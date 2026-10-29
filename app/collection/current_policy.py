@@ -45,7 +45,7 @@ def validate(value):
     if value['backoff_seconds'] != DEFAULT['backoff_seconds']:
         raise ValueError('Exact native backoff policy required')
     for k, ceiling in DEFAULT.items():
-        if type(ceiling) is int and (type(value[k]) is not int or not 1 <= value[k] <= ceiling):
+        if type(ceiling) is int and (type(value[k]) is not int or value[k] < 1):
             raise ValueError('Native operational resource ceiling exceeded')
     if value['rediscovery_seconds'] < 60:
         raise ValueError('Native rediscovery must be at least 60 seconds')

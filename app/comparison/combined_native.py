@@ -12,23 +12,26 @@ from app.collection.current_sink import normalized_records
 VERSION = 'predict-combined-native-1'
 
 
-def normalize(catalog, books, *, at, associations=None, include_missing=False):
+def normalize(catalog, books, *, at, associations=None, include_missing=False, owned=False):
     source = catalog['record']['source']
-    inventory = deepcopy(catalog['record']['value']['inventory'])
+    original = catalog['record']['value']['inventory']
+    inventory = (dict(original, events=[dict(e) for e in original['events']],
+                      markets=[dict(m) for m in original['markets']]) if owned else deepcopy(original))
     # Catalogs may gain season/stage after their initial display-only binding.
     # Re-run the same strict owner against retained original metadata; never
     # carry a refusal from an earlier incomplete event into a complete one.
     from app.collection.v1_comparison import annotate
     pending=[m for m in inventory['markets'] if m.get('comparison_admission',{}).get('reason')=='comparison_context_missing']
-    if pending:annotate(dict(inventory,markets=pending),source,policy='manual-comparison-2')
+    if pending:annotate(dict(inventory,markets=pending),source,policy='manual-comparison-2',share_metadata=owned)
     reducer = SessionProjection(); reducer.inventory = {source: inventory}
+    reducer.bulk_current = owned
     projected=associations
     associations = {}
     for envelope in sorted(books, key=lambda x: stamp(x['record']['retained_at'])):
         for obs in envelope['record']['value']['observations']:
             ref = obs['book']['raw']['ref']; key = (source, ref['event_id'], ref['market_id'])
             if projected is not None and projected.get((source,'book',ref['event_id']+':'+ref['market_id']))!=envelope['id']:continue
-            reducer.reduce_observation(deepcopy(obs)); associations[key] = envelope['id']
+            reducer.reduce_observation(obs if owned else deepcopy(obs)); associations[key] = envelope['id']
     states = unavailable()['source_status']
     states[source]['state'] = 'available'
     records, excluded = normalized_records(reducer, states, {}, dated_annotations=False, clock=at, include_missing=include_missing)

@@ -23,6 +23,82 @@ class DurableQuota(unittest.TestCase):
         aid=self.q.reserve(self.owner,'candidate',dict(path='/v4/sports',params={}),0,bootstrap=True)
         self.q.dispatched(aid,self.owner);self.q.reconcile(aid,quota(used));return aid
     def paid(self,cost=3):return self.q.reserve(self.owner,'candidate',dict(path='/v4/sports/baseball_mlb/odds',params={}),cost)
+    def test_unentered_transport_cancellation_cannot_clear_another_runtime_or_receipt(self):
+        self.q.bind_window(WINDOW);self.bootstrap();aid=self.paid()
+        self.q.dispatched(aid,self.owner)
+        prior=self.q._read()
+        self.owner.release();self.owner.acquire('CONTROLLED-other-runtime')
+        with self.assertRaisesRegex(QuotaStop,'reservation_owner_conflict'):
+            self.q.cancel_before_transport(aid,self.owner)
+        self.assertEqual(self.q._read(),prior)
+        self.owner.release();self.owner.acquire('CONTROLLED-runtime')
+        self.q.reconcile(aid,quota(23,3))
+        prior=self.q._read()
+        with self.assertRaisesRegex(QuotaStop,'transport_cancellation_not_unentered'):
+            self.q.cancel_before_transport(aid,self.owner)
+        self.assertEqual(self.q._read(),prior)
+
+    def test_status_reads_reuse_verified_file_but_mutations_always_reload(self):
+        from app.collection.quota_status import prepare, projection
+        self.q.bind_window(WINDOW);self.bootstrap()
+        with patch.object(self.q,'_read',wraps=self.q._read) as reader:
+            prepared=prepare([self.q,self.q])
+            self.assertEqual(reader.call_count,1)
+            with projection(prepared):
+                self.q.snapshot();self.q.recovery_reason(WINDOW)
+                self.assertEqual(reader.call_count,1)
+                self.q.transact(lambda v,at:v.update(rotation=7))
+                self.assertEqual(reader.call_count,2)
+                self.assertEqual(self.q.snapshot()['rotation'],7)
+                self.assertEqual(reader.call_count,3)
+            self.q.snapshot()
+            self.assertEqual(reader.call_count,4)
+
+    def test_prepared_status_detects_corruption_and_does_not_change_ledger(self):
+        from app.collection.quota_status import prepare, projection
+        self.q.bind_window(WINDOW);self.bootstrap()
+        before=self.q._read()
+        prepared=prepare([self.q])
+        with projection(prepared):
+            status=self.q.snapshot()
+            status['observation']['used']=999
+        self.assertEqual(self.q._read(),before)
+        (self.q.directory/'quota.json').write_text('{}')
+        with projection(prepared):
+            self.assertEqual(self.q.snapshot()['pause'],'quota_ledger_unavailable')
+            with self.assertRaises(QuotaStop):self.q.transact(lambda v,at:None)
+
+    def test_accounting_encoder_preserves_existing_canonical_seals(self):
+        from app.collection.current_quota import packed
+        from app.dashboard.current_contract import packed as original
+        value={'z': [{'unicode':'é\n', 'decimal':1.25, 'null':None, 'bool':True}], 'a':{}}
+        self.assertEqual(packed(value),original(value))
+        self.q.bind_window(WINDOW)
+        self.bootstrap()
+        envelope=json.loads((self.q.directory/'quota.json').read_text())
+        from hashlib import sha256
+        self.assertEqual(envelope['sha256'],sha256(original(envelope['value'])).hexdigest())
+
+    def test_expanded_capacity_preserves_history_on_restart_and_failed_replace(self):
+        from app.collection.current_quota import ATTEMPT_CAP,LEDGER_BYTE_CAP
+        self.assertGreaterEqual(ATTEMPT_CAP,6*56*153+2000)
+        self.assertGreaterEqual(LEDGER_BYTE_CAP,128*1024*1024)
+        self.q.bind_window(WINDOW);self.bootstrap()
+        uncertain=self.paid();self.q.dispatched(uncertain,self.owner)
+        before=self.q._read()
+        # Authored large census: preserves all original attempts, including holds.
+        seed=next(iter(before['attempts'].values()))
+        for i in range(33000):
+            aid='fixture-'+str(i)
+            before['attempts'][aid]=dict(seed,id=aid)
+        self.q._write(before)
+        restart=QuotaLedger(self.q.directory,clock=lambda:self.at)
+        self.assertEqual(restart._read(),before)
+        with patch('app.collection.current_quota.os.replace',side_effect=OSError('fixture disk failure')):
+            with self.assertRaises(OSError):restart._write(dict(before,rotation=999))
+        self.assertEqual(restart._read(),before)
+        self.assertEqual(restart._read()['attempts'][uncertain],before['attempts'][uncertain])
+
     def test_expired_uncertain_zero_charge_requires_exact_usage_evidence(self):
         self.q.bind_window(WINDOW);self.bootstrap();aid=self.paid();self.q.dispatched(aid,self.owner)
         before=self.q.snapshot();self.at='2026-10-03T12:03:00+00:00'

@@ -28,7 +28,7 @@ export function coverageRatioText(ratio, label) {
 }
 export function coverageCellState(cell) {
   const state = cell.configuration_state;
-  if (state === "held") return "Source held";
+  if (state === "held") return "Accounting restriction at capture";
   if (state === "paused") return "Source paused";
   if (state === "disabled") return "Disabled";
   if (state === "not_configured" || cell.configured === false) return "Not configured";

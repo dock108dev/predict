@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Predict · Odds</title>
+<link rel="stylesheet" href="/current/assets/stored.css">
+<script type="module" src="/current/assets/raw-odds.js"></script>
+<link rel="stylesheet" href="/current/assets/raw-odds.css">
+</head>
+<body><a class="skip-link" href="#content">Skip to received prices</a><main>
+<header>
+<a class="brand" href="/" aria-label="Predict home">Predict<span class="brand-mark" aria-hidden="true">↗</span></a>
+<nav aria-label="Views"><a href="/">Dashboard</a><a href="/odds" aria-current="page">Odds</a><a href="/ev" title="Expected value">EV</a><a href="/current/coverage">Coverage</a><a href="/admin">Admin</a></nav>
+<button id="stop" class="secondary">Stop collection</button>
+</header>
+<div class="heading"><h1>Odds</h1><a class="secondary" href="/api/raw/export" download>Export original inputs</a></div>
+<p>Prices received from each source. Calculations update separately; source status and original inputs are shown with each price.</p>
+<div class="board-controls">
+<section class="selection slate-selection" aria-label="Game filters">
+<label>League<select id="league"><option value="">All leagues</option></select></label>
+<label>Venue<select id="venue"><option value="">All sources</option></select></label>
+<label>Market<select id="family"><option value="">All markets</option></select></label>
+<label>Period<select id="period"><option value="">All periods</option></select></label>
+<label>Status<select id="state"><option value="">All states</option><option value="synchronized">Synchronized</option><option value="delayed">Delayed</option><option value="last_known">Last-known</option><option value="unqualified">Unqualified</option><option value="aggregate">Scheduled refresh</option></select></label>
+<label>Game ID<input id="game" type="search" placeholder="Any source event" autocomplete="off"></label>
+<label class="search-field">Search<input id="search" type="search" placeholder="Team or game" autocomplete="off"></label>
+</section>
+<button id="clear-filters" class="secondary" disabled>Clear filters</button>
+</div>
+<div class="context-bar"><p id="status" role="status">Loading received prices…</p><button id="retry" hidden>Retry current reads</button><details id="read-diagnostics" hidden><summary>Technical details</summary><p id="read-error"></p></details></div>
+<div class="raw-pagination"><button id="previous" disabled>Previous page</button><span id="page-number" role="status" aria-atomic="true"></span><button id="next" disabled>Next page</button><button id="refresh">Refresh prices</button><label><input id="live" type="checkbox" checked> Live updates</label></div>
+<details id="unusable"><summary>Unqualified source frames</summary><div id="unusable-content"></div></details>
+<section id="content" aria-label="Received prices" aria-busy="true" tabindex="-1"></section>
+<dialog id="details" aria-labelledby="details-title"><div class="dialog-head"><h2 id="details-title">Details</h2><button id="close-details">Close</button></div><div id="detail-content"></div></dialog>
+<footer><span>Read-only comparisons · No trades placed</span><div><a href="/admin">Source status</a><a href="/scanner">Advanced Scanner</a></div></footer>
+</main></body></html>

@@ -77,6 +77,10 @@ def selection(event, group, outcome, q):
         price=dict(amount=q['original']['value'],unit=q['original']['units'],
             payout_unit='usd_per_contract' if q['original']['units'] in ('usd_per_contract','cents_per_contract') else 'usd_per_usd_stake',
             currency='USD'))
+    descriptor=q.get('native_contract',{}).get('same_outcome',{})
+    if descriptor.get('predicate') is not None and not descriptor.get('reason'):
+        value['predicate']=deepcopy(descriptor['predicate'])
+        value['equality']=deepcopy(descriptor['equality'])
     return CanonicalSelection.from_dict(value).to_dict()
 
 
@@ -100,6 +104,7 @@ def reference_payload(q, reference_records):
     # selected outcome and exact line to select its disjoint opposition instead.
     candidates=[r for r in reference_records if r['quote']['venue']=='pinnacle'
         and r['quote']['provenance']['sha256']==ref['sha256']
+        and r['quote']['times']['received_at']==ref['received_at']
         and (native['provider']!='the_odds_api' or r['quote']['source']['native_event_id']==native['native_event_id'])
         and r['market_identity']['period']=='full_game'
         and r['market_identity']['family']=={'win':'moneyline','cover':'spread','over':'total','under':'total'}.get(target['predicate'])]

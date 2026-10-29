@@ -4,6 +4,8 @@ Original catalogs/reviews remain literal. Derived facts have a separate version,
 document snapshot and identity checks. Missing exceptions do not erase predicates.
 """
 from copy import deepcopy
+from contextlib import contextmanager
+from contextvars import ContextVar
 from decimal import Decimal, ROUND_FLOOR
 import json
 from pathlib import Path
@@ -12,6 +14,7 @@ from app.dashboard.session_projection import stable, stamp
 
 VERSION = 'public-contract-bindings-1'
 PATH = Path(__file__).resolve().parents[1] / 'fixtures/public-contracts-v1.json'
+_binding_snapshot=ContextVar('public_binding_snapshot',default=None)
 
 
 def fraction_input(value):
@@ -32,16 +35,42 @@ def _snapshot(signature):
     return data
 
 
-def load():
-    stat=PATH.stat()
-    return deepcopy(_snapshot((stat.st_mtime_ns,stat.st_size)))
+@contextmanager
+def binding_snapshot():
+    """One immutable contract revision per detached catalog operation."""
+    if _binding_snapshot.get() is not None:
+        yield
+        return
+    stat=PATH.stat();signature=(stat.st_mtime_ns,stat.st_size)
+    token=_binding_snapshot.set(_snapshot(signature))
+    try:
+        yield
+        after=PATH.stat()
+        if (after.st_mtime_ns,after.st_size)!=signature:
+            raise ValueError('Public binding snapshot changed during projection')
+    finally:
+        _binding_snapshot.reset(token)
+
+
+def _facts(*keys):
+    """Read-only verified facts, internal to this module."""
+    value=_binding_snapshot.get()
+    if value is None:
+        stat=PATH.stat()
+        value=_snapshot((stat.st_mtime_ns,stat.st_size))
+    for key in keys:value=value[key]
+    return value
+
+
+def load(*keys):
+    """Detach only requested facts; never copy the entire registry per market."""
+    return deepcopy(_facts(*keys))
 
 
 def event_identity(*, source, event_id, competition, participants, scheduled_start,
                    provider_season=None, provider_stage=None, provider_label=None):
     """Match exact ID AND participants AND schedule, preserving contradictions."""
-    data = load()
-    candidates = [x for x in data['events'] if x['competition'] == competition
+    candidates = [x for x in load('events') if x['competition'] == competition
                   and x['native_ids'].get(source) == event_id]
     original = dict(source=source, event_id=event_id, competition=competition,
                     participants=deepcopy(participants), scheduled_start=scheduled_start,
@@ -61,7 +90,7 @@ def event_identity(*, source, event_id, competition, participants, scheduled_sta
     if provider_label is not None and provider_label == {'NHL':'nhl-2025','NBA':'nba-2025'}.get(competition):
         conflicts.append('Provider series label '+provider_label+' conflicts with authoritative '+row['season']+' schedule')
     result.update(status='ENRICHED_WITH_CONFLICT' if conflicts else 'ENRICHED', conflicts=conflicts,
-                  enrichment=deepcopy(row), sources=[data['sources'][k] for k in row['sources']],
+                  enrichment=deepcopy(row), sources=[load('sources',k) for k in row['sources']],
                   qualification='Identity enrichment only; original/rescheduled identity and payout/fees separate')
     result['sha256'] = stable(result)
     return result
@@ -93,7 +122,7 @@ def college_registry():
     """Versioned membership overlay, exact NCAA IDs; no ambiguous short aliases."""
     from app.normalization.college_registry import expanded
     from app.normalization.registry import Registry, name_key
-    d=json.loads(expanded().to_json()); membership=load()['ncaab_membership']
+    d=json.loads(expanded().to_json()); membership=load('ncaab_membership')
     existing={x['id'] for x in d['entities']}
     for m in membership['members']:
         # These source-backed IDs predate the directory expansion. Preserve them.
@@ -101,14 +130,14 @@ def college_registry():
             cid={6:'NCAAB:M:D1:AAMU',8:'NCAAB:M:D1:ALA'}[m['org_id']]
             entity=next(x for x in d['entities'] if x['id']==cid)
             entity.update(ncaa_org_id=m['org_id'],academic_year=2027,
-                          public_membership_source=load()['sources']['ncaa-mbb-directory-data'])
+                          public_membership_source=load('sources','ncaa-mbb-directory-data'))
             continue
         if m['id'] in existing:
             entity=next(x for x in d['entities'] if x['id']==m['id'])
             entity.update(ncaa_org_id=m['org_id'],academic_year=2027,
-                          public_membership_source=load()['sources']['ncaa-mbb-directory-data'])
+                          public_membership_source=load('sources','ncaa-mbb-directory-data'))
             continue
-        source=load()['sources']['ncaa-mbb-directory-data']['url']
+        source=load('sources','ncaa-mbb-directory-data','url')
         d['entities'].append(dict(id=m['id'],kind='team',name=m['name'],league='NCAAB',source=source,
             school_id='NCAA:'+str(m['org_id']),ncaa_org_id=m['org_id'],academic_year=2027,gender='men',
             basketball_memberships={'2026-2027':dict(division='I',competition_id='NCAA:M:D1',source=source,
@@ -143,7 +172,7 @@ def us_type(native, *, competition):
     """Registered family locator only; does not invent line sign or settlement."""
     metadata=native.get('metadata',{})
     key=metadata.get('market_sport_type',native.get('sportsMarketType'))
-    row=load()['us_types'].get(key)
+    types=_facts('us_types');row=types.get(key)
     result=dict(version=VERSION,native_type=key,status='UNBOUND',original=deepcopy(native),
                 collection_authorized=False)
     expected_sport={'NFL':'FOOTBALL','NCAAF':'FOOTBALL','NBA':'BASKETBALL','NCAAB':'BASKETBALL','MLB':'BASEBALL','NHL':'HOCKEY'}.get(competition)
@@ -154,12 +183,12 @@ def us_type(native, *, competition):
                    'drawable_outcome':'three_way_winner','futures':'futures'}.get(key)
         if structure:
             result['documented_structure']=structure
-            result['source']=load()['sources']['us-schema']
+            result['source']=load('sources','us-schema')
             result['missing_scope']=['Exact sport/league, period or award horizon, category and season']
         result['reason']='No documented requested sport/period type; generic types require separate period evidence'
         return result
     alternate=native.get('sportsMarketType')
-    if metadata.get('market_sport_type') and alternate in load()['us_types'] and load()['us_types'][alternate]!=row:
+    if metadata.get('market_sport_type') and alternate in types and types[alternate]!=row:
         result['reason']='Explicit native market types conflict on family, period or sport';return result
     coarse={'moneyline':'moneyline','spreads':'spread','spread':'spread','totals':'total','total':'total',
             'SPORTS_MARKET_TYPE_MONEYLINE':'moneyline','SPORTS_MARKET_TYPE_SPREAD':'spread',
@@ -168,7 +197,7 @@ def us_type(native, *, competition):
         result['reason']='Explicit native coarse and full market families conflict';return result
     result.update(status='DOCUMENTED_LOCATOR',competition=competition,period=row['period'],family=row['family'],
         total_scope=row['total_scope'],strike_magnitude=metadata.get('outcome_strike'),
-        long_participant_id=metadata.get('long_participant_id'),source=load()['sources']['us-schema'],
+        long_participant_id=metadata.get('long_participant_id'),source=load('sources','us-schema'),
         missing=['Exact game/season/stage', 'Signed line and native payout predicate', 'Effective settlement/fees'])
     return result
 
@@ -179,7 +208,7 @@ def us_selector(game_id, family):
     return dict(version=VERSION,path='/v1/markets',query=dict(gameId=game_id,sportsMarketTypes=[{
         'moneyline':'SPORTS_MARKET_TYPE_MONEYLINE','spread':'SPORTS_MARKET_TYPE_SPREAD',
         'total':'SPORTS_MARKET_TYPE_TOTAL','futures':'SPORTS_MARKET_TYPE_FUTURE'}[family]]),
-        collection_authorized=False,source=load()['sources']['us-markets'],
+        collection_authorized=False,source=load('sources','us-markets'),
         note='Coarse filter; inspect returned typed metadata. No period inferred from filter.')
 
 
@@ -200,7 +229,7 @@ def odds_outright(native, competition):
                 outcomes.append(dict(bookmaker=b['key'],participant_label=o['name'],decimal_odds=str(o['price']),
                     source_at=m.get('last_update'),payout_basis='bookmaker_contract_unbound'))
     return dict(version=VERSION,competition=competition,category='league_champion',period='season',
-        native=deepcopy(native),outcomes=outcomes,source=load()['sources']['odds-sports'],
+        native=deepcopy(native),outcomes=outcomes,source=load('sources','odds-sports'),
         missing=['Exact award/season/member field', 'Source contract payout/fee terms'],collection_authorized=False)
 
 
@@ -428,7 +457,7 @@ def award_identity(native,binding):
 
 def novig_h1_descriptor(*,participant,yes_id,no_id,association=None):
     """Documented NFL-004 template; listing association is a separate gate."""
-    doc=load()['sources']['novig-nfl004']
+    doc=load('sources','novig-nfl004')
     if not participant or not yes_id or not no_id or yes_id==no_id:raise ValueError('Exact participant/outcome IDs required')
     d=dict(version='score-lines-1',public_binding_version=VERSION,source='novig',family='moneyline',period='first_half',
         participant=participant,line=None,unit='points',offered='pregame',regulation='first_two_15_minute_quarters',
@@ -446,7 +475,7 @@ def novig_h1_descriptor(*,participant,yes_id,no_id,association=None):
 
 def prophetx_h1_descriptor(*,participant,selected_id,other_id):
     """Non-tied H1 winner predicate; ambiguous tie clause gates equality only."""
-    doc=load()['sources']['prophetx-nfl-spec']
+    doc=load('sources','prophetx-nfl-spec')
     if not participant or not selected_id or not other_id or selected_id==other_id:raise ValueError('Exact outcomes required')
     d=dict(version='score-lines-1',public_binding_version=VERSION,source='prophetx',family='moneyline',period='first_half',
         participant=participant,line=None,unit='points',offered='pregame',regulation='first_two_15_minute_quarters',
@@ -483,7 +512,7 @@ def hockey_period_template(*,family,period,participant,line=None,association=Non
     if family not in ('moneyline','spread','total') or period not in PERIODS['NHL']:
         raise ValueError('Requested individual regulation period required')
     key={'moneyline':'kalshi-hockey-winner-amendment','spread':'kalshi-hockey-spread','total':'kalshi-hockey-total'}[family]
-    doc=load()['sources'][key];start,end=PERIODS['NHL'][period]
+    doc=load('sources')[key];start,end=PERIODS['NHL'][period]
     if family=='moneyline' and line is not None:raise ValueError('Unlined period winner required')
     if family=='total' and participant!='combined':raise ValueError('Combined period goal total required')
     if family!='moneyline':

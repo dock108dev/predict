@@ -67,6 +67,71 @@ Admin. The data process boundary logs `data_runtime_process` and exits with code
 operation/class/frame format described below. These changes introduce no provider
 retries, accounting recovery or automatic collection authority.
 
+## Disposable calculation workers
+
+Coverage and financial subprocesses keep the existing memory, reply-size and
+wall-clock bounds. Unexpected calculation failures return a fixed worker error
+and a safe exception-class/frame record. The parent logs `calculation_worker`
+before reporting `coverage_worker_failed`; raw database exception messages never
+enter that status. Child stderr remains discarded because third-party tracebacks
+can contain private payloads. Failures before the child error boundary or abrupt
+process death therefore have only the parent's generic failure, not child frames.
+
+Stop and repeated cancellation join a shielded cleanup operation: a suspended
+child is continued, terminated, then killed after the existing three-second wait
+if needed. The owner waits for exit and consumes the reply reader. Cleanup errors
+log `calculation_worker_cleanup`; they fail otherwise successful work and do not
+replace an active primary exception or cancellation. OS-level termination failure
+still means closure is unconfirmed; there is no new forced process-wide deadline.
+
+`app.owned_work.joined_thread` is the shared completion policy for checkpoint/
+accounting `owned_thread` work and raw dashboard reads. It returns failures internally as data,
+preventing Python's detached-shield diagnostics from exposing exception messages.
+Cancellation waits for actual completion; a concurrent failure logs
+`owned_thread_after_cancellation` and cancellation still propagates. Without
+cancellation, the original error propagates. Cancellation is not confirmation
+that a write rolled back: inspect retained accounting/receipts before retrying.
+
+Expected financial lock contention, serialization conflicts and deadlocks retain
+explicit deferred results. They do not trigger provider retries or claim a
+publication succeeded. Acquisition-pressure deferral, absent-process signal races
+and optional-source isolation remain deliberate resilience.
+
+## Aggregate admission and local contention
+
+Aggregate diagnostics identify scheduled admission, reservation, transport,
+accounting, decoding, normalization, database ingress and offered inventory.
+`last_processing_failure` includes runtime, attempt, sport, receipt time/hash and
+exception class; the data log records safe traceback locations without response
+content, credentials or exception messages. A generic historical
+`aggregate_admission_failed` does not establish malformed provider data.
+
+A rolled-back PostgreSQL lock timeout, deadlock or serialization conflict retries
+only the exact local ingress transaction, with cooperative backpressure. It never
+requests the provider again, changes receipt/source clocks or releases uncertainty.
+Stop revokes pending work before another attempt and before commit. Other database
+errors remain terminal. Admin exposes retrying versus terminal worker behavior;
+SQL prices are distinguished from the diagnostic cache.
+
+Guarded `database_ingress_lock_retry` repair binds a confirmed response receipt to
+an exact candidate and disposable SQL contention/Stop verification. It preserves
+attempts, held credits, balances and due times. An evidenced OS restart may require
+the existing clock-epoch transition and free accounting bootstrap independently.
+A local repair is not authority to resolve an uncertain paid charge.
+
+A transient failed OS boot-evidence read can also leave
+`clock_continuity_unknown` after the OS probe recovers. Owned startup now restores
+continuity only when fresh evidence proves the original boot ID/start, original
+suspend-inclusive clock progression and unchanged current account window. The
+ledger records `os_evidenced_continuity_restored` with
+`existing_accounting_only` authority. This is a local accounting preparation:
+attempts, holds, balances and due times are preserved, no new accounting epoch is
+created, and no provider request is made. It can run outside collection hours;
+ordinary paid collection still waits for 09:00 Eastern. Missing or contradictory
+clock evidence, uncovered attempts and incompatible windows continue to refuse.
+Do not clear the pause or edit the ledger manually to bypass that proof. See the
+[repair evidence](acquisition.md#recovery-from-an-interrupted-os-clock-check).
+
 ## Socket and resource cleanup
 
 Kalshi and Polymarket US streams retain socket-close failures (including timeout

@@ -237,14 +237,23 @@ total retained-board caps apply across batches. Ordinary reads still never acqui
 
 ### Read and publication coordination
 
-An admitted estimate sweep owns one finite catalog turn, like the whole-capture
-Scanner and Coverage workers. Complete match neighborhoods are still packed
-against measured SQL bytes; replacing a planning reservation excludes only that
-owner's prior charge. Every batch rechecks current RSS and its full reservation.
+An admitted estimate sweep owns one finite catalog turn. It publishes one complete
+matching component at a time, keeping all possible peers together; unrelated games
+are no longer packed ahead of the first publication. Replacing a planning
+reservation excludes only that owner's prior charge. Every component rechecks
+current RSS and its full reservation.
 No expanded prior batch is retained. The lease releases on completion, refusal
 or exception; queued optional owners get the next turn. Source runway, process
 limit and optional concurrency are unchanged. Completed unsupported evaluations
 are unavailable, not indefinitely pending.
+
+Optional owners retain their waiting turn across pre-capture deferral. A no-op or
+planning failure releases the waiter; Stop removes it. New work yields above five
+seconds of normalization backlog. An admitted component can finish through a soft
+normalization delay; initial synchronization or more than two seconds of socket/raw
+delay still interrupts it. Source clocks, financial validity and the delivery target
+are unchanged. The unchanged-result fast path checks each retained component's own
+policy and engine identity; the status of a newer sibling cannot authorize reuse.
 
 Coverage captures intern repeated values and field names, including nested source
 and market identities. SQL materializes restored prices once before projecting

@@ -15,7 +15,7 @@ LOCK = 903019
 # native wording, financial boards, depth ladders and full peer-input copies never
 # enter this worker's Python heap.
 MAX_CAPTURE_BYTES = 8 * 1024 * 1024
-MAX_WORK_BYTES = 128 * 1024 * 1024
+MAX_WORK_BYTES = 1024 * 1024 * 1024
 
 
 def _pick(expression, fields):
@@ -78,9 +78,10 @@ _PUBLICATION_SQL="""WITH boards AS MATERIALIZED (
         (SELECT jsonb_object_agg(field,CASE WHEN jsonb_typeof(value)='object' THEN
             COALESCE((SELECT jsonb_object_agg(CASE WHEN k ~ '^(0|[1-9][0-9]*)$' AND length(k)<10 THEN object_names->>(k::int) END,v) FROM jsonb_each(value) obj(k,v)),'{}'::jsonb)
             ELSE value END) FROM jsonb_each(q) fields(field,value)) END q FROM restored),
-    projected AS MATERIALIZED (SELECT game_key,"""+_PRICE+""" AS price FROM objects)
-    SELECT b.game_key,b.metadata,COALESCE((SELECT jsonb_agg(price) FROM projected p
-        WHERE p.game_key=b.game_key),'[]'::jsonb) prices FROM boards b"""
+    projected AS MATERIALIZED (SELECT game_key,"""+_PRICE+""" AS price FROM objects),
+    grouped AS (SELECT game_key,jsonb_agg(price) prices FROM projected GROUP BY game_key)
+    SELECT b.game_key,b.metadata,COALESCE(g.prices,'[]'::jsonb) prices
+    FROM boards b LEFT JOIN grouped g USING (game_key)"""
 
 _EVENT_SQL='SELECT id,provider,native_event_id,revision,'+_pick('facts',_EVENT_FIELDS)+' AS facts FROM current_event'
 _OFFER_SQL='''SELECT c.id,c.event_id,c.venue,c.native_market_id,c.native_outcome_id,c.native_side,c.revision AS contract_revision,
@@ -101,8 +102,7 @@ def _intern_object(expression):
     return ("(SELECT jsonb_build_object('f',COALESCE(jsonb_agg(jsonb_build_array(ki.ids->f.key,f.value)) "
         "FILTER (WHERE ref.id IS NULL),'[]'::jsonb),'r',COALESCE(jsonb_agg(jsonb_build_array(ki.ids->f.key,ref.id)) "
         "FILTER (WHERE ref.id IS NOT NULL),'[]'::jsonb)) FROM jsonb_each("+
-        expression+") f CROSS JOIN pool_index pi CROSS JOIN key_index ki CROSS JOIN LATERAL "
-        "(SELECT pi.ids->encode(sha256(convert_to(f.value::text,'UTF8')),'hex') AS id) ref)")
+        expression+") f CROSS JOIN key_index ki LEFT JOIN pool ref ON ref.value=f.value)")
 
 
 
@@ -242,6 +242,18 @@ def _expanded_size(db):
         "SELECT octet_length(prices::text) FROM ("+_PUBLICATION_SQL+") p) expanded").fetchone()['n'])
 
 
+def _stream_capture_totals(db):
+    return [db.execute('SELECT COALESCE(sum(octet_length(to_jsonb(r)::text)),0) total, '
+        'COALESCE(max(octet_length(to_jsonb(r)::text)),0) largest FROM ('+query+') r').fetchone()
+        for query in (_OFFER_SQL,_PUBLICATION_SQL,
+            'SELECT to_jsonb(e) facts FROM ('+_EVENT_SQL+') e UNION ALL '
+            'SELECT to_jsonb(b) FROM ('+_BOOK_SQL+') b UNION ALL '
+            'SELECT to_jsonb(r) FROM data_runtime r UNION ALL '
+            'SELECT to_jsonb(s) FROM current_source_status s UNION ALL '
+            'SELECT '+_STATUS+' FROM latest_board_status UNION ALL '
+            "SELECT jsonb_build_object('queries',facts->'query_observations') FROM coverage_latest")]
+
+
 def _publication_frame(db, states, *, offers=None):
     """Compact structural adapter to the existing exact publication predicates.
 
@@ -291,7 +303,6 @@ def _publication_frame(db, states, *, offers=None):
         neighborhoods={},candidate_sets={},selection_identities={},active_events={r['event_id'] for r in offers})
     # Retain only the shared projection fields needed by metrics and examples.
     from .current_rows import utc as current_clock
-    from .schedule_metadata import project
     from .store import exact_time
     now=exact_time(current_clock());records=[]
     for row in offers:
@@ -299,7 +310,13 @@ def _publication_frame(db, states, *, offers=None):
         q=row['quote'];q['venue']=row['venue']
         q.setdefault('times',{}).update(source_at=row['source_at'],received_at=row['received_at'])
         event=event_index[row['event_id']]['facts']
-        records.append(dict(project(event,row['contract']),event=event,quote=q))
+        from .current_rows import project_contract
+        contract=row['contract']
+        # This projection has no receipt-derived metadata. An unchanged start
+        # needs no detached copy of every nested contract field.
+        if contract['market_identity'].get('scheduled_start')!=event.get('scheduled_start'):
+            contract=project_contract(event,contract,q['times']['received_at'])
+        records.append(dict(contract,event=event,quote=q))
     return frame,records
 
 
@@ -363,19 +380,20 @@ def reconcile(db, *, at=None):
             # rows and query cancellation past the worker cleanup allowance.
             # Keep the setting local to this capture, including on rollback.
             db.execute('SET LOCAL jit=off')
-            cursor=capture_resources.enter_context(db.cursor(name='coverage_publication_rows'))
-            cursor.itersize=1
-            cursor.execute(_capture_stream_sql())
-            size=next(cursor)['payload']['size']
+            # Global JSON interning grows with every field in the universe and
+            # repeatedly scans/detoasts its dictionaries. Admit the full work
+            # graph, then stream ordinary projected games in this same snapshot.
+            # The wire bound applies to the largest record, not the universe.
+            totals=_stream_capture_totals(db)
+            size=max(int(r['largest']) for r in totals)
             if size>MAX_CAPTURE_BYTES:raise ValueError('coverage_capture_capacity')
-            reservation=max(size*12,_expanded_size(db)*4)+24*1024*1024
+            reservation=sum(int(r['total']) for r in totals)*6+24*1024*1024
             if reservation>MAX_WORK_BYTES:raise ValueError('coverage_memory_capacity')
             lease=reservations.enter_context(BACKGROUND.claim('coverage',reservation))
             if not lease:return lease.deferred()
             owner=read_runtime(db,at=at)
             committed={r['venue']:r['state'] for r in db.execute('SELECT venue,state FROM current_source_status').fetchall()}
-            capture=next(cursor)['payload']
-            frame,records=_publication_frame(db,source_states(committed,owner),offers=_captured_offers(capture))
+            frame,records=_publication_frame(db,source_states(committed,owner))
             source_binding=observation_binding()
             saved=db.execute('SELECT '+_STATUS+' AS facts FROM latest_board_status WHERE singleton=true').fetchone()
             status=saved['facts'] if saved else {}
@@ -385,20 +403,28 @@ def reconcile(db, *, at=None):
             published=[]
             # Stream one complete frozen game; shared pools and all original offers
             # remain from the same MVCC snapshot. Never truncate the universe.
-            capture['rows']=(item['payload'] for item in cursor)
-            for row in _publication_rows(capture,db):
+            cursor=capture_resources.enter_context(db.cursor(name='coverage_publication_rows'))
+            cursor.itersize=1
+            cursor.execute(_PUBLICATION_SQL+' ORDER BY b.game_key')
+            for row in cursor:
                 checkpoint()
                 try:published.extend(_age_publication(row,status,owner,frame,at,source_binding))
                 except (KeyError,ValueError,TypeError):continue
-            value=build(records,published,config=owner.get('config') or DEFAULT,owner=dict(owner,states=frame['states']),at=at,
+            epoch=frame['epoch'];states=frame['states']
+            input_revision=hashed([[r['id'],r['contract_revision'],r['offer_revision']] for r in frame['offers'].values()])
+            # Exact publication validation is finished. Its candidate caches,
+            # dependency indexes and book rows must not overlap the global
+            # occurrence resolver's metric graph.
+            del frame
+            value=build(records,published,config=owner.get('config') or DEFAULT,owner=dict(owner,states=states),at=at,
                 queries=queries,encountered=raw.get('encountered_types',[]),
                 exclusions=[*owner.get('status',{}).get('exclusions',[]),*status.get('catalog_errors',[])],
                 resolve_inputs=True)
             from .latest_board import runtime_identity
             authority=runtime_identity(owner);authority.pop('calculation_state',None)
-            value.update(epoch=frame['epoch'],input_revision=hashed([[r['id'],r['contract_revision'],r['offer_revision']] for r in frame['offers'].values()]),
+            value.update(epoch=epoch,input_revision=input_revision,
                 runtime_revision=owner.get('revision'),runtime_authority=authority,
-                source_authority={key:state.get('state') for key,state in frame['states'].items()},
+                source_authority={key:state.get('state') for key,state in states.items()},
                 source_binding=source_binding,query_observations=queries,
                 work_metrics=dict(projected_input_bytes=size,reserved_work_bytes=reservation,maximum_capture_bytes=MAX_CAPTURE_BYTES,
                     maximum_work_bytes=MAX_WORK_BYTES,expanded_boards=0,provider_requests=0))

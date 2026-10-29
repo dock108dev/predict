@@ -43,7 +43,8 @@ class SQL(IsolatedAsyncioTestCase):
         with cls.connect() as db:
             assert db.execute('select current_database() name').fetchone()['name']==cls.name
             with patch('app.storage.store.ROOT',Path(ROOT.name)):Store(db).migrate()
-            CurrentRowStore(db).upsert_records(fixture_records())
+            # Shared with SC03: admission and reads use the same replay clock.
+            CurrentRowStore(db).upsert_records(fixture_records(),now=AT)
 
     @classmethod
     def tearDownClass(cls):
@@ -86,6 +87,25 @@ class SQL(IsolatedAsyncioTestCase):
                     with transaction(db):db.execute('select 1')
                 self.assertEqual(len(seen),1)
         finally:close()
+
+    async def test_wake_only_commit_never_scans_roster_or_invents_proof(self):
+        seen=[];close=subscribe(seen.append,proof=False)
+        try:
+            with self.connect() as db, patch('app.storage.scanner_publication.current_revision',
+                    side_effect=AssertionError('Wake notification must not scan roster')):
+                with transaction(db):
+                    db.execute('SELECT 1')
+                    self.assertEqual(seen,[])
+                self.assertEqual(seen,[None])
+                with self.assertRaisesRegex(ValueError,'authored rollback'):
+                    with transaction(db):raise ValueError('authored rollback')
+                with db.transaction():
+                    with transaction(db):db.execute('SELECT 1')
+                self.assertEqual(seen,[None])
+        finally:close()
+        with self.connect() as db:
+            with transaction(db):db.execute('SELECT 1')
+        self.assertEqual(seen,[None])
 
     async def test_scanner_worker_capture_finance_after_release_stop_and_failure(self):
         worker=Scanner(self.provider(),connector=self.connect,clock=lambda:AT)

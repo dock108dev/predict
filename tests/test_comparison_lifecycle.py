@@ -157,3 +157,17 @@ class LifecycleTests(unittest.IsolatedAsyncioTestCase):
 
 
 if __name__=='__main__':unittest.main()
+
+
+def test_owned_image_retains_clock_validation_without_retaining_the_ladder():
+    owner=LifecycleOwner('kalshi',AUTHORED['runtime_id'],links=edges())
+    owner.reconcile([selected()],AT);owner.begin_connection(1)
+    image=book();result=owner.admit_book(image,generation=1,owned=True)
+    assert result['outcomes'] is image['outcomes']
+    assert owner.books['A']['book'] is None
+    assert owner.freshness('A',AT)['current']
+    later=book(source=(AT+timedelta(seconds=10)).isoformat(),received=(AT+timedelta(seconds=10)).isoformat())
+    updated=owner.admit_book(later,generation=1,owned=True)
+    assert updated['raw']['exchange_at']==result['raw']['exchange_at']
+    owner.revoke()
+    assert not owner.freshness('A',AT)['current']

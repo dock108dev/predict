@@ -11,6 +11,16 @@ export class LatestRead {
     this.generation++;
     this.controller?.abort();
   }
+  async releaseSlate(token) {
+    // Release only this client's abandoned traversal, never a displayed frame
+    // or a selected Details lease. Failure falls back to the bounded TTL.
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    try {
+      await this.fetcher('/api/boards/read-lease?read_token=' + encodeURIComponent(token),
+        {method:'DELETE', keepalive:true, signal:controller.signal});
+    } catch {} finally { clearTimeout(timeout); }
+  }
   async read(url, validate, limit = 524288) {
     this.cancel();
     const token = this.generation,

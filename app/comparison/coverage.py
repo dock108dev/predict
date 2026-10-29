@@ -40,6 +40,32 @@ class CoverageLedger:
         self.observations = {}
         self.family_observations = {}
         self.books = {}
+        from .offered_scope import NativePriceInventory
+        self.native_prices=NativePriceInventory()
+        self.offered_units={}
+
+    def observe_native_price(self,venue,book,catalog,disposition):
+        self.observe_native_prices(venue,[book],catalog,disposition)
+
+    def observe_native_prices(self,venue,books,catalog,disposition):
+        """Reconcile a complete admission batch, counting each affected cell once."""
+        events={e['id']:e for e in catalog.get('events',[])}
+        markets={m['id']:m for m in catalog.get('markets',[])}
+        affected=set()
+        for book in books:
+            ref=book['raw']['ref']
+            event=events.get(ref['event_id']);market=markets.get(ref['market_id'])
+            if not event or not market:continue
+            sport=event.get('competition');family=market.get('market_type')
+            if sport not in SPORTS or family not in FAMILIES:continue
+            self.native_prices.observe(venue,sport,family,book,disposition)
+            affected.add((sport,family))
+        for sport,family in affected:
+            context=self.family_observations.get((sport,venue,family),{})
+            counts=self.native_prices.counts(venue,sport,family)
+            for name in ('latest','last_success'):
+                if context.get(name):
+                    context[name].setdefault('inventory',{}).update(counts)
 
     def observe_book(self, sport, venue, *, received_at, source_at):
         if sport not in SPORTS or venue not in VENUES:
@@ -52,7 +78,7 @@ class CoverageLedger:
     def observe(self, sport, venue, *, checked_at, status, offered=None,
                 source_clocks=(), reason=None, evidence_sha256=None, family=None,
                 completeness='unmeasured', query=None, detail_code=None,
-                unique_offered=None, offered_scope='exact_query'):
+                unique_offered=None, offered_scope='exact_query', inventory=None):
         if sport not in SPORTS or venue not in VENUES or status not in STATUSES:
             raise ValueError('Invalid coverage cell/status')
         stamp(checked_at)
@@ -67,7 +93,7 @@ class CoverageLedger:
             if set(offered) - set(COUNTS):
                 raise ValueError('Invalid offering count')
             for key, value in offered.items():
-                if value is not None and (type(value) is not int or not 0 <= value <= 10000):
+                if value is not None and (type(value) is not int or value < 0):
                     raise ValueError('Invalid measured count')
                 values[key] = value
         if status in ('failed_source', 'rejected_payload') and any(v is not None for v in values.values()):
@@ -89,12 +115,22 @@ class CoverageLedger:
                      admission_code=None if detail_code is None else admission_code(detail_code))
         if unique_offered is not None:
             if (not isinstance(unique_offered,dict) or set(unique_offered)-set(COUNTS)
-                    or any(v is not None and (type(v) is not int or not 0<=v<=10000) for v in unique_offered.values())
-                    or offered_scope not in ('exact_query','bounded_listing_and_selected_metadata')):
+                    or any(v is not None and (type(v) is not int or v<0) for v in unique_offered.values())
+                    or offered_scope not in ('exact_query','bounded_listing_and_selected_metadata','complete_listing_and_metadata_traversal_price_boundary_unverified')):
                 raise ValueError('Invalid unique query measurement')
             if status in ('failed_source','rejected_payload') and any(v is not None for v in unique_offered.values()):
                 raise ValueError('Failed query unique totals remain unknown')
             value.update(unique_offered={k:unique_offered.get(k) for k in COUNTS},offered_scope=offered_scope)
+        if inventory is None:
+            inventory=dict(route='native_listing' if venue in ('kalshi','polymarket_us') else 'sport_odds',
+                requested_scope=dict(sport=sport,family=family,period='full_game',venue=venue),
+                started_at=None,completed_at=checked_at,pages=None,exhausted=False,continuation=None,
+                failures=1 if status in ('failed_source','rejected_payload') else 0,
+                denominator_status='unknown',received=None,admitted=None,rejected=None,omitted=None,pending=None,
+                omission_reasons={reason or 'inventory_unmeasured':1},provider_universe_complete=False)
+        if venue in ('kalshi','polymarket_us') and family is not None:
+            inventory.update(self.native_prices.counts(venue,sport,family))
+        value['inventory']=deepcopy(inventory)
         key = (sport, venue)
         previous = self.observations.get(key, {})
         if previous.get('latest') and stamp(checked_at) < stamp(previous['latest']['checked_at']):
@@ -170,36 +206,55 @@ def current_rows(index):
     return result
 
 
-def aggregate_observation(ledger, body, sport, received_at, rejected=None, *, parsed_frame=None):
-    """Count sanitized complete aggregate offerings, before display filtering."""
-    rejected = rejected or {}
+def aggregate_observation(ledger, body, sport, received_at, rejected=None, *, parsed_frame=None,
+                          records=(), started_at=None, query=None, admitted_at=None):
+    """Measure each venue independently, including rejected price identities."""
     try:
-        payload = json.loads(body) if parsed_frame is None else parsed_frame.payload
-        if not isinstance(payload, list) or len(payload) > 200:
-            raise ValueError()
-        receipt = sha256(body).hexdigest() if parsed_frame is None else parsed_frame.receipt_sha256
-        for venue in ('novig', 'prophetx', 'pinnacle'):
-            if venue in rejected:
-                ledger.observe(sport, venue, checked_at=received_at, status='rejected_payload', reason='payload_rejected', evidence_sha256=receipt,detail_code=rejected[venue])
-                continue
-            games = markets = quotes = 0
-            clocks = set()
-            for event in payload:
-                books = [b for b in event['bookmakers'] if b['key'] == venue]
-                if books:
-                    games += 1
-                for book in books:
-                    if book.get('last_update'):
-                        clocks.add(book['last_update'])
-                    for market in book['markets']:
-                        markets += 1
-                        quotes += len(market['outcomes'])
-                        if market.get('last_update'):
-                            clocks.add(market['last_update'])
-            ledger.observe(sport, venue, checked_at=received_at,
-                status='offerings_returned' if quotes else 'no_offerings_returned',
-                offered=dict(games=games, markets=markets, quotes=quotes), source_clocks=clocks,
-                reason=None if quotes else 'query_empty', evidence_sha256=receipt, completeness='complete')
-    except (ValueError, KeyError, TypeError, UnicodeError):
-        for venue in ('novig', 'prophetx', 'pinnacle'):
-            ledger.observe(sport, venue, checked_at=received_at, status='rejected_payload', reason='payload_rejected')
+        payload=json.loads(body) if parsed_frame is None else parsed_frame.payload
+        if not isinstance(payload,list):raise ValueError()
+        receipt=sha256(body).hexdigest() if parsed_frame is None else parsed_frame.receipt_sha256
+    except (ValueError,UnicodeError):
+        payload=None;receipt=None
+    for venue in ('novig','prophetx','pinnacle'):
+        try:
+            if payload is None:raise ValueError()
+            _aggregate_venue_observation(ledger,payload,sport,venue,received_at,rejected or {},
+                records,started_at,query,admitted_at,receipt)
+        except (ValueError,KeyError,TypeError,UnicodeError,AttributeError):
+            for family in ledger.configured_families[venue]:
+                ledger.observe(sport,venue,family=family,checked_at=received_at,status='rejected_payload',
+                    reason='payload_rejected',completeness='unmeasured')
+
+
+def _aggregate_venue_observation(ledger,payload,sport,venue,received_at,rejected,
+                               records,started_at,query,admitted_at,receipt):
+    from .offered_scope import aggregate_inventory
+    summaries=[]
+    clocks={clock for e in payload for b in e.get('bookmakers',[]) if b.get('key')==venue
+        for clock in [b.get('last_update'),*[m.get('last_update') for m in b.get('markets',[])]] if clock}
+    for family in ledger.configured_families[venue]:
+        inventory=aggregate_inventory(payload,venue,family,records,rejected=venue in rejected)
+        inventory.update(route='sport_odds',requested_scope=dict(sport=sport,family=family,
+            period='full_game',bookmaker=venue),started_at=started_at or received_at,
+            completed_at=received_at,admitted_at=admitted_at,source_clocks=sorted(clocks),pages=1,exhausted=True,continuation=False,failures=0)
+        units=set(inventory.pop('_unit_ids'))
+        previous=ledger.offered_units.get((sport,venue,family))
+        inventory.update(added_units=None if previous is None else len(units-previous),
+            withdrawn_units=None if previous is None else len(previous-units),
+            reconciliation='exact response replacement' if previous is not None else 'first measured boundary this runtime')
+        ledger.offered_units[sport,venue,family]=units
+        summaries.append(inventory)
+        counts=inventory['unique_offered']
+        ledger.observe(sport,venue,family=family,checked_at=received_at,
+            status='offerings_returned' if counts['quotes'] else 'no_offerings_returned',
+            offered=counts,unique_offered=counts,reason=None if counts['quotes'] else 'query_empty',
+            evidence_sha256=receipt,completeness='complete',query=query,inventory=inventory,
+            detail_code=rejected.get(venue),source_clocks=clocks)
+    total=dict(games=len({e['id'] for e in payload if any(b.get('key')==venue for b in e.get('bookmakers',[]))}),
+        markets=sum(i['unique_offered']['markets'] for i in summaries),quotes=sum(i['received'] for i in summaries))
+    ledger.observe(sport,venue,checked_at=received_at,
+        status='rejected_payload' if venue in rejected else 'offerings_returned' if total['quotes'] else 'no_offerings_returned',
+        offered=None if venue in rejected else total,unique_offered=None if venue in rejected else total,
+        reason='payload_rejected' if venue in rejected else None if total['quotes'] else 'query_empty',
+        evidence_sha256=receipt,completeness='complete',query=query,source_clocks=clocks,
+        detail_code=rejected.get(venue))

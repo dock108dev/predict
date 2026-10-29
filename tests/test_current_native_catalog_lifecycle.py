@@ -160,46 +160,37 @@ class CatalogContinuity(unittest.IsolatedAsyncioTestCase):
         self.assertIs(value.stream_task, before['stream'])
         self.assertIs(value.publication_handle, before['handle'])
 
-    async def test_infeasible_rediscovery_retains_complete_owned_frame(self):
-        for venue in ('kalshi', 'polymarket_us'):
+    async def test_large_rediscovery_replaces_owned_frame_and_retains_suspected_absence(self):
+        for venue in ('kalshi','polymarket_us'):
             with self.subTest(venue=venue):
-                value, published, calls, images, socket = await self.seeded(venue)
-                before = self.coherent_state(value)
-                count = len(published)
-                last_success = deepcopy(value.service.coverage.family_observations[('NFL', venue, 'moneyline')]['last_success'])
+                value,published,calls,images,socket=await self.seeded(venue)
+                before=self.coherent_state(value)
                 try:
                     await value.discover()
-                    self.assert_coherent(value, before)
-                    self.assertEqual(len(published), count)
-                    self.assertEqual(images, [])
+                    self.assertEqual(len(published),2)
+                    self.assertEqual(value.metrics['catalog_projection']['state'],'complete_traversal')
+                    self.assertTrue(set(before['markets']) <= set(value.markets))
+                    self.assertEqual(len(value.markets),2)
+                    self.assertEqual(value.metrics['suspected_absent_retained'],1)
                     self.assertFalse(value.failed)
-                    self.assertEqual(value.pages, [])
-                    self.assertEqual(value.metrics['catalog_projection']['state'], 'retained_previous')
-                    self.assertEqual(value.metrics['catalog_projection']['reason'], 'native_source_inventory_cap')
-                    coverage_cell = value.service.coverage.family_observations[('NFL', venue, 'moneyline')]
-                    self.assertEqual(coverage_cell['last_success'], last_success)
-                    self.assertEqual(coverage_cell['latest']['status'], 'not_checked')
-                    self.assertEqual(coverage_cell['latest']['reason'], 'query_capacity')
-                    self.assertEqual(coverage_cell['latest']['completeness'], 'partial')
-                    self.assertEqual(coverage_cell['latest']['offered'], dict(games=None, markets=None, quotes=None))
-                    self.assertLessEqual(len(calls), 2 * DEFAULT['discovery_pages'])
-                    socket.close.assert_not_awaited()
-                finally:
-                    await value.close()
+                    self.assertTrue(before['stream'].done())
+                    self.assertFalse(value.pending_books)
+                finally:await value.close()
                 socket.close.assert_awaited_once()
                 self.assertFalse(value.lifecycle.dispatch)
-                self.assertEqual(value.lifecycle.leases, {})
-                self.assertEqual(value.pending_books, {})
-                self.assertTrue(before['stream'].done())
-                self.assertEqual(images, [])
+                self.assertEqual(value.lifecycle.leases,{})
 
     async def test_stop_at_capacity_deferred_due_wait_never_restarts_discovery(self):
         value, published, calls, images, socket = await self.seeded('kalshi')
         value.service.deadline = float('inf')
         waiting = asyncio.Event()
         client = SimpleNamespace(budget=SimpleNamespace(requests=0, bytes=0), aclose=AsyncMock())
+        real_sleep=asyncio.sleep
 
         async def due_wait(seconds):
+            if seconds==0:
+                await real_sleep(0)
+                return
             self.assertEqual(seconds, DEFAULT['rediscovery_seconds'])
             waiting.set()
             await asyncio.Event().wait()
@@ -212,8 +203,8 @@ class CatalogContinuity(unittest.IsolatedAsyncioTestCase):
             try:
                 await asyncio.wait_for(waiting.wait(), 5)
                 self.assertFalse(value.failed)
-                self.assertEqual(value.metrics['catalog_projection']['state'], 'retained_previous')
-                self.assertEqual(len(published), 1)
+                self.assertEqual(value.metrics['catalog_projection']['state'], 'complete_traversal')
+                self.assertEqual(len(published), 2)
                 count = len(calls)
                 # Stop revokes dispatch before cancellation/cleanup can yield.
                 value.service.dispatch = False

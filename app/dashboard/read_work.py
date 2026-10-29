@@ -7,6 +7,7 @@ Daemon workers belong to this app process and cannot survive its termination.
 Each lane accepts one job at a time and reuses its allocator heap across reads.
 """
 import asyncio
+import gc
 import os
 from aiohttp import web
 from collections import deque
@@ -22,7 +23,9 @@ from app.comparison.calculation_control import CalculationStopped, cancellation,
 from app.storage.slate_reads import process_bytes
 from app.collection.current_policy import DEFAULT
 
-WORK_SECONDS = 5.0
+# Full-scope capture under active native ingestion can exceed thirty seconds.
+# Keep the same lanes and byte/RSS guards; allow the complete bounded snapshot.
+WORK_SECONDS = 60.0
 # An ordinary request has at most two admitted predecessors, each with this
 # response deadline. A one-second queue rejected normal concurrent EV/Arbs
 # captures before their preceding healthy worker could finish.
@@ -45,7 +48,12 @@ class TimedResponse(web.Response):
             self.read_trace.cancelled.set()
             self.read_trace.cleanup()
             raise
-        finally:self.read_trace.mark('response_completion',self.read_trace.started)
+        finally:
+            self.read_trace.mark('response_completion',self.read_trace.started)
+            # The response has finished: its disconnect callback must no longer
+            # retain the request/trace cycle or the encoded page body.
+            self.read_trace.cleanup=lambda:None
+            self.read_trace.frames.clear()
 
 
 class ReadDeadline(ValueError):
@@ -135,7 +143,7 @@ class ReadWork:
             if trace:self.reservations[trace] = max(additional_bytes, 16*1024*1024)
 
     def diagnostics(self):
-        return dict(allocator=os.environ.get('PYTHONMALLOC','default'),resident_bytes=process_bytes(), pending=dict(self.pending), running=len(self.running),
+        return dict(allocator=os.environ.get('PYTHONMALLOC','default'),allocator_purge_delay=os.environ.get('MIMALLOC_PURGE_DELAY'),resident_bytes=process_bytes(), pending=dict(self.pending), running=len(self.running),
             reserved_bytes=sum(self.reservations.values()), closed=self.closed,
             bounds=dict(workers=2, selected_workers=1, ordinary_workers=1,
                 selected_admitted=2, ordinary_admitted=3, admitted=5,
@@ -161,6 +169,7 @@ class ReadWork:
             trace.deadline = monotonic()+self.work_seconds
             loop = asyncio.get_running_loop(); future = loop.create_future()
             def finish(result, error):
+                nonlocal finish
                 # This callback alone releases live capacity and reservations.
                 if not returned.is_set():
                     loop.call_later(.001,finish,result,error)
@@ -179,6 +188,10 @@ class ReadWork:
                     result=error=None
                 if not future.done():
                     future.set_result((result, error))
+                # The retry callback references itself through this closure.
+                # Break that cycle now, otherwise its Future retains every
+                # completed multi-megabyte page until cyclic GC happens to run.
+                finish=None
             def worker():
                 result = None; error = None
                 try:
@@ -188,6 +201,11 @@ class ReadWork:
                     if not isinstance(exc, (CalculationStopped, asyncio.CancelledError)):
                         failure(__name__, 'retained_read_worker', exc)
                 finally:
+                    # Large detached JSON graphs are short-lived; Python's
+                    # allocation-count trigger does not reflect their byte size.
+                    # Collect unreachable cycles before this lane admits another
+                    # page, while its existing reservation is still owned.
+                    trace.values['collected_cycles']=gc.collect()
                     try:loop.call_soon_threadsafe(finish, result, error)
                     except RuntimeError:pass  # Process is exiting; daemon ownership ends with it.
             cancelled_at = [monotonic()]

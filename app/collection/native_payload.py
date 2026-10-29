@@ -31,9 +31,15 @@ TRANSPORT_CONTRACT = dict(policy=TRANSPORT_POLICY,
     ingress_callback_bytes=256*KIB, source_inventory_bytes=2*MIB)
 
 
+BULK_TRANSPORT_CONTRACT = dict(TRANSPORT_CONTRACT, policy='native-http-bulk-1',
+    response_wire_bytes=20*MIB, response_entity_bytes=16*MIB, response_decoded_bytes=16*MIB,
+    parse_expansion_bytes=128*MIB,json_structural_tokens=1000000,
+    discovery_wire_bytes=4*1024*MIB,discovery_decoded_bytes=4*1024*MIB)
+
+
 def exact_transport(value):
     """Equality alone accepts floats/bools in integer fields; seals require types."""
-    return (isinstance(value, dict) and value == TRANSPORT_CONTRACT and
+    return (isinstance(value, dict) and value in (TRANSPORT_CONTRACT,BULK_TRANSPORT_CONTRACT) and
             all(type(value[k]) is type(v) for k, v in TRANSPORT_CONTRACT.items()))
 
 

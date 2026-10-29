@@ -13,7 +13,7 @@ from app.comparison.readiness_inputs import instrument
 from app.collection.current_policy import GRANT, aggregate_scope, native_scope, native_markets
 from app.storage.store import Store
 from app.storage.current_rows import CurrentRowStore
-from app.storage.comparison_board import ReadContext, MAX_GAMES
+from app.storage.comparison_board import ReadContext
 
 
 def capture_reservation(db):
@@ -90,15 +90,6 @@ def capture(db, *, config, at, selection=None, authority=None, evaluations=(), s
                 raise ValueError('readiness_selected_members_invalid')
             wanted=set(members)
         planned=capture_batches(db)
-        # Enforce the complete catalog bound before any financial preparation,
-        # including a selected-member request. Never evaluate the first 500
-        # and only then discover that the capture had a 501st occurrence.
-        count=0
-        for ids in planned:
-            preflight=ReadContext(Store(db),at=at,frame=CurrentRowStore(db).capture(include_depth=False,event_ids=ids))
-            count+=sum(any(r['quote']['venue']!='pinnacle' for r in rows) for rows in preflight.prepared['groups'])
-            if count>MAX_GAMES:raise ValueError('board_catalog_capacity')
-        if planned:del preflight
         def components():
             for ids in planned:
                 part=CurrentRowStore(db).capture(include_depth=False,event_ids=ids)

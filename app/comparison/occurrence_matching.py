@@ -39,10 +39,19 @@ class OccurrenceResolver:
         if value in self.aliases:
             return self.aliases[value]
         from app.normalization.registry import Registry
+        registry=Registry.current()
+        if provider=='the_odds_api' and event['competition']=='NCAAF':
+            from app.normalization.college_registry import occurrence_registry
+            registry=occurrence_registry()
         for name, cid in event['participants'].items():
             if cid == value:
-                found = Registry.current().resolve('team', name, league=event['competition'], venue=provider)
+                found = registry.resolve('team', name, league=event['competition'], venue=provider)
                 if found.status == 'resolved':
+                    if provider=='the_odds_api' and event['competition']=='NCAAF' and value!=found.canonical_id:
+                        # A reviewed name may resolve an explicit provider-local
+                        # role, but cannot override a contradictory canonical ID.
+                        expected={f"the_odds_api:NCAAF:{event['id']}:{role}_team" for role in ('home','away')}
+                        if value not in expected:return value
                     return found.canonical_id
         return value
 
@@ -116,8 +125,8 @@ class OccurrenceResolver:
         starts = (a['original_start'] or a['start'], b['original_start'] or b['start'])
         return abs((instant(starts[0]) - instant(starts[1])).total_seconds()) <= 3600
 
-    def resolve(self, records, *, clock):
-        if len(records) > 16000:
+    def resolve(self, records, *, clock, result_projector=None):
+        if len(records) > 32768:
             raise ValueError('Occurrence record capacity')
         at = instant(clock)
         facts = {}; conflicts = {}; source_local = set()
@@ -315,6 +324,10 @@ class OccurrenceResolver:
                 # Matching provenance has its own dependency revision. Schedule
                 # or peer membership changes do not reprice a native instrument.
                 original['orientation_evidence'].append(VERSION+':'+digest([oid,k]))
+                if k[0]=='the_odds_api' and e['competition']=='NCAAF' and any(a!=b for a,b in mapping.items()):
+                    from app.normalization.college_registry import occurrence_registry
+                    registry=occurrence_registry()
+                    original['orientation_evidence'].append(registry.version+':'+registry.fingerprint)
                 applicable=[intervals[p] for p in members if p in intervals]
                 if applicable:
                     ends=[v['effective_until'] for v in applicable if v['effective_until'] is not None]
@@ -324,7 +337,7 @@ class OccurrenceResolver:
                         effective_until=min(ends) if ends else None)
                 next_members[k] = dict(occurrence_id=oid,method=methods[k],
                     facts=deepcopy({n:v for n,v in f.items() if n!='event'}),canonical_roles=canonical_roles)
-            output.append(original)
+            output.append(result_projector(original) if result_projector else original)
         # Keep only the current admitted membership, under the existing latest
         # state bound; no learning from titles or historical quote archive.
         self.members = next_members

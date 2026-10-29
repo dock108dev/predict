@@ -1,0 +1,42 @@
+{
+  "northwestern": {
+    "url": "https://nusports.com/sports/football/schedule?type=home",
+    "path": "app/fixtures/college-identity-20261028/northwestern.html.gz",
+    "sha256": "3d88c2d385b5a9ea239102618b17677e372a78d2637e5b59d9aee673d3d5ed49"
+  },
+  "oregon": {
+    "url": "https://goducks.com/sports/football",
+    "path": "app/fixtures/college-identity-20261028/oregon.html.gz",
+    "sha256": "54b189611c6a4c0873c2a874fba35b100778c4ce177a680bb2ade27b2837d476"
+  },
+  "fau": {
+    "url": "https://fausports.com/news/2026/10/26/football-game-notes-8",
+    "path": "app/fixtures/college-identity-20261028/fau.html.gz",
+    "sha256": "751f531c376ad09c14bd7c277c180d320a18fa868800b1b38c7735f119be1c61"
+  },
+  "temple": {
+    "url": "https://www.temple.edu/athletics",
+    "path": "app/fixtures/college-identity-20261028/temple.html.gz",
+    "sha256": "a36bd5946684127406ea5da93f75bb035d016439aee54efaabffbb6400df3f10"
+  },
+  "ecu": {
+    "url": "https://ecupirates.com/sports/football",
+    "path": "app/fixtures/college-identity-20261028/ecu.html.gz",
+    "sha256": "1e4f54ce954c108d7d865b7dab5c3354a53f8baa20da00a270122becada1f7f6"
+  },
+  "clemson_fsu": {
+    "url": "https://seminoles.com/news/2026/10/19/football-clemson-fsu-set-for-7-00-pm-on-october-31",
+    "path": "app/fixtures/college-identity-20261028/clemson_fsu.html.gz",
+    "sha256": "167ab48642a9ea08627c2cc36c626c1fe4023fe739e8a0801f79834edf0b27e3"
+  },
+  "arizona_tech": {
+    "url": "https://texastech.com/news/2026/10/19/football-texas-tech-arizona-picked-for-early-tv-window",
+    "path": "app/fixtures/college-identity-20261028/arizona_tech.html.gz",
+    "sha256": "e6fe6b4ad8504b1f877c2f9f8303f29d551dc06ab4450ee1212eb5d9f504210a"
+  },
+  "florida_georgia": {
+    "url": "https://georgiadogs.com/news/2026/10/26/football-georgia-takes-on-florida-in-atlanta-for-the-first-time",
+    "path": "app/fixtures/college-identity-20261028/florida_georgia.html.gz",
+    "sha256": "f002c7fa947a9d34d6e3e439a90449848b6218b2b61186795e53c2b96de576bd"
+  }
+}

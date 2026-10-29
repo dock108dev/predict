@@ -85,7 +85,7 @@ class CurrentService:
         self.store = store
         if self.database_mode:
             from .current_database import DatabasePipeline, DatabaseIngressSink
-            self.sink = DatabaseIngressSink(store,self.config)
+            self.sink = DatabaseIngressSink(store,self.config,process_normalization=True)
             self.database = DatabasePipeline(self)
             await self.database.start()
         else:
@@ -142,7 +142,7 @@ class CurrentService:
         except Exception as exc:
             self.issue(venue, 'local_defect', type(exc).__name__)
             if venue=='the_odds_api':
-                try:await call(self, self.workers[venue].state, 'error', 'aggregate_worker_failed', 'Shared aggregate worker failed; native sources continue.')
+                try:await call(self, self.workers[venue].state, 'error', 'aggregate_worker_failed', 'Shared aggregate worker failed. Inspect each native worker status.')
                 except Exception:self.cleanup_errors.append('aggregate_status_failed')
             else:await call(self, self.source_state, venue, 'error', 'Native worker failed; this source is paused.')
 
@@ -215,34 +215,31 @@ class CurrentService:
         self.states=states
 
     @operation
-    def catalog(self, venue, cat):
+    def catalog(self, venue, cat, *, prepared=None, catalog_delta=None):
         if not self.dispatch: raise asyncio.CancelledError()
-        cats = deepcopy(self.sink.reducer.inventory)
-        cats[venue]=deepcopy(cat)
-        # Occurrence evidence supplies season/stage before predicate binding.
-        # Each native source must remain usable without the other catalog.
-        from .current_occurrence import annotate as occurrence
-        from .v1_comparison import annotate
-        occurrence(cats[venue],venue)
-        proven={e['id'] for e in cats[venue]['events'] if e.get('current_occurrence_binding')}
-        blocked=[m for m in cats[venue]['markets'] if m['event_id'] in proven
-                 and m.get('v1_raw_binding',{}).get('status')=='IDENTITY_BLOCKED']
-        if blocked:
-            annotate(dict(cats[venue],markets=blocked),venue,policy='manual-comparison-2')
-        occurrence(cats[venue],venue)
-        if 'kalshi' in cats and 'polymarket_us' in cats:
-            from .admission_enrichment import share_games
-            from .v1_comparison import annotate
-            share_games(cats['polymarket_us'],cats['kalshi'])
-            annotate(cats['polymarket_us'],'polymarket_us',policy='manual-comparison-2')
-            occurrence(cats['polymarket_us'],'polymarket_us')
+        cats = prepared if prepared is not None else prepare_catalog(self.sink.reducer.inventory,venue,cat)
         generation=(self.sink.reducer.generation or 0)+1
         prior_books=set(self.sink.reducer.books)
-        (yield (self.row('coverage_inventory',venue,inventory=cats,generation=generation,
+        worker=self.workers.get(venue)
+        transition=getattr(worker,'subscription_transition',None)
+        invalidated=set() if not transition else transition['invalidated']
+        if catalog_delta is not None and invalidated:
+            keys={key for key in prior_books if key[0]==venue and key[2] in invalidated}
+            catalog_delta=dict(retained=catalog_delta['retained']-keys,withdraw=catalog_delta['withdraw']|keys,
+                               refresh=catalog_delta['refresh']-keys)
+        (yield (self.row('coverage_inventory',venue,inventory=cats,generation=generation,catalog_delta=catalog_delta,
+                                 defer_catalog_refresh=self.database_mode and catalog_delta is not None,
                                  previous_generation=self.sink.reducer.generation), self.states))
+        if self.database_mode and catalog_delta:
+            for key in catalog_delta['refresh'] & self.sink.reducer.books.keys():
+                worker=self.workers.get(key[0])
+                if worker and not worker.closed and self.dispatch:
+                    worker.queue_derived(self.sink.reducer.books[key]['book'])
         affected={key[0] for key in prior_books-set(self.sink.reducer.books)}
         for source in affected:
             worker=self.workers.get(source)
+            lost={key[2] for key in prior_books-set(self.sink.reducer.books) if key[0]==source}
+            if source==venue and transition and lost<=invalidated:continue
             if worker and not worker.closed and hasattr(worker,'request_resync'):
                 (yield from self.source_state.operation(self, source, 'resyncing', 'Catalog identity changed; waiting for a fresh native image.'))
                 worker.request_resync()
@@ -253,12 +250,19 @@ class CurrentService:
         self.books(venue,[book])
 
     @operation
+    def invalidate_market(self,venue,event_id,market_id):
+        if not self.dispatch:raise asyncio.CancelledError()
+        yield (self.row('native_market_invalid',venue,event_id=event_id,market_id=market_id),self.states)
+
+    @operation
     def books(self, venue, books):
         if not self.dispatch: raise asyncio.CancelledError()
         states=deepcopy(self.states)
         book=max(books,key=lambda b:b['raw']['received_at'])
         states[venue]=dict(state='available',reason_code='native_image',reason='Native book images received.',
                            source_at=book['raw'].get('exchange_at'),received_at=book['raw']['received_at'],next_due_at=None)
+        inventory=self.sink.reducer.inventory.get(venue,{})
+        self.coverage.observe_native_prices(venue,books,inventory,'pending')
         try:
             observations=[self.row('prediction_book',venue,book=b,packets=[]) for b in books]
             (yield (self.row('prediction_books',venue,observations=observations), states))
@@ -266,6 +270,7 @@ class CurrentService:
         except Exception as exc:
             from app.diagnostics import failure
             failure(__name__, 'current_image_admission', exc)
+            self.coverage.observe_native_prices(venue,books,inventory,'rejected')
             from .current_database import NativeAdmissionError
             if isinstance(exc,NativeAdmissionError):
                 import logging
@@ -282,8 +287,10 @@ class CurrentService:
             source_at=book['raw'].get('exchange_at'),received_at=book['raw']['received_at'],projected_at=self.store._state['projected_at'],
             quotes=len(self.store.index(self.store._state))))
         inventory=self.sink.reducer.inventory.get(venue,{})
+        self.coverage.observe_native_prices(venue,books,inventory,'admitted')
+        parents={e['id']:e for e in inventory.get('events',[])}
         for value in books:
-            parent=next((e for e in inventory.get('events',[]) if e['id']==value['raw']['ref']['event_id']),None)
+            parent=parents.get(value['raw']['ref']['event_id'])
             if parent and parent.get('competition') in self.coverage.configured[venue]:
                 self.coverage.observe_book(parent['competition'],venue,received_at=value['raw']['received_at'],source_at=value['raw'].get('exchange_at'))
 
@@ -365,7 +372,11 @@ class CurrentService:
             done,pending=await asyncio.wait(tasks,timeout=self.config['cleanup_seconds']) if tasks else (set(),set())
             await self.cleanup_clients(list(self.workers))
             if not await self.ingress.drain(self.config["cleanup_seconds"]):self.cleanup_errors.append("ingress_cleanup_timeout")
+            if self.ingress.catalog_preparer is not None:await self.ingress.catalog_preparer.close()
             if self.database and not await self.database.close():self.cleanup_errors.append('database_cleanup_timeout')
+            if getattr(self.sink,'normalizer',None) is not None:
+                from .bulk_checkpoint import owned_thread
+                await owned_thread(self.sink.close)
             if pending:self.cleanup_errors.append('worker_cleanup_timeout')
             self.cleanup_errors=list(dict.fromkeys(self.cleanup_errors))[:16]
             for venue in (() if self.ingress.tasks else ('kalshi','polymarket_us','novig','prophetx')):
@@ -380,8 +391,52 @@ class CurrentService:
             self.closing=False
             self.observation('service','shutdown',dict(cleanup_complete=self.cleanup_complete,ownership_released=self.ownership.file is None))
 
-    def status(self):
+    def status_accounting(self):
+        """Read-only display facts, prepared away from the acquisition loop."""
+        from .quota_status import projection
+        with projection():
+            ledger=self.workers['the_odds_api'].ledger if 'the_odds_api' in self.workers else self.retained_quota
+            return dict(quota=ledger.snapshot() if ledger is not None else None,
+                        recovery_reason=self.recovery_reason())
+
+    async def status_accounting_async(self, projector):
+        worker=self.workers.get('the_odds_api')
+        ledger=worker.ledger if worker and hasattr(worker,'ledger') else self.retained_quota
+        try:evidence=worker.window_loader() if worker else None
+        except (ValueError,OSError):evidence=None
+        prepared=await projector.read(str(ledger.directory) if ledger else None,
+            ledger.failed if ledger else None,
+            str(self.retained_quota.directory) if self.retained_quota else None,evidence)
+        return dict(quota=prepared['quota'],recovery_reason=self.recovery_reason(prepared=prepared))
+
+    def status(self, *, accounting=None):
+        from .quota_status import projection
+        with projection():
+            return self._status(accounting)
+
+    def _status(self, accounting=None):
         from .current_admin import project
+        if accounting is None:accounting=self.status_accounting()
+        for worker in self.workers.values():
+            for attribute,label in (('pending_since','derived'),('raw_since','raw')):
+                pending=getattr(worker,attribute,{})
+                actual=getattr(worker,'pending_books' if label=='derived' else 'raw_pending',{})
+                worker.metrics['pending_books' if label=='derived' else 'raw_backlog']=len(actual)
+                for mid in set(pending)-set(actual):pending.pop(mid,None)
+                in_flight=getattr(worker,label+'_inflight',{})
+                arrivals=list(pending.values())+list(in_flight.values())
+                worker.metrics[label+'_oldest_pending_seconds']=time.monotonic()-min(arrivals) if arrivals else 0
+            roster=set(getattr(worker,'markets',{}))
+            for label in ('raw','derived'):
+                served=getattr(worker,label+'_served',{})
+                for mid in set(served)-roster:served.pop(mid,None)
+                worker.metrics[label+'_roster_served']=len(roster & served.keys())
+                worker.metrics[label+'_roster_unserved']=len(roster-served.keys())
+                worker.metrics[label+'_oldest_service_seconds']=time.monotonic()-min(served.values()) if served else None
+            if getattr(worker,'receiver',None):worker.receiver.measure()
+            if hasattr(worker,'synchronization'):
+                worker.metrics['synchronization']=worker.synchronization.snapshot(worker.metrics,
+                    enabled=self.dispatch and not worker.closed and not worker.failed)
         raw = dict(schema=VERSION,runtime_id=self.runtime_id,candidate_digest=self.digest,
             attempt_id=self.attempt['attempt_id'] if self.attempt else None,dispatch_enabled=self.dispatch,
             ownership_held=self.ownership.file is not None,cleanup_complete=self.cleanup_complete,
@@ -392,20 +447,21 @@ class CurrentService:
             sink=None if self.sink is None else dict(sequence=self.sink.sequence,**self.sink.metrics),
             exclusions=[] if self.sink is None else self.sink.exclusions,issues=deepcopy(self.issues),
             odds_api_requests=self.workers['the_odds_api'].metrics['requests'] if 'the_odds_api' in self.workers else 0,
-            quota=self.workers['the_odds_api'].ledger.snapshot() if 'the_odds_api' in self.workers else
-                self.retained_quota.snapshot() if self.retained_quota is not None else None)
+            quota=accounting['quota'])
 
-        result=project(self, raw)
+        result=project(self, raw, accounting=accounting)
         if self.database:result['database']=self.database.status()
         return result
 
-    def recovery_reason(self):
+    def recovery_reason(self, *, prepared=None):
         if self.closing:return 'cleanup_in_progress'
         if self.cleanup_errors:return 'cleanup_safety_unresolved'
         if self.store is None or self.store.closed:return 'store_closed'
-        if self.retained_quota is not None:
+        if prepared is not None and prepared['pending']:return prepared['pending']
+        if self.retained_quota is not None and prepared is None:
             from .current_conservative import pending_reason
-            try:reason=pending_reason(self.retained_quota._read())
+            from .quota_status import read
+            try:reason=pending_reason(read(self.retained_quota))
             except (ValueError,OSError):return 'quota_ledger_unavailable'
             if reason:return reason
         if not self.config['enabled']:return 'configuration_disabled'
@@ -416,6 +472,7 @@ class CurrentService:
         if abs((time.time()-self.clock_wall)-(__import__('app.collection.current_clock',fromlist=['continuous']).continuous()-self.clock_mono))>120:return 'clock_continuity_unknown'
         worker=self.workers.get('the_odds_api')
         if worker and hasattr(worker,'ledger'):
+            if prepared is not None:return prepared['ledger_reason']
             try:reason=worker.ledger.recovery_reason(worker.window_loader())
             except (ValueError,OSError):return 'reset_window_evidence_unverified'
             if reason:return reason
@@ -493,3 +550,32 @@ class CurrentService:
                 worker.prepared=False;worker.bootstrapped=False
             self.tasks['the_odds_api']=asyncio.create_task(worker.run(),name='predict-aggregate-recovered')
             return self.status()
+
+
+def prepare_catalog(inventory, venue, cat, *, share_metadata=False):
+    """Detached catalog preparation; caller owns ingress serialization."""
+    def detach(value):
+        if not share_metadata:return deepcopy(value)
+        # Enrichment replaces row fields; immutable nested source metadata and
+        # previous bindings are read-only. Detach every row that it can update.
+        return dict(value,events=[dict(e) for e in value['events']],markets=[dict(m) for m in value['markets']])
+    cats = {source:detach(value) for source,value in inventory.items() if source!=venue}
+    cats[venue]=detach(cat)
+    # Occurrence evidence supplies season/stage before predicate binding.
+    # Each native source must remain usable without the other catalog.
+    from .current_occurrence import annotate as occurrence
+    from .v1_comparison import annotate
+    occurrence(cats[venue],venue)
+    proven={e['id'] for e in cats[venue]['events'] if e.get('current_occurrence_binding')}
+    blocked=[m for m in cats[venue]['markets'] if m['event_id'] in proven
+             and m.get('v1_raw_binding',{}).get('status')=='IDENTITY_BLOCKED']
+    if blocked:
+        annotate(dict(cats[venue],markets=blocked),venue,policy='manual-comparison-2',share_metadata=share_metadata)
+    occurrence(cats[venue],venue)
+    if 'kalshi' in cats and 'polymarket_us' in cats:
+        from .admission_enrichment import share_games
+        from .v1_comparison import annotate
+        share_games(cats['polymarket_us'],cats['kalshi'],share_metadata=share_metadata)
+        annotate(cats['polymarket_us'],'polymarket_us',policy='manual-comparison-2',share_metadata=share_metadata)
+        occurrence(cats['polymarket_us'],'polymarket_us')
+    return cats

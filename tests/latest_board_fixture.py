@@ -111,7 +111,11 @@ class LatestBoardFixture(IsolatedAsyncioTestCase):
             return result
 
     def rows(self):
-        with self.connect() as db:return {r['game_key']:r for r in db.execute('SELECT * FROM latest_board').fetchall()}
+        from app.dashboard.comparison_board import expand_price_fields
+        with self.connect() as db:rows=db.execute('SELECT game_key,dependency_revision,economic_revision,calculated_at,facts FROM latest_board').fetchall()
+        for row in rows:
+            for board in row['facts']['boards'].values():expand_price_fields(board)
+        return {r['game_key']:r for r in rows}
 
     def snapshot(self):
         with self.connect() as db:return latest.snapshot(db,at=self.at.isoformat())
@@ -140,6 +144,8 @@ class LatestBoardFixture(IsolatedAsyncioTestCase):
 
     def assert_source_frame(self, board, *, current=True):
         """Compare compact observations with admitted SQL facts, not finance."""
+        from app.dashboard.comparison_board import expand_price_fields
+        expand_price_fields(board)
         with self.connect() as db:
             records=CurrentRowStore(db).capture()['records']
         members={tuple(m) for g in self.snapshot()['status']['games'] if g['game_key']==board['game_key'] for m in g['members']}

@@ -140,7 +140,7 @@ long identities without horizontal page overflow. Synthetic browser fixtures tes
 these interactions; they do not establish current source availability or full-scale
 performance. See [scanner usage](scanner-usage.md) for the user workflow.
 
-## October 23 interface refinement
+## Interface refinement
 
 The current Dashboard → Odds → Details journey keeps the cool light palette,
 system typography and restrained blue actions from the shared design requirements.
@@ -168,3 +168,24 @@ populated Odds, unavailable estimates, Original Inputs, empty and failed reads.
 Expanded conditional results, financial Details, enlarged text and long names were
 also inspected. These are presentation checks, not owner or new-user acceptance,
 current source qualification or commercial readiness.
+
+## Raw-first Odds
+
+Ordinary Odds now groups native books locally by source identity, showing native
+sides/units and separate synchronization or scheduled-refresh status. All received
+books are paged; no game selection is required. Original Inputs retains the clicked
+frame, pages depth and loads optional captured financial evidence independently.
+Pinnacle is reference-only. A complete streamed export and unqualified native-frame
+inspection are available from the view. Search/filter URL state, unchanged row
+nodes, scroll and focus are retained during polls. See [raw prices](raw-prices.md)
+for complete browser reconciliation and the remaining qualification boundaries.
+
+
+Odds uses native filter controls with a Clear filters action and marks its current
+navigation link. During a read, the price region exposes `aria-busy` and page,
+refresh and retry buttons are disabled; page navigation cannot overlap a pending
+read. Status text distinguishes an initial load failure from failed refresh with
+last-known rows. Previous page / Next page labels describe navigation explicitly,
+and Original inputs buttons include the game, venue and outcome in their accessible
+names. Filters may still change during a read; the existing generation guard
+loads the latest requested filters afterward.

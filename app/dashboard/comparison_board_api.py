@@ -119,7 +119,7 @@ def mount(app,provider):
             if view not in ('details','inputs'):
                 result=board(latest,game,view=view,filter=req.query.get('filter','positive'))
                 from app.storage.selected_frame import bind_token
-                captured=read_frames.capture({},[encoded(dict(game_key=game,row=latest['rows'].get(game)))],context='selected',authority=latest['read_authority'])
+                captured=read_frames.capture({},[encoded(dict(game_key=game,row=latest['rows'].get(game)))],context='completed',authority=latest['read_authority'])
                 bind_token(result,captured.token)
                 return result
             if view=='details' and (not latest['owner'].get('active') or 'background_calculations_unavailable' in latest['reasons']):
@@ -260,10 +260,14 @@ def mount(app,provider):
     async def lease(req):
         token=req.query.get('read_token','')
         if not 16<=len(token)<=256:return web.json_response(dict(reason='current_slate_read_token_required'),status=400)
+        if req.method=='DELETE':
+            read_frames.discard(token)
+            return web.json_response(dict(released=True,provider_requests=0))
         try:read_frames.lease(token)
         except ValueError as exc:return web.json_response(dict(reason=str(exc) if str(exc) in PUBLIC_READ_REASONS else 'current_inputs_unavailable',provider_requests=0),status=409)
         return web.json_response(dict(retained=True,provider_requests=0))
     app.router.add_get('/api/boards/read-lease',lease)
+    app.router.add_delete('/api/boards/read-lease',lease)
     app.router.add_get('/api/boards/read-diagnostics',diagnostics)
     app.router.add_get('/api/boards/{view}',handle)
     async def coverage_handle(req):

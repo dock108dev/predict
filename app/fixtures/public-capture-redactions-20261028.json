@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "reviewed_at": "2026-10-28",
+  "captures": [
+    {
+      "path": "app/fixtures/pinnacle-rules-20261028.html",
+      "original_sha256": "533a0c5a45763bf18705986a17cef57c7a2dc67a85b626c8c0d2429b873dca96",
+      "sha256": "1606eed75ae55d44872bb259cf192bfcd3fdacfdaf1a166498d98d012cad4af2",
+      "transformation": "Removed scanner-identified embedded tokens and credential-bearing documentation example; original capture preserved privately. No fee/rule prose edited."
+    },
+    {
+      "path": "app/fixtures/prophetx-fees-review-20261028.html",
+      "original_sha256": "be3f0545c1db71e7e91ac3fe97bceb873b2f6adb8fcb434e85c01085e5439ab8",
+      "sha256": "387c544fad46b0ad9f4c344cda1162a5ab62293ce00aadd1ae4060ec06b27329",
+      "transformation": "Removed scanner-identified embedded tokens and credential-bearing documentation example; original capture preserved privately. No fee/rule prose edited."
+    }
+  ]
+}

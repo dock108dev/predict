@@ -41,7 +41,7 @@ class CapturedSlateReads(TestCase):
 
     def setUp(self):
         self.now=0
-        self.frames=CapturedReads(clock=lambda:self.now,resource_bytes=lambda:0)
+        self.frames=CapturedReads(clock=lambda:self.now,ttl_seconds=30,resource_bytes=lambda:0)
         self.frame=deepcopy(self.template)
         self.authority=hashed([self.frame['read_authority'],False])
         self.snapshot=patch.object(latest_board,'snapshot',side_effect=lambda *a,**k:deepcopy(self.frame)).start()
@@ -87,6 +87,16 @@ class CapturedSlateReads(TestCase):
         self.db.execute.assert_not_called()
         self.finance.assert_not_called()
 
+    def test_catalog_shares_match_meaning_without_hiding_conflicts(self):
+        game=self.frame['status']['games'][0]
+        game['matches']=[dict(status='matched',conflicts=[],revision=str(i),method='provider') for i in range(100)]
+        game['matches'].append(dict(status='unresolved',conflicts=['schedule'],revision='conflict',method='provider'))
+        first=self.read();catalog=first['games'][0]
+        self.assertEqual(catalog['match_count'],101)
+        self.assertEqual(catalog['matches'],[dict(status='matched',conflicts=[],method='provider'),
+            dict(status='unresolved',conflicts=['schedule'],method='provider')])
+        self.assertEqual(self.continuation(first)['games'],first['games'])
+
     def test_crossed_contexts_and_revision_are_explicit(self):
         first=self.read()
         for change in (dict(view='ev'),dict(filter='positive'),dict(limit=25),
@@ -131,6 +141,28 @@ class CapturedSlateReads(TestCase):
         self.assertEqual(len(self.frames.frames),0)
         self.assertEqual(self.frames.retained_bytes,0)
 
+    def test_forward_pages_renew_inactivity_without_changing_captured_clocks(self):
+        first=self.read(limit=20)
+        self.now=25
+        middle=self.continuation(first,offset=20,limit=20)
+        self.now=45
+        replay=self.continuation(first,offset=20,limit=20)
+        self.assertEqual(middle,replay)
+        self.now=54
+        last=self.continuation(first,offset=40,limit=20)
+        self.assertTrue(last['coverage']['complete'])
+        self.assertEqual(first['read_at'],last['read_at'])
+        self.assertEqual(first['read_expires_at'],last['read_expires_at'])
+        self.assertEqual(self.snapshot.call_count,1)
+
+    def test_page_replay_does_not_renew_inactivity(self):
+        first=self.read()
+        self.now=25
+        self.continuation(first,offset=0)
+        self.now=30
+        with self.assertRaisesRegex(ValueError,'current_slate_read_expired'):
+            self.continuation(first)
+
     def test_page_expiring_during_render_is_refused_and_released(self):
         def expire(*args,**kwargs):
             self.now=30
@@ -153,16 +185,12 @@ class CapturedSlateReads(TestCase):
         self.now=31;self.frames.cleanup()
         self.assertEqual(self.frames.retained_bytes,0)
 
-    def test_concurrent_tabs_get_independent_frames_and_oldest_eviction(self):
-        pages=[self.read() for _ in range(5)]
-        self.assertEqual(len({p['read_token'] for p in pages}),5)
+    def test_concurrent_tabs_cannot_evict_active_traversals(self):
+        pages=[self.read() for _ in range(4)]
+        with self.assertRaisesRegex(ValueError,'current_slate_read_capacity'):
+            self.read()
         self.assertEqual(len(self.frames.frames),4)
-        self.assertLessEqual(self.frames.retained_bytes,self.frames.maximum_bytes)
-        with self.assertRaisesRegex(ValueError,'current_slate_read_expired'):
-            self.continuation(pages[0])
-        self.continuation(pages[1])
-        self.assertEqual(len(self.frames.frames),4)
-        for first in pages[2:]:self.continuation(first)
+        for first in pages:self.continuation(first)
         self.assert_completed_cache()
 
     def test_byte_capacity_refuses_and_fresh_read_can_recover(self):
@@ -174,17 +202,16 @@ class CapturedSlateReads(TestCase):
         first=self.read();self.continuation(first)
         self.assert_completed_cache()
 
-    def test_byte_pressure_evicts_older_frames_without_duplicate_per_page_copies(self):
+    def test_byte_pressure_refuses_new_capture_preserving_active_pages(self):
         first=self.read();size=self.frames.retained_bytes
         self.frames.maximum_bytes=size+100
-        second=self.read()
+        with self.assertRaisesRegex(ValueError,'current_slate_read_capacity'):
+            self.read()
         self.assertEqual(len(self.frames.frames),1)
         self.assertEqual(self.frames.retained_bytes,size)
-        with self.assertRaisesRegex(ValueError,'current_slate_read_expired'):
-            self.continuation(first)
-        self.continuation(second,offset=0)
+        self.continuation(first,offset=0)
         self.assertEqual(self.frames.retained_bytes,size)
-        self.continuation(second)
+        self.continuation(first)
         self.assert_completed_cache()
 
     def test_process_guard_refuses_before_snapshot_or_page_allocation(self):

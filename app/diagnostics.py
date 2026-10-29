@@ -3,7 +3,7 @@ import logging
 from pathlib import Path
 
 
-def failure(logger_name, operation, error):
+def failure_details(error):
     # Do not use exc_info: provider exception strings/chains may contain credentials.
     frames = []
     tb = error.__traceback__
@@ -11,5 +11,10 @@ def failure(logger_name, operation, error):
         code = tb.tb_frame.f_code
         frames.append(f'{Path(code.co_filename).name}:{tb.tb_lineno}:{code.co_name}')
         tb = tb.tb_next
+    return dict(exception=type(error).__name__, frames=frames)
+
+
+def failure(logger_name, operation, error):
+    details = failure_details(error)
     logging.getLogger(logger_name).error('%s failed (%s); frames=%s',
-        operation, type(error).__name__, ' > '.join(frames) or 'unavailable')
+        operation, details['exception'], ' > '.join(details['frames']) or 'unavailable')

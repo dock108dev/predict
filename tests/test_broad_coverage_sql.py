@@ -37,17 +37,18 @@ class BroadCoverageSQL(IsolatedAsyncioTestCase):
     async def test_capture_plan_avoids_jit_without_changing_session_policy(self):
         from app.storage import coverage_latest
         await self.owner.close()
-        capture_sql=coverage_latest._capture_stream_sql
+        capture_sql=lambda: coverage_latest._PUBLICATION_SQL
+        original_totals=coverage_latest._stream_capture_totals
         plans=[]
         with self.connect() as db:
             db.execute('SET jit=on')
             db.execute('SET jit_above_cost=0')
-            def planned_capture():
+            def planned_capture(connection):
                 query=capture_sql()
                 plan=db.execute('EXPLAIN (FORMAT JSON) '+query).fetchone()['QUERY PLAN'][0]
                 plans.append(('JIT' in plan,db.execute('SHOW jit').fetchone()['jit']))
-                return query
-            with patch.object(coverage_latest,'_capture_stream_sql',side_effect=planned_capture):
+                return original_totals(connection)
+            with patch.object(coverage_latest,'_stream_capture_totals',side_effect=planned_capture):
                 result=reconcile(db)
             self.assertTrue(result['published'])
             self.assertEqual(len(plans),1)
@@ -328,7 +329,9 @@ class BroadCoverageSQL(IsolatedAsyncioTestCase):
             streamed=db.execute("SELECT octet_length((capture-'rows')::text)+COALESCE((SELECT max(octet_length(r::text)) FROM jsonb_array_elements(capture->'rows') r),0) n FROM ("+_PUBLICATION_CAPTURE_SQL+") p").fetchone()['n']
             self.assertGreater(old_total,streamed)
             prior=db.execute('SELECT revision FROM coverage_latest').fetchone()
-            with patch('app.storage.coverage_latest.MAX_CAPTURE_BYTES',size-1):
+            from app.storage.coverage_latest import _stream_capture_totals
+            streamed_size=max(int(r['largest']) for r in _stream_capture_totals(db))
+            with patch('app.storage.coverage_latest.MAX_CAPTURE_BYTES',streamed_size-1):
                 with self.assertRaisesRegex(ValueError,'coverage_capture_capacity'):reconcile(db)
             self.assertEqual(db.execute('SELECT revision FROM coverage_latest').fetchone(),prior)
             report=os.environ.get('PREDICT_CI_REPORT_ROOT')

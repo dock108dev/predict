@@ -145,4 +145,25 @@ class StorageAdmissionRepair(unittest.TestCase):
             with self.assertRaisesRegex(QuotaStop,'context'):self.q.repair_admission(evidence,owner=self.owner,candidate=CANDIDATE)
 
 
-if __name__=='__main__':unittest.main()
+
+
+    def test_lock_retry_proof_preserves_holds_and_rejects_missing_stop_test(self):
+        proof=dict(self.proof,repair='database_ingress_lock_retry',sqlstate='55P03',
+            replay_kind='disposable_lock_contention',transaction_retries=1,
+            original_clocks_preserved=True,stop_verified=True)
+        with self.owned_context():
+            for changes in (dict(stop_verified=False),dict(sqlstate='other'),dict(transaction_retries=0),
+                            dict(original_clocks_preserved=False),dict(response_receipt_sha256='0'*64)):
+                evidence=self.retained_evidence(dict(proof,**changes));evidence['repair']=proof['repair']
+                before=self.q._read()
+                with self.assertRaisesRegex(QuotaStop,'evidence'):
+                    self.q.repair_admission(evidence,owner=self.owner,candidate=CANDIDATE)
+                self.assertEqual(self.q._read()['attempts'],before['attempts'])
+                self.assertEqual(self.q._read()['pause'],before['pause'])
+            evidence=self.retained_evidence(proof);evidence['repair']=proof['repair']
+            before=self.q._read()
+            self.q.repair_admission(evidence,owner=self.owner,candidate=CANDIDATE)
+            after=self.q._read()
+            self.assertIsNone(after['pause'])
+            for key in ('attempts','observation','conservative_recoveries','cycle','next_due_at'):
+                self.assertEqual(before[key],after[key])

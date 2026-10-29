@@ -23,7 +23,7 @@ const side = (v) =>
     no: "NO",
     long: "Long",
     short: "Short",
-    bookmaker_outcome: "winner",
+    bookmaker_outcome: "bookmaker outcome",
   })[String(v).toLowerCase()] || v;
 const unit = (v) =>
   ({ stake_usd: "USD stake", dollar_face_contracts: "$1 face contracts" })[v] ||
@@ -1318,6 +1318,7 @@ function renderSavedDetails(v, { root, participants }) {
         side(q.source.native_side),
     );
   root.append(clockedText("p", now => quotes.map(q => observationStatus(q, now)).join(" · ")));
+  for (const q of quotes) root.append(el("p", venue(q.venue) + " source " + time(q.times.source_at) + " · Received " + time(q.times.received_at)));
   const primary = primaryComparisonMetric(selected, v.pair ? "arbs" : "ev");
   if (primary) {
     const headline = el("div", undefined, "metrics selected-primary");
@@ -1325,12 +1326,52 @@ function renderSavedDetails(v, { root, participants }) {
     root.append(headline);
   }
   const gross = selected.gross_decisive_benchmark;
+  if (gross?.available === false && gross.reason) textLine(root,"Gross comparison unavailable",financialGap(gross.reason));
   if (gross?.available && numeric(gross.return_percent) !== null) {
     const companion = el("section", undefined, "gross-benchmark-companion");
     companion.append(el("h3", "Gross decisive benchmark"));
     metric(companion, (gross.state === "numeric_last_known" ? "Last-known · " : "") + "Return on normal acquisition", gross.return_percent, x => (numeric(x) > 0 ? "+" : "") + percent(x));
     companion.append(el("p", "Per $1 normal claim, before fees and exceptional settlement. No executable quantity, complete net EV or covered arbitrage is established."));
+    companion.append(el("p", "Exact outcome and line, conditional on a decisive result. Ties, pushes and exceptional settlement are excluded."));
+    const predicate = gross.selected_predicate;
+    const operators = {gt:">",ge:"≥",lt:"<",le:"≤"};
+    const domain = value => ({home_margin:"Home score margin",combined_score:"Combined score"}[value] || words(value));
+    if (predicate) {
+      textLine(companion, "Selected native condition", domain(predicate.domain) + " " + operators[predicate.operator] + " " + predicate.threshold);
+      textLine(companion, "Reference conditioning", "Score unequal to " + predicate.threshold + "; equality and exceptional settlement excluded");
+      if (gross.selected_equality) textLine(companion, "Native equality treatment", words(gross.selected_equality.treatment || "See original contract"));
+    }
+    if (gross.currentness_reasons?.length) textLine(companion, "Last-known reasons", gross.currentness_reasons.map(words).join(", "));
+    for (const ref of gross.reference_originals || []) {
+      const s = ref.selection || {}, line = s.signed_line;
+      const name = s.label || s.native?.original_wording || participant(s.participant || s.participant_id) || "Reference outcome";
+      const label = name + (line == null ? "" : " " + (numeric(line) > 0 ? "+" : "") + line) + " · " + words(s.family || ref.market_identity?.family) + " · " + words(s.scope?.period || ref.market_identity?.period);
+      if (typeof s.predicate === "string") textLine(companion, "Reference condition", words(s.predicate));
+      else if (s.predicate?.domain && operators[s.predicate.operator] && s.predicate.threshold != null)
+        textLine(companion, "Reference condition", domain(s.predicate.domain) + " " + operators[s.predicate.operator] + " " + s.predicate.threshold);
+      textLine(companion, "Pinnacle · " + label, String(ref.decimal_odds) + " decimal odds");
+      companion.append(el("small", "Source " + time(ref.source_at || ref.market_at || ref.book_at) + " · Received " + time(ref.received_at)));
+    }
+    textLine(companion, "Selected decisive probability", String(gross.selected_decisive_probability) + " (" + percent(numeric(gross.selected_decisive_probability) * 100) + ")");
+    textLine(companion, "Cost per $1 normal claim", String(gross.acquisition_usd_per_normal_claim) + " USD");
+    companion.append(el("p", "Gross return = 100 × (decisive probability ÷ claim cost − 1). Pinnacle weights use proportional no-vig normalization."));
     root.append(companion);
+  }
+  const conditional = selected.conditional_trade_benchmark;
+  if (conditional?.available === false && conditional.reason) textLine(root,"Fee scenario unavailable",financialGap(conditional.reason));
+  if (conditional?.available) {
+    const section = el("section", undefined, "conditional-trade-benchmark");
+    section.append(el("h3", "Conditional trade-fee benchmark"));
+    metric(section, (conditional.state === "numeric_last_known" ? "Last-known · " : "") + "Conditional return", conditional.return_percent, percent);
+    textLine(section, "Scenario", conditional.normalization_label || "per $1 modeled risk");
+    textLine(section, "Modeled risk including trade fee", String(conditional.normalization_risk_usd) + " USD");
+    textLine(section, "Trade fee in modeled scenario", money(conditional.trade_fee_usd));
+    section.append(el("p", conditional.condition));
+    section.append(el("p", conditional.formula));
+    section.append(el("p", "Excluded: " + conditional.exclusions.join(", ") + "."));
+    section.append(el("p", conditional.meaning));
+    section.append(el("small", "Fee evidence reviewed " + time(conditional.evidence.reviewed_at) + "; withdraw at " + time(conditional.evidence.review_before) + "."));
+    root.append(section);
   }
   if (selected.modeled_basis) {
     const basis = selected.modeled_basis;
@@ -1488,6 +1529,21 @@ function renderSavedDetails(v, { root, participants }) {
 
 // Source: opportunity-dashboard.js
 
+function financialGap(reason) {
+  return ({
+    exact_pinnacle_opposition_unavailable: "No complete Pinnacle pair for this exact event, outcome and line in the retained inputs.",
+    exact_native_reference_pair_absent: "No complete Pinnacle pair for this native outcome and exact line in the matched event.",
+    reference_scoring_scope_conflict: "Native and reference scoring rules are not yet verified to agree, including overtime or shootout treatment.",
+    gross_exact_native_score_identity_unsupported: "The native score condition or scoring rules are not sufficiently supported for this comparison.",
+    gross_decisive_winner_identity_unsupported: "The full-game winner identity or overtime rules remain unsupported.",
+    explicit_two_way_benchmark_required: "A complete, occurrence-matched two-way reference is missing.",
+    estimate_source_clock_unknown: "The source has not supplied a usable price timestamp.",
+    conditional_fee_review_expired_or_not_effective: "The captured fee review is outside its applicability interval. Earlier values remain last-known.",
+    prophetx_account_fee_model_and_rate_unbound: "ProphetX sets the fee model and rate per account; its public API cannot supply that rate. Gross comparison remains available.",
+    kalshi_instrument_fee_schedule_unbound: "The effective Kalshi fee schedule and multiplier are not bound to this instrument. Gross comparison remains available.",
+  })[reason] || words(reason);
+}
+
 // Compare supplied exact values before formatting. This is ordering, not finance.
 function compareExactPercent(a, b) {
   function rational(value) {
@@ -1511,6 +1567,10 @@ const dashboardMetrics = {
   known: ["buffered_conditional_known_state_minimum_usd", "buffered_conditional_known_state_minimum_return_percent", "Listed known outcomes margin"],
 };
 function dashboardMetric(row, kind) {
+  if (kind === "trade") {
+    const m = row.conditional_trade_benchmark;
+    return m?.available && numeric(m.return_percent) !== null ? {value:m.return_percent,state:m.state,label:"Conditional trade-fee benchmark · " + (m.normalization_label || "per $1 modeled risk")} : null;
+  }
   if (kind === "gross") {
     const g = row.gross_decisive_benchmark;
     return g?.available && numeric(g.return_percent) !== null ? {value:g.return_percent, state:g.state, label:"Gross decisive benchmark"} : null;
@@ -1545,10 +1605,12 @@ function dashboardScope(slate, kind, filters = {}) {
   // Board completeness includes refused candidates not materialized as rows.
   const complete = rows.length > 0 && relevant.length > 0 && relevant.every(b => b.availability?.evaluation_complete === true) && !pending && !errors.length && !unknown && !lastKnown && !slate.stopped && !slate.dashboard_error;
   const failed = !!slate?.dashboard_error || errors.length > 0 || rows.some(e => e.row.availability?.metrics?.[field]?.state === "calculation_failed") || reasons.some(r => /calculation.*failed/.test(r));
-  const state = slate?.dashboard_error ? "failed" : positive.length ? complete ? "positive" : "partial" : complete ? "evaluated_no_positive" : current.length ? "partial" : lastKnown ? "last_known" : failed && (!relevant.length || rows.length > 0 && rows.every(e => e.row.availability?.metrics?.[field]?.state === "calculation_failed")) ? "failed" : !rows.length && !reasons.length || pending && !reasons.length ? "pending" : "unavailable";
+  const state = !slate ? "loading" : slate?.dashboard_error ? "failed" : !errors.length && (!games.size || (family || period || source) && boards.length && !relevant.length && !boards.some(b => b.delivery_state === "pending")) ? "no_matches" : positive.length ? complete ? "positive" : "partial" : complete ? "evaluated_no_positive" : current.length ? "partial" : lastKnown ? "last_known" : failed && (!relevant.length || rows.length > 0 && rows.every(e => e.row.availability?.metrics?.[field]?.state === "calculation_failed")) ? "failed" : !rows.length && !reasons.length || pending && !reasons.length ? "pending" : "unavailable";
   return {rows,positive,state: errors.length && boards.length && !slate?.dashboard_error ? "partial" : state,reasons,pending,failed,complete,errors,games};
 }
 function dashboardMessage(scope, kind) {
+  if (scope.state === "loading") return "Loading saved results. Prices remain available while this list loads.";
+  if (scope.state === "no_matches") return "No retained games or markets match these filters. Clear or change the filters to browse available results.";
   if (scope.state === "positive") return "Current positive results, highest return first.";
   if (scope.state === "evaluated_no_positive") return "No positive results in the evaluated scope. Zero and negative comparisons are below.";
   if (scope.state === "partial") return "Partially evaluated. Available results are shown; other results remain unknown.";
@@ -1618,7 +1680,7 @@ function drawOpportunityDashboard(content, slates, filters, onDetails, kinds = [
   content.append(grid);
   const prices=el("section",undefined,"opportunity-prices");
   const link=el("a","Browse available prices →");
-  const query=new URLSearchParams(Object.fromEntries(Object.entries({league:filters.league || "",venue:filters.source || "",family:filters.family || ""}).filter(([,v])=>v)));
+  const query=new URLSearchParams(Object.fromEntries(Object.entries({sport:filters.league || "",venue:filters.source || "",family:filters.family === "winner" ? "moneyline" : filters.family || "",period:filters.period || "",search:filters.search || ""}).filter(([,v])=>v)));
   link.href="/odds"+(query.size?"?"+query:"");
   prices.append(link,el("p","Inspect source prices and their original inputs. Gross comparisons exclude fees and exceptional settlement."));
   if (kinds.length > 1 && !kinds.some(kind => scopes[kind].positive.length)) content.replaceChildren(prices,grid);
@@ -1632,7 +1694,7 @@ function drawOpportunityDashboard(content, slates, filters, onDetails, kinds = [
   }
   content.append(results);
   const research=el("div",undefined,"opportunity-research");
-  for (const [kind,source,title] of [["ev","ev","Net EV · zero and negative"],["arbs","arbs","Covered minimum · zero and negative"],["conditional","ev","Conditional EV"],["decisive","arbs","Decisive hedges"],["known","arbs","Listed known outcome hedges"],["gross","ev","Gross comparisons · before fees and exceptional settlement"]]) {
+  for (const [kind,source,title] of [["ev","ev","Net EV · zero and negative"],["arbs","arbs","Covered minimum · zero and negative"],["conditional","ev","Conditional EV"],["trade","ev","Conditional trade-fee benchmarks"],["decisive","arbs","Decisive hedges"],["known","arbs","Listed known outcome hedges"],["gross","ev","Gross comparisons · before fees and exceptional settlement"]]) {
     if (!scopes[source]) continue;
     const entries=scopes[source].rows.filter(e => {
       const m=dashboardMetric(e.row,kind);
@@ -1646,13 +1708,28 @@ function drawOpportunityDashboard(content, slates, filters, onDetails, kinds = [
       const old=!!slates[source]?.dashboard_error || group.every(e=>dashboardMetric(e.row,kind).state !== "numeric_current");
       const d=el("details",undefined,"opportunity-group");d.dataset.key="research:"+kind+":"+old;
       d.append(el("summary",(old?"Last-known · ":"")+(old && kind === "ev" ? "Net EV research" : old && kind === "arbs" ? "Covered minimum research" : title)+" ("+group.length+")"));
-      if(kind === "gross")d.append(el("p","Decisive winners only, per $1 normal claim. Before fees and exceptional settlement; no executable quantity or net-EV claim."));
+      if(kind === "trade")d.append(el("p","Pregame conditional trade-fee scenarios. Each row states its modeled risk or contract basis. Excludes ties, pushes, voids and exceptional settlement. Not calibrated full net EV or executable sizing."));
+      else if(kind === "gross")d.append(el("p","Exact two-way outcome and line, conditional on a decisive result. Before fees, ties, pushes and exceptional settlement; no executable quantity or net-EV claim."));
       else d.append(el("p","Highest percentage first. Funding, assumptions and quantities are in Details."));
       for(const e of group)renderRow(d,e,kind);
       research.append(d);
     }
   }
   content.append(research);
+  if (scopes.ev) {
+    const counts = new Map();
+    for (const {row} of scopes.ev.rows) {
+      for (const metric of [row.gross_decisive_benchmark,row.conditional_trade_benchmark]) {
+        if (metric?.available === false && metric.reason) counts.set(metric.reason,(counts.get(metric.reason) || 0)+1);
+      }
+    }
+    if (counts.size) {
+      const gaps=el("details",undefined,"financial-gaps");gaps.dataset.key="financial-gaps";
+      gaps.append(el("summary","Why stronger results are unavailable"),el("p","These are result-row limitations, not missing-offering counts. Full net EV also needs supported settlement cashflows and full-outcome probabilities; unknowns are never zero."));
+      for (const [reason,count] of [...counts].sort((a,b)=>b[1]-a[1])) gaps.append(el("p",count+" rows · "+financialGap(reason)));
+      content.append(gaps);
+    }
+  }
   if (kinds.length === 1) {
     const slate = slates.ev, scope = scopes.ev, details = el("details"); details.dataset.key = "ev-scope-evidence";
     details.append(el("summary", "Calculation coverage & evidence"));
@@ -1807,10 +1884,13 @@ function draw(v) {
   $("applied").textContent = detailsLabel === sharedLabel ? detailsLabel :
     "Details " + detailsLabel + ". Shared comparisons " + sharedLabel;
   const pending = v.boards.filter(b => b.delivery_state === "pending").length;
+  const firstPending = v.boards.filter(b => b.delivery_state === "pending" && !b.calculated_at).length;
+  const refreshing = pending - firstPending;
+  const calculationNote = [firstPending ? firstPending + " games awaiting first calculation" : "", refreshing ? "Refreshing captured results for " + refreshing + " games" : ""].filter(Boolean).join("; ");
   const unavailable = v.storage?.state === "unavailable",
     storageLimit = String(v.storage?.error || "").includes("storage_cap") || (v.storage?.sql_bytes != null && v.storage?.sql_bytes >= v.storage?.sql_byte_cap);
   const storageNote = unavailable ? (storageLimit ? "Saving paused — storage limit reached. Open Admin to review storage." : "Saving updates paused. Source status is in Admin.") : v.storage?.state === "catching_up" ? "Saving new inputs…" : "";
-  setStatus(storageNote || (stopped ? "Collection stopped. Existing observations remain available." : pending ? view === "odds" ? "Updating stored observations for " + pending + " games. Original source clocks remain visible." : pending + " calculations pending. Prices remain available." : ""), unavailable ? "error" : pending ? "busy" : "ready");
+  setStatus(storageNote || (stopped ? "Collection stopped. Existing observations remain available." : pending ? view === "odds" ? "Updating stored observations for " + pending + " games. Original source clocks remain visible." : calculationNote + ". Prices remain available." : ""), unavailable ? "error" : pending ? "busy" : "ready");
   if (failures) setStatus("Current reads unavailable. Prior values have unverified freshness.", "error");
   if (view === "ev") {
     preserveContent(() => drawOpportunityDashboard($("content"), {ev:{...v, stopped:stopped || v.stopped, ...(failures ? {dashboard_error:$("read-error").textContent || "Current read failed"} : {})}},
@@ -1885,7 +1965,7 @@ async function pullDashboard() {
   polling.cancel();
   if (failures >= 4) return;
   const generation = ++pullGeneration;
-  let succeeded = 0;
+  let succeeded = 0, requiresReload = false;
   for (const kind of ["arbs","ev"]) {
     try {
       const value = await readSlate(read,{...context(),view:kind,filter:"all"},{isCurrent:()=>generation === pullGeneration && !unloading});
@@ -1897,6 +1977,7 @@ async function pullDashboard() {
       polling.setSlate(value);
     } catch(e) {
       if(e.name === "AbortError" || generation !== pullGeneration) return;
+      requiresReload ||= e.requiresReload === true;
       dashboardSlates[kind] = {...(dashboardSlates[kind] || {}),dashboard_error:e.message};
     }
     const available = dashboardSlates.ev?.policy ? dashboardSlates.ev : dashboardSlates.arbs;
@@ -1908,7 +1989,7 @@ async function pullDashboard() {
       draw(current);
     } else preserveContent(()=>drawOpportunityDashboard($("content"),dashboardSlates,{},openDetails));
   }
-  failures = succeeded ? 0 : failures + 1;
+  failures = requiresReload ? 4 : succeeded ? 0 : failures + 1;
   const failed = Object.values(dashboardSlates).some(v=>v?.dashboard_error);
   $("retry").hidden = !failed;
   $("retry").textContent = "Reload results";
@@ -1926,6 +2007,7 @@ async function pull() {
   try {
     const value = await readSlate(read, c, {
       isCurrent: () => generation === pullGeneration && !unloading,
+      onProgress: ({loaded,total}) => { if (!current) setStatus(`Loading saved results · ${loaded} of ${total} games…`, "busy"); },
       onRecovery: () => setStatus(current ? "Current reads unavailable. Prior values have unverified freshness. Recovering stored observations…" : "Recovering stored observations…", "busy"),
     });
     if (!value || generation !== pullGeneration) return;
@@ -1971,7 +2053,7 @@ async function pull() {
   } catch (e) {
     if (e.name === "AbortError" || generation !== pullGeneration) return;
     polling.setSlate(null);
-    failures++;
+    failures = e.requiresReload ? 4 : failures + 1;
     if (!games.length) {
       $("game").disabled = true;
       $("game").replaceChildren(el("option", "Games unavailable"));
@@ -1989,7 +2071,10 @@ async function pull() {
       $("settings").hidden = true;
       $("filters").hidden = true;
     }
-    setStatus(current ? "Current reads unavailable. Prior values have unverified freshness. Retry or check sources in Admin." : "Couldn’t load current games. Retry or check sources in Admin.", "error");
+    setStatus(e.requiresReload
+      ? "This captured list expired or became unavailable. Reload results to capture a new list; your filters and position are kept where possible. Prior values have unverified freshness."
+      : current ? "Current reads unavailable. Prior values have unverified freshness. Retry or check sources in Admin." : "Couldn’t load current games. Retry or check sources in Admin.", "error");
+    $("retry").textContent = "Reload results";
     $("read-error").textContent = e.message;
     $("read-diagnostics").hidden = false;
     $("retry").hidden = false;
@@ -2008,6 +2093,7 @@ function showDialog(button) {
 }
 function closeDetails() {
   const wasOpen = $("details").open;
+  if (detail?.selectedToken) fetch("/api/boards/read-lease?read_token=" + encodeURIComponent(detail.selectedToken), {method:"DELETE"}).catch(() => {});
   detail = null;
   detailRead.cancel();
   originalRead.cancel();
@@ -2064,7 +2150,7 @@ async function refreshDetails() {
       8388608,
     );
     if (!v || detail !== held) return;
-    if (v.read_token) held.identity.read_token = v.read_token;
+    if (v.read_token) { held.identity.read_token = v.read_token; held.selectedToken = v.read_token; }
     held.rendered = true;
     const open = [...$("detail-content").querySelectorAll("details[open]")].map(
         (x, i) => x.dataset.key || String(i),
@@ -2132,6 +2218,7 @@ async function openOriginal(q, button, selectedGame) {
       8388608,
     );
     if (!inputs || held !== detail) return;
+    held.selectedToken = inputs.read_token;
     renderFrame(inputs);
   } catch (e) {
     if (e.name !== "AbortError" && held === detail) {

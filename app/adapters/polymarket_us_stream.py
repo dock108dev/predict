@@ -22,8 +22,8 @@ WS_PATH = '/v1/ws/markets'
 WS_URL = 'wss://api.polymarket.us' + WS_PATH
 
 
-def subscription(slugs, request_id, dialect='camel'):
-    if not 1 <= len(slugs) <= 100 or len(set(slugs)) != len(slugs) or any(not isinstance(s, str) or not s for s in slugs):
+def subscription(slugs, request_id, dialect='camel', *, maximum_markets=100):
+    if not slugs or (maximum_markets is not None and len(slugs)>maximum_markets) or len(set(slugs)) != len(slugs) or any(not isinstance(s, str) or not s for s in slugs):
         raise ValueError('requires 1-100 unique market slugs')
     if dialect == 'camel':
         return {'subscribe': {'requestId': request_id, 'subscriptionType': 'SUBSCRIPTION_TYPE_MARKET_DATA', 'marketSlugs': list(slugs), 'responsesDebounced': False}}
@@ -78,12 +78,18 @@ class StaleSubscriptionFrame(ValueError):
     """A frame from a superseded connection/subscription is never applied."""
 
 
+class MalformedMarketFrame(ValueError):
+    """A recognized independent full-book image failed validation."""
+    def __init__(self,slug):
+        super().__init__('malformed_market_image');self.slug=slug
+
+
 class MarketStream:
     def __init__(self, markets, factory, *, dialect='camel', max_messages=30,
                  max_connections=2, stale_seconds=10, duration=30,
-                 kind=EvidenceKind.OBSERVATION, sleep=asyncio.sleep, profile_name=None):
+                 kind=EvidenceKind.OBSERVATION, sleep=asyncio.sleep, profile_name=None, maximum_markets=100):
         self.markets = {next_market_data(m)['slug']: m for m in markets}
-        subscription(tuple(self.markets), 'validate', dialect)
+        subscription(tuple(self.markets), 'validate', dialect, maximum_markets=maximum_markets)
         from app.collection.supervised import profile, bound_native
         policy = profile(profile_name) if profile_name else None
         for value, limit in ((max_messages, policy['group_messages'] if policy else 1000), (max_connections, 5)):
@@ -105,6 +111,8 @@ class MarketStream:
         self.subscription_id = None
         self.generation = 0
         self.source_time_high_water = {}  # Per market, retained across reconnects.
+        self.market_requests = None
+        self.retired_requests = set()
         if policy: bound_native(self)
 
     def begin_subscription(self, request_id):
@@ -127,20 +135,25 @@ class MarketStream:
             self.last[slug] = replace(book, sync=BookSync.UNSYNCHRONIZED)
         return tuple(self.last.values())
 
-    def parse(self, body, request_id, *, generation=None):
+    def parse(self, body, request_id, *, generation=None, received_at=None):
         # A caller cannot relabel an old connection's frame with a current request ID.
         if (self.closed or self.subscription_id is None or request_id != self.subscription_id
                 or generation != self.generation):
             raise StaleSubscriptionFrame('superseded connection/subscription')
-        response = Response(body, WS_URL, datetime.now(timezone.utc), self.kind)
+        response = Response(body, WS_URL, received_at or datetime.now(timezone.utc), self.kind)
         self.responses.append(response)
         try:
             data = decode(body)
             if set(data) == {'heartbeat'} and isinstance(data['heartbeat'], dict):
                 return None
-            if 'requestId' in data and data['requestId'] != self.subscription_id:
+            md = data.get('marketData')
+            expected=(self.market_requests.get(md.get('marketSlug')) if self.market_requests is not None and isinstance(md,dict)
+                      else self.subscription_id)
+            if self.market_requests is not None and data.get('requestId') in self.retired_requests:
+                return None  # Late frames from explicitly retired groups have no authority.
+            if 'requestId' in data and data['requestId'] != expected:
                 raise StaleSubscriptionFrame('superseded subscription response')
-            if data.get('requestId') != self.subscription_id or data.get('subscriptionType') != 'SUBSCRIPTION_TYPE_MARKET_DATA':
+            if data.get('requestId') != expected or data.get('subscriptionType') != 'SUBSCRIPTION_TYPE_MARKET_DATA':
                 raise ValueError('unsupported stream envelope')
             md = data.get('marketData')
             if not isinstance(md, dict) or md.get('marketSlug') not in self.markets:
@@ -151,6 +164,7 @@ class MarketStream:
             # Atomic replacement: do not merge, retain omitted levels or preserve
             # the other side from a previous frame. Explicit [] is known empty.
             complete = isinstance(md.get('bids'), list) and isinstance(md.get('offers'), list)
+            if not complete and getattr(self,'isolate_market_errors',False):raise ValueError('incomplete_image')
             slug = md['marketSlug']
             source_time = source_time_value(md.get('transactTime'))
             high_water = self.source_time_high_water.get(slug)
@@ -174,6 +188,15 @@ class MarketStream:
         except StaleSubscriptionFrame:
             raise
         except (ValueError, KeyError, TypeError):
+            md=data.get('marketData') if isinstance(locals().get('data'),dict) else None
+            if (getattr(self,'isolate_market_errors',False) and isinstance(md,dict)
+                    and md.get('marketSlug') in self.markets and data.get('requestId')==(self.market_requests.get(md['marketSlug']) if self.market_requests is not None else self.subscription_id)
+                    and data.get('subscriptionType')=='SUBSCRIPTION_TYPE_MARKET_DATA'
+                    and not set(data)-{'requestId','subscriptionType','marketData'}
+                    and not set(md)&{'delta','sequence','snapshot','updateType'}):
+                slug=md['marketSlug']
+                if slug in self.last:self.last[slug]=replace(self.last[slug],sync=BookSync.UNSYNCHRONIZED)
+                raise MalformedMarketFrame(slug) from None
             # Invalidate even when parse is called outside run(). A new subscription
             # is required before any later frame can requalify the current image.
             self.invalidate('unsupported_or_malformed')

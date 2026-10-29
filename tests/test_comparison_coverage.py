@@ -69,8 +69,8 @@ class CoverageTests(unittest.TestCase):
 
     def test_aggregate_offerings_counts_and_book_clocks_are_independent(self):
         ledger=self.ledger()
-        body=json.dumps([{'bookmakers':[{'key':'novig','last_update':'2026-10-08T19:00:00Z',
-            'markets':[{'key':'h2h','outcomes':[{'name':'A'},{'name':'B'}]}]}]}]).encode()
+        body=json.dumps([{'id':'native-event','bookmakers':[{'key':'novig','last_update':'2026-10-08T19:00:00Z',
+            'markets':[{'key':'h2h','outcomes':[{'name':'A','price':'2'},{'name':'B','price':'2'}]}]}]}]).encode()
         aggregate_observation(ledger,body,'NBA','2026-10-08T20:00:00Z',{'prophetx':'aggregate_total_line_conflict'})
         novig=ledger.observations['NBA','novig']['latest']
         self.assertEqual(novig['offered'],dict(games=1,markets=1,quotes=2))

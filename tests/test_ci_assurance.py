@@ -308,3 +308,62 @@ class AssuranceArtifactTests(unittest.TestCase):
                 self.assertEqual(
                     text, Path("test-results/assurance/summary.md").read_text()
                 )
+
+
+class ReadinessArtifactTests(unittest.TestCase):
+    def test_gate_retains_identity_and_failure_even_for_malformed_input(self):
+        import os
+        from unittest.mock import patch
+
+        gate = load("gate")
+        passing = {name: {"result": "success"} for name in gate.REQUIRED}
+        for raw, expected in (
+            (json.dumps(passing), "PASS"),
+            ("{broken", "FAIL"),
+            ("{}", "FAIL"),
+            ("null", "FAIL"),
+        ):
+            with self.subTest(raw=raw), tempfile.TemporaryDirectory() as folder:
+                with patch.dict(
+                    os.environ,
+                    {
+                        "NEEDS_JSON": raw,
+                        "GITHUB_SHA": "merge-candidate",
+                        "PR_HEAD_SHA": "pr-head",
+                        "GITHUB_STEP_SUMMARY": "summary.md",
+                    },
+                ):
+                    before = Path.cwd()
+                    try:
+                        os.chdir(folder)
+                        self.assertEqual(gate.main(), int(expected == "FAIL"))
+                    finally:
+                        os.chdir(before)
+                result = json.loads(
+                    (Path(folder) / "test-results/readiness/metrics.json").read_text()
+                )
+                self.assertEqual(result["overall"], expected)
+                self.assertEqual(result["tested_sha"], "merge-candidate")
+                self.assertEqual(result["pr_head_sha"], "pr-head")
+                self.assertTrue(
+                    (Path(folder) / "test-results/readiness/summary.md").exists()
+                )
+                self.assertNotIn("{broken", (Path(folder) / "summary.md").read_text())
+
+    def test_wheel_requires_noncode_financial_evidence(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            names = [
+                "app/fixtures/fee.md",
+                "app/fixtures/native-scoring-scope/rule.txt",
+                "app/fixtures/college-identity-20261028/source.html.gz",
+            ]
+            for name in names:
+                path = root / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("authored evidence")
+            validate = load("package_smoke").validate_wheel
+            validate(names, root)
+            for missing in names:
+                with self.assertRaises(ValueError):
+                    validate([name for name in names if name != missing], root)

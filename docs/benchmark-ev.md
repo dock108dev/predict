@@ -128,3 +128,32 @@ Hypothetical USD risk does not require account membership or observed depth.
 Actual void receipts and the complete minimum remain unknown even though the
 model supplies an expected receipt within that bucket. Other venues, markets and
 native NO/Short sides retain their existing financial dependencies.
+
+
+## Gross and conditional results in ordinary views
+
+A retained gross decisive benchmark can remain visible when current execution
+inputs are unavailable. It is labeled last-known and does not become executable.
+Unknown/future clocks, invalid odds, unverified selections and mismatched
+reference bindings still refuse calculation. Exact spread/total lines use their
+own opposing reference pair; a game-wide winner reference cannot replace them.
+
+For selected reference odds `a` and opposite odds `b`, decisive probability is
+`p = b / (a + b)`. With offered decimal odds `d`, acquisition cost is `1 / d` and
+gross return percent is `100 * (p * d - 1)`. Ties, pushes and exceptional settlement
+are excluded from this decisive metric, not assigned zero probability in net EV.
+
+`comparison/conditional_benchmark.py` adds a separate fee scenario where supported:
+Novig's reviewed pregame straight-trade scenario has zero modeled trade fee;
+Polymarket US uses one standard contract in one taker fill, with fee rounded to
+cents using half-even rounding on `0.0695 * cost * (1 - cost)`. The latter's risk
+is `cost + fee` and return is `100 * (p - cost - fee) / risk`. Account rebates,
+split-fill adjustments, funding costs and exceptional settlement remain excluded.
+Kalshi and ProphetX return explicit unbound-fee reasons in this scenario path.
+
+Evidence files in `app/fixtures` are hash-checked and have review/effective bounds.
+A new review applies prospectively; it does not fill an expired gap or relabel a
+result calculated under earlier evidence. These scenarios are not calibrated
+full-outcome EV, verified fills or covered arbitrage. Use the result's own
+applicability and missing-input fields rather than assuming that a supported
+venue or a recently displayed result is currently eligible.

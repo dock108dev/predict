@@ -501,7 +501,9 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
     static_root=Path(__file__).parent
     database_mode=getattr(current_provider,'database_mode',False)
     async def page(req):return web.FileResponse(static_root/('opportunity_static/current/stored.html' if database_mode else 'opportunity_static/current/index.html'))
-    async def odds_page(req):return web.FileResponse(static_root/'opportunity_static/current/stored.html')
+    from .raw_price_api import mount as mount_raw_prices
+    if database_mode:mount_raw_prices(app)
+    async def odds_page(req):return web.FileResponse(static_root/('opportunity_static/current/raw-odds.html' if database_mode else 'opportunity_static/current/stored.html'))
     app.router.add_get('/odds',odds_page)
     async def scanner_page(req):return web.FileResponse(static_root/'opportunity_static/current/scanner.html')
     app.router.add_get('/scanner',scanner_page)
@@ -653,7 +655,7 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
     app.router.add_post('/api/admin/current',current_admin)
     async def current_asset(req):
         name=req.match_info['name']
-        allowed={'stored.css':static_root/'opportunity_static/current/stored.css','stored.js':static_root/'opportunity_static/current/stored.js','arbs.js':static_root/'opportunity_static/current/arbs.js','admin.css':static_root/'opportunity_static/current/admin.css','admin.js':static_root/'opportunity_static/current/admin.js','current.js':static_root/'opportunity_static/current/current.js','current-client.js':static_root/'opportunity_static/current/current-client.js','board.js':static_root/'opportunity_static/u0/board.js','board.css':static_root/'opportunity_static/u0/board.css'}
+        allowed={'raw-odds.js':static_root/'opportunity_static/current/raw-odds.js','raw-odds.css':static_root/'opportunity_static/current/raw-odds.css','stored.css':static_root/'opportunity_static/current/stored.css','stored.js':static_root/'opportunity_static/current/stored.js','arbs.js':static_root/'opportunity_static/current/arbs.js','admin.css':static_root/'opportunity_static/current/admin.css','admin.js':static_root/'opportunity_static/current/admin.js','current.js':static_root/'opportunity_static/current/current.js','current-client.js':static_root/'opportunity_static/current/current-client.js','board.js':static_root/'opportunity_static/u0/board.js','board.css':static_root/'opportunity_static/u0/board.css'}
         for filename in ('scanner.js','scanner.css','board-client.js','board-contract.js','board-values.js','board-read.js','selected-details.js','comparison-board.js','comparison.css','comparison-client.js','comparison-view.js','ev.js','coverage.js','coverage.css','coverage-model.js','coverage-view.js'):
             allowed[filename]=static_root/'opportunity_static/current'/filename
         if name not in allowed:raise web.HTTPNotFound()

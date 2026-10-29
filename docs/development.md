@@ -95,7 +95,7 @@ git diff --check
 | Event matching and combined inputs | `test_ev02_occurrence.py`, `test_ev09_n01.py`, `test_comparison_event_links.py` |
 | SQL ingress, expiry and retired routes | `test_database_ingress_repair.py`, `test_current_route_retirement.py`, `test_ev09_ingress_isolation.py` |
 | Native HTTP admission and retry bounds | `test_native_http_reader.py`, `test_ordinary_native_transport.py` |
-| Runtime failure handling and detached reads | `test_data_runtime_unit.py`, `test_selected_read_work.py`, `test_abend_handling.py`; `test_sc02_sql.py` through the disposable SQL harness |
+| Runtime failure handling and detached reads | `test_data_runtime_unit.py`, `test_selected_read_work.py`, `test_abend_handling.py`, `test_coverage_worker.py`, `test_accounting_process.py`; `test_sc02_sql.py` through the disposable SQL harness |
 | Local browser, error privacy and launcher log targets | `test_security_hardening.py`, `test_dashboard_security.py`, `test_current_board_reads.py` |
 | CI reporting and isolation failures | `test_ci_reporting.py`, `test_ci_environment.py`, `test_ci_assurance.py`, `test_ci_secrets.py` |
 
@@ -235,20 +235,33 @@ publication, reconciliation, snapshot authority and its background task. The
 public `board`/`bounded_page` imports remain available there. Engine identity
 includes both extracted modules. SQL tests share disposable setup in
 `tests/latest_board_fixture.py`; `test_latest_board_sql.py` retains its public test
-class and independently reset behavioral cases.
+class and independently reset behavioral cases. Capacity/refusal isolation tests
+live in `tests/test_latest_board_capacity_sql.py`, using the same fixture. Both
+modules run in `postgres.py --da-separation`; the two standard-lane node names
+remain unchanged. The split preserves all 37 test methods and avoids importing
+one collected test class into another module.
 
 Native catalog selection and bounded diagnostics live in
 `collection/current_native_catalog.py`; `current_native.py` preserves public helper
-imports and owns transport lifecycle. The worker remains just above 1,000 lines
-after adding async book publication: queued books, pending publication, discovery,
-socket replacement, hourly budgets and cleanup share one credential/budget and
-cancellation/Stop owner. The catalog extraction remains the stateless boundary;
+imports and owns transport lifecycle. The worker is now 1,300 physical lines. Its added raw-image persistence,
+subscription transitions and synchronization acknowledgement still share one
+credential/budget and cancellation/Stop owner with discovery and socket replacement.
+Raw persistence must acknowledge the exact active generation before downstream
+publication; splitting these methods across stateful owners would obscure that
+ordering. Stateless image material, synchronization records and catalog helpers
+already have separate modules. The catalog extraction remains the stateless boundary;
 stateful mixins or a second publication owner would obscure shutdown and resync
-ordering. The 648-line `stored-controller.js`
+ordering. The 658-line `stored-controller.js`
 likewise retains one UI lifecycle: generation cancellation, applied settings,
 selection leases, modal focus and Stop all mutate the same current view. Rendering,
 wire validation, pagination and read scheduling are already separate modules;
 extract a new controller only when it can own an independent state lifecycle.
+The 1,094-line `storage/latest_board.py` retains the committed-authority
+protocol: publication validation, reconciliation and repeatable-read snapshots
+share the epoch, source-state and control barriers. Keeping those transaction
+boundaries together makes stale-result rejection auditable; capture sizing and
+wire rendering are already separate. Do not extract a second authority owner or
+duplicate these barriers to meet a line target.
 Review these decisions when those responsibilities change.
 
 CI regression tests are separated into `test_ci_reporting.py`,
@@ -275,3 +288,19 @@ in for complete evaluation. `coverage.js`, `coverage-model.js` and
 and `coverage.css`; they are not generated into `stored.js`. After changing the
 Coverage read contract, restart the app owner. Static-only edits need the normal
 asset build (for stored modules) and reload.
+
+## Acquisition and publication
+
+Use the existing disposable PostgreSQL lane for census, cancellation and current-row regressions. `python -m app.collection.acquisition_report` reads a coherent SQL census without provider dispatch. Do not qualify full-provider acquisition from featured queries or partial native census counts.
+
+See [acquisition](acquisition.md) for ownership, capacity and completeness limits.
+
+## Raw reader
+
+`raw-odds.html`, `raw-odds.js` and `raw-odds.css` are authored static assets served
+directly; they are not generated into `stored.js`. `raw_price_api.py` owns bounded
+read snapshots; `raw_prices.py` selects compact acquisition data; optional captured
+calculations have a separate read owner. The disposable SQL suite registers
+`tests/test_raw_prices_sql.py`. Restart the app for backend changes; migrations
+028–029 must be installed through the ordinary Store migration owner. See
+[raw prices and read lifecycle](raw-prices.md).

@@ -30,10 +30,15 @@ class DataRuntime:
         self.heartbeat_task = self.command_task = None
         self.failed = False
         self.selected_fees = None
+        self.loop_progress = None
+        self.memory_task = None
+        self.account_projection = None
+        self.retained_memory = None
 
     def prepare_status(self):
         from .background_work import BACKGROUND
-        self.service.background_work = dict(BACKGROUND.snapshot(),progress=getattr(self.board,'progress',{}))
+        self.service.background_work = dict(BACKGROUND.snapshot(),retained_memory=self.retained_memory,loop_progress=self.loop_progress.snapshot() if self.loop_progress else None,progress=getattr(self.board,'progress',{}),
+            component_admission=dict(getattr(self.board,'admission_status',{})),coverage_progress=getattr(self.board,'last_coverage',None))
         self.service.background_calculations = dict(
             scanner='pending' if self.scanner is None else 'unavailable' if getattr(self.scanner, 'error', None) else 'stopped' if getattr(self.scanner, 'closed', False) else 'running',
             scanner_error=None if self.scanner is None or not getattr(self.scanner, 'error', None) else 'background_scanner_unavailable',
@@ -59,14 +64,24 @@ class DataRuntime:
         await asyncio.to_thread(self.state.write_snapshot,value)
 
     async def persist_heartbeat(self):
+        from .bulk_checkpoint import owned_thread
+        if isinstance(self.service,CurrentService) and self.service.database_mode:
+            if self.account_projection is None:
+                from .quota_status import AccountProjection
+                self.account_projection=AccountProjection()
+            accounting=await self.service.status_accounting_async(self.account_projection)
+        else:accounting=await owned_thread(self.service.status_accounting)
         self.prepare_status()
         value=self.state.snapshot(self.service, paused_sources=self.paused_sources,
-                                  global_stopped=self.global_stopped)
+                                  global_stopped=self.global_stopped,accounting=accounting)
         return await asyncio.to_thread(self.state.write_snapshot, value, heartbeat=True)
 
     async def start(self):
         # Acquire before migration, epoch access, source construction or dispatch.
         self.owner.acquire('data-runtime-starting')
+        from .loop_progress import LoopProgress
+        self.loop_progress = LoopProgress()
+        self.loop_progress.start()
         try:
             self.lock_connection = self.connector()
             locked = self.lock_connection.execute('SELECT pg_try_advisory_lock(%s) AS held', (RUNTIME_LOCK,)).fetchone()['held']
@@ -86,9 +101,17 @@ class DataRuntime:
             # for guarded recovery; this does not consume acquisition authority.
             if self.global_stopped and self.service.digest is None:
                 self.service.digest = candidate()[0]
+            from .background_work import BACKGROUND
+            BACKGROUND.limit=self.service.config['rss_bytes']
+            # The owner's bulk configuration retains large native catalogs and
+            # images. Keep a quarter of that existing limit for a concurrent
+            # source pass; this never raises the fatal process ceiling.
+            BACKGROUND.runway=max(160*1024*1024,BACKGROUND.limit//4)
             self.store = CurrentStore(self.service)
             await self.persist_control('starting')
             await self.service.start(self.store)
+            BACKGROUND.acquisition_pressure=self.acquisition_pressure
+            BACKGROUND.critical_acquisition_pressure=lambda:self.acquisition_pressure(critical=True)
             await self.persist_control()
             if self.scanner_factory is None:
                 from app.dashboard.scanner_api import Scanner
@@ -103,6 +126,8 @@ class DataRuntime:
                 result = self.board.start()
                 if inspect.isawaitable(result):
                     await result
+            from .retained_memory import watch
+            self.memory_task=asyncio.create_task(watch(self),name='predict-retained-memory')
             self.heartbeat_task = asyncio.create_task(self.heartbeat(), name='predict-data-heartbeat')
             self.command_task = asyncio.create_task(self.commands(), name='predict-data-controls')
         except BaseException:
@@ -112,6 +137,24 @@ class DataRuntime:
             except (Exception, asyncio.CancelledError) as exc:
                 failure(__name__, 'data_runtime_start_cleanup', exc)
             raise
+
+    def acquisition_pressure(self, *, critical=False):
+        """Downstream CPU work yields to acquisition and overdue admission tails."""
+        if self.service is None or not self.service.dispatch:return False
+        for venue in ('kalshi','polymarket_us'):
+            worker=self.service.workers.get(venue)
+            if worker is None or worker.closed or worker.failed or venue in self.service.paused_sources:continue
+            metrics=worker.metrics
+            if metrics.get('selected_markets') is None:return True
+            if (metrics.get('stream_connected') and
+                metrics.get('initial_images',0)+metrics.get('isolated_missing_images',0)<metrics['selected_markets']):return True
+            if metrics.get('receive_oldest_seconds',0)>2 or metrics.get('raw_oldest_pending_seconds',0)>2:return True
+            # Derived admission has its own bounded queue and source runway.
+            # Its steady lag must not veto every downstream turn: at full scope
+            # that prevented any result from being published. Raw backlog and
+            # incomplete initial images still defer work; RSS and worker leases
+            # independently bound every admitted matching component.
+        return False
 
     def resource_guard(self):
         from .continuous import rss
@@ -123,7 +166,8 @@ class DataRuntime:
         if self.service is not None:
             self.service.sampled_rss = sampled
             self.service.peak_rss = max(getattr(self.service, 'peak_rss', 0), sampled)
-        if sampled >= 768 * 1024**2:
+        config=self.service.config if self.service is not None and hasattr(self.service,'config') else load(self.config_path)
+        if sampled >= config['rss_bytes']:
             raise ValueError('data_runtime_memory_guard')
 
     async def heartbeat(self):
@@ -252,6 +296,8 @@ class DataRuntime:
 
     async def close(self):
         self.stopping.set()
+        if self.loop_progress:
+            await self.loop_progress.close()
         errors = []
 
         async def attempt(operation, action):
@@ -270,7 +316,7 @@ class DataRuntime:
         if self.selected_fees:
             await attempt('data_runtime_finite_close', stop_fees)
             if errors:self.service.cleanup_errors.append('selected_fee_cleanup_unresolved')
-        for task in (self.heartbeat_task, self.command_task):
+        for task in (self.heartbeat_task, self.command_task, self.memory_task):
             if task and task is not asyncio.current_task():
                 # Cancellation we request is normal; an already failed task is
                 # still observed and cannot skip source/resource shutdown.
@@ -290,6 +336,9 @@ class DataRuntime:
             if self.store:
                 await attempt('data_runtime_store_close', self.store.close)
                 await attempt('data_runtime_terminal_status', lambda: self.persist_control('failed' if self.failed else 'stopped'))
+        if self.account_projection is not None:
+            await attempt('data_runtime_account_projection_close',self.account_projection.close)
+            self.account_projection=None
         if self.lock_connection is not None:
             await attempt('data_runtime_database_close', self.lock_connection.close)
             self.lock_connection = None
@@ -316,7 +365,9 @@ def main():
     parser.add_argument('--current-config', help='Existing bounded source configuration')
     args = parser.parse_args()
     try:
-        result = asyncio.run(run(args.current_config))
+        from .runtime_scheduling import collection_scheduling
+        with collection_scheduling():
+            result = asyncio.run(run(args.current_config))
     except Exception as exc:
         # The process boundary must not print credential-bearing exception text.
         failure(__name__, 'data_runtime_process', exc)

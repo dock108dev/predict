@@ -1,6 +1,21 @@
 import { numeric, percent } from "./board-client.js";
 import { el, venue, words, price, labelsFor, matchesGameSearch, matchesMarketFilter, typedGameTitle, marketCaption } from "./board-elements.js";
 
+export function financialGap(reason) {
+  return ({
+    exact_pinnacle_opposition_unavailable: "No complete Pinnacle pair for this exact event, outcome and line in the retained inputs.",
+    exact_native_reference_pair_absent: "No complete Pinnacle pair for this native outcome and exact line in the matched event.",
+    reference_scoring_scope_conflict: "Native and reference scoring rules are not yet verified to agree, including overtime or shootout treatment.",
+    gross_exact_native_score_identity_unsupported: "The native score condition or scoring rules are not sufficiently supported for this comparison.",
+    gross_decisive_winner_identity_unsupported: "The full-game winner identity or overtime rules remain unsupported.",
+    explicit_two_way_benchmark_required: "A complete, occurrence-matched two-way reference is missing.",
+    estimate_source_clock_unknown: "The source has not supplied a usable price timestamp.",
+    conditional_fee_review_expired_or_not_effective: "The captured fee review is outside its applicability interval. Earlier values remain last-known.",
+    prophetx_account_fee_model_and_rate_unbound: "ProphetX sets the fee model and rate per account; its public API cannot supply that rate. Gross comparison remains available.",
+    kalshi_instrument_fee_schedule_unbound: "The effective Kalshi fee schedule and multiplier are not bound to this instrument. Gross comparison remains available.",
+  })[reason] || words(reason);
+}
+
 // Compare supplied exact values before formatting. This is ordering, not finance.
 export function compareExactPercent(a, b) {
   function rational(value) {
@@ -24,6 +39,10 @@ const dashboardMetrics = {
   known: ["buffered_conditional_known_state_minimum_usd", "buffered_conditional_known_state_minimum_return_percent", "Listed known outcomes margin"],
 };
 export function dashboardMetric(row, kind) {
+  if (kind === "trade") {
+    const m = row.conditional_trade_benchmark;
+    return m?.available && numeric(m.return_percent) !== null ? {value:m.return_percent,state:m.state,label:"Conditional trade-fee benchmark · " + (m.normalization_label || "per $1 modeled risk")} : null;
+  }
   if (kind === "gross") {
     const g = row.gross_decisive_benchmark;
     return g?.available && numeric(g.return_percent) !== null ? {value:g.return_percent, state:g.state, label:"Gross decisive benchmark"} : null;
@@ -58,10 +77,12 @@ export function dashboardScope(slate, kind, filters = {}) {
   // Board completeness includes refused candidates not materialized as rows.
   const complete = rows.length > 0 && relevant.length > 0 && relevant.every(b => b.availability?.evaluation_complete === true) && !pending && !errors.length && !unknown && !lastKnown && !slate.stopped && !slate.dashboard_error;
   const failed = !!slate?.dashboard_error || errors.length > 0 || rows.some(e => e.row.availability?.metrics?.[field]?.state === "calculation_failed") || reasons.some(r => /calculation.*failed/.test(r));
-  const state = slate?.dashboard_error ? "failed" : positive.length ? complete ? "positive" : "partial" : complete ? "evaluated_no_positive" : current.length ? "partial" : lastKnown ? "last_known" : failed && (!relevant.length || rows.length > 0 && rows.every(e => e.row.availability?.metrics?.[field]?.state === "calculation_failed")) ? "failed" : !rows.length && !reasons.length || pending && !reasons.length ? "pending" : "unavailable";
+  const state = !slate ? "loading" : slate?.dashboard_error ? "failed" : !errors.length && (!games.size || (family || period || source) && boards.length && !relevant.length && !boards.some(b => b.delivery_state === "pending")) ? "no_matches" : positive.length ? complete ? "positive" : "partial" : complete ? "evaluated_no_positive" : current.length ? "partial" : lastKnown ? "last_known" : failed && (!relevant.length || rows.length > 0 && rows.every(e => e.row.availability?.metrics?.[field]?.state === "calculation_failed")) ? "failed" : !rows.length && !reasons.length || pending && !reasons.length ? "pending" : "unavailable";
   return {rows,positive,state: errors.length && boards.length && !slate?.dashboard_error ? "partial" : state,reasons,pending,failed,complete,errors,games};
 }
 export function dashboardMessage(scope, kind) {
+  if (scope.state === "loading") return "Loading saved results. Prices remain available while this list loads.";
+  if (scope.state === "no_matches") return "No retained games or markets match these filters. Clear or change the filters to browse available results.";
   if (scope.state === "positive") return "Current positive results, highest return first.";
   if (scope.state === "evaluated_no_positive") return "No positive results in the evaluated scope. Zero and negative comparisons are below.";
   if (scope.state === "partial") return "Partially evaluated. Available results are shown; other results remain unknown.";
@@ -131,7 +152,7 @@ export function drawOpportunityDashboard(content, slates, filters, onDetails, ki
   content.append(grid);
   const prices=el("section",undefined,"opportunity-prices");
   const link=el("a","Browse available prices →");
-  const query=new URLSearchParams(Object.fromEntries(Object.entries({league:filters.league || "",venue:filters.source || "",family:filters.family || ""}).filter(([,v])=>v)));
+  const query=new URLSearchParams(Object.fromEntries(Object.entries({sport:filters.league || "",venue:filters.source || "",family:filters.family === "winner" ? "moneyline" : filters.family || "",period:filters.period || "",search:filters.search || ""}).filter(([,v])=>v)));
   link.href="/odds"+(query.size?"?"+query:"");
   prices.append(link,el("p","Inspect source prices and their original inputs. Gross comparisons exclude fees and exceptional settlement."));
   if (kinds.length > 1 && !kinds.some(kind => scopes[kind].positive.length)) content.replaceChildren(prices,grid);
@@ -145,7 +166,7 @@ export function drawOpportunityDashboard(content, slates, filters, onDetails, ki
   }
   content.append(results);
   const research=el("div",undefined,"opportunity-research");
-  for (const [kind,source,title] of [["ev","ev","Net EV · zero and negative"],["arbs","arbs","Covered minimum · zero and negative"],["conditional","ev","Conditional EV"],["decisive","arbs","Decisive hedges"],["known","arbs","Listed known outcome hedges"],["gross","ev","Gross comparisons · before fees and exceptional settlement"]]) {
+  for (const [kind,source,title] of [["ev","ev","Net EV · zero and negative"],["arbs","arbs","Covered minimum · zero and negative"],["conditional","ev","Conditional EV"],["trade","ev","Conditional trade-fee benchmarks"],["decisive","arbs","Decisive hedges"],["known","arbs","Listed known outcome hedges"],["gross","ev","Gross comparisons · before fees and exceptional settlement"]]) {
     if (!scopes[source]) continue;
     const entries=scopes[source].rows.filter(e => {
       const m=dashboardMetric(e.row,kind);
@@ -159,13 +180,28 @@ export function drawOpportunityDashboard(content, slates, filters, onDetails, ki
       const old=!!slates[source]?.dashboard_error || group.every(e=>dashboardMetric(e.row,kind).state !== "numeric_current");
       const d=el("details",undefined,"opportunity-group");d.dataset.key="research:"+kind+":"+old;
       d.append(el("summary",(old?"Last-known · ":"")+(old && kind === "ev" ? "Net EV research" : old && kind === "arbs" ? "Covered minimum research" : title)+" ("+group.length+")"));
-      if(kind === "gross")d.append(el("p","Decisive winners only, per $1 normal claim. Before fees and exceptional settlement; no executable quantity or net-EV claim."));
+      if(kind === "trade")d.append(el("p","Pregame conditional trade-fee scenarios. Each row states its modeled risk or contract basis. Excludes ties, pushes, voids and exceptional settlement. Not calibrated full net EV or executable sizing."));
+      else if(kind === "gross")d.append(el("p","Exact two-way outcome and line, conditional on a decisive result. Before fees, ties, pushes and exceptional settlement; no executable quantity or net-EV claim."));
       else d.append(el("p","Highest percentage first. Funding, assumptions and quantities are in Details."));
       for(const e of group)renderRow(d,e,kind);
       research.append(d);
     }
   }
   content.append(research);
+  if (scopes.ev) {
+    const counts = new Map();
+    for (const {row} of scopes.ev.rows) {
+      for (const metric of [row.gross_decisive_benchmark,row.conditional_trade_benchmark]) {
+        if (metric?.available === false && metric.reason) counts.set(metric.reason,(counts.get(metric.reason) || 0)+1);
+      }
+    }
+    if (counts.size) {
+      const gaps=el("details",undefined,"financial-gaps");gaps.dataset.key="financial-gaps";
+      gaps.append(el("summary","Why stronger results are unavailable"),el("p","These are result-row limitations, not missing-offering counts. Full net EV also needs supported settlement cashflows and full-outcome probabilities; unknowns are never zero."));
+      for (const [reason,count] of [...counts].sort((a,b)=>b[1]-a[1])) gaps.append(el("p",count+" rows · "+financialGap(reason)));
+      content.append(gaps);
+    }
+  }
   if (kinds.length === 1) {
     const slate = slates.ev, scope = scopes.ev, details = el("details"); details.dataset.key = "ev-scope-evidence";
     details.append(el("summary", "Calculation coverage & evidence"));

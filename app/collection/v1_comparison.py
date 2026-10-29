@@ -14,7 +14,7 @@ REPAIR_POLICY = 'manual-comparison-2'
 
 def us_selectors(cell, game_id=None):
     from .public_contracts import load
-    keys = sorted(k for k, r in load()['us_types'].items()
+    keys = sorted(k for k, r in load('us_types').items()
                   if cell['sport'] in r['competitions'] and r['period'] == cell['period']
                   and r['family'] == cell['family'])
     # A coarse documented FUTURE filter locates records, never an award identity.
@@ -141,28 +141,34 @@ def _bind_v1(event, market, venue, *, revised=False):
     return result
 
 
-def bind(event,market,venue,*,policy=POLICY):
+def bind(event,market,venue,*,policy=POLICY,_share_metadata=False):
     if policy==POLICY:return _bind_v1(event,market,venue)
     if policy!=REPAIR_POLICY:raise ValueError('Unknown manual admission policy')
     from .admission_enrichment import enrich_game,award
     if market.get('market_type')=='futures' or (market.get('native_scope_binding') or {}).get('family')=='futures':return award(event,market,venue)
-    e=enrich_game(dict(event,source=venue));r=_bind_v1(e,market,venue,revised=True)
+    e=enrich_game(dict(event,source=venue),share_metadata=_share_metadata);r=_bind_v1(e,market,venue,revised=True)
     if e.get('identity_conflicts'):
         r['blockers']+=list(e['identity_conflicts']);r['status']='IDENTITY_BLOCKED'
     r['version']=policy;r['sha256']=stable({k:v for k,v in r.items() if k!='sha256'});return r
 
 
-def annotate(catalog, venue, templates=(), *, policy=POLICY):
+def annotate(catalog, venue, templates=(), *, policy=POLICY, share_metadata=False):
+    from .public_contracts import binding_snapshot
+    with binding_snapshot():
+        return _annotate(catalog,venue,templates,policy=policy,share_metadata=share_metadata)
+
+
+def _annotate(catalog, venue, templates=(), *, policy=POLICY, share_metadata=False):
     """Attach separately versioned bindings; admission clears only payout gates."""
     events={e['id']:e for e in catalog['events']}
     for market in catalog['markets']:
         event=events.get(market['event_id'])
         if not event:continue
         # Reuse exact reviewed event identity, never unrelated event/capture titles.
-        enriched=deepcopy(event)
+        enriched=dict(event) if share_metadata else deepcopy(event)
         if policy==REPAIR_POLICY and market.get('market_type')!='futures' and (market.get('native_scope_binding') or {}).get('family')!='futures':
             from .admission_enrichment import enrich_game
-            enriched=enrich_game(dict(enriched,source=venue))
+            enriched=enrich_game(dict(enriched,source=venue),share_metadata=share_metadata)
             event.update({k:v for k,v in enriched.items() if k not in ('_native','provenance')})
         for review in templates:
             source=review['sources'].get(venue,{})
@@ -178,7 +184,7 @@ def annotate(catalog, venue, templates=(), *, policy=POLICY):
             locator=us_type(market.get('_native') or market.get('native_metadata') or {},competition=enriched.get('competition'))
             if locator['status']=='DOCUMENTED_LOCATOR':
                 market.update(market_type=locator['family'],period=locator['period'])
-        binding=bind(enriched,market,venue,policy=policy);market['v1_raw_binding']=binding
+        binding=bind(enriched,market,venue,policy=policy,_share_metadata=share_metadata);market['v1_raw_binding']=binding
         if binding['status']=='BOUND_RAW_PREDICATE':
             # A prior source-local refusal describes its old facts. Rebinding
             # complete current metadata must replace that refusal as well.

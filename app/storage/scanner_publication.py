@@ -13,15 +13,17 @@ from app.storage.current_games import utc
 _lock = RLock()
 _observations = OrderedDict()
 _listeners = set()
+_wake_listeners = set()
 MAX_OBSERVATIONS = 512
 
 
-def subscribe(callback):
+def subscribe(callback, *, proof=True):
+    listeners = _listeners if proof else _wake_listeners
     with _lock:
-        _listeners.add(callback)
+        listeners.add(callback)
     def close():
         with _lock:
-            _listeners.discard(callback)
+            listeners.discard(callback)
             if not _listeners:_observations.clear()
     return close
 
@@ -35,9 +37,10 @@ def prepare(db):
 
 def current_revision(db):
     epoch=db.execute('SELECT epoch FROM current_row_epoch WHERE singleton=true').fetchone()['epoch']
-    offer_rows=db.execute('SELECT contract_id,revision FROM current_offer LIMIT 16385').fetchall()
-    native_rows=db.execute('SELECT b.venue,e.native_event_id,b.native_market_id,b.revision FROM current_native_book b JOIN current_event e ON e.id=b.event_id LIMIT 16385').fetchall()
-    if len(offer_rows)>16384 or len(native_rows)>16384:
+    from .current_rows import MAX_RECORDS
+    offer_rows=db.execute('SELECT contract_id,revision FROM current_offer LIMIT %s',(MAX_RECORDS+1,)).fetchall()
+    native_rows=db.execute('SELECT b.venue,e.native_event_id,b.native_market_id,b.revision FROM current_native_book b JOIN current_event e ON e.id=b.event_id LIMIT %s',(MAX_RECORDS+1,)).fetchall()
+    if len(offer_rows)>MAX_RECORDS or len(native_rows)>MAX_RECORDS:
         raise ValueError('scanner_revision_probe_capacity')
     offers={r['contract_id']:r['revision'] for r in offer_rows}
     native={hashed([r['venue'],r['native_event_id'],r['native_market_id']]):r['revision'] for r in native_rows}
@@ -49,6 +52,12 @@ def current_revision(db):
 
 
 def committed(proof):
+    # A wake signal carries no revision or claimed commit-to-display evidence.
+    # Durable workers capture and validate their exact SQL inputs independently.
+    with _lock:wake_listeners=tuple(_wake_listeners)
+    for callback in wake_listeners:
+        try:callback(None)
+        except Exception as exc:failure(__name__, 'scanner_commit_wake_listener', exc)
     if proof is None:return
     observation=dict(**proof,sql_committed_observed_at=utc(),monotonic_observed=perf_counter(),
                      meaning='observed_after_successful_top_level_commit')

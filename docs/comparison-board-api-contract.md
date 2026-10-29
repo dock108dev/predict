@@ -360,7 +360,7 @@ separately and yields after five seconds between occurrences. Priority uses a
 recent original source or existing confirmation clock only to schedule work;
 normal rendering still validates the confirmation and all freshness/authority rules.
 
-### Wide board field encoding (October 22 publication repair)
+### Wide board field encoding
 
 `price_field_pool` may now share any repeated price field except `quote_id` and
 `quote_revision`, including exact original values and clocks. Wide boards may
@@ -391,3 +391,11 @@ Coverage performs this same step in SQL before projecting its required fields.
 The encoder uses this only when the complete dictionary saves bytes, at 480 KiB
 or above; both publication and fully constructed HTTP replies retain the existing
 512 KiB check. No row, ladder level, original value or clock is removed by encoding.
+
+## Ordinary raw Odds route
+
+Ordinary `/odds` now uses the independent [raw read contract](raw-prices.md).
+It reads durable acquisition books before normalization, matching and shared-board
+publication, with complete pagination and separately paged depth. The v2 financial
+board routes above remain available for Dashboard/EV/Arbs and captured calculation
+evidence; their per-game bounds no longer gate ordinary raw visibility.

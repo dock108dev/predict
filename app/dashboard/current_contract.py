@@ -48,7 +48,28 @@ def canonical_chunks(value):
     yield from _canonical_chunks(value,encoder)
 
 
+def _small_graph(value):
+    # Cheap conservative bound; large publication bodies retain the streamed
+    # staging path. Small identity/seal values avoid two recursive encodings.
+    pending=[value];nodes=chars=0
+    while pending:
+        node=pending.pop();nodes+=1
+        if nodes>512:return False
+        if isinstance(node,str):
+            chars+=len(node)
+            if chars>16384:return False
+        elif isinstance(node,dict):
+            if len(node)>128:return False
+            pending.extend(node.keys());pending.extend(node.values())
+        elif isinstance(node,(list,tuple)):
+            if len(node)>128:return False
+            pending.extend(node)
+    return True
+
+
 def packed(value):
+    if _small_graph(value):
+        return json.dumps(value,sort_keys=True,separators=(',', ':'),ensure_ascii=False,allow_nan=False).encode()
     size=sum(len(chunk.encode()) for chunk in canonical_chunks(value))
     # Stable staging sizes avoid allocating a new large region for every
     # harmless age-digit change. At most one MiB of staging slack; the returned

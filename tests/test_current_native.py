@@ -40,6 +40,128 @@ class Socket:
         await asyncio.Event().wait()
 
 class WorkerControls(unittest.IsolatedAsyncioTestCase):
+    async def test_derived_turn_is_fifo_coalesced_and_byte_bounded(self):
+        service=SimpleNamespace(config=dict(DEFAULT,ingress_bytes=8192),dispatch=True,database_mode=True,books=lambda *args:None)
+        worker=NativeWorker(service,'kalshi')
+        at=datetime.now(timezone.utc).isoformat()
+        for i in range(600):
+            mid=str(i)
+            worker.pending_books[mid]=dict(raw=dict(ref=dict(market_id=mid),received_at=at),padding='x'*100)
+            worker.pending_since[mid]=float(i)
+            worker.derived_served[mid]=600-i
+        # A frequently updated market keeps its original place in the queue.
+        updated=worker.pending_books['0'];updated['padding']='latest'
+        worker.pending_books['0']=updated
+        captured=[]
+        async def admit(service,fn,venue,books):captured.extend(books)
+        with patch('app.collection.current_native.call',side_effect=admit),patch('app.collection.bulk_checkpoint.save_images'):
+            worker.flush_books();await worker.publication_task
+            if worker.publication_handle:worker.publication_handle.cancel();worker.publication_handle=None
+        self.assertEqual(captured[0]['raw']['ref']['market_id'],'0')
+        self.assertEqual(captured[0]['padding'],'latest')
+        self.assertEqual([b['raw']['ref']['market_id'] for b in captured],[str(i) for i in range(len(captured))])
+        self.assertLessEqual(sum(len(json.dumps(b,default=str).encode()) for b in captured),4096)
+        self.assertEqual(len(worker.pending_books)+len(captured),600)
+
+    async def test_metadata_recalculation_age_is_not_fresh_update_delivery_latency(self):
+        service=SimpleNamespace(config=deepcopy(DEFAULT),dispatch=True,database_mode=True,books=lambda *args:None)
+        worker=NativeWorker(service,'kalshi');worker.persist_raw=AsyncMock()
+        old=(datetime.now(timezone.utc)-timedelta(hours=1)).isoformat()
+        book=dict(raw=dict(ref=dict(market_id='quiet'),received_at=old))
+        captured=[]
+        async def admit(service,fn,venue,books):captured.extend(books)
+        with patch('app.collection.current_native.call',side_effect=admit),patch('app.collection.bulk_checkpoint.save_images'):
+            worker.queue_derived(book);worker.flush_books();await worker.publication_task
+            latency=worker.synchronization.snapshot({})['delivery_latency']
+            self.assertEqual(latency['derived']['samples'],0)
+            self.assertEqual(latency['metadata_recalculation']['samples'],1)
+            self.assertLess(latency['metadata_recalculation']['p95_seconds'],60)
+            self.assertEqual(captured[0]['raw']['received_at'],old)
+            # A real received update superseding the queued metadata recheck
+            # belongs in the receipt-delivery distribution, with its own clock.
+            worker.queue_derived(book)
+            newer=deepcopy(book);newer['raw']['received_at']=datetime.now(timezone.utc).isoformat()
+            worker.queue_book(newer);worker.flush_books();await worker.publication_task;await worker.raw_task
+            latency=worker.synchronization.snapshot({})['delivery_latency']
+            self.assertEqual(latency['derived']['samples'],1)
+            self.assertEqual(latency['metadata_recalculation']['samples'],1)
+            self.assertLess(latency['derived']['p95_seconds'],60)
+            self.assertFalse(worker.pending_recalculations)
+        if worker.publication_handle:worker.publication_handle.cancel()
+
+    async def test_short_steady_turns_and_bulk_catchup_keep_all_pending_books(self):
+        service=SimpleNamespace(config=deepcopy(DEFAULT),dispatch=True,database_mode=True,books=lambda *args:None)
+        at=datetime.now(timezone.utc).isoformat()
+        for count,expected in ((400,128),(1200,512)):
+            worker=NativeWorker(service,'kalshi')
+            for i in range(count):
+                worker.pending_books[str(i)]=dict(raw=dict(ref=dict(market_id=str(i)),received_at=at))
+                worker.pending_since[str(i)]=float(i)
+            captured=[]
+            async def admit(service,fn,venue,books):captured.extend(books)
+            with patch('app.collection.current_native.call',side_effect=admit),patch('app.collection.bulk_checkpoint.save_images'):
+                worker.flush_books();await worker.publication_task
+                if worker.publication_handle:worker.publication_handle.cancel()
+            self.assertEqual(len(captured),expected)
+            self.assertEqual(len(worker.pending_books)+len(captured),count)
+
+    async def test_kalshi_catalog_removal_keeps_socket_without_reimaging_survivors(self):
+        from app.adapters.kalshi_stream import BookReconstructor
+        service=SimpleNamespace(config=deepcopy(DEFAULT),dispatch=True,deadline=asyncio.get_running_loop().time()+10)
+        worker=NativeWorker(service,'kalshi');current=market();old=market('OLD')
+        mid=current.raw.ref.market_id
+        selections=[dict(market_id=m.raw.ref.market_id,event=dict(id=m.raw.ref.event_id),material_revision='same') for m in (current,old)]
+        worker.lifecycle.leases={s['market_id']:dict(selection=s) for s in selections};worker.lifecycle_initialized=True
+        worker.markets={mid:current,'OLD':old};worker.active_engine=BookReconstructor([current,old]);worker.active_engine.sid=7
+        worker.socket=SimpleNamespace(send=AsyncMock(),close=AsyncMock())
+        worker.reconstruction=SimpleNamespace(reconfigure=AsyncMock())
+        worker.stream_task=asyncio.create_task(asyncio.Event().wait())
+        worker.stream_markets=[current,old];worker.stream_market_index=dict(worker.markets)
+        worker.stream_seen={mid,'OLD'};worker.stream_isolated=set();worker.stream_snapshot_requests={}
+        worker.synchronization.begin(1,[mid,'OLD']);worker.synchronization.acknowledge('7')
+        for member in (mid,'OLD'):worker.synchronization.image(member)
+        try:
+            await worker.quiesce_catalog({mid:current},{},selections[:1])
+            self.assertEqual(worker.subscription_blocked,{'OLD'})
+            worker.markets={mid:current};worker.lifecycle.leases.pop('OLD')
+            await worker.finish_subscription_transition()
+            sent=[json.loads(c.args[0]) for c in worker.socket.send.await_args_list]
+            self.assertEqual(len(sent),1);self.assertEqual(sent[0]['params']['action'],'delete_markets')
+            self.assertEqual(sent[0]['params']['market_tickers'],['OLD'])
+            self.assertEqual(worker.stream_seen,{mid});self.assertEqual(worker.metrics['missing_initial_images'],0)
+            self.assertEqual(worker.metrics['catalog_transition']['reimaged_markets'],0)
+            self.assertEqual(worker.synchronization.images,{mid});worker.socket.close.assert_not_awaited()
+        finally:
+            worker.stream_task.cancel();await asyncio.gather(worker.stream_task,return_exceptions=True)
+
+    async def test_catalog_group_replacement_keeps_socket_and_waits_for_new_request_images(self):
+        from app.adapters.polymarket_us_stream import MarketStream
+        service=SimpleNamespace(config=deepcopy(DEFAULT),dispatch=True,deadline=asyncio.get_running_loop().time()+10)
+        worker=NativeWorker(service,'polymarket_us');m=us_market();mid=m.raw.ref.market_id
+        selection=dict(market_id=mid,event=dict(id=m.raw.ref.event_id),material_revision='old')
+        worker.lifecycle.leases={mid:dict(selection=selection)};worker.lifecycle_initialized=True
+        worker.markets={mid:m};worker.subscription_groups={'old-request':[mid]}
+        worker.active_engine=MarketStream([m],None);worker.active_engine.begin_subscription('connection')
+        worker.socket=SimpleNamespace(send=AsyncMock(),close=AsyncMock())
+        worker.reconstruction=SimpleNamespace(reconfigure=AsyncMock())
+        worker.stream_task=asyncio.create_task(asyncio.Event().wait())
+        worker.stream_markets=[m];worker.stream_market_index={mid:m};worker.stream_seen={mid};worker.stream_isolated=set()
+        worker.synchronization.begin(1,[mid]);worker.synchronization.acknowledge('connection');worker.synchronization.image(mid)
+        revised=dict(selection,material_revision='new')
+        try:
+            await worker.quiesce_catalog({mid:m},{},[revised])
+            worker.socket.close.assert_not_awaited();self.assertFalse(worker.stream_task.done())
+            self.assertEqual(worker.subscription_blocked,{mid});self.assertNotIn(mid,worker.synchronization.images)
+            worker.lifecycle.leases[mid]['selection']=revised
+            await worker.finish_subscription_transition()
+            sent=[json.loads(c.args[0]) for c in worker.socket.send.await_args_list]
+            self.assertEqual(sent[0],{'unsubscribe':{'requestId':'old-request'}})
+            self.assertNotEqual(sent[1]['subscribe']['requestId'],'old-request')
+            self.assertEqual(worker.stream_seen,set());self.assertFalse(worker.subscription_blocked)
+            self.assertIsNone(worker.subscription_transition);worker.socket.close.assert_not_awaited()
+        finally:
+            worker.stream_task.cancel();await asyncio.gather(worker.stream_task,return_exceptions=True)
+
     async def test_transient_rediscovery_failure_keeps_owned_healthy_socket(self):
         from app.collection.odds_http import BudgetStop
         states=[];calls=0
@@ -103,6 +225,21 @@ class WorkerControls(unittest.IsolatedAsyncioTestCase):
         worker.queue_book(book);worker.closed=True;worker.flush_books()
         self.assertEqual(len(published),1)
 
+    async def test_tail_priority_survives_reconnect_initial_image_order(self):
+        from tests.test_current_service import native_fixture
+        _,book=native_fixture();published=[]
+        service=SimpleNamespace(config=dict(DEFAULT,markets_per_source=1),dispatch=True,books=lambda *a:published.append(a))
+        worker=NativeWorker(service,'kalshi')
+        first=book['raw']['ref']['market_id']
+        worker.derived_served[first]=__import__('time').monotonic()
+        worker.queue_book(book)
+        tail=deepcopy(book);tail['raw']['ref']['market_id']='CONTROLLED-tail'
+        worker.queue_book(tail)
+        worker.flush_books()
+        self.assertEqual(published[0][1][0]['raw']['ref']['market_id'],'CONTROLLED-tail')
+        self.assertIn(first,worker.pending_books)
+        worker.closed=True;worker.flush_books()
+
     async def test_each_source_gap_resync_new_socket_cancel_no_duplicate(self):
         for venue in ('kalshi','polymarket_us'):
             with self.subTest(venue=venue):
@@ -117,7 +254,7 @@ class WorkerControls(unittest.IsolatedAsyncioTestCase):
                     def __init__(self,url,**kwargs):self.kwargs=kwargs
                     def __await__(self):
                         async def build():
-                            self_test.assertEqual(self.kwargs['max_queue'],1);self_test.assertIsNone(self.kwargs['compression'])
+                            self_test.assertEqual(self.kwargs['max_queue'],64);self_test.assertIsNone(self.kwargs['compression'])
                             socket=Socket(venue,len(sockets)+1);sockets.append(socket);return socket
                         return build().__await__()
                 self_test=self
@@ -137,6 +274,25 @@ class WorkerControls(unittest.IsolatedAsyncioTestCase):
                     self.assertEqual(len(sockets[1].sent),1)
                     task.cancel();await asyncio.gather(task,return_exceptions=True)
                 self.assertTrue(all(s.closed for s in sockets));self.assertIsNone(worker.socket)
+
+    async def test_stop_revokes_stream_before_waiting_for_publication(self):
+        service=SimpleNamespace(config=deepcopy(DEFAULT),dispatch=True)
+        worker=NativeWorker(service,'kalshi')
+        publishing=asyncio.Event();release=asyncio.Event();cancelled=asyncio.Event()
+        async def stream():
+            try:await asyncio.Event().wait()
+            finally:cancelled.set()
+        async def publish():
+            try:await asyncio.Event().wait()
+            except asyncio.CancelledError:
+                publishing.set();await release.wait();raise
+        worker.stream_task=asyncio.create_task(stream())
+        worker.publication_task=asyncio.create_task(publish())
+        await asyncio.sleep(0)
+        stop=asyncio.create_task(worker.stop_stream())
+        await asyncio.wait_for(publishing.wait(),1)
+        self.assertTrue(cancelled.is_set())
+        release.set();await stop
 
     async def test_three_malformed_images_stop_affected_source(self):
         issues=[];states=[]
@@ -209,4 +365,5 @@ class PurchaseSemantics(unittest.TestCase):
         self.assertEqual(coverage.catalog(pages,'polymarket_us',AS_OF,compact_output=False),legacy)
         empty=coverage.catalog(pages,'polymarket_us',AS_OF,current_selection={'events':[eid],'markets':[]})
         self.assertEqual(empty['markets'],[]);self.assertEqual(len(empty['events']),1)
-        with self.assertRaises(ValueError):coverage.catalog(pages,'polymarket_us',AS_OF,current_selection={'events':list(range(25)),'markets':[]})
+        # Ordinary selection has no event-count cutoff. Unknown IDs select nothing.
+        self.assertEqual(coverage.catalog(pages,'polymarket_us',AS_OF,current_selection={'events':[str(i) for i in range(25)],'markets':[]})['markets'],[])

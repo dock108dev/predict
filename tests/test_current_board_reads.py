@@ -40,11 +40,20 @@ def latest_frame(c=None):
             facts=dict(context=b['calculation_context'],observation_context=obs['calculation_context'],valid_until=None,
                 boards={view:response(obs if view=='odds' else b,None if view=='odds' else v,DEFAULT_POLICY,view=view,filter='all',at=AT) for view in ('odds','ev','arbs')}))
     return dict(status=dict(version='predict-latest-board-1',games=catalog['games'],policy=DEFAULT_POLICY.to_dict(),
-        epoch=c.epoch,as_of=AT,scope_complete=True),rows=rows,reasons=[],at=AT,
+        epoch=c.epoch,engine_binding=c.engine,as_of=AT,scope_complete=True),rows=rows,reasons=[],at=AT,
         owner=dict(active=True,healthy=True),read_revision='authored-read-revision',read_authority='authored-authority')
 
 
 class CurrentBoardReads(unittest.TestCase):
+    def test_new_global_status_cannot_revive_old_game_financial_identity(self):
+        from app.storage.board_view import board
+        for field,reason in (('engine_binding','engine_binding_changed'),('policy_revision','policy_changed')):
+            frame=latest_frame();key=next(iter(frame['rows']))
+            frame['rows'][key]['facts']['context'][field]='superseded-own-calculation'
+            result=board(frame,key,view='ev',filter='all')
+            self.assertIn(reason,result['calculation_reasons'])
+            self.assertEqual(result['status'],'historical')
+
     def test_large_field_pool_is_exact_and_rejects_crossed_references(self):
         from app.dashboard.comparison_board import compact_price_fields,expand_price_fields
         original=dict(prices=[dict(quote_id=str(n),original={'value':'0.47'},times={'source_at':AT},
@@ -76,7 +85,7 @@ class CurrentBoardReads(unittest.TestCase):
     def test_current_rows_only_and_no_envelope_membership(self):
         c=context();b=bundle(c)
         self.assertEqual(c.catalog()['version'],'predict-board-catalog-2')
-        self.assertEqual(c.catalog()['limits']['maximum_games'],500)
+        self.assertEqual(c.catalog()['limits']['maximum_games'],len(c.catalog()['games']))
         self.assertEqual(b['envelopes'],[])
         self.assertNotIn('combined_envelope_id',json.dumps(b['records']))
         self.assertEqual(c.catalog()['games'][0]['input_version'],b['input_version'])
@@ -138,6 +147,11 @@ class CurrentBoardReads(unittest.TestCase):
         self.assertEqual(d['quote']['observation_display'],observed['observation_display'])
         self.assertEqual(d['quote']['source_state'],q['state'])
         self.assertEqual(d['quote']['times'],q['times'])
+        from app.comparison.shared_templates import keys,resolve
+        expected={key for key in q.get('comparison_input_refs',{}).get('refs',{}).values() if key is not None}
+        self.assertEqual(set(keys(d['profiles'])),expected)
+        for key in expected:
+            self.assertEqual(resolve(d['profiles'],key),resolve(v['state']['comparison_profiles'],key))
 
     def test_details_percentage_companions_match_board_for_singles_and_pairs(self):
         c=context();b=bundle(c);v=calculate_current(b,DEFAULT_POLICY,context=c,details=True)
@@ -163,6 +177,8 @@ class CurrentBoardReads(unittest.TestCase):
         result=calculate_current(b,DEFAULT_POLICY,context=c)
         for view in ('odds','ev','arbs'):
             out=response(b,None if view=='odds' else result,DEFAULT_POLICY,view=view,filter='all',at=AT)
+            from app.dashboard.comparison_board import expand_price_fields
+            expand_price_fields(out)
             self.assertEqual(out['version'],'predict-comparison-board-2')
             self.assertEqual(out['delivery_state'],'complete')
             self.assertEqual(out['calculation_context'],b['calculation_context'])
@@ -209,12 +225,19 @@ class CurrentBoardAPI(unittest.IsolatedAsyncioTestCase):
                 for view in ('odds','ev','arbs'):
                     r=await client.get('/api/boards/'+view,params=params)
                     output[view]=await r.json();self.assertEqual(r.status,200,output[view])
+                    from app.dashboard.comparison_board import expand_price_fields
+                    expand_price_fields(output[view])
                     # Ordinary selected reads must leave unrelated games and
                     # other optional views in SQL, retaining neighborhood proof.
                     captured=patches[1].target.snapshot.call_args.kwargs
                     self.assertEqual(captured['game'],game)
                     self.assertEqual(captured['view'],view)
                 selected=output['ev']['rows'][0]['details'];identity=selected['context_id'];quote=selected['quote_id']
+                r=await client.delete('/api/boards/read-lease',params=dict(read_token=selected['read_token']))
+                self.assertEqual(r.status,200);self.assertEqual((await r.json())['provider_requests'],0)
+                r=await client.get('/api/boards/read-lease',params=dict(read_token=selected['read_token']))
+                self.assertEqual(r.status,409)
+                self.assertEqual((await r.json())['reason'],'current_slate_read_expired')
                 for view in ('details','inputs'):
                     expected=identity if view=='details' else output['odds']['calculation_context']['context_id']
                     r=await client.get('/api/boards/'+view,params=dict(params,context_id=expected,quote=quote))
@@ -357,6 +380,8 @@ class C1CompactProjection(unittest.TestCase):
         comparison=next(q['gross_comparison'] for q in expanded['prices'] if q['gross_comparison']['available'])
         comparison['inputs'][1]['observation_display']['publication_reason_codes']=['current_dependencies_changed']
         compact_odds(expanded)
+        expand_price_fields(expanded)
+        comparison=next(q['gross_comparison'] for q in expanded['prices'] if q['gross_comparison']['available'])
         self.assertNotIn('input_refs',comparison)
         self.assertEqual(comparison['inputs'][1]['observation_display']['publication_reason_codes'],['current_dependencies_changed'])
 
@@ -378,5 +403,7 @@ class C1CompactProjection(unittest.TestCase):
         comparison=next(q['gross_comparison'] for q in expanded['prices'] if q['gross_comparison']['available'])
         comparison['inputs'][1]['source']['native_market_id']='different-frozen-source'
         compact_odds(expanded)
+        expand_price_fields(expanded)
+        comparison=next(q['gross_comparison'] for q in expanded['prices'] if q['gross_comparison']['available'])
         self.assertNotIn('input_refs',comparison)
         self.assertEqual(comparison['inputs'][1]['source']['native_market_id'],'different-frozen-source')

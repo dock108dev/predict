@@ -13,23 +13,40 @@ def health(value):
     return {key:value.get(key) for key in ('state','reason_code','reason')}
 
 
+def event_dependency(event):
+    """Occurrence semantics, independently of repeated catalog receipt proofs."""
+    from app.comparison.occurrence_matching import OccurrenceResolver
+    from .schedule_metadata import witness
+    facts=event['facts']
+    semantic=OccurrenceResolver()._facts(dict(event=facts,quote=dict(source=dict(
+        provider=event['provider'],native_event_id=event['native_event_id'],binding_version='publication'),provenance={})))
+    for key in ('event','evidence','version'):semantic.pop(key,None)
+    schedule=witness(facts)
+    return hashed([semantic,{key:facts.get(key) for key in ('status','state','schedule_conflict')},
+        None if schedule is None else {key:schedule.get(key) for key in ('authority','start')}])
+
+
 def identity_index(db):
     """Small membership/identity index; no contracts, prices or ladders decoded."""
-    events=db.execute('SELECT id,provider,native_event_id,revision,facts FROM current_event ORDER BY id').fetchall()
+    # Membership must share the identity query's MVCC snapshot. Planning also
+    # runs outside repeatable-read captures while ingestion adds new events.
+    events=db.execute('''SELECT e.id,e.provider,e.native_event_id,e.revision,e.facts,
+        EXISTS(SELECT 1 FROM current_contract c JOIN current_offer o ON o.contract_id=c.id
+            WHERE c.event_id=e.id) AS active
+        FROM current_event e ORDER BY e.id''').fetchall()
     if len(events)>4096:raise ValueError('publication_dependency_capacity')
     epoch=db.execute('SELECT epoch FROM current_row_epoch WHERE singleton=true').fetchone()['epoch']
     # This is a cached identity lookup, not occurrence resolution, board building,
     # price evaluation or optional financial work.
-    from app.normalization.registry import Registry
-    registry=Registry.current()
+    from app.comparison.occurrence_matching import OccurrenceResolver
+    resolver=OccurrenceResolver()
     for event in events:
         facts=event['facts'];roles=[]
         for role in ('home','away'):
-            participant=facts.get(role)
-            for name,cid in facts.get('participants',{}).items():
-                if cid==participant:
-                    resolved=registry.resolve('team',name,league=facts.get('competition'),venue=event['provider'])
-                    if resolved.status=='resolved':participant=resolved.canonical_id
+            # Capture the same candidate identities as the actual resolver.
+            # A different lookup here silently splits otherwise valid matches
+            # into separate calculation/publication components.
+            participant=resolver._participant(facts.get(role),facts,event['provider'])
             roles.append(participant)
         event['pair']=[facts.get('competition'),sorted(roles,key=str)]
         raw=facts.get('_native') or facts.get('native_metadata') or {}
@@ -41,6 +58,7 @@ def identity_index(db):
             if fact.get('source_provider')=='sportradar' and fact.get('source_id'):
                 shared['sportradar']=str(fact['source_id'])
         event['shared']=[[name,str(value)] for name,value in sorted(shared.items())]
+        event['dependency_revision']=event_dependency(event)
     # Matching needs every small event identity and active-membership bit, but
     # only contracts/books in the complete selected neighborhood need decoding.
     # Reviewed aliases can join rescheduled occurrences beyond the metadata
@@ -52,7 +70,7 @@ def identity_index(db):
     for event in events:
         event['reviewed']=aliases.get((event['provider'],event['native_event_id']),[])
     event_index={r['id']:r for r in events}
-    active={r['event_id'] for r in db.execute('SELECT DISTINCT c.event_id FROM current_contract c JOIN current_offer o ON o.contract_id=c.id').fetchall()}
+    active={r['id'] for r in events if r.pop('active')}
     return dict(epoch=str(epoch),events=event_index,offers={},active_events=active,neighborhoods={})
 
 
@@ -64,8 +82,23 @@ def capture(db, states, *, selector=None, compact=False, resource_guard=None):
         selected_ids=[row[0] for row in neighborhood(index,selector)]
     query='''SELECT c.id,c.event_id,c.venue,c.native_market_id,c.native_outcome_id,c.native_side,c.revision AS contract_revision,
         encode(sha256(convert_to((c.facts #- '{comparison_source_metadata,observed_at}')::text,'UTF8')),'hex') AS contract_dependency,
+        encode(sha256(convert_to(jsonb_build_array(c.facts-'orientation_evidence'-'comparison_source_metadata',
+            c.facts#>'{comparison_source_metadata,same_outcome}',c.facts#>'{comparison_source_metadata,scoring_scope}',
+            c.facts#>'{comparison_source_metadata,native_market_type}',c.facts#>'{comparison_source_metadata,series_id}')::text,'UTF8')),'hex') AS metric_dependency,
         c.facts AS contract,o.revision AS offer_revision,o.source_at,o.received_at
         FROM current_contract c JOIN current_offer o ON o.contract_id=c.id WHERE (%s::text[] IS NULL OR c.event_id=ANY(%s)) ORDER BY c.id'''
+    if compact:
+        # Hash full immutable contracts in SQL, but return only the exact fields
+        # consumed by candidate_identity and scoped rule dependencies. Wording,
+        # wire provenance and unrelated metadata stay in SQL/selected evidence.
+        projection="""jsonb_build_object('selection',c.facts->'selection',
+          'market_identity',c.facts->'market_identity','comparison_scope',COALESCE(c.facts->'comparison_scope','{}'::jsonb),
+          'comparison_source_metadata',jsonb_build_object(
+            'same_outcome',COALESCE(c.facts#>'{comparison_source_metadata,same_outcome}','{}'::jsonb),
+            'scoring_scope',COALESCE(c.facts#>'{comparison_source_metadata,scoring_scope}','{}'::jsonb),
+            'native_market_type',c.facts#>'{comparison_source_metadata,native_market_type}',
+            'series_id',c.facts#>'{comparison_source_metadata,series_id}'))"""
+        query=query.replace('c.facts AS contract',projection+' AS contract')
     event_index={r['id']:r for r in events}
     selections={};scope_keys=[];scope_contexts=[]
     def retain(row):
@@ -87,7 +120,7 @@ def capture(db, states, *, selector=None, compact=False, resource_guard=None):
     if compact:
         offers=[]
         with db.cursor(name='predict_publication_proof') as cursor:
-            cursor.itersize=8;cursor.execute(query,(selected_ids,selected_ids))
+            cursor.itersize=256;cursor.execute(query,(selected_ids,selected_ids))
             for row in cursor:
                 if len(offers)>=32768:raise ValueError('publication_dependency_capacity')
                 offers.append(retain(row))
@@ -154,7 +187,7 @@ def neighborhood(frame, selector):
             for value in event['shared']:
                 if value not in shared:shared.append(value)
     active=frame.get('active_events',{value['event_id'] for value in frame['offers'].values()})
-    result=sorted((key,frame['events'][key]['revision'],key in active) for key in selected if key in frame['events'])
+    result=sorted((key,frame['events'][key].get('dependency_revision',frame['events'][key]['revision']),key in active) for key in selected if key in frame['events'])
     frame['neighborhoods'][cache]=result
     return result
 
@@ -179,19 +212,17 @@ def manifest(frame, bundle):
     # roster, rather than repeating scope/price admission on an HTTP read.
     from app.dashboard.comparison_board import entries,common_odds
     from app.comparison.same_outcome import quote_identity
-    values=entries(bundle['state_inputs']);eligible={}
+    values=entries(bundle['state_inputs']);eligible={};identities={};peers={}
     for event,group,q in values:
         cid=contract_id(dict(quote=q));identity=quote_identity(q,group,event)
-        compatible=[]
-        if identity['supported']:
-            for other_event,other_group,other in values:
-                peer=quote_identity(other,other_group,other_event)
-                if (peer['supported'] and peer['key']==identity['key']
-                    and other['venue']!=q['venue'] and other['binding']['verified']
-                    and other.get('occurrence_match',{}).get('status')=='matched'
-                    and other['original']['payout_units']=='USD' and common_odds(other)['supported']):
-                    compatible.append(contract_id(dict(quote=other)))
-        eligible[cid]=sorted(compatible)
+        key=encoded(identity['key']) if identity['supported'] else None
+        identities[id(q)]=(cid,key)
+        if (key is not None and q['binding']['verified'] and q.get('occurrence_match',{}).get('status')=='matched'
+                and q['original']['payout_units']=='USD' and common_odds(q)['supported']):
+            peers.setdefault(key,[]).append((q['venue'],cid))
+    for _,_,q in values:
+        cid,key=identities[id(q)]
+        eligible[cid]=sorted(peer for venue,peer in peers.get(key,[]) if venue!=q['venue'])
     return dict(version=VERSION,epoch=frame['epoch'],selector=selector,matching=hashed(neighborhood(frame,selector)),
         observations={contract_id(r):own(frame,contract_id(r)) for r in bundle['records'] if r['quote']['venue']!='pinnacle'},
         selections=selections,eligible=eligible,candidates={cid:candidates(frame,selector,value,eligible.get(cid,[])) for cid,value in selections.items()})
@@ -281,4 +312,39 @@ def reasons(frame, saved):
                   for cid,value in saved['observations'].items()}
     comparisons={cid:(['current_dependencies_changed'] if candidates(frame,saved['selector'],saved['selections'][cid],saved.get('eligible',{}).get(cid,[]))!=value else [])
                  for cid,value in saved['candidates'].items()}
-    return dict(all=common,observations=observations,comparisons=comparisons)
+    benchmarks={cid:(['reference_dependencies_changed'] if any(own(frame,rid)!=value for rid,value in refs.items()) else [])
+        for cid,refs in saved.get('references',{}).items()}
+    for cid,values in benchmarks.items():
+        if values:comparisons[cid]=sorted(set(comparisons.get(cid,[])+values))
+    identities={cid:([] if metric_identity(frame,cid)==value else ['benchmark_identity_changed'])
+        for cid,value in saved.get('metric_identities',{}).items()}
+    return dict(all=common,observations=observations,comparisons=comparisons,benchmarks=benchmarks,benchmark_identity=identities)
+
+
+def bind_references(frame, dependencies, bundle):
+    """Exact original reference offers, independently of unrelated peer prices."""
+    from app.dashboard.comparison_board import entries
+    from app.comparison.current_dependencies import references
+    from .current_rows import contract_id
+    result={};identities={}
+    for _,_,q in entries(bundle['state_inputs']):
+        cid=contract_id(dict(quote=q));identities[cid]=metric_identity(frame,cid)
+        value=references(q,bundle['state_inputs']['comparison_profiles']).get('reference',{}).get('payload',{})
+        originals=q.get('comparison_input_status',{}).get('reference',{}).get('source_originals')
+        if originals is None:
+            originals=[r.get('source') for r in value.get('outcomes',[]) if r.get('source')]
+        if not originals and value.get('version')=='comparison-two-way-benchmark-1':
+            originals=[r['quote']['source'] for r in (bundle.get('benchmark_originals') or {}).get('source_originals',[])]
+        if not originals:continue
+        ids=[contract_id(dict(quote=dict(venue=value.get('venue','pinnacle'),source=s))) for s in originals]
+        result[contract_id(dict(quote=q))]={cid:own(frame,cid) for cid in ids}
+    dependencies['references']=result
+    dependencies['metric_identities']=identities
+
+
+def metric_identity(frame,cid):
+    row=frame['offers'].get(cid)
+    # Price-only conditional metrics depend on the admitted semantic contract,
+    # not a repeated catalog receipt's provenance or orientation proof hash.
+    # Event membership/schedule and reviewed scoring remain separate checks.
+    return None if row is None else [row.get('metric_dependency',row.get('contract_dependency',row['contract_revision'])),row.get('scoring_dependency')]

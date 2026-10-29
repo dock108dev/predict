@@ -60,7 +60,7 @@ class AutomaticMultisportSQL(IsolatedAsyncioTestCase):
             task.cancel()
             await asyncio.gather(task,return_exceptions=True)
         self.addAsyncCleanup(stop_heartbeat)
-        for target in ('app.collection.current_database.connect','app.storage.latest_board.connect','app.dashboard.comparison_board_api.connect'):
+        for target in ('app.collection.current_database.connect','app.storage.latest_board.connect','app.dashboard.comparison_board_api.connect','app.collection.bulk_checkpoint.connect','app.collection.native_recovery.connect'):
             patched=patch(target,side_effect=self.connect);patched.start();self.addCleanup(patched.stop)
         self.owner=latest.LatestBoardOwner(self.service)
         await self.owner.start()

@@ -9,6 +9,7 @@ from aiohttp import web
 
 from app.comparison.scanner_projection import Projection, Filters
 from app.comparison.calculation_control import cancellation
+from app.collection.background_work import AcquisitionDeferred,optional_cancelled
 from app.storage.scanner_readiness import capture
 from app.storage.store import connect
 from app.storage.current_games import utc, engine_binding
@@ -17,6 +18,7 @@ from app.comparison.estimated_policy import load
 from app.storage.scanner_publication import subscribe, lookup
 
 INTERVAL_SECONDS = .25
+CAPTURE_TURN_SECONDS = 5
 
 
 class Scanner:
@@ -120,7 +122,12 @@ class Scanner:
         # boards and coverage. Fixture/local readers keep their existing lane.
         if not self.durable or self.stopped():return self._once_worker()
         from app.collection.background_work import BACKGROUND
+        return BACKGROUND.requested('scanner',self._once_background)
+
+    def _once_background(self):
+        from app.collection.background_work import BACKGROUND
         from app.storage.scanner_readiness import capture_reservation
+        if BACKGROUND.acquisition_pressure():raise AcquisitionDeferred('native_acquisition_catching_up')
         with self.connector() as db:
             required=capture_reservation(db)
             if not self.restored:
@@ -133,6 +140,7 @@ class Scanner:
                 self.projection.expire()
                 return lease.deferred()
             self.capture_guard=lambda amount:BACKGROUND.resize('scanner',amount)
+            self.capture_turn_deadline=perf_counter()+CAPTURE_TURN_SECONDS
             try:return self._once_worker()
             except ValueError as exc:
                 if str(exc) != 'background_memory_capacity':raise
@@ -144,7 +152,7 @@ class Scanner:
                 self.preparation.clear()
                 self.admission_status.update(state='deferred',reason=str(exc))
                 return dict(published=False,deferred=True,reason=str(exc),provider_requests=0)
-            finally:self.capture_guard=None
+            finally:self.capture_guard=None;self.capture_turn_deadline=None
 
     def _once_worker(self):
         if self.durable and not self.restored:
@@ -180,7 +188,13 @@ class Scanner:
     def _once(self):
         continuation,self.continuation=self.continuation,None
         if self._withdraw_if_stopped():return
-        with cancellation(self.stopped):
+        def cancelled():
+            if self.stopped():return True
+            deadline=getattr(self,'capture_turn_deadline',None)
+            if deadline is not None and perf_counter()>=deadline:
+                raise AcquisitionDeferred('background_turn_yielded')
+            return optional_cancelled(False)
+        with cancellation(cancelled):
             with self.projection.lock:
                 current=(self.marker,self.projection.generation,self.projection.capture_revision)
                 pending=bool(self.projection.pending) and not self.projection.stopped
@@ -246,6 +260,9 @@ class Scanner:
                     turn=await (optional_thread(self.once) if self.durable else asyncio.to_thread(self.once))
                     deferred=isinstance(turn,dict) and turn.get('deferred',False)
                     self.error=None
+                except AcquisitionDeferred as exc:
+                    deferred=True;self.error=None;self.continuation=None
+                    self.admission_status=dict(state='deferred',reason=str(exc))
                 except Exception as exc:
                     failure(__name__, 'scanner_reconciliation', exc)
                     self.error=type(exc).__name__
@@ -274,7 +291,7 @@ class Scanner:
 
     def start(self):
         if self.task is None:
-            self.unsubscribe=subscribe(lambda observation:self.wake.set())
+            self.unsubscribe=subscribe(lambda observation:self.wake.set(),proof=not self.durable)
             self.task=asyncio.create_task(self.run())
 
     async def close(self):

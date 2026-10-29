@@ -75,8 +75,8 @@ class SessionProjection:
         if typ in ('prediction_book','market_selected','coverage_inventory','product_reference'):
             data=row.get('book',row.get('market',{}));ref=data.get('raw',{}).get('ref',{})
             size_key=(typ,source,ref.get('event_id'),ref.get('market_id'),row.get('reference',{}).get('id'))
-            size=len(json.dumps(row).encode())
-            if sum(self.sizes.values())-self.sizes.get(size_key,0)+size>16*1024*1024:raise ValueError('projection byte bound')
+            size=0 if getattr(self,'bulk_current',False) else len(json.dumps(row).encode())
+            if not getattr(self,'bulk_current',False) and sum(self.sizes.values())-self.sizes.get(size_key,0)+size>16*1024*1024:raise ValueError('projection byte bound')
             self.sizes[size_key]=size
         if self.finished: raise ValueError('observation after terminal')
         if self.sid and row['session_id']!=self.sid: raise ValueError('session identity changed')
@@ -120,26 +120,29 @@ class SessionProjection:
                 else:self.native_receipts[receipt_key]=row['received_at']
         elif typ=='coverage_inventory':
             if row.get('previous_generation')!=self.generation: raise ValueError('inventory dependency mismatch')
-            cats=deepcopy(row['inventory'])
-            if sum(len(c['markets']) for c in cats.values())>512 and getattr(self,'native_interpretation','native-book-comparison-4')=='native-book-comparison-4':
+            # Database ingress already owns a detached prepared replacement.
+            cats=row['inventory'] if getattr(self,'bulk_current',False) else deepcopy(row['inventory'])
+            if not getattr(self,'bulk_current',False) and sum(len(c['markets']) for c in cats.values())>512 and getattr(self,'native_interpretation','native-book-comparison-4')=='native-book-comparison-4':
                 from app.collection.catalog_metadata import compact
                 for venue,cat in cats.items():compact(cat,venue)
-            if sum(len(c['markets']) for c in cats.values())>512: raise ValueError('projection market bound')
+            if not getattr(self,'bulk_current',False) and sum(len(c['markets']) for c in cats.values())>512: raise ValueError('projection market bound')
             old=self.memberships(); self.inventory=cats; self.generation=row['generation']; new=self.memberships()
             for key in list(self.books):
                 if key not in new or old.get(key)!=new[key]:
                     self.books.pop(key,None); self.metadata.pop(key,None); self.invalid.discard(key)
             self.sizes={k:v for k,v in self.sizes.items() if k[0] not in ('prediction_book','market_selected') or (k[1],k[2],k[3]) in new}
             self.health={k:v for k,v in self.health.items() if k in new}
+            self.book_evidence={k:v for k,v in self.book_evidence.items() if k in new}
             self.refresh=None;self.safety={}
         elif typ in ('market_selected','prediction_book'):
             data=row['market'] if typ=='market_selected' else row['book']; ref=data['raw']['ref']
             key=(source,ref['event_id'],ref['market_id'])
-            if len(self.metadata)+len(self.books)>=1024 and key not in self.metadata and key not in self.books:
+            if not getattr(self,'bulk_current',False) and len(self.metadata)+len(self.books)>=1024 and key not in self.metadata and key not in self.books:
                 raise ValueError('projection state bound')
             if typ=='market_selected': self.metadata[key]=deepcopy(row)
             else:
-                self.books[key]=deepcopy(row)
+                # Ordinary ingress transfers an owned immutable complete image.
+                self.books[key]=row if getattr(self,'bulk_current',False) else deepcopy(row)
                 if row.get('native_observation'):
                     obs=row['native_observation']
                     summary=self.book_evidence.setdefault(key,dict(counts={},latest=None))

@@ -355,7 +355,9 @@ def evaluate(q, profiles, *, at, event, group, policy=DEFAULT_POLICY, native_qua
             extra_funding=extra_funding,hold_returns_usd=hold_returns_usd,state_cashflows=state_cashflows,
             settlement_charge_already_withheld=settlement_charge_already_withheld,details=details,
             supported_result=supported_result,benchmark=benchmark)
-    return gross_quote(result,q,profiles,at=at,event=event,group=group,policy=policy,benchmark=benchmark)
+    result=gross_quote(result,q,profiles,at=at,event=event,group=group,policy=policy,benchmark=benchmark)
+    from .conditional_benchmark import attach
+    return attach(result,q,at=at,event=event,group=group)
 
 
 def _evaluate(q, profiles, *, at, event, group, policy=DEFAULT_POLICY, native_quantity=None,
@@ -610,7 +612,7 @@ def compact(result):
         'unbuffered_return_percent','buffered_return_percent','size_status','supported_native_quantity',
         'modeled_native_quantity','supported_capital_usd','policy_revision','evaluated_at','as_of_basis','display',
         'supported_size_evaluation','supported_size_result','material_note','evaluation_frame',
-        'gross_decisive_benchmark','bound_financial_inputs')
+        'gross_decisive_benchmark','conditional_trade_benchmark','bound_financial_inputs')
     from .financial_metrics import SUCCESSOR_FIELDS
     fields += (*SUCCESSOR_FIELDS, "modeled_basis")
     return {k:(compact(result[k]) if k=='supported_size_result' else result[k]) for k in fields if k in result}

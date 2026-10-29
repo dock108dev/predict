@@ -155,6 +155,19 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
 
 
 class WindowContractTests(unittest.TestCase):
+    def test_recognized_full_image_failure_can_be_isolated_without_relabeling_connection(self):
+        from app.adapters.polymarket_us_stream import MalformedMarketFrame
+        stream=MarketStream([market()],None);stream.isolate_market_errors=True
+        epoch=stream.begin_subscription('r')
+        stream.parse(message('r'),'r',generation=epoch)
+        with self.assertRaises(MalformedMarketFrame):stream.parse(message('r',price='bad'),'r',generation=epoch)
+        self.assertEqual(stream.last[SLUG].sync,BookSync.UNSYNCHRONIZED)
+        self.assertEqual(stream.subscription_id,'r')
+        self.assertEqual(stream.parse(message('r',price='0.3'),'r',generation=epoch).sync,BookSync.SYNCHRONIZED)
+        # Unknown delta semantics remain stream-wide recovery, never isolation.
+        with self.assertRaises(ValueError):stream.parse(message('r',delta={}),'r',generation=epoch)
+        self.assertIsNone(stream.subscription_id)
+
     def test_atomic_replacement_omission_quantity_zero_and_empty(self):
         stream=MarketStream([market()],None)
         epoch=stream.begin_subscription('r')

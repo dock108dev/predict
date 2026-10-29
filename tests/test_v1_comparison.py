@@ -21,7 +21,7 @@ def prepared():
   else:
    # Synthetic explicit side identity, never claimed as provider coverage.
    raw=json.loads(p.metadata[(venue,e['id'],m['id'])]['market']['raw']['json_text'])
-   native=deepcopy(raw['events'][0]['markets'][0]);native['sportsMarketType']='football_team_full_game_winner'
+   native=deepcopy(raw['markets'][0] if 'markets' in raw else raw['events'][0]['markets'][0]);native['sportsMarketType']='football_team_full_game_winner'
    for side in native['marketSides']:side['marketId']=m['id']
    m['native_metadata']=native
   for k,r in p.books.items():

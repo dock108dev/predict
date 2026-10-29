@@ -34,7 +34,7 @@ def advice(category, failure):
         return 'budget_accounting', 'Metered acquisition waits for safe accounting or its scheduled slot.', 'Inspect dated usage, unresolved charges, reset evidence and next due; preserve spend.'
     if category in ('connection','rate_limit') or failure in ('aggregate_transport_uncertain','aggregate_http_failure','aggregate_rate_limit'):
         return 'transport_uncertainty', 'Affected source transport is unavailable; freshness is separate.', 'Respect backoff; inspect cleanup and any uncertain charge before recovery.'
-    if category=='malformed_source' or failure in ('aggregate_admission_failed','aggregate_bootstrap_schema'):
+    if category=='malformed_source' or failure=='aggregate_bootstrap_schema':
         return 'malformed_source', 'Rejected data cannot replace valid admitted inputs.', 'Inspect the bounded admission reason; repair or wait for a complete valid image.'
     return 'local_admission_resource', 'Affected source is unavailable or unqualified; independent paths continue.', 'Inspect exclusions and resource limits; fix the smallest local defect before recovery.'
 
@@ -71,7 +71,7 @@ def age(at):
     except (ValueError,TypeError):return None
 
 
-def project(service, raw):
+def project(service, raw, *, accounting=None):
     store=service.store
     # This projection is synchronous and read-only. Keep the defensive-copy
     # snapshot API for callers that retain or edit state, not status summaries.
@@ -110,11 +110,19 @@ def project(service, raw):
         summaries={v:deepcopy(service.states[v]) for v in venues}
         backoff=max(0,getattr(worker,'backoff_until',0)-time.monotonic())
         latest_issue=next((i for i in reversed(service.issues) if i['runtime_id']==service.runtime_id and any(v in i['affected_venues'] for v in venues)),None)
-        panels.append(dict(next_action=None if latest_issue is None else latest_issue['next_action'],provider=provider,affected_venues=venues,status=summaries,
+        done=service.tasks[provider].done() if provider in service.tasks else None
+        state_values={v['state'] for v in summaries.values()}
+        behavior=('owner_stop' if provider in getattr(service,'paused_sources',()) or getattr(service,'globally_stopped',False)
+            else 'accounting_hold' if provider=='the_odds_api' and (raw.get('quota') or {}).get('blocking_reason')
+            else 'terminal_failure' if done else 'retrying' if backoff or (provider=='the_odds_api' and getattr(worker,'phase',None)=='database_ingress' and (raw.get('sink') or {}).get('admission_state')=='retrying')
+            else 'running' if provider=='the_odds_api' and worker is not None and getattr(worker,'phase','idle') not in ('idle','waiting_for_cycle')
+            else 'receiving' if 'available' in state_values else 'waiting_for_cycle' if 'budget_delayed' in state_values else 'running')
+        panels.append(dict(worker_behavior=behavior,processing_phase=getattr(worker,'phase',None),next_action=None if latest_issue is None else latest_issue['next_action'],provider=provider,affected_venues=venues,status=summaries,
             source_at=latest,source_age_seconds=age(latest),received_at=received,receipt_age_seconds=age(received),
             last_book_observation_at=max(observed_sources,key=stamp) if observed_sources else None,last_book_receipt_at=max(observed_receipts,key=stamp) if observed_receipts else None,last_http_received_at=metrics.get('last_received_at'),socket_connected=bool(getattr(worker,'socket',None)) if provider!='the_odds_api' else None,
             timestamp_meanings=sorted({q['times']['source_time_kind'] for q in quotes}),
-            quotes=len(quotes),identity_verified=sum(bool(q['binding']['verified']) for q in quotes),
+            quote_count_scope='diagnostic_cache' if getattr(service,'database_mode',False) else 'current_projection',
+            sql_observations=None,quotes=len(quotes),identity_verified=sum(bool(q['binding']['verified']) for q in quotes),
             comparison_eligible=sum(bool(q['comparison']['eligible']) for q in quotes),
             calculation_eligible={k:sum(bool(q.get('calculations',{}).get(k,{}).get('eligible')) for q in quotes) for k in ('raw_difference','arbitrage','ev','sizing')},
             stale=sum(bool(q['stale']) for q in quotes),freshness_policies=[deepcopy(p) for p in {packed(q['freshness_policy']):q['freshness_policy'] for q in quotes if q.get('freshness_policy')}.values()],
@@ -129,10 +137,10 @@ def project(service, raw):
                 file_bytes=sum(body.size for body in store.encoded_bodies.owners),**store.encoded_bodies.metrics),
             sampled_rss_bytes=service.sampled_rss,sampled_highwater_rss_bytes=service.peak_rss,rss_ceiling_bytes=service.config['rss_bytes'],
             subscribers=0 if store is None else len(store.subscribers),pending_notices=0 if store is None else sum(q.qsize() for q in store.subscribers),notice_ceiling_per_stream=1,stream_ceiling=8,
-            transport_queue_ceiling=1,transport_queue_sample=None,
+            transport_queue_ceiling=64,transport_queue_sample=None,
             reviews=0 if store is None else len(store.leases),issue_records=len(service.issues),issue_encoded_bytes=len(packed(service.issues)),
             issue_record_ceiling=service.config['issue_records'],issue_byte_ceiling=service.config['issue_bytes']),
-        recovery=dict(mode='fresh_service_runtime',expires_reviews=True,requires_attended_board=False,reason=service.recovery_reason()),
+        recovery=dict(mode='fresh_service_runtime',expires_reviews=True,requires_attended_board=False,reason=service.recovery_reason() if accounting is None else accounting['recovery_reason']),
         historical_issues=[dict(provider='the_odds_api',affected_venues=['novig'],category='query_offering_gap',
             observed_at='2026-10-03T05:21:49.121844+00:00',scope='NCAAF winner / spread / total; Novig and ProphetX query',
             impact='No Novig rows in this exact retained response. ProphetX supplied 322 quotes across 53 events.',credits=3,

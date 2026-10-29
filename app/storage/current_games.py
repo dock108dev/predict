@@ -21,23 +21,33 @@ def utc():return datetime.now(timezone.utc).isoformat()
 
 def engine_binding():
     root=Path(__file__).resolve().parents[2]
+    # Current occurrence aliases affect joins, not immutable ingress records.
     paths=['app/comparison/estimated_ev.py','app/comparison/estimated_pair.py','app/comparison/estimated_consumer.py','app/comparison/estimated_content.py','app/comparison/estimated_templates.py','app/fees/engine.py','app/fixtures/estimated-content-v1.json','app/fixtures/comparison-source-rules-v1.json','app/fixtures/comparison-selected-applicability-v1.json']
     paths += ['app/comparison/estimated_policy.py','app/comparison/effective_policy.py','app/comparison/benchmark.py','app/comparison/requested_sizing.py','app/comparison/financial_metrics.py','app/comparison/source_inputs.py','app/comparison/current_metrics.py','app/comparison/current_dependencies.py','app/comparison/domain.py']
     paths += ['app/storage/comparison_board.py','app/dashboard/comparison_board.py','app/dashboard/comparison_board_api.py','app/dashboard/query_policy.py','app/collection/current_database.py','app/comparison/calculation_control.py','app/normalization/registry.py']
     paths += ['app/comparison/calculation_availability.py','app/storage/current_rows.py','app/storage/schedule_metadata.py','app/dashboard/comparison_slate.py']
     paths += ['app/comparison/combined_inputs.py','app/comparison/combined_native.py','app/comparison/occurrence_matching.py','app/collection/current_sink.py','app/collection/current_aggregate_admission.py','app/dashboard/current_normalized.py','app/collection/current_comparison_inputs.py','app/storage/current_games.py']
-    paths += ['app/collection/current_aggregate.py','app/reference/odds_sample.py','app/reference/odds_acquire.py','app/comparison/coverage.py']
+    paths += ['app/collection/current_aggregate.py','app/collection/alternate_acquisition.py','app/collection/current_benchmark.py','app/reference/odds_sample.py','app/reference/odds_acquire.py','app/comparison/coverage.py']
     paths += ['app/comparison/readiness_encoding.py','app/comparison/scanner_readiness.py','app/comparison/readiness_inputs.py','app/storage/scanner_readiness.py','app/fixtures/scanner-readiness-policy-v1.json']
     paths += ['app/comparison/scanner_finance.py','app/comparison/scanner_projection.py','app/storage/scanner_publication.py','app/dashboard/scanner_api.py']
     paths += ['app/comparison/scanner_ticket_finance.py','app/comparison/scanner_tickets.py','app/comparison/scanner_destinations.py','app/dashboard/scanner_ticket_api.py','app/fixtures/scanner-destinations-v1.json']
     paths += ['app/comparison/scanner_transitions.py','app/comparison/scanner_summaries.py','app/storage/scanner_preparation.py']
-    paths += ['app/storage/scanner_latest.py','app/storage/latest_board.py','app/storage/board_capture.py','app/storage/board_view.py','app/storage/selected_frame.py','app/storage/slate_reads.py','app/dashboard/read_work.py',
+    paths += ['app/storage/scanner_latest.py','app/storage/latest_board.py','app/storage/board_capture.py','app/storage/board_view.py','app/storage/selected_frame.py','app/storage/shared_json.py','app/storage/slate_reads.py','app/dashboard/read_work.py',
               'app/collection/runtime_status.py','app/collection/runtime_client.py','app/collection/data_runtime.py']
     paths += ['app/collection/selected_fee_operation.py','app/collection/current_native.py','app/collection/current_native_catalog.py',
               'app/collection/native_fee_metadata.py','app/collection/native_http_transport.py',
               'app/collection/prediction_producer.py']
     paths += ['app/collection/coverage.py','app/collection/admission_enrichment.py','app/collection/v1_comparison.py']
     paths += ['app/comparison/net_ev.py','app/comparison/net_costs.py','app/comparison/modeled_winner.py','app/comparison/bound_finance.py','app/comparison/event_eligibility.py','app/collection/prediction_discovery.py','app/collection/native_score_binding.py','app/fixtures/native-admission-identity-v2.json']
+    paths += ['app/comparison/line_reference.py','app/storage/native_authority.py','app/collection/financial_worker.py','app/fixtures/pinnacle-rules-20261028.html']
+    paths += ['app/normalization/college_registry.py','app/normalization/college-occurrence-aliases-20261028.json']
+    paths += ['app/fixtures/novig-conditional-fees-review-20261028.json','app/fixtures/novig-fees-review-20261028.html',
+              'app/fixtures/polymarket-us-conditional-fees-review-20261028.json','app/fixtures/polymarket-us-fees-review-20261028.md',
+              'app/fixtures/native-scoring-scope/hockey-spreads-review-20261028.pdf',
+              'app/fixtures/native-scoring-scope/hockey-totals-review-20261028.pdf','app/fixtures/native-scoring-scope/nhl-2026-27-rule84.txt']
+    paths += ['app/comparison/conditional_benchmark.py','app/fixtures/novig-conditional-fees-20261028.json',
+              'app/fixtures/novig-fees-20261028.html','app/fixtures/polymarket-us-conditional-fees-20261028.json',
+              'app/fixtures/polymarket-us-fees-20261028.md']
     paths += ['app/storage/observation_publication.py','app/comparison/native_scoring_scope.py','app/comparison/same_outcome.py','app/comparison/sporting_scope.py',
               'app/normalization/registry-v1.json','app/fixtures/comparison-event-links-v1.json',
               'app/fixtures/native-scoring-scope/selected-series-fee-and-ot-resolution.json',
@@ -56,7 +66,8 @@ def observation_binding():
         'app/storage/current_rows.py','app/storage/schedule_metadata.py','app/storage/comparison_board.py','app/storage/observation_publication.py','app/storage/latest_board.py',
         'app/normalization/registry.py','app/comparison/event_eligibility.py',
         'app/collection/prediction_discovery.py','app/collection/native_score_binding.py','app/fixtures/native-admission-identity-v2.json',
-        'app/normalization/registry-v1.json','app/fixtures/comparison-event-links-v1.json')
+        'app/normalization/registry-v1.json','app/fixtures/comparison-event-links-v1.json',
+        'app/normalization/college_registry.py','app/normalization/college-occurrence-aliases-20261028.json')
     # Native scoring registry entries and retained governing rules have scoped
     # dependencies in observation_publication. A data edit for another native
     # outcome must not withdraw every unchanged game.

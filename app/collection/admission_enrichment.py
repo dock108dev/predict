@@ -126,8 +126,12 @@ def _season_context(facts):
     return None,None
 
 
-def enrich_game(event):
-    e=deepcopy(event);facts=e.get('observed_identity_facts',[])
+def enrich_game(event, *, share_metadata=False):
+    # Owned catalog rows may share read-only source facts; only conflicts are
+    # appended in place below. Ordinary callers still receive detached values.
+    e=dict(event) if share_metadata else deepcopy(event)
+    if share_metadata and 'identity_conflicts' in e:e['identity_conflicts']=list(e['identity_conflicts'])
+    facts=e.get('observed_identity_facts',[])
     native=e.get('_native') or {}
     if native.get('gameId') is not None:e['source_game_id']=str(native['gameId'])
     e['identity_field_evidence']=dict(native_season=native.get('season'),native_stage=native.get('stage'),native_series_label=native.get('seriesSlug'),native_game_id=native.get('gameId'),native_game_number=native.get('gameNumber'),native_original_start=native.get('originalStartTime'),native_rescheduled_from=native.get('rescheduledFromGameId'),qualification='Source identifiers/labels retained separately; no common MLB occurrence or sport season inferred from locator labels')
@@ -299,20 +303,36 @@ def duplicate_identity_conflicts(old,new,*,event):
     return conflicts
 
 
-def share_games(target,other):
+def share_games(target,other, *, share_metadata=False):
     """Share observed season/stage only for exact schedule and two participants."""
     facts={}
     for raw in other['events']:
-        e=enrich_game(dict(raw,source='kalshi'))
+        e=enrich_game(dict(raw,source='kalshi'),share_metadata=share_metadata)
         if e.get('identity')=='resolved' and e.get('season') and e.get('stage') and not e.get('conflicting_duplicate') and e.get('canonical_key') and len(e.get('participants',{}))==2:
             key=stable([e.get('competition'),e['canonical_key']]);facts.setdefault(key,[]).append(e)
     for raw in target['events']:
-        e=enrich_game(dict(raw,source='polymarket_us'));raw.update(e)
+        e=enrich_game(dict(raw,source='polymarket_us'),share_metadata=share_metadata);raw.update(e)
         key=stable([e.get('competition'),e.get('canonical_key')]);matches=facts.get(key,[])
         if matches and len({(m['season'],m['stage']) for m in matches})==1:
             m=matches[0]
             if any(e.get(k) is not None and e[k]!=m[k] for k in ('season','stage')):raw['conflicting_duplicate']=True
             raw.update(source_participant_roles=deepcopy(m.get('source_participant_roles',{})),season=m['season'],stage=m['stage'],shared_identity_provenance=dict(source='kalshi',event_ids=sorted(x['id'] for x in matches),facts=deepcopy(m.get('observed_identity_facts',[])),qualification='Exact two-participant schedule correspondence; no MLB occurrence inferred'))
+
+def source_team_label(label, event):
+    """Exact provider display abbreviation + safeName from this event's teams."""
+    sport=event.get('competition')
+    direct=resolve_team(dict(name=label),sport,'polymarket_us')
+    candidates={direct} if direct else set()
+    for team in (event.get('_native') or {}).get('teams',[]):
+        aliases={team.get('name'),team.get('safeName')}
+        for field in ('displayAbbreviation','abbreviation'):
+            if team.get(field) and team.get('safeName'):
+                aliases.add(str(team[field]).upper()+' '+team['safeName'])
+        if label in aliases:
+            canonical=resolve_team(team,sport,'polymarket_us')
+            if canonical:candidates.add(canonical)
+    return next(iter(candidates)) if len(candidates)==1 and candidates.issubset(set(event.get('participants',{}).values())) else None
+
 
 def us_score(native,locator,event):
     """Literal native line, period, subject, units and explicit equality facts."""
@@ -357,7 +377,7 @@ def us_score(native,locator,event):
         match=re.search(r' combine for (?:more than|over) (\d+(?:\.\d+)?) '+unit+r' in ',text)
         labels=re.search(r'(?:settles Over if|settle to Yes if) (.+?) and (.+?) combine for ',text)
         if not labels:return None
-        names=[resolve_team(dict(name=labels[k]),sport,'polymarket_us') for k in (1,2)]
+        names=[source_team_label(labels[k],event) for k in (1,2)]
         if set(names)!=set(event.get('participants',{}).values()) or None in names:return None
         if not match or Decimal(match[1])!=line or long.get('description')!='Over' or short.get('description')!='Under':return None
     equality='predicate' if family=='moneyline' else 'unreachable'
@@ -372,6 +392,7 @@ def us_score(native,locator,event):
         else:equality='unknown'
     return dict(policy=POLICY,status='EXPLICIT_PREDICATE_ONLY',competition=sport,period=period,family=family,
         participant=participant,line=format(line,'f'),unit=unit,native_metadata_sha256=stable(native),rules_primary=text,
+        event_team_metadata_sha256=stable((event.get('_native') or {}).get('teams',[])),
         equality_treatment=equality,outcomes=[dict(native_id=str(long['id']),operator='eq' if participant=='tie' else 'gt',equality=equality),
         dict(native_id=str(short['id']),operator=short_operator,equality=equality)],
         missing=['Exact equality/push/refund treatment for integer line'] if equality=='unknown' else [],

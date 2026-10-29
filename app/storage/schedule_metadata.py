@@ -73,11 +73,26 @@ def retained_binding(previous,event,contract,*,captured_at,path,snapshot_sha256,
     return binding(dict(previous,schedule_metadata=metadata))
 
 
-def choose(previous, incoming):
+def choose(previous, incoming, *, observed_at=None):
     """Select independently observed event metadata, or retain a bounded refusal."""
     if previous is None:return incoming
     old,new=witness(previous),witness(incoming)
     same=exact_time(previous['scheduled_start'])==exact_time(incoming['scheduled_start'])
+    conflict=previous.get('schedule_conflict') or {}
+    observation=conflict.get('observed_before')
+    if (new and old is None and observation and core(previous)==core(incoming)
+            and not previous.get('occurrence_conflict') and not previous.get('conflicting_duplicate')
+            and new['authority']==['the_odds_api','event',incoming['id']]
+            and new.get('received_at') and exact_time(new['received_at'])>exact_time(observation['at'])
+            and observation.get('core')==core(previous)
+            and all(v is None or v.get('authority')==new['authority'] for v in conflict.get('witnesses',[]))):
+        # A fresh provider receipt follows an actual local observation of the
+        # legacy conflict. This supplies the missing ordering without treating
+        # a quote clock or a retrospective replay time as metadata authority.
+        result=deepcopy(incoming)
+        result['schedule_recovery']=dict(reason='fresh_metadata_after_observed_legacy_conflict',
+            prior=deepcopy(conflict),prior_start=previous['scheduled_start'])
+        return result
     if old and new and old.get('received_at') and new.get('received_at') and old['authority']==new['authority'] and core(previous)==core(incoming):
         a,b=exact_time(old['received_at']),exact_time(new['received_at'])
         if b<a:return previous
@@ -96,6 +111,13 @@ def choose(previous, incoming):
     value['schedule_conflict']=dict(reason=reason,starts=sorted(set([
         previous['scheduled_start'],incoming['scheduled_start']])),
         witnesses=[deepcopy(old),deepcopy(new)])
+    if old is None and core(previous)==core(incoming):
+        if observation:
+            value['schedule_conflict']['observed_before']=deepcopy(observation)
+        elif observed_at is not None:
+            exact_time(observed_at)
+            value['schedule_conflict']['observed_before']=dict(at=observed_at,core=core(previous),
+                event_revision=hashed(previous),evidence_class='local_conflict_observation')
     return value
 
 

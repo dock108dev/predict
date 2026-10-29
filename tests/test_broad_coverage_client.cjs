@@ -37,6 +37,7 @@ const payload={schema:'predict-broad-coverage-1',captured_at:at,publication_at:a
  for(const selected of [[pending.cells[0]],[]]) {const counts=m.filteredCoverageTotals(pending,selected);for(const key of ['retained_observations','underlying_pairs','comparable_outcomes','signed_comparison_directions','matched_occurrences','displayed_comparison_directions'])assert.equal(counts[key],null,'absent publication remains unknown after local filtering: '+key);}
  for(const state of ['held','disabled','paused','not_configured']) assert(cells.some(cell=>cell.configuration_state===state&&m.coverageCellState(cell)!=='No retained prices'));
  assert.equal(m.coverageCellState(cells.at(-1)),'Unsupported capability');
+ assert.equal(m.coverageCellState({configuration_state:'held'}),'Accounting restriction at capture');
  assert.equal(m.filterCoverageCells(cells,{league:'NFL',venue:'kalshi',market:'winner'}).length,1);
  assert.equal(m.filterCoverageCells(cells,{period:'first_half'}).length,1);
  assert.equal(m.filterCoverageCells(cells,{attention:'stale'}).length,1);
@@ -52,6 +53,7 @@ const payload={schema:'predict-broad-coverage-1',captured_at:at,publication_at:a
  root.querySelectorAll('button').find(button=>button.dataset.cellId===stale.id).onclick();assert.equal(selected,stale);
  v.renderCoverageDetails(details,stale,payload);assert(details.textContent.includes('3 affected observations · 3 primary'));assert(details.textContent.includes('3 affected observations · 0 primary'));assert(details.textContent.includes('Original source clocks prevent a current comparison.'));assert(details.textContent.includes('0.53 usd per contract'));assert(details.textContent.includes('Missing fields: season context'));assert(details.textContent.includes('Missing fact: Ordered schedule witness'));assert(details.textContent.includes('Captured game start:'));
  assert(details.querySelectorAll('details').every(node=>!node.open),'native codes and identifiers begin behind disclosures');
+ const capturedHold=new Element('section');v.renderCoverageOutcome(capturedHold,payload,{});assert(capturedHold.textContent.includes('in-flight request reservation'));assert(capturedHold.textContent.includes('Check current collection status'));
  const frozen=details.textContent;v.renderCoverageMatrix(root,{...payload,captured_at:'2026-10-17T21:00:00Z'}, {league:'NBA'},()=>{});assert.equal(details.textContent,frozen,'open drilldown stays captured when view publication changes');
  assert.equal(JSON.stringify(payload),before,'all filters/rendering preserve captured originals and clocks');assert.equal(reads,0);assert.equal(dispatches,0);
  // Execute the ordinary controller: initial read only; filters/open/close do

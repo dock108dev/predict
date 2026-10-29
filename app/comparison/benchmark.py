@@ -54,10 +54,12 @@ class TwoWayBenchmark(ReferenceSet):
         for row in self.outcomes:
             s = row.selection
             role = 'home' if s.participant_id == s.event.home_id else 'away' if s.participant_id == s.event.away_id else None
-            if (s.native.venue != self.venue or s.family != 'moneyline' or
-                    s.scope.period != 'full_game' or s.scope.overtime != 'included' or s.predicate.domain != 'home_margin' or
-                    s.predicate.threshold.value != 0 or role is None or
-                    s.predicate.operator != ('gt' if role == 'home' else 'lt')):
+            if (s.native.venue != self.venue or s.family not in ('moneyline','spread','total') or
+                    s.scope.period != 'full_game' or s.scope.overtime != 'included' or
+                    (s.family=='total' and (s.predicate.domain!='combined_score' or s.participant_id!='combined')) or
+                    (s.family!='total' and (s.predicate.domain!='home_margin' or role is None or
+                        s.predicate.operator != ('gt' if role=='home' else 'lt'))) or
+                    (s.family=='moneyline' and s.predicate.threshold.value!=0)):
                 raise ValueError('benchmark_crossed_book_role_or_scope')
             if row.received_at != first.received_at or row.book_at != first.book_at or row.market_at != first.market_at:
                 raise ValueError('benchmark_incompatible_observation_revisions')
@@ -116,13 +118,23 @@ class TwoWayBenchmark(ReferenceSet):
             raise ValueError('selected_benchmark_missing; no substitution')
         for row in self.outcomes:
             s = row.selection
-            if s.event.key != selected.event.key or s.scope.period != selected.scope.period:
+            if (s.event.key != selected.event.key or s.scope.period != selected.scope.period or
+                    s.scope.overtime != selected.scope.overtime):
                 raise ValueError('benchmark_occurrence_period_conflict')
+        first=self.outcomes[0].selection
+        if (('moneyline' if selected.family=='team_binary' else selected.family)!=first.family or
+                selected.predicate.domain!=first.predicate.domain or
+                selected.predicate.subject_id!=first.predicate.subject_id or
+                selected.predicate.threshold.value!=first.predicate.threshold.value or
+                selected.predicate.operator not in ('gt','ge','lt','le')):
+            raise ValueError('benchmark_exact_predicate_conflict')
         status = self.clock_status(at)
         if status != 'current' and not (allow_last_known and status == 'expired'):
             reason = {'unknown':'source_clock_unknown', 'future':'clock_future', 'expired':'expired'}[status]
             raise ValueError('benchmark_' + reason)
-        return self.fair_probabilities()[selected.event.home_id]
+        if first.family!='total':return self.fair_probabilities()[selected.event.home_id]
+        upper=next(r for r in self.outcomes if r.selection.predicate.operator=='gt')
+        return (1/upper.decimal_odds.value)/sum((1/r.decimal_odds.value for r in self.outcomes),Fraction(0))
 
 
 def resolve(supplied, selected, policy, at, *, allow_last_known=False):

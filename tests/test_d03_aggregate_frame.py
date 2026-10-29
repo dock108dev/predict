@@ -22,6 +22,7 @@ def ordinary_scheduler():
     scheduler=AggregateScheduler.__new__(AggregateScheduler)
     scheduler.service=service;scheduler.issue_context={};scheduler.metrics={};scheduler.sport_states={}
     scheduler.permitted=lambda:None
+    scheduler.quota_next_due_at=...
     scheduler.ledger=SimpleNamespace(snapshot=lambda:dict(next_due_at=None),pause=lambda reason:None)
     return scheduler,committed,issues
 
@@ -74,7 +75,7 @@ class AggregateFrame(unittest.TestCase):
         payload[0]['bookmakers'][1]['markets'][0]['outcomes'].pop()
         raw=json.dumps(payload).encode();frame=parse_frame(raw);before=deepcopy(frame.payload)
         accepted,errors=admit_venues(raw,'NFL',AT,frame=frame,include_reference=True)
-        self.assertEqual(set(accepted),{'novig','pinnacle'});self.assertEqual(set(errors),{'prophetx'})
+        self.assertEqual(set(accepted),{'novig','prophetx','pinnacle'});self.assertEqual(len(accepted['prophetx']),4);self.assertEqual(set(errors),{'prophetx'})
         self.assertEqual(frame.payload,before)
         scheduler,committed,issues=ordinary_scheduler()
         scheduler.admit_response(dict(body=raw,received_at=AT,parsed_frame=frame),'NFL')

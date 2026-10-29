@@ -12,6 +12,7 @@ import re
 import subprocess
 import sys
 import time
+import tempfile
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -82,7 +83,13 @@ def execute(name, command, output, timeout=300, junit=False):
             + " --require "
             + str(ROOT / "scripts/ci/node-isolation.cjs")
         ).strip()
-        with (output / f"{name}.log").open("w") as log:
+        # Pytest otherwise shares a per-user temporary root with unrelated
+        # checkouts and may prune another project's retained test directories.
+        with (
+            tempfile.TemporaryDirectory(prefix="predict-ci-check-") as temporary,
+            (output / f"{name}.log").open("w") as log,
+        ):
+            environment.update(TMPDIR=temporary, TEMP=temporary, TMP=temporary)
             result = subprocess.run(
                 command,
                 cwd=ROOT,

@@ -101,7 +101,9 @@ const refused = reason => new Response(JSON.stringify({error:'current_inputs_una
 
   for (const reason of ['current_slate_read_expired','current_slate_read_capacity','current_slate_read_authority_changed']) {
     const calls = []; let recoveries = 0, visible = first;
-    const reader = new LatestRead(async url => {
+    const released = [];
+    const reader = new LatestRead(async (url, options) => {
+      if (options.method === 'DELETE') { released.push(new URL(url,'http://authored.local').searchParams.get('read_token')); return ok({released:true}); }
       const q = new URL(url,'http://authored.local').searchParams; calls.push(q);
       if (calls.length === 1) return ok(firstPage);
       if (calls.length === 2) return refused(reason);
@@ -113,6 +115,7 @@ const refused = reason => new Response(JSON.stringify({error:'current_inputs_una
     }});
     visible = recovered;
     assert.equal(recoveries,1); assert.equal(calls.length,4);
+    assert.deepEqual(released,[firstPage.read_token],'only abandoned traversal is released before recovery');
     assert.equal(calls[2].get('offset'),'0'); assert.equal(calls[2].get('read_token'),null);
     assert.equal(visible.games.length,61); assert.equal(visible.read_token,current.read_token);
     assert.equal(visible.boards[0].prices[0].original.value,'2.4');
@@ -120,9 +123,20 @@ const refused = reason => new Response(JSON.stringify({error:'current_inputs_una
   for (const reason of ['current_slate_read_expired','current_slate_read_capacity']) {
     let calls = 0, recoveries = 0;
     await assert.rejects(readSlate(new LatestRead(async()=>{calls++;return refused(reason);}),context,
-      {onRecovery:()=>recoveries++}),new RegExp(reason));
+      {onRecovery:()=>recoveries++}),error => error.message.includes(reason) && error.requiresReload === true);
     assert.equal(calls,2,'repeated refusal cannot create an endless recovery loop'); assert.equal(recoveries,1);
   }
+  const cancelledReleases=[];let pageCalls=0;
+  const stopAfterPage=new LatestRead(async(url,options)=>{
+    if(options.method==='DELETE'){cancelledReleases.push(new URL(url,'http://authored.local').searchParams.get('read_token'));return ok({released:true});}
+    pageCalls++;return ok(firstPage);
+  });
+  assert.equal(await readSlate(stopAfterPage,context,{isCurrent:()=>pageCalls===0}),null);
+  assert.deepEqual(cancelledReleases,[firstPage.read_token]);
+  let completeReleases=0;
+  const completeFrame=frame(1);
+  await readSlate(new LatestRead(async(_url,options)=>{if(options.method==='DELETE')completeReleases++;return ok(page(completeFrame));}),context);
+  assert.equal(completeReleases,0,'displayed complete results keep their lease');
   let busyCalls = 0;
   await assert.rejects(readSlate(new LatestRead(async()=>{busyCalls++;return new Response(JSON.stringify({error:'current_read_busy',reason:'Read capacity; retry shortly.'}),{status:429});}),context),/Read capacity/);
   assert.equal(busyCalls,2);

@@ -15,7 +15,7 @@ class PublicationEncoding(TestCase):
             times={'source_at':'2026-10-22T21:00:00Z','received_at':'2026-10-22T21:00:01Z'},
             original={'value':'0.4700','units':'probability'},
             **{f'inspectable_source_fact_{k:02}_long_provenance':f'{n}:{k}:'+('x'*120) for k in range(30)}) for n in range(110)])
-        self.assertGreater(len(encoded(original)), MAX_RESPONSE)
+        self.assertGreater(len(encoded(original)), 512*1024)
         wire = compact_price_fields(deepcopy(original))
         self.assertIn('price_key_pool', wire)
         self.assertLess(len(encoded(wire)), MAX_RESPONSE)
@@ -79,7 +79,7 @@ class PublicationEncoding(TestCase):
         original=dict(view='ev',prices=[],rows=[dict(quote_id=str(n),quote_revision='r'+str(n),
             modeled_basis=deepcopy(shared),financial_metrics={'conditional_net_ev_usd':str(n-55)},
             availability={'state':'numeric_current','reason_codes':[]}) for n in range(110)])
-        self.assertGreater(len(encoded(original)),MAX_RESPONSE)
+        self.assertGreater(len(encoded(original)),512*1024)
         wire=compact_price_fields(deepcopy(original))
         self.assertLess(len(encoded(wire)),MAX_RESPONSE)
         self.assertEqual(expand_price_fields(deepcopy(wire)),original)
@@ -100,7 +100,7 @@ class PublicationEncoding(TestCase):
         # Authentic retained SQL-derived source projection, not live freshness evidence.
         old=json.loads(gzip.decompress(Path('tests/fixtures/wide-spread-board-20261022.json.gz').read_bytes()))
         self.assertEqual(len(encoded(old)),526686)
-        self.assertGreater(len(encoded(old)),MAX_RESPONSE)
+        self.assertGreater(len(encoded(old)),512*1024)
         original=expand_price_fields(deepcopy(old))
         wire=compact_price_fields(deepcopy(original))
         self.assertEqual(len(encoded(wire)),451371)

@@ -82,7 +82,7 @@ class BenchmarkTests(unittest.TestCase):
         after=store.snapshot();self.assertFalse(self.quote(after)['calculations']['ev']['eligible'])
         self.assertGreater(after['state_revision'],before['state_revision'])
 
-    def test_whole_lines_and_different_periods_are_withheld(self):
+    def test_whole_lines_are_conditional_and_different_periods_withheld(self):
         encoded=body(books=('novig','pinnacle'))
         records=admit(encoded,'MLB',AT,venue='novig');refs=admit(encoded,'MLB',AT,venue='pinnacle')
         for r in [*records,*refs]:
@@ -92,7 +92,8 @@ class BenchmarkTests(unittest.TestCase):
             else:
                 r['market_identity']['period']='first_half' if r in refs else 'full_game'
         attach(records,refs)
-        self.assertTrue(all('sharp_reference' not in r['quote'] for r in records))
+        for r in records:
+            self.assertEqual('sharp_reference' in r['quote'],r['market_identity']['family']=='total')
 
     def test_stopped_source_does_not_claim_seventeen_minute_quote_is_too_old(self):
         q=self.quote(serialize(self.raw(),allow_synthetic=True))
@@ -105,3 +106,12 @@ class BenchmarkTests(unittest.TestCase):
         q['times']['source_at']='2026-10-02T23:40:00Z'
         result=calculate(q,stamp(AT)+timedelta(minutes=18))
         self.assertEqual(result['reason'],'Comparison quote is older than the 30-minute limit')
+
+    def test_identical_body_received_at_different_times_cannot_supply_halves(self):
+        records=admit(body(books=('novig','pinnacle')),'MLB',AT,venue='novig')
+        refs=admit(body(books=('novig','pinnacle')),'MLB',AT,venue='pinnacle')
+        grouped={}
+        for r in refs:grouped.setdefault(packed(r['market_identity']),[]).append(r)
+        for group in grouped.values():group[0]['quote']['times']['received_at']='2026-10-03T00:01:00Z'
+        attach(records,refs)
+        self.assertTrue(all('sharp_reference' not in r['quote'] for r in records))

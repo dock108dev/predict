@@ -58,8 +58,16 @@
       "league": "NBA",
       "family": "moneyline",
       "period": "full_game",
-      "defaults": {},
-      "evidence": null
+      "defaults": {
+        "overtime": "included"
+      },
+      "evidence": {
+        "path": "app/fixtures/native-scoring-scope/source-type-kalshi-basketballgamewin.pdf",
+        "sha256": "7db0904a1d578a2bca0f6a1f55d0d7962d32b76ce5fafb0e23823e5444381556",
+        "contract_terms_url": "https://assets.kalshi.com/contract_terms/BASKETBALLGAMEWIN.pdf",
+        "reviewed_at": "2026-10-28T16:51:31.627582+00:00",
+        "clause": "The full game includes regulation and overtime unless the selected period explicitly excludes overtime. Individual exceptions still govern."
+      }
     },
     {
       "provider": "kalshi",
@@ -67,8 +75,16 @@
       "league": "NBA",
       "family": "spread",
       "period": "full_game",
-      "defaults": {},
-      "evidence": null
+      "defaults": {
+        "overtime": "included"
+      },
+      "evidence": {
+        "path": "app/fixtures/native-scoring-scope/source-type-kalshi-basketballspreads.pdf",
+        "sha256": "08600ed5445d656704c6364de320442f884a2d8fca28778f1568befb4db2303e",
+        "contract_terms_url": "https://assets.kalshi.com/contract_terms/BASKETBALLSPREADS.pdf",
+        "reviewed_at": "2026-10-28T16:51:31.715928+00:00",
+        "clause": "The full game includes regulation and overtime unless the selected period explicitly excludes overtime. Individual exceptions still govern."
+      }
     },
     {
       "provider": "kalshi",
@@ -76,8 +92,16 @@
       "league": "NBA",
       "family": "total",
       "period": "full_game",
-      "defaults": {},
-      "evidence": null
+      "defaults": {
+        "overtime": "included"
+      },
+      "evidence": {
+        "path": "app/fixtures/native-scoring-scope/source-type-kalshi-basketballtotals.pdf",
+        "sha256": "c48fb1f6bd54fa6a2298e9f6c75b4c0ce31009ad609719ef119e179429652217",
+        "contract_terms_url": "https://assets.kalshi.com/contract_terms/BASKETBALLTOTALS.pdf",
+        "reviewed_at": "2026-10-28T16:51:31.880755+00:00",
+        "clause": "The full game includes regulation and overtime unless the selected period explicitly excludes overtime. Individual exceptions still govern."
+      }
     },
     {
       "provider": "kalshi",
@@ -94,8 +118,16 @@
       "league": "NCAAB",
       "family": "spread",
       "period": "full_game",
-      "defaults": {},
-      "evidence": null
+      "defaults": {
+        "overtime": "included"
+      },
+      "evidence": {
+        "path": "app/fixtures/native-scoring-scope/source-type-kalshi-basketballspreads.pdf",
+        "sha256": "08600ed5445d656704c6364de320442f884a2d8fca28778f1568befb4db2303e",
+        "contract_terms_url": "https://assets.kalshi.com/contract_terms/BASKETBALLSPREADS.pdf",
+        "reviewed_at": "2026-10-28T16:51:31.715955+00:00",
+        "clause": "The full game includes regulation and overtime unless the selected period explicitly excludes overtime. Individual exceptions still govern."
+      }
     },
     {
       "provider": "kalshi",
@@ -103,8 +135,16 @@
       "league": "NCAAB",
       "family": "total",
       "period": "full_game",
-      "defaults": {},
-      "evidence": null
+      "defaults": {
+        "overtime": "included"
+      },
+      "evidence": {
+        "path": "app/fixtures/native-scoring-scope/source-type-kalshi-basketballtotals.pdf",
+        "sha256": "c48fb1f6bd54fa6a2298e9f6c75b4c0ce31009ad609719ef119e179429652217",
+        "contract_terms_url": "https://assets.kalshi.com/contract_terms/BASKETBALLTOTALS.pdf",
+        "reviewed_at": "2026-10-28T16:51:31.880796+00:00",
+        "clause": "The full game includes regulation and overtime unless the selected period explicitly excludes overtime. Individual exceptions still govern."
+      }
     },
     {
       "provider": "kalshi",
@@ -222,13 +262,26 @@
       "family": "spread",
       "period": "full_game",
       "defaults": {
-        "overtime": "included"
+        "overtime": "included",
+        "shootout": "official_final_score"
       },
       "evidence": {
-        "path": "app/fixtures/native-scoring-scope/source-type-kalshi-hockey-spread.pdf",
-        "sha256": "c913519020c0a0eca2a6cd02ef376619ab47f3363c32e9f861ffe3975c8469a2",
+        "path": "app/fixtures/native-scoring-scope/hockey-spreads-review-20261028.pdf",
+        "sha256": "24b77416c335a21f9d25d399eaea45ab5c5e9d7fdc311055952d6321a87d74df",
         "contract_terms_url": "https://assets.kalshi.com/contract_terms/HOCKEYSPREADS.pdf",
-        "clause": "Full game includes all overtime unless the selected time period says otherwise."
+        "clause": "Full-game regulation, overtime and shootout official goals count. NHL Rule 84.4 credits the shootout winner one goal in the official game score. Individual period exceptions and exceptional settlement remain separate.",
+        "reviewed_at": "2026-10-29T00:11:57.627493+00:00",
+        "supporting_evidence": [
+          {
+            "path": "app/fixtures/native-scoring-scope/nhl-2026-27-rule84.txt",
+            "sha256": "fda7f36117388e28115255336f0ea4429894f3496fcbaa6f337a6dc3013c5765",
+            "source_url": "https://media.d3.nhle.com/image/private/t_document/prd/i9yumvyaojps5kixzaxz.pdf",
+            "source_sha256": "3c7a8cc932144565a798b57926e11f61d2686d8c9538d2a3f06c51c8380003f0",
+            "page": "131",
+            "section": "84.4",
+            "representation": "pdftotext complete page from official 2026-2027 NHL rulebook"
+          }
+        ]
       }
     },
     {
@@ -238,14 +291,39 @@
       "family": "total",
       "period": "full_game",
       "defaults": {
-        "overtime": "included"
+        "overtime": "included",
+        "shootout": "official_final_score"
       },
       "evidence": {
-        "path": "app/fixtures/native-scoring-scope/source-type-kalshi-hockey-total.pdf",
-        "sha256": "825c776e0cc3648cb90cbb78a45528b880e623776ebcf8d9b553caad0f21feaa",
+        "path": "app/fixtures/native-scoring-scope/hockey-totals-review-20261028.pdf",
+        "sha256": "9a71570c1da7cc6e76fe5ead43fecfe191e7371aef3de05979bbc661c541bb6b",
         "contract_terms_url": "https://assets.kalshi.com/contract_terms/HOCKEYTOTALS.pdf",
-        "clause": "Full game includes all overtime unless the selected time period says otherwise."
+        "clause": "Full-game regulation, overtime and shootout official goals count. NHL Rule 84.4 credits the shootout winner one goal in the official game score. Individual period exceptions and exceptional settlement remain separate.",
+        "reviewed_at": "2026-10-29T00:11:57.627493+00:00",
+        "supporting_evidence": [
+          {
+            "path": "app/fixtures/native-scoring-scope/nhl-2026-27-rule84.txt",
+            "sha256": "fda7f36117388e28115255336f0ea4429894f3496fcbaa6f337a6dc3013c5765",
+            "source_url": "https://media.d3.nhle.com/image/private/t_document/prd/i9yumvyaojps5kixzaxz.pdf",
+            "source_sha256": "3c7a8cc932144565a798b57926e11f61d2686d8c9538d2a3f06c51c8380003f0",
+            "page": "131",
+            "section": "84.4",
+            "representation": "pdftotext complete page from official 2026-2027 NHL rulebook"
+          }
+        ]
       }
     }
-  ]
+  ],
+  "polymarket_us_game_defaults": {
+    "overtime": "included",
+    "extra_innings": "included",
+    "shootout": "included",
+    "evidence": {
+      "path": "app/fixtures/native-scoring-scope/polymarket-us-sports-20261028.md",
+      "sha256": "9aae0cfe089256db6efc5f501d20ee4b7ea2ef24556e1d0e2131b79eb0ddb77d",
+      "source_url": "https://docs.polymarket.us/faqs/sports-faqs",
+      "reviewed_at": "2026-10-28T17:00:00Z",
+      "clause": "General Rules: game-level Athletic Event, Athletic Spread and Total Score include overtime and tiebreakers unless contract terms specify otherwise."
+    }
+  }
 }

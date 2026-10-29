@@ -456,7 +456,10 @@ def apply_selected(result,record,context,at):
 def _reference(record, context, selected, at):
     sharp=context['quote'].get('sharp_reference'); rows=context.get('reference_records')
     if not isinstance(sharp,dict):raise ValueError('exact_pinnacle_opposition_absent')
-    if not isinstance(rows,list) or len(rows)!=2:raise ValueError('pinnacle_native_provenance_unbound')
+    if not isinstance(rows,list):raise ValueError('pinnacle_native_provenance_unbound')
+    rows=[r for r in rows if r['quote']['provenance']['sha256']==sharp['sha256']
+          and r['quote']['times']['received_at']==sharp['received_at']]
+    if len(rows)!=2:raise ValueError('pinnacle_native_provenance_unbound')
     from app.collection.current_benchmark import key
     expected=record['market_identity']
     if any(r['quote']['venue']!='pinnacle' or r['market_identity']!=expected for r in rows):

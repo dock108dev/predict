@@ -413,3 +413,119 @@ class LauncherLogPrivacy(unittest.TestCase):
 
 
 if __name__ == '__main__':unittest.main()
+
+
+class RawReadBoundary(unittest.IsolatedAsyncioTestCase):
+    def routes(self):
+        from app.dashboard.raw_price_api import mount
+        app=web.Application()
+        mount(app)
+        return {r.resource.canonical:r.handler for r in app.router.routes() if r.method!='HEAD'}
+
+    async def test_saturated_raw_routes_refuse_without_queued_database_work(self):
+        import threading
+        entered=threading.Event();release=threading.Event();lock=threading.Lock();count=0
+        def blocked(*args):
+            nonlocal count
+            with lock:
+                count+=1
+                if count==4:entered.set()
+            release.wait(3)
+            return {'books':[]}
+        with patch('app.dashboard.raw_price_api.RawReads.read',side_effect=blocked), \
+             patch('app.dashboard.raw_price_api.connect') as connect:
+            routes=self.routes();request=SimpleNamespace(query={})
+            tasks=[asyncio.create_task(routes['/api/raw/prices'](request)) for _ in range(4)]
+            try:
+                for _ in range(200):
+                    if entered.is_set():break
+                    await asyncio.sleep(.005)
+                self.assertTrue(entered.is_set())
+                for path in ('/api/raw/prices','/api/raw/export','/api/raw/failures','/api/raw/read'):
+                    req=SimpleNamespace(query={'token':'synthetic'} if path.endswith('/read') else {})
+                    with self.assertRaises(web.HTTPTooManyRequests):await routes[path](req)
+                connect.assert_not_called()
+            finally:
+                release.set();await asyncio.gather(*tasks)
+
+    async def test_cancelled_raw_failure_keeps_slot_and_redacts_diagnostics(self):
+        import threading
+        entered=threading.Event();release=threading.Event()
+        def blocked(*args):
+            entered.set();release.wait(3);raise OSError('SECRET database value')
+        with patch('app.dashboard.raw_price_api.RawReads.read',side_effect=blocked):
+            routes=self.routes()
+            task=asyncio.create_task(routes['/api/raw/prices'](SimpleNamespace(query={})))
+            while not entered.is_set():await asyncio.sleep(.005)
+            with self.assertLogs(level='ERROR') as logs:
+                task.cancel();await asyncio.sleep(.01);task.cancel();await asyncio.sleep(.01)
+                self.assertFalse(task.done())
+                release.set()
+                with self.assertRaises(asyncio.CancelledError):await task
+            self.assertIn('raw_read_after_cancellation',' '.join(logs.output))
+            self.assertNotIn('SECRET',' '.join(logs.output))
+
+    async def test_export_cancelled_during_connect_closes_late_connection(self):
+        import threading
+        entered=threading.Event();release=threading.Event();db=Mock()
+        def connect():
+            entered.set();release.wait(3);return db
+        with patch('app.dashboard.raw_price_api.connect',side_effect=connect):
+            routes=self.routes()
+            task=asyncio.create_task(routes['/api/raw/export'](SimpleNamespace(query={})))
+            while not entered.is_set():await asyncio.sleep(.005)
+            task.cancel();await asyncio.sleep(.01);release.set()
+            with self.assertRaises(asyncio.CancelledError):await task
+        db.close.assert_called_once()
+        db.execute.assert_not_called()
+
+    async def test_export_applies_sql_deadlines_and_completes(self):
+        db=Mock();db.cursor.return_value.fetchmany.return_value=[]
+        db.execute.return_value.fetchall.return_value=[]
+        response=Mock(prepare=AsyncMock(),write=AsyncMock(),write_eof=AsyncMock())
+        with patch('app.dashboard.raw_price_api.connect',return_value=db), \
+             patch('app.dashboard.raw_price_api.read_runtime',return_value={}), \
+             patch('app.dashboard.raw_price_api.web.StreamResponse',return_value=response):
+            result=await self.routes()['/api/raw/export'](SimpleNamespace(query={}))
+        self.assertIs(result,response)
+        statements=[c.args[0] for c in db.execute.call_args_list]
+        self.assertIn("SET LOCAL statement_timeout='10s'",statements)
+        self.assertIn("SET LOCAL idle_in_transaction_session_timeout='125s'",statements)
+        self.assertTrue(json.loads(response.write.call_args.args[0])['export_complete'])
+        db.close.assert_called_once()
+
+
+class RawSnapshotCleanup(unittest.TestCase):
+    def test_close_failure_does_not_skip_other_snapshots_or_mask_read_failure(self):
+        from app.dashboard.raw_price_api import RawReads
+        reads=RawReads(Mock())
+        broken=Mock(close=Mock(side_effect=OSError('SECRET close')));healthy=Mock()
+        reads.frames={'bad':{'db':broken},'good':{'db':healthy}}
+        with self.assertLogs(level='ERROR') as logs:
+            with self.assertRaises(OSError):reads.close()
+        healthy.close.assert_called_once()
+        self.assertEqual(reads.frames,{})
+        self.assertNotIn('SECRET',' '.join(logs.output))
+        reads.frames={'bad':{'db':broken}}
+        original=ValueError('original read')
+        with self.assertLogs(level='ERROR'):
+            with self.assertRaises(ValueError) as caught:
+                with reads.snapshot_read('bad'):raise original
+        self.assertIs(caught.exception,original)
+
+
+class SharedCompletionPolicy(unittest.IsolatedAsyncioTestCase):
+    async def test_collection_and_raw_routes_use_authoritative_helper(self):
+        from app.collection.bulk_checkpoint import owned_thread
+        from app.dashboard.raw_price_api import mount
+        fn=Mock()
+        with patch('app.owned_work.joined_thread',new=AsyncMock(return_value={})) as shared:
+            await owned_thread(fn,value='synthetic')
+            app=web.Application();mount(app)
+            route=next(r.handler for r in app.router.routes()
+                if r.method=='GET' and r.resource.canonical=='/api/raw/prices')
+            await route(SimpleNamespace(query={}))
+        self.assertEqual(shared.await_count,2)
+        self.assertEqual(shared.await_args_list[0].args[1],'owned_thread_after_cancellation')
+        self.assertEqual(shared.await_args_list[0].kwargs,{'value':'synthetic'})
+        self.assertEqual(shared.await_args_list[1].args[1],'raw_read_after_cancellation')

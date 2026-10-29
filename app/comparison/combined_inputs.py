@@ -238,11 +238,16 @@ def build(envelopes, *, at, selected=None, benchmark_venue='pinnacle', resolver=
             if not pool.add(key,item):raise ValueError('combined_benchmark_profile_capacity')
             for event in state['events']:
                 for group in event['groups']:
+                    if group['market']!='winner':continue
                     for outcome in group['outcomes']:
                         for q in quotes_of(outcome):
                             q['comparison_input_refs']['refs']['reference']=key
                             q['comparison_input_status']['reference']=dict(status='available_and_bound',reason='selected_two_way_benchmark_originals_bound')
             state['comparison_profiles']=pool.finish()
+        from .line_reference import attach as attach_lines
+        pool=ProfilePool(state['comparison_profiles'])
+        attach_lines(rows,state,pool,benchmark_venue)
+        state['comparison_profiles']=pool.finish()
         used=set()
         for r in rows:
             meta=r.get('comparison_source_metadata',{});native=meta.get('combined_native_binding',{})

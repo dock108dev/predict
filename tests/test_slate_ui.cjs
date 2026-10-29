@@ -39,7 +39,7 @@ function slate(view = 'odds') {
   const { createSlateViews } = await import(asset('stored-views.js'));
   const c = {...defaults, view: 'odds', filter: 'all'};
   checkSlate(slate(), c);
-  for (const edit of [v => v.view='ev', v => v.policy.requested_amount_usd='500', v => v.boards[1].policy.buffer_rate='0.01', v => v.boards[1].prices[0].inputs_identity.game_key='crossed', v => v.boards[1].game_key=v.boards[0].game_key, v => v.games[1].game_key=v.games[0].game_key, v => v.boards.pop(), v => v.bounds.maximum_bytes=104857600, v => v.bounds.maximum_games=501]) {
+  for (const edit of [v => v.view='ev', v => v.policy.requested_amount_usd='500', v => v.boards[1].policy.buffer_rate='0.01', v => v.boards[1].prices[0].inputs_identity.game_key='crossed', v => v.boards[1].game_key=v.boards[0].game_key, v => v.games[1].game_key=v.games[0].game_key, v => v.boards.pop(), v => v.bounds.maximum_bytes=104857600, v => v.bounds.maximum_games=-1]) {
     const v=slate(); edit(v); assert.throws(()=>checkSlate(v,c));
   }
   const shared=slate('ev');shared.sizing_scope='shared_default_selected_details';

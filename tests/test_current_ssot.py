@@ -86,6 +86,20 @@ class RuntimeEntrypoints(unittest.TestCase):
                              ['data'] if role == 'data' else ['data', 'app'])
             self.assertEqual(start.call_args_list[0].args[2].current_config, 'synthetic.json')
 
+    def test_macos_data_launch_uses_system_allocator_and_preserves_configuration(self):
+        root = Path(__file__).resolve().parents[1]
+        start = runpy.run_path(str(root / 'scripts/opportunity-board'))['start_role']
+        child=Mock(pid=123);child.poll.return_value=None
+        with tempfile.TemporaryDirectory() as temp, \
+                patch.dict(start.__globals__,ROOT=Path(temp)), \
+                patch('sys.platform','darwin'),patch('time.sleep'), \
+                patch.object(start.__globals__['subprocess'],'Popen',return_value=child) as launch, \
+                patch.object(start.__globals__['subprocess'],'check_output',side_effect=['python -m app.collection.data_runtime','controlled-birth']):
+            config=Path(temp)/'existing-config.json'
+            start('data',Path(temp)/'runtime',SimpleNamespace(current_config=str(config)))
+        self.assertEqual(launch.call_args.kwargs['env']['PYTHONMALLOC'],'malloc')
+        self.assertEqual(launch.call_args.args[0][-2:],['--current-config',str(config.resolve())])
+
     def test_retired_router_and_frontend_are_absent(self):
         root = Path(__file__).resolve().parents[1]
         for name in ('app/dashboard/server.py', 'app/dashboard/static/index.html',

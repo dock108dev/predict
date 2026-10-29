@@ -174,10 +174,13 @@ function draw(v) {
   $("applied").textContent = detailsLabel === sharedLabel ? detailsLabel :
     "Details " + detailsLabel + ". Shared comparisons " + sharedLabel;
   const pending = v.boards.filter(b => b.delivery_state === "pending").length;
+  const firstPending = v.boards.filter(b => b.delivery_state === "pending" && !b.calculated_at).length;
+  const refreshing = pending - firstPending;
+  const calculationNote = [firstPending ? firstPending + " games awaiting first calculation" : "", refreshing ? "Refreshing captured results for " + refreshing + " games" : ""].filter(Boolean).join("; ");
   const unavailable = v.storage?.state === "unavailable",
     storageLimit = String(v.storage?.error || "").includes("storage_cap") || (v.storage?.sql_bytes != null && v.storage?.sql_bytes >= v.storage?.sql_byte_cap);
   const storageNote = unavailable ? (storageLimit ? "Saving paused — storage limit reached. Open Admin to review storage." : "Saving updates paused. Source status is in Admin.") : v.storage?.state === "catching_up" ? "Saving new inputs…" : "";
-  setStatus(storageNote || (stopped ? "Collection stopped. Existing observations remain available." : pending ? view === "odds" ? "Updating stored observations for " + pending + " games. Original source clocks remain visible." : pending + " calculations pending. Prices remain available." : ""), unavailable ? "error" : pending ? "busy" : "ready");
+  setStatus(storageNote || (stopped ? "Collection stopped. Existing observations remain available." : pending ? view === "odds" ? "Updating stored observations for " + pending + " games. Original source clocks remain visible." : calculationNote + ". Prices remain available." : ""), unavailable ? "error" : pending ? "busy" : "ready");
   if (failures) setStatus("Current reads unavailable. Prior values have unverified freshness.", "error");
   if (view === "ev") {
     preserveContent(() => drawOpportunityDashboard($("content"), {ev:{...v, stopped:stopped || v.stopped, ...(failures ? {dashboard_error:$("read-error").textContent || "Current read failed"} : {})}},
@@ -252,7 +255,7 @@ async function pullDashboard() {
   polling.cancel();
   if (failures >= 4) return;
   const generation = ++pullGeneration;
-  let succeeded = 0;
+  let succeeded = 0, requiresReload = false;
   for (const kind of ["arbs","ev"]) {
     try {
       const value = await readSlate(read,{...context(),view:kind,filter:"all"},{isCurrent:()=>generation === pullGeneration && !unloading});
@@ -264,6 +267,7 @@ async function pullDashboard() {
       polling.setSlate(value);
     } catch(e) {
       if(e.name === "AbortError" || generation !== pullGeneration) return;
+      requiresReload ||= e.requiresReload === true;
       dashboardSlates[kind] = {...(dashboardSlates[kind] || {}),dashboard_error:e.message};
     }
     const available = dashboardSlates.ev?.policy ? dashboardSlates.ev : dashboardSlates.arbs;
@@ -275,7 +279,7 @@ async function pullDashboard() {
       draw(current);
     } else preserveContent(()=>drawOpportunityDashboard($("content"),dashboardSlates,{},openDetails));
   }
-  failures = succeeded ? 0 : failures + 1;
+  failures = requiresReload ? 4 : succeeded ? 0 : failures + 1;
   const failed = Object.values(dashboardSlates).some(v=>v?.dashboard_error);
   $("retry").hidden = !failed;
   $("retry").textContent = "Reload results";
@@ -293,6 +297,7 @@ async function pull() {
   try {
     const value = await readSlate(read, c, {
       isCurrent: () => generation === pullGeneration && !unloading,
+      onProgress: ({loaded,total}) => { if (!current) setStatus(`Loading saved results · ${loaded} of ${total} games…`, "busy"); },
       onRecovery: () => setStatus(current ? "Current reads unavailable. Prior values have unverified freshness. Recovering stored observations…" : "Recovering stored observations…", "busy"),
     });
     if (!value || generation !== pullGeneration) return;
@@ -338,7 +343,7 @@ async function pull() {
   } catch (e) {
     if (e.name === "AbortError" || generation !== pullGeneration) return;
     polling.setSlate(null);
-    failures++;
+    failures = e.requiresReload ? 4 : failures + 1;
     if (!games.length) {
       $("game").disabled = true;
       $("game").replaceChildren(el("option", "Games unavailable"));
@@ -356,7 +361,10 @@ async function pull() {
       $("settings").hidden = true;
       $("filters").hidden = true;
     }
-    setStatus(current ? "Current reads unavailable. Prior values have unverified freshness. Retry or check sources in Admin." : "Couldn’t load current games. Retry or check sources in Admin.", "error");
+    setStatus(e.requiresReload
+      ? "This captured list expired or became unavailable. Reload results to capture a new list; your filters and position are kept where possible. Prior values have unverified freshness."
+      : current ? "Current reads unavailable. Prior values have unverified freshness. Retry or check sources in Admin." : "Couldn’t load current games. Retry or check sources in Admin.", "error");
+    $("retry").textContent = "Reload results";
     $("read-error").textContent = e.message;
     $("read-diagnostics").hidden = false;
     $("retry").hidden = false;
@@ -375,6 +383,7 @@ function showDialog(button) {
 }
 function closeDetails() {
   const wasOpen = $("details").open;
+  if (detail?.selectedToken) fetch("/api/boards/read-lease?read_token=" + encodeURIComponent(detail.selectedToken), {method:"DELETE"}).catch(() => {});
   detail = null;
   detailRead.cancel();
   originalRead.cancel();
@@ -431,7 +440,7 @@ async function refreshDetails() {
       8388608,
     );
     if (!v || detail !== held) return;
-    if (v.read_token) held.identity.read_token = v.read_token;
+    if (v.read_token) { held.identity.read_token = v.read_token; held.selectedToken = v.read_token; }
     held.rendered = true;
     const open = [...$("detail-content").querySelectorAll("details[open]")].map(
         (x, i) => x.dataset.key || String(i),
@@ -499,6 +508,7 @@ async function openOriginal(q, button, selectedGame) {
       8388608,
     );
     if (!inputs || held !== detail) return;
+    held.selectedToken = inputs.read_token;
     renderFrame(inputs);
   } catch (e) {
     if (e.name !== "AbortError" && held === detail) {

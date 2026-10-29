@@ -161,7 +161,8 @@ Updates replace current prices; completed or expired pregame events remove their
 dependent rows. Ordinary operation does not persist calculation reports or a
 sports-observation archive. A 60-second expiry worker stops after three failures.
 The SQL soft ceiling is 2 GiB, minimum free disk is 1 GiB and the process RSS
-guard is 768 MiB. Admin shows actual storage status and saving failures.
+guard follows `rss_bytes` (installed 3 GiB for bulk acquisition). Admin shows
+actual storage status and saving failures.
 
 Use the [storage guide](current-row-storage.md) for migrations and the explicit
 sports-only reset command. Applied migrations and their checksums are immutable.
@@ -175,3 +176,17 @@ remain unknown; reopening does not clear holds or authorize another dispatch.
 Accounting recovery is an explicit audited operation with independent balance
 evidence, not a routine diagnostic. See [failure recovery](error-handling.md)
 and the [Admin API](contracts/predict-admin-1.md).
+
+## Acquisition capacity and authority
+
+Native event, market and discovery-page settings are not complete-universe
+ceilings. `markets_per_source` is the publication chunk size. Source-byte and RSS
+limits come from the loaded configuration; the watchdog and background worker
+share the RSS setting. Example defaults are not an installed operator's values.
+
+Aggregate alternate authority lives separately in
+`.local/predict-alternate-authority.json`. Its credit ceilings and expiry do not
+replace account-window, reserve, quota, Stop or hold checks. Exact alternate
+manifests exceeding the allowed budget do not dispatch arbitrary subsets.
+Accounting storage capacity is not permission to spend. See
+[acquisition](acquisition.md) for lifecycle and completeness boundaries.

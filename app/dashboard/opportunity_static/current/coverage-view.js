@@ -9,6 +9,8 @@ const sourceName = value => coverageNames[value] || coverageWords(value);
 const familyName = cell => coverageFamilies[coverageFamily(cell)] || coverageWords(coverageFamily(cell));
 const cellTitle = cell => [coverageSport(cell), sourceName(coverageSource(cell)), familyName(cell), coverageWords(coveragePeriod(cell))].join(' · ');
 const categories = {source:'Source offering', source_omission:'Source offering', implementation:'Implementation limit', capability:'Implementation limit', operational:'Collection or publication limit', operation:'Collection or publication limit', display:'Display filter', identity:'Identity or comparison facts', comparison:'Comparison facts', freshness:'Original price clocks', meaning:'Contract meaning', matching:'Cross-source matching', publication:'Background publication', measurement:'Query measurement', configuration:'Configuration', reference:'Reference data'};
+const reasonLabel = reason => reason?.code === 'source_held' ? 'Aggregate accounting restriction at capture' : reason?.label;
+const capturedAccountingNote = 'The capture recorded an accounting restriction, which can include an in-flight request reservation. It does not establish that collection is still paused. Check Admin for the current blocking reason; unresolved credit holds remain reserved.';
 const mainCause = cell => (cell.reasons || []).slice().sort((a, b) => (b.primary_count || 0) - (a.primary_count || 0) || (b.count || 0) - (a.count || 0))[0];
 function ratioForCounts(counts, kind, scope) {
   const key = {supported_peer:'supported_comparison_observations', current_peer:'current_comparison_observations', current:'current_observations'}[kind];
@@ -53,7 +55,7 @@ export function renderCoverageMatrix(root, data, filters, onOpen) {
       const arrow = coverageElement('span', '↗', 'cell-open'); arrow.setAttribute('aria-hidden', 'true');
       button.append(coverageElement('span', familyName(cell), 'cell-family'), coverageElement('span', coverageWords(coveragePeriod(cell)), 'cell-period'), coverageElement('strong', coveragePercent(ratio), 'cell-ratio'), coverageElement('span', coverageCount(ratio.numerator) + ' with a supported peer / ' + coverageCount(ratio.denominator) + ' retained comparison-source observations', 'cell-denominator'), coverageElement('span', state, 'cell-status'));
       if (cell.capability?.state === 'unsupported' && state !== 'Unsupported capability') button.append(coverageElement('span', 'Comparison capability unsupported', 'cell-cause'));
-      if (cause) button.append(coverageElement('span', cause.label || 'Missing comparison facts', 'cell-cause'));
+      if (cause) button.append(coverageElement('span', reasonLabel(cause) || 'Missing comparison facts', 'cell-cause'));
       else button.append(coverageElement('span', coverageCount(cell.counts?.last_known_observations) + ' last-known · ' + coverageCount(cell.counts?.current_observations) + ' current', 'cell-cause'));
       button.append(arrow); button.onclick = () => onOpen(cell, button); grid.append(button);
     }
@@ -114,8 +116,9 @@ export function renderCoverageDetails(root, cell, data) {
     root.append(coverageElement('p', 'Affected counts can overlap. Primary counts assign one deterministic cause per affected observation; configuration and query causes can have no retained-observation count.', 'bounded-note'));
     for (const reason of cell.reasons) {
       const section = coverageElement('section', undefined, 'reason');
-      section.append(coverageElement('p', reason.label || 'Missing comparison facts', 'reason-title'), coverageElement('p', (categories[reason.category] || 'Processing condition') + ' · ' + coverageCount(reason.count) + ' affected observations · ' + coverageCount(reason.primary_count) + ' primary', 'reason-meta'));
-      if (reason.explanation || reason.condition) section.append(coverageElement('p', reason.explanation || reason.condition));
+      section.append(coverageElement('p', reasonLabel(reason) || 'Missing comparison facts', 'reason-title'), coverageElement('p', (categories[reason.category] || 'Processing condition') + ' · ' + coverageCount(reason.count) + ' affected observations · ' + coverageCount(reason.primary_count) + ' primary', 'reason-meta'));
+      if (reason.code === 'source_held') section.append(coverageElement('p', capturedAccountingNote));
+      else if (reason.explanation || reason.condition) section.append(coverageElement('p', reason.explanation || reason.condition));
       for (const example of (reason.examples || []).slice(0, 3)) section.append(renderCoverageExample(example));
       diagnostic(section, 'Diagnostic reason code & evidence', {code:reason.code, category:reason.category, overlapping:reason.overlapping, count:reason.count, primary_count:reason.primary_count}); root.append(section);
     }
@@ -158,5 +161,9 @@ export function renderCoverageOutcome(root, data, filters, readError = '') {
   const states = new Map();
   for (const cell of cells) {const state = coverageCellState(cell); states.set(state, (states.get(state) || 0) + 1);}
   if (states.size) root.append(coverageElement('p', [...states].map(([state,n]) => n + ' ' + state.toLowerCase() + ' cells').join(' · '), 'scope-states'));
+  if (cells.some(cell => cell.configuration_state === 'held')) {
+    root.append(coverageElement('p', capturedAccountingNote));
+    const admin = coverageElement('a', 'Check current collection status →'); admin.href = '/admin'; root.append(admin);
+  }
   const link = coverageElement('a', 'Browse captured prices →'); link.href = '/odds'; root.append(link);
 }

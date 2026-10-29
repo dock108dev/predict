@@ -114,7 +114,13 @@
     "tests/test_broad_coverage_sql.py": "Required standard and focused disposable PostgreSQL 16 lanes: authored full six-league, two-native-source, three-family ingress and changed typed periods through background publication and retained Coverage/Odds APIs, exact input clocks, deduplicated cohorts and zero read provider dispatch. No owner SQL or provider access.",
     "tests/test_broad_native_matrix_sql.py": "Required standard and focused disposable PostgreSQL 16 lanes: authored full six-league, two-native-source, three-family ingress and changed typed periods through background publication and retained Coverage/Odds APIs, exact input clocks, deduplicated cohorts and zero read provider dispatch. No owner SQL or provider access.",
     "tests/test_shared_current_comparisons_sql.py": "Required standard and focused disposable PostgreSQL 16 lanes: complete matrix current pairs, pending publication, confirmation ordering, expiry and runtime replacement; no owner SQL or providers.",
-    "tests/test_native_admission_sql.py": "Required in the standard disposable PostgreSQL 16 lane in scripts/ci/postgres.py; stale catalog admission, transport generation and atomic storage regressions. Never use owner SQL."
+    "tests/test_native_admission_sql.py": "Required in the standard disposable PostgreSQL 16 lane in scripts/ci/postgres.py; stale catalog admission, transport generation and atomic storage regressions. Never use owner SQL.",
+    "tests/test_sc09_bulk_sql.py": "Required in scripts/ci/postgres.py against its verified disposable cluster; socket absence is unverified, never a passing offline substitute.",
+    "tests/test_sc09_ingress_sql.py": "Required in scripts/ci/postgres.py against its verified disposable cluster; socket absence is unverified, never a passing offline substitute.",
+    "tests/test_raw_prices_sql.py": "Required in scripts/ci/postgres.py against its verified disposable cluster; socket absence is unverified, never a passing offline substitute.",
+    "tests/test_alternate_admission_sql.py": "Required in scripts/ci/postgres.py against its verified disposable cluster; source-route independence and bounded ordinary financial publication. No provider requests or owner storage.",
+    "tests/test_financial_worker_sql.py": "Required in scripts/ci/postgres.py against its verified disposable cluster; source-route independence and bounded ordinary financial publication. No provider requests or owner storage.",
+    "tests/test_latest_board_capacity_sql.py": "Required in the focused --da-separation disposable PostgreSQL lane: latest-board capacity, per-game refusal isolation and stale failure authority. Extracted without changing the prior lane scope; no owner SQL or providers."
   },
   "archival_nodes": {
     "tests/test_moneyline.py::CapturedMoneylineTests": "Historical production listing/rule hashes require removed capture corpus; synthetic matcher and settlement classes remain required.",

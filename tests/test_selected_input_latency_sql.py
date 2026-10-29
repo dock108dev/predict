@@ -54,10 +54,12 @@ class SelectedInputLatencySQL(IsolatedAsyncioTestCase):
         self.authored = [source_case(SPORTS[i % len(SPORTS)],
             FAMILIES[(i // len(SPORTS)) % len(FAMILIES)], uuid4().hex[:10], clock=clock) for i in range(60)]
         for generation, offset in enumerate(range(0, 60, 15), 1):
-            cases[:] = self.authored[offset:offset + 15]
+            # Discovery is a complete catalog snapshot. Keep earlier batches
+            # advertised while admitting the next batch's books.
+            cases[:] = self.authored[:offset + 15]
             for w in workers.values():await w.discover()
-            await self.ingress_books(workers, cases, generation=generation)
-            await self.publication(offset + len(cases))
+            await self.ingress_books(workers, self.authored[offset:offset + 15], generation=generation)
+            await self.publication(len(cases))
         self.read_call_counts={v:len(calls) for v,calls in self.calls.items()}
         self.workers = workers
         self.client, self.app = await self.api()

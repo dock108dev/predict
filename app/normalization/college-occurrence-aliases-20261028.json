@@ -1,0 +1,139 @@
+{
+  "version": "college-occurrence-aliases-20261028-1",
+  "reviewed_at": "2026-10-29T01:15:00Z",
+  "scope": "Exact observed The Odds API NCAAF names only. Team identity is not occurrence, scoring or settlement authority.",
+  "aliases": [
+    {
+      "kind": "team",
+      "league": "NCAAF",
+      "venue": "the_odds_api",
+      "text": "Northwestern Wildcats",
+      "targets": [
+        "NCAAF:NCAA509"
+      ],
+      "source": "https://nusports.com/sports/football/schedule?type=home; retained SHA256 3d88c2d385b5a9ea239102618b17677e372a78d2637e5b59d9aee673d3d5ed49; institution/NCAA ID from college-2026-27.json",
+      "evidence": "northwestern"
+    },
+    {
+      "kind": "team",
+      "league": "NCAAF",
+      "venue": "the_odds_api",
+      "text": "Oregon Ducks",
+      "targets": [
+        "NCAAF:NCAA529"
+      ],
+      "source": "https://goducks.com/sports/football; retained SHA256 54b189611c6a4c0873c2a874fba35b100778c4ce177a680bb2ade27b2837d476; institution/NCAA ID from college-2026-27.json",
+      "evidence": "oregon"
+    },
+    {
+      "kind": "team",
+      "league": "NCAAF",
+      "venue": "the_odds_api",
+      "text": "Florida Atlantic Owls",
+      "targets": [
+        "NCAAF:NCAA229"
+      ],
+      "source": "https://fausports.com/news/2026/10/26/football-game-notes-8; retained SHA256 751f531c376ad09c14bd7c277c180d320a18fa868800b1b38c7735f119be1c61; institution/NCAA ID from college-2026-27.json",
+      "evidence": "fau"
+    },
+    {
+      "kind": "team",
+      "league": "NCAAF",
+      "venue": "the_odds_api",
+      "text": "North Texas Mean Green",
+      "targets": [
+        "NCAAF:NCAA497"
+      ],
+      "source": "https://fausports.com/news/2026/10/26/football-game-notes-8; retained SHA256 751f531c376ad09c14bd7c277c180d320a18fa868800b1b38c7735f119be1c61; institution/NCAA ID from college-2026-27.json",
+      "evidence": "fau"
+    },
+    {
+      "kind": "team",
+      "league": "NCAAF",
+      "venue": "the_odds_api",
+      "text": "Temple Owls",
+      "targets": [
+        "NCAAF:NCAA690"
+      ],
+      "source": "https://www.temple.edu/athletics; retained SHA256 a36bd5946684127406ea5da93f75bb035d016439aee54efaabffbb6400df3f10; institution/NCAA ID from college-2026-27.json",
+      "evidence": "temple"
+    },
+    {
+      "kind": "team",
+      "league": "NCAAF",
+      "venue": "the_odds_api",
+      "text": "East Carolina Pirates",
+      "targets": [
+        "NCAAF:NCAA196"
+      ],
+      "source": "https://ecupirates.com/sports/football; retained SHA256 1e4f54ce954c108d7d865b7dab5c3354a53f8baa20da00a270122becada1f7f6; institution/NCAA ID from college-2026-27.json",
+      "evidence": "ecu"
+    },
+    {
+      "kind": "team",
+      "league": "NCAAF",
+      "venue": "the_odds_api",
+      "text": "Clemson Tigers",
+      "targets": [
+        "NCAAF:NCAA147"
+      ],
+      "source": "https://seminoles.com/news/2026/10/19/football-clemson-fsu-set-for-7-00-pm-on-october-31; retained SHA256 167ab48642a9ea08627c2cc36c626c1fe4023fe739e8a0801f79834edf0b27e3; institution/NCAA ID from college-2026-27.json",
+      "evidence": "clemson_fsu"
+    },
+    {
+      "kind": "team",
+      "league": "NCAAF",
+      "venue": "the_odds_api",
+      "text": "Florida State Seminoles",
+      "targets": [
+        "NCAAF:NCAA234"
+      ],
+      "source": "https://seminoles.com/news/2026/10/19/football-clemson-fsu-set-for-7-00-pm-on-october-31; retained SHA256 167ab48642a9ea08627c2cc36c626c1fe4023fe739e8a0801f79834edf0b27e3; institution/NCAA ID from college-2026-27.json",
+      "evidence": "clemson_fsu"
+    },
+    {
+      "kind": "team",
+      "league": "NCAAF",
+      "venue": "the_odds_api",
+      "text": "Arizona Wildcats",
+      "targets": [
+        "NCAAF:NCAA29"
+      ],
+      "source": "https://texastech.com/news/2026/10/19/football-texas-tech-arizona-picked-for-early-tv-window; retained SHA256 e6fe6b4ad8504b1f877c2f9f8303f29d551dc06ab4450ee1212eb5d9f504210a; institution/NCAA ID from college-2026-27.json",
+      "evidence": "arizona_tech"
+    },
+    {
+      "kind": "team",
+      "league": "NCAAF",
+      "venue": "the_odds_api",
+      "text": "Texas Tech Red Raiders",
+      "targets": [
+        "NCAAF:NCAA700"
+      ],
+      "source": "https://texastech.com/news/2026/10/19/football-texas-tech-arizona-picked-for-early-tv-window; retained SHA256 e6fe6b4ad8504b1f877c2f9f8303f29d551dc06ab4450ee1212eb5d9f504210a; institution/NCAA ID from college-2026-27.json",
+      "evidence": "arizona_tech"
+    },
+    {
+      "kind": "team",
+      "league": "NCAAF",
+      "venue": "the_odds_api",
+      "text": "Florida Gators",
+      "targets": [
+        "NCAAF:NCAA235"
+      ],
+      "source": "https://georgiadogs.com/news/2026/10/26/football-georgia-takes-on-florida-in-atlanta-for-the-first-time; retained SHA256 f002c7fa947a9d34d6e3e439a90449848b6218b2b61186795e53c2b96de576bd; institution/NCAA ID from college-2026-27.json",
+      "evidence": "florida_georgia"
+    },
+    {
+      "kind": "team",
+      "league": "NCAAF",
+      "venue": "the_odds_api",
+      "text": "Georgia Bulldogs",
+      "targets": [
+        "NCAAF:NCAA257"
+      ],
+      "source": "https://georgiadogs.com/news/2026/10/26/football-georgia-takes-on-florida-in-atlanta-for-the-first-time; retained SHA256 f002c7fa947a9d34d6e3e439a90449848b6218b2b61186795e53c2b96de576bd; institution/NCAA ID from college-2026-27.json",
+      "evidence": "florida_georgia"
+    }
+  ]
+}

@@ -20,7 +20,7 @@ def capture_reservation(db, *, observations_only=False, event_ids=None):
             FROM current_contract c JOIN current_offer o ON o.contract_id=c.id JOIN current_event e ON e.id=c.event_id
             WHERE (%s::text[] IS NULL OR c.event_id=ANY(%s))
         UNION ALL SELECT octet_length(('''+previous+''')::text) FROM latest_board
-            WHERE (%s::text[] IS NULL OR latest_board.facts#>'{publication_dependencies,selector,events}' ?| %s)
+            WHERE (%s::text[] IS NULL OR latest_board.publication_events ?| %s)
         UNION ALL SELECT octet_length(facts::text) FROM latest_board_status) inputs''',
         (event_ids,event_ids,event_ids,event_ids)).fetchone()['n']
     # Hydration keeps exact decimal strings and Python containers. Reserve for
@@ -30,7 +30,10 @@ def capture_reservation(db, *, observations_only=False, event_ids=None):
         UNION ALL SELECT 2048 FROM current_depth d JOIN current_contract c ON c.id=d.contract_id
             WHERE side='asks' AND (%s::text[] IS NULL OR c.event_id=ANY(%s))) levels''',
         (event_ids,event_ids,event_ids,event_ids)).fetchone()['n']
-    required=int(size)*8+int(depth)+32*1024*1024
+    # Full alternate games peak near 456 MB in the isolated measured pipeline:
+    # resolution, selected evidence and compaction overlap transiently. Encoded
+    # source bytes alone at 8x under-reserved that overlap and could kill ingress.
+    required=int(size)*32+int(depth)+64*1024*1024
     # Reserve complete MiB pages so ordinary receipt-size changes do not cause
     # needless admission retries; every byte of padding remains charged.
     return ((required+1024*1024-1)//(1024*1024))*1024*1024
@@ -44,8 +47,11 @@ def capture_batches(db):
     """
     index=publication.identity_index(db);remaining=set(index['active_events']);groups=[]
     while remaining:
+        from app.comparison.calculation_control import checkpoint
+        checkpoint()
         seed=min(remaining)
         ids=[row[0] for row in publication.neighborhood(index,dict(events=[seed],occurrences=[],shared=[]))]
+        if seed not in ids:raise ValueError('publication_component_membership_inconsistent')
         remaining.difference_update(ids)
         groups.append(ids)
     return groups
@@ -63,7 +69,7 @@ def prioritize_sources(db, batches, at):
         FROM current_offer o JOIN current_contract c ON c.id=o.contract_id
         WHERE c.venue IN ('kalshi','polymarket_us') GROUP BY c.event_id,c.venue''').fetchall()
     clocks={}
-    for row in db.execute("SELECT facts#>'{publication_dependencies,selector,events}' members,facts#>>'{boards,odds,as_of}' published_at FROM latest_board").fetchall():
+    for row in db.execute("SELECT publication_events members,observation_as_of published_at FROM latest_board").fetchall():
         for eid in row['members'] or []:clocks[eid]=row['published_at'] or ''
     selected=[]
     for venue in ('kalshi','polymarket_us'):
@@ -76,6 +82,19 @@ def prioritize_sources(db, batches, at):
             index=min(candidates)[2]
             if index not in selected:selected.append(index)
     return [*(batches[i] for i in selected),*(ids for i,ids in enumerate(batches) if i not in selected)]
+
+
+def prioritize_pending(db,batches):
+    """Committed first-calculation backlog precedes already evaluated work.
+
+    Keep the rotated order within both populations. Completed publications survive
+    an auxiliary child's cancellation, unlike its in-memory turn result.
+    """
+    pending=set()
+    for row in db.execute("""SELECT publication_events members FROM latest_board
+            WHERE facts#>>'{estimate_availability,state}'='pending'""").fetchall():
+        pending.update(row['members'] or [])
+    return sorted(batches,key=lambda ids:not bool(pending.intersection(ids or [])))
 
 
 

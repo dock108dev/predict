@@ -12,7 +12,9 @@ from app.comparison.benchmark import TwoWayBenchmark
 from app.comparison.calculation_availability import result_availability, summary, refusal
 
 VERSION='predict-comparison-board-2'
-MAX_RESPONSE=512*1024
+# Largest measured featured + alternate Odds game: 1,520,298 bytes before tokens.
+# Page, retained-frame and process guards remain independent.
+MAX_RESPONSE=2*1024*1024
 
 
 def entries(state):
@@ -83,9 +85,13 @@ def age(value, *, at=None, current=None, stopped=False, history=False):
             r['ranking_eligible']=False
             for key in ('main_positive_eligible','positive_rule_sensitive_eligible'):
                 if 'classification' in r:r['classification'][key]=False
-        gross=r.get('gross_decisive_benchmark',{})
-        if gross.get('available') and f['reasons']:
-            gross['state']='numeric_last_known'
+        from app.comparison.bound_finance import age_benchmarks
+        own=[]
+        if changed[q['id']]:own.append('dependency_changed_or_removed')
+        if stopped:own.append('updates_stopped')
+        if history:own.append('explicit_history')
+        if v.get('engine_binding_changed'):own.append('engine_binding_changed')
+        age_benchmarks(r,q,e,instant,reasons=own)
         r['availability']=result_availability(r)
         statuses.append(f['status'])
     byid={q['id']:q for _,_,q in entries(v['state'])}
@@ -233,7 +239,7 @@ def age_gross_comparison(value, at, *, source_states=None, publication_reasons=(
     return value
 
 
-def gross_comparison(q,group,event,state,at,*,source_states=None,include_display=True,current_only=False):
+def gross_comparison(q,group,event,state,at,*,source_states=None,include_display=True,current_only=False,identity_cache=None):
     """Existing exact normal-payout price arithmetic over safe source identity."""
     from .current_contract import price as original_price, exact_wire, display_decimal
     result=dict(available=False,value=None,unit='cents',exact=None,comparison_quote_id=None,inputs=[],
@@ -241,7 +247,12 @@ def gross_comparison(q,group,event,state,at,*,source_states=None,include_display
         meaning=('Lowest current compatible other venue price' if current_only else 'Lowest other venue price')+' minus selected price; gross source comparison before fees, sizing and exceptional settlement',
         reason='No other observed venue with the same supported selection and scope',reason_code='comparison_peer_missing')
     if include_display:age_gross_comparison(result,at)
-    from app.comparison.same_outcome import quote_identity as same_outcome
+    from app.comparison.same_outcome import quote_identity
+    def same_outcome(quote,group,event):
+        if identity_cache is None:return quote_identity(quote,group,event)
+        key=(id(quote),id(group),id(event))
+        if key not in identity_cache:identity_cache[key]=quote_identity(quote,group,event)
+        return identity_cache[key]
     selected_identity=same_outcome(q,group,event)
     display=group.get('display_group')
     if q.get('occurrence_match',{}).get('status')!='matched':
@@ -381,7 +392,7 @@ def details_id(value, *, quote=None,pair=None):
 
 def financial_row(r):
     fields=('revision','dependency_revision','model_available','ranking_eligible','reasons','eligibility_reasons',
-        'modeled_basis','availability','evaluation_frame','gross_decisive_benchmark','financial_metrics','funding','classification','model_versions','sizing_mode','requested_amount_usd','residual_funding_usd','buffer_usd','size_status','freshness')
+        'modeled_basis','conditional_trade_benchmark','availability','evaluation_frame','gross_decisive_benchmark','financial_metrics','funding','classification','model_versions','sizing_mode','requested_amount_usd','residual_funding_usd','buffer_usd','size_status','freshness')
     result={k:deepcopy(r[k]) for k in fields if k in r}
     b=r.get('benchmark',{})
     result['benchmark_identity']={k:deepcopy(b.get(k)) for k in ('venue','method','revision','available','reason','conditioning')}
@@ -403,6 +414,8 @@ def comparison_input(row):
 
 
 def expand_price_fields(board):
+    from app.storage.shared_json import expand_board
+    expand_board(board)
     pool=board.pop('financial_field_pool',None)
     if pool is not None:
         if not isinstance(pool,list):raise ValueError('financial_field_reference_conflict')
@@ -459,7 +472,7 @@ def expand_price_fields(board):
 
 def compact_price_objects(board):
     """One-level name dictionary for unique price objects; values stay literal."""
-    if len(encoded(board))<480*1024:return board
+    if len(encoded(board))<32*1024:return board
     objects=[value for row in board['prices'] for key,value in row.items()
              if key!='field_refs' and isinstance(value,dict)]
     objects.extend(value for value in board.get('price_field_pool',[]) if isinstance(value,dict))
@@ -479,7 +492,7 @@ def compact_price_objects(board):
 def compact_price_fields(board):
     """Lossless sharing within one board, including exact frozen prices and clocks."""
     expand_price_fields(board)
-    if len(encoded(board))<450*1024:return board
+    if len(encoded(board))<32*1024:return board
     # Wide financial boards repeat complete availability/model frames. Share
     # frozen values only; every row and its exact identities remain present.
     if board.get('view') in ('ev','arbs'):
@@ -510,7 +523,9 @@ def compact_price_fields(board):
     pool=[];indexes={}
     for body in sorted(counts):
         if counts[body]>1:indexes[body]=len(pool);pool.append(deepcopy(values[body]))
-    if not pool:return compact_price_objects(board)
+    if not pool:
+        from app.storage.shared_json import compact_board
+        return compact_board(compact_price_objects(board))
     for row in board['prices']:
         refs={}
         for key,value in list(row.items()):
@@ -520,7 +535,7 @@ def compact_price_fields(board):
     board['price_field_pool']=pool
     # Repeated field names themselves dominate wide 100+ price boards. Keep
     # identity keys literal; encode remaining names through one exact dictionary.
-    if len(encoded(board))>500*1024:
+    if len(encoded(board))>64*1024:
         literal={'quote_id','quote_revision','field_refs'}
         names=sorted({k for q in board['prices'] for k in q if k not in literal} |
                      {k for q in board['prices'] for k in q.get('field_refs',{})})
@@ -531,7 +546,8 @@ def compact_price_fields(board):
                      for k,value in row.items()}
             row.clear();row.update(renamed)
         board['price_key_pool']=names
-    return compact_price_objects(board)
+    from app.storage.shared_json import compact_board
+    return compact_board(compact_price_objects(board))
 
 
 def expand_odds(board):
@@ -668,6 +684,7 @@ def response(bundle, value, policy, *, view='odds', filter='positive', at=None, 
         delivery_state='stopped' if stopped else 'complete' if view=='odds' else 'pending' if saved is None or saved.get('superseded') else 'complete',
         status='historical' if stopped else 'prices_only' if saved is None else saved['status'],
         prices=[],rows=[],empty_reason=None,provider_requests=0,limits=dict(maximum_response_bytes=MAX_RESPONSE))
+    identity_cache={}
     for event,group,q in entries(state):
         row=price(q);row['freshness']=freshness(q,state['comparison_profiles'],event,instant,financial=False)
         health=bundle.get('source_status',{}).get(q['venue'],bundle.get('source_status',{}).get(q['source']['provider'],{}))
@@ -675,11 +692,12 @@ def response(bundle, value, policy, *, view='odds', filter='positive', at=None, 
         row['event']={field:deepcopy(event[field]) for field in ('id','title','start_at','sport','league')}
         from app.comparison.same_outcome import quote_identity as same_outcome
         row['same_outcome']=same_outcome(q,group,event)
+        identity_cache[(id(q),id(group),id(event))]=row['same_outcome']
         if view=='odds':row['native_contract_summary']={key:deepcopy(value) for key,value in q.get('native_contract',{}).items()
             if key in ('wording','same_outcome')}
         row['market']={field:deepcopy(group[field]) for field in ('id','market','period','line','anchor_participant') if field in group}
-        if view=='odds':row['gross_comparison']=gross_comparison(q,group,event,state,instant,source_states=bundle.get('source_status',{}))
-        if view=='odds':row['current_comparison']=gross_comparison(q,group,event,state,instant,source_states=bundle.get('source_status',{}),current_only=True)
+        if view=='odds':row['gross_comparison']=gross_comparison(q,group,event,state,instant,source_states=bundle.get('source_status',{}),identity_cache=identity_cache)
+        if view=='odds':row['current_comparison']=gross_comparison(q,group,event,state,instant,source_states=bundle.get('source_status',{}),current_only=True,identity_cache=identity_cache)
         if view=='odds':
             publication_reasons=['updates_stopped'] if stopped else []
             age_observation(row,event,instant,source_states=bundle.get('source_status',{}),publication_reasons=publication_reasons)
@@ -733,8 +751,7 @@ def response(bundle, value, policy, *, view='odds', filter='positive', at=None, 
                 'partial':'Some comparisons unavailable; no current positive result',
                 'last_known_only':'Only last-known estimates available; see All comparisons'}[outcome]
     if view=='odds':compact_odds(out)
-    else:compact_financial(out)
-    compact_price_fields(out)
+    else:compact_price_fields(compact_financial(out))
     if len(encoded(out))>MAX_RESPONSE:raise ValueError('board_compact_response_capacity')
     return out
 
@@ -757,8 +774,11 @@ def details(value, *, quote=None,pair=None,at=None,current=None,stopped=False,hi
     # Keep the server-supplied percentage companions identical to the board.
     # This adds presentation fields to the copied frame without repricing it.
     selected['financial_metrics'] = financial_row(selected)['financial_metrics']
+    from app.comparison.shared_templates import subset
+    leg_quotes=[rows[l['quote_id']] for l in p['legs']] if p else []
+    profiles=subset(v['state']['comparison_profiles'],dict(outcomes=[dict(quotes={str(i):item for i,item in enumerate(leg_quotes or [q])})]))
     return dict(version='predict-board-details-2',game_key=v['game_key'],calculation_context=v['calculation_context'],
         as_of=v['as_of'],read_at=v['read_at'],calculated_at=v.get('calculated_at'),status=v['status'],policy=v['policy'],quote=q,pair=p,
         original_inputs_identity=dict(game_key=v['game_key'].split(':benchmark:',1)[0],input_version=v['input_version'],context_id=v['calculation_context']['context_id'],policy_revision=v['policy']['revision']),
-        leg_quotes=[rows[l['quote_id']] for l in p['legs']] if p else [],profiles=v['state']['comparison_profiles'],
+        leg_quotes=leg_quotes,profiles=profiles,
         representation=v['representation'])

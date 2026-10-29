@@ -39,9 +39,9 @@ def body(sport='MLB',books=('novig','prophetx'), *,at='2026-10-03T00:00:00Z',pri
 
 
 class Wire:
-    def __init__(self):self.calls=[];self.closed=False;self.used=20;self.paid_body=body();self.hold=None;self.error=None;self.headers=None
+    def __init__(self):self.calls=[];self.closed=False;self.used=20;self.paid_body=body();self.hold=None;self.error=None;self.headers=None;self.entered=asyncio.Event()
     async def request(self,req,key):
-        self.calls.append(deepcopy(req))
+        self.calls.append(deepcopy(req));self.entered.set()
         if self.hold:await self.hold.wait()
         if self.error:raise self.error
         bootstrap=req['path']=='/v4/sports'
@@ -53,6 +53,8 @@ class Wire:
 
 class SchedulerTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
+        self.authority_patch=patch('app.collection.alternate_acquisition.authority',return_value=None)
+        self.authority_patch.start();self.addCleanup(self.authority_patch.stop)
         self.temp=tempfile.TemporaryDirectory();self.root=Path(self.temp.name)
         self.service=CurrentService(config=dict(DEFAULT,sports=['MLB']),directory=self.root/'service',ownership=LocalOwnership(self.root/'owner'),worker_factory=FakeWorker)
         self.store=CurrentStore(self.service);self.service.store=self.store
@@ -68,6 +70,99 @@ class SchedulerTests(unittest.IsolatedAsyncioTestCase):
             ends_at=(now.replace(day=28)+timedelta(days=4)).replace(day=1,hour=0,minute=0,second=0,microsecond=0).isoformat())
         self.scheduler=AggregateScheduler(self.service,ledger=self.q,transport=self.wire,key_loader=lambda:'CONTROLLED-dummy-key',window_loader=lambda:self.window)
     async def asyncTearDown(self):self.schedule_patch.stop();await self.scheduler.close();await self.store.close();self.service.ownership.release();self.temp.cleanup()
+    async def test_stop_during_reservation_or_marker_never_enters_transport(self):
+        import threading
+        await self.scheduler.step()
+        for method in ('reserve','dispatched'):
+            with self.subTest(method=method):
+                self.service.dispatch=True
+                self.q.transact(lambda v,at:v.update(next_due_at=None))
+                entered=threading.Event();release=threading.Event()
+                original=getattr(self.q,method)
+                def blocked(*args,**kwargs):
+                    result=original(*args,**kwargs);entered.set()
+                    if not release.wait(5):raise AssertionError('dispatch marker never released')
+                    return result
+                calls=len(self.wire.calls)
+                with patch.object(self.q,method,side_effect=blocked):
+                    task=asyncio.create_task(self.scheduler.dispatch(dict(path='/v4/sports/baseball_mlb/odds',params=PARAMS),3))
+                    try:
+                        for _ in range(500):
+                            if entered.is_set():break
+                            await asyncio.sleep(.01)
+                        self.assertTrue(entered.is_set())
+                        self.service.dispatch=False;task.cancel();await asyncio.sleep(.01)
+                        task.cancel();await asyncio.sleep(.01)
+                        self.assertFalse(task.done())
+                        self.assertEqual(len(self.wire.calls),calls)
+                    finally:release.set()
+                    with self.assertRaises(asyncio.CancelledError):await task
+                self.assertEqual(len(self.wire.calls),calls)
+                attempts=self.q._read()['attempts']
+                last=max(attempts.values(),key=lambda a:a['at'])
+                self.assertEqual(last['state'],'not_dispatched')
+                self.assertTrue(last['consumed'])
+                self.assertEqual(self.q.snapshot()['reserved'],0)
+
+    async def test_cancel_during_receipt_accounting_joins_durable_charge(self):
+        import threading
+        await self.scheduler.step()
+        # Make the authored second request eligible so cancellation reaches
+        # receipt accounting, rather than stopping at the previous cycle's due guard.
+        self.q.transact(lambda v,at:v.update(next_due_at=None))
+        entered=threading.Event();release=threading.Event()
+        original=self.scheduler.account_response
+        def blocked(aid,response):
+            entered.set()
+            if not release.wait(5):raise AssertionError('accounting never released')
+            return original(aid,response)
+        self.scheduler.account_response=blocked
+        task=asyncio.create_task(self.scheduler.dispatch(dict(path='/v4/sports/baseball_mlb/odds',params=PARAMS),3))
+        try:
+            for _ in range(500):
+                if entered.is_set():break
+                await asyncio.sleep(.01)
+            self.assertTrue(entered.is_set())
+            task.cancel();await asyncio.sleep(.02)
+            self.assertFalse(task.done())
+        finally:release.set()
+        with self.assertRaises(asyncio.CancelledError):await task
+        attempt=self.q._read()['attempts'][self.scheduler.issue_context['attempt_id']]
+        self.assertEqual(attempt['charged'],3)
+        self.assertEqual(attempt['response_receipt']['status'],200)
+        self.assertEqual(self.q.snapshot()['reserved'],0)
+
+    async def test_scheduler_projection_and_receipt_due_do_not_read_ledger_on_loop(self):
+        import threading
+        original=self.q.snapshot;threads=[]
+        def checked():
+            threads.append(threading.get_ident())
+            self.assertNotEqual(threading.get_ident(),threading.main_thread().ident)
+            return original()
+        with patch.object(self.q,'snapshot',side_effect=checked):
+            await self.scheduler.step()
+            paid=len(self.wire.calls)
+            await self.scheduler.step()
+            self.assertEqual(len(self.wire.calls),paid)
+            self.assertEqual(self.scheduler.quota_due(),self.scheduler.next_check_at)
+        self.assertTrue(threads)
+        self.q.failed='authored_failure'
+        self.assertEqual((await self.scheduler.quota_snapshot())['pause'],'authored_failure')
+
+    async def test_clock_probe_restoration_outside_window_performs_no_transport(self):
+        await self.scheduler.step()
+        self.q.pause('clock_continuity_unknown');before=self.q._read();calls=len(self.wire.calls)
+        self.scheduler.prepared=False
+        with patch('app.collection.current_schedule.schedule',return_value=dict(open=False,next_due_at='2026-10-29T13:00:00+00:00')):
+            await self.scheduler.step()
+        after=self.q._read()
+        self.assertEqual(len(self.wire.calls),calls)
+        self.assertEqual(self.scheduler.phase,'waiting_for_cycle')
+        self.assertIsNone(after['pause'])
+        for key in ('attempts','observation','next_due_at','bootstrap_due_at','accounting_epoch'):
+            self.assertEqual(after[key],before[key],key)
+        self.assertEqual(after['clock_recoveries'][-1]['reason'],'os_evidenced_continuity_restored')
+
     async def test_running_app_without_tabs_dispatches(self):
         await self.scheduler.step()
         self.assertEqual(len(self.wire.calls),2);self.assertEqual(self.q.snapshot()['used'],23)
@@ -165,9 +260,9 @@ class SchedulerTests(unittest.IsolatedAsyncioTestCase):
         self.store.subscribers.add(asyncio.Queue(maxsize=1));await self.scheduler.step()
         # Deliberately target an independently affordable future slot in a controlled ledger.
         self.q.transact(lambda v,at:v.update(next_due_at=None))
-        self.wire.hold=asyncio.Event()
+        self.wire.hold=asyncio.Event();self.wire.entered.clear()
         task=asyncio.create_task(self.scheduler.dispatch(dict(path='/v4/sports/baseball_mlb/odds',params=PARAMS),3))
-        await asyncio.sleep(.01);task.cancel()
+        await asyncio.wait_for(self.wire.entered.wait(),2);task.cancel()
         with self.assertRaises(asyncio.CancelledError):await task
         self.assertEqual(self.q.snapshot()['reserved'],3)
         with self.assertRaisesRegex(QuotaStop,'ambiguous'):await self.scheduler.dispatch(dict(path='/v4/sports/baseball_mlb/odds',params=PARAMS),3)
@@ -199,8 +294,8 @@ class SchedulerTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_cancel_after_headers_accounts_receipt_without_reacquisition(self):
         await self.scheduler.step();self.q.transact(lambda v,at:v.update(next_due_at=None))
-        self.wire.hold=asyncio.Event();task=asyncio.create_task(self.scheduler.dispatch(dict(path='/v4/sports/baseball_mlb/odds',params=PARAMS),3))
-        await asyncio.sleep(.01);self.wire.response_receipt=dict(status=200,headers=quota(self.wire.used+3,3),received_at=utc());task.cancel()
+        self.wire.hold=asyncio.Event();self.wire.entered.clear();task=asyncio.create_task(self.scheduler.dispatch(dict(path='/v4/sports/baseball_mlb/odds',params=PARAMS),3))
+        await asyncio.wait_for(self.wire.entered.wait(),2);self.wire.response_receipt=dict(status=200,headers=quota(self.wire.used+3,3),received_at=utc());task.cancel()
         with self.assertRaises(asyncio.CancelledError):await task
         aid=self.scheduler.issue_context['attempt_id'];a=self.q._read()['attempts'][aid]
         self.assertEqual(a['charged'],3);self.assertTrue(a['consumed']);self.assertEqual(a['interruption'],'aggregate_cancelled_after_dispatch')
@@ -332,7 +427,7 @@ class RestartScheduler(unittest.IsolatedAsyncioTestCase):
             elapsed=(new_at-at[0]).total_seconds();at[0]=new_at;mono[0]+=elapsed;boot[0]['uptime']=mono[0]
             return response
         self.wire.request=consistent_receipt
-        self.store.subscribers.add(asyncio.Queue(maxsize=1));self.wire.hold=asyncio.Event()
+        self.store.subscribers.add(asyncio.Queue(maxsize=1));self.wire.hold=asyncio.Event();self.wire.entered.clear()
         task=asyncio.create_task(self.scheduler.step())
         for _ in range(50):
             if self.wire.calls:break
@@ -378,3 +473,17 @@ class PinnacleDelivery(unittest.IsolatedAsyncioTestCase):
         await scheduler.refresh(['MLB'],'CONTROLLED-pinnacle-three')
         quotes=[x['quote'] for x in self.store.index(self.store.snapshot()).values()]
         self.assertTrue(all(q['original']==prior[q['id']][1] and q['revision']>prior[q['id']][0] for q in quotes))
+
+
+def test_idle_scheduler_waits_until_due_without_changing_dispatch_checks():
+    from types import SimpleNamespace
+    from unittest.mock import patch
+    from app.collection.current_aggregate import AggregateScheduler
+    # This is only an interruptible waiting interval, never dispatch authority.
+    worker=SimpleNamespace(next_check_at='2026-10-27T14:15:00+00:00')
+    with patch('app.collection.current_aggregate.now',return_value='2026-10-27T14:00:00+00:00'):
+        assert AggregateScheduler.idle_delay(worker)==30
+        worker.next_check_at='2026-10-27T14:00:02+00:00'
+        assert AggregateScheduler.idle_delay(worker)==2
+        worker.next_check_at=None
+        assert AggregateScheduler.idle_delay(worker)==1

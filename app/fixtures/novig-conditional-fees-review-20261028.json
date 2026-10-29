@@ -1,0 +1,14 @@
+{
+  "version": "novig-pregame-conditional-20261028-1-review-2",
+  "source_url": "https://support.novig.com/en/articles/16195057-fees-on-novig",
+  "sha256": "1f564c7f20eae949bd3fe24d5d59ab7c15a9fa3a81ad01c6894461dad1129ef4",
+  "path": "app/fixtures/novig-fees-review-20261028.html",
+  "reviewed_at": "2026-10-29T00:11:57.627493+00:00",
+  "review_before": "2026-10-30T00:00:00Z",
+  "fee_rate": "0",
+  "evidence_class": "official_fee_schedule_conditional_product_mapping",
+  "applicability": "Novig pregame straight trades, app/web and API; no fees for maker or taker. Aggregate channel mapping and exceptional settlement are conditions, not instrument-qualified facts.",
+  "supersedes": "novig-pregame-conditional-20261028-1",
+  "review_decision": "Reviewed fee schedule and product classification: winner/spread/total single-leg pregame trades, app/web and API, zero entry fee for maker and taker, full $1 winning receipt. Live/futures/parlays and aggregate instrument settlement remain outside this scenario.",
+  "review_window_basis": "New review applies prospectively only; next daily review due October 29 at 20:00 Eastern. Historical review interval is retained; no coverage of the gap or full-outcome probability validation."
+}

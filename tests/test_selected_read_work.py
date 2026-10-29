@@ -46,6 +46,20 @@ class SelectedReadWork(IsolatedAsyncioTestCase):
             if enabled:gc.enable()
             await work.close()
 
+    async def test_completed_page_does_not_wait_for_cyclic_gc(self):
+        import gc,weakref
+        class Page:pass
+        work=ReadWork();enabled=gc.isenabled();gc.disable()
+        try:
+            value=await self.run_work(work,False,Page)
+            reference=weakref.ref(value)
+            del value
+            await asyncio.sleep(0)
+            self.assertIsNone(reference())
+        finally:
+            if enabled:gc.enable()
+            await work.close()
+
     async def test_read_lanes_reuse_distinct_threads_and_close_idle_workers(self):
         from threading import get_ident
         work=ReadWork()

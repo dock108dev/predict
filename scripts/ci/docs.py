@@ -14,6 +14,8 @@ DOCUMENTS = (
     "docs/comparison-board-api-contract.md",
     "docs/comparison-slate-api-contract.md",
     "docs/configuration.md",
+    "docs/acquisition.md",
+    "docs/raw-prices.md",
     "docs/development.md",
     "docs/current-row-storage.md",
     "docs/data-app-runtime-contract.md",

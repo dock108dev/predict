@@ -132,6 +132,41 @@ class PublicationDependencyIdentity(TestCase):
 
 @skipUnless(fixtures.SOCKET,'Explicit maintained disposable DA PostgreSQL lane required')
 class PublicationRepairSQL(IsolatedAsyncioTestCase):
+    async def test_identity_membership_shares_snapshot_when_ingress_adds_event(self):
+        from app.storage import observation_publication as publication
+        fixture=self
+        class ConcurrentIngress:
+            changed=False
+            def __init__(self,db):self.db=db
+            def execute(self,query,*args):
+                result=self.db.execute(query,*args)
+                if 'FROM current_event' in query and 'ORDER BY' in query and not self.changed:
+                    self.changed=True
+                    with fixture.connect() as writer:
+                        with writer.transaction():
+                            writer.execute("""INSERT INTO current_event SELECT
+                                (jsonb_populate_record(NULL::current_event,to_jsonb(e)||
+                                '{"id":"concurrent-event","native_event_id":"concurrent-event"}'::jsonb)).*
+                                FROM current_event e LIMIT 1""")
+                            writer.execute("""INSERT INTO current_contract SELECT
+                                (jsonb_populate_record(NULL::current_contract,to_jsonb(c)||
+                                '{"id":"concurrent-contract","event_id":"concurrent-event"}'::jsonb)).*
+                                FROM current_contract c LIMIT 1""")
+                            writer.execute("""INSERT INTO current_offer SELECT
+                                (jsonb_populate_record(NULL::current_offer,to_jsonb(o)||
+                                '{"contract_id":"concurrent-contract"}'::jsonb)).*
+                                FROM current_offer o LIMIT 1""")
+                return result
+        with self.connect() as db:
+            concurrent=ConcurrentIngress(db)
+            frame=publication.identity_index(concurrent)
+            self.assertTrue(concurrent.changed)
+            self.assertNotIn('concurrent-event',frame['active_events'])
+            self.assertLessEqual(frame['active_events'],frame['events'].keys())
+            refreshed=publication.identity_index(db)
+            self.assertIn('concurrent-event',refreshed['active_events'])
+            self.assertTrue(any('concurrent-event' in group for group in latest.capture_batches(db)))
+
     async def test_source_live_planning_keeps_complete_components_and_clocks(self):
         self.fresh_sources()
         with self.connect() as db:
@@ -199,7 +234,7 @@ class PublicationRepairSQL(IsolatedAsyncioTestCase):
         self.assertFalse(self.rows())
         with self.connect() as db:
             self.assertTrue(latest.reconcile(db,at=self.at.isoformat(),observations_only=True)['published'])
-        board=latest.board(self.snapshot(),self.first['game_key'],view='odds',filter='all')
+        board=fixtures.decoded_board(self.snapshot(),self.first['game_key'],view='odds',filter='all')
         fixtures.LatestBoardSQL.assert_source_frame(self,board)
 
     async def test_whole_capture_refuses_but_complete_peer_batches_publish_and_withdraw(self):
@@ -232,7 +267,7 @@ class PublicationRepairSQL(IsolatedAsyncioTestCase):
         for game in (self.first,self.second):
             members={hashed(member) for member in game['members']}
             self.assertTrue(any(members<=ids for ids in captures))
-            board=latest.board(self.snapshot(),game['game_key'],view='odds',filter='all')
+            board=fixtures.decoded_board(self.snapshot(),game['game_key'],view='odds',filter='all')
             fixtures.LatestBoardSQL.assert_source_frame(self,board)
             self.assertIsNone(board['calculated_at'])
         # A later authoritative withdrawal retires only that occurrence. Its
@@ -246,7 +281,7 @@ class PublicationRepairSQL(IsolatedAsyncioTestCase):
         self.assertNotIn(self.first['game_key'],{g['game_key'] for g in self.snapshot()['status']['games']})
         self.assertEqual(self.rows()[self.second['game_key']]['facts']['boards']['odds']['prices'],second)
         self.service.dispatch=False;self.state.write(self.service)
-        stopped=latest.board(self.snapshot(),self.second['game_key'],view='odds',filter='all')
+        stopped=fixtures.decoded_board(self.snapshot(),self.second['game_key'],view='odds',filter='all')
         self.assertTrue(stopped['prices'])
         self.assertTrue(all(q['freshness']['status']=='historical' for q in stopped['prices']))
         self.assertIn('updates_stopped',stopped['background_reasons'])
@@ -273,16 +308,16 @@ class PublicationRepairSQL(IsolatedAsyncioTestCase):
         self.assertTrue(any(b['reason']=='background_source_capacity' for b in result['batches']))
         self.assertIn(self.second['game_key'],self.rows())
         self.assertNotIn(self.first['game_key'],set(self.rows()))
-        self.assertTrue(latest.board(self.snapshot(),self.second['game_key'],view='odds',filter='all')['prices'])
+        self.assertTrue(fixtures.decoded_board(self.snapshot(),self.second['game_key'],view='odds',filter='all')['prices'])
 
     async def test_unrelated_game_update_preserves_published_game(self):
         self.fresh_sources();self.reconcile()
-        before=latest.board(self.snapshot(),self.second['game_key'],view='odds',filter='all')
+        before=fixtures.decoded_board(self.snapshot(),self.second['game_key'],view='odds',filter='all')
         self.changed_first()
-        after=latest.board(self.snapshot(),self.second['game_key'],view='odds',filter='all')
+        after=fixtures.decoded_board(self.snapshot(),self.second['game_key'],view='odds',filter='all')
         self.assertTrue(all(q['observation_display']['state']=='current' for q in after['prices']))
         self.assertEqual([(q['original'],q['times']) for q in before['prices']],[(q['original'],q['times']) for q in after['prices']])
-        changed=latest.board(self.snapshot(),self.first['game_key'],view='odds',filter='all')
+        changed=fixtures.decoded_board(self.snapshot(),self.first['game_key'],view='odds',filter='all')
         self.assertTrue(any(q['observation_display']['state']=='pending' for q in changed['prices']))
         self.assertTrue(any(q['observation_display']['state']=='current' for q in changed['prices']))
         # Candidate changes withdraw comparisons even when an observation itself
@@ -303,7 +338,7 @@ class PublicationRepairSQL(IsolatedAsyncioTestCase):
         self.assertNotIn('runtime_authority_changed',frame['observation_reasons'])
         self.assertEqual(latest.runtime_identity(frame['owner']),before)
         for game in (self.first,self.second):
-            board=latest.board(frame,game['game_key'],view='odds',filter='all')
+            board=fixtures.decoded_board(frame,game['game_key'],view='odds',filter='all')
             self.assertTrue(all(q['observation_display']['state']=='current' for q in board['prices']))
 
     async def test_observations_commit_before_optional_discovery_and_estimates(self):
@@ -314,7 +349,7 @@ class PublicationRepairSQL(IsolatedAsyncioTestCase):
             frame=self.snapshot()
             self.assertEqual(set(frame['rows']),{self.first['game_key'],self.second['game_key']})
             for game in (self.first,self.second):
-                odds=latest.board(frame,game['game_key'],view='odds',filter='all')
+                odds=fixtures.decoded_board(frame,game['game_key'],view='odds',filter='all')
                 from app.dashboard.comparison_board import expand_price_fields
                 expand_price_fields(odds)
                 self.assertTrue(all(q['observation_display']['state']=='current' for q in odds['prices']))
@@ -325,24 +360,24 @@ class PublicationRepairSQL(IsolatedAsyncioTestCase):
 
     async def test_candidate_add_remove_and_source_health_invalidate_immediately(self):
         self.fresh_sources();self.reconcile();key=self.first['game_key']
-        before=latest.board(self.snapshot(),key,view='odds',filter='all')
+        before=fixtures.decoded_board(self.snapshot(),key,view='odds',filter='all')
         candidate=deepcopy(next(r for r in self.records if r['quote']['venue']=='novig'
             and [r['quote']['source']['provider'],r['quote']['source']['native_event_id']] in self.first['members']))
         candidate['quote']['source']['native_market_id']+='-new-candidate'
         self.admit([candidate])
-        added=latest.board(self.snapshot(),key,view='odds',filter='all')
+        added=fixtures.decoded_board(self.snapshot(),key,view='odds',filter='all')
         self.assertTrue(all(q['observation_display']['state']=='current' for q in added['prices']))
         self.assertIn('current_dependencies_changed',added['comparison_reasons'])
         with self.connect() as db:
             from app.storage.current_rows import contract_id
             db.execute('DELETE FROM current_contract WHERE id=%s',(contract_id(candidate),))
-        restored=latest.board(self.snapshot(),key,view='odds',filter='all')
+        restored=fixtures.decoded_board(self.snapshot(),key,view='odds',filter='all')
         self.assertEqual(restored['comparison_reasons'],[])
         failure=dict(state='unavailable',reason_code='fixture_failure',reason='Fixture source failure')
         with self.connect() as db:
             from app.storage.current_rows import CurrentRowStore
             CurrentRowStore(db).upsert_records([],now=self.at.isoformat(),source_status=dict(kalshi=failure))
-        failed=latest.board(self.snapshot(),key,view='odds',filter='all')
+        failed=fixtures.decoded_board(self.snapshot(),key,view='odds',filter='all')
         self.assertTrue(all(q['observation_display']['state']=='last_known' for q in failed['prices'] if q['venue']=='kalshi'))
         self.assertTrue(all(q['observation_display']['state']=='current' for q in failed['prices'] if q['venue']!='kalshi'))
         self.assertEqual([(q['original'],q['times']) for q in before['prices']],[(q['original'],q['times']) for q in failed['prices']])
@@ -361,7 +396,7 @@ class PublicationRepairSQL(IsolatedAsyncioTestCase):
                 self.assertTrue(await asyncio.to_thread(entered.wait,3))
                 changed=self.changed_first();found=False
                 for _ in range(35):
-                    odds=latest.board(self.snapshot(),self.first['game_key'],view='odds',filter='all')
+                    odds=fixtures.decoded_board(self.snapshot(),self.first['game_key'],view='odds',filter='all')
                     found=any(q['source']==changed['quote']['source'] and q['times']['source_at']==changed['quote']['times']['source_at']
                               and q['observation_display']['state']=='current' for q in odds['prices'])
                     if found:break
@@ -374,7 +409,7 @@ class PublicationRepairSQL(IsolatedAsyncioTestCase):
     async def test_opposite_outcome_change_keeps_unaffected_comparison(self):
         self.fresh_sources();self.reconcile();key=self.first['game_key']
         changed=self.changed_first();participant=changed['selection']['participant']
-        odds=latest.board(self.snapshot(),key,view='odds',filter='all')
+        odds=fixtures.decoded_board(self.snapshot(),key,view='odds',filter='all')
         unaffected=[q for q in odds['prices'] if q['selection']['participant']!=participant and q.get('gross_comparison',{}).get('available')]
         self.assertTrue(unaffected)
         self.assertTrue(all('current_dependencies_changed' not in q['gross_comparison']['reason_codes'] for q in unaffected))
@@ -382,10 +417,10 @@ class PublicationRepairSQL(IsolatedAsyncioTestCase):
     async def test_optional_worker_failure_preserves_sources_source_worker_failure_revokes(self):
         self.fresh_sources();self.reconcile();key=self.first['game_key']
         self.service.background_calculations=dict(board='unavailable',observations='running');self.state.write(self.service)
-        healthy=latest.board(self.snapshot(),key,view='odds',filter='all')
+        healthy=fixtures.decoded_board(self.snapshot(),key,view='odds',filter='all')
         self.assertTrue(all(q['observation_display']['state']=='current' for q in healthy['prices']))
         self.service.background_calculations['observations']='unavailable';self.state.write(self.service)
-        failed=latest.board(self.snapshot(),key,view='odds',filter='all')
+        failed=fixtures.decoded_board(self.snapshot(),key,view='odds',filter='all')
         self.assertIn('background_observations_unavailable',failed['observation_reasons'])
         self.assertFalse(any(q['observation_display']['state']=='current' for q in failed['prices']))
 
@@ -406,13 +441,18 @@ class PublicationRepairSQL(IsolatedAsyncioTestCase):
         with patch.object(latest,'discover',side_effect=AssertionError('Optional stage forbidden for source-only temporal publication')):
             with self.connect() as db:result=latest.reconcile(db,at=self.at.isoformat(),observations_only=True)
         self.assertTrue(result['published'])
-        refreshed=latest.board(self.snapshot(),key,view='odds',filter='all')
+        refreshed=fixtures.decoded_board(self.snapshot(),key,view='odds',filter='all')
         selected=[q for q in refreshed['prices'] if q['venue']!='novig' and q['selection']['participant']==future['selection']['participant']
                   and q.get('current_comparison',{}).get('comparison_venue')=='novig']
         self.assertTrue(selected)
         self.assertTrue(all(q['current_comparison']['display_status']=='current' for q in selected))
+        # The source owner already retained this completed financial frame.
+        # Replaying it cannot replace the newer observation or its evidence.
         with self.connect() as db:self.assertFalse(latest.publish(db,captured_marker=proof,captured_runtime=owner,status=status,rows=old))
-        still=latest.board(self.snapshot(),key,view='odds',filter='all')
+        retained=self.rows()[key]['facts']
+        self.assertIn('financial_dependencies',retained)
+        self.assertLess(retained['boards']['ev']['as_of'],retained['boards']['odds']['as_of'])
+        still=fixtures.decoded_board(self.snapshot(),key,view='odds',filter='all')
         self.assertEqual(refreshed['prices'],still['prices'])
 
     async def test_incompatible_scope_price_is_irrelevant_but_scope_change_invalidates(self):
@@ -451,7 +491,7 @@ class PublicationRepairSQL(IsolatedAsyncioTestCase):
         if 'native_value' in native['quote']['original']:native['quote']['original']['native_value']='0.19'
         native['quote']['times'].update(source_at=self.at.isoformat(),received_at=self.at.isoformat())
         self.admit([native])
-        unrelated=latest.board(self.snapshot(),key,view='odds',filter='all')
+        unrelated=fixtures.decoded_board(self.snapshot(),key,view='odds',filter='all')
         supported=[q for q in unrelated['prices'] if q['venue']!='kalshi' and q['selection']['participant']==participant
                    and q.get('gross_comparison',{}).get('available')]
         self.assertTrue(supported)
@@ -463,7 +503,7 @@ class PublicationRepairSQL(IsolatedAsyncioTestCase):
         # with unchanged numeric price/source clocks. It must invalidate at once.
         original=deepcopy(native['quote']);scope('included');self.admit(authored)
         self.assertEqual(native['quote'],original)
-        pending=latest.board(self.snapshot(),key,view='odds',filter='all')
+        pending=fixtures.decoded_board(self.snapshot(),key,view='odds',filter='all')
         self.assertTrue(all('current_dependencies_changed' in q['gross_comparison']['reason_codes'] for q in pending['prices']
             if q['quote_id'] in {q['quote_id'] for q in supported}))
 
@@ -473,8 +513,8 @@ class PublicationRepairSQL(IsolatedAsyncioTestCase):
         from app.storage.store import hashed
         self.fresh_sources();self.reconcile()
         original_frame=self.snapshot()
-        before=latest.board(original_frame,self.second['game_key'],view='odds',filter='all')
-        before_affected=latest.board(original_frame,self.first['game_key'],view='odds',filter='all')
+        before=fixtures.decoded_board(original_frame,self.second['game_key'],view='odds',filter='all')
+        before_affected=fixtures.decoded_board(original_frame,self.first['game_key'],view='odds',filter='all')
         target=next(r for r in self.records if r['quote']['venue']=='kalshi'
             and r['selection']['predicate']=='win'
             and [r['quote']['source']['provider'],r['quote']['source']['native_event_id']] in self.first['members'])
@@ -493,9 +533,9 @@ class PublicationRepairSQL(IsolatedAsyncioTestCase):
                 result=latest.reconcile(db,at=self.at.isoformat(),observations_only=True)
             self.assertTrue(result['published'])
             refreshed=self.snapshot()
-            current=latest.board(refreshed,self.first['game_key'],view='odds',filter='all')
+            current=fixtures.decoded_board(refreshed,self.first['game_key'],view='odds',filter='all')
             self.assertTrue(all(row['observation_display']['state']=='current' for row in current['prices']))
-        affected=latest.board(frame,self.first['game_key'],view='odds',filter='all')
+        affected=fixtures.decoded_board(frame,self.first['game_key'],view='odds',filter='all')
         from app.dashboard.comparison_board import expand_price_fields
         expand_price_fields(affected)
         own=[row for row in affected['prices'] if row['source']==source]
@@ -509,7 +549,7 @@ class PublicationRepairSQL(IsolatedAsyncioTestCase):
         self.assertTrue(candidates)
         self.assertTrue(all('current_dependencies_changed' in frame['dependency_reasons'][self.first['game_key']]['comparisons'].get(
             contract_id(dict(quote=row)),[]) for row in candidates))
-        unchanged=latest.board(frame,self.second['game_key'],view='odds',filter='all')
+        unchanged=fixtures.decoded_board(frame,self.second['game_key'],view='odds',filter='all')
         self.assertTrue(all(row['observation_display']['state']=='current' for row in unchanged['prices']))
         self.assertEqual(before['prices'],unchanged['prices'])
         self.assertEqual([(row['original'],row['times']) for row in own],
@@ -526,7 +566,7 @@ class PublicationRepairSQL(IsolatedAsyncioTestCase):
             return [hashed([prior,'authored_changed_governing_rule']) if key[:2]==('kalshi',event) else prior
                 for key,prior in zip(keys,real(keys,contexts=contexts))]
         with patch.object(scope,'publication_dependencies',side_effect=changed):frame=self.snapshot()
-        affected=latest.board(frame,self.first['game_key'],view='odds',filter='all')
+        affected=fixtures.decoded_board(frame,self.first['game_key'],view='odds',filter='all')
         from app.dashboard.comparison_board import expand_price_fields
         expand_price_fields(affected)
         applicable=[row for row in affected['prices'] if row['venue']=='kalshi' and row['source']['native_event_id']==event]
@@ -536,7 +576,7 @@ class PublicationRepairSQL(IsolatedAsyncioTestCase):
         self.assertTrue(all(row['observation_display']['state']=='pending' for row in applicable))
         self.assertTrue(all(row['observation_display']['state']=='current' for row in unaffected))
         self.assertIn('current_dependencies_changed',affected['comparison_reasons'])
-        other=latest.board(frame,self.second['game_key'],view='odds',filter='all')
+        other=fixtures.decoded_board(frame,self.second['game_key'],view='odds',filter='all')
         self.assertEqual(other['observation_reasons'],[])
         self.assertEqual(other['comparison_reasons'],[])
         self.assertTrue(all(row['observation_display']['state']=='current' for row in other['prices']))
@@ -556,7 +596,7 @@ class PublicationRepairSQL(IsolatedAsyncioTestCase):
                 self.assertTrue(latest.publish(db,captured_marker=proof,captured_runtime=owner,status=status,rows=rows))
             frame=self.snapshot()
         for game in (self.first,self.second):
-            odds=latest.board(frame,game['game_key'],view='odds',filter='all')
+            odds=fixtures.decoded_board(frame,game['game_key'],view='odds',filter='all')
             from app.dashboard.comparison_board import expand_price_fields
             expand_price_fields(odds)
             self.assertTrue(all(row['observation_display']['state']=='current' for row in odds['prices']))
@@ -576,11 +616,11 @@ class PublicationRepairSQL(IsolatedAsyncioTestCase):
             self.assertNotIn('matching_binding_changed',pending['observation_reasons'])
             self.assertIn('matching_binding_changed',pending['dependency_reasons'][key]['all'])
             self.assertTrue(all(row['observation_display']['state']=='pending'
-                for row in latest.board(pending,key,view='odds',filter='all')['prices']))
+                for row in fixtures.decoded_board(pending,key,view='odds',filter='all')['prices']))
             with self.connect() as db:
                 result=latest.reconcile(db,at=self.at.isoformat(),observations_only=True)
             self.assertTrue(result['published'])
-            refreshed=self.snapshot();current=latest.board(refreshed,key,view='odds',filter='all')
+            refreshed=self.snapshot();current=fixtures.decoded_board(refreshed,key,view='odds',filter='all')
             self.assertTrue(all(row['observation_display']['state']=='current' for row in current['prices']))
             self.assertEqual(self.rows()[key]['facts']['observation_binding'],'authored-new-observation-code')
             before=original[key]['facts']['boards']['odds']['prices']

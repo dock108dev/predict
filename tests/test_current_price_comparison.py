@@ -12,6 +12,15 @@ from tests.test_ev09_n01 import AT, retained
 
 
 class CurrentPriceComparison(TestCase):
+    def test_frame_local_identity_reuse_preserves_every_comparison(self):
+        cache={}
+        for event,group,q in entries(self.state):
+            for current_only in (False,True):
+                expected=gross_comparison(q,group,event,self.state,self.at,current_only=current_only)
+                actual=gross_comparison(q,group,event,self.state,self.at,current_only=current_only,identity_cache=cache)
+                self.assertEqual(actual,expected)
+        self.assertLessEqual(len(cache),len(entries(self.state)))
+
     def setUp(self):
         context=ReadContext(SimpleNamespace(db=None),at=AT,frame=dict(epoch='authored-current-peer',
             revision='fixture',records=deepcopy(retained()[0]['records'])))

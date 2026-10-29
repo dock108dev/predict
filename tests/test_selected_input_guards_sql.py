@@ -38,7 +38,8 @@ class SelectedInputGuardsSQL(IsolatedAsyncioTestCase):
         rows=self.rows();self.key=self.first['game_key'];self.saved=rows[self.key]['facts']['publication_dependencies']
         with self.connect() as db:
             b=latest.board(latest.snapshot(db,at=self.at.isoformat()),self.key,view='odds',filter='all')
-        q=b['prices'][0]
+        from app.dashboard.comparison_board import expand_price_fields,expand_odds
+        q=expand_odds(expand_price_fields(b))['prices'][0]
         self.query=dict(game=self.key,quote=q['quote_id'],context_id=q['inputs_identity']['context_id'])
         return client,app[READ_WORK],q
 

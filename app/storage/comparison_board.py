@@ -6,7 +6,6 @@ from app.comparison.combined_inputs import build
 from app.comparison.occurrence_matching import OccurrenceResolver
 
 LOCK = 901091
-MAX_GAMES = 500
 MAX_ASSOCIATIONS = 16384
 MAX_CAPTURE_BYTES = 96 * 1024 * 1024
 
@@ -60,12 +59,22 @@ class ReadContext:
         self.dependency_revisions=frame.get('dependency_revisions',{})
         self.native_dependency_revisions=frame.get('native_dependency_revisions',{})
         records=_records(frame['records'],self.at)
+        # Bind exact line-local reference pairs from this same SQL capture.
+        # Retained ingress attachments may predate reference or rule changes.
+        from app.collection.current_benchmark import attach as attach_benchmark
         statuses=frame.get('source_status',{})
         for record in records:
             q=record['quote'];status=statuses.get(q['venue'],statuses.get(q['source']['provider'],{}))
             if status.get('state') not in (None,'available','budget_delayed'):q['state']=status['state']
-        if len(records)>MAX_ASSOCIATIONS or len(encoded(records))>MAX_CAPTURE_BYTES:raise ValueError('board_current_input_capacity')
+            elif q['source']['provider']=='the_odds_api' and status.get('state') in ('available','budget_delayed') and q['state'] in ('stopped','error','connecting','resyncing'):
+                q['state']=status['state']
+        if len(encoded(records))>MAX_CAPTURE_BYTES:raise ValueError('board_current_input_capacity')
         resolved=OccurrenceResolver().resolve(records,clock=self.at)
+        # Canonical team IDs can reverse the deterministic side ordering.
+        # Rebind the complete original pair after identity projection so its
+        # selected index still names the exact participant, line and outcome.
+        attach_benchmark([r for r in resolved if r['quote']['source']['provider']=='the_odds_api' and r['quote']['venue']!='pinnacle'],
+                         [r for r in resolved if r['quote']['venue']=='pinnacle'])
         grouped={}
         for r in resolved:grouped.setdefault(encoded(r['market_identity']['event']),[]).append(r)
         self.prepared=dict(at=self.at,originals={},groups=list(grouped.values()),excluded=[])
@@ -115,7 +124,6 @@ class ReadContext:
                     failures=[d for record in executions if (d:=diagnostic(record)) is not None]
                     self.catalog_errors.append(dict(members=members,reason=failures[0]['reason'] if failures else 'observation_invalid',
                         **(dict(schedule_conflicts=failures[:8],omitted=max(0,len(failures)-8)) if failures else {})))
-                    if len(self.catalog_errors)>MAX_GAMES:raise ValueError('board_catalog_capacity')
                     continue
                 event=state['events'][0]
                 summary={k:event[k] for k in ('id','title','start_at','participants')}
@@ -125,7 +133,6 @@ class ReadContext:
                     periods=sorted({r['market_identity']['period'] for r in rows}))
                 summary['native_alternatives']=sum(sum(len(qs) for qs in o.get('alternatives',{}).values()) for g in event['groups'] for o in g['outcomes'])
                 out.append(dict(game_key='combined:'+event['id'],members=members,input_version=self.guard(members),records=rows,catalog_event=summary))
-            if len(out)>MAX_GAMES:raise ValueError('board_catalog_capacity')
             self._catalog_bundles=sorted(out,key=lambda b:b['game_key'])
         return self._catalog_bundles
 
@@ -210,7 +217,6 @@ class ReadContext:
                 value['representation']='current typed event, exact native contracts, offers, depth and shared definitions; original source clocks retained'
                 value['envelope_ids']=[];value['envelopes']=[]
             out.extend(values)
-        if len(out)>MAX_GAMES:raise ValueError('board_catalog_capacity')
         return sorted(out,key=lambda b:b['game_key'])
 
 
@@ -286,6 +292,6 @@ def catalog(bundles):
             league=league,sport=e.get('sport') or b['records'][0]['event'].get('sport'),families=families,periods=periods,
             scope='/'.join([league,','.join(periods),','.join('winner' if f=='moneyline' else f for f in families)]),
             matches=list({r['quote']['occurrence_match']['revision']:{k:deepcopy(r['quote']['occurrence_match'].get(k)) for k in ('revision','status','method','conflicts','occurrence_id')} for r in b['records']}.values()),native_alternatives=e.get('native_alternatives',0) if 'catalog_event' in b else sum(sum(len(qs) for qs in o.get('alternatives',{}).values()) for g in e['groups'] for o in g['outcomes'])))
-    out=dict(version='predict-board-catalog-2',games=games,limits=dict(maximum_games=MAX_GAMES),provider_requests=0)
+    out=dict(version='predict-board-catalog-2',games=games,limits=dict(maximum_games=len(games)),provider_requests=0)
     if len(encoded(out))>2*1024*1024:raise ValueError('board_catalog_byte_capacity')
     return out

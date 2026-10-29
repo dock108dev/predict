@@ -176,7 +176,7 @@ def publication_dependencies(keys, contexts=None):
 _SOURCE_RULE_CACHE = None
 
 
-def source_rules():
+def source_rules(*, detached=True):
     """Cache verified common evidence until one relevant file changes."""
     global _SOURCE_RULE_CACHE
     roots = [ROOT / 'app/fixtures/native-scope-bindings-v1.json',
@@ -193,12 +193,12 @@ def source_rules():
         return tuple(values)
     current = signature(paths)
     if _SOURCE_RULE_CACHE is not None and _SOURCE_RULE_CACHE[0] == str(ROOT) and current == _SOURCE_RULE_CACHE[1]:
-        return deepcopy(_SOURCE_RULE_CACHE[3])
+        return deepcopy(_SOURCE_RULE_CACHE[3]) if detached else _SOURCE_RULE_CACHE[3]
     result = _build_source_rules()
     paths = list(roots)
     for rule in result:
         evidence = rule.get('evidence') or {}
-        for item in (evidence,evidence.get('pointer_evidence') or {}):
+        for item in (evidence,evidence.get('pointer_evidence') or {},*evidence.get('supporting_evidence',[])):
             if item.get('path'):
                 path = ROOT / item['path']
                 if path not in paths:
@@ -251,6 +251,12 @@ def _build_source_rules():
                         raise ValueError('Local source evidence required')
                     body = (ROOT / path).read_bytes()
                     available = len(body) <= 256 * 1024 and sha256(body).hexdigest() == evidence['sha256']
+                    for support in evidence.get('supporting_evidence',[]):
+                        support_path=Path(support['path'])
+                        if support_path.is_absolute() or '..' in support_path.parts:
+                            raise ValueError('Local scoring support required')
+                        support_body=(ROOT/support_path).read_bytes()
+                        available &= len(support_body)<=256*1024 and sha256(support_body).hexdigest()==support['sha256']
                     pointer = evidence.get('pointer_evidence')
                     if pointer:
                         pointer_path = Path(pointer['path'])
@@ -270,13 +276,29 @@ def _build_source_rules():
             if available:
                 rule.update(shared['defaults'])
         rules.append(rule)
+    us_defaults = authored.get('polymarket_us_game_defaults', {})
+    us_evidence = us_defaults.get('evidence', {})
+    us_available = False
+    try:
+        path = Path(us_evidence['path'])
+        if path.is_absolute() or '..' in path.parts:
+            raise ValueError('Local source evidence required')
+        body = (ROOT / path).read_bytes()
+        us_available = len(body) <= 256 * 1024 and sha256(body).hexdigest() == us_evidence['sha256']
+    except (OSError, ValueError, KeyError, TypeError):
+        pass
     for native_type, row in public['us_types'].items():
         for league in row['competitions']:
             if not supported(league,row['family'],row['period']):continue
-            rules.append(dict(provider='polymarket_us', native_type=native_type, league=league,
+            rule = dict(provider='polymarket_us', native_type=native_type, league=league,
                 family=row['family'], period=row['period'], overtime='unknown',
                 source_sha256=digest(dict(native_type=row,schema={k:public['sources']['us-schema'].get(k)
-                    for k in ('url','sha256')}))))
+                    for k in ('url','sha256')})))
+            if row['period'] == 'full_game' and row['family'] in ('moneyline','spread','total'):
+                rule.update(evidence=deepcopy(us_evidence), evidence_available=us_available)
+                if us_available:
+                    rule.update({k:us_defaults[k] for k in ('overtime','extra_innings','shootout')})
+            rules.append(rule)
     return rules
 
 
@@ -284,7 +306,7 @@ def _rule_for(record):
     q = record['quote'];e = record['event'];m = record['market_identity']
     meta = record.get('comparison_source_metadata', {})
     native_type = meta.get('series_id') if q['venue'] == 'kalshi' else meta.get('native_market_type')
-    candidates = [r for r in source_rules() if r['provider'] == q['venue'] and
+    candidates = [r for r in source_rules(detached=False) if r['provider'] == q['venue'] and
         r['league'] == e.get('competition') and r['family'] == m.get('family') and r['period'] == m.get('period')]
     if native_type is not None:
         candidates = [r for r in candidates if r['native_type'] == native_type]
@@ -405,7 +427,8 @@ def resolve(record, *, at):
                 else rule.get('extra_innings','unknown'))
         if event.get('competition') == 'NHL':
             scoring['shootout'] = ('excluded' if 'shootout is excluded' in text or 'excluding shootout' in text
-                else 'included' if 'shootout' in text and any(word in text for word in ('included','including','includes'))
+                else ('official_final_score' if rule.get('shootout')=='official_final_score' else 'included')
+                    if 'shootout' in text and any(word in text for word in ('included','including','includes'))
                 else rule.get('shootout','unknown'))
     values = {f['overtime'] for f in facts}
     if len(values) > 1:

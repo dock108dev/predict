@@ -84,6 +84,12 @@ def gross_quote(result, q, profiles, *, at, event, group, policy, benchmark=None
         fee_basis='gross_excludes_fees',exceptional_probability=None,executable_size=False,
         source_times=deepcopy(q['times']))
     try:
+        # Retained modeled winners already carry a validated typed reference.
+        # Keep its identity/expiry checks below; current aggregate pairing is
+        # needed only when that reference is absent.
+        if (q['source']['provider']=='the_odds_api' and getattr(policy,'benchmark_venue','pinnacle')=='pinnacle'
+                and not q.get('comparison_input_refs',{}).get('refs',{}).get('reference')):
+            return aggregate_gross(result,q,profiles,at=at,event=event,group=group,metric=metric)
         from .domain import CanonicalSelection
         from .benchmark import resolve
         from .current_metrics import calculation_instant
@@ -93,21 +99,38 @@ def gross_quote(result, q, profiles, *, at, event, group, policy, benchmark=None
         roles={p['role']:p['id'] for p in event['participants']}
         from .estimated_content import native_contract
         contract=native_contract(q,group)
-        home=q['binding']['selection']['participant']==roles['home']
-        predicate=q['binding']['selection']['predicate']
-        expected=('gt' if home else 'lt') if predicate=='win' else ('le' if home else 'ge') if predicate=='not_win' else None
-        if (contract['scope']['overtime']!=selected.scope.overtime or contract['scope']['period']!=selected.scope.period or
-            selected.predicate.operator!=expected or group['market']!='winner' or group['period']!='full_game' or
-            identity.get('current_selection_binding')!=q['binding']['selection'] or not q['binding']['verified'] or
-            selected.scope.overtime!='included' or selected.predicate.domain!='home_margin' or
-            selected.predicate.threshold.value!=0 or selected.predicate.operator not in ('gt','lt','ge','le') or
-            selected.event.home_id!=roles['home'] or selected.event.away_id!=roles['away'] or
-            selected.event.league!=event['league'] or selected.participant_id!=q['binding']['selection']['participant'] or
-            list(selected.native.key)!=[q['venue'],*[q['source'][k] for k in ('native_event_id','native_market_id','native_outcome_id','native_side')]]):
-            raise ValueError('gross_decisive_winner_identity_unsupported')
-        supplied=benchmark or values.get('reference',{}).get('payload')
+        if group['market']=='winner':
+            home=q['binding']['selection']['participant']==roles['home']
+            predicate=q['binding']['selection']['predicate']
+            expected=('gt' if home else 'lt') if predicate=='win' else ('le' if home else 'ge') if predicate=='not_win' else None
+            if (contract['scope']['overtime']!=selected.scope.overtime or contract['scope']['period']!=selected.scope.period or
+                selected.predicate.operator!=expected or group['market']!='winner' or group['period']!='full_game' or
+                identity.get('current_selection_binding')!=q['binding']['selection'] or not q['binding']['verified'] or
+                selected.scope.overtime!='included' or selected.predicate.domain!='home_margin' or
+                selected.predicate.threshold.value!=0 or selected.predicate.operator not in ('gt','lt','ge','le') or
+                selected.event.home_id!=roles['home'] or selected.event.away_id!=roles['away'] or
+                selected.event.league!=event['league'] or selected.participant_id!=q['binding']['selection']['participant'] or
+                list(selected.native.key)!=[q['venue'],*[q['source'][k] for k in ('native_event_id','native_market_id','native_outcome_id','native_side')]]):
+                raise ValueError('gross_decisive_winner_identity_unsupported')
+        else:
+            from .same_outcome import quote_identity
+            facts=contract.get('same_outcome',{})
+            if (group['market'] not in ('spread','total') or group['period']!='full_game' or
+                    identity.get('current_selection_binding')!=q['binding']['selection'] or not q['binding']['verified'] or
+                    selected.predicate.to_dict()!=facts.get('predicate') or
+                    selected.scope.overtime!=contract['scope']['overtime'] or
+                    not quote_identity(q,group,event)['supported'] or
+                    list(selected.native.key)!=[q['venue'],*[q['source'][k] for k in ('native_event_id','native_market_id','native_outcome_id','native_side')]]):
+                raise ValueError('gross_exact_native_score_identity_unsupported')
+            if 'reference' not in values:
+                raise ValueError(q['comparison_input_status']['reference']['reason'])
+        metric['applicability_expiry']={k:v.get('expires_at') for k,v in values.items() if k in ('identity','reference')}
+        supplied=(benchmark if group['market']=='winner' else None) or values.get('reference',{}).get('payload')
         weight,reference=resolve(supplied,selected,policy,at,allow_last_known=True)
         probability=weight if selected.predicate.operator in ('gt','ge') else 1-weight
+        metric.update(conditioning='score_unequal_to_exact_threshold',selected_predicate=selected.predicate.to_dict(),
+            selected_equality=selected.equality.to_dict(),reference_applicability=deepcopy(q.get('comparison_input_status',{}).get('reference')),
+            meaning='Exact decisive reference benchmark. Equality, pushes and exceptional settlement excluded; not full net EV or covered arbitrage.')
         original=q['original']
         if original.get('payout_units')!='USD' or F(original['payout'])!=1:
             raise ValueError('gross_one_dollar_normal_face_required')
@@ -196,3 +219,91 @@ def pairs(event, profiles, policy, *, existing=()):
             result['bound_details']=deepcopy(raw);result['revision']=digest(result)
             results.append(result);seen.add(ids)
     return results
+
+
+def aggregate_gross(result,q,profiles,*,at,event,group,metric):
+    """Use the shared exact benchmark owner for provider-defined two-way bets.
+
+    This compares the provider's identical occurrence/period/line/outcome only.
+    It does not attest cross-venue exceptional settlement or a net probability.
+    """
+    try:
+        from app.collection.current_benchmark import calculate,validate_reference
+        from app.collection.current_comparison_inputs import PRODUCER_VERSION
+        from app.dashboard.current_contract import price
+        from .current_dependencies import instant
+        ref=q.get('sharp_reference')
+        if not ref:raise ValueError('exact_pinnacle_opposition_unavailable')
+        validate_reference(ref,q['binding']['selection'])
+        values=references(q,profiles)
+        payload=values.get('reference',{}).get('payload',{})
+        # The ordinary producer preserves both native originals. A game-level
+        # winner benchmark cannot replace a spread/total or another line.
+        if payload.get('version')==PRODUCER_VERSION:
+            originals=payload.get('outcomes',[])
+            if (len(originals)!=2 or payload['current_selection_binding']!=q['binding']['selection'] or
+                payload['receipt_sha256']!=ref['sha256'] or payload['original_odds']!=ref['odds'] or
+                any(r['source']['native_event_id']!=q['source']['native_event_id'] for r in originals)):
+                raise ValueError('exact_reference_originals_unavailable')
+        else:
+            # Combined winner attachment has its own typed original frame;
+            # retain the independently bound ordinary quote reference as well.
+            if group['market']!='winner' or payload.get('version')!='comparison-two-way-benchmark-1':
+                raise ValueError('exact_reference_originals_unavailable')
+            originals=payload['outcomes']
+            if (payload.get('receipt_sha256')!=ref['sha256'] or len(originals)!=2 or
+                sorted((x['decimal_odds'],x.get('market_at') or x.get('book_at')) for x in originals)!=sorted(zip(ref['odds'],ref['source_at'])) or
+                any(x['selection']['native']['event_id']!=q['source']['native_event_id'] for x in originals)):
+                raise ValueError('exact_reference_originals_unavailable')
+        value=calculate(q,at,allow_last_known=True)
+        if value.get('value') is None:raise ValueError(value.get('reason') or 'gross_reference_unavailable')
+        probability=F(int(value['basis']['probability']['numerator']),int(value['basis']['probability']['denominator']))
+        cost=price(q)
+        current=(q['state'] in ('available','budget_delayed') and all(t is not None and 0<=(at-instant(t)).total_seconds()<=1800 for t in
+            [q['times']['source_at'],*ref['source_at']]) and at<instant(event['start_at']))
+        metric.update(available=True,value=wire(probability-cost),return_percent=wire(F(int(value['exact']['numerator']),int(value['exact']['denominator']))),
+            selected_decisive_probability=wire(probability),acquisition_usd_per_normal_claim=wire(cost),
+            state='numeric_current' if current else 'numeric_last_known',reference_revision=digest(ref),
+            reference_originals=deepcopy(originals),reference_binding=deepcopy(ref),
+            conditioning='provider_defined_decisive_win_loss',originals_simultaneously_executable=False,
+            meaning='Exact provider event, full-game market, outcome and line; proportional no-vig benchmark before fees. Ties, pushes and exceptional settlement excluded. Not net EV or covered arbitrage.',
+            settlement_equivalence='not_established_by_aggregate_market_identity')
+    except (ValueError,KeyError,TypeError,ArithmeticError) as exc:
+        metric['reason']=str(exc)
+    result['gross_decisive_benchmark']=metric
+    result['revision']=digest(dict(financial_revision=result['revision'],gross_decisive_benchmark=metric))
+    return result
+
+
+def age_benchmarks(result,q,event,at,*,reasons=(),source_assessment=None):
+    """Age only inputs required by gross/conditional metrics, not net EV models."""
+    from .source_clock import assess
+    from .current_dependencies import instant,link_reasons
+    from .event_eligibility import assess as event_assess,quote_event
+    gross=result.get('gross_decisive_benchmark',{})
+    if not gross.get('available'):return
+    source_assessment=source_assessment or assess(q,at)
+    why=[*reasons,*source_assessment['reasons'],*link_reasons(q,at)]
+    gross['source_currentness']=source_assessment
+    if q.get('state',q.get('source_state')) not in ('available','budget_delayed'):why.append('source_unavailable')
+    er=event_assess(quote_event(q,event),at.isoformat())['reason']
+    if er:why.append(er)
+    if at>=instant(event['start_at']):why.append('pregame_ended')
+    refs=gross.get('reference_originals',[])
+    if len(refs)!=2:why.append('reference_pair_missing')
+    for r in refs:
+        clock=r.get('source_at') or r.get('market_at') or r.get('book_at')
+        receipt=r.get('received_at')
+        if clock is None or receipt is None:why.append('reference_clock_unknown');continue
+        if instant(clock)>at or instant(receipt)>at or instant(clock)>instant(receipt):why.append('reference_clock_future')
+        elif (at-instant(clock)).total_seconds()>1800:why.append('reference_expired')
+    for kind,expiry in gross.get('applicability_expiry',{}).items():
+        if expiry is not None and at>=instant(expiry):why.append(kind+'_profile_expired')
+    gross['currentness_reasons']=sorted(set(why))
+    gross['state']='numeric_last_known' if why else 'numeric_current'
+    conditional=result.get('conditional_trade_benchmark',{})
+    if conditional.get('available'):
+        if not instant(conditional['evidence']['reviewed_at'])<=at<instant(conditional['evidence']['review_before']):
+            why.append('conditional_fee_review_expired_or_not_effective')
+        conditional['currentness_reasons']=sorted(set(why))
+        conditional['state']='numeric_last_known' if why else 'numeric_current'

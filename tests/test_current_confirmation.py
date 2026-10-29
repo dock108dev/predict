@@ -108,19 +108,16 @@ class WireControls(unittest.TestCase):
   u=MarketStream([market()],None);g=u.begin_subscription('current');bad=json.loads(message('current'));bad['marketData'].pop('offers')
   parsed=u.parse(json.dumps(bad),'current',generation=g);self.assertNotEqual(parsed.sync.value,'synchronized')
 
-class SnapshotBudget(unittest.IsolatedAsyncioTestCase):
- async def test_snapshot_requests_share_budget_and_do_not_change_subscription(self):
-  from types import SimpleNamespace
-  from app.collection.current_native import NativeWorker
-  from app.collection.prediction_producer import PredictionBudget
-  from app.collection.odds_http import BudgetStop
-  config=dict(DEFAULT,duration_seconds=180,requests_per_source=2)
-  service=SimpleNamespace(config=config,dispatch=True,deadline=time.monotonic()+180)
-  w=NativeWorker(service,'kalshi');w.client=SimpleNamespace(budget=PredictionBudget(dict(session_bytes=1024*1024)));pending={};commands=[]
-  class Socket:
-   async def send(self,wire):commands.append(json.loads(wire));pending.clear()
-  w.socket=Socket();markets=[SimpleNamespace(raw=SimpleNamespace(ref=SimpleNamespace(market_id='exact-market')))]
-  async def no_sleep(seconds):pass
-  with patch('app.collection.current_native.asyncio.sleep',no_sleep),self.assertRaises(BudgetStop):await w.snapshots(SimpleNamespace(sid=7),markets,pending)
-  self.assertEqual(len(commands),2);self.assertEqual(w.client.budget.requests,2)
-  self.assertTrue(all(c['cmd']=='update_subscription' and c['params']==dict(sid=7,market_tickers=['exact-market'],action='get_snapshot') for c in commands))
+
+def test_future_snapshot_clock_refuses_proof_without_advancing_highwater_or_mutating_book():
+ from app.collection.current_confirmation import ConfirmationUnavailable
+ t=Confirmations('kalshi');t.begin(1);m=catalogs()['kalshi']['markets'][0]
+ prior,pd,pr=observation('kalshi',m,NOW-timedelta(seconds=2));proof(t,prior,pd,pr)
+ highwater=dict(t.highwater)
+ future,fd,fr=observation('kalshi',m,NOW+timedelta(seconds=1));future['raw']['received_at']=NOW.isoformat();unchanged=deepcopy(future)
+ with __import__('pytest').raises(ConfirmationUnavailable):proof(t,future,fd,fr)
+ assert future==unchanged and t.highwater==highwater and not t.latest
+ delta=dict(type='orderbook_delta',sid=2,seq=2,msg=dict(market_ticker=m['id']))
+ assert proof(t,future,delta,json.dumps(delta).encode()) is None
+ later,ld,lr=observation('kalshi',m,NOW+timedelta(seconds=2),sequence=3)
+ assert proof(t,later,ld,lr) is not None

@@ -32,8 +32,41 @@ from tests.latest_board_fixture import (
 )
 
 
+def decoded_board(*args,**kwargs):
+    from app.dashboard.comparison_board import expand_price_fields
+    return expand_price_fields(latest.board(*args,**kwargs))
+
+
 @skipUnless(SOCKET,'Explicit maintained disposable DA PostgreSQL lane required')
 class LatestBoardSQL(LatestBoardFixture):
+    async def test_generated_publication_accounting_tracks_every_fact_update(self):
+        from psycopg.types.json import Jsonb
+        self.reconcile()
+        with self.connect() as db:
+            def check():
+                rows=db.execute("""SELECT retained_bytes=octet_length(facts::text) bytes_exact,
+                    publication_events IS NOT DISTINCT FROM facts#>'{publication_dependencies,selector,events}' events_exact,
+                    observation_as_of IS NOT DISTINCT FROM facts#>>'{boards,odds,as_of}' clock_exact
+                    FROM latest_board""").fetchall()
+                self.assertTrue(rows)
+                self.assertTrue(all(all(r.values()) for r in rows))
+            check()
+            db.execute("UPDATE latest_board SET facts=facts || %s",(Jsonb(dict(authored_extra='x'*10000)),))
+            check()
+
+    async def test_scoped_marker_ignores_other_prices_but_detects_membership(self):
+        from app.storage.store import hashed
+        scope=[hashed(member) for member in self.first['members']]
+        with self.connect() as db:
+            before=latest.marker(db,scope);whole=latest.marker(db)
+            other=db.execute('SELECT o.contract_id FROM current_offer o JOIN current_contract c ON c.id=o.contract_id WHERE NOT(c.event_id=ANY(%s)) LIMIT 1',(scope,)).fetchone()
+            self.assertIsNotNone(other)
+            db.execute("UPDATE current_offer SET revision='authored-unrelated-update' WHERE contract_id=%s",(other['contract_id'],))
+            self.assertEqual(latest.marker(db,scope),before)
+            self.assertNotEqual(latest.marker(db),whole)
+            db.execute('DELETE FROM current_offer USING current_contract c WHERE current_offer.contract_id=c.id AND NOT(c.event_id=ANY(%s))',(scope,))
+            self.assertNotEqual(latest.marker(db,scope),before)
+
     async def test_comparison_enrichment_preserves_native_image_and_real_material_withdraws(self):
         from datetime import datetime,timezone
         self.at=datetime.now(timezone.utc)
@@ -262,11 +295,11 @@ class LatestBoardSQL(LatestBoardFixture):
                     self.assertIsNone(row['facts']['context'])
                     self.assertEqual(row['facts']['estimate_availability']['state'],'unavailable')
                     self.assertTrue(row['facts']['estimate_availability']['reason_codes'])
-                    odds=latest.board(self.snapshot(),game,view='odds',filter='all')
+                    odds=decoded_board(self.snapshot(),game,view='odds',filter='all')
                     self.assert_source_frame(odds)
                     self.assertEqual([row['price_ref'] for row in odds['rows']],[row['quote_id'] for row in odds['prices']])
                     self.assertTrue(all(q.get('observed_depth') is not None for q in odds['prices']))
-                    ev=latest.board(self.snapshot(),game,view='ev',filter='all')
+                    ev=decoded_board(self.snapshot(),game,view='ev',filter='all')
                     self.assert_source_frame(ev)
                     self.assertFalse(any(r.get('ranking_eligible') for r in ev['rows']))
 
@@ -277,7 +310,7 @@ class LatestBoardSQL(LatestBoardFixture):
         self.fresh_sources([r for r in self.records if r['quote']['venue']!='pinnacle'])
         self.assertTrue(self.reconcile()['published'])
         for game in self.rows():
-            odds=latest.board(self.snapshot(),game,view='odds',filter='all')
+            odds=decoded_board(self.snapshot(),game,view='odds',filter='all')
             self.assert_source_frame(odds)
             self.assertFalse(odds['benchmark']['available'])
         # A malformed optional producer output cannot become a source-fact gate.
@@ -285,7 +318,7 @@ class LatestBoardSQL(LatestBoardFixture):
         with patch('app.comparison.combined_inputs._benchmark',return_value=({'authored_malformed':True},None)):
             self.assertTrue(self.reconcile()['published'])
         for game in self.rows():
-            odds=latest.board(self.snapshot(),game,view='odds',filter='all')
+            odds=decoded_board(self.snapshot(),game,view='odds',filter='all')
             self.assert_source_frame(odds)
             self.assertFalse(odds['benchmark']['available'])
             self.assertTrue(odds['benchmark']['reason'])
@@ -313,9 +346,9 @@ class LatestBoardSQL(LatestBoardFixture):
                 with patch.object(latest,'discover',side_effect=decorated):
                     self.assertTrue(self.reconcile()['published'])
                 for game in self.rows():
-                    odds=latest.board(self.snapshot(),game,view='odds',filter='all')
+                    odds=decoded_board(self.snapshot(),game,view='odds',filter='all')
                     self.assert_source_frame(odds)
-                    ev=latest.board(self.snapshot(),game,view='ev',filter='all')
+                    ev=decoded_board(self.snapshot(),game,view='ev',filter='all')
                     self.assert_source_frame(ev)
                     self.assertEqual(ev['availability']['numeric_results'],0,ev['availability'])
                     self.assertFalse(any(r.get('ranking_eligible') for r in ev['rows']))
@@ -323,23 +356,23 @@ class LatestBoardSQL(LatestBoardFixture):
 
     async def test_policy_worker_and_estimate_deadlines_do_not_age_source(self):
         self.fresh_sources();self.reconcile();key=self.first['game_key']
-        original=latest.board(self.snapshot(),key,view='odds',filter='all')['prices']
+        original=decoded_board(self.snapshot(),key,view='odds',filter='all')['prices']
         alternate=replace(DEFAULT_POLICY,buffer_rate='0.01')
         with patch.object(latest,'load',return_value=alternate):
             frame=self.snapshot();self.assertIn('policy_changed',frame['calculation_reasons'])
-            odds=latest.board(frame,key,view='odds',filter='all')
+            odds=decoded_board(frame,key,view='odds',filter='all')
             self.assert_source_frame(odds)
             self.assertEqual(odds['prices'],original)
             self.assertNotIn('policy_changed',odds.get('observation_reasons',[]))
         self.service.background_calculations=dict(board='unavailable');self.state.write(self.service)
         frame=self.snapshot();self.assertIn('background_calculations_unavailable',frame['calculation_reasons'])
-        self.assert_source_frame(latest.board(frame,key,view='odds',filter='all'))
+        self.assert_source_frame(decoded_board(frame,key,view='odds',filter='all'))
         self.service.background_calculations=dict(board='running');self.state.write(self.service)
         with self.connect() as db:
             db.execute("UPDATE latest_board SET facts=jsonb_set(facts,'{valid_until}',to_jsonb(%s::text)) WHERE game_key=%s",
                 ((self.at+timedelta(seconds=1)).isoformat(),key))
         self.at+=timedelta(seconds=2);self.state.write(self.service)
-        frame=self.snapshot();odds=latest.board(frame,key,view='odds',filter='all');ev=latest.board(frame,key,view='ev',filter='all')
+        frame=self.snapshot();odds=decoded_board(frame,key,view='odds',filter='all');ev=decoded_board(frame,key,view='ev',filter='all')
         self.assert_source_frame(odds)
         # Read-relative age metadata advances; captured source facts do not.
         self.assertEqual([(q['original'],q['times'],q['observation_revision']) for q in odds['prices']],
@@ -347,7 +380,7 @@ class LatestBoardSQL(LatestBoardFixture):
         self.assertIn('calculation_authority_boundary',ev['background_reasons'])
         self.assertFalse(any(r.get('ranking_eligible') for r in ev['rows']))
         self.at+=timedelta(minutes=31);self.state.write(self.service)
-        stale=latest.board(self.snapshot(),key,view='odds',filter='all')
+        stale=decoded_board(self.snapshot(),key,view='odds',filter='all')
         self.assert_source_frame(stale,current=False)
         self.assertTrue(all(q['freshness']['status']=='historical' for q in stale['prices']))
         self.assertEqual([q['times'] for q in stale['prices']],[q['times'] for q in original])
@@ -359,7 +392,7 @@ class LatestBoardSQL(LatestBoardFixture):
         for record in records:
             if record['quote']['venue']=='prophetx':record['quote']['freshness_policy']=dict(version='predict-source-freshness-1',maximum_age_seconds=30)
         self.fresh_sources(records);self.reconcile();key=self.first['game_key']
-        original=latest.board(self.snapshot(),key,view='odds',filter='all')
+        original=decoded_board(self.snapshot(),key,view='odds',filter='all')
         def selected(board):
             from app.dashboard.comparison_board import expand_odds
             expand_odds(board)
@@ -368,14 +401,14 @@ class LatestBoardSQL(LatestBoardFixture):
         before=selected(original);captured=deepcopy(before['gross_comparison'])
         self.assertEqual(captured['display_status'],'current')
         self.changed_first()
-        pending=selected(latest.board(self.snapshot(),key,view='odds',filter='all'))
+        pending=selected(decoded_board(self.snapshot(),key,view='odds',filter='all'))
         self.assertEqual(pending['observation_display']['state'],'pending')
         self.assertEqual(pending['gross_comparison']['display_status'],'pending')
         self.assertNotIn('source_expired',pending['freshness']['reasons'])
         self.at+=timedelta(seconds=31);self.state.write(self.service)
         with patch.object(latest,'calculate_current',side_effect=AssertionError('read cannot calculate')), \
              patch.object(latest,'read_context',side_effect=AssertionError('read cannot capture new peer prices')):
-            read=latest.board(self.snapshot(),key,view='odds',filter='all');aged=selected(read)
+            read=decoded_board(self.snapshot(),key,view='odds',filter='all');aged=selected(read)
         gross=aged['gross_comparison'];self.assertEqual(gross['display_status'],'last_known')
         self.assertEqual(gross['exact'],captured['exact']);self.assertEqual(gross['comparison_quote_id'],captured['comparison_quote_id'])
         self.assertEqual([(q['original'],q['times']) for q in gross['inputs']],[(q['original'],q['times']) for q in captured['inputs']])
@@ -387,18 +420,18 @@ class LatestBoardSQL(LatestBoardFixture):
 
     async def test_source_failure_and_stop_keep_last_known_original_clocks(self):
         self.fresh_sources();self.reconcile();key=self.first['game_key']
-        before=latest.board(self.snapshot(),key,view='odds',filter='all')
+        before=decoded_board(self.snapshot(),key,view='odds',filter='all')
         clocks={native_key(q):q['times'] for q in before['prices']}
         self.service.states['kalshi']=dict(state='unavailable',reason_code='fixture_source_failure')
         self.state.write(self.service);self.reconcile()
-        unhealthy=latest.board(self.snapshot(),key,view='odds',filter='all')
+        unhealthy=decoded_board(self.snapshot(),key,view='odds',filter='all')
         self.assert_source_frame(unhealthy,current=False)
         for q in unhealthy['prices']:
             self.assertEqual(q['times'],clocks[native_key(q)])
             self.assertEqual(q['freshness']['status'],'historical' if q['venue']=='kalshi' else 'current')
             if q['venue']=='kalshi':self.assertIn('source_unavailable',q['freshness']['reasons'])
         self.service.dispatch=False;self.state.write(self.service);self.reconcile()
-        stopped=latest.board(self.snapshot(),key,view='odds',filter='all')
+        stopped=decoded_board(self.snapshot(),key,view='odds',filter='all')
         self.assert_source_frame(stopped,current=False)
         self.assertIn('updates_stopped',stopped['observation_reasons'])
         self.assertTrue(all(q['freshness']['status']=='historical' for q in stopped['prices']))
@@ -406,7 +439,7 @@ class LatestBoardSQL(LatestBoardFixture):
 
     async def test_committed_source_failure_beats_delayed_available_heartbeat(self):
         self.fresh_sources();self.reconcile();key=self.first['game_key']
-        before=latest.board(self.snapshot(),key,view='odds',filter='all')
+        before=decoded_board(self.snapshot(),key,view='odds',filter='all')
         originals={native_key(q):(q['original'],q['times']) for q in before['prices']}
         failure=dict(state='unavailable',reason_code='fixture_committed_source_failure',
             reason='Fixture ingress failure committed before the next runtime heartbeat.')
@@ -414,7 +447,7 @@ class LatestBoardSQL(LatestBoardFixture):
             CurrentRowStore(db).upsert_records([],now=self.at.isoformat(),source_status=dict(kalshi=failure))
         # Leave the persisted heartbeat available to reproduce the actual race.
         self.assertEqual(self.state.read()['states']['kalshi']['state'],'available')
-        immediate=latest.board(self.snapshot(),key,view='odds',filter='all')
+        immediate=decoded_board(self.snapshot(),key,view='odds',filter='all')
         self.assertIn('current_dependencies_changed',immediate['observation_reasons'])
         def check(value):
             self.assert_source_frame(value,current=False)
@@ -431,7 +464,7 @@ class LatestBoardSQL(LatestBoardFixture):
                 else:self.assertEqual(q['source_state'],'available')
         check(immediate)
         self.assertTrue(self.reconcile()['published'])
-        after=latest.board(self.snapshot(),key,view='odds',filter='all');check(after)
+        after=decoded_board(self.snapshot(),key,view='odds',filter='all');check(after)
         self.assertNotIn('current_dependencies_changed',after['observation_reasons'])
         self.assertTrue(all(q['freshness']['status']=='current' for q in after['prices'] if q['venue']!='kalshi'))
         self.assertEqual(self.state.read()['states']['kalshi']['state'],'available')
@@ -457,7 +490,8 @@ class LatestBoardSQL(LatestBoardFixture):
             c=latest.read_context(db,at=self.at.isoformat());bundle=discover(c.store,context=c,game=a)[0]
         bundle['calculation_context']=context_identity(bundle,DEFAULT_POLICY,c)
         expected=response(bundle,calculate_current(bundle,DEFAULT_POLICY,context=c),DEFAULT_POLICY,view='ev',filter='all',at=self.at.isoformat())
-        self.assertEqual(after[a]['facts']['boards']['ev']['rows'],expected['rows'])
+        from app.dashboard.comparison_board import expand_price_fields
+        self.assertEqual(after[a]['facts']['boards']['ev']['rows'],expand_price_fields(expected)['rows'])
         # A new owner reconciles current SQL without invoking any financial owner.
         with patch.object(latest,'calculate_current',side_effect=AssertionError('unchanged finance forbidden')):
             for _ in range(3):self.assertTrue(self.reconcile()['unchanged'])
@@ -471,22 +505,22 @@ class LatestBoardSQL(LatestBoardFixture):
         self.assertTrue(self.reconcile()['published']);before=self.rows()
         self.assertTrue(any(r['ranking_eligible'] for r in before[self.first['game_key']]['facts']['boards']['ev']['rows']))
         self.at+=timedelta(minutes=31);self.state.write(self.service)
-        expired=latest.board(self.snapshot(),self.first['game_key'],view='ev',filter='all')
+        expired=decoded_board(self.snapshot(),self.first['game_key'],view='ev',filter='all')
         self.assertIn('calculation_authority_boundary',expired['background_reasons'])
         self.assertTrue(all(not r['ranking_eligible'] for r in expired['rows']))
         self.assertTrue(self.reconcile()['published']);self.assertNotEqual(self.rows()[self.first['game_key']]['economic_revision'],before[self.first['game_key']]['economic_revision'])
         self.service.dispatch=False;self.state.write(self.service)
         for _ in range(2):
-            self.reconcile();value=latest.board(self.snapshot(),self.first['game_key'],view='ev',filter='all')
+            self.reconcile();value=decoded_board(self.snapshot(),self.first['game_key'],view='ev',filter='all')
             self.assertIn('updates_stopped',value['background_reasons'])
             self.assertTrue(all(not r['ranking_eligible'] for r in value['rows']))
         self.service.dispatch=True;self.service.background_calculations=dict(board='unavailable');self.state.write(self.service)
-        self.reconcile();value=latest.board(self.snapshot(),self.first['game_key'],view='ev',filter='all')
+        self.reconcile();value=decoded_board(self.snapshot(),self.first['game_key'],view='ev',filter='all')
         self.assertIn('background_calculations_unavailable',value['background_reasons'])
         self.assertTrue(all(not r['ranking_eligible'] for r in value['rows']))
         self.service.background_calculations=dict(board='running');self.state.write(self.service);self.reconcile()
         self.at+=timedelta(seconds=9)
-        value=latest.board(self.snapshot(),self.first['game_key'],view='ev',filter='all')
+        value=decoded_board(self.snapshot(),self.first['game_key'],view='ev',filter='all')
         self.assertIn('data_runtime_unhealthy',value['background_reasons'])
         self.assertTrue(all(not r['ranking_eligible'] for r in value['rows']))
 
@@ -513,7 +547,7 @@ class LatestBoardSQL(LatestBoardFixture):
                 db.execute('SELECT pg_advisory_xact_lock(%s)',(LOCK,))
                 db.execute('DELETE FROM current_event WHERE native_event_id=ANY(%s)',([m[1] for m in self.first['members']],))
         frame=self.snapshot();self.assertIn('current_dependencies_changed',frame['reasons'])
-        withdrawn=latest.board(frame,self.first['game_key'],view='ev',filter='all')
+        withdrawn=decoded_board(frame,self.first['game_key'],view='ev',filter='all')
         self.assertTrue(all(not r['ranking_eligible'] for r in withdrawn['rows']))
         self.reconcile();self.assertEqual(set(self.rows()),{self.second['game_key']})
         self.assertEqual(self.rows()[self.second['game_key']],preserved)
@@ -533,7 +567,7 @@ class LatestBoardSQL(LatestBoardFixture):
         with self.connect() as db:proof=latest.marker(db)
         self.at+=timedelta(seconds=2);self.state.write(self.service)
         frame=self.snapshot()
-        self.assertIn('calculation_authority_boundary',latest.board(frame,self.second['game_key'],view='ev',filter='all')['background_reasons'])
+        self.assertIn('calculation_authority_boundary',decoded_board(frame,self.second['game_key'],view='ev',filter='all')['background_reasons'])
         with self.connect() as db:self.assertEqual(latest.marker(db),proof)
         self.assertTrue(self.reconcile()['published'])
         after=self.rows()[self.second['game_key']]
@@ -549,7 +583,7 @@ class LatestBoardSQL(LatestBoardFixture):
             db.execute("UPDATE latest_board SET facts=jsonb_set(facts,'{valid_until}',to_jsonb(%s::text)) WHERE game_key=%s",
                 ((self.at+timedelta(seconds=1)).isoformat(),key))
         self.at+=timedelta(seconds=2);self.state.write(self.service)
-        self.assertIn('calculation_authority_boundary',latest.board(self.snapshot(),key,view='ev',filter='all')['background_reasons'])
+        self.assertIn('calculation_authority_boundary',decoded_board(self.snapshot(),key,view='ev',filter='all')['background_reasons'])
         with patch.object(latest,'calculate_current',side_effect=AssertionError('unchanged financial work forbidden')):
             result=self.reconcile()
         self.assertTrue(result['published']);self.assertEqual(result['computed'],0)
@@ -557,7 +591,7 @@ class LatestBoardSQL(LatestBoardFixture):
         self.assertEqual(after['economic_revision'],before[key]['economic_revision'])
         self.assertEqual(after['calculated_at'],before[key]['calculated_at'])
         self.assertGreater(stamp(after['facts']['valid_until']),self.at)
-        self.assertNotIn('calculation_authority_boundary',latest.board(self.snapshot(),key,view='ev',filter='all')['background_reasons'])
+        self.assertNotIn('calculation_authority_boundary',decoded_board(self.snapshot(),key,view='ev',filter='all')['background_reasons'])
 
     async def test_superseded_and_stopped_work_cannot_publish(self):
         self.reconcile();old=self.rows()
@@ -565,15 +599,47 @@ class LatestBoardSQL(LatestBoardFixture):
             proof=latest.marker(db);runtime=read_runtime(db);status=db.execute('SELECT facts FROM latest_board_status').fetchone()['facts']
         self.changed_first()
         with self.connect() as db:
-            self.assertFalse(latest.publish(db,captured_marker=proof,captured_runtime=runtime,status=status,rows=list(old.values())))
+            self.assertFalse(latest.publish(db,captured_marker=proof,captured_runtime=runtime,status=status,rows=deepcopy(list(old.values()))))
         self.assertEqual(self.rows(),old)
         self.reconcile();old=self.rows()
         with self.connect() as db:
             proof=latest.marker(db);runtime=read_runtime(db);status=db.execute('SELECT facts FROM latest_board_status').fetchone()['facts']
         self.service.dispatch=False;self.state.write(self.service)
         with self.connect() as db:
-            self.assertFalse(latest.publish(db,captured_marker=proof,captured_runtime=runtime,status=status,rows=list(old.values())))
+            self.assertFalse(latest.publish(db,captured_marker=proof,captured_runtime=runtime,status=status,rows=deepcopy(list(old.values()))))
         self.assertEqual(self.rows(),old)
+
+    async def test_price_change_during_new_calculation_retains_only_captured_finance(self):
+        from app.storage import selected_frame
+        original=latest.calculate_current
+        captured={}
+        def changing(bundle,*args,**kwargs):
+            value=original(bundle,*args,**kwargs)
+            if bundle['game_key']==self.first['game_key']:
+                captured['bundle']=deepcopy(bundle)
+                self.changed_first()
+            return value
+        with patch.object(latest,'calculate_current',side_effect=changing):
+            self.reconcile()
+        saved=self.rows()[self.first['game_key']]
+        self.assertTrue(saved['facts']['retained_financial_only'])
+        frame=self.snapshot()
+        # Even if a later read has no local differences, retained-only finance
+        # must not silently become a current opportunity.
+        frame['dependency_reasons'][self.first['game_key']]=dict(all=[],observations={},comparisons={})
+        board=decoded_board(frame,self.first['game_key'],view='ev',filter='all')
+        self.assertIn('captured_inputs_changed_before_publication',board['background_reasons'])
+        self.assertTrue(board['rows'])
+        self.assertTrue(all(not r['ranking_eligible'] for r in board['rows']))
+        self.assertTrue(all(not r.get('classification',{}).get('main_positive_eligible') for r in board['rows']))
+        selected=board['rows'][0]['details']
+        query=dict(game=self.first['game_key'],view='details',context_id=selected['context_id'],quote=selected['quote_id'])
+        with self.connect() as db,db.transaction():
+            detail=selected_frame.read(db,saved,query,DEFAULT_POLICY)
+        self.assertEqual(detail['selection_status'],'captured')
+        price=next(p for p in saved['facts']['boards']['ev']['prices'] if p['quote_id']==selected['quote_id'])
+        self.assertEqual(detail['quote']['original'],price['original'])
+        self.assertEqual(detail['quote']['times'],price['times'])
 
     async def test_actual_http_page_filter_poll_and_selected_amount_use_database_only(self):
         self.reconcile();published=self.rows();selected=published[self.first['game_key']]['facts']['boards']['ev']['rows'][0]['details']
@@ -639,11 +705,28 @@ class LatestBoardSQL(LatestBoardFixture):
                 self.assertEqual(result.status,409)
         provider.acquire.assert_not_called();self.assertEqual(self.rows(),published)
 
+    async def test_retained_publication_budget_accounts_replacements_without_eviction(self):
+        self.reconcile();rows=self.rows()
+        with self.connect() as db:
+            status=db.execute('SELECT facts FROM latest_board_status').fetchone()['facts']
+            status.pop('capture_events',None);status.pop('capture_membership',None)
+            proof=latest.marker(db);owner=latest.runtime(db)
+            total=int(db.execute('SELECT sum(retained_bytes) n FROM latest_board').fetchone()['n'])
+            selected=db.execute('SELECT game_key,dependency_revision,economic_revision,calculated_at,facts FROM latest_board ORDER BY game_key LIMIT 1').fetchall()
+            with patch.object(latest,'MAX_BYTES',total):
+                self.assertTrue(latest.publish(db,captured_marker=proof,captured_runtime=owner,status=status,rows=deepcopy(selected)))
+            with patch.object(latest,'MAX_BYTES',total-1),self.assertRaisesRegex(ValueError,'latest_board_capacity'):
+                latest.publish(db,captured_marker=proof,captured_runtime=owner,status=status,rows=deepcopy(selected))
+        self.assertEqual(self.rows(),rows)
+
     async def test_slow_estimate_completes_identical_newer_pending_observations(self):
         from psycopg.types.json import Jsonb
         self.reconcile();evaluated=self.rows()
         with self.connect() as db:
             status=db.execute('SELECT facts FROM latest_board_status').fetchone()['facts']
+            # Author this delayed completion across the whole fixture snapshot;
+            # the ordinary worker now publishes one complete component at a time.
+            status.pop('capture_events',None);status.pop('capture_membership',None)
             proof=latest.marker(db);owner=latest.runtime(db)
             for row in evaluated.values():
                 source=deepcopy(row['facts'])
@@ -667,6 +750,7 @@ class LatestBoardSQL(LatestBoardFixture):
         self.assertTrue(all(row['facts']['calculation_error']=='calculation_failed' for row in failed.values()))
         with self.connect() as db:
             status=db.execute('SELECT facts FROM latest_board_status').fetchone()['facts']
+            status.pop('capture_events',None);status.pop('capture_membership',None)
             proof=latest.marker(db);owner=latest.runtime(db)
             for row in failed.values():
                 source=deepcopy(row['facts'])
@@ -784,193 +868,3 @@ class LatestBoardSQL(LatestBoardFixture):
                 for endpoint in ('details','inputs'):
                     reply=await client.get('/api/boards/'+endpoint,params=query)
                     self.assertEqual(reply.status,409,await reply.json())
-
-    async def test_c1_shaped_capacity_and_game_isolation(self):
-        """Authored distinct native wording on real retained lines in disposable SQL."""
-        from pathlib import Path
-        import json
-        from app.dashboard import comparison_board as projection
-        from app.storage.store import encoded
-        from app.storage.comparison_board import observation_identity
-        root=Path(os.environ['PREDICT_CI_REPORT_ROOT'])
-        first_members={tuple(m) for m in self.first['members']}
-        real_encoded=projection.encoded
-        measurements={}
-        for shape,width in (('repeated',4352),('distinct',4352),('irreducible',16384)):
-            records=deepcopy(self.records)
-            for record in records:
-                q=record['quote']
-                if (q['source']['provider'],q['source']['native_event_id']) in first_members:
-                    token='shared' if shape=='repeated' else q['source']['native_market_id']+q['source']['native_outcome_id']+q['source']['native_side']
-                    record.setdefault('comparison_source_metadata',{})['original_wording']={'rules':('Authored '+token+' ').ljust(width,'x')}
-            self.admit(records)
-            with self.connect() as db:
-                db.execute('TRUNCATE latest_board,latest_board_status')
-                ctx=latest.read_context(db,at=self.at.isoformat())
-                observed=ctx.observation_bundles(game=self.first['game_key'])[0]
-                observed['calculation_context']=observation_identity(observed,ctx)
-            captured=[]
-            def measure(value):
-                if isinstance(value,dict) and value.get('version')==projection.VERSION:captured.append(deepcopy(value))
-                return real_encoded(value)
-            refusal=None
-            try:
-                with patch.object(projection,'encoded',side_effect=measure):
-                    projection.response(observed,None,DEFAULT_POLICY,view='odds',filter='all',at=self.at.isoformat())
-            except ValueError as exc:refusal=str(exc)
-            value=captured[0]
-            components={k:len(encoded(v)) for k,v in value.items()}
-            fields={k:sum(len(encoded(p[k])) for p in value['prices'] if k in p)
-                for k in {k for p in value['prices'] for k in p}}
-            measurements[shape]=dict(bytes=len(encoded(value)),prices=len(value['prices']),components=components,
-                price_fields=fields,refusal=refusal)
-            (root/'c1-components.json').write_text(json.dumps(measurements,indent=2)+'\n')
-            error=None
-            try:
-                with self.connect() as db:result=latest.reconcile(db,at=self.at.isoformat(),observations_only=True)
-            except ValueError as exc:error=str(exc)
-            measurements[shape]['reconcile_error']=error
-            measurements[shape]['published_games']=len(self.rows())
-            (root/'c1-components.json').write_text(json.dumps(measurements,indent=2)+'\n')
-            if shape=='irreducible':
-                self.assertEqual(refusal,'board_compact_response_capacity')
-                self.assertIsNone(error)
-                self.assertTrue(result['published'])
-                self.assertIn(self.second['game_key'],self.rows())
-                frame=self.snapshot();self.assertFalse(frame['status']['scope_complete'])
-                self.assertIn(dict(game_key=self.first['game_key'],reason='board_compact_response_capacity'),frame['status']['observation_errors'])
-                with self.assertRaisesRegex(ValueError,'board_compact_response_capacity'):
-                    latest.board(frame,self.first['game_key'],view='odds',filter='all')
-            elif refusal is None:
-                from app.dashboard.comparison_board import expand_odds
-                stored=self.rows()[self.first['game_key']]['facts']['boards']['odds']
-                expanded=expand_odds(deepcopy(stored))
-                expected={projection.quote_key(q):q for _,_,q in entries(observed['state_inputs'])}
-                for price in expanded['prices']:
-                    quote=expected[price['quote_id']]
-                    for field in ('source','original','times'):
-                        self.assertEqual(price[field],quote[field])
-                    self.assertEqual(price['native_side'],quote['source']['native_side'])
-                    self.assertEqual(price['native_contract_summary']['wording'],quote['native_contract']['wording'])
-                    for field in ('gross_comparison','current_comparison'):
-                        for item in price[field].get('inputs',[]):
-                            frozen=expected[item['quote_id']]
-                            for key in ('source','original','times'):
-                                self.assertEqual(item[key],frozen[key])
-                            self.assertEqual(item['quote_revision'],frozen['revision'])
-                board=latest.board(self.snapshot(),self.first['game_key'],view='odds',filter='all')
-                measurements[shape]['read_board_bytes']=len(encoded(board))
-                self.assertLessEqual(len(encoded(board)),projection.MAX_RESPONSE)
-                (root/('c1-'+shape+'-board.json')).write_bytes(encoded(board))
-                if shape=='distinct':
-                    from app.dashboard.comparison_board_api import mount
-                    from app.collection.current_storage_policy import sql_usage
-                    from app.collection.background_work import resident_bytes
-                    import shutil
-                    provider=RuntimeClient(connector=self.connect)
-                    provider.acquire=MagicMock(side_effect=AssertionError('provider forbidden'))
-                    app=web.Application();mount(app,provider)
-                    with patch('app.dashboard.comparison_board_api.connect',side_effect=self.connect):
-                        async with TestClient(TestServer(app)) as client:
-                            reply=await client.get('/api/boards/odds',params=dict(game=self.first['game_key'],filter='all'))
-                            self.assertEqual(reply.status,200,await reply.text())
-                            http=await reply.json();self.assertEqual(http['provider_requests'],0)
-                            measurements[shape]['http_board_bytes']=len(encoded(http))
-                            self.assertLessEqual(len(encoded(http)),projection.MAX_RESPONSE)
-                            (root/'c1-distinct-http-board.json').write_bytes(encoded(http))
-                            # Wire clocks and originals may be exact field references.
-                            expand_odds(http)
-                            quote=http['prices'][0]
-                            reply=await client.get('/api/boards/inputs',params=dict(game=self.first['game_key'],
-                                context_id=quote['inputs_identity']['context_id'],quote=quote['quote_id']))
-                            self.assertEqual(reply.status,200,await reply.text())
-                            selected=await reply.json();self.assertEqual(selected['provider_requests'],0)
-                            self.assertEqual(selected['evidence']['original'],quote['original'])
-                            self.assertEqual(selected['evidence']['times'],quote['times'])
-                    provider.acquire.assert_not_called()
-                    with self.connect() as db:
-                        resources=dict(sql_bytes=sql_usage(db),
-                            maximum_facts_row_bytes=db.execute('SELECT max(octet_length(facts::text)) n FROM latest_board').fetchone()['n'],
-                            publication_bytes=db.execute('SELECT sum(octet_length(facts::text)) n FROM latest_board').fetchone()['n'])
-                    resources.update(process_rss_bytes=resident_bytes(),free_disk_bytes=shutil.disk_usage(root).free)
-                    self.assertLess(resources['sql_bytes'],2*1024**3)
-                    self.assertLessEqual(resources['maximum_facts_row_bytes'],2*1024**2)
-                    self.assertLessEqual(resources['publication_bytes'],64*1024**2)
-                    self.assertLess(resources['process_rss_bytes'],768*1024**2)
-                    self.assertGreater(resources['free_disk_bytes'],1024**3)
-                    measurements[shape]['resources']=resources
-                (root/'c1-components.json').write_text(json.dumps(measurements,indent=2)+'\n')
-        self.assertIsNone(measurements['distinct']['refusal'],measurements['distinct'])
-        self.assertEqual(measurements['distinct']['published_games'],2)
-
-    async def test_c1_optional_render_and_guard_boundaries(self):
-        from app.comparison.calculation_control import CalculationStopped
-        self.fresh_sources()
-        original=latest.response
-        finance_observed=[]
-        def fail_finance(bundle,value,*args,**kwargs):
-            if value is not None:
-                finance_observed.append(len(self.rows()))
-                raise ValueError('authored_financial_render_failure')
-            return original(bundle,value,*args,**kwargs)
-        with patch.object(latest,'response',side_effect=fail_finance):
-            self.assertTrue(self.reconcile()['published'])
-        self.assertTrue(finance_observed)
-        self.assertTrue(all(count==2 for count in finance_observed))
-        for game,row in self.rows().items():
-            self.assertIsNone(row['calculated_at'])
-            self.assertIsNone(row['facts']['boards']['odds']['calculated_at'])
-            self.assert_source_frame(latest.board(self.snapshot(),game,view='odds',filter='all'))
-        with self.connect() as db:db.execute('TRUNCATE latest_board,latest_board_status')
-        with patch('app.comparison.combined_inputs._benchmark',side_effect=ValueError('authored_benchmark_failure')):
-            self.assertTrue(self.reconcile()['published'])
-        for game in self.rows():self.assert_source_frame(latest.board(self.snapshot(),game,view='odds',filter='all'))
-        for error in (CalculationStopped('stop'),MemoryError('process_guard'),TimeoutError('deadline'),
-                      OSError('storage_failure'),ValueError('current_read_memory_capacity')):
-            with self.subTest(error=type(error).__name__):
-                with self.connect() as db:db.execute('TRUNCATE latest_board,latest_board_status')
-                with patch.object(latest,'_selection_payload',side_effect=error),self.assertRaises(type(error)):
-                    with self.connect() as db:latest.reconcile(db,at=self.at.isoformat(),observations_only=True)
-                self.assertFalse(self.rows())
-        for stage in ('discover','calculate_current'):
-            for error in (CalculationStopped('stop'),MemoryError('process_guard'),TimeoutError('deadline'),OSError('storage_failure')):
-                with self.subTest(stage=stage,error=type(error).__name__):
-                    with self.connect() as db:db.execute('TRUNCATE latest_board,latest_board_status')
-                    with patch.object(latest,stage,side_effect=error),self.assertRaises(type(error)):
-                        self.reconcile()
-                    # The source pass committed first; the worker error escapes.
-                    self.assertEqual(len(self.rows()),2)
-                    self.assertTrue(self.snapshot()['status']['observation_only'])
-
-    async def test_c1_failed_game_withdraws_old_authority_and_status_recovers(self):
-        self.fresh_sources();self.assertTrue(self.reconcile()['published'])
-        original=latest._selection_payload
-        def refuse(observed,*args,**kwargs):
-            if observed['game_key']==self.first['game_key']:raise ValueError('board_compact_response_capacity')
-            return original(observed,*args,**kwargs)
-        self.at+=timedelta(seconds=1);self.state.write(self.service)
-        self.changed_first()
-        with patch.object(latest,'_selection_payload',side_effect=refuse):
-            with self.connect() as db:result=latest.reconcile(db,at=self.at.isoformat(),observations_only=True)
-        self.assertTrue(result['published']);frame=self.snapshot()
-        self.assertFalse(frame['status']['scope_complete'])
-        self.assertIn(self.first['game_key'],frame['rows'])
-        with self.assertRaisesRegex(ValueError,'board_compact_response_capacity'):
-            latest.board(frame,self.first['game_key'],view='odds',filter='all')
-        self.assertTrue(latest.board(frame,self.second['game_key'],view='odds',filter='all')['prices'])
-        self.assertTrue(self.reconcile()['published'])
-        self.assertTrue(self.snapshot()['status']['scope_complete'])
-        self.assertTrue(latest.board(self.snapshot(),self.first['game_key'],view='odds',filter='all')['prices'])
-
-    async def test_c1_obsolete_failure_cannot_overwrite_newer_success(self):
-        self.fresh_sources();self.reconcile()
-        with self.connect() as db:
-            owner=latest.runtime(db,at=self.at.isoformat());marker=latest.marker(db)
-        old=deepcopy(self.snapshot()['status'])
-        old['observation_errors']=[dict(game_key=self.first['game_key'],reason='board_compact_response_capacity')]
-        old.update(scope_complete=False,observation_only=True)
-        self.changed_first();self.assertTrue(self.reconcile()['published'])
-        with self.connect() as db:
-            self.assertFalse(latest.publish(db,captured_marker=marker,captured_runtime=owner,status=old,rows=[]))
-        self.assertTrue(self.snapshot()['status']['scope_complete'])
-        self.assertTrue(latest.board(self.snapshot(),self.first['game_key'],view='odds',filter='all')['prices'])

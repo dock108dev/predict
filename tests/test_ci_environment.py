@@ -474,3 +474,25 @@ class EnforcementTests(unittest.TestCase):
             metrics = json.loads(Path("test-results/health/metrics.json").read_text())
             self.assertEqual(metrics["status"], "UNAVAILABLE")
             self.assertIsNone(metrics["runner_minutes"])
+
+
+class PerCheckTemporaryState(unittest.TestCase):
+    def test_child_temp_root_is_private_and_removed_after_completion(self):
+        import sys
+
+        with tempfile.TemporaryDirectory() as folder:
+            output = Path(folder)
+            runner = load("run_checks")
+            record = runner.execute(
+                "temp-isolation",
+                [
+                    sys.executable,
+                    "-c",
+                    "import tempfile,pathlib; p=pathlib.Path(tempfile.gettempdir()); print(p); (p/'authored').write_text('fixture')",
+                ],
+                output,
+            )
+            self.assertEqual(record["status"], "PASS")
+            root = Path((output / "temp-isolation.log").read_text().strip())
+            self.assertTrue(root.name.startswith("predict-ci-check-"))
+            self.assertFalse(root.exists())

@@ -7,20 +7,25 @@ import json
 from . import coverage
 
 
-def book_material(venue, event, market):
-    """Native image identity, independent of derived comparison enrichment."""
+def native_material(venue, row, *, event=False):
     from .native_review_contract import project, CURRENT_POLICY, ELIGIBILITY
+    raw=row.get('_native') or row.get('native_metadata') or {}
+    if event:raw={k:v for k,v in raw.items() if k!='markets'}
+    from .native_image_material import project as image_material
+    raw=image_material(venue,raw,event=event)
+    try:terms=project(venue,raw,event=event,policy=CURRENT_POLICY)
+    except (ValueError,TypeError):terms=raw
+    return dict(terms=terms,eligibility={k:raw[k] for k in ELIGIBILITY[venue] if k in raw})
+
+
+def book_material(venue, event, market, *, include_schedule=True, event_material=None):
+    """Native image identity, independent of derived comparison enrichment."""
     from app.dashboard.session_projection import stable
-    def original(row, *, event=False):
-        raw=row.get('_native') or row.get('native_metadata') or {}
-        if event:raw={k:v for k,v in raw.items() if k!='markets'}
-        try:terms=project(venue,raw,event=event,policy=CURRENT_POLICY)
-        except (ValueError,TypeError):terms=raw  # Unknown changes remain material.
-        return dict(terms=terms,eligibility={k:raw[k] for k in ELIGIBILITY[venue] if k in raw})
     return stable(dict(event_id=event['id'],market_id=market['id'],parent=market['event_id'],
-        scheduled_start=event.get('scheduled_start'),competition=event.get('competition'),
-        native_event=original(event,event=True),native_market=original(market),
-        sides=market.get('sides'),terms=market.get('terms'),status=market.get('status'),
+        scheduled_start=event.get('scheduled_start') if include_schedule else None,competition=event.get('competition'),
+        native_event=native_material(venue,event,event=True) if event_material is None else event_material,
+        native_market=native_material(venue,market),
+        sides=market.get('sides'),terms=market.get('terms'),status=market.get('status') if include_schedule else None,
         family=market.get('market_type'),period=market.get('period'),slug=market.get('native_slug')))
 
 
@@ -349,3 +354,71 @@ def catalog_selection(events, native_events, markets, families, offset):
         omitted_events=len(by_event) - len(parents),
         omitted_markets=len({m["id"] for m in markets}) - len(selected),
     )
+
+
+def detach_event_packaging(catalog):
+    """Keep each market once in the live catalog; exact receipts remain durable.
+
+    Event-embedded child lists are transport packaging, not event terms. Every
+    selected child already has its own unchanged metadata/provenance entry.
+    """
+    for event in catalog['events']:
+        raw=event.get('_native')
+        if isinstance(raw,dict) and 'markets' in raw:
+            event['_native']={k:v for k,v in raw.items() if k!='markets'}
+    return catalog
+
+
+def share_immutable(previous,current):
+    """Reuse equal metadata subtrees without conflating JSON scalar types."""
+    if type(previous) is not type(current):return current
+    if isinstance(current,dict):
+        missing=object()
+        result={key:share_immutable(previous.get(key,missing),value) for key,value in current.items()}
+        return previous if previous.keys()==current.keys() and all(result[key] is previous[key] for key in result) else result
+    if isinstance(current,list):
+        result=[share_immutable(previous[i],value) if i<len(previous) else value for i,value in enumerate(current)]
+        return previous if len(previous)==len(result) and all(a is b for a,b in zip(previous,result)) else result
+    return previous if previous==current else current
+
+
+def share_catalog_metadata(previous,current):
+    """Detach writable rows while reusing unchanged nested source facts."""
+    result=dict(current)
+    for kind in ('events','markets'):
+        prior={row['id']:row for row in previous.get(kind,[])}
+        result[kind]=[dict(share_immutable(prior[row['id']],row)) if row['id'] in prior else row
+                      for row in current[kind]]
+    return result
+
+
+def parse_retained_market(venue,market,parent):
+    """Parse already admitted metadata without reloading its entire HTTP page.
+
+    Catalog construction verified the complete receipt and bound this exact
+    native object. Streaming retains the same compact object plus receipt hash
+    that the previous parse-then-replace path produced.
+    """
+    from app.adapters import kalshi,polymarket_us
+    proof=market['provenance'][0]
+    body=json.dumps(dict(market=market['_native'],source_receipt_sha256=proof['body_sha256']))
+    response=coverage.response(venue,proof,body)
+    if venue=='kalshi':
+        return kalshi.parse_market(response,market['_native'],parent['id'],
+            parent['native_aliases'].get('series_ticker','unknown'),typed_scope=True)
+    return polymarket_us.parse_market(response,market['_native'],parent['id'])
+
+
+def catalog_encoded_bytes(catalog):
+    """Exact ordinary JSON byte count without staging a whole-cohort string.
+
+    Catalog event/market rows are bounded by source metadata admission. Count
+    each row independently; only the small header/selection shell is staged.
+    """
+    shell=dict(catalog,events=[],markets=[])
+    size=len(json.dumps(shell,default=str).encode())
+    for field in ('events','markets'):
+        rows=catalog[field]
+        size+=sum(len(json.dumps(row,default=str).encode()) for row in rows)
+        size+=max(0,len(rows)-1)*2  # default JSON comma and space
+    return size

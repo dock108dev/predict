@@ -171,3 +171,11 @@ app/reviews/*
 
 # Local product planning; maintained behavior is documented in docs/.
 /docs/p0-product-contracts-20261020.md
+
+# Local implementation diaries; maintained behavior lives in the project guides.
+/docs/sc09-02-bulk-acquisition.md
+/docs/sc09-03-raw-display.md
+/docs/sc09-04-product-proof.md
+/docs/sc09-05-live-financial.md
+/docs/sc09-05-applicability.md
+/docs/sc09-acquisition-gaps.md

@@ -16,9 +16,13 @@ def key(record):
 def attach(records,references):
     groups={}
     for r in references:
-        groups.setdefault(packed(semantic_market(r)),[]).append(r)
+        q=r['quote']
+        groups.setdefault((packed(semantic_market(r)),q['provenance']['sha256'],q['times']['received_at'],
+            q['source']['native_market_id'].startswith('alternate:')),[]).append(r)
     index={}
-    for group in groups.values():
+    # Never splice complementary outcomes across independently received routes.
+    # A newer complete pair can replace an older complete pair for the same bet.
+    for group in sorted(groups.values(),key=lambda g:min(r['quote']['times']['received_at'] for r in g)):
         if len(group)!=2 or len({key(r) for r in group})!=2:continue
         group=sorted(group,key=key)
         family=group[0]['market_identity']['family']
@@ -37,9 +41,9 @@ def attach(records,references):
     for r in records:
         r['quote'].pop('sharp_reference',None)
         s=r['selection'];market=r['market_identity']
-        # Whole lines require push probability; do not infer it from two-way odds.
+        # The metric conditions on a decisive win/loss. Whole-line pushes are
+        # explicitly excluded, never assigned zero probability in net EV.
         if not r['verified'] or s['predicate']=='not_win':continue
-        if market['family'] in ('spread','total') and Fraction(market['line']).denominator!=2:continue
         ref=index.get(key(r))
         if ref is not None:r['quote']['sharp_reference']=deepcopy(ref)
 
@@ -66,19 +70,19 @@ def validate_reference(ref,selection):
     if len(ref['sha256'])!=64 or any(c not in '0123456789abcdef' for c in ref['sha256']):raise ValueError('Pinnacle receipt hash required')
 
 
-def calculate(q,clock):
+def calculate(q,clock,*,allow_last_known=False):
     ref=q['sharp_reference'];basis=dict(version=VERSION,inputs=[dict(quote_id=q['id'],quote_revision=q['revision'],venue=q['venue'])],reference_sha256=ref['sha256'],formula='100 × (Pinnacle no-vig probability / normalized quote cost − 1)')
     unavailable=lambda reason:result(reason=reason,unit='percent',basis=basis)
     if clock is None:return unavailable('Evaluation clock unavailable')
     from app.comparison.current_dependencies import link_reasons
     if link_reasons(q,clock):return unavailable('Exact occurrence link expired or not effective')
-    if q['state'] in ('stopped','error','unavailable','connecting','resyncing'):
+    if q['state'] in ('stopped','error','unavailable','connecting','resyncing') and not allow_last_known:
         return unavailable('Updates stopped; reopen current prices' if q['state']=='stopped' else 'Quote source '+q['state'].replace('_',' ')+'; EV waits for available prices')
     clocks=[stamp(at,True) for at in ref['source_at']]
     if any(at is None for at in clocks):return unavailable('Pinnacle source time unknown')
     ages=[(clock-at).total_seconds() for at in clocks]
     if any(age<0 for age in ages) or stamp(ref['received_at'])>clock:return unavailable('Pinnacle clock is ahead of the evaluation clock')
-    if max(ages)>MAXIMUM_AGE:return unavailable('Pinnacle baseline is older than the 30-minute limit')
+    if max(ages)>MAXIMUM_AGE and not allow_last_known:return unavailable('Pinnacle baseline is older than the 30-minute limit')
     if q['source']['provider']=='the_odds_api':
         at=stamp(q['times']['source_at'],True)
         if not q['binding']['verified']:return unavailable('Comparison selection binding is unverified')
@@ -86,7 +90,7 @@ def calculate(q,clock):
         if at is None:return unavailable('Comparison quote source time is unknown')
         age=(clock-at).total_seconds()
         if age<0:return unavailable('Comparison quote clock is ahead of the evaluation clock')
-        if age>MAXIMUM_AGE:return unavailable('Comparison quote is older than the 30-minute limit')
+        if age>MAXIMUM_AGE and not allow_last_known:return unavailable('Comparison quote is older than the 30-minute limit')
     elif not current_eligible(q):return unavailable('; '.join(q['comparison']['reasons']) or 'Current comparison quote is ineligible')
     cost=price(q)
     if cost<=0:return unavailable('Positive quote cost required')

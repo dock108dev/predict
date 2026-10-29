@@ -483,7 +483,8 @@ class LatestStateSink:
                 accepted,rejected=admit_venues(batch_row['body'],sport,batch_row['received_at'])
                 if len(rejected)==2:raise ValueError('Malformed aggregate response')
                 prior=aggregate_records.get(sport,[])
-                aggregate_records[sport]=[r for r in prior if r['quote']['venue'] in rejected]+[r for batch in accepted.values() for r in batch]
+                incoming={r['_instrument'] for batch in accepted.values() for r in batch}
+                aggregate_records[sport]=[r for r in prior if r['quote']['venue'] in rejected and r.get('_instrument') not in incoming]+[r for batch in accepted.values() for r in batch]
                 try:references=admit(batch_row['body'],sport,batch_row['received_at'],venue='pinnacle')
                 except (ValueError,KeyError,TypeError,ArithmeticError,StopIteration):references=[]
                 # Reference records need identity, originals and clocks, not venue

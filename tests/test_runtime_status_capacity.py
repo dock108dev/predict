@@ -26,7 +26,7 @@ class RuntimeStatusCapacity(unittest.TestCase):
 
     def test_broad_diagnostics_fit_without_dropping_accounting_or_source_details(self):
         service,original=self.fixture()
-        self.assertGreater(len(json.dumps(original,separators=(',',':')).encode()),STATUS_BYTES)
+        self.assertGreater(len(json.dumps(original,separators=(',',':')).encode()),256*1024)
         result=RuntimeState().snapshot(service,paused_sources={'the_odds_api'},global_stopped=True)
         projected=result['status']
         self.assertLessEqual(len(json.dumps(projected,separators=(',',':')).encode()),STATUS_BYTES)
@@ -42,6 +42,17 @@ class RuntimeStatusCapacity(unittest.TestCase):
             self.assertEqual(metrics['books'],1000)
             self.assertNotIn('native_identity_trace',metrics)
 
+    def test_ninety_family_inventories_fit_with_original_accounting(self):
+        service,original=self.fixture()
+        original['coverage']['cells']=[dict(sport=s,venue=v,family_queries=[dict(family=f,
+            latest=dict(inventory={'evidence':'x'*1800}),last_success=dict(inventory={'evidence':'x'*1800}))
+            for f in ('moneyline','spread','total')])
+            for s in ('NFL','NCAAF','NBA','NCAAB','MLB','NHL')
+            for v in ('kalshi','polymarket_us','novig','prophetx','pinnacle')]
+        result=RuntimeState().snapshot(service)
+        self.assertEqual(result['status']['coverage'],original['coverage'])
+        self.assertEqual(result['status']['quota'],original['quota'])
+
     def test_unmirrored_details_and_hard_capacity_guard_are_preserved(self):
         service,original=self.fixture()
         original['metrics']['kalshi']['unmirrored']=dict(reason='CONTROLLED-distinct')
@@ -50,3 +61,13 @@ class RuntimeStatusCapacity(unittest.TestCase):
         original['unexpected_payload']='x'*STATUS_BYTES
         with self.assertRaisesRegex(ValueError,'data_runtime_status_capacity'):
             RuntimeState().snapshot(service)
+
+    def test_large_subscription_roster_is_a_counted_diagnostic_not_heartbeat_payload(self):
+        from collections import Counter
+        actions=[dict(action='create',market_id=str(i),owner_token='x'*64) for i in range(6000)]
+        service,status=self.fixture()
+        status['sources'][0]['metrics']['subscription_changes']=dict(actions=actions[:20],
+            action_counts=dict(Counter(a['action'] for a in actions)),omitted_actions=len(actions)-20,
+            complete_roster='current_acquisition_market')
+        result=RuntimeState().snapshot(service)
+        self.assertEqual(result['status']['sources'][0]['metrics']['subscription_changes']['action_counts'],dict(create=6000))

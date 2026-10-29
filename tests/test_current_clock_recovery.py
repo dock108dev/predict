@@ -33,6 +33,43 @@ class RestartRecovery(unittest.TestCase):
         self.seed();self.advance(3600);self.prepare()
         self.assertEqual(self.q.snapshot()['clock_recoveries'],[])
         with self.assertRaisesRegex(QuotaStop,'budget_delayed'):self.paid()
+    def test_transient_probe_failure_recovers_same_clock_without_spending_or_epoch_change(self):
+        self.seed();self.advance(10)
+        with patch.object(self.q,'boot_loader',return_value=None):
+            with self.assertRaisesRegex(QuotaStop,'clock_continuity_unknown'):
+                self.q.transact(lambda v,at:None)
+        before=self.q._read()
+        self.assertIsNone(self.q.recovery_reason(WINDOW))
+        self.prepare();after=self.q._read()
+        for key in ('attempts','observation','window','windows','rotation','next_due_at','bootstrap_due_at','accounting_epoch'):
+            self.assertEqual(before[key],after[key],key)
+        self.assertIsNone(after['pause'])
+        audit=after['clock_recoveries'][-1]
+        self.assertEqual(audit['old_anchor'],before['clock_anchor'])
+        self.assertEqual(audit['reason'],'os_evidenced_continuity_restored')
+        self.assertEqual(audit['authority'],'existing_accounting_only')
+        self.prepare();self.assertEqual(len(self.q._read()['clock_recoveries']),1)
+        with self.assertRaisesRegex(QuotaStop,'budget_delayed'):self.paid()
+
+    def test_probe_restoration_refuses_unverified_clock_window_and_uncovered_attempts(self):
+        self.seed();self.q.pause('clock_continuity_unknown');before=self.q._read()
+        for boot in (None,dict(self.boot,id='other'),dict(self.boot,started_at='2026-10-03T11:58:21+00:00'),dict(self.boot,uptime=0)):
+            with self.subTest(boot=boot),patch.object(self.q,'boot_loader',return_value=boot):
+                with self.assertRaises(QuotaStop):self.prepare()
+                self.assertEqual(self.q._read(),before)
+        with self.assertRaises(QuotaStop):self.q.prepare_clock(self.owner,'c',dict(WINDOW,id='wrong'),cleanup_safe=True)
+        self.assertEqual(self.q._read(),before)
+        self.prepare();self.advance(21600);self.paid();self.q.pause('clock_continuity_unknown')
+        held=self.q._read()
+        with self.assertRaisesRegex(QuotaStop,'unresolved'):self.prepare()
+        self.assertEqual(self.q._read(),held)
+
+    def test_probe_restoration_write_failure_keeps_pause_and_original_records(self):
+        self.seed();self.q.pause('clock_continuity_unknown');before=self.q._read()
+        with patch('app.collection.current_quota.os.replace',side_effect=OSError('CONTROLLED')):
+            with self.assertRaisesRegex(QuotaStop,'persistence_failed'):self.prepare()
+        self.assertEqual(self.q._read(),before)
+
     def test_legacy_anchor_requires_boot_after_anchor_and_retains_failed_anchor(self):
         before=self.seed()
         legacy=dict(before,clock_anchor={k:before['clock_anchor'][k] for k in ('at','monotonic')})

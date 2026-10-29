@@ -227,3 +227,38 @@ PostgreSQL jobs. Both must pass; a failed shard does not cancel the other. Local
 Verbose test names and a thread dump after 120 seconds in one test help diagnose
 stalls. A process timeout records an explicit failure reason without inventing
 JUnit results for unfinished tests.
+
+## Readiness reports and package inputs
+
+The readiness job retains `test-results/readiness/metrics.json` and `summary.md`
+for each run and attempt, including malformed job-result input. Missing, skipped,
+cancelled and failed required jobs fail the gate. Reports distinguish the tested
+merge SHA, PR head and merge-group SHA; inspect the component artifacts for details.
+
+Package checks include authored Markdown, text, HTML and compressed evidence as
+well as code and structured assets. The clean installed smoke evaluates dated
+fee bindings and reviewed source rules, so missing model inputs fail even when
+imports succeed. Public-page fixtures have token-bearing fragments removed;
+`app/fixtures/public-capture-redactions-20261028.json` records their provenance.
+
+Each portable check owns a temporary directory to keep pytest cleanup from
+pruning unrelated projects' test state. Generated reports stay in `test-results/`
+and are not dependencies of the source distribution.
+
+## Current limitations
+
+Local publication/census, multisport, storage/delivery, capacity and two client
+contract checks have unresolved failures. Passing browser, package or support
+checks does not qualify the complete application. Keep the gates strict and use
+the failing test output to select focused repairs before rerunning the full suite.
+Hosted results must correspond to the source being reviewed.
+
+The workflows do not enforce branch protection themselves. Administrators must
+require `CI readiness` in repository rules. CodeQL default setup is independently
+configured; it is not part of this aggregation. No additional reporting service
+is required. Native summaries and artifacts remain in GitHub Actions; local
+Gitleaks CLI analysis does not upload source to a scanning service. pip-audit sends
+dependency identities to its advisory services. See the
+[GitHub Actions billing documentation](https://docs.github.com/en/billing/concepts/product-billing/github-actions)
+for current runner and storage eligibility; do not infer account allowances from
+local test results.

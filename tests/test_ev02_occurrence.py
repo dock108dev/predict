@@ -272,3 +272,63 @@ class OccurrenceCases(unittest.TestCase):
 
 
 if __name__ == '__main__':unittest.main()
+
+
+class ReviewedCollegeNames(unittest.TestCase):
+    """Authored occurrence boundaries using reviewed, source-scoped team names."""
+    def college(self,provider,native,home,away,*,canonical=False):
+        result=rows(provider,native,venue='novig' if provider=='the_odds_api' else provider,binary=False)
+        ids=('NCAAF:NCAA529','NCAAF:NCAA509') if canonical else (
+            f'the_odds_api:NCAAF:{native}:home_team',f'the_odds_api:NCAAF:{native}:away_team')
+        for r in result:
+            e=r['event'];e.update(competition='NCAAF',home=ids[0],away=ids[1],participants={home:ids[0],away:ids[1]})
+            if provider=='the_odds_api':e.update(season='unverified',stage='unverified')
+            r['market_identity'].update(competition='NCAAF',season=e['season'],stage=e['stage'],event=provider_key(provider,e))
+            for s in [r['selection'],*r['outcome_selections']]:
+                s['participant']={HOME:ids[0],AWAY:ids[1]}.get(s['participant'],s['participant'])
+        return result
+
+    def test_exact_names_join_without_changing_originals(self):
+        a=self.college('the_odds_api','odds','Oregon Ducks','Northwestern Wildcats')
+        b=self.college('kalshi','native','University of Oregon','Northwestern University',canonical=True)
+        before=deepcopy(a+b)
+        joined=OccurrenceResolver(links=EventLinks()).resolve(a+b,clock=AT)
+        self.assertEqual(a+b,before)
+        self.assertEqual(len({r['event']['game_id'] for r in joined}),1)
+        for r in joined:
+            self.assertEqual({r['event']['home'],r['event']['away']},{'NCAAF:NCAA529','NCAAF:NCAA509'})
+        self.assertEqual(joined[0]['quote']['occurrence_match']['original_event'],a[0]['event'])
+        self.assertTrue(any('college-occurrence-aliases-20261028-1' in x for x in joined[0]['orientation_evidence']))
+
+    def test_names_do_not_override_occurrence_or_identity_conflicts(self):
+        for mode in ('rematch','role','name','canonical_conflict','ambiguous'):
+            with self.subTest(mode=mode):
+                a=self.college('the_odds_api','odds','Oregon Ducks','Northwestern Wildcats')
+                b=self.college('kalshi','native','University of Oregon','Northwestern University',canonical=True)
+                if mode=='rematch':
+                    for r in b:r['event']['scheduled_start']='2026-10-20T00:15:00Z'
+                if mode=='role':
+                    for r in b:r['event']['home'],r['event']['away']=r['event']['away'],r['event']['home']
+                if mode=='name':
+                    for r in a:r['event']['participants']['Oregon Duck']=r['event']['participants'].pop('Oregon Ducks')
+                if mode=='canonical_conflict':
+                    for r in a:
+                        r['event']['home']='NCAAF:NCAA28';r['event']['participants']['Oregon Ducks']='NCAAF:NCAA28'
+                if mode=='ambiguous':b+=self.college('kalshi','second','University of Oregon','Northwestern University',canonical=True)
+                joined=OccurrenceResolver(links=EventLinks()).resolve(a+b,clock=AT)
+                self.assertFalse(any({m['provider'] for m in r['quote']['occurrence_match']['members']}=={'kalshi','the_odds_api'} for r in joined))
+
+    def test_alias_scope_and_retained_primary_evidence(self):
+        import gzip,json,hashlib
+        from pathlib import Path
+        from app.normalization.college_registry import occurrence_registry
+        root=Path(__file__).resolve().parents[1];registry=occurrence_registry()
+        manifest=json.loads((root/'app/normalization/college-occurrence-aliases-20261028.json').read_text())
+        sources=json.loads((root/'app/fixtures/college-identity-20261028/sources.json').read_text())
+        for a in manifest['aliases']:
+            result=registry.resolve('team',a['text'],league='NCAAF',venue='the_odds_api')
+            self.assertEqual(result.canonical_id,a['targets'][0])
+            self.assertNotEqual(registry.resolve('team',a['text'],league='NCAAB',venue='the_odds_api').canonical_id,a['targets'][0])
+            evidence=sources[a['evidence']]
+            self.assertEqual(hashlib.sha256(gzip.decompress((root/evidence['path']).read_bytes())).hexdigest(),evidence['sha256'])
+        self.assertNotEqual(registry.resolve('team','Wildcats',league='NCAAF',venue='the_odds_api').status,'resolved')

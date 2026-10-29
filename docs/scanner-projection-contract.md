@@ -138,7 +138,7 @@ unavailable, never an evaluated zero or a current financial result. Runtime iden
 configuration, reset epoch and Stop authority must still match. A later read exposes
 the saved scope and original clocks explicitly while withdrawing current results.
 
-### Durable readiness encoding (October 22 publication repair)
+### Durable readiness encoding
 
 The background readiness frame uses `readiness-shared-fields-1` for its physical
 publication bound. `instruments`, `pairs` and `scopes` are tables with a `keys`

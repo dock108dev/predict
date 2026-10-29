@@ -80,7 +80,7 @@ export class SlateAccumulator {
   get readToken() { return this.value?.read_token; }
   get complete() { return this.value !== null && this.nextOffset === null; }
   append(page, bytes) {
-    if (this.complete || this.pageCount >= 500 || !Number.isSafeInteger(bytes) || bytes < 0 || bytes > 8388608 || this.totalBytes + bytes > 83886080)
+    if (this.complete || this.value && this.pageCount >= Math.max(1, this.value.games.length) || !Number.isSafeInteger(bytes) || bytes < 0 || bytes > 8388608 || this.totalBytes + bytes > 83886080)
       throw Error("Current slate exceeds its bounded page or complete-read capacity.");
     checkSlate(page, this.context);
     if (page.coverage.offset !== this.nextOffset || page.coverage.limit !== 50 || this.value &&
@@ -94,7 +94,7 @@ export class SlateAccumulator {
       this.catalogIdentity = JSON.stringify(page.games);
       this.policyIdentity = JSON.stringify(page.policy);
       this.value = { ...page, version: "predict-comparison-slate-view-2", boards: [], errors: [],
-        bounds: { maximum_games: 500, maximum_page_games: 50, maximum_page_bytes: 8388608, maximum_read_bytes: 83886080, maximum_pages: 500 } };
+        bounds: { maximum_games: page.games.length, maximum_page_games: 50, maximum_page_bytes: 8388608, maximum_read_bytes: 83886080, maximum_pages: Math.max(1, page.games.length) } };
     }
     // Retain only these board/error objects and the first small catalog. Later
     // page envelopes and repeated catalogs become collectible immediately.
@@ -135,11 +135,12 @@ export class SlateAccumulator {
 // allowed recovery) starts at zero and never reuses a partial frame or token.
 // Existing completed values stay with the controller until this returns a
 // wholly validated result. Cancellation cannot start a recovery or next page.
-export async function readSlate(reader, context, { isCurrent = () => true, onRecovery = () => {} } = {}) {
+export async function readSlate(reader, context, { isCurrent = () => true, onRecovery = () => {}, onProgress = () => {} } = {}) {
   context = { ...context };
   let generation = reader.generation;
   for (let attempt = 0; attempt < 2; attempt++) {
     const pages = new SlateAccumulator(context);
+    let delivered = false;
     const query = new URLSearchParams({ view: context.view, filter: context.filter, limit: "50" });
     try {
       do {
@@ -157,14 +158,24 @@ export async function readSlate(reader, context, { isCurrent = () => true, onRec
         generation = reader.generation;
         const completed = await request;
         if (!completed || !isCurrent() || reader.generation !== generation) return null;
+        onProgress({loaded:pages.value.boards.length + pages.value.errors.length, total:pages.value.games.length});
       } while (!pages.complete);
-      return pages.result();
+      const result = pages.result();
+      delivered = true;
+      return result;
     } catch (error) {
       if (!isCurrent() || reader.generation !== generation || error.name === "AbortError") return null;
       const recoverable = ["current_slate_read_expired", "current_slate_read_capacity", "current_slate_read_authority_changed"]
         .includes(error.reason) || error.code === "current_read_busy";
-      if (attempt || !recoverable) throw error;
+      if (attempt || !recoverable) {
+        // The one recovery belongs to this complete traversal. Do not let
+        // controller polling turn repeated eviction into an endless retry loop.
+        if (recoverable) error.requiresReload = true;
+        throw error;
+      }
       onRecovery(error);
+    } finally {
+      if (!delivered && pages.readToken) await reader.releaseSlate(pages.readToken);
     }
   }
 }

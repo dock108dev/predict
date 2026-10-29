@@ -66,7 +66,17 @@ def load_pages(path):
     return pages, dict(path=str(path), sha256=sha256(raw).hexdigest(), classification=classification, historical_collection=historical_collection)
 
 
+class DecodedPage(dict):
+    """Pass-local immutable receipt cache; serialization still contains only proof fields."""
+    decoded = None
+
+
 def decode_page(page):
+    if isinstance(page,DecodedPage) and page.decoded is not None:
+        return page.decoded
+    if 'body_b64' not in page and page.get('current_checkpoint'):
+        from .bulk_checkpoint import read_page
+        page=read_page(page['current_checkpoint'])
     limits = page.get('transport_policy')
     if limits is not None:
         from .native_payload import exact_transport
@@ -89,7 +99,9 @@ def decode_page(page):
     elif market_detail_id(page['path']) is not None:
         if not isinstance(data.get('market'),dict):raise ValueError('native_malformed_data')
         data={'markets':[data['market']]}
-    return raw.decode(),data
+    result=raw.decode(),data
+    if isinstance(page,DecodedPage):page.decoded=result
+    return result
 
 
 def params(page):
@@ -244,7 +256,7 @@ def insert(records, record, native, proof):
                         conflicting_duplicate=False)
 
 
-def event_record(venue, page, body, native, index, as_of, linked_milestones=()):
+def event_record(venue, page, body, native, index, as_of, linked_milestones=(), decoded=None):
     eid = str(native.get('event_ticker' if venue == 'kalshi' else 'id') or f'unknown-event-row-{index}')
     record = dict(id=eid, title=native.get('title'), scheduled_start=None,
                   native_aliases={k:native[k] for k in ('ticker','slug','series_ticker','seriesSlug') if k in native},
@@ -259,7 +271,7 @@ def event_record(venue, page, body, native, index, as_of, linked_milestones=()):
                 raise ValueError('missing_native_series')
             from .native_scope_bindings import POLICY as SCOPE_POLICY, series_binding
             typed_scope = page.get('native_scope_policy') == SCOPE_POLICY or page.get('v1_coverage_policy') and series_binding(native.get('series_ticker')) is not None
-            event = kalshi.parse_event(r, native, native.get('series_ticker','KXNFLGAME'), typed_scope=typed_scope, linked_milestones=linked_milestones)
+            event = kalshi.parse_event(r, native, native.get('series_ticker','KXNFLGAME'), typed_scope=typed_scope, linked_milestones=linked_milestones or (decoded or {}).get("milestones",()))
             if typed_scope:
                 record['native_scope_binding'] = series_binding(native['series_ticker'])
         else:
@@ -289,7 +301,7 @@ def event_record(venue, page, body, native, index, as_of, linked_milestones=()):
         # Normalize this occurrence alone: identical duplicate native rows must
         # not look like ambiguous event identity to the shared extractor. Original
         # bytes remain in the hashed source; this view is used only for identity.
-        identity_payload = json.loads(body)
+        identity_payload = dict(decoded) if decoded is not None else json.loads(body)
         if linked_milestones:identity_payload['milestones']=list(linked_milestones)
         identity_payload['events'] = [native]
         identity_event = replace(event, raw=replace(event.raw, json_text=json.dumps(identity_payload)))
@@ -393,7 +405,6 @@ def catalog(pages, venue, as_of, *, v1_templates=(), share_identity=True, compac
     if current_selection is not None:
         if set(current_selection)!={'events','markets'}:raise ValueError('Exact current catalog selection required')
         selected_events=set(current_selection['events']);selected_markets=set(current_selection['markets'])
-        if len(selected_events)>24 or len(selected_markets)>72:raise ValueError('Current catalog selection capacity')
     groups = defaultdict(list)
     linked_milestones=[]
     for page in pages:
@@ -444,7 +455,7 @@ def catalog(pages, venue, as_of, *, v1_templates=(), share_identity=True, compac
                 if nested and isinstance(embedded,list):row_index+=len(embedded)
                 continue
             proof = provenance(page,row_index,body)
-            record = event_record(venue,page,body,native,row_index,as_of,linked_milestones if page.get('v1_coverage_policy') else ())
+            record = event_record(venue,page,body,native,row_index,as_of,linked_milestones if page.get('v1_coverage_policy') else (),decoded=data)
             if record.get('scheduled_start'):
                 # Keep the schedule-bearing response clock, never a market/book
                 # receipt. Linked milestone pages can differ from event pages.
@@ -497,7 +508,7 @@ def catalog(pages, venue, as_of, *, v1_templates=(), share_identity=True, compac
                 events[record['id']]['market_discovery'] = 'embedded_only' if isinstance(embedded,list) else 'unknown'
                 for m in (embedded if isinstance(embedded,list) else []):
                     row_index += 1
-                    if selected_markets is not None and str(m.get('id')) not in selected_markets:continue
+                    if selected_markets is not None and str(m.get('ticker' if venue=='kalshi' else 'id')) not in selected_markets:continue
                     insert(markets,market_record(venue,page,body,m,record['id'],row_index,native.get('series_ticker','KXNFLGAME')),m,provenance(page,row_index,body))
     for page, body, data in market_pages:
         for native in data['markets']:

@@ -32,6 +32,9 @@ def encode(value):
         if not value.is_finite():
             raise ValueError('invalid JSON number')
         return str(value)
+    if isinstance(value,(dict,list,tuple)):
+        try:return json.dumps(value,allow_nan=False,separators=(',',':'))
+        except TypeError:pass  # Legacy Decimal JSON numbers retain exact encoding.
     if isinstance(value, dict):
         return '{' + ','.join(json.dumps(k) + ':' + encode(v) for k, v in value.items()) + '}'
     if isinstance(value, (tuple, list)):
@@ -115,16 +118,29 @@ class RecoveryRequired(ValueError):
 
 
 class BookReconstructor:
-    def __init__(self, markets, *, kind=EvidenceKind.OBSERVATION):
+    def __init__(self, markets, *, kind=EvidenceKind.OBSERVATION, maximum_markets=20):
         self.markets = {m.raw.ref.market_id: m for m in markets}
-        if not 1 <= len(self.markets) <= 20 or len(self.markets) != len(markets):
+        if not self.markets or (maximum_markets is not None and len(self.markets)>maximum_markets) or len(self.markets) != len(markets):
             raise ValueError('requires 1-20 unique markets')
         self.kind = kind
         self.generation, self.sid, self.seq, self.request_id = 0, None, None, None
         self.sides, self.native_ids, self.last, self.source_highwater = {}, {}, {}, {}
         self.frames = []
+        self.retiring = {}
+
+    def reconfigure(self, markets, removal_request=None):
+        updated={m.raw.ref.market_id:m for m in markets}
+        removed=self.markets.keys()-updated.keys()
+        if removed and type(removal_request) is not int:raise ValueError('removal acknowledgement required')
+        # Tombstones last only until their ordered delete acknowledgement.
+        for mid in removed:
+            self.retiring[mid]=removal_request
+            for values in (self.sides,self.native_ids,self.last,self.source_highwater):values.pop(mid,None)
+        for mid in updated:self.retiring.pop(mid,None)
+        self.markets=updated
 
     def invalidate(self):
+        self.retiring.clear()
         self.sides.clear()
         self.sid, self.seq = None, None
         for mid, book in tuple(self.last.items()):
@@ -138,16 +154,16 @@ class BookReconstructor:
         return {'id': request_id, 'cmd': 'subscribe', 'params': {
             'channels': ['orderbook_delta'], 'market_tickers': list(self.markets)}}
 
-    def feed(self, body, generation, received_at):
+    def feed(self, body, generation, received_at, *, materialize=True):
         if generation != self.generation:
             return None
         try:
-            return self._feed(body, generation, received_at)
+            return self._feed(body, generation, received_at,materialize=materialize)
         except (ValueError, KeyError, TypeError, OverflowError, AttributeError, IndexError):
             self.invalidate()
             raise RecoveryRequired('invalid or ambiguous Kalshi subscription image') from None
 
-    def _feed(self, body, generation, received_at):
+    def _feed(self, body, generation, received_at, *, materialize=True):
         msg = decode(body)
         kind = msg.get('type')
         if kind == 'subscribed':
@@ -180,11 +196,13 @@ class BookReconstructor:
             raise ValueError('sequence gap, duplicate or regression')
         self.seq = seq
         if kind in ('ok',):
+            self.retiring={mid:rid for mid,rid in self.retiring.items() if rid!=msg.get('id')}
             return None
         if kind not in ('orderbook_snapshot', 'orderbook_delta'):
             raise ValueError('unexpected subscription message')
         data = msg['msg']
         mid, uuid = identity(data.get('market_ticker')), identity(data.get('market_id'))
+        if mid in self.retiring:return None  # SID/sequence checked above, no price admission.
         if mid not in self.markets or (mid in self.native_ids and self.native_ids[mid] != uuid):
             raise ValueError('market identity mismatch')
         self.native_ids[mid] = uuid
@@ -240,6 +258,13 @@ class BookReconstructor:
                 SourceTimeProgress.REPEATED if source_key == prior else SourceTimeProgress.REGRESSED)
             if prior is None or source_key > prior:
                 self.source_highwater[mid] = source_key
+        if (not materialize and kind=='orderbook_delta' and progress!=SourceTimeProgress.REGRESSED
+                and (exchange_at is None or exchange_at<=received_at)):
+            # The owning batch will materialize the last delta in the bounded contiguous batch for
+            # this market. Sequence, price, quantity and clocks above still
+            # advance for every input; an unsafe clock always emits for refusal.
+            self.sides[mid]=candidate;self.last.pop(mid,None)
+            return None
         safe = sanitize(msg)
         self.frames.append((generation, received_at, encode(safe)))
         raw_body = encode({'message': safe, 'connection_generation': generation,

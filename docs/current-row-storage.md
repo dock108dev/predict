@@ -29,16 +29,81 @@ The independent background runtime publishes bounded latest results through
 migrations 013–015. `data_runtime` and its bounded command relation provide source
 status, heartbeat, material revisions and actual control acknowledgments.
 `scanner_latest` replaces one compact typed projection (32 MiB cap);
-`latest_board` replaces up to 500 compact game rows (64 MiB total), with one
+`latest_board` replaces compact game rows without a fixed game-count cutoff
+(64 MiB total publication guard), with one
 status publication. Inputs, raw source bodies and expanded reports are excluded.
 The [runtime contract](data-app-runtime-contract.md) specifies authority, failure,
 retention and app-read behavior. Existing protected owners remain separate.
 
 ## Bounded ordered SQL writes
 
-`upsert_records` and `replace_native_books` pipeline their ordered SQL commands inside their existing transactions. Every SELECT/fetch barrier, input order, source/receipt comparison, equal-clock conflict check and authoritative-scope guard remains in place. There is no batch prefetch or change to transaction boundaries, schema or current-fact meaning.
+The database ingress reducer retains complete native observations as exact
+encoded JSON images. Transaction candidates share immutable bytes, and catalog
+normalization decodes at most 256 books at a time. This avoids keeping a second
+full decoded price graph beside SQL and pending source work. Full depth and
+original clocks remain intact; unchanged images survive catalog reannotation.
+Runtime memory diagnostics report container counts and encoded-image bytes
+without traversing millions of objects. See the
+[memory and backpressure](acquisition.md#memory-and-backpressure).
+
+`upsert_records` and `replace_native_books` pipeline ordered writes inside their existing transactions. SELECTs explicitly exit pipeline protocol, draining prior writes, and complete before the writer pipeline resumes. A large native scope query deadlocked with both peers waiting for input on the installed PostgreSQL 14/libpq 18 pairing; an in-pipeline Sync alone did not fix it. The 512-record regression exercises that boundary and authoritative removal. Every SELECT/fetch barrier, input order, source/receipt comparison, equal-clock conflict check and authoritative-scope guard remains in place. Exact disjoint native market scopes prefetch their existing ordering guards and membership together. Overlapping/aggregate scopes retain sequential read barriers. Transaction boundaries and current-fact meaning are unchanged.
 
 The private helper explicitly synchronizes after every 128 counted commands and again before its method exits, delivering delayed SQL errors before transaction completion or the [postcommit observation](scanner-projection-contract.md). A failure rolls back the transaction. Existing fetches can flush sooner. Closed-market withdrawal statements run in the same native-book transaction outside that counter; a following fetch or the final synchronization flushes them. The 128-command threshold therefore describes the helper's counted commands, rather than an exact limit on every physical statement. Protected account, quota, audit, reservation and financial state retain their separate owners.
+
+## Incremental catalog and calculation work
+
+Catalog preparation runs outside the serialized price-ingress lock in one CPU
+worker with no SQL or transport authority. Only one rebuild is submitted at a time;
+the worker is recycled after each rebuild to release transient metadata. Stop joins
+owned work. Before adoption, ingress checks the catalog generation and prepares
+again if another catalog won.
+Physical book dependencies are distinct from derived identity and schedule metadata.
+Capture provenance, validated schedule re-receipts and typed presentation counters do
+not invalidate an unchanged native image. Contract terms, side membership, eligibility,
+unknown fields and real schedule/identity changes remain dependencies. These physical
+image rules do not weaken the separate financial semantic-review contract.
+
+A metadata-only change withdraws affected derived rows atomically, retains exact raw
+images and queues only the affected books for recalculation. The ordinary per-market
+queue coalesces to the newest received image. Work waiting two seconds receives
+FIFO priority; younger work retains initial-roster tail priority. Steady queues use
+128-book SQL turns; queues above 512 books use 512-book catch-up turns, within the
+unchanged half-ingress byte bound and any higher configured batch allowance. It does
+not reset original price/receipt clocks or replay a provider request. Unchanged
+contract/event revisions skip redundant SQL writes. Normalization and deterministic
+storage preparation (validation, clock parsing and revision hashes) run together in
+a bounded two-worker CPU pool. The two native publishers can prepare while another
+batch owns SQL; each publisher still owns only one batch. Before commit the parent
+checks catalog generation and whether preparation crossed a scheduled-start phase
+boundary (or the clock moved backward), recomputing stale work. Revocation prevents
+adoption and shutdown joins owned work. The parent retains transactional ordering,
+SQL admission and publication authority. Native metadata whose observation
+clock exactly equals the quote receipt stores that relationship once; readers restore
+the exact clock. Independently observed metadata timestamps remain literal.
+
+Native depth updates use 32-row typed-array statements inside the existing ordered
+transaction, retaining every bid and ask level. Larger array/placeholder batches hung
+with the installed PostgreSQL 14/libpq 18 combination and are not used. Raw images
+already persisted at the same or newer receipt are not encoded and written again by
+the derived admission lane. Disposition updates retain their original ordering guards.
+
+Comparison identities are cached only within one captured response, and publication
+manifests index peers by exact identity. No cross-frame identity cache can outlive an
+input change. Publication checks scope changing price/book dependencies to the captured
+component while still checking global event membership and source/control authority.
+
+The receiver and reconstruction child overlap at most two bounded batches (one being
+consumed, one in flight), each at most 512 frames and approximately 1 MiB wire input.
+Every delta is validated in order; error/cancellation cleanup joins owned work. Current
+images and pending work remain bounded by the roster, with no historical update queue.
+The heartbeat's accounting display projection uses a joined read-only child so full
+ledger verification does not monopolize the collector's Python execution thread.
+Dispatch and recovery controls still perform their original fresh accounting checks.
+New background captures yield above five seconds of derived queue age. Admitted
+work may finish a complete component under ordinary normalization pressure;
+socket/raw queue age above two seconds, initial synchronization and Stop still
+interrupt it. These are scheduling thresholds, not changes to the two-second
+delivery target or any price/financial freshness rule.
 
 ## Ordering, removals and expiry
 
@@ -116,3 +181,84 @@ withdraw stale bindings before the worker catches up. App startup does not write
 epochs, reset data or start acquisition. See the
 [projection contract](scanner-projection-contract.md) and
 [latest-result contract](data-app-runtime-contract.md).
+
+## Acquisition and publication
+
+Current acquisition tables retain exact traversal pages, independent native metadata, latest raw books with dispositions, featured payloads and per-event alternate responses. These are replaceable current state, not an update archive. Ordinary current acquisition/capture cardinality bounds were removed; response chunks, per-record validation, memory admission and SQL/disk guards remain explicit. Rejected raw values do not acquire calculation authority.
+
+See [acquisition](acquisition.md) for ownership, capacity and completeness limits.
+
+
+Acquisition storage also retains suspected listing absence separately
+from explicit closed/settled metadata (`023_current_acquisition_absence.sql`).
+Missing identities remain in reconciliation; an interrupted or moving traversal
+cannot prove withdrawal. `024_current_acquisition_failures.sql` holds opaque,
+credential-checked unusable frames: at most 64 per source, 256 KiB each, and one
+day. These bytes have no ordinary rendering or financial authority.
+
+## Raw display projection
+
+Migrations 028–029 add a compact aggregate display index, native row-write clock
+and reusable compact source metadata. Native full images/depth remain solely in
+acquisition storage; list reads transfer selected top levels only. Aggregate
+projection and deletion are atomic with their source payload. No normalized row
+or financial result is required for display. See [raw prices](raw-prices.md)
+for clocks, snapshot lifetime, memory costs and reconciliation.
+
+Durable scanner notifications are wake-only post-commit signals. They do not scan
+and hash the entire market roster in every price transaction. Exact input capture
+and compare-and-publish remain unchanged; notifications carry no revision or
+commit-to-display evidence. Explicit proof subscribers retain the original full
+measurement path, while missing exact timing evidence remains unknown.
+
+Reconstruction children release the standalone adapters' decoded last-image cache
+after returning each frame. The parent owns current images; children retain only
+the ladders, native identity and clock high-water needed for ordered reconstruction.
+Standalone adapter disconnect/stale-image behavior is unchanged outside this worker.
+
+Fresh-update `derived` latency uses the received frame's clock. Explicit catalog
+recalculations use a separate `metadata_recalculation` queue-to-processing metric;
+reusing a quiet original book cannot turn its old receipt into a new delivery-delay
+sample. A newer native update supersedes that queue purpose. All original price,
+source and receipt clocks remain unchanged.
+
+The live aggregate scheduler also obtains quota-status projections through its
+existing joined accounting worker. It reuses the verified next-due display value
+for response/state publication; this cache never authorizes a paid request. All
+reservation and dispatch checks retain their original durable validation.
+
+Reconstruction results carry their catalog revision. The parent keeps a minimum
+valid revision for each current market and prunes departed membership; delayed
+results for removed/re-added markets cannot publish under a newer catalog.
+Unchanged members keep their valid received images and original clocks. Unknown
+current images still fail ownership checks. The live consumer checks reader
+failure before and after awaiting reconstruction, so revoked socket authority
+cannot be prolonged by draining old work. The original transport failure remains
+visible instead of being replaced by a later ownership error.
+
+Optional background owners register a waiting turn before pre-capture acquisition
+checks. Yielding before SQL planning no longer loses estimate/coverage priority to
+the scanner. An unmeasured waiter reserves no memory; the measured claim and every
+resize still enforce the full current-memory, source-runway and single-worker
+bounds. Stop removes waiters, and deferred estimate/coverage status remains explicit.
+
+## Raw snapshot failure recovery
+
+`RawReads` owns at most eight repeatable-read snapshots with 120-second leases.
+A failed SQL operation or unexpected decoding/read failure retires that token and
+closes its connection immediately, including a first-page failure before the
+caller receives the token. Refresh opens a new snapshot; the server never rolls
+back and silently reuses a token for different evidence. Authored selection
+refusals (unknown input or changed revision) preserve a healthy snapshot.
+
+Closing all snapshots attempts every connection even if one close fails. Safe
+`raw_snapshot_close` diagnostics identify cleanup failures; a secondary close
+failure does not replace the original read error. Shutdown still attempts all
+snapshot closes if the expiry task failed. This is read-resource recovery, not
+repair of acquisition data, accounting or durable publications.
+
+The disposable PostgreSQL regression in `tests/test_raw_prices_sql.py` verifies
+actual aborted transactions, repeated first-page failures, closed connections,
+expired-token refusal and fresh-read recovery, alongside ordinary pagination and
+export. No migration or data transformation is required. These small fixtures
+establish correctness, not production throughput or backup/restore qualification.

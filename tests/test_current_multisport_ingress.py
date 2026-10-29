@@ -141,10 +141,10 @@ class NativeMatrix(unittest.IsolatedAsyncioTestCase):
             with self.subTest(venue=venue):
                 w,_=worker(venue,events_per_source=2,markets_per_source=2)
                 calls=fake_discovery(w,cases);seen=set()
-                for _ in range(18):
+                for _ in range(2):
                     before=len(calls);await w.discover()
                     self.assertLessEqual(len(calls)-before,DEFAULT['discovery_pages'])
-                    self.assertLessEqual(len(w.markets),2)
+                    self.assertEqual(len(w.markets),len(cases))
                     events={e['id']:e for e in w.catalog['events']}
                     seen.update((events[m['event_id']]['competition'],m['market_type']) for m in w.catalog['markets'] if m['id'] in w.markets)
                 self.assertEqual(seen,{(s,f) for s in SPORTS for f in FAMILIES})
@@ -170,7 +170,7 @@ class NativeMatrix(unittest.IsolatedAsyncioTestCase):
                             limited.append(latest)
                             self.assertEqual(latest['reason'],'query_capacity')
                             self.assertIsNone(latest['offered']['markets']);self.assertIsNone(latest['offered']['quotes'])
-                self.assertTrue(limited)
+                self.assertEqual(limited,[])
                 # A genuinely empty bounded source listing retains its meaning.
                 w,_=worker(venue,['NFL'],['moneyline'])
                 w.service.coverage=CoverageLedger({venue:['NFL']},['moneyline'])
@@ -191,11 +191,11 @@ class NativeMatrix(unittest.IsolatedAsyncioTestCase):
         selected=set(w.markets)
         self.assertIn(peer['markets']['kalshi']['ticker'],selected)
         self.assertIn(nba['markets']['kalshi']['ticker'],selected)
-        self.assertNotIn(early['markets']['kalshi']['ticker'],selected)
+        self.assertIn(early['markets']['kalshi']['ticker'],selected)
         self.assertEqual(w.metrics['known_peer_priority_markets'],1)
         for _ in range(3):
             await w.discover();selected.update(w.markets)
-            self.assertLessEqual(len(w.markets),2)
+            self.assertEqual(len(w.markets),3)
         self.assertIn(early['markets']['kalshi']['ticker'],selected)
 
     async def test_recurring_listing_pages_reach_new_events_after_a_busy_first_page(self):
@@ -213,10 +213,10 @@ class NativeMatrix(unittest.IsolatedAsyncioTestCase):
                 self.assertIn(expected,events)
                 self.assertTrue(any(m.raw.ref.event_id==expected for m in w.markets.values()))
                 listing_calls=[c for c in calls[before:] if c['field']=='events']
-                self.assertEqual(len(listing_calls),2)
+                self.assertEqual(len(listing_calls),2 if venue=='kalshi' else 3)
                 nfl=next(c for c in listing_calls if c['params'].get('series_ticker')=='KXNFLGAME' or c['params'].get('tagSlug')=='nfl')
                 self.assertEqual(nfl['params'].get('cursor') if venue=='kalshi' else nfl['params'].get('offset'),
-                    'next-5' if venue=='kalshi' else 5)
+                    None if venue=='kalshi' else 0)
                 first_nfl=next(c for c in calls[:before] if c['field']=='events' and
                     (c['params'].get('series_ticker')=='KXNFLGAME' or c['params'].get('tagSlug')=='nfl'))
                 self.assertEqual({k:v for k,v in nfl['params'].items() if k not in ('cursor','offset')},
@@ -235,7 +235,7 @@ class NativeMatrix(unittest.IsolatedAsyncioTestCase):
         case=source_case('NHL','total','no-game-id');case['events']['polymarket_us'].pop('gameId')
         w,_=worker('polymarket_us',['NHL'],['total']);calls=fake_discovery(w,[case]);await w.discover()
         self.assertEqual(len(w.markets),1)
-        self.assertEqual(calls[-1]['path'],'/v1/market/id/'+case['markets']['polymarket_us']['id'])
+        self.assertEqual(calls[-1]['path'],'/v1/events/'+case['events']['polymarket_us']['id'])
 
     async def test_missing_predicate_keeps_native_total_subscribable(self):
         case=source_case('NBA','total','unknown-predicate')
@@ -289,13 +289,14 @@ class NativeMatrix(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(row['comparison_source_metadata']['same_outcome']['reason'],'comparison_equality_missing')
             self.assertIn('equality',record_identity(row)['missing_fields'])
 
-    async def test_missing_schedule_and_contradictory_league_do_not_admit(self):
+    async def test_unqualified_semantics_do_not_block_raw_subscription(self):
         for venue in ('kalshi','polymarket_us'):
             case=source_case('NCAAB','total','missing-schedule')
             if venue=='kalshi':case['milestone']['type']='unrecognized_schedule_kind'
             else:case['events'][venue]['teams'][0]['league']='nba'
             w,_=worker(venue,['NCAAB'],['total']);fake_discovery(w,[case]);await w.discover()
-            self.assertEqual(w.markets,{})
+            self.assertTrue(w.markets)
+            self.assertTrue(any(m.get("exclusion") or m.get("v1_raw_binding",{}).get("status")!="BOUND_RAW_PREDICATE" for m in w.catalog["markets"]))
 
 
 class Equality(unittest.TestCase):

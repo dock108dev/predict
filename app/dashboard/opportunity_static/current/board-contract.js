@@ -92,6 +92,25 @@ export function checkAvailability(value, summary = false) {
   return value;
 }
 function inflateCapturedInputs(v) {
+  if (v.shared_fields !== undefined) {
+    const tree=v.shared_fields, nodes=tree.nodes, sizes=[], depths=[];
+    if (tree.encoding !== "shared-json-1" || !Array.isArray(nodes) || nodes.length>1000000) throw Error("Invalid shared input frame");
+    for (let i=0;i<nodes.length;i++) {
+      const [kind,body]=nodes[i], refs=kind==="a"?body:kind==="o"?body.map(x=>x[1]):[];
+      if (refs.some(r=>!Number.isSafeInteger(r)||r<0||r>=i)) throw Error("Invalid shared input reference");
+      if (!["a","o","v"].includes(kind) || kind==="v" && body!==null && typeof body==="object") throw Error("Invalid shared input value");
+      if (kind==="o" && (body.some(([k])=>typeof k!=="string"||["__proto__","constructor","prototype"].includes(k)) || new Set(body.map(x=>x[0])).size!==body.length)) throw Error("Invalid shared input keys");
+      const size=kind==="v"?JSON.stringify(body).length*4:2+refs.reduce((n,r)=>n+sizes[r]+1,0)+(kind==="o"?body.reduce((n,[k])=>n+JSON.stringify(k).length*4+1,0):0);
+      const depth=kind==="v"?0:1+Math.max(0,...refs.map(r=>depths[r]));
+      if(size>96*1024*1024||depth>96)throw Error("Shared input expansion capacity");
+      sizes.push(size);depths.push(depth);
+    }
+    if(!Number.isSafeInteger(tree.root)||tree.root<0||tree.root>=nodes.length)throw Error("Invalid shared input root");
+    const restore=i=>{const [kind,body]=nodes[i];return kind==="o"?Object.fromEntries(body.map(([k,r])=>[k,restore(r)])):kind==="a"?body.map(restore):body;};
+    const fields=restore(tree.root);
+    if(Object.keys(fields).some(k=>!["prices","rows","price_field_pool","financial_field_pool","native_wordings"].includes(k)))throw Error("Invalid shared board fields");
+    delete v.shared_fields;Object.assign(v,fields);
+  }
   if (v.financial_field_pool !== undefined) {
     if (!Array.isArray(v.financial_field_pool)) throw Error("Captured financial field pool missing");
     for (const row of v.rows) {
@@ -299,9 +318,8 @@ export function checkSlate(v, c) {
     v.filter !== c.filter ||
     !Array.isArray(v.games) ||
     !Array.isArray(v.boards) ||
-    v.games.length > 500 ||
     v.boards.length > 50 ||
-    v.bounds?.maximum_games !== 500 ||
+    (!Number.isSafeInteger(v.bounds?.maximum_games) || v.bounds.maximum_games < v.games.length) ||
     v.bounds?.maximum_page_games !== 50 ||
     typeof v.read_revision !== "string" || !v.read_revision ||
     typeof v.epoch !== "string" || !v.epoch ||

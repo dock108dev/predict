@@ -64,6 +64,8 @@ automated checks.
 
 - [Scanner filters, observations and manual tickets](docs/scanner-usage.md)
 - [Architecture and module ownership](docs/architecture.md)
+- [Acquisition and accounting boundaries](docs/acquisition.md)
+- [Raw prices and original inputs](docs/raw-prices.md)
 - [Calculation basis and limitations](docs/benchmark-ev.md)
 - [Current-board API](docs/comparison-board-api-contract.md)
 - [Interface design](docs/ui-design.md)

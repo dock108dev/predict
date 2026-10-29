@@ -13,6 +13,7 @@ class SlowSink:
 
     def __init__(self):
         self.entered=Event();self.release=Event();self.finished=[];self.prepared=[]
+        self.metrics=dict(rejected_observations=0)
         self.loop_thread=get_ident()
 
     def prepare(self,row,states,revoked):
@@ -74,10 +75,40 @@ class OwnedIngress(IsolatedAsyncioTestCase):
     async def test_bounded_admission_and_revoked_queued_work_never_executes(self):
         service=Service();tasks=[asyncio.create_task(call(service,service.publish,n)) for n in range(8)]
         await self.entered(service)
-        with self.assertRaisesRegex(ValueError,'current_ingress_capacity'):
-            await call(service,service.publish,9)
+        waiting=asyncio.create_task(call(service,service.publish,9))
+        await asyncio.sleep(.01)
+        self.assertFalse(waiting.done())
         service.ingress.revoke();service.sink.release.set()
-        await asyncio.gather(*tasks,return_exceptions=True)
+        await asyncio.gather(*tasks,waiting,return_exceptions=True)
+        self.assertEqual(service.sink.finished,[])
+        self.assertFalse(service.ingress.tasks)
+
+    async def test_book_cpu_preparation_overlaps_sql_and_revocation_blocks_adoption(self):
+        started=Event();release=Event()
+        class ParallelSink(SlowSink):
+            process_normalization=True
+            def precompute_books(self,source,books,revoked):
+                if source=='polymarket_us':started.set();release.wait(3)
+                return dict(source=source)
+            def prepare(self,row,states,revoked,*,precomputed):
+                assert precomputed['source']==row
+                return super().prepare(row,states,revoked)
+        class NativeService(Service):
+            def __init__(self):
+                super().__init__();self.sink=ParallelSink()
+            @operation
+            def books(self,source,books):
+                yield source,{}
+        service=NativeService()
+        first=asyncio.create_task(call(service,service.books,'kalshi',[1]))
+        await self.entered(service)
+        second=asyncio.create_task(call(service,service.books,'polymarket_us',[2]))
+        for _ in range(100):
+            if started.is_set():break
+            await asyncio.sleep(.001)
+        self.assertTrue(started.is_set(),'Second source CPU preparation waited behind first SQL')
+        service.ingress.revoke();release.set();service.sink.release.set()
+        await asyncio.gather(first,second,return_exceptions=True)
         self.assertEqual(service.sink.finished,[])
         self.assertFalse(service.ingress.tasks)
 
@@ -116,3 +147,43 @@ class CursorLifetime(IsolatedAsyncioTestCase):
             self.assertIsNone(reference(), 'cursor/result must release without a cyclic-GC pass')
         finally:
             if previous:gc.enable()
+
+
+class CatalogPreparation(IsolatedAsyncioTestCase):
+    async def test_catalog_preparation_does_not_block_prices_or_replace_new_catalog(self):
+        from unittest.mock import patch
+        started=Event();release=Event();calls=[]
+        class CatalogService:
+            database_mode=True
+            def __init__(self):
+                self.sink=SimpleNamespace(reducer=SimpleNamespace(inventory={},generation=0),commit_async=self.commit)
+                self.ingress=Ingress(self);self.commits=[]
+            async def commit(self,row,states,revoked):
+                self.commits.append(row)
+                if row=='newer':self.sink.reducer=SimpleNamespace(inventory={'newer':{}},generation=1)
+            @operation
+            def catalog(self,source,cat,*,prepared,catalog_delta):
+                yield prepared,{}
+            @operation
+            def prices(self,source,value):
+                yield value,{}
+        service=CatalogService()
+        def prepare(base,*args,**kwargs):
+            calls.append(base)
+            if len(calls)==1:started.set();release.wait(3)
+            return dict(base,prepared=True)
+        with patch('app.collection.current_service.prepare_catalog',side_effect=prepare), \
+                patch('app.collection.current_catalog_delta.changes',return_value={}):
+            task=asyncio.create_task(call(service,service.catalog,'kalshi',{}))
+            for _ in range(100):
+                if started.is_set():break
+                await asyncio.sleep(.001)
+            self.assertTrue(started.is_set())
+            try:
+                await asyncio.wait_for(call(service,service.prices,'kalshi','price'),.5)
+                await asyncio.wait_for(call(service,service.prices,'kalshi','newer'),.5)
+                self.assertFalse(task.done())
+            finally:release.set()
+            await asyncio.wait_for(task,3)
+        self.assertEqual(service.commits,['price','newer',{'newer':{},'prepared':True}])
+        self.assertEqual(len(calls),2)

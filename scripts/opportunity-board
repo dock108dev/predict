@@ -9,6 +9,7 @@ import signal
 import socket
 import stat
 import subprocess
+import sys
 import time
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -108,12 +109,21 @@ def start_role(role, folder, args):
             raise SystemExit('No free loopback port')
         command += ['app.dashboard.opportunity_board', '--port', str(port)]
     environment={'PATH': '/usr/bin:/bin', 'PYTHONUNBUFFERED': '1', 'PYTHONDONTWRITEBYTECODE': '1'}
-    # The installed 3.14 build provides mimalloc. Repeated large read graphs
-    # otherwise strand resident arenas despite releasing their Python objects.
-    # Preserve compatibility with builds that do not include this allocator.
-    allocator=subprocess.check_output([command[0], '-c',
-        'import sysconfig; print(int(bool(sysconfig.get_config_var("WITH_MIMALLOC"))))'],text=True).strip()
-    if allocator=='1':environment['PYTHONMALLOC']='mimalloc'
+    if role=='data' and sys.platform=='darwin':
+        # Full-cohort replay on the installed Python showed that forced mimalloc
+        # retained freed object pages across catalog/update workloads. Darwin's
+        # allocator releases their physical footprint; keep the RSS guard intact.
+        environment['PYTHONMALLOC']='malloc'
+    else:
+        allocator=subprocess.check_output([command[0], '-c',
+            'import sysconfig; print(int(bool(sysconfig.get_config_var("WITH_MIMALLOC"))))'],text=True).strip()
+        if allocator=='1':
+            environment['PYTHONMALLOC']='mimalloc'
+            if role=='app':
+                # Return unused pages between consecutive full-slate reads;
+                # delayed purging otherwise trips the unchanged RSS admission.
+                environment['MIMALLOC_PURGE_DELAY']='0'
+                environment['MIMALLOC_PURGE_DECOMMITS']='1'
     with open_log(folder / ('data.log' if role == 'data' else 'server.log')) as log:
         process = subprocess.Popen(command, cwd=ROOT,
             env=environment,

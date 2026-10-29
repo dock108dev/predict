@@ -29,22 +29,29 @@ def parse_frame(body):
 
 def _frame(body,frame):
     frame=parse_frame(body) if frame is None else frame
-    if not isinstance(frame,ParsedAggregateFrame) or frame.receipt_sha256!=sha256(body).hexdigest():
+    # A retained SQL parse already carries its original receipt identity. Never
+    # reserialize it and pretend that the resulting bytes were provider bytes.
+    valid=isinstance(frame,ParsedAggregateFrame) and len(frame.receipt_sha256)==64 and all(c in '0123456789abcdef' for c in frame.receipt_sha256)
+    if not valid or (body is not None and frame.receipt_sha256!=sha256(body).hexdigest()):
         raise ValueError('aggregate_parsed_frame_identity')
     return frame
 
 
 def admit(body, sport, received_at, *, venue=None, event_ids=None, frame=None):
     frame=_frame(body,frame)
+    from datetime import datetime,timezone,timedelta
+    receipt=datetime.fromisoformat(received_at.replace('Z','+00:00'))
+    if receipt.utcoffset() is None:raise ValueError('aggregate_receipt_timezone_required')
+    if receipt.utcoffset()!=timedelta(0):received_at=receipt.astimezone(timezone.utc).isoformat()
     # Venue filtering/validation is isolated; it never mutates the shared frame.
     payload=deepcopy(frame.payload)
     if event_ids is not None:
         # A read may normalize only already-admitted provider events. Keep the
         # full original receipt hash below; filtering is never new acquisition
         # or an assertion that omitted games/books were present.
-        if not isinstance(event_ids,(set,frozenset,tuple,list)) or len(event_ids)>200 or any(not isinstance(v,str) or not v for v in event_ids):
+        if not isinstance(event_ids,(set,frozenset,tuple,list)) or any(not isinstance(v,str) or not v for v in event_ids):
             raise ValueError('aggregate_selected_event_identity')
-        if not isinstance(payload,list) or len(payload)>200:
+        if not isinstance(payload,list):
             raise ValueError('aggregate_event_bound')
         payload=[e for e in payload if isinstance(e,dict) and e.get('id') in event_ids]
     if venue is not None and isinstance(payload,list):
@@ -52,7 +59,7 @@ def admit(body, sport, received_at, *, venue=None, event_ids=None, frame=None):
         for event in payload:
             if not isinstance(event,dict) or not isinstance(event.get('bookmakers'),list):raise ValueError('aggregate_books_shape')
             event['bookmakers']=[b for b in event['bookmakers'] if isinstance(b,dict) and b.get('key')==venue]
-    if not isinstance(payload,list) or len(payload)>200: raise ValueError('aggregate_event_bound')
+    if not isinstance(payload,list): raise ValueError('aggregate_event_bound')
     seen=set()
     for event in payload:
         if not isinstance(event,dict) or event.get('id') in seen: raise ValueError('aggregate_event_identity')
@@ -79,7 +86,6 @@ def admit(body, sport, received_at, *, venue=None, event_ids=None, frame=None):
             book['markets']=valid_markets
     # The existing normalizer consumes the already-decoded exact fields.
     rows=normalize(body,sport,received_at,_parsed_events=payload,_receipt_sha256=frame.receipt_sha256)
-    if len(rows)>1200:raise ValueError('aggregate_quote_bound')
     bound=bind(rows)
     for r in bound:
         if r['price_issue']:raise ValueError('aggregate_decimal_price')
@@ -106,6 +112,12 @@ def admit(body, sport, received_at, *, venue=None, event_ids=None, frame=None):
         event=dict(id=event_id,sport={'NFL':'american_football','NCAAF':'american_football','NBA':'basketball','NCAAB':'basketball','MLB':'baseball','NHL':'ice_hockey'}[sport],
             competition=sport,season='unverified',stage='unverified',scheduled_start=raw['scheduled_start'],home=home,away=away,
             participants={raw['home_team']:home,raw['away_team']:away},title=raw['away_team']+' at '+raw['home_team'])
+        from app.storage.store import hashed
+        from app.storage.schedule_metadata import VERSION as SCHEDULE_VERSION
+        witness=dict(version=SCHEDULE_VERSION,native_event_id=event_id,authority=['the_odds_api','event',event_id],
+            start=raw['scheduled_start'],received_at=received_at,
+            proofs=[dict(path='the_odds_api/receipt/'+frame.receipt_sha256,body_sha256=frame.receipt_sha256,received_at=received_at)])
+        event['schedule_metadata']=dict(witness,revision=hashed(witness))
         from app.comparison.event_links import provider_key
         key=provider_key('the_odds_api',event)
         family={'h2h':'moneyline','spreads':'spread','totals':'total'}[market]
@@ -147,6 +159,59 @@ def admit(body, sport, received_at, *, venue=None, event_ids=None, frame=None):
     return records
 
 
+def admit_alternate(body,sport,received_at,*,frame=None):
+    """Split original alternate ladders into exact two-outcome full-game lines.
+
+    The base-market projection is only adapter input. Every resulting quote
+    retains the actual event-odds receipt hash, original price and source clocks.
+    Route-prefixed instruments keep independent authoritative refresh scopes.
+    """
+    from collections import defaultdict
+    frame=_frame(body,frame);event=frame.payload
+    if not isinstance(event,dict):raise ValueError('aggregate_event_identity')
+    records=[];errors={};complete=[]
+    for venue in (*VENUES,'pinnacle'):
+        books=[b for b in event.get('bookmakers',[]) if b.get('key')==venue]
+        if len(books)>1:errors[venue]='aggregate_book_identity';continue
+        failed=False
+        for book in books:
+            seen=set()
+            for market in book.get('markets',[]):
+                try:
+                    native=market['key'];base={'alternate_spreads':'spreads','alternate_totals':'totals'}[native]
+                    if native in seen:raise ValueError('aggregate_market_identity')
+                    seen.add(native);pairs=defaultdict(list)
+                    for outcome in market['outcomes']:
+                        try:
+                            line=bounded_decimal(str(outcome['point']))
+                            if base=='spreads' and outcome['name']==event['away_team']:line=-line
+                            pairs[line].append(outcome)
+                        except (ValueError,KeyError,TypeError,ArithmeticError) as exc:
+                            failed=True;errors[venue]=_admission_error(exc)
+                    for outcomes in pairs.values():
+                        if len(outcomes)!=2:
+                            failed=True;errors[venue]='aggregate_complete_two_way_required'
+                            continue
+                        try:
+                            selected=deepcopy(event)
+                            selected['bookmakers']=[dict(book,markets=[dict(market,key=base,outcomes=outcomes)])]
+                            subset=ParsedAggregateFrame([selected],frame.receipt_sha256)
+                            pair=admit(body,sport,received_at,venue=venue,frame=subset)
+                            for row in pair:
+                                source=row['quote']['source']
+                                source['native_market_id']='alternate:'+source['native_market_id']
+                                source['binding_id']='alternate:'+source['binding_id']
+                                row['_instrument']='alternate:'+row['_instrument']
+                                row['quote']['rule_note']='Aggregate '+native+' exact full-game line; settlement and native occurrence association unverified.'
+                            records.extend(pair)
+                        except (ValueError,KeyError,TypeError,ArithmeticError) as exc:
+                            failed=True;errors[venue]=_admission_error(exc)
+                except (ValueError,KeyError,TypeError,ArithmeticError) as exc:
+                    failed=True;errors[venue]=_admission_error(exc)
+        if not failed:complete.append(venue)
+    return records,complete,errors
+
+
 def _admission_error(exc):
     code=str(exc)
     if not code.startswith('aggregate_') or len(code)>80 or not all(c.islower() or c=='_' for c in code):
@@ -163,6 +228,21 @@ def admit_venues(body,sport,received_at,*,frame=None,include_reference=False):
         try:records[venue]=admit(body,sport,received_at,venue=venue,frame=frame)
         except (ValueError,KeyError,TypeError,ArithmeticError,StopIteration) as exc:
             errors[venue]=_admission_error(exc)
+            # Recover independent valid markets without claiming a complete
+            # venue replacement. Original receipt identity and clocks survive.
+            recovered=[]
+            if isinstance(frame.payload,list):
+                for event in frame.payload:
+                    if not isinstance(event,dict):continue
+                    for book in event.get('bookmakers',[]) if isinstance(event.get('bookmakers'),list) else []:
+                        if not isinstance(book,dict) or book.get('key')!=venue:continue
+                        for market in book.get('markets',[]) if isinstance(book.get('markets'),list) else []:
+                            partial=deepcopy(event)
+                            partial['bookmakers']=[dict(book,markets=[market])]
+                            subset=ParsedAggregateFrame([partial],frame.receipt_sha256)
+                            try:recovered.extend(admit(body,sport,received_at,venue=venue,frame=subset))
+                            except (ValueError,KeyError,TypeError,ArithmeticError,StopIteration):pass
+            if recovered:records[venue]=recovered
     return records,errors
 
 
@@ -170,9 +250,11 @@ def market_exclusions(body,*,frame=None):
     """Invalid decimal prices exclude their complete market, never one leg."""
     payload=_frame(body,frame).payload;counts={}
     for event in payload if isinstance(payload,list) else []:
-        for book in event.get('bookmakers',[]):
-            if book.get('key') not in VENUES:continue
-            for market in book.get('markets',[]):
+        if not isinstance(event,dict):continue
+        for book in event.get('bookmakers',[]) if isinstance(event.get('bookmakers'),list) else []:
+            if not isinstance(book,dict) or book.get('key') not in VENUES:continue
+            for market in book.get('markets',[]) if isinstance(book.get('markets'),list) else []:
+                if not isinstance(market,dict):continue
                 try:bad=any(bounded_decimal(str(o['price']))<=1 for o in market['outcomes'])
                 except (ValueError,KeyError,TypeError):continue
                 if bad:counts[book['key']]=counts.get(book['key'],0)+1

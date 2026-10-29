@@ -54,6 +54,8 @@
     "test_opportunity_dashboard.cjs",
     "test_publication_encoding.cjs",
     "test_sc07_u2.cjs",
-    "test_sc07_u3.cjs"
+    "test_sc07_u3.cjs",
+    "test_raw_result_view.cjs",
+    "test_raw_odds_controls.cjs"
   ]
 }

@@ -108,11 +108,17 @@ def fake_discovery(worker, cases):
 
     cases is a mutable list: append after startup to prove recurring new discovery.
     """
+    import time
+    worker.service.deadline=time.monotonic()+300
     calls=[]
     async def get(path,params,field=None,scope=None):
         from app.collection.native_selectors import LEAGUES
         venue=worker.venue
-        if field=='events':
+        if path.startswith('/v1/events/'):
+            selected=next(c for c in cases if str(c['events'][venue]['id'])==path.rsplit('/',1)[-1])
+            event=deepcopy(selected['events'][venue]);event['markets']=[deepcopy(selected['markets'][venue])]
+            payload=dict(event=event);rows=[event]
+        elif field=='events':
             relevant=[c for c in cases if (c['series']==params.get('series_ticker') if venue=='kalshi'
                 else LEAGUES[c['league']]==params.get('tagSlug'))]
             offset=int(params.get('cursor','next-0').removeprefix('next-')) if venue=='kalshi' else params.get('offset',0)

@@ -92,7 +92,9 @@ class Cycles(unittest.IsolatedAsyncioTestCase):
         with self.assertRaisesRegex(QuotaStop,'revoked'):await self.scheduler.step()
         self.assertEqual(len(self.calls),13)
     async def test_outside_window_depletion_and_preserved_account_history(self):
-        self.at=self.at.replace(hour=3);await self.scheduler.step();self.assertEqual(self.calls,[])
+        # Move forward into the next closed window; rollback is separately
+        # guarded and must not masquerade as an outside-hours scenario.
+        self.at=(self.at+timedelta(days=1)).replace(hour=3);await self.scheduler.step();self.assertEqual(self.calls,[])
         self.assertIn('09:00',self.service.states['novig']['reason'])
         self.at=self.at.replace(hour=14);await self.scheduler.step()
         old=deepcopy(self.q._read());self.q.transition_account(dict(account_id='next-account',monthly_credits=100000))

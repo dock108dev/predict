@@ -1,0 +1,3018 @@
+{
+  "epoch": "e2911cbb-110d-429d-9de4-8492fc83ec3c",
+  "revision": "e714b559ce182362d80da6fd5bc708f8ee062d01e516a758cb07ebb5c0d979fe",
+  "source_status": {
+    "kalshi": {
+      "next_due_at": null,
+      "reason": "Native book images received.",
+      "reason_code": "native_image",
+      "received_at": "2026-10-29T01:11:09.276111+00:00",
+      "source_at": "2026-10-29T01:11:09.251000+00:00",
+      "state": "available"
+    },
+    "novig": {
+      "next_due_at": "2026-10-29T01:15:00+00:00",
+      "reason": "Selected scope: NFL, NCAAF, NBA, NCAAB, MLB, NHL. NFL: Shared aggregate batch received; source age and freshness eligibility remain separate.; NCAAF: Shared aggregate batch received; source age and freshness eligibility remain separate.; NBA: Shared aggregate batch received; source age and freshness eligibility remain separate.; NCAAB: Shared aggregate batch received; source age and freshness eligibility remain separate.; MLB: Shared aggregate batch received; source age and freshness eligibility remain separate.; NHL: Shared aggregate batch received; source age and freshness eligibility remain separate.",
+      "reason_code": "aggregate_scope_observed",
+      "received_at": "2026-10-29T01:00:49.807549+00:00",
+      "state": "budget_delayed"
+    },
+    "polymarket_us": {
+      "next_due_at": null,
+      "reason": "Native book images received.",
+      "reason_code": "native_image",
+      "received_at": "2026-10-29T01:11:11.393422+00:00",
+      "source_at": "2026-10-29T01:11:11.342723+00:00",
+      "state": "available"
+    },
+    "prophetx": {
+      "next_due_at": "2026-10-29T01:15:00+00:00",
+      "reason": "Selected scope: NFL, NCAAF, NBA, NCAAB, MLB, NHL. NFL: Shared aggregate batch received; source age and freshness eligibility remain separate.; NCAAF: Shared aggregate batch received; source age and freshness eligibility remain separate.; NBA: Shared aggregate batch received; source age and freshness eligibility remain separate.; NCAAB: Shared aggregate batch received; source age and freshness eligibility remain separate.; MLB: Shared aggregate batch received; source age and freshness eligibility remain separate.; NHL: Shared aggregate batch received; source age and freshness eligibility remain separate.",
+      "reason_code": "aggregate_scope_observed",
+      "received_at": "2026-10-29T01:00:49.807549+00:00",
+      "state": "budget_delayed"
+    }
+  },
+  "records": [
+    {
+      "anchor_participant": "NCAAF:NCAA196",
+      "comparison_scope": {
+        "overtime": "included"
+      },
+      "comparison_source_metadata": {
+        "combined_native_binding": {
+          "actual_fills": null,
+          "completion": "native original terms retained; no common completion condition asserted",
+          "original_quantity_units": "contracts",
+          "original_roles": {
+            "away": "NCAAF:NCAA690",
+            "home": "NCAAF:NCAA196"
+          },
+          "original_terms": {
+            "rules_primary": "If East Carolina wins by more than 6.5 points in the Temple vs East Carolina college football game originally scheduled for Oct 31, 2026, then the market resolves to Yes.",
+            "rules_secondary": "If the game is postponed but begins within 48 hours of its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the NCAA. All trademarks, logos, and brand names are the property of their respective owners."
+          },
+          "phase_facts": [
+            {
+              "away_team_id": "c9ff894b-8cb2-4d7e-8979-d7e8b996d5f6",
+              "home_team_id": "41b7f8fa-a692-46a3-b216-653e7800ca53",
+              "id": "cc359960-613e-56d1-ae56-6d283159b246",
+              "main_game_event_ticker": "KXNCAAFGAME-26OCT30TEMECU",
+              "season": {
+                "type": "REG",
+                "week": 9,
+                "year": 2026
+              },
+              "source_id": null,
+              "source_provider": null,
+              "start_date": "2026-10-31T19:00:00Z",
+              "status": "scheduled"
+            }
+          ],
+          "predicate_sha256": "f5d15d9bab1b7fe0e61b5b4836ef5178d6734f726caf23ef24453b51b5935052",
+          "unit_basis": "existing admitted purchase_book USD per $1 contract; original depth contracts",
+          "version": "predict-combined-native-1"
+        },
+        "material_sha256": "e65aeb1d3ad1662cce9390420ddce64b0403adf5ed5145451eae3289f2586b43",
+        "native_key": [
+          "kalshi",
+          "KXNCAAFSPREAD-26OCT31TEMECU",
+          "KXNCAAFSPREAD-26OCT31TEMECU-ECU7",
+          "no",
+          "no"
+        ],
+        "native_market_type": null,
+        "native_scope_binding": {
+          "award_variant": null,
+          "category": null,
+          "conference_id": null,
+          "contract_terms_url": "https://assets.kalshi.com/contract_terms/FOOTBALLSPREAD.pdf",
+          "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/FOOTBALLSPREAD.pdf",
+          "family": "spread",
+          "last_updated_ts": "2026-09-09T17:30:49.938187Z",
+          "milestone_type": "football_game",
+          "period": "full_game",
+          "scope_basis": "Retained native series catalog classification; exact contract predicates, field, season, completion and applicability remain separate",
+          "series_ticker": "KXNCAAFSPREAD",
+          "settlement_sources": [
+            {
+              "name": "ESPN",
+              "url": "https://www.espn.com"
+            },
+            {
+              "name": "Kalshi using information originating from the NCAA",
+              "url": "https://www.ncaa.com/sports/football/fbs"
+            }
+          ],
+          "source_catalog_sha256": "c2329100ac3afac56ab7415b5a79c009716409dc9cf99176cf5f78e3f2323f82",
+          "source_path": "evidence/phase-0/kalshi-series.json",
+          "source_record_sha256": "0705c0d5759122ed97dbed970ce011d590ce2a315170ab20b132350f4986c1fd",
+          "sport": "NCAAF",
+          "tags": [
+            "Football"
+          ],
+          "title": "College Football Spread"
+        },
+        "native_terms": {
+          "rules_primary": "If East Carolina wins by more than 6.5 points in the Temple vs East Carolina college football game originally scheduled for Oct 31, 2026, then the market resolves to Yes.",
+          "rules_secondary": "If the game is postponed but begins within 48 hours of its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the NCAA. All trademarks, logos, and brand names are the property of their respective owners."
+        },
+        "observed_at": "2026-10-29T01:08:32.720407+00:00",
+        "original_wording": {
+          "no_sub_title": "East Carolina wins by over 6.5 points",
+          "rules_primary": "If East Carolina wins by more than 6.5 points in the Temple vs East Carolina college football game originally scheduled for Oct 31, 2026, then the market resolves to Yes.",
+          "rules_secondary": "If the game is postponed but begins within 48 hours of its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the NCAA. All trademarks, logos, and brand names are the property of their respective owners.",
+          "title": "East Carolina wins by over 6.5 points",
+          "yes_sub_title": "East Carolina wins by over 6.5 points"
+        },
+        "overtime": "included",
+        "phase": "pregame",
+        "rules_primary": "If East Carolina wins by more than 6.5 points in the Temple vs East Carolina college football game originally scheduled for Oct 31, 2026, then the market resolves to Yes.",
+        "rules_secondary": "If the game is postponed but begins within 48 hours of its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the NCAA. All trademarks, logos, and brand names are the property of their respective owners.",
+        "same_outcome": {
+          "equality": {
+            "payout": null,
+            "refund_fees": "not_applicable",
+            "treatment": "predicate",
+            "unknown_reason": null
+          },
+          "normal_payout": {
+            "payout": "1",
+            "payout_units": "USD",
+            "quantity_units": "contracts"
+          },
+          "predicate": {
+            "domain": "home_margin",
+            "operator": "le",
+            "subject_id": null,
+            "threshold": "13/2"
+          },
+          "reason": null,
+          "scoring": {
+            "extra_innings": "not_applicable",
+            "overtime": "included",
+            "score_domain": "integer",
+            "shootout": "not_applicable"
+          },
+          "version": "predict-same-outcome-1"
+        },
+        "schedule_binding": {
+          "core": "e0de52ce4294e92c5ed8d874b111d5a2d2dc19cfcd0ad9a4709b8878091c792b",
+          "metadata": {
+            "authority": [
+              "kalshi",
+              "milestone",
+              "cc359960-613e-56d1-ae56-6d283159b246"
+            ],
+            "native_event_id": "KXNCAAFSPREAD-26OCT31TEMECU",
+            "proofs": [
+              {
+                "body_sha256": "4b2556f6bf33bfd3b6f53f2e4a24668942fe031a5a9900a125d9ae10b064a1cd",
+                "inventory_row": 42,
+                "params": {
+                  "limit": 50,
+                  "series_ticker": "KXNCAAFSPREAD",
+                  "status": "open",
+                  "with_milestones": "true",
+                  "with_nested_markets": "true"
+                },
+                "path": "/trade-api/v2/events",
+                "received_at": "2026-10-29T01:05:29.357935+00:00"
+              }
+            ],
+            "received_at": "2026-10-29T01:05:29.357935+00:00",
+            "revision": "674c623ae6979eb6453d79584311565f39910b7a61d81d532215fa1d431424bc",
+            "start": "2026-10-31T19:00:00+00:00",
+            "version": "predict-schedule-metadata-1"
+          },
+          "native_event_id": "KXNCAAFSPREAD-26OCT31TEMECU",
+          "original_start": "2026-10-31T19:00:00+00:00",
+          "version": "predict-schedule-metadata-1"
+        },
+        "scoring_scope": {
+          "conflicts": [],
+          "evidence": [
+            {
+              "basis": "source_type_rule",
+              "overtime": "included",
+              "rule_id": "KXNCAAFSPREAD",
+              "rule_sha256": "415da19835c7c76b721b3a25041bca1bf67f5033b42f363f7346fb930270e0c1"
+            }
+          ],
+          "missing_fields": [],
+          "observed_overtime": "unknown",
+          "overtime": "included",
+          "reason": "selected_scoring_scope_supported",
+          "rule_id": "KXNCAAFSPREAD",
+          "scoring": {
+            "extra_innings": "not_applicable",
+            "overtime": "included",
+            "score_domain": "integer",
+            "shootout": "not_applicable"
+          },
+          "status": "supported",
+          "version": "predict-native-scoring-scope-3"
+        },
+        "selected_market_observation": {
+          "material_sha256": "e65aeb1d3ad1662cce9390420ddce64b0403adf5ed5145451eae3289f2586b43",
+          "native_event_id": "KXNCAAFSPREAD-26OCT31TEMECU",
+          "native_market_id": "KXNCAAFSPREAD-26OCT31TEMECU-ECU7",
+          "present_fields": [
+            "price_ranges",
+            "price_level_structure",
+            "notional_value_dollars"
+          ],
+          "qualification": "unreviewed_source_metadata_only_no_execution_authority",
+          "source": {
+            "body_sha256": "4b2556f6bf33bfd3b6f53f2e4a24668942fe031a5a9900a125d9ae10b064a1cd",
+            "inventory_row": 2475,
+            "params": {
+              "limit": 50,
+              "series_ticker": "KXNCAAFSPREAD",
+              "status": "open",
+              "with_milestones": "true",
+              "with_nested_markets": "true"
+            },
+            "path": "/trade-api/v2/events",
+            "received_at": "2026-10-29T01:05:29.357935+00:00"
+          },
+          "status": "observed",
+          "values": {
+            "notional_value_dollars": "1.0000",
+            "price_level_structure": "linear_cent",
+            "price_ranges": [
+              {
+                "end": "1.0000",
+                "start": "0.0000",
+                "step": "0.0100"
+              }
+            ]
+          },
+          "version": "selected-market-observation-1"
+        },
+        "series_id": "KXNCAAFSPREAD",
+        "source_predicate": {
+          "competition": "NCAAF",
+          "equality_treatment": "predicate",
+          "family": "spread",
+          "line": "-6.5",
+          "missing": [
+            "Exact shared event/season/stage and home/away review",
+            "Effective completion, exceptional payout, amendments and correction terms",
+            "Applicable overtime or explicit completed first-half scope",
+            "Effective fees, rounding/units and mandatory charges"
+          ],
+          "native_metadata_sha256": "e65aeb1d3ad1662cce9390420ddce64b0403adf5ed5145451eae3289f2586b43",
+          "native_team_id": "41b7f8fa-a692-46a3-b216-653e7800ca53",
+          "outcomes": [
+            {
+              "equality": "predicate",
+              "native_id": "yes",
+              "operator": "gt"
+            },
+            {
+              "equality": "predicate",
+              "native_id": "no",
+              "operator": "le"
+            }
+          ],
+          "participant": "NCAAF:NCAA196",
+          "period": "full_game",
+          "policy": "native-score-predicate-1",
+          "qualification": "Predicate bound; source descriptor/settlement review remains incomplete",
+          "rules_primary": "If East Carolina wins by more than 6.5 points in the Temple vs East Carolina college football game originally scheduled for Oct 31, 2026, then the market resolves to Yes.",
+          "source_threshold": "6.5",
+          "status": "EXPLICIT_PREDICATE_ONLY",
+          "unit": "points"
+        }
+      },
+      "event": {
+        "away": "NCAAF:NCAA690",
+        "competition": "NCAAF",
+        "conflicting_duplicate": false,
+        "home": "NCAAF:NCAA196",
+        "id": "KXNCAAFSPREAD-26OCT31TEMECU",
+        "observed_identity_facts": [
+          {
+            "away_team_id": "c9ff894b-8cb2-4d7e-8979-d7e8b996d5f6",
+            "home_team_id": "41b7f8fa-a692-46a3-b216-653e7800ca53",
+            "id": "cc359960-613e-56d1-ae56-6d283159b246",
+            "main_game_event_ticker": "KXNCAAFGAME-26OCT30TEMECU",
+            "season": {
+              "type": "REG",
+              "week": 9,
+              "year": 2026
+            },
+            "source_id": null,
+            "source_provider": null,
+            "start_date": "2026-10-31T19:00:00Z",
+            "status": "scheduled"
+          }
+        ],
+        "participants": {
+          "East Carolina University": "NCAAF:NCAA196",
+          "Temple University": "NCAAF:NCAA690"
+        },
+        "schedule_metadata": {
+          "authority": [
+            "kalshi",
+            "milestone",
+            "cc359960-613e-56d1-ae56-6d283159b246"
+          ],
+          "native_event_id": "KXNCAAFSPREAD-26OCT31TEMECU",
+          "proofs": [
+            {
+              "body_sha256": "4b2556f6bf33bfd3b6f53f2e4a24668942fe031a5a9900a125d9ae10b064a1cd",
+              "inventory_row": 42,
+              "params": {
+                "limit": 50,
+                "series_ticker": "KXNCAAFSPREAD",
+                "status": "open",
+                "with_milestones": "true",
+                "with_nested_markets": "true"
+              },
+              "path": "/trade-api/v2/events",
+              "received_at": "2026-10-29T01:05:29.357935+00:00"
+            }
+          ],
+          "received_at": "2026-10-29T01:05:29.357935+00:00",
+          "revision": "674c623ae6979eb6453d79584311565f39910b7a61d81d532215fa1d431424bc",
+          "start": "2026-10-31T19:00:00+00:00",
+          "version": "predict-schedule-metadata-1"
+        },
+        "scheduled_start": "2026-10-31T19:00:00+00:00",
+        "season": "2026",
+        "source_participant_roles": {
+          "away": "NCAAF:NCAA690",
+          "home": "NCAAF:NCAA196"
+        },
+        "sport": "american_football",
+        "stage": "regular_season",
+        "status": {
+          "active": null,
+          "closed": null,
+          "ended": null,
+          "live": null,
+          "period": null,
+          "status": null
+        },
+        "title": "Temple vs East Carolina: Spread"
+      },
+      "event_scope": {
+        "native_event_id": "KXNCAAFSPREAD-26OCT31TEMECU",
+        "policy": "native-provider-event-1",
+        "source": "kalshi"
+      },
+      "market_identity": {
+        "competition": "NCAAF",
+        "event": [
+          "comparison-provider-occurrence-1",
+          "kalshi",
+          "NCAAF",
+          "KXNCAAFSPREAD-26OCT31TEMECU",
+          "NCAAF:NCAA196",
+          "NCAAF:NCAA690"
+        ],
+        "family": "spread",
+        "line": "-6.5",
+        "outcome_set": "7c54813597f10f54bf12c5723f52ef7ef7c7bb7ed677e98ecbd2f4165f20bcb5",
+        "period": "full_game",
+        "rules": "native-gross-predicate-1",
+        "scheduled_start": "2026-10-31T19:00:00+00:00",
+        "season": "2026",
+        "sport": "american_football",
+        "stage": "regular_season"
+      },
+      "orientation_evidence": [
+        "manual-comparison-2:f5d15d9bab1b7fe0e61b5b4836ef5178d6734f726caf23ef24453b51b5935052",
+        "predict-combined-native-1:1aa992e481fc2976b1b7f770e8aa7e1a1970d18b0493a69fb996f5a4e8ba190c"
+      ],
+      "outcome_cardinality": 2,
+      "outcome_selections": [
+        {
+          "label": "East Carolina University",
+          "participant": "NCAAF:NCAA196",
+          "predicate": "cover",
+          "signed_line": "-6.5"
+        },
+        {
+          "label": "Temple University",
+          "participant": "NCAAF:NCAA690",
+          "predicate": "cover",
+          "signed_line": "6.5"
+        }
+      ],
+      "period_boundary": "Original native period; scoring scope recorded separately",
+      "quote": {
+        "cost_note": "Current applicable costs unavailable",
+        "freshness_policy": {
+          "maximum_age_seconds": 30,
+          "version": "kalshi-book-age-engineering-1"
+        },
+        "id": "",
+        "original": {
+          "native_units": "usd_per_contract",
+          "native_value": "0.4600",
+          "payout": "1",
+          "payout_units": "USD",
+          "quantity_units": "contracts",
+          "role": "comparison",
+          "transformation": "one_minus_native_bid",
+          "units": "usd_per_contract",
+          "value": "0.5400"
+        },
+        "provenance": {
+          "mode": "current",
+          "real_source": true,
+          "sha256": "f5d15d9bab1b7fe0e61b5b4836ef5178d6734f726caf23ef24453b51b5935052"
+        },
+        "revision": 1,
+        "rule_note": "Native predicate reviewed; exceptional settlement and costs remain unqualified.",
+        "source": {
+          "binding_id": "18bf820875bbc3b2c8ea1a56c3667e9efe16e20c7e34294e4be5b3f08de53e66",
+          "binding_version": "manual-comparison-2",
+          "native_event_id": "KXNCAAFSPREAD-26OCT31TEMECU",
+          "native_line": null,
+          "native_market_id": "KXNCAAFSPREAD-26OCT31TEMECU-ECU7",
+          "native_outcome_id": "no",
+          "native_side": "no",
+          "provider": "kalshi",
+          "quote_side": "buy"
+        },
+        "state": "available",
+        "times": {
+          "projected_at": "2026-10-29T01:08:44.399640+00:00",
+          "received_at": "2026-10-29T01:08:32.720407+00:00",
+          "source_at": "2026-10-29T01:08:32.698000+00:00",
+          "source_time_kind": "provider_book"
+        },
+        "venue": "kalshi"
+      },
+      "result_policy": "native-spread-normal-predicate-1:7c54813597f10f54bf12c5723f52ef7ef7c7bb7ed677e98ecbd2f4165f20bcb5",
+      "selection": {
+        "label": "Temple University",
+        "participant": "NCAAF:NCAA690",
+        "predicate": "cover",
+        "signed_line": "6.5"
+      },
+      "verified": true
+    },
+    {
+      "anchor_participant": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:home_team",
+      "comparison_source_metadata": {
+        "schedule_binding": {
+          "core": "34e66bf65bdfdf16011dd316d481b586c00b6efb2b49a0cfe816199dd709467a",
+          "metadata": {
+            "authority": [
+              "the_odds_api",
+              "event",
+              "fa9022be308ebe9ca39ecda8ea15bda4"
+            ],
+            "native_event_id": "fa9022be308ebe9ca39ecda8ea15bda4",
+            "proofs": [
+              {
+                "body_sha256": "8992b901cf9d5fade86913084d23af9efb36f6cf249d3ea342fd8c35e6281eaa",
+                "path": "the_odds_api/receipt/8992b901cf9d5fade86913084d23af9efb36f6cf249d3ea342fd8c35e6281eaa",
+                "received_at": "2026-10-29T00:59:45.345537+00:00"
+              }
+            ],
+            "received_at": "2026-10-29T00:59:45.345537+00:00",
+            "revision": "e15f359c98736a6510f82d1f1848b556c6d7d6fc1d1b7e7652597d8b76da7abb",
+            "start": "2026-10-31T19:00:00Z",
+            "version": "predict-schedule-metadata-1"
+          },
+          "native_event_id": "fa9022be308ebe9ca39ecda8ea15bda4",
+          "original_start": "2026-10-31T19:00:00Z",
+          "version": "predict-schedule-metadata-1"
+        }
+      },
+      "event": {
+        "away": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:away_team",
+        "competition": "NCAAF",
+        "home": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:home_team",
+        "id": "fa9022be308ebe9ca39ecda8ea15bda4",
+        "participants": {
+          "East Carolina Pirates": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:home_team",
+          "Temple Owls": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:away_team"
+        },
+        "schedule_metadata": {
+          "authority": [
+            "the_odds_api",
+            "event",
+            "fa9022be308ebe9ca39ecda8ea15bda4"
+          ],
+          "native_event_id": "fa9022be308ebe9ca39ecda8ea15bda4",
+          "proofs": [
+            {
+              "body_sha256": "5acd753658bbbf675e2c5561b9df466d29eef49556b2ef336714daf86b5e56f5",
+              "path": "the_odds_api/receipt/5acd753658bbbf675e2c5561b9df466d29eef49556b2ef336714daf86b5e56f5",
+              "received_at": "2026-10-29T01:00:16.027000+00:00"
+            }
+          ],
+          "received_at": "2026-10-29T01:00:16.027000+00:00",
+          "revision": "95022cdc31c3d586837b6fbff906ec0e083724fc667e528edf4ecd2b6860aaa7",
+          "start": "2026-10-31T19:00:00Z",
+          "version": "predict-schedule-metadata-1"
+        },
+        "scheduled_start": "2026-10-31T19:00:00Z",
+        "season": "unverified",
+        "sport": "american_football",
+        "stage": "unverified",
+        "title": "Temple Owls at East Carolina Pirates"
+      },
+      "event_scope": {
+        "native_event_id": "fa9022be308ebe9ca39ecda8ea15bda4",
+        "policy": "aggregate-provider-event-2",
+        "source": "the_odds_api"
+      },
+      "market_identity": {
+        "competition": "NCAAF",
+        "event": [
+          "comparison-provider-occurrence-1",
+          "the_odds_api",
+          "NCAAF",
+          "fa9022be308ebe9ca39ecda8ea15bda4",
+          "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:home_team",
+          "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:away_team"
+        ],
+        "family": "spread",
+        "line": "-5.5",
+        "outcome_set": "f225074f22f440d9e3fab531c11d8e82d4ed207b9ce480f93a94979cc4384a7a",
+        "period": "full_game",
+        "rules": "aggregate-common-1",
+        "scheduled_start": "2026-10-31T19:00:00Z",
+        "season": "unverified",
+        "sport": "american_football",
+        "stage": "unverified"
+      },
+      "orientation_evidence": [
+        "odds-aggregate-1:0ef9a594933c338b6da70bf01cc97e7021c9e054daa82ecb49d941b9bcd9c27f",
+        "8992b901cf9d5fade86913084d23af9efb36f6cf249d3ea342fd8c35e6281eaa"
+      ],
+      "outcome_cardinality": 2,
+      "outcome_selections": [
+        {
+          "label": "East Carolina Pirates",
+          "participant": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:home_team",
+          "predicate": "cover",
+          "signed_line": "-5.5"
+        },
+        {
+          "label": "Temple Owls",
+          "participant": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:away_team",
+          "predicate": "cover",
+          "signed_line": "5.5"
+        }
+      ],
+      "period_boundary": "Provider full-game market; exceptional settlement unverified",
+      "quote": {
+        "cost_note": "Cents are 1 / decimal odds per mathematical unit payout. Actual fees, execution, depth and probability unknown.",
+        "id": "",
+        "observation_time_evidence": "The Odds API original update clocks: {\"book\": null, \"market\": \"2026-10-29T00:59:37Z\"}; selected basis: market; upstream delay unknown.",
+        "original": {
+          "payout": "1",
+          "payout_units": "USD",
+          "quantity_units": "unknown",
+          "role": "comparison",
+          "units": "decimal_odds",
+          "value": "1.98"
+        },
+        "provenance": {
+          "mode": "current",
+          "real_source": true,
+          "sha256": "8992b901cf9d5fade86913084d23af9efb36f6cf249d3ea342fd8c35e6281eaa"
+        },
+        "provider_clocks": {
+          "book": null,
+          "market": "2026-10-29T00:59:37Z",
+          "selected_basis": "market"
+        },
+        "revision": 1,
+        "rule_note": "Aggregate alternate_spreads exact full-game line; settlement and native occurrence association unverified.",
+        "source": {
+          "binding_id": "alternate:6264bf36806982a43fa7d1d984546abeca0d5dc9664310834e5a6d8206c6e9ae",
+          "binding_version": "odds-aggregate-1",
+          "native_event_id": "fa9022be308ebe9ca39ecda8ea15bda4",
+          "native_line": "5.5",
+          "native_market_id": "alternate:83910e076fd58b9b9d2be3eb3ab31948173154a56c15cceeb888ba961d113286",
+          "native_outcome_id": "Temple Owls",
+          "native_side": "bookmaker_outcome",
+          "provider": "the_odds_api",
+          "quote_side": "buy"
+        },
+        "state": "budget_delayed",
+        "times": {
+          "projected_at": "2026-10-29T00:59:45.345537+00:00",
+          "received_at": "2026-10-29T00:59:45.345537+00:00",
+          "source_at": "2026-10-29T00:59:37Z",
+          "source_time_kind": "provider_book"
+        },
+        "venue": "pinnacle"
+      },
+      "result_policy": "aggregate-common-1:spreads",
+      "selection": {
+        "label": "Temple Owls",
+        "participant": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:away_team",
+        "predicate": "cover",
+        "signed_line": "5.5"
+      },
+      "verified": true
+    },
+    {
+      "anchor_participant": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:home_team",
+      "comparison_source_metadata": {
+        "schedule_binding": {
+          "core": "34e66bf65bdfdf16011dd316d481b586c00b6efb2b49a0cfe816199dd709467a",
+          "metadata": {
+            "authority": [
+              "the_odds_api",
+              "event",
+              "fa9022be308ebe9ca39ecda8ea15bda4"
+            ],
+            "native_event_id": "fa9022be308ebe9ca39ecda8ea15bda4",
+            "proofs": [
+              {
+                "body_sha256": "5acd753658bbbf675e2c5561b9df466d29eef49556b2ef336714daf86b5e56f5",
+                "path": "the_odds_api/receipt/5acd753658bbbf675e2c5561b9df466d29eef49556b2ef336714daf86b5e56f5",
+                "received_at": "2026-10-29T01:00:16.027000+00:00"
+              }
+            ],
+            "received_at": "2026-10-29T01:00:16.027000+00:00",
+            "revision": "95022cdc31c3d586837b6fbff906ec0e083724fc667e528edf4ecd2b6860aaa7",
+            "start": "2026-10-31T19:00:00Z",
+            "version": "predict-schedule-metadata-1"
+          },
+          "native_event_id": "fa9022be308ebe9ca39ecda8ea15bda4",
+          "original_start": "2026-10-31T19:00:00Z",
+          "version": "predict-schedule-metadata-1"
+        }
+      },
+      "event": {
+        "away": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:away_team",
+        "competition": "NCAAF",
+        "home": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:home_team",
+        "id": "fa9022be308ebe9ca39ecda8ea15bda4",
+        "participants": {
+          "East Carolina Pirates": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:home_team",
+          "Temple Owls": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:away_team"
+        },
+        "schedule_metadata": {
+          "authority": [
+            "the_odds_api",
+            "event",
+            "fa9022be308ebe9ca39ecda8ea15bda4"
+          ],
+          "native_event_id": "fa9022be308ebe9ca39ecda8ea15bda4",
+          "proofs": [
+            {
+              "body_sha256": "5acd753658bbbf675e2c5561b9df466d29eef49556b2ef336714daf86b5e56f5",
+              "path": "the_odds_api/receipt/5acd753658bbbf675e2c5561b9df466d29eef49556b2ef336714daf86b5e56f5",
+              "received_at": "2026-10-29T01:00:16.027000+00:00"
+            }
+          ],
+          "received_at": "2026-10-29T01:00:16.027000+00:00",
+          "revision": "95022cdc31c3d586837b6fbff906ec0e083724fc667e528edf4ecd2b6860aaa7",
+          "start": "2026-10-31T19:00:00Z",
+          "version": "predict-schedule-metadata-1"
+        },
+        "scheduled_start": "2026-10-31T19:00:00Z",
+        "season": "unverified",
+        "sport": "american_football",
+        "stage": "unverified",
+        "title": "Temple Owls at East Carolina Pirates"
+      },
+      "event_scope": {
+        "native_event_id": "fa9022be308ebe9ca39ecda8ea15bda4",
+        "policy": "aggregate-provider-event-2",
+        "source": "the_odds_api"
+      },
+      "market_identity": {
+        "competition": "NCAAF",
+        "event": [
+          "comparison-provider-occurrence-1",
+          "the_odds_api",
+          "NCAAF",
+          "fa9022be308ebe9ca39ecda8ea15bda4",
+          "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:home_team",
+          "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:away_team"
+        ],
+        "family": "spread",
+        "line": "-5.5",
+        "outcome_set": "f225074f22f440d9e3fab531c11d8e82d4ed207b9ce480f93a94979cc4384a7a",
+        "period": "full_game",
+        "rules": "aggregate-common-1",
+        "scheduled_start": "2026-10-31T19:00:00Z",
+        "season": "unverified",
+        "sport": "american_football",
+        "stage": "unverified"
+      },
+      "orientation_evidence": [
+        "odds-aggregate-1:0ef9a594933c338b6da70bf01cc97e7021c9e054daa82ecb49d941b9bcd9c27f",
+        "5acd753658bbbf675e2c5561b9df466d29eef49556b2ef336714daf86b5e56f5"
+      ],
+      "outcome_cardinality": 2,
+      "outcome_selections": [
+        {
+          "label": "East Carolina Pirates",
+          "participant": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:home_team",
+          "predicate": "cover",
+          "signed_line": "-5.5"
+        },
+        {
+          "label": "Temple Owls",
+          "participant": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:away_team",
+          "predicate": "cover",
+          "signed_line": "5.5"
+        }
+      ],
+      "period_boundary": "Provider full-game market; exceptional settlement unverified",
+      "quote": {
+        "cost_note": "Cents are 1 / decimal odds per mathematical unit payout. Actual fees, execution, depth and probability unknown.",
+        "id": "",
+        "observation_time_evidence": "The Odds API original update clocks: {\"book\": \"2026-10-29T01:00:10Z\", \"market\": \"2026-10-29T01:00:10Z\"}; selected basis: market; upstream delay unknown.",
+        "original": {
+          "payout": "1",
+          "payout_units": "USD",
+          "quantity_units": "unknown",
+          "role": "comparison",
+          "units": "decimal_odds",
+          "value": "2.0"
+        },
+        "provenance": {
+          "mode": "current",
+          "real_source": true,
+          "sha256": "5acd753658bbbf675e2c5561b9df466d29eef49556b2ef336714daf86b5e56f5"
+        },
+        "provider_clocks": {
+          "book": "2026-10-29T01:00:10Z",
+          "market": "2026-10-29T01:00:10Z",
+          "selected_basis": "market"
+        },
+        "revision": 1,
+        "rule_note": "Aggregate full-game outcome; settlement and native occurrence association unverified.",
+        "source": {
+          "binding_id": "27559b0f563e4e73fd00258372bceaa71398e256a24eb59683f333ceed151ef4",
+          "binding_version": "odds-aggregate-1",
+          "native_event_id": "fa9022be308ebe9ca39ecda8ea15bda4",
+          "native_line": "5.5",
+          "native_market_id": "83910e076fd58b9b9d2be3eb3ab31948173154a56c15cceeb888ba961d113286",
+          "native_outcome_id": "Temple Owls",
+          "native_side": "bookmaker_outcome",
+          "provider": "the_odds_api",
+          "quote_side": "buy"
+        },
+        "state": "budget_delayed",
+        "times": {
+          "projected_at": "2026-10-29T01:00:16.027000+00:00",
+          "received_at": "2026-10-29T01:00:16.027000+00:00",
+          "source_at": "2026-10-29T01:00:10Z",
+          "source_time_kind": "provider_book"
+        },
+        "venue": "prophetx"
+      },
+      "result_policy": "aggregate-common-1:spreads",
+      "selection": {
+        "label": "Temple Owls",
+        "participant": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:away_team",
+        "predicate": "cover",
+        "signed_line": "5.5"
+      },
+      "verified": true
+    },
+    {
+      "anchor_participant": "NCAAF:NCAA196",
+      "comparison_scope": {
+        "overtime": "included"
+      },
+      "comparison_source_metadata": {
+        "combined_native_binding": {
+          "actual_fills": null,
+          "completion": "native original terms retained; no common completion condition asserted",
+          "original_quantity_units": "contracts",
+          "original_roles": {
+            "away": "NCAAF:NCAA690",
+            "home": "NCAAF:NCAA196"
+          },
+          "original_terms": {
+            "rules_primary": "If East Carolina wins by more than 5.5 points in the Temple vs East Carolina college football game originally scheduled for Oct 31, 2026, then the market resolves to Yes.",
+            "rules_secondary": "If the game is postponed but begins within 48 hours of its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the NCAA. All trademarks, logos, and brand names are the property of their respective owners."
+          },
+          "phase_facts": [
+            {
+              "away_team_id": "c9ff894b-8cb2-4d7e-8979-d7e8b996d5f6",
+              "home_team_id": "41b7f8fa-a692-46a3-b216-653e7800ca53",
+              "id": "cc359960-613e-56d1-ae56-6d283159b246",
+              "main_game_event_ticker": "KXNCAAFGAME-26OCT30TEMECU",
+              "season": {
+                "type": "REG",
+                "week": 9,
+                "year": 2026
+              },
+              "source_id": null,
+              "source_provider": null,
+              "start_date": "2026-10-31T19:00:00Z",
+              "status": "scheduled"
+            }
+          ],
+          "predicate_sha256": "aca557ad7684f71124e625b5d6fe62232f7a37be4d978163c8dd89e7d30915a7",
+          "unit_basis": "existing admitted purchase_book USD per $1 contract; original depth contracts",
+          "version": "predict-combined-native-1"
+        },
+        "material_sha256": "411132318e66889094a094baaaa2b5ebcb36e0050fe291044bbb97453d914718",
+        "native_key": [
+          "kalshi",
+          "KXNCAAFSPREAD-26OCT31TEMECU",
+          "KXNCAAFSPREAD-26OCT31TEMECU-ECU6",
+          "yes",
+          "yes"
+        ],
+        "native_market_type": null,
+        "native_scope_binding": {
+          "award_variant": null,
+          "category": null,
+          "conference_id": null,
+          "contract_terms_url": "https://assets.kalshi.com/contract_terms/FOOTBALLSPREAD.pdf",
+          "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/FOOTBALLSPREAD.pdf",
+          "family": "spread",
+          "last_updated_ts": "2026-09-09T17:30:49.938187Z",
+          "milestone_type": "football_game",
+          "period": "full_game",
+          "scope_basis": "Retained native series catalog classification; exact contract predicates, field, season, completion and applicability remain separate",
+          "series_ticker": "KXNCAAFSPREAD",
+          "settlement_sources": [
+            {
+              "name": "ESPN",
+              "url": "https://www.espn.com"
+            },
+            {
+              "name": "Kalshi using information originating from the NCAA",
+              "url": "https://www.ncaa.com/sports/football/fbs"
+            }
+          ],
+          "source_catalog_sha256": "c2329100ac3afac56ab7415b5a79c009716409dc9cf99176cf5f78e3f2323f82",
+          "source_path": "evidence/phase-0/kalshi-series.json",
+          "source_record_sha256": "0705c0d5759122ed97dbed970ce011d590ce2a315170ab20b132350f4986c1fd",
+          "sport": "NCAAF",
+          "tags": [
+            "Football"
+          ],
+          "title": "College Football Spread"
+        },
+        "native_terms": {
+          "rules_primary": "If East Carolina wins by more than 5.5 points in the Temple vs East Carolina college football game originally scheduled for Oct 31, 2026, then the market resolves to Yes.",
+          "rules_secondary": "If the game is postponed but begins within 48 hours of its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the NCAA. All trademarks, logos, and brand names are the property of their respective owners."
+        },
+        "observed_at": "2026-10-29T01:09:06.123960+00:00",
+        "original_wording": {
+          "no_sub_title": "East Carolina wins by over 5.5 points",
+          "rules_primary": "If East Carolina wins by more than 5.5 points in the Temple vs East Carolina college football game originally scheduled for Oct 31, 2026, then the market resolves to Yes.",
+          "rules_secondary": "If the game is postponed but begins within 48 hours of its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the NCAA. All trademarks, logos, and brand names are the property of their respective owners.",
+          "title": "East Carolina wins by over 5.5 points",
+          "yes_sub_title": "East Carolina wins by over 5.5 points"
+        },
+        "overtime": "included",
+        "phase": "pregame",
+        "rules_primary": "If East Carolina wins by more than 5.5 points in the Temple vs East Carolina college football game originally scheduled for Oct 31, 2026, then the market resolves to Yes.",
+        "rules_secondary": "If the game is postponed but begins within 48 hours of its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the NCAA. All trademarks, logos, and brand names are the property of their respective owners.",
+        "same_outcome": {
+          "equality": {
+            "payout": null,
+            "refund_fees": "not_applicable",
+            "treatment": "predicate",
+            "unknown_reason": null
+          },
+          "normal_payout": {
+            "payout": "1",
+            "payout_units": "USD",
+            "quantity_units": "contracts"
+          },
+          "predicate": {
+            "domain": "home_margin",
+            "operator": "gt",
+            "subject_id": null,
+            "threshold": "11/2"
+          },
+          "reason": null,
+          "scoring": {
+            "extra_innings": "not_applicable",
+            "overtime": "included",
+            "score_domain": "integer",
+            "shootout": "not_applicable"
+          },
+          "version": "predict-same-outcome-1"
+        },
+        "schedule_binding": {
+          "core": "e0de52ce4294e92c5ed8d874b111d5a2d2dc19cfcd0ad9a4709b8878091c792b",
+          "metadata": {
+            "authority": [
+              "kalshi",
+              "milestone",
+              "cc359960-613e-56d1-ae56-6d283159b246"
+            ],
+            "native_event_id": "KXNCAAFSPREAD-26OCT31TEMECU",
+            "proofs": [
+              {
+                "body_sha256": "4b2556f6bf33bfd3b6f53f2e4a24668942fe031a5a9900a125d9ae10b064a1cd",
+                "inventory_row": 42,
+                "params": {
+                  "limit": 50,
+                  "series_ticker": "KXNCAAFSPREAD",
+                  "status": "open",
+                  "with_milestones": "true",
+                  "with_nested_markets": "true"
+                },
+                "path": "/trade-api/v2/events",
+                "received_at": "2026-10-29T01:05:29.357935+00:00"
+              }
+            ],
+            "received_at": "2026-10-29T01:05:29.357935+00:00",
+            "revision": "674c623ae6979eb6453d79584311565f39910b7a61d81d532215fa1d431424bc",
+            "start": "2026-10-31T19:00:00+00:00",
+            "version": "predict-schedule-metadata-1"
+          },
+          "native_event_id": "KXNCAAFSPREAD-26OCT31TEMECU",
+          "original_start": "2026-10-31T19:00:00+00:00",
+          "version": "predict-schedule-metadata-1"
+        },
+        "scoring_scope": {
+          "conflicts": [],
+          "evidence": [
+            {
+              "basis": "source_type_rule",
+              "overtime": "included",
+              "rule_id": "KXNCAAFSPREAD",
+              "rule_sha256": "415da19835c7c76b721b3a25041bca1bf67f5033b42f363f7346fb930270e0c1"
+            }
+          ],
+          "missing_fields": [],
+          "observed_overtime": "unknown",
+          "overtime": "included",
+          "reason": "selected_scoring_scope_supported",
+          "rule_id": "KXNCAAFSPREAD",
+          "scoring": {
+            "extra_innings": "not_applicable",
+            "overtime": "included",
+            "score_domain": "integer",
+            "shootout": "not_applicable"
+          },
+          "status": "supported",
+          "version": "predict-native-scoring-scope-3"
+        },
+        "selected_market_observation": {
+          "material_sha256": "411132318e66889094a094baaaa2b5ebcb36e0050fe291044bbb97453d914718",
+          "native_event_id": "KXNCAAFSPREAD-26OCT31TEMECU",
+          "native_market_id": "KXNCAAFSPREAD-26OCT31TEMECU-ECU6",
+          "present_fields": [
+            "price_ranges",
+            "price_level_structure",
+            "notional_value_dollars"
+          ],
+          "qualification": "unreviewed_source_metadata_only_no_execution_authority",
+          "source": {
+            "body_sha256": "4b2556f6bf33bfd3b6f53f2e4a24668942fe031a5a9900a125d9ae10b064a1cd",
+            "inventory_row": 2476,
+            "params": {
+              "limit": 50,
+              "series_ticker": "KXNCAAFSPREAD",
+              "status": "open",
+              "with_milestones": "true",
+              "with_nested_markets": "true"
+            },
+            "path": "/trade-api/v2/events",
+            "received_at": "2026-10-29T01:05:29.357935+00:00"
+          },
+          "status": "observed",
+          "values": {
+            "notional_value_dollars": "1.0000",
+            "price_level_structure": "linear_cent",
+            "price_ranges": [
+              {
+                "end": "1.0000",
+                "start": "0.0000",
+                "step": "0.0100"
+              }
+            ]
+          },
+          "version": "selected-market-observation-1"
+        },
+        "series_id": "KXNCAAFSPREAD",
+        "source_predicate": {
+          "competition": "NCAAF",
+          "equality_treatment": "predicate",
+          "family": "spread",
+          "line": "-5.5",
+          "missing": [
+            "Exact shared event/season/stage and home/away review",
+            "Effective completion, exceptional payout, amendments and correction terms",
+            "Applicable overtime or explicit completed first-half scope",
+            "Effective fees, rounding/units and mandatory charges"
+          ],
+          "native_metadata_sha256": "411132318e66889094a094baaaa2b5ebcb36e0050fe291044bbb97453d914718",
+          "native_team_id": "41b7f8fa-a692-46a3-b216-653e7800ca53",
+          "outcomes": [
+            {
+              "equality": "predicate",
+              "native_id": "yes",
+              "operator": "gt"
+            },
+            {
+              "equality": "predicate",
+              "native_id": "no",
+              "operator": "le"
+            }
+          ],
+          "participant": "NCAAF:NCAA196",
+          "period": "full_game",
+          "policy": "native-score-predicate-1",
+          "qualification": "Predicate bound; source descriptor/settlement review remains incomplete",
+          "rules_primary": "If East Carolina wins by more than 5.5 points in the Temple vs East Carolina college football game originally scheduled for Oct 31, 2026, then the market resolves to Yes.",
+          "source_threshold": "5.5",
+          "status": "EXPLICIT_PREDICATE_ONLY",
+          "unit": "points"
+        }
+      },
+      "event": {
+        "away": "NCAAF:NCAA690",
+        "competition": "NCAAF",
+        "conflicting_duplicate": false,
+        "home": "NCAAF:NCAA196",
+        "id": "KXNCAAFSPREAD-26OCT31TEMECU",
+        "observed_identity_facts": [
+          {
+            "away_team_id": "c9ff894b-8cb2-4d7e-8979-d7e8b996d5f6",
+            "home_team_id": "41b7f8fa-a692-46a3-b216-653e7800ca53",
+            "id": "cc359960-613e-56d1-ae56-6d283159b246",
+            "main_game_event_ticker": "KXNCAAFGAME-26OCT30TEMECU",
+            "season": {
+              "type": "REG",
+              "week": 9,
+              "year": 2026
+            },
+            "source_id": null,
+            "source_provider": null,
+            "start_date": "2026-10-31T19:00:00Z",
+            "status": "scheduled"
+          }
+        ],
+        "participants": {
+          "East Carolina University": "NCAAF:NCAA196",
+          "Temple University": "NCAAF:NCAA690"
+        },
+        "schedule_metadata": {
+          "authority": [
+            "kalshi",
+            "milestone",
+            "cc359960-613e-56d1-ae56-6d283159b246"
+          ],
+          "native_event_id": "KXNCAAFSPREAD-26OCT31TEMECU",
+          "proofs": [
+            {
+              "body_sha256": "4b2556f6bf33bfd3b6f53f2e4a24668942fe031a5a9900a125d9ae10b064a1cd",
+              "inventory_row": 42,
+              "params": {
+                "limit": 50,
+                "series_ticker": "KXNCAAFSPREAD",
+                "status": "open",
+                "with_milestones": "true",
+                "with_nested_markets": "true"
+              },
+              "path": "/trade-api/v2/events",
+              "received_at": "2026-10-29T01:05:29.357935+00:00"
+            }
+          ],
+          "received_at": "2026-10-29T01:05:29.357935+00:00",
+          "revision": "674c623ae6979eb6453d79584311565f39910b7a61d81d532215fa1d431424bc",
+          "start": "2026-10-31T19:00:00+00:00",
+          "version": "predict-schedule-metadata-1"
+        },
+        "scheduled_start": "2026-10-31T19:00:00+00:00",
+        "season": "2026",
+        "source_participant_roles": {
+          "away": "NCAAF:NCAA690",
+          "home": "NCAAF:NCAA196"
+        },
+        "sport": "american_football",
+        "stage": "regular_season",
+        "status": {
+          "active": null,
+          "closed": null,
+          "ended": null,
+          "live": null,
+          "period": null,
+          "status": null
+        },
+        "title": "Temple vs East Carolina: Spread"
+      },
+      "event_scope": {
+        "native_event_id": "KXNCAAFSPREAD-26OCT31TEMECU",
+        "policy": "native-provider-event-1",
+        "source": "kalshi"
+      },
+      "market_identity": {
+        "competition": "NCAAF",
+        "event": [
+          "comparison-provider-occurrence-1",
+          "kalshi",
+          "NCAAF",
+          "KXNCAAFSPREAD-26OCT31TEMECU",
+          "NCAAF:NCAA196",
+          "NCAAF:NCAA690"
+        ],
+        "family": "spread",
+        "line": "-5.5",
+        "outcome_set": "ae46d0fe91c21dc8a29461756cd5c7435b62a9182c44cb1bd8574f4bdffebe78",
+        "period": "full_game",
+        "rules": "native-gross-predicate-1",
+        "scheduled_start": "2026-10-31T19:00:00+00:00",
+        "season": "2026",
+        "sport": "american_football",
+        "stage": "regular_season"
+      },
+      "orientation_evidence": [
+        "manual-comparison-2:aca557ad7684f71124e625b5d6fe62232f7a37be4d978163c8dd89e7d30915a7",
+        "predict-combined-native-1:3735e25531878759dde1cd9cbcc4bfa67d455e6fc2796af4e425337a27fd1ed4"
+      ],
+      "outcome_cardinality": 2,
+      "outcome_selections": [
+        {
+          "label": "East Carolina University",
+          "participant": "NCAAF:NCAA196",
+          "predicate": "cover",
+          "signed_line": "-5.5"
+        },
+        {
+          "label": "Temple University",
+          "participant": "NCAAF:NCAA690",
+          "predicate": "cover",
+          "signed_line": "5.5"
+        }
+      ],
+      "period_boundary": "Original native period; scoring scope recorded separately",
+      "quote": {
+        "cost_note": "Current applicable costs unavailable",
+        "freshness_policy": {
+          "maximum_age_seconds": 30,
+          "version": "kalshi-book-age-engineering-1"
+        },
+        "id": "",
+        "original": {
+          "native_units": "usd_per_contract",
+          "native_value": "0.5000",
+          "payout": "1",
+          "payout_units": "USD",
+          "quantity_units": "contracts",
+          "role": "comparison",
+          "transformation": "one_minus_native_bid",
+          "units": "usd_per_contract",
+          "value": "0.5000"
+        },
+        "provenance": {
+          "mode": "current",
+          "real_source": true,
+          "sha256": "aca557ad7684f71124e625b5d6fe62232f7a37be4d978163c8dd89e7d30915a7"
+        },
+        "revision": 1,
+        "rule_note": "Native predicate reviewed; exceptional settlement and costs remain unqualified.",
+        "source": {
+          "binding_id": "ed6cd96ffa6be0c95f73f8f64034ede9355908156cdf3125f56e1bdee883b393",
+          "binding_version": "manual-comparison-2",
+          "native_event_id": "KXNCAAFSPREAD-26OCT31TEMECU",
+          "native_line": null,
+          "native_market_id": "KXNCAAFSPREAD-26OCT31TEMECU-ECU6",
+          "native_outcome_id": "yes",
+          "native_side": "yes",
+          "provider": "kalshi",
+          "quote_side": "buy"
+        },
+        "state": "available",
+        "times": {
+          "projected_at": "2026-10-29T01:09:10.396900+00:00",
+          "received_at": "2026-10-29T01:09:06.123960+00:00",
+          "source_at": "2026-10-29T01:09:06.085000+00:00",
+          "source_time_kind": "provider_book"
+        },
+        "venue": "kalshi"
+      },
+      "result_policy": "native-spread-normal-predicate-1:ae46d0fe91c21dc8a29461756cd5c7435b62a9182c44cb1bd8574f4bdffebe78",
+      "selection": {
+        "label": "East Carolina University",
+        "participant": "NCAAF:NCAA196",
+        "predicate": "cover",
+        "signed_line": "-5.5"
+      },
+      "verified": true
+    },
+    {
+      "anchor_participant": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:home_team",
+      "comparison_source_metadata": {
+        "schedule_binding": {
+          "core": "34e66bf65bdfdf16011dd316d481b586c00b6efb2b49a0cfe816199dd709467a",
+          "metadata": {
+            "authority": [
+              "the_odds_api",
+              "event",
+              "fa9022be308ebe9ca39ecda8ea15bda4"
+            ],
+            "native_event_id": "fa9022be308ebe9ca39ecda8ea15bda4",
+            "proofs": [
+              {
+                "body_sha256": "5acd753658bbbf675e2c5561b9df466d29eef49556b2ef336714daf86b5e56f5",
+                "path": "the_odds_api/receipt/5acd753658bbbf675e2c5561b9df466d29eef49556b2ef336714daf86b5e56f5",
+                "received_at": "2026-10-29T01:00:16.027000+00:00"
+              }
+            ],
+            "received_at": "2026-10-29T01:00:16.027000+00:00",
+            "revision": "95022cdc31c3d586837b6fbff906ec0e083724fc667e528edf4ecd2b6860aaa7",
+            "start": "2026-10-31T19:00:00Z",
+            "version": "predict-schedule-metadata-1"
+          },
+          "native_event_id": "fa9022be308ebe9ca39ecda8ea15bda4",
+          "original_start": "2026-10-31T19:00:00Z",
+          "version": "predict-schedule-metadata-1"
+        }
+      },
+      "event": {
+        "away": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:away_team",
+        "competition": "NCAAF",
+        "home": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:home_team",
+        "id": "fa9022be308ebe9ca39ecda8ea15bda4",
+        "participants": {
+          "East Carolina Pirates": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:home_team",
+          "Temple Owls": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:away_team"
+        },
+        "schedule_metadata": {
+          "authority": [
+            "the_odds_api",
+            "event",
+            "fa9022be308ebe9ca39ecda8ea15bda4"
+          ],
+          "native_event_id": "fa9022be308ebe9ca39ecda8ea15bda4",
+          "proofs": [
+            {
+              "body_sha256": "5acd753658bbbf675e2c5561b9df466d29eef49556b2ef336714daf86b5e56f5",
+              "path": "the_odds_api/receipt/5acd753658bbbf675e2c5561b9df466d29eef49556b2ef336714daf86b5e56f5",
+              "received_at": "2026-10-29T01:00:16.027000+00:00"
+            }
+          ],
+          "received_at": "2026-10-29T01:00:16.027000+00:00",
+          "revision": "95022cdc31c3d586837b6fbff906ec0e083724fc667e528edf4ecd2b6860aaa7",
+          "start": "2026-10-31T19:00:00Z",
+          "version": "predict-schedule-metadata-1"
+        },
+        "scheduled_start": "2026-10-31T19:00:00Z",
+        "season": "unverified",
+        "sport": "american_football",
+        "stage": "unverified",
+        "title": "Temple Owls at East Carolina Pirates"
+      },
+      "event_scope": {
+        "native_event_id": "fa9022be308ebe9ca39ecda8ea15bda4",
+        "policy": "aggregate-provider-event-2",
+        "source": "the_odds_api"
+      },
+      "market_identity": {
+        "competition": "NCAAF",
+        "event": [
+          "comparison-provider-occurrence-1",
+          "the_odds_api",
+          "NCAAF",
+          "fa9022be308ebe9ca39ecda8ea15bda4",
+          "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:home_team",
+          "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:away_team"
+        ],
+        "family": "spread",
+        "line": "-5.5",
+        "outcome_set": "f225074f22f440d9e3fab531c11d8e82d4ed207b9ce480f93a94979cc4384a7a",
+        "period": "full_game",
+        "rules": "aggregate-common-1",
+        "scheduled_start": "2026-10-31T19:00:00Z",
+        "season": "unverified",
+        "sport": "american_football",
+        "stage": "unverified"
+      },
+      "orientation_evidence": [
+        "odds-aggregate-1:0ef9a594933c338b6da70bf01cc97e7021c9e054daa82ecb49d941b9bcd9c27f",
+        "5acd753658bbbf675e2c5561b9df466d29eef49556b2ef336714daf86b5e56f5"
+      ],
+      "outcome_cardinality": 2,
+      "outcome_selections": [
+        {
+          "label": "East Carolina Pirates",
+          "participant": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:home_team",
+          "predicate": "cover",
+          "signed_line": "-5.5"
+        },
+        {
+          "label": "Temple Owls",
+          "participant": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:away_team",
+          "predicate": "cover",
+          "signed_line": "5.5"
+        }
+      ],
+      "period_boundary": "Provider full-game market; exceptional settlement unverified",
+      "quote": {
+        "cost_note": "Cents are 1 / decimal odds per mathematical unit payout. Actual fees, execution, depth and probability unknown.",
+        "id": "",
+        "observation_time_evidence": "The Odds API original update clocks: {\"book\": \"2026-10-29T01:00:10Z\", \"market\": \"2026-10-29T01:00:10Z\"}; selected basis: market; upstream delay unknown.",
+        "original": {
+          "payout": "1",
+          "payout_units": "USD",
+          "quantity_units": "unknown",
+          "role": "comparison",
+          "units": "decimal_odds",
+          "value": "1.93"
+        },
+        "provenance": {
+          "mode": "current",
+          "real_source": true,
+          "sha256": "5acd753658bbbf675e2c5561b9df466d29eef49556b2ef336714daf86b5e56f5"
+        },
+        "provider_clocks": {
+          "book": "2026-10-29T01:00:10Z",
+          "market": "2026-10-29T01:00:10Z",
+          "selected_basis": "market"
+        },
+        "revision": 1,
+        "rule_note": "Aggregate full-game outcome; settlement and native occurrence association unverified.",
+        "source": {
+          "binding_id": "99f6b407e502302aa867a9e75ad740093e56dcf822df9d318a29567a8b99c4a2",
+          "binding_version": "odds-aggregate-1",
+          "native_event_id": "fa9022be308ebe9ca39ecda8ea15bda4",
+          "native_line": "-5.5",
+          "native_market_id": "a660729a2699bb9c7b1639914a3cff2d5ed85689ad1f3ca7ca7d69e24b85585a",
+          "native_outcome_id": "East Carolina Pirates",
+          "native_side": "bookmaker_outcome",
+          "provider": "the_odds_api",
+          "quote_side": "buy"
+        },
+        "state": "budget_delayed",
+        "times": {
+          "projected_at": "2026-10-29T01:00:16.027000+00:00",
+          "received_at": "2026-10-29T01:00:16.027000+00:00",
+          "source_at": "2026-10-29T01:00:10Z",
+          "source_time_kind": "provider_book"
+        },
+        "venue": "prophetx"
+      },
+      "result_policy": "aggregate-common-1:spreads",
+      "selection": {
+        "label": "East Carolina Pirates",
+        "participant": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:home_team",
+        "predicate": "cover",
+        "signed_line": "-5.5"
+      },
+      "verified": true
+    },
+    {
+      "anchor_participant": "NCAAF:NCAA196",
+      "comparison_scope": {
+        "overtime": "included"
+      },
+      "comparison_source_metadata": {
+        "combined_native_binding": {
+          "actual_fills": null,
+          "completion": "native original terms retained; no common completion condition asserted",
+          "original_quantity_units": "contracts",
+          "original_roles": {
+            "away": "NCAAF:NCAA690",
+            "home": "NCAAF:NCAA196"
+          },
+          "original_terms": {
+            "rules_primary": "If East Carolina wins by more than 5.5 points in the Temple vs East Carolina college football game originally scheduled for Oct 31, 2026, then the market resolves to Yes.",
+            "rules_secondary": "If the game is postponed but begins within 48 hours of its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the NCAA. All trademarks, logos, and brand names are the property of their respective owners."
+          },
+          "phase_facts": [
+            {
+              "away_team_id": "c9ff894b-8cb2-4d7e-8979-d7e8b996d5f6",
+              "home_team_id": "41b7f8fa-a692-46a3-b216-653e7800ca53",
+              "id": "cc359960-613e-56d1-ae56-6d283159b246",
+              "main_game_event_ticker": "KXNCAAFGAME-26OCT30TEMECU",
+              "season": {
+                "type": "REG",
+                "week": 9,
+                "year": 2026
+              },
+              "source_id": null,
+              "source_provider": null,
+              "start_date": "2026-10-31T19:00:00Z",
+              "status": "scheduled"
+            }
+          ],
+          "predicate_sha256": "aca557ad7684f71124e625b5d6fe62232f7a37be4d978163c8dd89e7d30915a7",
+          "unit_basis": "existing admitted purchase_book USD per $1 contract; original depth contracts",
+          "version": "predict-combined-native-1"
+        },
+        "material_sha256": "411132318e66889094a094baaaa2b5ebcb36e0050fe291044bbb97453d914718",
+        "native_key": [
+          "kalshi",
+          "KXNCAAFSPREAD-26OCT31TEMECU",
+          "KXNCAAFSPREAD-26OCT31TEMECU-ECU6",
+          "no",
+          "no"
+        ],
+        "native_market_type": null,
+        "native_scope_binding": {
+          "award_variant": null,
+          "category": null,
+          "conference_id": null,
+          "contract_terms_url": "https://assets.kalshi.com/contract_terms/FOOTBALLSPREAD.pdf",
+          "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/FOOTBALLSPREAD.pdf",
+          "family": "spread",
+          "last_updated_ts": "2026-09-09T17:30:49.938187Z",
+          "milestone_type": "football_game",
+          "period": "full_game",
+          "scope_basis": "Retained native series catalog classification; exact contract predicates, field, season, completion and applicability remain separate",
+          "series_ticker": "KXNCAAFSPREAD",
+          "settlement_sources": [
+            {
+              "name": "ESPN",
+              "url": "https://www.espn.com"
+            },
+            {
+              "name": "Kalshi using information originating from the NCAA",
+              "url": "https://www.ncaa.com/sports/football/fbs"
+            }
+          ],
+          "source_catalog_sha256": "c2329100ac3afac56ab7415b5a79c009716409dc9cf99176cf5f78e3f2323f82",
+          "source_path": "evidence/phase-0/kalshi-series.json",
+          "source_record_sha256": "0705c0d5759122ed97dbed970ce011d590ce2a315170ab20b132350f4986c1fd",
+          "sport": "NCAAF",
+          "tags": [
+            "Football"
+          ],
+          "title": "College Football Spread"
+        },
+        "native_terms": {
+          "rules_primary": "If East Carolina wins by more than 5.5 points in the Temple vs East Carolina college football game originally scheduled for Oct 31, 2026, then the market resolves to Yes.",
+          "rules_secondary": "If the game is postponed but begins within 48 hours of its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the NCAA. All trademarks, logos, and brand names are the property of their respective owners."
+        },
+        "observed_at": "2026-10-29T01:09:06.123960+00:00",
+        "original_wording": {
+          "no_sub_title": "East Carolina wins by over 5.5 points",
+          "rules_primary": "If East Carolina wins by more than 5.5 points in the Temple vs East Carolina college football game originally scheduled for Oct 31, 2026, then the market resolves to Yes.",
+          "rules_secondary": "If the game is postponed but begins within 48 hours of its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the NCAA. All trademarks, logos, and brand names are the property of their respective owners.",
+          "title": "East Carolina wins by over 5.5 points",
+          "yes_sub_title": "East Carolina wins by over 5.5 points"
+        },
+        "overtime": "included",
+        "phase": "pregame",
+        "rules_primary": "If East Carolina wins by more than 5.5 points in the Temple vs East Carolina college football game originally scheduled for Oct 31, 2026, then the market resolves to Yes.",
+        "rules_secondary": "If the game is postponed but begins within 48 hours of its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the NCAA. All trademarks, logos, and brand names are the property of their respective owners.",
+        "same_outcome": {
+          "equality": {
+            "payout": null,
+            "refund_fees": "not_applicable",
+            "treatment": "predicate",
+            "unknown_reason": null
+          },
+          "normal_payout": {
+            "payout": "1",
+            "payout_units": "USD",
+            "quantity_units": "contracts"
+          },
+          "predicate": {
+            "domain": "home_margin",
+            "operator": "le",
+            "subject_id": null,
+            "threshold": "11/2"
+          },
+          "reason": null,
+          "scoring": {
+            "extra_innings": "not_applicable",
+            "overtime": "included",
+            "score_domain": "integer",
+            "shootout": "not_applicable"
+          },
+          "version": "predict-same-outcome-1"
+        },
+        "schedule_binding": {
+          "core": "e0de52ce4294e92c5ed8d874b111d5a2d2dc19cfcd0ad9a4709b8878091c792b",
+          "metadata": {
+            "authority": [
+              "kalshi",
+              "milestone",
+              "cc359960-613e-56d1-ae56-6d283159b246"
+            ],
+            "native_event_id": "KXNCAAFSPREAD-26OCT31TEMECU",
+            "proofs": [
+              {
+                "body_sha256": "4b2556f6bf33bfd3b6f53f2e4a24668942fe031a5a9900a125d9ae10b064a1cd",
+                "inventory_row": 42,
+                "params": {
+                  "limit": 50,
+                  "series_ticker": "KXNCAAFSPREAD",
+                  "status": "open",
+                  "with_milestones": "true",
+                  "with_nested_markets": "true"
+                },
+                "path": "/trade-api/v2/events",
+                "received_at": "2026-10-29T01:05:29.357935+00:00"
+              }
+            ],
+            "received_at": "2026-10-29T01:05:29.357935+00:00",
+            "revision": "674c623ae6979eb6453d79584311565f39910b7a61d81d532215fa1d431424bc",
+            "start": "2026-10-31T19:00:00+00:00",
+            "version": "predict-schedule-metadata-1"
+          },
+          "native_event_id": "KXNCAAFSPREAD-26OCT31TEMECU",
+          "original_start": "2026-10-31T19:00:00+00:00",
+          "version": "predict-schedule-metadata-1"
+        },
+        "scoring_scope": {
+          "conflicts": [],
+          "evidence": [
+            {
+              "basis": "source_type_rule",
+              "overtime": "included",
+              "rule_id": "KXNCAAFSPREAD",
+              "rule_sha256": "415da19835c7c76b721b3a25041bca1bf67f5033b42f363f7346fb930270e0c1"
+            }
+          ],
+          "missing_fields": [],
+          "observed_overtime": "unknown",
+          "overtime": "included",
+          "reason": "selected_scoring_scope_supported",
+          "rule_id": "KXNCAAFSPREAD",
+          "scoring": {
+            "extra_innings": "not_applicable",
+            "overtime": "included",
+            "score_domain": "integer",
+            "shootout": "not_applicable"
+          },
+          "status": "supported",
+          "version": "predict-native-scoring-scope-3"
+        },
+        "selected_market_observation": {
+          "material_sha256": "411132318e66889094a094baaaa2b5ebcb36e0050fe291044bbb97453d914718",
+          "native_event_id": "KXNCAAFSPREAD-26OCT31TEMECU",
+          "native_market_id": "KXNCAAFSPREAD-26OCT31TEMECU-ECU6",
+          "present_fields": [
+            "price_ranges",
+            "price_level_structure",
+            "notional_value_dollars"
+          ],
+          "qualification": "unreviewed_source_metadata_only_no_execution_authority",
+          "source": {
+            "body_sha256": "4b2556f6bf33bfd3b6f53f2e4a24668942fe031a5a9900a125d9ae10b064a1cd",
+            "inventory_row": 2476,
+            "params": {
+              "limit": 50,
+              "series_ticker": "KXNCAAFSPREAD",
+              "status": "open",
+              "with_milestones": "true",
+              "with_nested_markets": "true"
+            },
+            "path": "/trade-api/v2/events",
+            "received_at": "2026-10-29T01:05:29.357935+00:00"
+          },
+          "status": "observed",
+          "values": {
+            "notional_value_dollars": "1.0000",
+            "price_level_structure": "linear_cent",
+            "price_ranges": [
+              {
+                "end": "1.0000",
+                "start": "0.0000",
+                "step": "0.0100"
+              }
+            ]
+          },
+          "version": "selected-market-observation-1"
+        },
+        "series_id": "KXNCAAFSPREAD",
+        "source_predicate": {
+          "competition": "NCAAF",
+          "equality_treatment": "predicate",
+          "family": "spread",
+          "line": "-5.5",
+          "missing": [
+            "Exact shared event/season/stage and home/away review",
+            "Effective completion, exceptional payout, amendments and correction terms",
+            "Applicable overtime or explicit completed first-half scope",
+            "Effective fees, rounding/units and mandatory charges"
+          ],
+          "native_metadata_sha256": "411132318e66889094a094baaaa2b5ebcb36e0050fe291044bbb97453d914718",
+          "native_team_id": "41b7f8fa-a692-46a3-b216-653e7800ca53",
+          "outcomes": [
+            {
+              "equality": "predicate",
+              "native_id": "yes",
+              "operator": "gt"
+            },
+            {
+              "equality": "predicate",
+              "native_id": "no",
+              "operator": "le"
+            }
+          ],
+          "participant": "NCAAF:NCAA196",
+          "period": "full_game",
+          "policy": "native-score-predicate-1",
+          "qualification": "Predicate bound; source descriptor/settlement review remains incomplete",
+          "rules_primary": "If East Carolina wins by more than 5.5 points in the Temple vs East Carolina college football game originally scheduled for Oct 31, 2026, then the market resolves to Yes.",
+          "source_threshold": "5.5",
+          "status": "EXPLICIT_PREDICATE_ONLY",
+          "unit": "points"
+        }
+      },
+      "event": {
+        "away": "NCAAF:NCAA690",
+        "competition": "NCAAF",
+        "conflicting_duplicate": false,
+        "home": "NCAAF:NCAA196",
+        "id": "KXNCAAFSPREAD-26OCT31TEMECU",
+        "observed_identity_facts": [
+          {
+            "away_team_id": "c9ff894b-8cb2-4d7e-8979-d7e8b996d5f6",
+            "home_team_id": "41b7f8fa-a692-46a3-b216-653e7800ca53",
+            "id": "cc359960-613e-56d1-ae56-6d283159b246",
+            "main_game_event_ticker": "KXNCAAFGAME-26OCT30TEMECU",
+            "season": {
+              "type": "REG",
+              "week": 9,
+              "year": 2026
+            },
+            "source_id": null,
+            "source_provider": null,
+            "start_date": "2026-10-31T19:00:00Z",
+            "status": "scheduled"
+          }
+        ],
+        "participants": {
+          "East Carolina University": "NCAAF:NCAA196",
+          "Temple University": "NCAAF:NCAA690"
+        },
+        "schedule_metadata": {
+          "authority": [
+            "kalshi",
+            "milestone",
+            "cc359960-613e-56d1-ae56-6d283159b246"
+          ],
+          "native_event_id": "KXNCAAFSPREAD-26OCT31TEMECU",
+          "proofs": [
+            {
+              "body_sha256": "4b2556f6bf33bfd3b6f53f2e4a24668942fe031a5a9900a125d9ae10b064a1cd",
+              "inventory_row": 42,
+              "params": {
+                "limit": 50,
+                "series_ticker": "KXNCAAFSPREAD",
+                "status": "open",
+                "with_milestones": "true",
+                "with_nested_markets": "true"
+              },
+              "path": "/trade-api/v2/events",
+              "received_at": "2026-10-29T01:05:29.357935+00:00"
+            }
+          ],
+          "received_at": "2026-10-29T01:05:29.357935+00:00",
+          "revision": "674c623ae6979eb6453d79584311565f39910b7a61d81d532215fa1d431424bc",
+          "start": "2026-10-31T19:00:00+00:00",
+          "version": "predict-schedule-metadata-1"
+        },
+        "scheduled_start": "2026-10-31T19:00:00+00:00",
+        "season": "2026",
+        "source_participant_roles": {
+          "away": "NCAAF:NCAA690",
+          "home": "NCAAF:NCAA196"
+        },
+        "sport": "american_football",
+        "stage": "regular_season",
+        "status": {
+          "active": null,
+          "closed": null,
+          "ended": null,
+          "live": null,
+          "period": null,
+          "status": null
+        },
+        "title": "Temple vs East Carolina: Spread"
+      },
+      "event_scope": {
+        "native_event_id": "KXNCAAFSPREAD-26OCT31TEMECU",
+        "policy": "native-provider-event-1",
+        "source": "kalshi"
+      },
+      "market_identity": {
+        "competition": "NCAAF",
+        "event": [
+          "comparison-provider-occurrence-1",
+          "kalshi",
+          "NCAAF",
+          "KXNCAAFSPREAD-26OCT31TEMECU",
+          "NCAAF:NCAA196",
+          "NCAAF:NCAA690"
+        ],
+        "family": "spread",
+        "line": "-5.5",
+        "outcome_set": "ae46d0fe91c21dc8a29461756cd5c7435b62a9182c44cb1bd8574f4bdffebe78",
+        "period": "full_game",
+        "rules": "native-gross-predicate-1",
+        "scheduled_start": "2026-10-31T19:00:00+00:00",
+        "season": "2026",
+        "sport": "american_football",
+        "stage": "regular_season"
+      },
+      "orientation_evidence": [
+        "manual-comparison-2:aca557ad7684f71124e625b5d6fe62232f7a37be4d978163c8dd89e7d30915a7",
+        "predict-combined-native-1:3735e25531878759dde1cd9cbcc4bfa67d455e6fc2796af4e425337a27fd1ed4"
+      ],
+      "outcome_cardinality": 2,
+      "outcome_selections": [
+        {
+          "label": "East Carolina University",
+          "participant": "NCAAF:NCAA196",
+          "predicate": "cover",
+          "signed_line": "-5.5"
+        },
+        {
+          "label": "Temple University",
+          "participant": "NCAAF:NCAA690",
+          "predicate": "cover",
+          "signed_line": "5.5"
+        }
+      ],
+      "period_boundary": "Original native period; scoring scope recorded separately",
+      "quote": {
+        "cost_note": "Current applicable costs unavailable",
+        "freshness_policy": {
+          "maximum_age_seconds": 30,
+          "version": "kalshi-book-age-engineering-1"
+        },
+        "id": "",
+        "original": {
+          "native_units": "usd_per_contract",
+          "native_value": "0.4900",
+          "payout": "1",
+          "payout_units": "USD",
+          "quantity_units": "contracts",
+          "role": "comparison",
+          "transformation": "one_minus_native_bid",
+          "units": "usd_per_contract",
+          "value": "0.5100"
+        },
+        "provenance": {
+          "mode": "current",
+          "real_source": true,
+          "sha256": "aca557ad7684f71124e625b5d6fe62232f7a37be4d978163c8dd89e7d30915a7"
+        },
+        "revision": 1,
+        "rule_note": "Native predicate reviewed; exceptional settlement and costs remain unqualified.",
+        "source": {
+          "binding_id": "ea3ddac1a205088dba49aa328023a9af57193039814d281a37b83fd65a0ad305",
+          "binding_version": "manual-comparison-2",
+          "native_event_id": "KXNCAAFSPREAD-26OCT31TEMECU",
+          "native_line": null,
+          "native_market_id": "KXNCAAFSPREAD-26OCT31TEMECU-ECU6",
+          "native_outcome_id": "no",
+          "native_side": "no",
+          "provider": "kalshi",
+          "quote_side": "buy"
+        },
+        "state": "available",
+        "times": {
+          "projected_at": "2026-10-29T01:09:10.396900+00:00",
+          "received_at": "2026-10-29T01:09:06.123960+00:00",
+          "source_at": "2026-10-29T01:09:06.085000+00:00",
+          "source_time_kind": "provider_book"
+        },
+        "venue": "kalshi"
+      },
+      "result_policy": "native-spread-normal-predicate-1:ae46d0fe91c21dc8a29461756cd5c7435b62a9182c44cb1bd8574f4bdffebe78",
+      "selection": {
+        "label": "Temple University",
+        "participant": "NCAAF:NCAA690",
+        "predicate": "cover",
+        "signed_line": "5.5"
+      },
+      "verified": true
+    },
+    {
+      "anchor_participant": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:home_team",
+      "comparison_source_metadata": {
+        "schedule_binding": {
+          "core": "34e66bf65bdfdf16011dd316d481b586c00b6efb2b49a0cfe816199dd709467a",
+          "metadata": {
+            "authority": [
+              "the_odds_api",
+              "event",
+              "fa9022be308ebe9ca39ecda8ea15bda4"
+            ],
+            "native_event_id": "fa9022be308ebe9ca39ecda8ea15bda4",
+            "proofs": [
+              {
+                "body_sha256": "8992b901cf9d5fade86913084d23af9efb36f6cf249d3ea342fd8c35e6281eaa",
+                "path": "the_odds_api/receipt/8992b901cf9d5fade86913084d23af9efb36f6cf249d3ea342fd8c35e6281eaa",
+                "received_at": "2026-10-29T00:59:45.345537+00:00"
+              }
+            ],
+            "received_at": "2026-10-29T00:59:45.345537+00:00",
+            "revision": "e15f359c98736a6510f82d1f1848b556c6d7d6fc1d1b7e7652597d8b76da7abb",
+            "start": "2026-10-31T19:00:00Z",
+            "version": "predict-schedule-metadata-1"
+          },
+          "native_event_id": "fa9022be308ebe9ca39ecda8ea15bda4",
+          "original_start": "2026-10-31T19:00:00Z",
+          "version": "predict-schedule-metadata-1"
+        }
+      },
+      "event": {
+        "away": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:away_team",
+        "competition": "NCAAF",
+        "home": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:home_team",
+        "id": "fa9022be308ebe9ca39ecda8ea15bda4",
+        "participants": {
+          "East Carolina Pirates": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:home_team",
+          "Temple Owls": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:away_team"
+        },
+        "schedule_metadata": {
+          "authority": [
+            "the_odds_api",
+            "event",
+            "fa9022be308ebe9ca39ecda8ea15bda4"
+          ],
+          "native_event_id": "fa9022be308ebe9ca39ecda8ea15bda4",
+          "proofs": [
+            {
+              "body_sha256": "5acd753658bbbf675e2c5561b9df466d29eef49556b2ef336714daf86b5e56f5",
+              "path": "the_odds_api/receipt/5acd753658bbbf675e2c5561b9df466d29eef49556b2ef336714daf86b5e56f5",
+              "received_at": "2026-10-29T01:00:16.027000+00:00"
+            }
+          ],
+          "received_at": "2026-10-29T01:00:16.027000+00:00",
+          "revision": "95022cdc31c3d586837b6fbff906ec0e083724fc667e528edf4ecd2b6860aaa7",
+          "start": "2026-10-31T19:00:00Z",
+          "version": "predict-schedule-metadata-1"
+        },
+        "scheduled_start": "2026-10-31T19:00:00Z",
+        "season": "unverified",
+        "sport": "american_football",
+        "stage": "unverified",
+        "title": "Temple Owls at East Carolina Pirates"
+      },
+      "event_scope": {
+        "native_event_id": "fa9022be308ebe9ca39ecda8ea15bda4",
+        "policy": "aggregate-provider-event-2",
+        "source": "the_odds_api"
+      },
+      "market_identity": {
+        "competition": "NCAAF",
+        "event": [
+          "comparison-provider-occurrence-1",
+          "the_odds_api",
+          "NCAAF",
+          "fa9022be308ebe9ca39ecda8ea15bda4",
+          "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:home_team",
+          "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:away_team"
+        ],
+        "family": "spread",
+        "line": "-5.5",
+        "outcome_set": "f225074f22f440d9e3fab531c11d8e82d4ed207b9ce480f93a94979cc4384a7a",
+        "period": "full_game",
+        "rules": "aggregate-common-1",
+        "scheduled_start": "2026-10-31T19:00:00Z",
+        "season": "unverified",
+        "sport": "american_football",
+        "stage": "unverified"
+      },
+      "orientation_evidence": [
+        "odds-aggregate-1:0ef9a594933c338b6da70bf01cc97e7021c9e054daa82ecb49d941b9bcd9c27f",
+        "8992b901cf9d5fade86913084d23af9efb36f6cf249d3ea342fd8c35e6281eaa"
+      ],
+      "outcome_cardinality": 2,
+      "outcome_selections": [
+        {
+          "label": "East Carolina Pirates",
+          "participant": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:home_team",
+          "predicate": "cover",
+          "signed_line": "-5.5"
+        },
+        {
+          "label": "Temple Owls",
+          "participant": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:away_team",
+          "predicate": "cover",
+          "signed_line": "5.5"
+        }
+      ],
+      "period_boundary": "Provider full-game market; exceptional settlement unverified",
+      "quote": {
+        "cost_note": "Cents are 1 / decimal odds per mathematical unit payout. Actual fees, execution, depth and probability unknown.",
+        "id": "",
+        "observation_time_evidence": "The Odds API original update clocks: {\"book\": null, \"market\": \"2026-10-29T00:58:52Z\"}; selected basis: market; upstream delay unknown.",
+        "original": {
+          "payout": "1",
+          "payout_units": "USD",
+          "quantity_units": "unknown",
+          "role": "comparison",
+          "units": "decimal_odds",
+          "value": "1.98"
+        },
+        "provenance": {
+          "mode": "current",
+          "real_source": true,
+          "sha256": "8992b901cf9d5fade86913084d23af9efb36f6cf249d3ea342fd8c35e6281eaa"
+        },
+        "provider_clocks": {
+          "book": null,
+          "market": "2026-10-29T00:58:52Z",
+          "selected_basis": "market"
+        },
+        "revision": 1,
+        "rule_note": "Aggregate alternate_spreads exact full-game line; settlement and native occurrence association unverified.",
+        "source": {
+          "binding_id": "alternate:8ca19fcd0e07554c7e96d24b77d50ef633a6390211cc9863267c6265af3b3d7b",
+          "binding_version": "odds-aggregate-1",
+          "native_event_id": "fa9022be308ebe9ca39ecda8ea15bda4",
+          "native_line": "5.5",
+          "native_market_id": "alternate:83910e076fd58b9b9d2be3eb3ab31948173154a56c15cceeb888ba961d113286",
+          "native_outcome_id": "Temple Owls",
+          "native_side": "bookmaker_outcome",
+          "provider": "the_odds_api",
+          "quote_side": "buy"
+        },
+        "state": "budget_delayed",
+        "times": {
+          "projected_at": "2026-10-29T00:59:45.345537+00:00",
+          "received_at": "2026-10-29T00:59:45.345537+00:00",
+          "source_at": "2026-10-29T00:58:52Z",
+          "source_time_kind": "provider_book"
+        },
+        "venue": "novig"
+      },
+      "result_policy": "aggregate-common-1:spreads",
+      "selection": {
+        "label": "Temple Owls",
+        "participant": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:away_team",
+        "predicate": "cover",
+        "signed_line": "5.5"
+      },
+      "verified": true
+    },
+    {
+      "anchor_participant": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:home_team",
+      "comparison_source_metadata": {
+        "schedule_binding": {
+          "core": "34e66bf65bdfdf16011dd316d481b586c00b6efb2b49a0cfe816199dd709467a",
+          "metadata": {
+            "authority": [
+              "the_odds_api",
+              "event",
+              "fa9022be308ebe9ca39ecda8ea15bda4"
+            ],
+            "native_event_id": "fa9022be308ebe9ca39ecda8ea15bda4",
+            "proofs": [
+              {
+                "body_sha256": "8992b901cf9d5fade86913084d23af9efb36f6cf249d3ea342fd8c35e6281eaa",
+                "path": "the_odds_api/receipt/8992b901cf9d5fade86913084d23af9efb36f6cf249d3ea342fd8c35e6281eaa",
+                "received_at": "2026-10-29T00:59:45.345537+00:00"
+              }
+            ],
+            "received_at": "2026-10-29T00:59:45.345537+00:00",
+            "revision": "e15f359c98736a6510f82d1f1848b556c6d7d6fc1d1b7e7652597d8b76da7abb",
+            "start": "2026-10-31T19:00:00Z",
+            "version": "predict-schedule-metadata-1"
+          },
+          "native_event_id": "fa9022be308ebe9ca39ecda8ea15bda4",
+          "original_start": "2026-10-31T19:00:00Z",
+          "version": "predict-schedule-metadata-1"
+        }
+      },
+      "event": {
+        "away": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:away_team",
+        "competition": "NCAAF",
+        "home": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:home_team",
+        "id": "fa9022be308ebe9ca39ecda8ea15bda4",
+        "participants": {
+          "East Carolina Pirates": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:home_team",
+          "Temple Owls": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:away_team"
+        },
+        "schedule_metadata": {
+          "authority": [
+            "the_odds_api",
+            "event",
+            "fa9022be308ebe9ca39ecda8ea15bda4"
+          ],
+          "native_event_id": "fa9022be308ebe9ca39ecda8ea15bda4",
+          "proofs": [
+            {
+              "body_sha256": "5acd753658bbbf675e2c5561b9df466d29eef49556b2ef336714daf86b5e56f5",
+              "path": "the_odds_api/receipt/5acd753658bbbf675e2c5561b9df466d29eef49556b2ef336714daf86b5e56f5",
+              "received_at": "2026-10-29T01:00:16.027000+00:00"
+            }
+          ],
+          "received_at": "2026-10-29T01:00:16.027000+00:00",
+          "revision": "95022cdc31c3d586837b6fbff906ec0e083724fc667e528edf4ecd2b6860aaa7",
+          "start": "2026-10-31T19:00:00Z",
+          "version": "predict-schedule-metadata-1"
+        },
+        "scheduled_start": "2026-10-31T19:00:00Z",
+        "season": "unverified",
+        "sport": "american_football",
+        "stage": "unverified",
+        "title": "Temple Owls at East Carolina Pirates"
+      },
+      "event_scope": {
+        "native_event_id": "fa9022be308ebe9ca39ecda8ea15bda4",
+        "policy": "aggregate-provider-event-2",
+        "source": "the_odds_api"
+      },
+      "market_identity": {
+        "competition": "NCAAF",
+        "event": [
+          "comparison-provider-occurrence-1",
+          "the_odds_api",
+          "NCAAF",
+          "fa9022be308ebe9ca39ecda8ea15bda4",
+          "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:home_team",
+          "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:away_team"
+        ],
+        "family": "spread",
+        "line": "-5.5",
+        "outcome_set": "f225074f22f440d9e3fab531c11d8e82d4ed207b9ce480f93a94979cc4384a7a",
+        "period": "full_game",
+        "rules": "aggregate-common-1",
+        "scheduled_start": "2026-10-31T19:00:00Z",
+        "season": "unverified",
+        "sport": "american_football",
+        "stage": "unverified"
+      },
+      "orientation_evidence": [
+        "odds-aggregate-1:0ef9a594933c338b6da70bf01cc97e7021c9e054daa82ecb49d941b9bcd9c27f",
+        "8992b901cf9d5fade86913084d23af9efb36f6cf249d3ea342fd8c35e6281eaa"
+      ],
+      "outcome_cardinality": 2,
+      "outcome_selections": [
+        {
+          "label": "East Carolina Pirates",
+          "participant": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:home_team",
+          "predicate": "cover",
+          "signed_line": "-5.5"
+        },
+        {
+          "label": "Temple Owls",
+          "participant": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:away_team",
+          "predicate": "cover",
+          "signed_line": "5.5"
+        }
+      ],
+      "period_boundary": "Provider full-game market; exceptional settlement unverified",
+      "quote": {
+        "cost_note": "Cents are 1 / decimal odds per mathematical unit payout. Actual fees, execution, depth and probability unknown.",
+        "id": "",
+        "observation_time_evidence": "The Odds API original update clocks: {\"book\": null, \"market\": \"2026-10-29T00:59:37Z\"}; selected basis: market; upstream delay unknown.",
+        "original": {
+          "payout": "1",
+          "payout_units": "USD",
+          "quantity_units": "unknown",
+          "role": "comparison",
+          "units": "decimal_odds",
+          "value": "1.85"
+        },
+        "provenance": {
+          "mode": "current",
+          "real_source": true,
+          "sha256": "8992b901cf9d5fade86913084d23af9efb36f6cf249d3ea342fd8c35e6281eaa"
+        },
+        "provider_clocks": {
+          "book": null,
+          "market": "2026-10-29T00:59:37Z",
+          "selected_basis": "market"
+        },
+        "revision": 1,
+        "rule_note": "Aggregate alternate_spreads exact full-game line; settlement and native occurrence association unverified.",
+        "source": {
+          "binding_id": "alternate:c51547a9d48dd36bef0e3527238dab472e994f6d299ebfc1ab25e473672c8425",
+          "binding_version": "odds-aggregate-1",
+          "native_event_id": "fa9022be308ebe9ca39ecda8ea15bda4",
+          "native_line": "-5.5",
+          "native_market_id": "alternate:a660729a2699bb9c7b1639914a3cff2d5ed85689ad1f3ca7ca7d69e24b85585a",
+          "native_outcome_id": "East Carolina Pirates",
+          "native_side": "bookmaker_outcome",
+          "provider": "the_odds_api",
+          "quote_side": "buy"
+        },
+        "state": "budget_delayed",
+        "times": {
+          "projected_at": "2026-10-29T00:59:45.345537+00:00",
+          "received_at": "2026-10-29T00:59:45.345537+00:00",
+          "source_at": "2026-10-29T00:59:37Z",
+          "source_time_kind": "provider_book"
+        },
+        "venue": "pinnacle"
+      },
+      "result_policy": "aggregate-common-1:spreads",
+      "selection": {
+        "label": "East Carolina Pirates",
+        "participant": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:home_team",
+        "predicate": "cover",
+        "signed_line": "-5.5"
+      },
+      "verified": true
+    },
+    {
+      "anchor_participant": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:home_team",
+      "comparison_source_metadata": {
+        "schedule_binding": {
+          "core": "34e66bf65bdfdf16011dd316d481b586c00b6efb2b49a0cfe816199dd709467a",
+          "metadata": {
+            "authority": [
+              "the_odds_api",
+              "event",
+              "fa9022be308ebe9ca39ecda8ea15bda4"
+            ],
+            "native_event_id": "fa9022be308ebe9ca39ecda8ea15bda4",
+            "proofs": [
+              {
+                "body_sha256": "8992b901cf9d5fade86913084d23af9efb36f6cf249d3ea342fd8c35e6281eaa",
+                "path": "the_odds_api/receipt/8992b901cf9d5fade86913084d23af9efb36f6cf249d3ea342fd8c35e6281eaa",
+                "received_at": "2026-10-29T00:59:45.345537+00:00"
+              }
+            ],
+            "received_at": "2026-10-29T00:59:45.345537+00:00",
+            "revision": "e15f359c98736a6510f82d1f1848b556c6d7d6fc1d1b7e7652597d8b76da7abb",
+            "start": "2026-10-31T19:00:00Z",
+            "version": "predict-schedule-metadata-1"
+          },
+          "native_event_id": "fa9022be308ebe9ca39ecda8ea15bda4",
+          "original_start": "2026-10-31T19:00:00Z",
+          "version": "predict-schedule-metadata-1"
+        }
+      },
+      "event": {
+        "away": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:away_team",
+        "competition": "NCAAF",
+        "home": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:home_team",
+        "id": "fa9022be308ebe9ca39ecda8ea15bda4",
+        "participants": {
+          "East Carolina Pirates": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:home_team",
+          "Temple Owls": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:away_team"
+        },
+        "schedule_metadata": {
+          "authority": [
+            "the_odds_api",
+            "event",
+            "fa9022be308ebe9ca39ecda8ea15bda4"
+          ],
+          "native_event_id": "fa9022be308ebe9ca39ecda8ea15bda4",
+          "proofs": [
+            {
+              "body_sha256": "5acd753658bbbf675e2c5561b9df466d29eef49556b2ef336714daf86b5e56f5",
+              "path": "the_odds_api/receipt/5acd753658bbbf675e2c5561b9df466d29eef49556b2ef336714daf86b5e56f5",
+              "received_at": "2026-10-29T01:00:16.027000+00:00"
+            }
+          ],
+          "received_at": "2026-10-29T01:00:16.027000+00:00",
+          "revision": "95022cdc31c3d586837b6fbff906ec0e083724fc667e528edf4ecd2b6860aaa7",
+          "start": "2026-10-31T19:00:00Z",
+          "version": "predict-schedule-metadata-1"
+        },
+        "scheduled_start": "2026-10-31T19:00:00Z",
+        "season": "unverified",
+        "sport": "american_football",
+        "stage": "unverified",
+        "title": "Temple Owls at East Carolina Pirates"
+      },
+      "event_scope": {
+        "native_event_id": "fa9022be308ebe9ca39ecda8ea15bda4",
+        "policy": "aggregate-provider-event-2",
+        "source": "the_odds_api"
+      },
+      "market_identity": {
+        "competition": "NCAAF",
+        "event": [
+          "comparison-provider-occurrence-1",
+          "the_odds_api",
+          "NCAAF",
+          "fa9022be308ebe9ca39ecda8ea15bda4",
+          "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:home_team",
+          "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:away_team"
+        ],
+        "family": "spread",
+        "line": "-5.5",
+        "outcome_set": "f225074f22f440d9e3fab531c11d8e82d4ed207b9ce480f93a94979cc4384a7a",
+        "period": "full_game",
+        "rules": "aggregate-common-1",
+        "scheduled_start": "2026-10-31T19:00:00Z",
+        "season": "unverified",
+        "sport": "american_football",
+        "stage": "unverified"
+      },
+      "orientation_evidence": [
+        "odds-aggregate-1:0ef9a594933c338b6da70bf01cc97e7021c9e054daa82ecb49d941b9bcd9c27f",
+        "8992b901cf9d5fade86913084d23af9efb36f6cf249d3ea342fd8c35e6281eaa"
+      ],
+      "outcome_cardinality": 2,
+      "outcome_selections": [
+        {
+          "label": "East Carolina Pirates",
+          "participant": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:home_team",
+          "predicate": "cover",
+          "signed_line": "-5.5"
+        },
+        {
+          "label": "Temple Owls",
+          "participant": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:away_team",
+          "predicate": "cover",
+          "signed_line": "5.5"
+        }
+      ],
+      "period_boundary": "Provider full-game market; exceptional settlement unverified",
+      "quote": {
+        "cost_note": "Cents are 1 / decimal odds per mathematical unit payout. Actual fees, execution, depth and probability unknown.",
+        "id": "",
+        "observation_time_evidence": "The Odds API original update clocks: {\"book\": null, \"market\": \"2026-10-29T00:58:52Z\"}; selected basis: market; upstream delay unknown.",
+        "original": {
+          "payout": "1",
+          "payout_units": "USD",
+          "quantity_units": "unknown",
+          "role": "comparison",
+          "units": "decimal_odds",
+          "value": "2.0"
+        },
+        "provenance": {
+          "mode": "current",
+          "real_source": true,
+          "sha256": "8992b901cf9d5fade86913084d23af9efb36f6cf249d3ea342fd8c35e6281eaa"
+        },
+        "provider_clocks": {
+          "book": null,
+          "market": "2026-10-29T00:58:52Z",
+          "selected_basis": "market"
+        },
+        "revision": 1,
+        "rule_note": "Aggregate alternate_spreads exact full-game line; settlement and native occurrence association unverified.",
+        "source": {
+          "binding_id": "alternate:96bbb241f3cd92bd85953c7a889341cc2dcde79a6b129f07ba2dc2919c7d7749",
+          "binding_version": "odds-aggregate-1",
+          "native_event_id": "fa9022be308ebe9ca39ecda8ea15bda4",
+          "native_line": "-5.5",
+          "native_market_id": "alternate:a660729a2699bb9c7b1639914a3cff2d5ed85689ad1f3ca7ca7d69e24b85585a",
+          "native_outcome_id": "East Carolina Pirates",
+          "native_side": "bookmaker_outcome",
+          "provider": "the_odds_api",
+          "quote_side": "buy"
+        },
+        "state": "budget_delayed",
+        "times": {
+          "projected_at": "2026-10-29T00:59:45.345537+00:00",
+          "received_at": "2026-10-29T00:59:45.345537+00:00",
+          "source_at": "2026-10-29T00:58:52Z",
+          "source_time_kind": "provider_book"
+        },
+        "venue": "novig"
+      },
+      "result_policy": "aggregate-common-1:spreads",
+      "selection": {
+        "label": "East Carolina Pirates",
+        "participant": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:home_team",
+        "predicate": "cover",
+        "signed_line": "-5.5"
+      },
+      "verified": true
+    },
+    {
+      "anchor_participant": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:home_team",
+      "comparison_source_metadata": {
+        "schedule_binding": {
+          "core": "34e66bf65bdfdf16011dd316d481b586c00b6efb2b49a0cfe816199dd709467a",
+          "metadata": {
+            "authority": [
+              "the_odds_api",
+              "event",
+              "fa9022be308ebe9ca39ecda8ea15bda4"
+            ],
+            "native_event_id": "fa9022be308ebe9ca39ecda8ea15bda4",
+            "proofs": [
+              {
+                "body_sha256": "5acd753658bbbf675e2c5561b9df466d29eef49556b2ef336714daf86b5e56f5",
+                "path": "the_odds_api/receipt/5acd753658bbbf675e2c5561b9df466d29eef49556b2ef336714daf86b5e56f5",
+                "received_at": "2026-10-29T01:00:16.027000+00:00"
+              }
+            ],
+            "received_at": "2026-10-29T01:00:16.027000+00:00",
+            "revision": "95022cdc31c3d586837b6fbff906ec0e083724fc667e528edf4ecd2b6860aaa7",
+            "start": "2026-10-31T19:00:00Z",
+            "version": "predict-schedule-metadata-1"
+          },
+          "native_event_id": "fa9022be308ebe9ca39ecda8ea15bda4",
+          "original_start": "2026-10-31T19:00:00Z",
+          "version": "predict-schedule-metadata-1"
+        }
+      },
+      "event": {
+        "away": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:away_team",
+        "competition": "NCAAF",
+        "home": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:home_team",
+        "id": "fa9022be308ebe9ca39ecda8ea15bda4",
+        "participants": {
+          "East Carolina Pirates": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:home_team",
+          "Temple Owls": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:away_team"
+        },
+        "schedule_metadata": {
+          "authority": [
+            "the_odds_api",
+            "event",
+            "fa9022be308ebe9ca39ecda8ea15bda4"
+          ],
+          "native_event_id": "fa9022be308ebe9ca39ecda8ea15bda4",
+          "proofs": [
+            {
+              "body_sha256": "5acd753658bbbf675e2c5561b9df466d29eef49556b2ef336714daf86b5e56f5",
+              "path": "the_odds_api/receipt/5acd753658bbbf675e2c5561b9df466d29eef49556b2ef336714daf86b5e56f5",
+              "received_at": "2026-10-29T01:00:16.027000+00:00"
+            }
+          ],
+          "received_at": "2026-10-29T01:00:16.027000+00:00",
+          "revision": "95022cdc31c3d586837b6fbff906ec0e083724fc667e528edf4ecd2b6860aaa7",
+          "start": "2026-10-31T19:00:00Z",
+          "version": "predict-schedule-metadata-1"
+        },
+        "scheduled_start": "2026-10-31T19:00:00Z",
+        "season": "unverified",
+        "sport": "american_football",
+        "stage": "unverified",
+        "title": "Temple Owls at East Carolina Pirates"
+      },
+      "event_scope": {
+        "native_event_id": "fa9022be308ebe9ca39ecda8ea15bda4",
+        "policy": "aggregate-provider-event-2",
+        "source": "the_odds_api"
+      },
+      "market_identity": {
+        "competition": "NCAAF",
+        "event": [
+          "comparison-provider-occurrence-1",
+          "the_odds_api",
+          "NCAAF",
+          "fa9022be308ebe9ca39ecda8ea15bda4",
+          "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:home_team",
+          "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:away_team"
+        ],
+        "family": "spread",
+        "line": "-5.5",
+        "outcome_set": "f225074f22f440d9e3fab531c11d8e82d4ed207b9ce480f93a94979cc4384a7a",
+        "period": "full_game",
+        "rules": "aggregate-common-1",
+        "scheduled_start": "2026-10-31T19:00:00Z",
+        "season": "unverified",
+        "sport": "american_football",
+        "stage": "unverified"
+      },
+      "orientation_evidence": [
+        "odds-aggregate-1:0ef9a594933c338b6da70bf01cc97e7021c9e054daa82ecb49d941b9bcd9c27f",
+        "5acd753658bbbf675e2c5561b9df466d29eef49556b2ef336714daf86b5e56f5"
+      ],
+      "outcome_cardinality": 2,
+      "outcome_selections": [
+        {
+          "label": "East Carolina Pirates",
+          "participant": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:home_team",
+          "predicate": "cover",
+          "signed_line": "-5.5"
+        },
+        {
+          "label": "Temple Owls",
+          "participant": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:away_team",
+          "predicate": "cover",
+          "signed_line": "5.5"
+        }
+      ],
+      "period_boundary": "Provider full-game market; exceptional settlement unverified",
+      "quote": {
+        "cost_note": "Cents are 1 / decimal odds per mathematical unit payout. Actual fees, execution, depth and probability unknown.",
+        "id": "",
+        "observation_time_evidence": "The Odds API original update clocks: {\"book\": \"2026-10-29T00:59:53Z\", \"market\": \"2026-10-29T00:59:53Z\"}; selected basis: market; upstream delay unknown.",
+        "original": {
+          "payout": "1",
+          "payout_units": "USD",
+          "quantity_units": "unknown",
+          "role": "comparison",
+          "units": "decimal_odds",
+          "value": "1.98"
+        },
+        "provenance": {
+          "mode": "current",
+          "real_source": true,
+          "sha256": "5acd753658bbbf675e2c5561b9df466d29eef49556b2ef336714daf86b5e56f5"
+        },
+        "provider_clocks": {
+          "book": "2026-10-29T00:59:53Z",
+          "market": "2026-10-29T00:59:53Z",
+          "selected_basis": "market"
+        },
+        "revision": 1,
+        "rule_note": "Aggregate full-game outcome; settlement and native occurrence association unverified.",
+        "source": {
+          "binding_id": "8ca19fcd0e07554c7e96d24b77d50ef633a6390211cc9863267c6265af3b3d7b",
+          "binding_version": "odds-aggregate-1",
+          "native_event_id": "fa9022be308ebe9ca39ecda8ea15bda4",
+          "native_line": "5.5",
+          "native_market_id": "83910e076fd58b9b9d2be3eb3ab31948173154a56c15cceeb888ba961d113286",
+          "native_outcome_id": "Temple Owls",
+          "native_side": "bookmaker_outcome",
+          "provider": "the_odds_api",
+          "quote_side": "buy"
+        },
+        "state": "budget_delayed",
+        "times": {
+          "projected_at": "2026-10-29T01:00:16.027000+00:00",
+          "received_at": "2026-10-29T01:00:16.027000+00:00",
+          "source_at": "2026-10-29T00:59:53Z",
+          "source_time_kind": "provider_book"
+        },
+        "venue": "novig"
+      },
+      "result_policy": "aggregate-common-1:spreads",
+      "selection": {
+        "label": "Temple Owls",
+        "participant": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:away_team",
+        "predicate": "cover",
+        "signed_line": "5.5"
+      },
+      "verified": true
+    },
+    {
+      "anchor_participant": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:home_team",
+      "comparison_source_metadata": {
+        "schedule_binding": {
+          "core": "34e66bf65bdfdf16011dd316d481b586c00b6efb2b49a0cfe816199dd709467a",
+          "metadata": {
+            "authority": [
+              "the_odds_api",
+              "event",
+              "fa9022be308ebe9ca39ecda8ea15bda4"
+            ],
+            "native_event_id": "fa9022be308ebe9ca39ecda8ea15bda4",
+            "proofs": [
+              {
+                "body_sha256": "5acd753658bbbf675e2c5561b9df466d29eef49556b2ef336714daf86b5e56f5",
+                "path": "the_odds_api/receipt/5acd753658bbbf675e2c5561b9df466d29eef49556b2ef336714daf86b5e56f5",
+                "received_at": "2026-10-29T01:00:16.027000+00:00"
+              }
+            ],
+            "received_at": "2026-10-29T01:00:16.027000+00:00",
+            "revision": "95022cdc31c3d586837b6fbff906ec0e083724fc667e528edf4ecd2b6860aaa7",
+            "start": "2026-10-31T19:00:00Z",
+            "version": "predict-schedule-metadata-1"
+          },
+          "native_event_id": "fa9022be308ebe9ca39ecda8ea15bda4",
+          "original_start": "2026-10-31T19:00:00Z",
+          "version": "predict-schedule-metadata-1"
+        }
+      },
+      "event": {
+        "away": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:away_team",
+        "competition": "NCAAF",
+        "home": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:home_team",
+        "id": "fa9022be308ebe9ca39ecda8ea15bda4",
+        "participants": {
+          "East Carolina Pirates": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:home_team",
+          "Temple Owls": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:away_team"
+        },
+        "schedule_metadata": {
+          "authority": [
+            "the_odds_api",
+            "event",
+            "fa9022be308ebe9ca39ecda8ea15bda4"
+          ],
+          "native_event_id": "fa9022be308ebe9ca39ecda8ea15bda4",
+          "proofs": [
+            {
+              "body_sha256": "5acd753658bbbf675e2c5561b9df466d29eef49556b2ef336714daf86b5e56f5",
+              "path": "the_odds_api/receipt/5acd753658bbbf675e2c5561b9df466d29eef49556b2ef336714daf86b5e56f5",
+              "received_at": "2026-10-29T01:00:16.027000+00:00"
+            }
+          ],
+          "received_at": "2026-10-29T01:00:16.027000+00:00",
+          "revision": "95022cdc31c3d586837b6fbff906ec0e083724fc667e528edf4ecd2b6860aaa7",
+          "start": "2026-10-31T19:00:00Z",
+          "version": "predict-schedule-metadata-1"
+        },
+        "scheduled_start": "2026-10-31T19:00:00Z",
+        "season": "unverified",
+        "sport": "american_football",
+        "stage": "unverified",
+        "title": "Temple Owls at East Carolina Pirates"
+      },
+      "event_scope": {
+        "native_event_id": "fa9022be308ebe9ca39ecda8ea15bda4",
+        "policy": "aggregate-provider-event-2",
+        "source": "the_odds_api"
+      },
+      "market_identity": {
+        "competition": "NCAAF",
+        "event": [
+          "comparison-provider-occurrence-1",
+          "the_odds_api",
+          "NCAAF",
+          "fa9022be308ebe9ca39ecda8ea15bda4",
+          "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:home_team",
+          "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:away_team"
+        ],
+        "family": "spread",
+        "line": "-5.5",
+        "outcome_set": "f225074f22f440d9e3fab531c11d8e82d4ed207b9ce480f93a94979cc4384a7a",
+        "period": "full_game",
+        "rules": "aggregate-common-1",
+        "scheduled_start": "2026-10-31T19:00:00Z",
+        "season": "unverified",
+        "sport": "american_football",
+        "stage": "unverified"
+      },
+      "orientation_evidence": [
+        "odds-aggregate-1:0ef9a594933c338b6da70bf01cc97e7021c9e054daa82ecb49d941b9bcd9c27f",
+        "5acd753658bbbf675e2c5561b9df466d29eef49556b2ef336714daf86b5e56f5"
+      ],
+      "outcome_cardinality": 2,
+      "outcome_selections": [
+        {
+          "label": "East Carolina Pirates",
+          "participant": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:home_team",
+          "predicate": "cover",
+          "signed_line": "-5.5"
+        },
+        {
+          "label": "Temple Owls",
+          "participant": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:away_team",
+          "predicate": "cover",
+          "signed_line": "5.5"
+        }
+      ],
+      "period_boundary": "Provider full-game market; exceptional settlement unverified",
+      "quote": {
+        "cost_note": "Cents are 1 / decimal odds per mathematical unit payout. Actual fees, execution, depth and probability unknown.",
+        "id": "",
+        "observation_time_evidence": "The Odds API original update clocks: {\"book\": \"2026-10-29T00:59:53Z\", \"market\": \"2026-10-29T00:59:53Z\"}; selected basis: market; upstream delay unknown.",
+        "original": {
+          "payout": "1",
+          "payout_units": "USD",
+          "quantity_units": "unknown",
+          "role": "comparison",
+          "units": "decimal_odds",
+          "value": "2.0"
+        },
+        "provenance": {
+          "mode": "current",
+          "real_source": true,
+          "sha256": "5acd753658bbbf675e2c5561b9df466d29eef49556b2ef336714daf86b5e56f5"
+        },
+        "provider_clocks": {
+          "book": "2026-10-29T00:59:53Z",
+          "market": "2026-10-29T00:59:53Z",
+          "selected_basis": "market"
+        },
+        "revision": 1,
+        "rule_note": "Aggregate full-game outcome; settlement and native occurrence association unverified.",
+        "source": {
+          "binding_id": "96bbb241f3cd92bd85953c7a889341cc2dcde79a6b129f07ba2dc2919c7d7749",
+          "binding_version": "odds-aggregate-1",
+          "native_event_id": "fa9022be308ebe9ca39ecda8ea15bda4",
+          "native_line": "-5.5",
+          "native_market_id": "a660729a2699bb9c7b1639914a3cff2d5ed85689ad1f3ca7ca7d69e24b85585a",
+          "native_outcome_id": "East Carolina Pirates",
+          "native_side": "bookmaker_outcome",
+          "provider": "the_odds_api",
+          "quote_side": "buy"
+        },
+        "state": "budget_delayed",
+        "times": {
+          "projected_at": "2026-10-29T01:00:16.027000+00:00",
+          "received_at": "2026-10-29T01:00:16.027000+00:00",
+          "source_at": "2026-10-29T00:59:53Z",
+          "source_time_kind": "provider_book"
+        },
+        "venue": "novig"
+      },
+      "result_policy": "aggregate-common-1:spreads",
+      "selection": {
+        "label": "East Carolina Pirates",
+        "participant": "the_odds_api:NCAAF:fa9022be308ebe9ca39ecda8ea15bda4:home_team",
+        "predicate": "cover",
+        "signed_line": "-5.5"
+      },
+      "verified": true
+    },
+    {
+      "anchor_participant": "NCAAF:NCAA196",
+      "comparison_scope": {
+        "overtime": "included"
+      },
+      "comparison_source_metadata": {
+        "combined_native_binding": {
+          "actual_fills": null,
+          "completion": "native original terms retained; no common completion condition asserted",
+          "original_quantity_units": "contracts",
+          "original_roles": {
+            "away": "NCAAF:NCAA690",
+            "home": "NCAAF:NCAA196"
+          },
+          "original_terms": {
+            "rules_primary": "If East Carolina wins by more than 6.5 points in the Temple vs East Carolina college football game originally scheduled for Oct 31, 2026, then the market resolves to Yes.",
+            "rules_secondary": "If the game is postponed but begins within 48 hours of its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the NCAA. All trademarks, logos, and brand names are the property of their respective owners."
+          },
+          "phase_facts": [
+            {
+              "away_team_id": "c9ff894b-8cb2-4d7e-8979-d7e8b996d5f6",
+              "home_team_id": "41b7f8fa-a692-46a3-b216-653e7800ca53",
+              "id": "cc359960-613e-56d1-ae56-6d283159b246",
+              "main_game_event_ticker": "KXNCAAFGAME-26OCT30TEMECU",
+              "season": {
+                "type": "REG",
+                "week": 9,
+                "year": 2026
+              },
+              "source_id": null,
+              "source_provider": null,
+              "start_date": "2026-10-31T19:00:00Z",
+              "status": "scheduled"
+            }
+          ],
+          "predicate_sha256": "f5d15d9bab1b7fe0e61b5b4836ef5178d6734f726caf23ef24453b51b5935052",
+          "unit_basis": "existing admitted purchase_book USD per $1 contract; original depth contracts",
+          "version": "predict-combined-native-1"
+        },
+        "material_sha256": "e65aeb1d3ad1662cce9390420ddce64b0403adf5ed5145451eae3289f2586b43",
+        "native_key": [
+          "kalshi",
+          "KXNCAAFSPREAD-26OCT31TEMECU",
+          "KXNCAAFSPREAD-26OCT31TEMECU-ECU7",
+          "yes",
+          "yes"
+        ],
+        "native_market_type": null,
+        "native_scope_binding": {
+          "award_variant": null,
+          "category": null,
+          "conference_id": null,
+          "contract_terms_url": "https://assets.kalshi.com/contract_terms/FOOTBALLSPREAD.pdf",
+          "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/FOOTBALLSPREAD.pdf",
+          "family": "spread",
+          "last_updated_ts": "2026-09-09T17:30:49.938187Z",
+          "milestone_type": "football_game",
+          "period": "full_game",
+          "scope_basis": "Retained native series catalog classification; exact contract predicates, field, season, completion and applicability remain separate",
+          "series_ticker": "KXNCAAFSPREAD",
+          "settlement_sources": [
+            {
+              "name": "ESPN",
+              "url": "https://www.espn.com"
+            },
+            {
+              "name": "Kalshi using information originating from the NCAA",
+              "url": "https://www.ncaa.com/sports/football/fbs"
+            }
+          ],
+          "source_catalog_sha256": "c2329100ac3afac56ab7415b5a79c009716409dc9cf99176cf5f78e3f2323f82",
+          "source_path": "evidence/phase-0/kalshi-series.json",
+          "source_record_sha256": "0705c0d5759122ed97dbed970ce011d590ce2a315170ab20b132350f4986c1fd",
+          "sport": "NCAAF",
+          "tags": [
+            "Football"
+          ],
+          "title": "College Football Spread"
+        },
+        "native_terms": {
+          "rules_primary": "If East Carolina wins by more than 6.5 points in the Temple vs East Carolina college football game originally scheduled for Oct 31, 2026, then the market resolves to Yes.",
+          "rules_secondary": "If the game is postponed but begins within 48 hours of its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the NCAA. All trademarks, logos, and brand names are the property of their respective owners."
+        },
+        "observed_at": "2026-10-29T01:08:32.720407+00:00",
+        "original_wording": {
+          "no_sub_title": "East Carolina wins by over 6.5 points",
+          "rules_primary": "If East Carolina wins by more than 6.5 points in the Temple vs East Carolina college football game originally scheduled for Oct 31, 2026, then the market resolves to Yes.",
+          "rules_secondary": "If the game is postponed but begins within 48 hours of its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the NCAA. All trademarks, logos, and brand names are the property of their respective owners.",
+          "title": "East Carolina wins by over 6.5 points",
+          "yes_sub_title": "East Carolina wins by over 6.5 points"
+        },
+        "overtime": "included",
+        "phase": "pregame",
+        "rules_primary": "If East Carolina wins by more than 6.5 points in the Temple vs East Carolina college football game originally scheduled for Oct 31, 2026, then the market resolves to Yes.",
+        "rules_secondary": "If the game is postponed but begins within 48 hours of its originally scheduled start time, the market will remain open and resolve based on the official final result. If the game is not started within 48 hours, the market will resolve to a fair price.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the NCAA. All trademarks, logos, and brand names are the property of their respective owners.",
+        "same_outcome": {
+          "equality": {
+            "payout": null,
+            "refund_fees": "not_applicable",
+            "treatment": "predicate",
+            "unknown_reason": null
+          },
+          "normal_payout": {
+            "payout": "1",
+            "payout_units": "USD",
+            "quantity_units": "contracts"
+          },
+          "predicate": {
+            "domain": "home_margin",
+            "operator": "gt",
+            "subject_id": null,
+            "threshold": "13/2"
+          },
+          "reason": null,
+          "scoring": {
+            "extra_innings": "not_applicable",
+            "overtime": "included",
+            "score_domain": "integer",
+            "shootout": "not_applicable"
+          },
+          "version": "predict-same-outcome-1"
+        },
+        "schedule_binding": {
+          "core": "e0de52ce4294e92c5ed8d874b111d5a2d2dc19cfcd0ad9a4709b8878091c792b",
+          "metadata": {
+            "authority": [
+              "kalshi",
+              "milestone",
+              "cc359960-613e-56d1-ae56-6d283159b246"
+            ],
+            "native_event_id": "KXNCAAFSPREAD-26OCT31TEMECU",
+            "proofs": [
+              {
+                "body_sha256": "4b2556f6bf33bfd3b6f53f2e4a24668942fe031a5a9900a125d9ae10b064a1cd",
+                "inventory_row": 42,
+                "params": {
+                  "limit": 50,
+                  "series_ticker": "KXNCAAFSPREAD",
+                  "status": "open",
+                  "with_milestones": "true",
+                  "with_nested_markets": "true"
+                },
+                "path": "/trade-api/v2/events",
+                "received_at": "2026-10-29T01:05:29.357935+00:00"
+              }
+            ],
+            "received_at": "2026-10-29T01:05:29.357935+00:00",
+            "revision": "674c623ae6979eb6453d79584311565f39910b7a61d81d532215fa1d431424bc",
+            "start": "2026-10-31T19:00:00+00:00",
+            "version": "predict-schedule-metadata-1"
+          },
+          "native_event_id": "KXNCAAFSPREAD-26OCT31TEMECU",
+          "original_start": "2026-10-31T19:00:00+00:00",
+          "version": "predict-schedule-metadata-1"
+        },
+        "scoring_scope": {
+          "conflicts": [],
+          "evidence": [
+            {
+              "basis": "source_type_rule",
+              "overtime": "included",
+              "rule_id": "KXNCAAFSPREAD",
+              "rule_sha256": "415da19835c7c76b721b3a25041bca1bf67f5033b42f363f7346fb930270e0c1"
+            }
+          ],
+          "missing_fields": [],
+          "observed_overtime": "unknown",
+          "overtime": "included",
+          "reason": "selected_scoring_scope_supported",
+          "rule_id": "KXNCAAFSPREAD",
+          "scoring": {
+            "extra_innings": "not_applicable",
+            "overtime": "included",
+            "score_domain": "integer",
+            "shootout": "not_applicable"
+          },
+          "status": "supported",
+          "version": "predict-native-scoring-scope-3"
+        },
+        "selected_market_observation": {
+          "material_sha256": "e65aeb1d3ad1662cce9390420ddce64b0403adf5ed5145451eae3289f2586b43",
+          "native_event_id": "KXNCAAFSPREAD-26OCT31TEMECU",
+          "native_market_id": "KXNCAAFSPREAD-26OCT31TEMECU-ECU7",
+          "present_fields": [
+            "price_ranges",
+            "price_level_structure",
+            "notional_value_dollars"
+          ],
+          "qualification": "unreviewed_source_metadata_only_no_execution_authority",
+          "source": {
+            "body_sha256": "4b2556f6bf33bfd3b6f53f2e4a24668942fe031a5a9900a125d9ae10b064a1cd",
+            "inventory_row": 2475,
+            "params": {
+              "limit": 50,
+              "series_ticker": "KXNCAAFSPREAD",
+              "status": "open",
+              "with_milestones": "true",
+              "with_nested_markets": "true"
+            },
+            "path": "/trade-api/v2/events",
+            "received_at": "2026-10-29T01:05:29.357935+00:00"
+          },
+          "status": "observed",
+          "values": {
+            "notional_value_dollars": "1.0000",
+            "price_level_structure": "linear_cent",
+            "price_ranges": [
+              {
+                "end": "1.0000",
+                "start": "0.0000",
+                "step": "0.0100"
+              }
+            ]
+          },
+          "version": "selected-market-observation-1"
+        },
+        "series_id": "KXNCAAFSPREAD",
+        "source_predicate": {
+          "competition": "NCAAF",
+          "equality_treatment": "predicate",
+          "family": "spread",
+          "line": "-6.5",
+          "missing": [
+            "Exact shared event/season/stage and home/away review",
+            "Effective completion, exceptional payout, amendments and correction terms",
+            "Applicable overtime or explicit completed first-half scope",
+            "Effective fees, rounding/units and mandatory charges"
+          ],
+          "native_metadata_sha256": "e65aeb1d3ad1662cce9390420ddce64b0403adf5ed5145451eae3289f2586b43",
+          "native_team_id": "41b7f8fa-a692-46a3-b216-653e7800ca53",
+          "outcomes": [
+            {
+              "equality": "predicate",
+              "native_id": "yes",
+              "operator": "gt"
+            },
+            {
+              "equality": "predicate",
+              "native_id": "no",
+              "operator": "le"
+            }
+          ],
+          "participant": "NCAAF:NCAA196",
+          "period": "full_game",
+          "policy": "native-score-predicate-1",
+          "qualification": "Predicate bound; source descriptor/settlement review remains incomplete",
+          "rules_primary": "If East Carolina wins by more than 6.5 points in the Temple vs East Carolina college football game originally scheduled for Oct 31, 2026, then the market resolves to Yes.",
+          "source_threshold": "6.5",
+          "status": "EXPLICIT_PREDICATE_ONLY",
+          "unit": "points"
+        }
+      },
+      "event": {
+        "away": "NCAAF:NCAA690",
+        "competition": "NCAAF",
+        "conflicting_duplicate": false,
+        "home": "NCAAF:NCAA196",
+        "id": "KXNCAAFSPREAD-26OCT31TEMECU",
+        "observed_identity_facts": [
+          {
+            "away_team_id": "c9ff894b-8cb2-4d7e-8979-d7e8b996d5f6",
+            "home_team_id": "41b7f8fa-a692-46a3-b216-653e7800ca53",
+            "id": "cc359960-613e-56d1-ae56-6d283159b246",
+            "main_game_event_ticker": "KXNCAAFGAME-26OCT30TEMECU",
+            "season": {
+              "type": "REG",
+              "week": 9,
+              "year": 2026
+            },
+            "source_id": null,
+            "source_provider": null,
+            "start_date": "2026-10-31T19:00:00Z",
+            "status": "scheduled"
+          }
+        ],
+        "participants": {
+          "East Carolina University": "NCAAF:NCAA196",
+          "Temple University": "NCAAF:NCAA690"
+        },
+        "schedule_metadata": {
+          "authority": [
+            "kalshi",
+            "milestone",
+            "cc359960-613e-56d1-ae56-6d283159b246"
+          ],
+          "native_event_id": "KXNCAAFSPREAD-26OCT31TEMECU",
+          "proofs": [
+            {
+              "body_sha256": "4b2556f6bf33bfd3b6f53f2e4a24668942fe031a5a9900a125d9ae10b064a1cd",
+              "inventory_row": 42,
+              "params": {
+                "limit": 50,
+                "series_ticker": "KXNCAAFSPREAD",
+                "status": "open",
+                "with_milestones": "true",
+                "with_nested_markets": "true"
+              },
+              "path": "/trade-api/v2/events",
+              "received_at": "2026-10-29T01:05:29.357935+00:00"
+            }
+          ],
+          "received_at": "2026-10-29T01:05:29.357935+00:00",
+          "revision": "674c623ae6979eb6453d79584311565f39910b7a61d81d532215fa1d431424bc",
+          "start": "2026-10-31T19:00:00+00:00",
+          "version": "predict-schedule-metadata-1"
+        },
+        "scheduled_start": "2026-10-31T19:00:00+00:00",
+        "season": "2026",
+        "source_participant_roles": {
+          "away": "NCAAF:NCAA690",
+          "home": "NCAAF:NCAA196"
+        },
+        "sport": "american_football",
+        "stage": "regular_season",
+        "status": {
+          "active": null,
+          "closed": null,
+          "ended": null,
+          "live": null,
+          "period": null,
+          "status": null
+        },
+        "title": "Temple vs East Carolina: Spread"
+      },
+      "event_scope": {
+        "native_event_id": "KXNCAAFSPREAD-26OCT31TEMECU",
+        "policy": "native-provider-event-1",
+        "source": "kalshi"
+      },
+      "market_identity": {
+        "competition": "NCAAF",
+        "event": [
+          "comparison-provider-occurrence-1",
+          "kalshi",
+          "NCAAF",
+          "KXNCAAFSPREAD-26OCT31TEMECU",
+          "NCAAF:NCAA196",
+          "NCAAF:NCAA690"
+        ],
+        "family": "spread",
+        "line": "-6.5",
+        "outcome_set": "7c54813597f10f54bf12c5723f52ef7ef7c7bb7ed677e98ecbd2f4165f20bcb5",
+        "period": "full_game",
+        "rules": "native-gross-predicate-1",
+        "scheduled_start": "2026-10-31T19:00:00+00:00",
+        "season": "2026",
+        "sport": "american_football",
+        "stage": "regular_season"
+      },
+      "orientation_evidence": [
+        "manual-comparison-2:f5d15d9bab1b7fe0e61b5b4836ef5178d6734f726caf23ef24453b51b5935052",
+        "predict-combined-native-1:1aa992e481fc2976b1b7f770e8aa7e1a1970d18b0493a69fb996f5a4e8ba190c"
+      ],
+      "outcome_cardinality": 2,
+      "outcome_selections": [
+        {
+          "label": "East Carolina University",
+          "participant": "NCAAF:NCAA196",
+          "predicate": "cover",
+          "signed_line": "-6.5"
+        },
+        {
+          "label": "Temple University",
+          "participant": "NCAAF:NCAA690",
+          "predicate": "cover",
+          "signed_line": "6.5"
+        }
+      ],
+      "period_boundary": "Original native period; scoring scope recorded separately",
+      "quote": {
+        "cost_note": "Current applicable costs unavailable",
+        "freshness_policy": {
+          "maximum_age_seconds": 30,
+          "version": "kalshi-book-age-engineering-1"
+        },
+        "id": "",
+        "original": {
+          "native_units": "usd_per_contract",
+          "native_value": "0.5300",
+          "payout": "1",
+          "payout_units": "USD",
+          "quantity_units": "contracts",
+          "role": "comparison",
+          "transformation": "one_minus_native_bid",
+          "units": "usd_per_contract",
+          "value": "0.4700"
+        },
+        "provenance": {
+          "mode": "current",
+          "real_source": true,
+          "sha256": "f5d15d9bab1b7fe0e61b5b4836ef5178d6734f726caf23ef24453b51b5935052"
+        },
+        "revision": 1,
+        "rule_note": "Native predicate reviewed; exceptional settlement and costs remain unqualified.",
+        "source": {
+          "binding_id": "3921fb8977c89ea0150891bf04784086142c9e9b549afad45db9cff0f08a51aa",
+          "binding_version": "manual-comparison-2",
+          "native_event_id": "KXNCAAFSPREAD-26OCT31TEMECU",
+          "native_line": null,
+          "native_market_id": "KXNCAAFSPREAD-26OCT31TEMECU-ECU7",
+          "native_outcome_id": "yes",
+          "native_side": "yes",
+          "provider": "kalshi",
+          "quote_side": "buy"
+        },
+        "state": "available",
+        "times": {
+          "projected_at": "2026-10-29T01:08:44.399640+00:00",
+          "received_at": "2026-10-29T01:08:32.720407+00:00",
+          "source_at": "2026-10-29T01:08:32.698000+00:00",
+          "source_time_kind": "provider_book"
+        },
+        "venue": "kalshi"
+      },
+      "result_policy": "native-spread-normal-predicate-1:7c54813597f10f54bf12c5723f52ef7ef7c7bb7ed677e98ecbd2f4165f20bcb5",
+      "selection": {
+        "label": "East Carolina University",
+        "participant": "NCAAF:NCAA196",
+        "predicate": "cover",
+        "signed_line": "-6.5"
+      },
+      "verified": true
+    }
+  ]
+}

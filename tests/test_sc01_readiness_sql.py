@@ -40,7 +40,8 @@ class ReadOnlySQL(unittest.IsolatedAsyncioTestCase):
         with cls.connect() as db:
             with patch('app.storage.store.ROOT',Path(ISOLATED_ROOT.name)):
                 Store(db).migrate()
-            CurrentRowStore(db).upsert_records(fixture_records())
+            # Replay admission at the retained observation time, including expiry.
+            CurrentRowStore(db).upsert_records(fixture_records(),now=AT)
 
     @classmethod
     def tearDownClass(cls):
@@ -71,6 +72,8 @@ class ReadOnlySQL(unittest.IsolatedAsyncioTestCase):
                 records=store.capture()['records'];target=next(r for r in records if r['quote']['times']['source_at'])
                 for clock in ('2020-01-01T00:00:00Z',None):
                     changed=deepcopy(target);changed['quote']['times'].update(source_at=clock,received_at=AT);changed['quote']['original']['value']='99'
+                    # An old/unknown observation has no renewed book confirmation.
+                    changed['quote'].pop('book_confirmation',None)
                     store.upsert_records([changed])
                     self.assertEqual(before['revision'],store.capture()['revision'])
                 same=deepcopy(target);same['quote']['original']['value']='99'

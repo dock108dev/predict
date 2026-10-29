@@ -1,5 +1,4 @@
 """Bounded selected evidence carried by the ordinary immutable read frame."""
-import json
 from types import SimpleNamespace
 
 from .store import encoded, stamp, hashed
@@ -18,9 +17,10 @@ def pack(observed, financial, context, dependencies):
     def bundle(value):
         if value is None:return None
         return {key:value[key] for key in ('game_key','input_version','as_of','state_inputs','benchmark_venue','representation','benchmark','benchmark_reason') if key in value}
-    return encode(encoded(dict(observed=bundle(observed),financial=bundle(financial),
+    from .shared_json import dumps
+    return encode(dumps(dict(observed=bundle(observed),financial=bundle(financial),
         at=context.at,epoch=context.epoch,engine=context.engine,
-        proof=proof(context.publication_frame,dependencies['selector']))).decode())
+        proof=proof(context.publication_frame,dependencies['selector']))))
 
 
 def bind_token(board, token):
@@ -49,17 +49,21 @@ def read(db, saved, query, policy, *, stopped=False, guard=lambda _:None):
     payload=facts.get('selected_frame')
     if payload is None:raise ValueError('current_slate_read_expired')
     text=decode(payload);guard(len(text)*8)
-    captured=json.loads(text);context=SimpleNamespace(**{k:captured[k] for k in ('at','epoch','engine')})
-    bundle=captured['observed' if observation else 'financial']
+    from .shared_json import loads
+    bundle_key='observed' if observation else 'financial'
+    captured=loads(text,guard=guard,fields=(bundle_key,'at','epoch','engine','proof'))
+    context=SimpleNamespace(**{k:captured[k] for k in ('at','epoch','engine')})
+    bundle=captured[bundle_key]
     if bundle is None or bundle['game_key']!=query['game']:raise ValueError('current_inputs_changed_or_removed')
     owner=runtime(db);now=utc()
     committed={r['venue']:r['state'] for r in db.execute('SELECT venue,state FROM current_source_status').fetchall()}
     states=source_states(committed,owner)
-    dependency=facts['publication_dependencies']
+    dependency=facts.get('financial_dependencies',facts['publication_dependencies']) if not observation else facts['publication_dependencies']
     frame=publication.capture(db,states,selector=dependency['selector'],compact=True,resource_guard=guard)
     if frame['epoch']!=context.epoch:raise ValueError('current_inputs_changed_or_removed')
     checks=publication.reasons(frame,dependency)
-    changed=bool(checks['all'] or any(checks['observations'].values()) or any(checks['comparisons'].values())
+    changed=bool((not observation and facts.get('retained_financial_only'))
+        or checks['all'] or any(checks['observations'].values()) or any(checks['comparisons'].values())
         or (not observation and captured['proof']!=proof(frame,dependency['selector']))
         or context.engine!=engine_binding() or (not observation and expected['policy_revision']!=load().revision)
         or stopped or not owner.get('active') or not owner.get('healthy'))
@@ -95,7 +99,35 @@ def read(db, saved, query, policy, *, stopped=False, guard=lambda _:None):
             observed=age_observation(price(q),events[quote_key(q)],stamp(now),source_states=states,
                 publication_reasons=['current_dependencies_changed'] if changed else [])
             for field in ('source_state','source_health','observation_display'):q[field]=observed[field]
+        if out.get('quote'):
+            from .native_authority import capture as stream_capture,assessment
+            from .current_rows import contract_id
+            from .board_view import benchmark_reasons
+            from app.comparison.bound_finance import age_benchmarks
+            q=out['quote'];event=events[quote_key(q)]
+            stream_proof=assessment(q,stream_capture(db,owner),stamp(now))
+            global_reasons=[]
+            if stopped or not owner.get('active'):global_reasons.append('updates_stopped')
+            if not owner.get('healthy'):global_reasons.append('data_runtime_unhealthy')
+            if context.engine!=engine_binding():global_reasons.append('engine_binding_changed')
+            if expected['policy_revision']!=load().revision:global_reasons.append('policy_changed')
+            reasons=benchmark_reasons(checks,contract_id(dict(quote=q)),global_reasons,stream_proof,q['venue'])
+            age_benchmarks(q['calculations']['funded_estimate'],dict(q,state=states.get(q['venue'],{}).get('state',q['state'])),event,
+                stamp(now),reasons=reasons,source_assessment=stream_proof)
     out['selection_status']='captured' if changed else 'unchanged'
     out['read_token']=query.get('read_token')
     if len(encoded(out))>8*1024*1024:raise ValueError('board_response_byte_capacity')
     return out
+
+
+def preserve_newer_observation(financial, newer):
+    """Combine separate captured evidence without changing either input bundle."""
+    from .shared_json import loads,dumps
+    old=loads(decode(financial['selected_frame']))
+    new=loads(decode(newer['selected_frame']))
+    old['observed']=new['observed']
+    financial['selected_frame']=encode(dumps(old))
+    financial['financial_dependencies']=financial.get('financial_dependencies',financial['publication_dependencies'])
+    for key in ('observation_context','observation_valid_until','publication_dependencies','observation_binding'):
+        if key in newer:financial[key]=newer[key]
+    financial['boards']['odds']=newer['boards']['odds']

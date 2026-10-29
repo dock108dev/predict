@@ -131,3 +131,40 @@ remain part of the local deployment boundary; new-file protection does not
 change historical permissions or authenticate hostile code running as the same
 OS user. Request/header concurrency limits and remote authentication require a
 separate design; loopback browser checks do not provide those guarantees.
+
+## Raw-reader hardening findings
+
+The October 28 source pass found the following issues in
+`app/dashboard/raw_price_api.py`. These are local resource and diagnostic
+boundaries, not evidence of remote authentication bypass.
+
+| Finding / category | Severity / confidence | Evidence and realistic impact | Resolution / status |
+| --- | --- | --- | --- |
+| Raw-read admission bypass / resource exhaustion | Medium / high | Failure reads bypassed the four-operation gate; exports waited on it without refusing excess requests. A local client or repeated browser requests could queue work and compete for database/thread resources. | Fixed: failure reads and releases share the gate; exports refuse excess work with HTTP 429, as page and Details reads already did. |
+| Cancelled raw-read exception disclosure / diagnostic privacy | Medium / high | The shielded task raised database exceptions directly. Python 3.14 could log their raw messages after cancellation, and a late failure could replace cancellation. | Fixed: thread results carry failures as data; `raw_read_after_cancellation` logs only class/frame locations, cancellation propagates, and the slot remains charged until work finishes. |
+| Export connection ownership / resource exhaustion | Medium / high | Cancellation during `to_thread(connect)` could lose a subsequently opened connection; cancellation during SQL could begin close while work was still running. | Fixed: connection creation records ownership before returning, each operation is joined, and the connection closes in `finally`. |
+| Export SQL duration / hardening opportunity | Low / high | Export transactions lacked the page reader's SQL timeouts. Slow queries or idle streaming could retain database resources longer than ordinary pages. | Fixed: ten-second statement and 125-second idle-transaction timeouts. These are not a total export or network-write deadline. |
+
+The local threat model intentionally accepts unauthenticated same-user tools,
+trusted storage parents and internal process serialization. Host/Origin/Fetch
+Metadata checks, parameterized SQL, text-safe rendering and fixed provider
+endpoints remain the browser/provider boundaries. No new account system, HSTS on
+plain loopback HTTP, global logging suppression or provider retry was introduced.
+
+Prioritized follow-up remains:
+
+1. **Deferred hardening:** define total export/network-write and global connection
+   limits if slow local readers interfere with ordinary use. Four simultaneous raw
+   operations are bounded, but this is not a global server resource quota. An
+   interrupted export has no `export_complete` trailer and must be treated as
+   incomplete.
+2. **Needs deployment decision:** authentication, TLS and filesystem isolation are
+   prerequisites for any remote or shared-user deployment; current browser checks
+   do not authorize that deployment.
+3. **Outside-repository verification:** verify Keychain ACLs, provider permissions
+   and historical file permissions in a separately scoped operational review.
+   This pass makes no fresh dependency-vulnerability or platform-security claim.
+
+Focused regressions in `tests/test_security_hardening.py` use synthetic threads,
+connections and requests to verify admission refusal, cancellation ownership,
+message redaction and export deadlines without provider requests or owner data.

@@ -1,0 +1,11 @@
+{
+  "version": "polymarket-us-single-fill-conditional-20261028-1",
+  "source_url": "https://docs.polymarket.us/fees.md",
+  "sha256": "a52a2853a30f519f5808aa2e60cbe9a7ea260a03d8e33159abc32ec6ed65e266",
+  "path": "app/fixtures/polymarket-us-fees-20261028.md",
+  "reviewed_at": "2026-10-28T18:25:49.536715+00:00",
+  "review_before": "2026-10-29T00:00:00Z",
+  "fee_rate": "0.0695",
+  "evidence_class": "official_standard_fee_schedule_single_fill_scenario",
+  "applicability": "Standard non-combo sports taker, one contract in one fill, no weekly rebate assumption. Whole-order split-fill fees and actual execution are not established."
+}

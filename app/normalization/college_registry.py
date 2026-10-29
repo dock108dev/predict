@@ -29,3 +29,13 @@ def aggregate_registry():
     data['version']+='+'+extra['version']
     data['aliases']+=extra['aliases']
     return Registry(data)
+
+
+@lru_cache(maxsize=1)
+def occurrence_registry():
+    """Reviewed names for current joins; never rewrite retained admission IDs."""
+    data=json.loads(aggregate_registry().to_json())
+    extra=json.loads(Path(__file__).with_name('college-occurrence-aliases-20261028.json').read_text())
+    data['version']+='+'+extra['version']
+    data['aliases']+=extra['aliases']
+    return Registry(data)

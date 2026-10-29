@@ -1,0 +1,11 @@
+{
+  "version": "novig-pregame-conditional-20261028-1",
+  "source_url": "https://support.novig.com/en/articles/16195057-fees-on-novig",
+  "sha256": "062694ec8951a57678f4e3a857b3ee748e3253765dc701c53ed2b7da308a6b46",
+  "path": "app/fixtures/novig-fees-20261028.html",
+  "reviewed_at": "2026-10-28T17:00:16.032946+00:00",
+  "review_before": "2026-10-29T00:00:00Z",
+  "fee_rate": "0",
+  "evidence_class": "official_fee_schedule_conditional_product_mapping",
+  "applicability": "Novig pregame straight trades, app/web and API; no fees for maker or taker. Aggregate channel mapping and exceptional settlement are conditions, not instrument-qualified facts."
+}

@@ -20,7 +20,7 @@ const side = (v) =>
     no: "NO",
     long: "Long",
     short: "Short",
-    bookmaker_outcome: "winner",
+    bookmaker_outcome: "bookmaker outcome",
   })[String(v).toLowerCase()] || v;
 const unit = (v) =>
   ({ stake_usd: "USD stake", dollar_face_contracts: "$1 face contracts" })[v] ||

@@ -82,12 +82,11 @@ class WorkerMemory(TestCase):
         admission={};served=[];clock=[0]
         groups=[['a','a-peer'],['b','b-peer'],['c','c-peer']]
         def calculate(db,**kwargs):
-            served.append(kwargs['event_ids']);clock[0]+=21
+            served.append(list(kwargs['event_ids']));clock[0]+=21
             return dict(published=True,computed=1,reused=0,errors=[])
         with patch('app.collection.background_work.BACKGROUND',work),\
              patch.object(latest,'capture_reservation',return_value=100),\
              patch.object(latest,'capture_batches',side_effect=lambda db:groups),\
-             patch.object(latest,'MAX_BATCH_EVENTS',2),\
              patch.object(latest,'monotonic',side_effect=lambda:clock[0]),\
              patch.object(latest,'_reconcile',side_effect=calculate):
             first=latest.reconcile(db,admission=admission)

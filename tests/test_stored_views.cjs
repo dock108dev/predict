@@ -77,12 +77,26 @@ const asset = (name) =>
   assert.equal(nodes.advanced, root.children[root.children.length - 1]);
   assert.equal(nodes.advanced.parentNode, root);
   const grossExample=JSON.parse(JSON.stringify(fixture.single));
-  grossExample.quote.calculations.funded_estimate.gross_decisive_benchmark={available:true,state:'numeric_last_known',return_percent:'-475/214'};
+  grossExample.quote.calculations.funded_estimate.gross_decisive_benchmark={available:true,state:'numeric_last_known',return_percent:'-475/214',selected_decisive_probability:'46/97',acquisition_usd_per_normal_claim:'10/21',reference_originals:[{selection:{label:'Miami Dolphins',signed_line:'6.5'},market_identity:{family:'spread',period:'full_game'},decimal_odds:'2.04',source_at:'2026-10-28T02:15:10Z',received_at:'2026-10-28T02:15:32Z'}]};
   renderSavedDetails(grossExample,{root,participants});
   assert(root.textContent.includes('Gross decisive benchmark'));
   assert(root.textContent.includes('-2.22%'));
   assert(root.textContent.includes('before fees and exceptional settlement'));
   assert(root.textContent.includes('No executable quantity'));
+  assert(root.textContent.includes('Miami Dolphins +6.5 · spread · full game'));
+  assert(root.textContent.includes('2.04 decimal odds'));
+  assert(root.textContent.includes('46/97 (47.42%)'));
+  assert(root.textContent.includes('10/21 USD'));
+  assert(!root.textContent.includes('Source Unknown'));
+  const referenceSelection=grossExample.quote.calculations.funded_estimate.gross_decisive_benchmark.reference_originals[0].selection;
+  referenceSelection.predicate='cover';
+  renderSavedDetails(grossExample,{root,participants});
+  assert(!root.textContent.includes('undefined'));
+  assert(root.textContent.includes('Reference condition'));
+  assert(root.textContent.toLowerCase().includes('cover'));
+  referenceSelection.predicate={domain:'combined_score',operator:'lt',threshold:'47.5'};
+  renderSavedDetails(grossExample,{root,participants});
+  assert(root.textContent.includes('Combined score < 47.5'));
   renderSavedDetails(fixture.pair, { root, participants });
   assert(root.textContent.includes("Leg 2 quantity"));
   assert(root.textContent.includes("Modeled outcomes"));
@@ -96,6 +110,14 @@ const asset = (name) =>
   assert(root.textContent.includes("Conditional EV · buffered"));
   assert(root.textContent.includes("$12.34"));
   assert(root.textContent.includes("Complete modeled EV unavailable"));
+  conditional.quote.calculations.funded_estimate.conditional_trade_benchmark={
+    available:true,state:'numeric_last_known',return_percent:'-5.22',normalization_risk_usd:'0.395',
+    trade_fee_usd:'0.02',normalization_label:'one-contract, one-fill scenario',condition:'Authored fill scenario',
+    formula:'probability minus cost and fee',exclusions:['voids'],meaning:'Not complete net EV',
+    evidence:{reviewed_at:'2026-10-28T18:25:49Z',review_before:'2026-10-29T00:00:00Z'}};
+  renderSavedDetails(conditional,{root,participants});
+  assert(root.textContent.includes('0.395 USD'));
+  assert(root.textContent.includes('one-contract, one-fill scenario'));
   const q=JSON.parse(JSON.stringify(fixture.odds.prices[0]));
   Object.assign(q,{quote_revision:7,observation_revision:'authored-source-frame-7',source_state:'available',source_health:{state:'available',reason:'Book synchronized'},market:{market:'winner',period:'full_game',period_boundary:'Including overtime'},observed_depth:{available:true,levels:[{price:'0.430000000001',quantity:'12.500000001'}],total_levels:9,truncated:true,quantity_units:'contracts',price_units:'usd_per_contract',source_at:'2026-10-17T13:00:00.123456+00:00',received_at:'2026-10-17T13:00:00.456789+00:00'},gross_comparison:{available:false,reason:'occurrence_identity_ambiguous'}});
   q.observed_depth.clock_basis='current_native_book';q.observed_depth.book_revision=11;

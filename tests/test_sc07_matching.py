@@ -2,6 +2,7 @@
 from copy import deepcopy
 from datetime import datetime
 from unittest import TestCase
+from unittest.mock import patch
 
 from app.collection.native_score_binding import bind as score
 from app.collection.v1_comparison import bind
@@ -151,9 +152,12 @@ class PregameEligibility(TestCase):
                 ('native_event_id','native_market_id','native_outcome_id','native_side')]],
                 native_terms=terms,original_wording=dict(terms),series_id='KXNBAGAME',
                 native_market_type='basketball_team_full_game_winner')
-        raw=catalog_from_normalized(envelope(),inputs,occurrence_resolver=OccurrenceResolver(links=EventLinks()),
-            include_profiles=False,source_rules={},selected_applicability={})
-        state=drain(serialize_steps(raw,allow_synthetic=True,prices_only=True))
+        # NBA now has reviewed default scope evidence. This case deliberately
+        # removes that evidence to keep testing the missing-scope boundary.
+        with patch('app.comparison.native_scoring_scope.source_rules',return_value=[]):
+            raw=catalog_from_normalized(envelope(),inputs,occurrence_resolver=OccurrenceResolver(links=EventLinks()),
+                include_profiles=False,source_rules={},selected_applicability={})
+            state=drain(serialize_steps(raw,allow_synthetic=True,prices_only=True))
         self.assertEqual(len(entries(state)),4)
         at=datetime.fromisoformat(AT.replace('Z','+00:00'))
         for event,group,quote in entries(state):

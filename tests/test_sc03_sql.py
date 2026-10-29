@@ -65,7 +65,7 @@ class TicketSQL(IsolatedAsyncioTestCase):
                     with patch('app.comparison.scanner_projection.dependencies',wraps=dependencies) as owner:
                         again,again_inputs,again_metadata,again_ms=worker._capture()
                         worker._ingest_capture(again,again_inputs,again_metadata,again_ms,worker.projection.policy)
-                        owner.assert_not_called()
+                        self.assertEqual(owner.call_count,0)
                     self.assertEqual(len(worker.projection._dependency_proofs),500)
                     selected_before=deepcopy({key:worker.projection.inputs[key] for key in selected['inputs']})
                     frame=inputs=None
@@ -87,10 +87,10 @@ class TicketSQL(IsolatedAsyncioTestCase):
                     with self.connect() as db:
                         with transaction(db):
                             store=CurrentRowStore(db);store.upsert_records(extra);store.replace_native_books(native_books(extra))
-                    with patch('app.storage.scanner_readiness._prepare_group',side_effect=AssertionError('501 admission invoked model owner')) as prepare:
-                        for capture in (worker._capture,lambda:worker._capture_selected(selected)):
-                            with self.assertRaisesRegex(ValueError,'^board_catalog_capacity$'):capture()
-                        prepare.assert_not_called()
+                    # Expanded scope must not reject the entire slate at game 501.
+                    expanded,_,_,_=worker._capture()
+                    self.assertEqual(len(expanded['pairs']),501)
+                    worker._capture_selected(selected)
             finally:await worker.close()
 
     async def test_targeted_current_pair_proof_preserves_unrelated_continuity_and_rejects_changes(self):
@@ -196,6 +196,7 @@ class TicketSQL(IsolatedAsyncioTestCase):
 
     async def test_actual_sql_capture_connections_closed_before_selected_finance(self):
         from contextlib import contextmanager
+        from unittest.mock import patch
         from app.comparison.scanner_tickets import Tickets
         connections=[];captures=[]
         @contextmanager
@@ -205,7 +206,9 @@ class TicketSQL(IsolatedAsyncioTestCase):
         f,x=frame();p=scanner.projection;p.clock=lambda:AT;p.evaluator=fake
         p.ingest(f,x);p.drain()
         def fresh():
-            real,detached,meta,elapsed=scanner._capture()
+            # The SQL expiry filter must share the authored scanner clock.
+            with patch('app.storage.current_rows.utc',return_value=AT):
+                real,detached,meta,elapsed=scanner._capture()
             captures.append(dict(actual_revision=meta['current_rows_revision'],capture_ms=elapsed))
             self.assertTrue(all(db.closed for db in connections))
             self.assertTrue(real['instruments'])

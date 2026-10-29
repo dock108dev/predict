@@ -185,6 +185,7 @@ def _discovery(query):
     return dict(checked_at=latest['checked_at'],status=latest['status'],completeness=latest['completeness'],
         games=counts.get('games'),markets=counts.get('markets'),native_outcomes=counts.get('quotes'),
         reported_counts=None if failed else latest.get('offered'),unique_counts_measured=unique is not None and not failed,
+        inventory=deepcopy(latest.get('inventory')),
         scope=latest.get('offered_scope','exact_query'),query_sha256=latest.get('query_sha256'),
         reason=latest.get('reason'),admission_code=latest.get('admission_code'),last_success=deepcopy(query.get('last_success')),
         window_note='Exact captured query and selected metadata window; independent of the retained-price cohort. Provider-universe totals are unknown.')
@@ -252,12 +253,14 @@ def build(records, published, *, config, owner, at, queries=(), encountered=(), 
         from .occurrence_matching import OccurrenceResolver
         from app.storage.comparison_board import _records
         from .same_outcome import record_identity
-        resolved=OccurrenceResolver().resolve(_records(records,at),clock=at)
-        for row in resolved:
-            identity=record_identity(row)
-            # Legacy aggregate normal-payout bridging has the ordinary owner's
-            # separately validated published descriptor below.
-            input_facts[native_key(row['quote'])]=(row,identity)
+        def project(row):
+            return (native_key(row['quote']), dict(verified=row.get('verified'),
+                quote=dict(occurrence_match={k:row['quote']['occurrence_match'].get(k)
+                    for k in ('status','occurrence_id')})), record_identity(row))
+        # Preserve the ordinary resolver and its complete global membership,
+        # but release each detached audit graph after extracting metrics facts.
+        for key,row,identity in OccurrenceResolver().resolve(_records(records,at),clock=at,result_projector=project):
+            input_facts[key]=(row,identity)
     query_map = {(c['sport'],c.get('venue',c.get('source')),f['family']):f for c in queries for f in c.get('family_queries', [])}
     # A source-wide query cannot become family-specific counts.
     source_queries = {(c['sport'],c.get('venue',c.get('source'))):c for c in queries}

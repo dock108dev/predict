@@ -25,7 +25,7 @@ class LifecycleOwner:
     def __init__(self,venue,runtime_id,*,attempt_id=None,links=None,cap=MAX_MARKETS):
         if venue not in ('kalshi','polymarket_us') or not isinstance(runtime_id,str) or not runtime_id or len(runtime_id)>256:
             raise ValueError('Exact bounded lifecycle owner required')
-        if type(cap) is not int or not 1<=cap<=MAX_MARKETS:
+        if cap is not None and (type(cap) is not int or cap < 1):
             raise ValueError('Lifecycle subscription bound')
         self.venue=venue;self.runtime_id=runtime_id;self.attempt_id=attempt_id or runtime_id
         self.links=links or EventLinks();self.cap=cap
@@ -35,7 +35,7 @@ class LifecycleOwner:
     def reconcile(self,selected,at):
         if not self.dispatch:
             raise ValueError('Lifecycle dispatch revoked')
-        if len(selected)>self.cap:
+        if self.cap is not None and len(selected)>self.cap:
             raise ValueError('Lifecycle subscription bound')
         desired={};rejected=[]
         seen=set()
@@ -103,7 +103,7 @@ class LifecycleOwner:
         # A disconnected historical image is retained only as inspection context.
         # It cannot become current until a complete image from this generation.
 
-    def admit_book(self,book,*,generation):
+    def admit_book(self,book,*,generation,owned=False,_content_sha256=None,_encoded_bytes=None):
         if not self.dispatch or generation!=self.generation:
             raise ValueError('Stale/revoked native book generation')
         ref=book['raw']['ref'];mid=ref['market_id'];lease=self.leases.get(mid)
@@ -111,7 +111,8 @@ class LifecycleOwner:
             raise ValueError('Retired/unowned native book')
         if book.get('sync')!='synchronized' or book.get('state')!='active':
             raise ValueError('Complete active native image required')
-        if len(json.dumps(book,default=str).encode())>MAX_BOOK_BYTES:
+        encoded_bound=_encoded_bytes+4096 if owned and _encoded_bytes is not None else MAX_BOOK_BYTES+1
+        if encoded_bound>MAX_BOOK_BYTES and len(json.dumps(book,default=str).encode())>MAX_BOOK_BYTES:
             raise ValueError('Latest native book byte bound')
         received=stamp(book['raw']['received_at']);source=book['raw'].get('exchange_at')
         if source is not None and stamp(source)>received:
@@ -119,15 +120,16 @@ class LifecycleOwner:
         previous=self.books.get(mid)
         if previous and source is not None and previous['original_source_at'] is not None and stamp(source)<stamp(previous['original_source_at']):
             raise ValueError('Regressed native price clock')
-        value=deepcopy(book);fingerprint=content(book)
+        value=dict(book,raw=dict(book['raw'])) if owned else deepcopy(book)
+        fingerprint=_content_sha256 if owned and _content_sha256 is not None else content(book)
         # A complete unchanged image may have a new confirmation time, but the
         # price's original exchange clock remains the prior source observation.
         original=previous['original_source_at'] if previous and previous['content_sha256']==fingerprint else source
         value['raw']['exchange_at']=original
-        self.books[mid]=dict(book=value,content_sha256=fingerprint,original_source_at=original,
+        self.books[mid]=dict(book=None if owned else value,content_sha256=fingerprint,original_source_at=original,
             last_received_at=book['raw']['received_at'],confirmation_source_at=source,generation=generation)
         lease['image_current']=True
-        return deepcopy(value)
+        return value if owned else deepcopy(value)
 
     def freshness(self,market_id,at,maximum_age_seconds=30):
         book=self.books.get(market_id);lease=self.leases.get(market_id)
@@ -158,16 +160,18 @@ def worker_selections(venue,parsed,catalog):
     """Adapt existing admitted current catalog/markets without new authority."""
     events={e['id']:e for e in catalog['events']}
     markets={m['id']:m for m in catalog['markets']}
+    from app.collection.current_native_catalog import book_material,native_material
+    event_materials={eid:native_material(venue,event,event=True) for eid,event in events.items()}
     result=[]
     for mid,market in sorted(parsed.items()):
         row=markets[mid];parent=events[market.raw.ref.event_id]
         roles=parent.get('source_participant_roles',{})
         event=dict(id=parent['id'],competition=parent.get('competition'),home=parent.get('home',roles.get('home')),
             away=parent.get('away',roles.get('away')),scheduled_start=parent.get('scheduled_start'),status=deepcopy(parent.get('status',{})))
-        binding=row.get('v1_raw_binding',{})
-        identity={k:v for k,v in binding.get('identity',{}).items() if k not in ('event','scheduled_start')}
-        material=dict(state=market.state.value,identity=identity,predicate=binding.get('predicate'),
-            source_predicate=binding.get('source_predicate'),slug=row.get('native_slug'),
-            sides=row.get('sides'),terms=row.get('terms'))
-        result.append(dict(market_id=mid,event=event,material_revision=digest(material),discovery_eligible=True,payout_eligible=None))
+        # Canonical participant/season enrichment can change independently of
+        # the physical source instrument. Catalog ingress recalculates those
+        # dependencies; only native book material requires a new wire image.
+        identity={k:v for k,v in row.get('v1_raw_binding',{}).get('identity',{}).items()
+                  if k not in ('event','scheduled_start','participants','season','stage')}
+        result.append(dict(market_id=mid,event=event,material_revision=digest([book_material(venue,parent,row,include_schedule=False,event_material=event_materials[parent['id']]),identity]),discovery_eligible=True,payout_eligible=None))
     return result

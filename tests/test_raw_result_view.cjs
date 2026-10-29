@@ -1,0 +1,23 @@
+const assert=require('node:assert/strict');
+const {pathToFileURL}=require('node:url');
+const path=require('node:path');
+require('./ev07_dom.cjs');
+(async()=>{
+ const {capturedCalculation}=await import(pathToFileURL(path.resolve('app/dashboard/opportunity_static/current/raw-result-view.js')));
+ const record={view:'ev',calculated_at:'2026-10-29T01:30:00Z',captured_inputs:[{venue:'novig',selection:{participant:'Arizona',signed_line:'5.5'},original:{value:'1.70',units:'decimal_odds'},times:{source_at:'original-clock'}}],result:{reasons:['modeled_winner_basis_expired_or_not_effective'],gross_decisive_benchmark:{available:false,reason:'exact_pinnacle_opposition_unavailable'}}};
+ const before=JSON.stringify(record);let root=capturedCalculation(record);
+ assert(root.textContent.includes('No complete Pinnacle pair for this exact event, outcome and line.'));
+ assert(root.textContent.includes('outside its applicability interval'));
+ assert(root.textContent.includes('Missing evaluation is not zero return'));
+ assert(root.textContent.includes('1.70 decimal odds · Source original-clock'));
+ assert(!root.textContent.includes('0.00%'));assert.equal(JSON.stringify(record),before);
+ record.result.gross_decisive_benchmark={available:true,state:'numeric_current',return_percent:'-1/2',selected_decisive_probability:'219/389',acquisition_usd_per_normal_claim:'0.56',reference_originals:[{decimal_odds:'2.19',selection:{label:'Texas Tech',signed_line:'-5.5'},source_at:'reference-clock'}]};
+ record.result.conditional_trade_benchmark={available:true,return_percent:'0',normalization_label:'per $1 modeled risk',condition:'Decisive outcomes only.'};
+ root=capturedCalculation(record);
+ assert(root.textContent.includes('Gross decisive return · last-known: -0.50%'));
+ assert(root.textContent.includes('Conditional trade-fee return · last-known: 0.00%'));
+ assert(root.textContent.includes('Pinnacle reference · Texas Tech · line -5.5 · 2.19 decimal odds · Source reference-clock'));
+ assert(root.textContent.includes('Current eligibility is not established'));
+ assert(root.textContent.includes('219/389'));
+ console.log('Captured result presentation passed: missing versus zero, signed fractions, original/reference evidence, immutable historical state.');
+})().catch(e=>{console.error(e);process.exitCode=1;});

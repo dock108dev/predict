@@ -19,6 +19,8 @@
       "tests/test_current_native_density.py",
       "tests/test_current_native_material_quarantine.py",
       "tests/test_current_confirmation.py",
+      "tests/test_native_synchronization.py",
+      "tests/test_accounting_process.py",
       "tests/test_current_occurrence.py",
       "tests/test_current_occurrence_october8.py",
       "tests/test_current_quota.py",
@@ -39,7 +41,14 @@
       "tests/test_ev09_delivery.py",
       "tests/test_ev09_n01.py",
       "tests/test_ev09_b01.py",
-      "tests/test_schedule_metadata.py"
+      "tests/test_schedule_metadata.py",
+      "tests/test_sc09_bulk_native.py",
+      "tests/test_sc09_offered_scope.py",
+      "tests/test_sc09_alternate.py",
+      "tests/test_sc09_transport_probe.py",
+      "tests/test_current_book_images.py",
+      "tests/test_current_catalog_delta.py",
+      "tests/test_sc09_reconstruction.py"
     ]
   },
   {
@@ -481,6 +490,7 @@
       "tests/test_comparison_read_context.py",
       "tests/test_ingress_catchup_budget.py",
       "tests/test_payload_codec.py",
+      "tests/test_sc09_product.py",
       "tests/test_selected_read_work.py"
     ]
   },
@@ -551,9 +561,19 @@
     "name": "broad-shared-coverage",
     "tests": [
       "tests/test_background_work.py",
+      "tests/test_coverage_worker.py",
+      "tests/test_board_capture_progress.py",
       "tests/test_broad_pipeline.py",
       "tests/test_broad_coverage.py",
       "tests/test_shared_current_comparisons.py"
+    ]
+  },
+  {
+    "name": "sc09-financial-evidence",
+    "tests": [
+      "tests/test_sc09_live_financial.py",
+      "tests/test_financial_followup.py",
+      "tests/test_sc09_native_reference.py"
     ]
   },
   {

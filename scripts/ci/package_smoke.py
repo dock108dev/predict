@@ -21,8 +21,8 @@ def validate_wheel(names, source):
         and "__pycache__" not in p.parts
         and (
             p.suffix in {".py", ".json", ".js", ".css", ".html", ".sql"}
-            or p.suffix == ".pdf"
-            and p.parent == source / "app/fixtures/native-scoring-scope"
+            or p.suffix in {".pdf", ".txt", ".md", ".gz"}
+            and source / "app/fixtures" in p.parents
         )
     }
     actual = {n for n in names if n.startswith("app/")}
@@ -141,6 +141,16 @@ for name in ('index.html', 'current.js', 'arbs.html', 'arbs.js', 'admin.html', '
              'scanner.css', 'scanner-runtime.json'):
     assert (root / 'opportunity_static/current' / name).is_file(), name
 assert '/env/' in str(root), root
+# Imports alone do not prove that current model evidence survived packaging.
+from app.comparison.conditional_benchmark import basis
+from app.comparison.current_dependencies import instant
+for venue in ('novig', 'polymarket_us'):
+    assert basis(venue)['sha256']
+    assert basis(venue, at=instant('2026-10-29T01:00:00Z'))['sha256']
+from app.comparison.native_scoring_scope import source_rules
+rules=source_rules()
+for native_type in ('KXNBAGAME', 'KXNHLSPREAD', 'KXNHLTOTAL'):
+    assert any(r['native_type']==native_type and r['evidence_available'] for r in rules), native_type
 import asyncio, aiohttp
 from aiohttp import web
 from types import SimpleNamespace

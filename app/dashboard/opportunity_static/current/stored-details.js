@@ -1,4 +1,5 @@
 import { primaryComparisonMetric } from "./comparison-slate-views.js";
+import { financialGap } from "./opportunity-dashboard.js";
 import { money, quantity, numeric, percent } from "./board-client.js";
 import {
   el,
@@ -200,6 +201,7 @@ export function renderSavedDetails(v, { root, participants }) {
         side(q.source.native_side),
     );
   root.append(clockedText("p", now => quotes.map(q => observationStatus(q, now)).join(" · ")));
+  for (const q of quotes) root.append(el("p", venue(q.venue) + " source " + time(q.times.source_at) + " · Received " + time(q.times.received_at)));
   const primary = primaryComparisonMetric(selected, v.pair ? "arbs" : "ev");
   if (primary) {
     const headline = el("div", undefined, "metrics selected-primary");
@@ -207,12 +209,52 @@ export function renderSavedDetails(v, { root, participants }) {
     root.append(headline);
   }
   const gross = selected.gross_decisive_benchmark;
+  if (gross?.available === false && gross.reason) textLine(root,"Gross comparison unavailable",financialGap(gross.reason));
   if (gross?.available && numeric(gross.return_percent) !== null) {
     const companion = el("section", undefined, "gross-benchmark-companion");
     companion.append(el("h3", "Gross decisive benchmark"));
     metric(companion, (gross.state === "numeric_last_known" ? "Last-known · " : "") + "Return on normal acquisition", gross.return_percent, x => (numeric(x) > 0 ? "+" : "") + percent(x));
     companion.append(el("p", "Per $1 normal claim, before fees and exceptional settlement. No executable quantity, complete net EV or covered arbitrage is established."));
+    companion.append(el("p", "Exact outcome and line, conditional on a decisive result. Ties, pushes and exceptional settlement are excluded."));
+    const predicate = gross.selected_predicate;
+    const operators = {gt:">",ge:"≥",lt:"<",le:"≤"};
+    const domain = value => ({home_margin:"Home score margin",combined_score:"Combined score"}[value] || words(value));
+    if (predicate) {
+      textLine(companion, "Selected native condition", domain(predicate.domain) + " " + operators[predicate.operator] + " " + predicate.threshold);
+      textLine(companion, "Reference conditioning", "Score unequal to " + predicate.threshold + "; equality and exceptional settlement excluded");
+      if (gross.selected_equality) textLine(companion, "Native equality treatment", words(gross.selected_equality.treatment || "See original contract"));
+    }
+    if (gross.currentness_reasons?.length) textLine(companion, "Last-known reasons", gross.currentness_reasons.map(words).join(", "));
+    for (const ref of gross.reference_originals || []) {
+      const s = ref.selection || {}, line = s.signed_line;
+      const name = s.label || s.native?.original_wording || participant(s.participant || s.participant_id) || "Reference outcome";
+      const label = name + (line == null ? "" : " " + (numeric(line) > 0 ? "+" : "") + line) + " · " + words(s.family || ref.market_identity?.family) + " · " + words(s.scope?.period || ref.market_identity?.period);
+      if (typeof s.predicate === "string") textLine(companion, "Reference condition", words(s.predicate));
+      else if (s.predicate?.domain && operators[s.predicate.operator] && s.predicate.threshold != null)
+        textLine(companion, "Reference condition", domain(s.predicate.domain) + " " + operators[s.predicate.operator] + " " + s.predicate.threshold);
+      textLine(companion, "Pinnacle · " + label, String(ref.decimal_odds) + " decimal odds");
+      companion.append(el("small", "Source " + time(ref.source_at || ref.market_at || ref.book_at) + " · Received " + time(ref.received_at)));
+    }
+    textLine(companion, "Selected decisive probability", String(gross.selected_decisive_probability) + " (" + percent(numeric(gross.selected_decisive_probability) * 100) + ")");
+    textLine(companion, "Cost per $1 normal claim", String(gross.acquisition_usd_per_normal_claim) + " USD");
+    companion.append(el("p", "Gross return = 100 × (decisive probability ÷ claim cost − 1). Pinnacle weights use proportional no-vig normalization."));
     root.append(companion);
+  }
+  const conditional = selected.conditional_trade_benchmark;
+  if (conditional?.available === false && conditional.reason) textLine(root,"Fee scenario unavailable",financialGap(conditional.reason));
+  if (conditional?.available) {
+    const section = el("section", undefined, "conditional-trade-benchmark");
+    section.append(el("h3", "Conditional trade-fee benchmark"));
+    metric(section, (conditional.state === "numeric_last_known" ? "Last-known · " : "") + "Conditional return", conditional.return_percent, percent);
+    textLine(section, "Scenario", conditional.normalization_label || "per $1 modeled risk");
+    textLine(section, "Modeled risk including trade fee", String(conditional.normalization_risk_usd) + " USD");
+    textLine(section, "Trade fee in modeled scenario", money(conditional.trade_fee_usd));
+    section.append(el("p", conditional.condition));
+    section.append(el("p", conditional.formula));
+    section.append(el("p", "Excluded: " + conditional.exclusions.join(", ") + "."));
+    section.append(el("p", conditional.meaning));
+    section.append(el("small", "Fee evidence reviewed " + time(conditional.evidence.reviewed_at) + "; withdraw at " + time(conditional.evidence.review_before) + "."));
+    root.append(section);
   }
   if (selected.modeled_basis) {
     const basis = selected.modeled_basis;

@@ -17,7 +17,7 @@ The owner requires one working copy: this repository, on `main`.
   selected product scope. Do not ask again for API or acquisition approval.
   Execute within the recorded credit/account limits and preserve actual Stop
   choices and unresolved financial exposure. The six-league, three-family
-  aggregate scope is authorized up to 18 credits per 15-minute cycle and 1,008
+  aggregate scope is authorized up to 300 credits per 15-minute cycle and 16,800
   credits per operating day through October 31, 2026 at 8 PM Eastern, subject to
   the existing account-window, quota and hold guards.
 - Use proportionate verification for the behavior changed. Handoffs explain the

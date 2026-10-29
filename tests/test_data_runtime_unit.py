@@ -50,6 +50,13 @@ class RuntimeReadGuards(unittest.TestCase):
             self.assertEqual(value['states']['kalshi']['reason_code'], 'data_runtime_unhealthy')
             self.assertEqual(value['states']['kalshi']['source_at'], '2026-10-16T11:59:00+00:00')
 
+    def test_expired_runtime_revokes_sync_without_rewriting_retained_clocks(self):
+        status=dict(sources=[dict(provider='kalshi',metrics=dict(synchronization=dict(
+            state='synchronized',continuity_intact=True,generation=2)))])
+        value=self.read(runtime_row(status=status,heartbeat_at=AT-timedelta(seconds=9)))
+        self.assertEqual(value['status']['sources'][0]['metrics']['synchronization']['state'],'disconnected')
+        self.assertEqual(status['sources'][0]['metrics']['synchronization']['state'],'synchronized')
+
     def test_missing_runtime_is_unavailable(self):
         value = self.read(None)
         self.assertFalse(value['active'])
@@ -161,6 +168,26 @@ class PersistedStopGates(unittest.IsolatedAsyncioTestCase):
 
 
 class CalculationIsolation(unittest.IsolatedAsyncioTestCase):
+    async def test_slow_accounting_projection_does_not_block_source_loop(self):
+        import asyncio
+        from threading import Event
+        from types import SimpleNamespace
+        from app.collection.data_runtime import DataRuntime
+        entered=Event();release=Event()
+        def accounting():
+            entered.set();release.wait(2)
+            return {'quota':None,'recovery_reason':None}
+        runtime=DataRuntime(service=SimpleNamespace(status_accounting=accounting,background_calculations={}))
+        runtime.state=Mock()
+        task=asyncio.create_task(runtime.persist_heartbeat())
+        try:
+            while not entered.is_set():await asyncio.sleep(.001)
+            self.assertFalse(task.done())
+            runtime.state.snapshot.assert_not_called()
+        finally:
+            release.set();await task
+        self.assertEqual(runtime.state.snapshot.call_args.kwargs['accounting'],{'quota':None,'recovery_reason':None})
+
     async def test_busy_heartbeat_write_yields_to_source_and_does_not_stop_owner(self):
         import asyncio
         from threading import Event
@@ -168,7 +195,7 @@ class CalculationIsolation(unittest.IsolatedAsyncioTestCase):
         from unittest.mock import AsyncMock
         from app.collection.data_runtime import DataRuntime
         entered=Event();release=Event();source_progress=[]
-        runtime=DataRuntime(service=SimpleNamespace(close=AsyncMock(),background_calculations={}))
+        runtime=DataRuntime(service=SimpleNamespace(close=AsyncMock(),background_calculations={},status_accounting=lambda:{}))
         runtime.lock_connection=Mock();runtime.resource_guard=Mock();runtime.state=Mock()
         def busy(*args,**kwargs):
             entered.set();release.wait(2)
@@ -196,7 +223,7 @@ class CalculationIsolation(unittest.IsolatedAsyncioTestCase):
         async def fail():raise RuntimeError('authored calculation failure')
         task=asyncio.create_task(fail())
         await asyncio.sleep(0)
-        service=SimpleNamespace(close=AsyncMock(),background_calculations={})
+        service=SimpleNamespace(close=AsyncMock(),background_calculations={},status_accounting=lambda:{})
         runtime=DataRuntime(service=service)
         runtime.lock_connection=Mock();runtime.resource_guard=Mock();runtime.state=Mock()
         runtime.board=SimpleNamespace(task=task,error=None)
@@ -279,7 +306,7 @@ class RuntimeFailureHandling(IsolatedRuntimeClient):
         async def fail():raise OSError('SECRET background')
         tasks=[asyncio.create_task(fail()) for _ in range(2)]
         await asyncio.sleep(0)
-        runtime=DataRuntime(service=SimpleNamespace(background_calculations={}))
+        runtime=DataRuntime(service=SimpleNamespace(background_calculations={},status_accounting=lambda:{}))
         runtime.board=SimpleNamespace(task=None,estimate_task=tasks[0],coverage_task=tasks[1],error=None)
         runtime.lock_connection=Mock();runtime.resource_guard=Mock();runtime.state=Mock()
         runtime.state.write_snapshot.side_effect=lambda *a,**kw:runtime.stopping.set()
@@ -316,3 +343,42 @@ class RuntimeFailureHandling(IsolatedRuntimeClient):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+def test_loop_profile_snapshot_survives_concurrent_new_stack_keys():
+    import threading
+    from app.collection.loop_progress import LoopProgress
+    progress=LoopProgress();done=threading.Event()
+    def record():
+        for n in range(10000):
+            progress.profile[(str(n),)]+=1
+            progress.thread_profile[('worker',str(n))]+=1
+        done.set()
+    thread=threading.Thread(target=record);thread.start()
+    try:
+        while not done.is_set():
+            snapshot=progress.snapshot()
+            assert len(snapshot['sampled_stacks'])<=24
+            assert len(snapshot['sampled_threads'])<=32
+    finally:thread.join()
+    assert progress.snapshot()['sampled_stacks']
+
+
+def test_derived_tail_does_not_starve_results_but_raw_pressure_still_defers():
+    from types import SimpleNamespace
+    from app.collection.data_runtime import DataRuntime
+    metrics=dict(selected_markets=10,initial_images=10,stream_connected=True,derived_oldest_pending_seconds=6)
+    worker=SimpleNamespace(closed=False,failed=False,metrics=metrics)
+    runtime=DataRuntime.__new__(DataRuntime)
+    runtime.service=SimpleNamespace(dispatch=True,workers={'kalshi':worker},paused_sources=set())
+    assert not runtime.acquisition_pressure()
+    assert not runtime.acquisition_pressure(critical=True)
+    metrics['derived_oldest_pending_seconds']=3
+    assert not runtime.acquisition_pressure()
+    metrics['raw_oldest_pending_seconds']=3
+    assert runtime.acquisition_pressure(critical=True)
+    metrics['raw_oldest_pending_seconds']=0
+    metrics['receive_oldest_seconds']=3
+    assert runtime.acquisition_pressure(critical=True)
+    runtime.service.paused_sources={'kalshi'}
+    assert not runtime.acquisition_pressure()

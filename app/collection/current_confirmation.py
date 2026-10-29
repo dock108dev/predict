@@ -17,14 +17,19 @@ def instant(value):
 def content(book):
     return stable({k:book[k] for k in ('outcomes','state','sync','quantity_unit')})
 
+class ConfirmationUnavailable(ValueError):
+    """A complete snapshot has no usable send-clock proof; raw ordering remains."""
+
+
 class Confirmations:
     def __init__(self,venue):
         self.venue=venue;self.highwater={};self.latest={};self.generation=0
     def begin(self,generation):
         if generation<=self.generation:raise ValueError('Confirmation generation regressed')
         self.generation=generation;self.latest.clear()
-    def observe(self,book,data,raw,*,generation,request_id,requested_at=None,sid=None,sequence=None):
+    def observe(self,book,data,raw,*,generation,request_id,requested_at=None,sid=None,sequence=None,_content_sha256=None):
         if generation!=self.generation:raise ValueError('Stale confirmation generation')
+        fingerprint=_content_sha256 or content(book)
         ref=book['raw']['ref'];mid=ref['market_id'];at=None
         if self.venue=='kalshi':
             if data.get('type')=='orderbook_snapshot' and requested_at is not None:
@@ -40,21 +45,24 @@ class Confirmations:
         if ref['venue']!=self.venue or book['sync']!='synchronized':raise ValueError('Confirmation requires complete admitted book')
         if at is not None:
             observed=instant(at);received=instant(book['raw']['received_at'])
-            if observed>received:raise ValueError('Future confirmation clock')
-            if requested_at and observed<instant(requested_at):raise ValueError('Snapshot predates its request')
             prior=self.highwater.get(mid)
-            if prior and observed<prior:raise ValueError('Confirmation clock regressed')
+            refusal=('Future confirmation clock' if observed>received else
+                     'Snapshot predates its request' if requested_at and observed<instant(requested_at) else
+                     'Confirmation clock regressed' if prior and observed<prior else None)
+            if refusal:
+                self.latest.pop(mid,None)
+                raise (ConfirmationUnavailable if self.venue=='kalshi' else ValueError)(refusal)
             if (not prior or observed>prior) and (received-observed).total_seconds()<=30:
                 if self.latest.get(mid,{}).get('payload_sha256')==sha256(raw).hexdigest():raise ValueError('Replayed confirmation payload')
                 proof=dict(version=VERSION,basis=BASES[self.venue],venue=self.venue,event_id=ref['event_id'],market_id=mid,
                     generation=generation,request_id=str(request_id),requested_at=requested_at,subscription_id=None if sid is None else str(sid),
                     sequence=sequence,confirmed_at=at,received_at=book['raw']['received_at'],provider_source_at=book['raw'].get('exchange_at'),
-                    payload_sha256=sha256(raw).hexdigest(),content_sha256=content(book))
+                    payload_sha256=sha256(raw).hexdigest(),content_sha256=fingerprint)
                 proof['sha256']=stable(proof);self.latest[mid]=proof;self.highwater[mid]=observed
         proof=self.latest.get(mid)
-        return deepcopy(proof) if proof and proof['content_sha256']==content(book) else None
+        return deepcopy(proof) if proof and proof['content_sha256']==fingerprint else None
 
-def validate(proof,ref=None,book=None):
+def validate(proof,ref=None,book=None,*,_content_sha256=None):
     keys={'version','basis','venue','event_id','market_id','generation','request_id','requested_at','subscription_id','sequence','confirmed_at','received_at','provider_source_at','payload_sha256','content_sha256','sha256'}
     if not isinstance(proof,dict) or set(proof)!=keys or proof['version']!=VERSION or proof['venue'] not in BASES or proof['basis']!=BASES[proof['venue']]:raise ValueError('Unsupported book confirmation')
     if proof['sha256']!=stable({k:v for k,v in proof.items() if k!='sha256'}):raise ValueError('Book confirmation seal mismatch')
@@ -70,5 +78,5 @@ def validate(proof,ref=None,book=None):
         if not proof['subscription_id'] or type(proof['sequence']) is not int or proof['sequence']<1 or proof['requested_at'] is None or instant(proof['requested_at'])>at:raise ValueError('Snapshot request/continuity proof missing')
     elif proof['provider_source_at']!=proof['confirmed_at'] or proof['sequence'] is not None or proof['subscription_id'] is not None:raise ValueError('US confirmation basis mismatch')
     if ref and any(proof[k]!=ref[r] for k,r in [('venue','venue'),('event_id','event_id'),('market_id','market_id')]):raise ValueError('Confirmation market mismatch')
-    if book and (proof['content_sha256']!=content(book) or instant(proof['received_at'])>instant(book['raw']['received_at'])):raise ValueError('Confirmation content mismatch')
+    if book and (proof['content_sha256']!=(_content_sha256 or content(book)) or instant(proof['received_at'])>instant(book['raw']['received_at'])):raise ValueError('Confirmation content mismatch')
     return proof

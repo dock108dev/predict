@@ -20,12 +20,14 @@ def _withdraw(board, reasons):
         if board['view']!='odds':
             if row.get('gross_decisive_benchmark',{}).get('available'):
                 row['gross_decisive_benchmark']['state']='numeric_last_known'
+            if row.get('conditional_trade_benchmark',{}).get('available'):
+                row['conditional_trade_benchmark']['state']='numeric_last_known'
             row['availability']=result_availability(row,pair=board['view']=='arbs')
             items.append((board['game_key'],[l['venue'] for l in row.get('legs',[])] if board['view']=='arbs' else [row['venue']],row['availability']))
     if board['view']!='odds' and items:board['availability']=summary(items)
 
 
-def board(frame, game_key, *, view, filter):
+def board(frame, game_key, *, view, filter, read_token=None):
     error=next((e['reason'] for e in frame['status'].get('observation_errors',[]) if e['game_key']==game_key),None)
     if error:raise ValueError(error)
     row=frame['rows'].get(game_key)
@@ -38,9 +40,21 @@ def board(frame, game_key, *, view, filter):
     else:output=expand_price_fields(deepcopy(row['facts']['boards'][view]))
     source_reasons=list(frame.get('observation_reasons',frame['reasons']))
     local=frame.get('dependency_reasons',{}).get(game_key,dict(all=[],observations={},comparisons={}))
+    if view!='odds':local=local.get('financial',local)
     source_reasons=sorted(set([*source_reasons,*local['all']]))
     comparison_reasons=sorted(set([*source_reasons,*[reason for values in local['comparisons'].values() for reason in values]]))
     calculation_reasons=list(frame.get('calculation_reasons',[]))
+    captured=row['facts'].get('context')
+    if captured:
+        # A newer sibling publication may advance the shared status before
+        # this game's optional calculation catches up. Its own identity must
+        # still bind the financial engine and policy shown by that status.
+        if captured.get('engine_binding')!=frame['status'].get('engine_binding'):
+            calculation_reasons.append('engine_binding_changed')
+        if captured.get('policy_revision')!=frame['status']['policy']['revision']:
+            calculation_reasons.append('policy_changed')
+    if row['facts'].get('retained_financial_only'):
+        calculation_reasons.append('captured_inputs_changed_before_publication')
     if any(local['observations'].values()) or any(local['comparisons'].values()):
         calculation_reasons.append('current_dependencies_changed')
     deadline=row['facts'].get('valid_until')
@@ -72,7 +86,22 @@ def board(frame, game_key, *, view, filter):
         statuses={q['freshness']['status'] for q in output['prices']}
         output['status']='mixed' if len(statuses)>1 else next(iter(statuses),'historical')
         output['delivery_state']='pending' if any(q.get('observation_display',{}).get('state')=='pending' for q in output['prices']) or 'current_dependencies_changed' in comparison_reasons else 'stopped' if 'updates_stopped' in source_reasons else 'unavailable' if 'data_runtime_unhealthy' in source_reasons else 'complete'
-    else:_withdraw(output,reasons)
+    else:
+        _withdraw(output,reasons)
+        from app.comparison.bound_finance import age_benchmarks
+        prices={p['quote_id']:p for p in output['prices']}
+        for result in output['rows']:
+            q=prices.get(result.get('price_ref') or result.get('quote_id'))
+            if q is not None:
+                event=q.get('event') or next(g for g in frame['status']['games'] if g['game_key']==game_key)
+                from .native_authority import assessment
+                source_proof=assessment(q,frame.get('native_authority',{}),stamp(frame['at']))
+                cid=contract_id(dict(quote=q))
+                metric_reasons=benchmark_reasons(local,cid,reasons,source_proof,q['venue'])
+                age_benchmarks(result,q,event,stamp(frame['at']),reasons=metric_reasons,source_assessment=source_proof)
+        from app.comparison.calculation_availability import result_availability
+        for result in output['rows']:result['availability']=result_availability(result,pair=view=='arbs')
+        output['availability']=summary([(game_key,[r['venue']] if view=='ev' else [l['venue'] for l in r.get('legs',[])],r['availability']) for r in output['rows']])
     estimate=deepcopy(row['facts'].get('estimate_availability',dict(state='evaluated',reason_codes=[])))
     if reasons:estimate.update(state='last_known' if estimate['state'] in ('evaluated','partial') else 'unavailable',reason_codes=sorted(set(estimate['reason_codes']+reasons)))
     output.update(filter=filter,read_at=frame['at'],sizing_scope='shared_default_selected_details',
@@ -86,15 +115,21 @@ def board(frame, game_key, *, view, filter):
         key='positive_rule_sensitive_eligible' if filter=='hedges' else 'main_positive_eligible'
         output['rows']=[r for r in output['rows'] if r.get('classification',{}).get(key)]
     if not output['rows'] and reasons:output['empty_reason']='Latest results await background reconciliation' if 'current_dependencies_changed' in reasons else 'Only last-known estimates available; see All comparisons'
+    if read_token:
+        for price in output['prices']:
+            if price.get('inputs_identity'):price['inputs_identity']['read_token']=read_token
+        for result in output['rows']:
+            if result.get('details'):result['details']['read_token']=read_token
     if view=='odds':compact_odds(output)
     else:compact_price_fields(output)
     if len(encoded(output))>MAX_RESPONSE:raise ValueError('board_compact_response_capacity')
     return output
 
 
-def bounded_page(header, boards, errors, *, offset, limit, evaluated, storage=None):
+def bounded_page(header, boards, errors, *, offset, limit, evaluated, storage=None, rendered_count=None):
     """Largest contiguous game prefix fitting the unchanged complete wire bound."""
     games=header['games'];maximum=min(limit,len(games)-offset)
+    if rendered_count is not None:maximum=min(maximum,rendered_count)
     def build(count):
         keys={g['game_key'] for g in games[offset:offset+count]}
         selected=[b for b in boards if b['game_key'] in keys]
@@ -119,3 +154,11 @@ def bounded_page(header, boards, errors, *, offset, limit, evaluated, storage=No
     return best
 
 
+
+
+def benchmark_reasons(local,cid,reasons,source_proof,venue):
+    result=[r for r in reasons if r not in ('calculation_authority_boundary','current_dependencies_changed','captured_inputs_changed_before_publication','background_calculations_unavailable')]
+    if venue in ('kalshi','polymarket_us') and source_proof is None:result.append('native_stream_authority_unavailable')
+    identities=local.get('benchmark_identity',{})
+    selected=(identities[cid] if source_proof is not None and cid in identities else local['observations'].get(cid,[]))
+    return sorted(set(result+local['all']+selected+local.get('benchmarks',{}).get(cid,[])))

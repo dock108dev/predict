@@ -173,7 +173,7 @@ class BoundFinancial(TestCase):
 
 
 class PublicationAdmission(TestCase):
-    def test_estimates_pack_actual_smaller_neighborhoods_with_unchanged_reservations(self):
+    def test_estimates_publish_each_neighborhood_with_unchanged_reservations(self):
         from app.collection.background_work import BackgroundWork, MIB
         from app.storage.latest_board import reconcile
         work=BackgroundWork(sampler=lambda:500*MIB,limit_bytes=768*MIB,
@@ -199,8 +199,8 @@ class PublicationAdmission(TestCase):
                 patch('app.storage.latest_board.capture_reservation',side_effect=reservation),\
                 patch('app.storage.latest_board._reconcile',side_effect=calculate):
             result=reconcile(DB())
-        self.assertEqual(captured,[(['a','b'],72*MIB),(['c'],52*MIB)])
-        self.assertEqual(result['computed'],2)
+        self.assertEqual(captured,[(['a'],52*MIB),(['b'],52*MIB),(['c'],52*MIB)])
+        self.assertEqual(result['computed'],3)
         self.assertEqual({e for ids,_ in captured for e in ids},{'a','b','c'})
         self.assertFalse(work.snapshot()['active'])
         with work.claim('estimates',32*MIB) as denied:self.assertFalse(denied)

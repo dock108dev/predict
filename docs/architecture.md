@@ -206,10 +206,37 @@ fallbacks for current SQL boards. Preview pages still share
 `dashboard/static/style.css`. Frozen source manifests describe historical
 packages and are not inventories of the current checkout.
 
-The v2 API/client supports up to 500 canonical games through at most 50-game/8 MiB
-pages, with expected-revision coherence and complete coverage checks. This is a
-capacity bound, not a claim about live game availability. Sports rows expire;
+The v2 API/client traverses the complete canonical-game catalog through at most
+50-game/8 MiB pages, with expected-revision coherence and complete coverage checks.
+The former 500-game cutoff is removed; coherent total-byte guards remain explicit. Sports rows expire;
 account and configuration records have independent lifetimes. [Development](development.md)
 explains checks and frontend composition; [configuration](configuration.md) covers
 storage/account limits and operation. [Offline pricing](offline-pricing.md) and
 [opportunities](offline-opportunities.md) document separate research contracts.
+
+## Acquisition and publication
+
+Ordinary bulk discovery stores exact query/pages before catalog publication. It builds metadata one event at a time in an owned CPU process per native source, sharing pass-local decoded listing receipts. Active calls and child shutdown are joined on cancellation; public metadata parsing owns no provider transport. Current native books replace by exact source/event/market ID. Metadata roster, raw receipt disposition, derived current rows and downstream financial/publication state are separate boundaries.
+
+See [acquisition](acquisition.md) for ownership, capacity and completeness limits.
+
+## Shared completion ownership and raw view authority
+
+| Domain | SSOT module/file | Why authoritative | Known callers |
+| --- | --- | --- | --- |
+| Joined thread cancellation | `app/owned_work.py` (`joined_thread`) | Owns result/error-as-data, repeated-cancellation joining and error precedence in one implementation. | `collection/bulk_checkpoint.py::owned_thread` and the raw API's `joined` binding; checkpoint, ingress, accounting shutdown and raw read/export operations. |
+| Safe failure details | `app/diagnostics.py` | Builds class/frame-only diagnostics without messages or payloads. | Shared completion helper, runtime, storage and disposable calculation workers. |
+| Raw Odds controls | `dashboard/opportunity_static/current/raw-odds.js` and its `raw-odds.html` shell | Owns received-price filtering, pagination, selection and loading state. | `/odds`; `tests/test_raw_odds_controls.cjs`. |
+
+The checkpoint `owned_thread` import remains supported because acquisition,
+ingress and accounting owners actively use it. It and the raw API binding supply
+only diagnostic identity; neither implements a second cancellation policy.
+Subprocess termination, process-pool accounting and retained read queues retain
+their separate ownership protocols. They must not be replaced with the thread
+helper without preserving their authority, capacity and cleanup contracts.
+
+Raw Odds has no financial result-sort or positive/hedge filter mode. Its unused
+hidden controls for those modes have been removed; Dashboard and EV retain their
+separate supported calculation controls. Generated stored/scanner bundles and
+retained-session readers remain supported entry points, not dead alternatives to
+the raw controller.

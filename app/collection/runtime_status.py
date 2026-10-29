@@ -14,7 +14,8 @@ from app.storage.store import connect
 
 HEARTBEAT_SECONDS = 8
 COMMAND_SECONDS = 12
-STATUS_BYTES = 256 * 1024
+# Ninety family cells retain latest/last-success inventory and account evidence.
+STATUS_BYTES = 1024 * 1024
 RUNTIME_LOCK = 120013
 AUTHORITY_LOCK = 120015
 
@@ -40,6 +41,12 @@ def read_runtime(db, at=None):
     age = (now - _stamp(row['heartbeat_at'])).total_seconds()
     healthy = 0 <= age <= HEARTBEAT_SECONDS and row['state'] in ('running', 'starting')
     states = deepcopy(row['source_status'])
+    status = deepcopy(row['status'])
+    for panel in status.get('sources',[]):
+        revoked=not healthy or not row['dispatch'] or row['global_stopped'] or panel.get('provider') in row['paused_sources']
+        sync=panel.get('metrics',{}).get('synchronization')
+        if revoked and sync:
+            sync.update(state='disconnected',current=False,continuity_intact=False,reason='runtime_authority_unavailable')
     if not healthy:
         for state in states.values():
             state.update(state='unavailable', reason_code='data_runtime_unhealthy',
@@ -51,7 +58,7 @@ def read_runtime(db, at=None):
                 service_state=row['state'] if healthy else 'unavailable',
                 calculations=deepcopy(row['status'].get('background_calculations', {})),
                 reason_code=None if healthy else 'data_runtime_unhealthy',
-                status=deepcopy(row['status']), paused_sources=row['paused_sources'],
+                status=status, paused_sources=row['paused_sources'],
                 global_stopped=row['global_stopped'], owner_pid=row['owner_pid'])
 
 
@@ -69,11 +76,11 @@ class RuntimeState:
         self.write_snapshot(self.snapshot(service, state=state, paused_sources=paused_sources,
                                           global_stopped=global_stopped))
 
-    def snapshot(self, service, *, state='running', paused_sources=(), global_stopped=False):
+    def snapshot(self, service, *, state='running', paused_sources=(), global_stopped=False, accounting=None):
         """Copy loop-owned state before any asynchronous database work."""
         # CurrentService projects only local bounded vocabulary and validated
         # configuration; exception text is never added to this persisted view.
-        status = service.status()
+        status = service.status() if accounting is None else service.status(accounting=accounting)
         status['issues'] = status.get('issues', [])[-32:]
         status['exclusions'] = status.get('exclusions', [])[-100:]
         status['status_retention'] = dict(issue_limit=32, exclusion_limit=100,
