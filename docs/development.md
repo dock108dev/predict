@@ -304,3 +304,14 @@ calculations have a separate read owner. The disposable SQL suite registers
 `tests/test_raw_prices_sql.py`. Restart the app for backend changes; migrations
 028–029 must be installed through the ordinary Store migration owner. See
 [raw prices and read lifecycle](raw-prices.md).
+
+## October 28 repository cleanup evidence
+
+Four capacity/refusal SQL cases were extracted into
+`tests/test_latest_board_capacity_sql.py`, retaining the focused SQL lane and all
+37 original test methods. The four moved cases and 13 subtests passed on a
+disposable cluster; 51 CI support tests and 34 subtests passed. The ownership and
+size decisions above describe the resulting source organization. No generated
+tracked artifacts needed removal; sealed source archives and local evidence were
+preserved. This focused cleanup did not resolve the full-app CI failures recorded
+in [CI](CI.md).

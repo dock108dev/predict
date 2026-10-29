@@ -262,3 +262,37 @@ dependency identities to its advisory services. See the
 [GitHub Actions billing documentation](https://docs.github.com/en/billing/concepts/product-billing/github-actions)
 for current runner and storage eligibility; do not infer account allowances from
 local test results.
+
+## October 28 local engineering checkpoint
+
+The review at base `689135d52fad412765179b0164ad28d272910f09` implemented
+same-run readiness reports, financial-evidence packaging and test registration,
+per-check temporary state, and bounded spawn/financial/clock regression repairs.
+Preserved local evidence lives under `test-results/ci-review-*`.
+
+- Broad portable run: 2,798 passed / 26 failed Python cases and two failed client
+  scripts (`ci-review-offline/summary.md`). Its suite-registration failure was
+  subsequently repaired.
+- Disposable SQL: 329 passed / 28 failed, without runner timeout
+  (`ci-review-postgres/junit.xml`).
+- Focused product recheck: the closeout reports 37 passed / 12 failed; its JUnit
+  declares 85 tests and 12 failures in its suite summary, but contains 45
+  testcase elements, nine with failure elements (`ci-review-recheck/junit.xml`).
+  These totals do not directly reconcile with the closeout. Preserve the original
+  report and reconcile counting/reporting during the next run; none establishes a pass.
+- CI support, four browser journeys, package smoke, workflow/source validation,
+  secret scan and locked dependency audits passed in their respective local runs.
+
+The broad runs precede final targeted fixes and do not qualify the closing tree.
+Remaining failing contracts concern SQL publication/census/multisport, seven-module
+storage/delivery/capacity behavior, and client hold wording/quote binding. Repair
+these without weakening identity, financial, clock, Stop or accounting gates.
+The Desktop execution plan assigns the repair and final qualification separately.
+
+No commit, push, hosted qualification or process restart was performed by that
+CI review. At this documentation cleanup, repository HEAD is `3338bea`, which
+contains subsequent changes; neither its loaded runtime identity nor its hosted
+status was established by this documentation pass. The historical dirty-tree
+statement describes the review, not the current checkout. Branch protection was
+reported ineffective at review time; requiring `CI readiness` remains an optional
+owner/admin decision, not an applied setting or a prerequisite silently added here.
