@@ -13,7 +13,7 @@ const root=new Element('section');drawOpportunityDashboard(root,{ev:slate},{},()
 assert.match(root.textContent,/Partially evaluated/);assert.match(root.textContent,/Authored failed game/);assert.doesNotMatch(root.textContent,/Positive arbitrage/);
 assert(root.querySelectorAll('details').every(d=>!d.open));
 const cell={id:'a',sport:'NFL',venue:'kalshi',family:'winner',period:'full_game',configuration_state:'enabled',counts:{retained_observations:2,retained_comparison_observations:2,current_comparison_observations:0},reasons:[]};
-for(const [state,expected] of [['held','Source held'],['paused','Source paused'],['not_configured','Not configured']])assert.equal(coverageCellState({...cell,configuration_state:state}),expected);
+for(const [state,expected] of [['held','Accounting restriction at capture'],['paused','Source paused'],['not_configured','Not configured']])assert.equal(coverageCellState({...cell,configuration_state:state}),expected);
 assert.equal(coverageCellState({...cell,reasons:[{code:'source_failed',category:'source'}]}),'Source query failed');
 assert.equal(coverageCellState({...cell,reasons:[{code:'waiting_for_publication',category:'publication'}]}),'Pending publication');
 assert.equal(coverageCellState({...cell,reasons:[{code:'identity_missing',category:'identity'}]}),'Matching facts or peers missing');

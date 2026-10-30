@@ -58,6 +58,24 @@ def install(root):
                         "Offline CI permits only loopback network connections"
                     )
 
+    if sys.platform.startswith("linux"):
+        original_open = os.open
+
+        def open_at(path, flags, mode=0o777, *, dir_fd=None):
+            # Audit events omit dir_fd. Keep descriptor-relative lookup intact
+            # while giving the guard a resolvable path (including symlinks).
+            if dir_fd is not None and not os.path.isabs(path):
+                prefix = f"/proc/self/fd/{dir_fd}/"
+                if isinstance(path, bytes):
+                    path = os.fsencode(prefix) + path
+                else:
+                    path = prefix + os.fspath(path)
+            return original_open(path, flags, mode, dir_fd=dir_fd)
+
+        os.open = open_at
+        if original_open in os.supports_dir_fd:
+            os.supports_dir_fd.add(open_at)
+
     sys.addaudithook(check)
 
 

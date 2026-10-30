@@ -427,7 +427,7 @@ def resolve(record, *, at):
                 else rule.get('extra_innings','unknown'))
         if event.get('competition') == 'NHL':
             scoring['shootout'] = ('excluded' if 'shootout is excluded' in text or 'excluding shootout' in text
-                else ('official_final_score' if rule.get('shootout')=='official_final_score' else 'included')
+                else ('official_final_score' if 'official final score' in text or rule.get('shootout')=='official_final_score' else 'included')
                     if 'shootout' in text and any(word in text for word in ('included','including','includes'))
                 else rule.get('shootout','unknown'))
     values = {f['overtime'] for f in facts}

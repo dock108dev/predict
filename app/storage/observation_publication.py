@@ -36,11 +36,21 @@ def identity_index(db):
         FROM current_event e ORDER BY e.id''').fetchall()
     if len(events)>4096:raise ValueError('publication_dependency_capacity')
     epoch=db.execute('SELECT epoch FROM current_row_epoch WHERE singleton=true').fetchone()['epoch']
+    prepare_events(events)
+    event_index={r['id']:r for r in events}
+    active={r['id'] for r in events if r.pop('active')}
+    return dict(epoch=str(epoch),events=event_index,offers={},active_events=active,neighborhoods={})
+
+
+def prepare_events(events):
+    """Apply the same occurrence dependency semantics to full and projected rows."""
     # This is a cached identity lookup, not occurrence resolution, board building,
     # price evaluation or optional financial work.
     from app.comparison.occurrence_matching import OccurrenceResolver
     resolver=OccurrenceResolver()
+    from app.comparison.calculation_control import checkpoint
     for event in events:
+        checkpoint()
         facts=event['facts'];roles=[]
         for role in ('home','away'):
             # Capture the same candidate identities as the actual resolver.
@@ -69,9 +79,6 @@ def identity_index(db):
         aliases.setdefault((edge.provider,edge.provider_event_id),[]).append(edge.occurrence_id)
     for event in events:
         event['reviewed']=aliases.get((event['provider'],event['native_event_id']),[])
-    event_index={r['id']:r for r in events}
-    active={r['id'] for r in events if r.pop('active')}
-    return dict(epoch=str(epoch),events=event_index,offers={},active_events=active,neighborhoods={})
 
 
 def capture(db, states, *, selector=None, compact=False, resource_guard=None):

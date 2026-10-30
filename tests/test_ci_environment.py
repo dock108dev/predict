@@ -256,6 +256,65 @@ class IsolationTests(unittest.TestCase):
                 )
                 self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_directory_relative_reads_distinguish_disposable_and_private_state(self):
+        import os
+        import subprocess
+        import sys
+
+        if not sys.platform.startswith("linux"):
+            self.skipTest("Linux descriptor-relative audit regression")
+        scripts = Path(__file__).resolve().parents[1] / "scripts/ci"
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / ".local").mkdir()
+            (root / ".local/private").write_text("authored private state")
+            env = os.environ | {
+                "PREDICT_CI_ISOLATED_ROOT": str(root),
+                "PYTHONPATH": str(scripts),
+            }
+            env.pop("PREDICT_CI_REPORT_ROOT", None)
+            code = """
+import os, pathlib, tempfile
+with tempfile.TemporaryDirectory() as folder:
+    local = pathlib.Path(folder) / '.local'
+    local.mkdir()
+    (local / 'fixture').write_text('authored')
+    fd = os.open(folder, os.O_RDONLY)
+    try:
+        child = os.open(b'.local/fixture', os.O_RDONLY, dir_fd=fd)
+        assert os.read(child, 20) == b'authored'
+        os.close(child)
+        (pathlib.Path(folder) / 'private-link').symlink_to(pathlib.Path.cwd() / '.local')
+        try:
+            os.open('private-link/private', os.O_RDONLY, dir_fd=fd)
+        except PermissionError:
+            pass
+        else:
+            raise AssertionError('symlink bypassed private boundary')
+    finally:
+        os.close(fd)
+fd = os.open('.', os.O_RDONLY)
+try:
+    for name in ('.local/private', b'.local/private'):
+        try:
+            os.open(name, os.O_RDONLY, dir_fd=fd)
+        except PermissionError:
+            pass
+        else:
+            raise AssertionError('directory-relative private read allowed')
+finally:
+    os.close(fd)
+"""
+            result = subprocess.run(
+                [sys.executable, "-c", code],
+                cwd=root,
+                env=env,
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_node_browser_boundary_blocks_archive_and_private_reads(self):
         import os
         import subprocess

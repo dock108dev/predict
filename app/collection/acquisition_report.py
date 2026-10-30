@@ -7,9 +7,17 @@ from .price_units import native_boundary, aggregate_units, merge_units
 def event_route_status(census, event, receipt):
     """An event listing includes live games; only pregame routes are dispatched."""
     current=bool(receipt and receipt['cycle_id']==census['cycle_id'])
-    start=datetime.fromisoformat(event['commence_time'].replace('Z','+00:00'))
-    required=start>census['received_at']
+    # The raw census is retained before route qualification. Missing or invalid
+    # provider schedule data cannot establish that an event has already started.
+    required=None
+    raw_start=event.get('commence_time')
+    if isinstance(raw_start,str):
+        try:
+            start=datetime.fromisoformat(raw_start.replace('Z','+00:00'))
+            if start.tzinfo is not None:required=start>census['received_at']
+        except ValueError:pass
     reason=('received_current_cycle' if current else
+            'event_start_unknown' if required is None else
             'started_before_census_not_requested' if not required else
             'event_route_pending_or_interrupted')
     return dict(sport=census['sport'],event_id=event['id'],census_cycle=census['cycle_id'],

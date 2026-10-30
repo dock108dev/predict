@@ -87,6 +87,34 @@ class BroadNativeMatrixSQL(IsolatedAsyncioTestCase):
         provider.acquire.assert_not_called()
         return prices
 
+    async def test_coverage_event_projection_keeps_publication_dependency_semantics(self):
+        from psycopg.types.json import Jsonb
+        from app.storage.coverage_latest import _EVENT_SQL
+        from app.storage.observation_publication import identity_index,prepare_events
+        rows,books=await captured_core_matrix(self.at)
+        self.admit(rows,books)
+        with self.connect() as db:
+            event=db.execute('SELECT id,facts FROM current_event ORDER BY id LIMIT 1').fetchone()
+            for change in (
+                {},dict(state='suspended',status='delayed'),dict(occurrence_conflict=True),
+                dict(conflicting_duplicate=True),dict(related_game_event_id='explicit-source-game'),
+                dict(_native=dict(sportradarGameId='vendor-id',originalStartTime=self.at.isoformat(),
+                    replacementGameId='replacement',gameNumber=2)),
+                dict(native_metadata=dict(rescheduledFromGameId='prior-game',gameNumber=1)),
+                # A nonempty native object wins even when all its fields are
+                # irrelevant to matching. Do not accidentally fall back.
+                dict(_native=dict(unused='x'*100000),native_metadata=dict(sportradarGameId='must-not-win')),
+            ):
+                with self.subTest(change=tuple(change)):
+                    db.execute('UPDATE current_event SET facts=%s WHERE id=%s',
+                        (Jsonb(dict(event['facts'],**change)),event['id']))
+                    complete=identity_index(db)['events']
+                    projected=db.execute(_EVENT_SQL).fetchall();prepare_events(projected)
+                    for row in projected:
+                        for field in ('dependency_revision','pair','start','participants','shared','reviewed'):
+                            self.assertEqual(row[field],complete[row['id']][field],field)
+                    self.assertNotIn('unused',str(projected))
+
     async def test_all_six_leagues_both_native_sources_three_core_families_publish_together(self):
         rows,books=await captured_core_matrix(self.at);self.assertEqual(len(rows),72)
         self.admit(rows,books)
@@ -117,7 +145,8 @@ class BroadNativeMatrixSQL(IsolatedAsyncioTestCase):
         self.at+=timedelta(seconds=31);self.state.write(self.service)
         with self.connect() as db:
             captured=latest.snapshot(db,at=self.at.isoformat())
-            aged=[q for key in captured['rows'] for q in latest.board(captured,key,view='odds',filter='all')['prices']]
+            from app.dashboard.comparison_board import expand_odds
+            aged=[q for key in captured['rows'] for q in expand_odds(latest.board(captured,key,view='odds',filter='all'))['prices']]
         self.assertEqual(len(aged),56)
         for quote in aged:
             self.assertEqual(quote['times'],clocks[(quote['source']['native_market_id'],quote['source']['native_outcome_id'])])

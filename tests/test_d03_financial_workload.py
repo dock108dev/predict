@@ -7,7 +7,7 @@ import unittest
 from app.comparison.combined_inputs import prepare
 from app.storage.comparison_board import ReadContext,discover,calculate_current
 from app.comparison.estimated_policy import DEFAULT_POLICY
-from app.dashboard.comparison_board import entries,response
+from app.dashboard.comparison_board import entries,response,expand_price_fields
 from tests.test_ev09_n01 import AT,envelopes,SELECTED
 from tests.d03_financial_workload import authored_records,serialize_synthetic
 
@@ -43,7 +43,7 @@ class D03FinancialWorkload(unittest.TestCase):
         refused=[q for _,_,q in entries(value['state']) if not q['calculations']['funded_estimate']['model_available']]
         self.assertEqual(sorted(q['venue'] for q in refused),['novig','novig','polymarket_us'])
         pairs=value['state']['events'][0]['funded_pairs'];self.assertEqual(len(pairs),12)
-        arbs=response(bundle,value,DEFAULT_POLICY,view='arbs',filter='all',at=AT)
+        arbs=expand_price_fields(response(bundle,value,DEFAULT_POLICY,view='arbs',filter='all',at=AT))
         self.assertEqual(len(arbs['rows']),7)
         for row in singles+pairs:
             if not row['model_available']:continue

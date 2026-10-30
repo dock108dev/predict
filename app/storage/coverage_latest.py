@@ -25,7 +25,8 @@ def _pick(expression, fields):
 
 _EVENT_FIELDS=('id','competition','season','stage','home','away','participants','title','scheduled_start','original_start',
     'shared_provider_ids','observed_identity_facts','neutral_venue','identity','schedule_conflict',
-    'sport','game_number','replacement_game_id','source_participant_roles','schedule_metadata')
+    'sport','game_number','replacement_game_id','source_participant_roles','schedule_metadata',
+    'status','state','occurrence_conflict','conflicting_duplicate','related_game_event_id')
 _META_FIELDS=('same_outcome','comparison_admission','native_market_type','series_id')
 _CONTRACT="jsonb_build_object('market_identity',c.facts->'market_identity','selection',c.facts->'selection','verified',c.facts->'verified','orientation_evidence','[]'::jsonb,'comparison_scope',COALESCE(c.facts->'comparison_scope','{}'::jsonb),'comparison_source_metadata',"+_pick("c.facts->'comparison_source_metadata'",_META_FIELDS)+" || CASE WHEN c.facts#>>'{market_identity,scheduled_start}' IS DISTINCT FROM e.facts->>'scheduled_start' THEN "+_pick("c.facts->'comparison_source_metadata'",('schedule_binding',))+" ELSE '{}'::jsonb END || jsonb_build_object('scoring_scope',"+_pick("c.facts#>'{comparison_source_metadata,scoring_scope}'",('status','reason','missing_fields','scoring'))+"))"
 _QUOTE_FIELDS=('source','original','times','state','freshness_policy','binding','book_confirmation','provenance')
@@ -83,7 +84,9 @@ _PUBLICATION_SQL="""WITH boards AS MATERIALIZED (
     SELECT b.game_key,b.metadata,COALESCE(g.prices,'[]'::jsonb) prices
     FROM boards b LEFT JOIN grouped g USING (game_key)"""
 
-_EVENT_SQL='SELECT id,provider,native_event_id,revision,'+_pick('facts',_EVENT_FIELDS)+' AS facts FROM current_event'
+_NATIVE_EVENT_FIELDS=('sportradarGameId','originalStartTime','replacementGameId','rescheduledFromGameId','gameNumber')
+_NATIVE_EVENT="CASE WHEN jsonb_typeof(facts->'_native')='object' AND facts->'_native'<>'{}'::jsonb THEN facts->'_native' ELSE facts->'native_metadata' END"
+_EVENT_SQL='SELECT id,provider,native_event_id,revision,'+_pick('facts',_EVENT_FIELDS)+" || jsonb_build_object('_native',"+_pick(_NATIVE_EVENT,_NATIVE_EVENT_FIELDS)+") AS facts FROM current_event"
 _OFFER_SQL='''SELECT c.id,c.event_id,c.venue,c.native_market_id,c.native_outcome_id,c.native_side,c.revision AS contract_revision,
     encode(sha256(convert_to((c.facts #- '{comparison_source_metadata,observed_at}')::text,'UTF8')),'hex') AS contract_dependency,
     '''+_CONTRACT+''' AS contract,o.revision AS offer_revision,o.source_at,o.received_at,'''+_pick('o.facts',_QUOTE_FIELDS)+''' AS quote,e.expires_order
@@ -261,31 +264,13 @@ def _publication_frame(db, states, *, offers=None):
     weaken revocation: a change to any such field still changes its row revision.
     Candidate identity uses the shared owner, never a second matching algorithm.
     """
-    from app.normalization.registry import Registry
+    from .observation_publication import prepare_events
     from app.comparison.native_scoring_scope import publication_dependencies
-    from app.comparison.calculation_control import checkpoint
     events=db.execute(_EVENT_SQL+' ORDER BY id').fetchall()
     if offers is None:offers=db.execute(_OFFER_SQL+' ORDER BY c.id').fetchall()
     books=db.execute(_BOOK_SQL).fetchall()
     if len(events)>4096 or len(offers)>32768 or len(books)>32768:raise ValueError('coverage_record_capacity')
-    registry=Registry.current()
-    for event in events:
-        checkpoint()
-        facts=event['facts'];roles=[]
-        for role in ('home','away'):
-            participant=facts.get(role)
-            for name,cid in facts.get('participants',{}).items():
-                if cid==participant:
-                    resolved=registry.resolve('team',name,league=facts.get('competition'),venue=event['provider'])
-                    if resolved.status=='resolved':participant=resolved.canonical_id
-            roles.append(participant)
-        event['pair']=[facts.get('competition'),sorted(roles,key=str)]
-        event['start']=facts.get('original_start') or facts.get('scheduled_start')
-        event['participants']={facts.get(role):value for role,value in zip(('home','away'),roles)}
-        shared=dict(facts.get('shared_provider_ids',{}))
-        for fact in facts.get('observed_identity_facts',[]):
-            if fact.get('source_provider')=='sportradar' and fact.get('source_id'):shared['sportradar']=str(fact['source_id'])
-        event['shared']=[[name,str(value)] for name,value in sorted(shared.items())]
+    prepare_events(events)
     event_index={e['id']:e for e in events};by_event={}
     native=[r for r in offers if r['venue'] in ('kalshi','polymarket_us')]
     keys=[(event_index[r['event_id']]['provider'],event_index[r['event_id']]['native_event_id'],r['native_market_id'],r['native_outcome_id'],r['native_side']) for r in native]

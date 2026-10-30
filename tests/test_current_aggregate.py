@@ -139,7 +139,10 @@ class SchedulerTests(unittest.IsolatedAsyncioTestCase):
             threads.append(threading.get_ident())
             self.assertNotEqual(threading.get_ident(),threading.main_thread().ident)
             return original()
-        with patch.object(self.q,'snapshot',side_effect=checked):
+        # Keep the receipt due time ahead of the real ledger clock. The shared
+        # fixture's fixed 14:00 slot is already past when this runs later today.
+        plan=dict(open=True,slot=utc(),next_due_at=(datetime.now(timezone.utc)+timedelta(minutes=15)).isoformat())
+        with patch.object(self.q,'snapshot',side_effect=checked),patch('app.collection.current_schedule.schedule',return_value=plan):
             await self.scheduler.step()
             paid=len(self.wire.calls)
             await self.scheduler.step()

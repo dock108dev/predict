@@ -269,12 +269,15 @@ class ReadinessUniverseBounds(TestCase):
             source=dict(provider=venue, native_event_id=f'authored-{index}', native_market_id=f'market-{index}'),
             times=dict(source_at=clock(), received_at=clock())))] for index in range(count)]
 
-    def capture(self, groups, *, members=None, selection=None):
+    def capture(self, groups, *, members=None, selection=None, contracts=0):
         from app.collection.current_policy import DEFAULT, GRANT
         from app.storage import scanner_readiness
         class Database:
             def transaction(self):return nullcontext()
-            def execute(self, statement, args=()):return SimpleNamespace(fetchall=lambda: [])
+            def execute(self, statement, args=()):
+                rows = [dict(id=str(i), venue='kalshi', league='NFL', family='moneyline', period='full_game', offered=True)
+                        for i in range(contracts)] if 'SELECT c.id' in statement else []
+                return SimpleNamespace(fetchall=lambda: rows)
         context = SimpleNamespace(prepared=dict(groups=groups), engine='authored-engine', epoch='authored-epoch')
         frame = dict(records=[], epoch='authored-epoch', revision='authored-revision', source_status={})
         prepared = dict(instruments=[], failures=[], references={}, financial_inputs={}, input_bytes=0)
@@ -294,22 +297,24 @@ class ReadinessUniverseBounds(TestCase):
                 models.assert_not_called()
         return value
 
-    def test_501_executable_groups_fail_before_preparation_even_for_selected_members(self):
-        groups = self.groups(501)
+    def test_excess_contracts_fail_before_preparation_even_for_selected_members(self):
+        from app.comparison.scanner_readiness import MAX_INSTRUMENTS
+        groups = self.groups(1)
         for members in (None, (('kalshi', 'authored-0'),)):
-            with self.subTest(members=members), self.assertRaisesRegex(ValueError, '^board_catalog_capacity$'):
-                self.capture(groups, members=members)
+            with self.subTest(members=members), self.assertRaisesRegex(ValueError, '^readiness_contract_capacity$'):
+                self.capture(groups, members=members, contracts=MAX_INSTRUMENTS+1)
             self.assertEqual(self.producer_calls, 0)
 
-    def test_exact500_plus_reference_only_groups_retain_original_admission(self):
-        result = self.capture(self.groups(500) + self.groups(4, venue='pinnacle'))
+    def test_exact_contract_bound_plus_reference_groups_retain_admission(self):
+        from app.comparison.scanner_readiness import MAX_INSTRUMENTS
+        result = self.capture(self.groups(500) + self.groups(4, venue='pinnacle'), contracts=MAX_INSTRUMENTS)
         self.assertEqual(self.producer_calls, 500)
         self.assertEqual(result[0]['provider_requests'], 0)
 
     def test_unsupported_scope_still_enforces_complete_catalog_bound(self):
-        from app.comparison.scanner_readiness import Selection
-        with self.assertRaisesRegex(ValueError, '^board_catalog_capacity$'):
-            self.capture(self.groups(501), selection=Selection(markets=('total',)))
+        from app.comparison.scanner_readiness import Selection, MAX_INSTRUMENTS
+        with self.assertRaisesRegex(ValueError, '^readiness_contract_capacity$'):
+            self.capture(self.groups(1), selection=Selection(markets=('total',)), contracts=MAX_INSTRUMENTS+1)
         self.assertEqual(self.producer_calls, 0)
 
 

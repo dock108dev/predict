@@ -176,3 +176,23 @@ def test_event_route_report_distinguishes_started_unknown_and_empty_receipts():
     prior['cycle_id']='new'
     current=event_route_status(census,event,prior)
     assert current['reason']=='received_current_cycle' and current['returned_markets']==0
+
+
+def test_event_route_report_preserves_unknown_schedule_and_exact_receipt_cycle():
+    from datetime import datetime,timezone
+    from app.collection.acquisition_report import event_route_status
+    census=dict(sport='NFL',cycle_id='new',received_at=datetime(2026,10,30,tzinfo=timezone.utc))
+    for raw in (None,'','invalid',123,'2026-10-30T12:00:00'):
+        event=dict(id='e',commence_time=raw)
+        prior=dict(cycle_id='old',disposition='admitted_exact_lines',payload={'bookmakers':[]})
+        for receipt in (None,prior):
+            value=event_route_status(census,event,receipt)
+            assert value['pregame_at_census'] is None
+            assert value['reason']=='event_start_unknown'
+            assert value['current_cycle_received'] is False
+            assert value['returned_markets'] is None
+        current=event_route_status(census,event,dict(prior,cycle_id='new'))
+        assert current['pregame_at_census'] is None
+        assert current['reason']=='received_current_cycle'
+        assert current['current_cycle_received'] is True
+        assert current['returned_markets']==0

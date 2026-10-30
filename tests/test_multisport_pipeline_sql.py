@@ -192,7 +192,7 @@ class AutomaticMultisportSQL(IsolatedAsyncioTestCase):
         self.assertFalse(self.service.workers.get('the_odds_api'))
         return dict(case=case,workers=workers,cases=cases,client=client,game=game,board=rendered)
 
-    async def test_infeasible_same_id_line_change_quarantines_old_sql_observation(self):
+    async def test_large_same_id_line_change_withdraws_old_sql_observation(self):
         setup=await self.unseen_event_after_startup('NFL','total')
         case=setup['case'];workers=setup['workers'];client=setup['client']
         expected={case['events']['kalshi']['event_ticker'],case['events']['polymarket_us']['id']}
@@ -211,6 +211,8 @@ class AutomaticMultisportSQL(IsolatedAsyncioTestCase):
                            if expected<={m[1] for m in g['members']}),None)
                 if game:
                     board=latest.board(frame,game['game_key'],view='odds',filter='all')
+                    from app.dashboard.comparison_board import expand_odds
+                    expand_odds(board)
                     if predicate(board):return game,board
                 await asyncio.sleep(.1)
             self.fail((self.owner.observation_error,frame['status'].get('errors'),frame['status'].get('games')))
@@ -242,58 +244,23 @@ class AutomaticMultisportSQL(IsolatedAsyncioTestCase):
         case['markets']['kalshi']=changed
         worker=workers['kalshi']
         await worker.discover()
-        self.assertEqual(worker.metrics['catalog_projection']['state'],'retained_previous')
-        self.assertIn(native_id,worker.material_quarantine)
-
-        # A new complete image for the same native ID now belongs to changed
-        # terms. It cannot be admitted against the retained 45.5 predicate.
-        skipped=worker.metrics.get('quarantined_books_skipped',0)
-        worker.queue_book(current_book(case,'kalshi',price='0.67'))
-        worker.flush_books()
-        self.assertGreater(worker.metrics['quarantined_books_skipped'],skipped)
-        blocked=own_records()
-        self.assertEqual(len(blocked),2)
-        for record in blocked:
-            quote=record['quote'];original=frozen[quote['source']['native_outcome_id']]
-            self.assertEqual(quote['original'],original['original'])
-            self.assertEqual(record['comparison_source_metadata']['original_wording'],original['wording'])
-            self.assertEqual(record['comparison_source_metadata']['source_predicate'],original['predicate'])
-            self.assertEqual({k:quote['times'][k] for k in ('source_at','received_at')},original['times'])
-            self.assertEqual(record['market_identity']['line'],'45.5')
-            admission=record['comparison_source_metadata']['comparison_admission']
-            self.assertFalse(admission['supported'])
-            self.assertEqual(admission['reason'],'native_material_changed_capacity')
-        game,_=await published_when(lambda board:any(q['venue']=='kalshi' and
-            q['same_outcome']['reason']=='native_material_changed_capacity' for q in board['prices']))
-        reply=await client.get('/api/boards/odds',params=dict(game=game['game_key'],filter='all'))
-        self.assertEqual(reply.status,200,await reply.text())
-        quarantined=await reply.json()
-        self.assertEqual(quarantined['provider_requests'],0)
-        self.assertFalse(any(q['current_comparison']['available'] or q['gross_comparison']['available']
-                             for q in quarantined['prices']))
-        own_prices=[q for q in quarantined['prices'] if q['venue']=='kalshi']
-        self.assertEqual(len(own_prices),2)
-        for quote in own_prices:
-            self.assertEqual(quote['market']['line'],'45.5')
-            self.assertEqual(quote['original']['value'],'0.48')
-            self.assertNotEqual(quote['observation_display']['state'],'current')
-            self.assertFalse(quote['same_outcome']['supported'])
-            self.assertEqual(quote['same_outcome']['reason'],'native_material_changed_capacity')
-            source_side=quote['source']['native_outcome_id']
-            self.assertEqual({k:quote['times'][k] for k in ('source_at','received_at')},frozen[source_side]['times'])
-        selected=own_prices[0]
-        reply=await client.get('/api/boards/inputs',params=dict(game=game['game_key'],quote=selected['quote_id'],
+        # Bulk discovery no longer truncates this catalog at the old proposal
+        # cap. Changed native terms must withdraw the old instrument immediately,
+        # before a replacement image can make the new line available.
+        self.assertEqual(worker.metrics['catalog_projection']['state'],'complete_traversal')
+        self.assertIn(native_id,worker.metrics['catalog_transition']['changed_markets'])
+        self.assertEqual(own_records(),[])
+        with self.connect() as db:
+            self.assertEqual(db.execute('SELECT count(*) n FROM current_native_book WHERE venue=%s AND native_market_id=%s',
+                ('kalshi',native_id)).fetchone()['n'],0)
+        selected=next(q for q in initial['prices'] if q['venue']=='kalshi')
+        reply=await client.get('/api/boards/inputs',params=dict(game=initial['game_key'],quote=selected['quote_id'],
             context_id=selected['inputs_identity']['context_id']))
-        self.assertEqual(reply.status,200,await reply.text())
-        captured=(await reply.json())['evidence']
-        original=frozen[selected['source']['native_outcome_id']]
-        self.assertEqual(captured['original'],original['original'])
-        self.assertEqual({k:captured['times'][k] for k in ('source_at','received_at')},original['times'])
-        self.assertEqual(captured['native_contract']['wording'],original['wording'])
-        self.assertEqual(captured['native_contract']['same_outcome']['reason'],'native_material_changed_capacity')
+        self.assertEqual(reply.status,409,await reply.text())
+        self.assertEqual((await reply.json())['provider_requests'],0)
 
-        # Recover only after a complete feasible new catalog and a fresh owned
-        # image. The unchanged US 45.5 observations remain different outcomes.
+        # A complete new image belongs to 46.5; it cannot compare with the
+        # unchanged US 45.5 observations or reuse the original source clock.
         case['markets']['kalshi']=feasible
         await worker.discover()
         self.assertNotIn(native_id,worker.material_quarantine)
@@ -313,7 +280,8 @@ class AutomaticMultisportSQL(IsolatedAsyncioTestCase):
             and q['original']['value']=='0.67' for q in board['prices']))
         reply=await client.get('/api/boards/odds',params=dict(game=game['game_key'],filter='all'))
         self.assertEqual(reply.status,200,await reply.text())
-        recovered_board=await reply.json()
+        from app.dashboard.comparison_board import expand_odds
+        recovered_board=expand_odds(await reply.json())
         self.assertEqual({q['market']['line'] for q in recovered_board['prices'] if q['venue']=='kalshi'},{'46.5'})
         self.assertEqual({q['market']['line'] for q in recovered_board['prices'] if q['venue']=='polymarket_us'},{'45.5'})
         self.assertFalse(any(q['current_comparison']['available'] or q['gross_comparison']['available']

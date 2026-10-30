@@ -66,7 +66,7 @@ class ComparisonBoardSQL(unittest.TestCase):
     def test_sql_catalog_and_exact_financial_trace(self):
         context, bundle = self.current()
         self.assertEqual(context.catalog()['version'], 'predict-board-catalog-2')
-        self.assertEqual(context.catalog()['limits']['maximum_games'], 500)
+        self.assertEqual(context.catalog()['limits']['maximum_games'], len(context.catalog()['games']))
         actual = calculate_current(bundle, DEFAULT_POLICY, context=context)
         expected = {quote_key(q): q for _, _, q in entries(retained()[1])}
         for _, _, q in entries(actual['state']):

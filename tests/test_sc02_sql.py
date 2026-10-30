@@ -176,9 +176,10 @@ class SQL(IsolatedAsyncioTestCase):
     async def test_probe_capacity_and_measurement_failure_do_not_abort_ingress(self):
         from unittest.mock import MagicMock
         from app.storage.scanner_publication import current_revision
+        from app.storage.current_rows import MAX_RECORDS
         fake=MagicMock()
         fake.execute.side_effect=[SimpleNamespace(fetchone=lambda:dict(epoch='authored')),
-            SimpleNamespace(fetchall=lambda:[{}]*16385),SimpleNamespace(fetchall=lambda:[])]
+            SimpleNamespace(fetchall=lambda:[{}]*(MAX_RECORDS+1)),SimpleNamespace(fetchall=lambda:[])]
         with self.assertRaisesRegex(ValueError,'revision_probe_capacity'):current_revision(fake)
         seen=[];close=subscribe(seen.append)
         try:

@@ -14,6 +14,13 @@ class Checkpoints(TestCase):
     setUpClass = classmethod(base.SQL.setUpClass.__func__)
     tearDownClass = classmethod(base.SQL.tearDownClass.__func__)
 
+    def setUp(self):
+        # Every test owns independent evidence inside the disposable class DB.
+        with self.connect() as db:
+            db.execute('TRUNCATE current_acquisition_page,current_acquisition_query,current_acquisition_image,'
+                'current_acquisition_market,current_acquisition_aggregate,current_acquisition_alternate,'
+                'current_acquisition_event_census,current_acquisition_failure,current_native_market_recovery,current_native_catalog_recovery,data_runtime')
+
     def test_final_disposition_and_superseded_image_do_not_encode_depth_again(self):
         _,book=native_fixture();book['raw']['ref']['market_id']='lightweight-disposition'
         mid=book['raw']['ref']['market_id']
@@ -137,6 +144,8 @@ class Checkpoints(TestCase):
         self.assertEqual(cell['alternate_prior_cycle_retained'],1)
         self.assertEqual(sum(e['current_cycle_received'] for e in result['alternate_events']),1)
         self.assertFalse(result['qualified_99_percent'])
+        self.assertTrue(all(e['pregame_at_census'] is None for e in result['alternate_events']))
+        self.assertEqual(next(e for e in result['alternate_events'] if e['event_id']=='a')['reason'],'event_start_unknown')
 
     def test_started_absence_is_explained_without_shrinking_missing_denominator(self):
         from app.collection.acquisition_report import report

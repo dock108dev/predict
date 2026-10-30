@@ -57,17 +57,13 @@ class Assets(unittest.IsolatedAsyncioTestCase):
                     if path == script and "scanner.js" not in path:
                         self.assertTrue(imports)
                     pending.extend(urljoin(path, module) for module in imports)
-                self.assertTrue(
+                expected = (
+                    {"raw-odds.js", "raw-odds.css", "stored.css", "raw-result-view.js", "board-values.js"}
+                    if page == "/odds" else
                     {"board-client.js", "board-contract.js", "board-values.js", "board-read.js"}
-                    <= {Path(path.split("?")[0]).name for path in seen}
+                    | ({"scanner.css", "scanner.js"} if page == "/scanner" else {"stored.css", "stored.js"})
                 )
-                self.assertTrue(
-                    (
-                        {"scanner.css", "scanner.js"} if page == "/scanner"
-                        else {"stored.css", "stored.js", "board-client.js"}
-                    )
-                    <= {Path(path.split("?")[0]).name for path in seen}
-                )
+                self.assertTrue(expected <= {Path(path.split("?")[0]).name for path in seen}, page)
             self.assertEqual(
                 (await client.get("/current/assets/unknown.js")).status, 404
             )

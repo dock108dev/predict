@@ -90,6 +90,22 @@ class SharedSourceClock(unittest.TestCase):
 
 
 class SharedAdmission(unittest.IsolatedAsyncioTestCase):
+    async def test_explicit_nhl_official_score_is_preserved_across_sources(self):
+        from app.comparison.native_scoring_scope import resolve
+        rows,_=await captured_core_matrix()
+        for row in rows:
+            if row['event']['competition']!='NHL':continue
+            self.assertEqual(resolve(row,at=row['quote']['times']['received_at'])['scoring']['shootout'],
+                             'official_final_score')
+            if row['quote']['venue']!='polymarket_us' or row['market_identity']['family']=='moneyline':continue
+            ambiguous=deepcopy(row)
+            meta=ambiguous['comparison_source_metadata']
+            for fields in (meta['combined_native_binding']['original_terms'],meta['original_wording']):
+                fields['description']=fields['description'].replace('; official final score','')
+            # Merely including shootout does not prove official-score semantics.
+            self.assertEqual(resolve(ambiguous,at=row['quote']['times']['received_at'])['scoring']['shootout'],
+                             'included')
+
     async def test_complete_matrix_originals_survive_admission(self):
         rows,books=await captured_core_matrix()
         self.assertEqual(len(rows),72)

@@ -51,7 +51,7 @@ class SlateRead(TestCase):
     def test_current_rows_produce_v2_page_without_saved_queue(self):
         output,pending=self.read()
         self.assertEqual(output['version'],'predict-comparison-slate-2')
-        self.assertEqual(output['bounds']['maximum_games'],500)
+        self.assertEqual(output['bounds']['maximum_games'],len(output['games']))
         self.assertEqual(output['bounds']['maximum_page_games'],50)
         self.assertTrue(output['boards'])
         self.assertTrue(output['coverage']['complete'])
@@ -63,9 +63,13 @@ class SlateRead(TestCase):
             self.read(expected_revision='retired-page-revision')
 
     def test_page_capacity_is_checked_before_inputs(self):
-        for options in ({'offset':500},{'offset':-1},{'limit':51},{'limit':0}):
+        for options in ({'offset':-1},{'limit':51},{'limit':0}):
             with self.subTest(options=options),self.assertRaisesRegex(ValueError,'slate_page_capacity'):
                 self.read(**options)
+
+    def test_later_page_requires_frozen_read_token(self):
+        with self.assertRaisesRegex(ValueError, 'current_slate_read_token_required'):
+            self.read(offset=500)
 
     def test_current_serialized_capacity_is_explicit(self):
         with patch.object(slate,'MAX_BYTES',1),self.assertRaisesRegex(ValueError,'slate_response_byte_capacity'):

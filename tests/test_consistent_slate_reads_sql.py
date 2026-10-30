@@ -306,7 +306,16 @@ const path = require('node:path'), {pathToFileURL} = require('node:url');
 
         from app.dashboard.comparison_board_api import SLATE_READS
         cache = client.server.app[SLATE_READS]
-        tabs = [await self.page(client) for _ in range(cache.maximum_frames + 1)]
+        # Active traversals are protected; only completed reads may be evicted.
+        cache.clear()
+        tabs = [await self.page(client) for _ in range(cache.maximum_frames)]
+        refused = await self.page(client, status=409)
+        self.assertEqual(refused['reason'], 'current_slate_read_capacity')
+        self.assertEqual(set(cache.frames), {page['read_token'] for page in tabs})
+        finished = tabs[0]
+        while not finished['coverage']['complete']:
+            finished = await self.page(client, finished)
+        tabs.append(await self.page(client))
         self.assertEqual(len({page['read_token'] for page in tabs}), len(tabs))
         self.assertLessEqual(len(cache.frames), cache.maximum_frames)
         self.assertLessEqual(cache.retained_bytes, cache.maximum_bytes)

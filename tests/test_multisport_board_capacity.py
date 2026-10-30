@@ -4,7 +4,7 @@ from unittest import IsolatedAsyncioTestCase
 from datetime import datetime,timezone
 from types import SimpleNamespace
 from app.comparison.combined_native import normalize
-from app.dashboard.comparison_board import response,expand_odds
+from app.dashboard.comparison_board import response,expand_odds,expand_price_fields
 from app.comparison.estimated_policy import DEFAULT_POLICY
 from app.storage.comparison_board import ReadContext,observation_identity
 from app.storage.store import encoded
@@ -31,8 +31,9 @@ class MarketBoardCapacity(IsolatedAsyncioTestCase):
   bundles=context.observation_bundles();self.assertEqual(len(bundles),1);self.assertEqual(len(rows),80)
   for b in bundles:
    b['calculation_context']=observation_identity(b,context);r=response(b,None,DEFAULT_POLICY,view='odds',filter='all',at=at)
-   self.assertEqual(len(r['prices']),80)
    self.assertLessEqual(len(encoded(r)),512*1024)
+   expand_price_fields(r)
+   self.assertEqual(len(r['prices']),80)
    self.assertEqual(sum(q['current_comparison']['available'] for q in r['prices']),80)
    self.assertTrue(all(len(q['current_comparison']['input_refs'])==2 for q in r['prices']))
    self.assertTrue(all(not q['current_comparison']['inputs'] for q in r['prices']),'new wire frames retain references without duplicate full inputs')
@@ -42,12 +43,11 @@ class MarketBoardCapacity(IsolatedAsyncioTestCase):
    calculation=calculate_current(financial_bundle,DEFAULT_POLICY,context=context)
    for view in ('ev','arbs'):
     financial=response(financial_bundle,calculation,DEFAULT_POLICY,view=view,filter='all',at=at)
-    self.assertEqual(len(financial['prices']),80)
     self.assertLessEqual(len(encoded(financial)),512*1024)
+    self.assertEqual(len(expand_price_fields(financial)['prices']),80)
    expanded=expand_odds(deepcopy(r))
    self.assertTrue(all(len(q['current_comparison']['inputs'])==2 for q in expanded['prices']))
    self.assertTrue(all(q['native_contract_summary']['wording'] for q in expanded['prices']))
    frozen=encoded(expanded['prices'][0]['current_comparison']['inputs'])
-   from app.dashboard.comparison_board import expand_price_fields
    expand_price_fields(r)['prices'][0]['original']['value']='0.99'
    self.assertEqual(encoded(expanded['prices'][0]['current_comparison']['inputs']),frozen)

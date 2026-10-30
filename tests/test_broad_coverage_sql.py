@@ -32,6 +32,10 @@ class BroadCoverageSQL(IsolatedAsyncioTestCase):
     tearDownClass=classmethod(sql_fixtures.LatestBoardSQL.tearDownClass.__func__)
     async def asyncSetUp(self):
         await pipeline_fixtures.AutomaticMultisportSQL.asyncSetUp(self)
+        # Use the inline worker with this fixture's patched SQL connector.
+        # A child interpreter cannot inherit the class-specific database patch.
+        from app.collection.coverage_worker import MAX_PROCESS_BYTES
+        self.service.config['rss_bytes']=MAX_PROCESS_BYTES
         with self.connect() as db:db.execute('TRUNCATE coverage_latest')
 
     async def test_capture_plan_avoids_jit_without_changing_session_policy(self):
@@ -102,6 +106,9 @@ class BroadCoverageSQL(IsolatedAsyncioTestCase):
             for case in cases:self.service.book(venue,current_book(case,venue,price='0.48' if venue=='kalshi' else '0.53'))
         self.state.write(self.service)
         for _ in range(150):
+            # Advance the real background capture explicitly; the production
+            # two-minute census interval is not a test readiness deadline.
+            await asyncio.to_thread(self.owner.coverage_tick)
             with self.connect() as db:value=read(db)
             if value['global_totals']['supported_comparison_observations']==60:break
             await asyncio.sleep(.1)
@@ -230,8 +237,21 @@ class BroadCoverageSQL(IsolatedAsyncioTestCase):
         from app.storage.latest_board import source_states
         from app.collection.runtime_status import read_runtime
         from app.comparison.broad_coverage import native_key
-        await self.matrix()
+        # Projection parity is independent of the low-frequency background
+        # census schedule. Seed the same authored matrix and publish it once.
         await self.owner.close()
+        from tests.broad_pipeline_fixtures import captured_core_matrix
+        from app.storage import latest_board as latest
+        rows,books=await captured_core_matrix()
+        self.service.states.update({venue:dict(state='available') for venue in ('kalshi','polymarket_us')})
+        with self.connect() as db:
+            current=CurrentRowStore(db)
+            current.upsert_records(rows,source_status=self.service.states)
+            current.replace_native_books(books)
+        self.state.write(self.service)
+        with self.connect() as db:
+            result=latest.reconcile(db,observations_only=True)
+            self.assertTrue(result['published'],result)
         with self.connect() as db:
             runtime=read_runtime(db)
             committed={r['venue']:r['state'] for r in db.execute('SELECT venue,state FROM current_source_status').fetchall()}

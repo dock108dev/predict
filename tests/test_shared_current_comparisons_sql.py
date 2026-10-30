@@ -38,8 +38,8 @@ class SharedCurrentComparisonsSQL(BroadNativeMatrixSQL):
         with self.connect() as db:self.assertGreater(db.execute('SELECT count(*) n FROM latest_board').fetchone()['n'],18)
         self.admit(rows,books)
         marker=latest.marker;calls=[0]
-        def unrelated_noise(db):
-            calls[0]+=1;return marker(db)+str(calls[0])
+        def unrelated_noise(db,event_ids=None):
+            calls[0]+=1;return marker(db,event_ids)+str(calls[0])
         with patch.object(latest,'marker',unrelated_noise):result=await self.publish()
         self.assertTrue(result['published'],result)
         with self.connect() as db:self.assertEqual(db.execute('SELECT count(*) n FROM latest_board').fetchone()['n'],18)
