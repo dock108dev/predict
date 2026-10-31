@@ -222,9 +222,13 @@ class TicketSQL(IsolatedAsyncioTestCase):
             return finance(*a,**kw)
         t=Tickets(p,allow_authored=True,calculate=selected,fresh=fresh,destinations=Destinations(catalog(f['instruments'])))
         try:
-            r=await t.command(dict(operation='select',client_id=CLIENT,sequence=1,
-                selection=selector(p,next(iter(p.rows.values())))))
-            self.assertTrue(r['ready_for_manual_action']);self.assertGreaterEqual(len(captures),2)
+            # This checks SQL/lock release, with two full-catalog captures inside
+            # the ticket. Give that artificial work a bounded semantic budget;
+            # production's two-second deadline is tested in test_sc03_tickets.
+            with patch('app.comparison.scanner_tickets.DEADLINE_SECONDS',30):
+                r=await t.command(dict(operation='select',client_id=CLIENT,sequence=1,
+                    selection=selector(p,next(iter(p.rows.values())))))
+            self.assertTrue(r['ready_for_manual_action'],r);self.assertGreaterEqual(len(captures),2)
             self.assertEqual(r['provider_requests'],0)
             self.assertIsNone(r['selected_frame']['causal']['sql_post_commit_observation'])
             with self.connect() as db:self.assertLess(db.execute('select pg_database_size(current_database()) n').fetchone()['n'],2*1024**3)

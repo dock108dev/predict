@@ -279,6 +279,7 @@ class Lifecycle(IsolatedAsyncioTestCase):
             return finance(*a,**kw)
         self.t.calculate=late;r=await self.cmd('select')
         self.assertFalse(r['ready_for_manual_action']);self.assertIsNone(r['selected_frame'])
+        self.assertEqual(r['reason'],'calculation_deadline')
         def stopped(*a,**kw):self.p.stop();return finance(*a,**kw)
         self.t.calculate=stopped;r=await self.cmd('select')
         self.assertEqual(r['state'],'stopped');self.assertIsNone(r['selected_frame'])
