@@ -21,7 +21,7 @@ from tests.broad_pipeline_fixtures import captured_core_matrix,captured_partial,
 
 
 @skipUnless(fixtures.SOCKET,'Explicit maintained disposable PostgreSQL lane required')
-class BroadNativeMatrixSQL(IsolatedAsyncioTestCase):
+class NativeMatrixFixture(IsolatedAsyncioTestCase):
     connect=classmethod(fixtures.LatestBoardSQL.connect.__func__)
     setUpClass=classmethod(fixtures.LatestBoardSQL.setUpClass.__func__)
     tearDownClass=classmethod(fixtures.LatestBoardSQL.tearDownClass.__func__)
@@ -43,7 +43,7 @@ class BroadNativeMatrixSQL(IsolatedAsyncioTestCase):
         self.state=RuntimeState(self.connect)
         with self.connect() as db:
             db.execute('TRUNCATE current_event CASCADE')
-            db.execute('TRUNCATE current_source_status,current_refresh_scope,data_runtime,data_runtime_command,latest_board,latest_board_status,coverage_latest')
+            db.execute('TRUNCATE current_source_status,current_refresh_scope,data_runtime,data_runtime_command,current_result_parent_original,latest_board,latest_board_status,coverage_latest')
         self.state.write(self.service)
 
     def admit(self,rows,books):
@@ -52,6 +52,8 @@ class BroadNativeMatrixSQL(IsolatedAsyncioTestCase):
             current.upsert_records(rows,now=self.at.isoformat())
             current.replace_native_books(books)
 
+
+class BroadNativeMatrixSQL(NativeMatrixFixture):
     async def read_matrix(self,expected_cells,expected_prices):
         with self.connect() as db:
             result=latest.reconcile(db,at=self.at.isoformat(),observations_only=True)
@@ -69,7 +71,8 @@ class BroadNativeMatrixSQL(IsolatedAsyncioTestCase):
                 result=await client.get('/api/boards/slate',params=dict(view='odds',filter='all',limit='50'))
                 self.assertEqual(result.status,200,await result.text());page=await result.json()
                 self.assertEqual(page['provider_requests'],0)
-                prices=[q for b in page['boards'] for q in b['prices']]
+                from app.dashboard.comparison_board import expand_price_fields
+                prices=[q for b in page['boards'] for q in expand_price_fields(b)['prices']]
                 self.assertEqual(len(prices),expected_prices)
                 self.assertEqual({(g['league'],q['venue'],'moneyline' if q['market']['market']=='winner' else q['market']['market'],q['market']['period'])
                     for b in page['boards'] for g in page['games'] if b['game_key']==g['game_key'] for q in b['prices']},expected_cells)
@@ -135,9 +138,13 @@ class BroadNativeMatrixSQL(IsolatedAsyncioTestCase):
         prices=await self.read_matrix(expected,56)
         # Four leagues x three shared first-half families x two outcomes x
         # two native directions. The eight MLB single-source prices have no peer.
-        self.assertEqual(sum(q['current_comparison'].get('available') and q['current_comparison'].get('display_status')=='current' for q in prices),48)
         with self.connect() as db:
+            from app.dashboard.comparison_board import expand_odds
             from app.storage.coverage_latest import read
+            captured=latest.snapshot(db,at=self.at.isoformat())
+            full_prices=[q for key in captured['rows'] for q in expand_odds(latest.board(captured,key,view='odds',filter='all'))['prices']]
+            self.assertEqual({q['quote_id'] for q in full_prices},{q['quote_id'] for q in prices})
+            self.assertEqual(sum(q['current_comparison'].get('available') and q['current_comparison'].get('display_status')=='current' for q in full_prices),48)
             counts=read(db,at=self.at.isoformat())['global_totals']
         self.assertEqual(counts['eligible_current_pairs'],24)
         self.assertEqual(counts['displayed_current_comparison_directions'],48)
@@ -145,7 +152,6 @@ class BroadNativeMatrixSQL(IsolatedAsyncioTestCase):
         self.at+=timedelta(seconds=31);self.state.write(self.service)
         with self.connect() as db:
             captured=latest.snapshot(db,at=self.at.isoformat())
-            from app.dashboard.comparison_board import expand_odds
             aged=[q for key in captured['rows'] for q in expand_odds(latest.board(captured,key,view='odds',filter='all'))['prices']]
         self.assertEqual(len(aged),56)
         for quote in aged:

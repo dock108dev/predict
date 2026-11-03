@@ -12,6 +12,7 @@ from aiohttp.test_utils import TestClient, TestServer
 from psycopg.types.json import Jsonb
 
 from app.collection.runtime_client import RuntimeClient
+from app.dashboard.comparison_board import expand_odds
 from app.storage import latest_board as latest
 from app.storage.comparison_board import ReadContext
 from tests import test_latest_board_sql as sql_fixtures
@@ -38,8 +39,7 @@ class SelectedInputGuardsSQL(IsolatedAsyncioTestCase):
         rows=self.rows();self.key=self.first['game_key'];self.saved=rows[self.key]['facts']['publication_dependencies']
         with self.connect() as db:
             b=latest.board(latest.snapshot(db,at=self.at.isoformat()),self.key,view='odds',filter='all')
-        from app.dashboard.comparison_board import expand_price_fields,expand_odds
-        q=expand_odds(expand_price_fields(b))['prices'][0]
+        q=expand_odds(b)['prices'][0]
         self.query=dict(game=self.key,quote=q['quote_id'],context_id=q['inputs_identity']['context_id'])
         return client,app[READ_WORK],q
 
@@ -218,7 +218,7 @@ class SelectedInputGuardsSQL(IsolatedAsyncioTestCase):
             frame=latest.snapshot(db,at=self.at.isoformat())
             good=latest.board(frame,self.second['game_key'],view='odds',filter='all')
             self.assertEqual(frame['rows'][self.second['game_key']]['facts']['observation_binding'],latest.observation_binding())
-        quote=good['prices'][0]
+        quote=expand_odds(good)['prices'][0]
         reply=await client.get('/api/boards/inputs',params=dict(game=good['game_key'],quote=quote['quote_id'],context_id=quote['inputs_identity']['context_id']))
         value=await reply.json();self.assertEqual(reply.status,200,value)
         self.assertEqual(value['evidence']['original'],quote['original'])

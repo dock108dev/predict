@@ -1,4 +1,5 @@
 """Isolated database durability, exact binding and snapshot publication checks."""
+import asyncio
 import base64
 from copy import deepcopy
 from dataclasses import replace
@@ -145,19 +146,28 @@ class PipelineBounds(unittest.IsolatedAsyncioTestCase):
         from app.collection.current_database import DatabasePipeline
         svc=SimpleNamespace(config={'cleanup_seconds':1,'sports':['NFL'],'families':['moneyline']},sink=SimpleNamespace(error=None))
         return DatabasePipeline(svc)
-    async def test_failure_is_visible_and_finite(self):
-        pipe=self.service()
-        async def timeout(awaitable,timeout):
-            awaitable.close();raise TimeoutError
-        with patch.object(pipe,'tick',side_effect=OSError('database unavailable')),patch('app.collection.current_database.asyncio.wait_for',side_effect=timeout) as wait:
-            await pipe.run_maintenance()
-        self.assertEqual(wait.call_count,3)
-        self.assertIn('database unavailable',pipe.error)
+    async def test_maintenance_reports_failure_and_waits_until_stop(self):
+        pipe = self.service()
+        with patch.object(pipe, 'tick', side_effect=OSError('database unavailable')) as tick:
+            pipe.task = asyncio.create_task(pipe.run_maintenance())
+            try:
+                pipe.wake.set()
+                async with asyncio.timeout(2):
+                    while not pipe.maintenance_failures:
+                        await asyncio.sleep(0.01)
+                status = pipe.status()
+                self.assertEqual(status['failure_owner'], 'maintenance')
+                self.assertEqual(status['maintenance_failure']['exception'], 'OSError')
+                self.assertEqual(status['maintenance_failures'], 1)
+                self.assertFalse(pipe.task.done())
+            finally:
+                self.assertTrue(await pipe.close())
+            tick.assert_called_once_with()
+
     async def test_archive_calculation_queue_is_absent(self):
         pipe=self.service()
         self.assertFalse(hasattr(pipe,'request'));self.assertFalse(hasattr(pipe,'pending'))
     async def test_stop_revokes_and_finishes_owned_worker(self):
-        import asyncio
         pipe=self.service()
         pipe.task=asyncio.create_task(pipe.run_maintenance())
         await asyncio.sleep(0)

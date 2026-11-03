@@ -357,7 +357,9 @@ class CurrentRows(unittest.TestCase):
         before=sink.sequence
         with patch('app.collection.current_database.connect',side_effect=OSError('authored-sql-unavailable')):
             with self.assertRaisesRegex(OSError,'authored-sql'):sink.commit(dict(type='source_health',source=source,state='error',observed_at=AT),states)
-        self.assertEqual(sink.sequence,before);self.assertIn('authored-sql',sink.error)
+        self.assertEqual(sink.sequence,before)
+        self.assertEqual(sink.error,'OSError')
+        self.assertNotIn('authored-sql',str(sink.error_details))
         self.assertFalse(hasattr(sink,'pending'))
 
     def test_scheduler_admitted_handoff_reaches_current_sql_without_raw_fallback(self):
@@ -445,7 +447,8 @@ class CurrentRows(unittest.TestCase):
         before=self.store.capture()['epoch'];pipeline=DatabasePipeline(SimpleNamespace(config=DEFAULT))
         with patch('app.collection.current_database.connect',side_effect=OSError('authored-start-sql-unavailable')):
             with self.assertRaisesRegex(OSError,'authored-start-sql'):asyncio.run(pipeline.start())
-        self.assertIn('authored-start-sql',pipeline.error)
+        self.assertEqual(pipeline.error,'OSError')
+        self.assertNotIn('authored-start-sql',str(pipeline.error_details))
         self.assertEqual(before,self.store.capture()['epoch'])
         self.assertIsNone(pipeline.task)
 

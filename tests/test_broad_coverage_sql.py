@@ -260,7 +260,13 @@ class BroadCoverageSQL(IsolatedAsyncioTestCase):
         await self.owner.close()
         from tests.broad_pipeline_fixtures import captured_core_matrix
         from app.storage import latest_board as latest
-        rows,books=await captured_core_matrix()
+        # Synchronous SQL and allocation tracing block the fixture heartbeat.
+        # Compare both projections at one source/authority instant, while
+        # measuring actual elapsed time and memory on the runner.
+        clock=datetime.now(timezone.utc)
+        instant=clock.isoformat()
+        self.enterContext(patch('app.collection.runtime_status.clock',return_value=clock))
+        rows,books=await captured_core_matrix(clock=clock)
         self.service.states.update({venue:dict(state='available') for venue in ('kalshi','polymarket_us')})
         with self.connect() as db:
             current=CurrentRowStore(db)
@@ -268,10 +274,10 @@ class BroadCoverageSQL(IsolatedAsyncioTestCase):
             current.replace_native_books(books)
         self.state.write(self.service)
         with self.connect() as db:
-            result=latest.reconcile(db,observations_only=True)
+            result=latest.reconcile(db,at=instant,observations_only=True)
             self.assertTrue(result['published'],result)
         with self.connect() as db:
-            runtime=read_runtime(db)
+            runtime=read_runtime(db,at=instant)
             committed={r['venue']:r['state'] for r in db.execute('SELECT venue,state FROM current_source_status').fetchall()}
             states=source_states(committed,runtime)
             compact,projected=_publication_frame(db,states)
@@ -300,12 +306,12 @@ class BroadCoverageSQL(IsolatedAsyncioTestCase):
             del compact,complete,projected,originals
             tracemalloc.start();started=time.monotonic()
             try:
-                result=reconcile(db)
+                result=reconcile(db,at=instant)
                 _,peak=tracemalloc.get_traced_memory()
             finally:tracemalloc.stop()
             self.assertTrue(result['published'],result)
             metrics=db.execute("SELECT facts->'work_metrics' m FROM coverage_latest").fetchone()['m']
-            value=read(db)
+            value=read(db,at=instant)
         self.assertEqual(value['global_totals']['retained_observations'],72)
         self.assertEqual(value['global_totals']['supported_comparison_observations'],60)
         self.assertEqual(value['global_totals']['displayed_current_comparison_directions'],60)

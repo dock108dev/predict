@@ -5,7 +5,7 @@ from app.collection.current_confirmation import Confirmations
 from app.storage import latest_board as latest
 from app.storage.coverage_latest import reconcile,read
 from app.storage.current_rows import CurrentRowStore
-from tests.test_broad_native_matrix_sql import BroadNativeMatrixSQL
+from tests.test_broad_native_matrix_sql import NativeMatrixFixture
 from tests.broad_pipeline_fixtures import captured_core_matrix
 from unittest.mock import patch
 import json
@@ -28,12 +28,16 @@ def confirmed(book,at,sequence=1):
     return book
 
 
-class SharedCurrentComparisonsSQL(BroadNativeMatrixSQL):
+class SharedCurrentComparisonsSQL(NativeMatrixFixture):
     async def test_complete_metadata_replaces_old_source_local_groups_despite_global_noise(self):
         rows,books=await captured_core_matrix(self.at);incomplete=deepcopy(rows)
         for row in incomplete:
-            if row['quote']['venue']=='polymarket_us':
-                row['comparison_source_metadata']['comparison_admission']=dict(supported=False,reason='comparison_context_missing',missing_fields=['season','stage'])
+            # A complete peer can now supply the occurrence context for an
+            # exact-time join. Start with both sources missing that evidence.
+            for field in ('season','stage'):
+                row['event'][field]=None
+                row['market_identity'][field]=None
+            row['comparison_source_metadata']['comparison_admission']=dict(supported=False,reason='comparison_context_missing',missing_fields=['season','stage'])
         self.admit(incomplete,books);await self.publish()
         with self.connect() as db:self.assertGreater(db.execute('SELECT count(*) n FROM latest_board').fetchone()['n'],18)
         self.admit(rows,books)

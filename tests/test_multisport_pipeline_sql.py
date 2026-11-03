@@ -21,6 +21,7 @@ from app.collection.current_native import NativeWorker
 from app.collection.current_database import DatabaseIngressSink
 from app.collection.runtime_status import RuntimeState
 from app.collection.runtime_client import RuntimeClient
+from app.dashboard.comparison_board import expand_odds
 from app.dashboard.current_state import CurrentStore
 from app.storage import latest_board as latest
 from app.storage.current_rows import CurrentRowStore
@@ -176,7 +177,7 @@ class AutomaticMultisportSQL(IsolatedAsyncioTestCase):
                 Fraction(5 if row['venue']=='kalshi' else -5))
         reply=await client.get('/api/boards/odds',params=dict(game=game['game_key'],filter='all'))
         self.assertEqual(reply.status,200,await reply.text())
-        rendered=await reply.json();self.assertEqual(rendered['provider_requests'],0)
+        rendered=expand_odds(await reply.json());self.assertEqual(rendered['provider_requests'],0)
         self.assertTrue(all(q['event']['league']==league for q in rendered['prices']))
         self.assertTrue(all(q['market']['market']==('winner' if family=='moneyline' else family) for q in rendered['prices']))
         selected=next(q for q in rendered['prices'] if q.get('current_comparison',{}).get('available'))
@@ -211,7 +212,6 @@ class AutomaticMultisportSQL(IsolatedAsyncioTestCase):
                            if expected<={m[1] for m in g['members']}),None)
                 if game:
                     board=latest.board(frame,game['game_key'],view='odds',filter='all')
-                    from app.dashboard.comparison_board import expand_odds
                     expand_odds(board)
                     if predicate(board):return game,board
                 await asyncio.sleep(.1)
@@ -280,7 +280,6 @@ class AutomaticMultisportSQL(IsolatedAsyncioTestCase):
             and q['original']['value']=='0.67' for q in board['prices']))
         reply=await client.get('/api/boards/odds',params=dict(game=game['game_key'],filter='all'))
         self.assertEqual(reply.status,200,await reply.text())
-        from app.dashboard.comparison_board import expand_odds
         recovered_board=expand_odds(await reply.json())
         self.assertEqual({q['market']['line'] for q in recovered_board['prices'] if q['venue']=='kalshi'},{'46.5'})
         self.assertEqual({q['market']['line'] for q in recovered_board['prices'] if q['venue']=='polymarket_us'},{'45.5'})
