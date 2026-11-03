@@ -1,0 +1,834 @@
+{
+  "Washington": {
+    "label": "Washington",
+    "target": "NHL:WSH",
+    "event_id": "KXNHLGAME-26NOV01MINWSH",
+    "participants": {
+      "Minnesota Wild": "NHL:MIN",
+      "Washington Capitals": "NHL:WSH"
+    },
+    "native": {
+      "title": "Minnesota vs Washington",
+      "category": "Sports",
+      "sub_title": "MIN vs WSH (Nov 1)",
+      "event_ticker": "KXNHLGAME-26NOV01MINWSH",
+      "series_ticker": "KXNHLGAME",
+      "strike_period": "",
+      "exchange_index": 0,
+      "last_updated_ts": "2026-10-25T22:04:15.343297Z",
+      "product_metadata": {
+        "competition": "Pro Hockey",
+        "competition_scope": "Game"
+      },
+      "mutually_exclusive": true,
+      "settlement_sources": [
+        {
+          "url": "https://www.nhl.com",
+          "name": "NHL"
+        },
+        {
+          "url": "https://espn.com",
+          "name": "ESPN"
+        }
+      ],
+      "collateral_return_type": "MECNET"
+    },
+    "observed_identity_facts": [
+      {
+        "id": "14141b9d-a17f-5c54-9f33-f8003db11fc2",
+        "status": "scheduled",
+        "source_id": null,
+        "start_date": "2026-11-01T20:30:00Z",
+        "season_type": "REG",
+        "season_year": 2026,
+        "away_team_id": "1cee0410-99f1-43a2-a67c-4e6a3b968a9c",
+        "home_team_id": "5b474f02-be1a-4aee-8200-4c4eb6e557e9",
+        "source_provider": null,
+        "main_game_event_ticker": "KXNHLGAME-26NOV01MINWSH"
+      }
+    ],
+    "provenance": [
+      {
+        "path": "/trade-api/v2/events",
+        "params": {
+          "limit": 50,
+          "status": "open",
+          "series_ticker": "KXNHLGAME",
+          "with_milestones": "true",
+          "with_nested_markets": "true"
+        },
+        "body_sha256": "3f8968a20556d8e8accaa92597e34fc5271b413e39e7c03f95aeee71458ff845",
+        "received_at": "2026-10-31T04:11:39.473807+00:00",
+        "inventory_row": 7109
+      }
+    ]
+  },
+  "Ottawa": {
+    "label": "Ottawa",
+    "target": "NHL:OTT",
+    "event_id": "KXNHLGAME-26NOV01OTTANA",
+    "participants": {
+      "Anaheim Ducks": "NHL:ANA",
+      "Ottawa Senators": "NHL:OTT"
+    },
+    "native": {
+      "title": "Ottawa vs Anaheim",
+      "category": "Sports",
+      "sub_title": "OTT vs ANA (Nov 1)",
+      "event_ticker": "KXNHLGAME-26NOV01OTTANA",
+      "series_ticker": "KXNHLGAME",
+      "strike_period": "",
+      "exchange_index": 0,
+      "last_updated_ts": "2026-10-26T01:28:42.063961Z",
+      "product_metadata": {
+        "competition": "Pro Hockey",
+        "competition_scope": "Game"
+      },
+      "mutually_exclusive": true,
+      "settlement_sources": [
+        {
+          "url": "https://www.nhl.com",
+          "name": "NHL"
+        },
+        {
+          "url": "https://espn.com",
+          "name": "ESPN"
+        }
+      ],
+      "collateral_return_type": "MECNET"
+    },
+    "observed_identity_facts": [
+      {
+        "id": "c56f7098-59a7-5504-b1ec-4e90f50a8819",
+        "status": "scheduled",
+        "source_id": null,
+        "start_date": "2026-11-02T01:00:00Z",
+        "season_type": "REG",
+        "season_year": 2026,
+        "away_team_id": "a2478063-2ded-4657-923b-e59de696ad21",
+        "home_team_id": "954d2f87-b6bf-4eba-b424-478817a59b92",
+        "source_provider": null,
+        "main_game_event_ticker": "KXNHLGAME-26NOV01OTTANA"
+      }
+    ],
+    "provenance": [
+      {
+        "path": "/trade-api/v2/events",
+        "params": {
+          "limit": 50,
+          "status": "open",
+          "series_ticker": "KXNHLGAME",
+          "with_milestones": "true",
+          "with_nested_markets": "true"
+        },
+        "body_sha256": "3f8968a20556d8e8accaa92597e34fc5271b413e39e7c03f95aeee71458ff845",
+        "received_at": "2026-10-31T04:11:39.473807+00:00",
+        "inventory_row": 7118
+      }
+    ]
+  },
+  "Anaheim": {
+    "label": "Anaheim",
+    "target": "NHL:ANA",
+    "event_id": "KXNHLGAME-26NOV01OTTANA",
+    "participants": {
+      "Anaheim Ducks": "NHL:ANA",
+      "Ottawa Senators": "NHL:OTT"
+    },
+    "native": {
+      "title": "Ottawa vs Anaheim",
+      "category": "Sports",
+      "sub_title": "OTT vs ANA (Nov 1)",
+      "event_ticker": "KXNHLGAME-26NOV01OTTANA",
+      "series_ticker": "KXNHLGAME",
+      "strike_period": "",
+      "exchange_index": 0,
+      "last_updated_ts": "2026-10-26T01:28:42.063961Z",
+      "product_metadata": {
+        "competition": "Pro Hockey",
+        "competition_scope": "Game"
+      },
+      "mutually_exclusive": true,
+      "settlement_sources": [
+        {
+          "url": "https://www.nhl.com",
+          "name": "NHL"
+        },
+        {
+          "url": "https://espn.com",
+          "name": "ESPN"
+        }
+      ],
+      "collateral_return_type": "MECNET"
+    },
+    "observed_identity_facts": [
+      {
+        "id": "c56f7098-59a7-5504-b1ec-4e90f50a8819",
+        "status": "scheduled",
+        "source_id": null,
+        "start_date": "2026-11-02T01:00:00Z",
+        "season_type": "REG",
+        "season_year": 2026,
+        "away_team_id": "a2478063-2ded-4657-923b-e59de696ad21",
+        "home_team_id": "954d2f87-b6bf-4eba-b424-478817a59b92",
+        "source_provider": null,
+        "main_game_event_ticker": "KXNHLGAME-26NOV01OTTANA"
+      }
+    ],
+    "provenance": [
+      {
+        "path": "/trade-api/v2/events",
+        "params": {
+          "limit": 50,
+          "status": "open",
+          "series_ticker": "KXNHLGAME",
+          "with_milestones": "true",
+          "with_nested_markets": "true"
+        },
+        "body_sha256": "3f8968a20556d8e8accaa92597e34fc5271b413e39e7c03f95aeee71458ff845",
+        "received_at": "2026-10-31T04:11:39.473807+00:00",
+        "inventory_row": 7118
+      }
+    ]
+  },
+  "Utah": {
+    "label": "Utah",
+    "target": "NHL:UTA",
+    "event_id": "KXNHLGAME-26NOV01UTAPHI",
+    "participants": {
+      "Utah Mammoth": "NHL:UTA",
+      "Philadelphia Flyers": "NHL:PHI"
+    },
+    "native": {
+      "title": "Utah vs Philadelphia",
+      "category": "Sports",
+      "sub_title": "UTA vs PHI (Nov 1)",
+      "event_ticker": "KXNHLGAME-26NOV01UTAPHI",
+      "series_ticker": "KXNHLGAME",
+      "strike_period": "",
+      "exchange_index": 0,
+      "last_updated_ts": "2026-10-25T22:04:15.363302Z",
+      "product_metadata": {
+        "competition": "Pro Hockey",
+        "competition_scope": "Game"
+      },
+      "mutually_exclusive": true,
+      "settlement_sources": [
+        {
+          "url": "https://www.nhl.com",
+          "name": "NHL"
+        },
+        {
+          "url": "https://espn.com",
+          "name": "ESPN"
+        }
+      ],
+      "collateral_return_type": "MECNET"
+    },
+    "observed_identity_facts": [
+      {
+        "id": "3dee35c1-cb74-561b-b336-b12be2727f75",
+        "status": "scheduled",
+        "source_id": null,
+        "start_date": "2026-11-01T21:00:00Z",
+        "season_type": "REG",
+        "season_year": 2026,
+        "away_team_id": "7d20591d-c6fa-4b85-8d69-ff05fb3649ac",
+        "home_team_id": "24770a4a-6bb0-4ecc-a40b-ad77bcbe403f",
+        "source_provider": null,
+        "main_game_event_ticker": "KXNHLGAME-26NOV01UTAPHI"
+      }
+    ],
+    "provenance": [
+      {
+        "path": "/trade-api/v2/events",
+        "params": {
+          "limit": 50,
+          "status": "open",
+          "series_ticker": "KXNHLGAME",
+          "with_milestones": "true",
+          "with_nested_markets": "true"
+        },
+        "body_sha256": "3f8968a20556d8e8accaa92597e34fc5271b413e39e7c03f95aeee71458ff845",
+        "received_at": "2026-10-31T04:11:39.473807+00:00",
+        "inventory_row": 7112
+      }
+    ]
+  },
+  "Winnipeg": {
+    "label": "Winnipeg",
+    "target": "NHL:WPG",
+    "event_id": "KXNHLGAME-26NOV01WPGCAR",
+    "participants": {
+      "Winnipeg Jets": "NHL:WPG",
+      "Carolina Hurricanes": "NHL:CAR"
+    },
+    "native": {
+      "title": "Winnipeg vs Carolina",
+      "category": "Sports",
+      "sub_title": "WPG vs CAR (Nov 1)",
+      "event_ticker": "KXNHLGAME-26NOV01WPGCAR",
+      "series_ticker": "KXNHLGAME",
+      "strike_period": "",
+      "exchange_index": 0,
+      "last_updated_ts": "2026-10-25T19:03:22.78007Z",
+      "product_metadata": {
+        "competition": "Pro Hockey",
+        "competition_scope": "Game"
+      },
+      "mutually_exclusive": true,
+      "settlement_sources": [
+        {
+          "url": "https://www.nhl.com",
+          "name": "NHL"
+        },
+        {
+          "url": "https://espn.com",
+          "name": "ESPN"
+        }
+      ],
+      "collateral_return_type": "MECNET"
+    },
+    "observed_identity_facts": [
+      {
+        "id": "4d0bdcf9-6ef6-5c97-9fd6-13a4838ac519",
+        "status": "scheduled",
+        "source_id": null,
+        "start_date": "2026-11-01T18:00:00Z",
+        "season_type": "REG",
+        "season_year": 2026,
+        "away_team_id": "6f769f6d-161e-43d3-a586-db5451c5050e",
+        "home_team_id": "b93573ce-fdb3-4762-a28e-0f2505b1bd97",
+        "source_provider": null,
+        "main_game_event_ticker": "KXNHLGAME-26NOV01WPGCAR"
+      }
+    ],
+    "provenance": [
+      {
+        "path": "/trade-api/v2/events",
+        "params": {
+          "limit": 50,
+          "status": "open",
+          "series_ticker": "KXNHLGAME",
+          "with_milestones": "true",
+          "with_nested_markets": "true"
+        },
+        "body_sha256": "3f8968a20556d8e8accaa92597e34fc5271b413e39e7c03f95aeee71458ff845",
+        "received_at": "2026-10-31T04:11:39.473807+00:00",
+        "inventory_row": 7106
+      }
+    ]
+  },
+  "Carolina": {
+    "label": "Carolina",
+    "target": "NHL:CAR",
+    "event_id": "KXNHLGAME-26NOV01WPGCAR",
+    "participants": {
+      "Winnipeg Jets": "NHL:WPG",
+      "Carolina Hurricanes": "NHL:CAR"
+    },
+    "native": {
+      "title": "Winnipeg vs Carolina",
+      "category": "Sports",
+      "sub_title": "WPG vs CAR (Nov 1)",
+      "event_ticker": "KXNHLGAME-26NOV01WPGCAR",
+      "series_ticker": "KXNHLGAME",
+      "strike_period": "",
+      "exchange_index": 0,
+      "last_updated_ts": "2026-10-25T19:03:22.78007Z",
+      "product_metadata": {
+        "competition": "Pro Hockey",
+        "competition_scope": "Game"
+      },
+      "mutually_exclusive": true,
+      "settlement_sources": [
+        {
+          "url": "https://www.nhl.com",
+          "name": "NHL"
+        },
+        {
+          "url": "https://espn.com",
+          "name": "ESPN"
+        }
+      ],
+      "collateral_return_type": "MECNET"
+    },
+    "observed_identity_facts": [
+      {
+        "id": "4d0bdcf9-6ef6-5c97-9fd6-13a4838ac519",
+        "status": "scheduled",
+        "source_id": null,
+        "start_date": "2026-11-01T18:00:00Z",
+        "season_type": "REG",
+        "season_year": 2026,
+        "away_team_id": "6f769f6d-161e-43d3-a586-db5451c5050e",
+        "home_team_id": "b93573ce-fdb3-4762-a28e-0f2505b1bd97",
+        "source_provider": null,
+        "main_game_event_ticker": "KXNHLGAME-26NOV01WPGCAR"
+      }
+    ],
+    "provenance": [
+      {
+        "path": "/trade-api/v2/events",
+        "params": {
+          "limit": 50,
+          "status": "open",
+          "series_ticker": "KXNHLGAME",
+          "with_milestones": "true",
+          "with_nested_markets": "true"
+        },
+        "body_sha256": "3f8968a20556d8e8accaa92597e34fc5271b413e39e7c03f95aeee71458ff845",
+        "received_at": "2026-10-31T04:11:39.473807+00:00",
+        "inventory_row": 7106
+      }
+    ]
+  },
+  "San Jose": {
+    "label": "San Jose",
+    "target": "NHL:SJS",
+    "event_id": "KXNHLGAME-26NOV02CGYSJ",
+    "participants": {
+      "Calgary Flames": "NHL:CGY",
+      "San Jose Sharks": "NHL:SJS"
+    },
+    "native": {
+      "title": "Calgary vs San Jose",
+      "category": "Sports",
+      "sub_title": "CGY vs SJ (Nov 2)",
+      "event_ticker": "KXNHLGAME-26NOV02CGYSJ",
+      "series_ticker": "KXNHLGAME",
+      "strike_period": "",
+      "exchange_index": 0,
+      "last_updated_ts": "2026-10-27T04:08:18.527853Z",
+      "product_metadata": {
+        "competition": "Pro Hockey",
+        "competition_scope": "Game"
+      },
+      "mutually_exclusive": true,
+      "settlement_sources": [
+        {
+          "url": "https://www.nhl.com",
+          "name": "NHL"
+        },
+        {
+          "url": "https://espn.com",
+          "name": "ESPN"
+        }
+      ],
+      "collateral_return_type": "MECNET"
+    },
+    "observed_identity_facts": [
+      {
+        "id": "60c19be7-813a-59fb-8beb-09cde6d5e1d0",
+        "status": "scheduled",
+        "source_id": null,
+        "start_date": "2026-11-03T02:00:00Z",
+        "season_type": "REG",
+        "season_year": 2026,
+        "away_team_id": "ea3554a4-eaa6-4e72-a32f-8388e618133f",
+        "home_team_id": "eb4bc183-5966-40eb-8bdb-3dd922ad1752",
+        "source_provider": null,
+        "main_game_event_ticker": "KXNHLGAME-26NOV02CGYSJ"
+      }
+    ],
+    "provenance": [
+      {
+        "path": "/trade-api/v2/events",
+        "params": {
+          "limit": 50,
+          "status": "open",
+          "series_ticker": "KXNHLGAME",
+          "with_milestones": "true",
+          "with_nested_markets": "true"
+        },
+        "body_sha256": "3f8968a20556d8e8accaa92597e34fc5271b413e39e7c03f95aeee71458ff845",
+        "received_at": "2026-10-31T04:11:39.473807+00:00",
+        "inventory_row": 7130
+      }
+    ]
+  },
+  "Detroit": {
+    "label": "Detroit",
+    "target": "NHL:DET",
+    "event_id": "KXNHLGAME-26NOV02DETFLA",
+    "participants": {
+      "Florida Panthers": "NHL:FLA",
+      "Detroit Red Wings": "NHL:DET"
+    },
+    "native": {
+      "title": "Detroit vs Florida",
+      "category": "Sports",
+      "sub_title": "DET vs FLA (Nov 2)",
+      "event_ticker": "KXNHLGAME-26NOV02DETFLA",
+      "series_ticker": "KXNHLGAME",
+      "strike_period": "",
+      "exchange_index": 0,
+      "last_updated_ts": "2026-10-27T01:16:37.268938Z",
+      "product_metadata": {
+        "competition": "Pro Hockey",
+        "competition_scope": "Game"
+      },
+      "mutually_exclusive": true,
+      "settlement_sources": [
+        {
+          "url": "https://www.nhl.com",
+          "name": "NHL"
+        },
+        {
+          "url": "https://espn.com",
+          "name": "ESPN"
+        }
+      ],
+      "collateral_return_type": "MECNET"
+    },
+    "observed_identity_facts": [
+      {
+        "id": "20269873-db96-58d8-b013-9f8429f630b5",
+        "status": "scheduled",
+        "source_id": null,
+        "start_date": "2026-11-03T00:00:00Z",
+        "season_type": "REG",
+        "season_year": 2026,
+        "away_team_id": "2e166d0f-2ebf-4477-84d8-7702257b797f",
+        "home_team_id": "49b28762-c1b6-4962-a0cb-f1578510cad8",
+        "source_provider": null,
+        "main_game_event_ticker": "KXNHLGAME-26NOV02DETFLA"
+      }
+    ],
+    "provenance": [
+      {
+        "path": "/trade-api/v2/events",
+        "params": {
+          "limit": 50,
+          "status": "open",
+          "series_ticker": "KXNHLGAME",
+          "with_milestones": "true",
+          "with_nested_markets": "true"
+        },
+        "body_sha256": "3f8968a20556d8e8accaa92597e34fc5271b413e39e7c03f95aeee71458ff845",
+        "received_at": "2026-10-31T04:11:39.473807+00:00",
+        "inventory_row": 7121
+      }
+    ]
+  },
+  "Florida": {
+    "label": "Florida",
+    "target": "NHL:FLA",
+    "event_id": "KXNHLGAME-26NOV02DETFLA",
+    "participants": {
+      "Florida Panthers": "NHL:FLA",
+      "Detroit Red Wings": "NHL:DET"
+    },
+    "native": {
+      "title": "Detroit vs Florida",
+      "category": "Sports",
+      "sub_title": "DET vs FLA (Nov 2)",
+      "event_ticker": "KXNHLGAME-26NOV02DETFLA",
+      "series_ticker": "KXNHLGAME",
+      "strike_period": "",
+      "exchange_index": 0,
+      "last_updated_ts": "2026-10-27T01:16:37.268938Z",
+      "product_metadata": {
+        "competition": "Pro Hockey",
+        "competition_scope": "Game"
+      },
+      "mutually_exclusive": true,
+      "settlement_sources": [
+        {
+          "url": "https://www.nhl.com",
+          "name": "NHL"
+        },
+        {
+          "url": "https://espn.com",
+          "name": "ESPN"
+        }
+      ],
+      "collateral_return_type": "MECNET"
+    },
+    "observed_identity_facts": [
+      {
+        "id": "20269873-db96-58d8-b013-9f8429f630b5",
+        "status": "scheduled",
+        "source_id": null,
+        "start_date": "2026-11-03T00:00:00Z",
+        "season_type": "REG",
+        "season_year": 2026,
+        "away_team_id": "2e166d0f-2ebf-4477-84d8-7702257b797f",
+        "home_team_id": "49b28762-c1b6-4962-a0cb-f1578510cad8",
+        "source_provider": null,
+        "main_game_event_ticker": "KXNHLGAME-26NOV02DETFLA"
+      }
+    ],
+    "provenance": [
+      {
+        "path": "/trade-api/v2/events",
+        "params": {
+          "limit": 50,
+          "status": "open",
+          "series_ticker": "KXNHLGAME",
+          "with_milestones": "true",
+          "with_nested_markets": "true"
+        },
+        "body_sha256": "3f8968a20556d8e8accaa92597e34fc5271b413e39e7c03f95aeee71458ff845",
+        "received_at": "2026-10-31T04:11:39.473807+00:00",
+        "inventory_row": 7121
+      }
+    ]
+  },
+  "Boston": {
+    "label": "Boston",
+    "target": "NHL:BOS",
+    "event_id": "KXNHLGAME-26NOV02VGKBOS",
+    "participants": {
+      "Boston Bruins": "NHL:BOS",
+      "Vegas Golden Knights": "NHL:VGK"
+    },
+    "native": {
+      "title": "Vegas vs Boston",
+      "category": "Sports",
+      "sub_title": "VGK vs BOS (Nov 2)",
+      "event_ticker": "KXNHLGAME-26NOV02VGKBOS",
+      "series_ticker": "KXNHLGAME",
+      "strike_period": "",
+      "exchange_index": 0,
+      "last_updated_ts": "2026-10-27T01:16:37.289389Z",
+      "product_metadata": {
+        "competition": "Pro Hockey",
+        "competition_scope": "Game"
+      },
+      "mutually_exclusive": true,
+      "settlement_sources": [
+        {
+          "url": "https://www.nhl.com",
+          "name": "NHL"
+        },
+        {
+          "url": "https://espn.com",
+          "name": "ESPN"
+        }
+      ],
+      "collateral_return_type": "MECNET"
+    },
+    "observed_identity_facts": [
+      {
+        "id": "b4d8b3d0-1513-5b4f-b57c-4cbfd8d943ff",
+        "status": "scheduled",
+        "source_id": null,
+        "start_date": "2026-11-03T00:00:00Z",
+        "season_type": "REG",
+        "season_year": 2026,
+        "away_team_id": "d599b5cc-5e06-4679-9303-4d5dad7c4cce",
+        "home_team_id": "4163474f-3470-4f0c-8a60-c998e3f93810",
+        "source_provider": null,
+        "main_game_event_ticker": "KXNHLGAME-26NOV02VGKBOS"
+      }
+    ],
+    "provenance": [
+      {
+        "path": "/trade-api/v2/events",
+        "params": {
+          "limit": 50,
+          "status": "open",
+          "series_ticker": "KXNHLGAME",
+          "with_milestones": "true",
+          "with_nested_markets": "true"
+        },
+        "body_sha256": "3f8968a20556d8e8accaa92597e34fc5271b413e39e7c03f95aeee71458ff845",
+        "received_at": "2026-10-31T04:11:39.473807+00:00",
+        "inventory_row": 7124
+      }
+    ]
+  },
+  "Dallas": {
+    "label": "Dallas",
+    "target": "NHL:DAL",
+    "event_id": "KXNHLGAME-26NOV03DALWSH",
+    "participants": {
+      "Dallas Stars": "NHL:DAL",
+      "Washington Capitals": "NHL:WSH"
+    },
+    "native": {
+      "title": "Dallas vs Washington",
+      "category": "Sports",
+      "sub_title": "DAL vs WSH (Nov 3)",
+      "event_ticker": "KXNHLGAME-26NOV03DALWSH",
+      "series_ticker": "KXNHLGAME",
+      "strike_period": "",
+      "exchange_index": 0,
+      "last_updated_ts": "2026-10-28T01:30:01.450186Z",
+      "product_metadata": {
+        "competition": "Pro Hockey",
+        "competition_scope": "Game"
+      },
+      "mutually_exclusive": true,
+      "settlement_sources": [
+        {
+          "url": "https://www.nhl.com",
+          "name": "NHL"
+        },
+        {
+          "url": "https://espn.com",
+          "name": "ESPN"
+        }
+      ],
+      "collateral_return_type": "MECNET"
+    },
+    "observed_identity_facts": [
+      {
+        "id": "07e72a63-8040-5787-8a85-5b3242e9f01e",
+        "status": "scheduled",
+        "source_id": null,
+        "start_date": "2026-11-04T00:00:00Z",
+        "season_type": "REG",
+        "season_year": 2026,
+        "away_team_id": "5cfee6b9-43ff-4dfa-8347-2b9de7ed51b6",
+        "home_team_id": "5b474f02-be1a-4aee-8200-4c4eb6e557e9",
+        "source_provider": null,
+        "main_game_event_ticker": "KXNHLGAME-26NOV03DALWSH"
+      }
+    ],
+    "provenance": [
+      {
+        "path": "/trade-api/v2/events",
+        "params": {
+          "limit": 50,
+          "status": "open",
+          "series_ticker": "KXNHLGAME",
+          "with_milestones": "true",
+          "with_nested_markets": "true"
+        },
+        "body_sha256": "3f8968a20556d8e8accaa92597e34fc5271b413e39e7c03f95aeee71458ff845",
+        "received_at": "2026-10-31T04:11:39.473807+00:00",
+        "inventory_row": 7136
+      }
+    ]
+  },
+  "St. Louis": {
+    "label": "St. Louis",
+    "target": "NHL:STL",
+    "event_id": "KXNHLGAME-26NOV03STLNYR",
+    "participants": {
+      "St. Louis Blues": "NHL:STL",
+      "New York Rangers": "NHL:NYR"
+    },
+    "native": {
+      "title": "St. Louis vs New York R",
+      "category": "Sports",
+      "sub_title": "STL vs NYR (Nov 3)",
+      "event_ticker": "KXNHLGAME-26NOV03STLNYR",
+      "series_ticker": "KXNHLGAME",
+      "strike_period": "",
+      "exchange_index": 0,
+      "last_updated_ts": "2026-10-28T01:30:01.517673Z",
+      "product_metadata": {
+        "competition": "Pro Hockey",
+        "competition_scope": "Game"
+      },
+      "mutually_exclusive": true,
+      "settlement_sources": [
+        {
+          "url": "https://www.nhl.com",
+          "name": "NHL"
+        },
+        {
+          "url": "https://espn.com",
+          "name": "ESPN"
+        }
+      ],
+      "collateral_return_type": "MECNET"
+    },
+    "observed_identity_facts": [
+      {
+        "id": "83b7fd75-f9aa-56a4-97bc-6e70fc612e63",
+        "status": "scheduled",
+        "source_id": null,
+        "start_date": "2026-11-04T00:00:00Z",
+        "season_type": "REG",
+        "season_year": 2026,
+        "away_team_id": "999aeed3-b537-4775-a2f1-bfcfb9916303",
+        "home_team_id": "9979553a-3962-4169-b2c3-510ba6d931d2",
+        "source_provider": null,
+        "main_game_event_ticker": "KXNHLGAME-26NOV03STLNYR"
+      }
+    ],
+    "provenance": [
+      {
+        "path": "/trade-api/v2/events",
+        "params": {
+          "limit": 50,
+          "status": "open",
+          "series_ticker": "KXNHLGAME",
+          "with_milestones": "true",
+          "with_nested_markets": "true"
+        },
+        "body_sha256": "3f8968a20556d8e8accaa92597e34fc5271b413e39e7c03f95aeee71458ff845",
+        "received_at": "2026-10-31T04:11:39.473807+00:00",
+        "inventory_row": 7145
+      }
+    ]
+  },
+  "Montreal": {
+    "label": "Montreal",
+    "target": "NHL:MTL",
+    "event_id": "KXNHLGAME-26NOV03WPGMTL",
+    "participants": {
+      "Winnipeg Jets": "NHL:WPG",
+      "Montr\u00e9al Canadiens": "NHL:MTL"
+    },
+    "native": {
+      "title": "Winnipeg vs Montreal",
+      "category": "Sports",
+      "sub_title": "WPG vs MTL (Nov 3)",
+      "event_ticker": "KXNHLGAME-26NOV03WPGMTL",
+      "series_ticker": "KXNHLGAME",
+      "strike_period": "",
+      "exchange_index": 0,
+      "last_updated_ts": "2026-10-28T01:28:27.29962Z",
+      "product_metadata": {
+        "competition": "Pro Hockey",
+        "competition_scope": "Game"
+      },
+      "mutually_exclusive": true,
+      "settlement_sources": [
+        {
+          "url": "https://www.nhl.com",
+          "name": "NHL"
+        },
+        {
+          "url": "https://espn.com",
+          "name": "ESPN"
+        }
+      ],
+      "collateral_return_type": "MECNET"
+    },
+    "observed_identity_facts": [
+      {
+        "id": "8090ffb0-ebdd-5a64-965a-f17a940b43e2",
+        "status": "scheduled",
+        "source_id": null,
+        "start_date": "2026-11-04T00:00:00Z",
+        "season_type": "REG",
+        "season_year": 2026,
+        "away_team_id": "6f769f6d-161e-43d3-a586-db5451c5050e",
+        "home_team_id": "687da65c-5858-40e7-a189-0f20cf2a5686",
+        "source_provider": null,
+        "main_game_event_ticker": "KXNHLGAME-26NOV03WPGMTL"
+      }
+    ],
+    "provenance": [
+      {
+        "path": "/trade-api/v2/events",
+        "params": {
+          "limit": 50,
+          "status": "open",
+          "series_ticker": "KXNHLGAME",
+          "with_milestones": "true",
+          "with_nested_markets": "true"
+        },
+        "body_sha256": "3f8968a20556d8e8accaa92597e34fc5271b413e39e7c03f95aeee71458ff845",
+        "received_at": "2026-10-31T04:11:39.473807+00:00",
+        "inventory_row": 7154
+      }
+    ]
+  }
+}

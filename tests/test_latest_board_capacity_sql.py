@@ -146,17 +146,19 @@ class LatestBoardCapacitySQL(LatestBoardFixture):
     async def test_c1_optional_render_and_guard_boundaries(self):
         from app.comparison.calculation_control import CalculationStopped
         self.fresh_sources()
-        original=latest.response
+        original=latest.financial_responses
         finance_observed=[]
         def fail_finance(bundle,value,*args,**kwargs):
             if value is not None:
                 finance_observed.append(bundle['game_key'] in self.rows())
                 raise ValueError('authored_financial_render_failure')
             return original(bundle,value,*args,**kwargs)
-        with patch.object(latest,'response',side_effect=fail_finance):
+        with patch.object(latest,'financial_responses',side_effect=fail_finance):
             self.assertTrue(self.reconcile()['published'])
         self.assertTrue(finance_observed)
-        self.assertTrue(all(finance_observed))
+        # The financial pass commits source prices with its completed failure;
+        # independent observation turns no longer get a duplicate pending write.
+        self.assertFalse(any(finance_observed))
         self.assertEqual(len(self.rows()),2)
         for game,row in self.rows().items():
             self.assertIsNone(row['calculated_at'])
@@ -176,12 +178,16 @@ class LatestBoardCapacitySQL(LatestBoardFixture):
         for stage in ('discover','calculate_current'):
             for error in (CalculationStopped('stop'),MemoryError('process_guard'),TimeoutError('deadline'),OSError('storage_failure')):
                 with self.subTest(stage=stage,error=type(error).__name__):
-                    with self.connect() as db:db.execute('TRUNCATE latest_board,latest_board_status')
-                    with patch.object(latest,stage,side_effect=error),self.assertRaises(type(error)):
+                    self.clear_publications()
+                    target='app.storage.discovery_index.prepare' if stage=='discover' else 'app.storage.latest_board.'+stage
+                    with patch(target,side_effect=error),self.assertRaises(type(error)):
                         self.reconcile()
-                    # The current complete component's source pass committed
-                    # first; a fatal worker error must not start its sibling.
-                    self.assertEqual(len(self.rows()),1)
+                    # Fatal financial work cannot publish partial output. The
+                    # independent source turn can still publish every raw frame.
+                    self.assertFalse(self.rows())
+                    with self.connect() as db:
+                        latest.reconcile(db,at=self.at.isoformat(),observations_only=True)
+                    self.assertEqual(len(self.rows()),2)
                     for game in self.rows():
                         self.assert_source_frame(latest.board(self.snapshot(),game,view='odds',filter='all'))
                     self.assertTrue(self.snapshot()['status']['observation_only'])

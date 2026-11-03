@@ -39,7 +39,7 @@ class AutomaticMultisportSQL(IsolatedAsyncioTestCase):
         self.directory=TemporaryDirectory();self.addCleanup(self.directory.cleanup)
         with self.connect() as db:
             db.execute('TRUNCATE current_event CASCADE')
-            db.execute('TRUNCATE data_runtime,data_runtime_command,latest_board,latest_board_status,current_source_status,current_refresh_scope')
+            db.execute('TRUNCATE data_runtime,data_runtime_command,current_result_parent_original,latest_board,latest_board_status,current_source_status,current_refresh_scope')
         self.config=dict(deepcopy(DEFAULT),native_sports=list(SPORTS),native_families=list(FAMILIES),aggregate_enabled=False)
         for target,value in (('app.collection.runtime_client.load',self.config),
             ('app.storage.latest_board.load',DEFAULT_POLICY),('app.dashboard.comparison_board_api.load',DEFAULT_POLICY)):

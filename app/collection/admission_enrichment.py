@@ -119,10 +119,11 @@ def _season_context(facts):
         if bounds[0]>bounds[-1] or any(not bounds[0]<=year<=bounds[-1] for year in years):name_conflict=True
     if malformed or unknown_type or name_conflict or len(years)>1 or len(names)>1 or len(stages)>1:
         return None,'Explicit native season fields conflict or have unsupported year/type values'
-    if len(years)==1 and len(stages)==1:
+    if len(years)==1 or len(stages)==1:
         # A declared full name is authoritative; a scalar year remains that
         # exact source year label, never an inferred multi-year season.
-        return (next(iter(names)) if names else str(next(iter(years))),next(iter(stages))),None
+        return (next(iter(names)) if names else str(next(iter(years))) if years else None,
+                next(iter(stages)) if stages else None),None
     return None,None
 
 
@@ -172,7 +173,7 @@ def enrich_game(event, *, share_metadata=False):
     if len(unique)==1:
         roles=next(iter(unique.values()))
         prior=set(e.get('participants',{}).values())-{None}
-        if prior and prior!=set(roles.values()):e['conflicting_duplicate']=True
+        if prior and not prior.issubset(set(roles.values())):e['conflicting_duplicate']=True
         e.update(source_participant_roles=roles,home=roles['home'],away=roles['away'],participants={reg.entities[c]['name']:c for c in roles.values()},identity='resolved')
         if e.get('scheduled_start'):e['canonical_key']=[stamp(e['scheduled_start']).isoformat(),sorted(roles.values())]
     elif len(unique)>1:e['conflicting_duplicate']=True
@@ -191,8 +192,9 @@ def enrich_game(event, *, share_metadata=False):
         e.setdefault('identity_conflicts',[]).append(context_conflict)
     elif context:
         season,stage=context
-        if any(e.get(k) is not None and e[k]!=v for k,v in [('season',season),('stage',stage)]):e['conflicting_duplicate']=True
-        e.update(season=season,stage=stage)
+        supplied={k:v for k,v in [('season',season),('stage',stage)] if v is not None}
+        if any(e.get(k) is not None and e[k]!=v for k,v in supplied.items()):e['conflicting_duplicate']=True
+        e.update(supplied)
     # Exact retained public crosswalk may name the observed linked main game.
     from .public_contracts import event_identity
     participants=list(e.get('participants',{}).values())

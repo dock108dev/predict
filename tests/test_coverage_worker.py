@@ -8,6 +8,18 @@ import pytest
 from app.collection import coverage_worker as worker
 
 
+def test_shared_lane_admission_does_not_wait_or_launch(tmp_path):
+    from app.collection.background_work import BACKGROUND,AcquisitionDeferred
+    async def exercise():
+        with patch.object(BACKGROUND,'acquisition_pressure',return_value=True), \
+             patch.object(worker.asyncio,'create_subprocess_exec') as launch, \
+             patch.object(worker.asyncio,'sleep',side_effect=AssertionError('shared lane must yield')):
+            with pytest.raises(AcquisitionDeferred,match='native_acquisition_catching_up'):
+                await worker.run(lambda:False,root=tmp_path,wait_for_admission=False)
+            launch.assert_not_called()
+    asyncio.run(exercise())
+
+
 @pytest.mark.parametrize('mode',['success','stop','overflow','deadline'])
 def test_worker_owns_child_until_exit(tmp_path,mode):
     asyncio.run(exercise(tmp_path,mode))
@@ -43,7 +55,7 @@ def test_pressure_grace_keeps_stop_deadline_and_child_ownership(tmp_path,mode):
         async def start(*args,**kwargs):
             p=await launch(sys.executable,'-c',code,**kwargs);children.append(p);return p
         pressure=lambda:mode!='transient' or time.monotonic()-started<.04
-        stop=lambda:mode=='stop_during_pressure' and time.monotonic()-started>.02
+        stop=lambda:mode=='stop_during_pressure' and bool(children) and time.monotonic()-started>.02
         with patch.object(worker.asyncio,'create_subprocess_exec',side_effect=start), \
                 patch.object(worker,'MAX_SECONDS',.3), \
                 patch.object(BACKGROUND,'critical_acquisition_pressure',side_effect=pressure):
@@ -65,7 +77,7 @@ def test_component_progress_survives_pressure_cancellation(tmp_path):
             p=await launch(sys.executable,'-c',code,**kwargs);children.append(p);return p
         with patch.object(worker.asyncio,'create_subprocess_exec',side_effect=start), \
              patch.object(BACKGROUND,'critical_acquisition_pressure',side_effect=lambda:bool(cursor)):
-            with pytest.raises(AcquisitionDeferred):
+            with patch.object(worker,'MAX_SECONDS',.3), pytest.raises(ValueError,match='coverage_worker_deadline'):
                 await worker.run(lambda:False,root=tmp_path,module='app.collection.financial_worker',on_progress=cursor.update)
         assert cursor==dict(estimates_cursor=7,estimates_after='completed')
         assert children and all(p.returncode is not None for p in children)
@@ -73,15 +85,20 @@ def test_component_progress_survives_pressure_cancellation(tmp_path):
 
 
 @pytest.mark.skipif(not hasattr(signal,'SIGSTOP'),reason='POSIX child suspension')
-def test_coverage_pauses_cpu_work_then_resumes_same_census(tmp_path):
+@pytest.mark.parametrize('financial',[False,True])
+def test_coverage_pauses_cpu_work_then_resumes_same_census(tmp_path,financial):
     async def exercise_pause():
         from app.collection.background_work import BACKGROUND
         launch=asyncio.create_subprocess_exec;children=[];pressure=[False]
         progress=tmp_path/'progress'
+        setup="from app.collection.worker_pause import WorkerPause; pause=WorkerPause(); pause.install(); print('{\"worker_ready\": \"cooperative_pause\"}',flush=True)" if financial else ''
+        checkpoint='pause.checkpoint(None,lambda:False)' if financial else 'pass'
         code=f'''import time
+{setup}
 from pathlib import Path
 p=Path({str(progress)!r})
 for i in range(80):
+ {checkpoint}
  p.write_text(str(i));time.sleep(.01)
 print('{{"published":true}}')
 '''
@@ -90,7 +107,7 @@ print('{{"published":true}}')
         with patch.object(worker.asyncio,'create_subprocess_exec',side_effect=start), \
              patch.object(BACKGROUND,'critical_acquisition_pressure',side_effect=lambda:pressure[0]), \
              patch.object(worker,'MAX_SECONDS',5):
-            task=asyncio.create_task(worker.run(lambda:False,root=tmp_path))
+            task=asyncio.create_task(worker.run(lambda:False,root=tmp_path,module='app.collection.financial_worker' if financial else None))
             try:
                 for _ in range(100):
                     if progress.exists():break
@@ -151,7 +168,7 @@ def test_child_failure_preserves_safe_locations(module_name,tmp_path,capsys):
          patch.object(store,'connect',side_effect=OSError('SECRET database payload')):
         module.main()
     wire=capsys.readouterr().out
-    result=json.loads(wire)
+    result=json.loads(wire.strip().splitlines()[-1])
     assert result['worker_error']==module_name+'_failed'
     assert result['worker_failure']['exception']=='OSError'
     assert any(module_name+'.py' in f for f in result['worker_failure']['frames'])
@@ -243,3 +260,15 @@ def test_shared_thread_policy_preserves_results_kwargs_and_original_errors():
             await joined_thread(__name__,'test_failure',fail)
         assert caught.value is original
     asyncio.run(exercise())
+
+
+def test_financial_pause_never_waits_inside_sql_transaction():
+    from app.collection.worker_pause import WorkerPause
+    from types import SimpleNamespace
+    from psycopg.pq import TransactionStatus
+    pause=WorkerPause();pause.set(True)
+    db=SimpleNamespace(info=SimpleNamespace(transaction_status=TransactionStatus.INTRANS))
+    with patch('app.collection.worker_pause.time.sleep',side_effect=AssertionError('SQL locks must not wait')):
+        assert pause.checkpoint(db,lambda:False) is False
+    db.info.transaction_status=TransactionStatus.IDLE
+    assert pause.checkpoint(db,lambda:True) is True

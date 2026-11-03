@@ -12,7 +12,7 @@ from .current_sink import utc
 from .bulk_checkpoint import owned_thread
 
 
-def _catalog_process(receipts, venue, at, selection):
+def _catalog_process(receipts, venue, at, selection, output_path):
     """Pure CPU work on already received public metadata; no acquisition owner."""
     import os
     import resource
@@ -20,6 +20,10 @@ def _catalog_process(receipts, venue, at, selection):
     result=coverage.catalog(receipts,venue,at,compact_output=False,current_selection=selection)
     from .current_native_catalog import detach_event_packaging
     detach_event_packaging(result)
+    if output_path is not None:
+        from .catalog_transfer import write
+        write(output_path, {venue: result})
+        result = None
     rss=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
     return result,dict(pid=os.getpid(),peak_rss_bytes=rss if sys.platform=='darwin' else rss*1024)
 
@@ -32,15 +36,26 @@ async def build_catalog(worker, receipts, at, selection):
         from concurrent.futures import ProcessPoolExecutor
         from multiprocessing import get_context
         worker.catalog_pool=ProcessPoolExecutor(max_workers=1,mp_context=get_context('spawn'))
-    future=asyncio.wrap_future(worker.catalog_pool.submit(_catalog_process,receipts,worker.venue,at,selection))
-    try:
-        result,metrics=await asyncio.shield(future)
-    except asyncio.CancelledError:
-        await asyncio.gather(future,return_exceptions=True)
-        raise
-    worker.metrics['catalog_worker']=metrics
-    from .current_native_catalog import share_catalog_metadata
-    return await owned_thread(share_catalog_metadata,getattr(worker,'catalog',{}),result)
+    from tempfile import TemporaryDirectory
+    from pathlib import Path
+    from . import catalog_transfer
+    # The Kalshi build returns a complete league-spanning graph. Keep the
+    # small per-event US replies on the existing in-process pipe.
+    with TemporaryDirectory(prefix='predict-discovery-') as directory:
+        path = Path(directory) / 'catalog.jsonl' if worker.venue == 'kalshi' else None
+        future=asyncio.wrap_future(worker.catalog_pool.submit(_catalog_process,receipts,worker.venue,at,selection,path))
+        try:
+            result,metrics=await asyncio.shield(future)
+        except asyncio.CancelledError:
+            await asyncio.gather(future,return_exceptions=True)
+            raise
+        worker.metrics['catalog_worker']=metrics
+        previous = getattr(worker, 'catalog', {})
+        if path is not None:
+            catalogs, _ = await owned_thread(catalog_transfer.read, path, {worker.venue: previous})
+            return catalogs[worker.venue]
+        from .current_native_catalog import share_catalog_metadata
+        return await owned_thread(share_catalog_metadata,previous,result)
 
 
 async def close_catalog_worker(worker):
@@ -150,6 +165,22 @@ async def enumerate_native(worker):
                 query_started_at=started, query_completed_at=utc(),
                 query_sha256=sha256(json.dumps(selector, sort_keys=True).encode()).hexdigest(),
                 scope='complete listing traversal; metadata pending'))
+    if worker.venue == 'polymarket_us' and checkpoint:
+        completed = await owned_thread(checkpoint.completed_details)
+        if completed:
+            # On resume, reach the missing HTTP boundary before re-decoding and
+            # transferring the entire saved prefix. Preparation below still reads
+            # and validates every exact receipt in original listing order.
+            for eid in selected:
+                path = '/v1/events/' + eid
+                if path not in completed:
+                    worker._coverage_sport = selected[eid]['competition']
+                    worker._coverage_family = None
+                    start = len(worker.pages)
+                    details, _ = await pages(worker, path, {}, 'events')
+                    if len(details) != 1 or str(details[0].get('id')) != eid:
+                        raise ValueError('bulk_event_detail_identity')
+                    del worker.pages[start:]
     listing_pages=[coverage.DecodedPage(p) for p in worker.pages]
     # All configured listing scopes precede metadata. Distinct native IDs remain
     # independent even when derived occurrence/financial bindings are unavailable.

@@ -16,7 +16,7 @@ global.fetch=()=>{throw Error('Presentation must not acquire data');};
  }
  function slate(rows,complete=true){return {games:[g],boards:[{game_key:g.game_key,rows,prices:rows.flatMap(r=>r.legs||[r]),availability:{evaluation_complete:complete,causes:[]}}],errors:[],stopped:false};}
  let v=slate([row('negative','-3'),row('zero','0'),row('less-negative','-1')]);
- assert.equal(dashboardScope(v,'ev').state,'evaluated_no_positive');
+ assert.equal(dashboardScope(v,'ev').state,'positive');
  assert.equal(compareExactPercent('1.00000000000000000001','1.00000000000000000002'),1);
  assert.equal(compareExactPercent('1e-20','0.00000000000000000002'),1);
  assert.equal(compareExactPercent('1/3','0.3333333333333333333333'),-1);
@@ -24,10 +24,10 @@ global.fetch=()=>{throw Error('Presentation must not acquire data');};
  assert.deepEqual(dashboardScope(positive,'ev').positive.map(e=>e.row.quote_id),['c','b','a']);
  const conditional=slate([row('conditional','9','numeric_current','conditional')],false);
  assert.equal(dashboardScope(conditional,'ev').positive.length,0);
- assert.notEqual(dashboardScope(conditional,'ev').state,'evaluated_no_positive');
+ assert.notEqual(dashboardScope(conditional,'ev').state,'positive');
  for(const state of ['missing_inputs','unsupported_inputs','missing_reference','not_evaluated','calculation_failed']){
   const a=slate([row(state,null,state)],false), scope=dashboardScope(a,'ev');
-  assert.equal(scope.positive.length,0);assert.notEqual(scope.state,'evaluated_no_positive');
+  assert.equal(scope.positive.length,0);assert.notEqual(scope.state,'positive');
   assert.ok(dashboardMessage(scope,'ev').length);
  }
  assert.equal(dashboardScope(slate([row('old','5','numeric_last_known')]),'ev').state,'last_known');
@@ -37,6 +37,13 @@ global.fetch=()=>{throw Error('Presentation must not acquire data');};
  assert.equal(dashboardScope({...positive,dashboard_error:'read failed'},'ev').positive.length,0);
  assert.equal(dashboardScope(positive,'ev',{league:'NBA'}).state,'no_matches');
  assert.equal(dashboardScope(null,'ev').state,'loading');
+ const stoppedSlate={...slate([],false),stopped:true};
+ stoppedSlate.boards[0].availability.causes=[{code:'fee_estimate_scope_unsupported'}];
+ const stoppedScope=dashboardScope(stoppedSlate,'ev');
+ assert.equal(stoppedScope.state,'historical');
+ assert.match(dashboardMessage(stoppedScope,'ev'),/Historical inputs only/);
+ assert.equal(dashboardScope({...positive,stopped:true},'ev').positive.length,0);
+ assert.equal(dashboardScope({...positive,stopped:true,errors:[{game_key:g.game_key}]},'ev').state,'historical');
  assert.equal(dashboardScope(positive,'ev',{source:'kalshi'}).positive.length,0);
  const arb=slate([row('covered','2','numeric_current','arbs')]);assert.equal(dashboardScope(arb,'arbs').positive.length,1);
  arb.boards[0].rows[0].legs[1].venue='novig';assert.equal(dashboardScope(arb,'arbs').positive.length,0);
@@ -48,8 +55,8 @@ global.fetch=()=>{throw Error('Presentation must not acquire data');};
  assert.match(dashboardMetric(trade,'trade').label,/one-contract, one-fill scenario/);
  v=slate([...v.boards[0].rows,gross,trade]);
  drawOpportunityDashboard(root,{ev:v,arbs:empty},{},(r,b,game)=>clicked={r,game});
- assert.match(root.textContent,/Positive arbitrage/);assert.match(root.textContent,/Positive expected value/);assert.match(root.textContent,/before fees and exceptional settlement/);
- const research=root.querySelectorAll('details').find(d=>d.dataset.key==='research:ev:false');
+ assert.match(root.textContent,/Best arbitrage comparisons/);assert.match(root.textContent,/Best EV/);assert.match(root.textContent,/before fees and exceptional settlement/);
+ const research=root.querySelectorAll('section').find(d=>d.id==='positive-ev');
  assert.deepEqual(research.querySelectorAll('article').map(n=>n.dataset.key.split(':').pop()),['zero','less-negative','negative']);
  research.querySelector('button').onclick();assert.equal(clicked.r.quote_id,'zero');assert.equal(clicked.game,g);
  assert.match(root.textContent,/Last-known.*Gross comparisons/);

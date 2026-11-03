@@ -211,6 +211,10 @@ def main(argv=None):
                     "tests/test_selected_input_guards_sql.py",
                     "tests/test_alternate_admission_sql.py",
                     "tests/test_financial_worker_sql.py",
+                    "tests/test_storage_maintenance_sql.py",
+                    "tests/test_result_dependencies_sql.py",
+                    "tests/test_pipeline_storage_report_sql.py",
+                    "tests/test_grid_packet_store_sql.py",
                     "tests/test_schedule_reconciliation_sql.py",
                     "tests/test_broad_native_matrix_sql.py",
                     "tests/test_broad_coverage_sql.py",
@@ -237,6 +241,10 @@ def main(argv=None):
                     "tests/test_selected_input_guards_sql.py",
                     "tests/test_alternate_admission_sql.py",
                     "tests/test_financial_worker_sql.py",
+                    "tests/test_storage_maintenance_sql.py",
+                    "tests/test_result_dependencies_sql.py",
+                    "tests/test_pipeline_storage_report_sql.py",
+                    "tests/test_grid_packet_store_sql.py",
                     "tests/test_schedule_reconciliation_sql.py",
                     "tests/test_broad_native_matrix_sql.py",
                     "tests/test_broad_coverage_sql.py",
@@ -249,6 +257,8 @@ def main(argv=None):
                     # complements legacy archive and unpublished-read regressions.
                     "tests/test_latest_board_sql.py::LatestBoardSQL::test_sql_only_publication_affected_reuse_restart_and_authoritative_economics",
                     "tests/test_latest_board_sql.py::LatestBoardSQL::test_actual_http_page_filter_poll_and_selected_amount_use_database_only",
+                    "tests/test_dashboard_results_sql.py",
+                    "tests/test_comparison_snapshot_sql.py",
                 ]
             )
             if args.tests:

@@ -805,6 +805,10 @@ class QuotaLedger:
             a=v['attempts'][aid]
             if a['state']=='confirmed': return # Duplicate response is a no-op.
             if a['state']!='uncertain': raise QuotaStop('response_without_dispatch')
+            # Current capacity cannot reconcile a charge attributed to an older
+            # window, even when a rollover audit permits conservative dispatch.
+            if a['window_id'] != (v['window'] or {}).get('id'):
+                raise QuotaStop('historical_charge_reconciliation_required')
             audit=covering(v,a,exact=False)
             receipt_at=received_at or at
             if audit:

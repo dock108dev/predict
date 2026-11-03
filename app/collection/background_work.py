@@ -125,8 +125,7 @@ class BackgroundWork:
             self.last_resident=resident
             reason=None
             if source:
-                if self.acquisition_pressure():reason='native_acquisition_catching_up'
-                elif kind in self.active:reason='background_source_busy'
+                if kind in self.active:reason='background_source_busy'
                 elif additional_bytes>self.runway:reason='background_source_capacity'
                 elif not self._fits(resident,additional_bytes,optional=False):reason='background_memory_capacity'
             else:

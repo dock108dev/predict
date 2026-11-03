@@ -33,14 +33,15 @@ class SourceLocalOccurrence(TestCase):
             self.assertIsNone(row['event']['stage'])
         self.assertNotEqual(output[0]['market_identity']['event'], output[1]['market_identity']['event'])
 
-    def test_complete_peer_does_not_supply_own_missing_context(self):
+    def test_exact_unique_peer_joins_without_supplying_own_context_or_finance(self):
         records = [missing_context('kalshi', 'missing-season', stage=False),
                    rows('polymarket_us', 'complete', shared={'sportradar': 'shared-observed-id'})[0]]
         output = OccurrenceResolver(links=EventLinks()).resolve(records, clock=AT)
-        self.assertEqual(output[0]['quote']['occurrence_match']['status'], 'unresolved')
+        self.assertEqual(output[0]['quote']['occurrence_match']['status'], 'matched')
+        self.assertFalse(output[0]['verified'])
         self.assertIsNone(output[0]['event']['season'])
         self.assertEqual(output[1]['quote']['occurrence_match']['status'], 'matched')
-        self.assertEqual(len(output[1]['quote']['occurrence_match']['members']), 1)
+        self.assertEqual(len(output[1]['quote']['occurrence_match']['members']), 2)
 
     def test_remembered_join_cannot_restore_lost_context(self):
         resolver = OccurrenceResolver(links=EventLinks())
@@ -65,3 +66,23 @@ class SourceLocalOccurrence(TestCase):
         self.assertEqual(output['quote']['occurrence_match']['status'], 'unresolved')
         self.assertEqual(output['event_scope']['policy'], 'native-event-unverified-2')
         self.assertFalse(output['verified'])
+
+    def test_incomplete_context_does_not_join_ambiguous_or_changed_occurrences(self):
+        from datetime import timedelta
+        from app.storage.store import stamp
+        for mode in ('different_date','different_opponent','doubleheader','different_role','replacement','conflicting_stage'):
+            with self.subTest(mode=mode):
+                missing=missing_context('polymarket_us','missing',stage=False)
+                peer=rows('kalshi','complete')[0]
+                if mode=='different_date':peer['event']['scheduled_start']=(stamp(peer['event']['scheduled_start'])+timedelta(days=1)).isoformat()
+                elif mode=='different_opponent':peer['event']['away']='NFL:OTHER'
+                elif mode=='doubleheader':peer['event']['game_number']=2
+                elif mode=='different_role':peer['event']['home'],peer['event']['away']=peer['event']['away'],peer['event']['home']
+                elif mode=='replacement':peer['event']['replacement_game_id']='other'
+                elif mode=='conflicting_stage':peer['event']['stage']='postseason'
+                output=OccurrenceResolver(links=EventLinks()).resolve([missing,peer],clock=AT)
+                self.assertEqual(output[0]['quote']['occurrence_match']['status'],'unresolved')
+        missing=missing_context('polymarket_us','missing')
+        peers=[rows('kalshi',native)[0] for native in ('first','second')]
+        output=OccurrenceResolver(links=EventLinks()).resolve([missing,*peers],clock=AT)
+        self.assertEqual(output[0]['quote']['occurrence_match']['status'],'unresolved')

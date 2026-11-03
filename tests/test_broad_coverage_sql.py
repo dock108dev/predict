@@ -38,6 +38,24 @@ class BroadCoverageSQL(IsolatedAsyncioTestCase):
         self.service.config['rss_bytes']=MAX_PROCESS_BYTES
         with self.connect() as db:db.execute('TRUNCATE coverage_latest')
 
+    async def test_complete_component_partitions_match_whole_snapshot_counts(self):
+        from app.storage import coverage_partitions
+        await self.matrix()
+        await self.owner.close()
+        original=coverage_partitions.partitions
+        with self.connect() as db:
+            with patch.object(coverage_partitions,'partitions',side_effect=lambda db:original(db,maximum_offers=32768)):
+                self.assertTrue(reconcile(db)['published'])
+                whole=db.execute('SELECT facts FROM coverage_latest').fetchone()['facts']
+            with patch.object(coverage_partitions,'partitions',side_effect=lambda db:original(db,maximum_offers=1)):
+                self.assertTrue(reconcile(db)['published'])
+                divided=db.execute('SELECT facts FROM coverage_latest').fetchone()['facts']
+        self.assertGreater(divided['work_metrics']['partitions'],1)
+        self.assertEqual(whole['global_totals'],divided['global_totals'])
+        def counts(value):
+            return {c['id']:(c['counts'],{r['code']:(r['count'],r['primary_count']) for r in c['reasons']}) for c in value['cells']}
+        self.assertEqual(counts(whole),counts(divided))
+
     async def test_capture_plan_avoids_jit_without_changing_session_policy(self):
         from app.storage import coverage_latest
         await self.owner.close()
@@ -47,11 +65,11 @@ class BroadCoverageSQL(IsolatedAsyncioTestCase):
         with self.connect() as db:
             db.execute('SET jit=on')
             db.execute('SET jit_above_cost=0')
-            def planned_capture(connection):
+            def planned_capture(connection,*args):
                 query=capture_sql()
                 plan=db.execute('EXPLAIN (FORMAT JSON) '+query).fetchone()['QUERY PLAN'][0]
                 plans.append(('JIT' in plan,db.execute('SHOW jit').fetchone()['jit']))
-                return original_totals(connection)
+                return original_totals(connection,*args)
             with patch.object(coverage_latest,'_stream_capture_totals',side_effect=planned_capture):
                 result=reconcile(db)
             self.assertTrue(result['published'])

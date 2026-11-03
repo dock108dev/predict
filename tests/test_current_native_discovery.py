@@ -63,7 +63,7 @@ class FirstPageSelection(unittest.IsolatedAsyncioTestCase):
              patch('app.collection.continuous.select_inventory',side_effect=lambda c,a,n:([m['id'] for m in c['markets']],[])), \
              patch('app.adapters.kalshi.parse_market',side_effect=parsed), \
              patch('app.adapters.polymarket_us.parse_market',side_effect=parsed), \
-             patch('app.adapters.polymarket_us.next_market_data',side_effect=lambda m:dict(slug=m.raw.ref.market_id)), \
+             patch('app.adapters.polymarket_us.market_slug',side_effect=lambda m:m.raw.ref.market_id), \
              patch('app.comparison.lifecycle.worker_selections',return_value=[]):
             await worker.discover()
         return worker,calls,published,events

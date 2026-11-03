@@ -14,7 +14,7 @@ and manual dispatch. Four jobs feed the stable `CI readiness` gate:
 | `offline` | Portable Python modules in fresh processes, client regressions, compilation, JavaScript syntax, coverage reporting and generated frontend drift |
 | `quality` | Ruff, CI support formatting, pinned actionlint, shell syntax, documentation references, dependency consistency, reporting tests, redacted Gitleaks scan, hash-locked pip-audit and a fresh package/install smoke test |
 | `postgres` | Disposable socket-only PostgreSQL 16, migrations, current-row financial and occurrence roundtrips, transaction tests and teardown |
-| `browser` | Locked Playwright/Chromium journeys with intercepted responses: wide/narrow layouts, settings, Details, keyboard focus, Retry, empty states, Stop and enlarged text |
+| `browser` | Locked Playwright/Chromium journeys with intercepted responses: wide/narrow layouts, snapshot filters, Details, keyboard focus, failed refresh, empty states, Stop and enlarged text |
 
 Primary runners use Ubuntu 24.04, Python 3.14 and Node 24 (`.nvmrc`). Readiness requires all
 four jobs to succeed in the same run; skipped, cancelled, missing or malformed
@@ -83,7 +83,7 @@ Do not remove production checks to accommodate an expired fixture.
 The SQL suite verifies current rows, transient calculations, input-bound Details,
 expiry and restart behavior. Separate compatibility tests exercise retained
 storage codecs and HTTP 410 responses for retired ordinary-history routes.
-Intercepted browser responses use current version 2 calculation contexts.
+The ordinary browser journey uses synthetic snapshot results and revision-bound Details. The Scanner journeys exercise their separate publication and ticket contracts.
 
 For retained-fixture diagnostics,
 `.venv/bin/python scripts/ci/export.py EMPTY_DESTINATION` copies tracked and

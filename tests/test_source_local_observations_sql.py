@@ -21,6 +21,7 @@ from app.collection.runtime_client import RuntimeClient
 from app.comparison.combined_native import normalize
 from app.comparison.event_links import provider_key
 from app.storage import latest_board as latest
+from app.dashboard.comparison_board import expand_price_fields
 from app.storage.current_rows import CurrentRowStore
 from tests import test_latest_board_sql as sql_fixtures, test_multisport_pipeline_sql as multisport_sql
 from tests.multisport_fixtures import SPORTS, FAMILIES, current_book, fake_discovery, source_case
@@ -131,6 +132,33 @@ class SourceLocalObservationsSQL(IsolatedAsyncioTestCase):
         with self.connect() as db:
             return CurrentRowStore(db).capture()['records']
 
+    async def test_native_updates_remove_legacy_depth_once_without_empty_deletes(self):
+        from contextlib import contextmanager
+        from unittest.mock import patch
+        from app.storage import current_rows
+        case=source_local_case('NBA','moneyline',uuid4().hex[:10],clock=datetime.now(timezone.utc))
+        await self.ingress([case])
+        record=next(r for r in self.records() if r['quote']['venue']=='kalshi')
+        cid=current_rows.contract_id(record)
+        original=current_rows._ordered_writes
+        deletes=[]
+        @contextmanager
+        def traced(db):
+            with original(db) as execute:
+                def call(query,params=None):
+                    if query.startswith('DELETE FROM current_depth'):deletes.append(params)
+                    return execute(query,params)
+                yield call
+        with self.connect() as db:
+            db.execute("INSERT INTO current_depth VALUES (%s,'asks',0,'0.4','10','contracts')",(cid,))
+            for turn in range(2):
+                at=(datetime.now(timezone.utc)+timedelta(seconds=turn+1)).isoformat()
+                record['quote']['times'].update(source_at=at,received_at=at)
+                with patch.object(current_rows,'_ordered_writes',traced):
+                    CurrentRowStore(db).upsert_records([record])
+                self.assertEqual(db.execute('SELECT count(*) n FROM current_depth WHERE contract_id=%s',(cid,)).fetchone()['n'],0)
+        self.assertEqual(deletes,[(cid,)])
+
     async def test_shared_event_context_arrives_before_every_contract_rebinds(self):
         case=source_local_case('NBA','moneyline',uuid4().hex[:10],clock=datetime.now(timezone.utc))
         await self.ingress([case])
@@ -215,7 +243,7 @@ class SourceLocalObservationsSQL(IsolatedAsyncioTestCase):
                 frame = latest.snapshot(db)
             games = [g for g in frame['status'].get('games', [])
                      if set(map(tuple, g['members'])) & expected]
-            boards = {g['game_key']: latest.board(frame, g['game_key'], view='odds', filter='all')
+            boards = {g['game_key']: expand_price_fields(latest.board(frame, g['game_key'], view='odds', filter='all'))
                       for g in games if g['game_key'] in frame['rows']}
             rows = [q for board in boards.values() for q in board['prices']]
             if len(rows) == prices and {tuple((q['source']['provider'], q['source']['native_event_id']))

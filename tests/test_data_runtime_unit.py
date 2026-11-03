@@ -364,7 +364,7 @@ def test_loop_profile_snapshot_survives_concurrent_new_stack_keys():
     assert progress.snapshot()['sampled_stacks']
 
 
-def test_derived_tail_does_not_starve_results_but_raw_pressure_still_defers():
+def test_missing_images_and_replaceable_tails_do_not_veto_current_work():
     from types import SimpleNamespace
     from app.collection.data_runtime import DataRuntime
     metrics=dict(selected_markets=10,initial_images=10,stream_connected=True,derived_oldest_pending_seconds=6)
@@ -375,10 +375,26 @@ def test_derived_tail_does_not_starve_results_but_raw_pressure_still_defers():
     assert not runtime.acquisition_pressure(critical=True)
     metrics['derived_oldest_pending_seconds']=3
     assert not runtime.acquisition_pressure()
-    metrics['raw_oldest_pending_seconds']=3
-    assert runtime.acquisition_pressure(critical=True)
+    metrics['initial_images']=0
+    metrics['raw_oldest_pending_seconds']=300
+    assert not runtime.acquisition_pressure(critical=True)
     metrics['raw_oldest_pending_seconds']=0
     metrics['receive_oldest_seconds']=3
+    assert not runtime.acquisition_pressure(critical=True)
+    metrics['receive_buffer_bytes']=20*1024*1024
+    assert runtime.acquisition_pressure()
+    assert not runtime.acquisition_pressure(critical=True)
+    metrics['receive_buffer_bytes']=25*1024*1024
     assert runtime.acquisition_pressure(critical=True)
     runtime.service.paused_sources={'kalshi'}
     assert not runtime.acquisition_pressure()
+
+
+def test_storage_interval_requires_measured_deferred_work_near_guard():
+    from app.collection.data_runtime import needs_storage_interval
+    from app.collection.current_storage_policy import SQL_BYTE_CAP, MIB
+    report=dict(after_bytes=SQL_BYTE_CAP-192*MIB,deferred=[dict(reason='rewrite_headroom',reusable_bytes=32*MIB)])
+    assert needs_storage_interval(report)
+    assert not needs_storage_interval(dict(report,after_bytes=report['after_bytes']-1))
+    assert not needs_storage_interval(dict(report,deferred=[dict(reason='lock_timeout')]))
+    assert not needs_storage_interval(dict(state='busy'))

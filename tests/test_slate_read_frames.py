@@ -35,6 +35,41 @@ def authored_frame(count=60, revision='first-publication'):
 
 
 class CapturedSlateReads(TestCase):
+    def test_compact_owner_retains_complete_result_validation_authority(self):
+        owner=dict(runtime_id='original-runtime',active=True,healthy=True,config={'scope':'retained'},
+            paused_sources=['novig'],global_stopped=False,service_state='running',
+            calculations={'observations':'running','board':'paused'},status={'large':'diagnostic'})
+        compact=latest_board.captured_owner(owner)
+        self.assertEqual(latest_board.runtime_identity(owner),latest_board.runtime_identity(compact))
+        self.assertNotIn('status',compact)
+
+    def test_serialized_result_list_preserves_runtime_and_control_validation(self):
+        from app.storage.current_games import engine_binding, observation_binding
+        frame=latest_frame();key=frame['status']['games'][0]['game_key']
+        frame['status']['games']=[frame['status']['games'][0]];frame['rows']={key:frame['rows'][key]}
+        owner=dict(runtime_id='captured-owner',active=True,healthy=True,config={'scope':'fixture'},
+            paused_sources=[],global_stopped=False,service_state='running',calculations={'board':'running','observations':'running'})
+        frame['owner']=owner
+        frame['_source_binding']=observation_binding()
+        selector=dict(events=[],occurrences=[],shared=[])
+        child=deepcopy(frame['rows'][key]['facts'])
+        child.update(publication_runtime=latest_board.runtime_identity(owner),authority_control='retained-control',
+            publication_dependencies={'selector':selector},observation_binding=observation_binding(),
+            context={'engine_binding':engine_binding(),'policy_revision':DEFAULT_POLICY.revision})
+        frame['rows'][key]['facts'].update(result_units={'unit':dict(facts=child,generation_id='generation',calculated_at=frame['at'])},
+            result_unit_inventory=[dict(id='unit',groups=[])],publication_dependencies={'selector':selector})
+        frame['_dependencies']=dict(epoch='fixture',events={},offers={},books=[],selection_identities={},
+            states={},active_events=[],control_barrier='retained-control')
+        empty=lambda *a,**kw:dict(all=[],observations={},comparisons={})
+        with patch.object(latest_board,'snapshot',side_effect=lambda *a,**kw:deepcopy(frame)), \
+                patch('app.storage.observation_publication.neighborhood',return_value=[]), \
+                patch('app.storage.observation_publication.reasons',side_effect=empty), \
+                patch('app.storage.result_dependencies.reasons',side_effect=empty), \
+                patch.object(latest_board,'inventory_state',return_value='current'):
+            page=self.read(view='ev')
+        self.assertFalse(page['errors'])
+        self.assertEqual(page['boards'][0]['result_units'][0]['state'],'current')
+
     @classmethod
     def setUpClass(cls):
         cls.template=authored_frame()
@@ -294,3 +329,62 @@ class SlateCaptureClock(TestCase):
                     self.assertEqual(frame['owner']['healthy'],explicit_at is None)
                     self.assertEqual(frame['source_states']['kalshi']['source_at'],row['source_status']['kalshi']['source_at'])
                     self.assertEqual(frame['owner']['heartbeat_at'],(AT+timedelta(seconds=1)).isoformat())
+
+class DisplayedProtection(TestCase):
+    def test_displayed_and_selected_survive_new_capture_capacity(self):
+        from app.storage.slate_reads import CapturedReads
+        from app.storage.store import encoded
+        now=[0.0]
+        reads=CapturedReads(clock=lambda:now[0],resource_bytes=lambda:0,maximum_frames=2)
+        row=encoded(dict(game_key='g',row=dict(facts={})))
+        displayed=reads.capture({},[row],context='completed',authority='a')
+        reads.lease(displayed.token)
+        _,selected=reads.selection(displayed.token,'g')
+        with self.assertRaisesRegex(ValueError,'current_slate_read_capacity'):
+            reads.capture({},[row],context='completed',authority='a')
+        self.assertEqual(set(reads.frames),{displayed.token,selected})
+        now[0]=100;reads.lease(selected)
+        self.assertEqual(reads.frames[selected].context,'selected')
+        now[0]=121;reads.cleanup()
+        self.assertIn(selected,reads.frames)
+        self.assertNotIn(displayed.token,reads.frames)
+        now[0]=221;reads.cleanup()
+        self.assertFalse(reads.frames)
+
+    def test_completed_inline_packet_retains_originals_without_boards(self):
+        import json
+        reads=CapturedReads(resource_bytes=lambda:0)
+        facts=dict(selected_frame='exact-original',boards={'ev':'parent'},
+            result_units={'u':dict(facts=dict(selected_frame='exact-unit',boards={'ev':'large'}))})
+        packet=reads.freeze(encoded(dict(game_key='g',_facts_text=json.dumps(facts),_board_text='large-board')))
+        record=reads.join_record('g',packet,dict(proof='capture'))
+        captured=reads.capture(dict(games=[dict(game_key='g')]),[record],context='paging',authority='a')
+        reads.account(captured,offset=0,limit=1,size=1,complete=True)
+        saved,token=reads.selection(captured.token,'g')
+        self.assertNotIn('_board_text',saved)
+        self.assertEqual(saved['facts']['boards'],{'ev':'parent'})
+        self.assertEqual(saved['facts']['result_units']['u']['facts']['boards'],{'ev':'large'})
+        self.assertEqual(saved['facts']['selected_frame'],'exact-original')
+        self.assertEqual(saved['facts']['result_units']['u']['facts']['selected_frame'],'exact-unit')
+
+    def test_replacement_shares_only_identical_facts_and_releases_last_reference(self):
+        import json
+        from hashlib import sha256
+        reads=CapturedReads(resource_bytes=lambda:0,maximum_bytes=64000)
+        exact=''.join(sha256(str(i).encode()).hexdigest() for i in range(600))
+        def record(board, original=exact):
+            packet=reads.freeze(encoded(dict(game_key='g',_facts_text=json.dumps(dict(selected_frame=original)),_board_text=board)))
+            return reads.join_record('g',packet,{'captured':'proof'})
+        first=reads.capture(dict(games=[dict(game_key='g')]),[record('old')],context='paging',authority='a')
+        reads.account(first,offset=0,limit=1,size=1,complete=True);reads.lease(first.token)
+        before=reads.retained_bytes
+        replacement=reads.capture(dict(games=[dict(game_key='g')]),[record('new')],context='paging',authority='a')
+        self.assertEqual(len(reads.blobs),1)
+        self.assertLess(reads.retained_bytes-before,6000)
+        reads.discard(first.token)
+        row=reads.decode(replacement.records[0])['row']
+        self.assertEqual(json.loads(row['_facts_text'])['selected_frame'],exact)
+        self.assertEqual(row['_board_text'],'new')
+        reads.discard(replacement.token)
+        self.assertFalse(reads.blobs)
+        self.assertEqual(reads.retained_bytes,0)

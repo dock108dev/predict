@@ -42,6 +42,23 @@ class Service:
 
 
 class OwnedIngress(IsolatedAsyncioTestCase):
+    async def test_native_sql_timeout_retries_same_image_once(self):
+        from psycopg.errors import QueryCanceled
+        from unittest.mock import Mock
+        row = {'type': 'prediction_books'}
+        for repeat in (False, True):
+            sink = SlowSink()
+            sink.metrics['rejected_observations'] = 1
+            sink.prepare = Mock(side_effect=[QueryCanceled(), QueryCanceled() if repeat else row])
+            if repeat:
+                with self.assertRaises(QueryCanceled):
+                    await sink.commit_async(row, {}, Event())
+            else:
+                await sink.commit_async(row, {}, Event())
+            self.assertEqual(sink.prepare.call_count, 2)
+            self.assertTrue(all(call.args[0] is row for call in sink.prepare.call_args_list))
+            self.assertEqual(sink.finished, [] if repeat else [row])
+
     async def entered(self, service):
         for _ in range(100):
             if service.sink.entered.is_set():return

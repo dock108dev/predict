@@ -23,10 +23,11 @@ def basis(venue='novig', *, at=None):
     name={'novig':'novig','polymarket_us':'polymarket-us'}[venue]
     path=ROOT/f'app/fixtures/{name}-conditional-fees-20261028.json'
     if at is not None:
-        reviewed=ROOT/f'app/fixtures/{name}-conditional-fees-review-20261028.json'
         # A substantive new review is prospective. Never fill the expired gap
         # or relabel an immutable result computed with the earlier evidence.
-        if at>=instant(json.loads(reviewed.read_bytes())['reviewed_at']):path=reviewed
+        for date in ('20261028','20261030'):
+            reviewed=ROOT/f'app/fixtures/{name}-conditional-fees-review-{date}.json'
+            if at>=instant(json.loads(reviewed.read_bytes())['reviewed_at']):path=reviewed
     raw=path.read_bytes()
     item=json.loads(raw)
     path=Path(item['path'])

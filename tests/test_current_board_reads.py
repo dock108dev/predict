@@ -210,8 +210,8 @@ class CurrentBoardAPI(unittest.IsolatedAsyncioTestCase):
         current=frame()
         published=latest_frame()
         patches=[patch('app.dashboard.comparison_board_api.connect',return_value=database),
-            patch('app.dashboard.comparison_board_api.snapshot',return_value=published),
-            patch('app.storage.latest_board.snapshot',return_value=published),
+            patch('app.dashboard.comparison_board_api.snapshot',side_effect=lambda *a,**k:deepcopy(published)),
+            patch('app.storage.latest_board.snapshot',side_effect=lambda *a,**k:deepcopy(published)),
             patch('app.storage.latest_board.slate_authority',return_value=hashed(['authored-authority',False])),
             patch('app.dashboard.comparison_board_api.read_context',side_effect=lambda db,**kwargs:context(current)),
             patch('app.dashboard.comparison_board_api.selected_dependencies',return_value=('fixture-dependency',['fixture-event'])),
@@ -279,8 +279,8 @@ class CurrentBoardAPI(unittest.IsolatedAsyncioTestCase):
         app=web.Application();mount(app,provider)
         with ExitStack() as stack:
             stack.enter_context(patch('app.dashboard.comparison_board_api.connect',return_value=database))
-            stack.enter_context(patch('app.dashboard.comparison_board_api.snapshot',return_value=published))
-            stack.enter_context(patch('app.storage.latest_board.snapshot',return_value=published))
+            stack.enter_context(patch('app.dashboard.comparison_board_api.snapshot',side_effect=lambda *a,**k:deepcopy(published)))
+            stack.enter_context(patch('app.storage.latest_board.snapshot',side_effect=lambda *a,**k:deepcopy(published)))
             stack.enter_context(patch('app.storage.latest_board.slate_authority',return_value=hashed(['authored-authority',False])))
             for target in ('app.dashboard.comparison_board_api.calculate_current','app.dashboard.comparison_board_api.read_context','app.storage.latest_board.calculate_current'):
                 stack.enter_context(patch(target,side_effect=AssertionError('ordinary financial work forbidden')))
@@ -309,7 +309,7 @@ class CurrentBoardAPI(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(result.status,409)
                 self.assertEqual((await result.json())['error'],'current_read_stopped')
 
-    async def test_one_ordinary_worker_two_waiting_reserve_selected_capacity(self):
+    async def test_catalog_selected_worker_one_waiting_rejects_excess(self):
         import asyncio
         from threading import Event
         from aiohttp import web
@@ -326,13 +326,13 @@ class CurrentBoardAPI(unittest.IsolatedAsyncioTestCase):
             async with TestClient(TestServer(app)) as client:
                 first=asyncio.create_task(client.get('/api/boards/games'))
                 self.assertTrue(await asyncio.to_thread(entered.wait,3))
-                queued=[asyncio.create_task(client.get('/api/boards/games')) for _ in range(2)]
+                queued=[asyncio.create_task(client.get('/api/boards/games'))]
                 await asyncio.sleep(.05)
                 excess=await client.get('/api/boards/games');self.assertEqual(excess.status,429)
                 self.assertEqual(len(calls),1)
                 release.set()
                 responses=await asyncio.gather(first,*queued)
-                self.assertEqual([response.status for response in responses],[200]*3)
+                self.assertEqual([response.status for response in responses],[200]*2)
 
 
 if __name__=='__main__':unittest.main()

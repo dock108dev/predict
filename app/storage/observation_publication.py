@@ -4,21 +4,29 @@ Match neighborhoods include possible peers, including newly admitted source even
 Quote clocks belong to their own observation; routine source status clocks do not.
 """
 from fractions import Fraction
+from collections import OrderedDict
+from copy import deepcopy
+from threading import RLock
 from .store import encoded, hashed, stamp
 
 VERSION = 'predict-observation-publication-4'
+_IDENTITIES = OrderedDict()
+_IDENTITY_LOCK = RLock()
+_SELECTIONS = OrderedDict()
+_SELECTION_BYTES = 0
+_MAX_SELECTION_BYTES = 32*1024*1024
 
 
 def health(value):
     return {key:value.get(key) for key in ('state','reason_code','reason')}
 
 
-def event_dependency(event):
+def event_dependency(event, *, resolver=None):
     """Occurrence semantics, independently of repeated catalog receipt proofs."""
     from app.comparison.occurrence_matching import OccurrenceResolver
     from .schedule_metadata import witness
     facts=event['facts']
-    semantic=OccurrenceResolver()._facts(dict(event=facts,quote=dict(source=dict(
+    semantic=(resolver or OccurrenceResolver())._facts(dict(event=facts,quote=dict(source=dict(
         provider=event['provider'],native_event_id=event['native_event_id'],binding_version='publication'),provenance={})))
     for key in ('event','evidence','version'):semantic.pop(key,None)
     schedule=witness(facts)
@@ -43,6 +51,27 @@ def identity_index(db):
 
 
 def prepare_events(events):
+    """Reuse only immutable identity derivations; membership stays snapshot-local."""
+    from .current_games import observation_binding
+    binding=observation_binding()
+    fields=('pair','start','participants','shared','dependency_revision','reviewed')
+    missing=[];keys=[]
+    for event in events:
+        key=hashed([binding,event['provider'],event['native_event_id'],event['facts']])
+        with _IDENTITY_LOCK:
+            cached=_IDENTITIES.get(key)
+            if cached is not None:_IDENTITIES.move_to_end(key)
+        if cached is None:missing.append(event);keys.append(key)
+        else:event.update(deepcopy(cached))
+    if missing:
+        _prepare_events(missing)
+        with _IDENTITY_LOCK:
+            for key,event in zip(keys,missing):
+                _IDENTITIES[key]=deepcopy({field:event[field] for field in fields})
+            while len(_IDENTITIES)>4096:_IDENTITIES.popitem(last=False)
+
+
+def _prepare_events(events):
     """Apply the same occurrence dependency semantics to full and projected rows."""
     # This is a cached identity lookup, not occurrence resolution, board building,
     # price evaluation or optional financial work.
@@ -68,7 +97,7 @@ def prepare_events(events):
             if fact.get('source_provider')=='sportradar' and fact.get('source_id'):
                 shared['sportradar']=str(fact['source_id'])
         event['shared']=[[name,str(value)] for name,value in sorted(shared.items())]
-        event['dependency_revision']=event_dependency(event)
+        event['dependency_revision']=event_dependency(event,resolver=resolver)
     # Matching needs every small event identity and active-membership bit, but
     # only contracts/books in the complete selected neighborhood need decoding.
     # Reviewed aliases can join rescheduled occurrences beyond the metadata
@@ -81,59 +110,60 @@ def prepare_events(events):
         event['reviewed']=aliases.get((event['provider'],event['native_event_id']),[])
 
 
-def capture(db, states, *, selector=None, compact=False, resource_guard=None):
-    index=identity_index(db)
+def capture(db, states, *, selector=None, compact=False, resource_guard=None, identity=None):
+    index=identity_index(db) if identity is None else identity
     events=list(index['events'].values());epoch=index['epoch'];active=index['active_events']
     selected_ids=None
     if selector is not None:
         selected_ids=[row[0] for row in neighborhood(index,selector)]
     query='''SELECT c.id,c.event_id,c.venue,c.native_market_id,c.native_outcome_id,c.native_side,c.revision AS contract_revision,
-        encode(sha256(convert_to((c.facts #- '{comparison_source_metadata,observed_at}')::text,'UTF8')),'hex') AS contract_dependency,
-        encode(sha256(convert_to(jsonb_build_array(c.facts-'orientation_evidence'-'comparison_source_metadata',
-            c.facts#>'{comparison_source_metadata,same_outcome}',c.facts#>'{comparison_source_metadata,scoring_scope}',
-            c.facts#>'{comparison_source_metadata,native_market_type}',c.facts#>'{comparison_source_metadata,series_id}')::text,'UTF8')),'hex') AS metric_dependency,
-        c.facts AS contract,o.revision AS offer_revision,o.source_at,o.received_at
+        c.contract_dependency,c.metric_dependency,
+        c.facts AS contract,o.revision AS offer_revision,o.source_at,o.received_at,o.price_value,o.price_units
         FROM current_contract c JOIN current_offer o ON o.contract_id=c.id WHERE (%s::text[] IS NULL OR c.event_id=ANY(%s)) ORDER BY c.id'''
     if compact:
         # Hash full immutable contracts in SQL, but return only the exact fields
         # consumed by candidate_identity and scoped rule dependencies. Wording,
         # wire provenance and unrelated metadata stay in SQL/selected evidence.
-        projection="""jsonb_build_object('selection',c.facts->'selection',
-          'market_identity',c.facts->'market_identity','comparison_scope',COALESCE(c.facts->'comparison_scope','{}'::jsonb),
-          'comparison_source_metadata',jsonb_build_object(
-            'same_outcome',COALESCE(c.facts#>'{comparison_source_metadata,same_outcome}','{}'::jsonb),
-            'scoring_scope',COALESCE(c.facts#>'{comparison_source_metadata,scoring_scope}','{}'::jsonb),
-            'native_market_type',c.facts#>'{comparison_source_metadata,native_market_type}',
-            'series_id',c.facts#>'{comparison_source_metadata,series_id}'))"""
-        query=query.replace('c.facts AS contract',projection+' AS contract')
+        projection='c.candidate_projection'
+        if compact=='lazy':
+            query=query.replace('c.facts AS contract',
+                "c.candidate_projection#>>'{market_identity,family}' AS family,c.candidate_projection#>>'{market_identity,period}' AS period,"
+                "c.candidate_projection#>>'{comparison_source_metadata,native_market_type}' AS native_market_type,"
+                "c.candidate_projection#>>'{comparison_source_metadata,series_id}' AS series_id")
+        else:query=query.replace('c.facts AS contract',projection+' AS contract')
     event_index={r['id']:r for r in events}
     selections={};scope_keys=[];scope_contexts=[]
     def retain(row):
         if row['venue'] in ('kalshi','polymarket_us'):
-            event=event_index[row['event_id']];contract=row['contract']
+            event=event_index[row['event_id']];contract=row.get('contract',{})
             scope_keys.append((event['provider'],event['native_event_id'],row['native_market_id'],row['native_outcome_id'],row['native_side']))
             scope_contexts.append(dict(league=event['facts'].get('competition'),
-                family=contract.get('market_identity',{}).get('family'),
-                period=contract.get('market_identity',{}).get('period'),
-                native_market_type=contract.get('comparison_source_metadata',{}).get('native_market_type'),
-                series_id=contract.get('comparison_source_metadata',{}).get('series_id')))
-        if compact:
+                family=row.get('family') if compact=='lazy' else contract.get('market_identity',{}).get('family'),
+                period=row.get('period') if compact=='lazy' else contract.get('market_identity',{}).get('period'),
+                native_market_type=row.get('native_market_type') if compact=='lazy' else contract.get('comparison_source_metadata',{}).get('native_market_type'),
+                series_id=row.get('series_id') if compact=='lazy' else contract.get('comparison_source_metadata',{}).get('series_id')))
+        if compact and compact!='lazy':
             if resource_guard:resource_guard(len(encoded(row))*8)
             # Compute the exact same candidate identity before releasing bulky
             # original contract wording. The full contract dependency hash stays.
             selections[row['id']]=_selection(dict(events=event_index),row)
             row['contract']={}
+        if compact=='lazy':
+            for field in ('family','period','native_market_type','series_id'):row.pop(field,None)
         return row
     if compact:
         offers=[]
         with db.cursor(name='predict_publication_proof') as cursor:
-            cursor.itersize=256;cursor.execute(query,(selected_ids,selected_ids))
+            cursor.itersize=1024;cursor.execute(query,(selected_ids,selected_ids))
             for row in cursor:
+                if resource_guard and len(offers)%256==0:resource_guard(1024*1024)
                 if len(offers)>=32768:raise ValueError('publication_dependency_capacity')
                 offers.append(retain(row))
     else:
         offers=[retain(row) for row in db.execute(query,(selected_ids,selected_ids)).fetchall()]
-    books=db.execute('SELECT venue,event_id,native_market_id,revision,received_at FROM current_native_book WHERE (%s::text[] IS NULL OR event_id=ANY(%s)) ORDER BY venue,event_id,native_market_id',(selected_ids,selected_ids)).fetchall()
+    if compact=='lazy':
+        capture_selections(db,index,offers,selections,resource_guard=resource_guard)
+    books=db.execute('SELECT venue,event_id,native_market_id,revision,received_at,source_at,depth_revision,state,sync FROM current_native_book WHERE (%s::text[] IS NULL OR event_id=ANY(%s)) ORDER BY venue,event_id,native_market_id',(selected_ids,selected_ids)).fetchall()
     if len(events)>4096 or len(offers)>32768 or len(books)>32768:raise ValueError('publication_dependency_capacity')
     from app.comparison.native_scoring_scope import publication_dependencies
     native_offers=[row for row in offers if row['venue'] in ('kalshi','polymarket_us')]
@@ -145,6 +175,41 @@ def capture(db, states, *, selector=None, compact=False, resource_guard=None):
         row['scoring_dependency']=dependency
     return dict(epoch=str(epoch),events={r['id']:r for r in events},offers={r['id']:r for r in offers},by_event=by_event,
         books={(r['venue'],r['event_id'],r['native_market_id']):r for r in books},states=states,neighborhoods={},candidate_sets={},selection_identities=selections,active_events=active)
+
+
+def capture_selections(db,index,offers,selections,*,resource_guard=None):
+    """Memoize pure candidate identities, never price/freshness verdicts.
+
+    The SQL snapshot still supplies every contract and active event. Changed
+    facts or rule versions miss the cache, and their projection is fetched in
+    that same transaction. No later database lookup is needed by pagination.
+    """
+    from .current_games import observation_binding
+    global _SELECTION_BYTES
+    binding=observation_binding();missing={};keys={}
+    event_keys={eid:hashed(event['facts']) for eid,event in index['events'].items()}
+    for row in offers:
+        key=(binding,event_keys[row['event_id']],row['contract_dependency'],row['id'])
+        with _IDENTITY_LOCK:
+            cached=_SELECTIONS.get(key)
+            if cached is not None:_SELECTIONS.move_to_end(key)
+        if cached is not None:selections[row['id']]=cached.decode()
+        else:missing[row['id']]=row;keys[row['id']]=key
+    if not missing:return
+    with db.cursor(name='predict_missing_candidate_identities') as cursor:
+        cursor.itersize=256
+        cursor.execute('SELECT id,candidate_projection AS contract FROM current_contract WHERE id=ANY(%s)',(list(missing),))
+        for projected in cursor:
+            row=missing[projected['id']]
+            if resource_guard:resource_guard(len(encoded(projected))*8)
+            selected=_selection(index,dict(row,contract=projected['contract']))
+            body=encoded(selected);selections[row['id']]=selected;key=keys[row['id']]
+            with _IDENTITY_LOCK:
+                prior=_SELECTIONS.pop(key,None)
+                if prior is not None:_SELECTION_BYTES-=len(prior)+512
+                _SELECTIONS[key]=body;_SELECTION_BYTES+=len(body)+512
+                while _SELECTION_BYTES>_MAX_SELECTION_BYTES or len(_SELECTIONS)>32768:
+                    _,old=_SELECTIONS.popitem(last=False);_SELECTION_BYTES-=len(old)+512
 
 
 def neighborhood(frame, selector):
@@ -193,7 +258,7 @@ def neighborhood(frame, selector):
             if occurrence not in occurrences:occurrences.append(occurrence)
             for value in event['shared']:
                 if value not in shared:shared.append(value)
-    active=frame.get('active_events',{value['event_id'] for value in frame['offers'].values()})
+    active=frame['active_events'] if 'active_events' in frame else {value['event_id'] for value in frame['offers'].values()}
     result=sorted((key,frame['events'][key].get('dependency_revision',frame['events'][key]['revision']),key in active) for key in selected if key in frame['events'])
     frame['neighborhoods'][cache]=result
     return result
@@ -242,10 +307,16 @@ def selection(frame, row):
     if cache is None:return _selection(frame,row)
     key=row['id']
     if key not in cache:cache[key]=_selection(frame,row)
+    elif isinstance(cache[key],str):
+        import json
+        cache[key]=json.loads(cache[key])
     return cache[key]
 
 
 def _selection(frame, row):
+    if '_contract_text' in row:
+        import json
+        row=dict(row,contract=json.loads(row['_contract_text']))
     value=row['contract'].get('selection',{});event=frame['events'][row['event_id']]
     market=row['contract'].get('market_identity',{})
     result=dict(venue=row['venue'],participant=event['participants'].get(value.get('participant'),value.get('participant')),

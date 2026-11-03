@@ -60,6 +60,10 @@ from app.collection.alternate_acquisition import acquire
 
 
 class CompleteRoute(IsolatedAsyncioTestCase):
+    def setUp(self):
+        clock=patch('app.collection.current_quota.now',return_value='2026-10-31T20:00:00+00:00')
+        clock.start();self.addCleanup(clock.stop)
+
     async def test_over_budget_census_keeps_featured_and_sends_no_alternate_subset(self):
         scheduler=SimpleNamespace(service=SimpleNamespace(ownership=object()),cycle_id='cycle',metrics={},ledger=Mock())
         scheduler.dispatch=AsyncMock(return_value=dict(parsed_frame=SimpleNamespace(payload=[dict(id=str(i),commence_time='2026-10-31T23:00:00Z') for i in range(108)])))
@@ -119,3 +123,16 @@ def test_alternate_plan_interleaves_leagues_without_omitting_events_or_changing_
     assert [(r['sport'],r['event_id']) for r in value['requests'][:3]]==[('NFL','0'),('NCAAB','college'),('NHL','hockey')]
     assert {(r['sport'],r['event_id']) for r in value['requests']}=={(sport,e['id']) for sport,rows in events.items() for e in rows}
     assert value['total_maximum_credits_per_cycle']==142
+
+
+def test_explicit_renewal_supersedes_cutoff_without_changing_budget_guards(tmp_path):
+    from app.collection.alternate_acquisition import check_expiry
+    import pytest
+    p=tmp_path/'renewal.json'
+    renewal=dict(GRANT,schema='predict-alternate-authority-2',expires_at=None,credits_per_cycle=300,credits_per_day=16800)
+    p.write_text(json.dumps(renewal))
+    with patch('app.collection.alternate_acquisition.AUTHORITY_PATH',p):
+        check_expiry('2026-11-01T01:00:00+00:00')
+        assert authority('2026-11-01T01:00:00+00:00')['credits_per_day']==16800
+        p.write_text(json.dumps(dict(renewal,credits_per_cycle=302,credits_per_day=16912)))
+        with pytest.raises(QuotaStop):authority('2026-11-01T01:00:00+00:00')

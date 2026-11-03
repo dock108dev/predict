@@ -279,6 +279,8 @@ class Boundary(unittest.IsolatedAsyncioTestCase):
                             with self.assertRaisesRegex(BudgetStop,'^native_http_timeout$'):await task
                         row=rows[0]
                         self.assertEqual(row['delivery_reason'],'native_http_cancelled' if cancel else 'native_http_timeout')
+                        self.assertEqual(row['resource_usage']['transport_stage'],'body')
+                        self.assertGreater(row['resource_usage']['elapsed_seconds'],0)
                         self.assertEqual(budget.bytes,len(head)+len(GOOD))
                         self.assertEqual(row['resource_usage']['entity_bytes_read'],len(GOOD))
                         self.assertFalse(row['complete']);self.assertFalse(row['usable_metadata'])

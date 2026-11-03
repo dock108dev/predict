@@ -23,12 +23,18 @@ def decode(value,source):
 
 
 def save(source,scope,catalog,parsed):
+    ids=[m['id'] for m in catalog['markets']]
+    if len(ids)!=len(set(ids)):raise ValueError('native_recovery_duplicate_market')
     with connect() as db,db.transaction():
         db.execute('INSERT INTO current_native_catalog_recovery (source,scope,header) VALUES (%s,%s,%s) ON CONFLICT(source) DO UPDATE SET scope=EXCLUDED.scope,header=EXCLUDED.header,saved_at=now()',
                    (source,scope,Jsonb({k:v for k,v in catalog.items() if k!='markets'})))
-        db.execute('DELETE FROM current_native_market_recovery WHERE source=%s',(source,))
+        db.execute('DELETE FROM current_native_market_recovery WHERE source=%s AND NOT(market_id=ANY(%s))',
+                   (source,[m['id'] for m in catalog['markets']]))
         with db.cursor() as cur:
-            cur.executemany('INSERT INTO current_native_market_recovery VALUES (%s,%s,%s,%s)',
+            cur.executemany('INSERT INTO current_native_market_recovery (source,market_id,metadata,parsed) VALUES (%s,%s,%s,%s) '
+                'ON CONFLICT(source,market_id) DO UPDATE SET metadata=EXCLUDED.metadata,parsed=EXCLUDED.parsed '
+                'WHERE (current_native_market_recovery.metadata,current_native_market_recovery.parsed) '
+                'IS DISTINCT FROM (EXCLUDED.metadata,EXCLUDED.parsed)',
                 ((source,m['id'],Jsonb(m),Jsonb(encode(parsed[m['id']])) if m['id'] in parsed else None) for m in catalog['markets']))
 
 
@@ -37,15 +43,19 @@ def load(source,scope):
         db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
         head=db.execute('SELECT header,saved_at FROM current_native_catalog_recovery WHERE source=%s AND scope=%s',(source,scope)).fetchone()
         if not head:return None
-        from .current_native_catalog import detach_event_packaging
+        from .current_native_catalog import CatalogStrings, detach_event_packaging
         catalog=detach_event_packaging(head['header']);catalog['markets']=[];parsed={}
         events={e['id']:e for e in catalog['events']};now=datetime.now(timezone.utc)
-        for row in db.execute('SELECT metadata,parsed FROM current_native_market_recovery WHERE source=%s ORDER BY market_id',(source,)):
-            market=row['metadata'];catalog['markets'].append(market)
-            event=events.get(market['event_id'],{});start=event.get('scheduled_start');native=market.get('_native',{})
-            if (not row['parsed'] or native.get('closed') is True or native.get('status') in ('closed','settled','finalized')
-                    or start and datetime.fromisoformat(start)<=now):continue
-            parsed[market['id']]=decode(row['parsed'],source)
+        strings = CatalogStrings()
+        with db.cursor(name='native_recovery') as rows:
+            rows.itersize = 64
+            rows.execute('SELECT metadata,parsed FROM current_native_market_recovery WHERE source=%s ORDER BY market_id', (source,))
+            for row in rows:
+                market=strings.compact(row['metadata']);catalog['markets'].append(market)
+                event=events.get(market['event_id'],{});start=event.get('scheduled_start');native=market.get('_native',{})
+                if (not row['parsed'] or native.get('closed') is True or native.get('status') in ('closed','settled','finalized')
+                        or start and datetime.fromisoformat(start)<=now):continue
+                parsed[market['id']]=decode(row['parsed'],source)
         return catalog,parsed,head['saved_at'].isoformat()
 
 

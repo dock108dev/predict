@@ -174,7 +174,7 @@ def _raw_display_binding(event,market,binding):
     return out
 
 
-def normalized_records(projection, states, previous, *, dated_annotations=True, clock=None, include_missing=False):
+def normalized_records(projection, states, previous, *, dated_annotations=True, clock=None, include_missing=False, owned=False):
     from app.comparison.event_links import current_event_key as event_key
     from .v1_comparison import predicates
     records = []
@@ -192,7 +192,7 @@ def normalized_records(projection, states, previous, *, dated_annotations=True, 
                 continue
             reason = event.get('exclusion') or market.get('exclusion') or market.get('subscription_evidence_exclusion')
             try:
-                event=deepcopy(event)
+                event=dict(event) if owned else deepcopy(event)
                 roles=event.get('source_participant_roles',{})
                 for role in ('home','away'):
                     if event.get(role) is None and roles.get(role) is not None:event[role]=roles[role]
@@ -205,7 +205,7 @@ def normalized_records(projection, states, previous, *, dated_annotations=True, 
                         raise ValueError('Conflicting source-local identity')
                     if contextual is not None:
                         soft={'native_scope_effective_descriptor_facts_missing', 'native_scope_predicate_review_required',
-                              'unsupported_market_type_or_period', 'unresolved_native_sides'}
+                              'unsupported_market_type_or_period', 'unresolved_native_sides', 'unresolved_native_identity'}
                         if not event.get('exclusion') and all(not value or value in soft for value in
                                 (market.get('exclusion'),market.get('subscription_evidence_exclusion'))):
                             binding=contextual;reason=None
@@ -312,7 +312,7 @@ def normalized_records(projection, states, previous, *, dated_annotations=True, 
                     name = next((n for n, cid in event['participants'].items() if cid == participant), None)
                     selection = dict(participant=participant, predicate=kind, signed_line=signed,
                                      label=kind.capitalize() if name is None else name+(' does not win' if kind == 'not_win' else ''))
-                    normalized = dict(event=deepcopy(event), market_identity=dict(event=key, sport=event['sport'],
+                    normalized = dict(event=dict(event) if owned else deepcopy(event), market_identity=dict(event=key, sport=event['sport'],
                         competition=event['competition'], season=event['season'], stage=event['stage'], scheduled_start=event['scheduled_start'],
                         family=ident['family'], period=ident['period'], line=canonical_line,
                         outcome_set=stable([p for _, p, _ in predicates(binding)]), rules='native-gross-predicate-1'),
@@ -413,9 +413,8 @@ def normalized_records(projection, states, previous, *, dated_annotations=True, 
                     normalized['_fingerprint'] = fingerprint
                     records.append(normalized)
             except (ValueError, KeyError, TypeError, ArithmeticError, StopIteration) as exc:
-                excluded.append(dict(source=venue, market_id=market['id'], reason='Exact current binding incomplete or unsupported',
-                    sport=event.get('competition') if event else None,family=market.get('family'),reason_code='mapping_unresolved',
-                    binding_status=binding.get('status'),binding_blockers=binding.get('blockers',[]),catalog_exclusion=reason))
+                from .normalization_trace import refusal
+                excluded.append(refusal(exc,event,market,binding,reason,venue))
     return records, excluded[:200]
 
 

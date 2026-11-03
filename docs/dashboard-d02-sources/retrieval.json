@@ -1,0 +1,40 @@
+[
+  {
+    "path": "docs/dashboard-d02-sources/novig-fees.html",
+    "url": "https://support.novig.com/en/articles/16195057-fees-on-novig",
+    "sha256": "6485908cabd6fa7eac31e80d694c9931356f156fabf5469c42c3e0e845127441",
+    "retrieved_at": "2026-10-31T00:49:26.694720+00:00"
+  },
+  {
+    "path": "docs/dashboard-d02-sources/novig-settlement.html",
+    "url": "https://support.novig.com/en/articles/10336135-how-settlement-works-grading-disputes-and-voided-trades",
+    "sha256": "38bef1b7c2d54b25a8d780319e2419bfbdd5e1a6428cb089606b74be9a7e3139",
+    "retrieved_at": "2026-10-31T00:49:26.992974+00:00"
+  },
+  {
+    "path": "docs/dashboard-d02-sources/prophetx-fees.html",
+    "url": "https://docs.prophetx.co/docs/fees",
+    "sha256": "d141b85773733da75f020df365b24bf1576cf769339c53453d8a0fb41bedf8f0",
+    "retrieved_at": "2026-10-31T00:49:27.803222+00:00",
+    "original_sha256": "90c0ef7f6f708045acecbaa499be1b7779a83a67800c4e7f2185079a0af1b398",
+    "transformation": "Removed scanner-identified tokens from embedded documentation data. Original retained privately."
+  },
+  {
+    "path": "docs/dashboard-d02-sources/kalshi-settlement.md",
+    "url": "https://docs.kalshi.com/getting_started/market_settlement.md",
+    "sha256": "70ba6c92de7640b6a25826c7249335dd95a158d159ad2ea351536b71bee8624b",
+    "retrieved_at": "2026-10-31T00:49:27.944301+00:00"
+  },
+  {
+    "path": "docs/dashboard-d02-sources/polymarket-fees.md",
+    "url": "https://docs.polymarket.us/fees.md",
+    "sha256": "56a8a61b7a757795c5bd5cbf69f4a3595234e648451d304805bbfdb74be4b1df",
+    "retrieved_at": "2026-10-31T00:49:27.944436+00:00"
+  },
+  {
+    "path": "docs/dashboard-d02-sources/polymarket-sports.md",
+    "url": "https://docs.polymarket.us/faqs/sports-faqs.md",
+    "sha256": "9aae0cfe089256db6efc5f501d20ee4b7ea2ef24556e1d0e2131b79eb0ddb77d",
+    "retrieved_at": "2026-10-31T00:49:27.944527+00:00"
+  }
+]

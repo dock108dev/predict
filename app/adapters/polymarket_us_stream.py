@@ -15,7 +15,7 @@ import json
 import time
 import uuid
 
-from app.adapters.polymarket_us import (Response, decode, next_market_data, parse_book, source_time_value)
+from app.adapters.polymarket_us import (Response, decode, next_market_data, market_slug, parse_book, source_time_value)
 from app.models.core import BookSync, EvidenceKind, ReceiptFreshness, SourceTimeProgress
 
 WS_PATH = '/v1/ws/markets'
@@ -88,7 +88,7 @@ class MarketStream:
     def __init__(self, markets, factory, *, dialect='camel', max_messages=30,
                  max_connections=2, stale_seconds=10, duration=30,
                  kind=EvidenceKind.OBSERVATION, sleep=asyncio.sleep, profile_name=None, maximum_markets=100):
-        self.markets = {next_market_data(m)['slug']: m for m in markets}
+        self.markets = {market_slug(m): m for m in markets}
         subscription(tuple(self.markets), 'validate', dialect, maximum_markets=maximum_markets)
         from app.collection.supervised import profile, bound_native
         policy = profile(profile_name) if profile_name else None

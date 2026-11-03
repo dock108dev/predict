@@ -1,9 +1,18 @@
 # Architecture and data
 
-Predict is a local read-only odds, EV and arbitrage comparison app. The current
-product needs current event/contract/price rows, shared depth and calculation
-rules. Ordinary operation replaces and expires sports working data rather than retaining
-full feed archives or expanded calculation snapshots.
+## Ordinary comparison snapshots
+
+The dashboard, Odds, EV and opposing-outcome views use the snapshot API.
+`app.storage.comparison_snapshot` captures current SQL rows in one consistent
+read, matches outcomes, calculates results and atomically replaces the selected
+head. Recalculation creates a result revision over the same captured inputs.
+`app.dashboard.snapshot_api` filters and ranks that revision before pagination.
+Details resolves the selected row and its Originals against the same revision.
+Retention protects the current head, reviewed results and active read leases.
+
+Background collection supplies current rows. Scanner and background publication
+have separate read paths and lifecycles. See the [calculation basis](benchmark-ev.md)
+for the distinction between captured returns and live execution eligibility.
 
 ## Product boundary
 
@@ -21,14 +30,14 @@ hide admitted source prices.
 Acquisition, storage/publication, matching, financial logic, frontend and
 integration QA have distinct responsibilities. Current architecture has **two OS processes**:
 the background data process hosts collection and calculation workers; the app
-process reads publications. Logical worker separation does not establish complete
+process serves comparisons and reads publications. Logical worker separation does not establish complete
 resource/failure isolation: workers within the data process share its memory and
 process lifetime.
 
 The ordinary launcher runs an independent background data process and an app
 process against the existing PostgreSQL database. The data runtime owns
 collection, expiry, the shared scanner, Odds/EV calculations and compact episode
-summaries. The app reads bounded latest database publications. Opening a page is
+summaries. The app serves comparison snapshots and reads background publications for other views. Opening a page is
 not necessary to start calculation. App-only restart preserves the data identity
 and epoch; explicit collection Stop has acknowledged cross-process semantics.
 [Runtime and latest-result contract](data-app-runtime-contract.md).
@@ -71,10 +80,12 @@ bounded transient sizing.
 
 | Surface | Responsibility |
 | --- | --- |
-| `/` | Opportunity dashboard with separate EV and arbitrage sections and labeled research |
-| `/arbs` | Stored opposing-comparison view |
+| `/` | Ranked single-trade comparisons in the selected snapshot |
+| `/arbs` | Opposing-outcome scenarios from the selected snapshot |
 | `/scanner` | Advanced globally ranked Scanner, observed episodes and selected manual tickets |
 | `/odds`, `/ev` | Observed prices and single-trade estimates |
+| `/api/comparison-snapshot` | GET a ranked or grouped page. POST captures local inputs or recalculates the selected assumptions. |
+| `/api/comparison-snapshot/details` | Exact captured inputs for one result revision and selection |
 | `/api/boards/{view}` | Latest shared results, revision-bound selected Details and typed Original |
 | `/api/stored/games`, `/api/stored/result`, `/api/boards/history` | HTTP 410: retired ordinary sports history |
 | `/admin`, `/api/admin/status`, `/api/admin/current` | Sources, quota, storage, pause, Stop and guarded recovery |

@@ -1,7 +1,7 @@
 """Bounded Polymarket subscription groups on one connection, without roster caps."""
 from uuid import uuid4
 from math import ceil
-from app.adapters.polymarket_us import next_market_data
+from app.adapters.polymarket_us import next_market_data, market_slug
 
 
 def plan(groups, previous, current, changed):
@@ -22,14 +22,14 @@ def plan(groups, previous, current, changed):
     for start in range(0,len(pending),width):
         added[str(uuid4())]=pending[start:start+width]
     invalidated={mid for rid in retired for mid in groups[rid]} | set(pending)
-    return dict(groups={**retained,**added},added=added,retired=retired,invalidated=invalidated)
+    return dict(groups={**retained,**added},added=added,retired=retired,changed=set(changed),invalidated=invalidated)
 
 
 def requests(groups, markets):
-    return {next_market_data(markets[mid])['slug']:rid for rid,members in groups.items() for mid in members}
+    return {market_slug(markets[mid]):rid for rid,members in groups.items() for mid in members}
 
 
 def commands(groups, markets):
     from app.adapters.polymarket_us_stream import subscription
-    return [subscription([next_market_data(markets[mid])['slug'] for mid in members],rid,maximum_markets=None)
+    return [subscription([market_slug(markets[mid]) for mid in members],rid,maximum_markets=None)
             for rid,members in groups.items()]

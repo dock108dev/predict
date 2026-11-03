@@ -7,6 +7,20 @@ local reasons; malformed inputs reject the proposed snapshot atomically.
 from datetime import datetime
 from hashlib import sha256
 import json
+from contextlib import contextmanager
+from contextvars import ContextVar
+
+_VALIDATED = ContextVar('validated_profile_content', default=None)
+
+
+@contextmanager
+def validation_scope():
+    """Reuse successful exact-content checks only inside one bounded work unit."""
+    token = _VALIDATED.set(set())
+    try:
+        yield
+    finally:
+        _VALIDATED.reset(token)
 
 VERSION = 'comparison-current-dependencies-1'
 KINDS = ('identity', 'payout', 'reference', 'fee', 'quantity', 'buffer', 'probability')
@@ -87,6 +101,17 @@ def profile(kind, payload, *, expires_at=None):
 
 
 def validate_profiles(profiles):
+    cache = _VALIDATED.get()
+    key = digest(profiles) if cache is not None else None
+    if cache is not None and key in cache:
+        return profiles
+    result = _validate_profiles(profiles)
+    if cache is not None and len(cache) < 4096:
+        cache.add(key)
+    return result
+
+
+def _validate_profiles(profiles):
     from .shared_templates import shared, validate
     if shared(profiles):return validate(profiles)
     if not isinstance(profiles, dict) or len(profiles) > MAX_PROFILES:

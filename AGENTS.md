@@ -18,8 +18,11 @@ The owner requires one working copy: this repository, on `main`.
   Execute within the recorded credit/account limits and preserve actual Stop
   choices and unresolved financial exposure. The six-league, three-family
   aggregate scope is authorized up to 300 credits per 15-minute cycle and 16,800
-  credits per operating day through October 31, 2026 at 8 PM Eastern, subject to
-  the existing account-window, quota and hold guards.
+  credits per operating day, subject to the existing account-window, quota,
+  reservation and hold guards. The owner explicitly renewed authorization in
+  the October 31 runtime/storage recovery request, superseding the former
+  October 31, 2026 at 8 PM Eastern cutoff without a new cutoff. Preserve Stop
+  choices and source pauses.
 - Use proportionate verification for the behavior changed. Handoffs explain the
   outcome, relevant evidence and remaining issues; they do not impose arbitrary
   diagnostic-attempt limits, mandatory receipt bundles or approval addenda.

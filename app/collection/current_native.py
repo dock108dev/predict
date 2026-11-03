@@ -82,6 +82,7 @@ class NativeWorker:
         self.pending_books = CurrentBookImages() if getattr(service,'database_mode',False) else {}
         self.pending_recalculations=set()
         self.pending_since = {}
+        self.image_versions = {}
         self.raw_since = {}
         self.derived_served = {}
         self.raw_served = {}
@@ -119,6 +120,25 @@ class NativeWorker:
             return
         if self.lifecycle_initialized:
             book=self.lifecycle.admit_book(book,generation=self.metrics['connections'],owned=bool(getattr(self.service,'database_mode',False)),_content_sha256=_content_sha256,_encoded_bytes=_encoded_bytes)
+        # Bounded one-second instrument census, separate from ordered frames.
+        second=int(time.monotonic())
+        if getattr(self,'image_measure_second',None)!=second:
+            if hasattr(self,'image_measure_keys'):
+                self.metrics['received_instruments_last_second']=len(self.image_measure_keys)
+            self.image_measure_second=second;self.image_measure_keys=set()
+        self.image_measure_keys.add(mid)
+        from .current_confirmation import content
+        version=(_content_sha256 or content({k:book.get(k) for k in ('outcomes','state','sync','quantity_unit')}),book['raw'].get('exchange_at'),
+                 (book.get('book_confirmation') or {}).get('confirmed_at'))
+        prior=self.image_versions.get(mid)
+        category=('initial' if prior is None else 'meaningful' if version[0]!=prior[0]
+                  else 'clock' if version[1:]!=prior[1:] else 'repeated')
+        counter=category+'_images_received'
+        self.metrics[counter]=self.metrics.get(counter,0)+1
+        self.image_versions[mid]=version
+        self.metrics['normalization_keys_enqueued']=self.metrics.get('normalization_keys_enqueued',0)+int(mid not in self.pending_books)
+        self.metrics['complete_images_received']=self.metrics.get('complete_images_received',0)+1
+        self.metrics['pending_images_replaced']=self.metrics.get('pending_images_replaced',0)+int(mid in self.pending_books)
         self.pending_since.setdefault(mid,time.monotonic())
         self.pending_recalculations.discard(mid)
         self.pending_books[mid]=book
@@ -194,9 +214,11 @@ class NativeWorker:
         # Chunking limits each SQL transaction, never subscription membership.
         books=[];size=0;claimed={};recalculating=set()
         self.pending_recalculations.intersection_update(self.pending_books)
-        # Large initial/reimage queues favor throughput. Once caught up, short
-        # SQL turns prevent one source's large batch delaying the other feed.
-        batch_limit=max(512 if len(self.pending_books)>512 else 128,self.config['markets_per_source'])
+        # Catch-up must also yield the ingress lock. Live 512-market turns held
+        # it beyond the publisher's five-second wait and discarded completed
+        # calculations. Bound each transaction, never the subscribed inventory;
+        # the FIFO queue and durable images carry every remaining book forward.
+        batch_limit=128
         now=time.monotonic()
         def priority(mid):
             arrived=self.pending_since.get(mid,0)
@@ -219,6 +241,7 @@ class NativeWorker:
             self.service.books(self.venue,books)
             return
         self.derived_inflight=claimed
+        self.metrics['normalization_attempted_images']=self.metrics.get('normalization_attempted_images',0)+len(books)
         self.metrics['derived_inflight_images']=len(books)
         async def publish():
             nonlocal books
@@ -350,11 +373,11 @@ class NativeWorker:
             self.signature=self.lifecycle.signature();self.subscription_transition=None
             return
         from .native_subscriptions import requests,commands
-        from app.adapters.polymarket_us import next_market_data
+        from app.adapters.polymarket_us import next_market_data, market_slug
         groups=transition['groups'];mapping=requests(groups,self.markets)
         self.retired_subscription_ids=(self.retired_subscription_ids+sorted(transition['retired']))[-512:]
         engine=self.active_engine
-        engine.markets={next_market_data(m)['slug']:m for m in self.markets.values()}
+        engine.markets={market_slug(m):m for m in self.markets.values()}
         engine.market_requests=mapping;engine.retired_requests=set(self.retired_subscription_ids)
         await self.reconstruction.reconfigure(list(self.markets.values()),mapping,self.retired_subscription_ids)
         self.guard()
@@ -426,6 +449,13 @@ class NativeWorker:
         self.metrics['http_decoded_bytes']=self.http_totals['decoded']+getattr(self.client,'http_decoded_bytes',0)
         self.metrics['last_http'] = dict(path=row['path'],params=row.get('params',{}),status=row['status'],complete=row['complete'],
             reason=row.get('delivery_reason'),body_sha256=row['body_sha256'])
+        if not row['complete']:
+            usage=row.get('resource_usage',{})
+            self.metrics['last_incomplete_http']=dict(self.metrics['last_http'],
+                stage=usage.get('transport_stage'),elapsed_seconds=usage.get('elapsed_seconds'),
+                started_at=row.get('started_at'),received_at=row.get('received_at'),
+                entity_bytes=usage.get('entity_bytes_read'),wire_bytes=usage.get('wire_bytes'),
+                content_length=usage.get('response_content_length'),completed_pages=len(self.pages))
         self.service.observation(self.venue, 'http', dict(status=row['status'], complete=row['complete'],
             path=row['path'], bytes=row.get('resource_usage',{}).get('wire_bytes'),
             body_sha256=row['body_sha256'], reason=row.get('delivery_reason')))
@@ -705,8 +735,8 @@ class NativeWorker:
         # Retire unselected/closed catalogs deliberately; leases are independent.
         self.metrics['generations'] += 1
         self.catalog, self.markets = cat, parsed
-        from app.adapters.polymarket_us import next_market_data
-        active_clock_keys=set(parsed) if self.venue=='kalshi' else {next_market_data(m)['slug'] for m in parsed.values()}
+        from app.adapters.polymarket_us import next_market_data, market_slug
+        active_clock_keys=set(parsed) if self.venue=='kalshi' else {market_slug(m) for m in parsed.values()}
         for key in set(self.source_highwater)-active_clock_keys:self.source_highwater.pop(key)
         self.metrics['catalog_events'] = len(cat['events'])
         self.metrics['catalog_markets'] = len(cat['markets'])
@@ -798,12 +828,16 @@ class NativeWorker:
             reconstruction = None
             receiver = None
             stage = 'connect'
+            reconnect_delay = 0
             checked_raw = None
             seen = set()
             isolated = set()
             self.stream_seen=seen;self.stream_isolated=isolated;self.stream_markets=markets
             try:
                 self.guard()
+                while self.backoff_until > time.monotonic():
+                    await asyncio.sleep(self.backoff_until-time.monotonic())
+                    self.guard()
                 if self.connection_allowance_used() >= self.config['connections_per_source']:
                     raise BudgetStop('current_connection_cap')
                 self.metrics['connections'] += 1
@@ -812,6 +846,7 @@ class NativeWorker:
                 self.synchronization.begin(self.metrics['connections'], market_index)
                 if self.publication_handle:self.publication_handle.cancel()
                 self.publication_handle=None;self.pending_books.clear();self.pending_since.clear();self.pending_recalculations.clear()
+                self.image_versions={mid:version for mid,version in self.image_versions.items() if mid in market_index}
                 await call(self.service, self.service.source_state, self.venue, 'resyncing', 'Waiting for a complete native book image.')
                 credential = self.credential
                 headers = {}
@@ -849,7 +884,10 @@ class NativeWorker:
                 class NoRedirect(connect):
                     def process_redirect(self, exc): return exc
                 self.socket = await NoRedirect(ENDPOINTS[self.venue]['ws'], create_connection=SignedConnection,
-                    max_size=256*1024, max_queue=64, compression=None, proxy=None,
+                    # Full-catalog sequenced control replies may list every
+                    # subscribed ticker. Keep the protocol byte envelope at
+                    # 16 MiB while allowing those replies through intact.
+                    max_size=1024*1024, max_queue=16, compression=None, proxy=None,
                     open_timeout=5, close_timeout=1, ping_interval=20, ping_timeout=60)
                 self.metrics.update(stream_connected=True,initial_images=0,missing_initial_images=len(markets),isolated_missing_images=0)
                 self.metrics['invalid_current_market_ids']=[]
@@ -1129,7 +1167,7 @@ class NativeWorker:
                     # A finite reconnect burst yields to the normal discovery pace.
                     # Hourly counters continue to bound every later attempt.
                     failures = 0
-                    self.backoff_until = time.monotonic()+self.config['rediscovery_seconds']
+                    reconnect_delay = self.config['rediscovery_seconds']
                     await call(self.service, self.service.source_state, self.venue, 'resyncing',
                                'Native connection unavailable; waiting before the next bounded retry.')
             finally:
@@ -1152,9 +1190,9 @@ class NativeWorker:
                 if self.socket:
                     await self.socket.close()
                     self.socket = None
-            delay = max(self.config['backoff_seconds'][min(failures-1,4)], self.backoff_until-time.monotonic())
+            delay = max(reconnect_delay,self.config['backoff_seconds'][min(failures-1,4)], self.backoff_until-time.monotonic())
             self.metrics['retries'] += 1
-            self.backoff_until=time.monotonic()+delay
+            # Local socket pacing must not abort a checkpointed HTTP traversal.
             await asyncio.sleep(delay)
 
     async def stop_stream(self):
@@ -1225,6 +1263,13 @@ class NativeWorker:
                     await self.wait_hourly_budget()
                     continue
                 try:
+                    # A completed socket owner (e.g. after an hourly pause)
+                    # can resubscribe an adopted catalog while HTTP catches up.
+                    if (self.markets and self.lifecycle_initialized and not self.subscription_transition
+                            and self.signature == self.lifecycle.signature()
+                            and (self.stream_task is None or self.stream_task.done())
+                            and time.monotonic() >= self.backoff_until):
+                        self.stream_task=asyncio.create_task(self.stream(list(self.markets.values())))
                     async with self.http_lock:
                         self.begin_discovery()
                     await self.discover()
@@ -1248,23 +1293,20 @@ class NativeWorker:
                         await self.wait_hourly_budget()
                         continue
                     retryable=code in RETRYABLE_DISCOVERY
-                    if retryable and not self.failed and errors >= 3:
+                    if retryable and not self.failed:
                         self.pages=[]
-                        errors=0
-                        self.backoff_until=max(self.backoff_until,time.monotonic()+self.config['rediscovery_seconds'])
-                        await call(self.service,self.service.source_state,self.venue,'resyncing',
-                                   'Native discovery unavailable; waiting before the next bounded retry.')
-                        await asyncio.sleep(max(0,self.backoff_until-time.monotonic()))
-                        continue
-                    if (retryable and not self.failed and errors<3 and self.stream_task is not None
-                            and not self.stream_task.done()):
-                        # Failed optional rediscovery does not invalidate the
-                        # still-owned complete catalog or a healthy native socket.
-                        # Same finite attempts/backoff; no new transport allowance.
-                        self.pages=[]
-                        self.metrics['discovery_deferrals']=self.metrics.get('discovery_deferrals',0)+1
-                        self.metrics['last_discovery_deferral']=dict(at=utc(),reason=code)
-                        await asyncio.sleep(max(self.config['backoff_seconds'][errors-1],self.backoff_until-time.monotonic()))
+                        active=self.stream_task is not None and not self.stream_task.done()
+                        if active:
+                            self.metrics['discovery_deferrals']=self.metrics.get('discovery_deferrals',0)+1
+                            self.metrics['last_discovery_deferral']=dict(at=utc(),reason=code)
+                        else:
+                            await call(self.service,self.service.source_state,self.venue,'resyncing',
+                                       'Native discovery unavailable; waiting before the next bounded retry.')
+                        # An optional REST failure owns only its next discovery
+                        # attempt. Do not impose a socket backoff at burst end.
+                        delay=self.config['backoff_seconds'][errors-1] if errors<3 else self.config['rediscovery_seconds']
+                        if errors>=3:errors=0
+                        await asyncio.sleep(max(delay,self.backoff_until-time.monotonic()))
                         continue
                     await self.stop_stream()
                     if self.failed or errors >= 3 or isinstance(exc,BudgetStop) and not retryable:

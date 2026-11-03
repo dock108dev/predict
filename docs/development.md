@@ -243,7 +243,7 @@ one collected test class into another module.
 
 Native catalog selection and bounded diagnostics live in
 `collection/current_native_catalog.py`; `current_native.py` preserves public helper
-imports and owns transport lifecycle. The worker is now 1,300 physical lines. Its added raw-image persistence,
+imports and owns transport lifecycle. Its raw-image persistence,
 subscription transitions and synchronization acknowledgement still share one
 credential/budget and cancellation/Stop owner with discovery and socket replacement.
 Raw persistence must acknowledge the exact active generation before downstream
@@ -251,12 +251,12 @@ publication; splitting these methods across stateful owners would obscure that
 ordering. Stateless image material, synchronization records and catalog helpers
 already have separate modules. The catalog extraction remains the stateless boundary;
 stateful mixins or a second publication owner would obscure shutdown and resync
-ordering. The 658-line `stored-controller.js`
+ordering. The legacy `stored-controller.js`
 likewise retains one UI lifecycle: generation cancellation, applied settings,
 selection leases, modal focus and Stop all mutate the same current view. Rendering,
 wire validation, pagination and read scheduling are already separate modules;
 extract a new controller only when it can own an independent state lifecycle.
-The 1,094-line `storage/latest_board.py` retains the committed-authority
+The background publisher in `storage/latest_board.py` retains the committed-authority
 protocol: publication validation, reconciliation and repeatable-read snapshots
 share the epoch, source-state and control barriers. Keeping those transaction
 boundaries together makes stale-result rejection auditable; capture sizing and

@@ -224,8 +224,17 @@ class CurrentService:
         transition=getattr(worker,'subscription_transition',None)
         invalidated=set() if not transition else transition['invalidated']
         if catalog_delta is not None and invalidated:
-            keys={key for key in prior_books if key[0]==venue and key[2] in invalidated}
-            catalog_delta=dict(retained=catalog_delta['retained']-keys,withdraw=catalog_delta['withdraw']|keys,
+            keys={key for key in catalog_delta['retained'] | prior_books if key[0]==venue and key[2] in invalidated}
+            # A new request ID revokes live authority even for unchanged members.
+            # Keep only their previously admitted observation while awaiting reimage.
+            reimaging=set()
+            if venue=='polymarket_us' and 'added' in transition:
+                moving={mid for members in transition['added'].values() for mid in members}
+                unchanged=catalog_delta['retained']-catalog_delta['refresh']
+                changed=transition.get('changed',set())
+                reimaging={k for k in keys & unchanged if k[2] in moving
+                           and k[2] not in changed}
+            catalog_delta=dict(reimaging=reimaging,retained=catalog_delta['retained']-keys,withdraw=catalog_delta['withdraw']|keys,
                                refresh=catalog_delta['refresh']-keys)
         (yield (self.row('coverage_inventory',venue,inventory=cats,generation=generation,catalog_delta=catalog_delta,
                                  defer_catalog_refresh=self.database_mode and catalog_delta is not None,
@@ -349,11 +358,11 @@ class CurrentService:
         if failed and 'worker_cleanup_failure' not in self.cleanup_errors:self.cleanup_errors.append('worker_cleanup_failure')
         return not pending and not failed
 
-    async def close(self):
+    async def close(self, *, storage_interval=False):
         async with self._control_lock:
-            await self._close()
+            await self._close(storage_interval=storage_interval)
 
-    async def _close(self):
+    async def _close(self, *, storage_interval=False):
         async with self._close_lock:
             if self.closed or self._source_close_started: return
             self._source_close_started=True
@@ -369,7 +378,10 @@ class CurrentService:
             tasks=[t for t in self.tasks.values() if t is not current]
             if self.watchdog and self.watchdog is not current:tasks.append(self.watchdog)
             for task in tasks:task.cancel()
-            done,pending=await asyncio.wait(tasks,timeout=self.config['cleanup_seconds']) if tasks else (set(),set())
+            # A planned database interval owns the drain off the request path.
+            # Revoke first, then allow in-flight SQL and native restore to finish.
+            timeout=max(60,self.config['cleanup_seconds']) if storage_interval else self.config['cleanup_seconds']
+            done,pending=await asyncio.wait(tasks,timeout=timeout) if tasks else (set(),set())
             await self.cleanup_clients(list(self.workers))
             if not await self.ingress.drain(self.config["cleanup_seconds"]):self.cleanup_errors.append("ingress_cleanup_timeout")
             if self.ingress.catalog_preparer is not None:await self.ingress.catalog_preparer.close()
@@ -565,6 +577,18 @@ def prepare_catalog(inventory, venue, cat, *, share_metadata=False):
     # Each native source must remain usable without the other catalog.
     from .current_occurrence import annotate as occurrence
     from .v1_comparison import annotate
+    if 'kalshi' in cats:
+        from .native_role_binding import attach_kalshi
+        changed_roles=attach_kalshi(cats['kalshi'])
+        if changed_roles:
+            annotate(dict(cats['kalshi'],markets=[m for m in cats['kalshi']['markets'] if m['event_id'] in changed_roles]),
+                'kalshi',policy='manual-comparison-2',share_metadata=share_metadata)
+    if 'polymarket_us' in cats:
+        from .native_role_binding import attach as attach_roles
+        changed_roles=attach_roles(cats['polymarket_us'])
+        if changed_roles:
+            annotate(dict(cats['polymarket_us'],markets=[m for m in cats['polymarket_us']['markets'] if m['event_id'] in changed_roles]),
+                'polymarket_us',policy='manual-comparison-2',share_metadata=share_metadata)
     occurrence(cats[venue],venue)
     proven={e['id'] for e in cats[venue]['events'] if e.get('current_occurrence_binding')}
     blocked=[m for m in cats[venue]['markets'] if m['event_id'] in proven

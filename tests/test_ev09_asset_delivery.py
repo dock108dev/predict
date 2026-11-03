@@ -55,13 +55,12 @@ class Assets(unittest.IsolatedAsyncioTestCase):
                         else re.findall(r"from\s+['\"]([^'\"]+)['\"]", source)
                     )
                     if path == script and "scanner.js" not in path:
-                        self.assertTrue(imports)
+                        self.assertIn("/api/comparison-snapshot", source)
+                        self.assertNotIn("new SavedReadPoller", source)
                     pending.extend(urljoin(path, module) for module in imports)
                 expected = (
-                    {"raw-odds.js", "raw-odds.css", "stored.css", "raw-result-view.js", "board-values.js"}
-                    if page == "/odds" else
-                    {"board-client.js", "board-contract.js", "board-values.js", "board-read.js"}
-                    | ({"scanner.css", "scanner.js"} if page == "/scanner" else {"stored.css", "stored.js"})
+                    {"board-client.js", "board-contract.js", "board-values.js", "board-read.js", "scanner.css", "scanner.js"}
+                    if page == "/scanner" else {"stored.css", "stored.js"}
                 )
                 self.assertTrue(expected <= {Path(path.split("?")[0]).name for path in seen}, page)
             self.assertEqual(
@@ -88,7 +87,7 @@ class Composition(unittest.TestCase):
                 re.findall(
                     r"from\s+[\"\']([^\"\']+)[\"\']", (assets / "stored.js").read_text()
                 ),
-                ["./board-client.js"],
+                [],
             )
             self.assertNotIn("@import", (assets / "stored.css").read_text())
             with patch("sys.argv", ["build_stored_frontend.py", "--check"]):

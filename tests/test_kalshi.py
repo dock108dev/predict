@@ -89,6 +89,33 @@ class ParsingTests(unittest.TestCase):
 
 
 class ReconstructionTests(unittest.TestCase):
+    def test_ticker_only_empty_snapshot_keeps_neighbor_and_uuid_constraint(self):
+        e=engine([market(),market('N')])
+        e.feed(frame(1,mid='N'),1,NOW)
+        empty={'type':'orderbook_snapshot','sid':7,'seq':2,
+               'msg':{'market_ticker':'M','market_id':'','clock':0}}
+        book=e.feed(encode(empty),1,NOW)
+        self.assertEqual(book.sync,BookSync.SYNCHRONIZED)
+        self.assertTrue(all(not side for side in e.sides['M'].values()))
+        self.assertEqual(e.last['N'].sync,BookSync.SYNCHRONIZED)
+        e.feed(frame(3,'orderbook_delta'),1,NOW)
+        missing=json.loads(frame(4,'orderbook_delta'));del missing['msg']['market_id']
+        e.feed(encode(missing),1,NOW)
+        self.assertEqual(e.native_ids['M'],'uuid-M')
+        with self.assertRaises(RecoveryRequired):
+            e.feed(frame(5,'orderbook_delta',market_id='different'),1,NOW)
+
+    def test_ticker_only_unknown_still_requires_recovery(self):
+        e=engine()
+        with self.assertRaises(RecoveryRequired):e.feed(frame(1,mid='UNKNOWN',market_id=''),1,NOW)
+        self.assertIsNone(e.sid)
+
+    def test_catalog_ticker_cannot_rebind_to_another_event(self):
+        e=engine();e.feed(frame(1),1,NOW)
+        changed=replace(market(),raw=replace(market().raw,ref=replace(market().raw.ref,event_id='OTHER')))
+        with self.assertRaises(RecoveryRequired):e.reconfigure([changed])
+        self.assertIsNone(e.sid)
+
     def test_signed_delta_and_level_removal(self):
         e = engine()
         e.feed(frame(2),1,NOW)

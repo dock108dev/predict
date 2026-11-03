@@ -20,10 +20,10 @@ JOURNAL_RECORD_BYTE_CAP = 8 * MIB
 SQL_BYTE_CAP = 2 * GIB
 FREE_DISK_BYTE_FLOOR = GIB
 LATEST_WORKING_TABLES = ('data_runtime', 'data_runtime_command', 'scanner_latest',
-                        'latest_board', 'latest_board_status', 'coverage_latest')
+                        'latest_board', 'latest_dashboard', 'latest_board_status', 'coverage_latest')
 
 
-def sql_usage(db):
+def writer_subset_usage(db):
     """Read current heap/index/TOAST/history and owned sequence backing pages."""
     row = db.execute(
         "SELECT sum(bytes) AS n FROM ("
@@ -60,3 +60,11 @@ def require_disk_space(path, append_bytes=0):
         directory = directory.parent
     if shutil.disk_usage(directory).free < FREE_DISK_BYTE_FLOOR + append_bytes:
         raise BudgetStop('current_observation_disk_free_floor')
+
+
+def sql_usage(db):
+    """The same whole-database physical quantity enforced by the runtime."""
+    value = db.execute('SELECT pg_database_size(current_database()) n').fetchone()['n']
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        raise ValueError('current_database_storage_usage')
+    return value

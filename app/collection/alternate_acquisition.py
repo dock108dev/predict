@@ -16,21 +16,22 @@ def authority(at):
     # This owner-maintained authorization is configuration, not a market-count
     # constant. Account availability and the exact request manifest remain
     # independently enforced by the ledger at every reservation.
-    if (value.get('schema')!='predict-alternate-authority-1'
+    if (value.get('schema') not in ('predict-alternate-authority-1','predict-alternate-authority-2')
             or type(cycle) is not int or type(day) is not int or cycle<18
-            or (cycle-18)%2 or day!=56*cycle
-            or value.get('expires_at')!='2026-11-01T00:00:00+00:00'
+            or cycle>300 or (cycle-18)%2 or day!=56*cycle
+            or (value.get('expires_at') is None and value.get('schema')!='predict-alternate-authority-2')
             or value.get('interval_seconds')!=900 or value.get('enabled') is not True):
         raise QuotaStop('alternate_authority_invalid')
     clock=datetime.fromisoformat(at.replace('Z','+00:00'))
-    if not datetime.fromisoformat(value['approved_at'])<=clock<datetime.fromisoformat(value['expires_at']):return None
+    if clock<datetime.fromisoformat(value['approved_at']):return None
+    if value.get('expires_at') is not None and clock>=datetime.fromisoformat(value['expires_at']):return None
     return value
 
 
 def check_expiry(at):
     if AUTHORITY_PATH.exists():
         value=json.loads(AUTHORITY_PATH.read_text())
-        if datetime.fromisoformat(at.replace('Z','+00:00'))>=datetime.fromisoformat(value['expires_at']):
+        if value.get('expires_at') is not None and datetime.fromisoformat(at.replace('Z','+00:00'))>=datetime.fromisoformat(value['expires_at']):
             raise QuotaStop('aggregate_owner_authority_expired')
 
 
@@ -134,7 +135,7 @@ async def acquire(scheduler,sports):
     requests=[dict(path=r['path'],params=r['params']) for r in proposal['requests']]
     scheduler.ledger.extend_cycle(scheduler.service.ownership,scheduler.cycle_id,requests,2)
     scheduler.metrics['alternate_plan']['dispatch_enabled']=True
-    scheduler.metrics['alternate_plan']['reason']=f"Explicit owner authority: {grant['credits_per_cycle']}/cycle and {grant['credits_per_day']}/day through October 31 at 20:00 Eastern"
+    scheduler.metrics['alternate_plan']['reason']=f"Explicit owner authority: {grant['credits_per_cycle']}/cycle and {grant['credits_per_day']}/day; expiry {grant.get('expires_at') or 'renewed by owner without a new cutoff'}"
     scheduler.metrics['alternate_state']='acquiring'
     scheduler.metrics['alternate_completed']=0
     for item,request in zip(proposal['requests'],requests):

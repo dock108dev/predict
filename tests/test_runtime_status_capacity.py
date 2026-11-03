@@ -3,8 +3,76 @@ from copy import deepcopy
 import json
 from types import SimpleNamespace
 import unittest
+from unittest.mock import MagicMock, patch
 from app.collection.current_policy import DEFAULT
 from app.collection.runtime_status import RuntimeState,STATUS_BYTES
+
+
+class DatabaseFailureStatus(unittest.IsolatedAsyncioTestCase):
+    def fixture(self):
+        from app.collection.current_database import DatabasePipeline
+        sink=SimpleNamespace(error=None,error_details=None)
+        service=SimpleNamespace(sink=sink,config=deepcopy(DEFAULT))
+        return DatabasePipeline(service)
+
+    async def test_three_maintenance_failures_do_not_permanently_kill_recovery(self):
+        from psycopg.errors import LockNotAvailable
+        pipeline=self.fixture();pipeline.wake.set();attempts=[]
+        actual=pipeline.tick
+        def tick():
+            attempts.append(1)
+            if len(attempts)<=3:
+                pipeline.wake.set()
+                raise LockNotAvailable('secret provider response must not escape')
+            self.assertEqual(pipeline.status()['failure_owner'],'maintenance')
+            self.assertEqual(pipeline.status()['maintenance_failure']['sqlstate'],'55P03')
+            pipeline.closed=False
+            actual()
+            pipeline.closed=True
+        with patch('app.collection.current_database.connect',return_value=MagicMock()), \
+                patch('app.storage.current_rows.CurrentRowStore'), \
+                patch('app.storage.storage_maintenance.maintain',return_value={'after_bytes':123}), \
+                patch('app.collection.current_database.sql_usage',return_value=123), \
+                patch.object(pipeline,'tick',side_effect=tick):
+            await pipeline.run_maintenance()
+        self.assertEqual(len(attempts),4)
+        status=pipeline.status()
+        self.assertEqual(status['state'],'available')
+        self.assertIsNone(status['maintenance_failure'])
+        self.assertEqual(status['maintenance_failures'],0)
+        self.assertTrue(status['maintenance_last_success_at'])
+        self.assertNotIn('secret',json.dumps(status))
+
+    async def test_busy_is_not_recovery_and_ingress_failure_is_independent(self):
+        pipeline=self.fixture();pipeline.error='LockNotAvailable'
+        pipeline.error_details={'exception':'LockNotAvailable','frames':[],'sqlstate':'55P03'}
+        with patch('app.collection.current_database.connect',return_value=MagicMock()), \
+                patch('app.storage.current_rows.CurrentRowStore'), \
+                patch('app.storage.storage_maintenance.maintain',return_value={'state':'busy'}), \
+                patch('app.collection.current_database.sql_usage',return_value=123):
+            pipeline.tick()
+        self.assertEqual(pipeline.status()['state'],'unavailable')
+        self.assertEqual(pipeline.status()['failure_owner'],'maintenance')
+        pipeline.service.sink.error='OperationalError'
+        pipeline.service.sink.error_details={'exception':'OperationalError','frames':[]}
+        with patch('app.collection.current_database.connect',return_value=MagicMock()), \
+                patch('app.storage.current_rows.CurrentRowStore'), \
+                patch('app.storage.storage_maintenance.maintain',return_value={'after_bytes':123}), \
+                patch('app.collection.current_database.sql_usage',return_value=123):
+            pipeline.tick()
+        self.assertIsNone(pipeline.error)
+        self.assertEqual(pipeline.status()['state'],'unavailable')
+        self.assertEqual(pipeline.status()['failure_owner'],'ingress')
+
+    def test_safe_exception_evidence_has_bounded_frames_without_messages(self):
+        from app.diagnostics import failure_details
+        def nested(n):
+            if n:return nested(n-1)
+            raise ValueError('source-secret')
+        try:nested(40)
+        except ValueError as error:details=failure_details(error)
+        self.assertEqual(len(details['frames']),16)
+        self.assertNotIn('source-secret',json.dumps(details))
 
 
 class RuntimeStatusCapacity(unittest.TestCase):

@@ -55,6 +55,26 @@ class SQL(IsolatedAsyncioTestCase):
         config=deepcopy(DEFAULT);config['authority']=GRANT
         return SimpleNamespace(closed=False,closing=False,dispatch=True,config=config,states={})
 
+    async def test_oversized_scanner_roster_defers_before_component_hydration_and_rechecks(self):
+        scanner=Scanner(self.provider(),connector=self.connect,clock=lambda:AT,durable=True)
+        try:
+            with patch('app.collection.background_work.BACKGROUND.acquisition_pressure',return_value=False), \
+                 patch('app.comparison.scanner_readiness.MAX_INSTRUMENTS',0), \
+                 patch('app.storage.scanner_readiness.capture_reservation',side_effect=AssertionError('must not hydrate refused roster')):
+                result=scanner._once_background()
+                self.assertEqual(result['reason'],'readiness_contract_capacity')
+                self.assertGreater(scanner.admission_status['observed_contracts'],0)
+                self.assertEqual(scanner.admission_status['reserved_bytes'],0)
+                with patch.object(scanner,'connector',side_effect=AssertionError('coalesced capacity wait')):
+                    self.assertEqual(scanner._once_background()['reason'],'readiness_contract_capacity')
+            scanner.capacity_retry_at=0
+            with patch('app.collection.background_work.BACKGROUND.acquisition_pressure',return_value=False), \
+                 patch('app.storage.scanner_readiness.capture_reservation',side_effect=RuntimeError('capacity recovered')):
+                with self.assertRaisesRegex(RuntimeError,'capacity recovered'):scanner._once_background()
+        finally:
+            scanner.durable=False
+            await scanner.close()
+
     async def test_detached_repeatable_read_and_read_v1_unchanged(self):
         with self.connect() as db:
             with patch('app.storage.current_rows.utc',return_value=AT):
@@ -174,13 +194,9 @@ class SQL(IsolatedAsyncioTestCase):
         finally:close()
 
     async def test_probe_capacity_and_measurement_failure_do_not_abort_ingress(self):
-        from unittest.mock import MagicMock
         from app.storage.scanner_publication import current_revision
-        from app.storage.current_rows import MAX_RECORDS
-        fake=MagicMock()
-        fake.execute.side_effect=[SimpleNamespace(fetchone=lambda:dict(epoch='authored')),
-            SimpleNamespace(fetchall=lambda:[{}]*(MAX_RECORDS+1)),SimpleNamespace(fetchall=lambda:[])]
-        with self.assertRaisesRegex(ValueError,'revision_probe_capacity'):current_revision(fake)
+        with self.connect() as db, patch('app.storage.scanner_publication.MAX_PROBE_BYTES',1):
+            with self.assertRaisesRegex(ValueError,'revision_probe_capacity'):current_revision(db)
         seen=[];close=subscribe(seen.append)
         try:
             with self.connect() as db:

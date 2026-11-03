@@ -276,6 +276,11 @@ def _market_index(body):
     return {identifier(m.get('id')): m for m in candidates}
 
 
+def market_slug(market):
+    """Read an immutable routing scalar without copying nested event catalogs."""
+    return _market_index(market.raw.json_text)[market.raw.ref.market_id]['slug']
+
+
 def next_market_data(market):
     """Copy just the native object; full original response remains immutable."""
     return deepcopy(_market_index(market.raw.json_text)[market.raw.ref.market_id])

@@ -196,3 +196,23 @@ def test_event_route_report_preserves_unknown_schedule_and_exact_receipt_cycle()
         assert current['reason']=='received_current_cycle'
         assert current['current_cycle_received'] is True
         assert current['returned_markets']==0
+
+
+def test_structural_interning_preserves_legacy_wire_types_and_independent_copies():
+    from app.storage.store import encoded
+    def legacy(value,nodes,index):
+        if isinstance(value,dict):node=['o',[[k,legacy(v,nodes,index)] for k,v in value.items()]]
+        elif isinstance(value,list):node=['a',[legacy(v,nodes,index) for v in value]]
+        else:node=['v',value]
+        key=encoded(node)
+        if key not in index:index[key]=len(nodes);nodes.append(node)
+        return index[key]
+    value={'rows':[{'x':[True,1,1.0,False,0,-0.0,0.0,None,'1','é']}]*30,'nested':{'b':2,'a':1}}
+    nodes=[];root=legacy(value,nodes,{})
+    tree=pack(value)
+    assert tree==dict(encoding='shared-json-1',nodes=nodes,root=root)
+    result=unpack(tree)
+    assert [type(v) for v in result['rows'][0]['x']]==[type(v) for v in value['rows'][0]['x']]
+    result['rows'][0]['x'][0]='changed'
+    assert result['rows'][1]['x'][0] is True
+    with pytest.raises(ValueError):pack([float('nan')])

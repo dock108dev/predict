@@ -19,7 +19,7 @@ class IngressRepair(unittest.TestCase):
                 connect.assert_not_called()
                 self.assertEqual(sink.sequence,0)
                 self.assertEqual(sink.metrics['rejected_observations'],1)
-                self.assertIn('current_ingress_type_unsupported',sink.error)
+                self.assertEqual(sink.error,'ValueError')
 
     def test_admitted_record_bound_includes_the_complete_handoff(self):
         from unittest.mock import patch

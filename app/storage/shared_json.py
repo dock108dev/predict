@@ -15,7 +15,14 @@ def _visit(v,nodes,indexes):
     if isinstance(v,dict):node=['o',[[k,_visit(x,nodes,indexes)] for k,x in v.items()]]
     elif isinstance(v,list):node=['a',[_visit(x,nodes,indexes) for x in v]]
     else:node=['v',v]
-    key=encoded(node)
+    # Child references already identify complete subtrees. Structural keys
+    # avoid serializing every repeated node just to intern it. Scalar types
+    # stay distinct (notably bool/int and int/float); floats retain JSON's
+    # exact representation, including negative zero and rejection of NaN.
+    if node[0]=='o':key=('o',tuple((k,r) for k,r in node[1]))
+    elif node[0]=='a':key=('a',tuple(node[1]))
+    elif type(v) in (str,int,bool,type(None)):key=('v',type(v),v)
+    else:key=encoded(node)
     if key in indexes:return indexes[key]
     i=len(nodes);indexes[key]=i;nodes.append(node)
     if len(nodes)>MAX_NODES:raise ValueError('shared_json_node_capacity')

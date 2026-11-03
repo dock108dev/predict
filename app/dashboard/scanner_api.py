@@ -127,8 +127,23 @@ class Scanner:
     def _once_background(self):
         from app.collection.background_work import BACKGROUND
         from app.storage.scanner_readiness import capture_reservation
+        # A deterministic roster-cap refusal must not repeatedly hydrate/size
+        # every matching component on each incoming book wake. Keep the guard,
+        # expose its exact denominator, and periodically check for recovery.
+        if perf_counter()<getattr(self,'capacity_retry_at',0):
+            return dict(published=False,deferred=True,reason='readiness_contract_capacity',provider_requests=0)
         if BACKGROUND.acquisition_pressure():raise AcquisitionDeferred('native_acquisition_catching_up')
         with self.connector() as db:
+            from app.comparison.scanner_readiness import MAX_INSTRUMENTS
+            count=db.execute('''SELECT count(*) n FROM current_contract c JOIN current_event e ON e.id=c.event_id
+                WHERE e.scheduled_start::timestamptz>%s::timestamptz''',(self.clock(),)).fetchone()['n']
+            if count>MAX_INSTRUMENTS:
+                self.capacity_retry_at=perf_counter()+5
+                self.admission_status=dict(state='deferred',reason='readiness_contract_capacity',
+                    observed_contracts=count,maximum_contracts=MAX_INSTRUMENTS,reserved_bytes=0)
+                self.projection.expire()
+                return dict(published=False,deferred=True,reason='readiness_contract_capacity',provider_requests=0)
+            self.capacity_retry_at=0
             required=capture_reservation(db)
             if not self.restored:
                 old=db.execute('SELECT octet_length(payload::text) n FROM scanner_latest WHERE singleton').fetchone()

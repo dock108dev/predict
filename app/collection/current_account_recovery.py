@@ -24,10 +24,10 @@ def credential_binding(root=ROOT):
     return dict(device=s.st_dev,inode=s.st_ino,size=s.st_size,modified_ns=s.st_mtime_ns,changed_ns=s.st_ctime_ns)
 
 
-def context(ledger, covered, binding, *, root=ROOT, window_loader=load_window):
+def context(ledger, covered, binding, *, root=ROOT, window_loader=load_window, new_window=None):
     v=ledger._read()
     metadata=json.loads((Path(root)/'.local/predict-odds-account.json').read_text())
-    if metadata.get('account_id')!=v.get('account_id') or window_loader()!=v['window']:
+    if metadata.get('account_id')!=v.get('account_id') or window_loader()!=(new_window or v['window']):
         raise QuotaStop('recovery_context_mismatch')
     if any(binding['modified_ns']/1e9>=stamp(v['attempts'][aid]['dispatch_at']).timestamp() for aid in covered):
         raise QuotaStop('recovery_credential_changed')
@@ -36,15 +36,22 @@ def context(ledger, covered, binding, *, root=ROOT, window_loader=load_window):
 
 
 async def observe_and_activate(ledger, owner, candidate_digest, covered, recovery_id,
-                               *, root=ROOT, transport=None, key_loader=None, window_loader=load_window):
+                               *, root=ROOT, transport=None, key_loader=None, window_loader=load_window, rollover=False):
     from .current_aggregate import CurrentOddsTransport, credential
     if owner is None or owner.file is None:raise QuotaStop('acquisition_ownership_required')
     runtime=owner_runtime(owner)
-    recovery_preflight(ledger._read(),ledger.clock(),covered,owner_runtime=runtime,recovery_id=recovery_id)
     binding=credential_binding(root)
-    v=context(ledger,covered,binding,root=root,window_loader=window_loader)
+    new_window=window_loader() if rollover else None
+    def preflight(value, at):
+        if rollover:
+            from .current_rollover import preflight as rollover_preflight
+            return rollover_preflight(value,at,covered,owner_runtime=runtime,recovery_id=recovery_id,
+                                      new_window=new_window,binding=binding)
+        return recovery_preflight(value,at,covered,owner_runtime=runtime,recovery_id=recovery_id)
+    preflight(ledger._read(),ledger.clock())
+    v=context(ledger,covered,binding,root=root,window_loader=window_loader,new_window=new_window)
     def begin(value,at):
-        recovery_preflight(value,at,covered,owner_runtime=runtime,recovery_id=recovery_id)
+        preflight(value,at)
         if value['window']!=v['window'] or value.get('account_id')!=v.get('account_id'):raise QuotaStop('recovery_context_mismatch')
         probes=value.setdefault('recovery_probes',[])
         if len(probes)>=64:raise QuotaStop('quota_record_capacity')
@@ -82,11 +89,11 @@ async def observe_and_activate(ledger, owner, candidate_digest, covered, recover
             raise QuotaStop('cleanup_safety_unresolved') from None
     try:
         key=(key_loader or credential)()
-        context(ledger,covered,binding,root=root,window_loader=window_loader)
+        context(ledger,covered,binding,root=root,window_loader=window_loader,new_window=new_window)
         phase='observation'
         response=await asyncio.wait_for(transport.request(dict(path='/v4/sports',params={}),key),timeout=22)
         phase='validation'
-        context(ledger,covered,binding,root=root,window_loader=window_loader)
+        context(ledger,covered,binding,root=root,window_loader=window_loader,new_window=new_window)
         from .current_quota import headers
         headers(response['headers'],v['ceiling'])
         if response['status']!=200:raise QuotaStop('aggregate_authentication' if response['status'] in (401,403) else 'recovery_observation_failed')
@@ -98,7 +105,7 @@ async def observe_and_activate(ledger, owner, candidate_digest, covered, recover
         e=dict(schema='predict-independent-balance-1',id=str(uuid4()),purpose=POLICY,
             recovery_id=recovery_id,runtime_id=runtime,candidate_digest=candidate_digest,
             endpoint='https://api.the-odds-api.com/v4/sports',method='GET',params={},
-            account_id=v['account_id'],window=deepcopy(v['window']),status=response['status'],
+            account_id=v['account_id'],window=deepcopy(new_window or v['window']),status=response['status'],
             headers=response['headers'],received_at=response['received_at'],retries=0,documented_cost=0,
             credential_reference='.env',credential_binding=binding,credential_unchanged_since_snapshot=True,
             active_sports=sorted({s['key'] for s in sports if s['active'] and s.get('has_outrights') is False and s['key'] in SPORT_KEYS.values()}),
@@ -121,7 +128,13 @@ async def observe_and_activate(ledger, owner, candidate_digest, covered, recover
         def activate(value,at):
             from .current_conservative import import_balance
             if credential_binding(root)!=binding:raise QuotaStop('recovery_credential_changed')
-            import_balance(value,e,at,covered,owner_runtime=runtime,candidate=candidate_digest,recovery_id=recovery_id)
+            context(ledger,covered,binding,root=root,window_loader=window_loader,new_window=new_window)
+            if rollover:
+                from .current_rollover import import_rollover
+                import_rollover(value,e,at,covered,owner_runtime=runtime,candidate=candidate_digest,
+                                recovery_id=recovery_id,new_window=new_window,binding=binding)
+            else:
+                import_balance(value,e,at,covered,owner_runtime=runtime,candidate=candidate_digest,recovery_id=recovery_id)
             probe=next(p for p in value['recovery_probes'] if p['id']==recovery_id)
             probe.update(state='activated',evidence=str(path),evidence_sha256=digest(e),completed_at=at,diagnostics=diagnostics())
         ledger.transact(activate)
@@ -150,6 +163,7 @@ def main():
     from .local_ownership import LocalOwnership
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--request',required=True,help='Local JSON with recovery_id, candidate_digest and exact covered attempt hashes')
+    p.add_argument('--rollover',action='store_true',help='Require authenticated new-window account evidence; retain historical holds')
     args=p.parse_args()
     request_path=Path(args.request)
     if request_path.is_symlink() or request_path.stat().st_size>8192:raise QuotaStop('recovery_evidence_invalid')
@@ -158,7 +172,7 @@ def main():
         raise QuotaStop('candidate_changed')
     owner=LocalOwnership();owner.acquire('conservative-recovery-'+str(uuid4()))
     try:
-        q=asyncio.run(observe_and_activate(QuotaLedger(),owner,request['candidate_digest'],request['covered_attempts'],request['recovery_id']))
+        q=asyncio.run(observe_and_activate(QuotaLedger(),owner,request['candidate_digest'],request['covered_attempts'],request['recovery_id'],rollover=args.rollover))
         print(json.dumps(dict(status='activated',remaining=q['remaining'],available=q['available'],held=q['reserved'],next_due_at=q['next_due_at'])))
     finally:owner.release()
 

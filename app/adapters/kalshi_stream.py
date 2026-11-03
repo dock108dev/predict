@@ -130,6 +130,11 @@ class BookReconstructor:
 
     def reconfigure(self, markets, removal_request=None):
         updated={m.raw.ref.market_id:m for m in markets}
+        if len(updated)!=len(markets):raise ValueError('duplicate catalog ticker')
+        for mid in self.markets.keys() & updated.keys():
+            if self.markets[mid].raw.ref != updated[mid].raw.ref:
+                self.invalidate()
+                raise RecoveryRequired('catalog ticker identity changed')
         removed=self.markets.keys()-updated.keys()
         if removed and type(removal_request) is not int:raise ValueError('removal acknowledgement required')
         # Tombstones last only until their ordered delete acknowledgement.
@@ -201,11 +206,19 @@ class BookReconstructor:
         if kind not in ('orderbook_snapshot', 'orderbook_delta'):
             raise ValueError('unexpected subscription message')
         data = msg['msg']
-        mid, uuid = identity(data.get('market_ticker')), identity(data.get('market_id'))
+        mid = identity(data.get('market_ticker'))
+        # This channel is subscribed by ticker, not UUID. Empty/omitted UUIDs
+        # occur in otherwise complete (including empty) initial images. Bind
+        # only the exact catalog member; a missing secondary ID neither invents
+        # an identity nor erases a previously established UUID constraint.
+        uuid = data.get('market_id')
+        if uuid not in (None, ''):
+            uuid = identity(uuid)
         if mid in self.retiring:return None  # SID/sequence checked above, no price admission.
-        if mid not in self.markets or (mid in self.native_ids and self.native_ids[mid] != uuid):
+        if mid not in self.markets or (uuid not in (None, '') and mid in self.native_ids and self.native_ids[mid] != uuid):
             raise ValueError('market identity mismatch')
-        self.native_ids[mid] = uuid
+        if uuid not in (None, ''):
+            self.native_ids[mid] = uuid
         if kind == 'orderbook_snapshot':
             # AsyncAPI explicitly defines omitted side as no offers in WS snapshots.
             candidate = {s: levels(data.get(s + '_dollars_fp', [])) for s in ('yes', 'no')}

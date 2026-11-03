@@ -88,11 +88,28 @@ class DatabaseIngressSink:
         self.reducer=SessionProjection();self.reducer.bulk_current=True;self.store=store;self.config=config
         self.reducer.books=CurrentBookImages()
         self.sequence=0;self.metrics=dict(admitted_observations=0,rejected_observations=0)
-        self.exclusions=[];self.error=None
+        self.exclusions=[];self.error=None;self.error_details=None
         self.normalizer=None
         from threading import Lock
         self.normalizer_lock=Lock()
         self.process_normalization=process_normalization
+        self._catalog_index_owner=None
+        self._catalog_indexes=None
+
+    def catalog_indexes(self,inventory):
+        """Share immutable lookup structure for exactly one adopted catalog.
+
+        Price commits replace book entries, not inventory. Catalog adoption
+        replaces inventory, invalidating all event and market lookup references.
+        Concurrent preparation keeps its own returned pair, even on replacement.
+        """
+        with self.normalizer_lock:
+            if self._catalog_index_owner is not inventory:
+                indexes=({(s,m['event_id'],m['id']):m for s,c in inventory.items() for m in c['markets']},
+                         {(s,e['id']):e for s,c in inventory.items() for e in c['events']})
+                self._catalog_indexes=indexes
+                self._catalog_index_owner=inventory
+            return self._catalog_indexes
 
     def normalization_executor(self):
         with self.normalizer_lock:
@@ -108,9 +125,10 @@ class DatabaseIngressSink:
         inventory=base.inventory.get(source)
         if inventory is None:return None  # Ordinary admission supplies the error.
         selected={(b['raw']['ref']['event_id'],b['raw']['ref']['market_id']) for b in books}
-        markets=[m for m in inventory['markets'] if (m['event_id'],m['id']) in selected]
+        market_index,event_index=self.catalog_indexes(base.inventory)
+        markets=[market_index[(source,eid,mid)] for eid,mid in sorted(selected) if (source,eid,mid) in market_index]
         events={m['event_id'] for m in markets}
-        part=dict(inventory,markets=markets,events=[e for e in inventory['events'] if e['id'] in events])
+        part=dict(inventory,markets=markets,events=[event_index[(source,eid)] for eid in sorted(events) if (source,eid) in event_index])
         catalog=dict(id='transient-current-catalog',record=dict(source=source,value=dict(inventory=part)))
         images=[dict(id='transient-current-book',record=dict(retained_at=b['raw']['received_at'],
             value=dict(observations=[dict(type='prediction_book',source=source,book=b,
@@ -134,14 +152,19 @@ class DatabaseIngressSink:
 
     async def commit_async(self,row,states,revoked,*,precomputed=None):
         from .background_work import ingress_thread
-        from psycopg.errors import LockNotAvailable, DeadlockDetected, SerializationFailure
+        from psycopg.errors import LockNotAvailable, DeadlockDetected, SerializationFailure, QueryCanceled
         retries = 0
         while True:
             if revoked.is_set():raise asyncio.CancelledError()
             try:
                 prepared = await ingress_thread(self.prepare, row, states, revoked, **(dict(precomputed=precomputed) if precomputed is not None else {}))
                 break
-            except (LockNotAvailable, DeadlockDetected, SerializationFailure) as exc:
+            except (LockNotAvailable, DeadlockDetected, SerializationFailure, QueryCanceled) as exc:
+                if isinstance(exc, QueryCanceled):
+                    # A native depth statement can time out after the offers were
+                    # staged. Retry the rolled-back image once, under the same guard.
+                    if retries or row.get('type') not in ('prediction_book', 'prediction_books') or revoked.is_set():
+                        raise
                 # PostgreSQL rolled back the entire transaction. Retain this exact
                 # already-received image; never redispatch a paid request.
                 from app.diagnostics import failure
@@ -158,10 +181,11 @@ class DatabaseIngressSink:
     def finish(self,prepared,states):
         from app.dashboard.current_contract import snapshot_inputs
         candidate,now,changed=prepared
-        self.reducer=candidate;self.error=None
+        self.reducer=candidate
         raw=snapshot_inputs(self.store._state);raw.update(source_status=deepcopy(states),clock_at=now,projected_at=now,state_revision=raw['state_revision']+1)
         if getattr(self.store,'_source_stopping',False):self.store.admit_shutdown_health(states)
         else:self.store.commit(raw)
+        self.error=None;self.error_details=None
         self.sequence+=1;self.metrics['admitted_observations']+=1
         return dict(service_sequence=self.sequence,current_rows_changed=changed,acknowledgment=self.acknowledgment)
 
@@ -226,7 +250,7 @@ class DatabaseIngressSink:
                         withdraw.update(catalog_refresh)
                         self.metrics['catalog_delta'].update(recalculated=0,deferred=len(catalog_refresh))
                         catalog_refresh=set()
-                market_lookup={(s,m['event_id'],m['id']):m for s,c in candidate.inventory.items() for m in c['markets']}
+                market_lookup,_=self.catalog_indexes(candidate.inventory)
                 for index,observation in enumerate(observations):
                     if observation['type']=='prediction_book':
                         book=observation['book'];ref=book['raw']['ref']
@@ -273,7 +297,9 @@ class DatabaseIngressSink:
                         catalog=dict(id='transient-current-catalog',record=dict(source=source,value=dict(inventory=relevant)))
                         books=[]
                         event_index={e['id']:e for e in inventory['events']}
-                        for key in candidate.books:
+                        book_keys=((source,eid,mid) for eid,mid in selected) if selected else candidate.books
+                        for key in book_keys:
+                            if key not in candidate.books:continue
                             if key[0]!=source or selected and (key[1],key[2]) not in selected:continue
                             observation=candidate.books[key]
                             event=event_index.get(key[1])
@@ -330,7 +356,9 @@ class DatabaseIngressSink:
                         for key,prior in prior_memberships.items():
                             if key not in memberships or memberships[key]==prior or key in retained_books:continue
                             withdraw.add(key)
-                    rows.withdraw_native_markets(withdraw)
+                    reimaging=delta.get('reimaging',set()) if row['type']=='coverage_inventory' else set()
+                    rows.withdraw_native_markets(withdraw-reimaging)
+                    rows.withdraw_native_markets(reimaging, reimaging=True)
                     if revoked is not None and revoked.is_set():raise asyncio.CancelledError()
                     phase('commit_observation')
             phase('complete')
@@ -338,7 +366,8 @@ class DatabaseIngressSink:
                 dict(self.metrics['preparation'],records=len(records),scopes=len(scopes),withdrawn=len(withdraw))])[-32:]
             return candidate,now,changed
         except Exception as exc:
-            self.error=type(exc).__name__+': '+str(exc)[:160];self.metrics['rejected_observations']+=1
+            from app.diagnostics import failure_details
+            self.error=type(exc).__name__;self.error_details=failure_details(exc);self.metrics['rejected_observations']+=1
             raise
 
 
@@ -346,7 +375,8 @@ class DatabasePipeline:
     """Current-row startup, expiry and Stop for the independent data owner."""
     def __init__(self,service):
         self.service=service;self.closed=False;self.task=None
-        self.error=None;self.wake=asyncio.Event();self.used=None
+        self.error=None;self.error_details=None;self.wake=asyncio.Event();self.used=None;self.maintenance=None
+        self.maintenance_failures=0;self.maintenance_last_success_at=None
     async def start(self):
         from app.storage.current_rows import CurrentRowStore
         from .current_policy import aggregate_scope, native_scope, native_markets
@@ -365,27 +395,41 @@ class DatabasePipeline:
             self.error=None
             self.task=asyncio.create_task(self.run_maintenance(),name='predict-current-expiry')
         except Exception as exc:
-            self.error=type(exc).__name__+': '+str(exc)[:160]
+            from app.diagnostics import failure_details
+            self.error=type(exc).__name__;self.error_details=failure_details(exc)
             raise
     def tick(self):
         # Deliberately no journal, diagnostic, cursor, snapshot or publication path.
         if not self.closed:
             from app.storage.current_rows import CurrentRowStore
             with connect() as db:
-                CurrentRowStore(db).expire();self.used=sql_usage(db)
+                # Expiry contention must not starve independent committed
+                # retention/reclamation. Preserve its error after that work.
+                expiry_error=None
+                try:CurrentRowStore(db).expire()
+                except Exception as exc:expiry_error=exc
+                from app.storage.storage_maintenance import maintain
+                self.maintenance=maintain(db,collecting=True)
+                if expiry_error is not None:raise expiry_error
+                self.used=sql_usage(db)
+                if self.maintenance.get('state')!='busy':
+                    self.error=None;self.error_details=None;self.maintenance_failures=0
+                    self.maintenance_last_success_at=utc()
         return 0
     async def run_maintenance(self):
-        failures=0
         while not self.closed:
             try:await asyncio.wait_for(self.wake.wait(),timeout=60)
             except TimeoutError:pass
             self.wake.clear()
             if self.closed:break
             try:
-                await asyncio.to_thread(self.tick);failures=0;self.error=None
+                await asyncio.to_thread(self.tick)
             except Exception as exc:
-                self.error=type(exc).__name__+': '+str(exc)[:160];failures+=1
-                if failures>=3:return
+                from app.diagnostics import failure_details
+                self.error=type(exc).__name__;self.error_details=failure_details(exc)
+                self.maintenance_failures+=1
+                # No paid work or immediate retries. The next ordinary minute
+                # must be able to prove recovery after a transient lock failure.
     async def close(self):
         self.closed=True;self.wake.set()
         if self.task:
@@ -394,9 +438,15 @@ class DatabasePipeline:
         return True
     def status(self):
         error=getattr(self.service.sink,'error',None) or self.error
+        ingress=getattr(self.service.sink,'error',None)
         used=self.used
         return dict(database='prediction_arb',socket='.local/pgsocket',schema='012_current_rows.sql',
-            state='unavailable' if error else 'available',error=error,backlog_bytes=0,imported_records=0,
+            state='unavailable' if error else 'available',error='database_unavailable' if error else None,
+            failure_owner='ingress' if ingress else 'maintenance' if self.error else None,
+            ingress_failure=getattr(self.service.sink,'error_details',None) if ingress else None,
+            maintenance_failure=self.error_details,maintenance_failures=self.maintenance_failures,
+            maintenance_last_success_at=self.maintenance_last_success_at,
+            maintenance=self.maintenance,backlog_bytes=0,imported_records=0,
             pending_calculations=0,busy=False,sql_byte_cap=SQL_BYTE_CAP,sql_bytes=used,
             observation_representation='current event/contract/offer/shared depth upserts; transient calculations',
             journal_byte_cap=0,journal_segment_byte_cap=0,finite_failure_limit=0)

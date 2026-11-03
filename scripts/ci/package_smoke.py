@@ -147,6 +147,9 @@ from app.comparison.current_dependencies import instant
 for venue in ('novig', 'polymarket_us'):
     assert basis(venue)['sha256']
     assert basis(venue, at=instant('2026-10-29T01:00:00Z'))['sha256']
+    assert basis(venue, at=instant('2026-10-31T01:00:00Z'))['sha256']
+from app.storage.current_games import engine_binding
+assert engine_binding()
 from app.comparison.native_scoring_scope import source_rules
 rules=source_rules()
 for native_type in ('KXNBAGAME', 'KXNHLSPREAD', 'KXNHLTOTAL'):
@@ -160,6 +163,7 @@ async def smoke():
     from app.dashboard.current_state import CurrentStateProvider
     provider=CurrentStateProvider()
     provider.database_mode = True  # Serve ordinary SQL-mode assets without starting SQL or sources.
+    provider.closed = False
     provider.closing = False
     provider.dispatch = False  # No acquisition is permitted by this smoke provider.
     app=app_module.create_app(owner=owner, sessions={},current_provider=provider)

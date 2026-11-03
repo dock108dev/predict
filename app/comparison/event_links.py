@@ -169,10 +169,10 @@ def semantic_market(record):
     return market
 
 
-def ordinary_event_key(event):
+def ordinary_event_key(event, *, allow_missing_context=False):
     """Successor occurrence key; historical season/schedule readers stay sealed."""
     provider_key('occurrence', event)
-    for field in ('game_id', 'sport', 'season', 'stage'):
+    for field in (('game_id','sport') if allow_missing_context else ('game_id', 'sport', 'season', 'stage')):
         if not isinstance(event.get(field), str) or not event[field]:
             raise ValueError('Explicit ordinary occurrence context required')
     instant(event['scheduled_start'])

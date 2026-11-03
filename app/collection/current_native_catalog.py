@@ -165,6 +165,7 @@ def overlapping_markets(catalog, others):
 
 def identity_diagnostics(catalog, selected=(), byte_cap=24 * 1024):
     """Bounded existing admission facts; no parser or admission decisions change."""
+    selected = set(selected)
     entries = [
         dict(kind="event", id=e["id"], reason=e["exclusion"])
         for e in catalog["events"]
@@ -367,6 +368,31 @@ def detach_event_packaging(catalog):
         if isinstance(raw,dict) and 'markets' in raw:
             event['_native']={k:v for k,v in raw.items() if k!='markets'}
     return catalog
+
+
+class CatalogStrings:
+    """One bounded decode-local pool. Only immutable strings can alias."""
+    def __init__(self):
+        self.pool = {}
+
+    def string(self, value):
+        if len(value) > 256:
+            return value
+        existing = self.pool.get(value)
+        if existing is not None:
+            return existing
+        if len(self.pool) < 32768:
+            self.pool[value] = value
+        return value
+
+    def compact(self, value):
+        if isinstance(value, dict):
+            return {self.string(k): self.compact(v) for k, v in value.items()}
+        if isinstance(value, list):
+            return [self.compact(v) for v in value]
+        if isinstance(value, str):
+            return self.string(value)
+        return value
 
 
 def share_immutable(previous,current):

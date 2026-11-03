@@ -34,11 +34,14 @@ class DataRuntime:
         self.memory_task = None
         self.account_projection = None
         self.retained_memory = None
+        self.storage_interval = False
 
     def prepare_status(self):
         from .background_work import BACKGROUND
         self.service.background_work = dict(BACKGROUND.snapshot(),retained_memory=self.retained_memory,loop_progress=self.loop_progress.snapshot() if self.loop_progress else None,progress=getattr(self.board,'progress',{}),
-            component_admission=dict(getattr(self.board,'admission_status',{})),coverage_progress=getattr(self.board,'last_coverage',None))
+            component_admission=dict(getattr(self.board,'admission_status',{})),coverage_progress=getattr(self.board,'last_coverage',None),
+            scanner_admission=getattr(self.scanner,'admission_status',None),
+            catalog_transfer=getattr(getattr(getattr(self.service,'ingress',None),'catalog_preparer',None),'metrics',None))
         self.service.background_calculations = dict(
             scanner='pending' if self.scanner is None else 'unavailable' if getattr(self.scanner, 'error', None) else 'stopped' if getattr(self.scanner, 'closed', False) else 'running',
             scanner_error=None if self.scanner is None or not getattr(self.scanner, 'error', None) else 'background_scanner_unavailable',
@@ -87,6 +90,8 @@ class DataRuntime:
             locked = self.lock_connection.execute('SELECT pg_try_advisory_lock(%s) AS held', (RUNTIME_LOCK,)).fetchone()['held']
             if not locked:
                 raise ValueError('Another data runtime owns this database')
+            from app.storage.storage_maintenance import maintain
+            await asyncio.to_thread(maintain, self.lock_connection)
             self.resource_guard()
             Store(self.lock_connection).migrate()
             self.paused_sources, self.global_stopped = self.state.retained_controls()
@@ -139,21 +144,20 @@ class DataRuntime:
             raise
 
     def acquisition_pressure(self, *, critical=False):
-        """Downstream CPU work yields to acquisition and overdue admission tails."""
+        """Yield at measured ordered-transport capacity, not missing images.
+
+        Initial images may never exist for inactive subscribed markets. Raw and
+        normalized images are replaceable maps bounded by market cardinality;
+        their age measures service latency, not impending transport overflow.
+        Ordered deltas alone cannot be replaced and retain capacity priority.
+        """
         if self.service is None or not self.service.dispatch:return False
         for venue in ('kalshi','polymarket_us'):
             worker=self.service.workers.get(venue)
             if worker is None or worker.closed or worker.failed or venue in self.service.paused_sources:continue
             metrics=worker.metrics
-            if metrics.get('selected_markets') is None:return True
-            if (metrics.get('stream_connected') and
-                metrics.get('initial_images',0)+metrics.get('isolated_missing_images',0)<metrics['selected_markets']):return True
-            if metrics.get('receive_oldest_seconds',0)>2 or metrics.get('raw_oldest_pending_seconds',0)>2:return True
-            # Derived admission has its own bounded queue and source runway.
-            # Its steady lag must not veto every downstream turn: at full scope
-            # that prevented any result from being published. Raw backlog and
-            # incomplete initial images still defer work; RSS and worker leases
-            # independently bound every admitted matching component.
+            limit=metrics.get('receive_buffer_limit_bytes',32*1024*1024)
+            if metrics.get('receive_buffer_bytes',0)>=limit*(.75 if critical else .5):return True
         return False
 
     def resource_guard(self):
@@ -197,6 +201,15 @@ class DataRuntime:
                         if error_field != 'coverage_error':
                             worker.error = 'background_calculation_worker_stopped'
                 await asyncio.to_thread(self.resource_guard)
+                # Only a measured, deferred rewrite can initiate an orderly interval.
+                # Close every dispatch owner before startup uses its separate allowance.
+                maintenance=getattr(getattr(self.service,'database',None),'maintenance',None)
+                if needs_storage_interval(maintenance) and getattr(
+                        self.service.workers.get('the_odds_api'), 'phase', None) not in (
+                            'reservation','transport','accounting'):
+                    self.storage_interval=True
+                    self.stopping.set()
+                    break
                 await self.persist_heartbeat()
                 try:
                     await asyncio.wait_for(self.stopping.wait(), 1)
@@ -329,7 +342,8 @@ class DataRuntime:
             if self.store:
                 await attempt('data_runtime_stopping_status', lambda: self.persist_control('stopping'))
             # Revoke dispatch even when startup failed before store construction.
-            await attempt('data_runtime_source_close', self.service.close)
+            await attempt('data_runtime_source_close', lambda: self.service.close(storage_interval=True)
+                          if self.storage_interval else self.service.close())
             if getattr(self.service, 'cleanup_errors', None):self.failed = True
             for worker in (self.board, self.scanner):
                 if worker:await attempt('data_runtime_worker_close', worker.close)
@@ -346,17 +360,37 @@ class DataRuntime:
         if errors:raise errors[0]
 
 
+def needs_storage_interval(report):
+    from .current_storage_policy import SQL_BYTE_CAP, MIB
+    if not isinstance(report,dict) or report.get('after_bytes',0)<SQL_BYTE_CAP-192*MIB:
+        return False
+    return any(r['reason']=='rewrite_headroom' and r.get('reusable_bytes',0)>=32*MIB
+               for r in report.get('deferred',()))
+
+
 async def run(config_path=None):
     from app.storage.latest_board import LatestBoardOwner
+    import os
+    import sys
     runtime = DataRuntime(config_path=config_path, board_factory=LatestBoardOwner)
     loop = asyncio.get_running_loop()
+    signalled=False
+    def stop():
+        nonlocal signalled
+        signalled=True
+        runtime.stopping.set()
     for name in (signal.SIGTERM, signal.SIGINT):
-        loop.add_signal_handler(name, runtime.stopping.set)
+        loop.add_signal_handler(name, stop)
     await runtime.start()
     try:
         await runtime.stopping.wait()
     finally:
         await runtime.close()
+    if runtime.storage_interval and not runtime.failed and not signalled:
+        # Fresh process state, same PID and launcher command. Startup reacquires
+        # both ownership locks and reloads durable controls before dispatch.
+        os.execv(sys.executable,[sys.executable,'-m','app.collection.data_runtime',
+                 *(['--current-config',str(config_path)] if config_path else [])])
     return 1 if runtime.failed else 0
 
 

@@ -108,7 +108,9 @@ class MockREST:
                         else 'prediction_session_byte_cap'),
             reason=None, max_callback=0, sha256=sha256(), framing=_HTTPFraming(),
             closed=asyncio.get_running_loop().create_future())
-        request_deadline = asyncio.get_running_loop().time()+self.timeout
+        request_start = asyncio.get_running_loop().time()
+        request_deadline = request_start+self.timeout
+        stage = "connect"
         request_provenance = dict(configured_endpoint=_safe_url(self.endpoint),
             supplied_url=_safe_url(url), constructed_url=_safe_url(constructed),
             dispatched_url=None, method='GET', headers=_safe_headers(headers),
@@ -142,6 +144,7 @@ class MockREST:
                              policy['discovery_decoded_bytes']-source_decoded)
             async with self.client.get(constructed, params=query,
                     allow_redirects=False, headers=headers) as response:
+                stage = "body"
                 status = response.status
                 response_url = _safe_url(response.url)
                 request_provenance['dispatched_url'] = _safe_url(response.request_info.real_url)
@@ -179,11 +182,13 @@ class MockREST:
                     raise BudgetStop('native_http_length_mismatch')
                 # Force-close requests must be validated through actual peer
                 # EOF; framed payload EOF alone may hide a delayed surplus.
+                stage = "peer_close"
                 remaining = request_deadline-asyncio.get_running_loop().time()
                 if remaining <= 0: raise BudgetStop('native_http_timeout')
                 await asyncio.wait_for(asyncio.shield(self._wire_state['closed']), remaining)
                 if self._wire_state['reason'] is not None:
                     raise BudgetStop(self._wire_state['reason'])
+                stage = "validate"
                 complete = True
                 raw = bytes(body)
                 if self.credential: self.credential.check(raw, headers)
@@ -276,7 +281,10 @@ class MockREST:
                     response_headers = []
                     saved_query = '<redacted>'
                     provenance_redacted = True
-            metrics.update(request_category=category(path), response_envelope=envelope(path),
+            if stage == "connect" and state.get("read_mode"):
+                stage = "response_headers"
+            metrics.update(transport_stage=stage, elapsed_seconds=asyncio.get_running_loop().time()-request_start,
+                request_category=category(path), response_envelope=envelope(path),
                 wire_bytes=state['received'], wire_admitted_bytes=state['admitted'],
                 wire_max_callback_bytes=state['max_callback'], entity_bytes_read=entity_read,
                 retained_body_bytes=len(raw), decoded_bytes=entity_read,

@@ -63,11 +63,11 @@ export function dashboardScope(slate, kind, filters = {}) {
   const errors = (slate?.errors || []).filter(e => games.has(e.game_key));
   const positive = rows.filter(e => {
     const m = dashboardMetric(e.row,kind);
-    return m?.state === "numeric_current" && compareExactPercent(m.value,"0") < 0 && e.row.freshness?.status === "current" && e.row.classification?.main_positive_eligible && e.row.availability?.current_opportunity_eligible && !slate.stopped && !slate.dashboard_error;
+    return m?.state === "numeric_current" && e.row.freshness?.status === "current" && !slate.stopped && !slate.dashboard_error;
   });
   const sort = entries => entries.sort((a,b) => compareExactPercent(dashboardMetric(a.row,kind)?.value,dashboardMetric(b.row,kind)?.value) || dashboardTie(a,b));
   sort(positive);
-  const relevant = boards.filter(b => b.prices.some(match) || b.rows.some(match));
+  const relevant = boards.filter(b => b.dashboard_counts || b.prices.some(match) || b.rows.some(match));
   const field = dashboardMetrics[kind][0];
   const reasons = [...new Set(rows.flatMap(e => e.row.availability?.metrics?.[field]?.reason_codes || e.row.availability?.reason_codes || []).concat(relevant.flatMap(b => (b.availability?.causes || []).map(c => c.code))))];
   const pending = relevant.some(b => b.delivery_state === "pending" || b.availability?.outcome === "not_evaluated") || rows.some(e => e.row.availability?.metrics?.[field]?.state === "not_evaluated");
@@ -77,13 +77,14 @@ export function dashboardScope(slate, kind, filters = {}) {
   // Board completeness includes refused candidates not materialized as rows.
   const complete = rows.length > 0 && relevant.length > 0 && relevant.every(b => b.availability?.evaluation_complete === true) && !pending && !errors.length && !unknown && !lastKnown && !slate.stopped && !slate.dashboard_error;
   const failed = !!slate?.dashboard_error || errors.length > 0 || rows.some(e => e.row.availability?.metrics?.[field]?.state === "calculation_failed") || reasons.some(r => /calculation.*failed/.test(r));
-  const state = !slate ? "loading" : slate?.dashboard_error ? "failed" : !errors.length && (!games.size || (family || period || source) && boards.length && !relevant.length && !boards.some(b => b.delivery_state === "pending")) ? "no_matches" : positive.length ? complete ? "positive" : "partial" : complete ? "evaluated_no_positive" : current.length ? "partial" : lastKnown ? "last_known" : failed && (!relevant.length || rows.length > 0 && rows.every(e => e.row.availability?.metrics?.[field]?.state === "calculation_failed")) ? "failed" : !rows.length && !reasons.length || pending && !reasons.length ? "pending" : "unavailable";
-  return {rows,positive,state: errors.length && boards.length && !slate?.dashboard_error ? "partial" : state,reasons,pending,failed,complete,errors,games};
+  const state = !slate ? "loading" : slate?.dashboard_error ? "failed" : slate.stopped ? "historical" : !errors.length && (!games.size || (family || period || source) && boards.length && !relevant.length && !boards.some(b => b.delivery_state === "pending")) ? "no_matches" : positive.length ? complete ? "positive" : "partial" : complete ? "evaluated_no_positive" : current.length ? "partial" : lastKnown ? "last_known" : failed && (!relevant.length || rows.length > 0 && rows.every(e => e.row.availability?.metrics?.[field]?.state === "calculation_failed")) ? "failed" : !rows.length && !reasons.length || pending && !reasons.length ? "pending" : "unavailable";
+  return {rows,positive,state: errors.length && boards.length && !slate?.dashboard_error && !slate?.stopped ? "partial" : state,reasons,pending,failed,complete,errors,games};
 }
 export function dashboardMessage(scope, kind) {
   if (scope.state === "loading") return "Loading saved results. Prices remain available while this list loads.";
+  if (scope.state === "historical") return "Historical inputs only. Collection is stopped or unavailable; inspect Admin before relying on freshness.";
   if (scope.state === "no_matches") return "No retained games or markets match these filters. Clear or change the filters to browse available results.";
-  if (scope.state === "positive") return "Current positive results, highest return first.";
+  if (scope.state === "positive") return "Current comparisons, highest return first. Zero and negative returns are included.";
   if (scope.state === "evaluated_no_positive") return "No positive results in the evaluated scope. Zero and negative comparisons are below.";
   if (scope.state === "partial") return "Partially evaluated. Available results are shown; other results remain unknown.";
   if (scope.state === "last_known") return "Last-known estimates only. Older inputs are shown separately for research.";
@@ -115,20 +116,24 @@ export function drawOpportunityDashboard(content, slates, filters, onDetails, ki
     for (const leg of row.legs || [row]) identity.append(el("p",labelsFor(g.participants).selection(leg) + " · " + venue(leg.venue) + " " + price(leg)));
     if (kinds.length === 1) identity.append(el("small", marketCaption(row)));
     const value=el("div",undefined,"opportunity-value");
-    value.append(el("strong",(numeric(m.value)>0?"+":"")+percent(m.value)),el("small",m.label),el("small",m.state === "numeric_current" && !slates[row.pair_id?"arbs":"ev"]?.dashboard_error ? "Current inputs" : slates[row.pair_id?"arbs":"ev"]?.dashboard_error ? "Freshness unverified after failed read" : "Last-known inputs"));
+    value.append(el("strong",(numeric(m.value)>0?"+":"")+percent(m.value)),el("small",m.label),el("small",m.state === "numeric_current" && !slates[row.pair_id?"arbs":"ev"]?.dashboard_error ? (kind === "arbs" && numeric(m.value)<=0 ? "Not profitable arbitrage · current inputs" : "Current inputs") : slates[row.pair_id?"arbs":"ev"]?.dashboard_error ? "Freshness unverified after failed read" : "Last-known inputs"));
     const button=el("button","Details"); button.dataset.key=item.dataset.key; button.onclick=()=>onDetails(row,button,g);
     item.append(identity,value,button);root.append(item);
   }
   for (const kind of kinds) {
     const scope=scopes[kind]=dashboardScope(slates[kind],kind,filters), section=el("section",undefined,"opportunity-section");
     section.dataset.state=scope.state;
-    section.setAttribute("aria-label",kind === "ev" ? "Positive expected value" : "Positive arbitrage");
-    section.append(el("h2",kind === "ev" ? "Positive expected value" : "Positive arbitrage"),el("p",dashboardMessage(scope,kind),"opportunity-status"));
+    section.setAttribute("aria-label",kind === "ev" ? "Best EV" : "Best arbitrage comparisons");
+    section.append(el("h2",kind === "ev" ? "Best EV" : "Best arbitrage comparisons"),el("p",dashboardMessage(scope,kind),"opportunity-status"));
     if (scope.positive.length) {
       const best=scope.positive[0], lead=el("p",undefined,"opportunity-lead");
-      lead.append(el("strong","+"+percent(dashboardMetric(best.row,kind).value)+" · "+best.g.title));
-      const jump=el("a","View "+scope.positive.length+" positive results");jump.href="#positive-"+kind;
+      lead.append(el("strong",(numeric(dashboardMetric(best.row,kind).value)>0?"+":"")+percent(dashboardMetric(best.row,kind).value)+" · "+best.g.title));
+      const jump=el("a","View "+scope.positive.length+" comparisons");jump.href="#positive-"+kind;
       section.append(lead,jump);
+    }
+    if (slates[kind]?.counts) {
+      const c=slates[kind].counts;
+      section.append(el("p",`${c.evaluated || 0} current · ${c.blocked || 0} unsupported · ${c.stale || 0} stale · ${c.refused_units || 0} input/search refusals · ${scope.errors.length} games pending or failed (${slates[kind].stopped ? "historical inputs · " : ""}whole 72-hour window)`));
     }
     if (scope.reasons.length || scope.pending || scope.failed) {
       const d=el("details",undefined,"opportunity-reasons");d.dataset.key=kind+":reasons";d.append(el("summary","What’s needed"));
@@ -143,7 +148,7 @@ export function drawOpportunityDashboard(content, slates, filters, onDetails, ki
     }
     if (scope.errors.length) {
       const failures = el("details"); failures.dataset.key = kind + ":failed-games";
-      failures.append(el("summary", scope.errors.length + " games failed · other returned games remain inspectable"));
+      failures.append(el("summary", scope.errors.length + " games pending or failed · other returned games remain inspectable"));
       for (const error of scope.errors) failures.append(el("p", (scope.games.get(error.game_key)?.title || error.game_key) + " · " + words(error.reason)));
       section.append(failures);
     }
@@ -155,22 +160,20 @@ export function drawOpportunityDashboard(content, slates, filters, onDetails, ki
   const query=new URLSearchParams(Object.fromEntries(Object.entries({sport:filters.league || "",venue:filters.source || "",family:filters.family === "winner" ? "moneyline" : filters.family || "",period:filters.period || "",search:filters.search || ""}).filter(([,v])=>v)));
   link.href="/odds"+(query.size?"?"+query:"");
   prices.append(link,el("p","Inspect source prices and their original inputs. Gross comparisons exclude fees and exceptional settlement."));
-  if (kinds.length > 1 && !kinds.some(kind => scopes[kind].positive.length)) content.replaceChildren(prices,grid);
-  else content.append(prices);
   const results=el("div",undefined,"opportunity-sections");
   for (const kind of kinds) if(scopes[kind].positive.length) {
     const section=el("section",undefined,"opportunity-section");section.id="positive-"+kind;
-    section.append(el("h2",kind === "ev" ? "Net EV results" : "Covered arbitrage results"));
+    section.append(el("h2",kind === "ev" ? "Net EV results" : "Opposing-pair returns"));
     for(const entry of scopes[kind].positive)renderRow(section,entry,kind);
     results.append(section);
   }
-  content.append(results);
+  content.append(results,prices);
   const research=el("div",undefined,"opportunity-research");
   for (const [kind,source,title] of [["ev","ev","Net EV · zero and negative"],["arbs","arbs","Covered minimum · zero and negative"],["conditional","ev","Conditional EV"],["trade","ev","Conditional trade-fee benchmarks"],["decisive","arbs","Decisive hedges"],["known","arbs","Listed known outcome hedges"],["gross","ev","Gross comparisons · before fees and exceptional settlement"]]) {
     if (!scopes[source]) continue;
     const entries=scopes[source].rows.filter(e => {
       const m=dashboardMetric(e.row,kind);
-      return m && (!["ev","arbs"].includes(kind) || compareExactPercent(m.value,"0") >= 0 || m.state === "numeric_last_known" || slates[source]?.dashboard_error);
+      return m && (!["ev","arbs"].includes(kind) || m.state === "numeric_last_known" || slates[source]?.dashboard_error);
     });
     if(!entries.length)continue;
     const groups = [entries.filter(e=>dashboardMetric(e.row,kind).state === "numeric_current"),entries.filter(e=>dashboardMetric(e.row,kind).state !== "numeric_current")];

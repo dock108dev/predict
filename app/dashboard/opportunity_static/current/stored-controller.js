@@ -49,6 +49,7 @@ const read = new LatestRead(),
   detailRead = new LatestRead(),
   originalRead = new LatestRead();
 let pullGeneration = 0;
+let traversingToken = null;
 let oddsGroups = "";
 const priceGroups = v => v.boards.map(b => b.prices.map(q => priceResearch(q) ? "r" : "c").join("")).join("|");
 let previousSelection = null;
@@ -148,6 +149,11 @@ function preserveContent(draw) {
     (target || $("content")).focus({preventScroll:true});
   }
 }
+const renderers = createSlateViews({
+    content: $("content"),
+    onDetails: openDetails,
+    onOriginal: openOriginal,
+  });
 function draw(v) {
   if (view === "odds") oddsGroups = priceGroups(v);
   if (dashboard) {
@@ -156,11 +162,7 @@ function draw(v) {
     preserveContent(() => drawOpportunityDashboard($("content"),dashboardSlates,{game,search:$("search").value,league:$("league").value,family:$("family").value,period:$("period").value,source:$("venue").value},openDetails));
     return;
   }
-  const renderers = createSlateViews({
-    content: $("content"),
-    onDetails: openDetails,
-    onOriginal: openOriginal,
-  });
+
   if ((stopRequested || failures) && view !== "odds" && filter !== "all")
     v = {
       ...v,
@@ -247,58 +249,76 @@ function catalogOptions() {
 }
 function retainDisplayed() {
   const tokens = new Set((dashboard ? Object.values(dashboardSlates) : [current]).map(v => v?.read_token).filter(Boolean));
+  if (detail?.selectedToken) tokens.add(detail.selectedToken);
   for (const token of tokens) fetch('/api/boards/read-lease?read_token=' + encodeURIComponent(token)).catch(() => {});
 }
 const displayedTimer = setInterval(() => { if (!unloading) retainDisplayed(); }, 10000);
 window.addEventListener('pagehide', () => clearInterval(displayedTimer));
+let dashboardRevision = null;
 async function pullDashboard() {
   polling.cancel();
-  if (failures >= 4) return;
+  if (failures >= 4 || read.pending) return;
   const generation = ++pullGeneration;
-  let succeeded = 0, requiresReload = false;
-  for (const kind of ["arbs","ev"]) {
-    try {
-      const value = await readSlate(read,{...context(),view:kind,filter:"all"},{isCurrent:()=>generation === pullGeneration && !unloading});
-      if (!value || generation !== pullGeneration) return;
-      dashboardSlates[kind] = value;
-      retainDisplayed();
-      succeeded++;
-      stopped = value.stopped;
-      polling.setSlate(value);
-    } catch(e) {
-      if(e.name === "AbortError" || generation !== pullGeneration) return;
-      requiresReload ||= e.requiresReload === true;
-      dashboardSlates[kind] = {...(dashboardSlates[kind] || {}),dashboard_error:e.message};
-    }
-    const available = dashboardSlates.ev?.policy ? dashboardSlates.ev : dashboardSlates.arbs;
-    if (available?.policy) {
-      current = available;
-      games = [...new Map(Object.values(dashboardSlates).flatMap(v=>v?.games || []).map(g=>[g.game_key,g])).values()];
-      catalogOptions();
-      persist();
-      draw(current);
-    } else preserveContent(()=>drawOpportunityDashboard($("content"),dashboardSlates,{},openDetails));
+  $("retry").hidden = false;
+  $("retry").disabled = true;
+  $("retry").textContent = "Reloading…";
+  setStatus("Checking current results for the next 72 hours…", "loading");
+  const oldTokens = new Set(Object.values(dashboardSlates).map(s=>s?.read_token).filter(Boolean));
+  try {
+    const result = await read.read("/api/boards/dashboard", value => {
+      if (value.version !== "predict-dashboard-1" || !value.slates?.ev || !value.slates?.arbs || !value.revision)
+        throw Error("Dashboard response is incomplete.");
+      return value;
+    }, 8388608, 5000);
+    if (!result || generation !== pullGeneration) return;
+    const unchanged = dashboardRevision === result.revision;
+    dashboardRevision = result.revision;
+    Object.assign(dashboardSlates,result.slates);
+    current = dashboardSlates.ev;
+    stopped = current.stopped;
+    games = current.games;
+    catalogOptions();
+    draw(current);
+    retainDisplayed();
+    failures = 0;
+    setStatus((unchanged ? "Checked — no changes" : "Results updated") + (stopped ? " · Historical inputs — collection stopped or unavailable" : "") + " · " + new Date(result.read_at).toLocaleTimeString() + " · next 72 hours");
+    for (const token of oldTokens) if (token !== detail?.identity?.read_token) read.releaseSlate(token);
+  } catch(e) {
+    if (e.name === "AbortError" || generation !== pullGeneration) return;
+    failures++;
+    for (const kind of ["ev","arbs"]) dashboardSlates[kind] = {...(dashboardSlates[kind] || {}), dashboard_error:e.message};
+    preserveContent(()=>drawOpportunityDashboard($("content"),dashboardSlates,{},openDetails));
+    setStatus("Reload failed. Previous results have unverified freshness. " + e.message,"error");
+  } finally {
+    $("retry").disabled = false;
+    $("retry").textContent = "Reload results";
+    polling.delay = 10000;
+    polling.schedule();
   }
-  failures = requiresReload ? 4 : succeeded ? 0 : failures + 1;
-  const failed = Object.values(dashboardSlates).some(v=>v?.dashboard_error);
-  $("retry").hidden = !failed;
-  $("retry").textContent = "Reload results";
-  setStatus(failed ? "Some local results could not be refreshed. Each section shows its availability." : "");
-  if(detail?.kind === "result") refreshDetails();
-  // Two complete view reads share the ordinary lane; avoid rapid pending loops.
-  polling.delay = Math.max(polling.delay, 10000);
-  polling.schedule();
 }
-async function pull() {
+async function pull(manual = false) {
   if (dashboard) return pullDashboard();
   polling.cancel();
   if (failures >= 4) return;
   const c = context(), generation = ++pullGeneration;
+  const previousToken = current?.read_token;
+  const reloadPrices = $("reload-prices");
+  // Automatic traversals can outlast the polling interval. Keep manual Reload
+  // usable once a captured view exists; its new generation cancels the older
+  // read without relaxing captured-frame authority or mixing pages.
+  if (reloadPrices && (manual || !current)) {reloadPrices.disabled=true;reloadPrices.textContent="Loading prices…";}
   try {
     const value = await readSlate(read, c, {
       isCurrent: () => generation === pullGeneration && !unloading,
-      onProgress: ({loaded,total}) => { if (!current) setStatus(`Loading saved results · ${loaded} of ${total} games…`, "busy"); },
-      onRecovery: () => setStatus(current ? "Current reads unavailable. Prior values have unverified freshness. Recovering stored observations…" : "Recovering stored observations…", "busy"),
+      onToken: token => { if (generation === pullGeneration) traversingToken = token; },
+      onProgress: ({loaded,total,partial}) => {
+        if (view === "odds" && partial && (!current || current.coverage?.complete === false)) {
+          games=partial.games;catalogOptions();draw(partial);
+          setStatus(`Loading prices · ${loaded} of ${total} games received…`, "busy");
+        } else if (!current) setStatus(`Loading saved results · ${loaded} of ${total} games…`, "busy");
+      },
+      onRecovery: () => { if (current?.coverage?.complete === false) {current=null;$("content").replaceChildren();}
+        setStatus(current ? "Current reads unavailable. Prior values have unverified freshness. Recovering stored observations…" : "Recovering stored observations…", "busy"); },
     });
     if (!value || generation !== pullGeneration) return;
     polling.setSlate({ ...value, stopped: stopRequested || value.stopped });
@@ -323,6 +343,7 @@ async function pull() {
     $("stop").textContent = stopped ? "Collection stopped" : "Stop collection";
     current = value;
     retainDisplayed();
+    if (previousToken && previousToken !== value.read_token && previousToken !== detail?.identity?.read_token) read.releaseSlate(previousToken);
     catalogOptions();
     persist();
     failures = 0;
@@ -373,7 +394,10 @@ async function pull() {
       else preserveContent(() => drawOpportunityDashboard($("content"), {ev:{dashboard_error:e.message}}, {}, openDetails, ["ev"]));
     }
   } finally {
-    if (generation === pullGeneration && !read.pending) polling.schedule();
+    if (generation === pullGeneration && !read.pending) {
+      if (reloadPrices) {reloadPrices.disabled=false;reloadPrices.textContent="Reload prices";}
+      polling.schedule();
+    }
   }
 }
 function showDialog(button) {
@@ -383,7 +407,7 @@ function showDialog(button) {
 }
 function closeDetails() {
   const wasOpen = $("details").open;
-  if (detail?.selectedToken) fetch("/api/boards/read-lease?read_token=" + encodeURIComponent(detail.selectedToken), {method:"DELETE"}).catch(() => {});
+  if (detail?.selectedToken) fetch("/api/boards/read-lease?read_token=" + encodeURIComponent(detail.selectedToken), {method:"DELETE",headers:{"Content-Type":"application/json"}}).catch(() => {});
   detail = null;
   detailRead.cancel();
   originalRead.cancel();
@@ -481,19 +505,23 @@ addEventListener("pagehide", () => clearInterval(selectedTimer), { once: true })
 function openDetails(row, button, selectedGame) {
   detailRead.cancel();
   originalRead.cancel();
-  detail = { kind: "result", context: { ...context(), view:row.pair_id ? "arbs" : "ev", game: selectedGame.game_key }, participants: selectedGame.participants, identity: { ...row.details } };
+  const shared = dashboardSlates[row.pair_id ? "arbs" : "ev"]?.policy;
+  const exactSettings = dashboard && shared ? {amount:shared.requested_amount_usd,buffer:shared.buffer_rate,benchmark_venue:shared.benchmark_venue,benchmark_method:shared.benchmark_method,sizing_mode:shared.sizing_mode} : {};
+  detail = { kind: "result", context: { ...context(), ...exactSettings, view:row.pair_id ? "arbs" : "ev", game: selectedGame.game_key }, participants: selectedGame.participants, identity: { ...row.details } };
   $("detail-content").replaceChildren(el("p", "Loading current Details…"));
   showDialog(button);
   refreshDetails();
 }
 async function openOriginal(q, button, selectedGame) {
+  // The compact grid keeps game facts once in its captured catalog.
+  q = {...q, event:q.event || {title:selectedGame.title, league:selectedGame.league, sport:selectedGame.sport, start_at:selectedGame.start_at}};
   polling.cancel();
   detailRead.cancel();
   originalRead.cancel();
   const selectedBoard = current.boards.find(b => b.game_key === selectedGame.game_key);
-  const held = (detail = { kind: "price", context: { ...context(), game: selectedGame.game_key }, participants: selectedGame.participants, quote: q, identity: { ...q.inputs_identity, quote_revision: q.quote_revision, observation_revision: q.observation_revision, policy_revision: selectedBoard?.calculation_context?.policy_revision } });
+  const held = (detail = { kind: "price", context: { ...context(), game: selectedGame.game_key }, participants: selectedGame.participants, quote: q, identity: { ...q.inputs_identity, quote_revision: q.quote_revision, observation_revision: q.observation_revision, policy_revision: q.inputs_identity?.policy_revision ?? selectedBoard?.calculation_context?.policy_revision ?? selectedBoard?.policy?.revision } });
   const renderFrame = inputs => preserveDisclosures($("detail-content"), () => renderOriginalDetails(
-    inputs.evidence?.observation_display ? {...q, observation_display:inputs.evidence.observation_display, source_state:inputs.evidence.source_state, source_health:inputs.evidence.source_health} : q,
+    inputs.evidence?.observation_display ? {...q, observation_display:inputs.evidence.observation_display, source_state:inputs.evidence.source_state, source_health:inputs.evidence.source_health, observed_depth:inputs.evidence.observed_depth, book_confirmation:inputs.evidence.book_confirmation, native_contract_summary:inputs.evidence.native_contract} : q,
     { estimate_availability: selectedBoard?.estimate_availability, ...inputs }, { root: $("detail-content"), participants: selectedGame.participants, title: selectedGame.title }));
   renderFrame({ evidence: { status: "Loading exact-frame contract and source evidence" } });
   showDialog(button);
@@ -625,7 +653,13 @@ for (const a of document.querySelectorAll("nav a"))
     a.setAttribute("aria-current", "page");
 if (dashboard) {
   document.body.classList.add("dashboard-page");
+  $("settings").hidden = true;
   drawOpportunityDashboard($("content"),dashboardSlates,{},openDetails);
+  const disclosure = el("details", undefined, "ev-filters");
+  const reset = el("button", "Reset filters");
+  reset.onclick = () => { game=""; $("search").value=""; for (const id of ["league","family","period","venue"]) $(id).value=""; persist(); if(current)draw(current); };
+  disclosure.append(el("summary", "Filter results"), document.querySelector(".board-controls"), reset);
+  $("content").after(disclosure);
 }
 if (dashboard || view === "odds" || view === "ev") {
   $("settings").querySelector("strong").textContent = "Details settings";
@@ -639,6 +673,11 @@ if (!dashboard && view === "ev") {
   $("content").before(disclosure);
   drawOpportunityDashboard($("content"), {ev:null}, {}, openDetails, ["ev"]);
 }
+if (view === "odds") {
+  const reloadPrices=el("button","Reload prices","secondary");reloadPrices.id="reload-prices";
+  reloadPrices.onclick=()=>{failures=0;setStatus("Reloading stored prices…","busy");pull(true);};
+  document.querySelector(".heading-actions").prepend(reloadPrices);
+}
 form();
 const ageClock = window.setInterval(() => {
   if (unloading || document.hidden) return;
@@ -648,6 +687,11 @@ const ageClock = window.setInterval(() => {
 }, 1000);
 window.addEventListener("pagehide", () => {
   unloading = true;
+  // Release only this page's own captures before the document goes away.
+  // An async traversal finally block alone cannot run reliably after navigation.
+  const tokens = new Set([traversingToken, current?.read_token, detail?.selectedToken,
+    ...Object.values(dashboardSlates).map(value => value?.read_token)].filter(Boolean));
+  for (const token of tokens) read.releaseSlate(token);
   window.clearInterval(ageClock);
   polling.cancel();
   pullGeneration++;

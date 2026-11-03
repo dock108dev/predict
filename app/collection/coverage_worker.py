@@ -25,10 +25,11 @@ def resume_arguments(module, arguments):
             WHERE calculated_at IS NOT NULL ORDER BY calculated_at::timestamptz DESC,game_key LIMIT 1''').fetchone()
     if row and row['publication_events']:
         admission['estimates_after']=min(row['publication_events'])
+        admission['estimates_rotation_after']=admission['estimates_after']
     return (json.dumps(admission),*arguments[1:])
 
 
-async def run(stopped, *, root, module=None, arguments=(), on_progress=None):
+async def run(stopped, *, root, module=None, arguments=(), on_progress=None, wait_for_admission=True):
     from .background_work import BACKGROUND,AcquisitionDeferred
     start=time.monotonic()
     coverage=module in (None,__name__)
@@ -38,6 +39,7 @@ async def run(stopped, *, root, module=None, arguments=(), on_progress=None):
     # for an admissible slot without launching CPU work; this wait consumes the
     # same total deadline as the child, and Stop remains immediately observable.
     while coverage and BACKGROUND.acquisition_pressure():
+        if not wait_for_admission:raise AcquisitionDeferred('native_acquisition_catching_up')
         if stopped():return dict(published=False,reason='updates_stopped')
         if time.monotonic()-start>MAX_SECONDS:raise AcquisitionDeferred('native_acquisition_catching_up')
         await asyncio.sleep(.05)
@@ -47,7 +49,10 @@ async def run(stopped, *, root, module=None, arguments=(), on_progress=None):
     if time.monotonic()-start>MAX_SECONDS:raise ValueError('coverage_worker_deadline')
     process=await asyncio.create_subprocess_exec(sys.executable,'-m',module or __name__,str(root),str(os.getpid()),*arguments,
         cwd=str(Path(__file__).resolve().parents[2]),stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.DEVNULL)
+    cooperative=module=='app.collection.financial_worker' and hasattr(signal,'SIGUSR1')
+    ready=False
     async def bounded_reply():
+        nonlocal ready
         chunks=[];size=0;pending=b''
         while size<=MAX_REPLY_BYTES:
             chunk=await process.stdout.read(min(8192,MAX_REPLY_BYTES+1-size))
@@ -55,12 +60,14 @@ async def run(stopped, *, root, module=None, arguments=(), on_progress=None):
             size+=len(chunk);pending+=chunk
             while b'\n' in pending:
                 line,pending=pending.split(b'\n',1)
+                if cooperative and line==b'{"worker_ready": "cooperative_pause"}':
+                    ready=True;continue
                 if on_progress is not None:
                     try:value=json.loads(line)
                     except (ValueError,UnicodeError):value=None
                     if isinstance(value,dict) and set(value)=={'worker_progress'}:
                         cursor=value['worker_progress']
-                        if not isinstance(cursor,dict) or set(cursor)-{'estimates_cursor','estimates_after'}:
+                        if not isinstance(cursor,dict) or set(cursor)-{'estimates_cursor','estimates_after','estimates_rotation_after','estimates_window_turn'}:
                             raise ValueError('coverage_worker_invalid_progress')
                         on_progress(cursor);continue
                 chunks.append(line+b'\n')
@@ -75,7 +82,14 @@ async def run(stopped, *, root, module=None, arguments=(), on_progress=None):
             if stopped():return dict(published=False,reason='updates_stopped')
             if time.monotonic()-start>MAX_SECONDS:raise ValueError('coverage_worker_deadline')
             pressure=BACKGROUND.critical_acquisition_pressure()
-            if pausable:
+            if cooperative:
+                if ready and pressure!=paused:
+                    try:process.send_signal(signal.SIGUSR1 if pressure else signal.SIGUSR2)
+                    except ProcessLookupError:pass
+                    if pressure:pause_started=time.monotonic();pauses+=1
+                    else:paused_seconds+=time.monotonic()-pause_started
+                    paused=pressure
+            elif pausable:
                 if pressure and not paused:
                     try:process.send_signal(signal.SIGSTOP)
                     except ProcessLookupError:pass
@@ -106,7 +120,8 @@ async def run(stopped, *, root, module=None, arguments=(), on_progress=None):
             logging.getLogger(__name__).error('calculation_worker failed; diagnostic=%s',
                 json.dumps(result.get('worker_failure', {}),ensure_ascii=True))
             raise ValueError('coverage_worker_failed')
-        if pausable:result.update(worker_pauses=pauses,worker_paused_seconds=paused_seconds)
+        if pausable or cooperative:result.update(worker_pauses=pauses,worker_paused_seconds=paused_seconds,
+            worker_pause_mode='transaction_safe_checkpoints' if cooperative else 'process_suspension')
         return result
     finally:
         primary=sys.exception()
@@ -114,7 +129,7 @@ async def run(stopped, *, root, module=None, arguments=(), on_progress=None):
             # A stopped child cannot handle termination until continued. Stop and
             # the unchanged wall-clock deadline always retain ownership through exit.
             try:
-                if paused:
+                if paused and not cooperative:
                     try:process.send_signal(signal.SIGCONT)
                     except ProcessLookupError:pass
                 if process.returncode is None:

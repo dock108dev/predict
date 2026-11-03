@@ -29,9 +29,29 @@ def quote_key(q):
     return quote_identity(q,q['binding']['selection']['outcome_id'])
 
 
-def dependency(q,profiles):
+def dependency(q,profiles, *, kinds=None):
     fields=('original','source','times','provenance','binding','native_contract','occurrence_match','comparison_input_refs','comparison_input_status')
-    return hashed(dict(quote={k:q.get(k) for k in fields},profiles=references(q,profiles)))
+    quote={k:q.get(k) for k in fields};values=references(q,profiles)
+    if kinds is not None:
+        quote['comparison_input_refs']=dict(q['comparison_input_refs'],
+            refs={k:v for k,v in q['comparison_input_refs']['refs'].items() if k in kinds})
+        quote['comparison_input_status']={k:v for k,v in q.get('comparison_input_status',{}).items() if k in kinds}
+        values={k:v for k,v in values.items() if k in kinds}
+    return hashed(dict(quote=quote,profiles=values))
+
+
+def covered_pair_freshness(q, profiles, event, at):
+    """Cashflow minima have no benchmark or probability dependency.
+
+    Do not inherit a single leg's unavailable EV recipe. Required cashflow,
+    fee, allocation and identity profiles still expire independently.
+    """
+    from app.comparison.current_dependencies import eligibility
+    value=freshness(q,profiles,event,at,financial=False)
+    reasons=[*value['reasons'],*eligibility(q,profiles,at,
+        kinds=('identity','payout','fee','quantity','buffer'))]
+    value.update(reasons=sorted(set(reasons)),status='historical' if reasons else 'current')
+    return value
 
 
 def freshness(q, profiles, event, at, *, financial=True, bound_financial=False):
@@ -71,6 +91,9 @@ def age(value, *, at=None, current=None, stopped=False, history=False):
     """Age each result's own dependencies; never inherit an event-wide stale bit."""
     v=deepcopy(value);instant=stamp(at or utc());p=v['state']['comparison_profiles']
     newest={quote_key(q):dependency(q,current['comparison_profiles']) for _,_,q in entries(current)} if current else None
+    pair_kinds=('identity','payout','fee','quantity','buffer')
+    newest_pairs={quote_key(q):dependency(q,current['comparison_profiles'],kinds=pair_kinds)
+        for _,_,q in entries(current)} if current else None
     changed={};statuses=[]
     for e,g,q in entries(v['state']):
         r=q['calculations']['funded_estimate'];f=freshness(q,p,e,instant,bound_financial=r.get('bound_financial_inputs',False))
@@ -101,6 +124,13 @@ def age(value, *, at=None, current=None, stopped=False, history=False):
             for leg in pair['legs']:
                 q=byid.get(leg['quote_id'])
                 if q is None:reasons.append('leg_absent')
+                elif pair.get('bound_financial_inputs'):
+                    reasons.extend(covered_pair_freshness(q,p,e,instant)['reasons'])
+                    if newest_pairs is not None and newest_pairs.get(quote_key(q))!=dependency(q,p,kinds=pair_kinds):
+                        reasons.append('dependency_changed_or_removed')
+                    if stopped:reasons.append('updates_stopped')
+                    if history:reasons.append('explicit_history')
+                    if v.get('engine_binding_changed'):reasons.append('engine_binding_changed')
                 else:reasons.extend(q['calculations']['funded_estimate']['freshness']['reasons'])
             pair['freshness']=dict(status='historical' if reasons else 'current',reasons=sorted(set(reasons)))
             if reasons:
@@ -480,7 +510,8 @@ def compact_price_objects(board):
     if not names:return board
     indexes={key:str(index) for index,key in enumerate(names)}
     # Use only when the complete dictionary pays for itself. Nothing is dropped.
-    saving=sum(len(encoded(key))-len(encoded(indexes[key])) for value in objects for key in value)
+    name_savings={key:len(encoded(key))-len(encoded(indexes[key])) for key in names}
+    saving=sum(name_savings[key] for value in objects for key in value)
     if saving<=len(encoded(names))+len('price_object_keys')+4:return board
     renamed_objects=[{indexes[key]:item for key,item in value.items()} for value in objects]
     for value,renamed in zip(objects,renamed_objects):
@@ -508,8 +539,10 @@ def compact_price_fields(board):
             for row in board['rows']:
                 refs={}
                 for key,value in list(row.items()):
-                    if key not in excluded and encoded(value) in indexes:
-                        refs[key]=indexes[encoded(value)];del row[key]
+                    if key not in excluded:
+                        index=indexes.get(encoded(value))
+                        if index is not None:
+                            refs[key]=index;del row[key]
                 if refs:row['financial_field_refs']=refs
             board['financial_field_pool']=pool
     excluded={'quote_id','quote_revision'}
@@ -529,8 +562,10 @@ def compact_price_fields(board):
     for row in board['prices']:
         refs={}
         for key,value in list(row.items()):
-            if key not in excluded and encoded(value) in indexes:
-                refs[key]=indexes[encoded(value)];del row[key]
+            if key not in excluded:
+                index=indexes.get(encoded(value))
+                if index is not None:
+                    refs[key]=index;del row[key]
         if refs:row['field_refs']=refs
     board['price_field_pool']=pool
     # Repeated field names themselves dominate wide 100+ price boards. Keep
@@ -675,8 +710,26 @@ def expand_financial(board):
 
 def response(bundle, value, policy, *, view='odds', filter='positive', at=None, stopped=False, history=False):
     if view not in ('odds','ev','arbs') or filter not in ('positive','all','hedges'):raise ValueError('board_view_or_filter_invalid')
-    instant=stamp(at or utc());state=bundle['state_inputs'];e=state['events'][0]
+    instant=stamp(at or utc());state=bundle['state_inputs']
     saved=None if value is None else age(value,at=instant.isoformat(),current=state,stopped=stopped,history=history)
+    return _response(bundle,saved,policy,view=view,filter=filter,instant=instant,stopped=stopped)
+
+
+def financial_responses(bundle, value, policy, *, filter='all', at=None):
+    """Render both views of one exact capture with one temporal validation.
+
+    The aged value stays local. Each renderer builds detached output dictionaries;
+    no memo survives a changed input, timestamp, policy or authority.
+    """
+    if filter not in ('positive','all','hedges'):raise ValueError('board_view_or_filter_invalid')
+    instant=stamp(at or utc())
+    saved=None if value is None else age(value,at=instant.isoformat(),current=bundle['state_inputs'])
+    return {view:_response(bundle,saved,policy,view=view,filter=filter,instant=instant,stopped=False)
+        for view in ('ev','arbs')}
+
+
+def _response(bundle, saved, policy, *, view, filter, instant, stopped):
+    state=bundle['state_inputs'];e=state['events'][0]
     out=dict(version=VERSION,view=view,filter=filter,game_key=bundle['game_key'],input_version=bundle['input_version'],
         policy=policy.to_dict(),benchmark=benchmark(bundle,instant.isoformat()),as_of=bundle['as_of'],read_at=instant.isoformat(),
         calculation_context=bundle.get('calculation_context') if saved is None else saved['calculation_context'],
@@ -710,7 +763,11 @@ def response(bundle, value, policy, *, view='odds', filter='positive', at=None, 
                 row.pop(field,None)
         out['prices'].append(row)
     availability_items=[];failures=[]
-    if view=='odds':out['rows']=odds_rows(out['prices'])
+    if view=='odds':
+        from .grouped_odds import group_prices, reference_prices
+        out['rows']=odds_rows(out['prices'])
+        out['grouped_odds']=group_prices(out['prices'])
+        out['reference_prices']=reference_prices(bundle.get('records',[]))
     elif saved:
         originals={q['id']:q for _,_,q in entries(saved['state'])}
         if view=='ev':

@@ -32,6 +32,15 @@ class Checkpoint:
                 'AND query_key=%s ORDER BY position', (self.source, key))]
         return key, pages
 
+    def completed_details(self):
+        """Only this active traversal's exact, unparameterized event queries."""
+        with connect() as db:
+            return {r['path'] for r in db.execute(
+                "SELECT request->>'path' AS path FROM current_acquisition_query "
+                "WHERE source=%s AND request->>'scope'=%s AND request->'params'='{}'::jsonb "
+                "AND request->>'path' LIKE '/v1/events/%%' AND completed_at IS NOT NULL "
+                "AND generation<>'published'", (self.source, self.scope))}
+
     def page(self, key, index, receipt, complete):
         with connect() as db, db.transaction():
             db.execute('INSERT INTO current_acquisition_page VALUES (%s,%s,%s,%s) '
@@ -114,7 +123,8 @@ def save_census(source, events, markets, parsed):
                 'ON CONFLICT (source,event_id,market_id) DO UPDATE SET '
                 'sport=EXCLUDED.sport,family=EXCLUDED.family,generation=EXCLUDED.generation,'
                 'observed_at=EXCLUDED.observed_at,withdrawn=false,absent_since=NULL,missing_passes=0,'
-                'disposition=EXCLUDED.disposition,metadata=EXCLUDED.metadata',
+                'disposition=EXCLUDED.disposition,metadata=CASE WHEN current_acquisition_market.metadata=EXCLUDED.metadata '
+                'THEN current_acquisition_market.metadata ELSE EXCLUDED.metadata END',
                 [(source,m['event_id'],m['id'],parents[m['event_id']]['competition'],m['market_type'],
                   generation,at,'subscribed' if m['id'] in parsed else 'not_subscribed_parser_or_eligibility',
                   Jsonb(m['_native'])) for m in markets])

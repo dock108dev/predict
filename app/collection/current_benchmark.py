@@ -70,6 +70,14 @@ def validate_reference(ref,selection):
     if len(ref['sha256'])!=64 or any(c not in '0123456789abcdef' for c in ref['sha256']):raise ValueError('Pinnacle receipt hash required')
 
 
+def proportional_probability(odds, selected):
+    """Exact two-way arithmetic shared by strict and retained snapshot readers."""
+    if len(odds)!=2 or selected not in (0,1) or any(Fraction(o)<=1 for o in odds):
+        raise ValueError('Complete valid two-way decimal odds required')
+    implied=[1/Fraction(o) for o in odds]
+    return implied[selected]/sum(implied)
+
+
 def calculate(q,clock,*,allow_last_known=False):
     ref=q['sharp_reference'];basis=dict(version=VERSION,inputs=[dict(quote_id=q['id'],quote_revision=q['revision'],venue=q['venue'])],reference_sha256=ref['sha256'],formula='100 × (Pinnacle no-vig probability / normalized quote cost − 1)')
     unavailable=lambda reason:result(reason=reason,unit='percent',basis=basis)
@@ -95,7 +103,7 @@ def calculate(q,clock,*,allow_last_known=False):
     cost=price(q)
     if cost<=0:return unavailable('Positive quote cost required')
     implied=[1/Fraction(odds) for odds in ref['odds']]
-    probability=implied[ref['selected']]/sum(implied)
+    probability=proportional_probability(ref['odds'],ref['selected'])
     basis.update(probability=exact_wire(probability),implied_probability_sum=exact_wire(sum(implied)),reference_age_seconds=max(ages))
     exact=exact_wire(100*(probability/cost-1))
     out=result(exact['decimal_approx'],'percent',basis=basis)

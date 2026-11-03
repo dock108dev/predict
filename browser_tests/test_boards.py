@@ -1,299 +1,127 @@
-"""Ordinary frontend journey with all traffic intercepted; no owner/provider state."""
+"""Exercise the shipped snapshot dashboard with synthetic inputs and intercepted HTTP."""
 
-from copy import deepcopy
-from datetime import datetime, timezone
-import json
 import os
 from pathlib import Path
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import parse_qsl, urlparse
 
 import pytest
 from playwright.sync_api import expect, sync_playwright
 
-from app.comparison.calculation_availability import (
-    combine,
-    result_availability,
-    summary,
-)
-
-ROOT = Path(__file__).resolve().parents[1]
-
-
-def current_fixture():
-    """Bind retained examples to the current transport contract at their saved clocks."""
-    fixture = json.loads((ROOT / "tests/fixtures/ev09-u01-responses.json").read_text())
-    game = fixture["ev"]["game_key"]
-    identity = dict(
-        context_id="authored-context:" + game,
-        epoch="authored-reset-1",
-        dependency_revision=fixture["ev"]["input_version"],
-        policy_revision=fixture["ev"]["policy"]["revision"],
-        engine_binding="authored-engine-1",
-    )
-    for view in ("odds", "ev", "arbs"):
-        value = fixture[view]
-        value["version"] = "predict-comparison-board-2"
-        value["calculation_context"] = dict(
-            identity, dependency_revision=value["input_version"]
-        )
-        for key in ("result_id", "snapshot_id"):
-            value.pop(key, None)
-        for quote in value["prices"]:
-            quote["inputs_identity"].update(
-                context_id=identity["context_id"], game_key=game
-            )
-        availability_items = []
-        for row in value["rows"]:
-            if view != "odds":
-                row["availability"] = result_availability(row, pair=view == "arbs")
-                venues = (
-                    [leg["venue"] for leg in row["legs"]]
-                    if view == "arbs"
-                    else [row["venue"]]
-                )
-                if view != "arbs" or len(set(venues)) == 2:
-                    availability_items.append((game, venues, row["availability"]))
-            if "details" in row:
-                for key in ("result_id", "snapshot_id"):
-                    row["details"].pop(key, None)
-                row["details"]["context_id"] = identity["context_id"]
-        value["availability"] = summary(availability_items, evaluated=view != "odds")
-    for kind in ("single", "pair"):
-        value = fixture[kind]
-        value.update(
-            version="predict-board-details-2",
-            game_key=game,
-            calculation_context=identity,
-        )
-        for key in ("result_id", "snapshot_id"):
-            value.pop(key, None)
-            value["original_inputs_identity"].pop(key, None)
-        value["original_inputs_identity"]["context_id"] = identity["context_id"]
-    return fixture
+from app.dashboard.snapshot_api import page as result_page
+from app.storage.comparison_snapshot import calculate
+from tests.test_snapshot_benchmark import execution, inputs, references
 
 
 @pytest.mark.parametrize("width", [1280, 390])
 def test_saved_board_journey(width):
-    fixture = current_fixture()
-    state = {"mode": "normal", "stopped": False}
+    assets = (
+        Path(__file__).resolve().parents[1] / "app/dashboard/opportunity_static/current"
+    )
+    captured = inputs([execution(), execution("no")], references())
+    result = calculate(
+        captured,
+        {
+            "scenario": "decisive_only",
+            "sizing": "hypothetical_fractional",
+            "fees": {"polymarket_us": "0"},
+        },
+    )
+    state = {"fail": False, "stopped": False, "empty": False}
     errors = []
-    assets = ROOT / "app/dashboard/opportunity_static/current"
     with sync_playwright() as driver:
-        options = {"headless": True}
-        if os.environ.get("PREDICT_CI_CHROMIUM"):
-            options["executable_path"] = os.environ["PREDICT_CI_CHROMIUM"]
-        browser = driver.chromium.launch(**options)
+        browser = driver.chromium.launch(
+            executable_path=os.getenv("PREDICT_CI_CHROMIUM")
+        )
         context = browser.new_context(
-            viewport={"width": width, "height": 900},
-            timezone_id="America/New_York",
-            service_workers="block",
+            viewport={"width": width, "height": 900}, service_workers="block"
         )
         page = context.new_page()
-        page.clock.install(time=datetime(2026, 10, 14, 1, 15, 2, tzinfo=timezone.utc))
-        page.on("pageerror", lambda error: errors.append(str(error)))
+        page.on("pageerror", lambda e: errors.append(str(e)))
 
         def route(request):
-            u = urlparse(request.request.url)
-            if u.hostname != "board.invalid":
-                errors.append("Unexpected external browser request")
+            url = urlparse(request.request.url)
+            query = dict(parse_qsl(url.query))
+            if url.hostname != "board.invalid":
+                errors.append("Unexpected external request")
                 request.abort()
-                return
-            query = parse_qs(u.query)
-            if u.path.startswith("/current/assets/"):
-                name = Path(u.path).name
-                request.fulfill(
-                    path=str(assets / name),
-                    content_type="text/javascript"
-                    if name.endswith(".js")
-                    else "text/css",
-                )
-                return
-            if not u.path.startswith("/api/"):
-                request.fulfill(
-                    path=str(assets / "stored.html"), content_type="text/html"
-                )
-                return
-            if u.path == "/api/boards/read-lease":
-                assert query["read_token"] == ["authored-browser-read-0001"]
-                request.fulfill(json={"retained": True})
-                return
-            if u.path == "/api/admin/current":
-                assert json.loads(request.request.post_data)["action"] == "stop"
+            elif url.path.startswith("/current/assets/"):
+                request.fulfill(path=assets / Path(url.path).name)
+            elif url.path == "/api/admin/current":
+                assert request.request.post_data_json == {"action": "stop"}
                 state["stopped"] = True
                 request.fulfill(json={"stopped": True})
-                return
-            view = u.path.rsplit("/", 1)[-1]
-            if state["mode"] == "failure":
+            elif url.path == "/api/comparison-snapshot/details":
+                assert query["result_id"] == result["id"]
+                row = next(
+                    r
+                    for r in result["rows"] + result["pairs"]
+                    if r["id"] == query["id"]
+                )
+                ids = row.get("legs", [row["id"]])
                 request.fulfill(
-                    status=503, json={"error": "Saved reads temporarily unavailable"}
+                    json=dict(
+                        result_id=result["id"],
+                        snapshot_id=result["snapshot_id"],
+                        row=row,
+                        captured_at=result["captured_at"],
+                        assumptions=result["assumptions"],
+                        originals=[q for q in captured["quotes"] if q["id"] in ids],
+                        references=captured["references"],
+                    )
                 )
-                return
-            if view == "details":
-                value = fixture["pair" if "pair" in query else "single"]
-                assert (
-                    query["context_id"][0] == value["calculation_context"]["context_id"]
-                )
-                assert "result_id" not in query
+            elif url.path == "/api/comparison-snapshot":
+                if state["fail"]:
+                    request.fulfill(
+                        status=503, json={"error": "Temporary read failure"}
+                    )
+                else:
+                    request.fulfill(
+                        json=result_page(None if state["empty"] else result, query)
+                    )
+            elif url.path in ("/odds", "/ev", "/arbs"):
+                request.fulfill(path=assets / "stored.html")
             else:
-                assert view == "slate"
-                view = query["view"][0]
-                value = deepcopy(fixture[view])
-                value["filter"] = query["filter"][0]
-                if view != "odds" and value["filter"] != "all":
-                    value["rows"] = [
-                        r
-                        for r in value["rows"]
-                        if r["classification"][
-                            "positive_rule_sensitive_eligible"
-                            if value["filter"] == "hedges"
-                            else "main_positive_eligible"
-                        ]
-                    ]
-                value["empty_reason"] = (
-                    "No positive EV found"
-                    if view == "ev"
-                    else "No estimated arbitrage found"
-                )
-                if state["stopped"]:
-                    value["delivery_state"] = "stopped"
-                value = dict(
-                    version="predict-comparison-slate-2",
-                    epoch="authored-reset-1",
-                    read_revision="authored-read-1",
-                    read_token="authored-browser-read-0001",
-                    read_at=value["read_at"],
-                    read_expires_at="2026-10-14T01:16:09.650084+00:00",
-                    view=view,
-                    filter=query["filter"][0],
-                    policy=value["policy"],
-                    games=[]
-                    if state["mode"] == "empty"
-                    else fixture["catalog"]["games"],
-                    boards=[] if state["mode"] == "empty" else [value],
-                    availability=combine(
-                        [] if state["mode"] == "empty" else [value["availability"]],
-                        games=0 if state["mode"] == "empty" else 1,
-                        evaluated=view != "odds",
-                    ),
-                    stopped=state["stopped"],
-                    as_of=value["read_at"],
-                    bounds=dict(
-                        maximum_games=500, maximum_page_games=50, maximum_bytes=8388608
-                    ),
-                    coverage=dict(
-                        total_games=0
-                        if state["mode"] == "empty"
-                        else len(fixture["catalog"]["games"]),
-                        offset=0,
-                        limit=50,
-                        returned_games=0
-                        if state["mode"] == "empty"
-                        else len(fixture["catalog"]["games"]),
-                        next_offset=None,
-                        complete=True,
-                    ),
-                )
-            request.fulfill(json=value)
+                errors.append("Unexpected path: " + url.path)
+                request.abort()
 
         context.route("**/*", route)
         try:
             page.goto("http://board.invalid/odds")
-            page.wait_for_selector(".team")
-            # Same participants have distinct settlement scopes: aggregate,
-            # Polymarket and Kalshi win/not-win must remain separate cards.
-            headings = page.locator(".team .slate-team-name strong").all_text_contents()
-            from collections import Counter
-
-            assert Counter(headings) == {
-                "Denver Broncos": 3,
-                "Seattle Seahawks": 3,
-                "Denver Broncos · does not win": 1,
-                "Seattle Seahawks · does not win": 1,
-            }
-            page.goto("http://board.invalid/ev")
-            page.wait_for_selector(".opportunity-group")
-            for group in page.locator(".opportunity-group").all():
-                group.locator("summary").first.click()
-            page.locator(
-                'button[data-key="conditional:'
-                + fixture["ev"]["game_key"]
-                + ":"
-                + fixture["single"]["quote"]["id"]
-                + '"]'
-            ).click()
-            page.wait_for_selector("#detail-content dl", state="attached")
-            page.keyboard.press("Shift+Tab")
-            assert page.evaluate(
-                "document.getElementById('details').contains(document.activeElement)"
-            )
-            page.keyboard.press("Tab")
-            assert page.evaluate("document.activeElement.id") == "close-details"
+            expect(page.locator(".odds-grid tr")).to_have_count(3)
+            expect(page.locator(".odds-grid")).to_contain_text("Pinnacle")
+            page.get_by_role("link", name="EV", exact=True).click()
+            expect(page.locator("article")).to_have_count(2)
+            details = page.get_by_role("button", name="Details").first
+            details.click()
+            dialog = page.get_by_role("dialog")
+            expect(dialog).to_contain_text("Pinnacle Original 1")
             page.keyboard.press("Escape")
-            assert (
-                page.evaluate("document.activeElement.dataset.key")
-                == "conditional:"
-                + fixture["ev"]["game_key"]
-                + ":"
-                + fixture["single"]["quote"]["id"]
-            )
-            page.goto("http://board.invalid/arbs")
-            page.wait_for_selector(".empty")
-            page.get_by_role("button", name="Show all comparisons", exact=True).click()
-            pair_key = fixture["arbs"]["game_key"] + ":" + fixture["pair"]["pair"]["id"]
-            pair_row = page.locator(f'.slate-arb[data-key="{pair_key}"]')
-            expect(pair_row).to_have_attribute(
-                "data-metric", "buffered_decisive_opposing_margin_usd"
-            )
-            expect(pair_row.locator(".metric small")).to_have_text(
-                "Margin · decisive outcomes only"
-            )
-            expect(pair_row.locator(".metric strong")).to_have_text("-2.32%")
-            page.locator(
-                'button[data-key="'
-                + fixture["arbs"]["game_key"]
-                + ":"
-                + fixture["pair"]["pair"]["id"]
-                + '"]'
-            ).click()
-            page.wait_for_selector("#detail-content dl", state="attached")
-            page.keyboard.press("Escape")
-            state["mode"] = "failure"
-            page.reload()
-            page.wait_for_selector("#retry:not([hidden])")
-            state["mode"] = "normal"
-            page.locator("#retry").click()
-            page.wait_for_selector(".empty")
-            page.get_by_role("button", name="Show all comparisons", exact=True).click()
-            page.wait_for_selector(".slate-arb")
+            expect(details).to_be_focused()
+            page.get_by_role("link", name="Opposing-outcome scenarios").click()
+            expect(page.locator("article")).to_contain_text("Assumed scenario minimum")
+            page.locator("#league").select_option("NFL")
+            expect(page.locator("#content")).to_contain_text("No comparisons match")
+            page.locator("#league").select_option("NCAAB")
+            expect(page.locator("article")).to_have_count(1)
+            state["fail"] = True
+            page.locator("#refresh-snapshot").click()
+            expect(page.get_by_role("status")).to_contain_text("Refresh failed")
+            expect(page.locator("article")).to_have_count(1)
+            state["fail"] = False
+            page.locator("#latest-snapshot").click()
+            expect(page.get_by_role("status")).to_contain_text("Captured")
             page.evaluate("document.documentElement.style.fontSize='20px'")
             assert page.evaluate("document.documentElement.scrollWidth<=innerWidth")
             page.locator("#stop").click()
-            page.wait_for_function(
-                "document.getElementById('status').textContent.includes('Collection stopped')"
+            expect(page.get_by_role("status")).to_contain_text("Collection stopped")
+            assert state["stopped"]
+            state["empty"] = True
+            page.goto("http://board.invalid/ev")
+            expect(page.get_by_role("status")).to_contain_text(
+                "No comparison snapshot yet"
             )
-            assert page.locator("#stop").is_disabled()
-            state["mode"] = "empty"
-            page.reload()
-            page.wait_for_selector(".empty")
-            assert not page.locator("#settings").is_visible()
-            assert (
-                page.get_by_role("link", name="Check sources in Admin").get_attribute(
-                    "href"
-                )
-                == "/admin"
-            )
+            expect(page.locator("#refresh-snapshot")).to_be_enabled()
             assert not errors
-        except Exception:
-            target = ROOT / "test-results/browser"
-            target.mkdir(parents=True, exist_ok=True)
-            try:
-                page.screenshot(path=str(target / f"failure-{width}.png"), timeout=5000)
-            except Exception as diagnostic_error:
-                # A broken page/route must not replace the original test failure.
-                (target / f"screenshot-{width}.txt").write_text(
-                    type(diagnostic_error).__name__
-                )
-            raise
         finally:
             context.close()
             browser.close()

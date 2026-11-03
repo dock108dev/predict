@@ -18,6 +18,11 @@ MAX_CAPTURE_BYTES = 8 * 1024 * 1024
 MAX_WORK_BYTES = 1024 * 1024 * 1024
 
 
+class _CaptureDeferred(Exception):
+    def __init__(self, value):
+        self.value=value
+
+
 def _pick(expression, fields):
     names=','.join("'"+key+"'" for key in fields)
     return "(SELECT COALESCE(jsonb_object_agg(key,value),'{}'::jsonb) FROM jsonb_each(COALESCE("+expression+",'{}'::jsonb)) WHERE key IN ("+names+"))"
@@ -245,19 +250,27 @@ def _expanded_size(db):
         "SELECT octet_length(prices::text) FROM ("+_PUBLICATION_SQL+") p) expanded").fetchone()['n'])
 
 
-def _stream_capture_totals(db):
+def _partition_queries(event_ids):
+    if event_ids is None:return _OFFER_SQL,_PUBLICATION_SQL,()
+    return (_OFFER_SQL+' WHERE c.event_id=ANY(%s)',
+        _PUBLICATION_SQL.replace('FROM latest_board)', 'FROM latest_board WHERE publication_events ?| %s)'),
+        (event_ids,))
+
+
+def _stream_capture_totals(db, event_ids=None):
+    offers,publications,params=_partition_queries(event_ids)
     return [db.execute('SELECT COALESCE(sum(octet_length(to_jsonb(r)::text)),0) total, '
-        'COALESCE(max(octet_length(to_jsonb(r)::text)),0) largest FROM ('+query+') r').fetchone()
-        for query in (_OFFER_SQL,_PUBLICATION_SQL,
+        'COALESCE(max(octet_length(to_jsonb(r)::text)),0) largest FROM ('+query+') r',params if i<2 else None).fetchone()
+        for i,query in enumerate((offers,publications,
             'SELECT to_jsonb(e) facts FROM ('+_EVENT_SQL+') e UNION ALL '
             'SELECT to_jsonb(b) FROM ('+_BOOK_SQL+') b UNION ALL '
             'SELECT to_jsonb(r) FROM data_runtime r UNION ALL '
             'SELECT to_jsonb(s) FROM current_source_status s UNION ALL '
             'SELECT '+_STATUS+' FROM latest_board_status UNION ALL '
-            "SELECT jsonb_build_object('queries',facts->'query_observations') FROM coverage_latest")]
+            "SELECT jsonb_build_object('queries',facts->'query_observations') FROM coverage_latest"))]
 
 
-def _publication_frame(db, states, *, offers=None):
+def _publication_frame(db, states, *, offers=None, event_ids=None):
     """Compact structural adapter to the existing exact publication predicates.
 
     Original row revisions remain authoritative. Fields omitted here cannot
@@ -267,7 +280,9 @@ def _publication_frame(db, states, *, offers=None):
     from .observation_publication import prepare_events
     from app.comparison.native_scoring_scope import publication_dependencies
     events=db.execute(_EVENT_SQL+' ORDER BY id').fetchall()
-    if offers is None:offers=db.execute(_OFFER_SQL+' ORDER BY c.id').fetchall()
+    if offers is None:
+        query,_,params=_partition_queries(event_ids)
+        offers=db.execute(query+' ORDER BY c.id',params).fetchall()
     books=db.execute(_BOOK_SQL).fetchall()
     if len(events)>4096 or len(offers)>32768 or len(books)>32768:raise ValueError('coverage_record_capacity')
     prepare_events(events)
@@ -285,7 +300,7 @@ def _publication_frame(db, states, *, offers=None):
     epoch=db.execute('SELECT epoch FROM current_row_epoch WHERE singleton=true').fetchone()['epoch']
     frame=dict(epoch=str(epoch),events=event_index,offers={r['id']:r for r in offers},by_event=by_event,
         books={(r['venue'],r['event_id'],r['native_market_id']):r for r in books},states=states,
-        neighborhoods={},candidate_sets={},selection_identities={},active_events={r['event_id'] for r in offers})
+        neighborhoods={},candidate_sets={},selection_identities={},active_events={r['event_id'] for r in db.execute('SELECT DISTINCT c.event_id FROM current_contract c JOIN current_offer o ON o.contract_id=c.id').fetchall()})
     # Retain only the shared projection fields needed by metrics and examples.
     from .current_rows import utc as current_clock
     from .store import exact_time
@@ -369,42 +384,54 @@ def reconcile(db, *, at=None):
             # repeatedly scans/detoasts its dictionaries. Admit the full work
             # graph, then stream ordinary projected games in this same snapshot.
             # The wire bound applies to the largest record, not the universe.
-            totals=_stream_capture_totals(db)
-            size=max(int(r['largest']) for r in totals)
-            if size>MAX_CAPTURE_BYTES:raise ValueError('coverage_capture_capacity')
-            reservation=sum(int(r['total']) for r in totals)*6+24*1024*1024
-            if reservation>MAX_WORK_BYTES:raise ValueError('coverage_memory_capacity')
-            lease=reservations.enter_context(BACKGROUND.claim('coverage',reservation))
-            if not lease:return lease.deferred()
             owner=read_runtime(db,at=at)
             committed={r['venue']:r['state'] for r in db.execute('SELECT venue,state FROM current_source_status').fetchall()}
-            frame,records=_publication_frame(db,source_states(committed,owner))
+            states=source_states(committed,owner)
             source_binding=observation_binding()
             saved=db.execute('SELECT '+_STATUS+' AS facts FROM latest_board_status WHERE singleton=true').fetchone()
             status=saved['facts'] if saved else {}
             raw=owner.get('status',{}).get('coverage',{})
             previous=db.execute("SELECT facts->'query_observations' AS queries FROM coverage_latest WHERE singleton=true").fetchone()
             queries=merge_queries(raw.get('cells',[]),(previous['queries'] or []) if previous else [])
-            published=[]
-            # Stream one complete frozen game; shared pools and all original offers
-            # remain from the same MVCC snapshot. Never truncate the universe.
-            cursor=capture_resources.enter_context(db.cursor(name='coverage_publication_rows'))
-            cursor.itersize=1
-            cursor.execute(_PUBLICATION_SQL+' ORDER BY b.game_key')
-            for row in cursor:
-                checkpoint()
-                try:published.extend(_age_publication(row,status,owner,frame,at,source_binding))
-                except (KeyError,ValueError,TypeError):continue
-            epoch=frame['epoch'];states=frame['states']
-            input_revision=hashed([[r['id'],r['contract_revision'],r['offer_revision']] for r in frame['offers'].values()])
-            # Exact publication validation is finished. Its candidate caches,
-            # dependency indexes and book rows must not overlap the global
-            # occurrence resolver's metric graph.
-            del frame
-            value=build(records,published,config=owner.get('config') or DEFAULT,owner=dict(owner,states=states),at=at,
-                queries=queries,encountered=raw.get('encountered_types',[]),
-                exclusions=[*owner.get('status',{}).get('exclusions',[]),*status.get('catalog_errors',[])],
-                resolve_inputs=True)
+            from .coverage_partitions import partitions,merge
+            size=reservation=partition_count=0;revisions=[];memory=[];lease=None
+            epoch=str(db.execute('SELECT epoch FROM current_row_epoch WHERE singleton=true').fetchone()['epoch'])
+            def parts():
+                nonlocal size,reservation,partition_count,lease
+                for ids in partitions(db):
+                    totals=_stream_capture_totals(db,ids)
+                    local_size=max(int(r['largest']) for r in totals)
+                    if local_size>MAX_CAPTURE_BYTES:raise ValueError('coverage_capture_capacity')
+                    required=sum(int(r['total']) for r in totals)*6+24*1024*1024
+                    if required>MAX_WORK_BYTES:raise ValueError('coverage_memory_capacity')
+                    if lease is None:
+                        lease=reservations.enter_context(BACKGROUND.claim('coverage',required))
+                        if not lease:raise _CaptureDeferred(lease.deferred())
+                    else:BACKGROUND.resize('coverage',required)
+                    with ExitStack():
+                        size=max(size,local_size);reservation=max(reservation,required);partition_count+=1
+                        frame,records=_publication_frame(db,states,event_ids=ids)
+                        published=[]
+                        _,query,params=_partition_queries(ids)
+                        with db.cursor(name='coverage_publication_rows') as cursor:
+                            cursor.itersize=1;cursor.execute(query+' ORDER BY b.game_key',params)
+                            for row in cursor:
+                                checkpoint()
+                                try:published.extend(_age_publication(row,status,owner,frame,at,source_binding))
+                                except (KeyError,ValueError,TypeError):continue
+                        revisions.extend([r['id'],r['contract_revision'],r['offer_revision']] for r in frame['offers'].values())
+                        del frame
+                        part=build(records,published,config=owner.get('config') or DEFAULT,owner=dict(owner,states=states),at=at,
+                            queries=queries,encountered=raw.get('encountered_types',[]),
+                            exclusions=[*owner.get('status',{}).get('exclusions',[]),*status.get('catalog_errors',[])],resolve_inputs=True)
+                        from app.collection.background_work import resident_bytes
+                        memory.append(resident_bytes())
+                        del records,published
+                    yield part
+            try:value=merge(parts())
+            except _CaptureDeferred as exc:return exc.value
+            value['limits']['record_limit_scope']='complete_peer_partition'
+            input_revision=hashed(sorted(revisions))
             from .latest_board import runtime_identity
             authority=runtime_identity(owner);authority.pop('calculation_state',None)
             value.update(epoch=epoch,input_revision=input_revision,
@@ -412,7 +439,7 @@ def reconcile(db, *, at=None):
                 source_authority={key:state.get('state') for key,state in states.items()},
                 source_binding=source_binding,query_observations=queries,
                 work_metrics=dict(projected_input_bytes=size,reserved_work_bytes=reservation,maximum_capture_bytes=MAX_CAPTURE_BYTES,
-                    maximum_work_bytes=MAX_WORK_BYTES,expanded_boards=0,provider_requests=0))
+                    maximum_work_bytes=MAX_WORK_BYTES,partitions=partition_count,partition_resident_bytes=memory,expanded_boards=0,provider_requests=0))
         checkpoint()
         # Publication is a separate clock from the captured cohort and never a
         # quote receipt. Explicit authored future clocks stay internally ordered.

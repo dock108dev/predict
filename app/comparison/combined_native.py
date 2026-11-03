@@ -34,7 +34,7 @@ def normalize(catalog, books, *, at, associations=None, include_missing=False, o
             reducer.reduce_observation(obs if owned else deepcopy(obs)); associations[key] = envelope['id']
     states = unavailable()['source_status']
     states[source]['state'] = 'available'
-    records, excluded = normalized_records(reducer, states, {}, dated_annotations=False, clock=at, include_missing=include_missing)
+    records, excluded = normalized_records(reducer, states, {}, dated_annotations=False, clock=at, include_missing=include_missing, owned=owned)
     markets = {m['id']: m for m in inventory['markets']}
     result = []
     for row in records:

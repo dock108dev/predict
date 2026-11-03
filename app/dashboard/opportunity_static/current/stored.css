@@ -462,6 +462,34 @@ summary {
 .slate-overview>.observation-coverage-details[open] { flex-basis:100% }
 .slate-price-headings { margin:0; padding-top:0; padding-bottom:8px }
 .slate-game-heading { padding-bottom:10px; border-bottom:1px solid var(--line) }
+
+.odds-table-scroll { overflow-x:auto; max-width:100%; }
+.consolidated-odds { width:100%; border-collapse:collapse; font-variant-numeric:tabular-nums; }
+.consolidated-odds th,.consolidated-odds td { padding:10px 12px; border-bottom:1px solid var(--line,#dedede); text-align:left; min-width:105px; }
+.consolidated-odds th:first-child { min-width:165px; }
+.consolidated-odds small { display:block; font-weight:400; font-size:11px; margin-top:3px; }
+.consolidated-odds button { font-size:16px; font-weight:650; }
+.consolidated-odds .best-price { border-color:#258451; background:#eaf5ed; color:#12572f; }
+.odds-qualification { color:#7b642d; }
+.odds-alternates { margin:12px 0; }
+@media(max-width:600px) { .consolidated-odds th:first-child { min-width:130px; position:sticky; left:0; background:var(--surface,#fff); z-index:1; } .consolidated-odds th,.consolidated-odds td { padding:8px; min-width:100px; } }
+
+/* Keep the complete slate in the document while laying out offscreen games only
+   when approached. Remember actual heights after each game becomes visible. */
+.slate-game { content-visibility:auto; contain-intrinsic-size:auto 420px; }
+@media print { .slate-game { content-visibility:visible; contain-intrinsic-size:none; } }
+
+/* Ordinary immutable comparison snapshot. */
+.snapshot-actions { display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin:16px 0 }
+.snapshot-result { padding:18px; margin:12px 0; border:1px solid var(--line); border-radius:var(--radius); background:var(--surface) }
+.snapshot-result p { margin:8px 0; overflow-wrap:anywhere }
+.snapshot-result h2 { margin-bottom:8px }
+.odds-scroll { max-width:100%; overflow-x:auto }
+.odds-scroll table { width:100%; border-collapse:collapse }
+.odds-scroll th,.odds-scroll td { padding:12px; border-bottom:1px solid var(--line); text-align:left; min-width:125px; vertical-align:top }
+#detail-content table { width:100%; border-collapse:collapse }
+#detail-content th,#detail-content td { padding:8px; border-bottom:1px solid var(--line); text-align:left; overflow-wrap:anywhere }
+#detail-content pre { overflow:auto; max-height:60vh }
 dialog {
   width:min(800px,calc(100% - 24px));
   max-height:90dvh;

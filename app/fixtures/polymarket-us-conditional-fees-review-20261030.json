@@ -1,0 +1,14 @@
+{
+  "version": "polymarket-us-pregame-conditional-20261030-review-3",
+  "source_url": "https://docs.polymarket.us/fees.md",
+  "sha256": "56a8a61b7a757795c5bd5cbf69f4a3595234e648451d304805bbfdb74be4b1df",
+  "path": "app/fixtures/polymarket-us-fees-review-20261028.md",
+  "reviewed_at": "2026-10-31T00:50:06.434216+00:00",
+  "review_before": "2026-11-01T00:00:00Z",
+  "fee_rate": "0.0695",
+  "evidence_class": "official_standard_fee_schedule_single_fill_scenario",
+  "applicability": "Standard non-combo sports taker, one contract in one fill, no weekly rebate assumption. Whole-order split-fill fees and actual execution are not established.",
+  "supersedes": "polymarket-us-single-fill-conditional-20261028-1-review-2",
+  "review_decision": "Reviewed October 19 standard schedule: 0.0695 taker coefficient, half-even cents, per-fill fees with cumulative order cap. October 28 combo coefficient change and October maker/taker rebate changes do not change the single-contract one-fill pre-rebate scenario. Table tennis, combos, split fills, account rebates, settlement fees and future LFMP payouts remain outside this conditional calculation.",
+  "review_window_basis": "Prospective substantive October 30 review; next review at October 31 20:00 Eastern, coinciding with the operating authorization cutoff. Earlier intervals and expired gaps remain unchanged."
+}

@@ -70,7 +70,10 @@ const refused = reason => new Response(JSON.stringify({error:'current_inputs_una
     }
     return ok(response);
   };
-  const first = await readSlate(new LatestRead(localAPI),context);
+  const observedTokens = [];
+  const first = await readSlate(new LatestRead(localAPI),context,{onToken:value=>observedTokens.push(value)});
+  assert.equal(observedTokens[0],first.read_token,'navigation can release an in-flight capture as soon as page one arrives');
+  assert.equal(observedTokens.at(-1),null,'traversal relinquishes token ownership on completion');
   assert.equal(first.games.length,60); assert.equal(first.boards.length,60);
   assert.equal(new Set(first.boards.map(b=>b.game_key)).size,60,'every captured game appears once');
   assert.equal(new Set(first.games.map(g=>g.sport)).size,3);
@@ -137,6 +140,13 @@ const refused = reason => new Response(JSON.stringify({error:'current_inputs_una
   const completeFrame=frame(1);
   await readSlate(new LatestRead(async(_url,options)=>{if(options.method==='DELETE')completeReleases++;return ok(page(completeFrame));}),context);
   assert.equal(completeReleases,0,'displayed complete results keep their lease');
+  const rejectedTokens=[];
+  const malformed=page(frame(1));malformed.view='crossed';
+  await assert.rejects(readSlate(new LatestRead(async(url,options)=>{
+    if(options.method==='DELETE'){rejectedTokens.push(new URL(url,'http://authored.local').searchParams.get('read_token'));return ok({});}
+    return ok(malformed);
+  }),context),/identity crossed/);
+  assert.deepEqual(rejectedTokens,[malformed.read_token],'a rejected first page releases its owned capture');
   let busyCalls = 0;
   await assert.rejects(readSlate(new LatestRead(async()=>{busyCalls++;return new Response(JSON.stringify({error:'current_read_busy',reason:'Read capacity; retry shortly.'}),{status:429});}),context),/Read capacity/);
   assert.equal(busyCalls,2);

@@ -18,16 +18,16 @@ export class LatestRead {
     const timeout = setTimeout(() => controller.abort(), 5000);
     try {
       await this.fetcher('/api/boards/read-lease?read_token=' + encodeURIComponent(token),
-        {method:'DELETE', keepalive:true, signal:controller.signal});
+        {method:'DELETE', headers:{'Content-Type':'application/json'}, keepalive:true, signal:controller.signal});
     } catch {} finally { clearTimeout(timeout); }
   }
-  async read(url, validate, limit = 524288) {
+  async read(url, validate, limit = 524288, timeoutMs = 30000) {
     this.cancel();
     const token = this.generation,
       controller = (this.controller = new AbortController());
     const active = (this.active = { token, controller });
     let timedOut = false;
-    const timeout = setTimeout(() => { timedOut = true; controller.abort(); }, 30000);
+    const timeout = setTimeout(() => { timedOut = true; controller.abort(); }, timeoutMs);
     try {
       const response = await this.fetcher(url, { signal: controller.signal });
       // Read bounded bytes even when the peer omits Content-Length.

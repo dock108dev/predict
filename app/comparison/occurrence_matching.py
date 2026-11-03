@@ -157,6 +157,24 @@ class OccurrenceResolver:
             for namespace, value in fact['shared'].items():
                 shared_index.setdefault((namespace, value), set()).add(key)
                 namespaces.setdefault(namespace, set()).add(key)
+        # Missing source season/stage may participate in an exact-time,
+        # mutually unique metadata join when another source explicitly supplies
+        # that occurrence context. Do not synthesize it in the original event,
+        # promote shared IDs alone, or admit missing game-number/replacement facts.
+        metadata_local=set()
+        for k in source_local:
+            f=facts[k]
+            record=next(r for r in records if (r['quote']['source']['provider'],r['quote']['source']['native_event_id'])==k)
+            admission=record.get('comparison_source_metadata',{}).get('comparison_admission',{})
+            if admission.get('reason')=='comparison_context_missing' and set(admission.get('missing_fields',[]))-{'season','stage'}:
+                continue
+            if f['conflict'] or f['replacement']:continue
+            peers=role_groups[(f['league'],frozenset(f['roles'].values()))]
+            if any(p[0]!=k[0] and p not in source_local and p not in conflicts
+                   and self._metadata(f,facts[p]) and f['roles']==facts[p]['roles']
+                   and instant(f['start'])==instant(facts[p]['start']) for p in peers):
+                metadata_local.add(k)
+        excluded=source_local-metadata_local
         assigned = {}; methods = {}; intervals = {}; edge_ids = {}
         source_groups={}
         for k,f in facts.items():
@@ -210,19 +228,20 @@ class OccurrenceResolver:
         # Mutual unique candidates only. This rejects repeated games and forks.
         candidates = {}
         for k, f in facts.items():
-            if k in source_local:
+            if k in excluded:
                 candidates[k] = []
                 continue
             possible = set(role_groups[(f['league'], frozenset(f['roles'].values()))])
-            possible.difference_update(source_local)
+            possible.difference_update(excluded)
             for namespace, value in f['shared'].items():
                 # A different value in any common namespace necessarily fails
                 # _consistent. Missing namespaces remain candidates as before.
                 possible.difference_update(namespaces[namespace] - shared_index[(namespace, value)])
             candidates[k] = [p for p in sorted(possible, key=order.get)
-                if p[0] != k[0] and p not in conflicts and self._metadata(f, facts[p])]
+                if p[0] != k[0] and p not in conflicts and self._metadata(f, facts[p])
+                and (not ({k,p}&metadata_local) or f['roles']==facts[p]['roles'] and instant(f['start'])==instant(facts[p]['start']))]
         for k in sorted(facts):
-            if k in source_local or k in conflicts or k in assigned and methods[k]!='shared_provider_event':continue
+            if k in excluded or k in conflicts or k in assigned and methods[k]!='shared_provider_event':continue
             peers = candidates[k]
             if peers and all(candidates[p].count(k) == 1 and
                              len({facts[x]['source_game'] for x in candidates[p] if x[0] == k[0]}) == 1 for p in peers):
@@ -315,12 +334,12 @@ class OccurrenceResolver:
                     original['market_identity']['sport']='hockey'
                 e['participants'] = {n:mapping.get(cid,cid) for n,cid in e['participants'].items()}
                 from .event_links import ordinary_event_key
-                original['market_identity']['event'] = ordinary_event_key(e)
+                original['market_identity']['event'] = ordinary_event_key(e,allow_missing_context=k in metadata_local)
                 original.pop('event_scope',None)
                 for value in [original['selection'],*original.get('outcome_selections',[])]:
                     value['participant'] = mapping.get(value['participant'],value['participant'])
                 original['anchor_participant'] = mapping.get(original.get('anchor_participant'),original.get('anchor_participant'))
-                original['verified'] = (original.get('comparison_source_metadata', {}).get('comparison_admission', {}).get('supported') is not False)
+                original['verified'] = (k not in metadata_local and original.get('comparison_source_metadata', {}).get('comparison_admission', {}).get('supported') is not False)
                 # Matching provenance has its own dependency revision. Schedule
                 # or peer membership changes do not reprice a native instrument.
                 original['orientation_evidence'].append(VERSION+':'+digest([oid,k]))

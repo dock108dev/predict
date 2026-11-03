@@ -36,13 +36,13 @@ def initialize(venue,markets,connection,request,highwater,market_requests=None):
 def reconfigure(markets, market_requests, retired):
     """Ordered with reconstruction jobs; old request IDs never acquire new meaning."""
     global _MARKETS,_CATALOG_REVISION
-    from app.adapters.polymarket_us import next_market_data
+    from app.adapters.polymarket_us import next_market_data, market_slug
     _MARKETS={m.raw.ref.market_id:m for m in markets}
     if _VENUE=='kalshi':
         _ENGINE.reconfigure(markets,retired.get('request_id') if retired else None)
         _CATALOG_REVISION+=1
         return _CATALOG_REVISION
-    _ENGINE.markets={next_market_data(m)['slug']:m for m in markets}
+    _ENGINE.markets={market_slug(m):m for m in markets}
     previous=_ENGINE.market_requests or {}
     _ENGINE.last={slug:book for slug,book in _ENGINE.last.items()
                   if slug in market_requests and previous.get(slug)==market_requests[slug]}

@@ -8,6 +8,10 @@ from psycopg.errors import LockNotAvailable,SerializationFailure,DeadlockDetecte
 from .coverage_worker import MAX_PROCESS_BYTES,MAX_SECONDS
 
 
+def discovery_transfer_path(root):
+    return root/'.local'/'financial-discovery.json'
+
+
 def main():
     from app.storage import store
     store.ROOT=Path(sys.argv[1]);parent=int(sys.argv[2]);admission=json.loads(sys.argv[3])
@@ -17,11 +21,15 @@ def main():
     from app.comparison.calculation_control import cancellation
     from app.storage.latest_board import reconcile,LOCK
     BACKGROUND.limit=MAX_PROCESS_BYTES;BACKGROUND.runway=0
-    def guard():
+    from .worker_pause import WorkerPause
+    pause=WorkerPause();pause.install();db=None
+    print(json.dumps(dict(worker_ready='cooperative_pause')),flush=True)
+    def limits():
         if os.getppid()!=parent:return True
         if time.monotonic()-start>MAX_SECONDS:raise ValueError('financial_worker_deadline')
         if rss()>=MAX_PROCESS_BYTES:raise ValueError('financial_worker_memory_capacity')
         return False
+    def guard():return pause.checkpoint(db,limits)
     try:
         progress_count=0
         def progress(value):
@@ -30,13 +38,25 @@ def main():
             # components survive parent pressure cancellation of this child.
             if progress_count<64:
                 print(json.dumps(dict(worker_progress={k:v for k,v in value.items()
-                    if k in ('estimates_cursor','estimates_after')})),flush=True)
+                    if k in ('estimates_cursor','estimates_after','estimates_rotation_after','estimates_window_turn')})),flush=True)
                 progress_count+=1
         with cancellation(guard),store.connect() as db:
+            from app.storage.pipeline_generation import prune
+            prune(db)
             if not db.execute('SELECT pg_try_advisory_lock(%s) owned',(LOCK,)).fetchone()['owned']:
                 result=dict(published=False,reason='another_board_owner')
             else:
-                try:result=reconcile(db,admission=admission,turn_seconds=60,progress=progress)
+                try:
+                    from app.storage.pipeline_generation import recover_interrupted
+                    recover_interrupted(db)
+                    from app.storage.discovery_index import load_transfer,save_transfer
+                    transfer=discovery_transfer_path(store.ROOT)
+                    transfer_state=load_transfer(transfer)
+                    try:
+                        result=reconcile(db,admission=admission,turn_seconds=60,progress=progress)
+                        result['discovery_transfer']=transfer_state
+                    finally:
+                        save_transfer(transfer)
                 finally:db.execute('SELECT pg_advisory_unlock(%s)',(LOCK,))
         result.update(worker_pid=os.getpid(),worker_peak_rss_bytes=rss(),worker_maximum_bytes=MAX_PROCESS_BYTES,
             worker_seconds=time.monotonic()-start,provider_requests=0,

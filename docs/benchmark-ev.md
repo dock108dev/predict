@@ -1,5 +1,28 @@
 # Calculation basis and benchmark EV
 
+## Snapshot calculations under defined assumptions — integrated November 2
+
+The ordinary tool evaluates a captured odds set with a named, revisioned
+assumption set. Available price comparisons and gross/conditional/net/scenario
+metrics are computed when their necessary inputs are defined. Missing verified
+venue facts do not globally prohibit an explicitly assumed scenario. Unknown
+required inputs remain unavailable rather than silently zero.
+
+Show which probability/benchmark, fee, payout/scenario, sizing/depth and buffer
+values are observed or assumed. Preserve exact original quotes and show formulas
+and intermediate amounts. A later feed tick changes the next snapshot, not the
+captured calculation. Stale prices remain labeled with their original ages.
+Assumption-based output is not promoted to verified full-state or executable
+returns. Existing strict model scope/expiry checks continue to mean what they say;
+this audit does not extend models or change their implementation.
+
+The sections below describe current owners/defaults and strict applicability.
+The ordinary snapshot path now reuses these shared arithmetic owners. See the
+November 2 integration entry in local `docs/dashboard-d02-20261030.md` for exact
+assumptions, loaded evidence and remaining limitations. Strict full-state modes
+retain their own qualifications; snapshot mathematical validity is separate.
+
+
 Original-price comparison supports the configured multi-sport universe. Financial
 estimates have narrower, input-specific applicability: the legacy dated recipes
 cover NFL pregame full-game winners; strictly bound financial profiles and the

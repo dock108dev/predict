@@ -57,7 +57,7 @@ function render(v){
  if(selection){const b=v.books.find(b=>b.id===selection.book.id);if(b&&b.revision!==selection.book.revision)$('captured-state').textContent='Captured inputs · A newer price has arrived';}
 }
 async function load(continuation=false){
- if(busy)return;busy=true;readControls();$('status').textContent=frame?'Updating received prices… Displayed values are from the previous read.':'Loading received prices…';const gen=generation;const q=filters();history.replaceState(null,'','/odds'+(q.size?'?'+q:''));q.set('offset',offset);q.set('limit','50');
+ if(busy)return;busy=true;readControls();$('status').textContent=frame?'Updating received prices… Displayed values are from the previous read.':'Loading received prices…';const gen=generation;const q=filters();history.replaceState(null,'','/raw-odds'+(q.size?'?'+q:''));q.set('offset',offset);q.set('limit','50');
  if(continuation&&frame)q.set('token',frame.token);else if(frame&&!selection)q.set('release',frame.token);
  try{const v=await get('/api/raw/prices?'+q);if(gen!==generation){fetch('/api/raw/read?token='+v.token,{method:'DELETE',headers:{'Content-Type':'application/json'}});return;}frame=v;render(v);$('retry').hidden=true;$('read-diagnostics').hidden=true;}
  catch(e){if(gen!==generation)return;$('status').textContent=frame?'Prices could not refresh. Displayed values are last-known. Retry to read current prices.':'Prices could not load. Retry to read received prices.';$('retry').hidden=false;$('read-diagnostics').hidden=false;$('read-error').textContent=e.message;}

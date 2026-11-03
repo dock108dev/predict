@@ -76,7 +76,7 @@ function freshness(root, f) {
 function price(q) {
   return q.common_odds?.supported
     ? q.common_odds.american
-    : quantity(q.original?.value) + " " + words(q.original?.units);
+    : "American odds unavailable";
 }
 // Observation facts have their own clocks and availability. Estimate status is
 // deliberately not consulted when deciding whether a source price is current.

@@ -13,7 +13,8 @@ from tempfile import TemporaryDirectory
 import sys
 from time import perf_counter
 from unittest import IsolatedAsyncioTestCase, skipUnless
-from unittest.mock import patch
+from unittest.mock import Mock, patch
+from types import SimpleNamespace
 from uuid import uuid4
 
 import psycopg
@@ -56,6 +57,7 @@ class FixtureService:
         self.dispatch = True;self.closed = False;self.closing = False
         self.cleanup_errors = [];self.workers = {};self.digest = 'fixture-only'
         self.starts = 0
+        self.ingress = SimpleNamespace(revoke=Mock())
 
     def initial_state(self):
         value = unavailable();value['runtime_id'] = self.runtime_id
@@ -63,7 +65,8 @@ class FixtureService:
 
     async def start(self, store):self.starts += 1;self.store = store
     async def close(self):self.closed = True;self.dispatch = False
-    def status(self):return dict(runtime_id=self.runtime_id,candidate_digest=self.digest,issues=[],exclusions=[])
+    def status(self, *, accounting=None):return dict(runtime_id=self.runtime_id,candidate_digest=self.digest,issues=[],exclusions=[])
+    def status_accounting(self):return {}
 
 
 class InertScanner:
@@ -302,6 +305,7 @@ class SeparationSQL(IsolatedAsyncioTestCase):
             self.assertEqual(acknowledgment['runtime_id'],identity)
             self.assertFalse(runtime.state.read()['active'])
             self.assertTrue(runtime.state.read()['global_stopped'])
+            service.ingress.revoke.assert_called_once_with()
             await proxy.close()
         finally:await runtime.close()
 

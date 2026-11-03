@@ -152,11 +152,21 @@ def publication_dependencies(keys, contexts=None):
         raise ValueError('Scope publication dependency capacity')
     rules = source_rules()
     result = []
+    scoped = {}
     if contexts is not None and len(contexts) != len(keys):
         raise ValueError('Scope dependency contexts must match native keys')
     for index, key in enumerate(keys):
         provider, event_id, market_id, *_ = key
         series = str(event_id or market_id or '').split('-', 1)[0]
+        context = contexts[index] or {} if contexts is not None else None
+        meta = context.get('comparison_source_metadata',context) if context is not None else {}
+        market = context.get('market_identity',context) if context is not None else {}
+        league = market.get('competition',context.get('league')) if context is not None else None
+        native_type = meta.get('native_market_type') if provider == 'polymarket_us' else meta.get('series_id')
+        scope_key=(provider,series if provider=='kalshi' else None,contexts is not None,
+            league,market.get('family'),market.get('period'),native_type)
+        if scope_key in scoped:
+            result.append(scoped[scope_key]);continue
         selected = [r for r in rules if r['provider'] == provider and
             (provider != 'kalshi' or r['native_type'] == series)]
         if contexts is not None:
@@ -169,7 +179,8 @@ def publication_dependencies(keys, contexts=None):
                 and (market.get('family') is None or r['family'] == market['family'])
                 and (market.get('period') is None or r['period'] == market['period'])
                 and (native_type is None or r['native_type'] == native_type)]
-        result.append(digest(dict(version=VERSION, provider=provider, rules=selected)))
+        scoped[scope_key]=digest(dict(version=VERSION, provider=provider, rules=selected))
+        result.append(scoped[scope_key])
     return result
 
 

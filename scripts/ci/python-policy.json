@@ -120,7 +120,13 @@
     "tests/test_raw_prices_sql.py": "Required in scripts/ci/postgres.py against its verified disposable cluster; socket absence is unverified, never a passing offline substitute.",
     "tests/test_alternate_admission_sql.py": "Required in scripts/ci/postgres.py against its verified disposable cluster; source-route independence and bounded ordinary financial publication. No provider requests or owner storage.",
     "tests/test_financial_worker_sql.py": "Required in scripts/ci/postgres.py against its verified disposable cluster; source-route independence and bounded ordinary financial publication. No provider requests or owner storage.",
-    "tests/test_latest_board_capacity_sql.py": "Required in the focused --da-separation disposable PostgreSQL lane: latest-board capacity, per-game refusal isolation and stale failure authority. Extracted without changing the prior lane scope; no owner SQL or providers."
+    "tests/test_latest_board_capacity_sql.py": "Required in the focused --da-separation disposable PostgreSQL lane: latest-board capacity, per-game refusal isolation and stale failure authority. Extracted without changing the prior lane scope; no owner SQL or providers.",
+    "tests/test_comparison_snapshot_sql.py": "Required in scripts/ci/postgres.py: coherent snapshot capture, local recalculation, replacement and exact prior HTTP Originals on disposable PostgreSQL.",
+    "tests/test_dashboard_results_sql.py": "Required in scripts/ci/postgres.py: dashboard projection, full-window reads, immutable Details and no request finance on disposable PostgreSQL.",
+    "tests/test_storage_maintenance_sql.py": "Required in scripts/ci/postgres.py against disposable PostgreSQL: bounded independent retention, measured reclamation, immutable leased Originals and publication recovery; no owner database or provider use.",
+    "tests/test_pipeline_storage_report_sql.py": "Required in scripts/ci/postgres.py against disposable PostgreSQL: bounded independent retention, measured reclamation, immutable leased Originals and publication recovery; no owner database or provider use.",
+    "tests/test_grid_packet_store_sql.py": "Required in scripts/ci/postgres.py against disposable PostgreSQL: bounded independent retention, measured reclamation, immutable leased Originals and publication recovery; no owner database or provider use.",
+    "tests/test_result_dependencies_sql.py": "Required in disposable PostgreSQL lanes: independent unit dependency closure, sealed publication, candidate membership, clocks and ordinary read isolation; no providers or owner database."
   },
   "archival_nodes": {
     "tests/test_moneyline.py::CapturedMoneylineTests": "Historical production listing/rule hashes require removed capture corpus; synthetic matcher and settlement classes remain required.",

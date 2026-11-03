@@ -103,7 +103,7 @@ def recovery_preflight(v, at, covered, *, owner_runtime, recovery_id):
         if a['state'] != 'uncertain' or (a['runtime_id'] == owner_runtime and not a.get('interruption')):
             raise QuotaStop('recovery_active_transport')
         if ((stamp(at) - stamp(a['dispatch_at'])).total_seconds() < 120
-                or a['window_id'] != v['window']['id'] or covered[aid] != digest(a)):
+                or a['window_id'] != v['window']['id'] and not covering(v,a) or covered[aid] != digest(a)):
             raise QuotaStop('recovery_coverage_mismatch')
         if any(stamp(t['at']) >= stamp(a['at']) for t in v.get('account_transitions', [])):
             raise QuotaStop('recovery_context_mismatch')

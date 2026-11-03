@@ -43,11 +43,23 @@ def read(db, saved, query, policy, *, stopped=False, guard=lambda _:None):
     from app.comparison.estimated_policy import load
     from app.dashboard.comparison_board import details, entries, quote_key, price, age_observation, benchmark
     facts=saved['facts'];identity=query['context_id']
+    for unit in facts.get('result_units',{}).values():
+        if (unit['facts'].get('context') or {}).get('context_id')==identity:
+            return read(db,dict(saved,facts=unit['facts'],calculated_at=unit['calculated_at']),query,policy,stopped=stopped,guard=guard)
     observation=identity==(facts.get('observation_context') or {}).get('context_id')
     expected=facts.get('observation_context') if observation else facts.get('context')
     if expected is None or expected['context_id']!=identity:raise ValueError('current_inputs_changed_or_removed')
     payload=facts.get('selected_frame')
     if payload is None:raise ValueError('current_slate_read_expired')
+    if isinstance(payload,dict) and payload.get('original_packet'):
+        import json
+        from .grid_packet_store import PacketStore
+        packet=PacketStore.from_connection(db).load(payload['original_packet']);guard(len(packet)*8)
+        if payload['kind']=='unit':payload=json.loads(packet)
+        else:
+            from .slate_reads import CapturedReads
+            parent=CapturedReads().decode(packet)
+            payload=json.loads(parent['_facts_text'])['selected_frame']
     text=decode(payload);guard(len(text)*8)
     from .shared_json import loads
     bundle_key='observed' if observation else 'financial'
@@ -61,10 +73,15 @@ def read(db, saved, query, policy, *, stopped=False, guard=lambda _:None):
     dependency=facts.get('financial_dependencies',facts['publication_dependencies']) if not observation else facts['publication_dependencies']
     frame=publication.capture(db,states,selector=dependency['selector'],compact=True,resource_guard=guard)
     if frame['epoch']!=context.epoch:raise ValueError('current_inputs_changed_or_removed')
-    checks=publication.reasons(frame,dependency)
+    if dependency.get('result_unit'):
+        from .result_publication import validate
+        from .latest_board import _control_barrier
+        frame['control_barrier']=_control_barrier(db)
+        checks=validate(frame,facts,at=now,owner=owner,engine=engine_binding(),policy=load().revision)
+    else:checks=publication.reasons(frame,dependency)
     changed=bool((not observation and facts.get('retained_financial_only'))
         or checks['all'] or any(checks['observations'].values()) or any(checks['comparisons'].values())
-        or (not observation and captured['proof']!=proof(frame,dependency['selector']))
+        or (not observation and not dependency.get('result_unit') and captured['proof']!=proof(frame,dependency['selector']))
         or context.engine!=engine_binding() or (not observation and expected['policy_revision']!=load().revision)
         or stopped or not owner.get('active') or not owner.get('healthy'))
     bundle['calculation_context']=expected
@@ -128,6 +145,6 @@ def preserve_newer_observation(financial, newer):
     old['observed']=new['observed']
     financial['selected_frame']=encode(dumps(old))
     financial['financial_dependencies']=financial.get('financial_dependencies',financial['publication_dependencies'])
-    for key in ('observation_context','observation_valid_until','publication_dependencies','observation_binding'):
+    for key in ('observation_context','observation_valid_until','publication_dependencies','observation_binding','publication_runtime'):
         if key in newer:financial[key]=newer[key]
     financial['boards']['odds']=newer['boards']['odds']

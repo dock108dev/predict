@@ -83,7 +83,11 @@ def mount(app,provider):
                     # A bounded cache may evict a visible page during refresh.
                     # Only the exact same context can recover from current SQL.
                     saved=db.execute('SELECT game_key,calculated_at,facts FROM latest_board WHERE game_key=%s',(req.query['game'],)).fetchone()
-                    if saved is None or req.query['context_id'] not in {
+                    if saved is not None:
+                        from app.storage.result_publication import attach as attach_units
+                        attach_units(db,saved,guard=work.guard)
+                    unit_contexts={(u['facts'].get('context') or {}).get('context_id') for u in (saved['facts'].get('result_units',{}).values() if saved else [])}
+                    if saved is None or req.query['context_id'] not in unit_contexts | {
                         (saved['facts'].get(key) or {}).get('context_id') for key in ('context','observation_context')}:
                         raise ValueError('current_slate_read_expired') from None
                     saved['facts'].pop('boards',None)
@@ -93,6 +97,9 @@ def mount(app,provider):
                 with db.transaction():
                     db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
                     return selected_read(db,saved,dict(req.query,view=view,read_token=selected_token),p,stopped=stopped(),guard=work.guard)
+            if view=='dashboard':
+                from app.storage.dashboard_results import read as dashboard_read
+                return dashboard_read(db,p,reads=read_frames,stopped=stopped())
             if view=='slate':
                 from .comparison_slate import read as slate_read
                 storage=provider.database.status()
@@ -126,6 +133,13 @@ def mount(app,provider):
                 raise ValueError('background_runtime_authority_unavailable')
             saved=latest['rows'].get(game)
             if saved is None:raise ValueError('background_calculation_unavailable')
+            if any((u['facts'].get('context') or {}).get('context_id')==req.query.get('context_id') for u in saved['facts'].get('result_units',{}).values()):
+                from app.storage.selected_frame import read as selected_read
+                with db.transaction():
+                    db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
+                    selected_result=selected_read(db,saved,dict(req.query,view=view,game=game),p,stopped=stopped(),guard=work.guard)
+                    if selected_result.get('selection_status')=='captured':raise ValueError('current_inputs_changed_or_removed')
+                    return selected_result
             observation_selection=(view=='inputs' and req.query.get('context_id')==
                 (saved['facts'].get('observation_context') or {}).get('context_id'))
             selection_identity=saved['facts'].get('observation_context') if observation_selection else saved['facts']['context']
@@ -209,9 +223,9 @@ def mount(app,provider):
         if view=='slate':allowed=(allowed-{'game','context_id','quote','pair'})|{'view','offset','limit','expected_revision','read_token'}
         if view=='readiness':allowed={'venues','sports','leagues','markets','periods'}
         if view=='coverage':allowed={'league','venue','market','period'}
-        if view not in ('coverage','readiness','games','slate','odds','ev','arbs','details','inputs') or set(req.query)-allowed:raise PublicRequestError('Unsupported current comparison query')
-        if view=='games' and req.query:raise PublicRequestError('Catalog does not accept calculation settings')
-        if view not in ('coverage','readiness','games','slate') and not 1<=len(req.query.get('game',''))<=256:raise PublicRequestError('Exact bounded occurrence required')
+        if view not in ('coverage','readiness','games','dashboard','slate','odds','ev','arbs','details','inputs') or set(req.query)-allowed:raise PublicRequestError('Unsupported current comparison query')
+        if view in ('games','dashboard') and req.query:raise PublicRequestError('Catalog does not accept calculation settings')
+        if view not in ('coverage','readiness','games','dashboard','slate') and not 1<=len(req.query.get('game',''))<=256:raise PublicRequestError('Exact bounded occurrence required')
         if view=='slate' and req.query.get('view','odds') not in ('odds','ev','arbs'):raise PublicRequestError('Unsupported slate view')
         if req.query.get('filter','positive') not in ('positive','all','hedges'):raise PublicRequestError('Unsupported comparison filter')
         if view in ('details','inputs') and not req.query.get('context_id'):raise PublicRequestError('Expected current context required')
@@ -221,7 +235,10 @@ def mount(app,provider):
             try:Selection(**{k:tuple(req.query[k].split(',')) for k in req.query})
             except ValueError as exc:raise PublicRequestError(str(exc)) from None
         p=None if view in ('coverage','readiness') else calculation_policy(req.query,load())
-        trace=Trace('selected' if view in ('inputs','details') else 'ordinary')
+        # Compact dashboard/catalog reads share the bounded selected lane, so a
+        # full Odds capture cannot queue the initial dashboard behind itself.
+        selected_lane=view in ('inputs','details','dashboard','games')
+        trace=Trace('selected' if selected_lane else 'ordinary')
         def cleanup_frames():
             for identity in trace.frames:read_frames.discard(identity)
             trace.frames.clear()
@@ -237,7 +254,7 @@ def mount(app,provider):
                     body=encoded(out)
                     if len(body)>MAX_BYTES:raise ValueError('board_response_byte_capacity')
                 return body
-            body=await work.run(view in ('inputs','details'),render,trace)
+            body=await work.run(selected_lane,render,trace)
             trace.values['outcome']='success'
             timing=', '.join(f"{key};dur={value}" for key,value in trace.values['stages_ms'].items())
             return TimedResponse(trace=trace,body=body,content_type='application/json',headers={'Server-Timing':timing})
@@ -256,7 +273,12 @@ def mount(app,provider):
                 return reply(dict(error='current_read_stopped',reason='Updates stopped during calculation; reopen the current view.',provider_requests=0),status=409)
             return reply(dict(error='database_unavailable',reason=type(exc).__name__,availability=result_availability(dict(reasons=['calculation_read_failed'])),provider_requests=0),status=503)
         finally:TRACE.reset(token)
-    async def diagnostics(req):return web.json_response(dict(work.diagnostics(),frames=len(read_frames.frames),retained_frame_bytes=read_frames.retained_bytes))
+    async def diagnostics(req):
+        with read_frames.lock:
+            frames=[dict(state=f.context if f.context in ('completed','displayed','selected') else 'paging',
+                bytes=f.size,records=len(f.records),progress_offset=f.progress_offset,
+                idle_seconds_remaining=max(0,f.deadline-read_frames.clock())) for f in read_frames.frames.values()]
+        return web.json_response(dict(work.diagnostics(),frames=len(frames),retained_frame_bytes=read_frames.retained_bytes,frame_states=frames))
     async def lease(req):
         token=req.query.get('read_token','')
         if not 16<=len(token)<=256:return web.json_response(dict(reason='current_slate_read_token_required'),status=400)

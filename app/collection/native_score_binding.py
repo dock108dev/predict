@@ -9,7 +9,7 @@ from app.dashboard.session_projection import stable
 
 POLICY='native-score-predicate-1'
 
-def bind(native, binding, *, revised=False):
+def bind(native, binding, *, revised=False, event=None):
     sport,period,family=(binding[k] for k in ('sport','period','family'))
     if family=='futures':return championship(native,binding)
     if family not in ('moneyline','spread','total') or sport not in (('NFL','MLB','NCAAF','NBA','NCAAB','NHL') if revised else ('NFL','MLB')):
@@ -49,12 +49,17 @@ def bind(native, binding, *, revised=False):
         from .admission_enrichment import repair_registry
         registry=repair_registry() if revised else native_registry(live=True)
         resolution=registry.resolve('team',league=sport,venue='kalshi',environment='production',native_id=native_team)
-        if resolution.status!='resolved':return None
-        participant=resolution.canonical_id
         named=re.split(r' wins by (?:more than|over) ',text[3:],maxsplit=1)[0] if revised else text[3:text.index(' wins by more than ')]
-        if revised:
-            exact=registry.resolve('team',named,league=sport,venue='kalshi',environment='production',native_id=native_team)
-            if exact.status!='resolved' or exact.canonical_id!=participant:return None
+        if resolution.status=='resolved':
+            participant=resolution.canonical_id
+            if revised:
+                exact=registry.resolve('team',named,league=sport,venue='kalshi',environment='production',native_id=native_team)
+                if exact.status!='resolved' or exact.canonical_id!=participant:return None
+        elif revised and event is not None and resolution.status!='conflicting':
+            from .native_role_binding import kalshi_participant
+            participant=kalshi_participant(event,native_team,named)
+            if participant is None:return None
+        else:return None
         if not str(native.get('yes_sub_title','')).startswith(named+' wins by over '):return None
     line=format(-threshold if family=='spread' else threshold,'f')
     return dict(policy=POLICY,status='EXPLICIT_PREDICATE_ONLY',competition=sport,

@@ -48,7 +48,8 @@
       "tests/test_sc09_transport_probe.py",
       "tests/test_current_book_images.py",
       "tests/test_current_catalog_delta.py",
-      "tests/test_sc09_reconstruction.py"
+      "tests/test_sc09_reconstruction.py",
+      "tests/test_dashboard_results.py"
     ]
   },
   {
@@ -467,6 +468,7 @@
       "tests/test_aggregate_storage_refusal.py",
       "tests/test_current_budget_lifecycle.py",
       "tests/test_current_conservative_recovery.py",
+      "tests/test_current_rollover.py",
       "tests/test_current_retained.py",
       "tests/test_database_ingress_repair.py",
       "tests/test_recovery_diagnostics.py"
@@ -573,7 +575,12 @@
     "tests": [
       "tests/test_sc09_live_financial.py",
       "tests/test_financial_followup.py",
-      "tests/test_sc09_native_reference.py"
+      "tests/test_dashboard_d02_finance.py",
+      "tests/test_grouped_odds.py",
+      "tests/test_sc09_native_reference.py",
+      "tests/test_comparison_snapshot.py",
+      "tests/test_snapshot_benchmark.py",
+      "tests/test_snapshot_identity.py"
     ]
   },
   {
@@ -584,6 +591,22 @@
       "tests/test_selected_frame_cache.py",
       "tests/test_slate_byte_pages.py",
       "tests/test_worker_memory.py"
+    ]
+  },
+  {
+    "name": "pipeline-recovery-evidence",
+    "tests": [
+      "tests/test_pipeline_delivery.py",
+      "tests/test_financial_render_shared.py",
+      "tests/test_pipeline_changing_report.py",
+      "tests/test_pipeline_storage_report.py",
+      "tests/test_catalog_transfer.py",
+      "tests/test_discovery_transfer.py",
+      "tests/test_grid_read_packet.py",
+      "tests/test_native_city_labels.py",
+      "tests/test_pipeline_trace.py",
+      "tests/test_profile_validation_scope.py",
+      "tests/test_scanner_revision_stream.py"
     ]
   }
 ]

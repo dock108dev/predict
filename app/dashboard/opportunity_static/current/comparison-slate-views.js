@@ -1,3 +1,4 @@
+import { renderOddsGrid } from "./odds-grid.js";
 import { compareExactPercent } from "./opportunity-dashboard.js";
 import { numeric, percent } from "./board-client.js";
 import { appendComparisonCoverage } from "./comparison-coverage.js";
@@ -104,6 +105,7 @@ export function scopedObservationCoverage(boards, now = Date.now()) {
   return {total: seen.size, games: games.size, counts, reasons, venues};
 }
 export function createComparisonSlate({ content, onDetails, onOriginal }) {
+  let oddsCache = new Map(), oddsScope = null;
   function action(root, label, key, callback) {
     const button = el("button", label, "slate-action");
     button.dataset.key = key;
@@ -136,54 +138,10 @@ export function createComparisonSlate({ content, onDetails, onOriginal }) {
     root.dataset.key = g.game_key + (b.prices.every(q => priceResearch(q)) ? ":research" : ":current");
     heading(root, g);
     if (delivery(b, paused, true)) root.append(el("small", delivery(b, paused, true), "pending-label"));
-    const table = el("div", undefined, "slate-prices");
-    const books = ["novig", "prophetx", "kalshi", "polymarket_us"];
-    const instruments = new Map();
-    if (!b.prices.length) root.append(el("p", "No retained prices for this market scope."));
-    for (const q of b.prices) {
-      const key = outcomeDisplayKey(q);
-      if (!instruments.has(key)) instruments.set(key, []);
-      instruments.get(key).push(q);
-    }
-    for (const quotesForOutcome of instruments.values()) {
-      const first = quotesForOutcome[0], team = g.participants.find(p => p.id === first.selection.participant);
-      const row = el("div", undefined, "slate-price-row team");
-      const name = el("div", undefined, "slate-team-name");
-      name.append(el("strong", labelsFor(g.participants).selection(first, false)), el("small", marketCaption(first)));
-      row.append(name);
-      for (const book of books) {
-        const cell = el("div", undefined, "slate-price-cell");
-        cell.append(el("small", venue(book), "mobile-price-label"));
-        // Use the supplied participant/predicate. Short is NOT opponent YES.
-        const quotes = quotesForOutcome.filter(q => q.venue === book);
-        if (!quotes.length) {
-          const absent = el("span", "—", "unavailable-price");
-          absent.title = venue(book) + " price unavailable for " + labelsFor(g.participants).selection(first, false);
-          absent.setAttribute("aria-label", absent.title);
-          cell.append(absent);
-        }
-        for (const q of quotes) {
-          const native = q.native_side.toLowerCase() !== "bookmaker_outcome";
-          const label = price(q) + (native ? " · " + side(q.native_side) : "");
-          const button = action(cell, label, g.game_key + ":" + q.quote_id, button => onOriginal(q, button, g));
-          const meaning = labelsFor(g.participants).selection(q) + " · " + venue(book) + " · original " + q.original.value + " " + words(q.original.units) + " · " + (q.freshness?.status === "current" ? "Current inputs" : "As-of inputs") + " · Source " + (q.freshness?.source_at || "Unknown") + " · Received " + (q.freshness?.received_at || "Unknown");
-          button.title = meaning;
-          button.setAttribute("aria-label", meaning + " · Open original price");
-          observationSummary(cell, q, {compact:true});
-        }
-        row.append(cell);
-      }
-      const fair = el("div", undefined, "slate-price-cell slate-fair");
-      const winner = marketFamily(first) === "winner" && first.selection.predicate === "win";
-      const f = winner && b.benchmark?.fair?.find(f => f.participant === team?.id);
-      fair.append(el("strong", f ? "Fair " + americanDecimal(f.fair_decimal_odds) : winner ? "Fair unavailable" : "No matching reference"));
-      if (b.benchmark?.available && b.benchmark.freshness !== "current") fair.append(el("small", "Last-known"));
-      row.append(fair);
-      table.append(row);
-    }
-    root.append(table);
+    renderOddsGrid(root,g,b,onOriginal);
     referenceEvidence(root, g, b);
     target.append(root);
+    return root;
   }
   function financial(root, g, b, row, view, paused, shared) {
     const item = el("div", undefined, "slate-result " + (view === "arbs" ? "slate-arb" : "slate-ev"));
@@ -272,7 +230,8 @@ export function createComparisonSlate({ content, onDetails, onOriginal }) {
     content.replaceChildren();
     content.classList.toggle("compact-odds", view === "odds");
     content.classList.toggle("compact-comparisons", view !== "odds");
-    const visible = new Map(v.games.filter(g => (!game || g.game_key === game) && (!league || (g.league || g.scope?.split("/")[0]) === league) && matchesGameSearch(g, search)).map(g => [g.game_key, g]));
+    const loaded = v.coverage?.complete === false ? new Set([...v.boards.map(b=>b.game_key),...(v.errors || []).map(e=>e.game_key)]) : null;
+    const visible = new Map(v.games.filter(g => (!loaded || loaded.has(g.game_key)) && (!game || g.game_key === game) && (!league || (g.league || g.scope?.split("/")[0]) === league) && matchesGameSearch(g, search)).map(g => [g.game_key, g]));
     const boards = v.boards.filter(b => visible.has(b.game_key)).map(b => ({...b,
       prices:b.prices.filter(q => (!source || q.venue === source) && matchesMarketFilter(q, family, period)),
       rows:b.rows.filter(q => q.legs ? (!source || q.legs.some(leg => leg.venue === source)) && q.legs.every(leg => matchesMarketFilter(leg, family, period)) : (!source || q.venue === source) && matchesMarketFilter(q, family, period))})).filter(b => (!family && !period && !source) || b.prices.length || source === v.policy.benchmark_venue && (!family || family === "winner") && (!period || period === "full_game") && b.benchmark?.originals?.length), paused = v.storage?.state === "unavailable";
@@ -337,29 +296,23 @@ export function createComparisonSlate({ content, onDetails, onOriginal }) {
         estimateSummary(observationOverview, {state: states.size === 1 ? estimates[0].state : "partially_available", reason_codes: estimates.flatMap(e => e.reason_codes || [])}, "odds-estimate-reasons");
       }
       if (boards.some(b => b.prices.some(q => q.native_side.toLowerCase() !== "bookmaker_outcome"))) observationOverview.append(el("small", "Native sides have their own tie and refund terms. Open a price to inspect its contract.", "native-meaning"));
-      for (const research of [false, true]) {
-        const groups = boards.map(b => ({...b, prices:b.prices.filter(q => priceResearch(q) === research)})).filter(b => b.prices.length);
-        if (!groups.length) {
-          if (!research) content.append(el("p", "No current prices in this view."));
-          continue;
-        }
-        let target = content;
-        if (research) {
-          target = el("details", undefined, "odds-research");
-          target.dataset.key = "odds-research";
-          target.append(el("summary", "Last-known & other prices · " + groups.length + (groups.length === 1 ? " game" : " games")));
-          content.append(target);
-        } else content.append(el("h2", "Current prices", "price-group-heading"));
-        const h = el("div", undefined, "slate-price-headings slate-shared-headings");
-        h.append(el("span", "Game / outcome"), ...["novig", "prophetx", "kalshi", "polymarket_us"].map(book => el("span", venue(book))), el("span", venue(v.policy.benchmark_venue) + " reference"));
-        target.append(h);
-        for (const b of groups) odds(visible.get(b.game_key), b, paused, target);
+      const raw=el("a","Unmatched observations & all received books →");raw.href="/raw-odds";
+      content.append(raw);
+      // Pagination retains the very same immutable board objects. Reuse those
+      // nodes; new captures, changed filters and withdrawn inputs rebuild them.
+      const scopeKey = JSON.stringify([game,search,league,family,period,source,paused]);
+      if (scopeKey !== oddsScope) oddsCache.clear();
+      oddsScope = scopeKey;
+      const originalBoards = new Map(v.boards.map(b => [b.game_key,b]));
+      const nextCache = new Map();
+      for (const b of boards) {
+        const original = originalBoards.get(b.game_key), saved = oddsCache.get(b.game_key);
+        let node;
+        if (saved?.board === original) { node = saved.node; content.append(node); }
+        else node = odds(visible.get(b.game_key), b, paused);
+        nextCache.set(b.game_key,{board:original,node});
       }
-      for (const g of visible.values()) {
-        const b = boards.find(b => b.game_key === g.game_key);
-        if (!b) continue; // Failed games are named above; their price counts are unknown.
-        if (!b.prices.length) content.append(el("p", typedGameTitle(g.participants, g.title) + " · No retained prices for this market scope."));
-      }
+      oddsCache = nextCache;
       return;
     }
     availabilityNotice(scope, filter, onShowAll);

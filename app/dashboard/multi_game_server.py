@@ -503,7 +503,9 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
     async def page(req):return web.FileResponse(static_root/('opportunity_static/current/stored.html' if database_mode else 'opportunity_static/current/index.html'))
     from .raw_price_api import mount as mount_raw_prices
     if database_mode:mount_raw_prices(app)
-    async def odds_page(req):return web.FileResponse(static_root/('opportunity_static/current/raw-odds.html' if database_mode else 'opportunity_static/current/stored.html'))
+    async def odds_page(req):return web.FileResponse(static_root/'opportunity_static/current/stored.html')
+    async def raw_odds_page(req):return web.FileResponse(static_root/'opportunity_static/current/raw-odds.html')
+    app.router.add_get('/raw-odds',raw_odds_page)
     app.router.add_get('/odds',odds_page)
     async def scanner_page(req):return web.FileResponse(static_root/'opportunity_static/current/scanner.html')
     app.router.add_get('/scanner',scanner_page)
@@ -617,6 +619,8 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
     if database_mode:
         from .stored_games import mount as mount_stored
         mount_stored(app,current_provider)
+        from .snapshot_api import mount as mount_snapshots
+        mount_snapshots(app)
         from .scanner_client_api import mount as mount_client
         mount_client(app)
     async def current_admin(req):

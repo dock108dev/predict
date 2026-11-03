@@ -27,17 +27,22 @@ def _withdraw(board, reasons):
     if board['view']!='odds' and items:board['availability']=summary(items)
 
 
-def board(frame, game_key, *, view, filter, read_token=None):
+def board(frame, game_key, *, view, filter, read_token=None, price_grid=False):
     error=next((e['reason'] for e in frame['status'].get('observation_errors',[]) if e['game_key']==game_key),None)
     if error:raise ValueError(error)
     row=frame['rows'].get(game_key)
     if row is None:
         raise ValueError('background_observation_unavailable')
+    if view!='odds' and row['facts'].get('result_unit_inventory') is not None:
+        return result_board(frame,game_key,view=view,filter=filter,read_token=read_token)
     serialized=row.pop('_board_text',None)
     if serialized is not None:
         import json
         output=expand_price_fields(json.loads(serialized))
     else:output=expand_price_fields(deepcopy(row['facts']['boards'][view]))
+    if price_grid and view=='odds':
+        from app.dashboard.grouped_odds import grid_board
+        output=grid_board(output,compact=False)
     source_reasons=list(frame.get('observation_reasons',frame['reasons']))
     local=frame.get('dependency_reasons',{}).get(game_key,dict(all=[],observations={},comparisons={}))
     if view!='odds':local=local.get('financial',local)
@@ -120,6 +125,9 @@ def board(frame, game_key, *, view, filter, read_token=None):
             if price.get('inputs_identity'):price['inputs_identity']['read_token']=read_token
         for result in output['rows']:
             if result.get('details'):result['details']['read_token']=read_token
+    if price_grid and view=='odds':
+        from app.dashboard.grouped_odds import grid_wire
+        grid_wire(output)
     if view=='odds':compact_odds(output)
     else:compact_price_fields(output)
     if len(encoded(output))>MAX_RESPONSE:raise ValueError('board_compact_response_capacity')
@@ -162,3 +170,72 @@ def benchmark_reasons(local,cid,reasons,source_proof,venue):
     identities=local.get('benchmark_identity',{})
     selected=(identities[cid] if source_proof is not None and cid in identities else local['observations'].get(cid,[]))
     return sorted(set(result+local['all']+selected+local.get('benchmarks',{}).get(cid,[])))
+
+
+def result_board(frame, game_key, *, view, filter, read_token):
+    """Assemble independently validated units without granting sibling authority."""
+    from app.comparison.calculation_availability import combine
+    from .current_games import engine_binding
+    from app.comparison.estimated_policy import load
+    parent=frame['rows'][game_key];facts=parent['facts'];outputs=[];states=[]
+    current_engine=frame.get('_engine_binding') or engine_binding()
+    current_policy=frame.get('_current_policy') or load().to_dict()
+    local_inventory=frame.get('dependency_reasons',{}).get(game_key,{})
+    checks=local_inventory.get('units',{})
+    for unit in facts.get('result_unit_inventory',[]):
+        uid=unit['id'];saved=facts['result_units'].get(uid)
+        if not saved:
+            states.append(dict(unit_id=uid,state='pending'));continue
+        local=checks.get(uid,dict(all=['result_unit_validation_missing'],observations={},comparisons={}))
+        row=dict(game_key=game_key,facts=saved['facts'],calculated_at=saved['calculated_at'],
+                 economic_revision=saved.get('generation_id') or 'unsealed')
+        child=dict(frame,rows={game_key:row},reasons=[],observation_reasons=[],calculation_reasons=[],
+            status=dict(frame['status'],engine_binding=current_engine,policy=current_policy),
+            dependency_reasons={game_key:local})
+        output=expand_price_fields(board(child,game_key,view=view,filter=filter,read_token=read_token))
+        changed=bool(local['all'] or any(local['observations'].values()) or any(local['comparisons'].values())
+                     or saved['facts'].get('retained_financial_only'))
+        states.append(dict(unit_id=uid,state='historical' if changed else 'current',
+                           generation_id=saved.get('generation_id'),calculated_at=saved['calculated_at'],
+                           calculation_context=deepcopy(output.get('calculation_context')),input_version=output.get('input_version'),
+                           financial_state=saved['facts'].get('estimate_availability',{}).get('state')))
+        for result in output['rows']:result['result_unit_id']=uid
+        for price in output['prices']:price['result_unit_id']=uid
+        outputs.append(output)
+    if outputs:
+        output=deepcopy(outputs[0]);output['rows']=[r for b in outputs for r in b['rows']]
+        output['prices']=[p for b in outputs for p in b['prices']]
+        output['availability']=combine([b['availability'] for b in outputs],games=1,evaluated=True)
+        output['background_reasons']=sorted({r for b in outputs for r in b.get('background_reasons',[])})
+        output['status']='mixed' if len({s['state'] for s in states})>1 else states[0]['state']
+        output['calculation_context']=None;output['economic_revision']=None;output['input_version']=None
+        output['calculated_at']=None;output['result_as_of']=None
+    else:
+        # Independent inventory may exist before any child seals. Keep the
+        # ordinary source-only refusal frame (and exact Originals) inspectable;
+        # inventory discovery must not erase all received prices from EV.
+        fallback=dict(facts)
+        fallback.pop('result_unit_inventory',None)
+        pending_frame=dict(frame,rows={game_key:dict(parent,facts=fallback)})
+        output=expand_price_fields(board(pending_frame,game_key,view=view,filter=filter,read_token=read_token))
+        _withdraw(output,['background_estimates_pending'])
+        output['status']='pending'
+        # These are source-only refusal rows, not independently sealed units.
+        # Keep their own captured identity and report pending inventory beside
+        # them; assigning a mixed-unit envelope would falsely bind raw rows.
+        output['pending_result_inventory']=states
+        output['result_unit_coverage']=dict(total=len(states),current=0,historical=0,pending=len(states),
+            inventory_state=local_inventory.get('inventory_state','unknown'))
+        output['delivery_state']='pending'
+        compact_price_fields(output)
+        if len(encoded(output))>MAX_RESPONSE:raise ValueError('board_compact_response_capacity')
+        return output
+    output['calculation_context']=None;output['input_version']=None
+    output['result_units']=states
+    output['result_unit_coverage']=dict(total=len(states),current=sum(s['state']=='current' for s in states),
+        historical=sum(s['state']=='historical' for s in states),pending=sum(s['state']=='pending' for s in states),
+        inventory_state=local_inventory.get('inventory_state','unknown'))
+    output['delivery_state']='complete' if states and local_inventory.get('inventory_state')=='current' and all(s['state']=='current' for s in states) else 'pending'
+    compact_price_fields(output)
+    if len(encoded(output))>MAX_RESPONSE:raise ValueError('board_compact_response_capacity')
+    return output

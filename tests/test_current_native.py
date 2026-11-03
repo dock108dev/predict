@@ -40,6 +40,34 @@ class Socket:
         await asyncio.Event().wait()
 
 class WorkerControls(unittest.IsolatedAsyncioTestCase):
+    async def test_latest_image_arriving_during_completion_keeps_its_turn(self):
+        service=SimpleNamespace(config=deepcopy(DEFAULT),dispatch=True,database_mode=True,books=lambda *args:None)
+        worker=NativeWorker(service,'kalshi');worker.persist_raw=AsyncMock()
+        at=datetime.now(timezone.utc).isoformat()
+        book=dict(raw=dict(ref=dict(market_id='hot'),received_at=at),outcomes=[],state='active',sync='synchronized',quantity_unit='contracts')
+        worker.queue_book(book)
+        worker.queue_book(deepcopy(book))
+        changed=deepcopy(book);changed['outcomes']=[{'changed':True}]
+        worker.queue_book(changed)
+        clock=deepcopy(changed);clock['raw']['exchange_at']=at
+        worker.queue_book(clock)
+        async def admit(service,fn,venue,books):
+            newer=deepcopy(clock);newer['raw']['received_at']=(datetime.now(timezone.utc)+timedelta(microseconds=1)).isoformat()
+            worker.queue_book(newer)
+            quiet=deepcopy(newer);quiet['raw']['ref']['market_id']='quiet'
+            worker.queue_book(quiet)
+        with patch('app.collection.current_native.call',side_effect=admit),patch('app.collection.bulk_checkpoint.save_images'):
+            worker.flush_books();await worker.publication_task;await worker.raw_task
+        self.assertEqual(set(worker.pending_books),{'hot','quiet'})
+        self.assertEqual(worker.metrics['normalization_attempted_images'],1)
+        self.assertEqual(worker.metrics['derived_images_published'],1)
+        self.assertEqual(worker.metrics['pending_images_replaced'],3)
+        self.assertEqual(worker.metrics['normalization_keys_enqueued'],3)
+        self.assertEqual(worker.metrics['meaningful_images_received'],1)
+        self.assertEqual(worker.metrics['clock_images_received'],1)
+        self.assertEqual(worker.metrics['initial_images_received'],2)
+        if worker.publication_handle:worker.publication_handle.cancel()
+
     async def test_derived_turn_is_fifo_coalesced_and_byte_bounded(self):
         service=SimpleNamespace(config=dict(DEFAULT,ingress_bytes=8192),dispatch=True,database_mode=True,books=lambda *args:None)
         worker=NativeWorker(service,'kalshi')
@@ -92,18 +120,25 @@ class WorkerControls(unittest.IsolatedAsyncioTestCase):
     async def test_short_steady_turns_and_bulk_catchup_keep_all_pending_books(self):
         service=SimpleNamespace(config=deepcopy(DEFAULT),dispatch=True,database_mode=True,books=lambda *args:None)
         at=datetime.now(timezone.utc).isoformat()
-        for count,expected in ((400,128),(1200,512)):
+        for count,expected in ((400,128),(1200,128)):
             worker=NativeWorker(service,'kalshi')
             for i in range(count):
                 worker.pending_books[str(i)]=dict(raw=dict(ref=dict(market_id=str(i)),received_at=at))
                 worker.pending_since[str(i)]=float(i)
-            captured=[]
-            async def admit(service,fn,venue,books):captured.extend(books)
+            captured=[];sizes=[]
+            async def admit(service,fn,venue,books):
+                sizes.append(len(books));captured.extend(books)
             with patch('app.collection.current_native.call',side_effect=admit),patch('app.collection.bulk_checkpoint.save_images'):
                 worker.flush_books();await worker.publication_task
                 if worker.publication_handle:worker.publication_handle.cancel()
             self.assertEqual(len(captured),expected)
             self.assertEqual(len(worker.pending_books)+len(captured),count)
+            with patch('app.collection.current_native.call',side_effect=admit),patch('app.collection.bulk_checkpoint.save_images'):
+                while worker.pending_books:
+                    worker.flush_books();await worker.publication_task
+                    if worker.publication_handle:worker.publication_handle.cancel()
+            self.assertTrue(all(n<=128 for n in sizes))
+            self.assertEqual([b['raw']['ref']['market_id'] for b in captured],[str(i) for i in range(count)])
 
     async def test_kalshi_catalog_removal_keeps_socket_without_reimaging_survivors(self):
         from app.adapters.kalshi_stream import BookReconstructor
@@ -176,13 +211,13 @@ class WorkerControls(unittest.IsolatedAsyncioTestCase):
             nonlocal calls
             calls+=1
             self.assertFalse(stream.done());socket.close.assert_not_awaited()
-            if calls<3:raise BudgetStop('native_http_timeout')
+            if calls<4:raise BudgetStop('native_http_timeout')
             worker.closed=True
         with patch('app.collection.current_native.load_credentials',return_value={'polymarket_us':Credential()}),patch('app.collection.current_native.REST',return_value=client),patch('app.collection.current_native.native_payload.configure_transport'),patch.object(worker,'discover',side_effect=discover),patch('app.collection.current_native.asyncio.sleep',new=AsyncMock()) as sleep:
             await worker.run()
-        self.assertEqual(calls,3);self.assertFalse(worker.failed)
-        self.assertEqual(worker.metrics['discovery_deferrals'],2)
-        self.assertEqual([c.args[0] for c in sleep.await_args_list[:2]],[2,5])
+        self.assertEqual(calls,4);self.assertFalse(worker.failed)
+        self.assertEqual(worker.metrics['discovery_deferrals'],3)
+        self.assertEqual([c.args[0] for c in sleep.await_args_list[:3]],[2,5,DEFAULT['rediscovery_seconds']])
         self.assertEqual(states,[]);self.assertTrue(stream.cancelled());socket.close.assert_awaited_once()
 
     async def test_transient_http_timeout_retries_without_terminal_source_failure(self):
@@ -196,16 +231,16 @@ class WorkerControls(unittest.IsolatedAsyncioTestCase):
         async def discover():
             nonlocal calls
             calls+=1
-            if calls<3:
+            if calls<4:
                 worker.receipt(dict(path='/test',status=200,complete=False,usable_metadata=False,
                     body_sha256='0'*64,delivery_reason='native_http_timeout'))
                 raise BudgetStop('native_http_timeout')
             worker.closed=True
         with patch('app.collection.current_native.load_credentials',return_value={'kalshi':Credential()}),patch('app.collection.current_native.REST',return_value=client),patch('app.collection.current_native.native_payload.configure_transport'),patch.object(worker,'discover',side_effect=discover),patch('app.collection.current_native.asyncio.sleep',new=AsyncMock()) as sleep:
             await worker.run()
-        self.assertEqual(calls,3)
+        self.assertEqual(calls,4)
         self.assertFalse(worker.failed)
-        self.assertEqual([c.args[0] for c in sleep.await_args_list[:2]],[2,5])
+        self.assertEqual([c.args[0] for c in sleep.await_args_list[:3]],[2,5,DEFAULT['rediscovery_seconds']])
         client.aclose.assert_awaited_once()
 
     async def test_latest_validated_images_publish_as_one_bounded_batch(self):
@@ -254,7 +289,9 @@ class WorkerControls(unittest.IsolatedAsyncioTestCase):
                     def __init__(self,url,**kwargs):self.kwargs=kwargs
                     def __await__(self):
                         async def build():
-                            self_test.assertEqual(self.kwargs['max_queue'],64);self_test.assertIsNone(self.kwargs['compression'])
+                            self_test.assertEqual(self.kwargs['max_queue'],16)
+                            self_test.assertEqual(self.kwargs['max_size'],1024*1024)
+                            self_test.assertIsNone(self.kwargs['compression'])
                             socket=Socket(venue,len(sockets)+1);sockets.append(socket);return socket
                         return build().__await__()
                 self_test=self

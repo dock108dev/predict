@@ -104,6 +104,77 @@ class SourceLocalSink(unittest.TestCase):
                     self.assertTrue(all(r['comparison_source_metadata']['source_predicate']==predicate for r in records))
                     self.assertTrue(all(r['comparison_source_metadata']['comparison_admission']['supported'] is False for r in records))
 
+    def test_explicit_embedded_roles_recover_then_withdraw_without_inferring_context(self):
+        from app.collection.native_role_binding import attach
+        projection,event,market,_=fixture('polymarket_us','NCAAF')
+        catalog=projection.inventory['polymarket_us']
+        for field in ('home','away','source_participant_roles'):event.pop(field,None)
+        for team in event['_native']['teams']:team.pop('ordering',None)
+        self.assertEqual(attach(catalog),{event['id']})
+        self.assertEqual(set(event['source_participant_roles']),{'home','away'})
+        self.assertIsNone(event['season']);self.assertIsNone(event['stage'])
+        from app.storage.current_rows import event_facts
+        self.assertEqual(event_facts(event)['native_role_evidence'],event['native_role_evidence'])
+        self.assertEqual(attach(catalog),set())
+        for side in market['_native']['marketSides']:side['team'].pop('ordering',None)
+        self.assertEqual(attach(catalog),{event['id']})
+        self.assertNotIn('source_participant_roles',event)
+
+    def test_restored_unknown_participants_require_exact_new_role_evidence(self):
+        from app.collection.native_role_binding import attach
+        from app.collection.admission_enrichment import resolve_team
+        self.assertEqual(resolve_team(dict(name='Mich. State',id=1756),'NCAAB','polymarket_us'),
+                         'NCAAB:M:D1:NCAA416')
+        projection,event,market,_=fixture('polymarket_us','NCAAF')
+        catalog=projection.inventory['polymarket_us']
+        original={t['name']:resolve_team(t,'NCAAF','polymarket_us') for t in event['_native']['teams']}
+        event.update(participants={k:None for k in original},identity='unresolved')
+        self.assertEqual(attach(catalog),{event['id']})
+        self.assertEqual(event['participants'],original)
+        self.assertEqual(event['identity'],'resolved')
+
+    def test_conflicting_native_role_witness_does_not_override_existing_roles(self):
+        from app.collection.native_role_binding import attach
+        projection,event,market,_=fixture('polymarket_us','NCAAF')
+        old=deepcopy(event['source_participant_roles'])
+        for side in market['_native']['marketSides']:
+            side['team']['ordering']='away' if side['team']['ordering']=='home' else 'home'
+        attach(projection.inventory['polymarket_us'])
+        self.assertTrue(event['conflicting_duplicate'])
+        self.assertEqual(event['source_participant_roles'],old)
+
+    def test_stale_discovery_identity_refusal_yields_only_source_local_display(self):
+        projection,event,market,_=fixture('polymarket_us','NCAAF')
+        market['subscription_evidence_exclusion']='unresolved_native_identity'
+        records,excluded=normalize(projection,'polymarket_us')
+        self.assertEqual(excluded,[]);self.assertEqual(len(records),2)
+        self.assertTrue(all(not r['comparison_source_metadata']['comparison_admission']['supported'] for r in records))
+        event['source_participant_roles']['home']=event['away']
+        records,excluded=normalize(projection,'polymarket_us')
+        self.assertEqual(records,[]);self.assertEqual(len(excluded),1)
+
+    def test_complete_enrichment_revalidates_stale_subscription_identity(self):
+        from app.collection.v1_comparison import annotate
+        for fault in (None,'duplicate_slug','missing_slug','missing_terms','wrong_side_parent'):
+            with self.subTest(fault=fault):
+                projection,event,market,_=fixture('polymarket_us','NCAAF')
+                event.update(season='2026',stage='regular_season')
+                event['_native'].update(season='2026',stage='regular_season')
+                market.update(subscription_evidence_exclusion='unresolved_native_identity',subscription_slug_unique=True)
+                if fault=='duplicate_slug':market['subscription_slug_unique']=False
+                if fault=='missing_slug':market['_native'].pop('slug')
+                if fault=='missing_terms':market['terms']={}
+                if fault=='wrong_side_parent':market['_native']['marketSides'][0]['marketId']='other'
+                annotate(projection.inventory['polymarket_us'],'polymarket_us',policy=REPAIR_POLICY)
+                records,excluded=normalize(projection,'polymarket_us')
+                if fault is None:
+                    self.assertEqual(market['v1_raw_binding']['status'],'BOUND_RAW_PREDICATE')
+                    self.assertIsNone(market['subscription_evidence_exclusion'])
+                    self.assertEqual(len(records),2);self.assertEqual(excluded,[])
+                else:
+                    self.assertIsNotNone(market['subscription_evidence_exclusion'])
+                    self.assertEqual(records,[])
+
     def test_separate_catalog_admission_does_not_change_the_strict_binding_digest(self):
         for venue in ('kalshi','polymarket_us'):
             projection,event,market,_ = fixture(venue,'NBA','spread')

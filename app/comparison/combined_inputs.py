@@ -163,7 +163,7 @@ def prepare(envelopes, *, at, resolver=None, associations=None, admitted_records
     return dict(at=at,originals=originals,groups=list(groups.values()),excluded=excluded)
 
 
-def build(envelopes, *, at, selected=None, benchmark_venue='pinnacle', resolver=None, associations=None, admitted_records=None, prepared=None, source_rules=None, selected_applicability=None, registries=None, _current_guard=None, _readiness_only=False):
+def build(envelopes, *, at, selected=None, benchmark_venue='pinnacle', resolver=None, associations=None, admitted_records=None, prepared=None, source_rules=None, selected_applicability=None, registries=None, _current_guard=None, _readiness_only=False, _unit_contracts=None):
     """Hydrate only selected resolved occurrences; preserve original clocks.
 
     A read context may supply one verified prepared frame across several boards.
@@ -190,7 +190,7 @@ def build(envelopes, *, at, selected=None, benchmark_venue='pinnacle', resolver=
         raw=unavailable();raw.update(clock_at=at,projected_at=at,state='available',runtime_id='retained-combined-input')
         for status in raw['source_status'].values():status.update(state='available',reason_code='retained_input',reason='Retained observations; original clocks apply.')
         state=catalog_from_normalized(raw,deepcopy(executions),reference_records=deepcopy(references_rows),
-            source_rules=source_rules,selected_applicability=selected_applicability,registries=registries)
+            source_rules=source_rules,selected_applicability=selected_applicability,registries=registries,profile_contracts=_unit_contracts)
         # Legacy producer/fallback identities used different occurrence aliases.
         # Bind a combined-input identity consistently and retain the complete parent.
         pool=ProfilePool(state['comparison_profiles'])

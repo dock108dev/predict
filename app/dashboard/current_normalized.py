@@ -40,7 +40,8 @@ class NormalizationRegistries:
         return json.loads(self.source_rules), json.loads(self.selected_applicability)
 
 
-def catalog_from_normalized(envelope, records, *, reference_records=(), selected_applicability=None, occurrence_resolver=None, include_profiles=True, source_rules=None, registries=None):
+def catalog_from_normalized(envelope, records, *, reference_records=(), selected_applicability=None, occurrence_resolver=None, include_profiles=True, source_rules=None, registries=None, profile_contracts=None):
+    from app.storage.current_rows import contract_id
     from app.resolution.core import event_key
     from app.comparison.event_links import provider_key, current_event_key, ordinary_event_key
     if occurrence_resolver is not None:
@@ -74,6 +75,8 @@ def catalog_from_normalized(envelope, records, *, reference_records=(), selected
         record=attach(record,at=envelope['clock_at'])
         fields(record,{'event','market_identity','period_boundary','anchor_participant','selection','quote','orientation_evidence','verified','outcome_cardinality'},{'result_policy','event_scope','outcome_selections','comparison_source_metadata','comparison_scope'})
         event=record['event'];market=record['market_identity'];selection=record['selection'];q=deepcopy(record['quote'])
+        metadata_context=(q.get('occurrence_match',{}).get('status')=='matched' and
+            q['occurrence_match'].get('method')=='unique_metadata' and record['verified'] is False)
         if record.get('event_scope') is not None:
             scope=record['event_scope']
             fields(scope,{'policy','source','native_event_id'})
@@ -90,7 +93,7 @@ def catalog_from_normalized(envelope, records, *, reference_records=(), selected
             else:
                 key=provider_key(scope['source'],event) if scope['policy'].endswith('-2') else ['native-event-unverified-1',scope['source'],scope['native_event_id'],event['scheduled_start'],sorted(event['participants'].values())]
         else:
-            key=(ordinary_event_key(event) if market['event'][0]=='predict-occurrence-1' else
+            key=(ordinary_event_key(event,allow_missing_context=metadata_context) if market['event'][0]=='predict-occurrence-1' else
                  current_event_key(event) if market['event'][0]=='comparison-reviewed-occurrence-1' else event_key(event))
         admission=record.get('comparison_source_metadata',{}).get('comparison_admission',{})
         display_context=(key[0]=='comparison-provider-occurrence-1' and record['verified'] is False
@@ -105,7 +108,7 @@ def catalog_from_normalized(envelope, records, *, reference_records=(), selected
         if market['event']!=key or any(market[k]!=event[ek] for k,ek in [('sport','sport'),('competition','competition')]) or context_conflict:
             raise ValueError('Normalized market/event binding conflict')
         if any(event.get(k) is None for k in ('season','stage')) and not (
-                key[0]=='comparison-provider-occurrence-1' and record['verified'] is False):
+                (key[0]=='comparison-provider-occurrence-1' or metadata_context) and record['verified'] is False):
             raise ValueError('Missing comparison context requires an unverified source-local observation')
         if event.get('schedule_conflict') or stamp(market['scheduled_start'])!=stamp(event['scheduled_start']):raise ValueError('Normalized schedule conflict')
         family={'moneyline':'winner','team_binary':'winner','spread':'spread','total':'total'}.get(market['family'])
@@ -121,6 +124,13 @@ def catalog_from_normalized(envelope, records, *, reference_records=(), selected
         if key[0]=='predict-occurrence-1':discriminator='predict-occurrence-1:'+identity('occurrence',key)
         e=dict(id='',sport=event['sport'],league=event['competition'],season=event.get('season'),stage=event.get('stage'),event_discriminator=discriminator,
                participants=participants,title=event['title'],start_at=stamp(event['scheduled_start']).isoformat(),groups=[])
+        if metadata_context:
+            # Canonical display context comes from an explicit joined witness.
+            # Per-source event/market facts and financial verification stay untouched.
+            for field in ('season','stage'):
+                if e[field] in (None,'','unknown','unverified'):
+                    e[field]=next((r['event'][field] for r in records if r['market_identity']['event']==key
+                        and r['event'].get(field) not in (None,'','unknown','unverified')),e[field])
         e['id']=event_identity(e)
         if e['id'] not in events:events[e['id']]=e;result['events'].append(e)
         e=events[e['id']]
@@ -178,7 +188,7 @@ def catalog_from_normalized(envelope, records, *, reference_records=(), selected
         o=outcomes[o['id']]
         q['binding']=dict(verified=record['verified'],evidence=deepcopy(record['orientation_evidence']),selection=binding_context(e,g,o))
         if q.get('sharp_reference') is not None:q['sharp_reference']['selection_digest']=identity('binding',q['binding']['selection'])
-        if include_profiles:
+        if include_profiles and (profile_contracts is None or contract_id(record) in profile_contracts):
             proposal=produce(record,dict(event=e,group=g,outcome=o,quote=q,source_rules=source_rules,profile_factory=profile_factory,
                 selected_applicability=selected_applicability,
                 reference_records=reference_groups.get(encoded(record['market_identity']),[])),at=stamp(result['clock_at']))
@@ -194,6 +204,11 @@ def catalog_from_normalized(envelope, records, *, reference_records=(), selected
         v=q['venue']
         if v in o['quotes']:o['alternatives'].setdefault(v,[]).append(q)
         else:o['quotes'][v]=q
+    if profile_contracts is not None:
+        for event in result['events']:
+            event['groups']=[g for g in event['groups'] if any(contract_id(dict(quote=q)) in profile_contracts
+                for o in g['outcomes'] for q in [*o['quotes'].values(),*[q for qs in o.get('alternatives',{}).values() for q in qs]])]
+        result['events']=[e for e in result['events'] if e['groups']]
     result['comparison_profiles']=pool.finish()
     if include_profiles:
         from app.collection.current_comparison_inputs import attach

@@ -81,8 +81,11 @@ def result_availability(result, *, pair=False):
             metric_state, metric_codes = numeric_state, stale
         elif field == 'buffered_ev_usd' and metrics.get('conditional_buffered_ev_usd') is not None:
             metric_state, metric_codes = 'unsupported_inputs', ['complete_probability_partition_unsupported']
-        elif pair and not reasons:
-            metric_state, metric_codes = 'unsupported_inputs', ['complete_probability_partition_unsupported']
+        elif pair and field in ('buffered_complete_modeled_minimum_usd',
+                'buffered_decisive_opposing_margin_usd','buffered_conditional_known_state_minimum_usd'):
+            # A minimum requires cashflows and allocation, never probabilities.
+            cashflow_reasons=[r for r in reasons if 'probability' not in r and 'reference' not in r and 'benchmark' not in r]
+            metric_state, metric_codes = refusal(cashflow_reasons or ['complete_joint_cashflows_unsupported'])
         per_metric[field] = dict(state=metric_state, reason_codes=metric_codes)
     primary = (next((k for k in ('buffered_complete_modeled_minimum_usd','buffered_decisive_opposing_margin_usd','buffered_conditional_known_state_minimum_usd') if metrics.get(k) is not None),'buffered_decisive_opposing_margin_usd')) if pair else (
         'buffered_ev_usd' if metrics.get('buffered_ev_usd') is not None else 'conditional_buffered_ev_usd')

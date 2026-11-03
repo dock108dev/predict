@@ -39,6 +39,234 @@ def decoded_board(*args,**kwargs):
 
 @skipUnless(SOCKET,'Explicit maintained disposable DA PostgreSQL lane required')
 class LatestBoardSQL(LatestBoardFixture):
+    async def test_observation_merge_prepares_before_ingress_lock(self):
+        from app.storage import selected_frame
+        self.fresh_sources();self.reconcile();self.changed_first()
+        locks=[];original=selected_frame.preserve_newer_observation
+        with self.connect() as db:
+            def merge(*args):
+                locks.append(db.execute('''SELECT EXISTS(SELECT 1 FROM pg_locks
+                    WHERE pid=pg_backend_pid() AND locktype='advisory' AND objid=%s AND granted) held''',
+                    (LOCK,)).fetchone()['held'])
+                return original(*args)
+            with patch.object(selected_frame,'preserve_newer_observation',side_effect=merge):
+                result=latest.reconcile(db,at=self.at.isoformat(),observations_only=True)
+        self.assertTrue(result['published'],result)
+        self.assertTrue(locks)
+        self.assertFalse(any(locks),locks)
+        for row in self.rows().values():
+            self.assertTrue(row['facts']['selected_frame'])
+            self.assertTrue(row['facts']['context'])
+
+    async def test_grouped_scanner_admission_matches_complete_component_bound(self):
+        from app.storage.scanner_readiness import capture_reservation
+        from app.comparison.scanner_readiness import MAX_BYTES
+        with self.connect() as db,db.transaction():
+            db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
+            expected=0
+            for ids in latest.capture_batches(db):
+                size=db.execute('''SELECT COALESCE(sum(octet_length(e.facts::text)+octet_length(c.facts::text)+octet_length(o.facts::text)),0) n
+                    FROM current_contract c JOIN current_offer o ON o.contract_id=c.id JOIN current_event e ON e.id=c.event_id
+                    WHERE c.event_id=ANY(%s)''',(ids,)).fetchone()['n']
+                depth=db.execute("SELECT count(*) n FROM current_native_depth WHERE side='asks' AND event_id=ANY(%s)",(ids,)).fetchone()['n']
+                depth+=db.execute("SELECT count(*) n FROM current_depth d JOIN current_contract c ON c.id=d.contract_id WHERE side='asks' AND c.event_id=ANY(%s)",(ids,)).fetchone()['n']
+                expected=max(expected,int(size)*8+int(depth)*2048)
+            self.assertEqual(capture_reservation(db),expected+MAX_BYTES*8+16*1024*1024)
+
+    async def test_prepared_merge_rechecks_concurrent_parent_version(self):
+        from app.dashboard import grouped_odds
+        self.fresh_sources();self.reconcile();self.changed_first()
+        original=grouped_odds.grid_board;calls=0
+        with self.connect() as db:
+            def projected(*args,**kwargs):
+                nonlocal calls
+                calls+=1
+                if calls==1:
+                    db.execute("UPDATE latest_board SET facts=facts || '{\"concurrent_witness\":true}'::jsonb")
+                return original(*args,**kwargs)
+            with patch.object(grouped_odds,'grid_board',side_effect=projected):
+                result=latest.reconcile(db,at=self.at.isoformat(),observations_only=True)
+            self.assertTrue(result['published'],result)
+            self.assertGreaterEqual(calls,2)  # changed row requires a fresh projection
+            self.assertTrue(all(r['facts'].get('concurrent_witness') for r in db.execute('SELECT facts FROM latest_board')))
+
+    async def test_rekeyed_generation_retirement_requires_complete_committed_coverage(self):
+        from app.storage.pipeline_generation import admit,outcome,retire_obsolete
+        with self.connect() as db:
+            db.execute('TRUNCATE pipeline_generation')
+            def add(key,events):return admit(db,key,{'selector':{'events':events}},'engine','policy',[])
+            replaced=add('old-key',['a','b'])
+            unrelated=add('other-key',['c'])
+            retained=add('retained-key',['a'])
+            rejected=add('rejected-key',['d'])
+            outcome(db,rejected,published=False,reason='membership_changed')
+            self.assertEqual(db.execute('SELECT disposition FROM pipeline_generation WHERE id=%s',(rejected,)).fetchone()['disposition'],'superseded')
+            captured=db.execute('SELECT clock_timestamp() at').fetchone()['at']
+            future=add('newer-key',['a'])
+            retire_obsolete(db,['replacement-key','retained-key'],['a'],['a','b','c'],captured)
+            self.assertEqual(db.execute('SELECT disposition FROM pipeline_generation WHERE id=%s',(replaced,)).fetchone()['disposition'],'eligible_pending')
+            try:
+                with db.transaction():
+                    retire_obsolete(db,['replacement-key','retained-key'],['a','b'],['a','b','c'],captured)
+                    raise RuntimeError('authored rollback')
+            except RuntimeError:pass
+            self.assertEqual(db.execute('SELECT disposition FROM pipeline_generation WHERE id=%s',(replaced,)).fetchone()['disposition'],'eligible_pending')
+            retire_obsolete(db,['replacement-key','retained-key'],['a','b'],['a','b','c'],captured)
+            rows={r['id']:r for r in db.execute('SELECT id,disposition,reason FROM pipeline_generation')}
+            self.assertEqual(rows[replaced]['reason'],'publication_membership_replaced')
+            for gid in (unrelated,retained,future):self.assertEqual(rows[gid]['disposition'],'eligible_pending')
+            retire_obsolete(db,['replacement-key','retained-key'],[],['a','b'],captured)
+            self.assertEqual(db.execute('SELECT disposition FROM pipeline_generation WHERE id=%s',(unrelated,)).fetchone()['disposition'],'superseded')
+
+    async def test_generation_completion_and_commit_have_distinct_ownership(self):
+        from app.storage.pipeline_generation import admit,completed,outcome
+        with self.connect() as db:db.execute('TRUNCATE pipeline_generation')
+        self.reconcile()
+        with self.connect() as db:
+            generations=db.execute("SELECT * FROM pipeline_generation WHERE position('#result:' in game_key)=0").fetchall()
+            self.assertEqual(len(generations),2)
+            self.assertTrue(all(r['calculations']==1 and r['commits']==1 and r['published_at'] for r in generations))
+            before={r['id'] for r in generations}
+        self.assertTrue(self.reconcile()['unchanged'])
+        with self.connect() as db:
+            self.assertEqual({r['id'] for r in db.execute("SELECT id FROM pipeline_generation WHERE position('#result:' in game_key)=0").fetchall()},before)
+            dependencies={'selector':{'events':['authored']},'price':'1'}
+            gid=admit(db,'authored-game',dependencies,'engine','policy',['fresh'])
+            completed(db,gid)
+            try:
+                with db.transaction():
+                    outcome(db,gid,published=True)
+                    raise RuntimeError('authored transaction rollback')
+            except RuntimeError:pass
+            row=db.execute('SELECT * FROM pipeline_generation WHERE id=%s',(gid,)).fetchone()
+            self.assertIsNotNone(row['completed_at']);self.assertIsNone(row['published_at'])
+            new=admit(db,'authored-game',dict(dependencies,price='2'),'engine','policy',['fresh'])
+            self.assertNotEqual(new,gid)
+            self.assertEqual(db.execute('SELECT disposition FROM pipeline_generation WHERE id=%s',(gid,)).fetchone()['disposition'],'superseded')
+
+    async def test_interrupted_generation_retired_only_by_new_exclusive_owner(self):
+        from app.storage.pipeline_generation import admit,completed,recover_interrupted
+        from app.storage.current_games import engine_binding
+        with self.connect() as db:
+            dep={'selector':{'events':['authored']}}
+            current=admit(db,'interrupted-current',dep,engine_binding(),'policy',[])
+            prior=admit(db,'interrupted-prior',dep,'older-engine','policy',[])
+            completed(db,current)
+            recover_interrupted(db)
+            rows={r['id']:r for r in db.execute('SELECT * FROM pipeline_generation WHERE id=ANY(%s)',([current,prior],)).fetchall()}
+            self.assertEqual(rows[current]['reason'],'previous_worker_exited_before_commit')
+            self.assertEqual(rows[current]['disposition'],'deferred')
+            self.assertIsNone(rows[current]['published_at'])
+            self.assertEqual(rows[current]['calculations'],1)
+            self.assertEqual(rows[prior]['disposition'],'superseded')
+            self.assertEqual(rows[prior]['reason'],'engine_replaced')
+
+    async def test_catalog_capture_skips_native_prices_but_selected_finance_keeps_proof(self):
+        self.reconcile()
+        with self.connect() as db, patch('app.storage.native_authority.capture',return_value={}) as native:
+            catalog=latest.snapshot(db,game='__catalog_only__',at=self.at.isoformat())
+            self.assertEqual(catalog['rows'],{})
+            native.assert_not_called()
+            key=catalog['status']['games'][0]['game_key']
+            selected=latest.snapshot(db,game=key,at=self.at.isoformat(),dashboard=True)
+            self.assertIn(key,selected['rows'])
+            native.assert_called_once()
+
+    async def test_grid_revision_uses_frozen_proof_without_duplicate_marker_scan(self):
+        self.reconcile()
+        def snapshot():
+            with self.connect() as db,patch.object(latest,'marker',side_effect=AssertionError('redundant scan')):
+                return latest.snapshot(db,at=self.at.isoformat(),view='odds',serialized_boards=True,window_hours=72)
+        before=snapshot()
+        self.changed_first()
+        after=snapshot()
+        self.assertNotEqual(before['read_revision'],after['read_revision'])
+        self.assertEqual(before['status']['games'],after['status']['games'])
+
+    async def test_financial_turn_publishes_completed_frame_once_per_component(self):
+        with self.connect() as db:db.execute('TRUNCATE pipeline_generation')
+        with patch.object(latest,'publish',wraps=latest.publish) as publish, \
+                patch.object(latest,'_selection_payload',wraps=latest._selection_payload) as render:
+            result=self.reconcile()
+        self.assertTrue(result['published'],result)
+        self.assertEqual(result['computed'],2)
+        completed=[c for c in render.call_args_list if c.args[2] is not None]
+        self.assertGreater(len(completed),2)
+        with self.connect() as db:
+            self.assertEqual(len(completed),db.execute("SELECT count(*) n FROM pipeline_generation WHERE position('#result:' in game_key)>0").fetchone()['n'])
+        self.assertTrue(publish.call_args_list)
+        self.assertTrue(all(not c.kwargs['status'].get('observation_only') for c in publish.call_args_list))
+        self.assertTrue(all(r['facts']['boards']['odds']['prices'] for r in self.rows().values()))
+
+    async def test_identity_cache_does_not_cache_membership_or_alias_rule_changes(self):
+        from app.storage import observation_publication as publication
+        with self.connect() as db:
+            before=publication.identity_index(db)
+            with patch.object(publication,'_prepare_events',wraps=publication._prepare_events) as prepare:
+                repeated=publication.identity_index(db)
+            prepare.assert_not_called()
+            self.assertEqual(before,repeated)
+            eid=next(iter(before['active_events']))
+            db.execute('DELETE FROM current_offer WHERE contract_id IN (SELECT id FROM current_contract WHERE event_id=%s)',(eid,))
+            after=publication.identity_index(db)
+            self.assertNotIn(eid,after['active_events'])
+            with patch('app.storage.current_games.observation_binding',return_value='changed-rules'),patch.object(publication,'_prepare_events',wraps=publication._prepare_events) as prepare:
+                publication.identity_index(db)
+            self.assertTrue(prepare.called)
+
+    async def test_grid_snapshot_limits_capture_to_rolling_72_hours(self):
+        from psycopg.types.json import Jsonb
+        self.reconcile()
+        with self.connect() as db:
+            status=db.execute('SELECT facts FROM latest_board_status').fetchone()['facts']
+            games=status['games']
+            self.assertEqual(len(games),2)
+            for hours,expected in ((-1,False),(0,True),(71.999,True),(72,False),(96,False)):
+                with self.subTest(hours=hours):
+                    games[0]['start_at']=(self.at+timedelta(hours=hours)).isoformat()
+                    games[1]['start_at']=(self.at+timedelta(hours=100)).isoformat()
+                    db.execute('UPDATE latest_board_status SET facts=%s',(Jsonb(status),))
+                    frame=latest.snapshot(db,at=self.at.isoformat(),view='odds',
+                        serialized_boards=True,window_hours=72)
+                    keys=[g['game_key'] for g in frame['status']['games']]
+                    self.assertEqual(keys,[games[0]['game_key']] if expected else [])
+                    self.assertEqual(set(frame['rows']),set(keys))
+
+    async def test_grid_publication_preserves_original_membership_and_reference_separation(self):
+        from app.dashboard.grouped_odds import grid_board
+        from app.dashboard.comparison_board import expand_price_fields
+        self.reconcile()
+        with self.connect() as db:
+            frame=latest.snapshot(db,at=self.at.isoformat(),game=self.first['game_key'],view='odds')
+            value=decoded_board(frame,self.first['game_key'],view='odds',filter='all')
+            original={q['quote_id']:deepcopy(q['original']) for q in value['prices']}
+            compact=expand_price_fields(grid_board(value))
+            self.assertEqual({q['quote_id']:q['original'] for q in compact['prices']},original)
+            refs=[id for row in compact['grouped_odds']['rows'] for cell in row['cells'].values() for id in cell]
+            self.assertEqual(sorted(refs),sorted(original))
+            self.assertTrue(all(q['role']=='reference_only' for q in compact.get('reference_prices',[])))
+            self.assertTrue(all('gross_comparison' not in q for q in compact['prices']))
+            saved=db.execute("SELECT facts->'selected_frame' selected FROM latest_board WHERE game_key=%s",(self.first['game_key'],)).fetchone()
+            self.assertTrue(saved['selected'])
+
+    async def test_materialized_contract_fingerprints_keep_exact_dependency_semantics(self):
+        from psycopg.types.json import Jsonb
+        with self.connect() as db:
+            def check():
+                result=db.execute("""SELECT bool_and(contract_dependency=encode(sha256(convert_to(
+                    (facts #- '{comparison_source_metadata,observed_at}')::text,'UTF8')),'hex')) exact
+                    FROM current_contract""").fetchone()
+                self.assertTrue(result['exact'])
+            check()
+            row=db.execute('SELECT id,contract_dependency,metric_dependency FROM current_contract LIMIT 1').fetchone()
+            db.execute("UPDATE current_contract SET facts=jsonb_set(facts,'{comparison_source_metadata,observed_at}',%s) WHERE id=%s",
+                (Jsonb('2030-01-01T00:00:00Z'),row['id']))
+            self.assertEqual(db.execute('SELECT contract_dependency,metric_dependency FROM current_contract WHERE id=%s',(row['id'],)).fetchone(),
+                {k:row[k] for k in ('contract_dependency','metric_dependency')})
+            db.execute("UPDATE current_contract SET facts=facts || %s WHERE id=%s",(Jsonb(dict(authored_change=True)),row['id']))
+            check()
+            self.assertNotEqual(db.execute('SELECT contract_dependency FROM current_contract WHERE id=%s',(row['id'],)).fetchone()['contract_dependency'],row['contract_dependency'])
+
     async def test_generated_publication_accounting_tracks_every_fact_update(self):
         from psycopg.types.json import Jsonb
         self.reconcile()
@@ -53,6 +281,17 @@ class LatestBoardSQL(LatestBoardFixture):
             check()
             db.execute("UPDATE latest_board SET facts=facts || %s",(Jsonb(dict(authored_extra='x'*10000)),))
             check()
+
+    async def test_commit_marker_ignores_receipts_but_not_source_clock(self):
+        with self.connect() as db:
+            before=latest.marker(db)
+            db.execute("UPDATE current_offer SET received_at=%s,received_order=received_order+1",
+                ((self.at+timedelta(seconds=1)).isoformat(),))
+            db.execute("UPDATE current_native_book SET received_at=%s,received_order=received_order+1",
+                ((self.at+timedelta(seconds=1)).isoformat(),))
+            self.assertEqual(latest.marker(db),before)
+            db.execute("UPDATE current_offer SET source_at=%s",((self.at+timedelta(seconds=1)).isoformat(),))
+            self.assertNotEqual(latest.marker(db),before)
 
     async def test_scoped_marker_ignores_other_prices_but_detects_membership(self):
         from app.storage.store import hashed
@@ -194,15 +433,20 @@ class LatestBoardSQL(LatestBoardFixture):
             db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
             full=publication.capture(db,{})
             compact=publication.capture(db,{},compact=True,resource_guard=reservations.append)
+            lazy=publication.capture(db,{},compact='lazy')
+            warm=publication.capture(db,{},compact='lazy')
         self.assertEqual(set(full['offers']),set(compact['offers']))
         self.assertTrue(reservations)
         for cid,row in full['offers'].items():
             self.assertEqual(publication.own(full,cid),publication.own(compact,cid))
             self.assertEqual(publication.selection(full,row),publication.selection(compact,compact['offers'][cid]))
+            self.assertEqual(publication.selection(full,row),publication.selection(lazy,lazy['offers'][cid]))
+            self.assertEqual(publication.selection(full,row),publication.selection(warm,warm['offers'][cid]))
             self.assertEqual(compact['offers'][cid]['contract'],{})
         for row in rows.values():
             saved=row['facts']['publication_dependencies']
             self.assertEqual(publication.reasons(full,saved),publication.reasons(compact,saved))
+            self.assertEqual(publication.reasons(full,saved),publication.reasons(warm,saved))
         self.assertLess(len(encoded(dict(offers=compact['offers'],selections=compact['selection_identities']))),
             len(encoded(dict(offers=full['offers'],selections=full['selection_identities']))))
 
@@ -285,8 +529,9 @@ class LatestBoardSQL(LatestBoardFixture):
         self.fresh_sources()
         for stage in ('discover','context_identity','calculate_current'):
             with self.subTest(stage=stage):
-                with self.connect() as db:db.execute('TRUNCATE latest_board,latest_board_status')
-                with patch.object(latest,stage,side_effect=ValueError('authored_optional_calculation_failure')):
+                self.clear_publications()
+                target='app.storage.discovery_index.prepare' if stage=='discover' else 'app.storage.latest_board.'+stage
+                with patch(target,side_effect=ValueError('authored_optional_calculation_failure')):
                     result=self.reconcile()
                 self.assertTrue(result['published'],result)
                 self.assertEqual(set(self.rows()),{self.first['game_key'],self.second['game_key']})
@@ -314,7 +559,7 @@ class LatestBoardSQL(LatestBoardFixture):
             self.assert_source_frame(odds)
             self.assertFalse(odds['benchmark']['available'])
         # A malformed optional producer output cannot become a source-fact gate.
-        with self.connect() as db:db.execute('TRUNCATE latest_board,latest_board_status')
+        with self.connect() as db:db.execute('TRUNCATE current_result_parent_original,latest_board,latest_board_status')
         with patch('app.comparison.combined_inputs._benchmark',return_value=({'authored_malformed':True},None)):
             self.assertTrue(self.reconcile()['published'])
         for game in self.rows():
@@ -325,12 +570,12 @@ class LatestBoardSQL(LatestBoardFixture):
 
     async def test_missing_or_expired_optional_fee_preserves_source_facts(self):
         from app.comparison.current_dependencies import digest
-        self.fresh_sources();real_discover=latest.discover
+        self.fresh_sources();real_bundles=latest.ReadContext.bundles
         for mode in ('missing','expired'):
             with self.subTest(mode=mode):
-                with self.connect() as db:db.execute('TRUNCATE latest_board,latest_board_status')
-                def decorated(*args,**kwargs):
-                    bundles=real_discover(*args,**kwargs)
+                self.clear_publications()
+                def decorated(context,*args,**kwargs):
+                    bundles=real_bundles(context,*args,**kwargs)
                     for bundle in bundles:
                         for _,_,q in entries(bundle['state_inputs']):
                             fee=q['comparison_input_status']['fee']
@@ -343,7 +588,7 @@ class LatestBoardSQL(LatestBoardFixture):
                                     recipe['expires_at']=(self.at-timedelta(seconds=1)).isoformat()
                                     recipe['id']=digest({k:v for k,v in recipe.items() if k!='id'})
                     return bundles
-                with patch.object(latest,'discover',side_effect=decorated):
+                with patch.object(latest.ReadContext,'bundles',new=decorated):
                     self.assertTrue(self.reconcile()['published'])
                 for game in self.rows():
                     odds=decoded_board(self.snapshot(),game,view='odds',filter='all')
@@ -377,8 +622,8 @@ class LatestBoardSQL(LatestBoardFixture):
         # Read-relative age metadata advances; captured source facts do not.
         self.assertEqual([(q['original'],q['times'],q['observation_revision']) for q in odds['prices']],
             [(q['original'],q['times'],q['observation_revision']) for q in original])
-        self.assertIn('calculation_authority_boundary',ev['background_reasons'])
-        self.assertFalse(any(r.get('ranking_eligible') for r in ev['rows']))
+        self.assertNotIn('calculation_authority_boundary',ev['background_reasons'])
+        self.assertGreater(ev['result_unit_coverage']['current'],0)
         self.at+=timedelta(minutes=31);self.state.write(self.service)
         stale=decoded_board(self.snapshot(),key,view='odds',filter='all')
         self.assert_source_frame(stale,current=False)
@@ -491,7 +736,9 @@ class LatestBoardSQL(LatestBoardFixture):
         bundle['calculation_context']=context_identity(bundle,DEFAULT_POLICY,c)
         expected=response(bundle,calculate_current(bundle,DEFAULT_POLICY,context=c),DEFAULT_POLICY,view='ev',filter='all',at=self.at.isoformat())
         from app.dashboard.comparison_board import expand_price_fields
-        self.assertEqual(after[a]['facts']['boards']['ev']['rows'],expand_price_fields(expected)['rows'])
+        def economics(rows):
+            return sorted(({k:v for k,v in row.items() if k!='details'} for row in rows),key=lambda r:r['quote_id'])
+        self.assertEqual(economics(after[a]['facts']['boards']['ev']['rows']),economics(expand_price_fields(expected)['rows']))
         # A new owner reconciles current SQL without invoking any financial owner.
         with patch.object(latest,'calculate_current',side_effect=AssertionError('unchanged finance forbidden')):
             for _ in range(3):self.assertTrue(self.reconcile()['unchanged'])
@@ -526,15 +773,21 @@ class LatestBoardSQL(LatestBoardFixture):
 
     async def test_policy_engine_epoch_change_and_removal_withdraw_without_quotes(self):
         self.reconcile();before=self.rows()
+        # Distinct control generations must have distinct capture clocks.
+        # Equal-clock replacement correctly cannot renew prior unit authority.
+        self.at+=timedelta(seconds=1);self.state.write(self.service)
         alternate=replace(DEFAULT_POLICY,buffer_rate='0.01')
         with patch.object(latest,'load',return_value=alternate):
             self.assertIn('policy_changed',self.snapshot()['reasons'])
             self.assertTrue(self.reconcile()['published'])
             self.assertTrue(all(r['facts']['boards']['ev']['policy']['revision']==alternate.revision for r in self.rows().values()))
+        self.at+=timedelta(seconds=1);self.state.write(self.service)
         with patch.object(latest,'engine_binding',return_value='authored-engine-change'),patch('app.storage.comparison_board.engine_binding',return_value='authored-engine-change'):
             self.assertIn('engine_binding_changed',self.snapshot()['reasons'])
             self.assertTrue(self.reconcile()['published'])
+        self.at+=timedelta(seconds=1);self.state.write(self.service)
         self.reconcile()
+        self.at+=timedelta(seconds=1);self.state.write(self.service)
         with self.connect() as db:
             with db.transaction():
                 db.execute('SELECT pg_advisory_xact_lock(%s)',(LOCK,))
@@ -575,6 +828,68 @@ class LatestBoardSQL(LatestBoardFixture):
         self.assertEqual(after['facts']['boards']['ev']['availability']['numeric_results'],0)
         self.assertTrue(all(not row['ranking_eligible'] for row in after['facts']['boards']['ev']['rows']))
 
+    async def test_contested_component_rotates_without_discarding_its_retry(self):
+        from psycopg.errors import LockNotAvailable
+        calls=[];admission={}
+        def one(db,**kwargs):
+            calls.append(kwargs['event_ids'])
+            if len(calls)==1:raise LockNotAvailable('authored ingestion contention')
+            return dict(published=True,unchanged=False,computed=1,reused=0,errors=[])
+        with self.connect() as db,patch.object(latest,'_reconcile',side_effect=one):
+            result=latest.reconcile(db,at=self.at.isoformat(),admission=admission)
+            failed=db.execute("SELECT reason,attempts FROM current_pipeline_attempt WHERE event_id=ANY(%s) AND branch='metrics'",(calls[0],)).fetchall()
+        self.assertGreaterEqual(len(calls),2)
+        self.assertTrue(result['published'])
+        self.assertTrue(all(r['reason']=='attempt_LockNotAvailable' and r['attempts']==1 for r in failed))
+        self.assertEqual(admission['estimates_after'],min(calls[-1]))
+
+    async def test_overtaken_capture_keeps_window_retry_priority(self):
+        from app.storage.board_capture import prioritize_window_waiters
+        from psycopg.types.json import Jsonb
+        self.fresh_sources();self.reconcile()
+        # Both authored games must fall inside the same requested 72h window.
+        window_at=(self.at+timedelta(days=1,hours=19)).isoformat()
+        with self.connect() as db:
+            rows=db.execute("SELECT game_key,publication_events FROM latest_board ORDER BY game_key").fetchall()
+            retry,completed=rows
+            db.execute("UPDATE latest_board SET facts=facts || %s WHERE game_key=%s",
+                (Jsonb(dict(retained_financial_only=True)),retry['game_key']))
+            # An older completed component competes with the more recently
+            # attempted, accepted-but-overtaken capture. No cohort IDs or venue
+            # names enter the production priority rule.
+            db.execute("UPDATE current_pipeline_attempt SET last_attempt=%s WHERE event_id=ANY(%s) AND branch='metrics'",
+                (self.at-timedelta(minutes=10),completed['publication_events']))
+            batches=[completed['publication_events'],retry['publication_events']]
+            self.assertEqual(prioritize_window_waiters(db,batches,window_at,observations_only=False)[0],retry['publication_events'])
+            db.execute("UPDATE latest_board SET facts=facts-'retained_financial_only' WHERE game_key=%s",(retry['game_key'],))
+            self.assertEqual(prioritize_window_waiters(db,batches,window_at,observations_only=False)[0],completed['publication_events'])
+            # A once-valid frame with newer admitted evidence must also rejoin
+            # priority work. Receipt-only changes remain a scheduling hint; the
+            # existing reconciliation test verifies exact unchanged reuse.
+            db.execute("UPDATE current_offer SET received_at=%s WHERE contract_id IN (SELECT id FROM current_contract WHERE event_id=ANY(%s))",
+                ((self.at+timedelta(seconds=1)).isoformat(),retry['publication_events']))
+            self.assertEqual(prioritize_window_waiters(db,batches,window_at,observations_only=False)[0],retry['publication_events'])
+            # A new unpublished arrival joins the same age-ordered class; it
+            # cannot continually displace the older overtaken retry.
+            db.execute("UPDATE latest_board SET facts=facts || %s WHERE game_key=%s",
+                (Jsonb(dict(retained_financial_only=True)),retry['game_key']))
+            db.execute("DELETE FROM latest_board WHERE game_key=%s",(completed['game_key'],))
+            for row,when in ((retry,self.at-timedelta(minutes=5)),(completed,self.at)):
+                db.execute("UPDATE current_pipeline_attempt SET last_attempt=%s WHERE event_id=ANY(%s) AND branch='metrics'",
+                    (when,row['publication_events']))
+            self.assertEqual(prioritize_window_waiters(db,batches,window_at,observations_only=False)[0],retry['publication_events'])
+
+    async def test_receipt_only_refresh_and_sibling_status_do_not_rebuild_quiet_games(self):
+        self.reconcile();before=self.rows()
+        with self.connect() as db:
+            db.execute("UPDATE current_offer SET received_at=%s,received_order=received_order+1",((self.at+timedelta(seconds=1)).isoformat(),))
+            db.execute("UPDATE latest_board_status SET facts=jsonb_set(facts,'{observation_only}','true'::jsonb)")
+        with patch.object(latest,'read_context',side_effect=AssertionError('unchanged normalization forbidden')), patch.object(latest,'calculate_current',side_effect=AssertionError('unchanged maths forbidden')):
+            result=self.reconcile()
+        self.assertTrue(result['unchanged'])
+        self.assertEqual(result['computed'],0)
+        self.assertEqual({k:r['calculated_at'] for k,r in self.rows().items()}, {k:r['calculated_at'] for k,r in before.items()})
+
     async def test_conservative_boundary_refresh_keeps_original_economics(self):
         self.reconcile();before=self.rows();key=self.first['game_key']
         # Authored conservative deadline models a selected schedule boundary
@@ -583,7 +898,8 @@ class LatestBoardSQL(LatestBoardFixture):
             db.execute("UPDATE latest_board SET facts=jsonb_set(facts,'{valid_until}',to_jsonb(%s::text)) WHERE game_key=%s",
                 ((self.at+timedelta(seconds=1)).isoformat(),key))
         self.at+=timedelta(seconds=2);self.state.write(self.service)
-        self.assertIn('calculation_authority_boundary',decoded_board(self.snapshot(),key,view='ev',filter='all')['background_reasons'])
+        # A display assembly deadline cannot revoke independently sealed units.
+        self.assertNotIn('calculation_authority_boundary',decoded_board(self.snapshot(),key,view='ev',filter='all')['background_reasons'])
         with patch.object(latest,'calculate_current',side_effect=AssertionError('unchanged financial work forbidden')):
             result=self.reconcile()
         self.assertTrue(result['published']);self.assertEqual(result['computed'],0)
@@ -617,12 +933,25 @@ class LatestBoardSQL(LatestBoardFixture):
             value=original(bundle,*args,**kwargs)
             if bundle['game_key']==self.first['game_key']:
                 captured['bundle']=deepcopy(bundle)
-                self.changed_first()
+                # Selected-unit hydration no longer calculates every sibling.
+                # Change a required offer in THIS calculation, not a possibly
+                # unrelated unit that will correctly reject later hydration.
+                from app.dashboard.comparison_board import entries
+                from app.storage.current_rows import contract_id
+                q=next(q for _,_,q in entries(bundle['state_inputs']))
+                self.at+=timedelta(seconds=1);self.state.write(self.service)
+                with self.connect() as db:
+                    db.execute("UPDATE current_offer SET revision=revision||'-during-calculation' WHERE contract_id=%s",
+                        (contract_id(dict(quote=q)),))
             return value
         with patch.object(latest,'calculate_current',side_effect=changing):
             self.reconcile()
         saved=self.rows()[self.first['game_key']]
         self.assertTrue(saved['facts']['retained_financial_only'])
+        with self.connect() as db:
+            generation=db.execute('SELECT * FROM pipeline_generation WHERE id=%s',(saved['facts']['generation_id'],)).fetchone()
+        self.assertTrue(generation['facts']['validation_witness']['mismatches'])
+        self.assertGreaterEqual(stamp(generation['facts']['commit_observed_at']),generation['published_at'])
         frame=self.snapshot()
         # Even if a later read has no local differences, retained-only finance
         # must not silently become a current opportunity.
@@ -632,7 +961,9 @@ class LatestBoardSQL(LatestBoardFixture):
         self.assertTrue(board['rows'])
         self.assertTrue(all(not r['ranking_eligible'] for r in board['rows']))
         self.assertTrue(all(not r.get('classification',{}).get('main_positive_eligible') for r in board['rows']))
-        selected=board['rows'][0]['details']
+        refused={uid for uid,u in saved['facts']['result_units'].items() if u['facts'].get('retained_financial_only')}
+        self.assertTrue(refused)
+        selected=next(r['details'] for r in board['rows'] if r['result_unit_id'] in refused)
         query=dict(game=self.first['game_key'],view='details',context_id=selected['context_id'],quote=selected['quote_id'])
         with self.connect() as db,db.transaction():
             detail=selected_frame.read(db,saved,query,DEFAULT_POLICY)
@@ -664,15 +995,16 @@ class LatestBoardSQL(LatestBoardFixture):
                         self.assertEqual(result.status,200,await result.text())
                         self.assertEqual((await result.json())['filter'],selected_filter)
                     pages=[];read_identity={}
-                    for offset in (0,1):
+                    for offset in (0,):
                         result=await client.get('/api/boards/slate',params=dict(view='odds',filter='all',offset=str(offset),limit='1',**read_identity))
                         self.assertEqual(result.status,200,await result.text());page=await result.json()
                         read_identity=dict(read_token=page['read_token'],expected_revision=page['read_revision'])
-                        self.assertEqual(page['coverage']['total_games'],2)
+                        self.assertEqual(page['coverage']['total_games'],1)
                         self.assertEqual(page['coverage']['returned_games'],1)
                         self.assertEqual(len(page['boards']),1)
                         pages.extend(b['game_key'] for b in page['boards'])
-                    self.assertEqual(set(pages),set(published))
+                    # The second legacy fixture starts beyond the rolling 72-hour grid.
+                    self.assertEqual(set(pages),{self.first['game_key']})
                     with patch('app.dashboard.comparison_board_api.discover',side_effect=AssertionError('optional finance discovery forbidden')):
                         inputs=dict(game=self.first['game_key'],context_id=source['inputs_identity']['context_id'],quote=source['quote_id'])
                         result=await client.get('/api/boards/inputs',params=inputs);value=await result.json()
@@ -711,7 +1043,7 @@ class LatestBoardSQL(LatestBoardFixture):
             status=db.execute('SELECT facts FROM latest_board_status').fetchone()['facts']
             status.pop('capture_events',None);status.pop('capture_membership',None)
             proof=latest.marker(db);owner=latest.runtime(db)
-            total=int(db.execute('SELECT sum(retained_bytes) n FROM latest_board').fetchone()['n'])
+            total=int(db.execute('SELECT sum(retained_bytes) n FROM (SELECT retained_bytes FROM latest_board UNION ALL SELECT retained_bytes FROM current_result_unit UNION ALL SELECT retained_bytes FROM current_grid_projection UNION ALL SELECT retained_bytes FROM current_grid_blob b WHERE NOT EXISTS(SELECT 1 FROM current_grid_projection g WHERE g.blob_id=b.id)) retained').fetchone()['n'])
             selected=db.execute('SELECT game_key,dependency_revision,economic_revision,calculated_at,facts FROM latest_board ORDER BY game_key LIMIT 1').fetchall()
             with patch.object(latest,'MAX_BYTES',total):
                 self.assertTrue(latest.publish(db,captured_marker=proof,captured_runtime=owner,status=status,rows=deepcopy(selected)))

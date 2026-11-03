@@ -163,3 +163,55 @@ def test_owned_normalization_prepares_exact_sql_values_in_cpu_worker():
     actual=normalize_storage_batch(catalog,images,book['raw']['received_at'],True)
     assert actual==([prepare(row) for row in rows],errors)
     assert actual[0] and (catalog,images)==original
+
+
+def test_catalog_ipc_restores_unchanged_parent_metadata_sharing():
+    import asyncio
+    from app.collection.current_ingress import CatalogPreparation
+    catalog,_=native_fixture()
+    async def check():
+        worker=CatalogPreparation()
+        try:
+            actual,_=await worker.prepare({},'kalshi',catalog)
+            # Mutable row shells remain detached; source metadata is identical.
+            for old,new in zip(catalog['markets'],actual['kalshi']['markets']):
+                assert old is not new
+                if '_native' in old:assert old['_native'] is new['_native']
+            assert actual==prepare_catalog_change({},'kalshi',catalog)[0]
+        finally:await worker.close()
+    from app.collection.current_ingress import prepare_catalog_change
+    asyncio.run(check())
+
+
+def test_catalog_indexes_reuse_prices_but_replace_changed_authority():
+    from app.collection.current_database import DatabaseIngressSink
+    sink=DatabaseIngressSink(None,{})
+    cat,_=native_fixture();inventory={'kalshi':cat}
+    first=sink.catalog_indexes(inventory)
+    assert sink.catalog_indexes(inventory) is first
+    changed=deepcopy(inventory)
+    changed['kalshi']['markets'][0]['title']='changed metadata'
+    second=sink.catalog_indexes(changed)
+    assert second is not first
+    assert next(iter(first[0].values())).get('title')!='changed metadata'
+    assert next(iter(second[0].values()))['title']=='changed metadata'
+
+
+def test_group_move_preserves_display_only_for_unchanged_selected_members():
+    from types import SimpleNamespace
+    from app.collection.current_service import CurrentService
+    source='polymarket_us'
+    keys={mid:(source,'e',mid) for mid in ('moving','refresh','changed','removed','untouched')}
+    group={mid for mid in keys if mid!='untouched'}
+    transition=dict(invalidated=group,changed={'changed'},added={'new':sorted(group-{'removed'})})
+    worker=SimpleNamespace(subscription_transition=transition)
+    delta=dict(retained=set(keys.values())-{keys['removed']},refresh={keys['refresh']},withdraw={keys['removed']})
+    service=SimpleNamespace(dispatch=True,database_mode=True,workers={source:worker},states={},
+        sink=SimpleNamespace(reducer=SimpleNamespace(generation=1,books=set(keys.values()))),
+        row=lambda kind,venue,**values:values)
+    command=CurrentService.catalog.operation(service,source,{},prepared={},catalog_delta=delta)
+    row,_=next(command)
+    assert row['catalog_delta']['reimaging']=={keys['moving']}
+    assert row['catalog_delta']['retained']=={keys['untouched']}
+    assert row['catalog_delta']['withdraw']=={keys[mid] for mid in group}
+    command.close()

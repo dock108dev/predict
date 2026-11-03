@@ -79,9 +79,11 @@ def validate(profiles):
         public_tree(b['payload'])
         if b['expires_at'] is not None:instant(b['expires_at'])
         value=resolve(profiles,key)
-        public_tree(value['payload'])
-        if digest(value)!=key or len(encoded(value))>MAX_BINDING_BYTES:
-            raise ValueError('Resolved comparison profile digest/byte mismatch')
+        # Use the same exact-content validator as profile construction. Its
+        # bounded work-unit cache avoids rewalking identical resolved profiles
+        # in every group subset; changed content still validates independently.
+        from .current_dependencies import validate_profiles
+        validate_profiles({key:value})
     return profiles
 
 

@@ -554,6 +554,7 @@ def catalog(pages, venue, as_of, *, v1_templates=(), share_identity=True, compac
                 event['market_discovery'] = 'contradictory_listings'
                 event['embedded_missing_from_market_query'] = missing
         event['market_ids'] = sorted(m['id'] for m in markets.values() if m['event_id']==event['id'])
+    subscription_slug_counts=Counter(m.get('native_slug') for m in markets.values())
     for market in markets.values():
         if len(observed_parents.get(market['id'],()))>1:
             market.update(conflicting_duplicate=True,exclusion='conflicting_duplicate')
@@ -569,13 +570,14 @@ def catalog(pages, venue, as_of, *, v1_templates=(), share_identity=True, compac
             expected=polymarket_us.full_game_family(native.get('sportsMarketType'),league,live_bindings=types is polymarket_us.LIVE_FULL_GAME_TYPES) if league else None
             if market['period']=='full_game' and expected!=market['market_type']:market['exclusion']='market_event_sport_conflict'
         if venue == 'polymarket_us':
+            market['subscription_slug_unique']=(subscription_slug_counts[market.get('native_slug')]==1
+                and len(observed_slugs.get(market.get('native_slug'),()))<=1)
             sides = native.get('marketSides')
             sides = sides if isinstance(sides,list) and all(isinstance(s,dict) for s in sides) else []
             reason = None
             if not native.get('id') or not native.get('slug') or not event or event['identity'] != 'resolved':
                 reason = 'unresolved_native_identity'
-            elif (sum(m.get('native_slug') == market['native_slug'] for m in markets.values()) != 1
-                  or len(observed_slugs.get(market['native_slug'],()))>1):
+            elif not market['subscription_slug_unique']:
                 reason = 'ambiguous_subscription_slug'
             elif not any(isinstance(market['terms'].get(k), str) and market['terms'][k].strip()
                          for k in ('description','rules_primary','rules_secondary')):

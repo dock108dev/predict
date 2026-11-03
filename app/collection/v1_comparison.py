@@ -41,13 +41,17 @@ def _bind_v1(event, market, venue, *, revised=False):
         reg=repair_registry() if revised else native_registry(live=True)
         resolved=reg.resolve('team',team,league=event.get('competition'),venue=venue,
             environment='production',native_id=(native.get('custom_strike') or {}).get(TEAM_KEYS.get(event.get('competition'))))
-        if resolved.status=='resolved' and text.startswith('If '+str(team)+' wins ') and text.endswith(', then the market resolves to Yes.'):
-            result['predicate']=[dict(native_id='yes',participant=resolved.canonical_id,predicate='win'),
-                                 dict(native_id='no',participant=resolved.canonical_id,predicate='not_win')]
+        participant=resolved.canonical_id if resolved.status=='resolved' else None
+        if participant is None and revised and resolved.status!='conflicting':
+            from .native_role_binding import kalshi_participant
+            participant=kalshi_participant(event,(native.get('custom_strike') or {}).get(TEAM_KEYS.get(event.get('competition'))),team)
+        if participant is not None and text.startswith('If '+str(team)+' wins ') and text.endswith(', then the market resolves to Yes.'):
+            result['predicate']=[dict(native_id='yes',participant=participant,predicate='win'),
+                                 dict(native_id='no',participant=participant,predicate='not_win')]
         else: result['blockers'].append('Exact full-game native winner literal unavailable')
     elif venue == 'kalshi' and scope:
         from .native_score_binding import bind as score
-        fact = score(native, scope, revised=revised)
+        fact = score(native, scope, revised=revised, event=event)
         if scope['family'] == 'futures':
             try:
                 award = award_identity(native, scope)
@@ -195,11 +199,20 @@ def _annotate(catalog, venue, templates=(), *, policy=POLICY, share_metadata=Fal
             event.update(identity='resolved',competition=binding['identity']['competition'],season=binding['identity']['season'],stage='championship',
                 scheduled_start=binding['identity']['scheduled_start'],canonical_key=binding['identity']['event'])
             if event.get('exclusion') in ('unknown_schedule','event_parse_error'):event['exclusion']=None
-        if policy==REPAIR_POLICY and venue=='polymarket_us' and binding['status']=='BOUND_RAW_PREDICATE' and market.get('subscription_evidence_exclusion')=='unresolved_native_sides':
+        if policy==REPAIR_POLICY and venue=='polymarket_us' and binding['status']=='BOUND_RAW_PREDICATE' and market.get('subscription_evidence_exclusion') in ('unresolved_native_sides','unresolved_native_identity'):
             native=market.get('_native') or market.get('native_metadata') or {}
             sides=native.get('marketSides',[])
             exact_ids={n for n,p,s in predicates(binding)}
-            if (len(sides)==2 and len(exact_ids)==2 and {str(s.get('id')) for s in sides}==exact_ids
+            # Identity enrichment follows the initial subscription check. Rerun
+            # every guard skipped by that early identity refusal before clearing
+            # it; a valid predicate alone cannot qualify a duplicate slug.
+            identity_revalidated=(market.get('subscription_evidence_exclusion')!='unresolved_native_identity' or
+                bool(native.get('id') and native.get('slug') and event.get('identity')=='resolved'
+                    and not event.get('exclusion') and not event.get('conflicting_duplicate')
+                    and not market.get('conflicting_duplicate') and market.get('subscription_slug_unique') is True
+                    and any(isinstance(market.get('terms',{}).get(k),str) and market['terms'][k].strip()
+                        for k in ('description','rules_primary','rules_secondary'))))
+            if (identity_revalidated and len(sides)==2 and len(exact_ids)==2 and {str(s.get('id')) for s in sides}==exact_ids
                 and all(type(s.get('long')) is bool and str(s.get('marketId'))==market['id'] for s in sides)
                 and {s['long'] for s in sides}=={True,False}):
                 market['subscription_evidence_exclusion']=None

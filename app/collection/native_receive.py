@@ -10,6 +10,7 @@ class NativeReceive:
         self.socket=socket
         self.metrics=metrics
         self.byte_limit=byte_limit
+        self.metrics['receive_buffer_limit_bytes']=byte_limit
         self.bytes=0
         self.queue=asyncio.Queue()
         self.arrivals=deque()

@@ -19,17 +19,31 @@ def prepare_catalog_change(inventory, source, catalog):
 
 class CatalogPreparation:
     """One CPU rebuild in flight; no SQL, sockets, credentials or authority."""
-    def __init__(self):
+    def __init__(self,maximum_bytes=3*1024**3):
         from concurrent.futures import ProcessPoolExecutor
         from multiprocessing import get_context
         # Reclaim the full transient metadata arena after each infrequent rebuild.
         self.pool=ProcessPoolExecutor(max_workers=1,mp_context=get_context('spawn'),max_tasks_per_child=1)
         self.lock=asyncio.Lock()
+        self.maximum_bytes=maximum_bytes
+        self.metrics=None
 
     async def prepare(self,inventory,source,catalog):
+        from tempfile import TemporaryDirectory
+        from pathlib import Path
+        from .bulk_checkpoint import owned_thread
+        from . import catalog_transfer
         async with self.lock:
-            future=asyncio.wrap_future(self.pool.submit(prepare_catalog_change,inventory,source,catalog))
-            try:return await asyncio.shield(future)
+          with TemporaryDirectory(prefix='predict-catalog-') as directory:
+            base=Path(directory);input_path=str(base/'inventory.jsonl');replacement_path=str(base/'replacement.jsonl');output_path=str(base/'prepared.jsonl')
+            await owned_thread(catalog_transfer.write,input_path,inventory,previous={source:catalog})
+            await owned_thread(catalog_transfer.write,replacement_path,{source:catalog})
+            future=asyncio.wrap_future(self.pool.submit(catalog_transfer.prepare,input_path,replacement_path,output_path,source,self.maximum_bytes))
+            try:
+                self.metrics=await asyncio.shield(future)
+                # Share one decoded row at a time. Returning the entire graph
+                # through multiprocessing temporarily doubled owner residency.
+                return await owned_thread(catalog_transfer.read,output_path,dict(inventory,**{source:catalog}))
             except asyncio.CancelledError:
                 await asyncio.gather(future,return_exceptions=True)
                 raise
@@ -100,7 +114,7 @@ class Ingress:
                         generation=base.generation
                         tick=monotonic()
                         if getattr(self.service.sink,'process_normalization',False):
-                            if self.catalog_preparer is None:self.catalog_preparer=CatalogPreparation()
+                            if self.catalog_preparer is None:self.catalog_preparer=CatalogPreparation(self.service.config['rss_bytes'])
                             prepared,delta=await self.catalog_preparer.prepare(base.inventory,*args)
                         else:
                             prepared,delta=await owned_thread(prepare_catalog_change,base.inventory,*args)

@@ -57,9 +57,9 @@ function slate(view = 'odds') {
   const renderer=createSlateViews({content,onOriginal:(q,b,g)=>originals.push({q,b,g}),onDetails:(r,b,g)=>details.push({r,b,g})});
   renderer.draw(slate(),{view:'odds',filter:'all'});
   assert.equal(content.querySelectorAll('.slate-game').length,2,'all games visible by default');
-  assert.equal(content.querySelectorAll('.team').length,16,'distinct native periods and complements remain visible outcome rows');
-  assert.equal(content.querySelectorAll('.slate-price-cell').flatMap(n=>n.querySelectorAll('button')).length,slate().boards.reduce((count,b)=>count+b.prices.length,0),'every retained original is directly visible');
-  assert.equal(content.querySelectorAll('.slate-price-headings').length,1,'venue headings are shared across the full slate');
+  assert(content.querySelectorAll('.consolidated-odds').length>=2,'each occurrence has a consolidated source table');
+  assert.equal(content.querySelectorAll('.consolidated-odds').flatMap(n=>n.querySelectorAll('button')).length,slate().boards.reduce((count,b)=>count+b.prices.length,0),'every retained original remains accessible through grid or disclosure');
+  assert(content.textContent.includes('Pinnacle · Reference'),'reference remains a separately labeled source');
   assert(content.querySelector('.slate-coverage').textContent.includes('Novig ')); assert(content.querySelector('.slate-coverage').textContent.includes('ProphetX ')); assert(content.textContent.includes('2/2 matching games with observations')); assert(content.textContent.includes('Polymarket US'));
   const secondOriginal=content.querySelectorAll('button').find(b=>b.dataset.key.startsWith('synthetic-second-occurrence:')); secondOriginal.onclick();
   assert.equal(originals[0].g.game_key,'synthetic-second-occurrence'); assert.equal(originals[0].q.quote_id,secondOriginal.dataset.key.split('synthetic-second-occurrence:')[1]);
@@ -83,5 +83,12 @@ function slate(view = 'odds') {
   renderer.draw(firstUse,{view:'odds',filter:'all'});
   assert(content.textContent.includes('No current games yet'));
   assert.equal(content.querySelectorAll('.slate-overview').length,0,'first use leads with setup rather than zero-count disclosures');
+  const growing=slate(), firstBoard=growing.boards[0];
+  renderer.draw({...growing,boards:[firstBoard],coverage:{complete:false}},{view:'odds',filter:'all'});
+  const firstNode=content.querySelector('.slate-game');
+  renderer.draw(growing,{view:'odds',filter:'all'});
+  assert.equal(content.querySelector('.slate-game'),firstNode,'later pages reuse the immutable first game');
+  renderer.draw({...growing,boards:growing.boards.map(copy)},{view:'odds',filter:'all'});
+  assert.notEqual(content.querySelector('.slate-game'),firstNode,'a refreshed capture replaces old price cells');
   console.log('PASS slate exact settings/game/board guards, default all-game rendering, venue coverage, local filters, cross-game Details, global supplied-metric sort and paused/empty states');
 })().catch(error=>{console.error(error);process.exitCode=1;});

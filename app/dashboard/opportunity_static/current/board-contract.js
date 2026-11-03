@@ -219,12 +219,35 @@ export function checkBoard(v, c) {
     v.game_key !== c.game ||
     v.view !== c.view ||
     v.filter !== c.filter ||
-    !v.input_version ||
+    (!v.input_version && !Array.isArray(v.result_units)) ||
     !Array.isArray(v.prices) ||
     !Array.isArray(v.rows) ||
     v.benchmark?.venue !== c.benchmark_venue
   )
     throw Error("Game or view identity crossed; response withheld.");
+  if (Array.isArray(v.result_units) && v.view !== "odds") {
+    if (v.calculation_context != null || v.input_version != null) throw Error("Mixed result units cannot claim one calculation identity");
+    const units = new Map();
+    for (const unit of v.result_units) {
+      if (!unit.unit_id || units.has(unit.unit_id) || !["current","historical","pending"].includes(unit.state)) throw Error("Result unit identity crossed");
+      units.set(unit.unit_id,unit);
+      const rows=v.rows.filter(r=>r.result_unit_id===unit.unit_id), prices=v.prices.filter(q=>q.result_unit_id===unit.unit_id);
+      if (unit.state === "pending") {
+        if (rows.length || prices.length) throw Error("Pending unit carries unbound results");
+        continue;
+      }
+      checkCalculationContext(unit.calculation_context,v.policy.revision);
+      if (unit.input_version!==unit.calculation_context.dependency_revision) throw Error("Result unit dependency crossed");
+      if (unit.state!=="current" && rows.some(r=>r.ranking_eligible || r.availability?.state==="numeric_current")) throw Error("Historical unit carries current authority");
+      const child={...v,rows,prices,calculation_context:unit.calculation_context,input_version:unit.input_version};
+      delete child.result_units;delete child.result_unit_coverage;
+      checkBoard(child,c);
+    }
+    if ([...v.rows,...v.prices].some(r=>!units.has(r.result_unit_id))) throw Error("Result unit membership absent");
+    const coverage=v.result_unit_coverage;
+    if (!coverage || coverage.total!==units.size || ["current","historical","pending"].some(state=>coverage[state]!==v.result_units.filter(u=>u.state===state).length)) throw Error("Result unit coverage crossed");
+    return v;
+  }
   const observationContext = (v.view === "odds" || !v.rows.length) && v.calculation_context?.policy_revision === undefined &&
     v.prices.every(q => typeof q.observation_revision === "string" && q.observation_revision.length > 0);
   checkCalculationContext(v.calculation_context, observationContext ? undefined : v.policy.revision);
@@ -350,7 +373,7 @@ export function checkSlate(v, c) {
     if (!expected.has(b.game_key) || seen.has(b.game_key) || b.policy?.revision !== v.policy.revision)
       throw Error("Slate board occurrence crossed; response withheld.");
     checkBoard(b, { ...boardContext, game: b.game_key });
-    if (b.calculation_context.epoch !== v.epoch)
+    if ((b.result_units ? b.result_units.filter(u=>u.state!=="pending").map(u=>u.calculation_context) : [b.calculation_context]).some(context=>context.epoch !== v.epoch))
       throw Error("Current reset identity crossed; response withheld.");
     seen.add(b.game_key);
   }

@@ -75,6 +75,8 @@ class LatestBoardFixture(IsolatedAsyncioTestCase):
             ('app.collection.runtime_status.clock',lambda:self.at),
             ('app.storage.current_rows.utc',lambda:self.at.isoformat()),
             ('app.storage.latest_board.utc',lambda:self.at.isoformat()),
+            ('app.storage.current_games.utc',lambda:self.at.isoformat()),
+            ('app.storage.result_publication.utc',lambda:self.at.isoformat()),
             ('app.storage.comparison_board.utc',lambda:self.at.isoformat()),
             ('app.dashboard.comparison_board_api.utc',lambda:self.at.isoformat()),
         ):
@@ -87,7 +89,7 @@ class LatestBoardFixture(IsolatedAsyncioTestCase):
         self.state=RuntimeState(self.connect)
         with self.connect() as db:
             db.execute('TRUNCATE current_event CASCADE')
-            db.execute('TRUNCATE current_source_status,current_refresh_scope,data_runtime,data_runtime_command,latest_board,latest_board_status')
+            db.execute('TRUNCATE current_source_status,current_refresh_scope,data_runtime,data_runtime_command,latest_board,latest_board_status,current_result_unit,current_result_inventory CASCADE')
         self.state.write(self.service)
         self.admit(self.records)
 
@@ -109,6 +111,13 @@ class LatestBoardFixture(IsolatedAsyncioTestCase):
                 if error['reason']=='observation_invalid':
                     latest.read_context(db,at=self.at.isoformat()).observation_bundles(game=error['game_key'])
             return result
+
+    def clear_publications(self):
+        """Reset every derived publication and discovery cache between scenarios."""
+        from app.storage.discovery_index import clear
+        clear()
+        with self.connect() as db:
+            db.execute('TRUNCATE latest_board,latest_board_status,current_result_unit,current_result_inventory CASCADE')
 
     def rows(self):
         from app.dashboard.comparison_board import expand_price_fields

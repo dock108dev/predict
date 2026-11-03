@@ -1,5 +1,13 @@
 # Independent data runtime and latest results
 
+## Comparison and collection lifecycles
+
+The ordinary dashboard reads a saved comparison. Capture reads the available
+local odds and calculates a replacement. Recalculate changes the assumptions on
+those same captured inputs. Subsequent background updates leave earlier results
+and their source clocks intact. The data process owns live acquisition, Stop,
+source pauses and accounting controls. See the [snapshot architecture](architecture.md).
+
 The ordinary installation uses two processes in the same main checkout and the
 existing PostgreSQL database. `app.collection.data_runtime` owns `CurrentService`,
 current-row maintenance, the shared scanner and shared Odds/EV calculations.

@@ -20,14 +20,18 @@ def capture_reservation(db):
     from .latest_board import capture_batches
     from app.comparison.scanner_readiness import MAX_BYTES
     groups=capture_batches(db)
-    maximum=0
-    for ids in groups:
-        size=db.execute('''SELECT COALESCE(sum(octet_length(e.facts::text)+octet_length(c.facts::text)+octet_length(o.facts::text)),0) n
+    # Measure each event once, then sum complete peer components. The previous
+    # three queries per component repeatedly scanned the same source tables
+    # even when admission would subsequently defer the scanner.
+    sizes={r['event_id']:int(r['n']) for r in db.execute('''SELECT c.event_id,
+            sum(octet_length(e.facts::text)+octet_length(c.facts::text)+octet_length(o.facts::text)) n
             FROM current_contract c JOIN current_offer o ON o.contract_id=c.id JOIN current_event e ON e.id=c.event_id
-            WHERE c.event_id=ANY(%s)''',(ids,)).fetchone()['n']
-        depth=db.execute("SELECT count(*) n FROM current_native_depth WHERE side='asks' AND event_id=ANY(%s)",(ids,)).fetchone()['n']
-        depth+=db.execute("SELECT count(*) n FROM current_depth d JOIN current_contract c ON c.id=d.contract_id WHERE side='asks' AND c.event_id=ANY(%s)",(ids,)).fetchone()['n']
-        maximum=max(maximum,int(size)*8+int(depth)*2048)
+            GROUP BY c.event_id''')}
+    depths={r['event_id']:int(r['n']) for r in db.execute('''SELECT event_id,sum(n) n FROM (
+        SELECT event_id,count(*) n FROM current_native_depth WHERE side='asks' GROUP BY event_id
+        UNION ALL SELECT c.event_id,count(*) FROM current_depth d JOIN current_contract c ON c.id=d.contract_id
+            WHERE side='asks' GROUP BY c.event_id) levels GROUP BY event_id''')}
+    maximum=max((sum(sizes.get(eid,0)*8+depths.get(eid,0)*2048 for eid in ids) for ids in groups),default=0)
     # Whole readiness output stays bounded; expensive source/finance preparation
     # owns only one complete possible-peer component at a time.
     return maximum+MAX_BYTES*8+16*1024*1024

@@ -12,15 +12,18 @@ class IngressIsolation(unittest.IsolatedAsyncioTestCase):
     def pipeline(self):
         return DatabasePipeline(SimpleNamespace(config={'cleanup_seconds': 1}))
 
-    async def test_maintenance_routes_only_to_current_row_expiry(self):
+    async def test_maintenance_expires_rows_and_runs_independent_retention(self):
         pipe = self.pipeline()
         database = object()
         rows = Mock()
         with patch('app.collection.current_database.connect', return_value=nullcontext(database)), \
                 patch('app.storage.current_rows.CurrentRowStore', return_value=rows) as store, \
-                patch('app.collection.current_database.sql_usage', return_value=123) as usage:
+                patch('app.collection.current_database.sql_usage', return_value=123) as usage, \
+                patch('app.storage.storage_maintenance.maintain', return_value={'after_bytes':123}) as maintenance:
             self.assertEqual(pipe.tick(), 0)
             usage.assert_called_once_with(database)
+            maintenance.assert_called_once_with(database,collecting=True)
+            self.assertEqual(pipe.maintenance,{'after_bytes':123})
             self.assertEqual(pipe.used, 123)
             store.assert_called_once_with(database)
             rows.expire.assert_called_once_with()
@@ -56,18 +59,26 @@ class IngressIsolation(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(pipe.error)
         tick.assert_called_once_with()
 
-    async def test_expiry_failure_stops_after_three_attempts(self):
+    async def test_expiry_failure_remains_unavailable_until_stop_without_killing_recovery(self):
         pipe = self.pipeline()
+        loop=asyncio.get_running_loop()
         def fail():
-            pipe.wake.set()
+            if tick.call_count<3:loop.call_soon_threadsafe(pipe.wake.set)
             raise OSError('authored-expiry-unavailable')
         with patch.object(pipe, 'tick', side_effect=fail) as tick:
             pipe.wake.set()
             pipe.task = asyncio.create_task(pipe.run_maintenance())
-            await asyncio.wait_for(asyncio.shield(pipe.task), 1)
-            self.assertEqual(tick.call_count, 3)
-            self.assertIn('authored-expiry-unavailable', pipe.error)
-            self.assertTrue(await pipe.close())
+            async def failed_three_times():
+                while pipe.maintenance_failures<3:await asyncio.sleep(.005)
+            try:
+                await asyncio.wait_for(failed_three_times(),1)
+                self.assertFalse(pipe.task.done())
+                self.assertEqual(tick.call_count, 3)
+                self.assertEqual(pipe.error,'OSError')
+                self.assertEqual(pipe.error_details['exception'],'OSError')
+                self.assertNotIn('authored-expiry-unavailable',str(pipe.error_details))
+            finally:self.assertTrue(await pipe.close())
+            self.assertTrue(pipe.task.done())
 
     async def test_retired_import_and_finance_switches_fail_explicitly(self):
         pipe = self.pipeline()

@@ -21,6 +21,47 @@ class Checkpoints(TestCase):
                 'current_acquisition_market,current_acquisition_aggregate,current_acquisition_alternate,'
                 'current_acquisition_event_census,current_acquisition_failure,current_native_market_recovery,current_native_catalog_recovery,data_runtime')
 
+    def test_reimaging_preserves_both_exact_observations_until_atomic_replacement(self):
+        from app.storage.current_rows import CurrentRowStore
+        from tests.test_d03_current_rows import future_records
+        records=future_records('polymarket_us')
+        source=records[0]['quote']['source']
+        key=('polymarket_us',source['native_event_id'],source['native_market_id'])
+        with self.connect() as db:
+            rows=CurrentRowStore(db)
+            db.execute("DELETE FROM current_event WHERE provider=%s AND native_event_id=%s",key[:2])
+            rows.upsert_records(records)
+            def offers():
+                return db.execute("""SELECT c.native_side,o.price_value,o.source_at,o.received_at,
+                    o.facts->>'state' state FROM current_offer o JOIN current_contract c
+                    ON c.id=o.contract_id WHERE c.venue=%s AND c.native_market_id=%s
+                    ORDER BY c.native_side""",(key[0],key[2])).fetchall()
+            before=offers()
+            self.assertEqual([r['native_side'] for r in before],['Long','Short'])
+            rows.withdraw_native_markets([key],reimaging=True)
+            retained=[dict(r,state='resyncing') for r in before]
+            self.assertEqual(offers(),retained)
+            with self.assertRaisesRegex(ValueError,'rollback'),db.transaction():
+                rows.upsert_records(records)
+                raise ValueError('rollback')
+            self.assertEqual(offers(),retained)
+            rows.upsert_records(records)
+            self.assertEqual(offers(),before)
+            rows.withdraw_native_markets([key])
+            self.assertEqual(offers(),[])
+
+    def test_resume_only_skips_exact_completed_event_details(self):
+        with patch('app.collection.bulk_checkpoint.connect',side_effect=self.connect):
+            checkpoint=Checkpoint('polymarket_us',{'sports':['NFL']})
+            for path,params,complete in [('/v1/events/a',{},True),('/v1/events/b',{},False),
+                    ('/v1/events/c',{'variant':'other'},True),('/v1/events',{},True)]:
+                key,_=checkpoint.query(path,params)
+                checkpoint.page(key,0,{'path':path},complete)
+            self.assertEqual(checkpoint.completed_details(),{'/v1/events/a'})
+            self.assertFalse(Checkpoint('polymarket_us',{}).completed_details())
+            checkpoint.finish()
+            self.assertFalse(checkpoint.completed_details())
+
     def test_final_disposition_and_superseded_image_do_not_encode_depth_again(self):
         _,book=native_fixture();book['raw']['ref']['market_id']='lightweight-disposition'
         mid=book['raw']['ref']['market_id']
@@ -38,6 +79,21 @@ class Checkpoints(TestCase):
                 after=db.execute('SELECT image,runtime_id,connection_generation,census_generation,disposition FROM current_acquisition_image WHERE market_id=%s',(mid,)).fetchone()
             self.assertEqual(after.pop('disposition'),'admitted')
             self.assertEqual(before,after)
+
+    def test_failed_or_successful_old_attempt_cannot_finish_new_pending_image(self):
+        _,first=native_fixture()
+        second=deepcopy(first)
+        second['raw']['received_at']='2099-01-01T00:00:00+00:00'
+        mid=first['raw']['ref']['market_id']
+        with patch('app.collection.bulk_checkpoint.connect',side_effect=self.connect),self.connect() as db:
+            save_images('kalshi',[first],'pending',contexts={mid:('owner',1,'first')})
+            save_images('kalshi',[second],'pending',contexts={mid:('owner',2,'second')})
+            for result in ('rejected','admitted'):
+                save_images('kalshi',[first],result,known_persisted=True)
+                row=db.execute('SELECT disposition,census_generation,image FROM current_acquisition_image').fetchone()
+                self.assertEqual((row['disposition'],row['census_generation'],row['image']),('pending','second',second))
+            save_images('kalshi',[second],'admitted',known_persisted=True)
+            self.assertEqual(db.execute('SELECT disposition FROM current_acquisition_image').fetchone()['disposition'],'admitted')
 
     def test_concurrent_raw_and_derived_writers_lock_images_in_same_order(self):
         from concurrent.futures import ThreadPoolExecutor

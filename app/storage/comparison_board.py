@@ -1,5 +1,6 @@
 """Coherent current-row captures; ordinary reads never retain sports reports."""
 from copy import deepcopy
+from time import monotonic
 from app.storage.store import hashed, encoded, stamp
 from app.storage.current_games import engine_binding, utc
 from app.comparison.combined_inputs import build
@@ -54,7 +55,9 @@ class ReadContext:
         from .current_rows import CurrentRowStore
         self.store=store;self.at=at or utc();self.engine=engine_binding();self.resource_guard=resource_guard
         self.tolerate_invalid_catalog=tolerate_invalid_catalog;self.catalog_errors=[]
+        started=monotonic();self.timings={}
         frame=frame if frame is not None else CurrentRowStore(store.db).capture(include_depth=False)
+        self.timings['sql_row_capture_ms']=round((monotonic()-started)*1000,3)
         self.epoch=str(frame['epoch']);self.revision=frame['revision']
         self.dependency_revisions=frame.get('dependency_revisions',{})
         self.native_dependency_revisions=frame.get('native_dependency_revisions',{})
@@ -69,12 +72,18 @@ class ReadContext:
             elif q['source']['provider']=='the_odds_api' and status.get('state') in ('available','budget_delayed') and q['state'] in ('stopped','error','connecting','resyncing'):
                 q['state']=status['state']
         if len(encoded(records))>MAX_CAPTURE_BYTES:raise ValueError('board_current_input_capacity')
-        resolved=OccurrenceResolver().resolve(records,clock=self.at)
+        started=monotonic()
+        from .discovery_index import resolve
+        resolved,self.occurrence_index_reused=resolve(records,at=self.at,engine=self.engine,epoch=self.epoch)
+        self.timings['occurrence_resolution_ms']=round((monotonic()-started)*1000,3)
+        self.timings['occurrence_index_reused']=self.occurrence_index_reused
         # Canonical team IDs can reverse the deterministic side ordering.
         # Rebind the complete original pair after identity projection so its
         # selected index still names the exact participant, line and outcome.
+        started=monotonic()
         attach_benchmark([r for r in resolved if r['quote']['source']['provider']=='the_odds_api' and r['quote']['venue']!='pinnacle'],
                          [r for r in resolved if r['quote']['venue']=='pinnacle'])
+        self.timings['reference_binding_ms']=round((monotonic()-started)*1000,3)
         grouped={}
         for r in resolved:grouped.setdefault(encoded(r['market_identity']['event']),[]).append(r)
         self.prepared=dict(at=self.at,originals={},groups=list(grouped.values()),excluded=[])
@@ -196,7 +205,7 @@ class ReadContext:
             out.append(self._observation_bundles[key])
         return out
 
-    def bundles(self, *, benchmark_venue='pinnacle', selected=None, game=None, cache=True, occurrence_rows=None, _readiness_only=False):
+    def bundles(self, *, benchmark_venue='pinnacle', selected=None, game=None, cache=True, occurrence_rows=None, _readiness_only=False, unit_contracts=None):
         if _readiness_only and occurrence_rows is None:
             raise ValueError('board_readiness_occurrence_required')
         groups=self.prepared['groups']
@@ -207,20 +216,30 @@ class ReadContext:
         if selected is not None:groups=[rows for rows in groups if tuple(selected) in {(r['quote']['source']['provider'],r['quote']['source']['native_event_id']) for r in rows}]
         out=[]
         for rows in groups:
+            started=monotonic()
             if self.store.db is not None and any('depth' not in r['quote'] for r in rows):
-                from .current_rows import CurrentRowStore
-                rows=CurrentRowStore(self.store.db).hydrate_records(rows,resource_guard=self.resource_guard)
+                from .current_rows import CurrentRowStore, contract_id
+                selected_rows=rows if unit_contracts is None else [r for r in rows if contract_id(r) in unit_contracts]
+                hydrated=CurrentRowStore(self.store.db).hydrate_records(selected_rows,resource_guard=self.resource_guard)
+                by_id={contract_id(r):r for r in hydrated}
+                rows=[by_id.get(contract_id(r),r) for r in rows]
+            hydration_ms=round((monotonic()-started)*1000,3)
+            started=monotonic()
             values=build([],at=self.at,benchmark_venue=benchmark_venue,prepared=dict(self.prepared,groups=[rows]),
-                registries=self.normalization_registries(),_current_guard=self.guard,_readiness_only=_readiness_only)
+                registries=self.normalization_registries(),_current_guard=self.guard,_readiness_only=_readiness_only,
+                _unit_contracts=None if unit_contracts is None else set(unit_contracts))
             for value in values:
                 value['epoch']=self.epoch
                 value['representation']='current typed event, exact native contracts, offers, depth and shared definitions; original source clocks retained'
                 value['envelope_ids']=[];value['envelopes']=[]
+                value['input_stage_timings']=dict(depth_hydration_ms=hydration_ms,profile_reference_binding_ms=round((monotonic()-started)*1000,3))
             out.extend(values)
         return sorted(out,key=lambda b:b['game_key'])
 
 
 def context_identity(bundle, policy, context):
+    if bundle.get('_discovery_context') is not None:
+        return deepcopy(bundle['_discovery_context'])
     value=dict(epoch=context.epoch,game_key=bundle['game_key'],dependency_revision=bundle['input_version'],policy_revision=policy.revision,engine_binding=context.engine)
     from app.dashboard.comparison_board import entries, freshness, quote_key
     # Current SQL guards retain raw source identity. A local applicability

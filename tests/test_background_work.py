@@ -168,7 +168,7 @@ def test_optional_work_yields_to_acquisition_pressure_and_resumes():
     with work.claim('scanner',100) as lease:
         assert not lease and lease.reason=='native_acquisition_catching_up'
     with work.claim('observations',100,source=True) as lease:
-        assert not lease and lease.reason=='native_acquisition_catching_up'
+        assert lease  # Received prices have an independent measured lease.
     work.acquisition_pressure=lambda:False
     with work.claim('observations',100,source=True) as lease:assert lease
     with work.claim('scanner',100) as lease:assert lease
@@ -284,8 +284,9 @@ def test_scanner_turn_yields_worker_and_reservation_without_clearing_preparation
     class DB:
         def __enter__(self):return self
         def __exit__(self,*args):pass
+        def execute(self,*args):return SimpleNamespace(fetchone=lambda:dict(n=1))
     owner=SimpleNamespace(durable=True,restored=True,stopped=lambda:False,
-        connector=DB,continuation=None,preparation=prepared,
+        connector=DB,clock=lambda:'2026-11-02T00:00:00+00:00',continuation=None,preparation=prepared,
         _withdraw_if_stopped=lambda:False)
     def worker():
         work.request('estimates')
@@ -294,7 +295,7 @@ def test_scanner_turn_yields_worker_and_reservation_without_clearing_preparation
     owner._once_background=lambda:Scanner._once_background(owner)
     with patch('app.collection.background_work.BACKGROUND',work),\
             patch('app.storage.scanner_readiness.capture_reservation',return_value=100),\
-            patch('app.dashboard.scanner_api.perf_counter',side_effect=[0,6]):
+            patch('app.dashboard.scanner_api.perf_counter',side_effect=[0,0,6]):
         with pytest.raises(AcquisitionDeferred,match='background_turn_yielded'):Scanner.once(owner)
     assert work.snapshot()['active']=={}
     assert owner.preparation is prepared and prepared=={'completed_group':'retained'}

@@ -8,7 +8,7 @@ from unittest.mock import Mock, patch
 
 from app.collection.current_storage_policy import (
     FREE_DISK_BYTE_FLOOR, GIB, JOURNAL_BYTE_CAP, JOURNAL_RECORD_BYTE_CAP,
-    JOURNAL_SEGMENT_BYTE_CAP, MIB, SQL_BYTE_CAP, require_disk_space, sql_usage,
+    JOURNAL_SEGMENT_BYTE_CAP, MIB, SQL_BYTE_CAP, require_disk_space, sql_usage, writer_subset_usage,
 )
 from app.collection.odds_http import BudgetStop
 
@@ -27,18 +27,23 @@ class Policy(unittest.TestCase):
 
     def test_sql_usage_reads_current_and_latest_public_table_storage(self):
         database = self.database(Decimal('2147483648'))
-        self.assertEqual(sql_usage(database), SQL_BYTE_CAP)
+        self.assertEqual(writer_subset_usage(database), SQL_BYTE_CAP)
         query = database.execute.call_args.args[0]
         self.assertIn("schemaname='public'", query)
         self.assertIn("left(tablename,8)='current_'", query)
         self.assertIn('pg_total_relation_size', query)
         self.assertIn("format('%%I.%%I'", query)
         self.assertEqual(database.execute.call_args.args[1],
-                         (['data_runtime', 'data_runtime_command', 'scanner_latest', 'latest_board', 'latest_board_status', 'coverage_latest'],))
+                         (['data_runtime', 'data_runtime_command', 'scanner_latest', 'latest_board', 'latest_dashboard', 'latest_board_status', 'coverage_latest'],))
         database.execute.assert_called_once()
 
+    def test_writer_guard_measures_the_whole_database(self):
+        database = self.database(SQL_BYTE_CAP)
+        self.assertEqual(sql_usage(database), SQL_BYTE_CAP)
+        self.assertIn('pg_database_size(current_database())', database.execute.call_args.args[0])
+
     def test_empty_sql_sum_is_zero(self):
-        self.assertEqual(sql_usage(self.database(None)), 0)
+        self.assertEqual(writer_subset_usage(self.database(None)), 0)
 
     def test_sql_usage_refuses_invalid_accounting(self):
         for value in (True, -1, Decimal('.5'), Decimal('NaN'), Decimal('Infinity'), '123', 12.0):

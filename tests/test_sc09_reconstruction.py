@@ -37,6 +37,30 @@ class CompactChildState(IsolatedAsyncioTestCase):
 
 
 class ReconstructionProcess(IsolatedAsyncioTestCase):
+    async def test_full_catalog_control_reply_preserves_sequence_and_neighbor_book(self):
+        from websockets.asyncio.server import serve
+        from websockets.asyncio.client import connect
+        at=datetime.now(timezone.utc)
+        control=json.dumps(dict(type='ok',id=2,sid=7,seq=2,
+            msg=dict(market_tickers=[f'KXNCAAMBGAME-26NOV02-TEAM{i:05d}' for i in range(10000)])))
+        self.assertGreater(len(control),256*1024)
+        raw=[ack(1),frame(1),control,frame(3,'orderbook_delta')]
+        async def send(socket):
+            for body in raw:await socket.send(body)
+            await socket.wait_closed()
+        async with serve(send,'127.0.0.1',0) as server:
+            port=server.sockets[0].getsockname()[1]
+            async with connect(f'ws://127.0.0.1:{port}',max_size=1024*1024,max_queue=16,compression=None) as socket:
+                batch=Batch([(await socket.recv(),at) for _ in raw])
+        worker=Reconstruction('kalshi',[market()],1,None,{}, {})
+        try:
+            rows=[await worker.recv(batch) for _ in raw]
+            self.assertFalse(any(r.get('error') for r in rows))
+            self.assertIsNone(rows[2]['book'])
+            self.assertEqual(rows[2]['seq'],2)
+            self.assertEqual(rows[-1]['value']['sequence'],'3')
+        finally:await worker.close()
+
     async def test_bounded_prefetch_keeps_wire_order_and_closes_owned_child(self):
         import asyncio
         from app.collection.native_receive import NativeReceive

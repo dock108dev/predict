@@ -7,7 +7,8 @@ from app.diagnostics import failure
 from collections import OrderedDict
 from threading import RLock
 from time import perf_counter
-from app.storage.store import hashed
+from app.storage.store import hashed, encoded
+from hashlib import sha256
 from app.storage.current_games import utc
 
 _lock = RLock()
@@ -15,6 +16,7 @@ _observations = OrderedDict()
 _listeners = set()
 _wake_listeners = set()
 MAX_OBSERVATIONS = 512
+MAX_PROBE_BYTES = 32 * 1024 * 1024
 
 
 def subscribe(callback, *, proof=True):
@@ -37,18 +39,42 @@ def prepare(db):
 
 def current_revision(db):
     epoch=db.execute('SELECT epoch FROM current_row_epoch WHERE singleton=true').fetchone()['epoch']
-    from .current_rows import MAX_RECORDS
-    offer_rows=db.execute('SELECT contract_id,revision FROM current_offer LIMIT %s',(MAX_RECORDS+1,)).fetchall()
-    native_rows=db.execute('SELECT b.venue,e.native_event_id,b.native_market_id,b.revision FROM current_native_book b JOIN current_event e ON e.id=b.event_id LIMIT %s',(MAX_RECORDS+1,)).fetchall()
-    if len(offer_rows)>MAX_RECORDS or len(native_rows)>MAX_RECORDS:
-        raise ValueError('scanner_revision_probe_capacity')
-    offers={r['contract_id']:r['revision'] for r in offer_rows}
-    native={hashed([r['venue'],r['native_event_id'],r['native_market_id']]):r['revision'] for r in native_rows}
-    events={r['id']:r['revision'] for r in db.execute('SELECT id,revision FROM current_event').fetchall()}
-    contracts={r['id']:r['revision'] for r in db.execute('SELECT id,revision FROM current_contract').fetchall()}
-    statuses={r['venue']:r['state'] for r in db.execute('SELECT venue,state FROM current_source_status').fetchall()}
-    return dict(epoch=epoch,current_rows_revision=hashed([epoch,offers,native]),
-                facts_revision=hashed([events,contracts,statuses]))
+    # Revision witnesses are tiny, not hydrated financial records. Stream them
+    # under their own byte guard; a full-record count cap refused ordinary busy
+    # slates even though this probe held only IDs and hashes.
+    def mapping_into(digest,query,key,value):
+        digest.update(b'{');charged=0;separator=b''
+        with db.cursor(name='scanner_revision_witnesses') as cursor:
+            cursor.itersize=256;cursor.execute(query)
+            for row in cursor:
+                wire=encoded(row[key])+b':'+encoded(row[value]);charged+=len(wire)
+                if charged>MAX_PROBE_BYTES:raise ValueError('scanner_revision_probe_capacity')
+                digest.update(separator);digest.update(wire);separator=b','
+        digest.update(b'}')
+    # Preserve the exact canonical JSON revision used by CurrentRowStore.
+    # SQL ordering matches its string-key ordering; only native hash keys need
+    # a bounded sort in Python. No decoded market or financial graph is held.
+    with db.transaction():
+        rows_hash=sha256();rows_hash.update(b'['+encoded(epoch)+b',')
+        mapping_into(rows_hash,'SELECT contract_id,revision FROM current_offer ORDER BY contract_id COLLATE "C"','contract_id','revision')
+        native={};charged=0
+        with db.cursor(name='scanner_native_witnesses') as cursor:
+            cursor.itersize=256
+            cursor.execute('SELECT b.venue,e.native_event_id,b.native_market_id,b.revision FROM current_native_book b JOIN current_event e ON e.id=b.event_id')
+            for row in cursor:
+                key=hashed([row['venue'],row['native_event_id'],row['native_market_id']])
+                charged+=6*len(encoded([key,row['revision']]))+256
+                if charged>MAX_PROBE_BYTES:raise ValueError('scanner_revision_probe_capacity')
+                native[key]=row['revision']
+        rows_hash.update(b','+encoded(native)+b']')
+        facts_hash=sha256();facts_hash.update(b'[')
+        mapping_into(facts_hash,'SELECT id,revision FROM current_event ORDER BY id COLLATE "C"','id','revision')
+        facts_hash.update(b',')
+        mapping_into(facts_hash,'SELECT id,revision FROM current_contract ORDER BY id COLLATE "C"','id','revision')
+        facts_hash.update(b',')
+        mapping_into(facts_hash,'SELECT venue,state FROM current_source_status ORDER BY venue COLLATE "C"','venue','state')
+        facts_hash.update(b']')
+    return dict(epoch=epoch,current_rows_revision=rows_hash.hexdigest(),facts_revision=facts_hash.hexdigest())
 
 
 def committed(proof):

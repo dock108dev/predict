@@ -1,17 +1,23 @@
 # Predict
 
-A local, read-only prediction-market comparison app for macOS. The home dashboard
-groups arbitrage and EV results, **Odds** groups observed prices by game, and
-**EV** shows modeled single-trade estimates. Filter available games,
-inspect original prices and calculation inputs in Details, and manage collection
-and source status in Admin. The advanced **Scanner** supports opportunity filters
-and manual tickets.
+Predict is a local, read-only prediction-market comparison app for macOS. The
+dashboard and **EV** rank captured prices by expected return. **Odds** groups
+observations by game and outcome. **Opposing-outcome scenarios** compares paired
+positions under the selected assumptions. Open Details to inspect the calculation
+and its original prices. Admin manages collection and source status. The advanced
+Scanner supports opportunity filters and manual tickets.
 
 Kalshi and Polymarket US use native adapters; Novig and ProphetX can arrive through
 The Odds API. Pinnacle is a reference, not a purchase leg. The default calculation
 uses $1,000 funding and one 0.5% buffer on deployed capital. Estimates can be
 negative, unavailable or labeled last-known when inputs have aged. Predict does
 not place trades.
+
+Choose **Capture local prices** to compare the available observations for games
+in the next 72 hours. **Recalculate** applies edited assumptions to the same
+capture. Browsing, sorting and inspecting Details use the selected revision.
+Source ages remain visible, and an estimate can be unavailable when its required
+inputs are missing. See the [calculation basis](docs/benchmark-ev.md).
 
 ## Requirements and quickstart
 

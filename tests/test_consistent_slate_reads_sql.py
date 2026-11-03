@@ -167,19 +167,22 @@ const path = require('node:path'), {pathToFileURL} = require('node:url');
                 self.assertEqual(len(worker.markets), len(cases))
             await self.ingress_books(workers, cases, generation=generation)
             await self.publication(len(cases))
-        initial = await self.publication(60)
+        # Wait for the final discovery generation, not merely sixty old rows.
+        initial = await self.publication(60, accepts=lambda f: not any(r['all'] or any(r['observations'].values()) for r in f['dependency_reasons'].values()))
         # A page decodes only its requested stored view; projection preserves
         # exactly the same source clocks, aging and dependency assessments.
-        with self.connect() as db, db.transaction():
-            db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
-            full = latest.snapshot(db)
-            projected = latest.snapshot(db, at=full['at'], view='odds')
-        for key in full['rows']:
-            self.assertEqual(set(projected['rows'][key]['facts']['boards']), {'odds'})
-            self.assertEqual(latest.board(projected,key,view='odds',filter='all'),
-                latest.board(full,key,view='odds',filter='all'))
+        def compare_projection():
+            with self.connect() as db, db.transaction():
+                db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
+                full = latest.snapshot(db)
+                projected = latest.snapshot(db, at=full['at'], view='odds')
+            for key in full['rows']:
+                self.assertEqual(set(projected['rows'][key]['facts']['boards']), {'odds'})
+                self.assertEqual(latest.board(projected,key,view='odds',filter='all'),
+                    latest.board(full,key,view='odds',filter='all'))
+        await asyncio.to_thread(compare_projection)
         self.assertEqual({game['league'] for game in initial['status']['games']}, set(SPORTS))
-        del full,projected,initial
+        del initial
         with self.connect() as db:
             admitted = CurrentRowStore(db).capture()['records']
         self.assertEqual(len(admitted), 240)
@@ -360,6 +363,19 @@ const path = require('node:path'), {pathToFileURL} = require('node:url');
             refused=await self.page(client,held,status=409)
             self.assertEqual(refused['reason'],'current_slate_read_authority_changed')
             self.service.dispatch=True;self.state.write(self.service)
+        cache.clear()
+
+        # Native rediscovery/recovery is benign for immutable pagination.
+        # It does not renew the source clock or change the captured body.
+        captured = await self.page(client)
+        with self.connect() as db:
+            original=db.execute("SELECT state FROM current_source_status WHERE venue='kalshi'").fetchone()
+            db.execute("UPDATE current_source_status SET state=jsonb_set(state,'{state}','\"resyncing\"'::jsonb) WHERE venue='kalshi'")
+        continued = await self.page(client,captured)
+        self.assertEqual(continued['read_revision'],captured['read_revision'])
+        with self.connect() as db:
+            from psycopg.types.json import Jsonb
+            db.execute("UPDATE current_source_status SET state=%s WHERE venue='kalshi'",(Jsonb(original['state']),))
         cache.clear()
 
         # Runtime, explicit Stop, observation authority and reset epoch withdraw

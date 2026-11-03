@@ -37,5 +37,14 @@ const {fixture,board,coverage,bounds,copy}=require('./current_board_fixture.cjs'
  checkInputs(sourceInputs,{...c,game:sourceBoard.game_key},sourceIdentity);
  sourceBoard.view='ev';sourceBoard.rows=[];checkBoard(sourceBoard,{...c,view:'ev',game:sourceBoard.game_key});
  const incompleteSource=copy(sourceBoard);delete incompleteSource.prices[0].observation_revision;assert.throws(()=>checkBoard(incompleteSource,{...c,view:'ev',game:sourceBoard.game_key}),/identity unavailable/);
+ const mixed=copy(fixture.ev), ids=new Set(mixed.prices.filter((q,i)=>i%2===0).map(q=>q.quote_id));
+ mixed.result_units=[0,1].map(i=>({unit_id:'unit-'+i,state:'current',calculation_context:{...mixed.calculation_context,context_id:'context-'+i,dependency_revision:'inputs-'+i},input_version:'inputs-'+i}));
+ for(const q of mixed.prices){const i=ids.has(q.quote_id)?0:1;q.result_unit_id='unit-'+i;q.inputs_identity={...q.inputs_identity,context_id:'context-'+i,input_version:'inputs-'+i};}
+ for(const r of mixed.rows){const i=ids.has(r.quote_id)?0:1;r.result_unit_id='unit-'+i;r.details.context_id='context-'+i;}
+ mixed.calculation_context=null;mixed.input_version=null;mixed.result_unit_coverage={total:2,current:2,historical:0,pending:0};
+ checkBoard(mixed,ev);
+ for(const mutate of [x=>x.rows[0].result_unit_id='absent',x=>x.rows[0].details.context_id='crossed',x=>x.prices[0].inputs_identity.input_version='crossed',x=>x.result_units[0].calculation_context.epoch='',x=>x.result_units[0].state='pending',x=>x.result_unit_coverage.current=1,x=>x.calculation_context=copy(fixture.ev.calculation_context)]){const broken=copy(mixed);mutate(broken);assert.throws(()=>checkBoard(broken,ev));}
+ const mixedPage={...samplePage,view:'ev',filter:'all',games:[{...games[0],game_key:mixed.game_key}],boards:[mixed],policy:mixed.policy};
+ checkSlate(mixedPage,{...ev,game:undefined});
  console.log('PASS D03 500-event/50-per-page complete coverage, omitted/crossed pages, v2 current identities, reset/restart/removed Details and selected Original guards');
 })().catch(e=>{console.error(e);process.exitCode=1;});

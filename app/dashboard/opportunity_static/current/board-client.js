@@ -135,12 +135,12 @@ export class SlateAccumulator {
 // allowed recovery) starts at zero and never reuses a partial frame or token.
 // Existing completed values stay with the controller until this returns a
 // wholly validated result. Cancellation cannot start a recovery or next page.
-export async function readSlate(reader, context, { isCurrent = () => true, onRecovery = () => {}, onProgress = () => {} } = {}) {
+export async function readSlate(reader, context, { isCurrent = () => true, onRecovery = () => {}, onProgress = () => {}, onToken = () => {} } = {}) {
   context = { ...context };
   let generation = reader.generation;
   for (let attempt = 0; attempt < 2; attempt++) {
     const pages = new SlateAccumulator(context);
-    let delivered = false;
+    let delivered = false, ownedToken = null;
     const query = new URLSearchParams({ view: context.view, filter: context.filter, limit: "50" });
     try {
       do {
@@ -152,13 +152,16 @@ export async function readSlate(reader, context, { isCurrent = () => true, onRec
         }
         const request = reader.read("/api/boards/slate?" + query, (page, metadata) => {
           if (!page.read_token) throw Error("Current slate read token unavailable; response withheld.");
+          if (!ownedToken) { ownedToken = page.read_token; onToken(ownedToken); }
           pages.append(page, metadata.bytes);
           return true;
         }, 8388608);
         generation = reader.generation;
         const completed = await request;
         if (!completed || !isCurrent() || reader.generation !== generation) return null;
-        onProgress({loaded:pages.value.boards.length + pages.value.errors.length, total:pages.value.games.length});
+        onProgress({loaded:pages.value.boards.length + pages.value.errors.length, total:pages.value.games.length,
+          partial:context.view === "odds" ? {...pages.value,boards:[...pages.value.boards],errors:[...pages.value.errors],
+            coverage:{complete:false,returned_games:pages.value.boards.length+pages.value.errors.length,total_games:pages.value.games.length}} : null});
       } while (!pages.complete);
       const result = pages.result();
       delivered = true;
@@ -175,7 +178,8 @@ export async function readSlate(reader, context, { isCurrent = () => true, onRec
       }
       onRecovery(error);
     } finally {
-      if (!delivered && pages.readToken) await reader.releaseSlate(pages.readToken);
+      if (!delivered && ownedToken) await reader.releaseSlate(ownedToken);
+      onToken(null);
     }
   }
 }

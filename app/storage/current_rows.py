@@ -19,7 +19,7 @@ MAX_RECORD_BYTES=128*1024
 LOCK=901095
 MAX_PIPELINE_COMMANDS=128
 EVENT_FIELDS=('id','sport','competition','season','stage','scheduled_start','home','away','participants','title',
-    'status','state','shared_provider_ids','game_number','original_start','replacement_game_id','neutral_venue','source_participant_roles','current_occurrence_binding','observed_identity_facts','occurrence_conflict','conflicting_duplicate','schedule_metadata','schedule_conflict')
+    'status','state','shared_provider_ids','game_number','original_start','replacement_game_id','neutral_venue','source_participant_roles','native_role_evidence','current_occurrence_binding','observed_identity_facts','occurrence_conflict','conflicting_duplicate','schedule_metadata','schedule_conflict')
 
 
 def utc():return datetime.now(timezone.utc).isoformat()
@@ -105,9 +105,12 @@ def project_contract(event,contract,received_at):
 
 
 def prepare(record):
-    row=deepcopy(record)
+    # Only EVENT_FIELDS survive storage. Copying the full native event (often
+    # packaging many markets) just to discard it repeated per price and side.
+    # event_facts detaches every retained field and keeps its native witnesses.
+    row=deepcopy({k:v for k,v in record.items() if k!='event'})
     for key in ('_instrument','_fingerprint'):row.pop(key,None)
-    q=row.pop('quote');event=row.pop('event');source=q['source'];venue=q['venue']
+    q=row.pop('quote');event=record['event'];source=q['source'];venue=q['venue']
     if venue not in ('kalshi','polymarket_us','novig','prophetx','pinnacle'):raise ValueError('current_row_venue')
     if not all(isinstance(source.get(k),str) and source[k] for k in ('provider','native_event_id','native_market_id','native_outcome_id')):raise ValueError('current_row_native_identity')
     event=event_facts(event)
@@ -218,6 +221,13 @@ class CurrentRowStore:
                 (list({p['event_id'] for p in prepared}),)).fetchall()}
             old_contracts={r['id']:r['revision'] for r in execute('SELECT id,revision FROM current_contract WHERE id=ANY(%s)',
                 (list({p['contract_id'] for p in prepared}),)).fetchall()}
+            # Native ladders live in current_native_depth. Avoid a DELETE for
+            # every changing native side when no legacy per-contract rows exist.
+            # Read under the same writer lock; retained legacy rows still get
+            # removed when their accepted replacement is committed.
+            native_legacy_depth={r['contract_id'] for r in execute(
+                'SELECT DISTINCT contract_id FROM current_depth WHERE contract_id=ANY(%s)',
+                (list({p['contract_id'] for p in prepared if p['venue'] in ('kalshi','polymarket_us')}),)).fetchall()}
             for p in prepared:
                 source=p['source'];event=p['event'];eid=p['event_id'];cid=p['contract_id']
                 from .schedule_metadata import choose, witness
@@ -276,7 +286,8 @@ class CurrentRowStore:
                     revision=p['revision'],price_value=original['value'],price_units=original['units'],quantity_units=original['quantity_units'],
                     confirmation=p['quote'].get('book_confirmation'))
                 if old is None or old['revision']!=p['revision']:
-                    execute('DELETE FROM current_depth WHERE contract_id=%s',(cid,))
+                    if p['venue'] not in ('kalshi','polymarket_us') or cid in native_legacy_depth:
+                        execute('DELETE FROM current_depth WHERE contract_id=%s',(cid,))
                     for i,level in enumerate(p['depth'] or [] if p['venue'] not in ('kalshi','polymarket_us') else []):
                         execute('INSERT INTO current_depth VALUES (%s,%s,%s,%s,%s,%s)',
                             (cid,'asks',i,str(level['price']),str(level['quantity']),original['quantity_units']))
@@ -347,14 +358,23 @@ class CurrentRowStore:
         """Explicit native identity change withdraws the old exact instrument."""
         self.withdraw_native_markets([(venue,native_event_id,native_market_id)])
 
-    def withdraw_native_markets(self,keys):
+    def withdraw_native_markets(self,keys, *, reimaging=False):
         """One atomic set operation for an exact catalog delta, never a source wipe."""
         keys=sorted(set(keys))
         if not keys:return
         values=([k[0] for k in keys],[hashed([k[0],k[1]]) for k in keys],[k[2] for k in keys])
         with self.db.transaction():
             self.db.execute('SELECT pg_advisory_xact_lock(%s)',(LOCK,))
-            for table in ('current_contract','current_native_book'):
+            tables=('current_contract','current_native_book')
+            if reimaging:
+                self.db.execute("""UPDATE current_offer o SET
+                    facts=jsonb_set(o.facts,'{state}','"resyncing"'::jsonb),
+                    revision=encode(sha256(convert_to(o.revision||'resyncing','UTF8')),'hex')
+                    FROM current_contract c JOIN unnest(%s::text[],%s::text[],%s::text[])
+                    AS wanted(venue,event_id,native_market_id) USING(venue,event_id,native_market_id)
+                    WHERE o.contract_id=c.id AND o.facts->>'state' IN ('available','budget_delayed')""",values)
+                tables=('current_native_book',)
+            for table in tables:
                 self.db.execute('DELETE FROM '+table+' AS c USING unnest(%s::text[],%s::text[],%s::text[]) AS wanted(venue,event_id,market_id) '
                     'WHERE c.venue=wanted.venue AND c.event_id=wanted.event_id AND c.native_market_id=wanted.market_id',values)
 

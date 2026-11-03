@@ -6,11 +6,20 @@ Page loading, local filters, sorting, cell inspection and links back to Odds nev
 start collection. The prior saved-session `/coverage` page remains a separate
 historical reader.
 
+## Current scope of this document
+
+The ordinary product is a coherent comparison snapshot and math under explicit
+assumptions. Complete-source streaming coverage and the numerical targets below
+are follow-on assurance for claims about provider-wide/live completeness. They do
+not block a useful partial snapshot or calculation whose necessary scenario inputs
+are defined. No failed historical target is relabeled passed. Preserve actual
+source coverage, missing/held-source disclosure and exact observed clocks.
+
 ## Next-version target — bulk live data and 99% coverage
 
-Owner direction on October 26, 2026 changes the completion target. This section
-specifies required behavior; the retained-cohort implementation described below
-has **not** achieved it. Coverage must expose offered scope independently of the
+The October 26, 2026 direction defines the follow-on bulk-live coverage target.
+For that assurance, this section specifies required behavior; the retained-cohort
+implementation described below has **not** achieved it. Coverage must expose offered scope independently of the
 subset already stored. Bulk acquisition and raw visibility precede semantic
 qualification and maths. No per-game installation, approval or qualification
 sequence is required. Small regression cases may support engineering, but cannot
