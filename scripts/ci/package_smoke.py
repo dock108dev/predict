@@ -13,6 +13,14 @@ import time
 import zipfile
 
 
+UI_FONT_ASSETS = frozenset(
+    {
+        "app/dashboard/opportunity_static/current/manrope.ttf",
+        "app/dashboard/opportunity_static/current/manrope-OFL.txt",
+    }
+)
+
+
 def validate_wheel(names, source):
     expected = {
         p.relative_to(source).as_posix()
@@ -21,6 +29,7 @@ def validate_wheel(names, source):
         and "__pycache__" not in p.parts
         and (
             p.suffix in {".py", ".json", ".js", ".css", ".html", ".sql"}
+            or p.relative_to(source).as_posix() in UI_FONT_ASSETS
             or p.suffix in {".pdf", ".txt", ".md", ".gz"}
             and source / "app/fixtures" in p.parents
         )
@@ -138,7 +147,9 @@ root = Path(app.dashboard.__file__).parent
 for name in ('index.html', 'current.js', 'arbs.html', 'arbs.js', 'admin.html', 'admin.js',
              'ev.html', 'ev.js', 'coverage.html', 'coverage.js', 'comparison-board.js',
              'comparison-view.js', 'scanner.html', 'scanner.js',
-             'scanner.css', 'scanner-runtime.json'):
+             'scanner.css', 'scanner-runtime.json', 'stored.html', 'stored.js',
+             'stored.css', 'ui-common.js', 'coverage-shell.js',
+             'manrope.ttf', 'manrope-OFL.txt'):
     assert (root / 'opportunity_static/current' / name).is_file(), name
 assert '/env/' in str(root), root
 # Imports alone do not prove that current model evidence survived packaging.
@@ -179,6 +190,8 @@ async def smoke():
                          '/current/assets/scanner.js','/current/assets/scanner.css',
                          '/current/assets/comparison-board.js','/current/assets/board.js',
                          '/current/assets/stored.js','/current/assets/stored.css','/current/assets/board-client.js',
+                         '/view/current/manrope.ttf','/view/current/ui-common.js',
+                         '/view/current/coverage-shell.js',
                          '/current/assets/board-contract.js','/current/assets/board-values.js'):
                 async with client.get(url+path) as response:
                     assert response.status==200,(path,response.status)

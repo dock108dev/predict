@@ -465,6 +465,38 @@ class EnforcementTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     validate(names, root)
 
+    def test_package_requires_bundled_font_and_license_without_allowing_other_files(
+        self,
+    ):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            names = [
+                "app/dashboard/opportunity_static/current/manrope.ttf",
+                "app/dashboard/opportunity_static/current/manrope-OFL.txt",
+            ]
+            for name in names:
+                asset = root / name
+                asset.parent.mkdir(parents=True, exist_ok=True)
+                asset.write_bytes(b"authored font or license fixture")
+            validate = load("package_smoke").validate_wheel
+            validate(names, root)
+            for missing in names:
+                with (
+                    self.subTest(missing=missing),
+                    self.assertRaisesRegex(ValueError, "Missing package inputs"),
+                ):
+                    validate([name for name in names if name != missing], root)
+            for extra in ("unreviewed.ttf", "private.txt"):
+                name = "app/dashboard/opportunity_static/current/" + extra
+                (root / name).write_text("not an approved package input")
+                with (
+                    self.subTest(extra=extra),
+                    self.assertRaisesRegex(
+                        ValueError, "Unexpected/stale package inputs"
+                    ),
+                ):
+                    validate([*names, name], root)
+
     def test_health_fetches_only_current_window_and_exact_attempt_jobs(self):
         from datetime import datetime, timezone
 
