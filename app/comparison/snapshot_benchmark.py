@@ -32,8 +32,12 @@ def market_key(row):
 def bind(quotes, references, settings, at):
     """Project all witnesses together; bind only exact, coherent two-sided frames."""
     originals=[r for r in references if r.get('market',{}).get('competition')=='NCAAB']
-    refs=[reference_row(r) for r in originals if r.get('original_record') and r['venue']=='pinnacle']
+    venue=settings['benchmark_venue']
+    refs=[reference_row(r) for r in originals if r.get('original_record') and r['venue']==venue]
     combined=project([*quotes,*refs],settings)
+    # Apply the same exact-context rule to received native prices in the other
+    # leagues. Known bindings and their gross benchmark semantics stay intact.
+    combined=project(combined,settings,leagues=('NFL','NCAAF','NBA','MLB','NHL'),preserve_known=True)
     rows=combined[:len(quotes)]
     # Reference weights are explicitly conditional on no equality. Execution
     # claims still use the user's actual scope/equality settings above.
@@ -73,7 +77,7 @@ def bind(quotes, references, settings, at):
             qs=[r['original_record']['quote'] for r in pair]
             if len({hashed(q['source']) for q in qs})!=2 or any(r['id']!=hashed(q['source']) for r,q in zip(pair,qs)):
                 raise ValueError('original_identifier_conflict')
-            if any(q['venue']!='pinnacle' or q['original']['units']!='decimal_odds' or q['original'].get('payout_units')!='USD' or F(q['original'].get('payout','0'))!=1 for q in qs):raise ValueError('original_odds_conflict')
+            if any(q['venue']!=venue or q['original']['units']!='decimal_odds' or q['original'].get('payout_units')!='USD' or F(q['original'].get('payout','0'))!=1 for q in qs):raise ValueError('original_odds_conflict')
             sha=frame[3]
             if not isinstance(sha,str) or len(sha)!=64 or any(c not in '0123456789abcdef' for c in sha):raise ValueError('receipt_evidence_missing')
             odds=[q['original']['value'] for q in qs]
@@ -88,7 +92,7 @@ def bind(quotes, references, settings, at):
                 pc=q.get('provider_clocks')
                 if not pc or pc.get('selected_basis') not in ('book','market') or pc.get(pc['selected_basis'])!=t['source_at']:raise ValueError('provider_clock_evidence_missing')
                 if any(stamp(pc[c])>receipt for c in ('book','market') if pc.get(c)):raise ValueError('clock_future')
-            index[key].append(dict(ids=[r['id'] for r in pair],odds=odds,source_at=clocks,
+            index[key].append(dict(bookmaker=venue,ids=[r['id'] for r in pair],odds=odds,source_at=clocks,
                 method='proportional_no_vig',market_key=list(key),predicates=preds,
                 reference_identities=[r['snapshot_identity'] for r in pair],
                 received_at=frame[4],sha256=sha,provider_clocks=[q['provider_clocks'] for q in qs],
@@ -100,11 +104,11 @@ def bind(quotes, references, settings, at):
     for row in rows:
         if row['league']!='NCAAB':continue
         row['snapshot_benchmark']=None
-        row['snapshot_benchmark_missing']='Exact two-sided Pinnacle reference absent from captured inputs'
+        row['snapshot_benchmark_missing']='Exact two-sided '+venue.title()+' reference absent from captured inputs'
         key=market_key(row)
         candidates=index.get(key,[])
         if not candidates:
-            if originals:row['snapshot_benchmark_missing']='No exact coherent Pinnacle pair for this occurrence, scope and threshold; see reference diagnostics'
+            if originals:row['snapshot_benchmark_missing']='No exact coherent '+venue.title()+' pair for this occurrence, scope and threshold; see reference diagnostics'
             continue
         p=row['native_contract']['same_outcome']['predicate'];op=p['operator']
         if op not in ('gt','lt','ge','le'):continue
@@ -114,7 +118,7 @@ def bind(quotes, references, settings, at):
         latest=max(stamp(c['received_at']) for c in candidates)
         candidates=[c for c in candidates if stamp(c['received_at'])==latest]
         if len({tuple(c['odds']) for c in candidates})!=1:
-            row['snapshot_benchmark_missing']='Conflicting complete Pinnacle frames';issues['conflicting_frames']+=1;continue
+            row['snapshot_benchmark_missing']='Conflicting complete '+venue.title()+' frames';issues['conflicting_frames']+=1;continue
         ref=dict(sorted(candidates,key=lambda c:c['ids'])[0],selected=0 if op in ('gt','ge') else 1)
         ref['probability']=str(proportional_probability(ref['odds'],ref['selected']))
         ref['selected_odds']=ref['odds'][ref['selected']]

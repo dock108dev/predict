@@ -25,7 +25,7 @@ def basis(venue='novig', *, at=None):
     if at is not None:
         # A substantive new review is prospective. Never fill the expired gap
         # or relabel an immutable result computed with the earlier evidence.
-        for date in ('20261028','20261030'):
+        for date in ('20261028','20261030','20261103'):
             reviewed=ROOT/f'app/fixtures/{name}-conditional-fees-review-{date}.json'
             if at>=instant(json.loads(reviewed.read_bytes())['reviewed_at']):path=reviewed
     raw=path.read_bytes()
@@ -71,7 +71,7 @@ def attach(result, q, *, at, event, group):
             odds=Fraction(original['value'])
             if odds<=1:raise ValueError('conditional_invalid_odds')
             risk=Fraction(1);fee=Fraction(0);receipt=odds;value=p*odds-1
-            condition='The aggregate Novig offer maps to a pregame straight trade under the reviewed fee schedule, with the same decisive outcome as the exact Pinnacle pair.'
+            condition='The aggregate Novig offer maps to a pregame straight trade under the reviewed fee schedule, with the same decisive outcome as the exact selected reference pair.'
             formula='Conditional net per USD 1 risk = decisive benchmark probability × decimal odds − 1 − trade fee.'
             label='per $1 modeled risk'
         else:
@@ -102,3 +102,18 @@ def attach(result, q, *, at, event, group):
     result['conditional_trade_benchmark']=metric
     result['revision']=digest(dict(financial_revision=result['revision'],conditional_trade_benchmark=metric))
     return result
+
+
+def snapshot_metric(row, *, at):
+    """Adapt a captured decisive benchmark to the same reviewed fee owner.
+
+    A normalized one-fill scenario is separate from requested funding and from
+    user-configured upfront fees. Historical captures keep their review interval.
+    """
+    if row.get('gross_return_percent') is None:
+        return dict(available=False, reason=row.get('probability_missing') or 'supported_decisive_benchmark_required')
+    reference=row.get('snapshot_benchmark') or row.get('reference') or {}
+    result=dict(revision=digest([row['id'],reference]),gross_decisive_benchmark=dict(
+        available=True,state='captured',selected_decisive_probability=row['probability'],reference_revision=digest(reference)))
+    result=attach(result,row,at=instant(at),event={'start_at':row['start_at']},group=row['market'])
+    return result.get('conditional_trade_benchmark',dict(available=False,reason='reviewed_trade_fee_scenario_unavailable'))

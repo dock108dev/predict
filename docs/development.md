@@ -88,6 +88,7 @@ git diff --check
 | Change | Useful tests under `tests/` |
 | --- | --- |
 | Asset delivery and calculation cancellation | `test_ev09_asset_delivery.py`, `test_ev09_b01.py`, `test_ev09_calculation_stop.py` |
+| Ordinary snapshot matching, math and presentation | `test_comparison_snapshot.py`, `test_snapshot_identity.py`, `test_snapshot_benchmark.py`, `test_snapshot_completion.py`, `test_snapshot_display.py`; `test_comparison_snapshot_sql.py` in disposable SQL; `browser_tests/test_boards.py` |
 | Settings, game selection and polling | `test_ev09_u01.cjs`, `test_ev09_game_continuity.cjs`, `test_ev09_read_polling.cjs` |
 | Current board contracts and selected Details | `test_current_board_reads.py`, `test_d03_current_client.cjs`, `check_current_api_client.cjs` |
 | Captured multi-page reads and recovery | `test_consistent_slate_reads_sql.py` in the disposable SQL lane, `test_consistent_slate_reads.cjs` |
@@ -103,6 +104,24 @@ Client tests that generate server fixtures also need the locked Python environme
 Set `PYTHON="$PWD/.venv/bin/python"` when running them directly, for example
 `PYTHON="$PWD/.venv/bin/python" node tests/test_b02_client.cjs`. The full portable
 runner selects its own Python interpreter for these child processes.
+
+### Snapshot and recovery test coverage
+
+Local selection uses the explicit modules above and the affected callers; this
+repository has no dependency-aware test selection cache. The portable manifest
+and browser workflow discover the maintained tests below. The SQL harness accepts
+`--tests tests/test_comparison_snapshot_sql.py` for an isolated snapshot-only run.
+
+| Behavior | Tests and assertion boundary | Maintenance decision |
+| --- | --- | --- |
+| Named benchmark, clock validation and missing reference | `test_current_benchmark.py`, `test_snapshot_completion.py`: independent probabilities, selected-book failure messages, malformed clock rejection and incomplete-pair refusal using authored receipts | Keep; no live source claim |
+| Exact display and stable saved inputs | `test_snapshot_display.py`: rational arithmetic, full-name search, null ordering and unchanged input objects | Keep; display conversion does not establish executable returns |
+| Saved navigation and recovery | `browser_tests/test_boards.py::test_saved_board_journey`: real Chromium, desktop/narrow layout, keyboard Why, exact inspection, persistent odds preference, failed refresh retaining rows, first use, and malformed/external return links | Keep; intercepted HTTP isolates providers; invalid links must neither blank results nor leave the app |
+| Snapshot replacement and retention | `test_comparison_snapshot_sql.py`: concurrent capture, failed replacement preserving the head, unchanged Originals, recalculation and retention leases on disposable PostgreSQL | Keep; fixtures establish transactional behavior, not sustained provider coverage |
+| Collection cancellation and recovery | Added cases in `test_current_aggregate.py`, `test_current_service.py`, `test_current_conservative_recovery.py` and `test_current_admin.py`: no transport entry or reused receipt, maintenance versus Stop drain limits, exact held-record preservation, and active accounting display | Keep; mocked transport and controlled owned tasks protect cancellation/accounting boundaries |
+
+This review covers the snapshot/display cases and the added recovery cases. It
+does not claim a value audit of every existing test or a hosted CI run.
 
 Run resource-sensitive Python modules in fresh processes: some deliberately
 measure process caps. Use authored fixtures and temporary state. For SQL tests,
@@ -167,21 +186,20 @@ The authored frontend is under `app/dashboard/opportunity_static/current/`:
   [client contract](scanner-client-contract.md) for bounds, ticket interaction and summary reads.
 - [Readiness preparation reuse](scanner-preparation-contract.md) documents the
   bounded scanner/selected-ticket caches, exact invalidation and temporal proof.
-- `opportunity-dashboard.js` renders the default `/` opportunity dashboard, exact supplied-value ordering, independent availability, and separate research groups.
-- `stored-controller.js` owns dashboard and Odds/EV settings, selection, polling, cancellable reads,
-  dialogs and Stop.
-- `board-client.js` owns settings, game continuity and coherent slate pagination;
-  `board-contract.js` validates and expands response identities, and `board-values.js`
-  owns presentation numbers and exact decimal equality. The public client exports
-  remain compatible. `board-elements.js`
-  provides shared formatting and display primitives. `board-read.js` owns bounded
-  cancellable reads and completion-based polling; `board-client.js` preserves its
-  public read-helper exports for existing controllers.
-- `comparison-slate-views.js` groups games and rows; `stored-views.js` supplies
-  the compatible per-board presenter and view factory.
-- `stored-details.js` renders the selected current calculation and original inputs.
-- `stored-shell.css`, `stored-boards.css`, `stored-details.css` and
-  `stored-responsive.css` compose styles in cascade order.
+- `snapshot-controller.js` owns the ordinary immutable-result lifecycle, filters,
+  navigation context, paging and refresh/recalculation. `snapshot-views.js` renders
+  opportunities, market groups, Why and exact inspection. `ui-common.js` owns the
+  shared shell and persistent odds preference; `ui01.css` owns the approved layout.
+  These sources compose `stored.js` / `stored.css`; Manrope is a local font asset.
+- `snapshot_api.py` reads/captures/recalculates results. `snapshot_display.py` projects
+  display odds and $100 amounts without mutating saved records or ranking, reusing
+  `u0_display.quote_display` with optional presentation precision.
+- `admin.js` retains the real collection/status controls. `admin.html` serves overview
+  and usage; calculation/inspection/timing sections use the snapshot shell. Coverage
+  keeps its existing reader and uses `coverage-shell.js` for the shared navigation.
+- Earlier `stored-controller.js`, `stored-views.js`, `stored-details.js` and board
+  client modules remain compatible retained/scanner code. They are not the ordinary
+  snapshot shell’s source of truth. The older stored CSS files are no longer composed.
 
 Regenerate the public assets after editing their authored sources:
 

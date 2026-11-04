@@ -85,6 +85,27 @@ class ConservativeRecovery(unittest.TestCase):
         with self.assertRaisesRegex(QuotaStop,'authentication'):self.activate()
         self.q.pause(None);self.q.transact(lambda v,at:v.update(account_transitions=[dict(at=at)]))
         with self.assertRaisesRegex(QuotaStop,'context'):self.activate()
+
+    def test_rejected_identity_without_receipt_keeps_full_hold_and_original(self):
+        self.q.pause('response_identity_invalid')
+        self.activate()
+        self.assertEqual(self.q._read()['attempts'][self.aid],self.old)
+        self.assertEqual(self.q.snapshot()['held_uncertain_credits'],3)
+        self.assertIsNone(self.q.snapshot()['blocking_reason'])
+        self.assertEqual(self.q._read()['conservative_recoveries'][-1]['prior']['pause'],'response_identity_invalid')
+
+    def test_rejected_identity_with_receipt_or_live_owner_cannot_be_covered(self):
+        self.q.pause('response_identity_invalid')
+        for change in (dict(runtime_id='CONTROLLED-recovery'),dict(quota_headers=[]),
+                       dict(quota_failure='response_identity_invalid'),
+                       dict(response_receipt=dict(status=200,headers=counters(625),received_at=self.at)),
+                       dict(late_response_receipt=dict(status=200,headers=counters(625),received_at=self.at))):
+            with self.subTest(change=change):
+                self.q.transact(lambda v,at:v['attempts'].__setitem__(self.aid,dict(self.old,**change)))
+                covered={self.aid:digest(self.q._read()['attempts'][self.aid])}
+                before=(self.q.directory/'quota.json').read_bytes()
+                with self.assertRaisesRegex(QuotaStop,'response_identity_invalid'):self.activate(covered=covered)
+                self.assertEqual((self.q.directory/'quota.json').read_bytes(),before)
     def test_server_error_without_quota_headers_preserves_exact_unknown_charge(self):
         receipt=dict(status=502,headers=[],received_at='2026-10-03T14:00:01+00:00')
         self.q.reconcile(self.aid,[],received_at=receipt['received_at'])

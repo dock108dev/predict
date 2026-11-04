@@ -132,6 +132,35 @@ class SchedulerTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(attempt['response_receipt']['status'],200)
         self.assertEqual(self.q.snapshot()['reserved'],0)
 
+    async def test_cancel_or_revoke_before_request_task_entry_cannot_use_old_receipt(self):
+        await self.scheduler.step()
+        original_create=asyncio.create_task
+        for action in ('cancel','revoke'):
+            with self.subTest(action=action):
+                self.service.dispatch=True
+                self.q.transact(lambda v,at:v.update(next_due_at=None))
+                old_receipt=dict(status=200,headers=quota(self.wire.used,3),received_at=utc())
+                self.wire.response_receipt=old_receipt
+                calls=len(self.wire.calls)
+                def create(coro,**kwargs):
+                    task=original_create(coro,**kwargs)
+                    if coro.__name__=='send_once':
+                        if action=='cancel':
+                            task.cancel();asyncio.current_task().cancel()
+                        else:self.service.dispatch=False
+                    return task
+                with patch('app.collection.current_aggregate.asyncio.create_task',side_effect=create):
+                    with self.assertRaises(asyncio.CancelledError if action=='cancel' else QuotaStop):
+                        await self.scheduler.dispatch(dict(path='/v4/sports/baseball_mlb/odds',params=PARAMS),3)
+                attempt=self.q._read()['attempts'][self.scheduler.issue_context['attempt_id']]
+                self.assertEqual(attempt['state'],'not_dispatched')
+                self.assertEqual(attempt['interruption'],'cancelled_before_transport_entry')
+                self.assertTrue(attempt['consumed'])
+                self.assertNotIn('response_receipt',attempt)
+                self.assertEqual(self.wire.response_receipt,old_receipt)
+                self.assertEqual(len(self.wire.calls),calls)
+                self.assertEqual(self.q.snapshot()['reserved'],0)
+
     async def test_scheduler_projection_and_receipt_due_do_not_read_ledger_on_loop(self):
         import threading
         original=self.q.snapshot;threads=[]

@@ -383,7 +383,10 @@ class CurrentService:
             timeout=max(60,self.config['cleanup_seconds']) if storage_interval else self.config['cleanup_seconds']
             done,pending=await asyncio.wait(tasks,timeout=timeout) if tasks else (set(),set())
             await self.cleanup_clients(list(self.workers))
-            if not await self.ingress.drain(self.config["cleanup_seconds"]):self.cleanup_errors.append("ingress_cleanup_timeout")
+            # Cancelling a source revokes adoption, but its shielded ingress
+            # still owns SQL/catalog preparation until that work exits. Planned
+            # maintenance must allow the same drain window for those tasks.
+            if not await self.ingress.drain(timeout):self.cleanup_errors.append("ingress_cleanup_timeout")
             if self.ingress.catalog_preparer is not None:await self.ingress.catalog_preparer.close()
             if self.database and not await self.database.close():self.cleanup_errors.append('database_cleanup_timeout')
             if getattr(self.sink,'normalizer',None) is not None:

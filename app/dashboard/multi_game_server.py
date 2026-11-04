@@ -509,7 +509,10 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
     app.router.add_get('/odds',odds_page)
     async def scanner_page(req):return web.FileResponse(static_root/'opportunity_static/current/scanner.html')
     app.router.add_get('/scanner',scanner_page)
-    async def admin(req):return web.FileResponse(static_root/'opportunity_static/current/admin.html')
+    async def admin(req):
+        section=req.query.get('section')
+        filename='stored.html' if section in ('calculations','inspection','timing') else 'coverage.html' if section=='coverage' else 'admin.html'
+        return web.FileResponse(static_root/'opportunity_static/current'/filename)
     async def retained_page(req):return web.FileResponse(static_root/'opportunity_static/dashboard.html')
     app.router.add_get('/admin',admin)
     async def arbs_page(req):return web.FileResponse(static_root/('opportunity_static/current/stored.html' if database_mode else 'opportunity_static/current/arbs.html'))

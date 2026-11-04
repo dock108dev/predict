@@ -1,5 +1,18 @@
 # Calculation basis and benchmark EV
 
+
+## November 3 snapshot integration
+
+The ordinary snapshot now exposes before-fee, reviewed trade-fee, assumption-based
+net and scenario-minimum returns separately. Novig/ProphetX reference selections
+bind only the selected book's exact captured pairs; Pinnacle stays the default
+and reference-only. The common trade-fee engine is adapted to the capture timestamp,
+so a later evidence review never fills an expired historical interval. Reviewed
+Novig pregame and Polymarket US one-contract/one-fill scenarios are independent of
+owner-entered hypothetical upfront fees. The buffer applies once only to assumed
+net/minimum metrics. [Independent checks and missing-input boundaries](completion-20261103.md)
+record the integrated behavior. No user assumptions were changed.
+
 ## Snapshot calculations under defined assumptions — integrated November 2
 
 The ordinary tool evaluates a captured odds set with a named, revisioned
@@ -11,7 +24,8 @@ required inputs remain unavailable rather than silently zero.
 Show which probability/benchmark, fee, payout/scenario, sizing/depth and buffer
 values are observed or assumed. Preserve exact original quotes and show formulas
 and intermediate amounts. A later feed tick changes the next snapshot, not the
-captured calculation. Stale prices remain labeled with their original ages.
+captured calculation. Material delayed/saved/unverified states stay visible; detailed original clocks
+are inspectable in Admin under the approved UI design.
 Assumption-based output is not promoted to verified full-state or executable
 returns. Existing strict model scope/expiry checks continue to mean what they say;
 this audit does not extend models or change their implementation.
@@ -29,6 +43,15 @@ cover NFL pregame full-game winners; strictly bound financial profiles and the
 public Novig NFLWIN model have the separate rules described below. A league or
 market appearing in Odds does not imply a usable EV model. Calculations do not
 establish actual fills, final grades or known total account charges.
+
+## Approved presentation — November 3
+
+The [approved UI design](ui-redesign-20261103.md) adds Why beside an estimate and
+moves full formulas/records into Admin. Why uses the actual selected inputs and
+financial basis. Its normalized $100 example does not replace requested funding.
+American odds are the display default; one app-wide Decimal switch also converts
+benchmark and fair odds in explanations. Currency/probability/return units and raw
+original units remain explicit. Conversion never changes engine inputs or ranking.
 
 ## Policy and requested funding
 

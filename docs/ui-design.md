@@ -1,5 +1,34 @@
 # Interface design
 
+## Approved target — November 3, 2026
+
+The owner approved the revised Opportunities → Markets → Admin design.
+[Approved design](ui-redesign-20261103.md) controls visual hierarchy, navigation,
+Manrope typography, navy/teal styling, Why explanations, global odds formatting
+and quote-clock placement. [UI01](ui-redesign-implementation.md) is the
+implementation handoff for the Staff Product Engineer, frontend/UI and full-stack
+integration. [UI01 is integrated locally](ui01-delivery-20261103.md); owner acceptance of the running app remains open.
+
+Opportunities leads with game, position, venue, price and estimated advantage.
+Markets preserves the selected game and captured comparison while exposing venue
+prices and alternate lines. Admin owns Coverage, collection controls, detailed
+clocks, settings, formulas and raw evidence. American is the default and a single
+persistent Decimal toggle applies across formatted views and explanations.
+
+Why explains the source of the estimated advantage using offered/fair odds and a
+$100 example with the actual financial basis. Detailed provider update, receipt,
+confirmation and price-change clocks live in Admin. Ordinary screens retain a
+concise delayed/saved/unverified state when material. Keep captured input/result
+identity and required protected evidence through navigation and restart under the
+current runtime/storage contract.
+
+## Historical interface descriptions — superseded where conflicting
+
+The following records describe previous routes and presentation decisions. Their
+system font, gray palette, public timing/details/setup controls, old navigation,
+transient-only storage language and old next-action requirements do not override
+the approved design or current captured-evidence retention contract.
+
 Predict presents collected prices, EV and cross-venue comparisons across the
 supported leagues, markets and periods. Background financial owners calculate
 shared results; the browser validates their context and renders them. Ordinary

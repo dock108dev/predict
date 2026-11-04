@@ -58,6 +58,23 @@ class AdminTests(unittest.IsolatedAsyncioTestCase):
         self.service.config['issue_bytes']=10
         self.service.issue('kalshi','local_defect','ValueError');self.assertEqual(self.service.issues,[])
         self.assertLessEqual((self.root/'authority/issues.json').stat().st_size,10)
+
+    async def test_active_accounting_gate_is_distinct_from_abandoned_hold(self):
+        self.q.transact(lambda v,at:v.update(next_due_at=None))
+        aid=self.q.reserve(self.service.ownership,self.service.digest,dict(path='/v4/sports/baseball_mlb/odds',params={}),3)
+        self.q.dispatched(aid,self.service.ownership)
+        worker=self.service.workers['the_odds_api']
+        for phase,pending,behavior in [('reservation',True,'running'),('transport',True,'running'),
+                                        ('accounting',True,'running'),('scheduled_admission',False,'accounting_hold')]:
+            worker.phase=phase
+            status=self.service.status()
+            panel=next(p for p in status['sources'] if p['provider']=='the_odds_api')
+            self.assertEqual(status['quota']['blocking_reason'],'ambiguous_dispatch_unresolved')
+            self.assertEqual(panel['accounting_pending'],pending)
+            self.assertEqual(panel['worker_behavior'],behavior)
+        worker.phase='transport';worker.closed=True
+        panel=next(p for p in self.service.status()['sources'] if p['provider']=='the_odds_api')
+        self.assertFalse(panel['accounting_pending'])
     async def test_fresh_recovery_preserves_due_authority_and_expires_review(self):
         cat,book=native_fixture();self.service.catalog('kalshi',cat);self.service.book('kalshi',book)
         held=self.store.create(request(self.store));runtime=self.service.runtime_id

@@ -26,6 +26,11 @@ The owner requires one working copy: this repository, on `main`.
 - Use proportionate verification for the behavior changed. Handoffs explain the
   outcome, relevant evidence and remaining issues; they do not impose arbitrary
   diagnostic-attempt limits, mandatory receipt bundles or approval addenda.
+- Complete all engineering in the agreed product scope, integration and engineer-led
+  verification before requesting any owner review. Owner review is not a dependency
+  for continuing known UI, source, matching, calculation or operational fixes.
+  Report genuine external blockers explicitly; do not relabel unfinished work as
+  ready for review or invent missing financial assumptions to claim completion.
 - Use disposable fixtures/databases for tests without cloning the repository.
 - Preserve existing uncommitted work, credentials, settings, user data and
   account/quota/hold records. Do not reset them to simplify development.

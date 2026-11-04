@@ -9,6 +9,7 @@ from app.storage.store import connect
 from app.storage import comparison_snapshot as snapshots
 from app.comparison.snapshot_math import assumptions
 from .local_security import read_json, PublicRequestError
+from .snapshot_display import presented, search_index
 
 
 def page_options(query):
@@ -18,6 +19,7 @@ def page_options(query):
     metric = query.get("metric", "gross_return_percent")
     if metric not in (
         "gross_return_percent",
+        "conditional_return_percent",
         "net_return_percent",
         "price_difference_cents",
         "minimum_return_percent",
@@ -38,7 +40,10 @@ def page(result, query, *, options=None):
     if result is None:
         return dict(state="empty", defaults=assumptions()[0], provider_requests=0)
     out = {k: v for k, v in result.items() if k not in ("rows", "pairs", "references")}
+    out['defaults'] = assumptions()[0]
     rows = result["pairs"] if view == "arbs" else result["rows"]
+
+    names = search_index(result)
 
     def selected(row):
         return (
@@ -52,7 +57,7 @@ def page(result, query, *, options=None):
                 or query["venue"] in row.get("venues", [])
             )
             and (not query.get("family") or query["family"] == row["market"]["market"])
-            and (query.get("search", "").lower() in row["game_title"].lower())
+            and (all(term in (row["game_title"].casefold() + " " + names.get(row.get("game_key"), "")) for term in query.get("search", "").casefold().split()))
         )
 
     rows = [r for r in rows if selected(r)]
@@ -96,6 +101,8 @@ def page(result, query, *, options=None):
         limit=limit,
         rows=rows[offset : offset + limit],
     )
+    by_id = {r["id"]: r for r in result["rows"]}
+    out["rows"] = [dict(r, quotes=[presented(q) for q in r["quotes"]]) if view == "odds" else presented(r, by_id) for r in out["rows"]]
     out["reference_count"] = len(result["references"])
     coverage = {}
     for quote in (*result["rows"], *result["references"]):
@@ -288,10 +295,12 @@ def mount(app):
                 originals = [q for q in inputs["quotes"] if q["id"] in ids]
                 by_id = {q["id"]: q for q in originals}
                 refs = {}
+                from app.comparison.snapshot_named_benchmark import references
+                benchmark_refs=references(inputs['quotes'],inputs['references'],result['assumptions'])
                 for leg in result["rows"]:
                     if leg["id"] in by_id:
                         for ref in selected_references(
-                            leg, by_id[leg["id"]], inputs["references"]
+                            leg, by_id[leg["id"]], benchmark_refs
                         ):
                             refs[ref["id"]] = ref
                 return dict(
@@ -299,7 +308,7 @@ def mount(app):
                     snapshot_id=result["snapshot_id"],
                     captured_at=result["captured_at"],
                     assumptions=result["assumptions"],
-                    row=row,
+                    row=presented(row, {r["id"]: r for r in result["rows"]}),
                     benchmark_diagnostics=result.get("benchmark_diagnostics", {}),
                     originals=originals,
                     references=list(refs.values()),

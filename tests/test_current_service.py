@@ -114,6 +114,47 @@ class ServiceLifecycle(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(self.service.dispatch);self.assertTrue(self.service.cleanup_complete)
         self.assertTrue(any(i['code']=='rss_cap' for i in self.service.issues))
 
+    async def test_planned_storage_interval_waits_for_owned_ingress(self):
+        from threading import Event
+        from unittest.mock import AsyncMock
+        await self.service.start(self.store)
+        self.service.config['cleanup_seconds']=.001
+        released=asyncio.Event()
+        pending=asyncio.create_task(released.wait())
+        self.service.ingress.tasks[pending]=Event()
+        self.service.ingress.sources[pending]='kalshi'
+        pending.add_done_callback(lambda task:self.service.ingress.tasks.pop(task,None))
+        drain=self.service.ingress.drain
+        async def finish_during_planned_drain(seconds):
+            asyncio.get_running_loop().call_later(.02,released.set)
+            return await drain(seconds)
+        self.service.ingress.drain=AsyncMock(side_effect=finish_during_planned_drain)
+        await self.service.close(storage_interval=True)
+        self.service.ingress.drain.assert_awaited_once_with(60)
+        self.assertTrue(pending.done())
+        self.assertTrue(self.service.cleanup_complete)
+        self.assertIsNone(self.service.ownership.file)
+
+    async def test_operator_stop_keeps_short_ingress_limit_and_ownership(self):
+        from threading import Event
+        await self.service.start(self.store)
+        self.service.config['cleanup_seconds']=.001
+        released=asyncio.Event()
+        pending=asyncio.create_task(released.wait())
+        self.service.ingress.tasks[pending]=Event()
+        self.service.ingress.sources[pending]='kalshi'
+        try:
+            await self.service.close()
+            self.assertFalse(pending.done())
+            self.assertIn('ingress_cleanup_timeout',self.service.cleanup_errors)
+            self.assertFalse(self.service.cleanup_complete)
+            self.assertIsNotNone(self.service.ownership.file)
+        finally:
+            released.set()
+            await pending
+            self.service.ingress.tasks.clear()
+            self.service.ownership.release()
+
 
 class SinkAdmission(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):

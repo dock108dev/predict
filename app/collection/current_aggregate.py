@@ -241,8 +241,11 @@ class AggregateScheduler:
         self.metrics['requests']+=1;self.metrics['worst_case_credits']+=cost
         if bootstrap:self.metrics['bootstrap_requests']+=1
         else:self.metrics['batches']+=1
+        transport_started=False
         async def send_once():
+            nonlocal transport_started
             self.permitted()
+            transport_started=True
             return await self.transport.request(request,self.key)
         request_task=asyncio.create_task(send_once())
         try:
@@ -253,6 +256,14 @@ class AggregateScheduler:
             self.metrics['http_response_ms']=(time.perf_counter()-tick)*1000
             self.metrics['last_received_at']=response['received_at']
         except asyncio.CancelledError:
+            if not transport_started:
+                # The durable marker precedes task scheduling. Cancellation in
+                # that gap is positive evidence that no transport was entered;
+                # the shared transport may still hold the previous receipt.
+                request_task.cancel()
+                await asyncio.gather(request_task,return_exceptions=True)
+                await self.accounting('cancel_before_transport',aid)
+                raise
             # Stop has already revoked publication and future dispatch. Give only
             # this existing request a bounded chance to deliver charge headers.
             # No retry, new request or post-Stop price admission is permitted.
@@ -268,6 +279,9 @@ class AggregateScheduler:
             # No receipt leaves the durable marker uncertain. Never refund it.
             raise
         except Exception as exc:
+            if not transport_started:
+                await self.accounting('cancel_before_transport',aid)
+                raise
             from .current_transport_diagnostics import exception_kind
             phase=getattr(self.transport,'phase',None)
             diagnostic=dict(**exception_kind(exc),elapsed_seconds=round(time.perf_counter()-tick,6),

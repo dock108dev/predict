@@ -15,7 +15,7 @@ def bounded_decimal(value):
     return d
 
 
-def quote_display(value, units, payout='1'):
+def quote_display(value, units, payout='1', *, places=0):
     """Convert supported normal-win $1 claims; unsupported data stays inspectable."""
     invalid = dict(supported=False, american=None, cents=None, equivalent=None,
                    reason='Unsupported units or payout basis')
@@ -45,8 +45,11 @@ def quote_display(value, units, payout='1'):
             # Derive from the original value, not rounded d or display cents.
             a = (v-1)*100 if units == 'decimal_odds' and v >= 2 else -100/(v-1) if units == 'decimal_odds' else 100*(1-p)/p if p <= Decimal('.5') else -100*p/(1-p)
             cents = v*100 if units == 'usd_per_contract' else v if units == 'cents_per_contract' else 100/v
-            american = a.quantize(Decimal('1'), rounding=ROUND_HALF_UP)
-            return dict(supported=True, american=f'{american:+.0f}',
+            american = a.quantize(Decimal(1).scaleb(-places), rounding=ROUND_HALF_UP)
+            american_text = f'{american:+.{places}f}'
+            if places:
+                american_text = american_text.rstrip('0').rstrip('.')
+            return dict(supported=True, american=american_text,
                         cents=f"{cents.quantize(Decimal('.1'), rounding=ROUND_HALF_UP):.1f}",
                         equivalent=units=='decimal_odds', reason=None,
                         conversion=dict(original=value, units=units, payout=payout,

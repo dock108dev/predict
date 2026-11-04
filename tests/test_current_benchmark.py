@@ -63,6 +63,23 @@ class BenchmarkTests(unittest.TestCase):
         attach(records,refs);self.assertTrue(all('sharp_reference' not in r['quote'] for r in records))
         refs=admit(encoded,'MLB',AT,venue='pinnacle')
         attach(records,refs[:1]);self.assertTrue(all('sharp_reference' not in r['quote'] for r in records))
+
+    def test_selected_book_failure_names_and_malformed_clocks(self):
+        original=self.quote(serialize(self.raw(),allow_synthetic=True))
+        for venue,label in [('pinnacle','Pinnacle'),('novig','Novig'),('prophetx','ProphetX')]:
+            with self.subTest(venue=venue):
+                q=deepcopy(original);ref=q['sharp_reference']
+                ref.update(bookmaker=venue,version=venue+'-proportional-no-vig-1')
+                validate_reference(ref,q['binding']['selection'],venue=venue)
+                ref['source_at']=[None,AT]
+                self.assertEqual(calculate(q,stamp(AT))['reason'],label+' source time unknown')
+                ref['source_at']=[AT,AT]
+                self.assertEqual(calculate(q,stamp(AT)+timedelta(seconds=1801))['reason'],label+' baseline is older than the 30-minute limit')
+                ref['provider_clocks']=[dict(book=AT,market=None,selected_basis='book')]*2
+                for malformed in ([],[AT],None):
+                    ref['source_at']=malformed
+                    with self.assertRaisesRegex(ValueError,'Both '+label+' source clocks required'):
+                        validate_reference(ref,q['binding']['selection'],venue=venue)
     def test_reference_is_not_a_board_venue_and_snapshot_reproduces(self):
         from app.dashboard.current_contract import validate_snapshot,snapshot_inputs
         s=serialize(self.raw(),allow_synthetic=True)

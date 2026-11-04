@@ -78,7 +78,7 @@ class Composition(unittest.TestCase):
         spec.loader.exec_module(builder)
         with tempfile.TemporaryDirectory() as folder:
             assets = Path(folder)
-            for name in (*builder.JAVASCRIPT, *builder.SCANNER_JAVASCRIPT, *builder.STYLES, "scanner-shell.html"):
+            for name in (*builder.JAVASCRIPT, *builder.SCANNER_JAVASCRIPT, *builder.STYLES, "scanner-shell.html", "scanner-style.css"):
                 (assets / name).write_bytes((builder.ASSETS / name).read_bytes())
             builder.ASSETS = assets
             for name, body in builder.outputs().items():

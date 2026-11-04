@@ -291,3 +291,20 @@ app reads do not alter collection, continuity, protected accounting or finance.
 App-only restart loads the new routes without restarting the collector. Bounded
 read-only SQL snapshots provide coherent raw pages and retain source clocks.
 See [raw display ownership](raw-prices.md).
+
+
+### Planned storage drain and pending accounting
+
+Planned storage maintenance allows owned ingress the same 60-second drain window
+as source tasks before replacement. Operator Stop retains the configured short
+limit; an unfinished drain retains ownership and reports incomplete cleanup.
+Cancellation after the durable dispatch marker but before the request task enters
+transport records positive local non-dispatch evidence. A transport receipt from
+an earlier request is never used for this boundary.
+
+Admin distinguishes a live reservation/transport/accounting phase from an
+inactive uncertain charge. Both still retain the ordinary quota gates. An expired
+rejected-identity attempt with no attached receipt/header/failure evidence may be
+covered only by the existing exact-account independent-balance recovery process;
+its full hold and original record remain intact. Conflicting receipt evidence
+and active transport are not eligible for this exception.

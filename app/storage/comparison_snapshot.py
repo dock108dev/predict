@@ -129,14 +129,13 @@ def capture(db, *, at=None):
 
 def probability(row,settings,at):
     from app.collection.current_benchmark import calculate,validate_reference
-    if settings['benchmark_venue']!='pinnacle':return None,'Selected benchmark pair unavailable in captured inputs'
     if row['league']=='NCAAB':
         ref=row.get('snapshot_benchmark')
         return (ref['probability'],None) if ref else (None,row.get('snapshot_benchmark_missing','Exact two-sided Pinnacle reference unavailable'))
     q=row.get('benchmark_quote')
-    if not q:return None,'Exact two-sided Pinnacle reference unavailable'
+    if not q:return None,'Exact two-sided '+settings['benchmark_venue'].title()+' reference unavailable'
     try:
-        validate_reference(q['sharp_reference'],q['binding']['selection'])
+        validate_reference(q['sharp_reference'],q['binding']['selection'],venue=settings['benchmark_venue'])
         value=calculate(q,stamp(at),allow_last_known=True)
         if value.get('value') is None:return None,value.get('reason')
         p=value['basis']['probability']
@@ -149,12 +148,20 @@ def calculate(inputs,value=None):
     settings,policy=assumptions(value)
     rows=[];pairs=[];oppositions={}
     from app.comparison.snapshot_benchmark import bind
-    projected,benchmark_diagnostics=bind(inputs['quotes'],inputs['references'],settings,inputs['captured_at'])
+    from app.comparison import snapshot_named_benchmark as named
+    benchmark_refs=named.references(inputs['quotes'],inputs['references'],settings)
+    named_quotes=named.bind(inputs['quotes'],benchmark_refs,settings)
+    projected,benchmark_diagnostics=bind(named_quotes,benchmark_refs,settings,inputs['captured_at'])
     game_keys={old['game_key']:new['game_key'] for old,new in zip(inputs['quotes'],projected)}
-    games={game_keys.get(g['game_key'],g['game_key']):dict(g,game_key=game_keys.get(g['game_key'],g['game_key'])) for g in inputs['games']}
+    from app.comparison.snapshot_identity import games as projected_games
+    games=projected_games(inputs,projected)
     references=[dict(r,game_key=game_keys.get(r.get('game_key'),r.get('game_key'))) for r in inputs['references']]
     for original in projected:
         row={k:v for k,v in original.items() if k not in ('benchmark_quote','original_record','native_contract')}
+        row['game_title']=games.get(row['game_key'],{}).get('title',row['game_title'])
+        record=original.get('original_record') or {}
+        participant=record.get('selection',{}).get('participant')
+        row['participant_label']=next((name for name,pid in record.get('event',{}).get('participants',{}).items() if pid==participant),None)
         row['probability'],row['probability_missing']=probability(original,settings,inputs['captured_at'])
         supported=row['common_odds'].get('supported') and (row['snapshot_supported'] if 'snapshot_supported' in row else row['binding'].get('verified'))
         cost=price(original) if supported else None
@@ -166,6 +173,9 @@ def calculate(inputs,value=None):
         row['net_return_percent']=row['math'].get('buffered_return_percent')
         row['input_basis']=dict(price='observed captured original',probability='unavailable' if p is None else 'configured proportional no-vig decisive benchmark; not an observed probability',fees='unavailable' if settings['fees'][row['venue']] is None else 'configured hypothetical upfront rate',scenario='unavailable' if settings['scenario']=='unavailable' else 'configured hypothetical settlement scenario',sizing='unavailable' if settings['sizing']=='unavailable' else 'configured fractional top-price size; observed depth not used',buffer='configured once on deployed capital')
         row['gross_profit_per_claim']=None if p is None or cost is None else wire(p-cost)
+        from app.comparison.conditional_benchmark import snapshot_metric
+        row['conditional_trade_benchmark']=snapshot_metric(row,at=inputs['captured_at'])
+        row['conditional_return_percent']=row['conditional_trade_benchmark'].get('return_percent')
         from app.dashboard.u0_display import quote_display
         ref=original.get('reference')
         row['reference_odds']=None if not ref else dict(quote_display(ref['selected_odds'],'decimal_odds'),source_at=ref['source_at'],role='reference_only')
@@ -201,6 +211,7 @@ def calculate(inputs,value=None):
     return dict(id=uuid4().hex,snapshot_id=inputs['id'],captured_at=inputs['captured_at'],assumptions=settings,
         calculated_at=utc(),rows=rows,pairs=pairs,games=list(games.values()),references=references,sources=inputs['sources'],issues=inputs['issues'],
         counts=dict(observations=len(rows),gross_numeric=sum(r['gross_return_percent'] is not None for r in rows),
+            conditional_numeric=sum(r['conditional_return_percent'] is not None for r in rows),
             net_numeric=sum(r['net_return_percent'] is not None for r in rows),pairs=len(pairs),
             unmatched=sum(not r['same_outcome']['supported'] for r in rows)),provider_requests=0,
         capture_seconds=inputs['capture_seconds'],benchmark_diagnostics=benchmark_diagnostics,

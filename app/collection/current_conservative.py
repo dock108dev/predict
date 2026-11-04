@@ -87,7 +87,17 @@ def recovery_preflight(v, at, covered, *, owner_runtime, recovery_id):
                 and a['response_receipt'].get('headers')==[]
                 and a.get('quota_headers')==[])
             for a in lost)
-        related=transport or missing
+        # A pre-entry cancellation in older runtimes could submit a previous
+        # request's receipt, rejected before any evidence was attached here.
+        # An inactive, expired attempt with no receipt can be covered against an
+        # independent balance, retaining its entire unknown charge. Never cover
+        # conflicting or malformed receipt evidence through this exception.
+        identity_without_receipt=v['pause']=='response_identity_invalid' and lost and all(
+            covering(v,a) or (a['state']=='uncertain' and a['runtime_id']!=owner_runtime
+                and a.get('response_receipt') is None and a.get('late_response_receipt') is None
+                and a.get('quota_headers') is None and a.get('quota_failure') is None)
+            for a in lost)
+        related=transport or missing or identity_without_receipt
         if not related:raise QuotaStop(v['pause'])
     if not isinstance(recovery_id,str) or not re.fullmatch(r'[A-Za-z0-9_-]{1,80}', recovery_id):
         raise QuotaStop('recovery_identity_invalid')

@@ -1,0 +1,14 @@
+{
+  "version": "polymarket-us-conditional-20261103-review-4",
+  "source_url": "https://docs.polymarket.us/fees.md",
+  "sha256": "56a8a61b7a757795c5bd5cbf69f4a3595234e648451d304805bbfdb74be4b1df",
+  "path": "app/fixtures/polymarket-us-fees-review-20261103.md",
+  "reviewed_at": "2026-11-04T01:18:36.364584+00:00",
+  "review_before": "2026-11-05T01:18:36.364584+00:00",
+  "fee_rate": "0.0695",
+  "evidence_class": "official_standard_fee_schedule_single_fill_scenario",
+  "applicability": "Standard non-combo sports taker, one contract in one fill, no weekly rebate assumption. Whole-order split-fill fees and actual execution are not established.",
+  "supersedes": "polymarket-us-pregame-conditional-20261030-review-3",
+  "review_decision": "Current official standard sports taker schedule retains 0.0695 times contracts times price times one minus price, with half-even cent rounding and cumulative split-fill cap. This scenario remains one contract in one fill before rebates. Combo notice and table tennis are excluded; no account tier, actual fill or exceptional settlement is inferred.",
+  "review_window_basis": "Prospective daily engineering review of current official fee documentation. This is a review deadline, not a source promise or an acquisition cutoff."
+}

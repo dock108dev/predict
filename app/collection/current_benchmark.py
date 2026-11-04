@@ -1,4 +1,4 @@
-"""Exact two-way Pinnacle benchmark, gross conditional return on quote cost."""
+"""Exact selected-book benchmark, gross conditional return on quote cost."""
 from copy import deepcopy
 from fractions import Fraction
 from app.dashboard.current_contract import fields, stamp, text, bounded_decimal, price, result, exact_wire, display_decimal, current_eligible, packed, identity
@@ -6,6 +6,7 @@ from app.comparison.event_links import semantic_market
 
 VERSION='pinnacle-proportional-no-vig-1'
 MAXIMUM_AGE=1800
+BENCHMARK_NAMES={'pinnacle':'Pinnacle','novig':'Novig','prophetx':'ProphetX'}
 
 
 def key(record):
@@ -13,7 +14,8 @@ def key(record):
     return packed([semantic_market(record),s['participant'],s['predicate'],s['signed_line']])
 
 
-def attach(records,references):
+def attach(records,references, *, venue="pinnacle"):
+    if venue not in BENCHMARK_NAMES:raise ValueError("Unsupported benchmark venue")
     groups={}
     for r in references:
         q=r['quote']
@@ -28,12 +30,12 @@ def attach(records,references):
         family=group[0]['market_identity']['family']
         sides=[r['selection'] for r in group]
         event=group[0]['event']
-        if any(r['quote']['venue']!='pinnacle' for r in group):continue
+        if any(r['quote']['venue']!=venue for r in group):continue
         if family=='moneyline' and ({s['participant'] for s in sides}!={event['home'],event['away']} or {s['predicate'] for s in sides}!={'win'}):continue
         if family=='total' and {s['predicate'] for s in sides}!={'over','under'}:continue
         if family=='spread' and ({s['participant'] for s in sides}!={event['home'],event['away']} or {s['predicate'] for s in sides}!={'cover'} or Fraction(sides[0]['signed_line'])!=-Fraction(sides[1]['signed_line'])):continue
         for i,r in enumerate(group):
-            index[key(r)]=dict(bookmaker='pinnacle',version=VERSION,selection_digest=None,
+            index[key(r)]=dict(bookmaker=venue,version=(VERSION if venue=='pinnacle' else venue+'-proportional-no-vig-1'),selection_digest=None,
                 odds=[x['quote']['original']['value'] for x in group],selected=i,
                 source_at=[x['quote']['times']['source_at'] for x in group],
                 received_at=r['quote']['times']['received_at'],sha256=r['quote']['provenance']['sha256'],maximum_age_seconds=MAXIMUM_AGE,
@@ -48,26 +50,28 @@ def attach(records,references):
         if ref is not None:r['quote']['sharp_reference']=deepcopy(ref)
 
 
-def validate_reference(ref,selection):
+def validate_reference(ref,selection, *, venue="pinnacle"):
+    if venue not in BENCHMARK_NAMES:raise ValueError("Unsupported benchmark venue")
+    book=BENCHMARK_NAMES[venue]
     fields(ref,{'bookmaker','version','selection_digest','odds','selected','source_at','received_at','sha256','maximum_age_seconds'},{'selected_odds','provider_clocks'})
-    if ref['bookmaker']!='pinnacle' or ref['version']!=VERSION or ref['selection_digest']!=identity('binding',selection) or ref['maximum_age_seconds']!=MAXIMUM_AGE:raise ValueError('Exact Pinnacle benchmark binding required')
-    if type(ref['selected']) is not int or ref['selected'] not in (0,1) or not isinstance(ref['odds'],list) or len(ref['odds'])!=2:raise ValueError('Complete two-way Pinnacle odds required')
+    if ref['bookmaker']!=venue or ref['version']!=(VERSION if venue=='pinnacle' else venue+'-proportional-no-vig-1') or ref['selection_digest']!=identity('binding',selection) or ref['maximum_age_seconds']!=MAXIMUM_AGE:raise ValueError(f'Exact {book} benchmark binding required')
+    if type(ref['selected']) is not int or ref['selected'] not in (0,1) or not isinstance(ref['odds'],list) or len(ref['odds'])!=2:raise ValueError(f'Complete two-way {book} odds required')
     for value in ref['odds']:
-        if bounded_decimal(value)<=1:raise ValueError('Invalid Pinnacle decimal odds')
-    if 'selected_odds' in ref and ref['selected_odds']!=ref['odds'][ref['selected']]:raise ValueError('Exact selected Pinnacle odds conflict')
+        if bounded_decimal(value)<=1:raise ValueError(f'Invalid {book} decimal odds')
+    if 'selected_odds' in ref and ref['selected_odds']!=ref['odds'][ref['selected']]:raise ValueError(f'Exact selected {book} odds conflict')
+    if not isinstance(ref['source_at'],list) or len(ref['source_at'])!=2:raise ValueError(f'Both {book} source clocks required')
     if 'provider_clocks' in ref:
-        if not isinstance(ref['provider_clocks'],list) or len(ref['provider_clocks'])!=2:raise ValueError('Both original Pinnacle clock descriptors required')
+        if not isinstance(ref['provider_clocks'],list) or len(ref['provider_clocks'])!=2:raise ValueError(f'Both original {book} clock descriptors required')
         for i,clocks in enumerate(ref['provider_clocks']):
             if clocks is None:continue
             fields(clocks,{'book','market','selected_basis'})
-            if clocks['selected_basis'] not in ('book','market','unknown'):raise ValueError('Invalid Pinnacle provider clock basis')
+            if clocks['selected_basis'] not in ('book','market','unknown'):raise ValueError(f'Invalid {book} provider clock basis')
             for kind in ('book','market'):stamp(clocks[kind],True)
             selected=None if clocks['selected_basis']=='unknown' else clocks[clocks['selected_basis']]
-            if selected!=ref['source_at'][i]:raise ValueError('Pinnacle original clock conflict')
-    if not isinstance(ref['source_at'],list) or len(ref['source_at'])!=2:raise ValueError('Both Pinnacle source clocks required')
+            if selected!=ref['source_at'][i]:raise ValueError(f'{book} original clock conflict')
     for at in ref['source_at']:stamp(at,True)
     stamp(ref['received_at']);text(ref['sha256'])
-    if len(ref['sha256'])!=64 or any(c not in '0123456789abcdef' for c in ref['sha256']):raise ValueError('Pinnacle receipt hash required')
+    if len(ref['sha256'])!=64 or any(c not in '0123456789abcdef' for c in ref['sha256']):raise ValueError(f'{book} receipt hash required')
 
 
 def proportional_probability(odds, selected):
@@ -79,7 +83,7 @@ def proportional_probability(odds, selected):
 
 
 def calculate(q,clock,*,allow_last_known=False):
-    ref=q['sharp_reference'];basis=dict(version=VERSION,inputs=[dict(quote_id=q['id'],quote_revision=q['revision'],venue=q['venue'])],reference_sha256=ref['sha256'],formula='100 × (Pinnacle no-vig probability / normalized quote cost − 1)')
+    ref=q['sharp_reference'];book=BENCHMARK_NAMES[ref['bookmaker']];basis=dict(version=ref['version'],inputs=[dict(quote_id=q['id'],quote_revision=q['revision'],venue=q['venue'])],reference_sha256=ref['sha256'],formula=f'100 × ({book} no-vig probability / normalized quote cost − 1)')
     unavailable=lambda reason:result(reason=reason,unit='percent',basis=basis)
     if clock is None:return unavailable('Evaluation clock unavailable')
     from app.comparison.current_dependencies import link_reasons
@@ -87,10 +91,10 @@ def calculate(q,clock,*,allow_last_known=False):
     if q['state'] in ('stopped','error','unavailable','connecting','resyncing') and not allow_last_known:
         return unavailable('Updates stopped; reopen current prices' if q['state']=='stopped' else 'Quote source '+q['state'].replace('_',' ')+'; EV waits for available prices')
     clocks=[stamp(at,True) for at in ref['source_at']]
-    if any(at is None for at in clocks):return unavailable('Pinnacle source time unknown')
+    if any(at is None for at in clocks):return unavailable(f'{book} source time unknown')
     ages=[(clock-at).total_seconds() for at in clocks]
-    if any(age<0 for age in ages) or stamp(ref['received_at'])>clock:return unavailable('Pinnacle clock is ahead of the evaluation clock')
-    if max(ages)>MAXIMUM_AGE and not allow_last_known:return unavailable('Pinnacle baseline is older than the 30-minute limit')
+    if any(age<0 for age in ages) or stamp(ref['received_at'])>clock:return unavailable(f'{book} clock is ahead of the evaluation clock')
+    if max(ages)>MAXIMUM_AGE and not allow_last_known:return unavailable(f'{book} baseline is older than the 30-minute limit')
     if q['source']['provider']=='the_odds_api':
         at=stamp(q['times']['source_at'],True)
         if not q['binding']['verified']:return unavailable('Comparison selection binding is unverified')
@@ -107,6 +111,6 @@ def calculate(q,clock,*,allow_last_known=False):
     basis.update(probability=exact_wire(probability),implied_probability_sum=exact_wire(sum(implied)),reference_age_seconds=max(ages))
     exact=exact_wire(100*(probability/cost-1))
     out=result(exact['decimal_approx'],'percent',basis=basis)
-    out.update(exact=exact,display_value=display_decimal(out['value'],2,True)+' %',engine_version=VERSION,
-        scope='EV vs Pinnacle · proportional no-vig benchmark · gross conditional win/loss · fees excluded; ties, pushes and exceptional settlement excluded. This is a market benchmark, not a calibrated probability model.')
+    out.update(exact=exact,display_value=display_decimal(out['value'],2,True)+' %',engine_version=ref['version'],
+        scope=f'EV vs {book} · proportional no-vig benchmark · gross conditional win/loss · fees excluded; ties, pushes and exceptional settlement excluded. This is a market benchmark, not a calibrated probability model.')
     return out

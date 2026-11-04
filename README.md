@@ -1,23 +1,30 @@
 # Predict
 
-Predict is a local, read-only prediction-market comparison app for macOS. The
-dashboard and **EV** rank captured prices by expected return. **Odds** groups
-observations by game and outcome. **Opposing-outcome scenarios** compares paired
-positions under the selected assumptions. Open Details to inspect the calculation
-and its original prices. Admin manages collection and source status. The advanced
+Predict is a local, read-only prediction-market comparison app for macOS.
+**Opportunities** ranks captured prices by the selected estimate. **Markets** groups
+observations by game and outcome. The **Opposing positions** view compares paired
+positions under the selected assumptions. Open **Why** for the calculation meaning
+and follow its Admin link to inspect original prices. Admin manages collection and source status. The advanced
 Scanner supports opportunity filters and manual tickets.
 
 Kalshi and Polymarket US use native adapters; Novig and ProphetX can arrive through
 The Odds API. Pinnacle is a reference, not a purchase leg. The default calculation
 uses $1,000 funding and one 0.5% buffer on deployed capital. Estimates can be
-negative, unavailable or labeled last-known when inputs have aged. Predict does
+negative or unavailable; saved prices do not establish current availability. Predict does
 not place trades.
 
-Choose **Capture local prices** to compare the available observations for games
+Choose **Refresh prices** to capture available local observations for games
 in the next 72 hours. **Recalculate** applies edited assumptions to the same
-capture. Browsing, sorting and inspecting Details use the selected revision.
-Source ages remain visible, and an estimate can be unavailable when its required
+capture. Browsing, sorting and inspecting original inputs use the selected revision.
+Detailed source clocks remain in Admin, and an estimate can be unavailable when its required
 inputs are missing. See the [calculation basis](docs/benchmark-ev.md).
+
+## Interface
+
+The [interface design](docs/ui-design.md) describes the implemented
+Opportunities → Markets → Admin navigation, Why explanations and shared
+American/Decimal odds preference. Design approval is recorded; acceptance of the
+running implementation remains open.
 
 ## Requirements and quickstart
 
@@ -50,7 +57,9 @@ The launcher starts a dedicated socket-only PostgreSQL cluster plus independent
 background data and app processes. Add `--role app` or `--role data` to any command
 to manage them separately. Closing/restarting the app leaves collection and shared
 calculations running. [Lifecycle and result contract](docs/data-app-runtime-contract.md).
-There is no cloud service or automatic restart. Current prices keep their original clocks; a recent
+There is no cloud service. The data process can restart itself after successful
+planned storage maintenance; it preserves Stop choices and source pauses.
+Current prices keep their original clocks; a recent
 calculation does not make an old price fresh. Fee and payout models have bounded
 applicability, so missing or expired models can withhold estimates.
 

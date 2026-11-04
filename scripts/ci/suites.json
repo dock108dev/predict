@@ -580,7 +580,9 @@
       "tests/test_sc09_native_reference.py",
       "tests/test_comparison_snapshot.py",
       "tests/test_snapshot_benchmark.py",
-      "tests/test_snapshot_identity.py"
+      "tests/test_snapshot_identity.py",
+      "tests/test_snapshot_display.py",
+      "tests/test_snapshot_completion.py"
     ]
   },
   {

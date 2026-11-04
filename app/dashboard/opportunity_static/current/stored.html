@@ -1,20 +1,9 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Predict · Opportunities and prices</title>
-<link rel="stylesheet" href="/current/assets/stored.css">
-<script type="module" src="/current/assets/stored.js"></script>
-</head>
-<body><a class="skip-link" href="#content">Skip to comparisons</a><main>
-<header>
-<a class="brand" href="/" aria-label="Predict home">Predict<span class="brand-mark" aria-hidden="true">↗</span></a>
-<nav aria-label="Views"><a href="/">Dashboard</a><a href="/odds">Odds</a><a href="/ev" title="Expected value">EV</a><a href="/current/coverage">Coverage</a><a href="/admin">Admin</a></nav>
-<button id="stop" class="secondary">Stop collection</button>
-</header>
-<div class="heading"><div class="view-title"><h1 id="title">Odds</h1></div>
-<div class="heading-actions"><form id="settings" aria-label="Calculation settings">
-<details class="calculation-settings"><summary><span><strong>Assumptions</strong><span id="applied" class="muted">$1,000 · 0.5% buffer · Pinnacle</span></span></summary><div class="settings-body"><div class="settings-fields">
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Predict · Opportunities</title><link rel="stylesheet" href="/current/assets/stored.css"><script type="module" src="/current/assets/stored.js"></script></head>
+<body><a class="skip-link" href="#content">Skip to results</a><div data-shell></div><main>
+<a id="back" class="p-back" hidden>← Back to opportunities</a>
+<div class="p-heading"><div><h1 id="title">Opportunities</h1><p id="caption" class="p-caption">Next 72 hours · Saved comparison</p></div><button id="refresh-snapshot" class="p-action" disabled>Refresh prices</button></div>
+<div id="admin-nav"></div><section id="calculation-panel" hidden><form id="settings" aria-label="Calculation settings">
+<details class="calculation-settings" open><summary><span><strong>Assumptions</strong><span id="applied" class="muted">$1,000 · 0.5% buffer · Pinnacle</span></span></summary><div class="settings-body"><div class="settings-fields">
 <label>Requested funding ($)<input id="amount" type="text" inputmode="decimal" value="1000"></label>
 <label>Buffer (%)<input id="buffer" type="text" inputmode="decimal" value="0.5"></label>
 <label class="benchmark-setting">Reference<select id="benchmark"><option value="pinnacle">Pinnacle</option><option value="novig">Novig</option><option value="prophetx">ProphetX</option></select></label>
@@ -26,23 +15,11 @@
 <label>polymarket_us upfront fee rate (0–1)<input id="fee-polymarket_us" placeholder="Unknown"></label>
 <label>novig upfront fee rate (0–1)<input id="fee-novig" placeholder="Unknown"></label>
 <label>prophetx upfront fee rate (0–1)<input id="fee-prophetx" placeholder="Unknown"></label>
-<button type="submit" class="primary">Recalculate</button><button id="restore" type="button" class="secondary">Restore defaults</button>
-</div><p class="settings-help">Recalculate applies these assumptions to captured prices across all views. Blank inputs remain unknown. Fees are hypothetical upfront fractions of acquisition; the buffer applies once to deployed capital.</p></div></details></form><details class="view-help"><summary>About this view</summary><div><p>Collected prices remain visible when an estimate is unavailable. American odds express the supported price conversion; each native side retains its own meaning. Open a price for original clocks, observed depth and its exact source frame. Gross differences exclude costs and EV.</p></div></details></div></div>
-<div class="board-controls">
-<section class="selection slate-selection" aria-label="Game filters">
-<label>League<select id="league"><option value="">All leagues</option></select></label>
-<label>Venue<select id="venue"><option value="">All sources</option></select></label>
-<label>Market<select id="family"><option value="">All markets</option></select></label>
-<label>Period<select id="period"><option value="">All periods</option></select></label>
-<label>Games<select id="game"><option value="">All games</option></select></label>
-<label class="search-field">Search<input id="search" type="search" placeholder="Team or game" autocomplete="off"></label>
-<label id="sort-setting" hidden>Sort results<select id="sort"><option value="best">Return / margin %</option><option value="start">Start time</option></select></label>
-</section>
-
-</div>
-<div class="snapshot-actions"><button id="refresh-snapshot" disabled class="primary">Capture local prices</button><button id="latest-snapshot">Latest snapshot</button><button id="prior-snapshot" hidden>Inspect previous snapshot</button><a href="/admin">Provider acquisition and controls</a><a href="/arbs">Opposing-outcome scenarios</a></div><div class="context-bar"><p id="status" role="status">Loading comparison snapshot…</p><button id="retry" hidden>Retry current reads</button><details id="read-diagnostics" hidden><summary>Technical details</summary><p id="read-error"></p></details></div>
-<div id="filters" hidden role="group" aria-label="Results"><button data-filter="positive" aria-pressed="true">Positive</button><button data-filter="all" aria-pressed="false">All comparisons</button><button data-filter="hedges" aria-pressed="false" hidden>Rule-sensitive hedges</button></div>
-<section id="content" aria-label="Comparison results" tabindex="-1"></section>
-<dialog id="details" aria-labelledby="details-title"><div class="dialog-head"><h2 id="details-title">Details</h2><button id="close-details">Close</button></div><div id="detail-content"></div></dialog>
-<footer><span>Read-only comparisons · No trades placed</span><div><a href="/admin">Source status</a><a href="/scanner">Advanced Scanner</a></div></footer>
+<button type="submit" class="primary" disabled>Recalculate</button><button id="restore" type="button" class="secondary">Restore defaults</button>
+</div><p class="settings-help">Recalculate applies these assumptions to captured prices across all views. Blank inputs remain unknown. Fees are hypothetical upfront fractions of acquisition; the buffer applies once to deployed capital.</p></div></details></form><a id="return-result" class="p-textlink" href="/">Return to comparison</a></section>
+<div id="ordinary-controls"><div class="p-toolbar"><div id="leagues" class="p-tabs" aria-label="League"></div><input id="search" class="p-search" type="search" placeholder="Search teams" aria-label="Search teams" autocomplete="off"></div>
+<div class="filterbar"><label>View<select id="mode"><option value="ev">Single-position EV</option><option value="arbs">Opposing positions</option></select></label><label id="sort-setting">Rank by<select id="sort"></select></label><details class="more-filters"><summary>Filters</summary><div><label>Venue<select id="venue"><option value="">All venues</option></select></label><label>Market<select id="family"><option value="">All markets</option></select></label><label>Game<select id="game"><option value="">All games</option></select></label></div></details></div>
+<div id="markets" class="p-marketbar" hidden></div><p id="result-count" class="p-section-label"></p></div>
+<p id="status" role="status" aria-live="polite"></p><section id="content" tabindex="-1" aria-label="Results"></section>
+<div id="snapshot-tools" class="p-footer"><span>Saved comparison · Current availability unverified</span><div><button id="latest-snapshot" class="p-textlink">Latest comparison</button> · <button id="prior-snapshot" class="p-textlink" hidden>Previous capture</button></div></div>
 </main></body></html>

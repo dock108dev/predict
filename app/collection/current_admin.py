@@ -112,12 +112,17 @@ def project(service, raw, *, accounting=None):
         latest_issue=next((i for i in reversed(service.issues) if i['runtime_id']==service.runtime_id and any(v in i['affected_venues'] for v in venues)),None)
         done=service.tasks[provider].done() if provider in service.tasks else None
         state_values={v['state'] for v in summaries.values()}
+        accounting_pending=bool(provider=='the_odds_api' and service.dispatch and not done
+            and not getattr(worker,'closed',True)
+            and getattr(worker,'phase',None) in ('reservation','transport','accounting')
+            and (raw.get('quota') or {}).get('blocking_reason')=='ambiguous_dispatch_unresolved')
         behavior=('owner_stop' if provider in getattr(service,'paused_sources',()) or getattr(service,'globally_stopped',False)
+            else 'running' if accounting_pending
             else 'accounting_hold' if provider=='the_odds_api' and (raw.get('quota') or {}).get('blocking_reason')
             else 'terminal_failure' if done else 'retrying' if backoff or (provider=='the_odds_api' and getattr(worker,'phase',None)=='database_ingress' and (raw.get('sink') or {}).get('admission_state')=='retrying')
             else 'running' if provider=='the_odds_api' and worker is not None and getattr(worker,'phase','idle') not in ('idle','waiting_for_cycle')
             else 'receiving' if 'available' in state_values else 'waiting_for_cycle' if 'budget_delayed' in state_values else 'running')
-        panels.append(dict(worker_behavior=behavior,processing_phase=getattr(worker,'phase',None),next_action=None if latest_issue is None else latest_issue['next_action'],provider=provider,affected_venues=venues,status=summaries,
+        panels.append(dict(worker_behavior=behavior,accounting_pending=accounting_pending,processing_phase=getattr(worker,'phase',None),next_action=None if latest_issue is None else latest_issue['next_action'],provider=provider,affected_venues=venues,status=summaries,
             source_at=latest,source_age_seconds=age(latest),received_at=received,receipt_age_seconds=age(received),
             last_book_observation_at=max(observed_sources,key=stamp) if observed_sources else None,last_book_receipt_at=max(observed_receipts,key=stamp) if observed_receipts else None,last_http_received_at=metrics.get('last_received_at'),socket_connected=bool(getattr(worker,'socket',None)) if provider!='the_odds_api' else None,
             timestamp_meanings=sorted({q['times']['source_time_kind'] for q in quotes}),
