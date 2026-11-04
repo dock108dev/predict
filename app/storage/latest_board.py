@@ -840,6 +840,8 @@ def reconcile(db, *, at=None, observations_only=False, admission=None, turn_seco
         if anchor is not None:
             cursor=next((i for i,ids in enumerate(batches) if ids and min(ids)>anchor),0)
         deadline=monotonic()+(5 if observations_only else min(60,max(1,turn_seconds))) if admission is not None else None
+        rotation=batches
+        rotation_cursor=cursor
         batches=batches[cursor:]+batches[:cursor]
         if not observations_only and admission is None:
             from .board_capture import prioritize_unpublished
@@ -947,7 +949,9 @@ def reconcile(db, *, at=None, observations_only=False, admission=None, turn_seco
                     if ids:admission[kind+'_after']=min(ids)
                     # Priority turns have their own ordering and cannot move
                     # the ordinary rotation past quiet components indefinitely.
-                    if ids and not window_priority:admission[kind+'_rotation_after']=min(ids)
+                    if ids and (not window_priority or ids==rotation[rotation_cursor]):
+                        admission[kind+'_rotation_after']=min(ids)
+                        rotation_cursor=(rotation_cursor+1)%len(rotation)
                     if progress is not None:progress(admission)
                 if batch.get('deferred'):
                     state.update(state='deferred',reason=batch['reason'])

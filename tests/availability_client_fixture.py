@@ -28,7 +28,7 @@ def responses():
     published['read_authority'] = 'authored-authority'
     database = _ReadOnlyDB()
     output = {}
-    with patch('app.storage.latest_board.snapshot', return_value=published), patch(
+    with patch('app.storage.latest_board.snapshot', side_effect=lambda *a, **kw: deepcopy(published)), patch(
         'app.storage.latest_board.slate_authority', return_value=hashed(['authored-authority', False])
     ), patch(
         'app.storage.latest_board.calculate_current', side_effect=AssertionError('Ordinary read cannot calculate')

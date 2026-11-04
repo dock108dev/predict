@@ -71,6 +71,8 @@ class ComparisonReadContext(TestCase):
 
     def test_one_context_resolves_once_and_guard_never_rediscovers(self):
         from app.comparison.occurrence_matching import OccurrenceResolver
+        from app.storage.discovery_index import clear
+        clear()
         original = OccurrenceResolver.resolve
         calls = []
         def resolve(instance, records, **kwargs):

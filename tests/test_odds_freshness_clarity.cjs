@@ -52,12 +52,11 @@ function input(q) { return copy({quote_id:q.quote_id, quote_revision:q.quote_rev
   const content = new Element('section'), renderer = createComparisonSlate({content,onOriginal:()=>{},onDetails:()=>{}});
   renderer.draw(slate,{view:'odds',filter:'all'});
   for (const text of ['2 games shown · 2 in catalog','4 price observations','1 current · 1 pending publication · 1 last-known · 1 unknown/unavailable observations','Requested pages retrieved','board errors exclude unknown observations','source_board_read_failed','Updating stored observations']) assert(content.textContent.includes(text),text);
-  const priceCells=content.querySelectorAll('.slate-price-cell');
+  const priceCells=content.querySelectorAll('td');
   assert.equal(content.querySelectorAll('.compact-price-status').length,4);
   assert(priceCells.some(cell=>cell.textContent.includes('Current · 1s old')));
   assert(!priceCells.some(cell=>cell.textContent.includes('Observed depth unknown') || cell.textContent.includes('Gross difference')),'price cards leave technical/comparison evidence to Details');
-  assert(!content.querySelector('.odds-research').open,'old observations start collapsed, independently of financial availability');
-  assert(content.querySelector('.odds-research').querySelectorAll('.compact-price-status').length>0,'old originals remain inspectable');
+  assert(priceCells.some(cell=>cell.textContent.includes('Last-known') && cell.querySelector('button')),'last-known originals remain inspectable in the grid');
   const brief=new Element('section');observationSummary(brief,selected,{compact:true});
   assert.equal(brief.children.length,1);assert.equal(brief.textContent,'Current · 1s old');
   updateRelativeAges(brief,at+16*60*1000);assert(brief.textContent.startsWith('Last-known · '));
@@ -68,7 +67,7 @@ function input(q) { return copy({quote_id:q.quote_id, quote_revision:q.quote_rev
   assert(content.textContent.includes('Catalog: 4 returned price observations'));
   assert(content.textContent.includes('source_board_read_failed'));
   renderer.draw(slate,{view:'odds',filter:'all',search:g.participants[0].name});
-  assert.equal(content.querySelectorAll('.slate-odds').length,2,'current and research observations have separate game sections');
+  assert.equal(content.querySelectorAll('.slate-odds').length,1,'the grouped grid retains current and older observations for the same game');
   const manyGames = Array.from({length:51}, (_,index) => ({...copy(g),game_key:'authored-page-game:'+index,title:'Paged synthetic game '+index}));
   const accumulator = new SlateAccumulator(c);
   for (const offset of [0,50]) {

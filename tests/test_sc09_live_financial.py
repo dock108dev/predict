@@ -135,6 +135,8 @@ def test_shared_worker_deferral_preserves_next_unprocessed_component():
             if args[1]==3:raise ValueError('background_memory_capacity')
     admission={};work=Work()
     with patch('app.collection.background_work.BACKGROUND',work), \
+         patch.object(latest,'runtime',return_value={'runtime_id':'fixture'}), \
+         patch('app.storage.board_capture.refresh_waiters',return_value=[]), \
          patch.object(latest,'capture_batches',return_value=[['a'],['b'],['c']]), \
          patch.object(latest,'capture_reservation',side_effect=[1,2,3]), \
          patch.object(latest,'_reconcile',return_value=dict(published=True,computed=1,reused=0,errors=[])) as run:
@@ -158,7 +160,8 @@ def test_hot_source_turn_cannot_reset_quiet_component_rotation():
         @contextmanager
         def claim(self,kind,size,**kwargs):yield Lease(True,None,kind,size,0)
         def resize(self,*args):pass
-    admission={};clock=iter(range(0,1000,100));visited=[]
+    from itertools import count
+    admission={};clock=count(0,100);visited=[]
     def calculate(db,**kwargs):
         visited.append(kwargs['event_ids'])
         return dict(published=True,computed=1,reused=0,errors=[])

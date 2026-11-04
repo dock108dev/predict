@@ -73,7 +73,7 @@ function authoredAvailability(v) {
   const extra=copy(ev.boards[0].rows[0]);extra.quote_id+=':distinct';extra.selection.period_boundary+=':distinct';ev.boards[0].rows.push(extra);
   renderer.draw(ev,{view:'ev',filter:'all'});assert.equal(content.querySelectorAll('.slate-ev').length,ev.boards[0].rows.length);
   const missing=slate('odds');missing.boards[0].prices=[];missing.boards[0].benchmark.fair=[];missing.boards[0].benchmark.originals=[];
-  renderer.draw(missing,{view:'odds',filter:'all'});assert(content.textContent.includes('No retained prices for this market scope'));assert.equal(content.querySelectorAll('.slate-price-row').length,0,'an empty observation set cannot invent winner outcomes');
+  renderer.draw(missing,{view:'odds',filter:'all'});assert(content.textContent.includes('No retained prices for this market scope'));assert.equal(content.querySelectorAll('tbody').length,0,'an empty observation set cannot invent winner outcomes');
   const searched=slate('odds'),first=searched.games[0];
   Object.assign(first,{title:'CAR Panthers vs PHI Eagles',participants:[{id:'NFL:CAR',name:'Carolina Panthers'},{id:'NFL:PHI',name:'Philadelphia Eagles'}]});
   const second={...copy(first),game_key:first.game_key+':second',title:'Tampa Bay at Carolina'};
@@ -99,7 +99,7 @@ function authoredAvailability(v) {
   assert(expanded.textContent.includes('Gross difference +0.5 cents'));
   const preserved=content.querySelectorAll('button').find(n=>n.dataset.key===b.game_key+':'+q.quote_id);assert(preserved);preserved.onclick();assert.equal(originals.at(-1).q,q);
   assert.equal(JSON.stringify(observed),before,'observation presentation cannot rewrite source or estimate clocks');
-  q.observed_depth=null;q.freshness.status='historical';q.source_health.state='stopped';renderer.draw(observed,{view:'odds',filter:'all'});
+  q.observed_depth=null;q.freshness.status='historical';q.source_health.state='stopped';renderer.draw(copy(observed),{view:'odds',filter:'all'});
   const stopped=content.querySelectorAll('.compact-price-status').find(n=>n.title.includes('Source stopped'));
   assert(stopped);assert(stopped.textContent.includes('Last-known'));
   const unknown=new Element('div');observationSummary(unknown,q);assert(unknown.textContent.includes('Observed depth unknown'));
@@ -111,7 +111,7 @@ function authoredAvailability(v) {
     const us=odds.boards.flatMap(b=>b.prices.filter(q=>q.venue==='polymarket_us').map(q=>({q,b})));
     assert.equal(us.length,6);assert.equal(us.filter(({q})=>q.native_side==='Short').length,3);
     for(const {q,b} of us){
-      const button=content.querySelectorAll('.slate-price-cell').flatMap(n=>n.querySelectorAll('button')).find(n=>n.dataset.key===b.game_key+':'+q.quote_id);
+      const button=content.querySelectorAll('td').flatMap(n=>n.querySelectorAll('button')).find(n=>n.dataset.key===b.game_key+':'+q.quote_id);
       assert(button,'inline '+q.quote_id);assert(button.textContent.includes(q.native_side));assert(button.textContent.includes(q.common_odds.american));button.onclick();
       assert.equal(originals.at(-1).q,q);assert.equal(originals.at(-1).g.game_key,b.game_key);assert(button.title.includes(q.freshness.source_at));
     }

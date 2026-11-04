@@ -59,6 +59,7 @@ class WorkerMemory(TestCase):
         f,x=frame();worker.projection.ingest(f,x)
         saved=worker.projection.frame
         db=Mock();db.__enter__=Mock(return_value=db);db.__exit__=Mock(return_value=False)
+        db.execute.return_value.fetchone.return_value={'n':1}
         worker.connector=lambda:db
         def attempt():
             worker.capture_guard(600)
@@ -86,6 +87,8 @@ class WorkerMemory(TestCase):
             return dict(published=True,computed=1,reused=0,errors=[])
         with patch('app.collection.background_work.BACKGROUND',work),\
              patch.object(latest,'capture_reservation',return_value=100),\
+             patch.object(latest,'runtime',return_value={'runtime_id':'fixture'}), \
+             patch('app.storage.board_capture.refresh_waiters',return_value=[]), \
              patch.object(latest,'capture_batches',side_effect=lambda db:groups),\
              patch.object(latest,'monotonic',side_effect=lambda:clock[0]),\
              patch.object(latest,'_reconcile',side_effect=calculate):

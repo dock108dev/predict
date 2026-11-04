@@ -95,7 +95,7 @@ class CapturedReads:
             for token in list(self.frames):self.discard(token)
             self.retained_bytes = 0
 
-    def capture(self, header, records, *, context, authority, packet_store=None):
+    def capture(self, header, records, *, context, authority, packet_store=None, display_token=None):
         """Take immutable bytes without evicting active pagination or Details."""
         with self.lock:
             self.cleanup()
@@ -110,16 +110,16 @@ class CapturedReads:
             self.guard(size+shared_size)
             # Preflight eviction: a refused newcomer must leave all existing
             # evidence intact. Selected Details and active pages are protected.
-            candidates = sorted((key for key,value in self.frames.items()
-                                 if value.context == 'completed'),
-                                key=lambda key: self.frames[key].context == 'displayed')
+            candidates = [key for key,value in self.frames.items() if value.context == 'completed']
+            # A Details handoff may replace its own display lease at capacity.
+            if display_token in self.frames and self.frames[display_token].context == 'displayed':
+                candidates.append(display_token)
             victims=[];remaining_bytes=self.retained_bytes;remaining_count=len(self.frames)
             while remaining_count >= self.maximum_frames or remaining_bytes + size + shared_size > self.maximum_bytes:
                 if not candidates:
                     raise ValueError('current_slate_read_capacity')
                 victim=candidates.pop(0);victims.append(victim)
                 remaining_count-=1;remaining_bytes-=self.frames[victim].size
-            for victim in victims:self.discard(victim)
             frame = CapturedRead(token, context, authority, self.clock() + self.ttl_seconds,
                                  header, records, size, record_keys=record_keys)
             frame.packet_ids=tuple(self.packet_ids(records))
@@ -127,6 +127,7 @@ class CapturedReads:
                 if packet_store is None:raise ValueError('current_slate_read_expired')
                 packet_store.pin(token,frame.packet_ids,self.ttl_seconds)
                 frame.packet_store=packet_store
+            for victim in victims:self.discard(victim)
             frame.blob_ids=tuple(blob_ids)
             for key in blob_ids:
                 if key not in self.blobs:
@@ -235,7 +236,7 @@ class CapturedReads:
                     if frame.context != 'selected':
                         # Retain only the opened game. A selected modal must
                         # not pin a 500-game pagination frame between polls.
-                        selected=self.capture({},[record],context='selected',authority=frame.authority,packet_store=frame.packet_store)
+                        selected=self.capture({},[record],context='selected',authority=frame.authority,packet_store=frame.packet_store,display_token=frame.token)
                         return value['row'],selected.token
                     # Reading renews only this bounded UI cache lease, never
                     # any source, confirmation or calculation clock.

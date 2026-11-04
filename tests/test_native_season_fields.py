@@ -70,12 +70,21 @@ class NativeSeasonFacts(unittest.TestCase):
                 self.assertTrue(result['identity_conflicts'])
                 self.assertNotIn('season', result); self.assertNotIn('stage', result)
         for facts in ([dict(season_type='UNKNOWN_SOURCE_ENUM', season_year=2026)],
-                      [dict(season_type='REG')], [dict(season_year=2026)],
                       [dict(season_type=None, season_year=None)], []):
             with self.subTest(facts=facts):
                 result = enrich_game(event(facts))
                 self.assertNotIn('season', result); self.assertNotIn('stage', result)
                 self.assertEqual(result['observed_identity_facts'], facts)
+
+    def test_partial_context_preserves_only_the_observed_field(self):
+        for fact, known, value, missing in [
+            ({'season_type':'REG'}, 'stage', 'regular_season', 'season'),
+            ({'season_year':2026}, 'season', '2026', 'stage'),
+        ]:
+            result = enrich_game(event([fact]))
+            self.assertEqual(result[known], value)
+            self.assertNotIn(missing, result)
+            self.assertEqual(result['observed_identity_facts'], [fact])
 
     def test_existing_explicit_context_conflict_stays_blocked(self):
         result = enrich_game(event([dict(season_type='REG', season_year=2026)],

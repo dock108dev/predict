@@ -109,6 +109,8 @@ def test_hot_priority_work_cannot_reset_ordinary_rotation():
         return dict(published=False,unchanged=True)
     with patch('app.collection.background_work.BACKGROUND',budget), \
          patch.object(latest,'capture_reservation',return_value=1), \
+         patch.object(latest,'runtime',return_value={'runtime_id':'fixture'}), \
+         patch('app.storage.board_capture.refresh_waiters',return_value=[]), \
          patch.object(latest,'capture_batches',return_value=[['a-quiet'],['b-quiet'],['z-hot']]), \
          patch.object(board_capture,'prioritize_window_waiters',side_effect=lambda db,groups,*a,**kw:sorted(groups,key=lambda g:g!=['z-hot'])), \
          patch.object(latest,'_reconcile',side_effect=reconcile), \

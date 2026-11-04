@@ -51,6 +51,8 @@ class CapturedSlateReads(TestCase):
             paused_sources=[],global_stopped=False,service_state='running',calculations={'board':'running','observations':'running'})
         frame['owner']=owner
         frame['_source_binding']=observation_binding()
+        frame['_engine_binding']=engine_binding()
+        frame['_current_policy']=DEFAULT_POLICY.to_dict()
         selector=dict(events=[],occurrences=[],shared=[])
         child=deepcopy(frame['rows'][key]['facts'])
         child.update(publication_runtime=latest_board.runtime_identity(owner),authority_control='retained-control',

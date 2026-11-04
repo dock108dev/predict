@@ -232,7 +232,8 @@ class ReadContext:
                 value['epoch']=self.epoch
                 value['representation']='current typed event, exact native contracts, offers, depth and shared definitions; original source clocks retained'
                 value['envelope_ids']=[];value['envelopes']=[]
-                value['input_stage_timings']=dict(depth_hydration_ms=hydration_ms,profile_reference_binding_ms=round((monotonic()-started)*1000,3))
+                if unit_contracts is not None:
+                    value['input_stage_timings']=dict(depth_hydration_ms=hydration_ms,profile_reference_binding_ms=round((monotonic()-started)*1000,3))
             out.extend(values)
         return sorted(out,key=lambda b:b['game_key'])
 

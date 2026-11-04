@@ -42,13 +42,13 @@ function matrix() {
  const v=matrix(),before=JSON.stringify(v),root=new Element('section'),selected=[];
  const views=createComparisonSlate({content:root,onOriginal:(q,b,g)=>selected.push({q,g}),onDetails:()=>{}});
  views.draw(v,{view:'odds',filter:'all'});
- assert.equal(root.querySelectorAll('.slate-game').length,6);assert.equal(root.querySelectorAll('.slate-price-row').length,36);
+ assert.equal(root.querySelectorAll('.slate-game').length,6);assert.equal(root.querySelectorAll('tbody').reduce((n,body)=>n+body.querySelectorAll('tr').length,0),36);
  assert(root.textContent.includes('36 market outcomes covered · 72 retained price observations'));
  assert.equal(scopedCurrentComparisonCoverage(v.boards,now).current_pairs,36,'signed directions count once');
  assert.equal(scopedCurrentComparisonCoverage(v.boards,now).current_directions,72);
  assert(root.textContent.includes('72 signed comparison directions'));
  for(const family of ['winner','spread','total']) {
-  views.draw(v,{view:'odds',filter:'all',family});assert.equal(root.querySelectorAll('.slate-price-row').length,12);
+  views.draw(v,{view:'odds',filter:'all',family});assert.equal(root.querySelectorAll('tbody').reduce((n,body)=>n+body.querySelectorAll('tr').length,0),12);
   assert(root.textContent.includes('12 market outcomes covered · 24 retained price observations'));
   root.querySelector('button').onclick();assert.equal(marketFamily(selected.at(-1).q),family);
  }

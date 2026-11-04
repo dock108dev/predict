@@ -577,6 +577,9 @@ def prepare_catalog(inventory, venue, cat, *, share_metadata=False):
     # Each native source must remain usable without the other catalog.
     from .current_occurrence import annotate as occurrence
     from .v1_comparison import annotate
+    # Resolve reviewed occurrence IDs before role enrichment can assign a
+    # provider ID in their place. Revalidation below still checks changed roles.
+    occurrence(cats[venue],venue)
     if 'kalshi' in cats:
         from .native_role_binding import attach_kalshi
         changed_roles=attach_kalshi(cats['kalshi'])

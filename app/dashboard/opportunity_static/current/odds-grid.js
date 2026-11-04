@@ -1,4 +1,4 @@
-import { el, venue, words, price, labelsFor, marketFamily, observationState, observationStateLabel } from "./board-elements.js";
+import { el, venue, words, price, labelsFor, marketFamily, observationState, observationSummary } from "./board-elements.js";
 
 // Exact price ordering only. Financial estimates are never calculated here.
 function rational(value) {
@@ -54,6 +54,7 @@ export function bestPrices(group,now=Date.now()) {
 export function renderOddsGrid(root,game,board,onOriginal) {
   const books=["novig","prophetx","kalshi","polymarket_us","pinnacle"];
   const labels=labelsFor(game.participants), groups=groupedPriceRows(board);
+  if (!groups.length) root.append(el("p","No retained prices for this market scope"));
   const familyGroups=new Map();
   for (const group of groups) {
     const q=group.quotes[0], key=marketFamily(q)+":"+(q.market?.period || "full_game");
@@ -84,11 +85,13 @@ export function renderOddsGrid(root,game,board,onOriginal) {
         }
       }
       function offer(q, target) {
-        const button=el("button",price(q),best.has(q.quote_id)?"best-price":"");
+        const label=["Long","Short","yes","no"].includes(q.native_side) ? q.native_side+" "+price(q) : price(q);
+        const button=el("button",label,best.has(q.quote_id)?"best-price":"");
         button.dataset.key=game.game_key+":"+q.quote_id;
         button.onclick=()=>onOriginal(q,button,game);
         button.title=venue(book)+" · "+labels.selection(q)+" · Original "+q.original.value+" "+words(q.original.units)+" · Source "+(q.times?.source_at || q.freshness?.source_at || "Unknown")+" · Received "+(q.times?.received_at || q.freshness?.received_at || "Unknown")+" · Original inputs";
-        target.append(button,el("small",observationStateLabel(observationState(q))));
+        target.append(button);
+        observationSummary(target,q,{compact:true});
         if (best.has(q.quote_id)) target.append(el("small","Best before costs"));
       }
       if (offers.length) offer(offers[0],cell);
