@@ -293,6 +293,57 @@ def probability(row,settings,at):
     except (ValueError,KeyError,TypeError,ArithmeticError) as exc:return None,str(exc)
 
 
+def opposing_score(original):
+    """Use the retained exact predicate, never a display label, for pairing."""
+    contract = original.get('native_contract') or {}
+    facts = contract.get('same_outcome') or {}
+    predicate = facts.get('predicate')
+    if not original.get('same_outcome', {}).get('supported') or not predicate:
+        return None
+    operator = predicate['operator']
+    if original.get('snapshot_identity') and F(predicate['threshold']).denominator != 1:
+        operator = {'ge': 'gt', 'le': 'lt'}.get(operator, operator)
+    if operator not in ('gt', 'lt'):
+        return None
+    market = original['market']
+    key = hashed([original['game_key'], market['market'], market['period'],
+                  facts.get('scoring') or contract.get('scope'), predicate['domain'],
+                  predicate.get('subject_id'), str(F(predicate['threshold']))])
+    return key, operator
+
+
+def before_fee_pairs(quotes):
+    """Price-only path for already matched, verified and priced opposites."""
+    from app.comparison.snapshot_math import before_fee_pair
+    from app.dashboard.current_contract import price
+    from app.comparison.calculation_control import checkpoint
+
+    oppositions = {}
+    for original in quotes:
+        checkpoint()
+        if not original.get('binding', {}).get('verified') or not original.get('common_odds', {}).get('supported'):
+            continue
+        score = opposing_score(original)
+        if score is None:
+            continue
+        key, operator = score
+        row = dict(original, cost_per_normal_claim=wire(price(original)))
+        oppositions.setdefault(key, {}).setdefault(operator, []).append(row)
+    pairs = []
+    for key, sides in oppositions.items():
+        for left in sides.get('gt', ()):
+            for right in sides.get('lt', ()):
+                checkpoint()
+                proof = before_fee_pair(left, right, key)
+                if proof:
+                    pairs.append(dict({k: left[k] for k in ('game_key', 'game_title', 'league', 'start_at', 'market')},
+                                      id=hashed([left['id'], right['id']]), kind='pair',
+                                      legs=[left['id'], right['id']], venues=[left['venue'], right['venue']],
+                                      before_fees=proof, minimum_return_percent=None,
+                                      math=dict(available=False, missing=['finance_pending'])))
+    return pairs
+
+
 def calculate(inputs,value=None):
     from app.dashboard.current_contract import price
     settings,policy=assumptions(value)
@@ -343,19 +394,17 @@ def calculate(inputs,value=None):
         # Conditional opposing scenarios require supported exact identity and
         # the same occurrence, scoring, domain and exact threshold. NO/Short
         # keep their own explicit predicates; never infer opponent by label.
-        contract=original.get('native_contract') or {};facts=contract.get('same_outcome') or {}
-        pred=facts.get('predicate')
-        op = pred.get('operator') if pred else None
-        if row.get('snapshot_identity') and pred and F(pred['threshold']).denominator!=1:op={'ge':'gt','le':'lt'}.get(op,op)
-        if cost is not None and row['same_outcome']['supported'] and pred and op in ('gt','lt'):
-            key=hashed([row['game_key'],row['market']['market'],row['market']['period'],facts.get('scoring') or contract.get('scope'),pred['domain'],pred.get('subject_id'),str(F(pred['threshold']))])
-            oppositions.setdefault(key,{}).setdefault(op,[]).append(row)
-    for sides in oppositions.values():
+        score = opposing_score(original)
+        if cost is not None and score is not None:
+            key, operator = score
+            oppositions.setdefault(key, {}).setdefault(operator, []).append(row)
+    from app.comparison.snapshot_math import before_fee_pair
+    for market_key, sides in oppositions.items():
         for a in sides.get('gt',[]):
             for b in sides.get('lt',[]):
                 if a['id']==b['id'] or a['venue']==b['venue'] and not (a.get('snapshot_identity') and b.get('snapshot_identity')):continue
                 m=funded([a['cost_per_normal_claim'],b['cost_per_normal_claim']],[a['probability']],[a['venue'],b['venue']],settings,policy)
-                pairs.append(dict(id=hashed([a['id'],b['id']]),kind='pair',game_key=a['game_key'],game_title=a['game_title'],league=a['league'],start_at=a['start_at'],market=a['market'],legs=[a['id'],b['id']],venues=[a['venue'],b['venue']],math=m,
+                pairs.append(dict(before_fees=before_fee_pair(a,b,market_key),id=hashed([a['id'],b['id']]),kind='pair',game_key=a['game_key'],game_title=a['game_title'],league=a['league'],start_at=a['start_at'],market=a['market'],legs=[a['id'],b['id']],venues=[a['venue'],b['venue']],math=m,
                     minimum_return_percent=m.get('scenario_minimum_percent'),
                     snapshot_identities=[a.get('snapshot_identity'),b.get('snapshot_identity')]))
     groups={}

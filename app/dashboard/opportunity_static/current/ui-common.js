@@ -13,6 +13,22 @@ const UI = (() => {
   function shell(){
     const host=document.querySelector('[data-shell]');if(!host)return;
     const h=el('header',null,'p-chrome'),brand=link('Predict.','/','p-brand'),nav=el('nav',null,'p-nav');nav.setAttribute('aria-label','Predict');
+    if(document.body.classList.contains('desk-app')){
+      const mark=el('span','p/a','desk-brand-mark');mark.setAttribute('aria-hidden','true');
+      brand.replaceChildren(mark,'Prediction Arb');
+      nav.append(link('EV','/ev'),link('Arbitrage','/arbs'),link('Admin','/admin'));
+      const label=el('label','Odds '),choice=el('select');
+      for(const [value,title] of [['american','American'],['decimal','Decimal']]){
+        const option=el('option',title);option.value=value;choice.append(option);
+      }
+      choice.value=format;
+      choice.onchange=()=>{format=choice.value;try{localStorage.setItem('predict-odds-format',format);}catch{}updateOdds();};
+      label.append(choice);label.className='p-format';
+      h.append(brand,nav,label);host.replaceChildren(h);
+      const path=location.pathname==='/'?'/ev':location.pathname;
+      nav.querySelectorAll('a').forEach(a=>{if(a.pathname===path)a.setAttribute('aria-current','page');});
+      return;
+    }
     nav.append(link('Opportunities','/'),link('Markets','/odds'));
     const f=el('div',null,'p-format');f.setAttribute('aria-label','Odds format');
     for(const [key,label] of [['american','American'],['decimal','Decimal']]){const b=button(label,()=>{format=key;try{localStorage.setItem('predict-odds-format',key);}catch{}updateOdds();},'');b.dataset.format=key;f.append(b);}

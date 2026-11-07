@@ -284,18 +284,27 @@ def mount(app):
                     pairs=[r for r in result['pairs'] if r['id']==selected]
                     ids={selected,*(leg for pair in pairs for leg in pair['legs'])}
                     result=dict(result,rows=[r for r in result['rows'] if r['id'] in ids],pairs=pairs)
+                captured_pairs = result['pairs']
                 result = live.project(result, deps, owner, states, at=at, policy=policy, epoch=epoch, settings=settings)
                 timings['projection']=(monotonic()-stage)*1000
                 if req.path.endswith('/selection'):
                     result['publication']['count_scope']='selected_inputs'
                     row=next((r for r in [*result['rows'],*result['pairs']] if r['id']==selected),None)
+                    if query.get('layout') == 'desk':
+                        from .trade_desk import EV_METRIC, offer
+                        return dict(row=offer(row, EV_METRIC) if row and row['kind'] == 'single' else None,
+                                    provider_requests=0)
                     return dict(result_id=result['id'],generation=head['generation'],cursor=cursor,
                         state='removed' if row is None else 'ready' if row.get('price_current',True) else 'unavailable',
                         publication=result['publication'],assumptions=result['assumptions'],provider_requests=0,
                         captured_at=row.get('captured_at', result['captured_at']) if row else None,
                         row=None if row is None else presented(row,{r['id']:r for r in result['rows']}))
                 stage=monotonic()
-                out = page(result, query, options=options)
+                if query.get('layout') == 'desk':
+                    from .trade_desk import page as desk_page
+                    out = desk_page(result, query, options, captured_pairs=captured_pairs, policy=policy)
+                else:
+                    out = page(result, query, options=options)
                 timings['page']=(monotonic()-stage)*1000
                 out.update(cursor=cursor, generation=head['generation'], publication=dict(
                     out['publication'], **{k:v for k,v in head['facts'].items() if k in (

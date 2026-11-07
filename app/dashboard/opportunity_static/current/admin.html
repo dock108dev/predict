@@ -1,1 +1,71 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Predict · Source operation</title><link rel="stylesheet" href="/current/assets/stored.css"><script type="module" src="/current/assets/admin.js"></script></head><body class="current-app"><a class="skip-link" href="#main-content">Skip to content</a><div data-shell></div><main id="main-content" class="admin-page"><div class="p-heading"><div><h1>Admin</h1><p class="p-caption">Sources, usage and calculation settings</p></div></div><div id="admin-nav"></div><div id="attention" class="p-attention" role="status"></div><p id="feedback" role="status" aria-live="polite"></p><div class="admin-controls"><section aria-labelledby="service-title"><h2 id="service-title">Acquisition &amp; recovery</h2><div id="service">Loading service status…</div><div class="controls"><button data-action="stop">Stop all acquisition</button><button data-action="recover" disabled>Resume collection</button></div><details><summary>Collection and recovery behavior</summary><p class="recovery-consequence">Restart expires open reviews after safe cleanup. Quota, uncertain charges and due times are preserved; collection and shared calculations run independently of the app. Closing the app leaves them running; Stop all acquisition withdraws current action authority. Explicit source pauses survive restarts.</p></details></section><section id="owner-refresh"><h2>Refresh aggregate prices</h2><p>Novig and ProphetX · reserves up to 3 credits per sport. Actual charges appear in quota; scheduled due times stay unchanged.</p><div id="refresh-sports"></div><label class="check-label"><input type="checkbox" id="reference"> Also retain Pinnacle for reference research</label><button data-action="refresh">Refresh Odds API now</button><p id="refresh-result" role="status"></p></section></div><div id="sources" class="source-grid"></div><section><h2>Shared quota &amp; schedule</h2><div id="quota">Loading accounting…</div><details><summary>Plan context and upstream intervals</summary><p>Active policy: owner-confirmed 100,000 monthly credits at $59/month, with 50 held in reserve. Shared automatic refresh every 15 minutes from 09:00 to 23:00 America/New_York. Native streams run independently; owner refreshes use the same quota ledger.</p><p>The provider advertises 20-second pregame / 10-second in-play exchange intervals. These upstream intervals do not demonstrate our venue coverage or freshness. Its polymarket listing points to polymarket.com; native Polymarket US remains independent.</p><p><a href="https://the-odds-api.com/sports-odds-data/update-intervals.html">Published intervals</a> · <a href="https://the-odds-api.com/sports-odds-data/bookmaker-apis.html">Bookmaker list</a></p></details></section><section><h2>Current source issues</h2><div id="issues">Loading issues…</div><details><summary>Historical U4 offering gap · separate from current incidents</summary><div id="historical"></div></details></section><details><summary>Identity &amp; admission exclusions</summary><div id="exclusions"></div><p>Unverified identity, quote age and unsupported calculations are separate gates. An available socket cannot establish fresh or eligible quotes.</p></details><details><summary>Technical measurements &amp; bounded inspection</summary><div id="measurements"></div><details><summary>Encoded runtime status</summary><pre id="technical"></pre></details><p><a href="/admin/retained">Retained engineering inspection</a></p></details></main></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Prediction Arb · Admin</title>
+  <link rel="stylesheet" href="/view/current/desk.css">
+  <script type="module" src="/current/assets/admin.js"></script>
+</head>
+<body class="desk-app">
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <div data-shell></div>
+  <main id="main-content">
+    <div class="desk-title"><h1>Admin</h1><span>Local owner controls</span></div>
+    <nav id="admin-nav" class="desk-tabs" aria-label="Admin sections">
+      <a href="/admin" data-section="overview">Overview</a>
+      <a href="/admin?section=sources" data-section="sources">Sources</a>
+      <a href="/admin?section=scope" data-section="scope">Sports &amp; markets</a>
+      <a href="/admin?section=usage" data-section="usage">Spending</a>
+      <a href="/admin?section=settings" data-section="settings">Settings</a>
+    </nav>
+    <p id="feedback" role="status"></p>
+    <div class="desk-admin-layout" data-panel="overview">
+      <section>
+        <h2>Price updates</h2>
+        <div class="desk-admin-row"><div><strong id="update-state">Checking status…</strong><p id="attention" class="desk-note" role="status"></p></div>
+          <button data-action="stop" disabled>Stop</button><button data-action="recover" disabled hidden>Start</button></div>
+        <div class="desk-admin-row"><div><strong>Sources</strong><p id="source-count" class="desk-note"></p></div><a class="desk-action" href="/admin?section=sources">Manage</a></div>
+        <div class="desk-admin-row"><div><strong>Sports &amp; markets</strong><p class="desk-note">See what the app collects.</p></div><a class="desk-action" href="/admin?section=scope">View scope</a></div>
+      </section>
+      <section>
+        <h2>Data credits</h2>
+        <p id="spending-summary" class="desk-balance">Checking balance…</p>
+        <p id="spending-holds" class="desk-note"></p>
+        <a class="desk-action" href="/admin?section=usage">View spending</a>
+      </section>
+    </div>
+    <div class="desk-admin-section" data-panel="sources" hidden>
+      <h2>Sources</h2><div id="sources"></div>
+      <details><summary>Current issues</summary><div id="issues"></div></details>
+    </div>
+    <div class="desk-admin-section" data-panel="scope" hidden>
+      <h2>Collection scope</h2><div id="collection-scope"></div>
+      <p><a href="/admin?section=coverage">View coverage</a></p>
+      <details><summary>Identity and admission exclusions</summary><div id="exclusions"></div></details>
+    </div>
+    <div class="desk-admin-section" data-panel="usage" hidden>
+      <h2>Shared budget</h2><div id="quota">Loading accounting…</div>
+      <details id="owner-refresh"><summary>Refresh aggregate prices</summary>
+        <p>Novig and ProphetX share a guarded budget. A manual refresh uses up to 3 credits per selected sport.</p>
+        <fieldset id="refresh-sports"><legend>Sports to refresh</legend></fieldset>
+        <p><label><input type="checkbox" id="reference"> Include Pinnacle reference prices</label></p>
+        <button data-action="refresh" disabled>Refresh Odds API now</button><p id="refresh-result" role="status"></p>
+      </details>
+    </div>
+    <div class="desk-admin-section" data-panel="settings" hidden>
+      <h2>Display preferences</h2>
+      <form id="display-settings" class="desk-settings">
+        <label>Appearance <select id="theme"><option value="">System</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
+        <label>Time zone <select id="timezone"><option value="">Device time zone</option></select></label>
+      </form>
+      <details><summary>Advanced</summary>
+        <p><a href="/admin?section=calculations">Calculation and fee settings</a> · <a href="/admin?section=inspection">Exact inputs</a> · <a href="/admin?section=timing">Quote timing</a> · <a href="/admin/retained">Retained inspections</a></p>
+        <details><summary>Runtime and recovery</summary><div id="service">Loading service status…</div></details>
+        <details><summary>Technical measurements</summary><div id="measurements"></div><pre id="technical"></pre></details>
+        <details><summary>Historical source issue</summary><div id="historical"></div></details>
+      </details>
+    </div>
+  </main>
+</body>
+</html>

@@ -500,7 +500,7 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
     from pathlib import Path
     static_root=Path(__file__).parent
     database_mode=getattr(current_provider,'database_mode',False)
-    async def page(req):return web.FileResponse(static_root/('opportunity_static/current/stored.html' if database_mode else 'opportunity_static/current/index.html'))
+    async def page(req):return web.FileResponse(static_root/('opportunity_static/current/desk.html' if database_mode else 'opportunity_static/current/index.html'))
     from .raw_price_api import mount as mount_raw_prices
     if database_mode:mount_raw_prices(app)
     async def odds_page(req):return web.FileResponse(static_root/'opportunity_static/current/stored.html')
@@ -515,7 +515,7 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
         return web.FileResponse(static_root/'opportunity_static/current'/filename)
     async def retained_page(req):return web.FileResponse(static_root/'opportunity_static/dashboard.html')
     app.router.add_get('/admin',admin)
-    async def arbs_page(req):return web.FileResponse(static_root/('opportunity_static/current/stored.html' if database_mode else 'opportunity_static/current/arbs.html'))
+    async def arbs_page(req):return web.FileResponse(static_root/('opportunity_static/current/desk.html' if database_mode else 'opportunity_static/current/arbs.html'))
     async def arbs_data(req):
         from .current_state import CURRENT_KEY
         from .current_contract import arbitrage_pairs
@@ -608,7 +608,7 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
         value.update(runtime_id=store._state['runtime_id'],state_revision=store._state['state_revision'],
             clock_at=store._state['clock_at'],mode=store._state['mode'],acquisition_requests=0)
         return web.json_response(value)
-    async def ev_page(req):return web.FileResponse(static_root/('opportunity_static/current/stored.html' if database_mode else 'opportunity_static/current/ev.html'))
+    async def ev_page(req):return web.FileResponse(static_root/('opportunity_static/current/desk.html' if database_mode else 'opportunity_static/current/ev.html'))
     async def comparison_coverage_page(req):return web.FileResponse(static_root/'opportunity_static/current/coverage.html')
     app.router.add_get('/api/comparison',comparison_data)
     if not database_mode:app.router.add_get('/api/coverage',comparison_coverage)

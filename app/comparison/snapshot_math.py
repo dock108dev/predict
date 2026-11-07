@@ -81,3 +81,34 @@ def funded(costs, probabilities, venues, settings, policy):
         arithmetic=result['arithmetic'],executable=False,
         formula='q = funding / sum(cost × (1 + fee rate)); state profit = sum(receipts) − deployed; EV = sum(probability × state profit); buffered metric = metric − buffer rate × deployed (once)',
         meaning='Assumed fractional size at captured top prices; fees are upfront fractions of acquisition. Other-refund returns acquisition only and retains fees. No other costs included. No fill or verified settlement claim.')
+
+
+def before_fee_pair(left, right, market_key):
+    """Equal normal payouts on complementary completed-game score ranges."""
+    if left['venue'] == right['venue'] or any(row.get('cost_per_normal_claim') is None for row in (left, right)):
+        return None
+    a, b = (row.get('same_outcome', {}).get('key') for row in (left, right))
+    if not a or not b or len(a) != 13 or len(b) != 13:
+        return None
+    if a[:7] != b[:7] or a[-2:] != b[-2:]:
+        return None
+    domain, lower, low, subject = a[9]
+    other_domain, upper, high, other_subject = b[9]
+    if (domain, subject, lower, upper) != (other_domain, other_subject, 'ge', 'le'):
+        return None
+    gap = F(*low) - F(*high)
+    equality = (a[10], b[10])
+    if gap == 1 and equality == (['predicate'], ['predicate']):
+        pass
+    elif gap == 2 and all(eq[0] == 'fraction' and eq[2] is not None for eq in equality):
+        if equality[0][1] != equality[1][1] or sum(F(*eq[2]) for eq in equality) != 1:
+            return None
+    else:
+        return None
+    costs = tuple(F(row['cost_per_normal_claim']) for row in (left, right))
+    if not all(0 < cost < 1 for cost in costs):
+        return None
+    from app.opportunities.percentages import normalized_pair
+    result = normalized_pair(*costs)
+    return dict(market_key=market_key, value=str(F(int(result['numerator']), int(result['denominator']))),
+                weights=[str(cost / sum(costs)) for cost in costs])

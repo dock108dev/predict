@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Prediction Arb</title>
+  <link rel="stylesheet" href="/view/current/desk.css">
+  <script type="module" src="/view/current/desk.js"></script>
+</head>
+<body class="desk-app">
+  <a class="skip-link" href="#main-content">Skip to results</a>
+  <div data-shell></div>
+  <main id="main-content">
+    <div class="desk-title"><h1 id="title">Expected value</h1><span>Before fees</span></div>
+    <form id="filters" class="desk-filters">
+      <label>Search <input name="search" type="search" maxlength="150" placeholder="Team or game"></label>
+      <label>Date <input name="day" type="date"></label>
+      <label>Sort <select name="sort"><option value="return">Highest return</option><option value="start">Soonest start</option></select></label>
+      <label id="stake-field" hidden>Total stake ($) <input name="stake" type="number" min="0.01" max="1000000" step="0.01" value="100"></label>
+      <details id="more-filters">
+        <summary>Filters</summary>
+        <div class="desk-options">
+          <fieldset id="leagues"><legend>Leagues</legend></fieldset>
+          <fieldset id="families"><legend>Markets</legend></fieldset>
+          <fieldset id="venues"><legend>Sites</legend></fieldset>
+          <div class="desk-thresholds">
+            <label>Period <select name="period"><option value="">All periods</option><option value="full_game">Full game</option></select></label>
+            <label>Minimum return (%) <input name="minimum" type="number" step="any"></label>
+            <label id="profit-field" hidden>Minimum profit ($) <input name="profit" type="number" step="any"></label>
+            <label><input name="positive" type="checkbox"> Positive only</label>
+          </div>
+          <button type="button" id="reset">Reset filters</button>
+        </div>
+      </details>
+    </form>
+    <p id="notice" class="desk-note" role="status"></p>
+    <div id="results" aria-label="Sorted results"></div>
+    <nav class="desk-pages" aria-label="Results pages">
+      <button id="previous" type="button" disabled>Previous</button>
+      <span id="count"></span>
+      <button id="next" type="button" disabled>Next</button>
+    </nav>
+  </main>
+  <dialog id="trade" aria-labelledby="trade-title">
+    <div class="desk-title"><h2 id="trade-title">Trade details</h2><form method="dialog"><button>Close</button></form></div>
+    <div id="trade-body"></div>
+    <button id="latest" type="button">Use latest prices</button>
+    <p id="trade-note" role="status"></p>
+  </dialog>
+</body>
+</html>

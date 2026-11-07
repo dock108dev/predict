@@ -176,7 +176,7 @@ def prices(inputs, settings):
         row.update(kind='single', cost_per_normal_claim=None)
         rows.append(without_finance(row,'finance_pending',status_cache=statuses,copy_row=False))
     result = dict(id=uuid4().hex, snapshot_id=inputs['id'], captured_at=inputs['captured_at'],
-                  calculated_at=None, assumptions=settings, rows=rows, pairs=[], games=inputs['games'],
+                  calculated_at=None, assumptions=settings, rows=rows, pairs=snapshots.before_fee_pairs(inputs['quotes']), games=inputs['games'],
                   references=inputs['references'], sources=inputs['sources'], issues=inputs['issues'],
                   provider_requests=0, capture_seconds=inputs['capture_seconds'],
                   scope=dict(leagues=list(snapshots.SPORTS), families=['winner', 'spread', 'total'],
