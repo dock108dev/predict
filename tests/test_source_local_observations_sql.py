@@ -145,9 +145,9 @@ class SourceLocalObservationsSQL(IsolatedAsyncioTestCase):
         @contextmanager
         def traced(db):
             with original(db) as execute:
-                def call(query,params=None):
+                def call(query,params=None,*,synchronous=False):
                     if query.startswith('DELETE FROM current_depth'):deletes.append(params)
-                    return execute(query,params)
+                    return execute(query,params,synchronous=synchronous)
                 yield call
         with self.connect() as db:
             db.execute("INSERT INTO current_depth VALUES (%s,'asks',0,'0.4','10','contracts')",(cid,))

@@ -58,13 +58,21 @@ class SelectedInputLatencySQL(IsolatedAsyncioTestCase):
             # advertised while admitting the next batch's books.
             cases[:] = self.authored[:offset + 15]
             for w in workers.values():await w.discover()
-            await self.ingress_books(workers, self.authored[offset:offset + 15], generation=generation)
+            # Discovery can revoke older images. Reimage the complete retained
+            # catalog so a selected game still has both sources in this generation.
+            await self.ingress_books(workers, cases, generation=generation)
             await self.publication(len(cases))
+        await self.publication(60, accepts=lambda f: not any(
+            r['all'] or any(r['observations'].values()) for r in f['dependency_reasons'].values()))
         self.read_call_counts={v:len(calls) for v,calls in self.calls.items()}
         self.workers = workers
         self.client, self.app = await self.api()
         first = await self.page(self.client)
-        await self.page(self.client, first)
+        second = await self.page(self.client, first)
+        boards = first['boards'] + second['boards']
+        self.assertEqual(len(boards), 60)
+        self.assertTrue(all(len(board['prices']) == 4 for board in boards),
+            'latency fixture requires both native sources for every game')
         self.board = first['boards'][0]
         self.quote = self.board['prices'][0]
         self.query = dict(game=self.board['game_key'], quote=self.quote['quote_id'],
