@@ -41,6 +41,28 @@ def verify_rules(binary, config):
         native.write_text(
             '"hockey_team": "' + team + '"\napi_key = "' + credential + '"\n'
         )
+        finance_name = "tests/fixtures/l02-native-20261104.json"
+        finance = root / "source" / finance_name
+        finance.parent.mkdir(parents=True)
+        event_ids = (
+            "87d2b814c3f0d3691e9cebbf2de76295",
+            "c75744790b7acf6260c78ba5e739c0e5",
+        )
+        finance.write_text(
+            json.dumps([["the_odds_api", event_id] for event_id in event_ids])
+            + f'\napi_key = "{credential}"\n'
+            + f'api_key = "{event_ids[0]}"\n'
+            + json.dumps(["the_odds_api", credential])
+            + "\n"
+        )
+        expected = {
+            ("app/dashboard/opportunity_board.py", 2),
+            (example_name, 2),
+            (review_name, 2),
+            (finance_name, 2),
+            (finance_name, 3),
+            (finance_name, 4),
+        }
         report = root / "report.json"
         result = subprocess.run(
             [
@@ -63,16 +85,21 @@ def verify_rules(binary, config):
         if (
             result.returncode != 1
             or not isinstance(value, list)
-            or len(value) != 3
-            or any(row.get("StartLine") != 2 for row in value)
-            or {str(Path(row["File"]).relative_to(root / "source")) for row in value}
-            != {"app/dashboard/opportunity_board.py", example_name, review_name}
+            or len(value) != len(expected)
+            or {
+                (
+                    str(Path(row["File"]).relative_to(root / "source")),
+                    row.get("StartLine"),
+                )
+                for row in value
+            }
+            != expected
         ):
             raise ValueError(
                 "Secret scanner detection/exception controls failed; no source scan can qualify"
             )
     print(
-        "Secret scanner controls: PASS; credential detection retained in all three excepted file classes"
+        "Secret scanner controls: PASS; four excepted file classes checked, credential fields and unlisted event values detected"
     )
 
 

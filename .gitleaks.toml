@@ -52,3 +52,12 @@ targetRules = ["generic-api-key"]
 paths = ['''(?:^|/)app/reviews/native/retained-1694c5363a2386593b8c44f1-v1\.json$''']
 regexTarget = "match"
 regexes = ['''hockey_team"?\s*:\s*"f61f9daa-407b-4c46-96e8-feee19cd6f51(?:"|$)''']
+
+# Reviewed 2026-11-06 against the fixture's original source.native_event_id fields.
+[[allowlists]]
+description = "Two exact provider event IDs in the retained NBA/NFL financial fixture's occurrence members"
+condition = "AND"
+targetRules = ["generic-api-key"]
+paths = ['''(?:^|/)tests/fixtures/l02-native-20261104\.json$''']
+regexTarget = "match"
+regexes = ['''the_odds_api"\s*,\s*"(?:87d2b814c3f0d3691e9cebbf2de76295|c75744790b7acf6260c78ba5e739c0e5)"''']

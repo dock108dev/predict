@@ -25,11 +25,12 @@ class SecretControlIsolationTests(unittest.TestCase):
         def scan(command, **kwargs):
             source = Path(command[2])
             files = sorted(p for p in source.rglob("*") if p.is_file())
-            self.assertEqual(len(files), 3)
+            self.assertEqual(len(files), 4)
             report = Path(command[command.index("--report-path") + 1])
-            report.write_text(
-                json.dumps([dict(File=str(p), StartLine=2) for p in files])
-            )
+            findings = [dict(File=str(p), StartLine=2) for p in files]
+            finance = source / "tests/fixtures/l02-native-20261104.json"
+            findings.extend(dict(File=str(finance), StartLine=line) for line in (3, 4))
+            report.write_text(json.dumps(findings))
             return SimpleNamespace(returncode=1)
 
         with (
