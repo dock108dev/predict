@@ -329,9 +329,9 @@ class OccurrenceResolver:
                 e.update(game_id=oid,**canonical_roles)
                 # Source spelling is preserved in original_event. NHL providers
                 # use both hockey and ice_hockey for the same canonical sport.
-                if e['competition']=='NHL' and e['sport'] in ('hockey','ice_hockey'):
-                    e['sport']='hockey'
-                    original['market_identity']['sport']='hockey'
+                from .event_links import occurrence_sport
+                if e['competition']=='NHL' and occurrence_sport(e['competition'],e['sport'])=='hockey':
+                    e['sport']=original['market_identity']['sport']='hockey'
                 e['participants'] = {n:mapping.get(cid,cid) for n,cid in e['participants'].items()}
                 from .event_links import ordinary_event_key
                 original['market_identity']['event'] = ordinary_event_key(e,allow_missing_context=k in metadata_local)

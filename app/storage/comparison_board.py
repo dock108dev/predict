@@ -51,7 +51,7 @@ def _records(records, at):
 
 class ReadContext:
     """One caller-owned repeatable SQL snapshot and bounded transient game data."""
-    def __init__(self, store, *, at=None, frame=None, resource_guard=None, tolerate_invalid_catalog=False):
+    def __init__(self, store, *, at=None, frame=None, resource_guard=None, tolerate_invalid_catalog=False, reuse_catalog_inputs=False, capture_binding=None):
         from .current_rows import CurrentRowStore
         self.store=store;self.at=at or utc();self.engine=engine_binding();self.resource_guard=resource_guard
         self.tolerate_invalid_catalog=tolerate_invalid_catalog;self.catalog_errors=[]
@@ -93,6 +93,9 @@ class ReadContext:
         receipts=[(r['quote']['source'],r['quote']['times'].get('received_at'),r['quote'].get('provenance')) for r in records]
         self.read_revision=hashed(dict(epoch=self.epoch,revision=self.revision,engine=self.engine,availability=clocks,receipts=receipts,source_states={k:v.get('state') for k,v in statuses.items()}))
         self._catalog_bundles=None
+        self._catalog_inputs={}
+        self.reuse_catalog_inputs=reuse_catalog_inputs
+        self.capture_binding=capture_binding
         self._observation_bundles={}
         self._normalization_registries=None
 
@@ -125,8 +128,12 @@ class ReadContext:
                 raw=unavailable();raw.update(clock_at=self.at,projected_at=self.at,state='available',runtime_id='current-rows:'+self.epoch)
                 members=[list(v) for v in sorted({(r['quote']['source']['provider'],r['quote']['source']['native_event_id']) for r in rows})]
                 try:
-                    state=catalog_from_normalized(raw,executions,include_profiles=False,
-                        source_rules={},selected_applicability={})
+                    if self.capture_binding is not None:
+                        from .capture_structure import normalized
+                        state=normalized(raw,executions,binding=[self.engine,self.epoch,self.capture_binding])
+                    else:
+                        state=catalog_from_normalized(raw,executions,include_profiles=False,
+                            source_rules={},selected_applicability={})
                 except ValueError:
                     if not self.tolerate_invalid_catalog:raise
                     from .schedule_metadata import diagnostic
@@ -135,6 +142,10 @@ class ReadContext:
                         **(dict(schedule_conflicts=failures[:8],omitted=max(0,len(failures)-8)) if failures else {})))
                     continue
                 event=state['events'][0]
+                # This exact context already validated and normalized the frame.
+                # Reuse it only when observation hydration has not changed rows;
+                # the serializer below still performs its complete validation.
+                if self.reuse_catalog_inputs:self._catalog_inputs['combined:'+event['id']]=state
                 summary={k:event[k] for k in ('id','title','start_at','participants')}
                 summary.update(league=rows[0]['event']['competition'],
                     sport=rows[0]['event'].get('sport'),
@@ -171,12 +182,18 @@ class ReadContext:
                 if self.store.db is not None and any('depth' not in r['quote'] for r in rows):
                     from .current_rows import CurrentRowStore
                     rows=CurrentRowStore(self.store.db).hydrate_records(rows,resource_guard=self.resource_guard)
-                executions=_observation_records(rows)
-                raw=unavailable();raw.update(clock_at=self.at,projected_at=self.at,state='available',runtime_id='current-rows:'+self.epoch)
-                state=catalog_from_normalized(raw,executions,include_profiles=False,source_rules={},selected_applicability={})
+                if rows is source['records'] and source['game_key'] in self._catalog_inputs:
+                    state=self._catalog_inputs[source['game_key']]
+                else:
+                    executions=_observation_records(rows)
+                    raw=unavailable();raw.update(clock_at=self.at,projected_at=self.at,state='available',runtime_id='current-rows:'+self.epoch)
+                    state=catalog_from_normalized(raw,executions,include_profiles=False,source_rules={},selected_applicability={})
                 # Reuse the existing fact validator and supported native-price
                 # conversions without invoking its financial owners.
-                state=drain(serialize_steps(state,prices_only=True,estimate_policy=DEFAULT_POLICY))
+                if self.capture_binding is not None:
+                    from .capture_materialization import materialize
+                    state=materialize(state,binding=[self.engine,self.epoch,self.capture_binding])
+                else:state=drain(serialize_steps(state,prices_only=True,estimate_policy=DEFAULT_POLICY))
                 state['comparison_profiles']={}
                 if self.store.db is not None:
                     from .current_rows import contract_id

@@ -23,12 +23,13 @@ def capture_reservation(db):
     # Measure each event once, then sum complete peer components. The previous
     # three queries per component repeatedly scanned the same source tables
     # even when admission would subsequently defer the scanner.
-    sizes={r['event_id']:int(r['n']) for r in db.execute('''SELECT c.event_id,
-            sum(octet_length(e.facts::text)+octet_length(c.facts::text)+octet_length(o.facts::text)) n
-            FROM current_contract c JOIN current_offer o ON o.contract_id=c.id JOIN current_event e ON e.id=c.event_id
-            GROUP BY c.event_id''')}
+    sizes={r['event_id']:int(r['n']) for r in db.execute('''WITH offers AS MATERIALIZED (
+            SELECT c.event_id,count(*) rows,sum(octet_length(c.facts::text)+octet_length(o.facts::text)) bytes
+            FROM current_contract c JOIN current_offer o ON o.contract_id=c.id GROUP BY c.event_id)
+            SELECT e.id event_id,offers.bytes+offers.rows*octet_length(e.facts::text) n
+            FROM offers JOIN current_event e ON e.id=offers.event_id''')}
     depths={r['event_id']:int(r['n']) for r in db.execute('''SELECT event_id,sum(n) n FROM (
-        SELECT event_id,count(*) n FROM current_native_depth WHERE side='asks' GROUP BY event_id
+        SELECT event_id,sum(jsonb_array_length(levels)) n FROM current_native_ladder WHERE side='asks' GROUP BY event_id
         UNION ALL SELECT c.event_id,count(*) FROM current_depth d JOIN current_contract c ON c.id=d.contract_id
             WHERE side='asks' GROUP BY c.event_id) levels GROUP BY event_id''')}
     maximum=max((sum(sizes.get(eid,0)*8+depths.get(eid,0)*2048 for eid in ids) for ids in groups),default=0)

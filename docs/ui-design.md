@@ -1,6 +1,17 @@
 # Interface design
 
-## Approved target — November 3, 2026
+## Current comparison interface
+
+Opportunities and Markets group offers by outcome. Each book row shows its
+offered odds and available estimates. The default ranking uses EV after reviewed
+trade fees. Math & fees holds the selected offer while the list updates. Its
+update notice names material changes and lets the reader adopt the latest prices.
+The [interface contract](engineering/live-comparison-20261104/L04-interface-contract.md)
+covers keyboard interaction, narrow windows, odds formats and missing inputs.
+The [delivery record](engineering/live-comparison-20261104/L05-delivery.md)
+documents the running app and its measured limits. Owner acceptance is open.
+
+## Earlier approved target — November 3, 2026
 
 The owner approved the revised Opportunities → Markets → Admin design.
 [Approved design](ui-redesign-20261103.md) controls visual hierarchy, navigation,

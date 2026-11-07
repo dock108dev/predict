@@ -14,8 +14,8 @@ from hashlib import sha256
 
 ROOT = Path(__file__).resolve().parents[1]
 ASSETS = ROOT / "app/dashboard/opportunity_static/current"
-JAVASCRIPT = ("ui-common.js", "snapshot-views.js", "snapshot-controller.js")
-STYLES = ("ui01.css",)
+JAVASCRIPT = ("ui-common.js", "snapshot-views.js", "snapshot-live.js", "snapshot-drawer.js", "snapshot-controller.js")
+STYLES = ("ui01.css", "live-comparison.css")
 SCANNER_JAVASCRIPT = ("scanner-client.js", "ticket-client.js", "ticket-view.js", "scanner-arrivals.js", "scanner-summaries.js", "scanner-controller.js")
 CLIENT_NAMES = (
     "defaults",

@@ -30,6 +30,8 @@ def test_routing_slug_does_not_copy_or_mutate_native_catalog():
     market=us_market();expected=next_market_data(market)['slug']
     with patch('app.adapters.polymarket_us.deepcopy',side_effect=AssertionError('routing copied evidence')):
         assert market_slug(market)==expected
+    with patch('app.adapters.polymarket_us._market_index',side_effect=AssertionError('redecoded owned route')):
+        assert market_slug(market) == expected
     assert next_market_data(market)['slug']==expected
 
 

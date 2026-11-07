@@ -9,6 +9,209 @@ from app.collection import native_recovery
 
 
 class StorageMaintenanceSQL(LatestBoardFixture):
+    async def test_partitioning_does_not_multiply_the_logical_reclaim_threshold(self):
+        import os
+        from psycopg.types.json import Jsonb
+        from app.storage import storage_maintenance as maintenance
+        with self.connect()as db:
+            db.execute('CREATE EXTENSION IF NOT EXISTS pgstattuple')
+            db.execute('TRUNCATE current_acquisition_image_parts')
+            with db.cursor()as cursor:
+                cursor.executemany('INSERT INTO current_acquisition_image_parts(source,event_id,market_id,received_at,disposition,image) VALUES(%s,%s,%s,now(),%s,%s)',
+                    [('kalshi','bounded-copy',str(n),'pending',Jsonb(dict(raw=os.urandom(16384).hex())))for n in range(1024)])
+            db.execute('DELETE FROM current_acquisition_image_parts WHERE market_id::integer%4<>0')
+            db.execute('VACUUM (TRUNCATE FALSE) current_acquisition_image_parts')
+            before=db.execute("SELECT market_id,image FROM current_acquisition_image_parts ORDER BY market_id").fetchall()
+            parts=db.execute("SELECT relid,pg_total_relation_size(relid) bytes FROM pg_partition_tree('current_acquisition_image_parts') WHERE isleaf").fetchall()
+            self.assertLess(max(r['bytes']for r in parts),maintenance.MIN_REUSABLE_BYTES)
+            with patch.object(maintenance,'PRESSURE_BYTES',0),patch.object(maintenance,'COMPACT_TABLES',('current_acquisition_image_parts',)),patch.object(maintenance,'REWRITE_TURN_SECONDS',0):
+                result=maintain(db,collecting=True)
+            self.assertEqual(len(result['rewrites']),1)
+            rewrite=result['rewrites'][0]
+            self.assertEqual(rewrite['minimum_reclaim_bytes'],maintenance.MIN_REUSABLE_BYTES//16)
+            self.assertGreater(rewrite['before_bytes']-rewrite['after_bytes'],rewrite['minimum_reclaim_bytes'])
+            self.assertEqual(before,db.execute('SELECT market_id,image FROM current_acquisition_image_parts ORDER BY market_id').fetchall())
+
+    async def test_old_reader_retained_tuples_do_not_become_an_irreducible_floor(self):
+        from app.storage import storage_maintenance as maintenance
+        with self.connect() as db,self.connect() as reader:
+            db.execute('CREATE EXTENSION IF NOT EXISTS pgstattuple')
+            db.execute('CREATE TABLE maintenance_reader_fixture(id integer PRIMARY KEY,payload text)')
+            db.execute("INSERT INTO maintenance_reader_fixture SELECT n,repeat('complete retained value ',14) FROM generate_series(1,6000)n")
+            maintenance._rewrite_floor.clear()
+            with patch.object(maintenance,'PRESSURE_BYTES',0),patch.object(maintenance,'MIN_REUSABLE_BYTES',128*1024),patch.object(maintenance,'COMPACT_TABLES',('maintenance_reader_fixture',)):
+                with reader.transaction():
+                    reader.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
+                    reader.execute('SELECT * FROM current_row_epoch').fetchall()
+                    db.execute('DELETE FROM maintenance_reader_fixture WHERE id>1000')
+                    first=maintain(db,collecting=True)
+                    self.assertEqual(len(first['rewrites']),1)
+                db.execute('VACUUM (TRUNCATE FALSE) maintenance_reader_fixture')
+                second=maintain(db,collecting=True)
+                self.assertEqual(len(second['rewrites']),1)
+                self.assertGreater(second['rewrites'][0]['before_bytes']-second['rewrites'][0]['after_bytes'],128*1024)
+                self.assertEqual(db.execute('SELECT count(*) n FROM maintenance_reader_fixture').fetchone()['n'],1000)
+            db.execute('DROP TABLE maintenance_reader_fixture')
+
+    async def test_irreducible_page_slack_is_not_rewritten_until_new_reclaimable_growth(self):
+        from app.storage import storage_maintenance as maintenance
+        with self.connect() as db:
+            db.execute('CREATE EXTENSION IF NOT EXISTS pgstattuple')
+            db.execute('CREATE TABLE maintenance_rewrite_fixture(id integer PRIMARY KEY,payload text) WITH(fillfactor=50)')
+            db.execute("INSERT INTO maintenance_rewrite_fixture SELECT n,repeat('complete retained value ',14) FROM generate_series(1,6000)n")
+            before=db.execute('SELECT * FROM maintenance_rewrite_fixture ORDER BY id').fetchall()
+            maintenance._rewrite_floor.clear()
+            with patch.object(maintenance,'PRESSURE_BYTES',0),patch.object(maintenance,'MIN_REUSABLE_BYTES',128*1024),patch.object(maintenance,'COMPACT_TABLES',('maintenance_rewrite_fixture',)):
+                first=maintain(db,collecting=True)
+                self.assertEqual(len(first['rewrites']),1)
+                second=maintain(db,collecting=True)
+                self.assertEqual(second['rewrites'],[])
+                self.assertIn('maintenance_rewrite_fixture',second['unchanged_rewrite_floor'])
+                self.assertEqual(before,db.execute('SELECT * FROM maintenance_rewrite_fixture ORDER BY id').fetchall())
+                # A real removal creates newly reclaimable pages and must regain
+                # service even though the relation has the same identity.
+                db.execute('DELETE FROM maintenance_rewrite_fixture WHERE id>1000')
+                db.execute('VACUUM (TRUNCATE FALSE) maintenance_rewrite_fixture')
+                third=maintain(db,collecting=True)
+                self.assertEqual(len(third['rewrites']),1)
+                self.assertGreater(third['rewrites'][0]['before_bytes']-third['rewrites'][0]['after_bytes'],128*1024)
+                self.assertEqual(before[:1000],db.execute('SELECT * FROM maintenance_rewrite_fixture ORDER BY id').fetchall())
+            db.execute('DROP TABLE maintenance_rewrite_fixture')
+
+    async def test_acquisition_partition_upgrade_preserves_original_clocks_and_generated_values(self):
+        from pathlib import Path
+        from psycopg.types.json import Jsonb
+        with self.connect() as db,db.transaction(force_rollback=True):
+            db.execute('DROP VIEW current_acquisition_image')
+            db.execute('ALTER TABLE current_acquisition_image_parts RENAME TO current_acquisition_image')
+            db.execute('ALTER TABLE current_acquisition_image DROP COLUMN depth_payload,DROP COLUMN wire_payload')
+            for table in ('current_acquisition_image','current_acquisition_market'):
+                db.execute(f'CREATE TEMP TABLE shape_{table} (LIKE {table} INCLUDING ALL)')
+                db.execute(f'DROP TABLE {table}')
+                db.execute(f'CREATE TABLE {table} (LIKE shape_{table} INCLUDING ALL)')
+            image=dict(original='完整 provider text',source_at='2026-11-04T11:59:00Z',
+                outcomes=[dict(price='0.1234567890123456789',quantity='9007199254740993.00001')])
+            for mid,clock in (('one','2026-11-04T12:00:05Z'),('two',None)):
+                db.execute('INSERT INTO current_acquisition_image(source,event_id,market_id,received_at,disposition,image,runtime_id,connection_generation,census_generation,persisted_at) VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)',
+                    ('kalshi','event',mid,'2026-11-04T12:00:00Z','rejected',Jsonb(image),'original-runtime',7,'exact-census',clock))
+            db.execute('INSERT INTO current_acquisition_market(source,event_id,market_id,sport,family,generation,observed_at,withdrawn,disposition,metadata,absent_since,missing_passes) VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)',
+                ('kalshi','event','one','NFL','spread','original-census','2026-11-04T12:00:00Z',False,'suspected_absent',Jsonb(dict(title='original',line='2.5')),'2026-11-04T11:00:00Z',3))
+            before={table:db.execute(f'SELECT * FROM {table} ORDER BY source,event_id,market_id').fetchall() for table in ('current_acquisition_image','current_acquisition_market')}
+            migration=(Path(__file__).resolve().parents[1]/'app/storage/migrations/062_acquisition_evidence_partitions.sql').read_text()
+            with db.transaction():db.execute(migration)
+            for table,rows in before.items():
+                self.assertEqual(rows,db.execute(f'SELECT * FROM {table} ORDER BY source,event_id,market_id').fetchall())
+                self.assertEqual(db.execute('SELECT count(*) n FROM pg_partition_tree(%s::regclass) WHERE isleaf',(table,)).fetchone()['n'],16)
+            db.execute("UPDATE current_acquisition_image SET disposition='admitted' WHERE market_id='one'")
+            old=before['current_acquisition_image'][0]['persisted_at']
+            self.assertEqual(db.execute("SELECT persisted_at FROM current_acquisition_image WHERE market_id='one'").fetchone()['persisted_at'],old)
+            db.execute("UPDATE current_acquisition_image SET received_at=now() WHERE market_id='one'")
+            self.assertGreater(db.execute("SELECT persisted_at FROM current_acquisition_image WHERE market_id='one'").fetchone()['persisted_at'],old)
+
+    async def test_raw_image_partition_reclaims_inside_bounded_copy_runway(self):
+        from app.storage.storage_maintenance import REWRITE_RUNWAY_BYTES
+        with self.connect() as db:
+            db.execute('CREATE EXTENSION IF NOT EXISTS pgstattuple')
+            db.execute("""INSERT INTO current_acquisition_image_parts(source,event_id,market_id,received_at,disposition,image)
+                SELECT 'kalshi','partition-proof','image-'||i,now(),'pending',jsonb_build_object('payload',
+                    (SELECT string_agg(md5(i::text||':'||j::text),'') FROM generate_series(1,4096) j))
+                FROM generate_series(1,400) i""")
+            db.execute("DELETE FROM current_acquisition_image_parts WHERE event_id='partition-proof' AND (substring(market_id from 7))::int%20<>0")
+            db.execute('VACUUM (TRUNCATE FALSE) current_acquisition_image_parts')
+            sizes=[r['bytes']for r in db.execute("SELECT pg_total_relation_size(relid) bytes FROM pg_partition_tree('current_acquisition_image_parts') WHERE isleaf")]
+            before=sql_usage(db);cap=before+max(sizes)+REWRITE_RUNWAY_BYTES+1
+            self.assertGreater(before+sum(sizes)+REWRITE_RUNWAY_BYTES,cap)
+            with patch('app.storage.storage_maintenance.PRESSURE_BYTES',0),patch('app.storage.storage_maintenance.SQL_BYTE_CAP',cap),patch('app.storage.storage_maintenance.MIN_REUSABLE_BYTES',128*1024),patch('app.storage.storage_maintenance.COMPACT_TABLES',('current_acquisition_image_parts',)),patch('app.storage.storage_maintenance.REWRITE_TURN_SECONDS',0):
+                result=maintain(db,collecting=True)
+            self.assertEqual(len(result['rewrites']),1)
+            rewrite=result['rewrites'][0]
+            self.assertTrue(rewrite['table'].startswith('current_acquisition_image_p'))
+            self.assertLess(rewrite['transient_peak_bound_bytes'],cap)
+            self.assertGreater(rewrite['before_bytes']-rewrite['after_bytes'],128*1024)
+            self.assertEqual(db.execute("SELECT count(*) n FROM current_acquisition_image_parts WHERE event_id='partition-proof'").fetchone()['n'],20)
+
+    async def test_bounded_recovery_repack_preserves_exact_records_and_skips_locked(self):
+        from psycopg.types.json import Jsonb
+        from app.storage import recovery_codec as codec
+        original=dict(title='exact',period='full_game',sides=[],payload='original evidence '*1000,
+            raw=dict(received_at='2026-11-04T00:00:00Z',number=10**80))
+        with self.connect() as db,self.connect() as writer:
+            db.execute('DELETE FROM current_native_market_recovery')
+            db.execute('DELETE FROM current_native_catalog_recovery')
+            db.execute("INSERT INTO current_native_catalog_recovery(source,scope,header) VALUES('kalshi','scope','{}')")
+            for key in ('a','b','c'):
+                db.execute('INSERT INTO current_native_market_recovery(source,market_id,metadata,parsed) VALUES(%s,%s,%s,%s)',
+                    ('kalshi',key,Jsonb(original),Jsonb(original)))
+            header=db.execute('SELECT * FROM current_native_catalog_recovery').fetchall()
+            codec._after.clear()
+            with writer.transaction():
+                writer.execute("SELECT 1 FROM current_native_market_recovery WHERE market_id='a' FOR UPDATE")
+                with patch.object(codec,'REPACK_ROWS',2):first=codec.repack(db)
+                self.assertEqual(first['updated'],1)
+                self.assertEqual(codec.repack(db)['updated'],1)
+            codec.repack(db)  # wrap after the bounded scan
+            self.assertEqual(codec.repack(db)['updated'],1)
+            before=db.execute('SELECT market_id,xmin::text FROM current_native_market_recovery ORDER BY market_id').fetchall()
+            codec.repack(db);codec.repack(db)
+            self.assertEqual(before,db.execute('SELECT market_id,xmin::text FROM current_native_market_recovery ORDER BY market_id').fetchall())
+            self.assertEqual(header,db.execute('SELECT * FROM current_native_catalog_recovery').fetchall())
+            for row in db.execute('SELECT metadata,parsed FROM current_native_market_recovery'):
+                self.assertEqual(codec.thaw(row['metadata']),original)
+                self.assertEqual(codec.thaw(row['parsed']),original)
+            with patch('app.collection.current_storage_policy.sql_usage',return_value=2**31):
+                self.assertEqual(codec.repack(db)['deferred'],'recovery_repack_headroom')
+
+    async def test_repack_batch_bounds_exact_source_pairs_and_raw_bytes(self):
+        from psycopg.types.json import Jsonb
+        from app.storage import recovery_codec as codec
+        original=dict(title='exact',payload='complete evidence '*4000)
+        with self.connect() as db:
+            db.execute('DELETE FROM current_native_market_recovery')
+            db.execute('DELETE FROM current_native_catalog_recovery')
+            for source in ('kalshi','polymarket_us'):
+                db.execute('INSERT INTO current_native_catalog_recovery(source,scope,header) VALUES(%s,%s,%s)',(source,'scope',Jsonb({})))
+            for source,mid in (('kalshi','z'),('polymarket_us','a'),('polymarket_us','z')):
+                db.execute('INSERT INTO current_native_market_recovery(source,market_id,metadata) VALUES(%s,%s,%s)',(source,mid,Jsonb(original)))
+            codec._after.clear()
+            with patch.object(codec,'REPACK_ROWS',2),patch.object(codec,'REPACK_BYTES',100000):
+                first=codec.repack(db)
+                self.assertEqual(first['updated'],1)
+                self.assertLessEqual(first['output_bytes'],100000)
+                packed=db.execute("SELECT source,market_id FROM current_native_market_recovery WHERE metadata ? '_predict_storage'").fetchall()
+                self.assertEqual(packed,[dict(source='kalshi',market_id='z')])
+                self.assertEqual(codec.repack(db)['updated'],1)
+                self.assertEqual(codec.repack(db)['updated'],1)
+            for row in db.execute('SELECT metadata FROM current_native_market_recovery'):
+                self.assertEqual(codec.thaw(row['metadata']),original)
+
+    async def test_live_reclamation_waits_for_publication_and_yields_after_one_rewrite(self):
+        import threading
+        with self.connect() as db,self.connect() as publisher:
+            db.execute('CREATE EXTENSION IF NOT EXISTS pgstattuple')
+            for name in ('staged_a','staged_b'):
+                db.execute(f'CREATE TABLE {name}(id integer,payload text)')
+                db.execute(f"INSERT INTO {name} SELECT i,(SELECT string_agg(md5(i::text||j::text),'') FROM generate_series(1,4096) j) FROM generate_series(1,70) i")
+                db.execute(f'DELETE FROM {name} WHERE id>1')
+                db.execute(f'VACUUM (TRUNCATE FALSE) {name}')
+            publisher.execute('SELECT pg_advisory_lock(901153)')
+            release=threading.Timer(.25,lambda:publisher.execute('SELECT pg_advisory_unlock(901153)'))
+            release.start()
+            try:
+                with patch('app.storage.storage_maintenance.PRESSURE_BYTES',0),patch('app.storage.storage_maintenance.COMPACT_TABLES',('staged_a','staged_b')),patch('app.storage.storage_maintenance.REWRITE_TURN_SECONDS',0):
+                    first=maintain(db,collecting=True)
+                    self.assertTrue(first['capture_lock_acquired'])
+                    self.assertEqual(len(first['rewrites']),1)
+                    self.assertTrue(first['continue_compaction'])
+                    self.assertTrue(publisher.execute('SELECT pg_try_advisory_lock(901153) held').fetchone()['held'])
+                    publisher.execute('SELECT pg_advisory_unlock(901153)')
+                    second=maintain(db,collecting=True)
+                    self.assertEqual(len(second['rewrites']),1)
+                    self.assertNotEqual(first['rewrites'][0]['table'],second['rewrites'][0]['table'])
+                    for name in ('staged_a','staged_b'):
+                        self.assertEqual(db.execute(f'SELECT id FROM {name}').fetchall(),[dict(id=1)])
+            finally:
+                release.join();publisher.execute('SELECT pg_advisory_unlock_all()')
+
     async def test_small_packet_bloat_reclaimed_without_changing_selected_original_or_lease(self):
         from app.storage.grid_packet_store import PacketStore
         with self.connect() as db:
@@ -86,20 +289,72 @@ class StorageMaintenanceSQL(LatestBoardFixture):
                 FROM generate_series(1,400) i""")
             db.execute("DELETE FROM current_native_market_recovery WHERE market_id LIKE 'churn-%' AND (substring(market_id from 7))::int%20<>0")
             db.execute('VACUUM (TRUNCATE FALSE) current_native_market_recovery')
-            before=hashed(db.execute('SELECT source,market_id,metadata,parsed FROM current_native_market_recovery ORDER BY source,market_id').fetchall())
-            with patch('app.storage.storage_maintenance.PRESSURE_BYTES',0),patch('app.storage.storage_maintenance.SQL_BYTE_CAP',sql_usage(db)):
+            from app.storage.recovery_codec import thaw
+            def semantic_records():
+                return [dict(row,metadata=thaw(row['metadata']),parsed=thaw(row['parsed'])) for row in db.execute(
+                    'SELECT source,market_id,metadata,parsed FROM current_native_market_recovery ORDER BY source,market_id')]
+            before=hashed(semantic_records())
+            with patch('app.storage.storage_maintenance.PRESSURE_BYTES',0),patch('app.storage.storage_maintenance.MIN_REUSABLE_BYTES',128*1024),patch('app.storage.storage_maintenance.SQL_BYTE_CAP',sql_usage(db)):
                 deferred=maintain(db,collecting=True)
             self.assertFalse(deferred['rewrites'])
             self.assertTrue(any(r['reason']=='rewrite_headroom' for r in deferred['deferred']))
             # Recovery may temporarily cross the operating cap, but preserves
             # the original until commit and reports its separate bounded peak.
-            with patch('app.storage.storage_maintenance.PRESSURE_BYTES',0),patch('app.storage.storage_maintenance.SQL_BYTE_CAP',sql_usage(db)):
+            with patch('app.storage.storage_maintenance.PRESSURE_BYTES',0),patch('app.storage.storage_maintenance.MIN_REUSABLE_BYTES',128*1024),patch('app.storage.storage_maintenance.SQL_BYTE_CAP',sql_usage(db)):
                 result=maintain(db)
-            after=hashed(db.execute('SELECT source,market_id,metadata,parsed FROM current_native_market_recovery ORDER BY source,market_id').fetchall())
+            after=hashed(semantic_records())
             self.assertEqual(before,after)
             self.assertTrue(result['rewrites'])
             self.assertTrue(any(r['transient_peak_bound_bytes']>r['operating_cap_bytes'] for r in result['rewrites']))
             self.assertGreater(result['before_bytes']-result['after_bytes'],32*1024*1024)
+
+    async def test_partition_reclamation_fits_runway_that_cannot_copy_whole_recovery(self):
+        from app.storage.storage_maintenance import REWRITE_RUNWAY_BYTES
+        with self.connect() as db:
+            db.execute('CREATE EXTENSION IF NOT EXISTS pgstattuple')
+            db.execute("INSERT INTO current_native_catalog_recovery(source,scope,header) VALUES('polymarket_us','partition-proof','{}') ON CONFLICT(source) DO NOTHING")
+            db.execute("""INSERT INTO current_native_market_recovery(source,market_id,metadata)
+                SELECT 'polymarket_us','partition-'||i,jsonb_build_object('payload',
+                    (SELECT string_agg(md5(i::text||':'||j::text),'') FROM generate_series(1,4096) j))
+                FROM generate_series(1,400) i""")
+            db.execute("DELETE FROM current_native_market_recovery WHERE market_id LIKE 'partition-%' AND (substring(market_id from 11))::int%20<>0")
+            db.execute('VACUUM (TRUNCATE FALSE) current_native_market_recovery')
+            sizes=[r['bytes'] for r in db.execute("SELECT pg_total_relation_size(relid) bytes FROM pg_partition_tree('current_native_market_recovery') WHERE isleaf")]
+            before=sql_usage(db);cap=before+max(sizes)+REWRITE_RUNWAY_BYTES+1
+            self.assertGreater(before+sum(sizes)+REWRITE_RUNWAY_BYTES,cap)
+            with patch('app.storage.storage_maintenance.PRESSURE_BYTES',0),patch('app.storage.storage_maintenance.SQL_BYTE_CAP',cap),patch('app.storage.storage_maintenance.MIN_REUSABLE_BYTES',128*1024),patch('app.storage.storage_maintenance.COMPACT_TABLES',('current_native_market_recovery',)),patch('app.storage.storage_maintenance.REWRITE_TURN_SECONDS',0):
+                result=maintain(db,collecting=True)
+            self.assertEqual(len(result['rewrites']),1)
+            rewrite=result['rewrites'][0]
+            self.assertTrue(rewrite['table'].startswith('current_native_market_recovery_p'))
+            self.assertLess(rewrite['transient_peak_bound_bytes'],cap)
+            self.assertGreater(rewrite['before_bytes']-rewrite['after_bytes'],128*1024)
+            self.assertEqual(db.execute("SELECT count(*) n FROM current_native_market_recovery WHERE market_id LIKE 'partition-%'").fetchone()['n'],20)
+
+    async def test_partition_upgrade_is_exact_atomic_and_refuses_unknown_dependents(self):
+        from pathlib import Path
+        from psycopg.types.json import Jsonb
+        from psycopg.errors import DependentObjectsStillExist
+        with self.connect() as db,db.transaction(force_rollback=True):
+            db.execute('ALTER TABLE current_native_market_recovery DROP COLUMN receipt_fields')
+            db.execute('DELETE FROM current_native_market_recovery')
+            db.execute('CREATE TEMP TABLE legacy_recovery_shape (LIKE current_native_market_recovery INCLUDING ALL)')
+            db.execute('DROP TABLE current_native_market_recovery')
+            db.execute('CREATE TABLE current_native_market_recovery (LIKE legacy_recovery_shape INCLUDING ALL)')
+            original=dict(title='original',period='full_game',sides=[dict(id='yes')],large='exact source text '*400,
+                receipt='2026-11-04T00:00:00Z',number=10**70)
+            db.execute('INSERT INTO current_native_market_recovery(source,market_id,metadata,parsed) VALUES(%s,%s,%s,%s)',('kalshi','upgrade-proof',Jsonb(original),Jsonb(original)))
+            before=db.execute('SELECT * FROM current_native_market_recovery').fetchall()
+            db.execute('CREATE TABLE unexpected_recovery_owner(source text,market_id text,FOREIGN KEY(source,market_id) REFERENCES current_native_market_recovery(source,market_id))')
+            db.execute("INSERT INTO current_native_catalog_recovery(source,scope,header) VALUES('kalshi','upgrade','{}') ON CONFLICT(source) DO NOTHING")
+            migration=(Path(__file__).resolve().parents[1]/'app/storage/migrations/061_native_recovery_partitions.sql').read_text()
+            with self.assertRaises(DependentObjectsStillExist),db.transaction():db.execute(migration)
+            self.assertEqual(before,db.execute('SELECT * FROM current_native_market_recovery').fetchall())
+            db.execute('DROP TABLE unexpected_recovery_owner')
+            db.execute("INSERT INTO current_native_catalog_recovery(source,scope,header) VALUES('kalshi','upgrade','{}') ON CONFLICT(source) DO NOTHING")
+            with db.transaction():db.execute(migration)
+            self.assertEqual(before,db.execute('SELECT * FROM current_native_market_recovery').fetchall())
+            self.assertEqual(db.execute("SELECT count(*) n FROM pg_partition_tree('current_native_market_recovery') WHERE isleaf").fetchone()['n'],16)
 
     async def test_real_ingress_lock_timeout_advances_then_eventually_recovers(self):
         from app.storage import latest_board as latest
@@ -200,3 +455,84 @@ class StorageMaintenanceSQL(LatestBoardFixture):
                     pipeline.tick()
             self.assertIsNotNone(pipeline.maintenance)
             self.assertIsNone(db.execute('SELECT id FROM current_grid_blob WHERE id=%s',(packet,)).fetchone())
+
+
+class WorkingPartitionUpgradeSQL(LatestBoardFixture):
+    def admit(self,records):
+        # Seed the historical ranked schema independently of today's writer.
+        from app.storage.current_rows import CurrentRowStore
+        with patch.object(CurrentRowStore,'replace_native_books'):
+            super().admit(records)
+        with self.connect() as db:
+            c=db.execute("SELECT * FROM current_contract WHERE venue='kalshi' LIMIT 1").fetchone()
+            if c:
+                db.execute("INSERT INTO current_native_book VALUES(%s,%s,%s,NULL,NULL,%s,1,'fixture-revision','contracts','open','synchronized',NULL,'[]',NULL,NULL)",
+                    (c['venue'],c['event_id'],c['native_market_id'],self.at.isoformat()))
+                db.execute("INSERT INTO current_native_depth VALUES(%s,%s,%s,%s,'asks',0,'0.37','usd_per_contract','9007199254740993.000001','contracts')",
+                    (c['venue'],c['event_id'],c['native_market_id'],c['native_outcome_id']))
+
+    @classmethod
+    def setUpClass(cls):
+        from hashlib import sha256
+        from pathlib import Path
+        from app.storage.store import Store
+        def legacy(store):
+            with store.db.transaction():
+                store.db.execute('CREATE TABLE schema_migration(version text PRIMARY KEY,sha256 text NOT NULL)')
+                for path in sorted((Path(__file__).resolve().parents[1]/'app/storage/migrations').glob('*.sql')):
+                    if path.name>='063_':break
+                    store.db.execute(path.read_text())
+                    store.db.execute('INSERT INTO schema_migration VALUES(%s,%s)',(path.name,sha256(path.read_bytes()).hexdigest()))
+        with patch.object(Store,'migrate',legacy):super().setUpClass()
+
+    async def test_exact_populated_cutover_preserves_pins_triggers_foreign_keys_and_atomic_refusal(self):
+        from psycopg.errors import DependentObjectsStillExist,RaiseException
+        from app.storage.store import Store
+        from app.storage import ordinary_publication as live,comparison_snapshot as snapshots
+        order=dict(current_contract='id',current_offer='contract_id',
+            current_native_depth='venue,event_id,native_market_id,native_outcome_id,side,level',
+            comparison_snapshot='id',comparison_snapshot_result='id',comparison_live_read_fragment='member_id',
+            comparison_live_head='singleton',comparison_live_component='id',comparison_live_member='result_id,member_id',
+            comparison_live_lease='id')
+        with self.connect() as db,patch.object(live,'utc',lambda:self.at.isoformat()),patch.object(snapshots,'utc',lambda:self.at.isoformat()):
+            live.turn(db)
+            head=live.status(db)
+            root=snapshots.unpack(db.execute('SELECT result FROM comparison_snapshot_result WHERE id=%s',(head['result_id'],)).fetchone()['result'],db=db)
+            member=root['rows'][0]['evidence_result_id'];token=live.retain(db,member)
+            before={table:db.execute('SELECT * FROM '+table+' ORDER BY '+keys).fetchall()for table,keys in order.items()}
+            db.execute('CREATE TABLE unknown_working_reference(id text REFERENCES comparison_snapshot_result(id))')
+            with self.assertRaisesRegex(RaiseException,'unknown_foreign_dependency'):Store(db).migrate()
+            db.execute('DROP TABLE unknown_working_reference')
+            db.execute('CREATE VIEW unknown_working_dependent AS SELECT id FROM current_contract')
+            with self.assertRaises(DependentObjectsStillExist):Store(db).migrate()
+            self.assertEqual(db.execute("SELECT relkind FROM pg_class WHERE oid='current_contract'::regclass").fetchone()['relkind'],'r')
+            for table,rows in before.items():self.assertEqual(rows,db.execute('SELECT * FROM '+table+' ORDER BY '+order[table]).fetchall())
+            db.execute('DROP VIEW unknown_working_dependent')
+            with self.assertRaisesRegex(ValueError,'unknown migration boundary'):Store(db).migrate(through='invented')
+            Store(db).migrate(through='063_contract_offer_partitions.sql')
+            self.assertEqual(db.execute("SELECT relkind FROM pg_class WHERE oid='current_contract'::regclass").fetchone()['relkind'],'p')
+            self.assertEqual(db.execute("SELECT relkind FROM pg_class WHERE oid='current_native_depth'::regclass").fetchone()['relkind'],'r')
+            Store(db).migrate(through='064_native_depth_partitions.sql')
+            self.assertEqual(db.execute("SELECT relkind FROM pg_class WHERE oid='comparison_snapshot_result'::regclass").fetchone()['relkind'],'r')
+            Store(db).migrate(through='065_immutable_publication_partitions.sql')
+            for table,rows in before.items():self.assertEqual(rows,db.execute('SELECT * FROM '+table+' ORDER BY '+order[table]).fetchall())
+            for table in tuple(order)[:6]:
+                self.assertEqual(db.execute('SELECT count(*) n FROM pg_partition_tree(%s::regclass) WHERE isleaf',(table,)).fetchone()['n'],16)
+            self.assertEqual(root,snapshots.unpack(db.execute('SELECT result FROM comparison_snapshot_result WHERE id=%s',(head['result_id'],)).fetchone()['result'],db=db))
+            with db.transaction(force_rollback=True):
+                contract=before['current_contract'][0]
+                db.execute("UPDATE current_contract SET facts=facts||'{\"rule_note\":\"changed original rule\"}' WHERE id=%s",(contract['id'],))
+                self.assertNotEqual(contract['contract_dependency'],db.execute('SELECT contract_dependency FROM current_contract WHERE id=%s',(contract['id'],)).fetchone()['contract_dependency'])
+                offer=before['current_offer'][0]
+                db.execute("UPDATE current_offer SET facts=jsonb_set(facts,'{original,value}','\"0.37\"') WHERE contract_id=%s",(offer['contract_id'],))
+                self.assertNotEqual(offer['price_dependency'],db.execute('SELECT price_dependency FROM current_offer WHERE contract_id=%s',(offer['contract_id'],)).fetchone()['price_dependency'])
+                db.execute('DELETE FROM current_event')
+                for table in ('current_contract','current_offer','current_native_depth'):
+                    self.assertEqual(db.execute('SELECT count(*) n FROM '+table).fetchone()['n'],0)
+            Store(db).migrate(through='066_native_ladders.sql')
+            self.assertEqual(db.execute("SELECT relkind FROM pg_class WHERE oid='current_native_depth'::regclass").fetchone()['relkind'],'v')
+            self.assertEqual(db.execute("SELECT count(*) n FROM pg_partition_tree('current_native_ladder') WHERE isleaf").fetchone()['n'],16)
+            self.assertEqual(before['current_native_depth'],db.execute('SELECT * FROM current_native_depth ORDER BY '+order['current_native_depth']).fetchall())
+            self.assertEqual(before['comparison_live_lease'],db.execute('SELECT * FROM comparison_live_lease ORDER BY id').fetchall())
+            db.execute('DELETE FROM comparison_live_lease WHERE id=%s',(token['lease_id'],))
+            self.assertEqual(db.execute('SELECT count(*) n FROM comparison_live_lease').fetchone()['n'],0)

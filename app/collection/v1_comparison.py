@@ -23,7 +23,7 @@ def us_selectors(cell, game_id=None):
                  **({'gameId':str(game_id)} if game_id is not None else {}))) for k in keys]
 
 
-def _bind_v1(event, market, venue, *, revised=False):
+def _bind_v1(event, market, venue, *, revised=False, share_metadata=False):
     """A predicate binding may exist without a counterpart or a current quote."""
     from .public_contracts import award_identity, event_identity, us_type
     native = market.get('_native') or market.get('native_metadata') or {}
@@ -77,7 +77,7 @@ def _bind_v1(event, market, venue, *, revised=False):
             result['predicate'] = [fact['participant'],fact['line'],fact['outcomes']]
         else: result['blockers'].append('Exact literal score/outcome predicate or canonical participant unavailable')
     elif venue == 'polymarket_us':
-        locator = us_type(native,competition=event.get('competition'))
+        locator = us_type(native,competition=event.get('competition'),share_metadata=share_metadata)
         result['locator'] = locator
         if locator['status'] != 'DOCUMENTED_LOCATOR': result['blockers'].append(locator['reason'])
         elif locator['family'] != 'moneyline' or revised and locator['period']=='first_half':
@@ -150,7 +150,7 @@ def bind(event,market,venue,*,policy=POLICY,_share_metadata=False):
     if policy!=REPAIR_POLICY:raise ValueError('Unknown manual admission policy')
     from .admission_enrichment import enrich_game,award
     if market.get('market_type')=='futures' or (market.get('native_scope_binding') or {}).get('family')=='futures':return award(event,market,venue)
-    e=enrich_game(dict(event,source=venue),share_metadata=_share_metadata);r=_bind_v1(e,market,venue,revised=True)
+    e=enrich_game(dict(event,source=venue),share_metadata=_share_metadata);r=_bind_v1(e,market,venue,revised=True,share_metadata=_share_metadata)
     if e.get('identity_conflicts'):
         r['blockers']+=list(e['identity_conflicts']);r['status']='IDENTITY_BLOCKED'
     r['version']=policy;r['sha256']=stable({k:v for k,v in r.items() if k!='sha256'});return r
@@ -185,7 +185,7 @@ def _annotate(catalog, venue, templates=(), *, policy=POLICY, share_metadata=Fal
                                  if k in ('game_id','game_number','original_start','schedule_status')})
         if venue=='polymarket_us':
             from .public_contracts import us_type
-            locator=us_type(market.get('_native') or market.get('native_metadata') or {},competition=enriched.get('competition'))
+            locator=us_type(market.get('_native') or market.get('native_metadata') or {},competition=enriched.get('competition'),share_metadata=True)
             if locator['status']=='DOCUMENTED_LOCATOR':
                 market.update(market_type=locator['family'],period=locator['period'])
         binding=bind(enriched,market,venue,policy=policy,_share_metadata=share_metadata);market['v1_raw_binding']=binding

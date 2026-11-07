@@ -30,14 +30,17 @@ def clear():
 
 
 def structural_record(record):
-    value=deepcopy(record)
-    q=value['quote']
+    # A proof is read-only. Copy only the shells from which volatile fields are
+    # removed, not every unchanged event/contract/rule witness on every visit.
+    value=dict(record)
+    q=value['quote']=dict(record['quote'])
     audit=q.get('occurrence_match')
     if audit:
+        audit=q['occurrence_match']=dict(audit)
         audit.pop('revision',None)
-        for member in audit['members']:member.pop('evidence_sha256',None)
+        audit['members']=[{k:v for k,v in member.items() if k!='evidence_sha256'} for member in audit['members']]
     if q['venue']=='pinnacle':return value
-    metadata=value.get('comparison_source_metadata',{})
+    metadata=value['comparison_source_metadata']=dict(value.get('comparison_source_metadata',{}))
     # This metadata clock is receipt evidence, not an input to occurrence,
     # group or predicate construction. The selected producer receives it fresh.
     metadata.pop('observed_at',None)
@@ -46,7 +49,9 @@ def structural_record(record):
     for key in ('depth','times','revision','provider_clocks','book_confirmation','observed_book'):
         q.pop(key,None)
     if 'provenance' in q:
+        q['provenance']=dict(q['provenance'])
         for key in ('sha256','receipt_sha256'):q['provenance'].pop(key,None)
+    q['original']=dict(q['original'])
     q['original'].pop('value',None)
     q['original'].pop('native_value',None)
     return value
@@ -224,7 +229,7 @@ def resolve(records, *, at, engine, epoch):
         evidence={(r['quote']['source']['provider'],r['quote']['source']['native_event_id']):r['quote']['provenance'].get('sha256') for r in records}
         out=[]
         for record,projection in zip(records,saved['changes']):
-            value=deepcopy(record)
+            value={k:deepcopy(v) for k,v in record.items() if k!='quote'}
             value.update(projection['set'])
             for field in projection['remove']:value.pop(field,None)
             q=deepcopy(record['quote']);q.pop('occurrence_link',None)

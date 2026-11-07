@@ -40,6 +40,63 @@ class Socket:
         await asyncio.Event().wait()
 
 class WorkerControls(unittest.IsolatedAsyncioTestCase):
+    def test_priority_distinguishes_top_prices_from_depth_and_size_churn(self):
+        from app.collection.current_native import top_price_identity
+        book=dict(state='active',sync='synchronized',quantity_unit='contracts',outcomes=[dict(
+            outcome_id='yes',bids=None,asks=dict(levels=[dict(price=dict(value='0.4',unit='usd_per_contract'),
+                quantity=dict(value='10',unit='contracts'))]))])
+        deep=deepcopy(book)
+        deep['outcomes'][0]['asks']['levels'][0]['quantity']['value']='100'
+        deep['outcomes'][0]['asks']['levels'].append(dict(price=dict(value='0.5',unit='usd_per_contract')))
+        self.assertEqual(top_price_identity(book),top_price_identity(deep))
+        deep['outcomes'][0]['asks']['levels'][0]['price']['value']='0.41'
+        self.assertNotEqual(top_price_identity(book),top_price_identity(deep))
+
+    async def test_material_changes_share_service_with_oldest_confirmation_waiters(self):
+        service=SimpleNamespace(config=deepcopy(DEFAULT),dispatch=True,database_mode=True,books=lambda *args:None)
+        worker=NativeWorker(service,'kalshi')
+        at=datetime.now(timezone.utc).isoformat()
+        for i in range(400):
+            mid=str(i)
+            worker.pending_books[mid]=dict(raw=dict(ref=dict(market_id=mid),received_at=at))
+            worker.pending_since[mid]=float(i)
+            worker.pending_price_versions[mid]='changed' if i>=200 else 'same'
+            worker.derived_versions[mid]='same'
+        captured=[]
+        async def admit(service,fn,venue,books):captured.extend(books)
+        with patch('app.collection.current_native.call',side_effect=admit),patch('app.collection.bulk_checkpoint.save_images'):
+            worker.flush_books();await worker.publication_task
+        if worker.publication_handle:worker.publication_handle.cancel()
+        ids=[b['raw']['ref']['market_id'] for b in captured]
+        self.assertEqual(ids[:6],['0','200','1','201','2','202'])
+        self.assertEqual(len(ids),128)
+        self.assertEqual(len(set(ids)),128)
+        self.assertEqual(len(worker.pending_books),272)
+        self.assertEqual(worker.pending_since['64'],64)
+        self.assertEqual(worker.derived_versions['200'],'changed')
+        self.assertLessEqual(len(worker.metrics['delivery_trace']),128)
+
+    async def test_fresh_slot_leaves_time_for_publication_while_fifo_advances(self):
+        import time
+        service=SimpleNamespace(config=deepcopy(DEFAULT),dispatch=True,database_mode=True,books=lambda *args:None)
+        worker=NativeWorker(service,'kalshi')
+        wall=time.time()
+        at=datetime.now(timezone.utc).isoformat()
+        for i in range(256):
+            mid=str(i)
+            worker.pending_books[mid]=dict(raw=dict(ref=dict(market_id=mid),received_at=at))
+            worker.pending_since[mid]=float(i)
+            worker.pending_price_versions[mid]='updated'
+            worker.derived_versions[mid]='prior'
+            worker.pending_clocks[mid]=wall-(1 if i==255 else 26)
+        captured=[]
+        async def admit(service,fn,venue,books):captured.extend(books)
+        with patch('app.collection.current_native.call',side_effect=admit),patch('app.collection.bulk_checkpoint.save_images'):
+            worker.flush_books();await worker.publication_task
+        if worker.publication_handle:worker.publication_handle.cancel()
+        self.assertEqual([b['raw']['ref']['market_id'] for b in captured[:2]],['0','255'])
+        self.assertEqual(len(captured)+len(worker.pending_books),256)
+
     async def test_latest_image_arriving_during_completion_keeps_its_turn(self):
         service=SimpleNamespace(config=deepcopy(DEFAULT),dispatch=True,database_mode=True,books=lambda *args:None)
         worker=NativeWorker(service,'kalshi');worker.persist_raw=AsyncMock()
@@ -312,6 +369,50 @@ class WorkerControls(unittest.IsolatedAsyncioTestCase):
                     task.cancel();await asyncio.gather(task,return_exceptions=True)
                 self.assertTrue(all(s.closed for s in sockets));self.assertIsNone(worker.socket)
 
+    async def test_reconnect_uses_adopted_roster_while_durable_save_is_pending(self):
+        service=SimpleNamespace(config=deepcopy(DEFAULT),dispatch=True,deadline=asyncio.get_running_loop().time()+10,
+            source_state=lambda *a:None,issue=lambda *a:None)
+        service.config['backoff_seconds']=[.001]*5
+        worker=NativeWorker(service,'kalshi');worker.credential=Credential()
+        worker.client=SimpleNamespace(budget=PredictionBudget(dict(session_bytes=16*1024*1024)))
+        retained=replace(market('M'),state=MarketState.ACTIVE)
+        retired=replace(market('RETIRED'),state=MarketState.ACTIVE)
+        sockets=[]
+        class ControlledSocket:
+            def __init__(self):self.sent=[];self.closed=False;sockets.append(self)
+            async def send(self,body):self.sent.append(json.loads(body))
+            async def close(self):self.closed=True
+            async def recv(self):
+                if len(sockets)==1:
+                    # Successful SQL adoption/reconciliation has retired one
+                    # market. Discovery is still awaiting its durable save.
+                    worker.markets={'M':retained};worker.lifecycle.leases={'M':{}}
+                    worker.lifecycle_initialized=True
+                    worker.metrics['catalog_recovery']={'stage':'recovery_persistence'}
+                    raise ConnectionError('controlled reconnect during save')
+                await asyncio.Event().wait()
+        class Connector:
+            def __init__(self,*a,**kw):pass
+            def __await__(self):
+                async def build():return ControlledSocket()
+                return build().__await__()
+        with patch('app.collection.current_native.connect',Connector):
+            task=asyncio.create_task(worker.stream([retained,retired]))
+            try:
+                for _ in range(200):
+                    if len(sockets)==2 and sockets[-1].sent:break
+                    await asyncio.sleep(.005)
+                self.assertEqual(len(sockets),2)
+                self.assertEqual(sockets[0].sent[0]['params']['market_tickers'],['M','RETIRED'])
+                self.assertEqual(sockets[1].sent[0]['params']['market_tickers'],['M'])
+                self.assertEqual(set(worker.stream_market_index),{'M'})
+                self.assertEqual(worker.synchronization.members,{'M'})
+                self.assertEqual(worker.metrics['catalog_recovery']['stage'],'recovery_persistence')
+                self.assertEqual(worker.metrics['connections'],2)
+            finally:
+                task.cancel();await asyncio.gather(task,return_exceptions=True)
+        self.assertTrue(all(s.closed for s in sockets))
+
     async def test_stop_revokes_stream_before_waiting_for_publication(self):
         service=SimpleNamespace(config=deepcopy(DEFAULT),dispatch=True)
         worker=NativeWorker(service,'kalshi')
@@ -404,3 +505,34 @@ class PurchaseSemantics(unittest.TestCase):
         self.assertEqual(empty['markets'],[]);self.assertEqual(len(empty['events']),1)
         # Ordinary selection has no event-count cutoff. Unknown IDs select nothing.
         self.assertEqual(coverage.catalog(pages,'polymarket_us',AS_OF,current_selection={'events':[str(i) for i in range(25)],'markets':[]})['markets'],[])
+
+
+def test_catalog_replacements_have_one_workspace_and_release_on_cancellation():
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock, Mock
+    from app.collection.current_native import NativeWorker
+
+    async def run():
+        shared = SimpleNamespace(native_discovery_lock=asyncio.Lock())
+        entered = asyncio.Event()
+        async def hold():
+            entered.set()
+            await asyncio.Event().wait()
+        def worker(fn):
+            return SimpleNamespace(service=shared, metrics={}, http_lock=asyncio.Lock(),
+                                   begin_discovery=Mock(), discover=AsyncMock(side_effect=fn))
+        first = worker(hold)
+        second = worker(None)
+        active = asyncio.create_task(NativeWorker.run_discovery_pass(first))
+        await entered.wait()
+        waiting = asyncio.create_task(NativeWorker.run_discovery_pass(second))
+        await asyncio.sleep(0)
+        assert second.metrics['catalog_recovery']['stage'] == 'waiting_for_discovery'
+        second.begin_discovery.assert_not_called()
+        active.cancel()
+        await asyncio.gather(active, return_exceptions=True)
+        await waiting
+        second.discover.assert_awaited_once()
+        assert not shared.native_discovery_lock.locked()
+
+    asyncio.run(run())

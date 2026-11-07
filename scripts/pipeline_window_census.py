@@ -167,8 +167,15 @@ def run(path, *, trace=False):
             from current_acquisition_image i left join current_acquisition_market m using(source,event_id,market_id)
             group by i.source,i.event_id,m.sport,m.family,i.disposition,i.market_id""").fetchall()
         normalized_markets={(k[0],k[1],k[2]) for k in normalized}
-        binding_rows=db.execute("select source,market_id,metadata->>'subscription_evidence_exclusion' exclusion,metadata#>>'{v1_raw_binding,status}' status,metadata#>'{v1_raw_binding,blockers}' blockers from current_native_market_recovery").fetchall()
-        bindings={(r['source'],r['market_id']):r for r in binding_rows}
+        from app.storage.recovery_codec import thaw
+        bindings={}
+        with db.cursor(name='window_catalog_binding') as cursor:
+            cursor.itersize=64
+            cursor.execute('SELECT source,market_id,metadata FROM current_native_market_recovery')
+            for r in cursor:
+                value=thaw(r['metadata']);binding=value.get('v1_raw_binding') or {}
+                bindings[(r['source'],r['market_id'])]=dict(source=r['source'],market_id=r['market_id'],
+                    exclusion=value.get('subscription_evidence_exclusion'),status=binding.get('status'),blockers=binding.get('blockers'))
         raw_traces=[];raw_trace_counts=Counter()
         for r in raw:
             date=raw_dates.get((r['venue'],r['event_id']))

@@ -12,6 +12,13 @@ POLICY = 'predict-conservative-recovery-1'
 AUTHORITY = 'owner-approved-conservative-accounting-20261013'
 CAP = 64
 
+# One owner-authorized observation for this immutable November receipt and
+# exposure set. The observation owner consumes this ID before transport entry.
+NFL_429_RECOVERY = 'l05-nfl-429-balance-20261105'
+NFL_429_ATTEMPT = 'b867b77e-0da9-4e8f-b9e5-5c8be6a9c96a'
+NFL_429_CONTEXT = 'bfc9f92b8829a2e67724ef66a00145c805ef4a7b8b1d8e8362ac352bb5effdc8'
+NFL_429_EXPOSURE = '3e18b1f6b7d3f82004b1ac4df4804990efff9218bedd4b207eacb9e6211c5903'
+
 
 def digest(value):
     return sha256(packed(value)).hexdigest()
@@ -97,7 +104,15 @@ def recovery_preflight(v, at, covered, *, owner_runtime, recovery_id):
                 and a.get('response_receipt') is None and a.get('late_response_receipt') is None
                 and a.get('quota_headers') is None and a.get('quota_failure') is None)
             for a in lost)
-        related=transport or missing or identity_without_receipt
+        approved_429 = (
+            recovery_id == NFL_429_RECOVERY
+            and v['pause'] == 'quota_missing_duplicate_or_malformed'
+            and digest(covered) == NFL_429_EXPOSURE
+            and digest([v.get('account_id'), v['window'], v['ceiling'],
+                        v.get('account_transitions', [])]) == NFL_429_CONTEXT
+            and all(a['id'] == NFL_429_ATTEMPT or covering(v, a) for a in lost)
+        )
+        related=transport or missing or identity_without_receipt or approved_429
         if not related:raise QuotaStop(v['pause'])
     if not isinstance(recovery_id,str) or not re.fullmatch(r'[A-Za-z0-9_-]{1,80}', recovery_id):
         raise QuotaStop('recovery_identity_invalid')
@@ -156,6 +171,8 @@ def import_balance(v, evidence, at, covered, *, owner_runtime, candidate, recove
         evidence=deepcopy(e), evidence_sha256=digest(e), balance=balance,
         prior=dict(pause=v['pause'], observation=deepcopy(old), available=max(0, old['remaining']-exposure(v)-v['engineering_reserve']),
                    next_due_at=v['next_due_at'], bootstrap_due_at=v['bootstrap_due_at']))
+    if recovery_id == NFL_429_RECOVERY:
+        audit['owner_policy'] = 'November 5 one-time balance observation for exact NFL 429 and protected holds'
     audit['record_sha256'] = digest(audit)
     v.setdefault('conservative_recoveries', []).append(audit)
     v['observation'] = deepcopy(balance)

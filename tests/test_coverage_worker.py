@@ -85,8 +85,9 @@ def test_component_progress_survives_pressure_cancellation(tmp_path):
 
 
 @pytest.mark.skipif(not hasattr(signal,'SIGSTOP'),reason='POSIX child suspension')
-@pytest.mark.parametrize('financial',[False,True])
-def test_coverage_pauses_cpu_work_then_resumes_same_census(tmp_path,financial):
+@pytest.mark.parametrize('module',[None,'app.collection.financial_worker','app.collection.ordinary_worker'])
+def test_coverage_pauses_cpu_work_then_resumes_same_census(tmp_path,module):
+    financial=module is not None
     async def exercise_pause():
         from app.collection.background_work import BACKGROUND
         launch=asyncio.create_subprocess_exec;children=[];pressure=[False]
@@ -107,7 +108,7 @@ print('{{"published":true}}')
         with patch.object(worker.asyncio,'create_subprocess_exec',side_effect=start), \
              patch.object(BACKGROUND,'critical_acquisition_pressure',side_effect=lambda:pressure[0]), \
              patch.object(worker,'MAX_SECONDS',5):
-            task=asyncio.create_task(worker.run(lambda:False,root=tmp_path,module='app.collection.financial_worker' if financial else None))
+            task=asyncio.create_task(worker.run(lambda:False,root=tmp_path,module=module))
             try:
                 for _ in range(100):
                     if progress.exists():break
@@ -131,8 +132,9 @@ print('{{"published":true}}')
     asyncio.run(exercise_pause())
 
 
+@pytest.mark.parametrize('module',[None,'app.collection.ordinary_worker'])
 @pytest.mark.parametrize('mode',['clears','stop','persistent'])
-def test_coverage_admission_wait_is_bounded_and_starts_only_when_clear(tmp_path,mode):
+def test_coverage_admission_wait_is_bounded_and_starts_only_when_clear(tmp_path,mode,module):
     async def exercise_admission():
         from app.collection.background_work import BACKGROUND,AcquisitionDeferred
         launch=asyncio.create_subprocess_exec;children=[];started=time.monotonic()
@@ -145,9 +147,9 @@ def test_coverage_admission_wait_is_bounded_and_starts_only_when_clear(tmp_path,
              patch.object(BACKGROUND,'acquisition_pressure',side_effect=pressure), \
              patch.object(worker,'MAX_SECONDS',.3):
             if mode=='persistent':
-                with pytest.raises(AcquisitionDeferred):await worker.run(stop,root=tmp_path)
+                with pytest.raises(AcquisitionDeferred):await worker.run(stop,root=tmp_path,module=module)
             else:
-                result=await worker.run(stop,root=tmp_path)
+                result=await worker.run(stop,root=tmp_path,module=module)
                 assert result.get('published') is (mode=='clears')
         assert len(children)==(1 if mode=='clears' else 0)
         assert all(p.returncode is not None for p in children)

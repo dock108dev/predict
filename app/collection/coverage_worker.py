@@ -33,23 +33,26 @@ async def run(stopped, *, root, module=None, arguments=(), on_progress=None, wai
     from .background_work import BACKGROUND,AcquisitionDeferred
     start=time.monotonic()
     coverage=module in (None,__name__)
+    ordinary=module=='app.collection.ordinary_worker'
     if stopped():return dict(published=False,reason='updates_stopped')
     # A census deferred at admission otherwise waits the entire two-minute
     # publication interval, phase-locking with recurring raw-input bursts. Wait
     # for an admissible slot without launching CPU work; this wait consumes the
     # same total deadline as the child, and Stop remains immediately observable.
-    while coverage and BACKGROUND.acquisition_pressure():
+    while (coverage or ordinary) and BACKGROUND.acquisition_pressure():
         if not wait_for_admission:raise AcquisitionDeferred('native_acquisition_catching_up')
         if stopped():return dict(published=False,reason='updates_stopped')
         if time.monotonic()-start>MAX_SECONDS:raise AcquisitionDeferred('native_acquisition_catching_up')
         await asyncio.sleep(.05)
-    if not coverage and BACKGROUND.acquisition_pressure():raise AcquisitionDeferred('native_acquisition_catching_up')
+    if not (coverage or ordinary) and BACKGROUND.acquisition_pressure():raise AcquisitionDeferred('native_acquisition_catching_up')
+    admission_seconds=time.monotonic()-start
     arguments=await asyncio.to_thread(resume_arguments,module,arguments)
     if stopped():return dict(published=False,reason='updates_stopped')
     if time.monotonic()-start>MAX_SECONDS:raise ValueError('coverage_worker_deadline')
+    if ordinary and hasattr(signal,'SIGUSR1'):arguments=(*arguments,'--cooperative-pause')
     process=await asyncio.create_subprocess_exec(sys.executable,'-m',module or __name__,str(root),str(os.getpid()),*arguments,
         cwd=str(Path(__file__).resolve().parents[2]),stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.DEVNULL)
-    cooperative=module=='app.collection.financial_worker' and hasattr(signal,'SIGUSR1')
+    cooperative=module in ('app.collection.financial_worker','app.collection.ordinary_worker') and hasattr(signal,'SIGUSR1')
     ready=False
     async def bounded_reply():
         nonlocal ready
@@ -122,6 +125,7 @@ async def run(stopped, *, root, module=None, arguments=(), on_progress=None, wai
             raise ValueError('coverage_worker_failed')
         if pausable or cooperative:result.update(worker_pauses=pauses,worker_paused_seconds=paused_seconds,
             worker_pause_mode='transaction_safe_checkpoints' if cooperative else 'process_suspension')
+        result['worker_admission_wait_seconds']=round(admission_seconds,6)
         return result
     finally:
         primary=sys.exception()

@@ -160,7 +160,7 @@ def test_owned_normalization_prepares_exact_sql_values_in_cpu_worker():
     images=[dict(id='book',record=dict(retained_at=book['raw']['received_at'],value=dict(observations=[observation])))]
     original=deepcopy((catalog,images))
     rows,errors=normalize_storage_batch(catalog,images,book['raw']['received_at'],False)
-    actual=normalize_storage_batch(catalog,images,book['raw']['received_at'],True)
+    actual=normalize_storage_batch(catalog,images,book['raw']['received_at'],True,detached=True)
     assert actual==([prepare(row) for row in rows],errors)
     assert actual[0] and (catalog,images)==original
 

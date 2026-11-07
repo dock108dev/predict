@@ -1,14 +1,104 @@
 // Pure view builders. Callers own navigation and immutable result selection.
 const SnapshotViews = (() => {
   const {el,fmt,num,name,odd,link,button}=UI;
-  const titles={gross_return_percent:'Before-fee estimate',conditional_return_percent:'After trade-fee estimate',net_return_percent:'Assumed net EV',price_difference_cents:'Price difference',minimum_return_percent:'Scenario minimum'};
+  const titles={gross_return_percent:'Before-fee estimate',conditional_return_percent:'After reviewed trade fees',conservative_return_percent:'Conservative public-fee estimate',net_return_percent:'Assumed net EV',price_difference_cents:'Price difference',minimum_return_percent:'Scenario minimum'};
   const metricLabel=(metric,a)=>metric==='net_return_percent'&&a.scenario==='decisive_only'?'Conditional net EV':titles[metric];
-  function position(q,games){const s=q.selection||{},g=games?.find(g=>g.game_key===q.game_key);const participant=q.participant_label||g?.participants?.find(p=>p.id===s.participant)?.name||s.label||q.source?.native_outcome_id||'';return [(['over','under'].includes(s.predicate)&&participant.toLowerCase()===s.predicate?'':participant),({win:'to win',cover:'spread',over:'Over',under:'Under'})[s.predicate]||s.predicate,s.signed_line,['YES','NO','Long','Short'].includes(q.native_side)?q.native_side:null].filter(x=>x!=null&&x!=='').join(' · ');}
-  function state(q){return /delay|stale|paused|stopped|error/.test(q.source_state||'')?'Saved · source delayed':'Saved · availability unverified';}
+  function position(q,games){
+    const s=q.selection||{},g=games?.find(g=>g.game_key===q.game_key);
+    const participant=q.participant_label||g?.participants?.find(p=>p.id===s.participant)?.name||s.label||'Outcome not identified';
+    const line=s.signed_line??q.market?.line, n=num(line);
+    const signed=line==null?'':`${n>0?'+':''}${n}`;
+    // Selection is already normalized by the source adapter. Short is not a
+    // second negation, and a native NO never becomes the other team's win.
+    if(s.predicate==='win')return participant+' to win';
+    if(s.predicate==='not_win')return participant+' not to win';
+    if(s.predicate==='cover')return participant+' to cover '+signed;
+    if(s.predicate==='not_cover')return participant+' not to cover '+signed;
+    if(['over','under'].includes(s.predicate))return `${s.predicate==='over'?'Over':'Under'} ${line==null?'':num(line)}`.trim();
+    return [participant,({not_over:'Not over',not_under:'Not under'})[s.predicate]||s.predicate?.replaceAll('_',' '),signed].filter(Boolean).join(' · ');
+  }
+  function clock(at){return at?new Date(at).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'Time unknown';}
+  function state(q){
+    const at=q.book_confirmation?.confirmed_at||q.times?.source_at||q.times?.received_at;
+    const basis=q.book_confirmation?.confirmed_at?'Confirmed':q.times?.source_at?'Source':'Received';
+    const mode=q.source_state==='budget_delayed'?'15-min collection':({paused:'Paused',stopped:'Stopped',error:'Source error',unavailable:'Source unavailable',stale:'Stale source'})[q.source_state];
+    return `${basis} ${clock(at)}${mode?' · '+mode:''}`;
+  }
+  const pct=v=>v==null?'—':`${num(v)>0?'+':''}${fmt(v)}%`;
+  function missing(q,metric){
+    const reasons=q.current_reasons||[];
+    if(reasons.includes('source_expired'))return q.price_current?'Reference expired':'Source price expired';
+    if(reasons.includes('settings_replaced'))return 'Settings recalculating';
+    if(reasons.includes('input_replaced_or_removed'))return q.price_current?'Reference inputs changed':'Source inputs changed';
+    if(reasons.length)return q.price_current?'Current calculation unavailable':'Source currently unavailable';
+    if(q.probability_missing==='finance_pending')return 'Calculation pending';
+    if(metric==='conservative_return_percent')return 'Public-fee estimate unavailable';
+    if(metric==='conditional_return_percent')return ({prophetx_account_fee_model_and_rate_unbound:'Account fee unknown',kalshi_instrument_fee_schedule_unbound:'Contract fee unknown',conditional_fee_review_expired_or_not_effective:'Fee review expired',conditional_pregame_ended:'Pregame fee only',supported_decisive_benchmark_required:'Reference unavailable'})[q.conditional_trade_benchmark?.reason]||(!q.probability?'Reference unavailable':'Fee estimate unavailable');
+    if(metric==='gross_return_percent')return q.probability==null?'Reference unavailable':'Estimate unavailable';
+    if(metric==='net_return_percent')return 'Assumptions needed';
+    if(metric==='minimum_return_percent')return 'Fees / settlement / size needed';
+    return 'Unavailable';
+  }
+  function metricCell(q,metric){const cell=el('td',null,'compare-number');cell.append(el('strong',pct(q[metric]),num(q[metric])>0?'positive':num(q[metric])<0?'negative':''));if(q[metric]==null)cell.append(el('small',missing(q,metric),'compare-note'));return cell;}
+  function referenceStrip(quotes,result){
+    const wrap=el('div',null,'compare-references'),refs=new Map();
+    for(const q of quotes){
+      const ref=q.reference_calculation, pair=ref?.pair||[];
+      const key=JSON.stringify([ref?.venue||q.display?.benchmark_venue,pair.map(p=>[p.id,p.original,p.selection]),ref?.selected,ref?.selected_predicate,q.display?.benchmark]);
+      if(!pair.length&&!q.display?.benchmark?.length)continue;
+      if(!refs.has(key))refs.set(key,{q,venues:new Set(),retained:new Set()});refs.get(key).venues.add(name(q.venue));if(ref?.available===false)refs.get(key).retained.add(name(q.venue));
+    }
+    for(const {q,venues,retained} of refs.values()){
+      const ref=q.reference_calculation, line=el('div',null,'compare-reference');
+      line.append(el('strong',name(ref?.venue||q.display?.benchmark_venue||result.assumptions.benchmark_venue)+' reference'),el('span',' · '+[...venues].join(', '),'compare-note'));
+      const values=el('div',null,'compare-ref-values');
+      if(ref?.pair?.length)for(const [i,r] of ref.pair.entries()){
+        const item=el('span',position({...r,market:q.market},result.games)+': ');item.append(odd(q.display?.benchmark?.[i],''));values.append(item);
+      }else for(const [i,o] of (q.display?.benchmark||[]).entries()){
+        const item=el('span','Reference outcome '+(i+1)+' (name unavailable): ');item.append(odd(o,''));values.append(item);
+      }
+      line.append(values);if(retained.size)line.append(el('small','Retained reference for '+[...retained].join(', '),'compare-note'));wrap.append(line);
+    }
+    if(!refs.size)wrap.append(el('p',`${name(result.assumptions.benchmark_venue)} reference unavailable for these exact outcomes.`,'compare-note'));
+    return wrap;
+  }
+  function comparison(group,result,metric,actions){
+    const pair=group.kind==='pair_group',quotes=group.quotes,first=quotes[0],article=el('article',null,'compare-group');article.dataset.group=group.id;
+    const header=el('header',null,'compare-heading');
+    header.append(link(first.game_title,actions.game(first),'p-game'),el('span',`${first.league} · ${name(first.market.market)} · ${clock(first.start_at)}`,'p-meta'));
+    header.append(el('h2',pair?(first.display.positions||[]).map(q=>position(q,result.games)).join(' / '):position(first,result.games)));
+    if(group.score_source)header.append(el('p',`${name(group.score_source.venue)} sets rank · ${pct(group.score)}`,'compare-note'));
+    else header.append(el('p','Unranked · '+metricLabel(metric,result.assumptions)+' unavailable','compare-note'));
+    article.append(header);if(!pair)article.append(referenceStrip(quotes,result));
+    const table=el('table',null,'compare-table'+(pair?' pair-table':''));table.setAttribute('aria-label',pair?'Compare both sides':position(first,result.games)+' by source');
+    const head=el('thead'),tr=el('tr');
+    const extra=!pair&&['conservative_return_percent','net_return_percent','price_difference_cents'].includes(metric)?metric:null;
+    const headings=pair?['First outcome','Other outcome','Minimum return','Details']:['Source','Odds','EV before fees','EV after trade fees',...(extra?[metricLabel(extra,result.assumptions)]:[])];
+    for(const text of headings){const th=el('th',text);th.setAttribute('scope','col');tr.append(th);}head.append(tr);table.append(head);const body=el('tbody');
+    for(const q of quotes){
+      const row=el('tr');row.dataset.row=q.id;row.dataset.quote=q.id;row.dataset.ranking=q.ranking?.eligible?'eligible':'unranked';if(group.score_source?.id===q.id)row.classList.add('sets-rank');
+      if(pair){for(const leg of q.display.positions||[]){const c=el('td');c.append(el('strong',position(leg,result.games)),el('div',name(leg.venue),'compare-note'),odd(leg.display?.offered),el('small',state(leg),'compare-note'));row.append(c);}row.append(metricCell(q,'minimum_return_percent'));}
+      else{
+        const source=el('td');source.append(el('strong',name(q.venue)));if(q.price_current===false)source.append(el('small','Retained price','compare-note'));if(group.score_source?.id===q.id)source.append(el('small','Sets rank','compare-note'));row.append(source);
+        const price=el('td',null,'compare-number');price.append(odd(q.display?.offered));row.append(price,metricCell(q,'gross_return_percent'),metricCell(q,'conditional_return_percent'));
+        if(extra==='price_difference_cents'){const c=el('td',q[extra]==null?'—':fmt(q[extra])+'¢','compare-number');row.append(c);}else if(extra)row.append(metricCell(q,extra));
+      }
+      const cell=el('td'),b=button('Math & fees',()=>{
+        if(actions.openInspection){actions.openInspection(q,result,pair?'minimum_return_percent':metric);return;}
+        const open=article.querySelector('.p-why-panel'),same=open?.dataset.selection===q.id;open?.remove();for(const x of article.querySelectorAll('.p-why-button'))x.setAttribute('aria-expanded','false');
+        if(same){actions.selected(null);return;}const panel=why(q,result,pair?'minimum_return_percent':metric,actions.inspect(q,pair?'minimum_return_percent':metric));panel.dataset.selection=q.id;article.append(panel);b.setAttribute('aria-expanded','true');actions.selected(q.id);
+      },'p-why-button');b.setAttribute('aria-expanded','false');b.setAttribute('aria-label',`Why ${pair?'this pair':name(q.venue)+' '+position(q,result.games)}`);b.setAttribute('aria-haspopup','dialog');b.setAttribute('aria-controls','math-inspection');if(pair){cell.append(b);row.append(cell);}else{b.textContent=name(q.venue);row.firstChild.querySelector('strong').replaceWith(b);b.title='Math & fees';}[...row.children].forEach((td,i)=>td.dataset.label=headings[i]);body.append(row);
+    }
+    table.append(body);const scroll=el('div',null,'compare-scroll');scroll.append(table);article.append(scroll);
+    if(pair)article.append(el('p','Minimum return uses both purchases and the settlement, fees, size and buffer in Admin. A dash means inputs are missing; it does not mean zero or guaranteed profit.','compare-footnote'));
+
+    return article;
+  }
   function why(row,result,metric,inspect){
     const box=el('section',null,'p-why-panel');box.setAttribute('aria-label','Why this estimate');
     const title=el('div',null,'p-why-title');title.append(el('strong',metricLabel(metric,result.assumptions)),link('Inspect exact inputs in Admin',inspect));box.append(title,el('p',row.kind==='pair'?row.game_title:position(row,result.games)+' · '+row.game_title,'p-meta'));
-    const conditional=metric==='conditional_return_percent',fee=row.conditional_trade_benchmark||{};
+    const conservative=metric==='conservative_return_percent',conditional=metric==='conditional_return_percent'||conservative,fee=(conservative?row.conservative_trade_benchmark:row.conditional_trade_benchmark)||{};
+    if(conservative)box.append(el('p','Conservative public-schedule estimate. Account terms are unverified; this does not enter the reviewed-fee ranking.'));
     const d=row.display||{},grid=el('div',null,'p-why-grid');
     function fact(label,value,caption){const item=el('div');item.append(el('small',label),value,el('span',caption));grid.append(item);}
     if(row.kind!=='pair'){
@@ -24,7 +114,7 @@ const SnapshotViews = (() => {
     else if(conditional)box.append(el('p','A trade-fee estimate needs a supported reference probability and an applicable reviewed fee schedule.'))
     else if(metric==='price_difference_cents')box.append(el('p','Difference from another comparable instrument’s price, in cents per normal claim. This is not expected profit or a two-position minimum.'));
     else box.append(el('p','Uses the fees, fractional size and buffer entered in Admin. Available depth and actual fills are not established. Unknown inputs remain unavailable.'));
-    if(d.benchmark?.length){const p=el('p',`${name(d.benchmark_venue)} reference odds · `);d.benchmark.forEach((o,i)=>{if(i)p.append(' / ');p.append(odd(o,''));});box.append(p);}
+    if(d.benchmark?.length)box.append(referenceStrip([row],result));
     if(value==null)box.append(el('p','Needed: '+(metric==='gross_return_percent'?row.probability_missing||'supported price and decisive benchmark':conditional?({prophetx_account_fee_model_and_rate_unbound:'the account fee model and rate',kalshi_instrument_fee_schedule_unbound:'the fee schedule for this exact contract',conditional_fee_review_expired_or_not_effective:'a fee review applicable to this capture',conditional_pregame_ended:'a capture taken before the game starts',supported_decisive_benchmark_required:'supported offered odds and a reference probability'}[fee.reason]||'a supported reference and reviewed fee scenario for this saved position'):row.math?.missing?.join('; ')||'comparable supported inputs')));
     if(metric==='gross_return_percent'&&value!=null){const details=el('details');details.append(el('summary','How the $100 example works'));const dl=el('dl',null,'p-example');for(const [k,v] of [['Profit on a decisive win','$'+fmt(d.win_profit_per_100)],['Loss on a decisive loss','−$100.00'],['Estimated win chance',fmt(num(row.probability)*100)+'%'],['Expected profit before fees','$'+fmt(d.gross_profit_per_100)]])dl.append(el('dt',k),el('dd',v));details.append(dl,el('p','Expected profit = win chance × win profit − loss chance × $100. Full-precision captured inputs are used.'));box.append(details);}
     box.append(el('p','The $100 illustration does not change your calculation settings.','p-meta'));
@@ -62,5 +152,5 @@ const SnapshotViews = (() => {
     const exact=el('details');exact.append(el('summary','Exact calculation records · literal values, units and identifiers'),el('pre',JSON.stringify({result_id:value.result_id,snapshot_id:value.snapshot_id,row:r,assumptions:value.assumptions},null,2)));
     const originals=el('details');originals.append(el('summary','Original records · literal units and precision'),el('pre',JSON.stringify({originals:value.originals,references:value.references},null,2)));box.append(exact,originals);return box;
   }
-  return {card,markets,why,inspection,position,metricLabel};
+  return {card,markets,comparison,why,inspection,position,metricLabel,state,referenceStrip,missing,pct};
 })();

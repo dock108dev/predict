@@ -82,7 +82,8 @@ def test_borrowed_fields_preserve_order_types_and_deletions_under_original_cap(t
     path = tmp_path / 'job'
     prior = {'kalshi': catalog()}
     base = prior['kalshi']['markets'][0]
-    base.update(obsolete=True, evidence=['exact evidence' * 500])
+    import random
+    base.update(obsolete=True, evidence=[''.join(random.Random(3).choices('abcdefghijklmnopqrstuvwxyz0123456789',k=7000))])
     row = dict(id=base['id'], evidence=base['evidence'], present=None, value=False)
     source = {'kalshi': dict(events=[], markets=[row])}
     with patch.object(transfer, 'MAX_TRANSFER_BYTES', 1024):
@@ -95,3 +96,23 @@ def test_borrowed_fields_preserve_order_types_and_deletions_under_original_cap(t
     actual = restored['kalshi']['markets'][0]
     assert list(actual.items()) == list(row.items())
     assert actual is not row and actual['evidence'] is base['evidence']
+
+
+def test_compact_transfer_preserves_full_rows_under_unchanged_file_and_decode_guards(tmp_path):
+    import json
+    path=tmp_path/'compact'
+    source={'polymarket_us':catalog()}
+    source['polymarket_us']['markets'][0]['evidence']=['exact native terms '*2000,False,1,'1',None]
+    with patch.object(transfer,'MAX_TRANSFER_BYTES',4096):
+        size=transfer.write(path,source)
+        actual,_=transfer.read(path)
+        assert actual==source and size<4096
+    lines=path.read_bytes().splitlines(keepends=True)
+    index=next(i for i,b in enumerate(lines) if json.loads(b)[0]=='gzip-1')
+    packet=json.loads(lines[index]);packet[2]='0'*64
+    damaged=list(lines);damaged[index]=json.dumps(packet).encode()+b'\n';path.write_bytes(b''.join(damaged))
+    with pytest.raises(ValueError,match='integrity'):transfer.read(path)
+    packet[1]=transfer.MAX_ROW_BYTES+1;damaged[index]=json.dumps(packet).encode()+b'\n';path.write_bytes(b''.join(damaged))
+    with pytest.raises(ValueError,match='capacity'):transfer.read(path)
+    with patch.object(transfer,'MAX_ROW_BYTES',4096):
+        with pytest.raises(ValueError,match='capacity'):transfer.write(path,source)

@@ -66,6 +66,9 @@ class CurrentService:
         self.clock_wall, self.clock_mono = time.time(), continuous()
         from .current_ingress import Ingress
         self.ingress = Ingress(self)
+        # Only complete native catalog replacements need this shared workspace.
+        # Socket readers, book publication and paid collection run independently.
+        self.native_discovery_lock = asyncio.Lock()
         self._control_lock = asyncio.Lock()
         self._close_lock = asyncio.Lock()
         self.states = self.initial_state()['source_status']
@@ -271,6 +274,12 @@ class CurrentService:
         states[venue]=dict(state='available',reason_code='native_image',reason='Native book images received.',
                            source_at=book['raw'].get('exchange_at'),received_at=book['raw']['received_at'],next_due_at=None)
         inventory=self.sink.reducer.inventory.get(venue,{})
+        if getattr(self,'database_mode',False) and hasattr(self.sink,'catalog_indexes'):
+            markets,events=self.sink.catalog_indexes(self.sink.reducer.inventory)
+            keys={(venue,b['raw']['ref']['event_id'],b['raw']['ref']['market_id']) for b in books}
+            event_keys={key[:2] for key in keys}
+            inventory=dict(events=[events[k] for k in event_keys if k in events],
+                           markets=[markets[k] for k in keys if k in markets])
         self.coverage.observe_native_prices(venue,books,inventory,'pending')
         try:
             observations=[self.row('prediction_book',venue,book=b,packets=[]) for b in books]
@@ -295,7 +304,6 @@ class CurrentService:
         self.observation(venue,'book',dict(market_id=book['raw']['ref']['market_id'],sequence=book['sequence'],
             source_at=book['raw'].get('exchange_at'),received_at=book['raw']['received_at'],projected_at=self.store._state['projected_at'],
             quotes=len(self.store.index(self.store._state))))
-        inventory=self.sink.reducer.inventory.get(venue,{})
         self.coverage.observe_native_prices(venue,books,inventory,'admitted')
         parents={e['id']:e for e in inventory.get('events',[])}
         for value in books:
@@ -433,6 +441,11 @@ class CurrentService:
         from .current_admin import project
         if accounting is None:accounting=self.status_accounting()
         for worker in self.workers.values():
+            if hasattr(worker,'queue_snapshot'):
+                worker.queue_snapshot()
+                q=worker.metrics['derived_queue_accounting']
+                q['observed_pending']=len(worker.pending_books);q['observed_inflight']=len(worker.derived_inflight)
+                q['inventory_residual']=q['admissions']-q['completions']-q['withdrawals']-q['observed_pending']-q['observed_inflight']
             for attribute,label in (('pending_since','derived'),('raw_since','raw')):
                 pending=getattr(worker,attribute,{})
                 actual=getattr(worker,'pending_books' if label=='derived' else 'raw_pending',{})
@@ -458,7 +471,7 @@ class CurrentService:
             cleanup_errors=list(self.cleanup_errors),config=self.config,source_status=self.states,
             metrics={v:deepcopy(w.metrics) for v,w in self.workers.items()},peak_rss_bytes=self.peak_rss,
             observation_retention=None,
-            ingress=dict(owned=len(self.ingress.tasks),maximum=self.ingress.maximum,records=list(self.ingress.records)),
+            ingress=dict(owned=len(self.ingress.tasks),maximum=self.ingress.maximum,native_service=deepcopy(self.ingress.native_service),records=list(self.ingress.records)),
             sink=None if self.sink is None else dict(sequence=self.sink.sequence,**self.sink.metrics),
             exclusions=[] if self.sink is None else self.sink.exclusions,issues=deepcopy(self.issues),
             odds_api_requests=self.workers['the_odds_api'].metrics['requests'] if 'the_odds_api' in self.workers else 0,

@@ -35,6 +35,7 @@ class DataRuntime:
         self.account_projection = None
         self.retained_memory = None
         self.storage_interval = False
+        self.sql_bytes = None
 
     def prepare_status(self):
         from .background_work import BACKGROUND
@@ -164,7 +165,8 @@ class DataRuntime:
         from .continuous import rss
         from .current_storage_policy import require_disk_space, SQL_BYTE_CAP
         require_disk_space(ROOT / '.local/postgres')
-        if self.lock_connection.execute('SELECT pg_database_size(current_database()) n').fetchone()['n'] >= SQL_BYTE_CAP:
+        self.sql_bytes = self.lock_connection.execute('SELECT pg_database_size(current_database()) n').fetchone()['n']
+        if self.sql_bytes >= SQL_BYTE_CAP:
             raise ValueError('data_runtime_sql_storage_guard')
         sampled = rss()
         if self.service is not None:
@@ -201,10 +203,10 @@ class DataRuntime:
                         if error_field != 'coverage_error':
                             worker.error = 'background_calculation_worker_stopped'
                 await asyncio.to_thread(self.resource_guard)
-                # Only a measured, deferred rewrite can initiate an orderly interval.
+                # Measured pressure/deferred rewrites initiate an orderly interval.
                 # Close every dispatch owner before startup uses its separate allowance.
                 maintenance=getattr(getattr(self.service,'database',None),'maintenance',None)
-                if needs_storage_interval(maintenance) and getattr(
+                if needs_storage_interval(maintenance, sql_bytes=self.sql_bytes) and getattr(
                         self.service.workers.get('the_odds_api'), 'phase', None) not in (
                             'reservation','transport','accounting'):
                     self.storage_interval=True
@@ -360,8 +362,14 @@ class DataRuntime:
         if errors:raise errors[0]
 
 
-def needs_storage_interval(report):
+def needs_storage_interval(report, *, sql_bytes=None):
     from .current_storage_policy import SQL_BYTE_CAP, MIB
+    # A busy publication lock can prevent the minute maintenance scan from
+    # measuring deferred rewrites. The independent measured database size still
+    # needs an orderly interval before ingress hits the fatal cap. Do not wait
+    # for a stale/empty deferred list to describe that already observed pressure.
+    if sql_bytes is not None and sql_bytes >= SQL_BYTE_CAP-128*MIB:
+        return True
     if not isinstance(report,dict) or report.get('after_bytes',0)<SQL_BYTE_CAP-192*MIB:
         return False
     return any(r['reason']=='rewrite_headroom' and r.get('reusable_bytes',0)>=32*MIB
@@ -369,10 +377,10 @@ def needs_storage_interval(report):
 
 
 async def run(config_path=None):
-    from app.storage.latest_board import LatestBoardOwner
+    from app.storage.ordinary_owner import OrdinaryOwner
     import os
     import sys
-    runtime = DataRuntime(config_path=config_path, board_factory=LatestBoardOwner)
+    runtime = DataRuntime(config_path=config_path, board_factory=OrdinaryOwner)
     loop = asyncio.get_running_loop()
     signalled=False
     def stop():

@@ -439,3 +439,84 @@ class ListingFallback(IsolatedAsyncioTestCase):
             assert market['provenance'][0]['body_sha256']==listing_hash
             assert w.metrics['listing_only_markets']==1
         finally:await w.stop_stream()
+
+
+def test_census_reuses_only_exact_typed_metadata_without_losing_raw_evidence():
+    from copy import deepcopy
+    from app.collection.current_native_catalog import share_census_metadata
+    native={'id':'M','depth':[{'price':'0.37000000000000001','size':9007199254740993}],
+            'receipt':'2026-11-05T07:00:00.123456789Z','eligible':True}
+    catalog={'markets':[dict(id='M',event_id='E',_native=deepcopy(native))]}
+    rows=[dict(id='M',event_id='E',_native=deepcopy(native))]
+    before=deepcopy(rows)
+    assert share_census_metadata(rows,catalog)==1
+    assert rows==before and rows[0]['_native'] is catalog['markets'][0]['_native']
+    rows=[dict(id='M',event_id='E',_native=dict(deepcopy(native),eligible=1,extra='raw-only')),
+          dict(id='M',event_id='other-event',_native=deepcopy(native))]
+    before=deepcopy(rows)
+    assert share_census_metadata(rows,catalog)==0
+    assert rows==before and type(rows[0]['_native']['eligible']) is int
+    assert rows[0]['_native']['depth'] is catalog['markets'][0]['_native']['depth']
+    assert rows[1]['_native'] is not catalog['markets'][0]['_native']
+
+
+class ListingReceiptIndex(Traversal):
+    async def test_index_matches_complete_scan_with_duplicate_events_and_pages(self):
+        from app.collection.coverage import decode_page,DecodedPage
+        worker,_=self.worker('polymarket_us',[
+            dict(events=[{'id':'a','markets':[{'id':'raw-one'}]},{'id':'a'},{'id':'b'}]),
+            dict(events=[{'id':'b'},{'id':'c'},{'id':'d'}]),dict(events=[])])
+        index={}
+        rows,_=await pages(worker,'/v1/events',{},'events',size=3,event_pages=index)
+        assert len(rows)==6
+        for eid in ('a','b','c','d','missing'):
+            expected=[p for p in worker.pages if any(str(e.get('id'))==eid for e in decode_page(p)[1]['events'])]
+            assert index.get(eid,[])==expected
+            assert all(not isinstance(p,DecodedPage) for p in index.get(eid,[]))
+        assert len(index['a'])==1 and len(index['b'])==2
+
+
+class InstalledCensusSharing(IsolatedAsyncioTestCase):
+    async def test_checkpoint_enumeration_matches_complete_raw_and_catalog_oracle(self):
+        from copy import deepcopy
+        from unittest.mock import patch
+        from app.collection import coverage
+        from app.collection.bulk_native import enumerate_native
+        from tests.test_current_multisport_ingress import worker
+        from tests.multisport_fixtures import source_case,fake_discovery
+        cases=[source_case('NCAAB',family,'census-'+family) for family in ('moneyline','spread','total')]
+        baseline,_=worker('polymarket_us',['NCAAB'],['moneyline','spread','total'])
+        fake_discovery(baseline,cases);baseline._coverage_checked=set();receipts={};get=baseline.get
+        async def record(path,params,field=None,scope=None):
+            await get(path,params,field,scope)
+            receipts[path,json.dumps(params,sort_keys=True)]=deepcopy(baseline.pages[-1])
+        baseline.get=record
+        async def build(w,pages,at,selection):
+            return coverage.catalog(pages,w.venue,at,compact_output=False,current_selection=selection)
+        with patch('app.collection.bulk_native.build_catalog',new=build):
+            expected=await enumerate_native(baseline)
+        current,_=worker('polymarket_us',['NCAAB'],['moneyline','spread','total'])
+        current.guard=lambda:None
+        class Checkpoint:
+            def begin(self):pass
+            def query(self,*args):return 'fixture',[]
+            def page(self,*args):pass
+            def completed_details(self):return set()
+        current.checkpoint=Checkpoint()
+        async def replay(path,params,field=None,scope=None):
+            current.pages.append(deepcopy(receipts[path,json.dumps(params,sort_keys=True)]))
+        current.get=replay
+        with patch('app.collection.bulk_native.build_catalog',new=build):
+            actual=await enumerate_native(current)
+        # Durable checkpoint locators are added by the installed path. Compare
+        # all original raw payloads and the complete derived event/market data.
+        def original(value):
+            if isinstance(value,dict):return {k:original(v) for k,v in value.items() if k!='current_checkpoint'}
+            if isinstance(value,list):return [original(v) for v in value]
+            return value
+        assert actual[0]==expected[0] and actual[2]==expected[2]
+        assert actual[1]=={} and len(expected[1])==3
+        for field in ('events','markets'):
+            assert original(current.bulk_catalog[field])==original(baseline.bulk_catalog[field])
+        assert current.metrics['census_metadata_shared']==3
+        assert len(actual[2])==3

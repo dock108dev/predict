@@ -6,6 +6,7 @@ from types import SimpleNamespace
 from datetime import timedelta
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from app.storage.store import connect,stamp
+from app.collection.native_recovery import market_value
 from app.collection.current_service import prepare_catalog
 from app.collection.current_sink import normalized_records
 
@@ -15,8 +16,8 @@ def run(path):
         db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
         at=db.execute('select transaction_timestamp() at').fetchone()['at'];end=at+timedelta(hours=72)
         original={r['source']:dict(r['header'],markets=[]) for r in db.execute('select source,header from current_native_catalog_recovery')}
-        for r in db.execute('select source,metadata from current_native_market_recovery order by source,market_id'):
-            original[r['source']]['markets'].append(r['metadata'])
+        for r in db.execute('select source,metadata,receipt_fields from current_native_market_recovery order by source,market_id'):
+            original[r['source']]['markets'].append(market_value(r['metadata'],r['receipt_fields']))
         from unittest.mock import patch
         with patch('app.collection.native_role_binding.attach_kalshi',return_value=set()):
             baseline=prepare_catalog(original,'kalshi',original['kalshi'],share_metadata=True)

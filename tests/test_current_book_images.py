@@ -100,3 +100,16 @@ def test_native_queues_share_exact_encoded_image_and_keep_independent_ownership(
             if w.publication_handle:w.publication_handle.cancel()
             if w.raw_task:await w.raw_task
     asyncio.run(run())
+
+def test_compressed_and_small_images_preserve_original_quote_text_and_container_ownership():
+    from app.collection.current_book_images import decode_container, encode_container
+
+    side = {"name": "Sí", "price": "0.6200", "depth": ["3.00", None, 0]}
+    assert not encode_container(side).startswith(b'\0')
+    event = {"markets": [side] * 90}
+    encoded = encode_container(event)
+    assert encoded.startswith(b'\0')
+    assert decode_container(encoded) == event
+    changed = decode_container(encoded)
+    changed["markets"][0]["price"] = "1.00"
+    assert decode_container(encoded) == event

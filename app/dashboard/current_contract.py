@@ -176,6 +176,23 @@ def age_basis(q,clock):
     return age
 
 
+def price_clock_status(q,clock):
+    """Re-evaluate only clock/link authority on an already validated quote."""
+    at=stamp(q['times']['source_at'],True)
+    age=age_basis(q,clock)
+    reasons=[]
+    from app.comparison.current_dependencies import link_reasons
+    reasons.extend(link_reasons(q, clock))
+    if not q['binding']['verified']:reasons.append('Selection binding unverified')
+    if age is None:reasons.append('Source time unknown')
+    if age is not None and age<0 or at is not None and at>clock:reasons.append('Source clock is ahead of evaluation clock')
+    if q.get('book_confirmation') and stamp(q['book_confirmation']['received_at'])>clock:reasons.append('Confirmation receipt is ahead of evaluation clock')
+    if q['stale']:reasons.append('Stale or unqualified source age policy')
+    if q['state']!='available':reasons.append('Source '+q['state'].replace('_',' '))
+    if not q['display']['supported']:reasons.append(q['display']['reason'])
+    q['comparison']=dict(eligible=not reasons,reasons=reasons)
+
+
 def comparisons(outcome):
     """All 15 visible-venue subsets; no client economic arithmetic/extra fetch."""
     quotes = quotes_of(outcome)
@@ -351,9 +368,17 @@ def serialize_steps(raw, *, allow_synthetic=False, estimate_policy=None, legacy=
         raise ValueError('Unknown service state')
     if set(r['source_status'])!=set(VENUES):
         raise ValueError('All four source states required')
-    for status in r['source_status'].values():
-        if set(status)-{'state','reason','reason_code','source_at','received_at','next_due_at'} or status['state'] not in STATES:
+    for venue,status in r['source_status'].items():
+        if set(status)-{'state','reason','reason_code','source_at','received_at','next_due_at','observed_sports','reference_sports'} or status['state'] not in STATES:
             raise ValueError('Invalid ordinary source status')
+        for scope_key in ('observed_sports','reference_sports'):
+            if scope_key not in status:continue
+            from app.collection.current_policy import SPORTS
+            scopes=status[scope_key]
+            if venue not in ('novig','prophetx') or not isinstance(scopes,dict) or set(scopes)-set(SPORTS):
+                raise ValueError('Invalid aggregate sport status')
+            if scope_key=='reference_sports' and venue!='novig':raise ValueError('Invalid reference sport status')
+            for code in scopes.values():text(code)
         for k in ('source_at','received_at','next_due_at'):
             if k in status:stamp(status[k],True)
         for k in ('reason','reason_code'):
@@ -528,18 +553,7 @@ def serialize_steps(raw, *, allow_synthetic=False, estimate_policy=None, legacy=
                     if policy is not None:
                         fields(policy,{'version','maximum_age_seconds'})
                         text(policy['version']);integer(policy['maximum_age_seconds'])
-                    age=age_basis(q,clock)
-                    reasons=[]
-                    from app.comparison.current_dependencies import link_reasons
-                    reasons.extend(link_reasons(q, clock))
-                    if not b['verified']:reasons.append('Selection binding unverified')
-                    if age is None:reasons.append('Source time unknown')
-                    if age is not None and age<0 or at is not None and at>clock:reasons.append('Source clock is ahead of evaluation clock')
-                    if q.get('book_confirmation') and stamp(q['book_confirmation']['received_at'])>clock:reasons.append('Confirmation receipt is ahead of evaluation clock')
-                    if q['stale']:reasons.append('Stale or unqualified source age policy')
-                    if q['state']!='available':reasons.append('Source '+q['state'].replace('_',' '))
-                    if not q['display']['supported']:reasons.append(q['display']['reason'])
-                    q['comparison']=dict(eligible=not reasons,reasons=reasons)
+                    price_clock_status(q,clock)
                     if q.get('observation_time_evidence') is not None:text(q['observation_time_evidence'])
                     if 'rules_differ' in q and type(q['rules_differ']) is not bool:raise ValueError('Explicit rule difference flag required')
                     if q.get('cost_note') is not None:text(q['cost_note'])

@@ -78,6 +78,7 @@ class NativePriceInventory:
     """
     def __init__(self):
         self.books={}
+        self.cells={}
 
     def observe(self,venue,sport,family,book,disposition):
         ref=book['raw']['ref'];units=set()
@@ -94,14 +95,48 @@ class NativePriceInventory:
             added=previous['added'] if same_image else len(units-previous.get('units',set())),
             withdrawn=previous['withdrawn'] if same_image else len(previous.get('units',set())-units))
 
+        cell=(venue,sport,family)
+        if previous:
+            old_cell=(venue,previous['sport'],previous['family'])
+            self._adjust(old_cell,previous,-1)
+        self._adjust(cell,self.books[key],1)
+
+    @staticmethod
+    def _empty():
+        return dict(received=0,admitted=0,rejected=0,pending=0,listing_only_markets=0,
+                    observed_market_images=0,last_image_additions=0,last_image_withdrawals=0,
+                    last_receipt_at=None,last_source_at=None)
+
+    def _adjust(self,cell,row,direction):
+        stats=self.cells.setdefault(cell,self._empty())
+        count=len(row['units'])
+        stats['received']+=direction*count
+        if row['disposition'] in ('admitted','rejected','pending'):
+            stats[row['disposition']]+=direction*count
+        stats['observed_market_images']+=direction
+        stats['listing_only_markets']+=direction*(count==0)
+        stats['last_image_additions']+=direction*row['added']
+        stats['last_image_withdrawals']+=direction*row['withdrawn']
+        if not stats['observed_market_images']:
+            self.cells.pop(cell,None)
+            return
+        for field,label in (('received_at','last_receipt_at'),('source_at','last_source_at')):
+            value=row[field]
+            if value is None or field=='source_at' and not value:continue
+            if direction<0 and stats[label]==value:
+                stats[label+'_dirty']=True
+            if direction>0 and (stats[label] is None or value>=stats[label]):
+                stats[label]=value
+                stats.pop(label+'_dirty',None)
+
     def counts(self,venue,sport,family):
-        rows=[v for k,v in self.books.items() if k[0]==venue and v['sport']==sport and v['family']==family]
-        return dict(count_scope='latest_received_native_books_this_runtime',
-            received=sum(len(r['units']) for r in rows),
-            **{state:sum(len(r['units']) for r in rows if r['disposition']==state) for state in ('admitted','rejected','pending')},
-            listing_only_markets=sum(not r['units'] for r in rows),
-            last_receipt_at=max((r['received_at'] for r in rows),default=None),
-            last_source_at=max((r['source_at'] for r in rows if r['source_at']),default=None),
-            native_unit_definition='native event/market/outcome and ask or bid with at least one price level',
-            observed_market_images=len(rows),
-            last_image_additions=sum(r['added'] for r in rows),last_image_withdrawals=sum(r['withdrawn'] for r in rows))
+        cell=(venue,sport,family)
+        stats=self.cells.get(cell) or self._empty()
+        for field,label in (('received_at','last_receipt_at'),('source_at','last_source_at')):
+            if stats.pop(label+'_dirty',False):
+                # Only a removed/replaced maximum that moved backwards needs a
+                # scan. Keep exactly one summary per configured coverage cell.
+                stats[label]=max((r[field] for key,r in self.books.items() if
+                    (key[0],r['sport'],r['family'])==cell and r[field] is not None and (field!='source_at' or r[field])),default=None)
+        return dict(stats,count_scope='latest_received_native_books_this_runtime',
+            native_unit_definition='native event/market/outcome and ask or bid with at least one price level')

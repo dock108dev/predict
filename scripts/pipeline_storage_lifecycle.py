@@ -4,6 +4,7 @@ from pathlib import Path
 import sys
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from app.storage.store import connect
+from app.storage.recovery_codec import thaw
 
 
 def snapshot(db):
@@ -11,13 +12,13 @@ def snapshot(db):
     queries={
         'catalog':'''SELECT source,count(*) rows,count(*) FILTER(WHERE parsed IS NOT NULL) parsed,
             sum(pg_column_size(metadata)) metadata_storage_bytes,sum(pg_column_size(parsed)) parsed_storage_bytes,
-            count(*) FILTER(WHERE metadata->>'inventory_recovery_disposition'='suspected_absent') suspected_absent
+            coalesce(sum(pg_column_size(receipt_fields)),0) receipt_storage_bytes
             FROM current_native_market_recovery GROUP BY source''',
         'images':'''SELECT i.source,count(*) rows,
             count(*) FILTER(WHERE m.market_id IS NOT NULL AND NOT m.withdrawn) current_membership,
             count(*) FILTER(WHERE i.received_at<now()-interval '2 days' AND (m.market_id IS NULL OR m.withdrawn)) cleanup_eligible,
-            sum(pg_column_size(i.image)) image_storage_bytes
-            FROM current_acquisition_image i LEFT JOIN current_acquisition_market m USING(source,event_id,market_id) GROUP BY i.source''',
+            sum(pg_column_size(i.image)+coalesce(pg_column_size(i.depth_payload),0)+coalesce(pg_column_size(i.wire_payload),0)) image_storage_bytes
+            FROM current_acquisition_image_parts i LEFT JOIN current_acquisition_market m USING(source,event_id,market_id) GROUP BY i.source''',
         'queries':'''SELECT q.source,q.generation,count(DISTINCT q.query_key) queries,count(p.position) pages,
             sum(pg_column_size(p.receipt)) receipt_storage_bytes,min(q.completed_at) oldest_completed
             FROM current_acquisition_query q LEFT JOIN current_acquisition_page p USING(source,query_key)
@@ -38,6 +39,19 @@ def snapshot(db):
         db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
         out['at']=db.execute('SELECT transaction_timestamp() at').fetchone()['at']
         for key,query in queries.items():out[key]=db.execute(query).fetchall()
+        counts={r['source']:0 for r in out['catalog']}
+        # For historical recovery packets the disposition is inside the metadata;
+        # split packets retain it in the observation section. Never count only the
+        # SQL-visible display fields of a compressed value.
+        with db.cursor(name='lifecycle_absence') as cursor:
+            cursor.itersize=64
+            cursor.execute('SELECT source,receipt_fields IS NOT NULL AS split,'
+                'coalesce(receipt_fields,metadata) AS packet FROM current_native_market_recovery')
+            for r in cursor:
+                value=thaw(r['packet'])
+                if r['split']:value=value['metadata']
+                if value.get('inventory_recovery_disposition')=='suspected_absent':counts[r['source']]+=1
+        for r in out['catalog']:r['suspected_absent']=counts[r['source']]
     return out
 
 if __name__=='__main__':

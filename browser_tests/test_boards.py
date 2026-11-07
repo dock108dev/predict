@@ -50,6 +50,18 @@ def test_saved_board_journey(width, back):
                 request.abort()
             elif url.path.startswith(("/current/assets/", "/view/current/")):
                 request.fulfill(path=assets / Path(url.path).name)
+            elif url.path == "/api/admin/status":
+                request.fulfill(
+                    json=dict(sources=[], dispatch_enabled=False, data_runtime={})
+                )
+            elif url.path == "/api/comparison-current/lease":
+                request.fulfill(
+                    json=dict(
+                        lease_id="fixture-lease", result_id=result["id"], released=True
+                    )
+                )
+            elif url.path == "/api/comparison-current/updates":
+                request.fulfill(json=dict(changed=False))
             elif url.path == "/api/comparison-snapshot/details":
                 assert query["result_id"] == result["id"]
                 row = next(
@@ -69,7 +81,7 @@ def test_saved_board_journey(width, back):
                         references=captured["references"],
                     )
                 )
-            elif url.path == "/api/comparison-snapshot":
+            elif url.path in ("/api/comparison-snapshot", "/api/comparison-current"):
                 if state["fail"]:
                     request.fulfill(
                         status=503, json={"error": "Temporary read failure"}
@@ -86,16 +98,19 @@ def test_saved_board_journey(width, back):
 
         context.route("**/*", route)
         try:
-            page.goto("http://board.invalid/odds?" + urlencode({"back": back}))
-            expect(page.locator(".p-market-card")).to_have_count(2)
+            page.goto(
+                "http://board.invalid/odds?"
+                + urlencode({"back": back, "result_id": result["id"]})
+            )
+            expect(page.locator(".compare-group")).to_have_count(2)
             expect(page.locator("#content")).to_contain_text("Pinnacle")
             page.get_by_role("link", name="Opportunities", exact=True).click()
-            expect(page.locator(".p-opportunity")).to_have_count(2)
-            why = page.get_by_role("button", name="Why", exact=True).first
+            expect(page.locator(".compare-group")).to_have_count(2)
+            page.get_by_role("button", name="Decimal", exact=True).click()
+            why = page.locator(".p-why-button").first
             why.focus()
             page.keyboard.press("Enter")
-            expect(page.locator(".p-why-panel")).to_contain_text("Per $100")
-            page.get_by_role("button", name="Decimal", exact=True).click()
+            expect(page.locator(".math-content")).to_contain_text("per $100")
             page.get_by_role("link", name="Inspect exact inputs in Admin").click()
             expect(page.locator(".inspection")).to_contain_text(
                 "Exact calculation records"
@@ -109,17 +124,18 @@ def test_saved_board_journey(width, back):
                 page.get_by_role("button", name="Decimal", exact=True)
             ).to_have_attribute("aria-pressed", "true")
             page.locator("#back").click()
-            expect(page.locator(".p-opportunity")).to_have_count(2)
+            expect(page.locator(".compare-group")).to_have_count(2)
+            page.keyboard.press("Escape")
             page.locator("#mode").select_option("arbs")
-            expect(page.locator(".p-opportunity")).to_contain_text("Scenario minimum")
+            expect(page.locator(".compare-group")).to_contain_text("Minimum return")
             page.get_by_role("button", name="NFL", exact=True).click()
             expect(page.locator("#content")).to_contain_text("No results match")
             page.get_by_role("button", name="NCAAB", exact=True).click()
-            expect(page.locator(".p-opportunity")).to_have_count(1)
+            expect(page.locator(".compare-group")).to_have_count(1)
             state["fail"] = True
             page.locator("#refresh-snapshot").click()
             expect(page.get_by_role("status")).to_contain_text("Refresh failed")
-            expect(page.locator(".p-opportunity")).to_have_count(1)
+            expect(page.locator(".compare-group")).to_have_count(1)
             state["fail"] = False
             page.locator("#latest-snapshot").click()
             expect(page.locator("#status")).to_have_text("")
@@ -130,7 +146,7 @@ def test_saved_board_journey(width, back):
             state["empty"] = True
             page.goto("http://board.invalid/ev")
             expect(page.get_by_role("status")).to_contain_text(
-                "No comparison captured yet"
+                "No comparisons available"
             )
             expect(page.locator("#refresh-snapshot")).to_be_enabled()
             assert not errors

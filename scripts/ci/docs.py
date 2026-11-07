@@ -5,6 +5,20 @@ import re
 
 ROOT = Path(__file__).resolve().parents[2]
 DOCUMENTS = (
+    "docs/engineering/live-comparison-20261104/L05-continuation.md",
+    "docs/live-comparison-plan-20261104.md",
+    "docs/engineering/live-comparison-20261104/L01-runtime.md",
+    "docs/engineering/live-comparison-20261104/L01-publication-contract.md",
+    "docs/engineering/live-comparison-20261104/L02-finance.md",
+    "docs/engineering/live-comparison-20261104/L02-financial-contract.md",
+    "docs/engineering/live-comparison-20261104/L03-ranking.md",
+    "docs/engineering/live-comparison-20261104/L03-ranking-contract.md",
+    "docs/engineering/live-comparison-20261104/L04-interface-contract.md",
+    "docs/engineering/live-comparison-20261104/L04-interface.md",
+    "docs/engineering/live-comparison-20261104/L05-verification.md",
+    "docs/engineering/live-comparison-20261104/L05-delivery.md",
+    "docs/engineering/live-comparison-20261104/README.md",
+    "docs/design/live-comparison-20261104/README.md",
     "README.md",
     "docs/CI.md",
     "docs/architecture.md",

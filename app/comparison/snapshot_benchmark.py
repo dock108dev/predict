@@ -5,6 +5,7 @@ receipt ownership, scoring scope or coherent frames and are not reconstructed.
 """
 from collections import Counter, defaultdict
 from fractions import Fraction as F
+from copy import deepcopy
 
 from app.comparison.snapshot_identity import project
 from app.collection.current_benchmark import proportional_probability
@@ -26,12 +27,13 @@ def market_key(row):
     scope=row['snapshot_identity']['scoring']
     if scope.get('overtime')!='included' or scope.get('score_domain','integer')!='integer':return None
     return (row['game_key'],row['market']['market'].replace('winner','moneyline'),
-        row['market']['period'],p['domain'],p.get('subject_id'),str(F(p['threshold'])),scope['overtime'],scope.get('score_domain','integer'))
+        row['market']['period'],p['domain'],p.get('subject_id'),str(F(p['threshold'])),scope['overtime'],scope.get('score_domain','integer'),
+        scope.get('extra_innings','not_applicable'),scope.get('shootout','not_applicable'))
 
 
 def bind(quotes, references, settings, at):
     """Project all witnesses together; bind only exact, coherent two-sided frames."""
-    originals=[r for r in references if r.get('market',{}).get('competition')=='NCAAB']
+    originals=list(references)
     venue=settings['benchmark_venue']
     refs=[reference_row(r) for r in originals if r.get('original_record') and r['venue']==venue]
     combined=project([*quotes,*refs],settings)
@@ -39,9 +41,33 @@ def bind(quotes, references, settings, at):
     # leagues. Known bindings and their gross benchmark semantics stay intact.
     combined=project(combined,settings,leagues=('NFL','NCAAF','NBA','MLB','NHL'),preserve_known=True)
     rows=combined[:len(quotes)]
-    # Reference weights are explicitly conditional on no equality. Execution
-    # claims still use the user's actual scope/equality settings above.
-    projected=project([*quotes,*refs],dict(settings,scenario='decisive_only'))[len(quotes):] if refs else []
+    # Finance has its own explicitly decisive domain. It never changes the
+    # full-state grouping predicate (not-win remains not-win) or Admin scenarios.
+    finance = deepcopy([*quotes,*refs])
+    from app.comparison.occurrence_matching import OccurrenceResolver
+    records = [r['original_record'] for r in finance]
+    for record in records:
+        record.setdefault('verified', False)
+        record.setdefault('orientation_evidence', [])
+    resolvable = all(all(r['event'].get(k) for k in ('season','stage'))
+        for r in records if r['quote']['source']['provider']=='the_odds_api')
+    resolved = OccurrenceResolver().resolve(records, clock=at) if records and resolvable else records
+    occurrences = {}
+    for row, record in zip(finance, resolved):
+        match = record['quote'].get('occurrence_match',{})
+        if match.get('status')=='matched' and not match['conflicts']:
+            source=record['quote']['source']
+            occurrences[(source['provider'],source['native_event_id'])]=match['occurrence_id']
+        # Full-game aggregate reference scoring is a reviewed source rule,
+        # never borrowed from the native instrument it is meant to price.
+        if row['venue']==venue and venue=='pinnacle' and record['quote']['source']['provider']=='the_odds_api':
+            from app.comparison.line_reference import scoring, RULE_PATH, RULE_URL
+            if not record.get('comparison_scope') and not record.get('comparison_source_metadata',{}).get('scoring_scope'):
+                record['comparison_scope']=scoring(record['event']['competition'])
+        row['original_record']=record
+    finance=project(finance,dict(settings,scenario='decisive_only'),
+        leagues=('NFL','NCAAF','NBA','NCAAB','MLB','NHL'),occurrences=occurrences)
+    projected=finance[len(quotes):]
     groups=defaultdict(list);issues=Counter();index=defaultdict(list)
     issues['missing_original_evidence']=len(originals)-len(refs)
     for ref in projected:
@@ -101,28 +127,34 @@ def bind(quotes, references, settings, at):
                 role='reference_only',historical=True,strict_verified=False))
             issues['complete_pairs']+=1
         except (ValueError,KeyError,TypeError,ArithmeticError) as exc:issues[str(exc)]+=1
-    for row in rows:
-        if row['league']!='NCAAB':continue
+    for row, financial in zip(rows,finance[:len(quotes)]):
+        if row['league']!='NCAAB' and row['venue'] not in ('kalshi','polymarket_us'):continue
         row['snapshot_benchmark']=None
+        row['snapshot_benchmark_reason']='exact_reference_pair_unavailable'
         row['snapshot_benchmark_missing']='Exact two-sided '+venue.title()+' reference absent from captured inputs'
-        key=market_key(row)
+        key=market_key(financial)
+        if key is None:
+            row['snapshot_benchmark_reason']=financial.get('same_outcome',{}).get('reason') or 'reference_scoring_scope_incompatible'
         candidates=index.get(key,[])
         if not candidates:
             if originals:row['snapshot_benchmark_missing']='No exact coherent '+venue.title()+' pair for this occurrence, scope and threshold; see reference diagnostics'
             continue
-        p=row['native_contract']['same_outcome']['predicate'];op=p['operator']
+        p=financial['native_contract']['same_outcome']['predicate'];op=p['operator']
         if op not in ('gt','lt','ge','le'):continue
-        if op in ('ge','le') and F(p['threshold']).denominator==1 and settings['scenario']!='decisive_only':
-            row['snapshot_benchmark_missing']='Inclusive equality requires explicit decisive-only domain';continue
         # Prefer latest complete frame, never splice sides. Tied frames must agree.
         latest=max(stamp(c['received_at']) for c in candidates)
         candidates=[c for c in candidates if stamp(c['received_at'])==latest]
         if len({tuple(c['odds']) for c in candidates})!=1:
+            row['snapshot_benchmark_reason']='reference_frames_conflict'
             row['snapshot_benchmark_missing']='Conflicting complete '+venue.title()+' frames';issues['conflicting_frames']+=1;continue
         ref=dict(sorted(candidates,key=lambda c:c['ids'])[0],selected=0 if op in ('gt','ge') else 1)
         ref['probability']=str(proportional_probability(ref['odds'],ref['selected']))
         ref['selected_odds']=ref['odds'][ref['selected']]
-        row['snapshot_benchmark']=ref;row['snapshot_benchmark_missing']=None
+        ref['selected_predicate']=p
+        ref['selected_identity']=financial['snapshot_identity']
+        ref['selected_equality']=(row.get('native_contract') or {}).get('same_outcome',{}).get('equality')
+        ref['fair_decimal_odds']=str(1/F(ref['probability']))
+        row['snapshot_benchmark']=ref;row['snapshot_benchmark_missing']=None;row['snapshot_benchmark_reason']=None
         row['reference']=ref
         issues['bound_observations']+=1
     return rows,dict(reference_observations=len(originals),**issues)

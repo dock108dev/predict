@@ -3,7 +3,12 @@ name = "prediction-arb"
 version = "0.1.0"
 description = "Read-only prediction market adapters and shared models"
 requires-python = ">=3.11"
-dependencies = ["httpx>=0.28,<0.29", "psycopg[binary]>=3.2,<4", "aiohttp>=3.12,<4"]
+dependencies = [
+    "httpx>=0.28,<0.29",
+    "psycopg[binary]>=3.2,<4",
+    "aiohttp>=3.12,<4",
+    "orjson>=3.11,<4",
+]
 
 [project.optional-dependencies]
 stream = ["websockets>=15,<18", "cryptography>=50.0.0,<51", "keyring>=25,<26"]

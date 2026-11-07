@@ -130,6 +130,26 @@ class RuntimeStatusCapacity(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'data_runtime_status_capacity'):
             RuntimeState().snapshot(service)
 
+    def test_full_coverage_and_accounting_fit_alongside_native_delivery_samples(self):
+        service, original = self.fixture()
+        original['coverage']['cells'][0]['evidence'] = 'c' * 380000
+        original['quota']['recovery_authority'][0]['original'] = 'q' * 140000
+        for panel in original['sources']:
+            samples = [dict(market=i, timing='x' * 1600) for i in range(128)]
+            panel['metrics']['delivery_trace'] = samples
+            original['metrics'][panel['provider']]['delivery_trace'] = samples
+
+        report = RuntimeState().snapshot(service)['status']
+        self.assertEqual(report['quota'], original['quota'])
+        self.assertEqual(report['coverage'], original['coverage'])
+        for i, panel in enumerate(report['sources']):
+            samples = original['sources'][i]['metrics']['delivery_trace']
+            self.assertEqual(len(samples), 128)
+            self.assertEqual(panel['metrics']['delivery_trace'], samples[-16:])
+            self.assertEqual(report['status_retention']['delivery_samples'][panel['provider']],
+                             dict(available=128, retained=16))
+        self.assertLessEqual(len(json.dumps(report, separators=(',', ':')).encode()), STATUS_BYTES)
+
     def test_large_subscription_roster_is_a_counted_diagnostic_not_heartbeat_payload(self):
         from collections import Counter
         actions=[dict(action='create',market_id=str(i),owner_token='x'*64) for i in range(6000)]

@@ -1,5 +1,9 @@
 # Approved Predict interface — November 3, 2026
 
+## Current planning authority — November 4, 2026
+
+The owner has since selected grouped book rows, after-fee outcome ranking, an automatically updating list and a pinned math drawer. See [November 4 decisions](live-comparison-plan-20261104.md). Keep this approved November 3 record as historical evidence. The requested new visual polish is a proposal, not a retroactive change to this approval.
+
 ## Decision and next owner
 
 The owner approved the revised navy/teal, Manrope design after reviewing its

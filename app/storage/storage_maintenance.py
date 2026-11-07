@@ -10,6 +10,7 @@ from psycopg.errors import LockNotAvailable
 from psycopg.pq import TransactionStatus
 from app.collection.current_storage_policy import SQL_BYTE_CAP, sql_usage, require_disk_space
 from .store import ROOT
+from time import monotonic
 
 LOCK = 120046
 PRESSURE_BYTES = SQL_BYTE_CAP * 3 // 5
@@ -20,12 +21,22 @@ REWRITE_RUNWAY_BYTES = 64 * 1024 * 1024
 TRANSIENT_REWRITE_BYTES = 512 * 1024 * 1024
 # Rewrites preserve every live row, including immutable Original packets.
 # Account and journal tables are outside this maintenance owner.
-COMPACT_TABLES = ('current_native_market_recovery', 'current_acquisition_image',
-    'current_native_depth', 'current_contract', 'current_offer', 'current_acquisition_market',
+COMPACT_TABLES = ('current_native_market_recovery', 'current_acquisition_image_parts',
+    'current_native_ladder', 'current_contract_storage', 'current_offer', 'current_acquisition_market',
     'current_acquisition_page', 'latest_board', 'latest_dashboard', 'current_grid_projection',
     'current_result_unit', 'current_native_book', 'current_native_catalog_recovery',
-    'comparison_snapshot', 'comparison_snapshot_result', 'data_runtime', 'current_grid_blob')
+    'comparison_snapshot', 'comparison_snapshot_result', 'comparison_live_read_fragment', 'data_runtime', 'current_grid_blob')
 MIN_REUSABLE_BYTES = 4 * 1024 * 1024
+HOT_TABLES = ('current_acquisition_image_parts','current_acquisition_market',
+              'current_native_ladder','current_native_book','current_offer')
+CAPTURE_WAIT_SECONDS = 10
+REWRITE_TURN_SECONDS = 5
+# A completed copy measures irreducible page/TOAST slack. Do not keep copying
+# that same slack: require another bounded unit of growth/reusable space first.
+# This is process-local advice only; a changed relfilenode invalidates it.
+_rewrite_floor = {}
+_last_collecting_candidate = {}
+REWRITE_FLOORS = 128
 
 
 def maintain(db, *, compact=True, collecting=False):
@@ -40,7 +51,7 @@ def maintain(db, *, compact=True, collecting=False):
     try:
         db.execute("SET lock_timeout='1s'")
         db.execute("SET statement_timeout='60s'")
-        if db.execute("SELECT to_regclass('public.comparison_snapshot_review') r").fetchone()['r']:
+        if db.execute("SELECT to_regclass('public.comparison_live_lease') r").fetchone()['r']:
             from .comparison_snapshot import prune as prune_snapshots
             prune_snapshots(db)
         with db.transaction():
@@ -56,17 +67,55 @@ def maintain(db, *, compact=True, collecting=False):
             if db.execute("SELECT to_regclass('public.current_result_work') r").fetchone()['r']:
                 from .result_inventory import prune as prune_inventory
                 prune_inventory(db)
+        if collecting and result['before_bytes'] >= PRESSURE_BYTES:
+            # Full-scope native replacement can consume the remaining runway
+            # before the server's default minute autovacuum wake-up. Recycle
+            # dead working pages in place; no live evidence is deleted and no
+            # temporary relation copy competes with ongoing acquisition.
+            for table in HOT_TABLES:
+                db.execute(sql.SQL('VACUUM {}').format(sql.Identifier(table)))
         # Retention is committed even if reclamation fails or publication rejects.
         # A capture and a FULL rewrite must not spend the same runway.
-        capture_lock = compact and sql_usage(db) >= PRESSURE_BYTES and db.execute(
-            'SELECT pg_try_advisory_lock(901153) held').fetchone()['held']
+        if compact and sql_usage(db) >= PRESSURE_BYTES:
+            if collecting:
+                # Continuous bounded publication turns leave almost no idle
+                # lock gap. Queue a bounded request so reclamation receives a
+                # turn instead of repeatedly missing a non-waiting probe.
+                started=monotonic()
+                db.execute("SELECT set_config('lock_timeout',%s,false)",(str(CAPTURE_WAIT_SECONDS)+'s',))
+                try:
+                    db.execute('SELECT pg_advisory_lock(901153)')
+                    capture_lock=True
+                except LockNotAvailable:result['state']='busy'
+                finally:db.execute("SET lock_timeout='1s'")
+                result['capture_lock_wait_seconds']=round(monotonic()-started,6)
+            else:capture_lock=db.execute('SELECT pg_try_advisory_lock(901153) held').fetchone()['held']
+            result['capture_lock_acquired']=capture_lock
         if capture_lock:
+            rewrite_started=monotonic()
             ext = db.execute("SELECT n.nspname AS schema FROM pg_extension e JOIN pg_namespace n ON n.oid=e.extnamespace WHERE e.extname='pgstattuple'").fetchone()
             if ext:
-                candidates = db.execute('''SELECT oid,relname,reltoastrelid,pg_total_relation_size(oid) bytes
-                    FROM pg_class WHERE relnamespace='public'::regnamespace AND relname=ANY(%s)
-                    ORDER BY pg_total_relation_size(oid)''', (list(COMPACT_TABLES),)).fetchall()
-                for row in candidates:
+                candidates = db.execute('''SELECT c.oid,c.relname,c.relfilenode,c.reltoastrelid,COALESCE(parent.relname,c.relname) owner,pg_total_relation_size(c.oid) bytes,
+                    COALESCE(f.members,1) partition_count
+                    FROM pg_class c LEFT JOIN pg_inherits own ON own.inhrelid=c.oid
+                    LEFT JOIN pg_class parent ON parent.oid=own.inhparent
+                    LEFT JOIN (SELECT inhparent,count(*) members FROM pg_inherits GROUP BY inhparent) f ON f.inhparent=own.inhparent
+                    WHERE c.relnamespace='public'::regnamespace AND c.relkind='r'
+                    AND (c.relname=ANY(%s) OR EXISTS(SELECT 1 FROM pg_inherits i JOIN pg_class p ON p.oid=i.inhparent
+                      WHERE i.inhrelid=c.oid AND p.relnamespace='public'::regnamespace AND p.relname=ANY(%s)))
+                    ORDER BY pg_total_relation_size(c.oid)''', (list(COMPACT_TABLES),list(COMPACT_TABLES))).fetchall()
+                if collecting and candidates:
+                    last=_last_collecting_candidate.get(db.info.dbname)
+                    index=next((i+1 for i,r in enumerate(candidates) if r['oid']==last),0)
+                    candidates=candidates[index:]+candidates[:index]
+                for index,row in enumerate(candidates):
+                    if collecting:
+                        if index and monotonic()-rewrite_started>=REWRITE_TURN_SECONDS:
+                            result['continue_compaction']=True
+                            break
+                        _last_collecting_candidate[db.info.dbname]=row['oid']
+                        if len(_last_collecting_candidate)>8:
+                            _last_collecting_candidate.pop(next(iter(_last_collecting_candidate)))
                     if sql_usage(db) < PRESSURE_BYTES:break
                     free = 0
                     heap_bytes = 0
@@ -75,7 +124,25 @@ def maintain(db, *, compact=True, collecting=False):
                             facts = db.execute(sql.SQL('SELECT * FROM {}.pgstattuple(%s::regclass)').format(sql.Identifier(ext['schema'])), (str(oid),)).fetchone()
                             free += facts['free_space'] + facts['dead_tuple_len']
                             heap_bytes += facts['table_len']
-                    if free < MIN_REUSABLE_BYTES or free < heap_bytes // (4 if collecting else 12):continue
+                    # Splitting one owner must not multiply its unreclaimed-space
+                    # budget by the number of children. Keep the same logical
+                    # owner's minimum while bounding each physical copy.
+                    reclaim_unit=max(1,MIN_REUSABLE_BYTES//row['partition_count'])
+                    # Recovery changes in complete catalog bursts. Its cold partitions
+                    # can each strand several MB below the hot-owner 25% bar.
+                    # The installed image/contract/offer owners stranded tens of
+                    # MB between 12.5% and 25% while their admissions waited.
+                    divisor=12
+                    if collecting and row['owner']!='current_native_market_recovery':
+                        divisor=8 if row['owner'] in ('current_acquisition_image_parts','current_contract_storage','current_offer') else 4
+                    if free < reclaim_unit or free < heap_bytes // divisor:continue
+                    floor_key=(db.info.dbname,row['oid'])
+                    floor=_rewrite_floor.get(floor_key)
+                    if (floor and floor['node']==row['relfilenode']
+                            and row['bytes']-floor['bytes']<reclaim_unit
+                            and free-floor['free']<reclaim_unit):
+                        result.setdefault('unchanged_rewrite_floor',[]).append(row['relname'])
+                        continue
                     # Old relation + replacement + indexes/WAL runway; host floor
                     # remains separate from the unchanged application SQL cap.
                     # Requiring the temporary copy to fit the operating cap
@@ -99,7 +166,30 @@ def maintain(db, *, compact=True, collecting=False):
                         continue
                     after = db.execute('SELECT pg_total_relation_size(%s::regclass) n', (str(row['oid']),)).fetchone()['n']
                     result['rewrites'].append(dict(table=row['relname'],before_bytes=row['bytes'],after_bytes=after,measured_reusable_bytes=free,
-                        transient_peak_bound_bytes=peak_bound,operating_cap_bytes=SQL_BYTE_CAP))
+                        transient_peak_bound_bytes=peak_bound,operating_cap_bytes=SQL_BYTE_CAP,minimum_reclaim_bytes=reclaim_unit))
+                    _rewrite_floor.pop(floor_key,None)
+                    if row['bytes']-after<reclaim_unit:
+                        current=db.execute('SELECT relfilenode,reltoastrelid FROM pg_class WHERE oid=%s',(row['oid'],)).fetchone()
+                        remaining=0
+                        for oid in (row['oid'],current['reltoastrelid']):
+                            if oid:
+                                facts=db.execute(sql.SQL('SELECT * FROM {}.pgstattuple(%s::regclass)').format(sql.Identifier(ext['schema'])),(str(oid),)).fetchone()
+                                # Dead tuples can become reclaimable when an
+                                # older reader finishes without any growth.
+                                # Only already-empty page slack forms the floor.
+                                remaining+=facts['free_space']
+                        _rewrite_floor[floor_key]=dict(node=current['relfilenode'],bytes=after,free=remaining)
+                        while len(_rewrite_floor)>REWRITE_FLOORS:_rewrite_floor.pop(next(iter(_rewrite_floor)))
+                    if collecting and monotonic()-rewrite_started>=REWRITE_TURN_SECONDS:
+                        # Yield between rewrites on a bounded time budget. A
+                        # single small status-table rewrite must not monopolize
+                        # every tick while larger reclaimable relations wait.
+                        # Each individual SQL operation retains its timeout.
+                        result['continue_compaction']=sql_usage(db)>=PRESSURE_BYTES
+                        break
+        if db.execute("SELECT to_regclass('public.current_native_market_recovery') r").fetchone()['r']:
+            from .recovery_codec import repack
+            result['recovery_repack']=repack(db)
         result['after_bytes'] = sql_usage(db)
         return result
     finally:

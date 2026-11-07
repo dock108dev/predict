@@ -109,6 +109,11 @@ class RuntimeClient:
             raise SelectionError(503, 'data_runtime_unavailable',
                                  'Background data runtime did not accept the control. Inspect its status.') from None
         deadline = time.monotonic() + COMMAND_SECONDS + 1
+        if action=='refresh':
+            from .current_aggregate_policy import POLICY
+            # Submission expires promptly if the owner never dispatches it.
+            # After dispatch, the serial sport requests may each use a transport window.
+            deadline += POLICY.timeout_seconds * (1 + POLICY.shared_batches_per_cycle)
         while time.monotonic() < deadline:
             try:
                 result = await asyncio.to_thread(self.state.result, identity)
@@ -122,7 +127,7 @@ class RuntimeClient:
                     raise SelectionError(409, ack.get('error', 'data_runtime_control_failed'),
                                          ack.get('reason', 'The owning data runtime rejected this control.'))
                 return ack
-            await asyncio.sleep(.1)
+            await asyncio.sleep(.5 if action=='refresh' else .1)
         raise SelectionError(503, 'data_runtime_control_timeout',
                              'The owning data runtime did not acknowledge this control; inspect status before retrying.')
 

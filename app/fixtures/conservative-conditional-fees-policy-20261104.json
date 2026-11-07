@@ -1,0 +1,10 @@
+{
+  "version": "owner-conservative-trade-fees-1",
+  "enabled_at": "2026-11-04T22:54:49.775389+00:00",
+  "authorization": "November 4 owner response requests estimates erring on the high side using supplied Kalshi standard schedule and ProphetX site 2% net-gains schedule.",
+  "normal_claim_usd": "1",
+  "fill_count": 1,
+  "kalshi": "maximum exchange charge across documented direct and non-direct rounding grids; intermediary charges excluded and unbound",
+  "prophetx": "public-site single-position market, 2% positive gains, assumed cent-ceiling commission; separately negotiated API fees unbound",
+  "rank_with_verified_fees": false
+}

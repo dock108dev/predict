@@ -72,15 +72,23 @@ class Store:
     def __init__(self, connection):
         self.db=connection;self.tree_cache=OrderedDict();self.tree_cache_bytes=0;self.precompiled={};self.precompiled_written=None
 
-    def migrate(self):
+    def migrate(self, *, through=None):
+        migrations=sorted((Path(__file__).parent/'migrations').glob('*.sql'))
+        if through is not None and through not in {p.name for p in migrations}:
+            raise ValueError('unknown migration boundary')
         with self.db.transaction():
             self.db.execute('SELECT pg_advisory_xact_lock(120012)')
             self.db.execute('CREATE TABLE IF NOT EXISTS schema_migration(version text PRIMARY KEY, sha256 text NOT NULL)')
-            for p in sorted((Path(__file__).parent/'migrations').glob('*.sql')):
+            for p in migrations:
                 h=sha256(p.read_bytes()).hexdigest()
                 old=self.db.execute('SELECT sha256 FROM schema_migration WHERE version=%s',(p.name,)).fetchone()
                 if old:
                     if old['sha256']!=h: raise ValueError('applied migration changed')
+                elif through is not None and p.name>through:
+                    # Explicit offline upgrades can commit bounded replacement
+                    # stages, releasing old physical files before the next copy.
+                    # Default startup still applies all pending migrations atomically.
+                    continue
                 else:
                     self.db.execute(p.read_text())
                     self.db.execute('INSERT INTO schema_migration VALUES (%s,%s)',(p.name,h))

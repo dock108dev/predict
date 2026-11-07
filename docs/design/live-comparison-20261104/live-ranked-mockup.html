@@ -1,0 +1,149 @@
+<style>
+#predict-live{color-scheme:light dark;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;--paper:light-dark(#ffffff,#162634);--bg:light-dark(#f4f6f9,#101c28);--ink:light-dark(#182d43,#edf4fa);--soft:light-dark(#4d6075,#b6c6d6);--line:light-dark(#d9e0e8,#3b4c60);--tint:light-dark(#edf5f2,#1b3634);--accent:light-dark(#2255b5,#aac8ff);--profit:light-dark(#08654a,#94ddbf);--notice:light-dark(#fff6e3,#3e3321);--notice-ink:light-dark(#765012,#f0cf93);--pad:11px;color:var(--ink)}
+#predict-live *{box-sizing:border-box}
+#predict-live .demo{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px;padding-right:90px;font-size:12px;color:var(--soft)}
+#predict-live button{font:600 12px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;padding:8px 11px;border:1px solid var(--line);border-radius:6px;background:var(--paper);color:var(--accent);cursor:pointer}
+#predict-live button:disabled{opacity:.5;cursor:default}
+#predict-live .main-button{background:var(--accent);color:light-dark(#ffffff,#12243d);border-color:transparent}
+#predict-live .window{background:var(--bg);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+#predict-live .chrome{display:flex;gap:28px;align-items:center;background:light-dark(#102f43,#091c27);color:#eefbff;padding:18px 22px}
+#predict-live .brand{font-size:23px;font-weight:800;letter-spacing:-1px}
+#predict-live .nav{font-size:13px;font-weight:650}
+#predict-live .format{margin-left:auto;color:#b9d8e4;font-size:11px}
+#predict-live .heading{padding:20px 22px 14px;display:flex;gap:12px;justify-content:space-between;flex-wrap:wrap;align-items:center}
+#predict-live h1{font-size:26px;letter-spacing:-.7px;line-height:1.25;margin:0 0 5px}
+#predict-live .small{font-size:11px;color:var(--soft);line-height:1.5}
+#predict-live .status{font-size:12px;color:var(--profit)}
+#predict-live .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:currentColor;margin-right:6px}
+#predict-live .workspace{display:grid;grid-template-columns:minmax(0,1fr) 345px;align-items:start;border-top:1px solid var(--line)}
+#predict-live .workspace.closed{grid-template-columns:minmax(0,1fr)}
+#predict-live .list-wrap{padding:16px;min-width:0}
+#predict-live .list-header{font-size:11px;color:var(--soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+#predict-live .list{display:grid;gap:14px}
+#predict-live .outcome{background:var(--paper);border:1px solid var(--line);border-radius:9px;overflow:hidden;min-width:0}
+#predict-live .outcome-head{padding:13px 14px 11px;display:flex;gap:10px;align-items:start}
+#predict-live .rank{color:var(--soft);font-size:15px;font-weight:650;min-width:19px;padding-top:2px}
+#predict-live .outcome-head h2{font-size:16px;margin:3px 0 0;line-height:1.35;font-weight:750}
+#predict-live .outcome-head .math{margin-left:auto;white-space:nowrap;font-size:11px;padding:6px 8px}
+#predict-live table{width:100%;border-collapse:collapse;font-size:12px;line-height:1.4}
+#predict-live th{font-size:11px;font-weight:550;color:var(--soft);padding:8px 10px;background:var(--bg);border-block:1px solid var(--line);text-align:right}
+#predict-live td{padding:var(--pad) 10px;border-bottom:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums;vertical-align:middle}
+#predict-live tr:last-child td{border-bottom:0}
+#predict-live td:first-child,#predict-live th:first-child{text-align:left}
+#predict-live td strong{font-weight:750;font-size:14px;white-space:nowrap}
+#predict-live .sets-rank{background:var(--tint)}
+#predict-live .sets-rank td:first-child{box-shadow:inset 3px 0 var(--accent)}
+#predict-live .source{font-weight:650;font-size:12px}
+#predict-live .gain{color:var(--profit)}
+#predict-live .negative{color:light-dark(#a54237,#f2aa9b)}
+#predict-live .tiny{display:block;font-size:11px;color:var(--soft);font-weight:400}
+#predict-live .reference{padding:10px 14px;font-size:11px;border-top:1px solid var(--line);color:var(--soft);display:flex;gap:5px 13px;flex-wrap:wrap}
+#predict-live .reference b{color:var(--ink);font-weight:650}
+#predict-live .drawer{background:var(--paper);border-left:1px solid var(--line);padding:18px;min-width:0;align-self:stretch}
+#predict-live .drawer[hidden]{display:none}
+#predict-live .drawer-head{display:flex;justify-content:space-between;gap:8px;align-items:center}
+#predict-live h3{margin:0;font-size:17px;font-weight:750}
+#predict-live .selection{font-size:14px;font-weight:650;line-height:1.45;margin:16px 0 3px}
+#predict-live .notice{margin:16px 0;background:var(--notice);color:var(--notice-ink);border:1px solid color-mix(in srgb,var(--notice-ink) 25%,transparent);border-radius:8px;padding:12px}
+#predict-live .notice strong{font-size:13px}
+#predict-live .notice p{font-size:12px;line-height:1.5;margin:6px 0 10px}
+#predict-live .notice .change{display:flex;justify-content:space-between;gap:8px;font-size:12px;margin:6px 0;font-variant-numeric:tabular-nums}
+#predict-live .notice button{width:100%;margin-top:9px}
+#predict-live .notice .keep{margin:9px 0 0;font-size:11px}
+#predict-live .current-detail{margin:14px 0;font-size:11px;color:var(--profit)}
+#predict-live .math-grid{display:grid;grid-template-columns:1fr auto;gap:9px;font-size:12px;line-height:1.5;margin:14px 0}
+#predict-live dt{color:var(--soft)}
+#predict-live dd{margin:0;font-weight:650;text-align:right;font-variant-numeric:tabular-nums}
+#predict-live .drawer h4{font-size:12px;margin:20px 0 9px;font-weight:750}
+#predict-live .formula{font-size:12px;line-height:1.6;border-block:1px solid var(--line);padding:12px 0;margin:14px 0}
+#predict-live .drawer p.scope{font-size:11px;color:var(--soft);line-height:1.55;margin:12px 0}
+#predict-live .bottom{padding:12px 16px;font-size:11px;color:var(--soft);border-top:1px solid var(--line)}
+#predict-live .demo-state{font-size:12px;color:var(--soft);margin-top:10px;min-height:18px}
+@media(max-width:800px){#predict-live .workspace{grid-template-columns:1fr}#predict-live .drawer{grid-row:1;border-left:0;border-bottom:1px solid var(--line)}#predict-live .drawer-details{display:grid;grid-template-columns:1fr 1fr;gap:0 24px}#predict-live .notice{grid-column:1/-1}#predict-live .drawer-head,#predict-live .selection,#predict-live .detail-time{grid-column:1/-1}}
+@media(max-width:460px){#predict-live .drawer-details{display:block}#predict-live .heading{padding:16px 12px}#predict-live .list-wrap{padding:12px 8px}#predict-live .chrome{padding:14px 12px;gap:18px}#predict-live .format{display:none}#predict-live .outcome-head{padding:12px 9px;gap:6px}#predict-live .outcome-head h2{font-size:14px}#predict-live .outcome-head .math{padding:6px}#predict-live td,#predict-live th{padding-left:6px;padding-right:6px}#predict-live .source{font-size:11px}#predict-live td strong{font-size:13px}#predict-live .drawer{padding:16px}#predict-live .demo{padding-right:0}}
+@media(prefers-reduced-motion:no-preference){#predict-live .drawer{animation:predict-enter .2s ease-out}@keyframes predict-enter{from{transform:translateX(14px)}to{transform:translateX(0)}}}
+@media(pointer:coarse){#predict-live button{min-height:44px}}
+#predict-live .source-link{padding:0;border:0;background:transparent;color:var(--ink);font-size:12px;text-align:left;font-weight:650}
+#predict-live .source-link:hover{text-decoration:underline;color:var(--accent)}
+#predict-live .source-picker{display:block;font-size:11px;color:var(--soft);margin-top:12px}
+#predict-live .source-picker select{display:block;width:100%;margin-top:5px;padding:8px;border:1px solid var(--line);border-radius:6px;background:var(--paper);color:var(--ink);font:13px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+/* Visual refinement proposal, November 4: awaiting owner assessment. */
+#predict-live .window{border-radius:9px}
+#predict-live h1{font-size:27px;font-weight:700;letter-spacing:-.6px}
+#predict-live .chrome{background:light-dark(#14283e,#0b1724)}
+#predict-live .brand{font-weight:750}
+#predict-live .small,#predict-live .tiny,#predict-live .list-header,#predict-live .reference,#predict-live .bottom,#predict-live .current-detail{font-size:12px}
+#predict-live .outcome-head h2{font-weight:650;letter-spacing:-.15px}
+#predict-live table{font-size:13px}
+#predict-live th{font-size:12px;font-weight:500;background:var(--paper)}
+#predict-live td strong{font-size:15px;font-weight:650;letter-spacing:-.15px}
+#predict-live button{font-size:13px}
+#predict-live .source-link{font-size:13px;font-weight:600;color:var(--ink)}
+#predict-live .drawer h3{font-weight:650}
+#predict-live .drawer p.scope,#predict-live .source-picker{font-size:12px}
+#predict-live .math-grid{font-size:13px}
+#predict-live .notice{box-shadow:none}
+#predict-live .notice .keep{font-size:12px}
+@media(max-width:460px){#predict-live table{font-size:12px}#predict-live .source-link{font-size:12px}#predict-live td strong{font-size:14px}#predict-live .tiny{font-size:12px}#predict-live .outcome-head .math{font-size:12px}}
+</style>
+<div id="predict-live">
+<div class="demo"><span>DESIGN DEMO · Illustrative prices, reference matches & fees</span><button type="button" class="main-button" id="pl-update">Simulate price update</button><button type="button" id="pl-reset">Replay</button></div>
+<section class="window" aria-label="Predict live ranked opportunities design">
+<header class="chrome"><span class="brand">Predict.</span><span class="nav">Opportunities</span><span class="format">American odds</span></header>
+<div class="heading"><div><h1>Opportunities</h1><div class="small">All sports · Best EV after trade fees</div></div><div><div class="status"><span class="dot"></span>Updating automatically</div><div class="small" id="pl-feed">Streams connected · Next API refresh 3:45 PM</div></div></div>
+<div class="workspace" id="pl-workspace">
+<main class="list-wrap"><div class="list-header"><span>2 outcomes · All 4 sources shown</span><span id="pl-list-time">Updated 3:44:58 PM</span></div><div class="list" id="pl-list"></div></main>
+<aside class="drawer" id="pl-drawer" aria-label="Math and fees for selected price">
+<div class="drawer-head"><h3>Math &amp; fees</h3><button type="button" id="pl-close" aria-label="Close math drawer">Close</button></div>
+<div class="selection" id="pl-selection">Baltimore Ravens to win · Novig</div><div class="small detail-time" id="pl-detail-time">Viewing prices from 3:44:58 PM</div>
+<label class="source-picker">Source<select id="pl-source"><option value="novig">Novig</option><option value="prophetx">ProphetX</option><option value="kalshi">Kalshi</option><option value="polymarket_us">Polymarket US</option></select></label>
+<div id="pl-notice" class="notice" role="status" hidden><strong>New prices available</strong><p>The list has updated. Your calculation below is unchanged.</p><div class="change"><span id="pl-change-source">Novig odds</span><b id="pl-change-odds">+426 → +410</b></div><div class="change"><span>EV after fees</span><b id="pl-change-ev">+4.33% → +1.16%</b></div><button type="button" class="main-button" id="pl-adopt">Use latest prices</button><p class="keep">Keep reading to stay on these values.</p></div>
+<div class="current-detail" id="pl-current">Matches the current list</div>
+<div id="pl-math" class="drawer-details"></div>
+</aside>
+</div>
+<div class="bottom">Highlighted source sets the rank · Pinnacle matched to all 4 sources · Native fees are illustrative</div>
+</section>
+<div id="pl-demo-state" class="demo-state" aria-live="polite"></div>
+</div>
+<script>
+(()=>{
+const root=document.getElementById('predict-live'),list=document.getElementById('pl-list'),drawer=document.getElementById('pl-drawer'),workspace=document.getElementById('pl-workspace'),picker=document.getElementById('pl-source');
+const names={novig:'Novig',prophetx:'ProphetX',kalshi:'Kalshi',polymarket_us:'Polymarket US'};
+const defaults={version:2,updated:false,drawerOpen:true,selected:'ravens',source:'novig',revision:0};let state={...defaults};let lastTrigger=null;
+function restore(s){if(s?.version===2&&typeof s.updated==='boolean'&&['ravens','under'].includes(s.selected)&&names[s.source])state={...defaults,...s,revision:s.revision===1?1:0};}
+restore(window.openai?.widgetState?.privateContent);
+const groups={ravens:{title:'Baltimore Ravens to win',game:'Jaguars at Ravens',meta:'NFL · Thu 8:15 PM',reference:['Ravens +385','Jaguars −500'],prob:24/121,offered:[5.26,5.10],other:5.35,native:1/.19,market:'Full-game moneyline'},under:{title:'Under 232.5 points',game:'Hawks at Wizards',meta:'NBA · Wed 7:00 PM',reference:['Under −114.94','Over −102.04'],prob:1.98/3.85,offered:[2,2],other:1.98,native:1/.495,market:'Full-game total'}};
+const fmt=v=>v.toFixed(2),pct=v=>v==null?'—':(v>0?'+':'')+fmt(v)+'%',american=d=>{const n=d>=2?(d-1)*100:-100/(d-1);return(n>0?'+':'')+(Math.abs(n-Math.round(n))<.005?Math.round(n):fmt(n));},tone=v=>v==null?'':v>=0?'gain':'negative';
+function quote(g,source,rev){const odd=source==='novig'?g.offered[rev]:source==='prophetx'?g.other:g.native,cost=1/odd,fee=source==='kalshi'?.02:source==='polymarket_us'?.01:source==='novig'?0:null;return{odd,cost,fee,risk:fee==null?null:cost+fee,before:100*(g.prob/cost-1),after:fee==null?null:100*(g.prob/(cost+fee)-1)};}
+function ranked(g,rev){return Object.keys(names).map(source=>({source,...quote(g,source,rev)})).filter(q=>q.after!=null).sort((a,b)=>b.after-a.after)[0];}
+function pending(){if(!state.updated||state.revision===1)return false;return quote(groups[state.selected],state.source,0).odd!==quote(groups[state.selected],state.source,1).odd;}
+function save(){window.openai?.setWidgetState?.({modelContent:{design:'All four sources use matched Pinnacle references; illustrative native fees',selectedSource:names[state.source],stage:state.updated?'Price update received':'Before update',drawerUsesLatest:!pending()},privateContent:state})?.catch(()=>{});}
+function row(id,source,q,best){return `<tr class="${best?'sets-rank':''}"><td><button type="button" class="source-link" data-open="${id}" data-source="${source}" aria-label="${names[source]} math and Pinnacle reference for ${groups[id].title}">${names[source]}</button>${best?'<span class="tiny">Best after-fee EV</span>':''}</td><td><strong>${american(q.odd)}</strong></td><td><strong class="${tone(q.before)}">${pct(q.before)}</strong></td><td><strong class="${tone(q.after)}">${pct(q.after)}</strong>${q.after==null?'<span class="tiny">Fee unknown</span>':''}</td></tr>`;}
+for(const [id,g]of Object.entries(groups)){const article=document.createElement('article');article.className='outcome';article.dataset.outcome=id;article.innerHTML=`<header class="outcome-head"><span class="rank"></span><div><div class="small">${g.game}</div><h2>${g.title}</h2><div class="small">${g.meta}</div></div><button type="button" class="math" data-open="${id}" aria-label="Math and fees for ${g.title}">Math &amp; fees</button></header><table aria-label="${g.title} by source"><thead><tr><th>Source</th><th>Odds</th><th>EV before fees</th><th>EV after fees</th></tr></thead><tbody></tbody></table><div class="reference"><b>Pinnacle · reference for all 4 sources</b><span>${g.reference[0]}</span><span>${g.reference[1]}</span></div>`;list.append(article);}
+function render(animate=false){
+const rev=state.updated?1:0,positions=new Map([...list.children].map(n=>[n.dataset.outcome,n.getBoundingClientRect().top]));
+const sorted=Object.keys(groups).sort((a,b)=>ranked(groups[b],rev).after-ranked(groups[a],rev).after);
+for(const [i,id]of sorted.entries()){const g=groups[id],article=list.querySelector(`[data-outcome="${id}"]`),best=ranked(g,rev);article.querySelector('.rank').textContent=String(i+1);article.querySelector('tbody').innerHTML=['novig','prophetx','kalshi','polymarket_us'].map(source=>row(id,source,quote(g,source,rev),source===best.source)).join('');list.append(article);}
+if(animate&&!matchMedia('(prefers-reduced-motion: reduce)').matches)for(const n of list.children){const delta=positions.get(n.dataset.outcome)-n.getBoundingClientRect().top;if(delta)n.animate([{transform:`translateY(${delta}px)`},{transform:'translateY(0)'}],{duration:350,easing:'ease-out'});}
+document.getElementById('pl-list-time').textContent='Updated '+(state.updated?'3:45:12 PM':'3:44:58 PM');document.getElementById('pl-feed').textContent=state.updated?'Streams connected · API refreshed 3:45 PM · Next 4:00 PM':'Streams connected · Next API refresh 3:45 PM';
+document.getElementById('pl-update').disabled=state.updated;drawer.hidden=!state.drawerOpen;workspace.classList.toggle('closed',!state.drawerOpen);picker.value=state.source;
+const g=groups[state.selected],r=state.revision,q=quote(g,state.source,r),newQ=quote(g,state.source,1),native=['kalshi','polymarket_us'].includes(state.source),prob=g.prob*100;
+document.getElementById('pl-selection').textContent=g.title;document.getElementById('pl-detail-time').textContent='Viewing prices from '+(r===1?'3:45:12 PM':'3:44:58 PM');
+document.getElementById('pl-notice').hidden=!pending();document.getElementById('pl-current').hidden=pending();document.getElementById('pl-current').textContent=r===1?'Latest prices adopted · 3:45:12 PM':'Matches the current list';
+document.getElementById('pl-change-source').textContent=names[state.source]+' odds';document.getElementById('pl-change-odds').textContent=american(q.odd)+' → '+american(newQ.odd);document.getElementById('pl-change-ev').textContent=pct(q.after)+' → '+pct(newQ.after);
+const feeText=native?`Illustrative fee: $${fmt(q.fee)} per $1-payout contract, paid on purchase. This is a design assumption, not a verified ${names[state.source]} fee schedule.`:state.source==='novig'?'Zero trade fees assumed for this example.':'Account fee unknown. The Pinnacle reference supplies before-fee EV; after-fee EV cannot be calculated.';
+const formula=native?`($${g.prob.toFixed(5)} expected payout − $${q.cost.toFixed(3)} price − $${fmt(q.fee)} fee) ÷ $${q.risk.toFixed(3)} risk = ${pct(q.after)}`:`${fmt(prob)}% × $${fmt((q.odd-1)*100)} − ${fmt(100-prob)}% × $100 ≈ $${fmt(q.before)}`;
+const win=q.risk==null?100*(q.odd-1):100*(1/q.risk-1);
+document.getElementById('pl-math').innerHTML=`<section><h4>Selected price</h4><dl class="math-grid"><dt>Offered odds</dt><dd>${american(q.odd)}</dd>${native?`<dt>Contract price / payout</dt><dd>${fmt(q.cost*100)}¢ / $1</dd>`:''}<dt>EV before trade fees</dt><dd class="${tone(q.before)}">${pct(q.before)}</dd><dt>EV after trade fees</dt><dd class="${tone(q.after)}">${q.after==null?'Fee unknown':pct(q.after)}</dd></dl><h4>Pinnacle reference · matched</h4><p class="scope">${g.title} · ${g.market}. Same game, outcome and scoring scope in this design sample.</p><dl class="math-grid"><dt>${g.reference[0].split(' ')[0]} / ${g.reference[1].split(' ')[0]}</dt><dd>${g.reference.map(x=>x.split(' ').slice(1).join(' ')).join(' / ')}</dd><dt>Fair odds, margin removed</dt><dd>${american(1/g.prob)}</dd><dt>Decisive win probability</dt><dd>${fmt(prob)}%</dd></dl></section><section><h4>Trade fee</h4><p class="scope">${feeText}</p><h4>Per $100 ${q.risk==null?'risked before fees':'total risk, including trade fees'}</h4><dl class="math-grid"><dt>Profit on a win${q.risk==null?' before fees':''}</dt><dd>$${fmt(win)}</dd><dt>Loss on a loss</dt><dd>−$100.00</dd><dt>Expected profit after fees</dt><dd class="${tone(q.after)}">${q.after==null?'Unknown':(q.after<0?'−$':'$')+fmt(Math.abs(q.after))}</dd></dl><p class="formula">${formula}</p><p class="scope">Decisive wins and losses only. Other costs, pushes and exceptional settlement are excluded. Calculations use full precision.</p></section>`;
+}
+root.addEventListener('click',e=>{const trigger=e.target.closest('[data-open]');if(!trigger)return;lastTrigger=trigger;state.selected=trigger.dataset.open;state.source=trigger.dataset.source||ranked(groups[state.selected],state.updated?1:0).source;state.revision=state.updated?1:0;state.drawerOpen=true;render();save();picker.focus();});
+picker.onchange=()=>{state.source=picker.value;render();save();};
+document.getElementById('pl-update').onclick=()=>{state.updated=true;render(true);save();document.getElementById('pl-demo-state').textContent='Hawks–Wizards moves to #1. The list has updated; any open calculation keeps its selected values.';};
+document.getElementById('pl-adopt').onclick=()=>{state.revision=1;render();save();document.getElementById('pl-demo-state').textContent='The drawer now uses the latest prices. It stays fixed until you choose another update.';picker.focus();};
+document.getElementById('pl-close').onclick=()=>{state.drawerOpen=false;render();save();const target=lastTrigger?.isConnected?lastTrigger:list.querySelector(`[data-open="${state.selected}"]`);target?.focus();};
+document.getElementById('pl-reset').onclick=()=>{state={...defaults};render();save();document.getElementById('pl-demo-state').textContent='';};
+root.addEventListener('keydown',e=>{if(e.key==='Escape'&&state.drawerOpen)document.getElementById('pl-close').click();});window.addEventListener('openai:set_globals',e=>{restore(e.detail?.globals?.widgetState?.privateContent);render();});
+render();const settings={rowSpacing:11};if(globalThis.Tweak){const tweak=new Tweak({container:root,onChange:()=>root.style.setProperty('--pad',settings.rowSpacing+'px')});tweak.addSlider(settings,'rowSpacing',{label:'Source row spacing',min:8,max:18,step:1,unit:'px'});}
+})();
+</script>

@@ -8,6 +8,15 @@ from tests.current_fixture import fixture
 
 
 class CurrentContractTests(unittest.TestCase):
+    def test_aggregate_sport_observations_survive_current_serialization(self):
+        raw=self.raw()
+        scopes={'NBA':'aggregate_observed','NFL':'aggregate_partial_admission'}
+        raw['source_status']['novig']['observed_sports']=scopes
+        self.assertEqual(serialize(raw,allow_synthetic=True)['source_status']['novig']['observed_sports'],scopes)
+        raw['source_status']['kalshi']['observed_sports']=scopes
+        with self.assertRaisesRegex(ValueError,'Invalid aggregate sport status'):
+            serialize(raw,allow_synthetic=True)
+
     def test_repeated_large_encoding_has_bounded_resident_growth(self):
         import json,subprocess,sys
         code="""

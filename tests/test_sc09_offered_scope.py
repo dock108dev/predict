@@ -55,6 +55,33 @@ class OfferedScope(unittest.TestCase):
         self.assertEqual(after['received'],0)
         self.assertEqual(after['last_image_withdrawals'],before['received'])
 
+    def test_cell_transfers_and_backwards_clocks_match_full_latest_book_census(self):
+        from app.comparison.offered_scope import NativePriceInventory
+        from tests.test_current_service import native_fixture
+        _,book=native_fixture()
+        ledger=NativePriceInventory()
+        for market,family,clock,disposition in (
+                ('a','moneyline','12','pending'),('b','moneyline','11','rejected'),
+                ('a','moneyline','09','admitted'),('b','spread',None,'pending'),
+                ('a','spread','','admitted'),('b','spread','14','admitted')):
+            image=deepcopy(book)
+            image['raw'].update(exchange_at=clock,received_at=clock or '10')
+            image['raw']['ref']['market_id']=market
+            if clock is None:image['outcomes']=[]
+            ledger.observe('kalshi','NFL',family,image,disposition)
+            for cell in ('moneyline','spread'):
+                rows=[r for r in ledger.books.values() if r['family']==cell]
+                counts=ledger.counts('kalshi','NFL',cell)
+                self.assertEqual(counts['received'],sum(len(r['units']) for r in rows))
+                for state in ('pending','rejected','admitted'):
+                    self.assertEqual(counts[state],sum(len(r['units']) for r in rows if r['disposition']==state))
+                self.assertEqual(counts['observed_market_images'],len(rows))
+                self.assertEqual(counts['listing_only_markets'],sum(not r['units'] for r in rows))
+                self.assertEqual(counts['last_image_additions'],sum(r['added'] for r in rows))
+                self.assertEqual(counts['last_image_withdrawals'],sum(r['withdrawn'] for r in rows))
+                self.assertEqual(counts['last_source_at'],max((r['source_at'] for r in rows if r['source_at']),default=None))
+                self.assertEqual(counts['last_receipt_at'],max((r['received_at'] for r in rows),default=None))
+
     def test_batch_inventory_matches_sequential_replacement_and_counts_once(self):
         from app.comparison.coverage import CoverageLedger
         from tests.test_current_service import native_fixture

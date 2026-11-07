@@ -44,6 +44,43 @@ class CurrentRows(unittest.TestCase):
         self.db.execute('TRUNCATE current_event CASCADE');self.db.execute('TRUNCATE current_refresh_scope,current_source_status')
     def counts(self):
         return {t:self.db.execute(sql.SQL('SELECT count(*) AS n FROM {}').format(sql.Identifier(t))).fetchone()['n'] for t in ('current_event','current_contract','current_offer','current_depth','current_envelope','current_game_snapshot','current_game_result')}
+    def test_capture_shared_event_transfer_matches_join_and_keeps_records_independent(self):
+        from app.storage.current_rows import project_contract
+        rows=future_records('kalshi');self.store.upsert_records(rows)
+        original=self.db.execute('SELECT c.id,c.facts contract,e.facts event,o.facts quote,o.source_at,o.received_at '
+            'FROM current_contract c JOIN current_event e ON e.id=c.event_id JOIN current_offer o ON o.contract_id=c.id ORDER BY c.id').fetchall()
+        expected=[]
+        for row in original:
+            q=deepcopy(row['quote']);q.update(id='',revision=1)
+            q['times'].update(source_at=row['source_at'],received_at=row['received_at'])
+            q['times'].setdefault('projected_at',None)
+            expected.append(dict(project_contract(row['event'],row['contract'],row['received_at']),event=row['event'],quote=q))
+        actual=self.store.capture(include_depth=False)['records']
+        self.assertEqual(actual,expected);self.assertGreater(len(actual),1)
+        actual[0]['event']['shared_provider_ids']={'mutation':'must-not-escape'}
+        self.assertEqual(actual[1],expected[1])
+        self.assertEqual(self.store.capture(include_depth=False)['records'],expected)
+
+    def test_material_output_counts_committed_top_once_at_source_clock(self):
+        from app.storage.native_admission_metrics import MaterialRows
+        rows=future_records('kalshi')
+        for row in rows:
+            row['event']['scheduled_start']=row['market_identity']['scheduled_start']='2026-10-16T12:00:00Z'
+        def admit(batch,at):
+            metrics=MaterialRows()
+            self.store.upsert_records(batch,now=at,material_rows=metrics)
+            return metrics.counts(at)
+        at='2026-10-15T12:00:02Z'
+        first=admit(rows,at)
+        self.assertEqual((first['initial'],first['fresh_material'],first['contract_inserts']),(2,2,2))
+        advanced=deepcopy(rows)
+        for row in advanced:row['quote']['times']['received_at']='2026-10-15T12:00:40Z'
+        advanced[0]['quote']['original']['value']='0.27'
+        changed=admit(advanced+advanced,'2026-10-15T12:00:41Z')
+        self.assertEqual((changed['same'],changed['changed'],changed['material_in_window'],changed['fresh_material']),(1,1,1,0))
+        rejected=admit(rows,'2026-10-15T12:00:42Z')
+        self.assertEqual((rejected['order_refusals'],rejected['fresh_material']),(2,0))
+
     def test_repeat_receipt_only_stable_and_no_archive(self):
         rows=future_records();self.store.upsert_records(rows);before=self.store.capture();counts=self.counts()
         for i in range(10):
@@ -53,6 +90,21 @@ class CurrentRows(unittest.TestCase):
         after=self.store.capture();self.assertEqual(before['revision'],after['revision']);self.assertEqual(counts,self.counts())
         self.assertTrue(all(r['quote']['times']['source_at']=='2026-10-15T12:00:00Z' for r in after['records']))
         self.assertEqual(counts['current_envelope']+counts['current_game_snapshot']+counts['current_game_result'],0)
+
+    def test_batched_offers_preserve_decimal_clock_and_original_precision(self):
+        from app.storage.store import exact_time
+        rows=future_records('kalshi')
+        clock='2026-10-15T12:00:01.12345678901234567890Z'
+        for r in rows:
+            r['quote']['times'].update(source_at=clock,received_at=clock)
+            r['quote']['original']['value']='0.12345678901234567890'
+        self.store.upsert_records(rows)
+        offers=self.db.execute('SELECT source_order,received_order,price_value FROM current_offer').fetchall()
+        self.assertEqual(len(offers),len(rows))
+        for row in offers:
+            self.assertEqual(row['source_order'],exact_time(clock))
+            self.assertEqual(row['received_order'],exact_time(clock))
+            self.assertEqual(row['price_value'],'0.12345678901234567890')
 
     def test_large_native_batch_drains_writes_before_scope_read_barrier(self):
         original=future_records('kalshi')[0];rows=[];scopes=[]
@@ -77,13 +129,13 @@ class CurrentRows(unittest.TestCase):
             row['comparison_source_metadata']['observed_at']=row['quote']['times']['received_at']
             row['comparison_source_metadata'].setdefault('combined_native_binding',{'version':'authored'})
         self.store.upsert_records(rows)
-        before={r['id']:(r['revision'],r['position']) for r in self.db.execute('SELECT id,revision,ctid::text position FROM current_contract').fetchall()}
+        before={r['id']:(r['revision'],r['position']) for r in self.db.execute('SELECT id,revision,ctid::text position FROM current_contract_storage WHERE active').fetchall()}
         later=deepcopy(rows)
         for row in later:
             row['quote']['times']['received_at']='2026-10-15T12:00:02Z'
             row['comparison_source_metadata']['observed_at']='2026-10-15T12:00:02Z'
         self.store.upsert_records(later)
-        after={r['id']:(r['revision'],r['position']) for r in self.db.execute('SELECT id,revision,ctid::text position FROM current_contract').fetchall()}
+        after={r['id']:(r['revision'],r['position']) for r in self.db.execute('SELECT id,revision,ctid::text position FROM current_contract_storage WHERE active').fetchall()}
         self.assertEqual(before,after)
         captured=self.store.capture(include_depth=False)['records']
         self.assertTrue(captured)
@@ -92,6 +144,38 @@ class CurrentRows(unittest.TestCase):
             self.assertNotIn('observed_at_from_quote_receipt',row['comparison_source_metadata'])
         separate=deepcopy(later[0]);separate['comparison_source_metadata']['observed_at']='2026-10-15T11:30:00Z'
         self.assertEqual(prepare(separate)['contract']['comparison_source_metadata']['observed_at'],'2026-10-15T11:30:00Z')
+    def test_deferred_catalog_hides_members_and_revalidates_complete_body(self):
+        rows=future_records('kalshi')
+        self.store.upsert_records(rows)
+        before=self.db.execute('SELECT * FROM current_contract ORDER BY id').fetchall()
+        keys={(r['quote']['venue'],r['quote']['source']['native_event_id'],
+               r['quote']['source']['native_market_id']) for r in rows}
+        def inactive():
+            return self.db.execute('SELECT count(*) n FROM current_contract_storage WHERE NOT active').fetchone()['n']
+        with self.db.transaction(force_rollback=True):
+            self.store.withdraw_native_markets(keys,deferred=True)
+            self.assertEqual(inactive(),len(before))
+            self.assertEqual(self.counts()['current_contract'],0)
+            self.assertEqual(self.counts()['current_offer'],0)
+            self.assertFalse(self.store.records())
+        self.assertEqual(inactive(),0)
+        self.store.withdraw_native_markets(keys,deferred=True)
+        # Exact return bypasses all fact/dependency rewrites. A changed
+        # original with the same instrument ID takes normal readmission.
+        self.store.upsert_records(rows)
+        self.assertEqual(self.db.execute('SELECT * FROM current_contract ORDER BY id').fetchall(),before)
+        self.assertEqual(inactive(),0)
+        self.store.withdraw_native_markets(keys,deferred=True)
+        changed=deepcopy(rows[0])
+        changed['selection']['label']='Changed exact contract label'
+        self.store.upsert_records([changed])
+        self.assertEqual(inactive(),len(before)-1)
+        self.assertEqual(self.counts()['current_offer'],1)
+        self.assertEqual(self.db.execute('SELECT revision FROM current_contract').fetchone()['revision'],prepare(changed)['contract_revision'])
+        self.db.execute('DELETE FROM current_contract_storage WHERE NOT active')
+        self.assertEqual(inactive(),0)
+        self.assertEqual(self.counts()['current_contract'],1)
+
     def test_price_and_contract_changes_replace(self):
         rows=future_records();self.store.upsert_records(rows);before=self.store.capture();changed=deepcopy(rows)
         changed[0]['quote']['times'].update(source_at='2026-10-15T12:02:00Z',received_at='2026-10-15T12:02:01Z')
@@ -202,15 +286,15 @@ class CurrentRows(unittest.TestCase):
         book['raw'].update(exchange_at='2026-10-15T12:00:00Z',received_at='2026-10-15T12:00:01Z')
         return book
 
-    def test_one_native_level_update_preserves_all_other_physical_rows(self):
+    def test_native_ladder_change_mutates_one_side_and_retains_exact_rank_order(self):
         rows=future_records('polymarket_us');self.store.upsert_records(rows);book=self.native_book(rows)
         ladder=next(o['asks'] for o in book['outcomes'] if o['asks'] and o['asks']['levels'])
         ladder['levels']=[deepcopy(ladder['levels'][0]) for _ in range(3)]
         for i,level in enumerate(ladder['levels']):level['price']['value']=str((i+1)/10)
         self.store.replace_native_books([book])
         def tuples():
-            return {(r['native_outcome_id'],r['side'],r['level']):r['tuple_id'] for r in
-                self.db.execute('SELECT ctid::text AS tuple_id,* FROM current_native_depth')}
+            return {(r['native_outcome_id'],r['side']):r['tuple_id'] for r in
+                self.db.execute('SELECT ctid::text AS tuple_id,* FROM current_native_ladder')}
         before=tuples();ladder['levels'][1]['quantity']['value']='777'
         book['raw'].update(exchange_at='2026-10-15T12:01:00Z',received_at='2026-10-15T12:01:01Z')
         self.store.replace_native_books([book]);after=tuples()
@@ -219,15 +303,25 @@ class CurrentRows(unittest.TestCase):
         ladder['levels'].pop()
         book['raw'].update(exchange_at='2026-10-15T12:02:00Z',received_at='2026-10-15T12:02:01Z')
         self.store.replace_native_books([book]);shorter=tuples()
-        self.assertEqual(len(shorter),len(after)-1)
-        self.assertTrue(all(after[k]==shorter[k] for k in shorter))
+        self.assertEqual(set(shorter),set(after))
+        self.assertEqual(sum(after[k]!=shorter[k] for k in after),1)
+        # Insertion at the front used to rewrite every following rank.
+        inserted=deepcopy(ladder['levels'][0]);inserted['price']['value']='0.000000000000000001'
+        inserted['quantity']['value']='9007199254740993.00000001'
+        ladder['levels'].insert(0,inserted)
+        book['raw'].update(exchange_at='2026-10-15T12:03:00Z',received_at='2026-10-15T12:03:01Z')
+        self.store.replace_native_books([book]);shifted=tuples()
+        self.assertEqual(sum(shorter[k]!=shifted[k] for k in shorter),1)
+        self.assertEqual(self.db.execute("SELECT levels FROM current_native_ladder WHERE native_outcome_id=%s AND side='asks'",
+            (next(o['outcome_id'] for o in book['outcomes'] if o['asks'] is ladder),)).fetchone()['levels'],
+            [[v['price']['value'],v['price'].get('unit',v['price'].get('units','usd_per_contract')),v['quantity']['value'],v['quantity']['unit']] for v in ladder['levels']])
 
     def test_new_source_clock_keeps_identical_depth_rows_but_changes_revision(self):
         rows=future_records('polymarket_us');self.store.upsert_records(rows);book=self.native_book(rows)
         self.store.replace_native_books([book])
         before=self.store.capture()['revision']
         def depth():
-            return self.db.execute('SELECT ctid::text AS tuple_id,* FROM current_native_depth ORDER BY native_outcome_id,side,level').fetchall()
+            return self.db.execute('SELECT ctid::text AS tuple_id,* FROM current_native_ladder ORDER BY native_outcome_id,side').fetchall()
         stored=depth();self.assertTrue(stored)
         newer=deepcopy(book);newer['raw'].update(exchange_at='2026-10-15T12:01:00Z',received_at='2026-10-15T12:01:01Z')
         self.store.replace_native_books([newer])
@@ -240,6 +334,52 @@ class CurrentRows(unittest.TestCase):
         self.store.replace_native_books([newer]);rebuilt=depth()
         self.assertEqual(stored,rebuilt)
         self.store.replace_native_books([newer]);self.assertEqual(rebuilt,depth())
+
+    def test_ladder_rank_shift_bursts_reduce_mutations_and_reclaim_exact_storage(self):
+        import json
+        import os
+        from decimal import Decimal
+        rows=future_records('polymarket_us');self.store.upsert_records(rows);book=self.native_book(rows)
+        outcome=next(o for o in book['outcomes'] if o['asks'] and o['asks']['levels'])
+        seed=outcome['asks']['levels'][0]
+        base=[dict(price=dict(seed['price'],value=str(Decimal(i+1)/1000)),
+                   quantity=dict(seed['quantity'],value=str(Decimal(i+1)+Decimal('0.00000001')))) for i in range(256)]
+        outcome['asks']['levels']=deepcopy(base);self.store.replace_native_books([book])
+        self.db.execute('CREATE TEMP TABLE ranked_depth_burst AS SELECT * FROM current_native_depth')
+        self.db.execute('ALTER TABLE ranked_depth_burst ADD PRIMARY KEY(venue,event_id,native_market_id,native_outcome_id,side,level)')
+        def sizes():
+            return dict(ladder=self.db.execute("SELECT sum(pg_total_relation_size(relid))::bigint n FROM pg_partition_tree('current_native_ladder') WHERE isleaf").fetchone()['n'],
+                ranked=self.db.execute("SELECT pg_total_relation_size('ranked_depth_burst') n").fetchone()['n'])
+        report=[]
+        for cycle in range(3):
+            before=sizes();ranked_updates=0
+            with self.db.transaction():
+                prior_mutations=self.db.execute("SELECT sum(pg_stat_get_xact_tuples_updated(relid))::bigint n FROM pg_partition_tree('current_native_ladder') WHERE isleaf").fetchone()['n']
+                for tick in range(20):
+                    levels=deepcopy(base)
+                    if tick%2:levels.insert(0,dict(price=dict(seed['price'],value='0.000000000000000001'),
+                        quantity=dict(seed['quantity'],value='9007199254740993.000000001')))
+                    outcome['asks']['levels']=levels
+                    seconds=cycle*20+tick+1
+                    instant=(datetime(2026,10,15,12,tzinfo=timezone.utc)+timedelta(seconds=seconds)).isoformat()
+                    book['raw'].update(exchange_at=instant,received_at=instant)
+                    self.store.replace_native_books([book])
+                    self.db.execute('DELETE FROM ranked_depth_burst d WHERE NOT EXISTS (SELECT 1 FROM current_native_depth n WHERE '
+                        '(n.venue,n.event_id,n.native_market_id,n.native_outcome_id,n.side,n.level)=(d.venue,d.event_id,d.native_market_id,d.native_outcome_id,d.side,d.level))')
+                    ranked_updates+=self.db.execute('INSERT INTO ranked_depth_burst SELECT * FROM current_native_depth '
+                        'ON CONFLICT(venue,event_id,native_market_id,native_outcome_id,side,level) DO UPDATE SET '
+                        'price_value=excluded.price_value,quantity_value=excluded.quantity_value '
+                        'WHERE (ranked_depth_burst.price_value,ranked_depth_burst.quantity_value) IS DISTINCT FROM (excluded.price_value,excluded.quantity_value)').rowcount
+                    self.assertFalse(self.db.execute('SELECT EXISTS((SELECT * FROM current_native_depth EXCEPT ALL SELECT * FROM ranked_depth_burst) '
+                        'UNION ALL (SELECT * FROM ranked_depth_burst EXCEPT ALL SELECT * FROM current_native_depth)) differs').fetchone()['differs'])
+                mutations=self.db.execute("SELECT sum(pg_stat_get_xact_tuples_updated(relid))::bigint n FROM pg_partition_tree('current_native_ladder') WHERE isleaf").fetchone()['n']
+            peak=sizes()
+            self.db.execute('VACUUM (FULL,ANALYZE) current_native_ladder,ranked_depth_burst')
+            after=sizes()
+            self.assertLessEqual(mutations-prior_mutations,20);self.assertGreater(ranked_updates,4000)
+            report.append(dict(cycle=cycle,images=20,ladder_updates=mutations-prior_mutations,ranked_writes=ranked_updates,before=before,peak=peak,after=after))
+        if os.environ.get('PREDICT_CI_REPORT_ROOT'):
+            Path(os.environ['PREDICT_CI_REPORT_ROOT'],'depth-bursts.json').write_text(json.dumps(report,indent=2))
 
     def test_native_ordered_receipt_only_older_unknown_and_conflict_rollback(self):
         rows=future_records('polymarket_us');self.store.upsert_records(rows);book=self.native_book(rows)
@@ -267,6 +407,31 @@ class CurrentRows(unittest.TestCase):
         self.store.upsert_records(rows)
         self.assertEqual(len(self.store.records()),2);self.assertTrue(any(r['quote'].get('depth') for r in self.store.records()))
 
+    def test_mixed_ladder_packet_preserves_duplicate_empty_and_terminal_order(self):
+        rows=future_records('polymarket_us')
+        self.store.upsert_records(rows)
+        first=self.native_book(rows)
+        peer=deepcopy(first)
+        peer['raw']['ref']['market_id']+='-peer'
+        reduced=deepcopy(first)
+        reduced['raw'].update(exchange_at='2026-10-15T12:10:00Z',received_at='2026-10-15T12:10:01Z')
+        for outcome in reduced['outcomes']:outcome['asks']=None
+        closed=deepcopy(peer)
+        closed.update(state='closed')
+        closed['raw'].update(exchange_at='2026-10-15T12:11:00Z',received_at='2026-10-15T12:11:01Z')
+        arrivals=[first,peer,reduced,closed]
+        def snapshot():
+            return [self.db.execute('SELECT * FROM '+table+' ORDER BY '+order).fetchall() for table,order in (
+                ('current_native_book','venue,event_id,native_market_id'),
+                ('current_native_ladder','venue,event_id,native_market_id,native_outcome_id,side'))]
+        with self.db.transaction(force_rollback=True):
+            for book in arrivals:self.store.replace_native_books([book])
+            expected=snapshot()
+        self.store.replace_native_books(arrivals)
+        self.assertEqual(snapshot(),expected)
+        self.assertEqual(len(expected[0]),1)
+        self.assertTrue(all(row['side']=='bids' for row in expected[1]))
+
     def test_batched_native_depth_preserves_every_level_and_clock(self):
         from decimal import Decimal
         rows=future_records('polymarket_us');self.store.upsert_records(rows)
@@ -292,13 +457,13 @@ class CurrentRows(unittest.TestCase):
         changed=deepcopy(book);changed['raw'].update(exchange_at='2026-10-15T12:10:00Z',received_at='2026-10-15T12:10:01Z')
         ladder=next(o['asks'] for o in changed['outcomes'] if o['asks'] and o['asks']['levels'])
         level=deepcopy(ladder['levels'][0]);ladder['levels']=[deepcopy(level) for _ in range(260)];ladder['levels'][-1]['quantity']['value']='123.456789'
-        self.db.execute("ALTER TABLE current_native_depth ADD CONSTRAINT authored_pipeline_late_failure CHECK(quantity_value<>'123.456789')")
+        self.db.execute("ALTER TABLE current_native_ladder ADD CONSTRAINT authored_pipeline_late_failure CHECK(levels::text NOT LIKE '%123.456789%')")
         try:
             with self.assertRaises(CheckViolation):
                 with transaction(self.db):self.store.replace_native_books([changed])
             self.assertEqual(events,[]);self.assertEqual(before,self.store.capture())
         finally:
-            close();self.db.execute('ALTER TABLE current_native_depth DROP CONSTRAINT authored_pipeline_late_failure')
+            close();self.db.execute('ALTER TABLE current_native_ladder DROP CONSTRAINT authored_pipeline_late_failure')
 
     def test_nested_transaction_publishes_only_after_outer_commit_and_never_rollback(self):
         from app.storage.scanner_publication import subscribe,transaction

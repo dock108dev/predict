@@ -1,0 +1,13 @@
+{
+  "version": "prophetx-public-site-conditional-20261104-review-1",
+  "source_url": "https://www.prophetx.co/lobby/t-c/trading-fees",
+  "path": "app/fixtures/prophetx-fees-review-20261104.md",
+  "sha256": "7f9a9055586471522edc3f2592bccc5669c20fac23649d5c40469ed759c83e6f",
+  "fee_rate": "0.02",
+  "reviewed_at": "2026-11-04T22:54:49.775389+00:00",
+  "review_before": "2026-11-05T22:54:49.775389+00:00",
+  "published_version": "1.3",
+  "published_effective_date": "2026-10-12",
+  "applicability": "Public-site straight trades only; positive net market gains. Not API/account authority.",
+  "review_window_basis": "Prospective daily engineering review, not a source promise."
+}

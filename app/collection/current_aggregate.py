@@ -197,6 +197,10 @@ class AggregateScheduler:
                 continue
             scoped='; '.join(scope+': '+values[venue]['reason'] for scope,values in self.sport_states.items())
             states[venue]=dict(state=state,reason_code=code,reason=reason+(' '+scoped if scoped else ''),next_due_at=due)
+        if state=='budget_delayed' and self.sport_states:
+            for venue in ('novig','prophetx'):
+                states[venue]['observed_sports']={scope:v[venue]['reason_code'] for scope,v in self.sport_states.items()}
+            states['novig']['reference_sports']={scope:v['pinnacle']['reason_code'] for scope,v in self.sport_states.items()}
         if states==svc.states:return
         (yield (svc.row('source_health','the_odds_api',state=state), states))
         svc.states=states
@@ -350,12 +354,9 @@ class AggregateScheduler:
             self.metrics['manual_scope']=list(sports)
             self.metrics['manual_refresh_id']=identity
             try:
-                responses=[]
+                errors=[]
                 for sport,request in zip(sports,requests):
                     response=await self.dispatch(request,POLICY.credits_per_batch)
-                    responses.append((sport,response))
-                errors=[]
-                for sport,response in responses:
                     try:await call(self.service, self.admit_response, response, sport)
                     except QuotaStop as exc:errors.append(exc)
                 if errors:raise errors[0]
@@ -454,21 +455,25 @@ class AggregateScheduler:
         self.metrics.setdefault('unsupported_market_exclusions',{})[sport]=exclusions
         batches,rejected=admit_venues(response['body'],sport,response['received_at'],frame=frame,include_reference=True)
         records=[r for venue,batch in batches.items() if venue!='pinnacle' for r in batch]
-        for venue in ('novig','prophetx'):
-            exists=any(r['quote']['venue']==venue for r in records)
-            states[venue]=dict(state='budget_delayed' if exists else 'unavailable' if venue in rejected else 'not_offered',
+        latest={}
+        for venue in ('novig','prophetx','pinnacle'):
+            exists=bool(batches.get(venue))
+            latest[venue]=dict(state='budget_delayed' if exists else 'unavailable' if venue in rejected else 'not_offered',
                 reason_code='aggregate_partial_admission' if exists and venue in rejected else rejected[venue] if venue in rejected else 'aggregate_observed' if exists else 'aggregate_offering_unobserved',
                 reason='Independent valid markets admitted; rejected markets: '+rejected[venue]+'. Previous valid inputs remain inspectable.' if exists and venue in rejected else 'Response rejected: '+rejected[venue]+'. Previous valid inputs remain inspectable.' if venue in rejected else 'Shared aggregate batch received; source age and freshness eligibility remain separate.' if exists else 'No venue records observed in this sport batch.',
                 received_at=response['received_at'],next_due_at=due)
+        states.update({venue:latest[venue] for venue in ('novig','prophetx')})
         venue_states=deepcopy(states)
-        self.sport_states[sport]={venue:deepcopy(states[venue]) for venue in ('novig','prophetx')}
+        sport_states={**self.sport_states,sport:latest}
         for venue in ('novig','prophetx'):
-            observations=[(scope,values[venue]) for scope,values in self.sport_states.items()]
+            observations=[(scope,values[venue]) for scope,values in sport_states.items()]
             healthy=any(value['reason_code'] in ('aggregate_observed','aggregate_partial_admission') for _,value in observations)
             states[venue]=dict(state='budget_delayed' if healthy else states[venue]['state'],
                 reason_code='aggregate_scope_observed' if healthy else states[venue]['reason_code'],
+                observed_sports={scope:value['reason_code'] for scope,value in observations},
                 reason='Selected scope: '+', '.join(aggregate_scope(self.service.config))+'. '+ '; '.join(scope+': '+value['reason'] for scope,value in observations),
                 received_at=response['received_at'],next_due_at=due)
+        states['novig']['reference_sports']={scope:values['pinnacle']['reason_code'] for scope,values in sport_states.items()}
         self.phase='database_ingress'
         if getattr(self.service,'database',None) is not None:
             complete=[venue for venue in batches if venue not in rejected]
@@ -477,6 +482,7 @@ class AggregateScheduler:
                 records=records,complete_venues=complete,received_at=response['received_at'],raw_payload=frame.payload), states))
         else:
             (yield (dict(type='current_aggregate',source='the_odds_api',sport=sport,body=response['body'],received_at=response['received_at'],venue_states=venue_states), states))
+        self.sport_states=sport_states
         self.phase='offered_inventory'
         if hasattr(self.service,'coverage'):
             from app.comparison.coverage import aggregate_observation

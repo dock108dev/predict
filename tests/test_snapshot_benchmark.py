@@ -43,6 +43,22 @@ def inputs(qs,refs):
 
 
 class SnapshotBenchmark(TestCase):
+    def test_selection_requires_both_witnesses_from_the_bound_receipt(self):
+        from app.dashboard.snapshot_api import selected_references
+
+        refs = references()
+        quote = execution()
+        row = calculate(inputs([quote], refs))['rows'][0]
+        wanted = row['snapshot_benchmark']['ids']
+        by_id = {ref['id']: ref for ref in refs}
+        ordered = [by_id[key] for key in wanted]
+        other_receipt = deepcopy(ordered[0])
+        other_receipt['original_record']['quote']['provenance']['sha256'] = 'b' * 64
+        self.assertEqual(selected_references(row, quote, [*refs, other_receipt]), ordered)
+        for incomplete in ([ordered[0]], [other_receipt, ordered[1]],
+                           [dict(ordered[0], original_record=None), ordered[1]]):
+            self.assertEqual(selected_references(row, quote, incomplete), [])
+
     def test_exact_oriented_positive_zero_negative_and_net(self):
         refs=references();before=deepcopy(refs)
         for cost,expected in [('0.4',F(50)),('0.6',F(0)),('0.8',F(-25))]:
@@ -68,7 +84,11 @@ class SnapshotBenchmark(TestCase):
                 self.assertEqual(F(result['rows'][0]['probability']),F(3,5))
                 if family!='total':
                     self.assertIsNone(calculate(inputs([q],references()),{'scenario':'decisive_only'})['rows'][0]['probability'])
-        self.assertIsNone(calculate(inputs([execution(family='moneyline')],references('moneyline','0')))['rows'][0]['gross_return_percent'])
+        # Decisive gross is independent of the optional full-state Admin scenario.
+        row=calculate(inputs([execution(family='moneyline')],references('moneyline','0')))['rows'][0]
+        self.assertEqual(F(row['gross_return_percent']),50)
+        self.assertFalse(row['same_outcome']['supported'])
+        self.assertFalse(row['reference_calculation']['full_state_probability'])
 
     def test_incomplete_crossed_frames_and_original_evidence(self):
         refs=references()
@@ -125,7 +145,8 @@ class SnapshotBenchmark(TestCase):
         self.assertEqual(F(r['probability']),F(2,5))
         q=execution(native='no',line='136')
         r=calculate(inputs([q],references(line='136')))['rows'][0]
-        self.assertIsNone(r['probability'])
+        self.assertEqual(F(r['probability']),F(2,5))
+        self.assertIn('equality',r['snapshot_benchmark']['conditioning'])
         r=calculate(inputs([q],references(line='136')),{'scenario':'decisive_only'})['rows'][0]
         self.assertEqual(F(r['probability']),F(2,5))
 

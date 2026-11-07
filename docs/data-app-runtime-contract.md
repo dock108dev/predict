@@ -1,18 +1,24 @@
 # Independent data runtime and latest results
 
-## Comparison and collection lifecycles
+## Current ordinary publication — November 4, 2026
 
-The ordinary dashboard reads a saved comparison. Capture reads the available
-local odds and calculates a replacement. Recalculate changes the assumptions on
-those same captured inputs. Subsequent background updates leave earlier results
-and their source clocks intact. The data process owns live acquisition, Stop,
-source pauses and accounting controls. See the [snapshot architecture](architecture.md).
+The [L01 contract](engineering/live-comparison-20261104/L01-publication-contract.md)
+is implemented locally. Ordinary Opportunities reads `/api/comparison-current`
+and follows a bounded two-second notification cursor. The data process's
+`OrdinaryOwner` replaces legacy board observation/estimate loops, reusing the
+snapshot math engine and matching-component partition. It publishes source-only
+prices before optional finance and atomically replaces immutable current roots.
+Explicit historical snapshots remain readable; selected evidence uses bounded
+leases. The [inspection controller](engineering/live-comparison-20261104/L03-ranking-contract.md) keeps a selected revision pinned as the list advances.
 
-The ordinary installation uses two processes in the same main checkout and the
-existing PostgreSQL database. `app.collection.data_runtime` owns `CurrentService`,
-current-row maintenance, the shared scanner and shared Odds/EV calculations.
-`app.dashboard.opportunity_board` uses `RuntimeClient` and database result readers.
-HTTP access never starts the shared workers. No broker or extra database is used.
+The installation uses the same two processes and PostgreSQL database.
+`app.collection.data_runtime` owns `CurrentService`, maintenance, ordinary
+publication, Scanner and Coverage. `app.dashboard.opportunity_board` uses
+`RuntimeClient` and result readers. HTTP access never starts acquisition or
+financial workers. Stop/pause, accounting, source clocks and resource guards below
+remain binding. See L01 for current routes, readiness, timings and the observed
+partial currentness/coverage limitations. Legacy board loop descriptions below
+remain architectural history, not an additional ordinary publisher.
 
 ## Lifecycle and controls
 

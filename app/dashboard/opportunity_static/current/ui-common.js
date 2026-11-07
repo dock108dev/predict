@@ -35,6 +35,7 @@ const UI = (() => {
     const here=new URL(location.href);
     for(const a of document.querySelectorAll('.p-chrome a,.p-adminnav a')){
       const u=new URL(a.href);if(result)u.searchParams.set('result_id',result);
+      if(['/','/odds','/arbs'].includes(u.pathname))for(const key of ['league','search','family','game']){if(here.searchParams.get(key))u.searchParams.set(key,here.searchParams.get(key));else u.searchParams.delete(key);}
       if(u.pathname==='/admin'){
         for(const key of ['selection','selected_metric','back'])if(here.searchParams.get(key))u.searchParams.set(key,here.searchParams.get(key));
         if(here.pathname!=='/admin')u.searchParams.set('back',here.pathname+here.search);

@@ -1,5 +1,9 @@
 # Retained coverage
 
+## Current planning authority — November 4, 2026
+
+The [November 4 live-comparison plan](live-comparison-plan-20261104.md) makes ordinary automatic source-to-screen publication required product scope. Provider-wide 99% denominator and multi-hour assurance targets below remain separate follow-ons. Their deferral cannot be used to defer the normal live ranked list.
+
 Ordinary Odds links to `/current/coverage`. Its `/api/coverage` reader consumes a
 compact latest PostgreSQL publication produced by the independent data runtime.
 Page loading, local filters, sorting, cell inspection and links back to Odds never

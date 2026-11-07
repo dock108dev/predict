@@ -1,0 +1,13 @@
+{
+  "version": "polymarket-us-conditional-20261105-review",
+  "source_url": "https://docs.polymarket.us/fees.md",
+  "sha256": "296e4db4edd4b3597113733b0c8d5590668072122f1e460a50b6d6a5efeadec3",
+  "path": "app/fixtures/polymarket-us-fees-review-20261105.md",
+  "reviewed_at": "2026-11-06T04:12:09.865787+00:00",
+  "review_before": "2026-11-07T04:12:09.865787+00:00",
+  "fee_rate": "0.0695",
+  "evidence_class": "official_reviewed_trade_fee_schedule",
+  "applicability": "Standard single sports contract taker, one contract in one fill, round-half-even cents. Excludes combos, table tennis, weekly rebates and account funding. Selected native product/fee coefficient and quantity evidence must agree.",
+  "review_decision": "Standard single sports contract taker, one contract in one fill, round-half-even cents. Excludes combos, table tennis, weekly rebates and account funding. Selected native product/fee coefficient and quantity evidence must agree.",
+  "review_window_basis": "Prospective daily engineering review deadline, not a source guarantee. No historical gap filled."
+}

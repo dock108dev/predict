@@ -1,0 +1,62 @@
+/* L04 visual refinement. Proposed system body type, bundled Manrope headings. */
+:root{color-scheme:light dark}
+body{--p-bg:light-dark(#f4f6f9,#101c28);--p-panel:light-dark(#ffffff,#162634);--p-text:light-dark(#182d43,#edf4fa);--p-soft:light-dark(#4d6075,#b6c6d6);--p-line:light-dark(#d9e0e8,#3b4c60);--p-accent:light-dark(#2255b5,#aac8ff);--p-tint:light-dark(#edf3fc,#21354d);--p-profit:light-dark(#08654a,#94ddbf);--p-loss:light-dark(#a54237,#ffb5aa);--p-rank:light-dark(#edf5f2,#1b3634);--p-warm:light-dark(#fff6e3,#3e3321);--p-warn:light-dark(#765012,#f0cf93);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:.875rem;letter-spacing:0}
+body h1,body .p-brand{font-family:Manrope,-apple-system,BlinkMacSystemFont,sans-serif;font-weight:700}
+body h1{font-size:1.75rem;letter-spacing:-.6px}body h2{font-weight:600}body strong{font-weight:600}
+body .p-chrome{background:light-dark(#182d43,#0b1723);height:64px}
+body .p-nav a[aria-current=page]{border-bottom-color:#aac8ff}
+body .p-format{background:#30465e}body .p-format button{font-size:.75rem;color:#edf4fa;min-height:32px}body .p-format button[aria-pressed=true]{background:#edf3fc;color:#182d43}
+body main{padding-top:22px}body .p-heading{margin-bottom:16px}
+body .p-caption,body .p-meta,body .p-section-label,body .price-status,body .filterbar,#status{font-size:.75rem}
+body .p-action,body .p-heading .p-outline{background:var(--p-accent);color:light-dark(#fff,#12243d);border-radius:6px}
+body .p-game{font-weight:600;font-size:.875rem}body .p-tabs button{font-size:.8125rem;min-height:36px}body .p-tabs button[aria-pressed=true]{box-shadow:none;background:var(--p-tint);color:var(--p-accent)}
+body select,body input,.more-filters>div,.settings-body,.inspection,.p-market-card,.p-result-list,.admin-page section,.admin-page>details,body .p-adminnav a[aria-current=page]{background:var(--p-panel);color:var(--p-text)}
+body button:disabled{opacity:1;color:var(--p-soft);background:var(--p-bg);cursor:default}
+body :is(button,input,select,a,summary):focus-visible{outline:3px solid var(--p-accent);outline-offset:3px}
+body .p-chrome :focus-visible{outline-color:#aac8ff}
+body .comparison-list{display:grid;gap:14px}.compare-basis{font-size:.75rem;color:var(--p-soft)}
+body .compare-group{border:1px solid var(--p-line);border-radius:8px;background:var(--p-panel);overflow:hidden;margin:0;min-width:0}
+body .compare-heading{padding:12px 16px 10px}body .compare-heading h2{font-size:1rem;line-height:1.4;margin:3px 0;font-weight:600}
+body .compare-heading>.p-meta{font-size:.75rem}body .compare-note{font-size:.75rem;line-height:1.4;font-weight:400;color:var(--p-soft);margin-top:3px}
+body .compare-scroll{overflow-x:auto}body .compare-table{width:100%;min-width:0;border-collapse:collapse;table-layout:fixed}
+body .compare-table th{background:var(--p-bg);font-size:.75rem;font-weight:500;color:var(--p-soft);padding:8px 12px;text-align:right;white-space:normal}
+body .compare-table td{padding:9px 12px;vertical-align:middle;text-align:right;border-bottom:1px solid var(--p-line);overflow-wrap:anywhere}
+body .compare-table td:first-child,body .compare-table th:first-child{text-align:left;width:28%;max-width:none}
+body .compare-number{white-space:normal;font-variant-numeric:tabular-nums}body .compare-number>strong,body .compare-table .p-odds{font-size:1rem;font-weight:600;letter-spacing:0;white-space:nowrap}
+body .compare-number .compare-note{max-width:none}
+body .positive,body .compare-number .positive{color:var(--p-profit)}body .negative,body .compare-number .negative{color:var(--p-loss)}
+body .compare-table .p-why-button{font-size:.875rem;color:var(--p-accent);font-weight:600;background:none;border-radius:3px;padding:6px 0;min-height:36px;text-align:left;text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px;white-space:normal}
+body .compare-table .sets-rank{background:var(--p-rank)}body .compare-table .sets-rank td:first-child{box-shadow:inset 3px 0 var(--p-accent)}
+body .compare-references{background:var(--p-bg);border-block:1px solid var(--p-line);padding:8px 16px}
+body .compare-reference{font-size:.75rem;line-height:1.5}body .compare-reference>.compare-note{display:inline}body .compare-reference+.compare-reference{padding-top:6px;margin-top:6px}
+body .compare-ref-values{display:flex;flex-wrap:wrap;gap:3px 16px}body .compare-ref-values>span:nth-child(2){font-weight:400;margin:0}body .compare-ref-values [data-american]{font-weight:600;font-variant-numeric:tabular-nums}
+body .compare-footnote{font-size:.75rem}body .price-status{background:transparent;border:0;border-left:3px solid var(--p-line);padding:4px 10px;margin-bottom:12px}body .price-status small{font-size:.75rem}
+body .math-drawer{position:fixed;inset:0 0 0 auto;margin:0;width:min(480px,100%);height:100dvh;max-height:100dvh;max-width:100%;padding:0 20px 24px;border:0;border-left:1px solid var(--p-line);background:var(--p-panel);color:var(--p-text);box-shadow:-12px 0 40px #0002;overflow-y:auto;overscroll-behavior:contain;z-index:15;font-size:.875rem}
+.math-head{position:sticky;top:0;z-index:2;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:16px 0;background:var(--p-panel);border-bottom:1px solid var(--p-line);margin-bottom:14px}
+.math-head h2{font-size:1.125rem}.math-head button{font-size:.8125rem;min-height:40px}
+.math-source{display:flex;align-items:center;justify-content:space-between;gap:14px;font-size:.75rem}.math-source select{width:65%;font-size:.875rem}
+.math-pin{font-size:.75rem;color:var(--p-soft);margin:10px 0 16px!important}
+.math-content{display:grid;gap:16px}.math-content h3{font-size:1rem;font-weight:600}.math-content h4{font-size:.8125rem;margin:12px 0 4px}
+.math-price{display:flex;justify-content:space-between;align-items:baseline;gap:12px;border-bottom:1px solid var(--p-line);padding-bottom:12px}.math-price>span:first-child{font-size:.8125rem}.math-price .p-odds{font-size:1.5rem;font-weight:600}
+.math-values{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.math-values small{font-size:.75rem;color:var(--p-soft);display:block}.math-values strong{font-size:1.5rem;display:block;font-variant-numeric:tabular-nums;letter-spacing:-.3px}
+.math-section{border-top:1px solid var(--p-line);padding-top:14px;display:grid;gap:10px}.math-section p{font-size:.8125rem}.math-section .compare-references{border:0;border-radius:4px;padding:10px}
+.math-facts{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:8px 16px;margin:0;font-size:.8125rem}.math-facts dt{font-size:.75rem}.math-facts dd{font-variant-numeric:tabular-nums;text-align:right;overflow-wrap:anywhere}
+.math-state{font-size:.8125rem;background:var(--p-bg);padding:10px;border-left:3px solid var(--p-soft)}
+.math-drawer details{font-size:.8125rem}.math-drawer summary{min-height:40px;padding:9px 0;color:var(--p-accent)}.math-drawer pre{font-size:.75rem}.math-admin{font-size:.8125rem;padding:10px 0;text-decoration:underline}
+#selection-update{background:var(--p-warm);color:var(--p-warn);border:1px solid var(--p-warn);border-radius:6px;padding:12px;margin:0 0 16px;font-size:.8125rem}#selection-update strong{font-size:.875rem}.math-changes{display:grid;gap:5px;margin:8px 0}#selection-update .compare-note{color:inherit}#selection-update summary{color:inherit}#adopt-selection{background:var(--p-accent);color:light-dark(#fff,#12243d);border:0;min-height:40px}#adopt-selection:disabled{background:var(--p-panel);color:var(--p-soft)}
+@media(min-width:1100px){body:has(.math-drawer) main{margin-right:480px;padding-inline:24px}body:has(.math-drawer) .filterbar{align-items:start}}
+@media(max-width:680px){body .p-chrome{height:auto;display:grid;padding:12px 16px 0;gap:8px}body main{padding:18px 16px}body .p-search{width:100%}body .p-section-label{line-height:1.5}body .compare-heading{padding:10px 12px}body .compare-table th,body .compare-table td{padding:8px}body .compare-references{padding:8px 12px}.filterbar label{flex-wrap:wrap}.filterbar select{max-width:100%}}
+@media(max-width:520px){body .compare-table{display:table}body .compare-table thead{display:table-header-group}body .compare-table tbody{display:table-row-group}body .compare-table tr{display:table-row;padding:0;border:0}body .compare-table td,body .compare-table th{display:table-cell;font-size:.75rem;padding:8px 6px}body .compare-table td:before{display:none!important}body .compare-table td:first-child,body .compare-table th:first-child{width:28%}body .compare-number>strong,body .compare-table .p-odds{font-size:.9375rem}body .compare-table .compare-note{font-size:.75rem}body .compare-table .p-why-button{font-size:.8125rem;padding:6px 0}body .compare-heading>.p-meta{font-size:.75rem}body .compare-table.pair-table{table-layout:auto;min-width:400px}body .compare-table.pair-table tr{display:table-row}body .p-heading{flex-wrap:wrap}body .p-chrome{grid-template-columns:minmax(0,1fr) auto}body .p-nav{gap:16px;font-size:.8125rem}body .p-brand{font-size:1.375rem}.math-drawer{width:100%}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
+/* Scale with text preferences; overflow stays within the comparison, not the page. */
+body .compare-table{min-width:24em}
+body .p-chrome{flex-wrap:wrap}body .p-format{flex-wrap:wrap}
+body .price-status details>p{margin:6px 0}body .price-status summary{cursor:pointer}
+@media(max-width:680px){body .p-toolbar{display:grid;grid-template-columns:minmax(0,1fr) 150px;gap:8px}body .p-tabs{gap:0}body .p-tabs button{padding:6px}body .p-search{width:100%}body .p-heading{margin-bottom:10px}body .p-caption{font-size:.75rem}}
+@media(max-width:440px){body .p-toolbar{grid-template-columns:1fr}body .p-format{max-width:180px}body .p-nav{flex-wrap:wrap}}
+.skip-link{background:var(--p-panel);color:var(--p-accent)}
+.math-drawer::backdrop{background:#08162655}
+body h1{overflow-wrap:anywhere}body .p-heading>div{min-width:0}
+body button,body input,body select{font-size:inherit}
+body .p-action,body .p-outline{font-size:.8125rem}
+@media(min-width:540px) and (max-width:680px){body .p-chrome{display:flex;min-height:64px;padding:0 16px;gap:16px}body .p-brand{font-size:1.375rem}body .p-nav{gap:12px;font-size:.8125rem}body .p-format{margin-left:auto}body .p-admin{font-size:.8125rem}body .p-heading{margin-bottom:8px}}

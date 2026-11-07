@@ -105,6 +105,13 @@ Set `PYTHON="$PWD/.venv/bin/python"` when running them directly, for example
 `PYTHON="$PWD/.venv/bin/python" node tests/test_b02_client.cjs`. The full portable
 runner selects its own Python interpreter for these child processes.
 
+For the live comparison, run `browser_tests/test_live_comparison.py` with pytest.
+Each journey writes its screenshots inside that test's temporary directory.
+The standalone fixture entry points retain their documented output directories.
+The optional `tests/test_l05_capacity_sql.py` replay needs explicit
+`L05_CAPTURE_LOAD` and `L05_LOAD_OUTPUT` paths and a disposable PostgreSQL
+cluster. Routine SQL checks use authored inputs.
+
 ### Snapshot and recovery test coverage
 
 Local selection uses the explicit modules above and the affected callers; this
@@ -188,9 +195,11 @@ The authored frontend is under `app/dashboard/opportunity_static/current/`:
   bounded scanner/selected-ticket caches, exact invalidation and temporal proof.
 - `snapshot-controller.js` owns the ordinary immutable-result lifecycle, filters,
   navigation context, paging and refresh/recalculation. `snapshot-views.js` renders
-  opportunities, market groups, Why and exact inspection. `ui-common.js` owns the
-  shared shell and persistent odds preference; `ui01.css` owns the approved layout.
-  These sources compose `stored.js` / `stored.css`; Manrope is a local font asset.
+  grouped offers and their pricing reference. `snapshot-live.js` owns the pinned
+  selection and its lease. `snapshot-drawer.js` renders Math & fees and its
+  update notice. `ui-common.js` owns the shared shell and odds preference.
+  These modules and the `ui01.css` and `live-comparison.css` styles compose the
+  shipped `stored.js` and `stored.css`.
 - `snapshot_api.py` reads/captures/recalculates results. `snapshot_display.py` projects
   display odds and $100 amounts without mutating saved records or ranking, reusing
   `u0_display.quote_display` with optional presentation precision.

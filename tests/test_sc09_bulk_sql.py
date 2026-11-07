@@ -17,9 +17,39 @@ class Checkpoints(TestCase):
     def setUp(self):
         # Every test owns independent evidence inside the disposable class DB.
         with self.connect() as db:
-            db.execute('TRUNCATE current_acquisition_page,current_acquisition_query,current_acquisition_image,'
+            db.execute('TRUNCATE current_acquisition_page,current_acquisition_query,current_acquisition_image_parts,'
                 'current_acquisition_market,current_acquisition_aggregate,current_acquisition_alternate,'
                 'current_acquisition_event_census,current_acquisition_failure,current_native_market_recovery,current_native_catalog_recovery,data_runtime')
+
+    def test_page_codec_preserves_original_receipt_restart_and_raw_reference_with_noop_retries(self):
+        import json
+        from psycopg.types.json import Jsonb
+        from app.collection.bulk_checkpoint import read_page
+        body=dict(markets=[dict(id=str(n),title='完整 original market '+str(n),
+            rules='Exact source settlement terms. '*30,quantity='9007199254740993.00001')for n in range(250)])
+        original=dict(status=200,received_at='2026-11-04T12:00:00.123456789Z',
+            body=body,json_text=json.dumps(body,ensure_ascii=False,indent=2),headers=[['date','original header']],number=10**80)
+        with patch('app.collection.bulk_checkpoint.connect',side_effect=self.connect),self.connect()as db:
+            checkpoint=Checkpoint('kalshi',{'sports':['NFL']});key,_=checkpoint.query('/markets',{})
+            ref=dict(source='kalshi',query_key=key,position=0)
+            db.execute('INSERT INTO current_acquisition_page VALUES(%s,%s,0,%s)',('kalshi',key,Jsonb(original)))
+            before=db.execute('SELECT pg_column_size(receipt) n FROM current_acquisition_page').fetchone()['n']
+            self.assertEqual(checkpoint.query('/markets',{})[1],[original])
+            checkpoint.page(key,0,original,False)
+            row=db.execute('SELECT receipt,ctid::text tuple_id,pg_column_size(receipt) n FROM current_acquisition_page').fetchone()
+            self.assertIn('_predict_storage',row['receipt']);self.assertLess(row['n'],before)
+            for _ in range(10):checkpoint.page(key,0,original,False)
+            self.assertEqual(db.execute('SELECT ctid::text tuple_id FROM current_acquisition_page').fetchone()['tuple_id'],row['tuple_id'])
+            self.assertEqual(Checkpoint('kalshi',{'sports':['NFL']}).query('/markets',{})[1],[original])
+            self.assertEqual(read_page(ref),original)
+            with self.assertRaisesRegex(ValueError,'unavailable'):read_page(dict(ref,source='polymarket_us'))
+            damaged=deepcopy(row['receipt']);damaged['_predict_storage']['sha256']='f'*64
+            db.execute('UPDATE current_acquisition_page SET receipt=%s',(Jsonb(damaged),))
+            with self.assertRaisesRegex(ValueError,'integrity'):read_page(ref)
+            db.execute('UPDATE current_acquisition_page SET receipt=%s',(Jsonb(original),))
+            self.assertEqual(read_page(ref),original)
+            checkpoint.finish();checkpoint.begin()
+            with self.assertRaisesRegex(ValueError,'unavailable'):read_page(ref)
 
     def test_reimaging_preserves_both_exact_observations_until_atomic_replacement(self):
         from app.storage.current_rows import CurrentRowStore
@@ -61,6 +91,43 @@ class Checkpoints(TestCase):
             self.assertFalse(Checkpoint('polymarket_us',{}).completed_details())
             checkpoint.finish()
             self.assertFalse(checkpoint.completed_details())
+
+    def test_packed_recovery_retains_exact_catalog_and_parsed_clocks(self):
+        from datetime import datetime,timezone,timedelta
+        from app.collection.native_recovery import save,load,decode,market_value
+        cat,book=native_fixture();cat['events'][0]['scheduled_start']=(datetime.now(timezone.utc)+timedelta(days=1)).isoformat()
+        mid=book['raw']['ref']['market_id']
+        cat['markets'][0]['title']='Exact recovery fixture'
+        cat['markets'][0]['literal_evidence']='unchanged original witness '*3000
+        value=dict(raw=dict(book['raw'],source='fixture'),title='fixture',market_type='unknown',state='active',period='full_game',canonical_id=None,
+            outcomes=[dict(native_id=o['outcome_id'],label=o['outcome_id'],canonical_id=None) for o in book['outcomes']])
+        market=decode(value,'kalshi')
+        with patch('app.collection.native_recovery.connect',side_effect=self.connect),self.connect() as db:
+            save('kalshi','scope',cat,{mid:market})
+            row=db.execute('SELECT metadata,display_metadata,receipt_fields FROM current_native_market_recovery WHERE market_id=%s',(mid,)).fetchone()
+            self.assertIn('_predict_storage',row['metadata'])
+            self.assertEqual(market_value(row['metadata'],row['receipt_fields']),cat['markets'][0])
+            self.assertEqual(row['display_metadata']['title'],cat['markets'][0]['title'])
+            restored,parsed,_=load('kalshi','scope')
+            self.assertEqual(restored,cat);self.assertEqual(parsed[mid],market)
+            self.assertEqual(parsed[mid].raw.received_at,market.raw.received_at)
+            cat['markets'][0]['literal_evidence']+=' material change'
+            save('kalshi','scope',cat,{mid:market})
+            self.assertEqual(load('kalshi','scope')[0],cat)
+
+    def test_identical_raw_checkpoint_is_no_physical_update_but_context_advances(self):
+        _,book=native_fixture();mid=book['raw']['ref']['market_id']
+        with patch('app.collection.bulk_checkpoint.connect',side_effect=self.connect),self.connect() as db:
+            save_images('kalshi',[book],'pending',contexts={mid:('owner',1,'first')})
+            def row():return db.execute('SELECT p.ctid::text tuple,i.image,i.persisted_at,i.runtime_id,i.connection_generation,i.census_generation FROM current_acquisition_image i JOIN current_acquisition_image_parts p USING(source,event_id,market_id)').fetchone()
+            before=row()
+            for _ in range(10):save_images('kalshi',[book],'pending',contexts={mid:('owner',1,'first')})
+            self.assertEqual(row(),before)
+            save_images('kalshi',[book],'pending',contexts={mid:('owner',2,'second')})
+            after=row();self.assertNotEqual(after['tuple'],before['tuple'])
+            self.assertEqual(after['image'],book)
+            self.assertEqual(after['persisted_at'],before['persisted_at'])
+            self.assertEqual(after['connection_generation'],2)
 
     def test_final_disposition_and_superseded_image_do_not_encode_depth_again(self):
         _,book=native_fixture();book['raw']['ref']['market_id']='lightweight-disposition'
@@ -303,3 +370,127 @@ class Checkpoints(TestCase):
                 self.assertEqual({r['disposition'] for r in rows},{'unusable_not_math_eligible'})
                 self.assertTrue(all(bytes(r['body']).startswith(b'<unsafe malformed>') for r in rows))
             with self.assertRaises(ValueError):save_failure('kalshi',b'x'*262145,utc(),2,'decode')
+
+    def test_split_evidence_turnover_reuses_toast_without_losing_receipts_or_provenance(self):
+        from datetime import datetime,timezone,timedelta
+        from hashlib import sha256
+        from psycopg.types.json import Jsonb
+        _,book=native_fixture();mid=book['raw']['ref']['market_id']
+        book['raw']['json_text']=''.join(sha256(str(i).encode()).hexdigest() for i in range(300))
+        book['outcomes'][0]['literal_depth']=[sha256(str(i+300).encode()).hexdigest() for i in range(300)]
+        at=datetime.now(timezone.utc)
+        with patch('app.collection.bulk_checkpoint.connect',side_effect=self.connect),self.connect() as db:
+            db.execute('CREATE TEMP TABLE whole_image(i integer PRIMARY KEY,image jsonb,disposition text)')
+            def toast(rel):
+                db.execute('SELECT pg_stat_force_next_flush()');db.execute('SELECT pg_stat_clear_snapshot()')
+                return db.execute('SELECT sum(pg_stat_get_tuples_inserted(c.reltoastrelid)) n FROM pg_class c WHERE c.oid IN (SELECT relid FROM pg_partition_tree(%s::regclass) WHERE isleaf) OR c.oid=%s::regclass',(rel,rel)).fetchone()['n']
+            first=last=None
+            for i in range(16):
+                book['raw']['received_at']=(at+timedelta(seconds=i)).isoformat()
+                book['book_confirmation']={'confirmed_at':book['raw']['received_at'],'literal':str(i)}
+                if i==8:book['outcomes'][0]['literal_depth'].reverse()
+                if i==12:book['raw']['json_text']+=' exact wire change'
+                db.execute("INSERT INTO whole_image VALUES(1,%s,'pending') ON CONFLICT(i) DO UPDATE SET image=excluded.image,disposition='pending'",(Jsonb(book),))
+                save_images('kalshi',[book],'pending',ensure_only=True)
+                save_images('kalshi',[book],'admitted',known_persisted=True)
+                # Delayed raw writer carries the generation for this exact
+                # receipt, while a conflicting same-clock callback cannot
+                # replace the finalized image or attach its different context.
+                save_images('kalshi',[book],'pending',contexts={mid:('owner',2,'census')})
+                bad=deepcopy(book);bad['raw']['json_text']+='wrong'
+                save_images('kalshi',[bad],'pending',contexts={mid:('other',3,'crossed')})
+                row=db.execute('SELECT * FROM current_acquisition_image').fetchone()
+                self.assertEqual(row['image'],book)
+                self.assertEqual((row['disposition'],row['runtime_id'],row['connection_generation'],row['census_generation']),('admitted','owner',2,'census'))
+                if last:self.assertGreater(row['persisted_at'],last)
+                last=row['persisted_at']
+                if i==0:first=[toast('current_acquisition_image_parts'),toast('whole_image')]
+            writes=[int(toast(rel)-n) for rel,n in zip(('current_acquisition_image_parts','whole_image'),first)]
+            self.assertLess(writes[0]*3,writes[1],writes)
+            print('receipt/depth/wire turnover TOAST inserts (parts,whole):',writes)
+
+    def test_recovery_complete_replacement_separates_receipts_legacy_and_retirement(self):
+        from datetime import datetime,timezone,timedelta
+        from app.collection.native_recovery import save,load,decode,encode
+        from app.storage.recovery_codec import freeze
+        from psycopg.types.json import Jsonb
+        cat,book=native_fixture();cat['events'][0]['scheduled_start']=(datetime.now(timezone.utc)+timedelta(days=1)).isoformat()
+        mid=book['raw']['ref']['market_id'];m=next(m for m in cat['markets'] if m['id']==mid)
+        m['literal']='精確 receipt body '*3000;m['provenance']=[{'receipt':'original'}]
+        old=dict(m,id='not-seen-again',inventory_recovery_disposition='suspected_absent')
+        cat['markets'].append(old)
+        value=dict(raw=dict(book['raw'],json_text='{"market":{}, "source_receipt_sha256": "first"}',source='fixture'),title='fixture',market_type='unknown',state='active',period='full_game',canonical_id=None,
+            outcomes=[dict(native_id=o['outcome_id'],label=o['outcome_id'],canonical_id=None) for o in book['outcomes']])
+        obj=decode(value,'kalshi')
+        with patch('app.collection.native_recovery.connect',side_effect=self.connect),self.connect() as db:
+            save('kalshi','scope',cat,{mid:obj})
+            db.execute('UPDATE current_native_market_recovery SET metadata=%s,receipt_fields=NULL WHERE market_id=%s',(Jsonb(freeze(old)),old['id']))
+            self.assertEqual(save('kalshi','scope',cat,{mid:obj})['writes'],0)
+            m['provenance']=[{'receipt':'new'}];value['raw']['json_text']=value['raw']['json_text'].replace('first','second')
+            value['raw']['received_at']=(datetime.now(timezone.utc)+timedelta(seconds=1)).isoformat();obj=decode(value,'kalshi')
+            r=save('kalshi','scope',cat,{mid:obj})
+            self.assertEqual((r['writes'],r['receipt_only']),(1,1))
+            restored,parsed,_=load('kalshi','scope')
+            self.assertEqual(sorted(restored['markets'],key=lambda m:m['id']),sorted(cat['markets'],key=lambda m:m['id']))
+            self.assertEqual(encode(parsed[mid]),encode(obj))
+            self.assertIsNone(db.execute('SELECT receipt_fields FROM current_native_market_recovery WHERE market_id=%s',(old['id'],)).fetchone()['receipt_fields'])
+            cat['markets'].remove(old);m['literal']+=' new catalog fact'
+            r=save('kalshi','scope',cat,{mid:obj});self.assertEqual((r['retired'],r['payload_changes']),(1,1))
+            self.assertEqual(load('kalshi','scope')[0]['markets'],cat['markets'])
+
+    def test_repeat_converted_native_catalogs_over_equal_populations(self):
+        """Opt-in real-shaped turnover in disposable SQL, including retired IDs."""
+        import json
+        import os
+        from pathlib import Path
+        from app.collection import native_recovery as recovery
+        fixture=os.environ.get('L05_CONVERTED_CATALOG')
+        if not fixture:self.skipTest('Requires bounded captured recovery population')
+        data=json.loads(Path(fixture).read_text())
+        samples=[]
+        def footprint(db):
+            query="""SELECT c.oid,c.reltoastrelid,pg_relation_size(c.oid) heap,pg_indexes_size(c.oid) indexes,
+                pg_total_relation_size(c.reltoastrelid) overflow,pg_total_relation_size(c.oid) total
+                FROM pg_class c JOIN pg_inherits i ON i.inhrelid=c.oid
+                WHERE i.inhparent='current_native_market_recovery'::regclass"""
+            parts=db.execute(query).fetchall()
+            totals={k:sum(r[k] for r in parts) for k in ('heap','indexes','overflow','total')}
+            totals['live_payload']=db.execute("""SELECT sum(pg_column_size(metadata)+coalesce(pg_column_size(parsed),0)+
+                coalesce(pg_column_size(receipt_fields),0)) n FROM current_native_market_recovery""").fetchone()['n']
+            totals['free_and_dead']=sum(db.execute('SELECT free_space+dead_tuple_len reusable FROM pgstattuple(%s::oid::regclass)',
+                (oid,)).fetchone()['reusable'] for row in parts for oid in (row['oid'],row['reltoastrelid']) if oid)
+            return totals
+        with patch.object(recovery,'connect',side_effect=self.connect),self.connect() as db:
+            db.execute('CREATE EXTENSION IF NOT EXISTS pgstattuple')
+            for source,values in data.items():
+                markets=values['markets']
+                parsed={key:recovery.decode(value,source) for key,value in values['parsed'].items()}
+                catalog=dict(events=values['events'],markets=markets)
+                recovery.save(source,'turnover',catalog,parsed)
+                for cycle in range(3):
+                    before=footprint(db)
+                    for market in markets[:16]:
+                        market['provenance']={'original':market.get('provenance'),'fixture_receipt':cycle}
+                    for market in markets[16:24]:
+                        market['title']=str(market.get('title',''))+str(cycle)
+                    old=markets[-1]['id']
+                    self.assertNotIn(old,parsed)
+                    markets[-1]=dict(markets[-1],id=old+'-replacement')
+                    with db.transaction():
+                        db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
+                        visible=db.execute('SELECT market_id FROM current_native_market_recovery WHERE source=%s ORDER BY 1',(source,)).fetchall()
+                        self.assertIn({'market_id':old},visible)
+                        stats=recovery.save(source,'turnover',catalog,parsed)
+                        self.assertEqual(db.execute('SELECT market_id FROM current_native_market_recovery WHERE source=%s ORDER BY 1',(source,)).fetchall(),visible)
+
+                    self.assertEqual((stats['receipt_only'],stats['payload_changes'],stats['new'],stats['retired'],
+                        stats['unchanged'],stats['writes'],stats['legacy_conversions']),
+                        (16,8,1,1,len(markets)-25,25,0))
+                    saved=db.execute('SELECT market_id,metadata,parsed,receipt_fields FROM current_native_market_recovery WHERE source=%s',(source,)).fetchall()
+                    self.assertEqual({r['market_id']:recovery.market_value(r['metadata'],r['receipt_fields']) for r in saved},
+                                     {m['id']:m for m in markets})
+                    self.assertEqual({r['market_id']:recovery.parsed_value(r['parsed'],r['receipt_fields']) for r in saved if r['parsed']},values['parsed'])
+                    self.assertEqual(recovery.save(source,'turnover',catalog,parsed)['writes'],0)
+                    samples.append(dict(source=source,cycle=cycle,before=before,after=footprint(db),**stats))
+                db.execute('TRUNCATE current_native_market_recovery,current_native_catalog_recovery')
+        print('Complete converted catalog turnover:',json.dumps(samples))

@@ -5,6 +5,8 @@
       "tests/test_current_contract.py",
       "tests/test_current_state.py",
       "tests/test_current_native.py",
+      "tests/test_native_queue_accounting.py",
+      "tests/test_member_packet.py",
       "tests/test_source_recovery.py",
       "tests/test_native_admission.py",
       "tests/test_aggregate_scope_controls.py",
@@ -16,6 +18,7 @@
       "tests/test_native_identity_trace.py",
       "tests/test_native_season_fields.py",
       "tests/test_current_native_catalog_lifecycle.py",
+      "tests/test_native_catalog_checkpoint.py",
       "tests/test_current_native_density.py",
       "tests/test_current_native_material_quarantine.py",
       "tests/test_current_confirmation.py",
@@ -500,6 +503,9 @@
     "name": "d03-current-contracts",
     "tests": [
       "tests/test_current_board_reads.py",
+      "tests/test_capture_structure.py",
+      "tests/test_capture_materialization.py",
+      "tests/test_recovery_codec.py",
       "tests/test_current_journal_domains.py",
       "tests/test_current_reset.py",
       "tests/test_current_route_retirement.py",
@@ -580,8 +586,10 @@
       "tests/test_sc09_native_reference.py",
       "tests/test_comparison_snapshot.py",
       "tests/test_snapshot_benchmark.py",
+      "tests/test_l02_native_finance.py",
       "tests/test_snapshot_identity.py",
       "tests/test_snapshot_display.py",
+      "tests/test_l03_ranking.py",
       "tests/test_snapshot_completion.py"
     ]
   },

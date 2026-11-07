@@ -28,6 +28,15 @@ def ordinary_scheduler():
 
 
 class AggregateFrame(unittest.TestCase):
+    def test_pinnacle_witness_is_independent_of_execution_venue_offering(self):
+        raw=body('NFL',books=('prophetx','pinnacle'))
+        scheduler,committed,_=ordinary_scheduler()
+        scheduler.admit_response(dict(body=raw,received_at=AT),'NFL')
+        states=committed[0][1]
+        self.assertEqual(states['novig']['observed_sports']['NFL'],'aggregate_offering_unobserved')
+        self.assertEqual(states['novig']['reference_sports']['NFL'],'aggregate_observed')
+        self.assertEqual(states['prophetx']['observed_sports']['NFL'],'aggregate_observed')
+
     def test_ordinary_admission_decodes_once_and_preserves_exact_adapter_values(self):
         raw=body('NFL',books=('novig','prophetx','pinnacle'),price='2.500000000000000000000001')
         expected=[r for venue in ('novig','prophetx','pinnacle') for r in admit(raw,'NFL',AT,venue=venue)]

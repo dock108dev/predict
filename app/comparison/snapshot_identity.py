@@ -13,7 +13,7 @@ SCORING_MEANING = ('NCAAB full-game comparison assumes both instruments use inte
     'tie/refund, fees and execution equivalence are not asserted.')
 
 
-def project(quotes, settings, *, leagues=('NCAAB',), preserve_known=False):
+def project(quotes, settings, *, leagues=('NCAAB',), preserve_known=False, occurrences=None):
     """Exact-time, mutually unique occurrence associations and literal predicates.
 
     Native IDs identify only source-local occurrences. Cross-provider joins require
@@ -37,7 +37,9 @@ def project(quotes, settings, *, leagues=('NCAAB',), preserve_known=False):
         if k in facts and comparable != facts[k][1]:conflicts.add(k)
         facts[k] = (f, comparable)
         if f['conflict'] or f['replacement']:conflicts.add(k)
-        neighborhoods[(f['league'], tuple(sorted(f['roles'].values())), instant(f['start']))].add(k)
+        occurrence = (occurrences or {}).get(k)
+        neighborhood = ('resolved', occurrence) if occurrence else ('schedule', instant(f['start']))
+        neighborhoods[(f['league'], tuple(sorted(f['roles'].values())), neighborhood)].add(k)
     associations = {}
     for keys in neighborhoods.values():
         members = sorted(keys)
@@ -115,7 +117,7 @@ def project(quotes, settings, *, leagues=('NCAAB',), preserve_known=False):
         q['same_outcome']=ident
         q['snapshot_supported']=ident['supported']
         q['snapshot_identity']=dict(occurrence=oid,members=[list(p) for p in members],
-            method='exact_schedule_unique_roles' if len(members)>1 else 'native_event_only',
+            method='validated_ordinary_occurrence' if (occurrences or {}).get(k) else 'exact_schedule_unique_roles' if len(members)>1 else 'native_event_only',
             observed_context={f:r['event'].get(f) for f in ('season','stage')},
             scoring=scoring,scoring_basis='declared assumption' if assumed else 'retained source scoring evidence',
             assumption=SCORING_MEANING if assumed else None,

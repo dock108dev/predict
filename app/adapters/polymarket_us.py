@@ -8,6 +8,7 @@ from email.utils import parsedate_to_datetime
 import json
 import re
 from functools import lru_cache
+from weakref import WeakKeyDictionary
 from copy import deepcopy
 from urllib.parse import quote, urlencode
 
@@ -276,9 +277,28 @@ def _market_index(body):
     return {identifier(m.get('id')): m for m in candidates}
 
 
+# A routing scalar belongs to one immutable source receipt. Weak ownership
+# releases it with that receipt even across retries or catalog replacement.
+_route_slugs = WeakKeyDictionary()
+
+
 def market_slug(market):
-    """Read an immutable routing scalar without copying nested event catalogs."""
-    return _market_index(market.raw.json_text)[market.raw.ref.market_id]['slug']
+    """Read the source slug for this exact market receipt."""
+    raw = market.raw
+    if isinstance(raw, RawPayload):
+        try:
+            return _route_slugs[raw]
+        except KeyError:
+            pass
+    slug = _market_index(raw.json_text)[raw.ref.market_id]['slug']
+    if isinstance(raw, RawPayload):
+        _route_slugs[raw] = slug
+    return slug
+
+
+def routing_slugs(markets):
+    return {market_slug(market) for market in markets}
+
 
 
 def next_market_data(market):

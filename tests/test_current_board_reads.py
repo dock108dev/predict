@@ -45,6 +45,18 @@ def latest_frame(c=None):
 
 
 class CurrentBoardReads(unittest.TestCase):
+    def test_capture_catalog_reuse_is_exact_and_context_local(self):
+        original=frame()
+        plain=ReadContext(SimpleNamespace(db=None),at=AT,frame=deepcopy(original))
+        reused=ReadContext(SimpleNamespace(db=None),at=AT,frame=deepcopy(original),reuse_catalog_inputs=True)
+        self.assertEqual(reused.observation_bundles(),plain.observation_bundles())
+        self.assertEqual(reused.catalog(),plain.catalog())
+        # A new captured receipt is never substituted into the old context.
+        changed=deepcopy(original)
+        changed['records'][0]['quote']['times']['received_at']='2026-10-15T12:01:01Z'
+        fresh=ReadContext(SimpleNamespace(db=None),at=AT,frame=changed,reuse_catalog_inputs=True)
+        self.assertNotEqual(fresh.observation_bundles(),reused.observation_bundles())
+
     def test_new_global_status_cannot_revive_old_game_financial_identity(self):
         from app.storage.board_view import board
         for field,reason in (('engine_binding','engine_binding_changed'),('policy_revision','policy_changed')):

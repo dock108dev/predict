@@ -1,6 +1,23 @@
 """Exact current images with batch-local decoding, rather than retained JSON trees."""
 from collections.abc import MutableMapping
 import json
+import zlib
+
+
+def encode_container(value):
+    """Pack an already validated JSON value for temporary process-local ownership."""
+    raw = json.dumps(value, separators=(',', ':'), ensure_ascii=False).encode()
+    if len(raw) >= 1024:
+        packed = zlib.compress(raw, level=1)
+        if len(packed) + 1 < len(raw):
+            return b'\0' + packed
+    return raw
+
+
+def decode_container(image):
+    if image.startswith(b'\0'):
+        image = zlib.decompress(image[1:])
+    return json.loads(image)
 
 
 class CurrentBookImages(MutableMapping):
@@ -9,10 +26,10 @@ class CurrentBookImages(MutableMapping):
         self.encoded_bytes = 0
 
     def __getitem__(self, key):
-        return json.loads(self.encoded[key])
+        return decode_container(self.encoded[key])
 
     def __setitem__(self, key, value):
-        image = json.dumps(value, separators=(',', ':'), ensure_ascii=False).encode()
+        image = encode_container(value)
         self.encoded_bytes += len(image) - len(self.encoded.get(key, b''))
         self.encoded[key] = image
 

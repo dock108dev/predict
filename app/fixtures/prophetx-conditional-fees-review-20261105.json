@@ -1,0 +1,15 @@
+{
+  "version": "prophetx-conditional-20261105-review",
+  "source_url": "https://www.prophetx.co/lobby/t-c/trading-fees",
+  "path": "app/fixtures/prophetx-fees-review-20261105.md",
+  "sha256": "fdee82a41f37ba6bf3542b359422911561b061365be873eb876f0b7aeaffac85",
+  "fee_rate": "0.02",
+  "reviewed_at": "2026-11-06T04:12:09.865787+00:00",
+  "review_before": "2026-11-07T04:12:09.865787+00:00",
+  "published_version": "1.0",
+  "published_effective_date": null,
+  "applicability": "Straight contracts on the public site. NHL uses a per-fill price-based fee, all other events use positive net gains per market. Privately negotiated API terms remain unbound.",
+  "review_window_basis": "Prospective daily engineering review, not a source promise.",
+  "published_update_date": "2026-11-05",
+  "nhl_taker_coefficient": "0.035"
+}

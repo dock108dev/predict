@@ -115,6 +115,27 @@ class ConservativeRecovery(unittest.TestCase):
         self.assertEqual(self.q._read()['attempts'][self.aid],old)
         self.assertEqual(self.q.snapshot()['held_uncertain_credits'],3)
         self.assertIsNone(self.q.snapshot()['blocking_reason'])
+    def test_scoped_429_requires_exact_context_attempts_and_observation_id(self):
+        from app.collection import current_conservative as policy
+        receipt=dict(status=429,headers=[],received_at='2026-10-03T14:00:01+00:00')
+        self.q.reconcile(self.aid,[],received_at=receipt['received_at'])
+        self.q.record_response(self.aid,receipt)
+        ledger=self.q._read()
+        attempts={self.aid:digest(ledger['attempts'][self.aid])}
+        context=digest([ledger['account_id'],ledger['window'],ledger['ceiling'],ledger.get('account_transitions',[])])
+        with patch.multiple(policy,NFL_429_CONTEXT=context,NFL_429_EXPOSURE=digest(attempts),NFL_429_ATTEMPT=self.aid):
+            def check(value,keys=attempts,name=policy.NFL_429_RECOVERY):
+                return policy.recovery_preflight(value,self.at,keys,owner_runtime='other',recovery_id=name)
+            self.assertEqual(set(check(ledger)),{self.aid})
+            for mutated in (dict(ledger,account_id='different'),dict(ledger,window={}),
+                            dict(ledger,account_transitions=[{'at':self.at}])):
+                with self.assertRaises(QuotaStop):check(mutated)
+            with self.assertRaises(QuotaStop):check(ledger,name='different')
+            with self.assertRaises(QuotaStop):check(ledger,keys={})
+            altered=deepcopy(ledger)
+            altered['attempts'][self.aid]['response_receipt']['status']=500
+            with self.assertRaises(QuotaStop):check(altered)
+
     def test_missing_headers_on_success_authentication_or_partial_headers_stay_blocked(self):
         for status,items in ((200,[]),(401,[]),(429,[]),(502,[['x-requests-used','622']])):
             with self.subTest(status=status,items=items):

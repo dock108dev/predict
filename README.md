@@ -1,30 +1,26 @@
 # Predict
 
 Predict is a local, read-only prediction-market comparison app for macOS.
-**Opportunities** ranks captured prices by the selected estimate. **Markets** groups
-observations by game and outcome. The **Opposing positions** view compares paired
-positions under the selected assumptions. Open **Why** for the calculation meaning
-and follow its Admin link to inspect original prices. Admin manages collection and source status. The advanced
-Scanner supports opportunity filters and manual tickets.
+**Opportunities** groups offers for the same outcome and ranks them by the best
+eligible EV after reviewed trade fees. **Markets** shows prices by game.
+Open **Math & fees** to see the selected offer, its reference prices and the fee
+calculation. The list updates as prices arrive. An open drawer keeps its selected
+inputs until you choose **Use latest prices**. Its Admin link opens those originals.
 
-Kalshi and Polymarket US use native adapters; Novig and ProphetX can arrive through
-The Odds API. Pinnacle is a reference, not a purchase leg. The default calculation
-uses $1,000 funding and one 0.5% buffer on deployed capital. Estimates can be
-negative or unavailable; saved prices do not establish current availability. Predict does
-not place trades.
+Kalshi and Polymarket US supply native prices. Novig and ProphetX can arrive
+through The Odds API. Pinnacle is the default pricing reference. The ordinary
+list covers games in the next 72 hours. An offer can stay visible when its price
+or reference has expired, or when a required fee is unknown. Conservative
+public-fee estimates have a separate ranking. The **Opposing positions** view
+compares paired positions under the selected assumptions. The default funding
+is $1,000, with one 0.5% buffer on deployed capital. See the
+[calculation basis](docs/benchmark-ev.md).
 
-Choose **Refresh prices** to capture available local observations for games
-in the next 72 hours. **Recalculate** applies edited assumptions to the same
-capture. Browsing, sorting and inspecting original inputs use the selected revision.
-Detailed source clocks remain in Admin, and an estimate can be unavailable when its required
-inputs are missing. See the [calculation basis](docs/benchmark-ev.md).
-
-## Interface
-
-The [interface design](docs/ui-design.md) describes the implemented
-Opportunities → Markets → Admin navigation, Why explanations and shared
-American/Decimal odds preference. Design approval is recorded; acceptance of the
-running implementation remains open.
+Admin manages collection and source status. The advanced Scanner supports
+opportunity filters and manual tickets. The [interface guide](docs/ui-design.md)
+describes navigation, the odds preference and inspection. The
+[local delivery record](docs/engineering/live-comparison-20261104/L05-delivery.md)
+covers the verified NBA walkthrough and observed performance limits.
 
 ## Requirements and quickstart
 

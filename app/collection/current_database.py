@@ -2,6 +2,7 @@
 import asyncio
 from copy import deepcopy
 from pathlib import Path
+from time import monotonic
 from app.storage.current_games import utc
 from app.storage.store import connect,Store
 from .current_storage_policy import SQL_BYTE_CAP,sql_usage,require_disk_space
@@ -31,12 +32,13 @@ def native_identity(book, source, candidate, index, total):
 
 
 
-def normalize_storage_batch(catalog, images, at, prepare_records):
+def normalize_storage_batch(catalog, images, at, prepare_records, *, detached=False):
     from app.comparison.combined_native import normalize
     records,errors=normalize(catalog,images,at=at,include_missing=True,owned=True)
     if prepare_records:
         from app.storage.current_rows import prepare
-        records=[prepare(record) for record in records]
+        batch_events={} if detached else None
+        records=[prepare(record,batch_events=batch_events) for record in records]
     return records,errors
 
 
@@ -68,7 +70,7 @@ def normalize_current(catalog, books, *, at, revoked=None, executor=None, curren
         else:
             # Only detached public metadata/images cross this CPU boundary. The
             # serialized parent retains SQL, cancellation and publication authority.
-            rows,excluded=executor.submit(normalize_storage_batch,part,images,at,prepare_records).result()
+            rows,excluded=executor.submit(normalize_storage_batch,part,images,at,prepare_records,detached=True).result()
             if revoked is not None and revoked.is_set():raise asyncio.CancelledError()
         records.extend(rows);errors.extend(excluded[:max(0,200-len(errors))])
     return records,errors
@@ -185,6 +187,11 @@ class DatabaseIngressSink:
         raw=snapshot_inputs(self.store._state);raw.update(source_status=deepcopy(states),clock_at=now,projected_at=now,state_revision=raw['state_revision']+1)
         if getattr(self.store,'_source_stopping',False):self.store.admit_shutdown_health(states)
         else:self.store.commit(raw)
+        admitted=candidate.__dict__.pop('_material_admission',None)
+        if admitted:
+            source=admitted.pop('source')
+            totals=self.metrics.setdefault('native_material_admissions',{}).setdefault(source,{})
+            for name,n in dict(admitted,batches=1).items():totals[name]=totals.get(name,0)+n
         self.error=None;self.error_details=None
         self.sequence+=1;self.metrics['admitted_observations']+=1
         return dict(service_sequence=self.sequence,current_rows_changed=changed,acknowledgment=self.acknowledgment)
@@ -224,6 +231,7 @@ class DatabaseIngressSink:
             else:
                 candidate=deepcopy(self.reducer)
             records=[];scopes=[];withdraw=set();storage_prepared=False
+            deferred_keys=set();catalog_turnover={}
             if row['type']=='native_market_invalid':
                 key=(row['source'],row['event_id'],row['market_id'])
                 candidate.books.pop(key,None);candidate.metadata.pop(key,None);candidate.invalid.add(key)
@@ -247,6 +255,7 @@ class DatabaseIngressSink:
                         # Revoke old derived rows atomically with new metadata,
                         # then let the ordinary fair book queue recalculate them.
                         # Original packed images remain owned by the reducer.
+                        deferred_keys=catalog_refresh
                         withdraw.update(catalog_refresh)
                         self.metrics['catalog_delta'].update(recalculated=0,deferred=len(catalog_refresh))
                         catalog_refresh=set()
@@ -290,19 +299,24 @@ class DatabaseIngressSink:
                         else:
                             if source!=row['source']:continue
                             selected={tuple(o['book']['raw']['ref'][k] for k in ('event_id','market_id')) for o in observations if o['type']=='prediction_book'}
-                        selected_events={eid for eid,_ in selected}
-                        relevant=inventory if not selected else dict(inventory,
-                            events=[e for e in inventory['events'] if e['id'] in selected_events],
-                            markets=[m for m in inventory['markets'] if (m['event_id'],m['id']) in selected])
+                        market_index,event_index=self.catalog_indexes(candidate.inventory)
+                        if selected:
+                            events={eid for eid,_ in selected}
+                            relevant=dict(inventory,
+                                events=[event_index[(source,eid)] for eid in sorted(events) if (source,eid) in event_index],
+                                markets=[market_index[(source,eid,mid)] for eid,mid in sorted(selected) if (source,eid,mid) in market_index])
+                        else:relevant=inventory
                         catalog=dict(id='transient-current-catalog',record=dict(source=source,value=dict(inventory=relevant)))
                         books=[]
-                        event_index={e['id']:e for e in inventory['events']}
+                        # reduce_observation already transferred these exact books
+                        # into the candidate. The last image per key is the same
+                        # one a retained-map decode would return.
+                        incoming={(source,o['book']['raw']['ref']['event_id'],o['book']['raw']['ref']['market_id']):o for o in observations if o['type']=='prediction_book'}
                         book_keys=((source,eid,mid) for eid,mid in selected) if selected else candidate.books
                         for key in book_keys:
-                            if key not in candidate.books:continue
-                            if key[0]!=source or selected and (key[1],key[2]) not in selected:continue
-                            observation=candidate.books[key]
-                            event=event_index.get(key[1])
+                            if key not in candidate.books or key[0]!=source:continue
+                            observation=incoming.get(key) or candidate.books[key]
+                            event=event_index.get(key[:2])
                             if event:
                                 scopes.append(dict(venue=source,competition=event['competition'],native_event_id=key[1],native_market_id=key[2],
                                     received_at=observation['book']['raw']['received_at'],source_at=observation['book']['raw'].get('exchange_at')))
@@ -346,7 +360,10 @@ class DatabaseIngressSink:
                             'WHERE current_acquisition_aggregate.received_at<=EXCLUDED.received_at',
                             (row['sport'],row['received_at'],Jsonb(raw_batch)))
                     admit=rows._upsert_prepared if storage_prepared else rows.upsert_records
-                    changed=admit(records,scopes=scopes,authoritative=bool(scopes),source_status=states,now=now)
+                    from app.storage.native_admission_metrics import MaterialRows
+                    material_rows=MaterialRows() if row['type'] in ('prediction_books','prediction_book') else None
+                    changed=admit(records,scopes=scopes,authoritative=bool(scopes),source_status=states,now=now,
+                                  **({'material_rows':material_rows} if material_rows is not None else {}))
                     phase('native_depth')
                     if row['type'] in ('prediction_book','prediction_books'):rows.replace_native_books([o['book'] for o in observations])
                     if row['type']=='coverage_inventory':
@@ -357,10 +374,21 @@ class DatabaseIngressSink:
                             if key not in memberships or memberships[key]==prior or key in retained_books:continue
                             withdraw.add(key)
                     reimaging=delta.get('reimaging',set()) if row['type']=='coverage_inventory' else set()
-                    rows.withdraw_native_markets(withdraw-reimaging)
-                    rows.withdraw_native_markets(reimaging, reimaging=True)
+                    if row['type']=='coverage_inventory':
+                        # Prior inactive bodies get one catalog interval. A
+                        # restart, partial readmission or retirement cannot
+                        # accumulate historical bodies behind the active view.
+                        db.execute('DELETE FROM current_contract_storage WHERE NOT active')
+                        for reason,keys in (('derived_refresh',deferred_keys),('reimage',reimaging),
+                                            ('retirement_or_native_change',withdraw-reimaging-deferred_keys)):
+                            if keys:catalog_turnover[reason]=rows.withdraw_native_markets(keys,reimaging=reason=='reimage',deferred=reason=='derived_refresh',measure=True)
+                    else:rows.withdraw_native_markets(withdraw)
                     if revoked is not None and revoked.is_set():raise asyncio.CancelledError()
                     phase('commit_observation')
+            if row['type']=='coverage_inventory':
+                self.metrics['catalog_storage_turnover']=dict(at=utc(),source=row['source'],generation=row['generation'],reasons=catalog_turnover)
+            if material_rows is not None:
+                candidate._material_admission=dict(material_rows.counts(utc()),source=row['source'],books=len(observations),normalized=len(records))
             phase('complete')
             self.metrics['recent_preparations']=(self.metrics.get('recent_preparations',[])+[
                 dict(self.metrics['preparation'],records=len(records),scopes=len(scopes),withdrawn=len(withdraw))])[-32:]
@@ -377,6 +405,7 @@ class DatabasePipeline:
         self.service=service;self.closed=False;self.task=None
         self.error=None;self.error_details=None;self.wake=asyncio.Event();self.used=None;self.maintenance=None
         self.maintenance_failures=0;self.maintenance_last_success_at=None
+        self.last_compaction_check=0
     async def start(self):
         from app.storage.current_rows import CurrentRowStore
         from .current_policy import aggregate_scope, native_scope, native_markets
@@ -409,7 +438,12 @@ class DatabasePipeline:
                 try:CurrentRowStore(db).expire()
                 except Exception as exc:expiry_error=exc
                 from app.storage.storage_maintenance import maintain
-                self.maintenance=maintain(db,collecting=True)
+                # Frequent in-place reuse must not multiply expensive whole-
+                # database compaction scans or monopolize the publication lock.
+                compact=monotonic()-self.last_compaction_check>=60 or bool((self.maintenance or {}).get('continue_compaction'))
+                self.maintenance=maintain(db,collecting=True,compact=compact)
+                if compact and self.maintenance.get('state')!='busy':
+                    self.last_compaction_check=monotonic()
                 if expiry_error is not None:raise expiry_error
                 self.used=sql_usage(db)
                 if self.maintenance.get('state')!='busy':
@@ -418,7 +452,7 @@ class DatabasePipeline:
         return 0
     async def run_maintenance(self):
         while not self.closed:
-            try:await asyncio.wait_for(self.wake.wait(),timeout=60)
+            try:await asyncio.wait_for(self.wake.wait(),timeout=15)
             except TimeoutError:pass
             self.wake.clear()
             if self.closed:break
@@ -428,7 +462,7 @@ class DatabasePipeline:
                 from app.diagnostics import failure_details
                 self.error=type(exc).__name__;self.error_details=failure_details(exc)
                 self.maintenance_failures+=1
-                # No paid work or immediate retries. The next ordinary minute
+                # No paid work or immediate retries. The next maintenance turn
                 # must be able to prove recovery after a transient lock failure.
     async def close(self):
         self.closed=True;self.wake.set()

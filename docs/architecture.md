@@ -1,13 +1,24 @@
 # Architecture and data
 
+## Live comparisons
+
+The data process publishes prices and calculated results. The app reads each
+publication, groups matching offers and ranks the complete filtered list before
+pagination. An open drawer holds a lease on the selected evidence while newer
+publications reach the list. See the [publication contract](engineering/live-comparison-20261104/L01-publication-contract.md)
+and the [ranking and inspection contract](engineering/live-comparison-20261104/L03-ranking-contract.md).
+
 ## Ordinary comparison snapshots
 
-The dashboard, Odds, EV and opposing-outcome views use the snapshot API.
+Ordinary dashboard, Odds, EV and opposing-outcome views use the current publication API; explicit saved-result URLs use the immutable snapshot API.
 `app.storage.comparison_snapshot` captures current SQL rows in one consistent
 read, matches outcomes, calculates results and atomically replaces the selected
 head. Recalculation creates a result revision over the same captured inputs.
 `app.dashboard.snapshot_api` filters and ranks that revision before pagination.
 Details resolves the selected row and its Originals against the same revision.
+An explicit benchmark pair binds both source IDs to the original receipt, book,
+prices and clocks. A current estimate requires two distinct reference contracts.
+If either side is missing, the app can still show the source offer.
 Retention protects the current head, reviewed results and active read leases.
 
 Background collection supplies current rows. Scanner and background publication

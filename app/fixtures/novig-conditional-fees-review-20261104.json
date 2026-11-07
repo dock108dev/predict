@@ -1,0 +1,13 @@
+{
+  "version": "novig-conditional-20261104-review-5",
+  "source_url": "https://support.novig.com/en/articles/16195057-fees-on-novig",
+  "sha256": "3aec6d7a000913541e833344ac6c0ad340ceeb3fea9fe27a5f26d640d7dfce78",
+  "path": "app/fixtures/novig-fees-review-20261104.md",
+  "reviewed_at": "2026-11-04T22:49:55.572261+00:00",
+  "review_before": "2026-11-05T22:49:55.572261+00:00",
+  "fee_rate": "0",
+  "evidence_class": "official_reviewed_trade_fee_schedule",
+  "applicability": "Pregame straight trade, app/web or API, one USD normal claim; no maker or taker fee. Aggregate product mapping remains conditional; no full-state settlement or actual fill claim.",
+  "review_decision": "Pregame straight trade, app/web or API, one USD normal claim; no maker or taker fee. Aggregate product mapping remains conditional; no full-state settlement or actual fill claim.",
+  "review_window_basis": "Prospective daily engineering review deadline, not a source guarantee. No historical gap filled."
+}

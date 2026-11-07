@@ -398,3 +398,5 @@ def test_storage_interval_requires_measured_deferred_work_near_guard():
     assert not needs_storage_interval(dict(report,after_bytes=report['after_bytes']-1))
     assert not needs_storage_interval(dict(report,deferred=[dict(reason='lock_timeout')]))
     assert not needs_storage_interval(dict(state='busy'))
+    assert needs_storage_interval(dict(state='busy'),sql_bytes=SQL_BYTE_CAP-128*MIB)
+    assert not needs_storage_interval(dict(state='busy'),sql_bytes=SQL_BYTE_CAP-128*MIB-1)

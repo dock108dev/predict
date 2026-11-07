@@ -99,6 +99,16 @@ def test_named_benchmark_uses_selected_book_and_exact_originals(venue):
     assert selected['reference']['bookmaker']==venue
     assert selected['reference']['selection_digest']==identity('binding',row['binding']['selection'])
     assert {r['id'] for r in selected_references(selected,row,refs)}=={hashed(r['quote']['source']) for r in witnesses}
+    # Occurrence projection canonicalizes the execution sport while retained
+    # Pinnacle/named-book originals preserve the provider's spelling.
+    hockey=deepcopy(row);hockey_refs=deepcopy(refs)
+    hockey['original_record']['market_identity'].update(competition='NHL',sport='hockey')
+    for witness in hockey_refs:
+        witness['original_record']['market_identity'].update(competition='NHL',sport='ice_hockey')
+        witness['market'].update(competition='NHL',sport='ice_hockey')
+    assert len(selected_references(selected,hockey,hockey_refs))==2
+    hockey['original_record']['market_identity']['sport']='football'
+    assert selected_references(selected,hockey,hockey_refs)==[]
     assert rows==before
     assert bind([row],refs[:1],settings)[0]['reference'] is None
 

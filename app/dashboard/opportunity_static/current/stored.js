@@ -38,6 +38,7 @@ const UI = (() => {
     const here=new URL(location.href);
     for(const a of document.querySelectorAll('.p-chrome a,.p-adminnav a')){
       const u=new URL(a.href);if(result)u.searchParams.set('result_id',result);
+      if(['/','/odds','/arbs'].includes(u.pathname))for(const key of ['league','search','family','game']){if(here.searchParams.get(key))u.searchParams.set(key,here.searchParams.get(key));else u.searchParams.delete(key);}
       if(u.pathname==='/admin'){
         for(const key of ['selection','selected_metric','back'])if(here.searchParams.get(key))u.searchParams.set(key,here.searchParams.get(key));
         if(here.pathname!=='/admin')u.searchParams.set('back',here.pathname+here.search);
@@ -56,14 +57,104 @@ window.PredictUI=UI;
 // Pure view builders. Callers own navigation and immutable result selection.
 const SnapshotViews = (() => {
   const {el,fmt,num,name,odd,link,button}=UI;
-  const titles={gross_return_percent:'Before-fee estimate',conditional_return_percent:'After trade-fee estimate',net_return_percent:'Assumed net EV',price_difference_cents:'Price difference',minimum_return_percent:'Scenario minimum'};
+  const titles={gross_return_percent:'Before-fee estimate',conditional_return_percent:'After reviewed trade fees',conservative_return_percent:'Conservative public-fee estimate',net_return_percent:'Assumed net EV',price_difference_cents:'Price difference',minimum_return_percent:'Scenario minimum'};
   const metricLabel=(metric,a)=>metric==='net_return_percent'&&a.scenario==='decisive_only'?'Conditional net EV':titles[metric];
-  function position(q,games){const s=q.selection||{},g=games?.find(g=>g.game_key===q.game_key);const participant=q.participant_label||g?.participants?.find(p=>p.id===s.participant)?.name||s.label||q.source?.native_outcome_id||'';return [(['over','under'].includes(s.predicate)&&participant.toLowerCase()===s.predicate?'':participant),({win:'to win',cover:'spread',over:'Over',under:'Under'})[s.predicate]||s.predicate,s.signed_line,['YES','NO','Long','Short'].includes(q.native_side)?q.native_side:null].filter(x=>x!=null&&x!=='').join(' · ');}
-  function state(q){return /delay|stale|paused|stopped|error/.test(q.source_state||'')?'Saved · source delayed':'Saved · availability unverified';}
+  function position(q,games){
+    const s=q.selection||{},g=games?.find(g=>g.game_key===q.game_key);
+    const participant=q.participant_label||g?.participants?.find(p=>p.id===s.participant)?.name||s.label||'Outcome not identified';
+    const line=s.signed_line??q.market?.line, n=num(line);
+    const signed=line==null?'':`${n>0?'+':''}${n}`;
+    // Selection is already normalized by the source adapter. Short is not a
+    // second negation, and a native NO never becomes the other team's win.
+    if(s.predicate==='win')return participant+' to win';
+    if(s.predicate==='not_win')return participant+' not to win';
+    if(s.predicate==='cover')return participant+' to cover '+signed;
+    if(s.predicate==='not_cover')return participant+' not to cover '+signed;
+    if(['over','under'].includes(s.predicate))return `${s.predicate==='over'?'Over':'Under'} ${line==null?'':num(line)}`.trim();
+    return [participant,({not_over:'Not over',not_under:'Not under'})[s.predicate]||s.predicate?.replaceAll('_',' '),signed].filter(Boolean).join(' · ');
+  }
+  function clock(at){return at?new Date(at).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'Time unknown';}
+  function state(q){
+    const at=q.book_confirmation?.confirmed_at||q.times?.source_at||q.times?.received_at;
+    const basis=q.book_confirmation?.confirmed_at?'Confirmed':q.times?.source_at?'Source':'Received';
+    const mode=q.source_state==='budget_delayed'?'15-min collection':({paused:'Paused',stopped:'Stopped',error:'Source error',unavailable:'Source unavailable',stale:'Stale source'})[q.source_state];
+    return `${basis} ${clock(at)}${mode?' · '+mode:''}`;
+  }
+  const pct=v=>v==null?'—':`${num(v)>0?'+':''}${fmt(v)}%`;
+  function missing(q,metric){
+    const reasons=q.current_reasons||[];
+    if(reasons.includes('source_expired'))return q.price_current?'Reference expired':'Source price expired';
+    if(reasons.includes('settings_replaced'))return 'Settings recalculating';
+    if(reasons.includes('input_replaced_or_removed'))return q.price_current?'Reference inputs changed':'Source inputs changed';
+    if(reasons.length)return q.price_current?'Current calculation unavailable':'Source currently unavailable';
+    if(q.probability_missing==='finance_pending')return 'Calculation pending';
+    if(metric==='conservative_return_percent')return 'Public-fee estimate unavailable';
+    if(metric==='conditional_return_percent')return ({prophetx_account_fee_model_and_rate_unbound:'Account fee unknown',kalshi_instrument_fee_schedule_unbound:'Contract fee unknown',conditional_fee_review_expired_or_not_effective:'Fee review expired',conditional_pregame_ended:'Pregame fee only',supported_decisive_benchmark_required:'Reference unavailable'})[q.conditional_trade_benchmark?.reason]||(!q.probability?'Reference unavailable':'Fee estimate unavailable');
+    if(metric==='gross_return_percent')return q.probability==null?'Reference unavailable':'Estimate unavailable';
+    if(metric==='net_return_percent')return 'Assumptions needed';
+    if(metric==='minimum_return_percent')return 'Fees / settlement / size needed';
+    return 'Unavailable';
+  }
+  function metricCell(q,metric){const cell=el('td',null,'compare-number');cell.append(el('strong',pct(q[metric]),num(q[metric])>0?'positive':num(q[metric])<0?'negative':''));if(q[metric]==null)cell.append(el('small',missing(q,metric),'compare-note'));return cell;}
+  function referenceStrip(quotes,result){
+    const wrap=el('div',null,'compare-references'),refs=new Map();
+    for(const q of quotes){
+      const ref=q.reference_calculation, pair=ref?.pair||[];
+      const key=JSON.stringify([ref?.venue||q.display?.benchmark_venue,pair.map(p=>[p.id,p.original,p.selection]),ref?.selected,ref?.selected_predicate,q.display?.benchmark]);
+      if(!pair.length&&!q.display?.benchmark?.length)continue;
+      if(!refs.has(key))refs.set(key,{q,venues:new Set(),retained:new Set()});refs.get(key).venues.add(name(q.venue));if(ref?.available===false)refs.get(key).retained.add(name(q.venue));
+    }
+    for(const {q,venues,retained} of refs.values()){
+      const ref=q.reference_calculation, line=el('div',null,'compare-reference');
+      line.append(el('strong',name(ref?.venue||q.display?.benchmark_venue||result.assumptions.benchmark_venue)+' reference'),el('span',' · '+[...venues].join(', '),'compare-note'));
+      const values=el('div',null,'compare-ref-values');
+      if(ref?.pair?.length)for(const [i,r] of ref.pair.entries()){
+        const item=el('span',position({...r,market:q.market},result.games)+': ');item.append(odd(q.display?.benchmark?.[i],''));values.append(item);
+      }else for(const [i,o] of (q.display?.benchmark||[]).entries()){
+        const item=el('span','Reference outcome '+(i+1)+' (name unavailable): ');item.append(odd(o,''));values.append(item);
+      }
+      line.append(values);if(retained.size)line.append(el('small','Retained reference for '+[...retained].join(', '),'compare-note'));wrap.append(line);
+    }
+    if(!refs.size)wrap.append(el('p',`${name(result.assumptions.benchmark_venue)} reference unavailable for these exact outcomes.`,'compare-note'));
+    return wrap;
+  }
+  function comparison(group,result,metric,actions){
+    const pair=group.kind==='pair_group',quotes=group.quotes,first=quotes[0],article=el('article',null,'compare-group');article.dataset.group=group.id;
+    const header=el('header',null,'compare-heading');
+    header.append(link(first.game_title,actions.game(first),'p-game'),el('span',`${first.league} · ${name(first.market.market)} · ${clock(first.start_at)}`,'p-meta'));
+    header.append(el('h2',pair?(first.display.positions||[]).map(q=>position(q,result.games)).join(' / '):position(first,result.games)));
+    if(group.score_source)header.append(el('p',`${name(group.score_source.venue)} sets rank · ${pct(group.score)}`,'compare-note'));
+    else header.append(el('p','Unranked · '+metricLabel(metric,result.assumptions)+' unavailable','compare-note'));
+    article.append(header);if(!pair)article.append(referenceStrip(quotes,result));
+    const table=el('table',null,'compare-table'+(pair?' pair-table':''));table.setAttribute('aria-label',pair?'Compare both sides':position(first,result.games)+' by source');
+    const head=el('thead'),tr=el('tr');
+    const extra=!pair&&['conservative_return_percent','net_return_percent','price_difference_cents'].includes(metric)?metric:null;
+    const headings=pair?['First outcome','Other outcome','Minimum return','Details']:['Source','Odds','EV before fees','EV after trade fees',...(extra?[metricLabel(extra,result.assumptions)]:[])];
+    for(const text of headings){const th=el('th',text);th.setAttribute('scope','col');tr.append(th);}head.append(tr);table.append(head);const body=el('tbody');
+    for(const q of quotes){
+      const row=el('tr');row.dataset.row=q.id;row.dataset.quote=q.id;row.dataset.ranking=q.ranking?.eligible?'eligible':'unranked';if(group.score_source?.id===q.id)row.classList.add('sets-rank');
+      if(pair){for(const leg of q.display.positions||[]){const c=el('td');c.append(el('strong',position(leg,result.games)),el('div',name(leg.venue),'compare-note'),odd(leg.display?.offered),el('small',state(leg),'compare-note'));row.append(c);}row.append(metricCell(q,'minimum_return_percent'));}
+      else{
+        const source=el('td');source.append(el('strong',name(q.venue)));if(q.price_current===false)source.append(el('small','Retained price','compare-note'));if(group.score_source?.id===q.id)source.append(el('small','Sets rank','compare-note'));row.append(source);
+        const price=el('td',null,'compare-number');price.append(odd(q.display?.offered));row.append(price,metricCell(q,'gross_return_percent'),metricCell(q,'conditional_return_percent'));
+        if(extra==='price_difference_cents'){const c=el('td',q[extra]==null?'—':fmt(q[extra])+'¢','compare-number');row.append(c);}else if(extra)row.append(metricCell(q,extra));
+      }
+      const cell=el('td'),b=button('Math & fees',()=>{
+        if(actions.openInspection){actions.openInspection(q,result,pair?'minimum_return_percent':metric);return;}
+        const open=article.querySelector('.p-why-panel'),same=open?.dataset.selection===q.id;open?.remove();for(const x of article.querySelectorAll('.p-why-button'))x.setAttribute('aria-expanded','false');
+        if(same){actions.selected(null);return;}const panel=why(q,result,pair?'minimum_return_percent':metric,actions.inspect(q,pair?'minimum_return_percent':metric));panel.dataset.selection=q.id;article.append(panel);b.setAttribute('aria-expanded','true');actions.selected(q.id);
+      },'p-why-button');b.setAttribute('aria-expanded','false');b.setAttribute('aria-label',`Why ${pair?'this pair':name(q.venue)+' '+position(q,result.games)}`);b.setAttribute('aria-haspopup','dialog');b.setAttribute('aria-controls','math-inspection');if(pair){cell.append(b);row.append(cell);}else{b.textContent=name(q.venue);row.firstChild.querySelector('strong').replaceWith(b);b.title='Math & fees';}[...row.children].forEach((td,i)=>td.dataset.label=headings[i]);body.append(row);
+    }
+    table.append(body);const scroll=el('div',null,'compare-scroll');scroll.append(table);article.append(scroll);
+    if(pair)article.append(el('p','Minimum return uses both purchases and the settlement, fees, size and buffer in Admin. A dash means inputs are missing; it does not mean zero or guaranteed profit.','compare-footnote'));
+
+    return article;
+  }
   function why(row,result,metric,inspect){
     const box=el('section',null,'p-why-panel');box.setAttribute('aria-label','Why this estimate');
     const title=el('div',null,'p-why-title');title.append(el('strong',metricLabel(metric,result.assumptions)),link('Inspect exact inputs in Admin',inspect));box.append(title,el('p',row.kind==='pair'?row.game_title:position(row,result.games)+' · '+row.game_title,'p-meta'));
-    const conditional=metric==='conditional_return_percent',fee=row.conditional_trade_benchmark||{};
+    const conservative=metric==='conservative_return_percent',conditional=metric==='conditional_return_percent'||conservative,fee=(conservative?row.conservative_trade_benchmark:row.conditional_trade_benchmark)||{};
+    if(conservative)box.append(el('p','Conservative public-schedule estimate. Account terms are unverified; this does not enter the reviewed-fee ranking.'));
     const d=row.display||{},grid=el('div',null,'p-why-grid');
     function fact(label,value,caption){const item=el('div');item.append(el('small',label),value,el('span',caption));grid.append(item);}
     if(row.kind!=='pair'){
@@ -79,7 +170,7 @@ const SnapshotViews = (() => {
     else if(conditional)box.append(el('p','A trade-fee estimate needs a supported reference probability and an applicable reviewed fee schedule.'))
     else if(metric==='price_difference_cents')box.append(el('p','Difference from another comparable instrument’s price, in cents per normal claim. This is not expected profit or a two-position minimum.'));
     else box.append(el('p','Uses the fees, fractional size and buffer entered in Admin. Available depth and actual fills are not established. Unknown inputs remain unavailable.'));
-    if(d.benchmark?.length){const p=el('p',`${name(d.benchmark_venue)} reference odds · `);d.benchmark.forEach((o,i)=>{if(i)p.append(' / ');p.append(odd(o,''));});box.append(p);}
+    if(d.benchmark?.length)box.append(referenceStrip([row],result));
     if(value==null)box.append(el('p','Needed: '+(metric==='gross_return_percent'?row.probability_missing||'supported price and decisive benchmark':conditional?({prophetx_account_fee_model_and_rate_unbound:'the account fee model and rate',kalshi_instrument_fee_schedule_unbound:'the fee schedule for this exact contract',conditional_fee_review_expired_or_not_effective:'a fee review applicable to this capture',conditional_pregame_ended:'a capture taken before the game starts',supported_decisive_benchmark_required:'supported offered odds and a reference probability'}[fee.reason]||'a supported reference and reviewed fee scenario for this saved position'):row.math?.missing?.join('; ')||'comparable supported inputs')));
     if(metric==='gross_return_percent'&&value!=null){const details=el('details');details.append(el('summary','How the $100 example works'));const dl=el('dl',null,'p-example');for(const [k,v] of [['Profit on a decisive win','$'+fmt(d.win_profit_per_100)],['Loss on a decisive loss','−$100.00'],['Estimated win chance',fmt(num(row.probability)*100)+'%'],['Expected profit before fees','$'+fmt(d.gross_profit_per_100)]])dl.append(el('dt',k),el('dd',v));details.append(dl,el('p','Expected profit = win chance × win profit − loss chance × $100. Full-precision captured inputs are used.'));box.append(details);}
     box.append(el('p','The $100 illustration does not change your calculation settings.','p-meta'));
@@ -117,7 +208,183 @@ const SnapshotViews = (() => {
     const exact=el('details');exact.append(el('summary','Exact calculation records · literal values, units and identifiers'),el('pre',JSON.stringify({result_id:value.result_id,snapshot_id:value.snapshot_id,row:r,assumptions:value.assumptions},null,2)));
     const originals=el('details');originals.append(el('summary','Original records · literal units and precision'),el('pre',JSON.stringify({originals:value.originals,references:value.references},null,2)));box.append(exact,originals);return box;
   }
-  return {card,markets,why,inspection,position,metricLabel};
+  return {card,markets,comparison,why,inspection,position,metricLabel,state,referenceStrip,missing,pct};
+})();
+
+// Source: snapshot-live.js
+// Revision-bound inspection independent of the rolling list. No financial math.
+const SnapshotLive = (() => {
+  const copy=value=>structuredClone(value);
+  const canonical=value=>JSON.stringify(value,(_,v)=>v&&typeof v==='object'&&!Array.isArray(v)?Object.fromEntries(Object.keys(v).sort().map(k=>[k,v[k]])):v);
+  function facts(row){
+    if(!row)return null;
+    const reference=row.reference_calculation||{};
+    const fee=value=>value?{...Object.fromEntries(['ranking_basis','quantity','quantity_unit','fill_count','liquidity_role',
+      'trade_fee_usd','normalization_risk_usd','return_percent','formula','fee_payment','assumptions','reason'].map(k=>[k,value[k]??null])),
+      evidence:Object.fromEntries(['version','sha256','reviewed_at','review_before'].map(k=>[k,value.evidence?.[k]??null]))}:null;
+    return {price_revision:row.price_revision??null,economic_revision:row.economic_revision??null,
+      original:row.original,offered:row.display?.offered??null,before_trade_fee:row.gross_return_percent??null,after_trade_fee:row.conditional_return_percent??null,
+      conservative_estimate:row.conservative_return_percent??null,price_current:row.price_current??null,
+      probability:row.probability??null,reference_pair:(reference.pair||[]).map(r=>({id:r.id,source:r.source,original:r.original,selection:r.selection})),
+      reference_venue:reference.venue??row.display?.benchmark_venue??null,
+      reference_selected:reference.selected??null,fee_basis:fee(row.conditional_trade_benchmark),
+      conservative_fee_basis:fee(row.conservative_trade_benchmark),
+      metric_status:Object.fromEntries(Object.entries(row.metric_status||{}).map(([k,v])=>[k,{state:v.state,reasons:[...(v.reasons||[])].sort()}])),
+      reasons:[...(row.current_reasons||[])].sort(),settings_revision:row.settings_revision,
+      fee_revision:row.current_authority?.fee_revision};
+  }
+  function create({request,release,onChange=()=>{},onError=()=>{}}){
+    let pinned=null,notice=null,opening=null,error=null,epoch=0,checks=0;
+    const emit=()=>onChange({pinned,notice,opening,error});
+    const fail=message=>{error=message;emit();onError(message);};
+    function compare(latest){
+      const old=facts(pinned.row),next=facts(latest.row);
+      notice=canonical(old)===canonical(next)?null:{state:latest.state,old,latest:next,
+        result_id:latest.result_id,cursor:latest.cursor,can_adopt:latest.state==='ready'};
+      emit();return latest;
+    }
+    async function retain(row,result,metric,ticket,verifyLatest=false){
+      const candidate={row:copy(row),result:copy(result),metric,lease:null,details:null};
+      const resultId=row.evidence_result_id||result.id||result.result_id;
+      let token;
+      try{
+        token=await request('/api/comparison-current/lease',{result_id:resultId});
+        const details=await request('/api/comparison-snapshot/details?'+new URLSearchParams({result_id:resultId,id:row.id,lease_id:token.lease_id}));
+        if(details.row.id!==row.id||details.row.price_revision!==row.price_revision||details.row.economic_revision!==row.economic_revision)throw Error('Selected evidence does not match the displayed revision');
+        if(verifyLatest){
+          const latest=await request('/api/comparison-current/selection?'+new URLSearchParams({id:row.id}));
+          if(latest.state!=='ready'||canonical(facts(latest.row))!==canonical(facts(row))){
+            if(ticket===epoch)compare(latest);
+            throw Error('Latest inputs changed while retaining them; previous calculation remains pinned');
+          }
+        }
+        if(ticket!==epoch){release(token.lease_id);return false;}
+        candidate.lease=token;candidate.details=copy(details);
+        const previous=pinned;pinned=candidate;opening=null;notice=null;error=null;++checks;
+        emit();if(previous?.lease)release(previous.lease.lease_id);
+        return true;
+      }catch(e){if(token)release(token.lease_id);if(ticket===epoch){opening=null;fail('Exact selection unavailable: '+e.message);}return false;}
+    }
+    async function open(row,result,metric){
+      const ticket=++epoch;++checks;error=null;opening={row:copy(row),result:copy(result),metric};emit();
+      return retain(row,result,metric,ticket);
+    }
+    async function check(){
+      if(!pinned||opening)return null;
+      const ticket=++checks,version=epoch,id=pinned.row.id;
+      const latest=await request('/api/comparison-current/selection?'+new URLSearchParams({id}));
+      if(ticket!==checks||version!==epoch||pinned?.row.id!==id)return null;
+      return compare(latest);
+    }
+    async function adopt(){
+      if(!pinned||opening)return false;
+      const previous=pinned,ticket=++epoch;++checks;
+      try{
+        const latest=await request('/api/comparison-current/selection?'+new URLSearchParams({id:previous.row.id}));
+        if(ticket!==epoch)return false;
+        compare(latest);
+        if(latest.state!=='ready'||!latest.row)return false;
+        const result={...previous.result,...latest,id:latest.result_id};
+        opening={row:copy(latest.row),result,metric:previous.metric};emit();
+        return await retain(latest.row,result,previous.metric,ticket,true);
+      }catch(e){if(ticket===epoch)fail('Latest selection unavailable: '+e.message);return false;}
+    }
+    function close(){++epoch;++checks;const previous=pinned;pinned=null;notice=null;opening=null;error=null;emit();if(previous?.lease)release(previous.lease.lease_id);}
+    async function renew(){
+      const selected=pinned;if(!selected?.lease)return;
+      try{await request('/api/comparison-current/lease',{result_id:selected.lease.result_id,lease_id:selected.lease.lease_id});}
+      catch(e){if(selected===pinned)fail('Retained evidence lease unavailable: '+e.message);}
+    }
+    return {open,check,adopt,close,renew,get state(){return {pinned,notice,opening,error};}};
+  }
+  return {create,facts};
+})();
+
+// Source: snapshot-drawer.js
+// Drawer presentation only. SnapshotLive owns all retention and adoption.
+const SnapshotDrawer = (() => {
+  const {el,fmt,num,name,odd,link}=UI;
+  const {position,pct,missing,referenceStrip}=SnapshotViews;
+  const human=v=>String(v??'Not established').replaceAll('_',' ');
+  function facts(entries){const dl=el('dl',null,'math-facts');for(const [k,v] of entries)dl.append(el('dt',k),el('dd',v==null?'Not established':String(v)));return dl;}
+  function section(title){const s=el('section',null,'math-section');s.append(el('h3',title));return s;}
+  function disclosure(title,child){const d=el('details');d.append(el('summary',title),child);return d;}
+  function content({row,result,metric,details},inspect){
+    // Current displayed economics may be null even when this member retains math.
+    // Never replace row with details.row or borrow result.assumptions for it.
+    const box=el('div',null,'math-content'),a=details.assumptions||{};
+    box.append(el('p',row.game_title,'p-meta'),el('h3',row.kind==='pair'?'Both outcomes':position(row,result.games)));
+    if(row.kind==='pair'){
+      box.append(SnapshotViews.why(row,{...result,assumptions:a},metric,inspect));
+    }else{
+      const price=el('div',null,'math-price');price.append(el('span',name(row.venue)+' · selected odds'),odd(row.display?.offered));box.append(price);
+      const values=el('div',null,'math-values');
+      for(const [key,label] of [['gross_return_percent','EV before trade fees'],['conditional_return_percent','EV after reviewed trade fees'],...(metric==='conservative_return_percent'?[['conservative_return_percent','Conservative public-fee estimate']]:[])]){
+        const item=el('div');item.append(el('small',label),el('strong',pct(row[key]),num(row[key])>0?'positive':num(row[key])<0?'negative':''));
+        if(row[key]==null)item.append(el('span',missing(row,key),'compare-note'));values.append(item);
+      }
+      if(['net_return_percent','price_difference_cents'].includes(metric))box.append(SnapshotViews.why(row,{...result,assumptions:a},metric,inspect));
+      box.append(values,el('p','EV is estimated profit per $100 of modeled risk, conditional on a decisive win or loss. Pushes and exceptional outcomes are excluded.','p-meta'));
+      if(row.current_reasons?.length||row.probability_missing==='finance_pending')box.append(el('p','Pinned availability: '+(row.current_reasons?.map(human).join('; ')||'Calculation pending')+'. Retained arithmetic below has no current ranking authority.','math-state'));
+      const r=row.reference_calculation||{};
+      const venue=r.venue||row.display?.benchmark_venue||result.assumptions.benchmark_venue;
+      const ref=section(venue?name(venue)+' fair price':'Fair price');
+      ref.append(referenceStrip([row],result));
+      if(r.available&&row.probability!=null){
+        const derivation=el('p','Remove the margin proportionally: (1 ÷ selected decimal price) ÷ the sum of both implied probabilities.');
+        ref.append(derivation,facts([['Margin (overround)',r.overround==null?null:pct(num(r.overround)*100)],['Decisive win probability',fmt(num(row.probability)*100)+'%'],['Fair decimal price',r.fair_decimal_odds==null?null:fmt(r.fair_decimal_odds,4)]]));
+      }else ref.append(el('p','Fair price unavailable in the pinned display. Retained reference prices do not restore current probability.'));
+      box.append(ref);
+      const calc=section('Before / after trade fees');
+      calc.append(el('p','Before fees: expected profit = win probability × win profit − loss probability × acquisition cost. EV % divides expected profit by acquisition cost.'));
+      const fee=metric==='conservative_return_percent'?row.conservative_trade_benchmark:row.conditional_trade_benchmark;
+      calc.append(el('p',fee?.formula||'After-fee calculation unavailable for these displayed inputs.'));
+      if(fee?.available){calc.append(facts([['Acquisition per normal claim',row.cost_per_normal_claim==null?null:'$'+fmt(row.cost_per_normal_claim,6)],['Modeled trade fee','$'+fmt(fee.trade_fee_usd,6)],['Risk denominator','$'+fmt(fee.normalization_risk_usd,6)],['Expected profit in scenario',fee.scenario_net_usd==null?null:'$'+fmt(fee.scenario_net_usd,6)],['Fee payment',human(fee.fee_payment||fee.percentage_denominator)]]));}
+      box.append(calc);
+      const fees=section(metric==='conservative_return_percent'?'Conservative fee assumptions':'Reviewed fee assumptions');
+      if(metric==='conservative_return_percent')fees.append(el('p','Public-schedule estimate; account terms unverified. This is a separate basis and never enters reviewed-fee ranking.','math-state'));
+      fees.append(el('p',fee?.condition||human(fee?.reason||'Applicable reviewed fee schedule unavailable')));
+      if(fee?.available)fees.append(facts([['Quantity',`${fee.quantity??'Unknown'} ${fee.quantity_unit||''}`],['Order',`${human(fee.liquidity_role)} · ${fee.fill_count??'Unknown'} fill(s)`],['Review starts',fee.evidence?.reviewed_at],['Review expires',fee.evidence?.review_before]]));
+      const fullFee=details.row[metric==='conservative_return_percent'?'conservative_trade_benchmark':'conditional_trade_benchmark'];
+      if(fullFee?.rounding_trace)fees.append(disclosure('Exact fee rounding',el('pre',JSON.stringify(fullFee.rounding_trace,null,2))));
+      if(fee?.assumptions)fees.append(el('p',Array.isArray(fee.assumptions)?fee.assumptions.join(' · '):JSON.stringify(fee.assumptions)));
+      fees.append(el('p','The $100 illustration scales the modeled trade; it does not specify a $100 order or establish available depth. Buffer and other costs are excluded.','p-meta'));box.append(fees);
+    }
+    const clocks=section('Detailed clocks'),original=(details.originals||[]).find(q=>q.id===row.id)||{};
+    clocks.append(facts([['Source capture',row.captured_at||details.captured_at],['Provider update',row.times?.source_at],['Successful confirmation',row.book_confirmation?.confirmed_at||original.book_confirmation?.confirmed_at],['Local receipt',row.times?.received_at],['Last price change',row.last_price_change_at||original.last_price_change_at],['Price authority ends',row.current_authority?.price?.current_until]]));
+    for(const ref of row.reference_calculation?.pair||[])clocks.append(el('h4',position({...ref,market:row.market},result.games)),facts([['Reference provider update',ref.times?.source_at],['Reference receipt',ref.times?.received_at]]));
+    clocks.append(el('p','Capture, receipt and publication do not renew source evidence.','p-meta'));box.append(disclosure('Source details & clocks',clocks));
+    const native=section('Original source');native.append(facts([['Native side',row.native_side||row.source?.native_side],['Original price',row.original?.value],['Price units',human(row.original?.units)],['Native price',row.original?.native_value],['Transformation',human(row.original?.transformation)]]));box.append(disclosure('Native price & interpretation',native));
+    const retained=section('Retained historical arithmetic');retained.append(el('p','Exact member evidence, separate from the pinned displayed availability. These values cannot restore a withdrawn estimate.'),facts([['Before-fee EV',pct(details.row.gross_return_percent)],['After reviewed-fee EV',pct(details.row.conditional_return_percent)],['Member funding',a.amount==null?null:'$'+fmt(a.amount)],['Member buffer',a.buffer==null?null:pct(num(a.buffer)*100)],['Member scenario',human(a.scenario)],['Member sizing',human(a.sizing)]]));
+    retained.append(disclosure('Literal inputs, formulas and fee records',el('pre',JSON.stringify({displayed:row,evidence:details},null,2))));box.append(disclosure('Retained arithmetic & exact inputs',retained),link('Inspect exact inputs in Admin',inspect,'math-admin'));
+    return box;
+  }
+  function changes(notice){
+    const box=el('div',null,'math-changes'),old=notice.old||{},next=notice.latest||{};
+    function change(label,a,b){if(JSON.stringify(a)!==JSON.stringify(b))box.append(el('p',`${label}: ${a??'Unavailable'} → ${b??'Unavailable'}`));}
+    if(old.original?.value!==next.original?.value&&old.offered&&next.offered){const line=el('p','Offered odds: ');line.append(odd(old.offered,''),document.createTextNode(' → '),odd(next.offered,''));box.append(line);}
+    change('Original price',old.original?.value,next.original?.value);
+    change('EV before trade fees',pct(old.before_trade_fee),pct(next.before_trade_fee));
+    if(old.original?.value!==next.original?.value)box.append(el('small',human(next.original?.units||old.original?.units),'compare-note'));
+    change('EV after trade fees',pct(old.after_trade_fee),pct(next.after_trade_fee));
+    change('Conservative estimate',pct(old.conservative_estimate),pct(next.conservative_estimate));
+    change('Fair win probability',old.probability==null?'Unavailable':fmt(num(old.probability)*100)+'%',next.probability==null?'Unavailable':fmt(num(next.probability)*100)+'%');
+    change('Reference book',name(old.reference_venue),name(next.reference_venue));
+    if(JSON.stringify(old.reference_pair)!==JSON.stringify(next.reference_pair)){
+      const label=old.reference_venue&&old.reference_venue===next.reference_venue?name(old.reference_venue)+' reference':'Reference pair';
+      const prices=v=>(v.reference_pair||[]).map(r=>`${position(r)} ${r.original?.value??'Unavailable'}`).join(' / ')||'Unavailable';change(label,prices(old),prices(next));
+      if(prices(old)===prices(next))box.append(el('p',label+' binding changed.'));
+    }
+    for(const [key,label] of [['fee_basis','Reviewed fees'],['conservative_fee_basis','Conservative fees']])if(JSON.stringify(old[key])!==JSON.stringify(next[key])){
+      const summarize=f=>f?`${f.trade_fee_usd==null?'Unavailable':'$'+fmt(f.trade_fee_usd,6)} · ${human(f.reason||f.evidence?.version||f.ranking_basis)}`:'Unavailable';
+      if(summarize(old[key])!==summarize(next[key]))change(label,summarize(old[key]),summarize(next[key]));else box.append(el('p',label+' assumptions or applicability changed.'));
+    }
+    const availability=v=>v.price_current===false?'Price unavailable':v.reasons?.length?v.reasons.map(human).join('; '):v.after_trade_fee==null?'After-fee EV unavailable':'Price and after-fee EV available';
+    change('Availability',availability(old),notice.state==='removed'?'Offer removed':availability(next));
+    if(!box.childNodes.length)box.append(el('p','Calculation inputs or authority changed; use latest to adopt the complete revision.'));
+    return box;
+  }
+  return {content,changes};
 })();
 
 // Source: snapshot-controller.js
@@ -126,18 +393,63 @@ const SnapshotViews = (() => {
   const {el,num,fmt,name,link,button}=UI,byId=id=>document.getElementById(id),api='/api/comparison-snapshot';
   const initial=new URLSearchParams(location.search),admin=location.pathname==='/admin',section=initial.get('section')||'overview';
   const view=location.pathname==='/odds'?'odds':location.pathname==='/arbs'?'arbs':'ev';
-  let current=null,offset=Number(initial.get('offset')||0),busy=false,generation=0,selection=initial.get('selection'),league=initial.get('league')||'',detailGeneration=0;
+  let liveMode=!initial.get('result_id'), liveCursor=null, following=false;
+  let current=null,offset=Number(initial.get('offset')||0),busy=false,generation=0,selection=initial.get('selection'),league=initial.get('league')||'',detailGeneration=0,selectionInitialized=false;
   const status=t=>byId('status').textContent=t,prior=[];
   const filters=['venue','family','game','search'];
   async function request(url,body){const r=await fetch(url,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});const v=await r.json();if(!r.ok)throw Error(v.reason||v.error||'Request failed');return v;}
-  function query(){const q=new URLSearchParams({view,offset:String(offset),limit:'25',metric:byId('sort').value});if(league)q.set('league',league);for(const id of filters)if(byId(id).value||(id==='game'&&!current&&initial.get(id)))q.set(id,byId(id).value||initial.get(id));return q;}
-  function saveURL(){const u=new URL(location.href),q=query();for(const id of ['league',...filters,'offset','metric']){q.get(id)?u.searchParams.set(id,q.get(id)):u.searchParams.delete(id);}if(current?.id)u.searchParams.set('result_id',current.id);if(selection)u.searchParams.set('selection',selection);else u.searchParams.delete('selection');history.replaceState(history.state,'',u);UI.carry(current?.id);}
+  function query(){const q=new URLSearchParams({view,group:'outcome',offset:String(offset),limit:'25',metric:byId('sort').value});if(league)q.set('league',league);for(const id of filters)if(byId(id).value||(id==='game'&&!current&&initial.get(id)))q.set(id,byId(id).value||initial.get(id));return q;}
+  function saveURL(){const u=new URL(location.href),q=query();for(const id of ['league',...filters,'offset','metric']){q.get(id)?u.searchParams.set(id,q.get(id)):u.searchParams.delete(id);}if(current?.id&&!liveMode)u.searchParams.set('result_id',current.id);else u.searchParams.delete('result_id');if(selection)u.searchParams.set('selection',selection);else u.searchParams.delete('selection');history.replaceState(history.state,'',u);UI.carry(liveMode?null:current?.id);}
   function contextKey(){const u=new URL(location.href);u.searchParams.delete('result_id');u.searchParams.delete('notice');u.searchParams.sort();return 'predict-context:'+u.pathname+u.search;}
   function remember(id){if(id){selection=id;saveURL();}const state={scroll:scrollY,focus:selection};history.replaceState(state,'',location.href);try{sessionStorage.setItem(contextKey(),JSON.stringify(state));}catch{}}
   function originURL(row){const u=new URL(location.href);u.searchParams.set('result_id',current.id);u.searchParams.set('selection',row.id);return u.pathname+u.search;}
   function gameURL(row){const u=new URL('/odds',location.origin);u.searchParams.set('result_id',current.id);u.searchParams.set('game',row.game_key);u.searchParams.set('selection',row.id);u.searchParams.set('selected_metric',byId('sort').value);u.searchParams.set('family',row.market.market);u.searchParams.set('back',originURL(row));return u.pathname+u.search;}
   function inspectURL(row,metric=initial.get('selected_metric')||byId('sort').value){const q=new URLSearchParams({section:'inspection',result_id:current.id,selection:row.id,selected_metric:metric,back:originURL(row)});return '/admin?'+q;}
-  function selected(id){selection=id;saveURL();}
+  function releaseToken(token){fetch('/api/comparison-current/lease?'+new URLSearchParams({lease_id:token}),{method:'DELETE',headers:{'Content-Type':'application/json'},keepalive:true}).then(r=>{if(!r.ok)throw Error('Lease release refused');}).catch(()=>status('Evidence release unavailable; its bounded lease will expire automatically.'));}
+  const inspection=SnapshotLive.create({request,release:releaseToken,onChange:renderInspection,onError:message=>{status(message);selection=inspection.state.pinned?.row.id||null;saveURL();}});
+  let panelKey=null,opener=null;
+  function renderInspection({pinned,notice,opening,error}){
+    const key=JSON.stringify([pinned?.lease?.lease_id,notice&&[notice.state,notice.old,notice.latest,notice.can_adopt],!!opening,error]);if(key===panelKey)return;panelKey=key;
+    let panel=byId('math-inspection');
+    if(!pinned&&!opening&&!error){panel?.remove();return;}
+    const active=document.activeElement?.id,scroll=panel?.scrollTop||0,openDetails=[...(panel?.querySelectorAll('details[open]')||[])].map(e=>e.querySelector('summary')?.textContent);
+    if(!panel){panel=el('dialog');panel.id='math-inspection';panel.setAttribute('aria-label','Math & fees');panel.className='math-drawer';document.body.append(panel);}
+    panel.replaceChildren();
+    const close=button('Close',()=>closeInspection());close.id='close-inspection';const head=el('header',null,'math-head');head.append(el('h2','Math & fees'),close);panel.append(head);
+    if(opening)panel.append(el('p','Retaining the exact displayed inputs…'));
+    if(error){const message=el('p',error);message.setAttribute('role','alert');panel.append(message);}
+    if(pinned){
+      const {row,result,metric,details}=pinned;
+      panel.dataset.priceRevision=row.price_revision||'';panel.dataset.economicRevision=row.economic_revision||'';
+      panel.dataset.evidenceResultId=details.evidence_result_id;
+      const inspect='/admin?'+new URLSearchParams({section:'inspection',result_id:pinned.lease.result_id,selection:row.id,selected_metric:metric,back:location.pathname+location.search});
+      const sourceLabel=el('label','Source','math-source'),sources=el('select');sources.id='inspection-source';
+      const group=result.rows?.find(g=>(g.quotes||[g]).some(q=>q.id===row.id));
+      const choices=group?.quotes||[row];
+      for(const q of choices){const o=el('option',name(q.venue||'Both sides')+(choices.filter(v=>v.venue===q.venue).length>1?' · '+q.id.slice(0,8):''));o.value=q.id;sources.append(o);}sources.value=row.id;sources.disabled=!!opening;
+      sources.onchange=()=>{const latest=current?.rows?.flatMap(g=>g.quotes||[g]).find(q=>q.id===sources.value);const q=latest||choices.find(q=>q.id===sources.value);if(q)openInspection(q,latest?current:result,metric);};sourceLabel.append(sources);panel.append(sourceLabel);
+      panel.append(el('p','Pinned inputs · list updates independently','math-pin'));
+      if(notice){
+        const box=el('section');box.id='selection-update';box.setAttribute('aria-live','polite');
+        box.append(el('strong',notice.state==='removed'?'Selected offer removed':notice.state==='unavailable'?'Selected offer unavailable':'New prices available'));
+        box.append(SnapshotDrawer.changes(notice));
+        const facts=el('details');facts.append(el('summary','Exact old / latest changes'),el('pre',JSON.stringify(notice,null,2)));box.append(facts);
+        const adopt=button('Use latest prices',()=>inspection.adopt());adopt.id='adopt-selection';adopt.disabled=!notice.can_adopt||!!opening;box.append(adopt);panel.append(box);
+      }
+      panel.append(SnapshotDrawer.content(pinned,inspect));
+    }
+    const first=!panel.open;if(first){if(matchMedia('(max-width:1099px)').matches){panel.showModal();panel.setAttribute('aria-modal','true');}else panel.show();}
+    for(const d of panel.querySelectorAll('details'))if(openDetails.includes(d.querySelector('summary')?.textContent))d.open=true;
+    panel.scrollTop=scroll;
+    if(active&&panel.querySelector('#'+CSS.escape(active)))byId(active).focus({preventScroll:true});else if(first)close.focus({preventScroll:true});
+    for(const b of document.querySelectorAll('.p-why-button'))b.setAttribute('aria-expanded',String(b.closest('[data-row]')?.dataset.row===pinned?.row.id));
+  }
+  function closeInspection(){const id=inspection.state.pinned?.row.id;inspection.close();for(const b of document.querySelectorAll('.p-why-button'))b.setAttribute('aria-expanded','false');selection=null;saveURL();const target=[...document.querySelectorAll('[data-row]')].find(e=>e.dataset.row===id)?.querySelector('.p-why-button');(target||(opener?.isConnected?opener:null)||byId('content')).focus({preventScroll:true});}
+  function selected(id){if(!id){closeInspection();return;}const row=current?.rows.flatMap(g=>g.quotes||[g]).find(r=>r.id===id);if(row)openInspection(row,current,current.metric);}
+  function openInspection(row,result,metric){selectionInitialized=true;if(!document.activeElement?.closest('#math-inspection'))opener=document.activeElement;selection=row.id;saveURL();inspection.open(row,result,metric).then(ok=>{if(ok&&liveMode)inspection.check().catch(()=>status('Latest selection temporarily unavailable; pinned inputs retained.'));});}
+  window.addEventListener('pagehide',()=>inspection.close());
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&byId('math-inspection')){e.preventDefault();closeInspection();}});
+  setInterval(()=>{if(!document.hidden)inspection.renew();},30*60*1000);
   function settingsForm(a){byId('amount').value=a.amount;byId('buffer').value=String(num(a.buffer)*100);byId('benchmark').value=a.benchmark_venue;for(const k of ['scenario','scoring','sizing'])byId(k).value=a[k]||'unavailable';byId('exception-probability').value=a.exception_probability??'';for(const v of ['kalshi','polymarket_us','novig','prophetx'])byId('fee-'+v).value=a.fees[v]??'';byId('applied').textContent=`$${fmt(a.amount)} · ${fmt(num(a.buffer)*100)}% buffer · ${name(a.benchmark_venue)}`;}
   function settingsValue(){return {amount:byId('amount').value,buffer:String(Number(byId('buffer').value)/100),benchmark_venue:byId('benchmark').value,scenario:byId('scenario').value,scoring:byId('scoring').value,sizing:byId('sizing').value,exception_probability:byId('exception-probability').value||null,fees:Object.fromEntries(['kalshi','polymarket_us','novig','prophetx'].map(v=>[v,byId('fee-'+v).value||null]))};}
   function options(id,items){const e=byId(id),value=e.value||initial.get(id);e.replaceChildren(e.options[0]);for(const [v,label] of items){const o=el('option',label);o.value=v;e.append(o);}e.value=value||'';}
@@ -151,7 +463,7 @@ const SnapshotViews = (() => {
     return '/?result_id='+encodeURIComponent(current?.id||'');
   }
   function draw(v,replace=false){
-    current=v;if(v.state==='empty'){settingsForm(v.defaults);status('No comparison captured yet. Refresh prices to capture available local inputs.');byId('content').replaceChildren();return;}
+    current=v;document.body.dataset.publicationGeneration=String(v.generation||'');document.body.dataset.publishedAt=v.publication?.published_at||'';if(v.state==='initializing'){status('Synchronizing sources and preparing current comparisons…');byId('content').replaceChildren(el('p','Waiting for the first source publication.','p-empty'));return;}if(v.state==='empty'){settingsForm(v.defaults);status('No comparisons available. Automatic collection will publish available inputs.');byId('content').replaceChildren();return;}
     if(replace){settingsForm(v.assumptions);options('game',v.games.map(g=>[g.game_key,g.title]));}saveURL();
     const u=new URL(backTarget(),location.origin);u.searchParams.set('result_id',v.id);byId('return-result').href=u.pathname+u.search;
     prior.splice(0,prior.length,...(v.history||[]).filter(h=>h.snapshot_id!==v.snapshot_id).map(h=>h.id));byId('prior-snapshot').hidden=!prior.length;
@@ -160,16 +472,34 @@ const SnapshotViews = (() => {
     byId('caption').textContent=admin?'Sources, usage and calculation settings':`${inGame?game.league+' · Full game':'Next 72 hours'} · Prices saved ${new Date(v.captured_at).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}`;
     byId('back').hidden=!inGame&&!admin;byId('back').href=backTarget();byId('back').textContent='← Back to comparison';
     byId('markets').hidden=!inGame;byId('leagues').hidden=inGame;byId('search').hidden=inGame;byId('mode').closest('label').hidden=view==='odds';byId('sort-setting').hidden=view==='odds';
-    byId('result-count').textContent=`${v.total.toLocaleString()} ${view==='odds'?'market groups':'positions'} · ${view==='odds'?'All lines and native sides':SnapshotViews.metricLabel(v.metric,v.assumptions)+' ↓'}`;
+    byId('result-count').textContent=`${v.total.toLocaleString()} ${view==='arbs'?'outcome pairs':'outcomes'} · ${v.position_count.toLocaleString()} ${view==='arbs'?'combinations':'source prices'} · ${v.unranked_count??0} unranked`;
     ++detailGeneration;const content=byId('content');content.replaceChildren();
     if(admin){drawAdmin(v);saveURL();return;}
-    const actions={game:gameURL,inspect:inspectURL,remember,selected,inGame};
-    const list=el('div',null,view==='odds'?'market-list':'p-result-list');
-    for(const row of v.rows)list.append(view==='odds'?SnapshotViews.markets(row,v,actions):SnapshotViews.card(row,v,v.metric,actions));
-    if(!v.rows.length)list.append(el('p','No results match these filters in this capture. Try another league or market.','p-empty'));content.append(list);
-    if(selection){const row=v.rows.find(r=>r.id===selection);if(row&&view!=='odds'){const card=[...list.children].find(e=>e.dataset.row===row.id);card.append(SnapshotViews.why(row,v,v.metric,inspectURL(row)));card.querySelector('.p-why-button').setAttribute('aria-expanded','true');}else if(inGame)showGameSelection(v,selection);}
+    collectionStatus(v);
+    const actions={game:gameURL,inspect:inspectURL,remember,selected,openInspection,inGame};
+    const list=el('div',null,'comparison-list');
+    if(view!=='arbs')list.append(el('p','EV per $100 of risk · decisive outcomes · Select a source for math & fees.','compare-basis'));
+    for(const row of v.rows)list.append(SnapshotViews.comparison(row,v,v.metric,actions));
+    if(!v.rows.length)list.append(el('p','No results match these filters in this capture. Try another league or market.','p-empty'));content.append(list);for(const b of list.querySelectorAll('.p-why-button'))b.setAttribute('aria-expanded',String(b.closest('[data-row]')?.dataset.row===inspection.state.pinned?.row.id));
+    if(selection&&!selectionInitialized&&!inspection.state.pinned&&!inspection.state.opening){selectionInitialized=true;const row=v.rows.flatMap(g=>g.quotes||[g]).find(q=>q.id===selection);if(row)openInspection(row,v,v.metric);else if(inGame)showGameSelection(v,selection);}
     const pager=el('div',null,'pager'),prev=button('Previous',()=>read({pageOffset:Math.max(0,offset-25),focusResults:true})),next=button('Next',()=>read({pageOffset:offset+25,focusResults:true}));prev.disabled=offset===0;next.disabled=offset+25>=v.total;pager.append(prev,el('span',`${v.total?offset+1:0}–${Math.min(offset+25,v.total)} of ${v.total}`),next);content.append(pager);
     for(const b of document.querySelectorAll('[data-league]'))b.setAttribute('aria-pressed',String(b.dataset.league===league));for(const b of document.querySelectorAll('[data-family]'))b.setAttribute('aria-pressed',String(b.dataset.family===byId('family').value));saveURL();
+  }
+  async function collectionStatus(v){
+    const box=byId('price-status');if(!box||admin)return;
+    if(v.publication){const p=v.publication,wasOpen=box.querySelector('details')?.open;const summary=el('summary',`${p.state[0].toUpperCase()+p.state.slice(1)} · ${p.current_prices.toLocaleString()} current prices · ${p.retained_prices.toLocaleString()} retained`),more=el('details');more.open=!!wasOpen;more.append(summary,el('p','Automatic collection. Retained prices await current evidence; individual source clocks determine freshness.'));for(const [venue,source] of Object.entries(p.sources||{}))more.append(el('p',name(venue)+': '+String(source.state||'pending').replaceAll('_',' ')));box.replaceChildren(more);return;}
+    const captured=new Date(v.captured_at),age=Date.now()-captured.getTime();
+    const note=el('div',age>30*60*1000?'This saved comparison is over 30 minutes old. Refresh prices to capture the newest collected inputs.':'Saved comparison. Individual source times are shown beside each price; availability can change.');
+    box.replaceChildren(note);
+    try{const live=await request('/api/admin/status');if(current?.id!==v.id)return;
+      const running=live.dispatch_enabled&&live.data_runtime?.state==='running';
+      const parts=[];for(const p of live.sources||[])for(const [venue,s] of Object.entries(p.status||{})){
+        const label=s.state==='available'?'receiving':s.state==='budget_delayed'?'15-minute schedule':s.state.replaceAll('_',' ');
+        const due=s.next_due_at?` · next ${new Date(s.next_due_at).toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'})}`:'';
+        parts.push(`${name(venue)}: ${label}${due}`);
+      }
+      box.append(el('div',(running?'Collection running. ':'Collection is not active. ')+parts.join(' · ')),el('small','Collection status checked '+new Date().toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'})+'. This does not renew saved prices.'));
+    }catch{if(current?.id===v.id)box.append(el('div','Collection status unavailable. Saved prices remain readable.'));}
   }
   async function showGameSelection(v,id){const ticket=++detailGeneration;try{const data=await request(api+'/details?'+new URLSearchParams({result_id:v.id,id}));if(ticket!==detailGeneration||current.id!==v.id||selection!==id)return;const box=SnapshotViews.why(data.row,v,data.row.kind==='pair'?'minimum_return_percent':initial.get('selected_metric')||'gross_return_percent',inspectURL(data.row));box.id='selected-why';byId('content').prepend(box);}catch(e){if(ticket===detailGeneration)status('Selected position unavailable: '+e.message);}}
   async function drawAdmin(v){
@@ -179,24 +509,38 @@ const SnapshotViews = (() => {
     content.append(el('h2',section==='timing'?'Quote timing':'Exact inspection'),el('p','Choose Why on a position, then Inspect exact inputs in Admin to see its original records and separate clocks.'));
     for(const [venue,c] of Object.entries(v.coverage||{})){const card=el('article',null,'p-market-card');card.append(el('h2',name(venue)),el('p',`${c.count} captured prices · ${c.unknown_clock} without a provider-update clock`),el('p',`Provider update range: ${c.oldest||'Unknown'} to ${c.newest||'Unknown'}`),el('p','Successful confirmation and last price change are quote-specific; provider updates alone establish neither.'));content.append(card);}
   }
-  async function read({replace=false,resultId=current?.id,pageOffset=0,focusResults=false}={}){
-    if(busy)return;const ticket=++generation,q=query();q.set('offset',String(pageOffset));if(resultId)q.set('result_id',resultId);
-    status('Loading saved comparison…');try{const v=await request(api+'?'+q);if(ticket!==generation)return;offset=v.offset||0;status(initial.get('notice')==='recalculated'?'Recalculation complete. These results use the updated assumptions.':'');draw(v,replace||!current);if(!performance.getEntriesByName('predict-useful').length)requestAnimationFrame(()=>{performance.mark('predict-useful');document.body.dataset.usefulMs=String(Math.round(performance.now()));});if(focusResults){byId('content').focus();byId('content').scrollIntoView({block:'start'});}}catch(e){if(ticket===generation){status('Read failed: '+e.message);const retry=button('Retry',()=>read({replace,resultId,pageOffset}));byId('status').append(' ',retry);}}
+  async function read({replace=false,resultId=liveMode?null:current?.id,pageOffset=0,focusResults=false,background=false}={}){
+    if(busy)return;const ticket=++generation,q=query();q.set('offset',String(pageOffset));if(resultId)q.set('result_id',resultId);if(liveMode&&!resultId&&pageOffset&&liveCursor)q.set('expected_cursor',liveCursor);
+    if(!background)status('Loading comparison…');try{const v=await request((liveMode&&!resultId?'/api/comparison-current':api)+'?'+q);if(ticket!==generation||liveMode&&!resultId&&current?.generation>v.generation)return;if(v.state==='page_changed'){await read({replace,resultId,pageOffset:0,focusResults,background});return;}offset=v.offset||0;liveCursor=v.cursor||liveCursor;status(initial.get('notice')==='recalculated'?'Recalculation complete. These results use the updated assumptions.':'');const y=scrollY,focused=document.activeElement,focusRow=focused?.closest('[data-row]')?.dataset.row;const drawStarted=performance.now();draw(v,replace||!current?.id);document.body.dataset.renderMs=String(Math.round(performance.now()-drawStarted));if(background){scrollTo(0,y);if(focusRow){const target=[...document.querySelectorAll('[data-row]')].find(e=>e.dataset.row===focusRow)?.querySelector('button,a');(target||byId('content')).focus({preventScroll:true});}}if(v.state==='ready'&&!performance.getEntriesByName('predict-useful').length)requestAnimationFrame(()=>{performance.mark('predict-useful');document.body.dataset.usefulMs=String(Math.round(performance.now()));});if(focusResults){byId('content').focus();byId('content').scrollIntoView({block:'start'});}}catch(e){if(ticket===generation){status('Read failed: '+e.message);const retry=button('Retry',()=>read({replace,resultId,pageOffset}));byId('status').append(' ',retry);}}
   }
   function disable(yes){for(const e of document.querySelectorAll('#refresh-snapshot,#ordinary-controls input,#ordinary-controls select,#ordinary-controls button,#settings button,#settings input,#settings select,#latest-snapshot,#prior-snapshot'))e.disabled=yes;}
-  async function operation(action){if(busy)return;const started=performance.now();busy=true;++generation;disable(true);status(`${action==='refresh'?'Refreshing local prices':'Recalculating captured inputs'}… Previous results remain displayed.`);try{const body={action};if(current?.id)body.expected=current.id;if(action==='recalculate')body.assumptions=settingsValue();const q=query();q.set('offset','0');const v=await request(api+'?'+q,body);offset=0;draw(v,true);status(action==='refresh'?'Prices refreshed. A new saved comparison is ready.':'Recalculation complete.');if(action==='recalculate'&&admin){const target=new URL(byId('return-result').href);target.searchParams.set('notice','recalculated');location.href=target;}}catch(e){status(`${action==='refresh'?'Refresh':'Recalculation'} failed: ${e.message}. Previous results retained.`);}finally{document.body.dataset.operationMs=String(Math.round(performance.now()-started));busy=false;disable(false);}}
+  async function operation(action){if(busy)return;if(action==='refresh'&&liveMode){await read({replace:true,resultId:null});return;}if(action==='recalculate'&&current?.publication){busy=true;disable(true);try{const v=await request('/api/comparison-current/settings',{expected:current.assumptions.revision,assumptions:settingsValue()});current.assumptions=v.assumptions;settingsForm(v.assumptions);status('Settings saved. Current comparisons are recalculating automatically.');byId('return-result').href='/';}catch(e){status('Settings could not be applied: '+e.message);}finally{busy=false;disable(false);}return;}const started=performance.now();busy=true;++generation;disable(true);status(`${action==='refresh'?'Refreshing local prices':'Recalculating captured inputs'}… Previous results remain displayed.`);try{const body={action};if(current?.id)body.expected=current.id;if(action==='recalculate')body.assumptions=settingsValue();const q=query();q.set('offset','0');const v=await request(api+'?'+q,body);offset=0;draw(v,true);status(action==='refresh'?'Prices refreshed. A new saved comparison is ready.':'Recalculation complete.');if(action==='recalculate'&&admin){const target=new URL(byId('return-result').href);target.searchParams.set('notice','recalculated');location.href=target;}}catch(e){status(`${action==='refresh'?'Refresh':'Recalculation'} failed: ${e.message}. Previous results retained.`);}finally{document.body.dataset.operationMs=String(Math.round(performance.now()-started));busy=false;disable(false);}}
   options('venue',['kalshi','polymarket_us','novig','prophetx'].map(v=>[v,name(v)]));options('family',['winner','spread','total'].map(v=>[v,name(v)]));
-  byId('sort').replaceChildren();for(const [value,label] of view==='arbs'?[['minimum_return_percent','Scenario minimum %']]:[['gross_return_percent','Before-fee estimate %'],['conditional_return_percent','After trade-fee estimate %'],['net_return_percent','Assumed net EV %'],['price_difference_cents','Price difference ¢']]){const o=el('option',label);o.value=value;byId('sort').append(o);}if([...byId('sort').options].some(o=>o.value===initial.get('metric')))byId('sort').value=initial.get('metric');
+  byId('sort').replaceChildren();for(const [value,label] of view==='arbs'?[['minimum_return_percent','Scenario minimum %']]:[['conditional_return_percent','EV after reviewed trade fees %'],['conservative_return_percent','Conservative public-fee estimate %'],['gross_return_percent','EV before fees %'],['net_return_percent','Assumed net EV %'],['price_difference_cents','Price difference ¢']]){const o=el('option',label);o.value=value;byId('sort').append(o);}if([...byId('sort').options].some(o=>o.value===initial.get('metric')))byId('sort').value=initial.get('metric');
   for(const id of filters)if(id!=='game')byId(id).value=initial.get(id)||'';
   byId('mode').value=view==='arbs'?'arbs':'ev';byId('mode').onchange=()=>{const u=new URL(location.href);u.pathname=byId('mode').value==='arbs'?'/arbs':'/';u.searchParams.delete('metric');u.searchParams.delete('offset');location.href=u;};
-  for(const value of ['','NFL','NCAAF','NBA','NCAAB','MLB','NHL']){const b=button(value||'All sports',()=>{league=value;selection=null;read();},'');b.dataset.league=value;b.setAttribute('aria-pressed',String(value===league));byId('leagues').append(b);}
+  for(const value of ['','NFL','NCAAF','NBA','NCAAB','MLB','NHL']){const b=button(value||'All sports',()=>{league=value;read();},'');b.dataset.league=value;b.setAttribute('aria-pressed',String(value===league));byId('leagues').append(b);}
   for(const value of ['','winner','spread','total']){const b=button(value?name(value):'All markets',()=>{byId('family').value=value;read();},'');b.dataset.family=value;byId('markets').append(b);}
-  for(const id of ['venue','family','game','sort'])byId(id).onchange=()=>{selection=null;read();};
-  let searchTimer;byId('search').oninput=()=>{clearTimeout(searchTimer);searchTimer=setTimeout(()=>{selection=null;read();},200);};
+  for(const id of ['venue','family','game','sort'])byId(id).onchange=()=>{read();};
+  let searchTimer;byId('search').oninput=()=>{clearTimeout(searchTimer);searchTimer=setTimeout(()=>{read();},200);};
   byId('restore').onclick=()=>{if(current?.defaults){settingsForm(current.defaults);status('Defaults loaded in this form. Recalculate to apply them.');}};
-  byId('settings').onsubmit=e=>{e.preventDefault();operation('recalculate');};byId('refresh-snapshot').onclick=()=>operation('refresh');byId('latest-snapshot').onclick=()=>{selection=null;read({replace:true,resultId:null});};byId('prior-snapshot').onclick=()=>{selection=null;read({replace:true,resultId:prior[0]});};
+  byId('settings').onsubmit=e=>{e.preventDefault();operation('recalculate');};byId('refresh-snapshot').onclick=()=>operation('refresh');byId('latest-snapshot').onclick=()=>{selected(null);liveMode=true;read({replace:true,resultId:null});};byId('prior-snapshot').onclick=()=>{selection=null;liveMode=false;read({replace:true,resultId:prior[0]});};
   if(admin){byId('admin-nav').append(UI.adminNav());byId('ordinary-controls').hidden=true;byId('snapshot-tools').hidden=true;byId('refresh-snapshot').hidden=true;byId('calculation-panel').hidden=section!=='calculations';}
   document.addEventListener('click',e=>{const a=e.target.closest('a');if(a&&new URL(a.href).origin===location.origin)remember();});
+  async function follow(){
+    if(following)return;following=true;
+    const ticket=generation;
+    try{if(liveMode&&!admin&&!busy&&!document.hidden){
+      const next=await request('/api/comparison-current/updates?'+new URLSearchParams({after:liveCursor||''}));
+      if(ticket!==generation)return;
+      if(next.changed)await read({pageOffset:offset,background:true});
+      if(liveMode)await inspection.check();
+    }}catch{if(liveMode)status('Live connection interrupted; reconnecting. Retained prices do not regain freshness.');}
+    finally{following=false;setTimeout(follow,2000);}
+  }
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&liveMode){inspection.renew();read({pageOffset:offset,background:true});}});
+  if(!admin)setTimeout(follow,2000);
+  if(liveMode){byId('refresh-snapshot').textContent='Show latest';byId('snapshot-tools').querySelector('span').textContent='Automatic publication · Source freshness checked independently';}
   disable(true);
   read({replace:true,resultId:initial.get('result_id'),pageOffset:offset}).then(restoreContext).finally(()=>{disable(false);if(!current?.id)byId('settings').querySelector('[type=submit]').disabled=true;});
 })();

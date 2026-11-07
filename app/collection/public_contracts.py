@@ -70,7 +70,7 @@ def load(*keys):
 def event_identity(*, source, event_id, competition, participants, scheduled_start,
                    provider_season=None, provider_stage=None, provider_label=None):
     """Match exact ID AND participants AND schedule, preserving contradictions."""
-    candidates = [x for x in load('events') if x['competition'] == competition
+    candidates = [x for x in _facts('events') if x['competition'] == competition
                   and x['native_ids'].get(source) == event_id]
     original = dict(source=source, event_id=event_id, competition=competition,
                     participants=deepcopy(participants), scheduled_start=scheduled_start,
@@ -168,12 +168,12 @@ def membership_field(competition,conference=None):
                 status='DOCUMENTED_MEMBERSHIP',award_eligibility_established=False,collection_authorized=False)
 
 
-def us_type(native, *, competition):
+def us_type(native, *, competition, share_metadata=False):
     """Registered family locator only; does not invent line sign or settlement."""
     metadata=native.get('metadata',{})
     key=metadata.get('market_sport_type',native.get('sportsMarketType'))
     types=_facts('us_types');row=types.get(key)
-    result=dict(version=VERSION,native_type=key,status='UNBOUND',original=deepcopy(native),
+    result=dict(version=VERSION,native_type=key,status='UNBOUND',original=native if share_metadata else deepcopy(native),
                 collection_authorized=False)
     expected_sport={'NFL':'FOOTBALL','NCAAF':'FOOTBALL','NBA':'BASKETBALL','NCAAB':'BASKETBALL','MLB':'BASEBALL','NHL':'HOCKEY'}.get(competition)
     if expected_sport is not None and metadata.get('event_subcategory') is not None and metadata['event_subcategory']!=expected_sport:

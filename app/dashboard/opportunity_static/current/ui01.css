@@ -24,3 +24,34 @@ body .p-why-panel{padding:20px 24px 22px;background:var(--p-tint);border-top:1px
 @media(max-width:440px){body main{padding:20px 14px}body .p-chrome{padding-left:16px;padding-right:16px}body .p-search{width:100%}body h1{font-size:25px}body .p-heading .p-action{font-size:12px;padding:9px 11px}body .filterbar{align-items:flex-start}body .filterbar label{flex-direction:column;align-items:flex-start}body .filterbar select{max-width:175px;font-size:11px}body .more-filters{align-self:flex-end}body .p-row{padding:15px 14px}body .p-row .p-edge strong{font-size:19px}body .p-row .p-price{max-width:110px}.settings-fields{grid-template-columns:1fr}body .p-why-grid{gap:10px}body .p-why-panel{padding:16px}.venue-prices{grid-template-columns:1fr 1fr}.venue-price{padding:10px;min-width:0}.venue-price .p-odds{font-size:17px}body .p-adminnav{gap:0}body .p-adminnav a{font-size:12px;padding:8px}dl{grid-template-columns:1fr}body dd{margin-bottom:8px}}
 
 body .p-why-grid .p-odds{display:block;font-size:27px;line-height:1.4;font-weight:750;margin:4px 0;color:var(--p-text)}body .p-price>.p-odds{display:block}body .p-heading .p-action{flex-shrink:0}body #selected-why{margin-bottom:18px;border-radius:12px;border:1px solid var(--p-line)}
+/* Outcome-first comparisons: every source and both EV columns stay together. */
+body .comparison-list{display:grid;gap:18px}
+body .compare-group{background:var(--p-panel);border:1px solid var(--p-line);border-radius:12px;overflow:hidden}
+body .compare-heading{padding:16px 18px 12px;display:flex;flex-wrap:wrap;gap:4px 16px;align-items:baseline}
+body .compare-heading>.p-meta{font-size:11px;margin-left:auto}
+body .compare-heading h2{width:100%;font-size:17px;margin:2px 0 0;line-height:1.4}
+body .compare-scroll{max-width:100%;overflow-x:auto}
+body .compare-table{width:100%;border-collapse:collapse;table-layout:auto;font-size:12px}
+body .compare-table th{background:var(--p-bg);color:var(--p-soft);font-size:11px;font-weight:650;text-align:left;white-space:normal;padding:10px 14px;border-block:1px solid var(--p-line)}
+body .compare-table td{padding:12px 14px;border-bottom:1px solid var(--p-line);vertical-align:middle;line-height:1.45}
+body .compare-table tbody tr:last-child td{border-bottom:0}
+body .compare-table td:first-child{max-width:250px}
+body .compare-number{font-variant-numeric:tabular-nums;white-space:nowrap}
+body .compare-number>strong,body .compare-table .p-odds{font-size:17px;font-weight:750;letter-spacing:-.3px}
+body .compare-number .positive{color:var(--p-profit)}
+body .compare-number .negative{color:#a54237}
+body .compare-note{display:block;font-size:10px;color:var(--p-soft);white-space:normal;font-weight:400;line-height:1.5;margin-top:3px}
+body .compare-number .compare-note{max-width:145px}
+body .compare-table .p-why-button{font-size:11px;padding:6px 9px}
+body .compare-references{padding:10px 18px;background:var(--p-tint);border-top:1px solid var(--p-line)}
+body .compare-reference{font-size:11px;line-height:1.6}
+body .compare-reference+.compare-reference{padding-top:10px;margin-top:10px;border-top:1px solid var(--p-line)}
+body .compare-ref-values{display:flex;gap:4px 8px;flex-wrap:wrap;align-items:baseline}
+body .compare-ref-values>span:nth-child(2){font-weight:750;margin-right:12px}
+body .compare-footnote{font-size:10px;color:var(--p-soft);padding:9px 18px;margin:0;line-height:1.55}
+body .compare-group .p-why-panel{border-top:1px solid var(--p-line)}
+body .compare-group .p-why-panel .compare-references{padding:10px 0;margin-top:10px}
+body .price-status{background:var(--p-tint);border:1px solid var(--p-line);padding:10px 14px;border-radius:8px;font-size:11px;color:var(--p-soft);margin:0 0 16px;line-height:1.6}
+body .price-status strong{color:var(--p-text)}
+@media(max-width:760px){body .compare-table td,body .compare-table th{padding:10px 9px}body .compare-number>strong,body .compare-table .p-odds{font-size:15px}body .compare-heading{padding:13px 12px 10px}body .compare-heading>.p-meta{margin-left:0}body .compare-heading h2{font-size:15px}body .compare-references,body .compare-footnote{padding-left:12px;padding-right:12px}}
+@media(max-width:520px){body .compare-scroll{overflow:visible}body .compare-table,body .compare-table tbody{display:block}body .compare-table thead{display:none}body .compare-table tr{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) auto;gap:8px;padding:12px;border-top:1px solid var(--p-line)}body .compare-table td{display:block;padding:0;border:0;min-width:0}body .compare-table td:first-child{grid-column:1/-1;max-width:none}body .compare-table td:before{content:attr(data-label);display:block;font-size:9px;color:var(--p-soft);font-weight:500;white-space:normal;margin-bottom:3px}body .compare-table td:first-child:before{display:none}body .compare-table td:last-child{align-self:center}body .compare-table td:last-child:before{display:none}body .compare-number>strong,body .compare-table .p-odds{font-size:14px}body .compare-table .compare-note{font-size:9px}body .compare-table .p-why-button{padding:6px}body .compare-table.pair-table tr{grid-template-columns:1fr 1fr}body .compare-table.pair-table td:first-child{grid-column:auto}body .compare-table.pair-table td:first-child:before{display:block}body .compare-table.pair-table td:last-child{justify-self:end}body .compare-heading>.p-meta{font-size:10px}}

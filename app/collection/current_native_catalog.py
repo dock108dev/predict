@@ -418,6 +418,23 @@ def share_catalog_metadata(previous,current):
     return result
 
 
+def share_census_metadata(rows,catalog):
+    """Share exact immutable facts, retaining every raw census field and type.
+
+    Discovery's raw census and derived catalog used to retain separate decoded
+    copies of the same complete market payload. Only equal subtrees may alias;
+    parser omissions or changes remain in the original raw census independently.
+    """
+    index={(m['event_id'],m['id']):m for m in catalog['markets']}
+    shared=0
+    for row in rows:
+        market=index.get((row['event_id'],row['id']))
+        if market is None or '_native' not in market:continue
+        row['_native']=share_immutable(market['_native'],row['_native'])
+        shared+=row['_native'] is market['_native']
+    return shared
+
+
 def parse_retained_market(venue,market,parent):
     """Parse already admitted metadata without reloading its entire HTTP page.
 

@@ -167,13 +167,55 @@ class CursorLifetime(IsolatedAsyncioTestCase):
 
 
 class CatalogPreparation(IsolatedAsyncioTestCase):
-    async def test_catalog_preparation_does_not_block_prices_or_replace_new_catalog(self):
+    async def test_competing_catalogs_choose_base_after_prior_adoption_without_blocking_prices(self):
         from unittest.mock import patch
-        started=Event();release=Event();calls=[]
+        started=Event();release=Event();bases=[]
         class CatalogService:
             database_mode=True
             def __init__(self):
                 self.sink=SimpleNamespace(reducer=SimpleNamespace(inventory={},generation=0),commit_async=self.commit)
+                self.ingress=Ingress(self);self.commits=[]
+            async def commit(self,row,states,revoked):
+                self.commits.append(row)
+                if row!='price':
+                    self.sink.reducer=SimpleNamespace(inventory=row,generation=self.sink.reducer.generation+1)
+            @operation
+            def catalog(self,source,cat,*,prepared,catalog_delta):yield prepared,{}
+            @operation
+            def prices(self,source,value):yield value,{}
+        service=CatalogService()
+        def prepare(base,source,cat,**kwargs):
+            bases.append((source,tuple(base)))
+            if len(bases)==1:started.set();release.wait(3)
+            return dict(base,**{source:cat})
+        with patch('app.collection.current_service.prepare_catalog',side_effect=prepare), \
+                patch('app.collection.current_catalog_delta.changes',return_value={}):
+            first=asyncio.create_task(call(service,service.catalog,'kalshi',{'complete':1}))
+            for _ in range(100):
+                if started.is_set():break
+                await asyncio.sleep(.001)
+            self.assertTrue(started.is_set())
+            second=asyncio.create_task(call(service,service.catalog,'polymarket_us',{'complete':2}))
+            try:
+                await asyncio.wait_for(call(service,service.prices,'kalshi','price'),.5)
+                await asyncio.sleep(.01)
+                self.assertEqual(bases,[('kalshi',())])
+                self.assertEqual(service.commits,['price'])
+            finally:release.set()
+            await asyncio.wait_for(asyncio.gather(first,second),3)
+        self.assertEqual(bases,[('kalshi',()),('polymarket_us',('kalshi',))])
+        self.assertEqual(service.sink.reducer.inventory,{'kalshi':{'complete':1},'polymarket_us':{'complete':2}})
+        self.assertEqual([r['catalog_attempts'] for r in service.ingress.records if r['operation']=='catalog'],[1,1])
+
+    async def test_catalog_preparation_does_not_block_prices_or_replace_new_catalog(self):
+        from unittest.mock import patch
+        import weakref
+        started=Event();release=Event();calls=[]
+        class Reducer(SimpleNamespace):pass
+        class CatalogService:
+            database_mode=True
+            def __init__(self):
+                self.sink=SimpleNamespace(reducer=Reducer(inventory={},generation=0),commit_async=self.commit)
                 self.ingress=Ingress(self);self.commits=[]
             async def commit(self,row,states,revoked):
                 self.commits.append(row)
@@ -185,6 +227,7 @@ class CatalogPreparation(IsolatedAsyncioTestCase):
             def prices(self,source,value):
                 yield value,{}
         service=CatalogService()
+        old_reducer=weakref.ref(service.sink.reducer)
         def prepare(base,*args,**kwargs):
             calls.append(base)
             if len(calls)==1:started.set();release.wait(3)
@@ -199,6 +242,7 @@ class CatalogPreparation(IsolatedAsyncioTestCase):
             try:
                 await asyncio.wait_for(call(service,service.prices,'kalshi','price'),.5)
                 await asyncio.wait_for(call(service,service.prices,'kalshi','newer'),.5)
+                self.assertIsNone(old_reducer(), 'catalog preparation must not pin superseded books')
                 self.assertFalse(task.done())
             finally:release.set()
             await asyncio.wait_for(task,3)

@@ -90,6 +90,9 @@ class SnapshotSQL(LatestBoardFixture):
         self.assertGreater(a['counts']['gross_numeric'],0)
         self.assertEqual(a['counts']['net_numeric'],0)
         broken=deepcopy(captured)
+        # Native finance is rebuilt from the retained reference witnesses, not
+        # a cached derived binding. Remove the actual probability inputs.
+        broken['references']=[]
         for q in broken['quotes']:
             q['same_outcome']['supported']=False
             q['reference']=None;q['benchmark_quote']=None

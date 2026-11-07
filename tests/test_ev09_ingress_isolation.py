@@ -22,16 +22,24 @@ class IngressIsolation(unittest.IsolatedAsyncioTestCase):
                 patch('app.storage.storage_maintenance.maintain', return_value={'after_bytes':123}) as maintenance:
             self.assertEqual(pipe.tick(), 0)
             usage.assert_called_once_with(database)
-            maintenance.assert_called_once_with(database,collecting=True)
+            maintenance.assert_called_once_with(database,collecting=True,compact=True)
             self.assertEqual(pipe.maintenance,{'after_bytes':123})
             self.assertEqual(pipe.used, 123)
             store.assert_called_once_with(database)
             rows.expire.assert_called_once_with()
             self.assertEqual(rows.method_calls, [('expire', (), {})])
+            maintenance.reset_mock()
+            pipe.tick()
+            maintenance.assert_called_once_with(database,collecting=True,compact=False)
+            pipe.maintenance=dict(pipe.maintenance,continue_compaction=True)
+            maintenance.reset_mock()
+            pipe.tick()
+            maintenance.assert_called_once_with(database,collecting=True,compact=True)
+            store.reset_mock();usage.reset_mock()
             pipe.closed = True
             pipe.tick()
-            store.assert_called_once_with(database)
-            usage.assert_called_once_with(database)
+            store.assert_not_called()
+            usage.assert_not_called()
 
     async def test_close_joins_active_expiry_without_starting_more_work(self):
         pipe = self.pipeline()

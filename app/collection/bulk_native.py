@@ -10,6 +10,7 @@ from .native_scope_bindings import selectors_for
 from .native_selectors import query
 from .current_sink import utc
 from .bulk_checkpoint import owned_thread
+from .current_book_images import decode_container, encode_container
 
 
 def _catalog_process(receipts, venue, at, selection, output_path):
@@ -66,7 +67,7 @@ async def close_catalog_worker(worker):
         worker.metrics['catalog_worker_stopped']=True
 
 
-async def pages(worker, path, base, field, scope=None, size=50):
+async def pages(worker, path, base, field, scope=None, size=50, *, event_pages=None):
     """Resume exact queries. A repeated cursor/page is a failure, never absence."""
     checkpoint = getattr(worker, 'checkpoint', None)
     key, saved = await owned_thread(checkpoint.query, path, base) if checkpoint else (None, [])
@@ -116,7 +117,21 @@ async def pages(worker, path, base, field, scope=None, size=50):
             await owned_thread(checkpoint.page, key, index, page, complete)
         if checkpoint:
             page['current_checkpoint']=dict(source=worker.venue,query_key=key,position=index)
-        result.extend(rows)
+        if event_pages is not None:
+            # Preserve every original listing witness, including duplicate event
+            # appearances. Index during the already-required bounded decode;
+            # never retain a second decoded copy of the complete listing slate.
+            for eid in dict.fromkeys(str(row['id']) for row in rows if row.get('id') is not None):
+                event_pages.setdefault(eid,[]).append(page)
+        if event_pages is not None and checkpoint:
+            # Listing receipts are durable. Hold the exact listing parents in
+            # compact form while other leagues and event details are traversed.
+            result.extend(
+                dict(id=row['id'], gameId=row.get('gameId'), packed_event=encode_container(row))
+                for row in rows
+            )
+        else:
+            result.extend(rows)
         index += 1
         worker.metrics['bulk_progress'] = dict(path=path, pages=index, rows=len(result),
                                               exhausted=complete, continuation=None if complete else position)
@@ -131,6 +146,7 @@ async def enumerate_native(worker):
     if checkpoint:
         await owned_thread(checkpoint.begin)
     selected, native_events, markets = {}, {}, {}
+    event_pages={}
     catalogs=[]
     cache=getattr(worker,'catalog_cache',{})
     worker.catalog_cache=cache
@@ -150,7 +166,8 @@ async def enumerate_native(worker):
                 selector=dict(selector,params=dict(selector['params'],with_nested_markets='true'))
             scope = selector['binding']
             rows, count = await pages(worker, selector['path'], selector['params'], 'events', scope,
-                                      size=50 if worker.venue == 'kalshi' else 5)
+                                      size=50 if worker.venue == 'kalshi' else 5,
+                                      event_pages=event_pages if worker.venue=='polymarket_us' else None)
             ids = []
             for native in rows:
                 eid = str(native['event_ticker' if worker.venue == 'kalshi' else 'id'])
@@ -181,7 +198,7 @@ async def enumerate_native(worker):
                     if len(details) != 1 or str(details[0].get('id')) != eid:
                         raise ValueError('bulk_event_detail_identity')
                     del worker.pages[start:]
-    listing_pages=[coverage.DecodedPage(p) for p in worker.pages]
+    listing_pages=[coverage.DecodedPage(p) for p in worker.pages] if worker.venue=='kalshi' else list(worker.pages)
     # All configured listing scopes precede metadata. Distinct native IDs remain
     # independent even when derived occurrence/financial bindings are unavailable.
     from app.adapters.polymarket_us import full_game_family
@@ -190,6 +207,8 @@ async def enumerate_native(worker):
         worker._coverage_family = (event['scope'] or {}).get('family')
         metadata_start=len(worker.pages)
         listing_native=native_events[eid]
+        if checkpoint and worker.venue=='polymarket_us':
+            listing_native = decode_container(listing_native['packed_event'])
         missing_listing_ids=set()
         if worker.venue == 'kalshi':
             rows=native_events[eid].get('markets')
@@ -216,7 +235,8 @@ async def enumerate_native(worker):
             mid = str(native['ticker' if worker.venue == 'kalshi' else 'id'])
             family = (event['scope'] or {}).get('family') if worker.venue == 'kalshi' else full_game_family(native.get('sportsMarketType'))
             markets[(eid,mid)] = dict(id=mid, event_id=eid, market_type=family or 'unknown', _native=native)
-        own_ids=[m['id'] for m in markets.values() if m['event_id']==eid]
+        own_rows=[markets[(eid,mid)] for mid in dict.fromkeys(str(m['ticker' if worker.venue=='kalshi' else 'id']) for m in rows)]
+        own_ids=[m['id'] for m in own_rows]
         # Derive one event at a time. Complete raw receipts live in indexed SQL;
         # unselected props and duplicated depth never accumulate in the graph.
         relevant=[p for p in listing_pages if
@@ -225,8 +245,7 @@ async def enumerate_native(worker):
         if missing_listing_ids:
             # Preserve actual listing receipts, including conflict checks. Never
             # synthesize an expanded response or relabel its provider hash.
-            relevant=[p for p in listing_pages if any(str(e.get('id'))==eid
-                for e in coverage.decode_page(p)[1].get('events',[]))]
+            relevant=event_pages.get(eid,[])
         receipts=relevant+worker.pages[metadata_start:]
         if worker.venue!='kalshi':
             signature=tuple(p['body_sha256'] for p in receipts)
@@ -237,13 +256,22 @@ async def enumerate_native(worker):
                 cat=await build_catalog(worker,receipts,datetime.now(timezone.utc),
                     dict(events=[eid],markets=own_ids))
                 cache[eid]=(signature,cat)
+            if checkpoint:
+                from .current_native_catalog import share_census_metadata
+                shared=share_census_metadata(own_rows,cat)
+                worker.metrics['census_metadata_shared']=worker.metrics.get('census_metadata_shared',0)+shared
             catalogs.append(cat)
             if checkpoint:
                 for page in worker.pages[metadata_start:]:
                     page.pop('body_b64',None)
         # Keep selected metadata only, with raw evidence available independently.
         if worker.venue=='polymarket_us':
-            native_events[eid]=dict(native_events[eid],markets=rows)
+            if checkpoint:
+                # The installed caller discards this unused parent graph. Exact
+                # selected raw markets, catalog parents and durable receipts
+                # already have their independent owners; release packaging now.
+                native_events.pop(eid)
+            else:native_events[eid]=dict(native_events[eid],markets=rows)
 
     if worker.venue=='kalshi':
         # One complete pass through the shared listing pages. Sending those same
@@ -251,6 +279,9 @@ async def enumerate_native(worker):
         # and IPC even after HTTP acquisition had finished.
         catalogs=[await build_catalog(worker,worker.pages,datetime.now(timezone.utc),
             dict(events=list(selected),markets=[mid for _,mid in markets]))]
+        if checkpoint:
+            from .current_native_catalog import share_census_metadata
+            worker.metrics['census_metadata_shared']=share_census_metadata(markets.values(),catalogs[0])
         cache.clear()
         if checkpoint:
             for page in worker.pages:page.pop('body_b64',None)

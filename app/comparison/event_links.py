@@ -163,6 +163,12 @@ def current_event_key(event):
     return ['comparison-reviewed-occurrence-1', event['competition'], event['game_id'], event['home'], event['away'], event.get('game_number')]
 
 
+def occurrence_sport(competition,sport):
+    if competition=='NHL' and sport in ('ice_hockey','hockey'):
+        return 'hockey'
+    return sport
+
+
 def semantic_market(record):
     market = deepcopy(record['market_identity'])
     market.pop('scheduled_start', None)

@@ -40,7 +40,28 @@ class NormalizationRegistries:
         return json.loads(self.source_rules), json.loads(self.selected_applicability)
 
 
-def catalog_from_normalized(envelope, records, *, reference_records=(), selected_applicability=None, occurrence_resolver=None, include_profiles=True, source_rules=None, registries=None, profile_contracts=None):
+def native_contract(record, quote):
+    """Construct exact native contract evidence from this captured record."""
+    q=quote;selection=record['selection'];market=record['market_identity']
+    policy=record.get('result_policy',identity('normalized-outcomes',[market['outcome_set'],market['rules']]))
+    overtime=(record.get('comparison_scope') or dict(overtime='unknown'))['overtime']
+    from app.comparison.event_links import digest
+    metadata=record.get('comparison_source_metadata',{})
+    contract=dict(version='predict-native-contract-1',source=deepcopy(q['source']),
+        predicate=deepcopy(q['occurrence_match']['original_selection']),
+        wording=deepcopy(metadata.get('original_wording',{'selection':selection['label'],'rule_note':q['rule_note']})),
+        result_policy=q.get('native_predicate',{}).get('original_result_policy',policy),
+        scope=dict(period=market['period'],overtime=overtime),
+        material_sha256=metadata.get('material_sha256',q['provenance'].get('sha256')))
+    if 'same_outcome' in metadata:
+        contract['same_outcome']=deepcopy(metadata['same_outcome'])
+    if 'scoring_scope' in metadata:
+        contract['scope_evidence']=deepcopy(metadata['scoring_scope'])
+    contract['id']='native-contract:'+digest(contract)
+    return contract
+
+
+def catalog_from_normalized(envelope, records, *, reference_records=(), selected_applicability=None, occurrence_resolver=None, include_profiles=True, source_rules=None, registries=None, profile_contracts=None, _scoring_attached=False):
     from app.storage.current_rows import contract_id
     from app.resolution.core import event_key
     from app.comparison.event_links import provider_key, current_event_key, ordinary_event_key
@@ -72,7 +93,7 @@ def catalog_from_normalized(envelope, records, *, reference_records=(), selected
         # Reattach supported retained metadata to existing SQL rows as well as
         # new collection. This does not need another provider observation.
         from app.comparison.native_scoring_scope import attach
-        record=attach(record,at=envelope['clock_at'])
+        if not _scoring_attached:record=attach(record,at=envelope['clock_at'])
         fields(record,{'event','market_identity','period_boundary','anchor_participant','selection','quote','orientation_evidence','verified','outcome_cardinality'},{'result_policy','event_scope','outcome_selections','comparison_source_metadata','comparison_scope'})
         event=record['event'];market=record['market_identity'];selection=record['selection'];q=deepcopy(record['quote'])
         metadata_context=(q.get('occurrence_match',{}).get('status')=='matched' and
@@ -158,20 +179,7 @@ def catalog_from_normalized(envelope, records, *, reference_records=(), selected
             g['display_group']=dict(version='predict-display-group-1',id=identity('display-group',display_key),
                 occurrence_id=e['id'],market=family,period=market['period'],overtime=overtime,line=line(market['line']))
         if 'occurrence_match' in q:
-            from app.comparison.event_links import digest
-            metadata=record.get('comparison_source_metadata',{})
-            contract=dict(version='predict-native-contract-1',source=deepcopy(q['source']),
-                predicate=deepcopy(q['occurrence_match']['original_selection']),
-                wording=deepcopy(metadata.get('original_wording',{'selection':selection['label'],'rule_note':q['rule_note']})),
-                result_policy=q.get('native_predicate',{}).get('original_result_policy',policy),
-                scope=dict(period=market['period'],overtime=overtime),
-                material_sha256=metadata.get('material_sha256',q['provenance'].get('sha256')))
-            if 'same_outcome' in metadata:
-                contract['same_outcome']=deepcopy(metadata['same_outcome'])
-            if 'scoring_scope' in metadata:
-                contract['scope_evidence']=deepcopy(metadata['scoring_scope'])
-            contract['id']='native-contract:'+digest(contract)
-            q['native_contract']=contract
+            q['native_contract']=native_contract(record,q)
         if g['id'] not in groups:groups[g['id']]=g;e['groups'].append(g)
         g=groups[g['id']]
         if 'outcome_selections' in record:

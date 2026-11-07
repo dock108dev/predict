@@ -96,6 +96,18 @@ class RuntimeState:
                         and panels[provider][key]==value)}
                 for provider,metrics in status['metrics'].items()}
             status['status_retention']['structured_metrics_location']='sources[].metrics; exact repeated root details omitted'
+        # Retain the most recent delivery examples in the cross-process report.
+        # The worker keeps the full timing ring. Source coverage, quota records
+        # and publication inputs have independent owners and retain every row.
+        delivery_samples = {}
+        for panel in status.get('sources', []):
+            metrics = panel.get('metrics', {})
+            samples = metrics.get('delivery_trace', [])
+            if len(samples) > 16:
+                delivery_samples[panel['provider']] = dict(available=len(samples), retained=16)
+                panel['metrics'] = dict(metrics, delivery_trace=samples[-16:])
+        if delivery_samples:
+            status['status_retention']['delivery_samples'] = delivery_samples
         status['background_calculations'] = deepcopy(getattr(service, 'background_calculations', {}))
         status['background_work'] = deepcopy(getattr(service, 'background_work', {}))
         if status.get('database'):

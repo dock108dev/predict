@@ -5,6 +5,7 @@ from uuid import uuid4
 
 from psycopg.types.json import Jsonb
 from app.storage.store import connect
+from app.storage.recovery_codec import freeze,thaw
 
 
 class Checkpoint:
@@ -27,7 +28,7 @@ class Checkpoint:
                            (self.source, key, self.generation, Jsonb(request)))
             else:
                 self.generation = row['generation']
-            pages = [r['receipt'] for r in db.execute(
+            pages = [thaw(r['receipt']) for r in db.execute(
                 'SELECT receipt FROM current_acquisition_page WHERE source=%s '
                 'AND query_key=%s ORDER BY position', (self.source, key))]
         return key, pages
@@ -44,8 +45,9 @@ class Checkpoint:
     def page(self, key, index, receipt, complete):
         with connect() as db, db.transaction():
             db.execute('INSERT INTO current_acquisition_page VALUES (%s,%s,%s,%s) '
-                       'ON CONFLICT (source,query_key,position) DO UPDATE SET receipt=EXCLUDED.receipt',
-                       (self.source, key, index, Jsonb(receipt)))
+                       'ON CONFLICT (source,query_key,position) DO UPDATE SET receipt=EXCLUDED.receipt '
+                       'WHERE current_acquisition_page.receipt IS DISTINCT FROM EXCLUDED.receipt',
+                       (self.source, key, index, Jsonb(freeze(receipt))))
             if complete:
                 db.execute('UPDATE current_acquisition_query SET completed_at=now() '
                            'WHERE source=%s AND query_key=%s', (self.source, key))
@@ -64,6 +66,14 @@ class Checkpoint:
                        (self.source,))
 
 
+def image_parts(book):
+    # SQL NULL means absent; JSON null and empty arrays/strings are evidence.
+    header=dict(book,raw=dict(book['raw']))
+    depth=Jsonb(header.pop('outcomes')) if 'outcomes' in header else None
+    wire=Jsonb(header['raw'].pop('json_text')) if 'json_text' in header['raw'] else None
+    return Jsonb(header),depth,wire
+
+
 def save_images(source, books, disposition, contexts=None, *, known_persisted=False, ensure_only=False):
     if ensure_only and (disposition!='pending' or contexts is not None):
         raise ValueError('invalid_image_ensure')
@@ -75,39 +85,60 @@ def save_images(source, books, disposition, contexts=None, *, known_persisted=Fa
         if known_persisted:
             if disposition not in ('admitted','rejected') or contexts is not None:
                 raise ValueError('invalid_persisted_image_disposition')
-            with db.cursor() as cur:
-                cur.executemany('UPDATE current_acquisition_image SET disposition=%s '
-                    'WHERE source=%s AND event_id=%s AND market_id=%s AND received_at=%s '
-                    'AND disposition IS DISTINCT FROM %s',
-                    [(disposition,source,b['raw']['ref']['event_id'],b['raw']['ref']['market_id'],b['raw']['received_at'],disposition) for b in books])
+            # Lock in the same identity order as the raw writer. One statement
+            # marks exact persisted receipts without resending any book payload.
+            db.execute("""WITH wanted AS MATERIALIZED (
+                SELECT DISTINCT * FROM unnest(%s::text[],%s::text[],%s::timestamptz[]) w(event_id,market_id,received_at)
+                ORDER BY event_id,market_id,received_at),
+              locked AS MATERIALIZED (
+                SELECT found.* FROM wanted w CROSS JOIN LATERAL (
+                  SELECT i.source,i.event_id,i.market_id,i.received_at FROM current_acquisition_image_parts i
+                  WHERE i.source=%s AND i.event_id=w.event_id AND i.market_id=w.market_id
+                    AND i.received_at=w.received_at AND i.disposition IS DISTINCT FROM %s
+                  LIMIT 1 FOR UPDATE OF i) found)
+              UPDATE current_acquisition_image_parts i SET disposition=%s FROM locked l
+              WHERE (i.source,i.event_id,i.market_id,i.received_at)=(l.source,l.event_id,l.market_id,l.received_at)""",
+                ([b['raw']['ref']['event_id'] for b in books],[b['raw']['ref']['market_id'] for b in books],
+                 [b['raw']['received_at'] for b in books],source,disposition,disposition))
             return
         # The current image only moves forward. An already superseded receipt
         # cannot become eligible again, so avoid serializing its complete depth.
         from datetime import datetime
         prior={(r['event_id'],r['market_id']):r for r in db.execute(
-            'SELECT i.event_id,i.market_id,i.received_at,i.disposition FROM current_acquisition_image i '
-            'JOIN unnest(%s::text[],%s::text[]) AS wanted(event_id,market_id) '
-            'ON i.event_id=wanted.event_id AND i.market_id=wanted.market_id WHERE i.source=%s',
+            'SELECT i.* FROM unnest(%s::text[],%s::text[]) AS wanted(event_id,market_id) '
+            'CROSS JOIN LATERAL (SELECT event_id,market_id,received_at,disposition FROM current_acquisition_image_parts '
+            'WHERE event_id=wanted.event_id AND market_id=wanted.market_id AND source=%s LIMIT 1) i',
             ([b['raw']['ref']['event_id'] for b in books],[b['raw']['ref']['market_id'] for b in books],source))}
         def eligible(book):
             old=prior.get((book['raw']['ref']['event_id'],book['raw']['ref']['market_id']))
             if old is None:return True
             at=datetime.fromisoformat(book['raw']['received_at'].replace('Z','+00:00'))
-            return old['received_at']<at or not ensure_only and old['received_at']==at and (disposition!='pending' or old['disposition']=='pending')
+            return old['received_at']<at or not ensure_only and old['received_at']==at
         books=[b for b in books if eligible(b)]
         with db.cursor() as cur:
-            cur.executemany('INSERT INTO current_acquisition_image (source,event_id,market_id,received_at,disposition,image,runtime_id,connection_generation,census_generation) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s) '
+            cur.executemany('INSERT INTO current_acquisition_image_parts (source,event_id,market_id,received_at,disposition,image,depth_payload,wire_payload,runtime_id,connection_generation,census_generation) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) '
                 'ON CONFLICT (source,event_id,market_id) DO UPDATE SET '
-                'received_at=EXCLUDED.received_at,disposition=EXCLUDED.disposition,image=EXCLUDED.image, '
-                'runtime_id=CASE WHEN current_acquisition_image.received_at=EXCLUDED.received_at THEN COALESCE(EXCLUDED.runtime_id,current_acquisition_image.runtime_id) ELSE EXCLUDED.runtime_id END, '
-                'connection_generation=CASE WHEN current_acquisition_image.received_at=EXCLUDED.received_at THEN COALESCE(EXCLUDED.connection_generation,current_acquisition_image.connection_generation) ELSE EXCLUDED.connection_generation END, '
-                'census_generation=CASE WHEN current_acquisition_image.received_at=EXCLUDED.received_at THEN COALESCE(EXCLUDED.census_generation,current_acquisition_image.census_generation) ELSE EXCLUDED.census_generation END '
-                'WHERE current_acquisition_image.received_at<EXCLUDED.received_at OR '
-                '(current_acquisition_image.received_at=EXCLUDED.received_at AND '
-                "(EXCLUDED.disposition<>'pending' OR current_acquisition_image.disposition='pending') AND "
-                +('false' if ensure_only else 'true')+")",
+                "received_at=EXCLUDED.received_at,disposition=CASE WHEN current_acquisition_image_parts.received_at=EXCLUDED.received_at AND EXCLUDED.disposition='pending' THEN current_acquisition_image_parts.disposition ELSE EXCLUDED.disposition END, "
+                'image=CASE WHEN current_acquisition_image_parts.image=EXCLUDED.image THEN current_acquisition_image_parts.image ELSE EXCLUDED.image END, '
+                'depth_payload=CASE WHEN current_acquisition_image_parts.depth_payload IS NOT DISTINCT FROM EXCLUDED.depth_payload THEN current_acquisition_image_parts.depth_payload ELSE EXCLUDED.depth_payload END, '
+                'wire_payload=CASE WHEN current_acquisition_image_parts.wire_payload IS NOT DISTINCT FROM EXCLUDED.wire_payload THEN current_acquisition_image_parts.wire_payload ELSE EXCLUDED.wire_payload END, '
+                'runtime_id=CASE WHEN current_acquisition_image_parts.received_at=EXCLUDED.received_at THEN COALESCE(EXCLUDED.runtime_id,current_acquisition_image_parts.runtime_id) ELSE EXCLUDED.runtime_id END, '
+                'connection_generation=CASE WHEN current_acquisition_image_parts.received_at=EXCLUDED.received_at THEN COALESCE(EXCLUDED.connection_generation,current_acquisition_image_parts.connection_generation) ELSE EXCLUDED.connection_generation END, '
+                'census_generation=CASE WHEN current_acquisition_image_parts.received_at=EXCLUDED.received_at THEN COALESCE(EXCLUDED.census_generation,current_acquisition_image_parts.census_generation) ELSE EXCLUDED.census_generation END '
+                'WHERE current_acquisition_image_parts.received_at<EXCLUDED.received_at OR '
+                '(current_acquisition_image_parts.received_at=EXCLUDED.received_at AND '
+                "(EXCLUDED.disposition<>'pending' OR current_acquisition_image_parts.disposition='pending' OR "
+                "(current_acquisition_image_parts.image=EXCLUDED.image AND current_acquisition_image_parts.depth_payload IS NOT DISTINCT FROM EXCLUDED.depth_payload AND current_acquisition_image_parts.wire_payload IS NOT DISTINCT FROM EXCLUDED.wire_payload)) AND "
+                +('false' if ensure_only else 'true')+") AND ("
+                "(EXCLUDED.disposition<>'pending' AND current_acquisition_image_parts.disposition IS DISTINCT FROM EXCLUDED.disposition) OR "
+                'current_acquisition_image_parts.image IS DISTINCT FROM EXCLUDED.image OR '
+                'current_acquisition_image_parts.depth_payload IS DISTINCT FROM EXCLUDED.depth_payload OR '
+                'current_acquisition_image_parts.wire_payload IS DISTINCT FROM EXCLUDED.wire_payload OR '
+                '(EXCLUDED.runtime_id IS NOT NULL AND current_acquisition_image_parts.runtime_id IS DISTINCT FROM EXCLUDED.runtime_id) OR '
+                '(EXCLUDED.connection_generation IS NOT NULL AND current_acquisition_image_parts.connection_generation IS DISTINCT FROM EXCLUDED.connection_generation) OR '
+                '(EXCLUDED.census_generation IS NOT NULL AND current_acquisition_image_parts.census_generation IS DISTINCT FROM EXCLUDED.census_generation))',
                 [(source,b['raw']['ref']['event_id'],b['raw']['ref']['market_id'],
-                  b['raw']['received_at'],disposition,Jsonb(b),*(contexts or {}).get(b['raw']['ref']['market_id'],(None,None,None))) for b in books])
+                  b['raw']['received_at'],disposition,*image_parts(b),*(contexts or {}).get(b['raw']['ref']['market_id'],(None,None,None))) for b in books])
 
 
 def save_census(source, events, markets, parsed):
@@ -139,7 +170,7 @@ def save_census(source, events, markets, parsed):
                    "OR metadata->>'status' IN ('closed','settled','finalized'))", (source,generation))
         # Current evidence plus a short withdrawal inspection window, not history.
         db.execute("DELETE FROM current_acquisition_market WHERE withdrawn AND observed_at<now()-interval '2 days'")
-        db.execute("DELETE FROM current_acquisition_image i WHERE received_at<now()-interval '2 days' AND NOT EXISTS "
+        db.execute("DELETE FROM current_acquisition_image_parts i WHERE received_at<now()-interval '2 days' AND NOT EXISTS "
                    '(SELECT 1 FROM current_acquisition_market m WHERE m.source=i.source AND '
                    'm.event_id=i.event_id AND m.market_id=i.market_id AND NOT m.withdrawn)')
 
@@ -152,7 +183,7 @@ def read_page(reference):
                        (reference['source'],reference['query_key'],reference['position'])).fetchone()
     if row is None:
         raise ValueError('current_checkpoint_page_unavailable')
-    return row['receipt']
+    return thaw(row['receipt'])
 
 
 async def owned_thread(fn, *args, **kwargs):

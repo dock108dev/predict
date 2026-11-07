@@ -1,5 +1,11 @@
 # UI01 — implement the approved Predict interface
 
+## Subsequent delivery
+
+The [November 4 live-comparison plan](live-comparison-plan-20261104.md) updated
+the design below. The [November 6 delivery record](engineering/live-comparison-20261104/L05-delivery.md)
+covers the grouped live list, pinned drawer and their local verification.
+
 ## November 3 — integrated engineering verification
 
 The ordinary snapshot product is implemented and integrated in the existing main

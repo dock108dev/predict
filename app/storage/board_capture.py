@@ -27,7 +27,7 @@ def capture_reservation(db, *, observations_only=False, event_ids=None):
     # Hydration keeps exact decimal strings and Python containers. Reserve for
     # selected asks only, with the same conservative bound as selected reads.
     depth=db.execute('''SELECT COALESCE(sum(n),0) AS n FROM (
-        SELECT 2048 n FROM current_native_depth WHERE side='asks' AND (%s::text[] IS NULL OR event_id=ANY(%s))
+        SELECT 2048::bigint*jsonb_array_length(levels) n FROM current_native_ladder WHERE side='asks' AND (%s::text[] IS NULL OR event_id=ANY(%s))
         UNION ALL SELECT 2048 FROM current_depth d JOIN current_contract c ON c.id=d.contract_id
             WHERE side='asks' AND (%s::text[] IS NULL OR c.event_id=ANY(%s))) levels''',
         (event_ids,event_ids,event_ids,event_ids)).fetchone()['n']

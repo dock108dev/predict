@@ -74,23 +74,25 @@ def resolve_team(team, competition, venue):
 @lru_cache(maxsize=1024)
 def college_entrant(label, sport):
     if not isinstance(label,str) or not label:return None
-    from .public_contracts import college_registry
     from app.normalization.registry import name_key
     reg=_college_registry();direct=reg.resolve('team',label,league=sport)
     if direct.status=='resolved':return direct.canonical_id
-    # Enumerated institutional display normalization, with collision rejection
-    # over the complete official directory. No abbreviations or ticker decoding.
-    matches=set()
+    return _institutional_names(reg).get((sport,name_key(label)))
+
+
+@lru_cache(maxsize=1)
+def _institutional_names(reg):
+    from app.normalization.registry import name_key
+    matches={}
     for cid,e in reg.entities.items():
-        if e.get('league')!=sport:continue
         names={e['name']}
         if e['name'].startswith('University of '):names.add(e['name'][14:])
         if e['name'].endswith(' University'):names.add(e['name'][:-11])
-        # State -> St. is an enumerated institutional display form, checked
-        # against every directory entry so abbreviated Saint names stay ambiguous.
         names.update(n.replace(' State',' St.') for n in tuple(names) if ' State' in n)
-        if name_key(label) in {name_key(n) for n in names}:matches.add(cid)
-    return next(iter(matches)) if len(matches)==1 else None
+        for label in names:
+            matches.setdefault((e.get('league'),name_key(label)),set()).add(cid)
+    # Omit collisions across the entire league directory.
+    return {key:next(iter(ids)) for key,ids in matches.items() if len(ids)==1}
 
 
 def _season_context(facts):

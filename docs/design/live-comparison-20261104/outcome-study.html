@@ -1,0 +1,78 @@
+<style>
+#predict-design{color-scheme:light dark}
+#predict-design .preview{padding:16px 0}
+#predict-design .sample{font:12px system-ui,sans-serif;color:light-dark(#526e7b,#adc8d4);margin:0 0 12px;padding-right:90px}
+#predict-design .product{--paper:light-dark(#fff,#162c37);--ink:light-dark(#102f43,#eaf6fc);--soft:light-dark(#526e7b,#adc8d4);--line:light-dark(#d7e7eb,#36515f);--tint:light-dark(#eaf7f7,#193c47);--accent:light-dark(#067d87,#70dbda);--profit:light-dark(#007064,#8bdcc3);background:var(--paper);color:var(--ink);font-family:Manrope,system-ui,sans-serif;border:1px solid var(--line);border-radius:12px;position:relative;overflow:hidden;min-height:500px;--row:15px}
+#predict-design .top{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;padding:15px 18px;border-bottom:1px solid var(--line);font-size:14px}
+#predict-design .meta{font-size:12px;color:var(--soft)}
+#predict-design .heading{padding:18px;display:flex;gap:12px;align-items:center;justify-content:space-between}
+#predict-design .heading h2{font-size:20px;line-height:1.3;margin:5px 0 3px;font-weight:750}
+#predict-design .heading p{margin:0}
+#predict-design button{font:600 12px Manrope,system-ui,sans-serif;color:var(--accent);background:var(--tint);border:1px solid var(--line);border-radius:6px;padding:8px 10px;cursor:pointer}
+#predict-design .heading button{flex-shrink:0}
+#predict-design .source-button{padding:0;background:transparent;border:0;text-align:left;font-size:13px;color:var(--ink)}
+#predict-design .source-button:hover{text-decoration:underline;color:var(--accent)}
+#predict-design table{width:100%;border-collapse:collapse;font-size:13px;line-height:1.5}
+#predict-design th{font-size:11px;color:var(--soft);font-weight:600;text-align:right;background:var(--tint);padding:10px 16px;border-block:1px solid var(--line)}
+#predict-design td{padding:var(--row) 16px;border-bottom:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums;vertical-align:middle}
+#predict-design td:first-child,#predict-design th:first-child{text-align:left}
+#predict-design td strong{font-size:16px;white-space:nowrap}
+#predict-design .gain{color:var(--profit)}
+#predict-design .reason{font-size:11px;color:var(--soft);display:block;line-height:1.4}
+#predict-design .reference{padding:12px 18px;background:var(--tint);font-size:12px;display:flex;flex-wrap:wrap;gap:6px 18px;align-items:baseline}
+#predict-design .reference strong{font-weight:700}
+#predict-design .foot{padding:10px 18px;font-size:11px;color:var(--soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:5px}
+#predict-design .veil{position:absolute;inset:0;background:light-dark(#102f4340,#0008);z-index:2}
+#predict-design .drawer{position:absolute;inset:0 0 0 auto;width:min(420px,100%);z-index:3;background:var(--paper);border-left:1px solid var(--line);box-shadow:-12px 0 30px #0002;overflow:auto;padding:20px;box-sizing:border-box}
+#predict-design .drawer[hidden],#predict-design .veil[hidden]{display:none}
+#predict-design .drawer-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:8px}
+#predict-design .drawer h3{font-size:18px;margin:0;font-weight:750}
+#predict-design .drawer h4{font-size:13px;margin:18px 0 8px}
+#predict-design .drawer p{font-size:12px;line-height:1.55;margin:6px 0;color:var(--soft)}
+#predict-design .drawer label{display:block;font-size:12px;margin-top:16px;color:var(--soft)}
+#predict-design .drawer select{width:100%;font:14px Manrope,system-ui,sans-serif;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:8px;margin-top:5px}
+#predict-design .drawer dl{margin:8px 0;display:grid;grid-template-columns:1fr auto;gap:9px;font-size:12px;line-height:1.4}
+#predict-design .drawer dt{color:var(--soft)}
+#predict-design .drawer dd{margin:0;text-align:right;font-variant-numeric:tabular-nums;font-weight:650}
+#predict-design .drawer .formula{border-block:1px solid var(--line);padding:12px 0;margin:14px 0;font-size:13px;color:var(--ink)}
+#predict-design .drawer details{font-size:12px;margin-top:16px}
+#predict-design .drawer summary{cursor:pointer;color:var(--accent)}
+@media(max-width:540px){#predict-design .product{min-height:560px}#predict-design .heading{padding:14px 12px;gap:8px}#predict-design .heading h2{font-size:18px}#predict-design th,#predict-design td{padding-left:8px;padding-right:8px}#predict-design td strong{font-size:14px}#predict-design .top{padding:12px}#predict-design .source-button{font-size:12px}#predict-design .heading button{padding:7px;font-size:11px}#predict-design .reference,#predict-design .foot{padding-left:12px;padding-right:12px}}
+@media(max-width:375px){#predict-design .heading{align-items:flex-start;flex-wrap:wrap}#predict-design th{font-size:11px}#predict-design td{padding-block:13px}#predict-design .source-button{max-width:85px}#predict-design .drawer{padding:16px}}
+</style>
+<div id="predict-design">
+<p class="sample">Revised mockup · historical Nov 3 sample, not current prices</p>
+<div class="preview viz-dotted-background">
+<section class="product" id="predict-comparison" aria-label="Compact outcome comparison">
+<div class="top"><strong>Opportunities</strong><span class="meta">NFL · Ranked by EV before fees</span></div>
+<div class="heading"><div><p class="meta">Jaguars at Ravens · Thu 8:15 PM ET</p><h2>Baltimore Ravens to win</h2><p class="meta">Full-game moneyline</p></div><button type="button" id="math-open" aria-haspopup="dialog" aria-controls="math-drawer">Math &amp; fees ↗</button></div>
+<table aria-label="Ravens moneyline prices and expected value"><thead><tr><th>Source</th><th>Odds</th><th>EV before fees</th><th>EV after fees</th></tr></thead><tbody>
+<tr><td><button type="button" class="source-button" data-source="prophetx" aria-label="ProphetX calculation details">ProphetX</button></td><td><strong>+435</strong></td><td><strong class="gain">+6.12%</strong></td><td><strong>—</strong><span class="reason">Fee unknown</span></td></tr>
+<tr><td><button type="button" class="source-button" data-source="novig" aria-label="Novig calculation details">Novig</button></td><td><strong>+426</strong></td><td><strong class="gain">+4.33%</strong></td><td><strong class="gain">+4.33%</strong></td></tr>
+<tr><td><button type="button" class="source-button" data-source="kalshi" aria-label="Kalshi calculation details">Kalshi</button></td><td><strong>+426.32</strong></td><td><strong>—</strong></td><td><strong>—</strong></td></tr>
+<tr><td><button type="button" class="source-button" data-source="polymarket_us" aria-label="Polymarket US calculation details">Polymarket US</button></td><td><strong>+426.32</strong></td><td><strong>—</strong></td><td><strong>—</strong></td></tr>
+</tbody></table>
+<div class="reference"><strong>Pinnacle reference</strong><span>Ravens <strong>+385</strong></span><span>Jaguars <strong>−500</strong></span></div>
+<div class="foot"><span>Saved Nov 3, 8:29 PM · Not live</span><span>— Missing inputs · EV excludes exceptional outcomes</span></div>
+<div class="veil" id="math-veil" hidden></div>
+<aside class="drawer" id="math-drawer" role="dialog" aria-modal="true" aria-labelledby="math-title" hidden>
+<div class="drawer-head"><h3 id="math-title">Math &amp; fees</h3><button type="button" id="math-close" aria-label="Close calculation details">Close</button></div>
+<p>Baltimore Ravens to win</p>
+<label for="math-source">Source<select id="math-source"><option value="prophetx">ProphetX</option><option value="novig">Novig</option><option value="kalshi">Kalshi</option><option value="polymarket_us">Polymarket US</option></select></label>
+<div id="math-values" aria-live="polite"></div>
+</aside>
+</section>
+</div>
+</div>
+<script>
+(()=>{
+const root=document.getElementById('predict-design'),drawer=document.getElementById('math-drawer'),veil=document.getElementById('math-veil'),picker=document.getElementById('math-source'),content=document.getElementById('math-values'),product=document.getElementById('predict-comparison');let opener=null;
+const samples={prophetx:{odds:'+435',win:'$435.00',before:'+$6.12',after:'Unknown',formula:'19.83% × $435 − 80.17% × $100 ≈ $6.12',fee:'The account fee model and rate are not established. After-fee EV stays unknown.',time:'Nov 3, 8:14 PM ET',matched:true},novig:{odds:'+426',win:'$426.00',before:'+$4.33',after:'+$4.33',formula:'19.83% × $426 − 80.17% × $100 ≈ $4.33',fee:'The reviewed pregame straight-trade scenario has zero trade fees. Before-fee and after-trade-fee EV are equal in this sample.',time:'Nov 3, 8:14 PM ET',matched:true},kalshi:{odds:'+426.32',win:'$426.32',before:'Unavailable',after:'Unavailable',fee:'This exact contract has no matched two-sided reference in the capture, and its applicable fee schedule is not established.',time:'Nov 3, 8:28 PM ET',matched:false},polymarket_us:{odds:'+426.32',win:'$426.32',before:'Unavailable',after:'Unavailable',fee:'This exact position has no matched two-sided reference in the capture. Another source’s probability is not silently reused.',time:'Nov 3, 8:28 PM ET',matched:false}};
+function render(){const q=samples[picker.value];content.innerHTML=`<h4>$100 example</h4><dl><dt>Offered odds</dt><dd>${q.odds}</dd><dt>Profit if Ravens win, before fees</dt><dd>${q.win}</dd><dt>Loss if Ravens lose</dt><dd>−$100.00</dd><dt>Expected profit before fees</dt><dd>${q.before}</dd><dt>Expected profit after trade fees</dt><dd>${q.after}</dd></dl>${q.matched?`<p class="formula">${q.formula}</p><h4>Pinnacle → estimated fair odds</h4><dl><dt>Ravens / Jaguars raw odds</dt><dd>+385 / −500</dd><dt>Fair Ravens odds, margin removed</dt><dd>+404.17</dd><dt>Decisive win probability</dt><dd>19.83%</dd></dl>`:'<p class="formula">EV unavailable · exact reference not matched</p>'}<h4>Fees and limits</h4><p>${q.fee}</p><details><summary>Source timing and calculation scope</summary><p>Source update: ${q.time}. Historical saved sample; current availability is unverified.</p><p>Decisive wins and losses only. After-fee EV includes the reviewed trade fee, not funding, withdrawal or other costs. No buffer is deducted here. Full-precision inputs are used; displayed values are rounded.</p></details>`;}
+function open(source,trigger){opener=trigger;picker.value=source;render();drawer.hidden=false;veil.hidden=false;document.getElementById('math-close').focus();}
+function close(){drawer.hidden=true;veil.hidden=true;opener?.focus();}
+document.getElementById('math-open').addEventListener('click',e=>open(picker.value,e.currentTarget));for(const b of root.querySelectorAll('[data-source]'))b.addEventListener('click',()=>open(b.dataset.source,b));document.getElementById('math-close').addEventListener('click',close);veil.addEventListener('click',close);picker.addEventListener('change',render);
+drawer.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();close();}if(e.key==='Tab'){const focusable=[...drawer.querySelectorAll('button,select,summary')],first=focusable[0],last=focusable[focusable.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}});render();
+const state={spacing:15};function spacing(){product.style.setProperty('--row',state.spacing+'px');}spacing();if(globalThis.Tweak){const tweak=new Tweak({container:product,onChange:spacing});tweak.addSlider(state,'spacing',{label:'Row spacing',min:9,max:21,step:2,unit:'px'});}
+})();
+</script>

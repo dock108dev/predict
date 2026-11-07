@@ -5,11 +5,41 @@ reader reuses equal immutable subtrees as each row arrives, before reading the
 next row. Neither process stages a whole serialized catalog message.
 """
 import json
+import base64
+import gzip
+import io
+from hashlib import sha256
 from pathlib import Path
 from .current_native_catalog import CatalogStrings, share_immutable
 
 MAX_ROW_BYTES=8*1024*1024
 MAX_TRANSFER_BYTES=512*1024*1024
+
+
+def packet(value):
+    body=json.dumps(value,separators=(',',':'),ensure_ascii=True).encode()+b'\n'
+    if len(body)>MAX_ROW_BYTES:raise ValueError('catalog_transfer_capacity')
+    if len(body)>=4096:
+        # The unchanged file cap measures bytes actually transferred. Bound the
+        # decoded row separately, and retain the worker's resident-memory guard.
+        # No shared dictionary can outlive this private job or lose its base.
+        compressed=json.dumps(['gzip-1',len(body),sha256(body).hexdigest(),
+            base64.b64encode(gzip.compress(body,compresslevel=1,mtime=0)).decode()],separators=(',',':')).encode()+b'\n'
+        if len(compressed)<len(body):return compressed
+    return body
+
+
+def unpacket(body):
+    value=json.loads(body)
+    if isinstance(value,list) and value and value[0]=='gzip-1':
+        if len(value)!=4 or type(value[1]) is not int or not 0<value[1]<=MAX_ROW_BYTES:
+            raise ValueError('catalog_transfer_capacity')
+        with gzip.GzipFile(fileobj=io.BytesIO(base64.b64decode(value[3],validate=True))) as stream:
+            raw=stream.read(MAX_ROW_BYTES+1)
+        if len(raw)!=value[1] or sha256(raw).hexdigest()!=value[2]:
+            raise ValueError('catalog_transfer_integrity')
+        value=json.loads(raw)
+    return value
 
 
 def write(path,catalogs,delta=None,*,previous=None):
@@ -19,7 +49,7 @@ def write(path,catalogs,delta=None,*,previous=None):
     with Path(path).open('wb') as stream:
         def emit(value):
             nonlocal total
-            body=json.dumps(value,separators=(',',':'),ensure_ascii=True).encode()+b'\n'
+            body=packet(value)
             total+=len(body)
             if len(body)>MAX_ROW_BYTES or total>MAX_TRANSFER_BYTES:
                 raise ValueError('catalog_transfer_capacity')
@@ -57,7 +87,7 @@ def read(path,previous=None,guard=None):
             total+=len(body)
             if len(body)>MAX_ROW_BYTES or total>MAX_TRANSFER_BYTES or not body.endswith(b'\n'):
                 raise ValueError('catalog_transfer_capacity')
-            kind,source,value=json.loads(body)
+            kind,source,value=unpacket(body)
             if guard and count%128==0:guard()
             if kind=='end':
                 if stream.read(1):raise ValueError('catalog_transfer_trailing_data')

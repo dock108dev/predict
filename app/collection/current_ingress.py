@@ -81,9 +81,11 @@ class Ingress:
     def __init__(self, service):
         self.service = service
         self.lock = asyncio.Lock()
+        self.catalog_turn = asyncio.Lock()
         self.tasks = {}
         self.sources = {}
         self.records = deque(maxlen=32)
+        self.native_service = {}
         self.maximum = 8
         self.slots=asyncio.Semaphore(self.maximum)
         self.revocations={}
@@ -99,25 +101,39 @@ class Ingress:
         revoked = Event()
         async def execute():
             started = monotonic()
-            queue_seconds=prepare_seconds=commit_seconds=catalog_prepare_seconds=precompute_seconds=0.0
+            queue_seconds=prepare_seconds=commit_seconds=catalog_prepare_seconds=precompute_seconds=catalog_wait_seconds=0.0
+            catalog_owned=False;catalog_attempts=0
             precomputed=None
             try:
                 operation_kwargs=kwargs
                 if fn.__name__=='catalog':
                     from .bulk_checkpoint import owned_thread
+                    # Acquire the catalog turn BEFORE choosing its immutable
+                    # base, and keep it through adoption. CPU-pool serialization
+                    # alone let a waiting source prepare a base that the earlier
+                    # catalog immediately replaced, repeatedly discarding minutes
+                    # of complete work. Ordinary prices still use only self.lock.
+                    tick=monotonic()
+                    await self.catalog_turn.acquire();catalog_owned=True
+                    catalog_wait_seconds=monotonic()-tick
+                    if revoked.is_set():raise asyncio.CancelledError()
                     # Price commits can proceed while immutable catalog metadata
                     # is prepared. A competing catalog requires a new base; never
                     # publish a detached replacement over a newer generation.
                     while True:
                         if revoked.is_set():raise asyncio.CancelledError()
-                        base=self.service.sink.reducer
-                        generation=base.generation
+                        inventory=self.service.sink.reducer.inventory
+                        generation=self.service.sink.reducer.generation
+                        # Keep only immutable catalog metadata while preparing.
+                        # A reducer also owns books superseded by price commits;
+                        # retaining it here pins that whole population for minutes.
+                        catalog_attempts+=1
                         tick=monotonic()
                         if getattr(self.service.sink,'process_normalization',False):
                             if self.catalog_preparer is None:self.catalog_preparer=CatalogPreparation(self.service.config['rss_bytes'])
-                            prepared,delta=await self.catalog_preparer.prepare(base.inventory,*args)
+                            prepared,delta=await self.catalog_preparer.prepare(inventory,*args)
                         else:
-                            prepared,delta=await owned_thread(prepare_catalog_change,base.inventory,*args)
+                            prepared,delta=await owned_thread(prepare_catalog_change,inventory,*args)
                         catalog_prepare_seconds+=monotonic()-tick
                         if revoked.is_set():raise asyncio.CancelledError()
                         await self.lock.acquire()
@@ -132,15 +148,23 @@ class Ingress:
                         precompute_seconds=monotonic()-tick
                         if revoked.is_set():raise asyncio.CancelledError()
                     await self.lock.acquire()
+                lock_acquired=monotonic()
                 try:
                     if revoked.is_set():raise asyncio.CancelledError()
-                    queue_seconds=monotonic()-started-catalog_prepare_seconds-precompute_seconds
+                    queue_seconds=monotonic()-started-catalog_prepare_seconds-precompute_seconds-catalog_wait_seconds
                     steps = fn.operation(fn.__self__, *args, **operation_kwargs)
                     value = None
                     while True:
                         tick=monotonic()
                         try:row, states = steps.send(value)
-                        except StopIteration as done:return done.value
+                        except StopIteration as done:
+                            if fn.__name__=='books':
+                                totals=self.native_service.setdefault(source,dict(batches=0,seconds=0.0,precompute=0.0,wait=0.0))
+                                totals['batches']+=1
+                                totals['seconds']+=monotonic()-lock_acquired
+                                totals['precompute']+=precompute_seconds
+                                totals['wait']+=queue_seconds
+                            return done.value
                         prepare_seconds+=monotonic()-tick
                         tick=monotonic()
                         try:
@@ -154,10 +178,13 @@ class Ingress:
                 finally:
                     self.lock.release()
             finally:
-                self.records.append(dict(operation=fn.__name__, seconds=monotonic()-started,
+                if catalog_owned:self.catalog_turn.release()
+                from .current_sink import utc
+                self.records.append(dict(operation=fn.__name__, source=source, completed_at=utc(), seconds=monotonic()-started,
                                          revoked=revoked.is_set(),queue_seconds=queue_seconds,
                                          prepare_seconds=prepare_seconds,commit_seconds=commit_seconds,
-                                         catalog_prepare_seconds=catalog_prepare_seconds,precompute_seconds=precompute_seconds))
+                                         catalog_prepare_seconds=catalog_prepare_seconds,precompute_seconds=precompute_seconds,
+                                         catalog_wait_seconds=catalog_wait_seconds,catalog_attempts=catalog_attempts))
         task = asyncio.create_task(execute(), name='predict-ingress-'+fn.__name__)
         self.tasks[task] = revoked
         self.sources[task] = "the_odds_api" if hasattr(fn.__self__,"service") else args[0] if args else None

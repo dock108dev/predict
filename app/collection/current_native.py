@@ -43,6 +43,19 @@ RETRYABLE_DISCOVERY = frozenset(('provider_backoff_pending', 'native_http_timeou
 HOURLY_CAPS = frozenset(('prediction_session_byte_cap', 'prediction_discovery_request_cap',
                         'current_snapshot_request_cap', 'current_connection_cap'))
 
+
+def top_price_identity(book):
+    """Scheduling hint only; complete depth and all admission checks stay intact."""
+    sides=[]
+    for outcome in book.get('outcomes',[]):
+        for side in ('asks','bids'):
+            levels=(outcome.get(side) or {}).get('levels',[])
+            price=levels[0]['price'] if levels else None
+            sides.append((outcome.get('outcome_id',''),side,
+                None if price is None else (price['value'],price.get('unit',price.get('units')))))
+    return (book.get('state'),book.get('sync'),book.get('quantity_unit'),tuple(sorted(sides)))
+
+
 class NativeWorker:
     def __init__(self, service, venue):
         self.service, self.venue = service, venue
@@ -85,6 +98,13 @@ class NativeWorker:
         self.image_versions = {}
         self.raw_since = {}
         self.derived_served = {}
+        self.derived_versions = {}
+        self.pending_clock_trace = {}
+        self.last_dispatch_release = None
+        self.pending_price_versions = {}
+        self.pending_price_changes = set()
+        self.pending_received = {}
+        self.pending_clocks = {}
         self.raw_served = {}
         self.raw_pending=CurrentBookImages() if getattr(service,'database_mode',False) else {}
         self.raw_context={}
@@ -96,6 +116,8 @@ class NativeWorker:
         self.pending_health = False
         self.raw_inflight = {}
         self.derived_inflight = {}
+        from .native_queue_accounting import QueueAccounting
+        self.queue_accounting=QueueAccounting(venue)
         self.receiver = None
         self.subscription_groups = {}
         self.subscription_transition = None
@@ -136,12 +158,31 @@ class NativeWorker:
         counter=category+'_images_received'
         self.metrics[counter]=self.metrics.get(counter,0)+1
         self.image_versions[mid]=version
+        price_version=top_price_identity(book)
+        if mid in self.pending_price_versions and self.pending_price_versions[mid]!=price_version:
+            self.pending_price_changes.add(mid)
+        # The ticket can outlive many received images. Keep only its current
+        # replacement count and the clocks of the last observed top-price change.
+        trace=self.pending_clock_trace.setdefault(mid,{'coalesced_replacements':0})
+        if mid in self.pending_books:trace['coalesced_replacements']+=1
+        previous_price=self.pending_price_versions.get(mid,self.derived_versions.get(mid))
+        if previous_price is not None and previous_price!=price_version:
+            trace.update(material_change_received_at=book['raw']['received_at'],
+                material_change_source_at=book['raw'].get('exchange_at'),
+                material_change_confirmed_at=(book.get('book_confirmation') or {}).get('confirmed_at'))
+        self.pending_price_versions[mid]=price_version
+        self.pending_received[mid]=(book['raw']['received_at'],utc())
+        # A scheduling hint only: do not substitute receipt time for source time.
+        clocks=[book['raw'].get('exchange_at'),(book.get('book_confirmation') or {}).get('confirmed_at')]
+        try:self.pending_clocks[mid]=max((datetime.fromisoformat(v).timestamp() for v in clocks if v),default=None)
+        except (ValueError,TypeError,OverflowError):self.pending_clocks[mid]=None
         self.metrics['normalization_keys_enqueued']=self.metrics.get('normalization_keys_enqueued',0)+int(mid not in self.pending_books)
         self.metrics['complete_images_received']=self.metrics.get('complete_images_received',0)+1
         self.metrics['pending_images_replaced']=self.metrics.get('pending_images_replaced',0)+int(mid in self.pending_books)
         self.pending_since.setdefault(mid,time.monotonic())
         self.pending_recalculations.discard(mid)
         self.pending_books[mid]=book
+        self.queue_accounting.admit(mid,self.metrics['connections'])
         if getattr(self.service,'database_mode',False):
             self.raw_since.setdefault(mid,time.monotonic())
             self.raw_pending.retain_from(self.pending_books,[mid])
@@ -151,6 +192,21 @@ class NativeWorker:
                 self.raw_task.add_done_callback(lambda task: None if task.cancelled() else task.exception())
         if self.publication_handle is None:
             self.publication_handle=asyncio.get_running_loop().call_later(.01,self.flush_books)
+
+    def queue_snapshot(self):
+        self.metrics['derived_queue_accounting']=self.queue_accounting.snapshot()
+        self.metrics['pending_books']=len(self.pending_books)
+
+    def withdraw_pending(self, keys, reason):
+        keys=list(keys)
+        self.queue_accounting.depart(keys,reason,pending=True)
+        for mid in keys:
+            # Deletion must not decode a complete retired ladder.
+            if mid in self.pending_books:del self.pending_books[mid]
+            self.pending_since.pop(mid,None);self.pending_recalculations.discard(mid)
+            self.pending_received.pop(mid,None);self.pending_clocks.pop(mid,None);self.pending_price_versions.pop(mid,None)
+            self.pending_price_changes.discard(mid)
+            self.pending_clock_trace.pop(mid,None)
 
     async def persist_raw(self):
         from .bulk_checkpoint import save_images
@@ -197,8 +253,10 @@ class NativeWorker:
         """Recalculate a retained image without re-receiving or re-persisting it."""
         if self.closed or self.failed or not self.service.dispatch:return
         mid=book['raw']['ref']['market_id']
+        self.metrics['metadata_keys_enqueued']=self.metrics.get('metadata_keys_enqueued',0)+int(mid not in self.pending_books)
         if mid not in self.pending_books:self.pending_recalculations.add(mid)
-        self.pending_books.setdefault(mid,book)
+        if mid not in self.pending_books:self.pending_books[mid]=book
+        self.queue_accounting.admit(mid,self.metrics['connections'])
         self.pending_since.setdefault(mid,time.monotonic())
         if self.publication_handle is None:
             self.publication_handle=asyncio.get_running_loop().call_later(.01,self.flush_books)
@@ -207,6 +265,9 @@ class NativeWorker:
         if self.publication_handle:self.publication_handle.cancel()
         self.publication_handle=None
         if self.publication_task and not self.publication_task.done():return
+        if self.closed or self.failed or not self.service.dispatch:
+            self.withdraw_pending(list(self.pending_books),'cancellation')
+            return
         # Overdue work owns a FIFO turn after the two-second processing target.
         # Otherwise preserve tail priority across reconnect initial-image order.
         # Pure last-service ordering could indefinitely put new quiet instruments
@@ -223,70 +284,150 @@ class NativeWorker:
         def priority(mid):
             arrived=self.pending_since.get(mid,0)
             return (0,arrived,0) if now-arrived>=2 else (1,self.derived_served.get(mid,-1),arrived)
-        ordered=sorted(self.pending_books,key=priority)
+        # Only these prefixes can fit this turn. A stale material change must
+        # not consume a scarce fresh-price slot ahead of a still-current change.
+        # The independent FIFO half guarantees quiet/old instruments progress.
+        from heapq import nsmallest
+        limit=batch_limit if getattr(self.service,'database_mode',False) else self.config['markets_per_source']
+        oldest=nsmallest(limit,self.pending_books,key=priority);wall=time.time()
+        def fresh(mid):
+            clock=self.pending_clocks.get(mid)
+            return clock is not None and 0<=wall-clock<=30
+        def hot_rank(mid):
+            material=self.pending_price_versions[mid]!=self.derived_versions.get(mid)
+            established=mid in self.derived_versions or mid in self.pending_price_changes
+            current=fresh(mid)
+            # The FIFO half already protects waiting instruments. Within the
+            # live half leave time for SQL admission and component publication.
+            # A receipt near expiry can otherwise finish SQL after it expires.
+            clock=self.pending_clocks[mid] if current else 0
+            return (not current,not (material and established),-clock,priority(mid))
+        # Give an eligible first image or authentic fresh confirmation a turn
+        # ahead of expired material. The other half retains oldest-ticket order.
+        hot=iter(nsmallest(limit,(mid for mid in self.pending_price_versions if fresh(mid) or
+            (self.pending_price_versions[mid]!=self.derived_versions.get(mid) and
+             (mid in self.derived_versions or mid in self.pending_price_changes))),key=hot_rank))
+        scheduled=set();ordered=[]
+        for mid in oldest:
+            if mid in scheduled:continue
+            ordered.append(mid);scheduled.add(mid)
+            for recent in hot:
+                if recent not in scheduled:
+                    ordered.append(recent);scheduled.add(recent);break
+            if len(ordered)>=limit:break
+        queued_at={};versions={};clock_traces={}
         for mid in ordered:
+            if len(books)>=limit:break
             book=self.pending_books[mid]
             cost=len(json.dumps(book,default=str).encode())
-            if books and (len(books)>=(batch_limit if getattr(self.service,'database_mode',False) else self.config['markets_per_source']) or size+cost>self.config['ingress_bytes']//2):break
+            if books and size+cost>self.config['ingress_bytes']//2:break
             books.append(book);size+=cost
             del self.pending_books[mid]
             if mid in self.pending_recalculations:recalculating.add(mid)
             self.pending_recalculations.discard(mid)
             claimed[mid]=self.pending_since.pop(mid,time.monotonic())
+            clock_traces[mid]=self.pending_clock_trace.pop(mid,{})
+            queued_at[mid]=self.pending_received.pop(mid,None);self.pending_clocks.pop(mid,None)
+            versions[mid]=self.pending_price_versions.pop(mid,None)
+            self.pending_price_changes.discard(mid)
             waited=time.monotonic()-claimed[mid]
             self.metrics['derived_oldest_served_seconds']=max(self.metrics.get('derived_oldest_served_seconds',0),waited)
         self.metrics['pending_books']=len(self.pending_books)
-        if not books or self.closed or self.failed or not self.service.dispatch:return
+        if not books:return
+        self.queue_accounting.claim(claimed)
         if not getattr(self.service,'database_mode',False):
-            self.service.books(self.venue,books)
+            try:self.service.books(self.venue,books)
+            except BaseException:
+                self.queue_accounting.depart(claimed,'rejected');raise
+            self.queue_accounting.depart(claimed)
             return
         self.derived_inflight=claimed
         self.metrics['normalization_attempted_images']=self.metrics.get('normalization_attempted_images',0)+len(books)
         self.metrics['derived_inflight_images']=len(books)
+        claimed_at=time.monotonic()
+        idle_seconds=None if self.last_dispatch_release is None else claimed_at-self.last_dispatch_release
+        flush_at=utc();accepted=[];rejected=[];invalid=[];remaining_reason='cancellation'
+        def finish():
+            # Synchronous terminal accounting, also used when a task is cancelled
+            # before Python enters its coroutine. A new ticket for the same key
+            # remains in pending and is never consumed by this batch's departure.
+            if self.derived_inflight is not claimed:return
+            self.queue_accounting.depart(accepted);self.queue_accounting.depart(rejected,'rejected')
+            self.queue_accounting.depart(invalid,'invalidated');self.queue_accounting.depart(claimed,remaining_reason)
+            self.metrics['derived_images_published']=self.metrics.get('derived_images_published',0)+len(accepted)
+            self.metrics['rejected_book_updates']=self.metrics.get('rejected_book_updates',0)+len(rejected)
+            self.last_dispatch_release=time.monotonic()
+            self.derived_inflight={};self.metrics['derived_inflight_images']=0
         async def publish():
-            nonlocal books
+            nonlocal books,remaining_reason
             try:
                 tick=time.perf_counter()
                 from .bulk_checkpoint import save_images
-                await owned_thread(save_images,self.venue,books,'pending',ensure_only=True)
-                books=[b for b in books if b['raw']['received_at']>self.invalid_received.get(b['raw']['ref']['market_id'],'')]
-                if not books:return
-                try:
-                    await call(self.service,self.service.books,self.venue,books)
+                try:await owned_thread(save_images,self.venue,books,'pending',ensure_only=True)
                 except Exception:
-                    await owned_thread(save_images,self.venue,books,'rejected',known_persisted=True)
-                    raise
-                await owned_thread(save_images,self.venue,books,'admitted',known_persisted=True)
+                    remaining_reason='raw_persistence_failed';raise
+                ensured_at=time.perf_counter()
+                eligible=[];by_id={}
+                for book in books:
+                    mid=book['raw']['ref']['market_id'];by_id[mid]=book
+                    if book['raw']['received_at']<=self.invalid_received.get(mid,''):invalid.append(mid)
+                    else:eligible.append(book)
+                if not eligible:return
+                try:
+                    try:await call(self.service,self.service.books,self.venue,eligible)
+                    except Exception as exc:
+                        self.metrics['last_admission_failure']=type(exc).__name__
+                        # Isolate normalization only. Never replay a successful
+                        # admission because its disposition writer failed.
+                        for book in eligible:
+                            mid=book['raw']['ref']['market_id']
+                            try:await call(self.service,self.service.books,self.venue,[book])
+                            except Exception:rejected.append(mid)
+                            else:accepted.append(mid)
+                    else:accepted.extend(b['raw']['ref']['market_id'] for b in eligible)
+                    admitted_at=utc();dispatch_done=time.perf_counter()
+                finally:
+                    for ids,disposition in ((accepted,'admitted'),(rejected,'rejected')):
+                        if ids:await owned_thread(save_images,self.venue,[by_id[k] for k in ids],disposition,known_persisted=True)
+                books=[by_id[k] for k in accepted]
                 self.metrics['receipt_projection_ms']=(time.perf_counter()-tick)*1000
                 self.derived_served.update({b['raw']['ref']['market_id']:time.monotonic() for b in books})
+                self.derived_versions.update({b['raw']['ref']['market_id']:versions[b['raw']['ref']['market_id']] for b in books})
+                # Compact correlated samples, not an exhaustive event log. First
+                # and last images expose both edges of each bounded SQL batch.
+                samples=[]
+                for b in (books[:2]+books[-2:]):
+                    mid=b['raw']['ref']['market_id'];arrival=queued_at.get(mid)
+                    samples.append(dict(market_id=mid,event_id=b['raw']['ref'].get('event_id'),
+                        received_at=b['raw']['received_at'],source_at=b['raw'].get('exchange_at'),
+                        confirmed_at=(b.get('book_confirmation') or {}).get('confirmed_at'),
+                        reconstructed_at=arrival[1] if arrival and arrival[0]==b['raw']['received_at'] else None,
+                        flush_at=flush_at,admitted_at=admitted_at,metadata_recalculation=mid in recalculating,
+                        first_pending_wait_seconds=max(0,claimed_at-claimed[mid]),**clock_traces[mid],
+                        loop_seconds=max(0,tick-claimed_at),idle_dispatch_seconds=idle_seconds,
+                        ensure_seconds=ensured_at-tick,dispatch_seconds=dispatch_done-ensured_at,
+                        disposition_seconds=time.perf_counter()-dispatch_done,
+                        batch_images=len(books),pending_after=len(self.pending_books)))
+                self.metrics['delivery_trace']=(self.metrics.get('delivery_trace',[])+samples)[-128:]
                 self.synchronization.delivered('derived',[b['raw']['received_at'] for b in books
                     if b['raw']['ref']['market_id'] not in recalculating])
                 completed=time.monotonic()
                 self.synchronization.elapsed('metadata_recalculation',[
                     completed-claimed[b['raw']['ref']['market_id']] for b in books
                     if b['raw']['ref']['market_id'] in recalculating])
-                self.metrics['derived_images_published']=self.metrics.get('derived_images_published',0)+len(books)
             except asyncio.CancelledError:raise
             except Exception as exc:
-                # A malformed instrument cannot starve unrelated subscriptions.
-                # Raw images remain durable; isolate admission within this chunk.
-                self.metrics['last_admission_failure']=type(exc).__name__
-                for book in books:
-                    try:
-                        await call(self.service,self.service.books,self.venue,[book])
-                    except asyncio.CancelledError:raise
-                    except Exception:
-                        await owned_thread(save_images,self.venue,[book],'rejected')
-                        self.metrics['rejected_book_updates']=self.metrics.get('rejected_book_updates',0)+1
-                    else:
-                        await owned_thread(save_images,self.venue,[book],'admitted')
+                self.metrics['last_persistence_failure']=type(exc).__name__
+                raise
             finally:
-                self.derived_inflight.clear()
-                self.metrics['derived_inflight_images']=0
+                finish()
                 if self.pending_books and not self.closed and self.service.dispatch:
                     self.publication_handle=asyncio.get_running_loop().call_later(.01,self.flush_books)
         self.publication_task=asyncio.create_task(publish(),name='predict-native-publication-'+self.venue)
-        self.publication_task.add_done_callback(lambda task: None if task.cancelled() else task.exception())
+        def done(task):
+            finish()
+            if not task.cancelled():task.exception()
+        self.publication_task.add_done_callback(done)
 
     def request_resync(self):
         self.synchronization.revoke('catalog_changed')
@@ -319,7 +460,7 @@ class NativeWorker:
                     added=set(new)-set(old),removed=set(old)-set(new))
                 self.subscription_blocked=set(old)-set(new)
                 for mid in self.subscription_blocked:
-                    self.pending_books.pop(mid,None);self.pending_since.pop(mid,None);self.pending_recalculations.discard(mid)
+                    self.withdraw_pending([mid],'retirement' if mid not in new else 'quiescence')
                     self.synchronization.invalidate(mid)
                 if self.publication_task:await asyncio.gather(self.publication_task,return_exceptions=True)
                 self.metrics['catalog_transition']['mode']='update_markets_existing_sid'
@@ -330,14 +471,14 @@ class NativeWorker:
                 self.subscription_transition=plan(self.subscription_groups,self.markets,parsed,changed)
                 self.subscription_blocked=set(self.subscription_transition['invalidated'])
                 for mid in self.subscription_blocked:
-                    self.pending_books.pop(mid,None);self.pending_since.pop(mid,None);self.pending_recalculations.discard(mid)
+                    self.withdraw_pending([mid],'retirement' if mid not in new else 'quiescence')
                     self.synchronization.invalidate(mid)
                 # Finish any already-owned old-catalog transaction before the
                 # catalog atomically withdraws these groups. Unaffected input
                 # continues arriving and remains in its ordinary bounded queue.
                 if self.publication_task:await asyncio.gather(self.publication_task,return_exceptions=True)
                 self.metrics['catalog_transition']['mode']='affected_subscription_groups'
-            else:await self.stop_stream()
+            else:await self.stop_stream(reason='quiescence')
 
     async def finish_subscription_transition(self):
         transition=self.subscription_transition
@@ -599,7 +740,7 @@ class NativeWorker:
             self.material_quarantine[mid]=witness
             old['comparison_admission']=deepcopy(witness)
             self.lifecycle.leases[mid]['image_current']=False
-            self.pending_books.pop(mid,None);self.pending_recalculations.discard(mid)
+            self.withdraw_pending([mid],'invalidated')
             changed=True
         self.metrics['material_quarantined_markets']=len(self.material_quarantine)
         if changed:
@@ -628,8 +769,29 @@ class NativeWorker:
                             offered=dict(games=None,markets=None,quotes=None))
         self.pages=[]
 
+    async def run_discovery_pass(self):
+        from contextlib import nullcontext
+
+        # A second full roster, its parsed markets and SQL recovery can coexist
+        # with the serving catalog, but two simultaneous replacements exceed
+        # the parent's memory budget. asyncio.Lock serves waiting venues FIFO.
+        lock = getattr(self.service, 'native_discovery_lock', None)
+        if lock is not None and lock.locked():
+            self.metrics['catalog_recovery'] = dict(stage='waiting_for_discovery', started_at=utc())
+        async with lock if lock is not None else nullcontext():
+            async with self.http_lock:
+                self.begin_discovery()
+            await self.discover()
+
     async def discover(self):
         self.metrics['discovery_passes']=self.metrics.get('discovery_passes',0)+1
+        stage_started=time.monotonic()
+        self.metrics['catalog_recovery']=dict(started_at=utc(),stage='traversal',completed_stages={})
+        def stage(name):
+            nonlocal stage_started
+            progress=self.metrics['catalog_recovery'];tick=time.monotonic()
+            progress['completed_stages'][progress['stage']]=round(tick-stage_started,3)
+            progress.update(stage=name,stage_started_at=utc());stage_started=tick
         self.pages = []
         self.findings = []
         self._coverage_checked=set()
@@ -638,6 +800,7 @@ class NativeWorker:
         sports=native_scope(self.config);families=native_markets(self.config)
         from .bulk_native import enumerate_native
         selected,native_events,returned_markets=await enumerate_native(self)
+        stage('catalog_projection')
         del native_events  # Selected raw rows remain in returned_markets; no unused parent graph.
         selection=dict(events=[e['id'] for e in selected],markets=list(dict.fromkeys(m['id'] for m in returned_markets)))
         projection=dict(candidate_events=len(selected),candidate_markets=len(selection['markets']),omitted_markets=0)
@@ -689,6 +852,7 @@ class NativeWorker:
         for m in eligible_markets:
             if m['id'] not in selected_ids:m['subscription_exclusion']='subscription_limit'
         cat['selection'] = dict(ids=ids)
+        stage('parse_selected_metadata')
         parsed = {}
         from app.adapters import kalshi, polymarket_us
         events = {e['id']:e for e in cat['events']}
@@ -720,6 +884,7 @@ class NativeWorker:
                 parsed[market['id']] = value
             except (ValueError, KeyError, TypeError):
                 market['parse_exclusion'] = 'native_market_parser_rejected'
+        stage('census_persistence')
         # Include selection and parser diagnostics in the exact reservation.
         from .current_native_catalog import catalog_encoded_bytes
         actual_bytes=await owned_thread(catalog_encoded_bytes,cat)
@@ -727,16 +892,29 @@ class NativeWorker:
         if getattr(self,'checkpoint',None):
             from .bulk_checkpoint import save_census
             self.census_generation=await owned_thread(save_census,self.venue,selected,returned_markets,parsed)
+        stage('subscription_quiescence')
         # Quiesce while the old producer/catalog still describe the same native
         # generation, before replacing membership or clearing source highwaters.
         from app.comparison.lifecycle import worker_selections
         selections=await owned_thread(worker_selections,self.venue,parsed,cat)
         await self.quiesce_catalog(parsed,cat,selections)
+        stage('catalog_validation_and_adoption')
+        try:
+            await call(self.service, self.service.catalog, self.venue, cat)
+        except BaseException:
+            # The proposal is not the owned catalog until ingress commits it.
+            # A failed transition must not reconnect proposed markets against
+            # the previous lifecycle leases. Retain the old complete metadata;
+            # fresh book authority is required after the interrupted transition.
+            await self.stop_stream()
+            self.subscription_transition=None;self.subscription_blocked.clear()
+            raise
         # Retire unselected/closed catalogs deliberately; leases are independent.
         self.metrics['generations'] += 1
         self.catalog, self.markets = cat, parsed
-        from app.adapters.polymarket_us import next_market_data, market_slug
-        active_clock_keys=set(parsed) if self.venue=='kalshi' else {market_slug(m) for m in parsed.values()}
+        self.derived_versions={mid:v for mid,v in self.derived_versions.items() if mid in parsed}
+        from app.adapters.polymarket_us import routing_slugs
+        active_clock_keys = set(parsed) if self.venue == 'kalshi' else await owned_thread(routing_slugs, parsed.values())
         for key in set(self.source_highwater)-active_clock_keys:self.source_highwater.pop(key)
         self.metrics['catalog_events'] = len(cat['events'])
         self.metrics['catalog_markets'] = len(cat['markets'])
@@ -748,20 +926,35 @@ class NativeWorker:
         trace_bytes=len(json.dumps(self.metrics['native_identity_trace'],separators=(',',':')).encode())
         self.metrics['identity_exclusions'],self.metrics['identity_exclusions_omitted']=identity_diagnostics(
             cat,ids,byte_cap=24*1024-trace_bytes-256)
-        await call(self.service, self.service.catalog, self.venue, cat)
         from app.comparison.lifecycle import worker_selections
         delta=self.lifecycle.reconcile(selections,now)
         self.material_quarantine.clear()
         self.metrics['material_quarantined_markets']=0
         self.lifecycle_initialized=True
+        # Metadata adoption and socket subscription completion are independent.
+        # Persist the complete adopted census before fallible socket commands;
+        # a disconnected socket must not force restoration of an older catalog.
+        # Recovery stores metadata only, never connection/book authority.
+        self.guard()
+        if getattr(self,'checkpoint',None):
+            from .native_recovery import save
+            stage('recovery_persistence')
+            cat['acquisition_census_generation']=self.census_generation
+            self.metrics['catalog_recovery']['storage']=await owned_thread(save,self.venue,self.checkpoint.scope,cat,parsed)
+            stage('checkpoint_completion')
+            await owned_thread(self.checkpoint.finish)
+            self.metrics['catalog_recovery'].update(durable_at=utc(),census_generation=self.census_generation,
+                durable_markets=len(cat['markets']),durable_selected=len(parsed))
+        stage('socket_transition')
         await self.finish_subscription_transition()
+        stage('complete')
         from collections import Counter
         self.metrics['subscription_changes']=dict(delta,actions=delta['actions'][:20],
             action_counts=dict(Counter(a['action'] for a in delta['actions'])),
             omitted_actions=max(0,len(delta['actions'])-20),complete_roster='current_acquisition_market')
         self.metrics['owned_subscriptions']=len(self.lifecycle.leases)
         for mid in set(self.pending_books)-set(self.lifecycle.leases):
-            self.pending_books.pop(mid,None);self.pending_recalculations.discard(mid)
+            self.withdraw_pending([mid],'retirement')
         selected_inventory_ids=set(selection['markets'])
         selected_sports={e['id']:e.get('competition') for e in selected}
         if hasattr(self.service,'coverage'):
@@ -797,11 +990,6 @@ class NativeWorker:
                         inventory=inventory,status=status,offered=offered,reason=reason,completeness='partial',
                         unique_offered=unique,
                         offered_scope='complete_listing_and_metadata_traversal_price_boundary_unverified')
-        if getattr(self,'checkpoint',None):
-            from .native_recovery import save
-            cat['acquisition_census_generation']=self.census_generation
-            await owned_thread(save,self.venue,self.checkpoint.scope,cat,parsed)
-            await owned_thread(self.checkpoint.finish)
         self.pages = []
         # Metadata raw receipts change every rediscovery. Reconciliation depends
         # only on exact identity and material native terms/state.
@@ -821,8 +1009,6 @@ class NativeWorker:
         from .native_semantics import current_purchase_book
         failures = malformed = 0
         highwater = self.source_highwater
-        market_index={m.raw.ref.market_id:m for m in markets}
-        self.stream_market_index=market_index
         while not self.closed and not self.failed and self.service.dispatch:
             engine = None
             reconstruction = None
@@ -832,12 +1018,22 @@ class NativeWorker:
             checked_raw = None
             seen = set()
             isolated = set()
-            self.stream_seen=seen;self.stream_isolated=isolated;self.stream_markets=markets
             try:
                 self.guard()
                 while self.backoff_until > time.monotonic():
                     await asyncio.sleep(self.backoff_until-time.monotonic())
                     self.guard()
+                # Catalog adoption can finish while this owner is recovering
+                # and durable persistence is still in progress. Reconnecting
+                # the original coroutine's roster resurrected retired markets
+                # against the newly reconciled leases. Only the committed,
+                # currently owned roster may begin a new connection generation.
+                if self.lifecycle_initialized:
+                    markets=[m for mid,m in self.markets.items() if mid in self.lifecycle.leases]
+                    if not markets:return
+                market_index={m.raw.ref.market_id:m for m in markets}
+                self.stream_market_index=market_index
+                self.stream_seen=seen;self.stream_isolated=isolated;self.stream_markets=markets
                 if self.connection_allowance_used() >= self.config['connections_per_source']:
                     raise BudgetStop('current_connection_cap')
                 self.metrics['connections'] += 1
@@ -845,8 +1041,9 @@ class NativeWorker:
                 self.confirmations.begin(self.metrics['connections'])
                 self.synchronization.begin(self.metrics['connections'], market_index)
                 if self.publication_handle:self.publication_handle.cancel()
-                self.publication_handle=None;self.pending_books.clear();self.pending_since.clear();self.pending_recalculations.clear()
+                self.publication_handle=None;self.withdraw_pending(list(self.pending_books),'resync')
                 self.image_versions={mid:version for mid,version in self.image_versions.items() if mid in market_index}
+                self.derived_versions={mid:version for mid,version in self.derived_versions.items() if mid in market_index}
                 await call(self.service, self.service.source_state, self.venue, 'resyncing', 'Waiting for a complete native book image.')
                 credential = self.credential
                 headers = {}
@@ -992,7 +1189,7 @@ class NativeWorker:
                         isolated.add(mid);seen.discard(mid);self.invalid_received[mid]=received.isoformat()
                         self.synchronization.invalidate(mid)
                         self.metrics['invalid_current_market_ids']=sorted(isolated)
-                        self.pending_books.pop(mid,None);self.pending_since.pop(mid,None);self.pending_recalculations.discard(mid)
+                        self.withdraw_pending([mid],'invalidated')
                         if mid in self.lifecycle.leases:self.lifecycle.leases[mid]['image_current']=False
                         await owned_thread(save_failure,self.venue,raw,received.isoformat(),self.metrics['connections'],'reconstruct')
                         await call(self.service,self.service.invalidate_market,self.venue,market.raw.ref.event_id,mid)
@@ -1183,7 +1380,7 @@ class NativeWorker:
                 self.receiver=None
                 if reconstruction:await reconstruction.close()
                 if self.publication_handle:self.publication_handle.cancel()
-                self.publication_handle=None;self.pending_books.clear();self.pending_since.clear();self.pending_recalculations.clear()
+                self.publication_handle=None;self.withdraw_pending(list(self.pending_books),'resync')
                 if self.publication_task and not self.publication_task.done():
                     self.publication_task.cancel()
                     await asyncio.gather(self.publication_task,return_exceptions=True)
@@ -1195,14 +1392,14 @@ class NativeWorker:
             # Local socket pacing must not abort a checkpointed HTTP traversal.
             await asyncio.sleep(delay)
 
-    async def stop_stream(self):
+    async def stop_stream(self, reason='cancellation'):
         self.synchronization.revoke('stopped')
         # Revoke callbacks before joining publication: a joined SQL worker can
         # take time, during which the old stream must not admit another image.
         task, self.stream_task = self.stream_task, None
         if task:task.cancel()
         if self.publication_handle:self.publication_handle.cancel()
-        self.publication_handle=None;self.pending_books.clear();self.pending_since.clear();self.pending_recalculations.clear()
+        self.publication_handle=None;self.withdraw_pending(list(self.pending_books),reason)
         if self.publication_task and not self.publication_task.done():
             self.publication_task.cancel()
             await asyncio.gather(self.publication_task,return_exceptions=True)
@@ -1224,6 +1421,9 @@ class NativeWorker:
         if restored is None:return
         self.guard()
         cat,parsed,saved_at=restored
+        if self.venue == 'polymarket_us':
+            from app.adapters.polymarket_us import routing_slugs
+            await owned_thread(routing_slugs, parsed.values())
         selections=await owned_thread(worker_selections,self.venue,parsed,cat)
         await call(self.service,self.service.catalog,self.venue,cat)
         self.guard()
@@ -1270,15 +1470,14 @@ class NativeWorker:
                             and (self.stream_task is None or self.stream_task.done())
                             and time.monotonic() >= self.backoff_until):
                         self.stream_task=asyncio.create_task(self.stream(list(self.markets.values())))
-                    async with self.http_lock:
-                        self.begin_discovery()
-                    await self.discover()
+                    await self.run_discovery_pass()
                     errors = 0
                 except asyncio.CancelledError: raise
                 except Exception as exc:
                     errors += 1
+                    from app.diagnostics import failure_details
                     code = str(exc) if isinstance(exc,BudgetStop) or type(exc) is ValueError and str(exc) in RETRYABLE_DISCOVERY else type(exc).__name__
-                    self.metrics['last_discovery_failure'] = dict(at=utc(), reason=code if code in RETRYABLE_DISCOVERY | HOURLY_CAPS | DISCOVERY_CAPS else 'native_discovery_failure', consecutive=errors)
+                    self.metrics['last_discovery_failure'] = dict(at=utc(), reason=code if code in RETRYABLE_DISCOVERY | HOURLY_CAPS | DISCOVERY_CAPS else 'native_discovery_failure', consecutive=errors,stage=self.metrics.get('catalog_recovery',{}).get('stage'),diagnostic=failure_details(exc))
                     self.service.issue(self.venue, 'resource' if isinstance(exc,BudgetStop) else 'discovery', code)
                     if isinstance(exc,BudgetStop) and code in DISCOVERY_CAPS and not self.failed:
                         # Partial metadata cannot replace the last complete catalog.
