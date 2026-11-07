@@ -218,3 +218,5 @@ dialog::backdrop { background: #101b3180; }
   .desk-tabs { gap: 0 1rem; }
   .desk-admin-row { flex-wrap: wrap; }
 }
+
+.desk-refresh{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin:.75rem 0}.desk-refresh button{flex-shrink:0}

@@ -113,3 +113,110 @@ def test_compressed_and_small_images_preserve_original_quote_text_and_container_
     changed = decode_container(encoded)
     changed["markets"][0]["price"] = "1.00"
     assert decode_container(encoded) == event
+
+
+def test_take_transfers_encoded_ownership_without_decoding():
+    images=CurrentBookImages()
+    images['one']={'original':'0.123400'};images['two']={'original':'0.5600'}
+    encoded=images.encoded['one']
+    with patch.object(CurrentBookImages,'__getitem__',side_effect=AssertionError('main-loop decode')):
+        batch=images.take(['one'])
+    assert batch.encoded['one'] is encoded and 'one' not in images
+    assert images.encoded_bytes==len(images.encoded['two'])
+    assert batch.encoded_bytes==len(encoded)
+    images['one']={'original':'0.7800'}
+    assert batch['one']=={'original':'0.123400'}
+
+
+def test_raw_storage_decodes_in_owned_thread_and_reports_original_receipts():
+    import asyncio,threading,time
+    from types import SimpleNamespace
+    from unittest.mock import Mock
+    from app.collection.current_native import NativeWorker
+    from app.collection.current_policy import DEFAULT
+    async def run():
+        w=NativeWorker(SimpleNamespace(config=DEFAULT,dispatch=True,database_mode=True,runtime_id='owner'),'kalshi')
+        _,book=native_fixture();mid=book['raw']['ref']['market_id']
+        w.raw_pending[mid]=book;w.raw_context[mid]=('owner',2,'census');w.raw_since[mid]=time.monotonic()
+        w.synchronization=Mock();main=threading.get_ident();original=CurrentBookImages.__getitem__
+        def decode(images,key):
+            assert threading.get_ident()!=main
+            return original(images,key)
+        def save(venue,books,disposition,contexts):
+            assert threading.get_ident()!=main
+            assert venue=='kalshi' and disposition=='pending' and books==[book]
+            assert contexts=={mid:('owner',2,'census')}
+        with patch.object(CurrentBookImages,'__getitem__',decode),patch('app.collection.bulk_checkpoint.save_images',side_effect=save):
+            await w.persist_raw()
+        assert not w.raw_pending and not w.raw_inflight and not w.raw_context
+        assert w.metrics['raw_images_persisted']==1
+        w.synchronization.persist.assert_called_once_with(2,[mid])
+        w.synchronization.delivered.assert_called_once_with('raw',[book['raw']['received_at']])
+    asyncio.run(run())
+
+
+def test_raw_storage_failure_restores_exact_images_without_overwriting_new_arrival():
+    import asyncio,threading,time
+    from types import SimpleNamespace
+    from app.collection.current_native import NativeWorker
+    from app.collection.current_policy import DEFAULT
+    async def run():
+        w=NativeWorker(SimpleNamespace(config=DEFAULT,dispatch=True,database_mode=True,runtime_id='owner'),'kalshi')
+        _,book=native_fixture();first=book['raw']['ref']['market_id'];second='second'
+        other=deepcopy(book);other['raw']['ref']['market_id']=second
+        for mid,b in ((first,book),(second,other)):
+            w.raw_pending[mid]=b;w.raw_context[mid]=('owner',2,'old');w.raw_since[mid]=1.0
+        original=w.raw_pending.encoded[second];entered=threading.Event();release=threading.Event()
+        def fail(*args,**kwargs):
+            entered.set()
+            assert release.wait(5)
+            raise RuntimeError('fixture storage failure')
+        with patch('app.collection.bulk_checkpoint.save_images',side_effect=fail):
+            task=asyncio.create_task(w.persist_raw())
+            try:
+                assert await asyncio.to_thread(entered.wait,5)
+                replacement=deepcopy(book);replacement['inspection']='new arrival'
+                w.raw_pending[first]=replacement;w.raw_context[first]=('owner',3,'new');w.raw_since[first]=2.0
+                newer=w.raw_pending.encoded[first]
+            finally:release.set()
+            try:await task
+            except RuntimeError:pass
+            else:raise AssertionError('storage failure was hidden')
+        assert w.raw_pending.encoded[first] is newer
+        assert w.raw_pending.encoded[second] is original
+        assert w.raw_context=={first:('owner',3,'new'),second:('owner',2,'old')}
+        assert w.raw_since=={first:2.0,second:1.0}
+        assert w.raw_pending.encoded_bytes==sum(map(len,w.raw_pending.encoded.values()))
+        assert not w.raw_inflight and w.metrics['raw_inflight_images']==0
+    asyncio.run(run())
+
+
+def test_cancelled_raw_storage_joins_write_before_restoring_batch_ownership():
+    import asyncio,threading
+    from types import SimpleNamespace
+    from app.collection.current_native import NativeWorker
+    from app.collection.current_policy import DEFAULT
+    async def run():
+        w=NativeWorker(SimpleNamespace(config=DEFAULT,dispatch=True,database_mode=True,runtime_id='owner'),'kalshi')
+        _,book=native_fixture();mid=book['raw']['ref']['market_id']
+        w.raw_pending[mid]=book;w.raw_context[mid]=('owner',2,'census');w.raw_since[mid]=1.0
+        encoded=w.raw_pending.encoded[mid];entered=threading.Event();release=threading.Event();finished=threading.Event()
+        def save(*args,**kwargs):
+            entered.set()
+            assert release.wait(5)
+            finished.set()
+        with patch('app.collection.bulk_checkpoint.save_images',side_effect=save):
+            task=asyncio.create_task(w.persist_raw())
+            try:
+                assert await asyncio.to_thread(entered.wait,5)
+                task.cancel();await asyncio.sleep(0)
+                assert not task.done() and mid not in w.raw_pending
+            finally:release.set()
+            try:await task
+            except asyncio.CancelledError:pass
+            else:raise AssertionError('cancellation was hidden')
+        assert finished.is_set()
+        assert w.raw_pending.encoded[mid] is encoded
+        assert w.raw_context[mid]==('owner',2,'census')
+        assert not w.raw_inflight
+    asyncio.run(run())

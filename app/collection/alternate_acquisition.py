@@ -1,5 +1,5 @@
 """Complete event-odds route with explicit owner authority and durable raw values."""
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 from .current_policy import ROOT
 from .current_quota import QuotaStop
@@ -7,6 +7,9 @@ from .current_aggregate_policy import POLICY
 from app.reference.product import SPORT_KEYS
 
 AUTHORITY_PATH=ROOT/'.local/predict-alternate-authority.json'
+# Leave room for the 20s transport bound, 30s local-write retry bound and
+# accounting before the next featured slot. Never cancel a paid request.
+FEATURED_HANDOFF_SECONDS=60
 
 
 def authority(at):
@@ -110,21 +113,52 @@ def save_event_census(sport,response,cycle_id):
             (sport,Jsonb(frame.payload)))
 
 
+def prioritize(requests, received):
+    """Least recently collected first; stable league interleaving for ties/new events."""
+    return sorted(requests,key=lambda r:received.get((r['sport'],r['event_id']),float('-inf')))
+
+
+def priority_requests(requests, sports):
+    from app.storage.store import connect
+    with connect() as db:
+        db.execute('SET TRANSACTION READ ONLY')
+        rows=db.execute('SELECT sport,event_id,received_at FROM current_acquisition_alternate WHERE sport=ANY(%s)',
+                        (list(sports),)).fetchall()
+    return prioritize(requests,{(r['sport'],r['event_id']):r['received_at'].timestamp() for r in rows})
+
+
+def handoff_due(scheduler, at, deadline, remaining):
+    if deadline is None or datetime.fromisoformat(at.replace('Z','+00:00')) >= (
+            datetime.fromisoformat(deadline.replace('Z','+00:00'))-timedelta(seconds=FEATURED_HANDOFF_SECONDS)):
+        scheduler.metrics.update(alternate_state='deferred_for_scheduled_refresh',
+            alternate_deferred=remaining,alternate_next_refresh=deadline)
+        scheduler.next_check_at=deadline
+        return True
+    return False
+
+
 async def acquire(scheduler,sports):
     from .alternate_plan import plan
     from .bulk_checkpoint import owned_thread
     from .current_quota import now
     grant=authority(now())
     if grant is None:return
+    deadline=scheduler.quota_due()
+    scheduler.metrics.update(alternate_completed=0,alternate_deferred=0,alternate_census_completed=0,
+                             alternate_state='event_census')
+    scheduler.metrics.pop('alternate_plan',None)
+    if handoff_due(scheduler,now(),deadline,None):return
     free=[event_request(s) for s in sports]
     scheduler.ledger.extend_cycle(scheduler.service.ownership,scheduler.cycle_id,free,0)
     events={}
     for sport,request in zip(sports,free):
+        if handoff_due(scheduler,now(),deadline,None):return
         response=await scheduler.dispatch(request,0)
         payload=response['parsed_frame'].payload
         if not isinstance(payload,list) or any(not isinstance(e,dict) or not isinstance(e.get('id'),str) for e in payload):
             raise QuotaStop('alternate_event_census_invalid')
         await owned_thread(save_event_census,sport,response,scheduler.cycle_id)
+        scheduler.metrics['alternate_census_completed']+=1
         events[sport]=[e for e in payload if datetime.fromisoformat(e['commence_time'].replace('Z','+00:00'))>datetime.fromisoformat(now())]
     proposal=plan(events)
     proposal.update(authorized_cycle=grant['credits_per_cycle'],authorized_day=grant['credits_per_day'])
@@ -132,13 +166,15 @@ async def acquire(scheduler,sports):
     if proposal['total_maximum_credits_per_cycle']>grant['credits_per_cycle']:
         scheduler.metrics['alternate_state']='blocked_full_census_exceeds_authorized_cycle'
         return
-    requests=[dict(path=r['path'],params=r['params']) for r in proposal['requests']]
+    ordered=await owned_thread(priority_requests,proposal['requests'],sports)
+    requests=[dict(path=r['path'],params=r['params']) for r in ordered]
     scheduler.ledger.extend_cycle(scheduler.service.ownership,scheduler.cycle_id,requests,2)
     scheduler.metrics['alternate_plan']['dispatch_enabled']=True
     scheduler.metrics['alternate_plan']['reason']=f"Explicit owner authority: {grant['credits_per_cycle']}/cycle and {grant['credits_per_day']}/day; expiry {grant.get('expires_at') or 'renewed by owner without a new cutoff'}"
     scheduler.metrics['alternate_state']='acquiring'
     scheduler.metrics['alternate_completed']=0
-    for item,request in zip(proposal['requests'],requests):
+    for index,(item,request) in enumerate(zip(ordered,requests)):
+        if handoff_due(scheduler,now(),deadline,len(requests)-index):return
         response=await scheduler.dispatch(request,2)
         scheduler.permitted()
         await owned_thread(save_response,item['sport'],item['event_id'],response,scheduler.cycle_id)

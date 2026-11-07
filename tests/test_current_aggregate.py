@@ -423,6 +423,13 @@ class AggregateAdmission(SchedulerTests):
         self.scheduler.state('budget_delayed','aggregate_budget_delayed','CONTROLLED paced')
         self.assertEqual(self.service.states['prophetx']['state'],'not_offered')
 
+    async def test_cleared_quota_failure_shows_scheduled_wait(self):
+        self.service.states['novig']=dict(state='unavailable',reason_code='quota_missing_duplicate_or_malformed',reason='CONTROLLED old failure',next_due_at=None)
+        self.service.states['prophetx']=dict(state='unavailable',reason_code='aggregate_admission_failed',reason='CONTROLLED independent failure',next_due_at=None)
+        self.scheduler.state('budget_delayed','aggregate_budget_delayed','CONTROLLED paced')
+        self.assertEqual(self.service.states['novig']['reason_code'],'aggregate_budget_delayed')
+        self.assertEqual(self.service.states['prophetx']['reason_code'],'aggregate_admission_failed')
+
 
 class BrowserLifecycle(unittest.IsolatedAsyncioTestCase):
     @patch('app.collection.current_aggregate.now',return_value='2026-10-07T14:00:00+00:00')

@@ -22,6 +22,17 @@ def exception_kind(exc):
     return dict(category='other', type='Exception')
 
 
+def websocket_close_kind(exc):
+    """Classify local keepalive failure without retaining a remote reason string."""
+    from websockets.exceptions import ConnectionClosed
+    if not isinstance(exc,ConnectionClosed):return None
+    sent=exc.sent
+    kind=('keepalive_timeout' if sent is not None and sent.code==1011
+        and sent.reason=='keepalive ping timeout' else
+        'remote_close' if exc.rcvd is not None else 'transport_lost')
+    return dict(kind=kind,cause=exception_kind(exc.__cause__) if exc.__cause__ else None)
+
+
 def receipt(value):
     if not isinstance(value, dict):return None
     status=value.get('status')

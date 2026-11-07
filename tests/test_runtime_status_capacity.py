@@ -150,6 +150,24 @@ class RuntimeStatusCapacity(unittest.TestCase):
                              dict(available=128, retained=16))
         self.assertLessEqual(len(json.dumps(report, separators=(',', ':')).encode()), STATUS_BYTES)
 
+    def test_capacity_reduces_diagnostic_samples_without_changing_accounting_or_controls(self):
+        service,original=self.fixture()
+        original['coverage']['cells'][0]['evidence']='c'*700000
+        original['exclusions']=[dict(example=i,detail='x'*1800) for i in range(100)]
+        before=deepcopy(original)
+        result=RuntimeState().snapshot(service,global_stopped=True,paused_sources=['kalshi'])
+        report=result['status']
+        self.assertLessEqual(len(json.dumps(report,separators=(',',':')).encode()),STATUS_BYTES)
+        self.assertEqual(report['quota'],before['quota'])
+        self.assertEqual(report['coverage'],before['coverage'])
+        self.assertEqual(report['exclusions'],before['exclusions'][-20:])
+        self.assertEqual(report['issues'],before['issues'][-16:])
+        self.assertEqual(result['states'],service.states)
+        self.assertTrue(result['global_stopped'])
+        self.assertEqual(result['paused_sources'],['kalshi'])
+        self.assertEqual(original,before)
+        self.assertIn('capacity_compaction',report['status_retention'])
+
     def test_large_subscription_roster_is_a_counted_diagnostic_not_heartbeat_payload(self):
         from collections import Counter
         actions=[dict(action='create',market_id=str(i),owner_token='x'*64) for i in range(6000)]

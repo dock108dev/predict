@@ -125,6 +125,22 @@ class RuntimeState:
         status['data_runtime'] = dict(state=state, heartbeat_timeout_seconds=HEARTBEAT_SECONDS,
                                       paused_sources=sorted(paused_sources), global_stopped=global_stopped)
         if len(json.dumps(status, separators=(',', ':')).encode()) > STATUS_BYTES:
+            # Diagnostic examples must not take down otherwise valid acquisition.
+            # Accounting, coverage, current source state and control proofs stay
+            # exact; their owning records are never pruned by this projection.
+            status['issues']=status['issues'][-16:]
+            status['exclusions']=status['exclusions'][-20:]
+            status['status_retention'].update(issue_limit=16,exclusion_limit=20,
+                capacity_compaction='Diagnostic history samples reduced; accounting and coverage unchanged.')
+            for panel in status.get('sources',[]):
+                metrics=panel.get('metrics',{})
+                samples=metrics.get('delivery_trace',[])
+                if len(samples)>4:
+                    available=delivery_samples.get(panel['provider'],{}).get('available',len(samples))
+                    delivery_samples[panel['provider']]=dict(available=available,retained=4)
+                    panel['metrics']=dict(metrics,delivery_trace=samples[-4:])
+            if delivery_samples:status['status_retention']['delivery_samples']=delivery_samples
+        if len(json.dumps(status, separators=(',', ':')).encode()) > STATUS_BYTES:
             raise ValueError('data_runtime_status_capacity')
         return dict(runtime_id=service.runtime_id, state=state, status=status, config=config,
                     states=states, dispatch=bool(service.dispatch), fingerprint=fingerprint,

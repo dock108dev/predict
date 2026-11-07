@@ -12,7 +12,7 @@ from .current_policy import load, validate, candidate, consume, ROOT, VERSION, A
 from .local_ownership import LocalOwnership
 from .current_sink import LatestStateSink, utc
 from app.dashboard.current_state import unavailable
-from app.dashboard.current_contract import packed
+from app.dashboard.current_contract import packed, stamp
 
 
 class CurrentService:
@@ -571,8 +571,30 @@ class CurrentService:
                 raise SelectionError(409,'clock_continuity_unknown','Inspect the clock discontinuity.')
             async with worker.acquisition_lock:
                 try:
+                    # Only the owning service can attest completion, while the
+                    # scheduler is finished and its dispatch lock is held. A
+                    # supplied request body or balance file cannot grant this.
+                    completed = {}
+                    aid = worker.issue_context.get('attempt_id')
+                    receipt = getattr(worker.transport, 'response_receipt', None) or {}
+                    if task is not None and task.done() and getattr(worker.transport, 'phase', None) == 'complete' and aid:
+                        from .bulk_checkpoint import owned_thread
+                        from .current_conservative import digest as record_digest
+                        value = await owned_thread(worker.ledger._read)
+                        attempt = value['attempts'].get(aid, {})
+                        retained = attempt.get('response_receipt') or {}
+                        if (attempt.get('runtime_id') == self.runtime_id
+                                and attempt.get('state') == 'uncertain'
+                                and attempt.get('quota_failure') == 'quota_missing_duplicate_or_malformed'
+                                and type(receipt.get('status')) is int and 500 <= receipt['status'] <= 599
+                                and receipt.get('status') == retained.get('status')
+                                and receipt.get('headers') == retained.get('headers') == []
+                                and retained.get('received_at') == worker.metrics.get('last_received_at')
+                                and receipt.get('received_at') and retained.get('received_at')
+                                and stamp(receipt['received_at']) <= stamp(retained['received_at'])):
+                            completed[aid] = record_digest(attempt)
                     await observe_and_activate(worker.ledger,self.ownership,digest,covered_attempts,recovery_id,
-                                               window_loader=worker.window_loader)
+                                               window_loader=worker.window_loader,completed_attempts=completed)
                 except QuotaStop as exc:
                     raise SelectionError(409,str(exc),'Accounting recovery blocked: '+str(exc).replace('_',' ')+'.') from None
                 worker.prepared=False;worker.bootstrapped=False

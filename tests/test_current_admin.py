@@ -191,6 +191,45 @@ class AdminTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual((self.q.directory/'quota.json').read_bytes(),before)
                 operation.assert_awaited_once();self.assertEqual(self.service.status()['odds_api_requests'],0)
 
+    async def test_recovery_attests_only_finished_matching_server_error(self):
+        from unittest.mock import AsyncMock
+        from app.collection.current_conservative import digest
+        worker=self.service.workers['the_odds_api']
+        task=self.service.tasks['the_odds_api']
+        aid=self.q.reserve(self.service.ownership,self.service.digest,{},3)
+        self.q.dispatched(aid,self.service.ownership)
+        at=(datetime.now(timezone.utc)-timedelta(minutes=3)).isoformat()
+        receipt=dict(status=502,headers=[],received_at=at)
+        self.q.transact(lambda v,now:v['attempts'][aid].update(dispatch_at=at,at=at))
+        self.q.reconcile(aid,[],received_at=at)
+        self.q.record_response(aid,receipt)
+        covered={aid:digest(self.q._read()['attempts'][aid])}
+        worker.issue_context['attempt_id']=aid
+        worker.metrics['last_received_at']=at
+        worker.transport.response_receipt=receipt
+        worker.transport.phase='complete'
+        operation=AsyncMock()
+        with patch('app.collection.current_account_recovery.observe_and_activate',operation):
+            with self.assertRaisesRegex(SelectionError,'transport cleanup'):
+                await self.service.recover_accounting(self.service.runtime_id,self.service.digest,'CONTROLLED',covered)
+            operation.assert_not_awaited()
+            task.cancel();await asyncio.gather(task,return_exceptions=True)
+            await worker.acquisition_lock.acquire()
+            try:
+                with self.assertRaisesRegex(SelectionError,'transport cleanup'):
+                    await self.service.recover_accounting(self.service.runtime_id,self.service.digest,'CONTROLLED',covered)
+            finally:worker.acquisition_lock.release()
+            operation.assert_not_awaited()
+            await self.service.recover_accounting(self.service.runtime_id,self.service.digest,'CONTROLLED',covered)
+            self.assertEqual(operation.await_args.kwargs['completed_attempts'],covered)
+            new_task=self.service.tasks['the_odds_api'];new_task.cancel()
+            await asyncio.gather(new_task,return_exceptions=True)
+            # A header receipt before body completion is not a completed request.
+            worker.transport.phase='body'
+            await self.service.recover_accounting(self.service.runtime_id,self.service.digest,'CONTROLLED-2',covered)
+            self.assertEqual(operation.await_args.kwargs['completed_attempts'],{})
+            self.assertEqual(self.q._read()['attempts'][aid]['state'],'uncertain')
+
     async def test_routes_assets_security_status_and_conflict(self):
         # App starts the already-started service without a duplicate worker.
         async with TestClient(TestServer(create_app(owner=owner(),sessions={},current_provider=self.service))) as c:

@@ -136,6 +136,39 @@ class ConservativeRecovery(unittest.TestCase):
             altered['attempts'][self.aid]['response_receipt']['status']=500
             with self.assertRaises(QuotaStop):check(altered)
 
+    def test_usability_429_grant_is_exact_time_bounded_and_keeps_the_original_hold(self):
+        self.assert_usability_grant('USABILITY_429')
+
+    def test_1700_grant_is_separate_exact_time_bounded_and_preserves_the_hold(self):
+        self.assert_usability_grant('USABILITY_1700_429')
+
+    def assert_usability_grant(self, prefix):
+        from app.collection import current_conservative as policy
+        receipt=dict(status=429,headers=[],received_at='2026-10-03T14:00:01+00:00')
+        self.q.reconcile(self.aid,[],received_at=receipt['received_at'])
+        self.q.record_response(self.aid,receipt)
+        ledger=self.q._read();original=deepcopy(ledger['attempts'][self.aid])
+        attempts={self.aid:digest(original)}
+        context=digest([ledger['account_id'],ledger['window'],ledger['ceiling'],ledger.get('account_transitions',[])])
+        with patch.multiple(policy,**{prefix+'_CONTEXT':context,prefix+'_EXPOSURE':digest(attempts),
+                prefix+'_ATTEMPT':self.aid,prefix+'_NOT_BEFORE':self.at}):
+            name=getattr(policy,prefix+'_RECOVERY')
+            check=lambda value,at,keys=attempts,identity=name:policy.recovery_preflight(value,at,keys,owner_runtime='other',recovery_id=identity)
+            with self.assertRaises(QuotaStop):check(ledger,'2026-10-03T14:02:59+00:00')
+            self.assertEqual(set(check(ledger,self.at)),{self.aid})
+            with self.assertRaises(QuotaStop):check(ledger,self.at,identity='another-observation')
+            other=policy.USABILITY_429_RECOVERY if prefix=='USABILITY_1700_429' else policy.USABILITY_1700_429_RECOVERY
+            with self.assertRaises(QuotaStop):check(ledger,self.at,identity=other)
+            with self.assertRaises(QuotaStop):check(dict(ledger,account_id='different'),self.at)
+            changed=deepcopy(ledger);changed['attempts'][self.aid]['response_receipt']['status']=502
+            with self.assertRaises(QuotaStop):check(changed,self.at)
+            self.activate(self.evidence(recovery_id=name),covered=attempts,identity=name)
+            self.assertEqual(self.q._read()['attempts'][self.aid],original)
+            self.assertEqual(self.q.snapshot()['held_uncertain_credits'],3)
+            self.assertIsNone(self.q.snapshot()['blocking_reason'])
+            self.assertIn('November 7 owner-approved',self.q._read()['conservative_recoveries'][-1]['owner_policy'])
+            with self.assertRaises(QuotaStop):self.activate(self.evidence(recovery_id=name),covered=attempts,identity=name)
+
     def test_missing_headers_on_success_authentication_or_partial_headers_stay_blocked(self):
         for status,items in ((200,[]),(401,[]),(429,[]),(502,[['x-requests-used','622']])):
             with self.subTest(status=status,items=items):
@@ -282,9 +315,9 @@ class ConservativeRecovery(unittest.TestCase):
 class RecoveryTransport(unittest.IsolatedAsyncioTestCase):
     setUp=ConservativeRecovery.setUp
     tearDown=ConservativeRecovery.tearDown
-    async def observe(self,wire,identity='CONTROLLED-recovery'):
+    async def observe(self,wire,identity='CONTROLLED-recovery',**kwargs):
         return await observe_and_activate(self.q,self.owner,CANDIDATE,self.covered,identity,root=self.root,transport=wire,
-            key_loader=lambda:'CONTROLLED-key',window_loader=lambda:WINDOW)
+            key_loader=lambda:'CONTROLLED-key',window_loader=lambda:WINDOW,**kwargs)
     def wire(self,fail=False):
         fixture=self
         class Wire:
@@ -304,6 +337,49 @@ class RecoveryTransport(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.q._read()['attempts'][self.aid],self.old)
         with self.assertRaisesRegex(QuotaStop,'already_activated'):await self.observe(self.wire())
         self.assertEqual(len(list((self.q.directory/'independent-balances').glob('*.json'))),1)
+    async def test_current_owner_completed_502_preserves_hold_and_requires_private_attestation(self):
+        receipt=dict(status=502,headers=[],received_at='2026-10-03T14:00:01+00:00')
+        self.q.reconcile(self.aid,[],received_at=receipt['received_at'])
+        self.q.record_response(self.aid,receipt)
+        self.q.transact(lambda v,at:v['attempts'][self.aid].update(runtime_id='CONTROLLED-recovery',interruption=None))
+        original=deepcopy(self.q._read()['attempts'][self.aid])
+        self.covered={self.aid:digest(original)}
+        before=(self.q.directory/'quota.json').read_bytes()
+        for proof in (None, {self.aid:'0'*64}, {'unknown':'0'*64}):
+            wire=self.wire()
+            with self.assertRaises(QuotaStop):
+                await self.observe(wire,completed_attempts=proof)
+            self.assertEqual(wire.calls,0)
+            self.assertEqual((self.q.directory/'quota.json').read_bytes(),before)
+        # Putting a claim in a supplied balance file alone grants no authority.
+        with self.assertRaisesRegex(QuotaStop,'active_transport'):
+            self.q.activate_conservative(self.owner,CANDIDATE,self.covered,
+                ConservativeRecovery.evidence(self,completed_attempts=self.covered),
+                'CONTROLLED-recovery',self.binding)
+        wire=self.wire()
+        result=await self.observe(wire,completed_attempts=self.covered)
+        self.assertEqual(wire.calls,1)
+        self.assertEqual(result['held_uncertain_credits'],3)
+        self.assertEqual(self.q._read()['attempts'][self.aid],original)
+        audit=self.q._read()['conservative_recoveries'][-1]
+        self.assertEqual(audit['evidence']['completed_attempts'],self.covered)
+        self.assertIsNone(result['blocking_reason'])
+        # A later failure in this same runtime must preserve the earlier exact
+        # completion audit rather than requiring its transport receipt again.
+        self.at='2026-10-03T20:00:00+00:00'
+        cycle=self.q.begin_cycle(self.owner,[REQUEST])
+        second=self.q.reserve(self.owner,CANDIDATE,REQUEST,3,cycle_id=cycle)
+        self.q.dispatched(second,self.owner)
+        receipt2=dict(status=502,headers=[],received_at=self.at)
+        self.q.reconcile(second,[],received_at=self.at)
+        self.q.record_response(second,receipt2)
+        self.at='2026-10-03T20:03:00+00:00'
+        latest=deepcopy(self.q._read()['attempts'][second])
+        self.covered[second]=digest(latest)
+        result=await self.observe(self.wire(),identity='CONTROLLED-second',completed_attempts={second:digest(latest)})
+        self.assertEqual(result['held_uncertain_credits'],6)
+        self.assertEqual(self.q._read()['attempts'][self.aid],original)
+        self.assertEqual(self.q._read()['attempts'][second],latest)
     async def test_failed_observation_retains_pause_and_original_history_without_retry(self):
         wire=self.wire(True)
         with self.assertRaisesRegex(QuotaStop,'observation_failed'):await self.observe(wire)

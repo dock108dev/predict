@@ -210,23 +210,33 @@ class NativeWorker:
 
     async def persist_raw(self):
         from .bulk_checkpoint import save_images
+        from .current_book_images import CurrentBookImages
         while self.raw_pending:
             selected=list(self.raw_pending)[:200]
-            images=[self.raw_pending.pop(mid) for mid in selected]
+            images=(self.raw_pending.take(selected) if isinstance(self.raw_pending,CurrentBookImages)
+                else {mid:self.raw_pending.pop(mid) for mid in selected})
             contexts={mid:self.raw_context.pop(mid,(None,None,None)) for mid in selected}
             oldest=min(self.raw_since.pop(mid,time.monotonic()) for mid in selected)
             started=time.perf_counter()
             self.raw_inflight={mid:oldest for mid in selected}
             self.metrics['raw_inflight_images']=len(images)
+            def save():
+                # Decode only this owned batch in the existing storage thread.
+                # Returning small receipt facts avoids moving a second complete
+                # decoded ladder population back onto the connection loop.
+                books=[images[mid] for mid in selected]
+                save_images(self.venue,books,'pending',**(dict(contexts=contexts) if getattr(self.service,'runtime_id',None) else {}))
+                return [(mid,book['raw']['received_at']) for mid,book in zip(selected,books)]
             try:
-                await owned_thread(save_images,self.venue,images,'pending',**(dict(contexts=contexts) if getattr(self.service,'runtime_id',None) else {}))
+                receipts=await owned_thread(save)
             except BaseException as exc:
                 self.raw_inflight.clear()
                 self.metrics['raw_inflight_images']=0
                 self.metrics['raw_persistence_error']=type(exc).__name__
-                for book in images:
-                    mid=book['raw']['ref']['market_id']
-                    self.raw_pending.setdefault(mid,book)
+                for mid in selected:
+                    if mid not in self.raw_pending:
+                        if isinstance(self.raw_pending,CurrentBookImages):self.raw_pending.retain_from(images,[mid])
+                        else:self.raw_pending[mid]=images[mid]
                     self.raw_context.setdefault(mid,contexts[mid])
                     self.raw_since.setdefault(mid,oldest)
                 raise
@@ -234,11 +244,11 @@ class NativeWorker:
             self.metrics['raw_inflight_images']=0
             for generation in {context[1] for context in contexts.values()}:
                 self.synchronization.persist(generation,[mid for mid,context in contexts.items() if context[1]==generation])
-            self.synchronization.delivered('raw',[b['raw']['received_at'] for b in images])
+            self.synchronization.delivered('raw',[at for _,at in receipts])
             self.metrics['raw_persistence_error']=None
             self.metrics['raw_write_ms']=(time.perf_counter()-started)*1000
             self.metrics['raw_oldest_served_seconds']=time.monotonic()-oldest
-            self.raw_served.update({b['raw']['ref']['market_id']:time.monotonic() for b in images})
+            self.raw_served.update({mid:time.monotonic() for mid,_ in receipts})
             self.metrics['raw_images_persisted']=self.metrics.get('raw_images_persisted',0)+len(images)
             self.metrics['raw_backlog']=len(self.raw_pending)
             await asyncio.sleep(0)
@@ -1311,8 +1321,10 @@ class NativeWorker:
                         receipt_minus_send_ms=None if type(sending) is not int else received.timestamp()*1000-sending)
                 from websockets.exceptions import ConnectionClosed
                 if isinstance(exc,ConnectionClosed):
+                    from .current_transport_diagnostics import websocket_close_kind
                     self.metrics['last_stream_failure']['close_codes']=dict(
                         received=getattr(exc.rcvd,'code',None),sent=getattr(exc.sent,'code',None))
+                    self.metrics['last_stream_failure']['close_diagnostic']=websocket_close_kind(exc)
                 self.metrics['resyncs'] += 1
                 status = getattr(getattr(exc,'response',None), 'status_code', None)
                 if status in (401,403):

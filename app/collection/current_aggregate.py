@@ -192,7 +192,7 @@ class AggregateScheduler:
             # but show the scheduled wait instead of a cleared accounting hold.
             if (code=='aggregate_budget_delayed' and states[venue]['state'] in ('not_offered','unavailable')
                     and states[venue].get('reason_code') not in
-                    ('aggregate_transport_uncertain','ambiguous_dispatch_unresolved')):
+                    ('aggregate_transport_uncertain','ambiguous_dispatch_unresolved','quota_missing_duplicate_or_malformed')):
                 states[venue]['next_due_at']=due
                 continue
             scoped='; '.join(scope+': '+values[venue]['reason'] for scope,values in self.sport_states.items())

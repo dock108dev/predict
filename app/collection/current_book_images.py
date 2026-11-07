@@ -56,6 +56,16 @@ class CurrentBookImages(MutableMapping):
         result.encoded_bytes = self.encoded_bytes
         return result
 
+    def take(self, keys):
+        """Transfer immutable images without decoding on the socket event loop."""
+        result = type(self)()
+        for key in keys:
+            image = self.encoded.pop(key)
+            result.encoded[key] = image
+            result.encoded_bytes += len(image)
+            self.encoded_bytes -= len(image)
+        return result
+
     def retain_from(self, other, keys):
         """Keep unchanged images through catalog replacement without decoding."""
         for key in keys:

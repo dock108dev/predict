@@ -28,7 +28,7 @@ class AlternateAdmissionSQL(LatestBoardFixture):
         import asyncio
         from unittest.mock import patch
         from app.storage.current_rows import LOCK
-        from app.collection.alternate_acquisition import save_response, _save_response
+        from app.collection.alternate_acquisition import save_response, _save_response, priority_requests
         from app.collection.current_quota import QuotaStop
         import json
         payload=alternate_fixture();eid=json.loads(payload)['id']
@@ -51,6 +51,9 @@ class AlternateAdmissionSQL(LatestBoardFixture):
                 from app.storage.store import stamp
                 self.assertEqual(raw['received_at'],stamp(AT))
                 self.assertEqual(raw['disposition'],'admitted_exact_lines')
+            ordered=priority_requests([dict(sport='MLB',event_id=eid),dict(sport='MLB',event_id='unseen')],['MLB'])
+            self.assertEqual([r['event_id'] for r in ordered],['unseen',eid])
+            with self.connect() as db:
                 db.execute('UPDATE data_runtime SET global_stopped=true')
             with self.assertRaisesRegex(QuotaStop,'owner_stopped'):
                 await asyncio.to_thread(save_response,'MLB',eid,response,'authored-cycle')

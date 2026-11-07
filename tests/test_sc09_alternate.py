@@ -5,7 +5,7 @@ import tempfile
 from unittest import TestCase
 from unittest.mock import patch
 from app.collection.alternate_plan import plan
-from app.collection.alternate_acquisition import authority, validate_request, event_request
+from app.collection.alternate_acquisition import authority, validate_request, event_request, prioritize
 from app.collection.current_quota import QuotaStop
 from tests import test_current_quota as quota_tests
 WINDOW=quota_tests.WINDOW
@@ -21,6 +21,12 @@ class AlternatePlan(TestCase):
         for r in p['requests']:validate_request(dict(path=r['path'],params=r['params']),2)
         self.assertEqual(plan({'NFL':[dict(id=str(i)) for i in range(108)]})['total_maximum_credits_per_cycle'],234)
         with self.assertRaises(QuotaStop):validate_request(event_request('NFL'),2)
+
+    def test_least_recent_receipts_prevent_deferred_event_starvation(self):
+        requests=plan({'NFL':[{'id':'a'},{'id':'b'}],'NCAAF':[{'id':'c'},{'id':'d'}]})['requests']
+        ordered=prioritize(requests,{('NFL','a'):10,('NCAAF','c'):20})
+        self.assertEqual([r['event_id'] for r in ordered],['b','d','a','c'])
+        self.assertEqual({r['path'] for r in ordered},{r['path'] for r in requests})
 
     def test_authority_expires_and_cannot_inflate(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -61,11 +67,14 @@ from app.collection.alternate_acquisition import acquire
 
 class CompleteRoute(IsolatedAsyncioTestCase):
     def setUp(self):
-        clock=patch('app.collection.current_quota.now',return_value='2026-10-31T20:00:00+00:00')
+        self.now='2026-10-31T20:00:00+00:00'
+        clock=patch('app.collection.current_quota.now',side_effect=lambda:self.now)
         clock.start();self.addCleanup(clock.stop)
+        priority=patch('app.collection.alternate_acquisition.priority_requests',side_effect=lambda requests,sports:requests)
+        priority.start();self.addCleanup(priority.stop)
 
     async def test_over_budget_census_keeps_featured_and_sends_no_alternate_subset(self):
-        scheduler=SimpleNamespace(service=SimpleNamespace(ownership=object()),cycle_id='cycle',metrics={},ledger=Mock())
+        scheduler=SimpleNamespace(service=SimpleNamespace(ownership=object()),cycle_id='cycle',metrics={},quota_due=lambda:'2026-10-31T20:15:00+00:00',ledger=Mock())
         scheduler.dispatch=AsyncMock(return_value=dict(parsed_frame=SimpleNamespace(payload=[dict(id=str(i),commence_time='2026-10-31T23:00:00Z') for i in range(108)])))
         with patch('app.collection.alternate_acquisition.authority',return_value=GRANT),patch('app.collection.alternate_acquisition.save_event_census'):
             await acquire(scheduler,['NFL'])
@@ -78,13 +87,43 @@ class CompleteRoute(IsolatedAsyncioTestCase):
     async def test_complete_census_exact_event_route_and_original_response_retained(self):
         census=dict(parsed_frame=SimpleNamespace(payload=[dict(id='abc',commence_time='2026-10-31T23:00:00Z')]))
         response=dict(body=b'original')
-        scheduler=SimpleNamespace(service=SimpleNamespace(ownership=object()),cycle_id='cycle',metrics={},ledger=Mock(),permitted=Mock())
+        scheduler=SimpleNamespace(service=SimpleNamespace(ownership=object()),cycle_id='cycle',metrics={},quota_due=lambda:'2026-10-31T20:15:00+00:00',ledger=Mock(),permitted=Mock())
         scheduler.dispatch=AsyncMock(side_effect=[census,response])
         with patch('app.collection.alternate_acquisition.authority',return_value=GRANT),patch('app.collection.alternate_acquisition.save_response') as saved,patch('app.collection.alternate_acquisition.save_event_census'):
             await acquire(scheduler,['NFL'])
         self.assertEqual(scheduler.metrics['alternate_completed'],1)
         self.assertEqual(scheduler.dispatch.await_args.args[1],2)
         saved.assert_called_once_with('NFL','abc',response,'cycle')
+
+    async def test_deadline_defers_before_census_without_dispatch_or_reservation(self):
+        self.now='2026-10-31T20:14:00+00:00'
+        scheduler=SimpleNamespace(metrics={},quota_due=lambda:'2026-10-31T20:15:00+00:00',dispatch=AsyncMock(),ledger=Mock())
+        with patch('app.collection.alternate_acquisition.authority',return_value=GRANT):
+            await acquire(scheduler,['NFL'])
+        scheduler.dispatch.assert_not_awaited();scheduler.ledger.extend_cycle.assert_not_called()
+        self.assertEqual(scheduler.metrics['alternate_state'],'deferred_for_scheduled_refresh')
+        self.assertIsNone(scheduler.metrics['alternate_deferred'])
+        self.assertEqual(scheduler.next_check_at,'2026-10-31T20:15:00+00:00')
+
+    async def test_paid_response_finishes_and_is_saved_before_deferring_remaining_events(self):
+        census=dict(parsed_frame=SimpleNamespace(payload=[dict(id=i,commence_time='2026-10-31T23:00:00Z') for i in ['a','b']]))
+        response=dict(body=b'exact paid response')
+        scheduler=SimpleNamespace(service=SimpleNamespace(ownership=object()),cycle_id='cycle',metrics={},
+            quota_due=lambda:'2026-10-31T20:15:00+00:00',ledger=Mock(),permitted=Mock())
+        async def dispatch(request,cost):
+            if cost==0:return census
+            self.now='2026-10-31T20:14:01+00:00'
+            return response
+        scheduler.dispatch=AsyncMock(side_effect=dispatch)
+        with patch('app.collection.alternate_acquisition.authority',return_value=GRANT),patch('app.collection.alternate_acquisition.save_response') as saved,patch('app.collection.alternate_acquisition.save_event_census'):
+            await acquire(scheduler,['NFL'])
+        self.assertEqual(scheduler.dispatch.await_count,2)
+        saved.assert_called_once_with('NFL','a',response,'cycle')
+        self.assertEqual(scheduler.metrics['alternate_completed'],1)
+        self.assertEqual(scheduler.metrics['alternate_deferred'],1)
+        self.assertEqual(scheduler.metrics['alternate_state'],'deferred_for_scheduled_refresh')
+        # The exact full request manifest remains budgeted; only dispatch stops.
+        self.assertEqual(len(scheduler.ledger.extend_cycle.call_args.args[2]),2)
 
 
 class ExpandedTransport(IsolatedAsyncioTestCase):

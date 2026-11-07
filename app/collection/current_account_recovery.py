@@ -36,7 +36,8 @@ def context(ledger, covered, binding, *, root=ROOT, window_loader=load_window, n
 
 
 async def observe_and_activate(ledger, owner, candidate_digest, covered, recovery_id,
-                               *, root=ROOT, transport=None, key_loader=None, window_loader=load_window, rollover=False):
+                               *, root=ROOT, transport=None, key_loader=None, window_loader=load_window, rollover=False,
+                               completed_attempts=None):
     from .current_aggregate import CurrentOddsTransport, credential
     if owner is None or owner.file is None:raise QuotaStop('acquisition_ownership_required')
     runtime=owner_runtime(owner)
@@ -47,7 +48,8 @@ async def observe_and_activate(ledger, owner, candidate_digest, covered, recover
             from .current_rollover import preflight as rollover_preflight
             return rollover_preflight(value,at,covered,owner_runtime=runtime,recovery_id=recovery_id,
                                       new_window=new_window,binding=binding)
-        return recovery_preflight(value,at,covered,owner_runtime=runtime,recovery_id=recovery_id)
+        return recovery_preflight(value,at,covered,owner_runtime=runtime,recovery_id=recovery_id,
+                                  completed_attempts=completed_attempts)
     preflight(ledger._read(),ledger.clock())
     v=context(ledger,covered,binding,root=root,window_loader=window_loader,new_window=new_window)
     def begin(value,at):
@@ -110,6 +112,8 @@ async def observe_and_activate(ledger, owner, candidate_digest, covered, recover
             credential_reference='.env',credential_binding=binding,credential_unchanged_since_snapshot=True,
             active_sports=sorted({s['key'] for s in sports if s['active'] and s.get('has_outrights') is False and s['key'] in SPORT_KEYS.values()}),
             documentation='https://the-odds-api.com/liveapi/guides/v4/#get-sports')
+        if completed_attempts:
+            e['completed_attempts'] = deepcopy(completed_attempts)
         phase='evidence'
         # Durable separate evidence before import; exclusive name, never overwrite.
         directory=ledger.directory/'independent-balances'
@@ -134,7 +138,8 @@ async def observe_and_activate(ledger, owner, candidate_digest, covered, recover
                 import_rollover(value,e,at,covered,owner_runtime=runtime,candidate=candidate_digest,
                                 recovery_id=recovery_id,new_window=new_window,binding=binding)
             else:
-                import_balance(value,e,at,covered,owner_runtime=runtime,candidate=candidate_digest,recovery_id=recovery_id)
+                import_balance(value,e,at,covered,owner_runtime=runtime,candidate=candidate_digest,recovery_id=recovery_id,
+                               completed_attempts=completed_attempts)
             probe=next(p for p in value['recovery_probes'] if p['id']==recovery_id)
             probe.update(state='activated',evidence=str(path),evidence_sha256=digest(e),completed_at=at,diagnostics=diagnostics())
         ledger.transact(activate)

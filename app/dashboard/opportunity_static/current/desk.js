@@ -8,7 +8,7 @@ const pageSize = 25;
 const filters = $('filters');
 const stake = filters.elements.stake;
 const dialog = $('trade');
-const state = {offset: 0, page: null, request: null, selected: null};
+const state = {offset: 0, page: null, request: null, selected: null, lastChecked: null};
 const cash = new Intl.NumberFormat('en-US', {style: 'currency', currency: 'USD'});
 const pct = value => value == null ? '—' : `${num(value) > 0 ? '+' : ''}${fmt(value)}%`;
 const tone = value => num(value) > 0 ? 'positive' : num(value) < 0 ? 'negative' : '';
@@ -154,6 +154,13 @@ function arbRow(group, game, expanded) {
   return row;
 }
 
+function refreshStatus() {
+  const checked = state.lastChecked ? `Last checked ${new Intl.DateTimeFormat('en-US', {hour:'numeric', minute:'2-digit', second:'2-digit', timeZoneName:'short', timeZone:timezone()}).format(state.lastChecked)}.` : 'No successful check yet.';
+  const mode = state.request ? 'Checking for updates…' : state.offset ? 'Auto-refresh paused on this page. Refresh returns to page one.' : $('results').contains(document.activeElement) ? 'Auto-refresh paused while a result has keyboard focus.' : 'Auto-refresh on.';
+  $('refresh-status').textContent = `${mode} ${checked}`;
+  $('refresh-list').disabled = !!state.request;
+}
+
 function render(page) {
   const expanded = new Set([...$('results').querySelectorAll('details[open]')].map(e => e.dataset.id));
   const games = new Map((page.games || []).map(game => [game.game_key, game]));
@@ -162,7 +169,8 @@ function render(page) {
   const publication = page.publication || {};
   const notice = [];
   if (!publication.current_prices && publication.retained_prices) notice.push('Only saved prices are available right now.');
-  else if (publication.state === 'held' || publication.state === 'partial') notice.push('Some sources are unavailable.');
+  else if (publication.state === 'held') notice.push('Current prices are unavailable.');
+  else if (publication.state === 'partial') notice.push('Some prices are not current. Check each price’s status.');
   if (arb) notice.push('Returns assume a completed game and equal payouts at the displayed prices. Voids and cancellations may differ.');
   $('notice').textContent = notice.join(' ');
   const results = $('results'); results.replaceChildren();
@@ -189,7 +197,7 @@ function render(page) {
 
 async function load(offset = state.offset) {
   state.request?.abort();
-  const controller = new AbortController(); state.request = controller;
+  const controller = new AbortController(); state.request = controller; refreshStatus();
   const query = new URLSearchParams({...selections(), layout: 'desk', view: arb ? 'arbs' : 'ev',
     stake: stake.value, timezone: timezone(), offset, limit: pageSize});
   if (offset && state.page?.cursor) query.set('expected_cursor', state.page.cursor);
@@ -200,14 +208,14 @@ async function load(offset = state.offset) {
     const page = await response.json();
     if (controller.signal.aborted) return;
     if (page.state === 'page_changed') return load(0);
-    state.page = page; state.offset = offset; render(page);
+    state.page = page; state.offset = offset; state.lastChecked = new Date(); render(page);
   } catch (error) {
     if (error.name !== 'AbortError') {
       $('notice').textContent = 'Prices could not be loaded. Retrying automatically.';
       $('results').replaceChildren(); $('count').textContent = '';
       $('next').disabled = $('previous').disabled = true;
     }
-  } finally { if (state.request === controller) state.request = null; }
+  } finally { if (state.request === controller) { state.request = null; refreshStatus(); } }
 }
 
 let debounce;
@@ -224,6 +232,9 @@ $('reset').onclick = () => {
   for (const field of filters.querySelectorAll('fieldset input')) field.checked = true;
   savePreference(filterKey, JSON.stringify(selections())); load(0);
 };
+$('refresh-list').onclick = () => load(0);
+document.addEventListener('focusin', refreshStatus);
+document.addEventListener('focusout', () => queueMicrotask(refreshStatus));
 $('previous').onclick = () => load(Math.max(0, state.offset - pageSize));
 $('next').onclick = () => load(state.offset + pageSize);
 $('latest').onclick = async () => {
@@ -250,4 +261,5 @@ $('latest').onclick = async () => {
 load();
 setInterval(() => {
   if (!state.request && !state.offset && !document.hidden && !$('results').contains(document.activeElement)) load();
+  refreshStatus();
 }, 6500);

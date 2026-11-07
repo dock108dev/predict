@@ -20,6 +20,23 @@ NFL_429_CONTEXT = 'bfc9f92b8829a2e67724ef66a00145c805ef4a7b8b1d8e8362ac352bb5eff
 NFL_429_EXPOSURE = '3e18b1f6b7d3f82004b1ac4df4804990efff9218bedd4b207eacb9e6211c5903'
 
 
+# Owner explicitly approved this one additional observation during the November
+# 7 usability session. It cannot cover another receipt, exposure set or account.
+USABILITY_429_RECOVERY = 'usability-20261107-1500-rate-limit'
+USABILITY_429_ATTEMPT = '1c47e538-9602-4f74-8230-dfb6f0202478'
+USABILITY_429_CONTEXT = 'bfc9f92b8829a2e67724ef66a00145c805ef4a7b8b1d8e8362ac352bb5effdc8'
+USABILITY_429_EXPOSURE = 'e7adfdb7a876f9d90293d81535dc40b5c87533a43971cecb0ba5fcaace518eb6'
+USABILITY_429_NOT_BEFORE = '2026-11-07T20:05:00+00:00'
+
+# Separately approved after the observation window; never reuse the 15:00 grant.
+USABILITY_1700_429_RECOVERY = 'usability-20261107-1700-rate-limit'
+USABILITY_1700_429_ATTEMPT = '30bd9cd0-bd15-4d5c-8e08-14a5037422d1'
+USABILITY_1700_429_CONTEXT = 'bfc9f92b8829a2e67724ef66a00145c805ef4a7b8b1d8e8362ac352bb5effdc8'
+USABILITY_1700_429_EXPOSURE = '72deeb6131e5e12bffa670796ee58d24ba0d17778fe73d04f65c82a7f5968709'
+USABILITY_1700_429_NOT_BEFORE = '2026-11-07T22:05:00+00:00'
+
+
+
 def digest(value):
     return sha256(packed(value)).hexdigest()
 
@@ -79,7 +96,7 @@ def exposure(v):
                for a in v['attempts'].values())
 
 
-def recovery_preflight(v, at, covered, *, owner_runtime, recovery_id):
+def recovery_preflight(v, at, covered, *, owner_runtime, recovery_id, completed_attempts=None):
     from .current_quota import QuotaStop
     if v['pause'] not in (None, 'ambiguous_dispatch_unresolved'):
         lost=[a for a in v['attempts'].values() if a['state'] in ('reserved','uncertain')]
@@ -104,13 +121,20 @@ def recovery_preflight(v, at, covered, *, owner_runtime, recovery_id):
                 and a.get('response_receipt') is None and a.get('late_response_receipt') is None
                 and a.get('quota_headers') is None and a.get('quota_failure') is None)
             for a in lost)
-        approved_429 = (
-            recovery_id == NFL_429_RECOVERY
+        approved_429 = any(
+            recovery_id == identity
             and v['pause'] == 'quota_missing_duplicate_or_malformed'
-            and digest(covered) == NFL_429_EXPOSURE
+            and digest(covered) == exposure_hash
             and digest([v.get('account_id'), v['window'], v['ceiling'],
-                        v.get('account_transitions', [])]) == NFL_429_CONTEXT
-            and all(a['id'] == NFL_429_ATTEMPT or covering(v, a) for a in lost)
+                        v.get('account_transitions', [])]) == context_hash
+            and (not_before is None or stamp(at)>=stamp(not_before))
+            and all(a['id'] == attempt_id or covering(v, a) for a in lost)
+            for identity,attempt_id,context_hash,exposure_hash,not_before in (
+                (NFL_429_RECOVERY,NFL_429_ATTEMPT,NFL_429_CONTEXT,NFL_429_EXPOSURE,None),
+                (USABILITY_429_RECOVERY,USABILITY_429_ATTEMPT,USABILITY_429_CONTEXT,
+                 USABILITY_429_EXPOSURE,USABILITY_429_NOT_BEFORE),
+                (USABILITY_1700_429_RECOVERY,USABILITY_1700_429_ATTEMPT,USABILITY_1700_429_CONTEXT,
+                 USABILITY_1700_429_EXPOSURE,USABILITY_1700_429_NOT_BEFORE))
         )
         related=transport or missing or identity_without_receipt or approved_429
         if not related:raise QuotaStop(v['pause'])
@@ -124,8 +148,20 @@ def recovery_preflight(v, at, covered, *, owner_runtime, recovery_id):
     pending = {aid: a for aid, a in v['attempts'].items() if a['state'] in ('reserved', 'uncertain')}
     if not isinstance(covered, dict) or not covered or set(covered) != set(pending) or len(covered) > 32:
         raise QuotaStop('recovery_coverage_mismatch')
+    completed_attempts = {} if completed_attempts is None else completed_attempts
+    if not isinstance(completed_attempts, dict) or set(completed_attempts) - set(pending):
+        raise QuotaStop('recovery_completion_invalid')
     for aid, a in pending.items():
-        if a['state'] != 'uncertain' or (a['runtime_id'] == owner_runtime and not a.get('interruption')):
+        receipt = a.get('response_receipt') or {}
+        completed = (aid in completed_attempts and completed_attempts[aid] == digest(a)
+                     and a['runtime_id'] == owner_runtime
+                     and a.get('quota_failure') == 'quota_missing_duplicate_or_malformed'
+                     and type(receipt.get('status')) is int and 500 <= receipt['status'] <= 599
+                     and receipt.get('headers') == [] and a.get('quota_headers') == [])
+        if aid in completed_attempts and not completed:
+            raise QuotaStop('recovery_completion_invalid')
+        if a['state'] != 'uncertain' or (a['runtime_id'] == owner_runtime and not a.get('interruption')
+                                       and not completed and not covering(v, a)):
             raise QuotaStop('recovery_active_transport')
         if ((stamp(at) - stamp(a['dispatch_at'])).total_seconds() < 120
                 or a['window_id'] != v['window']['id'] and not covering(v,a) or covered[aid] != digest(a)):
@@ -135,11 +171,14 @@ def recovery_preflight(v, at, covered, *, owner_runtime, recovery_id):
     return pending
 
 
-def import_balance(v, evidence, at, covered, *, owner_runtime, candidate, recovery_id):
+def import_balance(v, evidence, at, covered, *, owner_runtime, candidate, recovery_id, completed_attempts=None):
     from .current_quota import QuotaStop, headers
-    pending = recovery_preflight(v, at, covered, owner_runtime=owner_runtime, recovery_id=recovery_id)
+    pending = recovery_preflight(v, at, covered, owner_runtime=owner_runtime, recovery_id=recovery_id,
+                                completed_attempts=completed_attempts)
     e = evidence
     if len(packed(e))>8192:raise QuotaStop('recovery_evidence_invalid')
+    if e.get('completed_attempts', {}) != (completed_attempts or {}):
+        raise QuotaStop('recovery_completion_invalid')
     if e.get('active_sports') is not None:
         from app.reference.product import SPORT_KEYS
         if not isinstance(e['active_sports'],list) or len(e['active_sports'])>6 or set(e['active_sports'])-set(SPORT_KEYS.values()):raise QuotaStop('recovery_evidence_invalid')
@@ -173,6 +212,10 @@ def import_balance(v, evidence, at, covered, *, owner_runtime, candidate, recove
                    next_due_at=v['next_due_at'], bootstrap_due_at=v['bootstrap_due_at']))
     if recovery_id == NFL_429_RECOVERY:
         audit['owner_policy'] = 'November 5 one-time balance observation for exact NFL 429 and protected holds'
+    if recovery_id == USABILITY_429_RECOVERY:
+        audit['owner_policy'] = 'November 7 owner-approved one-time balance observation after 15:05 EST for exact 15:00 NFL 429; preserve all 43 held credits and resume normally due collection only'
+    if recovery_id == USABILITY_1700_429_RECOVERY:
+        audit['owner_policy'] = 'November 7 owner-approved separate one-time balance observation after 17:05 EST for exact 17:00 NFL 429; preserve all 49 held credits and resume normally due collection only'
     audit['record_sha256'] = digest(audit)
     v.setdefault('conservative_recoveries', []).append(audit)
     v['observation'] = deepcopy(balance)
