@@ -367,3 +367,27 @@ class ReadinessArtifactTests(unittest.TestCase):
             for missing in names:
                 with self.assertRaises(ValueError):
                     validate([name for name in names if name != missing], root)
+
+    def test_wheel_requires_bundled_fonts_and_licenses_but_rejects_unknown_assets(self):
+        package = load("package_smoke")
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            names = sorted(package.UI_FONT_ASSETS)
+            for name in names:
+                path = root / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(b"font or license fixture")
+            package.validate_wheel(names, root)
+            for missing in names:
+                with (
+                    self.subTest(missing=missing),
+                    self.assertRaisesRegex(ValueError, "Missing package inputs"),
+                ):
+                    package.validate_wheel(
+                        [name for name in names if name != missing], root
+                    )
+            with self.assertRaisesRegex(ValueError, "Unexpected/stale package inputs"):
+                package.validate_wheel(
+                    names + ["app/dashboard/opportunity_static/current/unknown.ttf"],
+                    root,
+                )

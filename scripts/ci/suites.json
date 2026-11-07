@@ -486,6 +486,7 @@
   {
     "name": "ordinary-delivery-boundaries",
     "tests": [
+      "tests/test_trade_desk.py",
       "tests/test_ev09_asset_delivery.py",
       "tests/test_ev09_calculation_stop.py",
       "tests/test_ev09_ingress_isolation.py",

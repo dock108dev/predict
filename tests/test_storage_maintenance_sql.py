@@ -216,21 +216,37 @@ class StorageMaintenanceSQL(LatestBoardFixture):
         from app.storage.grid_packet_store import PacketStore
         with self.connect() as db:
             db.execute('CREATE EXTENSION IF NOT EXISTS pgstattuple')
-            packet=b'live selected Original with exact source clock'
-            pinned=put(db,packet)
-            db.execute("INSERT INTO current_grid_read_lease VALUES ('small-bloat',now()+interval '1 hour',%s)",([pinned],))
-            db.execute("""INSERT INTO current_grid_blob(id,packet)
-                SELECT encode(sha256(convert_to('churn-'||i,'UTF8')),'hex'),convert_to((SELECT string_agg(md5(i::text||':'||j::text),'')
-                    FROM generate_series(1,4096) j),'UTF8') FROM generate_series(1,70) i""")
-            db.execute("DELETE FROM current_grid_blob WHERE id IN (SELECT encode(sha256(convert_to('churn-'||i,'UTF8')),'hex') FROM generate_series(1,70) i)")
-            db.execute('VACUUM (TRUNCATE FALSE) current_grid_blob')
-            lease=db.execute("SELECT * FROM current_grid_read_lease WHERE token='small-bloat'").fetchone()
-            with patch('app.storage.storage_maintenance.PRESSURE_BYTES',0):result=maintain(db)
-            rewrite=next(r for r in result['rewrites'] if r['table']=='current_grid_blob')
-            self.assertLess(rewrite['measured_reusable_bytes'],32*1024*1024)
-            self.assertGreater(rewrite['before_bytes']-rewrite['after_bytes'],4*1024*1024)
-            self.assertEqual(lease,db.execute("SELECT * FROM current_grid_read_lease WHERE token='small-bloat'").fetchone())
-            self.assertEqual(packet,PacketStore.from_connection(db).load(pinned))
+            # A statement-level TRUNCATE FALSE does not govern a concurrent
+            # autovacuum. Retain this fixture's empty heap/TOAST pages until
+            # maintenance gets its turn, even on a slow shared CI runner.
+            db.execute('ALTER TABLE current_grid_blob SET (vacuum_truncate=false,toast.vacuum_truncate=false)')
+            try:
+                packet=b'live selected Original with exact source clock'
+                pinned=put(db,packet)
+                db.execute("INSERT INTO current_grid_read_lease VALUES ('small-bloat',now()+interval '1 hour',%s)",([pinned],))
+                db.execute("""INSERT INTO current_grid_blob(id,packet)
+                    SELECT encode(sha256(convert_to('churn-'||i,'UTF8')),'hex'),convert_to((SELECT string_agg(md5(i::text||':'||j::text),'')
+                        FROM generate_series(1,4096) j),'UTF8') FROM generate_series(1,70) i""")
+                db.execute("DELETE FROM current_grid_blob WHERE id IN (SELECT encode(sha256(convert_to('churn-'||i,'UTF8')),'hex') FROM generate_series(1,70) i)")
+                # An ordinary vacuum uses the same relation options as the
+                # background worker; reusable pages must remain for the rewrite.
+                db.execute('VACUUM current_grid_blob')
+                reusable=db.execute("""SELECT sum(s.free_space+s.dead_tuple_len) n
+                    FROM pg_class c CROSS JOIN LATERAL pgstattuple(c.oid) s
+                    WHERE c.oid='current_grid_blob'::regclass
+                       OR c.oid=(SELECT reltoastrelid FROM pg_class WHERE oid='current_grid_blob'::regclass)""").fetchone()['n']
+                self.assertGreater(reusable,4*1024*1024,'Fixture must retain measurable bloat before maintenance')
+                lease=db.execute("SELECT * FROM current_grid_read_lease WHERE token='small-bloat'").fetchone()
+                with patch('app.storage.storage_maintenance.PRESSURE_BYTES',0):result=maintain(db)
+                rewrites={r['table']:r for r in result['rewrites']}
+                self.assertIn('current_grid_blob',rewrites,result)
+                rewrite=rewrites['current_grid_blob']
+                self.assertLess(rewrite['measured_reusable_bytes'],32*1024*1024)
+                self.assertGreater(rewrite['before_bytes']-rewrite['after_bytes'],4*1024*1024)
+                self.assertEqual(lease,db.execute("SELECT * FROM current_grid_read_lease WHERE token='small-bloat'").fetchone())
+                self.assertEqual(packet,PacketStore.from_connection(db).load(pinned))
+            finally:
+                db.execute('ALTER TABLE current_grid_blob RESET (vacuum_truncate,toast.vacuum_truncate)')
 
     async def test_cleanup_commits_despite_later_publication_failure_and_preserves_pinned(self):
         with self.connect() as db:

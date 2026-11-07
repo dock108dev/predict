@@ -14,7 +14,7 @@ from tests.test_current_state import owner
 
 
 class Assets(unittest.IsolatedAsyncioTestCase):
-    async def test_three_ordinary_pages_deliver_their_module_graph(self):
+    async def test_ordinary_pages_deliver_their_module_graph(self):
         provider = InjectedTestProvider()
         provider.database_mode = True
         app = create_app(owner=owner(), sessions={}, current_provider=provider)
@@ -36,9 +36,9 @@ class Assets(unittest.IsolatedAsyncioTestCase):
                     seen.add(path)
                     response = await client.get(path)
                     self.assertEqual(response.status, 200, path)
-                    source = await response.text()
+                    suffix = Path(path.split("?")[0]).suffix
                     self.assertIn(
-                        "css" if path.split("?")[0].endswith(".css") else "javascript",
+                        {".css": "css", ".js": "javascript", ".ttf": "font"}[suffix],
                         response.headers["Content-Type"],
                     )
                     self.assertEqual(
@@ -49,18 +49,24 @@ class Assets(unittest.IsolatedAsyncioTestCase):
                             / Path(path.split("?")[0]).name
                         ).read_bytes(),
                     )
+                    if suffix == ".ttf":
+                        continue
+                    source = await response.text()
                     imports = (
-                        re.findall(r"@import\s+url\([\"\']([^\"\']+)[\"\']\)", source)
-                        if path.split("?")[0].endswith(".css")
-                        else re.findall(r"from\s+['\"]([^'\"]+)['\"]", source)
+                        re.findall(r"url\([\"\']([^\"\']+)[\"\']\)", source)
+                        if suffix == ".css"
+                        else re.findall(r"(?:from\s+|import\s*)['\"]([^'\"]+)['\"]", source)
                     )
                     if path == script and "scanner.js" not in path:
-                        self.assertIn("/api/comparison-snapshot", source)
+                        endpoint = "/api/comparison-current" if page in ("/", "/ev", "/arbs") else "/api/comparison-snapshot"
+                        self.assertIn(endpoint, source)
                         self.assertNotIn("new SavedReadPoller", source)
                     pending.extend(urljoin(path, module) for module in imports)
                 expected = (
                     {"board-client.js", "board-contract.js", "board-values.js", "board-read.js", "scanner.css", "scanner.js"}
-                    if page == "/scanner" else {"stored.css", "stored.js"}
+                    if page == "/scanner" else
+                    {"desk.css", "desk.js", "desk-preferences.js", "ui-common.js", "barlow-semi-condensed-600.ttf"}
+                    if page in ("/", "/ev", "/arbs") else {"stored.css", "stored.js", "manrope.ttf"}
                 )
                 self.assertTrue(expected <= {Path(path.split("?")[0]).name for path in seen}, page)
             self.assertEqual(

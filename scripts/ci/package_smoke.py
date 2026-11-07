@@ -17,6 +17,8 @@ UI_FONT_ASSETS = frozenset(
     {
         "app/dashboard/opportunity_static/current/manrope.ttf",
         "app/dashboard/opportunity_static/current/manrope-OFL.txt",
+        "app/dashboard/opportunity_static/current/barlow-semi-condensed-600.ttf",
+        "app/dashboard/opportunity_static/current/barlow-OFL.txt",
     }
 )
 
@@ -149,7 +151,8 @@ for name in ('index.html', 'current.js', 'arbs.html', 'arbs.js', 'admin.html', '
              'comparison-view.js', 'scanner.html', 'scanner.js',
              'scanner.css', 'scanner-runtime.json', 'stored.html', 'stored.js',
              'stored.css', 'ui-common.js', 'coverage-shell.js',
-             'manrope.ttf', 'manrope-OFL.txt'):
+             'manrope.ttf', 'manrope-OFL.txt', 'barlow-semi-condensed-600.ttf',
+             'barlow-OFL.txt', 'desk.html', 'desk.js', 'desk.css', 'desk-preferences.js'):
     assert (root / 'opportunity_static/current' / name).is_file(), name
 assert '/env/' in str(root), root
 # Imports alone do not prove that current model evidence survived packaging.
@@ -191,6 +194,8 @@ async def smoke():
                          '/current/assets/comparison-board.js','/current/assets/board.js',
                          '/current/assets/stored.js','/current/assets/stored.css','/current/assets/board-client.js',
                          '/view/current/manrope.ttf','/view/current/ui-common.js',
+                         '/view/current/barlow-semi-condensed-600.ttf',
+                         '/view/current/desk.js','/view/current/desk.css','/view/current/desk-preferences.js',
                          '/view/current/coverage-shell.js',
                          '/current/assets/board-contract.js','/current/assets/board-values.js'):
                 async with client.get(url+path) as response:
@@ -212,7 +217,7 @@ async def smoke():
                     assert state['error']=='database_unavailable',(path,state)
                     assert state['provider_requests']==0,(path,state)
             async with client.get(url+'/') as response:
-                assert '/current/assets/stored.js' in await response.text()
+                assert '/view/current/desk.js' in await response.text()
             assert app[current_key].provider.__class__.__name__=='CurrentStateProvider'
     finally:
         await runner.cleanup()

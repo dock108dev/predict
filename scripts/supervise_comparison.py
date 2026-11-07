@@ -152,6 +152,10 @@ class Supervisor:
     def tick(self):
         self.bind_start()
         status = self.app.request('/api/status')
+        # Start can commit its marker while the status request is in flight.
+        # Re-read it before treating a newly active app as an unbound session.
+        if self.started is None and status.get('active'):
+            self.bind_start()
         now = self.clock()
         if self.started is None:
             if status.get('active'):

@@ -69,6 +69,27 @@ class Supervision(unittest.TestCase):
         result=json.loads((self.evidence.folder/'result.json').read_text())
         self.assertIn('NOT manual Stop',result['stop_classification'])
 
+    def test_start_during_status_request_binds_without_safety_stop(self):
+        self.monitor.ready()
+        request = self.app.request
+        def start_during_request(route, **kwargs):
+            if route == '/api/status' and not self.app.status['active']:
+                self.start()
+            return request(route, **kwargs)
+        self.app.request = start_during_request
+        self.monitor.tick()
+        self.assertTrue(self.monitor.bound_session)
+        self.assertEqual(self.monitor.started, 1000.)
+        self.assertEqual(self.app.posts, 0)
+        self.assertIsNone(self.monitor.safety)
+
+    def test_active_without_start_marker_is_still_rejected(self):
+        self.monitor.ready()
+        self.app.status.update(active=True, session='test-attempt')
+        with self.assertRaisesRegex(ValueError, 'without matching consumed Start marker'):
+            self.monitor.tick()
+        self.assertFalse(self.monitor.bound_session)
+
     def test_status_transport_failure_attempts_stop_from_previously_bound_session(self):
         def sleep(_):
             if self.monitor.started is None:self.start()
