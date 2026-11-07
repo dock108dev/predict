@@ -49,9 +49,18 @@ class EnvironmentTests(unittest.TestCase):
     def test_sql_shards_cover_each_target_once(self):
         module = load("postgres")
         targets = [f"tests/sql_{index}.py" for index in range(21)]
-        shards = [module.shard_targets(targets, index, 2) for index in (1, 2)]
-        self.assertEqual(sorted(sum(shards, [])), sorted(targets))
-        self.assertFalse(set(shards[0]) & set(shards[1]))
+        for count in (1, 2, 4):
+            with self.subTest(count=count):
+                shards = [
+                    module.shard_targets(targets, index, count)
+                    for index in range(1, count + 1)
+                ]
+                self.assertEqual(sorted(sum(shards, [])), sorted(targets))
+                self.assertTrue(all(shards))
+                for i, shard in enumerate(shards):
+                    self.assertTrue(
+                        all(set(shard).isdisjoint(other) for other in shards[i + 1 :])
+                    )
         self.assertEqual(module.shard_targets(targets, 1, 1), targets)
         for index, count in ((0, 2), (3, 2), (1, 0), (1, 22)):
             with self.subTest(index=index, count=count), self.assertRaises(ValueError):

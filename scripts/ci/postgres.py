@@ -272,7 +272,7 @@ def main(argv=None):
             code = (
                 "from pathlib import Path; import app.storage.store as s; "
                 's.ROOT=Path(__import__("sys").argv[1]); import pytest; '
-                'raise SystemExit(pytest.main(["-v","-o","faulthandler_timeout=120",*'
+                'raise SystemExit(pytest.main(["-v","--durations=20","-o","faulthandler_timeout=120",*'
                 + repr(tests)
                 + ',"--junitxml="+__import__("sys").argv[2]]))'
             )

@@ -24,7 +24,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2]
+        # Two jobs reached 829s and the 900s process limit in run 42382221525.
+        # Split the same targets further while retaining the bounded timeout.
+        shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -36,7 +38,7 @@ jobs:
         run: echo '/usr/lib/postgresql/16/bin' >> "$GITHUB_PATH"
       - name: Disposable migrations and transaction tests
         id: postgres
-        run: python scripts/ci/postgres.py --shard-index ${{ matrix.shard }} --shard-count 2
+        run: python scripts/ci/postgres.py --shard-index ${{ matrix.shard }} --shard-count ${{ strategy.job-total }}
       - name: Storage summary
         if: always()
         env:
