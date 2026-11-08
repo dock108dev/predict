@@ -295,11 +295,11 @@ class CurrentRowStore:
                 from .schedule_metadata import choose, witness
                 old=old_offers.get(cid)
                 price_admitted=True
+                incoming=_evidence_order(p['source_at'],p['quote'].get('book_confirmation'))
                 if old:
                     original=p['quote']['original']
                     if not p['missing'] and (p['source_order'],p['received_order'])==(old['source_order'],old['received_order']) and (original['value'],original['units'],original['quantity_units'])!=(old['price_value'],old['price_units'],old['quantity_units']):
                         raise ValueError('current_row_equal_clock_price_conflict')
-                    incoming=_evidence_order(p['source_at'],p['quote'].get('book_confirmation'))
                     previous=_evidence_order(old['source_at'],old['confirmation'])
                     if incoming is not None and previous is not None:
                         if incoming<previous:price_admitted=False
@@ -310,8 +310,11 @@ class CurrentRowStore:
                 if not price_admitted and not witness(event):continue
                 prior_event=old_events.get(eid)
                 # Metadata admission is independent of price-source ordering.
-                # Never extend an expired offering around an old retained book.
-                if prior_event and prior_event['expires_order']<exact_time(now or utc()) and p['expires_order']<=prior_event['expires_order']:continue
+                # A later schedule or receipt cannot revive an expired offering
+                # around an old book. Require admitted source/confirmation
+                # evidence after the prior expiry, independently of metadata.
+                if prior_event and prior_event['expires_order']<exact_time(now or utc()):
+                    if not price_admitted or incoming is None or incoming<=prior_event['expires_order']:continue
                 # prepare() already detached and validated this exact metadata.
                 # Identical non-conflicted events need no repeated witness/core
                 # hashing for every outcome in a native batch. Changed metadata

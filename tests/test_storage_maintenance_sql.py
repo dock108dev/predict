@@ -540,7 +540,11 @@ class WorkingPartitionUpgradeSQL(LatestBoardFixture):
             comparison_live_head='singleton',comparison_live_component='id',comparison_live_member='result_id,member_id',
             comparison_live_lease='id')
         with self.connect() as db,patch.object(live,'utc',lambda:self.at.isoformat()),patch.object(snapshots,'utc',lambda:self.at.isoformat()):
-            live.turn(db)
+            # Seed a pre-063 publication: delivery diagnostics only arrived in
+            # 069, so the historical publisher did not write those side records.
+            # Keep the actual snapshot, fragment and lease writes under test.
+            with patch('app.storage.delivery_clocks.captured'),patch('app.storage.delivery_clocks.published'):
+                live.turn(db)
             head=live.status(db)
             root=snapshots.unpack(db.execute('SELECT result FROM comparison_snapshot_result WHERE id=%s',(head['result_id'],)).fetchone()['result'],db=db)
             member=root['rows'][0]['evidence_result_id'];token=live.retain(db,member)

@@ -3,6 +3,7 @@ from copy import deepcopy
 from datetime import timedelta
 import json
 from unittest import TestCase
+from unittest.mock import patch
 from app.storage.current_rows import contract_id, CurrentRowStore
 from app.storage.current_games import GameStore
 from app.storage.comparison_board import ReadContext
@@ -109,6 +110,30 @@ class ScheduleReconciliationSQL(TestCase):
         self.assertEqual(self.db.execute('SELECT count(*) n FROM current_event').fetchone()['n'],0)
         self.assertEqual(self.db.execute('SELECT count(*) n FROM current_offer').fetchone()['n'],0)
         self.assertEqual(CurrentRowStore(self.db).capture()['records'],[])
+
+    def test_later_receipt_cannot_revive_expired_prices_but_new_source_evidence_can(self):
+        rows=self.authored()
+        start=stamp(rows[0]['event']['scheduled_start'])
+        at=(start+timedelta(minutes=1)).isoformat()
+        for fresh_source in (False,True):
+            with self.subTest(fresh_source=fresh_source):
+                self.setUp()
+                self.store.upsert_records(rows)
+                changed=self.later(rows[0],minutes=60)
+                changed['quote']['times']['received_at']=at
+                if fresh_source:
+                    changed['quote']['times']['source_at']=at
+                self.store.upsert_records([changed],now=at)
+                with patch('app.storage.current_rows.utc',return_value=at):
+                    captured=self.store.capture()['records']
+                if fresh_source:
+                    self.assertTrue(captured)
+                    updated=next(r for r in captured if contract_id(r)==contract_id(changed))
+                    self.assertEqual(updated['quote']['times']['source_at'],at)
+                    self.assertEqual(updated['quote']['times']['received_at'],at)
+                    self.assertEqual(updated['event']['scheduled_start'],changed['event']['scheduled_start'])
+                else:
+                    self.assertEqual(captured,[])
 
     def snapshot(self):
         return json.loads(json.dumps(dict(observed_at='2026-10-17T12:30:00Z',
