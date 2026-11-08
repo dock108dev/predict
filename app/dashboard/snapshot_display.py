@@ -105,7 +105,7 @@ def outcome_id(key):
     return hashed(key)
 
 
-def comparison_groups(rows, by_id, metric, *, pairs=False, current=False):
+def comparison_groups(rows, by_id, metric, *, pairs=False, current=False, individual=False):
     """Group the complete filtered slate before pagination; preserve every quote."""
     groups = {}
     values = {r['id']: ranking_value(r, metric, current=current) for r in rows}
@@ -118,7 +118,7 @@ def comparison_groups(rows, by_id, metric, *, pairs=False, current=False):
             keys = [outcome_key(by_id[i]) for i in row['legs'] if i in by_id]
             key = ('pair', tuple(sorted(keys, key=repr))) if len(keys) == 2 else ('unresolved', row['id'])
         else:
-            key = outcome_key(row)
+            key = ('offer', row['id']) if individual else outcome_key(row)
         groups.setdefault(key, []).append(row)
     result = []
     for key, members in groups.items():

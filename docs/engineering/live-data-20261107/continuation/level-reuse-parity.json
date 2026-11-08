@@ -1,0 +1,33 @@
+{
+  "population": "1000 retained actual ladders plus 2048 controlled nonzero deltas; same inputs in alternating runs",
+  "results": [
+    {
+      "mode": "direct_without_leaf_reuse",
+      "seconds": 1.7645254590315744,
+      "sha256": "0e31974e18ea888a0ab6a4713cee131985438849cbaa57d6a8539cf98fbcb9ff",
+      "inputs": 3049,
+      "outputs": 3049
+    },
+    {
+      "mode": "direct_with_leaf_reuse",
+      "seconds": 1.2450332080479711,
+      "sha256": "0e31974e18ea888a0ab6a4713cee131985438849cbaa57d6a8539cf98fbcb9ff",
+      "inputs": 3049,
+      "outputs": 3049
+    },
+    {
+      "mode": "direct_without_leaf_reuse",
+      "seconds": 1.680346249951981,
+      "sha256": "0e31974e18ea888a0ab6a4713cee131985438849cbaa57d6a8539cf98fbcb9ff",
+      "inputs": 3049,
+      "outputs": 3049
+    },
+    {
+      "mode": "direct_with_leaf_reuse",
+      "seconds": 1.170340875047259,
+      "sha256": "0e31974e18ea888a0ab6a4713cee131985438849cbaa57d6a8539cf98fbcb9ff",
+      "inputs": 3049,
+      "outputs": 3049
+    }
+  ]
+}

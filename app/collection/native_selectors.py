@@ -58,7 +58,7 @@ def query(venue,sport,at=None,*,families=None):
     elif sport=='NFL':q['sportsMarketTypes']='football_team_full_game_winner'
     else:q['tagSlugsAll']='games'  # observed games tag; documented AND filter
     if at:
-        q.update(startTimeMin=(at+timedelta(minutes=5)).isoformat(),startTimeMax=(at+timedelta(days=7)).isoformat())
+        q.update(startTimeMin=(at-timedelta(hours=24)).isoformat(),startTimeMax=(at+timedelta(days=7)).isoformat())
     return '/v1/events',q
 
 def candidates(pages,venue,sport,at,*,families=None):
@@ -99,7 +99,7 @@ def candidates(pages,venue,sport,at,*,families=None):
                 try:start=coverage.stamp(e['startTime']) if e.get('startTime') else None
                 except (ValueError,TypeError,AttributeError):reason='invalid_schedule'
             if not eid or not e.get('title'):reason='missing_game_identity_or_title'
-            if start and not at+timedelta(minutes=5)<start<=at+timedelta(days=7):reason='outside_game_window'
+            if start and not at-timedelta(hours=24)<=start<=at+timedelta(days=7):reason='outside_game_window'
             if eid in found:reason='duplicate_game_identity'
             if reason:excluded.append(dict(id=eid,reason=reason));continue
             canonical_key=None

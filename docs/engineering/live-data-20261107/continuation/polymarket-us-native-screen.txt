@@ -1,0 +1,5 @@
+Browser tab: 3, Title: "Prediction Arb · Expected value", URL: "http://127.0.0.1:8783/ev?league=NBA&family=winner&search=Orlando&basis=before".
+The following is a diff from the previous accessibility tree with ~ and + representing changed and added elements, respectively. Removed elements are summarized by ID range.
+~		57 text Auto-refresh on. Last checked 9:25:08 PM EST.
+~		48 button Refresh list, ID: refresh-list
+The focused UI element is 21 search text field (settable) Search, Value: San Antonio

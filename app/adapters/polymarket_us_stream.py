@@ -22,12 +22,13 @@ WS_PATH = '/v1/ws/markets'
 WS_URL = 'wss://api.polymarket.us' + WS_PATH
 
 
-def subscription(slugs, request_id, dialect='camel', *, maximum_markets=100):
+def subscription(slugs, request_id, dialect='camel', *, maximum_markets=100, debounced=False):
     if not slugs or (maximum_markets is not None and len(slugs)>maximum_markets) or len(set(slugs)) != len(slugs) or any(not isinstance(s, str) or not s for s in slugs):
         raise ValueError('requires 1-100 unique market slugs')
     if dialect == 'camel':
-        return {'subscribe': {'requestId': request_id, 'subscriptionType': 'SUBSCRIPTION_TYPE_MARKET_DATA', 'marketSlugs': list(slugs), 'responsesDebounced': False}}
+        return {'subscribe': {'requestId': request_id, 'subscriptionType': 'SUBSCRIPTION_TYPE_MARKET_DATA', 'marketSlugs': list(slugs), 'responsesDebounced': debounced}}
     if dialect == 'snake':
+        if debounced:raise ValueError('debouncing requires documented camel dialect')
         return {'subscribe': {'request_id': request_id, 'subscription_type': 1, 'market_slugs': list(slugs)}}
     raise ValueError('explicit camel or snake dialect required')
 
@@ -87,7 +88,9 @@ class MalformedMarketFrame(ValueError):
 class MarketStream:
     def __init__(self, markets, factory, *, dialect='camel', max_messages=30,
                  max_connections=2, stale_seconds=10, duration=30,
-                 kind=EvidenceKind.OBSERVATION, sleep=asyncio.sleep, profile_name=None, maximum_markets=100):
+                 kind=EvidenceKind.OBSERVATION, sleep=asyncio.sleep, profile_name=None, maximum_markets=100, market_partition=None):
+        if market_partition is not None and market_partition not in ((0,2),(1,2)):raise ValueError('market_partition_invalid')
+        self.market_partition=market_partition
         self.markets = {market_slug(m): m for m in markets}
         subscription(tuple(self.markets), 'validate', dialect, maximum_markets=maximum_markets)
         from app.collection.supervised import profile, bound_native
@@ -160,6 +163,11 @@ class MarketStream:
                 raise ValueError('unknown market message')
             if set(data) - {'requestId', 'subscriptionType', 'marketData'} or set(md) & {'delta', 'sequence', 'snapshot', 'updateType'}:
                 raise ValueError('ambiguous wire semantics')
+            if self.market_partition is not None:
+                import zlib
+                part,total=self.market_partition
+                if zlib.crc32(md['marketSlug'].encode())%total!=part:
+                    return None  # Independent full images have one stable CPU owner.
             book = parse_book(response, md, self.markets[md['marketSlug']], stream=True)
             # Atomic replacement: do not merge, retain omitted levels or preserve
             # the other side from a previous frame. Explicit [] is known empty.

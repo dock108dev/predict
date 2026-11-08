@@ -1,0 +1,151 @@
+{
+  "at": "2026-11-08T03:03:58.953366+00:00",
+  "runtime_id": "f41e058f-5f6b-4bc7-b7e5-98442dabccc8",
+  "delivery_stages": [
+    {
+      "sport": "NFL",
+      "records": 336,
+      "attempt_id": "c2e9a510-eb1c-4591-a6d5-c827437912d0",
+      "decoded_at": "2026-11-08T02:45:13.644370+00:00",
+      "admitted_at": "2026-11-08T02:45:14.431215+00:00",
+      "received_at": "2026-11-08T02:45:12.721900+00:00",
+      "normalized_at": "2026-11-08T02:45:13.684228+00:00",
+      "decoding_seconds": 8.291099220514297e-06,
+      "admission_seconds": 0.7469835409428924,
+      "normalization_seconds": 0.039860708988271654
+    },
+    {
+      "sport": "NCAAF",
+      "records": 284,
+      "attempt_id": "7f6560f1-14f2-488a-b0f4-4efc9596d90b",
+      "decoded_at": "2026-11-08T02:45:16.880170+00:00",
+      "admitted_at": "2026-11-08T02:45:17.567448+00:00",
+      "received_at": "2026-11-08T02:45:15.792869+00:00",
+      "normalized_at": "2026-11-08T02:45:16.915683+00:00",
+      "decoding_seconds": 6.082933396100998e-06,
+      "admission_seconds": 0.6517544579692185,
+      "normalization_seconds": 0.03552241704892367
+    },
+    {
+      "sport": "NBA",
+      "records": 208,
+      "attempt_id": "a195f5ef-4807-447f-9a38-456a1f32b24f",
+      "decoded_at": "2026-11-08T02:45:19.869151+00:00",
+      "admitted_at": "2026-11-08T02:45:20.283051+00:00",
+      "received_at": "2026-11-08T02:45:19.006034+00:00",
+      "normalized_at": "2026-11-08T02:45:19.894118+00:00",
+      "decoding_seconds": 4.833098500967026e-06,
+      "admission_seconds": 0.3889332079561427,
+      "normalization_seconds": 0.024973666993901134
+    },
+    {
+      "sport": "NCAAB",
+      "records": 308,
+      "attempt_id": "3000ec31-ca7b-42f9-85b1-2d77b6d0de39",
+      "decoded_at": "2026-11-08T02:45:22.709782+00:00",
+      "admitted_at": "2026-11-08T02:45:23.688675+00:00",
+      "received_at": "2026-11-08T02:45:21.713861+00:00",
+      "normalized_at": "2026-11-08T02:45:22.748539+00:00",
+      "decoding_seconds": 1.5332945622503757e-05,
+      "admission_seconds": 0.9400348330382258,
+      "normalization_seconds": 0.03884933399967849
+    },
+    {
+      "sport": "MLB",
+      "records": 0,
+      "attempt_id": "249fba81-f22c-4619-b7d5-b9fe1a92a083",
+      "decoded_at": "2026-11-08T02:45:26.277650+00:00",
+      "admitted_at": "2026-11-08T02:45:27.163436+00:00",
+      "received_at": "2026-11-08T02:45:25.292842+00:00",
+      "normalized_at": "2026-11-08T02:45:26.277835+00:00",
+      "decoding_seconds": 1.6290927305817604e-05,
+      "admission_seconds": 0.885596500011161,
+      "normalization_seconds": 0.0001757920254021883
+    },
+    {
+      "sport": "NHL",
+      "records": 228,
+      "attempt_id": "4749a88c-b282-4a47-a742-4f8d058cda49",
+      "decoded_at": "2026-11-08T02:45:31.458138+00:00",
+      "admitted_at": "2026-11-08T02:45:33.255921+00:00",
+      "received_at": "2026-11-08T02:45:30.569737+00:00",
+      "normalized_at": "2026-11-08T02:45:31.488329+00:00",
+      "decoding_seconds": 5.37489540874958e-06,
+      "admission_seconds": 1.767580125015229,
+      "normalization_seconds": 0.03019320801831782
+    },
+    {
+      "sport": "NFL",
+      "records": 336,
+      "attempt_id": "a9d249ea-a024-4228-a53b-bb40e790c839",
+      "decoded_at": "2026-11-08T03:00:06.458831+00:00",
+      "admitted_at": "2026-11-08T03:00:07.800073+00:00",
+      "received_at": "2026-11-08T03:00:04.266504+00:00",
+      "normalized_at": "2026-11-08T03:00:06.503215+00:00",
+      "decoding_seconds": 2.9579969123005867e-06,
+      "admission_seconds": 1.296844333061017,
+      "normalization_seconds": 0.044392666895873845
+    },
+    {
+      "sport": "NCAAF",
+      "records": 262,
+      "attempt_id": "81700fef-bf12-41fd-a1f9-e72bc2197de3",
+      "decoded_at": "2026-11-08T03:00:10.977977+00:00",
+      "admitted_at": "2026-11-08T03:00:11.735583+00:00",
+      "received_at": "2026-11-08T03:00:09.595056+00:00",
+      "normalized_at": "2026-11-08T03:00:11.009471+00:00",
+      "decoding_seconds": 3.4580007195472717e-06,
+      "admission_seconds": 0.7261039590230212,
+      "normalization_seconds": 0.031498707947321236
+    },
+    {
+      "sport": "NBA",
+      "records": 202,
+      "attempt_id": "af9a1de2-3298-40a7-a1f5-4d00f37b9c68",
+      "decoded_at": "2026-11-08T03:00:14.805806+00:00",
+      "admitted_at": "2026-11-08T03:00:15.208630+00:00",
+      "received_at": "2026-11-08T03:00:13.537827+00:00",
+      "normalized_at": "2026-11-08T03:00:14.831175+00:00",
+      "decoding_seconds": 8.16606916487217e-06,
+      "admission_seconds": 0.3774528750218451,
+      "normalization_seconds": 0.025373958982527256
+    },
+    {
+      "sport": "NCAAB",
+      "records": 316,
+      "attempt_id": "7a5a9054-aae1-45aa-a9f2-780b193b45e2",
+      "decoded_at": "2026-11-08T03:00:17.699392+00:00",
+      "admitted_at": "2026-11-08T03:00:19.425782+00:00",
+      "received_at": "2026-11-08T03:00:16.721464+00:00",
+      "normalized_at": "2026-11-08T03:00:17.769028+00:00",
+      "decoding_seconds": 5.209003575146198e-06,
+      "admission_seconds": 1.656736542005092,
+      "normalization_seconds": 0.06964166602119803
+    },
+    {
+      "sport": "MLB",
+      "records": 0,
+      "attempt_id": "eb5610f1-75f0-4084-a600-1a3d8a43e502",
+      "decoded_at": "2026-11-08T03:00:23.342490+00:00",
+      "admitted_at": "2026-11-08T03:00:23.494398+00:00",
+      "received_at": "2026-11-08T03:00:21.022480+00:00",
+      "normalized_at": "2026-11-08T03:00:23.342630+00:00",
+      "decoding_seconds": 1.5083001926541328e-05,
+      "admission_seconds": 0.15176949999295175,
+      "normalization_seconds": 0.00013141706585884094
+    },
+    {
+      "sport": "NHL",
+      "records": 202,
+      "attempt_id": "48c71f26-186f-4025-84cf-28fea5f9481d",
+      "decoded_at": "2026-11-08T03:00:28.336240+00:00",
+      "admitted_at": "2026-11-08T03:00:28.891457+00:00",
+      "received_at": "2026-11-08T03:00:26.744190+00:00",
+      "normalized_at": "2026-11-08T03:00:28.365421+00:00",
+      "decoding_seconds": 4.125060513615608e-06,
+      "admission_seconds": 0.5260309590958059,
+      "normalization_seconds": 0.029185624909587204
+    }
+  ],
+  "processing_phase": "reservation"
+}

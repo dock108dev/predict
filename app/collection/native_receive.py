@@ -17,11 +17,29 @@ class NativeReceive:
         self.on_failure=on_failure
         self.error=None
         self.capacity_failed=False
+        self.space=asyncio.Event()
+        self.space.set()
         self.task=asyncio.create_task(self.read(),name='predict-native-socket-reader')
 
     async def read(self):
         try:
             while True:
+                # Reserve one maximum websocket frame before reading. Full
+                # initial catalogs can burst faster than reconstruction; pause
+                # the reader instead of losing sequence continuity at the cap.
+                # Socket framing remains limited to 1 MiB by its owner.
+                reserve=min(1024*1024,self.byte_limit)
+                if self.bytes>self.byte_limit-reserve:
+                    started=time.monotonic()
+                    self.metrics['receive_backpressure_count']=self.metrics.get('receive_backpressure_count',0)+1
+                    self.metrics['receive_backpressure_active']=True
+                    try:
+                        while self.bytes>self.byte_limit-reserve:
+                            self.space.clear()
+                            await self.space.wait()
+                    finally:
+                        self.metrics['receive_backpressure_active']=False
+                        self.metrics['receive_backpressure_seconds']=self.metrics.get('receive_backpressure_seconds',0)+time.monotonic()-started
                 body=await self.socket.recv()
                 received=datetime.now(timezone.utc)
                 size=len(body.encode()) if isinstance(body,str) else len(body)
@@ -63,6 +81,7 @@ class NativeReceive:
             raise self.error
         body,received,size=row
         self.bytes-=size
+        self.space.set()
         self.arrivals.popleft()
         self.metrics['receive_queue_wait_ms']=(datetime.now(timezone.utc)-received).total_seconds()*1000
         self.measure()

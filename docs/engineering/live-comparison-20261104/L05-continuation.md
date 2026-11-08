@@ -1,5 +1,11 @@
 # L05 — finish the usable live comparison product
 
+## Current continuation — November 7
+
+The November 7 follow-up and its subsequent delivery are recorded locally in
+`docs/engineering/live-data-20261107/`. Use [local operation](../../development.md)
+for the integrated desk and replay. Preserve the November 6 proof as dated evidence.
+
 ## Status — November 6: delivered locally, historical assignment below
 
 The [final L05 delivery](L05-delivery.md) records completed local implementation,

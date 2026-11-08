@@ -1,0 +1,43 @@
+{
+  "at": "2026-11-08T02:45:22.606823+00:00",
+  "runtime_id": "f41e058f-5f6b-4bc7-b7e5-98442dabccc8",
+  "delivery_stages": [
+    {
+      "sport": "NFL",
+      "records": 336,
+      "attempt_id": "c2e9a510-eb1c-4591-a6d5-c827437912d0",
+      "decoded_at": "2026-11-08T02:45:13.644370+00:00",
+      "admitted_at": "2026-11-08T02:45:14.431215+00:00",
+      "received_at": "2026-11-08T02:45:12.721900+00:00",
+      "normalized_at": "2026-11-08T02:45:13.684228+00:00",
+      "decoding_seconds": 8.291099220514297e-06,
+      "admission_seconds": 0.7469835409428924,
+      "normalization_seconds": 0.039860708988271654
+    },
+    {
+      "sport": "NCAAF",
+      "records": 284,
+      "attempt_id": "7f6560f1-14f2-488a-b0f4-4efc9596d90b",
+      "decoded_at": "2026-11-08T02:45:16.880170+00:00",
+      "admitted_at": "2026-11-08T02:45:17.567448+00:00",
+      "received_at": "2026-11-08T02:45:15.792869+00:00",
+      "normalized_at": "2026-11-08T02:45:16.915683+00:00",
+      "decoding_seconds": 6.082933396100998e-06,
+      "admission_seconds": 0.6517544579692185,
+      "normalization_seconds": 0.03552241704892367
+    },
+    {
+      "sport": "NBA",
+      "records": 208,
+      "attempt_id": "a195f5ef-4807-447f-9a38-456a1f32b24f",
+      "decoded_at": "2026-11-08T02:45:19.869151+00:00",
+      "admitted_at": "2026-11-08T02:45:20.283051+00:00",
+      "received_at": "2026-11-08T02:45:19.006034+00:00",
+      "normalized_at": "2026-11-08T02:45:19.894118+00:00",
+      "decoding_seconds": 4.833098500967026e-06,
+      "admission_seconds": 0.3889332079561427,
+      "normalization_seconds": 0.024973666993901134
+    }
+  ],
+  "processing_phase": "reservation"
+}

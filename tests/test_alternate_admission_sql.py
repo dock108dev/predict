@@ -9,6 +9,28 @@ from tests.test_current_aggregate import body
 
 @skipUnless(SOCKET,'Disposable PostgreSQL required')
 class AlternateAdmissionSQL(LatestBoardFixture):
+    async def test_exact_missing_event_withdraws_only_its_alternate_scope(self):
+        import json
+        from unittest.mock import patch
+        from app.collection.alternate_acquisition import _save_response
+        payload=json.loads(alternate_fixture());eid=payload['id']
+        alt,_,_=admit_alternate(json.dumps(payload).encode(),'MLB',AT)
+        payload['id']='different-source-event'
+        peer,_,_=admit_alternate(json.dumps(payload).encode(),'MLB',AT)
+        featured=admit(body(books=('novig','pinnacle')),'MLB',AT)
+        with self.connect() as db:
+            store=CurrentRowStore(db);store.upsert_records([*alt,*peer,*featured],now=AT)
+            original_featured=db.execute("SELECT c.id,c.revision,o.revision offer_revision FROM current_contract c JOIN current_offer o ON o.contract_id=c.id WHERE c.venue='novig' AND c.native_market_id NOT LIKE 'alternate:%%' ORDER BY c.id").fetchall()
+        with patch('app.storage.store.connect',side_effect=self.connect),patch('app.storage.current_rows.utc',return_value=AT):
+            _save_response('MLB',eid,dict(event_missing=True,received_at=AT),'test-cycle')
+        with self.connect() as db:
+            rows=db.execute("SELECT e.native_event_id,c.native_market_id FROM current_contract c JOIN current_event e ON e.id=c.event_id WHERE c.venue='novig'").fetchall()
+            retained_featured=db.execute("SELECT c.id,c.revision,o.revision offer_revision FROM current_contract c JOIN current_offer o ON o.contract_id=c.id WHERE c.venue='novig' AND c.native_market_id NOT LIKE 'alternate:%%' ORDER BY c.id").fetchall()
+        self.assertFalse(any(r['native_event_id']==eid and r['native_market_id'].startswith('alternate:') for r in rows))
+        self.assertEqual(sum(r['native_event_id']=='different-source-event' for r in rows),8)
+        self.assertTrue(original_featured)
+        self.assertEqual(retained_featured,original_featured)
+
     async def test_route_replacement_does_not_erase_other_route(self):
         alt,_,errors=admit_alternate(alternate_fixture(),'MLB',AT)
         self.assertFalse(errors)

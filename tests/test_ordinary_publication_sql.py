@@ -13,6 +13,35 @@ from app.dashboard.snapshot_api import mount
 
 @skipUnless(SOCKET, 'Disposable PostgreSQL required')
 class OrdinarySQL(LatestBoardFixture):
+    async def test_owned_refresh_preserves_prices_but_failure_and_controls_withdraw(self):
+        from app.collection.runtime_status import read_runtime
+        with self.connect() as db:
+            live.turn(db);result=self.result(db);deps=live.dependencies(db)
+            original=read_runtime(db)
+            pending=dict(id='request',runtime_id=original['runtime_id'],candidate_digest='code',state='uncertain')
+            owner=dict(original,status=dict(quota=dict(blocking_reason='ambiguous_dispatch_unresolved',pause=None,
+                publication_pending=pending),sources=[dict(provider='the_odds_api',worker_done=False,
+                publication_progress=dict(pending,stage='transport'))]))
+            def projected(o):
+                with patch('app.collection.runtime_status.read_runtime',return_value=o):
+                    actual,states=live.authority(db)
+                return live.project(result,deps,actual,states,at=self.at,policy=live.policy_identity(),
+                    epoch=result['publication']['epoch'])
+            before=projected(original)
+            current=projected(owner)
+            self.assertEqual([(r['id'],r['price_current']) for r in before['rows']],
+                [(r['id'],r['price_current']) for r in current['rows']])
+            self.assertTrue(any(r['price_current'] for r in current['rows'] if r['venue']=='novig'))
+            for change in ('failure','ownership','pause','stop'):
+                o=deepcopy(owner)
+                if change=='failure':o['status']['sources'][0]['publication_progress']=None
+                if change=='ownership':o['healthy']=False
+                if change=='pause':o['paused_sources']=['the_odds_api']
+                if change=='stop':o['global_stopped']=True;o['active']=False
+                with self.subTest(change=change):
+                    rows=projected(o)['rows']
+                    self.assertTrue(all(not r['price_current'] for r in rows if r['venue']=='novig'))
+
     async def test_new_root_reuses_only_present_exact_members_and_rechecks_authority(self):
         from time import monotonic
         from app.storage.store import hashed
@@ -153,6 +182,14 @@ class OrdinarySQL(LatestBoardFixture):
         self.assertTrue(live.source_allowed(state,'NBA'))
         self.assertFalse(live.source_allowed(state,'NFL'))
         self.assertFalse(live.source_allowed(state,'NHL'))
+
+    def test_first_delivery_keeps_fair_and_native_work(self):
+        scope={k:[k] for k in ('old','quiet','api','kalshi','poly')}
+        evidence=[dict(event_id=k,venue=v,at=self.at.isoformat())
+            for k,v in [('kalshi','kalshi'),('poly','polymarket_us')]]
+        order=live.prioritize_current(list(scope),scope,evidence,self.at,undelivered={'api'})
+        self.assertEqual(order,['old','api','kalshi','poly','quiet'])
+        self.assertEqual(len(order),len(set(order)))
 
     async def asyncSetUp(self):
         await super().asyncSetUp()

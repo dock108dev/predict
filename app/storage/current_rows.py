@@ -6,7 +6,7 @@ publication; the record read adapter reconstructs only transient finance inputs.
 """
 from copy import deepcopy
 from contextlib import contextmanager, ExitStack
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from decimal import Decimal
 from psycopg.types.json import Jsonb
 from psycopg.pq import TransactionStatus
@@ -23,6 +23,18 @@ EVENT_FIELDS=('id','sport','competition','season','stage','scheduled_start','hom
 
 
 def utc():return datetime.now(timezone.utc).isoformat()
+
+
+def event_retention(event,quote,at):
+    # Storage lifetime is separate from the existing quote freshness policy.
+    # Only a source-evidenced post-start phase can retain a started occurrence;
+    # old pregame observations never extend their own deadline.
+    from app.comparison.game_phase import price_phase
+    phase=price_phase(event,quote,at)
+    start=datetime.fromisoformat(event['scheduled_start'].replace('Z','+00:00'))
+    if phase['state'] in ('live','suspended','final'):
+        return exact_time((start+timedelta(hours=24)).isoformat())
+    return exact_time(event['scheduled_start'])
 
 
 def _evidence_order(source, confirmation):
@@ -186,6 +198,7 @@ def prepare(record, *, batch_events=None):
             if not valid_price or quantity<=0:raise ValueError('current_row_depth_value')
     q.pop('id',None);q.pop('revision',None)
     q.pop('occurrence_match',None);q.pop('occurrence_link',None)
+    expires=event_retention(event,q,times['received_at'])
     q['times']={k:v for k,v in times.items() if k not in ('source_at','received_at')}
     # No receipt/envelope association is required by the current finance owner.
     meta=row.get('comparison_source_metadata',{})
@@ -204,7 +217,7 @@ def prepare(record, *, batch_events=None):
     return dict(event_id=eid,contract_id=cid,event=event,event_revision=event_revision,
         contract=row,contract_revision=hashed(row),quote=q,depth=depth,
         source=source,venue=venue,received_at=times['received_at'],received_order=received,source_at=at,source_order=order,
-        expires_order=received if event.get('status',event.get('state')) in ('completed','final','settled','cancelled') else exact_time(event['scheduled_start']),revision=revision,missing=missing)
+        expires_order=expires,revision=revision,missing=missing)
 
 
 class CurrentRowStore:
@@ -298,7 +311,7 @@ class CurrentRowStore:
                 prior_event=old_events.get(eid)
                 # Metadata admission is independent of price-source ordering.
                 # Never extend an expired offering around an old retained book.
-                if prior_event and prior_event['expires_order']<exact_time(now or utc()):continue
+                if prior_event and prior_event['expires_order']<exact_time(now or utc()) and p['expires_order']<=prior_event['expires_order']:continue
                 # prepare() already detached and validated this exact metadata.
                 # Identical non-conflicted events need no repeated witness/core
                 # hashing for every outcome in a native batch. Changed metadata
@@ -306,16 +319,22 @@ class CurrentRowStore:
                 incoming_revision=p.get('event_revision') or hashed(event)
                 if not (prior_event and prior_event['revision']==incoming_revision and not event.get('schedule_conflict')):
                     event=choose(prior_event['facts'] if prior_event else None,event,observed_at=now or utc())
-                expiry=exact_time(event['scheduled_start'])
+                phase_quote=dict(p['quote'],times=dict(p['quote']['times'],source_at=p['source_at'],received_at=p['received_at']))
+                expiry=event_retention(event,phase_quote,now or utc())
+                # A sibling's older pregame quote cannot retire an occurrence
+                # already retained by post-start evidence. This retains storage
+                # only; each offer still needs its own current lifecycle proof.
+                if prior_event and prior_event['facts']['scheduled_start']==event['scheduled_start']:
+                    expiry=max(expiry,prior_event['expires_order'])
                 ef=incoming_revision if event is p['event'] else prior_event['revision'] if prior_event and event is prior_event['facts'] else hashed(event)
-                if prior_event is None or prior_event['revision']!=ef:
+                if prior_event is None or prior_event['revision']!=ef or prior_event['expires_order']!=expiry:
                     execute('''INSERT INTO current_event VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
                       ON CONFLICT(id) DO UPDATE SET facts=excluded.facts,revision=excluded.revision,
                         scheduled_start=excluded.scheduled_start,expires_order=excluded.expires_order
-                      WHERE current_event.revision<>excluded.revision''',
-                        (eid,source['provider'],source['native_event_id'],event['competition'],event['scheduled_start'],min(expiry,p['expires_order']) if event.get('status',event.get('state')) in ('completed','final','settled','cancelled') else expiry,Jsonb(event),ef))
+                      WHERE current_event.revision<>excluded.revision OR current_event.expires_order<>excluded.expires_order''',
+                        (eid,source['provider'],source['native_event_id'],event['competition'],event['scheduled_start'],expiry,Jsonb(event),ef))
                     old_events[eid]=dict(facts=event,revision=ef,expires_order=
-                        min(expiry,p['expires_order']) if event.get('status',event.get('state')) in ('completed','final','settled','cancelled') else expiry)
+                        expiry)
                 if not price_admitted:continue
                 if material_rows is not None:material_rows.observe(p,old,event)
                 cf=p.get('contract_revision') or hashed(p['contract'])

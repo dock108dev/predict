@@ -40,6 +40,103 @@ class Socket:
         await asyncio.Event().wait()
 
 class WorkerControls(unittest.IsolatedAsyncioTestCase):
+    async def test_priority_rotation_closes_owned_workers_and_requires_new_images(self):
+        from collections import deque
+        service=SimpleNamespace(config=deepcopy(DEFAULT),dispatch=True,database_mode=True,
+            deadline=asyncio.get_running_loop().time()+10,source_state=lambda *a:None,issue=lambda *a:None)
+        worker=NativeWorker(service,'kalshi');worker.credential=Credential()
+        sockets=[];children=[];selections=[]
+        class QuietSocket(Socket):
+            async def recv(self):await asyncio.Event().wait()
+        class Connector:
+            def __init__(self,*a,**kw):pass
+            def __await__(self):
+                async def build():
+                    socket=QuietSocket('kalshi',len(sockets)+1);sockets.append(socket);return socket
+                return build().__await__()
+        class Child:
+            def __init__(self,*a,**kw):self.ready=deque();self.closed=False;children.append(self)
+            async def warm(self):pass
+            async def recv(self,receiver,timeout):
+                await asyncio.sleep(timeout);raise TimeoutError()
+            async def close(self):self.closed=True
+        def choose(markets,catalog,at,offset):
+            selections.append(offset)
+            return markets,dict(deferred_markets=1,active_markets=1)
+        with patch('app.collection.current_native.connect',Connector),patch('app.collection.current_native.call',new=AsyncMock()),patch('app.collection.native_reconstruction.Reconstruction',Child),patch('app.collection.native_priority.select',side_effect=choose),patch('app.collection.native_priority.ROTATE_SECONDS',.03):
+            task=asyncio.create_task(worker.stream([market()]))
+            try:
+                for _ in range(100):
+                    if len(sockets)>=2:break
+                    await asyncio.sleep(.005)
+                self.assertEqual(selections[:2],[0,1])
+                self.assertTrue(sockets[0].closed and children[0].closed)
+                self.assertEqual(worker.metrics['retries'],0)
+                self.assertEqual(worker.synchronization.generation,2)
+                self.assertFalse(worker.synchronization.images)
+                self.assertFalse(worker.synchronization.persisted)
+                self.assertFalse(worker.synchronization.snapshot(worker.metrics)['continuity_intact'])
+            finally:task.cancel();await asyncio.gather(task,return_exceptions=True)
+        self.assertTrue(all(s.closed for s in sockets))
+        self.assertTrue(all(c.closed for c in children))
+        self.assertFalse(worker.synchronization.active)
+
+    async def test_received_withdrawal_batch_precedes_queued_price_publication(self):
+        service=SimpleNamespace(config=deepcopy(DEFAULT),dispatch=True,database_mode=True,books=lambda *args:None)
+        worker=NativeWorker(service,'polymarket_us')
+        worker.pending_books['m']=dict(raw=dict(ref=dict(market_id='m'),received_at=datetime.now(timezone.utc).isoformat()))
+        worker.pending_since['m']=0
+        worker.invalidation_boundary=True
+        worker.flush_books()
+        self.assertIn('m',worker.pending_books)
+        self.assertIsNone(worker.publication_task)
+        self.assertIsNotNone(worker.publication_handle)
+        worker.publication_handle.cancel();worker.publication_handle=None
+        worker.invalidation_boundary=False
+        captured=[]
+        async def admit(service,fn,venue,books):captured.extend(books)
+        with patch('app.collection.current_native.call',side_effect=admit),patch('app.collection.bulk_checkpoint.save_images'):
+            worker.flush_books();await worker.publication_task
+        self.assertEqual([b['raw']['ref']['market_id'] for b in captured],['m'])
+
+    async def test_market_suspension_withdraws_only_market_and_can_resume_same_socket(self):
+        states=[];withdrawals=[];books=[]
+        service=SimpleNamespace(config=deepcopy(DEFAULT),dispatch=True,deadline=asyncio.get_running_loop().time()+10,
+            source_state=lambda *a:states.append(a),issue=lambda *a:None,
+            invalidate_market=lambda *a:withdrawals.append(a),books=lambda v,b:books.extend(b))
+        worker=NativeWorker(service,'polymarket_us');worker.credential=Credential()
+        worker.client=SimpleNamespace(budget=PredictionBudget(dict(session_bytes=16*1024*1024)))
+        class LifecycleSocket(Socket):
+            async def recv(self):
+                self.count+=1
+                if self.count<=101:
+                    return message(self.sent[0]['subscribe']['requestId'],
+                        state='MARKET_STATE_SUSPENDED' if self.count<=100 else 'MARKET_STATE_OPEN',
+                        transactTime=datetime.now(timezone.utc).isoformat())
+                await asyncio.Event().wait()
+        socket=LifecycleSocket('polymarket_us',1)
+        class Connector:
+            def __init__(self,*a,**kw):pass
+            def __await__(self):
+                async def build():return socket
+                return build().__await__()
+        with patch('app.collection.current_native.connect',Connector):
+            task=asyncio.create_task(worker.stream([replace(us_market(),state=MarketState.ACTIVE)]))
+            try:
+                for _ in range(200):
+                    if books:break
+                    await asyncio.sleep(.005)
+                self.assertEqual(len(withdrawals),1)
+                self.assertTrue(books)
+                self.assertFalse(task.done())
+                self.assertEqual(len(socket.sent),1)
+                self.assertEqual(worker.metrics['lifecycle_withdrawals'],1)
+                self.assertEqual(worker.metrics['repeated_inactive_images'],99)
+                self.assertTrue(worker.invalid_received)
+                self.assertEqual(worker.metrics['invalid_current_market_ids'],[])
+                self.assertEqual(worker.metrics['resyncs'],0)
+            finally:task.cancel();await asyncio.gather(task,return_exceptions=True)
+
     def test_priority_distinguishes_top_prices_from_depth_and_size_churn(self):
         from app.collection.current_native import top_price_identity
         book=dict(state='active',sync='synchronized',quantity_unit='contracts',outcomes=[dict(
@@ -196,6 +293,32 @@ class WorkerControls(unittest.IsolatedAsyncioTestCase):
                     if worker.publication_handle:worker.publication_handle.cancel()
             self.assertTrue(all(n<=128 for n in sizes))
             self.assertEqual([b['raw']['ref']['market_id'] for b in captured],[str(i) for i in range(count)])
+
+    async def test_deferred_catalog_changes_preserve_exact_bounded_cohort(self):
+        for venue in ('kalshi','polymarket_us'):
+            service=SimpleNamespace(config=deepcopy(DEFAULT),dispatch=True,deadline=asyncio.get_running_loop().time()+10)
+            worker=NativeWorker(service,venue);m=market();mid=m.raw.ref.market_id
+            selected=[dict(market_id=key,event=dict(id=m.raw.ref.event_id),material_revision='same') for key in (mid,'deferred')]
+            worker.lifecycle.leases={v['market_id']:dict(selection=v) for v in selected};worker.lifecycle_initialized=True
+            worker.markets={mid:m};worker.catalog={};worker.stream_market_index={mid:m}
+            worker.socket=SimpleNamespace(send=AsyncMock(),close=AsyncMock());worker.reconstruction=SimpleNamespace()
+            worker.stream_task=asyncio.create_task(asyncio.Event().wait())
+            worker.metrics['subscription_priority']=dict(deferred_markets=1,next_rotation_at='retained')
+            revised=[selected[0],dict(selected[1],material_revision='changed')]
+            try:
+                await worker.quiesce_catalog({mid:m},{},revised)
+                self.assertEqual(worker.subscription_transition,{'kind':'retained_priority_cohort','invalidated':set()})
+                self.assertFalse(worker.stream_task.done());worker.socket.close.assert_not_awaited()
+                await worker.finish_subscription_transition()
+                worker.socket.send.assert_not_awaited()
+                self.assertEqual(worker.metrics['subscription_priority']['active_markets'],1)
+                self.assertEqual(worker.metrics['subscription_priority']['next_rotation_at'],'retained')
+                worker.metrics['subscription_priority']['deferred_markets']=1
+                with patch.object(worker,'stop_stream',new=AsyncMock()) as stop:
+                    await worker.quiesce_catalog({mid:m},{},[dict(selected[0],material_revision='changed'),selected[1]])
+                    stop.assert_awaited_once_with(reason='quiescence')
+            finally:
+                worker.stream_task.cancel();await asyncio.gather(worker.stream_task,return_exceptions=True)
 
     async def test_kalshi_catalog_removal_keeps_socket_without_reimaging_survivors(self):
         from app.adapters.kalshi_stream import BookReconstructor

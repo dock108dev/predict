@@ -1,0 +1,13 @@
+{
+  "version": "kalshi-conditional-20261107-review",
+  "source_url": "https://kalshi.com/docs/kalshi-fee-schedule.pdf",
+  "sha256": "fb34906cbf478bcdfafb1ff59726cb79dab57a9f403311fbefd62e615ffa0fb6",
+  "path": "app/fixtures/kalshi-fees-review-20261107.json",
+  "reviewed_at": "2026-11-08T01:18:03.426655+00:00",
+  "review_before": "2026-11-09T01:18:03.426655+00:00",
+  "fee_rate": "0.07",
+  "evidence_class": "official_reviewed_trade_fee_schedule",
+  "applicability": "Exact configured full-game series and event override history, one USD binary claim, taker single fill. Membership rounding and non-direct intermediary charges require separate account authority. Direct/non-direct scenarios do not establish the owner account.",
+  "review_decision": "Exact configured full-game series and event override history, one USD binary claim, taker single fill. Membership rounding and non-direct intermediary charges require separate account authority. Direct/non-direct scenarios do not establish the owner account.",
+  "review_window_basis": "Prospective daily engineering review deadline, not a source guarantee. No historical gap filled."
+}

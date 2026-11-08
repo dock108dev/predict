@@ -139,6 +139,16 @@ def enrich_game(event, *, share_metadata=False):
     if native.get('gameId') is not None:e['source_game_id']=str(native['gameId'])
     e['identity_field_evidence']=dict(native_season=native.get('season'),native_stage=native.get('stage'),native_series_label=native.get('seriesSlug'),native_game_id=native.get('gameId'),native_game_number=native.get('gameNumber'),native_original_start=native.get('originalStartTime'),native_rescheduled_from=native.get('rescheduledFromGameId'),qualification='Source identifiers/labels retained separately; no common MLB occurrence or sport season inferred from locator labels')
     if e.get('source')=='polymarket_us':
+        # Event lifecycle fields are distinct from the market's trading state.
+        # Retain their literal evidence; a scheduled kickoff never sets live.
+        state=native.get('eventState') or {}
+        same_game=not (state.get('gameId') and native.get('gameId') and state['gameId']!=native['gameId'])
+        phase={k:native[k] for k in ('live','ended','closed','active') if type(native.get(k)) is bool}
+        if same_game:
+            phase.update({k:state[k] for k in ('live','ended') if type(state.get(k)) is bool})
+            if state.get('updatedAt'):phase['observed_at']=state['updatedAt']
+        else:phase=dict(identity_conflict=True)
+        if phase:e['status']=phase
         for key in ('season','stage'):
             value=native.get(key)
             if isinstance(value,str) and value and (key!='stage' or value in ('regular_season','preseason','playoffs','postseason','championship')):
@@ -205,6 +215,12 @@ def enrich_game(event, *, share_metadata=False):
         if p.get('enrichment'):
             if p['conflicts']:e['identity_conflicts']=p['conflicts']
             e.update(season=p['enrichment']['season'],stage=p['enrichment']['stage'],public_identity=p)
+    # Discovery's legacy pregame exclusion must not suppress a source-evidenced
+    # live game. This only admits metadata/books; the price owner still requires
+    # a post-start source clock, intact continuity and the 15-second live ceiling.
+    from app.comparison.game_phase import sporting_phase
+    if e.get('exclusion')=='kickoff_reached' and sporting_phase(e)['state']=='live':
+        e['exclusion']=None
     return e
 
 def award(event,market,venue):

@@ -15,6 +15,13 @@ def encode_container(value):
 
 
 def decode_container(image):
+    if image.startswith(b'\1'):
+        size=int.from_bytes(image[1:5],'big')
+        overlay=json.loads(image[5:5+size])
+        value=decode_container(image[5+size:])
+        value['raw']['exchange_at']=overlay['exchange_at']
+        if overlay['confirmation'] is not None:value['book_confirmation']=overlay['confirmation']
+        return value
     if image.startswith(b'\0'):
         image = zlib.decompress(image[1:])
     return json.loads(image)
@@ -30,6 +37,19 @@ class CurrentBookImages(MutableMapping):
 
     def __setitem__(self, key, value):
         image = encode_container(value)
+        self.set_encoded(key,image)
+
+    def set_prepared(self,key,image,*,exchange_at,confirmation):
+        """Child-packed complete image plus parent-owned clock/confirmation.
+
+        Reconstruction owns the large immutable book. Lifecycle admission can
+        preserve its prior exchange clock, and confirmation belongs to the live
+        socket owner. Neither requires recompressing every ladder on that loop.
+        """
+        overlay=json.dumps(dict(exchange_at=exchange_at,confirmation=confirmation),separators=(',',':')).encode()
+        self.set_encoded(key,b'\1'+len(overlay).to_bytes(4,'big')+overlay+image)
+
+    def set_encoded(self,key,image):
         self.encoded_bytes += len(image) - len(self.encoded.get(key, b''))
         self.encoded[key] = image
 

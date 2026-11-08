@@ -1,5 +1,5 @@
 """Compact, sorted views of the ordinary publication for the three-page desk."""
-from datetime import date, datetime
+from datetime import date, datetime, time
 from fractions import Fraction
 import re
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -9,7 +9,8 @@ from .local_security import PublicRequestError
 from .snapshot_display import comparison_groups, odds, ranking_value, search_index
 
 
-EV_METRIC = 'gross_return_percent'
+EV_METRIC = 'conditional_return_percent'
+METRICS={'reviewed':EV_METRIC,'before':'gross_return_percent','conservative':'conservative_return_percent'}
 
 
 def number(value):
@@ -24,8 +25,14 @@ def filters(query):
         day = date.fromisoformat(query['day']) if query.get('day') else None
         minimum = number(query['minimum']) if query.get('minimum') else None
         dollars = number(query['profit']) if query.get('profit') else None
+        for key in ('time_from','time_to'):
+            if query.get(key):time.fromisoformat(query[key])
+        if query.get('time_from') and query.get('time_to') and query['time_from']>=query['time_to']:
+            raise ValueError()
+        if query.get('game_state','') not in ('','scheduled','live','suspended','final','unknown'):raise ValueError()
+        if query.get('basis','reviewed') not in METRICS:raise ValueError()
         stake = number(query.get('stake', '100'))
-        if not 0 < stake <= 1_000_000:
+        if not 0 < stake <= 1_000_000 or (stake * 100).denominator != 1:
             raise ValueError()
     except (ValueError, ZeroDivisionError, ZoneInfoNotFoundError):
         raise PublicRequestError('Check the date, time zone, stake and minimums') from None
@@ -52,19 +59,39 @@ def offer(original, metric=None):
         elif row.get('probability_missing') == 'finance_pending':
             reason = 'Calculation pending'
         else:
-            reason = 'Current Pinnacle reference unavailable'
-    return dict(id=row['id'], venue=row['venue'], selection=row.get('selection'),
+            reasons_by_metric={'conditional_return_percent':'after_trade_fee_ev','conservative_return_percent':'conservative_trade_fee_ev','gross_return_percent':'before_fee_ev'}
+            unavailable=row.get('metric_status',{}).get(reasons_by_metric.get(metric),{}).get('reasons',[])
+            reason = ', '.join(unavailable).replace('_',' ') or 'Current Pinnacle reference unavailable'
+            labels={'conditional fee review expired or not effective':'Fee schedule review expired',
+                'polymarket account taker fee tier unbound':'Account taker fee tier not verified',
+                'prophetx account fee model and rate unbound':'Account fee terms not verified',
+                'kalshi account membership unbound':'Account membership not verified',
+                'live financial model unverified':'Live fee and reference calculation unavailable'}
+            reason=labels.get(reason,reason)
+    gross=ranking_value(row,'gross_return_percent',current=True)
+    reviewed=ranking_value(row,'conditional_return_percent',current=True)
+    conservative=ranking_value(row,'conservative_return_percent',current=True)
+    return dict(before_fee=None if gross is None else str(gross),after_fee=None if reviewed is None else str(reviewed),
+                conservative=None if conservative is None else str(conservative),metric=metric,
+                fee=row.get('conditional_trade_benchmark'),conservative_fee=row.get('conservative_trade_benchmark'),
+                reference_calculation=row.get('reference_calculation'),economic_revision=row.get('economic_revision'),price_revision=row.get('price_revision'),evidence_result_id=row.get('evidence_result_id'),
+                captured_at=row.get('captured_at'),game_state=row.get('game_state','unknown'),
+                game_state_basis=row.get('game_state_basis'),current_reasons=reasons,
+                source_clock_at=row.get('times',{}).get('source_at'),
+                confirmed_at=(row.get('book_confirmation') or {}).get('confirmed_at'),
+                projected_at=row.get('times',{}).get('projected_at'),
+                id=row['id'], venue=row['venue'], selection=row.get('selection'),
                 participant=row.get('participant_label'), market=row['market'],
                 odds=odds(price['value'], price['units'], price.get('payout', '1')),
                 current=bool(row.get('price_current')), value=None if value is None else str(value), reason=reason,
                 reference=odds(selected_price) if selected_price is not None and ref_venue == 'pinnacle' else None,
-                reference_current=value is not None, probability=row.get('probability') if value is not None else None,
+                reference_current=gross is not None, probability=row.get('probability') if gross is not None else None,
                 overround=reference.get('overround') if value is not None else None,
                 source_at=(row.get('book_confirmation') or {}).get('confirmed_at') or row.get('times', {}).get('source_at'),
                 received_at=row.get('times', {}).get('received_at'))
 
 
-def page(result, query, options, *, captured_pairs=(), policy=None):
+def page(result, query, options, *, captured_pairs=(), policy=None, browsing=None):
     view, _, offset, limit = options
     zone, day, minimum, dollars, stake = filters(query)
     search = search_index(result)
@@ -73,9 +100,13 @@ def page(result, query, options, *, captured_pairs=(), policy=None):
 
     def matches(row):
         market = row['market']
+        local=datetime.fromisoformat(row['start_at']).astimezone(zone)
         return ((not leagues or row['league'] in leagues) and (not families or market['market'] in families)
                 and (not query.get('period') or market['period'] == query['period'])
-                and (not day or datetime.fromisoformat(row['start_at']).astimezone(zone).date() == day)
+                and (not day or local.date() == day)
+                and (not query.get('time_from') or local.time()>=time.fromisoformat(query['time_from']))
+                and (not query.get('time_to') or local.time()<time.fromisoformat(query['time_to']))
+                and (not query.get('game_state') or row.get('game_state','unknown')==query['game_state'])
                 and all(term in (row['game_title'].casefold() + ' ' + search.get(row['game_key'], '')) for term in terms))
 
     def passes(value):
@@ -83,45 +114,74 @@ def page(result, query, options, *, captured_pairs=(), policy=None):
                 and (minimum is None or value is not None and value >= minimum)
                 and (dollars is None or value is not None and value * stake / 100 >= dollars))
 
-    rows = [row for row in result['rows'] if (not venues or row['venue'] in venues) and matches(row)]
+    # Provider event titles sometimes describe one market family (e.g. Total
+    # Points). A matchup label comes from the captured participants, never from
+    # another market's title; the exact canonical market remains on each row.
+    games={g['game_key']:g for g in result.get('games',[])}
+    def labeled(row):
+        participants=games.get(row['game_key'],{}).get('participants',[])
+        names={p.get('id',p.get('name')):p.get('name') for p in participants if p.get('name')}
+        if len(names)!=2:return row
+        return dict(row,source_game_title=row['game_title'],game_title=' vs. '.join(names.values()))
+    rows = [labeled(row) for row in result['rows'] if (not venues or row['venue'] in venues) and matches(row)]
     by_id = {row['id']: row for row in rows}
-    metric = EV_METRIC
+    metric = METRICS[query.get('basis','reviewed')]
     if view == 'arbs':
+        from app.comparison.inspection_math import pair_math
         eligible = {r['id']: r for r in rows if r.get('price_current')
                     and r.get('publication_policy') == policy}
         markets = {}
         for pair in captured_pairs:
             proof = pair.get('before_fees')
             if proof and all(leg in eligible for leg in pair['legs']):
-                markets.setdefault(proof['market_key'], []).append(pair)
+                inspection = pair_math(proof, stake)
+                markets.setdefault(proof['market_key'], []).append(dict(pair, inspection=inspection))
         groups = []
         for key, pairs in markets.items():
-            pairs.sort(key=lambda pair: (-Fraction(pair['before_fees']['value']), pair['id']))
+            pairs.sort(key=lambda pair: (-Fraction(pair['inspection']['rounded_return_percent']),
+                                        -Fraction(pair['before_fees']['value']), pair['id']))
             first = pairs[0]
-            groups.append(dict(first, id=key, quotes=pairs, score=first['before_fees']['value']))
+            groups.append(dict(first, id=key, quotes=pairs, score=first['inspection']['rounded_return_percent']))
         groups.sort(key=lambda g: (-Fraction(g['score']), g['start_at'], g['id']))
     else:
         # Do not let a separately configured non-Pinnacle calculation rank here.
         def ev_row(row):
-            return row if result.get('assumptions', {}).get('benchmark_venue') == 'pinnacle' else dict(row, gross_return_percent=None)
+            return row if result.get('assumptions', {}).get('benchmark_venue') == 'pinnacle' else dict(row, **{metric:None})
 
-        groups = comparison_groups([ev_row(row) for row in rows], by_id, metric, current=True)
+        groups = comparison_groups([ev_row(row) for row in rows], by_id, metric, current=True,
+                                   individual=query.get('group') == 'offer')
     groups = [g for g in groups if passes(Fraction(g['score']) if g['score'] is not None else None)]
+    coverage = {}
+    if view != 'arbs':
+        visible_offers = [row for group in groups for row in group['quotes']]
+        coverage = dict(offers=len(visible_offers), current=sum(bool(row.get('price_current')) for row in visible_offers),
+                        before=sum(ranking_value(row, METRICS['before'], current=True) is not None for row in visible_offers),
+                        reviewed=sum(ranking_value(row, METRICS['reviewed'], current=True) is not None for row in visible_offers),
+                        conservative=sum(ranking_value(row, METRICS['conservative'], current=True) is not None for row in visible_offers))
     if query.get('sort') == 'start':
         groups.sort(key=lambda g: g['start_at'])
 
     def present(group):
         summary = {k: group[k] for k in ('id', 'game_key', 'game_title', 'league', 'start_at', 'market', 'score')}
+        summary['source_titles']=sorted({q.get('source_game_title',q.get('game_title','')) for q in group['quotes']}) if view!='arbs' else []
         if view == 'arbs':
-            pairs = [dict(pair['before_fees'], id=pair['id'], legs=pair['legs']) for pair in group['quotes']]
+            pairs = [dict(pair['before_fees'], id=pair['id'], legs=pair['legs'],
+                          inspection=pair['inspection'], assumed_scenario=pair.get('math')) for pair in group['quotes']]
             summary['pairs'] = pairs
             summary['offers'] = [offer(by_id[id_]) for id_ in dict.fromkeys(leg for pair in pairs for leg in pair['legs'])]
         else:
             summary['offers'] = [offer(row, metric) for row in group['quotes']]
         return summary
 
-    visible = [present(g) for g in groups[offset:offset + limit]]
+    session=browsing.page(groups,query,offset,limit) if browsing else None
+    if session and session['state']=='page_changed':return session
+    visible = [g if g.get('withdrawn') else present(g) for g in (session['rows'] if session else groups[offset:offset + limit])]
     keys = {g['game_key'] for g in visible}
-    return dict(state='ready', rows=visible, total=len(groups), offset=offset, limit=limit,
+    return dict(**({k:v for k,v in session.items() if k not in ('rows','state','total')} if session else {}),
+                state='ready', rows=visible, total=session['total'] if session else len(groups), offset=offset, limit=limit,
                 games=[g for g in result.get('games', []) if g['game_key'] in keys],
-                publication=result['publication'], provider_requests=0)
+                publication=result['publication'], basis=query.get('basis','reviewed'), coverage=coverage,
+                row_kind='offers' if view != 'arbs' and query.get('group') == 'offer' else 'outcomes',
+                game_count=len({g['game_key'] for g in groups}),outcome_count=len(groups),
+                offer_count=len({q['id'] for g in groups for q in g['quotes']}) if view!='arbs' else len(by_id),
+                provider_requests=0)

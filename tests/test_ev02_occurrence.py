@@ -332,3 +332,17 @@ class ReviewedCollegeNames(unittest.TestCase):
             evidence=sources[a['evidence']]
             self.assertEqual(hashlib.sha256(gzip.decompress((root/evidence['path']).read_bytes())).hexdigest(),evidence['sha256'])
         self.assertNotEqual(registry.resolve('team','Wildcats',league='NCAAF',venue='the_odds_api').status,'resolved')
+
+    def test_november_seven_aliases_are_exact_source_scoped_and_evidenced(self):
+        import gzip,json,hashlib
+        from pathlib import Path
+        from app.normalization.college_registry import occurrence_registry,aggregate_registry
+        root=Path(__file__).resolve().parents[1];registry=occurrence_registry()
+        manifest=json.loads((root/'app/normalization/college-occurrence-aliases-20261107.json').read_text())
+        sources=json.loads((root/'app/fixtures/college-identity-20261107/sources.json').read_text())
+        for a in manifest['aliases']:
+            self.assertEqual(registry.resolve('team',a['text'],league='NCAAF',venue='the_odds_api').canonical_id,a['targets'][0])
+            self.assertNotEqual(registry.resolve('team',a['text'],league='NCAAB',venue='the_odds_api').canonical_id,a['targets'][0])
+            self.assertNotEqual(aggregate_registry().resolve('team',a['text'],league='NCAAF',venue='the_odds_api').status,'resolved')
+            evidence=sources[a['evidence']]
+            self.assertEqual(hashlib.sha256(gzip.decompress((root/evidence['path']).read_bytes())).hexdigest(),evidence['sha256'])

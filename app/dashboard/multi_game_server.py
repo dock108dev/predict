@@ -624,6 +624,9 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
         mount_stored(app,current_provider)
         from .snapshot_api import mount as mount_snapshots
         mount_snapshots(app)
+        from .replay_api import mount as mount_replay
+        mount_replay(app)
+        app.router.add_get('/replay', ev_page)
         from .scanner_client_api import mount as mount_client
         mount_client(app)
     async def current_admin(req):

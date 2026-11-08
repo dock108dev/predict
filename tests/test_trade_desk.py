@@ -34,13 +34,13 @@ class TradeDesk(TestCase):
         other['selection']['signed_line'] = '-3.5'
         data = result(retained, other, second, first)
         options = ('ev', 'gross_return_percent', 0, 25)
-        view = page(data, {'day': '2026-11-07', 'timezone': 'America/New_York'}, options)
+        view = page(data, {'day': '2026-11-07', 'timezone': 'America/New_York','basis':'before'}, options)
         self.assertEqual([g['score'] for g in view['rows']], ['8', '-2'])
         offers = view['rows'][0]['offers']
         self.assertEqual([q['value'] for q in offers], ['8', '0', None])
         self.assertEqual(offers[0]['reference']['american'], '+110')
         self.assertEqual(offers[2]['reason'], 'Price expired')
-        self.assertEqual(page(data, {'positive': 'on'}, options)['total'], 1)
+        self.assertEqual(page(data, {'positive': 'on','basis':'before'}, options)['total'], 1)
 
     def test_pair_requires_exclusive_score_coverage_and_evidenced_equality(self):
         a = quote('a', 'kalshi', threshold=3)

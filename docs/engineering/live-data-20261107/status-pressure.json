@@ -1,0 +1,21 @@
+{
+  "input_bytes": 1684011,
+  "output_bytes": 662201,
+  "limit": 1048576,
+  "compaction": {
+    "issue_limit": 16,
+    "exclusion_limit": 20,
+    "note": "Compact latest status; bounded local diagnostic records retain additional issues.",
+    "structured_metrics_location": "sources[].metrics; exact repeated root details omitted",
+    "capacity_compaction": "Diagnostic history samples reduced; accounting and coverage unchanged.",
+    "delivery_samples": {
+      "kalshi": {
+        "available": 12,
+        "retained": 4
+      }
+    }
+  },
+  "quota_equal": true,
+  "coverage_equal": true,
+  "controls_equal": true
+}

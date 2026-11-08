@@ -1,0 +1,29 @@
+{
+  "population": "1000 retained complete Kalshi ladders; 16384 controlled nonzero deltas in 2048-frame runs; startup excluded; every child validates every frame; one child emits each market",
+  "results": [
+    {
+      "partitions": 1,
+      "seconds": 4.65404649998527,
+      "sha256": "55b42f3c7f3f1fb77827b7411deaa2f821f14e918eb892d9ea92b05e41fe1cbf",
+      "max_child_rss": 170803200
+    },
+    {
+      "partitions": 2,
+      "seconds": 2.633532833075151,
+      "sha256": "55b42f3c7f3f1fb77827b7411deaa2f821f14e918eb892d9ea92b05e41fe1cbf",
+      "max_child_rss": 173588480
+    },
+    {
+      "partitions": 1,
+      "seconds": 4.432550124940462,
+      "sha256": "55b42f3c7f3f1fb77827b7411deaa2f821f14e918eb892d9ea92b05e41fe1cbf",
+      "max_child_rss": 167886848
+    },
+    {
+      "partitions": 2,
+      "seconds": 3.075809665955603,
+      "sha256": "55b42f3c7f3f1fb77827b7411deaa2f821f14e918eb892d9ea92b05e41fe1cbf",
+      "max_child_rss": 168361984
+    }
+  ]
+}

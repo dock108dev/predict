@@ -1,0 +1,170 @@
+{
+  "at": "2026-11-08T02:35:51.005537+00:00",
+  "installed_runtime": "6a06c182-4c9b-4413-88a1-ffa6ad7999d6",
+  "observed_lock_owners": [
+    {
+      "pid": 22886,
+      "state": "idle in transaction",
+      "query": "RELEASE \"_pg3_3\""
+    }
+  ],
+  "database": {
+    "busy": false,
+    "error": null,
+    "state": "available",
+    "schema": "012_current_rows.sql",
+    "socket": ".local/pgsocket",
+    "database": "prediction_arb",
+    "sql_bytes": 1287914275,
+    "maintenance": {
+      "deferred": [],
+      "rewrites": [
+        {
+          "table": "current_contract_p12",
+          "after_bytes": 9412608,
+          "before_bytes": 9986048,
+          "operating_cap_bytes": 2147483648,
+          "minimum_reclaim_bytes": 262144,
+          "measured_reusable_bytes": 1437975,
+          "transient_peak_bound_bytes": 1376060195
+        },
+        {
+          "table": "current_contract_p08",
+          "after_bytes": 9469952,
+          "before_bytes": 10010624,
+          "operating_cap_bytes": 2147483648,
+          "minimum_reclaim_bytes": 262144,
+          "measured_reusable_bytes": 1386511,
+          "transient_peak_bound_bytes": 1375904547
+        },
+        {
+          "table": "current_contract_p03",
+          "after_bytes": 9314304,
+          "before_bytes": 10051584,
+          "operating_cap_bytes": 2147483648,
+          "minimum_reclaim_bytes": 262144,
+          "measured_reusable_bytes": 1541855,
+          "transient_peak_bound_bytes": 1375421219
+        },
+        {
+          "table": "current_contract_p05",
+          "after_bytes": 9428992,
+          "before_bytes": 10092544,
+          "operating_cap_bytes": 2147483648,
+          "minimum_reclaim_bytes": 262144,
+          "measured_reusable_bytes": 1467425,
+          "transient_peak_bound_bytes": 1374724899
+        },
+        {
+          "table": "current_contract_p13",
+          "after_bytes": 9576448,
+          "before_bytes": 10215424,
+          "operating_cap_bytes": 2147483648,
+          "minimum_reclaim_bytes": 262144,
+          "measured_reusable_bytes": 1459634,
+          "transient_peak_bound_bytes": 1374184227
+        },
+        {
+          "table": "current_contract_p07",
+          "after_bytes": 9535488,
+          "before_bytes": 10256384,
+          "operating_cap_bytes": 2147483648,
+          "minimum_reclaim_bytes": 262144,
+          "measured_reusable_bytes": 1475333,
+          "transient_peak_bound_bytes": 1373586211
+        },
+        {
+          "table": "current_acquisition_image_p06",
+          "after_bytes": 12812288,
+          "before_bytes": 14548992,
+          "operating_cap_bytes": 2147483648,
+          "minimum_reclaim_bytes": 262144,
+          "measured_reusable_bytes": 2654749,
+          "transient_peak_bound_bytes": 1377739555
+        },
+        {
+          "table": "current_acquisition_image_p12",
+          "after_bytes": 13230080,
+          "before_bytes": 14573568,
+          "operating_cap_bytes": 2147483648,
+          "minimum_reclaim_bytes": 262144,
+          "measured_reusable_bytes": 2384421,
+          "transient_peak_bound_bytes": 1376027427
+        },
+        {
+          "table": "current_acquisition_image_p10",
+          "after_bytes": 13049856,
+          "before_bytes": 14819328,
+          "operating_cap_bytes": 2147483648,
+          "minimum_reclaim_bytes": 262144,
+          "measured_reusable_bytes": 2751710,
+          "transient_peak_bound_bytes": 1375191843
+        },
+        {
+          "table": "current_acquisition_image_p04",
+          "after_bytes": 12828672,
+          "before_bytes": 14860288,
+          "operating_cap_bytes": 2147483648,
+          "minimum_reclaim_bytes": 262144,
+          "measured_reusable_bytes": 2974855,
+          "transient_peak_bound_bytes": 1373627171
+        },
+        {
+          "table": "current_acquisition_image_p03",
+          "after_bytes": 12763136,
+          "before_bytes": 14876672,
+          "operating_cap_bytes": 2147483648,
+          "minimum_reclaim_bytes": 262144,
+          "measured_reusable_bytes": 3093054,
+          "transient_peak_bound_bytes": 1371800355
+        }
+      ],
+      "after_bytes": 1287914275,
+      "before_bytes": 1299514147,
+      "recovery_repack": {
+        "scanned": 0,
+        "updated": 0,
+        "input_bytes": 0,
+        "output_bytes": 0
+      },
+      "capture_lock_acquired": true,
+      "unchanged_rewrite_floor": [
+        "current_native_market_recovery_p10",
+        "current_native_market_recovery_p13",
+        "current_native_market_recovery_p01",
+        "current_native_market_recovery_p12",
+        "current_native_market_recovery_p03",
+        "current_native_market_recovery_p07",
+        "current_native_market_recovery_p08",
+        "current_native_market_recovery_p06",
+        "current_native_market_recovery_p02",
+        "current_native_market_recovery_p04",
+        "current_native_market_recovery_p14",
+        "current_native_market_recovery_p15",
+        "current_native_market_recovery_p00",
+        "current_native_market_recovery_p11",
+        "current_native_market_recovery_p05",
+        "current_native_market_recovery_p09"
+      ],
+      "capture_lock_wait_seconds": 1.426327
+    },
+    "sql_byte_cap": 2147483648,
+    "backlog_bytes": 0,
+    "failure_owner": null,
+    "ingress_failure": null,
+    "imported_records": 0,
+    "journal_byte_cap": 0,
+    "maintenance_failure": null,
+    "finite_failure_limit": 0,
+    "maintenance_failures": 0,
+    "pending_calculations": 0,
+    "journal_segment_byte_cap": 0,
+    "observation_representation": "current event/contract/offer/shared depth upserts; transient calculations",
+    "maintenance_last_success_at": "2026-11-08T02:35:37.014774+00:00"
+  },
+  "prior_observation": {
+    "pid": 22198,
+    "query": "SELECT * FROM \"public\".pgstattuple($1::regclass)",
+    "publication_lock": 901153
+  }
+}

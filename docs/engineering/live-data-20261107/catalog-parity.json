@@ -1,0 +1,20 @@
+{
+  "markets": {
+    "kalshi": 30311,
+    "polymarket_us": 41761
+  },
+  "runs": [
+    {
+      "label": "before",
+      "seconds": 33.183726334013045,
+      "sha256": "55ba653a26b85a03bf56055d4675ba88a1dd40772cfe7e5a30af6b027a1f9386"
+    },
+    {
+      "label": "after",
+      "seconds": 23.452740292064846,
+      "sha256": "55ba653a26b85a03bf56055d4675ba88a1dd40772cfe7e5a30af6b027a1f9386"
+    }
+  ],
+  "identical": true,
+  "provider_requests": 0
+}

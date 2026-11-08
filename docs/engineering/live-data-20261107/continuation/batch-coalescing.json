@@ -1,0 +1,37 @@
+{
+  "population": "1000 retained ladders; 8192 controlled nonzero deltas, identical ordered source inputs",
+  "results": [
+    {
+      "frame_limit": 2048,
+      "wire_bytes_limit": 1048576,
+      "seconds": 1.8765671669971198,
+      "emitted_images": 4000,
+      "terminal_sha256": "817b6c3f94889a9ac3920c041b8d01d77b5b6c79b5d595bd27b379daf9a54cc4",
+      "peak_rss_bytes": 437714944
+    },
+    {
+      "frame_limit": 4096,
+      "wire_bytes_limit": 1048576,
+      "seconds": 1.4760442089755088,
+      "emitted_images": 2000,
+      "terminal_sha256": "817b6c3f94889a9ac3920c041b8d01d77b5b6c79b5d595bd27b379daf9a54cc4",
+      "peak_rss_bytes": 437714944
+    },
+    {
+      "frame_limit": 2048,
+      "wire_bytes_limit": 1048576,
+      "seconds": 2.2473855420248583,
+      "emitted_images": 4000,
+      "terminal_sha256": "817b6c3f94889a9ac3920c041b8d01d77b5b6c79b5d595bd27b379daf9a54cc4",
+      "peak_rss_bytes": 437714944
+    },
+    {
+      "frame_limit": 4096,
+      "wire_bytes_limit": 1048576,
+      "seconds": 1.0189338339259848,
+      "emitted_images": 2000,
+      "terminal_sha256": "817b6c3f94889a9ac3920c041b8d01d77b5b6c79b5d595bd27b379daf9a54cc4",
+      "peak_rss_bytes": 437714944
+    }
+  ]
+}

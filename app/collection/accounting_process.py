@@ -40,9 +40,8 @@ def invoke(method, args, kwargs):
         return check_account_binding(_LEDGER, load_window)
     if method == 'account_response':
         aid, receipt = args
-        _LEDGER.reconcile(aid, receipt['headers'], received_at=receipt['received_at'])
-        _LEDGER.record_response(aid, receipt)
-        return _LEDGER._read()['attempts'][aid].get('charged'), _LEDGER.snapshot()
+        charged=_LEDGER.complete_response(aid,receipt)
+        return charged, _LEDGER.snapshot()
     raise ValueError('Unsupported accounting worker operation')
 
 

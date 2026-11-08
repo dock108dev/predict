@@ -1,0 +1,28 @@
+{
+  "version": "college-occurrence-aliases-20261107-1",
+  "scope": "Two exact observed aggregate football names. Participant identity only; no occurrence, line, period or settlement authority.",
+  "aliases": [
+    {
+      "kind": "team",
+      "league": "NCAAF",
+      "venue": "the_odds_api",
+      "text": "Sam Houston State Bearkats",
+      "targets": [
+        "NCAAF:NCAA624"
+      ],
+      "source": "https://gobearkats.com/sports/football; retained SHA256 cea43ae6910a73ba91dd3493764ffbcc336856bea0b226a140c4d2f9705d0807; institution/NCAA ID from college-2026-27.json",
+      "evidence": "sam"
+    },
+    {
+      "kind": "team",
+      "league": "NCAAF",
+      "venue": "the_odds_api",
+      "text": "Jacksonville State Gamecocks",
+      "targets": [
+        "NCAAF:NCAA315"
+      ],
+      "source": "https://jaxstatesports.com/sports/football; retained SHA256 8395517a0640bc4b1b185d768e9a3c2dcf3843ea5299d7e53a9dd5a9346e2344; institution/NCAA ID from college-2026-27.json",
+      "evidence": "jax"
+    }
+  ]
+}

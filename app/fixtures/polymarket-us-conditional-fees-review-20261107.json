@@ -1,0 +1,21 @@
+{
+  "version": "polymarket-us-conditional-20261107-review",
+  "source_url": "https://docs.polymarket.us/fees",
+  "sha256": "137e6259c2bae27925b6a23de6557d9cc3a78163f79e6c2fedf74c74abe3b54c",
+  "path": "app/fixtures/polymarket-us-fees-review-20261107.html",
+  "reviewed_at": "2026-11-07T23:19:02.573757+00:00",
+  "review_before": "2026-11-08T23:19:02.573757+00:00",
+  "fee_rate": null,
+  "evidence_class": "official_reviewed_trade_fee_schedule",
+  "applicability": "Account taker coefficient at order insertion is required; no universal standard coefficient after the November 6, 2026 13:00 Eastern tier launch.",
+  "review_decision": "Official schedule now states account-based taker coefficients 0.095/0.085/0.075/0.0695, onboarding and manual overrides. Legacy standard table remains below the dated change notice; it cannot establish account applicability. Withhold reviewed and conservative financial estimates pending the exact applicable tier. No account terms inferred.",
+  "review_window_basis": "Prospective daily engineering review deadline, not a source guarantee. No historical gap filled.",
+  "supersedes": "polymarket-us-conditional-20261105-review",
+  "unavailable_reason": "polymarket_account_taker_fee_tier_unbound",
+  "allowed_taker_coefficients": [
+    "0.095",
+    "0.085",
+    "0.075",
+    "0.0695"
+  ]
+}

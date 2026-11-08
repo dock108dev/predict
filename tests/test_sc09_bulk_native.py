@@ -189,20 +189,40 @@ class SocketDrain(IsolatedAsyncioTestCase):
         finally:await reader.close()
         self.assertTrue(reader.task.done())
 
-    async def test_byte_capacity_requires_immediate_explicit_resynchronization(self):
+    async def test_oversized_frame_requires_immediate_explicit_resynchronization(self):
+        from app.collection.native_receive import NativeReceive
+        class Socket:
+            def __init__(self):self.count=0
+            async def recv(self):
+                self.count+=1
+                return b'oversized'
+        metrics={};reader=NativeReceive(Socket(),metrics,byte_limit=8)
+        try:
+            await reader.task  # Saturate before consuming; independent of task scheduling.
+            with self.assertRaisesRegex(ValueError,'native_receive_backlog_capacity'):await reader.recv()
+            self.assertEqual(metrics.get('receive_buffer_peak_bytes',0),0)
+        finally:await reader.close()
+        self.assertEqual(metrics['receive_frames_discarded_on_resync'],0)
+
+    async def test_snapshot_burst_backpressures_without_loss_and_stop_cancels_wait(self):
         from app.collection.native_receive import NativeReceive
         class Socket:
             def __init__(self):self.count=0
             async def recv(self):
                 self.count+=1
                 return f'{self.count:04d}'.encode()
-        metrics={};reader=NativeReceive(Socket(),metrics,byte_limit=8)
+        metrics={};socket=Socket();reader=NativeReceive(socket,metrics,byte_limit=8)
         try:
-            await reader.task  # Saturate before consuming; independent of task scheduling.
-            with self.assertRaisesRegex(ValueError,'native_receive_backlog_capacity'):await reader.recv()
-            self.assertEqual(metrics['receive_buffer_peak_bytes'],8)
+            await asyncio.sleep(0)
+            self.assertTrue(metrics['receive_backpressure_active'])
+            self.assertFalse(reader.task.done());reader.require_active()
+            values=[(await asyncio.wait_for(reader.recv(),1))[0] for _ in range(100)]
+            self.assertEqual(values,[f'{i:04d}'.encode() for i in range(1,101)])
+            self.assertLessEqual(metrics['receive_buffer_peak_bytes'],8)
+            self.assertGreater(metrics['receive_backpressure_count'],0)
         finally:await reader.close()
-        self.assertEqual(metrics['receive_frames_discarded_on_resync'],2)
+        self.assertTrue(reader.task.done())
+        self.assertFalse(metrics['receive_backpressure_active'])
 
 
 def test_full_catalog_replacement_keeps_every_instrument_below_legacy_projection_bound():
@@ -259,6 +279,26 @@ def test_missing_moving_pass_retains_instrument_until_explicit_reappearance():
     returned=dict(events=[dict(id='E')],markets=[dict(id='M',event_id='E',_native={'closed':True})])
     assert retain_absent(new,returned)==set()
     assert len(returned['markets'])==1 and returned['markets'][0]['_native']['closed']
+
+
+def test_catalog_retirement_keeps_unknown_future_and_full_current_window():
+    from datetime import datetime,timezone,timedelta
+    from copy import deepcopy
+    from app.collection.native_recovery import retire_expired_catalog,retain_absent
+    now=datetime.now(timezone.utc)
+    events=[dict(id='old',scheduled_start=(now-timedelta(hours=25)).isoformat()),
+        dict(id='boundary',scheduled_start=(now-timedelta(hours=24)).isoformat()),
+        dict(id='live',scheduled_start=(now-timedelta(hours=3)).isoformat()),
+        dict(id='future',scheduled_start=(now+timedelta(days=30)).isoformat()),dict(id='unknown')]
+    catalog=dict(events=events,markets=[dict(id=e['id'],event_id=e['id'],_native={'status':'suspended'}) for e in events])
+    original=deepcopy(catalog)
+    assert retire_expired_catalog(catalog,now)==1
+    assert [m['id'] for m in catalog['markets']]==['boundary','live','future','unknown']
+    current=dict(events=[],markets=[])
+    kept=retain_absent(original,current)
+    assert kept=={'live','future','unknown'}
+    assert {e['id'] for e in current['events']}==kept
+    assert len(original['markets'])==5
 
 
 def test_event_packaging_does_not_change_native_material_or_drop_selected_markets():
@@ -499,6 +539,7 @@ class InstalledCensusSharing(IsolatedAsyncioTestCase):
         current.guard=lambda:None
         class Checkpoint:
             def begin(self):pass
+            def listing_start(self,proposed):return baseline.metrics['listing_window']['start_time_min']
             def query(self,*args):return 'fixture',[]
             def page(self,*args):pass
             def completed_details(self):return set()
@@ -519,4 +560,5 @@ class InstalledCensusSharing(IsolatedAsyncioTestCase):
         for field in ('events','markets'):
             assert original(current.bulk_catalog[field])==original(baseline.bulk_catalog[field])
         assert current.metrics['census_metadata_shared']==3
+        assert current.metrics['listing_window']['start_time_max'] is None
         assert len(actual[2])==3

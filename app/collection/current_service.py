@@ -262,9 +262,34 @@ class CurrentService:
         self.books(venue,[book])
 
     @operation
+    def sporting_states(self, venue, observations):
+        if venue!='polymarket_us':raise ValueError('sporting_state_source')
+        if not self.dispatch:raise asyncio.CancelledError()
+        from .native_sporting_state import apply
+        inventory,changed=apply(self.sink.reducer.inventory,observations)
+        if not changed:return
+        retained={(source,m['event_id'],m['id']) for source,cat in inventory.items() for m in cat['markets']}
+        refresh={key for key in retained if key[0]==venue and key[1] in changed}
+        delta=dict(retained=retained,withdraw=set(),refresh=refresh)
+        yield (self.row('coverage_inventory',venue,inventory=inventory,
+            generation=(self.sink.reducer.generation or 0)+1,previous_generation=self.sink.reducer.generation,
+            catalog_delta=delta,defer_catalog_refresh=self.database_mode),self.states)
+        worker=self.workers.get(venue)
+        if self.database_mode and worker and not worker.closed:
+            for key in refresh & self.sink.reducer.books.keys():
+                worker.queue_derived(self.sink.reducer.books[key]['book'])
+        self.observation(venue,'sporting_state',dict(changed_events=len(changed),affected_markets=len(refresh)))
+
+    @operation
     def invalidate_market(self,venue,event_id,market_id):
         if not self.dispatch:raise asyncio.CancelledError()
         yield (self.row('native_market_invalid',venue,event_id=event_id,market_id=market_id),self.states)
+
+    @operation
+    def invalidate_markets(self,venue,markets):
+        if not self.dispatch:raise asyncio.CancelledError()
+        if not 1<=len(markets)<=128:raise ValueError('native_invalidation_batch_capacity')
+        yield (self.row('native_market_invalid',venue,markets=markets),self.states)
 
     @operation
     def books(self, venue, books):
@@ -273,6 +298,9 @@ class CurrentService:
         book=max(books,key=lambda b:b['raw']['received_at'])
         states[venue]=dict(state='available',reason_code='native_image',reason='Native book images received.',
                            source_at=book['raw'].get('exchange_at'),received_at=book['raw']['received_at'],next_due_at=None)
+        priority=getattr(self.workers.get(venue),'metrics',{}).get('subscription_priority',{})
+        if priority.get('deferred_markets'):
+            states[venue]['reason']=f"Native images for {priority['active_markets']} active markets; {priority['deferred_markets']} deferred in fair subscription rotation. Coverage is partial."
         inventory=self.sink.reducer.inventory.get(venue,{})
         if getattr(self,'database_mode',False) and hasattr(self.sink,'catalog_indexes'):
             markets,events=self.sink.catalog_indexes(self.sink.reducer.inventory)
@@ -394,13 +422,16 @@ class CurrentService:
             # Cancelling a source revokes adoption, but its shielded ingress
             # still owns SQL/catalog preparation until that work exits. Planned
             # maintenance must allow the same drain window for those tasks.
-            if not await self.ingress.drain(timeout):self.cleanup_errors.append("ingress_cleanup_timeout")
+            drained=await self.ingress.drain(timeout)
             if self.ingress.catalog_preparer is not None:await self.ingress.catalog_preparer.close()
+            # Closing the preparer joins the same owned job that exceeded the
+            # first observation window. Reconcile actual completion afterward.
+            if not drained and not await self.ingress.drain(timeout):self.cleanup_errors.append("ingress_cleanup_timeout")
             if self.database and not await self.database.close():self.cleanup_errors.append('database_cleanup_timeout')
             if getattr(self.sink,'normalizer',None) is not None:
                 from .bulk_checkpoint import owned_thread
                 await owned_thread(self.sink.close)
-            if pending:self.cleanup_errors.append('worker_cleanup_timeout')
+            if any(not task.done() for task in pending):self.cleanup_errors.append('worker_cleanup_timeout')
             self.cleanup_errors=list(dict.fromkeys(self.cleanup_errors))[:16]
             for venue in (() if self.ingress.tasks else ('kalshi','polymarket_us','novig','prophetx')):
                 await call(self, self.source_state, venue, 'stopped' if not self.cleanup_errors else 'error', (self.stop_reason or 'Updates stopped. Reopen for a fresh runtime.') if not self.cleanup_errors else 'Native cleanup unresolved; ownership remains held.')
@@ -643,4 +674,9 @@ def prepare_catalog(inventory, venue, cat, *, share_metadata=False):
         share_games(cats['polymarket_us'],cats['kalshi'],share_metadata=share_metadata)
         annotate(cats['polymarket_us'],'polymarket_us',policy='manual-comparison-2',share_metadata=share_metadata)
         occurrence(cats['polymarket_us'],'polymarket_us')
-    return cats
+    # A slow complete traversal must not roll back a newer small sporting-state
+    # observation. Identity/schedule and source timestamps are checked again.
+    from .native_sporting_state import apply
+    values=[e['sporting_state_evidence'] for e in inventory.get('polymarket_us',{}).get('events',[])
+        if e.get('sporting_state_evidence')]
+    return apply(cats,values,retain_evidence=True)[0]

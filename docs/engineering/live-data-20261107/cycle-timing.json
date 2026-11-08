@@ -1,0 +1,12 @@
+{
+  "cycle_slot": "2026-11-07T23:15:00+00:00",
+  "requests": 129,
+  "first_dispatch_at": "2026-11-07T23:15:03.272912+00:00",
+  "last_receipt_at": "2026-11-07T23:24:55.967741+00:00",
+  "dispatch_to_last_receipt_seconds": 592.694829,
+  "sum_dispatch_to_receipt_seconds": 118.624737,
+  "between_requests_seconds": 474.07009200000005,
+  "charged_credits": 240,
+  "all_confirmed": true,
+  "note": "129 requests: six featured, six event censuses, 117 alternate events. This is the full actual 18:15 cycle; elapsed excludes final admission/idle status write."
+}

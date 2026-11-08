@@ -10,6 +10,25 @@ from app.comparison import native_scoring_scope as scope
 from tests.test_native_scoring_registry import winners,AT
 
 
+def test_november_7_fee_review_is_prospective_and_does_not_invent_us_account_tier():
+    from tests.test_snapshot_completion import fee_row
+    from app.comparison.conditional_benchmark import snapshot_metric
+    from fractions import Fraction
+    novig=basis('novig',at=instant('2026-11-08T00:00:00Z'))
+    at=novig['reviewed_at']
+    row=fee_row();row['start_at']='2026-11-09T00:00:00Z'
+    checked=snapshot_metric(row,at=at)
+    assert checked['available'] and Fraction(checked['trade_fee_usd'])==0
+    assert Fraction(checked['return_percent'])==20
+    assert basis('novig',at=instant(at)-timedelta(microseconds=1))['version']!=novig['version']
+    row=fee_row('polymarket_us','.50');row['start_at']='2026-11-09T00:00:00Z'
+    checked=snapshot_metric(row,at=at)
+    assert not checked['available']
+    assert checked['reason']=='polymarket_account_taker_fee_tier_unbound'
+    assert checked['evidence']['fee_rate'] is None
+    assert 'trade_fee_usd' not in checked
+
+
 @pytest.mark.parametrize('venue',['novig','polymarket_us'])
 def test_new_fee_review_never_retroactively_covers_expired_interval(venue):
     old=basis(venue);end=instant(old['review_before'])
@@ -80,3 +99,26 @@ def test_missing_aggregate_reference_does_not_report_a_native_identity_failure()
     r=gross_quote(dict(revision='original'),dict(source={'provider':'the_odds_api'},times={}),{},
         at=None,event={},group={},policy=SimpleNamespace(benchmark_venue='pinnacle'))
     assert r['gross_decisive_benchmark']['reason']=='exact_pinnacle_opposition_unavailable'
+
+
+def test_november_7_kalshi_review_retains_exact_public_terms_without_account_claim():
+    import json
+    from app.comparison.snapshot_fee_scope import kalshi_scenarios,kalshi_account
+    from app.comparison.conditional_benchmark import ROOT
+    evidence=basis('kalshi',at=instant('2026-11-08T02:00:00Z'))
+    assert evidence['version']=='kalshi-conditional-20261107-review'
+    start=instant(evidence['reviewed_at'])
+    assert basis('kalshi',at=start-timedelta(microseconds=1))['version']!=evidence['version']
+    body=json.loads((ROOT/evidence['path']).read_bytes())
+    assert len(body['series'])==18 and body['event_changes']['cursor']==''
+    for ticker,row in body['series'].items():
+        event=ticker+'-SYNTHETIC';market=event+'-A'
+        q=dict(league=row['league'],market={'market':row['family'].replace('moneyline','winner')},
+            source=dict(provider='kalshi',native_event_id=event,native_market_id=market,native_side='yes',native_outcome_id='yes'),
+            fee_applicability=dict(series_id=ticker,native_key=['kalshi',event,market,'yes','yes']),
+            original=dict(value='.5',units='usd_per_contract',quantity_units='contracts',payout_units='USD',payout='1'))
+        scenarios,_=kalshi_scenarios(q,evidence,start)
+        assert all(not x['account_verified'] and not x['ranking_eligible'] for x in scenarios)
+        assert all(x['resolved_terms']['fee_multiplier']==str(row['response']['series']['fee_multiplier']) for x in scenarios)
+    with patch('app.comparison.snapshot_fee_scope.ACCOUNT_PATH',ROOT/'.local/nonexistent-disposable-account-fact'):
+        with pytest.raises(ValueError,match='kalshi_account_membership_unbound'):kalshi_account(start)

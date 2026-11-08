@@ -51,6 +51,20 @@ class Checkpoints(TestCase):
             checkpoint.finish();checkpoint.begin()
             with self.assertRaisesRegex(ValueError,'unavailable'):read_page(ref)
 
+    def test_listing_lower_bound_survives_restart_and_advances_only_after_complete_publication(self):
+        with patch('app.collection.bulk_checkpoint.connect',side_effect=self.connect):
+            scope={'sports':['NFL','NBA']};checkpoint=Checkpoint('polymarket_us',scope)
+            first='2026-11-07T01:00:00+00:00';later='2026-11-07T02:00:00+00:00'
+            self.assertEqual(checkpoint.listing_start(first),first)
+            checkpoint.query('/v1/events',dict(tagSlug='nfl',startTimeMin=first))
+            restart=Checkpoint('polymarket_us',scope);restart.begin()
+            self.assertEqual(restart.listing_start(later),first)
+            restart.query('/v1/events',dict(tagSlug='nba',startTimeMin=first))
+            self.assertEqual(restart.listing_start(later),first)
+            self.assertEqual(Checkpoint('polymarket_us',{'sports':['NHL']}).listing_start(later),later)
+            restart.finish();restart.begin()
+            self.assertEqual(restart.listing_start(later),later)
+
     def test_reimaging_preserves_both_exact_observations_until_atomic_replacement(self):
         from app.storage.current_rows import CurrentRowStore
         from tests.test_d03_current_rows import future_records
@@ -201,6 +215,11 @@ class Checkpoints(TestCase):
             with self.assertRaises(Exception):save('kalshi','scope',invalid,{mid:market})
             self.assertEqual(load('kalshi','scope')[1][mid],market)
             cat['events'][0]['scheduled_start']=(datetime.now(timezone.utc)-timedelta(seconds=1)).isoformat()
+            save('kalshi','scope',cat,{mid:market})
+            self.assertEqual(load('kalshi','scope')[1][mid],market)
+            # Started metadata survives for live-state discovery; no price or
+            # connection authority is restored. The existing 24h window retires it.
+            cat['events'][0]['scheduled_start']=(datetime.now(timezone.utc)-timedelta(hours=25)).isoformat()
             save('kalshi','scope',cat,{mid:market})
             self.assertEqual(load('kalshi','scope')[1],{})
 

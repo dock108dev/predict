@@ -1,0 +1,91 @@
+{
+  "at": "2026-11-08T02:44:49.525658+00:00",
+  "catalog_saved_at": "2026-11-07 21:20:24.276788-05:00",
+  "past_24h_events": 191,
+  "phases": {
+    "unknown": 184,
+    "live": 7
+  },
+  "samples": [
+    {
+      "id": "189305",
+      "title": "Liberty vs. NM State",
+      "scheduled_start": "2026-11-08T01:00:00+00:00",
+      "status": {
+        "active": true,
+        "closed": false
+      },
+      "exclusion": "kickoff_reached"
+    },
+    {
+      "id": "189313",
+      "title": "Montana State vs. Idaho State",
+      "scheduled_start": "2026-11-07T23:00:00+00:00",
+      "status": {
+        "active": true,
+        "closed": false
+      },
+      "exclusion": "kickoff_reached"
+    },
+    {
+      "id": "189314",
+      "title": "Boise State vs. Colorado State",
+      "scheduled_start": "2026-11-07T23:00:00+00:00",
+      "status": {
+        "active": true,
+        "closed": false
+      },
+      "exclusion": "kickoff_reached"
+    },
+    {
+      "id": "189315",
+      "title": "Southern Illinois vs. Indiana State",
+      "scheduled_start": "2026-11-07T23:00:00+00:00",
+      "status": {
+        "active": true,
+        "closed": false
+      },
+      "exclusion": "kickoff_reached"
+    },
+    {
+      "id": "189317",
+      "title": "Sam Houston vs. Jacksonville State",
+      "scheduled_start": "2026-11-08T00:00:00+00:00",
+      "status": {
+        "active": true,
+        "closed": false
+      },
+      "exclusion": "kickoff_reached"
+    },
+    {
+      "id": "189318",
+      "title": "Utah Tech vs. UC Davis",
+      "scheduled_start": "2026-11-08T00:00:00+00:00",
+      "status": {
+        "active": true,
+        "closed": false
+      },
+      "exclusion": "kickoff_reached"
+    },
+    {
+      "id": "189319",
+      "title": "Incarnate Word vs. Southeastern Louisiana",
+      "scheduled_start": "2026-11-08T00:00:00+00:00",
+      "status": {
+        "active": true,
+        "closed": false
+      },
+      "exclusion": "kickoff_reached"
+    },
+    {
+      "id": "189321",
+      "title": "West Florida vs. North Alabama",
+      "scheduled_start": "2026-11-08T00:00:00+00:00",
+      "status": {
+        "active": true,
+        "closed": false
+      },
+      "exclusion": "kickoff_reached"
+    }
+  ]
+}

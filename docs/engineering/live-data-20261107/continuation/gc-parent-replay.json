@@ -1,0 +1,33 @@
+{
+  "population": "Same retained Kalshi catalog resident; twenty decodes and compact storage of the same 1000 saved complete images per pass. No network or production writes.",
+  "results": [
+    {
+      "threshold": 2000,
+      "seconds": 5.558443415910006,
+      "gc_seconds": 0.4480979609070346,
+      "gc_collections": 20,
+      "peak_rss_bytes": 507985920
+    },
+    {
+      "threshold": 20000,
+      "seconds": 5.414689042023383,
+      "gc_seconds": 0.4831432077335194,
+      "gc_collections": 20,
+      "peak_rss_bytes": 507985920
+    },
+    {
+      "threshold": 2000,
+      "seconds": 4.984950499958359,
+      "gc_seconds": 0.4388188768643886,
+      "gc_collections": 20,
+      "peak_rss_bytes": 522764288
+    },
+    {
+      "threshold": 20000,
+      "seconds": 5.217590374988504,
+      "gc_seconds": 0.44767300074454397,
+      "gc_collections": 20,
+      "peak_rss_bytes": 522764288
+    }
+  ]
+}

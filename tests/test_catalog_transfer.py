@@ -51,7 +51,7 @@ class TransferCancellation(IsolatedAsyncioTestCase):
    paths.append(Path(input_path).parent);entered.set();release.wait(3)
    assert Path(input_path).exists() and Path(replacement_path).exists()
    transfer.write(output_path,{source:catalog()});return {}
-  owner=object.__new__(CatalogPreparation);owner.lock=asyncio.Lock();owner.pool=ThreadPoolExecutor(1);owner.maximum_bytes=3*1024**3;owner.metrics=None
+  owner=object.__new__(CatalogPreparation);owner.closed=False;owner.lock=asyncio.Lock();owner.pool=ThreadPoolExecutor(1);owner.maximum_bytes=3*1024**3;owner.metrics=None
   with patch.object(transfer,'prepare',side_effect=worker):
    task=asyncio.create_task(owner.prepare({'kalshi':catalog()},'kalshi',catalog()))
    while not entered.is_set():await asyncio.sleep(.001)

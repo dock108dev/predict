@@ -131,6 +131,16 @@ def test_subscription_plan_keeps_unaffected_groups_and_covers_entire_moving_rost
     assert not same['added'] and not same['retired'] and not same['invalidated']
 
 
+def test_current_subscription_commands_debounce_every_initial_and_added_group():
+    from app.collection.native_subscriptions import commands
+    from unittest.mock import patch
+    groups={'initial':['a','b'],'added':['c']}
+    with patch('app.collection.native_subscriptions.market_slug',side_effect=lambda m:m):
+        sent=commands(groups,{'a':'slug-a','b':'slug-b','c':'slug-c'})
+    assert all(c['subscribe']['responsesDebounced'] is True for c in sent)
+    assert [c['subscribe']['marketSlugs'] for c in sent]==[['slug-a','slug-b'],['slug-c']]
+
+
 def test_spawned_catalog_preparation_matches_exact_path_and_releases_worker():
     import asyncio
     from app.collection.current_ingress import CatalogPreparation,prepare_catalog_change

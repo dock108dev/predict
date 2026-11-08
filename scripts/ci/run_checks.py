@@ -110,7 +110,7 @@ def execute(name, command, output, timeout=300, junit=False):
         if (
             record["status"] == "PASS"
             and command[0] == "node"
-            and command[1].endswith(".cjs")
+            and command[1].endswith((".cjs", ".mjs"))
         ):
             require_client_report(output / f"{name}.log")
         if record["status"] == "PASS" and name == "coverage-json":
@@ -293,12 +293,9 @@ def main():
                     True,
                 )
             )
-    deferred = json.loads((ROOT / "scripts/ci/browser-suites.json").read_text())[
-        "deferred"
-    ]
-    for source in sorted((ROOT / "tests").glob("test_*.cjs")):
-        if source.name in deferred:
-            continue
+    browser = json.loads((ROOT / "scripts/ci/browser-suites.json").read_text())
+    for name in browser["required"]:
+        source = ROOT / "tests" / name
         commands.append((source.stem, ["node", str(source)], False))
     commands += [
         (
@@ -343,7 +340,7 @@ def main():
             "tests": None,
             "reason": reason,
         }
-        for name, reason in deferred.items()
+        for name, reason in browser["deferred"].items()
     )
     records.extend(
         {

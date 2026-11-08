@@ -122,7 +122,11 @@ def project(service, raw, *, accounting=None):
             else 'terminal_failure' if done else 'retrying' if backoff or (provider=='the_odds_api' and getattr(worker,'phase',None)=='database_ingress' and (raw.get('sink') or {}).get('admission_state')=='retrying')
             else 'running' if provider=='the_odds_api' and worker is not None and getattr(worker,'phase','idle') not in ('idle','waiting_for_cycle')
             else 'receiving' if 'available' in state_values else 'waiting_for_cycle' if 'budget_delayed' in state_values else 'running')
-        panels.append(dict(worker_behavior=behavior,accounting_pending=accounting_pending,processing_phase=getattr(worker,'phase',None),next_action=None if latest_issue is None else latest_issue['next_action'],provider=provider,affected_venues=venues,status=summaries,
+        panels.append(dict(worker_behavior=behavior,accounting_pending=accounting_pending,
+            publication_progress=worker.publication_progress() if hasattr(worker,'publication_progress') else None,
+            league_collection=deepcopy(getattr(worker,'sport_states',{})),
+            publication_completions=deepcopy(getattr(worker,'publication_completions',[])),
+            processing_phase=getattr(worker,'phase',None),next_action=None if latest_issue is None else latest_issue['next_action'],provider=provider,affected_venues=venues,status=summaries,
             source_at=latest,source_age_seconds=age(latest),received_at=received,receipt_age_seconds=age(received),
             last_book_observation_at=max(observed_sources,key=stamp) if observed_sources else None,last_book_receipt_at=max(observed_receipts,key=stamp) if observed_receipts else None,last_http_received_at=metrics.get('last_received_at'),socket_connected=bool(getattr(worker,'socket',None)) if provider!='the_odds_api' else None,
             timestamp_meanings=sorted({q['times']['source_time_kind'] for q in quotes}),

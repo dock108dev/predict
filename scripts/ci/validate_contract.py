@@ -49,7 +49,11 @@ def validate(root):
         not reason.strip() for reason in browser["deferred"].values()
     ):
         raise ValueError("Duplicate client input or unexplained client omission")
-    actual_browser = {p.name for p in (root / "tests").glob("test_*.cjs")}
+    actual_browser = {
+        p.name
+        for suffix in ("cjs", "mjs")
+        for p in (root / "tests").glob(f"test_*.{suffix}")
+    }
     if active & deferred or active | deferred != actual_browser or not active:
         raise ValueError("Browser test classification drift")
     print(

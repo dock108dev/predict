@@ -31,5 +31,7 @@ def requests(groups, markets):
 
 def commands(groups, markets):
     from app.adapters.polymarket_us_stream import subscription
-    return [subscription([market_slug(markets[mid]) for mid in members],rid,maximum_markets=None)
+    # Provider-supported batching of independent full images. Source clocks
+    # and freshness ceilings still govern each image; this is not a delta feed.
+    return [subscription([market_slug(markets[mid]) for mid in members],rid,maximum_markets=None,debounced=True)
             for rid,members in groups.items()]

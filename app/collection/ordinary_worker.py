@@ -15,6 +15,7 @@ def main():
     store.ROOT = Path(sys.argv[1])
     parent = int(sys.argv[2])
     start = time.monotonic()
+    if hasattr(os,'nice'):os.nice(10)
     from .worker_pause import WorkerPause
     pause=WorkerPause();db=None
     if '--cooperative-pause' in sys.argv[3:]:

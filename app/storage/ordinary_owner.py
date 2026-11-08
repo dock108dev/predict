@@ -47,15 +47,18 @@ class OrdinaryOwner(LatestBoardOwner):
             self.wake.clear()
 
     async def run_coverage(self):
-        # Keep the existing reserved optional-thread lane for this census. A
-        # multi-minute auxiliary census must not sit ahead of native prices.
-        from app.collection.background_work import optional_thread
+        # The full census must neither hold the publication lane nor allocate
+        # its JSON graph in the socket process. Native sampling found its GC
+        # scans holding the GIL while receive callbacks waited. The existing
+        # coverage runner owns one child, its memory/deadline and Stop cleanup.
         while not self.closed:
             try:
-                self.last_coverage = await optional_thread(self.coverage_tick)
+                self.last_coverage = await run(lambda:self.closed,root=ROOT,wait_for_admission=False)
                 self.coverage_error = None
             except AcquisitionDeferred:
                 self.last_coverage = dict(deferred=True, reason='native_acquisition_catching_up')
+                await asyncio.sleep(2)
+                continue
             except Exception as exc:
                 if self.closed: return
                 failure(__name__, 'ordinary_coverage', exc)

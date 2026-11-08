@@ -8,7 +8,7 @@ from .current_ingress import call
 from .bulk_checkpoint import owned_thread
 from copy import deepcopy
 from dataclasses import replace
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from hashlib import sha256
 import json
 import time
@@ -105,11 +105,13 @@ class NativeWorker:
         self.pending_price_changes = set()
         self.pending_received = {}
         self.pending_clocks = {}
+        self.pending_sizes = {}
         self.raw_served = {}
         self.raw_pending=CurrentBookImages() if getattr(service,'database_mode',False) else {}
         self.raw_context={}
         self.census_generation=None
         self.invalid_received={}
+        self.invalidation_boundary=False
         self.raw_task=None
         self.publication_handle = None
         self.publication_task = None
@@ -133,7 +135,7 @@ class NativeWorker:
         self.lifecycle=LifecycleOwner(venue,getattr(service,'runtime_id','controlled-current-worker'),links=reviewed_links(),cap=None)
         self.lifecycle_initialized=False
 
-    def queue_book(self, book, *, _content_sha256=None,_encoded_bytes=None):
+    def queue_book(self, book, *, _content_sha256=None,_encoded_bytes=None,_prepared_image=None):
         """Keep one fully reconstructed latest image per subscribed market."""
         mid=book['raw']['ref']['market_id']
         if mid in self.subscription_blocked:return
@@ -181,7 +183,14 @@ class NativeWorker:
         self.metrics['pending_images_replaced']=self.metrics.get('pending_images_replaced',0)+int(mid in self.pending_books)
         self.pending_since.setdefault(mid,time.monotonic())
         self.pending_recalculations.discard(mid)
-        self.pending_books[mid]=book
+        if _prepared_image is not None:
+            self.pending_books.set_prepared(mid,_prepared_image,exchange_at=book['raw'].get('exchange_at'),confirmation=book.get('book_confirmation'))
+            # The child's complete JSON size plus a conservative exact proof
+            # envelope bounds admission without decoding ladders on the loop.
+            self.pending_sizes[mid]=_encoded_bytes+len(json.dumps(book.get('book_confirmation')))+128
+        else:
+            self.pending_books[mid]=book
+            self.pending_sizes[mid]=len(json.dumps(book,default=str).encode())
         self.queue_accounting.admit(mid,self.metrics['connections'])
         if getattr(self.service,'database_mode',False):
             self.raw_since.setdefault(mid,time.monotonic())
@@ -206,7 +215,7 @@ class NativeWorker:
             self.pending_since.pop(mid,None);self.pending_recalculations.discard(mid)
             self.pending_received.pop(mid,None);self.pending_clocks.pop(mid,None);self.pending_price_versions.pop(mid,None)
             self.pending_price_changes.discard(mid)
-            self.pending_clock_trace.pop(mid,None)
+            self.pending_clock_trace.pop(mid,None);self.pending_sizes.pop(mid,None)
 
     async def persist_raw(self):
         from .bulk_checkpoint import save_images
@@ -265,7 +274,9 @@ class NativeWorker:
         mid=book['raw']['ref']['market_id']
         self.metrics['metadata_keys_enqueued']=self.metrics.get('metadata_keys_enqueued',0)+int(mid not in self.pending_books)
         if mid not in self.pending_books:self.pending_recalculations.add(mid)
-        if mid not in self.pending_books:self.pending_books[mid]=book
+        if mid not in self.pending_books:
+            self.pending_books[mid]=book
+            self.pending_sizes[mid]=len(json.dumps(book,default=str).encode())
         self.queue_accounting.admit(mid,self.metrics['connections'])
         self.pending_since.setdefault(mid,time.monotonic())
         if self.publication_handle is None:
@@ -277,6 +288,9 @@ class NativeWorker:
         if self.publication_task and not self.publication_task.done():return
         if self.closed or self.failed or not self.service.dispatch:
             self.withdraw_pending(list(self.pending_books),'cancellation')
+            return
+        if self.invalidation_boundary:
+            self.publication_handle=asyncio.get_running_loop().call_later(.01,self.flush_books)
             return
         # Overdue work owns a FIFO turn after the two-second processing target.
         # Otherwise preserve tail priority across reconnect initial-image order.
@@ -326,13 +340,19 @@ class NativeWorker:
                     ordered.append(recent);scheduled.add(recent);break
             if len(ordered)>=limit:break
         queued_at={};versions={};clock_traces={}
+        from .current_book_images import CurrentBookImages
+        compact=isinstance(self.pending_books,CurrentBookImages)
+        images=CurrentBookImages() if compact else None
         for mid in ordered:
             if len(books)>=limit:break
-            book=self.pending_books[mid]
-            cost=len(json.dumps(book,default=str).encode())
+            cost=self.pending_sizes.get(mid) if compact else None
+            if cost is None:cost=len(json.dumps(self.pending_books[mid],default=str).encode())
             if books and size+cost>self.config['ingress_bytes']//2:break
-            books.append(book);size+=cost
-            del self.pending_books[mid]
+            if compact:
+                images.retain_from(self.pending_books,[mid]);books.append(mid)
+            else:books.append(self.pending_books[mid])
+            size+=cost
+            del self.pending_books[mid];self.pending_sizes.pop(mid,None)
             if mid in self.pending_recalculations:recalculating.add(mid)
             self.pending_recalculations.discard(mid)
             claimed[mid]=self.pending_since.pop(mid,time.monotonic())
@@ -372,6 +392,9 @@ class NativeWorker:
             nonlocal books,remaining_reason
             try:
                 tick=time.perf_counter()
+                if compact:
+                    keys=tuple(books)
+                    books=await owned_thread(lambda:[images[mid] for mid in keys])
                 from .bulk_checkpoint import save_images
                 try:await owned_thread(save_images,self.venue,books,'pending',ensure_only=True)
                 except Exception:
@@ -463,7 +486,16 @@ class NativeWorker:
                 old_markets=len(old),new_markets=len(new),retired_markets=sorted(set(old)-set(new)),
                 changed_markets=sorted(mid for mid in old.keys()&new.keys() if old[mid]!=new[mid]),
                 pending_images=len(self.pending_books),reason='subscription_membership_or_material_changed')
-            if (self.venue=='kalshi' and new and all(old[k]==new[k] for k in old.keys()&new.keys())
+            active=set(getattr(self,'stream_market_index',{}))
+            if (self.metrics.get('subscription_priority',{}).get('deferred_markets') and active
+                    and self.stream_task and not self.stream_task.done() and self.socket and self.reconstruction
+                    and all(mid in new and old.get(mid)==new[mid] for mid in active)):
+                # A complete discovery may add/change only deferred markets.
+                # Keep this exact bounded cohort and its ordered image authority;
+                # those new candidates receive their ordinary rotation later.
+                self.subscription_transition=dict(kind='retained_priority_cohort',invalidated=set())
+                self.metrics['catalog_transition']['mode']='retained_priority_cohort'
+            elif (not self.metrics.get('subscription_priority',{}).get('deferred_markets') and self.venue=='kalshi' and new and all(old[k]==new[k] for k in old.keys()&new.keys())
                     and self.reconstruction and self.socket and self.stream_task and not self.stream_task.done()
                     and getattr(self.active_engine,'sid',None) is not None):
                 self.subscription_transition=dict(kind='kalshi_membership',invalidated=set(old)^set(new),
@@ -474,7 +506,7 @@ class NativeWorker:
                     self.synchronization.invalidate(mid)
                 if self.publication_task:await asyncio.gather(self.publication_task,return_exceptions=True)
                 self.metrics['catalog_transition']['mode']='update_markets_existing_sid'
-            elif (self.venue=='polymarket_us' and parsed and self.subscription_groups and self.reconstruction
+            elif (not self.metrics.get('subscription_priority',{}).get('deferred_markets') and self.venue=='polymarket_us' and parsed and self.subscription_groups and self.reconstruction
                     and self.socket and self.stream_task and not self.stream_task.done()):
                 from .native_subscriptions import plan
                 changed={mid for mid in old.keys()&new.keys() if old[mid]!=new[mid]}
@@ -495,6 +527,15 @@ class NativeWorker:
         if not transition:return
         self.guard()
         if not self.reconstruction or not self.socket:raise CatalogResync()
+        if transition.get('kind')=='retained_priority_cohort':
+            from .native_priority import describe
+            previous=self.metrics['subscription_priority']
+            priority=describe(list(self.markets.values()),self.catalog,list(self.stream_market_index.values()),getattr(self,'priority_cursor',0))
+            if previous.get('next_rotation_at'):priority['next_rotation_at']=previous['next_rotation_at']
+            self.metrics['subscription_priority']=priority
+            self.metrics['catalog_transition']['reimaged_markets']=0
+            self.signature=self.lifecycle.signature();self.subscription_transition=None
+            return
         if transition.get('kind')=='kalshi_membership':
             engine=self.active_engine
             commands=[];removal_request=None
@@ -616,6 +657,11 @@ class NativeWorker:
             if getattr(self.service,'database_mode',False):self.pending_health = True
             else:self.service.source_state(self.venue,'unavailable','Native catalog access was refused.')
         self.apply_http_backoff(row)
+        if getattr(self,'sporting_http',False):
+            # The small state route is not a page in the concurrent complete
+            # catalog traversal. It shares the same byte/request/backoff owner.
+            self.sporting_receipt={k:row[k] for k in ('path','received_at','body_sha256') if k in row}
+            return
         if not row['complete'] or not row.get('usable_metadata'):
             query_caps=native_payload.query_cap_reasons(dict(native_transport=native_payload.TRANSPORT_CONTRACT,v1_comparison_policy='manual-comparison-2'))
             if row.get('delivery_reason') not in query_caps | DISCOVERY_CAPS | HOURLY_CAPS | {'http_status', None} | RETRYABLE_DISCOVERY and row['status']==200:
@@ -658,7 +704,7 @@ class NativeWorker:
             # No invisible per-operation retry: the source runtime owns backoff.
             response = await MockREST.get(self.client, self.client.endpoint+path, params)
         except Exception as exc:
-            if hasattr(self.service,'coverage') and getattr(self,'_coverage_sport',None):
+            if not getattr(self,'sporting_http',False) and hasattr(self.service,'coverage') and getattr(self,'_coverage_sport',None):
                 self.service.coverage.observe(self._coverage_sport,self.venue,family=getattr(self,'_coverage_family',None),checked_at=utc(),
                     status='failed_source',reason='source_failed',query=dict(path=path,params=params),detail_code=str(exc))
             raise
@@ -669,7 +715,7 @@ class NativeWorker:
                 self.pending_health=False
                 await call(self.service,self.service.source_state,self.venue,'unavailable','Native catalog access was refused.')
         if response.status_code != 200:
-            if hasattr(self.service,'coverage') and getattr(self,'_coverage_sport',None):
+            if not getattr(self,'sporting_http',False) and hasattr(self.service,'coverage') and getattr(self,'_coverage_sport',None):
                 self.service.coverage.observe(self._coverage_sport,self.venue,family=getattr(self,'_coverage_family',None),checked_at=utc(),
                     status='failed_source',reason='source_failed',query=dict(path=path,params=params),detail_code='http_'+str(response.status_code))
             raise ValueError('http_'+str(response.status_code))
@@ -683,11 +729,11 @@ class NativeWorker:
                 ids = [str(r.get(id_field) or '') for r in rows]
                 if not all(ids) or len(set(ids)) != len(ids): raise ValueError('duplicate_catalog_identity')
         except (ValueError,TypeError,AttributeError) as exc:
-            if hasattr(self.service,'coverage') and getattr(self,'_coverage_sport',None):
+            if not getattr(self,'sporting_http',False) and hasattr(self.service,'coverage') and getattr(self,'_coverage_sport',None):
                 self.service.coverage.observe(self._coverage_sport,self.venue,family=getattr(self,'_coverage_family',None),checked_at=utc(),
                     status='rejected_payload',reason='payload_rejected',query=dict(path=path,params=params),detail_code=str(exc))
             raise
-        if hasattr(self,'_coverage_checked') and getattr(self,'_coverage_sport',None):
+        if not getattr(self,'sporting_http',False) and hasattr(self,'_coverage_checked') and getattr(self,'_coverage_sport',None):
             self._coverage_checked.add(self._coverage_sport)
         return rows
 
@@ -793,6 +839,53 @@ class NativeWorker:
                 self.begin_discovery()
             await self.discover()
 
+    async def sporting_state_loop(self):
+        from .native_sporting_state import active_leagues,active_events,observations,newest_observations,PAGE_SIZE,POLL_SECONDS
+        from .native_selectors import LEAGUES
+        offsets={};turn=0;seen={}
+        while not self.closed and not self.failed and self.service.dispatch:
+            try:
+                self.guard()
+                leagues=[s for s in active_leagues(self.catalog) if s in LEAGUES]
+                if leagues and not self.hourly_pause:
+                    league=leagues[turn%len(leagues)];turn+=1
+                    offset=offsets.get(league,0)
+                    path='/v2/leagues/'+LEAGUES[league]+'/events'
+                    async with self.http_lock:
+                        self.sporting_http=True
+                        try:
+                            rows=await self._get(path,dict(limit=PAGE_SIZE,offset=offset),'events')
+                            receipt=dict(self.sporting_receipt)
+                        finally:self.sporting_http=False
+                    offsets[league]=offset+len(rows) if len(rows)==PAGE_SIZE else 0
+                    values=observations(rows,league=league,receipt=receipt)
+                    # Same-state confirmations need no catalog rewrite, but
+                    # still prevent a later cached response rolling state back.
+                    events=active_events(self.catalog)
+                    ids={e['id'] for e in events}
+                    seen={key:value for key,value in seen.items() if key in ids}
+                    accepted=newest_observations(events,values,seen)
+                    if accepted:
+                        await call(self.service,self.service.sporting_states,self.venue,list(accepted.values()))
+                        seen.update(accepted)
+                    self.metrics['sporting_state_refresh']=dict(at=utc(),league=league,rows=len(rows),
+                        accepted_events=len(accepted),next_offset=offsets[league],request_interval_seconds=POLL_SECONDS,
+                        coverage='partial_round_robin_league_pages',source='documented_us_sports_route',
+                        received_at=receipt['received_at'],body_sha256=receipt['body_sha256'])
+            except asyncio.CancelledError:raise
+            except Exception as exc:
+                # The regular source owner retains all authentication, hourly,
+                # backoff and Stop guards. Never reset budgets or retry here.
+                self.metrics['sporting_state_refresh']=dict(at=utc(),state='deferred',reason=type(exc).__name__)
+            await asyncio.sleep(POLL_SECONDS)
+
+    async def stop_sporting_states(self):
+        task=getattr(self,'sporting_task',None)
+        if task:
+            if not task.cancelling():task.cancel()
+            await asyncio.gather(task,return_exceptions=True)
+            if self.sporting_task is task:self.sporting_task=None
+
     async def discover(self):
         self.metrics['discovery_passes']=self.metrics.get('discovery_passes',0)+1
         stage_started=time.monotonic()
@@ -816,7 +909,8 @@ class NativeWorker:
         projection=dict(candidate_events=len(selected),candidate_markets=len(selection['markets']),omitted_markets=0)
         self.metrics['catalog_projection']=dict(projection,state='complete_traversal',reason=None)
         cat = self.bulk_catalog
-        from .native_recovery import retain_absent
+        from .native_recovery import retain_absent, retire_expired_catalog
+        self.metrics['retired_catalog_markets']=retire_expired_catalog(cat)
         retained_absent=retain_absent(self.catalog,cat)
         # Recheck channels after merging retained moving-listing absences.
         from collections import defaultdict
@@ -846,8 +940,8 @@ class NativeWorker:
             closed=native.get('closed') is True or native.get('status') in ('closed','settled','finalized')
             if market.get('subscription_evidence_exclusion') in ('ambiguous_subscription_slug','ambiguous_native_subscription_identity'):
                 market['subscription_exclusion']=market['subscription_evidence_exclusion']
-            elif closed or start and coverage.stamp(start)<=datetime.now(timezone.utc):
-                market['subscription_exclusion']='closed_or_started'
+            elif closed or start and coverage.stamp(start)<datetime.now(timezone.utc)-timedelta(hours=24):
+                market['subscription_exclusion']='closed_or_outside_retained_game_window'
             else:
                 eligible_markets.append(market)
         # Do not retain another source’s superseded catalog across HTTP discovery.
@@ -1020,6 +1114,8 @@ class NativeWorker:
         failures = malformed = 0
         highwater = self.source_highwater
         while not self.closed and not self.failed and self.service.dispatch:
+            rotation_due=False
+            rotate_at=None
             engine = None
             reconstruction = None
             receiver = None
@@ -1041,6 +1137,10 @@ class NativeWorker:
                 if self.lifecycle_initialized:
                     markets=[m for mid,m in self.markets.items() if mid in self.lifecycle.leases]
                     if not markets:return
+                if getattr(self.service,'database_mode',False):
+                    from .native_priority import select,ROTATE_SECONDS
+                    markets,priority=select(markets,self.catalog,datetime.now(timezone.utc),getattr(self,'priority_cursor',0))
+                    self.metrics['subscription_priority']=priority
                 market_index={m.raw.ref.market_id:m for m in markets}
                 self.stream_market_index=market_index
                 self.stream_seen=seen;self.stream_isolated=isolated;self.stream_markets=markets
@@ -1121,29 +1221,53 @@ class NativeWorker:
                 requested=utc()
                 pending={m.raw.ref.market_id:(command['id'],requested) for m in markets} if self.venue=='kalshi' else {}
                 self.stream_snapshot_requests=pending
+                if getattr(self.service,'database_mode',False):
+                    from .native_reconstruction import Reconstruction
+                    reconstruction=Reconstruction(self.venue,markets,self.metrics['connections'],request_id,highwater,self.metrics,
+                        market_requests=engine.market_requests if self.venue=='polymarket_us' else None,compact=True,partitions=2)
+                    self.reconstruction=reconstruction
+                    stage='prepare_reconstruction'
+                    await reconstruction.warm()
+                    self.guard()
                 stage = 'subscribe'
                 commands_to_send=commands(self.subscription_groups,market_index) if self.venue=='polymarket_us' and self.subscription_groups else [command]
                 for command_to_send in commands_to_send:
                     await asyncio.wait_for(self.socket.send(json.dumps(command_to_send)), 3)
+                if self.metrics.get('subscription_priority',{}).get('deferred_markets'):
+                    rotate_at=time.monotonic()+ROTATE_SECONDS
+                    self.metrics['subscription_priority']['next_rotation_at']=(datetime.now(timezone.utc)+timedelta(seconds=ROTATE_SECONDS)).isoformat()
                 # Initial snapshots and ordered deltas maintain the subscribed books.
                 # Recovery reconnects the affected subscription; no periodic image renewal.
                 from .native_receive import NativeReceive
                 receiver=NativeReceive(self.socket,self.metrics,on_failure=lambda:self.synchronization.revoke('transport_lost'))
                 self.receiver=receiver
-                if getattr(self.service,'database_mode',False):
-                    from .native_reconstruction import Reconstruction
-                    reconstruction=Reconstruction(self.venue,markets,self.metrics['connections'],request_id,highwater,self.metrics,
-                        market_requests=engine.market_requests if self.venue=='polymarket_us' else None)
-                    self.reconstruction=reconstruction
                 self.initial_deadline = time.monotonic()+15
+                pending_invalidations=[]
                 while True:
+                    rotation_due=rotate_at is not None and time.monotonic()>=rotate_at
+                    # Accumulate withdrawals only inside this already-received
+                    # bounded batch. Newly queued prices cannot publish before
+                    # its withdrawal commit; a later active image may then resume.
+                    if pending_invalidations:
+                        next_frame=reconstruction.ready[0] if reconstruction is not None and reconstruction.ready else {}
+                        if (rotation_due or len(pending_invalidations)>=128 or not next_frame or next_frame.get('error')):
+                            await call(self.service,self.service.invalidate_markets,self.venue,pending_invalidations)
+                            self.metrics['lifecycle_withdrawal_batches']=self.metrics.get('lifecycle_withdrawal_batches',0)+1
+                            pending_invalidations=[]
+                            self.invalidation_boundary=False
+                    if rotation_due:
+                        self.synchronization.revoke('subscription_rotation')
+                        break
                     stage = 'receive'
                     self.metrics['processing_inflight_frames']=0
                     self.metrics['processing_received_at']=None
                     checked_raw = None
                     self.guard()
                     receiver.require_active()
-                    timeout = max(.01, self.initial_deadline-time.monotonic()) if len(seen|isolated)<len(markets) else 30
+                    # Active and isolated image sets are disjoint at every transition.
+                    # Count them without copying the whole roster per wire frame.
+                    timeout = max(.01, self.initial_deadline-time.monotonic()) if len(seen)+len(isolated)<len(markets) else 30
+                    if rotate_at is not None:timeout=min(timeout,max(.01,rotate_at-time.monotonic()))
                     try:
                         prepared_frame=None
                         if reconstruction is None:
@@ -1152,7 +1276,8 @@ class NativeWorker:
                             prepared_frame=await reconstruction.recv(receiver,timeout=timeout)
                             body,received=prepared_frame['body'],prepared_frame['received']
                     except TimeoutError:
-                        if len(seen|isolated)<len(markets): raise ValueError('initial_image_deadline')
+                        if rotate_at is not None and time.monotonic()>=rotate_at:continue
+                        if len(seen)+len(isolated)<len(markets): raise ValueError('initial_image_deadline')
                         continue  # quiet books age independently; socket ping owns transport failure
                     receiver.require_active()
                     self.metrics['processing_inflight_frames']=1
@@ -1188,7 +1313,8 @@ class NativeWorker:
                     try:
                         if prepared_frame is not None:
                             if prepared_frame.get('malformed_slug'):raise MalformedMarketFrame(prepared_frame['malformed_slug'])
-                            if prepared_frame.get('error'):raise ValueError('native_reconstruction_failure')
+                            if prepared_frame.get('error'):
+                                raise ValueError('provider_subscription_buffer_overflow' if prepared_frame['error']=='provider_subscription_buffer_overflow' else 'native_reconstruction_failure')
                             book=prepared_frame['book']
                         else:
                             book = (engine.feed(raw, generation, received) if self.venue=='kalshi'
@@ -1207,7 +1333,7 @@ class NativeWorker:
                         if prepared_frame is not None and prepared_frame.get('isolated_reason'):
                             self.metrics['isolated_regressed_images']=self.metrics.get('isolated_regressed_images',0)+1
                         self.metrics['isolated_malformed_images']=self.metrics.get('isolated_malformed_images',0)+1
-                        self.metrics['isolated_missing_images']=len(isolated-seen)
+                        self.metrics['isolated_missing_images']=len(isolated)
                         continue
                     # Reused engines retain diagnostics for finite qualification;
                     # current mode keeps at most one input frame and no wire log.
@@ -1237,22 +1363,41 @@ class NativeWorker:
                         self.metrics['obsolete_catalog_images_discarded']=self.metrics.get('obsolete_catalog_images_discarded',0)+1
                         continue
                     if book.state != MarketState.ACTIVE:
-                        await call(self.service, self.service.source_state, self.venue, 'resyncing', 'Market lifecycle changed; rediscovery required.')
-                        return
+                        mid=book.raw.ref.market_id
+                        already_isolated=mid in isolated
+                        isolated.add(mid);seen.discard(mid)
+                        self.invalid_received[mid]=received.isoformat()
+                        self.synchronization.invalidate(mid)
+                        self.withdraw_pending([mid],'invalidated')
+                        if mid in self.lifecycle.leases:self.lifecycle.leases[mid]['image_current']=False
+                        if not already_isolated:self.metrics['invalid_current_market_ids']=sorted(isolated)
+                        self.metrics.update(isolated_missing_images=len(isolated),
+                            last_lifecycle_withdrawal=dict(market_id=mid,state=book.state.value,received_at=received.isoformat()))
+                        if already_isolated:
+                            self.metrics['repeated_inactive_images']=self.metrics.get('repeated_inactive_images',0)+1
+                            continue
+                        if reconstruction is not None:
+                            pending_invalidations.append((book.raw.ref.event_id,mid))
+                            self.invalidation_boundary=True
+                        else:
+                            await call(self.service,self.service.invalidate_market,self.venue,book.raw.ref.event_id,mid)
+                        self.metrics['lifecycle_withdrawals']=self.metrics.get('lifecycle_withdrawals',0)+1
+                        continue
                     if book.raw.ref.market_id in self.subscription_blocked:continue
                     if book.raw.ref.market_id not in seen:self.initial_deadline=time.monotonic()+15
                     self.synchronization.image(book.raw.ref.market_id)
                     self.synchronization.delivered('reconstruction',[received.isoformat()])
                     seen.add(book.raw.ref.market_id)
-                    isolated.discard(book.raw.ref.market_id)
-                    self.metrics['invalid_current_market_ids']=sorted(isolated)
+                    if book.raw.ref.market_id in isolated:
+                        isolated.remove(book.raw.ref.market_id)
+                        self.metrics['invalid_current_market_ids']=sorted(isolated)
                     self.metrics['initial_images']=len(seen)
                     self.metrics['missing_initial_images']=len(markets)-len(seen)
                     if prepared_frame is None:
                         book = current_purchase_book(book)
                         from .native_book_value import book_value
                         value=book_value(book)
-                    else:value=prepared_frame['value']
+                    else:value=prepared_frame.get('queue_hint',prepared_frame.get('value'))
                     from .current_confirmation import validate
                     stage = 'confirm'
                     request=pending.pop(book.raw.ref.market_id,None) if data.get('type')=='orderbook_snapshot' else None
@@ -1278,7 +1423,8 @@ class NativeWorker:
                     tick = time.perf_counter()
                     stage = 'queue'
                     self.queue_book(value,_content_sha256=prepared_frame.get('content_sha256') if prepared_frame is not None else None,
-                                    _encoded_bytes=prepared_frame.get('encoded_bytes') if prepared_frame is not None else None)
+                                    _encoded_bytes=prepared_frame.get('encoded_bytes') if prepared_frame is not None else None,
+                                    _prepared_image=prepared_frame.get('prepared_image') if prepared_frame is not None else None)
                     self.metrics['receipt_queue_ms'] = (time.perf_counter()-tick)*1000
                     self.metrics['source_receipt_ms'] = None if book.raw.exchange_at is None else (received-book.raw.exchange_at).total_seconds()*1000
                     self.metrics['books'] += 1
@@ -1303,6 +1449,7 @@ class NativeWorker:
                          'Future native price clock','Regressed native price clock',
                          'Snapshot confirmation identity conflict','Book confirmation subscription conflict',
                          'Transaction timestamp reconstruction conflict','Future confirmation clock',
+                         'provider_subscription_buffer_overflow',
                          'Snapshot predates its request','Confirmation clock regressed',
                          'Replayed confirmation payload','Confirmation content mismatch',
                          'Snapshot request/continuity proof missing','Invalid confirmation age at receipt'}
@@ -1382,6 +1529,7 @@ class NativeWorker:
             finally:
                 self.synchronization.revoke(self.synchronization.reason or 'disconnected')
                 self.metrics['stream_connected']=False
+                self.invalidation_boundary=False
                 self.metrics['processing_inflight_frames']=0
                 self.metrics['processing_received_at']=None
                 self.active_engine=None
@@ -1399,6 +1547,11 @@ class NativeWorker:
                 if self.socket:
                     await self.socket.close()
                     self.socket = None
+            if rotation_due:
+                self.priority_cursor=getattr(self,'priority_cursor',0)+1
+                self.metrics['subscription_rotations']=self.metrics.get('subscription_rotations',0)+1
+                await asyncio.sleep(0)
+                continue
             delay = max(reconnect_delay,self.config['backoff_seconds'][min(failures-1,4)], self.backoff_until-time.monotonic())
             self.metrics['retries'] += 1
             # Local socket pacing must not abort a checkpointed HTTP traversal.
@@ -1426,18 +1579,28 @@ class NativeWorker:
             self.wake_task = None
 
     async def restore_catalog(self):
+        self.metrics['restoration']=dict(stage='loading_saved_catalog',started_at=datetime.now(timezone.utc).isoformat())
         from .native_recovery import load
         from app.comparison.lifecycle import worker_selections
         started=time.monotonic()
         restored=await owned_thread(load,self.venue,self.checkpoint.scope)
-        if restored is None:return
+        loaded=time.monotonic()
+        self.metrics['restoration']['load_seconds']=loaded-started
+        if restored is None:
+            self.metrics['restoration']['stage']='no_saved_catalog'
+            return
         self.guard()
         cat,parsed,saved_at=restored
+        self.metrics['restoration'].update(stage='validating_saved_markets',markets=len(parsed),saved_at=saved_at)
         if self.venue == 'polymarket_us':
             from app.adapters.polymarket_us import routing_slugs
             await owned_thread(routing_slugs, parsed.values())
         selections=await owned_thread(worker_selections,self.venue,parsed,cat)
+        validated=time.monotonic()
+        self.metrics['restoration']['validation_seconds']=validated-loaded
+        self.metrics['restoration']['stage']='admitting_saved_catalog'
         await call(self.service,self.service.catalog,self.venue,cat)
+        self.metrics['restoration']['admission_seconds']=time.monotonic()-validated
         self.guard()
         self.catalog,self.markets=cat,parsed
         self.census_generation=cat.get('acquisition_census_generation')
@@ -1447,6 +1610,8 @@ class NativeWorker:
         self.metrics.update(selected_markets=len(parsed),catalog_events=len(cat['events']),catalog_markets=len(cat['markets']),
             restored_catalog_at=saved_at,restore_seconds=time.monotonic()-started,restored_price_images=0)
         if parsed:self.stream_task=asyncio.create_task(self.stream(list(parsed.values())))
+        self.metrics['restoration'].update(stage='complete',completed_at=datetime.now(timezone.utc).isoformat(),
+            seconds=time.monotonic()-started)
 
     async def run(self):
         limits = dict(discovery_requests=self.config['requests_per_source'], session_bytes=self.config['source_bytes'],
@@ -1466,6 +1631,8 @@ class NativeWorker:
                 from .bulk_checkpoint import Checkpoint
                 self.checkpoint=Checkpoint(self.venue,dict(sports=native_scope(self.config),families=native_markets(self.config)))
             if getattr(self,'checkpoint',None):await self.restore_catalog()
+            if self.venue=='polymarket_us' and getattr(self.service,'database_mode',False):
+                self.sporting_task=asyncio.create_task(self.sporting_state_loop(),name='predict-us-sporting-state')
             if self.venue=='polymarket_us': self.client.request_interval = .5
             # Conservative 1/s Kalshi bootstrap; no account data/trading calls.
             errors = 0
@@ -1529,6 +1696,7 @@ class NativeWorker:
                     continue
                 await asyncio.sleep(max(self.config['rediscovery_seconds'], self.backoff_until-time.monotonic()))
         finally:
+            await self.stop_sporting_states()
             self.lifecycle.revoke()
             await self.stop_stream()
             if self.client: await self.client.aclose()
@@ -1545,6 +1713,7 @@ class NativeWorker:
 
     async def close(self):
         self.closed = True
+        await self.stop_sporting_states()
         self.lifecycle.revoke()
         await self.stop_stream()
         if self.client: await self.client.aclose()

@@ -103,7 +103,11 @@ def candidate():
     # Canonical JSON ordering keeps source identity consistent across callers.
     manifest = {str(p.relative_to(ROOT)): sha256(p.read_bytes()).hexdigest()
                 for p in sorted((ROOT/'app').rglob('*')) if p.is_file()
-                and '__pycache__' not in p.parts and p.suffix in {'.py','.json','.js','.html','.css'}}
+                and '__pycache__' not in p.parts and p.suffix in {'.py','.json','.js','.html','.css'}
+                # Reader-only presentation cannot change transport, accounting,
+                # configuration or financial evidence. Those remain attested.
+                and not (p.is_relative_to(ROOT/'app/dashboard/opportunity_static')
+                         and p.suffix in {'.js','.html','.css'})}
     return sha256(json.dumps(manifest, sort_keys=True, separators=(',', ':')).encode()).hexdigest(), manifest
 
 

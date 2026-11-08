@@ -233,9 +233,12 @@ class DatabaseIngressSink:
             records=[];scopes=[];withdraw=set();storage_prepared=False
             deferred_keys=set();catalog_turnover={}
             if row['type']=='native_market_invalid':
-                key=(row['source'],row['event_id'],row['market_id'])
-                candidate.books.pop(key,None);candidate.metadata.pop(key,None);candidate.invalid.add(key)
-                withdraw.add(key)
+                markets=row.get('markets') or [(row['event_id'],row['market_id'])]
+                if len(markets)>128:raise ValueError('native_invalidation_batch_capacity')
+                for event_id,market_id in markets:
+                    key=(row['source'],event_id,market_id)
+                    candidate.books.pop(key,None);candidate.metadata.pop(key,None);candidate.invalid.add(key)
+                    withdraw.add(key)
             elif row['type']=='current_aggregate_records':
                 records=row['records']
                 scopes=[dict(venue=v,competition=row['sport'],received_at=row['received_at'],aggregate_route='featured') for v in row['complete_venues']]
@@ -284,6 +287,11 @@ class DatabaseIngressSink:
                                 for level in ladder['levels']:
                                     if not 0<=bounded_decimal(level['price']['value'])<=1 or bounded_decimal(level['quantity']['value'])<=0 or level['quantity']['unit']!='contracts':raise ValueError('Invalid current native level')
                     candidate.reduce_observation(observation)
+                    if observation['type']=='prediction_book' and book['state']=='active':
+                        # Current ingress already checked the complete synchronized
+                        # image; SQL below still checks this owner's Stop/revocation.
+                        # A legacy session-health row is not required to resume it.
+                        candidate.invalid.discard((row['source'],ref['event_id'],ref['market_id']))
                 # Legacy session membership also binds derived season/stage and
                 # canonical matching. A counterpart catalog changing those facts
                 # cannot invalidate an unchanged physical source image. Reuse its

@@ -65,3 +65,20 @@ def test_active_low_latency_stream_does_not_require_an_empty_simultaneous_sample
     assert result['raw_pending_images']==1
     result=owner.snapshot(dict(metrics,raw_backlog=1,raw_oldest_pending_seconds=3))
     assert result['state']=='catching_up' and not result['current']
+
+
+def test_rotating_coverage_is_partial_and_old_images_cannot_restore_authority():
+    owner,metrics=ready()
+    metrics['subscription_priority']={'deferred_markets':10}
+    snapshot=owner.snapshot(metrics)
+    assert snapshot['state']=='partial' and not snapshot['current']
+    assert snapshot['continuity_intact'] and snapshot['deferred_markets']==10
+    owner.revoke('subscription_rotation')
+    assert not owner.snapshot(metrics)['continuity_intact']
+    owner.begin(2,['a','c']);owner.acknowledge(18)
+    owner.persist(1,['a','b'])
+    assert owner.snapshot(metrics)['missing_images']==2
+    assert owner.snapshot(metrics)['missing_durable_images']==2
+    owner.image('a');owner.image('c');owner.persist(2,['a','c'])
+    assert owner.snapshot(metrics)['state']=='partial'
+    assert owner.images=={'a','c'} and owner.persisted=={'a','c'}

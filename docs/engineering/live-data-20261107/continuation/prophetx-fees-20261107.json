@@ -1,0 +1,6 @@
+{
+  "url": "https://docs.prophetx.co/docs/fees",
+  "checked_at": "2026-11-08T01:03:33.041762+00:00",
+  "sha256": "6cf4d5cd152c15bd40d20a52e0fe78b851e485124e62a273468d60c28f640e4f",
+  "decision": "No new numeric authority: official API documentation says model and rate are configured per account and there is no endpoint to query the current rate."
+}

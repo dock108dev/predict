@@ -180,3 +180,7 @@ app/reviews/*
 /docs/sc09-05-applicability.md
 /docs/sc09-acquisition-gaps.md
 /docs/usability/
+
+# Generated high-volume continuation traces. Dated summaries and fixtures stay visible.
+/docs/engineering/live-data-20261107/continuation/priority-observation.jsonl
+/docs/engineering/live-data-20261107/continuation/integrated-runtime.jsonl

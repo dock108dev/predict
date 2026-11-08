@@ -1,0 +1,16 @@
+[
+  {
+    "compact": false,
+    "images": 1000,
+    "bytes": 8374876,
+    "pack_seconds": 0.048769166925922036,
+    "unpack_seconds": 0.03735166706610471
+  },
+  {
+    "compact": true,
+    "images": 1000,
+    "bytes": 5163417,
+    "pack_seconds": 0.00615887506864965,
+    "unpack_seconds": 0.014379416941665113
+  }
+]

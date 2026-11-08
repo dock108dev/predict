@@ -1,6 +1,6 @@
 """Exhaustive ordinary listing and metadata traversal with durable checkpoints."""
 import asyncio
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from hashlib import sha256
 import json
 
@@ -89,7 +89,7 @@ async def pages(worker, path, base, field, scope=None, size=50, *, event_pages=N
         else:
             await worker.get(path, params, None if detail else field, scope)
             page = worker.pages[-1]
-        _, data = coverage.decode_page(page)
+        _, data = await owned_thread(coverage.decode_page,page)
         rows = data.get(field) if field else data.get('markets', [data.get('market', data)])
         if not isinstance(rows, list):
             raise ValueError('bulk_listing_array_missing')
@@ -108,7 +108,7 @@ async def pages(worker, path, base, field, scope=None, size=50, *, event_pages=N
             if len(rows) > size:
                 raise ValueError('bulk_offset_boundary_unknown')
             complete = len(rows) < size
-            fingerprint = sha256(json.dumps(rows, sort_keys=True).encode()).hexdigest()
+            fingerprint = await owned_thread(lambda:sha256(json.dumps(rows, sort_keys=True).encode()).hexdigest())
             if rows and fingerprint in seen:
                 raise ValueError('bulk_page_repeated')
             seen.add(fingerprint)
@@ -126,10 +126,10 @@ async def pages(worker, path, base, field, scope=None, size=50, *, event_pages=N
         if event_pages is not None and checkpoint:
             # Listing receipts are durable. Hold the exact listing parents in
             # compact form while other leagues and event details are traversed.
-            result.extend(
+            packed=await owned_thread(lambda:[
                 dict(id=row['id'], gameId=row.get('gameId'), packed_event=encode_container(row))
-                for row in rows
-            )
+                for row in rows])
+            result.extend(packed)
         else:
             result.extend(rows)
         index += 1
@@ -145,6 +145,13 @@ async def enumerate_native(worker):
     checkpoint = getattr(worker, 'checkpoint', None)
     if checkpoint:
         await owned_thread(checkpoint.begin)
+    lower=None
+    if worker.venue=='polymarket_us':
+        lower=(datetime.now(timezone.utc)-timedelta(hours=24)).isoformat()
+        if checkpoint and hasattr(checkpoint,'listing_start'):
+            lower=await owned_thread(checkpoint.listing_start,lower)
+        worker.metrics['listing_window']=dict(start_time_min=lower,start_time_max=None,
+            meaning='Existing 24-hour past-event retention; all future events remain in scope; fixed across resumed pages')
     selected, native_events, markets = {}, {}, {}
     event_pages={}
     catalogs=[]
@@ -160,6 +167,7 @@ async def enumerate_native(worker):
                 raise ValueError('bulk_selector_unestablished')
         else:
             path, params = query(worker.venue, sport, families=families)
+            params['startTimeMin']=lower
             selectors = [dict(path=path, params=params, binding=None)]
         for selector in selectors:
             if worker.venue=='kalshi':
@@ -198,7 +206,7 @@ async def enumerate_native(worker):
                     if len(details) != 1 or str(details[0].get('id')) != eid:
                         raise ValueError('bulk_event_detail_identity')
                     del worker.pages[start:]
-    listing_pages=[coverage.DecodedPage(p) for p in worker.pages] if worker.venue=='kalshi' else list(worker.pages)
+    listing_pages=await owned_thread(lambda:[coverage.DecodedPage(p) for p in worker.pages]) if worker.venue=='kalshi' else list(worker.pages)
     # All configured listing scopes precede metadata. Distinct native IDs remain
     # independent even when derived occurrence/financial bindings are unavailable.
     from app.adapters.polymarket_us import full_game_family
@@ -208,7 +216,7 @@ async def enumerate_native(worker):
         metadata_start=len(worker.pages)
         listing_native=native_events[eid]
         if checkpoint and worker.venue=='polymarket_us':
-            listing_native = decode_container(listing_native['packed_event'])
+            listing_native = await owned_thread(decode_container,listing_native['packed_event'])
         missing_listing_ids=set()
         if worker.venue == 'kalshi':
             rows=native_events[eid].get('markets')

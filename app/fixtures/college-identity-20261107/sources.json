@@ -1,0 +1,14 @@
+{
+  "sam": {
+    "url": "https://gobearkats.com/sports/football",
+    "path": "app/fixtures/college-identity-20261107/sam.html.gz",
+    "sha256": "cea43ae6910a73ba91dd3493764ffbcc336856bea0b226a140c4d2f9705d0807",
+    "reviewed_at": "2026-11-08T00:35:00Z"
+  },
+  "jax": {
+    "url": "https://jaxstatesports.com/sports/football",
+    "path": "app/fixtures/college-identity-20261107/jax.html.gz",
+    "sha256": "8395517a0640bc4b1b185d768e9a3c2dcf3843ea5299d7e53a9dd5a9346e2344",
+    "reviewed_at": "2026-11-08T00:35:00Z"
+  }
+}

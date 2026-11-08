@@ -145,12 +145,13 @@ def _bind_v1(event, market, venue, *, revised=False, share_metadata=False):
     return result
 
 
-def bind(event,market,venue,*,policy=POLICY,_share_metadata=False):
+def bind(event,market,venue,*,policy=POLICY,_share_metadata=False,_enriched=False):
     if policy==POLICY:return _bind_v1(event,market,venue)
     if policy!=REPAIR_POLICY:raise ValueError('Unknown manual admission policy')
     from .admission_enrichment import enrich_game,award
     if market.get('market_type')=='futures' or (market.get('native_scope_binding') or {}).get('family')=='futures':return award(event,market,venue)
-    e=enrich_game(dict(event,source=venue),share_metadata=_share_metadata);r=_bind_v1(e,market,venue,revised=True,share_metadata=_share_metadata)
+    e=event if _enriched else enrich_game(dict(event,source=venue),share_metadata=_share_metadata)
+    r=_bind_v1(e,market,venue,revised=True,share_metadata=_share_metadata)
     if e.get('identity_conflicts'):
         r['blockers']+=list(e['identity_conflicts']);r['status']='IDENTITY_BLOCKED'
     r['version']=policy;r['sha256']=stable({k:v for k,v in r.items() if k!='sha256'});return r
@@ -165,6 +166,7 @@ def annotate(catalog, venue, templates=(), *, policy=POLICY, share_metadata=Fals
 def _annotate(catalog, venue, templates=(), *, policy=POLICY, share_metadata=False):
     """Attach separately versioned bindings; admission clears only payout gates."""
     events={e['id']:e for e in catalog['events']}
+    enriched_events={}
     for market in catalog['markets']:
         event=events.get(market['event_id'])
         if not event:continue
@@ -172,8 +174,11 @@ def _annotate(catalog, venue, templates=(), *, policy=POLICY, share_metadata=Fal
         enriched=dict(event) if share_metadata else deepcopy(event)
         if policy==REPAIR_POLICY and market.get('market_type')!='futures' and (market.get('native_scope_binding') or {}).get('family')!='futures':
             from .admission_enrichment import enrich_game
-            enriched=enrich_game(dict(enriched,source=venue),share_metadata=share_metadata)
-            event.update({k:v for k,v in enriched.items() if k not in ('_native','provenance')})
+            if event['id'] not in enriched_events:
+                enriched=enrich_game(dict(enriched,source=venue),share_metadata=share_metadata)
+                event.update({k:v for k,v in enriched.items() if k not in ('_native','provenance')})
+                enriched_events[event['id']]=enriched
+            else:enriched=dict(enriched_events[event['id']])
         for review in templates:
             source=review['sources'].get(venue,{})
             if source.get('event_id') in (event['id'],event.get('related_game_event_id')) and review.get('event')==event.get('canonical_key'):
@@ -188,7 +193,14 @@ def _annotate(catalog, venue, templates=(), *, policy=POLICY, share_metadata=Fal
             locator=us_type(market.get('_native') or market.get('native_metadata') or {},competition=enriched.get('competition'),share_metadata=True)
             if locator['status']=='DOCUMENTED_LOCATOR':
                 market.update(market_type=locator['family'],period=locator['period'])
-        binding=bind(enriched,market,venue,policy=policy,_share_metadata=share_metadata);market['v1_raw_binding']=binding
+        binding=bind(enriched,market,venue,policy=policy,_share_metadata=share_metadata,
+            _enriched=event['id'] in enriched_events);market['v1_raw_binding']=binding
+        if policy==REPAIR_POLICY and market.get('exclusion')=='event_excluded:kickoff_reached' and not event.get('exclusion'):
+            from app.comparison.game_phase import sporting_phase
+            if sporting_phase(enriched)['state']=='live':
+                # Discovery copied the old event gate onto each market. Live
+                # event enrichment must retire that exact derived refusal too.
+                market['qualified_exclusion']=market['exclusion'];market['exclusion']=None
         if binding['status']=='BOUND_RAW_PREDICATE':
             # A prior source-local refusal describes its old facts. Rebinding
             # complete current metadata must replace that refusal as well.
@@ -196,6 +208,7 @@ def _annotate(catalog, venue, templates=(), *, policy=POLICY, share_metadata=Fal
             if prior.get('reason')=='comparison_context_missing':
                 market.pop('comparison_admission',None)
         if binding['status']=='BOUND_RAW_PREDICATE' and binding['identity']['family']=='futures':
+            enriched_events.pop(event['id'],None)
             event.update(identity='resolved',competition=binding['identity']['competition'],season=binding['identity']['season'],stage='championship',
                 scheduled_start=binding['identity']['scheduled_start'],canonical_key=binding['identity']['event'])
             if event.get('exclusion') in ('unknown_schedule','event_parse_error'):event['exclusion']=None

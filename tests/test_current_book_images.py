@@ -6,6 +6,21 @@ from app.collection.current_database import normalize_current
 from tests.test_current_service import native_fixture
 
 
+def test_child_packed_image_keeps_parent_clock_and_confirmation_without_reencoding():
+    from app.collection.current_book_images import encode_container
+    _,book=native_fixture();image=encode_container(book)
+    images=CurrentBookImages();expected=deepcopy(book)
+    expected['raw']['exchange_at']='2026-09-01T00:00:00Z'
+    expected['book_confirmation']={'confirmed_at':'2026-11-07T23:00:00Z','proof':'owned'}
+    with patch('app.collection.current_book_images.encode_container',side_effect=AssertionError('loop compression')):
+        images.set_prepared('one',image,exchange_at=expected['raw']['exchange_at'],confirmation=expected['book_confirmation'])
+        copied=images.copy();moved=copied.take(['one'])
+    assert moved['one']==expected and images['one']==expected
+    expected['book_confirmation']['proof']='outside mutation'
+    assert moved['one']['book_confirmation']['proof']=='owned'
+    assert images.encoded_bytes==len(images.encoded['one'])
+
+
 def test_owned_images_are_exact_and_candidates_do_not_mutate_committed_books():
     _,book=native_fixture()
     book['inspection']={'unicode':'é 🎯','price':'0.12345678901234567890','missing':None}

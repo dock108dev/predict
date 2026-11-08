@@ -37,6 +37,7 @@
 }
 
 * { box-sizing: border-box; }
+dialog pre, #session-events pre { white-space: pre-wrap; overflow-wrap: anywhere; max-width: 100%; font-size: .78rem; }
 [hidden] { display: none !important; }
 body { margin: 0; background: var(--paper); color: var(--body); font: 15px/1.5 system-ui, sans-serif; }
 a { color: var(--accent); }
@@ -96,12 +97,6 @@ h3 { font-size: 19px; line-height: 1.2; }
 .desk-filters input[type="number"] { width: 8rem; }
 #stake-field { margin-inline-start: auto; }
 summary { color: var(--accent); }
-#more-filters > summary { border: 1px solid var(--control); border-radius: 99px; padding: .42rem .85rem; }
-.desk-options {
-  position: absolute; inset: calc(100% + .5rem) 0 auto auto; z-index: 1;
-  width: min(30rem, 100%); background: var(--paper); padding: 1rem;
-  border: 1px solid var(--control); border-radius: 12px; box-shadow: 0 8px 26px #101b311a;
-}
 fieldset { display: flex; flex-wrap: wrap; gap: .45rem .8rem; border: 0; margin: 0 0 .6rem; padding: 0; min-width: 0; }
 legend { font-weight: 650; }
 fieldset label, .desk-thresholds label:has(input[type="checkbox"]) { display: flex; flex-direction: row; align-items: center; }
@@ -194,9 +189,6 @@ dialog::backdrop { background: #101b3180; }
   .desk-offer strong { font-size: 25px; }
   .desk-arb { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .desk-arb .desk-trade { grid-column: 1 / -1; }
-  .desk-options { position: static; margin-top: .45rem; width: 100%; box-shadow: none; }
-  #more-filters[open] { flex-basis: 100%; }
-  #more-filters > summary { width: fit-content; }
   #stake-field { margin-inline-start: 0; }
 }
 @media (max-width: 560px) {
@@ -220,3 +212,85 @@ dialog::backdrop { background: #101b3180; }
 }
 
 .desk-refresh{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin:.75rem 0}.desk-refresh button{flex-shrink:0}
+
+/* The comparison toolbar stays on one line on desktop, with advanced filters on demand. */
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.desk-app .p-chrome { min-height: 72px; padding-block: .7rem; }
+.desk-app main { padding-top: 1.5rem; }
+.desk-kicker { margin: 0 0 .28rem; color: var(--muted); font-size: .73rem; font-weight: 650; letter-spacing: .08em; text-transform: uppercase; }
+.desk-filters { display: block; margin: 0 0 .7rem; }
+.desk-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; }
+.desk-toolbar > label { flex: 0 1 auto; }
+.desk-toolbar .desk-search { flex: 1 1 13rem; }
+.desk-toolbar .desk-search input { width: 100%; }
+.desk-toolbar :is(input,select,button) { min-height: 2.5rem; font-size: .86rem; }
+.desk-toolbar #stake-field { flex-direction: row; align-items: center; margin: 0; }
+#stake-field input { width: 7rem; }
+#open-filters { display: inline-flex; align-items: center; gap: .45rem; font-weight: 630; }
+#filter-count { display: inline-grid; place-items: center; min-width: 1.2rem; min-height: 1.2rem; padding: 0 .22rem; border-radius: 1rem; background: var(--selected); color: var(--selected-text); font-size: .72rem; }
+.filter-chips { display: flex; flex-wrap: wrap; gap: .32rem; margin-top: .48rem; }
+.filter-chip { padding: .24rem .5rem; border: 0; border-radius: 1rem; background: var(--soft); font-size: .77rem; }
+#filter-panel { width: min(35rem, calc(100vw - 1.5rem)); padding: 1.15rem; }
+#filter-panel h2 { font-size: 26px; }
+#filter-panel .desk-title { align-items: center; margin-bottom: .8rem; }
+#filter-panel .desk-title h2 { margin: 0; }
+.filter-selections fieldset { gap: .35rem; margin-bottom: .85rem; }
+.filter-selections legend { font-size: .84rem; margin-bottom: .26rem; }
+.filter-selections label { position: relative; flex-direction: row; align-items: center; padding: .32rem .6rem; border: 1px solid var(--control); border-radius: 1.25rem; cursor: pointer; }
+.filter-selections label:has(:checked) { background: var(--soft); color: var(--ink); border-color: var(--control); }
+.filter-selections label:has(:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.filter-selections label input { appearance: none; margin: 0; width: .55rem; height: .55rem; border-radius: 50%; border: 1px solid var(--control); padding: 0; }
+.filter-selections label input:checked { background: var(--accent); border-color: var(--accent); }
+.filter-section { padding: .6rem 0; border-top: 1px solid var(--rule); }
+.filter-section summary { color: var(--ink); font-size: .86rem; font-weight: 625; }
+.filter-section .desk-thresholds { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .6rem; }
+.filter-section input[type="number"] { width: 100%; }
+.filter-footer { display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--rule); padding-top: .65rem; }
+.desk-primary { background: var(--selected); color: var(--selected-text); }
+.coverage-strip { padding: .56rem .7rem; border: 1px solid var(--rule); border-radius: 8px; color: var(--muted); font-size: .78rem; font-variant-numeric: tabular-nums; }
+.replay-bar { display: flex; align-items: center; flex-wrap: wrap; gap: .65rem 1.05rem; padding: .6rem .75rem; margin-bottom: .72rem; border: 1px solid var(--control); border-radius: 10px; background: var(--soft); }
+.replay-bar label { display: flex; align-items: center; flex-wrap: wrap; gap: .45rem; font-size: .83rem; }
+.replay-bar nav { display: flex; gap: .8rem; margin-inline-start: auto; font-size: .83rem; }
+.replay-bar nav [aria-current] { color: var(--ink); font-weight: 700; }
+.desk-row { padding-block: .85rem; }
+.desk-offer { min-height: 4.7rem; border: 1px solid var(--rule); }
+.desk-offer.desk-best { border-color: var(--control); background: var(--soft); }
+.desk-pair-inspect { margin-top: .62rem; padding: .32rem .55rem; font-size: .8rem; }
+#trade { width: min(52rem, calc(100vw - 1.5rem)); max-height: calc(100dvh - 1.5rem); padding: 0; }
+#trade > .desk-title { position: sticky; top: 0; z-index: 1; align-items: center; margin: 0; padding: .9rem 1.1rem; background: var(--paper); border-bottom: 1px solid var(--rule); flex-wrap: nowrap; }
+#trade h2 { font-size: clamp(21px, 4vw, 28px); margin: 0; }
+#trade-body, #trade-note { padding-inline: 1.1rem; }
+#trade-body { padding-block: .85rem .35rem; }
+.inspection-matchup { font-size: .93rem; font-weight: 650; }
+.inspection-mode { font-size: .79rem; color: var(--muted); }
+.inspection-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .45rem; margin-block: .55rem .85rem; }
+.inspection-tiles > div { display: grid; gap: .22rem; background: var(--soft); padding: .55rem .6rem; border-radius: 8px; }
+.inspection-tiles strong { font-size: clamp(.82rem, 2.4vw, 1.12rem); font-variant-numeric: tabular-nums; }
+.inspection-section, .inspection-disclosure { padding: .72rem 0; border-top: 1px solid var(--rule); }
+.inspection-section h3 { font-size: 22px; }
+.inspection-section ul { margin: .3rem 0 0; padding-inline-start: 1.25rem; }
+.inspection-facts { margin: .35rem 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr); gap: .25rem .85rem; font-size: .85rem; }
+.inspection-facts dt { color: var(--muted); }
+.inspection-facts dd { margin: 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.inspection-disclosure { font-size: .85rem; }
+.inspection-section .inspection-disclosure { padding-block: .45rem; border: 0; }
+.inspection-disclosure[open] summary { margin-bottom: .4rem; }
+.inspection-formula, .inspection-gap { font-size: .84rem; padding: .42rem .58rem; border-radius: 7px; background: var(--soft); margin: .4rem 0; }
+.inspection-footer { display: flex; flex-wrap: wrap; gap: .5rem; padding: .45rem 1.1rem .7rem; }
+.inspection-footer:has(button:not([hidden])) { border-top: 1px solid var(--rule); }
+.inspection-footer:not(:has(button:not([hidden]))) { display: none; }
+@media (max-width: 560px) {
+  .desk-app .p-chrome { display: flex; }
+  .desk-app .p-nav { order: 3; width: 100%; }
+  .desk-toolbar .desk-search { flex-basis: 100%; }
+  .desk-toolbar .desk-search input { width: 100%; }
+  .desk-toolbar { gap: .35rem; }
+  .desk-toolbar :is(input,select,button) { font-size: .8rem; padding-inline: .45rem; }
+  .inspection-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .replay-bar nav { margin-inline-start: 0; }
+}
+
+.desk-individual .desk-ev-offers { display: block; }
+.desk-individual .desk-offer { width: 100%; grid-template-columns: minmax(5.2rem, 1fr) auto auto; align-items: baseline; gap: .3rem .65rem; }
+.desk-individual .desk-offer .p-odds { font-size: .95rem; }
+.desk-individual .offer-breakdown, .desk-individual .offer-reason { grid-column: 1 / -1; }

@@ -7,6 +7,7 @@
   },
   "required": [
     "test_l03_inspection.cjs",
+    "test_diagnostic_session.mjs",
     "test_b02_client.cjs",
     "test_u02_client.cjs",
     "test_aggregate_assessment_ui.cjs",

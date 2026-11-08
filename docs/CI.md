@@ -75,7 +75,8 @@ non-loopback connections; they are regression guards rather than an OS sandbox.
 ## Suite inputs and output
 
 `scripts/ci/suites.json`, `python-policy.json` and `browser-suites.json` classify
-the Python and client tests. Older acquisition modules and captured client oracles
+the Python and client tests. The offline runner uses the client manifest for both
+CommonJS and ES module cases, including the desk's diagnostic history. Older acquisition modules and captured client oracles
 with unavailable portable inputs are deferred with reasons. Required suites reject
 zero cases, all-skipped results and client scripts without a completion marker.
 Do not remove production checks to accommodate an expired fixture.

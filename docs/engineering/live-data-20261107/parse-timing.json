@@ -1,0 +1,28 @@
+{
+  "population": "500 retained native wire messages; source clocks and payloads unchanged, no provider request",
+  "wire_bytes": 852634,
+  "exact_parse_and_structural_metrics_equal": true,
+  "timing": {
+    "before": {
+      "median_seconds": 0.05296566698234528,
+      "samples": [
+        0.05296566698234528,
+        0.04176791594363749,
+        0.04910375003237277,
+        0.053816250059753656,
+        0.06407137494534254
+      ]
+    },
+    "after": {
+      "median_seconds": 0.06753358396235853,
+      "samples": [
+        0.06753358396235853,
+        0.06022470805328339,
+        0.06941895803902298,
+        0.06961854198016226,
+        0.05628029094077647
+      ]
+    }
+  },
+  "decision": "Rejected: exact results and limits matched, but the alternative scanner was slower. Original scanner restored; no performance gain claimed."
+}

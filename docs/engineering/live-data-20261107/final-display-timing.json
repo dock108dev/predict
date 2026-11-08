@@ -1,0 +1,14 @@
+{
+  "received_at": "2026-11-07T23:45:08.399171+00:00",
+  "normalized_at": "2026-11-07T23:45:09.618373+00:00",
+  "admitted_at": "2026-11-07T23:45:10.621400+00:00",
+  "first_league_capture": "2026-11-07T18:45:15.665291-05:00",
+  "first_league_publication": "2026-11-07T18:45:19.856949-05:00",
+  "selected_game_capture": "2026-11-07T23:45:43.451346+00:00",
+  "selected_page_publication": "2026-11-07T23:45:47.497116+00:00",
+  "browser_display": "2026-11-07T23:45:50.565Z",
+  "receipt_to_browser_seconds": 42.165829,
+  "events": 293,
+  "population": "Sam Houston\u2013Jacksonville State NCAAF winner, Novig/ProphetX; no whole-slate claim",
+  "history_note": "Pre-final-label export retained. Calculation availability changes with unchanged odds were then separated from material changes; regression test passes."
+}

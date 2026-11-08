@@ -195,6 +195,23 @@ class CapturedAssociation(TestCase):
         self.assertEqual(result['results'][0]['captured_inputs'][0]['times']['received_at'],'old')
         self.assertEqual(result['results'][0]['raw_revision'],'raw-new')
 
+    def test_rotating_partial_coverage_keeps_exact_current_image_status(self):
+        from app.storage.raw_prices import status,state_expression
+        metrics=dict(stream_connected=True,invalid_current_market_ids=[],synchronization=dict(
+            current=False,continuity_intact=True,generation=7,oldest_processing_delay_seconds=.3,
+            coverage_state='rotating_partial',deferred_markets=1000))
+        owner=dict(active=True,healthy=True,runtime_id='run',status=dict(sources=[dict(provider='kalshi',metrics=metrics)]))
+        row=dict(kind='native',venue='kalshi',runtime_id='run',connection_generation=7,
+            census_generation='census',generation='census',market_id='m',withdrawn=False,disposition='accepted')
+        self.assertEqual(status(row,owner),'synchronized')
+        self.assertEqual(state_expression(owner)[1][-1],'synchronized')
+        self.assertEqual(status(dict(row,connection_generation=6),owner),'last_known')
+        metrics['synchronization']['oldest_processing_delay_seconds']=3
+        self.assertEqual(status(row,owner),'delayed')
+        self.assertEqual(state_expression(owner)[1][-1],'delayed')
+        metrics['invalid_current_market_ids']=['m']
+        self.assertEqual(status(row,owner),'last_known')
+
     def test_aggregate_refresh_is_separate_and_stop_keeps_last_known(self):
         from app.storage.raw_prices import status,source_information,state_expression
         row=dict(kind='featured',venue='novig')

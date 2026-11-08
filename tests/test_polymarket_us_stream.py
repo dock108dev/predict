@@ -91,6 +91,9 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn('synthetic-key',repr(signer))
         with self.assertRaises(ValueError):AuthenticatedTransport(signer)
         self.assertEqual(subscription([SLUG],'r','snake')['subscribe']['subscription_type'],1)
+        self.assertIs(subscription([SLUG],'r')['subscribe']['responsesDebounced'],False)
+        self.assertIs(subscription([SLUG],'r',debounced=True)['subscribe']['responsesDebounced'],True)
+        with self.assertRaises(ValueError):subscription([SLUG],'r','snake',debounced=True)
         for slugs in [[],[SLUG,SLUG],list(map(str,range(101)))]:
             with self.assertRaises(ValueError):subscription(slugs,'r')
         with self.assertRaises(ValueError):RuntimeSigner('id','not-base64')

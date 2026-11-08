@@ -219,7 +219,7 @@ def capture(db, *, at=None, ordinary=False, event_ids=None, capture_binding=None
         for row in db.execute("""SELECT id,facts->>'competition' league FROM current_event
             WHERE scheduled_start::timestamptz >= %s AND scheduled_start::timestamptz < %s
             AND (%s::text[] IS NULL OR id=ANY(%s)) ORDER BY id""",
-            (stamp(at),stamp(at)+timedelta(hours=72),event_ids,event_ids)):
+            (stamp(at)-timedelta(hours=24),stamp(at)+timedelta(hours=72),event_ids,event_ids)):
             league_ids.setdefault(row['league'],[]).append(row['id'])
         for league in SPORTS:
             from app.comparison.calculation_control import checkpoint

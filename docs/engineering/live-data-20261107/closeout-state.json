@@ -1,0 +1,74 @@
+{
+  "at": "2026-11-07T23:50:40.880079+00:00",
+  "healthy": true,
+  "owner_pid": 7008,
+  "runtime_id": "2d93cb70-58bc-4ca6-8f47-f8b885b6742d",
+  "global_stopped": false,
+  "paused_sources": [],
+  "protected_digest": "a6e691b659621146176ccfa13aa16615263b47a9043f6974059895f72a2b60ea",
+  "calculations": {
+    "board": "running",
+    "scanner": "running",
+    "coverage": "pending",
+    "board_error": null,
+    "observations": "running",
+    "scanner_error": null,
+    "coverage_error": null
+  },
+  "sources": {
+    "kalshi": {
+      "worker_behavior": "receiving",
+      "processing_phase": null,
+      "last_stream_failure": {
+        "at": "2026-11-07T23:49:05.233504+00:00",
+        "stage": "reconstruct",
+        "reason": "provider_subscription_buffer_overflow",
+        "selected": 7265,
+        "exception": {
+          "type": "ValueError",
+          "category": "validation"
+        },
+        "generation": 4,
+        "initial_images": 7247
+      }
+    },
+    "polymarket_us": {
+      "worker_behavior": "receiving",
+      "processing_phase": null,
+      "last_stream_failure": {
+        "at": "2026-11-07T23:48:23.144321+00:00",
+        "stage": "receive",
+        "reason": "native_stream_failure",
+        "selected": 8240,
+        "exception": {
+          "type": "Exception",
+          "category": "other"
+        },
+        "generation": 5,
+        "close_codes": {
+          "sent": 1011,
+          "received": null
+        },
+        "initial_images": 6519,
+        "close_diagnostic": {
+          "kind": "keepalive_timeout",
+          "cause": {
+            "type": "TimeoutError",
+            "category": "timeout"
+          }
+        }
+      }
+    },
+    "the_odds_api": {
+      "worker_behavior": "running",
+      "processing_phase": "accounting",
+      "last_stream_failure": null
+    }
+  },
+  "app_http_status": 200,
+  "protected_credits": 49,
+  "protected_attempts": 18,
+  "total_pending_attempts_at_read": 18,
+  "total_pending_credits_at_read": 49,
+  "pending_note": "An owned in-flight request temporarily adds its reservation to pending exposure; it is separate from the 18 original protected uncertain attempts."
+}

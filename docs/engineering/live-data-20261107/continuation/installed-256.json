@@ -1,0 +1,454 @@
+{
+  "at": "2026-11-08T03:26:35.985578+00:00",
+  "runtime_id": "b9d591ef-3fb4-47e3-838f-0ee128253078",
+  "pid": 25201,
+  "healthy": true,
+  "active": true,
+  "global_stopped": false,
+  "paused_sources": [],
+  "protected_attempts": 18,
+  "protected_record_sha256": "a6e691b659621146176ccfa13aa16615263b47a9043f6974059895f72a2b60ea",
+  "protected_credits": 49,
+  "active_reservations": 0,
+  "sources": [
+    {
+      "provider": "kalshi",
+      "state": null,
+      "processing_phase": null,
+      "metrics": {
+        "frames": 140583,
+        "books": 34773,
+        "connections": 6,
+        "retries": 0,
+        "stream_connected": true,
+        "receive_buffer_bytes": 3792,
+        "receive_oldest_seconds": 0.00595749996136874,
+        "synchronization": {
+          "state": "partial",
+          "reason": null,
+          "current": false,
+          "version": "native-continuity-1",
+          "sequence": 28231,
+          "generation": 6,
+          "coverage_state": "rotating_partial",
+          "initial_images": 254,
+          "invalid_images": 2,
+          "missing_images": 2,
+          "subscription_id": 1,
+          "deferred_markets": 7590,
+          "delivery_latency": {
+            "raw": {
+              "basis": "socket_receipt_to_delivery",
+              "window": "latest_2048_deliveries",
+              "samples": 2048,
+              "p50_seconds": 0.124729,
+              "p95_seconds": 0.300341,
+              "maximum_seconds": 0.996116
+            },
+            "derived": {
+              "basis": "socket_receipt_to_delivery",
+              "window": "latest_2048_deliveries",
+              "samples": 1162,
+              "p50_seconds": 0.913334,
+              "p95_seconds": 3.336128,
+              "maximum_seconds": 3.338709
+            },
+            "reconstruction": {
+              "basis": "socket_receipt_to_delivery",
+              "window": "latest_2048_deliveries",
+              "samples": 2048,
+              "p50_seconds": 0.025419,
+              "p95_seconds": 0.091661,
+              "maximum_seconds": 0.743505
+            },
+            "metadata_recalculation": {
+              "basis": "metadata_queue_to_processing_complete",
+              "window": "latest_2048_recalculations",
+              "samples": 0,
+              "p50_seconds": null,
+              "p95_seconds": null,
+              "maximum_seconds": null
+            }
+          },
+          "continuity_intact": true,
+          "raw_pending_images": 15,
+          "subscribed_markets": 256,
+          "derived_pending_images": 54,
+          "missing_durable_images": 2,
+          "transport_pending_frames": 12,
+          "processing_target_seconds": 2,
+          "price_change_age_is_sync_age": false,
+          "oldest_processing_delay_seconds": 0.03655387507751584
+        },
+        "subscription_priority": {
+          "cells": [
+            {
+              "active": 18,
+              "family": "moneyline",
+              "league": "NBA",
+              "deferred": 66
+            },
+            {
+              "active": 18,
+              "family": "spread",
+              "league": "NBA",
+              "deferred": 414
+            },
+            {
+              "active": 18,
+              "family": "total",
+              "league": "NBA",
+              "deferred": 365
+            },
+            {
+              "active": 17,
+              "family": "moneyline",
+              "league": "NCAAB",
+              "deferred": 379
+            },
+            {
+              "active": 17,
+              "family": "spread",
+              "league": "NCAAB",
+              "deferred": 693
+            },
+            {
+              "active": 17,
+              "family": "total",
+              "league": "NCAAB",
+              "deferred": 1023
+            },
+            {
+              "active": 17,
+              "family": "moneyline",
+              "league": "NCAAF",
+              "deferred": 613
+            },
+            {
+              "active": 17,
+              "family": "spread",
+              "league": "NCAAF",
+              "deferred": 1726
+            },
+            {
+              "active": 16,
+              "family": "total",
+              "league": "NCAAF",
+              "deferred": 1205
+            },
+            {
+              "active": 16,
+              "family": "moneyline",
+              "league": "NFL",
+              "deferred": 40
+            },
+            {
+              "active": 17,
+              "family": "spread",
+              "league": "NFL",
+              "deferred": 367
+            },
+            {
+              "active": 17,
+              "family": "total",
+              "league": "NFL",
+              "deferred": 268
+            },
+            {
+              "active": 17,
+              "family": "moneyline",
+              "league": "NHL",
+              "deferred": 97
+            },
+            {
+              "active": 17,
+              "family": "spread",
+              "league": "NHL",
+              "deferred": 116
+            },
+            {
+              "active": 17,
+              "family": "total",
+              "league": "NHL",
+              "deferred": 218
+            }
+          ],
+          "policy": "fair-current-subscriptions-1",
+          "meaning": "Half the slots prioritize nearby games fairly across leagues/families; remaining slots rotate the rest. Deferred markets have observation gaps, not current coverage.",
+          "rotation": 4,
+          "active_markets": 256,
+          "deferred_markets": 7590,
+          "eligible_markets": 7846,
+          "next_rotation_at": "2026-11-08T03:26:36.718336+00:00",
+          "rotation_seconds": 20
+        },
+        "subscription_rotations": 4,
+        "restoration": {
+          "stage": "complete",
+          "markets": 7843,
+          "seconds": 19.723853708943352,
+          "saved_at": "2026-11-07T22:16:02.048611-05:00",
+          "started_at": "2026-11-08T03:22:15.768002+00:00",
+          "completed_at": "2026-11-08T03:22:35.492369+00:00",
+          "load_seconds": 8.78984716697596,
+          "admission_seconds": 9.99780233297497,
+          "validation_seconds": 0.8178537499625236
+        },
+        "last_stream_failure": null,
+        "delivery_stages": null,
+        "alternate_completed": null
+      }
+    },
+    {
+      "provider": "polymarket_us",
+      "state": null,
+      "processing_phase": null,
+      "metrics": {
+        "frames": 8940,
+        "books": 8518,
+        "connections": 8,
+        "retries": 0,
+        "stream_connected": false,
+        "receive_buffer_bytes": 0,
+        "receive_oldest_seconds": 0,
+        "synchronization": {
+          "state": "disconnected",
+          "reason": "subscription_rotation",
+          "current": false,
+          "version": "native-continuity-1",
+          "sequence": null,
+          "generation": 8,
+          "coverage_state": "rotating_partial",
+          "initial_images": 210,
+          "invalid_images": 46,
+          "missing_images": 46,
+          "subscription_id": "6e9b5c69-2f4d-4fff-9c43-e50748a01930",
+          "deferred_markets": 9693,
+          "delivery_latency": {
+            "raw": {
+              "basis": "socket_receipt_to_delivery",
+              "window": "latest_2048_deliveries",
+              "samples": 919,
+              "p50_seconds": 0.227713,
+              "p95_seconds": 0.892352,
+              "maximum_seconds": 0.986145
+            },
+            "derived": {
+              "basis": "socket_receipt_to_delivery",
+              "window": "latest_2048_deliveries",
+              "samples": 882,
+              "p50_seconds": 1.245774,
+              "p95_seconds": 3.226527,
+              "maximum_seconds": 3.25864
+            },
+            "reconstruction": {
+              "basis": "socket_receipt_to_delivery",
+              "window": "latest_2048_deliveries",
+              "samples": 919,
+              "p50_seconds": 0.07794,
+              "p95_seconds": 0.225891,
+              "maximum_seconds": 0.748257
+            },
+            "metadata_recalculation": {
+              "basis": "metadata_queue_to_processing_complete",
+              "window": "latest_2048_recalculations",
+              "samples": 0,
+              "p50_seconds": null,
+              "p95_seconds": null,
+              "maximum_seconds": null
+            }
+          },
+          "continuity_intact": false,
+          "raw_pending_images": 0,
+          "subscribed_markets": 256,
+          "derived_pending_images": 0,
+          "missing_durable_images": 46,
+          "transport_pending_frames": 0,
+          "processing_target_seconds": 2,
+          "price_change_age_is_sync_age": false,
+          "oldest_processing_delay_seconds": 0
+        },
+        "subscription_priority": {
+          "cells": [
+            {
+              "active": 19,
+              "family": "moneyline",
+              "league": "NBA",
+              "deferred": 90
+            },
+            {
+              "active": 19,
+              "family": "spread",
+              "league": "NBA",
+              "deferred": 453
+            },
+            {
+              "active": 18,
+              "family": "total",
+              "league": "NBA",
+              "deferred": 415
+            },
+            {
+              "active": 18,
+              "family": "moneyline",
+              "league": "NCAAB",
+              "deferred": 753
+            },
+            {
+              "active": 19,
+              "family": "spread",
+              "league": "NCAAB",
+              "deferred": 1148
+            },
+            {
+              "active": 19,
+              "family": "total",
+              "league": "NCAAB",
+              "deferred": 1204
+            },
+            {
+              "active": 19,
+              "family": "moneyline",
+              "league": "NCAAF",
+              "deferred": 211
+            },
+            {
+              "active": 19,
+              "family": "spread",
+              "league": "NCAAF",
+              "deferred": 2031
+            },
+            {
+              "active": 18,
+              "family": "total",
+              "league": "NCAAF",
+              "deferred": 1052
+            },
+            {
+              "active": 8,
+              "family": "moneyline",
+              "league": "NFL",
+              "deferred": 21
+            },
+            {
+              "active": 18,
+              "family": "spread",
+              "league": "NFL",
+              "deferred": 1130
+            },
+            {
+              "active": 18,
+              "family": "total",
+              "league": "NFL",
+              "deferred": 794
+            },
+            {
+              "active": 8,
+              "family": "moneyline",
+              "league": "NHL",
+              "deferred": 21
+            },
+            {
+              "active": 18,
+              "family": "spread",
+              "league": "NHL",
+              "deferred": 156
+            },
+            {
+              "active": 18,
+              "family": "total",
+              "league": "NHL",
+              "deferred": 214
+            }
+          ],
+          "policy": "fair-current-subscriptions-1",
+          "meaning": "Half the slots prioritize nearby games fairly across leagues/families; remaining slots rotate the rest. Deferred markets have observation gaps, not current coverage.",
+          "rotation": 7,
+          "active_markets": 256,
+          "deferred_markets": 9693,
+          "eligible_markets": 9949,
+          "next_rotation_at": "2026-11-08T03:26:34.632671+00:00",
+          "rotation_seconds": 20
+        },
+        "subscription_rotations": 7,
+        "restoration": {
+          "stage": "complete",
+          "markets": 9949,
+          "seconds": 84.47988216707017,
+          "saved_at": "2026-11-07T22:21:34.230750-05:00",
+          "started_at": "2026-11-08T03:22:15.770920+00:00",
+          "completed_at": "2026-11-08T03:23:40.251389+00:00",
+          "load_seconds": 15.418224000022747,
+          "admission_seconds": 59.47850512492005,
+          "validation_seconds": 8.768908458063379
+        },
+        "last_stream_failure": null,
+        "delivery_stages": null,
+        "alternate_completed": null
+      }
+    },
+    {
+      "provider": "the_odds_api",
+      "state": null,
+      "processing_phase": "waiting_for_cycle",
+      "metrics": {
+        "frames": null,
+        "books": null,
+        "connections": null,
+        "retries": null,
+        "stream_connected": null,
+        "receive_buffer_bytes": null,
+        "receive_oldest_seconds": null,
+        "synchronization": null,
+        "subscription_priority": null,
+        "subscription_rotations": null,
+        "restoration": null,
+        "last_stream_failure": null,
+        "delivery_stages": null,
+        "alternate_completed": null
+      }
+    }
+  ],
+  "database": {
+    "busy": false,
+    "error": null,
+    "state": "available",
+    "schema": "012_current_rows.sql",
+    "socket": ".local/pgsocket",
+    "database": "prediction_arb",
+    "sql_bytes": 1322287907,
+    "maintenance": {
+      "deferred": [],
+      "rewrites": [],
+      "after_bytes": 1322287907,
+      "before_bytes": 1323320099,
+      "recovery_repack": {
+        "scanned": 0,
+        "updated": 0,
+        "input_bytes": 0,
+        "output_bytes": 0
+      },
+      "capture_lock_acquired": false
+    },
+    "sql_byte_cap": 2147483648,
+    "backlog_bytes": 0,
+    "failure_owner": null,
+    "ingress_failure": null,
+    "imported_records": 0,
+    "journal_byte_cap": 0,
+    "maintenance_failure": null,
+    "finite_failure_limit": 0,
+    "maintenance_failures": 0,
+    "pending_calculations": 0,
+    "journal_segment_byte_cap": 0,
+    "observation_representation": "current event/contract/offer/shared depth upserts; transient calculations",
+    "maintenance_last_success_at": "2026-11-08T03:26:23.011103+00:00"
+  },
+  "locks": [
+    {
+      "pid": 34541,
+      "state": "idle in transaction",
+      "query": "SELECT inputs FROM comparison_snapshot WHERE id=$1"
+    }
+  ]
+}

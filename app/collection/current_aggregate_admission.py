@@ -136,7 +136,7 @@ def admit(body, sport, received_at, *, venue=None, event_ids=None, frame=None):
                 native_side='bookmaker_outcome',binding_id=r['id'],binding_version=r['version'],native_line=raw['point'],quote_side='buy')
             q=dict(id='',revision=1,venue=book,source=source,
                 original=dict(value=raw['decimal_odds'],units='decimal_odds',payout='1',payout_units='USD',quantity_units='unknown',role='comparison'),
-                times=dict(source_at=source_time,received_at=received_at,projected_at=received_at,
+                times=dict(source_at=source_time,received_at=received_at,projected_at=None,
                     source_time_kind='provider_book' if source_time else 'unknown'),state='budget_delayed',
                 rule_note='Aggregate full-game outcome; settlement and native occurrence association unverified.',
                 cost_note='Cents are 1 / decimal odds per mathematical unit payout. Actual fees, execution, depth and probability unknown.',

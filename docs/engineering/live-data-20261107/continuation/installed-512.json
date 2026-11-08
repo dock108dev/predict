@@ -1,0 +1,371 @@
+{
+  "at": "2026-11-08T02:30:10.183278+00:00",
+  "runtime_id": "6a06c182-4c9b-4413-88a1-ffa6ad7999d6",
+  "owner_pid": 93487,
+  "healthy": true,
+  "active": true,
+  "global_stopped": false,
+  "paused_sources": [],
+  "sources": [
+    {
+      "provider": "kalshi",
+      "metrics": {
+        "frames": 691690,
+        "books": 152718,
+        "connections": 12,
+        "retries": 0,
+        "subscription_rotations": 10,
+        "subscription_priority": {
+          "cells": [
+            {
+              "active": 18,
+              "family": "moneyline",
+              "league": "NBA",
+              "deferred": 64
+            },
+            {
+              "active": 41,
+              "family": "spread",
+              "league": "NBA",
+              "deferred": 388
+            },
+            {
+              "active": 41,
+              "family": "total",
+              "league": "NBA",
+              "deferred": 340
+            },
+            {
+              "active": 42,
+              "family": "moneyline",
+              "league": "NCAAB",
+              "deferred": 354
+            },
+            {
+              "active": 42,
+              "family": "spread",
+              "league": "NCAAB",
+              "deferred": 666
+            },
+            {
+              "active": 41,
+              "family": "total",
+              "league": "NCAAB",
+              "deferred": 994
+            },
+            {
+              "active": 41,
+              "family": "moneyline",
+              "league": "NCAAF",
+              "deferred": 589
+            },
+            {
+              "active": 41,
+              "family": "spread",
+              "league": "NCAAF",
+              "deferred": 1699
+            },
+            {
+              "active": 41,
+              "family": "total",
+              "league": "NCAAF",
+              "deferred": 1170
+            },
+            {
+              "active": 17,
+              "family": "moneyline",
+              "league": "NFL",
+              "deferred": 39
+            },
+            {
+              "active": 41,
+              "family": "spread",
+              "league": "NFL",
+              "deferred": 343
+            },
+            {
+              "active": 41,
+              "family": "total",
+              "league": "NFL",
+              "deferred": 244
+            },
+            {
+              "active": 17,
+              "family": "moneyline",
+              "league": "NHL",
+              "deferred": 97
+            },
+            {
+              "active": 17,
+              "family": "spread",
+              "league": "NHL",
+              "deferred": 114
+            },
+            {
+              "active": 31,
+              "family": "total",
+              "league": "NHL",
+              "deferred": 204
+            }
+          ],
+          "policy": "fair-current-subscriptions-1",
+          "meaning": "Half the slots prioritize nearby games fairly across leagues/families; remaining slots rotate the rest. Deferred markets have observation gaps, not current coverage.",
+          "rotation": 10,
+          "active_markets": 512,
+          "deferred_markets": 7305,
+          "eligible_markets": 7817,
+          "next_rotation_at": "2026-11-08T02:30:16.161116+00:00",
+          "rotation_seconds": 30
+        },
+        "synchronization": {
+          "state": "partial",
+          "reason": null,
+          "current": false,
+          "version": "native-continuity-1",
+          "sequence": 55774,
+          "generation": 12,
+          "coverage_state": "rotating_partial",
+          "initial_images": 508,
+          "invalid_images": 4,
+          "missing_images": 4,
+          "subscription_id": 1,
+          "deferred_markets": 7305,
+          "delivery_latency": {
+            "raw": {
+              "basis": "socket_receipt_to_delivery",
+              "window": "latest_2048_deliveries",
+              "samples": 2048,
+              "p50_seconds": 0.459822,
+              "p95_seconds": 1.307118,
+              "maximum_seconds": 1.557837
+            },
+            "derived": {
+              "basis": "socket_receipt_to_delivery",
+              "window": "latest_2048_deliveries",
+              "samples": 1237,
+              "p50_seconds": 2.712457,
+              "p95_seconds": 11.026668,
+              "maximum_seconds": 12.04729
+            },
+            "reconstruction": {
+              "basis": "socket_receipt_to_delivery",
+              "window": "latest_2048_deliveries",
+              "samples": 2048,
+              "p50_seconds": 0.053067,
+              "p95_seconds": 0.262694,
+              "maximum_seconds": 0.950478
+            },
+            "metadata_recalculation": {
+              "basis": "metadata_queue_to_processing_complete",
+              "window": "latest_2048_recalculations",
+              "samples": 0,
+              "p50_seconds": null,
+              "p95_seconds": null,
+              "maximum_seconds": null
+            }
+          },
+          "continuity_intact": true,
+          "raw_pending_images": 46,
+          "subscribed_markets": 512,
+          "derived_pending_images": 286,
+          "missing_durable_images": 4,
+          "transport_pending_frames": 70,
+          "processing_target_seconds": 2,
+          "price_change_age_is_sync_age": false,
+          "oldest_processing_delay_seconds": 0.17992000002413988
+        },
+        "last_admission_failure": null,
+        "last_admission_rejection": null,
+        "last_stream_failure": null,
+        "stream_connected": true,
+        "catalog_recovery": {
+          "stage": "waiting_for_discovery",
+          "started_at": "2026-11-08T02:27:23.289610+00:00"
+        }
+      }
+    },
+    {
+      "provider": "polymarket_us",
+      "metrics": {
+        "frames": 35214,
+        "books": 34585,
+        "connections": 12,
+        "retries": 0,
+        "subscription_rotations": 11,
+        "subscription_priority": {
+          "cells": [
+            {
+              "active": 18,
+              "family": "moneyline",
+              "league": "NBA",
+              "deferred": 91
+            },
+            {
+              "active": 45,
+              "family": "spread",
+              "league": "NBA",
+              "deferred": 427
+            },
+            {
+              "active": 45,
+              "family": "total",
+              "league": "NBA",
+              "deferred": 385
+            },
+            {
+              "active": 45,
+              "family": "moneyline",
+              "league": "NCAAB",
+              "deferred": 728
+            },
+            {
+              "active": 45,
+              "family": "spread",
+              "league": "NCAAB",
+              "deferred": 893
+            },
+            {
+              "active": 45,
+              "family": "total",
+              "league": "NCAAB",
+              "deferred": 938
+            },
+            {
+              "active": 17,
+              "family": "moneyline",
+              "league": "NCAAF",
+              "deferred": 213
+            },
+            {
+              "active": 44,
+              "family": "spread",
+              "league": "NCAAF",
+              "deferred": 2006
+            },
+            {
+              "active": 44,
+              "family": "total",
+              "league": "NCAAF",
+              "deferred": 1026
+            },
+            {
+              "active": 17,
+              "family": "moneyline",
+              "league": "NFL",
+              "deferred": 12
+            },
+            {
+              "active": 44,
+              "family": "spread",
+              "league": "NFL",
+              "deferred": 1104
+            },
+            {
+              "active": 44,
+              "family": "total",
+              "league": "NFL",
+              "deferred": 768
+            },
+            {
+              "active": 17,
+              "family": "moneyline",
+              "league": "NHL",
+              "deferred": 15
+            },
+            {
+              "active": 17,
+              "family": "spread",
+              "league": "NHL",
+              "deferred": 175
+            },
+            {
+              "active": 25,
+              "family": "total",
+              "league": "NHL",
+              "deferred": 231
+            }
+          ],
+          "policy": "fair-current-subscriptions-1",
+          "meaning": "Half the slots prioritize nearby games fairly across leagues/families; remaining slots rotate the rest. Deferred markets have observation gaps, not current coverage.",
+          "rotation": 11,
+          "active_markets": 512,
+          "deferred_markets": 9012,
+          "eligible_markets": 9524,
+          "next_rotation_at": "2026-11-08T02:30:35.033354+00:00",
+          "rotation_seconds": 30
+        },
+        "synchronization": {
+          "state": "partial",
+          "reason": null,
+          "current": false,
+          "version": "native-continuity-1",
+          "sequence": null,
+          "generation": 12,
+          "coverage_state": "rotating_partial",
+          "initial_images": 469,
+          "invalid_images": 35,
+          "missing_images": 43,
+          "subscription_id": "9141b0f4-650b-4ab6-b7d7-9e0ba3107a16",
+          "deferred_markets": 9012,
+          "delivery_latency": {
+            "raw": {
+              "basis": "socket_receipt_to_delivery",
+              "window": "latest_2048_deliveries",
+              "samples": 469,
+              "p50_seconds": 0.833915,
+              "p95_seconds": 2.029281,
+              "maximum_seconds": 2.029446
+            },
+            "derived": {
+              "basis": "socket_receipt_to_delivery",
+              "window": "latest_2048_deliveries",
+              "samples": 37,
+              "p50_seconds": 1.94368,
+              "p95_seconds": 1.971348,
+              "maximum_seconds": 1.982414
+            },
+            "reconstruction": {
+              "basis": "socket_receipt_to_delivery",
+              "window": "latest_2048_deliveries",
+              "samples": 469,
+              "p50_seconds": 0.43385,
+              "p95_seconds": 0.659812,
+              "maximum_seconds": 0.662989
+            },
+            "metadata_recalculation": {
+              "basis": "metadata_queue_to_processing_complete",
+              "window": "latest_2048_recalculations",
+              "samples": 0,
+              "p50_seconds": null,
+              "p95_seconds": null,
+              "maximum_seconds": null
+            }
+          },
+          "continuity_intact": true,
+          "raw_pending_images": 0,
+          "subscribed_markets": 512,
+          "derived_pending_images": 432,
+          "missing_durable_images": 43,
+          "transport_pending_frames": 114,
+          "processing_target_seconds": 2,
+          "price_change_age_is_sync_age": false,
+          "oldest_processing_delay_seconds": 2.286044
+        },
+        "last_admission_failure": null,
+        "last_admission_rejection": null,
+        "last_stream_failure": null,
+        "stream_connected": true,
+        "catalog_recovery": {
+          "stage": "traversal",
+          "started_at": "2026-11-08T02:25:22.696892+00:00",
+          "completed_stages": {}
+        }
+      }
+    }
+  ],
+  "uncertain_records_including_inflight_at_sample": 19,
+  "uncertain_records_including_inflight_digest": "055605b1f946c9f367ba7d1a510f55ac7b0f6d762470f129e3f68bbb54a2c944",
+  "original_protected_attempts": 18,
+  "original_protected_digest": "a6e691b659621146176ccfa13aa16615263b47a9043f6974059895f72a2b60ea",
+  "accounting_note": "The 19th uncertain record in the sample was the current owner\u2019s in-flight ordinary request. A subsequent read shows it accounted and the original 18 unchanged."
+}

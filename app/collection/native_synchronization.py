@@ -87,6 +87,8 @@ class Synchronization:
                  'partial' if self.invalid else
                  'initializing' if missing or durable_missing else
                  ('catching_up' if delay>2 else 'streaming') if transport_pending or raw_pending else 'synchronized')
+        deferred=metrics.get('subscription_priority',{}).get('deferred_markets',0)
+        if deferred and state in ('streaming','synchronized'):state='partial'
         latency = {}
         for stage, samples in self.latencies.items():
             values = sorted(samples)
@@ -98,6 +100,7 @@ class Synchronization:
         return dict(version='native-continuity-1', state=state, generation=self.generation,
             subscription_id=self.subscription, sequence=self.sequence,
             subscribed_markets=len(self.members), initial_images=len(self.images),
+            deferred_markets=deferred,coverage_state='rotating_partial' if deferred else 'selected_roster',
             missing_images=len(missing), missing_durable_images=len(durable_missing), invalid_images=len(self.invalid),
             processing_target_seconds=2, oldest_processing_delay_seconds=max(0,delay),
             current=state in ('streaming','synchronized'),

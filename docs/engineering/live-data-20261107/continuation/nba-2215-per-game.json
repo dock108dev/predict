@@ -1,0 +1,428 @@
+{
+  "stage": {
+    "sport": "NBA",
+    "records": 186,
+    "attempt_id": "99b2a6be-24b3-4035-a5f0-fe0be8eab6a6",
+    "decoded_at": "2026-11-08T03:15:10.830991+00:00",
+    "admitted_at": "2026-11-08T03:15:11.188587+00:00",
+    "received_at": "2026-11-08T03:15:09.566362+00:00",
+    "normalized_at": "2026-11-08T03:15:10.858977+00:00",
+    "decoding_seconds": 9.541981853544712e-06,
+    "admission_seconds": 0.32960625004488975,
+    "normalization_seconds": 0.027989624999463558
+  },
+  "population": "First 100 NBA winner outcome groups, sampled every five seconds; all dates. Each first sample must contain the exact new aggregate receipt. API is not browser.",
+  "games": [
+    {
+      "game": "Miami Heat vs. Sacramento Kings",
+      "game_key": "combined:event:547ad91f942e48850ce25ada920403b2",
+      "captured_at": "2026-11-08T03:15:17.549849+00:00",
+      "first_api_seen_at": "2026-11-08T03:15:24.516521+00:00",
+      "admission_to_capture_seconds": 6.361262,
+      "receipt_to_first_api_seconds": 14.950159,
+      "current_offers_at_first_sample": 2,
+      "component": {
+        "component": "e553fbe9f2b075c360d5828f69fad491d79f508ab935cf2bcb39aaf2d729b594",
+        "event_count": 5,
+        "queue_position": 20,
+        "selected_at": "2026-11-08T03:15:13.508034+00:00",
+        "capture_seconds": 0.812,
+        "member_costs": {
+          "input_bytes": 555590,
+          "result_bytes": 249915,
+          "reused_input_bytes": 0,
+          "input_decode_skipped": true,
+          "input_encode_seconds": 0.099078,
+          "price_binding_seconds": 0.008693,
+          "result_encode_seconds": 0.032685
+        },
+        "rows": 373,
+        "price_capture": {
+          "path": "complete",
+          "fallback": "governing_binding_changed_before_decode",
+          "read_records": 423,
+          "changed_fields": [
+            "source.kalshi",
+            "source.polymarket_us"
+          ]
+        },
+        "previous_visit": "2026-11-08T03:12:50.402018+00:00"
+      },
+      "publication_turn": {
+        "at": "2026-11-08T03:15:21.702730+00:00",
+        "timings": {
+          "capture_seconds": 4.499582,
+          "finance_seconds": 2.116594,
+          "planning_seconds": 0.602399,
+          "price_seal_seconds": 0.366827,
+          "finance_seal_seconds": 0.462287
+        },
+        "turn_seconds": 8.151,
+        "price_published_at": "2026-11-08T03:15:18.897605+00:00",
+        "captured_components": 21,
+        "pending_components": 117
+      },
+      "admission_to_selection_seconds": 2.319447,
+      "selection_to_capture_seconds": 4.041815,
+      "capture_to_price_publication_seconds": 1.347756
+    },
+    {
+      "game": "New York vs. Cleveland",
+      "game_key": "combined:event:9f9fd43b79bb2abe598ba283c8a40ce0",
+      "captured_at": "2026-11-08T03:15:14.330745+00:00",
+      "first_api_seen_at": "2026-11-08T03:15:24.516521+00:00",
+      "admission_to_capture_seconds": 3.142158,
+      "receipt_to_first_api_seconds": 14.950159,
+      "current_offers_at_first_sample": 0
+    },
+    {
+      "game": "San Antonio Spurs vs. Portland Trail Blazers",
+      "game_key": "combined:event:4c5f7b82f4cc15364d5c2e445b4cbc66",
+      "captured_at": "2026-11-08T03:15:14.047922+00:00",
+      "first_api_seen_at": "2026-11-08T03:15:24.516521+00:00",
+      "admission_to_capture_seconds": 2.859335,
+      "receipt_to_first_api_seconds": 14.950159,
+      "current_offers_at_first_sample": 0
+    },
+    {
+      "game": "Boston Celtics vs. Milwaukee Bucks",
+      "game_key": "combined:event:90a8b0be1417b67973151fba0cff1384",
+      "captured_at": "2026-11-08T03:15:24.869687+00:00",
+      "first_api_seen_at": "2026-11-08T03:15:30.353704+00:00",
+      "admission_to_capture_seconds": 13.6811,
+      "receipt_to_first_api_seconds": 20.787342,
+      "current_offers_at_first_sample": 2,
+      "component": {
+        "component": "3a89c5547cbee1a98ccd3bd653f4a80015ee2a6318e5ba52cd69e347523751a3",
+        "event_count": 5,
+        "queue_position": 12,
+        "selected_at": "2026-11-08T03:15:22.145173+00:00",
+        "capture_seconds": 1.0,
+        "member_costs": {
+          "input_bytes": 587542,
+          "result_bytes": 274079,
+          "reused_input_bytes": 0,
+          "input_decode_skipped": true,
+          "input_encode_seconds": 0.108498,
+          "price_binding_seconds": 0.009813,
+          "result_encode_seconds": 0.037422
+        },
+        "rows": 423,
+        "price_capture": {
+          "path": "complete",
+          "fallback": "governing_binding_changed_before_decode",
+          "read_records": 473,
+          "changed_fields": [
+            "source.polymarket_us"
+          ]
+        },
+        "previous_visit": "2026-11-08T03:13:35.240506+00:00"
+      },
+      "publication_turn": {
+        "at": "2026-11-08T03:15:30.129275+00:00",
+        "timings": {
+          "capture_seconds": 4.019937,
+          "finance_seconds": 1.792928,
+          "planning_seconds": 0.56497,
+          "price_seal_seconds": 0.342495,
+          "finance_seal_seconds": 0.334302
+        },
+        "turn_seconds": 7.174,
+        "price_published_at": "2026-11-08T03:15:26.987577+00:00",
+        "captured_components": 16,
+        "pending_components": 121
+      },
+      "admission_to_selection_seconds": 10.956586,
+      "selection_to_capture_seconds": 2.724514,
+      "capture_to_price_publication_seconds": 2.11789
+    },
+    {
+      "game": "Orlando vs. Golden State",
+      "game_key": "combined:event:3ec78a522a6c91fee89662331d190b4d",
+      "captured_at": "2026-11-08T03:15:32.825574+00:00",
+      "first_api_seen_at": "2026-11-08T03:15:42.192077+00:00",
+      "admission_to_capture_seconds": 21.636987,
+      "receipt_to_first_api_seconds": 32.625715,
+      "current_offers_at_first_sample": 0,
+      "component": {
+        "component": "806fb41111a9deb0e5171acbb0029bb9a455424c591768de63823ee841718b1f",
+        "event_count": 5,
+        "queue_position": 2,
+        "selected_at": "2026-11-08T03:15:30.647578+00:00",
+        "capture_seconds": 0.21,
+        "member_costs": {
+          "input_bytes": 147729,
+          "result_bytes": 61227,
+          "reused_input_bytes": 0,
+          "input_decode_skipped": true,
+          "input_encode_seconds": 0.028981,
+          "price_binding_seconds": 0.002822,
+          "result_encode_seconds": 0.008415
+        },
+        "rows": 78,
+        "price_capture": {
+          "path": "complete",
+          "fallback": "offer_membership",
+          "read_records": 84,
+          "changed_fields": [
+            "offer_membership",
+            "contract_revision",
+            "event_revision"
+          ]
+        },
+        "previous_visit": "2026-11-08T03:15:07.682748+00:00"
+      },
+      "publication_turn": {
+        "at": "2026-11-08T03:15:38.654698+00:00",
+        "timings": {
+          "capture_seconds": 4.663721,
+          "finance_seconds": 1.803795,
+          "planning_seconds": 0.619923,
+          "price_seal_seconds": 0.259819,
+          "finance_seal_seconds": 0.400883
+        },
+        "turn_seconds": 7.875,
+        "price_published_at": "2026-11-08T03:15:36.091816+00:00",
+        "captured_components": 9,
+        "pending_components": 114
+      },
+      "admission_to_selection_seconds": 19.458991,
+      "selection_to_capture_seconds": 2.177996,
+      "capture_to_price_publication_seconds": 3.266242
+    },
+    {
+      "game": "Utah Jazz vs. Minnesota Timberwolves",
+      "game_key": "combined:event:3dc6ec5064369aa9883c468c53eeea67",
+      "captured_at": "2026-11-08T03:15:49.370473+00:00",
+      "first_api_seen_at": "2026-11-08T03:15:53.799843+00:00",
+      "admission_to_capture_seconds": 38.181886,
+      "receipt_to_first_api_seconds": 44.233481,
+      "current_offers_at_first_sample": 2
+    },
+    {
+      "game": "Los Angeles Lakers vs. Detroit Pistons",
+      "game_key": "combined:event:33553582ad5b4938060a913b3b5d46df",
+      "captured_at": "2026-11-08T03:15:55.860077+00:00",
+      "first_api_seen_at": "2026-11-08T03:16:04.936595+00:00",
+      "admission_to_capture_seconds": 44.67149,
+      "receipt_to_first_api_seconds": 55.370233,
+      "current_offers_at_first_sample": 0,
+      "component": {
+        "component": "f2917e3035c9bf4364390900836e776d5dd36ee0cd14d7517f2f121b3b29896b",
+        "event_count": 5,
+        "queue_position": 6,
+        "selected_at": "2026-11-08T03:15:54.404065+00:00",
+        "capture_seconds": 0.925,
+        "member_costs": {
+          "input_bytes": 534699,
+          "result_bytes": 253252,
+          "reused_input_bytes": 0,
+          "input_decode_skipped": true,
+          "input_encode_seconds": 0.101388,
+          "price_binding_seconds": 0.009345,
+          "result_encode_seconds": 0.034658
+        },
+        "rows": 374,
+        "price_capture": {
+          "path": "complete",
+          "fallback": "contract_revision",
+          "read_records": 424,
+          "changed_fields": [
+            "contract_revision",
+            "event_revision"
+          ]
+        },
+        "previous_visit": "2026-11-08T03:14:40.112251+00:00"
+      },
+      "publication_turn": {
+        "at": "2026-11-08T03:16:02.308567+00:00",
+        "timings": {
+          "capture_seconds": 4.60552,
+          "finance_seconds": 1.857827,
+          "planning_seconds": 0.537482,
+          "price_seal_seconds": 0.291826,
+          "finance_seal_seconds": 0.344288
+        },
+        "turn_seconds": 7.769,
+        "price_published_at": "2026-11-08T03:15:59.783802+00:00",
+        "captured_components": 11,
+        "pending_components": 93
+      },
+      "admission_to_selection_seconds": 43.215478,
+      "selection_to_capture_seconds": 1.456012,
+      "capture_to_price_publication_seconds": 3.923725
+    },
+    {
+      "game": "Brooklyn vs. Atlanta",
+      "game_key": "combined:event:20af3559c5fc054ab29fc2b822d1334d",
+      "captured_at": "2026-11-08T03:16:05.216220+00:00",
+      "first_api_seen_at": "2026-11-08T03:16:10.580790+00:00",
+      "admission_to_capture_seconds": 54.027633,
+      "receipt_to_first_api_seconds": 61.014428,
+      "current_offers_at_first_sample": 0,
+      "component": {
+        "component": "0d0b0c8842fff6f5568807ef9338e7f50bcf8d4489d53cb195578b4c0e0077e9",
+        "event_count": 5,
+        "queue_position": 4,
+        "selected_at": "2026-11-08T03:16:02.878473+00:00",
+        "capture_seconds": 0.077,
+        "member_costs": {
+          "input_bytes": 53246,
+          "result_bytes": 21193,
+          "reused_input_bytes": 0,
+          "input_decode_skipped": true,
+          "input_encode_seconds": 0.007796,
+          "price_binding_seconds": 0.000796,
+          "result_encode_seconds": 0.002166
+        },
+        "rows": 22,
+        "price_capture": {
+          "path": "complete",
+          "fallback": "governing_binding_changed_before_decode",
+          "read_records": 22,
+          "changed_fields": [
+            "source.novig",
+            "source.pinnacle",
+            "source.polymarket_us"
+          ]
+        },
+        "previous_visit": "2026-11-08T03:14:48.604052+00:00"
+      },
+      "publication_turn": {
+        "at": "2026-11-08T03:16:10.221021+00:00",
+        "timings": {
+          "capture_seconds": 4.100506,
+          "finance_seconds": 1.820847,
+          "planning_seconds": 0.64115,
+          "price_seal_seconds": 0.26294,
+          "finance_seal_seconds": 0.35004
+        },
+        "turn_seconds": 7.291,
+        "price_published_at": "2026-11-08T03:16:07.778444+00:00",
+        "captured_components": 11,
+        "pending_components": 108
+      },
+      "admission_to_selection_seconds": 51.689886,
+      "selection_to_capture_seconds": 2.337747,
+      "capture_to_price_publication_seconds": 2.562224
+    },
+    {
+      "game": "Houston vs. Phoenix",
+      "game_key": "combined:event:c6c49ae5795cf9239e5049171e633692",
+      "captured_at": "2026-11-08T03:16:04.657452+00:00",
+      "first_api_seen_at": "2026-11-08T03:16:10.580790+00:00",
+      "admission_to_capture_seconds": 53.468865,
+      "receipt_to_first_api_seconds": 61.014428,
+      "current_offers_at_first_sample": 0
+    },
+    {
+      "game": "Philadelphia 76ers vs. Chicago Bulls",
+      "game_key": "combined:event:146aaa639a2e26e7f5e5a11c4c3c0a7a",
+      "captured_at": "2026-11-08T03:16:12.201211+00:00",
+      "first_api_seen_at": "2026-11-08T03:16:16.285521+00:00",
+      "admission_to_capture_seconds": 61.012624,
+      "receipt_to_first_api_seconds": 66.719159,
+      "current_offers_at_first_sample": 2,
+      "component": {
+        "component": "4bbc139890d65f87be7f3c337eb2c9047a9b9156f7ca90c0f02d7d3796dae6ba",
+        "event_count": 5,
+        "queue_position": 6,
+        "selected_at": "2026-11-08T03:16:10.720969+00:00",
+        "capture_seconds": 0.986,
+        "member_costs": {
+          "input_bytes": 568090,
+          "result_bytes": 261229,
+          "reused_input_bytes": 0,
+          "input_decode_skipped": true,
+          "input_encode_seconds": 0.108329,
+          "price_binding_seconds": 0.009125,
+          "result_encode_seconds": 0.038815
+        },
+        "rows": 392,
+        "price_capture": {
+          "path": "complete",
+          "fallback": "offer_membership",
+          "read_records": 442,
+          "changed_fields": [
+            "offer_membership",
+            "contract_revision",
+            "event_revision"
+          ]
+        },
+        "previous_visit": "2026-11-08T03:14:59.541632+00:00"
+      },
+      "publication_turn": {
+        "at": "2026-11-08T03:16:18.752530+00:00",
+        "timings": {
+          "capture_seconds": 4.240187,
+          "finance_seconds": 2.088916,
+          "planning_seconds": 0.566612,
+          "price_seal_seconds": 0.357919,
+          "finance_seal_seconds": 0.475863
+        },
+        "turn_seconds": 7.897,
+        "price_published_at": "2026-11-08T03:16:15.806706+00:00",
+        "captured_components": 13,
+        "pending_components": 114
+      },
+      "admission_to_selection_seconds": 59.532382,
+      "selection_to_capture_seconds": 1.480242,
+      "capture_to_price_publication_seconds": 3.605495
+    },
+    {
+      "game": "New Orleans Pelicans vs. Los Angeles Clippers",
+      "game_key": "combined:event:a32c435e7c57a0569fa0e3c69bb2599d",
+      "captured_at": "2026-11-08T03:16:13.583568+00:00",
+      "first_api_seen_at": "2026-11-08T03:16:16.285521+00:00",
+      "admission_to_capture_seconds": 62.394981,
+      "receipt_to_first_api_seconds": 66.719159,
+      "current_offers_at_first_sample": 2,
+      "component": {
+        "component": "6b39d06fcb13f75e1d727b02a16b1db2b50d2e62f483ae3ea01ef176da60fd24",
+        "event_count": 5,
+        "queue_position": 8,
+        "selected_at": "2026-11-08T03:16:10.720969+00:00",
+        "capture_seconds": 0.779,
+        "member_costs": {
+          "input_bytes": 470628,
+          "result_bytes": 217504,
+          "reused_input_bytes": 0,
+          "input_decode_skipped": true,
+          "input_encode_seconds": 0.10781,
+          "price_binding_seconds": 0.008614,
+          "result_encode_seconds": 0.033181
+        },
+        "rows": 313,
+        "price_capture": {
+          "path": "complete",
+          "fallback": "offer_membership",
+          "read_records": 363,
+          "changed_fields": [
+            "offer_membership",
+            "contract_revision",
+            "event_revision"
+          ]
+        },
+        "previous_visit": "2026-11-08T03:15:00.386828+00:00"
+      },
+      "publication_turn": {
+        "at": "2026-11-08T03:16:18.752530+00:00",
+        "timings": {
+          "capture_seconds": 4.240187,
+          "finance_seconds": 2.088916,
+          "planning_seconds": 0.566612,
+          "price_seal_seconds": 0.357919,
+          "finance_seal_seconds": 0.475863
+        },
+        "turn_seconds": 7.897,
+        "price_published_at": "2026-11-08T03:16:15.806706+00:00",
+        "captured_components": 13,
+        "pending_components": 114
+      },
+      "admission_to_selection_seconds": 59.532382,
+      "selection_to_capture_seconds": 2.862599,
+      "capture_to_price_publication_seconds": 2.223138
+    }
+  ],
+  "stage_semantics": "Selection is the planning observation; admission may overlap that plan. Capture time starts materialization. The publication turn includes competing components and optional calculation; API samples are not browser first-render clocks."
+}

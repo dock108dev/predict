@@ -27,6 +27,7 @@ class CatalogPreparation:
         self.lock=asyncio.Lock()
         self.maximum_bytes=maximum_bytes
         self.metrics=None
+        self.closed=False
 
     async def prepare(self,inventory,source,catalog):
         from tempfile import TemporaryDirectory
@@ -34,6 +35,7 @@ class CatalogPreparation:
         from .bulk_checkpoint import owned_thread
         from . import catalog_transfer
         async with self.lock:
+          if self.closed:raise asyncio.CancelledError()
           with TemporaryDirectory(prefix='predict-catalog-') as directory:
             base=Path(directory);input_path=str(base/'inventory.jsonl');replacement_path=str(base/'replacement.jsonl');output_path=str(base/'prepared.jsonl')
             await owned_thread(catalog_transfer.write,input_path,inventory,previous={source:catalog})
@@ -50,7 +52,11 @@ class CatalogPreparation:
 
     async def close(self):
         from .bulk_checkpoint import owned_thread
-        await owned_thread(self.pool.shutdown,wait=True,cancel_futures=True)
+        # Input transfer is part of the owned job too. Shutdown must not race
+        # its subsequent submission after a bounded ingress drain times out.
+        async with self.lock:
+            self.closed=True
+            await owned_thread(self.pool.shutdown,wait=True,cancel_futures=True)
 
 
 def operation(fn):
@@ -152,7 +158,19 @@ class Ingress:
                 try:
                     if revoked.is_set():raise asyncio.CancelledError()
                     queue_seconds=monotonic()-started-catalog_prepare_seconds-precompute_seconds-catalog_wait_seconds
-                    steps = fn.operation(fn.__self__, *args, **operation_kwargs)
+                    operation_args=args
+                    if fn.__name__=='books':
+                        worker=getattr(self.service,'workers',{}).get(source)
+                        invalid=getattr(worker,'invalid_received',{})
+                        if invalid:
+                            from app.storage.store import stamp
+                            eligible=[b for b in args[1] if b['raw']['ref']['market_id'] not in invalid
+                                or stamp(b['raw']['received_at'])>stamp(invalid[b['raw']['ref']['market_id']])]
+                            if len(eligible)!=len(args[1]):
+                                self.service.sink.metrics['invalidated_inflight_images']=self.service.sink.metrics.get('invalidated_inflight_images',0)+len(args[1])-len(eligible)
+                                if not eligible:return
+                                operation_args=(args[0],eligible);precomputed=None
+                    steps = fn.operation(fn.__self__, *operation_args, **operation_kwargs)
                     value = None
                     while True:
                         tick=monotonic()

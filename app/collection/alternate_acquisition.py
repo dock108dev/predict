@@ -52,6 +52,14 @@ def validate_request(request, cost):
         raise QuotaStop('alternate_request_scope_invalid')
 
 
+def missing_event(request,cost,status,charged):
+    """A fully accounted missing event affects only its exact alternate route."""
+    if status!=404 or charged!=0 or cost!=2:return False
+    try:validate_request(request,cost)
+    except QuotaStop:return False
+    return True
+
+
 def save_response(sport,event_id,response,cycle_id):
     """Retry only the already-paid local write; preserve its original receipt."""
     from time import monotonic, sleep
@@ -71,6 +79,20 @@ def _save_response(sport,event_id,response,cycle_id):
     from app.storage.store import connect
     from psycopg.types.json import Jsonb
     from .current_aggregate_admission import parse_frame
+    if response.get('event_missing'):
+        # Positive absence withdraws this exact route only, preserving featured
+        # markets, unrelated events and original clocks on all retained rows.
+        from app.storage.current_rows import CurrentRowStore
+        with connect() as db:
+            from .runtime_status import AUTHORITY_LOCK
+            db.execute('SELECT pg_advisory_xact_lock_shared(%s)',(AUTHORITY_LOCK,))
+            owner=db.execute('SELECT global_stopped,paused_sources FROM data_runtime WHERE singleton').fetchone()
+            if owner and (owner['global_stopped'] or any(v in owner['paused_sources'] for v in ('the_odds_api','novig','prophetx'))):
+                raise QuotaStop('aggregate_owner_stopped')
+            CurrentRowStore(db).upsert_records([],authoritative=True,scopes=[
+                dict(venue=v,competition=sport,native_event_id=event_id,
+                     aggregate_route='alternate',received_at=response['received_at']) for v in POLICY.bookmakers])
+        return
     frame=response.get('parsed_frame') or parse_frame(response['body'])
     payload=frame.payload
     disposition='received_pending_qualification'
@@ -179,4 +201,7 @@ async def acquire(scheduler,sports):
         scheduler.permitted()
         await owned_thread(save_response,item['sport'],item['event_id'],response,scheduler.cycle_id)
         scheduler.metrics['alternate_completed']+=1
+        if response.get('event_missing'):
+            scheduler.metrics['alternate_missing_events']=scheduler.metrics.get('alternate_missing_events',0)+1
+            scheduler.metrics['last_missing_event']=dict(sport=item['sport'],event_id=item['event_id'],received_at=response['received_at'])
     scheduler.metrics['alternate_state']='acquisition_and_exact_line_admission_complete'

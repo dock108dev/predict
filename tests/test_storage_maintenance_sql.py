@@ -121,9 +121,11 @@ class StorageMaintenanceSQL(LatestBoardFixture):
             sizes=[r['bytes']for r in db.execute("SELECT pg_total_relation_size(relid) bytes FROM pg_partition_tree('current_acquisition_image_parts') WHERE isleaf")]
             before=sql_usage(db);cap=before+max(sizes)+REWRITE_RUNWAY_BYTES+1
             self.assertGreater(before+sum(sizes)+REWRITE_RUNWAY_BYTES,cap)
-            with patch('app.storage.storage_maintenance.PRESSURE_BYTES',0),patch('app.storage.storage_maintenance.SQL_BYTE_CAP',cap),patch('app.storage.storage_maintenance.MIN_REUSABLE_BYTES',128*1024),patch('app.storage.storage_maintenance.COMPACT_TABLES',('current_acquisition_image_parts',)),patch('app.storage.storage_maintenance.REWRITE_TURN_SECONDS',0):
+            # Isolate the FULL-copy runway: ordinary hot-table VACUUM can
+            # already truncate empty partitions before this assertion on PG14.
+            with patch('app.storage.storage_maintenance.HOT_TABLES',()),patch('app.storage.storage_maintenance.PRESSURE_BYTES',0),patch('app.storage.storage_maintenance.SQL_BYTE_CAP',cap),patch('app.storage.storage_maintenance.MIN_REUSABLE_BYTES',128*1024),patch('app.storage.storage_maintenance.COMPACT_TABLES',('current_acquisition_image_parts',)),patch('app.storage.storage_maintenance.REWRITE_TURN_SECONDS',0):
                 result=maintain(db,collecting=True)
-            self.assertEqual(len(result['rewrites']),1)
+            self.assertEqual(len(result['rewrites']),1,result)
             rewrite=result['rewrites'][0]
             self.assertTrue(rewrite['table'].startswith('current_acquisition_image_p'))
             self.assertLess(rewrite['transient_peak_bound_bytes'],cap)
@@ -184,6 +186,25 @@ class StorageMaintenanceSQL(LatestBoardFixture):
             for row in db.execute('SELECT metadata FROM current_native_market_recovery'):
                 self.assertEqual(codec.thaw(row['metadata']),original)
 
+    async def test_noop_bloat_scan_does_not_request_publication_lock(self):
+        from app.storage import storage_maintenance as maintenance
+        with self.connect() as db,self.connect() as publisher:
+            db.execute('CREATE EXTENSION IF NOT EXISTS pgstattuple')
+            db.execute('CREATE TABLE dense_scan_fixture(id integer)')
+            db.execute('INSERT INTO dense_scan_fixture SELECT generate_series(1,10)')
+            publisher.execute('SELECT pg_advisory_lock(901153)')
+            try:
+                with patch.object(maintenance,'PRESSURE_BYTES',0),patch.object(maintenance,'COMPACT_TABLES',('dense_scan_fixture',)),patch.object(maintenance,'CAPTURE_WAIT_SECONDS',.001):
+                    result=maintain(db,collecting=True)
+                self.assertFalse(result['capture_lock_acquired'])
+                self.assertNotIn('capture_lock_wait_seconds',result)
+                self.assertNotEqual(result.get('state'),'busy')
+                self.assertEqual(result['rewrites'],[])
+                self.assertEqual(db.execute('SELECT count(*) n FROM dense_scan_fixture').fetchone()['n'],10)
+            finally:
+                publisher.execute('SELECT pg_advisory_unlock_all()')
+                db.execute('DROP TABLE dense_scan_fixture')
+
     async def test_live_reclamation_waits_for_publication_and_yields_after_one_rewrite(self):
         import threading
         with self.connect() as db,self.connect() as publisher:
@@ -198,7 +219,15 @@ class StorageMaintenanceSQL(LatestBoardFixture):
             release.start()
             try:
                 with patch('app.storage.storage_maintenance.PRESSURE_BYTES',0),patch('app.storage.storage_maintenance.COMPACT_TABLES',('staged_a','staged_b')),patch('app.storage.storage_maintenance.REWRITE_TURN_SECONDS',0):
-                    first=maintain(db,collecting=True)
+                    from app.storage import recovery_codec
+                    original_repack=recovery_codec.repack
+                    def independent_repack(connection):
+                        # Post-rewrite work must release the publication owner.
+                        self.assertTrue(publisher.execute('SELECT pg_try_advisory_lock(901153) held').fetchone()['held'])
+                        publisher.execute('SELECT pg_advisory_unlock(901153)')
+                        return original_repack(connection)
+                    with patch.object(recovery_codec,'repack',side_effect=independent_repack):
+                        first=maintain(db,collecting=True)
                     self.assertTrue(first['capture_lock_acquired'])
                     self.assertEqual(len(first['rewrites']),1)
                     self.assertTrue(first['continue_compaction'])

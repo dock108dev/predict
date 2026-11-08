@@ -23,6 +23,43 @@ class DurableQuota(unittest.TestCase):
         aid=self.q.reserve(self.owner,'candidate',dict(path='/v4/sports',params={}),0,bootstrap=True)
         self.q.dispatched(aid,self.owner);self.q.reconcile(aid,quota(used));return aid
     def paid(self,cost=3):return self.q.reserve(self.owner,'candidate',dict(path='/v4/sports/baseball_mlb/odds',params={}),cost)
+    def test_exact_missing_event_repair_preserves_ledger_and_refuses_other_failures(self):
+        from app.collection.alternate_plan import plan
+        from app.collection.current_conservative import digest
+        self.q.bind_window(WINDOW);self.bootstrap()
+        self.at='2026-10-03T12:01:00+00:00'
+        aid=self.paid(2);self.q.dispatched(aid,self.owner)
+        self.q.complete_response(aid,dict(status=404,headers=quota(20,0),received_at=self.at))
+        request=plan({'NFL':[dict(id='abc')]})['requests'][0]
+        self.q.transact(lambda v,at:v['attempts'][aid].update(request={k:request[k] for k in ('path','params')}))
+        self.q.pause('aggregate_http_failure');before=self.q._read()
+        with patch('app.collection.current_policy.candidate',return_value=('candidate',{})),patch('app.collection.current_quota.load_window',return_value=WINDOW):
+            with self.assertRaisesRegex(QuotaStop,'evidence_mismatch'):
+                self.q.repair_missing_event(self.owner,'candidate',aid,'wrong')
+            self.q.repair_missing_event(self.owner,'candidate',aid,digest(before['attempts'][aid]))
+            after=self.q._read()
+            for k in ('attempts','observation','next_due_at','cycle','rotation'):
+                self.assertEqual(after.get(k),before.get(k))
+            self.assertIsNone(after['pause'])
+            with self.assertRaisesRegex(QuotaStop,'pause_mismatch'):
+                self.q.repair_missing_event(self.owner,'candidate',aid,digest(before['attempts'][aid]))
+    def test_atomic_response_equals_separate_transactions_and_preserves_malformed_hold(self):
+        self.q.bind_window(WINDOW);self.bootstrap();aid=self.paid();self.q.dispatched(aid,self.owner)
+        before=self.q._read()
+        for items in (quota(23,3),[]):
+            with self.subTest(headers=items):
+                receipt=dict(status=200 if items else 502,headers=items,received_at=AT)
+                self.q._write(deepcopy(before))
+                self.q.reconcile(aid,items,received_at=AT);self.q.record_response(aid,receipt)
+                expected=self.q._read()
+                self.q._write(deepcopy(before))
+                with patch.object(self.q,'_write',wraps=self.q._write) as writes:
+                    charged=self.q.complete_response(aid,receipt)
+                self.assertEqual(writes.call_count,1)
+                self.assertEqual(self.q._read(),expected)
+                self.assertEqual(charged,3 if items else None)
+                if not items:self.assertEqual(self.q.snapshot()['held_uncertain_credits'],3)
+
     def test_unentered_transport_cancellation_cannot_clear_another_runtime_or_receipt(self):
         self.q.bind_window(WINDOW);self.bootstrap();aid=self.paid()
         self.q.dispatched(aid,self.owner)

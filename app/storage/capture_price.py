@@ -89,7 +89,8 @@ def capture(db,previous,*,at,binding,event_ids,diagnostics=None,_frame_dependenc
     # belong in the new envelope, not in the structural authority identity.
     # Quote execution changes only with the source state; each retained quote
     # still owns its original book/confirmation clocks and evidence.
-    authority=lambda states:{k:v.get('state') for k,v in states.items()}
+    relevant=set(binding[4]) if isinstance(binding,list) and len(binding)==5 and isinstance(binding[4],dict) else None
+    authority=lambda states:{k:states.get(k,{}).get('state') for k in (relevant if relevant is not None else states)}
     if authority(frame['source_status'])!=authority(previous['sources']):return refuse('source_authority')
     if any(k not in basis['records'] or hashed(structure(r))!=basis['records'][k]['proof'] for k,r in fresh.items()):return refuse('quote_structure')
     # Keep a complete evidence map, including source events not selected for

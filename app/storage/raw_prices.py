@@ -2,6 +2,7 @@
 from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 from app.storage.store import hashed
+from .native_authority import stream_ready
 
 HEADER = """
 SELECT 'native'::text kind,i.source venue,i.event_id,i.market_id,
@@ -40,7 +41,7 @@ def state_expression(owner):
         if (owner.get('active') and owner.get('healthy') and not owner.get('global_stopped')
                 and venue not in owner.get('paused_sources',[]) and metrics.get('stream_connected') and sync.get('continuity_intact')):
             cases.append("WHEN venue=%s AND runtime_id=%s AND connection_generation=%s AND census_generation=generation AND NOT COALESCE(withdrawn,false) AND NOT(market_id=ANY(%s)) THEN %s")
-            args.extend((venue,owner.get('runtime_id'),sync.get('generation'),metrics.get('invalid_current_market_ids',[]),'synchronized' if sync.get('current') else 'delayed'))
+            args.extend((venue,owner.get('runtime_id'),sync.get('generation'),metrics.get('invalid_current_market_ids',[]),'synchronized' if sync.get('current') or stream_ready(metrics) else 'delayed'))
     return ("CASE WHEN kind<>'native' THEN %s WHEN disposition='rejected' THEN 'unqualified' "+' '.join(cases)+" ELSE 'last_known' END"),args
 
 
@@ -97,7 +98,7 @@ def status(row,owner):
         and metrics.get('stream_connected') and sync.get('continuity_intact')
         and row['market_id'] not in metrics.get('invalid_current_market_ids',[]) and not row['withdrawn'])
     if row['disposition']=='rejected':return 'unqualified'
-    if bound and sync.get('current'):return 'synchronized'
+    if bound and (sync.get('current') or stream_ready(metrics)):return 'synchronized'
     if bound:return 'delayed'
     return 'last_known'
 

@@ -231,6 +231,9 @@ def mount(app):
 
         return web.json_response(await asyncio.to_thread(work))
 
+    from .browse_sessions import BrowseSessions
+    browsing=BrowseSessions()
+
     async def current_read(req):
         timings = {}
         query = dict(req.query)
@@ -266,7 +269,7 @@ def mount(app):
                 if not head['result_id']:
                     return dict(state='initializing', publication=dict(state='initializing', sources=states),
                         cursor=cursor, generation=head['generation'], rows=[], total=0, provider_requests=0)
-                if not req.path.endswith('/selection') and (
+                if query.get('layout')!='desk' and not req.path.endswith('/selection') and (
                         query.get('expected_cursor') and query['expected_cursor'] != cursor or
                         options[2] and not query.get('expected_cursor')):
                     return dict(state='page_changed', reason='comparison_changed_restart_pagination',
@@ -291,8 +294,8 @@ def mount(app):
                     result['publication']['count_scope']='selected_inputs'
                     row=next((r for r in [*result['rows'],*result['pairs']] if r['id']==selected),None)
                     if query.get('layout') == 'desk':
-                        from .trade_desk import EV_METRIC, offer
-                        return dict(row=offer(row, EV_METRIC) if row and row['kind'] == 'single' else None,
+                        from .trade_desk import EV_METRIC, METRICS, offer
+                        return dict(row=offer(row, METRICS.get(query.get('basis','reviewed'),EV_METRIC)) if row and row['kind'] == 'single' else None,
                                     provider_requests=0)
                     return dict(result_id=result['id'],generation=head['generation'],cursor=cursor,
                         state='removed' if row is None else 'ready' if row.get('price_current',True) else 'unavailable',
@@ -302,10 +305,13 @@ def mount(app):
                 stage=monotonic()
                 if query.get('layout') == 'desk':
                     from .trade_desk import page as desk_page
-                    out = desk_page(result, query, options, captured_pairs=captured_pairs, policy=policy)
+                    out = desk_page(result, query, options, captured_pairs=captured_pairs, policy=policy, browsing=browsing)
                 else:
                     out = page(result, query, options=options)
+                if out.get('state')=='page_changed':return out
                 timings['page']=(monotonic()-stage)*1000
+                from app.storage.delivery_clocks import recent
+                out['delivery_clocks']=recent(db)
                 out.update(cursor=cursor, generation=head['generation'], publication=dict(
                     out['publication'], **{k:v for k,v in head['facts'].items() if k in (
                         'published_at','price_seconds','total_seconds','error')}))
@@ -440,7 +446,13 @@ def mount(app):
                             leg, by_id[leg["id"]], benchmark_refs
                         ):
                             refs[ref["id"]] = ref
+                from app.comparison.inspection_math import offer_math, offer_disclosures
+                inspection = None
+                if row['kind'] == 'single':
+                    inspection = offer_math(row)
+                    inspection.update(offer_disclosures(row, evidence_result['captured_at'], originals))
                 return dict(
+                    inspection=inspection,
                     result_id=result["id"],
                     evidence_result_id=evidence_result['id'],
                     snapshot_id=evidence_result["snapshot_id"],

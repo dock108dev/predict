@@ -164,6 +164,25 @@ class SinkAdmission(unittest.IsolatedAsyncioTestCase):
         self.cat,self.book=native_fixture()
         self.service.catalog('kalshi',self.cat);self.service.book('kalshi',self.book)
     async def asyncTearDown(self):await self.store.close()
+    async def test_rotating_coverage_survives_full_price_projection(self):
+        from types import SimpleNamespace
+        self.service.workers['kalshi']=SimpleNamespace(metrics={'subscription_priority':dict(active_markets=2048,deferred_markets=5354)},closed=False)
+        self.service.books('kalshi',[self.book])
+        state=self.store.snapshot()
+        self.assertIn('5354 deferred',state['source_status']['kalshi']['reason'])
+        self.assertTrue(self.store.index(state))
+        self.assertEqual(state['source_status']['kalshi']['state'],'available')
+        self.service.workers.clear()
+
+    async def test_retained_priority_catalog_keeps_existing_price(self):
+        from types import SimpleNamespace
+        self.service.workers['kalshi']=SimpleNamespace(
+            subscription_transition=dict(kind='retained_priority_cohort',invalidated=set()),closed=False)
+        before=set(self.store.index(self.store.snapshot()))
+        self.service.catalog('kalshi',deepcopy(self.cat))
+        self.assertEqual(set(self.store.index(self.store.snapshot())),before)
+        self.service.workers.clear()
+
     async def test_ephemeral_no_journal_cursor_and_identical_image_clocks(self):
         sink=self.service.sink;self.assertEqual(sink.reducer.cursor,0);self.assertEqual(sink.reducer.chain,'0'*64)
         state=self.store.snapshot();old=next(iter(self.store.index(state).values()))['quote']

@@ -1,0 +1,235 @@
+{
+  "at": "2026-11-07T22:31:52.602283-05:00",
+  "receipt": "2026-11-08T03:30:12.513195+00:00",
+  "events": [
+    {
+      "id": "181113d04fb80db024caec61009d374f26517cee65e23ec720fa3cd7eeadc214",
+      "title": "San Antonio Spurs at Portland Trail Blazers",
+      "scheduled_start": "2026-11-08T03:12:00Z",
+      "venues": [
+        "novig",
+        "pinnacle",
+        "prophetx"
+      ],
+      "families": [
+        "moneyline",
+        "spread",
+        "total"
+      ],
+      "offers": 12,
+      "within_publication_horizon": true
+    },
+    {
+      "id": "231045b66b0fd45534e69d48aec22846a27313e28ea3b06b30c48820afdbeb78",
+      "title": "San Antonio Spurs at New York Knicks",
+      "scheduled_start": "2026-12-25T17:00:00Z",
+      "venues": [
+        "novig"
+      ],
+      "families": [
+        "moneyline",
+        "spread",
+        "total"
+      ],
+      "offers": 6,
+      "within_publication_horizon": false
+    },
+    {
+      "id": "3e9b9a0306cb6bfb138b65758663ea0eead4a868aed142973b8b103ae6936c00",
+      "title": "New York Knicks at Cleveland Cavaliers",
+      "scheduled_start": "2026-11-08T01:13:00Z",
+      "venues": [
+        "pinnacle",
+        "prophetx"
+      ],
+      "families": [
+        "spread",
+        "total"
+      ],
+      "offers": 6,
+      "within_publication_horizon": true
+    },
+    {
+      "id": "58f457131071907f954e438e047f699d3cbb73bb2b4ed1940ac52fe0cfa4c7af",
+      "title": "Philadelphia 76ers at Los Angeles Lakers",
+      "scheduled_start": "2026-12-25T22:00:00Z",
+      "venues": [
+        "novig"
+      ],
+      "families": [
+        "moneyline",
+        "spread",
+        "total"
+      ],
+      "offers": 6,
+      "within_publication_horizon": false
+    },
+    {
+      "id": "5f8c9c9b7c251db7dbefb6ee3c6bf71d639a30adde36bb8d8c8b8eb2f33f3aa9",
+      "title": "Los Angeles Lakers at Detroit Pistons",
+      "scheduled_start": "2026-11-08T23:10:00Z",
+      "venues": [
+        "novig",
+        "pinnacle",
+        "prophetx"
+      ],
+      "families": [
+        "moneyline",
+        "spread",
+        "total"
+      ],
+      "offers": 16,
+      "within_publication_horizon": true
+    },
+    {
+      "id": "74c3dfbaa59364c238fd17bbf26b38f648d8f76b194f54e8b85ee9da5baf12ec",
+      "title": "Miami Heat at Sacramento Kings",
+      "scheduled_start": "2026-11-09T02:10:00Z",
+      "venues": [
+        "novig",
+        "pinnacle",
+        "prophetx"
+      ],
+      "families": [
+        "moneyline",
+        "spread",
+        "total"
+      ],
+      "offers": 18,
+      "within_publication_horizon": true
+    },
+    {
+      "id": "828b0777290318b50f9975a7a5ca32132717f11fec7842fbab745a5a1193f043",
+      "title": "Utah Jazz at Minnesota Timberwolves",
+      "scheduled_start": "2026-11-09T00:10:00Z",
+      "venues": [
+        "novig",
+        "pinnacle",
+        "prophetx"
+      ],
+      "families": [
+        "moneyline",
+        "spread",
+        "total"
+      ],
+      "offers": 16,
+      "within_publication_horizon": true
+    },
+    {
+      "id": "8c48581773167d79ecb29031bfed8c9b23692a316e65d0f9f54c156230367a04",
+      "title": "New Orleans Pelicans at Los Angeles Clippers",
+      "scheduled_start": "2026-11-09T02:10:00Z",
+      "venues": [
+        "novig",
+        "pinnacle",
+        "prophetx"
+      ],
+      "families": [
+        "moneyline",
+        "spread",
+        "total"
+      ],
+      "offers": 14,
+      "within_publication_horizon": true
+    },
+    {
+      "id": "98c23dc08af754e9426b0c2fd68e73d200899688b12b425519c0abc663b4d07a",
+      "title": "Miami Heat at Boston Celtics",
+      "scheduled_start": "2026-12-25T19:30:00Z",
+      "venues": [
+        "novig"
+      ],
+      "families": [
+        "moneyline",
+        "spread",
+        "total"
+      ],
+      "offers": 6,
+      "within_publication_horizon": false
+    },
+    {
+      "id": "a9c26ce3c8c1824482a81aee65da2b6d4174f1fc956ca6ae0e6e7f24ab4ed5ef",
+      "title": "Houston Rockets at Phoenix Suns",
+      "scheduled_start": "2026-11-08T02:11:00Z",
+      "venues": [
+        "novig",
+        "pinnacle",
+        "prophetx"
+      ],
+      "families": [
+        "moneyline",
+        "spread",
+        "total"
+      ],
+      "offers": 16,
+      "within_publication_horizon": true
+    },
+    {
+      "id": "b5a8ccd945278d96ec30f197ca0938dd124232a38010f13e4441a58f357e4bb4",
+      "title": "Orlando Magic at Golden State Warriors",
+      "scheduled_start": "2026-11-08T01:43:00Z",
+      "venues": [
+        "novig",
+        "pinnacle",
+        "prophetx"
+      ],
+      "families": [
+        "moneyline",
+        "spread",
+        "total"
+      ],
+      "offers": 14,
+      "within_publication_horizon": true
+    },
+    {
+      "id": "b7c9910a716b53cd01f98d740b41b7036bcc283341763e847d19324b36c2ed06",
+      "title": "Boston Celtics at Milwaukee Bucks",
+      "scheduled_start": "2026-11-09T01:10:00Z",
+      "venues": [
+        "novig",
+        "pinnacle",
+        "prophetx"
+      ],
+      "families": [
+        "moneyline",
+        "spread",
+        "total"
+      ],
+      "offers": 14,
+      "within_publication_horizon": true
+    },
+    {
+      "id": "df9dc89ca9f93f530b9d03b9cdc4ffb45cd6f08246418a00c50aea3855e273aa",
+      "title": "Philadelphia 76ers at Chicago Bulls",
+      "scheduled_start": "2026-11-08T20:40:00Z",
+      "venues": [
+        "novig",
+        "pinnacle",
+        "prophetx"
+      ],
+      "families": [
+        "moneyline",
+        "spread",
+        "total"
+      ],
+      "offers": 14,
+      "within_publication_horizon": true
+    },
+    {
+      "id": "ea34bdc770e48064224d185ba49829c7464af58ec6206307b193e7322f8a9a80",
+      "title": "Denver Nuggets at Golden State Warriors",
+      "scheduled_start": "2026-12-26T03:30:00Z",
+      "venues": [
+        "novig"
+      ],
+      "families": [
+        "moneyline",
+        "spread",
+        "total"
+      ],
+      "offers": 6,
+      "within_publication_horizon": false
+    }
+  ],
+  "note": "Read-only current SQL population by exact featured receipt; later alternate updates can already have replaced individual offers."
+}

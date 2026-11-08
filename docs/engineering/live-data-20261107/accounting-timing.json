@@ -1,0 +1,20 @@
+{
+  "population_attempts": 13773,
+  "method": "Disposable copy of retained ledger, identical receipt accounting and snapshot; three measured repetitions per path, no provider I/O",
+  "seconds": {
+    "separate": [
+      2.1235956250457093,
+      2.3003762499429286,
+      1.8239171670284122
+    ],
+    "atomic": [
+      1.0826354579767212,
+      1.3763111250009388,
+      1.251111333956942
+    ]
+  },
+  "median_seconds": {
+    "separate": 2.1235956250457093,
+    "atomic": 1.251111333956942
+  }
+}

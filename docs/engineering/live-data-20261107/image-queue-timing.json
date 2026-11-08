@@ -1,0 +1,26 @@
+{
+  "population": "200 retained native images, no provider reads; exact decoded equality in both paths",
+  "timing_scope": "parent image storage only; encoding moves to ordered reconstruction child, not eliminated",
+  "results": {
+    "parent_encoding": {
+      "seconds": [
+        0.03687991702463478,
+        0.038203374948352575,
+        0.03094208298716694,
+        0.030125124962069094,
+        0.030094416928477585
+      ],
+      "median_seconds": 0.03094208298716694
+    },
+    "child_packed_parent_overlay": {
+      "seconds": [
+        0.0007660000119358301,
+        0.0007990829180926085,
+        0.0010154999326914549,
+        0.0007497919723391533,
+        0.0007329590152949095
+      ],
+      "median_seconds": 0.0007660000119358301
+    }
+  }
+}

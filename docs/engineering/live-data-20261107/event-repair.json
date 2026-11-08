@@ -1,0 +1,27 @@
+{
+  "repair": {
+    "at": "2026-11-07T22:55:35.484133+00:00",
+    "attempt_digest": "0cae078e58d32d0b96bbb3e0ab8300dcc3f608b1a7d9ae6a15ab2aede67dcc6c",
+    "attempt_id": "20b758f3-9ef8-4b70-9efd-9cd09511411b",
+    "candidate_digest": "7a2c8117469c1ca4eee195b98867e34087c498f4eeafe4df86c72354d043737c",
+    "next_due_at": "2026-11-07T23:00:00+00:00",
+    "observation": {
+      "at": "2026-11-07T22:46:05.024403+00:00",
+      "attempt_id": "20b758f3-9ef8-4b70-9efd-9cd09511411b",
+      "kind": "request_response_balance",
+      "last": 0,
+      "remaining": 96417,
+      "used": 3583
+    },
+    "preserved_credits": 49,
+    "prior_pause": "aggregate_http_failure",
+    "provider_requests": 0,
+    "repair": "accounted_missing_alternate_event",
+    "runtime_id": "live-data-20261107-accounted-event-repair",
+    "sha256": "d8af574da9e36cf3b7a164edfff9d34b044b678305e9cf100db7b8f8ceec4e90"
+  },
+  "holds": 49,
+  "uncertain_attempts": 18,
+  "hold_digest": "a6e691b659621146176ccfa13aa16615263b47a9043f6974059895f72a2b60ea",
+  "attempts_unchanged": true
+}

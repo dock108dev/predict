@@ -31,6 +31,55 @@ def future_records(venue='novig'):
 
 
 class CurrentRows(unittest.TestCase):
+    def test_post_start_source_updates_retained_but_old_pregame_is_not_extended(self):
+        rows=future_records('novig');start='2026-10-15T12:00:00Z'
+        for r in rows:
+            r['event']['scheduled_start']=r['market_identity']['scheduled_start']=start
+            r['quote']['times'].update(source_at='2026-10-15T11:59:59Z',received_at='2026-10-15T11:59:59Z')
+            r['quote']['provider_clocks']={'market':'2026-10-15T11:59:59Z'}
+        self.store.upsert_records(rows,now='2026-10-15T11:59:59Z')
+        with patch('app.storage.current_rows.utc',return_value='2026-10-15T12:00:01Z'):
+            self.assertEqual(len(self.store.capture()['records']),0)
+        for r in rows:
+            r['quote']['times'].update(source_at='2026-10-15T12:00:02Z',received_at='2026-10-15T12:00:03Z')
+            r['quote']['provider_clocks']={'market':'2026-10-15T12:00:02Z'}
+        self.store.upsert_records(rows,now='2026-10-15T12:00:03Z')
+        with patch('app.storage.current_rows.utc',return_value='2026-10-15T12:00:04Z'):
+            retained=self.store.capture()['records']
+        self.assertEqual(len(retained),2)
+        from app.comparison.game_phase import price_phase
+        self.assertEqual(price_phase(retained[0]['event'],retained[0]['quote'],'2026-10-15T12:00:04Z')['state'],'live')
+        self.assertEqual(price_phase(retained[0]['event'],retained[0]['quote'],'2026-10-15T12:00:18Z')['reason'],'live_price_expired')
+        # A new stale sibling must not shorten the event's storage lifetime.
+        sibling=deepcopy(rows[0]);sibling['quote']['venue']='prophetx'
+        sibling['quote']['times'].update(source_at='2026-10-15T11:59:59Z',received_at='2026-10-15T12:00:05Z')
+        sibling['quote']['provider_clocks']={'market':'2026-10-15T11:59:59Z'}
+        self.store.upsert_records([sibling],now='2026-10-15T12:00:05Z')
+        with patch('app.storage.current_rows.utc',return_value='2026-10-15T12:00:06Z'):
+            retained=self.store.capture()['records']
+        self.assertEqual(len(retained),3)
+        stale=next(r for r in retained if r['quote']['venue']=='prophetx')
+        self.assertEqual(price_phase(stale['event'],stale['quote'],'2026-10-15T12:00:06Z')['state'],'unknown')
+    def test_native_live_suspension_resume_and_final_keep_separate_price_authority(self):
+        from app.comparison.game_phase import price_phase
+        rows=future_records('kalshi')
+        for r in rows:
+            r['event']['scheduled_start']=r['market_identity']['scheduled_start']='2026-10-15T12:00:00Z'
+        for second,status,expected,reason in ((2,'inprogress','live',None),
+                (4,'suspended','suspended','event_suspended'),(6,'inprogress','live',None),
+                (8,'final','final','event_source_completed')):
+            at=f'2026-10-15T12:00:{second:02d}Z'
+            for r in rows:
+                r['event']['observed_identity_facts']=[dict(status=status)]
+                r['quote']['times'].update(source_at=at,received_at=at)
+            self.store.upsert_records(rows,now=at)
+            with patch('app.storage.current_rows.utc',return_value=at):
+                captured=self.store.capture()['records']
+            self.assertEqual(len(captured),len(rows))
+            for r in captured:
+                phase=price_phase(r['event'],r['quote'],at)
+                self.assertEqual((phase['state'],phase['reason']),(expected,reason))
+
     @classmethod
     def setUpClass(cls):
         cls.name='prediction_arb_d03_ingress_'+uuid4().hex[:10]
@@ -526,6 +575,44 @@ class CurrentRows(unittest.TestCase):
         self.assertEqual(sink.error,'OSError')
         self.assertNotIn('authored-sql',str(sink.error_details))
         self.assertFalse(hasattr(sink,'pending'))
+
+    @patch('app.storage.current_rows.utc', return_value=AT)
+    def test_sporting_patch_withdraws_derived_rows_then_reuses_exact_book(self, storage_clock):
+        from app.collection.current_database import DatabaseIngressSink
+        from app.collection.current_service import CurrentService
+        from app.collection.current_policy import DEFAULT
+        from app.dashboard.current_state import unavailable
+        raw=unavailable();store=SimpleNamespace(_state=raw,commit=lambda value:setattr(store,'_state',value))
+        sink=DatabaseIngressSink(store,DEFAULT);states=raw['source_status'];source='polymarket_us'
+        cat=deepcopy(next(e['record']['value']['inventory'] for e in envelopes()
+            if e['record']['kind']=='catalog' and e['record']['source']==source))
+        observation=deepcopy(next(o for e in envelopes() if e['record']['kind']=='admitted_books'
+            and e['record']['source']==source for o in e['record']['value']['observations']))
+        observation['book'].pop('book_confirmation',None)
+        header=dict(source=source,session_id='d03-synthetic-offline',observed_at=AT)
+        queued=[];worker=SimpleNamespace(closed=False,queue_derived=queued.append)
+        service=SimpleNamespace(dispatch=True,database_mode=True,sink=sink,states=states,workers={source:worker},
+            row=lambda kind,venue,**v:dict(header,type=kind,**v),observation=lambda *args:None)
+        with patch('app.collection.current_database.connect',lambda:connect(self.name)), \
+             patch('app.collection.current_database.utc',return_value=AT):
+            sink.commit(dict(header,type='coverage_inventory',inventory={source:cat},generation=1,previous_generation=None),states)
+            sink.commit(dict(observation,**header),states)
+            before=self.store.records();self.assertTrue(before)
+            event=cat['events'][0]
+            value=dict(event_id=event['id'],game_id=str(event['_native']['gameId']),league=event['competition'],
+                start_at=event['scheduled_start'],source_at=AT,received_at=AT,body_sha256='b'*64,
+                path='/v2/leagues/nfl/events',state=dict(live=False,ended=True,active=True,closed=False))
+            original=deepcopy(observation['book'])
+            CurrentService.sporting_states(service,source,[value])
+            self.assertFalse(self.store.records())
+            self.assertEqual(queued,[original])
+            self.assertEqual(sink.metrics['catalog_storage_turnover']['reasons'].keys(),{'derived_refresh'})
+            sink.commit(dict(observation,**header),states)
+            after=self.store.records();self.assertTrue(after)
+            self.assertTrue(all(r['event']['status']['ended'] for r in after))
+            self.assertTrue(all(r['event']['status']['source_evidence']['body_sha256']=='b'*64 for r in after))
+            self.assertEqual([r['quote']['times'] for r in after],[r['quote']['times'] for r in before])
+            self.assertEqual(observation['book'],original)
 
     def test_scheduler_admitted_handoff_reaches_current_sql_without_raw_fallback(self):
         import json

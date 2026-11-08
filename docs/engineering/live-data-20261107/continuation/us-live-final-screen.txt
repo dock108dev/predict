@@ -1,0 +1,340 @@
+Browser tab: 4, Title: "Prediction Arb · Expected value", URL: "http://127.0.0.1:8783/ev?league=NBA&search=Houston&game_state=live&basis=before".
+0 AXWebArea Prediction Arb · Expected value, URL: 127.0.0.1:8783/ev?league=NBA&search=Houston&game_state=live&basis=before
+	1 link Description: Skip to results, Value: 127.0.0.1:8783/ev?league=NBA&search=Houston&game_state=live&basis=before#main-content
+	2 container
+		3 link Description: Prediction Arb, Value: 127.0.0.1:8783/
+		4 container Predict
+			5 link Description: EV, Value: 127.0.0.1:8783/ev
+			6 link Description: Arbitrage, Value: 127.0.0.1:8783/arbs
+			7 link Description: Admin, Value: 127.0.0.1:8783/admin
+		8 text Odds
+		9 pop up button (collapsed, settable) Odds, Value: American, Secondary Actions: Expand
+			10 menu
+				11 (selected) American
+				12 Decimal
+	13 container main-content
+		14 heading Expected value, Value: 1, ID: title
+			15 text Expected value
+		54 text before fees
+		17 container filters
+			18 container
+				19 text Search
+				20 search text field (settable) Search, Value: Houston
+			21 container
+				22 text Date
+				23 date field (settable) Date, Value: 2026-11-07
+					24 container
+						25 stepper
+						26 stepper
+						27 stepper
+					28 pop up button Show date picker Show date picker
+			29 container
+				30 text Calculation
+				31 pop up button (collapsed, settable) Calculation, Value: Before fees, Secondary Actions: Expand
+					32 menu
+						33 After reviewed trade fees
+						34 Conservative fee estimate
+						35 (selected) Before fees
+			36 container
+				37 text Sort
+				38 pop up button (collapsed, settable) Sort, Value: Soonest start, Secondary Actions: Expand
+					39 menu
+						40 Highest return
+						41 (selected) Soonest start
+			42 container more-filters
+				43 button (collapsed) Filters, Secondary Actions: Expand
+					44 text Filters
+		55 text Some prices are not current. Check each price’s status.
+		56 text Auto-refresh on. Last checked 10:25:08 PM EST.
+		47 button Refresh list, ID: refresh-list
+		48 button (collapsed) Diagnostic session history, Secondary Actions: Expand
+			49 text Diagnostic session history
+		50 container Description: Sorted results, ID: results
+			57 text Trade Pinnacle Sites · highest EV first
+			58 container
+				59 text Houston vs. Phoenix
+				60 heading Over 192.5, Value: 2
+					61 text Over 192.5
+				62 text NBA · Total · Full game Nov 7, 9:00 PM EST Pinnacle —
+				63 button Kalshi, Over 192.5, Price expired
+					64 text Kalshi
+					65 text —
+					66 text -1328.57
+					67 text Before — · After fees —
+					68 text Price expired
+			69 container
+				70 text Houston vs. Phoenix
+				71 heading Over 196.5, Value: 2
+					72 text Over 196.5
+				73 text NBA · Total · Full game Nov 7, 9:00 PM EST Pinnacle —
+				74 button Kalshi, Over 196.5, Price expired
+					75 text Kalshi
+					76 text —
+					77 text -566.67
+					78 text Before — · After fees —
+					79 text Price expired
+			80 container
+				81 text Houston vs. Phoenix
+				82 heading Over 197.5, Value: 2
+					83 text Over 197.5
+				84 text NBA · Total · Full game Nov 7, 9:00 PM EST Pinnacle —
+				85 button Polymarket US, Over 197.5, Price expired
+					86 text Polymarket US
+					87 text —
+					88 text -488.24
+					89 text Before — · After fees —
+					90 text Price expired
+			91 container
+				92 text Houston vs. Phoenix
+				93 heading Over 198.5, Value: 2
+					94 text Over 198.5
+				95 text NBA · Total · Full game Nov 7, 9:00 PM EST Pinnacle —
+				96 button Kalshi, Over 198.5, Price expired
+					97 text Kalshi
+					98 text —
+					99 text -354.55
+					100 text Before — · After fees —
+					101 text Price expired
+			102 container
+				103 text Houston vs. Phoenix
+				104 heading Over 199.5, Value: 2
+					105 text Over 199.5
+				106 text NBA · Total · Full game Nov 7, 9:00 PM EST Pinnacle —
+				107 button Polymarket US, Over 199.5, Price expired
+					108 text Polymarket US
+					109 text —
+					110 text -316.67
+					111 text Before — · After fees —
+					112 text Price expired
+			113 container
+				114 text Houston vs. Phoenix
+				115 heading Over 201.5, Value: 2
+					116 text Over 201.5
+				117 text NBA · Total · Full game Nov 7, 9:00 PM EST Pinnacle —
+				118 button Polymarket US, Over 201.5, Live fee and reference calculation unavailable
+					119 text Polymarket US
+					120 text —
+					121 text -222.58
+					122 text Before — · After fees —
+					123 text Live fee and reference calculation unavailable
+			124 container
+				125 text Houston vs. Phoenix
+				126 heading Over 203.5, Value: 2
+					127 text Over 203.5
+				128 text NBA · Total · Full game Nov 7, 9:00 PM EST Pinnacle —
+				129 button Polymarket US, Over 203.5, Price expired
+					130 text Polymarket US
+					131 text —
+					132 text -203.03
+					133 text Before — · After fees —
+					134 text Price expired
+			135 container
+				136 text Houston vs. Phoenix
+				137 heading Over 205.5, Value: 2
+					138 text Over 205.5
+				139 text NBA · Total · Full game Nov 7, 9:00 PM EST Pinnacle —
+				140 button Polymarket US, Over 205.5, Price expired
+					141 text Polymarket US
+					142 text —
+					143 text -163.16
+					144 text Before — · After fees —
+					145 text Price expired
+			146 container
+				147 text Houston vs. Phoenix
+				148 heading Over 207.5, Value: 2
+					149 text Over 207.5
+				150 text NBA · Total · Full game Nov 7, 9:00 PM EST Pinnacle —
+				151 button Polymarket US, Over 207.5, Price expired
+					152 text Polymarket US
+					153 text —
+					154 text -117.39
+					155 text Before — · After fees —
+					156 text Price expired
+			157 container
+				158 text Houston vs. Phoenix
+				159 heading Over 209.5, Value: 2
+					160 text Over 209.5
+				161 text NBA · Total · Full game Nov 7, 9:00 PM EST Pinnacle -107.53 Saved
+				162 button Polymarket US, Over 209.5, Price expired
+					163 text Polymarket US
+					164 text —
+					165 text +104.08
+					166 text Before — · After fees —
+					167 text Price expired
+				168 button ProphetX, Over 209.5, Price expired
+					169 text ProphetX
+					170 text —
+					171 text +104
+					172 text Before — · After fees —
+					173 text Price expired
+			174 container
+				175 text Houston vs. Phoenix
+				176 heading Over 211.5, Value: 2
+					177 text Over 211.5
+				178 text NBA · Total · Full game Nov 7, 9:00 PM EST Pinnacle —
+				179 button Polymarket US, Over 211.5, Price expired
+					180 text Polymarket US
+					181 text —
+					182 text +143.9
+					183 text Before — · After fees —
+					184 text Price expired
+			185 container
+				186 text Houston vs. Phoenix
+				187 heading Over 213.5, Value: 2
+					188 text Over 213.5
+				189 text NBA · Total · Full game Nov 7, 9:00 PM EST Pinnacle —
+				190 button Polymarket US, Over 213.5, Price expired
+					191 text Polymarket US
+					192 text —
+					193 text +177.78
+					194 text Before — · After fees —
+					195 text Price expired
+			196 container
+				197 text Houston vs. Phoenix
+				198 heading Over 215.5, Value: 2
+					199 text Over 215.5
+				200 text NBA · Total · Full game Nov 7, 9:00 PM EST Pinnacle —
+				201 button Polymarket US, Over 215.5, Price expired
+					202 text Polymarket US
+					203 text —
+					204 text +212.5
+					205 text Before — · After fees —
+					206 text Price expired
+			207 container
+				208 text Houston vs. Phoenix
+				209 heading Over 217.5, Value: 2
+					210 text Over 217.5
+				211 text NBA · Total · Full game Nov 7, 9:00 PM EST Pinnacle —
+				212 button Polymarket US, Over 217.5, Price expired
+					213 text Polymarket US
+					214 text —
+					215 text +300
+					216 text Before — · After fees —
+					217 text Price expired
+			218 container
+				219 text Houston vs. Phoenix
+				220 heading Over 219.5, Value: 2
+					221 text Over 219.5
+				222 text NBA · Total · Full game Nov 7, 9:00 PM EST Pinnacle —
+				223 button Polymarket US, Over 219.5, Price expired
+					224 text Polymarket US
+					225 text —
+					226 text +354.55
+					227 text Before — · After fees —
+					228 text Price expired
+			229 container
+				230 text Houston vs. Phoenix
+				231 heading Over 221.5, Value: 2
+					232 text Over 221.5
+				233 text NBA · Total · Full game Nov 7, 9:00 PM EST Pinnacle —
+				234 button Polymarket US, Over 221.5, Price expired
+					235 text Polymarket US
+					236 text —
+					237 text +455.56
+					238 text Before — · After fees —
+					239 text Price expired
+			240 container
+				241 text Houston vs. Phoenix
+				242 heading Over 223.5, Value: 2
+					243 text Over 223.5
+				244 text NBA · Total · Full game Nov 7, 9:00 PM EST Pinnacle —
+				245 button Polymarket US, Over 223.5, Price expired
+					246 text Polymarket US
+					247 text —
+					248 text +614.29
+					249 text Before — · After fees —
+					250 text Price expired
+			251 container
+				252 text Houston vs. Phoenix
+				253 heading Over 225.5, Value: 2
+					254 text Over 225.5
+				255 text NBA · Total · Full game Nov 7, 9:00 PM EST Pinnacle —
+				256 button Polymarket US, Over 225.5, Live fee and reference calculation unavailable
+					257 text Polymarket US
+					258 text —
+					259 text +809.09
+					260 text Before — · After fees —
+					261 text Live fee and reference calculation unavailable
+			262 container
+				263 text Houston vs. Phoenix
+				264 heading Over 227.5, Value: 2
+					265 text Over 227.5
+				266 text NBA · Total · Full game Nov 7, 9:00 PM EST Pinnacle —
+				267 button Polymarket US, Over 227.5, Price expired
+					268 text Polymarket US
+					269 text —
+					270 text +1011.11
+					271 text Before — · After fees —
+					272 text Price expired
+			273 container
+				274 text Houston vs. Phoenix
+				275 heading Over 229.5, Value: 2
+					276 text Over 229.5
+				277 text NBA · Total · Full game Nov 7, 9:00 PM EST Pinnacle —
+				278 button Polymarket US, Over 229.5, Price expired
+					279 text Polymarket US
+					280 text —
+					281 text +1150
+					282 text Before — · After fees —
+					283 text Price expired
+			284 container
+				285 text Houston vs. Phoenix
+				286 heading Over 230.5, Value: 2
+					287 text Over 230.5
+				288 text NBA · Total · Full game Nov 7, 9:00 PM EST Pinnacle —
+				289 button Kalshi, Over 230.5, Price expired
+					290 text Kalshi
+					291 text —
+					292 text +733.33
+					293 text Before — · After fees —
+					294 text Price expired
+			295 container
+				296 text Houston vs. Phoenix
+				297 heading Over 231.5, Value: 2
+					298 text Over 231.5
+				299 text NBA · Total · Full game Nov 7, 9:00 PM EST Pinnacle —
+				300 button Polymarket US, Over 231.5, Price expired
+					301 text Polymarket US
+					302 text —
+					303 text +1011.11
+					304 text Before — · After fees —
+					305 text Price expired
+			306 container
+				307 text Houston vs. Phoenix
+				308 heading Over 232.5, Value: 2
+					309 text Over 232.5
+				310 text NBA · Total · Full game Nov 7, 9:00 PM EST Pinnacle —
+				311 button Kalshi, Over 232.5, Price expired
+					312 text Kalshi
+					313 text —
+					314 text +1328.57
+					315 text Before — · After fees —
+					316 text Price expired
+			317 container
+				318 text Houston vs. Phoenix
+				319 heading Over 233.5, Value: 2
+					320 text Over 233.5
+				321 text NBA · Total · Full game Nov 7, 9:00 PM EST Pinnacle —
+				322 button Polymarket US, Over 233.5, Price expired
+					323 text Polymarket US
+					324 text —
+					325 text +1566.67
+					326 text Before — · After fees —
+					327 text Price expired
+			328 container
+				329 text Houston vs. Phoenix
+				330 heading Over 234.5, Value: 2
+					331 text Over 234.5
+				332 text NBA · Total · Full game Nov 7, 9:00 PM EST Pinnacle —
+				333 button Kalshi, Over 234.5, Price expired
+					334 text Kalshi
+					335 text —
+					336 text +1566.67
+					337 text Before — · After fees —
+					338 text Price expired
+		51 container Results pages
+			52 button (disabled) Previous, ID: previous
+			339 text 1–25 of 64 outcomes · Current filters: 64 outcomes, 1 games, 66 offers
+			53 button Next, ID: next
+
+The focused UI element is 0 AXWebArea Prediction Arb · Expected value, URL: 127.0.0.1:8783/ev?league=NBA&search=Houston&game_state=live&basis=before

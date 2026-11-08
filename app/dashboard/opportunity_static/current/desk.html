@@ -11,33 +11,62 @@
   <a class="skip-link" href="#main-content">Skip to results</a>
   <div data-shell></div>
   <main id="main-content">
-    <div class="desk-title"><h1 id="title">Expected value</h1><span>Before fees</span></div>
+    <div class="desk-title">
+      <div><p class="desk-kicker" id="desk-mode">Market comparison</p><h1 id="title">Expected value</h1></div>
+      <a class="desk-action" id="replay-link" href="/replay">Open replay</a>
+    </div>
+    <div class="replay-bar" id="replay-controls" hidden>
+      <label>Dataset <select id="replay-dataset"><option value="frozen">11 p.m. capture</option><option value="preview">Earlier capture</option><option value="practice">Synthetic practice</option></select></label>
+      <label id="replay-frame-field" hidden>Price step <select id="replay-frame"><option value="initial">1. Opening prices</option><option value="changed">2. Price moves</option></select></label>
+      <nav aria-label="Replay views"><a id="replay-ev" href="/replay">Offers</a><a id="replay-arbs" href="/replay?view=arbs">Arbitrage</a></nav>
+    </div>
     <form id="filters" class="desk-filters">
-      <label>Search <input name="search" type="search" maxlength="150" placeholder="Team or game"></label>
-      <label>Date <input name="day" type="date"></label>
-      <label>Sort <select name="sort"><option value="return">Highest return</option><option value="start">Soonest start</option></select></label>
-      <label id="stake-field" hidden>Total stake ($) <input name="stake" type="number" min="0.01" max="1000000" step="0.01" value="100"></label>
-      <details id="more-filters">
-        <summary>Filters</summary>
-        <div class="desk-options">
+      <div class="desk-toolbar">
+        <label class="desk-search"><span class="sr-only">Search teams</span><input name="search" type="search" maxlength="150" placeholder="Search teams or games"></label>
+        <label id="basis-field"><span class="sr-only">Calculation basis</span><select name="basis"><option value="reviewed">Reviewed fees</option><option value="conservative">Conservative fees</option><option value="before">Before fees</option></select></label>
+        <label id="group-field"><span class="sr-only">Rows</span><select name="group"><option value="outcome">By outcome</option><option value="offer">Individual offers</option></select></label>
+        <label id="stake-field" hidden>Stake ($) <input name="stake" type="number" min="0.01" max="1000000" step="0.01" value="100"></label>
+        <button id="open-filters" type="button" aria-haspopup="dialog">Filters<span id="filter-count" hidden></span></button>
+      </div>
+      <div class="filter-chips" id="active-filters" aria-label="Active filters" hidden></div>
+      <dialog id="filter-panel" aria-labelledby="filter-title">
+        <div class="desk-title"><h2 id="filter-title">Filter results</h2><button id="close-filters" type="button" aria-label="Close filters">Close</button></div>
+        <div class="filter-selections">
           <fieldset id="leagues"><legend>Leagues</legend></fieldset>
           <fieldset id="families"><legend>Markets</legend></fieldset>
           <fieldset id="venues"><legend>Sites</legend></fieldset>
+        </div>
+        <details class="filter-section" id="timing-filters">
+          <summary>Schedule and game state</summary>
           <div class="desk-thresholds">
+            <label>Date <input name="day" type="date"></label>
+            <label>Time zone <select name="timezone"><option value="America/New_York">Eastern</option><option value="UTC">UTC</option></select></label>
+            <label>Starts from <input name="time_from" type="time"></label><label>Starts before <input name="time_to" type="time"></label>
+            <label>Game state <select name="game_state"><option value="">All observed states</option><option value="scheduled">Scheduled</option><option value="live">Live observed</option><option value="suspended">Suspended</option><option value="final">Final</option><option value="unknown">Unknown</option></select></label>
             <label>Period <select name="period"><option value="">All periods</option><option value="full_game">Full game</option></select></label>
+          </div>
+          <p id="time-window-error" class="inspection-gap" role="status" hidden></p>
+          <p class="desk-meta">The start window uses the selected time zone. Game state reflects the source evidence.</p>
+        </details>
+        <details class="filter-section" id="return-filters">
+          <summary>Sorting and return thresholds</summary>
+          <div class="desk-thresholds">
+            <label>Sort <select name="sort"><option value="return">Highest return</option><option value="start">Soonest start</option></select></label>
             <label>Minimum return (%) <input name="minimum" type="number" step="any"></label>
             <label id="profit-field" hidden>Minimum profit ($) <input name="profit" type="number" step="any"></label>
             <label><input name="positive" type="checkbox"> Positive only</label>
           </div>
-          <button type="button" id="reset">Reset filters</button>
-        </div>
-      </details>
+        </details>
+        <div class="filter-footer"><button type="button" id="reset">Clear all</button><button type="button" id="filter-done" class="desk-primary">Done</button></div>
+      </dialog>
     </form>
+    <p id="coverage-strip" class="coverage-strip" hidden></p>
     <p id="notice" class="desk-note" role="status"></p>
     <div class="desk-refresh">
       <span id="refresh-status" class="desk-meta"></span>
       <button id="refresh-list" type="button">Refresh list</button>
     </div>
+    <details><summary>Diagnostic session history</summary><p id="session-summary"></p><button id="session-export" type="button">Export session JSON</button><button id="session-clear" type="button">Start new session</button><ol id="session-events"></ol></details>
     <div id="results" aria-label="Sorted results"></div>
     <nav class="desk-pages" aria-label="Results pages">
       <button id="previous" type="button" disabled>Previous</button>
@@ -48,7 +77,7 @@
   <dialog id="trade" aria-labelledby="trade-title">
     <div class="desk-title"><h2 id="trade-title">Trade details</h2><form method="dialog"><button>Close</button></form></div>
     <div id="trade-body"></div>
-    <button id="latest" type="button">Use latest prices</button>
+    <footer class="inspection-footer"><button id="back-to-pair" type="button" hidden>Back to pairing</button><button id="latest" type="button">Use latest prices</button></footer>
     <p id="trade-note" role="status"></p>
   </dialog>
 </body>

@@ -1,0 +1,225 @@
+{
+  "observed_at": "2026-11-07T23:28:05.391882+00:00",
+  "game": "Sam Houston State Bearkats vs. Jacksonville State Gamecocks",
+  "offer": {
+    "before_fee": "5933/778",
+    "after_fee": "5933/778",
+    "conservative": null,
+    "metric": "conditional_return_percent",
+    "fee": {
+      "available": true,
+      "calibrated": false,
+      "classification": "conditional_trade_fee_benchmark",
+      "condition": "The aggregate Novig offer maps to a pregame straight trade under the reviewed fee schedule, with the same decisive outcome as the exact selected reference pair.",
+      "evidence": {
+        "fee_rate": "0",
+        "path": "app/fixtures/novig-fees-review-20261107.html",
+        "review_before": "2026-11-08T23:19:02.573757+00:00",
+        "reviewed_at": "2026-11-07T23:19:02.573757+00:00",
+        "sha256": "6eb680155acc04150feed380091a5d455aeefbdeffe7ec1b0c41617428ca6f6d",
+        "source_url": "https://support.novig.com/en/articles/16195057-fees-on-novig",
+        "version": "novig-conditional-20261107-review"
+      },
+      "exclusions": [
+        "ties",
+        "pushes",
+        "voids",
+        "cancellations",
+        "asymmetric exceptional settlement",
+        "account funding and withdrawal costs",
+        "taxes"
+      ],
+      "execution_qualified": false,
+      "fill_count": 1,
+      "formula": "Conditional net per USD 1 risk = decisive benchmark probability \u00d7 decimal odds \u2212 1 \u2212 trade fee.",
+      "liquidity_role": "taker",
+      "meaning": "Conditional trade-fee benchmark; not calibrated full net EV, an executable fill or covered arbitrage.",
+      "missing": [
+        "full-outcome probabilities",
+        "instrument-level settlement mapping",
+        "native quantity and executable depth"
+      ],
+      "net_per_dollar_risk": "5933/77800",
+      "normal_win_receipt_usd": "1",
+      "normalization_label": "one USD normal claim, one-fill scenario",
+      "normalization_risk_usd": "100/741",
+      "percentage_denominator": "acquisition_plus_modeled_trade_fee",
+      "quantity": "1",
+      "quantity_unit": "USD normal claim",
+      "ranking_basis": "decisive_taker_one_usd_claim_one_fill_total_risk_v1",
+      "reason": null,
+      "reference_revision": "2acb96c87f2dc6791e66acb621a745c180672c6ba1809ccd9d81af073608d072",
+      "return_percent": "5933/778",
+      "scenario_net_usd": "5933/576498",
+      "selected_decisive_probability": "113/778",
+      "source_times": {
+        "projected_at": null,
+        "received_at": "2026-11-07T23:15:11.183185+00:00",
+        "source_at": "2026-11-07T23:14:05Z",
+        "source_time_kind": "provider_book"
+      },
+      "state": "captured",
+      "trade_fee_usd": "0"
+    },
+    "conservative_fee": {
+      "available": false,
+      "reason": "conservative_trade_fee_estimate_not_applicable"
+    },
+    "reference_calculation": {
+      "available": true,
+      "conditioning": "decisive win/loss only; equality, ties, pushes and exceptional settlement excluded",
+      "fair_american_odds": "66500/113",
+      "fair_decimal_odds": "778/113",
+      "full_state_probability": false,
+      "method": "proportional_no_vig",
+      "overround": "531/15029",
+      "pair": [
+        {
+          "id": "28858e2e44eec98a79e5cb2db9ba93bfdd1dec82a68f5dd368d36d6aafa771c6",
+          "original": {
+            "payout": "1",
+            "payout_units": "USD",
+            "quantity_units": "unknown",
+            "role": "comparison",
+            "units": "decimal_odds",
+            "value": "6.65"
+          },
+          "provider_clocks": {
+            "book": "2026-11-07T23:14:54Z",
+            "market": "2026-11-07T23:14:54Z",
+            "selected_basis": "market"
+          },
+          "receipt_sha256": "0e96a7e0e4240def99a4e31c5273f94737755fba269ea404e1129297d98c2826",
+          "selection": {
+            "label": "Sam Houston State Bearkats",
+            "participant": "the_odds_api:NCAAF:a3f893b3bac8940a6899ae5869fb211c:away_team",
+            "predicate": "win",
+            "signed_line": null
+          },
+          "source": {
+            "binding_id": "003d0a1bc00bc4a86a277c94b7e3cd32bd7b943806eeafa5b6782520fd29afde",
+            "binding_version": "odds-aggregate-1",
+            "native_event_id": "a3f893b3bac8940a6899ae5869fb211c",
+            "native_line": null,
+            "native_market_id": "a079d16d9e0c98b4254106a278a99f4250932c9586c8876de821770dacb7d9b1",
+            "native_outcome_id": "Sam Houston State Bearkats",
+            "native_side": "bookmaker_outcome",
+            "provider": "the_odds_api",
+            "quote_side": "buy"
+          },
+          "times": {
+            "projected_at": null,
+            "received_at": "2026-11-07T23:15:11.183185+00:00",
+            "source_at": "2026-11-07T23:14:54Z",
+            "source_time_kind": "provider_book"
+          }
+        },
+        {
+          "id": "27384b12cd9b8385bed70b4eaf3893a3168ada8a7fd79914454f3569c9401ddc",
+          "original": {
+            "payout": "1",
+            "payout_units": "USD",
+            "quantity_units": "unknown",
+            "role": "comparison",
+            "units": "decimal_odds",
+            "value": "1.13"
+          },
+          "provider_clocks": {
+            "book": "2026-11-07T23:14:54Z",
+            "market": "2026-11-07T23:14:54Z",
+            "selected_basis": "market"
+          },
+          "receipt_sha256": "0e96a7e0e4240def99a4e31c5273f94737755fba269ea404e1129297d98c2826",
+          "selection": {
+            "label": "Jacksonville State Gamecocks",
+            "participant": "the_odds_api:NCAAF:a3f893b3bac8940a6899ae5869fb211c:home_team",
+            "predicate": "win",
+            "signed_line": null
+          },
+          "source": {
+            "binding_id": "368a92d62a4b6559ba877f48cba7f77b039b37b9cd005d424783c08d22ee108c",
+            "binding_version": "odds-aggregate-1",
+            "native_event_id": "a3f893b3bac8940a6899ae5869fb211c",
+            "native_line": null,
+            "native_market_id": "73f706583cfee5a8d47c911ec39a0baf5aa3b37bbd9e6795076c4daaecb76319",
+            "native_outcome_id": "Jacksonville State Gamecocks",
+            "native_side": "bookmaker_outcome",
+            "provider": "the_odds_api",
+            "quote_side": "buy"
+          },
+          "times": {
+            "projected_at": null,
+            "received_at": "2026-11-07T23:15:11.183185+00:00",
+            "source_at": "2026-11-07T23:14:54Z",
+            "source_time_kind": "provider_book"
+          }
+        }
+      ],
+      "probability": "113/778",
+      "provenance": "exact retained pair; original provider prices and clocks",
+      "selected": 0,
+      "selected_equality": null,
+      "selected_id": "28858e2e44eec98a79e5cb2db9ba93bfdd1dec82a68f5dd368d36d6aafa771c6",
+      "selected_predicate": null,
+      "venue": "pinnacle"
+    },
+    "economic_revision": "ce7f8d06428d303545d17008e1ae4685343b448d43516ee74a5da8a53434697f",
+    "price_revision": "e0e03bf82764bcef379de9e47ddb3cb28df7b5c48d610f6bdadd2acb34fd6dd0",
+    "evidence_result_id": "5270e8c6f0dd4215807e7cd7edb24930",
+    "captured_at": "2026-11-07T23:26:13.756154+00:00",
+    "game_state": "scheduled",
+    "game_state_basis": "source_schedule",
+    "current_reasons": [],
+    "source_clock_at": "2026-11-07T23:14:05Z",
+    "confirmed_at": null,
+    "projected_at": null,
+    "id": "4a708d4097abea14cd729f419daf2f1ebd8d6f8c225fe17c61a64b31771dd696",
+    "venue": "novig",
+    "selection": {
+      "participant": "the_odds_api:NCAAF:a3f893b3bac8940a6899ae5869fb211c:away_team",
+      "predicate": "win",
+      "result_interpretation": "normal_win",
+      "signed_line": null
+    },
+    "participant": "Sam Houston State Bearkats",
+    "market": {
+      "line": null,
+      "market": "winner",
+      "period": "full_game"
+    },
+    "odds": {
+      "american": "+641",
+      "decimal": "7.41",
+      "reason": null
+    },
+    "current": true,
+    "value": "5933/778",
+    "reason": null,
+    "reference": {
+      "american": "+565",
+      "decimal": "6.65",
+      "reason": null
+    },
+    "reference_current": true,
+    "probability": "113/778",
+    "overround": "531/15029",
+    "source_at": "2026-11-07T23:14:05Z",
+    "received_at": "2026-11-07T23:15:11.183185+00:00"
+  },
+  "independent_arithmetic": {
+    "selected_probability": "113/778",
+    "price_cost": "100/741",
+    "fee": "0",
+    "total_risk": "100/741",
+    "return_percent": "5933/778",
+    "display_rounded_percent": 7.63,
+    "reference_decimal_odds": [
+      "6.65",
+      "1.13"
+    ],
+    "probability_recomputed_from_opposition": "113/778",
+    "same_provider_event": true,
+    "pinned_browser_fee_matches": true
+  },
+  "evidence": "Active ordinary API; exact arithmetic from its pinned fee/reference inputs. Conditional decisive-outcome scenario, not full-outcome EV."
+}

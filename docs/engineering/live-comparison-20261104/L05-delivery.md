@@ -1,5 +1,12 @@
 # L05 — installed repairs and observed qualification
 
+## Later evidence — November 7
+
+The later local engineering record under `docs/engineering/live-data-20261107/`
+tracks the November 7 follow-up, delivery and current limits. The accounting
+figures below are dated. See [local operation](../../development.md) for current
+controls and replay.
+
 ## November 6, 11:21 AM Eastern — L05 delivered locally
 
 Open [Opportunities](http://127.0.0.1:8783/) and choose NBA, or go directly to [NBA Markets](http://127.0.0.1:8783/odds?league=NBA). Each outcome groups its received offers. Reviewed after-trade-fee EV determines the reviewed ranking. Conservative estimates and missing inputs have distinct labels. Open **Math & fees** to inspect original odds, the named Pinnacle pair, normalized probability and fee/risk basis. The list continues updating, while the open selection holds its prices until **Use latest prices**. The drawer's Admin link opens the evidence for that selection.

@@ -1,5 +1,6 @@
 """Coherent current-row captures; ordinary reads never retain sports reports."""
 from copy import deepcopy
+from datetime import timedelta
 from time import monotonic
 from app.storage.store import hashed, encoded, stamp
 from app.storage.current_games import engine_binding, utc
@@ -29,7 +30,7 @@ def _records(records, at):
     out=[]
     for item in records:
         if item['event'].get('competition') not in SPORTS or item['market_identity'].get('family') not in ('moneyline','spread','total'):continue
-        if stamp(item['event']['scheduled_start'])<=stamp(at):continue
+        if stamp(item['event']['scheduled_start'])<stamp(at)-timedelta(hours=24):continue
         # Only these containers change before OccurrenceResolver's final copy.
         # Other nested facts, including unknown fields, remain untouched here.
         r=dict(item);r['quote']=dict(item['quote'])
@@ -44,7 +45,7 @@ def _records(records, at):
                 and r['market_identity'].get('family')=='moneyline'
                 and r['market_identity'].get('period')=='full_game'):
             r['comparison_scope']=dict(overtime='included')
-            meta.update(phase='pregame',overtime='included',scope_basis='declared aggregate NFL full-game decisive benchmark; exceptional execution rules retained')
+            meta.update(phase='pregame' if stamp(r['event']['scheduled_start'])>stamp(at) else 'unknown',overtime='included',scope_basis='declared aggregate NFL full-game decisive benchmark; exceptional execution rules retained')
         out.append(r)
     return out
 

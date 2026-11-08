@@ -1,6 +1,6 @@
 """Atomic complete metadata recovery. Never restore a book's connection authority."""
 from dataclasses import asdict
-from datetime import datetime,timezone
+from datetime import datetime,timezone,timedelta
 import json
 from psycopg.types.json import Jsonb
 from app.storage.store import connect,encoded
@@ -119,6 +119,28 @@ def save(source,scope,catalog,parsed):
     return stats
 
 
+def expired_event(event, now):
+    start=event.get('scheduled_start')
+    if not start:return False
+    try:stamp=datetime.fromisoformat(start)
+    except (ValueError,TypeError):return False
+    return stamp.tzinfo is not None and stamp<now-timedelta(hours=24)
+
+
+def retire_expired_catalog(catalog, now=None):
+    """Bound resident metadata by the existing game retention window.
+
+    This is time retirement, not inference from missing listings or trading
+    status. Durable records remain intact; unknown starts stay visible.
+    """
+    now=now or datetime.now(timezone.utc)
+    expired={e['id'] for e in catalog.get('events',[]) if expired_event(e,now)}
+    before=len(catalog.get('markets',[]))
+    catalog['markets']=[m for m in catalog.get('markets',[]) if m['event_id'] not in expired]
+    catalog['events']=[e for e in catalog.get('events',[]) if e['id'] not in expired]
+    return before-len(catalog['markets'])
+
+
 def load(source,scope):
     with connect() as db,db.transaction():
         db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
@@ -132,11 +154,14 @@ def load(source,scope):
             rows.itersize = 64
             rows.execute('SELECT metadata,parsed,receipt_fields FROM current_native_market_recovery WHERE source=%s ORDER BY market_id', (source,))
             for row in rows:
-                market=strings.compact(market_value(row['metadata'],row['receipt_fields']));catalog['markets'].append(market)
+                market=market_value(row['metadata'],row['receipt_fields'])
                 event=events.get(market['event_id'],{});start=event.get('scheduled_start');native=market.get('_native',{})
+                if expired_event(event,now):continue
+                market=strings.compact(market);catalog['markets'].append(market)
                 if (not row['parsed'] or native.get('closed') is True or native.get('status') in ('closed','settled','finalized')
-                        or start and datetime.fromisoformat(start)<=now):continue
+                        or start and datetime.fromisoformat(start)<now-timedelta(hours=24)):continue
                 parsed[market['id']]=decode(parsed_value(row['parsed'],row['receipt_fields']),source)
+        retire_expired_catalog(catalog,now)
         return catalog,parsed,head['saved_at'].isoformat()
 
 
@@ -144,8 +169,11 @@ def retain_absent(previous,current):
     """Missing from one moving pass is suspicion, never source withdrawal."""
     existing={m['id'] for m in current['markets']};events={e['id'] for e in current['events']}
     kept=[]
+    now=datetime.now(timezone.utc)
+    previous_events={e['id']:e for e in previous.get('events',[])}
     for market in previous.get('markets',[]):
         if market['id'] in existing:continue
+        if expired_event(previous_events.get(market['event_id'],{}),now):continue
         retained=dict(market,inventory_recovery_disposition='suspected_absent')
         current['markets'].append(retained);kept.append(market['id'])
     required={m['event_id'] for m in current['markets']}-events

@@ -74,24 +74,11 @@ def maintain(db, *, compact=True, collecting=False):
             # temporary relation copy competes with ongoing acquisition.
             for table in HOT_TABLES:
                 db.execute(sql.SQL('VACUUM {}').format(sql.Identifier(table)))
-        # Retention is committed even if reclamation fails or publication rejects.
-        # A capture and a FULL rewrite must not spend the same runway.
+        # Read-only bloat scans do not consume rewrite runway or change MVCC
+        # visibility. Reserve the publication lock only for an eligible FULL
+        # rewrite; no-op scans must not withhold already-admitted games.
+        result['capture_lock_acquired']=False
         if compact and sql_usage(db) >= PRESSURE_BYTES:
-            if collecting:
-                # Continuous bounded publication turns leave almost no idle
-                # lock gap. Queue a bounded request so reclamation receives a
-                # turn instead of repeatedly missing a non-waiting probe.
-                started=monotonic()
-                db.execute("SELECT set_config('lock_timeout',%s,false)",(str(CAPTURE_WAIT_SECONDS)+'s',))
-                try:
-                    db.execute('SELECT pg_advisory_lock(901153)')
-                    capture_lock=True
-                except LockNotAvailable:result['state']='busy'
-                finally:db.execute("SET lock_timeout='1s'")
-                result['capture_lock_wait_seconds']=round(monotonic()-started,6)
-            else:capture_lock=db.execute('SELECT pg_try_advisory_lock(901153) held').fetchone()['held']
-            result['capture_lock_acquired']=capture_lock
-        if capture_lock:
             rewrite_started=monotonic()
             ext = db.execute("SELECT n.nspname AS schema FROM pg_extension e JOIN pg_namespace n ON n.oid=e.extnamespace WHERE e.extname='pgstattuple'").fetchone()
             if ext:
@@ -149,6 +136,24 @@ def maintain(db, *, compact=True, collecting=False):
                     # deadlocks reclamation precisely when it is needed most.
                     # Bound the transient peak separately; this does not admit
                     # sports writes beyond the normal database guard.
+                    if not capture_lock:
+                        started=monotonic()
+                        if collecting:
+                            db.execute("SELECT set_config('lock_timeout',%s,false)",(str(CAPTURE_WAIT_SECONDS)+'s',))
+                            try:
+                                db.execute('SELECT pg_advisory_lock(901153)')
+                                capture_lock=True
+                            except LockNotAvailable:result['state']='busy'
+                            finally:db.execute("SET lock_timeout='1s'")
+                        else:
+                            capture_lock=db.execute('SELECT pg_try_advisory_lock(901153) held').fetchone()['held']
+                        result['capture_lock_acquired']=capture_lock
+                        result['capture_lock_wait_seconds']=round(monotonic()-started,6)
+                        if not capture_lock:break
+                    # Scanning preceded lock ownership: refresh the physical
+                    # size before applying the unchanged copy/runway guard.
+                    row=dict(row,bytes=db.execute('SELECT pg_total_relation_size(%s::regclass) n',
+                        (str(row['oid']),)).fetchone()['n'])
                     before_rewrite=sql_usage(db)
                     peak_bound=before_rewrite+row['bytes']+REWRITE_RUNWAY_BYTES
                     # While acquisition is live the independent heartbeat sees
@@ -157,6 +162,8 @@ def maintain(db, *, compact=True, collecting=False):
                     allowance=0 if collecting else TRANSIENT_REWRITE_BYTES
                     if peak_bound >= SQL_BYTE_CAP+allowance:
                         result['deferred'].append(dict(table=row['relname'], reason='rewrite_headroom',reusable_bytes=free))
+                        db.execute('SELECT pg_advisory_unlock(901153)')
+                        capture_lock=False
                         continue
                     require_disk_space(ROOT/'.local/postgres', append_bytes=row['bytes']*3)
                     try:
@@ -164,6 +171,12 @@ def maintain(db, *, compact=True, collecting=False):
                     except LockNotAvailable:
                         result['deferred'].append(dict(table=row['relname'], reason='lock_timeout'))
                         continue
+                    finally:
+                        # The physical replacement has committed (or failed).
+                        # Subsequent size scans and recovery repacking must not
+                        # continue withholding the next publication turn.
+                        db.execute('SELECT pg_advisory_unlock(901153)')
+                        capture_lock=False
                     after = db.execute('SELECT pg_total_relation_size(%s::regclass) n', (str(row['oid']),)).fetchone()['n']
                     result['rewrites'].append(dict(table=row['relname'],before_bytes=row['bytes'],after_bytes=after,measured_reusable_bytes=free,
                         transient_peak_bound_bytes=peak_bound,operating_cap_bytes=SQL_BYTE_CAP,minimum_reclaim_bytes=reclaim_unit))

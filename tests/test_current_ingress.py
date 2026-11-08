@@ -42,6 +42,30 @@ class Service:
 
 
 class OwnedIngress(IsolatedAsyncioTestCase):
+    async def test_withdrawal_during_precompute_cannot_be_revived_by_older_image(self):
+        class NativeService:
+            database_mode=True
+            def __init__(self):
+                self.workers={'kalshi':SimpleNamespace(invalid_received={})}
+                self.sink=SimpleNamespace(process_normalization=True,metrics={},precompute_books=self.prepare)
+                self.ingress=Ingress(self);self.adopted=[];self.started=Event();self.release=Event()
+            def prepare(self,*args):self.started.set();self.release.wait(3);return {'old':True}
+            @operation
+            def books(self,source,books):
+                self.adopted.extend(books)
+                if False:yield
+        service=NativeService()
+        book=dict(raw=dict(ref=dict(market_id='m'),received_at='2026-11-08T00:00:00Z'))
+        task=asyncio.create_task(call(service,service.books,'kalshi',[book]))
+        for _ in range(100):
+            if service.started.is_set():break
+            await asyncio.sleep(.001)
+        self.assertTrue(service.started.is_set())
+        service.workers['kalshi'].invalid_received['m']='2026-11-08T00:00:01Z'
+        service.release.set();await task
+        self.assertEqual(service.adopted,[])
+        self.assertEqual(service.sink.metrics['invalidated_inflight_images'],1)
+
     async def test_native_sql_timeout_retries_same_image_once(self):
         from psycopg.errors import QueryCanceled
         from unittest.mock import Mock
@@ -167,6 +191,33 @@ class CursorLifetime(IsolatedAsyncioTestCase):
 
 
 class CatalogPreparation(IsolatedAsyncioTestCase):
+    async def test_close_waits_for_input_transfer_before_shutting_down_pool(self):
+        from concurrent.futures import Future
+        from unittest.mock import Mock,patch
+        from app.collection.current_ingress import CatalogPreparation as Preparer
+        entered=Event();release=Event();order=[]
+        def write(*args,**kwargs):
+            entered.set();release.wait(3);order.append('write')
+        def submit(*args):
+            order.append('submit');future=Future();future.set_result({});return future
+        pool=Mock(submit=Mock(side_effect=submit),shutdown=Mock(side_effect=lambda **kw:order.append('shutdown')))
+        with patch('concurrent.futures.ProcessPoolExecutor',return_value=pool), \
+                patch('app.collection.catalog_transfer.write',side_effect=write), \
+                patch('app.collection.catalog_transfer.read',return_value={}):
+            preparer=Preparer()
+            task=asyncio.create_task(preparer.prepare({},'kalshi',{}))
+            for _ in range(100):
+                if entered.is_set():break
+                await asyncio.sleep(.001)
+            self.assertTrue(entered.is_set())
+            closing=asyncio.create_task(preparer.close())
+            await asyncio.sleep(.01)
+            self.assertFalse(closing.done());pool.shutdown.assert_not_called()
+            release.set()
+            await asyncio.wait_for(asyncio.gather(task,closing),3)
+            self.assertEqual(order,['write','write','submit','shutdown'])
+            with self.assertRaises(asyncio.CancelledError):await preparer.prepare({},'kalshi',{})
+
     async def test_competing_catalogs_choose_base_after_prior_adoption_without_blocking_prices(self):
         from unittest.mock import patch
         started=Event();release=Event();bases=[]

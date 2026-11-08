@@ -1,0 +1,29 @@
+Browser tab: 4, Title: "Prediction Arb · Expected value", URL: "http://127.0.0.1:8783/ev?league=NBA&search=Houston&game_state=live&basis=before".
+0 AXWebArea Prediction Arb · Expected value, URL: 127.0.0.1:8783/ev?league=NBA&search=Houston&game_state=live&basis=before
+	1 container Polymarket US · Over 201.5, ID: trade
+		2 heading Polymarket US · Over 201.5, Value: 2, ID: trade-title
+			3 text Polymarket US · Over 201.5
+		4 button Close
+		5 container trade-body
+			6 text Houston vs. Phoenix
+			7 container
+				8 text Offered odds  -222.58
+			9 container
+				10 text Pinnacle  Unavailable
+			11 text Price expired
+			12 text Saved price · Nov 7, 10:24 PM EST
+			13 text Before fees — · After reviewed trade fees — · Conservative estimate —
+			24 container
+				25 button (expanded) Source evidence and clocks, Secondary Actions: Collapse
+					26 text Source evidence and clocks
+				27 text Source event titles: Houston at Phoenix Source: 2026-11-08T03:24:54.195935+00:00 · 29 seconds ago Confirmation: 2026-11-08T03:24:54.195935+00:00 · 29 seconds ago Receipt: 2026-11-08T03:24:54.350600+00:00 · 29 seconds ago Capture: 2026-11-08T03:24:59.172489+00:00 · 25 seconds ago Game state: live · explicit_source_live_and_current_book
+			16 button (collapsed) Reviewed fee calculation, Secondary Actions: Expand
+				17 text Reviewed fee calculation
+			18 button (collapsed) Conservative fee estimate, Secondary Actions: Expand
+				19 text Conservative fee estimate
+			20 button (collapsed) Exact Pinnacle reference, Secondary Actions: Expand
+				21 text Exact Pinnacle reference
+		22 button Use latest prices, ID: latest
+		23 text Latest price is unavailable; inspected evidence remains pinned.
+
+The focused UI element is 25 button (expanded) Source evidence and clocks, Secondary Actions: Collapse

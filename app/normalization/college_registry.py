@@ -38,4 +38,7 @@ def occurrence_registry():
     extra=json.loads(Path(__file__).with_name('college-occurrence-aliases-20261028.json').read_text())
     data['version']+='+'+extra['version']
     data['aliases']+=extra['aliases']
+    extra=json.loads(Path(__file__).with_name('college-occurrence-aliases-20261107.json').read_text())
+    data['version']+='+'+extra['version']
+    data['aliases']+=extra['aliases']
     return Registry(data)

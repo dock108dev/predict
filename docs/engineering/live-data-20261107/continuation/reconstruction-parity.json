@@ -1,0 +1,30 @@
+[
+  {
+    "mode": "legacy",
+    "seconds": 1.7986371670849621,
+    "sha256": "a675eec739f7ab6619a13fa07670c0082b3b788af685694585c193b2f14e4bd4",
+    "inputs": 3049,
+    "outputs": 3049
+  },
+  {
+    "mode": "direct",
+    "seconds": 1.0728001249954104,
+    "sha256": "a675eec739f7ab6619a13fa07670c0082b3b788af685694585c193b2f14e4bd4",
+    "inputs": 3049,
+    "outputs": 3049
+  },
+  {
+    "mode": "legacy",
+    "seconds": 1.693131334031932,
+    "sha256": "a675eec739f7ab6619a13fa07670c0082b3b788af685694585c193b2f14e4bd4",
+    "inputs": 3049,
+    "outputs": 3049
+  },
+  {
+    "mode": "direct",
+    "seconds": 1.3293964590411633,
+    "sha256": "a675eec739f7ab6619a13fa07670c0082b3b788af685694585c193b2f14e4bd4",
+    "inputs": 3049,
+    "outputs": 3049
+  }
+]

@@ -130,6 +130,9 @@ class AggregateScheduler:
             accounting_isolation='process' if self.process_accounting else 'joined_thread')
         self.issue_context={}
         self.phase='idle';self.next_check_at=None;self.quota_next_due_at=...
+        self.active_request=None
+        self.active_dispatch_task=None
+        self.publication_completions=[]
         self.cycle_id=None;self.cycle_requests=0;self.cycle_credits=0;self.sport_states={};self.prepared=False;self.manual=False;self.acquisition_lock=asyncio.Lock()
         self.wall=time.time();self.monotonic=__import__('app.collection.current_clock',fromlist=['continuous']).continuous()
 
@@ -137,6 +140,16 @@ class AggregateScheduler:
         return check_account_binding(self.ledger,self.window_loader)
 
     async def accounting(self,method,*args,result=None,**kwargs):
+        tick=time.perf_counter()
+        try:return await self._accounting(method,*args,result=result,**kwargs)
+        finally:
+            elapsed=time.perf_counter()-tick
+            stages=self.metrics.setdefault('accounting_stages',{})
+            prior=stages.get(method,dict(calls=0,total_seconds=0,max_seconds=0))
+            stages[method]=dict(calls=prior['calls']+1,total_seconds=prior['total_seconds']+elapsed,
+                max_seconds=max(prior['max_seconds'],elapsed),last_seconds=elapsed)
+
+    async def _accounting(self,method,*args,result=None,**kwargs):
         if self.process_accounting:
             if self.accounting_process is None:
                 from .accounting_process import AccountingProcess
@@ -206,6 +219,22 @@ class AggregateScheduler:
         svc.states=states
 
     async def dispatch(self, request, cost, *, bootstrap=False):
+        self.active_dispatch_task=asyncio.current_task()
+        try:
+            return await self._dispatch(request,cost,bootstrap=bootstrap)
+        finally:
+            self.active_request=None
+            self.active_dispatch_task=None
+
+    def publication_progress(self):
+        task=self.active_dispatch_task
+        if (not self.active_request or not task or task.done() or task.cancelling()
+                or self.closed or not self.service.dispatch or self.service.ownership.file is None
+                or self.active_request['stage'] not in ('reserved','transport','received')):
+            return None
+        return dict(self.active_request,runtime_id=self.service.runtime_id,candidate_digest=self.service.digest)
+
+    async def _dispatch(self, request, cost, *, bootstrap=False):
         self.phase='scheduled_admission'
         self.permitted()
         await self.accounting('check_binding')
@@ -226,6 +255,7 @@ class AggregateScheduler:
         try:
             aid=await self.accounting('reserve',self.service.digest,request,cost,
                 bootstrap=bootstrap,qualification=self.qualification,cycle_id=self.cycle_id,result=reservation)
+            self.active_request=dict(id=aid,stage='reserved')
             self.issue_context=dict(attempt_id=aid,charged_credits=None,endpoint_class='sports_bootstrap' if bootstrap else 'sport_odds')
             sport=next((s for s,k in SPORT_KEYS.items() if request['path']=='/v4/sports/'+k+'/odds'),None)
             if sport:self.issue_context['sport']=sport
@@ -250,6 +280,7 @@ class AggregateScheduler:
             nonlocal transport_started
             self.permitted()
             transport_started=True
+            self.active_request['stage']='transport'
             return await self.transport.request(request,self.key)
         request_task=asyncio.create_task(send_once())
         try:
@@ -257,9 +288,11 @@ class AggregateScheduler:
             self.metrics['request_started_at']=now()
             self.phase='transport'
             response=await asyncio.shield(request_task)
+            self.active_request['stage']='received' if response['status']==200 else 'failed'
             self.metrics['http_response_ms']=(time.perf_counter()-tick)*1000
             self.metrics['last_received_at']=response['received_at']
         except asyncio.CancelledError:
+            self.active_request['stage']='cancelled'
             if not transport_started:
                 # The durable marker precedes task scheduling. Cancellation in
                 # that gap is positive evidence that no transport was entered;
@@ -283,6 +316,7 @@ class AggregateScheduler:
             # No receipt leaves the durable marker uncertain. Never refund it.
             raise
         except Exception as exc:
+            self.active_request['stage']='failed'
             if not transport_started:
                 await self.accounting('cancel_before_transport',aid)
                 raise
@@ -307,6 +341,18 @@ class AggregateScheduler:
         self.service.observation('the_odds_api','response',dict(attempt_id=aid,status=response['status'],
             request=request,headers=response['headers'],received_at=response['received_at'],body_bytes=len(response['body']),body_sha256=sha256(response['body']).hexdigest()))
         if q['pause']:raise QuotaStop(q['pause'])
+        from .alternate_acquisition import missing_event
+        scoped_missing=missing_event(request,cost,response['status'],charged)
+        if response['status']==200 or scoped_missing:
+            # The heartbeat's ledger read can precede completion of this exact
+            # transaction. Keep a bounded positive completion witness so that
+            # its own stale pending projection cannot revoke unrelated prices.
+            from .current_quota import owner_runtime
+            self.publication_completions.append(dict(id=aid,runtime_id=owner_runtime(self.service.ownership),
+                candidate_digest=self.service.digest,stage='accounted',status=response['status'],charged=charged))
+            self.publication_completions=self.publication_completions[-2:]
+        if scoped_missing:
+            return dict(response,event_missing=True)
         if response['status']!=200:
             self.coverage_failure(sport,response['received_at'])
             code='aggregate_rate_limit' if response['status']==429 else 'aggregate_authentication' if response['status'] in (401,403) else 'aggregate_http_failure'
@@ -316,9 +362,7 @@ class AggregateScheduler:
 
     def account_response(self,aid,response):
         """Join strict durable receipt accounting without blocking socket reads."""
-        self.ledger.reconcile(aid,response['headers'],received_at=response['received_at'])
-        self.ledger.record_response(aid,response)
-        charged=self.ledger._read()['attempts'][aid].get('charged')
+        charged=self.ledger.complete_response(aid,response)
         return charged,self.ledger.snapshot()
 
     def retain_interrupted_response(self, aid, reason, *, receipt=None, diagnostic=None):
@@ -447,9 +491,11 @@ class AggregateScheduler:
         states=deepcopy(self.service.states)
         due=self.quota_due()
         from .current_aggregate_admission import admit_venues,market_exclusions,parse_frame
+        decode_started=time.perf_counter()
         self.phase='decoding'
         if response.get('parse_error'):raise ValueError('aggregate_json_invalid')
         frame=response.get('parsed_frame') or parse_frame(response['body'])
+        decoded_at=now();normalize_started=time.perf_counter()
         self.phase='normalization'
         exclusions=market_exclusions(response['body'],frame=frame)
         self.metrics.setdefault('unsupported_market_exclusions',{})[sport]=exclusions
@@ -474,6 +520,7 @@ class AggregateScheduler:
                 reason='Selected scope: '+', '.join(aggregate_scope(self.service.config))+'. '+ '; '.join(scope+': '+value['reason'] for scope,value in observations),
                 received_at=response['received_at'],next_due_at=due)
         states['novig']['reference_sports']={scope:values['pinnacle']['reason_code'] for scope,values in sport_states.items()}
+        normalized_at=now();admission_started=time.perf_counter()
         self.phase='database_ingress'
         if getattr(self.service,'database',None) is not None:
             complete=[venue for venue in batches if venue not in rejected]
@@ -482,6 +529,14 @@ class AggregateScheduler:
                 records=records,complete_venues=complete,received_at=response['received_at'],raw_payload=frame.payload), states))
         else:
             (yield (dict(type='current_aggregate',source='the_odds_api',sport=sport,body=response['body'],received_at=response['received_at'],venue_states=venue_states), states))
+        admitted_at=now()
+        self.metrics.setdefault('delivery_stages',[]).append(dict(sport=sport,
+            attempt_id=self.issue_context.get('attempt_id'),received_at=response['received_at'],
+            decoded_at=decoded_at,normalized_at=normalized_at,admitted_at=admitted_at,
+            decoding_seconds=normalize_started-decode_started,
+            normalization_seconds=admission_started-normalize_started,
+            admission_seconds=time.perf_counter()-admission_started,records=len(records)))
+        self.metrics['delivery_stages']=self.metrics['delivery_stages'][-24:]
         self.sport_states=sport_states
         self.phase='offered_inventory'
         if hasattr(self.service,'coverage'):

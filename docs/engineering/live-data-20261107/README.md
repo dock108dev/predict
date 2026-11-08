@@ -1,8 +1,8 @@
 # Live-data engineering — November 7 follow-up
 
-**Current next action: implement E01. Broad observation is finished.** Use targeted
-source-to-screen checks to verify each repair; do not start another open-ended
-monitoring session or ask for owner acceptance while known engineering remains.
+**Evening continuation is integrated.** See the [current result](continuation/result.md) for real native-to-browser matches, supported native live prices, explicit 256-market rotating coverage, per-game publication measurements and exact fee dependencies. The final 22:30 check delivered all nine in-horizon NBA winner games in 6.1–41.8 seconds admission-to-capture (13.5–48.3 seconds receipt-to-sampled API). Full-scope competition, explicit deferred markets and source-age gaps remain visible. Earlier trial failures remain in the [implementation chronology](continuation/implementation.md).
+
+**E01–E07 changes are integrated and locally checked.** See the [delivery record](delivery.md) for running behavior, focused tests and remaining product limits. The final 18:45 NCAAF receipt reached the checked Sam Houston browser rows in 42.166 seconds. Pinned adoption, keyboard return, later-page stability and session export passed. Those remaining failures are addressed by the continuation above; the original 18:45 sample is not the final native or latency result. No complete live coverage or owner acceptance is claimed.
 
 This queue follows the owner's November 7 request to turn the usability findings
 into next steps. It supersedes the November 6 “ordinary use / owner acceptance
@@ -40,9 +40,9 @@ Use current owning records before an operational action. Both November 7 exact
 | Status-capacity fallback | Trims diagnostic examples while preserving accounting, coverage and controls. Regression checks passed; live pressure fallback was not exercised during the remaining window. |
 | Refresh visibility and clearer status wording | List check time, focus-pause indicator, manual list refresh, schedule/next due, alternate progress and partial-price banner verified. Active-collection guidance and stable pagination remain open. |
 
-These are integrated local changes in the existing uncommitted checkout. Focused
-unit, disposable PostgreSQL and browser evidence is linked in the session report;
-there is no new commit, hosted CI or owner-acceptance claim.
+These changes were integrated locally during the session. Focused unit, disposable
+PostgreSQL and browser evidence is linked in the session report. This planning
+update does not establish new runtime verification, hosted CI or owner acceptance.
 
 ## Execution order
 
@@ -53,13 +53,13 @@ external dependency in one path does not block independent engineering.
 
 | Order | Workstream | Priority / state | Findings covered |
 | --- | --- | --- | --- |
-| E01 | Separate acquisition guards from existing-price publication authority | P0 — next implementation | U14, U28 |
-| E02 | Measure and repair source-to-screen latency and cycle throughput | P0 — open; preserve integrated scheduling/storage fixes | U08, U12, U16, U23, U24, U25, U29, U30 |
-| E03 | Resilient runtime, scoped recovery and truthful operational UI | P0 — open; several narrow fixes integrated | U01, U09, U10, U13, U15, U17, U21, U22, U27, U31 |
-| E04 | Resolve the in-game coverage gap and time-window controls | P0 functional gap — open | U02, U07 |
-| E05 | Reconcile the active interface with the agreed fee/reference contract | P1 — open; engineering reconciliation precedes acceptance | U05; existing L02/L03 requirements |
-| E06 | Stable browsing, consistent market labels and precise inspection | P1 — open; refresh visibility already integrated | U03, U04, U11, U18, U20 |
-| E07 | In-app diagnostic session history and change provenance | P1 — open feature work | U06, U19 |
+| E01 | Separate acquisition guards from existing-price publication authority | Implemented; owned refresh and revocation checked | U14, U28 |
+| E02 | Measure and repair source-to-screen latency and cycle throughput | Final selected receipt-to-browser 42.166 s; rotation delay remains | U08, U12, U16, U23, U24, U25, U29, U30 |
+| E03 | Resilient runtime, scoped recovery and truthful operational UI | Integrated and restarted; specific provider overflow/backlog remains | U01, U09, U10, U13, U15, U17, U21, U22, U26, U27, U31 |
+| E04 | Resolve the in-game coverage gap and time-window controls | Supported lifecycle implemented; provider/cadence limits explicit | U02, U07 |
+| E05 | Reconcile the active interface with the agreed fee/reference contract | Current Novig arithmetic/evidence verified; US account tier and other fee facts missing | U05; existing L02/L03 requirements |
+| E06 | Stable browsing, consistent market labels and precise inspection | Later pages, mobile, keyboard return and explicit latest adoption verified | U03, U04, U11, U18, U20 |
+| E07 | In-app diagnostic session history and change provenance | Implemented; browser JSON export verified | U06, U19 |
 
 ### E01 — publication authority during ordinary collection
 

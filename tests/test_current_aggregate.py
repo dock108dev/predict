@@ -70,6 +70,28 @@ class SchedulerTests(unittest.IsolatedAsyncioTestCase):
             ends_at=(now.replace(day=28)+timedelta(days=4)).replace(day=1,hour=0,minute=0,second=0,microsecond=0).isoformat())
         self.scheduler=AggregateScheduler(self.service,ledger=self.q,transport=self.wire,key_loader=lambda:'CONTROLLED-dummy-key',window_loader=lambda:self.window)
     async def asyncTearDown(self):self.schedule_patch.stop();await self.scheduler.close();await self.store.close();self.service.ownership.release();self.temp.cleanup()
+    async def test_live_request_witness_clears_on_completion_and_failure(self):
+        from app.storage.ordinary_publication import owned_refresh
+        await self.scheduler.step()
+        for failure in (None,ConnectionError('controlled')):
+            self.q.transact(lambda v,at:v.update(next_due_at=None))
+            self.wire.hold=asyncio.Event();self.wire.entered.clear();self.wire.error=failure
+            task=asyncio.create_task(self.scheduler.dispatch(dict(path='/v4/sports/baseball_mlb/odds',params=PARAMS),3))
+            await self.wire.entered.wait()
+            q=self.q.snapshot()
+            self.assertEqual(q['blocking_reason'],'ambiguous_dispatch_unresolved')
+            p=self.scheduler.publication_progress()
+            owner=dict(healthy=True,active=True,runtime_id=self.service.runtime_id,
+                status=dict(sources=[dict(provider='the_odds_api',publication_progress=p)]))
+            self.assertTrue(owned_refresh(owner,q))
+            self.wire.hold.set()
+            if failure:
+                with self.assertRaisesRegex(QuotaStop,'transport_uncertain'):await task
+            else:await task
+            self.assertIsNone(self.scheduler.publication_progress())
+            owner['status']['sources'][0]['publication_progress']=None
+            self.assertFalse(owned_refresh(owner,self.q.snapshot()))
+
     async def test_stop_during_reservation_or_marker_never_enters_transport(self):
         import threading
         await self.scheduler.step()

@@ -18,6 +18,38 @@ class LockRecovery(IsolatedAsyncioTestCase):
     setUpClass = classmethod(base.SQL.setUpClass.__func__)
     tearDownClass = classmethod(base.SQL.tearDownClass.__func__)
 
+    def test_batched_invalidation_withdraws_then_allows_a_new_active_image(self):
+        from tests.test_current_service import native_fixture
+        cat,book=native_fixture();sink=DatabaseIngressSink(None,DEFAULT)
+        from datetime import datetime,timedelta
+        at=(datetime.fromisoformat(cat['events'][0]['scheduled_start'].replace('Z','+00:00'))-timedelta(minutes=1)).isoformat()
+        book['raw'].update(received_at=at,exchange_at=at)
+        from app.storage.store import hashed
+        binding=cat['markets'][0]['v1_raw_binding']
+        binding['sha256']=hashed({k:v for k,v in binding.items() if k!='sha256'})
+        sink.reducer.inventory={'kalshi':cat}
+        row=dict(type='prediction_books',source='kalshi',observations=[dict(
+            type='prediction_book',source='kalshi',book=book,observed_at=book['raw']['received_at'],packets=[])])
+        key=('kalshi',book['raw']['ref']['event_id'],book['raw']['ref']['market_id'])
+        with patch('app.collection.current_database.connect',side_effect=self.connect), \
+                patch('app.collection.current_database.utc',return_value=book['raw']['received_at']):
+            sink.reducer,_,_=sink.prepare(row,{})
+            self.assertIn(key,sink.reducer.books)
+            with self.connect() as db:
+                self.assertTrue(db.execute('SELECT 1 FROM current_offer o JOIN current_contract c ON c.id=o.contract_id WHERE c.venue=%s AND c.native_market_id=%s',('kalshi',key[2])).fetchone())
+            invalid=dict(type='native_market_invalid',source='kalshi',markets=[key[1:],('other','unseen')])
+            candidate,_,_=sink.prepare(invalid,{})
+            self.assertNotIn(key,candidate.books)
+            self.assertIn(key,candidate.invalid)
+            with self.connect() as db:
+                self.assertFalse(db.execute('SELECT 1 FROM current_offer o JOIN current_contract c ON c.id=o.contract_id WHERE c.venue=%s AND c.native_market_id=%s',('kalshi',key[2])).fetchone())
+            sink.reducer=candidate
+            candidate,_,_=sink.prepare(row,{})
+            self.assertIn(key,candidate.books)
+            self.assertNotIn(key,candidate.invalid)
+            with self.connect() as db:
+                self.assertTrue(db.execute('SELECT 1 FROM current_offer o JOIN current_contract c ON c.id=o.contract_id WHERE c.venue=%s AND c.native_market_id=%s',('kalshi',key[2])).fetchone())
+
     def test_packed_images_survive_catalog_reannotation_and_failed_candidate(self):
         from copy import deepcopy
         from tests.test_current_service import native_fixture

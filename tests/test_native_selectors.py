@@ -53,7 +53,7 @@ class Retained(unittest.TestCase):
         at=datetime(2026,9,30,tzinfo=timezone.utc)
         for sport in ns.LEAGUES:
             path,q=ns.query('polymarket_us',sport,at)
-            self.assertEqual(q['startTimeMin'],(at+timedelta(minutes=5)).isoformat())
+            self.assertEqual(q['startTimeMin'],(at-timedelta(hours=24)).isoformat())
             self.assertEqual(q['startTimeMax'],(at+timedelta(days=7)).isoformat())
             if sport!='NFL':self.assertEqual(q['tagSlugsAll'],'games')
 

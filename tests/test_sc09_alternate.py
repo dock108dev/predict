@@ -15,6 +15,14 @@ GRANT=dict(schema='predict-alternate-authority-1',enabled=True,credits_per_cycle
 
 
 class AlternatePlan(TestCase):
+    def test_missing_event_is_only_exact_zero_charge_alternate_404(self):
+        from app.collection.alternate_acquisition import missing_event
+        r=plan({'NFL':[dict(id='abc')]})['requests'][0]
+        req={k:r[k] for k in ('path','params')}
+        self.assertTrue(missing_event(req,2,404,0))
+        for cost,status,charged in [(2,429,0),(2,404,None),(2,404,2),(0,404,0),(2,502,0)]:
+            self.assertFalse(missing_event(req,cost,status,charged))
+        self.assertFalse(missing_event(event_request('NFL'),2,404,0))
     def test_full_plan_no_sampling_and_exact_cost(self):
         p=plan({'NFL':[dict(id=str(i)) for i in range(107)]})
         self.assertEqual((p['event_requests'],p['total_maximum_credits_per_cycle'],p['total_maximum_credits_per_operating_day']),(107,232,12992))

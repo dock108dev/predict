@@ -1,0 +1,29 @@
+{
+  "population": "1000 retained Polymarket US full images replayed eight times; stable independent market owners; envelope validation unchanged, startup excluded; no provider requests",
+  "results": [
+    {
+      "partitions": 1,
+      "seconds": 7.891960958018899,
+      "sha256": "4611911fa288167bf4bfbbc323f200a141d622053e87eae483c4edb3a7c4818a",
+      "max_child_rss": 162201600
+    },
+    {
+      "partitions": 2,
+      "seconds": 6.532416917034425,
+      "sha256": "4611911fa288167bf4bfbbc323f200a141d622053e87eae483c4edb3a7c4818a",
+      "max_child_rss": 133316608
+    },
+    {
+      "partitions": 1,
+      "seconds": 7.8904932090081275,
+      "sha256": "4611911fa288167bf4bfbbc323f200a141d622053e87eae483c4edb3a7c4818a",
+      "max_child_rss": 153059328
+    },
+    {
+      "partitions": 2,
+      "seconds": 5.315432791016065,
+      "sha256": "4611911fa288167bf4bfbbc323f200a141d622053e87eae483c4edb3a7c4818a",
+      "max_child_rss": 128008192
+    }
+  ]
+}

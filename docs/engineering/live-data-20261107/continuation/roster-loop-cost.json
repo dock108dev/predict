@@ -1,0 +1,21 @@
+{
+  "population": "100000 frame bookkeeping operations; 7262 active and 102 disjoint isolated IDs, matching observed Kalshi roster. Controlled cost, excludes reconstruction and SQL.",
+  "results": [
+    {
+      "mode": "before",
+      "seconds": 8.926437624963
+    },
+    {
+      "mode": "after",
+      "seconds": 0.01453804096672684
+    },
+    {
+      "mode": "before",
+      "seconds": 9.303274917067029
+    },
+    {
+      "mode": "after",
+      "seconds": 0.02468408306594938
+    }
+  ]
+}

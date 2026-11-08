@@ -14,7 +14,10 @@ ROOT=Path(__file__).resolve().parents[2]
 @lru_cache(maxsize=4)
 def _verified(raw, body, venue):
     basis=json.loads(raw)
-    if sha256(body).hexdigest()!=basis['sha256'] or basis['fee_rate']!={'novig':'0','polymarket_us':'0.0695','kalshi':'0.07','prophetx':'0.02'}[venue]:
+    unbound_tier=(venue=='polymarket_us' and basis.get('fee_rate') is None
+        and basis.get('unavailable_reason')=='polymarket_account_taker_fee_tier_unbound'
+        and basis.get('allowed_taker_coefficients')==['0.095','0.085','0.075','0.0695'])
+    if sha256(body).hexdigest()!=basis['sha256'] or (not unbound_tier and basis['fee_rate']!={'novig':'0','polymarket_us':'0.0695','kalshi':'0.07','prophetx':'0.02'}[venue]):
         raise ValueError('conditional_fee_evidence_invalid')
     return basis
 
@@ -25,7 +28,7 @@ def basis(venue='novig', *, at=None):
     if at is not None:
         # A substantive new review is prospective. Never fill the expired gap
         # or relabel an immutable result computed with the earlier evidence.
-        for date in ('20261028','20261030','20261103','20261104','20261105'):
+        for date in ('20261028','20261030','20261103','20261104','20261105','20261107'):
             reviewed=ROOT/f'app/fixtures/{name}-conditional-fees-review-{date}.json'
             if reviewed.exists() and at>=instant(json.loads(reviewed.read_bytes())['reviewed_at']):path=reviewed
     raw=path.read_bytes()
@@ -60,6 +63,7 @@ def attach(result, q, *, at, event, group):
         if not instant(evidence['reviewed_at'])<=at<instant(evidence['review_before']):
             raise ValueError('conditional_fee_review_expired_or_not_effective')
         metric['evidence']=evidence
+        if evidence.get('unavailable_reason'):raise ValueError(evidence['unavailable_reason'])
         if at>=instant(event['start_at']):raise ValueError('conditional_pregame_ended')
         if (group['period']!='full_game' or group['market'] not in ('winner','spread','total')
                 or q.get('comparison_input_refs',{}).get('phase')=='live'):

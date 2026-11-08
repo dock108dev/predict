@@ -1,0 +1,3 @@
+Browser tab: 3, Title: "Prediction Arb · Expected value", URL: "http://127.0.0.1:8783/ev?league=NBA&family=winner&search=Orlando&basis=before".
+There has been no change in the accessibility tree.
+The focused UI element is 21 search text field (settable) Search, Value: San Antonio

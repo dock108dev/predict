@@ -12,10 +12,10 @@ export function timezone() {
   return readPreference('timezone') || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
 }
 
-export function clock(at) {
+export function clock(at, zone = timezone()) {
   if (!at) return 'Time unavailable';
   return new Intl.DateTimeFormat('en-US', {
-    timeZone: timezone(), month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short'
+    timeZone: zone, month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short'
   }).format(new Date(at));
 }
 

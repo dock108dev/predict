@@ -2,6 +2,13 @@
 
 ## Authority and status
 
+The local November 7 engineering record under `docs/engineering/live-data-20261107/`
+contains the follow-up and delivery evidence. The product contracts below remain
+applicable. The [development guide](development.md) describes the integrated desk
+and replay.
+
+### November 6 checkpoint — dated evidence
+
 This is the current product plan from the November 4 owner design conversation.
 It supersedes conflicting November 3 per-source cards, manual-refresh discovery,
 inline Why panels and treatment of automatic ordinary-list publication as optional.
@@ -20,8 +27,10 @@ recovery, consumed once, without releasing the 34 held credits / 13 historical
 attempts. It is not a standing authorization for new 429 recovery exceptions.
 Prior blocked/open entries are historical and must not override the final evidence.
 No universal currentness, hosted CI, commit/push or owner acceptance is claimed.
-The next step is ordinary use of the running app and focused follow-up for actual
-issues, not automatic redispatch of the historical optimization assignments.
+The next step at that checkpoint was ordinary use and focused follow-up. Actual
+November 7 findings now have an explicit engineering queue; do not automatically
+redispatch historical optimization assignments or leave the new work behind
+owner acceptance.
 
 Read `AGENTS.md`. Work only in this repository on main. Preserve the
 existing uncommitted prototype and protected data. No worktree, commit/push,

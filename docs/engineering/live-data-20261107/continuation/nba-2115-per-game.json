@@ -1,0 +1,72 @@
+[
+  {
+    "game": "Orlando Magic vs. Golden State Warriors",
+    "receipt": "2026-11-08T02:15:15.705187+00:00",
+    "admitted": "2026-11-08T02:15:19.961270+00:00",
+    "captured": "2026-11-08T02:15:28.555500+00:00",
+    "api_seen": "2026-11-08T02:15:35.099534+00:00",
+    "current_offers": 0,
+    "admission_to_capture_s": 8.59423,
+    "receipt_to_api_s": 19.394347
+  },
+  {
+    "game": "Houston Rockets vs. Phoenix Suns",
+    "receipt": "2026-11-08T02:15:15.705187+00:00",
+    "admitted": "2026-11-08T02:15:19.961270+00:00",
+    "captured": "2026-11-08T02:15:28.307201+00:00",
+    "api_seen": "2026-11-08T02:15:35.099534+00:00",
+    "current_offers": 0,
+    "admission_to_capture_s": 8.345931,
+    "receipt_to_api_s": 19.394347
+  },
+  {
+    "game": "New York Knicks vs. Cleveland Cavaliers",
+    "receipt": "2026-11-08T02:15:15.705187+00:00",
+    "admitted": "2026-11-08T02:15:19.961270+00:00",
+    "captured": "2026-11-08T02:15:39.933814+00:00",
+    "api_seen": "2026-11-08T02:15:41.717829+00:00",
+    "current_offers": 0,
+    "admission_to_capture_s": 19.972544,
+    "receipt_to_api_s": 26.012642
+  },
+  {
+    "game": "Philadelphia 76ers vs. Chicago Bulls",
+    "receipt": "2026-11-08T02:15:15.705187+00:00",
+    "admitted": "2026-11-08T02:15:19.961270+00:00",
+    "captured": "2026-11-08T02:15:52.832658+00:00",
+    "api_seen": "2026-11-08T02:16:02.205182+00:00",
+    "current_offers": 2,
+    "admission_to_capture_s": 32.871388,
+    "receipt_to_api_s": 46.499995
+  },
+  {
+    "game": "Boston Celtics vs. Milwaukee Bucks",
+    "receipt": "2026-11-08T02:15:15.705187+00:00",
+    "admitted": "2026-11-08T02:15:19.961270+00:00",
+    "captured": "2026-11-08T02:15:53.768311+00:00",
+    "api_seen": "2026-11-08T02:16:02.205182+00:00",
+    "current_offers": 2,
+    "admission_to_capture_s": 33.807041,
+    "receipt_to_api_s": 46.499995
+  },
+  {
+    "game": "San Antonio Spurs vs. Portland Trail Blazers",
+    "receipt": "2026-11-08T02:15:15.705187+00:00",
+    "admitted": "2026-11-08T02:15:19.961270+00:00",
+    "captured": "2026-11-08T02:16:20.476757+00:00",
+    "api_seen": "2026-11-08T02:16:27.887881+00:00",
+    "current_offers": 2,
+    "admission_to_capture_s": 60.515487,
+    "receipt_to_api_s": 72.182694
+  },
+  {
+    "game": "Utah Jazz vs. Minnesota Timberwolves",
+    "receipt": "2026-11-08T02:15:15.705187+00:00",
+    "admitted": "2026-11-08T02:15:19.961270+00:00",
+    "captured": "2026-11-08T02:16:28.780567+00:00",
+    "api_seen": "2026-11-08T02:16:33.698567+00:00",
+    "current_offers": 2,
+    "admission_to_capture_s": 68.819297,
+    "receipt_to_api_s": 77.99338
+  }
+]

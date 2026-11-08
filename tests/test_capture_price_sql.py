@@ -10,6 +10,24 @@ from app.storage.current_rows import CurrentRowStore
 
 @skipUnless(SOCKET,'Disposable PostgreSQL required')
 class PriceCaptureSQL(LatestBoardFixture):
+    async def test_unrelated_source_reconnect_preserves_exact_incremental_capture(self):
+        from psycopg.types.json import Jsonb
+        from app.storage.ordinary_publication import component_binding
+        with self.connect() as db:
+            db.execute("DELETE FROM current_event WHERE provider='polymarket_us'")
+            events=[r['id'] for r in db.execute('SELECT id FROM current_event')]
+            venues={r['venue'] for r in db.execute('SELECT DISTINCT venue FROM current_contract')}
+            binding=component_binding(['policy','settings','epoch',{},dict(kalshi='available',polymarket_us='available',pinnacle='available')],venues)
+            previous=snapshots.capture(db,ordinary=True,event_ids=events,at=self.at.isoformat(),capture_binding=binding,price_basis=True)
+            db.execute('UPDATE current_source_status SET state=%s WHERE venue=%s',(Jsonb(dict(state='resyncing')),'polymarket_us'))
+            self.at+=timedelta(seconds=2)
+            actual=capture_price.capture(db,deepcopy(previous),at=self.at.isoformat(),binding=binding,event_ids=events)
+            expected=snapshots.capture(db,ordinary=True,event_ids=events,at=self.at.isoformat())
+            self.assertIsNotNone(actual)
+            for value in (actual,expected):
+                for k in ('id','capture_seconds','_price_basis','_price_capture'):value.pop(k,None)
+            self.assertEqual(actual,expected)
+
     async def test_material_receipt_provenance_and_depth_churn_equal_complete(self):
         with self.connect() as db:
             events=[r['id'] for r in db.execute('SELECT id FROM current_event')]

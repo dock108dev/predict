@@ -1,5 +1,11 @@
 # Next engineering slices
 
+## November 7 — active follow-up engineering
+
+The November 7 local engineering record is under `docs/engineering/live-data-20261107/`.
+For the integrated desk and replay, see [local operation](../../development.md).
+The November 6 delivery below records the earlier installed result.
+
 ## November 6 — L05 delivered locally
 
 The running Opportunities → Markets → Math & fees workflow is engineer-verified. Eight scheduled slots were confirmed after the machine woke, including a six-game NBA receipt-to-list trace. A live NBA drawer adopted +2% to +3% only on explicit action. Both native catalogs completed replacement on the repaired data process, with 189 consecutive healthy checks and advancing list generations. The recorded balance was 98,032 and the 34 historical credits across 13 unresolved attempts remain held. Startup can exceed the two-second target, native prices can expire during turnover, and account-specific net values require supporting facts.
@@ -8,7 +14,7 @@ Use the installed app at [Opportunities](http://127.0.0.1:8783/) or [NBA Markets
 
 See the [L05 delivery record](L05-delivery.md) for the walkthrough, limits and evidence.
 
-## Next action and remaining follow-up
+## November 6 next-action record — historical
 
 Use the running app for the NBA/game comparison walkthrough. The original local
 product assignment has reached its recorded engineer-verified handoff. Do not

@@ -1,0 +1,136 @@
+{
+  "processing_phase": "accounting",
+  "publication_progress": null,
+  "publication_completions": [
+    {
+      "id": "f1afd11b-0aa2-409c-9064-f67ba9d83ddf",
+      "stage": "accounted",
+      "status": 200,
+      "charged": 2,
+      "runtime_id": "9d4f7f01-32db-43ee-9ffa-55f1a6b77209",
+      "candidate_digest": "931c128b3cb1c08e4b0b6c61d110ce0eea527040d9f5eeab1a6d038b7a8d4210"
+    },
+    {
+      "id": "0607d9b1-953e-43e9-bc6e-3b6600126989",
+      "stage": "accounted",
+      "status": 200,
+      "charged": 2,
+      "runtime_id": "9d4f7f01-32db-43ee-9ffa-55f1a6b77209",
+      "candidate_digest": "931c128b3cb1c08e4b0b6c61d110ce0eea527040d9f5eeab1a6d038b7a8d4210"
+    }
+  ],
+  "last_http_received_at": "2026-11-08T02:16:17.947929+00:00",
+  "delivery_stages": [
+    {
+      "sport": "NFL",
+      "records": 336,
+      "attempt_id": "c0c94175-72ef-4555-b434-1f23b2964be2",
+      "decoded_at": "2026-11-08T02:15:06.526031+00:00",
+      "admitted_at": "2026-11-08T02:15:08.776570+00:00",
+      "received_at": "2026-11-08T02:15:04.480878+00:00",
+      "normalized_at": "2026-11-08T02:15:06.590736+00:00",
+      "decoding_seconds": 2.749962732195854e-06,
+      "admission_seconds": 2.1858182499418035,
+      "normalization_seconds": 0.06471020809840411
+    },
+    {
+      "sport": "NCAAF",
+      "records": 320,
+      "attempt_id": "61691204-45f3-4d83-ab06-5be2c11931b5",
+      "decoded_at": "2026-11-08T02:15:11.874904+00:00",
+      "admitted_at": "2026-11-08T02:15:13.230585+00:00",
+      "received_at": "2026-11-08T02:15:10.382739+00:00",
+      "normalized_at": "2026-11-08T02:15:11.923348+00:00",
+      "decoding_seconds": 2.874992787837982e-06,
+      "admission_seconds": 1.3072368329158053,
+      "normalization_seconds": 0.04845166706945747
+    },
+    {
+      "sport": "NBA",
+      "records": 210,
+      "attempt_id": "f8e7c086-e11b-43da-a89f-dc944aeda80e",
+      "decoded_at": "2026-11-08T02:15:18.874630+00:00",
+      "admitted_at": "2026-11-08T02:15:19.961270+00:00",
+      "received_at": "2026-11-08T02:15:15.705187+00:00",
+      "normalized_at": "2026-11-08T02:15:18.905788+00:00",
+      "decoding_seconds": 1.89170241355896e-05,
+      "admission_seconds": 1.0554711669683456,
+      "normalization_seconds": 0.03115170798264444
+    },
+    {
+      "sport": "NCAAB",
+      "records": 318,
+      "attempt_id": "9a9d878f-42a8-4832-881c-f0d5fbfb91a8",
+      "decoded_at": "2026-11-08T02:15:23.599331+00:00",
+      "admitted_at": "2026-11-08T02:15:25.743107+00:00",
+      "received_at": "2026-11-08T02:15:22.085537+00:00",
+      "normalized_at": "2026-11-08T02:15:23.644372+00:00",
+      "decoding_seconds": 1.4416058547794819e-05,
+      "admission_seconds": 2.0987169169820845,
+      "normalization_seconds": 0.04503804200794548
+    },
+    {
+      "sport": "MLB",
+      "records": 0,
+      "attempt_id": "8f4e3bc3-8be6-42c0-8738-16c8045125b9",
+      "decoded_at": "2026-11-08T02:15:28.835685+00:00",
+      "admitted_at": "2026-11-08T02:15:29.016604+00:00",
+      "received_at": "2026-11-08T02:15:27.171244+00:00",
+      "normalized_at": "2026-11-08T02:15:28.835780+00:00",
+      "decoding_seconds": 3.5829143598675728e-06,
+      "admission_seconds": 0.18082520796451718,
+      "normalization_seconds": 9.379209950566292e-05
+    },
+    {
+      "sport": "NHL",
+      "records": 236,
+      "attempt_id": "c1510d96-fadf-4693-a9ed-c2811cef8d5b",
+      "decoded_at": "2026-11-08T02:15:34.261301+00:00",
+      "admitted_at": "2026-11-08T02:15:36.231277+00:00",
+      "received_at": "2026-11-08T02:15:32.470725+00:00",
+      "normalized_at": "2026-11-08T02:15:34.288537+00:00",
+      "decoding_seconds": 1.9579892978072166e-06,
+      "admission_seconds": 1.9427219160133973,
+      "normalization_seconds": 0.02724283398129046
+    }
+  ],
+  "accounting_stages": {
+    "reserve": {
+      "calls": 17,
+      "max_seconds": 1.4771645829314366,
+      "last_seconds": 0.5965414579259232,
+      "total_seconds": 11.936429871828295
+    },
+    "snapshot": {
+      "calls": 21,
+      "max_seconds": 1.2451254579937086,
+      "last_seconds": 0.86158525000792,
+      "total_seconds": 13.177543832338415
+    },
+    "dispatched": {
+      "calls": 17,
+      "max_seconds": 1.1915793749503791,
+      "last_seconds": 0.4807890000520274,
+      "total_seconds": 11.239843831746839
+    },
+    "check_binding": {
+      "calls": 38,
+      "max_seconds": 1.0718015410238877,
+      "last_seconds": 0.32029662502463907,
+      "total_seconds": 16.232284455094486
+    },
+    "prepare_clock": {
+      "calls": 1,
+      "max_seconds": 0.5107602080097422,
+      "last_seconds": 0.5107602080097422,
+      "total_seconds": 0.5107602080097422
+    },
+    "account_response": {
+      "calls": 17,
+      "max_seconds": 1.586569375009276,
+      "last_seconds": 0.864083124906756,
+      "total_seconds": 18.868087124777958
+    }
+  },
+  "at": "2026-11-08T02:16:19.051940+00:00"
+}

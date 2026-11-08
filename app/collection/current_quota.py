@@ -316,6 +316,35 @@ class QuotaLedger:
             v['pause']=None
         self.transact(repair)
 
+    def repair_missing_event(self, owner, candidate, attempt_id, attempt_digest):
+        """Reclassify an old global HTTP pause using an exact accounted 404.
+
+        Caller must hold the scheduler lock with its worker stopped. This grants
+        no credit, accounting coverage, retry or change to the next due time.
+        """
+        from .alternate_acquisition import missing_event
+        from .current_conservative import pending_reason,digest
+        from .current_policy import candidate as current_candidate
+        def repair(v,at):
+            if owner.file is None:raise QuotaStop('acquisition_ownership_required')
+            if candidate!=current_candidate()[0]:raise QuotaStop('candidate_changed')
+            if v['pause']!='aggregate_http_failure':raise QuotaStop('event_repair_pause_mismatch')
+            if pending_reason(v):raise QuotaStop('ambiguous_dispatch_unresolved')
+            a=v['attempts'].get(attempt_id)
+            latest=max(v['attempts'].values(),key=lambda x:stamp(x['at']),default=None)
+            if (not a or a!=latest or digest(a)!=attempt_digest or a['state']!='confirmed'
+                    or not missing_event(a['request'],a['cost'],(a.get('response_receipt') or {}).get('status'),a.get('charged'))
+                    or a.get('quota_failure') or load_window()!=v['window']):
+                raise QuotaStop('event_repair_evidence_mismatch')
+            repairs=v.setdefault('admission_repairs',[])
+            if len(repairs)>=12:raise QuotaStop('account_transition_capacity')
+            audit=dict(at=at,repair='accounted_missing_alternate_event',candidate_digest=candidate,
+                runtime_id=owner_runtime(owner),attempt_id=attempt_id,attempt_digest=attempt_digest,
+                prior_pause=v['pause'],next_due_at=v['next_due_at'],observation=deepcopy(v['observation']),
+                preserved_credits=exposure(v),provider_requests=0)
+            audit['sha256']=digest(audit);repairs.append(audit);v['pause']=None
+        self.transact(repair)
+
     def repair_credential_selection(self, evidence):
         """Resolve only a returned, zero-cost sports bootstrap on a proven old route.
 
@@ -563,6 +592,23 @@ class QuotaLedger:
             return dict(schema=SCHEMA,used=None,remaining=None,reserved=None,available=None,reset=None,next_due_at=None,observation=None,
                 unresolved_attempts=None,engineering_reserve=RESERVE,ceiling=CEILING,ledger_byte_ceiling=LEDGER_BYTE_CAP,attempt_ceiling=ATTEMPT_CAP,pause='quota_ledger_unavailable')
         unresolved=[a for a in v['attempts'].values() if a['state'] in ('reserved','uncertain')]
+        pending=[a for a in unresolved if not (a['state']=='uncertain' and covering(v,a))]
+        # Read authority is independent of permission to dispatch again. This
+        # witness is useful only when the live owner attests the same task.
+        progress=None
+        if len(pending)==1:
+            a=pending[0]
+            if not self.eligibility(v,self.clock(),own_reservation=a['id']):
+                progress={k:a.get(k) for k in ('id','runtime_id','candidate_digest','state','at','dispatch_at')}
+        incident=None
+        if pending and len(unresolved)<=32:
+            from .current_conservative import digest
+            covered={a['id']:digest(a) for a in unresolved}
+            incident=dict(recovery_id='incident-'+digest(covered)[:32],covered_attempts=covered,
+                preserved_credits=sum(a['cost'] for a in unresolved),
+                attempts=[dict(id=a['id'],at=a.get('dispatch_at'),cost=a['cost'],
+                    status=(a.get('response_receipt') or {}).get('status'),
+                    reason=a.get('quota_failure') or a.get('interruption'),runtime_id=a['runtime_id']) for a in pending])
         reserved=exposure(v)
         o=v['observation']
         return dict(schema=SCHEMA,used=None if o is None else o['used'],remaining=None if o is None else o['remaining'],
@@ -572,9 +618,12 @@ class QuotaLedger:
             held_uncertain_credits=sum(a['cost'] for a in unresolved if a['state']=='uncertain'),
             covered_uncertain_attempts=sum(bool(covering(v,a)) for a in unresolved),
             blocking_reason=self.eligibility(v,self.clock()),
+            publication_pending=progress,
+            recovery_incident=incident,
             recovery_authority=deepcopy(v.get('conservative_recoveries',[])),
             independent_balance=deepcopy(v.get('conservative_recoveries',[])[-1]['balance']) if v.get('conservative_recoveries') else None,
             recovery_probes=deepcopy(v.get('recovery_probes',[])),
+            local_repairs=deepcopy(v.get('admission_repairs',[])),
             attempts=len(v['attempts']),unresolved_attempts=len(unresolved),engineering_reserve=RESERVE,ceiling=v['ceiling'],account_id=v.get('account_id'),account_transitions=deepcopy(v.get('account_transitions',[])),cycle=deepcopy(v.get('cycle')),sports_inventory=deepcopy(v.get('sports_inventory')),
             observation_age_seconds=None if o is None or stamp(self.clock())<stamp(o['at']) else (stamp(self.clock())-stamp(o['at'])).total_seconds(),
             observation_clock_skew=o is not None and stamp(self.clock())<stamp(o['at']),
@@ -778,7 +827,7 @@ class QuotaLedger:
             if receipt_pause:v['pause']=None
         self.transact(recover)
 
-    def record_response(self, aid, receipt, *, interruption=None, diagnostic=None):
+    def _response_action(self, aid, receipt, *, interruption=None, diagnostic=None):
         """Persist sanitized response identity independently of optional capture."""
         safe=None
         if receipt is not None:
@@ -798,9 +847,12 @@ class QuotaLedger:
                 a['response_receipt']=deepcopy(safe)
             if interruption:a['interruption']=interruption
             if diagnostic is not None:a['transport_diagnostic']=deepcopy(diagnostic)
-        self.transact(record)
+        return record
 
-    def reconcile(self, aid, items, *, received_at=None):
+    def record_response(self, aid, receipt, *, interruption=None, diagnostic=None):
+        self.transact(self._response_action(aid,receipt,interruption=interruption,diagnostic=diagnostic))
+
+    def _reconcile_action(self, aid, items, *, received_at=None):
         def reconcile(v,at):
             a=v['attempts'][aid]
             if a['state']=='confirmed': return # Duplicate response is a no-op.
@@ -851,7 +903,24 @@ class QuotaLedger:
             if epoch and epoch['state']=='awaiting_bootstrap' and a['bootstrap'] and a['window_id']==epoch['window_id'] and stamp(a['dispatch_at'])>=stamp(v['clock_recoveries'][-1]['at']):
                 epoch.update(state='current',attempt_id=aid,validated_at=at)
             # Unrelated uncertain attempts remain reserved even after bootstrap.
-        self.transact(reconcile)
+        return reconcile
+
+    def reconcile(self, aid, items, *, received_at=None):
+        self.transact(self._reconcile_action(aid,items,received_at=received_at))
+
+    def complete_response(self, aid, receipt):
+        """One durable transaction for exact charge and sanitized receipt.
+
+        Uses the same validation as the standalone late/interrupted paths. No
+        cached mutation reads, intermediate refund, or relaxed ownership guard.
+        """
+        record=self._response_action(aid,receipt)
+        reconcile=self._reconcile_action(aid,receipt['headers'],received_at=receipt['received_at'])
+        def complete(v,at):
+            reconcile(v,at)
+            record(v,at)
+            return v['attempts'][aid].get('charged')
+        return self.transact(complete)
 
     def activate_conservative(self, owner, candidate, covered, evidence, recovery_id, credential_binding):
         if owner is None or owner.file is None:raise QuotaStop('acquisition_ownership_required')

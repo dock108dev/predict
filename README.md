@@ -1,26 +1,22 @@
 # Predict
 
 Predict is a local, read-only prediction-market comparison app for macOS.
-**Opportunities** groups offers for the same outcome and ranks them by the best
-eligible EV after reviewed trade fees. **Markets** shows prices by game.
-Open **Math & fees** to see the selected offer, its reference prices and the fee
-calculation. The list updates as prices arrive. An open drawer keeps its selected
-inputs until you choose **Use latest prices**. Its Admin link opens those originals.
 
-Kalshi and Polymarket US supply native prices. Novig and ProphetX can arrive
-through The Odds API. Pinnacle is the default pricing reference. The ordinary
-list covers games in the next 72 hours. An offer can stay visible when its price
-or reference has expired, or when a required fee is unknown. Conservative
-public-fee estimates have a separate ranking. The **Opposing positions** view
-compares paired positions under the selected assumptions. The default funding
-is $1,000, with one 0.5% buffer on deployed capital. See the
-[calculation basis](docs/benchmark-ev.md).
+The desk opens on EV, with Arbitrage and Admin alongside it. Compare individual
+source offers or group them by outcome. Reviewed fees, conservative estimates,
+and before-fee EV are separate calculation bases. Open an offer for its exact
+reference inputs, recorded starting fee terms, saved book rules and outcome
+cashflows. Missing inputs stay visible in the inspection.
 
-Admin manages collection and source status. The advanced Scanner supports
-opportunity filters and manual tickets. The [interface guide](docs/ui-design.md)
-describes navigation, the odds preference and inspection. The
-[local delivery record](docs/engineering/live-comparison-20261104/L05-delivery.md)
-covers the verified NBA walkthrough and observed performance limits.
+Kalshi and Polymarket US supply native prices, including supported live prices.
+Novig and ProphetX can arrive through The Odds API on the 15-minute aggregate
+schedule. Pinnacle supplies reference prices. Freshness and calculation
+eligibility are checked separately.
+
+**Open replay** displays a frozen local slate or a clearly labeled fictional
+price scenario. The live desk follows the data owner's Stop and source controls.
+See [replay and local operation](docs/development.md#frozen-replay) and the
+[calculation contract](docs/benchmark-ev.md).
 
 ## Requirements and quickstart
 

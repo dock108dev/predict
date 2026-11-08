@@ -40,6 +40,7 @@ def policy_identity():
         POLICY_ROOT/'app/storage/capture_price.py',POLICY_ROOT/'app/storage/member_packet.py',
         POLICY_ROOT/'app/storage/ordinary_fragments.py',
         POLICY_ROOT/'app/comparison/conditional_benchmark.py',
+        POLICY_ROOT/'app/comparison/game_phase.py',
         POLICY_ROOT/'app/dashboard/snapshot_api.py',
         POLICY_ROOT/'app/comparison/line_reference.py',
         POLICY_ROOT/'app/fees/engine.py',
@@ -66,7 +67,7 @@ def dependencies(db, event_ids=None):
         WHERE ((%s::text[] IS NULL AND e.scheduled_start::timestamptz >= %s
                 AND e.scheduled_start::timestamptz < %s)
             OR c.event_id=ANY(%s)) ORDER BY c.id''',
-        (event_ids,stamp(utc()),stamp(utc())+timedelta(hours=72),event_ids)).fetchall()
+        (event_ids,stamp(utc())-timedelta(hours=24),stamp(utc())+timedelta(hours=72),event_ids)).fetchall()
     if len(rows) > 32768:
         raise snapshots.SnapshotOperationError('ordinary_dependency_capacity')
     # The fourth field schedules genuine new confirmation evidence. Only the
@@ -90,6 +91,30 @@ def governing_fields(binding):
                 **{'source.'+key:value for key,value in sources.items()})
 
 
+def component_binding(binding,venues):
+    """Only sources present in this exact contract component govern its reuse."""
+    return [*binding[:4],{venue:binding[4].get(venue) for venue in sorted(set(venues))}]
+
+
+def owned_refresh(owner, quota):
+    """Exact live-task + ledger witness; never grants acquisition authority."""
+    if (quota.get('blocking_reason')!='ambiguous_dispatch_unresolved' or quota.get('pause')
+            or not owner.get('healthy') or not owner.get('active') or owner.get('global_stopped')
+            or 'the_odds_api' in owner.get('paused_sources',[])):
+        return False
+    pending=quota.get('publication_pending')
+    panel=next((p for p in owner.get('status',{}).get('sources',[]) if p.get('provider')=='the_odds_api'),{})
+    progress=panel.get('publication_progress')
+    if pending and (not progress or progress.get('id')!=pending.get('id')):
+        progress=next((p for p in panel.get('publication_completions',[]) if p.get('id')==pending.get('id')),None)
+    return bool(pending and progress and pending.get('id')
+        and pending.get('runtime_id')==owner.get('runtime_id')
+        and all(pending.get(k)==progress.get(k) for k in ('id','runtime_id','candidate_digest'))
+        and pending.get('state') in ('reserved','uncertain')
+        and progress.get('stage') in ('reserved','transport','received','accounted')
+        and not panel.get('worker_done'))
+
+
 def authority(db, *, at=None):
     from app.collection.runtime_status import read_runtime
     from .latest_board import source_states
@@ -107,7 +132,7 @@ def authority(db, *, at=None):
             states[venue] = dict(state='stopped', reason_code='aggregate_paused')
     quota = owner.get('status', {}).get('quota', {})
     block = quota.get('blocking_reason')
-    if block:
+    if block and not owned_refresh(owner,quota):
         for venue in ('novig', 'prophetx', 'pinnacle'):
             states[venue] = dict(state='held', reason_code=block)
     # Pinnacle has no separate transport; all three share the aggregate owner.
@@ -137,10 +162,15 @@ def quote_authority(row, inputs, *, reference=False):
         q=dict(q,freshness_policy=dict(maximum_age_seconds=MAXIMUM_AGE))
     cid = contract_id(record)
     clock = assess(q, stamp(inputs['captured_at']))
+    from app.comparison.game_phase import price_phase
+    lifecycle=price_phase(record['event'],q,inputs['captured_at'])
+    if lifecycle['reason']:clock['reasons'].append(lifecycle['reason'])
+    if lifecycle.get('current_until') and clock.get('current_until'):
+        clock['current_until']=min(clock['current_until'],lifecycle['current_until'])
     if q.get('state') in ('stopped','unavailable','error','resyncing','stale'):
         clock['reasons'].append('quote_'+q['state'])
     return dict(dependency=cid, expected=inputs['dependencies'].get(cid),
-                venue=row['venue'], **clock)
+                venue=row['venue'], lifecycle=lifecycle, **clock)
 
 
 def without_finance(row, reason, *, status_cache=None, copy_row=True):
@@ -259,10 +289,14 @@ def project(result, current, owner, states, *, at, policy, epoch, settings=None)
         if row.get('publication_epoch', epoch) != epoch: reasons.append('input_epoch_replaced')
         state = states.get(row['venue'], {})
         if not source_allowed(state,row.get('league')): reasons.append(state.get('reason_code') or 'source_unavailable')
-        if at >= stamp(row['start_at']): reasons.append('pregame_ended')
+        lifecycle=auth['price'].get('lifecycle',{})
+        if at >= stamp(row['start_at']) and lifecycle.get('state')!='live':reasons.append('post_start_game_state_unverified')
+        row['game_state']=lifecycle.get('state','scheduled' if at<stamp(row['start_at']) else 'unknown')
+        row['game_state_basis']=lifecycle.get('basis')
         row['price_current'] = not reasons
         current_prices += not reasons
         financial = list(reasons)
+        if row['game_state']=='live':financial.append('live_financial_model_unverified')
         if row.get('publication_policy', result['publication']['policy']) != policy:
             financial.append('policy_replaced')
         if row.get('settings_revision') != settings['revision']:
@@ -308,6 +342,9 @@ def project(result, current, owner, states, *, at, policy, epoch, settings=None)
              'initializing' if not result['rows'] else
              'ready' if healthy_sources and len(ready) == len(result['rows']) and result['publication']['finance'] == 'ready' else 'partial')
     out['publication'] = dict(result['publication'], state=state, sources=states, current_prices=current_prices,
+        data_runtime=dict(healthy=bool(owner.get('healthy')),active=bool(owner.get('active')),
+            state=owner.get('service_state'),reason=owner.get('reason_code'),
+            stopped=bool(owner.get('global_stopped')),paused_sources=owner.get('paused_sources',[])),
         retained_prices=len(result['rows'])-current_prices, coverage_complete=False,
         read_at=at.isoformat(), poll_after_ms=2000, provider_requests=0)
     counts(out)
@@ -399,11 +436,16 @@ def seal(db, inputs, result, facts, *, insert_inputs=False, component=None, memb
         db.execute('''INSERT INTO comparison_snapshot_result(id,snapshot_id,assumptions,result,lease_until,automatic)
             VALUES(%s,%s,%s,%s,clock_timestamp()+interval '10 seconds',true)''', (result['id'], inputs['id'], Jsonb(result['assumptions']), packed_result))
         if component is not None:
+            if insert_inputs:
+                from .delivery_clocks import captured
+                captured(db,inputs['quotes'],inputs['captured_at'])
             db.execute('''INSERT INTO comparison_live_component(id,result_id,facts) VALUES(%s,%s,%s)
                 ON CONFLICT(id) DO UPDATE SET result_id=excluded.result_id,facts=excluded.facts''',
                 (component, result['id'], Jsonb(facts)))
             row=dict(generation=None)
         else:
+            from .delivery_clocks import published
+            published(db,facts.pop('_delivery_receipts',[]))
             if members:
                 with db.cursor() as cursor:
                     cursor.executemany('INSERT INTO comparison_live_member VALUES(%s,%s)',
@@ -492,7 +534,7 @@ def compose(db, settings, *, scope, policy, epoch, started):
     missing=[c['result_id'] for c in components if c['summary'] is None]
     blobs={r['id']:r['result'] for r in db.execute(
         'SELECT id,result FROM comparison_snapshot_result WHERE id=ANY(%s)',(missing,))}
-    members=[];captured=[];boundaries=[];pending=0;failed=0;written=0
+    members=[];captured=[];boundaries=[];pending=0;failed=0;written=0;delivery=[]
     totals=dict(observations=0,gross_numeric=0,conditional_numeric=0,conservative_numeric=0,net_numeric=0,pairs=0,unmatched=0)
     for c in components:
         summary=c['summary']
@@ -505,9 +547,11 @@ def compose(db, settings, *, scope, policy, epoch, started):
                 raise snapshots.SnapshotOperationError('ordinary_retention_capacity')
             if sql_usage(db)+2*len(packed)+REWRITE_RUNWAY_BYTES>=SQL_BYTE_CAP:
                 raise snapshots.SnapshotOperationError('ordinary_sql_headroom')
-            summary=dict(captured_at=part['captured_at'],finance=part['publication']['finance'],counts=part['counts'])
+            from .delivery_clocks import receipts
+            summary=dict(captured_at=part['captured_at'],finance=part['publication']['finance'],counts=part['counts'],delivery_receipts=receipts(part['rows']))
             db.execute('INSERT INTO comparison_live_read_fragment VALUES(%s,%s,%s)',
                 (c['result_id'],Jsonb(summary),packed));written+=len(packed)
+        delivery.extend(summary.get('delivery_receipts',[]))
         members.append(c['result_id']);captured.append(summary['captured_at'])
         pending+=summary['finance']!='ready';failed+=c['facts'].get('finance')=='failed'
         for key in totals:totals[key]+=summary['counts'][key]
@@ -524,12 +568,12 @@ def compose(db, settings, *, scope, policy, epoch, started):
     facts=dict(state='partial' if pending else 'ready',finance=result['publication']['finance'],
         component_count=len(members),expected_components=len(scope),pending_components=pending,
         next_boundary=min(boundaries,key=stamp) if boundaries else None,
-        representation=FRAGMENTS,fragment_bytes_written=written,new_fragments=len(missing),
+        _delivery_receipts=delivery,representation=FRAGMENTS,fragment_bytes_written=written,new_fragments=len(missing),
         total_seconds=round(monotonic()-started,3))
     return seal(db,inputs,result,facts,insert_inputs=True,members=members)
 
 
-def prioritize_current(pending, scope, evidence, at, *, material=()):
+def prioritize_current(pending, scope, evidence, at, *, material=(), undelivered=()):
     """Reserve oldest and source slots, then alternate fair and fresh work.
 
     The first slot always advances fair rotation, including API/reference work.
@@ -541,14 +585,22 @@ def prioritize_current(pending, scope, evidence, at, *, material=()):
     reference_events={r['event_id'] for r in evidence if r['venue']=='pinnacle' and r['at']
         and 0 <= (at-stamp(r['at'])).total_seconds() <= MAXIMUM_AGE}
     order=[pending[0]];fresh={}
+    # A newly admitted aggregate batch deserves a first-delivery slot before
+    # unchanged native confirmations. Oldest-first within that batch preserves
+    # fairness. This never promotes an expired quote or changes eligibility.
+    first_delivery=[key for key in pending if key in undelivered and key not in order]
+    if first_delivery:order.append(first_delivery[0])
     for venue in ('kalshi','polymarket_us'):
         recent={r['event_id']:stamp(r['at']) for r in evidence
             if r['venue']==venue and r['at'] and 0 <= (at-stamp(r['at'])).total_seconds() <= 30}
-        candidates=[(key not in material,reference_events.isdisjoint(scope[key]),-max(recent[e].timestamp() for e in scope[key] if e in recent),index,key)
+        candidates=[(key not in undelivered,key not in material,reference_events.isdisjoint(scope[key]),-max(recent[e].timestamp() for e in scope[key] if e in recent),index,key)
             for index,key in enumerate(pending) if key not in order and recent.keys() & set(scope[key])]
-        for confirmation_only,no_reference,clock,index,key in candidates:
-            rank=(confirmation_only,no_reference,clock,index)
+        for already_delivered,confirmation_only,no_reference,clock,index,key in candidates:
+            rank=(already_delivered,confirmation_only,no_reference,clock,index)
             fresh[key]=min(fresh.get(key,rank),rank)
+        # First delivery can also satisfy a native source slot. Prefer that
+        # overlap before repeatedly refreshing an already-delivered hot game.
+        # Oldest work and each source still retain their reserved turn.
         if candidates:order.append(min(candidates)[-1])
     # Previously every slot after the two source representatives went to old
     # rotation. Fresh books behind them could expire before their first seal.
@@ -556,13 +608,38 @@ def prioritize_current(pending, scope, evidence, at, *, material=()):
     # interleaving recent complete native components without dropping any scope.
     scheduled=set(order)
     recent_order=iter(sorted(fresh,key=lambda key:(fresh[key],key)))
+    delivery_order=iter(first_delivery)
     for key in pending:
         if key in scheduled:continue
         order.append(key);scheduled.add(key)
+        delivered=False
+        for waiting in delivery_order:
+            if waiting not in scheduled:
+                order.append(waiting);scheduled.add(waiting);delivered=True;break
+        if delivered:continue
         for hot in recent_order:
             if hot not in scheduled:
                 order.append(hot);scheduled.add(hot);break
     return order
+
+
+def captured_aggregate_receipts(inputs):
+    receipts={}
+    for q in (*inputs['quotes'],*inputs.get('references',[])):
+        source=q['source']
+        if source['provider']!='the_odds_api':continue
+        key=hashed([source['provider'],source['native_event_id']])
+        received=q['times']['received_at']
+        if key not in receipts or stamp(received)>stamp(receipts[key]):receipts[key]=received
+    return receipts
+
+
+def awaiting_aggregate(facts,events,receipts,at):
+    # Optional calculation time is not evidence that a later receipt was
+    # captured. Compare the exact per-event clocks sealed in the component.
+    captured=facts.get('aggregate_receipts',{})
+    return any(e in receipts and (e not in captured or stamp(captured[e])<receipts[e])
+        and 0<=(at-receipts[e]).total_seconds()<=900 for e in events)
 
 
 def turn(db, *, turn_seconds=8, capture_cache=None):
@@ -592,23 +669,28 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
             capture_binding=[policy,settings['revision'],epoch,
                 {k:owner.get(k) for k in ('runtime_id','global_stopped','paused_sources','dispatch')},
                 {k:v.get('state') for k,v in source_states.items()}]
-            capture_binding_id=hashed(capture_binding)
-            governing=governing_fields(capture_binding)
+            frame_binding=capture_binding
             finance_available=source_allowed(source_states.get('pinnacle',{}))
             at=stamp(utc())
             selected={r['id'] for r in db.execute('''SELECT id FROM current_event WHERE competition=ANY(%s)
                 AND scheduled_start::timestamptz >= %s AND scheduled_start::timestamptz < %s''',
-                (list(snapshots.SPORTS),at,at+timedelta(hours=72)))}
+                (list(snapshots.SPORTS),at-timedelta(hours=24),at+timedelta(hours=72)))}
             # Include the complete peer component when any member is in scope.
             batches=[b for b in capture_batches(db) if selected.intersection(b)]
             scope={hashed(sorted(b)):b for b in batches}
             old={c['id']:c for c in db.execute('SELECT * FROM comparison_live_component')}
             dep=dependencies(db)
-            membership={r['id']:r['event_id'] for r in db.execute('SELECT id,event_id FROM current_contract')}
+            contracts=db.execute('SELECT id,event_id,venue FROM current_contract').fetchall()
+            membership={r['id']:r['event_id'] for r in contracts}
+            event_venues={}
+            for r in contracts:event_venues.setdefault(r['event_id'],set()).add(r['venue'])
             per_event={}
             for cid,value in dep.items():per_event.setdefault(membership[cid],{})[cid]=value
             latest_receipts={r['event_id']:r['at'] for r in db.execute('''SELECT c.event_id,max(o.received_at) at
                 FROM current_offer o JOIN current_contract c ON c.id=o.contract_id GROUP BY c.event_id''')}
+            aggregate_receipts={r['event_id']:stamp(r['at']) for r in db.execute('''SELECT c.event_id,max(o.received_at) at
+                FROM current_offer o JOIN current_contract c ON c.id=o.contract_id
+                WHERE c.venue IN ('novig','prophetx','pinnacle') GROUP BY c.event_id''')}
             native_evidence=db.execute('''SELECT c.event_id,c.venue,
                 max(greatest(o.source_at::timestamptz,
                     (o.facts#>>'{book_confirmation,confirmed_at}')::timestamptz))::text at
@@ -632,7 +714,9 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
         # price/contract change. These hashes schedule only; exact captured
         # dependencies and the existing authority checks still own eligibility.
         pending=prioritize_current(pending,scope,native_evidence,at,material={key for key in pending
-            if old.get(key,{}).get('facts',{}).get('material_identity')!=material[key]})
+            if old.get(key,{}).get('facts',{}).get('material_identity')!=material[key]},
+            undelivered={key for key in pending if awaiting_aggregate(old.get(key,{}).get('facts',{}),
+                scope[key],aggregate_receipts,at)})
         timings['planning_seconds']=round(monotonic()-started,6)
         work=[];errors=[];component_trace=[]
         snapshots.prune(db)
@@ -650,7 +734,13 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
             capture_started=monotonic()
             for key in pending:
                 checkpoint()
-                if len(work)>=3 and monotonic()-capture_started>=turn_seconds/2:break
+                # Oldest, first aggregate delivery, Kalshi and US can occupy
+                # four distinct reserved slots. Cutting after three repeatedly
+                # postponed US whenever aggregate and Kalshi work were pending.
+                if len(work)>=4 and monotonic()-capture_started>=turn_seconds/2:break
+                capture_binding=component_binding(frame_binding,{v for eid in scope[key] for v in event_venues.get(eid,())})
+                capture_binding_id=hashed(capture_binding)
+                governing=governing_fields(capture_binding)
                 prior=old.get(key)
                 if prior and prior['facts'].get('input_identity')==desired[key] and prior['facts'].get('finance')!='ready':
                     input_id=db.execute('SELECT snapshot_id FROM comparison_snapshot_result WHERE id=%s',(prior['result_id'],)).fetchone()['snapshot_id']
@@ -695,6 +785,7 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
                 identity=hashed([epoch,policy,settings['revision'],[(eid,{cid:v for cid,v in inputs['dependencies'].items()
                     if membership.get(cid)==eid}) for eid in sorted(scope[key])]])
                 facts=dict(input_identity=identity,finance='pending',visited_at=utc(),capture_seconds=inputs['capture_seconds'],
+                    aggregate_receipts=captured_aggregate_receipts(inputs),
                     capture_binding_id=inputs['_price_basis']['binding'],governing_fields=governing,capture_structure_ids=structure_ids)
                 facts['material_identity']=hashed([epoch,[(eid,{cid:v[:3] for cid,v in inputs['dependencies'].items()
                     if membership.get(cid)==eid}) for eid in sorted(scope[key])]])
@@ -709,6 +800,8 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
                 seal(db,inputs,price_result,facts,insert_inputs=True,component=key,prior_parts=prior_parts,costs=costs)
                 del prior_parts
                 component_trace.append(dict(component=key,event_ids=sorted(scope[key])[:8],event_count=len(scope[key]),
+                    queue_position=pending.index(key),selected_at=at.isoformat(),
+                    aggregate_receipts=facts['aggregate_receipts'],
                     desired_identity=desired[key],captured_identity=identity,member=price_result['id'],
                     captured_at=inputs['captured_at'],capture_seconds=inputs['capture_seconds'],
                     member_costs=costs,rows=len(inputs['quotes']),price_capture=inputs.get('_price_capture'),previous_visit=(prior or {}).get('facts',{}).get('visited_at'),
@@ -739,7 +832,9 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
             # No reference timestamp or accounting state is changed here.
             for key,input_id,facts in (work if finance_available else ()):
                 checkpoint()
-                if computed and monotonic()-finance_started>=turn_seconds:break
+                # Finance shares the turn's wall-time budget with planning and
+                # capture. Keep one oldest job progressing even on a costly turn.
+                if computed and monotonic()-started>=turn_seconds:break
                 inputs=snapshots.unpack(db.execute('SELECT inputs FROM comparison_snapshot WHERE id=%s',(input_id,)).fetchone()['inputs'])
                 try:
                     result=bind(snapshots.calculate(inputs,settings),inputs,'ready')

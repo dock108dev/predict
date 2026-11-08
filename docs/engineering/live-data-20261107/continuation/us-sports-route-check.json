@@ -1,0 +1,676 @@
+{
+  "url": "https://gateway.polymarket.us/v2/leagues/nba/events?limit=5&offset=0",
+  "started_at": "2026-11-08T02:54:08.141648+00:00",
+  "purpose": "One public documented sports-route capability check; no authentication, paid request, retry, or accounting mutation",
+  "maximum_bytes": 1048576,
+  "status": 200,
+  "received_at": "2026-11-08T02:54:08.293175+00:00",
+  "bytes": 91666,
+  "sha256": "beaac0a4849bd3f97f37d0516aafa576915a01b0de2dedf7ab3c4faa2c998805",
+  "top_fields": [
+    "type",
+    "typeTitle",
+    "section",
+    "sectionTitle",
+    "events",
+    "league"
+  ],
+  "events": [
+    {
+      "id": "185088",
+      "gameId": 20024067,
+      "title": "BKN Nets vs. ATL Hawks",
+      "startTime": "2026-11-08T00:30:00Z",
+      "live": true,
+      "ended": false,
+      "active": true,
+      "closed": false,
+      "eventState": {
+        "id": 142119800,
+        "gameId": 20024067,
+        "sportradarGameId": "fcf4c571-3ffa-4fa7-a580-5dbfcd31894e",
+        "type": "basketball",
+        "createdAt": "2026-11-07T02:44:56.690174Z",
+        "updatedAt": "2026-11-08T02:53:54.788824Z",
+        "score": "111-110",
+        "elapsed": "02:36",
+        "period": "Q4",
+        "live": true,
+        "ended": false,
+        "mainSpreadLine": -1.5,
+        "mainTotalLine": 234.5,
+        "marketGroupStats": [
+          {
+            "marketGroupId": "game-lines/spread/full-game",
+            "line": -1.5
+          },
+          {
+            "marketGroupId": "game-lines/totals/full-game",
+            "line": 234.5
+          },
+          {
+            "marketGroupId": "game-lines/spread/1st-half",
+            "line": 3.5
+          },
+          {
+            "marketGroupId": "game-lines/totals/1st-half",
+            "line": 116.5
+          },
+          {
+            "marketGroupId": "game-lines/spread/1st-quarter",
+            "line": 1.5
+          },
+          {
+            "marketGroupId": "game-lines/totals/1st-quarter",
+            "line": 58.5
+          },
+          {
+            "marketGroupId": "game-lines/spread/2nd-quarter",
+            "line": 1.5
+          },
+          {
+            "marketGroupId": "game-lines/totals/2nd-quarter",
+            "line": 57.5
+          },
+          {
+            "marketGroupId": "game-lines/spread/3rd-quarter",
+            "line": 1.5
+          },
+          {
+            "marketGroupId": "game-lines/totals/3rd-quarter",
+            "line": 55.5
+          },
+          {
+            "marketGroupId": "game-lines/spread/4th-quarter",
+            "line": 1.5
+          },
+          {
+            "marketGroupId": "game-lines/totals/4th-quarter",
+            "line": 53.5
+          },
+          {
+            "marketGroupId": "game-lines/spread/2nd-half",
+            "line": 2.5
+          },
+          {
+            "marketGroupId": "game-lines/totals/2nd-half",
+            "line": 110.5
+          }
+        ],
+        "periodScores": [
+          {
+            "number": 1,
+            "type": "PERIOD_SCORE_TYPE_REGULATION",
+            "label": "Q1",
+            "scores": [
+              {
+                "competitorId": "25",
+                "score": 27
+              },
+              {
+                "competitorId": "22",
+                "score": 37
+              }
+            ]
+          },
+          {
+            "number": 2,
+            "type": "PERIOD_SCORE_TYPE_REGULATION",
+            "label": "Q2",
+            "scores": [
+              {
+                "competitorId": "25",
+                "score": 39
+              },
+              {
+                "competitorId": "22",
+                "score": 33
+              }
+            ]
+          },
+          {
+            "number": 3,
+            "type": "PERIOD_SCORE_TYPE_REGULATION",
+            "label": "Q3",
+            "scores": [
+              {
+                "competitorId": "25",
+                "score": 22
+              },
+              {
+                "competitorId": "22",
+                "score": 25
+              }
+            ]
+          },
+          {
+            "number": 4,
+            "type": "PERIOD_SCORE_TYPE_REGULATION",
+            "label": "Q4",
+            "scores": [
+              {
+                "competitorId": "25",
+                "score": 22
+              },
+              {
+                "competitorId": "22",
+                "score": 16
+              }
+            ]
+          }
+        ],
+        "eventId": 185088
+      }
+    },
+    {
+      "id": "185089",
+      "gameId": 20024068,
+      "title": "NY Knicks vs. CLE Cavaliers",
+      "startTime": "2026-11-08T01:00:00Z",
+      "live": true,
+      "ended": false,
+      "active": true,
+      "closed": false,
+      "eventState": {
+        "id": 142033441,
+        "gameId": 20024068,
+        "sportradarGameId": "c09d313c-9d1d-45de-b7bd-e24307e0604b",
+        "type": "basketball",
+        "createdAt": "2026-11-06T18:03:11.806321Z",
+        "updatedAt": "2026-11-08T02:54:02.425458Z",
+        "score": "88-70",
+        "elapsed": "11:09",
+        "period": "Q4",
+        "live": true,
+        "ended": false,
+        "mainSpreadLine": -16.5,
+        "mainTotalLine": 208.5,
+        "marketGroupStats": [
+          {
+            "marketGroupId": "game-lines/spread/full-game",
+            "line": -16.5
+          },
+          {
+            "marketGroupId": "game-lines/totals/full-game",
+            "line": 208.5
+          },
+          {
+            "marketGroupId": "game-lines/spread/1st-half",
+            "line": -2.5
+          },
+          {
+            "marketGroupId": "game-lines/totals/1st-half",
+            "line": 114.5
+          },
+          {
+            "marketGroupId": "game-lines/spread/1st-quarter",
+            "line": -0.5
+          },
+          {
+            "marketGroupId": "game-lines/totals/1st-quarter",
+            "line": 57.5
+          },
+          {
+            "marketGroupId": "game-lines/spread/2nd-quarter",
+            "line": -1.5
+          },
+          {
+            "marketGroupId": "game-lines/totals/2nd-quarter",
+            "line": 56.5
+          },
+          {
+            "marketGroupId": "game-lines/spread/3rd-quarter",
+            "line": -1.5
+          },
+          {
+            "marketGroupId": "game-lines/totals/3rd-quarter",
+            "line": 54.5
+          },
+          {
+            "marketGroupId": "game-lines/spread/4th-quarter",
+            "line": -0.5
+          },
+          {
+            "marketGroupId": "game-lines/totals/4th-quarter",
+            "line": 52.5
+          },
+          {
+            "marketGroupId": "game-lines/spread/2nd-half",
+            "line": -2.5
+          },
+          {
+            "marketGroupId": "game-lines/totals/2nd-half",
+            "line": 107.5
+          }
+        ],
+        "periodScores": [
+          {
+            "number": 1,
+            "type": "PERIOD_SCORE_TYPE_REGULATION",
+            "label": "Q1",
+            "scores": [
+              {
+                "competitorId": "38",
+                "score": 27
+              },
+              {
+                "competitorId": "43",
+                "score": 26
+              }
+            ]
+          },
+          {
+            "number": 2,
+            "type": "PERIOD_SCORE_TYPE_REGULATION",
+            "label": "Q2",
+            "scores": [
+              {
+                "competitorId": "38",
+                "score": 26
+              },
+              {
+                "competitorId": "43",
+                "score": 37
+              }
+            ]
+          },
+          {
+            "number": 3,
+            "type": "PERIOD_SCORE_TYPE_REGULATION",
+            "label": "Q3",
+            "scores": [
+              {
+                "competitorId": "38",
+                "score": 17
+              },
+              {
+                "competitorId": "43",
+                "score": 25
+              }
+            ]
+          },
+          {
+            "number": 4,
+            "type": "PERIOD_SCORE_TYPE_REGULATION",
+            "label": "Q4",
+            "scores": [
+              {
+                "competitorId": "38",
+                "score": 0
+              },
+              {
+                "competitorId": "43",
+                "score": 0
+              }
+            ]
+          }
+        ],
+        "eventId": 185089
+      }
+    },
+    {
+      "id": "185090",
+      "gameId": 20024069,
+      "title": "WAS Wizards vs. OKC Thunder",
+      "startTime": "2026-11-08T01:00:00Z",
+      "live": true,
+      "ended": false,
+      "active": true,
+      "closed": false,
+      "eventState": {
+        "id": 142119798,
+        "gameId": 20024069,
+        "sportradarGameId": "dea598c4-c5c0-42bb-a3da-101f567315ec",
+        "type": "basketball",
+        "createdAt": "2026-11-07T02:44:56.585736Z",
+        "updatedAt": "2026-11-08T02:53:44.485871Z",
+        "score": "59-90",
+        "elapsed": "11:52",
+        "period": "Q4",
+        "live": true,
+        "ended": false,
+        "mainSpreadLine": 32.5,
+        "mainTotalLine": 202.5,
+        "marketGroupStats": [
+          {
+            "marketGroupId": "game-lines/spread/full-game",
+            "line": 32.5
+          },
+          {
+            "marketGroupId": "game-lines/totals/full-game",
+            "line": 202.5
+          },
+          {
+            "marketGroupId": "game-lines/spread/1st-half",
+            "line": 7.5
+          },
+          {
+            "marketGroupId": "game-lines/totals/1st-half",
+            "line": 114.5
+          },
+          {
+            "marketGroupId": "game-lines/spread/1st-quarter",
+            "line": 3.5
+          },
+          {
+            "marketGroupId": "game-lines/totals/1st-quarter",
+            "line": 57.5
+          },
+          {
+            "marketGroupId": "game-lines/spread/2nd-quarter",
+            "line": 3.5
+          },
+          {
+            "marketGroupId": "game-lines/totals/2nd-quarter",
+            "line": 56.5
+          },
+          {
+            "marketGroupId": "game-lines/spread/3rd-quarter",
+            "line": 3.5
+          },
+          {
+            "marketGroupId": "game-lines/totals/3rd-quarter",
+            "line": 55.5
+          },
+          {
+            "marketGroupId": "game-lines/spread/4th-quarter",
+            "line": 2.5
+          },
+          {
+            "marketGroupId": "game-lines/totals/4th-quarter",
+            "line": 53.5
+          },
+          {
+            "marketGroupId": "game-lines/spread/2nd-half",
+            "line": 5.5
+          },
+          {
+            "marketGroupId": "game-lines/totals/2nd-half",
+            "line": 108.5
+          }
+        ],
+        "periodScores": [
+          {
+            "number": 1,
+            "type": "PERIOD_SCORE_TYPE_REGULATION",
+            "label": "Q1",
+            "scores": [
+              {
+                "competitorId": "27",
+                "score": 25
+              },
+              {
+                "competitorId": "36",
+                "score": 19
+              }
+            ]
+          },
+          {
+            "number": 2,
+            "type": "PERIOD_SCORE_TYPE_REGULATION",
+            "label": "Q2",
+            "scores": [
+              {
+                "competitorId": "27",
+                "score": 32
+              },
+              {
+                "competitorId": "36",
+                "score": 17
+              }
+            ]
+          },
+          {
+            "number": 3,
+            "type": "PERIOD_SCORE_TYPE_REGULATION",
+            "label": "Q3",
+            "scores": [
+              {
+                "competitorId": "27",
+                "score": 33
+              },
+              {
+                "competitorId": "36",
+                "score": 23
+              }
+            ]
+          },
+          {
+            "number": 4,
+            "type": "PERIOD_SCORE_TYPE_REGULATION",
+            "label": "Q4",
+            "scores": [
+              {
+                "competitorId": "27",
+                "score": 0
+              },
+              {
+                "competitorId": "36",
+                "score": 0
+              }
+            ]
+          }
+        ],
+        "eventId": 185090
+      }
+    },
+    {
+      "id": "185091",
+      "gameId": 20024070,
+      "title": "ORL Magic vs. GS Warriors",
+      "startTime": "2026-11-08T01:30:00Z",
+      "live": true,
+      "ended": false,
+      "active": true,
+      "closed": false,
+      "eventState": {
+        "id": 142098165,
+        "gameId": 20024070,
+        "sportradarGameId": "9e30ba1d-a7a3-40ca-90cd-600197f28d74",
+        "type": "basketball",
+        "createdAt": "2026-11-07T01:10:41.063563Z",
+        "updatedAt": "2026-11-08T02:53:44.499141Z",
+        "score": "43-58",
+        "elapsed": "11:28",
+        "period": "Q3",
+        "live": true,
+        "ended": false,
+        "mainTotalLine": 204.5,
+        "marketGroupStats": [
+          {
+            "marketGroupId": "game-lines/totals/full-game",
+            "line": 204.5
+          },
+          {
+            "marketGroupId": "game-lines/totals/1st-half",
+            "line": 113.5
+          },
+          {
+            "marketGroupId": "game-lines/totals/1st-quarter",
+            "line": 57.5
+          },
+          {
+            "marketGroupId": "game-lines/totals/2nd-quarter",
+            "line": 55.5
+          },
+          {
+            "marketGroupId": "game-lines/totals/3rd-quarter",
+            "line": 53.5
+          },
+          {
+            "marketGroupId": "game-lines/totals/4th-quarter",
+            "line": 52.5
+          },
+          {
+            "marketGroupId": "game-lines/totals/2nd-half",
+            "line": 106.5
+          }
+        ],
+        "periodScores": [
+          {
+            "number": 1,
+            "type": "PERIOD_SCORE_TYPE_REGULATION",
+            "label": "Q1",
+            "scores": [
+              {
+                "competitorId": "47",
+                "score": 31
+              },
+              {
+                "competitorId": "28",
+                "score": 19
+              }
+            ]
+          },
+          {
+            "number": 2,
+            "type": "PERIOD_SCORE_TYPE_REGULATION",
+            "label": "Q2",
+            "scores": [
+              {
+                "competitorId": "47",
+                "score": 26
+              },
+              {
+                "competitorId": "28",
+                "score": 22
+              }
+            ]
+          },
+          {
+            "number": 3,
+            "type": "PERIOD_SCORE_TYPE_REGULATION",
+            "label": "Q3",
+            "scores": [
+              {
+                "competitorId": "47",
+                "score": 1
+              },
+              {
+                "competitorId": "28",
+                "score": 2
+              }
+            ]
+          }
+        ],
+        "eventId": 185091
+      }
+    },
+    {
+      "id": "185092",
+      "gameId": 20024071,
+      "title": "HOU Rockets vs. PHO Suns",
+      "startTime": "2026-11-08T02:00:00Z",
+      "live": true,
+      "ended": false,
+      "active": true,
+      "closed": false,
+      "eventState": {
+        "id": 142033353,
+        "gameId": 20024071,
+        "sportradarGameId": "a1e569af-ebb3-4943-af73-0b10d7ebd1c3",
+        "type": "basketball",
+        "createdAt": "2026-11-06T18:02:12.020555Z",
+        "updatedAt": "2026-11-08T02:54:02.441066Z",
+        "score": "36-45",
+        "elapsed": "05:21",
+        "period": "Q2",
+        "live": true,
+        "ended": false,
+        "mainSpreadLine": 3.5,
+        "mainTotalLine": 221.5,
+        "marketGroupStats": [
+          {
+            "marketGroupId": "game-lines/spread/full-game",
+            "line": 3.5
+          },
+          {
+            "marketGroupId": "game-lines/totals/full-game",
+            "line": 221.5
+          },
+          {
+            "marketGroupId": "game-lines/spread/1st-half",
+            "line": -3.5
+          },
+          {
+            "marketGroupId": "game-lines/totals/1st-half",
+            "line": 108.5
+          },
+          {
+            "marketGroupId": "game-lines/spread/1st-quarter",
+            "line": -1.5
+          },
+          {
+            "marketGroupId": "game-lines/totals/1st-quarter",
+            "line": 54.5
+          },
+          {
+            "marketGroupId": "game-lines/spread/2nd-quarter",
+            "line": -1.5
+          },
+          {
+            "marketGroupId": "game-lines/totals/2nd-quarter",
+            "line": 53.5
+          },
+          {
+            "marketGroupId": "game-lines/spread/3rd-quarter",
+            "line": -1.5
+          },
+          {
+            "marketGroupId": "game-lines/totals/3rd-quarter",
+            "line": 58.5
+          },
+          {
+            "marketGroupId": "game-lines/spread/4th-quarter",
+            "line": -0.5
+          },
+          {
+            "marketGroupId": "game-lines/totals/4th-quarter",
+            "line": 56.5
+          },
+          {
+            "marketGroupId": "game-lines/spread/2nd-half",
+            "line": -3.5
+          },
+          {
+            "marketGroupId": "game-lines/totals/2nd-half",
+            "line": 116.5
+          }
+        ],
+        "periodScores": [
+          {
+            "number": 1,
+            "type": "PERIOD_SCORE_TYPE_REGULATION",
+            "label": "Q1",
+            "scores": [
+              {
+                "competitorId": "30",
+                "score": 35
+              },
+              {
+                "competitorId": "18",
+                "score": 23
+              }
+            ]
+          },
+          {
+            "number": 2,
+            "type": "PERIOD_SCORE_TYPE_REGULATION",
+            "label": "Q2",
+            "scores": [
+              {
+                "competitorId": "30",
+                "score": 10
+              },
+              {
+                "competitorId": "18",
+                "score": 13
+              }
+            ]
+          }
+        ],
+        "eventId": 185092
+      }
+    }
+  ]
+}

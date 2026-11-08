@@ -1,0 +1,46 @@
+{
+  "healthy": false,
+  "owner_pid": 7008,
+  "runtime_id": "2d93cb70-58bc-4ca6-8f47-f8b885b6742d",
+  "heartbeat_at": "2026-11-07T23:55:39.192260+00:00",
+  "global_stopped": false,
+  "paused_sources": [],
+  "resources": {
+    "reviews": 0,
+    "delivery": {
+      "owners": 0,
+      "created": 0,
+      "readers": 0,
+      "released": 0,
+      "file_bytes": 0,
+      "peak_owners": 0,
+      "peak_readers": 0,
+      "peak_file_bytes": 0,
+      "peak_block_bytes": 0
+    },
+    "projection": {
+      "reused_groups": 0,
+      "projected_groups": 0
+    },
+    "subscribers": 0,
+    "issue_records": 200,
+    "stream_ceiling": 8,
+    "pending_notices": 0,
+    "rss_ceiling_bytes": 3221225472,
+    "sampled_rss_bytes": 3230646272,
+    "issue_byte_ceiling": 1048576,
+    "issue_encoded_bytes": 197514,
+    "state_ceiling_bytes": 67108864,
+    "state_encoded_bytes": 4456,
+    "issue_record_ceiling": 200,
+    "transport_queue_sample": null,
+    "transport_queue_ceiling": 64,
+    "notice_ceiling_per_stream": 1,
+    "sampled_highwater_rss_bytes": 3230646272
+  },
+  "peak_rss_bytes": 3230646272,
+  "cleanup_errors": [
+    "ingress_cleanup_timeout"
+  ],
+  "cleanup_complete": false
+}

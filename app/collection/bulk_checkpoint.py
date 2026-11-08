@@ -65,6 +65,16 @@ class Checkpoint:
             db.execute("DELETE FROM current_acquisition_query WHERE source=%s AND generation='published'",
                        (self.source,))
 
+    def listing_start(self, proposed):
+        """Resume one fixed lower bound until this complete census publishes."""
+        with connect() as db:
+            values={r['start'] for r in db.execute(
+                "SELECT request->'params'->>'startTimeMin' AS start FROM current_acquisition_query "
+                "WHERE source=%s AND request->>'scope'=%s AND request->>'path'='/v1/events' "
+                "AND generation<>'published' AND request->'params' ? 'startTimeMin'",(self.source,self.scope))}
+        if len(values)>1:raise ValueError('conflicting_listing_windows')
+        return next(iter(values)) if values else proposed
+
 
 def image_parts(book):
     # SQL NULL means absent; JSON null and empty arrays/strings are evidence.

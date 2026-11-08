@@ -118,7 +118,7 @@ class RecoveryRequired(ValueError):
 
 
 class BookReconstructor:
-    def __init__(self, markets, *, kind=EvidenceKind.OBSERVATION, maximum_markets=20):
+    def __init__(self, markets, *, kind=EvidenceKind.OBSERVATION, maximum_markets=20, materializer=None, wire_encoder=None):
         self.markets = {m.raw.ref.market_id: m for m in markets}
         if not self.markets or (maximum_markets is not None and len(self.markets)>maximum_markets) or len(self.markets) != len(markets):
             raise ValueError('requires 1-20 unique markets')
@@ -127,6 +127,8 @@ class BookReconstructor:
         self.sides, self.native_ids, self.last, self.source_highwater = {}, {}, {}, {}
         self.frames = []
         self.retiring = {}
+        self.materializer=materializer or book_from_levels
+        self.wire_encoder=wire_encoder or encode
 
     def reconfigure(self, markets, removal_request=None):
         updated={m.raw.ref.market_id:m for m in markets}
@@ -271,7 +273,7 @@ class BookReconstructor:
                 SourceTimeProgress.REPEATED if source_key == prior else SourceTimeProgress.REGRESSED)
             if prior is None or source_key > prior:
                 self.source_highwater[mid] = source_key
-        if (not materialize and kind=='orderbook_delta' and progress!=SourceTimeProgress.REGRESSED
+        if (not materialize and progress!=SourceTimeProgress.REGRESSED
                 and (exchange_at is None or exchange_at<=received_at)):
             # The owning batch will materialize the last delta in the bounded contiguous batch for
             # this market. Sequence, price, quantity and clocks above still
@@ -279,14 +281,14 @@ class BookReconstructor:
             self.sides[mid]=candidate;self.last.pop(mid,None)
             return None
         safe = sanitize(msg)
-        self.frames.append((generation, received_at, encode(safe)))
-        raw_body = encode({'message': safe, 'connection_generation': generation,
+        self.frames.append((generation, received_at, self.wire_encoder(safe)))
+        raw_body = self.wire_encoder({'message': safe, 'connection_generation': generation,
             'reconstructed_bids': {s: [[str(p), str(q)] for p, q in sorted(rows.items())]
                                    for s, rows in candidate.items()}})
         market = self.markets[mid]
         raw = Response(raw_body, WS_URL + f'#sid={self.sid};generation={generation};book', received_at,
                        self.kind).raw(market.raw.ref.event_id, mid, exchange_at)
-        book = book_from_levels(raw, candidate, depth=Depth.FULL, sync=BookSync.SYNCHRONIZED,
+        book = self.materializer(raw, candidate, depth=Depth.FULL, sync=BookSync.SYNCHRONIZED,
             sequence=str(seq), source_progress=progress)
         self.sides[mid], self.last[mid] = candidate, book
         return book

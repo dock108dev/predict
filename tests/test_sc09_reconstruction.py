@@ -21,6 +21,68 @@ class Batch:
 
 
 class CompactChildState(IsolatedAsyncioTestCase):
+    async def test_current_wire_matches_legacy_exact_decimal_and_unicode_encoding(self):
+        from decimal import Decimal
+        from app.adapters.kalshi_stream import encode
+        from app.collection.native_reconstruction import current_wire
+        for value in ({'side':'yes','price':'0.123456789012345678901','quantity':123},
+                      {'unicode':'é 🎯'}, {'quantity':10**80},
+                      {'price':Decimal('0.123456789012345678901')}):
+            self.assertEqual(current_wire(value),encode(value))
+
+    async def test_native_packing_preserves_decimal_strings_unicode_and_existing_seal(self):
+        from app.collection.native_reconstruction import pack_native_image
+        from app.collection.current_confirmation import content
+        from app.collection.current_book_images import decode_container
+        from tests.test_current_service import native_fixture
+        _,book=native_fixture()
+        for side in ('yes','é 🎯'):
+            book['outcomes'][0]['outcome_id']=side
+            book['outcomes'][0]['asks']['levels'][0]['quantity']['value']='9007199254740993.00000000000001'
+            digest,image=pack_native_image(book)
+            self.assertEqual(digest,content(book))
+            self.assertEqual(decode_container(image),book)
+
+    async def test_reused_levels_preserve_previous_images_and_retire_removed_prices(self):
+        from app.collection import native_reconstruction as worker
+        from app.collection.current_book_images import decode_container
+        from copy import deepcopy
+        at=datetime.now(timezone.utc)
+        worker.initialize('kalshi',[market()],1,None,{})
+        rows,_=worker.reconstruct([(ack(1),at),(frame(1,yes_dollars_fp=[['0.4','3'],['0.3','5']]),at)])
+        first=rows[-1]['value'];saved=deepcopy(first)
+        delta=json.loads(frame(2,'orderbook_delta'))
+        delta['msg'].update(side='yes',price_dollars='0.4',delta_fp='-3')
+        rows,_=worker.reconstruct([(json.dumps(delta),at)])
+        self.assertEqual(first,saved)
+        self.assertEqual(decode_container(rows[-1]['prepared_image']),rows[-1]['value'])
+        self.assertEqual([x['price']['value'] for x in rows[-1]['value']['outcomes'][0]['bids']['levels']],['0.3'])
+        worker.reconfigure([],None,{'request_id':2})
+        self.assertFalse(worker._LEVEL_IMAGES)
+
+    async def test_compact_transfer_keeps_full_ladder_and_confirmation_content(self):
+        from app.collection import native_reconstruction as worker
+        from app.collection.current_book_images import decode_container,CurrentBookImages
+        from app.collection.current_confirmation import content
+        from app.collection.current_native import top_price_identity
+        from tests.test_polymarket_us_stream import SLUG
+        at=datetime.now(timezone.utc)
+        for venue,markets,request,raw,mapping in (
+                ('kalshi',[market()],None,[ack(1),frame(1,yes_dollars_fp=[['0.4','3'],['0.3','5']])],None),
+                ('polymarket_us',[us_market()],'r',[message('r',transactTime=at.isoformat())],{SLUG:'r'})):
+            worker.initialize(venue,markets,1,request,{},mapping)
+            full,_=worker.reconstruct([(v,at) for v in raw])
+            worker.initialize(venue,markets,1,request,{},mapping)
+            compact,_=worker.reconstruct([(v,at) for v in raw],compact=True)
+            original=full[-1]['value'];entry=compact[-1];hint=entry['queue_hint']
+            self.assertNotIn('value',entry)
+            self.assertEqual(decode_container(entry['prepared_image']),original)
+            self.assertEqual(top_price_identity(hint),top_price_identity(original))
+            self.assertEqual(entry['content_sha256'],content(original))
+            images=CurrentBookImages()
+            images.set_prepared('m',entry['prepared_image'],exchange_at=hint['raw']['exchange_at'],confirmation=None)
+            self.assertEqual(images['m'],original)
+
     async def test_reconstruction_does_not_retain_redundant_decoded_image_roster(self):
         from app.collection import native_reconstruction as worker
         from tests.test_polymarket_us_stream import SLUG
@@ -32,11 +94,28 @@ class CompactChildState(IsolatedAsyncioTestCase):
             rows,_=worker.reconstruct([(raw,at) for raw in frames])
             self.assertFalse(worker._ENGINE.last)
             self.assertIsNotNone(rows[-1]['book'])
+            from app.collection.current_book_images import decode_container
+            self.assertEqual(decode_container(rows[-1]['prepared_image']),rows[-1]['value'])
             if venue=='kalshi':self.assertTrue(worker._ENGINE.sides)
             else:self.assertTrue(worker._ENGINE.source_time_high_water)
 
 
 class ReconstructionProcess(IsolatedAsyncioTestCase):
+    async def test_warm_loads_all_workers_without_consuming_a_frame(self):
+        metrics={};worker=Reconstruction('kalshi',[market()],1,None,{},metrics,partitions=2)
+        try:
+            await worker.warm()
+            self.assertEqual(len(set(metrics['reconstruction_ready_workers'])),2)
+            self.assertFalse(worker.ready)
+            self.assertIsNone(worker.pending)
+            at=datetime.now(timezone.utc);batch=Batch([(ack(1),at),(frame(1),at)])
+            await worker.recv(batch)
+            row=await worker.recv(batch)
+            self.assertEqual(row['value']['sequence'],'1')
+            self.assertEqual(row['received'],at)
+        finally:await worker.close()
+        self.assertTrue(metrics['reconstruction_worker_stopped'])
+
     async def test_full_catalog_control_reply_preserves_sequence_and_neighbor_book(self):
         from websockets.asyncio.server import serve
         from websockets.asyncio.client import connect
@@ -65,7 +144,7 @@ class ReconstructionProcess(IsolatedAsyncioTestCase):
         import asyncio
         from app.collection.native_receive import NativeReceive
         at=datetime.now(timezone.utc);metrics={}
-        raw=[ack(1),frame(1)]+[frame(i,'orderbook_delta') for i in range(2,2051)]
+        raw=[ack(1),frame(1)]+[frame(i,'orderbook_delta') for i in range(2,4100)]
         class Socket:
             def __init__(self):self.items=iter(raw)
             async def recv(self):
@@ -79,10 +158,10 @@ class ReconstructionProcess(IsolatedAsyncioTestCase):
             self.assertIsNotNone(worker.pending)
             self.assertEqual(first['sid'],7)
             rows=[await worker.recv(receiver) for _ in range(len(raw)-1)]
-            self.assertEqual([r['seq'] for r in rows],list(range(1,2051)))
+            self.assertEqual([r['seq'] for r in rows],list(range(1,4100)))
             self.assertFalse(any(r.get('error') for r in rows))
-            self.assertEqual(rows[-1]['value']['sequence'],'2050')
-            self.assertLessEqual(metrics['reconstruction_batch_frames'],2048)
+            self.assertEqual(rows[-1]['value']['sequence'],'4099')
+            self.assertLessEqual(metrics['reconstruction_batch_frames'],4096)
         finally:
             await receiver.close();await worker.close()
         self.assertIsNone(worker.pending)
@@ -278,3 +357,63 @@ class InterleavedDeltaBatch(IsolatedAsyncioTestCase):
         self.assertEqual(sum(bool(r.get('book')) for r in rows),4)
         self.assertEqual(sum(bool(r.get('coalesced')) for r in rows),98)
         self.assertEqual([r['seq'] for r in rows[1:]],list(range(1,103)))
+
+
+class ProviderFailureReason(IsolatedAsyncioTestCase):
+    async def test_exact_subscription_overflow_is_safe_and_stops_at_failed_frame(self):
+        from app.collection import native_reconstruction as worker
+        at=datetime.now(timezone.utc)
+        for code,reason in ((25,'provider_subscription_buffer_overflow'),(99,'native_reconstruction_failure')):
+            worker.initialize('kalshi',[market()],1,None,{})
+            error=json.dumps(dict(type='error',sid=7,seq=2,msg=dict(code=code,msg='PRIVATE provider message')))
+            rows,_=worker.reconstruct([(ack(1),at),(frame(1),at),(error,at),(frame(3,'orderbook_delta'),at)])
+            self.assertEqual(len(rows),3)
+            self.assertEqual(rows[-1]['error'],reason)
+            self.assertNotIn('PRIVATE',reason)
+
+class PartitionedReconstruction(IsolatedAsyncioTestCase):
+    async def test_two_children_emit_identical_books_and_fail_at_same_sequence_gap(self):
+        from app.collection.current_book_images import decode_container
+        at=datetime.now(timezone.utc)
+        frames=[ack(),frame(1,mid='M'),frame(2,mid='N'),frame(3,'orderbook_delta',mid='M'),
+            frame(4,'orderbook_delta',mid='N'),frame(6,'orderbook_delta',mid='M'),frame(7,'orderbook_delta',mid='N')]
+        outputs=[]
+        for count in (1,2):
+            worker=Reconstruction('kalshi',[market('M'),market('N')],1,None,{}, {},compact=True,partitions=count)
+            try:
+                _,rows,_=await worker.load(Batch([(f,at) for f in frames]))
+                outputs.append([{k:r.get(k) for k in ('sid','seq','error','clock','content_sha256','prepared_image','queue_hint')} for r in rows])
+                self.assertEqual(len(rows),6)
+                self.assertEqual(rows[-1]['error'],'native_reconstruction_failure')
+                for r in rows:
+                    if r.get('prepared_image'):
+                        b=decode_container(r['prepared_image'])
+                        self.assertEqual(b['raw']['received_at'],at.isoformat())
+            finally:await worker.close()
+            self.assertTrue(all(p._shutdown_thread for p in worker.pools))
+        self.assertEqual(outputs[0],outputs[1])
+
+    async def test_partition_disagreement_never_adopts_partial_results(self):
+        from app.collection.native_reconstruction import merge_partitions
+        a=[dict(received='now',sid=7,seq=1,catalog_revision=0)]
+        b=[dict(a[0],seq=2)]
+        with self.assertRaisesRegex(ValueError,'partition_state_conflict'):
+            merge_partitions([(a,{}),(b,{})])
+
+    async def test_us_partitions_preserve_full_replacement_and_isolated_withdrawal(self):
+        from tests.test_polymarket_us_stream import SLUG
+        at=datetime.now(timezone.utc);stamp=at.isoformat()
+        frames=[message('r',transactTime=stamp),message('r',offers=None,transactTime=stamp),
+            message('r','0.3',transactTime=stamp),message('r','0.4',transactTime=(at-timedelta(seconds=1)).isoformat())]
+        outputs=[]
+        for count in (1,2):
+            worker=Reconstruction('polymarket_us',[us_market()],1,'r',{}, {},compact=True,
+                market_requests={SLUG:'r'},partitions=count)
+            try:
+                _,rows,_=await worker.load(Batch([(f,at) for f in frames]))
+                outputs.append([{k:r.get(k) for k in ('error','clock','content_sha256','prepared_image','queue_hint','malformed_slug','isolated_reason')} for r in rows])
+                self.assertEqual(rows[1]['malformed_slug'],SLUG)
+                self.assertIsNotNone(rows[2]['book'])
+                self.assertEqual(rows[3]['isolated_reason'],'regressed_native_source_clock')
+            finally:await worker.close()
+        self.assertEqual(outputs[0],outputs[1])

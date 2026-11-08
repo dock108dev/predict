@@ -1,0 +1,125 @@
+{
+  "stage": {
+    "sport": "NBA",
+    "records": 214,
+    "attempt_id": "9cd960bd-3134-4ea4-a751-ca795adb2f36",
+    "decoded_at": "2026-11-08T02:30:21.392497+00:00",
+    "admitted_at": "2026-11-08T02:30:22.189452+00:00",
+    "received_at": "2026-11-08T02:30:19.854163+00:00",
+    "normalized_at": "2026-11-08T02:30:21.431294+00:00",
+    "decoding_seconds": 2.9170187190175056e-06,
+    "admission_seconds": 0.7581662909360602,
+    "normalization_seconds": 0.03880166704766452
+  },
+  "population": "First 100 NBA winner outcome groups, sampled every five seconds; all dates. Each first sample must contain the exact new aggregate receipt. API is not browser.",
+  "games": [
+    {
+      "game": "Los Angeles Lakers vs. Detroit Pistons",
+      "game_key": "combined:event:33553582ad5b4938060a913b3b5d46df",
+      "captured_at": "2026-11-08T02:30:24.966766+00:00",
+      "first_api_seen_at": "2026-11-08T02:30:31.483361+00:00",
+      "admission_to_capture_seconds": 2.777314,
+      "receipt_to_first_api_seconds": 11.629198,
+      "current_offers_at_first_sample": 2
+    },
+    {
+      "game": "San Antonio Spurs vs. Portland Trail Blazers",
+      "game_key": "combined:event:4c5f7b82f4cc15364d5c2e445b4cbc66",
+      "captured_at": "2026-11-08T02:30:34.483470+00:00",
+      "first_api_seen_at": "2026-11-08T02:30:43.020681+00:00",
+      "admission_to_capture_seconds": 12.294018,
+      "receipt_to_first_api_seconds": 23.166518,
+      "current_offers_at_first_sample": 2
+    },
+    {
+      "game": "Brooklyn Nets vs. Atlanta Hawks",
+      "game_key": "combined:event:f18e5ab19bda9f9222e5548edbb68233",
+      "captured_at": "2026-11-08T02:30:34.088251+00:00",
+      "first_api_seen_at": "2026-11-08T02:30:43.020681+00:00",
+      "admission_to_capture_seconds": 11.898799,
+      "receipt_to_first_api_seconds": 23.166518,
+      "current_offers_at_first_sample": 0
+    },
+    {
+      "game": "Houston Rockets vs. Phoenix Suns",
+      "game_key": "combined:event:3290864e98970e7e69819c8940475380",
+      "captured_at": "2026-11-08T02:30:50.818337+00:00",
+      "first_api_seen_at": "2026-11-08T02:31:00.388153+00:00",
+      "admission_to_capture_seconds": 28.628885,
+      "receipt_to_first_api_seconds": 40.53399,
+      "current_offers_at_first_sample": 0
+    },
+    {
+      "game": "Washington Wizards vs. Oklahoma City Thunder",
+      "game_key": "combined:event:686145ff4b61ead4cb2afdf486fae035",
+      "captured_at": "2026-11-08T02:31:08.047489+00:00",
+      "first_api_seen_at": "2026-11-08T02:31:13.675364+00:00",
+      "admission_to_capture_seconds": 45.858037,
+      "receipt_to_first_api_seconds": 53.821201,
+      "current_offers_at_first_sample": 0
+    },
+    {
+      "game": "Utah Jazz vs. Minnesota Timberwolves",
+      "game_key": "combined:event:3dc6ec5064369aa9883c468c53eeea67",
+      "captured_at": "2026-11-08T02:31:08.583922+00:00",
+      "first_api_seen_at": "2026-11-08T02:31:13.675364+00:00",
+      "admission_to_capture_seconds": 46.39447,
+      "receipt_to_first_api_seconds": 53.821201,
+      "current_offers_at_first_sample": 2
+    },
+    {
+      "game": "Philadelphia 76ers vs. Chicago Bulls",
+      "game_key": "combined:event:146aaa639a2e26e7f5e5a11c4c3c0a7a",
+      "captured_at": "2026-11-08T02:31:18.434849+00:00",
+      "first_api_seen_at": "2026-11-08T02:31:25.430059+00:00",
+      "admission_to_capture_seconds": 56.245397,
+      "receipt_to_first_api_seconds": 65.575896,
+      "current_offers_at_first_sample": 2
+    },
+    {
+      "game": "New York Knicks vs. Cleveland Cavaliers",
+      "game_key": "combined:event:65ecc50cb91b98a2679a49df6ebf9dce",
+      "captured_at": "2026-11-08T02:31:17.910028+00:00",
+      "first_api_seen_at": "2026-11-08T02:31:25.430059+00:00",
+      "admission_to_capture_seconds": 55.720576,
+      "receipt_to_first_api_seconds": 65.575896,
+      "current_offers_at_first_sample": 0
+    },
+    {
+      "game": "New Orleans Pelicans vs. Los Angeles Clippers",
+      "game_key": "combined:event:a32c435e7c57a0569fa0e3c69bb2599d",
+      "captured_at": "2026-11-08T02:31:44.664967+00:00",
+      "first_api_seen_at": "2026-11-08T02:31:50.208511+00:00",
+      "admission_to_capture_seconds": 82.475515,
+      "receipt_to_first_api_seconds": 90.354348,
+      "current_offers_at_first_sample": 2
+    },
+    {
+      "game": "Orlando Magic vs. Golden State Warriors",
+      "game_key": "combined:event:1316f3072673dcd0cff9e77a2f92af35",
+      "captured_at": "2026-11-08T02:31:42.403905+00:00",
+      "first_api_seen_at": "2026-11-08T02:31:50.208511+00:00",
+      "admission_to_capture_seconds": 80.214453,
+      "receipt_to_first_api_seconds": 90.354348,
+      "current_offers_at_first_sample": 0
+    },
+    {
+      "game": "Miami Heat vs. Sacramento Kings",
+      "game_key": "combined:event:547ad91f942e48850ce25ada920403b2",
+      "captured_at": "2026-11-08T02:31:56.037817+00:00",
+      "first_api_seen_at": "2026-11-08T02:32:03.285664+00:00",
+      "admission_to_capture_seconds": 93.848365,
+      "receipt_to_first_api_seconds": 103.431501,
+      "current_offers_at_first_sample": 2
+    },
+    {
+      "game": "Boston Celtics vs. Milwaukee Bucks",
+      "game_key": "combined:event:90a8b0be1417b67973151fba0cff1384",
+      "captured_at": "2026-11-08T02:32:21.476417+00:00",
+      "first_api_seen_at": "2026-11-08T02:32:29.397135+00:00",
+      "admission_to_capture_seconds": 119.286965,
+      "receipt_to_first_api_seconds": 129.542972,
+      "current_offers_at_first_sample": 2
+    }
+  ]
+}
