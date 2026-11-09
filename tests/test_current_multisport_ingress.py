@@ -3,6 +3,7 @@ from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 import unittest
+from unittest.mock import patch
 
 from app.collection.current_native import NativeWorker, balanced_markets
 from app.collection.current_policy import DEFAULT, validate, native_scope, native_markets, aggregate_scope, aggregate_markets
@@ -204,10 +205,15 @@ class NativeMatrix(unittest.IsolatedAsyncioTestCase):
                 cases=[source_case('NFL','moneyline','first-page-'+str(i)) for i in range(6)]
                 nba=source_case('NBA','moneyline','other-cell');cases.append(nba)
                 w,published=worker(venue,['NFL','NBA'],['moneyline'])
-                calls=fake_discovery(w,cases);await w.discover()
+                at=datetime.now(timezone.utc)
+                async def discover_at(clock):
+                    with patch('app.collection.bulk_native.datetime',wraps=datetime) as dates:
+                        dates.now.return_value=clock
+                        await w.discover()
+                calls=fake_discovery(w,cases);await discover_at(at)
                 unseen=source_case('NFL','moneyline','new-after-start-page-two')
                 cases.append(unseen)
-                before=len(calls);await w.discover()
+                before=len(calls);await discover_at(at+timedelta(minutes=1))
                 events={e['id'] for e in published[-1]['events']}
                 expected=unseen['events'][venue].get('event_ticker',unseen['events'][venue].get('id'))
                 self.assertIn(expected,events)
@@ -219,17 +225,26 @@ class NativeMatrix(unittest.IsolatedAsyncioTestCase):
                     None if venue=='kalshi' else 0)
                 first_nfl=next(c for c in calls[:before] if c['field']=='events' and
                     (c['params'].get('series_ticker')=='KXNFLGAME' or c['params'].get('tagSlug')=='nfl'))
-                self.assertEqual({k:v for k,v in nfl['params'].items() if k not in ('cursor','offset')},
-                    {k:v for k,v in first_nfl['params'].items() if k not in ('cursor','offset')})
+                self.assertEqual({k:v for k,v in nfl['params'].items() if k not in ('cursor','offset','startTimeMin')},
+                    {k:v for k,v in first_nfl['params'].items() if k not in ('cursor','offset','startTimeMin')})
+                if venue=='polymarket_us':
+                    # A completed census starts a new rolling window. Every
+                    # page/league inside one census must share the exact bound.
+                    self.assertEqual(first_nfl['params']['startTimeMin'],(at-timedelta(hours=24)).isoformat())
+                    self.assertEqual({c['params']['startTimeMin'] for c in listing_calls},
+                        {(at+timedelta(minutes=1)-timedelta(hours=24)).isoformat()})
+                    self.assertTrue(all('startTimeMax' not in c['params'] for c in listing_calls))
                 finding=next(f for f in w.findings if f['sport']=='NFL')
                 self.assertTrue(finding['traversal_exhausted'])
                 self.assertLessEqual(len(calls)-before,DEFAULT['discovery_pages'])
                 self.assertIn(nba['markets'][venue].get('ticker',nba['markets'][venue].get('id')),w.markets)
                 # A completed traversal resets on the next normal due pass.
-                before=len(calls);await w.discover()
+                before=len(calls);await discover_at(at+timedelta(minutes=2))
                 nfl=next(c for c in calls[before:] if c['field']=='events' and
                     (c['params'].get('series_ticker')=='KXNFLGAME' or c['params'].get('tagSlug')=='nfl'))
                 self.assertEqual(nfl['params'].get('cursor','') if venue=='kalshi' else nfl['params']['offset'],'' if venue=='kalshi' else 0)
+                if venue=='polymarket_us':
+                    self.assertEqual(nfl['params']['startTimeMin'],(at+timedelta(minutes=2)-timedelta(hours=24)).isoformat())
 
     async def test_total_without_game_id_uses_only_observed_embedded_market_locator(self):
         case=source_case('NHL','total','no-game-id');case['events']['polymarket_us'].pop('gameId')

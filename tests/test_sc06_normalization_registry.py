@@ -4,6 +4,7 @@ No database, provider, financial evaluation, model renewal or owner state writes
 """
 from copy import deepcopy
 from dataclasses import FrozenInstanceError
+from datetime import timedelta
 import json
 from pathlib import Path
 from types import SimpleNamespace
@@ -14,6 +15,7 @@ from app.comparison.combined_inputs import build, prepare
 from app.dashboard.current_normalized import NormalizationRegistries, catalog_from_normalized
 from app.dashboard.current_state import unavailable
 from app.storage.comparison_board import ReadContext
+from app.storage.store import stamp
 from tests.test_ev09_n01 import AT, envelopes
 
 
@@ -114,11 +116,11 @@ class RegistrySnapshots(TestCase):
                 catalog_envelope_id='old-catalog', book_envelope_id='old-book',
                 unknown={'nested': ['source native metadata']}))
         first['_instrument'] = {'old': True}; first['_fingerprint'] = 'old-locator'
-        for kind in ('unsupported_market', 'unsupported_league', 'already_started'):
+        for kind in ('unsupported_market', 'unsupported_league', 'outside_live_window'):
             excluded = deepcopy(first)
             if kind == 'unsupported_market':excluded['market_identity']['family'] = 'player_prop'
             elif kind == 'unsupported_league':excluded['event']['competition'] = 'unsupported_league'
-            else:excluded['event']['scheduled_start'] = AT
+            else:excluded['event']['scheduled_start'] = (stamp(AT)-timedelta(hours=24,microseconds=1)).isoformat()
             records.append(excluded)
         frame = dict(epoch='authored-shells', revision='unchanged-source-facts', records=records,
             source_status={first['quote']['venue']: dict(state='failed')},

@@ -181,8 +181,17 @@ class CurrentBoardReads(unittest.TestCase):
         self.assertEqual(b['input_version'],bundle(later)['input_version'])
 
     def test_empty_first_use_and_expired_occurrence_are_honest(self):
+        from datetime import timedelta
+        from app.storage.store import stamp
         self.assertEqual(context(frame([])) .catalog()['games'],[])
-        self.assertEqual(context(at='2026-10-17T00:00:00Z').catalog()['games'],[])
+        captured=frame();before=deepcopy(captured)
+        last_start=max(stamp(row['event']['scheduled_start']) for row in captured['records'])
+        # Kickoff is not catalog expiry: live games remain inspectable for 24h.
+        for at in (last_start,last_start+timedelta(hours=24)):
+            self.assertTrue(context(captured,at=at.isoformat()).catalog()['games'])
+        expired=last_start+timedelta(hours=24,microseconds=1)
+        self.assertEqual(context(captured,at=expired.isoformat()).catalog()['games'],[])
+        self.assertEqual(captured,before)
 
     def test_version2_odds_financial_and_details_contracts(self):
         c=context();b=bundle(c)
