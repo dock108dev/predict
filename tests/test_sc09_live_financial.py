@@ -67,7 +67,7 @@ def test_conditional_math_independent_and_not_complete_ev():
     from fractions import Fraction as F
     from datetime import datetime,timezone
     from app.comparison.conditional_benchmark import attach
-    evidence=dict(reviewed_at='2026-10-28T00:00:00Z',review_before='2026-10-29T00:00:00Z')
+    evidence=dict(reviewed_at='2026-10-28T00:00:00Z',review_before='2026-10-29T00:00:00Z',fee_rate='0')
     at=datetime(2026,10,28,18,tzinfo=timezone.utc)
     q=dict(venue='novig',source=dict(provider='the_odds_api',native_side='bookmaker_outcome'),
         original=dict(value='2',units='decimal_odds'),times=dict(source_at='original',received_at='receipt'))
@@ -79,6 +79,7 @@ def test_conditional_math_independent_and_not_complete_ev():
             with patch('app.comparison.conditional_benchmark.basis',return_value=evidence):
                 result=attach(deepcopy(raw),q,at=at,event={'start_at':'2026-10-30T00:00:00Z'},group={'period':'full_game','market':family})
             m=result['conditional_trade_benchmark']
+            assert m['available'],m['reason']
             # Independent terminal payoff sum: equal chances of d-1 and -1.
             assert F(m['net_per_dollar_risk'])==((F(odds)-1)-1)/2
             assert F(m['return_percent'])==100*((F(odds)-1)-1)/2
