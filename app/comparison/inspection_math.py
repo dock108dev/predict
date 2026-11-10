@@ -27,21 +27,38 @@ def starting_fee_terms(row, captured_at, assumptions=None):
         return None
     try:
         at = instant(captured_at)
-        review = basis(venue, at=at)
+        captured = (row.get('trade_fee') or {}).get('evidence') or {}
+        if not captured.get('schedule_revision'):
+            captured = (row.get('conservative_trade_benchmark') or {}).get('evidence') or {}
+        review = captured if captured.get('schedule_revision') else basis(venue, at=at)
         in_window = instant(review['reviewed_at']) <= at < instant(review['review_before'])
         rate = review['fee_rate']
         if venue == 'novig':
-            values = [['Recorded pregame fee', f'${Decimal(rate):.2f} per $1 claim']]
-            scope = 'Eligible pregame straight trades. Live trades require separate fee evidence.'
+            native = ((row.get('trade_fee') or {}).get('evidence') or {}).get('native')
+            if native:
+                terms = native['market_fee']
+                values = [['Captured market coefficient', terms['coefficient']],
+                          ['Charge condition', terms['charged']], ['Observed event state', native['event_status']]]
+                scope = 'One immediate taker fill. Each native contract pays $0.01; 100 pay $1. Multi-price fills are not modeled.'
+            else:
+                values = [['Recorded pregame fee', f'${Decimal(rate):.2f} per $1 claim']]
+                scope = 'Eligible pregame straight trades. Live trades require separate fee evidence.'
         elif venue == 'kalshi':
             values = [['Standard starting formula', f'{rate} × price × (1 − price) per contract']]
             scope = 'Before series or event adjustments and account rounding. Price is the acquisition cost in dollars.'
         elif venue == 'polymarket_us':
-            initial = basis(venue)['fee_rate']
-            values = [['Historical assumption', f'{initial} taker coefficient']]
-            if tiers := review.get('allowed_taker_coefficients'):
-                values.append(['Recorded taker tiers', ' / '.join(tiers)])
-            scope = 'The coefficient multiplies price × (1 − price) before rounding. The applicable account tier is required.'
+            from .snapshot_polymarket_fee import PROFILE
+            if review.get('profile') == PROFILE:
+                values = [['Standard taker tiers', ' / '.join(review['allowed_taker_coefficients'])],
+                          ['Manual retail estimate', f'{rate} × contracts × acquired price × (1 − acquired price)']]
+                scope = ('Highest published standard tier at order insertion. Half-even cent rounding and cumulative '
+                         'order cap apply. Assumed rebates are $0. Personal tiers and overrides require account evidence.')
+            else:
+                initial = basis(venue)['fee_rate']
+                values = [['Historical assumption', f'{initial} taker coefficient']]
+                if tiers := review.get('allowed_taker_coefficients'):
+                    values.append(['Recorded taker tiers', ' / '.join(tiers)])
+                scope = 'The coefficient multiplies price × (1 − price) before rounding. The applicable account tier is required.'
         elif row.get('league') == 'NHL' and (nhl := review.get('nhl_taker_coefficient')):
             values = [['Recorded public NHL taker formula', f'{nhl} × price × (1 − price) per contract']]
             scope = 'Public site, before rounding. Negotiated account terms may differ.'
@@ -85,7 +102,7 @@ def offer_math(row):
     return dict(original=row.get('original'), source=row.get('source'), selection=row.get('selection'),
                 market=row.get('market'), clocks=row.get('times'),
                 probability=probability, fair_reference=reference, before_fees=gross,
-                reviewed=reviewed,
+                trade_fee=row.get('trade_fee'), reviewed=reviewed,
                 conservative=row.get('conservative_trade_benchmark'),
                 assumed_scenario=row.get('math'), fee_applicability=row.get('fee_applicability'),
                 metric_status=row.get('metric_status', {}),

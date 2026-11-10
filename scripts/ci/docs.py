@@ -23,6 +23,7 @@ DOCUMENTS = (
     "docs/CI.md",
     "docs/architecture.md",
     "docs/benchmark-ev.md",
+    "docs/fee-coverage-policy.md",
     "docs/novig-nflwin-modeled-basis.md",
     "docs/combined-occurrence-input-contract.md",
     "docs/comparison-board-api-contract.md",

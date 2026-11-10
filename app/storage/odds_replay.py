@@ -23,7 +23,7 @@ def capture():
         owner, states = publication.authority(db, at=at)
         inputs = snapshots.capture(db, at=at.isoformat(), ordinary=True)
         settings = publication.current_settings(db)
-    control = {key: owner.get(key) for key in ('active', 'healthy', 'global_stopped', 'paused_sources')}
+    control = {key: owner.get(key) for key in ('active', 'healthy', 'global_stopped', 'paused_sources', 'runtime_id')}
     return inputs, settings, control, states
 
 

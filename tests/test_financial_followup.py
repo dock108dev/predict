@@ -29,6 +29,30 @@ def test_november_7_fee_review_is_prospective_and_does_not_invent_us_account_tie
     assert 'trade_fee_usd' not in checked
 
 
+def test_november_9_novig_review_restores_only_current_pregame_terms():
+    from app.comparison.conditional_benchmark import snapshot_metric
+    from tests.test_snapshot_completion import fee_row
+
+    review = basis('novig', at=instant('2026-11-10T00:00:00Z'))
+    start = instant(review['reviewed_at'])
+    end = instant(review['review_before'])
+    row = fee_row()
+    row['start_at'] = '2026-11-11T00:00:00Z'
+
+    before = snapshot_metric(row, at=(start - timedelta(microseconds=1)).isoformat())
+    assert before['reason'] == 'conditional_fee_review_expired_or_not_effective'
+    current = snapshot_metric(row, at=start.isoformat())
+    assert current['available'] and current['trade_fee_usd'] == '0'
+    assert current['evidence']['version'] == 'novig-conditional-20261109-review'
+    renewed = basis('novig', at=end)
+    assert renewed['version'] == 'novig-conditional-20261110-review'
+    assert instant(renewed['reviewed_at']) < end
+    assert snapshot_metric(row, at=end.isoformat())['evidence']['version'] == renewed['version']
+
+    row['start_at'] = '2026-11-09T00:00:00Z'
+    assert not snapshot_metric(row, at=start.isoformat())['available']
+
+
 @pytest.mark.parametrize('venue',['novig','polymarket_us'])
 def test_new_fee_review_never_retroactively_covers_expired_interval(venue):
     old=basis(venue);end=instant(old['review_before'])

@@ -136,6 +136,13 @@ class CurrentService:
         elif 'the_odds_api' in self.paused_sources:
             for venue in ('novig','prophetx'):
                 await call(self, self.source_state, venue, 'stopped', 'Shared aggregate acquisition explicitly paused. Accounting and due times are preserved.')
+        if self.database_mode and self.config['aggregate_enabled'] and not ({'novig', 'the_odds_api'} & self.paused_sources):
+            from .novig_v3_public import NovigPublicDiscovery
+            from .novig_v3_current import NovigCurrentWorker
+            self.workers['novig_public'] = NovigPublicDiscovery(self)
+            self.tasks['novig_public'] = asyncio.create_task(self.run_worker('novig_public'), name='predict-novig-public')
+            self.workers['novig_native'] = NovigCurrentWorker(self)
+            self.tasks['novig_native'] = asyncio.create_task(self.run_worker('novig_native'), name='predict-novig-native')
         self.watchdog = asyncio.create_task(self.watch(), name='predict-current-resources')
 
     async def run_worker(self, venue):
@@ -144,7 +151,11 @@ class CurrentService:
         except asyncio.CancelledError: raise
         except Exception as exc:
             self.issue(venue, 'local_defect', type(exc).__name__)
-            if venue=='the_odds_api':
+            if venue=='novig_native':
+                self.workers[venue].metrics.update(state='unavailable', gap='novig_signed_worker_failed')
+            elif venue=='novig_public':
+                self.workers[venue].metrics.update(state='unavailable', gap='novig_public_source_unavailable')
+            elif venue=='the_odds_api':
                 try:await call(self, self.workers[venue].state, 'error', 'aggregate_worker_failed', 'Shared aggregate worker failed. Inspect each native worker status.')
                 except Exception:self.cleanup_errors.append('aggregate_status_failed')
             else:await call(self, self.source_state, venue, 'error', 'Native worker failed; this source is paused.')
@@ -183,6 +194,12 @@ class CurrentService:
 
     def row(self, kind, venue, **value):
         return dict(type=kind, source=venue, session_id=self.runtime_id, observed_at=utc(), **value)
+
+    @operation
+    def novig_quotes(self, venue, records, withdrawn):
+        if not self.dispatch or {'novig', 'the_odds_api'} & self.paused_sources:
+            raise asyncio.CancelledError()
+        return (yield self.row('novig_native_records', venue, records=records, withdrawn=withdrawn), self.states)
 
     @operation
     def source_state(self, venue, state, reason):
@@ -356,6 +373,23 @@ class CurrentService:
             await self._pause(venue)
 
     async def _pause(self, venue):
+        if venue in ('novig','prophetx','the_odds_api') and 'novig_native' in self.workers:
+            self.ingress.revoke('novig')
+            self.workers['novig_native'].closed=True
+            task=self.tasks['novig_native'];task.cancel()
+            _, pending=await asyncio.wait({task},timeout=self.config['cleanup_seconds'])
+            if pending or not await self.ingress.drain(self.config['cleanup_seconds'],'novig'):
+                self.cleanup_errors.append('novig_native:cleanup_timeout')
+                return
+            await self.workers['novig_native'].close()
+        if venue in ('novig','prophetx','the_odds_api') and 'novig_public' in self.workers:
+            worker=self.workers['novig_public'];worker.closed=True
+            task=self.tasks['novig_public'];task.cancel()
+            done,pending=await asyncio.wait({task},timeout=self.config['cleanup_seconds'])
+            if pending:
+                self.cleanup_errors.append('novig_public:cleanup_timeout')
+                return
+            await worker.close()
         if venue in ('novig','prophetx'):venue='the_odds_api'
         if venue not in self.workers: raise ValueError('Source is not running')
         self.ingress.revoke(venue)

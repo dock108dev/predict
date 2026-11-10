@@ -54,6 +54,8 @@ def render(
         )
     records = []
     errors = []
+    fee_journey_outcomes = set()
+    fee_journey_cases = 0
     for name, path in required.items():
         raw = outcomes.get(name, {}).get("outcome", "not run")
         status = {
@@ -95,6 +97,25 @@ def render(
                     - record["measurements"]["failed"]
                     - record["measurements"]["skipped"]
                 )
+                if browser or postgres:
+                    module = (
+                        "browser_tests.test_fee_desk"
+                        if browser
+                        else "tests.test_novig_current_admission"
+                    )
+                    for case in cases:
+                        owner = case.get("classname", "")
+                        if owner == module or owner.startswith(module + "."):
+                            fee_journey_cases += 1
+                            if (
+                                case.find("failure") is not None
+                                or case.find("error") is not None
+                            ):
+                                fee_journey_outcomes.add("FAIL")
+                            elif case.find("skipped") is not None:
+                                fee_journey_outcomes.add("SKIPPED")
+                            else:
+                                fee_journey_outcomes.add("PASS")
                 if record["measurements"]["failed"] or record["measurements"][
                     "skipped"
                 ] == len(cases):
@@ -177,7 +198,33 @@ def render(
             "inventory": "full package artifact metrics.json",
         }
 
-    text = f"## {'Package' if package else 'Storage' if postgres else 'Browser' if browser else 'Quality'} results\n\nTested SHA: `{safe(os.environ.get('GITHUB_SHA', 'local'))}`; event: {safe(os.environ.get('GITHUB_EVENT_NAME', 'local'))}; {safe(platform.platform())}; Python {platform.python_version()}.\n\n| Check | Status | Measurement / reason |\n|---|---|---|\n"
+    text = f"## {'Package' if package else 'Storage' if postgres else 'Browser' if browser else 'Quality'} results\n\nTested SHA: `{safe(os.environ.get('GITHUB_SHA', 'local'))}`; event: {safe(os.environ.get('GITHUB_EVENT_NAME', 'local'))}; {safe(platform.platform())}; Python {platform.python_version()}.\n\n"
+    if browser or postgres:
+        behavior, purpose, evidence = (
+            (
+                "Fee desk, pinned details and Admin at desktop and mobile widths",
+                "Keeps fee assumptions, recovery notices and coverage visible",
+                "Fee desk JUnit cases. Intercepted requests.",
+            )
+            if browser
+            else (
+                "Signed-format Novig admission, withdrawal and frozen detail",
+                "Keeps current stream authority separate from retained fee evidence",
+                "Novig current-admission JUnit case on its SQL shard.",
+            )
+        )
+        if fee_journey_cases < (2 if browser else 1):
+            fee_journey_outcomes.add("NOT RUN")
+        result = " / ".join(sorted(fee_journey_outcomes))
+        text += (
+            "### What was tested and why it matters\n\n"
+            "| Behavior checked | Actual result | Why it matters | Evidence / limit |\n"
+            "|---|---|---|---|\n"
+            f"| {behavior} | {result} | {purpose} | {evidence} |\n\n"
+            "**Gaps and limits.** These fixtures use disposable data. "
+            "A case absent from this report may belong to another shard or may not have executed.\n\n"
+        )
+    text += "| Check | Status | Measurement / reason |\n|---|---|---|\n"
     text += "\n".join(
         f"| {r['name']} | {r['status']} | {safe(display_measurement(r))}; {safe(r.get('reason', ''))} |"
         for r in records

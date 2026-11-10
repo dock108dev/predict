@@ -276,6 +276,31 @@ class ReportingTests(unittest.TestCase):
 
 
 class ProgressSummaryTests(unittest.TestCase):
+    def test_fee_browser_summary_does_not_promote_missing_mobile_case(self):
+        module = load("quality_report")
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            report = root / "browser/junit.xml"
+            report.parent.mkdir()
+            report.write_text(
+                '<testsuite><testcase classname="browser_tests.test_fee_desk" '
+                'name="test_ordinary_fee_desk[1440]"/></testsuite>'
+            )
+            summary, _, _ = module.render(
+                {"browser": {"outcome": "success"}}, root, browser=True
+            )
+            self.assertIn("desktop and mobile widths | NOT RUN / PASS |", summary)
+            report.write_text(
+                '<testsuite><testcase classname="browser_tests.test_fee_desk" '
+                'name="test_ordinary_fee_desk[1440]"/><testcase '
+                'classname="browser_tests.test_fee_desk" name="test_ordinary_fee_desk[390]">'
+                "<skipped/></testcase></testsuite>"
+            )
+            summary, _, _ = module.render(
+                {"browser": {"outcome": "success"}}, root, browser=True
+            )
+            self.assertIn("desktop and mobile widths | PASS / SKIPPED |", summary)
+
     def test_progress_replaces_step_summary_and_keeps_final_failure(self):
         import os
         import time

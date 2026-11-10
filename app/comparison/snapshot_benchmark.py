@@ -55,7 +55,10 @@ def bind(quotes, references, settings, at):
     occurrences = {}
     for row, record in zip(finance, resolved):
         match = record['quote'].get('occurrence_match',{})
-        if match.get('status')=='matched' and not match['conflicts']:
+        # A source-only provider grouping is not a cross-provider match.
+        # Preserve the exact schedule and roles fallback for those records.
+        if (match.get('status')=='matched' and not match['conflicts']
+                and len({member['provider'] for member in match['members']}) > 1):
             source=record['quote']['source']
             occurrences[(source['provider'],source['native_event_id'])]=match['occurrence_id']
         # Full-game aggregate reference scoring is a reviewed source rule,
@@ -128,7 +131,7 @@ def bind(quotes, references, settings, at):
             issues['complete_pairs']+=1
         except (ValueError,KeyError,TypeError,ArithmeticError) as exc:issues[str(exc)]+=1
     for row, financial in zip(rows,finance[:len(quotes)]):
-        if row['league']!='NCAAB' and row['venue'] not in ('kalshi','polymarket_us'):continue
+        if row['league']!='NCAAB' and row['venue'] not in ('kalshi','polymarket_us') and row.get('source',{}).get('provider')!='novig':continue
         row['snapshot_benchmark']=None
         row['snapshot_benchmark_reason']='exact_reference_pair_unavailable'
         row['snapshot_benchmark_missing']='Exact two-sided '+venue.title()+' reference absent from captured inputs'

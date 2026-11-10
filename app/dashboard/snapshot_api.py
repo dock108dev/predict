@@ -236,11 +236,13 @@ def mount(app):
 
     async def current_read(req):
         timings = {}
+        is_fee_census = req.path.endswith('/fee-coverage')
         query = dict(req.query)
         query.setdefault('metric', 'minimum_return_percent' if query.get('view') == 'arbs' else 'conditional_return_percent')
         query.setdefault('group', 'outcome')
-        options = page_options(query)
+        options = None if is_fee_census else page_options(query)
         from app.storage import ordinary_publication as live
+        from app.fees.schedule_lifecycle import revision as fee_revision
         from app.storage.store import hashed, stamp
         from app.storage.current_games import utc
 
@@ -258,6 +260,8 @@ def mount(app):
                 timings['authority']=(monotonic()-started)*1000
                 # No heartbeat/read timestamp in the change cursor.
                 cursor = hashed([head['generation'], {k:v[:3] for k,v in deps.items()}, epoch, policy, settings['revision'],
+                    fee_revision(owner.get('fee_lifecycle')),
+                    owner.get('fee_products'),
                     owner.get('active'), owner.get('healthy'), owner.get('global_stopped'), owner.get('paused_sources'),
                     {k: [s.get('state'), s.get('reason_code'), s.get('observed_sports')] for k,s in states.items()},
                     int(at.timestamp())//2 if head['facts'].get('next_boundary') and at >= stamp(head['facts']['next_boundary']) else None])
@@ -267,9 +271,14 @@ def mount(app):
                         generation=head['generation'], result_id=head['result_id'],
                         publication=head['facts'], poll_after_ms=2000, provider_requests=0)
                 if not head['result_id']:
+                    if is_fee_census:
+                        from .fee_coverage import census, source_inventory
+                        return dict(census(dict(rows=[],publication=dict(sources=states,read_at=at.isoformat())),
+                            source_inventory(db, deps)), state='initializing', cursor=cursor,
+                            generation=head['generation'], result_id=None, provider_requests=0)
                     return dict(state='initializing', publication=dict(state='initializing', sources=states),
                         cursor=cursor, generation=head['generation'], rows=[], total=0, provider_requests=0)
-                if query.get('layout')!='desk' and not req.path.endswith('/selection') and (
+                if not is_fee_census and query.get('layout')!='desk' and not req.path.endswith('/selection') and (
                         query.get('expected_cursor') and query['expected_cursor'] != cursor or
                         options[2] and not query.get('expected_cursor')):
                     return dict(state='page_changed', reason='comparison_changed_restart_pagination',
@@ -290,6 +299,11 @@ def mount(app):
                 captured_pairs = result['pairs']
                 result = live.project(result, deps, owner, states, at=at, policy=policy, epoch=epoch, settings=settings)
                 timings['projection']=(monotonic()-stage)*1000
+                if is_fee_census:
+                    from .fee_coverage import census, source_inventory
+                    return dict(census(result, source_inventory(db, deps), pairs=captured_pairs, policy=policy),
+                        state=result['publication']['state'],
+                        cursor=cursor, generation=head['generation'], result_id=head['result_id'], provider_requests=0)
                 if req.path.endswith('/selection'):
                     result['publication']['count_scope']='selected_inputs'
                     row=next((r for r in [*result['rows'],*result['pairs']] if r['id']==selected),None)
@@ -470,6 +484,7 @@ def mount(app):
     app.router.add_get("/api/comparison-snapshot", read)
     app.router.add_get("/api/comparison-current", current_read)
     app.router.add_get("/api/comparison-current/updates", current_read)
+    app.router.add_get("/api/comparison-current/fee-coverage", current_read)
     app.router.add_get("/api/comparison-current/selection", current_read)
     app.router.add_post("/api/comparison-current/lease", evidence_lease)
     app.router.add_delete("/api/comparison-current/lease", evidence_lease)

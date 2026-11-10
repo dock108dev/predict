@@ -214,12 +214,14 @@ class DatabaseIngressSink:
                 phase=name,phase_started=tick,seconds=tick-started,timings=dict(timings))
         phase(active)
         try:
-            if row['type'] not in ('current_aggregate_records','coverage_inventory','prediction_book','prediction_books','source_health','native_market_invalid'):
+            if row['type'] not in ('current_aggregate_records','coverage_inventory','prediction_book','prediction_books','source_health','native_market_invalid','novig_native_records'):
                 raise ValueError('current_ingress_type_unsupported: use admitted current records or native observations')
             if 'body' in row or 'batches' in row:
                 raise ValueError('current_ingress_raw_payload_unsupported: use admitted current records')
             if row['type']!='coverage_inventory' and len(packed(row))>self.config['ingress_bytes']:raise ValueError('Current ingress observation capacity')
-            if row['type'] in ('prediction_book','prediction_books','source_health','current_aggregate_records','coverage_inventory','native_market_invalid'):
+            if row['type']=='novig_native_records':
+                candidate=self.reducer
+            elif row['type'] in ('prediction_book','prediction_books','source_health','current_aggregate_records','coverage_inventory','native_market_invalid'):
                 # Immutable catalog/unchanged images are shared until adoption.
                 # These reducers replace map entries rather than mutating them.
                 from copy import copy
@@ -232,7 +234,18 @@ class DatabaseIngressSink:
                 candidate=deepcopy(self.reducer)
             records=[];scopes=[];withdraw=set();storage_prepared=False
             deferred_keys=set();catalog_turnover={}
-            if row['type']=='native_market_invalid':
+            if row['type']=='novig_native_records':
+                from .novig_v3_current import MAX_MARKETS, identity
+                records=row['records']
+                if row['source']!='novig' or len(records)>2*MAX_MARKETS or len(row['withdrawn'])>MAX_MARKETS:
+                    raise ValueError('novig_current_ingress_bound')
+                for record in records:
+                    q=record['quote']; source=q['source']
+                    if (q['venue']!='novig' or source['provider']!='novig'
+                            or q['novig_runtime_id']!=row['session_id'] or not q['novig_v3_evidence']):
+                        raise ValueError('novig_current_ingress_identity')
+                withdraw={('novig',identity(eid),identity(mid)) for eid,mid in row['withdrawn']}
+            elif row['type']=='native_market_invalid':
                 markets=row.get('markets') or [(row['event_id'],row['market_id'])]
                 if len(markets)>128:raise ValueError('native_invalidation_batch_capacity')
                 for event_id,market_id in markets:
@@ -356,7 +369,9 @@ class DatabaseIngressSink:
                         db.execute('SELECT pg_advisory_xact_lock_shared(%s)', (AUTHORITY_LOCK,))
                         owner=db.execute('SELECT runtime_id,global_stopped,paused_sources FROM data_runtime WHERE singleton').fetchone()
                         if row['type']!='source_health' and (revoked.is_set() or owner and
-                            (str(owner['runtime_id'])!=self.store.provider.runtime_id or owner['global_stopped'] or row['source'] in owner['paused_sources'])):
+                            (str(owner['runtime_id'])!=self.store.provider.runtime_id or owner['global_stopped']
+                             or row['source'] in owner['paused_sources'] or row['type']=='novig_native_records'
+                             and 'the_odds_api' in owner['paused_sources'])):
                             raise asyncio.CancelledError()
                     if row['type']=='current_aggregate_records' and 'raw_payload' in row:
                         from psycopg.types.json import Jsonb

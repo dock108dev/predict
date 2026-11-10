@@ -96,6 +96,9 @@ def catalog_from_normalized(envelope, records, *, reference_records=(), selected
         if not _scoring_attached:record=attach(record,at=envelope['clock_at'])
         fields(record,{'event','market_identity','period_boundary','anchor_participant','selection','quote','orientation_evidence','verified','outcome_cardinality'},{'result_policy','event_scope','outcome_selections','comparison_source_metadata','comparison_scope'})
         event=record['event'];market=record['market_identity'];selection=record['selection'];q=deepcopy(record['quote'])
+        # The snapshot joins the stored Original by exact source. Keep
+        # stream authority and the full reset proof on that Original only.
+        q.pop('novig_v3_evidence',None);q.pop('novig_runtime_id',None)
         metadata_context=(q.get('occurrence_match',{}).get('status')=='matched' and
             q['occurrence_match'].get('method')=='unique_metadata' and record['verified'] is False)
         if record.get('event_scope') is not None:

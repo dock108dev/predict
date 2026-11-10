@@ -8,6 +8,7 @@ from app.comparison.same_outcome import descriptor, selection_identity
 from app.storage.store import hashed
 
 SCORING_ASSUMPTION = 'ncaab_full_game_overtime'
+DECISIVE_EQUALITY_BASIS = 'assumed conditional domain excludes equal score/threshold'
 SCORING_MEANING = ('NCAAB full-game comparison assumes both instruments use integer final points including '
     'all overtime. Only the stated normal scoring predicate is compared; cancellation, postponement, '
     'tie/refund, fees and execution equivalence are not asserted.')
@@ -105,6 +106,12 @@ def project(quotes, settings, *, leagues=('NCAAB',), preserve_known=False, occur
         normal=d.get('normal_payout') or r['quote']['original']
         if r['quote']['original'].get('units') in ('decimal_odds','american_odds'):
             normal=dict(payout='1',payout_units='USD',quantity_units='contracts')
+        elif (r['quote']['source']['provider']=='novig' and r['quote'].get('novig_v3_evidence')
+                and r['quote']['original'].get('quantity_units')=='novig_v3_cent_contracts'
+                and normal.get('payout')=='1' and normal.get('payout_units')=='USD'):
+            # The stored acquired-side price is already per normalized $1
+            # claim. Only the mathematical payout identity uses that unit.
+            normal=dict(normal,quantity_units='contracts')
         conditional_equality = False
         if d.get('reason')=='comparison_equality_missing' and settings.get('scenario')=='decisive_only':
             # Equality is outside this explicitly selected conditional domain.
@@ -121,7 +128,7 @@ def project(quotes, settings, *, leagues=('NCAAB',), preserve_known=False, occur
             observed_context={f:r['event'].get(f) for f in ('season','stage')},
             scoring=scoring,scoring_basis='declared assumption' if assumed else 'retained source scoring evidence',
             assumption=SCORING_MEANING if assumed else None,
-            equality_basis='assumed conditional domain excludes equal score/threshold' if conditional_equality else 'retained predicate/equality',
+            equality_basis=DECISIVE_EQUALITY_BASIS if conditional_equality else 'retained predicate/equality',
             strict_verified=False)
         if conditional_equality and ident['supported']:ident['key'].append('conditional_excludes_equality')
         q['game_key']=oid

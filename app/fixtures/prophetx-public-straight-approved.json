@@ -1,0 +1,29 @@
+{
+  "venue": "prophetx",
+  "profile": "manual_retail",
+  "product": "straight_contract",
+  "source_url": "https://www.prophetx.co/lobby/t-c/trading-fees",
+  "document_url": "https://framerusercontent.com/assets/0PR4FR5AUuNv0xMjMRGkbz8GZ0.pdf",
+  "document_sha256": "4ef7e0b80689faa5177d266098b6ce0488a1c5aec4a9643227dc82f6683e4879",
+  "text_sha256": "34ff44f9d8d7849d3dee470c919b91f702cb5ce4b60e2a03810cf6d1eb6aa5e6",
+  "published_version": "1.0",
+  "published_update": "November 5, 2026",
+  "rules": [
+    {
+      "version": "prophetx-retail-straight-1.0",
+      "effective_from": null,
+      "market_id": null,
+      "terms": {
+        "fee_rate": "0.02",
+        "nhl_taker_coefficient": "0.035",
+        "nhl_maker_coefficient": "0.01",
+        "nhl_rounding": "half_up_cent_with_order_carry",
+        "nhl_fee_timing": "fill",
+        "nhl_market_order_funding": "fee_from_entered_amount",
+        "commission_basis": "positive_net_gains_per_market",
+        "commission_timing": "winning_settlement_for_standalone_position",
+        "schedule_application": "order_placement"
+      }
+    }
+  ]
+}

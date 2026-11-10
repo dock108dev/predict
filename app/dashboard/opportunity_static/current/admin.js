@@ -1,8 +1,9 @@
+import {mountFeeCensus} from './fee-census-view.js';
 import '/view/current/ui-common.js';
 import {applyTheme, readPreference, savePreference, timezone} from '/view/current/desk-preferences.js';
 const $=id=>document.getElementById(id);
 const requestedSection=new URLSearchParams(location.search).get('section');
-const adminSection=['sources','scope','usage','settings'].includes(requestedSection)?requestedSection:'overview';
+const adminSection=['sources','scope','usage','settings','fees'].includes(requestedSection)?requestedSection:'overview';
 for(const panel of document.querySelectorAll('[data-panel]'))panel.hidden=panel.dataset.panel!==adminSection;
 for(const link of document.querySelectorAll('[data-section]'))if(link.dataset.section===adminSection)link.setAttribute('aria-current','page');
 for(const zone of [...new Set(['UTC', Intl.DateTimeFormat().resolvedOptions().timeZone, ...(Intl.supportedValuesOf?.('timeZone')||[])])].sort()) {
@@ -81,6 +82,16 @@ function render(s){
   for(const b of document.querySelectorAll('[data-action]'))b.disabled=busy||(s.data_runtime&&s.data_runtime.healthy===false)||(b.dataset.action==='recover'&&(s.dispatch_enabled||!s.recovery||!!s.recovery.reason))||(b.dataset.action==='refresh'&&!s.dispatch_enabled);
   if(!$('refresh-sports').children.length)for(const sport of ['NFL','NBA','MLB','NHL','NCAAF','NCAAB']){const label=node('label',sport+' '),input=node('input');input.type='checkbox';input.value=sport;input.checked=s.config?.sports?.includes(sport)||false;label.prepend(input);$('refresh-sports').append(label);}
   $('refresh-result').textContent=s.dispatch_enabled?'':'Refresh needs an active acquisition runtime. Use recovery when its checks permit a restart.';
+  const novigPublic=s.metrics?.novig_public;
+  const novigNative=s.metrics?.novig_native;
+  $('novig-public-status').textContent=!novigPublic ? 'Novig public discovery is not running.' :
+    novigPublic.state === 'initializing' ? 'Novig public discovery is waiting for its first read.' :
+    `Novig public discovery: ${novigPublic.events || 0} live events observed; ${novigPublic.books || 0} books sampled. ` +
+    (novigPublic.state === 'unavailable' ? `Public discovery is unavailable (${String(novigPublic.gap || 'source error').replaceAll('_',' ')}).` :
+     'Public snapshots are discovery evidence.') +
+    (novigNative ? ` Signed feed: ${novigNative.state}; ${novigNative.subscriptions || 0} subscriptions` +
+      (novigNative.discovery_partial ? ' (partial roster)' : '') +
+      (novigNative.gap ? `. ${novigNative.gap.replaceAll('_',' ')}.` : '.') : '');
   const panels=s.sources||[];
   // Stable source controls and open disclosures survive polling.
   for(const p of panels){
@@ -98,9 +109,142 @@ function render(s){
   pairs($('measurements'),[['Process peak RSS / retained peak / ceiling',`${value(r.sampled_rss_bytes)} / ${value(r.sampled_highwater_rss_bytes)} / ${value(r.rss_ceiling_bytes)} bytes`],['Encoded state / ceiling',`${value(r.state_encoded_bytes)} / ${value(r.state_ceiling_bytes)} bytes`],['Issue buffer / bounds',`${value(r.issue_records)} records, ${value(r.issue_encoded_bytes)} bytes / ${value(r.issue_record_ceiling)} records, ${value(r.issue_byte_ceiling)} bytes`],['Streams / pending notices / held reviews',`${value(r.subscribers)} / ${value(r.pending_notices)} / ${value(r.reviews)}`],['Admitted / rejected observations',`${value(s.sink?.admitted_observations)} / ${value(s.sink?.rejected_observations)}`],['Retained records / identity exclusions',`${value(s.sink?.admitted_records)} / ${value(s.sink?.identity_excluded_records)}`],['Commit latency last / high-water',`${value(s.sink?.last_commit_ms)} / ${value(s.sink?.max_commit_ms)} ms`],['Latency meaning','source_receipt_ms is a source-clock age difference; receipt_projection_ms is local image processing. http_response_ms measures awaited HTTP delivery. No browser paint latency is measured.']]);
   $('technical').textContent=JSON.stringify(s,null,2);
 }
+const feeStateNames = {
+  verified:'Verified public terms', expired:'Fee review expired', scheduled:'Verified terms awaiting their effective time',
+  review_required:'Explicit review required', awaiting_verification:'Awaiting first verification'
+};
+const feeErrors = {
+  public_straight_schedule_changed:'The official straight schedule changed.',
+  prior_change_requires_explicit_review:'A prior change still requires explicit review.',
+  conflicting_straight_fee_documents:'The fee page lists conflicting straight schedules.',
+  conflicting_approved_rules:'Reviewed rules conflict at the same effective time.',
+  straight_fee_document_missing:'The fee page did not identify a straight schedule.',
+  fee_index_unparseable:'The straight schedule listing could not be read.',
+  fee_document_unparseable:'The fee document could not be read.',
+  fee_retrieval_failed:'The source did not respond in time or could not be reached.',
+  fee_http_status:'The source returned an unsuccessful HTTP status.',
+  fee_response_freshness_unverified:'The response could not be confirmed as fresh.',
+  kalshi_renderer_unconfigured:'The data process has no configured PDF renderer.',
+  kalshi_renderer_configuration_invalid:'The data process could not load a valid renderer endpoint.',
+  kalshi_rendered_origin_unverified:'The renderer could not prove a fresh fetch of the official PDF.',
+  kalshi_rendered_origin_http_status:'The renderer received an unsuccessful status from the official PDF.',
+  kalshi_rendered_scope_ambiguous:'The renderer did not return a complete document.',
+  kalshi_rendered_schedule_changed:'The rendered PDF differs from the approved rendering.',
+  kalshi_market_terms_approval_mismatch:'The runtime fee model differs from the reviewed market terms.',
+  kalshi_market_terms_changed:'Kalshi series or event fee terms changed.',
+  kalshi_market_terms_ambiguous:'Kalshi market fee evidence is incomplete, conflicting, or unsupported.',
+  kalshi_rounding_terms_changed:'The official rounding documentation changed.',
+  fee_response_size_limit:'The response exceeded the retrieval limit.',
+  fee_response_encoding_unsupported:'The source sent an unsupported response encoding.'
+};
+const feeDate = at => at ? new Intl.DateTimeFormat(undefined,{
+  dateStyle:'medium',timeStyle:'medium',timeZone:timezone()
+}).format(new Date(at)) : 'None known';
+function feeSourceURL(value) {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' && !url.username && !url.password ? url.href : null;
+  } catch {
+    return null;
+  }
+}
+let feeSchedulesPending = false;
+async function refreshFeeSchedules() {
+  if (feeSchedulesPending) return;
+  feeSchedulesPending = true;
+  const notice = $('fee-schedules-status');
+  try {
+    const response = await fetch('/api/admin/fee-schedules', {
+      cache: 'no-store', signal: AbortSignal.timeout(5000)
+    });
+    if (!response.ok) throw Error();
+    const status = await response.json();
+    replaceIfChanged($('other-public-fee-schedules'), () => {
+      const root=$('other-public-fee-schedules');
+      root.replaceChildren();
+      for (const item of status.products || []) {
+        const section=document.createElement('section');
+        const title=document.createElement('h3');
+        title.textContent=({novig:'Novig · pregame straight',polymarket_us:'Polymarket US · standard sports',kalshi:'Kalshi · exchange'})[item.venue] || item.venue;
+        section.append(title);
+        const facts=document.createElement('div'); section.append(facts);
+        const attempt = item.refresh?.retrieval;
+        const verified = item.retrieval;
+        const httpStatus = attempt?.failed_request?.http_status || attempt?.renderer?.http_status || attempt?.document?.http_status;
+        pairs(facts, [
+          ['Status',feeStateNames[item.state] || item.state],
+          ['Review expires',item.review_before && feeDate(item.review_before)],
+          ['Next action',item.next_action],
+          ['Last issue',item.refresh?.error && (feeErrors[item.refresh.error] || recoveryReason(item.refresh.error))],
+          ['Review basis',item.review_basis],
+          ['Last verified',item.last_verified_at && feeDate(item.last_verified_at)],
+          ['Next check',item.next_refresh_at && feeDate(item.next_refresh_at)],
+          ['Last HTTP status',httpStatus],
+          ['Rendered PDF verified',verified?.rendered_origin?.retrieved_at && feeDate(verified.rendered_origin.retrieved_at)],
+          ['Last direct PDF check',item.direct_pdf?.http_status && `HTTP ${item.direct_pdf.http_status} · ${feeDate(item.direct_pdf.retrieved_at)}`],
+          ['Exact-market evidence',verified?.event_history_complete && `${verified.series_count} series and complete event fee-change history verified.`]
+        ].filter(([, value]) => value !== undefined && value !== null && value !== false && value !== ''));
+        const source = feeSourceURL(item.source_url);
+        if (source) {
+          const link = node('a', 'Official fee source');
+          link.href = source;
+          section.append(link);
+        }
+        root.append(section);
+      }
+    },JSON.stringify(status.products));
+    const terms = status.terms || {};
+    const review = status.review_required;
+    const recent = status.refresh;
+    const error = recent?.error;
+    $('public-fee-state').textContent = feeStateNames[status.state];
+    replaceIfChanged($('public-fee-facts'), () => pairs($('public-fee-facts'), [
+      ['Published version',terms.published_version || 'Awaiting verification'],
+      ['Published update',terms.published_update || 'None known'],
+      ['Published effective time',feeDate(terms.published_effective_from)],
+      ['Authority begins',feeDate(terms.effective_from)],
+      ['Last verified',feeDate(status.last_verified_at)],
+      ['Review expires',feeDate(status.review_before)],
+      ['Last refresh attempt',feeDate(recent?.at)],
+      ['Refresh error',error ? feeErrors[error] || recoveryReason(error) : 'None'],
+      ['Next refresh',feeDate(status.next_refresh_at)],
+      ['Next known change',status.next_change ? `${feeDate(status.next_change.effective_from)} · ${status.next_change.version}` : 'None published'],
+      ['Review issue',review ? feeErrors[review.reason] || recoveryReason(review.reason) : 'None'],
+      ['NHL taker fee',terms.nhl_taker_coefficient ? `${terms.nhl_taker_coefficient} × price × (1 − price) per contract` : 'Unavailable'],
+      ['Other events',terms.fee_rate ? `${Number(terms.fee_rate)*100}% of positive net gains per market` : 'Unavailable']
+    ]),JSON.stringify(status));
+    const documentURL = feeSourceURL(terms.document_url);
+    $('public-fee-document-wrap').hidden = !documentURL;
+    if (documentURL) $('public-fee-document').href = documentURL;
+    const evidence = terms.retrieval || {};
+    const failed = recent?.retrieval?.failed_request;
+    replaceIfChanged($('public-fee-receipts'), () => pairs($('public-fee-receipts'), [
+      ['Fee page retrieved',feeDate(evidence.index?.retrieved_at)],
+      ['Fee page SHA-256',evidence.index?.sha256],
+      ['Schedule retrieved',feeDate(evidence.document?.retrieved_at)],
+      ['Schedule SHA-256',evidence.document?.sha256],
+      ['Last error HTTP status',failed?.http_status],
+      ...(review ? [['Review opened',feeDate(review.detected_at)],['Document awaiting review',review.retrieval?.document?.sha256]] : [])
+    ]),JSON.stringify([evidence,failed,review]));
+    notice.hidden = true;
+  } catch {
+    $('public-fee-state').textContent = 'Fee schedule status unavailable';
+    notice.textContent = 'Latest fee schedules unavailable. Displayed review dates may be out of date.';
+    notice.hidden = false;
+  } finally {
+    feeSchedulesPending = false;
+  }
+}
+
 async function refresh(){if(pulling||busy)return;pulling=true;const generation=pollGeneration;try{const response=await fetch('/api/admin/status');if(!response.ok)throw Error();const data=await response.json();if(generation===pollGeneration&&!busy)render(data);}catch{if(generation!==pollGeneration||busy)return;feedback('Admin status unavailable. Controls require a current status response.');current=null;for(const b of document.querySelectorAll('[data-action]'))b.disabled=true;}finally{pulling=false;}}
 document.addEventListener('click',async e=>{const b=e.target.closest('[data-action]');if(!b||b.disabled||busy)return;busy=true;pollGeneration++;for(const x of document.querySelectorAll('[data-action]'))x.disabled=true;const body={action:b.dataset.action};if(b.dataset.source)body.source=b.dataset.source;if(body.action==='refresh'){body.sports=[...$('refresh-sports').querySelectorAll('input:checked')].map(n=>n.value);body.request_id=crypto.randomUUID();body.reference=$('reference').checked;}if(body.action==='recover'||body.action==='recover_accounting'){body.runtime_id=current.runtime_id;body.candidate_digest=current.candidate_digest;}if(body.action==='recover_accounting'){body.recovery_id=current.quota.recovery_incident.recovery_id;body.covered_attempts=current.quota.recovery_incident.covered_attempts;}
   try{const response=await fetch('/api/admin/current',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const data=await response.json();if(!response.ok){feedback(data.reason||'Control failed. Inspect current status.');}else{feedback(body.action==='recover_accounting'?'Balance observation completed; original holds remain protected. Inspect the next eligible slot.':body.action==='recover'?'Fresh runtime recorded. Previous reviews expired.':body.action==='stop'?'The data runtime acknowledged Stop. Acquisition is withdrawn; check cleanup below.':body.action==='refresh'?'Refresh complete. Prices and quota updated.':'The data runtime acknowledged the source pause. It survives app and data restarts.',body.action==='recover'||body.action==='stop');render(data);}}
   catch{feedback('Control outcome unknown. Inspect status before trying again.');}finally{busy=false;if(current)render(current);await refresh();}
 });
-refresh();setInterval(refresh,5000);
+if (adminSection === 'fees') {
+  const refreshCounts = mountFeeCensus($('admin-fee-census'));
+  $('refresh-fee-census').onclick = () => refreshCounts();
+  void refreshCounts();
+}
+const poll = adminSection === 'fees' ? refreshFeeSchedules : refresh;
+poll();setInterval(poll,5000);

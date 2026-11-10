@@ -390,9 +390,13 @@ async def run(config_path=None):
     for name in (signal.SIGTERM, signal.SIGINT):
         loop.add_signal_handler(name, stop)
     await runtime.start()
+    from .public_fee_refresh import run as refresh_public_fees
+    fee_task = asyncio.create_task(refresh_public_fees(runtime), name='predict-public-fee-schedule')
     try:
         await runtime.stopping.wait()
     finally:
+        fee_task.cancel()
+        await asyncio.gather(fee_task, return_exceptions=True)
         await runtime.close()
     if runtime.storage_interval and not runtime.failed and not signalled:
         # Fresh process state, same PID and launcher command. Startup reacquires

@@ -17,7 +17,14 @@ def _verified(raw, body, venue):
     unbound_tier=(venue=='polymarket_us' and basis.get('fee_rate') is None
         and basis.get('unavailable_reason')=='polymarket_account_taker_fee_tier_unbound'
         and basis.get('allowed_taker_coefficients')==['0.095','0.085','0.075','0.0695'])
-    if sha256(body).hexdigest()!=basis['sha256'] or (not unbound_tier and basis['fee_rate']!={'novig':'0','polymarket_us':'0.0695','kalshi':'0.07','prophetx':'0.02'}[venue]):
+    retail_tier = False
+    if venue == 'polymarket_us':
+        from .snapshot_polymarket_fee import CUTOVER, PROFILE, STANDARD_TIERS
+        retail_tier = (basis.get('profile') == PROFILE and basis['fee_rate'] == STANDARD_TIERS[0]
+            and tuple(basis.get('allowed_taker_coefficients', ())) == STANDARD_TIERS
+            and basis.get('published_effective_from') == CUTOVER
+            and instant(basis['reviewed_at']) >= instant(CUTOVER))
+    if sha256(body).hexdigest()!=basis['sha256'] or (not (unbound_tier or retail_tier) and basis['fee_rate']!={'novig':'0','polymarket_us':'0.0695','kalshi':'0.07','prophetx':'0.02'}[venue]):
         raise ValueError('conditional_fee_evidence_invalid')
     return basis
 
@@ -28,7 +35,7 @@ def basis(venue='novig', *, at=None):
     if at is not None:
         # A substantive new review is prospective. Never fill the expired gap
         # or relabel an immutable result computed with the earlier evidence.
-        for date in ('20261028','20261030','20261103','20261104','20261105','20261107'):
+        for date in ('20261028','20261030','20261103','20261104','20261105','20261107','20261109','20261110'):
             reviewed=ROOT/f'app/fixtures/{name}-conditional-fees-review-{date}.json'
             if reviewed.exists() and at>=instant(json.loads(reviewed.read_bytes())['reviewed_at']):path=reviewed
     raw=path.read_bytes()
@@ -45,41 +52,36 @@ def rounded_cents(value):
     return Fraction(whole,100)
 
 
-def attach(result, q, *, at, event, group):
-    gross=result.get('gross_decisive_benchmark') or {}
+def reviewed_fee(q, *, at, event, group, review=None):
+    """Resolve the reviewed fee at the offered price without a reference."""
     venue=q['venue']
-    if not gross.get('available'):
-        return result
-    if venue=='prophetx':
-        result['conditional_trade_benchmark']=dict(available=False,reason=(
-            'prophetx_account_fee_model_and_rate_unbound' if venue=='prophetx'
-            else 'kalshi_instrument_fee_schedule_unbound'))
-        result['revision']=digest(dict(financial_revision=result['revision'],conditional_trade_benchmark=result['conditional_trade_benchmark']))
-        return result
-    if venue not in ('novig','polymarket_us','kalshi'):return result
     metric=dict(available=False,reason=None)
     try:
-        evidence=basis(venue,at=at)
+        evidence=review if review is not None else basis(venue,at=at)
+        metric['evidence']=evidence
         if not instant(evidence['reviewed_at'])<=at<instant(evidence['review_before']):
             raise ValueError('conditional_fee_review_expired_or_not_effective')
-        metric['evidence']=evidence
         if evidence.get('unavailable_reason'):raise ValueError(evidence['unavailable_reason'])
         if at>=instant(event['start_at']):raise ValueError('conditional_pregame_ended')
         if (group['period']!='full_game' or group['market'] not in ('winner','spread','total')
-                or q.get('comparison_input_refs',{}).get('phase')=='live'):
+                or q.get('comparison_input_refs',{}).get('phase')=='live'
+                or (q.get('fee_applicability') or {}).get('phase')=='live'):
             raise ValueError('conditional_pregame_straight_mapping_unsupported')
-        p=Fraction(gross['selected_decisive_probability']);original=q['original']
+        original=q['original']
         exclusions=['ties','pushes','voids','cancellations','asymmetric exceptional settlement','account funding and withdrawal costs','taxes']
         if venue=='novig':
             if q['source']['provider']!='the_odds_api' or q['source']['native_side']!='bookmaker_outcome' or original['units']!='decimal_odds':
                 raise ValueError('conditional_pregame_straight_mapping_unsupported')
             odds=Fraction(original['value'])
             if odds<=1:raise ValueError('conditional_invalid_odds')
-            risk=1/odds;fee=Fraction(0);receipt=Fraction(1);value=p*odds-1
+            risk=1/odds;fee=Fraction(evidence['fee_rate']);receipt=Fraction(1)
             condition='The aggregate Novig offer maps to a pregame straight trade under the reviewed fee schedule, with the same decisive outcome as the exact selected reference pair.'
             formula='Conditional net per USD 1 risk = decisive benchmark probability × decimal odds − 1 − trade fee.'
             label='one USD normal claim, one-fill scenario'
         elif venue=='polymarket_us':
+            from .snapshot_polymarket_fee import CUTOVER
+            if at >= instant(CUTOVER):
+                raise ValueError('polymarket_account_taker_fee_tier_unbound')
             if (q['source']['provider']!='polymarket_us' or q['source']['native_side'] not in ('Long','Short')
                     or original['units']!='usd_per_contract' or original.get('quantity_units')!='contracts'
                     or original.get('payout_units')!='USD' or Fraction(original.get('payout','0'))!=1):
@@ -101,36 +103,31 @@ def attach(result, q, *, at, event, group):
             cost=Fraction(original['value'])
             if not Fraction(1,100)<=cost<=Fraction(99,100):raise ValueError('conditional_fee_price_range_unsupported')
             fee=rounded_cents(Fraction(evidence['fee_rate'])*cost*(1-cost))
-            risk=cost+fee;receipt=Fraction(1);value=(p-cost-fee)/risk
+            risk=cost+fee;receipt=Fraction(1)
             condition='Exactly one standard non-combo sports contract is acquired as taker in one fill at the captured Long or complemented Short acquisition cost, and settles to the decisive outcome represented by the exact reference pair. This is a hypothetical fill, not a depth or funding assertion.'
             formula='One-fill fee = round-half-even cents(0.0695 × cost × (1 − cost)); conditional net = decisive probability − cost − fee; return = 100 × net / (cost + fee).'
             label='one-contract, one-fill scenario'
             exclusions+=['account-specific rebates','split-fill fee adjustments']
+            evidence = dict(evidence, review_before=min(evidence['review_before'], CUTOVER, key=instant))
         else:
             from .snapshot_fee_scope import kalshi_scenarios, kalshi_account
             scenarios,evidence=kalshi_scenarios(q,evidence,at)
-            for scenario in scenarios:
-                risk=Fraction(scenario['risk']);fee=Fraction(scenario['fee'])
-                scenario.update(return_percent=wire(100*(p-risk)/risk),scenario_net_usd=wire(p-risk))
             metric.update(evidence=evidence,fee_scenarios=scenarios)
             account=kalshi_account(at)
             selected=next(s for s in scenarios if s['membership']==account['membership'])
-            risk=Fraction(selected['risk']);fee=Fraction(selected['fee']);receipt=Fraction(1);value=(p-risk)/risk
+            risk=Fraction(selected['risk']);fee=Fraction(selected['fee']);receipt=Fraction(1)
             evidence=dict(evidence,account=account,review_before=min(evidence['review_before'],account['review_before'],key=instant))
             metric['rounding_trace']=selected['rounding_trace']
             metric['resolved_terms']=selected['resolved_terms']
             label='one-contract, one-fill scenario'
             condition='One binary USD 1 claim acquired as taker in one fill under exact series/event fee metadata and evidenced direct-account precision. No actual fill or executable depth claim.'
             formula='Shared fee engine: ceil six decimals(0.07 × series/event multiplier × cost × (1 − cost)); align cost plus fee to account precision; return = 100 × (decisive probability − total risk) / total risk.'
-        from .snapshot_fee_scope import RANKING_BASIS
-        metric.update(available=True,state=gross['state'],ranking_basis=RANKING_BASIS,
+        metric.update(available=True,
             quantity='1',quantity_unit='USD normal claim',liquidity_role='taker',fill_count=1,
             percentage_denominator='acquisition_plus_modeled_trade_fee',
-            applicability=deepcopy(q.get('fee_applicability')),net_per_dollar_risk=wire(value),return_percent=wire(100*value),
+            applicability=deepcopy(q.get('fee_applicability')),
             trade_fee_usd=wire(fee),normalization_risk_usd=wire(risk),normal_win_receipt_usd=wire(receipt),
-            normalization_label=label,scenario_net_usd=wire(value*risk),
-            selected_decisive_probability=wire(p),source_times=deepcopy(q['times']),
-            reference_revision=gross['reference_revision'],evidence=evidence,
+            normalization_label=label,source_times=deepcopy(q['times']),evidence=evidence,
             classification='conditional_trade_fee_benchmark',calibrated=False,execution_qualified=False,
             condition=condition,exclusions=exclusions,
             missing=['full-outcome probabilities','instrument-level settlement mapping','native quantity and executable depth'],
@@ -138,12 +135,44 @@ def attach(result, q, *, at, event, group):
             meaning='Conditional trade-fee benchmark; not calibrated full net EV, an executable fill or covered arbitrage.')
     except (OSError,ValueError,KeyError,TypeError,ArithmeticError) as exc:
         metric['reason']=str(exc)
+    return metric
+
+
+def attach(result, q, *, at, event, group, review=None):
+    gross=result.get('gross_decisive_benchmark') or {}
+    venue=q['venue']
+    if not gross.get('available'):
+        return result
+    if venue=='prophetx':
+        metric=dict(available=False,reason='prophetx_account_fee_model_and_rate_unbound')
+    elif venue in ('novig','polymarket_us','kalshi'):
+        metric=reviewed_fee(q,at=at,event=event,group=group,review=review)
+        if metric['reason']=='conditional_fee_review_expired_or_not_effective':
+            metric.pop('evidence',None)
+        try:
+            if metric.get('fee_scenarios') or metric['available']:
+                p=Fraction(gross['selected_decisive_probability'])
+                for scenario in metric.get('fee_scenarios',()):
+                    risk=Fraction(scenario['risk'])
+                    scenario.update(return_percent=wire(100*(p-risk)/risk),scenario_net_usd=wire(p-risk))
+                if metric['available']:
+                    from .snapshot_fee_scope import RANKING_BASIS
+                    risk=Fraction(metric['normalization_risk_usd'])
+                    value=(p-risk)/risk
+                    metric.update(state=gross['state'],ranking_basis=RANKING_BASIS,
+                        net_per_dollar_risk=wire(value),return_percent=wire(100*value),
+                        scenario_net_usd=wire(p-risk),selected_decisive_probability=wire(p),
+                        reference_revision=gross['reference_revision'])
+        except (ValueError,KeyError,TypeError,ArithmeticError) as exc:
+            metric.update(available=False,reason=str(exc))
+    else:
+        return result
     result['conditional_trade_benchmark']=metric
     result['revision']=digest(dict(financial_revision=result['revision'],conditional_trade_benchmark=metric))
     return result
 
 
-def snapshot_metric(row, *, at):
+def snapshot_metric(row, *, at, review=None):
     """Adapt a captured decisive benchmark to the same reviewed fee owner.
 
     A normalized one-fill scenario is separate from requested funding and from
@@ -154,5 +183,5 @@ def snapshot_metric(row, *, at):
     reference=row.get('snapshot_benchmark') or row.get('reference') or {}
     result=dict(revision=digest([row['id'],reference]),gross_decisive_benchmark=dict(
         available=True,state='captured',selected_decisive_probability=row['probability'],reference_revision=digest(reference)))
-    result=attach(result,row,at=instant(at),event={'start_at':row['start_at']},group=row['market'])
+    result=attach(result,row,at=instant(at),event={'start_at':row['start_at']},group=row['market'],review=review)
     return result.get('conditional_trade_benchmark',dict(available=False,reason='reviewed_trade_fee_scenario_unavailable'))

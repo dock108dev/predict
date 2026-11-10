@@ -144,7 +144,11 @@ def _calculate(c, registry):
                   fill_reconciliation='unverified', settlement_status=c.get('settlement_status','UNKNOWN'))
     issues = result['unsupported']; assumptions = result['assumptions']
     try:
-        s = registry.select(c['venue'],c['product'],c['trade_time'],c.get('schedule_version'))
+        insertion = c.get('order_inserted_at')
+        if insertion is not None and (c['venue']!='polymarket_us' or c['product']!='standard_contract'
+                or stamp(insertion)>stamp(c['trade_time'])):
+            raise ValueError('standard Polymarket US order insertion must precede or equal evaluation')
+        s = registry.select(c['venue'],c['product'],insertion or c['trade_time'],c.get('schedule_version'))
     except ValueError as e:
         issues.append(str(e)); return result
     result['schedule']=s; result['schedule_hash']=digest(s)
@@ -173,11 +177,15 @@ def _calculate(c, registry):
         if f['order_id'] in order_times and stamp(fill_time)<order_times[f['order_id']]: raise ValueError('fills must be chronological within order')
         order_times[f['order_id']]=stamp(fill_time)
         if stamp(fill_time)>stamp(c['trade_time']): raise ValueError('fill time exceeds scenario trade time')
-        try: fill_schedule=registry.select(c['venue'],c['product'],fill_time,c.get('schedule_version'))
-        except ValueError as e:
-            issues.append('earlier fill: '+str(e)); return result
-        if fill_schedule!=s:
-            issues.append('order crosses schedule versions; mixed-version order replay unsupported'); return result
+        if insertion is not None:
+            if stamp(fill_time)<stamp(insertion) or len(order_times)!=1:
+                raise ValueError('insertion-bound calculation requires fills of one order at or after insertion')
+        else:
+            try: fill_schedule=registry.select(c['venue'],c['product'],fill_time,c.get('schedule_version'))
+            except ValueError as e:
+                issues.append('earlier fill: '+str(e)); return result
+            if fill_schedule!=s:
+                issues.append('order crosses schedule versions; mixed-version order replay unsupported'); return result
         if f['role'] not in ('maker','taker'): raise ValueError('unknown liquidity role')
         p=number(f['price']); q=number(f['quantity'])
         if not ZERO<p<ONE or q<=ZERO: raise ValueError('price must be between 0 and 1, quantity positive')

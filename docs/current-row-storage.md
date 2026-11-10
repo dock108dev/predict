@@ -188,6 +188,11 @@ Current acquisition tables retain exact traversal pages, independent native meta
 
 See [acquisition](acquisition.md) for ownership, capacity and completeness limits.
 
+Ordinary scheduling tracks aggregate delivery by the underlying provider and
+gives the signed Novig stream its own short-lived native slot. An aggregate
+watermark cannot acknowledge a signed quote. Scheduling priority does not
+extend the quote's authority deadline.
+
 
 Acquisition storage also retains suspected listing absence separately
 from explicit closed/settled metadata (`023_current_acquisition_absence.sql`).

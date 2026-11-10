@@ -1,5 +1,7 @@
 import './ui-common.js';
-import {tradeInspection, pairInspection} from './desk-inspection.js';
+import {tradeInspection, pairInspection, tradingFeeLabel, tradingFeeSize} from './desk-inspection.js';
+import {pinLatestSelection, selectionIdentity} from './desk-evidence.js';
+import {evidenceReason} from './desk-reasons.js';
 import {DiagnosticSession} from './session-history.js';
 import {clock as savedClock, readPreference, savePreference, timezone} from './desk-preferences.js';
 
@@ -143,7 +145,16 @@ $('back-to-pair').onclick = () => {
   openPair(pairContext.pair, pairContext.offers, pairContext.group, pairContext.game, pairContext.opener);
   dialog.querySelector('form button').focus();
 };
-async function releaseEvidence(lease){if(lease)try{await fetch('/api/comparison-current/lease?'+new URLSearchParams({lease_id:lease.lease_id}),{method:'DELETE'});}catch{}}
+async function releaseEvidence(lease){
+  if(!lease)return;
+  try{
+    await fetch('/api/comparison-current/lease?'+new URLSearchParams({lease_id:lease.lease_id}), {
+      method:'DELETE',
+      headers:{'Content-Type':'application/json'},
+      keepalive:true
+    });
+  }catch{}
+}
 async function pinEvidence(offer){
   if(!offer.evidence_result_id)throw Error('Missing exact evidence');
   if (replay) {
@@ -175,23 +186,31 @@ function trade(group, title) {
 function evRow(group, game, individual) {
   const row = el('article', null, individual ? 'desk-row desk-individual' : 'desk-row');
   const best = group.offers[0];
-  const ref = group.offers.find(offer => offer.reference);
+  const ref = group.offers.find(offer => offer.reference_current && offer.reference) || group.offers.find(offer => offer.reference);
   const reference = el('div', null, 'desk-reference');
   reference.append(el('small', 'Pinnacle', 'desk-reference-label'),
     ref ? odd(ref.reference, 'desk-reference-odds') : el('span', '—', 'desk-reference-odds'));
   if (ref && !ref.reference_current) reference.append(el('small', 'Saved'));
+  if (!ref) reference.append(el('small', 'No exact match'));
   const offers = el('div', null, 'desk-ev-offers');
   for (const offer of group.offers) {
     const item = button('', () => openTrade(offer, group, game), 'desk-offer');
     item.dataset.offerId=offer.id;
-    item.setAttribute('aria-label', `${name(offer.venue)}, ${position(offer, game)}, ${offer.value == null ? offer.reason : pct(offer.value) + ' EV'}`);
+    const feeLabel = offer.trade_fee ? tradingFeeLabel(offer.trade_fee) : null;
+    const size = offer.trade_fee?.available ? tradingFeeSize(offer.trade_fee) : null;
+    const reason = offer.reason && evidenceReason(offer.reason);
+    item.setAttribute('aria-label', [name(offer.venue), position(offer, game),
+      offer.value == null ? reason : pct(offer.value) + ' EV', feeLabel, size].filter(Boolean).join(', '));
     if (offer === best && num(offer.value) > 0) item.classList.add('desk-best');
     const site = el('span', name(offer.venue), 'desk-site');
     const value = el('strong', pct(offer.value), tone(offer.value));
     const price = odd(offer.odds);
-    const breakdown = el('small', `Before ${pct(offer.before_fee)} · Reviewed ${pct(offer.after_fee)}${individual ? ` · Conservative ${pct(offer.conservative)}` : ''}`, 'offer-breakdown');
+    const breakdown = el('small', `Before fees ${pct(offer.before_fee)} · Reviewed fees ${pct(offer.after_fee)} · Conservative ${pct(offer.conservative)}`, 'offer-breakdown');
     item.append(site, value, price, breakdown);
-    if (offer.reason) item.append(el('small', offer.reason, 'offer-reason'));
+    if (feeLabel) item.append(el('small', feeLabel, 'offer-breakdown'));
+    if (size) item.append(el('small', size, 'offer-breakdown'));
+    if (offer.trade_fee && !offer.trade_fee.available) item.append(el('small', evidenceReason(offer.trade_fee.reason), 'offer-reason'));
+    if (reason) item.append(el('small', reason, 'offer-reason'));
     offers.append(item);
   }
   row.append(trade(group, position(best, game)), reference, offers);
@@ -209,13 +228,22 @@ function arbRow(group, game, expanded) {
     box.append(el('small', label));
     if (!pair) { box.append(el('p', 'No matching reverse prices')); return box; }
     const math = pair.inspection;
+    const net = pair.retail_payoff;
     const profit = el('p', payoffCash.format(num(math.minimum_profit_usd)), `desk-return ${tone(math.minimum_profit_usd)}`);
     profit.append(el('small', ` ${payoffReturn.format(num(math.rounded_return_percent))}%`)); box.append(profit);
     pair.legs.forEach((id, index) => {
       const offer = offers.get(id);
       const leg = el('div', null, 'desk-leg'), text = el('span', `${position(offer, game)} · ${name(offer.venue)} · `);
       text.append(odd(offer.odds)); leg.append(text, el('span', cash.format(num(math.legs[index].allocation_usd)))); box.append(leg);
+      const fee = net?.legs[index];
+      const winFee = fee?.settlement_usd?.[index ? 'second_wins' : 'first_wins'];
+      if (fee?.available) box.append(el('small', `Fee at fill ${payoffCash.format(num(fee.at_fill_usd))}${num(winFee) > 0
+        ? ` · ${payoffCash.format(num(winFee))} at settlement if it wins` : ''}`, 'desk-pair-fee'));
+      else box.append(el('small', 'Fee at this stake unavailable', 'desk-pair-fee'));
     });
+    box.append(el('small', net?.available
+      ? `Net after fees: ${payoffCash.format(num(net.minimum_net_profit_usd))} minimum modeled profit`
+      : 'Net after fees unavailable'));
     box.append(button('Inspect pairing', () => openPair(pair, offers, group, game), 'desk-pair-inspect'));
     return box;
   }
@@ -225,15 +253,15 @@ function arbRow(group, game, expanded) {
   const list = el('div', null, 'desk-pair-list');
   detail.append(el('summary', `Compare all sites (${group.pairs.length} ${group.pairs.length === 1 ? 'pairing' : 'pairings'})`), list);
   // Build the long pairing list only when the row is expanded.
-  function expand() { if (detail.open && !list.hasChildNodes()) group.pairs.forEach(pair => list.append(pairing(pair, 'Completed-game profit'))); }
+  function expand() { if (detail.open && !list.hasChildNodes()) group.pairs.forEach(pair => list.append(pairing(pair, 'Completed-game profit before fees'))); }
   detail.addEventListener('toggle', expand); expand();
-  row.append(header, pairing(best, 'Best pairing · profit'), pairing(reverse, 'Reverse pairing · profit'), detail);
+  row.append(header, pairing(best, 'Best pairing · before-fee profit'), pairing(reverse, 'Reverse pairing · before-fee profit'), detail);
   return row;
 }
 
 function refreshStatus() {
   const checked = state.lastChecked ? `Last checked ${new Intl.DateTimeFormat('en-US', {hour:'numeric', minute:'2-digit', second:'2-digit', timeZoneName:'short', timeZone:filters.elements.timezone.value}).format(state.lastChecked)}.` : 'No successful check yet.';
-  const mode = !filters.elements.time_to.validity.valid ? 'Correct the time window to refresh.' : replay ? (state.request ? 'Loading replay…' : 'Replay clock is fixed.') : state.request ? 'Checking for updates…' : state.offset ? 'Browsing order held. Prices and authority update; Refresh list starts a new order.' : $('results').contains(document.activeElement) ? 'Auto-refresh paused while a result has keyboard focus.' : 'Auto-refresh on.';
+  const mode = !filters.elements.time_to.validity.valid ? 'Correct the time window to refresh.' : replay ? (state.request ? 'Loading replay…' : 'Replay clock is fixed.') : state.request ? 'Checking for updates…' : state.offset ? 'Browsing order held. Prices and authority update; Refresh list starts a new order.' : 'Auto-refresh pauses while a result has focus.';
   $('refresh-status').textContent = `${mode} ${checked}`;
   $('refresh-list').disabled = !!state.request || !filters.elements.time_to.validity.valid;
 }
@@ -402,26 +430,33 @@ $('latest').onclick = async () => {
   const query = new URLSearchParams({id: selection.offer.id, layout: 'desk',basis:filters.elements.basis.value});
   $('latest').disabled = true;
   $('trade-note').textContent = 'Checking latest price…';
-  let pendingLease=null;
+  const isActive = () => dialog.open && state.selected === selection;
   try {
-    const response = await fetch(`/api/comparison-current/selection?${query}`);
-    if (!response.ok) throw new Error('Unavailable');
-    const {row} = await response.json();
-    if (!dialog.open || state.selected !== selection) return;
-    if (!row?.current) {
+    const next = await pinLatestSelection({
+      read: async () => {
+        const response = await fetch(`/api/comparison-current/selection?${query}`);
+        if (!response.ok) throw Error('Unavailable');
+        return (await response.json()).row;
+      },
+      pin: pinEvidence, release: releaseEvidence, isActive
+    });
+    if (!isActive()) { if (next.state === 'ready') releaseEvidence(next.lease); return; }
+    if (next.state === 'unavailable') {
       $('trade-note').textContent = 'No current price for this trade. The inspected price is still shown.';
       return;
     }
-    const pinned=await pinEvidence(row);pendingLease=pinned.lease;
-    if(!dialog.open||state.selected!==selection){releaseEvidence(pinned.lease);return;}
-    const verify=await fetch(`/api/comparison-current/selection?${query}`);const newest=verify.ok?(await verify.json()).row:null;
-    if(!newest?.current||newest.economic_revision!==row.economic_revision||newest.price_revision!==row.price_revision){releaseEvidence(pinned.lease);$('trade-note').textContent='Prices changed during adoption. Inspected inputs remain pinned; check latest again.';return;}
-    state.selected = {...selection, offer: row,...pinned,retentionError:null};pendingLease=null;releaseEvidence(selection.lease);
+    if (next.state === 'changed') {
+      $('trade-note').textContent = 'The price, fee, or reference changed during adoption. The earlier inspection is still pinned.';
+      return;
+    }
+    if (next.state !== 'ready') return;
+    const {offer, evidence, lease} = next;
+    state.selected = {...selection, offer, evidence, lease, retentionError:null};
+    releaseEvidence(selection.lease);
     $('trade-note').textContent = '';
     tradeDetails();
   } catch {
-    releaseEvidence(pendingLease);
-    if (dialog.open && state.selected === selection) $('trade-note').textContent = 'Could not check the latest price.';
+    if (isActive()) $('trade-note').textContent = 'Could not check the latest price.';
   } finally { $('latest').disabled = false; }
 };
 dialog.addEventListener('close',()=>{const old=state.selected;releaseEvidence(old?.lease);const current=[...$('results').querySelectorAll('[data-offer-id]')].find(e=>e.dataset.offerId===old?.offer.id);(old?.opener?.isConnected?old.opener:current||$('refresh-list')).focus({preventScroll:true});});
@@ -430,8 +465,14 @@ async function checkSelection(){
   try{const response=await fetch('/api/comparison-current/selection?'+new URLSearchParams({id:selected.offer.id,layout:'desk',basis:filters.elements.basis.value}));if(!response.ok)return;const {row}=await response.json();
     if(!dialog.open||selected!==state.selected)return;
     if(selected.retentionError){$('trade-note').textContent=selected.retentionError;return;}
-    const economic=o=>JSON.stringify([o?.odds,o?.economic_revision,o?.before_fee,o?.after_fee,o?.conservative,o?.current]);
-    $('trade-note').textContent=!row?.current?'Latest price is unavailable; inspected evidence remains pinned.':economic(row)!==economic(selected.offer)?`New prices available: ${pct(selected.offer.after_fee)} → ${pct(row.after_fee)} after fees. Use latest prices to adopt all inputs.`:'';
+    const previous=selected.offer;
+    let note='';
+    if(!row?.current)note='Latest price is unavailable. Inspected evidence remains pinned.';
+    else if(selectionIdentity(row)!==selectionIdentity(previous)){
+      const change=row.odds?.decimal===previous.odds?.decimal?'Calculation evidence changed.':'Price changed.';
+      note=`${change} Use latest prices to update the offer, fee and Pinnacle reference together.`;
+    }
+    $('trade-note').textContent=note;
   }catch{}
 }
 $('session-export').onclick=()=>history.export();

@@ -3,12 +3,14 @@
 A heartbeat proves only owner liveness. It never changes any source clock or
 quote authority. Readers fail closed after HEARTBEAT_SECONDS without a write.
 """
+from base64 import b64decode, b64encode
 from copy import deepcopy
 from datetime import datetime, timezone, timedelta
 from hashlib import sha256
 import json
 import os
 from uuid import uuid4
+import zlib
 from psycopg.types.json import Jsonb
 from app.storage.store import connect
 
@@ -16,6 +18,10 @@ HEARTBEAT_SECONDS = 8
 COMMAND_SECONDS = 12
 # Ninety family cells retain latest/last-success inventory and account evidence.
 STATUS_BYTES = 1024 * 1024
+# Only these two owned projections can use the lossless overflow encoding.
+# Bound expanded bytes independently from the committed heartbeat size.
+STATUS_SECTION_BYTES = 2 * STATUS_BYTES
+STATUS_SECTIONS = ('coverage', 'quota')
 RUNTIME_LOCK = 120013
 AUTHORITY_LOCK = 120015
 
@@ -30,6 +36,34 @@ def _stamp(value):
     return datetime.fromisoformat(value.replace('Z', '+00:00'))
 
 
+def _pack_status_sections(status):
+    sections = {}
+    for key in STATUS_SECTIONS:
+        if status.get(key) is None:
+            continue
+        raw = json.dumps(status[key], separators=(',', ':')).encode()
+        if len(raw) > STATUS_SECTION_BYTES:
+            continue
+        encoded = b64encode(zlib.compress(raw, level=1)).decode('ascii')
+        if len(encoded) < len(raw):
+            sections[key] = encoded
+            del status[key]
+    if sections:
+        status['compressed_sections'] = sections
+        status['status_retention']['lossless_sections'] = sorted(sections)
+
+
+def _unpack_status_sections(status):
+    for key, encoded in status.pop('compressed_sections', {}).items():
+        if key not in STATUS_SECTIONS or key in status or len(encoded) > STATUS_BYTES:
+            raise ValueError('data_runtime_status_section_invalid')
+        decoder = zlib.decompressobj()
+        raw = decoder.decompress(b64decode(encoded, validate=True), STATUS_SECTION_BYTES + 1)
+        if len(raw) > STATUS_SECTION_BYTES or not decoder.eof or decoder.unused_data:
+            raise ValueError('data_runtime_status_section_invalid')
+        status[key] = json.loads(raw)
+
+
 def read_runtime(db, at=None):
     """Read committed facts, with bounded death detection independent of app life."""
     row = db.execute('SELECT * FROM data_runtime WHERE singleton=true').fetchone()
@@ -42,6 +76,7 @@ def read_runtime(db, at=None):
     healthy = 0 <= age <= HEARTBEAT_SECONDS and row['state'] in ('running', 'starting')
     states = deepcopy(row['source_status'])
     status = deepcopy(row['status'])
+    _unpack_status_sections(status)
     for panel in status.get('sources',[]):
         revoked=not healthy or not row['dispatch'] or row['global_stopped'] or panel.get('provider') in row['paused_sources']
         sync=panel.get('metrics',{}).get('synchronization')
@@ -140,6 +175,11 @@ class RuntimeState:
                     delivery_samples[panel['provider']]=dict(available=available,retained=4)
                     panel['metrics']=dict(metrics,delivery_trace=samples[-4:])
             if delivery_samples:status['status_retention']['delivery_samples']=delivery_samples
+        if len(json.dumps(status, separators=(',', ':')).encode()) > STATUS_BYTES:
+            # Repeated coverage observations and protected accounting audits
+            # can exceed the wire budget together. Keep their exact contents
+            # and the existing heartbeat ceiling without suppressing dispatch.
+            _pack_status_sections(status)
         if len(json.dumps(status, separators=(',', ':')).encode()) > STATUS_BYTES:
             raise ValueError('data_runtime_status_capacity')
         return dict(runtime_id=service.runtime_id, state=state, status=status, config=config,

@@ -44,7 +44,7 @@ def kalshi_account(at):
     return deepcopy(fact)
 
 
-def kalshi_scenarios(q, evidence, at):
+def kalshi_scenarios(q, evidence, at, *, quantity='1'):
     """Resolve source metadata once, then use the existing fee engine for rounding."""
     from app.collection.native_fee_metadata import context
     from app.fees.engine import Registry, calculate
@@ -60,6 +60,9 @@ def kalshi_scenarios(q, evidence, at):
             or not event_id.startswith(series_id+'-') or not market_id.startswith(event_id+'-')
             or scope.get('native_key')!=['kalshi',event_id,market_id,source['native_outcome_id'],source['native_side']]):
         raise ValueError('kalshi_native_fee_identity_conflict')
+    quantity=F(quantity)
+    if quantity <= 0:
+        raise ValueError('kalshi_positive_quantity_required')
     original=q['original']
     if (original['units']!='usd_per_contract' or original.get('quantity_units')!='contracts'
             or original.get('payout_units')!='USD' or F(original.get('payout','0'))!=1):
@@ -84,10 +87,10 @@ def kalshi_scenarios(q, evidence, at):
             series_id=series_id,event_id=event_id,kalshi_metadata=metadata,balance_precision=precision,
             applicability_evidence=scope,complete_order_history=True,
             fills=[dict(fill_id='modeled-single-fill',order_id='modeled-single-order',role='taker',
-                price=original['value'],quantity='1',unit='contracts')]),registry)
+                price=original['value'],quantity=str(quantity),unit='contracts')]),registry)
         if audit['entry_cash_requirement'] is None:raise ValueError('; '.join(audit['unsupported']))
         scenarios.append(dict(membership=membership,balance_precision=precision,
-            risk=audit['entry_cash_requirement'],fee=str(F(audit['entry_cash_requirement'])-F(original['value'])),
+            risk=audit['entry_cash_requirement'],fee=str(F(audit['entry_cash_requirement'])-F(original['value'])*quantity),
             rounding_trace=audit['trace'],resolved_terms=audit['resolved_terms'],
             account_verified=False,ranking_eligible=False,intermediary_charges='not included'))
     return scenarios,evidence

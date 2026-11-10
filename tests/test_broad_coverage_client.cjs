@@ -5,8 +5,15 @@ const {pathToFileURL} = require('node:url');
 const {Element} = require('./ev07_dom.cjs');
 const {fixture, board, copy} = require('./current_board_fixture.cjs');
 const asset = name => pathToFileURL(path.resolve('app/dashboard/opportunity_static/current', name)).href;
-let reads = 0, dispatches = 0;
-global.fetch = async url => {if (url !== '/api/coverage') {dispatches++; throw Error('Only captured local coverage may be read');} reads++; return {ok:true,json:async()=>copy(payload)};};
+let reads = 0, feeReads = 0, dispatches = 0;
+global.fetch = async url => {
+ if (url === '/api/comparison-current/fee-coverage') {
+  feeReads++;
+  return {ok:true,json:async()=>({total:{covered:1,current:2,fee_coverage_percent:50},missing_reasons:{}})};
+ }
+ if (url !== '/api/coverage') {dispatches++; throw Error('Only captured local coverage may be read');}
+ reads++; return {ok:true,json:async()=>copy(payload)};
+};
 const sports = ['NFL','NCAAF','NBA','NCAAB','MLB','NHL'], sources = ['kalshi','polymarket_us','novig','prophetx','pinnacle'], families = ['moneyline','spread','total'];
 const zero = {retained_observations:0,retained_comparison_observations:0,retained_reference_observations:0,displayed_observations:0,displayed_comparison_directions:0,displayed_current_comparison_directions:0,current_observations:0,last_known_observations:0,unknown_age_observations:0,matched_occurrences:0,supported_comparison_observations:0,current_comparison_observations:0,comparable_outcomes:0,underlying_pairs:0,signed_comparison_directions:0,gap_observations:0};
 const at = '2026-10-17T20:00:00Z', cells = [];
@@ -58,20 +65,21 @@ const payload={schema:'predict-broad-coverage-1',captured_at:at,publication_at:a
  assert.equal(JSON.stringify(payload),before,'all filters/rendering preserve captured originals and clocks');assert.equal(reads,0);assert.equal(dispatches,0);
  // Execute the ordinary controller: initial read only; filters/open/close do
  // not read again and cannot dispatch a provider. Background reads remain separate.
- const ids=['league','venue','market','period','attention','sort','coverage-outcome','capture-evidence','global-totals','filtered-totals','coverage','coverage-details','cell-title','cell-content','close-coverage-details','pause-coverage','retry-coverage','filters','test-notice','flow','clear-filters'];
+ const ids=['league','venue','market','period','attention','sort','coverage-outcome','capture-evidence','global-totals','filtered-totals','coverage','coverage-details','cell-title','cell-content','close-coverage-details','pause-coverage','retry-coverage','filters','test-notice','flow','clear-filters','fee-census','export-fee-census'];
  document.body.replaceChildren();
  for(const id of ids){const node=new Element(['league','venue','market','period','attention','sort'].includes(id)?'select':id==='coverage-details'?'dialog':'div');node.id=id;if(id==='sort')node.value='scope';document.body.append(node);}
  const handlers={};global.window={addEventListener:(type,fn)=>handlers[type]=fn};
  const dialog=document.getElementById('coverage-details');dialog.showModal=()=>{dialog.open=true;};dialog.close=()=>{dialog.open=false;dialog.onclose?.();};
  await import(asset('coverage.js'));await new Promise(resolve=>setImmediate(resolve));
- assert.equal(reads,1);
+ assert.equal(reads,1);assert.equal(feeReads,1);
+ assert.match(document.getElementById('fee-census').textContent,/1 of 2 current offers/);
  assert.equal(document.getElementById('period').value,'full_game','first dataset opens the ordinary full-game scope');assert.equal(document.getElementById('coverage').querySelectorAll('button').length,90);
  document.getElementById('league').value='NFL';document.getElementById('league').onchange();
  document.getElementById('venue').value='kalshi';document.getElementById('venue').onchange();
  document.getElementById('coverage').querySelector('button').onclick();assert(dialog.open);const frame=document.getElementById('cell-content').textContent;
  document.getElementById('market').value='spread';document.getElementById('market').onchange();assert.equal(document.getElementById('cell-content').textContent,frame);
- document.getElementById('close-coverage-details').onclick();assert(!dialog.open);assert.equal(reads,1);assert.equal(dispatches,0);
- document.getElementById('period').value='';document.getElementById('period').onchange();document.getElementById('pause-coverage').onclick();document.getElementById('pause-coverage').onclick();await new Promise(resolve=>setImmediate(resolve));assert.equal(reads,2);assert.equal(document.getElementById('period').value,'','a subsequent dataset preserves the owner choice of All periods');assert.equal(dispatches,0);
+ document.getElementById('close-coverage-details').onclick();assert(!dialog.open);assert.equal(reads,1);assert.equal(feeReads,1);assert.equal(dispatches,0);
+ document.getElementById('period').value='';document.getElementById('period').onchange();document.getElementById('pause-coverage').onclick();document.getElementById('pause-coverage').onclick();await new Promise(resolve=>setImmediate(resolve));assert.equal(reads,2);assert.equal(feeReads,2);assert.equal(document.getElementById('period').value,'','a subsequent dataset preserves the owner choice of All periods');assert.equal(dispatches,0);
  global.fetch=async()=>{reads++;return {ok:false,json:async()=>({reason:'authored_read_failure'})};};
  document.getElementById('retry-coverage').onclick();await new Promise(resolve=>setImmediate(resolve));
  document.getElementById('league').value='NBA';document.getElementById('league').onchange();

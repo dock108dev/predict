@@ -17,6 +17,7 @@
       <a href="/admin?section=sources" data-section="sources">Sources</a>
       <a href="/admin?section=scope" data-section="scope">Sports &amp; markets</a>
       <a href="/admin?section=usage" data-section="usage">Spending</a>
+      <a href="/admin?section=fees" data-section="fees">Fee schedules</a>
       <a href="/admin?section=settings" data-section="settings">Settings</a>
     </nav>
     <p id="feedback" role="status"></p>
@@ -36,12 +37,12 @@
       </section>
     </div>
     <div class="desk-admin-section" data-panel="sources" hidden>
-      <h2>Sources</h2><div id="sources"></div>
+      <h2>Sources</h2><p id="novig-public-status" class="desk-note"></p><div id="sources"></div>
       <details><summary>Current issues</summary><div id="issues"></div></details>
     </div>
     <div class="desk-admin-section" data-panel="scope" hidden>
       <h2>Collection scope</h2><div id="collection-scope"></div>
-      <p><a href="/admin?section=coverage">View coverage</a></p>
+      <p><a href="/current/coverage">View coverage</a></p>
       <details><summary>Identity and admission exclusions</summary><div id="exclusions"></div></details>
     </div>
     <div class="desk-admin-section" data-panel="usage" hidden>
@@ -53,6 +54,25 @@
         <p><label><input type="checkbox" id="reference"> Include Pinnacle reference prices</label></p>
         <button data-action="refresh" disabled>Refresh Odds API now</button><p id="refresh-result" role="status"></p>
       </details>
+    </div>
+    <div class="desk-admin-section" data-panel="fees" hidden>
+      <section aria-label="Desk coverage">
+        <h2>Desk coverage</h2>
+        <div id="admin-fee-census">Reading the unfiltered live fee census…</div>
+        <p><button id="refresh-fee-census" type="button">Refresh counts</button> · <a href="/current/coverage">Open Coverage</a></p>
+      </section>
+      <h2>Public fee schedules</h2>
+      <p class="desk-note">Public retail terms are reviewed separately by venue and product. These checks do not use market-data credits.</p>
+      <p id="fee-schedules-status" role="status" hidden></p>
+      <div id="other-public-fee-schedules"></div>
+      <section aria-labelledby="prophetx-fee-heading">
+        <h3 id="prophetx-fee-heading">ProphetX</h3>
+        <p id="public-fee-state" role="status">Checking schedule status…</p>
+        <div id="public-fee-facts"></div>
+        <p><a id="public-fee-source" href="https://www.prophetx.co/lobby/t-c/trading-fees">Official fee page</a>
+        <span id="public-fee-document-wrap" hidden> · <a id="public-fee-document">Straight-contract schedule</a></span></p>
+        <details><summary>Retrieval evidence</summary><div id="public-fee-receipts"></div></details>
+      </section>
     </div>
     <div class="desk-admin-section" data-panel="settings" hidden>
       <h2>Display preferences</h2>

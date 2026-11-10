@@ -105,6 +105,7 @@ The launcher uses a minimal environment; it does not forward shell keys or load
 | --- | --- | --- |
 | Kalshi | `prediction-arb.kalshi.production` / `market-data` | `key_id`, `private_key` |
 | Polymarket US | `prediction-arb.polymarket-us` / `retail-api` | `key_id`, `secret_key` |
+| Novig v3 | `prediction-arb.novig.v3.production` / `market-data-read` | `key_id`, `private_key_pem` (Ed25519) |
 
 Provision native records through local Keychain tooling; there is no native setup
 CLI. Fixed destinations are in `app/collection/venue_access.py`. Keep secrets out
@@ -120,6 +121,11 @@ acquisition session as well. Start data again after saving the key.
 Paid selection requires the guarded `.env` and never falls back to another
 account. Saved inspection needs no credentials. See [security](security.md) for
 the remaining credential-loading rules.
+
+The Novig key is for the signed, read-only book stream. A missing key
+keeps that feed unavailable while aggregate Novig follows its normal
+schedule. Signed in-game authority requires an observed reset and a
+qualifying subsequent image.
 
 ## Calculation settings
 

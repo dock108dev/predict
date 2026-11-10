@@ -1,5 +1,6 @@
 {
   "deferred": {
+    "tests/test_novig_current_admission.py": "Required in the disposable PostgreSQL lane. Exercises signed-format input, current-row authority and frozen fee evidence without contacting the provider.",
     "tests/test_acquisition_r2.py": "Historical or prepared acquisition/review contract outside the current merge gate: Focused immutable-approval, dynamic evidence and bounded accounting checks.. Current application/adapter/math/persistence/lifecycle controls are required separately; this module remains explicit local opt-in.",
     "tests/test_acquisition_r3.py": "Historical or prepared acquisition/review contract outside the current merge gate: Offline r3 regressions. Synthetic pages never establish a complete live catalog.. Current application/adapter/math/persistence/lifecycle controls are required separately; this module remains explicit local opt-in.",
     "tests/test_actual_references.py": "Historical or prepared acquisition/review contract outside the current merge gate: test_actual_references. Current application/adapter/math/persistence/lifecycle controls are required separately; this module remains explicit local opt-in.",

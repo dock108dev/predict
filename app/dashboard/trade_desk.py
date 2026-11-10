@@ -61,19 +61,13 @@ def offer(original, metric=None):
         else:
             reasons_by_metric={'conditional_return_percent':'after_trade_fee_ev','conservative_return_percent':'conservative_trade_fee_ev','gross_return_percent':'before_fee_ev'}
             unavailable=row.get('metric_status',{}).get(reasons_by_metric.get(metric),{}).get('reasons',[])
-            reason = ', '.join(unavailable).replace('_',' ') or 'Current Pinnacle reference unavailable'
-            labels={'conditional fee review expired or not effective':'Fee schedule review expired',
-                'polymarket account taker fee tier unbound':'Account taker fee tier not verified',
-                'prophetx account fee model and rate unbound':'Account fee terms not verified',
-                'kalshi account membership unbound':'Account membership not verified',
-                'live financial model unverified':'Live fee and reference calculation unavailable'}
-            reason=labels.get(reason,reason)
+            reason = ', '.join(unavailable) or 'exact_reference_pair_unavailable'
     gross=ranking_value(row,'gross_return_percent',current=True)
     reviewed=ranking_value(row,'conditional_return_percent',current=True)
     conservative=ranking_value(row,'conservative_return_percent',current=True)
     return dict(before_fee=None if gross is None else str(gross),after_fee=None if reviewed is None else str(reviewed),
                 conservative=None if conservative is None else str(conservative),metric=metric,
-                fee=row.get('conditional_trade_benchmark'),conservative_fee=row.get('conservative_trade_benchmark'),
+                trade_fee=row.get('trade_fee'),fee=row.get('conditional_trade_benchmark'),conservative_fee=row.get('conservative_trade_benchmark'),
                 reference_calculation=row.get('reference_calculation'),economic_revision=row.get('economic_revision'),price_revision=row.get('price_revision'),evidence_result_id=row.get('evidence_result_id'),
                 captured_at=row.get('captured_at'),game_state=row.get('game_state','unknown'),
                 game_state_basis=row.get('game_state_basis'),current_reasons=reasons,
@@ -85,7 +79,7 @@ def offer(original, metric=None):
                 odds=odds(price['value'], price['units'], price.get('payout', '1')),
                 current=bool(row.get('price_current')), value=None if value is None else str(value), reason=reason,
                 reference=odds(selected_price) if selected_price is not None and ref_venue == 'pinnacle' else None,
-                reference_current=gross is not None, probability=row.get('probability') if gross is not None else None,
+                reference_current=row.get('exact_pinnacle_reference_current', gross is not None), probability=row.get('probability') if gross is not None else None,
                 overround=reference.get('overround') if value is not None else None,
                 source_at=(row.get('book_confirmation') or {}).get('confirmed_at') or row.get('times', {}).get('source_at'),
                 received_at=row.get('times', {}).get('received_at'))
@@ -165,10 +159,15 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
         summary = {k: group[k] for k in ('id', 'game_key', 'game_title', 'league', 'start_at', 'market', 'score')}
         summary['source_titles']=sorted({q.get('source_game_title',q.get('game_title','')) for q in group['quotes']}) if view!='arbs' else []
         if view == 'arbs':
+            from app.comparison.snapshot_pair_fees import pair_fees
+            ids = dict.fromkeys(leg for pair in group['quotes'] for leg in pair['legs'])
+            expanded = {id_: expand_row(by_id[id_]) for id_ in ids}
             pairs = [dict(pair['before_fees'], id=pair['id'], legs=pair['legs'],
-                          inspection=pair['inspection'], assumed_scenario=pair.get('math')) for pair in group['quotes']]
+                          inspection=pair['inspection'], assumed_scenario=pair.get('math'),
+                          retail_payoff=pair_fees(pair['before_fees'], pair['inspection'],
+                                                [expanded[id_] for id_ in pair['legs']])) for pair in group['quotes']]
             summary['pairs'] = pairs
-            summary['offers'] = [offer(by_id[id_]) for id_ in dict.fromkeys(leg for pair in pairs for leg in pair['legs'])]
+            summary['offers'] = [offer(row) for row in expanded.values()]
         else:
             summary['offers'] = [offer(row, metric) for row in group['quotes']]
         return summary

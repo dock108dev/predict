@@ -17,7 +17,12 @@ from . import comparison_snapshot as snapshots
 from .store import hashed, stamp
 from .current_games import utc
 from .current_rows import contract_id
+from .ordinary_scheduling import (
+    awaiting_aggregate, captured_aggregate_receipts, prioritize_current, receipt_watermarks,
+)
 from app.comparison.source_clock import assess
+from app.fees import schedule_lifecycle
+from app.fees import product_schedules
 
 VERSION = 'ordinary-comparison-1'
 MAX_RETAINED = 32
@@ -44,6 +49,8 @@ def policy_identity():
         POLICY_ROOT/'app/dashboard/snapshot_api.py',
         POLICY_ROOT/'app/comparison/line_reference.py',
         POLICY_ROOT/'app/fees/engine.py',
+        POLICY_ROOT/'app/fees/schedule_lifecycle.py', POLICY_ROOT/'app/fees/product_schedules.py',
+        *(POLICY_ROOT/spec['reference'] for spec in product_schedules.PRODUCTS.values()),
         POLICY_ROOT/'app/fixtures/pinnacle-rules-20261028.html']
     from app.comparison.snapshot_fee_scope import ACCOUNT_PATH
     if ACCOUNT_PATH.exists():
@@ -118,7 +125,8 @@ def owned_refresh(owner, quota):
 def authority(db, *, at=None):
     from app.collection.runtime_status import read_runtime
     from .latest_board import source_states
-    owner = read_runtime(db, at=at)
+    owner = dict(read_runtime(db, at=at), fee_lifecycle=schedule_lifecycle.read(db),
+                 fee_products=product_schedules.read_all(db))
     committed={r['venue']:r['state'] for r in db.execute('SELECT venue,state FROM current_source_status')}
     # The legacy transport exposes four execution venues. Its shared aggregate
     # receipt also reports Pinnacle independently, including a reference-only sport.
@@ -170,7 +178,8 @@ def quote_authority(row, inputs, *, reference=False):
     if q.get('state') in ('stopped','unavailable','error','resyncing','stale'):
         clock['reasons'].append('quote_'+q['state'])
     return dict(dependency=cid, expected=inputs['dependencies'].get(cid),
-                venue=row['venue'], lifecycle=lifecycle, **clock)
+                venue=row['venue'], lifecycle=lifecycle,
+                **({'novig_runtime_id':q['novig_runtime_id']} if q.get('novig_runtime_id') else {}), **clock)
 
 
 def without_finance(row, reason, *, status_cache=None, copy_row=True):
@@ -215,7 +224,15 @@ def prices(inputs, settings):
 
 
 def bind(result, inputs, finance):
+    from app.comparison.game_phase import sporting_phase
+    from app.comparison.snapshot_fee_scope import applicability
+    from app.comparison.snapshot_fee_outcome import outcome, reviews
     from app.comparison.snapshot_named_benchmark import references, selected_references
+    at = stamp(inputs['captured_at'])
+    schedules = reviews(at) if result['rows'] else {}
+    fee_state = inputs.get('fee_lifecycle')
+    product_states = inputs.get('fee_products') or {}
+    fee_revision = schedule_lifecycle.revision(fee_state)
     originals = {q['id']: q for q in inputs['quotes']}
     refs = references(inputs['quotes'], inputs['references'], result['assumptions']) if finance=='ready' else []
     empty_fee_revision=hashed({})
@@ -225,8 +242,41 @@ def bind(result, inputs, finance):
         selected = selected_references(row, original, refs) if finance == 'ready' else []
         witnesses = [quote_authority(ref, inputs, reference=True) for ref in selected]
         fee = row.get('conditional_trade_benchmark', {}).get('evidence', {})
+        if row['venue'] in schedules and original.get('original_record'):
+            record = original['original_record']
+            phase = source.get('lifecycle', {}).get('state')
+            if row['venue'] != 'polymarket_us' and sporting_phase(record['event'])['state'] == 'live':
+                phase = 'live'
+            fee_input = dict(row, fee_applicability=row.get('fee_applicability') or applicability(record),
+                             novig_v3_evidence=record['quote'].get('novig_v3_evidence'))
+            review = (schedule_lifecycle.for_offer(fee_state, fee_input, at, fallback=schedules[row['venue']])
+                      if row['venue'] == 'prophetx' else
+                      product_schedules.for_offer(product_states, fee_input, at, fallback=schedules[row['venue']]))
+            row['trade_fee'] = outcome(fee_input, at=at, phase=phase, review=review)
+            if finance == 'ready' and phase == 'live' and row['venue'] == 'novig':
+                from app.comparison.snapshot_novig_live import live_metric
+                row['conditional_trade_benchmark'] = live_metric(row, row['trade_fee'], witnesses)
+                row['conditional_return_percent'] = row['conditional_trade_benchmark'].get('return_percent')
+                row['novig_live_financial_qualified'] = bool(row['conditional_trade_benchmark'].get('available'))
+                from app.comparison.snapshot_metrics import statuses
+                statuses(row)
+                fee = row['conditional_trade_benchmark'].get('evidence') or {}
+            if (finance == 'ready' and row['venue'] == 'polymarket_us'
+                    and row['trade_fee']['classification'] != 'exact_public'):
+                from app.comparison.snapshot_polymarket_fee import conservative_metric
+                from app.comparison.snapshot_metrics import statuses
+                source_scope = (record.get('comparison_source_metadata') or {}).get('scoring_scope')
+                row['conservative_trade_benchmark'] = conservative_metric(
+                    row, row['trade_fee'], witnesses, phase, source_scope=source_scope)
+                row['conservative_return_percent'] = row['conservative_trade_benchmark'].get('return_percent')
+                row['polymarket_live_financial_qualified'] = phase == 'live' and row['conservative_trade_benchmark']['available']
+                statuses(row)
+        reference = row.get('reference_calculation') or {}
         row['current_authority'] = dict(price=source, references=witnesses,
             reference_required=row.get('probability') is not None,
+            exact_pinnacle_reference=bool(reference.get('available') and reference.get('venue')=='pinnacle'),
+            public_fee_revision=(fee_revision if row['venue']=='prophetx' else
+                product_schedules.revision(product_states.get(product_schedules.key_for(row)))),
             fee_until=fee.get('review_before'),fee_from=fee.get('reviewed_at'),fee_revision=hashed(fee) if fee else empty_fee_revision,
             conservative_fee_until=row.get('conservative_trade_benchmark',{}).get('evidence',{}).get('review_before'),
             start_at=row['start_at'])
@@ -240,7 +290,7 @@ def bind(result, inputs, finance):
             (row.get('snapshot_benchmark') or {}).get('selected_predicate'),row.get('fee_applicability'),
             row.get('conditional_return_percent'),row.get('conservative_return_percent'),
             row.get('conservative_trade_benchmark',{}).get('evidence'),fee, result['assumptions']['revision'],
-            inputs['policy_identity']])
+            row.get('trade_fee'), inputs['policy_identity']])
     result['publication'] = dict(schema=VERSION, finance=finance, policy=inputs['policy_identity'],
         epoch=inputs['epoch'], captured_at=inputs['captured_at'], provider_requests=0)
     counts(result)
@@ -270,6 +320,7 @@ def validity(witness, current, at):
 
 def project(result, current, owner, states, *, at, policy, epoch, settings=None):
     """Fail-closed rank withdrawal; no reference/fee/math is recomputed here."""
+    from app.comparison.snapshot_fee_outcome import EXPIRED, unavailable
     out = dict(result, rows=[], pairs=[])
     common = []
     settings=settings or result['assumptions']
@@ -282,22 +333,50 @@ def project(result, current, owner, states, *, at, policy, epoch, settings=None)
     # their small trees instead of allocating five per each of 20k source rows.
     withdrawal_statuses = {}
     current_prices = 0
+    fee_state = owner.get('fee_lifecycle')
+    product_states = owner.get('fee_products') or {}
+    current_fee_revision = schedule_lifecycle.revision(fee_state)
     for original in result['rows']:
         row = dict(original)
         auth = row['current_authority']
         reasons = common + validity(auth['price'], current, at)
         if row.get('publication_epoch', epoch) != epoch: reasons.append('input_epoch_replaced')
         state = states.get(row['venue'], {})
-        if not source_allowed(state,row.get('league')): reasons.append(state.get('reason_code') or 'source_unavailable')
+        native_owner = auth['price'].get('novig_runtime_id')
+        if native_owner:
+            if native_owner != str(owner.get('runtime_id')) or {'novig','the_odds_api'} & set(owner.get('paused_sources', ())):
+                reasons.append('novig_native_authority_withdrawn')
+        elif not source_allowed(state,row.get('league')):
+            reasons.append(state.get('reason_code') or 'source_unavailable')
         lifecycle=auth['price'].get('lifecycle',{})
         if at >= stamp(row['start_at']) and lifecycle.get('state')!='live':reasons.append('post_start_game_state_unverified')
         row['game_state']=lifecycle.get('state','scheduled' if at<stamp(row['start_at']) else 'unknown')
         row['game_state_basis']=lifecycle.get('basis')
         row['price_current'] = not reasons
+        row['price_reasons'] = sorted(set(reasons))
         current_prices += not reasons
+        policy_replaced = row.get('publication_policy', result['publication']['policy']) != policy
+        fee = row.get('trade_fee')
+        product_key = product_schedules.key_for(row)
+        relevant_state = product_states.get(product_key) if product_key else fee_state
+        relevant_revision = (product_schedules.revision(relevant_state) if product_key else current_fee_revision)
+        fee_replaced = ((row['venue']=='prophetx' and 'fee_lifecycle' in owner or
+                         product_key and 'fee_products' in owner)
+                        and auth.get('public_fee_revision') != relevant_revision)
+        fee_reason = (schedule_lifecycle.REVIEW_REQUIRED if (relevant_state or {}).get('review_required')
+                      else 'public_fee_schedule_refresh_pending')
+        if reasons or policy_replaced or fee is None:
+            row['trade_fee'] = unavailable(
+                'fee_source_price_not_current' if reasons else
+                'fee_policy_replaced' if policy_replaced else 'fee_outcome_not_published')
+        elif fee_replaced:
+            row['trade_fee'] = unavailable(fee_reason)
+        elif fee['available']:
+            evidence = fee['evidence']
+            if not stamp(evidence['reviewed_at']) <= at < stamp(evidence['review_before']):
+                row['trade_fee'] = unavailable(EXPIRED, evidence=evidence)
         financial = list(reasons)
-        if row['game_state']=='live':financial.append('live_financial_model_unverified')
-        if row.get('publication_policy', result['publication']['policy']) != policy:
+        if policy_replaced:
             financial.append('policy_replaced')
         if row.get('settings_revision') != settings['revision']:
             financial.append('settings_replaced')
@@ -310,21 +389,37 @@ def project(result, current, owner, states, *, at, policy, epoch, settings=None)
             len(references) != 2 or references[0]['dependency'] == references[1]['dependency']
         ):
             financial.append('reference_evidence_missing')
+        row['exact_pinnacle_reference_current'] = not financial and auth.get('exact_pinnacle_reference', False)
+        live_fee_unqualified = row['game_state']=='live' and not (
+            (row.get('novig_live_financial_qualified') or row.get('kalshi_live_financial_qualified')
+             or row.get('polymarket_live_financial_qualified')) and (row.get('trade_fee') or {}).get('available'))
         if financial:
             row = without_finance(row, ', '.join(sorted(set(financial))), status_cache=withdrawal_statuses, copy_row=False)
-        elif (auth['fee_until'] and at >= stamp(auth['fee_until']) or
+        elif fee_replaced or (auth['fee_until'] and at >= stamp(auth['fee_until']) or
                 auth.get('fee_from') and at < stamp(auth['fee_from'])):
             row = snapshots.expand_row(row)
             row['conditional_return_percent'] = None
-            row['conditional_trade_benchmark'] = dict(available=False, reason='conditional_fee_review_expired_or_not_effective')
+            row['conditional_trade_benchmark'] = dict(available=False, reason=fee_reason if fee_replaced else 'conditional_fee_review_expired_or_not_effective')
             from app.comparison.snapshot_metrics import statuses
             statuses(row)
         else:
             ready.add(row['id'])
-        if auth.get('conservative_fee_until') and at>=stamp(auth['conservative_fee_until']):
+        if live_fee_unqualified and not financial:
+            row = snapshots.expand_row(row)
+            row['conditional_return_percent'] = None
+            row['conditional_trade_benchmark'] = dict(available=False, reason='live_financial_model_unverified')
+            if row['venue'] != 'polymarket_us' or row.get('conservative_return_percent') is not None:
+                row['conservative_return_percent'] = None
+                row['conservative_trade_benchmark'] = dict(available=False, reason='live_financial_model_unverified')
+            from app.comparison.snapshot_metrics import statuses
+            statuses(row)
+        pmus_fee_withdrawn = (row['venue'] == 'polymarket_us' and row.get('conservative_return_percent') is not None
+                              and not row['trade_fee']['available'])
+        if fee_replaced or pmus_fee_withdrawn or auth.get('conservative_fee_until') and at>=stamp(auth['conservative_fee_until']):
             row = snapshots.expand_row(row)
             row['conservative_return_percent']=None
-            row['conservative_trade_benchmark']=dict(available=False,reason='conditional_fee_review_expired_or_not_effective')
+            row['conservative_trade_benchmark']=dict(available=False,
+                reason=fee_reason if fee_replaced else row['trade_fee']['reason'] if pmus_fee_withdrawn else EXPIRED)
             from app.comparison.snapshot_metrics import statuses
             if not financial:
                 statuses(row)
@@ -573,75 +668,6 @@ def compose(db, settings, *, scope, policy, epoch, started):
     return seal(db,inputs,result,facts,insert_inputs=True,members=members)
 
 
-def prioritize_current(pending, scope, evidence, at, *, material=(), undelivered=()):
-    """Reserve oldest and source slots, then alternate fair and fresh work.
-
-    The first slot always advances fair rotation, including API/reference work.
-    The two source slots prevent every native frame expiring behind a full-slate
-    rotation. This is scheduling only; reads still validate exact source clocks.
-    """
-    if not pending:return []
-    from app.collection.current_benchmark import MAXIMUM_AGE
-    reference_events={r['event_id'] for r in evidence if r['venue']=='pinnacle' and r['at']
-        and 0 <= (at-stamp(r['at'])).total_seconds() <= MAXIMUM_AGE}
-    order=[pending[0]];fresh={}
-    # A newly admitted aggregate batch deserves a first-delivery slot before
-    # unchanged native confirmations. Oldest-first within that batch preserves
-    # fairness. This never promotes an expired quote or changes eligibility.
-    first_delivery=[key for key in pending if key in undelivered and key not in order]
-    if first_delivery:order.append(first_delivery[0])
-    for venue in ('kalshi','polymarket_us'):
-        recent={r['event_id']:stamp(r['at']) for r in evidence
-            if r['venue']==venue and r['at'] and 0 <= (at-stamp(r['at'])).total_seconds() <= 30}
-        candidates=[(key not in undelivered,key not in material,reference_events.isdisjoint(scope[key]),-max(recent[e].timestamp() for e in scope[key] if e in recent),index,key)
-            for index,key in enumerate(pending) if key not in order and recent.keys() & set(scope[key])]
-        for already_delivered,confirmation_only,no_reference,clock,index,key in candidates:
-            rank=(already_delivered,confirmation_only,no_reference,clock,index)
-            fresh[key]=min(fresh.get(key,rank),rank)
-        # First delivery can also satisfy a native source slot. Prefer that
-        # overlap before repeatedly refreshing an already-delivered hot game.
-        # Oldest work and each source still retain their reserved turn.
-        if candidates:order.append(min(candidates)[-1])
-    # Previously every slot after the two source representatives went to old
-    # rotation. Fresh books behind them could expire before their first seal.
-    # Keep at least half the remaining slots for rotation (including API work),
-    # interleaving recent complete native components without dropping any scope.
-    scheduled=set(order)
-    recent_order=iter(sorted(fresh,key=lambda key:(fresh[key],key)))
-    delivery_order=iter(first_delivery)
-    for key in pending:
-        if key in scheduled:continue
-        order.append(key);scheduled.add(key)
-        delivered=False
-        for waiting in delivery_order:
-            if waiting not in scheduled:
-                order.append(waiting);scheduled.add(waiting);delivered=True;break
-        if delivered:continue
-        for hot in recent_order:
-            if hot not in scheduled:
-                order.append(hot);scheduled.add(hot);break
-    return order
-
-
-def captured_aggregate_receipts(inputs):
-    receipts={}
-    for q in (*inputs['quotes'],*inputs.get('references',[])):
-        source=q['source']
-        if source['provider']!='the_odds_api':continue
-        key=hashed([source['provider'],source['native_event_id']])
-        received=q['times']['received_at']
-        if key not in receipts or stamp(received)>stamp(receipts[key]):receipts[key]=received
-    return receipts
-
-
-def awaiting_aggregate(facts,events,receipts,at):
-    # Optional calculation time is not evidence that a later receipt was
-    # captured. Compare the exact per-event clocks sealed in the component.
-    captured=facts.get('aggregate_receipts',{})
-    return any(e in receipts and (e not in captured or stamp(captured[e])<receipts[e])
-        and 0<=(at-receipts[e]).total_seconds()<=900 for e in events)
-
-
 def turn(db, *, turn_seconds=8, capture_cache=None):
     """Latest-only component work; unchanged games reuse their exact evidence.
 
@@ -666,6 +692,9 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
             epoch=str(db.execute('SELECT epoch FROM current_row_epoch').fetchone()['epoch'])
             settings=current_settings(db)
             owner,source_states=authority(db)
+            fee_state=owner['fee_lifecycle']
+            product_states=owner['fee_products']
+            fee_revision=schedule_lifecycle.publication_revision(fee_state)
             capture_binding=[policy,settings['revision'],epoch,
                 {k:owner.get(k) for k in ('runtime_id','global_stopped','paused_sources','dispatch')},
                 {k:v.get('state') for k,v in source_states.items()}]
@@ -688,21 +717,33 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
             for cid,value in dep.items():per_event.setdefault(membership[cid],{})[cid]=value
             latest_receipts={r['event_id']:r['at'] for r in db.execute('''SELECT c.event_id,max(o.received_at) at
                 FROM current_offer o JOIN current_contract c ON c.id=o.contract_id GROUP BY c.event_id''')}
-            aggregate_receipts={r['event_id']:stamp(r['at']) for r in db.execute('''SELECT c.event_id,max(o.received_at) at
-                FROM current_offer o JOIN current_contract c ON c.id=o.contract_id
-                WHERE c.venue IN ('novig','prophetx','pinnacle') GROUP BY c.event_id''')}
-            native_evidence=db.execute('''SELECT c.event_id,c.venue,
-                max(greatest(o.source_at::timestamptz,
-                    (o.facts#>>'{book_confirmation,confirmed_at}')::timestamptz))::text at
-                FROM current_offer o JOIN current_contract c ON c.id=o.contract_id
-                WHERE c.venue IN ('kalshi','polymarket_us','pinnacle') GROUP BY c.event_id,c.venue''').fetchall()
-            desired={key:hashed([epoch,policy,settings['revision'],[(eid,per_event.get(eid,{})) for eid in sorted(ids)]]) for key,ids in scope.items()}
+            aggregate_receipts,native_evidence=receipt_watermarks(db)
+            prophetx_components={key for key,ids in scope.items()
+                                 if any('prophetx' in event_venues.get(eid,()) for eid in ids)}
+            product_components={key:{product_key for product_key,spec in product_schedules.PRODUCTS.items()
+                if any(spec['venue'] in event_venues.get(eid,()) for eid in ids)} for key,ids in scope.items()}
+            def input_identity(key, dependencies):
+                return hashed([epoch,policy,settings['revision'],fee_revision if key in prophetx_components else None,
+                    {k:product_schedules.revision(product_states.get(k),publication=True) for k in sorted(product_components[key])},
+                    [(eid,dependencies.get(eid,{})) for eid in sorted(scope[key])]])
+            desired={key:input_identity(key,per_event) for key in scope}
             material={key:hashed([epoch,[(eid,{cid:v[:3] for cid,v in per_event.get(eid,{}).items()})
                 for eid in sorted(ids)]]) for key,ids in scope.items()}
+        schedule_boundaries=[]
+        for path in (POLICY_ROOT/'app/fixtures').glob('*conditional-fees*.json'):
+            model=json.loads(path.read_text())
+            schedule_boundaries.extend(model[k] for k in ('reviewed_at','review_before') if model.get(k) and stamp(model[k])>at)
+        public_boundaries=schedule_lifecycle.boundaries(fee_state,at)
+        public_boundaries += [v['last_verified']['review_before'] for v in product_states.values()
+                              if v.get('last_verified') and stamp(v['last_verified']['review_before']) > at]
+
         removed=set(old)-set(scope)
+        def fee_boundary_due(facts):
+            return facts.get('next_fee_boundary') and stamp(facts['next_fee_boundary'])<=at
+
         def needs(key):
             facts=old.get(key,{}).get('facts',{})
-            return (facts.get('input_identity')!=desired[key] or finance_available and (
+            return (facts.get('input_identity')!=desired[key] or fee_boundary_due(facts) or finance_available and (
                     facts.get('finance')!='ready' or
                     facts.get('next_boundary') and stamp(facts['next_boundary'])<=at))
         pending=[key for key in scope if needs(key)]
@@ -742,7 +783,8 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
                 capture_binding_id=hashed(capture_binding)
                 governing=governing_fields(capture_binding)
                 prior=old.get(key)
-                if prior and prior['facts'].get('input_identity')==desired[key] and prior['facts'].get('finance')!='ready':
+                if (prior and prior['facts'].get('input_identity')==desired[key]
+                        and prior['facts'].get('finance')!='ready' and not fee_boundary_due(prior['facts'])):
                     input_id=db.execute('SELECT snapshot_id FROM comparison_snapshot_result WHERE id=%s',(prior['result_id'],)).fetchone()['snapshot_id']
                     work.append((key,input_id,dict(prior['facts'])))
                     continue
@@ -782,8 +824,12 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
                     inputs=snapshots.capture(db,ordinary=True,event_ids=scope[key],capture_binding=capture_binding,price_basis=True,_frame_dependencies=current_dependencies)
                     inputs['_price_capture']=dict(path='complete',read_records=len(inputs['dependencies']),**capture_diagnostics)
                 inputs['policy_identity']=policy
-                identity=hashed([epoch,policy,settings['revision'],[(eid,{cid:v for cid,v in inputs['dependencies'].items()
-                    if membership.get(cid)==eid}) for eid in sorted(scope[key])]])
+                inputs['fee_lifecycle']=fee_state if key in prophetx_components else None
+                inputs['fee_products']={k:product_states[k] for k in product_components[key] if k in product_states}
+                captured_dependencies={}
+                for cid, value in inputs['dependencies'].items():
+                    captured_dependencies.setdefault(membership.get(cid),{})[cid]=value
+                identity=input_identity(key,captured_dependencies)
                 facts=dict(input_identity=identity,finance='pending',visited_at=utc(),capture_seconds=inputs['capture_seconds'],
                     aggregate_receipts=captured_aggregate_receipts(inputs),
                     capture_binding_id=inputs['_price_basis']['binding'],governing_fields=governing,capture_structure_ids=structure_ids)
@@ -796,6 +842,9 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
                 # even if no provider update or further calculation occurs.
                 boundaries=[v for row in price_result['rows'] for v in
                     (row['current_authority']['price'].get('current_until'),row['start_at']) if v]
+                fee_boundaries=[*schedule_boundaries, *(public_boundaries if key in prophetx_components or product_components[key] else ())]
+                facts['next_fee_boundary']=min(fee_boundaries,key=stamp,default=None)
+                boundaries.extend(fee_boundaries)
                 facts['next_boundary']=min(boundaries,key=stamp) if boundaries else None
                 seal(db,inputs,price_result,facts,insert_inputs=True,component=key,prior_parts=prior_parts,costs=costs)
                 del prior_parts
@@ -846,13 +895,14 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
                     errors.append(dict(component=key,reason='ordinary_finance_failed'))
                     del inputs
                     continue
-                future=[];now=stamp(utc())
-                for path in (POLICY_ROOT/'app/fixtures').glob('*conditional-fees*.json'):
-                    model=json.loads(path.read_text())
-                    future.extend(model[k] for k in ('reviewed_at','review_before') if model.get(k) and stamp(model[k])>now)
+                now=stamp(utc())
+                future=[v for v in [*schedule_boundaries, *(public_boundaries if key in prophetx_components or product_components[key] else ())]
+                        if stamp(v)>now]
                 for row in result['rows']:
                     a=row['current_authority']
-                    future.extend(v for v in [a.get('fee_until'),a.get('conservative_fee_until'),a['start_at'],a['price'].get('current_until'),
+                    future.extend(v for v in [a.get('fee_until'),a.get('conservative_fee_until'),
+                        (row.get('trade_fee',{}).get('evidence') or {}).get('review_before'),
+                        a['start_at'],a['price'].get('current_until'),
                         *(w.get('current_until') for w in a['references'])] if v and stamp(v)>now)
                 facts.update(finance='ready',next_boundary=min(future,key=stamp) if future else None,visited_at=utc())
                 seal(db,inputs,result,facts,component=key)

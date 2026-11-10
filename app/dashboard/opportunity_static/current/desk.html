@@ -23,9 +23,9 @@
     <form id="filters" class="desk-filters">
       <div class="desk-toolbar">
         <label class="desk-search"><span class="sr-only">Search teams</span><input name="search" type="search" maxlength="150" placeholder="Search teams or games"></label>
-        <label id="basis-field"><span class="sr-only">Calculation basis</span><select name="basis"><option value="reviewed">Reviewed fees</option><option value="conservative">Conservative fees</option><option value="before">Before fees</option></select></label>
+        <label id="basis-field"><span class="sr-only">Calculation basis</span><select name="basis"><option value="reviewed">Reviewed-fee EV</option><option value="conservative">Conservative estimate EV</option><option value="before">Before-fee EV</option></select></label>
         <label id="group-field"><span class="sr-only">Rows</span><select name="group"><option value="outcome">By outcome</option><option value="offer">Individual offers</option></select></label>
-        <label id="stake-field" hidden>Stake ($) <input name="stake" type="number" min="0.01" max="1000000" step="0.01" value="100"></label>
+        <label id="stake-field" hidden>Total stake before fees ($) <input name="stake" type="number" min="0.01" max="1000000" step="0.01" value="100"></label>
         <button id="open-filters" type="button" aria-haspopup="dialog">Filters<span id="filter-count" hidden></span></button>
       </div>
       <div class="filter-chips" id="active-filters" aria-label="Active filters" hidden></div>

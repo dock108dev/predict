@@ -1,0 +1,14 @@
+{
+  "version": "kalshi-conditional-20261109-review",
+  "source_url": "https://kalshi.com/docs/kalshi-fee-schedule.pdf",
+  "sha256": "ffc57082a358b2d6acab1b2b93fe787fc0b6a53234476342456f3f5115a8fb83",
+  "path": "app/fixtures/kalshi-fees-review-20261109.json",
+  "reviewed_at": "2026-11-10T03:57:09.955215+00:00",
+  "review_before": "2026-11-11T03:57:09.955215+00:00",
+  "fee_rate": "0.07",
+  "evidence_class": "official_reviewed_trade_fee_schedule",
+  "applicability": "Exact configured full-game series and complete event override history, one USD binary claim, taker single fill; public exchange only.",
+  "review_decision": "July 7, 2026 effective schedule viewed from official PDF via web research rendering on November 9 Eastern; direct PDF retrieval returned 429. No claim of fresh PDF byte retrieval. Exact series and complete event fee-change API receipts are retained.",
+  "review_window_basis": "Prospective 24-hour engineering review deadline, not a source guarantee. No historical gap filled.",
+  "published_effective_date": "2026-07-07"
+}

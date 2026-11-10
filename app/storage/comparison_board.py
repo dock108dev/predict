@@ -69,6 +69,7 @@ class ReadContext:
         statuses=frame.get('source_status',{})
         for record in records:
             q=record['quote'];status=statuses.get(q['venue'],statuses.get(q['source']['provider'],{}))
+            if q.get('novig_runtime_id'):continue  # This state describes the aggregate feed.
             if status.get('state') not in (None,'available','budget_delayed'):q['state']=status['state']
             elif q['source']['provider']=='the_odds_api' and status.get('state') in ('available','budget_delayed') and q['state'] in ('stopped','error','connecting','resyncing'):
                 q['state']=status['state']

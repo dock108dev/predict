@@ -114,7 +114,8 @@ fieldset label, .desk-thresholds label:has(input[type="checkbox"]) { display: fl
 .desk-outcome { font-size: 24px; line-height: 1.12; margin: .24rem 0 .38rem; text-wrap: pretty; }
 .desk-reference { color: var(--ink); }
 .desk-reference-odds { display: block; font-size: 23px; font-weight: 550; line-height: 1.15; }
-.desk-reference-label { position: absolute; clip-path: inset(50%); }
+.desk-reference-label, .desk-pair-fee { display: block; }
+.desk-pair-fee { margin-block: .15rem .4rem; color: var(--muted); }
 .desk-ev-offers { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .4rem; align-items: start; }
 .desk-offer {
   display: grid; gap: .25rem; text-align: left; border: 0; background: transparent;
@@ -184,7 +185,6 @@ dialog::backdrop { background: #101b3180; }
   .desk-columns { display: none; }
   .desk-row { grid-template-columns: minmax(0, 1fr) auto; gap: 1rem; padding-block: 1.4rem; }
   .desk-reference { text-align: right; }
-  .desk-reference-label { position: static; clip-path: none; }
   .desk-ev-offers { grid-column: 1 / -1; }
   .desk-offer strong { font-size: 25px; }
   .desk-arb { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -294,3 +294,7 @@ dialog::backdrop { background: #101b3180; }
 .desk-individual .desk-offer { width: 100%; grid-template-columns: minmax(5.2rem, 1fr) auto auto; align-items: baseline; gap: .3rem .65rem; }
 .desk-individual .desk-offer .p-odds { font-size: .95rem; }
 .desk-individual .offer-breakdown, .desk-individual .offer-reason { grid-column: 1 / -1; }
+
+.desk-offer, .desk-offer small, .desk-pair small { min-width: 0; overflow-wrap: anywhere; }
+.fee-census-facts { display: grid; grid-template-columns: minmax(8rem, 1fr) minmax(0, 3fr); gap: .35rem .75rem; }
+.fee-census-facts dd { margin: 0; overflow-wrap: anywhere; }

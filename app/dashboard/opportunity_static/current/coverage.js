@@ -1,3 +1,4 @@
+import {mountFeeCensus} from './fee-census-view.js';
 import {coverageNames, coverageFamilies, coverageWords, coverageSport, coverageSource, coverageFamily, coveragePeriod} from './coverage-model.js';
 import {coverageElement, coverageTime, renderCoverageOutcome, renderCoverageTotals, renderFilteredCoverage, renderCoverageMatrix, renderCoverageDetails, cellTitle} from './coverage-view.js';
 const get = id => document.getElementById(id), keys = ['league', 'venue', 'market', 'period', 'attention', 'sort'];
@@ -34,6 +35,14 @@ function draw() {
   if (get('capture-evidence')) get('capture-evidence').textContent = (readError ? 'Read failed; prior freshness is unverified. ' : '') + (paused ? 'View updates paused. ' : '') + 'Captured ' + coverageTime(data.captured_at) + ' · Published ' + coverageTime(data.publication_at) + ' · ' + coverageWords(data.publication_state || 'published') + '. Measurements are as of capture; source clocks and explicit book confirmations determine freshness.' + (data.capture_age_seconds == null ? '' : ' Capture age: ' + Math.round(data.capture_age_seconds) + 's · Publication age: ' + Math.round(data.publication_age_seconds) + 's · Processing delay: ' + Number(data.capture_to_publication_seconds).toFixed(2) + 's.') + (data.publication_reasons?.length ? ' Summary warning: ' + data.publication_reasons.map(coverageWords).join(', ') + '.' : '');
   get('flow').textContent = (paused ? 'View updates paused. ' : '') + (readError ? 'Latest read failed; prior capture retained.' : data.publication_error ? 'Background publication is unavailable.' : 'Local publication read · original capture clocks retained.');
 }
+const refreshFeeCensus = mountFeeCensus(get('fee-census'), get('export-fee-census'));
+function readFeeCensus() {
+  if (['synthetic', 'fixture', 'authored'].includes(data?.mode)) {
+    get('fee-census').textContent = 'The live fee census is not part of this preview.';
+    return;
+  }
+  void refreshFeeCensus(() => active && !paused);
+}
 function schedule() {
   clearTimeout(timer); if (active && !paused && failures < 4) timer = setTimeout(pull, 10000);
 }
@@ -45,7 +54,7 @@ async function pull() {
     if (!response.ok) throw Error(value.reason || value.error || 'Coverage publication is unavailable');
     if (value.schema !== 'predict-broad-coverage-1' || !Array.isArray(value.cells) || !value.global_totals) throw Error('Coverage publication does not have the expected captured contract');
     if (!active || paused) return;
-    data = value; readError = ""; failures = 0; get('retry-coverage').hidden = true; options(); draw();
+    data = value; readError = ""; failures = 0; get('retry-coverage').hidden = true; options(); draw(); void readFeeCensus();
   } catch (error) {
     if (!active || paused) return;
     readError = error.message; renderCoverageOutcome(get('coverage-outcome'), data, filters(), readError);

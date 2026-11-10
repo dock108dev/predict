@@ -1,0 +1,15 @@
+{
+  "version": "polymarket-us-standard-retail-20261109",
+  "source_url": "https://docs.polymarket.us/fees",
+  "sha256": "137e6259c2bae27925b6a23de6557d9cc3a78163f79e6c2fedf74c74abe3b54c",
+  "path": "app/fixtures/polymarket-us-fees-review-20261107.html",
+  "reviewed_at": "2026-11-10T01:58:05Z",
+  "review_before": "2026-11-11T01:58:05Z",
+  "published_version": "November 6 standard taker tiers",
+  "published_effective_from": "2026-11-06T18:00:00Z",
+  "fee_rate": "0.095",
+  "allowed_taker_coefficients": ["0.095", "0.085", "0.075", "0.0695"],
+  "profile": "standard_retail_taker_high_tier",
+  "applicability": "Standard native sports contracts with a documented market family and period, pregame and in-game. Highest standard retail taker tier at order insertion, half-even cent rounding, cumulative order cap and zero assumed rebates.",
+  "review_window_basis": "Prospective daily review window. Published terms rechecked November 9 Eastern against the dated tier notice and Standard Fee Rules in the retained official page."
+}

@@ -261,6 +261,7 @@ def main(argv=None):
                     "tests/test_comparison_snapshot_sql.py",
                     "tests/test_ordinary_publication_sql.py",
                     "tests/test_capture_price_sql.py",
+                    "tests/test_novig_current_admission.py",
                 ]
             )
             if args.tests:

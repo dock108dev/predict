@@ -53,6 +53,15 @@ def test_native_slots_advance_undelivered_games_without_losing_fair_work():
     assert order[:3]==['old','hot_k','hot_us']
 
 
+def test_novig_fresh_slot_uses_the_live_quote_deadline():
+    at=datetime(2026,11,8,tzinfo=timezone.utc)
+    pending=['old','quiet','novig']
+    scope={key:[key] for key in pending}
+    evidence=[dict(event_id='novig',venue='novig',at=(at-timedelta(seconds=15)).isoformat())]
+    assert prioritize_current(pending,scope,evidence,at)==['old','novig','quiet']
+    assert prioritize_current(pending,scope,evidence,at+timedelta(microseconds=1))==pending
+
+
 def test_reference_only_capture_advances_aggregate_receipt_watermark():
     from app.storage.ordinary_publication import captured_aggregate_receipts
     from app.storage.store import hashed

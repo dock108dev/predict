@@ -85,7 +85,8 @@ def defer_details(result):
         'current_authority publication_epoch publication_policy settings_revision probability '
         'gross_return_percent conditional_return_percent conservative_return_percent net_return_percent '
         'gross_profit_per_claim price_difference_cents snapshot_benchmark_reason same_outcome '
-        'times original evidence_result_id '
+        'times original evidence_result_id trade_fee novig_live_financial_qualified kalshi_live_financial_qualified '
+        'polymarket_live_financial_qualified '
         'captured_at price_revision economic_revision').split())
     rows=[]
     for row in result['rows']:
@@ -206,6 +207,10 @@ def capture(db, *, at=None, ordinary=False, event_ids=None, capture_binding=None
         if owns_transaction:
             db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
         db.execute('SET LOCAL statement_timeout=30000')
+        from app.fees.schedule_lifecycle import read as read_fee_schedule
+        out['fee_lifecycle'] = read_fee_schedule(db)
+        from app.fees.product_schedules import read_all as read_fee_products
+        out['fee_products'] = read_fee_products(db)
         if ordinary:
             from .ordinary_publication import dependencies, policy_identity
             out['dependencies']=dependencies(db,event_ids) if _frame_dependencies is None else _frame_dependencies
@@ -279,7 +284,7 @@ def capture(db, *, at=None, ordinary=False, event_ids=None, capture_binding=None
 
 def probability(row,settings,at):
     from app.collection.current_benchmark import calculate,validate_reference
-    if row['league']=='NCAAB' or row['venue'] in ('kalshi','polymarket_us'):
+    if row['league']=='NCAAB' or row['venue'] in ('kalshi','polymarket_us') or row.get('source',{}).get('provider')=='novig':
         ref=row.get('snapshot_benchmark')
         return (ref['probability'],None) if ref else (None,row.get('snapshot_benchmark_missing','Exact two-sided Pinnacle reference unavailable'))
     q=row.get('benchmark_quote')
@@ -346,6 +351,11 @@ def before_fee_pairs(quotes):
 
 def calculate(inputs,value=None):
     from app.dashboard.current_contract import price
+    from app.fees.schedule_lifecycle import for_offer
+    from app.comparison.current_dependencies import instant
+    fee_state = inputs.get('fee_lifecycle')
+    fee_products = inputs.get('fee_products')
+    at = instant(inputs['captured_at'])
     settings,policy=assumptions(value)
     rows=[];pairs=[];oppositions={}
     from app.comparison.snapshot_benchmark import bind
@@ -379,11 +389,14 @@ def calculate(inputs,value=None):
         from app.comparison.snapshot_fee_scope import applicability
         row['fee_applicability']=applicability(record) if record else None
         from app.comparison.conditional_benchmark import snapshot_metric
-        row['conditional_trade_benchmark']=snapshot_metric(row,at=inputs['captured_at'])
+        from app.fees.product_schedules import for_offer as product_review
+        reviewed = product_review(fee_products,row,at) if row['venue'] in ('novig','polymarket_us','kalshi') else None
+        row['conditional_trade_benchmark']=snapshot_metric(row,at=inputs['captured_at'],review=reviewed)
         row['conditional_return_percent']=row['conditional_trade_benchmark'].get('return_percent')
         from app.comparison.snapshot_conservative import metric as conservative_metric
-        row['conservative_trade_benchmark']=conservative_metric(row,at=inputs['captured_at'])
+        row['conservative_trade_benchmark']=conservative_metric(row,at=inputs['captured_at'],review=(reviewed if row['venue']=='kalshi' else for_offer(fee_state,row,at)))
         row['conservative_return_percent']=row['conservative_trade_benchmark'].get('return_percent')
+        row['kalshi_live_financial_qualified'] = row['venue']=='kalshi' and bool(row['conservative_trade_benchmark'].get('available'))
         from app.dashboard.u0_display import quote_display
         ref=original.get('reference')
         row['reference_odds']=None if not ref else dict(quote_display(ref['selected_odds'],'decimal_odds'),source_at=ref['source_at'],role='reference_only')

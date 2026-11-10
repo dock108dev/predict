@@ -602,6 +602,23 @@
     ]
   },
   {
+    "name": "ordinary-fee-coverage",
+    "tests": [
+      "tests/test_f04_kalshi_public.py",
+      "tests/test_f05_polymarket_public.py",
+      "tests/test_f06_prophetx_retail.py",
+      "tests/test_f07_desk.py",
+      "tests/test_f08a_product_schedules.py",
+      "tests/test_kalshi_fee_renderer.py",
+      "tests/test_kalshi_rendered_fee_refresh.py",
+      "tests/test_novig_live_fee.py",
+      "tests/test_novig_v3_public.py",
+      "tests/test_novig_v3_stream.py",
+      "tests/test_public_fee_schedule.py",
+      "tests/test_snapshot_fee_coverage.py"
+    ]
+  },
+  {
     "name": "current-ingress-and-publication",
     "tests": [
       "tests/test_current_ingress.py",

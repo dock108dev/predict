@@ -111,7 +111,7 @@ def capture(db,previous,*,at,binding,event_ids,diagnostics=None,_frame_dependenc
             # resolver-owned projection, never old clocks or confirmation.
             q=dict(value['quote'],**{k:q[k] for k in ('occurrence_match','occurrence_link') if k in q})
             status=frame['source_status'].get(q['venue'],frame['source_status'].get(q['source']['provider'],{}))
-            if status.get('state') not in (None,'available','budget_delayed'):q['state']=status['state']
+            if not q.get('novig_runtime_id') and status.get('state') not in (None,'available','budget_delayed'):q['state']=status['state']
             r=dict(r,quote=q,comparison_source_metadata=dict(r.get('comparison_source_metadata',{})))
             meta=value.get('comparison_source_metadata',{})
             if 'observed_at' in meta:r['comparison_source_metadata']['observed_at']=meta['observed_at']

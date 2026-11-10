@@ -98,11 +98,13 @@ def before_fee_pair(left, right, market_key):
         return None
     gap = F(*low) - F(*high)
     equality = (a[10], b[10])
+    payouts = {'first_wins': ['1', '0'], 'second_wins': ['0', '1']}
     if gap == 1 and equality == (['predicate'], ['predicate']):
         pass
     elif gap == 2 and all(eq[0] == 'fraction' and eq[2] is not None for eq in equality):
         if equality[0][1] != equality[1][1] or sum(F(*eq[2]) for eq in equality) != 1:
             return None
+        payouts['equality'] = [wire(F(*eq[2])) for eq in equality]
     else:
         return None
     costs = tuple(F(row['cost_per_normal_claim']) for row in (left, right))
@@ -111,4 +113,4 @@ def before_fee_pair(left, right, market_key):
     from app.opportunities.percentages import normalized_pair
     result = normalized_pair(*costs)
     return dict(market_key=market_key, value=str(F(int(result['numerator']), int(result['denominator']))),
-                weights=[str(cost / sum(costs)) for cost in costs])
+                weights=[str(cost / sum(costs)) for cost in costs], settlement_payouts=payouts)

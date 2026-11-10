@@ -10,8 +10,10 @@ cashflows. Missing inputs stay visible in the inspection.
 
 Kalshi and Polymarket US supply native prices, including supported live prices.
 Novig and ProphetX can arrive through The Odds API on the 15-minute aggregate
-schedule. Pinnacle supplies reference prices. Freshness and calculation
-eligibility are checked separately.
+schedule. Novig also supports a signed read-only feed for eligible in-game
+offers with a post-reset book. Pinnacle supplies reference prices. The
+[fee coverage policy](docs/fee-coverage-policy.md) defines what the desk
+counts independently of reference and calculation eligibility.
 
 **Open replay** displays a frozen local slate or a clearly labeled fictional
 price scenario. The live desk follows the data owner's Stop and source controls.

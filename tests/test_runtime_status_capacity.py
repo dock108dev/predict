@@ -5,7 +5,7 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import MagicMock, patch
 from app.collection.current_policy import DEFAULT
-from app.collection.runtime_status import RuntimeState,STATUS_BYTES
+from app.collection.runtime_status import RuntimeState,STATUS_BYTES,clock,read_runtime
 
 
 class DatabaseFailureStatus(unittest.IsolatedAsyncioTestCase):
@@ -167,6 +167,40 @@ class RuntimeStatusCapacity(unittest.TestCase):
         self.assertEqual(result['paused_sources'],['kalshi'])
         self.assertEqual(original,before)
         self.assertIn('capacity_compaction',report['status_retention'])
+
+    def test_overflow_keeps_exact_coverage_and_quota_available_to_readers(self):
+        service, original = self.fixture()
+        original['coverage']['cells'] = [
+            dict(sport=sport, venue=venue, family_queries=[
+                dict(family=family, latest=dict(inventory='x'*4500),
+                     last_success=dict(inventory='y'*4500))
+                for family in ('moneyline', 'spread', 'total')
+            ])
+            for sport in ('NFL', 'NCAAF', 'NBA', 'NCAAB', 'MLB', 'NHL')
+            for venue in ('kalshi', 'polymarket_us', 'novig', 'prophetx', 'pinnacle')
+        ]
+        original['quota']['recovery_authority'][0]['original'] = 'q'*310000
+        self.assertGreater(len(json.dumps(original).encode()), STATUS_BYTES)
+        snapshot = RuntimeState().snapshot(service, paused_sources={'the_odds_api'})
+        saved = snapshot['status']
+        self.assertLessEqual(len(json.dumps(saved,separators=(',', ':')).encode()), STATUS_BYTES)
+        self.assertEqual(saved['status_retention']['lossless_sections'], ['coverage', 'quota'])
+        now = clock()
+        db = MagicMock()
+        db.execute.return_value.fetchone.return_value = dict(
+            heartbeat_at=now, state='running', source_status=snapshot['states'],
+            status=saved, dispatch=True, global_stopped=False,
+            paused_sources=snapshot['paused_sources'], runtime_id=service.runtime_id,
+            config=service.config, revision=2, owner_pid=123)
+
+        observed = read_runtime(db, at=now)
+
+        self.assertTrue(observed['active'])
+        self.assertEqual(observed['paused_sources'], ['the_odds_api'])
+        self.assertEqual(observed['status']['coverage'], original['coverage'])
+        self.assertEqual(observed['status']['quota'], original['quota'])
+        self.assertNotIn('compressed_sections', observed['status'])
+        self.assertIn('compressed_sections', saved)
 
     def test_large_subscription_roster_is_a_counted_diagnostic_not_heartbeat_payload(self):
         from collections import Counter

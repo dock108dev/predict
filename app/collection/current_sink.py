@@ -388,6 +388,7 @@ def normalized_records(projection, states, previous, *, dated_annotations=True, 
                             normalized['comparison_source_metadata']['public_retail_observation']=dict(
                                 market_id=market['id'],instrument_id=native,
                                 long=public_side.get('long'),team_id=str(public_side.get('teamId')),
+                                is_combo=material.get('isCombo'),
                                 values={field:str(material[field]) for field in
                                     ('orderPriceMinTickSize','minimumTradeQty','feeCoefficient') if field in material},
                                 description=material.get('description'),

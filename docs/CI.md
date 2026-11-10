@@ -82,9 +82,16 @@ zero cases, all-skipped results and client scripts without a completion marker.
 Do not remove production checks to accommodate an expired fixture.
 
 The SQL suite verifies current rows, transient calculations, input-bound Details,
-expiry and restart behavior. Separate compatibility tests exercise retained
-storage codecs and HTTP 410 responses for retired ordinary-history routes.
-The ordinary browser journey uses synthetic snapshot results and revision-bound Details. The Scanner journeys exercise their separate publication and ticket contracts.
+expiry and restart behavior. This includes signed-format Novig admission and
+withdrawal on its disposable shard. Separate compatibility tests exercise
+retained storage codecs and HTTP 410 responses for retired history routes.
+The offline fee modules cover review windows, venue rounding, failed renewal,
+and the coverage denominator. The primary offline workflow ensures Poppler is
+available for the PDF extraction fixture. The fee browser journey checks
+desktop and mobile coverage, pinned evidence and the Admin error state using
+intercepted responses. The ordinary browser journey uses synthetic snapshot
+results and revision-bound Details. Scanner journeys exercise their separate
+publication and ticket contracts.
 
 For retained-fixture diagnostics,
 `.venv/bin/python scripts/ci/export.py EMPTY_DESTINATION` copies tracked and

@@ -199,6 +199,28 @@ def write_report(output, records, started):
                 report["overall"] = "FAIL"
                 overall = "FAIL"
     (output / "metrics.json").write_text(json.dumps(report, indent=2) + "\n")
+    fee_checks = [
+        r
+        for r in records
+        if r["name"].startswith("ordinary-fee-coverage__")
+        or r["name"] == "test_f07_desk_ui"
+    ]
+    behavior = []
+    if fee_checks:
+        fee_outcomes = {r["status"] for r in fee_checks}
+        if any((r.get("tests") or {}).get("skipped") for r in fee_checks):
+            fee_outcomes.add("SKIPPED")
+        behavior = [
+            "### What was tested and why it matters",
+            "| Behavior checked | Actual result | Why it matters | Evidence / limit |",
+            "|---|---|---|---|",
+            "| Fee applicability, renewal, rounding, coverage counts and the fee desk | "
+            + " / ".join(sorted(fee_outcomes))
+            + " | Keeps expired or unsupported fees out of current estimates and preserves the coverage denominator | "
+            + "Ordinary fee modules and desk client results below. Fixtures and simulated HTTP only. |",
+            "",
+            "**Gaps and limits.** Signed-provider operation and automatic live renewal require separate validation.",
+        ]
     summary = [
         f"## Offline contract — {overall}",
         f"Candidate: `{safe(report['tested_sha'])}`; PR head: `{safe(report['pr_head'])}`; event: {safe(report['event'])}",
@@ -220,7 +242,10 @@ def write_report(output, records, started):
     summary.append(
         "Diagnostics: this run’s `ci-*` artifact (JUnit, coverage, logs, metrics). A failing check requires inspecting its log; NOT RUN requires fixing the earlier blocker. Existing optional-catalog skips are listed in JUnit. These checks do not establish live provider or owner acceptance."
     )
-    text = "\n\n".join(summary[:5]) + "\n\n" + "\n".join(summary[5:]) + "\n"
+    text = "\n\n".join(summary[:4]) + "\n\n"
+    if behavior:
+        text += "\n".join(behavior) + "\n\n"
+    text += summary[4] + "\n\n" + "\n".join(summary[5:]) + "\n"
     (output / "summary.md").write_text(text)
     if os.environ.get("GITHUB_STEP_SUMMARY"):
         # The command file belongs to this step. Replace progress snapshots so

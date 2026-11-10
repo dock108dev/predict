@@ -404,6 +404,7 @@ class CurrentRowStore:
                         if route not in ('featured','alternate') or scope['venue'] not in ('novig','prophetx','pinnacle'):
                             raise ValueError('aggregate_refresh_route')
                         condition.append("c.native_market_id "+('LIKE' if route=='alternate' else 'NOT LIKE')+" 'alternate:%%'")
+                        condition.append("e.provider='the_odds_api'")
                     for name,owner in (('native_event_id','e'),('native_market_id','c')):
                         if name in scope:condition.append(owner+'.'+name+'=%s');params.append(scope[name])
                     candidates=by_scope[key] if bulk else execute('''SELECT c.id,o.source_order,o.received_order FROM current_contract c
@@ -439,7 +440,8 @@ class CurrentRowStore:
                     execute("""UPDATE current_offer o SET facts=jsonb_set(o.facts,'{state}',to_jsonb(lost.state)),
                         revision=encode(sha256(convert_to(o.revision||lost.state,'UTF8')),'hex')
                         FROM current_contract c JOIN unnest(%s::text[],%s::text[]) lost(venue,state) ON c.venue=lost.venue
-                        WHERE c.id=o.contract_id AND o.facts->>'state' IN ('available','budget_delayed')""",
+                        WHERE c.id=o.contract_id AND o.facts->>'state' IN ('available','budget_delayed')
+                        AND NOT (c.venue='novig' AND o.facts ? 'novig_runtime_id')""",
                         tuple(map(list,zip(*lost))))
                 for venue,state in source_status.items():
                     execute('''INSERT INTO current_source_status VALUES (%s,%s,%s) ON CONFLICT(venue)
