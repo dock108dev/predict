@@ -11,6 +11,7 @@ from __future__ import annotations
 from contextlib import contextmanager
 from datetime import datetime, timezone
 import sqlite3
+from uuid import uuid4
 
 
 def _integer(value: int, name: str, *, positive: bool = False) -> int:
@@ -46,7 +47,33 @@ class ObjectLedger:
                 CREATE TABLE IF NOT EXISTS sgo_http_request (account TEXT NOT NULL, requested_at REAL NOT NULL);
                 CREATE INDEX IF NOT EXISTS sgo_http_rate ON sgo_http_request(account, requested_at);
                 CREATE TABLE IF NOT EXISTS sgo_http_clock (account TEXT PRIMARY KEY, last_at REAL NOT NULL);
+                CREATE TABLE IF NOT EXISTS sgo_ledger_identity (singleton INTEGER PRIMARY KEY CHECK(singleton=1), account TEXT NOT NULL);
             ''')
+
+    def account_identity(self) -> str:
+        """Use one opaque partition per ledger, preserving unambiguous old history.
+
+        Credential rotation must never create a fresh budget or bypass a hold.
+        Multiple legacy partitions require reconciliation before any request.
+        """
+        with self._connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            row = db.execute('SELECT account FROM sgo_ledger_identity WHERE singleton=1').fetchone()
+            if row:
+                db.execute('COMMIT')
+                return row[0]
+            accounts = {row[0] for row in db.execute('SELECT DISTINCT account FROM sgo_http_request')}
+            accounts.update(row[0] for row in db.execute('SELECT account FROM sgo_http_clock'))
+            for (window,) in db.execute('SELECT id FROM sgo_object_window'):
+                if ':' not in window:
+                    raise RuntimeError('legacy ledger identity ambiguous; reconciliation required')
+                accounts.add(window.split(':', 1)[0])
+            if len(accounts) > 1 or '' in accounts:
+                raise RuntimeError('legacy ledger identity ambiguous; reconciliation required')
+            account = next(iter(accounts)) if accounts else uuid4().hex
+            db.execute('INSERT INTO sgo_ledger_identity VALUES(1,?)', (account,))
+            db.execute('COMMIT')
+            return account
 
     @contextmanager
     def _connect(self):

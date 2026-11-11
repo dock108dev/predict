@@ -30,6 +30,38 @@ def test_holds_survive_restart_and_only_evidence_resolves(tmp_path):
         book.resolve('a', charged=1, evidence='duplicate', now=NOW)
 
 
+def test_opaque_identity_preserves_legacy_hold_and_request_history(tmp_path):
+    book = ObjectLedger(tmp_path / 'legacy.sqlite')
+    book.create_window('legacy:old', limit=100, initial_used=0, reserve=0, requests_per_minute=2)
+    book.reserve('legacy:old', 'held', objects=2, now=NOW)
+    assert book.account_identity() == 'legacy'
+    book = ObjectLedger(book.path)
+    assert book.account_identity() == 'legacy'
+    book.reserve_request('legacy', requests_per_minute=2, now=NOW + timedelta(seconds=1))
+    with pytest.raises(RuntimeError, match='request rate'):
+        book.reserve_request('legacy', requests_per_minute=2, now=NOW + timedelta(seconds=2))
+    book.create_window('legacy:new', limit=100, initial_used=0, reserve=0, requests_per_minute=2)
+    with pytest.raises(RuntimeError, match='unresolved'):
+        book.reserve('legacy:new', 'next', objects=1, now=NOW + timedelta(seconds=60))
+    assert book.status('legacy:old')['held'] == 2
+
+
+def test_identity_is_persistent_and_ambiguous_legacy_ledger_fails_closed(tmp_path):
+    book = ObjectLedger(tmp_path / 'new.sqlite')
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        identities = list(executor.map(lambda _: book.account_identity(), range(4)))
+    assert len(set(identities)) == 1
+    assert ObjectLedger(book.path).account_identity() == identities[0]
+
+    legacy = ObjectLedger(tmp_path / 'ambiguous.sqlite')
+    legacy.create_window('first:old', limit=100, initial_used=0, reserve=0)
+    legacy.create_window('second:old', limit=100, initial_used=0, reserve=0)
+    with pytest.raises(RuntimeError, match='reconciliation required'):
+        legacy.account_identity()
+    assert legacy.status('first:old')['limit'] == 100
+    assert legacy.status('second:old')['limit'] == 100
+
+
 def test_concurrent_reservations_are_atomic(tmp_path):
     book = ledger(tmp_path)
     def attempt(i):

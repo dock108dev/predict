@@ -7,7 +7,6 @@ from an incomplete, moving, or successful-but-not-snapshot traversal.
 import asyncio
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
-from hashlib import sha256
 import os
 from pathlib import Path
 
@@ -85,7 +84,7 @@ class SportsGameOddsWorker:
         self.key = self.key_loader()
         self.ledger_path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
         self.ledger = ObjectLedger(self.ledger_path)
-        self.account_id = sha256(self.key.encode()).hexdigest()
+        self.account_id = self.ledger.account_identity()
         observed = await self.usage()
         self.request_limit = observed['requests_per_minute']
         if observed.get('reset_at') is None:
@@ -93,8 +92,7 @@ class SportsGameOddsWorker:
         reset = observed['reset_at']
         if reset <= self.now():
             raise RuntimeError('account reset evidence expired')
-        # Credential digest only identifies the local ledger partition. It is
-        # never emitted in status, diagnostics, URLs, or reports.
+        # A credential change cannot create a new accounting partition.
         self.window_id = self.account_id + ':' + reset.isoformat()
         try:
             self.ledger.status(self.window_id)

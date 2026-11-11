@@ -32,6 +32,12 @@ identify one provider account window and avoid opening overlapping windows or
 ignoring use by other clients; an initial usage snapshot alone cannot observe
 external use. An unknown reset is retained as unknown, not guessed.
 
+Each ledger uses a persistent, randomly assigned accounting identity independent
+of the API key. Replacing a key does not reset its rate history or bypass holds.
+An existing ledger with one legacy identity keeps that identity and its records;
+multiple legacy identities fail closed until their accounting is reconciled.
+Use a separate ledger only for a genuinely separate, reconciled account.
+
 A guarded collector and runtime worker now bind these controls to bounded
 transport and serialized current-row ingress. Provider selection and source
 pause preserve the direct native workers. The worker requires a fresh matching
