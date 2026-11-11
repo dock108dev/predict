@@ -490,6 +490,8 @@ class StorageMaintenanceSQL(LatestBoardFixture):
         with self.connect() as db,self.connect() as blocker:
             packet=put(db,b'expired despite expiry contention')
             db.execute("UPDATE current_grid_blob SET unreferenced_at=now()-interval '10 minutes' WHERE id=%s",(packet,))
+            db.execute("INSERT INTO current_sgo_reference VALUES ('expired-reference','event','book',NULL,1,now()-interval '1 day','revision','{}')")
+            db.execute("INSERT INTO current_sgo_event_frame VALUES ('event',1,now()-interval '1 day',2,'{}')")
             with blocker.transaction():
                 blocker.execute('SELECT pg_advisory_xact_lock(%s)',(LOCK,))
                 def connection():
@@ -499,7 +501,13 @@ class StorageMaintenanceSQL(LatestBoardFixture):
                 with patch('app.collection.current_database.connect',side_effect=connection),self.assertRaises(LockNotAvailable):
                     pipeline.tick()
             self.assertIsNotNone(pipeline.maintenance)
+            self.assertIn(dict(table='sportsgameodds_reference',reason='lock_busy'),pipeline.maintenance['deferred'])
             self.assertIsNone(db.execute('SELECT id FROM current_grid_blob WHERE id=%s',(packet,)).fetchone())
+            self.assertIsNotNone(db.execute("SELECT id FROM current_sgo_reference WHERE id='expired-reference'").fetchone())
+            self.assertIsNotNone(db.execute("SELECT event_id FROM current_sgo_event_frame WHERE event_id='event'").fetchone())
+            result=maintain(db,compact=False)
+            self.assertEqual(result['sgo_reference_expired'],1)
+            self.assertEqual(result['sgo_frame_expired'],1)
 
 
 class WorkingPartitionUpgradeSQL(LatestBoardFixture):

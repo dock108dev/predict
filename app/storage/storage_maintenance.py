@@ -55,14 +55,6 @@ def maintain(db, *, compact=True, collecting=False):
             from .comparison_snapshot import prune as prune_snapshots
             prune_snapshots(db)
         with db.transaction():
-            if db.execute("SELECT to_regclass('public.current_sgo_reference') r").fetchone()['r']:
-                from .sportsgameodds_reference import prune as prune_sgo
-                from .store import now
-                result['sgo_reference_expired'] = prune_sgo(db, at=now())
-            if db.execute("SELECT to_regclass('public.current_sgo_event_frame') r").fetchone()['r']:
-                from .sportsgameodds_reference import prune_frames
-                from .store import now
-                result['sgo_frame_expired'] = prune_frames(db, at=now())
             if db.execute("SELECT to_regclass('public.current_grid_read_lease') r").fetchone()['r']:
                 from .grid_packet_store import cleanup
                 cleanup(db)
@@ -75,6 +67,23 @@ def maintain(db, *, compact=True, collecting=False):
             if db.execute("SELECT to_regclass('public.current_result_work') r").fetchone()['r']:
                 from .result_inventory import prune as prune_inventory
                 prune_inventory(db)
+        # SGO evidence shares the current-row writer lock. Do not let a busy
+        # writer roll back or delay unrelated retention work above.
+        with db.transaction():
+            reference = db.execute("SELECT to_regclass('public.current_sgo_reference') r").fetchone()['r']
+            frames = db.execute("SELECT to_regclass('public.current_sgo_event_frame') r").fetchone()['r']
+            if reference or frames:
+                from .current_rows import LOCK as CURRENT_ROWS_LOCK
+                if not db.execute('SELECT pg_try_advisory_xact_lock(%s) held', (CURRENT_ROWS_LOCK,)).fetchone()['held']:
+                    result['deferred'].append(dict(table='sportsgameodds_reference', reason='lock_busy'))
+                else:
+                    from .store import now
+                    if reference:
+                        from .sportsgameodds_reference import prune as prune_sgo
+                        result['sgo_reference_expired'] = prune_sgo(db, at=now())
+                    if frames:
+                        from .sportsgameodds_reference import prune_frames
+                        result['sgo_frame_expired'] = prune_frames(db, at=now())
         if collecting and result['before_bytes'] >= PRESSURE_BYTES:
             # Full-scope native replacement can consume the remaining runway
             # before the server's default minute autovacuum wake-up. Recycle
