@@ -60,3 +60,26 @@ provider coverage or sustained latency and memory performance.
 For isolated changes, use the [disposable SQL runner](CI.md#local-reproduction)
 and select the affected tests with `--tests`. Keep provider credentials and owner
 storage out of test fixtures.
+
+## SportsGameOdds integration work
+
+The SGO page adapter, object accounting, reference capture and worker are under
+integration; their presence alone does not establish that the installed runtime
+has cut over. The adapter retains original bookmaker clocks and availability,
+including per-book alternate lines, and refuses incomplete or ambiguous input
+rather than authorizing an absence-based withdrawal. Cursor completion alone is
+not an authoritative census. Unknown settlement and unjoined native contracts
+remain unqualified for reference and EV. The direct Kalshi and Polymarket US
+owners remain separate.
+
+The reference table's bounds, retention and disposable cached/synthetic replay
+measurements are documented in [current-row storage](current-row-storage.md#sportsgameodds-reference-observations-integration-work).
+Those results use free cached pages and invented scale fixtures, not paid-plan
+coverage, live freshness, account allowance or actual cost. Exact plan terms,
+venue access and operating cadence require the authorized account's own evidence.
+
+The ten cached free NBA/NHL event objects contained SGO event IDs, teams,
+status and bookmaker links, but no typed external shared game ID. SGO event IDs
+and aliases remain provider-local; bookmaker URLs or matching names must not be
+promoted to a foreign event-ID namespace. This observation does not establish
+what every paid response may contain.

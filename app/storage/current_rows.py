@@ -401,10 +401,17 @@ class CurrentRowStore:
                     condition=['c.venue=%s','e.competition=%s'];params=[scope['venue'],scope['competition']]
                     if 'aggregate_route' in scope:
                         route=scope['aggregate_route']
-                        if route not in ('featured','alternate') or scope['venue'] not in ('novig','prophetx','pinnacle'):
+                        if route in ('featured','alternate') and scope['venue'] in ('novig','prophetx','pinnacle'):
+                            condition.append("c.native_market_id "+('LIKE' if route=='alternate' else 'NOT LIKE')+" 'alternate:%%'")
+                            condition.append("e.provider='the_odds_api'")
+                        elif route=='sgo_event' and scope['venue'] in ('novig','prophetx','pinnacle') and scope.get('native_event_id'):
+                            # Only an explicitly complete event/book scope may
+                            # retire SGO rows; never touch native or old-provider
+                            # rows for the same venue. Cursor completion alone
+                            # is not evidence of an authoritative event scope.
+                            condition.append("e.provider='sportsgameodds'")
+                        else:
                             raise ValueError('aggregate_refresh_route')
-                        condition.append("c.native_market_id "+('LIKE' if route=='alternate' else 'NOT LIKE')+" 'alternate:%%'")
-                        condition.append("e.provider='the_odds_api'")
                     for name,owner in (('native_event_id','e'),('native_market_id','c')):
                         if name in scope:condition.append(owner+'.'+name+'=%s');params.append(scope[name])
                     candidates=by_scope[key] if bulk else execute('''SELECT c.id,o.source_order,o.received_order FROM current_contract c

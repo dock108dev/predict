@@ -55,6 +55,14 @@ def maintain(db, *, compact=True, collecting=False):
             from .comparison_snapshot import prune as prune_snapshots
             prune_snapshots(db)
         with db.transaction():
+            if db.execute("SELECT to_regclass('public.current_sgo_reference') r").fetchone()['r']:
+                from .sportsgameodds_reference import prune as prune_sgo
+                from .store import now
+                result['sgo_reference_expired'] = prune_sgo(db, at=now())
+            if db.execute("SELECT to_regclass('public.current_sgo_event_frame') r").fetchone()['r']:
+                from .sportsgameodds_reference import prune_frames
+                from .store import now
+                result['sgo_frame_expired'] = prune_frames(db, at=now())
             if db.execute("SELECT to_regclass('public.current_grid_read_lease') r").fetchone()['r']:
                 from .grid_packet_store import cleanup
                 cleanup(db)

@@ -17,6 +17,7 @@ from . import comparison_snapshot as snapshots
 from .store import hashed, stamp
 from .current_games import utc
 from .current_rows import contract_id
+from .ordinary_projection import compact_member, compact_row
 from .ordinary_scheduling import (
     awaiting_aggregate, captured_aggregate_receipts, prioritize_current, receipt_watermarks,
 )
@@ -44,6 +45,7 @@ def policy_identity():
         POLICY_ROOT/'app/storage/capture_materialization.py',
         POLICY_ROOT/'app/storage/capture_price.py',POLICY_ROOT/'app/storage/member_packet.py',
         POLICY_ROOT/'app/storage/ordinary_fragments.py',
+        POLICY_ROOT/'app/storage/ordinary_projection.py',
         POLICY_ROOT/'app/comparison/conditional_benchmark.py',
         POLICY_ROOT/'app/comparison/game_phase.py',
         POLICY_ROOT/'app/dashboard/snapshot_api.py',
@@ -61,20 +63,41 @@ def policy_identity():
             if not evidence.is_absolute():evidence=POLICY_ROOT/evidence
             if evidence.exists():paths.append(evidence)
         except (ValueError,KeyError,TypeError):pass
-    return hashed([VERSION, engine_binding(), observation_binding(),
+    from app.collection.current_policy import load as current_policy
+    paths += [POLICY_ROOT/'app/comparison/sgo_reference.py', POLICY_ROOT/'app/comparison/sgo_reference_publication.py',
+              POLICY_ROOT/'app/comparison/sgo_fair_display.py', POLICY_ROOT/'app/storage/sportsgameodds_reference.py',
+              POLICY_ROOT/'app/comparison/sgo_rule_evidence.py', POLICY_ROOT/'app/comparison/sgo_median_publication.py',
+              POLICY_ROOT/'app/fixtures/sgo-reviewed-market-rules-20261110.json',
+              POLICY_ROOT/'app/fixtures/sgo-reviewed-jurisdiction-bindings.json']
+    return hashed([VERSION, engine_binding(), observation_binding(), current_policy()['aggregate_provider'],
                    [(str(p.relative_to(POLICY_ROOT)) if p.is_relative_to(POLICY_ROOT) else str(p), sha256(p.read_bytes()).hexdigest()) for p in paths]])
 
 
 def dependencies(db, event_ids=None):
-    rows = db.execute('''SELECT c.id, concat(o.revision,':',o.received_at) receipt,
+    from app.collection.current_policy import load as current_policy
+    frames = (current_policy()['aggregate_provider']=='sportsgameodds' and
+        bool(db.execute("SELECT to_regclass('public.current_sgo_event_frame') AS name").fetchone()['name']))
+    frame_join = "LEFT JOIN current_sgo_event_frame f ON e.provider='sportsgameodds' AND f.event_id=e.native_event_id" if frames else ''
+    receipt = "concat(o.revision,':',o.received_at,':',coalesce(f.facts->>'receipt_sha256',''))" if frames else "concat(o.revision,':',o.received_at)"
+    rows = db.execute('''SELECT c.id, '''+receipt+''' receipt,
         o.price_dependency price,
         c.revision contract,
         e.revision event FROM current_offer o JOIN current_contract c ON c.id=o.contract_id
         JOIN current_event e ON e.id=c.event_id
+        '''+frame_join+'''
         WHERE ((%s::text[] IS NULL AND e.scheduled_start::timestamptz >= %s
                 AND e.scheduled_start::timestamptz < %s)
             OR c.event_id=ANY(%s)) ORDER BY c.id''',
         (event_ids,stamp(utc())-timedelta(hours=24),stamp(utc())+timedelta(hours=72),event_ids)).fetchall()
+    if frames:
+        rows += db.execute('''SELECT 'sgo-reference:'||r.id id, r.revision price, r.id contract,
+            e.revision event, concat(r.received_order,':',coalesce(f.facts->>'receipt_sha256','')) receipt
+            FROM current_sgo_reference r JOIN current_event e ON e.provider='sportsgameodds' AND e.native_event_id=r.event_id
+            LEFT JOIN current_sgo_event_frame f ON f.event_id=r.event_id
+            WHERE r.bookmaker_id=ANY(%s) AND e.competition='NBA' AND r.facts->>'market'='moneyline'
+            AND ((%s::text[] IS NULL AND e.scheduled_start::timestamptz >= %s AND e.scheduled_start::timestamptz < %s)
+                 OR e.id=ANY(%s)) ORDER BY r.id''',
+            (['draftkings','fanduel','fanatics'],event_ids,stamp(utc())-timedelta(hours=24),stamp(utc())+timedelta(hours=72),event_ids)).fetchall()
     if len(rows) > 32768:
         raise snapshots.SnapshotOperationError('ordinary_dependency_capacity')
     # The fourth field schedules genuine new confirmation evidence. Only the
@@ -135,6 +158,10 @@ def authority(db, *, at=None):
         committed['pinnacle']=dict(state='budget_delayed',reason_code='aggregate_scope_observed',
             observed_sports=reference_scopes)
     states=source_states(committed,owner)
+    if 'sportsgameodds' in committed:
+        states['sportsgameodds']=committed['sportsgameodds']
+    if 'sportsgameodds' in owner.get('paused_sources', []) or owner.get('global_stopped'):
+        states['sportsgameodds']=dict(state='stopped',reason_code='sgo_paused_or_stopped')
     if 'the_odds_api' in owner.get('paused_sources', []):
         for venue in ('novig', 'prophetx', 'pinnacle'):
             states[venue] = dict(state='stopped', reason_code='aggregate_paused')
@@ -157,7 +184,8 @@ def source_allowed(state, league=None):
         return any(code in healthy for code in scopes.values()) if league is None else scopes.get(league) in healthy
     return state.get('state') == 'available' or (
         state.get('state') == 'budget_delayed' and state.get('reason_code') in
-        ('aggregate_budget_delayed', 'aggregate_outside_window'))
+        ('aggregate_budget_delayed', 'aggregate_outside_window', 'sgo_cycle_complete',
+         'sgo_daily_pacing', 'sgo_request_rate'))
 
 
 def quote_authority(row, inputs, *, reference=False):
@@ -178,7 +206,7 @@ def quote_authority(row, inputs, *, reference=False):
     if q.get('state') in ('stopped','unavailable','error','resyncing','stale'):
         clock['reasons'].append('quote_'+q['state'])
     return dict(dependency=cid, expected=inputs['dependencies'].get(cid),
-                venue=row['venue'], lifecycle=lifecycle,
+                venue=row['venue'], provider=q.get('source',{}).get('provider'), lifecycle=lifecycle,
                 **({'novig_runtime_id':q['novig_runtime_id']} if q.get('novig_runtime_id') else {}), **clock)
 
 
@@ -212,11 +240,15 @@ def prices(inputs, settings):
     rows = [];statuses={}
     for q in inputs['quotes']:
         row = {k: v for k, v in q.items() if k not in ('original_record', 'benchmark_quote', 'native_contract')}
+        if inputs.get('reference_provider') == 'sportsgameodds':
+            row.update(reference=None, snapshot_benchmark=None,
+                reference_calculation={'available':False, 'venue':'sportsgameodds_books',
+                    'method':'sgo-book-median-proportional-1'})
         row.update(kind='single', cost_per_normal_claim=None)
         rows.append(without_finance(row,'finance_pending',status_cache=statuses,copy_row=False))
     result = dict(id=uuid4().hex, snapshot_id=inputs['id'], captured_at=inputs['captured_at'],
                   calculated_at=None, assumptions=settings, rows=rows, pairs=snapshots.before_fee_pairs(inputs['quotes']), games=inputs['games'],
-                  references=inputs['references'], sources=inputs['sources'], issues=inputs['issues'],
+                  references=[] if inputs.get('reference_provider') == 'sportsgameodds' else inputs['references'], sources=inputs['sources'], issues=inputs['issues'],
                   provider_requests=0, capture_seconds=inputs['capture_seconds'],
                   scope=dict(leagues=list(snapshots.SPORTS), families=['winner', 'spread', 'total'],
                              period='full_game', horizon_hours=72))
@@ -239,8 +271,28 @@ def bind(result, inputs, finance):
     for row in result['rows']:
         original = originals[row['id']]
         source = quote_authority(original, inputs)
-        selected = selected_references(row, original, refs) if finance == 'ready' else []
+        sgo_mode = inputs.get('reference_provider') == 'sportsgameodds'
+        selected = selected_references(row, original, refs) if finance == 'ready' and not sgo_mode else []
         witnesses = [quote_authority(ref, inputs, reference=True) for ref in selected]
+        if finance == 'ready' and sgo_mode:
+            from app.comparison.sgo_reference_publication import bind_captured
+            row.update(snapshot_benchmark=None, reference=None,
+                       snapshot_benchmark_reason='sgo_reference_qualification_unavailable',
+                       reference_calculation={})
+            without_finance(row, 'SportsGameOdds reference awaits verified occurrence, settlement and current contributor evidence', copy_row=False)
+            row['reference_calculation'].update(venue='sportsgameodds_books', method='sgo-book-median-proportional-1')
+            sgo, witnesses = bind_captured(row, source, inputs,
+                selected_venue=result['assumptions']['benchmark_venue'])
+            if sgo.get('available'):
+                row.update(probability=sgo['probability'], probability_missing=None,
+                    gross_return_percent=sgo['gross_return_percent'],
+                    reference_calculation=sgo['reference_calculation'],
+                    conditional_trade_benchmark=sgo['conditional_trade_benchmark'],
+                    conditional_return_percent=sgo['conditional_trade_benchmark'].get('return_percent'),
+                    snapshot_benchmark=dict(method=sgo['reference_calculation']['method'],
+                        probability=sgo['probability'], basis_sha256=sgo['reference_calculation']['basis_sha256']))
+                from app.comparison.snapshot_metrics import statuses
+                statuses(row)
         fee = row.get('conditional_trade_benchmark', {}).get('evidence', {})
         if row['venue'] in schedules and original.get('original_record'):
             record = original['original_record']
@@ -274,6 +326,7 @@ def bind(result, inputs, finance):
         reference = row.get('reference_calculation') or {}
         row['current_authority'] = dict(price=source, references=witnesses,
             reference_required=row.get('probability') is not None,
+            reference_method=(row.get('reference_calculation') or {}).get('method'),
             exact_pinnacle_reference=bool(reference.get('available') and reference.get('venue')=='pinnacle'),
             public_fee_revision=(fee_revision if row['venue']=='prophetx' else
                 product_schedules.revision(product_states.get(product_schedules.key_for(row)))),
@@ -290,7 +343,7 @@ def bind(result, inputs, finance):
             (row.get('snapshot_benchmark') or {}).get('selected_predicate'),row.get('fee_applicability'),
             row.get('conditional_return_percent'),row.get('conservative_return_percent'),
             row.get('conservative_trade_benchmark',{}).get('evidence'),fee, result['assumptions']['revision'],
-            row.get('trade_fee'), inputs['policy_identity']])
+            row.get('trade_fee'), (row.get('reference_calculation') or {}).get('basis_sha256'), inputs['policy_identity']])
     result['publication'] = dict(schema=VERSION, finance=finance, policy=inputs['policy_identity'],
         epoch=inputs['epoch'], captured_at=inputs['captured_at'], provider_requests=0)
     counts(result)
@@ -341,7 +394,11 @@ def project(result, current, owner, states, *, at, policy, epoch, settings=None)
         auth = row['current_authority']
         reasons = common + validity(auth['price'], current, at)
         if row.get('publication_epoch', epoch) != epoch: reasons.append('input_epoch_replaced')
-        state = states.get(row['venue'], {})
+        provider = auth['price'].get('provider') or row.get('source',{}).get('provider')
+        aggregate_provider = owner.get('config',{}).get('aggregate_provider', 'the_odds_api')
+        if provider in ('the_odds_api','sportsgameodds') and provider != aggregate_provider:
+            reasons.append('aggregate_provider_replaced')
+        state = states.get('sportsgameodds' if provider == 'sportsgameodds' else row['venue'], {})
         native_owner = auth['price'].get('novig_runtime_id')
         if native_owner:
             if native_owner != str(owner.get('runtime_id')) or {'novig','the_odds_api'} & set(owner.get('paused_sources', ())):
@@ -381,12 +438,18 @@ def project(result, current, owner, states, *, at, policy, epoch, settings=None)
         if row.get('settings_revision') != settings['revision']:
             financial.append('settings_replaced')
         for witness in auth['references']:
+            witness_provider = witness.get('provider') or 'the_odds_api'
+            if witness_provider in ('the_odds_api','sportsgameodds') and witness_provider != aggregate_provider:
+                financial.append('reference_provider_replaced')
             financial.extend(validity(witness, current, at))
-            if not source_allowed(states.get(witness.get('venue'), {}),row.get('league')):
+            reference_source = witness.get('provider') if witness.get('provider') == 'sportsgameodds' else witness.get('venue')
+            if not source_allowed(states.get(reference_source, {}),row.get('league')):
                 financial.append('reference_source_unavailable')
         references = auth['references']
+        multi = auth.get('reference_method') == 'sgo-book-median-proportional-1'
         if auth['reference_required'] and (
-            len(references) != 2 or references[0]['dependency'] == references[1]['dependency']
+            (len(references) < 6 or len(references) % 2 if multi else len(references) != 2)
+            or len({r.get('dependency') for r in references}) != len(references)
         ):
             financial.append('reference_evidence_missing')
         row['exact_pinnacle_reference_current'] = not financial and auth.get('exact_pinnacle_reference', False)
@@ -489,20 +552,6 @@ def compact_retention(db, required):
                 retained -= len(packed)-len(replacement)
 
 
-def compact_row(row):
-    """Keep list/drawer inputs; full semantic proof stays in the exact member."""
-    row = dict(row)
-    for key in ('common_odds', 'reference_odds', 'snapshot_identity'):
-        row.pop(key, None)
-    row['selection'] = {k:v for k,v in row.get('selection', {}).items()
-        if k in ('participant','predicate','signed_line','result_interpretation','label')}
-    row['same_outcome'] = {k:v for k,v in row.get('same_outcome', {}).items() if k != 'key'}
-    if row.get('reference_calculation'):
-        row['reference_calculation'] = {k:v for k,v in row['reference_calculation'].items()
-            if k not in ('authority','occurrence')}
-    return row
-
-
 def seal(db, inputs, result, facts, *, insert_inputs=False, component=None, members=(), prior_parts=None, costs=None):
     # Automatic replacements favor bounded low-latency encoding; manual saved
     # captures retain their denser encoding. Both use the same checked decoder.
@@ -569,51 +618,6 @@ def lease(db, result_id):
         db.execute("UPDATE comparison_snapshot_result SET lease_until=now()+interval '2 hours' WHERE id=%s", (result_id,))
         db.execute("UPDATE comparison_snapshot SET lease_until=now()+interval '2 hours' WHERE id=(SELECT snapshot_id FROM comparison_snapshot_result WHERE id=%s)", (result_id,))
     return True
-
-
-def compact_member(part):
-    """Same exact list projection as legacy root composition; private input."""
-    for row in part['rows']:
-        # Ordinary sorting needs compact prices/results. Full binding,
-        # depth and provenance graphs remain in this immutable member,
-        # reached by evidence_result_id instead of duplicated per head.
-        for field in ('binding','observed_depth','occurrence_match','occurrence_link',
-                      'provider_clocks','observation_time_evidence','source_health',
-                      'input_basis','native_contract_id','observation_revision','fee_applicability'):
-            row.pop(field,None)
-        # Full financial provenance belongs to the immutable selected
-        # member. The root keeps exact numeric inputs, IDs and clocks,
-        # without copying the same rules/occurrence graph on every row.
-        if row.get('snapshot_benchmark'):
-            row['snapshot_benchmark']={k:v for k,v in row['snapshot_benchmark'].items()
-                if k in ('bookmaker','ids','odds','selected','selected_odds','probability',
-                    'source_at','received_at','method','conditioning','selected_predicate')}
-            row['reference']=None
-        disclosure=row.get('reference_calculation')
-        if disclosure and disclosure.get('occurrence'):
-            disclosure['occurrence']={k:v for k,v in disclosure['occurrence'].items()
-                if k in ('occurrence','method','scoring','scoring_basis','equality_basis')}
-        for name in ('conditional_trade_benchmark','conservative_trade_benchmark'):
-            metric=row.get(name)
-            if not metric:continue
-            for field in ('applicability','fee_scenarios','rounding_trace','policy'):
-                metric.pop(field,None)
-            if metric.get('evidence'):
-                metric['evidence']={k:v for k,v in metric['evidence'].items()
-                    if k in ('version','source_url','sha256','path','reviewed_at','review_before',
-                        'fee_rate','series_id','event_id','metadata_revision')}
-        if row.get('book_confirmation'):
-            row['book_confirmation']={k:row['book_confirmation'][k] for k in ('confirmed_at','basis')}
-        row['evidence_result_id']=part['id']
-        row['captured_at']=part['captured_at']
-    part['rows'] = [compact_row(row) for row in part['rows']]
-    for pair in part['pairs']:
-        pair['evidence_result_id']=part['id']
-    part['references']=[{k:v for k,v in r.items() if k!='original_record'} for r in part['references']]
-    for row in part['rows']:
-        row['publication_policy']=part['publication']['policy']
-        row['publication_epoch']=part['publication']['epoch']
-    return part
 
 
 def compose(db, settings, *, scope, policy, epoch, started):
@@ -699,7 +703,9 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
                 {k:owner.get(k) for k in ('runtime_id','global_stopped','paused_sources','dispatch')},
                 {k:v.get('state') for k,v in source_states.items()}]
             frame_binding=capture_binding
-            finance_available=source_allowed(source_states.get('pinnacle',{}))
+            from app.collection.current_policy import load as current_policy
+            reference_provider=current_policy()['aggregate_provider']
+            finance_available=(reference_provider == 'sportsgameodds' or source_allowed(source_states.get('pinnacle',{})))
             at=stamp(utc())
             selected={r['id'] for r in db.execute('''SELECT id FROM current_event WHERE competition=ANY(%s)
                 AND scheduled_start::timestamptz >= %s AND scheduled_start::timestamptz < %s''',
@@ -711,6 +717,12 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
             dep=dependencies(db)
             contracts=db.execute('SELECT id,event_id,venue FROM current_contract').fetchall()
             membership={r['id']:r['event_id'] for r in contracts}
+            if reference_provider=='sportsgameodds' and db.execute("SELECT to_regclass('public.current_sgo_event_frame') AS name").fetchone()['name']:
+                for r in db.execute('''SELECT 'sgo-reference:'||r.id id,e.id event_id FROM current_sgo_reference r
+                    JOIN current_event e ON e.provider='sportsgameodds' AND e.native_event_id=r.event_id
+                    WHERE r.bookmaker_id=ANY(%s) AND e.competition='NBA' AND r.facts->>'market'='moneyline' ''',
+                    (['draftkings','fanduel','fanatics'],)).fetchall():
+                    membership[r['id']]=r['event_id']
             event_venues={}
             for r in contracts:event_venues.setdefault(r['event_id'],set()).add(r['venue'])
             per_event={}
@@ -824,6 +836,7 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
                     inputs=snapshots.capture(db,ordinary=True,event_ids=scope[key],capture_binding=capture_binding,price_basis=True,_frame_dependencies=current_dependencies)
                     inputs['_price_capture']=dict(path='complete',read_records=len(inputs['dependencies']),**capture_diagnostics)
                 inputs['policy_identity']=policy
+                inputs['reference_provider']=reference_provider
                 inputs['fee_lifecycle']=fee_state if key in prophetx_components else None
                 inputs['fee_products']={k:product_states[k] for k in product_components[key] if k in product_states}
                 captured_dependencies={}

@@ -645,7 +645,7 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
                 if 'reference' in body and type(body['reference']) is not bool:raise PublicRequestError('Explicit reference flag required')
                 await provider.refresh_aggregate(body['sports'],body['request_id'],reference=body.get('reference',False))
             except SelectionError as exc:return web.json_response(exc.body,status=exc.status)
-        elif set(body)=={'action','source'} and body['action']=='pause' and body['source'] in ('kalshi','polymarket_us','the_odds_api') and hasattr(provider,'pause'):
+        elif set(body)=={'action','source'} and body['action']=='pause' and body['source'] in ('kalshi','polymarket_us','the_odds_api','sportsgameodds') and hasattr(provider,'pause'):
             try:await provider.pause(body['source'])
             except SelectionError as exc:return web.json_response(exc.body,status=exc.status)
         elif set(body)=={'action','runtime_id','candidate_digest','recovery_id','covered_attempts'} and body['action']=='recover_accounting' and hasattr(provider,'recover_accounting'):

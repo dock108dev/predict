@@ -257,7 +257,7 @@ class DataRuntime:
             finite_clean = await self.withdraw(self.service.close())
             if not finite_clean:
                 raise SelectionError(409,'cleanup_safety_unresolved','The finite operation has not confirmed transport cleanup.')
-        elif action == 'pause' and set(body) == {'source'} and body['source'] in ('kalshi', 'polymarket_us', 'the_odds_api'):
+        elif action == 'pause' and set(body) == {'source'} and body['source'] in ('kalshi', 'polymarket_us', 'the_odds_api', 'sportsgameodds'):
             venue = body['source']
             if venue not in self.service.workers:
                 raise SelectionError(409, 'source_not_running', 'This source is not running.')

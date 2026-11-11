@@ -23,6 +23,7 @@ DOCUMENTS = (
     "docs/CI.md",
     "docs/architecture.md",
     "docs/benchmark-ev.md",
+    "docs/sportsgameodds-operations-20261110.md",
     "docs/fee-coverage-policy.md",
     "docs/novig-nflwin-modeled-basis.md",
     "docs/combined-occurrence-input-contract.md",

@@ -31,6 +31,24 @@ def market_key(row):
         scope.get('extra_innings','not_applicable'),scope.get('shootout','not_applicable'))
 
 
+def withhold_unqualified_sgo(row):
+    """Keep an SGO observation visible without borrowing a legacy reference.
+
+    The current SGO normalization does not yet carry verified settlement or a
+    current contributor lifecycle. A captured arithmetic witness alone does not
+    authorize publishing it as live EV. This is deliberately fail-closed until
+    those owners are integrated into the ordinary snapshot dependency path.
+    """
+    if (row.get('source') or {}).get('provider') != 'sportsgameodds':
+        return False
+    row['snapshot_benchmark'] = None
+    row['reference'] = None
+    row['benchmark_quote'] = None
+    row['snapshot_benchmark_reason'] = 'sgo_reference_qualification_unavailable'
+    row['snapshot_benchmark_missing'] = 'SportsGameOdds reference awaits verified occurrence, settlement and current contributor evidence'
+    return True
+
+
 def bind(quotes, references, settings, at):
     """Project all witnesses together; bind only exact, coherent two-sided frames."""
     originals=list(references)
@@ -131,6 +149,9 @@ def bind(quotes, references, settings, at):
             issues['complete_pairs']+=1
         except (ValueError,KeyError,TypeError,ArithmeticError) as exc:issues[str(exc)]+=1
     for row, financial in zip(rows,finance[:len(quotes)]):
+        if withhold_unqualified_sgo(row):
+            issues['sgo_reference_qualification_unavailable']+=1
+            continue
         if row['league']!='NCAAB' and row['venue'] not in ('kalshi','polymarket_us') and row.get('source',{}).get('provider')!='novig':continue
         row['snapshot_benchmark']=None
         row['snapshot_benchmark_reason']='exact_reference_pair_unavailable'

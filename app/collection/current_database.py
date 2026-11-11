@@ -81,6 +81,55 @@ def utc_between(start,now,end):
     return exact_time(start)<=exact_time(now) and (end is None or exact_time(now)<exact_time(end))
 
 
+def validate_sgo_page(row):
+    """Bind all product and reference facts to the same bounded page receipt."""
+    import re
+    digest, scopes = row.get('receipt_sha256'), row.get('event_scopes')
+    if (row.get('source') != 'sportsgameodds' or row.get('complete_venues') != []
+            or not isinstance(digest, str) or not re.fullmatch(r'[0-9a-f]{64}', digest)
+            or not isinstance(scopes, dict) or not 1 <= len(scopes) <= 100
+            or any(not isinstance(k,str) or not k or len(k)>256 or v not in ('NFL','NCAAF','NBA','NCAAB','MLB','NHL') for k,v in scopes.items())):
+        raise ValueError('sgo_reference_scope_invalid')
+    try:
+        for record in row['records']:
+            quote = record['quote']
+            event = record['event']
+            if (quote['source']['provider'] != 'sportsgameodds'
+                    or quote['source']['native_event_id'] != event['id']
+                    or scopes.get(event['id']) != event['competition']
+                    or quote['provenance']['sha256'] != digest):
+                raise ValueError('sgo_page_identity_mismatch')
+        for reference in row['sgo_reference_rows']:
+            facts = reference['facts']
+            if (facts['provider'] != 'sportsgameodds' or facts['event_id'] != reference['event_id']
+                    or scopes.get(facts['event_id']) != facts['league'] or facts['receipt_sha256'] != digest):
+                raise ValueError('sgo_page_identity_mismatch')
+        members = {event_id: [] for event_id in scopes}
+        seen_reference_ids = set()
+        for reference in row['sgo_reference_rows']:
+            if reference['id'] in seen_reference_ids:
+                raise ValueError('sgo_page_identity_mismatch')
+            seen_reference_ids.add(reference['id'])
+            members[reference['event_id']].append([reference['id'], reference['revision']])
+        frames = row['sgo_event_frames']
+        if not isinstance(frames, list) or len(frames) != len(scopes):
+            raise ValueError('sgo_page_identity_mismatch')
+        frame_ids = set()
+        for frame in frames:
+            facts = frame['facts']
+            event_id = frame['event_id']
+            if (event_id in frame_ids or event_id not in scopes
+                    or facts['provider'] != 'sportsgameodds' or facts['event_id'] != event_id
+                    or facts['receipt_sha256'] != digest or facts['received_at'] != row['received_at']
+                    or facts['members'] != sorted(members[event_id])):
+                raise ValueError('sgo_page_identity_mismatch')
+            frame_ids.add(event_id)
+        if frame_ids != set(scopes):
+            raise ValueError('sgo_page_identity_mismatch')
+    except (KeyError, TypeError):
+        raise ValueError('sgo_page_identity_mismatch') from None
+
+
 class DatabaseIngressSink:
     """Direct synchronous SQL publication; no durable feed or retry queue."""
     acknowledgment='saved-current-row-transaction'
@@ -214,12 +263,12 @@ class DatabaseIngressSink:
                 phase=name,phase_started=tick,seconds=tick-started,timings=dict(timings))
         phase(active)
         try:
-            if row['type'] not in ('current_aggregate_records','coverage_inventory','prediction_book','prediction_books','source_health','native_market_invalid','novig_native_records'):
+            if row['type'] not in ('current_aggregate_records','coverage_inventory','prediction_book','prediction_books','source_health','native_market_invalid','novig_native_records','sgo_status'):
                 raise ValueError('current_ingress_type_unsupported: use admitted current records or native observations')
             if 'body' in row or 'batches' in row:
                 raise ValueError('current_ingress_raw_payload_unsupported: use admitted current records')
             if row['type']!='coverage_inventory' and len(packed(row))>self.config['ingress_bytes']:raise ValueError('Current ingress observation capacity')
-            if row['type']=='novig_native_records':
+            if row['type'] in ('novig_native_records','sgo_status'):
                 candidate=self.reducer
             elif row['type'] in ('prediction_book','prediction_books','source_health','current_aggregate_records','coverage_inventory','native_market_invalid'):
                 # Immutable catalog/unchanged images are shared until adoption.
@@ -234,7 +283,10 @@ class DatabaseIngressSink:
                 candidate=deepcopy(self.reducer)
             records=[];scopes=[];withdraw=set();storage_prepared=False
             deferred_keys=set();catalog_turnover={}
-            if row['type']=='novig_native_records':
+            if row['type']=='sgo_status':
+                if row.get('source')!='sportsgameodds' or row.get('state') not in ('connecting','available','budget_delayed','unavailable','stopped'):
+                    raise ValueError('sgo_source_status_invalid')
+            elif row['type']=='novig_native_records':
                 from .novig_v3_current import MAX_MARKETS, identity
                 records=row['records']
                 if row['source']!='novig' or len(records)>2*MAX_MARKETS or len(row['withdrawn'])>MAX_MARKETS:
@@ -253,6 +305,8 @@ class DatabaseIngressSink:
                     candidate.books.pop(key,None);candidate.metadata.pop(key,None);candidate.invalid.add(key)
                     withdraw.add(key)
             elif row['type']=='current_aggregate_records':
+                if 'sgo_reference_rows' in row:
+                    validate_sgo_page(row)
                 records=row['records']
                 scopes=[dict(venue=v,competition=row['sport'],received_at=row['received_at'],aggregate_route='featured') for v in row['complete_venues']]
             else:
@@ -368,7 +422,7 @@ class DatabaseIngressSink:
                         from .runtime_status import AUTHORITY_LOCK
                         db.execute('SELECT pg_advisory_xact_lock_shared(%s)', (AUTHORITY_LOCK,))
                         owner=db.execute('SELECT runtime_id,global_stopped,paused_sources FROM data_runtime WHERE singleton').fetchone()
-                        if row['type']!='source_health' and (revoked.is_set() or owner and
+                        if row['type'] not in ('source_health','sgo_status') and (revoked.is_set() or owner and
                             (str(owner['runtime_id'])!=self.store.provider.runtime_id or owner['global_stopped']
                              or row['source'] in owner['paused_sources'] or row['type']=='novig_native_records'
                              and 'the_odds_api' in owner['paused_sources'])):
@@ -382,6 +436,15 @@ class DatabaseIngressSink:
                             'ON CONFLICT (sport) DO UPDATE SET received_at=EXCLUDED.received_at,payload=EXCLUDED.payload '
                             'WHERE current_acquisition_aggregate.received_at<=EXCLUDED.received_at',
                             (row['sport'],row['received_at'],Jsonb(raw_batch)))
+                    if row['type']=='current_aggregate_records' and 'sgo_reference_rows' in row:
+                        from app.storage.sportsgameodds_reference import upsert_rows, upsert_frames
+                        upsert_rows(db, row['sgo_reference_rows'])
+                        upsert_frames(db, row['sgo_event_frames'])
+                    if row['type']=='sgo_status' or (row['type']=='current_aggregate_records' and row.get('source')=='sportsgameodds'):
+                        from psycopg.types.json import Jsonb
+                        status = (dict(state=row['state'],reason_code=row['reason_code'],reason=row['reason'])
+                                  if row['type']=='sgo_status' else dict(state='available',reason_code='sgo_page_received',reason='SportsGameOdds page admitted.'))
+                        db.execute('INSERT INTO current_source_status VALUES (%s,%s,%s) ON CONFLICT(venue) DO UPDATE SET state=excluded.state,received_at=excluded.received_at WHERE current_source_status.state<>excluded.state', ('sportsgameodds',Jsonb(status),now))
                     admit=rows._upsert_prepared if storage_prepared else rows.upsert_records
                     from app.storage.native_admission_metrics import MaterialRows
                     material_rows=MaterialRows() if row['type'] in ('prediction_books','prediction_book') else None

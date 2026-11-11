@@ -2,6 +2,44 @@
 
 Updated November 10, 2026.
 
+## SportsGameOdds pivot implementation in progress
+
+The owner confirmed that paid venue and exact-market coverage, a defensible
+replacement reference and a useful object-budget schedule are available. On that
+basis the owner directed the SportsGameOdds pivot, retaining both direct
+native feeds. See the [assessment and integration work](docs/sportsgameodds-pivot-decision-20261110.md).
+Production cutover is authorized when the replacement is integrated and verified;
+buying a paid subscription requires a separate owner instruction.
+The fee-validation work below remains paused and unchanged.
+
+The [free-tier sample](docs/sportsgameodds-free-evaluation-20261110.md) and
+[evaluation plan](docs/sportsgameodds-evaluation-plan-20261110.md) retain the
+underlying evidence and original direction. Always retain direct Kalshi and
+Polymarket US; the pivot replaces The Odds API and transitions its benchmark.
+
+The new parser, guarded worker, object ledger, source controls and transactional
+current-reference storage have fixture and disposable-database coverage. They are
+not yet a verified production cutover: the active configuration still uses The
+Odds API, and the configured SportsGameOdds key reports Amateur limits without a
+reset timestamp. Verify the actual authorized paid account, reset and scope; then
+complete real collection, matching, reference/EV and desktop/mobile journeys.
+The cached free observations did not establish a typed shared event ID, paid
+venue coverage, or Polymarket US identity. See
+[operations](docs/sportsgameodds-operations-20261110.md).
+
+On November 10 the app and data processes were restarted with the existing
+source selection; the new SGO tables are present. Focused checks passed with
+fixtures and disposable PostgreSQL 14, and a read-only installed EV page
+loaded at desktop and mobile widths. This does not establish SGO paid coverage,
+live EV, a real SGO-to-native match, or a complete cutover. The older D03 smoke
+script refused the current `/view/current/` assets and did not complete; its
+failure is not an installed-page rendering result. The current SGO reference
+path tries a qualified named Pinnacle pair, then a narrowly scoped reviewed
+NBA moneyline bookmaker median. Its jurisdiction bindings are currently empty,
+so that median cannot yet qualify live inputs. See [reference rules](docs/sgo-reference-rules-20261110.md).
+Complete paid-account, matching, broader reference,
+provider-status and pinned journey verification before declaring the pivot done.
+
 Show a numeric trading fee for **at least 99% of distinct current offers**
 in the configured live desk, using verified public terms or a defensible
 conservative estimate for manual retail trades. Measure before fee, reference,

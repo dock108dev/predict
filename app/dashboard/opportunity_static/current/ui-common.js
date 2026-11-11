@@ -3,7 +3,7 @@ const UI = (() => {
   const el = (tag, text, cls) => { const e=document.createElement(tag); if(text!=null)e.textContent=text;if(cls)e.className=cls;return e; };
   const num = v => {if(v==null)return null;const p=String(v).split('/');return Number(p[0])/(p.length===2?Number(p[1]):1);};
   const fmt = (v,d=2) => v==null?'Unavailable':num(v).toLocaleString('en-US',{maximumFractionDigits:d,minimumFractionDigits:d});
-  const names={kalshi:'Kalshi',polymarket_us:'Polymarket US',novig:'Novig',prophetx:'ProphetX',pinnacle:'Pinnacle',winner:'Winner',spread:'Spread',total:'Total'};
+  const names={kalshi:'Kalshi',polymarket_us:'Polymarket US',novig:'Novig',prophetx:'ProphetX',pinnacle:'Pinnacle',the_odds_api:'The Odds API',sportsgameodds:'SportsGameOdds',sportsgameodds_books:'SportsGameOdds bookmaker median',winner:'Winner',spread:'Spread',total:'Total'};
   const name=v=>names[v]||v;
   let format='american';try{format=localStorage.getItem('predict-odds-format')==='decimal'?'decimal':'american';}catch{}
   function updateOdds(){for(const e of document.querySelectorAll('[data-american]'))e.textContent=e.dataset[format]||'Unavailable';for(const b of document.querySelectorAll('[data-format]'))b.setAttribute('aria-pressed',String(b.dataset.format===format));}

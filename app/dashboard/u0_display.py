@@ -31,27 +31,32 @@ def quote_display(value, units, payout='1', *, places=0):
             v, basis = bounded_decimal(value), bounded_decimal(payout)
             if not v.is_finite() or not basis.is_finite():
                 return dict(invalid, reason='Nonfinite original value')
-            if basis != 1 or units not in ('usd_per_contract', 'cents_per_contract', 'decimal_odds'):
+            if basis != 1 or units not in ('usd_per_contract', 'cents_per_contract', 'decimal_odds', 'american_odds'):
                 return invalid
             if units == 'decimal_odds':
                 if v <= 1:
                     return dict(invalid, reason='Decimal odds must exceed 1')
                 d, p = v, 1/v
+            elif units == 'american_odds':
+                if abs(v) < 100 or v != v.to_integral_value():
+                    return dict(invalid, reason='Invalid American odds')
+                d = 1 + v/100 if v > 0 else 1 - 100/v
+                p = 1/d
             else:
                 p = v/100 if units == 'cents_per_contract' else v
                 if not 0 < p < 1:
                     return dict(invalid, reason='Contract price must be strictly between 0 and $1')
                 d = 1/p
             # Derive from the original value, not rounded d or display cents.
-            a = (v-1)*100 if units == 'decimal_odds' and v >= 2 else -100/(v-1) if units == 'decimal_odds' else 100*(1-p)/p if p <= Decimal('.5') else -100*p/(1-p)
-            cents = v*100 if units == 'usd_per_contract' else v if units == 'cents_per_contract' else 100/v
+            a = v if units == 'american_odds' else (v-1)*100 if units == 'decimal_odds' and v >= 2 else -100/(v-1) if units == 'decimal_odds' else 100*(1-p)/p if p <= Decimal('.5') else -100*p/(1-p)
+            cents = v*100 if units == 'usd_per_contract' else v if units == 'cents_per_contract' else 100*p
             american = a.quantize(Decimal(1).scaleb(-places), rounding=ROUND_HALF_UP)
             american_text = f'{american:+.{places}f}'
             if places:
                 american_text = american_text.rstrip('0').rstrip('.')
             return dict(supported=True, american=american_text,
                         cents=f"{cents.quantize(Decimal('.1'), rounding=ROUND_HALF_UP):.1f}",
-                        equivalent=units=='decimal_odds', reason=None,
+                        equivalent=units in ('decimal_odds','american_odds'), reason=None,
                         conversion=dict(original=value, units=units, payout=payout,
                                         method='normal-win-dollar-1', decimal_approx=str(d),
                                         price_approx=str(p), precision=ctx.prec),

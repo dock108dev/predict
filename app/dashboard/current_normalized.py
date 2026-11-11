@@ -108,6 +108,10 @@ def catalog_from_normalized(envelope, records, *, reference_records=(), selected
                 if record['verified'] is not True or scope['source']!='the_odds_api' or q['source']['provider']!='the_odds_api' or scope['native_event_id']!=event['id']:
                     raise ValueError('Exact aggregate source-local event required')
                 key=provider_key(scope['source'],event) if scope['policy'].endswith('-2') else ['aggregate-provider-event-1',event['competition'],event['id'],event['scheduled_start'],event['home'],event['away']]
+            elif scope['policy']=='sgo-provider-event-unverified-1':
+                if record['verified'] is not False or scope['source']!='sportsgameodds' or q['source']['provider']!='sportsgameodds' or scope['native_event_id']!=event['id']:
+                    raise ValueError('Exact unverified SportsGameOdds source-local event required')
+                key=provider_key(scope['source'],event)
             elif scope['policy']=='native-provider-event-1':
                 if record['verified'] is not True or scope['source']!=q['venue'] or q['source']['provider']!=scope['source'] or scope['native_event_id']!=event['id']:
                     raise ValueError('Exact native source-local verified event required')

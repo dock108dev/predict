@@ -129,6 +129,9 @@ def result(value=None, unit=None, reason=None, basis=None):
 
 def price(quote):
     v = Fraction(quote['original']['value'])
+    if quote['original']['units']=='american_odds':
+        if abs(v)<100 or v.denominator!=1:raise ValueError('Invalid American odds')
+        return Fraction(100,1)/(v+100) if v>0 else -v/(-v+100)
     return 1/v if quote['original']['units']=='decimal_odds' else v/100 if quote['original']['units']=='cents_per_contract' else v
 
 
@@ -731,7 +734,7 @@ def manual_scenario(review, assumptions):
     from app.settlement import portfolio
     from app.fees.engine import number as engine_number
     from math import lcm
-    original=q['original'];value=original['value'];convention='decimal_odds' if original['units']=='decimal_odds' else 'price'
+    original=q['original'];value=original['value'];convention=original['units'] if original['units'] in ('decimal_odds','american_odds') else 'price'
     try:
         for k in values:engine_number(assumptions[k])
         if original['units']=='cents_per_contract':

@@ -44,22 +44,23 @@ const SnapshotViews = (() => {
     const wrap=el('div',null,'compare-references'),refs=new Map();
     for(const q of quotes){
       const ref=q.reference_calculation, pair=ref?.pair||[];
-      const key=JSON.stringify([ref?.venue||q.display?.benchmark_venue,pair.map(p=>[p.id,p.original,p.selection]),ref?.selected,ref?.selected_predicate,q.display?.benchmark]);
-      if(!pair.length&&!q.display?.benchmark?.length)continue;
+      const key=JSON.stringify([ref?.venue||q.display?.benchmark_venue,pair.map(p=>[p.id,p.original,p.selection]),ref?.selected,ref?.selected_predicate,q.display?.benchmark,ref?.basis_sha256]);
+      if(!pair.length&&!q.display?.benchmark?.length&&!ref?.contributors?.length)continue;
       if(!refs.has(key))refs.set(key,{q,venues:new Set(),retained:new Set()});refs.get(key).venues.add(name(q.venue));if(ref?.available===false)refs.get(key).retained.add(name(q.venue));
     }
     for(const {q,venues,retained} of refs.values()){
       const ref=q.reference_calculation, line=el('div',null,'compare-reference');
       line.append(el('strong',name(ref?.venue||q.display?.benchmark_venue||result.assumptions.benchmark_venue)+' reference'),el('span',' · '+[...venues].join(', '),'compare-note'));
       const values=el('div',null,'compare-ref-values');
-      if(ref?.pair?.length)for(const [i,r] of ref.pair.entries()){
+      if(ref?.contributors?.length){values.append(el('span','Contributing books: '+ref.contributors.map(c=>name(c.venue)).join(', ')));}
+      else if(ref?.pair?.length)for(const [i,r] of ref.pair.entries()){
         const item=el('span',position({...r,market:q.market},result.games)+': ');item.append(odd(q.display?.benchmark?.[i],''));values.append(item);
       }else for(const [i,o] of (q.display?.benchmark||[]).entries()){
         const item=el('span','Reference outcome '+(i+1)+' (name unavailable): ');item.append(odd(o,''));values.append(item);
       }
       line.append(values);if(retained.size)line.append(el('small','Retained reference for '+[...retained].join(', '),'compare-note'));wrap.append(line);
     }
-    if(!refs.size)wrap.append(el('p',`${name(result.assumptions.benchmark_venue)} reference unavailable for these exact outcomes.`,'compare-note'));
+    if(!refs.size)wrap.append(el('p',`${name(quotes[0]?.reference_calculation?.venue||result.assumptions.benchmark_venue)} reference unavailable for these exact outcomes.`,'compare-note'));
     return wrap;
   }
   function comparison(group,result,metric,actions){

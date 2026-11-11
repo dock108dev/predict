@@ -6,7 +6,7 @@ from app.dashboard.current_contract import packed, stamp
 from .current_sink import utc
 
 VENUES = ('kalshi','polymarket_us','novig','prophetx')
-SITES = {'kalshi':'https://docs.kalshi.com','polymarket_us':'https://docs.polymarket.us','the_odds_api':'https://the-odds-api.com','service':'local'}
+SITES = {'kalshi':'https://docs.kalshi.com','polymarket_us':'https://docs.polymarket.us','the_odds_api':'https://the-odds-api.com','sportsgameodds':'https://sportsgameodds.com','service':'local'}
 # Only developer-owned codes enter persistence. Unknown exception/provider text
 # is suppressed even when it consists entirely of letters and numbers.
 CODES = {'native_http_framing_error','native_http_length_mismatch','native_http_timeout','native_http_transport_error','http_429','http_500','http_502','http_503','http_504'} | {'issue_retention_invalid','native_identity_exclusion'} | set('''sanitized_failure ValueError OSError RuntimeError TimeoutError ConnectionError ClientError InvalidStatus KeyError TypeError BudgetStop rss_cap ownership_or_authority_unavailable worker_cleanup_timeout source_cleanup_unresolved cleanup_safety_unresolved attended_runtime_deadline retry_after_outside_operational_envelope current_discovery_retained_cap provider_backoff_pending native_source_inventory_cap current_connection_cap websocket_retry_after_outside_envelope dedicated_credential_missing_or_invalid aggregate_offering_unobserved aggregate_credentials_unavailable aggregate_transport_closed aggregate_response_byte_cap aggregate_encoding_unsupported aggregate_secret_echo_suppressed aggregate_dispatch_revoked aggregate_idle clock_jump aggregate_runtime_envelope_consumed aggregate_transport_uncertain aggregate_rate_limit aggregate_authentication aggregate_http_failure aggregate_bootstrap_schema reset_window_unknown aggregate_common_sport_unobserved aggregate_admission_failed bootstrap_budget_delayed aggregate_budget_delayed reset_window_evidence_invalid reset_window_evidence_unverified quota_missing_duplicate_or_malformed quota_ceiling_or_headers_contradictory quota_ledger_missing quota_ledger_corrupt_or_oversize quota_record_capacity clock_continuity_unknown clock_regression quota_persistence_failed quota_ledger_unavailable reset_window_not_current reset_transition_unresolved acquisition_ownership_required invalid_reservation qualification_envelope_invalid qualification_envelope_expired qualification_envelope_consumed qualification_scope_invalid reset_window_expired quota_unknown ambiguous_dispatch_unresolved quota_reserve_or_exhausted dispatch_not_reserved response_without_dispatch quota_counter_or_charge_contradictory bootstrap_unexpected_charge'''.split())
@@ -41,22 +41,22 @@ def advice(category, failure):
 
 def issue(service, venue, category, failure):
     from .current_policy import aggregate_scope, native_scope, native_markets
-    venue=venue if venue in (*VENUES,'the_odds_api','service') else 'service'
+    venue=venue if venue in (*VENUES,'the_odds_api','sportsgameodds','service') else 'service'
     category=category if category in CATEGORIES else 'local_defect'
     failure=code(failure)
     provider='the_odds_api' if venue in ('novig','prophetx') else venue
-    affected=[venue] if venue in VENUES else ['novig','prophetx'] if venue=='the_odds_api' else list(VENUES)
+    affected=[venue] if venue in VENUES else ['novig','prophetx'] if venue in ('the_odds_api','sportsgameodds') else list(VENUES)
     kind,impact,action=advice(category,failure)
     worker=service.workers.get(provider)
-    q=worker.ledger.snapshot() if worker and hasattr(worker,'ledger') else None
+    q=worker.ledger.snapshot() if worker and hasattr(getattr(worker,'ledger',None),'snapshot') else None
     context=getattr(worker,'issue_context',{})
     at=utc()
     return dict(schema='predict-site-issue-2',provider=provider,site=SITES[provider],affected_venues=affected,
         endpoint_class=context.get('endpoint_class', 'discovery_or_book' if venue in ('kalshi','polymarket_us') else 'service_or_quota'),
         runtime_id=service.runtime_id,attempt_id=context.get('attempt_id',service.runtime_id),candidate_digest=service.digest,
         first_at=at,last_at=at,occurrences=1,category=category,kind=kind,code=failure,
-        scope=dict(sports=[context['sport']] if context.get('sport') else aggregate_scope(service.config) if provider=='the_odds_api' else native_scope(service.config),
-            families=service.config['families'] if provider=='the_odds_api' else native_markets(service.config)),
+        scope=dict(sports=[context['sport']] if context.get('sport') else aggregate_scope(service.config) if provider in ('the_odds_api','sportsgameodds') else native_scope(service.config),
+            families=service.config['families'] if provider in ('the_odds_api','sportsgameodds') else native_markets(service.config)),
         impact=impact,healthy_independent_paths=[v for v in VENUES if v not in affected and service.states[v]['state']=='available'],
         credits=0 if provider in ('kalshi','polymarket_us') else context.get('charged_credits'),
         reserved_credits=0 if provider in ('kalshi','polymarket_us') else None if q is None else q.get('reserved'),retry_count=getattr(worker,'metrics',{}).get('retries',0),
@@ -96,7 +96,7 @@ def project(service, raw, *, accounting=None):
                     encountered.add((sport,source,str(family)[:100],str(period)[:100]))
         raw['coverage']['encountered_types']=[dict(league=s,source=v,family=f,period=p) for s,v,f,p in sorted(encountered)[:256]]
     panels=[]
-    for provider,venues in (('kalshi',['kalshi']),('polymarket_us',['polymarket_us']),('the_odds_api',['novig','prophetx'])):
+    for provider,venues in (('kalshi',['kalshi']),('polymarket_us',['polymarket_us']),(service.config.get('aggregate_provider','the_odds_api'),['novig','prophetx'])):
         worker=service.workers.get(provider)
         metrics=deepcopy(getattr(worker,'metrics',{}))
         quotes=[x['quote'] for x in index.values() if x['quote']['venue'] in venues]
@@ -119,8 +119,8 @@ def project(service, raw, *, accounting=None):
         behavior=('owner_stop' if provider in getattr(service,'paused_sources',()) or getattr(service,'globally_stopped',False)
             else 'running' if accounting_pending
             else 'accounting_hold' if provider=='the_odds_api' and (raw.get('quota') or {}).get('blocking_reason')
-            else 'terminal_failure' if done else 'retrying' if backoff or (provider=='the_odds_api' and getattr(worker,'phase',None)=='database_ingress' and (raw.get('sink') or {}).get('admission_state')=='retrying')
-            else 'running' if provider=='the_odds_api' and worker is not None and getattr(worker,'phase','idle') not in ('idle','waiting_for_cycle')
+            else 'unavailable' if provider=='sportsgameodds' and worker is None else 'terminal_failure' if done else 'retrying' if backoff or (provider=='the_odds_api' and getattr(worker,'phase',None)=='database_ingress' and (raw.get('sink') or {}).get('admission_state')=='retrying')
+            else 'running' if provider in ('the_odds_api','sportsgameodds') and worker is not None and getattr(worker,'phase','idle') not in ('idle','waiting_for_cycle')
             else 'receiving' if 'available' in state_values else 'waiting_for_cycle' if 'budget_delayed' in state_values else 'running')
         panels.append(dict(worker_behavior=behavior,accounting_pending=accounting_pending,
             publication_progress=worker.publication_progress() if hasattr(worker,'publication_progress') else None,
@@ -128,7 +128,7 @@ def project(service, raw, *, accounting=None):
             publication_completions=deepcopy(getattr(worker,'publication_completions',[])),
             processing_phase=getattr(worker,'phase',None),next_action=None if latest_issue is None else latest_issue['next_action'],provider=provider,affected_venues=venues,status=summaries,
             source_at=latest,source_age_seconds=age(latest),received_at=received,receipt_age_seconds=age(received),
-            last_book_observation_at=max(observed_sources,key=stamp) if observed_sources else None,last_book_receipt_at=max(observed_receipts,key=stamp) if observed_receipts else None,last_http_received_at=metrics.get('last_received_at'),socket_connected=bool(getattr(worker,'socket',None)) if provider!='the_odds_api' else None,
+            last_book_observation_at=max(observed_sources,key=stamp) if observed_sources else None,last_book_receipt_at=max(observed_receipts,key=stamp) if observed_receipts else None,last_http_received_at=metrics.get('last_received_at'),socket_connected=bool(getattr(worker,'socket',None)) if provider not in ('the_odds_api','sportsgameodds') else None,
             timestamp_meanings=sorted({q['times']['source_time_kind'] for q in quotes}),
             quote_count_scope='diagnostic_cache' if getattr(service,'database_mode',False) else 'current_projection',
             sql_observations=None,quotes=len(quotes),identity_verified=sum(bool(q['binding']['verified']) for q in quotes),
@@ -178,7 +178,7 @@ def retained_issues(service):
     for prior in saved:
         if not isinstance(prior,dict) or prior.get('schema') not in ('predict-site-issue-1','predict-site-issue-2'):continue
         venue=prior.get('provider')
-        if venue not in (*VENUES,'the_odds_api','service'):continue
+        if venue not in (*VENUES,'the_odds_api','sportsgameodds','service'):continue
         scope=prior.get('scope',{})
         if not isinstance(scope,dict) or set(scope)!= {'sports','families'}:continue
         if not isinstance(scope['sports'],list) or not isinstance(scope['families'],list):continue

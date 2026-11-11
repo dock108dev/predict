@@ -1,0 +1,153 @@
+"""Conservative SGO-to-current-row projection, not wired to collection.
+
+The current storage contract does not support arbitrary bookmaker venues. This
+projection retains exact American prices and deliberately marks the binding
+unverified; it is suitable for current-row persistence tests, not for financial
+qualification, execution, or authoritative removal.
+"""
+from copy import deepcopy
+from decimal import Decimal
+import re
+
+from app.comparison.event_links import provider_key
+from app.dashboard.session_projection import stable
+from app.normalization.college_registry import aggregate_registry
+from app.storage.schedule_metadata import VERSION as SCHEDULE_VERSION
+from app.storage.store import hashed
+
+SPORTS = {'NFL': 'american_football', 'NCAAF': 'american_football', 'NBA': 'basketball',
+          'NCAAB': 'basketball', 'MLB': 'baseball', 'NHL': 'ice_hockey'}
+# Provider IDs are not crosswalked to native identities. In particular the
+# provider's 'polymarket' is not established as Polymarket US.
+CURRENT_VENUES = frozenset(('novig', 'prophetx', 'pinnacle', 'kalshi'))
+
+
+def current_rows(page, receipt_sha256):
+    """Return (rows, exclusions); never declares a scope authoritative."""
+    if not isinstance(receipt_sha256, str) or not re.fullmatch('[0-9a-f]{64}', receipt_sha256):
+        raise ValueError('original receipt digest required')
+    if page.receipt_sha256 != receipt_sha256:
+        raise ValueError('receipt digest mismatch')
+    events = {event['event_id']: event for event in page.events}
+    groups, excluded = {}, []
+    for quote in page.quotes:
+        if quote['venue'] not in CURRENT_VENUES:
+            excluded.append((quote['event_id'], quote['venue'], 'unsupported current-row venue'))
+            continue
+        if quote['price_american'] is None:
+            excluded.append((quote['event_id'], quote['venue'], 'no retained price'))
+            continue
+        line = quote['line']
+        if line is not None:
+            value = Decimal(line)
+            if quote['market'] == 'spread' and quote['side'] == 'away':
+                value = -value
+            line = '0' if value == 0 else str(value.normalize())
+        key = (quote['event_id'], quote['venue'], quote['market'], line)
+        groups.setdefault(key, []).append(quote)
+    batches = []
+    for (event_id, venue, family, _line), quotes in groups.items():
+        if len({q['side'] for q in quotes}) != len(quotes):
+            raise ValueError('duplicate same-side price at line')
+        sides = ('over', 'under') if family == 'total' else ('home', 'away')
+        by_side = {q['side']: q for q in quotes}
+        pair = len(by_side) == len(quotes) == 2 and set(by_side) == set(sides)
+        if pair:
+            a, b = (by_side[side] for side in sides)
+            pair = a['odd_id'] == b['opposing_odd_id'] and b['odd_id'] == a['opposing_odd_id']
+            if pair and family != 'moneyline':
+                pair = (a['line'] is not None and b['line'] is not None and
+                        (Decimal(a['line']) == -Decimal(b['line']) if family == 'spread'
+                         else Decimal(a['line']) == Decimal(b['line'])))
+        # A missing, ambiguous, or conflicting opposing observation does not
+        # erase a displayed source price. Each unmatched side gets its own
+        # unverified group and an empty opposite-outcome descriptor.
+        batches.extend([(event_id, venue, family, list(by_side.values()), True)] if pair else
+                       [(event_id, venue, family, [q], False) for q in quotes])
+    result = []
+    for event_id, venue, family, quotes, paired in batches:
+        event = events[event_id]
+        sides = ('over', 'under') if family == 'total' else ('home', 'away')
+        first = quotes[0]
+        if family != 'moneyline' and first['line'] is None:
+            excluded.append((event_id, venue, 'missing line'))
+            continue
+        by_side = {q['side']: q for q in quotes}
+        registry = aggregate_registry()
+        def participant(role):
+            name = event['teams'][role]['name']
+            resolved = registry.resolve('team', name, league=event['league'], venue='sportsgameodds')
+            return resolved.canonical_id if resolved.status == 'resolved' else 'sportsgameodds:' + event['league'] + ':' + event_id + ':' + role
+        home, away = participant('home'), participant('away')
+        received_at = first['received_at']
+        row_event = dict(id=event_id, sport=SPORTS[event['league']], competition=event['league'],
+                         season='unverified', stage='unverified', scheduled_start=event['starts_at'],
+                         home=home, away=away,
+                         participants={event['teams']['home']['name']: home, event['teams']['away']['name']: away},
+                         title=event['teams']['away']['name'] + ' at ' + event['teams']['home']['name'])
+        witness = dict(version=SCHEDULE_VERSION, native_event_id=event_id,
+                       authority=['sportsgameodds', 'event', event_id], start=event['starts_at'], received_at=received_at,
+                       proofs=[dict(path='sportsgameodds/receipt/' + receipt_sha256,
+                                    body_sha256=receipt_sha256, received_at=received_at)])
+        row_event['schedule_metadata'] = dict(witness, revision=hashed(witness))
+        canonical = first['line']
+        if family == 'spread' and first['side'] == 'away':
+            canonical = str(-Decimal(canonical))
+        selections = []
+        for side in sides:
+            if family == 'moneyline':
+                line = None
+            elif family == 'total' or side == 'home':
+                line = canonical
+            else:
+                line = str(-Decimal(canonical))
+            if side in by_side:
+                line = by_side[side]['line']
+            selections.append(dict(participant=None if family == 'total' else home if side == 'home' else away,
+                                   predicate=side if family == 'total' else 'cover' if family == 'spread' else 'win',
+                                   signed_line=line,
+                                   label=side.title() if family == 'total' else event['teams'][side]['name']))
+        identity = dict(event=provider_key('sportsgameodds', row_event), sport=row_event['sport'],
+                        competition=event['league'], season='unverified', stage='unverified',
+                        scheduled_start=event['starts_at'], family=family, period='full_game',
+                        line=canonical, outcome_set=stable(selections), rules='sportsgameodds-unverified-1')
+        policy = 'sportsgameodds-unverified-1:' + family
+        if not paired:
+            policy += ':single:' + stable([venue, first['odd_id'], first['line']])
+        for side, selection in zip(sides, selections):
+            if side not in by_side:
+                continue
+            quote = by_side[side]
+            instrument = stable(['sportsgameodds', venue, event_id, quote['odd_id'], quote['line']])
+            source = dict(provider='sportsgameodds', native_event_id=event_id,
+                          native_market_id=stable([event_id, family, quote['line'], side]),
+                          native_outcome_id=quote['odd_id'], native_side='bookmaker_outcome',
+                          binding_id=instrument, binding_version='sgo-current-unverified-1',
+                          native_line=quote['line'], quote_side='buy')
+            original = dict(value=quote['price_american'], units='american_odds', payout='1', payout_units='USD',
+                            quantity_units='unknown', role='comparison')
+            at = quote['source_at']
+            q = dict(id='', revision=1, venue=venue, source=source, original=original,
+                     times=dict(source_at=at, received_at=quote['received_at'], projected_at=None,
+                                source_time_kind='provider_book' if at else 'unknown'),
+                     state='available' if quote['available'] else 'unavailable',
+                     rule_note='SportsGameOdds aggregate full-game outcome; settlement and native occurrence association unverified.',
+                     cost_note='American odds retained exactly; fees, execution and depth are unverified.',
+                     observation_time_evidence='SportsGameOdds bookmaker clock; upstream delay unknown.',
+                     provider_clocks=dict(book=at, market=None, selected_basis='book' if at else 'unknown'),
+                     provenance=dict(mode='current', real_source=True, sha256=receipt_sha256))
+            row = dict(event=deepcopy(row_event), market_identity=deepcopy(identity),
+                       period_boundary='Provider full-game market; exceptional settlement unverified',
+                       anchor_participant=home if family == 'spread' else None, selection=selection, quote=q,
+                       orientation_evidence=['sgo-current-unverified-1', receipt_sha256], verified=False,
+                       outcome_cardinality=2, outcome_selections=deepcopy(selections),
+                       result_policy=policy,
+                       comparison_source_metadata=dict(provider_event_aliases=list(event['aliases']),
+                           provider_event_status=deepcopy(event['status']), provider_phase=event['phase'],
+                           provider_source_clock_original=quote['source_at_original'],
+                           provider_opposing_odd_id=quote['opposing_odd_id']),
+                       event_scope=dict(policy='sgo-provider-event-unverified-1', source='sportsgameodds', native_event_id=event_id))
+            row['_instrument'] = instrument
+            row['_fingerprint'] = stable([source, original, q['state'], identity, at, quote['source_at_original'], quote['opposing_odd_id'], policy, event['aliases'], event['status'], event['phase']])
+            result.append(row)
+    return result, excluded

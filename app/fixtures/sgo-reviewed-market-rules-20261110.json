@@ -1,0 +1,20 @@
+{
+  "version": "sgo-reviewed-nba-winner-rules-1",
+  "reviewed_at": "2026-11-11T00:46:22Z",
+  "scope": "NBA full-game two-sided moneyline, completed normal decisive result including overtime; exceptional settlement excluded",
+  "profiles": {
+    "draftkings:US-WV": {
+      "source": "https://sportsbook.draftkings.com/help/general-betting-rules/general-rules",
+      "rule": "Two-way moneyline includes overtime; general rules are subject to applicable sport and market rules."
+    },
+    "fanduel:US-NJ": {
+      "source": "https://d38ayms4az88sz.cloudfront.net/SB/NJ/2026-07-30T12-49-55.html",
+      "rule": "NBA basketball includes overtime unless the specific market states otherwise."
+    },
+    "fanatics:US-NY": {
+      "source": "https://sportsbook.fanatics.com/legal/ny/house-rules",
+      "rule": "Two-way basketball moneyline includes overtime unless a specific rule states otherwise."
+    }
+  },
+  "limitations": "No source quote or jurisdiction is established by these rules. Sport, market, jurisdiction, market-specific terms, native occurrence and source receipt require independent evidence. Do not apply to spread, total, other leagues, or complete settlement EV."
+}

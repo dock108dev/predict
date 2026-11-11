@@ -124,6 +124,15 @@ print(json.dumps(peaks))
         a['probability']='0';self.assertEqual(Decimal(manual_scenario(review,a)['value']),Decimal('-.48'))
         a['probability']='1';self.assertEqual(Decimal(manual_scenario(review,a)['value']),Decimal('.52'))
 
+    def test_manual_scenario_uses_exact_american_odds(self):
+        q=self.quote(self.snapshot())
+        q['original'].update(value='+150',units='american_odds')
+        q['display']=quote_display('+150','american_odds')
+        a=dict(probability='.4',entry_cost='0',win_cost='0',loss_cost='0',quantity='1',acknowledge_conditional=True)
+        result=manual_scenario({'quote':q},a)
+        self.assertTrue(result['eligible'])
+        self.assertEqual(Decimal(result['value']),0)
+
     def test_existing_engine_supported_zero_negative_and_binding(self):
         from app.dashboard.current_contract import identity
         r=self.raw();q=self.quote(r);q['original']['value']='.5'

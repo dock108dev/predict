@@ -8,6 +8,16 @@ from tests.current_sample import sample_payload
 
 
 class OriginalConversions(unittest.TestCase):
+    def test_american_originals_and_exact_cost(self):
+        from app.dashboard.current_contract import price
+        for value, cents, expected in [('+150','40.0',Fraction(2,5)), ('-150','60.0',Fraction(3,5))]:
+            with self.subTest(value=value):
+                display=quote_display(value,'american_odds')
+                self.assertEqual((display['supported'],display['american'],display['cents']),(True,value,cents))
+                self.assertEqual(price({'original':{'value':value,'units':'american_odds'}}),expected)
+        for value in ('0','99','-99','100.5'):
+            self.assertFalse(quote_display(value,'american_odds')['supported'])
+
     def test_original_inputs_and_unrounded_equivalents(self):
         for value, units, cents, american in [
             ('0.48','usd_per_contract','48.0','+108'),

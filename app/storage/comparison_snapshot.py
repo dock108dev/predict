@@ -196,7 +196,9 @@ def captured_price(event,group,q,record,game,league):
 def capture(db, *, at=None, ordinary=False, event_ids=None, capture_binding=None, price_basis=False, _frame_dependencies=None):
     from app.dashboard.comparison_board import entries
     from app.dashboard.grouped_odds import reference_prices
-    at=at or utc();start=monotonic();out=dict(captured_at=at,quotes=[],references=[],games=[],sources={},issues=[])
+    from app.collection.current_policy import load as current_policy
+    at=at or utc();start=monotonic();out=dict(captured_at=at,quotes=[],references=[],games=[],sources={},issues=[],
+        reference_provider=current_policy()['aggregate_provider'])
     if price_basis:
         from .capture_price import begin, remember_frame, remember_catalog
         out['_price_basis']=begin(capture_binding)
@@ -275,6 +277,36 @@ def capture(db, *, at=None, ordinary=False, event_ids=None, capture_binding=None
                             row=captured_price(event,group,q,record,game,league)
                             out['quotes'].append(row)
                     out['issues'].extend(context.catalog_errors)
+        if out['reference_provider']=='sportsgameodds':
+            from app.comparison.sgo_fair_display import comparison as vendor_fair
+            from .sportsgameodds_reference import read_event, read_event_frame
+            exists=db.execute("SELECT to_regclass('public.current_sgo_reference') AS name").fetchone()['name']
+            frames_exist=db.execute("SELECT to_regclass('public.current_sgo_event_frame') AS name").fetchone()['name']
+            events={}
+            for ref in out['references']:
+                record=ref.get('original_record') or {}; source=(record.get('quote') or {}).get('source') or {}
+                if not exists or source.get('provider')!='sportsgameodds':continue
+                event_id=source['native_event_id']
+                if event_id in events:continue
+                try:events[event_id]=read_event(db,event_id)
+                except ValueError:
+                    events[event_id]=[]
+                    out['issues'].append(dict(event=event_id,reason='vendor_fair_event_capacity'))
+            for row in out['quotes']:
+                record=row.get('original_record') or {}; source=(record.get('quote') or {}).get('source') or {}
+                if not exists or source.get('provider')!='sportsgameodds':continue
+                event_id=source['native_event_id']
+                if event_id not in events:
+                    try:events[event_id]=read_event(db,event_id)
+                    except ValueError:
+                        events[event_id]=[]
+                        out['issues'].append(dict(event=event_id,reason='vendor_fair_event_capacity'))
+                value=vendor_fair(record,events[event_id])
+                if value is not None:row['sgo_fair_comparison']=value
+            if frames_exist:
+                out['sgo_reference_events']={event_id:dict(frame=read_event_frame(db,event_id),
+                    rows=[item for item in items if item['facts'].get('venue') in ('pinnacle','draftkings','fanduel','fanatics')])
+                    for event_id,items in events.items()}
         out['epoch']=str(db.execute('SELECT epoch FROM current_row_epoch WHERE singleton').fetchone()['epoch'])
         out['sources']={r['venue']:r['state'] for r in db.execute('SELECT venue,state FROM current_source_status').fetchall()}
     out['id']=uuid4().hex
@@ -284,6 +316,8 @@ def capture(db, *, at=None, ordinary=False, event_ids=None, capture_binding=None
 
 def probability(row,settings,at):
     from app.collection.current_benchmark import calculate,validate_reference
+    if row.get('snapshot_benchmark_reason') == 'sgo_reference_qualification_unavailable':
+        return None,row['snapshot_benchmark_missing']
     if row['league']=='NCAAB' or row['venue'] in ('kalshi','polymarket_us') or row.get('source',{}).get('provider')=='novig':
         ref=row.get('snapshot_benchmark')
         return (ref['probability'],None) if ref else (None,row.get('snapshot_benchmark_missing','Exact two-sided Pinnacle reference unavailable'))
@@ -361,15 +395,23 @@ def calculate(inputs,value=None):
     from app.comparison.snapshot_benchmark import bind
     from app.comparison import snapshot_named_benchmark as named
     benchmark_refs=named.references(inputs['quotes'],inputs['references'],settings)
+    if inputs.get('reference_provider') == 'sportsgameodds':
+        benchmark_refs=[]
     named_quotes=named.bind(inputs['quotes'],benchmark_refs,settings)
     projected,benchmark_diagnostics=bind(named_quotes,benchmark_refs,settings,inputs['captured_at'])
     game_keys={old['game_key']:new['game_key'] for old,new in zip(inputs['quotes'],projected)}
     from app.comparison.snapshot_identity import games as projected_games
     games=projected_games(inputs,projected)
-    references=[dict(r,game_key=game_keys.get(r.get('game_key'),r.get('game_key'))) for r in inputs['references']]
+    references=[] if inputs.get('reference_provider') == 'sportsgameodds' else [dict(r,game_key=game_keys.get(r.get('game_key'),r.get('game_key'))) for r in inputs['references']]
     for original in projected:
         from app.comparison.calculation_control import checkpoint
         checkpoint()
+        if inputs.get('reference_provider') == 'sportsgameodds':
+            # The old retained Odds API pair must not become the replacement
+            # reference merely because its occurrence and line still match.
+            original=dict(original, snapshot_benchmark=None, reference=None, benchmark_quote=None,
+                snapshot_benchmark_reason='sgo_reference_qualification_unavailable',
+                snapshot_benchmark_missing='SportsGameOdds reference awaits verified occurrence, settlement and current contributor evidence')
         row={k:v for k,v in original.items() if k not in ('benchmark_quote','original_record','native_contract')}
         row['game_title']=games.get(row['game_key'],{}).get('title',row['game_title'])
         record=original.get('original_record') or {}
@@ -403,6 +445,10 @@ def calculate(inputs,value=None):
         if row['reference_odds']:row['reference_odds'].pop('what_if',None)
         from app.comparison.snapshot_metrics import disclose
         disclose(row,original,benchmark_refs)
+        if inputs.get('reference_provider') == 'sportsgameodds':
+            row['reference_calculation'].update(venue='sportsgameodds_books',
+                method='sgo-book-median-proportional-1', available=False,
+                reason='sgo_reference_qualification_unavailable')
         row['kind']='single';rows.append(row)
         # Conditional opposing scenarios require supported exact identity and
         # the same occurrence, scoring, domain and exact threshold. NO/Short

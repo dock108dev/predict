@@ -98,7 +98,7 @@ class Ingress:
         self.catalog_preparer=None
 
     async def run(self, fn, *args, **kwargs):
-        source="the_odds_api" if hasattr(fn.__self__,"service") else args[0] if args else None
+        source=getattr(fn.__self__, "ingress_source", "the_odds_api") if hasattr(fn.__self__,"service") else args[0] if args else None
         generation=(self.revocations.get(None,0),self.revocations.get(source,0))
         await self.slots.acquire()
         if generation!=(self.revocations.get(None,0),self.revocations.get(source,0)):

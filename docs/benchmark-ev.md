@@ -1,5 +1,25 @@
 # Calculation basis and benchmark EV
 
+## SportsGameOdds transition in progress — November 10
+
+The running configuration still uses The Odds API and the existing reference.
+The SportsGameOdds implementation introduces separately attributed bookmaker
+observations and a versioned proportional no-vig calculation. Its named-pair
+path requires a reviewed settlement rule, explicit occurrence evidence, exact
+opposing sides and lines, eligible source clocks, and current contributor
+revisions. A median requires multiple individually qualified pairs and excludes
+the evaluated venue; the arithmetic exists, but broad-book settlement and
+jurisdiction evidence are not yet established. These estimates are conditional
+on decisive outcomes; they do not supply push or void probabilities. Vendor
+fair odds are a separate comparison with an unknown source clock and contributor
+set, not an input to this reference. Missing or changed evidence makes reference
+and EV unavailable while retaining the source price.
+
+The named SGO Pinnacle path has fixture coverage, not verified paid-feed or
+production coverage. The configured SGO key and reset have not established the
+necessary paid access; see [operations](sportsgameodds-operations-20261110.md).
+The current source has not been cut over.
+
 
 ## November 3 snapshot integration
 

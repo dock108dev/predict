@@ -28,10 +28,13 @@ const SnapshotDrawer = (() => {
       const ref=section(venue?name(venue)+' fair price':'Fair price');
       ref.append(referenceStrip([row],result));
       if(r.available&&row.probability!=null){
-        const derivation=el('p','Remove the margin proportionally: (1 ÷ selected decimal price) ÷ the sum of both implied probabilities.');
-        ref.append(derivation,facts([['Margin (overround)',r.overround==null?null:pct(num(r.overround)*100)],['Decisive win probability',fmt(num(row.probability)*100)+'%'],['Fair decimal price',r.fair_decimal_odds==null?null:fmt(r.fair_decimal_odds,4)]]));
+        const multi=r.method==='sgo-book-median-proportional-1';
+        const derivation=el('p',multi?'Remove the margin from each eligible two-sided book pair, then take the median of their decisive probabilities.':'Remove the margin proportionally: (1 ÷ selected decimal price) ÷ the sum of both implied probabilities.');
+        ref.append(derivation,facts([...(multi?[]:[['Margin (overround)',r.overround==null?null:pct(num(r.overround)*100)]]),['Decisive win probability',fmt(num(row.probability)*100)+'%'],['Fair decimal price',r.fair_decimal_odds==null?null:fmt(r.fair_decimal_odds,4)]]));
       }else ref.append(el('p','Fair price unavailable in the pinned display. Retained reference prices do not restore current probability.'));
       box.append(ref);
+      const fair=row.sgo_fair_comparison;
+      if(fair?.available){const v=section('SportsGameOdds fair odds comparison');v.append(facts([['Vendor fair American odds',fair.price_american],['Vendor fair line',fair.line],['Original source time','Unknown'],['Received',fair.received_at]]),el('p','Vendor comparison only. Its contributors and original update time are unknown; it is not used as the reference probability.','p-meta'));box.append(v);}
       const calc=section('Before / after trade fees');
       calc.append(el('p','Before fees: expected profit = win probability × win profit − loss probability × acquisition cost. EV % divides expected profit by acquisition cost.'));
       const fee=metric==='conservative_return_percent'?row.conservative_trade_benchmark:row.conditional_trade_benchmark;
@@ -50,8 +53,11 @@ const SnapshotDrawer = (() => {
     const clocks=section('Detailed clocks'),original=(details.originals||[]).find(q=>q.id===row.id)||{};
     clocks.append(facts([['Source capture',row.captured_at||details.captured_at],['Provider update',row.times?.source_at],['Successful confirmation',row.book_confirmation?.confirmed_at||original.book_confirmation?.confirmed_at],['Local receipt',row.times?.received_at],['Last price change',row.last_price_change_at||original.last_price_change_at],['Price authority ends',row.current_authority?.price?.current_until]]));
     for(const ref of row.reference_calculation?.pair||[])clocks.append(el('h4',position({...ref,market:row.market},result.games)),facts([['Reference provider update',ref.times?.source_at],['Reference receipt',ref.times?.received_at]]));
+    for(const book of row.reference_calculation?.contributors||[])for(const side of book.inputs||[])clocks.append(el('h4',name(book.venue)+' · '+human(side.side)),facts([['Original American odds',side.price_american],['Line',side.line],['Jurisdiction',side.jurisdiction],['Reviewed rule source',side.rule_source],['Reference provider update',side.source_at],['Reference receipt',side.received_at],['Shared frame receipt',side.frame_received_at]]));
     clocks.append(el('p','Capture, receipt and publication do not renew source evidence.','p-meta'));box.append(disclosure('Source details & clocks',clocks));
-    const native=section('Original source');native.append(facts([['Native side',row.native_side||row.source?.native_side],['Original price',row.original?.value],['Price units',human(row.original?.units)],['Native price',row.original?.native_value],['Transformation',human(row.original?.transformation)]]));box.append(disclosure('Native price & interpretation',native));
+    const provider=row.source?.provider||original.source?.provider;
+    const providerKind=['the_odds_api','sportsgameodds'].includes(provider)?'Aggregate':(['kalshi','polymarket_us','novig'].includes(provider)?'Direct':null);
+    const native=section('Original source');native.append(facts([['Price provider',provider?name(provider):null],['Source type',providerKind],['Venue',row.venue?name(row.venue):null],['Original side',row.native_side||row.source?.native_side],['Original price',row.original?.value],['Price units',human(row.original?.units)],['Native price',row.original?.native_value],['Transformation',human(row.original?.transformation)]]));box.append(disclosure('Source price & interpretation',native));
     const retained=section('Retained historical arithmetic');retained.append(el('p','Exact member evidence, separate from the pinned displayed availability. These values cannot restore a withdrawn estimate.'),facts([['Before-fee EV',pct(details.row.gross_return_percent)],['After reviewed-fee EV',pct(details.row.conditional_return_percent)],['Member funding',a.amount==null?null:'$'+fmt(a.amount)],['Member buffer',a.buffer==null?null:pct(num(a.buffer)*100)],['Member scenario',human(a.scenario)],['Member sizing',human(a.sizing)]]));
     retained.append(disclosure('Literal inputs, formulas and fee records',el('pre',JSON.stringify({displayed:row,evidence:details},null,2))));box.append(disclosure('Retained arithmetic & exact inputs',retained),link('Inspect exact inputs in Admin',inspect,'math-admin'));
     return box;

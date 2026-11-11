@@ -18,7 +18,7 @@ from app.dashboard.current_contract import packed, stamp
 class CurrentService:
     allow_synthetic = False
 
-    def __init__(self, config=None, *, directory=None, ownership=None, worker_factory=None, evidence=None, aggregate_factory=None, config_loader=None, retained_directory=None, database_mode=False, paused_sources=(), globally_stopped=False):
+    def __init__(self, config=None, *, directory=None, ownership=None, worker_factory=None, evidence=None, aggregate_factory=None, sgo_factory=None, config_loader=None, retained_directory=None, database_mode=False, paused_sources=(), globally_stopped=False):
         self.config = load() if config is None else validate(config)
         from app.comparison.coverage import CoverageLedger
         self.coverage = CoverageLedger({v: native_scope(self.config) if v in ('kalshi','polymarket_us') else
@@ -31,6 +31,7 @@ class CurrentService:
         self.worker_factory = worker_factory
         self.evidence = evidence
         self.aggregate_factory = aggregate_factory
+        self.sgo_factory = sgo_factory
         self.config_loader = config_loader
         self.retained_directory = retained_directory
         self.retained_quota = None
@@ -79,7 +80,8 @@ class CurrentService:
         for venue in ('kalshi','polymarket_us'):
             raw['source_status'][venue] = dict(state='connecting', reason_code='native_connecting', reason='Connecting to the native feed.', next_due_at=None)
         for venue in ('novig','prophetx'):
-            raw['source_status'][venue] = dict(state='budget_delayed', reason_code='aggregate_connecting', reason='Shared aggregate cycle: ' + ', '.join(aggregate_scope(self.config)) + '; every 15 minutes, 09:00–23:00 Eastern, with evidenced quota.', next_due_at=None) if self.config['aggregate_enabled'] else dict(state='stopped', reason_code='aggregate_disabled', reason='Aggregate acquisition is disabled in startup configuration.', next_due_at=None)
+            description = ('SportsGameOdds acquisition is awaiting configuration and account evidence.' if self.config['aggregate_provider']=='sportsgameodds' else 'Shared aggregate cycle: ' + ', '.join(aggregate_scope(self.config)) + '; every 15 minutes, 09:00–23:00 Eastern, with evidenced quota.')
+            raw['source_status'][venue] = dict(state='budget_delayed', reason_code='aggregate_connecting', reason=description, next_due_at=None) if self.config['aggregate_enabled'] else dict(state='stopped', reason_code='aggregate_disabled', reason='Aggregate acquisition is disabled in startup configuration.', next_due_at=None)
         return raw
 
     async def start(self, store):
@@ -129,11 +131,16 @@ class CurrentService:
                 continue
             self.workers[venue] = factory(self,venue)
             self.tasks[venue] = asyncio.create_task(self.run_worker(venue), name='predict-current-'+venue)
-        if self.config['aggregate_enabled'] and 'the_odds_api' not in self.paused_sources:
+        provider=self.config['aggregate_provider']
+        if self.config['aggregate_enabled'] and provider=='sportsgameodds' and provider not in self.paused_sources:
+            from .sportsgameodds_worker import SportsGameOddsWorker
+            self.workers[provider]=(self.sgo_factory or SportsGameOddsWorker)(self)
+            self.tasks[provider]=asyncio.create_task(self.run_worker(provider), name='predict-current-sportsgameodds')
+        elif self.config['aggregate_enabled'] and provider=='the_odds_api' and 'the_odds_api' not in self.paused_sources:
             from .current_aggregate import AggregateScheduler
             self.workers['the_odds_api']=(self.aggregate_factory or AggregateScheduler)(self)
             self.tasks['the_odds_api']=asyncio.create_task(self.run_worker('the_odds_api'),name='predict-current-aggregate')
-        elif 'the_odds_api' in self.paused_sources:
+        elif provider in self.paused_sources:
             for venue in ('novig','prophetx'):
                 await call(self, self.source_state, venue, 'stopped', 'Shared aggregate acquisition explicitly paused. Accounting and due times are preserved.')
         if self.database_mode and self.config['aggregate_enabled'] and not ({'novig', 'the_odds_api'} & self.paused_sources):
@@ -155,7 +162,7 @@ class CurrentService:
                 self.workers[venue].metrics.update(state='unavailable', gap='novig_signed_worker_failed')
             elif venue=='novig_public':
                 self.workers[venue].metrics.update(state='unavailable', gap='novig_public_source_unavailable')
-            elif venue=='the_odds_api':
+            elif venue in ('the_odds_api','sportsgameodds'):
                 try:await call(self, self.workers[venue].state, 'error', 'aggregate_worker_failed', 'Shared aggregate worker failed. Inspect each native worker status.')
                 except Exception:self.cleanup_errors.append('aggregate_status_failed')
             else:await call(self, self.source_state, venue, 'error', 'Native worker failed; this source is paused.')
@@ -408,7 +415,7 @@ class CurrentService:
         if not await self.ingress.drain(self.config['cleanup_seconds'],venue):
             self.cleanup_errors.append(venue+':ingress_cleanup_timeout')
             return
-        if venue=='the_odds_api':
+        if venue in ('the_odds_api','sportsgameodds'):
             await call(self, self.workers[venue].state, 'stopped', 'aggregate_paused', 'Shared aggregate acquisition paused. Persisted quota and next-due survive reopening.')
         else:await call(self, self.source_state, venue, 'stopped', 'Native source paused. This pause survives app and data restarts.')
 

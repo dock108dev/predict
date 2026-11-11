@@ -127,6 +127,11 @@ def read_context(db, *, at=None, owner=None, event_ids=None, resource_guard=None
     owner=owner if owner is not None else runtime(db,at=at)
     started=monotonic()
     frame=CurrentRowStore(db).capture(include_depth=False,event_ids=event_ids,resource_guard=resource_guard)
+    # Retain old provider rows in storage and raw history, but do not let a
+    # newly rebuilt board promote an inactive aggregate source as current.
+    active_provider=owner.get('config',{}).get('aggregate_provider','the_odds_api')
+    frame['records']=[r for r in frame['records'] if r['quote']['source']['provider'] not in ('the_odds_api','sportsgameodds')
+                      or r['quote']['source']['provider']==active_provider]
     captured_ms=round((monotonic()-started)*1000,3)
     frame['source_status']=source_states(frame['source_status'],owner)
     context=ReadContext(GameStore(db),at=at,frame=frame,resource_guard=resource_guard,tolerate_invalid_catalog=tolerate_invalid_catalog)

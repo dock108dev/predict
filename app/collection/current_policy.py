@@ -11,7 +11,7 @@ GRANT = 'predict-standing-native-20261002'
 MIB = 1024 * 1024
 APP_RUNNING_DURATION = 31536000  # Existing configuration sentinel for process lifetime.
 SPORTS = ['NFL', 'NCAAF', 'NBA', 'NCAAB', 'MLB', 'NHL']
-DEFAULT = dict(schema=VERSION, authority=GRANT, enabled=True, aggregate_enabled=True,
+DEFAULT = dict(schema=VERSION, authority=GRANT, enabled=True, aggregate_enabled=True, aggregate_provider='the_odds_api',
     sports=['NFL'], aggregate_sports=[], native_sports=[], native_families=[],
     families=['moneyline', 'spread', 'total'], duration_seconds=APP_RUNNING_DURATION,
     rediscovery_seconds=120, markets_per_source=20, events_per_source=24,
@@ -25,12 +25,15 @@ DEFAULT = dict(schema=VERSION, authority=GRANT, enabled=True, aggregate_enabled=
 def validate(value):
     if isinstance(value,dict):
         value=dict(value)
+        value.setdefault('aggregate_provider','the_odds_api')
         for key in ('aggregate_sports','native_sports','native_families'):
             value.setdefault(key,[])
     if not isinstance(value, dict) or set(value) != set(DEFAULT):
         raise ValueError('Exact native operational configuration required')
     if value['schema'] != VERSION or value['authority'] != GRANT or any(type(value[k]) is not bool for k in ('enabled','aggregate_enabled')):
         raise ValueError('Native operational authority/schema conflict')
+    if value['aggregate_provider'] not in ('the_odds_api', 'sportsgameodds'):
+        raise ValueError('Unsupported aggregate provider')
     for k in ('sports', 'families'):
         allowed=SPORTS if k=='sports' else DEFAULT[k]
         if not isinstance(value[k], list) or not value[k] or len(set(value[k])) != len(value[k]) or set(value[k])-set(allowed):
@@ -124,7 +127,8 @@ def consume(directory, runtime, config, digest):
         candidate_digest=digest, at=datetime.now(timezone.utc).isoformat(),
         endpoints=ENDPOINTS, config=config, consumed=True, odds_api_requests=0,
         grant='Owner approves necessary live-data attempts and retries; bounded native and shared aggregate read-only scope',
-        aggregate_policy=AGGREGATE_POLICY.record(aggregate_scope(config),markets=aggregate_markets(config)))
+        aggregate_policy=(AGGREGATE_POLICY.record(aggregate_scope(config),markets=aggregate_markets(config))
+            if config['aggregate_provider']=='the_odds_api' else dict(provider='sportsgameodds', scope=aggregate_scope(config), status='awaiting_account_and_integration')))
     import os
     fd = os.open(directory/('attempt-'+runtime+'.json'), os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
     with os.fdopen(fd, 'w') as stream:
