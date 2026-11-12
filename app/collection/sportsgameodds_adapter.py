@@ -4,11 +4,13 @@ This module does not dispatch requests or write current rows. A complete cursor
 walk alone is not proof of absence: moving provider pages may omit events.
 """
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from collections import defaultdict
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
 from hashlib import sha256
 import json
 import re
+from urllib.parse import urlsplit
 
 LEAGUES = frozenset(('NFL', 'NCAAF', 'NBA', 'NCAAB', 'MLB', 'NHL'))
 MARKETS = {'ml': 'moneyline', 'sp': 'spread', 'ou': 'total'}
@@ -16,6 +18,8 @@ MAX_PAGE_BYTES = 16 * 1024 * 1024
 MAX_EVENTS = 100
 MAX_ODDS_PER_EVENT = 20000
 MAX_BOOKS_PER_ODD = 200
+P2P_BOOKS = frozenset(('novig', 'prophetx', 'prophetexchange', 'kalshi', 'polymarket', 'matchbook', 'betfairexchange'))
+OPPOSITE_SIDE = {'home': 'away', 'away': 'home', 'over': 'under', 'under': 'over'}
 
 
 def _pairs(pairs):
@@ -66,12 +70,113 @@ def _identity(value):
     return value
 
 
+def _baseline(odd, typ, prefix):
+    odds_key = prefix + 'Odds'
+    result = dict(available=odd.get(odds_key + 'Available') is True, price_american=None, line=None, source_at=None)
+    try:
+        if odd.get(odds_key) is not None:
+            result['price_american'] = _price(odd[odds_key])
+        if typ != 'ml':
+            line_key = prefix + ('Spread' if typ == 'sp' else 'OverUnder')
+            if odd.get(line_key) is not None:
+                result['line'] = _number(odd[line_key])
+    except ValueError:
+        result['available'] = False
+    if result['price_american'] is None or (typ != 'ml' and result['line'] is None):
+        result['available'] = False
+    return result
+
+
+def bookmaker_event_links(event):
+    """Retain bounded provider-attributed origin and path for manual review."""
+    links = event.get('links')
+    books = links.get('bookmakers') if isinstance(links, dict) else None
+    if not isinstance(books, dict):
+        return {}
+    retained = {}
+    for venue in sorted(P2P_BOOKS | {'pinnacle'}):
+        raw = books.get(venue)
+        if not isinstance(raw, str) or len(raw) > 2048 or not raw.isascii() or any(c.isspace() for c in raw):
+            continue
+        try:
+            url = urlsplit(raw)
+        except ValueError:
+            continue
+        if (url.scheme != 'https' or not re.fullmatch(r'[a-zA-Z0-9.-]{1,253}', url.netloc)
+                or not re.fullmatch(r'/[a-zA-Z0-9_./%~+-]{1,384}', url.path) or url.path.startswith('//')):
+            continue
+        retained[venue] = {'host': url.netloc.lower(), 'path': url.path}
+    return retained
+
+
 @dataclass(frozen=True)
 class Page:
     events: tuple
     quotes: tuple
     next_cursor: str | None
     receipt_sha256: str | None = None
+    payload_bytes: int = 0
+
+
+def clock_sample(page, *, admitted_at=None):
+    """Count receipt and admission clock stages for source-local observations."""
+    from app.comparison.game_phase import LIVE_SECONDS, sgo_event_status, sporting_phase
+
+    events = {e['event_id']: e for e in page.events}
+    starts = {eid: datetime.fromisoformat(event['starts_at']) for eid, event in events.items()}
+    eligible_live = {eid for eid, event in events.items()
+                     if sporting_phase({'status': sgo_event_status(event['status'])})['state'] == 'live'}
+    counts, reference = {}, defaultdict(list)
+    live_offers = []
+    for quote in page.quotes:
+        venue, event_id = quote['venue'], quote['event_id']
+        if venue not in P2P_BOOKS and venue != 'pinnacle':
+            continue
+        event = events[event_id]
+        cohort = (quote['league'], quote['phase'], quote['market'], venue)
+        tally = counts.setdefault(cohort, dict(observations=0, available=0, within_900_seconds=0,
+            within_15_seconds=0,
+            live_available=0, live_post_start=0, live_fresh=0, live_fresh_at_admission=0,
+            live_with_exact_pinnacle_pair=0, live_with_post_start_pinnacle_pair=0,
+            live_with_pinnacle_clocks=0, live_with_pinnacle_clocks_at_admission=0))
+        tally['observations'] += 1
+        tally['available'] += int(quote['available'])
+        source = quote['source_at']
+        receipt = datetime.fromisoformat(quote['received_at'])
+        clock = datetime.fromisoformat(source) if source else None
+        age = (receipt - clock).total_seconds() if clock else -1
+        if quote['available'] and 0 <= age <= 900:
+            tally['within_900_seconds'] += 1
+        if quote['available'] and 0 <= age <= LIVE_SECONDS:
+            tally['within_15_seconds'] += 1
+        live_available = quote['available'] and event_id in eligible_live
+        post_start = live_available and age >= 0 and clock >= starts[event_id]
+        fresh = post_start and age <= LIVE_SECONDS
+        fresh_at_admission = fresh and (admitted_at is not None and
+            receipt <= admitted_at <= clock + timedelta(seconds=LIVE_SECONDS))
+        tally['live_available'] += int(live_available)
+        tally['live_post_start'] += int(post_start)
+        tally['live_fresh'] += int(fresh)
+        tally['live_fresh_at_admission'] += int(fresh_at_admission)
+        line = Decimal(quote['line']) if quote['line'] is not None else None
+        key = (event_id, quote['market'], quote['odd_id'], quote['side'], line)
+        opposite_line = -line if line is not None and quote['market'] == 'spread' else line
+        opposite = (event_id, quote['market'], quote['opposing_odd_id'], OPPOSITE_SIDE[quote['side']], opposite_line)
+        if venue == 'pinnacle':
+            reference[key].append((opposite, live_available, post_start, fresh, fresh_at_admission))
+        elif live_available:
+            live_offers.append((tally, key, opposite, post_start, fresh, fresh_at_admission))
+    for tally, key, opposite, post_start, fresh, fresh_at_admission in live_offers:
+        same, other = reference[key], reference[opposite]
+        if len(same) != 1 or len(other) != 1 or same[0][0] != opposite or other[0][0] != key:
+            continue
+        for index, (field, offer_meets_clock) in enumerate((
+                ('live_with_exact_pinnacle_pair', True),
+                ('live_with_post_start_pinnacle_pair', post_start),
+                ('live_with_pinnacle_clocks', fresh),
+                ('live_with_pinnacle_clocks_at_admission', fresh_at_admission)), start=1):
+            tally[field] += int(offer_meets_clock and same[0][index] and other[0][index])
+    return counts
 
 
 def parse_page(body, received_at, *, leagues=LEAGUES, venues=None):
@@ -113,11 +218,13 @@ def parse_page(body, received_at, *, leagues=LEAGUES, venues=None):
         status, teams, odds = event.get('status'), event.get('teams'), event.get('odds', {})
         if not isinstance(status, dict) or not isinstance(teams, dict) or not isinstance(odds, dict) or len(odds) > MAX_ODDS_PER_EVENT:
             raise ValueError('event shape or odds limit')
-        names = {}
+        names, scores = {}, {}
         for role in ('home', 'away'):
             try:
                 team = teams[role]
                 names[role] = {'id': _identity(team['teamID']), 'name': _identity(team['names']['long'])}
+                if team.get('score') is not None:
+                    scores[role] = _number(team['score'])
             except (KeyError, TypeError) as exc:
                 raise ValueError('team identity') from exc
         if not isinstance(status.get('live'), bool) or not isinstance(status.get('started'), bool):
@@ -127,10 +234,32 @@ def parse_page(body, received_at, *, leagues=LEAGUES, venues=None):
         if not isinstance(aliases, list) or len(aliases) > 100:
             raise ValueError('event aliases')
         aliases = [_identity(alias) for alias in aliases]
+        # Retain only bounded full-game team points, rather than the provider's
+        # potentially large player/stat tree. These are audit observations,
+        # not venue settlement authority or a substitute for a source clock.
+        game_results = {}
+        results = event.get('results')
+        game = results.get('game') if isinstance(results, dict) else None
+        if isinstance(game, dict):
+            for role in ('home', 'away'):
+                values = game.get(role)
+                if isinstance(values, dict) and values.get('points') is not None:
+                    game_results[role] = _number(values['points'])
         event_row = {'event_id': event_id, 'aliases': aliases, 'league': league, 'teams': names,
                      'starts_at': _time(status.get('startsAt')), 'phase': phase,
-                     'status': {key: status.get(key) for key in ('started', 'live', 'ended', 'completed', 'cancelled', 'delayed')},
+                     'status': {key: status.get(key) for key in ('started', 'live', 'ended', 'completed', 'cancelled', 'delayed', 'finalized')},
+                     'scores': scores, 'game_results': game_results,
                      'received_at': received_at}
+        previous_starts = status.get('previousStartsAt')
+        if isinstance(previous_starts, list) and 0 < len(previous_starts) <= 16:
+            try:
+                event_row['previous_starts_at'] = [_time(value) for value in previous_starts]
+            except ValueError:
+                # Optional provider schedule history is supporting evidence.
+                pass
+        event_links = bookmaker_event_links(event)
+        if event_links:
+            event_row['bookmaker_event_links'] = event_links
         events.append(event_row)
         for odd_id, odd in odds.items():
             if not isinstance(odd, dict):
@@ -149,15 +278,8 @@ def parse_page(body, received_at, *, leagues=LEAGUES, venues=None):
             by_book = odd.get('byBookmaker', {})
             if not isinstance(by_book, dict) or len(by_book) > MAX_BOOKS_PER_ODD:
                 raise ValueError('book shape or limit')
-            fair = {'available': odd.get('fairOddsAvailable') is True, 'price_american': None,
-                    'line': None, 'source_at': None}
-            if fair['available']:
-                try:
-                    fair['price_american'] = _price(odd['fairOdds'])
-                    if typ != 'ml':
-                        fair['line'] = _number(odd['fairSpread' if typ == 'sp' else 'fairOverUnder'])
-                except (KeyError, ValueError):
-                    fair['available'] = False
+            fair = _baseline(odd, typ, 'fair')
+            consensus = _baseline(odd, typ, 'book') if any(key in odd for key in ('bookOdds', 'bookOddsAvailable', 'bookSpread', 'bookOverUnder')) else None
             for venue, book in by_book.items():
                 _identity(venue)
                 if venues is not None and venue not in venues:
@@ -185,7 +307,9 @@ def parse_page(body, received_at, *, leagues=LEAGUES, venues=None):
                         reason = reason or 'missing price, line or source clock'
                     if not entry['available']:
                         reason = reason or 'provider unavailable'
-                    if status.get('cancelled') is True or status.get('ended') is True or odd.get('cancelled') is True or odd.get('ended') is True:
+                    if (status.get('cancelled') is True or status.get('ended') is True
+                            or status.get('completed') is True or odd.get('cancelled') is True
+                            or odd.get('ended') is True):
                         reason = reason or 'event or market ended'
                     quotes.append({'event_id': event_id, 'league': league, 'phase': phase,
                                    'period': 'game', 'market': MARKETS[typ], 'side': side,
@@ -196,8 +320,9 @@ def parse_page(body, received_at, *, leagues=LEAGUES, venues=None):
                                    'available': entry['available'] and reason is None,
                                    'provider_available': entry['available'], 'unavailable_reason': reason,
                                    'odd_id': odd_id, 'opposing_odd_id': opposite,
-                                   'settlement': 'unverified', 'fair': fair.copy()})
-    return Page(tuple(events), tuple(quotes), cursor, sha256(body).hexdigest())
+                                   'settlement': 'unverified', 'fair': fair.copy(),
+                                   **({'consensus': consensus.copy()} if consensus is not None else {})})
+    return Page(tuple(events), tuple(quotes), cursor, sha256(body).hexdigest(), len(body))
 
 
 class Traversal:
@@ -208,6 +333,7 @@ class Traversal:
         self.max_pages = max_pages
         self.next_cursor = None
         self.pages = []
+        self.charged_objects = 0
         self._seen_cursors = set()
         self._seen_events = set()
         self.finished = False

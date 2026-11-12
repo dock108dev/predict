@@ -1,5 +1,27 @@
 # SportsGameOdds reviewed reference scope
 
+**Scope clarification, November 11:** The initial sportsbook EV mode selects
+the highest payout on the chosen outcome among FanDuel, DraftKings, BetMGM
+and Caesars via SportsGameOdds. Each eligible book supplies both sides of
+the exact full-game market and line in the same current frame. Proportional
+de-vig uses the selected sportsbook's two implied probabilities. EV before
+fees is the selected no-vig probability multiplied by the offer's decimal
+payout, minus one. The result is conditional on a decisive outcome and is
+shown separately from qualified reference and fee results. Native offers
+require exact cross-source matching. The labeled SGO fair odds and book
+consensus remain available with their own line and timing disclosures.
+See the [active plan](../NEXT_STEPS.md).
+
+**Running verification, November 11:** The live named Pinnacle path checks
+the offer's live lifecycle and fresh post-start price, plus both original
+reference clocks. Both reference clocks must be post-start and at most 15
+seconds old when evaluated. The 10:09 p.m. desk showed qualified Polymarket
+US fees and zero qualified EV. The retained SGO database had no Pinnacle
+rows. [SGO lists Pinnacle for Pro and higher](https://sportsgameodds.com/bookmakers/pinnacle-odds-api).
+The account is Rookie. A named result still requires exact occurrence and
+settlement and a fresh two-sided pair from an entitled source. See the
+[post-reload evidence](sgo-paid-observation-20261111.md).
+
 The initial reviewed multi-book calculation is limited to an NBA full-game,
 two-sided moneyline and a completed, normal decisive outcome including
 overtime. It does not establish a probability for voids, cancellation,

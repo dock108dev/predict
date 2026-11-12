@@ -11,6 +11,7 @@ from __future__ import annotations
 from contextlib import contextmanager
 from datetime import datetime, timezone
 import sqlite3
+import json
 from uuid import uuid4
 
 
@@ -47,7 +48,30 @@ class ObjectLedger:
                 CREATE TABLE IF NOT EXISTS sgo_http_request (account TEXT NOT NULL, requested_at REAL NOT NULL);
                 CREATE INDEX IF NOT EXISTS sgo_http_rate ON sgo_http_request(account, requested_at);
                 CREATE TABLE IF NOT EXISTS sgo_http_clock (account TEXT PRIMARY KEY, last_at REAL NOT NULL);
+                CREATE TABLE IF NOT EXISTS sgo_external_usage (
+                    window_id TEXT NOT NULL, observed_at REAL NOT NULL,
+                    previous_used INTEGER NOT NULL, observed_used INTEGER NOT NULL
+                );
                 CREATE TABLE IF NOT EXISTS sgo_ledger_identity (singleton INTEGER PRIMARY KEY CHECK(singleton=1), account TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS sgo_reservation_context (
+                    reservation_id TEXT PRIMARY KEY REFERENCES sgo_object_reservation(id),
+                    category TEXT NOT NULL, league TEXT
+                );
+                CREATE TABLE IF NOT EXISTS sgo_charge_breakdown (
+                    reservation_id TEXT NOT NULL REFERENCES sgo_object_reservation(id),
+                    league TEXT NOT NULL, phase TEXT NOT NULL, objects INTEGER NOT NULL,
+                    PRIMARY KEY(reservation_id, league, phase)
+                );
+                CREATE TABLE IF NOT EXISTS sgo_discovery_schedule (
+                    league TEXT PRIMARY KEY, completed_at REAL NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS sgo_discovery_progress (
+                    league TEXT PRIMARY KEY, checkpoint TEXT NOT NULL, updated_at REAL NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS sgo_discovery_cost (
+                    league TEXT PRIMARY KEY REFERENCES sgo_discovery_schedule(league),
+                    objects INTEGER NOT NULL
+                );
             ''')
 
     def account_identity(self) -> str:
@@ -145,11 +169,16 @@ class ObjectLedger:
             db.execute('COMMIT')
 
     def reserve(self, window_id: str, reservation_id: str, *, objects: int,
-                now: datetime, stopped: bool = False, source_paused: bool = False) -> None:
+                now: datetime, stopped: bool = False, source_paused: bool = False,
+                category: str | None = None, league: str | None = None) -> None:
         _integer(objects, 'objects', positive=True)
         current = _time(now)
         if not reservation_id:
             raise ValueError('reservation id required')
+        if category not in (None, 'discovery', 'event_refresh'):
+            raise ValueError('invalid request category')
+        if league is not None and (category != 'discovery' or league not in ('NFL', 'NCAAF', 'NBA', 'NCAAB', 'MLB', 'NHL')):
+            raise ValueError('invalid request league')
         if stopped or source_paused:
             raise RuntimeError('collection stopped or source paused')
         with self._connect() as db:
@@ -175,9 +204,12 @@ class ObjectLedger:
                 raise RuntimeError('insufficient object allowance')
             db.execute("INSERT INTO sgo_object_reservation(id,window_id,reserved,status,created_at) VALUES(?,?,?,'held',?)",
                        (reservation_id, window_id, objects, current))
+            if category is not None:
+                db.execute('INSERT INTO sgo_reservation_context VALUES(?,?,?)', (reservation_id, category, league))
             db.execute('COMMIT')
 
-    def resolve(self, reservation_id: str, *, charged: int, evidence: str, now: datetime) -> None:
+    def resolve(self, reservation_id: str, *, charged: int, evidence: str, now: datetime,
+                breakdown: dict[tuple[str, str], int] | None = None) -> None:
         """Resolve only with attributable evidence; unknown failures stay held.
 
         Zero is allowed only when the caller has evidence that no response was
@@ -187,6 +219,13 @@ class ObjectLedger:
         current = _time(now)
         if not evidence.strip():
             raise ValueError('evidence required')
+        if breakdown is not None:
+            for (league, phase), count in breakdown.items():
+                if league not in ('NFL', 'NCAAF', 'NBA', 'NCAAB', 'MLB', 'NHL', 'unknown') or phase not in ('pregame', 'live', 'started', 'unknown'):
+                    raise ValueError('invalid charge breakdown')
+                _integer(count, 'breakdown objects', positive=True)
+            if sum(breakdown.values()) != charged:
+                raise ValueError('charge breakdown must equal charged objects')
         with self._connect() as db:
             db.execute('BEGIN IMMEDIATE')
             row = db.execute('SELECT reserved,status,window_id,charged FROM sgo_object_reservation WHERE id=?', (reservation_id,)).fetchone()
@@ -204,13 +243,115 @@ class ObjectLedger:
                 raise ValueError('charge exceeds reservation; collection paused and hold retained')
             db.execute("UPDATE sgo_object_reservation SET status='resolved',charged=?,evidence=?,resolved_at=? WHERE id=?",
                        (charged, evidence, current, reservation_id))
+            if breakdown:
+                db.executemany('INSERT INTO sgo_charge_breakdown VALUES(?,?,?,?)',
+                               [(reservation_id, league, phase, count) for (league, phase), count in breakdown.items()])
             db.execute('COMMIT')
 
     def rolling_objects(self, window_id: str, *, since: datetime) -> int:
-        """Locally accounted or reserved object exposure since the given time."""
+        """Count recent exposure across this account's pacing boundaries."""
         start = _time(since)
+        account = window_id.split(':', 1)[0]
+        prefix = account + ':'
         with self._connect() as db:
-            return db.execute("SELECT COALESCE(SUM(CASE WHEN status='resolved' THEN charged ELSE MAX(reserved,COALESCE(charged,0)) END),0) FROM sgo_object_reservation WHERE window_id=? AND created_at>?", (window_id,start)).fetchone()[0]
+            return db.execute("SELECT COALESCE(SUM(CASE WHEN status='resolved' THEN charged ELSE MAX(reserved,COALESCE(charged,0)) END),0) FROM sgo_object_reservation WHERE (window_id=? OR substr(window_id,1,?)=?) AND created_at>?", (account,len(prefix),prefix,start)).fetchone()[0]
+
+    def charge_breakdown(self, window_id: str, *, since: datetime) -> list[dict]:
+        """Summarize resolved charges; legacy and unclassified charges stay unknown.
+
+        Outstanding reservations and external account use are separate exposure,
+        not attributed charges. Time is the request reservation time.
+        """
+        with self._connect() as db:
+            rows = db.execute('''SELECT COALESCE(c.category,'unknown'),
+                    COALESCE(b.league,c.league,'unknown'), COALESCE(b.phase,'unknown'),
+                    SUM(COALESCE(b.objects,r.charged))
+                FROM sgo_object_reservation r
+                LEFT JOIN sgo_reservation_context c ON c.reservation_id=r.id
+                LEFT JOIN sgo_charge_breakdown b ON b.reservation_id=r.id
+                WHERE r.window_id=? AND r.status='resolved' AND r.created_at>?
+                GROUP BY 1,2,3 ORDER BY 1,2,3''', (window_id, _time(since))).fetchall()
+        return [dict(category=category, league=league, phase=phase, objects=objects)
+                for category, league, phase, objects in rows]
+
+    def save_discovery_progress(self, league: str, checkpoint: dict, *, now: datetime) -> None:
+        if league not in ('NFL', 'NCAAF', 'NBA', 'NCAAB', 'MLB', 'NHL'):
+            raise ValueError('invalid discovery league')
+        data = json.dumps(checkpoint, sort_keys=True, separators=(',', ':'))
+        if len(data.encode()) > 3_000_000:
+            raise ValueError('discovery checkpoint too large')
+        with self._connect() as db:
+            db.execute("INSERT INTO sgo_discovery_progress VALUES(?,?,?) ON CONFLICT(league) DO UPDATE SET checkpoint=excluded.checkpoint,updated_at=excluded.updated_at",
+                       (league, data, _time(now)))
+
+    def load_discovery_progress(self, *, now: datetime) -> dict:
+        current = _time(now)
+        with self._connect() as db:
+            rows = db.execute('SELECT league,checkpoint,updated_at FROM sgo_discovery_progress').fetchall()
+        result = {}
+        for league, data, updated in rows:
+            # A long interruption or regressed clock invalidates the walk, not
+            # its already admitted source observations.
+            if 0 <= current - updated <= 86400:
+                try:
+                    result[league] = json.loads(data)
+                except (ValueError, TypeError):
+                    continue
+        return result
+
+    def clear_discovery_progress(self, league: str) -> None:
+        with self._connect() as db:
+            db.execute('DELETE FROM sgo_discovery_progress WHERE league=?', (league,))
+
+    def record_discovery(self, league: str, *, completed_at: datetime, objects: int | None = None) -> None:
+        """Persist scheduling only; traversal completion never implies absence."""
+        if league not in ('NFL', 'NCAAF', 'NBA', 'NCAAB', 'MLB', 'NHL'):
+            raise ValueError('invalid discovery league')
+        if objects is not None:
+            _integer(objects, 'discovery objects', positive=True)
+        when = _time(completed_at)
+        with self._connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            db.execute('DELETE FROM sgo_discovery_progress WHERE league=?', (league,))
+            db.execute('''INSERT INTO sgo_discovery_schedule VALUES(?,?)
+                ON CONFLICT(league) DO UPDATE SET completed_at=MAX(completed_at,excluded.completed_at)''',
+                (league, when))
+            if objects is not None:
+                db.execute('''INSERT INTO sgo_discovery_cost
+                    SELECT league,? FROM sgo_discovery_schedule WHERE league=? AND completed_at=?
+                    ON CONFLICT(league) DO UPDATE SET objects=excluded.objects''', (objects, league, when))
+            db.execute('COMMIT')
+
+    def discovery_cost(self, *, now: datetime) -> dict[str, int]:
+        with self._connect() as db:
+            return dict(db.execute('''SELECT c.league,c.objects FROM sgo_discovery_cost c
+                JOIN sgo_discovery_schedule s USING(league) WHERE s.completed_at<=?''', (_time(now),)))
+
+    def discovery_schedule(self, *, now: datetime) -> dict[str, datetime]:
+        current = _time(now)
+        with self._connect() as db:
+            rows = db.execute('SELECT league,completed_at FROM sgo_discovery_schedule').fetchall()
+        # A regressed local clock must not postpone a fresh discovery.
+        return {league: datetime.fromtimestamp(at, timezone.utc) for league, at in rows if at <= current}
+
+    def reconcile_increase(self, window_id: str, *, used: int, now: datetime) -> None:
+        """Record additional provider-reported use without releasing any exposure."""
+        _integer(used, 'used')
+        current = _time(now)
+        with self._connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            row = db.execute('SELECT initial_used,limit_objects FROM sgo_object_window WHERE id=?', (window_id,)).fetchone()
+            if row is None:
+                raise KeyError(window_id)
+            initial, limit = row
+            charged, held = db.execute("SELECT COALESCE(SUM(CASE WHEN status='resolved' THEN charged ELSE 0 END),0), COUNT(*) FILTER (WHERE status IN ('held','overrun')) FROM sgo_object_reservation WHERE window_id=?", (window_id,)).fetchone()
+            expected = initial + charged
+            if held or used < expected or used > limit:
+                raise RuntimeError('current account usage evidence unavailable or changed')
+            if used > expected:
+                db.execute('UPDATE sgo_object_window SET initial_used=initial_used+? WHERE id=?', (used-expected, window_id))
+                db.execute('INSERT INTO sgo_external_usage VALUES(?,?,?,?)', (window_id,current,expected,used))
+            db.execute('COMMIT')
 
     def status(self, window_id: str) -> dict:
         with self._connect() as db:

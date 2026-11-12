@@ -1,0 +1,7 @@
+{
+  "source_url": "https://docs.polymarket.us/fees",
+  "retrieved_at": "2026-11-11T22:25:38.514548+00:00",
+  "body_sha256": "3bd83185c12b086a3508eee29a355d663bd6c100bdf966ff516ea7851a74b0f3",
+  "normalized_sha256": "90ee55153cac932effbf2264334b0d3f66d6c7eb00e8e4b2fdacd9c2c8fc2495",
+  "review": "Compared the complete official page main text against the collector's normalized receipt. The four published standard taker coefficients remain 0.095, 0.085, 0.075 and 0.0695. Standard fees still use the acquired price from 0.01 to 0.99, the coefficient at insertion and round-half-even cents. The split-fill cap only reduces fees and the estimate assumes one fill. The November 11 and 14 changes apply to combos. Onboarding, rebates and account overrides do not establish the user's exact coefficient."
+}

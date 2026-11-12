@@ -12,6 +12,8 @@ import hashlib
 import json
 import re
 
+from .game_phase import LIVE_SECONDS
+
 VERSION = 'sgo-book-median-proportional-1'
 NAMED_VERSION = 'sgo-named-proportional-1'
 MAX_AGE_SECONDS = 1800
@@ -41,7 +43,7 @@ def _line(value):
     return Fraction(value)
 
 
-def _american(value):
+def american_probability(value):
     if not isinstance(value, str) or not DECIMAL.fullmatch(value):
         raise ValueError('price_invalid')
     n = Fraction(value)
@@ -76,6 +78,12 @@ def calculate(quotes, contract, *, at, evaluated_venue, named_venue=None,
     family, side = contract['market'], contract['side']
     if contract['phase'] not in ('pregame', 'live') or contract['period'] != 'game':
         raise ValueError('unsupported phase or period')
+    live_start = None
+    if contract['phase'] == 'live':
+        if not contract.get('starts_at'):
+            return {'available': False, 'reason': 'reference_live_start_unknown', 'contributors': [], 'exclusions': {}}
+        live_start = _time(contract['starts_at'])
+        maximum_age_seconds = min(maximum_age_seconds, LIVE_SECONDS)
     if family not in ('moneyline', 'spread', 'total') or side not in OPPOSITE:
         raise ValueError('unsupported contract')
     if (family == 'total') != (side in ('over', 'under')):
@@ -137,9 +145,11 @@ def calculate(quotes, contract, *, at, evaluated_venue, named_venue=None,
                 frame_receipt = _time(q.get('frame_received_at'))
                 if source > receipt or receipt > frame_receipt or frame_receipt > clock or source > clock:
                     raise ValueError('clock_future')
+                if live_start is not None and source < live_start:
+                    raise ValueError('reference_pre_start')
                 if (clock - source).total_seconds() > maximum_age_seconds:
                     raise ValueError('source_stale')
-                implied.append(_american(q.get('price_american')))
+                implied.append(american_probability(q.get('price_american')))
             probability = implied[0] / sum(implied)
             evidence = [{k: q.get(k) for k in ('frame_id', 'frame_received_at', 'odd_id', 'opposing_odd_id', 'side', 'line', 'price_american', 'source_at', 'received_at', 'settlement', 'settlement_evidence', 'jurisdiction', 'rule_source', 'rule_reviewed_at')} for q in pair]
             contributors.append({'venue': venue, 'probability': str(probability), 'inputs': evidence})
@@ -211,7 +221,8 @@ def validate_witness(witness, *, at):
             return fresh
         if (fresh['probability'] != saved['probability'] or fresh['fair_decimal_odds'] != saved['fair_decimal_odds']
                 or fresh['conditioning'] != saved['conditioning'] or fresh['contributors'] != basis['contributors']
-                or fresh['basis']['required_contributors'] != basis['required_contributors']):
+                or fresh['basis']['required_contributors'] != basis['required_contributors']
+                or fresh['basis']['maximum_age_seconds'] != basis['maximum_age_seconds']):
             raise ValueError('witness_calculation_conflict')
         return {'available': True, 'probability': fresh['probability'],
                 'basis_sha256': saved['basis_sha256'], 'basis': basis,

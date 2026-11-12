@@ -10,6 +10,7 @@ from .event_links import digest, instant, reviewed_links
 VERSION = 'predict-occurrence-match-1'
 MAX_MEMBERS = 2048
 UNKNOWN = (None, '', 'unknown', 'unverified')
+VENUE_EVENT_IDS = {'kalshi_event', 'novig_event'}
 
 
 def validate_match(value, source):
@@ -108,6 +109,10 @@ class OccurrenceResolver:
             if a[field] not in UNKNOWN and b[field] not in UNKNOWN and a[field] != b[field]:
                 return False
         common = set(a['shared']) & set(b['shared'])
+        if common & VENUE_EVENT_IDS and (
+                a['roles'] != b['roles'] or instant(a['start']) != instant(b['start'])
+                or a['replacement'] != b['replacement']):
+            return False
         return all(a['shared'][k] == b['shared'][k] for k in common)
 
     @classmethod
@@ -147,6 +152,33 @@ class OccurrenceResolver:
                 conflicts[k] = ['source_role_or_identity_conflict']
         if len(facts) > MAX_MEMBERS:
             raise ValueError('Occurrence membership capacity')
+        # A venue permalink has force only with its exact independently
+        # observed source event. Leave unmatched links in the original audit.
+        sgo_links = {}
+        for key, f in facts.items():
+            if key[0] == 'sportsgameodds':
+                for pair in f['shared'].items():
+                    if pair[0] in VENUE_EVENT_IDS:
+                        sgo_links.setdefault(pair, set()).add(key)
+        native_links = {}
+        for key, f in facts.items():
+            namespace = key[0] + '_event'
+            if key not in source_local and namespace in VENUE_EVENT_IDS:
+                native_links[key] = (namespace, f['source_game'])
+        confirmed_links = set()
+        for key, pair in native_links.items():
+            anchors = sgo_links.get(pair, ())
+            if len(anchors) == 1:
+                confirmed_links.add(pair)
+            elif anchors:
+                for conflict in (*anchors, key):
+                    conflicts.setdefault(conflict, []).append('duplicate_venue_event_link')
+        for key, f in facts.items():
+            f['shared'] = {k: v for k, v in f['shared'].items()
+                           if k not in VENUE_EVENT_IDS or key[0] == 'sportsgameodds' and (k, v) in confirmed_links}
+            if key in native_links and native_links[key] in confirmed_links:
+                k, v = native_links[key]
+                f['shared'][k] = v
         # Necessary-condition indexes only: the existing consistency/metadata
         # predicates still decide every candidate. Preserve original fact order
         # in audit output and retain peers sharing any (even conflicting) ID.
@@ -193,7 +225,8 @@ class OccurrenceResolver:
                 methods[k] = 'reviewed_source_id'
             elif reason != 'provider_edge_review_required':
                 conflicts.setdefault(k, []).append(reason)
-            elif k in self.members and self._consistent(f, self.members[k]['facts']):
+            elif (k in self.members and self._consistent(f, self.members[k]['facts'])
+                  and (k[0] != 'sportsgameodds' or self.members[k]['method'] != 'shared_provider_id')):
                 assigned[k] = self.members[k]['occurrence_id']
                 methods[k] = self.members[k]['method']
             elif k[0]=='the_odds_api':
@@ -316,10 +349,12 @@ class OccurrenceResolver:
                 from .event_links import provider_key
                 original['market_identity']['event'] = provider_key(k[0],original['event'])
                 aggregate = k[0] == 'the_odds_api'
+                sgo = k[0] == 'sportsgameodds'
                 verified=aggregate or r['verified'] is True and k not in source_local and not f['conflict']
                 original['event_scope'] = dict(policy='aggregate-provider-event-2' if aggregate else
+                    'sgo-provider-event-unverified-1' if sgo else
                     'native-provider-event-1' if verified else 'native-event-unverified-2',
-                    source=k[0] if aggregate else original['quote']['venue'],native_event_id=k[1])
+                    source=k[0] if aggregate or sgo else original['quote']['venue'],native_event_id=k[1])
                 original['verified'] = verified
             if not unresolved:
                 prior=prior_occurrences.get(oid)
@@ -334,7 +369,8 @@ class OccurrenceResolver:
                     e['sport']=original['market_identity']['sport']='hockey'
                 e['participants'] = {n:mapping.get(cid,cid) for n,cid in e['participants'].items()}
                 from .event_links import ordinary_event_key
-                original['market_identity']['event'] = ordinary_event_key(e,allow_missing_context=k in metadata_local)
+                missing_context = k in metadata_local or bool(set(f['shared']) & VENUE_EVENT_IDS)
+                original['market_identity']['event'] = ordinary_event_key(e, allow_missing_context=missing_context)
                 original.pop('event_scope',None)
                 for value in [original['selection'],*original.get('outcome_selections',[])]:
                     value['participant'] = mapping.get(value['participant'],value['participant'])

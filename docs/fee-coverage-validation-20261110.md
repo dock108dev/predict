@@ -1,9 +1,19 @@
 # Fee coverage validation checklist
 
+## Current fee work
+
+The running SGO configuration is tracked in [repository Next Steps](../NEXT_STEPS.md).
+The November 11 [fee and desk census](sgo-paid-observation-20261111.md#fee-verification-deadline-and-live-page-coverage-november-11-10431044-pm-eastern)
+showed active Polymarket US standard sports and eligible Novig pregame
+reviews and an expired local Kalshi review. The official schedule's effective
+terms and Predict's recheck deadline are separate. F08A owns renewal and
+effective-term handling. F09 measures numeric fee coverage independently from
+EV and two-leg coverage on the same unfiltered cohort.
+
 November 10, 2026 · existing `main` checkout · manual retail straight trades
 
-Engineering stops at the integrated local candidate and fixture results. The
-live evidence below is a separate validation pass. Keep normal collection and
+The November 10 evidence below describes the earlier integrated candidate
+and its separate live validation pass. Keep normal collection and
 the recorded controls and quota limits. Use disposable data for induced faults,
 synthetic arbs and any cases the live slate cannot supply.
 

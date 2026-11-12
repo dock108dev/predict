@@ -1,5 +1,9 @@
 # L05 — finish the usable live comparison product
 
+The current work is tracked in the repository root `NEXT_STEPS.md` and the
+[updated product scope](../../live-comparison-plan-20261104.md#current-scope--november-11-2026).
+The entries below describe earlier deliveries.
+
 ## Current continuation — November 7
 
 The November 7 follow-up and its subsequent delivery are recorded locally in

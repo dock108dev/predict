@@ -1,8 +1,11 @@
 # Retained coverage
 
-## Current planning authority — November 4, 2026
+## Current planning authority — November 11, 2026
 
-The [November 4 live-comparison plan](live-comparison-plan-20261104.md) makes ordinary automatic source-to-screen publication required product scope. Provider-wide 99% denominator and multi-hour assurance targets below remain separate follow-ons. Their deferral cannot be used to defer the normal live ranked list.
+The [live comparison plan](live-comparison-plan-20261104.md) governs the
+existing SportsGameOdds desk. The 99% offered-data target and sustained
+verification below apply to the current delivery. Source prices with missing
+finance stay useful and visible while coverage work continues.
 
 Ordinary Odds links to `/current/coverage`. Its `/api/coverage` reader consumes a
 compact latest PostgreSQL publication produced by the independent data runtime.
@@ -13,32 +16,30 @@ historical reader.
 ## Current scope of this document
 
 The ordinary product is a coherent comparison snapshot and math under explicit
-assumptions. Complete-source streaming coverage and the numerical targets below
-are follow-on assurance for claims about provider-wide/live completeness. They do
-not block a useful partial snapshot or calculation whose necessary scenario inputs
-are defined. No failed historical target is relabeled passed. Preserve actual
+assumptions. The numerical targets below measure coverage and sustained live completeness.
+Partial snapshots and calculations with valid inputs still serve the desk while
+the target remains open. Historical results retain their measured scope. Preserve actual
 source coverage, missing/held-source disclosure and exact observed clocks.
 
 ## Next-version target — bulk live data and 99% coverage
 
-The October 26, 2026 direction defines the follow-on bulk-live coverage target.
-For that assurance, this section specifies required behavior; the retained-cohort
-implementation described below has **not** achieved it. Coverage must expose offered scope independently of the
-subset already stored. Bulk acquisition and raw visibility precede semantic
-qualification and maths. No per-game installation, approval or qualification
-sequence is required. Small regression cases may support engineering, but cannot
-qualify broad live coverage.
+The October 26 direction established the offered-data target. The November 11
+SportsGameOdds cutover updated the active routes and benchmark. The repository
+root `NEXT_STEPS.md` is the engineering queue. The current implementation still
+needs an independently enumerated offered denominator and sustained evidence.
 
 ### Scope and denominator
 
-The target is the full available pregame offering for NFL, NCAAF, NBA, NCAAB, MLB
-and NHL, moneyline/winner, spread and total, full game, across Kalshi, Polymarket
-US, Novig and ProphetX; Pinnacle is measured separately as reference-only. Include
-all available in-scope lines and native sides, not just a selected main line or a
-handpicked near-term cohort. Other periods, futures and extra providers remain
-outside this version. No new narrower time horizon may be introduced to improve
-the percentage. Started/ended/postponed/unknown states need explicit evidence and
-separate current eligibility; preserve inspectable raw observations.
+Measure the authorized NFL, NCAAF, NBA, NCAAB, MLB and NHL full-game winner,
+spread and total scope across direct Kalshi and Polymarket US and supported
+SGO-attributed offers. Include all available lines and native sides on the
+in-scope routes. Count pregame and supported in-game cohorts separately.
+FanDuel, DraftKings, BetMGM and Caesars are sportsbook reference inputs.
+Existing source-local SGO Novig and Kalshi observations retain their distinct
+identities. New P2P venues, Pinnacle or Circa acquisition, and other market
+periods remain backlog work. Keep any feed-limited or inaccessible population
+visible. Report seasonal absence and start, suspend and end transitions with
+source evidence.
 
 Define one offered unit as provider + venue + native event + native market +
 outcome/side + native line + period. Deduplicate reconnects and repeated pages;
@@ -64,7 +65,9 @@ evidence. Provider absence must not be inferred from a failed request or a cap.
 | Fresh coverage | At least 99% of offered units have valid, independently supported currentness at the sampled time under the declared source-specific policy. Recent receipt, ingestion or model time cannot make an old source quote fresh. |
 | Validation accounting | 100% of received units have an explicit valid, invalid, missing-fact, stale, unsupported or pending disposition, with reason and provenance. This accounting percentage is not the raw/fresh coverage percentage. |
 | Comparison processing | At least 99% of reference-enumerated eligible cross-venue comparisons are evaluated and published; count deterministic output selections separately from all evaluated candidates. Missing peers and unresolved meaning remain measured gaps. |
-| Financial processing | At least 99% of valid input sets eligible for each implemented metric are computed/published. Separately show eligible/total offered and blocked counts by missing fee, payout, probability, size or reference input. An empty eligible set cannot establish financial completion. |
+| Numeric fees | At least 99% of distinct current displayed offers have applicable fees or documented conservative fees. Use the unfiltered offer cohort and count fee-only qualification independently of EV. |
+| EV processing | At least 99% of independently enumerated eligible offer/reference inputs are computed and published. Report sportsbook, qualified before-fee and after-fee results separately. Show eligible versus offered and all upstream missing inputs. |
+| Arbitrage processing | At least 99% of independently enumerated eligible opposing two-leg inputs are computed and published. Report before-fee, both-fee and execution-qualified coverage separately. A complete evaluation may have zero positive results. An empty eligible population has no percentage. |
 
 Raw acquisition, display and freshness targets apply both globally and to each
 nonempty venue/league/family cell, with reference cells reported separately. A
@@ -92,13 +95,14 @@ must be separate measures. A 15-minute paid cadence cannot be labeled a
 continuous fresh feed merely because every scheduled request succeeded.
 
 Verify the entire live scope through cold catch-up and then at least two
-consecutive operating hours spanning eight scheduled aggregate cycles. Sample
-full-scope metrics at least once per minute, plus each completed aggregate cycle;
-report cold catch-up separately and require each steady-state sample to meet the
-applicable 99% target. This is a next-version engineering acceptance design, not
-a previously measured capability. Include an ordinary listing change if observed;
-exercise missing transitions in regression tests rather than force paid events.
-Recheck supported behavior after app-only restart without interrupting data work.
+consecutive operating hours under normal load. Sample full-scope metrics at least
+once per minute and at completed refresh boundaries. Report cold catch-up
+separately and record each steady-state result against its applicable target.
+SGO uses adaptive refresh and discovery. Record natural discovery completion
+and interleaving at their actual due times. The prior eight fixed-cycle rule
+described the old 15-minute Odds API scheduler. Use controlled regressions for
+transitions that do not occur during observation. Recheck app-only restart and
+independent data-owner continuity.
 
 If a source's offering, timestamps, cadence or account budget cannot satisfy the
 target, retain the measured deficit and concrete alternative. Do not silently

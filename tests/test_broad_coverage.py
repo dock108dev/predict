@@ -145,6 +145,18 @@ class BroadCoverage(unittest.TestCase):
         self.assertEqual(unknown['global_totals']['pending_observations'],1)
         self.assertEqual(unknown['global_totals']['supported_comparison_observations'],0)
 
+    def test_live_coverage_uses_post_start_source_clock_and_live_expiry(self):
+        row, _ = observation(source_at='2026-10-17T15:59:55Z')
+        row['event'].update(scheduled_start='2026-10-17T15:59:50Z', status={'live': True})
+        row['quote']['times']['received_at'] = '2026-10-17T15:59:56Z'
+        live = build([row], [], config=config(), owner=owner(), at=AT)['global_totals']
+        self.assertEqual(live['current_observations'], 1)
+        expired = build([row], [], config=config(), owner=owner(), at='2026-10-17T16:00:11Z')['global_totals']
+        self.assertEqual(expired['last_known_observations'], 1)
+        row['event']['status'].clear()
+        unknown = build([row], [], config=config(), owner=owner(), at=AT)['global_totals']
+        self.assertEqual(unknown['last_known_observations'], 1)
+
     def test_displayed_differences_are_separate_from_eligible_pair_directions(self):
         samples=[observation(venue=v,suffix=str(n)) for n,v in enumerate(('kalshi','kalshi','polymarket_us','novig'))]
         rows=[r for r,p in samples];prices=[p for r,p in samples]
@@ -225,6 +237,45 @@ class BroadCoverage(unittest.TestCase):
         held=build([],[],config=config(),owner=owner(status=dict(quota=dict(pause='quota_unknown',reserved=9,unresolved_attempts=3))),at=AT)
         self.assertTrue(held['aggregate_acquisition']['held'])
         self.assertEqual(next(c for c in held['cells'] if c['id']=='NFL|novig|moneyline|full_game')['configuration_state'],'held')
+
+    def test_sgo_coverage_uses_its_own_acquisition_evidence_and_source_state(self):
+        from app.comparison.capabilities import inventory
+
+        sgo_config = config(aggregate_provider='sportsgameodds')
+        selectors = next(c for c in inventory(sgo_config) if c['league'] == 'NFL'
+                         and c['source'] == 'novig' and c['family'] == 'moneyline' and c['period'] == 'full_game')
+        self.assertEqual(selectors['native_selectors'], ['points-away-game-ml-away', 'points-home-game-ml-home'])
+
+        ledger = CoverageLedger({'novig': SPORTS})
+        ledger.observe('NFL', 'novig', family='moneyline', checked_at=AT, status='failed_source', reason='source_failed')
+        status = dict(quota=dict(pause='quota_unknown', reserved=55, unresolved_attempts=20),
+                      sources=[dict(provider='sportsgameodds', metrics=dict(objects=dict(held=0, paused=False)))])
+        native, _ = observation(suffix='native')
+        aggregate, _ = observation(suffix='aggregate')
+        aggregate['quote']['source']['provider'] = 'sportsgameodds'
+        states = dict(kalshi=dict(state='unavailable'), sportsgameodds=dict(state='available'))
+        value = build([native, aggregate], [], config=sgo_config, at=AT, queries=ledger.snapshot()['cells'],
+                      owner=owner(status=status, states=states, paused_sources=['the_odds_api']))
+        cells = {c['id']: c for c in value['cells']}
+        novig = cells['NFL|novig|moneyline|full_game']
+        self.assertEqual((novig['provider'], novig['configuration_state']), ('sportsgameodds', 'enabled'))
+        self.assertEqual(novig['discovery']['status'], 'not_checked')
+        self.assertEqual(value['aggregate_acquisition']['reserved_objects'], 0)
+        self.assertFalse(value['aggregate_acquisition']['held'])
+        self.assertEqual(cells['NFL|kalshi|moneyline|full_game']['counts']['current_observations'], 1)
+        old_query = next(c for c in ledger.snapshot()['cells'] if c['sport'] == 'NFL' and c['venue'] == 'novig')
+        new_query = dict(old_query, provider='sportsgameodds')
+        queries = merge_queries([new_query], [old_query])
+        self.assertEqual(len(queries), 2)
+        self.assertEqual(sum(c.get('provider') == 'sportsgameodds' for c in queries), 1)
+
+        status['sources'][0]['metrics']['objects']['held'] = 2
+        paused = build([native, aggregate], [], config=sgo_config, at=AT, owner=owner(
+            status=status, states=dict(kalshi=dict(state='available')), paused_sources=['sportsgameodds']))
+        cells = {c['id']: c for c in paused['cells']}
+        self.assertEqual(paused['aggregate_acquisition']['reserved_objects'], 2)
+        self.assertEqual(cells['NFL|novig|moneyline|full_game']['configuration_state'], 'held')
+        self.assertEqual(cells['NFL|kalshi|moneyline|full_game']['counts']['current_observations'], 1)
 
     def test_overlapping_reason_counts_primary_reconciliation_and_original_examples(self):
         row,price=observation(source_at=None)

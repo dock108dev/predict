@@ -41,6 +41,35 @@ def test_real_stream_frames_produce_exact_single_fill_fee():
     assert evidence['reset_proof']['source_book']['seq']==11
 
 
+def test_signed_current_price_is_retained_when_one_order_is_too_small_for_fee():
+    from app.collection.novig_v3_current import records_for_book
+
+    owner = StreamBook('event', 'market')
+    owner.apply(snapshot(qty=99), T0)
+    owner.apply(delta(life=life(5, 'GOLIVE')), T1)
+    owner.request_snapshot(2)
+    owner.apply(snapshot(seq=11, life=5, qty=99, nonce=2), T2)
+    # The signed transport stamps the validated packet clock after applying it.
+    owner.book_source_at = T2
+    _, fixture = sample()
+    start = int(AT.timestamp() * 1000) - 60_000
+    event = dict(fixture['native_event'], league='NCAAB', startsTs=start)
+    market = dict(fixture['native_market'], startsTs=start, outcomes=[
+        dict(outcomeId='outcome', name='Miami Hurricanes +2.5', status='TBD'),
+        dict(outcomeId='other', name='Alabama Crimson Tide -2.5', status='TBD'),
+    ])
+    participants = dict(eventId='event', homeCompetitorId='mia', awayCompetitorId='ala', competitors=[
+        dict(competitorId='mia', name='Miami Hurricanes', marketIds=['market']),
+        dict(competitorId='ala', name='Alabama Crimson Tide', marketIds=['market']),
+    ])
+    row, = records_for_book(owner, event, market, participants, terms_at=T2, at=AT.isoformat(), runtime_id='fixture')
+    q = row['quote']
+    assert q['original']['value'] == '0.5' and q['state'] == 'available'
+    assert q['novig_v3_evidence']['available_native_contracts'] == 99
+    trade = dict(q, market=dict(market='spread', period='full_game', line='2.5'))
+    assert live_fee(trade, AT, q['novig_v3_evidence'])['reason'] == 'novig_single_price_fill_evidence_missing'
+
+
 def test_reset_resume_disconnect_and_two_independent_sequence_gaps():
     event, market = sample()[1]['native_event'], sample()[1]['native_market']
     for channel in ('book','lifecycle'):

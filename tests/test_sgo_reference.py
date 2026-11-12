@@ -155,13 +155,75 @@ def test_vendor_fair_is_attributed_separately_and_never_freshened():
         'native_outcome_id':'over','native_line':'224.5'},'original':{'value':'-110'},
         'times':{'received_at':AT},'provenance':{'sha256':'a'*64}}}
     facts={'event_id':'e','odd_id':'over','venue':'novig','line':'224.50','price_american':'-110',
-        'receipt_sha256':'a'*64,'received_at':AT,'fair':{'available':True,'price_american':'-105','line':'225','source_at':None}}
+        'receipt_sha256':'a'*64,'received_at':AT,'fair':{'available':True,'price_american':'-105','line':'224.50','source_at':None}}
     result=fair_comparison(record,[{'facts':facts}])
-    assert result['line']=='225' and result['source_at'] is None and result['provider']=='sportsgameodds'
+    assert result['line']=='224.50' and result['same_line'] and result['source_at'] is None and result['provider']=='sportsgameodds'
     assert 'unknown' in result['meaning']
-    for change in ({'receipt_sha256':'b'*64},{'received_at':'2026-11-10T20:00:01Z'},
-                   {'fair':{'available':False,'price_american':'-105'}}):
+    different=fair_comparison(record,[{'facts':dict(facts,fair={'available':True,'price_american':'-105','line':'225'})}])
+    assert different['line']=='225' and different['same_line'] is False
+    unavailable=fair_comparison(record,[{'facts':dict(facts,fair={'available':False,'price_american':'-105','line':'225'})}])
+    assert unavailable['available'] is False and unavailable['line'] == '225'
+    for change in ({'receipt_sha256':'b'*64},{'received_at':'2026-11-10T20:00:01Z'}):
         assert fair_comparison(record,[{'facts':dict(facts,**change)}]) is None
+    new_at = '2026-11-10T20:00:01Z'
+    refreshed = dict(id='q', revision='r', facts=dict(facts, receipt_sha256='b'*64, received_at=new_at,
+        phase='pregame', available=True, source_at=AT, opposing_odd_id='under',
+        consensus=dict(available=True, price_american='-110', line='225', source_at=None)))
+    record['quote']['times']['source_at'] = AT
+    record['quote']['state'] = 'available'
+    record['comparison_source_metadata'] = dict(provider_phase='pregame', provider_opposing_odd_id='under')
+    frame = {'facts': {'provider':'sportsgameodds','event_id':'e','members':[['q','r']]}}
+    display = fair_comparison(record, [refreshed], frame)
+    assert display['received_at'] == new_at and not display['consensus']['same_line']
+    assert display['consensus']['source_at'] is None
+    refreshed['facts']['source_at'] = new_at
+    assert fair_comparison(record, [refreshed], frame) is None
+
+
+def test_best_payout_selects_one_book_then_devigs_its_opposite():
+    from app.collection.sportsgameodds_current_rows import current_rows
+    from app.comparison.sgo_sportsbook_baseline import current, select
+    from app.storage.sportsgameodds_reference import prepare_frames, prepare_page
+    from app.storage.store import stamp
+    from tests.test_sportsgameodds_adapter import parse, response
+
+    data = response()
+    event = data['data'][0]
+    event['status'].update(startsAt='2026-11-10T19:59:55Z', started=True, live=True)
+    home = event['odds']['points-home-game-sp-home']
+    offer = dict(available=True, odds='+140', spread='-1.5', lastUpdatedAt=AT)
+    home['byBookmaker'] = {
+        'novig': offer,
+        'fanduel': dict(offer, odds='+120'),
+        'draftkings': dict(offer, odds='+110'),
+        'betmgm': dict(offer, odds='-105'),
+        'caesars': dict(offer, odds='+200', spread='-2.5'),
+    }
+    away = dict(home, oddID=home['opposingOddID'], opposingOddID=home['oddID'], statEntityID='away', sideID='away',
+                byBookmaker={'fanduel':dict(offer, odds='-150', spread='1.5'),
+                             'draftkings':dict(offer, odds='-115', spread='1.5'),
+                             'betmgm':dict(offer, odds='-110', spread='1.5'),
+                             'caesars':dict(offer, odds='-230', spread='2.5')})
+    event['odds'][away['oddID']] = away
+
+    def captured():
+        page = parse(data)
+        offered, _ = current_rows(page, page.receipt_sha256)
+        rows = prepare_page(page)
+        return offered[0], rows, prepare_frames(page, rows)[0]
+
+    record, rows, frame = captured()
+    value = select(record, rows, frame, at=AT)
+    assert value['book'] == 'fanduel' and value['candidate_books'] == 3
+    assert [leg['price_american'] for leg in value['prices']] == ['+120', '-150']
+    assert Fraction(value['probability']) == Fraction(25, 58)
+    assert Fraction(value['return_percent']) == Fraction(100, 29)
+    assert current(value, ['quote', 'contract', 'event', 'receipt:'+value['frame_id']], at=stamp(AT))
+    assert not current(value, ['quote', 'contract', 'event', 'receipt:changed'], at=stamp(AT))
+    assert select(record, rows, frame, at='2026-11-10T20:00:16Z') is None
+    away['byBookmaker']['fanduel']['available'] = False
+    record, rows, frame = captured()
+    assert select(record, rows, frame, at=AT)['book'] == 'draftkings'
 
 
 def publication_fixture():
@@ -220,7 +282,7 @@ def test_ordinary_publication_sgo_mode_uses_all_dependencies_and_never_legacy(mo
               'policy_identity': 'policy', 'epoch': 'epoch'}
     result = {'rows': [row], 'pairs': [], 'assumptions': {'revision': 'settings', 'benchmark_venue': 'pinnacle'}}
     monkeypatch.setattr(snapshot_fee_outcome, 'reviews', lambda at: {})
-    monkeypatch.setattr(sgo_reference_publication, 'owned_reference_evidence', lambda row, inputs, source: (inputs.get('sgo_reference_inputs') or {}).get(row['id']))
+    monkeypatch.setattr(sgo_reference_publication, 'owned_reference_evidence', lambda row, inputs, source, **kwargs: (inputs.get('sgo_reference_inputs') or {}).get(row['id']))
     monkeypatch.setattr(ordinary, 'quote_authority', lambda *args, **kwargs: {
         'dependency': 'native', 'expected': ['r', 'c', 'e'], 'reasons': [],
         'current_until': '2026-11-10T20:30:00Z', 'lifecycle': {'state': 'scheduled'}})
@@ -235,6 +297,59 @@ def test_ordinary_publication_sgo_mode_uses_all_dependencies_and_never_legacy(mo
     inputs['sgo_reference_inputs'] = {}
     again = ordinary.bind({'rows': [deepcopy(row)], 'pairs': [], 'assumptions': result['assumptions']}, inputs, 'ready')['rows'][0]
     assert again['probability'] is None and again['reference'] is None
+
+
+def test_live_sgo_reference_and_native_kalshi_fee_reach_current_desk(monkeypatch):
+    from app.comparison import sgo_reference_publication, snapshot_fee_scope
+    from app.comparison.inspection_math import offer_math
+    from app.dashboard.trade_desk import offer
+    from app.storage import ordinary_publication as ordinary
+
+    row, _, binding, _, _ = publication_fixture()
+    start = '2026-11-10T19:00:00Z'
+    series = 'KXNBASPREAD'
+    event = series + '-26NOV10BOSNYK'
+    source = dict(provider='kalshi', native_event_id=event, native_market_id=event+'-BOS7',
+                  native_side='yes', native_outcome_id='yes')
+    row.update(league='NBA', kind='single', start_at=start, source=source, cost_per_normal_claim=None,
+               original=dict(value='0.4', units='usd_per_contract', quantity_units='contracts', payout_units='USD', payout='1'),
+               times={'source_at': AT, 'received_at': AT}, same_outcome={'supported': True})
+    scope = dict(series_id=series, phase='live', native_key=['kalshi', event, source['native_market_id'], 'yes', 'yes'])
+    original = dict(row, original_record={'event': {'status': {'live': True}}, 'quote': {'source': source},
+                                         'comparison_source_metadata': scope})
+    quotes = [dict(q, phase='live') for q in pair('pinnacle')]
+    contract = dict(CONTRACT, phase='live', starts_at=start)
+    _, witness = capture_witness(quotes, contract, at=AT, evaluated_venue='kalshi', named_venue='pinnacle')
+    deps = [dict(q, dependency=q['odd_id'], expected_revision=['r','c','e'], state='available') for q in quotes]
+    candidate = dict(witness=witness.wire, binding=dict(binding, contract=contract), dependencies=deps)
+    current = {key: ['r','c','e'] for key in ('home','away','native')}
+    inputs = dict(captured_at=AT, quotes=[original], references=[], dependencies=current,
+                  reference_provider='sportsgameodds', policy_identity='policy', epoch='epoch')
+    settings = dict(revision='settings', benchmark_venue='pinnacle')
+    monkeypatch.setattr(sgo_reference_publication, 'owned_reference_evidence', lambda *args, **kwargs: candidate)
+    monkeypatch.setattr(ordinary, 'quote_authority', lambda *args, **kwargs: dict(
+        dependency='native', expected=current['native'], provider='kalshi', reasons=[],
+        current_until='2026-11-10T20:00:15Z', lifecycle={'state':'live'}))
+    monkeypatch.setattr(snapshot_fee_scope, 'kalshi_account', lambda at: dict(
+        membership='direct', review_before='2026-11-10T20:00:10Z'))
+
+    result = ordinary.bind(dict(rows=[row], pairs=[], assumptions=settings), inputs, 'ready')
+    owner = dict(healthy=True, active=True, config={'aggregate_provider':'sportsgameodds'})
+    states = {k: dict(state='available') for k in ('kalshi','polymarket_us','sportsgameodds')}
+    def read(at):
+        return ordinary.project(result, current, owner, states, at=ordinary.stamp(at), policy='policy', epoch='epoch')['rows'][0]
+
+    current_row = read(AT)
+    assert current_row['gross_profit_per_claim'] == '0.1'
+    assert current_row['gross_return_percent'] == '25'
+    assert current_row['conditional_trade_benchmark']['trade_fee_usd'] == '0.0168'
+    assert Fraction(current_row['conditional_return_percent']) == Fraction(10400, 521)
+    assert Fraction(current_row['conservative_return_percent']) == Fraction(400, 21)
+    assert offer(current_row, 'gross_return_percent')['reference']['american'] == '+100'
+    assert offer_math(current_row)['fair_reference']['contributors'][0]['venue'] == 'pinnacle'
+    after_fee_expiry = read('2026-11-10T20:00:11Z')
+    assert after_fee_expiry['gross_return_percent'] == '25' and after_fee_expiry['conditional_return_percent'] is None
+    assert read('2026-11-10T20:00:16Z')['gross_return_percent'] is None
 
 
 def test_owned_reference_requires_retained_pinnacle_and_native_evidence():
@@ -314,7 +429,8 @@ def test_owned_reference_requires_retained_pinnacle_and_native_evidence():
     assert 'input_replaced_or_removed' in validity(authorities[0],changed,stamp(AT))
     saved=deepcopy(nr['event']['shared_provider_ids'])
     nr['event'].pop('shared_provider_ids')
-    assert owned_reference_evidence(native,data,source) is None
+    missing, _ = bind_captured(native,source,data)
+    assert missing['reason'] == 'sgo_reference_occurrence_unverified'
     nr['event']['shared_provider_ids']=saved
     nr['event']['shared_provider_ids']={'sportradar':'different'}
     assert owned_reference_evidence(native,data,source) is None
@@ -326,8 +442,19 @@ def test_owned_reference_requires_retained_pinnacle_and_native_evidence():
     nr['event']['scheduled_start']=native['start_at']
     for ref in refs:
         ref['original_record']['event']['scheduled_start']=native['start_at']
-        ref['original_record']['comparison_source_metadata']['provider_phase']='live'
+        ref['original_record']['comparison_source_metadata'].update(provider_phase='live',
+            provider_event_status={'started':True,'live':True})
     source['lifecycle']['state']='live'
     assert owned_reference_evidence(native,data,source) is not None
+    live, authority = bind_captured(native, source, data)
+    assert live['available'] and live['reference_calculation']['maximum_age_seconds'] == 15
+    assert all(a['lifecycle']['state'] == 'live' for a in authority)
+    assert all(stamp(a['current_until']) == stamp('2026-11-10T20:00:15Z') for a in authority)
+    data['captured_at']='2026-11-10T20:00:15.001Z'
+    stale, authority = bind_captured(native, source, data)
+    assert not stale['available'] and stale['reason'] == 'sgo_reference_pair_timing_unverified' and authority == []
+    data['captured_at']=AT
     refs[0]['original_record']['comparison_source_metadata']['provider_phase']='pregame'
-    assert owned_reference_evidence(native,data,source) is None
+    diagnostic = {}
+    assert owned_reference_evidence(native,data,source,diagnostics=diagnostic) is None
+    assert diagnostic['reason'] == 'sgo_reference_pair_timing_unverified'

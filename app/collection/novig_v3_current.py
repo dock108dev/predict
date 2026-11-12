@@ -1,7 +1,7 @@
 """Read-only signed Novig producer for the ordinary current-row owner."""
 import asyncio
 from copy import deepcopy
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 import json
 import re
@@ -90,7 +90,9 @@ def records_for_book(owner, event, market, participants, *, terms_at, at, runtim
             or (eid, mid) != (owner.event_id, owner.market_id) or not owner.book_source_at):
         return []
     start = datetime.fromtimestamp(starts / 1000, timezone.utc).isoformat()
-    if not stamp(start) <= stamp(owner.book_source_at) <= stamp(owner.book_at):
+    captured_at = stamp(at)
+    if (not stamp(start) <= stamp(owner.book_source_at) <= stamp(owner.book_at) <= captured_at
+            or captured_at - stamp(owner.book_source_at) > timedelta(seconds=15)):
         return []
     sides = participants['competitors']
     teams = {identity(v['competitorId']): v for v in sides}
@@ -112,7 +114,7 @@ def records_for_book(owner, event, market, participants, *, terms_at, at, runtim
                            line=line, outcome_set=hashed(choices), rules=VERSION)
     result = []
     for oid, selection in choices.items():
-        evidence = owner.evidence(event, market, oid, at=owner.book_at)
+        evidence = owner.evidence(event, market, oid, at=owner.book_at, minimum_quantity=1)
         if evidence is None:
             continue
         evidence['terms_at'] = terms_at
@@ -121,15 +123,11 @@ def records_for_book(owner, event, market, participants, *, terms_at, at, runtim
                       binding_id=hashed([eid, mid, oid, selection]))
         original = dict(value=evidence['price'], units='usd_per_contract', payout='1',
                         payout_units='USD', quantity_units='novig_v3_cent_contracts', role='comparison')
-        check = dict(source=source, original=original, market=dict(market='winner' if family == 'moneyline' else family,
-                                                                  period='full_game', line=line))
-        if not live_fee(check, stamp(at), evidence)['available']:
-            continue
         q = dict(id='', revision=1, venue='novig', source=source, original=original,
                  times=dict(source_at=owner.book_source_at, received_at=owner.book_at, projected_at=None,
                             source_time_kind='provider_book'), state='available',
                  rule_note='Signed full-game book. Exceptional settlement requires separate evidence.',
-                 cost_note='One immediate fill of 100 native one-cent contracts.',
+                 cost_note='Signed top price. A 100-contract fee estimate requires applicable terms and one-order size.',
                  freshness_policy=dict(version=VERSION, maximum_age_seconds=15),
                  provenance=dict(mode='current', real_source=True, sha256=hashed(evidence)),
                  novig_v3_evidence=evidence, novig_runtime_id=runtime_id)
@@ -149,7 +147,7 @@ class NovigCurrentWorker:
         self.service = service
         self.transport, self.stream, self.key_loader = transport, stream, key_loader
         self.closed = False
-        self.metrics = dict(state='initializing', subscriptions=0, live_qualified=0)
+        self.metrics = dict(state='initializing', subscriptions=0, live_prices=0, live_qualified=0)
 
     def allowed(self):
         return (not self.closed and self.service.dispatch
@@ -247,8 +245,17 @@ class NovigCurrentWorker:
             if admitted:
                 await call(self.service, self.service.novig_quotes, 'novig',
                            [row for rows in admitted.values() for row in rows], [])
-                active.update((mid,len(rows)) for mid,rows in admitted.items())
-            self.metrics['live_qualified'] = sum(active.values())
+                for mid, rows in admitted.items():
+                    fees = 0
+                    for row in rows:
+                        q, m = row['quote'], row['market_identity']
+                        market = dict(market='winner' if m['family'] == 'moneyline' else m['family'],
+                                      period=m['period'], line=m['line'])
+                        fees += live_fee(dict(q, market=market), datetime.now(timezone.utc),
+                                         q['novig_v3_evidence'])['available']
+                    active[mid] = (len(rows), fees)
+            self.metrics['live_prices'] = sum(count for count, _ in active.values())
+            self.metrics['live_qualified'] = sum(count for _, count in active.values())
 
         await self.stream(subjects, update, key=key, duration=1800, require_provider_clock=True)
         self.metrics.update(state='waiting', gap='novig_waiting_for_observed_reset')

@@ -27,6 +27,7 @@ const payoffCash = new Intl.NumberFormat('en-US', {style: 'currency', currency: 
 const payoffReturn = new Intl.NumberFormat('en-US', {maximumFractionDigits: 4, signDisplay:'exceptZero'});
 const pct = value => value == null ? '—' : `${num(value) > 0 ? '+' : ''}${fmt(value)}%`;
 const tone = value => num(value) > 0 ? 'positive' : num(value) < 0 ? 'negative' : '';
+const siteName = offer => name(offer.venue) + (offer.source_provider === 'sportsgameodds' ? ' · SportsGameOdds' : '');
 
 $('title').textContent = arb ? 'Arbitrage' : 'Expected value';
 document.title = `Prediction Arb · ${$('title').textContent}`;
@@ -34,6 +35,7 @@ $('stake-field').hidden = $('profit-field').hidden = !arb;
 $('basis-field').hidden = $('group-field').hidden = arb;
 $('replay-controls').hidden = !replay;
 if (replay) {
+  $('desk-mode').hidden = false;
   $('desk-mode').textContent = replayMode();
   $('replay-link').textContent = 'Return to live board';
   $('replay-link').href = arb ? '/arbs' : '/ev';
@@ -52,7 +54,10 @@ const filterKey = `${replay ? 'replay-' + dataset + '-' : ''}${arb ? 'arb' : 'ev
 let saved;
 try { saved = JSON.parse(readPreference(filterKey, '{}')); } catch { saved = {}; }
 saved ||= {};
-if (replay) { saved.group ||= 'offer'; saved.basis ||= 'before'; }
+if (replay) {
+  filters.elements.basis.querySelector('option[value="sportsbooks"]').remove();
+  saved.group ||= 'offer'; saved.basis ||= 'before';
+}
 for (const key of ['search', 'day', 'sort', 'group', 'period', 'minimum', 'profit','basis','timezone','time_from','time_to','game_state']) {
   if (saved[key]) filters.elements[key].value = saved[key];
 }
@@ -100,7 +105,7 @@ function position(offer, game) {
 function tradeDetails() {
   const {offer, group, game, evidence} = state.selected;
   const label = position(offer, game);
-  $('trade-title').textContent = `${name(offer.venue)} · ${label}`;
+  $('trade-title').textContent = `${siteName(offer)} · ${label}`;
   $('trade-body').replaceChildren(tradeInspection(offer, group, evidence, {mode:replayMode(), position:label}));
   $('latest').hidden = replay;
   $('back-to-pair').hidden = !state.selected.pairContext;
@@ -186,30 +191,36 @@ function trade(group, title) {
 function evRow(group, game, individual) {
   const row = el('article', null, individual ? 'desk-row desk-individual' : 'desk-row');
   const best = group.offers[0];
-  const ref = group.offers.find(offer => offer.reference_current && offer.reference) || group.offers.find(offer => offer.reference);
+  const sportsbookMode = filters.elements.basis.value === 'sportsbooks';
+  const sportsbook = sportsbookMode ? best.sportsbook : null;
+  const ref = sportsbookMode ? null : group.offers.find(offer => offer.reference_current && offer.reference) || group.offers.find(offer => offer.reference);
   const reference = el('div', null, 'desk-reference');
-  reference.append(el('small', 'Pinnacle', 'desk-reference-label'),
-    ref ? odd(ref.reference, 'desk-reference-odds') : el('span', '—', 'desk-reference-odds'));
+  reference.append(el('small', sportsbook ? name(sportsbook.book) + ' no-vig' : ref?.reference ? 'Reference' : 'Fair reference', 'desk-reference-label'),
+    sportsbook ? odd(sportsbook.fair_odds, 'desk-reference-odds') :
+      ref ? odd(ref.reference, 'desk-reference-odds') : el('span', '—', 'desk-reference-odds'));
   if (ref && !ref.reference_current) reference.append(el('small', 'Saved'));
-  if (!ref) reference.append(el('small', 'No exact match'));
+  if (!ref && !sportsbook) reference.append(el('small', sportsbookMode ? 'No current book pair' : 'No exact match'));
   const offers = el('div', null, 'desk-ev-offers');
   for (const offer of group.offers) {
     const item = button('', () => openTrade(offer, group, game), 'desk-offer');
     item.dataset.offerId=offer.id;
-    const feeLabel = offer.trade_fee ? tradingFeeLabel(offer.trade_fee) : null;
-    const size = offer.trade_fee?.available ? tradingFeeSize(offer.trade_fee) : null;
+    const feeLabel = offer.current && offer.trade_fee ? tradingFeeLabel(offer.trade_fee) : null;
+    const size = offer.current && offer.trade_fee?.available ? tradingFeeSize(offer.trade_fee) : null;
     const reason = offer.reason && evidenceReason(offer.reason);
-    item.setAttribute('aria-label', [name(offer.venue), position(offer, game),
+    item.setAttribute('aria-label', [siteName(offer), position(offer, game),
       offer.value == null ? reason : pct(offer.value) + ' EV', feeLabel, size].filter(Boolean).join(', '));
     if (offer === best && num(offer.value) > 0) item.classList.add('desk-best');
-    const site = el('span', name(offer.venue), 'desk-site');
+    const site = el('span', siteName(offer), 'desk-site');
     const value = el('strong', pct(offer.value), tone(offer.value));
     const price = odd(offer.odds);
-    const breakdown = el('small', `Before fees ${pct(offer.before_fee)} · Reviewed fees ${pct(offer.after_fee)} · Conservative ${pct(offer.conservative)}`, 'offer-breakdown');
-    item.append(site, value, price, breakdown);
-    if (feeLabel) item.append(el('small', feeLabel, 'offer-breakdown'));
-    if (size) item.append(el('small', size, 'offer-breakdown'));
-    if (offer.trade_fee && !offer.trade_fee.available) item.append(el('small', evidenceReason(offer.trade_fee.reason), 'offer-reason'));
+    item.append(site, value, price);
+    if (offer.current) {
+      item.append(el('small', `Before fees ${pct(offer.before_fee)} · Reviewed fees ${pct(offer.after_fee)} · Conservative ${pct(offer.conservative)}`, 'offer-breakdown'));
+      if (sportsbookMode && offer.sportsbook) item.append(el('small', 'Sportsbook estimate before fees', 'offer-breakdown'));
+      if (feeLabel) item.append(el('small', feeLabel, 'offer-breakdown'));
+      if (size) item.append(el('small', size, 'offer-breakdown'));
+      if (offer.trade_fee && !offer.trade_fee.available) item.append(el('small', evidenceReason(offer.trade_fee.reason), 'offer-reason'));
+    }
     if (reason) item.append(el('small', reason, 'offer-reason'));
     offers.append(item);
   }
@@ -233,7 +244,7 @@ function arbRow(group, game, expanded) {
     profit.append(el('small', ` ${payoffReturn.format(num(math.rounded_return_percent))}%`)); box.append(profit);
     pair.legs.forEach((id, index) => {
       const offer = offers.get(id);
-      const leg = el('div', null, 'desk-leg'), text = el('span', `${position(offer, game)} · ${name(offer.venue)} · `);
+      const leg = el('div', null, 'desk-leg'), text = el('span', `${position(offer, game)} · ${siteName(offer)} · `);
       text.append(odd(offer.odds)); leg.append(text, el('span', cash.format(num(math.legs[index].allocation_usd)))); box.append(leg);
       const fee = net?.legs[index];
       const winFee = fee?.settlement_usd?.[index ? 'second_wins' : 'first_wins'];
@@ -276,13 +287,18 @@ function render(page) {
   const coverage = page.coverage;
   const strip = $('coverage-strip');
   strip.hidden = !coverage?.offers;
-  if (coverage?.offers) strip.textContent = `${coverage.offers.toLocaleString()} offers · ${coverage.current.toLocaleString()} ${replay ? 'fresh at capture' : 'current'} · ${coverage.before.toLocaleString()} before-fee EV · ${coverage.reviewed.toLocaleString()} reviewed fee EV · ${coverage.conservative.toLocaleString()} conservative EV`;
+  if (coverage?.offers) {
+    const counts = filters.elements.basis.value === 'sportsbooks'
+      ? `${(coverage.sportsbooks || 0).toLocaleString()} sportsbook EV estimates`
+      : `${coverage.before.toLocaleString()} before-fee EV · ${coverage.reviewed.toLocaleString()} reviewed fee EV · ${coverage.conservative.toLocaleString()} conservative EV`;
+    strip.textContent = `${coverage.offers.toLocaleString()} offers · ${coverage.current.toLocaleString()} ${replay ? 'fresh at capture' : 'current'} · ${counts}`;
+  }
   if (replay && page.replay?.captured_at) notice.push(`${replayMode()} · ${clock(page.replay.captured_at)}`);
   if(state.offset && !replay)notice.push(page.browse_order||'Browsing order held.');
   if(!replay && publication.data_runtime&&!publication.data_runtime.healthy)notice.push('The data process is unavailable. The app is showing retained evidence; open Admin for its status.');
   else if(publication.data_runtime?.stopped)notice.push('Updates were stopped. Open Admin to inspect the saved Stop choice.');
   if (!publication.current_prices && publication.retained_prices) notice.push(replay ? 'All displayed prices were retained at capture.' : 'Only saved prices are available right now.');
-  else if (publication.state === 'held') notice.push('Current prices are unavailable.');
+  else if (publication.state === 'held') notice.push(coverage?.current ? 'Some calculations are unavailable. Check each offer’s status.' : 'Current prices are unavailable.');
   else if (publication.state === 'partial') notice.push(replay ? 'Some offers lacked fresh prices or complete calculation inputs at capture.' : 'Some prices are not current. Check each price’s status.');
   if (arb) notice.push('Each pair shows its lower decisive profit after cent allocation, before fees. Voids and cancellations can change the payoff.');
   $('notice').textContent = notice.join(' ');
@@ -290,7 +306,7 @@ function render(page) {
   if (rows.length) {
     if (!arb) {
       const columns = el('div', null, 'desk-columns');
-      columns.append(el('span', 'Trade'), el('span', 'Pinnacle'), el('span', 'Offers · highest EV first')); results.append(columns);
+      columns.append(el('span', 'Trade'), el('span', 'Reference'), el('span', 'Offers · highest EV first')); results.append(columns);
     }
     for (const group of rows) {
       const game = games.get(group.game_key);
@@ -300,7 +316,10 @@ function render(page) {
   } else {
     const empty = el('div', null, 'desk-empty');
     const message = page.state === 'initializing' ? (replay ? 'This capture is not available yet.' : 'Waiting for the first price update.') :
-      arb ? 'No current pairings match these filters.' : 'No trades match these filters.';
+      !arb ? 'No trades match these filters.' :
+      page.eligible_pair_count > 0 ? 'No pairs meet the return filters.' :
+      !publication.current_prices && publication.retained_prices ? 'No current prices to compare.' :
+      'No current opposing pairs in this selection.';
     empty.append(el('h2', message), replay && page.state === 'initializing' ? link('Open earlier capture', replayURL(arb ? 'arbs' : 'ev', 'preview')) : link('Check sources in Admin', '/admin?section=sources'));
     results.append(empty);
   }
@@ -470,7 +489,7 @@ async function checkSelection(){
     if(!row?.current)note='Latest price is unavailable. Inspected evidence remains pinned.';
     else if(selectionIdentity(row)!==selectionIdentity(previous)){
       const change=row.odds?.decimal===previous.odds?.decimal?'Calculation evidence changed.':'Price changed.';
-      note=`${change} Use latest prices to update the offer, fee and Pinnacle reference together.`;
+      note=`${change} Use latest prices to update the offer, fee and reference together.`;
     }
     $('trade-note').textContent=note;
   }catch{}

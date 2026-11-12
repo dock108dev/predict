@@ -65,11 +65,14 @@ def census(result, inventory, *, pairs=(), policy=None):
 
     totals = bucket()
     dimensions = defaultdict(bucket)
+    providers = defaultdict(bucket)
     reasons = defaultdict(Counter)
+    provider_reasons = defaultdict(Counter)
     price_gaps = Counter()
     for row in by_offer.values():
         phase = {'scheduled': 'pregame', 'live': 'in_game'}.get(row.get('game_state'), row.get('game_state', 'unknown'))
         key = (row['venue'], row['league'], row['market']['market'], row['market']['period'], phase)
+        provider_key = (row.get('source', {}).get('provider') or 'unknown', *key)
         count = Counter(published=1)
         if row['price_current']:
             fee = row.get('trade_fee') or {}
@@ -83,15 +86,18 @@ def census(result, inventory, *, pairs=(), policy=None):
                     ('before_fee_ev', 'gross_return_percent'),
                     ('reviewed_after_fee_ev', 'conditional_return_percent'),
                     ('conservative_after_fee_ev', 'conservative_return_percent')):
-                count[label] = int(exact_reference and ranking_value(row, metric, current=True) is not None)
+                count[label] = int(ranking_value(row, metric, current=True) is not None)
             count['any_after_fee_ev'] = int(count['reviewed_after_fee_ev'] or count['conservative_after_fee_ev'])
             if not covered:
-                reasons[key][fee.get('reason') or 'fee_outcome_not_published'] += 1
+                reason = fee.get('reason') or 'fee_outcome_not_published'
+                reasons[key][reason] += 1
+                provider_reasons[provider_key][reason] += 1
         else:
             count['retained_unavailable'] = 1
             price_gaps.update(row.get('price_reasons') or ['source_price_not_current'])
         totals.update(count)
         dimensions[key].update(count)
+        providers[provider_key].update(count)
 
     def with_rate(count):
         return dict(count, fee_coverage_percent=round(100 * count['covered'] / count['current'], 4)
@@ -133,6 +139,9 @@ def census(result, inventory, *, pairs=(), policy=None):
                 total=with_rate(totals), missing_reasons=dict(gaps.most_common()),
                 by_scope=[dict(labels(key), **with_rate(counts), missing_reasons=dict(reasons[key]))
                           for key, counts in sorted(dimensions.items(), key=lambda item: str(item[0]))],
+                by_provider=[dict(provider=key[0], **labels(key[1:]), **with_rate(counts),
+                                  missing_reasons=dict(provider_reasons[key]))
+                             for key, counts in sorted(providers.items(), key=lambda item: str(item[0]))],
                 duplicate_published_rows=duplicate_rows, current_presentation_rows=current_presentations,
                 published_source_price_keys=len(published_source_keys),
                 retained_price_gap_reasons=dict(price_gaps.most_common()),

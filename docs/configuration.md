@@ -17,8 +17,11 @@ The launcher rejects `--current-config` for app-only starts, stop and status.
 
 - `enabled` controls all acquisition. Set it to `false` to inspect stored current
   observations without starting source workers.
-- `aggregate_enabled` controls The Odds API requests when acquisition is enabled.
-  The sample enables native acquisition and disables aggregate requests.
+- `aggregate_enabled` controls the selected aggregate route when acquisition is
+  enabled. The sample enables native acquisition and leaves aggregate requests off.
+- `aggregate_provider` selects `sportsgameodds` or the legacy `the_odds_api`
+  route. The sample selects SportsGameOdds. Earlier configurations without
+  this field keep their legacy selection.
 - `sports` scopes native discovery. Values are `NFL`, `NCAAF`, `NBA`, `NCAAB`,
   `MLB` and `NHL`; actual source listings and supported calculations vary.
 - `native_sports` and `native_families` optionally override the native scope.
@@ -29,18 +32,21 @@ The launcher rejects `--current-config` for app-only starts, stop and status.
 
 Configuration must match the validated fields in
 `app/collection/current_policy.py`. Both enable flags must be booleans. Resource
-bounds may be lowered from `DEFAULT`; rediscovery must be at least 60 seconds.
+bounds are validated as positive integers. Rediscovery must be at least 60 seconds.
+Use Coverage and Admin to see the effect of source scope and resource settings.
 The default `duration_seconds=31536000` means operation for the app's lifetime;
 smaller valid values set a finite duration. An explicit missing path fails. If
 the default file is absent, internal defaults enable native **and aggregate**
 acquisition, so create the file deliberately.
 
-The aggregate scheduler requests Novig, ProphetX and Pinnacle through The Odds
-API. `app/collection/current_aggregate_policy.py` defines a 100,000-credit monthly
-ceiling, 50-credit reserve and 15-minute slots from 09:00 inclusive to 23:00
-exclusive in `America/New_York`. Missed slots are skipped. These are application
-limits, not evidence of the provider account's plan or balance. Admin refresh
-uses the same quota ledger and does not change the automatic schedule.
+The SportsGameOdds worker shares its object budget across discovery and event
+refresh. Admin shows the plan, account usage, reserve, holds and pacing. The
+first-of-month UTC boundary is a provisional pacing assumption whenever the
+provider supplies no reset. Keep the existing ledger and Stop state on restart.
+See [SGO operations](sportsgameodds-operations-20261110.md).
+
+The legacy Odds API route uses its own ledger and 15-minute schedule from
+09:00 to 23:00 Eastern. Its limits and held credits apply only to that route.
 
 ## Start and stop
 
@@ -98,8 +104,8 @@ are visible and have no in-memory financial fallback.
 
 ## Credentials
 
-The launcher uses a minimal environment; it does not forward shell keys or load
-`.env`. Source-specific loaders retrieve credentials when needed.
+The launcher uses a minimal environment. Source-specific loaders retrieve
+credentials from the supported local stores.
 
 | Native venue | macOS Keychain service / account | JSON fields |
 | --- | --- | --- |
@@ -111,16 +117,21 @@ Provision native records through local Keychain tooling; there is no native setu
 CLI. Fixed destinations are in `app/collection/venue_access.py`. Keep secrets out
 of sample configuration, command arguments and logs.
 
-[.env.example](../.env.example) names the aggregate `ODDS_API_KEY` without a value.
-A populated `.env` must be untracked, a regular user-owned file and mode 0600.
-`.venv/bin/python scripts/predict-paid-key` prompts for the key without echoing
-it and records the paid-account transition without making a provider request.
-Stop the data process before changing credentials (`scripts/opportunity-board stop --role data`);
-source workers cache their selected key. Stop any separately running retained
-acquisition session as well. Start data again after saving the key.
-Paid selection requires the guarded `.env` and never falls back to another
-account. Saved inspection needs no credentials. See [security](security.md) for
-the remaining credential-loading rules.
+For SportsGameOdds, add exactly one `SPORTSGAMEODDS_API_KEY` assignment to the
+repository's private `.env`. Copy [.env.example](../.env.example) if needed.
+Keep the file ignored and untracked, owned by your macOS user, and set
+`chmod 600 .env`. Keep the key out of commands and logs. The SGO worker
+checks the file and validates the credential before starting. A failed SGO
+credential leaves SGO unavailable. Native workers use their own keys.
+
+For the legacy Odds API route, `.venv/bin/python scripts/predict-paid-key`
+prompts without echoing the key and records the account transition without
+a provider request. Use this command only for that route.
+
+Stop data before changing credentials with `scripts/opportunity-board stop --role data`.
+Start it again with the same selected configuration after saving the key.
+Saved inspection and synthetic practice need no provider credentials.
+See [security](security.md) for the credential-loading rules.
 
 The Novig key is for the signed, read-only book stream. A missing key
 keeps that feed unavailable while aggregate Novig follows its normal

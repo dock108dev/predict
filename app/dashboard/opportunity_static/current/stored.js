@@ -7,6 +7,7 @@ const UI = (() => {
   const num = v => {if(v==null)return null;const p=String(v).split('/');return Number(p[0])/(p.length===2?Number(p[1]):1);};
   const fmt = (v,d=2) => v==null?'Unavailable':num(v).toLocaleString('en-US',{maximumFractionDigits:d,minimumFractionDigits:d});
   const names={kalshi:'Kalshi',polymarket_us:'Polymarket US',novig:'Novig',prophetx:'ProphetX',pinnacle:'Pinnacle',the_odds_api:'The Odds API',sportsgameodds:'SportsGameOdds',sportsgameodds_books:'SportsGameOdds bookmaker median',winner:'Winner',spread:'Spread',total:'Total'};
+  Object.assign(names, {fanduel:'FanDuel', draftkings:'DraftKings', betmgm:'BetMGM', caesars:'Caesars'});
   const name=v=>names[v]||v;
   let format='american';try{format=localStorage.getItem('predict-odds-format')==='decimal'?'decimal':'american';}catch{}
   function updateOdds(){for(const e of document.querySelectorAll('[data-american]'))e.textContent=e.dataset[format]||'Unavailable';for(const b of document.querySelectorAll('[data-format]'))b.setAttribute('aria-pressed',String(b.dataset.format===format));}
@@ -354,7 +355,7 @@ const SnapshotDrawer = (() => {
       }else ref.append(el('p','Fair price unavailable in the pinned display. Retained reference prices do not restore current probability.'));
       box.append(ref);
       const fair=row.sgo_fair_comparison;
-      if(fair?.available){const v=section('SportsGameOdds fair odds comparison');v.append(facts([['Vendor fair American odds',fair.price_american],['Vendor fair line',fair.line],['Original source time','Unknown'],['Received',fair.received_at]]),el('p','Vendor comparison only. Its contributors and original update time are unknown; it is not used as the reference probability.','p-meta'));box.append(v);}
+      if(fair){const v=section('SportsGameOdds fair odds');v.append(facts([['Availability',fair.available?'Available':'Unavailable from SportsGameOdds'],['Fair American odds',fair.price_american],['Fair line',fair.line],['Original source time','Unknown'],['Received',fair.received_at]]),el('p',!fair.available?'This baseline is unavailable or incomplete. It is not used as the reference probability.':fair.same_line===false?'Context at a different line; not the fair price for this offer. Contributors and original update time are unknown.':'Third-party baseline; contributors and original update time are unknown. It is not used as the reference probability.','p-meta'));box.append(v);}
       const calc=section('Before / after trade fees');
       calc.append(el('p','Before fees: expected profit = win probability × win profit − loss probability × acquisition cost. EV % divides expected profit by acquisition cost.'));
       const fee=metric==='conservative_return_percent'?row.conservative_trade_benchmark:row.conditional_trade_benchmark;

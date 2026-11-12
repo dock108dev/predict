@@ -2,7 +2,9 @@
 from copy import deepcopy
 from hashlib import sha256
 from html.parser import HTMLParser
+import json
 from pathlib import Path
+import re
 
 from psycopg.types.json import Jsonb
 
@@ -19,7 +21,9 @@ PRODUCTS = {
         phase='scheduled', method='direct official HTML; complete normalized article text'),
     'polymarket_us:standard_sports': dict(venue='polymarket_us', product='standard_sports',
         url='https://docs.polymarket.us/fees', reference='app/fixtures/polymarket-us-fees-review-20261110.html',
-        tag='main', phase=None, method='direct official HTML; complete normalized page text'),
+        tag='main', phase=None, method='direct official HTML; complete normalized page text',
+        review_receipt='app/fixtures/polymarket-us-standard-fees-review-20261111.json',
+        review_receipt_sha256='1add70fd37fe03a06e09546a47d97197a4d83443e267e7f7259366c1aafc6ae4'),
     'kalshi:exchange': dict(venue='kalshi', product='exchange',
         url='https://kalshi.com/docs/kalshi-fee-schedule.pdf',
         reference='app/fixtures/kalshi-fees-review-20261110.json', tag=None,
@@ -68,6 +72,18 @@ def approved(key):
                 normalized_sha256=sha256(text.encode()).hexdigest() if text else None)
     if 'rendered_sha256' in spec:
         approval.update(normalized_sha256=spec['rendered_sha256'], rendered_pages=spec['rendered_pages'])
+    if 'review_receipt' in spec:
+        receipt_body = (ROOT / spec['review_receipt']).read_bytes()
+        if sha256(receipt_body).hexdigest() != spec['review_receipt_sha256']:
+            raise ValueError('reviewed_receipt_changed')
+        receipt = json.loads(receipt_body)
+        if (receipt.get('source_url') != spec['url']
+                or not all(re.fullmatch('[0-9a-f]{64}', receipt[k])
+                           for k in ('body_sha256', 'normalized_sha256'))):
+            raise ValueError('reviewed_receipt_invalid')
+        approval.update(normalized_sha256=receipt['normalized_sha256'],
+                        reviewed_receipt=dict(path=spec['review_receipt'], sha256=spec['review_receipt_sha256'],
+                                              retrieved_at=stamp(receipt['retrieved_at']).isoformat()))
     return approval
 
 

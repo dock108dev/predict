@@ -1,5 +1,8 @@
 {
   "deferred": {
+    "tests/test_sgo_current_rows_sql.py": "Required in the disposable PostgreSQL lane. Exercises source-scoped current rows and sportsbook EV publication and withdrawal.",
+    "tests/test_sportsgameodds_ingress_sql.py": "Required in the disposable PostgreSQL lane. Exercises atomic SGO admission, delivery clocks and account-safe source control.",
+    "tests/test_sportsgameodds_reference_sql.py": "Required in the disposable PostgreSQL lane. Exercises original evidence clocks, frame membership, rollback and bounded history.",
     "tests/test_novig_current_admission.py": "Required in the disposable PostgreSQL lane. Exercises signed-format input, current-row authority and frozen fee evidence without contacting the provider.",
     "tests/test_acquisition_r2.py": "Historical or prepared acquisition/review contract outside the current merge gate: Focused immutable-approval, dynamic evidence and bounded accounting checks.. Current application/adapter/math/persistence/lifecycle controls are required separately; this module remains explicit local opt-in.",
     "tests/test_acquisition_r3.py": "Historical or prepared acquisition/review contract outside the current merge gate: Offline r3 regressions. Synthetic pages never establish a complete live catalog.. Current application/adapter/math/persistence/lifecycle controls are required separately; this module remains explicit local opt-in.",

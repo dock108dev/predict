@@ -5,38 +5,107 @@ worker does not infer absent events from pagination and never withdraws rows
 from an incomplete, moving, or successful-but-not-snapshot traversal.
 """
 import asyncio
+from collections import Counter
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 import os
 from pathlib import Path
+import re
 
 from .current_ingress import call, operation
 from .current_policy import ROOT, aggregate_scope
 from .sportsgameodds_adapter import Traversal
-from .sportsgameodds_collector import GuardedPageCollector
+from .sportsgameodds_collector import GuardedPageCollector, RejectedCursor
 from .sportsgameodds_current_rows import current_rows
 from .sportsgameodds_ledger import ObjectLedger
-from .sportsgameodds_schedule import EventDue, due_events
+from .sportsgameodds_schedule import (
+    PLANNED_FRACTION, REFRESH_TARGET, EventDue, SchedulePolicy, budgeted_policy, daily_allowance,
+    discovery_interval, due_events, poll_slot, response_object_charge,
+)
+from .sportsgameodds_adapter import clock_sample
 from .sportsgameodds_transport import ODD_IDS, SportsgameoddsTransport
+from .sportsgameodds_transport import TransportFailure
 from .sportsgameodds_usage import read_usage
 
 
 def credential():
+    key_format = r'[A-Za-z0-9_-]{1,1024}'
     value = os.environ.get('SPORTSGAMEODDS_API_KEY')
     if value:
-        return value.strip()
-    path = ROOT / '.local/sportsgameodds-evaluation.env'
-    if path.is_symlink() or not path.is_file() or path.stat().st_size > 8192:
-        raise ValueError('SportsGameOdds credential unavailable')
-    entries = [line.split('=', 1)[1].strip().strip("\"'") for line in path.read_text().splitlines()
-               if line.startswith('SPORTSGAMEODDS_API_KEY=')]
-    if len(entries) != 1 or not entries[0]:
+        value = value.strip()
+        if not re.fullmatch(key_format, value):
+            raise ValueError('SportsGameOdds credential unavailable')
+        return value
+    from .credential_handoff import git_executable
+    import stat
+    import subprocess
+    path = ROOT / '.env'
+    try:
+        git = git_executable()
+        ignored = subprocess.run([git, 'check-ignore', '--quiet', '--no-index', '.env'], cwd=ROOT,
+                                 stderr=subprocess.DEVNULL)
+        tracked = subprocess.run([git, 'ls-files', '--error-unmatch', '.env'], cwd=ROOT,
+                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        if ignored.returncode or tracked.returncode != 1:
+            raise ValueError('SportsGameOdds credential unavailable')
+        with os.fdopen(os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK), 'rb') as secret:
+            info = os.fstat(secret.fileno())
+            if (not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid()
+                    or info.st_mode & 0o077 or info.st_size > 65536):
+                raise ValueError('SportsGameOdds credential unavailable')
+            raw = secret.read(65537)
+        if len(raw) > 65536:
+            raise ValueError('SportsGameOdds credential unavailable')
+        lines = raw.decode('utf-8').splitlines()
+    except (OSError, UnicodeError):
+        raise ValueError('SportsGameOdds credential unavailable') from None
+    entries = [line.split('=', 1)[1].strip().strip("\"'") for line in lines
+               if re.match(r'^\s*(?:export\s+)?SPORTSGAMEODDS_API_KEY\s*=', line)]
+    if len(entries) != 1 or not re.fullmatch(key_format, entries[0]):
         raise ValueError('SportsGameOdds credential unavailable')
     return entries[0]
 
 
 def clock():
     return datetime.now(timezone.utc)
+
+
+def pacing_reset(observed, now):
+    """Use provider evidence when present; otherwise use the owner's pacing assumption."""
+    if observed.get('reset_at') is not None:
+        return observed['reset_at'], 'provider_reported'
+    now = now.astimezone(timezone.utc)
+    year, month = (now.year + 1, 1) if now.month == 12 else (now.year, now.month + 1)
+    return datetime(year, month, 1, tzinfo=timezone.utc), 'assumed_calendar_month'
+
+
+def retained_schedule(scope, now, limit):
+    """Seed polling from retained receipts; never restore quote authority.
+
+    The event frame's receipt is used only to order future polling. No
+    missing event is treated as absent.
+    """
+    from app.storage.store import connect
+    with connect() as db:
+        rows = db.execute('''SELECT f.event_id AS native_event_id,
+                COALESCE(f.facts->'event_context'->>'league',e.competition) AS competition,
+                COALESCE(f.facts->>'starts_at',e.scheduled_start) AS scheduled_start, f.facts
+            FROM current_sgo_event_frame f
+            LEFT JOIN current_event e ON e.native_event_id=f.event_id AND e.provider='sportsgameodds'
+            WHERE COALESCE(f.facts->'event_context'->>'league',e.competition)=ANY(%s)
+              AND COALESCE(f.facts->>'starts_at',e.scheduled_start)::timestamptz >= %s
+            ORDER BY COALESCE(f.facts->>'starts_at',e.scheduled_start)::timestamptz,f.event_id LIMIT %s''',
+            (list(scope), now-timedelta(hours=12), limit+1)).fetchall()
+    result = {}
+    for row in rows[:limit]:
+        facts = row['facts']; context = facts.get('event_context') or {}
+        status = context.get('status') or {}
+        if any(status.get(k) is True for k in ('ended', 'completed', 'cancelled')):
+            continue
+        event_id = row['native_event_id']
+        result[event_id] = dict(event_id=event_id, league=row['competition'], starts_at=row['scheduled_start'],
+                                received_at=facts['received_at'], phase=context.get('phase', 'unknown'), status=status)
+    return result, len(rows) > limit
 
 
 class SportsGameOddsWorker:
@@ -64,6 +133,8 @@ class SportsGameOddsWorker:
         self.events = {}
         self.discovery_at = {}
         self.discovery_progress = {}
+        self.discovery_next_league = None
+        self.schedule_policy = None
         self.key = None
         self.account_id = None
         self.request_limit = 1
@@ -86,10 +157,9 @@ class SportsGameOddsWorker:
         self.ledger = ObjectLedger(self.ledger_path)
         self.account_id = self.ledger.account_identity()
         observed = await self.usage()
+        self._usage_status(observed)
         self.request_limit = observed['requests_per_minute']
-        if observed.get('reset_at') is None:
-            raise RuntimeError('account reset evidence unavailable')
-        reset = observed['reset_at']
+        reset, reset_basis = pacing_reset(observed, self.now())
         if reset <= self.now():
             raise RuntimeError('account reset evidence expired')
         # A credential change cannot create a new accounting partition.
@@ -100,10 +170,25 @@ class SportsGameOddsWorker:
             self.ledger.create_window(self.window_id, limit=observed['limit'], initial_used=observed['used'],
                 reserve=max(1, observed['limit']//10), reset_at=reset,
                 requests_per_minute=observed['requests_per_minute'])
+        async def pacing_usage():
+            current = await self.usage()
+            self._usage_status(current)
+            current_reset, basis = pacing_reset(current, self.now())
+            if basis != reset_basis:
+                raise RuntimeError('current account usage evidence unavailable or changed')
+            return dict(current, reset_at=current_reset)
         self.collector = GuardedPageCollector(self.ledger, self.window_id, self.transport,
-                                              controls=self.controls, account_usage=self.usage)
-        self.metrics.update(state='waiting', account_tier=observed.get('tier'))
+                                              controls=self.controls, account_usage=pacing_usage)
+        self.metrics.update(state='waiting', account_tier=observed.get('tier'), reset_basis=reset_basis)
         self._account_status()
+
+    def _usage_status(self, observed):
+        # Nonsecret, point-in-time provider facts; a calendar boundary remains
+        # separately labeled as an assumption rather than a provider reset.
+        self.metrics['provider_usage'] = {
+            key: value.isoformat() if isinstance(value, datetime) else value
+            for key, value in observed.items() if key in ('tier', 'limit', 'used', 'requests_per_minute', 'reset_at', 'at')
+        }
 
     def _account_status(self):
         if self.ledger is None or self.window_id is None:
@@ -141,8 +226,16 @@ class SportsGameOddsWorker:
         if len(packed(envelope)) > self.service.config['ingress_bytes']:
             raise ValueError('SGO current page exceeds ingress bound')
         await call(self.service, self.admit, sport, records, reference_rows, event_frames, received_at, page.receipt_sha256, event_scopes)
+        admitted_at = self.now()
         self.metrics['records'] += len(records)
         self.metrics['reference_rows'] = self.metrics.get('reference_rows', 0) + len(reference_rows)
+        cohorts = self.metrics.setdefault('admitted_quote_clock_samples', {})
+        self.metrics['last_clock_sample_admitted_at'] = admitted_at.isoformat()
+        for (league, phase, family, venue), tally in clock_sample(page, admitted_at=admitted_at).items():
+            key = ':'.join((league, phase, family, venue))
+            totals = cohorts.setdefault(key, dict.fromkeys(tally, 0))
+            for field, count in tally.items():
+                totals[field] += count
 
     async def _fetch(self, params):
         self.phase = 'collecting'
@@ -151,16 +244,49 @@ class SportsGameOddsWorker:
             self.metrics['requests'] += 1
             self.metrics['pages'] += 1
             self.metrics['events'] += len(page.events)
+            self.metrics['payload_bytes'] = self.metrics.get('payload_bytes', 0) + page.payload_bytes
+            self.metrics['largest_page_bytes'] = max(self.metrics.get('largest_page_bytes', 0), page.payload_bytes)
+            requested = set(params.get('eventIDs', '').split(',')) - {''}
+            returned = {event['event_id'] for event in page.events}
+            aliases = {}
+            for event in page.events:
+                for alias in event.get('aliases', ()):
+                    if alias in requested and alias not in returned:
+                        aliases.setdefault(alias, set()).add(event['event_id'])
+            # A paid response is not a successfully admitted observation until
+            # the source-revocable ingress transaction succeeds. Stage schedule
+            # changes so a failed admission cannot postpone retry or discard an
+            # older event/alias from the in-memory schedule.
+            next_events = dict(self.events)
             for event in page.events:
                 if event['league'] not in aggregate_scope(self.service.config):
                     raise ValueError('provider returned outside configured scope')
                 if event['status'].get('ended') or event['status'].get('completed') or event['status'].get('cancelled'):
-                    self.events.pop(event['event_id'], None)
+                    next_events.pop(event['event_id'], None)
                 else:
-                    self.events[event['event_id']] = event
-                if len(self.events) > self.max_events:
-                    raise ValueError('event scheduling capacity exceeded')
+                    next_events[event['event_id']] = event
+            # SGO can return a replacement event for a requested old ID. Its
+            # explicit alias updates scheduling only; it is not cross-provider
+            # identity or authority to withdraw the old source observation.
+            for alias, replacements in aliases.items():
+                if len(replacements) == 1:
+                    next_events.pop(alias, None)
+            if len(next_events) > self.max_events:
+                raise ValueError('event scheduling capacity exceeded')
+            # An empty or partial ID response is not evidence of closure.
+            # Remember the local attempt solely to avoid repeatedly spending on
+            # an omitted ID; never change its provider or receipt clocks.
+            if 'eventIDs' in params:
+                seen = {event['event_id'] for event in page.events}
+                resolved_aliases = {alias for alias, replacements in aliases.items() if len(replacements) == 1}
+                for event_id in requested - seen - resolved_aliases:
+                    if event_id in next_events:
+                        next_events[event_id] = dict(next_events[event_id], last_polled_at=self.now().isoformat())
             await self._publish(page)
+            self.events = next_events
+            if page.events:
+                await self.state('available', 'sgo_page_received',
+                                 'SportsGameOdds page received; individual source clocks and availability apply.')
             return page
         finally:
             self._account_status()
@@ -172,44 +298,240 @@ class SportsGameOddsWorker:
             result['leagueID'] = league
         else:
             result['eventIDs'] = ','.join(event_ids)
+            result['limit'] = len(event_ids)
         if cursor is not None:
             result['cursor'] = cursor
         return result
 
-    async def cycle(self):
-        now = self.now()
-        # Previously discovered live and imminent events take priority over a
-        # potentially broad discovery walk. Receipt time is scheduling only.
-        candidates = [EventDue(e['event_id'], datetime.fromisoformat(e['starts_at'].replace('Z','+00:00')),
-                     datetime.fromisoformat(e['received_at'].replace('Z','+00:00')), e['phase']=='live')
-                      for e in self.events.values()]
-        due = due_events(candidates, now, **self.controls_to_schedule())
+    def checkpoint_discovery(self, league, traversal):
+        if self.ledger is None:
+            return
+        self.ledger.save_discovery_progress(league, {
+            'params': dict(self.params(league=league), startsAfter=traversal.starts_after),
+            'next_cursor': traversal.next_cursor,
+            'pages': len(traversal.pages),
+            'charged_objects': traversal.charged_objects,
+            'seen_cursors': sorted(traversal._seen_cursors),
+            'seen_events': sorted(traversal._seen_events),
+        }, now=self.now())
+
+    def restore_discovery(self):
+        if self.ledger is None:
+            return
+        from .sportsgameodds_transport import validate_params
+        for league, value in self.ledger.load_discovery_progress(now=self.now()).items():
+            try:
+                if league not in aggregate_scope(self.service.config) or not isinstance(value, dict):
+                    continue
+                params = value['params']
+                expected = dict(self.params(league=league), startsAfter=params['startsAfter'])
+                if params != expected:
+                    continue
+                if not isinstance(value['next_cursor'], str) or not value['next_cursor']:
+                    continue
+                validate_params(dict(params, cursor=value['next_cursor']))
+                pages, cursors, events = value['pages'], value['seen_cursors'], value['seen_events']
+                if (type(pages) is not int or not 1 <= pages < 1000
+                        or not isinstance(cursors, list) or len(cursors) != pages - 1
+                        or not isinstance(events, list) or len(events) > pages * self.page_limit
+                        or any(not isinstance(x, str) or not x or len(x) > 2048 for x in cursors + events)
+                        or len(set(cursors)) != len(cursors) or len(set(events)) != len(events)
+                        or value['next_cursor'] in cursors):
+                    continue
+                objects = value.get('charged_objects', max(pages, len(events)))
+                if type(objects) is not int or not max(pages, len(events)) <= objects <= pages * self.page_limit:
+                    continue
+                traversal = Traversal(max_pages=1000)
+                traversal.charged_objects = objects
+                traversal.starts_after = params['startsAfter']
+                traversal.next_cursor = value['next_cursor']
+                traversal.pages = [None] * pages
+                traversal._seen_cursors = set(cursors)
+                traversal._seen_events = set(events)
+                self.discovery_progress[league] = traversal
+            except (KeyError, TypeError, ValueError):
+                continue
+        self.metrics['discovery_restored'] = len(self.discovery_progress)
+
+    def scheduled_events(self):
+        return [EventDue(e['event_id'], datetime.fromisoformat(e['starts_at']),
+                         datetime.fromisoformat(e.get('last_polled_at', e['received_at'])),
+                         e['phase'] in ('live', 'started')) for e in self.events.values()]
+
+    async def refresh(self, due, policy, *, between_discovery_pages=False):
         for start in range(0, len(due), self.page_limit):
             batch = due[start:start+self.page_limit]
+            attempted_at = self.now()
+            slots = [poll_slot(event, attempted_at, policy) for event in batch]
             await self._fetch(self.params(event_ids=[event.event_id for event in batch]))
-        for league in aggregate_scope(self.service.config):
+            metrics = self.metrics.setdefault('completed_refresh_polls', {})
+            for rank, deadline in slots:
+                tier = 'active' if rank == 0 else 'kickoff' if rank == 1 else 'scheduled'
+                tally = metrics.setdefault(tier, dict(events=0, between_discovery_pages=0,
+                                                       max_schedule_delay_seconds=0))
+                tally['events'] += 1
+                tally['between_discovery_pages'] += int(between_discovery_pages)
+                delay = round(max(0, (attempted_at-deadline).total_seconds()), 3)
+                tally['max_schedule_delay_seconds'] = max(tally['max_schedule_delay_seconds'], delay)
+
+    async def cycle(self):
+        now = self.now()
+        # Receipt time schedules polling and carries no source-price authority.
+        candidates = self.scheduled_events()
+        policy = SchedulePolicy()
+        discovery_cadence = timedelta(hours=12)
+        leagues = list(aggregate_scope(self.service.config))
+        if self.ledger is not None and self.window_id is not None:
+            account = self.ledger.status(self.window_id)
+            rolling = self.ledger.rolling_objects(self.window_id, since=now-timedelta(days=1))
+            allowance = daily_allowance(available=account['available'] + rolling, now=now, reset_at=account['reset_at'])
+            by_league = Counter(event['league'] for event in self.events.values())
+            prior_cost = self.ledger.discovery_cost(now=now)
+            walk_objects = sum(max(1, by_league[league], prior_cost.get(league, 0)) for league in leagues)
+            policy, projected = budgeted_policy(candidates, now, allowance, discovery_walk_objects=walk_objects)
+            self.schedule_policy = policy
+            discovery_cadence = discovery_interval(retained_events=walk_objects, daily_budget=allowance,
+                                                   projected_refresh_objects=projected)
+            discovery_per_day = walk_objects * timedelta(days=1) / discovery_cadence
+            combined = projected + discovery_per_day
+            self.metrics['schedule_budget'] = dict(daily_allowance=allowance,
+                projected_refresh_objects=projected, refresh_fraction=REFRESH_TARGET,
+                discovery_hours=discovery_cadence.total_seconds()/3600,
+                discovery_walk_objects=walk_objects, last_completed_walk_objects=prior_cost,
+                projected_discovery_objects=discovery_per_day, projected_total_objects=combined,
+                planned_fraction=PLANNED_FRACTION, projected_headroom_objects=round(allowance-combined, 3),
+                live_minutes=policy.live.total_seconds()/60, approaching_minutes=policy.approaching.total_seconds()/60,
+                approaching_hours=policy.approaching_window.total_seconds()/3600,
+                imminent_minutes=policy.imminent.total_seconds()/60,
+                near_minutes=policy.near.total_seconds()/60, distant_minutes=policy.distant.total_seconds()/60)
+            self.metrics['resolved_objects_last_hour'] = self.ledger.charge_breakdown(self.window_id, since=now-timedelta(hours=1))
+            self.metrics['resolved_objects_hour_ended_at'] = now.isoformat()
+        def discovery_due(league):
+            if league in self.discovery_progress or league not in self.discovery_at:
+                return True
+            interval = (timedelta(minutes=15) if league in self.metrics.get('discovery_unstable', {})
+                        else discovery_cadence)
+            return now - self.discovery_at[league] >= interval
+
+        def due_now():
+            at = self.now()
+            due = due_events(self.scheduled_events(), at, policy=policy, **self.controls_to_schedule())
+            urgent, scheduled = [], []
+            for event in due:
+                (urgent if event.live or event.starts_at <= at else scheduled).append(event)
+            return urgent, scheduled
+
+        def in_traversal():
+            return any(walk.next_cursor is not None for walk in self.discovery_progress.values())
+
+        urgent, scheduled = due_now()
+        await self.refresh(urgent, policy, between_discovery_pages=in_traversal())
+        walking = any(map(discovery_due, leagues))
+        await self.refresh(scheduled[:self.page_limit] if walking else scheduled, policy)
+        if self.discovery_next_league in leagues:
+            offset = leagues.index(self.discovery_next_league)
+            leagues = leagues[offset:] + leagues[:offset]
+        for index, league in enumerate(leagues):
             if self.controls()['stopped'] or self.controls()['source_paused']:
                 return
-            if league not in self.discovery_progress and league in self.discovery_at and now-self.discovery_at[league] < timedelta(hours=12):
+            if not discovery_due(league):
                 continue
-            traversal = self.discovery_progress.setdefault(league, Traversal(max_pages=100))
+            # Advance before dispatch: a local rate or budget interruption must
+            # not repeatedly favor the first leagues on the next cycle. Cursors
+            # remain attached to their own league and retain their query filter.
+            self.discovery_next_league = leagues[(index + 1) % len(leagues)]
+            # The 2,000-event schedule bound permits up to 1,000 two-event
+            # pages. A smaller traversal cap silently abandoned large slates.
+            traversal = self.discovery_progress.setdefault(league, Traversal(max_pages=1000))
+            # Keep the filter stable across cursor pages; include recently
+            # started games so live events are not discarded by discovery.
+            if not hasattr(traversal, 'starts_after'):
+                traversal.starts_after = (now - timedelta(hours=12)).isoformat()
             for _ in range(self.max_pages):
+                # A live update or kickoff can become due during a multi-page
+                # walk. Give it the next guarded request before spending on
+                # another discovery page, keeping the cursor and filter intact.
+                urgent, _ = due_now()
+                await self.refresh(urgent, policy, between_discovery_pages=in_traversal())
+                if self.controls()['stopped'] or self.controls()['source_paused']:
+                    return
                 cursor = traversal.next_cursor
-                page = await self._fetch(self.params(league=league, cursor=cursor))
-                traversal.add(cursor, page)
+                params = self.params(league=league, cursor=cursor)
+                params['startsAfter'] = traversal.starts_after
+                try:
+                    page = await self._fetch(params)
+                except RejectedCursor:
+                    # Abandon only this incomplete walk. The request's durable
+                    # reservation still blocks dispatch until reconciled.
+                    self.discovery_progress.pop(league, None)
+                    if self.ledger is not None:
+                        self.ledger.clear_discovery_progress(league)
+                    self.discovery_at[league] = now
+                    self.metrics.setdefault('discovery_complete', {})[league] = False
+                    self.metrics.setdefault('discovery_unstable', {})[league] = self.now().isoformat()
+                    raise
+                try:
+                    traversal.add(cursor, page)
+                except ValueError:
+                    # Moving pages cannot prove absence. Keep observations
+                    # already admitted and retry discovery on its normal cadence.
+                    self.discovery_progress.pop(league, None)
+                    if self.ledger is not None:
+                        self.ledger.clear_discovery_progress(league)
+                    self.discovery_at[league] = now
+                    self.metrics.setdefault('discovery_complete', {})[league] = False
+                    self.metrics.setdefault('discovery_unstable', {})[league] = self.now().isoformat()
+                    break
                 # Keep bounded cursor and event identities, not entire payloads.
+                traversal.charged_objects += response_object_charge(len(page.events))
                 traversal.pages[-1] = None
                 if traversal.complete:
                     self.discovery_progress.pop(league, None)
-                    self.discovery_at[league] = now
+                    completed_at = self.now()
+                    self.discovery_at[league] = completed_at
+                    if self.ledger is not None:
+                        self.ledger.record_discovery(league, completed_at=completed_at, objects=traversal.charged_objects)
+                    self.metrics.get('discovery_unstable', {}).pop(league, None)
                     break
                 if len(traversal.pages) >= traversal.max_pages:
                     self.discovery_progress.pop(league, None)
+                    if self.ledger is not None:
+                        self.ledger.clear_discovery_progress(league)
                     self.discovery_at[league] = now
+                    self.metrics.setdefault('discovery_unstable', {})[league] = self.now().isoformat()
                     break
+                self.checkpoint_discovery(league, traversal)
+                # Give overdue pregame work a bounded share of the turn.
+                # A large refresh backlog cannot take every discovery slot.
+                urgent, scheduled = due_now()
+                await self.refresh(urgent, policy, between_discovery_pages=True)
+                await self.refresh(scheduled[:self.page_limit], policy)
             self.metrics.setdefault('discovery_complete', {})[league] = traversal.complete
         self.phase = 'waiting_for_cycle'
-        self.metrics['next_refresh_at'] = (self.now()+timedelta(minutes=15)).isoformat()
+        self.metrics['next_refresh_at'] = (self.now()+timedelta(seconds=self.next_cycle_delay())).isoformat()
+
+    def next_cycle_delay(self):
+        # Continue a bounded traversal promptly, while respecting the same
+        # per-page usage reconciliation, local rate guard and daily budget.
+        if self.discovery_progress:
+            return 60
+        policy = self.schedule_policy
+        if policy is None:
+            return 15 * 60
+        now = self.now()
+        delay = 15 * 60
+        for event in self.scheduled_events():
+            # "started" is not proof of a live offer, but a non-ended game
+            # with that provider status deserves the same polling priority.
+            _, due = poll_slot(event, now, policy)
+            delay = min(delay, max(0, (due - now).total_seconds()))
+            if not event.live:
+                for window in (policy.approaching_window, policy.imminent_window, policy.near_window):
+                    boundary = (event.starts_at - window - now).total_seconds()
+                    if boundary > 0:
+                        delay = min(delay, boundary)
+        # Avoid a busy loop for due requests interrupted by controls or rate.
+        return max(60, int(delay))
 
     def controls_to_schedule(self):
         c = self.controls()
@@ -223,8 +545,9 @@ class SportsGameOddsWorker:
         self.metrics.update(state=state, reason_code=code)
         if self.service.database_mode:
             await call(self.service, self.provider_status, state, code, reason)
-        for venue in ('novig','prophetx'):
-            await call(self.service, self.service.source_state, venue, state, reason)
+        await call(self.service, self.service.source_state, 'novig', state, reason)
+        await call(self.service, self.service.source_state, 'prophetx', 'unavailable',
+                   'SportsGameOdds Prophet Exchange quotes are not verified as current ProphetX contracts.')
 
     async def run(self):
         if not self.service.database_mode:
@@ -232,27 +555,44 @@ class SportsGameOddsWorker:
             return
         try:
             await self.state('connecting', 'sgo_connecting', 'Connecting to SportsGameOdds account usage.')
-            await self.initialize()
             while not self.controls()['stopped'] and not self.controls()['source_paused']:
                 try:
+                    await self.initialize()
+                    retained, truncated = await asyncio.to_thread(
+                        retained_schedule, aggregate_scope(self.service.config), self.now(), self.max_events)
+                    self.events.update(retained)
+                    self.metrics.update(retained_schedule_events=len(retained), retained_schedule_truncated=truncated)
+                    if self.ledger is not None:
+                        self.discovery_at.update(self.ledger.discovery_schedule(now=self.now()))
+                        self.restore_discovery()
+                    break
+                except RuntimeError as exc:
+                    if not await self.wait_for_dispatch(exc):
+                        raise
+                    await asyncio.sleep(60)
+            while not self.controls()['stopped'] and not self.controls()['source_paused']:
+                try:
+                    if self.ledger is not None and self.now() >= self.ledger.status(self.window_id)['reset_at']:
+                        # A new pacing window starts from fresh provider usage;
+                        # outstanding older reservations still block dispatch.
+                        await self.initialize()
                     await self.cycle()
                 except RuntimeError as exc:
                     if str(exc) == 'daily object pacing limit':
                         self.phase = 'waiting_for_budget'
                         delay, code = 60*60, 'sgo_daily_pacing'
                         reason = 'SportsGameOdds is waiting for its daily object budget; prices retain their original source times.'
-                    elif str(exc) == 'request rate limit':
-                        self.phase = 'waiting_for_rate'
-                        delay, code = 60, 'sgo_request_rate'
-                        reason = 'SportsGameOdds is waiting for its request limit to reset.'
                     else:
-                        raise
+                        if not await self.wait_for_dispatch(exc):
+                            raise
+                        await asyncio.sleep(60)
+                        continue
                     self.metrics['next_refresh_at'] = (self.now()+timedelta(seconds=delay)).isoformat()
                     await self.state('budget_delayed', code, reason)
                     await asyncio.sleep(delay)
                     continue
                 await self.state('budget_delayed', 'sgo_cycle_complete', 'SportsGameOdds prices are attributed aggregate observations; source freshness is checked separately.')
-                await asyncio.sleep(15*60)
+                await asyncio.sleep(self.next_cycle_delay())
         except asyncio.CancelledError:
             raise
         except Exception as exc:
@@ -261,6 +601,7 @@ class SportsGameOddsWorker:
                        'current account usage evidence unavailable or changed':'Current account usage could not be safely reconciled.',
                        'unresolved provider object reservation':'An earlier provider request has an unresolved object charge.',
                        'provider rate limited; charge remains held':'The provider rate limit was reached; the request charge remains held.',
+                       'provider rejected cursor; charge remains held':'The provider rejected a discovery cursor; the incomplete walk was discarded and the request charge remains held.',
                        'daily object pacing limit':'The daily object pacing limit has been reached.'}
             reason = reasons.get(str(exc), 'SportsGameOdds collection is unavailable; check account and source status.')
             self.metrics['state']='unavailable'
@@ -271,6 +612,28 @@ class SportsGameOddsWorker:
                     reason)
         finally:
             await self.close()
+
+    async def wait_for_dispatch(self, exc):
+        # Retry read-only balance checks. Paid dispatch still requires a fresh
+        # agreeing balance, with every unresolved reservation left in place.
+        if str(exc) == 'request rate limit':
+            self.phase, code = 'waiting_for_rate', 'sgo_request_rate'
+            reason = 'SportsGameOdds is waiting for its request limit to reset.'
+        elif isinstance(exc, TransportFailure) or str(exc) in (
+                'provider rejected cursor; charge remains held', 'provider rate limited; charge remains held',
+                'provider response unsuccessful; charge remains held', 'unresolved provider object reservation',
+                'unresolved object reservation', 'collection paused or rate limited'):
+            self.phase, code = 'waiting_for_reconciliation', 'sgo_charge_unresolved'
+            reason = 'SportsGameOdds is waiting for accounting or provider controls to allow dispatch.'
+        elif str(exc) in ('account usage unavailable', 'account usage request failed',
+                          'current account usage evidence unavailable or changed'):
+            self.phase, code = 'waiting_for_usage', 'sgo_usage_unreconciled'
+            reason = 'SportsGameOdds is waiting for a fresh provider balance that agrees with the ledger.'
+        else:
+            return False
+        self.metrics['next_refresh_at'] = (self.now()+timedelta(seconds=60)).isoformat()
+        await self.state('budget_delayed', code, reason)
+        return True
 
     async def close(self):
         if not self.closed:

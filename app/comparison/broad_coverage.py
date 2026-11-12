@@ -13,6 +13,7 @@ from .capabilities import SPORTS, SOURCES as VENUES
 from app.dashboard.current_contract import stamp
 
 VERSION = 'predict-broad-coverage-1'
+AGGREGATE_VENUES = ('novig', 'prophetx', 'pinnacle')
 MAX_RECORDS = 32768
 MAX_EXAMPLES = 3
 MAX_CELLS = 4096
@@ -111,14 +112,20 @@ def _mapped_reason(code):
 
 def _freshness(quote, event, at, states, published=None):
     try:
+        from .game_phase import price_phase
         from .source_clock import assess
-        clocks=assess(quote,stamp(at))
+        evaluated_at = stamp(at)
+        clocks=assess(quote,evaluated_at)
         if any(code!='source_expired' for code in clocks['reasons']):
             return 'unknown'
         start = event.get('scheduled_start', event.get('start_at'))
-        current = (not clocks['reasons']
-            and (not start or stamp(at)<stamp(start)))
-        state = states.get(quote.get('venue'), {}).get('state', quote.get('state', quote.get('source_state', 'unknown')))
+        current = not clocks['reasons']
+        if current and start and stamp(start) <= evaluated_at:
+            phase = price_phase(event, quote, at)
+            current = phase['state'] == 'live' and phase['reason'] is None
+        provider = quote.get('source', {}).get('provider')
+        status_key = provider if provider == 'sportsgameodds' else quote.get('venue')
+        state = states.get(status_key, {}).get('state', quote.get('state', quote.get('source_state', 'unknown')))
         captured=quote.get('state',quote.get('source_state','unknown'))
         published=published or {}
         captured_available=(captured in ('available','budget_delayed')
@@ -174,6 +181,20 @@ def _held(owner):
         ('ambiguous_dispatch_unresolved', 'quota_unknown', 'clock_continuity_unknown', 'restart_accounting_refresh_required'))
 
 
+def _aggregate_acquisition(owner, provider):
+    status = owner.get('status', {})
+    if provider == 'sportsgameodds':
+        metrics = next((panel.get('metrics', {}) for panel in status.get('sources', [])
+                        if panel.get('provider') == provider), {})
+        objects = metrics.get('objects') or {}
+        return dict(provider=provider, held=bool(objects.get('held') or objects.get('paused')),
+                    reserved_objects=objects.get('held'), pause=objects.get('paused'))
+    quota = status.get('quota') or {}
+    return dict(provider=provider, held=_held(owner), pause=quota.get('pause'),
+                blocking_reason=quota.get('blocking_reason'), unresolved_attempts=quota.get('unresolved_attempts'),
+                reserved_credits=quota.get('reserved'))
+
+
 def _discovery(query):
     latest = deepcopy((query or {}).get('latest'))
     if not latest:
@@ -191,6 +212,14 @@ def _discovery(query):
         window_note='Exact captured query and selected metadata window; independent of the retained-price cohort. Provider-universe totals are unknown.')
 
 
+def _query_source(row):
+    venue = row.get('venue', row.get('source'))
+    provider = venue
+    if venue in AGGREGATE_VENUES:
+        provider = 'sportsgameodds' if row.get('provider') == 'sportsgameodds' else 'the_odds_api'
+    return venue, provider
+
+
 def merge_queries(current, previous=()):
     """Keep bounded latest query evidence across runtime restarts, without aging it.
 
@@ -205,13 +234,15 @@ def merge_queries(current, previous=()):
             result[key]=deepcopy(max(candidates,key=lambda v:stamp(v['checked_at']))) if candidates else None
         return result
     for row in [*previous,*current]:
-        key=(row['sport'],row.get('venue',row.get('source')))
+        key=(row['sport'],*_query_source(row))
         if key[0] not in SPORTS or key[1] not in VENUES:continue
         old=values.get(key,{})
         families={f['family']:deepcopy(f) for f in old.get('family_queries',[])}
         for f in row.get('family_queries',[]):
             families[f['family']]=dict(family=f['family'],**merge(families.get(f['family']),f))
         values[key]=dict(sport=key[0],venue=key[1],**merge(old,row),family_queries=list(families.values()))
+        if key[2] == 'sportsgameodds':
+            values[key]['provider'] = key[2]
     return [values[key] for key in sorted(values)]
 
 
@@ -261,12 +292,17 @@ def build(records, published, *, config, owner, at, queries=(), encountered=(), 
         # but release each detached audit graph after extracting metrics facts.
         for key,row,identity in OccurrenceResolver().resolve(_records(records,at),clock=at,result_projector=project):
             input_facts[key]=(row,identity)
+    aggregate = _aggregate_acquisition(owner, (config or {}).get('aggregate_provider', 'the_odds_api'))
+    # Keep historical query records in storage and display only evidence for
+    # the selected aggregate provider.
+    queries = [c for c in queries if _query_source(c)[0] not in AGGREGATE_VENUES
+               or _query_source(c)[1] == aggregate['provider']]
     query_map = {(c['sport'],c.get('venue',c.get('source')),f['family']):f for c in queries for f in c.get('family_queries', [])}
     # A source-wide query cannot become family-specific counts.
     source_queries = {(c['sport'],c.get('venue',c.get('source'))):c for c in queries}
     states = deepcopy(owner.get('states', {}))
-    for source in VENUES:
-        provider='the_odds_api' if source in ('novig','prophetx','pinnacle') else source
+    for source in (*VENUES, 'sportsgameodds'):
+        provider=aggregate['provider'] if source in AGGREGATE_VENUES else source
         if not owner.get('healthy',True) or not owner.get('active',True) or owner.get('global_stopped') or provider in owner.get('paused_sources',[]):
             states[source]=dict(states.get(source,{}),state='stopped')
     items = []; seen = set(); scope = list(encountered)
@@ -415,14 +451,13 @@ def build(records, published, *, config, owner, at, queries=(), encountered=(), 
             item['peers'] = len(group)-venue_counts[source]
             item['current_peers'] = sum(current_counts.values())-current_counts[source] if item['freshness']=='current' else 0
     cells = []
-    aggregate_held = _held(owner)
     for spec in specs:
         checkpoint()
         sport,venue,fam,period = spec['league'],spec['source'],spec['family'],spec['period']
         cid = cell_id(sport,venue,fam,period); local = by_cell[cid]
         configured = spec['configured']; provider = spec['acquisition_provider']
         state = ('not_configured' if not configured else 'disabled' if not spec['acquisition_enabled'] else
-            'held' if provider=='the_odds_api' and aggregate_held else 'paused' if owner.get('global_stopped') or provider in owner.get('paused_sources', []) else 'enabled')
+            'held' if provider==aggregate['provider'] and aggregate['held'] else 'paused' if owner.get('global_stopped') or provider in owner.get('paused_sources', []) else 'enabled')
         query = query_map.get((sport,venue,fam)) if period=='full_game' else None
         discovery = _discovery(query)
         discovery['source_query'] = _discovery(source_queries.get((sport,venue)))
@@ -494,11 +529,7 @@ def build(records, published, *, config, owner, at, queries=(), encountered=(), 
         cells=cells,total_cells=len(cells),filtered_cells=len(cells),global_totals=global_counts,filtered_totals=deepcopy(global_counts),
         ratios=ratios(global_counts,'all captured retained observations'),filtered_ratios=ratios(global_counts,'all captured retained observations'),
         aggregation=dict(outcomes=comparable_groups,occurrences=occurrence_groups,inputs=input_aggregation,publications=publication_groups),
-        aggregate_acquisition=dict(provider='the_odds_api',held=aggregate_held,
-            pause=(owner.get('status',{}).get('quota') or {}).get('pause'),
-            blocking_reason=(owner.get('status',{}).get('quota') or {}).get('blocking_reason'),
-            unresolved_attempts=(owner.get('status',{}).get('quota') or {}).get('unresolved_attempts'),
-            reserved_credits=(owner.get('status',{}).get('quota') or {}).get('reserved')),
+        aggregate_acquisition=aggregate,
         definitions=dict(cohort='One repeatable-read capture of unexpired retained native price inputs; one observation per source/native side.',
             discovery='Separate exact-query window; reported row counts are distinct from measured unique discovered counts. Unknown provider-universe totals.',
             displayed='Exact retained native inputs with a corresponding ordinary Odds publication, before local display filters.',

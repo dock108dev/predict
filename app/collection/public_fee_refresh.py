@@ -32,10 +32,12 @@ class RetrievalFailed(ValueError):
         self.receipt = receipt
 
 
-def record_attempt(state, outcome, reason, evidence, clock):
+def record_attempt(state, outcome, reason, evidence, clock, *, approval_id=None):
     """Shared retry scheduling for each independently reviewed product."""
     at = clock()
     state['last_attempt'] = dict(at=at, state=outcome, error=reason, retrieval=evidence)
+    if approval_id is not None:
+        state['last_attempt']['approval_id'] = approval_id
     delay = RETRY_INTERVAL if outcome == 'failed' else REFRESH_INTERVAL
     state['next_attempt_at'] = (stamp(at) + delay).isoformat()
     return state
@@ -225,7 +227,18 @@ async def refresh_product(key, state, retrieve, *, clock=now, allowed=lambda: Tr
         outcome='unchanged_verified' if state.get('last_verified',{}).get('approval_id')==approval_id else 'verified'
         state['last_verified']=verified; state.pop('review_required',None); reason=None
     if not allowed(): return None
-    return record_attempt(state, outcome, reason, evidence, clock)
+    return record_attempt(state, outcome, reason, evidence, clock, approval_id=approval_id)
+
+
+def product_due(key, state, at):
+    if not state or stamp(state['next_attempt_at']) <= at:
+        return True
+    required = state.get('review_required')
+    if not required:
+        return False
+    from app.fees import product_schedules as products
+    approval_id = hashed(products.approved(key))
+    return approval_id not in (required.get('approval'), (state.get('last_attempt') or {}).get('approval_id'))
 
 
 async def run(runtime):
@@ -271,7 +284,7 @@ async def run(runtime):
                     def load_product():
                         with runtime.connector() as db: return products.read_all(db).get(key)
                     previous=await asyncio.to_thread(load_product)
-                    if not previous or stamp(previous['next_attempt_at']) <= stamp(now()):
+                    if product_due(key, previous, stamp(now())):
                         updated=await refresh_product(key, previous, retrieve, allowed=product_allowed, clock=now)
                         if updated is not None and product_allowed():
                             def save_product():

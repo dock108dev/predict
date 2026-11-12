@@ -1,15 +1,10 @@
-"""Conservative SGO-to-current-row projection, not wired to collection.
-
-The current storage contract does not support arbitrary bookmaker venues. This
-projection retains exact American prices and deliberately marks the binding
-unverified; it is suitable for current-row persistence tests, not for financial
-qualification, execution, or authoritative removal.
-"""
+"""Project SGO prices and explicit sporting state into current-row storage."""
 from copy import deepcopy
 from decimal import Decimal
 import re
 
 from app.comparison.event_links import provider_key
+from app.comparison.game_phase import sgo_event_status
 from app.dashboard.session_projection import stable
 from app.normalization.college_registry import aggregate_registry
 from app.storage.schedule_metadata import VERSION as SCHEDULE_VERSION
@@ -20,6 +15,22 @@ SPORTS = {'NFL': 'american_football', 'NCAAF': 'american_football', 'NBA': 'bask
 # Provider IDs are not crosswalked to native identities. In particular the
 # provider's 'polymarket' is not established as Polymarket US.
 CURRENT_VENUES = frozenset(('novig', 'prophetx', 'pinnacle', 'kalshi'))
+
+
+def linked_event_ids(links):
+    ids = {}
+    novig = links.get('novig', {})
+    event = re.fullmatch(
+        r'/event-markets/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/sportsgameodds',
+        novig.get('path', ''),
+    )
+    if novig.get('host') == 'novig.com' and event:
+        ids['novig_event'] = event[1]
+    kalshi = links.get('kalshi', {})
+    event = re.fullmatch(r'/markets/(kx[a-z0-9]+)/[a-z0-9-]+/(\1-[a-z0-9-]+)', kalshi.get('path', ''))
+    if kalshi.get('host') == 'kalshi.com' and event:
+        ids['kalshi_event'] = event[2].upper()
+    return ids
 
 
 def current_rows(page, receipt_sha256):
@@ -85,6 +96,12 @@ def current_rows(page, receipt_sha256):
                          home=home, away=away,
                          participants={event['teams']['home']['name']: home, event['teams']['away']['name']: away},
                          title=event['teams']['away']['name'] + ' at ' + event['teams']['home']['name'])
+        row_event['status'] = sgo_event_status(event['status'])
+        linked = linked_event_ids(event.get('bookmaker_event_links', {}))
+        if linked:
+            # Event links identify a venue occurrence. They carry no market
+            # ID, outcome, settlement or price authority.
+            row_event['shared_provider_ids'] = linked
         witness = dict(version=SCHEDULE_VERSION, native_event_id=event_id,
                        authority=['sportsgameodds', 'event', event_id], start=event['starts_at'], received_at=received_at,
                        proofs=[dict(path='sportsgameodds/receipt/' + receipt_sha256,

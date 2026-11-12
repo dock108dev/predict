@@ -179,7 +179,9 @@ def test_offer_scope_fails_closed(field, value, reason):
 
 
 @pytest.mark.parametrize('phase', ['scheduled', 'live'])
-def test_ordinary_after_fee_ev_requires_both_current_reference_and_settlement(phase):
+@pytest.mark.parametrize('provider', ['the_odds_api', 'sportsgameodds'])
+def test_ordinary_after_fee_ev_requires_both_current_reference_and_settlement(phase, provider):
+    from app.comparison.line_reference import scoring
     from tests.test_snapshot_benchmark import execution, references
 
     original = execution(native='no', cost='0.30')
@@ -197,29 +199,58 @@ def test_ordinary_after_fee_ev_requires_both_current_reference_and_settlement(ph
     record['comparison_source_metadata'].update(meta)
 
     refs = references()
-    for ref in refs:
+    if provider == 'sportsgameodds':
+        original.update(quote_revision=1, binding={'verified': True})
+        record.update(verified=True, orientation_evidence=[])
+        record['event'].update(season='2026', stage='regular', shared_provider_ids={'sportradar':'fixture-game'})
+        record['comparison_source_metadata'].pop('comparison_admission')
+        record['comparison_source_metadata']['scoring_scope']['scoring'] = scoring('NCAAB')
+    for i, ref in enumerate(refs):
         reference_record = ref['original_record']
         reference_record['event']['scheduled_start'] = short['start_at']
         reference_quote = reference_record['quote']
         reference_quote['times'] = short['times']
         reference_quote['provider_clocks'] = dict(book=AT.isoformat(), market=AT.isoformat(), selected_basis='market')
+        if provider == 'sportsgameodds':
+            reference_record.update(verified=False, orientation_evidence=[])
+            reference_record['event'].update(season='unverified', stage='unverified', shared_provider_ids={'sportradar':'fixture-game'})
+            reference_quote['source'].update(provider=provider, native_market_id=f'sgo-{i}')
+            reference_quote.update(state='available', original=dict(units='american_odds', value='-110'))
+            reference_quote['provider_clocks'] = dict(book=AT.isoformat(), market=None, selected_basis='book')
+            reference_record['comparison_source_metadata'].update(
+                provider_phase='live' if phase == 'live' else 'pregame',
+                provider_event_status=dict(started=phase == 'live', live=phase == 'live'),
+                provider_opposing_odd_id='yes' if i else 'no')
+            reference_record['comparison_source_metadata'].pop('comparison_admission')
+            reference_record['comparison_source_metadata'].pop('scoring_scope')
         ref.update(source=reference_quote['source'], times=short['times'])
     inputs = inputs_for(original, *refs)
+    inputs['reference_provider'] = provider
     calculated = snapshots.calculate(inputs)
     ready = live.bind(deepcopy(calculated), inputs, 'ready')
     ready = snapshots.unpack(snapshots.pack_read(snapshots.defer_details(ready)), lazy=True)
-    current, = project(ready, inputs, pinnacle='available')['rows']
+    def project_reference(state):
+        source = 'sportsgameodds' if provider == 'sportsgameodds' else 'pinnacle'
+        return live.project(ready, inputs['dependencies'], dict(OWNER, config={'aggregate_provider':provider}),
+            {'polymarket_us':{'state':'available'}, source:{'state':state}}, at=AT, policy='policy', epoch='epoch')['rows'][0]
+
+    current = project_reference('available')
     assert current['exact_pinnacle_reference_current'] and current['trade_fee']['available']
     assert current['conditional_return_percent'] is None
-    assert Fraction(current['conservative_return_percent']) == 25
-    withdrawn, = project(ready, inputs, pinnacle='paused')['rows']
+    assert Fraction(current['gross_return_percent']) == (Fraction(200, 3) if provider == 'sportsgameodds' else Fraction(100, 3))
+    assert Fraction(current['conservative_return_percent']) == (Fraction(225, 4) if provider == 'sportsgameodds' else 25)
+    withdrawn = project_reference('paused')
     assert withdrawn['trade_fee']['available'] and withdrawn['conservative_return_percent'] is None
 
     row, = calculated['rows']
-    row['snapshot_benchmark']['selected_identity']['equality_basis'] = 'assumed'
+    if provider == 'sportsgameodds':
+        record['event'].pop('shared_provider_ids')
+    else:
+        row['snapshot_benchmark']['selected_identity']['equality_basis'] = 'assumed'
     ready = live.bind(calculated, inputs, 'ready')
-    current, = project(ready, inputs, pinnacle='available')['rows']
-    assert current['exact_pinnacle_reference_current'] and current['trade_fee']['available']
+    current = project_reference('available')
+    assert current['exact_pinnacle_reference_current'] is (provider != 'sportsgameodds')
+    assert current['trade_fee']['available']
     assert current['conservative_return_percent'] is None
 
 

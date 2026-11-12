@@ -19,23 +19,120 @@ from tests.test_ev09_n01 import AT
 
 @skipUnless(SOCKET, 'Disposable PostgreSQL required')
 class SportsGameOddsAtomicIngress(LatestBoardFixture):
+    async def test_history_rotates_oldest_at_capacity(self):
+        from app.storage.sportsgameodds_reference import archive_revisions
+        from app.storage.store import encoded
+        def row(n):
+            return dict(id=str(n), event_id='rotation-fixture', revision=str(n), facts={'n': n})
+        with self.connect() as db, patch('app.storage.sportsgameodds_reference.HISTORY_BYTES', 2 * len(encoded({'n': 1}))):
+            with db.transaction():
+                archive_revisions(db, 'reference', [row(1)])
+                archive_revisions(db, 'reference', [row(2)])
+                archive_revisions(db, 'reference', [row(3)])
+            self.assertEqual([r['identity'] for r in db.execute(
+                "SELECT identity FROM current_sgo_history WHERE event_id='rotation-fixture' ORDER BY identity").fetchall()], ['2', '3'])
+            self.assertEqual(db.execute('SELECT evicted_capacity FROM current_sgo_history_state').fetchone()['evicted_capacity'], 1)
+            with patch('app.collection.current_storage_policy.sql_usage', return_value=2 * 1024**3):
+                with db.transaction():
+                    archive_revisions(db, 'reference', [row(4)])
+            self.assertEqual(db.execute("SELECT count(*) n FROM current_sgo_history WHERE event_id='rotation-fixture'").fetchone()['n'], 2)
+            self.assertEqual(db.execute('SELECT skipped_runway FROM current_sgo_history_state').fetchone()['skipped_runway'], 1)
+            db.execute("DELETE FROM current_sgo_history WHERE event_id='rotation-fixture'")
+
+    async def test_bounded_history_records_revisions_and_prunes_only_history(self):
+        import json
+        from datetime import datetime, timedelta, timezone
+        from app.collection.sportsgameodds_adapter import parse_page
+        from app.storage.sportsgameodds_reference import prune_history, read_history, prune, prune_frames
+        first = response()
+        old = parse(first)
+        second = deepcopy(first)
+        book = second['data'][0]['odds']['points-home-game-sp-home']['byBookmaker']['book']
+        book.update(odds='+100', lastUpdatedAt='2026-11-10T20:00:30Z')
+        new = parse_page(json.dumps(second).encode(), '2026-11-10T20:01:00Z')
+        with self.connect() as db:
+            upsert_rows(db, prepare_page(old))
+            upsert_frames(db, prepare_frames(old, prepare_page(old)))
+            with db.transaction():
+                upsert_rows(db, prepare_page(new))
+                upsert_frames(db, prepare_frames(new, prepare_page(new)))
+            history = db.execute('SELECT kind,facts FROM current_sgo_history ORDER BY kind').fetchall()
+            self.assertEqual([r['kind'] for r in history], ['frame', 'reference'])
+            self.assertEqual(history[1]['facts']['price_american'], '-110')
+            self.assertEqual(db.execute('SELECT facts FROM current_sgo_reference').fetchone()['facts']['price_american'], '+100')
+            # An undersized budget omits history without damaging the current row.
+            book.update(odds='+105', lastUpdatedAt='2026-11-10T20:01:30Z')
+            third = parse_page(json.dumps(second).encode(), '2026-11-10T20:02:00Z')
+            with patch('app.storage.sportsgameodds_reference.HISTORY_BYTES', 0):
+                upsert_rows(db, prepare_page(third))
+            self.assertEqual(db.execute('SELECT count(*) n FROM current_sgo_history').fetchone()['n'], 2)
+            self.assertEqual(db.execute('SELECT facts FROM current_sgo_reference').fetchone()['facts']['price_american'], '+105')
+        with self.connect() as db:
+            self.assertEqual(len(read_history(db, 'event')), 2)
+            state = db.execute('SELECT * FROM current_sgo_history_state').fetchone()
+            self.assertEqual(state['recorded'], 2)
+            self.assertEqual(state['skipped_capacity'], 1)
+            future = datetime.now(timezone.utc) + timedelta(days=8)
+            self.assertEqual(prune_history(db, at=future.isoformat()), 2)
+            self.assertEqual(db.execute('SELECT count(*) n FROM current_sgo_reference').fetchone()['n'], 1)
+            self.assertEqual(db.execute('SELECT count(*) n FROM current_sgo_event_frame').fetchone()['n'], 1)
+            later = (datetime.now(timezone.utc) + timedelta(days=60)).isoformat()
+            self.assertEqual(prune(db, at=later), 1)
+            self.assertEqual(prune_frames(db, at=later), 1)
+            self.assertEqual(len(read_history(db, 'event')), 2)
+            db.execute('DELETE FROM current_sgo_history')
+
+    async def test_restart_restores_live_frame_without_a_projected_event(self):
+        from datetime import datetime, timezone
+        from app.collection.sportsgameodds_worker import retained_schedule
+        raw = response()
+        raw['data'][0]['eventID'] = 'recovery-event'
+        raw['data'][0]['status'].update(started=True, live=True)
+        page = parse(raw)
+        with self.connect() as db:
+            upsert_frames(db, prepare_frames(page, prepare_page(page)))
+            self.assertEqual(db.execute("SELECT count(*) n FROM current_event WHERE provider='sportsgameodds'").fetchone()['n'], 0)
+        with patch('app.storage.store.connect', side_effect=self.connect):
+            events, truncated = retained_schedule(['NBA'], datetime(2026, 11, 10, 20, tzinfo=timezone.utc), 10)
+        self.assertFalse(truncated)
+        self.assertEqual(events['recovery-event']['phase'], 'live')
+        self.assertEqual(events['recovery-event']['received_at'], page.events[0]['received_at'])
+
+    async def test_old_provider_hold_does_not_mark_sgo_venues_held(self):
+        from app.storage import ordinary_publication as live
+        from app.collection.runtime_status import read_runtime
+        with self.connect() as db:
+            owner = read_runtime(db)
+            owner['config']['aggregate_provider'] = 'sportsgameodds'
+            owner['paused_sources'] = ['the_odds_api']
+            owner.setdefault('status', {})['quota'] = {'blocking_reason': 'recovery_credential_changed'}
+            with patch('app.collection.runtime_status.read_runtime', return_value=owner):
+                _, states = live.authority(db)
+            self.assertEqual(states['novig']['state'], 'available')
+            self.assertNotEqual(states['novig'].get('reason_code'), 'recovery_credential_changed')
+            self.assertNotEqual(states['pinnacle'].get('reason_code'), 'native_available')
+
     async def test_page_atomicity_unchanged_rows_and_controls(self):
         raw = response()
         book = raw['data'][0]['odds']['points-home-game-sp-home']['byBookmaker'].pop('book')
         raw['data'][0]['odds']['points-home-game-sp-home']['byBookmaker']['novig'] = book
+        raw['data'].append(dict(deepcopy(raw['data'][0]), eventID='college-event', leagueID='NCAAB'))
         page = parse(raw)
         records, _ = current_rows(page, page.receipt_sha256)
         references = prepare_page(page)
         self.assertTrue(records and references)
         row = dict(type='current_aggregate_records',source='sportsgameodds',sport='NBA',
                    records=records,sgo_reference_rows=references,sgo_event_frames=prepare_frames(page,references),receipt_sha256=page.receipt_sha256,
-                   event_scopes={page.events[0]['event_id']:page.events[0]['league']},
+                   event_scopes={event['event_id']:event['league'] for event in page.events},
                    complete_venues=[],received_at=page.events[0]['received_at'])
         sink = DatabaseIngressSink(SimpleNamespace(provider=self.service), DEFAULT)
         from app.collection.current_database import validate_sgo_page
         validate_sgo_page(row)
         mismatch = deepcopy(row)
         mismatch['sgo_reference_rows'][0]['facts']['receipt_sha256'] = 'f'*64
+        with self.assertRaises(ValueError): validate_sgo_page(mismatch)
+        mismatch = deepcopy(row)
+        mismatch['sgo_reference_rows'][0]['facts']['received_at'] = '2026-11-10T21:00:00Z'
         with self.assertRaises(ValueError): validate_sgo_page(mismatch)
         mismatch = deepcopy(row)
         mismatch['sgo_event_frames'][0]['facts']['members'] = []
@@ -55,13 +152,22 @@ class SportsGameOddsAtomicIngress(LatestBoardFixture):
              patch('app.storage.sportsgameodds_reference.upsert_frames',side_effect=fail_after_frame):
             with self.assertRaises(RuntimeError):
                 sink.prepare(row,self.service.states,Event())
+        self.assertNotIn('recent_sgo_preparations', sink.metrics)
         with self.connect() as db:
             self.assertEqual(db.execute('SELECT count(*) n FROM current_sgo_reference').fetchone()['n'], 0)
             self.assertEqual(db.execute('SELECT count(*) n FROM current_sgo_event_frame').fetchone()['n'], 0)
+            self.assertEqual(db.execute('SELECT count(*) n FROM current_sgo_delivery_clock').fetchone()['n'], 0)
             self.assertEqual(db.execute('SELECT count(*) n FROM current_offer').fetchone()['n'], before)
         with patch('app.collection.current_database.connect',side_effect=self.connect), \
              patch('app.collection.current_database.utc',return_value=AT):
             sink.prepare(row,self.service.states,Event())
+            sample, = sink.metrics['recent_sgo_preparations']
+            self.assertEqual(sample['received_at'], row['received_at'])
+            self.assertEqual(sample['leagues'], ['NBA', 'NCAAB'])
+            self.assertEqual(sample['reference_rows'], len(references))
+            self.assertEqual(sample['event_frames'], 2)
+            for key in ('sgo_reference', 'sgo_frames', 'sql_admission'):
+                self.assertGreaterEqual(sample['timings'][key], 0)
             with self.connect() as db:
                 first = db.execute('SELECT id,xmin::text AS version FROM current_sgo_reference').fetchall()
                 self.assertEqual(db.execute("SELECT state FROM current_source_status WHERE venue='sportsgameodds'").fetchone()['state']['state'], 'available')
@@ -69,7 +175,20 @@ class SportsGameOddsAtomicIngress(LatestBoardFixture):
                 offers = db.execute('SELECT count(*) n FROM current_offer').fetchone()['n']
                 self.assertGreater(offers,before)
                 self.assertEqual(len(first),len(references))
-                self.assertEqual(db.execute('SELECT count(*) n FROM current_sgo_event_frame').fetchone()['n'],1)
+                self.assertEqual(db.execute('SELECT count(*) n FROM current_sgo_event_frame').fetchone()['n'],2)
+                clocks = db.execute('SELECT * FROM current_sgo_delivery_clock ORDER BY league').fetchall()
+                self.assertEqual([clock['league'] for clock in clocks], ['NBA', 'NCAAB'])
+                admitted_at = clocks[0]['admitted_at']
+                self.assertIsNotNone(admitted_at)
+                self.assertEqual(clocks[1]['admitted_at'], admitted_at)
+                self.assertTrue(all(clock['first_publication_write_at'] is None for clock in clocks))
+                from app.storage.delivery_clocks import captured, published, receipts
+                offers_at = [dict(league=r['event']['competition'], source=r['quote']['source'], times=r['quote']['times']) for r in records]
+                captured(db, offers_at, admitted_at)
+                published(db, receipts(offers_at))
+                for delivered in db.execute('SELECT * FROM current_sgo_delivery_clock').fetchall():
+                    self.assertEqual(delivered['first_recorded_capture_at'], admitted_at)
+                    self.assertGreaterEqual(delivered['first_publication_write_at'], admitted_at)
             sink.prepare(row,self.service.states,Event())
             with self.connect() as db:
                 self.assertEqual(db.execute('SELECT id,xmin::text AS version FROM current_sgo_reference').fetchall(),first)
@@ -80,6 +199,7 @@ class SportsGameOddsAtomicIngress(LatestBoardFixture):
                 sink.prepare(row,self.service.states,Event())
             stopped=dict(type='sgo_status',source='sportsgameodds',state='stopped',reason_code='sgo_paused',reason='Paused')
             sink.prepare(stopped,self.service.states,Event())
+            self.assertEqual(len(sink.metrics['recent_sgo_preparations']), 2)
             with self.connect() as db:
                 self.assertEqual(db.execute("SELECT state FROM current_source_status WHERE venue='sportsgameodds'").fetchone()['state']['state'], 'stopped')
                 self.assertEqual(db.execute("SELECT venue,state FROM current_source_status WHERE venue IN ('kalshi','polymarket_us') ORDER BY venue").fetchall(),native_before)
@@ -98,8 +218,11 @@ class SportsGameOddsAtomicIngress(LatestBoardFixture):
         from app.storage import ordinary_publication as live
         from app.collection.runtime_status import read_runtime
         with self.connect() as db, \
-             patch('app.collection.current_policy.load', return_value=DEFAULT):
-            live.turn(db)
+             patch('app.collection.current_policy.load', return_value=DEFAULT), \
+             patch('app.storage.ordinary_publication.utc', return_value=self.at.isoformat()), \
+             patch('app.storage.comparison_snapshot.utc', return_value=self.at.isoformat()):
+            publication = live.turn(db)
+            self.assertTrue(publication['published'], publication)
             from app.storage import comparison_snapshot as snapshots
             head = live.status(db)
             result = snapshots.unpack(db.execute('SELECT result FROM comparison_snapshot_result WHERE id=%s', (head['result_id'],)).fetchone()['result'],db=db)

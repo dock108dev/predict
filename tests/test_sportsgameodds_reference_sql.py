@@ -1,7 +1,9 @@
 """Disposable database tests; no provider requests or installed-state writes."""
 import json
+from pathlib import Path
 import unittest
 from copy import deepcopy
+from unittest.mock import Mock, patch
 from uuid import uuid4
 
 from psycopg import sql
@@ -12,12 +14,43 @@ from app.collection.sportsgameodds_current_rows import current_rows
 from app.storage.current_rows import CurrentRowStore
 from app.storage.sportsgameodds_reference import prepare_page, read_event, upsert_rows
 from app.storage.store import Store, connect
+from tests.latest_board_fixture import SOCKET
 from tests.test_sportsgameodds_adapter import AT, response
 
 
+def test_batch_archives_only_replaced_returned_revisions():
+    raw = response()
+    raw['data'][0]['eventID'] = 'batch'
+    books = raw['data'][0]['odds']['points-home-game-sp-home']['byBookmaker']
+    for name in ('changed', 'expiry_only', 'unchanged', 'new'):
+        books[name] = deepcopy(books['book'])
+    del books['book']
+    rows = prepare_page(parse_page(json.dumps(raw).encode(), AT))
+    by_book = {row['bookmaker_id']: row for row in rows}
+    previous = [dict(by_book['changed'], revision='old'), by_book['expiry_only'], by_book['unchanged']]
+    accepted = [by_book[name] for name in ('changed', 'expiry_only', 'new')]
+    lock, retained, count, write = Mock(), Mock(), Mock(), Mock()
+    retained.fetchall.return_value = previous
+    count.fetchone.return_value = {'n': len(previous)}
+    write.fetchall.return_value = [{k: row[k] for k in ('id', 'revision')} for row in accepted]
+    db = Mock()
+    db.execute.side_effect = [lock, retained, count, write]
+
+    with patch('app.storage.sportsgameodds_reference.archive_revisions') as archive:
+        assert upsert_rows(db, rows) == len(accepted)
+        archive.assert_called_once_with(db, 'reference', previous[:1])
+    statement, params = db.execute.call_args.args
+    assert 'jsonb_to_recordset' in statement and params[0].obj == rows
+
+
+@unittest.skipUnless(SOCKET, 'Explicit disposable PostgreSQL lane required')
 class SportsGameOddsReferenceSQL(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        from app.storage.store import ROOT
+        root = Path(ROOT).resolve()
+        assert root.parent == Path('/tmp').resolve() and root.name.startswith('predict-pg-'), 'Disposable cluster only'
+        assert (root / '.local' / 'pgsocket').resolve() == Path(SOCKET).resolve(), 'Disposable socket only'
         cls.name = 'prediction_arb_sgo_' + uuid4().hex[:10]
         with connect() as db:
             db.execute(sql.SQL('CREATE DATABASE {}').format(sql.Identifier(cls.name)))
@@ -42,9 +75,11 @@ class SportsGameOddsReferenceSQL(unittest.TestCase):
             VALUES ('protected',1,now(),now(),'stopped',%s,%s,false,%s,'keep',%s,true)''',
             (Jsonb({}), Jsonb({}), Jsonb({}), Jsonb(['kalshi'])))
 
-    def page(self, *, source='2026-11-10T19:59:00Z', received=AT, available=True, odds='-110'):
+    def page(self, *, source='2026-11-10T19:59:00Z', received=AT, available=True, odds='-110', event_id='event'):
         data = response()
-        odd = data['data'][0]['odds']['points-home-game-sp-home']
+        event = data['data'][0]
+        event['eventID'] = event_id
+        odd = event['odds']['points-home-game-sp-home']
         book = odd['byBookmaker'].pop('book')
         book.update(lastUpdatedAt=source, available=available, odds=odds)
         odd['byBookmaker']['novig'] = book
@@ -135,8 +170,9 @@ class SportsGameOddsReferenceSQL(unittest.TestCase):
             self.assertEqual(prune(self.db, at='2026-11-24T21:00:01Z'), 0)
 
     def test_event_frame_binds_unchanged_and_changed_sides_without_refreshing_clock(self):
-        from app.storage.sportsgameodds_reference import prepare_frames, read_event_frame, upsert_frames
-        first = self.page()
+        from app.storage.sportsgameodds_reference import prepare_frames, read_event_frame, read_history, upsert_frames
+        event_id = 'mixed-reference-batch'
+        first = self.page(event_id=event_id)
         first_rows = prepare_page(first)
         first_frames = prepare_frames(first, first_rows)
         with self.assertRaisesRegex(RuntimeError, 'rollback'):
@@ -144,29 +180,47 @@ class SportsGameOddsReferenceSQL(unittest.TestCase):
                 upsert_rows(self.db, first_rows)
                 upsert_frames(self.db, first_frames)
                 raise RuntimeError('rollback')
-        self.assertIsNone(read_event_frame(self.db, 'event'))
+        self.assertIsNone(read_event_frame(self.db, event_id))
         with self.db.transaction():
             upsert_rows(self.db, first_rows)
             upsert_frames(self.db, first_frames)
-        old = {r['facts']['venue']: r for r in read_event(self.db, 'event')}
+        old = {r['facts']['venue']: r for r in read_event(self.db, event_id)}
         data = response()
-        odd = data['data'][0]['odds']['points-home-game-sp-home']
+        event = data['data'][0]
+        event['eventID'] = event_id
+        odd = event['odds']['points-home-game-sp-home']
         base = odd['byBookmaker'].pop('book')
         odd['byBookmaker']['novig'] = deepcopy(base)
-        odd['byBookmaker']['fanduel'] = dict(base, odds='+150', lastUpdatedAt='2026-11-10T20:00:30Z')
+        source_at = '2026-11-10T20:00:30.123456Z'
+        odd['byBookmaker']['fanduel'] = dict(base, odds='+150', lastUpdatedAt=source_at)
+        odd['byBookmaker']['pinnacle'] = deepcopy(base)
         second = parse_page(json.dumps(data).encode(), '2026-11-10T20:01:00Z')
         second_rows = prepare_page(second)
+        second_frames = prepare_frames(second, second_rows)
+        with self.assertRaisesRegex(RuntimeError, 'rollback'):
+            with self.db.transaction():
+                self.assertEqual(upsert_rows(self.db, second_rows), 2)
+                self.assertEqual(upsert_frames(self.db, second_frames), 1)
+                self.assertEqual(len(read_history(self.db, event_id)), 2)
+                raise RuntimeError('rollback current facts, frame and archived witnesses')
+        self.assertEqual({r['facts']['venue']: r for r in read_event(self.db, event_id)}, old)
+        self.assertEqual(read_event_frame(self.db, event_id)['facts']['receipt_sha256'], first.receipt_sha256)
+        self.assertEqual(read_history(self.db, event_id), [])
         with self.db.transaction():
-            self.assertEqual(upsert_rows(self.db, second_rows), 1)
-            self.assertEqual(upsert_frames(self.db, prepare_frames(second, second_rows)), 1)
-        current = {r['facts']['venue']: r for r in read_event(self.db, 'event')}
-        frame = read_event_frame(self.db, 'event')['facts']
+            self.assertEqual(upsert_rows(self.db, second_rows), 2)
+            self.assertEqual(upsert_frames(self.db, second_frames), 1)
+        current = {r['facts']['venue']: r for r in read_event(self.db, event_id)}
+        frame = read_event_frame(self.db, event_id)['facts']
         self.assertEqual(frame['receipt_sha256'], second.receipt_sha256)
         self.assertEqual(frame['received_at'], '2026-11-10T20:01:00Z')
         self.assertEqual({tuple(pair) for pair in frame['members']}, {(r['id'], r['revision']) for r in current.values()})
         self.assertEqual(current['novig']['facts']['received_at'], old['novig']['facts']['received_at'])
         self.assertEqual(current['novig']['facts']['source_at'], old['novig']['facts']['source_at'])
+        self.assertEqual(current['fanduel']['facts']['source_at'], source_at)
         self.assertEqual(current['fanduel']['facts']['price_american'], '+150')
+        self.assertEqual(current['pinnacle']['facts']['received_at'], frame['received_at'])
+        archived = {r['kind']: r['facts'] for r in read_history(self.db, event_id)}
+        self.assertEqual(archived, {'frame': first_frames[0]['facts'], 'reference': old['fanduel']['facts']})
         with self.assertRaisesRegex(ValueError, 'incomplete'):
             prepare_frames(second, second_rows[:1])
 

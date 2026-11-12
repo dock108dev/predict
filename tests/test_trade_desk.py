@@ -26,6 +26,38 @@ def result(*rows):
 
 
 class TradeDesk(TestCase):
+    def test_current_unranked_outcome_precedes_retained_unranked_outcome(self):
+        expired = quote('expired', 'novig', current=False)
+        expired['selection']['signed_line'] = '-3.5'
+        expired['start_at'] = '2026-11-07T01:00:00+00:00'
+        current = quote('current', 'kalshi')
+        options = ('ev', 'gross_return_percent', 0, 25)
+        data = result(expired, current)
+        ranked = page(data, {'basis':'sportsbooks'}, options)
+        self.assertEqual([g['offers'][0]['id'] for g in ranked['rows']], ['current', 'expired'])
+        scheduled = page(data, {'basis':'sportsbooks', 'sort':'start'}, options)
+        self.assertEqual([g['offers'][0]['id'] for g in scheduled['rows']], ['expired', 'current'])
+
+    def test_sportsbook_mode_keeps_rank_separate_from_qualified_ev(self):
+        first = quote('sgo', 'novig')
+        first.update(sportsbook_baseline=dict(book='fanduel', fair_decimal_odds='2',
+                     return_percent='10'), sportsbook_return_percent='10')
+        other = quote('expired', 'kalshi', current=False)
+        other.update(sportsbook_baseline=first['sportsbook_baseline'], sportsbook_return_percent='15')
+        options = ('ev', 'gross_return_percent', 0, 25)
+        view = page(result(other, first), {'basis':'sportsbooks', 'positive':'on'}, options)
+        self.assertEqual(view['coverage']['sportsbooks'], 1)
+        self.assertEqual(view['coverage']['before'], 0)
+        self.assertEqual(view['rows'][0]['score'], '10')
+        self.assertEqual(view['rows'][0]['offers'][0]['sportsbook']['book'], 'fanduel')
+        self.assertIsNone(view['rows'][0]['offers'][1]['value'])
+
+    def test_aggregate_venue_keeps_provider_attribution(self):
+        row = quote('sgo', 'kalshi')
+        row['source'] = {'provider': 'sportsgameodds'}
+        view = page(result(row), {}, ('ev', 'gross_return_percent', 0, 25))
+        self.assertEqual(view['rows'][0]['offers'][0]['source_provider'], 'sportsgameodds')
+
     def test_ev_groups_exact_lines_and_keeps_unknowns_out_of_rank(self):
         first = quote('first', 'kalshi', value='8')
         second = quote('second', 'polymarket_us', value='0')

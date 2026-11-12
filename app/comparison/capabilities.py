@@ -42,6 +42,14 @@ def inventory(config=None, encountered=()):
     from app.collection.public_contracts import load
     from .sporting_scope import supported
     config = DEFAULT if config is None else config
+    aggregate_provider = config.get('aggregate_provider', 'the_odds_api')
+    aggregate_selectors = {'moneyline': ['h2h'], 'spread': ['spreads'], 'total': ['totals']}
+    if aggregate_provider == 'sportsgameodds':
+        from app.collection.sportsgameodds_adapter import MARKETS
+        from app.collection.sportsgameodds_transport import ODD_IDS
+        aggregate_selectors = {family: [] for family in MARKETS.values()}
+        for odd_id in sorted(ODD_IDS):
+            aggregate_selectors[MARKETS[odd_id.split('-')[-2]]].append(odd_id)
     representations, bindings = _representations()
     cells = {(sport, source, family, period) for sport, family, period in representations
              for source in SOURCES}
@@ -72,7 +80,7 @@ def inventory(config=None, encountered=()):
                 kind for kind,row in us_types.items() if sport in row['competitions'] and
                 (row['family'],row['period'])==(family,period))
         elif not native and core:
-            selectors = [{'moneyline':'h2h', 'spread':'spreads', 'total':'totals'}[family]]
+            selectors = list(aggregate_selectors[family])
         # Ordinary discovery currently requests the full-game core. Other
         # retained catalog selectors are disclosed without claiming that the
         # running worker traverses them or that their predicates are normalized.
@@ -94,7 +102,7 @@ def inventory(config=None, encountered=()):
             reasons.append('outside_configured_acquisition_scope')
         state = 'reference_only' if reference and normalization else 'implemented' if comparison else 'unsupported'
         result.append(dict(league=sport, source=source, source_role='reference' if reference else 'native' if native else 'aggregate_venue',
-            acquisition_provider=source if native else 'the_odds_api', family=family, period=period,
+            acquisition_provider=source if native else aggregate_provider, family=family, period=period,
             configured=configured, acquisition_enabled=configured and bool(config.get('enabled')) and (
                 native or bool(config.get('aggregate_enabled'))),
             discovery_supported=discovery, normalization_supported=normalization,

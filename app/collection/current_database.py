@@ -97,12 +97,14 @@ def validate_sgo_page(row):
             if (quote['source']['provider'] != 'sportsgameodds'
                     or quote['source']['native_event_id'] != event['id']
                     or scopes.get(event['id']) != event['competition']
+                    or quote['times']['received_at'] != row['received_at']
                     or quote['provenance']['sha256'] != digest):
                 raise ValueError('sgo_page_identity_mismatch')
         for reference in row['sgo_reference_rows']:
             facts = reference['facts']
             if (facts['provider'] != 'sportsgameodds' or facts['event_id'] != reference['event_id']
-                    or scopes.get(facts['event_id']) != facts['league'] or facts['receipt_sha256'] != digest):
+                    or scopes.get(facts['event_id']) != facts['league'] or facts['receipt_sha256'] != digest
+                    or facts['received_at'] != row['received_at']):
                 raise ValueError('sgo_page_identity_mismatch')
         members = {event_id: [] for event_id in scopes}
         seen_reference_ids = set()
@@ -120,6 +122,7 @@ def validate_sgo_page(row):
             event_id = frame['event_id']
             if (event_id in frame_ids or event_id not in scopes
                     or facts['provider'] != 'sportsgameodds' or facts['event_id'] != event_id
+                    or (facts.get('event_context') is not None and facts['event_context']['league'] != scopes[event_id])
                     or facts['receipt_sha256'] != digest or facts['received_at'] != row['received_at']
                     or facts['members'] != sorted(members[event_id])):
                 raise ValueError('sgo_page_identity_mismatch')
@@ -438,8 +441,11 @@ class DatabaseIngressSink:
                             (row['sport'],row['received_at'],Jsonb(raw_batch)))
                     if row['type']=='current_aggregate_records' and 'sgo_reference_rows' in row:
                         from app.storage.sportsgameodds_reference import upsert_rows, upsert_frames
+                        phase('sgo_reference')
                         upsert_rows(db, row['sgo_reference_rows'])
+                        phase('sgo_frames')
                         upsert_frames(db, row['sgo_event_frames'])
+                        phase('sql_admission')
                     if row['type']=='sgo_status' or (row['type']=='current_aggregate_records' and row.get('source')=='sportsgameodds'):
                         from psycopg.types.json import Jsonb
                         status = (dict(state=row['state'],reason_code=row['reason_code'],reason=row['reason'])
@@ -470,14 +476,23 @@ class DatabaseIngressSink:
                             if keys:catalog_turnover[reason]=rows.withdraw_native_markets(keys,reimaging=reason=='reimage',deferred=reason=='derived_refresh',measure=True)
                     else:rows.withdraw_native_markets(withdraw)
                     if revoked is not None and revoked.is_set():raise asyncio.CancelledError()
+                    if row['type']=='current_aggregate_records' and 'sgo_reference_rows' in row:
+                        from app.storage.delivery_clocks import sgo_admitted
+                        sgo_admitted(db, set(row['event_scopes'].values()), row['received_at'])
                     phase('commit_observation')
             if row['type']=='coverage_inventory':
                 self.metrics['catalog_storage_turnover']=dict(at=utc(),source=row['source'],generation=row['generation'],reasons=catalog_turnover)
             if material_rows is not None:
                 candidate._material_admission=dict(material_rows.counts(utc()),source=row['source'],books=len(observations),normalized=len(records))
             phase('complete')
-            self.metrics['recent_preparations']=(self.metrics.get('recent_preparations',[])+[
-                dict(self.metrics['preparation'],records=len(records),scopes=len(scopes),withdrawn=len(withdraw))])[-32:]
+            prepared = dict(self.metrics['preparation'], records=len(records), scopes=len(scopes), withdrawn=len(withdraw))
+            self.metrics['recent_preparations'] = (self.metrics.get('recent_preparations', []) + [prepared])[-32:]
+            if row['type'] == 'current_aggregate_records' and 'sgo_reference_rows' in row:
+                # Native book admissions can fill the shared ring while SGO is waiting for budget.
+                sample = dict(prepared, received_at=row['received_at'],
+                              leagues=sorted(set(row['event_scopes'].values())),
+                              reference_rows=len(row['sgo_reference_rows']), event_frames=len(row['sgo_event_frames']))
+                self.metrics['recent_sgo_preparations'] = (self.metrics.get('recent_sgo_preparations', []) + [sample])[-16:]
             return candidate,now,changed
         except Exception as exc:
             from app.diagnostics import failure_details

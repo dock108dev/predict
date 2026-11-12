@@ -1,5 +1,14 @@
 import asyncio
 
+
+def test_cursor_error_classification_is_narrow():
+    from app.collection.sportsgameodds_transport import _invalid_cursor
+    assert _invalid_cursor(b'{"success":false,"error":"Invalid cursor"}')
+    assert _invalid_cursor(b'{"success":false,"error":"Cursor expired"}')
+    assert not _invalid_cursor(b'{"success":false,"error":"Invalid league"}')
+    assert not _invalid_cursor(b'{"success":true,"error":"Invalid cursor"}')
+    assert not _invalid_cursor(b'not json')
+
 import pytest
 
 from app.collection.sportsgameodds_transport import SportsgameoddsTransport, TransportFailure, validate_params

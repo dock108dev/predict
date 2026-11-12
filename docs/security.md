@@ -71,6 +71,10 @@ Manual assumptions in localStorage are calculation inputs, not provider secrets.
 
 The launcher uses a minimal environment and does not load `.env` or forward shell
 credentials. Ordinary startup validates its bounded configuration and acquires exclusive ownership before dedicated Keychain access. Retained real collectors separately require a run specification and applicable consumed-attempt checks. Browser input cannot supply provider destinations or credentials.
+The SGO worker reads a bounded, ignored, untracked `.env` through a file
+descriptor opened without following symlinks. It verifies the file is regular,
+owned by the current user and inaccessible to group and other users before
+reading it. It also validates the credential format before transport.
 See [configuration](configuration.md) for source-specific access and separate tools.
 
 Saved selectors resolve through discovered packages. Journal hashes and manifests

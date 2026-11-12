@@ -1,5 +1,11 @@
 # F08A Kalshi rendered schedule renewal
 
+**November 11 status.** The fee formula remains installed. Predict's local
+review expired, and the direct official PDF request returned HTTP 429.
+The provider's effective date and the app's verification deadline are
+separate. The [active fee work](../NEXT_STEPS.md#f08af09--keep-fees-effective-and-make-missing-fees-actionable)
+covers reliable verification and standing-term handling.
+
 November 10, 2026 · Integrated on `main` and exercised with fixtures.
 
 The ordinary data owner now renews the Kalshi exchange review after a fresh

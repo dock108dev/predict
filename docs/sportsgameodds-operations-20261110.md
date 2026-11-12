@@ -1,5 +1,44 @@
 # SportsGameOdds operations foundation
 
+## November 11 running state and account controls
+
+The local configuration runs SGO on Rookie alongside independent Kalshi and
+Polymarket US workers. The November 11 local reload confirmed the collector
+counters, batch admission and split reference and frame SQL timings. The
+observed slate selected a 15-minute live target and 72-hour repeat discovery.
+Its combined projection was 4,166.33 objects/day against a 4,770 allowance.
+The rolling budget guard remained active. Measure spending and source-clock
+freshness together over wider operating windows. The dated measurements are
+in `docs/sgo-paid-observation-20261111.md`, and `NEXT_STEPS.md` tracks
+the remaining integrated work.
+
+The provider reported a 100,000-object limit, 50 requests per minute and no
+reset timestamp. The worker uses the owner-directed **00:00 UTC on the first
+of each month** as a provisional pacing boundary. Use fresh provider usage
+and remaining allowance, retain reservations and uncertain exposure across
+the boundary, and require authoritative evidence before recognizing
+replenishment. Retain The Odds API's accounting separately. The startup
+control checks, rejected-cursor hold and resumption after an independently
+evidenced resolution have controlled coverage. Automatic request-specific
+charge attribution and live rejection recovery remain unverified.
+
+SQL verified bounded SGO history near its 32 MiB logical cap. Capacity
+evictions can reduce effective retention below the seven-day age limit.
+Current facts and pinned originals retain their separate authority.
+
+The ordinary desk also supports the highest-payout same-book de-vig basis
+using FanDuel, DraftKings, BetMGM and Caesars on the existing account. The
+price and reference clocks govern currency independently of polling.
+The [configuration guide](configuration.md) explains the SGO key and safe
+opt-in. Use the [coverage contract](broad-coverage.md) for the offered-data
+denominator and sustained coverage target.
+
+## November 10 foundation and evaluation record
+
+The following observations describe the earlier evaluation configuration and
+account. The November 11 section above records the running selection and
+supersedes the earlier pacing and reset requirements.
+
 The existing protected evaluation credential was checked against the provider's
 `/v2/account/usage` endpoint on November 10, 2026. The response explicitly
 identified the active tier as **amateur**, with 10 requests per minute and 2,500

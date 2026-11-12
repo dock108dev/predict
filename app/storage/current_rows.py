@@ -446,8 +446,10 @@ class CurrentRowStore:
                     # newly admitted by another writer cannot regain continuity.
                     execute("""UPDATE current_offer o SET facts=jsonb_set(o.facts,'{state}',to_jsonb(lost.state)),
                         revision=encode(sha256(convert_to(o.revision||lost.state,'UTF8')),'hex')
-                        FROM current_contract c JOIN unnest(%s::text[],%s::text[]) lost(venue,state) ON c.venue=lost.venue
+                        FROM current_contract c JOIN current_event e ON e.id=c.event_id
+                        JOIN unnest(%s::text[],%s::text[]) lost(venue,state) ON c.venue=lost.venue
                         WHERE c.id=o.contract_id AND o.facts->>'state' IN ('available','budget_delayed')
+                        AND (lost.venue NOT IN ('kalshi','polymarket_us') OR e.provider=lost.venue)
                         AND NOT (c.venue='novig' AND o.facts ? 'novig_runtime_id')""",
                         tuple(map(list,zip(*lost))))
                 for venue,state in source_status.items():

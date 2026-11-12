@@ -3,15 +3,20 @@
 Predict is a local, read-only prediction-market comparison app for macOS.
 
 The desk opens on EV, with Arbitrage and Admin alongside it. Compare individual
-source offers or group them by outcome. Reviewed fees, conservative estimates,
-and before-fee EV are separate calculation bases. Open an offer for its exact
+source offers or group them by outcome. The live EV page starts with the
+highest-payout sportsbook pair de-vigged for before-fee EV. Qualified before-fee,
+reviewed-fee and conservative EV are also available as separate bases.
+Open an offer for its exact
 reference inputs, recorded starting fee terms, saved book rules and outcome
 cashflows. Missing inputs stay visible in the inspection.
 
-Kalshi and Polymarket US supply native prices, including supported live prices.
-Novig and ProphetX can arrive through The Odds API on the 15-minute aggregate
-schedule. Novig also supports a signed read-only feed for eligible in-game
-offers with a post-reset book. Pinnacle supplies reference prices. The
+Kalshi and Polymarket US supply independent native prices. The aggregate route
+is selected in the data configuration. The sample selects SportsGameOdds with
+aggregate acquisition disabled. SGO supplies labeled offers and bookmaker
+observations. The current sportsbook EV basis uses FanDuel, DraftKings, BetMGM
+and Caesars. The Odds API has a separate legacy route and accounting.
+Novig also supports a signed read-only feed for eligible in-game offers with a
+post-reset book. The
 [fee coverage policy](docs/fee-coverage-policy.md) defines what the desk
 counts independently of reference and calculation eligibility.
 
@@ -38,7 +43,9 @@ cp -n config/current.example.json .local/predict-current-config.json
 Read [configuration](docs/configuration.md) before starting. The sample enables
 native acquisition and disables aggregate requests. Set `enabled` to `false`
 for current-data inspection without acquisition. `cp -n` keeps existing settings.
-Credentials are provisioned separately; aggregate requests consume provider credits.
+Open replay and select Synthetic practice to try the desk without provider credentials. For live
+collection, add your own read-only credentials. Enable SGO explicitly in the
+local configuration when you are ready to consume account objects.
 
 ```sh
 scripts/opportunity-board start

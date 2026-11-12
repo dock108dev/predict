@@ -8,8 +8,10 @@ coverage within the configured ordinary scope.
 ## What counts
 
 - The denominator is every distinct current, displayed-price offer across
-  Kalshi, Polymarket US, Novig and ProphetX in the configured NFL, NCAAF, NBA,
-  NCAAB, MLB and NHL winner, spread and total scope. Include supported periods,
+  active native and SGO-attributed venues in the configured NFL, NCAAF, NBA,
+  NCAAB, MLB and NHL winner, spread and total scope. Historical ProphetX rows
+  remain identifiable in the diagnostic inventory. Additional venues are backlog
+  work. Include supported periods,
   alternate lines and in-game offers wherever the live desk publishes them.
   Take the census before fee, EV, reference or positive-only filters. Use the
   venue, market and executable side to deduplicate repeated presentations.
@@ -43,6 +45,14 @@ explicitly labeled estimate. The [renewal state](../app/fees/product_schedules.p
 records effective terms and review deadlines. The [census](../app/dashboard/fee_coverage.py)
 counts the resulting current offers. Captured replay retains the original
 terms and deadline.
+
+A provider's effective dates and Predict's verification deadline describe
+different things. The installed app can withhold a fee when its local review
+expires, even while the schedule is still published. The remaining fee work
+in `NEXT_STEPS.md` covers reliable change detection, exact-market
+applicability and explicit handling of standing terms when a recheck fails.
+The current verified and conservative fee counts retain their existing
+meaning until that behavior is implemented and qualified.
 
 Use the applicable published fee when it is deterministic. If a public profile
 admits several documented possibilities, price each applicable case using

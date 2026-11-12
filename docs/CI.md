@@ -85,7 +85,11 @@ The SQL suite verifies current rows, transient calculations, input-bound Details
 expiry and restart behavior. This includes signed-format Novig admission and
 withdrawal on its disposable shard. Separate compatibility tests exercise
 retained storage codecs and HTTP 410 responses for retired history routes.
-The offline fee modules cover review windows, venue rounding, failed renewal,
+The SportsGameOdds offline group covers normalization, pacing, checkpoint
+recovery, usage holds, exact reference selection and the saved drawer.
+Disposable PostgreSQL adds batch admission, provider selection, history
+rotation, current sportsbook EV and expiry. The offline fee modules cover
+review windows, venue rounding, failed renewal,
 and the coverage denominator. The primary offline workflow ensures Poppler is
 available for the PDF extraction fixture. The fee browser journey checks
 desktop and mobile coverage, pinned evidence and the Admin error state using

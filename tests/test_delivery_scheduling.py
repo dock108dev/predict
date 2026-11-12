@@ -62,6 +62,17 @@ def test_novig_fresh_slot_uses_the_live_quote_deadline():
     assert prioritize_current(pending,scope,evidence,at+timedelta(microseconds=1))==pending
 
 
+def test_fresh_sgo_live_receipt_gets_first_slot_without_displacing_native_or_oldest():
+    at = datetime(2026, 11, 11, tzinfo=timezone.utc)
+    pending = ['old', 'pregame', 'kalshi', 'us', 'live']
+    scope = {key: [key] for key in pending}
+    evidence = [dict(event_id=key, venue=venue, at=(at - timedelta(seconds=age)).isoformat())
+                for key, venue, age in [('kalshi', 'kalshi', 0), ('us', 'polymarket_us', 0), ('live', 'sgo_live', 15)]]
+    kwargs = dict(undelivered={'pregame', 'live'})
+    assert prioritize_current(pending, scope, evidence, at, **kwargs) == ['live', 'old', 'kalshi', 'us', 'pregame']
+    assert prioritize_current(pending, scope, evidence, at + timedelta(microseconds=1), **kwargs) == pending
+
+
 def test_reference_only_capture_advances_aggregate_receipt_watermark():
     from app.storage.ordinary_publication import captured_aggregate_receipts
     from app.storage.store import hashed
@@ -69,3 +80,32 @@ def test_reference_only_capture_advances_aggregate_receipt_watermark():
     receipt='2026-11-08T02:30:00+00:00'
     inputs=dict(quotes=[],references=[dict(source=source,times=dict(received_at=receipt))])
     assert captured_aggregate_receipts(inputs)=={hashed(['the_odds_api','reference-only']):receipt}
+
+
+def test_sgo_live_delivery_prioritizes_the_earliest_source_deadline():
+    at = datetime(2026, 11, 11, tzinfo=timezone.utc)
+    pending = ['old', 'pregame', 'new_live', 'kalshi', 'us', 'expiring', 'expired']
+    scope = {key: [key] for key in pending}
+    evidence = [dict(event_id=key, venue=venue, at=(at - timedelta(seconds=age)).isoformat())
+                for key, venue, age in [('kalshi', 'kalshi', 0), ('us', 'polymarket_us', 0),
+                                        ('new_live', 'sgo_live', 2), ('expiring', 'sgo_live', 14),
+                                        ('expired', 'sgo_live', 16)]]
+    order = prioritize_current(pending, scope, evidence, at, undelivered={'pregame', 'new_live', 'expiring', 'expired'})
+    assert order[:4] == ['expiring', 'old', 'kalshi', 'us']
+    assert set(order) == set(pending)
+    assert order.index('new_live') < order.index('expired')
+
+
+def test_sgo_capture_watermark_uses_exact_current_frame_without_renewing_originals():
+    from app.storage.ordinary_scheduling import captured_aggregate_receipts
+    from app.storage.store import hashed
+    earlier = '2026-11-11T20:00:00Z'
+    latest = '2026-11-11T20:00:10Z'
+    inputs = dict(reference_provider='sportsgameodds', quotes=[], references=[
+        dict(source=dict(provider='the_odds_api', native_event_id='retired'), times=dict(received_at=latest)),
+        dict(source=dict(provider='sportsgameodds', native_event_id='event'), times=dict(received_at=earlier)),
+    ], sgo_reference_events={'event': {'frame': {'facts': {
+        'provider':'sportsgameodds','event_id':'event','received_at':latest,
+    }}}})
+    assert captured_aggregate_receipts(inputs) == {hashed(['sportsgameodds','event']):latest}
+    assert inputs['references'][1]['times']['received_at'] == earlier

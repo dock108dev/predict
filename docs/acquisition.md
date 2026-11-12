@@ -61,11 +61,11 @@ For isolated changes, use the [disposable SQL runner](CI.md#local-reproduction)
 and select the affected tests with `--tests`. Keep provider credentials and owner
 storage out of test fixtures.
 
-## SportsGameOdds integration work
+## SportsGameOdds collection
 
-The SGO page adapter, object accounting, reference capture and worker are under
-integration; their presence alone does not establish that the installed runtime
-has cut over. The adapter retains original bookmaker clocks and availability,
+SportsGameOdds is the aggregate on the current local setup. The page adapter,
+object ledger, event scheduler and reference capture run in the data owner.
+The adapter retains original bookmaker clocks and availability,
 including per-book alternate lines, and refuses incomplete or ambiguous input
 rather than authorizing an absence-based withdrawal. Cursor completion alone is
 not an authoritative census. Unknown settlement and unjoined native contracts

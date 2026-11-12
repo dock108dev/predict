@@ -134,8 +134,8 @@ function tradingFee(model) {
   return block;
 }
 
-function settlement(data, venue) {
-  const block = section(`${name(venue)} rules and outcomes`);
+function settlement(data, venue, aggregate) {
+  const block = section(aggregate ? 'Illustrative outcomes · contract rules unverified' : `${name(venue)} rules and outcomes`);
   const scoring = Object.entries(data.scoring).filter(([key, value]) =>
     key !== 'score_domain' && !['not_applicable', 'unknown'].includes(value));
   if (scoring.length) {
@@ -179,6 +179,17 @@ export function tradeInspection(offer, group, evidence, {mode, position}) {
   result.append(tiles);
   if (offer.trade_fee) result.append(tradingFee(offer.trade_fee));
   if (offer.reason) result.append(el('p', reasons(offer.reason), 'inspection-gap'));
+  const sportsbook = offer.sportsbook;
+  if (sportsbook) {
+    result.append(section('Sportsbook EV estimate', facts([
+      ['Before-fee estimate', percent(sportsbook.return_percent)],
+      ['Selected book', name(sportsbook.book)],
+      ['Books with a current pair', sportsbook.candidate_books],
+      ['No-vig probability', probability(sportsbook.probability)],
+      ...sportsbook.prices.map((leg, i) => [i === 0 ? 'Selected odds' : 'Opposite odds',
+        `${leg.price_american} American · ${leg.source_at}`])
+    ]), el('p', 'Best payout for this outcome. Both prices are from the selected sportsbook via SportsGameOdds. The estimate assumes a decisive outcome.', 'desk-meta')));
+  }
   if (!evidence?.inspection) {
     result.append(el('p', 'Loading the pinned calculation…', 'desk-meta inspection-loading'));
     return result;
@@ -191,11 +202,23 @@ export function tradeInspection(offer, group, evidence, {mode, position}) {
   result.append(section('Price and outcome', facts([
     ['Selected outcome', position], ['Market', [name(offer.market.market), human(offer.market.period)].join(' · ')],
     ['Native side', data.source?.native_side && human(data.source.native_side)], ['Original price', original.value == null ? null : `${original.value} ${human(original.units)}`],
-    ['Cost per $1 normal claim', usd(gross.cost_usd)], ['Cross-site settlement match', data.identity.outcome?.supported ? 'Supported' : reasons(data.identity.outcome?.reason || 'Exact settlement evidence missing')]
+    ['Cost per $1 normal claim', usd(gross.cost_usd)], ['Cross-site settlement match', ref.available && ref.contract ? 'Decisive scoring supported' : data.identity.outcome?.supported ? 'Supported' : reasons(data.identity.outcome?.reason || 'Exact settlement evidence missing')]
   ])));
-  if (data.settlement) result.append(settlement(data.settlement, offer.venue));
-  const reference = section('Pinnacle reference');
-  if (ref.available) {
+  const sgoAggregate = data.source?.provider === 'sportsgameodds';
+  if (data.settlement) result.append(settlement(data.settlement, offer.venue, sgoAggregate));
+  const reference = section('Qualified reference');
+  if (ref.available && ref.contributors?.length) {
+    const median = ref.contributors.length > 1;
+    reference.append(facts([
+      ['Method', median ? 'Median of qualified SportsGameOdds book pairs' : `${name(ref.venue)} pair via SportsGameOdds`],
+      ['Fair probability', probability(ref.probability)], ['Fair decimal odds', number(ref.fair_decimal_odds)],
+      ['Maximum source age', `${ref.maximum_age_seconds} seconds`],
+      ...ref.contributors.flatMap(book => book.inputs.map((leg, index) => [
+        `${name(book.venue)} ${index === 0 ? 'selected' : 'opposite'}`,
+        `${human(leg.side)}${leg.line == null ? '' : ' · '+leg.line} · ${leg.price_american} American · ${leg.source_at}`
+      ]))
+    ]), el('p', ref.conditioning, 'desk-meta'));
+  } else if (ref.available && ref.pair?.length) {
     reference.append(facts([
       ...ref.pair.map((leg, index) => [index === ref.selected ? 'Selected price' : 'Opposite price',
         `${leg.selection?.label || human(leg.selection?.predicate || 'Outcome')} · ${leg.original.value} decimal · ${probability(ref.implied_probabilities[index])} implied`]),
@@ -206,12 +229,31 @@ export function tradeInspection(offer, group, evidence, {mode, position}) {
   } else {
     reference.append(el('p', reasons(ref.reason || data.identity.probability_reason || data.identity.reference_reason || 'exact_reference_pair_unavailable'), 'inspection-gap'));
   }
-  result.append(reference, section('Before-fee cashflows', facts([
+  result.append(reference);
+  const fair = evidence.row?.sgo_fair_comparison;
+  if (fair) {
+    result.append(section('SportsGameOdds fair odds', facts([
+      ['Availability', fair.available ? 'Available' : 'Unavailable from SportsGameOdds'],
+      ['Fair American odds', fair.price_american], ['Fair line', fair.line],
+      ['Original source time', fair.source_at || 'Unknown'], ['Received', fair.received_at]
+    ]), el('p', !fair.available ? 'This baseline is unavailable or incomplete.' : fair.same_line === false
+      ? 'Vendor estimate at a different line. Contributors and original update time are unknown.'
+      : 'Vendor estimate at capture. Contributors and original update time are unknown.', 'desk-meta')));
+  }
+  if (fair?.consensus) {
+    const book = fair.consensus;
+    result.append(section('SportsGameOdds book consensus', facts([
+      ['Availability', book.available ? 'Available' : 'Unavailable from SportsGameOdds'],
+      ['Consensus American odds', book.price_american], ['Consensus line', book.line],
+      ['Original source time', book.source_at], ['Received', book.received_at]
+    ]), el('p', book.same_line ? 'Vendor consensus includes bookmaker margin.' : 'Vendor consensus includes bookmaker margin and uses a different line.', 'desk-meta')));
+  }
+  result.append(section('Before-fee cashflows', facts([
     ['Normal winning payout', usd(gross.win_receipt_usd)], ['Profit if it wins', usd(gross.win_profit_usd)],
     ['Profit if it loses', usd(gross.loss_profit_usd)], ['Expected profit per claim', usd(gross.expected_profit_usd)],
     ['Risk per claim', usd(gross.risk_usd)], ['Return on risk', percent(gross.return_percent)]
   ]), el('p', 'Expected profit = fair chance × win profit + losing chance × loss profit. Return = expected profit ÷ risk.', 'inspection-formula')),
-  fee('EV with reviewed trading fees', data.reviewed, data.starting_fee_terms), fee('EV with conservative fees', data.conservative));
+  fee('EV with reviewed trading fees', data.reviewed, sgoAggregate ? null : data.starting_fee_terms), fee('EV with conservative fees', data.conservative));
   const model = data.assumed_scenario || {};
   const scenario = section('Full net EV and execution');
   if (model.available) {

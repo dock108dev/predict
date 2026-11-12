@@ -52,7 +52,7 @@ def rounded_cents(value):
     return Fraction(whole,100)
 
 
-def reviewed_fee(q, *, at, event, group, review=None):
+def reviewed_fee(q, *, at, event, group, review=None, verified_live=False):
     """Resolve the reviewed fee at the offered price without a reference."""
     venue=q['venue']
     metric=dict(available=False,reason=None)
@@ -62,10 +62,12 @@ def reviewed_fee(q, *, at, event, group, review=None):
         if not instant(evidence['reviewed_at'])<=at<instant(evidence['review_before']):
             raise ValueError('conditional_fee_review_expired_or_not_effective')
         if evidence.get('unavailable_reason'):raise ValueError(evidence['unavailable_reason'])
-        if at>=instant(event['start_at']):raise ValueError('conditional_pregame_ended')
+        live_kalshi = (verified_live and venue == 'kalshi' and q['source']['provider'] == 'kalshi'
+                       and at >= instant(event['start_at']))
+        if at>=instant(event['start_at']) and not live_kalshi:raise ValueError('conditional_pregame_ended')
         if (group['period']!='full_game' or group['market'] not in ('winner','spread','total')
-                or q.get('comparison_input_refs',{}).get('phase')=='live'
-                or (q.get('fee_applicability') or {}).get('phase')=='live'):
+                or not live_kalshi and (q.get('comparison_input_refs',{}).get('phase')=='live'
+                    or (q.get('fee_applicability') or {}).get('phase')=='live')):
             raise ValueError('conditional_pregame_straight_mapping_unsupported')
         original=q['original']
         exclusions=['ties','pushes','voids','cancellations','asymmetric exceptional settlement','account funding and withdrawal costs','taxes']
@@ -138,7 +140,7 @@ def reviewed_fee(q, *, at, event, group, review=None):
     return metric
 
 
-def attach(result, q, *, at, event, group, review=None):
+def attach(result, q, *, at, event, group, review=None, verified_live=False):
     gross=result.get('gross_decisive_benchmark') or {}
     venue=q['venue']
     if not gross.get('available'):
@@ -146,7 +148,7 @@ def attach(result, q, *, at, event, group, review=None):
     if venue=='prophetx':
         metric=dict(available=False,reason='prophetx_account_fee_model_and_rate_unbound')
     elif venue in ('novig','polymarket_us','kalshi'):
-        metric=reviewed_fee(q,at=at,event=event,group=group,review=review)
+        metric=reviewed_fee(q,at=at,event=event,group=group,review=review,verified_live=verified_live)
         if metric['reason']=='conditional_fee_review_expired_or_not_effective':
             metric.pop('evidence',None)
         try:
@@ -172,7 +174,7 @@ def attach(result, q, *, at, event, group, review=None):
     return result
 
 
-def snapshot_metric(row, *, at, review=None):
+def snapshot_metric(row, *, at, review=None, verified_live=False):
     """Adapt a captured decisive benchmark to the same reviewed fee owner.
 
     A normalized one-fill scenario is separate from requested funding and from
@@ -183,5 +185,6 @@ def snapshot_metric(row, *, at, review=None):
     reference=row.get('snapshot_benchmark') or row.get('reference') or {}
     result=dict(revision=digest([row['id'],reference]),gross_decisive_benchmark=dict(
         available=True,state='captured',selected_decisive_probability=row['probability'],reference_revision=digest(reference)))
-    result=attach(result,row,at=instant(at),event={'start_at':row['start_at']},group=row['market'],review=review)
+    result=attach(result,row,at=instant(at),event={'start_at':row['start_at']},group=row['market'],review=review,
+                  verified_live=verified_live)
     return result.get('conditional_trade_benchmark',dict(available=False,reason='reviewed_trade_fee_scenario_unavailable'))

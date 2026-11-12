@@ -205,21 +205,42 @@ def write_report(output, records, started):
         if r["name"].startswith("ordinary-fee-coverage__")
         or r["name"] == "test_f07_desk_ui"
     ]
+    sgo_checks = [
+        r
+        for r in records
+        if r["name"].startswith("sportsgameodds__") or r["name"] == "test_sgo_drawer"
+    ]
     behavior = []
-    if fee_checks:
-        fee_outcomes = {r["status"] for r in fee_checks}
-        if any((r.get("tests") or {}).get("skipped") for r in fee_checks):
-            fee_outcomes.add("SKIPPED")
+    if fee_checks or sgo_checks:
         behavior = [
             "### What was tested and why it matters",
             "| Behavior checked | Actual result | Why it matters | Evidence / limit |",
             "|---|---|---|---|",
-            "| Fee applicability, renewal, rounding, coverage counts and the fee desk | "
-            + " / ".join(sorted(fee_outcomes))
-            + " | Keeps expired or unsupported fees out of current estimates and preserves the coverage denominator | "
-            + "Ordinary fee modules and desk client results below. Fixtures and simulated HTTP only. |",
+        ]
+        for checks, title, purpose in (
+            (
+                fee_checks,
+                "Fee applicability, renewal, rounding and coverage",
+                "Keeps unsupported fees out of current estimates and preserves the denominator",
+            ),
+            (
+                sgo_checks,
+                "SportsGameOdds collection, recovery and reference qualification",
+                "Protects budget holds, original prices and the exact inputs used in EV",
+            ),
+        ):
+            if not checks:
+                continue
+            outcomes = {r["status"] for r in checks}
+            if any((r.get("tests") or {}).get("skipped") for r in checks):
+                outcomes.add("SKIPPED")
+            behavior.append(
+                f"| {title} | {' / '.join(sorted(outcomes))} | {purpose} "
+                "| Fixtures and simulated HTTP. Check results below. |"
+            )
+        behavior += [
             "",
-            "**Gaps and limits.** Signed-provider operation and automatic live renewal require separate validation.",
+            "**Gaps and limits.** Provider collection, live fee renewal and current desk coverage require separate validation.",
         ]
     summary = [
         f"## Offline contract — {overall}",

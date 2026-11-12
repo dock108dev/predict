@@ -1,12 +1,13 @@
 import asyncio
+import sqlite3
 from functools import wraps
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from app.collection.sportsgameodds_collector import GuardedPageCollector
+from app.collection.sportsgameodds_collector import GuardedPageCollector, RejectedCursor
 from app.collection.sportsgameodds_ledger import ObjectLedger
 from app.collection.sportsgameodds_transport import PageResponse
 
@@ -38,6 +39,34 @@ async def test_successful_empty_page_accounts_minimum(tmp_path):
     assert not page.events
     assert ledger.status('w')['charged'] == 1
     assert ledger.status('w')['held'] == 0
+    with sqlite3.connect(ledger.path) as db:
+        assert db.execute('SELECT category, league FROM sgo_reservation_context').fetchall() == [('discovery', 'NBA')]
+        assert db.execute('SELECT league, phase, objects FROM sgo_charge_breakdown').fetchall() == [('NBA', 'unknown', 1)]
+
+
+@run_async
+async def test_event_refresh_category_is_recorded_before_dispatch(tmp_path):
+    c, ledger, _, transport = setup(tmp_path, PageResponse(200, b'{"success":true,"data":[]}', NOW.isoformat(), None))
+    async def fetch(*args):
+        with sqlite3.connect(ledger.path) as db:
+            assert db.execute('SELECT category, league FROM sgo_reservation_context').fetchall() == [('event_refresh', None)]
+        return PageResponse(200, b'{"success":true,"data":[]}', NOW.isoformat(), None)
+    transport.fetch.side_effect = fetch
+    await c.fetch({'eventIDs': 'event-1', 'oddID': PARAMS['oddID'], 'limit': 1}, 'private', now=NOW)
+    assert ledger.status('w')['charged'] == 1
+
+
+@run_async
+async def test_refresh_attributes_returned_events_not_requested_ids(tmp_path):
+    c, ledger, _, _ = setup(tmp_path, PageResponse(200, b'{}', NOW.isoformat(), None))
+    page = SimpleNamespace(events=[{'league': 'NBA', 'phase': 'live'},
+                                   {'league': 'NCAAB', 'phase': 'started'}])
+    with patch('app.collection.sportsgameodds_collector.parse_page', return_value=page):
+        await c.fetch({'eventIDs': 'a,b', 'oddID': PARAMS['oddID'], 'limit': 2}, 'private', now=NOW)
+    assert ledger.charge_breakdown('w', since=NOW - timedelta(seconds=1)) == [
+        {'category': 'event_refresh', 'league': 'NBA', 'phase': 'live', 'objects': 1},
+        {'category': 'event_refresh', 'league': 'NCAAB', 'phase': 'started', 'objects': 1},
+    ]
 
 
 @run_async
@@ -46,15 +75,27 @@ async def test_bad_response_or_429_retains_uncertain_reservation(tmp_path):
     with pytest.raises(RuntimeError, match='rate limited'):
         await c.fetch(PARAMS, 'private', now=NOW)
     assert ledger.status('w')['held'] == 5
+    with sqlite3.connect(ledger.path) as db:
+        assert db.execute('SELECT category, league FROM sgo_reservation_context').fetchall() == [('discovery', 'NBA')]
     assert ledger.status('w')['retry_after'] == NOW + timedelta(seconds=60)
     with pytest.raises(RuntimeError, match='unresolved'):
         await c.fetch(PARAMS, 'private', now=NOW + timedelta(minutes=1))
 
 
 @run_async
+async def test_rejected_cursor_retains_reservation(tmp_path):
+    c, ledger, _, _ = setup(tmp_path, PageResponse(400, b'', NOW.isoformat(), None, True))
+    with pytest.raises(RejectedCursor):
+        await c.fetch(dict(PARAMS, cursor='opaque'), 'private', now=NOW)
+    assert ledger.status('w')['held'] == 5
+    with pytest.raises(RuntimeError, match='unresolved'):
+        await c.fetch(PARAMS, 'private', now=NOW)
+
+
+@run_async
 async def test_changed_account_or_stop_never_dispatches(tmp_path):
     c, ledger, usage, transport = setup(tmp_path, PageResponse(200, b'', NOW.isoformat(), None))
-    usage.return_value['used'] = 11
+    usage.return_value['used'] = 9
     with pytest.raises(RuntimeError, match='usage evidence'):
         await c.fetch(PARAMS, 'private', now=NOW)
     usage.return_value['used'] = 10
@@ -63,6 +104,17 @@ async def test_changed_account_or_stop_never_dispatches(tmp_path):
         await c.fetch(PARAMS, 'private', now=NOW)
     transport.fetch.assert_not_awaited()
     assert ledger.status('w')['held'] == 0
+
+
+@run_async
+async def test_other_client_usage_reduces_available_allowance(tmp_path):
+    c, ledger, usage, _ = setup(tmp_path, PageResponse(200, b'{"success":true,"data":[]}', NOW.isoformat(), None))
+    usage.return_value['used'] = 13
+    await c.fetch(PARAMS, 'private', now=NOW)
+    state = ledger.status('w')
+    assert state['initial_used'] == 13
+    assert state['charged'] == 1
+    assert state['available'] == 76
 
 
 @run_async

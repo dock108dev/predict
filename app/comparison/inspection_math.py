@@ -89,7 +89,7 @@ def offer_math(row):
         gross.update(win_receipt_usd='1', win_profit_usd=wire(1-Fraction(cost)),
                      loss_profit_usd=wire(-Fraction(cost)))
     reference = dict(row.get('reference_calculation') or {})
-    if reference.get('available'):
+    if reference.get('available') and reference.get('pair'):
         reference['implied_probabilities'] = [wire(1/Fraction(leg['original']['value']))
                                                for leg in reference['pair']]
     reviewed = dict(row.get('conditional_trade_benchmark') or {})

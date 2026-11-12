@@ -68,6 +68,9 @@ async function check() {
   assert.equal(adopted.state, 'ready');
   assert.equal(adopted.offer.trade_fee.trade_fee_usd, '0');
   assert.equal(adopted.evidence.inspection.fair_reference.pair[0].original.value, '8');
+  frames = [null];
+  assert.deepEqual(await adopt(), {state:'unavailable'});
+  assert.deepEqual(released, ['new']);
   active = false;
   frames = [latest];
   assert.deepEqual(await adopt(), {state:'closed'});
@@ -81,6 +84,29 @@ async function check() {
   const settlement = tradeInspection(commission, group, details['commission:commission'], {position:'Fixture'});
   assert.match(settlement.textContent, /Winning settlement/);
   assert.match(settlement.textContent, /Fee if it loses\$0\.00/);
+  const aggregateEvidence = structuredClone(details['commission:commission']);
+  aggregateEvidence.inspection.source.provider = 'sportsgameodds';
+  aggregateEvidence.inspection.starting_fee_terms = {values:[['Formula','venue formula']],scope:'venue scope'};
+  aggregateEvidence.inspection.settlement = {scoring:{},outcomes:[],wording:[],fictional:false};
+  const aggregate = tradeInspection(commission, group, aggregateEvidence, {position:'Fixture'});
+  assert.match(aggregate.textContent, /Illustrative outcomes · contract rules unverified/);
+  assert.doesNotMatch(aggregate.textContent, /venue formula/);
+  const sgoEvidence = structuredClone(details[latest.id + ':latest']);
+  sgoEvidence.inspection.fair_reference = {available:true, venue:'pinnacle', contract:{phase:'live'},
+    probability:'1/2', fair_decimal_odds:'2', maximum_age_seconds:15,
+    contributors:[{venue:'pinnacle',inputs:[{side:'home',price_american:'-110',source_at:'2026-11-10T20:00:00Z'},
+      {side:'away',price_american:'-110',source_at:'2026-11-10T20:00:00Z'}]}]};
+  const sgoDrawer = tradeInspection({...latest, reference_current:true}, group, sgoEvidence, {position:'Fixture'});
+  assert.match(sgoDrawer.textContent, /Pinnacle pair via SportsGameOdds/i);
+  assert.match(sgoDrawer.textContent, /Maximum source age15 seconds/);
+  const sportsbook = {book:'fanduel', candidate_books:3, probability:'25/58', return_percent:'100/29',
+    prices:[{price_american:'+120', source_at:'2026-11-10T20:00:00Z'},
+            {price_american:'-150', source_at:'2026-11-10T20:00:00Z'}]};
+  const withBook = tradeInspection({...latest, sportsbook}, group, sgoEvidence, {position:'Fixture'});
+  assert.match(withBook.textContent, /Before-fee estimate3\.45%/);
+  assert.match(withBook.textContent, /Selected bookFanDuel/);
+  assert.match(withBook.textContent, /Opposite odds-150 American/);
+  assert.notEqual(selectionIdentity(latest), selectionIdentity({...latest, sportsbook}));
 
   for (const row of arbs.rows) {
     const drawer = pairInspection(row.pairs[0], new Map(row.offers.map(o => [o.id, o])),

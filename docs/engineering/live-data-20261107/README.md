@@ -4,14 +4,10 @@
 
 **E01–E07 changes are integrated and locally checked.** See the [delivery record](delivery.md) for running behavior, focused tests and remaining product limits. The final 18:45 NCAAF receipt reached the checked Sam Houston browser rows in 42.166 seconds. Pinned adoption, keyboard return, later-page stability and session export passed. Those remaining failures are addressed by the continuation above; the original 18:45 sample is not the final native or latency result. No complete live coverage or owner acceptance is claimed.
 
-This queue follows the owner's November 7 request to turn the usability findings
-into next steps. It supersedes the November 6 “ordinary use / owner acceptance
-next” instructions as the active execution order. The November 4
-[product contract](../../live-comparison-plan-20261104.md) and November 6
-[L05 delivery evidence](../live-comparison-20261104/L05-delivery.md) remain dated
-requirements and evidence; earlier checks are not erased or automatically rerun.
-The [Desktop next steps](../../../../prediction_arb_next_steps.md) is a concise
-entry point to this queue, not a second independently maintained plan.
+This record describes the November 7 delivery and its dated follow-ups.
+[Repository Next Steps](../../../NEXT_STEPS.md) owns the current SGO,
+99% coverage and usability work. The [product contract](../../live-comparison-plan-20261104.md)
+preserves the earlier design and records the current source and reference choices.
 
 ## Evidence and starting state
 

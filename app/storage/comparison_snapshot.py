@@ -87,7 +87,7 @@ def defer_details(result):
         'gross_profit_per_claim price_difference_cents snapshot_benchmark_reason same_outcome '
         'times original evidence_result_id trade_fee novig_live_financial_qualified kalshi_live_financial_qualified '
         'polymarket_live_financial_qualified '
-        'captured_at price_revision economic_revision').split())
+        'captured_at price_revision economic_revision sportsbook_baseline').split())
     rows=[]
     for row in result['rows']:
         if '_detail_json' in row:
@@ -279,10 +279,12 @@ def capture(db, *, at=None, ordinary=False, event_ids=None, capture_binding=None
                     out['issues'].extend(context.catalog_errors)
         if out['reference_provider']=='sportsgameodds':
             from app.comparison.sgo_fair_display import comparison as vendor_fair
+            from app.comparison.sgo_sportsbook_baseline import select as sportsbook_baseline
             from .sportsgameodds_reference import read_event, read_event_frame
             exists=db.execute("SELECT to_regclass('public.current_sgo_reference') AS name").fetchone()['name']
             frames_exist=db.execute("SELECT to_regclass('public.current_sgo_event_frame') AS name").fetchone()['name']
             events={}
+            frames={}
             for ref in out['references']:
                 record=ref.get('original_record') or {}; source=(record.get('quote') or {}).get('source') or {}
                 if not exists or source.get('provider')!='sportsgameodds':continue
@@ -301,10 +303,15 @@ def capture(db, *, at=None, ordinary=False, event_ids=None, capture_binding=None
                     except ValueError:
                         events[event_id]=[]
                         out['issues'].append(dict(event=event_id,reason='vendor_fair_event_capacity'))
-                value=vendor_fair(record,events[event_id])
+                if frames_exist and event_id not in frames:
+                    frames[event_id] = read_event_frame(db, event_id)
+                value=vendor_fair(record, events[event_id], frames.get(event_id))
                 if value is not None:row['sgo_fair_comparison']=value
+                baseline = sportsbook_baseline(record, events[event_id], frames.get(event_id), at=at)
+                if baseline is not None:
+                    row['sportsbook_baseline'] = baseline
             if frames_exist:
-                out['sgo_reference_events']={event_id:dict(frame=read_event_frame(db,event_id),
+                out['sgo_reference_events']={event_id:dict(frame=frames[event_id] if event_id in frames else read_event_frame(db,event_id),
                     rows=[item for item in items if item['facts'].get('venue') in ('pinnacle','draftkings','fanduel','fanatics')])
                     for event_id,items in events.items()}
         out['epoch']=str(db.execute('SELECT epoch FROM current_row_epoch WHERE singleton').fetchone()['epoch'])

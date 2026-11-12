@@ -7,6 +7,32 @@ import pytest
 
 from app.collection.sportsgameodds_ledger import ObjectLedger
 
+
+def test_charge_breakdown_is_atomic_and_must_sum_to_charge(tmp_path):
+    from datetime import datetime, timedelta, timezone
+    now = datetime(2026, 11, 11, tzinfo=timezone.utc)
+    ledger = ObjectLedger(tmp_path / 'attribution.sqlite')
+    ledger.create_window('w', limit=100, initial_used=0, reserve=0,
+                         reset_at=now + timedelta(days=1), requests_per_minute=10)
+    ledger.reserve('w', 'r', objects=2, now=now, category='event_refresh')
+    with pytest.raises(ValueError, match='must equal'):
+        ledger.resolve('r', charged=2, evidence='response', now=now,
+                       breakdown={('NBA', 'live'): 1})
+    assert ledger.status('w')['held'] == 2
+    ledger.resolve('r', charged=2, evidence='response', now=now,
+                   breakdown={('NBA', 'live'): 1, ('NHL', 'pregame'): 1})
+    with sqlite3.connect(ledger.path) as db:
+        assert db.execute('SELECT league, phase, objects FROM sgo_charge_breakdown ORDER BY league').fetchall() == [
+            ('NBA', 'live', 1), ('NHL', 'pregame', 1)]
+    assert ledger.charge_breakdown('w', since=now - timedelta(seconds=1)) == [
+        {'category': 'event_refresh', 'league': 'NBA', 'phase': 'live', 'objects': 1},
+        {'category': 'event_refresh', 'league': 'NHL', 'phase': 'pregame', 'objects': 1},
+    ]
+    ledger.reserve('w', 'old', objects=1, now=now, category='event_refresh')
+    ledger.resolve('old', charged=1, evidence='legacy response', now=now)
+    assert ledger.charge_breakdown('w', since=now - timedelta(seconds=1))[-1] == {
+        'category': 'event_refresh', 'league': 'unknown', 'phase': 'unknown', 'objects': 1}
+
 NOW = datetime(2026, 11, 10, 20, tzinfo=timezone.utc)
 
 
@@ -186,3 +212,24 @@ def test_connections_close_on_success_and_failure(tmp_path):
             book.reserve('w', 'b', objects=1, now=NOW)
         book.status('w')
     assert created and all(db.closed_by_ledger for db in created)
+
+
+def test_daily_exposure_survives_pacing_boundary(tmp_path):
+    book = ObjectLedger(tmp_path / 'boundary.sqlite')
+    book.create_window('account:old', limit=100, initial_used=0, reserve=0, requests_per_minute=10)
+    book.create_window('account:new', limit=100, initial_used=2, reserve=0, requests_per_minute=10)
+    book.reserve('account:old', 'a', objects=2, now=NOW)
+    book.resolve('a', charged=2, evidence='observed response', now=NOW)
+    assert book.rolling_objects('account:new', since=NOW-timedelta(hours=1)) == 2
+
+
+def test_discovery_schedule_survives_restart_without_clock_regression(tmp_path):
+    path = tmp_path / 'ledger.sqlite'
+    ledger = ObjectLedger(path)
+    ledger.record_discovery('NBA', completed_at=NOW)
+    ledger.record_discovery('NBA', completed_at=NOW - timedelta(hours=1))
+    reopened = ObjectLedger(path)
+    assert reopened.discovery_schedule(now=NOW + timedelta(minutes=1)) == {'NBA': NOW}
+    assert reopened.discovery_schedule(now=NOW - timedelta(seconds=1)) == {}
+    with pytest.raises(ValueError):
+        reopened.record_discovery('unknown', completed_at=NOW)

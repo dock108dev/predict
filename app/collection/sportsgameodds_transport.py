@@ -7,6 +7,7 @@ URLs, credentials, error bodies, or provider text.
 from dataclasses import dataclass
 from datetime import datetime, timezone
 import re
+import json
 
 import aiohttp
 
@@ -28,6 +29,21 @@ class PageResponse:
     body: bytes
     received_at: str
     retry_after_seconds: int | None
+    invalid_cursor: bool = False
+
+
+def _invalid_cursor(body):
+    """Recognize only an explicit cursor-specific rejection; never expose text."""
+    try:
+        value = json.loads(body)
+    except (ValueError, UnicodeDecodeError):
+        return False
+    if not isinstance(value, dict) or value.get('success') is not False:
+        return False
+    error = value.get('error')
+    return (isinstance(error, str) and len(error) <= 512
+            and bool(re.search(r'\bcursor\b', error, re.I))
+            and bool(re.search(r'\b(?:invalid|expired|malformed)\b', error, re.I)))
 
 
 def _csv(value, *, limit=100):
@@ -100,7 +116,16 @@ class SportsgameoddsTransport:
                 retry = response.headers.get('Retry-After')
                 retry = int(retry) if retry and retry.isascii() and retry.isdigit() and len(retry) <= 6 else None
                 if response.status != 200:
-                    return PageResponse(response.status, b'', received_at, retry)
+                    invalid_cursor = False
+                    if response.status == 400 and 'cursor' in params:
+                        body = bytearray()
+                        async for chunk in response.content.iter_chunked(4096):
+                            if len(body) + len(chunk) > 4096:
+                                break
+                            body.extend(chunk)
+                        else:
+                            invalid_cursor = _invalid_cursor(body)
+                    return PageResponse(response.status, b'', received_at, retry, invalid_cursor)
                 if response.headers.get('Content-Encoding', 'identity').lower() != 'identity':
                     raise TransportFailure('unsupported response encoding')
                 body = bytearray()
@@ -110,7 +135,7 @@ class SportsgameoddsTransport:
                     body.extend(chunk)
                 if api_key.encode() in body:
                     raise TransportFailure('sensitive response suppressed')
-                return PageResponse(response.status, bytes(body), received_at, retry)
+                return PageResponse(response.status, bytes(body), datetime.now(timezone.utc).isoformat(), retry)
         except (aiohttp.ClientError, TimeoutError, OSError):
             raise TransportFailure('provider request outcome uncertain') from None
 

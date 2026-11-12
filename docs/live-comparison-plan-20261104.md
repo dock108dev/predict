@@ -1,5 +1,21 @@
 # Live outcome comparison — November 4, 2026
 
+## Current scope — November 11, 2026
+
+The working execution queue is `NEXT_STEPS.md`. Use the current
+[coverage measures](broad-coverage.md#next-version-target--bulk-live-data-and-99-coverage)
+and [fee policy](fee-coverage-policy.md). The November 4 design below remains
+the grouping and inspection contract. Its provider and default reference
+decisions describe the earlier Odds API setup.
+
+The live EV desk starts with Sportsbook EV before fees. It selects the highest
+eligible exact-line payout among FanDuel, DraftKings, BetMGM and Caesars via
+SportsGameOdds and de-vigs that book's own pair. Keep qualified and after-fee
+bases distinct, with explicit gaps when direct native contracts lack a verified
+binding. Preserve independent Kalshi and Polymarket US inputs. New P2P venues are
+backlog work. Finish the ordinary desk for the owner's profile and a clean
+macOS profile with its own credentials and preferences.
+
 ## Authority and status
 
 The local November 7 engineering record under `docs/engineering/live-data-20261107/`

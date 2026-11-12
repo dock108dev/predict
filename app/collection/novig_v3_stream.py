@@ -212,8 +212,8 @@ class StreamBook:
             self.frames.append(dict(position=self.position,market_id=self.market_id,lifecycle=deepcopy(value['lifecycle'])))
             if len(self.frames)>=128:self.revoke('novig_lifecycle_evidence_bound')
 
-    def evidence(self, event, market, outcome_id, *, at):
-        """Make a one-order fee witness only after a source GOLIVE + snapshot."""
+    def evidence(self, event, market, outcome_id, *, at, minimum_quantity=100):
+        """Retain the top opposite order after a source GOLIVE and snapshot."""
         if (not self.connected or self.orders is None or not self.transition
                 or not self.frames or 'book' not in self.frames[-1]):
             return None
@@ -222,7 +222,7 @@ class StreamBook:
         ids=[o.get('outcomeId') for o in market.get('outcomes',[])]
         if len(ids)!=2 or len(set(ids))!=2 or outcome_id not in ids:return None
         other=next(x for x in ids if x!=outcome_id);orders=self.orders.get(other,[])
-        if not orders or orders[0]['qty']<100:return None
+        if not orders or orders[0]['qty'] < minimum_quantity:return None
         price=str(Decimal('1')-Decimal(orders[0]['price']))
         family={'MONEY':'winner','SPREAD':'spread','TOTAL':'total'}.get(market.get('marketType'))
         if not family:return None

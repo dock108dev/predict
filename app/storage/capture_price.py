@@ -76,7 +76,7 @@ def capture(db,previous,*,at,binding,event_ids,diagnostics=None,_frame_dependenc
     changed={k for k in dep if dep[k]!=old[k]}
     by_id={contract_id(r['original_record']):r for r in previous['quotes']}
     if not changed<=by_id.keys():return refuse('reference_or_unselected')
-    if any(by_id[k]['venue'] not in ('kalshi','polymarket_us') for k in changed):return refuse('non_native')
+    if any(by_id[k]['source']['provider'] not in ('kalshi','polymarket_us') for k in changed):return refuse('non_native')
     if any(stamp(g['start_at'])<=stamp(at) for g in previous['games']):return refuse('kickoff')
     for row in previous['quotes']:
         link=row['original_record']['quote'].get('occurrence_link') or {}
@@ -126,6 +126,7 @@ def capture(db,previous,*,at,binding,event_ids,diagnostics=None,_frame_dependenc
             r=dict(r,quote=dict(q,occurrence_match=audit));affected.add(cid)
         records[hashed(r['quote']['source'])]=r
     games={g['game_key']:g for g in previous['games']};replacement={};groups=0
+    fair_baselines = {r['id']: r['sgo_fair_comparison'] for r in previous['quotes'] if 'sgo_fair_comparison' in r}
     affected_sources={basis['records'][cid]['source'] for cid in affected}
     for catalog in basis['catalogs']:
         selected=[]
@@ -144,6 +145,8 @@ def capture(db,previous,*,at,binding,event_ids,diagnostics=None,_frame_dependenc
         for event,group,q in entries(validated):
             r=records[hashed(q['source'])]
             row=captured_price(event,group,q,r,game,game['league'])
+            if row['id'] in fair_baselines:
+                row['sgo_fair_comparison'] = fair_baselines[row['id']]
             replacement[row['id']]=row
         groups+=sum(len(e['groups']) for e in selected)
     if not {by_id[k]['id'] for k in affected}<=replacement.keys():return refuse('missing_output')

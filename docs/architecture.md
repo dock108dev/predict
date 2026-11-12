@@ -1,5 +1,13 @@
 # Architecture and data
 
+The ordinary data owner seals comparison members in
+`app/storage/ordinary_publication.py`. The immutable list representation and
+read-time price, reference and fee authority are owned by
+`app/storage/ordinary_projection.py`. The HTTP desk reads and validates the
+sealed result within one database snapshot. See the
+[live comparison plan](live-comparison-plan-20261104.md) and
+[coverage contract](broad-coverage.md).
+
 ## Live comparisons
 
 The data process publishes prices and calculated results. The app reads each

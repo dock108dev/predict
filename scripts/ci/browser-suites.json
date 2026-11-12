@@ -54,6 +54,7 @@
     "test_selected_input_reads.cjs",
     "test_broad_coverage_client.cjs",
     "test_f07_desk_ui.cjs",
+    "test_sgo_drawer.cjs",
     "test_shared_current_comparisons.cjs",
     "test_opportunity_dashboard.cjs",
     "test_publication_encoding.cjs",

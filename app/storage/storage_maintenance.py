@@ -72,7 +72,8 @@ def maintain(db, *, compact=True, collecting=False):
         with db.transaction():
             reference = db.execute("SELECT to_regclass('public.current_sgo_reference') r").fetchone()['r']
             frames = db.execute("SELECT to_regclass('public.current_sgo_event_frame') r").fetchone()['r']
-            if reference or frames:
+            history = db.execute("SELECT to_regclass('public.current_sgo_history') r").fetchone()['r']
+            if reference or frames or history:
                 from .current_rows import LOCK as CURRENT_ROWS_LOCK
                 if not db.execute('SELECT pg_try_advisory_xact_lock(%s) held', (CURRENT_ROWS_LOCK,)).fetchone()['held']:
                     result['deferred'].append(dict(table='sportsgameodds_reference', reason='lock_busy'))
@@ -84,6 +85,9 @@ def maintain(db, *, compact=True, collecting=False):
                     if frames:
                         from .sportsgameodds_reference import prune_frames
                         result['sgo_frame_expired'] = prune_frames(db, at=now())
+                    if history:
+                        from .sportsgameodds_reference import prune_history
+                        result['sgo_history_expired'] = prune_history(db, at=now())
         if collecting and result['before_bytes'] >= PRESSURE_BYTES:
             # Full-scope native replacement can consume the remaining runway
             # before the server's default minute autovacuum wake-up. Recycle

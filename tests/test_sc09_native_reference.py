@@ -64,6 +64,30 @@ def test_independent_metric_currentness_excludes_optional_models():
     assert result['gross_decisive_benchmark']['state']=='numeric_current'
 
 
+def test_live_benchmark_requires_qualified_phase_and_post_start_reference_clocks():
+    from app.comparison.bound_finance import age_benchmarks
+    now=instant(AT); start=now-timedelta(minutes=1)
+    event=dict(start_at=start.isoformat(),status=dict(live=True))
+    q=dict(venue='polymarket_us',state='available',times=dict(source_at=AT,received_at=AT),
+        source={'provider':'polymarket_us'},comparison_input_refs=dict(phase='live'))
+    originals=[r.to_dict() for r in reference('total','40').outcomes]
+    for row in originals:
+        row.update(book_at=AT,market_at=AT,received_at=AT)
+    result=dict(gross_decisive_benchmark=dict(available=True,reference_originals=originals))
+    def reasons(quote=q, match=event, at=now):
+        age_benchmarks(result,quote,match,at)
+        return result['gross_decisive_benchmark']['currentness_reasons']
+    assert reasons()==[]
+    assert result['gross_decisive_benchmark']['state']=='numeric_current'
+    assert 'reference_expired' in reasons(at=now+timedelta(seconds=16))
+    originals[0]['market_at']=(start-timedelta(seconds=1)).isoformat()
+    originals[0]['book_at']=(start-timedelta(seconds=1)).isoformat()
+    assert 'reference_pre_start' in reasons()
+    originals[0]['market_at']=AT;originals[0]['book_at']=AT
+    assert 'post_start_game_state_unverified' in reasons(match=dict(start_at=start.isoformat()))
+    assert 'pregame_ended' in reasons(quote=dict(q,comparison_input_refs=dict(phase='pregame')))
+
+
 def test_ordered_stream_proof_requires_exact_price_and_receipt_order():
     from app.storage.native_authority import assessment
     from app.storage.store import hashed

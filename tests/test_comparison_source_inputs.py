@@ -13,7 +13,7 @@ from app.collection.current_aggregate_admission import admit
 from app.collection.current_benchmark import attach, key
 from app.comparison.current_dependencies import references, validate_profiles, eligibility
 from app.comparison.current_metrics import calculate_quote
-from app.comparison.source_inputs import produce
+from app.comparison.source_inputs import _phase, produce
 from app.dashboard.current_normalized import catalog_from_normalized
 from tests.current_fixture import fixture
 from tests.test_current_occurrence import book
@@ -76,6 +76,17 @@ def authored_opposition(record):
 
 
 class SourceInputs(unittest.TestCase):
+    def test_live_phase_requires_fresh_explicit_lifecycle_and_matching_metadata(self):
+        record={'event':{'scheduled_start':(AT-timedelta(minutes=10)).isoformat(), 'status':{'live':True}},
+                'quote':{'source':{'provider':'sportsgameodds'},
+                         'times':{'source_at':AT.isoformat(),'received_at':AT.isoformat(),
+                                  'source_time_kind':'provider_book'}}}
+        self.assertEqual(_phase(record, {'phase':'live'}, AT), 'live')
+        self.assertEqual(_phase(record, {'phase':'pregame'}, AT), 'unknown')
+        self.assertEqual(_phase(record, {'phase':'live'}, AT+timedelta(seconds=16)), 'unknown')
+        record['event']['status']={'live':True,'ended':True}
+        self.assertEqual(_phase(record, {'phase':'live'}, AT), 'unknown')
+
     def test_retained_us_short_orientation_produced_from_admission(self):
         record=next(r for r in native_records() if r['quote']['source']['native_outcome_id']=='2059747')
         original=deepcopy(record);ctx=context(record)
@@ -192,6 +203,22 @@ class SourceInputs(unittest.TestCase):
         self.assertEqual(result['gaps']['fee']['reason'],'source_channel_rule_not_established')
         self.assertIsNotNone(result['comparison_input_refs']['refs']['reference'])
         self.assertIsNotNone(result['comparison_input_refs']['refs']['probability'])
+
+    def test_sgo_observation_cannot_borrow_native_or_other_aggregate_rules(self):
+        from app.comparison.source_inputs import _rule, RULES_VERSION
+        record=next(r for r in native_records('kalshi') if r['selection']['predicate']=='win')
+        record['quote']['source']['provider']='sportsgameodds'
+        rule={'venue':record['quote']['venue'], 'channel':'native',
+              'market_families':[record['market_identity']['family']],
+              'period':record['market_identity']['period']}
+        registry={'schema':1, 'version':RULES_VERSION, 'rules':[rule]}
+        found, problem=_rule(record,registry,AT)
+        self.assertIsNone(found)
+        self.assertEqual(problem['reason'],'source_channel_rule_not_established')
+        rule['channel']='aggregate'
+        found, problem=_rule(record,registry,AT)
+        self.assertIsNone(found)
+        self.assertEqual(problem['reason'],'source_channel_rule_not_established')
 
     def test_real_receipt_keeps_named_hypothesis_visible_but_net_withheld(self):
         record=next(r for r in native_records() if r['quote']['source']['native_outcome_id']=='2059747')

@@ -64,7 +64,7 @@ def test_owned_median_capture_binds_sql_rows_and_revision_dependencies(tmp_path,
     from app.dashboard.current_contract import stamp
     quotes,registry=fixture(tmp_path)
     monkeypatch.setattr(sgo_rule_evidence,'owned_bindings',lambda:registry)
-    monkeypatch.setattr(sgo_reference_publication,'owned_reference_evidence',lambda *args:None)
+    monkeypatch.setattr(sgo_reference_publication,'owned_reference_evidence',lambda *args, **kwargs:None)
     native=execution(family='moneyline',line='0')
     native.update(league='NBA',quote_revision=3,binding={'verified':True},start_at='2026-11-11T03:00:00Z',cost_per_normal_claim='2/5')
     nr=native['original_record'];nr.update(verified=True,orientation_evidence=[])

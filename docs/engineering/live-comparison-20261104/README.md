@@ -1,5 +1,9 @@
 # Next engineering slices
 
+The current work is tracked in the repository root `NEXT_STEPS.md` and the
+[updated product scope](../../live-comparison-plan-20261104.md#current-scope--november-11-2026).
+The entries below describe earlier deliveries.
+
 ## November 7 — active follow-up engineering
 
 The November 7 local engineering record is under `docs/engineering/live-data-20261107/`.

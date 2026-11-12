@@ -51,7 +51,8 @@ class LatestBoardFixture(IsolatedAsyncioTestCase):
     def setUpClass(cls):
         cls.name='prediction_arb_latest_board_'+uuid4().hex[:10]
         with cls.connect('prediction_arb') as db:
-            assert str(db.execute('show data_directory').fetchone()['data_directory']).startswith('/tmp/predict-pg-')
+            directory = str(db.execute('show data_directory').fetchone()['data_directory'])
+            assert os.path.realpath(directory).startswith(os.path.realpath('/tmp/predict-pg-'))
             db.execute(sql.SQL('CREATE DATABASE {}').format(sql.Identifier(cls.name)))
         with cls.connect() as db:Store(db).migrate()
 
@@ -68,8 +69,13 @@ class LatestBoardFixture(IsolatedAsyncioTestCase):
         admission=patch('app.collection.background_work.BACKGROUND',BackgroundWork(sampler=lambda:64*1024*1024))
         admission.start();self.addCleanup(admission.stop)
         self.at=stamp(AT)
-        for target in ('app.collection.runtime_client.load','app.storage.latest_board.load','app.dashboard.comparison_board_api.load'):
-            change=patch(target,return_value=deepcopy(DEFAULT) if target.endswith('runtime_client.load') else DEFAULT_POLICY)
+        for target, policy in (
+            ('app.collection.current_policy.load', DEFAULT),
+            ('app.collection.runtime_client.load', DEFAULT),
+            ('app.storage.latest_board.load', DEFAULT_POLICY),
+            ('app.dashboard.comparison_board_api.load', DEFAULT_POLICY),
+        ):
+            change=patch(target,return_value=deepcopy(policy))
             change.start();self.addCleanup(change.stop)
         for target,callback in (
             ('app.collection.runtime_status.clock',lambda:self.at),

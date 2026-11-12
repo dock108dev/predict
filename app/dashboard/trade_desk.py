@@ -10,7 +10,9 @@ from .snapshot_display import comparison_groups, odds, ranking_value, search_ind
 
 
 EV_METRIC = 'conditional_return_percent'
-METRICS={'reviewed':EV_METRIC,'before':'gross_return_percent','conservative':'conservative_return_percent'}
+SPORTSBOOK_METRIC = 'sportsbook_return_percent'
+METRICS={'reviewed':EV_METRIC,'before':'gross_return_percent','conservative':'conservative_return_percent',
+         'sportsbooks':SPORTSBOOK_METRIC}
 
 
 def number(value):
@@ -43,10 +45,17 @@ def offer(original, metric=None):
     row = expand_row(original)
     price = row['original']
     ref = row.get('snapshot_benchmark') or row.get('reference') or {}
-    ref_venue = ref.get('bookmaker', 'pinnacle' if row.get('snapshot_benchmark') else None)
-    value = ranking_value(row, metric, current=True) if metric and ref_venue == 'pinnacle' else None
-    reasons = row.get('current_reasons', [])
     reference = row.get('reference_calculation') or {}
+    from app.comparison.sgo_reference import NAMED_VERSION, VERSION as SGO_MEDIAN
+    sgo_reference = reference.get('available') and reference.get('method') in (NAMED_VERSION, SGO_MEDIAN)
+    ref_venue = ref.get('bookmaker', 'pinnacle' if row.get('snapshot_benchmark') else None)
+    sportsbook = row.get('sportsbook_baseline') if row.get('price_current') else None
+    if sportsbook:
+        from .snapshot_display import decimal
+        sportsbook = dict(sportsbook, fair_odds=odds(decimal(sportsbook['fair_decimal_odds'])))
+    value = ranking_value(row, metric, current=True) if metric and (
+        metric == SPORTSBOOK_METRIC or ref_venue == 'pinnacle' or sgo_reference) else None
+    reasons = row.get('current_reasons', [])
     reference_prices = ref.get('odds') or []
     selected = ref.get('selected')
     selected_price = ref.get('selected_odds')
@@ -56,6 +65,8 @@ def offer(original, metric=None):
     if metric and value is None:
         if not row.get('price_current'):
             reason = 'Price expired' if 'source_expired' in reasons else 'Price unavailable'
+        elif metric == SPORTSBOOK_METRIC:
+            reason = 'sportsbook_baseline_unavailable'
         elif row.get('probability_missing') == 'finance_pending':
             reason = 'Calculation pending'
         else:
@@ -65,8 +76,15 @@ def offer(original, metric=None):
     gross=ranking_value(row,'gross_return_percent',current=True)
     reviewed=ranking_value(row,'conditional_return_percent',current=True)
     conservative=ranking_value(row,'conservative_return_percent',current=True)
+    fair = reference.get('fair_decimal_odds')
+    if sgo_reference and fair:
+        from .snapshot_display import decimal
+        reference_price = odds(decimal(fair))
+    else:
+        reference_price = odds(selected_price) if selected_price is not None and ref_venue == 'pinnacle' else None
     return dict(before_fee=None if gross is None else str(gross),after_fee=None if reviewed is None else str(reviewed),
                 conservative=None if conservative is None else str(conservative),metric=metric,
+                sportsbook=sportsbook,
                 trade_fee=row.get('trade_fee'),fee=row.get('conditional_trade_benchmark'),conservative_fee=row.get('conservative_trade_benchmark'),
                 reference_calculation=row.get('reference_calculation'),economic_revision=row.get('economic_revision'),price_revision=row.get('price_revision'),evidence_result_id=row.get('evidence_result_id'),
                 captured_at=row.get('captured_at'),game_state=row.get('game_state','unknown'),
@@ -74,12 +92,13 @@ def offer(original, metric=None):
                 source_clock_at=row.get('times',{}).get('source_at'),
                 confirmed_at=(row.get('book_confirmation') or {}).get('confirmed_at'),
                 projected_at=row.get('times',{}).get('projected_at'),
-                id=row['id'], venue=row['venue'], selection=row.get('selection'),
+                id=row['id'], venue=row['venue'], source_provider=(row.get('source') or {}).get('provider'), selection=row.get('selection'),
                 participant=row.get('participant_label'), market=row['market'],
                 odds=odds(price['value'], price['units'], price.get('payout', '1')),
                 current=bool(row.get('price_current')), value=None if value is None else str(value), reason=reason,
-                reference=odds(selected_price) if selected_price is not None and ref_venue == 'pinnacle' else None,
-                reference_current=row.get('exact_pinnacle_reference_current', gross is not None), probability=row.get('probability') if gross is not None else None,
+                reference=reference_price,
+                reference_current=gross is not None if sgo_reference else row.get('exact_pinnacle_reference_current', gross is not None),
+                probability=row.get('probability') if gross is not None else None,
                 overround=reference.get('overround') if value is not None else None,
                 source_at=(row.get('book_confirmation') or {}).get('confirmed_at') or row.get('times', {}).get('source_at'),
                 received_at=row.get('times', {}).get('received_at'))
@@ -120,6 +139,7 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
     rows = [labeled(row) for row in result['rows'] if (not venues or row['venue'] in venues) and matches(row)]
     by_id = {row['id']: row for row in rows}
     metric = METRICS[query.get('basis','reviewed')]
+    eligible_pair_count = None
     if view == 'arbs':
         from app.comparison.inspection_math import pair_math
         eligible = {r['id']: r for r in rows if r.get('price_current')
@@ -137,10 +157,11 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
             first = pairs[0]
             groups.append(dict(first, id=key, quotes=pairs, score=first['inspection']['rounded_return_percent']))
         groups.sort(key=lambda g: (-Fraction(g['score']), g['start_at'], g['id']))
+        eligible_pair_count = sum(len(g['quotes']) for g in groups)
     else:
         # Do not let a separately configured non-Pinnacle calculation rank here.
         def ev_row(row):
-            return row if result.get('assumptions', {}).get('benchmark_venue') == 'pinnacle' else dict(row, **{metric:None})
+            return row if metric == SPORTSBOOK_METRIC or result.get('assumptions', {}).get('benchmark_venue') == 'pinnacle' else dict(row, **{metric:None})
 
         groups = comparison_groups([ev_row(row) for row in rows], by_id, metric, current=True,
                                    individual=query.get('group') == 'offer')
@@ -151,7 +172,8 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
         coverage = dict(offers=len(visible_offers), current=sum(bool(row.get('price_current')) for row in visible_offers),
                         before=sum(ranking_value(row, METRICS['before'], current=True) is not None for row in visible_offers),
                         reviewed=sum(ranking_value(row, METRICS['reviewed'], current=True) is not None for row in visible_offers),
-                        conservative=sum(ranking_value(row, METRICS['conservative'], current=True) is not None for row in visible_offers))
+                        conservative=sum(ranking_value(row, METRICS['conservative'], current=True) is not None for row in visible_offers),
+                        sportsbooks=sum(ranking_value(row, SPORTSBOOK_METRIC, current=True) is not None for row in visible_offers))
     if query.get('sort') == 'start':
         groups.sort(key=lambda g: g['start_at'])
 
@@ -180,6 +202,7 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
                 state='ready', rows=visible, total=session['total'] if session else len(groups), offset=offset, limit=limit,
                 games=[g for g in result.get('games', []) if g['game_key'] in keys],
                 publication=result['publication'], basis=query.get('basis','reviewed'), coverage=coverage,
+                eligible_pair_count=eligible_pair_count,
                 row_kind='offers' if view != 'arbs' and query.get('group') == 'offer' else 'outcomes',
                 game_count=len({g['game_key'] for g in groups}),outcome_count=len(groups),
                 offer_count=len({q['id'] for g in groups for q in g['quotes']}) if view!='arbs' else len(by_id),

@@ -113,7 +113,15 @@ def _native_key(q):
 
 def _phase(record, metadata, at):
     from .event_eligibility import assess
-    if not assess(record['event'],at.isoformat())['eligible']:
+    eligibility=assess(record['event'],at.isoformat())
+    if not eligibility['eligible']:
+        # Live inputs need explicit source lifecycle and a fresh post-start
+        # price; a schedule or a metadata label alone cannot establish them.
+        if eligibility['state']=='live' and metadata.get('phase')=='live':
+            from .game_phase import price_phase
+            lifecycle=price_phase(record['event'],record['quote'],at.isoformat())
+            if lifecycle['state']=='live' and lifecycle['reason'] is None:
+                return 'live'
         return 'unknown'
     value=metadata.get('phase')
     if value in ('pregame', 'live', 'unknown'):
@@ -140,7 +148,12 @@ def _rule(record, registry, at):
         raise ValueError('source_rule_registry_capacity')
     public_tree(registry)
     q=record['quote'];m=record['market_identity']
-    channel='aggregate' if q['source']['provider']=='the_odds_api' else 'native'
+    provider=q['source']['provider']
+    # An SGO bookmaker label is an aggregate observation, not evidence that
+    # the quote is a native contract or that an older aggregate rule applies.
+    # Keep its channel distinct until provider-specific applicability is owned.
+    channel=('sgo_aggregate' if provider=='sportsgameodds' else
+             'aggregate' if provider=='the_odds_api' else 'native')
     matches=[r for r in rows if r.get('venue')==q['venue'] and r.get('channel')==channel
         and m['family'] in r.get('market_families', []) and r.get('period')==m['period']
         and (not r.get('leagues') or record['event']['competition'] in r['leagues'])]

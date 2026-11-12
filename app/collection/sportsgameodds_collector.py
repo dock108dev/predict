@@ -5,10 +5,15 @@ consumer. It must not start this component merely because a key exists.
 """
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
+from collections import Counter
 
 from .sportsgameodds_adapter import parse_page
 from .sportsgameodds_schedule import daily_allowance, response_object_charge
 from .sportsgameodds_transport import validate_params
+
+
+class RejectedCursor(RuntimeError):
+    """The cursor was rejected; its request remains an uncertain charge."""
 
 
 class GuardedPageCollector:
@@ -29,9 +34,9 @@ class GuardedPageCollector:
             raise RuntimeError('unresolved provider object reservation')
         observed = await self.account_usage()
         now = now or datetime.now(timezone.utc)
-        # Exact equality intentionally fails closed on external use, stale or
-        # lagging account counters; it never guesses which client spent objects.
-        if (not isinstance(observed, dict) or observed.get('used') != state['initial_used'] + state['charged']
+        # A higher provider count is conservatively recorded as external usage.
+        # A lower count may be lag or an actual reset; neither releases exposure.
+        if (not isinstance(observed, dict) or type(observed.get('used')) is not int
                 or observed.get('limit') != state['limit'] or observed.get('reset_at') != state['reset_at']
                 or type(observed.get('requests_per_minute')) is not int
                 or observed['requests_per_minute'] < state['requests_per_minute']
@@ -39,6 +44,8 @@ class GuardedPageCollector:
                 or observed['at'].tzinfo is None or observed['at'].utcoffset() is None
                 or not timedelta(0) <= now - observed['at'] <= timedelta(seconds=60)):
             raise RuntimeError('current account usage evidence unavailable or changed')
+        self.ledger.reconcile_increase(self.window_id, used=observed['used'], now=now)
+        state = self.ledger.status(self.window_id)
         rolling = self.ledger.rolling_objects(self.window_id, since=now-timedelta(days=1))
         per_day = daily_allowance(available=state['available'] + rolling, now=now, reset_at=state['reset_at'])
         if rolling + params['limit'] > per_day:
@@ -46,7 +53,9 @@ class GuardedPageCollector:
         control = self.controls()
         attempt = str(uuid4())
         self.ledger.reserve(self.window_id, attempt, objects=params['limit'], now=now,
-                            stopped=control['stopped'], source_paused=control['source_paused'])
+                            stopped=control['stopped'], source_paused=control['source_paused'],
+                            category='discovery' if 'leagueID' in params else 'event_refresh',
+                            league=params.get('leagueID'))
         # Recheck after reservation and immediately before dispatch. An unused
         # reservation is released only with a locally certain no-dispatch receipt.
         control = self.controls()
@@ -62,9 +71,21 @@ class GuardedPageCollector:
             else:
                 self.ledger.set_paused(self.window_id, True)
             raise RuntimeError('provider rate limited; charge remains held')
+        if response.status == 400 and response.invalid_cursor and 'cursor' in params:
+            raise RejectedCursor('provider rejected cursor; charge remains held')
         if response.status != 200:
             raise RuntimeError('provider response unsuccessful; charge remains held')
         page = parse_page(response.body, response.received_at)
         charged = response_object_charge(len(page.events))
-        self.ledger.resolve(attempt, charged=charged, evidence='parsed provider response', now=now)
+        # One object per returned event; the minimum charge on an empty page
+        # has no observed event phase. Never infer phase from a request.
+        leagues = {'NFL', 'NCAAF', 'NBA', 'NCAAB', 'MLB', 'NHL'}
+        phases = {'pregame', 'live', 'started'}
+        breakdown = Counter((event.get('league') if event.get('league') in leagues else 'unknown',
+                             event.get('phase') if event.get('phase') in phases else 'unknown')
+                            for event in page.events)
+        if not page.events:
+            breakdown[(params.get('leagueID', 'unknown'), 'unknown')] = 1
+        self.ledger.resolve(attempt, charged=charged, evidence='parsed provider response', now=now,
+                            breakdown=dict(breakdown))
         return page

@@ -2,6 +2,15 @@
 
 November 10, 2026 · Decision analysis, not a source cutover
 
+**November 11 status:** SGO Rookie is the running aggregate. The current desk
+uses best-payout same-book de-vig from FanDuel, DraftKings, BetMGM and Caesars
+as its starter sportsbook basis. Direct Kalshi and Polymarket US remain active.
+Additional P2P expansion is backlog work. The [execution queue](../NEXT_STEPS.md)
+tracks the 99% target, exact matching, fee applicability and the clean-profile
+journey. The [dated evidence](sgo-paid-observation-20261111.md) records measured
+freshness, costs and limitations. The first-of-month 00:00 UTC boundary remains
+a provisional pacing assumption.
+
 ## Recommendation — revised after owner confirmation
 
 **Pivot to SportsGameOdds.** The owner confirmed that the three questions that drove the earlier recommendation are resolved affirmatively: the paid plan supplies the required venues and exact markets, a defensible replacement reference is available, and the object allowance supports a useful schedule. On that basis, the broader common-format dataset and potential to simplify aggregate collection outweigh the cost and work of a migration. This is an owner-provided premise; the free captures and trial evidence in this report do not independently establish its details. The earlier recommendation to continue as-is was contingent on those unknowns and is superseded.

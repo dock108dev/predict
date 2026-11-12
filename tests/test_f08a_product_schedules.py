@@ -57,13 +57,66 @@ def test_failed_and_changed_retrieval_preserve_review_and_require_explicit_resol
     assert still['last_attempt']['error']=='prior_change_requires_explicit_review'
 
 
-def test_polymarket_standard_review_is_independent():
+def test_polymarket_standard_review_is_independent(monkeypatch):
     key='polymarket_us:standard_sports'; body=(ROOT/products.PRODUCTS[key]['reference']).read_bytes()
-    verified=attempt(key,body)
+    prior_spec = {k: v for k, v in products.PRODUCTS[key].items() if not k.startswith('review_receipt')}
+    reviewed = products.approved(key)
+    assert reviewed['normalized_sha256'] == '90ee55153cac932effbf2264334b0d3f66d6c7eb00e8e4b2fdacd9c2c8fc2495'
+    assert attempt(key,body)['review_required']['reason']=='public_product_schedule_changed'
+    with monkeypatch.context() as historical:
+        historical.setitem(products.PRODUCTS, key, prior_spec)
+        changed = attempt(key, body.replace(b'</main>', b'<p>Changed standard terms.</p></main>', 1))
+    assert refresh.product_due(key, changed, AT)
+    failed = attempt(key,body,state=changed,error=True)
+    assert not refresh.product_due(key, failed, AT)
+    # The test response stands in for the official body whose full normalized
+    # digest matched the browser and the collector's independent receipt.
+    def approved_fixture(_name):
+        return dict(reviewed, normalized_sha256=sha256(
+            products.normalized(body, 'main').encode()).hexdigest())
+    monkeypatch.setattr(products, 'approved', approved_fixture)
+    verified=attempt(key,body,state=changed)
     model=products.for_offer({key:verified},{'venue':'polymarket_us'},AT)
     assert model['fee_rate']=='0.095' and model['product']=='standard_sports'
     assert model['review_before']==(AT+timedelta(hours=24)).isoformat()
     assert 'product' not in products.for_offer({key:verified},{'venue':'novig'},AT)
+
+
+def test_prospective_polymarket_review_reaches_current_ordinary_offers(monkeypatch):
+    from app.storage import ordinary_publication as live
+    from tests.test_f05_polymarket_public import OWNER, SETTINGS, inputs_for, native
+
+    key = 'polymarket_us:standard_sports'
+    body = (ROOT / products.PRODUCTS[key]['reference']).read_bytes()
+    changed_at = stamp('2026-11-11T22:25:38+00:00')
+    renewed_at = changed_at + timedelta(hours=3)
+    prior = attempt(key, body, at=changed_at)
+    assert prior['last_attempt']['state'] == 'review_required'
+    # Stand in for the official HTML matching the newly reviewed digest.
+    approved = dict(products.approved(key), normalized_sha256=sha256(
+        products.normalized(body, 'main').encode()).hexdigest())
+    monkeypatch.setattr(products, 'approved', lambda name: approved)
+    renewed = attempt(key, body, at=renewed_at, state=prior)
+
+    def publish(captured_at, review_state):
+        row = native('scheduled', 'Short', at=captured_at)
+        inputs = inputs_for(row, at=captured_at)
+        inputs['fee_products'] = {key: review_state}
+        result = live.prices(inputs, SETTINGS)
+        projected = live.project(result, inputs['dependencies'], dict(OWNER, fee_products=inputs['fee_products']),
+            {'polymarket_us':{'state':'available'}}, at=captured_at, policy='policy', epoch='epoch')
+        return projected['rows'][0]
+
+    before = publish(renewed_at - timedelta(seconds=1), prior)
+    after = publish(renewed_at, renewed)
+    assert before['price_current'] and before['trade_fee']['reason'] == products.REVIEW_REQUIRED
+    assert after['price_current'] and after['gross_return_percent'] is None
+    fee = after['trade_fee']
+    assert fee['trade_fee_usd'] == '0.02' and fee['classification'] == 'conservative'
+    assert fee['evidence']['native_side'] == 'Short' and fee['evidence']['acquired_price_usd'] == '0.30'
+    assert fee['evidence']['reviewed_at'] == renewed_at.isoformat()
+    assert fee['evidence']['review_before'] == (renewed_at + timedelta(days=1)).isoformat()
+    assert not publish(renewed_at - timedelta(seconds=1), renewed)['trade_fee']['available']
 
 
 def test_ordinary_projection_withholds_changed_terms_but_keeps_frozen_capture():

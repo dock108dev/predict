@@ -1,25 +1,22 @@
 # Calculation basis and benchmark EV
 
-## SportsGameOdds transition in progress — November 10
+## SportsGameOdds on the ordinary desk
 
-The running configuration still uses The Odds API and the existing reference.
-The SportsGameOdds implementation introduces separately attributed bookmaker
-observations and a versioned proportional no-vig calculation. Its named-pair
-path requires a reviewed settlement rule, explicit occurrence evidence, exact
-opposing sides and lines, eligible source clocks, and current contributor
-revisions. A median requires multiple individually qualified pairs and excludes
-the evaluated venue; the arithmetic exists, but broad-book settlement and
-jurisdiction evidence are not yet established. These estimates are conditional
-on decisive outcomes; they do not supply push or void probabilities. Vendor
-fair odds are a separate comparison with an unknown source clock and contributor
-set, not an input to this reference. Missing or changed evidence makes reference
-and EV unavailable while retaining the source price.
+The running SportsGameOdds route publishes source-attributed offers. The
+**Sportsbook EV before fees** basis picks the highest payout among FanDuel,
+DraftKings, BetMGM and Caesars with a complete current pair at the exact
+event, outcome, phase and line. The probability is the selected sportsbook's
+implied probability divided by the sum of both sides' implied probabilities.
+Return before fees is that probability times the offer's decimal payout,
+minus one. The drawer records the selected book, both prices and clocks.
 
-The named SGO Pinnacle path has fixture coverage, not verified paid-feed or
-production coverage. The configured SGO key and reset have not established the
-necessary paid access; see [operations](sportsgameodds-operations-20261110.md).
-The current source has not been cut over.
-
+This basis currently applies to SGO-attributed offers with exact local
+evidence. It estimates decisive win/loss outcomes. Cross-source native
+comparisons and fee-adjusted results require independently supported identity,
+settlement and applicable terms. The separate vendor fair odds retain their own
+line and timing disclosure. Missing or expired inputs leave source prices
+visible with their status. [Source operation](sportsgameodds-operations-20261110.md)
+and [coverage](broad-coverage.md) describe the measured limits.
 
 ## November 3 snapshot integration
 

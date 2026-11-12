@@ -109,21 +109,24 @@ def evaluate(row, witness, binding, dependencies, *, at, price_authority, review
                      'method': basis['version'], 'contributors': deepcopy(basis['contributors']),
                      'exclusions': deepcopy(basis['exclusions']), 'basis_sha256': validated['basis_sha256'],
                      'maximum_age_seconds': basis['maximum_age_seconds'],
+                     'contract': deepcopy(basis['contract']), 'probability': str(p),
                      'fair_decimal_odds': exact_wire(1 / p),
                      'conditioning': validated['conditioning'], 'full_state_probability': False}
         metric_row = dict(row, probability=str(p), gross_return_percent=gross,
                           snapshot_benchmark={'method': basis['version'], 'probability': str(p),
                                               'basis_sha256': validated['basis_sha256']})
         from .conditional_benchmark import snapshot_metric
-        fee = snapshot_metric(metric_row, at=at, review=review)
+        fee = (snapshot_metric(metric_row, at=at, review=review) if review is not None else
+               {'available': False, 'reason': 'offer_fee_evidence_required'})
         return {'available': True, 'probability': str(p), 'gross_return_percent': gross,
+                'gross_profit_per_claim': exact_wire(p - cost),
                 'reference_calculation': reference, 'conditional_trade_benchmark': fee,
                 'dependency_ids': [current[k]['dependency'] for k in sorted(current)]}
     except (KeyError, TypeError, ValueError, ArithmeticError):
         return unavailable('sgo_price_or_fee_inputs_invalid')
 
 
-def owned_reference_evidence(row, inputs, source):
+def owned_reference_evidence(row, inputs, source, *, diagnostics=None):
     """Build a narrow Pinnacle candidate from captured SQL originals and rules.
 
     The only reviewed bookmaker scoring rule currently owned is Pinnacle's.
@@ -137,11 +140,18 @@ def owned_reference_evidence(row, inputs, source):
     from pathlib import Path
     from app.storage.current_rows import contract_id
     from app.storage.store import hashed, stamp
+    from .game_phase import original_price_phase
     from .line_reference import RULE_PATH, scoring
     from .occurrence_matching import OccurrenceResolver
     from .snapshot_benchmark import market_key, reference_row
     from .snapshot_identity import project
     from .sgo_reference import capture_witness
+
+    def missing(reason):
+        if diagnostics is not None:
+            diagnostics['reason'] = reason
+        return None
+
     try:
         native = next(q for q in inputs['quotes'] if q['id'] == row['id'])
         record = native['original_record']
@@ -150,19 +160,19 @@ def owned_reference_evidence(row, inputs, source):
                 or not native.get('binding', {}).get('verified') or not row.get('quote_revision')
                 or phase not in ('scheduled', 'live')
                 or (phase == 'scheduled') != (stamp(inputs['captured_at']) < stamp(native['start_at']))):
-            return None
+            return missing('sgo_offer_native_contract_unverified')
         refs = [r for r in inputs['references'] if r.get('original_record')
                 and r['original_record']['quote']['source']['provider'] == 'sportsgameodds'
                 and r['original_record']['quote']['venue'] == 'pinnacle']
         if not refs:
-            return None
+            return missing('sgo_reference_pair_unavailable')
         all_records = deepcopy([record] + [r['original_record'] for r in refs])
         resolved = OccurrenceResolver().resolve(all_records, clock=inputs['captured_at'])
         native_match = resolved[0]['quote'].get('occurrence_match') or {}
         explicit_methods = ('shared_provider_id', 'reviewed_source_id', 'local_reviewed_override')
         if (native_match.get('status') != 'matched' or native_match.get('conflicts')
                 or native_match.get('estimated') is not False or native_match.get('method') not in explicit_methods):
-            return None
+            return missing('sgo_reference_occurrence_unverified')
         occurrence = native_match['occurrence_id']
         matched = []
         for r, resolved_ref in zip(refs, resolved[1:]):
@@ -175,7 +185,7 @@ def owned_reference_evidence(row, inputs, source):
                 item['original_record']['comparison_scope'] = scoring(row['league'])
                 matched.append(item)
         if not matched:
-            return None
+            return missing('sgo_reference_occurrence_unverified')
         occurrence_map = {(x['quote']['source']['provider'], x['quote']['source']['native_event_id']): occurrence
                           for x in resolved if (x['quote'].get('occurrence_match') or {}).get('occurrence_id') == occurrence}
         projected = project([deepcopy(native)] + [reference_row(r) for r in matched], {'scenario': 'decisive_only'},
@@ -185,22 +195,19 @@ def owned_reference_evidence(row, inputs, source):
         if (native_scope.get('method') != 'validated_ordinary_occurrence'
                 or native_scope.get('scoring_basis') != 'retained source scoring evidence'
                 or native_scope.get('scoring') != scoring(row['league'])):
-            return None
+            return missing('sgo_reference_settlement_unverified')
         key = market_key(selected)
         predicate = (selected.get('native_contract') or {}).get('same_outcome', {}).get('predicate') or {}
         if key is None or predicate.get('operator') not in ('gt', 'lt', 'ge', 'le'):
-            return None
+            return missing('sgo_reference_settlement_unverified')
         desired = 'gt' if predicate['operator'] in ('gt', 'ge') else 'lt'
         groups = {}
         for ref in projected[1:]:
             if market_key(ref) != key:
                 continue
             r = ref['original_record']; q = r['quote']; source = q['source']; meta = r.get('comparison_source_metadata') or {}
-            if (meta.get('provider_phase') != ('pregame' if phase == 'scheduled' else 'live') or not meta.get('provider_opposing_odd_id')
-                    or q.get('state') != 'available' or q['original'].get('units') != 'american_odds'):
-                continue
-            if phase == 'live' and (not q['times'].get('source_at')
-                                    or stamp(q['times']['source_at']) < stamp(native['start_at'])):
+            if (not meta.get('provider_opposing_odd_id') or q.get('state') != 'available'
+                    or q['original'].get('units') != 'american_odds'):
                 continue
             observed=captured_frame(r, (inputs.get('sgo_reference_events') or {}).get(source['native_event_id']) or {})
             if observed is None:
@@ -213,6 +220,7 @@ def owned_reference_evidence(row, inputs, source):
         settlement = 'pinnacle-normal-score:' + sha256(rule_path.read_bytes()).hexdigest()
         occurrence_evidence = 'occurrence:' + hashed(native_match)
         candidates = []
+        timing_gap = False
         for (event_id, frame_id, frame_received_at), group in sorted(groups.items()):
             if len(group) != 2 or not frame_id:
                 continue
@@ -238,26 +246,42 @@ def owned_reference_evidence(row, inputs, source):
                 by_operator[operator]=(quote,cid,revision)
             if set(by_operator) != {'gt', 'lt'}:
                 continue
+            quotes=[v[0] for v in by_operator.values()]
+            first, second = quotes
+            if first['odd_id'] != second['opposing_odd_id'] or second['odd_id'] != first['opposing_odd_id']:
+                continue
+            expected_phase = 'pregame' if phase == 'scheduled' else 'live'
+            records = [ref['original_record'] for ref in group]
+            lifecycles = [original_price_phase(record, inputs['captured_at']) for record in records]
+            if any(record['comparison_source_metadata'].get('provider_phase') != expected_phase
+                   or lifecycle['state'] != phase or lifecycle['reason']
+                   for record, lifecycle in zip(records, lifecycles)):
+                timing_gap = True
+                continue
             selected_quote = by_operator[desired][0]
             contract = {k:selected_quote[k] for k in ('event_id','league','phase','period','market','side','line','settlement','settlement_evidence','frame_id','frame_received_at')}
             contract['occurrence_evidence']=occurrence_evidence
-            quotes=[v[0] for v in by_operator.values()]
+            if phase == 'live':
+                contract['starts_at'] = max(stamp(native['start_at']), stamp(group[0]['original_record']['event']['scheduled_start'])).isoformat()
             result,witness=capture_witness(quotes, contract, at=inputs['captured_at'], evaluated_venue=row['venue'], named_venue='pinnacle')
             if not result['available']:
+                timing_gap |= result['exclusions'].get('pinnacle') in (
+                    'source_stale', 'reference_pre_start', 'clock_future', 'source_clock_unknown', 'source_clock_invalid')
                 continue
             deps=[dict(q,dependency=cid,expected_revision=revision,state='available') for q,cid,revision in by_operator.values()]
             candidate={'witness':witness.wire, 'binding':dict(verified=True,row_id=row['id'],row_revision=row['quote_revision'],
-                contract=contract,occurrence_evidence=occurrence_evidence,settlement_evidence=settlement), 'dependencies':deps}
+                contract=contract,occurrence_evidence=occurrence_evidence,settlement_evidence=settlement), 'dependencies':deps,
+                'selected_identity':native_scope, 'selected_predicate':predicate}
             candidates.append((min(stamp(q['source_at']) for q in quotes), result['probability'], candidate))
         if not candidates:
-            return None
+            return missing('sgo_reference_pair_timing_unverified' if timing_gap else 'sgo_reference_pair_unavailable')
         latest=max(item[0] for item in candidates)
         finalists=[item for item in candidates if item[0] == latest]
         if len({item[1] for item in finalists}) != 1:
-            return None
+            return missing('reference_frames_conflict')
         return sorted(finalists,key=lambda item: item[2]['witness'])[0][2]
     except (KeyError, StopIteration, TypeError, ValueError, ArithmeticError, OSError):
-        return None
+        return missing('sgo_reference_evidence_unavailable')
 
 
 def bind_captured(row, source, inputs, *, selected_venue='pinnacle'):
@@ -272,16 +296,16 @@ def bind_captured(row, source, inputs, *, selected_venue='pinnacle'):
     from .sgo_reference import ContributorFrameWitness
     missing = {'available': False, 'reason': 'sgo_reference_evidence_unavailable'}
     if selected_venue != 'pinnacle':
-        return missing, []
+        return dict(missing, reason='sgo_reference_venue_unsupported'), []
     at = stamp(inputs['captured_at'])
     if (source.get('reasons') or not source.get('dependency') or not source.get('expected')
             or not source.get('current_until') or stamp(source['current_until']) < at):
-        return missing, []
+        return dict(missing, reason='source_price_authority_unavailable'), []
     from .sgo_median_publication import owned_median_evidence
     # Versioned policy is named Pinnacle, then reviewed median; each method is
     # disclosed on the resulting reference and bound into its witness revision.
-    for produce in (owned_reference_evidence,owned_median_evidence):
-        captured=produce(row,inputs,source)
+    for produce, options in ((owned_reference_evidence, {'diagnostics': missing}), (owned_median_evidence, {})):
+        captured=produce(row,inputs,source,**options)
         if not isinstance(captured,dict) or not isinstance(captured.get('witness'),str):continue
         facts=captured.get('dependencies')
         if not isinstance(facts,list):continue
@@ -294,16 +318,24 @@ def bind_captured(row, source, inputs, *, selected_venue='pinnacle'):
                 authorities.append(dict(dependency=dep['dependency'],expected=expected,
                     venue=dep['venue'],provider='sportsgameodds',reasons=[],source_at=dep['source_at']))
             offered=dict(row,revision=row.get('revision',row.get('quote_revision')))
+            if offered.get('cost_per_normal_claim') is None:
+                from app.dashboard.current_contract import price
+                offered['cost_per_normal_claim'] = exact_wire(price(offered))
             price_authority=dict(eligible=True,dependency=source['dependency'],
                 expected_revision=source['expected'],current_revision=source['expected'],
                 row_id=offered['id'],row_revision=offered.get('revision'))
             result=evaluate(offered,ContributorFrameWitness(captured['witness']),captured.get('binding'),
                             dependencies,at=inputs['captured_at'],price_authority=price_authority,review=captured.get('review'))
             if not result.get('available'):continue
+            result['cost_per_normal_claim'] = offered['cost_per_normal_claim']
+            result['selected_identity'] = captured.get('selected_identity')
+            result['selected_predicate'] = captured.get('selected_predicate')
             result['reference_calculation']['selection_policy']='sgo-pinnacle-then-reviewed-median-1'
             maximum_age=result['reference_calculation']['maximum_age_seconds']
+            phase = result['reference_calculation']['contract']['phase']
             for authority in authorities:
                 authority['current_until']=(stamp(authority.pop('source_at'))+timedelta(seconds=maximum_age)).isoformat()
+                authority['lifecycle'] = {'state': 'live' if phase == 'live' else 'scheduled'}
             return result,authorities
         except (KeyError,TypeError,ValueError,ArithmeticError):
             continue

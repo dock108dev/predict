@@ -79,6 +79,8 @@ def ranking_value(row, metric, *, current=False):
     value = row.get(metric)
     if value is None:
         return None
+    if metric == 'sportsbook_return_percent':
+        return Fraction(value) if row.get('price_current') and row.get('sportsbook_baseline') else None
     if current and row.get('kind') != 'pair':
         if not row.get('price_current') or not row.get('current_authority') or row.get('current_reasons'):
             return None
@@ -112,6 +114,7 @@ def comparison_groups(rows, by_id, metric, *, pairs=False, current=False, indivi
     def rank(r):
         value = values[r['id']]
         return (value is None, -value if value is not None else 0,
+                current and not r.get('price_current'),
                 r.get('start_at', ''), r['id'], r.get('evidence_result_id', ''))
     for row in rows:
         if pairs:
@@ -135,5 +138,6 @@ def comparison_groups(rows, by_id, metric, *, pairs=False, current=False, indivi
                            outcome_key=list(key),
                            meaning='Display grouping only; each quote retains its own reference and settlement evidence.'))
     return sorted(result, key=lambda g: (g['score'] is None,
-        -Fraction(g['score']) if g['score'] is not None else 0, g['start_at'],
+        -Fraction(g['score']) if g['score'] is not None else 0,
+        current and not g['quotes'][0].get('price_current'), g['start_at'],
         repr(g['outcome_key']), g['quotes'][0]['id']))

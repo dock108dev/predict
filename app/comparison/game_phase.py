@@ -8,6 +8,24 @@ LIVE_SECONDS = 15
 LOOKBACK_HOURS = 24
 
 
+def sgo_event_status(status):
+    return dict(
+        ended=status.get('ended') is True or status.get('completed') is True,
+        closed=status.get('cancelled') is True,
+        live=status.get('live') is True and status.get('started') is True,
+        status='delayed' if status.get('delayed') is True else None,
+    )
+
+
+def original_price_phase(record, at):
+    event, quote = record['event'], record['quote']
+    if quote['source']['provider'] == 'sportsgameodds' and 'status' not in event:
+        retained = (record.get('comparison_source_metadata') or {}).get('provider_event_status')
+        if isinstance(retained, dict):
+            event = dict(event, status=sgo_event_status(retained))
+    return price_phase(event, quote, at)
+
+
 def sporting_phase(event):
     status=event.get('status') or {}
     if not isinstance(status,dict):status={'status':status}

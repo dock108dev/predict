@@ -286,9 +286,18 @@ def age_benchmarks(result,q,event,at,*,reasons=(),source_assessment=None):
     why=[*reasons,*source_assessment['reasons'],*link_reasons(q,at)]
     gross['source_currentness']=source_assessment
     if q.get('state',q.get('source_state')) not in ('available','budget_delayed'):why.append('source_unavailable')
-    er=event_assess(quote_event(q,event),at.isoformat())['reason']
-    if er:why.append(er)
-    if at>=instant(event['start_at']):why.append('pregame_ended')
+    lifecycle_event=quote_event(q,event)
+    phase=q.get('comparison_input_refs',{}).get('phase','unknown')
+    after_start=at>=instant(event['start_at'])
+    if after_start and phase=='live':
+        from .game_phase import price_phase
+        lifecycle=price_phase(lifecycle_event,q,at.isoformat())
+        if lifecycle['state']!='live' or lifecycle['reason']:
+            why.append(lifecycle['reason'] or 'post_start_game_state_unverified')
+    else:
+        er=event_assess(lifecycle_event,at.isoformat())['reason']
+        if er:why.append(er)
+        if after_start:why.append('pregame_ended')
     refs=gross.get('reference_originals',[])
     if len(refs)!=2:why.append('reference_pair_missing')
     for r in refs:
@@ -296,7 +305,9 @@ def age_benchmarks(result,q,event,at,*,reasons=(),source_assessment=None):
         receipt=r.get('received_at')
         if clock is None or receipt is None:why.append('reference_clock_unknown');continue
         if instant(clock)>at or instant(receipt)>at or instant(clock)>instant(receipt):why.append('reference_clock_future')
-        elif (at-instant(clock)).total_seconds()>1800:why.append('reference_expired')
+        elif after_start and phase=='live' and instant(clock)<instant(event['start_at']):
+            why.append('reference_pre_start')
+        elif (at-instant(clock)).total_seconds()>(15 if after_start and phase=='live' else 1800):why.append('reference_expired')
     for kind,expiry in gross.get('applicability_expiry',{}).items():
         if expiry is not None and at>=instant(expiry):why.append(kind+'_profile_expired')
     gross['currentness_reasons']=sorted(set(why))

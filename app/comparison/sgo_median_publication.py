@@ -4,6 +4,7 @@ from copy import deepcopy
 
 def owned_median_evidence(row, inputs, source):
     from app.storage.store import hashed, stamp
+    from .game_phase import sgo_event_status, sporting_phase
     from .line_reference import scoring
     from .occurrence_matching import OccurrenceResolver
     from .snapshot_identity import project
@@ -52,9 +53,14 @@ def owned_median_evidence(row, inputs, source):
                     or m.get('conflicts') or m.get('occurrence_id')!=occurrence):
                 continue
             event_id=observed['quote']['source']['native_event_id']
+            live_start = max(stamp(native['start_at']), stamp(observed['event']['scheduled_start'])) if phase == 'live' else None
             event=inputs['sgo_reference_events'][event_id]; frame=(event.get('frame') or {}).get('facts') or {}
             if frame.get('provider')!='sportsgameodds' or frame.get('event_id')!=event_id:
                 continue
+            if live_start is not None:
+                status = (frame.get('event_context') or {}).get('status') or {}
+                if sporting_phase({'status': sgo_event_status(status)})['state'] != 'live':
+                    continue
             members=dict(frame['members'])
             if len(members)!=len(frame['members']):
                 continue
@@ -66,7 +72,7 @@ def owned_median_evidence(row, inputs, source):
                         or f.get('league')!='NBA' or f.get('market')!='moneyline' or f.get('period')!='game'
                         or f.get('phase')!=('pregame' if phase=='scheduled' else 'live') or f.get('line') is not None
                         or f.get('available') is not True or f.get('side') not in ('home','away')
-                        or (phase=='live' and (not f.get('source_at') or stamp(f['source_at'])<stamp(native['start_at'])))):
+                        or (live_start is not None and (not f.get('source_at') or stamp(f['source_at']) < live_start))):
                     continue
                 q={k:f.get(k) for k in ('provider','venue','event_id','odd_id','opposing_odd_id','league','market','period',
                     'phase','side','line','price_american','source_at','received_at','available')}
@@ -75,6 +81,8 @@ def owned_median_evidence(row, inputs, source):
             contract=dict(event_id=event_id,league='NBA',phase='pregame' if phase=='scheduled' else 'live',period='game',
                 market='moneyline',side=side,line=None,settlement=SETTLEMENT,settlement_evidence=native_evidence,
                 occurrence_evidence=occurrence_evidence,frame_id=frame_id,frame_received_at=frame_at)
+            if live_start is not None:
+                contract['starts_at'] = live_start.isoformat()
             result,witness=reviewed_median(quotes,contract,at=inputs['captured_at'],evaluated_venue=row['venue'],registry=registry)
             if not result.get('available'):
                 continue
