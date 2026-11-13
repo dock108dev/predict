@@ -20,7 +20,12 @@ def target(cat,v):return next(e for e in cat['events'] if e['id']==load()['sourc
 
 def book(v,m,at):
  sides=m['sides']
- return dict(raw=dict(ref=dict(venue=v,event_id=m['event_id'],market_id=m['id']),kind='observation',received_at=at,exchange_at=at,json_text='{}'),outcomes=[dict(outcome_id=s['id'],asks=dict(depth='full',levels=[dict(price=dict(value='.48' if i==0 else '.53'),quantity=dict(value='5',unit='contracts'))]),bids=None) for i,s in enumerate(sides)],state='active',sync='synchronized',sequence='1',quantity_unit='contracts')
+ def ladder(value):
+  return dict(depth='full',levels=[dict(price=dict(value=value),quantity=dict(value='5',unit='contracts'))])
+ return dict(raw=dict(ref=dict(venue=v,event_id=m['event_id'],market_id=m['id']),kind='observation',received_at=at,exchange_at=at,json_text='{}'),
+  outcomes=[dict(outcome_id=s['id'],asks=ladder('.48' if i==0 else '.53'),
+                 bids=ladder('0.47' if i==0 else '0.52') if v=='kalshi' else None) for i,s in enumerate(sides)],
+  state='active',sync='synchronized',sequence='1',quantity_unit='contracts')
 
 class Occurrence(unittest.TestCase):
  def setUp(self):
