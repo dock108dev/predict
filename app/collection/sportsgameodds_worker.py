@@ -33,8 +33,9 @@ ALTERNATE_REFRESH_WINDOW = timedelta(hours=2)
 
 def credential():
     key_format = r'[A-Za-z0-9_-]{1,1024}'
-    value = os.environ.get('SPORTSGAMEODDS_API_KEY')
-    if value:
+    from .service_secrets import read_file
+    value = read_file('sportsgameodds')
+    if value is not None or (value := os.environ.get('SPORTSGAMEODDS_API_KEY')):
         value = value.strip()
         if not re.fullmatch(key_format, value):
             raise ValueError('SportsGameOdds credential unavailable')

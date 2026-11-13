@@ -14,12 +14,12 @@ SECRET_REFERENCE = 'keychain:prediction-arb.novig.v3.production/market-data-read
 def load_read_key():
     """Read the dedicated local Ed25519 key; never return it in diagnostics."""
     import json
-    from keyring.backends.macOS import Keyring
+    from .service_secrets import keychain_or_file
     from cryptography.hazmat.primitives.serialization import load_pem_private_key
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
     service, account = SECRET_REFERENCE.removeprefix('keychain:').split('/')
     try:
-        value = json.loads(Keyring().get_password(service, account) or '{}')
+        value = json.loads(keychain_or_file('novig.json', service, account) or '{}')
         if set(value) != {'key_id', 'private_key_pem'} or not isinstance(value['key_id'], str) or not value['key_id']:
             raise ValueError()
         key = load_pem_private_key(value['private_key_pem'].encode(), password=None)

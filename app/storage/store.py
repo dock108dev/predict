@@ -4,6 +4,7 @@ from decimal import Decimal
 from hashlib import sha256
 import base64
 import json
+import os
 from pathlib import Path
 import re
 import uuid
@@ -39,7 +40,10 @@ def stamp(t):
 def connect(database='prediction_arb'):
     if not database.startswith('prediction_arb'): raise ValueError('dedicated project databases only')
     from .payload_codec import payload_row
-    return psycopg.connect(host=str(ROOT/'.local/pgsocket'),port=55432,user='prediction_arb',
+    socket_directory = os.environ.get('PREDICT_DB_SOCKET', str(ROOT/'.local/pgsocket'))
+    if not Path(socket_directory).is_absolute():
+        raise ValueError('An absolute PostgreSQL socket directory is required')
+    return psycopg.connect(host=socket_directory,port=55432,user='prediction_arb',
         dbname=database,autocommit=True,row_factory=payload_row,connect_timeout=5,
         options='-c statement_timeout=30000 -c lock_timeout=5000')
 

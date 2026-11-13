@@ -4,6 +4,7 @@ import json
 import time
 from app.adapters.kalshi_stream import RuntimeSigner as KSigner
 from app.adapters.polymarket_us_stream import RuntimeSigner as PSigner
+from .service_secrets import keychain_or_file
 
 ENDPOINTS = {
     'kalshi': dict(rest='https://external-api.kalshi.com',ws='wss://external-api-ws.kalshi.com/trade-api/ws/v2'),
@@ -35,12 +36,11 @@ class Credential:
 
 
 def load_credentials(venues=None):
-    from keyring.backends.macOS import Keyring
     result={}
     for venue,service,account in [('kalshi','prediction-arb.kalshi.production','market-data'),('polymarket_us','prediction-arb.polymarket-us','retail-api')]:
         if venues is not None and venue not in venues:continue
         try:
-            value=Keyring().get_password(service,account)
+            value=keychain_or_file(venue+'.json', service, account)
             if not value:raise ValueError()
             result[venue]=Credential(venue,json.loads(value))
         except Exception:

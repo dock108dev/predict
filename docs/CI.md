@@ -170,8 +170,9 @@ production execution destinations.
 
 Workflow tokens use read-only permissions. Fork checks receive no application
 credentials, checkout does not persist credentials, and Actions are pinned by
-commit. No deployment, publishing or external reporting service is configured
-by these checks. Configure `CI readiness` as a required branch check separately;
+commit. On `main`, the release jobs use that result to build, smoke-test and
+publish the Linux image, then deploy its digest when enabled. See the
+[Hetzner runbook](hetzner.md). Configure `CI readiness` as a required branch check separately;
 workflow success alone cannot enforce merge policy.
 
 ## Check coverage and merge policy
@@ -198,9 +199,9 @@ recorded. These workflows do not publish releases.
 | Reliability and resource trends | Scheduled assurance / CI health sample / `health.py` | Weekly and every manual scope | Advisory | Up to 30 completed runs / 30 days; event-separated rates, cancelled runs excluded; no inferred flakes or billing |
 | Reporting/gate integrity | CI / Source, security and package / `pytest tests/test_ci_*.py`; CI readiness / `gate.py` | Every CI event | Required | Passing, failing, missing, malformed and skipped-report cases; first ten failing JUnit identities in summaries, escaped as data |
 | Type checking and broad formatting | No repository-wide typing/format migration | N/A | Explicit omission | Dynamic dict/JSON application has no type-check configuration or established typed boundary; compilation, Ruff and executable schema/contract tests remain required. Broad annotation/style migration would be separate product work |
-| ShellCheck, containers and IaC | Shell parser check; no container/IaC distribution | N/A for container/IaC | Explicit omission | Existing shell wrappers use syntax checks; actionlint ShellCheck integration remains disabled, so no claim of shell semantic lint coverage |
+| Containers and shell syntax | Compose smoke on `main`; shell parser checks | Release job and quality lane | Deployment requires the smoke | ShellCheck integration remains disabled |
 | Performance and accessibility scoring | Existing workload, keyboard and overflow assertions | Required functional lanes | Advisory beyond assertions | No stable Lighthouse/burst benchmark or automated WCAG conformance baseline; native/device usability and performance remain separate evidence |
-| Signing, deployment and owner-data migrations | None | N/A | Not authorized by CI | Local read-only product; CI does not publish, sign, collect live odds or touch owner state |
+| Hetzner deployment | Publish tested digest and request a server-side release | `main` push or dispatch, with deployment enabled | After readiness and Compose smoke | Provider credentials and collection state remain on the server |
 
 Scheduled jobs use the default branch and may be delayed by GitHub; they are not
 exact-time jobs. Treat the latest successful weekly assurance as stale after eight

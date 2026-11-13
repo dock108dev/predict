@@ -1,0 +1,88 @@
+name: predict
+
+x-runtime: &runtime
+  image: ${PREDICT_IMAGE:?Set the tested Predict image}
+  environment:
+    PREDICT_DB_SOCKET: /run/predict-postgres
+  volumes:
+    - ./state:/predict/.local
+    - ./socket:/run/predict-postgres:ro
+  security_opt:
+    - no-new-privileges:true
+  cap_drop: [ALL]
+  read_only: true
+  tmpfs: [/tmp]
+  restart: unless-stopped
+  init: true
+  depends_on:
+    db:
+      condition: service_healthy
+  logging: &logging
+    driver: local
+    options:
+      max-size: 10m
+      max-file: '3'
+
+services:
+  db:
+    image: postgres:16-bookworm@sha256:a49f7438ba03589f9b1ca062f2da82e899b48ea1dc50d2449fa09a70be83ebca
+    # Unix socket shared only with Predict. PostgreSQL has no network interface.
+    network_mode: none
+    environment:
+      POSTGRES_USER: prediction_arb
+      POSTGRES_DB: prediction_arb
+      POSTGRES_INITDB_ARGS: --locale=C --encoding=UTF8
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres-bootstrap
+    command: [postgres, -c, listen_addresses=, -c, port=55432, -c, 'unix_socket_directories=/var/run/postgresql,/run/predict-postgres']
+    volumes:
+      - postgres:/var/lib/postgresql/data
+      - ./socket:/run/predict-postgres
+    secrets: [postgres-bootstrap]
+    healthcheck:
+      test: [CMD, psql, -h, /run/predict-postgres, -p, '55432', -U, prediction_arb, -d, prediction_arb, -Atqc, 'SELECT 1']
+      interval: 5s
+      timeout: 4s
+      retries: 12
+    restart: unless-stopped
+    logging: *logging
+
+  web:
+    <<: *runtime
+    ports: ['127.0.0.1:8784:8784']
+    networks: [web]
+    healthcheck:
+      test: [CMD, python, deploy/check-health.py, web]
+      interval: 10s
+      timeout: 8s
+      retries: 6
+
+  collector:
+    <<: *runtime
+    profiles: [collection]
+    command: [python, -m, app.collection.data_runtime, --current-config, /predict/.local/predict-current-config.json]
+    environment:
+      PREDICT_DB_SOCKET: /run/predict-postgres
+      PREDICT_SECRET_DIRECTORY: /run/predict-secrets
+    volumes:
+      - ./state:/predict/.local
+      - ./socket:/run/predict-postgres:ro
+      - ./provider-secrets:/run/predict-secrets:ro
+    networks: [collector]
+    stop_grace_period: 2m
+    healthcheck:
+      test: [CMD, python, deploy/check-health.py, collector]
+      interval: 10s
+      timeout: 8s
+      start_period: 60s
+      retries: 6
+
+networks:
+  web:
+  collector:
+
+volumes:
+  postgres:
+
+secrets:
+  postgres-bootstrap:
+    file: ./postgres-bootstrap

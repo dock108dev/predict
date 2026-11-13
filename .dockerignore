@@ -1,0 +1,15 @@
+**
+!Dockerfile
+!pyproject.toml
+!uv.lock
+!app/
+!app/**
+!scripts/
+!scripts/live_coverage_census.py
+!scripts/pipeline_storage_report.py
+!scripts/sgo_runtime_census.sql
+!deploy/
+!deploy/check-health.py
+**/__pycache__
+**/.DS_Store
+app/reviews/

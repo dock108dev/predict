@@ -22,6 +22,7 @@ DOCUMENTS = (
     "README.md",
     "docs/storage-ownership.md",
     "docs/CI.md",
+    "docs/hetzner.md",
     "docs/architecture.md",
     "docs/benchmark-ev.md",
     "docs/sportsgameodds-operations-20261110.md",

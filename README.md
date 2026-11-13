@@ -75,7 +75,8 @@ The launcher uses a dedicated socket-only PostgreSQL cluster and independent
 background data and app processes. Add `--role app` or `--role data` to start,
 stop or check either process on its own. Closing/restarting the app leaves collection and shared
 calculations running. [Lifecycle and result contract](docs/data-app-runtime-contract.md).
-There is no cloud service. The data process can restart itself after successful
+The [Hetzner runbook](docs/hetzner.md) covers the same runtime on a private Linux
+host. The data process can restart itself after successful
 planned storage maintenance; it preserves Stop choices and source pauses.
 Current prices keep their original clocks; a recent
 calculation does not make an old price fresh. Fee and payout models have bounded
