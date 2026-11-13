@@ -8,6 +8,7 @@ from . import native_payload
 import asyncio
 from copy import deepcopy
 from datetime import datetime, timezone, timedelta
+from pathlib import Path
 import resource
 import shutil
 import sys
@@ -39,6 +40,19 @@ def now():
 
 
 def rss():
+    if sys.platform == 'linux':
+        # Linux getrusage can carry the parent's pre-exec high-water mark into
+        # a new calculation worker. VmHWM measures this executable's memory.
+        try:
+            with Path('/proc/self/status').open() as status:
+                for line in status:
+                    if line.startswith('VmHWM:'):
+                        _, kib, unit = line.split()
+                        if unit == 'kB' and int(kib) > 0:
+                            return int(kib) * 1024
+                        break
+        except (OSError, ValueError):
+            pass
     value = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
     return int(value if sys.platform == 'darwin' else value * 1024)
 

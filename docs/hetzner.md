@@ -71,7 +71,8 @@ contents:
 docker compose --env-file /dev/null exec -T web \
   python scripts/live_coverage_census.py --phase live --samples 240 > live-coverage.jsonl
 docker compose --env-file /dev/null exec -T web \
-  python scripts/pipeline_storage_report.py > storage.json
+  python scripts/pipeline_storage_report.py /tmp/storage.json
+docker compose --env-file /dev/null cp web:/tmp/storage.json ./storage.json
 ```
 
 Take storage and account snapshots before and after the window. Compare the
