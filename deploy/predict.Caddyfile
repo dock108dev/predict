@@ -10,6 +10,7 @@ predict.dock108.dev {
 			path /api/comparison-current/lease
 		}
 	}
+	@adminPage path /view/current/admin.html /view/current/raw-odds.html /view/current/stored.html /view/current/coverage.html /view/current/scanner.html
 	@foreignOrigin {
 		header Origin *
 		not header Origin https://predict.dock108.dev
@@ -19,6 +20,9 @@ predict.dock108.dev {
 	route {
 		respond @foreignOrigin 403
 		request_header @predictOrigin Origin http://127.0.0.1:8784
+		basicauth @adminPage {
+			import /etc/caddy/predict-auth
+		}
 		basicauth @admin {
 			import /etc/caddy/predict-auth
 		}
