@@ -24,6 +24,11 @@ printf '%s' "$registry_token" | docker --config "$registry_config" login ghcr.io
 unset registry_token
 docker --config "$registry_config" pull "$image"
 rm -rf "$registry_config"
+# Host-side database configuration changes must quiesce the active collector
+# before Compose replaces PostgreSQL and revokes its database ownership.
+if [[ -f current-image ]] && ! cmp -s compose.yml applied-compose.yml; then
+    compose stop collector
+fi
 compose up -d --wait db
 
 # Refuse an image with a missing or altered applied migration before touching
@@ -81,6 +86,7 @@ fi
 
 printf '%s\n' "$image" > current-image.tmp
 mv current-image.tmp current-image
+cp compose.yml applied-compose.yml
 if [[ -n $previous && $previous != "$image" ]]; then
     printf '%s\n' "$previous" > previous-image
 fi
