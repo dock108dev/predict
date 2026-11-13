@@ -18,10 +18,9 @@ HEARTBEAT_SECONDS = 8
 COMMAND_SECONDS = 12
 # Ninety family cells retain latest/last-success inventory and account evidence.
 STATUS_BYTES = 1024 * 1024
-# Only these two owned projections can use the lossless overflow encoding.
-# Bound expanded bytes independently from the committed heartbeat size.
+# Bound expanded bytes per section independently from the committed heartbeat size.
 STATUS_SECTION_BYTES = 2 * STATUS_BYTES
-STATUS_SECTIONS = ('coverage', 'quota')
+STATUS_SECTIONS = ('coverage', 'quota', 'sources')
 RUNTIME_LOCK = 120013
 AUTHORITY_LOCK = 120015
 
@@ -39,6 +38,8 @@ def _stamp(value):
 def _pack_status_sections(status):
     sections = {}
     for key in STATUS_SECTIONS:
+        if key == 'sources' and len(json.dumps(status, separators=(',', ':')).encode()) <= STATUS_BYTES:
+            continue
         if status.get(key) is None:
             continue
         raw = json.dumps(status[key], separators=(',', ':')).encode()
@@ -48,6 +49,7 @@ def _pack_status_sections(status):
         if len(encoded) < len(raw):
             sections[key] = encoded
             del status[key]
+            status['compressed_sections'] = sections
     if sections:
         status['compressed_sections'] = sections
         status['status_retention']['lossless_sections'] = sorted(sections)

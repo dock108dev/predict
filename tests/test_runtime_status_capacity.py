@@ -202,6 +202,19 @@ class RuntimeStatusCapacity(unittest.TestCase):
         self.assertNotIn('compressed_sections', observed['status'])
         self.assertIn('compressed_sections', saved)
 
+    def test_large_source_diagnostics_are_retained_without_stopping_heartbeat(self):
+        from app.collection.runtime_status import _unpack_status_sections
+
+        service, original = self.fixture()
+        sources = [dict(provider='sportsgameodds', metrics=dict(
+            admitted_quote_clock_samples={f'cohort-{n}': dict(source='s'*550) for n in range(2100)}))]
+        original['sources'] = sources
+        report = RuntimeState().snapshot(service)['status']
+        self.assertIn('sources', report['status_retention']['lossless_sections'])
+        self.assertLessEqual(len(json.dumps(report,separators=(',', ':')).encode()), STATUS_BYTES)
+        _unpack_status_sections(report)
+        self.assertEqual(report['sources'], sources)
+
     def test_large_subscription_roster_is_a_counted_diagnostic_not_heartbeat_payload(self):
         from collections import Counter
         actions=[dict(action='create',market_id=str(i),owner_token='x'*64) for i in range(6000)]

@@ -16,6 +16,17 @@ from tests.test_ev02_occurrence import rows, AT, START, envelope
 
 
 class MixedContext(TestCase):
+    def test_aggregate_with_missing_context_keeps_originals_when_native_peer_matches(self):
+        aggregate = rows('sportsgameodds', 'aggregate', venue='prophetx', binary=False)[0]
+        for field in ('season', 'stage'):
+            aggregate['event'][field] = aggregate['market_identity'][field] = None
+        native = rows()[0]
+        result = OccurrenceResolver(links=EventLinks()).resolve([aggregate, native], clock=AT)
+        self.assertEqual(result[0]['event']['game_id'], result[1]['event']['game_id'])
+        self.assertEqual(result[0]['quote']['occurrence_match']['original_event'], aggregate['event'])
+        self.assertFalse(result[0]['verified'])
+        self.assertTrue(result[1]['verified'])
+
     def test_new_shared_context_does_not_erase_old_price_or_promote_contract(self):
         raw,record=local_contract.SourceLocalContract().record('NBA')
         record['event'].update(season='2026-2027',stage='regular_season')

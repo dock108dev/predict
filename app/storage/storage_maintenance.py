@@ -24,7 +24,7 @@ TRANSIENT_REWRITE_BYTES = 512 * 1024 * 1024
 COMPACT_TABLES = ('current_native_market_recovery', 'current_native_market_body', 'current_acquisition_image_parts',
     'current_native_ladder', 'native_ladder_revision', 'native_book_revision',
     'current_contract_storage', 'current_offer_storage', 'current_acquisition_market',
-    'acquisition_receipt', 'sgo_event_evidence', 'latest_board', 'latest_dashboard', 'current_grid_projection',
+    'acquisition_receipt', 'sgo_event_evidence', 'sgo_quote_revision', 'latest_board', 'latest_dashboard', 'current_grid_projection',
     'current_result_unit', 'current_native_book', 'current_native_catalog_recovery',
     'comparison_snapshot', 'comparison_snapshot_result', 'comparison_publication', 'data_runtime', 'current_grid_blob')
 MIN_REUSABLE_BYTES = 4 * 1024 * 1024

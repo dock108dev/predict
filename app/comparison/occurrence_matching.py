@@ -185,9 +185,9 @@ class OccurrenceResolver:
             # A native price has a durable provider identity before its shared
             # comparison context is known. Retain it without promoting a typed
             # vendor ID or a remembered join into missing source context.
-            if k[0] == PUBLIC_BOARD or k[0] in ('kalshi', 'polymarket_us') and (
-                    any(r['event'].get(field) in (None, '') for field in ('season', 'stage'))
-                    or admission.get('reason') == 'comparison_context_missing'):
+            if (k[0] == PUBLIC_BOARD
+                    or any(r['event'].get(field) in (None, '') for field in ('season', 'stage'))
+                    or k[0] in ('kalshi', 'polymarket_us') and admission.get('reason') == 'comparison_context_missing'):
                 source_local.add(k)
             if k in facts and digest({n:v for n,v in f.items() if n not in ('event', 'version', 'evidence')}) != digest({n:v for n,v in facts[k].items() if n not in ('event', 'version', 'evidence')}):
                 conflicts[k] = ['contradictory_source_metadata']

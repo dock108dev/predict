@@ -126,8 +126,14 @@ class BroadCoverageSQL(IsolatedAsyncioTestCase):
                 result = live.turn(db)
                 if result['remaining_components'] == 0:
                     break
-            self.assertTrue(reconcile(db)['published'])
-            value=read(db)
+            # Evaluate prices at the fixture's receipt clock and keep the
+            # independent aging case below. CI may take longer than a book's
+            # 30-second freshness window to calculate the authored slate.
+            at=max(row['quote']['times']['received_at'] for row in CurrentRowStore(db).capture(include_depth=False)['records'])
+            with patch('app.collection.runtime_status.clock',return_value=stamp(at)):
+                self.state.write(self.service)
+            self.assertTrue(reconcile(db,at=at)['published'])
+            value=read(db,at=at)
         self.assertEqual(value['global_totals']['retained_observations'],72,(self.owner.observation_error,self.owner.coverage_error))
         self.assertEqual(value['global_totals']['supported_comparison_observations'],60,
             (self.owner.observation_error,self.owner.coverage_error,[(c['id'],c['counts'],c['reasons']) for c in value['cells'] if c['counts']['retained_observations']]))

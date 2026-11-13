@@ -646,7 +646,9 @@ class SportsGameOddsWorker:
                     await asyncio.sleep(delay)
                     continue
                 self.metrics.pop('daily_pacing', None)
-                await self.state('budget_delayed', 'sgo_cycle_complete', 'SportsGameOdds prices are attributed aggregate observations; source freshness is checked separately.')
+                if self.metrics['state'] != 'available':
+                    await self.state('available', 'sgo_cycle_complete',
+                                     'SportsGameOdds scans are scheduled. Individual source clocks and availability apply.')
                 await asyncio.sleep(self.next_cycle_delay())
         except asyncio.CancelledError:
             raise
@@ -693,7 +695,8 @@ class SportsGameOddsWorker:
         return True
 
     async def close(self):
-        if not self.closed:
-            self.closed = True
+        self.closed = True
+        try:
             await self.transport.close()
-        self.key = None
+        finally:
+            self.key = None
