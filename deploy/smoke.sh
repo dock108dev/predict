@@ -20,7 +20,8 @@ cleanup() {
     status=$?
     if (( status != 0 )); then compose logs --tail 50 >&2 || true; fi
     compose down --volumes >&2 || true
-    rm -rf "$scratch"
+    # UID 10001 owns the worker-created state directories on the Linux runner.
+    sudo rm -rf -- "$scratch"
 }
 trap cleanup EXIT
 
