@@ -918,7 +918,10 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
                     native_slots.discard(key)
                     native_price_seal=not native_slots and any(deadline > stamp(utc()) for deadline in native_deadlines)
                 del inputs,price_result
-                if not native_slots and (live_first_price_seal or native_price_seal):
+                # An inexpensive turn can finish the next peers without
+                # spending appreciable time from a native price's lifetime.
+                if not native_slots and (live_first_price_seal or native_price_seal
+                        and monotonic()-capture_started >= turn_seconds/2):
                     break
             timings['capture_seconds']=round(monotonic()-capture_started,6)
             price_seal_started=monotonic()
