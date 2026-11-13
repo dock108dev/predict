@@ -20,6 +20,7 @@ DEFAULT = dict(schema=VERSION, authority=GRANT, enabled=True, aggregate_enabled=
     backoff_seconds=[2, 5, 15, 30, 60], reconnect_failures=5,
     ingress_records=16000, ingress_bytes=8*MIB, issue_records=200,
     issue_bytes=MIB, discovery_pages=36)
+OPTIONAL_FLAGS = ('direct_novig_enabled',)
 
 
 def validate(value):
@@ -28,8 +29,10 @@ def validate(value):
         value.setdefault('aggregate_provider','the_odds_api')
         for key in ('aggregate_sports','native_sports','native_families'):
             value.setdefault(key,[])
-    if not isinstance(value, dict) or set(value) != set(DEFAULT):
+    if not isinstance(value, dict) or set(value) - set(OPTIONAL_FLAGS) != set(DEFAULT):
         raise ValueError('Exact native operational configuration required')
+    if any(type(value[key]) is not bool for key in OPTIONAL_FLAGS if key in value):
+        raise ValueError('Invalid optional source setting')
     if value['schema'] != VERSION or value['authority'] != GRANT or any(type(value[k]) is not bool for k in ('enabled','aggregate_enabled')):
         raise ValueError('Native operational authority/schema conflict')
     if value['aggregate_provider'] not in ('the_odds_api', 'sportsgameodds'):

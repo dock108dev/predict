@@ -148,7 +148,8 @@ class CurrentService:
         elif provider in self.paused_sources:
             for venue in ('novig','prophetx'):
                 await call(self, self.source_state, venue, 'stopped', 'Shared aggregate acquisition explicitly paused. Accounting and due times are preserved.')
-        if self.database_mode and self.config['aggregate_enabled'] and not ({'novig', 'the_odds_api'} & self.paused_sources):
+        if (self.database_mode and self.config['aggregate_enabled'] and self.config.get('direct_novig_enabled', True)
+                and not ({'novig', 'the_odds_api'} & self.paused_sources)):
             from .novig_v3_public import NovigPublicDiscovery
             from .novig_v3_current import NovigCurrentWorker
             self.workers['novig_public'] = NovigPublicDiscovery(self)

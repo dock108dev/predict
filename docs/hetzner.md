@@ -30,10 +30,11 @@ not offer an interactive shell or any port forwarding.
 Create a private `postgres-bootstrap` file with a random password for a new
 cluster. The database uses a shared Unix socket and a persistent `predict_postgres`
 volume. Source credentials live in `/srv/predict/provider-secrets` as mode 0600
-files owned by UID 10001. The collector alone mounts them. Use `kalshi.json`,
-`polymarket_us.json`, and `novig.json` with the fields in
+files owned by UID 10001. The collector alone mounts them. Use `kalshi.json`
+and `polymarket_us.json` with the fields in
 [Credentials](configuration.md#credentials), and put the SportsGameOdds key on
-one line in `sportsgameodds`. The legacy Odds API's existing account records are
+one line in `sportsgameodds`. Set `direct_novig_enabled` to `false` in the server's
+source configuration to get Novig prices through SportsGameOdds. The legacy Odds API's existing account records are
 retained. Its macOS-bound credential verification needs separate requalification
 before selecting that provider on the server.
 
