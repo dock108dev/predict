@@ -228,8 +228,19 @@ class DataRuntime:
             await self.service.close()
 
     async def commands(self):
+        # Keep one session for the command poll instead of opening ten database
+        # connections per second alongside ingestion and publication.
+        from .bulk_checkpoint import owned_thread
+        db = await owned_thread(self.connector)
+        try:
+            await self.poll_commands(db)
+        finally:
+            await owned_thread(db.close)
+
+    async def poll_commands(self, db):
+        from .bulk_checkpoint import owned_thread
         while not self.stopping.is_set():
-            for command in await asyncio.to_thread(self.state.pending):
+            for command in await owned_thread(self.state.pending, db):
                 try:
                     if command['runtime_id'] != self.service.runtime_id:
                         raise SelectionError(409, 'runtime_conflict', 'The owning runtime changed before this control was applied.')

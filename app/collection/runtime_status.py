@@ -276,13 +276,12 @@ class RuntimeState:
             row = db.execute('SELECT state,acknowledgment FROM data_runtime_command WHERE id=%s', (identity,)).fetchone()
         return row
 
-    def pending(self):
-        with self.connector() as db:
-            db.execute("UPDATE data_runtime_command SET state='failed',acknowledgment=%s WHERE state='pending' AND expires_at<clock_timestamp()",
-                       (Jsonb(dict(error='data_runtime_control_expired', reason='Control expired before the owning runtime acknowledged it.')),))
-            # Retain only bounded recent ACKs. No accumulating control history.
-            db.execute("DELETE FROM data_runtime_command WHERE state<>'pending' AND id NOT IN (SELECT id FROM data_runtime_command WHERE state<>'pending' ORDER BY created_at DESC LIMIT 64)")
-            return db.execute("SELECT id,runtime_id,action,body FROM data_runtime_command WHERE state='pending' ORDER BY created_at LIMIT 8").fetchall()
+    def pending(self, db):
+        db.execute("UPDATE data_runtime_command SET state='failed',acknowledgment=%s WHERE state='pending' AND expires_at<clock_timestamp()",
+                   (Jsonb(dict(error='data_runtime_control_expired', reason='Control expired before the owning runtime acknowledged it.')),))
+        # Retain only bounded recent ACKs. No accumulating control history.
+        db.execute("DELETE FROM data_runtime_command WHERE state<>'pending' AND id NOT IN (SELECT id FROM data_runtime_command WHERE state<>'pending' ORDER BY created_at DESC LIMIT 64)")
+        return db.execute("SELECT id,runtime_id,action,body FROM data_runtime_command WHERE state='pending' ORDER BY created_at LIMIT 8").fetchall()
 
     def acknowledge(self, identity, result, *, failed=False):
         with self.connector() as db:
