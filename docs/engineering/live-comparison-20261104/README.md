@@ -1,7 +1,9 @@
 # Next engineering slices
 
 The current work is tracked in the repository root `NEXT_STEPS.md` and the
-[updated product scope](../../live-comparison-plan-20261104.md#current-scope--november-11-2026).
+[approved November 12 interface](../../live-comparison-plan-20261104.md#november-12--compare-every-venue-on-the-line).
+One assignment owns ranked cards, ordinary price access and missing calculation
+traces through installed verification.
 The entries below describe earlier deliveries.
 
 ## November 7 — active follow-up engineering

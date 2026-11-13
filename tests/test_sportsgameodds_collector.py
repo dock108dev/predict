@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from app.collection.sportsgameodds_collector import GuardedPageCollector, RejectedCursor
+from app.collection.sportsgameodds_collector import DailyObjectPacing, GuardedPageCollector, RejectedCursor
 from app.collection.sportsgameodds_ledger import ObjectLedger
 from app.collection.sportsgameodds_transport import PageResponse
 
@@ -54,6 +54,53 @@ async def test_event_refresh_category_is_recorded_before_dispatch(tmp_path):
     transport.fetch.side_effect = fetch
     await c.fetch({'eventIDs': 'event-1', 'oddID': PARAMS['oddID'], 'limit': 1}, 'private', now=NOW)
     assert ledger.status('w')['charged'] == 1
+
+
+@run_async
+async def test_unresolved_response_keeps_request_specific_trace_across_restart(tmp_path):
+    from hashlib import sha256
+
+    params = dict(PARAMS, cursor='opaque-cursor')
+    response = PageResponse(200, b'broken provider response', NOW.isoformat(), None,
+                            provider_request_id='provider-request-1')
+    collector, ledger, _, transport = setup(tmp_path, response)
+    with pytest.raises(ValueError):
+        await collector.fetch(params, 'private', now=NOW)
+    reopened = ObjectLedger(ledger.path)
+    hold, = reopened.holds('w')
+    assert hold['reserved'] == 5 and hold['charged'] is None
+    assert hold['query'] == dict(params, cursor='[present]')
+    assert hold['provider_used_before'] == 10
+    assert hold['provider_request_id'] == 'provider-request-1'
+    assert hold['response_sha256'] == sha256(response.body).hexdigest()
+    with pytest.raises(RuntimeError, match='unresolved'):
+        await collector.fetch(params, 'private', now=NOW)
+    transport.fetch.assert_awaited_once()
+
+
+@run_async
+async def test_single_event_alternate_refresh_keeps_event_billing_and_book_scope(tmp_path):
+    import json
+    from tests.test_sportsgameodds_adapter import response
+
+    body = response()
+    odd = body['data'][0]['odds']['points-home-game-sp-home']
+    main = odd['byBookmaker']['book']
+    odd['byBookmaker'] = {'novig':dict(main,altLines=[dict(main,spread='-2.5')]), 'other':main}
+    params = dict(eventIDs='event',oddID=odd['oddID'],limit=1,bookmakerID='novig',includeAltLines=True)
+    provider = PageResponse(200,json.dumps(body).encode(),NOW.isoformat(),None)
+    collector, ledger, usage, _ = setup(tmp_path, provider)
+    page = await collector.fetch(params,'private',now=NOW)
+    assert {q['venue'] for q in page.quotes} == {'novig'}
+    assert page.alternate_rows == page.ignored_bookmaker_groups == 1
+    assert ledger.status('w')['charged'] == 1 and ledger.status('w')['held'] == 0
+
+    odd['byBookmaker']['novig']['altLines'] *= 101
+    usage.return_value['used'] = 11
+    collector.transport.fetch.return_value = PageResponse(200,json.dumps(body).encode(),NOW.isoformat(),None)
+    with pytest.raises(ValueError,match='alternate-line limit'):
+        await collector.fetch(params,'private',now=NOW+timedelta(seconds=1))
+    assert ledger.status('w')['held'] == 1
 
 
 @run_async
@@ -139,6 +186,9 @@ async def test_daily_pacing_refuses_an_oversized_page_before_dispatch(tmp_path):
     ledger.create_window('w', limit=100, initial_used=10, reserve=10, reset_at=NOW+timedelta(days=30), requests_per_minute=10)
     c.ledger = ledger
     usage.return_value['reset_at'] = NOW+timedelta(days=30)
-    with pytest.raises(RuntimeError, match='daily object pacing'):
+    with pytest.raises(DailyObjectPacing, match='daily object pacing') as blocked:
         await c.fetch(PARAMS, 'private', now=NOW)
+    assert blocked.value.retry_at == NOW+timedelta(days=14)
+    assert (blocked.value.requested, blocked.value.rolling, blocked.value.allowance) == (5, 0, 2)
     transport.fetch.assert_not_awaited()
+    assert ledger.status('w')['held'] == 0

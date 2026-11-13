@@ -3,8 +3,10 @@
 A caller must persist reservations before dispatch and reconcile against the
 provider's usage; this module deliberately does not dispatch or manage Stops.
 """
+from bisect import bisect_right
 from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
+from itertools import accumulate
 from math import ceil, floor
 
 
@@ -14,6 +16,11 @@ class EventDue:
     starts_at: datetime
     last_received_at: datetime | None = None
     live: bool = False
+    started: bool = False
+
+    @property
+    def active(self) -> bool:
+        return self.live or self.started
 
 
 @dataclass(frozen=True)
@@ -35,15 +42,16 @@ def _aware(value: datetime) -> bool:
 def poll_slot(event: EventDue, now: datetime, policy: SchedulePolicy):
     until = event.starts_at - now
     rank, cadence = ((0, policy.live) if event.live else
-                     (2, policy.approaching) if until <= policy.approaching_window else
-                     (3, policy.imminent) if until <= policy.imminent_window else
-                     (4, policy.near) if until <= policy.near_window else
-                     (5, policy.distant))
+                     (2, policy.live) if event.started else
+                     (3, policy.approaching) if until <= policy.approaching_window else
+                     (4, policy.imminent) if until <= policy.imminent_window else
+                     (5, policy.near) if until <= policy.near_window else
+                     (6, policy.distant))
     last = event.last_received_at
     if last is None:
         return rank, now
     due = last + cadence
-    if not event.live and last < event.starts_at:
+    if not event.active and last < event.starts_at:
         # The first post-start poll can detect an explicit live transition.
         # After an omitted or pregame response, the normal cadence applies.
         due = min(due, event.starts_at)
@@ -115,13 +123,35 @@ def daily_allowance(*, available: int, now: datetime, reset_at: datetime) -> int
     return floor(available / days)
 
 
+def daily_retry_at(*, available, requested, now, reset_at, expirations):
+    """First eligible whole-second retry from unchanged account evidence.
+
+    Remaining days decrease as time passes. When a charge leaves the rolling
+    window the allowance decreases by at most that charge, so headroom is
+    monotone until another request or account observation changes the inputs.
+    """
+    clocks = [at for at, _ in expirations]
+    exposure = list(accumulate((amount for _, amount in expirations), initial=0))
+    low, high = 0, ceil((reset_at-now).total_seconds())
+    while high-low > 1:
+        middle = (low+high)//2
+        at = now+timedelta(seconds=middle)
+        rolling = exposure[-1]-exposure[bisect_right(clocks, at)]
+        allowance = daily_allowance(available=available+rolling, now=at, reset_at=reset_at)
+        if rolling+requested <= allowance:
+            high = middle
+        else:
+            low = middle
+    return min(reset_at, now+timedelta(seconds=high))
+
+
 REFRESH_TARGET = .65
 PLANNED_FRACTION = .90
 DISCOVERY_HOURS = (12, 24, 48, 72, 96)
 
 
 def budgeted_policy(events: list[EventDue], now: datetime, daily_budget: int, *,
-                    discovery_walk_objects: int = 0) -> tuple[SchedulePolicy, int]:
+                    discovery_walk_objects: int = 0, priority_pregame=False) -> tuple[SchedulePolicy, int]:
     """Budget the static slate, preserving kickoff and active refresh priority.
 
     Project current live events as live all day. Reserve capacity for the
@@ -140,8 +170,8 @@ def budgeted_policy(events: list[EventDue], now: datetime, daily_budget: int, *,
         if not _aware(event.starts_at):
             raise ValueError('event clocks must be timezone-aware')
         hours = (event.starts_at - now).total_seconds() / 3600
-        tiers[0 if event.live else 1 if hours <= 2 else 2 if hours <= 12 else 3 if hours <= 72 else 4] += 1
-        if not event.live and hours <= 24 and (event.last_received_at is None or event.last_received_at < event.starts_at):
+        tiers[0 if event.active else 1 if hours <= 2 else 2 if hours <= 12 else 3 if hours <= 72 else 4] += 1
+        if not event.active and hours <= 24 and (event.last_received_at is None or event.last_received_at < event.starts_at):
             kickoff_polls += 1
     # Keep the normal 15-minute live target as we stretch distant, near and
     # imminent pregame polling. Kickoff remains an independent one-time poll.
@@ -169,8 +199,15 @@ def budgeted_policy(events: list[EventDue], now: datetime, daily_budget: int, *,
                 for minutes in (5, 10):
                     faster = replace(policy, live=timedelta(minutes=minutes))
                     if cost(faster) <= normal_limit:
-                        return faster, ceil(cost(faster))
-            return policy, ceil(projected)
+                        policy = faster
+                        break
+            if priority_pregame and tiers[1]:
+                for minutes in (5, 10, 15):
+                    faster = replace(policy, approaching=timedelta(minutes=minutes))
+                    if cost(faster) <= normal_limit:
+                        policy = faster
+                        break
+            return policy, ceil(cost(policy))
     if not discovery_walk_objects:
         return policy, ceil(projected)
 

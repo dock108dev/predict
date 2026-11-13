@@ -2,6 +2,11 @@
 
 ## Subsequent delivery
 
+The owner-approved [November 12 line-comparison plan](live-comparison-plan-20261104.md#november-12--compare-every-venue-on-the-line)
+and [pregame default](live-comparison-plan-20261104.md#november-12--pregame-opportunities-first)
+are the active implementation target. The implementation record below describes
+the earlier approved layout and its local verification.
+
 The [November 4 live-comparison plan](live-comparison-plan-20261104.md) updated
 the design below. The [November 6 delivery record](engineering/live-comparison-20261104/L05-delivery.md)
 covers the grouped live list, pinned drawer and their local verification.

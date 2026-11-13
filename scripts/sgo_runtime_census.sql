@@ -85,6 +85,22 @@ ORDER BY league, phase;
 \echo SGO delivery-clock migration unavailable. Continuing with the retained history census.
 \endif
 
+SELECT EXISTS (SELECT 1 FROM information_schema.columns
+               WHERE table_schema='public' AND table_name='current_sgo_delivery_clock'
+                 AND column_name='first_live_sportsbook_write_at') AS has_live_sportsbook_clock \gset
+\if :has_live_sportsbook_clock
+-- These markers record a fresh offer member sealing indicative sportsbook EV.
+-- The ordinary read still checks the offer, reference, and authority clocks.
+SELECT league, count(*) AS admitted_receipts,
+       count(first_live_sportsbook_write_at) AS receipts_with_live_sportsbook_write,
+       min(first_live_sportsbook_write_at) AS first_live_sportsbook_write_at,
+       max(first_live_sportsbook_write_at) AS latest_live_sportsbook_write_at
+FROM current_sgo_delivery_clock
+WHERE received_at >= transaction_timestamp() - interval '2 hours'
+GROUP BY GROUPING SETS ((league), ())
+ORDER BY league NULLS LAST;
+\endif
+
 SELECT kind, count(*) AS retained,
        coalesce(sum(payload_bytes), 0) AS payload_bytes,
        min(archived_at) AS oldest,

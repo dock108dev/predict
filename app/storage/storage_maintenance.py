@@ -28,8 +28,10 @@ COMPACT_TABLES = ('current_native_market_recovery', 'current_acquisition_image_p
     'comparison_snapshot', 'comparison_snapshot_result', 'comparison_live_read_fragment', 'data_runtime', 'current_grid_blob')
 MIN_REUSABLE_BYTES = 4 * 1024 * 1024
 HOT_TABLES = ('current_acquisition_image_parts','current_acquisition_market',
-              'current_native_ladder','current_native_book','current_offer')
+              'current_native_ladder','current_native_book','current_offer',
+              'comparison_snapshot_result','comparison_snapshot','comparison_live_read_fragment')
 CAPTURE_WAIT_SECONDS = 10
+LIVE_REWRITE_LOCK_TIMEOUT = '100ms'
 REWRITE_TURN_SECONDS = 5
 # A completed copy measures irreducible page/TOAST slack. Do not keep copying
 # that same slack: require another bounded unit of growth/reusable space first.
@@ -94,7 +96,10 @@ def maintain(db, *, compact=True, collecting=False):
             # dead working pages in place; no live evidence is deleted and no
             # temporary relation copy competes with ongoing acquisition.
             for table in HOT_TABLES:
-                db.execute(sql.SQL('VACUUM {}').format(sql.Identifier(table)))
+                try:
+                    db.execute(sql.SQL('VACUUM (TRUNCATE FALSE) {}').format(sql.Identifier(table)))
+                except LockNotAvailable:
+                    result['deferred'].append(dict(table=table, reason='reuse_lock_timeout'))
         # Read-only bloat scans do not consume rewrite runway or change MVCC
         # visibility. Reserve the publication lock only for an eligible FULL
         # rewrite; no-op scans must not withhold already-admitted games.
@@ -187,6 +192,8 @@ def maintain(db, *, compact=True, collecting=False):
                         capture_lock=False
                         continue
                     require_disk_space(ROOT/'.local/postgres', append_bytes=row['bytes']*3)
+                    if collecting:
+                        db.execute("SELECT set_config('lock_timeout',%s,false)", (LIVE_REWRITE_LOCK_TIMEOUT,))
                     try:
                         db.execute(sql.SQL('VACUUM (FULL, ANALYZE) {}').format(sql.Identifier('public',row['relname'])))
                     except LockNotAvailable:
@@ -198,6 +205,8 @@ def maintain(db, *, compact=True, collecting=False):
                         # continue withholding the next publication turn.
                         db.execute('SELECT pg_advisory_unlock(901153)')
                         capture_lock=False
+                        if collecting:
+                            db.execute("SET lock_timeout='1s'")
                     after = db.execute('SELECT pg_total_relation_size(%s::regclass) n', (str(row['oid']),)).fetchone()['n']
                     result['rewrites'].append(dict(table=row['relname'],before_bytes=row['bytes'],after_bytes=after,measured_reusable_bytes=free,
                         transient_peak_bound_bytes=peak_bound,operating_cap_bytes=SQL_BYTE_CAP,minimum_reclaim_bytes=reclaim_unit))

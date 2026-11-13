@@ -25,6 +25,30 @@ def plan(groups, previous, current, changed):
     return dict(groups={**retained,**added},added=added,retired=retired,changed=set(changed),invalidated=invalidated)
 
 
+def priority_groups(hot, tail):
+    """Keep hot and rotating markets in separate, bounded request groups."""
+    if set(hot) & set(tail):
+        raise ValueError('overlapping_native_priority_groups')
+    groups = {}
+    for members in (sorted(hot), sorted(tail)):
+        for start in range(0, len(members), 100):
+            groups[str(uuid4())] = members[start:start+100]
+    return groups
+
+
+def priority_plan(groups, previous_hot, next_hot, next_tail):
+    # A tail group is a subscription unit. Keep hot request IDs only if the
+    # complete hot cohort is stable, and acknowledge each retired group before
+    # allocating another provider subscription on this socket.
+    retained = {rid: members for rid, members in groups.items()
+                if previous_hot == next_hot and set(members) <= next_hot}
+    retained_markets = {mid for members in retained.values() for mid in members}
+    added = priority_groups(next_hot - retained_markets, next_tail)
+    retired = set(groups) - set(retained)
+    invalidated = {mid for rid in retired for mid in groups[rid]}
+    return dict(groups={**retained, **added}, added=added, retired=retired, invalidated=invalidated)
+
+
 def requests(groups, markets):
     return {market_slug(markets[mid]):rid for rid,members in groups.items() for mid in members}
 

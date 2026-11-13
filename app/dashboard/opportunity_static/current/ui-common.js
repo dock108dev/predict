@@ -3,8 +3,7 @@ const UI = (() => {
   const el = (tag, text, cls) => { const e=document.createElement(tag); if(text!=null)e.textContent=text;if(cls)e.className=cls;return e; };
   const num = v => {if(v==null)return null;const p=String(v).split('/');return Number(p[0])/(p.length===2?Number(p[1]):1);};
   const fmt = (v,d=2) => v==null?'Unavailable':num(v).toLocaleString('en-US',{maximumFractionDigits:d,minimumFractionDigits:d});
-  const names={kalshi:'Kalshi',polymarket_us:'Polymarket US',novig:'Novig',prophetx:'ProphetX',pinnacle:'Pinnacle',the_odds_api:'The Odds API',sportsgameodds:'SportsGameOdds',sportsgameodds_books:'SportsGameOdds bookmaker median',winner:'Winner',spread:'Spread',total:'Total'};
-  Object.assign(names, {fanduel:'FanDuel', draftkings:'DraftKings', betmgm:'BetMGM', caesars:'Caesars'});
+  const names={kalshi:'Kalshi',polymarket_us:'Polymarket US',novig:'Novig',prophetx:'ProphetX',pinnacle:'Pinnacle',fanduel:'FanDuel',draftkings:'DraftKings',betmgm:'BetMGM',caesars:'Caesars',the_odds_api:'The Odds API',sportsgameodds:'SportsGameOdds',sportsgameodds_books:'Sportsbook comparison',winner:'Winner',spread:'Spread',total:'Total'};
   const name=v=>names[v]||v;
   let format='american';try{format=localStorage.getItem('predict-odds-format')==='decimal'?'decimal':'american';}catch{}
   function updateOdds(){for(const e of document.querySelectorAll('[data-american]'))e.textContent=e.dataset[format]||'Unavailable';for(const b of document.querySelectorAll('[data-format]'))b.setAttribute('aria-pressed',String(b.dataset.format===format));}
@@ -16,9 +15,16 @@ const UI = (() => {
     const h=el('header',null,'p-chrome'),brand=link('Predict.','/','p-brand'),nav=el('nav',null,'p-nav');nav.setAttribute('aria-label','Predict');
     if(document.body.classList.contains('desk-app')){
       const mark=el('span','p/a','desk-brand-mark');mark.setAttribute('aria-hidden','true');
-      brand.replaceChildren(mark,'Prediction Arb');
-      nav.append(link('EV','/ev'),link('Arbitrage','/arbs'),link('Admin','/admin'));
-      const label=el('label','Odds '),choice=el('select');
+      const opportunities = document.body.classList.contains('opportunities-app');
+      if (opportunities) {
+        mark.textContent='P';
+        brand.replaceChildren(mark,'Predict');
+        nav.append(link('Opportunities','/'),link('Browse odds','/browse-odds'),link('Admin','/admin'));
+      } else {
+        brand.replaceChildren(mark,'Prediction Arb');
+        nav.append(link('EV','/ev'),link('Arbitrage','/arbs'),link('Admin','/admin'));
+      }
+      const label=el('label','Odds '),choice=el('select');choice.setAttribute('aria-label','Odds format');
       for(const [value,title] of [['american','American'],['decimal','Decimal']]){
         const option=el('option',title);option.value=value;choice.append(option);
       }
@@ -26,7 +32,9 @@ const UI = (() => {
       choice.onchange=()=>{format=choice.value;try{localStorage.setItem('predict-odds-format',format);}catch{}updateOdds();};
       label.append(choice);label.className='p-format';
       h.append(brand,nav,label);host.replaceChildren(h);
-      const path=location.pathname==='/'?'/ev':location.pathname;
+      const path = opportunities
+        ? ['/browse-odds', '/game'].includes(location.pathname) ? '/browse-odds' : '/'
+        : location.pathname==='/'?'/ev':location.pathname;
       nav.querySelectorAll('a').forEach(a=>{if(a.pathname===path)a.setAttribute('aria-current','page');});
       return;
     }
@@ -37,7 +45,7 @@ const UI = (() => {
     const path=location.pathname;for(const a of h.querySelectorAll('a'))if(a.pathname===(path==='/arbs'||path==='/ev'?'/':path))a.setAttribute('aria-current','page');
     updateOdds();
   }
-  function adminNav(){const nav=el('nav',null,'p-adminnav');nav.setAttribute('aria-label','Admin sections');for(const [key,label] of [['overview','Overview'],['timing','Quote timing'],['coverage','Coverage'],['usage','Usage & budget'],['calculations','Calculations'],['inspection','Exact inspection']]){const a=link(label,'/admin?section='+key);if((new URLSearchParams(location.search).get('section')||'overview')===key)a.setAttribute('aria-current','page');nav.append(a);}return nav;}
+  function adminNav(){const nav=el('nav',null,'p-adminnav');nav.setAttribute('aria-label','Admin sections');for(const [key,label] of [['overview','Overview'],['timing','Quote timing'],['coverage','Coverage'],['usage','Usage & budget'],['calculations','Calculations'],['inspection','Exact inspection'],['database','Database']]){const a=link(label,'/admin?section='+key);if((new URLSearchParams(location.search).get('section')||'overview')===key)a.setAttribute('aria-current','page');nav.append(a);}return nav;}
   function localURL(raw){
     if(!raw)return null;
     try{

@@ -61,12 +61,14 @@ def stop_role(role, folder):
         print(f'{role}: no matching process; no process changed.')
         return
     os.kill(record['pid'], signal.SIGTERM)
-    for _ in range(150):
+    # The data owner drains in-flight SQL work before releasing its lock.
+    deadline = time.monotonic() + (45 if role == 'data' else 15)
+    while time.monotonic() < deadline:
         if not owned(record):
             state.unlink(missing_ok=True)
             print(f'{role}: stopped the verified process.')
             return
-        time.sleep(.1)
+        time.sleep(.2)
     raise SystemExit(f'{role}: cleanup is still in progress; no process was force-killed.')
 
 
@@ -140,15 +142,40 @@ def start_role(role, folder, args):
     print(f"{role}: " + (record.get('url') or f"started · {process.pid}"))
 
 
+def check_configuration(path):
+    sys.path.insert(0, str(ROOT))
+    from app.collection.current_policy import aggregate_scope, load, native_markets, native_scope
+
+    config_path = Path(path) if path else ROOT / '.local/predict-current-config.json'
+    try:
+        config = load(config_path)
+    except FileNotFoundError:
+        raise SystemExit('Configuration file missing. Copy config/current.example.json or select an existing file.') from None
+    except json.JSONDecodeError as error:
+        raise SystemExit(f'Invalid configuration JSON at line {error.lineno}, column {error.colno}.') from None
+    except (OSError, UnicodeError, TypeError, ValueError):
+        raise SystemExit('Invalid configuration. Check the fields and allowed values in docs/configuration.md.') from None
+
+    native_enabled = 'enabled' if config['enabled'] else 'disabled'
+    aggregate_enabled = 'enabled' if config['enabled'] and config['aggregate_enabled'] else 'disabled'
+    print(f"Valid configuration. Native acquisition {native_enabled} · "
+          f"{', '.join(native_scope(config))} · {', '.join(native_markets(config))}.")
+    print(f"Aggregate acquisition {aggregate_enabled} · {config['aggregate_provider']} · "
+          f"{', '.join(aggregate_scope(config))} · {', '.join(config['families'])}.")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action', choices=['start', 'stop', 'status'])
+    parser.add_argument('action', choices=['start', 'stop', 'status', 'check-config'])
     parser.add_argument('--role', choices=['app', 'data', 'both'], default='both',
                         help='Manage one role independently; default: both')
     parser.add_argument('--port', type=int, default=8783)
     parser.add_argument('--instance', choices=['poc', 'beta'], default='beta')
-    parser.add_argument('--current-config', help='Existing data-runtime configuration (start data/both only)')
+    parser.add_argument('--current-config', help='Existing data-runtime configuration for check-config or start data/both')
     args = parser.parse_args()
+    if args.action == 'check-config':
+        check_configuration(args.current_config)
+        return
     if args.current_config is not None and (args.action != 'start' or args.role == 'app'):
         parser.error('--current-config requires start with --role data or both')
     if not 1 <= args.port <= 65535:

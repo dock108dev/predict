@@ -15,7 +15,7 @@ import re
 from .current_ingress import call, operation
 from .current_policy import ROOT, aggregate_scope
 from .sportsgameodds_adapter import Traversal
-from .sportsgameodds_collector import GuardedPageCollector, RejectedCursor
+from .sportsgameodds_collector import DailyObjectPacing, GuardedPageCollector, RejectedCursor
 from .sportsgameodds_current_rows import current_rows
 from .sportsgameodds_ledger import ObjectLedger
 from .sportsgameodds_schedule import (
@@ -26,6 +26,10 @@ from .sportsgameodds_adapter import clock_sample
 from .sportsgameodds_transport import ODD_IDS, SportsgameoddsTransport
 from .sportsgameodds_transport import TransportFailure
 from .sportsgameodds_usage import read_usage
+from app.comparison.sgo_reference import BEST_BOOKS
+
+ALTERNATE_REFRESH_BOOKS = ('kalshi', 'novig', *BEST_BOOKS)
+ALTERNATE_REFRESH_WINDOW = timedelta(hours=2)
 
 
 def credential():
@@ -125,7 +129,12 @@ class SportsGameOddsWorker:
         self.now = now
         self.closed = False
         self.metrics = {'state':'connecting', 'requests':0, 'pages':0, 'events':0,
-                        'records':0, 'excluded':0, 'next_refresh_at':None}
+                        'records':0, 'excluded':0, 'next_refresh_at':None,
+                        'alternate_refresh': dict(resolved_requests=0, returned_events=0,
+                            received_alternate_rows=0, admitted_alternate_rows=0, admitted_available_alternate_rows=0,
+                            duplicate_alternate_rows=0, conflicting_alternate_lines=0, ignored_bookmaker_groups=0,
+                            largest_page_bytes=0, bookmaker_filter=list(ALTERNATE_REFRESH_BOOKS),
+                            vendor_consensus_contributors='unspecified_for_filtered_response')}
         self.phase = 'initializing'
         self.ledger = None
         self.window_id = None
@@ -195,6 +204,7 @@ class SportsGameOddsWorker:
             return
         value = self.ledger.status(self.window_id)
         self.metrics['objects'] = {k: v.isoformat() if isinstance(v, datetime) else v for k,v in value.items()}
+        self.metrics['object_holds'] = self.ledger.holds(self.window_id)
 
     @operation
     def admit(self, sport, records, reference_rows, event_frames, received_at, receipt_sha256, event_scopes):
@@ -246,6 +256,17 @@ class SportsGameOddsWorker:
             self.metrics['events'] += len(page.events)
             self.metrics['payload_bytes'] = self.metrics.get('payload_bytes', 0) + page.payload_bytes
             self.metrics['largest_page_bytes'] = max(self.metrics.get('largest_page_bytes', 0), page.payload_bytes)
+            alternate = None
+            if params.get('includeAltLines') is True:
+                alternate = self.metrics['alternate_refresh']
+                alternate['resolved_requests'] += 1
+                alternate['returned_events'] += len(page.events)
+                for target, field in (('received_alternate_rows', 'alternate_rows'),
+                        ('duplicate_alternate_rows', 'duplicate_alternate_rows'),
+                        ('conflicting_alternate_lines', 'conflicting_alternate_lines'),
+                        ('ignored_bookmaker_groups', 'ignored_bookmaker_groups')):
+                    alternate[target] += getattr(page, field)
+                alternate['largest_page_bytes'] = max(alternate['largest_page_bytes'], page.payload_bytes)
             requested = set(params.get('eventIDs', '').split(',')) - {''}
             returned = {event['event_id'] for event in page.events}
             aliases = {}
@@ -283,6 +304,10 @@ class SportsGameOddsWorker:
                     if event_id in next_events:
                         next_events[event_id] = dict(next_events[event_id], last_polled_at=self.now().isoformat())
             await self._publish(page)
+            if alternate is not None:
+                admitted = [quote for quote in page.quotes if quote.get('alternate')]
+                alternate['admitted_alternate_rows'] += len(admitted)
+                alternate['admitted_available_alternate_rows'] += sum(quote.get('available') is True for quote in admitted)
             self.events = next_events
             if page.events:
                 await self.state('available', 'sgo_page_received',
@@ -291,7 +316,7 @@ class SportsGameOddsWorker:
         finally:
             self._account_status()
 
-    def params(self, *, league=None, event_ids=None, cursor=None):
+    def params(self, *, league=None, event_ids=None, cursor=None, include_alternates=False):
         result = {'oddID': ','.join(sorted(ODD_IDS)), 'limit': self.page_limit,
                   'includeOpposingOdds': True}
         if league is not None:
@@ -299,6 +324,10 @@ class SportsGameOddsWorker:
         else:
             result['eventIDs'] = ','.join(event_ids)
             result['limit'] = len(event_ids)
+        if include_alternates:
+            if league is not None or cursor is not None or len(event_ids) != 1:
+                raise ValueError('alternate refresh requires one explicit event')
+            result.update(includeAltLines=True, bookmakerID=','.join(ALTERNATE_REFRESH_BOOKS))
         if cursor is not None:
             result['cursor'] = cursor
         return result
@@ -356,17 +385,29 @@ class SportsGameOddsWorker:
     def scheduled_events(self):
         return [EventDue(e['event_id'], datetime.fromisoformat(e['starts_at']),
                          datetime.fromisoformat(e.get('last_polled_at', e['received_at'])),
-                         e['phase'] in ('live', 'started')) for e in self.events.values()]
+                         live=e['phase']=='live', started=e['phase']=='started') for e in self.events.values()]
 
     async def refresh(self, due, policy, *, between_discovery_pages=False):
-        for start in range(0, len(due), self.page_limit):
-            batch = due[start:start+self.page_limit]
+        def needs_alternates(event, at):
+            return event.active or event.starts_at - at <= ALTERNATE_REFRESH_WINDOW
+
+        start = 0
+        while start < len(due):
             attempted_at = self.now()
+            include_alternates = needs_alternates(due[start], attempted_at)
+            batch = [due[start]]
+            if not include_alternates:
+                for event in due[start+1:start+self.page_limit]:
+                    if needs_alternates(event, attempted_at):
+                        break
+                    batch.append(event)
             slots = [poll_slot(event, attempted_at, policy) for event in batch]
-            await self._fetch(self.params(event_ids=[event.event_id for event in batch]))
+            await self._fetch(self.params(event_ids=[event.event_id for event in batch],
+                                          include_alternates=include_alternates))
+            start += len(batch)
             metrics = self.metrics.setdefault('completed_refresh_polls', {})
             for rank, deadline in slots:
-                tier = 'active' if rank == 0 else 'kickoff' if rank == 1 else 'scheduled'
+                tier = ('active', 'kickoff', 'started')[rank] if rank <= 2 else 'scheduled'
                 tally = metrics.setdefault(tier, dict(events=0, between_discovery_pages=0,
                                                        max_schedule_delay_seconds=0))
                 tally['events'] += 1
@@ -388,7 +429,8 @@ class SportsGameOddsWorker:
             by_league = Counter(event['league'] for event in self.events.values())
             prior_cost = self.ledger.discovery_cost(now=now)
             walk_objects = sum(max(1, by_league[league], prior_cost.get(league, 0)) for league in leagues)
-            policy, projected = budgeted_policy(candidates, now, allowance, discovery_walk_objects=walk_objects)
+            policy, projected = budgeted_policy(candidates, now, allowance, discovery_walk_objects=walk_objects,
+                                                priority_pregame=True)
             self.schedule_policy = policy
             discovery_cadence = discovery_interval(retained_events=walk_objects, daily_budget=allowance,
                                                    projected_refresh_objects=projected)
@@ -418,7 +460,7 @@ class SportsGameOddsWorker:
             due = due_events(self.scheduled_events(), at, policy=policy, **self.controls_to_schedule())
             urgent, scheduled = [], []
             for event in due:
-                (urgent if event.live or event.starts_at <= at else scheduled).append(event)
+                (urgent if event.active or event.starts_at <= at else scheduled).append(event)
             return urgent, scheduled
 
         def in_traversal():
@@ -521,11 +563,9 @@ class SportsGameOddsWorker:
         now = self.now()
         delay = 15 * 60
         for event in self.scheduled_events():
-            # "started" is not proof of a live offer, but a non-ended game
-            # with that provider status deserves the same polling priority.
             _, due = poll_slot(event, now, policy)
             delay = min(delay, max(0, (due - now).total_seconds()))
-            if not event.live:
+            if not event.active:
                 for window in (policy.approaching_window, policy.imminent_window, policy.near_window):
                     boundary = (event.starts_at - window - now).total_seconds()
                     if boundary > 0:
@@ -581,6 +621,10 @@ class SportsGameOddsWorker:
                     if str(exc) == 'daily object pacing limit':
                         self.phase = 'waiting_for_budget'
                         delay, code = 60*60, 'sgo_daily_pacing'
+                        if isinstance(exc, DailyObjectPacing):
+                            delay = min(delay, max(1, (exc.retry_at-self.now()).total_seconds()))
+                            self.metrics['daily_pacing'] = dict(eligible_retry_at=exc.retry_at.isoformat(),
+                                requested=exc.requested, rolling=exc.rolling, allowance=exc.allowance)
                         reason = 'SportsGameOdds is waiting for its daily object budget; prices retain their original source times.'
                     else:
                         if not await self.wait_for_dispatch(exc):
@@ -591,6 +635,7 @@ class SportsGameOddsWorker:
                     await self.state('budget_delayed', code, reason)
                     await asyncio.sleep(delay)
                     continue
+                self.metrics.pop('daily_pacing', None)
                 await self.state('budget_delayed', 'sgo_cycle_complete', 'SportsGameOdds prices are attributed aggregate observations; source freshness is checked separately.')
                 await asyncio.sleep(self.next_cycle_delay())
         except asyncio.CancelledError:

@@ -9,7 +9,8 @@ export function feeCensusLines(report) {
   return [
     ['Trading fees', `${count(t.covered)} of ${count(t.current)} current offers · ${rate}`],
     ['Exact Pinnacle references', count(t.exact_pinnacle_reference)],
-    ['EV results', `${count(t.before_fee_ev)} before fees · ${count(t.reviewed_after_fee_ev)} reviewed fees · ${count(t.conservative_after_fee_ev)} conservative · ${count(t.any_after_fee_ev)} with either after-fee result`],
+    ['Sportsbook EV estimates before fees', count(t.sportsbook_ev)],
+    ['Qualified EV results', `${count(t.before_fee_ev)} before fees · ${count(t.reviewed_after_fee_ev)} reviewed fees · ${count(t.conservative_after_fee_ev)} conservative · ${count(t.any_after_fee_ev)} with either after-fee result`],
     ['Source prices', `${count(report.published_working_prices)} working prices published · ${count(report.unpublished_working_prices)} working prices unpublished · ${count(t.retained_unavailable)} retained unavailable offers`],
     ['Fee gaps among current offers', Object.entries(report.missing_reasons || {})
       .map(([reason, n]) => `${count(n)} · ${evidenceReason(reason)}`).join(' ') || 'None observed'],
@@ -48,6 +49,14 @@ export function mountFeeCensus(root, exportButton) {
         facts.append(term, detail);
       }
       root.replaceChildren(facts);
+      if (next.coverage_complete === false) {
+        const note = document.createElement('p');
+        const sources = document.createElement('a');
+        sources.href = '/admin?section=sources';
+        sources.textContent = 'Check source status';
+        note.append('The full provider offer count is unknown. These counts cover the local observations and offers. ', sources, ' to see gaps.');
+        root.append(note);
+      }
       report = next;
       if (exportButton) exportButton.disabled = false;
     } catch {

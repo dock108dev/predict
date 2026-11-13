@@ -57,7 +57,8 @@ outside collection hours does not change the test outcome.
 
 ## Frozen replay
 
-Open `/replay` on the local app. Select a saved capture or **Synthetic practice**.
+Open `/replay` on the local app to start **Synthetic practice**. Select a saved
+capture from the dataset menu when a local archive is available.
 The capture clock stays fixed, including the freshness and fee review decisions
 at that time. Individual offer inspection includes recorded starting fee terms,
 saved rules, and before-fee payouts. A tie that settles to $0.50 has a cashflow
@@ -219,6 +220,14 @@ The authored frontend is under `app/dashboard/opportunity_static/current/`:
 - `admin.js` retains the real collection/status controls. `admin.html` serves overview
   and usage; calculation/inspection/timing sections use the snapshot shell. Coverage
   keeps its existing reader and uses `coverage-shell.js` for the shared navigation.
+- **Admin → Database** (`/admin?section=database`) discovers project schemas, tables
+  and views on catalog refresh. Turn on **Include partitions and sequences** to see
+  those storage objects in the picker. Structure shows
+  columns, defaults, constraints, indexes, partition metadata and view definitions.
+  Rows shows paged stored values, including encoded payloads, and opens long values
+  in chunks. Pages are live and ordered by the primary key where available.
+  The loopback browser uses bounded read-only transactions and does not call providers.
+  PostgreSQL system schemas are excluded; foreign tables show structure only.
 - Earlier `stored-controller.js`, `stored-views.js`, `stored-details.js` and board
   client modules remain compatible retained/scanner code. They are not the ordinary
   snapshot shell’s source of truth. The older stored CSS files are no longer composed.
@@ -303,6 +312,12 @@ boundaries together makes stale-result rejection auditable; capture sizing and
 wire rendering are already separate. Do not extract a second authority owner or
 duplicate these barriers to meet a line target.
 Review these decisions when those responsibilities change.
+The Opportunities controller keeps navigation history, filter state, request
+cancellation, and pinned inspection adoption together. Card and drawer rendering
+live in `opportunity-cards.js` and `desk-inspection.js`. The controller remains
+above the JavaScript review threshold. A later extraction can move inspection
+lease management as one unit once its drawer focus and replacement contracts
+can be exercised independently.
 
 CI regression tests are separated into `test_ci_reporting.py`,
 `test_ci_environment.py`, `test_ci_assurance.py` and `test_ci_secrets.py`, with

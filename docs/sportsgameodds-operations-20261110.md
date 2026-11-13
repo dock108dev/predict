@@ -1,26 +1,55 @@
 # SportsGameOdds operations foundation
 
-## November 11 running state and account controls
+## November 11–12 running state and account controls
 
 The local configuration runs SGO on Rookie alongside independent Kalshi and
 Polymarket US workers. The November 11 local reload confirmed the collector
 counters, batch admission and split reference and frame SQL timings. The
 observed slate selected a 15-minute live target and 72-hour repeat discovery.
 Its combined projection was 4,166.33 objects/day against a 4,770 allowance.
-The rolling budget guard remained active. Measure spending and source-clock
-freshness together over wider operating windows. The dated measurements are
-in `docs/sgo-paid-observation-20261111.md`, and `NEXT_STEPS.md` tracks
-the remaining integrated work.
+The rolling budget guard remained active. The November 12 transport window
+spent 21 refresh objects over two hours, with no completed discovery traversal.
+At 2:16 a.m. Eastern the changed slate projected 2,874 combined objects/day
+against a 4,813 allowance. The inherited rolling spend still deferred a due
+two-object request until the estimated 2:27:24 a.m. retry. Compare the
+observed objects and original price clocks across future active slates and
+normal discovery runs. The dated measurements are in
+`docs/sgo-paid-observation-20261111.md`. `NEXT_STEPS.md` tracks the remaining
+work.
 
 The provider reported a 100,000-object limit, 50 requests per minute and no
 reset timestamp. The worker uses the owner-directed **00:00 UTC on the first
-of each month** as a provisional pacing boundary. Use fresh provider usage
-and remaining allowance, retain reservations and uncertain exposure across
+of each month** as a provisional pacing boundary. SGO describes the account
+allowance as a rolling 30-day period from first use. The reported usage still
+governs account headroom. [Provider plan and reset policy](https://sportsgameodds.com/pricing)
+
+Use fresh provider usage and remaining allowance, retain reservations and uncertain exposure across
 the boundary, and require authoritative evidence before recognizing
 replenishment. Retain The Odds API's accounting separately. The startup
 control checks, rejected-cursor hold and resumption after an independently
 evidenced resolution have controlled coverage. Automatic request-specific
 charge attribution and live rejection recovery remain unverified.
+
+On November 12 at 11:08 a.m. Eastern, a refresh was interrupted during
+macOS maintenance sleep. The account-wide reading of 4,913 objects was
+two above the prior reading, and no request-specific response or provider
+request identifier was retained. The two-object reservation stays held.
+Paid event dispatch waits for an attributable provider charge or explicit
+no-charge evidence, and the native workers continue independently.
+The dated accounting observation is in `docs/sgo-paid-observation-20261111.md`.
+
+Admin → Spending shows each held request's local ID and available
+transport evidence. New reservations store the bounded query and preceding
+usage observation in the reservation transaction. Completed HTTP reads
+record the status, receipt time, response digest and a provider request ID
+when supplied. The original hold predates this trace. A later account
+balance does not establish its charge. [Account usage](https://sportsgameodds.com/docs/endpoints/getUsageData)
+
+When rolling daily spend blocks a page, the worker estimates the next
+eligible attempt from available objects, time to the pacing boundary, and
+the ledger's charge ages. The next dispatch checks current usage and all
+existing guards again. The estimated retry can be earlier than the hourly
+status recheck. It does not grant spending or renew a quote's source time.
 
 SQL verified bounded SGO history near its 32 MiB logical cap. Capacity
 evictions can reduce effective retention below the seven-day age limit.
@@ -29,6 +58,22 @@ Current facts and pinned originals retain their separate authority.
 The ordinary desk also supports the highest-payout same-book de-vig basis
 using FanDuel, DraftKings, BetMGM and Caesars on the existing account. The
 price and reference clocks govern currency independently of polling.
+The SGO developer guidance defines each odd by period, family and side, and
+its optional bookmaker market links are retained as audit observations. Keep
+both sides of a reference within one book and preserve original source clocks.
+Discovery cursor requests reuse the original query unchanged. [SGO developer guidance](https://sportsgameodds.com/docs/info/ai-vibe-coding) ·
+[Cursor rules](https://sportsgameodds.com/docs/guides/data-batches)
+
+Confirmed live events and due kickoffs take priority over the older started-only
+backlog. Started-only events retain their active polling target. Event-ID
+refreshes for active games and games within two hours request alternate lines
+one event at a time, bounded to Novig, Kalshi and the four reference books.
+Distant polls and discovery retain their ordinary main-line requests. Each
+alternate refresh uses the same quota, request, admission and hold guards.
+The response can include closed lines. Vendor fair and consensus values are
+labeled with their lines, and the vendor does not disclose the contributor
+set for a filtered response. [Events request fields](https://sportsgameodds.com/docs/endpoints/getEvents)
+
 The [configuration guide](configuration.md) explains the SGO key and safe
 opt-in. Use the [coverage contract](broad-coverage.md) for the offered-data
 denominator and sustained coverage target.
@@ -36,7 +81,7 @@ denominator and sustained coverage target.
 ## November 10 foundation and evaluation record
 
 The following observations describe the earlier evaluation configuration and
-account. The November 11 section above records the running selection and
+account. The November 11–12 section above records the running selection and
 supersedes the earlier pacing and reset requirements.
 
 The existing protected evaluation credential was checked against the provider's

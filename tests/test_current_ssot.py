@@ -86,6 +86,28 @@ class RuntimeEntrypoints(unittest.TestCase):
                              ['data'] if role == 'data' else ['data', 'app'])
             self.assertEqual(start.call_args_list[0].args[2].current_config, 'synthetic.json')
 
+    def test_launcher_checks_acquisition_off_config_without_opening_runtime(self):
+        root = Path(__file__).resolve().parents[1]
+        main = runpy.run_path(str(root / 'scripts/opportunity-board'))['main']
+        with tempfile.TemporaryDirectory() as temp:
+            profile = Path(temp)
+            config = profile / 'sample.json'
+            config.write_text((root / 'config/current.example.json').read_text())
+            with patch.dict(main.__globals__, ROOT=profile), \
+                    patch('sys.argv', ['opportunity-board', 'check-config', '--current-config', str(config)]), \
+                    patch('sys.stdout', new_callable=io.StringIO) as stdout, \
+                    patch.object(main.__globals__['subprocess'], 'run') as process:
+                main()
+            self.assertIn('Native acquisition disabled', stdout.getvalue())
+            self.assertIn('Aggregate acquisition disabled · sportsgameodds', stdout.getvalue())
+            process.assert_not_called()
+            self.assertEqual(list(profile.iterdir()), [config])
+            config.write_text(json.dumps(dict(current_policy.DEFAULT, unexpected='fixture-private')))
+            with patch('sys.argv', ['opportunity-board', 'check-config', '--current-config', str(config)]), \
+                    self.assertRaises(SystemExit) as error:
+                main()
+            self.assertEqual(str(error.exception), 'Invalid configuration. Check the fields and allowed values in docs/configuration.md.')
+
     def test_macos_data_launch_uses_system_allocator_and_preserves_configuration(self):
         root = Path(__file__).resolve().parents[1]
         start = runpy.run_path(str(root / 'scripts/opportunity-board'))['start_role']

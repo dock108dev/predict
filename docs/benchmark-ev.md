@@ -1,6 +1,75 @@
 # Calculation basis and benchmark EV
 
-## SportsGameOdds on the ordinary desk
+## November 12 · Pregame sportsbook estimate
+
+Use the original clocks on both sides of each eligible sportsbook pair.
+Keep a pair through 15 minutes of source age and withdraw it at kickoff,
+on suspension, on replacement, or once either side ages out. Receipt and
+publication clocks remain separate. The target offer must be current under
+its own source policy.
+
+For the exact full-game market and selected outcome, choose the best payout
+among eligible FanDuel, DraftKings, BetMGM and Caesars pairs. Apply a stable
+tie-break. With implied probabilities q and r from the selected book's
+original pair, the no-vig win probability is q / (q + r). For a $1 claim
+costing c, before-fee return is 100 × (probability / c − 1). For a conventional
+stake, use the equivalent decimal payout. Keep the original inputs and
+unrounded arithmetic in the capture.
+
+At 7:08 p.m. Eastern, the ordinary desk returned a current Washington
+winner on direct Polymarket US at $0.4625 per $1 claim. DraftKings and
+Caesars both paid +105. DraftKings won the deterministic tie-break, with
+−125 on the other side and a 7:04:30 p.m. source clock. The result was
+36/77 (46.7532%) no-vig, +113.89 fair odds, and 3100/2849 percent
+(**+1.09%**) before fees. That read used a one-shot capture. The ordinary data
+owner now polls the public board and applies the 15-minute window. See the
+[coverage and freshness contract](broad-coverage.md#freshness-and-verification-window).
+
+Show this basis as a sportsbook estimate before fees. It may use an exact
+pregame comparison of the same two-way winner, signed spread, or exact total
+and a direct native offer.
+Exact market identity, applicable sportsbook rules and compatible settlement
+are required for a settlement-qualified result. Add independently applicable
+fees for an after-fee result. The pregame estimate, reviewed EV, modeled
+fees and execution depth each retain their own status.
+
+## November 12 · Trace missing calculations
+
+The 3:51 p.m. Eastern Detroit–Washington Over 205.5 inspection carried a
+fresh native Polymarket US price of $0.81 per $1 contract and a $0.01
+conservative fee estimate. The pinned result's first recorded benchmark
+failure was `sgo_reference_book_rules_unverified`. At 3:56 p.m. the independent
+desk audit found 34 current working prices with the SGO reference source
+unavailable, 28 current displayed prices with numeric fees, and zero eligible
+EV or opposing pairs. A two-object SGO hold blocked new paid collection at
+that read. Those are different evidence boundaries. The row-specific rules
+gap can persist after fresh collection resumes.
+
+Trace each missing outcome from provider price, exact market and phase to
+paired reference, applicable rules and fee, calculation, seal and ordinary
+read. Retain the first failed gate and any independently established later
+gaps. For arbitrage, start with the two venue books and compare occurrence,
+opposing side, payout rules and overlapping clocks without a sportsbook
+reference. Verify signed line, ties, pushes, void treatment, quantities and
+rounding where applicable. Publish each fully evaluated result even when it
+is negative or zero. Use the current source witness in the top-level reason
+and the exact saved evidence in the inspection.
+
+The EV trace exposes each candidate book's available payout and eligibility,
+the winning book's original two prices and proportional de-vig, and every
+input used to compute the selected result. Arb exposes the stake, actual
+whole-claim quantities and fees, funding and payout in each modeled state.
+Both traces must independently reconcile using unrounded inputs. Keep
+execution depth and exceptional settlement status visible where relevant.
+
+The evening investigation found four scheduled matchups with retained
+sportsbook prices but no quote-specific jurisdiction or market link. The
+current rules registry has no reviewed quote bindings. The calculator checks
+the same-frame opposing prices and their original clocks before invoking the
+rules review. A current exact pair can still fail at rules qualification.
+[DraftKings general rules](https://sportsbook.draftkings.com/help/general-betting-rules/general-rules)
+
+## Existing aggregate path and deferred in-game rules
 
 The running SportsGameOdds route publishes source-attributed offers. The
 **Sportsbook EV before fees** basis picks the highest payout among FanDuel,
@@ -10,13 +79,34 @@ implied probability divided by the sum of both sides' implied probabilities.
 Return before fees is that probability times the offer's decimal payout,
 minus one. The drawer records the selected book, both prices and clocks.
 
-This basis currently applies to SGO-attributed offers with exact local
-evidence. It estimates decisive win/loss outcomes. Cross-source native
-comparisons and fee-adjusted results require independently supported identity,
-settlement and applicable terms. The separate vendor fair odds retain their own
-line and timing disclosure. Missing or expired inputs leave source prices
-visible with their status. [Source operation](sportsgameodds-operations-20261110.md)
-and [coverage](broad-coverage.md) describe the measured limits.
+Source-local SGO offers can show an indicative estimate when the source has a
+current same-book pair. A settlement-qualified native result uses an exact
+occurrence and market binding, compatible settlement and a reviewed sportsbook
+rules jurisdiction.
+The capture retains the eligible book pairs and the selected book. A higher
+payout on another market, line or phase cannot change that selection. Fees
+need independently applicable evidence for the quoted contract. Admin retains
+vendor fair odds with their own line and timing. Missing or
+expired financial inputs leave the source price visible with its status.
+[Source operations](sportsgameodds-operations-20261110.md) · [Coverage](broad-coverage.md)
+
+In-game SGO calculation requires an explicit live event and original offer
+and reference clocks after kickoff. Each clock must be within 15 seconds at
+publication and read. The calculation owner can seal the earliest eligible
+in-game price while the rest of the receipt is being processed. Admission,
+display and subsequent reads retain the original clocks. A later provider
+receipt with the same source clock does not extend the result.
+
+The Arbitrage page checks opposing contracts independently of sportsbook
+references. A supported NFL occurrence can use a common official event ID
+when both venues corroborate it, including matching teams, kickoff, season and
+stage. A match does not establish the market's settlement terms. A numeric
+pair requires both quotes current in the same phase and compatible payoff
+cases. For two supported native contract legs, the retail calculation buys
+equal whole claims at the captured prices within the selected pre-fee stake,
+reports unused stake and applies each leg's size-specific rounding. Results
+may be negative. The displayed cashflows are modeled for the evidenced
+settlement states. Depth and exceptional settlement may remain unavailable.
 
 ## November 3 snapshot integration
 

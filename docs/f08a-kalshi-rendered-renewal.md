@@ -1,10 +1,13 @@
 # F08A Kalshi rendered schedule renewal
 
-**November 11 status.** The fee formula remains installed. Predict's local
-review expired, and the direct official PDF request returned HTTP 429.
-The provider's effective date and the app's verification deadline are
-separate. The [active fee work](../NEXT_STEPS.md#f08af09--keep-fees-effective-and-make-missing-fees-actionable)
-covers reliable verification and standing-term handling.
+**November 11 follow-up.** A successful verification establishes standing
+terms. The six-hour source check and 24-hour verification status track the
+evidence independently from provider and account cutovers. When no remote
+renderer is configured, the worker tries a bounded direct official PDF render
+using Poppler. If the official PDF is unavailable, it verifies the unchanged
+reviewed market terms through the API and compares the official rounding text.
+That result qualifies a scoped conservative exchange estimate, and Admin
+shows that the PDF recheck is unavailable. [Active fee work](../NEXT_STEPS.md#f08af09--keep-fees-effective-and-make-missing-fees-actionable)
 
 November 10, 2026 · Integrated on `main` and exercised with fixtures.
 
@@ -23,33 +26,23 @@ continue to supply the fee model when the fresh evidence agrees with them.
 The worker compares the current type and multiplier for each reviewed series,
 the scoped series history, the scoped event overrides from the complete
 empty-cursor event listing, and the official rounding document. A successful
-check opens a prospective 24-hour review and schedules the next check in six
-hours. Retrieval failures preserve the current deadline and retry in 15
-minutes. Changed or ambiguous terms require explicit review before another
-automatic renewal. Previously captured fees keep their evidence and deadlines.
+check starts prospective applicability and schedules the next check in six
+hours. Retrieval failures preserve established terms and retry in 15 minutes.
+Changed or ambiguous terms require explicit review before another automatic
+renewal. Previously captured fees keep their evidence and historical deadlines.
 Admin keeps the direct PDF 429 separate from the renderer, origin and API
 receipts. The individual receipts are attached to the verified product revision.
 [Series fee changes](https://docs.kalshi.com/api-reference/exchange/get-series-fee-changes) ·
 [Event fee changes](https://docs.kalshi.com/api-reference/events/get-event-fee-changes) ·
 [Fee rounding](https://docs.kalshi.com/getting_started/fee_rounding)
 
-## Runtime access needed for the live witness
+## Full-document verification routes
 
-The installed data owner needs outbound HTTPS access to a trusted rendering
-endpoint and to Kalshi's API and documentation hosts. The research renderer
-used here runs in the research tool. No callable endpoint for it is configured
-in the project. The direct PDF and regulatory-page receipts from the ordinary
-runtime returned 429. The original session also could not resolve the public Kalshi
-hosts from the shell, connect to the installed Admin or PostgreSQL socket, or
-inspect or signal the installed processes through the launcher. The existing
-processes were left in place in that session. The local follow-up recovered
-process access and restarted both ordinary processes. The owner confirmed
-that no verified renderer URL is available. The research renderer exposes
-no callable endpoint to the worker. Jina Reader documents extracted text
-and optional metadata, while the worker requires a request-bound receipt
-for the official origin fetch, including the fetched PDF's SHA-256.
-The documented Reader API is insufficient for this qualification.
-[Jina Reader API reference](https://docs.jina.ai/)
+The data owner needs outbound HTTPS access to Kalshi's API and documentation
+hosts. For a full-document check it also needs a fresh official PDF response and
+Poppler, or a trusted rendering endpoint that can retrieve that PDF. This Mac's
+direct request returned 429. A remote renderer remains optional for the scoped
+API verification. The research renderer has no callable endpoint for the worker.
 
 The data owner reads `.local/kalshi-fee-renderer.json` at the next due Kalshi
 check. Its only field is `url`, the trusted HTTPS endpoint. The endpoint URL
@@ -71,8 +64,10 @@ returns one UTF-8 JSON object with these fields:
 | `page_count` | The rendered document's actual page count |
 | `text` | Complete extracted text in the reviewed order, without search snippets or an added summary |
 
-The transport requires a current HTTP `Date`, accepts a cache `Age` of at most
-five seconds, and permits up to 1 MiB per response. It uses no redirects or
+The renderer, direct PDF and market API requests require a current HTTP `Date`
+and accept a cache `Age` of at most five seconds. Rounding text must match the
+reviewed text and its receipt records the cache age when supplied. The worker
+permits up to 1 MiB per response and uses no redirects or
 ambient proxy configuration. The full pass is bounded to 50 seconds. The public
 API reads are paced at one-second intervals and check the existing source and
 global controls before dispatch. The renderer must use synchronized clocks and
@@ -127,10 +122,7 @@ source controls and all 18 original holds covering 49 credits preserved.
 The Admin, drawer and census evidence is under
 `.local/f08a-kalshi-rendered-20261110/`.
 
-The last checked Admin status still shows the November 10 manual deadline.
-Any manual renewal needs fresh official schedule and exact-market evidence.
-Once a qualified runtime route is available, verify the next scheduled
-renewal in Admin and match its new verification time and deadline to a
-current desk offer.
-
-Review decision: Live Kalshi scheduled renewal | Runtime origin receipt is missing from the available rendering sources | Kept the live witness open and preserved deadline protection.
+Verify the next scheduled attempt in Admin and match its verification scope
+and applicable market to a current desk offer. A complete PDF renewal requires
+the fresh origin receipt and all market evidence. An API-only check reports
+its narrower scope. Changed source terms require a new approval.

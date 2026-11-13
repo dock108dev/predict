@@ -312,6 +312,19 @@ class StorageMaintenanceSQL(LatestBoardFixture):
             self.assertIn('after_bytes',result)
             self.assertEqual(db.execute('SHOW lock_timeout').fetchone()['lock_timeout'],'0')
 
+    async def test_hot_table_vacuum_contention_defers_reuse_without_failing_maintenance(self):
+        with self.connect() as blocker, self.connect() as db:
+            db.execute('CREATE TABLE maintenance_hot_blocked (id integer)')
+            db.execute('CREATE TABLE maintenance_hot_available (id integer)')
+            with blocker.transaction():
+                blocker.execute('LOCK TABLE maintenance_hot_blocked IN ACCESS EXCLUSIVE MODE')
+                with patch('app.storage.storage_maintenance.PRESSURE_BYTES',0), patch(
+                        'app.storage.storage_maintenance.HOT_TABLES',('maintenance_hot_blocked','maintenance_hot_available')):
+                    result = maintain(db, compact=False, collecting=True)
+            self.assertIn(dict(table='maintenance_hot_blocked',reason='reuse_lock_timeout'),result['deferred'])
+            self.assertIn('after_bytes',result)
+            self.assertEqual(db.execute('SHOW lock_timeout').fetchone()['lock_timeout'],'0')
+
     async def test_prospective_generation_trace_is_snapshot_bound_and_bounded(self):
         self.reconcile()
         with self.connect() as db:

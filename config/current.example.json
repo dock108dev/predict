@@ -1,7 +1,7 @@
 {
   "schema": "predict-native-current-1",
   "authority": "predict-standing-native-20261002",
-  "enabled": true,
+  "enabled": false,
   "aggregate_enabled": false,
   "aggregate_provider": "sportsgameodds",
   "sports": [

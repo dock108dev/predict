@@ -129,8 +129,8 @@ def test_active_and_kickoff_refresh_interleave_with_discovery_and_retain_cursor_
             nonlocal now
             requests.append(params)
             if 'eventIDs' in params:
-                return Page(tuple(dict(e, phase='live', received_at=now.isoformat())
-                                  for e in (active, upcoming)), (), None, 'b'*64)
+                observed = active if params['eventIDs'] == 'e3' else upcoming
+                return Page((dict(observed, phase='live', received_at=now.isoformat()),), (), None, 'b'*64)
             if 'cursor' in params:
                 return Page((event(2),), (), None, 'c'*64)
             now += timedelta(seconds=3)
@@ -140,8 +140,11 @@ def test_active_and_kickoff_refresh_interleave_with_discovery_and_retain_cursor_
         worker._publish = AsyncMock()
         worker.state = AsyncMock()
         await worker.cycle()
-        first, refresh, last = requests
-        assert refresh['eventIDs'] == 'e3,e1'
+        first, active_refresh, kickoff_refresh, last = requests
+        assert [r['eventIDs'] for r in (active_refresh,kickoff_refresh)] == ['e3','e1']
+        assert all(r['includeAltLines'] and r['limit'] == 1 for r in (active_refresh,kickoff_refresh))
+        assert 'includeAltLines' not in first and 'bookmakerID' not in first
+        assert 'includeAltLines' not in last and 'bookmakerID' not in last
         assert first['startsAfter'] == last['startsAfter']
         assert last['cursor'] == 'next'
         assert worker.events['e1']['phase'] == 'live'
@@ -169,8 +172,44 @@ def test_started_event_uses_active_polling_without_relabeling_phase():
         worker._fetch = AsyncMock()
         await worker.cycle()
         assert worker._fetch.await_args.args[0]['eventIDs'] == 'e1'
+        assert worker.metrics['completed_refresh_polls']['started']['events'] == 1
         assert worker.events['e1']['phase'] == 'started'
+
+        worker._fetch.reset_mock()
+        worker.events['e2'] = dict(event(2), phase='live', starts_at=(NOW - timedelta(minutes=20)).isoformat(),
+                                   received_at=(NOW - timedelta(minutes=15)).isoformat())
+        await worker.cycle()
+        assert [call.args[0]['eventIDs'] for call in worker._fetch.await_args_list] == ['e2','e1']
     asyncio.run(check_due())
+
+
+def test_alternates_use_bounded_approaching_event_refresh_and_track_admission():
+    from app.collection.sportsgameodds_schedule import EventDue, SchedulePolicy
+
+    async def scenario():
+        service = SimpleNamespace(config=deepcopy(DEFAULT), dispatch=True, globally_stopped=False, paused_sources=set())
+        worker = SportsGameOddsWorker(service, transport=SimpleNamespace(close=AsyncMock()), now=lambda: NOW)
+        active = dict(event(1), starts_at=(NOW+timedelta(hours=2)).isoformat())
+        response = Page((active,), ({'alternate':True},{}), None, 'b'*64, 500,
+                        alternate_rows=3, duplicate_alternate_rows=1, conflicting_alternate_lines=1,
+                        ignored_bookmaker_groups=4)
+        worker.collector = SimpleNamespace(fetch=AsyncMock(side_effect=[response,Page((),(),None)]))
+        worker._publish = AsyncMock()
+        worker.state = AsyncMock()
+        due = [EventDue('e1',NOW+timedelta(hours=2)), EventDue('e2',NOW+timedelta(hours=2,seconds=1)),
+               EventDue('e3',NOW+timedelta(hours=12))]
+        await worker.refresh(due,SchedulePolicy())
+        first, other = [c.args[0] for c in worker.collector.fetch.await_args_list]
+        assert first['eventIDs'] == 'e1' and first['limit'] == 1 and first['includeAltLines'] is True
+        assert set(first['bookmakerID'].split(',')) == {'kalshi','novig','fanduel','draftkings','betmgm','caesars'}
+        assert other['eventIDs'] == 'e2,e3' and other['limit'] == 2
+        assert not {'bookmakerID','includeAltLines'} & other.keys()
+        metrics = worker.metrics['alternate_refresh']
+        assert (metrics['resolved_requests'],metrics['returned_events'],metrics['received_alternate_rows'],
+                metrics['admitted_alternate_rows'],metrics['ignored_bookmaker_groups']) == (1,1,3,1,4)
+        assert metrics['largest_page_bytes'] == 500 and metrics['conflicting_alternate_lines'] == 1
+
+    asyncio.run(scenario())
 
 
 def test_rejected_cursor_clears_checkpoint_but_preserves_observations(tmp_path):
@@ -477,6 +516,39 @@ def test_local_rate_limit_backs_off_then_resumes_without_losing_cursor():
         assert len(calls) == 2
         assert worker.discovery_progress['NFL'] is marker
         assert any(call.args[1] == 'sgo_request_rate' for call in worker.state.await_args_list)
+    asyncio.run(scenario())
+
+
+def test_daily_pacing_wakes_at_headroom_before_the_hourly_recheck():
+    from unittest.mock import patch
+
+    from app.collection.sportsgameodds_collector import DailyObjectPacing
+
+    async def scenario():
+        service = SimpleNamespace(config=deepcopy(DEFAULT), dispatch=True, globally_stopped=False,
+                                  paused_sources=set(), database_mode=True)
+        worker = SportsGameOddsWorker(service, transport=SimpleNamespace(close=AsyncMock()), now=lambda: NOW)
+        worker.initialize = AsyncMock()
+        worker.state = AsyncMock()
+        cursor = object()
+        worker.discovery_progress['NFL'] = cursor
+        retry_at = NOW+timedelta(seconds=92)
+
+        async def cycle():
+            assert worker.discovery_progress['NFL'] is cursor
+            if worker.cycle.await_count == 1:
+                raise DailyObjectPacing(retry_at=retry_at, requested=2, rolling=4, allowance=5)
+            service.dispatch = False
+
+        worker.cycle = AsyncMock(side_effect=cycle)
+        with patch('app.collection.sportsgameodds_worker.asyncio.sleep', new=AsyncMock()) as wait, \
+             patch('app.collection.sportsgameodds_worker.retained_schedule', return_value=({}, False)):
+            await worker.run()
+        assert worker.cycle.await_count == 2
+        assert wait.await_args_list[0].args == (92,)
+        assert any(call.args[1] == 'sgo_daily_pacing' for call in worker.state.await_args_list)
+        assert 'daily_pacing' not in worker.metrics
+
     asyncio.run(scenario())
 
 

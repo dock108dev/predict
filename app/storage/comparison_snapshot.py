@@ -20,6 +20,7 @@ from app.comparison.snapshot_math import assumptions, funded
 from app.comparison.cashflows import exact_wire as wire
 
 SPORTS=('NFL','NCAAF','NBA','NCAAB','MLB','NHL')
+ORDINARY_ARB_POLICY = 'ordinary-verified-opposition-1'
 
 
 class SnapshotOperationError(ValueError):
@@ -279,12 +280,20 @@ def capture(db, *, at=None, ordinary=False, event_ids=None, capture_binding=None
                     out['issues'].extend(context.catalog_errors)
         if out['reference_provider']=='sportsgameodds':
             from app.comparison.sgo_fair_display import comparison as vendor_fair
+            from app.comparison.sgo_native_binding import bind as bind_native_catalog
+            from app.comparison.sgo_reference import BEST_BOOKS
+            from app.comparison.sgo_reference_publication import FrameQuoteIndex
             from app.comparison.sgo_sportsbook_baseline import select as sportsbook_baseline
             from .sportsgameodds_reference import read_event, read_event_frame
+            from .sgo_native_catalog import read as read_native_catalog
             exists=db.execute("SELECT to_regclass('public.current_sgo_reference') AS name").fetchone()['name']
             frames_exist=db.execute("SELECT to_regclass('public.current_sgo_event_frame') AS name").fetchone()['name']
             events={}
             frames={}
+            indexes={}
+            native_catalog = read_native_catalog(db, {
+                row['source']['native_event_id'] for row in out['quotes']
+                if row['source']['provider'] == 'sportsgameodds' and row['venue'] == 'novig'})
             for ref in out['references']:
                 record=ref.get('original_record') or {}; source=(record.get('quote') or {}).get('source') or {}
                 if not exists or source.get('provider')!='sportsgameodds':continue
@@ -305,14 +314,20 @@ def capture(db, *, at=None, ordinary=False, event_ids=None, capture_binding=None
                         out['issues'].append(dict(event=event_id,reason='vendor_fair_event_capacity'))
                 if frames_exist and event_id not in frames:
                     frames[event_id] = read_event_frame(db, event_id)
-                value=vendor_fair(record, events[event_id], frames.get(event_id))
+                frame = frames.get(event_id)
+                if event_id not in indexes:
+                    indexes[event_id] = FrameQuoteIndex(events[event_id], frame)
+                index = indexes[event_id]
+                value=vendor_fair(record, events[event_id], frame, index=index)
                 if value is not None:row['sgo_fair_comparison']=value
-                baseline = sportsbook_baseline(record, events[event_id], frames.get(event_id), at=at)
+                baseline = sportsbook_baseline(record, events[event_id], frame, at=at, index=index)
                 if baseline is not None:
                     row['sportsbook_baseline'] = baseline
+                if row['venue'] == 'novig':
+                    row['sgo_native_contract'] = bind_native_catalog(record, native_catalog.get(event_id), at=at)
             if frames_exist:
                 out['sgo_reference_events']={event_id:dict(frame=frames[event_id] if event_id in frames else read_event_frame(db,event_id),
-                    rows=[item for item in items if item['facts'].get('venue') in ('pinnacle','draftkings','fanduel','fanatics')])
+                    rows=[item for item in items if item['facts'].get('venue') in (*BEST_BOOKS,'pinnacle','fanatics')])
                     for event_id,items in events.items()}
         out['epoch']=str(db.execute('SELECT epoch FROM current_row_epoch WHERE singleton').fetchone()['epoch'])
         out['sources']={r['venue']:r['state'] for r in db.execute('SELECT venue,state FROM current_source_status').fetchall()}
@@ -341,39 +356,67 @@ def probability(row,settings,at):
 
 def opposing_score(original):
     """Use the retained exact predicate, never a display label, for pairing."""
-    contract = original.get('native_contract') or {}
-    facts = contract.get('same_outcome') or {}
-    predicate = facts.get('predicate')
-    if not original.get('same_outcome', {}).get('supported') or not predicate:
+    identity = original.get('same_outcome', {})
+    key = identity.get('key')
+    if not identity.get('supported') or not key or len(key) != 13:
         return None
-    operator = predicate['operator']
-    if original.get('snapshot_identity') and F(predicate['threshold']).denominator != 1:
-        operator = {'ge': 'gt', 'le': 'lt'}.get(operator, operator)
-    if operator not in ('gt', 'lt'):
+    domain, operator, boundary, subject = key[9]
+    if operator not in ('ge', 'le'):
         return None
-    market = original['market']
-    key = hashed([original['game_key'], market['market'], market['period'],
-                  facts.get('scoring') or contract.get('scope'), predicate['domain'],
-                  predicate.get('subject_id'), str(F(predicate['threshold']))])
-    return key, operator
+    equality = key[10]
+    if equality == ['predicate']:
+        pivot = F(*boundary) + (operator == 'le')
+    elif len(equality) >= 3 and equality[0] == 'fraction' and equality[2] is not None:
+        pivot = F(*boundary) + (-1 if operator == 'ge' else 1)
+    else:
+        return None
+    match = hashed([key[:7], key[-2:], domain, subject, equality[0], str(pivot)])
+    return match, 'gt' if operator == 'ge' else 'lt'
 
 
-def before_fee_pairs(quotes):
+def before_fee_pairs(quotes, *, at=None):
     """Price-only path for already matched, verified and priced opposites."""
     from app.comparison.snapshot_math import before_fee_pair
     from app.dashboard.current_contract import price
     from app.comparison.calculation_control import checkpoint
+    from app.comparison.occurrence_matching import OccurrenceResolver
+
+    native = {}
+    if at is not None:
+        for row in quotes:
+            record = row.get('original_record')
+            source = (record or {}).get('quote', {}).get('source', {})
+            if source.get('provider') in ('kalshi', 'polymarket_us', 'novig', 'prophetx'):
+                native.setdefault((source['provider'], source['native_event_id']), record)
+    # An estimated aggregate peer does not revoke an independently verified
+    # relationship between the two native offers in the same component.
+    matches = {}
+    if len({provider for provider, _ in native}) > 1:
+        resolved = OccurrenceResolver().resolve(list(native.values()), clock=at)
+        matches = {key: record['quote']['occurrence_match'] for key, record in zip(native, resolved, strict=True)}
 
     oppositions = {}
     for original in quotes:
         checkpoint()
         if not original.get('binding', {}).get('verified') or not original.get('common_odds', {}).get('supported'):
             continue
+        source = original.get('source') or {}
+        occurrence = matches.get((source.get('provider'), source.get('native_event_id')), original.get('occurrence_match') or {})
+        if (occurrence.get('status') != 'matched' or occurrence.get('estimated') is not False
+                or occurrence.get('conflicts') or occurrence.get('method') not in
+                ('shared_provider_id', 'reviewed_source_id', 'local_reviewed_override')):
+            continue
         score = opposing_score(original)
         if score is None:
             continue
         key, operator = score
-        row = dict(original, cost_per_normal_claim=wire(price(original)))
+        if occurrence.get('occurrence_id') is not None:
+            key = hashed([occurrence['occurrence_id'], key])
+        witness = {key: source[key] for key in ('provider','native_event_id','native_market_id','native_outcome_id')
+                   if key in source}
+        witness.update(method=occurrence['method'], revision=occurrence.get('revision'),
+                       occurrence_id=occurrence.get('occurrence_id'))
+        row = dict(original, cost_per_normal_claim=wire(price(original)), opposition_witness=witness)
         oppositions.setdefault(key, {}).setdefault(operator, []).append(row)
     pairs = []
     for key, sides in oppositions.items():
@@ -382,12 +425,20 @@ def before_fee_pairs(quotes):
                 checkpoint()
                 proof = before_fee_pair(left, right, key)
                 if proof:
+                    witnesses = [leg['opposition_witness'] for leg in (left,right)]
+                    proof['authority'] = dict(policy=ORDINARY_ARB_POLICY,
+                        occurrence_id=witnesses[0]['occurrence_id'], legs=witnesses)
                     pairs.append(dict({k: left[k] for k in ('game_key', 'game_title', 'league', 'start_at', 'market')},
                                       id=hashed([left['id'], right['id']]), kind='pair',
                                       legs=[left['id'], right['id']], venues=[left['venue'], right['venue']],
                                       before_fees=proof, minimum_return_percent=None,
                                       math=dict(available=False, missing=['finance_pending'])))
     return pairs
+
+
+def exact_arb_pair(pair):
+    proof = pair.get('before_fees')
+    return isinstance(proof, dict) and (proof.get('authority') or {}).get('policy') == ORDINARY_ARB_POLICY
 
 
 def calculate(inputs,value=None):

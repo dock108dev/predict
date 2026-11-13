@@ -19,23 +19,23 @@ const result={games:[],assumptions:{benchmark_venue:'pinnacle'}};
 const details={assumptions:{},row:{},originals:[]};
 const before=JSON.stringify(row);
 const view=drawer.content({row,result,details,metric:'gross_return_percent'},'/inspect');
-assert(view.textContent.includes('SportsGameOdds bookmaker median'));
+assert(view.textContent.includes('Sportsbook comparison'));
 assert(view.textContent.includes('median of their decisive probabilities'));
 assert(view.textContent.includes('Fair American odds'));
 assert(view.textContent.includes('different line; not the fair price for this offer'));
-assert(view.textContent.indexOf('EV before trade fees') < view.textContent.indexOf('SportsGameOdds fair odds'),
+assert(view.textContent.indexOf('EV before trade fees') < view.textContent.indexOf('Provider fair-odds estimate'),
   'the offer calculation should precede the separate vendor comparison');
 assert(view.textContent.includes('Original source timeUnknown'));
-assert(view.textContent.includes('Price providerSportsGameOdds'));
+assert(view.textContent.includes('Estimated fair odds'));
 assert(view.textContent.includes('Source typeAggregate'));
 assert(view.textContent.includes('2026-11-10T20:00:01Z'));
 assert.equal(JSON.stringify(row),before,'pinned inputs must not be mutated by rendering');
 const unavailable={...row,probability:null,gross_return_percent:null,reference_calculation:{available:false,venue:'sportsgameodds_books'}};
 const empty=drawer.content({row:unavailable,result,details,metric:'gross_return_percent'},'/inspect');
-assert(empty.textContent.includes('SportsGameOdds bookmaker median reference unavailable'));
+assert(empty.textContent.includes('Sportsbook comparison unavailable'));
 assert(empty.textContent.includes('Fair price unavailable in the pinned display'));
 const vendorUnavailable={...row,sgo_fair_comparison:{...row.sgo_fair_comparison,available:false}};
 const unavailableView=drawer.content({row:vendorUnavailable,result,details,metric:'gross_return_percent'},'/inspect');
-assert(unavailableView.textContent.includes('Unavailable from SportsGameOdds'));
+assert(unavailableView.textContent.includes('AvailabilityUnavailable'));
 assert(unavailableView.textContent.includes('This baseline is unavailable or incomplete'));
 console.log('PASS SGO saved details fixture');

@@ -2,6 +2,14 @@
 from . import comparison_snapshot as snapshots
 from .store import stamp
 from app.fees import product_schedules, schedule_lifecycle
+from app.fees.evidence import applies
+from app.comparison.sgo_reference import BEST_BOOKS, BEST_VERSION
+
+
+def publication_runtime(owner):
+    return dict(healthy=bool(owner.get('healthy')), active=bool(owner.get('active')),
+                state=owner.get('service_state'), reason=owner.get('reason_code'),
+                stopped=bool(owner.get('global_stopped')), paused_sources=owner.get('paused_sources', []))
 
 
 def compact_row(row):
@@ -20,14 +28,17 @@ def compact_row(row):
 
 def compact_member(part):
     """Same exact list projection as legacy root composition; private input."""
+    paired = {leg for pair in part['pairs'] for leg in pair['legs']}
     for row in part['rows']:
         # Ordinary sorting needs compact prices/results. Full binding,
         # depth and provenance graphs remain in this immutable member,
         # reached by evidence_result_id instead of duplicated per head.
         for field in ('binding','observed_depth','occurrence_match','occurrence_link',
                       'provider_clocks','observation_time_evidence','source_health',
-                      'input_basis','native_contract_id','observation_revision','fee_applicability'):
+                      'input_basis','native_contract_id','observation_revision'):
             row.pop(field,None)
+        if row['id'] not in paired:
+            row.pop('fee_applicability', None)
         # Full financial provenance belongs to the immutable selected
         # member. The root keeps exact numeric inputs, IDs and clocks,
         # without copying the same rules/occurrence graph on every row.
@@ -48,6 +59,7 @@ def compact_member(part):
             if metric.get('evidence'):
                 metric['evidence']={k:v for k,v in metric['evidence'].items()
                     if k in ('version','source_url','sha256','path','reviewed_at','review_before',
+                        'standing_public_terms','recheck_due_at','verification_scope',
                         'fee_rate','series_id','event_id','metadata_revision')}
         if row.get('book_confirmation'):
             row['book_confirmation']={k:row['book_confirmation'][k] for k in ('confirmed_at','basis')}
@@ -114,7 +126,8 @@ def validity(witness, current, at):
     reasons = list(witness.get('reasons', []))
     expected=witness.get('expected')
     actual=current.get(witness.get('dependency'))
-    if expected is None or actual is None or actual[:3] != expected[:3]:
+    if (expected is None or actual is None or actual[:3] != expected[:3]
+            or witness.get('exact_frame') and actual != expected):
         reasons.append('input_replaced_or_removed')
     deadline = witness.get('current_until')
     if deadline is None or at > stamp(deadline):
@@ -122,10 +135,19 @@ def validity(witness, current, at):
     return reasons
 
 
-def project(result, current, owner, states, *, at, policy, epoch, settings=None):
+def project(result, current, owner, states, *, at, policy, epoch, settings=None, sportsbook_frames=()):
     """Fail-closed rank withdrawal; no reference/fee/math is recomputed here."""
     from app.comparison.snapshot_fee_outcome import EXPIRED, unavailable
     from app.comparison.sgo_sportsbook_baseline import current as sportsbook_current
+    from app.comparison.public_sportsbook_estimate import SOURCE, allowed, clocks_current, index, read_captures
+    from .store import ROOT
+    baseline_inputs = set()
+    if allowed(owner) and any((row.get('sportsbook_baseline') or {}).get('indicative') for row in result['rows']):
+        baseline_inputs.update((SOURCE, match['event_id'], match['revision'])
+                               for match in index(read_captures(ROOT, at=at), at=at).values() if match['scheduled'])
+        baseline_inputs.update(('sportsgameodds', item['native_event_id'], item['frame'])
+                               for item in sportsbook_frames if source_allowed(
+                                   states.get('sportsgameodds', {}), item['competition']))
     out = dict(result, rows=[], pairs=[])
     common = []
     settings=settings or result['assumptions']
@@ -134,6 +156,7 @@ def project(result, current, owner, states, *, at, policy, epoch, settings=None)
     if not owner.get('healthy'): common.append('data_runtime_unhealthy')
     if not owner.get('active') or owner.get('global_stopped'): common.append('updates_stopped')
     ready = set()
+    pair_ready = {}
     # Identical withdrawal statuses are read-only within this response. Share
     # their small trees instead of allocating five per each of 20k source rows.
     withdrawal_statuses = {}
@@ -158,19 +181,39 @@ def project(result, current, owner, states, *, at, policy, epoch, settings=None)
         elif not source_allowed(state,row.get('league')):
             reasons.append(state.get('reason_code') or 'source_unavailable')
         lifecycle=auth['price'].get('lifecycle',{})
-        if at >= stamp(row['start_at']) and lifecycle.get('state')!='live':reasons.append('post_start_game_state_unverified')
-        row['game_state']=lifecycle.get('state','scheduled' if at<stamp(row['start_at']) else 'unknown')
+        start = stamp(row['start_at'])
+        started = at >= start
+        actual = current.get(auth['price'].get('dependency'))
+        expected = auth['price'].get('expected')
+        event_replaced = bool(actual and expected and actual[2] != expected[2])
+        if started and lifecycle.get('state')!='live':reasons.append('post_start_game_state_unverified')
+        row['game_state']=lifecycle.get('state','scheduled' if not started else 'unknown')
+        if (started or event_replaced) and row['game_state'] == 'scheduled':
+            row['game_state'] = 'unknown'
         row['game_state_basis']=lifecycle.get('basis')
         row['price_current'] = not reasons
         row['price_reasons'] = sorted(set(reasons))
         current_prices += not reasons
         policy_replaced = row.get('publication_policy', result['publication']['policy']) != policy
+        if not reasons and not policy_replaced:
+            pair_ready[row['id']] = row['game_state']
         baseline = row.get('sportsbook_baseline')
-        if baseline:
-            if (reasons or policy_replaced
-                    or not sportsbook_current(baseline, current.get(auth['price']['dependency']), at=at)):
+        if baseline and not baseline.get('verified_native'):
+            if baseline.get('indicative'):
+                refs = baseline.get('reference_inputs') or {}
+                current_baseline = bool(refs and all(tuple(ref) in baseline_inputs for ref in refs.values())
+                                        and at <= stamp(baseline['current_until']))
+            else:
+                current_baseline = sportsbook_current(baseline, current.get(auth['price']['dependency']), at=at)
+            if row['game_state'] == 'scheduled':
+                current_baseline = current_baseline and clocks_current(baseline.get('prices', ()), at=at, start=start)
+            if reasons or policy_replaced or not current_baseline:
                 row['sportsbook_baseline'] = None
             else:
+                if baseline.get('candidates') and row['game_state'] == 'scheduled':
+                    row['sportsbook_baseline'] = dict(baseline, candidates={
+                        book: prices for book, prices in baseline['candidates'].items()
+                        if clocks_current(prices, at=at, start=start)})
                 row['sportsbook_return_percent'] = baseline['return_percent']
         fee = row.get('trade_fee')
         product_key = product_schedules.key_for(row)
@@ -181,15 +224,21 @@ def project(result, current, owner, states, *, at, policy, epoch, settings=None)
                         and auth.get('public_fee_revision') != relevant_revision)
         fee_reason = (schedule_lifecycle.REVIEW_REQUIRED if (relevant_state or {}).get('review_required')
                       else 'public_fee_schedule_refresh_pending')
+        catalog = auth.get('sgo_native_contract')
+        catalog_replaced = bool(catalog and (policy_replaced or validity(catalog, current, at)))
+        if catalog_replaced:
+            row['sgo_native_contract'] = dict(available=False, reason='sgo_native_catalog_replaced_or_expired')
         if reasons or policy_replaced or fee is None:
             row['trade_fee'] = unavailable(
                 'fee_source_price_not_current' if reasons else
                 'fee_policy_replaced' if policy_replaced else 'fee_outcome_not_published')
         elif fee_replaced:
             row['trade_fee'] = unavailable(fee_reason)
+        elif catalog_replaced:
+            row['trade_fee'] = unavailable('sgo_native_catalog_replaced_or_expired')
         elif fee['available']:
             evidence = fee['evidence']
-            if not stamp(evidence['reviewed_at']) <= at < stamp(evidence['review_before']):
+            if not applies(evidence, at):
                 row['trade_fee'] = unavailable(EXPIRED, evidence=evidence)
         financial = list(reasons)
         if policy_replaced:
@@ -206,11 +255,20 @@ def project(result, current, owner, states, *, at, policy, epoch, settings=None)
                 financial.append('reference_source_unavailable')
         references = auth['references']
         multi = auth.get('reference_method') == 'sgo-book-median-proportional-1'
-        if auth['reference_required'] and (
-            (len(references) < 6 or len(references) % 2 if multi else len(references) != 2)
-            or len({r.get('dependency') for r in references}) != len(references)
-        ):
+        best = auth.get('reference_method') == BEST_VERSION
+        minimum = 6 if multi else 2
+        maximum = len(BEST_BOOKS) * 2 if best else None if multi else 2
+        if auth['reference_required'] and (len(references) < minimum or len(references) % 2
+                or maximum is not None and len(references) > maximum
+                or len({r.get('dependency') for r in references}) != len(references)):
             financial.append('reference_evidence_missing')
+        if baseline and baseline.get('verified_native'):
+            pregame_baseline_expired = row['game_state'] == 'scheduled' and not clocks_current(
+                baseline.get('prices', ()), at=at, start=start)
+            if financial or pregame_baseline_expired:
+                row['sportsbook_baseline'] = None
+            else:
+                row['sportsbook_return_percent'] = baseline['return_percent']
         row['exact_pinnacle_reference_current'] = not financial and auth.get('exact_pinnacle_reference', False)
         live_fee_unqualified = row['game_state']=='live' and not (
             (row.get('novig_live_financial_qualified') or row.get('kalshi_live_financial_qualified')
@@ -248,7 +306,9 @@ def project(result, current, owner, states, *, at, policy, epoch, settings=None)
         row['current_reasons'] = sorted(set(financial))
         out['rows'].append(row)
     for pair in result['pairs']:
-        if all(leg in ready for leg in pair['legs']): out['pairs'].append(pair)
+        phases = {pair_ready.get(leg) for leg in pair['legs']}
+        if snapshots.exact_arb_pair(pair) and len(phases) == 1 and phases <= {'scheduled', 'live'}:
+            out['pairs'].append(pair)
     # Peer-price differences cannot borrow a withdrawn peer's offer.
     if len(ready) != len(result['rows']):
         for row in out['rows']:
@@ -261,9 +321,7 @@ def project(result, current, owner, states, *, at, policy, epoch, settings=None)
              'initializing' if not result['rows'] else
              'ready' if healthy_sources and len(ready) == len(result['rows']) and result['publication']['finance'] == 'ready' else 'partial')
     out['publication'] = dict(result['publication'], state=state, sources=states, current_prices=current_prices,
-        data_runtime=dict(healthy=bool(owner.get('healthy')),active=bool(owner.get('active')),
-            state=owner.get('service_state'),reason=owner.get('reason_code'),
-            stopped=bool(owner.get('global_stopped')),paused_sources=owner.get('paused_sources',[])),
+        data_runtime=publication_runtime(owner),
         retained_prices=len(result['rows'])-current_prices, coverage_complete=False,
         read_at=at.isoformat(), poll_after_ms=2000, provider_requests=0)
     counts(out)

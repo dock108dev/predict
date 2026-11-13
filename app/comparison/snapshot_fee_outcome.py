@@ -1,6 +1,6 @@
 """Standalone trading fees for the ordinary desk's normalized trade profile."""
 from .conditional_benchmark import basis, reviewed_fee
-from .current_dependencies import instant
+from app.fees.evidence import applies
 from .snapshot_conservative import fee_model
 
 VENUES = ('kalshi', 'polymarket_us', 'novig', 'prophetx')
@@ -42,12 +42,14 @@ def outcome(row, *, at, phase, review):
         evidence['path'] = review['path']
     for key in ('document_url', 'published_version', 'published_update', 'published_effective_from', 'effective_from',
                 'effective_time_basis', 'verification_deadline', 'next_change_at', 'market_override', 'schedule_revision',
-                'retrieval', 'review_basis', 'product', 'verification_revision', 'nhl_taker_coefficient', 'nhl_maker_coefficient', 'nhl_rounding', 'commission_basis'):
+                'retrieval', 'review_basis', 'product', 'verification_revision', 'standing_public_terms',
+                'recheck_due_at', 'verification_scope', 'nhl_taker_coefficient', 'nhl_maker_coefficient',
+                'nhl_rounding', 'commission_basis'):
         if key in review:
             evidence[key] = review[key]
     if review.get('unavailable_reason'):
         return unavailable(review['unavailable_reason'], evidence=evidence)
-    if not instant(review['reviewed_at']) <= at < instant(review['review_before']):
+    if not applies(review, at):
         return unavailable(EXPIRED, evidence=evidence)
 
     if venue == 'kalshi':

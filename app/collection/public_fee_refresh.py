@@ -14,6 +14,7 @@ from app.storage.store import hashed, now, stamp
 REFRESH_INTERVAL = timedelta(hours=6)
 REVIEW_WINDOW = timedelta(hours=24)
 RETRY_INTERVAL = timedelta(minutes=15)
+PRODUCT_TERMS_POLICY = 'standing-public-terms-1'
 INDEX_BYTES = 1024 * 1024
 DOCUMENT_BYTES = 512 * 1024
 DOCUMENT_URL = re.compile(r'https://framerusercontent\.com/assets/[A-Za-z0-9]+\.pdf')
@@ -94,14 +95,15 @@ async def fetch(client, url, limit, *, query=None, fresh=False):
         receipt = dict(url=url, retrieved_at=now(), http_status=response.status_code)
         if response.status_code != 200:
             raise RetrievalFailed('fee_http_status', receipt)
-        if fresh:
-            try:
-                origin_date = parsedate_to_datetime(response.headers['date'])
-                age = int(response.headers.get('age', '0'))
-                if not 0 <= age <= 5 or abs((stamp(receipt['retrieved_at']) - origin_date).total_seconds()) > 60:
-                    raise ValueError('outside freshness window')
-            except (KeyError, ValueError, TypeError, OverflowError) as exc:
+        try:
+            origin_date = parsedate_to_datetime(response.headers['date'])
+            age = int(response.headers.get('age', '0'))
+            if fresh and (not 0 <= age <= 5 or abs((stamp(receipt['retrieved_at']) - origin_date).total_seconds()) > 60):
+                raise ValueError('outside freshness window')
+        except (KeyError, ValueError, TypeError, OverflowError) as exc:
+            if fresh:
                 raise RetrievalFailed('fee_response_freshness_unverified', receipt) from exc
+        else:
             receipt.update(response_date=origin_date.isoformat(), age_seconds=age)
         if response.headers.get('content-encoding', 'identity').lower() != 'identity':
             raise RetrievalFailed('fee_response_encoding_unsupported', receipt)
@@ -193,8 +195,12 @@ async def refresh_product(key, state, retrieve, *, clock=now, allowed=lambda: Tr
             text = products.normalized(body, products.PRODUCTS[key]['tag'])
             evidence['normalized_sha256'] = sha256(text.encode()).hexdigest()
             evidence['method'] = approval['method']
-            if evidence['normalized_sha256'] != approval['normalized_sha256']:
+            if evidence['normalized_sha256'] not in (approval['normalized_sha256'], approval.get('alternate_normalized_sha256')):
                 raise ReviewRequired('public_product_schedule_changed')
+            receipt = (approval.get('reviewed_receipt') if evidence['normalized_sha256'] == approval['normalized_sha256']
+                       else approval.get('alternate_reviewed_receipt'))
+            if receipt:
+                evidence['reviewed_receipt'] = receipt
         prior = state.get('review_required') or {}
         if prior and prior.get('approval') == approval_id:
             raise ReviewRequired('prior_change_requires_explicit_review')
@@ -222,16 +228,22 @@ async def refresh_product(key, state, retrieve, *, clock=now, allowed=lambda: Tr
     else:
         verified_at=clock()
         verified=dict(approval=approval, approval_id=approval_id, retrieval=evidence,
-            verified_at=verified_at, review_before=(stamp(verified_at)+REVIEW_WINDOW).isoformat())
+            verified_at=verified_at, review_before=None, standing_public_terms=True,
+            recheck_due_at=(stamp(verified_at)+REVIEW_WINDOW).isoformat(),
+            verification_scope=evidence.get('verification_scope', 'full_document'))
         verified['revision']=hashed(verified)
         outcome='unchanged_verified' if state.get('last_verified',{}).get('approval_id')==approval_id else 'verified'
         state['last_verified']=verified; state.pop('review_required',None); reason=None
     if not allowed(): return None
-    return record_attempt(state, outcome, reason, evidence, clock, approval_id=approval_id)
+    record_attempt(state, outcome, reason, evidence, clock, approval_id=approval_id)
+    state['last_attempt']['terms_policy'] = PRODUCT_TERMS_POLICY
+    return state
 
 
 def product_due(key, state, at):
     if not state or stamp(state['next_attempt_at']) <= at:
+        return True
+    if (state.get('last_attempt') or {}).get('terms_policy') != PRODUCT_TERMS_POLICY:
         return True
     required = state.get('review_required')
     if not required:

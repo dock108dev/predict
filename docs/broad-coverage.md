@@ -1,10 +1,11 @@
 # Retained coverage
 
-## Current planning authority — November 11, 2026
+## Current planning authority — November 12, 2026
 
 The [live comparison plan](live-comparison-plan-20261104.md) governs the
-existing SportsGameOdds desk. The 99% offered-data target and sustained
-verification below apply to the current delivery. Source prices with missing
+existing desk. The 99% offered-data target and sustained verification below
+apply to pregame full-game markets for this delivery. Preserve in-game
+measurements as a separate cohort for later work. Source prices with missing
 finance stay useful and visible while coverage work continues.
 
 Ordinary Odds links to `/current/coverage`. Its `/api/coverage` reader consumes a
@@ -25,15 +26,17 @@ source coverage, missing/held-source disclosure and exact observed clocks.
 
 The October 26 direction established the offered-data target. The November 11
 SportsGameOdds cutover updated the active routes and benchmark. The repository
-root `NEXT_STEPS.md` is the engineering queue. The current implementation still
-needs an independently enumerated offered denominator and sustained evidence.
+root `NEXT_STEPS.md` is the engineering queue. The synchronized census below
+can locate gaps among retained working rows. A provider-wide offered price
+denominator remains unknown where the feeds cannot enumerate that population.
 
 ### Scope and denominator
 
 Measure the authorized NFL, NCAAF, NBA, NCAAB, MLB and NHL full-game winner,
-spread and total scope across direct Kalshi and Polymarket US and supported
-SGO-attributed offers. Include all available lines and native sides on the
-in-scope routes. Count pregame and supported in-game cohorts separately.
+spread and total pregame scope across direct Kalshi and Polymarket US and
+supported SGO-attributed offers. Include all available lines and native sides
+on the in-scope routes. Keep any in-game observations outside these milestone
+denominators.
 FanDuel, DraftKings, BetMGM and Caesars are sportsbook reference inputs.
 Existing source-local SGO Novig and Kalshi observations retain their distinct
 identities. New P2P venues, Pinnacle or Circa acquisition, and other market
@@ -71,7 +74,7 @@ evidence. Provider absence must not be inferred from a failed request or a cap.
 
 Raw acquisition, display and freshness targets apply both globally and to each
 nonempty venue/league/family cell, with reference cells reported separately. A
-large NFL cell cannot hide a missing NHL or ProphetX cell. Report numerators,
+large NFL cell cannot hide a missing NHL cell. Report numerators,
 denominators and residual gaps, not only rounded percentages. Use the smallest
 integer numerator meeting 0.99 times the denominator. Rejected or unsupported
 received rows remain in raw coverage denominators; only evidenced source absence
@@ -84,20 +87,52 @@ remaining work or a named owner-accepted limitation; neither is called 99%
 financial coverage. This target does not promise 99% profitable opportunities,
 identical venue offerings, actual fills or execution-qualified returns.
 
+### Running census
+
+For the November 12 usability follow-up, begin with the saved Detroit–Washington
+Over 205.5 offer. It exposes a quote with a numeric fee and an unverified
+sportsbook rules binding. Use a synchronized active-slate read to count the
+separate losses at source availability, working storage, current display,
+reference or opposing-pair qualification, calculation and ordinary publication.
+At 3:56 p.m. Eastern, there were 34 current working and 28 current displayed
+prices, all displayed prices had fees, and the independent EV and arb eligible
+sets were empty. That read keeps the full offered universe unknown. Render
+calculated, pending, unavailable and last-known counts in their actual units.
+
+Use the synchronized local read to see ordinary currentness, publication gaps,
+exact scope query boundaries, and SGO frame and original clock counts. Keep the
+native catalog market count, book-side count and offered price denominator
+separate. The response sets the offered count to unknown where the provider
+response lacks a complete price inventory.
+
+```bash
+.venv/bin/python scripts/live_coverage_census.py --samples 121
+.venv/bin/python scripts/live_coverage_census.py --phase pregame --independent-finance
+```
+
+The first command samples all phases and reads sized pair outcomes periodically.
+The second reconstructs eligible pregame inputs from retained working rows and
+the local sportsbook captures. Both use local read routes and can run with acquisition off.
+The exact input reconstruction may take longer than a regular desk read.
+Only compare counts from matching timestamps and stage populations.
+
 ### Freshness and verification window
 
 Record native source/complete-book confirmation time, aggregate source update,
 receipt, admission, publication and display separately. Establish a documented
 policy per feed using its actual update semantics. Preserve the existing native
-30-second policy until an evidenced policy change is justified; never widen it
-solely to pass. Aggregate scheduled completeness and between-cycle source age
-must be separate measures. A 15-minute paid cadence cannot be labeled a
-continuous fresh feed merely because every scheduled request succeeded.
+quote authority. The pregame sportsbook estimate uses a 15-minute window
+on both original book clocks, capped at kickoff, independently of native
+quote freshness and stricter financial authority. Target five-minute polls
+for priority pregame markets where measured source limits and budgets allow.
+Measure scheduled completeness, actual source age and between-poll currentness
+separately. Keep deferred live data out of the milestone denominators.
 
-Verify the entire live scope through cold catch-up and then at least two
-consecutive operating hours under normal load. Sample full-scope metrics at least
-once per minute and at completed refresh boundaries. Report cold catch-up
-separately and record each steady-state result against its applicable target.
+Verify coverage with independently enumerated populations and synchronized
+stage counts. Include cold catch-up and representative operating samples,
+including completed refresh boundaries where they occur. The owner removed the
+fixed two-hour duration for the November 12 ranked desk closeout. Report the
+actual sampling interval and each measured cohort against its applicable target.
 SGO uses adaptive refresh and discovery. Record natural discovery completion
 and interleaving at their actual due times. The prior eight fixed-cycle rule
 described the old 15-minute Odds API scheduler. Use controlled regressions for
@@ -139,6 +174,15 @@ Coverage separates discovered offerings, received raw values, synchronized books
 matching and financial publication. A retained-row ratio is not an independently
 measured provider-wide coverage percentage. The software does not currently
 establish a universal 99% acquisition, display or financial-completeness result.
+
+The November 12 installed two-hour sample measured 97.83% numeric fee
+coverage across 12,169 current offer observations, with 100% on the 11,905
+native observations. The closing independent census counted 46 eligible
+pregame indicative SGO inputs, all published after the new receipt was
+processed. It counted zero native EV inputs. A separate closing read
+verified one eligible exact arb and one published pair. These measurements
+describe different cohorts. The offered-price universe remained unknown.
+See `docs/sgo-paid-observation-20261111.md` for the dated evidence.
 
 An offered unit is provider, venue, native event, native market, outcome/side,
 native line and period. Repeated receipts are deduplicated; distinct sides and
@@ -269,6 +313,15 @@ maximum-age instant. Pregame and effective-mapping boundaries still apply.
 Continuity loss withdraws old observation authority until that instrument is
 received again. Stop, withdrawal, reset and runtime replacement still revoke
 current display authority; saved Original Details remains frozen.
+
+The native workers keep 256 active markets per venue. A fixed half covers the
+league/family cells and gives the remaining slots to confirmed live lines
+nearest kickoff. The other half rotates across the deferred catalog. This
+keeps older live status records from crowding out recent live alternates.
+Kalshi can request up to 24 quiet live books every eight seconds on its
+existing ordered subscription, subject to the normal capacity and control
+guards. Verify the current working and published stages separately, including
+ordinary expiration during storage maintenance and calculation delays.
 
 Capture age, publication age and capture-to-publication processing time are
 separate clocks. Coverage compares material runtime and source authority;

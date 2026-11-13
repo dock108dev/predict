@@ -6,6 +6,7 @@ from app.collection.public_contracts import load
 from app.fees.engine import Registry, calculate
 
 from .cashflows import exact_wire as wire
+from .sgo_reference import BEST_BOOKS, BEST_VERSION
 from .snapshot_fee_scope import RANKING_BASIS
 from .snapshot_identity import DECISIVE_EQUALITY_BASIS
 
@@ -97,6 +98,7 @@ def public_fee(row, *, at, phase, review, quantity='1'):
                         order_inserted_at=when, phase=phase, market_id=market_id, instrument_id=outcome_id,
                         native_side=side, acquired_price_usd=original['value'])
         return dict(available=True, reason=None, evidence=evidence, trade_fee_usd=audit['entry_fees'],
+                    details=dict(rounding_trace=audit['trace']),
                     quantity=wire(size), quantity_unit='USD payout contracts', fill_count=1,
                     liquidity_role='taker', fee_payment='at_fill', assumptions=[
                         f"Standard taker coefficient {schedule['coefficient']} at modeled order insertion.",
@@ -127,7 +129,7 @@ def nba_completed_game_rule(row, identity, predicate, source_scope):
 
 
 def conservative_metric(row, fee, witnesses, phase, *, source_scope=None):
-    """Decisive-only after-fee EV on an exact and phase-aligned Pinnacle frame."""
+    """Decisive-only after-fee EV on an exact and phase-aligned reference frame."""
     if not fee.get('available'):
         return dict(available=False, reason=fee.get('reason'))
     ref = row.get('reference_calculation') or {}
@@ -135,8 +137,10 @@ def conservative_metric(row, fee, witnesses, phase, *, source_scope=None):
     identity = benchmark.get('selected_identity') or {}
     predicate = benchmark.get('selected_predicate')
     missing = dict(available=False, reason='polymarket_exact_reference_or_settlement_missing')
-    if (not ref.get('available') or ref.get('venue') != 'pinnacle'
+    best = ref.get('method') == BEST_VERSION and ref.get('venue') in BEST_BOOKS
+    if (not ref.get('available') or not (best or ref.get('venue') == 'pinnacle')
             or len(witnesses) != 2 or len({w.get('dependency') for w in witnesses}) != 2
+            or best and any(w.get('venue') != ref['venue'] or w.get('provider') != 'sportsgameodds' for w in witnesses)
             or not all(w.get('expected') is not None and not w['reasons']
                        and w['lifecycle']['state'] == phase for w in witnesses)
             or identity.get('scoring_basis') != 'retained source scoring evidence'
@@ -164,7 +168,7 @@ def conservative_metric(row, fee, witnesses, phase, *, source_scope=None):
                 win_profit_usd=wire(1-risk), loss_profit_usd=wire(-risk),
                 scenario_net_usd=wire(probability-risk), return_percent=wire(100*(probability-risk)/risk),
                 selected_decisive_probability=wire(probability), expected_trade_fee_usd=wire(charge),
-                condition='Conditional on decisive settlement with the exact Pinnacle reference.',
+                condition='Conditional on decisive settlement with the exact sportsbook reference.',
                 exclusions=['ties', 'pushes', 'voids', 'cancellations', 'multi-price fills'],
                 evidence=evidence, **{key: fee[key] for key in ('trade_fee_usd', 'quantity', 'quantity_unit',
                                            'fill_count', 'liquidity_role', 'fee_payment', 'assumptions')})

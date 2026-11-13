@@ -5,31 +5,60 @@ verified occurrence and settlement bindings. This module does not discover
 them or turn provider IDs into proof of native contract equivalence.
 """
 from copy import deepcopy
+from collections import defaultdict
 from fractions import Fraction
 
 from .cashflows import exact_wire
 from .sgo_reference import validate_witness
 
 
-def captured_frame(record, capture):
+def exact_line(value):
+    return None if value is None else Fraction(value)
+
+
+class FrameQuoteIndex:
+    """Index a captured event once, keeping every exact-line candidate."""
+
+    def __init__(self, rows, frame):
+        self.frame = frame
+        facts = (frame or {}).get('facts') or {}
+        self.members = dict(facts.get('members', ()))
+        self.unique_members = len(self.members) == len(facts.get('members', ()))
+        self.rows = defaultdict(list)
+        for item in rows:
+            fact = item['facts']
+            try:
+                key = (fact.get('odd_id'), exact_line(fact.get('line')))
+            except (TypeError, ValueError, ArithmeticError):
+                continue
+            self.rows[key].append(item)
+
+    def selection(self, odd_id, line):
+        return self.rows.get((odd_id, exact_line(line)), ())
+
+
+def captured_frame(record, capture, *, index=None):
     """Resolve an original quote against a stored co-observation frame."""
     try:
-        from fractions import Fraction
         q=record['quote']; s=q['source']; meta=record['comparison_source_metadata']
-        frame=capture['frame']['facts']; members=dict(frame['members'])
+        frame=capture['frame']['facts']
+        if index is not None and index.frame is capture['frame']:
+            members, unique = index.members, index.unique_members
+        else:
+            members = dict(frame['members'])
+            unique = len(members) == len(frame['members'])
         digest=frame.get('receipt_sha256')
         if (frame.get('provider')!='sportsgameodds' or frame.get('event_id')!=s['native_event_id']
-                or len(members)!=len(frame['members']) or not isinstance(digest,str) or len(digest)!=64
+                or not unique or not isinstance(digest,str) or len(digest)!=64
                 or any(c not in '0123456789abcdef' for c in digest)):
             return None
-        def line(value):return None if value is None else Fraction(value)
         matched=[]
         for entry in capture['rows']:
             fact=entry['facts']
             if (members.get(entry['id']) != entry['revision'] or fact.get('event_id') != s['native_event_id']
                     or fact.get('venue') != q['venue'] or fact.get('odd_id') != s['native_outcome_id']
                     or fact.get('opposing_odd_id') != meta.get('provider_opposing_odd_id')
-                    or line(fact.get('line')) != line(record['selection'].get('signed_line'))
+                    or exact_line(fact.get('line')) != exact_line(record['selection'].get('signed_line'))
                     or fact.get('price_american') != q['original']['value']
                     or fact.get('source_at') != q['times']['source_at']
                     or fact.get('phase') != meta.get('provider_phase')
@@ -105,7 +134,7 @@ def evaluate(row, witness, binding, dependencies, *, at, price_authority, review
         if not 0 < p < 1 or not 0 < cost <= 1:
             return unavailable('sgo_price_or_probability_invalid')
         gross = exact_wire(100 * (p / cost - 1))
-        reference = {'available': True, 'venue': basis['named_venue'] or 'sportsgameodds_books',
+        reference = {'available': True, 'venue': basis.get('selected_venue') or basis['named_venue'] or 'sportsgameodds_books',
                      'method': basis['version'], 'contributors': deepcopy(basis['contributors']),
                      'exclusions': deepcopy(basis['exclusions']), 'basis_sha256': validated['basis_sha256'],
                      'maximum_age_seconds': basis['maximum_age_seconds'],
@@ -284,7 +313,7 @@ def owned_reference_evidence(row, inputs, source, *, diagnostics=None):
         return missing('sgo_reference_evidence_unavailable')
 
 
-def bind_captured(row, source, inputs, *, selected_venue='pinnacle'):
+def bind_captured(row, source, inputs, *, selected_venue='pinnacle', best_payout=False, registry=None, native=None):
     """Adapt ordinary publication's captured dependency map to the SGO boundary.
 
     Only the explicitly selected SGO reference mode may call this. Missing
@@ -295,16 +324,17 @@ def bind_captured(row, source, inputs, *, selected_venue='pinnacle'):
     from app.dashboard.current_contract import stamp
     from .sgo_reference import ContributorFrameWitness
     missing = {'available': False, 'reason': 'sgo_reference_evidence_unavailable'}
-    if selected_venue != 'pinnacle':
+    if not best_payout and selected_venue != 'pinnacle':
         return dict(missing, reason='sgo_reference_venue_unsupported'), []
     at = stamp(inputs['captured_at'])
     if (source.get('reasons') or not source.get('dependency') or not source.get('expected')
             or not source.get('current_until') or stamp(source['current_until']) < at):
         return dict(missing, reason='source_price_authority_unavailable'), []
     from .sgo_median_publication import owned_median_evidence
-    # Versioned policy is named Pinnacle, then reviewed median; each method is
-    # disclosed on the resulting reference and bound into its witness revision.
-    for produce, options in ((owned_reference_evidence, {'diagnostics': missing}), (owned_median_evidence, {})):
+    producers = ((owned_median_evidence, {'best_payout': True, 'diagnostics': missing,
+                                         'registry': registry, 'native': native}),) if best_payout else (
+        (owned_reference_evidence, {'diagnostics': missing}), (owned_median_evidence, {}))
+    for produce, options in producers:
         captured=produce(row,inputs,source,**options)
         if not isinstance(captured,dict) or not isinstance(captured.get('witness'),str):continue
         facts=captured.get('dependencies')
@@ -326,16 +356,21 @@ def bind_captured(row, source, inputs, *, selected_venue='pinnacle'):
                 row_id=offered['id'],row_revision=offered.get('revision'))
             result=evaluate(offered,ContributorFrameWitness(captured['witness']),captured.get('binding'),
                             dependencies,at=inputs['captured_at'],price_authority=price_authority,review=captured.get('review'))
-            if not result.get('available'):continue
+            if not result.get('available'):
+                missing['reason'] = result['reason']
+                continue
             result['cost_per_normal_claim'] = offered['cost_per_normal_claim']
             result['selected_identity'] = captured.get('selected_identity')
             result['selected_predicate'] = captured.get('selected_predicate')
-            result['reference_calculation']['selection_policy']='sgo-pinnacle-then-reviewed-median-1'
+            result['reference_calculation']['selection_policy'] = (
+                'sgo-best-payout-then-same-book-devig-1' if best_payout else 'sgo-pinnacle-then-reviewed-median-1')
             maximum_age=result['reference_calculation']['maximum_age_seconds']
             phase = result['reference_calculation']['contract']['phase']
             for authority in authorities:
                 authority['current_until']=(stamp(authority.pop('source_at'))+timedelta(seconds=maximum_age)).isoformat()
                 authority['lifecycle'] = {'state': 'live' if phase == 'live' else 'scheduled'}
+                if best_payout:
+                    authority['exact_frame'] = True
             return result,authorities
         except (KeyError,TypeError,ValueError,ArithmeticError):
             continue

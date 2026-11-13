@@ -8,12 +8,21 @@ from uuid import uuid4
 from collections import Counter
 
 from .sportsgameodds_adapter import parse_page
-from .sportsgameodds_schedule import daily_allowance, response_object_charge
+from .sportsgameodds_schedule import daily_allowance, daily_retry_at, response_object_charge
 from .sportsgameodds_transport import validate_params
 
 
 class RejectedCursor(RuntimeError):
     """The cursor was rejected; its request remains an uncertain charge."""
+
+
+class DailyObjectPacing(RuntimeError):
+    def __init__(self, *, retry_at, requested, rolling, allowance):
+        super().__init__('daily object pacing limit')
+        self.retry_at = retry_at
+        self.requested = requested
+        self.rolling = rolling
+        self.allowance = allowance
 
 
 class GuardedPageCollector:
@@ -49,13 +58,15 @@ class GuardedPageCollector:
         rolling = self.ledger.rolling_objects(self.window_id, since=now-timedelta(days=1))
         per_day = daily_allowance(available=state['available'] + rolling, now=now, reset_at=state['reset_at'])
         if rolling + params['limit'] > per_day:
-            raise RuntimeError('daily object pacing limit')
+            retry = daily_retry_at(available=state['available'], requested=params['limit'], now=now,
+                reset_at=state['reset_at'], expirations=self.ledger.rolling_expirations(self.window_id, now=now))
+            raise DailyObjectPacing(retry_at=retry, requested=params['limit'], rolling=rolling, allowance=per_day)
         control = self.controls()
         attempt = str(uuid4())
         self.ledger.reserve(self.window_id, attempt, objects=params['limit'], now=now,
                             stopped=control['stopped'], source_paused=control['source_paused'],
                             category='discovery' if 'leagueID' in params else 'event_refresh',
-                            league=params.get('leagueID'))
+                            league=params.get('leagueID'), request=params, usage=observed)
         # Recheck after reservation and immediately before dispatch. An unused
         # reservation is released only with a locally certain no-dispatch receipt.
         control = self.controls()
@@ -63,6 +74,7 @@ class GuardedPageCollector:
             self.ledger.resolve(attempt, charged=0, evidence='control revoked before dispatch', now=now)
             raise RuntimeError('collection stopped or source paused')
         response = await self.transport.fetch(params, api_key)
+        self.ledger.record_response(attempt, response)
         if response.status == 429:
             if response.retry_after_seconds:
                 received = datetime.fromisoformat(response.received_at.replace('Z','+00:00'))
@@ -75,7 +87,8 @@ class GuardedPageCollector:
             raise RejectedCursor('provider rejected cursor; charge remains held')
         if response.status != 200:
             raise RuntimeError('provider response unsuccessful; charge remains held')
-        page = parse_page(response.body, response.received_at)
+        venues = set(params['bookmakerID'].split(',')) if 'bookmakerID' in params else None
+        page = parse_page(response.body, response.received_at, venues=venues)
         charged = response_object_charge(len(page.events))
         # One object per returned event; the minimum charge on an empty page
         # has no observed event phase. Never infer phase from a request.

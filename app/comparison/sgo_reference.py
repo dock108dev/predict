@@ -16,6 +16,8 @@ from .game_phase import LIVE_SECONDS
 
 VERSION = 'sgo-book-median-proportional-1'
 NAMED_VERSION = 'sgo-named-proportional-1'
+BEST_VERSION = 'sgo-best-payout-proportional-1'
+BEST_BOOKS = ('fanduel', 'draftkings', 'betmgm', 'caesars')
 MAX_AGE_SECONDS = 1800
 MIN_BOOKS = 3
 OPPOSITE = {'home': 'away', 'away': 'home', 'over': 'under', 'under': 'over'}
@@ -57,8 +59,8 @@ def _digest(value):
     return hashlib.sha256(wire.encode()).hexdigest()
 
 
-def calculate(quotes, contract, *, at, evaluated_venue, named_venue=None,
-              minimum_books=MIN_BOOKS, maximum_age_seconds=MAX_AGE_SECONDS):
+def calculate(quotes, contract, *, at, evaluated_venue, named_venue=None, best_payout=False,
+              minimum_books=MIN_BOOKS, maximum_age_seconds=MAX_AGE_SECONDS, qualify_pair=None):
     """Return a decisive conditional probability or an explicit unavailable reason.
 
     ``contract`` identifies a previously matched occurrence, league, phase,
@@ -101,6 +103,8 @@ def calculate(quotes, contract, *, at, evaluated_venue, named_venue=None,
         return {'available': False, 'reason': 'contract_settlement_unverified', 'contributors': [], 'exclusions': {}}
     if not evaluated_venue:
         raise ValueError('evaluated venue required for self-exclusion')
+    if best_payout and named_venue:
+        raise ValueError('only one reference selection policy is supported')
     if named_venue == evaluated_venue:
         return {'available': False, 'reason': 'evaluated_venue_excluded', 'contributors': [], 'exclusions': {named_venue: 'evaluated_venue_excluded'}}
     grouped = defaultdict(list)
@@ -110,6 +114,8 @@ def calculate(quotes, contract, *, at, evaluated_venue, named_venue=None,
                 grouped[quote['venue']].append(quote)
     contributors, exclusions = [], {}
     for venue, group in sorted(grouped.items()):
+        if best_payout and venue not in BEST_BOOKS:
+            continue
         if venue == evaluated_venue:
             exclusions[venue] = 'evaluated_venue_excluded'; continue
         if named_venue and venue != named_venue:
@@ -135,8 +141,6 @@ def calculate(quotes, contract, *, at, evaluated_venue, named_venue=None,
                 raise ValueError('pair_frame_clock_conflict')
             if not all(q.get('available') is True for q in pair):
                 raise ValueError('quote_unavailable')
-            if not all(q.get('settlement') == contract['settlement'] and q.get('settlement_evidence') for q in pair):
-                raise ValueError('settlement_unverified_or_incompatible')
             if not all(q.get('odd_id') and q.get('opposing_odd_id') for q in pair) or pair[0]['odd_id'] != pair[1]['opposing_odd_id'] or pair[1]['odd_id'] != pair[0]['opposing_odd_id']:
                 raise ValueError('opposing_identity_unverified')
             implied = []
@@ -150,23 +154,35 @@ def calculate(quotes, contract, *, at, evaluated_venue, named_venue=None,
                 if (clock - source).total_seconds() > maximum_age_seconds:
                     raise ValueError('source_stale')
                 implied.append(american_probability(q.get('price_american')))
+            if qualify_pair is not None:
+                pair = qualify_pair(pair)
+            if not all(q.get('settlement') == contract['settlement'] and q.get('settlement_evidence') for q in pair):
+                raise ValueError('settlement_unverified_or_incompatible')
+            if pair[0].get('jurisdiction') != pair[1].get('jurisdiction'):
+                raise ValueError('pair_jurisdiction_conflict')
             probability = implied[0] / sum(implied)
             evidence = [{k: q.get(k) for k in ('frame_id', 'frame_received_at', 'odd_id', 'opposing_odd_id', 'side', 'line', 'price_american', 'source_at', 'received_at', 'settlement', 'settlement_evidence', 'jurisdiction', 'rule_source', 'rule_reviewed_at')} for q in pair]
             contributors.append({'venue': venue, 'probability': str(probability), 'inputs': evidence})
         except (ValueError, TypeError, ZeroDivisionError, OverflowError) as exc:
             exclusions[venue] = str(exc) or 'invalid_quote'
-    threshold = 1 if named_venue else minimum_books
+    threshold = 1 if named_venue or best_payout else minimum_books
     if len(contributors) < threshold:
         return {'available': False, 'reason': 'insufficient_qualifying_pairs', 'contributors': contributors, 'exclusions': exclusions}
     probabilities = sorted(Fraction(c['probability']) for c in contributors)
     mid = len(probabilities) // 2
-    median = probabilities[mid] if len(probabilities) % 2 else (probabilities[mid-1] + probabilities[mid]) / 2
-    basis = {'version': NAMED_VERSION if named_venue else VERSION, 'contract': contract,
+    probability = probabilities[mid] if len(probabilities) % 2 else (probabilities[mid-1] + probabilities[mid]) / 2
+    basis = {'version': BEST_VERSION if best_payout else NAMED_VERSION if named_venue else VERSION, 'contract': contract,
              'evaluated_venue': evaluated_venue, 'named_venue': named_venue,
              'minimum_books': minimum_books, 'required_contributors': threshold,
              'maximum_age_seconds': maximum_age_seconds, 'captured_at': at,
              'contributors': contributors, 'exclusions': exclusions}
-    return {'available': True, 'probability': str(median), 'fair_decimal_odds': str(1 / median),
+    if best_payout:
+        selected = min(contributors, key=lambda contributor: (
+            american_probability(contributor['inputs'][0]['price_american']),
+            BEST_BOOKS.index(contributor['venue'])))
+        basis['selected_venue'] = selected['venue']
+        probability = Fraction(selected['probability'])
+    return {'available': True, 'probability': str(probability), 'fair_decimal_odds': str(1 / probability),
             'conditioning': 'decisive win/loss; pushes, ties and exceptional settlement excluded',
             'basis': basis, 'basis_sha256': _digest(basis), 'contributors': contributors, 'exclusions': exclusions}
 
@@ -177,12 +193,12 @@ class ContributorFrameWitness:
     wire: str
 
 
-def capture_witness(quotes, contract, *, at, evaluated_venue, named_venue=None,
-                    minimum_books=MIN_BOOKS, maximum_age_seconds=MAX_AGE_SECONDS):
+def capture_witness(quotes, contract, *, at, evaluated_venue, named_venue=None, best_payout=False,
+                    minimum_books=MIN_BOOKS, maximum_age_seconds=MAX_AGE_SECONDS, qualify_pair=None):
     """Capture an admitted frame; unavailable inputs never produce a witness."""
     result = calculate(quotes, contract, at=at, evaluated_venue=evaluated_venue,
-                       named_venue=named_venue, minimum_books=minimum_books,
-                       maximum_age_seconds=maximum_age_seconds)
+                       named_venue=named_venue, best_payout=best_payout, minimum_books=minimum_books,
+                       maximum_age_seconds=maximum_age_seconds, qualify_pair=qualify_pair)
     if not result['available']:
         return result, None
     payload = {key: result[key] for key in ('probability', 'fair_decimal_odds', 'conditioning', 'basis', 'basis_sha256')}
@@ -202,7 +218,7 @@ def validate_witness(witness, *, at):
             raise ValueError('invalid_witness')
         saved = json.loads(witness.wire)
         basis = saved['basis']
-        if basis['version'] not in (VERSION, NAMED_VERSION) or saved['basis_sha256'] != _digest(basis):
+        if basis['version'] not in (VERSION, NAMED_VERSION, BEST_VERSION) or saved['basis_sha256'] != _digest(basis):
             raise ValueError('witness_basis_invalid')
         if (basis['version'] == NAMED_VERSION) != bool(basis['named_venue']):
             raise ValueError('witness_policy_invalid')
@@ -215,14 +231,16 @@ def validate_witness(witness, *, at):
                 quotes.append(dict(item, venue=contributor['venue'], available=True,
                     **{k: contract[k] for k in ('event_id', 'league', 'phase', 'period', 'market')}))
         fresh = calculate(quotes, contract, at=at, evaluated_venue=basis['evaluated_venue'],
-                          named_venue=basis['named_venue'], minimum_books=basis['minimum_books'],
+                          named_venue=basis['named_venue'], best_payout=basis['version'] == BEST_VERSION,
+                          minimum_books=basis['minimum_books'],
                           maximum_age_seconds=basis['maximum_age_seconds'])
         if not fresh['available']:
             return fresh
         if (fresh['probability'] != saved['probability'] or fresh['fair_decimal_odds'] != saved['fair_decimal_odds']
                 or fresh['conditioning'] != saved['conditioning'] or fresh['contributors'] != basis['contributors']
                 or fresh['basis']['required_contributors'] != basis['required_contributors']
-                or fresh['basis']['maximum_age_seconds'] != basis['maximum_age_seconds']):
+                or fresh['basis']['maximum_age_seconds'] != basis['maximum_age_seconds']
+                or fresh['basis'].get('selected_venue') != basis.get('selected_venue')):
             raise ValueError('witness_calculation_conflict')
         return {'available': True, 'probability': fresh['probability'],
                 'basis_sha256': saved['basis_sha256'], 'basis': basis,

@@ -38,3 +38,53 @@ def test_small_roster_needs_no_deferral_and_unknown_times_are_retained():
     chosen,detail=select(markets,catalog,now,0)
     assert {m.raw.ref.market_id for m in chosen}=={m.raw.ref.market_id for m in markets}
     assert detail['deferred_markets']==0
+
+
+def test_confirmed_live_event_has_a_stable_slot_ahead_of_nearer_kickoff():
+    markets,catalog,now=population()
+    live=catalog['events'][2]
+    live.update(scheduled_start=(now-timedelta(hours=2)).isoformat(),status={'live': True})
+    for offset in range(12):
+        chosen,_=select(markets,catalog,now,offset,limit=36)
+        fixed={m.raw.ref.market_id for m in chosen[:18]}
+        assert {f"{live['id']}-{family}-0" for family in ('moneyline','spread','total')} <= fixed
+    live['status']={'live': True, 'ended': True}
+    chosen,_=select(markets,catalog,now,0,limit=36)
+    assert all(m.raw.ref.event_id!=live['id'] for m in chosen[:18])
+
+
+def test_sparse_live_event_retains_all_lines_without_losing_other_cells_or_rotation():
+    markets, catalog, now = population()
+    event = catalog['events'][-1]
+    start = (now - timedelta(hours=2)).isoformat()
+    event.update(scheduled_start=start, _native={'gameId': 42, 'eventState': {'updatedAt': start}})
+    observation = dict(event_id=event['id'], league='NHL', game_id='42', start_at=start, source_at=now.isoformat())
+    committed = dict(event, status={'live': True}, sporting_state_evidence=observation)
+    live = {m.raw.ref.market_id for m in markets if m.raw.ref.event_id == event['id']}
+    seen = set()
+    for offset in range(8):
+        chosen, detail = select(markets, catalog, now, offset, limit=72, phase_events=[committed])
+        ids = [m.raw.ref.market_id for m in chosen]
+        assert live <= set(ids[:36])
+        assert len(ids) == len(set(ids)) == detail['active_markets'] == 72
+        assert all(cell['active'] for cell in detail['cells'])
+        seen.update(ids)
+    assert seen == {m.raw.ref.market_id for m in markets}
+    for invalid in (dict(observation, game_id='77'),
+                    dict(observation, source_at=(now-timedelta(hours=3)).isoformat())):
+        chosen, _ = select(markets, catalog, now, 0, limit=72,
+                           phase_events=[dict(committed, sporting_state_evidence=invalid)])
+        assert live - {m.raw.ref.market_id for m in chosen[:36]}
+
+
+def test_older_live_flags_do_not_crowd_out_alternates_for_a_recent_game():
+    markets, catalog, now = population()
+    for event in catalog['events']:
+        event.update(scheduled_start=(now-timedelta(hours=16)).isoformat(), status={'live': True})
+    recent = catalog['events'][-1]
+    recent['scheduled_start'] = (now-timedelta(minutes=35)).isoformat()
+    for offset in range(8):
+        chosen, detail = select(markets, catalog, now, offset, limit=72)
+        assert sum(m.raw.ref.event_id == recent['id'] for m in chosen[:36]) == 12
+        assert detail['active_markets'] == 72
+        assert all(cell['active'] for cell in detail['cells'])

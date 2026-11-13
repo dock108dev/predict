@@ -2,7 +2,7 @@
 from fractions import Fraction
 
 
-def comparison(record, rows, frame=None):
+def comparison(record, rows, frame=None, *, index=None):
     """Find an exact captured SGO observation; do not splice receipt frames."""
     try:
         q=record['quote'];source=q['source'];original=q['original']
@@ -11,8 +11,11 @@ def comparison(record, rows, frame=None):
         def line(value):
             return None if value is None else Fraction(value)
         facts = (frame or {}).get('facts') or {}
-        members = dict(facts.get('members', ())) if (facts.get('provider') == 'sportsgameodds'
-                  and facts.get('event_id') == source['native_event_id']) else {}
+        members = {}
+        if facts.get('provider') == 'sportsgameodds' and facts.get('event_id') == source['native_event_id']:
+            members = index.members if index is not None else dict(facts.get('members', ()))
+        if index is not None:
+            rows = index.selection(source['native_outcome_id'], source.get('native_line'))
         candidates = []
         for item in rows:
             f=item['facts'];fair=f.get('fair') or {}

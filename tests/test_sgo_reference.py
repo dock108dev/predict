@@ -71,6 +71,23 @@ def test_named_pair_and_minimum_and_self_reference():
     assert calc(quotes, named_venue='novig')['reason'] == 'evaluated_venue_excluded'
 
 
+def test_best_native_reference_uses_highest_payout_and_same_books_other_side():
+    quotes = pair('fanduel', '+105', '-120') + pair('draftkings', '-105', '-150')
+    quotes += pair('betmgm', '+106', '-280') + pair('caesars', '+103', '+190') + pair('pinnacle', '+999')
+    result, witness = capture_witness(quotes, CONTRACT, at=AT, evaluated_venue='kalshi', best_payout=True)
+    assert result['basis']['selected_venue'] == 'betmgm'
+    assert Fraction(result['probability']) == Fraction(950, 2392)
+    assert len(result['contributors']) == 4
+    assert validate_witness(witness, at=AT)['probability'] == result['probability']
+    quotes[5]['line'] = '6'
+    fallback = calc(quotes, best_payout=True)
+    assert fallback['basis']['selected_venue'] == 'fanduel'
+    assert fallback['exclusions']['betmgm'] == 'exact_opposing_pair_missing'
+    quotes[0]['jurisdiction'], quotes[1]['jurisdiction'] = 'US-NJ', 'US-NY'
+    fallback = calc(quotes, best_payout=True)
+    assert fallback['exclusions']['fanduel'] == 'pair_jurisdiction_conflict'
+
+
 def test_shared_frame_does_not_refresh_unchanged_original_clocks():
     quotes=pair('a')
     quotes[0]['source_at']='2026-11-10T19:55:00Z'
@@ -183,6 +200,7 @@ def test_vendor_fair_is_attributed_separately_and_never_freshened():
 def test_best_payout_selects_one_book_then_devigs_its_opposite():
     from app.collection.sportsgameodds_current_rows import current_rows
     from app.comparison.sgo_sportsbook_baseline import current, select
+    from app.comparison.sgo_reference_publication import FrameQuoteIndex
     from app.storage.sportsgameodds_reference import prepare_frames, prepare_page
     from app.storage.store import stamp
     from tests.test_sportsgameodds_adapter import parse, response
@@ -214,13 +232,19 @@ def test_best_payout_selects_one_book_then_devigs_its_opposite():
 
     record, rows, frame = captured()
     value = select(record, rows, frame, at=AT)
+    index = FrameQuoteIndex(rows, frame)
+    assert select(record, rows, frame, at=AT, index=index) == value
+    assert fair_comparison(record, rows, frame, index=index) == fair_comparison(record, rows, frame)
     assert value['book'] == 'fanduel' and value['candidate_books'] == 3
     assert [leg['price_american'] for leg in value['prices']] == ['+120', '-150']
+    assert {book: [leg['price_american'] for leg in pair] for book, pair in value['candidates'].items()} == {
+        'fanduel': ['+120', '-150'], 'draftkings': ['+110', '-115'], 'betmgm': ['-105', '-110']}
     assert Fraction(value['probability']) == Fraction(25, 58)
     assert Fraction(value['return_percent']) == Fraction(100, 29)
     assert current(value, ['quote', 'contract', 'event', 'receipt:'+value['frame_id']], at=stamp(AT))
     assert not current(value, ['quote', 'contract', 'event', 'receipt:changed'], at=stamp(AT))
     assert select(record, rows, frame, at='2026-11-10T20:00:16Z') is None
+    assert select(record, rows, frame, at='2026-11-10T20:00:16Z', index=index) is None
     away['byBookmaker']['fanduel']['available'] = False
     record, rows, frame = captured()
     assert select(record, rows, frame, at=AT)['book'] == 'draftkings'
@@ -268,8 +292,11 @@ def test_publication_rejects_removed_input_unverified_binding_and_stale_frame():
 def test_ordinary_publication_sgo_mode_uses_all_dependencies_and_never_legacy(monkeypatch):
     from app.storage import ordinary_publication as ordinary
     from app.comparison import snapshot_fee_outcome
-    from app.comparison import sgo_reference_publication
-    row, witness, binding, deps, authority = publication_fixture()
+    from app.comparison import sgo_median_publication
+    row, _, binding, _, _ = publication_fixture()
+    quotes = pair('fanduel') + pair('draftkings') + pair('caesars')
+    _, witness = capture_witness(quotes, CONTRACT, at=AT, evaluated_venue='kalshi', best_payout=True)
+    deps = [dict(q, dependency=q['venue'] + ':' + q['odd_id'], state='available') for q in quotes]
     row.update(kind='single', league='NBA', original={'value': '0.4'}, same_outcome={'supported': True},
                snapshot_benchmark={'bookmaker': 'pinnacle', 'probability': '3/4'},
                reference={'bookmaker': 'pinnacle'}, probability='3/4')
@@ -282,13 +309,14 @@ def test_ordinary_publication_sgo_mode_uses_all_dependencies_and_never_legacy(mo
               'policy_identity': 'policy', 'epoch': 'epoch'}
     result = {'rows': [row], 'pairs': [], 'assumptions': {'revision': 'settings', 'benchmark_venue': 'pinnacle'}}
     monkeypatch.setattr(snapshot_fee_outcome, 'reviews', lambda at: {})
-    monkeypatch.setattr(sgo_reference_publication, 'owned_reference_evidence', lambda row, inputs, source, **kwargs: (inputs.get('sgo_reference_inputs') or {}).get(row['id']))
+    monkeypatch.setattr(sgo_median_publication, 'owned_median_evidence', lambda row, inputs, source, **kwargs: (inputs.get('sgo_reference_inputs') or {}).get(row['id']))
     monkeypatch.setattr(ordinary, 'quote_authority', lambda *args, **kwargs: {
         'dependency': 'native', 'expected': ['r', 'c', 'e'], 'reasons': [],
         'current_until': '2026-11-10T20:30:00Z', 'lifecycle': {'state': 'scheduled'}})
     output = ordinary.bind(result, inputs, 'ready')['rows'][0]
     assert output['probability'] == '1/2'
-    assert output['reference_calculation']['venue'] == 'sportsgameodds_books'
+    assert output['reference_calculation']['venue'] == 'fanduel'
+    assert output['sportsbook_baseline']['verified_native']
     assert len(output['current_authority']['references']) == 6
     assert not output['current_authority']['exact_pinnacle_reference']
     changed = dict(current)
@@ -300,7 +328,7 @@ def test_ordinary_publication_sgo_mode_uses_all_dependencies_and_never_legacy(mo
 
 
 def test_live_sgo_reference_and_native_kalshi_fee_reach_current_desk(monkeypatch):
-    from app.comparison import sgo_reference_publication, snapshot_fee_scope
+    from app.comparison import sgo_median_publication, snapshot_fee_scope
     from app.comparison.inspection_math import offer_math
     from app.dashboard.trade_desk import offer
     from app.storage import ordinary_publication as ordinary
@@ -317,16 +345,16 @@ def test_live_sgo_reference_and_native_kalshi_fee_reach_current_desk(monkeypatch
     scope = dict(series_id=series, phase='live', native_key=['kalshi', event, source['native_market_id'], 'yes', 'yes'])
     original = dict(row, original_record={'event': {'status': {'live': True}}, 'quote': {'source': source},
                                          'comparison_source_metadata': scope})
-    quotes = [dict(q, phase='live') for q in pair('pinnacle')]
+    quotes = [dict(q, phase='live') for q in pair('fanduel')]
     contract = dict(CONTRACT, phase='live', starts_at=start)
-    _, witness = capture_witness(quotes, contract, at=AT, evaluated_venue='kalshi', named_venue='pinnacle')
+    _, witness = capture_witness(quotes, contract, at=AT, evaluated_venue='kalshi', best_payout=True)
     deps = [dict(q, dependency=q['odd_id'], expected_revision=['r','c','e'], state='available') for q in quotes]
     candidate = dict(witness=witness.wire, binding=dict(binding, contract=contract), dependencies=deps)
     current = {key: ['r','c','e'] for key in ('home','away','native')}
     inputs = dict(captured_at=AT, quotes=[original], references=[], dependencies=current,
                   reference_provider='sportsgameodds', policy_identity='policy', epoch='epoch')
     settings = dict(revision='settings', benchmark_venue='pinnacle')
-    monkeypatch.setattr(sgo_reference_publication, 'owned_reference_evidence', lambda *args, **kwargs: candidate)
+    monkeypatch.setattr(sgo_median_publication, 'owned_median_evidence', lambda *args, **kwargs: candidate)
     monkeypatch.setattr(ordinary, 'quote_authority', lambda *args, **kwargs: dict(
         dependency='native', expected=current['native'], provider='kalshi', reasons=[],
         current_until='2026-11-10T20:00:15Z', lifecycle={'state':'live'}))
@@ -346,7 +374,8 @@ def test_live_sgo_reference_and_native_kalshi_fee_reach_current_desk(monkeypatch
     assert Fraction(current_row['conditional_return_percent']) == Fraction(10400, 521)
     assert Fraction(current_row['conservative_return_percent']) == Fraction(400, 21)
     assert offer(current_row, 'gross_return_percent')['reference']['american'] == '+100'
-    assert offer_math(current_row)['fair_reference']['contributors'][0]['venue'] == 'pinnacle'
+    assert offer_math(current_row)['fair_reference']['contributors'][0]['venue'] == 'fanduel'
+    assert offer(current_row, 'sportsbook_return_percent')['value'] == '25'
     after_fee_expiry = read('2026-11-10T20:00:11Z')
     assert after_fee_expiry['gross_return_percent'] == '25' and after_fee_expiry['conditional_return_percent'] is None
     assert read('2026-11-10T20:00:16Z')['gross_return_percent'] is None

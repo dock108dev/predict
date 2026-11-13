@@ -85,7 +85,9 @@ def test_unfiltered_census_deduplicates_offers_and_keeps_gaps_and_ev_separate():
     rows = [supported, alternate, duplicate, live_unknown, retained]
     inventory = [dict(id='source-'+key, venue=venue, league='NBA', family='spread', period='full_game')
                  for key, venue in [('alt-1', 'novig'), ('alt-2', 'novig'), ('live', 'kalshi'), ('waiting', 'kalshi')]]
-    pairs = [dict(before_fees=True, legs=[supported['id'], live_unknown['id']])]
+    proof = dict(authority={'policy': snapshots.ORDINARY_ARB_POLICY})
+    pairs = [dict(before_fees=True, legs=[supported['id'], alternate['id']]),
+             dict(before_fees=proof, legs=[supported['id'], live_unknown['id']])]
     counts = census(dict(rows=rows, publication={}), inventory, pairs=pairs, policy='policy')
     assert counts['total']['current'] == 3
     assert counts['total']['covered'] == 2 and counts['total']['uncovered'] == 1
@@ -95,7 +97,7 @@ def test_unfiltered_census_deduplicates_offers_and_keeps_gaps_and_ev_separate():
     assert counts['published_source_price_keys'] == 5
     assert counts['published_working_prices'] == 3 and counts['unpublished_working_prices'] == 1
     assert counts['published_without_working_price'] == 2
-    assert counts['pair_coverage'] == {'current_before_fee_pairs': 1, 'both_legs_have_normalized_fee': 0}
+    assert counts['pair_coverage'] == {'current_before_fee_pairs': 0, 'both_legs_have_normalized_fee': 0}
     assert next(row for row in counts['by_scope'] if row['phase'] == 'in_game')['uncovered'] == 1
     assert counts['retained_price_gap_reasons'] == {'source_expired': 1}
     assert counts['missing_reasons'] == {'live_market_fee_evidence_unbound': 1}

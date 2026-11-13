@@ -4,6 +4,12 @@
   font-weight: 600;
   font-display: swap;
 }
+@font-face {
+  font-family: Manrope;
+  src: url("manrope.ttf") format("truetype");
+  font-weight: 200 800;
+  font-display: swap;
+}
 
 :root {
   color-scheme: light;
@@ -143,7 +149,11 @@ fieldset label, .desk-thresholds label:has(input[type="checkbox"]) { display: fl
 .desk-expand summary { width: fit-content; padding-block: .25rem; font-size: .87rem; }
 .desk-pair-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr)); gap: 1rem; margin-top: .8rem; }
 .desk-pages { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: .75rem; margin-top: 1rem; }
+.desk-session { margin-top: 1.2rem; }
+#session-history pre { white-space: pre-wrap; overflow-wrap: anywhere; }
 .desk-empty { padding: 1.8rem 0; border-top: 1px solid var(--rule); }
+.desk-empty p { max-width: 42rem; }
+.desk-empty-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .65rem 1rem; }
 dialog {
   border: 1px solid var(--rule); border-radius: 14px; background: var(--paper); color: var(--ink);
   padding: 1.4rem; width: min(35rem, calc(100vw - 2rem));
@@ -259,8 +269,7 @@ dialog::backdrop { background: #101b3180; }
 #trade { width: min(52rem, calc(100vw - 1.5rem)); max-height: calc(100dvh - 1.5rem); padding: 0; }
 #trade > .desk-title { position: sticky; top: 0; z-index: 1; align-items: center; margin: 0; padding: .9rem 1.1rem; background: var(--paper); border-bottom: 1px solid var(--rule); flex-wrap: nowrap; }
 #trade h2 { font-size: clamp(21px, 4vw, 28px); margin: 0; }
-#trade-body, #trade-note { padding-inline: 1.1rem; }
-#trade-body { padding-block: .85rem .35rem; }
+#trade-body { padding: .85rem 1.1rem .35rem; }
 .inspection-matchup { font-size: .93rem; font-weight: 650; }
 .inspection-mode { font-size: .79rem; color: var(--muted); }
 .inspection-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .45rem; margin-block: .55rem .85rem; }
@@ -276,9 +285,10 @@ dialog::backdrop { background: #101b3180; }
 .inspection-section .inspection-disclosure { padding-block: .45rem; border: 0; }
 .inspection-disclosure[open] summary { margin-bottom: .4rem; }
 .inspection-formula, .inspection-gap { font-size: .84rem; padding: .42rem .58rem; border-radius: 7px; background: var(--soft); margin: .4rem 0; }
-.inspection-footer { display: flex; flex-wrap: wrap; gap: .5rem; padding: .45rem 1.1rem .7rem; }
-.inspection-footer:has(button:not([hidden])) { border-top: 1px solid var(--rule); }
-.inspection-footer:not(:has(button:not([hidden]))) { display: none; }
+.inspection-footer { position: sticky; bottom: 0; z-index: 1; display: flex; flex-wrap: wrap; gap: .5rem; padding: .45rem 1.1rem .7rem; background: var(--paper); border-top: 1px solid var(--rule); }
+.inspection-footer:not(:has(button:not([hidden]), #trade-note:not(:empty))) { display: none; }
+#trade-note { flex-basis: 100%; margin: 0; font-size: .84rem; }
+#trade-note:empty { display: none; }
 @media (max-width: 560px) {
   .desk-app .p-chrome { display: flex; }
   .desk-app .p-nav { order: 3; width: 100%; }
@@ -298,3 +308,172 @@ dialog::backdrop { background: #101b3180; }
 .desk-offer, .desk-offer small, .desk-pair small { min-width: 0; overflow-wrap: anywhere; }
 .fee-census-facts { display: grid; grid-template-columns: minmax(8rem, 1fr) minmax(0, 3fr); gap: .35rem .75rem; }
 .fee-census-facts dd { margin: 0; overflow-wrap: anywhere; }
+
+.opportunities-app {
+  --canvas: #f1f3f9;
+  --sidebar: #131c31;
+  --sidebar-text: #dce5fc;
+  --sidebar-current: #25334f;
+  --accent: #3046c8;
+  --selection: #edf0fc;
+  --selection-edge: #a6b3ff;
+  --gain: #116452;
+  --gain-bg: #e7f4ee;
+  --loss-bg: #fbefef;
+  background: var(--canvas);
+  font-family: Manrope, system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .opportunities-app {
+    --canvas: #101723; --accent: #a7bcff; --selection: #253658; --selection-edge: #6484bd;
+    --gain: #a2e3cf; --gain-bg: #203c39; --loss-bg: #44282e;
+  }
+}
+:root[data-theme="dark"] .opportunities-app {
+  --canvas: #101723; --accent: #a7bcff; --selection: #253658; --selection-edge: #6484bd;
+  --gain: #a2e3cf; --gain-bg: #203c39; --loss-bg: #44282e;
+}
+.opportunities-app .p-chrome { background: var(--sidebar); color: var(--sidebar-text); }
+.opportunities-app .p-brand { color: var(--sidebar-text); font-family: var(--headline); font-size: 1.8rem; }
+.opportunities-app .desk-brand-mark { background: #dfe5fd; color: #26399d; font-family: system-ui, sans-serif; font-style: normal; }
+.opportunities-app .p-nav { background: transparent; }
+.opportunities-app .p-nav a { color: var(--sidebar-text); border-radius: 9px; }
+.opportunities-app .p-nav a[aria-current], .opportunities-app .p-nav a:hover { color: #fff; background: var(--sidebar-current); }
+.opportunities-app .p-format { color: var(--sidebar-text); }
+.opportunities-app .p-format select { background: var(--sidebar-current); color: #fff; }
+.opportunities-app .desk-title { align-items: center; }
+.opportunities-app .desk-title h1 { font-size: clamp(2.3rem, 4vw, 3.2rem); }
+.opportunities-app .desk-action { border-radius: 9px; font-weight: 650; }
+.opportunities-app .desk-primary { color: #fff; background: #3046c8; }
+.opportunities-app .desk-primary:hover { background: #253ab8; }
+.opportunities-app .desk-toolbar { gap: .65rem; }
+.opportunities-app .desk-toolbar > .desk-toggle {
+  flex-direction: row; align-items: center; flex-shrink: 0; gap: .35rem; color: var(--ink);
+}
+.opportunities-app .desk-toggle input { min-height: 0; }
+.opportunities-app #group-field select { max-width: 12rem; }
+.opportunities-app .coverage-strip {
+  border: 0; padding: 0; margin: .85rem 0 .25rem; font-size: .8rem; font-weight: 650;
+}
+.opportunities-app .desk-refresh { margin: .35rem 0 .85rem; }
+.opportunities-app .desk-refresh button { font-size: .78rem; }
+.opportunities-app .desk-empty,
+.opportunity-card, .odds-card {
+  background: var(--paper); border: 1px solid var(--rule); border-radius: 14px;
+  box-shadow: 0 8px 32px #17284908; overflow: hidden;
+}
+.opportunities-app .desk-empty { padding: 1.25rem; }
+.opportunities-app .desk-empty h2 { font-size: 1.7rem; margin-bottom: .35rem; }
+.opportunity-tabs {
+  display: inline-flex; align-items: center; gap: .18rem; padding: .2rem; border-radius: 10px;
+  background: var(--selection); max-width: 100%;
+}
+.opportunity-tabs a, .opportunity-tabs button {
+  display: inline-flex; align-items: center; min-height: 2.3rem; padding: .32rem .78rem;
+  border: 0; border-radius: 7px; text-decoration: none; color: var(--muted);
+  background: transparent; font-size: .86rem; font-weight: 650;
+}
+.opportunity-tabs :is([aria-current], [aria-pressed="true"]) {
+  background: var(--paper); color: var(--accent); box-shadow: 0 1px 5px #27326c25;
+}
+.desk-path { margin: 0 0 1rem; font-size: .85rem; }
+.desk-path a { color: var(--muted); }
+.opportunity-card { padding: .9rem 1rem; margin-bottom: .75rem; }
+.opportunity-card :focus-visible, .odds-matrix :focus-visible { outline-offset: -2px; }
+.opportunity-card-header { display: flex; justify-content: space-between; align-items: start; gap: .75rem; }
+.opportunity-card-header small { font-size: .76rem; font-weight: 650; }
+.opportunity-card-header h2 { font-size: clamp(1.42rem, 2.45vw, 1.95rem); margin: .15rem 0; }
+.opportunity-card-header p { color: var(--muted); font-size: .85rem; margin-bottom: .72rem; }
+.opportunity-score { display: grid; text-align: right; gap: .04rem; background: var(--soft); color: var(--ink); border-radius: 9px; padding: .4rem .65rem; }
+.opportunity-score strong { font: 600 clamp(1.25rem, 2.35vw, 1.9rem)/1.1 var(--headline); font-variant-numeric: tabular-nums; }
+.opportunity-score small { color: inherit; font-weight: 500; max-width: 15rem; }
+.opportunity-score.positive, .matrix-reference { color: var(--gain); background: var(--gain-bg); }
+.opportunity-score.negative { color: var(--negative); background: var(--loss-bg); }
+.opportunity-quotes {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 10.5rem), 1fr));
+  gap: .48rem; align-items: stretch;
+}
+.opportunities-app .desk-offer { background: var(--paper); padding: .48rem .65rem; min-height: 0; }
+.opportunities-app .desk-offer .p-odds { color: var(--ink); font-size: .92rem; font-weight: 720; }
+.opportunities-app .desk-offer.desk-best { border-color: var(--selection-edge); background: var(--selection); }
+.opportunities-app .desk-offer:hover { background: var(--selection); }
+.opportunity-reference {
+  display: flex; flex-direction: column; gap: .14rem; border: 1px solid var(--rule);
+  background: var(--gain-bg); border-radius: 8px; padding: .48rem .65rem; color: var(--gain);
+  font-size: .83rem; overflow-wrap: anywhere;
+}
+.opportunity-reference span, .opportunity-reference small { color: var(--muted); font-size: .75rem; }
+.opportunity-reference-prices { display: flex; flex-wrap: wrap; gap: .15rem .45rem; }
+.opportunity-reference-prices > span { display: inline-block; }
+.opportunity-actions { display: flex; justify-content: space-between; gap: .5rem; align-items: center; margin-top: .55rem; }
+.opportunity-link {
+  padding: .2rem 0; border: 0; background: transparent; text-decoration: none;
+  color: var(--accent); font-size: .83rem; font-weight: 680;
+}
+.opportunity-link:hover { text-decoration: underline; }
+.opportunity-arb .desk-expand button { display: block; }
+.arb-card-comparison { display: grid; grid-template-columns: minmax(0, 1fr) minmax(10.5rem, .3fr); gap: .55rem; }
+.arb-card-comparison .odds-scroll { border: 1px solid var(--rule); border-radius: 8px; }
+.odds-card { margin-bottom: 1rem; }
+.odds-card > header { position: relative; padding: .85rem 1rem .65rem; }
+.odds-card > header h2 { font-size: 1.6rem; margin-bottom: .15rem; }
+.odds-card > header p { margin: 0; }
+.odds-card > header .opportunity-link { display: inline-block; margin-top: .15rem; }
+.odds-scroll { overflow: auto; max-width: 100%; }
+.odds-matrix { border-spacing: 0; border-collapse: separate; width: 100%; text-align: center; font-size: .82rem; }
+.odds-matrix th, .odds-matrix td { padding: .38rem .42rem; border-bottom: 1px solid var(--rule); }
+.odds-matrix thead th { background: var(--soft); color: var(--muted); font-size: .74rem; white-space: nowrap; }
+.odds-matrix tbody th, .odds-matrix thead tr:first-child th:first-child {
+  position: sticky; left: 0; z-index: 1; text-align: start; padding-inline: .6rem;
+  min-width: 9rem; max-width: 15rem; box-shadow: 1px 0 var(--rule);
+}
+.odds-matrix tbody th { background: var(--paper); color: var(--ink); }
+.odds-matrix small { display: block; font-size: .72rem; font-weight: 450; }
+.odds-matrix .desk-offer { display: inline-grid; text-align: center; padding: .22rem .35rem; margin: .12rem; white-space: nowrap; border-color: transparent; }
+.odds-matrix .desk-offer .p-odds { font-size: .84rem; }
+.odds-matrix td > .p-odds { display: block; white-space: nowrap; font-weight: 650; }
+.matrix-reference small { color: inherit; }
+.odds-card .odds-matrix td { min-width: 4.7rem; }
+.matrix-legend, .matrix-empty { margin: .6rem 1rem; }
+.inspection-price-unit { display: block; font-weight: 500; }
+.inspection-columns { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); gap: 1rem; }
+.inspection-leg { margin-top: .45rem; border: 1px solid var(--rule); border-radius: 8px; padding: .5rem .6rem; }
+.inspection-leg h4 { margin: 0 0 .25rem; }
+.inspection-payoffs { width: 100%; border-collapse: collapse; font-size: .83rem; margin-bottom: .5rem; }
+.inspection-payoffs :is(th,td) { border-bottom: 1px solid var(--rule); text-align: start; padding: .35rem .18rem; }
+.opportunities-app .positive { color: var(--gain); }
+@media (min-width: 900px) {
+  .opportunities-app .p-chrome {
+    position: fixed; inset: 0 auto 0 0; width: 11.5rem; display: flex; flex-direction: column;
+    align-items: stretch; gap: 1rem; padding: 1.35rem .9rem; border: 0;
+  }
+  .opportunities-app .p-brand { margin: 0 .45rem .55rem; }
+  .opportunities-app .p-nav { display: grid; grid-template-columns: 1fr; width: 100%; gap: .2rem; padding: 0; }
+  .opportunities-app .p-nav a { justify-items: start; padding-inline: .7rem; }
+  .opportunities-app .p-format { margin: auto .45rem 0; }
+  .opportunities-app main { max-width: 100rem; margin-inline-start: 11.5rem; padding: 2rem clamp(1.3rem, 2.45vw, 2.25rem) 2rem; }
+}
+@media (max-width: 560px) {
+  .opportunities-app main { padding-inline: .8rem; }
+  .opportunities-app .p-chrome { gap: .35rem .8rem; padding-inline: .8rem; }
+  .opportunities-app .p-nav { padding: 0; }
+  .opportunities-app .desk-toolbar { gap: .4rem; }
+  .opportunities-app .desk-toolbar .desk-search { flex-basis: 100%; }
+  .opportunity-card { padding-inline: .65rem; }
+  .opportunity-card-header { gap: .35rem; }
+  .opportunity-score { padding-inline: .45rem; min-width: 5rem; }
+  .opportunity-score small { max-width: 8rem; font-size: .67rem; }
+  .opportunity-quotes { grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)); }
+  .arb-card-comparison { grid-template-columns: minmax(0, 1fr); }
+  .odds-matrix tbody th, .odds-matrix thead tr:first-child th:first-child { min-width: 7.4rem; max-width: 8rem; }
+}
+
+.sportsbook-comparison { display: grid; gap: .35rem; margin-block: .55rem; }
+.sportsbook-comparison > small, .sportsbook-price small { color: var(--muted); }
+.sportsbook-prices { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .4rem; }
+.sportsbook-prices > div { min-width: 0; padding: .4rem .5rem; border: 1px solid var(--rule); border-radius: 6px; }
+.sportsbook-prices strong, .sportsbook-price small { display: block; font-size: .75rem; }
+.sportsbook-price .matrix-reference small { color: inherit; }
+@media (max-width: 480px) {
+  .sportsbook-prices { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

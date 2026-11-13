@@ -1,0 +1,2 @@
+ALTER TABLE current_sgo_delivery_clock
+ADD COLUMN first_live_sportsbook_write_at timestamptz;

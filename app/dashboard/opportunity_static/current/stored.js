@@ -6,8 +6,7 @@ const UI = (() => {
   const el = (tag, text, cls) => { const e=document.createElement(tag); if(text!=null)e.textContent=text;if(cls)e.className=cls;return e; };
   const num = v => {if(v==null)return null;const p=String(v).split('/');return Number(p[0])/(p.length===2?Number(p[1]):1);};
   const fmt = (v,d=2) => v==null?'Unavailable':num(v).toLocaleString('en-US',{maximumFractionDigits:d,minimumFractionDigits:d});
-  const names={kalshi:'Kalshi',polymarket_us:'Polymarket US',novig:'Novig',prophetx:'ProphetX',pinnacle:'Pinnacle',the_odds_api:'The Odds API',sportsgameodds:'SportsGameOdds',sportsgameodds_books:'SportsGameOdds bookmaker median',winner:'Winner',spread:'Spread',total:'Total'};
-  Object.assign(names, {fanduel:'FanDuel', draftkings:'DraftKings', betmgm:'BetMGM', caesars:'Caesars'});
+  const names={kalshi:'Kalshi',polymarket_us:'Polymarket US',novig:'Novig',prophetx:'ProphetX',pinnacle:'Pinnacle',fanduel:'FanDuel',draftkings:'DraftKings',betmgm:'BetMGM',caesars:'Caesars',the_odds_api:'The Odds API',sportsgameodds:'SportsGameOdds',sportsgameodds_books:'Sportsbook comparison',winner:'Winner',spread:'Spread',total:'Total'};
   const name=v=>names[v]||v;
   let format='american';try{format=localStorage.getItem('predict-odds-format')==='decimal'?'decimal':'american';}catch{}
   function updateOdds(){for(const e of document.querySelectorAll('[data-american]'))e.textContent=e.dataset[format]||'Unavailable';for(const b of document.querySelectorAll('[data-format]'))b.setAttribute('aria-pressed',String(b.dataset.format===format));}
@@ -19,9 +18,16 @@ const UI = (() => {
     const h=el('header',null,'p-chrome'),brand=link('Predict.','/','p-brand'),nav=el('nav',null,'p-nav');nav.setAttribute('aria-label','Predict');
     if(document.body.classList.contains('desk-app')){
       const mark=el('span','p/a','desk-brand-mark');mark.setAttribute('aria-hidden','true');
-      brand.replaceChildren(mark,'Prediction Arb');
-      nav.append(link('EV','/ev'),link('Arbitrage','/arbs'),link('Admin','/admin'));
-      const label=el('label','Odds '),choice=el('select');
+      const opportunities = document.body.classList.contains('opportunities-app');
+      if (opportunities) {
+        mark.textContent='P';
+        brand.replaceChildren(mark,'Predict');
+        nav.append(link('Opportunities','/'),link('Browse odds','/browse-odds'),link('Admin','/admin'));
+      } else {
+        brand.replaceChildren(mark,'Prediction Arb');
+        nav.append(link('EV','/ev'),link('Arbitrage','/arbs'),link('Admin','/admin'));
+      }
+      const label=el('label','Odds '),choice=el('select');choice.setAttribute('aria-label','Odds format');
       for(const [value,title] of [['american','American'],['decimal','Decimal']]){
         const option=el('option',title);option.value=value;choice.append(option);
       }
@@ -29,7 +35,9 @@ const UI = (() => {
       choice.onchange=()=>{format=choice.value;try{localStorage.setItem('predict-odds-format',format);}catch{}updateOdds();};
       label.append(choice);label.className='p-format';
       h.append(brand,nav,label);host.replaceChildren(h);
-      const path=location.pathname==='/'?'/ev':location.pathname;
+      const path = opportunities
+        ? ['/browse-odds', '/game'].includes(location.pathname) ? '/browse-odds' : '/'
+        : location.pathname==='/'?'/ev':location.pathname;
       nav.querySelectorAll('a').forEach(a=>{if(a.pathname===path)a.setAttribute('aria-current','page');});
       return;
     }
@@ -40,7 +48,7 @@ const UI = (() => {
     const path=location.pathname;for(const a of h.querySelectorAll('a'))if(a.pathname===(path==='/arbs'||path==='/ev'?'/':path))a.setAttribute('aria-current','page');
     updateOdds();
   }
-  function adminNav(){const nav=el('nav',null,'p-adminnav');nav.setAttribute('aria-label','Admin sections');for(const [key,label] of [['overview','Overview'],['timing','Quote timing'],['coverage','Coverage'],['usage','Usage & budget'],['calculations','Calculations'],['inspection','Exact inspection']]){const a=link(label,'/admin?section='+key);if((new URLSearchParams(location.search).get('section')||'overview')===key)a.setAttribute('aria-current','page');nav.append(a);}return nav;}
+  function adminNav(){const nav=el('nav',null,'p-adminnav');nav.setAttribute('aria-label','Admin sections');for(const [key,label] of [['overview','Overview'],['timing','Quote timing'],['coverage','Coverage'],['usage','Usage & budget'],['calculations','Calculations'],['inspection','Exact inspection'],['database','Database']]){const a=link(label,'/admin?section='+key);if((new URLSearchParams(location.search).get('section')||'overview')===key)a.setAttribute('aria-current','page');nav.append(a);}return nav;}
   function localURL(raw){
     if(!raw)return null;
     try{
@@ -123,7 +131,7 @@ const SnapshotViews = (() => {
     }
     for(const {q,venues,retained} of refs.values()){
       const ref=q.reference_calculation, line=el('div',null,'compare-reference');
-      line.append(el('strong',name(ref?.venue||q.display?.benchmark_venue||result.assumptions.benchmark_venue)+' reference'),el('span',' · '+[...venues].join(', '),'compare-note'));
+      line.append(el('strong',name(ref?.venue||q.display?.benchmark_venue||result.assumptions.benchmark_venue)+' quoted odds'),el('span',' · '+[...venues].join(', '),'compare-note'));
       const values=el('div',null,'compare-ref-values');
       if(ref?.contributors?.length){values.append(el('span','Contributing books: '+ref.contributors.map(c=>name(c.venue)).join(', ')));}
       else if(ref?.pair?.length)for(const [i,r] of ref.pair.entries()){
@@ -133,7 +141,7 @@ const SnapshotViews = (() => {
       }
       line.append(values);if(retained.size)line.append(el('small','Retained reference for '+[...retained].join(', '),'compare-note'));wrap.append(line);
     }
-    if(!refs.size)wrap.append(el('p',`${name(quotes[0]?.reference_calculation?.venue||result.assumptions.benchmark_venue)} reference unavailable for these exact outcomes.`,'compare-note'));
+    if(!refs.size)wrap.append(el('p','Sportsbook comparison unavailable for these exact outcomes.','compare-note'));
     return wrap;
   }
   function comparison(group,result,metric,actions){
@@ -345,17 +353,16 @@ const SnapshotDrawer = (() => {
       box.append(values,el('p','EV is estimated profit per $100 of modeled risk, conditional on a decisive win or loss. Pushes and exceptional outcomes are excluded.','p-meta'));
       if(row.current_reasons?.length||row.probability_missing==='finance_pending')box.append(el('p','Pinned availability: '+(row.current_reasons?.map(human).join('; ')||'Calculation pending')+'. Retained arithmetic below has no current ranking authority.','math-state'));
       const r=row.reference_calculation||{};
-      const venue=r.venue||row.display?.benchmark_venue||result.assumptions.benchmark_venue;
-      const ref=section(venue?name(venue)+' fair price':'Fair price');
+      const ref=section('Sportsbook prices and estimated fair odds');
       ref.append(referenceStrip([row],result));
-      if(r.available&&row.probability!=null){
+      if(r.available!==false&&row.probability!=null){
         const multi=r.method==='sgo-book-median-proportional-1';
         const derivation=el('p',multi?'Remove the margin from each eligible two-sided book pair, then take the median of their decisive probabilities.':'Remove the margin proportionally: (1 ÷ selected decimal price) ÷ the sum of both implied probabilities.');
-        ref.append(derivation,facts([...(multi?[]:[['Margin (overround)',r.overround==null?null:pct(num(r.overround)*100)]]),['Decisive win probability',fmt(num(row.probability)*100)+'%'],['Fair decimal price',r.fair_decimal_odds==null?null:fmt(r.fair_decimal_odds,4)]]));
+        ref.append(derivation,facts([...(multi?[]:[['Margin (overround)',r.overround==null?null:pct(num(r.overround)*100)]]),['Decisive win probability',fmt(num(row.probability)*100)+'%'],['Estimated fair odds',odd(row.display?.fair||{decimal:r.fair_decimal_odds})]]));
       }else ref.append(el('p','Fair price unavailable in the pinned display. Retained reference prices do not restore current probability.'));
       box.append(ref);
       const fair=row.sgo_fair_comparison;
-      if(fair){const v=section('SportsGameOdds fair odds');v.append(facts([['Availability',fair.available?'Available':'Unavailable from SportsGameOdds'],['Fair American odds',fair.price_american],['Fair line',fair.line],['Original source time','Unknown'],['Received',fair.received_at]]),el('p',!fair.available?'This baseline is unavailable or incomplete. It is not used as the reference probability.':fair.same_line===false?'Context at a different line; not the fair price for this offer. Contributors and original update time are unknown.':'Third-party baseline; contributors and original update time are unknown. It is not used as the reference probability.','p-meta'));box.append(v);}
+      if(fair){const v=section('Provider fair-odds estimate');v.append(facts([['Availability',fair.available?'Available':'Unavailable'],['Fair American odds',fair.price_american],['Fair line',fair.line],['Original source time','Unknown'],['Received',fair.received_at]]),el('p',!fair.available?'This baseline is unavailable or incomplete. It is not used as the reference probability.':fair.same_line===false?'Context at a different line; not the fair price for this offer. Contributors and original update time are unknown.':'Third-party baseline; contributors and original update time are unknown. It is not used as the reference probability.','p-meta'));box.append(v);}
       const calc=section('Before / after trade fees');
       calc.append(el('p','Before fees: expected profit = win probability × win profit − loss probability × acquisition cost. EV % divides expected profit by acquisition cost.'));
       const fee=metric==='conservative_return_percent'?row.conservative_trade_benchmark:row.conditional_trade_benchmark;
@@ -365,7 +372,13 @@ const SnapshotDrawer = (() => {
       const fees=section(metric==='conservative_return_percent'?'Conservative fee assumptions':'Reviewed fee assumptions');
       if(metric==='conservative_return_percent')fees.append(el('p','Public-schedule estimate; account terms unverified. This is a separate basis and never enters reviewed-fee ranking.','math-state'));
       fees.append(el('p',fee?.condition||human(fee?.reason||'Applicable reviewed fee schedule unavailable')));
-      if(fee?.available)fees.append(facts([['Quantity',`${fee.quantity??'Unknown'} ${fee.quantity_unit||''}`],['Order',`${human(fee.liquidity_role)} · ${fee.fill_count??'Unknown'} fill(s)`],['Review starts',fee.evidence?.reviewed_at],['Review expires',fee.evidence?.review_before]]));
+      if(fee?.available){
+        const evidence=fee.evidence||{};
+        const authority=[['Terms verified',evidence.reviewed_at]];
+        if(evidence.review_before)authority.push(['Applicable through',evidence.review_before]);
+        if(evidence.standing_public_terms)authority.push(['Terms',evidence.verification_scope==='market_terms_only'?'Standing public terms · market evidence verified':'Standing public terms'],['Recheck due',evidence.recheck_due_at]);
+        fees.append(facts([['Quantity',`${fee.quantity??'Unknown'} ${fee.quantity_unit||''}`],['Order',`${human(fee.liquidity_role)} · ${fee.fill_count??'Unknown'} fill(s)`],...authority]));
+      }
       const fullFee=details.row[metric==='conservative_return_percent'?'conservative_trade_benchmark':'conditional_trade_benchmark'];
       if(fullFee?.rounding_trace)fees.append(disclosure('Exact fee rounding',el('pre',JSON.stringify(fullFee.rounding_trace,null,2))));
       if(fee?.assumptions)fees.append(el('p',Array.isArray(fee.assumptions)?fee.assumptions.join(' · '):JSON.stringify(fee.assumptions)));
@@ -378,7 +391,7 @@ const SnapshotDrawer = (() => {
     clocks.append(el('p','Capture, receipt and publication do not renew source evidence.','p-meta'));box.append(disclosure('Source details & clocks',clocks));
     const provider=row.source?.provider||original.source?.provider;
     const providerKind=['the_odds_api','sportsgameodds'].includes(provider)?'Aggregate':(['kalshi','polymarket_us','novig'].includes(provider)?'Direct':null);
-    const native=section('Original source');native.append(facts([['Price provider',provider?name(provider):null],['Source type',providerKind],['Venue',row.venue?name(row.venue):null],['Original side',row.native_side||row.source?.native_side],['Original price',row.original?.value],['Price units',human(row.original?.units)],['Native price',row.original?.native_value],['Transformation',human(row.original?.transformation)]]));box.append(disclosure('Source price & interpretation',native));
+    const native=section('Original source');native.append(facts([['Source type',providerKind],['Venue',row.venue?name(row.venue):null],['Original side',row.native_side||row.source?.native_side],['Original price',row.original?.value],['Price units',human(row.original?.units)],['Native price',row.original?.native_value],['Transformation',human(row.original?.transformation)]]));box.append(disclosure('Source price & interpretation',native));
     const retained=section('Retained historical arithmetic');retained.append(el('p','Exact member evidence, separate from the pinned displayed availability. These values cannot restore a withdrawn estimate.'),facts([['Before-fee EV',pct(details.row.gross_return_percent)],['After reviewed-fee EV',pct(details.row.conditional_return_percent)],['Member funding',a.amount==null?null:'$'+fmt(a.amount)],['Member buffer',a.buffer==null?null:pct(num(a.buffer)*100)],['Member scenario',human(a.scenario)],['Member sizing',human(a.sizing)]]));
     retained.append(disclosure('Literal inputs, formulas and fee records',el('pre',JSON.stringify({displayed:row,evidence:details},null,2))));box.append(disclosure('Retained arithmetic & exact inputs',retained),link('Inspect exact inputs in Admin',inspect,'math-admin'));
     return box;

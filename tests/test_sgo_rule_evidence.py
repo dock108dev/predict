@@ -3,7 +3,7 @@ from hashlib import sha256
 import json
 
 from app.comparison.sgo_reference import validate_witness
-from app.comparison.sgo_rule_evidence import ReviewedBindings, SETTLEMENT, owned_bindings, reviewed_median
+from app.comparison.sgo_rule_evidence import ReviewedBindings, SETTLEMENT, owned_bindings, reviewed_best_payout, reviewed_median
 
 AT='2026-11-11T01:00:00Z'
 FRAME='a'*64
@@ -12,26 +12,37 @@ CONTRACT=dict(event_id='event',league='NBA',phase='pregame',period='game',market
     frame_id=FRAME,frame_received_at=AT)
 
 
+def reviewed_registry(tmp_path, quotes, *, at=AT):
+    from app.comparison.sgo_rule_evidence import settlement_key
+
+    bindings=[]
+    jurisdictions = {'draftkings':'US-WV','fanduel':'US-NJ','fanatics':'US-NY'}
+    for quote in quotes:
+        identity = {key:quote[key] for key in ('provider','venue','event_id','odd_id','frame_id','league','market','period')}
+        identity['jurisdiction'] = jurisdictions[quote['venue']]
+        if quote['market'] in ('spread', 'total'):
+            identity['line'] = quote['line']
+        settlement = settlement_key(quote['league'], quote['market'], quote['period'])
+        body=json.dumps({'kind':'reviewed_source_market_jurisdiction','identity':identity,
+                         'source_url':'https://example.org/fixture','normal_scoring':settlement,
+                         'specific_market_terms_reviewed':True}).encode()
+        path=tmp_path/(quote['venue']+'-'+quote['odd_id']+'.json');path.write_bytes(body)
+        bindings.append(dict(identity,review_class='manual_review',evidence_path=path.name,
+            evidence_sha256=sha256(body).hexdigest(),reviewed_at=at,effective_from=at,effective_until=None))
+    return ReviewedBindings({'version':'sgo-reviewed-jurisdiction-bindings-1','bindings':bindings},evidence_root=tmp_path)
+
+
 def fixture(tmp_path):
-    quotes=[];bindings=[]
-    for venue,jurisdiction in [('draftkings','US-WV'),('fanduel','US-NJ'),('fanatics','US-NY')]:
+    quotes=[]
+    for venue in ('draftkings','fanduel','fanatics'):
         for side,opposite in [('home','away'),('away','home')]:
             odd=venue+'-'+side
             q=dict(provider='sportsgameodds',venue=venue,event_id='event',odd_id=odd,
                 opposing_odd_id=venue+'-'+opposite,frame_id=FRAME,frame_received_at=AT,league='NBA',
                 market='moneyline',period='game',phase='pregame',side=side,line=None,
                 price_american='-110',source_at=AT,received_at=AT,available=True)
-            identity={k:q[k] for k in ('provider','venue','event_id','odd_id','frame_id','league','market','period')}
-            identity['jurisdiction']=jurisdiction
-            body=json.dumps({'kind':'reviewed_source_market_jurisdiction','identity':identity,
-                             'source_url':'https://example.org/fixture','normal_scoring':SETTLEMENT,
-                             'specific_market_terms_reviewed':True}).encode()
-            path=tmp_path/(odd+'.json');path.write_bytes(body)
-            bindings.append(dict(identity,review_class='manual_review',evidence_path=path.name,
-                evidence_sha256=sha256(body).hexdigest(),reviewed_at=AT,effective_from=AT,effective_until=None))
             quotes.append(q)
-    registry=ReviewedBindings({'version':'sgo-reviewed-jurisdiction-bindings-1','bindings':bindings},evidence_root=tmp_path)
-    return quotes,registry
+    return quotes,reviewed_registry(tmp_path,quotes)
 
 
 def test_three_evidenced_books_produce_reproducible_conditional_median(tmp_path):
@@ -54,6 +65,27 @@ def test_jurisdiction_must_bind_exact_source_frame_and_is_not_inferred(tmp_path)
     changed=deepcopy(CONTRACT);changed['market']='spread'
     assert not reviewed_median(quotes,changed,at=AT,evaluated_venue='novig',registry=registry)[0]['available']
     assert not reviewed_median(quotes,dict(CONTRACT,occurrence_evidence=None),at=AT,evaluated_venue='novig',registry=registry)[0]['available']
+
+
+def test_best_payout_reports_quote_timing_before_missing_rules(tmp_path):
+    quotes, _ = fixture(tmp_path)
+    registry = owned_bindings()
+    result, witness = reviewed_best_payout(quotes, CONTRACT, at=AT, evaluated_venue='kalshi', registry=registry)
+    assert witness is None
+    assert result['exclusions'] == {
+        'draftkings': 'exact_jurisdiction_binding_unavailable',
+        'fanduel': 'exact_jurisdiction_binding_unavailable',
+    }
+    stale = [dict(quote, source_at='2026-11-10T23:00:00Z') for quote in quotes]
+    result, witness = reviewed_best_payout(stale, CONTRACT, at=AT, evaluated_venue='kalshi', registry=registry)
+    assert witness is None
+    assert result['exclusions'] == {'draftkings': 'source_stale', 'fanduel': 'source_stale'}
+    incomplete = [quote for quote in quotes if quote['side'] == 'home']
+    result, witness = reviewed_best_payout(incomplete, CONTRACT, at=AT, evaluated_venue='kalshi', registry=registry)
+    assert witness is None
+    assert result['exclusions'] == {
+        'draftkings': 'exact_opposing_pair_missing', 'fanduel': 'exact_opposing_pair_missing',
+    }
 
 
 def test_owned_median_capture_binds_sql_rows_and_revision_dependencies(tmp_path,monkeypatch):

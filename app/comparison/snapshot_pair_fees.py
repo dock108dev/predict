@@ -16,6 +16,8 @@ def _leg_fee(row, *, stake, price, quantity, receipts):
     cashflows = fee['fee_cashflows']
     evidence = fee['evidence']
     venue = row['venue']
+    rounding_trace = None
+    assumptions = fee.get('assumptions', ())
     if not stake:
         return dict(available=False, reason='pair_stake_rounds_to_zero')
     if 'winning_settlement_usd' in cashflows:
@@ -29,6 +31,8 @@ def _leg_fee(row, *, stake, price, quantity, receipts):
         settlement = dict.fromkeys(receipts, F(0))
         if quantity == 1:
             fill = F(cashflows['at_fill_usd'])
+        elif (row.get('source') or {}).get('provider') == 'practice' and fee['classification'] == 'synthetic':
+            fill = F(evidence['fictional_rate']) * stake
         elif (venue == 'novig' and fee['classification'] == 'exact_public'
               and evidence.get('fee_rate') == '0' and row.get('game_state') == 'scheduled'):
             fill = F(0)
@@ -55,8 +59,38 @@ def _leg_fee(row, *, stake, price, quantity, receipts):
             if not model['available']:
                 return dict(available=False, reason=model.get('reason') or 'pair_fee_size_unverified')
             fill = F(model['trade_fee_usd'])
+            rounding_trace = (model.get('details') or {}).get('rounding_trace')
+            assumptions = model.get('assumptions', assumptions)
     return dict(available=True, classification=fee['classification'], quantity=wire(quantity),
-                at_fill_usd=wire(fill), settlement_usd={state: wire(amount) for state, amount in settlement.items()})
+                at_fill_usd=wire(fill), settlement_usd={state: wire(amount) for state, amount in settlement.items()},
+                receipts_usd={state: wire(amount) for state, amount in receipts.items()},
+                assumptions=assumptions, rounding_trace=rounding_trace)
+
+
+def _whole_contract_allocation(allocation, rows):
+    if {row['venue'] for row in rows} != {'kalshi', 'polymarket_us'}:
+        return allocation, None
+    pmus = next(row for row in rows if row['venue'] == 'polymarket_us')
+    retail = (pmus.get('fee_applicability') or {}).get('retail') or {}
+    try:
+        minimum = F(retail['values']['minimumTradeQty'])
+        costs = [F(leg['cost_per_claim']) for leg in allocation['legs']]
+        requested = F(allocation['funding_usd'])
+        # The common quantity uses whole USD payout contracts and must be a
+        # multiple of the observed Polymarket US size grid.
+        step = minimum.numerator
+        if step <= 0:
+            return allocation, None
+        quantity = (requested // (step * sum(costs))) * step
+    except (ValueError, KeyError, TypeError, ArithmeticError):
+        return allocation, None
+    stakes = [quantity * cost for cost in costs]
+    used = sum(stakes)
+    sizing = dict(quantity=str(quantity), requested_stake_usd=wire(requested),
+                  acquisition_usd=wire(used), unused_stake_usd=wire(requested - used),
+                  basis='equal_whole_contracts_at_captured_prices', execution_qualified=False)
+    return dict(funding_usd=wire(used), legs=[dict(cost_per_claim=wire(cost), allocation_usd=wire(stake))
+                for cost, stake in zip(costs, stakes, strict=True)]), sizing
 
 
 def pair_fees(proof, allocation, rows):
@@ -64,6 +98,9 @@ def pair_fees(proof, allocation, rows):
     payouts = proof.get('settlement_payouts')
     if not payouts:
         return dict(available=False, reason='pair_settlement_unverified', legs=[])
+    allocation, sizing = _whole_contract_allocation(allocation, rows)
+    if sizing is not None and sizing['quantity'] == '0':
+        return dict(available=False, reason='pair_size_unsupported', legs=[], sizing=sizing)
     legs, receipts = [], []
     for index, (row, leg) in enumerate(zip(rows, allocation['legs'], strict=True)):
         stake, price = F(leg['allocation_usd']), F(leg['cost_per_claim'])
@@ -73,9 +110,11 @@ def pair_fees(proof, allocation, rows):
             fee = _leg_fee(row, stake=stake, price=price, quantity=quantity, receipts=receipts[-1])
         except (OSError, ValueError, KeyError, TypeError, ArithmeticError):
             fee = dict(available=False, reason='pair_fee_size_unverified')
+        if sizing is not None:
+            fee['acquisition_usd'] = wire(stake)
         legs.append(fee)
     if not all(leg['available'] for leg in legs):
-        return dict(available=False, reason='pair_missing_leg_fees', legs=legs)
+        return dict(available=False, reason='pair_missing_leg_fees', legs=legs, sizing=sizing)
     funding = F(allocation['funding_usd']) + sum(F(leg['at_fill_usd']) for leg in legs)
     states = {}
     for state in payouts:
@@ -84,4 +123,4 @@ def pair_fees(proof, allocation, rows):
         states[state] = dict(net_receipt_usd=wire(net_receipt), net_profit_usd=wire(net_receipt - funding))
     minimum = min(F(state['net_profit_usd']) for state in states.values())
     return dict(available=True, legs=legs, funding_usd=wire(funding), states=states,
-                minimum_net_profit_usd=wire(minimum))
+                minimum_net_profit_usd=wire(minimum), sizing=sizing)

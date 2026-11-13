@@ -246,13 +246,31 @@ def mount(app):
         from app.storage.store import hashed, stamp
         from app.storage.current_games import utc
 
+        def fee_census(db, result, deps, owner, states, at, *, pairs=(), policy=None, epoch=None, settings=None):
+            from .fee_coverage import census, source_inventory
+            from .trade_desk import desk_phase, direct_venue_offer, phase_matches
+            phase = desk_phase(query)
+            if phase:
+                result = dict(result, rows=[row for row in result['rows']
+                    if direct_venue_offer(row) and phase_matches(row, phase, at)])
+            counts = census(result, source_inventory(db, deps, phase=phase, at=at), pairs=pairs, policy=policy)
+            counts['phase'] = phase
+            if query.get('funnel') == '1':
+                from .coverage_funnel import measure
+                counts['synchronized_funnel'] = measure(db, result, deps, counts, owner, at=at, phase=phase)
+                if query.get('independent') == '1':
+                    from .coverage_finance_inputs import measure as audit_inputs
+                    counts['synchronized_funnel']['independent_finance'] = audit_inputs(db, result, pairs, deps,
+                        owner, states, settings=settings, policy=policy, epoch=epoch, at=at, phase=phase)
+            return counts
+
         def work():
             started=monotonic()
             with connect() as db, db.transaction():
                 db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
                 head = live.status(db)
                 at = stamp(utc())
-                owner, states = live.authority(db, at=at)
+                owner, states = live.authority(db)
                 deps = live.dependencies(db)
                 policy = live.policy_identity()
                 settings = live.current_settings(db)
@@ -272,11 +290,13 @@ def mount(app):
                         publication=head['facts'], poll_after_ms=2000, provider_requests=0)
                 if not head['result_id']:
                     if is_fee_census:
-                        from .fee_coverage import census, source_inventory
-                        return dict(census(dict(rows=[],publication=dict(sources=states,read_at=at.isoformat())),
-                            source_inventory(db, deps)), state='initializing', cursor=cursor,
+                        empty = dict(rows=[], publication=dict(sources=states, read_at=at.isoformat()))
+                        return dict(fee_census(db, empty, deps, owner, states, at, policy=policy, epoch=epoch, settings=settings),
+                            state='initializing', cursor=cursor,
                             generation=head['generation'], result_id=None, provider_requests=0)
-                    return dict(state='initializing', publication=dict(state='initializing', sources=states),
+                    from app.storage.ordinary_projection import publication_runtime
+                    return dict(state='initializing', publication=dict(state='initializing', sources=states,
+                            data_runtime=publication_runtime(owner)),
                         cursor=cursor, generation=head['generation'], rows=[], total=0, provider_requests=0)
                 if not is_fee_census and query.get('layout')!='desk' and not req.path.endswith('/selection') and (
                         query.get('expected_cursor') and query['expected_cursor'] != cursor or
@@ -296,21 +316,31 @@ def mount(app):
                     pairs=[r for r in result['pairs'] if r['id']==selected]
                     ids={selected,*(leg for pair in pairs for leg in pair['legs'])}
                     result=dict(result,rows=[r for r in result['rows'] if r['id'] in ids],pairs=pairs)
-                captured_pairs = result['pairs']
-                result = live.project(result, deps, owner, states, at=at, policy=policy, epoch=epoch, settings=settings)
+                captured_pairs = [pair for pair in result['pairs'] if snapshots.exact_arb_pair(pair)]
+                frames = (live.sportsbook_frames(db, at) if any(
+                    (r.get('sportsbook_baseline') or {}).get('indicative') for r in result['rows'])
+                    and owner.get('config', {}).get('aggregate_provider') == 'sportsgameodds' else ())
+                result = live.project(result, deps, owner, states, at=at, policy=policy, epoch=epoch,
+                                      settings=settings, sportsbook_frames=frames)
                 timings['projection']=(monotonic()-stage)*1000
                 if is_fee_census:
-                    from .fee_coverage import census, source_inventory
-                    return dict(census(result, source_inventory(db, deps), pairs=captured_pairs, policy=policy),
+                    return dict(fee_census(db, result, deps, owner, states, at, pairs=captured_pairs,
+                        policy=policy, epoch=epoch, settings=settings),
                         state=result['publication']['state'],
                         cursor=cursor, generation=head['generation'], result_id=head['result_id'], provider_requests=0)
                 if req.path.endswith('/selection'):
                     result['publication']['count_scope']='selected_inputs'
                     row=next((r for r in [*result['rows'],*result['pairs']] if r['id']==selected),None)
                     if query.get('layout') == 'desk':
-                        from .trade_desk import EV_METRIC, METRICS, offer
-                        return dict(row=offer(row, METRICS.get(query.get('basis','reviewed'),EV_METRIC)) if row and row['kind'] == 'single' else None,
-                                    provider_requests=0)
+                        from .trade_desk import EV_METRIC, METRICS, desk_phase, direct_venue_offer, offer, phase_matches
+                        paused = states.get('sportsgameodds', {}).get('reason_code') == 'sgo_charge_unresolved'
+                        phase = desk_phase(query)
+                        basis = query.get('basis', 'sportsbooks' if phase == 'pregame' else 'reviewed')
+                        value = (offer(row, METRICS.get(basis,EV_METRIC), sportsbook_updates_paused=paused)
+                                 if row and row['kind'] == 'single' and direct_venue_offer(row) else None)
+                        if value and not phase_matches(row, phase, at):
+                            value.update(current=False, value=None, withdrawn_from_phase=True)
+                        return dict(row=value, provider_requests=0)
                     return dict(result_id=result['id'],generation=head['generation'],cursor=cursor,
                         state='removed' if row is None else 'ready' if row.get('price_current',True) else 'unavailable',
                         publication=result['publication'],assumptions=result['assumptions'],provider_requests=0,
@@ -318,8 +348,13 @@ def mount(app):
                         row=None if row is None else presented(row,{r['id']:r for r in result['rows']}))
                 stage=monotonic()
                 if query.get('layout') == 'desk':
-                    from .trade_desk import page as desk_page
+                    from .trade_desk import add_public_prices, add_sgo_prices, page as desk_page
                     out = desk_page(result, query, options, captured_pairs=captured_pairs, policy=policy, browsing=browsing)
+                    if out.get('state') == 'ready' and options[0] != 'arbs' and owner.get('config', {}).get('aggregate_provider') == 'sportsgameodds' and 'sportsgameodds' in states:
+                        add_sgo_prices(db, out, result['rows'], states, at=at,
+                                       include_retained=query.get('last_known') == '1')
+                        if out.get('phase') != 'live':
+                            add_public_prices(out, owner, at=at, include_retained=query.get('last_known') == '1')
                 else:
                     out = page(result, query, options=options)
                 if out.get('state')=='page_changed':return out
@@ -462,10 +497,23 @@ def mount(app):
                             refs[ref["id"]] = ref
                 from app.comparison.inspection_math import offer_math, offer_disclosures
                 inspection = None
+                desk = {}
                 if row['kind'] == 'single':
                     inspection = offer_math(row)
                     inspection.update(offer_disclosures(row, evidence_result['captured_at'], originals))
+                    if req.query.get('layout') == 'desk':
+                        from app.storage.store import stamp
+                        from .trade_desk import EV_METRIC, METRICS, offer
+                        authority = (row.get('current_authority') or {}).get('price') or {}
+                        reasons = authority.get('reasons', [])
+                        captured_at = evidence_result['captured_at']
+                        current_until = authority.get('current_until')
+                        captured_current = bool(current_until and stamp(captured_at) <= stamp(current_until) and not reasons)
+                        desk['desk_offer'] = offer(dict(row, price_current=captured_current,
+                            current_reasons=reasons, captured_at=captured_at, evidence_result_id=evidence_result['id']),
+                            METRICS.get(req.query.get('basis'), EV_METRIC))
                 return dict(
+                    **desk,
                     inspection=inspection,
                     result_id=result["id"],
                     evidence_result_id=evidence_result['id'],

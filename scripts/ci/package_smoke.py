@@ -152,7 +152,8 @@ for name in ('index.html', 'current.js', 'arbs.html', 'arbs.js', 'admin.html', '
              'scanner.css', 'scanner-runtime.json', 'stored.html', 'stored.js',
              'stored.css', 'ui-common.js', 'coverage-shell.js',
              'manrope.ttf', 'manrope-OFL.txt', 'barlow-semi-condensed-600.ttf',
-             'barlow-OFL.txt', 'desk.html', 'desk.js', 'desk.css', 'desk-preferences.js'):
+             'barlow-OFL.txt', 'desk.html', 'desk.js', 'desk.css', 'desk-preferences.js',
+             'opportunity-cards.js'):
     assert (root / 'opportunity_static/current' / name).is_file(), name
 assert '/env/' in str(root), root
 # Imports alone do not prove that current model evidence survived packaging.
@@ -194,9 +195,11 @@ async def smoke():
                          '/current/assets/comparison-board.js','/current/assets/board.js',
                          '/current/assets/stored.js','/current/assets/stored.css','/current/assets/board-client.js',
                          '/view/current/manrope.ttf','/view/current/ui-common.js',
+                         '/admin?section=database','/view/current/admin-database.js',
+                         '/view/current/admin-database.css',
                          '/view/current/barlow-semi-condensed-600.ttf',
                          '/view/current/desk.js','/view/current/desk.css','/view/current/desk-preferences.js',
-                         '/view/current/coverage-shell.js',
+                         '/view/current/coverage-shell.js','/view/current/opportunity-cards.js',
                          '/current/assets/board-contract.js','/current/assets/board-values.js'):
                 async with client.get(url+path) as response:
                     assert response.status==200,(path,response.status)
@@ -216,8 +219,10 @@ async def smoke():
                     state=await response.json()
                     assert state['error']=='database_unavailable',(path,state)
                     assert state['provider_requests']==0,(path,state)
-            async with client.get(url+'/') as response:
-                assert '/view/current/desk.js' in await response.text()
+            for path in ('/', '/browse-odds', '/game?game_key=smoke'):
+                async with client.get(url+path) as response:
+                    assert response.status==200,(path,response.status)
+                    assert '/view/current/desk.js' in await response.text()
             assert app[current_key].provider.__class__.__name__=='CurrentStateProvider'
     finally:
         await runner.cleanup()

@@ -139,8 +139,9 @@ def prepare_page(page):
                      unavailable_reason=quote['unavailable_reason'], source_at=quote['source_at'],
                      source_at_original=quote['source_at_original'], received_at=quote['received_at'],
                      receipt_sha256=page.receipt_sha256, fair=quote['fair'], settlement='unverified')
-        if 'consensus' in quote:
-            facts['consensus'] = quote['consensus']
+        for field in ('consensus', 'bookmaker_market_link'):
+            if field in quote:
+                facts[field] = quote[field]
         revision = hashed({k: v for k, v in facts.items() if k not in ('received_at', 'receipt_sha256')})
         rows.append(dict(id=row_id, event_id=quote['event_id'], bookmaker_id=quote['venue'],
                          source_order=str(exact_time(quote['source_at'])) if quote['source_at'] else None,
@@ -228,14 +229,16 @@ def upsert_rows(db, rows):
     return len(changed)
 
 
-def read_event(db, event_id, *, limit=MAX_ROWS):
+def read_event(db, event_id, *, limit=MAX_ROWS, bookmakers=None):
     """Read one bounded event within the caller's coherent snapshot transaction."""
     if not isinstance(event_id, str) or not event_id or len(event_id) > 256:
         raise ValueError('sgo event identity')
     if type(limit) is not int or not 1 <= limit <= MAX_ROWS:
         raise ValueError('sgo read capacity')
-    rows = db.execute('SELECT id,revision,facts FROM current_sgo_reference WHERE event_id=%s ORDER BY id LIMIT %s',
-                      (event_id, limit + 1)).fetchall()
+    params = (event_id,) if bookmakers is None else (event_id, list(bookmakers))
+    book_filter = '' if bookmakers is None else ' AND bookmaker_id=ANY(%s)'
+    rows = db.execute('SELECT id,revision,facts FROM current_sgo_reference WHERE event_id=%s'
+                      + book_filter + ' ORDER BY id LIMIT %s', (*params, limit + 1)).fetchall()
     if len(rows) > limit:
         raise ValueError('sgo event exceeds read capacity')
     return rows

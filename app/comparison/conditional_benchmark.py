@@ -5,6 +5,7 @@ from functools import lru_cache
 from hashlib import sha256
 import json
 from pathlib import Path
+from app.fees.evidence import applies, earliest_end
 from .current_dependencies import digest, instant
 from .net_costs import wire
 
@@ -59,7 +60,7 @@ def reviewed_fee(q, *, at, event, group, review=None, verified_live=False):
     try:
         evidence=review if review is not None else basis(venue,at=at)
         metric['evidence']=evidence
-        if not instant(evidence['reviewed_at'])<=at<instant(evidence['review_before']):
+        if not applies(evidence, at):
             raise ValueError('conditional_fee_review_expired_or_not_effective')
         if evidence.get('unavailable_reason'):raise ValueError(evidence['unavailable_reason'])
         live_kalshi = (verified_live and venue == 'kalshi' and q['source']['provider'] == 'kalshi'
@@ -110,7 +111,7 @@ def reviewed_fee(q, *, at, event, group, review=None, verified_live=False):
             formula='One-fill fee = round-half-even cents(0.0695 × cost × (1 − cost)); conditional net = decisive probability − cost − fee; return = 100 × net / (cost + fee).'
             label='one-contract, one-fill scenario'
             exclusions+=['account-specific rebates','split-fill fee adjustments']
-            evidence = dict(evidence, review_before=min(evidence['review_before'], CUTOVER, key=instant))
+            evidence = dict(evidence, review_before=earliest_end(evidence['review_before'], CUTOVER))
         else:
             from .snapshot_fee_scope import kalshi_scenarios, kalshi_account
             scenarios,evidence=kalshi_scenarios(q,evidence,at)
@@ -118,7 +119,7 @@ def reviewed_fee(q, *, at, event, group, review=None, verified_live=False):
             account=kalshi_account(at)
             selected=next(s for s in scenarios if s['membership']==account['membership'])
             risk=Fraction(selected['risk']);fee=Fraction(selected['fee']);receipt=Fraction(1)
-            evidence=dict(evidence,account=account,review_before=min(evidence['review_before'],account['review_before'],key=instant))
+            evidence=dict(evidence,account=account,review_before=earliest_end(evidence['review_before'],account['review_before']))
             metric['rounding_trace']=selected['rounding_trace']
             metric['resolved_terms']=selected['resolved_terms']
             label='one-contract, one-fill scenario'

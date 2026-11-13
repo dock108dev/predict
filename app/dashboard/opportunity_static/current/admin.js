@@ -3,7 +3,7 @@ import '/view/current/ui-common.js';
 import {applyTheme, readPreference, savePreference, timezone} from '/view/current/desk-preferences.js';
 const $=id=>document.getElementById(id);
 const requestedSection=new URLSearchParams(location.search).get('section');
-const adminSection=['sources','scope','usage','settings','fees'].includes(requestedSection)?requestedSection:'overview';
+const adminSection=['sources','scope','usage','settings','fees','quality','database'].includes(requestedSection)?requestedSection:'overview';
 for(const panel of document.querySelectorAll('[data-panel]'))panel.hidden=panel.dataset.panel!==adminSection;
 for(const link of document.querySelectorAll('[data-section]'))if(link.dataset.section===adminSection)link.setAttribute('aria-current','page');
 for(const zone of [...new Set(['UTC', Intl.DateTimeFormat().resolvedOptions().timeZone, ...(Intl.supportedValuesOf?.('timeZone')||[])])].sort()) {
@@ -36,11 +36,12 @@ function alternateProgress(p){
 function sgoDiagnostics(metrics){
   const {objects, provider_usage:provider, schedule_budget:pace,
     admitted_quote_clock_samples:samples, completed_refresh_polls:polls,
-    resolved_objects_last_hour:spend, resolved_objects_hour_ended_at:spendThrough} = metrics;
+    resolved_objects_last_hour:spend, resolved_objects_hour_ended_at:spendThrough,
+    alternate_refresh:alternates} = metrics;
   const accounted = objects ? objects.initial_used + objects.charged : null;
   const totals = {};
   for (const [cohort, tally] of Object.entries(samples || {})) {
-    if (cohort.endsWith(':pinnacle')) continue;
+    if (['pinnacle','fanduel','draftkings','betmgm','caesars'].includes(cohort.split(':').at(-1))) continue;
     for (const [field, count] of Object.entries(tally)) {
       totals[field] = (totals[field] || 0) + count;
     }
@@ -57,10 +58,12 @@ function sgoDiagnostics(metrics){
     ['Polling intervals', pace ? `Live ${pace.live_minutes} min · within ${pace.approaching_hours}h ${pace.approaching_minutes} min · within 12h ${pace.imminent_minutes} min · 12–72h ${pace.near_minutes} min · later ${pace.distant_minutes} min` : 'No estimate'],
     [spendThrough ? `Objects charged in the hour ending ${refreshTime(spendThrough)}` : 'Last recorded hourly charges', spend ? Object.entries(objectsByCategory).map(([category, count]) => `${count} ${category.replaceAll('_', ' ')}`).join(' · ') || '0' : 'No measurement'],
     ['Discovery', Object.entries(metrics.discovery_complete || {}).map(([league, complete]) => `${league}: ${complete ? 'complete traversal' : 'partial traversal'}`).join(' · ') || 'No traversal observed'],
+    ['Alternate-line refreshes', alternates?.resolved_requests ? `${alternates.resolved_requests} requests · ${alternates.admitted_alternate_rows} retained · ${alternates.admitted_available_alternate_rows} provider-available at receipt` : 'No alternate-line receipts'],
     ['Completed event polls since start', polls ? Object.entries(polls).map(([tier, tally]) => `${tier}: ${tally.events} · ${value(tally.between_discovery_pages)} between pages · ${tally.max_schedule_delay_seconds}s max delay`).join(' | ') : 'No poll measurements'],
     ['Exchange-labeled receipt clocks since start', samples ? `${totals.within_15_seconds || 0} of ${totals.available || 0} available within 15s at receipt` : 'No receipt measurements'],
     ['Live exchange-labeled observations since start', samples ? `${totals.live_available || 0} available · ${totals.live_post_start || 0} post-start clocks · ${value(totals.live_fresh)} fresh at receipt · ${value(totals.live_fresh_at_admission)} fresh at admission` : 'No receipt measurements'],
-    ['Live exact Pinnacle pairs since start', samples ? `${totals.live_with_exact_pinnacle_pair || 0} pairs · ${value(totals.live_with_pinnacle_clocks)} co-fresh at receipt · ${value(totals.live_with_pinnacle_clocks_at_admission)} co-fresh at admission` : 'No receipt measurements']
+    ['Live exact four-book pairs since start', samples ? `${totals.live_with_exact_sportsbook_pair || 0} offers · ${value(totals.live_with_sportsbook_clocks)} co-fresh at receipt · ${value(totals.live_with_sportsbook_clocks_at_admission)} co-fresh at admission` : 'No receipt measurements'],
+    ['Live exact Pinnacle pairs since start', samples ? `${totals.live_with_exact_pinnacle_pair || 0} offers · ${value(totals.live_with_pinnacle_clocks)} co-fresh at receipt · ${value(totals.live_with_pinnacle_clocks_at_admission)} co-fresh at admission` : 'No receipt measurements']
   ];
 }
 function sourceAction(p){
@@ -83,7 +86,7 @@ function render(s){
   const delayed=(s.sources||[]).flatMap(p=>Object.entries(p.status||{}).filter(([,v])=>v.state!=='available').map(([venue,v])=>name(venue)+': '+availability(v)));
   const healthy=s.data_runtime?.healthy!==false;
   const running=healthy&&s.dispatch_enabled;
-  $('update-state').textContent=running?'Running':healthy?'Stopped':'Data service unavailable';
+  $('update-state').textContent=running?'Running':!healthy?'Data service unavailable':s.config?.enabled===false?'Collection disabled in configuration':'Stopped';
   document.querySelector('[data-action="stop"]').hidden=!running;
   document.querySelector('[data-action="recover"]').hidden=running||!healthy;
   const q=s.quota;
@@ -94,7 +97,13 @@ function render(s){
   const supported=incident?.attempts?.length && incident.attempts.every(a=>a.status>=500&&a.status<=599&&a.reason==='quota_missing_duplicate_or_malformed');
   const recover=$('account-recovery');
   recover.hidden=!!sgo||!supported;recover.disabled=busy||!healthy||!running||!aggregate?.worker_done||s.data_runtime?.paused_sources?.includes('the_odds_api');
-  $('recovery-incident').textContent=incident?incident.attempts.map(a=>`${a.id} · HTTP ${a.status??'unknown'} · ${a.cost} credits · ${a.at}`).join('; ')+` . All ${incident.preserved_credits} credits remain held. `+(supported?'The owned service rechecks exact receipt, account, window and cleanup before one zero-credit balance observation. No missing charge is resolved.':'No supported recovery action for this incident. A new rate-limit exception requires separate authority.'):'No unresolved incident requires a new recovery action.';
+  const sgoHolds = sgo?.metrics?.object_holds || [];
+  $('recovery-incident').textContent = sgoHolds.length
+    ? sgoHolds.map(hold => `${hold.id} · ${hold.created_at} · ${hold.reserved} held · ${hold.category || 'Request type unknown'} · ${hold.provider_request_id || 'No provider request ID'}`).join(' | ')
+      + '. Reconcile each request with its provider response or charge record.'
+    : incident?incident.attempts.map(a=>`${a.id} · HTTP ${a.status??'unknown'} · ${a.cost} credits · ${a.at}`).join('; ')+` . All ${incident.preserved_credits} credits remain held. `+(supported?'The owned service rechecks exact receipt, account, window and cleanup before one zero-credit balance observation. No missing charge is resolved.':'No supported recovery action for this incident. A new rate-limit exception requires separate authority.'):'No unresolved incident requires a new recovery action.';
+  $('sgo-hold-trace').hidden = !sgoHolds.length;
+  $('sgo-hold-evidence').textContent = sgoHolds.length ? JSON.stringify(sgoHolds, null, 2) : '';
   $('recovery-outcome').textContent=(q?.recovery_probes||[]).slice(-1).map(p=>`${p.id}: ${p.state}. Next eligible scheduled slot: ${refreshTime(q.next_due_at)}.`).join('');
   const sgoState=sgo?.metrics?.state;
   const sgoReason=sgo?.metrics?.reason_code;
@@ -103,7 +112,7 @@ function render(s){
     : requestPending?'An aggregate request is in progress.':q?.blocking_reason?'Aggregate prices held: '+recoveryReason(q.blocking_reason):delayed.length?delayed.join(' · '):'Prices update automatically.';
   const configured=(s.sources||[]).length;
   const paused=(s.data_runtime?.paused_sources||[]).length;
-  $('source-count').textContent=`${Math.max(0,configured-paused)} of ${configured} collection feeds enabled`;
+  $('source-count').textContent=configured?`${Math.max(0,configured-paused)} of ${configured} collection feeds enabled`:'No source status available';
   const available=sgo ? sgoObjects?.available : q?.remaining;
   if(available==null)$('spending-summary').textContent='Balance unavailable';
   else $('spending-summary').replaceChildren(node('strong',available.toLocaleString()),node('span',sgo?' SportsGameOdds objects available above reserve':' provider credits remaining'));
@@ -123,6 +132,16 @@ function render(s){
   $('refresh-result').textContent=s.dispatch_enabled?'':'Refresh needs an active acquisition runtime. Use recovery when its checks permit a restart.';
   const novigPublic=s.metrics?.novig_public;
   const novigNative=s.metrics?.novig_native;
+  const sportsbook = s.metrics?.public_sportsbook;
+  $('public-sportsbook-status').hidden = !sportsbook;
+  if (sportsbook) {
+    $('public-sportsbook-schedule').textContent = `Target ${sportsbook.poll_target_seconds / 60} minutes · ${sportsbook.paid_objects} paid objects`;
+    $('public-sportsbook-leagues').replaceChildren(...Object.entries(sportsbook.leagues || {}).map(([league, poll]) => {
+      const received = poll.received_at ? ` · last receipt ${refreshTime(poll.received_at)}` : '';
+      const interval = poll.interval_seconds == null ? '' : ` · ${seconds(poll.interval_seconds)} between receipts`;
+      return node('li', `${league} · ${poll.completed}/${poll.attempts} polls · ${poll.reason || poll.state}${received}${interval}`);
+    }));
+  }
   $('novig-public-status').textContent=!novigPublic ? 'Novig public discovery is not running.' :
     novigPublic.state === 'initializing' ? 'Novig public discovery is waiting for its first read.' :
     `Novig public discovery: ${novigPublic.events || 0} live events observed; ${novigPublic.books || 0} books sampled. ` +
@@ -132,6 +151,9 @@ function render(s){
       (novigNative.discovery_partial ? ' (partial roster)' : '') +
       (novigNative.gap ? `. ${novigNative.gap.replaceAll('_',' ')}.` : '.') : '');
   const panels=s.sources||[];
+  $('sources-empty').hidden=!!panels.length;
+  $('sources').hidden=!panels.length;
+  $('novig-public-status').hidden=!panels.length&&!novigPublic;
   // Stable source controls and open disclosures survive polling.
   for(const p of panels){
     let card=$('source-'+p.provider);
@@ -150,6 +172,8 @@ function render(s){
 }
 const feeStateNames = {
   verified:'Verified public terms', expired:'Fee review expired', scheduled:'Verified terms awaiting their effective time',
+  market_terms_verified:'Market terms verified · PDF recheck unavailable',
+  verification_overdue:'Standing terms · source recheck overdue',
   review_required:'Explicit review required', awaiting_verification:'Awaiting first verification'
 };
 const feeErrors = {
@@ -212,12 +236,14 @@ async function refreshFeeSchedules() {
         const httpStatus = attempt?.failed_request?.http_status || attempt?.renderer?.http_status || attempt?.document?.http_status;
         pairs(facts, [
           ['Status',feeStateNames[item.state] || item.state],
-          ['Review expires',item.review_before && feeDate(item.review_before)],
+          ['Applicable through',item.review_before && feeDate(item.review_before)],
+          ['Terms',item.standing_public_terms && 'Standing public terms'],
           ['Next action',item.next_action],
           ['Last issue',item.refresh?.error && (feeErrors[item.refresh.error] || recoveryReason(item.refresh.error))],
           ['Review basis',item.review_basis],
           ['Last verified',item.last_verified_at && feeDate(item.last_verified_at)],
           ['Next check',item.next_refresh_at && feeDate(item.next_refresh_at)],
+          ['Recheck due',item.recheck_due_at && feeDate(item.recheck_due_at)],
           ['Last HTTP status',httpStatus],
           ['Rendered PDF verified',verified?.rendered_origin?.retrieved_at && feeDate(verified.rendered_origin.retrieved_at)],
           ['Last direct PDF check',item.direct_pdf?.http_status && `HTTP ${item.direct_pdf.http_status} · ${feeDate(item.direct_pdf.retrieved_at)}`],
@@ -285,5 +311,77 @@ if (adminSection === 'fees') {
   $('refresh-fee-census').onclick = () => refreshCounts();
   void refreshCounts();
 }
+async function quoteQuality(eventId) {
+  const status = $('quote-quality-status');
+  const root = $('quote-quality-results');
+  root.replaceChildren();
+  status.textContent = 'Reading stored observations…';
+  try {
+    const response = await fetch('/api/admin/quote-quality?' + new URLSearchParams(eventId ? {event_id:eventId} : {}));
+    const report = await response.json();
+    if (!response.ok) throw Error(report.reason || 'Stored observations unavailable.');
+    if (!eventId) {
+      for (const event of report.events) {
+        $('quote-quality-event').append(new Option(`${event.league} · ${event.title} · ${event.start}`, event.id));
+      }
+      status.textContent = report.events.length ? '' : 'No retained events.';
+      return;
+    }
+    status.textContent = `${report.event.title} · ${report.rows.length} direct quotes${report.truncated ? ' (limited to 500)' : ''} · SportsGameOdds receipt ${report.aggregate_received_at}`;
+    const scroll = node('div'); scroll.className = 'odds-scroll'; scroll.tabIndex = 0;
+    scroll.setAttribute('role', 'region'); scroll.setAttribute('aria-label', 'Direct and aggregate prices');
+    const table = node('table'); table.className = 'odds-matrix';
+    const header = table.createTHead().insertRow();
+    for (const label of ['Outcome', 'Direct quote', 'SportsGameOdds same line', 'Game and contract association']) {
+      const cell = node('th', label); cell.scope = 'col'; header.append(cell);
+    }
+    const body = table.createTBody();
+    for (const row of report.rows) {
+      const direct = row.native;
+      const line = direct.selection.signed_line;
+      const outcome = [direct.selection.label, direct.market.family, line].filter(value => value != null).join(' · ');
+      const tr = body.insertRow();
+      tr.append(node('th', outcome));
+      const native = tr.insertCell();
+      native.append(node('strong', `${name(direct.provider)} ${row.native_american || direct.price_value}`),
+        node('small', `Source ${direct.source_at || 'unknown'} · Receipt ${direct.received_at}`),
+        node('small', `${direct.native_market_id} · ${direct.native_outcome_id} · ${direct.native_side}`));
+      const observed = tr.insertCell();
+      for (const price of row.aggregate) {
+        observed.append(node('strong', price.price_american || 'Price unavailable'),
+          node('small', `${price.available ? 'Observed' : 'Closed'} · Source ${price.source_at || 'unknown'} · Receipt ${price.received_at}`),
+          node('small', price.odd_id));
+      }
+      if (!row.aggregate.length) observed.append(node('span', 'No retained quote for this exact side and line'));
+      tr.insertCell().textContent = ({polymarket_us_unverified:'Polymarket US mapping unverified',
+        provider_event_link:'Provider event link', schedule_and_teams:'Teams and scheduled start'})[row.event_match]
+        + ' · ' + ({unverified:'Contract unverified', exact_side_and_line_only:'Exact side and line; settlement unverified',
+          unobserved:'No aggregate contract observed'})[row.contract_match];
+    }
+    scroll.append(table);
+    root.append(scroll);
+    const retained = node('details');
+    retained.append(node('summary', 'Retained SportsGameOdds lines, fair values and links'),
+      node('pre', JSON.stringify({links:report.links, observations:report.aggregate_observations,
+        sportsbooks:report.sportsbook_observations}, null, 2)));
+    root.append(retained);
+  } catch (error) {
+    status.textContent = error.message || 'Quote comparison unavailable.';
+  }
+}
+
+if (adminSection === 'quality') {
+  $('quote-quality-event').onchange = () => { $('quote-quality-id').value = $('quote-quality-event').value; };
+  $('quote-quality-form').onsubmit = event => {
+    event.preventDefault();
+    const id = $('quote-quality-id').value.trim();
+    if (id) void quoteQuality(id);
+  };
+  void quoteQuality();
+}
 const poll = adminSection === 'fees' ? refreshFeeSchedules : refresh;
-poll();setInterval(poll,5000);
+if (adminSection === 'database') {
+  import('/view/current/admin-database.js').then(({mountDatabase}) => mountDatabase()).catch(() => {
+    $('db-status').textContent = 'Database browser could not load. Reload the page to try again.';
+  });
+} else if (adminSection !== 'quality') { poll(); setInterval(poll,5000); }

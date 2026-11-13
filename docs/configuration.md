@@ -4,6 +4,28 @@ Install the app using the [README](../README.md). The ordinary runtime uses a
 local macOS source checkout, Python with the `stream` dependencies and a dedicated
 socket-only PostgreSQL cluster. The web listener binds to loopback.
 
+## Practice without an account
+
+Follow the [README quickstart](../README.md#requirements-and-quickstart) to copy
+the acquisition-off example, create the database, and start the app role. On
+the desk, choose **Open replay**. Search for Harbor Foxes, open an offer, and
+compare its original price and calculation. Open **Arbitrage** inside the
+replay, inspect a pairing, then select **Price moves** to step forward. Practice
+has fictional inputs and a fixed clock. The two saved-capture options depend on
+files in `.local/odds-replay`.
+
+Use the header's **Odds** control for American or decimal prices. In
+**Admin → Settings**, choose a time zone or follow the device. The EV and
+Arbitrage schedule filters can override the default with Eastern or UTC. The EV
+page remembers its selected calculation basis in the browser. Synthetic replay
+has separate settings and offers the calculation bases supported by its data.
+
+On the live desk, an offer can be visible even when its reference, settlement
+terms or fee is unavailable. Clear return filters to see those prices. Arbitrage
+needs current opposing offers with compatible settlement terms. Open an offer to
+see why a calculation is missing. **Use latest prices** checks for a current
+replacement and keeps the inspected evidence pinned if the price is unavailable.
+
 ## Source configuration
 
 Copy [config/current.example.json](../config/current.example.json) to
@@ -15,10 +37,10 @@ default path. Override it with
 The app process reads the shared runtime; it does not accept source configuration.
 The launcher rejects `--current-config` for app-only starts, stop and status.
 
-- `enabled` controls all acquisition. Set it to `false` to inspect stored current
-  observations without starting source workers.
+- `enabled` controls all acquisition and is `false` in the example. Turn it on
+  when you are ready to start source workers.
 - `aggregate_enabled` controls the selected aggregate route when acquisition is
-  enabled. The sample enables native acquisition and leaves aggregate requests off.
+  enabled. The example leaves it off so you can opt into paid collection.
 - `aggregate_provider` selects `sportsgameodds` or the legacy `the_odds_api`
   route. The sample selects SportsGameOdds. Earlier configurations without
   this field keep their legacy selection.
@@ -37,12 +59,18 @@ Use Coverage and Admin to see the effect of source scope and resource settings.
 The default `duration_seconds=31536000` means operation for the app's lifetime;
 smaller valid values set a finite duration. An explicit missing path fails. If
 the default file is absent, internal defaults enable native **and aggregate**
-acquisition, so create the file deliberately.
+acquisition, so create the file deliberately. Run `scripts/opportunity-board
+check-config` before starting data. With a custom config, run
+`scripts/opportunity-board check-config --current-config PATH` and use that same
+path when starting data. The check prints the selected provider and scope from the
+validated configuration. It needs no database, credentials or network access.
 
 The SportsGameOdds worker shares its object budget across discovery and event
 refresh. Admin shows the plan, account usage, reserve, holds and pacing. The
 first-of-month UTC boundary is a provisional pacing assumption whenever the
-provider supplies no reset. Keep the existing ledger and Stop state on restart.
+provider supplies no reset. Choose sports and market scope to fit your provider
+allowance. Check **Admin → Spending** for remaining allowance, reserve and any
+unresolved charges. Keep the existing ledger and Stop state on restart.
 See [SGO operations](sportsgameodds-operations-20261110.md).
 
 The legacy Odds API route uses its own ledger and 15-minute schedule from
@@ -72,11 +100,12 @@ changes. Source pauses, explicit global Stop and uncertain accounting survive a
 data restart. Admin controls require the owning runtime's acknowledgment; a
 failed or timed-out command stays explicit. The runtime heartbeat expires after
 eight seconds. [Runtime contract](data-app-runtime-contract.md).
-There is no operating-system service or automatic restart. For foreground use,
-start PostgreSQL, then run these in separate terminals:
+There is no operating-system service. For foreground use, start PostgreSQL and
+prepare its schema, then run the roles you need in separate terminals:
 
 ```sh
 scripts/project-postgres start
+.venv/bin/python -m app.storage migrate
 .venv/bin/python -m app.collection.data_runtime
 .venv/bin/python -m app.dashboard.opportunity_board --port 8783
 ```
@@ -92,6 +121,7 @@ data ends acquisition. Both leave PostgreSQL running; use
 | `/arbs` | Stored opposing-comparison view |
 | `/scanner` | Advanced Scanner, observed episodes and selected manual tickets |
 | `/odds`, `/ev` | Observed source prices and single-trade estimates across games |
+| `/replay?dataset=practice` | Fictional opening prices and a later move for trying EV and Arbitrage without keys |
 | Details and Original | Selected calculations and original inputs; leased selections retain captured evidence when current inputs change |
 | `/admin` | Source, quota, storage and issue status; collection controls and guarded recovery |
 | `/admin/retained` | Separate finite-session and saved-capture readers |
@@ -113,9 +143,16 @@ credentials from the supported local stores.
 | Polymarket US | `prediction-arb.polymarket-us` / `retail-api` | `key_id`, `secret_key` |
 | Novig v3 | `prediction-arb.novig.v3.production` / `market-data-read` | `key_id`, `private_key_pem` (Ed25519) |
 
-Provision native records through local Keychain tooling; there is no native setup
-CLI. Fixed destinations are in `app/collection/venue_access.py`. Keep secrets out
-of sample configuration, command arguments and logs.
+Add a password item in your login keychain with the service as the item's name
+and the account from the table. Paste a single JSON object into the password
+field with the named fields for that venue. Encode PEM line breaks as `\n` inside
+the JSON string. You can also use Terminal's secure prompt, for example
+`security add-generic-password -s prediction-arb.kalshi.production -a market-data -w`.
+Paste the JSON only at the password prompt. macOS may ask you to allow the
+local Python process to read the item. In Admin Sources, check the independent
+status of each feed. A missing credential for one venue does not supply or
+replace another venue's key. Keep secrets out of sample configuration, command
+arguments and logs.
 
 For SportsGameOdds, add exactly one `SPORTSGAMEODDS_API_KEY` assignment to the
 repository's private `.env`. Copy [.env.example](../.env.example) if needed.

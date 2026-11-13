@@ -1,4 +1,4 @@
-"""Qualify a fresh rendering of the official schedule and its exact market terms."""
+"""Check the official schedule and current evidence for its reviewed market scope."""
 
 import asyncio
 from decimal import Decimal
@@ -136,38 +136,30 @@ async def qualify(approval, state, evidence, retrieve, allowed, clock):
     if direct and direct.get('url') == SOURCE:
         state['direct_pdf'] = direct
     endpoint = renderer_endpoint()
-    if endpoint is None:
-        # Keep the legacy direct receipt as a separate diagnostic. A direct
-        # response cannot by itself verify the approved rendered representation.
-        if 'direct_pdf' not in state and allowed():
-            try:
-                async with asyncio.timeout(5):
-                    _, state['direct_pdf'] = await retrieve(SOURCE, INDEX_BYTES)
-            except RetrievalFailed as exc:
-                state['direct_pdf'] = exc.receipt
-            except (httpx.HTTPError, TimeoutError, OSError):
-                state['direct_pdf'] = dict(url=SOURCE, retrieved_at=None, http_status=None)
-        raise RetrievalFailed('kalshi_renderer_unconfigured', {})
-
-    async def get(url, name, *, query=None):
+    async def get(url, name, *, query=None, fresh=True):
         if not allowed():
             raise RetrievalFailed('fee_refresh_interrupted', {})
         evidence['request_stage'] = name
         async with asyncio.timeout(5):
-            body, receipt = await retrieve(url, INDEX_BYTES, query=query, fresh=True)
+            body, receipt = await retrieve(url, INDEX_BYTES, query=query, fresh=fresh)
         evidence[name] = receipt
         return body, receipt
 
-    async def public(url, name):
+    async def public(url, name, *, fresh=True):
         await asyncio.sleep(API_SPACING_SECONDS)
-        return (await get(url, name))[0]
+        return (await get(url, name, fresh=fresh))[0]
 
     try:
         async with asyncio.timeout(ATTEMPT_SECONDS):
-            nonce = token_hex(16)
             started = clock()
-            body, receipt = await get(endpoint, 'renderer', query=urlencode({'request_id': nonce}))
-            _rendered(body, approval, nonce, started, receipt, evidence)
+            if endpoint:
+                nonce = token_hex(16)
+                body, receipt = await get(endpoint, 'renderer', query=urlencode({'request_id': nonce}))
+                _rendered(body, approval, nonce, started, receipt, evidence)
+                evidence['document_check'] = 'configured_renderer'
+            else:
+                await _direct(approval, state, evidence, get)
+            evidence['verification_scope'] = 'full_document' if 'rendered_origin' in evidence else 'market_terms_only'
 
             raw = (products.ROOT / approval['reference']).read_bytes()
             if (sha256(raw).hexdigest() != approval['reference_sha256']
@@ -187,7 +179,9 @@ async def qualify(approval, state, evidence, retrieve, allowed, clock):
             if (series_history != _history(approved['series_changes'], scope)
                     or _history(events, scope, events=True) != _history(approved['event_changes'], scope, events=True)):
                 raise ReviewRequired('kalshi_market_terms_changed')
-            rounding = await public(ROUNDING, 'rounding_document')
+            # The fixed, reviewed rounding text is served from a CDN. Keep its
+            # receipt age and require byte-independent equality with that review.
+            rounding = await public(ROUNDING, 'rounding_document', fresh=False)
             if _digest(rounding.decode()) != _digest(approved['rounding_document']):
                 raise ReviewRequired('kalshi_rounding_terms_changed')
             # The current series baseline is re-dated on renewal. If a reviewed
@@ -203,3 +197,31 @@ async def qualify(approval, state, evidence, retrieve, allowed, clock):
         raise RetrievalFailed('fee_retrieval_failed', {}) from exc
     except (ValueError, KeyError, TypeError, AttributeError, ArithmeticError) as exc:
         raise ReviewRequired('kalshi_market_terms_ambiguous') from exc
+
+
+async def _direct(approval, state, evidence, get):
+    from .kalshi_fee_renderer import render
+
+    try:
+        pdf, receipt = await get(SOURCE, 'document')
+    except RetrievalFailed as exc:
+        if exc.receipt:
+            state['direct_pdf'] = exc.receipt
+        if exc.receipt.get('http_status') not in (403, 429, 502, 503, 504):
+            raise
+        evidence['document_check'] = 'official_pdf_unavailable'
+        return
+    state['direct_pdf'] = receipt
+    try:
+        async with asyncio.timeout(5):
+            rendered, pages = await render(pdf)
+    except (FileNotFoundError, TimeoutError):
+        evidence['document_check'] = 'official_pdf_render_unavailable'
+        return
+    except (ValueError, ExceptionGroup) as exc:
+        raise ReviewRequired('kalshi_rendered_scope_ambiguous') from exc
+    digest = _digest(rendered)
+    evidence.update(rendered_pages=pages, normalized_sha256=digest)
+    if pages != approval['rendered_pages'] or digest != approval['normalized_sha256']:
+        raise ReviewRequired('kalshi_rendered_schedule_changed')
+    evidence.update(rendered_origin=receipt, document_check='direct_rendering')

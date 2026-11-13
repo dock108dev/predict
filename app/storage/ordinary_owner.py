@@ -11,6 +11,8 @@ from .current_games import utc
 class OrdinaryOwner(LatestBoardOwner):
     async def start(self):
         await asyncio.to_thread(self.retire_legacy)
+        self.service.ingress.on_sgo_admitted = self.wake.set
+        self.service.ingress.on_native_admitted = self.wake.set
         # One turn seals observations then their optional finance. No legacy
         # observation/estimate owner runs alongside this ordinary projection.
         self.task = asyncio.create_task(self.run_ordinary(), name='predict-ordinary-comparison-owner')
@@ -41,6 +43,11 @@ class OrdinaryOwner(LatestBoardOwner):
             # A completed bounded turn with known remaining work need not spend
             # another two seconds polling. The shared lane rechecks acquisition
             # pressure and Stop before admitting every successor child.
+            if completed and self.last.get('reason') == 'snapshot_operation_running':
+                # Coalesce incoming updates while a rewrite owns the slot.
+                self.wake.clear()
+                await asyncio.sleep(.25)
+                continue
             delay=.05 if completed and self.last.get('published') and self.last.get('remaining_components',0)>0 else 2
             try: await asyncio.wait_for(self.wake.wait(), timeout=delay)
             except TimeoutError: pass

@@ -29,7 +29,7 @@ def test_replay_detail_is_revision_bound_and_never_reads_live_data():
     with patch('app.storage.odds_replay.connect', side_effect=AssertionError('live data connection')):
         page = load(dict(query, frame='initial'))
         assert page['replay']['synthetic'] is True
-        assert page['coverage'] == dict(offers=2, current=2, before=2, reviewed=0, conservative=0)
+        assert page['coverage'] == dict(offers=2, current=2, before=2, reviewed=0, conservative=0, sportsbooks=0)
         (offer,) = page['rows'][0]['offers']
         selection = dict(query, id=offer['id'], result_id=offer['evidence_result_id'])
         detail = load(dict(selection, frame='initial'), details=True)

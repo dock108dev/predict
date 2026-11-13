@@ -1,9 +1,11 @@
 """Price and rank contracts for the installed EV and arbitrage lists."""
 from fractions import Fraction
 from unittest import TestCase
+from unittest.mock import Mock, patch
 
 from app.comparison.snapshot_math import before_fee_pair
-from app.dashboard.trade_desk import page
+from app.dashboard.trade_desk import add_sgo_prices, page
+from app.storage.store import stamp
 from app.storage.comparison_snapshot import before_fee_pairs
 
 
@@ -26,6 +28,75 @@ def result(*rows):
 
 
 class TradeDesk(TestCase):
+    def test_live_desk_prefers_direct_exchange_sources_even_with_retained_prices(self):
+        direct = dict(quote('direct', 'kalshi'), source={'provider': 'kalshi'})
+        aggregate = dict(quote('aggregate', 'kalshi'), source={'provider': 'sportsgameodds'})
+        other = dict(quote('novig', 'novig'), source={'provider': 'sportsgameodds'})
+        out = page(result(direct, aggregate, other), {'layout':'desk', 'last_known':'1'}, ('ev', None, 0, 10))
+        self.assertEqual({q['id'] for g in out['rows'] for q in g['offers']}, {'direct', 'novig'})
+
+    def test_native_only_sportsbook_quotes_are_displayed_without_qualifying_ev(self):
+        home = quote('native-home', 'kalshi')
+        home.update(market=dict(market='winner', period='full_game', line=None),
+                    selection=dict(participant='home', predicate='win'))
+        no = dict(home, id='native-no', selection=dict(participant='home', predicate='not_win'))
+        start = home['start_at']
+        data = result(home, no)
+        data['games'] = [dict(game_key='game', league='NBA', start_at=start, participants=[
+            dict(id='home', role='home'), dict(id='away', role='away'),
+        ])]
+        at = stamp('2026-11-08T00:55:00Z')
+        source_at = '2026-11-08T00:54:00Z'
+        event = dict(native_event_id='sgo-game', competition='NBA', scheduled_start=start, home='home', away='away')
+        fact = dict(venue='fanduel', period='game', price_american='-132', starts_at=start,
+                    source_at=source_at, received_at=source_at, league='NBA', market='moneyline',
+                    phase='pregame', side='home', line=None, odd_id='sgo-moneyline', available=True)
+        book = dict(id='book-row', revision='revision', facts=fact)
+        frame = dict(facts=dict(starts_at=start, members=[['book-row', 'revision']], received_at=source_at))
+        options = ('ev', None, 0, 10)
+        with patch('app.storage.sportsgameodds_reference.read_event_frame', return_value=frame), patch(
+                'app.storage.sportsgameodds_reference.read_event', return_value=[book]):
+            for state, retained, duplicates, expected_current in [
+                ({'state':'available'}, False, False, True),
+                ({'state':'budget_delayed', 'reason_code':'sgo_charge_unresolved'}, True, False, False),
+                ({'state':'budget_delayed', 'reason_code':'sgo_charge_unresolved'}, False, False, None),
+                ({'state':'available'}, False, True, None),
+            ]:
+                with self.subTest(state=state, retained=retained, duplicates=duplicates):
+                    db = Mock()
+                    db.execute.return_value.fetchall.return_value = [
+                        event, *([dict(event, native_event_id='another-event')] if duplicates else [])]
+                    out = page(data, {'browse_odds':'1'}, options)
+                    add_sgo_prices(db, out, data['rows'], {'sportsgameodds':state}, at=at, include_retained=retained)
+                    groups = {g['offers'][0]['id']:g for g in out['rows']}
+                    prices = groups['native-home']['sportsbook_quotes'].get('fanduel', [])
+                    self.assertEqual([p['current'] for p in prices], [] if expected_current is None else [expected_current])
+                    self.assertEqual(groups['native-no']['sportsbook_quotes'], {})
+                    self.assertIsNone(groups['native-home']['offers'][0]['value'])
+                    self.assertIsNone(groups['native-home']['score'])
+
+    def test_native_short_names_are_searchable_by_canonical_team_names(self):
+        row = quote('current', 'polymarket_us')
+        row.update(league='NHL', game_title='Hurricanes at Kraken')
+        data = result(row)
+        data['games'] = [dict(game_key='game', league='NHL', title=row['game_title'], participants=[
+            dict(id='NHL:CAR', name='Hurricanes'), dict(id='NHL:SEA', name='Kraken'),
+        ])]
+        options = ('ev', None, 0, 25)
+        for search in ('Carolina Seattle', 'Hurricanes Kraken'):
+            self.assertEqual(page(data, {'search': search}, options)['matched_offer_count'], 1)
+        self.assertEqual(page(data, {'search': 'Boston Seattle'}, options)['matched_offer_count'], 0)
+
+    def test_empty_filter_and_unavailable_rank_have_distinct_pre_threshold_counts(self):
+        options = ('ev', 'gross_return_percent', 0, 25)
+        negative = quote('negative', 'kalshi', value='-2')
+        unranked = quote('unranked', 'polymarket_us')
+        for query, expected in [({'search': 'unknown'}, (0, 0)), ({'venue': 'kalshi'}, (1, 1)),
+                                ({'venue': 'polymarket_us'}, (1, 0))]:
+            view = page(result(negative, unranked), dict(query, basis='before', positive='on'), options)
+            self.assertEqual((view['matched_offer_count'], view['ranked_group_count']), expected)
+            self.assertEqual(view['total'], 0)
+
     def test_current_unranked_outcome_precedes_retained_unranked_outcome(self):
         expired = quote('expired', 'novig', current=False)
         expired['selection']['signed_line'] = '-3.5'
@@ -37,6 +108,21 @@ class TradeDesk(TestCase):
         self.assertEqual([g['offers'][0]['id'] for g in ranked['rows']], ['current', 'expired'])
         scheduled = page(data, {'basis':'sportsbooks', 'sort':'start'}, options)
         self.assertEqual([g['offers'][0]['id'] for g in scheduled['rows']], ['expired', 'current'])
+
+    def test_browse_pages_keep_the_whole_matchup_and_filter_exact_game(self):
+        over = quote('over', 'kalshi')
+        under = quote('under', 'polymarket_us')
+        other = quote('other', 'kalshi')
+        under['selection']['signed_line'] = '2.5'
+        other['game_key'] = 'other'
+        data = result(over, under, other)
+        options = ('ev', None, 0, 1)
+        first = page(data, {'browse_odds': '1', 'positive': 'on'}, options)
+        self.assertEqual((first['row_kind'], first['total'], first['page_count']), ('games', 2, 1))
+        self.assertEqual({row['game_key'] for row in first['rows']}, {'game'})
+        self.assertEqual(len(first['rows']), 2)
+        selected = page(data, {'browse_odds': '1', 'game_key': 'other'}, options)
+        self.assertEqual([row['game_key'] for row in selected['rows']], ['other'])
 
     def test_sportsbook_mode_keeps_rank_separate_from_qualified_ev(self):
         first = quote('sgo', 'novig')
@@ -52,6 +138,16 @@ class TradeDesk(TestCase):
         self.assertEqual(view['rows'][0]['offers'][0]['sportsbook']['book'], 'fanduel')
         self.assertIsNone(view['rows'][0]['offers'][1]['value'])
 
+    def test_qualified_sgo_rank_is_independent_of_historical_reference_setting(self):
+        from app.comparison.sgo_reference import BEST_VERSION
+
+        row = quote('current', 'kalshi', value='8')
+        row['reference_calculation'] = dict(available=True, method=BEST_VERSION, venue='fanduel')
+        row['current_authority']['reference_method'] = BEST_VERSION
+        published = dict(result(row), assumptions={'benchmark_venue':'novig'})
+        view = page(published, {'basis':'before','positive':'on'}, ('ev',None,0,25))
+        self.assertEqual(view['rows'][0]['score'], '8')
+
     def test_aggregate_venue_keeps_provider_attribution(self):
         row = quote('sgo', 'kalshi')
         row['source'] = {'provider': 'sportsgameodds'}
@@ -59,7 +155,7 @@ class TradeDesk(TestCase):
         self.assertEqual(view['rows'][0]['offers'][0]['source_provider'], 'sportsgameodds')
 
     def test_ev_groups_exact_lines_and_keeps_unknowns_out_of_rank(self):
-        first = quote('first', 'kalshi', value='8')
+        first = dict(quote('first', 'kalshi', value='8'), probability='100/223')
         second = quote('second', 'polymarket_us', value='0')
         retained = quote('retained', 'novig', value='99', current=False)
         other = quote('other', 'kalshi', value='-2')
@@ -70,7 +166,7 @@ class TradeDesk(TestCase):
         self.assertEqual([g['score'] for g in view['rows']], ['8', '-2'])
         offers = view['rows'][0]['offers']
         self.assertEqual([q['value'] for q in offers], ['8', '0', None])
-        self.assertEqual(offers[0]['reference']['american'], '+110')
+        self.assertEqual(offers[0]['reference']['american'], '+123')
         self.assertEqual(offers[2]['reason'], 'Price expired')
         self.assertEqual(page(data, {'positive': 'on','basis':'before'}, options)['total'], 1)
 
@@ -93,15 +189,52 @@ class TradeDesk(TestCase):
         c = quote('c', 'polymarket_us', threshold=3)
         d = quote('d', 'kalshi', threshold=2, operator='le')
         c['cost_per_normal_claim'] = d['cost_per_normal_claim'] = '5/9'
+        for row in (a, b, c, d):
+            row.update(source={'provider': 'practice'}, trade_fee=dict(available=True,
+                classification='synthetic', evidence={'fictional_rate': '0.01'},
+                fee_cashflows={'at_fill_usd': '0.01'}))
         pairs = [dict(left, id=f'pair-{left["id"]}', legs=[left['id'], right['id']],
                       before_fees=before_fee_pair(left, right, 'spread')) for left, right in ((c, d), (a, b))]
         options = ('arbs', 'gross_return_percent', 0, 25)
-        view = page(result(a, b, c, d), {'positive': 'on', 'stake': '100', 'profit': '10'}, options,
+        view = page(result(a, b, c, d), {'positive': 'on', 'stake': '100', 'profit': '9'}, options,
                     captured_pairs=pairs, policy='policy')
         self.assertEqual([p['value'] for p in view['rows'][0]['pairs']], ['10', '-10'])
+        self.assertEqual(Fraction(view['rows'][0]['score']), Fraction(900, 101))
+        self.assertEqual(page(result(a, b, c, d), {'positive': 'on', 'profit': '10'}, options,
+                              captured_pairs=pairs, policy='policy')['total'], 0)
         a['price_current'] = False
         self.assertEqual(page(result(a, b, c, d), {'positive': 'on'}, options,
                               captured_pairs=pairs, policy='policy')['total'], 0)
+
+    def test_arb_does_not_combine_pregame_and_live_legs(self):
+        left = quote('a', 'kalshi', threshold=3)
+        right = quote('b', 'polymarket_us', threshold=2, operator='le')
+        left['game_state'], right['game_state'] = 'live', 'scheduled'
+        pair = dict(left, id='pair', legs=['a','b'], before_fees=before_fee_pair(left, right, 'spread'))
+        view = page(result(left, right), {}, ('arbs', None, 0, 25), captured_pairs=[pair], policy='policy')
+        self.assertEqual(view['eligible_pair_count'], 0)
+
+    def test_ranked_arb_uses_funded_minimum_and_keeps_zero_and_losses(self):
+        rows, pairs = [], []
+        for key, cost, fee in (
+                ('gross-first', '5/11', '0.06'), ('net-first', '25/54', '0'),
+                ('even', '1/2', '0'), ('loss', '5/9', '0')):
+            left = quote(f'{key}-first', 'novig', threshold=3)
+            right = quote(f'{key}-second', 'prophetx', threshold=2, operator='le')
+            for row in (left, right):
+                row.update(game_key=key, cost_per_normal_claim=cost, source={'provider': 'practice'},
+                           trade_fee=dict(available=True, classification='synthetic',
+                                          evidence={'fictional_rate': fee}, fee_cashflows={'at_fill_usd': '0'}))
+            rows.extend((left, right))
+            pairs.append(dict(left, id=f'{key}-pair', legs=[left['id'], right['id']],
+                              before_fees=before_fee_pair(left, right, key)))
+        options = ('arbs', None, 0, 25)
+        data = result(*rows)
+        ranked = page(data, {'ranked': '1'}, options, captured_pairs=pairs, policy='policy')
+        self.assertEqual([group['id'] for group in ranked['rows']], ['net-first', 'gross-first', 'even', 'loss'])
+        self.assertEqual([Fraction(group['score']) for group in ranked['rows']], [8, Fraction(200, 53), 0, -10])
+        positive = page(data, {'ranked': '1', 'positive': 'on'}, options, captured_pairs=pairs, policy='policy')
+        self.assertEqual(positive['total'], 2)
 
     def test_price_only_opposites_do_not_need_a_reference_or_fee_settings(self):
         a = quote('a', 'kalshi', threshold=3)
@@ -110,6 +243,7 @@ class TradeDesk(TestCase):
             row.pop('reference')
             row['binding'] = {'verified': True}
             row['common_odds'] = {'supported': True}
+            row['occurrence_match'] = dict(status='matched', estimated=False, method='shared_provider_id')
             row['native_contract'] = {'same_outcome': {'predicate': {
                 'domain': 'home_margin', 'operator': operator, 'threshold': '5/2', 'subject_id': None}}}
         (pair,) = before_fee_pairs([a, b])

@@ -8,13 +8,24 @@ from hashlib import sha256
 import json
 from pathlib import Path
 
-from .sgo_reference import capture_witness, _time, _digest, ContributorFrameWitness
+from .sgo_reference import capture_witness, _time, _line
 
 ROOT=Path(__file__).resolve().parents[2]
 RULES=ROOT/'app/fixtures/sgo-reviewed-market-rules-20261110.json'
 BINDINGS=ROOT/'app/fixtures/sgo-reviewed-jurisdiction-bindings.json'
 FIELDS=('provider','venue','jurisdiction','event_id','odd_id','frame_id','league','market','period')
 SETTLEMENT='nba-completed-two-way-winner-including-overtime'
+
+
+def settlement_key(league, market, period):
+    from .line_reference import scoring
+
+    scoring(league)
+    if period != 'game' or market not in ('moneyline', 'spread', 'total'):
+        raise ValueError('unreviewed reference settlement scope')
+    if (league, market) == ('NBA', 'moneyline'):
+        return SETTLEMENT
+    return f'{league.lower()}-completed-two-way-{market}-full-game-score'
 
 
 class ReviewedBindings:
@@ -30,6 +41,14 @@ class ReviewedBindings:
             identity={k:item.get(k) for k in FIELDS}
             if any(not isinstance(v,str) or not v or len(v)>256 for v in identity.values()):
                 raise ValueError('exact jurisdiction binding required')
+            if identity['market'] in ('spread', 'total'):
+                line = item.get('line')
+                if line is None:
+                    raise ValueError('exact jurisdiction line required')
+                _line(line)
+                identity['line'] = line
+            elif item.get('line') is not None:
+                raise ValueError('unexpected jurisdiction line')
             path=(self.root/item['evidence_path']).resolve()
             if not path.is_relative_to(self.root) or not path.is_file() or path.stat().st_size>131072:
                 raise ValueError('jurisdiction evidence path invalid')
@@ -39,7 +58,7 @@ class ReviewedBindings:
             evidence=json.loads(body)
             if (evidence.get('kind')!='reviewed_source_market_jurisdiction'
                     or evidence.get('identity')!=identity or not evidence.get('source_url','').startswith('https://')
-                    or evidence.get('normal_scoring')!=SETTLEMENT
+                    or evidence.get('normal_scoring')!=settlement_key(identity['league'],identity['market'],identity['period'])
                     or evidence.get('specific_market_terms_reviewed') is not True):
                 raise ValueError('jurisdiction evidence identity conflict')
             _time(item['reviewed_at']);_time(item['effective_from'])
@@ -52,6 +71,8 @@ class ReviewedBindings:
         matches=[]
         for identity,item in self.rows:
             if any(identity[k] != quote.get(k) for k in FIELDS if k!='jurisdiction'):
+                continue
+            if 'line' in identity and _line(identity['line']) != _line(quote.get('line')):
                 continue
             if (_time(item['reviewed_at'])<=clock and _time(item['effective_from'])<=clock
                     and (item.get('effective_until') is None or clock<_time(item['effective_until']))):
@@ -70,40 +91,46 @@ def reviewed_median(quotes, contract, *, at, evaluated_venue, registry):
     The calling owner must first independently qualify the native occurrence,
     contract and scoring scope. This function cannot create native evidence.
     """
+    return _reviewed_reference(quotes, contract, at=at, evaluated_venue=evaluated_venue,
+                               registry=registry, best_payout=False)
+
+
+def reviewed_best_payout(quotes, contract, *, at, evaluated_venue, registry):
+    return _reviewed_reference(quotes, contract, at=at, evaluated_venue=evaluated_venue,
+                               registry=registry, best_payout=True)
+
+
+def _reviewed_reference(quotes, contract, *, at, evaluated_venue, registry, best_payout):
     unavailable=lambda reason: ({'available':False,'reason':reason,'contributors':[],'exclusions':{}},None)
-    rules=json.loads(RULES.read_text())
-    if (_time(at)<_time(rules['reviewed_at']) or contract.get('league')!='NBA'
-            or contract.get('market')!='moneyline' or contract.get('period')!='game'
-            or contract.get('settlement')!=SETTLEMENT or not contract.get('occurrence_evidence')
+    rules_body = RULES.read_bytes()
+    rules=json.loads(rules_body)
+    rule_sha = sha256(rules_body).hexdigest()
+    try:
+        settlement = settlement_key(contract.get('league'), contract.get('market'), contract.get('period'))
+    except ValueError:
+        settlement = None
+    if (_time(at)<_time(rules['reviewed_at']) or not settlement
+            or not best_payout and settlement != SETTLEMENT
+            or contract.get('settlement')!=settlement or not contract.get('occurrence_evidence')
             or not contract.get('settlement_evidence')):
-        return unavailable('reviewed_median_native_or_rule_scope_unavailable')
-    if not isinstance(registry,ReviewedBindings):
-        return unavailable('reviewed_jurisdiction_registry_unavailable')
-    qualified=[];excluded={}
-    for raw in quotes:
-        q=dict(raw)
-        try:
-            match=registry.resolve(q,at)
+        return unavailable('sgo_reference_settlement_unverified' if best_payout else 'reviewed_median_native_or_rule_scope_unavailable')
+    def qualify_pair(pair):
+        if not isinstance(registry, ReviewedBindings):
+            raise ValueError('reviewed_jurisdiction_registry_unavailable')
+        qualified = []
+        for quote in pair:
+            match = registry.resolve(quote, at)
             if not match:
                 raise ValueError('exact_jurisdiction_binding_unavailable')
-            identity, review=match
-            rule=rules['profiles'].get(identity['venue']+':'+identity['jurisdiction'])
-            if not rule:
+            identity, review = match
+            rule = rules['profiles'].get(identity['venue'] + ':' + identity['jurisdiction'])
+            if not rule or settlement not in rule.get('normal_scoring', [SETTLEMENT]):
                 raise ValueError('jurisdiction_rules_unreviewed')
-            q['settlement']=SETTLEMENT
-            q['settlement_evidence']='jurisdiction-review:'+review['evidence_sha256']+';rules:'+sha256(RULES.read_bytes()).hexdigest()
-            q['jurisdiction']=identity['jurisdiction']
-            q['rule_source']=rule['source']
-            q['rule_reviewed_at']=rules['reviewed_at']
-            qualified.append(q)
-        except (KeyError,TypeError,ValueError,ArithmeticError) as exc:
-            excluded[q.get('venue','unknown')]=str(exc)
-    result,witness=capture_witness(qualified,contract,at=at,evaluated_venue=evaluated_venue)
-    result['exclusions'].update(excluded)
-    if witness is not None:
-        payload=json.loads(witness.wire)
-        payload['basis']['exclusions'].update(excluded)
-        payload['basis_sha256']=_digest(payload['basis'])
-        result['basis']=payload['basis'];result['basis_sha256']=payload['basis_sha256']
-        witness=ContributorFrameWitness(json.dumps(payload,sort_keys=True,separators=(',',':'),ensure_ascii=False))
-    return result,witness
+            qualified.append(dict(quote, settlement=settlement,
+                settlement_evidence='jurisdiction-review:' + review['evidence_sha256'] + ';rules:' + rule_sha,
+                jurisdiction=identity['jurisdiction'], rule_source=rule['source'],
+                rule_reviewed_at=rules['reviewed_at']))
+        return qualified
+
+    return capture_witness(quotes, contract, at=at, evaluated_venue=evaluated_venue,
+                           best_payout=best_payout, qualify_pair=qualify_pair)

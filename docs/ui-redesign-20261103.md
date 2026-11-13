@@ -1,5 +1,9 @@
 # Approved Predict interface — November 3, 2026
 
+The owner-approved [November 12 interface direction](live-comparison-plan-20261104.md#november-12--compare-every-venue-on-the-line)
+governs the ranked dashboard, game view and concise financial inspection. The
+November 3 design record below remains the dated approval.
+
 ## Current planning authority — November 4, 2026
 
 The owner has since selected grouped book rows, after-fee outcome ranking, an automatically updating list and a pinned math drawer. See [November 4 decisions](live-comparison-plan-20261104.md). Keep this approved November 3 record as historical evidence. The requested new visual polish is a proposal, not a retroactive change to this approval.

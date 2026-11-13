@@ -5,6 +5,7 @@ from dataclasses import replace
 from datetime import datetime,timezone
 from datetime import timedelta
 import json
+import time
 from types import SimpleNamespace
 import unittest
 from unittest.mock import patch, AsyncMock
@@ -60,7 +61,7 @@ class WorkerControls(unittest.IsolatedAsyncioTestCase):
             async def recv(self,receiver,timeout):
                 await asyncio.sleep(timeout);raise TimeoutError()
             async def close(self):self.closed=True
-        def choose(markets,catalog,at,offset):
+        def choose(markets,catalog,at,offset,*,phase_events):
             selections.append(offset)
             return markets,dict(deferred_markets=1,active_markets=1)
         with patch('app.collection.current_native.connect',Connector),patch('app.collection.current_native.call',new=AsyncMock()),patch('app.collection.native_reconstruction.Reconstruction',Child),patch('app.collection.native_priority.select',side_effect=choose),patch('app.collection.native_priority.ROTATE_SECONDS',.03):
@@ -349,6 +350,144 @@ class WorkerControls(unittest.IsolatedAsyncioTestCase):
         finally:
             worker.stream_task.cancel();await asyncio.gather(worker.stream_task,return_exceptions=True)
 
+    async def test_kalshi_tail_rotation_retires_only_the_outgoing_member_on_the_same_sid(self):
+        from app.adapters.kalshi_stream import BookReconstructor
+        service=SimpleNamespace(config=deepcopy(DEFAULT),dispatch=True,invalidate_markets=object(),
+                                deadline=asyncio.get_running_loop().time()+10)
+        worker=NativeWorker(service,'kalshi')
+        hot, retired, added=(market(mid) for mid in ('HOT','TAIL-OLD','TAIL-NEW'))
+        worker.markets={m.raw.ref.market_id:m for m in (hot,retired,added)}
+        worker.lifecycle.leases={mid:dict(selection=dict(event=dict(id=m.raw.ref.event_id)),image_current=mid!='TAIL-NEW')
+                                 for mid,m in worker.markets.items()}
+        worker.lifecycle_initialized=True
+        worker.lifecycle.signature=lambda: 'whole-catalog'
+        worker.active_engine=BookReconstructor([hot,retired]);worker.active_engine.sid=7
+        worker.socket=SimpleNamespace(send=AsyncMock(),close=AsyncMock())
+        worker.reconstruction=SimpleNamespace(reconfigure=AsyncMock())
+        worker.stream_markets=[hot,retired]
+        worker.stream_market_index={'HOT':hot,'TAIL-OLD':retired}
+        worker.stream_seen={'HOT','TAIL-OLD'};worker.stream_isolated=set()
+        worker.stream_snapshot_requests={'TAIL-OLD':(1,'old')}
+        worker.synchronization.begin(1,worker.stream_seen);worker.synchronization.acknowledge(7)
+        for mid in worker.stream_seen:worker.synchronization.image(mid)
+        worker.synchronization.persist(1,worker.stream_seen)
+        worker.metrics['connections']=1
+        with patch('app.collection.native_priority.select',return_value=([hot,added],{'deferred_markets':1})), \
+                patch('app.collection.current_native.call',new=AsyncMock()) as invalidate:
+            assert await worker.rotate_kalshi_priority()
+            invalidate.assert_awaited_once_with(service,service.invalidate_markets,'kalshi',
+                                                [(retired.raw.ref.event_id,'TAIL-OLD')])
+            assert not await worker.rotate_kalshi_priority()  # No new rotation ahead of an outstanding ordered delete ACK.
+        messages=[json.loads(sent.args[0]) for sent in worker.socket.send.await_args_list]
+        assert [msg['params']['action'] for msg in messages]==['delete_markets','add_markets']
+        assert [msg['params']['market_tickers'] for msg in messages]==[['TAIL-OLD'],['TAIL-NEW']]
+        assert all(msg['params']['sids']==[7] for msg in messages)
+        assert worker.active_engine.retiring=={'TAIL-OLD':messages[0]['id']}
+        assert worker.stream_snapshot_requests['TAIL-NEW'][0]==messages[1]['id']
+        assert 'TAIL-OLD' not in worker.stream_snapshot_requests
+        assert worker.synchronization.images==worker.synchronization.persisted=={'HOT'}
+        assert worker.synchronization.members=={'HOT','TAIL-NEW'}
+        assert worker.lifecycle.leases['HOT']['image_current'] and not worker.lifecycle.leases['TAIL-OLD']['image_current']
+        assert set(worker.markets)=={'HOT','TAIL-OLD','TAIL-NEW'}
+        assert worker.metrics['connections']==1 and worker.priority_cursor==1
+        worker.socket.close.assert_not_awaited()
+
+    async def test_kalshi_quiet_snapshot_requests_only_durable_live_quiet_members(self):
+        service=SimpleNamespace(config=deepcopy(DEFAULT),dispatch=True,deadline=time.monotonic()+10)
+        worker=NativeWorker(service,'kalshi')
+        now=datetime.now(timezone.utc)
+        old=(now-timedelta(seconds=20)).isoformat()
+        fresh=(now-timedelta(seconds=1)).isoformat()
+        quiet=[f'QUIET-{i:02}' for i in range(30)]
+        excluded=('FRESH-PRICE','FRESH-CONFIRMATION','FRESH-ORDERED','PREGAME','UNKNOWN','UNRESOLVED',
+                  'UNSEEN','NOT-DURABLE','BLOCKED','QUARANTINED','INACTIVE','ISOLATED')
+        for mid in (*quiet,*excluded,'OLD-GAME'):
+            candidate=market(mid)
+            event={'PREGAME':'FUTURE','UNKNOWN':'UNKNOWN','UNRESOLVED':'UNRESOLVED','OLD-GAME':'YESTERDAY'}.get(mid,'LIVE')
+            candidate=replace(candidate,raw=replace(candidate.raw,ref=replace(candidate.raw.ref,event_id=event)))
+            if mid=='INACTIVE':candidate=replace(candidate,state=MarketState.CLOSED)
+            worker.markets[mid]=candidate
+            worker.lifecycle.leases[mid]=dict(image_current=True,selection=dict(event=dict(id=event)))
+            source=(now-timedelta(minutes=5)).isoformat() if mid=='OLD-GAME' else fresh if mid=='FRESH-PRICE' else old
+            worker.lifecycle.books[mid]=dict(original_source_at=source,generation=1)
+        worker.catalog['events']=[dict(id=eid,identity='unresolved' if eid=='UNRESOLVED' else 'resolved',
+            scheduled_start=(now+timedelta(minutes=2) if eid=='FUTURE' else now-timedelta(minutes=20)).isoformat(),
+            status=dict(live=eid in ('LIVE','UNRESOLVED'))) for eid in ('LIVE','FUTURE','UNKNOWN','UNRESOLVED')]
+        worker.catalog['events'].append(dict(id='YESTERDAY',identity='resolved',status={'live':True},
+            scheduled_start=(now-timedelta(hours=16)).isoformat()))
+        worker.lifecycle_initialized=True
+        worker.active_engine=SimpleNamespace(sid=7,seq=19,retiring={})
+        worker.socket=SimpleNamespace(send=AsyncMock())
+        worker.stream_market_index=worker.markets
+        worker.stream_snapshot_requests={}
+        worker.stream_seen=set(worker.markets)-{'UNSEEN'}
+        worker.stream_isolated={'ISOLATED'}
+        worker.subscription_blocked={'BLOCKED'}
+        worker.material_quarantine={'QUARANTINED':{}}
+        worker.confirmations.latest['FRESH-CONFIRMATION']=dict(confirmed_at=fresh)
+        worker.source_highwater['FRESH-ORDERED']=now.timestamp()-1
+        worker.synchronization.begin(1,worker.markets)
+        worker.synchronization.acknowledge(7,19)
+        worker.synchronization.persist(1,set(worker.markets)-{'NOT-DURABLE'})
+
+        worker.active_engine.retiring={'RETIRED':1}
+        await worker.reconfirm_kalshi_quiet_books()
+        worker.socket.send.assert_not_awaited()
+        worker.active_engine.retiring={}
+        worker.metrics['receive_backpressure_active']=True
+        await worker.reconfirm_kalshi_quiet_books()
+        worker.socket.send.assert_not_awaited()
+        worker.metrics['receive_backpressure_active']=False
+        await worker.reconfirm_kalshi_quiet_books()
+        await worker.reconfirm_kalshi_quiet_books()
+        worker.socket.send.assert_awaited_once()
+        sent=json.loads(worker.socket.send.await_args.args[0])
+        assert sent['cmd']=='update_subscription'
+        assert sent['params']==dict(sids=[7],market_tickers=quiet[:24],action='get_snapshot')
+        assert worker.metrics['quiet_snapshot_requested']==24
+        assert set(worker.stream_snapshot_requests)==set(quiet[:24])
+        assert all(value[0]==sent['id'] and value[2:4]==(7,19) for value in worker.stream_snapshot_requests.values())
+        service.paused_sources={'kalshi'}
+        with self.assertRaises(asyncio.CancelledError):
+            await worker.reconfirm_kalshi_quiet_books()
+        worker.socket.send.assert_awaited_once()
+
+    async def test_kalshi_quiet_snapshot_correlates_actual_provider_clock_without_renewing_original(self):
+        from app.collection.current_confirmation import content, validate
+
+        service=SimpleNamespace(config=deepcopy(DEFAULT),dispatch=True,deadline=time.monotonic()+10)
+        worker=NativeWorker(service,'kalshi')
+        now=datetime.now(timezone.utc)
+        requested=now-timedelta(milliseconds=100)
+        old=(now-timedelta(seconds=20)).isoformat()
+        received=now+timedelta(milliseconds=10)
+        book=dict(raw=dict(ref=dict(venue='kalshi',event_id='E',market_id='M'),
+                           exchange_at=None,received_at=received.isoformat()),
+                  outcomes=[],state='active',sync='synchronized',quantity_unit='contracts')
+        worker.lifecycle.leases['M']=dict(selection=dict(event=dict(id='E')))
+        worker.lifecycle.begin_connection(1)
+        worker.lifecycle.books['M']=dict(original_source_at=old,content_sha256=content(book))
+        worker.confirmations.begin(1)
+        request=(1000001,requested.isoformat(),7,19,time.monotonic()+8)
+        worker.stream_snapshot_requests={'M':request}
+        image=dict(type='orderbook_snapshot',sid=7,seq=20,msg={'market_ticker':'M'},
+                   sending_ts_ms=int(now.timestamp()*1000))
+        for changes in (dict(sid=8),dict(seq=19),dict(sending_ts_ms=int((now-timedelta(seconds=1)).timestamp()*1000)),
+                        dict(msg={'market_ticker':'OTHER'}),dict(sending_ts_ms=None)):
+            assert worker.take_snapshot_request('M',dict(image,**changes),received) is None
+            assert worker.stream_snapshot_requests['M']==request
+        assert worker.take_snapshot_request('M',image,received)==request
+        proof=worker.confirmations.observe(book,image,b'actual complete ordered frame',generation=1,
+            request_id=request[0],requested_at=request[1],sid=7,sequence=20)
+        assert proof['confirmed_at'] != old and proof['request_id']=='1000001'
+        validate(proof,book['raw']['ref'],book)
+        assert worker.lifecycle.admit_book(book,generation=1)['raw']['exchange_at']==old
+        assert worker.metrics['quiet_snapshot_correlated']==1
+        assert worker.metrics['quiet_snapshot_uncorrelated']==5
+        worker.stream_snapshot_requests['M']=(*request[:4],None)
+        assert worker.take_snapshot_request('M',image,received) is None
+        assert worker.stream_snapshot_requests['M'][4] is None
+
     async def test_catalog_group_replacement_keeps_socket_and_waits_for_new_request_images(self):
         from app.adapters.polymarket_us_stream import MarketStream
         service=SimpleNamespace(config=deepcopy(DEFAULT),dispatch=True,deadline=asyncio.get_running_loop().time()+10)
@@ -376,6 +515,60 @@ class WorkerControls(unittest.IsolatedAsyncioTestCase):
             self.assertIsNone(worker.subscription_transition);worker.socket.close.assert_not_awaited()
         finally:
             worker.stream_task.cancel();await asyncio.gather(worker.stream_task,return_exceptions=True)
+
+    async def test_pmus_tail_rotation_waits_for_every_ack_and_keeps_hot_request(self):
+        from app.collection.current_native import CatalogResync
+
+        service=SimpleNamespace(config=deepcopy(DEFAULT),dispatch=True,invalidate_markets=object(),
+                                deadline=asyncio.get_running_loop().time()+10)
+        worker=NativeWorker(service,'polymarket_us')
+        hot={'HOT-A','HOT-B'}
+        old={'TAIL-A','TAIL-B'}
+        added={'TAIL-C','TAIL-D'}
+        worker.markets={mid:SimpleNamespace(raw=SimpleNamespace(ref=SimpleNamespace(market_id=mid,event_id='game')))
+                        for mid in hot|old|added}
+        worker.lifecycle.leases={mid:dict(image_current=mid in hot|old) for mid in worker.markets}
+        worker.lifecycle_initialized=True
+        worker.lifecycle.signature=lambda: 'whole-catalog'
+        worker.socket=SimpleNamespace(send=AsyncMock(),close=AsyncMock())
+        worker.reconstruction=SimpleNamespace(reconfigure=AsyncMock())
+        worker.stream_hot_markets=set(hot)
+        worker.stream_market_index={mid:worker.markets[mid] for mid in hot|old}
+        worker.stream_markets=list(worker.stream_market_index.values())
+        worker.stream_seen=hot|old;worker.stream_isolated=set()
+        worker.subscription_groups={'hot':['HOT-A','HOT-B'],'tail-a':['TAIL-A'],'tail-b':['TAIL-B']}
+        worker.active_engine=SimpleNamespace(markets=dict(worker.stream_market_index), retired_requests=set(),
+            market_requests={mid:rid for rid,members in worker.subscription_groups.items() for mid in members})
+        worker.synchronization.begin(1,worker.stream_seen);worker.synchronization.acknowledge('connection')
+        for mid in worker.stream_seen:worker.synchronization.image(mid)
+        worker.synchronization.persist(1,worker.stream_seen)
+        chosen=[worker.markets[mid] for mid in sorted(hot)+sorted(added)]
+        with patch('app.collection.native_priority.select',return_value=(chosen,{'deferred_markets':2})), \
+                patch('app.collection.current_native.call',new=AsyncMock()) as invalidate, \
+                patch('app.collection.native_subscriptions.market_slug',side_effect=lambda m: m.raw.ref.market_id), \
+                patch('app.adapters.polymarket_us.market_slug',side_effect=lambda m: m.raw.ref.market_id):
+            assert await worker.begin_pmus_priority()
+            invalidate.assert_awaited_once_with(service,service.invalidate_markets,'polymarket_us',
+                                                [('game','TAIL-A'),('game','TAIL-B')])
+            first=[json.loads(sent.args[0]) for sent in worker.socket.send.await_args_list]
+            assert first==[{'unsubscribe':{'requestId':'tail-a'}},{'unsubscribe':{'requestId':'tail-b'}}]
+            assert worker.synchronization.images==worker.synchronization.persisted==hot
+            worker.acknowledge_pmus_priority({'requestId':'hot','unsubscribed':True})
+            worker.acknowledge_pmus_priority({'requestId':'tail-a','unsubscribed':True})
+            assert worker.pmus_priority_pending['awaiting']=={'tail-b'}
+            with self.assertRaises(CatalogResync):
+                worker.acknowledge_pmus_priority({'requestId':'tail-b','unsubscribed':False})
+            assert worker.socket.send.await_count==2
+            worker.acknowledge_pmus_priority({'requestId':'tail-b','unsubscribed':True})
+            await worker.finish_pmus_priority()
+        commands=[json.loads(sent.args[0]) for sent in worker.socket.send.await_args_list]
+        assert len(commands)==3 and set(commands[-1]['subscribe']['marketSlugs'])==added
+        assert worker.subscription_groups['hot']==['HOT-A','HOT-B']
+        assert worker.synchronization.members==hot|added and worker.synchronization.images==hot
+        assert worker.stream_seen==hot and worker.pmus_priority_pending is None
+        assert worker.active_engine.retired_requests=={'tail-a','tail-b'}
+        assert worker.metrics['priority_last_rotation']['acknowledged_groups']==2
+        worker.socket.close.assert_not_awaited()
 
     async def test_transient_rediscovery_failure_keeps_owned_healthy_socket(self):
         from app.collection.odds_http import BudgetStop

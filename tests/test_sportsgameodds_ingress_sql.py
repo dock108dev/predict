@@ -19,6 +19,23 @@ from tests.test_ev09_n01 import AT
 
 @skipUnless(SOCKET, 'Disposable PostgreSQL required')
 class SportsGameOddsAtomicIngress(LatestBoardFixture):
+    async def test_live_ev_write_clock_requires_fresh_prices_at_seal(self):
+        from datetime import timedelta
+
+        from app.storage.delivery_clocks import published, recent, sgo_admitted
+
+        with self.connect() as db, db.transaction(force_rollback=True):
+            at = db.execute('SELECT clock_timestamp() at').fetchone()['at']
+            received = at.isoformat()
+            sgo_admitted(db, {'NHL', 'NBA'}, received)
+            published(db, [('sportsgameodds', league, received) for league in ('NHL', 'NBA')],
+                      live_sportsbook=[('NHL', received, (at + timedelta(minutes=1)).isoformat()),
+                                       ('NBA', received, (at - timedelta(seconds=1)).isoformat())])
+            rows = {row['league']: row for row in recent(db) if row['received_at'] == received}
+            assert rows['NBA']['first_publication_write_at']
+            assert rows['NBA']['first_live_sportsbook_write_at'] is None
+            assert rows['NHL']['first_live_sportsbook_write_at']
+
     async def test_history_rotates_oldest_at_capacity(self):
         from app.storage.sportsgameodds_reference import archive_revisions
         from app.storage.store import encoded

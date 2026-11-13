@@ -12,6 +12,8 @@ import json
 import re
 from urllib.parse import urlsplit
 
+from app.comparison.sgo_reference import BEST_BOOKS
+
 LEAGUES = frozenset(('NFL', 'NCAAF', 'NBA', 'NCAAB', 'MLB', 'NHL'))
 MARKETS = {'ml': 'moneyline', 'sp': 'spread', 'ou': 'total'}
 MAX_PAGE_BYTES = 16 * 1024 * 1024
@@ -19,6 +21,7 @@ MAX_EVENTS = 100
 MAX_ODDS_PER_EVENT = 20000
 MAX_BOOKS_PER_ODD = 200
 P2P_BOOKS = frozenset(('novig', 'prophetx', 'prophetexchange', 'kalshi', 'polymarket', 'matchbook', 'betfairexchange'))
+LINK_BOOKS = P2P_BOOKS | {'pinnacle', *BEST_BOOKS}
 OPPOSITE_SIDE = {'home': 'away', 'away': 'home', 'over': 'under', 'under': 'over'}
 
 
@@ -87,6 +90,19 @@ def _baseline(odd, typ, prefix):
     return result
 
 
+def _link_witness(raw):
+    if not isinstance(raw, str) or len(raw) > 2048 or not raw.isascii() or any(c.isspace() for c in raw):
+        return None
+    try:
+        url = urlsplit(raw)
+    except ValueError:
+        return None
+    if (url.scheme != 'https' or not re.fullmatch(r'[a-zA-Z0-9.-]{1,253}', url.netloc)
+            or not re.fullmatch(r'/[a-zA-Z0-9_./%~+-]{1,384}', url.path) or url.path.startswith('//')):
+        return None
+    return {'host': url.netloc.lower(), 'path': url.path}
+
+
 def bookmaker_event_links(event):
     """Retain bounded provider-attributed origin and path for manual review."""
     links = event.get('links')
@@ -94,18 +110,9 @@ def bookmaker_event_links(event):
     if not isinstance(books, dict):
         return {}
     retained = {}
-    for venue in sorted(P2P_BOOKS | {'pinnacle'}):
-        raw = books.get(venue)
-        if not isinstance(raw, str) or len(raw) > 2048 or not raw.isascii() or any(c.isspace() for c in raw):
-            continue
-        try:
-            url = urlsplit(raw)
-        except ValueError:
-            continue
-        if (url.scheme != 'https' or not re.fullmatch(r'[a-zA-Z0-9.-]{1,253}', url.netloc)
-                or not re.fullmatch(r'/[a-zA-Z0-9_./%~+-]{1,384}', url.path) or url.path.startswith('//')):
-            continue
-        retained[venue] = {'host': url.netloc.lower(), 'path': url.path}
+    for venue in sorted(LINK_BOOKS):
+        if witness := _link_witness(books.get(venue)):
+            retained[venue] = witness
     return retained
 
 
@@ -116,6 +123,10 @@ class Page:
     next_cursor: str | None
     receipt_sha256: str | None = None
     payload_bytes: int = 0
+    alternate_rows: int = 0
+    duplicate_alternate_rows: int = 0
+    conflicting_alternate_lines: int = 0
+    ignored_bookmaker_groups: int = 0
 
 
 def clock_sample(page, *, admitted_at=None):
@@ -126,11 +137,12 @@ def clock_sample(page, *, admitted_at=None):
     starts = {eid: datetime.fromisoformat(event['starts_at']) for eid, event in events.items()}
     eligible_live = {eid for eid, event in events.items()
                      if sporting_phase({'status': sgo_event_status(event['status'])})['state'] == 'live'}
+    reference_books = {'pinnacle', *BEST_BOOKS}
     counts, reference = {}, defaultdict(list)
     live_offers = []
     for quote in page.quotes:
         venue, event_id = quote['venue'], quote['event_id']
-        if venue not in P2P_BOOKS and venue != 'pinnacle':
+        if venue not in P2P_BOOKS and venue not in reference_books:
             continue
         event = events[event_id]
         cohort = (quote['league'], quote['phase'], quote['market'], venue)
@@ -138,7 +150,9 @@ def clock_sample(page, *, admitted_at=None):
             within_15_seconds=0,
             live_available=0, live_post_start=0, live_fresh=0, live_fresh_at_admission=0,
             live_with_exact_pinnacle_pair=0, live_with_post_start_pinnacle_pair=0,
-            live_with_pinnacle_clocks=0, live_with_pinnacle_clocks_at_admission=0))
+            live_with_pinnacle_clocks=0, live_with_pinnacle_clocks_at_admission=0,
+            live_with_exact_sportsbook_pair=0, live_with_post_start_sportsbook_pair=0,
+            live_with_sportsbook_clocks=0, live_with_sportsbook_clocks_at_admission=0))
         tally['observations'] += 1
         tally['available'] += int(quote['available'])
         source = quote['source_at']
@@ -162,20 +176,23 @@ def clock_sample(page, *, admitted_at=None):
         key = (event_id, quote['market'], quote['odd_id'], quote['side'], line)
         opposite_line = -line if line is not None and quote['market'] == 'spread' else line
         opposite = (event_id, quote['market'], quote['opposing_odd_id'], OPPOSITE_SIDE[quote['side']], opposite_line)
-        if venue == 'pinnacle':
-            reference[key].append((opposite, live_available, post_start, fresh, fresh_at_admission))
+        if venue in reference_books:
+            reference[venue, key].append((opposite, live_available, post_start, fresh, fresh_at_admission))
         elif live_available:
             live_offers.append((tally, key, opposite, post_start, fresh, fresh_at_admission))
     for tally, key, opposite, post_start, fresh, fresh_at_admission in live_offers:
-        same, other = reference[key], reference[opposite]
-        if len(same) != 1 or len(other) != 1 or same[0][0] != opposite or other[0][0] != key:
-            continue
-        for index, (field, offer_meets_clock) in enumerate((
-                ('live_with_exact_pinnacle_pair', True),
-                ('live_with_post_start_pinnacle_pair', post_start),
-                ('live_with_pinnacle_clocks', fresh),
-                ('live_with_pinnacle_clocks_at_admission', fresh_at_admission)), start=1):
-            tally[field] += int(offer_meets_clock and same[0][index] and other[0][index])
+        for label, venues in (('pinnacle', ('pinnacle',)), ('sportsbook', BEST_BOOKS)):
+            matched = []
+            for venue in venues:
+                same, other = reference.get((venue, key), ()), reference.get((venue, opposite), ())
+                if len(same) == len(other) == 1 and same[0][0] == opposite and other[0][0] == key:
+                    matched.append((same[0], other[0]))
+            for index, (field, offer_meets_clock) in enumerate((
+                    (f'live_with_exact_{label}_pair', True),
+                    (f'live_with_post_start_{label}_pair', post_start),
+                    (f'live_with_{label}_clocks', fresh),
+                    (f'live_with_{label}_clocks_at_admission', fresh_at_admission)), start=1):
+                tally[field] += int(offer_meets_clock and any(same[index] and other[index] for same, other in matched))
     return counts
 
 
@@ -205,6 +222,7 @@ def parse_page(body, received_at, *, leagues=LEAGUES, venues=None):
     if cursor is not None:
         _identity(cursor)
     events, quotes, seen = [], [], set()
+    alternate_rows = duplicate_alternate_rows = conflicting_alternate_lines = ignored_bookmaker_groups = 0
     for event in data['data']:
         if not isinstance(event, dict):
             raise ValueError('event shape')
@@ -283,13 +301,17 @@ def parse_page(body, received_at, *, leagues=LEAGUES, venues=None):
             for venue, book in by_book.items():
                 _identity(venue)
                 if venues is not None and venue not in venues:
+                    ignored_bookmaker_groups += 1
                     continue
                 if not isinstance(book, dict) or not isinstance(book.get('available'), bool):
                     raise ValueError('book availability')
                 alternatives = book.get('altLines', [])
                 if not isinstance(alternatives, list) or len(alternatives) > 100:
                     raise ValueError('alternate-line limit')
-                for entry in [book, *alternatives]:
+                alternate_rows += len(alternatives)
+                book_quotes = {}
+                conflicts = set()
+                for index, entry in enumerate([book, *alternatives]):
                     if not isinstance(entry, dict) or not isinstance(entry.get('available'), bool):
                         raise ValueError('alternate availability')
                     price = line = source_at = None
@@ -311,7 +333,8 @@ def parse_page(body, received_at, *, leagues=LEAGUES, venues=None):
                             or status.get('completed') is True or odd.get('cancelled') is True
                             or odd.get('ended') is True):
                         reason = reason or 'event or market ended'
-                    quotes.append({'event_id': event_id, 'league': league, 'phase': phase,
+                    market_link = _link_witness(entry.get('deeplink')) if venue in LINK_BOOKS else None
+                    observation = {'event_id': event_id, 'league': league, 'phase': phase,
                                    'period': 'game', 'market': MARKETS[typ], 'side': side,
                                    'line': line, 'venue': venue, 'price_american': price,
                                    'source_at': source_at, 'received_at': received_at,
@@ -321,8 +344,31 @@ def parse_page(body, received_at, *, leagues=LEAGUES, venues=None):
                                    'provider_available': entry['available'], 'unavailable_reason': reason,
                                    'odd_id': odd_id, 'opposing_odd_id': opposite,
                                    'settlement': 'unverified', 'fair': fair.copy(),
-                                   **({'consensus': consensus.copy()} if consensus is not None else {})})
-    return Page(tuple(events), tuple(quotes), cursor, sha256(body).hexdigest(), len(body))
+                                   **({'bookmaker_market_link': market_link} if market_link else {}),
+                                   **({'consensus': consensus.copy()} if consensus is not None else {})}
+                    line_key = Decimal(line) if line is not None else None
+                    previous = book_quotes.get(line_key)
+                    if previous is None:
+                        book_quotes[line_key] = observation
+                    elif all(previous.get(key) == observation.get(key)
+                             for key in (previous.keys() | observation.keys()) - {'line', 'alternate'}):
+                        duplicate_alternate_rows += 1
+                    else:
+                        conflicts.add(line_key)
+                        # Retain the latest actual clock, while refusing any
+                        # price authority for contradictory same-line entries.
+                        prior_at = previous['source_at']
+                        if source_at is not None and (prior_at is None or
+                                datetime.fromisoformat(source_at) > datetime.fromisoformat(prior_at)):
+                            book_quotes[line_key] = observation
+                    if index and book_quotes[line_key] is observation:
+                        observation['alternate'] = True
+                for line_key in conflicts:
+                    book_quotes[line_key].update(available=False, unavailable_reason='conflicting observations at exact line')
+                conflicting_alternate_lines += len(conflicts)
+                quotes.extend(book_quotes.values())
+    return Page(tuple(events), tuple(quotes), cursor, sha256(body).hexdigest(), len(body),
+                alternate_rows, duplicate_alternate_rows, conflicting_alternate_lines, ignored_bookmaker_groups)
 
 
 class Traversal:

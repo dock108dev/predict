@@ -314,7 +314,8 @@ def age_benchmarks(result,q,event,at,*,reasons=(),source_assessment=None):
     gross['state']='numeric_last_known' if why else 'numeric_current'
     conditional=result.get('conditional_trade_benchmark',{})
     if conditional.get('available'):
-        if not instant(conditional['evidence']['reviewed_at'])<=at<instant(conditional['evidence']['review_before']):
+        from app.fees.evidence import applies
+        if not applies(conditional['evidence'], at):
             why.append('conditional_fee_review_expired_or_not_effective')
         conditional['currentness_reasons']=sorted(set(why))
         conditional['state']='numeric_last_known' if why else 'numeric_current'

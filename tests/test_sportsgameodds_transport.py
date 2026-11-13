@@ -58,6 +58,20 @@ def test_transport_limits_and_no_retries_or_error_body():
     asyncio.run(_transport_limits_and_no_retries_or_error_body())
 
 
+def test_transport_preserves_single_event_alternate_shape():
+    async def scenario():
+        session = Session(Response())
+        transport = SportsgameoddsTransport(session=session)
+        params = dict(eventIDs='fixture-event',oddID=PARAMS['oddID'],limit=1,
+                      includeAltLines=True,includeOpposingOdds=True,bookmakerID='novig,kalshi,fanduel')
+        await transport.fetch(params, 'secret')
+        sent = session.calls[0][1]['params']
+        assert sent == dict(params, includeAltLines='true', includeOpposingOdds='true')
+        assert len(session.calls) == 1
+
+    asyncio.run(scenario())
+
+
 async def _transport_limits_and_no_retries_or_error_body():
     session = Session(Response(429, b'error with private details', {'Retry-After': '30'}))
     transport = SportsgameoddsTransport(session=session)

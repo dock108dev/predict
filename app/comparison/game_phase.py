@@ -5,6 +5,7 @@ from .source_clock import evidence
 
 # Reuse the established live-input freshness ceiling (current_dependencies).
 LIVE_SECONDS = 15
+PREGAME_SPORTSBOOK_SECONDS = 15 * 60
 LOOKBACK_HOURS = 24
 
 
@@ -12,8 +13,9 @@ def sgo_event_status(status):
     return dict(
         ended=status.get('ended') is True or status.get('completed') is True,
         closed=status.get('cancelled') is True,
-        live=status.get('live') is True and status.get('started') is True,
-        status='delayed' if status.get('delayed') is True else None,
+        live=status.get('live') is True,
+        status='suspended' if status.get('suspended') is True else
+               'delayed' if status.get('delayed') is True else None,
     )
 
 
@@ -51,6 +53,8 @@ def price_phase(event, quote, at):
     if not start:return dict(state='unknown',reason='event_schedule_unknown',basis='missing_schedule')
     start=stamp(start)
     if start>at:
+        if phase['state']=='live':
+            return dict(phase, reason='event_started_before_schedule')
         return dict(state='scheduled',reason=None,basis='source_schedule')
     clock,clock_basis,errors=evidence(quote)
     receipt=quote.get('times',{}).get('received_at')

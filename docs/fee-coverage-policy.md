@@ -32,7 +32,7 @@ coverage within the configured ordinary scope.
   gaps and stale or unpublished prices separately so lost data cannot look
   like improved fee coverage. An empty cohort has no measurable percentage.
   List products outside the configured scope separately.
-- Track fee coverage, exact Pinnacle reference coverage, after-fee EV
+- Track fee coverage, exact sportsbook reference coverage, after-fee EV
   coverage and two-leg fee coverage as separate measures. A supported fee
   remains inspectable when the reference is missing. An arb's after-fee
   payoff needs both fees and the same settlement cases on both legs.
@@ -42,17 +42,26 @@ coverage within the configured ordinary scope.
 The [fee-only outcome](../app/comparison/snapshot_fee_outcome.py) owns the
 ordinary fee display. Its venue models use the reviewed schedule or an
 explicitly labeled estimate. The [renewal state](../app/fees/product_schedules.py)
-records effective terms and review deadlines. The [census](../app/dashboard/fee_coverage.py)
-counts the resulting current offers. Captured replay retains the original
-terms and deadline.
+records effective terms, the last successful verification and the next
+recheck. The [census](../app/dashboard/fee_coverage.py) counts the resulting
+current offers. Captured replay retains the original terms and their clocks.
 
-A provider's effective dates and Predict's verification deadline describe
-different things. The installed app can withhold a fee when its local review
-expires, even while the schedule is still published. The remaining fee work
-in `NEXT_STEPS.md` covers reliable change detection, exact-market
-applicability and explicit handling of standing terms when a recheck fails.
-The current verified and conservative fee counts retain their existing
-meaning until that behavior is implemented and qualified.
+Successful verification establishes standing terms prospectively for Kalshi's
+reviewed exchange markets, Polymarket US standard sports and eligible Novig
+pregame straights. An overdue scheduled check leaves those terms applicable
+and displays its status in Admin. A known provider or account cutoff ends
+applicability. Detected changed or ambiguous terms require review and withdraw
+the affected current result. Existing historical review intervals retain their
+captured boundaries. Signed live Novig terms retain their market, phase and
+sequence checks.
+
+Kalshi's full-document check uses a complete matching direct PDF rendering or
+a qualified renderer receipt. When the official PDF is unavailable, a scoped
+conservative exchange estimate requires fresh matching type, multiplier and
+complete series and event-change evidence for the reviewed scope, plus the
+matching official rounding text. Admin shows that the PDF recheck is
+unavailable and records the rounding response's cache age when supplied.
+Known scheduled fee changes and market applicability still govern each quote.
 
 Use the applicable published fee when it is deterministic. If a public profile
 admits several documented possibilities, price each applicable case using

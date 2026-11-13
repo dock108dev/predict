@@ -200,10 +200,14 @@ def reconstruct(batch,compact=False):
                         if isinstance(md.get(side),list):entry['data']['marketData'][side]=[]
                 entry['clock']=(key,clock)
             else:
-                entry['data']={k:data[k] for k in ('type','sid','seq') if k in data}
+                fields = ('type','sid','seq','id') if _VENUE=='kalshi' else ('requestId','unsubscribed')
+                entry['data']={k:data[k] for k in fields if k in data}
                 if _VENUE=='kalshi' and not materialize:
                     mid=data['msg']['market_ticker']
-                    entry['clock']=(mid,_ENGINE.source_highwater.get(mid))
+                    # Retiring deltas advance SID sequence without offering a
+                    # clock or book in either partition until delete ACK.
+                    if mid in _ENGINE.markets:
+                        entry['clock']=(mid,_ENGINE.source_highwater.get(mid))
                     if not entry.get('partition_skipped'):entry['coalesced']=True
         except MalformedMarketFrame as exc:
             entry['malformed_slug']=exc.slug
@@ -268,6 +272,7 @@ class Reconstruction:
             for i in range(partitions)]
         self.pool=self.pools[0]
         self.ready=deque();self.metrics=metrics;self.highwater=highwater;self.pending=None
+        self.submission_lock=asyncio.Lock()
         self.catalog_revision=0
         self.compact=compact
         self.market_revisions={m.raw.ref.market_id:0 for m in markets}
@@ -284,7 +289,10 @@ class Reconstruction:
         self.metrics['reconstruction_startup_seconds']=time.monotonic()-started
 
     async def reconfigure(self,markets,market_requests,retired):
-        jobs=await owned_thread(lambda:[pool.submit(reconfigure,markets,market_requests,retired) for pool in self.pools])
+        # Every process partition must see the same catalog boundary. A
+        # concurrent receive prefetch can otherwise submit between two pools.
+        async with self.submission_lock:
+            jobs=await owned_thread(lambda:[pool.submit(reconfigure,markets,market_requests,retired) for pool in self.pools])
         future=asyncio.gather(*(asyncio.wrap_future(job) for job in jobs))
         try:
             revisions=await asyncio.shield(future)
@@ -330,7 +338,8 @@ class Reconstruction:
         started=time.monotonic()
         # Spawn/pickle the initial roster away from the socket event loop.
         # The owned call joins submission on cancellation; close joins children.
-        jobs=await owned_thread(lambda:[pool.submit(reconstruct,batch,self.compact) for pool in self.pools])
+        async with self.submission_lock:
+            jobs=await owned_thread(lambda:[pool.submit(reconstruct,batch,self.compact) for pool in self.pools])
         future=asyncio.gather(*(asyncio.wrap_future(job) for job in jobs))
         self.metrics['reconstruction_inflight_frames']=len(batch)
         self.metrics['reconstruction_oldest_received_at']=batch[0][1].isoformat()

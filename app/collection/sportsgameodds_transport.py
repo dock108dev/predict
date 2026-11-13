@@ -30,6 +30,7 @@ class PageResponse:
     received_at: str
     retry_after_seconds: int | None
     invalid_cursor: bool = False
+    provider_request_id: str | None = None
 
 
 def _invalid_cursor(body):
@@ -113,6 +114,10 @@ class SportsgameoddsTransport:
                     headers={'x-api-key': api_key, 'Accept-Encoding': 'identity'},
                     allow_redirects=False) as response:
                 received_at = datetime.now(timezone.utc).isoformat()
+                request_id = response.headers.get('X-Request-ID')
+                if (not request_id or not re.fullmatch(r'[A-Za-z0-9_.:-]{1,128}', request_id)
+                        or api_key in request_id):
+                    request_id = None
                 retry = response.headers.get('Retry-After')
                 retry = int(retry) if retry and retry.isascii() and retry.isdigit() and len(retry) <= 6 else None
                 if response.status != 200:
@@ -125,7 +130,7 @@ class SportsgameoddsTransport:
                             body.extend(chunk)
                         else:
                             invalid_cursor = _invalid_cursor(body)
-                    return PageResponse(response.status, b'', received_at, retry, invalid_cursor)
+                    return PageResponse(response.status, b'', received_at, retry, invalid_cursor, request_id)
                 if response.headers.get('Content-Encoding', 'identity').lower() != 'identity':
                     raise TransportFailure('unsupported response encoding')
                 body = bytearray()
@@ -135,7 +140,8 @@ class SportsgameoddsTransport:
                     body.extend(chunk)
                 if api_key.encode() in body:
                     raise TransportFailure('sensitive response suppressed')
-                return PageResponse(response.status, bytes(body), datetime.now(timezone.utc).isoformat(), retry)
+                return PageResponse(response.status, bytes(body), datetime.now(timezone.utc).isoformat(), retry,
+                                    provider_request_id=request_id)
         except (aiohttp.ClientError, TimeoutError, OSError):
             raise TransportFailure('provider request outcome uncertain') from None
 

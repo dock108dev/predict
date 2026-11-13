@@ -8,6 +8,7 @@ import httpx
 
 from app.collection import public_fee_refresh as refresh
 from app.fees import product_schedules as products
+from app.fees.evidence import applies
 from app.storage.store import stamp
 
 AT=stamp('2026-11-10T04:30:00+00:00')
@@ -31,13 +32,15 @@ def test_novig_real_reviewed_article_matches_and_renews_prospectively():
     assert first['last_attempt']['state']=='verified'
     later=attempt(key,new,state=first,at=AT+timedelta(hours=6))
     assert later['last_attempt']['state']=='unchanged_verified'
-    assert later['last_verified']['review_before']==(AT+timedelta(hours=30)).isoformat()
+    assert later['last_verified']['review_before'] is None
+    assert later['last_verified']['recheck_due_at']==(AT+timedelta(hours=30)).isoformat()
     row={'venue':'novig'}
     before=products.for_offer({key:first},row,AT)
     after=products.for_offer({key:later},row,AT+timedelta(hours=6))
     assert before['reviewed_at']==AT.isoformat()
     assert after['reviewed_at']==(AT+timedelta(hours=6)).isoformat()
-    assert before['review_before']==(AT+timedelta(hours=24)).isoformat()
+    assert before['review_before'] is None
+    assert before['recheck_due_at']==(AT+timedelta(hours=24)).isoformat()
     assert products.for_offer({key:later},row,AT)['version']=='novig-conditional-20261110-review'
 
 
@@ -48,6 +51,14 @@ def test_failed_and_changed_retrieval_preserve_review_and_require_explicit_resol
     assert failed['last_attempt']['state']=='failed'
     assert failed['last_verified']==first['last_verified']
     assert failed['next_attempt_at']==(AT+timedelta(hours=6,minutes=15)).isoformat()
+    after_recheck = AT + timedelta(days=2)
+    model = products.for_offer({key:failed},{'venue':'novig'},after_recheck)
+    assert applies(model, after_recheck)
+    assert products.summary(key,failed,after_recheck)['state']=='verification_overdue'
+    actual_cutover = dict(model, review_before=after_recheck.isoformat())
+    assert applies(actual_cutover, after_recheck - timedelta(microseconds=1))
+    assert not applies(actual_cutover, after_recheck)
+    assert not applies(dict(model, standing_public_terms=False), after_recheck)
     changed=attempt(key,body.replace(b'No fee',b'One fee',1),state=first,at=AT+timedelta(hours=6))
     assert changed['last_attempt']['state']=='review_required'
     assert changed['last_verified']==first['last_verified']
@@ -59,9 +70,11 @@ def test_failed_and_changed_retrieval_preserve_review_and_require_explicit_resol
 
 def test_polymarket_standard_review_is_independent(monkeypatch):
     key='polymarket_us:standard_sports'; body=(ROOT/products.PRODUCTS[key]['reference']).read_bytes()
-    prior_spec = {k: v for k, v in products.PRODUCTS[key].items() if not k.startswith('review_receipt')}
+    prior_spec = {k: v for k, v in products.PRODUCTS[key].items()
+                  if not k.startswith(('review_receipt', 'alternate_receipt'))}
     reviewed = products.approved(key)
     assert reviewed['normalized_sha256'] == '90ee55153cac932effbf2264334b0d3f66d6c7eb00e8e4b2fdacd9c2c8fc2495'
+    assert reviewed['alternate_normalized_sha256'] == 'e917d96f8837da45d22d1d4a904652ccfa0dc3cc7bb1390fe8c562088727df18'
     assert attempt(key,body)['review_required']['reason']=='public_product_schedule_changed'
     with monkeypatch.context() as historical:
         historical.setitem(products.PRODUCTS, key, prior_spec)
@@ -78,8 +91,30 @@ def test_polymarket_standard_review_is_independent(monkeypatch):
     verified=attempt(key,body,state=changed)
     model=products.for_offer({key:verified},{'venue':'polymarket_us'},AT)
     assert model['fee_rate']=='0.095' and model['product']=='standard_sports'
-    assert model['review_before']==(AT+timedelta(hours=24)).isoformat()
+    assert model['review_before'] is None and model['standing_public_terms']
     assert 'product' not in products.for_offer({key:verified},{'venue':'novig'},AT)
+
+
+def test_polymarket_review_accepts_only_both_complete_approved_variants(monkeypatch):
+    key = 'polymarket_us:standard_sports'
+    body = (ROOT / products.PRODUCTS[key]['reference']).read_bytes()
+    alternate = body.replace(b'</main>', b'<p>Second reviewed complete page.</p></main>', 1)
+    unknown = body.replace(b'</main>', b'<p>Unreviewed economics change.</p></main>', 1)
+    reviewed = products.approved(key)
+    def normalized_digest(html):
+        return sha256(products.normalized(html, 'main').encode()).hexdigest()
+
+    fixture = dict(reviewed, normalized_sha256=normalized_digest(body),
+                   alternate_normalized_sha256=normalized_digest(alternate))
+    monkeypatch.setattr(products, 'approved', lambda _: fixture)
+    original = attempt(key, body)
+    second = attempt(key, alternate, state=original, at=AT + timedelta(hours=6))
+    assert original['last_attempt']['retrieval']['reviewed_receipt'] == reviewed['reviewed_receipt']
+    assert second['last_attempt']['retrieval']['reviewed_receipt'] == reviewed['alternate_reviewed_receipt']
+    assert second['last_attempt']['state'] == 'unchanged_verified'
+    changed = attempt(key, unknown, state=second, at=AT + timedelta(hours=12))
+    assert changed['review_required']['reason'] == 'public_product_schedule_changed'
+    assert changed['last_verified'] == second['last_verified']
 
 
 def test_prospective_polymarket_review_reaches_current_ordinary_offers(monkeypatch):
@@ -115,8 +150,10 @@ def test_prospective_polymarket_review_reaches_current_ordinary_offers(monkeypat
     assert fee['trade_fee_usd'] == '0.02' and fee['classification'] == 'conservative'
     assert fee['evidence']['native_side'] == 'Short' and fee['evidence']['acquired_price_usd'] == '0.30'
     assert fee['evidence']['reviewed_at'] == renewed_at.isoformat()
-    assert fee['evidence']['review_before'] == (renewed_at + timedelta(days=1)).isoformat()
+    assert fee['evidence']['review_before'] is None and fee['evidence']['standing_public_terms']
+    assert fee['evidence']['recheck_due_at'] == (renewed_at + timedelta(days=1)).isoformat()
     assert not publish(renewed_at - timedelta(seconds=1), renewed)['trade_fee']['available']
+    assert publish(renewed_at + timedelta(days=2), renewed)['trade_fee']['available']
 
 
 def test_ordinary_projection_withholds_changed_terms_but_keeps_frozen_capture():
@@ -151,13 +188,14 @@ def test_kalshi_429_keeps_existing_review_deadline(monkeypatch):
     from app.collection import kalshi_fee_refresh
     from app.comparison.conditional_benchmark import basis
     monkeypatch.setattr(kalshi_fee_refresh, 'renderer_endpoint', lambda: None)
+    monkeypatch.setattr(kalshi_fee_refresh, 'API_SPACING_SECONDS', 0)
     key='kalshi:exchange'
     old=basis('kalshi',at=AT)
-    async def retrieve(url,limit):
+    async def retrieve(url,limit,**_options):
         raise refresh.RetrievalFailed('fee_http_status',dict(url=url,http_status=429,retrieved_at=AT.isoformat()))
     state=asyncio.run(refresh.refresh_product(key,None,retrieve,clock=AT.isoformat))
     assert state['direct_pdf']['http_status']==429
-    assert 'failed_request' not in state['last_attempt']['retrieval']
+    assert state['last_attempt']['retrieval']['failed_request']['url'].startswith(kalshi_fee_refresh.API)
     resolved=products.for_offer({key:state},{'venue':'kalshi'},AT)
     assert resolved['review_before']==old['review_before']
-    assert products.summary(key,state,AT)['next_action']=='Connect the official PDF renderer'
+    assert products.summary(key,state,AT)['next_action']=='Retry retrieval'

@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 
 from app.collection.sportsgameodds_schedule import (
-    EventDue, available_objects, budgeted_policy, daily_allowance, discovery_interval, due_events, response_object_charge,
+    EventDue, available_objects, budgeted_policy, daily_allowance, daily_retry_at, discovery_interval, due_events, response_object_charge,
 )
 
 NOW = datetime(2026, 11, 10, 20, tzinfo=timezone.utc)
@@ -59,6 +59,18 @@ def test_pacing_requires_known_future_reset():
     assert daily_allowance(available=23, now=NOW, reset_at=NOW + timedelta(hours=2)) == 23
     with pytest.raises(ValueError):
         daily_allowance(available=100, now=NOW, reset_at=NOW)
+
+
+def test_daily_retry_uses_guard_when_time_to_reset_shrinks_or_old_charges_age_out():
+    reset = NOW+timedelta(days=2, seconds=1)
+    assert daily_retry_at(available=19, requested=9, now=NOW, reset_at=reset,
+                          expirations=[(NOW+timedelta(hours=12), 1)]) == NOW+timedelta(seconds=1)
+
+    reset = NOW+timedelta(days=2)
+    expiring = [(NOW+timedelta(seconds=12), 2), (NOW+timedelta(hours=12), 78)]
+    assert daily_retry_at(available=80, requested=1, now=NOW, reset_at=reset,
+                          expirations=expiring) == NOW+timedelta(seconds=12)
+    assert daily_retry_at(available=1, requested=2, now=NOW, reset_at=reset, expirations=[]) == reset
 
 
 def test_slate_budget_slows_distant_games_before_imminent_and_keeps_live_priority():

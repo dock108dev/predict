@@ -67,6 +67,34 @@ class OccurrenceCases(unittest.TestCase):
     def resolve(self, records, resolver=None):return (resolver or self.resolver()).resolve(records,clock=AT)
     def audit(self, record):return record['quote']['occurrence_match']
 
+    def test_native_nfl_uuid_requires_both_independently_linked_event_observations(self):
+        from app.collection.coverage import milestone_identity
+
+        shared = '5ab9e951-17ea-4e84-9c6c-5ce04ac073ad'
+        kalshi, = rows(native='kalshi-game')[:1]
+        polymarket, = rows('polymarket_us', 'pmus-game', shared={'sportradar': shared})[:1]
+        milestone = dict(id='fixture-milestone', type='football_game', source_id=shared, start_date=START,
+                         source_ids={'source_3_id':shared}, related_event_tickers=['kalshi-game','kalshi-total'],
+                         details={'main_game_event_ticker':'kalshi-game'})
+        kalshi['event']['observed_identity_facts'] = [milestone_identity(milestone)]
+        resolver = self.resolver()
+        matched = self.resolve([kalshi, polymarket], resolver)
+        assert len({self.audit(record)['occurrence_id'] for record in matched}) == 1
+        assert all(self.audit(record)['method'] == 'shared_provider_id' and not self.audit(record)['estimated'] for record in matched)
+        assert self.audit(self.resolve([kalshi], resolver)[0])['method'] != 'shared_provider_id'
+
+        uncorroborated = deepcopy(kalshi)
+        del uncorroborated['event']['observed_identity_facts'][0]['source_3_id']
+        assert self.audit(self.resolve([uncorroborated, polymarket])[0])['estimated']
+        wrong_start = deepcopy(polymarket)
+        wrong_start['event']['scheduled_start'] = '2026-10-13T01:15:00Z'
+        assert all('milestone_uuid_metadata_conflict' in self.audit(record)['conflicts']
+                   for record in self.resolve([kalshi, wrong_start]))
+        duplicate = deepcopy(polymarket)
+        duplicate['quote']['source']['native_event_id'] = duplicate['event']['id'] = 'second-pmus-game'
+        assert all('milestone_uuid_metadata_conflict' in self.audit(record)['conflicts']
+                   for record in self.resolve([kalshi, polymarket, duplicate]))
+
     def test_shared_ids_reviewed_edges_and_precedence(self):
         a=rows(shared={'sportradar':'authored-shared'})
         b=rows('polymarket_us','authored-us',shared={'sportradar':'authored-shared'})

@@ -229,6 +229,7 @@ def main(argv=None):
                     "integration_tests",
                     "tests/test_sc09_bulk_sql.py",
                     "tests/test_raw_prices_sql.py",
+                    "tests/test_admin_database_sql.py",
                     "tests/test_sc09_ingress_sql.py",
                     "tests/test_d03_current_rows.py",
                     "tests/test_native_admission_sql.py",
@@ -263,6 +264,7 @@ def main(argv=None):
                     "tests/test_capture_price_sql.py",
                     "tests/test_novig_current_admission.py",
                     "tests/test_sgo_current_rows_sql.py",
+                    "tests/test_sgo_native_catalog_sql.py",
                     "tests/test_sportsgameodds_ingress_sql.py",
                     "tests/test_sportsgameodds_reference_sql.py",
                 ]

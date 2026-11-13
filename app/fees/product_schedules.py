@@ -23,7 +23,9 @@ PRODUCTS = {
         url='https://docs.polymarket.us/fees', reference='app/fixtures/polymarket-us-fees-review-20261110.html',
         tag='main', phase=None, method='direct official HTML; complete normalized page text',
         review_receipt='app/fixtures/polymarket-us-standard-fees-review-20261111.json',
-        review_receipt_sha256='1add70fd37fe03a06e09546a47d97197a4d83443e267e7f7259366c1aafc6ae4'),
+        review_receipt_sha256='1add70fd37fe03a06e09546a47d97197a4d83443e267e7f7259366c1aafc6ae4',
+        alternate_receipt='app/fixtures/polymarket-us-standard-fees-review-20261112.json',
+        alternate_receipt_sha256='fe99296cc172ed943611aec3088930fb5f3417710d8a84a36e4ff795681123cc'),
     'kalshi:exchange': dict(venue='kalshi', product='exchange',
         url='https://kalshi.com/docs/kalshi-fee-schedule.pdf',
         reference='app/fixtures/kalshi-fees-review-20261110.json', tag=None,
@@ -60,6 +62,19 @@ def normalized(body, tag):
     return text
 
 
+def _receipt(path, digest, url):
+    body = (ROOT / path).read_bytes()
+    if sha256(body).hexdigest() != digest:
+        raise ValueError('reviewed_receipt_changed')
+    receipt = json.loads(body)
+    if (receipt.get('source_url') != url
+            or not all(re.fullmatch('[0-9a-f]{64}', receipt[key])
+                       for key in ('body_sha256', 'normalized_sha256'))):
+        raise ValueError('reviewed_receipt_invalid')
+    return receipt['normalized_sha256'], dict(path=path, sha256=digest,
+        retrieved_at=stamp(receipt['retrieved_at']).isoformat())
+
+
 def approved(key):
     spec=PRODUCTS[key]
     raw=(ROOT/spec['reference']).read_bytes()
@@ -73,17 +88,11 @@ def approved(key):
     if 'rendered_sha256' in spec:
         approval.update(normalized_sha256=spec['rendered_sha256'], rendered_pages=spec['rendered_pages'])
     if 'review_receipt' in spec:
-        receipt_body = (ROOT / spec['review_receipt']).read_bytes()
-        if sha256(receipt_body).hexdigest() != spec['review_receipt_sha256']:
-            raise ValueError('reviewed_receipt_changed')
-        receipt = json.loads(receipt_body)
-        if (receipt.get('source_url') != spec['url']
-                or not all(re.fullmatch('[0-9a-f]{64}', receipt[k])
-                           for k in ('body_sha256', 'normalized_sha256'))):
-            raise ValueError('reviewed_receipt_invalid')
-        approval.update(normalized_sha256=receipt['normalized_sha256'],
-                        reviewed_receipt=dict(path=spec['review_receipt'], sha256=spec['review_receipt_sha256'],
-                                              retrieved_at=stamp(receipt['retrieved_at']).isoformat()))
+        digest, receipt = _receipt(spec['review_receipt'], spec['review_receipt_sha256'], spec['url'])
+        approval.update(normalized_sha256=digest, reviewed_receipt=receipt)
+    if 'alternate_receipt' in spec:
+        digest, receipt = _receipt(spec['alternate_receipt'], spec['alternate_receipt_sha256'], spec['url'])
+        approval.update(alternate_normalized_sha256=digest, alternate_reviewed_receipt=receipt)
     return approval
 
 
@@ -137,23 +146,46 @@ def for_offer(states, row, at, *, fallback=None):
             return dict(fallback, unavailable_reason=REVIEW_REQUIRED)
         # The full bounded receipt set stays with the product revision in Admin.
         retrieval = {name: retrieval[name] for name in (
-            'rendered_origin', 'normalized_sha256', 'series_count', 'event_history_complete')}
+            'rendered_origin', 'normalized_sha256', 'series_count', 'event_history_complete',
+            'document_check', 'rounding_document') if name in retrieval}
     result=deepcopy(fallback)
+    standing = verified.get('standing_public_terms') is True
     result.update(reviewed_at=verified['verified_at'], review_before=verified['review_before'],
         schedule_revision=revision(state), verification_revision=verified['revision'],
-        retrieval=retrieval, review_basis=approval['method'], product=approval['product'])
+        retrieval=retrieval, review_basis=_review_basis(verified), product=approval['product'])
+    if standing:
+        result.update(standing_public_terms=True, recheck_due_at=verified['recheck_due_at'],
+                      verification_scope=verified['verification_scope'])
     if review and at >= stamp(review['detected_at']): result['unavailable_reason']=REVIEW_REQUIRED
     return result
+
+
+def _review_basis(verified):
+    if verified.get('verification_scope') == 'market_terms_only':
+        return 'Reviewed PDF terms and unchanged official market fee metadata. PDF recheck unavailable.'
+    return (verified.get('approval') or {}).get('method')
 
 
 def summary(key, state, at):
     spec=PRODUCTS[key]; state=state or {}; verified=state.get('last_verified') or {}
     review=state.get('review_required'); attempt=state.get('last_attempt') or {}
     fallback=legacy_basis(spec['venue'],at=at)
-    deadline=verified.get('review_before') or fallback['review_before']
-    status=('review_required' if review else 'verified' if deadline and at < stamp(deadline)
-            else 'expired' if deadline else 'awaiting_verification')
+    standing = verified.get('standing_public_terms') is True
+    deadline = verified.get('review_before') if verified else fallback['review_before']
+    recheck = verified.get('recheck_due_at') or deadline
+    scope = verified.get('verification_scope')
+    if review:
+        status = 'review_required'
+    elif deadline and at >= stamp(deadline):
+        status = 'expired'
+    elif standing and recheck and at >= stamp(recheck):
+        status = 'verification_overdue'
+    elif standing and scope == 'market_terms_only':
+        status = 'market_terms_verified'
+    else:
+        status = 'verified' if verified or deadline else 'awaiting_verification'
     action=('Review changed or ambiguous source terms' if review else
+            'Recheck the official PDF when accessible' if scope == 'market_terms_only' else
             'Connect the official PDF renderer' if attempt.get('error') in ('kalshi_renderer_unconfigured', 'kalshi_renderer_configuration_invalid') else 'Retry retrieval' if attempt.get('state')=='failed'
             else 'Automatic source check' if status=='verified' else 'Verify official terms')
     direct = state.get('direct_pdf')
@@ -162,7 +194,8 @@ def summary(key, state, at):
         if failed and failed.get('url') == spec['url']:
             direct = failed
     return dict(venue=spec['venue'], product=spec['product'], source_url=spec['url'], state=status,
-        review_basis=(verified.get('approval') or {}).get('method') or fallback.get('retrieval_method') or fallback.get('review_decision'), last_verified_at=verified.get('verified_at') or fallback['reviewed_at'],
-        review_before=deadline, next_refresh_at=state.get('next_attempt_at'), next_action=action,
+        review_basis=_review_basis(verified) or fallback.get('retrieval_method') or fallback.get('review_decision'), last_verified_at=verified.get('verified_at') or fallback['reviewed_at'],
+        review_before=deadline, recheck_due_at=recheck, verification_scope=scope,
+        standing_public_terms=standing, next_refresh_at=state.get('next_attempt_at'), next_action=action,
         refresh=attempt, review_required=review, retrieval=verified.get('retrieval'),
         direct_pdf=direct)

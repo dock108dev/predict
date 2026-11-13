@@ -31,7 +31,7 @@ def paired(league, review):
 def shown_pair(left, right):
     proof = before_fee_pair(left, right, 'exact-market')
     pair = dict(left, id='arb', legs=[left['id'], right['id']], before_fees=proof)
-    view = page(result(left, right), {'stake': '100', 'positive': 'on'},
+    view = page(result(left, right), {'stake': '100'},
                 ('arbs', 'gross_return_percent', 0, 25), captured_pairs=[pair], policy='policy')
     assert view['provider_requests'] == 0
     return view['rows'][0]['pairs'][0]
@@ -66,8 +66,21 @@ def test_stale_terms_keep_supported_leg_and_withhold_net_payoff(review):
     assert retail['legs'][1]['at_fill_usd'] == '0'
 
 
+def test_independent_payoff_uses_working_capture_clock(review):
+    from app.dashboard.coverage_finance_inputs import _retail_payoff
+
+    left, right = paired('NHL', review)
+    proof = before_fee_pair(left, right, 'exact-market')
+    pair = dict(before_fees=proof, legs=[left['id'], right['id']])
+    rows = {row['id']: row for row in (left, right)}
+    del left['captured_at']
+    audited = _retail_payoff(pair, rows, captured_at=AT.isoformat())
+    assert audited['available'] and audited['legs'][0]['at_fill_usd'] == '0.93'
+
+
 def test_sized_live_novig_fee_is_unavailable_with_only_one_claim_evidence(review):
     left, right = paired('NHL', review)
+    left['game_state'] = 'live'
     right['game_state'] = 'live'
     right['trade_fee']['evidence'] = {}
     retail = shown_pair(left, right)['retail_payoff']
@@ -112,6 +125,97 @@ def test_native_sized_fee_reuses_selected_terms_and_rounds_at_size(venue, amount
     assert priced['minimum_net_profit_usd'] == '-' + amount
     unaligned = pair_fees(proof, pair_math(proof, F('100.02')), [row, other])
     assert not unaligned['available'] and unaligned['legs'][1]['at_fill_usd'] == '0'
+
+
+def test_native_pair_models_equal_whole_claims_under_a_non_grid_stake():
+    from app.comparison.conditional_benchmark import basis
+    from app.comparison.inspection_math import pair_math
+    from app.comparison.snapshot_fee_scope import applicability
+    from tests.test_f04_kalshi_public import input_row
+    from tests.test_f05_polymarket_public import AT as pmus_at, native
+
+    kalshi, terms, at = input_row()
+    pmus = native('scheduled', 'Long')
+    pmus['original']['value'] = '0.55'
+    pmus['fee_applicability'] = applicability(pmus['original_record'])
+    for row, review, clock in ((kalshi, terms, at), (pmus, basis('polymarket_us', at=pmus_at), pmus_at)):
+        row['captured_at'] = clock.isoformat()
+        row['trade_fee'] = outcome(row, at=clock, phase='scheduled', review=review)
+    proof = dict(value='-100/21', weights=['10/21','11/21'],
+                 settlement_payouts={'first_wins':['1','0'],'second_wins':['0','1']})
+    priced = pair_fees(proof, pair_math(proof, F('100.02')), [kalshi, pmus])
+    assert priced['available'] and priced['sizing']['quantity'] == '95'
+    assert priced['sizing']['acquisition_usd'] == '99.75'
+    assert priced['sizing']['unused_stake_usd'] == '0.27'
+    assert [leg['acquisition_usd'] for leg in priced['legs']] == ['47.5','52.25']
+    assert {state['net_receipt_usd'] for state in priced['states'].values()} == {'95'}
+    assert F(priced['minimum_net_profit_usd']) < 0
+
+
+def test_native_census_distinguishes_unobserved_incompatible_stale_and_pending_peers():
+    from app.dashboard.coverage_finance_inputs import _native_pair_input_gaps, _pair_key
+    from app.storage.comparison_snapshot import before_fee_pairs
+
+    left = quote('left', 'kalshi', threshold=3)
+    right = quote('right', 'polymarket_us', threshold=2, operator='le')
+    right['selection'] = dict(participant='away', predicate='cover', signed_line='2.5')
+    for row in (left, right):
+        row['game_state'] = 'scheduled'
+        row['binding'] = {'verified': True}
+        row['common_odds'] = {'supported': True}
+        row['source'] = dict(provider=row['venue'], native_event_id=row['id'], binding_version='fixture')
+        event = dict(id=row['id'], competition='NBA', sport='basketball', home='home', away='away',
+                     season='2026', stage='regular_season', scheduled_start=row['start_at'],
+                     shared_provider_ids={'sportradar':'fixture'}, participants={'Home':'home', 'Away':'away'})
+        row['original_record'] = dict(event=event, selection=row['selection'], market_identity={},
+            quote=dict(source=row['source'], venue=row['venue'], provenance={}),
+            verified=True, orientation_evidence=[])
+
+    selected = {row['id']: row for row in (left, right)}
+    pair, = before_fee_pairs([left, right], at=AT.isoformat())
+    working = {left['id']: left}
+
+    def gaps(scoped, prices, captured=(), published=()):
+        result = _native_pair_input_gaps(scoped, prices, captured, published, at=AT)
+        return {row['venue']: row['reasons'] for row in result}
+
+    assert gaps(working, working) == {'kalshi': {'opposing_price_not_observed': 1}}
+    assert gaps(selected, working) == {'kalshi': {'exact_opposing_price_not_current': 1}}
+    assert gaps(selected, selected, [pair]) == {
+        'kalshi': {'pair_awaiting_publication': 1}, 'polymarket_us': {'pair_awaiting_publication': 1}}
+    assert not gaps(selected, selected, [pair], {_pair_key(pair, selected)})
+    right['game_state'] = 'live'
+    assert gaps(selected, selected, [pair]) == {
+        'kalshi': {'opposing_phase_mismatch': 1}, 'polymarket_us': {'opposing_phase_mismatch': 1}}
+    right['original_record']['event']['shared_provider_ids'] = {'sportradar':'different'}
+    assert gaps(selected, working) == {'kalshi': {'opposing_occurrence_or_settlement_unverified': 1}}
+
+
+@pytest.mark.parametrize('verified', [False, True])
+def test_ordinary_ready_and_pending_publish_only_exact_native_pairs(verified, monkeypatch):
+    from copy import deepcopy
+    from app.storage import ordinary_publication as ordinary
+
+    left = quote('a', 'kalshi', threshold=3)
+    right = quote('b', 'polymarket_us', threshold=2, operator='le')
+    for row in (left, right):
+        row['binding'] = {'verified': True}
+        row['common_odds'] = {'supported': True}
+        row['occurrence_match'] = dict(status='matched', estimated=not verified,
+                                       method='shared_provider_id' if verified else 'unique_metadata')
+    monkeypatch.setattr('app.comparison.snapshot_fee_outcome.reviews',lambda at:{})
+    monkeypatch.setattr(ordinary,'quote_authority',lambda *args,**kw:{'reasons':['controlled_source_fixture']})
+    settings = dict(benchmark_venue='pinnacle',revision='settings')
+    inputs = dict(id='input',captured_at=AT.isoformat(),epoch='epoch',policy_identity='policy',
+        quotes=[left,right],references=[],reference_provider='sportsgameodds',games=[],sources={},issues=[],capture_seconds=0)
+    pending = ordinary.prices(inputs, settings)
+    legacy = dict(id='legacy-assumed-pair',legs=['a','b'],before_fees=before_fee_pair(left,right,'fixture'),math={'available':True})
+    ready = ordinary.bind(dict(rows=deepcopy(inputs['quotes']),pairs=[legacy],assumptions=settings),inputs,'ready')
+    assert len(ready['pairs']) == len(pending['pairs']) == int(verified)
+    if verified:
+        assert ready['pairs'][0]['before_fees'] == pending['pairs'][0]['before_fees']
+        assert ready['pairs'][0]['before_fees']['authority']['policy'] == 'ordinary-verified-opposition-1'
+        assert not ready['pairs'][0]['math']['available']
 
 
 class FeeViewAssets(unittest.IsolatedAsyncioTestCase):

@@ -23,7 +23,7 @@ async function check() {
   await import('../app/dashboard/opportunity_static/current/ui-common.js');
   const {tradeInspection, pairInspection, tradingFeeLabel, tradingFeeSize} =
     await import('../app/dashboard/opportunity_static/current/desk-inspection.js');
-  const {pinLatestSelection, selectionIdentity, pinnedInspection} =
+  const {pinLatestSelection, selectionCurrent, selectionIdentity, pinnedInspection} =
     await import('../app/dashboard/opportunity_static/current/desk-evidence.js');
   const {feeCensusLines, mountFeeCensus} =
     await import('../app/dashboard/opportunity_static/current/fee-census-view.js');
@@ -32,15 +32,20 @@ async function check() {
   const old = group.offers.find(o => o.id === 'prophetx-offer');
   assert.equal(tradingFeeLabel(old.trade_fee), 'Trading fee $0.01 at fill · Conservative estimate');
   assert.equal(tradingFeeSize(old.trade_fee), '1 $1-payout contract · 1 immediate taker fill');
-  const before = tradeInspection(old, group, details[old.id + ':old'], {position:'Fixture'});
+  const before = tradeInspection({...old, source_clock_at:'2026-11-10T14:59:52Z'},
+    {...group, sportsbook_quotes:{fanduel:[{price_american:'+105', current:false, source_at:'2026-11-10T14:00:00Z'}]}},
+    details[old.id + ':old'], {position:'Fixture', checkedAt:'2026-11-10T15:00:00Z'});
   assert.match(before.textContent, /At fill/);
+  assert.match(before.textContent, /Quote updated 8s ago · Est. \$0.01 fee for 1 \$1-payout contract/);
+  assert.match(before.textContent, /FanDuel\+105.*Last known/);
+  assert.doesNotMatch(before.textContent, /Pinnacle/);
   assert.match(before.textContent, /Modeled size1 \$1-payout contract/);
-  assert.match(before.textContent, /exact current Pinnacle match is unavailable/);
-  const after = tradeInspection(latest, group, details[latest.id + ':latest'], {position:'Fixture'});
+  assert.match(before.textContent, /exact current sportsbook match is unavailable/);
+  const after = tradeInspection(latest, group, details[latest.id + ':latest'], {position:'Fixture', basis:'reviewed'});
   assert.match(after.textContent, /\$0\.00/);
   assert.match(after.textContent, /8 decimal/);
   assert.match(after.textContent, /Reviewed-fee EV/);
-  assert.match(after.textContent, /Conservative EV/);
+  assert.match(after.textContent, /EV with conservative fees/);
 
   // Authority-only changes can keep both saved revisions. They must still
   // invalidate an in-flight adoption and suppress an older reference in detail.
@@ -52,6 +57,8 @@ async function check() {
   const pinned = pinnedInspection(withdrawn, details[latest.id + ':latest'].inspection);
   assert.equal(pinned.fair_reference.available, false);
   assert.equal(details[latest.id + ':latest'].inspection.fair_reference.available, true);
+  assert.equal(selectionCurrent({...latest, current_until:'2026-11-10T15:00:00Z'}, Date.parse('2026-11-10T15:00:00Z')), false);
+  assert.equal(selectionCurrent({...latest, value:'1', calculation_current_until:'2026-11-10T15:00:00Z'}, Date.parse('2026-11-10T15:00:01Z')), false);
   const released = [];
   let active = true, frames;
   const adopt = () => pinLatestSelection({
@@ -91,36 +98,48 @@ async function check() {
   const aggregate = tradeInspection(commission, group, aggregateEvidence, {position:'Fixture'});
   assert.match(aggregate.textContent, /Illustrative outcomes · contract rules unverified/);
   assert.doesNotMatch(aggregate.textContent, /venue formula/);
+  aggregateEvidence.row.sgo_native_contract = {available:true, phase_verified:false,
+    market_id:'novig-market', outcome_id:'novig-outcome', settlement:{available:true,
+      extra_innings:'included', equality:'void_without_official_winner',
+      source_url:'https://ludlow-filings.s3.us-east-1.amazonaws.com/MLB-winner-anchor-2.0-a.pdf'}};
+  const bound = tradeInspection(commission, group, aggregateEvidence, {position:'Fixture'});
+  assert.match(bound.textContent, /Verified Novig contract/);
+  assert.match(bound.textContent, /Current phase not confirmed for this price/);
+  assert.match(bound.textContent, /Full game, including extra innings/);
+  assert.match(bound.textContent, /Void if there is no official winner/);
+  assert.match(bound.textContent, /Official contract terms/);
+  assert.doesNotMatch(bound.textContent, /Illustrative outcomes/);
   const sgoEvidence = structuredClone(details[latest.id + ':latest']);
   sgoEvidence.inspection.fair_reference = {available:true, venue:'pinnacle', contract:{phase:'live'},
     probability:'1/2', fair_decimal_odds:'2', maximum_age_seconds:15,
     contributors:[{venue:'pinnacle',inputs:[{side:'home',price_american:'-110',source_at:'2026-11-10T20:00:00Z'},
       {side:'away',price_american:'-110',source_at:'2026-11-10T20:00:00Z'}]}]};
   const sgoDrawer = tradeInspection({...latest, reference_current:true}, group, sgoEvidence, {position:'Fixture'});
-  assert.match(sgoDrawer.textContent, /Pinnacle pair via SportsGameOdds/i);
+  assert.match(sgoDrawer.textContent, /Pinnacle price pair/i);
   assert.match(sgoDrawer.textContent, /Maximum source age15 seconds/);
   const sportsbook = {book:'fanduel', candidate_books:3, probability:'25/58', return_percent:'100/29',
     prices:[{price_american:'+120', source_at:'2026-11-10T20:00:00Z'},
             {price_american:'-150', source_at:'2026-11-10T20:00:00Z'}]};
-  const withBook = tradeInspection({...latest, sportsbook}, group, sgoEvidence, {position:'Fixture'});
-  assert.match(withBook.textContent, /Before-fee estimate3\.45%/);
+  const withBook = tradeInspection({...latest, sportsbook, value:sportsbook.return_percent}, group, sgoEvidence, {position:'Fixture', basis:'sportsbooks'});
+  assert.match(withBook.textContent, /Sportsbook EV before fees\+3\.45%/);
   assert.match(withBook.textContent, /Selected bookFanDuel/);
-  assert.match(withBook.textContent, /Opposite odds-150 American/);
+  assert.match(withBook.textContent, /Opposite odds-150/);
   assert.notEqual(selectionIdentity(latest), selectionIdentity({...latest, sportsbook}));
 
   for (const row of arbs.rows) {
     const drawer = pairInspection(row.pairs[0], new Map(row.offers.map(o => [o.id, o])),
       {group:row, position:() => 'Fixture', inspect:() => {}});
-    assert.match(drawer.textContent, /Cent-rounded stake\$44\.44/);
-    assert.match(drawer.textContent, /Cent-rounded stake\$55\.56/);
+    assert.match(drawer.textContent, /Acquisition cost\$44\.44/);
+    assert.match(drawer.textContent, /Acquisition cost\$55\.56/);
     assert.match(drawer.textContent, /Fee at fill\$0\.93/);
-    if (row.pairs[0].retail_payoff.available) assert.match(drawer.textContent, /\$10\.17 net profit/);
+    if (row.pairs[0].retail_payoff.available) assert.match(drawer.textContent, /Minimum modeled net payoff\$10\.17/);
     else assert.match(drawer.textContent, /Both leg fees are needed/);
   }
   const lines = Object.fromEntries(feeCensusLines(census));
   assert.match(lines['Trading fees'], /3 of 4/);
   assert.equal(lines['Exact Pinnacle references'], '2');
-  assert.match(lines['EV results'], /0 reviewed fees · 1 conservative/);
+  assert.equal(lines['Sportsbook EV estimates before fees'], '3');
+  assert.match(lines['Qualified EV results'], /0 reviewed fees · 1 conservative/);
   assert.match(lines['Source prices'], /8 working prices published · 5 working prices unpublished/);
   assert.match(lines['Fee gaps among current offers'], /fee review does not cover/);
   const requests = [];
@@ -132,6 +151,7 @@ async function check() {
   await mountFeeCensus(coverage, download)();
   await mountFeeCensus(admin)();
   assert.equal(coverage.textContent, admin.textContent);
+  assert.match(coverage.textContent, /The full provider offer count is unknown/);
   assert.equal(download.disabled, false);
   assert.deepEqual(requests, Array(2).fill(['/api/comparison-current/fee-coverage', 'GET']));
   console.log('PASS F07 DOM fixtures: fee, size, timing, pinned reference withdrawal, arb payoffs and owner counts');

@@ -5,12 +5,30 @@ are estimated, with exact originals beside the projected canonical identity.
 Historical event keys and sealed direct-win proofs remain separate readers.
 """
 from copy import deepcopy
+from uuid import UUID
 from .event_links import digest, instant, reviewed_links
 
 VERSION = 'predict-occurrence-match-1'
 MAX_MEMBERS = 2048
 UNKNOWN = (None, '', 'unknown', 'unverified')
 VENUE_EVENT_IDS = {'kalshi_event', 'novig_event'}
+
+
+def _kalshi_milestone_uuid(event):
+    candidates = set()
+    for fact in event.get('observed_identity_facts', []):
+        value = fact.get('source_3_id')
+        if value is None:
+            continue
+        try:
+            if (value != fact.get('source_id') or value != str(UUID(value)) or not fact.get('id')
+                    or not fact.get('main_game_event_ticker')
+                    or instant(fact['start_date']) != instant(event['scheduled_start'])):
+                return None
+        except (ValueError, TypeError, KeyError, AttributeError):
+            return None
+        candidates.add((value, fact['id']))
+    return next(iter(candidates)) if len(candidates) == 1 else None
 
 
 def validate_match(value, source):
@@ -89,6 +107,7 @@ class OccurrenceResolver:
         # Native spread/total series may use separate event IDs for the same
         # provider game. Only an explicit source link establishes that alias.
         source_game = next(iter(source_games)) if len(source_games) == 1 else s['native_event_id']
+        candidate = _kalshi_milestone_uuid(e) if provider == 'kalshi' and e['competition'] == 'NFL' else None
         return dict(key=(provider, s['native_event_id']), roles=roles,
                     source_game=source_game,
                     league=e['competition'], season=e.get('season'), stage=e.get('stage'),
@@ -97,7 +116,31 @@ class OccurrenceResolver:
                     start=e['scheduled_start'], replacement=replacement, conflict=conflict,
                     neutral=e.get('neutral_venue') is True,
                     version=s['binding_version'], evidence=record['quote']['provenance'].get('sha256'),
-                    event=e)
+                    event=e, **({'milestone_uuid': candidate[0], 'milestone_id': candidate[1]} if candidate else {}))
+
+    def _confirm_nfl_milestones(self, facts, source_local, conflicts):
+        """Validate a shared NFL UUID only while both source events attest it."""
+        kalshi = {}; polymarket = {}
+        for key, event in facts.items():
+            if event['league'] != 'NFL' or key in source_local or key in conflicts:
+                continue
+            if key[0] == 'kalshi' and event.get('milestone_uuid'):
+                kalshi.setdefault(event['milestone_uuid'], []).append(event)
+            elif key[0] == 'polymarket_us' and event['shared'].get('sportradar'):
+                polymarket.setdefault(event['shared']['sportradar'], []).append(event)
+        for identifier in kalshi.keys() & polymarket.keys():
+            own, peers = kalshi[identifier], polymarket[identifier]
+            if (len({(f['source_game'], f['milestone_id']) for f in own}) != 1 or len(peers) != 1
+                    or any(not self._consistent(f, peers[0]) or f['roles'] != peers[0]['roles']
+                        or instant(f['start']) != instant(peers[0]['start'])
+                        or f['replacement'] or peers[0]['replacement']
+                        or f['season'] != peers[0]['season'] or f['stage'] != peers[0]['stage']
+                        or f['shared'].get('sportradar', identifier) != identifier for f in own)):
+                for event in [*own, *peers]:
+                    conflicts.setdefault(event['key'], []).append('milestone_uuid_metadata_conflict')
+                continue
+            for event in own:
+                event['shared']['sportradar'] = identifier
 
     @staticmethod
     def _consistent(a, b):
@@ -179,6 +222,7 @@ class OccurrenceResolver:
             if key in native_links and native_links[key] in confirmed_links:
                 k, v = native_links[key]
                 f['shared'][k] = v
+        self._confirm_nfl_milestones(facts, source_local, conflicts)
         # Necessary-condition indexes only: the existing consistency/metadata
         # predicates still decide every candidate. Preserve original fact order
         # in audit output and retain peers sharing any (even conflicting) ID.
@@ -226,6 +270,8 @@ class OccurrenceResolver:
             elif reason != 'provider_edge_review_required':
                 conflicts.setdefault(k, []).append(reason)
             elif (k in self.members and self._consistent(f, self.members[k]['facts'])
+                  and not (k[0] == 'kalshi' and self.members[k]['facts'].get('milestone_uuid')
+                           and self.members[k]['method'] == 'shared_provider_id')
                   and (k[0] != 'sportsgameodds' or self.members[k]['method'] != 'shared_provider_id')):
                 assigned[k] = self.members[k]['occurrence_id']
                 methods[k] = self.members[k]['method']

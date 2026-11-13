@@ -136,6 +136,11 @@ class CurrentService:
             from .sportsgameodds_worker import SportsGameOddsWorker
             self.workers[provider]=(self.sgo_factory or SportsGameOddsWorker)(self)
             self.tasks[provider]=asyncio.create_task(self.run_worker(provider), name='predict-current-sportsgameodds')
+            if self.database_mode and self.sgo_factory is None:
+                from .public_sportsbook_worker import PublicSportsbookWorker
+                self.workers['public_sportsbook'] = PublicSportsbookWorker(self)
+                self.tasks['public_sportsbook'] = asyncio.create_task(
+                    self.run_worker('public_sportsbook'), name='predict-public-sportsbook')
         elif self.config['aggregate_enabled'] and provider=='the_odds_api' and 'the_odds_api' not in self.paused_sources:
             from .current_aggregate import AggregateScheduler
             self.workers['the_odds_api']=(self.aggregate_factory or AggregateScheduler)(self)
@@ -162,6 +167,8 @@ class CurrentService:
                 self.workers[venue].metrics.update(state='unavailable', gap='novig_signed_worker_failed')
             elif venue=='novig_public':
                 self.workers[venue].metrics.update(state='unavailable', gap='novig_public_source_unavailable')
+            elif venue == 'public_sportsbook':
+                self.workers[venue].metrics.update(state='unavailable', reason=type(exc).__name__)
             elif venue in ('the_odds_api','sportsgameodds'):
                 try:await call(self, self.workers[venue].state, 'error', 'aggregate_worker_failed', 'Shared aggregate worker failed. Inspect each native worker status.')
                 except Exception:self.cleanup_errors.append('aggregate_status_failed')
@@ -292,6 +299,18 @@ class CurrentService:
         from .native_sporting_state import apply
         inventory,changed=apply(self.sink.reducer.inventory,observations)
         if not changed:return
+        from .v1_comparison import annotate
+        catalog = inventory[venue]
+        affected = dict(events=[dict(event) for event in catalog['events'] if event['id'] in changed],
+                        markets=[dict(market) for market in catalog['markets'] if market['event_id'] in changed])
+        # Kickoff exclusions may have short-circuited the earlier subscription
+        # proof. Recheck its original exact identities, terms and slug guards.
+        annotate(affected, venue, policy='manual-comparison-2', share_metadata=True)
+        events = {event['id']:event for event in affected['events']}
+        markets = {(market['event_id'],market['id']):market for market in affected['markets']}
+        inventory = dict(inventory, **{venue:dict(catalog,
+            events=[events.get(event['id'],event) for event in catalog['events']],
+            markets=[markets.get((market['event_id'],market['id']),market) for market in catalog['markets']])})
         retained={(source,m['event_id'],m['id']) for source,cat in inventory.items() for m in cat['markets']}
         refresh={key for key in retained if key[0]==venue and key[1] in changed}
         delta=dict(retained=retained,withdraw=set(),refresh=refresh)
@@ -380,6 +399,9 @@ class CurrentService:
             await self._pause(venue)
 
     async def _pause(self, venue):
+        if venue == 'sportsgameodds' and (worker := self.workers.get('public_sportsbook')):
+            worker.closed = True
+            self.tasks['public_sportsbook'].cancel()
         if venue in ('novig','prophetx','the_odds_api') and 'novig_native' in self.workers:
             self.ingress.revoke('novig')
             self.workers['novig_native'].closed=True

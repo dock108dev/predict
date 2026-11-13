@@ -36,7 +36,17 @@ def receipt_watermarks(db, aggregate_provider='the_odds_api'):
     return aggregate, native
 
 
-def prioritize_current(pending, scope, evidence, at, *, material=(), undelivered=()):
+def sgo_live_deliveries(pending, scope, evidence, at, undelivered):
+    from app.comparison.game_phase import LIVE_SECONDS
+    clocks = {r['event_id']: stamp(r['at']) for r in evidence
+              if r['venue'] == 'sgo_live' and r['at']
+              and 0 <= (at - stamp(r['at'])).total_seconds() <= LIVE_SECONDS}
+    return [key for _, _, key in sorted(
+        (min(clocks[e] for e in scope[key] if e in clocks), index, key)
+        for index, key in enumerate(pending) if key in undelivered and any(e in clocks for e in scope[key]))]
+
+
+def prioritize_current(pending, scope, evidence, at, *, material=(), undelivered=(), live_deliveries=None):
     """Reserve oldest and source slots, then alternate fair and fresh work.
 
     Preserve a fair rotation slot. A fresh explicit SGO live receipt can use
@@ -48,15 +58,10 @@ def prioritize_current(pending, scope, evidence, at, *, material=(), undelivered
     reference_events={r['event_id'] for r in evidence if r['venue']=='pinnacle' and r['at']
         and 0 <= (at-stamp(r['at'])).total_seconds() <= MAXIMUM_AGE}
     from app.comparison.game_phase import LIVE_SECONDS
-    sgo_live = {r['event_id']: stamp(r['at']) for r in evidence
-                if r['venue'] == 'sgo_live' and r['at'] and
-                0 <= (at - stamp(r['at'])).total_seconds() <= LIVE_SECONDS}
     # An earlier source clock has less time left in the same freshness window.
-    live_candidates = sorted(
-        (min(sgo_live[e] for e in scope[key] if e in sgo_live), index, key)
-        for index, key in enumerate(pending) if key in undelivered and any(e in sgo_live for e in scope[key])
-    )
-    live_first = live_candidates[0][-1] if live_candidates else None
+    if live_deliveries is None:
+        live_deliveries = sgo_live_deliveries(pending, scope, evidence, at, undelivered)
+    live_first = live_deliveries[0] if live_deliveries else None
     order = list(dict.fromkeys([live_first, pending[0]])) if live_first else [pending[0]]
     fresh = {}
     # A newly admitted aggregate batch deserves a first-delivery slot before
@@ -82,7 +87,7 @@ def prioritize_current(pending, scope, evidence, at, *, material=(), undelivered
     # interleaving recent complete native components without dropping any scope.
     scheduled=set(order)
     recent_order=iter(sorted(fresh,key=lambda key:(fresh[key],key)))
-    delivery_order=iter(dict.fromkeys([*(key for _, _, key in live_candidates), *first_delivery]))
+    delivery_order=iter(dict.fromkeys([*live_deliveries, *first_delivery]))
     for key in pending:
         if key in scheduled:continue
         order.append(key);scheduled.add(key)

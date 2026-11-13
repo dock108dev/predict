@@ -2182,3 +2182,830 @@ current desk sample. It does not establish the independently offered universe
 or sustained data coverage. The updated [execution queue](../NEXT_STEPS.md)
 owns the remaining measurement, freshness, exact comparison, fee, usability
 and installed-verification work.
+
+## Overnight coverage and usability integration, November 11–12 Eastern
+
+Work continued in the existing `main` checkout. The first launcher stop
+returned after its 15-second wait while the data owner was still draining.
+The owner exited normally and the launcher started both roles on port 8784
+with the original config. The launcher now gives the data owner a 45-second
+drain window. A later app-only restart left the data PID and collection
+ownership intact.
+
+### Standing fees and ordinary inspection
+
+At 11:17–11:18 p.m. the installed fee owner verified Polymarket US standard
+sports and Novig pregame against their official documents. Kalshi's official
+PDF returned HTTP 429. Current native API values and complete scoped change
+histories matched the 18 reviewed series. The rounding text matched the
+reviewed content and its CDN receipt age remained visible. Admin marked this
+Kalshi evidence **Market terms verified · PDF recheck unavailable**. The
+quote-specific calculation retains its conservative exchange-only scope.
+All three products now report standing terms with scheduled rechecks and no
+invented provider end date. Observed changes and known cutovers still affect
+current authority. Older pinned captures keep their original evidence.
+
+The first post-reload census displayed 84 current Kalshi offers and 84
+numeric fees. The live desktop and 390px browser checks opened two current
+Kalshi drawers with a $0.01 conservative fill fee and standing terms. A
+separate installed 390px inspection showed a $0.02 fee. These were fee-only
+observations while a compatible current EV reference was unavailable.
+
+### Exact comparison and the legacy pair withdrawal
+
+The active sportsbook path carries the highest eligible same-line payout
+from FanDuel, DraftKings, BetMGM or Caesars and de-vigs that book's own pair.
+It binds native offers only when the occurrence, exact contract, reviewed
+rules jurisdiction and original source clocks qualify. SGO fair odds remain
+separately labeled. The controlled Polymarket US calculation used a $0.30
+acquisition, a $0.02 conservative fee and a 50% de-vigged probability to
+produce 66.67% before fees and 56.25% after fees.
+
+At 11:27:53 p.m. the installed Arb page displayed a Chicago State–California
+Baptist spread with a modeled −$2.25 net payoff. The arithmetic reconciled,
+and the source trace found that the event association lacked exact proof.
+The legacy finance-ready producer had replaced the price pass's stricter
+opposition set. Both passes now emit the same independently proved pairs,
+with a versioned per-leg source and occurrence witness. The ordinary API
+withdrew pre-correction assumed proofs after the 11:32 p.m. restart. The
+Chicago capture is historical diagnostic evidence only.
+
+At 11:33:08 p.m. the corrected ordinary head retained 20 exact NFL proofs
+for Washington–Giants across winners, spreads and totals. Both venues
+corroborated the occurrence ID, teams and kickoff. Zero of those pairs had
+both quotes current in that read. An adjacent synchronized input census
+found one current exact NFL winner pair with both numeric fees and zero
+published eligible pairs. That was a publication gap in the sampled
+read. [Kalshi milestone](https://external-api.kalshi.com/trade-api/v2/milestones/5d577d84-4a39-4676-8f31-7bb242dab15b) ·
+[Polymarket US event](https://gateway.polymarket.us/v1/events/205606)
+
+The final installed build published the exact Washington–Giants full-game
+winner pair at 11:59:23 p.m. The modeled $100 pre-fee stake bought 99
+whole claims per leg at $0.56 and $0.445. The acquisition was $99.495.
+The separately reconciled conservative fees were $1.71 and $2.32. Total
+funding was $103.525, with $99 payable in either decisive state or the
+documented tie, for a $4.525 modeled loss. Depth and exceptional settlement
+remain outside this estimate. Both desktop and 390px opened the ordinary
+pair drawer. The final list uses each fee leg's whole-claim acquisition
+amount alongside the fee.
+
+At 11:32 p.m. the retained census found zero four-book originals within the
+15-second live or 30-minute pregame reference clocks. This is a retained
+sample. The source also lacks reviewed exact sportsbook jurisdiction bindings
+and a verified SGO-to-native link for the inspected NBA/NCAAB cohorts.
+
+### First use and coverage inspection
+
+The clean-profile browser run used PostgreSQL 16.15 and the actual local app
+routes with acquisition off, no provider credentials and no external browser
+requests. Both 1440px and 390px completed practice replay, settings, search,
+offer and pair inspection, price-step comparison, filter empty states and
+missing-archive recovery. A queued drawer-close race discovered by the
+keyboard journey was corrected. The installed profile completed offer
+inspection, native and SGO source status, practice entry and pinned-evidence
+preservation when the latest price was unavailable. Changed-price adoption
+was verified in the controlled browser fixture in this pass.
+
+The opt-in synchronized census separates the provider-offered universe,
+native catalog queries, SGO originals and latest-frame membership, SQL
+working prices, published and current prices, numeric fees and EV/arb
+eligibility. A separate retained-input reconstruction checks publication
+against independently reconstructed eligible inputs. The provider-wide
+offered price count remains unknown. Coverage and Admin label that gap
+and show sportsbook EV separately from the historical Pinnacle measure.
+[Census instructions](broad-coverage.md#running-census)
+
+### Source scheduling and transport
+
+With the rolling allowance saturated, a process reload used to postpone the
+next SGO attempt by one hour. The worker now derives the next estimated
+eligibility from the account allowance and charge ages, then rechecks all
+guards. The normal worker admitted a two-object page at its computed
+11:44:19 p.m. retry. Confirmed live and kickoff work now precede older
+started-only polls while preserving the latter's target cadence.
+
+The active and within-two-hour refresh now requests alternate lines for six
+selected books in one-event requests. The first running filtered NHL page
+arrived at 11:53:36 p.m. It was 59,551 bytes and yielded 176 alternate
+observations. The provider marked all 212 main and alternate observations
+unavailable. The ledger and account matched at 4,798 objects with zero held.
+The controlled storage stress case fit one event in the 8 MiB ingress limit
+and measured 13.04 MB for two equally dense events. Discovery queries and
+their saved cursors retain their original shape.
+
+At 12:40:48 a.m., a live Nashville–Anaheim page admitted 33
+provider-available alternates. A retrospective check found five exact Novig
+total sides with a current same-book BetMGM pair at receipt and admission.
+The Novig source clock was already 13.057 seconds old at receipt. Admission
+added 0.771 seconds. First capture occurred 1.991 seconds after receipt and
+first page publication 4.601 seconds after receipt. The five inputs all
+expired under the 15-second policy before a qualified result could publish.
+This verifies receipt of open alternates and locates an EV delivery gap.
+
+At 12:52:04 a.m., another live NHL page had fresh moneyline prices from three
+reference books. The available Novig and SGO-Kalshi originals were already
+27.170–49.575 seconds old at receipt. At 1:14:35 a.m., an NCAAB receipt had
+fresh SGO-Kalshi ±7.5 and FanDuel ±10.5 prices. The lines differed, so that
+receipt had no exact same-line pair for those offers.
+
+Kalshi now changes the rotating tail under the existing subscription ID.
+The initial integration found a late retiring-market delta could make its
+two reconstruction partitions disagree about a price clock. Both partitions
+now validate the sequence and omit the retired market clock. Submission of
+the two partitions and catalog changes is serialized. Polymarket US keeps
+unchanged hot request groups and waits for a positive, request-matched
+unsubscribe response before adding replacement groups. Both feeds retain
+the 256-market cap and use the normal reconnect path when the transition
+cannot be verified. [Kalshi order book](https://docs.kalshi.com/websockets/orderbook-updates) ·
+[Polymarket US market data](https://docs.polymarket.us/api-reference/websocket/markets)
+
+At 1:13:58 a.m., Polymarket US received a remote WebSocket close with code
+1001. It reconnected and resumed acknowledged rotations. Kalshi retained
+its own connection through that recovery.
+
+### Fee capture correction and checks
+
+The 12:24:29 a.m. read had 185 of 191 current offers fee-covered. Six newly
+published Kalshi NCAAB offers carried a stale fee-product token. Their
+fee coverage returned on the next read. The ordinary writer now binds fee
+products to the quotes it actually captured, including venues that arrive
+between the planning and capture transactions. The disposable SQL fixture
+reproduced the missing plan-time venue and verified first-publication fee
+authority. The next worker turns loaded the change without a data-owner
+restart. During policy replacement the read withheld old economics until
+the new members were ready. At 12:38:04 a.m., all 388 expected components
+were on the new policy and finance-ready.
+
+The integrated checks passed 554 focused Python tests and 100 subtests,
+51 disposable PostgreSQL tests and four subtests, and the additional
+fee-capture SQL case. The native transport and alternate-line targeted
+suites, browser checks at both widths, both drawer fixtures, package
+install smoke, lint and maintained-document checks passed. The first
+combined browser run exposed a keyboard focus race. After the correction,
+five consecutive combined browser runs passed at both widths. The live
+in-game checks preserved pinned prices when the latest price expired.
+
+### Two-hour installed verification, November 12 Eastern
+
+The 12:03:29–2:03:29 a.m. transport sample covered 121 one-minute reads
+on a single data owner. All synchronized desk and runtime reads succeeded.
+Two reads of the separate legacy Coverage route hit its existing read-memory
+guard and recovered on subsequent reads. Exact opposing pairs appeared in
+112 of the desk samples. Ten periodic reads returned a sized payoff.
+
+Kalshi completed 353 acknowledged in-place rotations on one connection,
+with no resynchronization. Polymarket US completed 343 rotations on seven
+connections with one provider-initiated resynchronization. There were no
+rotation fallbacks. SGO accounted for 21 objects in the measured interval,
+with no holds and no completed discovery traversal. This measured the
+running guard and refresh path. Discovery cost remains outside this sample.
+
+The 2:03 a.m. retained-input audit reconstructed 127 current working
+prices, one exact opposing NFL pair and zero EV-eligible inputs. The same
+read published 125 current fee-covered offers and that exact pair. SQL at
+2:03:40 a.m. measured 1,483,703,075 allocated database bytes and 24,765
+history witnesses using 33,553,877 logical bytes. Capacity had rotated
+80,711 witnesses and recorded zero skips. Seven days remains the age limit,
+and capacity can shorten the effective retained period.
+
+At 2:27 a.m., the ordinary two-object refresh admitted NFL and NHL pregame
+prices. The following reads included 24 current SGO-attributed Kalshi and
+Novig offers across winners, spreads and totals. They reported
+`sgo_offer_native_contract_unverified`. Their source price remained usable
+for inspection while the unverified native contract prevented a numeric fee.
+The source frames were Washington–Giants (`Qq8Zi9AOEqVNhRnPgzcx`) and
+Carolina–Seattle (`JfMmDBLF1lxRJoEg2pIW`). Each contained six Kalshi-attributed
+prices with no Kalshi event or market link. The common native NFL event UUID
+was absent from the SGO frame. Novig market links were present, with signed
+contract and terms evidence still unavailable. The fee census includes these
+offers in the all-source denominator.
+
+The corrected-policy window ran from 12:38:29 to 2:38:29 a.m. on the same
+data owner. All 121 minute reads succeeded across desk, Admin and Coverage.
+Current offers ranged from 10 to 206, with a median of 105. All 11,905 native
+offer observations had numeric fees, including 99 Kalshi and 56 Polymarket US
+in-game observations. Across all sources 11,905 of 12,169 had numeric fees
+(97.83%). Each of the 264 uncovered observations was one of the 24 SGO
+pregame prices repeated across the last 11 samples. This is an observation
+count across time, and the inventory of provider-offered prices is still
+unknown. Four earlier legacy Coverage reads hit the memory guard, including
+the two in the separate transport window above.
+
+An exact opposing pair appeared in 109 of the 121 corrected-policy desk
+reads, with 12 periodic sized payoff reads. At 2:38:38 a.m. the independent
+audit matched one eligible pair to one published pair with both fees. That
+read overlapped a normally scheduled SGO admission and found 24 of 46
+eligible source-local indicative EV prices already published. At 2:39:21
+a.m. the ordinary publication had all 46. The matched cohort was pregame.
+The installed 1440px and 390px drawers both opened the Novig-via-SGO
+Seattle winner at +264. DraftKings supplied the highest payout among four
+eligible books, with +245 and −305 on its two sides. The independently
+calculated 27.7921% no-vig probability gave 1.1631% indicative before-fee
+EV. Trading fees and native settlement remained unavailable for that offer.
+The independent audit found zero eligible native EV inputs. The 154
+available SGO live offer observations contained 18 fresh at receipt and
+admission, 71 with an exact same-book pair and five with both the offer and
+its pair fresh at receipt and admission. None reached the desk in time for
+an in-game indication. A blank eligible cohort has no coverage rate.
+
+In the corrected-policy window Kalshi rotated 334 times in place without
+another connection or resync. Polymarket US rotated 325 times and recovered
+from one remote close. Both stayed at 256 active markets, with 9,496
+Kalshi and 11,700 Polymarket US markets deferred near the end. SGO used
+20 objects, all refresh. The static projection was 2,825 objects/day
+(1,904 refresh and 921 discovery) against 4,817 allowed. The inherited
+rolling ledger reached that allowance. No discovery or refresh between
+discovery pages occurred during either window. The installed alternate
+route had admitted 14,933 observations, of which 220 were available.
+
+At 2:39:30 a.m. provider usage and the ledger agreed at 4,828 of 100,000
+objects, with zero SGO held and 10,000 reserved. The separate legacy ledger
+held 55 uncertain credits across 20 attempts. The full database used
+1,476,887,331 bytes. SGO history held 24,838 witnesses and 33,524,214
+logical bytes, with 81,663 capacity evictions, zero skips and zero witnesses
+older than seven days. Both processes remained healthy on the existing
+configuration with global Stop off and no source pauses.
+
+The remaining live coverage work is to trace an exact, fresh native EV
+input to publication, reduce elapsed time on the source-local live path,
+establish the SGO-to-native contracts and applicable sportsbook rules,
+and measure discovery and independently offered prices across the full
+scope. No plan or venue expansion was made.
+
+## November 12 active-slate continuation
+
+### Aggregate accounting interruption
+
+The last successful SGO receipt was at 11:08:28 a.m. Eastern. The next
+two-object refresh reservation was created at 11:08:29 as macOS entered
+maintenance sleep. No response body, provider request identifier or
+successful admission is retained for that reservation. A guarded account
+read at 11:38:54 showed 4,913 of 100,000 objects, two above the preceding
+4,911 balance. The aggregate counter does not identify the request or rule
+out delayed reporting or another client. The ledger retains the two held
+objects, and the existing hold guard prevents further SGO event requests.
+This differs from the separate legacy 55-credit hold, which also remains.
+[SGO usage endpoint](https://sportsgameodds.com/docs/endpoints/getUsageData)
+
+### Exact Novig instruments and live delivery
+
+SGO carries Novig event links and some outcome links. A bounded public
+Novig catalog reader now observes the matching official event and market
+IDs without an SGO request. The binding checks immutable outcome IDs, their
+market and event membership, league, full-game period, signed line,
+participants, original kickoff and venue phase. Exact instrument identity
+and current price authority remain separate. The pregame `WHEN_LIVE` fee
+is zero for a current, verified offer. Signed post-reset quote evidence is
+still needed for a live fee. The reviewed NHL and NFL outcome rules preserve
+fair-market-value void settlement with no fixed payout estimate.
+[Novig catalog documentation](https://docs.novig.com/api-reference/catalog/list-markets) ·
+[Novig fee documentation](https://docs.novig.com/api/concepts/fees)
+
+The loaded college-team path corroborates home and away using two co-received
+SGO outcome links, the official nonzero home handicap and distinct official
+Novig subject IDs. It requires all available exact role anchors to agree.
+The ordinary head carried the resulting UMKC–George Mason winner link and
+the reviewed NCAAM winner rule. The reviewed NFL, NCAAF, NBA, NCAAB, NHL and
+MLB profiles cover all 18 full-game market families, with venue-specific tie,
+overtime, shootout, extra-inning and shortened-game treatments. Spread and
+total rule promotion is limited to exact half-point lines. The FMV void
+payout and unconditional pair economics remain unavailable from that evidence.
+[Novig market catalog](https://docs.novig.com/api/catalog) ·
+[Ludlow Exchange filings](https://www.ludlowexchange.com/filings)
+
+The first installed poll captured two events and 12 exact linked outcomes.
+The Carolina–Seattle retention had six exact main-line Novig outcomes and
+22 additional available source alternates without native links. The
+ordinary desktop and 390px drawers both opened Carolina −1.5 with native
+market `01a1cba2-f314-7381-bc87-29b0261a6c5d` and outcome
+`01a1cba2-f314-7381-bc87-29df87f5669e`. The drawer showed the exact contract
+and retained original price. Its expired source clock withheld fee and EV.
+The surrounding retention census found 4,134 Kalshi-attributed reference
+rows with zero outcome links. It found 408 links on 4,979 Novig-attributed
+rows, of which 380 linked rows were available. The larger counts describe
+retained source records, including stale and unavailable records.
+
+The follow-up exhausted the official Carolina–Seattle Novig event catalog
+at 17 markets. Each of the 22 unlinked alternates had one numerical native
+candidate. Its SGO original had no outcome UUID or alternate link. The
+Washington–Giants catalog had 77 markets and all six retained linked
+quotes matched. Across 4,134 current and 1,204 archived SGO Kalshi facts,
+none supplied a native market or outcome ID, a matching link or a typed
+ticker alias. The four sportsbook feeds had 20,147 current and 4,197 archived
+facts with no retained market link or jurisdiction. Generic odd IDs and
+matching lines provide context for these records. An exact native match
+needs a source-attributed instrument and side, and native EV still needs
+quote-specific sportsbook rules evidence.
+[SGO Kalshi feed](https://sportsgameodds.com/bookmakers/kalshi-odds-api) ·
+[SGO events schema](https://sportsgameodds.com/docs/endpoints/getEvents)
+
+The 12:47:53 p.m. Eastern scoped binding census found 274 available raw
+Novig observations, all event-linked and 252 outcome-linked. In the separate
+254-row retained Novig working set, 108 replayed with exact native identity,
+phase and settlement rules. The remaining rows had 136 unavailable official
+catalog witnesses, four missing outcome links and six scope conflicts. There
+were no side conflicts. The hold left zero SGO prices current. These are
+separate counts for source-link availability, retained working rows, exact
+contracts and current financial authority.
+
+The comparison owner now wakes after SGO SQL admission, prioritizes a
+fresh in-game component, and seals its indicative EV price member before
+processing the rest of the pending batch. Indexing each exact event, odd
+and line once removed repeated scans over dense alternate lines. Two
+read-only retained-event capture samples changed from 0.474 to 0.350 seconds
+and 0.597 to 0.364 seconds after indexing. These are spot timings. The new
+SQL diagnostic records the first live sportsbook price-member write within
+both the offer and reference clocks. A database fixture verified immediate
+ordinary publication and expiry without renewing the original clocks.
+
+A separate read-only replay joined original frame member IDs and revisions
+for 121 archived live frames. At their original receipt times it found 185
+candidate offer/reference observations with all three clocks within 15
+seconds. One Jackson State–Southern Mississippi winner at Kalshi via SGO
+was +625. DraftKings supplied +575 and −950 on the two sides, giving a
+de-vig probability of 28/199 and an indicative 2.0101% before fees. This
+recalculates retained observations at their original receipt times. It
+supplies no current price, native settlement proof or live publication.
+
+The app and data owner reloaded before puck drop. A second data-only reload
+loaded a correction for Polymarket US event-state feeds that carry a typed
+Sportradar UUID on both event and state and omit the older numeric game ID.
+The new route keeps its exact identity, contradiction and clock checks.
+
+### Carolina–Seattle in-game measurement
+
+The first active event was the NHL Global Series game in Helsinki. The
+scheduled start was noon Eastern. NHL still reported pregame at 12:07:15,
+when the direct books offered 33 Kalshi sides and 30 Polymarket US sides.
+The ordinary desk had zero current offers on the game because the scheduled
+start had passed without a confirmed live transition. NHL first reported
+live to this sampler at 12:11:59.910. At that boundary the direct books
+still offered 63 sides. The exact-event Polymarket US endpoint still carried
+a pregame state from 11:30:02, while the league head page soon showed a live
+state timestamped 12:11:43.769. The normal collector was on the league's tail
+page at 12:14:38. The direct Kalshi milestone still reported `scheduled`.
+[NHL Global Series](https://www.nhl.com/hurricanes/fans/global-series-2026)
+
+Polymarket US now interleaves an imminent-game league head request with
+its normal fair page traversal under the same 15-second request cadence.
+It retains the deep cursor and drops repeated source timestamps. The
+installed collector accepted a priority NHL head at 12:20:18. Fresh native
+books still could not produce working rows. The trace found two further
+causes. Enrichment reapplied the older catalog phase, and affected markets
+retained an old subscription identity refusal. The correction preserves the
+newer identity-bound phase through enrichment and reruns the existing slug,
+market, terms and side checks for the affected event only.
+
+At 12:27:14 the corrected runtime had four current working CAR–SEA prices.
+The ordinary desk showed one fee-covered spread at 12:27:29 and both winner
+sides at 12:27:44. The winner source clock was 12:27:37.168, receipt
+12:27:37.565, projection 12:27:37.645 and capture 12:27:39.074. Both winner
+fees were $0.02. A further exact normalization trace isolated a combined-total
+team label mismatch. The official terms used each event team's abbreviation
+plus its display name. With that exact form recognized, the retained
+first-party replay normalized all 30 Polymarket US sides, including 16
+totals, 12 spreads and two winners. The runtime loaded that fix around
+12:30 p.m. The native cross-venue CAR–SEA link still needs independent
+occurrence proof. Kalshi and Polymarket US supplied different source IDs.
+
+Kalshi's official milestone first carried `inprogress` at 12:25:22.877.
+The final data owner saved it at 12:32:14.074, and working rows for both
+sides of all three families were present at 12:32:15.928. The first
+ordinary sample showing Kalshi live was 12:32:29.401. At 12:33:14 the two
+venues had 12 current working keys and the desk published 11 of them.
+All 11 had numeric fees. The 6m51s gap from milestone clock to local
+admission includes a data-owner restart, so it does not isolate normal
+collector polling delay.
+
+At 12:34:24.478–25.476, the independent direct snapshot exhausted the
+Kalshi event roster and received full signed Polymarket US images.
+Kalshi offered 33 of 34 sides and Polymarket US offered 30 of 30. The
+coherent local read at 12:34:25.479 matched 12 of 63 to a current working
+key and six of 63 to a current published key, all with numeric fees. Of
+the remaining 57 offered sides, 33 lacked a current-connection image,
+18 had an image without a current working key, and six had a current
+working key whose published dependency had been replaced. The 9.52%
+publication figure applies to this event and capture. No exact EV input
+or opposing pair qualified for this game. Full-slate offered prices and
+full-slate EV and arb coverage remained unmeasured at the source boundary.
+
+The installed desktop and 390px mobile desk found the exact live event
+with `Carolina Seattle` after the app-only reload at 12:35. The search
+index now includes the canonical team name for a verified registry ID in
+the same league. Both drawers opened a Polymarket US Carolina −3.5 offer
+at +525 and displayed the $0.01 conservative fee for one taker contract.
+The row reported that a current same-line sportsbook pair was unavailable.
+The data owner continued through the app reload.
+
+A separate read-only Kalshi probe subscribed to the two exact winner
+tickers, then requested fresh snapshots on the same subscription ID.
+Both full books arrived with advancing sequence and a provider send clock
+33 milliseconds after the request. The provider documents that this
+action preserves membership and replaces the corresponding full book.
+The probe did not modify ordinary publication or execute trades.
+[Kalshi orderbook updates](https://docs.kalshi.com/websockets/orderbook-updates)
+
+The 12:48:43 p.m. Eastern ordinary Arbitrage read published a separate
+pregame Washington–Giants winner payoff from an exact shared provider
+occurrence. At the captured quotes, 99 whole contracts on each leg used
+$99.99 in acquisition and $4.04 in fees, for $104.03 in total funding and
+$99.00 of payout in either winner state and the tie state. Both the 1440px
+and 390px drawers displayed the resulting $5.03 loss and stayed within the
+viewport. The pair was not execution-qualified.
+
+### Live subscription and freshness repair
+
+At 12:57:15–18 p.m. Eastern, the second independent native boundary
+enumerated 37 offered Kalshi sides and 29 Polymarket US sides. The roster
+included two newly listed Kalshi markets. All 12 current working sides
+were published and had numeric fees, giving 12 of 66 (18.18%) current
+desk coverage. Among the missing Kalshi sides, 24 had an older image on
+the same connection and seven lacked a current-connection image. The
+23 missing Polymarket US sides lacked an image on its new connection
+after a reconnect. No exact EV input or opposing pair qualified for
+this NHL game.
+
+The new subscription policy protects one fixed slot per league and family
+before using the remaining fixed half for confirmed live lines. The other
+half rotates through deferred markets. Each venue retains its 256-market
+cap. Polymarket US selection can use newer committed sporting evidence when
+its source IDs and schedule still bind the catalog event. The Kalshi worker
+can request up to 24 aging in-game full books every eight seconds on its
+existing subscription, subject to the same stream ownership and capacity
+guards. Confirmation requires the exact ticker, current subscription,
+advancing sequence and a provider send clock after the request. Unchanged
+content keeps its original exchange clock. The data-only reload followed
+the 12:57 comparison boundary and left the app running.
+
+During the short 12:59–1:05 p.m. first-reload window, Kalshi confirmed
+768 of 768 requested quiet books through 1:04:33, with no timeout or
+reconnect. The first 21 exact-game reads had medians of 14 current working
+and 12 current published sides. The prior 100 exact-game reads on the
+earlier owner had medians of 12 working and nine published sides. Provider
+catalog size, game state and reconnections changed between these windows.
+
+The fixed-slot trace then found 195 Kalshi and 50 Polymarket US catalog
+event rows still marked live 14–22 hours after scheduled start. The prior
+six official NHL games were final. A further scheduling change ranks the
+additional fixed live lines and quiet-book requests by kickoff proximity,
+with fair league/family order for allocation ties. It leaves lifecycle and
+financial authority with the original providers. On the saved catalogs it
+raised fixed Carolina–Seattle residency from three to all 19 Kalshi markets
+and from three to all 15 Polymarket US markets. It preserved the 256 caps
+and 128 rotating slots. The app stayed up for the second data reload.
+
+The 1:16:15.084–17.819 p.m. Eastern provider capture was in period two.
+It enumerated 36 Kalshi and 29 Polymarket US offered sides. At the
+adjacent 1:16:18.104 coherent local read, all 65 had a current working
+price. The desk showed 22 Kalshi and 27 Polymarket US current prices,
+49 of 65 overall (75.38%), with numeric fees for all 49. All 16 missing
+desk prices had a same-connection image received within 15 seconds and a
+current working quote. Fourteen Kalshi prices had a replaced dependency.
+The two Polymarket US gaps were expiry and a replaced dependency. This
+capture isolates the missing prices to the stage after acquisition. An
+earlier 1:08:14 local tick had 62 of 62 current working prices published,
+and separate ticks fell to zero with working prices present. Freshness
+therefore varies over the publication cycle.
+
+One ordered Kalshi confirmation kept the original 1:07:08.354 book
+clock. Its quiet snapshot was requested at 1:07:28.426, confirmed by the
+provider at 1:07:28.457 and received at 1:07:28.465. It reached working
+projection at 1:07:28.497. The independent 1:16 read found no eligible
+live EV or exact arb input on this game. The reference source was held
+for all 65 working sides. Kalshi and Polymarket US lacked a shared game
+identifier, and the moneyline comparison lacked equality treatment.
+
+At 1:08 and 1:10 the ordinary writer deferred while storage maintenance
+held its shared advisory lock for physical reclamation. A separate
+regular `VACUUM` lock timeout also mislabeled the database unavailable
+while native admission continued. The repair defers the busy regular
+vacuum per table and leaves the physical storage guard and full-rewrite
+ownership in place. The disposable PostgreSQL 16 test held a table lock,
+verified the deferral and verified that the maintenance owner completed
+the rest of the turn. The timing data also shows price changes during the
+normal calculation interval. Reducing working-to-publication delay and
+reclamation contention remains necessary for sustained live freshness.
+
+Eight additional coherent reads at 1:18:09–31 identified 107 observations
+where a captured price dependency differed from the current working one.
+All 107 had a changed top price. Six earlier reads independently found price
+dependency changes without contract or occurrence revisions. These observations
+can repeat a side across captures. Preserve the current authority checks while
+reducing the time before ordinary replacement.
+
+### Twenty-minute active-window closeout
+
+The final subscription policy was observed on one data owner from
+1:06:59.930 to 1:27:00.381 p.m. Eastern. The 81 Carolina–Seattle samples
+each had all 19 Kalshi and 15 Polymarket US market images on the current
+connections. Current working prices ranged from 60 to 66, median 65.
+Current desk prices ranged from zero to 66, median 51. The desk showed
+3,660 of 5,199 working-side observations (70.40%) and had six zero-current
+ticks for this game. Every current published side had a numeric fee.
+The observations repeat sides across time. The three synchronized provider
+captures above independently enumerate the actual open price population at
+their respective boundaries.
+
+Twenty whole-desk minute reads had 2,300 of 2,300 current offer observations
+with numeric fees. Four independent financial audits found three eligible
+pregame NFL opposing-pair observations and matched all three to ordinary
+published pairs with both fees. No native or indicative EV input qualified
+in those audits, and no Carolina–Seattle pair qualified. An empty eligible
+cohort has no percentage. Full-slate offered coverage and a two-hour
+steady-state run on the final policy remain open.
+
+The storage and publication diagnostic recorded 131 distinct sampled
+ordinary turns, 102 published and 29 deferred on the snapshot lock. It
+directly observed 24 full-rewrite lock holders. Successful turns took a
+median 6.523 seconds. In a separate current-working and desk reason join,
+591 of 2,124 working observations lacked current publication. The reason
+counts were 318 replaced and 290 expired, with overlap. Kalshi confirmed
+2,595 of 2,619 requested quiet snapshots and recorded 22 timeouts. Late or
+uncorrelated responses did not renew authority. Both native feeds stayed
+on one connection each during the steady window.
+
+At 1:23:58, project PostgreSQL measured 1,584,145,187 bytes against the 2 GiB
+guard. History contained 25,969 witnesses and 33,553,620 encoded bytes,
+with 88,621 capacity evictions, zero skips and zero rows beyond seven days.
+There were zero SGO page admissions or live sportsbook seals in the prior
+two hours. The startup provider balance remained 4,913 of 100,000. The
+ledger retained 4,900 charged, 11 initial, two held and 10,000 reserved.
+The separate Odds API ledger kept 55 uncertain credits across 20 attempts.
+Stop was off and there were no source pauses.
+
+The installed desktop and 390px mobile drawers showed fresh in-game offers
+and numeric fees for both direct venues. During one publication gap, the
+desktop drawer retained its expired inspection when no current replacement
+was available. The mobile drawer kept its pinned price when evidence changed
+during adoption. The current run did not establish a changed-price adoption.
+
+The maintenance-only data reload at 1:27 left the app running. At 1:29:23
+both native workers were available with 256 active markets each. The database
+was available and had completed a maintenance turn with zero failures. The
+next exact-game read had 63 current working and 62 current desk prices, all
+62 with fees. There was no live regular-vacuum contention in that short
+check. The disposable SQL regression exercised the deferral itself. The
+final wheel, 226 focused tests and two subtests, five PostgreSQL 16 checks,
+Ruff, documentation and whitespace checks passed. Earlier disposable SGO
+checks separately exercised the exact catalog and first live-member seal.
+
+The Mac remained on battery through closeout. The scheduled later-slate
+samplers were stopped after the active NHL and final installed checks. The
+application and data owner remained running. A later active NBA/NCAAB window
+and a two-hour final-policy measurement still require observations, along
+with request-specific SportsGameOdds charge evidence and fresh qualifying
+receipts for live EV.
+
+### November 12 owner walkthrough
+
+The screenshot's 3:51:23.263333 p.m. Eastern inspection was recovered from
+the pinned comparison result. Detroit–Washington Over 205.5 at Polymarket US
+was $0.8100 per $1 contract (−426.32 American), with an original provider book
+clock of 3:51:19.046051 and a $0.01 estimated fee. Its benchmark reason was
+`sgo_reference_book_rules_unverified`. The drawer put three unavailable EV
+variants and detailed fee evidence ahead of an actionable reason.
+
+At 3:56:20 a synchronized read found 8,508 retained display offers, 28 current
+display offers with 28 numeric fees and 34 current working keys. The reference
+source was unavailable for all 34 working prices. No EV or opposing pair
+qualified in that read. Both native feeds were available and SGO's two-object
+reservation still blocked paid dispatch. These counts do not establish an
+offered-slate denominator. The current work now pairs exact-line presentation
+with a trace of the missing financial inputs.
+
+### Ranked dashboard approval and engineering baseline
+
+The owner approved the revised EV and Arbitrage rankings, game and calculation
+screens and no-results state on November 12. The approved design opens on
+ranked opportunity cards and puts other venue prices and the selected comparison
+book on the card. The game view carries the full line matrix. The positive
+examples use illustrative prices. The negative Washington–Giants arb is a
+recorded calculation. `NEXT_STEPS.md` tracks installed engineering and proof.
+
+At 4:20:54 p.m. Eastern the app showed four current desk prices, each with a
+numeric fee, out of 8,242 retained displayed offers. The independent audit
+found 26 current working prices, each with the SGO reference source unavailable,
+and zero eligible EV or opposing pairs. Both native feeds were available. The
+data owner was healthy with Stop off and no source pauses. SGO was still blocked
+by the two-object reservation. This synchronized point read supports the
+availability and publication trace. It leaves full-slate offered coverage unknown.
+
+Review decision: Ranked opportunity cards on the opening dashboard | Owner approved the revised mockups, closing design review | Implement and verify the installed journey.
+
+### Ranked opportunities installation and verification
+
+The November 12 local installation on port 8784 opens Opportunities with EV
+and Arbitrage tabs. Ranked EV cards keep every distinct exact-outcome offer,
+with each venue's result or missing input and the selected comparison pair.
+Arbitrage ranks the lowest modeled net payoff over total funding using exact
+values, including both fees and evidenced equality outcomes. The game and
+Browse odds routes show both sides, including alternates. Historical odds
+remain labeled, and the open inspection retains one immutable capture.
+
+The original Detroit–Washington Over 205.5 evidence records a Polymarket US
+price of $0.81 and a $0.01 modeled fee. Provider clock 3:51:19.046051 p.m.
+Eastern preceded receipt at 3:51:19.308971, working projection at
+3:51:19.480597, and capture at 3:51:23.263333. Its first recorded EV gate was
+unverified sportsbook rules. The earlier SGO frame contained a 220.5 total
+with book clocks near 8:02–8:04 a.m. Eastern and no 205.5 pair. Its observed
+Novig event ID did not corroborate the native Polymarket US Sportradar ID.
+The native Kalshi capture supplied a 200.5 total and no 205.5 opposing peer.
+The signed-line fix scopes reference dependencies and sportsbook rules
+bindings to the exact alternate and requires both sides to share the reviewed
+jurisdiction.
+
+At 4:26:13 p.m., the synchronized audit found 52 independently current working
+keys and eight current desk prices, all eight fee-covered. All 52 had the
+reference source unavailable. One exact NFL pregame pair qualified and was
+published with both fees. At 4:35:26 p.m., the ordinary Washington–Giants
+inspection used Kalshi $0.5400 and Polymarket US $0.4675. At 99 contracts on
+each leg, acquisition cost $99.7425 and fees were $1.73 and $2.34. The $99
+receipt in either winning state or the captured tie gave −$4.8125 and
+−4.6357615894% on $103.8125 of funding. Depth remains unverified. The
+earlier Washington–Giants capture separately reconciles to −$5.03 with
+$104.03 of funding and the same $99 receipt in its three evidenced states.
+
+The controlled Denver prices reproduce +3.26% after-fee EV from
+`(1431/2887 − $0.48) ÷ $0.48` and +0.89% modeled arb return from $0.93 over
+$104.07 of funding. A retained Seattle pregame ordinary estimate reproduces
++1.1631% from the +264 offer and DraftKings +245/−305. A retained live Jackson
+State–Southern Miss source frame reproduces an indicative +2.0101% from
+the +625 offer and DraftKings +575/−950. The latter is a source replay
+without a confirmed ordinary live publication.
+
+The 4:36 p.m. native Detroit–Washington inventory enumerated 259 offered
+pregame sides across the two venues. Of these, 42 had same-connection market
+images, eight reached current working storage, and two were current on the
+desk with fees. The 256 active markets per venue are a local throughput
+setting. The independent route could enumerate all 128 Kalshi and 131
+Polymarket US offered sides at the measured boundary. Missing same-connection
+images explain the largest gap, followed by freshness, admission and
+publication. This is an exact-event point measurement. The full-slate
+provider inventory is unknown.
+
+Ordinary publication now wakes after native commits. It retries boundedly
+when reclamation holds the publication lock. Snapshot reuse vacuum runs in
+the storage maintenance owner, and collecting rewrites use a shorter relation
+lock wait under the same capacity and retention guards. In matched
+90-sample, two-second observations, rewrites held the publication lock in
+12 samples before the change and one afterward. Seven before-change samples
+had a rewrite waiting on a relation lock while holding the publication lock.
+The after-change sample had zero such overlaps. PostgreSQL still recorded
+short relation lock timeouts. The final observation samples the data owner
+continuously, with app reload and policy boundaries recorded.
+
+In the 4:48:26 p.m. final-policy sample, the pinned Washington pair's
+receipt-to-working times were 0.3364 seconds for Kalshi and 0.3395 seconds
+for Polymarket US. Working-to-capture took 1.0207 and 2.1117 seconds,
+respectively. The first sampled ordinary card was 5.5247 seconds after its
+price capture. These are clocks for one matched pair. The 4:54:05 p.m.
+synchronized audit independently reconstructed and matched one sized
+payoff to the ordinary publication. An earlier audit undercounted sized
+payoffs because it omitted its own capture time. The ordinary payoff did
+not use that audit, and the corrected audit retains its actual read clock.
+
+A second complete Detroit boundary at 4:41:30 p.m. Eastern found 146 of 259
+offered sides in same-connection images. Eight of those images' sides had
+receipts within 30 seconds. Six exact offered sides were independently
+current in working storage, and all six were current and fee-covered on the
+desk. Both venues offered a 205.5 total. No 205.5 side in that boundary
+was present as an independently current working or desk key. The
+Polymarket US independent 205.5 book read returned an original transaction
+clock about 173 seconds older than the receipt. This separates the
+subscription and quote-clock gaps from the final desk seal.
+
+The two-object SGO reservation remains held. Startup account usage was 4,913
+of 100,000, with 4,911 accounted locally before the hold and a 10,000 object
+reserve. The account usage route returns window totals. The existing evidence
+does not attribute the two objects to the interrupted 11:08:29 a.m. Eastern
+request. The smallest missing evidence is provider or retained transport
+confirmation of its returned or charged object count, including an explicit
+zero if applicable. Paid collection and fresh SGO-dependent qualification
+remain blocked. The provisional first-of-month 00:00 UTC pacing boundary and
+the legacy Odds API holds remain in force.
+
+At 5:29:19 p.m. Eastern, the automatic Polymarket US recheck recorded an
+unrecognized revision of the complete official fee page. The first sampled
+withdrawal at 5:31 showed two current prices without numeric fees. The
+5:32 sample showed ten, all on Polymarket US. Direct retrievals reproduced
+the same document and digest. The current standard-sports taker tiers,
+insertion-time selection, formula, half-even cents, and split-fill cap
+still matched the supported model. The new review receipt records the
+served document's cache age. Verification accepts only the two specifically
+reviewed complete editions and retains the review guard for other revisions.
+The data owner was reloaded to run the normal prospective recheck, with the
+withdrawal interval preserved in the first observation. [Polymarket US fee schedule](https://docs.polymarket.us/fees)
+
+The new data owner accepted the reviewed edition at 5:37:11 p.m. Eastern.
+The 5:39:06 desk sample showed fees on 34 of 34 current Polymarket US
+offers and 38 of 38 current offers overall. The interrupted measurement
+retained 51 minute samples, with 3,876 fee-covered out of 3,946 current
+offer observations, including the withdrawal and catch-up. The renewed
+final-policy run began at 5:38:37 after both native feeds were available
+and the publication hash matched the loaded policy.
+
+The owner removed the two-hour duration requirement at closeout. The
+5:38:37–5:49:37 p.m. Eastern sample completed 12 synchronized minute reads
+with a single healthy data owner and no read gaps. All 800 current desk
+offer observations had numeric fees. The sampled observations may repeat
+an offer. Two independently reconstructed points counted 341 current working
+keys and 96 current desk prices, with the opening point still catching up.
+All 341 lacked a current SGO reference. The independent audit sized three
+negative native pair observations. One matched the ordinary desk within
+the same read. The other two awaited publication at the opening point.
+Both native feeds were available at closeout. Exact checks confirmed the
+same configuration, two held SGO objects, and 55 legacy Odds API uncertain
+credits across 20 attempts. Stop remained off and no sources were paused.
+
+The complete Detroit and Coppin State–Bradley provider inventories measured
+exact pregame cohorts. A new ordinary live EV could not be observed during
+the SGO hold. Independent live offered-price boundaries were still pending
+when the owner ended sampling. Whole-slate offered coverage is unknown, and
+the sampled native cohorts remain below the 99% freshness target. The local
+subscription roster and aging source clocks explain the largest measured
+deficits. The exact local evidence and per-cohort counters are in
+`.local/predict-ranked-qa-20261112/renewed/window-report.json`.
+
+Review decision: Fixed two-hour coverage run | Owner removed the duration requirement for this milestone | Closed sampling with the observed cohorts and kept live qualification open.
+
+### November 12 · Beta first click and quote quality
+
+Both beta reviewers started by looking for a matchup. The earlier README
+address returned 404 for /browse-odds on the older 8783 service. The ranked
+desk on 8784 served the route. The quickstart and **Find my game** walkthrough
+now use the ranked app.
+
+The retained Giants winner frame supplied FanDuel −132, DraftKings −135,
+BetMGM −135 and Caesars −134. The 11:05 a.m. Eastern receipt was over seven
+hours old when inspected. The desk now attaches those observations to the
+exact line even when the displayed offers come only from native venues.
+The current-only view omits expired prices. The Last-known view shows all
+four and their source ages. This browsing association supplies no settlement
+or financial authority.
+
+Admin → Quote quality reads the same stored frame alongside native Kalshi and
+Polymarket US offers. One probe showed Kalshi −117.39 direct and −137 in the
+older aggregate observation. The event comparison used teams and scheduled
+start. The provider's Polymarket observation stays labeled unverified as
+Polymarket US. No provider requests were needed for these checks.
+
+Desktop and 390px live browser journeys passed after reloading both processes.
+They covered Find my game, the Giants line, pinned inspection, a calculated
+Arbitrage card and Admin. The reported Arbitrage load failure did not recur
+on 8784. A later current pair modeled a $4.565 loss on $103.565 funded.
+The app and data process were healthy after both native sources reconnected.
+The two-object SGO charge hold remains unresolved. The production sportsbook
+jurisdiction-binding registry is empty, and current EV remained unavailable.
+Sixty focused tests, four subtests, three drawer/view fixtures, Ruff,
+documentation and generated-asset checks passed.
+
+### November 12 evening · Current EV blockers
+
+At 6:47:43 p.m. Eastern the provider reported 4,913 of 100,000 objects.
+The ledger held two objects on reservation
+`d3eed008-43bd-46e4-b5f4-af04a3c8df5a` and accounted for 4,911.
+The last admitted event frame arrived at 11:08:28.311559 a.m.; the held
+reservation was created at 11:08:29.394586 a.m. during maintenance sleep.
+No later frame, response, or provider request ID was available to attribute
+the account increase. No paid retry was dispatched. The earlier 55 uncertain
+Odds API credits and 10,000-object reserve were preserved. Admin Spending
+shows the held request and transport fields. New reservations capture the
+validated query and usage timestamp before dispatch and available response
+metadata on completion.
+
+The latest retained four-book clocks for Raptors–76ers and Pistons–Wizards
+were 7:03:59 a.m.; Mavericks–Timberwolves had 8:09:30 a.m.; Commanders–Giants
+had 11:05:17 a.m. The 102 retained four-book rows across those matchups had
+no market link or jurisdiction field. The generic house rules explain a
+two-way moneyline but do not establish which jurisdiction an individual feed
+quote came from. Native best-payout reference qualification now checks the
+exact same-frame pair and its clocks before looking up applicable rules.
+
+Both processes were reloaded. At 6:56:43 p.m. Eastern both direct feeds
+were available, Stop was off, no sources were paused, and the ordinary
+EV read showed 233 current offers and zero sportsbook or qualified EV.
+The live browser
+check opened the Admin incident and the ordinary EV and game views. The
+ordinary desk displayed a plain-language pause message. The 107 focused
+tests, four subtests and 31 disposable PostgreSQL checks passed. The existing
+in-game publication regression still produces and expires an exact numeric
+result with controlled inputs. Live EV remains pending a current real
+reference and its applicable evidence.
+
+### November 12 evening · Ordinary pregame sportsbook estimate
+
+An independent public board capture at 7:04:34 p.m. Eastern supplied
+timestamped pregame NFL moneyline pairs. The 7:08 p.m. ordinary ranked desk
+read showed three estimates across two Washington–Giants outcome groups.
+Washington to win was $0.4625 per $1 claim on direct Polymarket US. DraftKings
+and Caesars both paid +105. The deterministic tie-break chose DraftKings,
+whose opposite was −125 and whose original clock was 7:04:30 p.m. Eastern.
+Proportional de-vig produced 36/77. Return before fees was 3100/2849 percent
+(+1.09%). The desk classified the offer as scheduled.
+
+The capture was a one-shot read from the OddsLink public board and used
+the existing 30-minute estimate expiry. Recurring collection, Admin
+capture diagnostics, the 15-minute pregame policy and the separate Live
+tab were not installed by this check. The paid hold was neither used nor
+released. The calculation was an indicative estimate before fees.
+[Public board contract](https://oddslink.app/docs/api-reference/operations/publicboard/)

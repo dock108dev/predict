@@ -164,7 +164,17 @@ def current_rows(page, receipt_sha256):
                            provider_source_clock_original=quote['source_at_original'],
                            provider_opposing_odd_id=quote['opposing_odd_id']),
                        event_scope=dict(policy='sgo-provider-event-unverified-1', source='sportsgameodds', native_event_id=event_id))
+            if market_link := quote.get('bookmaker_market_link'):
+                row['comparison_source_metadata']['bookmaker_market_link'] = market_link.copy()
+            if quote.get('alternate') is True:
+                row['comparison_source_metadata']['alternate'] = True
             row['_instrument'] = instrument
-            row['_fingerprint'] = stable([source, original, q['state'], identity, at, quote['source_at_original'], quote['opposing_odd_id'], policy, event['aliases'], event['status'], event['phase']])
+            fingerprint = [source, original, q['state'], identity, at, quote['source_at_original'],
+                           quote['opposing_odd_id'], policy, event['aliases'], event['status'], event['phase']]
+            if market_link:
+                fingerprint.append(market_link)
+            if quote.get('alternate') is True:
+                fingerprint.append('alternate')
+            row['_fingerprint'] = stable(fingerprint)
             result.append(row)
     return result, excluded

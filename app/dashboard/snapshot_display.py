@@ -43,9 +43,20 @@ def presented(row, by_id=None):
 
 
 def search_index(result):
-    return {g['game_key']: ' '.join([g.get('title', ''), *[
-        str(p.get(k, '')) for p in g.get('participants', []) for k in ('id', 'name')
-    ]]).casefold() for g in result.get('games', [])}
+    from app.normalization.registry import Registry
+
+    entities = Registry.current().entities
+    index = {}
+    for game in result.get('games', []):
+        terms = [game.get('title', '')]
+        for participant in game.get('participants', []):
+            identifier = participant.get('id', '')
+            terms.extend((str(identifier), str(participant.get('name', ''))))
+            team = entities.get(identifier, {})
+            if team.get('kind') == 'team' and team.get('league') == game.get('league'):
+                terms.append(team['name'])
+        index[game['game_key']] = ' '.join(terms).casefold()
+    return index
 
 
 def outcome_key(row):

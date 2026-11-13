@@ -5,6 +5,7 @@ from fractions import Fraction
 from .cashflows import exact_wire as wire
 from .conditional_benchmark import basis
 from .current_dependencies import instant
+from app.fees.evidence import applies
 
 FEE_REQUIREMENTS = {
     'kalshi': 'A reviewed account result requires the applicable instrument terms, account channel, membership, precision and intermediary charges.',
@@ -31,7 +32,7 @@ def starting_fee_terms(row, captured_at, assumptions=None):
         if not captured.get('schedule_revision'):
             captured = (row.get('conservative_trade_benchmark') or {}).get('evidence') or {}
         review = captured if captured.get('schedule_revision') else basis(venue, at=at)
-        in_window = instant(review['reviewed_at']) <= at < instant(review['review_before'])
+        in_window = applies(review, at)
         rate = review['fee_rate']
         if venue == 'novig':
             native = ((row.get('trade_fee') or {}).get('evidence') or {}).get('native')

@@ -502,11 +502,19 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
     database_mode=getattr(current_provider,'database_mode',False)
     async def page(req):return web.FileResponse(static_root/('opportunity_static/current/desk.html' if database_mode else 'opportunity_static/current/index.html'))
     from .raw_price_api import mount as mount_raw_prices
-    if database_mode:mount_raw_prices(app)
+    if database_mode:
+        from .admin_database import mount as mount_admin_database
+        from .quote_quality import mount as mount_quote_quality
+        mount_admin_database(app)
+        mount_raw_prices(app)
+        mount_quote_quality(app)
     async def odds_page(req):return web.FileResponse(static_root/'opportunity_static/current/stored.html')
     async def raw_odds_page(req):return web.FileResponse(static_root/'opportunity_static/current/raw-odds.html')
     app.router.add_get('/raw-odds',raw_odds_page)
     app.router.add_get('/odds',odds_page)
+    if database_mode:
+        app.router.add_get('/browse-odds',page)
+        app.router.add_get('/game',page)
     async def scanner_page(req):return web.FileResponse(static_root/'opportunity_static/current/scanner.html')
     app.router.add_get('/scanner',scanner_page)
     async def admin(req):

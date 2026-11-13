@@ -49,6 +49,10 @@ def practice(frame):
             publication_policy='practice', price_revision=f'{index}:{odds}', economic_revision=f'{index}:{odds}',
             times=dict(source_at=at, received_at=at))
         row['net_return_percent'] = row['math']['buffered_return_percent']
+        # The practice calculator uses the same per-fill payoff path as the desk.
+        rate = Fraction(settings['fees'][venue])
+        row['trade_fee'] = dict(available=True, classification='synthetic',
+            evidence=dict(fictional_rate=wire(rate)), fee_cashflows=dict(at_fill_usd=wire(rate * cost)))
         row['snapshot_benchmark'] = dict(bookmaker='pinnacle', selected=index, odds=['2', '2'])
         row['reference_calculation'] = dict(available=True, venue='pinnacle', selected=index,
             method='proportional_no_vig', probability='0.5', overround='0', fair_decimal_odds='2',

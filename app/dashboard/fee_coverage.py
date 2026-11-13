@@ -2,19 +2,30 @@
 from collections import Counter, defaultdict
 from itertools import product
 from app.comparison.snapshot_fee_outcome import CLASSES, FAMILIES, VENUES
-from app.storage.comparison_snapshot import SPORTS
+from app.storage.comparison_snapshot import SPORTS, exact_arb_pair
 from .snapshot_display import ranking_value
 
 
-def source_inventory(db, dependencies):
+WORKING_PHASE_SQL = """CASE WHEN e.facts#>>'{status,ended}'='true' THEN 'final'
+    WHEN e.facts#>>'{status,closed}'='true' THEN 'unknown'
+    WHEN lower(e.facts#>>'{status,status}') IN ('suspended','delayed','postponed') THEN 'suspended'
+    WHEN e.facts#>>'{status,live}'='true' THEN 'in_game'
+    WHEN e.scheduled_start::timestamptz > %(at)s THEN 'pregame' ELSE 'unknown' END"""
+
+
+def source_inventory(db, dependencies, *, phase='', at=None):
     # Use the same working keys, horizon and transaction as price authority.
     # A working price can be stale or unpublished, even if the catalog lists it.
+    scope = (" AND c.facts#>>'{market_identity,period}'='full_game'"
+             " AND (c.venue NOT IN ('kalshi','polymarket_us') OR e.provider=c.venue)"
+             f" AND ({WORKING_PHASE_SQL})=%(phase)s") if phase else ''
     return db.execute("""SELECT c.id, c.venue, e.competition AS league,
         c.facts#>>'{market_identity,family}' AS family,
         c.facts#>>'{market_identity,period}' AS period
         FROM current_contract c JOIN current_event e ON e.id=c.event_id
-        WHERE c.id=ANY(%s) AND c.venue=ANY(%s)""",
-        (list(dependencies), list(VENUES))).fetchall()
+        WHERE c.id=ANY(%(dependencies)s) AND c.venue=ANY(%(venues)s)""" + scope,
+        dict(dependencies=list(dependencies), venues=list(VENUES), at=at,
+             phase='in_game' if phase == 'live' else phase)).fetchall()
 
 
 def source_key(row):
@@ -36,6 +47,7 @@ def census(result, inventory, *, pairs=(), policy=None):
     by_offer = {}
     published_source_keys = set()
     pair_keys = {}
+    pair_phases = {}
     outside = Counter()
     current_presentations = 0
     duplicate_rows = 0
@@ -50,6 +62,7 @@ def census(result, inventory, *, pairs=(), policy=None):
             current_presentations += 1
             if row.get('publication_policy') == policy:
                 pair_keys[row['id']] = offer_id
+                pair_phases[row['id']] = row.get('game_state')
         previous = by_offer.get(offer_id)
         if previous is not None:
             duplicate_rows += 1
@@ -60,7 +73,7 @@ def census(result, inventory, *, pairs=(), policy=None):
 
     def bucket():
         return Counter(dict.fromkeys(('published', 'retained_unavailable', 'current', 'covered', 'uncovered',
-            'exact_pinnacle_reference', 'before_fee_ev', 'reviewed_after_fee_ev', 'conservative_after_fee_ev',
+            'exact_pinnacle_reference', 'sportsbook_ev', 'before_fee_ev', 'reviewed_after_fee_ev', 'conservative_after_fee_ev',
             'any_after_fee_ev', *CLASSES), 0))
 
     totals = bucket()
@@ -83,6 +96,7 @@ def census(result, inventory, *, pairs=(), policy=None):
             exact_reference = bool(row.get('exact_pinnacle_reference_current'))
             count['exact_pinnacle_reference'] = int(exact_reference)
             for label, metric in (
+                    ('sportsbook_ev', 'sportsbook_return_percent'),
                     ('before_fee_ev', 'gross_return_percent'),
                     ('reviewed_after_fee_ev', 'conditional_return_percent'),
                     ('conservative_after_fee_ev', 'conservative_return_percent')):
@@ -121,7 +135,8 @@ def census(result, inventory, *, pairs=(), policy=None):
             source[key]['published_working_prices'] += 1
 
     current_pairs = {frozenset(pair_keys[leg] for leg in pair['legs'])
-                     for pair in pairs if pair.get('before_fees') and all(leg in pair_keys for leg in pair['legs'])}
+                     for pair in pairs if exact_arb_pair(pair) and all(leg in pair_keys for leg in pair['legs'])
+                     and len({pair_phases[leg] for leg in pair['legs']}) == 1}
     current_pairs = {legs for legs in current_pairs if len(legs) == 2}
     both_fees = sum(all((by_offer[key].get('trade_fee') or {}).get('available') for key in legs)
                     for legs in current_pairs)
@@ -136,7 +151,8 @@ def census(result, inventory, *, pairs=(), policy=None):
     working = {key[:3] for key, counts in source.items() if counts['working_prices']}
     return dict(scope=dict(venues=VENUES, leagues=SPORTS, families=FAMILIES,
                            publication=result.get('scope'), profile='manual_retail'),
-                total=with_rate(totals), missing_reasons=dict(gaps.most_common()),
+                total=with_rate(totals), coverage_complete=bool(result['publication'].get('coverage_complete')),
+                missing_reasons=dict(gaps.most_common()),
                 by_scope=[dict(labels(key), **with_rate(counts), missing_reasons=dict(reasons[key]))
                           for key, counts in sorted(dimensions.items(), key=lambda item: str(item[0]))],
                 by_provider=[dict(provider=key[0], **labels(key[1:]), **with_rate(counts),

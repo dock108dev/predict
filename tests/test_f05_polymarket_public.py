@@ -180,8 +180,11 @@ def test_offer_scope_fails_closed(field, value, reason):
 
 @pytest.mark.parametrize('phase', ['scheduled', 'live'])
 @pytest.mark.parametrize('provider', ['the_odds_api', 'sportsgameodds'])
-def test_ordinary_after_fee_ev_requires_both_current_reference_and_settlement(phase, provider):
+def test_ordinary_after_fee_ev_requires_both_current_reference_and_settlement(phase, provider, tmp_path, monkeypatch):
+    import json
+    from app.comparison import sgo_rule_evidence
     from app.comparison.line_reference import scoring
+    from tests.test_sgo_rule_evidence import reviewed_registry
     from tests.test_snapshot_benchmark import execution, references
 
     original = execution(native='no', cost='0.30')
@@ -226,6 +229,31 @@ def test_ordinary_after_fee_ev_requires_both_current_reference_and_settlement(ph
         ref.update(source=reference_quote['source'], times=short['times'])
     inputs = inputs_for(original, *refs)
     inputs['reference_provider'] = provider
+    if provider == 'sportsgameodds':
+        clock = AT.isoformat()
+        frame_id = 'f'*64
+        quotes = [dict(provider=provider,venue='fanduel',event_id='ref',odd_id=outcome,
+            opposing_odd_id=other,league='NCAAB',market='total',period='game',side=side,line='135.5',
+            phase='live' if phase=='live' else 'pregame',available=True,price_american='-110',
+            frame_id=frame_id,source_at=clock,received_at=clock,frame_received_at=clock)
+            for outcome,other,side in [('yes','no','over'),('no','yes','under')]]
+        registry = reviewed_registry(tmp_path, quotes, at=clock)
+        unrelated = [dict(quote, line='136.5', price_american='+200') for quote in quotes]
+        assert all(registry.resolve(quote, clock) is None for quote in unrelated)
+        rules = json.loads(sgo_rule_evidence.RULES.read_text())
+        rules['reviewed_at'] = clock
+        rules['profiles']['fanduel:US-NJ']['normal_scoring'] = [sgo_rule_evidence.settlement_key('NCAAB','total','game')]
+        rules_path = tmp_path/'rules.json'
+        rules_path.write_text(json.dumps(rules))
+        monkeypatch.setattr(sgo_rule_evidence, 'RULES', rules_path)
+        monkeypatch.setattr(sgo_rule_evidence, 'owned_bindings', lambda: registry)
+        rows = [dict(id=f"{quote['odd_id']}:{quote['line']}", revision='revision', facts=quote)
+                for quote in (*quotes, *unrelated)]
+        for row in rows:
+            inputs['dependencies']['sgo-reference:'+row['id']] = ['revision',row['id'],'event','receipt:'+frame_id]
+        inputs['sgo_reference_events'] = {'ref':dict(rows=rows,frame={'facts':dict(provider=provider,event_id='ref',
+            receipt_sha256=frame_id,received_at=clock,members=[[row['id'],row['revision']] for row in rows],
+            event_context={'status':dict(started=phase=='live',live=phase=='live')})})}
     calculated = snapshots.calculate(inputs)
     ready = live.bind(deepcopy(calculated), inputs, 'ready')
     ready = snapshots.unpack(snapshots.pack_read(snapshots.defer_details(ready)), lazy=True)
@@ -235,10 +263,15 @@ def test_ordinary_after_fee_ev_requires_both_current_reference_and_settlement(ph
             {'polymarket_us':{'state':'available'}, source:{'state':state}}, at=AT, policy='policy', epoch='epoch')['rows'][0]
 
     current = project_reference('available')
-    assert current['exact_pinnacle_reference_current'] and current['trade_fee']['available']
+    assert current['exact_pinnacle_reference_current'] is (provider == 'the_odds_api')
+    assert current['trade_fee']['available']
     assert current['conditional_return_percent'] is None
+    assert current['gross_return_percent'] is not None, current.get('snapshot_benchmark_reason')
     assert Fraction(current['gross_return_percent']) == (Fraction(200, 3) if provider == 'sportsgameodds' else Fraction(100, 3))
     assert Fraction(current['conservative_return_percent']) == (Fraction(225, 4) if provider == 'sportsgameodds' else 25)
+    if provider == 'sportsgameodds':
+        assert {item['dependency'] for item in current['current_authority']['references']} == {
+            'sgo-reference:yes:135.5', 'sgo-reference:no:135.5'}
     withdrawn = project_reference('paused')
     assert withdrawn['trade_fee']['available'] and withdrawn['conservative_return_percent'] is None
 

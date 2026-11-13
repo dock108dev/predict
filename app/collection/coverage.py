@@ -256,6 +256,23 @@ def insert(records, record, native, proof):
                         conflicting_duplicate=False)
 
 
+def milestone_identity(milestone):
+    details = milestone.get('details') or {}
+    fact = dict(id=milestone.get('id'), source_id=milestone.get('source_id'),
+        source_provider=milestone.get('source_provider'), start_date=milestone.get('start_date'),
+        **{key: details[key] for key in ('season','season_type','season_year','main_game_event_ticker',
+            'home_team_id','away_team_id','game_number','original_start','schedule_status','status') if key in details})
+    source_ids = milestone.get('source_ids')
+    # Retain this independent source slot only for the documented NFL milestone
+    # shape and only when the vendor repeats the same bounded identifier.
+    if (milestone.get('type') == 'football_game' and isinstance(source_ids, dict)
+            and isinstance(fact['source_id'], str) and len(fact['source_id']) == 36
+            and source_ids.get('source_3_id') == fact['source_id']
+            and details.get('main_game_event_ticker') in (milestone.get('related_event_tickers') or ())):
+        fact['source_3_id'] = source_ids['source_3_id']
+    return fact
+
+
 def event_record(venue, page, body, native, index, as_of, linked_milestones=(), decoded=None):
     eid = str(native.get('event_ticker' if venue == 'kalshi' else 'id') or f'unknown-event-row-{index}')
     record = dict(id=eid, title=native.get('title'), scheduled_start=None,
@@ -311,7 +328,8 @@ def event_record(venue, page, body, native, index, as_of, linked_milestones=(), 
         if page.get('v1_comparison_policy')=='manual-comparison-2':
             # Keep only identity fields of exact linked milestones, never the
             # injury/lineup payload, and never inherit unrelated game records.
-            record['observed_identity_facts']=[dict(id=m.get('id'),source_id=m.get('source_id'),source_provider=m.get('source_provider'),start_date=m.get('start_date'),**{k:v for k,v in m.get('details',{}).items() if k in ('season','season_type','season_year','main_game_event_ticker','home_team_id','away_team_id','game_number','original_start','schedule_status','status')}) for m in identity_payload.get('milestones',[]) if eid in m.get('related_event_tickers',[])]
+            record['observed_identity_facts'] = [milestone_identity(m) for m in identity_payload.get('milestones', [])
+                                                 if eid in m.get('related_event_tickers', [])]
 
         if page.get('v1_comparison_policy')in ('manual-comparison-1','manual-comparison-2') and venue=='kalshi':
             links={m.get('details',{}).get('main_game_event_ticker') for m in identity_payload.get('milestones',[]) if eid in m.get('related_event_tickers',[]) and m.get('details',{}).get('main_game_event_ticker') in m.get('related_event_tickers',[])}

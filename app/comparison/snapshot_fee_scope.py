@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 from app.comparison.current_dependencies import instant
+from app.fees.evidence import earliest_end
 from app.storage.store import hashed
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -74,7 +75,7 @@ def kalshi_scenarios(q, evidence, at, *, quantity='1'):
     metadata=context(row['response']['series'],changes,events,series_id,event_id,evidence['reviewed_at'])
     future=[r['scheduled_ts'] for r in [*metadata['series_changes'],*metadata['event_changes']]
         if instant(r['scheduled_ts'])>at]
-    until=min([evidence['review_before'],*future],key=instant)
+    until=earliest_end(evidence['review_before'],*future)
     evidence=dict(evidence,review_before=until,series_id=series_id,event_id=event_id,
         metadata_revision=hashed(metadata))
     registry=Registry(dict(schema=1,schedules=[dict(venue='kalshi',product='event_contract',

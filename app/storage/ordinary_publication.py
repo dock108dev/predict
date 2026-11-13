@@ -22,9 +22,10 @@ from .ordinary_projection import (
     project as project, source_allowed as source_allowed, validity as validity,
 )
 from .ordinary_scheduling import (
-    awaiting_aggregate, captured_aggregate_receipts, prioritize_current, receipt_watermarks,
+    awaiting_aggregate, captured_aggregate_receipts, prioritize_current, receipt_watermarks, sgo_live_deliveries,
 )
 from app.comparison.source_clock import assess
+from app.comparison.sgo_reference import BEST_BOOKS, BEST_VERSION
 from app.fees import schedule_lifecycle
 from app.fees import product_schedules
 
@@ -54,6 +55,7 @@ def policy_identity():
         POLICY_ROOT/'app/dashboard/snapshot_api.py',
         POLICY_ROOT/'app/comparison/line_reference.py',
         POLICY_ROOT/'app/fees/engine.py',
+        POLICY_ROOT/'app/fees/evidence.py',
         POLICY_ROOT/'app/fees/schedule_lifecycle.py', POLICY_ROOT/'app/fees/product_schedules.py',
         *(POLICY_ROOT/spec['reference'] for spec in product_schedules.PRODUCTS.values()),
         POLICY_ROOT/'app/fixtures/pinnacle-rules-20261028.html']
@@ -69,15 +71,84 @@ def policy_identity():
     from app.collection.current_policy import load as current_policy
     paths += [POLICY_ROOT/'app/comparison/sgo_reference.py', POLICY_ROOT/'app/comparison/sgo_reference_publication.py',
               POLICY_ROOT/'app/comparison/sgo_fair_display.py', POLICY_ROOT/'app/storage/sportsgameodds_reference.py',
+              POLICY_ROOT/'app/comparison/sgo_native_binding.py',
               POLICY_ROOT/'app/comparison/sgo_sportsbook_baseline.py',
+              POLICY_ROOT/'app/comparison/public_sportsbook_estimate.py',
               POLICY_ROOT/'app/comparison/sgo_rule_evidence.py', POLICY_ROOT/'app/comparison/sgo_median_publication.py',
               POLICY_ROOT/'app/fixtures/sgo-reviewed-market-rules-20261110.json',
               POLICY_ROOT/'app/fixtures/sgo-reviewed-jurisdiction-bindings.json']
-    return hashed([VERSION, engine_binding(), observation_binding(), current_policy()['aggregate_provider'],
+    return hashed([VERSION, snapshots.ORDINARY_ARB_POLICY, engine_binding(), observation_binding(), current_policy()['aggregate_provider'],
                    [(str(p.relative_to(POLICY_ROOT)) if p.is_relative_to(POLICY_ROOT) else str(p), sha256(p.read_bytes()).hexdigest()) for p in paths]])
 
 
-def dependencies(db, event_ids=None):
+def reviewed_reference_registry():
+    from app.comparison.sgo_rule_evidence import owned_bindings
+
+    try:
+        return owned_bindings()
+    except (OSError, ValueError, KeyError, TypeError):
+        return False
+
+
+def sportsbook_dependencies(db, event_ids=None):
+    registry = reviewed_reference_registry()
+    if not registry or not registry.rows:
+        return []
+    keys = [{key: identity.get(key) for key in ('event_id', 'venue', 'odd_id', 'frame_id', 'line')}
+            for identity, _ in registry.rows if identity['venue'] in BEST_BOOKS]
+    at = stamp(utc())
+    return db.execute('''SELECT DISTINCT 'sgo-reference:'||r.id id, r.revision price, r.id contract,
+        e.id event_id, e.revision event, concat(r.received_order,':',review.frame_id) receipt
+        FROM jsonb_to_recordset(%s) AS review(event_id text,venue text,odd_id text,frame_id text,line numeric)
+        JOIN current_sgo_reference r ON (r.event_id,r.bookmaker_id,r.facts->>'odd_id') =
+            (review.event_id,review.venue,review.odd_id)
+            AND (r.facts->>'line')::numeric IS NOT DISTINCT FROM review.line
+        JOIN current_sgo_event_frame f ON f.event_id=r.event_id AND f.facts->>'receipt_sha256'=review.frame_id
+        JOIN current_event e ON e.provider='sportsgameodds' AND e.native_event_id=r.event_id
+        WHERE ((%s::text[] IS NULL AND e.scheduled_start::timestamptz >= %s AND e.scheduled_start::timestamptz < %s)
+            OR e.id=ANY(%s)) ORDER BY id''',
+        (Jsonb(keys),event_ids,at-timedelta(hours=24),at+timedelta(hours=72),event_ids)).fetchall()
+
+
+def sportsbook_frames(db, at):
+    rows = db.execute("""SELECT e.id, e.native_event_id, e.competition, e.scheduled_start,
+                                e.facts->>'home' home, e.facts->>'away' away,
+                                f.facts->>'receipt_sha256' AS frame
+                         FROM current_event e JOIN current_sgo_event_frame f ON f.event_id=e.native_event_id
+                         WHERE e.provider='sportsgameodds' AND e.scheduled_start::timestamptz > %s
+                           AND e.scheduled_start::timestamptz <= %s""", (at, at+timedelta(hours=72)))
+    return list(rows)
+
+
+def pregame_sportsbooks(db, owner, states, at, *, frames=None):
+    from app.comparison.public_sportsbook_estimate import allowed, index, read_captures, sgo_observation
+    from .sportsgameodds_reference import read_event, read_event_frame
+    from collections import defaultdict
+
+    if not allowed(owner):
+        return {}
+    matches = {key: [value] for key, value in index(read_captures(POLICY_ROOT, at=at), at=at).items()}
+    candidates = defaultdict(list)
+    for row in sportsbook_frames(db, at) if frames is None else frames:
+        if source_allowed(states.get('sportsgameodds', {}), row['competition']):
+            key = (row['competition'], stamp(row['scheduled_start']), row['home'], row['away'])
+            candidates[key].append(row['native_event_id'])
+    for key, ids in candidates.items():
+        if len(ids) != 1:
+            continue
+        event = ids[0]
+        try:
+            frame = read_event_frame(db, event)
+            if frame and stamp(frame['facts']['received_at']) >= at - timedelta(minutes=15):
+                value = sgo_observation(frame, read_event(db, event, bookmakers=BEST_BOOKS), at=at, occurrence=key)
+                if value:
+                    matches.setdefault(key, []).append(value)
+        except (KeyError, ValueError):
+            continue
+    return matches
+
+
+def dependencies(db, event_ids=None, *, sportsbook_rows=None, catalog_rows=None):
     from app.collection.current_policy import load as current_policy
     frames = (current_policy()['aggregate_provider']=='sportsgameodds' and
         bool(db.execute("SELECT to_regclass('public.current_sgo_event_frame') AS name").fetchone()['name']))
@@ -94,14 +165,9 @@ def dependencies(db, event_ids=None):
             OR c.event_id=ANY(%s)) ORDER BY c.id''',
         (event_ids,stamp(utc())-timedelta(hours=24),stamp(utc())+timedelta(hours=72),event_ids)).fetchall()
     if frames:
-        rows += db.execute('''SELECT 'sgo-reference:'||r.id id, r.revision price, r.id contract,
-            e.revision event, concat(r.received_order,':',coalesce(f.facts->>'receipt_sha256','')) receipt
-            FROM current_sgo_reference r JOIN current_event e ON e.provider='sportsgameodds' AND e.native_event_id=r.event_id
-            LEFT JOIN current_sgo_event_frame f ON f.event_id=r.event_id
-            WHERE r.bookmaker_id=ANY(%s) AND e.competition='NBA' AND r.facts->>'market'='moneyline'
-            AND ((%s::text[] IS NULL AND e.scheduled_start::timestamptz >= %s AND e.scheduled_start::timestamptz < %s)
-                 OR e.id=ANY(%s)) ORDER BY r.id''',
-            (['draftkings','fanduel','fanatics'],event_ids,stamp(utc())-timedelta(hours=24),stamp(utc())+timedelta(hours=72),event_ids)).fetchall()
+        from .sgo_native_catalog import dependencies as catalog_dependencies
+        rows += sportsbook_dependencies(db, event_ids) if sportsbook_rows is None else sportsbook_rows
+        rows += catalog_dependencies(db, event_ids, at=utc()) if catalog_rows is None else catalog_rows
     if len(rows) > 32768:
         raise snapshots.SnapshotOperationError('ordinary_dependency_capacity')
     # The fourth field schedules genuine new confirmation evidence. Only the
@@ -211,11 +277,12 @@ def prices(inputs, settings):
         if inputs.get('reference_provider') == 'sportsgameodds':
             row.update(reference=None, snapshot_benchmark=None,
                 reference_calculation={'available':False, 'venue':'sportsgameodds_books',
-                    'method':'sgo-book-median-proportional-1'})
+                    'method':BEST_VERSION})
         row.update(kind='single', cost_per_normal_claim=None)
         rows.append(without_finance(row,'finance_pending',status_cache=statuses,copy_row=False))
     result = dict(id=uuid4().hex, snapshot_id=inputs['id'], captured_at=inputs['captured_at'],
-                  calculated_at=None, assumptions=settings, rows=rows, pairs=snapshots.before_fee_pairs(inputs['quotes']), games=inputs['games'],
+                  calculated_at=None, assumptions=settings, rows=rows,
+                  pairs=snapshots.before_fee_pairs(inputs['quotes'], at=inputs['captured_at']), games=inputs['games'],
                   references=[] if inputs.get('reference_provider') == 'sportsgameodds' else inputs['references'], sources=inputs['sources'], issues=inputs['issues'],
                   provider_requests=0, capture_seconds=inputs['capture_seconds'],
                   scope=dict(leagues=list(snapshots.SPORTS), families=['winner', 'spread', 'total'],
@@ -227,6 +294,8 @@ def bind(result, inputs, finance):
     from app.comparison.game_phase import sporting_phase
     from app.comparison.snapshot_fee_scope import applicability
     from app.comparison.snapshot_fee_outcome import outcome, reviews, unavailable
+    from app.comparison.sgo_native_binding import pregame_fee
+    from .sgo_native_catalog import dependency_id as catalog_dependency_id
     from app.comparison.snapshot_named_benchmark import references, selected_references
     at = stamp(inputs['captured_at'])
     schedules = reviews(at) if result['rows'] else {}
@@ -235,24 +304,46 @@ def bind(result, inputs, finance):
     fee_revision = schedule_lifecycle.revision(fee_state)
     originals = {q['id']: q for q in inputs['quotes']}
     sgo_mode = inputs.get('reference_provider') == 'sportsgameodds'
+    registry = reviewed_reference_registry() if sgo_mode and finance=='ready' else False
     refs = references(inputs['quotes'], inputs['references'], result['assumptions']) if finance=='ready' and not sgo_mode else []
     empty_fee_revision=hashed({})
+    if finance == 'ready':
+        # The manual snapshot may model metadata associations. Ordinary arb
+        # publishes only independent exact opposition, in both worker passes.
+        scenarios = {pair['id']: pair for pair in result['pairs']}
+        result['pairs'] = snapshots.before_fee_pairs(inputs['quotes'], at=inputs['captured_at'])
+        for pair in result['pairs']:
+            if scenario := scenarios.get(pair['id']):
+                pair.update(math=scenario['math'], minimum_return_percent=scenario.get('minimum_return_percent'))
+    paired_ids = {leg for pair in result['pairs'] for leg in pair['legs']}
     for row in result['rows']:
         original = originals[row['id']]
         source = quote_authority(original, inputs)
+        catalog_authority = None
         sgo = None
         selected = selected_references(row, original, refs) if finance == 'ready' and not sgo_mode else []
         witnesses = [quote_authority(ref, inputs, reference=True) for ref in selected]
+        fee_witnesses = witnesses
         if finance == 'ready' and sgo_mode:
             from app.comparison.sgo_reference_publication import bind_captured
             row.update(snapshot_benchmark=None, reference=None,
                        snapshot_benchmark_reason='sgo_reference_qualification_unavailable',
                        reference_calculation={})
             without_finance(row, 'SportsGameOdds reference awaits verified occurrence, settlement and current contributor evidence', copy_row=False)
-            row['reference_calculation'].update(venue='sportsgameodds_books', method='sgo-book-median-proportional-1')
-            sgo, witnesses = bind_captured(row, source, inputs,
-                selected_venue=result['assumptions']['benchmark_venue'])
+            row['reference_calculation'].update(venue='sportsgameodds_books', method=BEST_VERSION)
+            sgo, witnesses = bind_captured(row, source, inputs, best_payout=True, registry=registry, native=original)
             if sgo.get('available'):
+                reference = sgo['reference_calculation']
+                selected_book = reference['venue']
+                contributors = reference['contributors']
+                selected_prices = next(item['inputs'] for item in contributors if item['venue'] == selected_book)
+                fee_witnesses = [item for item in witnesses if item['venue'] == selected_book]
+                if source.get('lifecycle', {}).get('state') == 'live' or not row.get('sportsbook_baseline'):
+                    row['sportsbook_baseline'] = dict(verified_native=True, book=selected_book,
+                        candidate_books=len(contributors), frame_id=reference['contract']['frame_id'],
+                        current_until=min(item['current_until'] for item in witnesses),
+                        probability=sgo['probability'], fair_decimal_odds=reference['fair_decimal_odds'],
+                        return_percent=sgo['gross_return_percent'], prices=selected_prices)
                 row.update(probability=sgo['probability'], probability_missing=None,
                     gross_return_percent=sgo['gross_return_percent'],
                     gross_profit_per_claim=sgo['gross_profit_per_claim'],
@@ -272,6 +363,20 @@ def bind(result, inputs, finance):
         fee = row.get('conditional_trade_benchmark', {}).get('evidence', {})
         if source.get('provider') == 'sportsgameodds':
             row['trade_fee'] = unavailable('sgo_offer_native_contract_unverified')
+            binding = original.get('sgo_native_contract')
+            if binding:
+                row['sgo_native_contract'] = binding
+            if binding and binding['available']:
+                dependency = catalog_dependency_id(original['source']['native_event_id'])
+                expected = inputs['dependencies'].get(dependency)
+                if expected and expected[0] == binding['revision']:
+                    catalog_authority = dict(dependency=dependency, expected=expected,
+                        current_until=binding['current_until'])
+                    row['trade_fee'] = pregame_fee(binding)
+                    if row['trade_fee']['available']:
+                        review = product_schedules.for_offer(product_states, row, at, fallback=schedules[row['venue']])
+                        if review and review.get('unavailable_reason'):
+                            row['trade_fee'] = unavailable(review['unavailable_reason'])
         elif row['venue'] in schedules and original.get('original_record'):
             record = original['original_record']
             phase = source.get('lifecycle', {}).get('state')
@@ -279,6 +384,8 @@ def bind(result, inputs, finance):
                 phase = 'live'
             fee_input = dict(row, fee_applicability=row.get('fee_applicability') or applicability(record),
                              novig_v3_evidence=record['quote'].get('novig_v3_evidence'))
+            if row['id'] in paired_ids:
+                row['fee_applicability'] = fee_input['fee_applicability']
             review = (schedule_lifecycle.for_offer(fee_state, fee_input, at, fallback=schedules[row['venue']])
                       if row['venue'] == 'prophetx' else
                       product_schedules.for_offer(product_states, fee_input, at, fallback=schedules[row['venue']]))
@@ -299,7 +406,7 @@ def bind(result, inputs, finance):
                 fee = metric.get('evidence') or {}
             if finance == 'ready' and phase == 'live' and row['venue'] == 'novig':
                 from app.comparison.snapshot_novig_live import live_metric
-                row['conditional_trade_benchmark'] = live_metric(row, row['trade_fee'], witnesses)
+                row['conditional_trade_benchmark'] = live_metric(row, row['trade_fee'], fee_witnesses)
                 row['conditional_return_percent'] = row['conditional_trade_benchmark'].get('return_percent')
                 row['novig_live_financial_qualified'] = bool(row['conditional_trade_benchmark'].get('available'))
                 from app.comparison.snapshot_metrics import statuses
@@ -311,10 +418,13 @@ def bind(result, inputs, finance):
                 from app.comparison.snapshot_metrics import statuses
                 source_scope = (record.get('comparison_source_metadata') or {}).get('scoring_scope')
                 row['conservative_trade_benchmark'] = conservative_metric(
-                    row, row['trade_fee'], witnesses, phase, source_scope=source_scope)
+                    row, row['trade_fee'], fee_witnesses, phase, source_scope=source_scope)
                 row['conservative_return_percent'] = row['conservative_trade_benchmark'].get('return_percent')
                 row['polymarket_live_financial_qualified'] = phase == 'live' and row['conservative_trade_benchmark']['available']
                 statuses(row)
+        metadata = (original.get('original_record') or {}).get('comparison_source_metadata') or {}
+        if metadata.get('alternate') is True:
+            row['alternate'] = True
         reference = row.get('reference_calculation') or {}
         row['current_authority'] = dict(price=source, references=witnesses,
             reference_required=row.get('probability') is not None,
@@ -325,6 +435,8 @@ def bind(result, inputs, finance):
             fee_until=fee.get('review_before'),fee_from=fee.get('reviewed_at'),fee_revision=hashed(fee) if fee else empty_fee_revision,
             conservative_fee_until=row.get('conservative_trade_benchmark',{}).get('evidence',{}).get('review_before'),
             start_at=row['start_at'])
+        if catalog_authority is not None:
+            row['current_authority']['sgo_native_contract'] = catalog_authority
         if row.get('reference_calculation',{}).get('available'):
             row['reference_calculation']=dict(row['reference_calculation'],authority=witnesses)
         row['settings_revision'] = result['assumptions']['revision']
@@ -422,11 +534,11 @@ def seal(db, inputs, result, facts, *, insert_inputs=False, component=None, memb
             row=dict(generation=None)
         else:
             from .delivery_clocks import published
-            published(db,facts.pop('_delivery_receipts',[]))
+            delivery = facts.pop('_delivery_receipts', [])
+            live_sportsbook = facts.pop('_live_sportsbook_deadlines', [])
             if members:
-                with db.cursor() as cursor:
-                    cursor.executemany('INSERT INTO comparison_live_member VALUES(%s,%s)',
-                        [(result['id'],member) for member in members])
+                db.execute('INSERT INTO comparison_live_member SELECT %s,unnest(%s::text[])',
+                    (result['id'], list(members)))
             # Grace starts when a displayed head is superseded, not when it was
             # first assembled. A long-lived head must remain selectable while
             # a browser receives/renders its replacement.
@@ -435,6 +547,7 @@ def seal(db, inputs, result, facts, *, insert_inputs=False, component=None, memb
                 WHERE id=(SELECT result_id FROM comparison_live_head WHERE singleton)""")
             row = db.execute('''UPDATE comparison_live_head SET generation=generation+1,result_id=%s,facts=%s
                 WHERE singleton RETURNING generation''', (result['id'], Jsonb(dict(facts, published_at=utc())))).fetchone()
+            published(db, delivery, live_sportsbook=live_sportsbook)
         snapshots.prune(db)
     return row['generation']
 
@@ -466,7 +579,7 @@ def compose(db, settings, *, scope, policy, epoch, started):
     missing=[c['result_id'] for c in components if c['summary'] is None]
     blobs={r['id']:r['result'] for r in db.execute(
         'SELECT id,result FROM comparison_snapshot_result WHERE id=ANY(%s)',(missing,))}
-    members=[];captured=[];boundaries=[];pending=0;failed=0;written=0;delivery=[]
+    members=[];captured=[];boundaries=[];pending=0;failed=0;written=0;delivery=[];live_sportsbook=[]
     totals=dict(observations=0,gross_numeric=0,conditional_numeric=0,conservative_numeric=0,net_numeric=0,pairs=0,unmatched=0)
     for c in components:
         summary=c['summary']
@@ -479,11 +592,13 @@ def compose(db, settings, *, scope, policy, epoch, started):
                 raise snapshots.SnapshotOperationError('ordinary_retention_capacity')
             if sql_usage(db)+2*len(packed)+REWRITE_RUNWAY_BYTES>=SQL_BYTE_CAP:
                 raise snapshots.SnapshotOperationError('ordinary_sql_headroom')
-            from .delivery_clocks import receipts
-            summary=dict(captured_at=part['captured_at'],finance=part['publication']['finance'],counts=part['counts'],delivery_receipts=receipts(part['rows']))
+            from .delivery_clocks import live_sportsbook_deadlines, receipts
+            summary=dict(captured_at=part['captured_at'],finance=part['publication']['finance'],counts=part['counts'],
+                         delivery_receipts=receipts(part['rows']), live_sportsbook_deadlines=live_sportsbook_deadlines(part['rows']))
             db.execute('INSERT INTO comparison_live_read_fragment VALUES(%s,%s,%s)',
                 (c['result_id'],Jsonb(summary),packed));written+=len(packed)
         delivery.extend(summary.get('delivery_receipts',[]))
+        live_sportsbook.extend(summary.get('live_sportsbook_deadlines', []))
         members.append(c['result_id']);captured.append(summary['captured_at'])
         pending+=summary['finance']!='ready';failed+=c['facts'].get('finance')=='failed'
         for key in totals:totals[key]+=summary['counts'][key]
@@ -500,7 +615,8 @@ def compose(db, settings, *, scope, policy, epoch, started):
     facts=dict(state='partial' if pending else 'ready',finance=result['publication']['finance'],
         component_count=len(members),expected_components=len(scope),pending_components=pending,
         next_boundary=min(boundaries,key=stamp) if boundaries else None,
-        _delivery_receipts=delivery,representation=FRAGMENTS,fragment_bytes_written=written,new_fragments=len(missing),
+        _delivery_receipts=delivery,_live_sportsbook_deadlines=live_sportsbook,
+        representation=FRAGMENTS,fragment_bytes_written=written,new_fragments=len(missing),
         total_seconds=round(monotonic()-started,3))
     return seal(db,inputs,result,facts,insert_inputs=True,members=members)
 
@@ -540,6 +656,19 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
             reference_provider=current_policy()['aggregate_provider']
             finance_available=(reference_provider == 'sportsgameodds' or source_allowed(source_states.get('pinnacle',{})))
             at=stamp(utc())
+            from app.comparison.public_sportsbook_estimate import identity as reference_identity
+            frames_exist = reference_provider == 'sportsgameodds' and db.execute(
+                "SELECT to_regclass('public.current_sgo_event_frame') AS name").fetchone()['name']
+            frames = sportsbook_frames(db, at) if frames_exist else []
+            public_matches = pregame_sportsbooks(db, owner, source_states, at, frames=frames)
+            public_events = {}
+            if public_matches:
+                for event in db.execute("""SELECT id,competition,scheduled_start,facts->>'home' home,facts->>'away' away
+                    FROM current_event WHERE provider IN ('kalshi','polymarket_us') AND competition=ANY(%s)""",
+                    (sorted({key[0] for key in public_matches}),)):
+                    match = public_matches.get((event['competition'], stamp(event['scheduled_start']), event['home'], event['away']))
+                    if match:
+                        public_events[event['id']] = [reference_identity(item, at=at) for item in match]
             selected={r['id'] for r in db.execute('''SELECT id FROM current_event WHERE competition=ANY(%s)
                 AND scheduled_start::timestamptz >= %s AND scheduled_start::timestamptz < %s''',
                 (list(snapshots.SPORTS),at-timedelta(hours=24),at+timedelta(hours=72)))}
@@ -547,15 +676,14 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
             batches=[b for b in capture_batches(db) if selected.intersection(b)]
             scope={hashed(sorted(b)):b for b in batches}
             old={c['id']:c for c in db.execute('SELECT * FROM comparison_live_component')}
-            dep=dependencies(db)
+            sportsbook_rows = sportsbook_dependencies(db) if frames_exist else []
+            from .sgo_native_catalog import dependencies as catalog_dependencies
+            catalog_rows = catalog_dependencies(db, at=utc()) if reference_provider == 'sportsgameodds' else []
+            dep=dependencies(db, sportsbook_rows=sportsbook_rows, catalog_rows=catalog_rows)
             contracts=db.execute('SELECT id,event_id,venue FROM current_contract').fetchall()
             membership={r['id']:r['event_id'] for r in contracts}
-            if reference_provider=='sportsgameodds' and db.execute("SELECT to_regclass('public.current_sgo_event_frame') AS name").fetchone()['name']:
-                for r in db.execute('''SELECT 'sgo-reference:'||r.id id,e.id event_id FROM current_sgo_reference r
-                    JOIN current_event e ON e.provider='sportsgameodds' AND e.native_event_id=r.event_id
-                    WHERE r.bookmaker_id=ANY(%s) AND e.competition='NBA' AND r.facts->>'market'='moneyline' ''',
-                    (['draftkings','fanduel','fanatics'],)).fetchall():
-                    membership[r['id']]=r['event_id']
+            membership.update((r['id'], r['event_id']) for r in sportsbook_rows)
+            membership.update((r['id'], r['event_id']) for r in catalog_rows)
             event_venues={}
             for r in contracts:event_venues.setdefault(r['event_id'],set()).add(r['venue'])
             per_event={}
@@ -570,7 +698,8 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
             def input_identity(key, dependencies):
                 return hashed([epoch,policy,settings['revision'],fee_revision if key in prophetx_components else None,
                     {k:product_schedules.revision(product_states.get(k),publication=True) for k in sorted(product_components[key])},
-                    [(eid,dependencies.get(eid,{})) for eid in sorted(scope[key])]])
+                    [(eid,dependencies.get(eid,{})) for eid in sorted(scope[key])],
+                    [public_events[eid] for eid in sorted(scope[key]) if eid in public_events]])
             desired={key:input_identity(key,per_event) for key in scope}
             material={key:hashed([epoch,[(eid,{cid:v[:3] for cid,v in per_event.get(eid,{}).items()})
                 for eid in sorted(ids)]]) for key,ids in scope.items()}
@@ -579,8 +708,9 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
             model=json.loads(path.read_text())
             schedule_boundaries.extend(model[k] for k in ('reviewed_at','review_before') if model.get(k) and stamp(model[k])>at)
         public_boundaries=schedule_lifecycle.boundaries(fee_state,at)
-        public_boundaries += [v['last_verified']['review_before'] for v in product_states.values()
-                              if v.get('last_verified') and stamp(v['last_verified']['review_before']) > at]
+        public_boundaries += [deadline for v in product_states.values()
+                              if (deadline := (v.get('last_verified') or {}).get('review_before'))
+                              and stamp(deadline) > at]
 
         removed=set(old)-set(scope)
         def fee_boundary_due(facts):
@@ -599,12 +729,16 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
         # A repeated confirmation must not win every fresh slot ahead of a real
         # price/contract change. These hashes schedule only; exact captured
         # dependencies and the existing authority checks still own eligibility.
+        undelivered = {key for key in pending if awaiting_aggregate(old.get(key, {}).get('facts', {}),
+            scope[key], aggregate_receipts, at)}
+        live_deliveries = sgo_live_deliveries(pending, scope, native_evidence, at, undelivered)
         pending=prioritize_current(pending,scope,native_evidence,at,material={key for key in pending
             if old.get(key,{}).get('facts',{}).get('material_identity')!=material[key]},
-            undelivered={key for key in pending if awaiting_aggregate(old.get(key,{}).get('facts',{}),
-                scope[key],aggregate_receipts,at)})
+            undelivered=undelivered, live_deliveries=live_deliveries)
+        pending.sort(key=lambda key: not public_events.keys() & set(scope[key]))
         timings['planning_seconds']=round(monotonic()-started,6)
         work=[];errors=[];component_trace=[]
+        live_first_price_seal = False
         snapshots.prune(db)
         head_size=db.execute('SELECT octet_length(result) n FROM comparison_snapshot_result WHERE id=(SELECT result_id FROM comparison_live_head)').fetchone()
         # Recover legacy staging pressure before the atomic batch. This reserved
@@ -670,6 +804,22 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
                     inputs['_price_capture']=dict(path='complete',read_records=len(inputs['dependencies']),**capture_diagnostics)
                 inputs['policy_identity']=policy
                 inputs['reference_provider']=reference_provider
+                from app.comparison.public_sportsbook_estimate import select as public_estimate
+                capture_at = stamp(inputs['captured_at'])
+                for row in inputs['quotes']:
+                    if (row.get('sportsbook_baseline') or {}).get('indicative'):
+                        row.pop('sportsbook_baseline')
+                    if public_matches and (row.get('source') or {}).get('provider') in ('kalshi', 'polymarket_us'):
+                        estimate = public_estimate(row, quote_authority(row, inputs), public_matches, at=capture_at)
+                        if estimate:
+                            row['sportsbook_baseline'] = estimate
+                # Ingress can add a venue between planning and this capture.
+                # Fee authority must cover the actual quotes in this member.
+                captured_venues = {row['venue'] for row in inputs['quotes']}
+                product_components[key].update(product_key for product_key, spec in product_schedules.PRODUCTS.items()
+                                               if spec['venue'] in captured_venues)
+                if 'prophetx' in captured_venues:
+                    prophetx_components.add(key)
                 inputs['fee_lifecycle']=fee_state if key in prophetx_components else None
                 inputs['fee_products']={k:product_states[k] for k in product_components[key] if k in product_states}
                 captured_dependencies={}
@@ -688,6 +838,7 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
                 # even if no provider update or further calculation occurs.
                 boundaries=[v for row in price_result['rows'] for v in
                     (row['current_authority']['price'].get('current_until'),row['start_at'],
+                     (row['current_authority'].get('sgo_native_contract') or {}).get('current_until'),
                      (row.get('sportsbook_baseline') or {}).get('current_until')) if v]
                 fee_boundaries=[*schedule_boundaries, *(public_boundaries if key in prophetx_components or product_components[key] else ())]
                 facts['next_fee_boundary']=min(fee_boundaries,key=stamp,default=None)
@@ -705,7 +856,15 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
                         received_at=q['times']['received_at'],source_at=q['times'].get('source_at'))
                         for q in (inputs['quotes'][:2]+inputs['quotes'][-2:])]))
                 work.append((key,inputs['id'],facts));changed+=1
+                # Indicative EV is already in the ordinary price member. Seal
+                # a fresh first delivery before spending the turn on peers.
+                if live_deliveries and key == live_deliveries[0]:
+                    live_first_price_seal = any(row.get('sportsbook_baseline')
+                        and row['current_authority']['price'].get('lifecycle', {}).get('state') == 'live'
+                        and not row['current_authority']['price']['reasons'] for row in price_result['rows'])
                 del inputs,price_result
+                if live_first_price_seal:
+                    break
             timings['capture_seconds']=round(monotonic()-capture_started,6)
             price_seal_started=monotonic()
             # One atomic price replacement per bounded batch, before optional math.
@@ -749,6 +908,7 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
                     a=row['current_authority']
                     future.extend(v for v in [a.get('fee_until'),a.get('conservative_fee_until'),
                         (row.get('trade_fee',{}).get('evidence') or {}).get('review_before'),
+                        (a.get('sgo_native_contract') or {}).get('current_until'),
                         a['start_at'],a['price'].get('current_until'),
                         (row.get('sportsbook_baseline') or {}).get('current_until'),
                         *(w.get('current_until') for w in a['references'])] if v and stamp(v)>now)
@@ -778,6 +938,7 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
         return dict(timings=timings,component_trace=component_trace[-8:],component_queue=queue_trace,
             capture_structure=capture_structure.metrics(),materialization=capture_materialization.metrics(),serviced_components=[key for key,_,_ in work],pending_components=len(pending),
             captured_components=len(work),finance_deferred_reason=None if finance_available else 'reference_source_unavailable',
+            live_first_price_seal=live_first_price_seal,
             published=bool(changed or computed),unchanged=not pending and not removed,computed=computed,errors=errors,
             remaining_components=max(0,len(pending)-(computed if finance_available else len(work))),expected_components=len(scope),
             generation=generation,price_generation=price_generation,price_published_at=price_published_at,

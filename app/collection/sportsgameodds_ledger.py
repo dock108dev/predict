@@ -9,7 +9,7 @@ reservation. In-flight and failed requests remain held across restarts.
 from __future__ import annotations
 
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import sqlite3
 import json
 from uuid import uuid4
@@ -56,6 +56,16 @@ class ObjectLedger:
                 CREATE TABLE IF NOT EXISTS sgo_reservation_context (
                     reservation_id TEXT PRIMARY KEY REFERENCES sgo_object_reservation(id),
                     category TEXT NOT NULL, league TEXT
+                );
+                CREATE TABLE IF NOT EXISTS sgo_request_trace (
+                    reservation_id TEXT PRIMARY KEY REFERENCES sgo_object_reservation(id),
+                    query TEXT NOT NULL,
+                    provider_used_before INTEGER NOT NULL,
+                    usage_observed_at REAL NOT NULL,
+                    http_status INTEGER,
+                    response_at REAL,
+                    provider_request_id TEXT,
+                    response_sha256 TEXT
                 );
                 CREATE TABLE IF NOT EXISTS sgo_charge_breakdown (
                     reservation_id TEXT NOT NULL REFERENCES sgo_object_reservation(id),
@@ -170,7 +180,8 @@ class ObjectLedger:
 
     def reserve(self, window_id: str, reservation_id: str, *, objects: int,
                 now: datetime, stopped: bool = False, source_paused: bool = False,
-                category: str | None = None, league: str | None = None) -> None:
+                category: str | None = None, league: str | None = None,
+                request=None, usage=None) -> None:
         _integer(objects, 'objects', positive=True)
         current = _time(now)
         if not reservation_id:
@@ -179,6 +190,13 @@ class ObjectLedger:
             raise ValueError('invalid request category')
         if league is not None and (category != 'discovery' or league not in ('NFL', 'NCAAF', 'NBA', 'NCAAB', 'MLB', 'NHL')):
             raise ValueError('invalid request league')
+        if request is not None:
+            from .sportsgameodds_transport import validate_params
+            request = validate_params(request)
+            used = _integer(usage['used'], 'provider usage')
+            observed_at = _time(usage['at'])
+            if request['limit'] != objects or not 0 <= current - observed_at <= 60:
+                raise ValueError('request trace conflicts with reservation')
         if stopped or source_paused:
             raise RuntimeError('collection stopped or source paused')
         with self._connect() as db:
@@ -206,7 +224,49 @@ class ObjectLedger:
                        (reservation_id, window_id, objects, current))
             if category is not None:
                 db.execute('INSERT INTO sgo_reservation_context VALUES(?,?,?)', (reservation_id, category, league))
+            if request is not None:
+                db.execute('''INSERT INTO sgo_request_trace
+                    (reservation_id,query,provider_used_before,usage_observed_at) VALUES(?,?,?,?)''',
+                           (reservation_id, json.dumps(request, sort_keys=True), used, observed_at))
             db.execute('COMMIT')
+
+    def record_response(self, reservation_id, response):
+        from hashlib import sha256
+
+        with self._connect() as db:
+            db.execute('''UPDATE sgo_request_trace SET http_status=?,response_at=?,
+                          provider_request_id=?,response_sha256=?
+                          WHERE reservation_id=? AND http_status IS NULL''',
+                       (response.status, _time(datetime.fromisoformat(response.received_at.replace('Z', '+00:00'))),
+                        response.provider_request_id, sha256(response.body).hexdigest() if response.body else None,
+                        reservation_id))
+
+    def holds(self, window_id):
+        account = window_id.split(':', 1)[0]
+        prefix = account + ':'
+        with self._connect() as db:
+            db.row_factory = sqlite3.Row
+            rows = db.execute('''SELECT r.id,r.status,r.reserved,r.charged,r.created_at,c.category,c.league,
+                                        t.query,t.provider_used_before,t.usage_observed_at,t.http_status,
+                                        t.response_at,t.provider_request_id,t.response_sha256
+                                 FROM sgo_object_reservation r
+                                 LEFT JOIN sgo_reservation_context c ON c.reservation_id=r.id
+                                 LEFT JOIN sgo_request_trace t ON t.reservation_id=r.id
+                                 WHERE (r.window_id=? OR r.window_id=? OR substr(r.window_id,1,?)=?)
+                                 AND r.status IN ('held','overrun') ORDER BY r.created_at LIMIT 32''',
+                              (window_id, account, len(prefix), prefix)).fetchall()
+        result = []
+        for row in rows:
+            item = dict(row)
+            if item['query'] is not None:
+                item['query'] = json.loads(item['query'])
+                if 'cursor' in item['query']:
+                    item['query']['cursor'] = '[present]'
+            for key in ('created_at', 'usage_observed_at', 'response_at'):
+                if item[key] is not None:
+                    item[key] = datetime.fromtimestamp(item[key], timezone.utc).isoformat()
+            result.append(item)
+        return result
 
     def resolve(self, reservation_id: str, *, charged: int, evidence: str, now: datetime,
                 breakdown: dict[tuple[str, str], int] | None = None) -> None:
@@ -255,6 +315,18 @@ class ObjectLedger:
         prefix = account + ':'
         with self._connect() as db:
             return db.execute("SELECT COALESCE(SUM(CASE WHEN status='resolved' THEN charged ELSE MAX(reserved,COALESCE(charged,0)) END),0) FROM sgo_object_reservation WHERE (window_id=? OR substr(window_id,1,?)=?) AND created_at>?", (account,len(prefix),prefix,start)).fetchone()[0]
+
+    def rolling_expirations(self, window_id: str, *, now: datetime) -> list[tuple[datetime, int]]:
+        """Read charge ages for scheduling. Existing reservations stay untouched."""
+        account = window_id.split(':', 1)[0]
+        prefix = account + ':'
+        with self._connect() as db:
+            rows = db.execute('''SELECT created_at, SUM(CASE WHEN status='resolved' THEN charged
+                    ELSE MAX(reserved,COALESCE(charged,0)) END)
+                FROM sgo_object_reservation
+                WHERE (window_id=? OR substr(window_id,1,?)=?) AND created_at>?
+                GROUP BY created_at ORDER BY created_at''', (account, len(prefix), prefix, _time(now)-86400)).fetchall()
+        return [(datetime.fromtimestamp(at, timezone.utc)+timedelta(days=1), amount) for at, amount in rows if amount]
 
     def charge_breakdown(self, window_id: str, *, since: datetime) -> list[dict]:
         """Summarize resolved charges; legacy and unclassified charges stay unknown.

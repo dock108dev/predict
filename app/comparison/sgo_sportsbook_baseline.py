@@ -5,42 +5,56 @@ from fractions import Fraction
 from app.collection.current_benchmark import proportional_probability
 from app.storage.store import stamp
 from .cashflows import exact_wire
-from .game_phase import LIVE_SECONDS, original_price_phase
-from .sgo_reference import MAX_AGE_SECONDS, OPPOSITE, american_probability
-from .sgo_reference_publication import captured_frame
+from .game_phase import LIVE_SECONDS, PREGAME_SPORTSBOOK_SECONDS, original_price_phase
+from .public_sportsbook_estimate import outcome
+from .sgo_reference import BEST_BOOKS, OPPOSITE, american_probability
+from .sgo_reference_publication import captured_frame, exact_line
 
-BOOKS = ('fanduel', 'draftkings', 'betmgm', 'caesars')
+BOOKS = BEST_BOOKS
 
 
-def select(record, rows, frame, *, at):
+def select(record, rows, frame, *, at, index=None):
     """Compare a source-local SGO offer with books from the same event frame."""
     quote = record['quote']
     source = quote['source']
     if (source['provider'] != 'sportsgameodds' or quote['state'] != 'available'
             or quote['original']['units'] != 'american_odds'):
         return None
-    capture = {'frame': frame, 'rows': rows}
-    observed = captured_frame(record, capture)
-    if observed is None:
-        return None
     phase = original_price_phase(record, at)
     if phase['reason'] or phase['state'] not in ('live', 'scheduled'):
         return None
     market = record['market_identity']['family']
+    if phase['state'] == 'scheduled' and (record['market_identity']['period'] != 'full_game'
+            or not outcome(market, record['selection'], record['event']['home'], record['event']['away'])):
+        return None
     selected_line = source.get('native_line')
     wanted = source['native_outcome_id']
     opposing = record['comparison_source_metadata'].get('provider_opposing_odd_id')
     if not opposing or wanted == opposing:
         return None
+    if index is not None:
+        try:
+            chosen = exact_line(selected_line)
+            opposite_line = -chosen if market == 'spread' and chosen is not None else chosen
+            target_rows = index.selection(wanted, chosen)
+            offer_rows = index.selection(wanted, record['selection'].get('signed_line'))
+            rows = (*target_rows, *index.selection(opposing, opposite_line))
+        except (KeyError, TypeError, ValueError, ArithmeticError):
+            return None
+    else:
+        offer_rows = rows
+    observed = captured_frame(record, {'frame': frame, 'rows': offer_rows}, index=index)
+    if observed is None:
+        return None
     facts = frame['facts']
-    members = dict(facts['members'])
+    members = index.members if index is not None else dict(facts['members'])
     captured = stamp(at)
     received = stamp(observed['frame_received_at'])
     start = stamp(record['event']['scheduled_start'])
     live = phase['state'] == 'live'
     if received > captured or (received >= start) != live:
         return None
-    lifetime = timedelta(seconds=LIVE_SECONDS if live else MAX_AGE_SECONDS)
+    lifetime = timedelta(seconds=LIVE_SECONDS if live else PREGAME_SPORTSBOOK_SECONDS)
     book_rows = {book: [] for book in BOOKS}
     for entry in rows:
         fact = entry['facts']
@@ -83,13 +97,19 @@ def select(record, rows, frame, *, at):
     _, book, target, other = min(candidates, key=lambda item: (item[0], BOOKS.index(item[1])))
     fair = proportional_probability([1 / target[1], 1 / other[1]], 0)
     cost = american_probability(quote['original']['value'])
-    deadline = min(target[2], other[2]) + lifetime
+    deadline = min(target[2], other[2]) + lifetime if live else min(
+        min(selected[2], opposing[2]) for _, _, selected, opposing in candidates) + lifetime
+    book_prices = {
+        venue: [{key: leg[0][key] for key in ('price_american', 'source_at', 'side', 'line')}
+                for leg in (selected, opposing)]
+        for _, venue, selected, opposing in candidates
+    }
     return dict(book=book, candidate_books=len(candidates), frame_id=observed['frame_id'],
+                frame_received_at=observed['frame_received_at'],
                 current_until=(deadline if live else min(deadline, start)).isoformat(),
                 probability=exact_wire(fair), fair_decimal_odds=exact_wire(1 / fair),
                 return_percent=exact_wire(100 * (fair / cost - 1)),
-                prices=[{key: item[0][key] for key in ('price_american', 'source_at', 'side', 'line')}
-                        for item in (target, other)])
+                prices=book_prices[book], candidates=book_prices)
 
 
 def current(baseline, dependency, *, at):

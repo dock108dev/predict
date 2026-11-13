@@ -148,6 +148,20 @@ def enrich_game(event, *, share_metadata=False):
             phase.update({k:state[k] for k in ('live','ended') if type(state.get(k)) is bool})
             if state.get('updatedAt'):phase['observed_at']=state['updatedAt']
         else:phase=dict(identity_conflict=True)
+        admitted = e.get('sporting_state_evidence')
+        if same_game and admitted:
+            from .native_sporting_state import matches_event
+            try:
+                observed_at = stamp(admitted['source_at'])
+                original_at = stamp(phase['observed_at']) if phase.get('observed_at') else None
+                observed_state = admitted['state']
+                if (matches_event(e, admitted) and observed_at <= stamp(admitted['received_at'])
+                        and all(type(observed_state.get(k)) is bool for k in ('live','ended'))
+                        and (original_at is None or observed_at > original_at or observed_at == original_at
+                             and all(phase.get(k) == observed_state[k] for k in ('live','ended')))):
+                    phase = dict(observed_state, observed_at=admitted['source_at'], source_evidence=dict(admitted))
+            except (KeyError, TypeError, ValueError, AttributeError):
+                pass  # Keep original catalog state when the independent proof is invalid.
         if phase:e['status']=phase
         for key in ('season','stage'):
             value=native.get(key)
@@ -339,16 +353,14 @@ def share_games(target,other, *, share_metadata=False):
             raw.update(source_participant_roles=deepcopy(m.get('source_participant_roles',{})),season=m['season'],stage=m['stage'],shared_identity_provenance=dict(source='kalshi',event_ids=sorted(x['id'] for x in matches),facts=deepcopy(m.get('observed_identity_facts',[])),qualification='Exact two-participant schedule correspondence; no MLB occurrence inferred'))
 
 def source_team_label(label, event):
-    """Exact provider display abbreviation + safeName from this event's teams."""
+    """Exact provider display labels from this event's typed teams."""
     sport=event.get('competition')
     direct=resolve_team(dict(name=label),sport,'polymarket_us')
     candidates={direct} if direct else set()
     for team in (event.get('_native') or {}).get('teams',[]):
-        aliases={team.get('name'),team.get('safeName')}
-        for field in ('displayAbbreviation','abbreviation'):
-            if team.get(field) and team.get('safeName'):
-                aliases.add(str(team[field]).upper()+' '+team['safeName'])
-        if label in aliases:
+        names={team[field] for field in ('name','safeName') if isinstance(team.get(field),str) and team[field]}
+        abbreviations={str(team[field]).upper() for field in ('displayAbbreviation','abbreviation') if team.get(field)}
+        if label in names or label in {f'{prefix} {name}' for prefix in abbreviations for name in names}:
             canonical=resolve_team(team,sport,'polymarket_us')
             if canonical:candidates.add(canonical)
     return next(iter(candidates)) if len(candidates)==1 and candidates.issubset(set(event.get('participants',{}).values())) else None

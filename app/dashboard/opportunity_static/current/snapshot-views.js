@@ -50,7 +50,7 @@ const SnapshotViews = (() => {
     }
     for(const {q,venues,retained} of refs.values()){
       const ref=q.reference_calculation, line=el('div',null,'compare-reference');
-      line.append(el('strong',name(ref?.venue||q.display?.benchmark_venue||result.assumptions.benchmark_venue)+' reference'),el('span',' · '+[...venues].join(', '),'compare-note'));
+      line.append(el('strong',name(ref?.venue||q.display?.benchmark_venue||result.assumptions.benchmark_venue)+' quoted odds'),el('span',' · '+[...venues].join(', '),'compare-note'));
       const values=el('div',null,'compare-ref-values');
       if(ref?.contributors?.length){values.append(el('span','Contributing books: '+ref.contributors.map(c=>name(c.venue)).join(', ')));}
       else if(ref?.pair?.length)for(const [i,r] of ref.pair.entries()){
@@ -60,7 +60,7 @@ const SnapshotViews = (() => {
       }
       line.append(values);if(retained.size)line.append(el('small','Retained reference for '+[...retained].join(', '),'compare-note'));wrap.append(line);
     }
-    if(!refs.size)wrap.append(el('p',`${name(quotes[0]?.reference_calculation?.venue||result.assumptions.benchmark_venue)} reference unavailable for these exact outcomes.`,'compare-note'));
+    if(!refs.size)wrap.append(el('p','Sportsbook comparison unavailable for these exact outcomes.','compare-note'));
     return wrap;
   }
   function comparison(group,result,metric,actions){

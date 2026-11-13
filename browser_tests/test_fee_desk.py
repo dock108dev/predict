@@ -104,6 +104,7 @@ def data():
             current=4,
             fee_coverage_percent=75,
             exact_pinnacle_reference=2,
+            sportsbook_ev=3,
             before_fee_ev=2,
             reviewed_after_fee_ev=0,
             conservative_after_fee_ev=1,
@@ -112,6 +113,7 @@ def data():
         ),
         published_working_prices=8,
         unpublished_working_prices=5,
+        coverage_complete=False,
         missing_reasons={"conditional_fee_review_expired_or_not_effective": 1},
         provider_requests=0,
     )
@@ -156,8 +158,9 @@ def run(browser, width, output):
                 "products": [
                     {
                         "venue": "kalshi",
-                        "state": "verified",
-                        "review_before": AT.isoformat(),
+                        "state": "market_terms_verified",
+                        "standing_public_terms": True,
+                        "recheck_due_at": AT.isoformat(),
                         "source_url": "https://kalshi.com/docs/kalshi-fee-schedule.pdf",
                     },
                     {
@@ -195,46 +198,47 @@ def run(browser, width, output):
     base = "https://predict.fixture"
     tab.goto(base + "/ev")
     card = tab.locator('[data-offer-id="prophetx-offer"]')
-    expect(card).to_contain_text("$0.01 at fill")
-    expect(card).to_contain_text("1 $1-payout contract")
-    expect(card).to_contain_text("Reviewed fees")
-    expect(card).to_contain_text("Conservative")
-    expect(tab.locator('[data-offer-id="expired"]')).to_contain_text(
-        "The fee review does not cover this capture time."
-    )
+    expect(card).to_contain_text("An exact two-sided sportsbook match is missing")
     commission = tab.locator('[data-offer-id="commission"]')
-    expect(commission).to_contain_text("$0.02 at settlement if it wins")
-    expect(commission).to_contain_text("1 $1-payout contract")
     assert tab.evaluate("document.documentElement.scrollWidth === innerWidth")
-    commission.click()
+    commission.press("Enter")
+    expect(tab.locator("#trade")).to_contain_text("$0.02")
     expect(tab.locator("#trade")).to_contain_text("Winning settlement")
     expect(tab.locator("#trade")).to_contain_text("Fee if it loses")
     tab.keyboard.press("Escape")
-    card.click()
+    expect(commission).to_be_focused()
+    card.press("Enter")
     drawer = tab.locator("#trade")
     expect(drawer).to_contain_text("Modeled size")
-    expect(drawer).to_contain_text("An exact current Pinnacle match is unavailable")
+    expect(drawer).to_contain_text("An exact current sportsbook match is unavailable")
     expect(drawer).to_contain_text("$0.01")
-    tab.locator("#latest").click()
+    tab.locator("#latest").press("Enter")
     expect(drawer).to_contain_text("$0.00")
     expect(drawer).to_contain_text("8 decimal")
     assert drawer.evaluate("(el) => el.scrollWidth <= el.clientWidth")
     drawer.screenshot(path=output / f"ev-drawer-{width}.png")
     tab.goto(base + "/arbs")
-    expect(
-        tab.get_by_text("Net after fees: $10.17 minimum modeled profit")
-    ).to_be_visible()
-    expect(tab.get_by_text("Net after fees unavailable")).to_be_visible()
-    tab.get_by_role("button", name="Inspect pairing").first.click()
+    expect(tab.get_by_text("$10.17 worst modeled result")).to_be_visible()
+    expect(tab.get_by_text("Net payoff unavailable")).to_be_visible()
+    inspect = tab.get_by_role("button", name="View payoff calculation ↗").first
+    inspect.press("Enter")
     expect(drawer).to_contain_text("$44.44")
     expect(drawer).to_contain_text("$55.56")
     expect(drawer).to_contain_text("$0.93")
-    expect(drawer).to_contain_text("$10.17 net profit")
+    expect(drawer).to_contain_text("$10.17")
     assert tab.evaluate("document.documentElement.scrollWidth === innerWidth")
     drawer.screenshot(path=output / f"arb-drawer-{width}.png")
+    tab.keyboard.press("Escape")
+    expect(inspect).to_be_focused()
     tab.goto(base + "/current/coverage")
     expect(tab.locator("#fee-census")).to_contain_text("3 of 4 current offers")
     expect(tab.locator("#fee-census")).to_contain_text("5 working prices unpublished")
+    expect(tab.locator("#fee-census")).to_contain_text(
+        "Sportsbook EV estimates before fees"
+    )
+    expect(tab.locator("#fee-census")).to_contain_text(
+        "The full provider offer count is unknown"
+    )
     with tab.expect_download() as exported:
         tab.locator("#export-fee-census").click()
     assert exported.value.suggested_filename == "predict-fee-coverage.json"
@@ -244,9 +248,15 @@ def run(browser, width, output):
         "Exact Pinnacle references"
     )
     expect(tab.locator("#admin-fee-census")).to_contain_text(
+        "Sportsbook EV estimates before fees"
+    )
+    expect(tab.locator("#admin-fee-census")).to_contain_text(
         "0 reviewed fees · 1 conservative"
     )
     schedules = tab.locator("#other-public-fee-schedules")
+    expect(schedules).to_contain_text("Market terms verified · PDF recheck unavailable")
+    expect(schedules).to_contain_text("Standing public terms")
+    expect(schedules).to_contain_text("Recheck due")
     expect(schedules.get_by_role("link", name="Official fee source")).to_have_count(1)
     expect(schedules.get_by_role("link")).to_have_attribute(
         "href", "https://kalshi.com/docs/kalshi-fee-schedule.pdf"

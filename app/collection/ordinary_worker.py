@@ -31,11 +31,6 @@ def main():
     try:
         with cancellation(lambda:pause.checkpoint(db,stopped)), store.connect() as db:
             result = turn(db,capture_cache=store.ROOT/'.local/ordinary-capture-structure.json')
-            if result.get('published'):
-                # The small parent tables can contain many compressed TOAST
-                # pages. Reuse expired automatic revisions before the next
-                # batch; ordinary VACUUM does not rewrite or remove live rows.
-                db.execute('VACUUM comparison_snapshot_result, comparison_snapshot, comparison_live_read_fragment')
         result.update(worker_seconds=round(time.monotonic()-start,3), worker_peak_rss_bytes=rss())
     except Exception as exc:
         from app.diagnostics import failure_details

@@ -1,6 +1,8 @@
 {
   "deferred": {
+    "tests/test_admin_database_sql.py": "Required in the disposable PostgreSQL lane. Verifies bounded local database reads and read-only access.",
     "tests/test_sgo_current_rows_sql.py": "Required in the disposable PostgreSQL lane. Exercises source-scoped current rows and sportsbook EV publication and withdrawal.",
+    "tests/test_sgo_native_catalog_sql.py": "Required in the disposable PostgreSQL lane. Exercises exact Novig catalog evidence, replacement and expiry.",
     "tests/test_sportsgameodds_ingress_sql.py": "Required in the disposable PostgreSQL lane. Exercises atomic SGO admission, delivery clocks and account-safe source control.",
     "tests/test_sportsgameodds_reference_sql.py": "Required in the disposable PostgreSQL lane. Exercises original evidence clocks, frame membership, rollback and bounded history.",
     "tests/test_novig_current_admission.py": "Required in the disposable PostgreSQL lane. Exercises signed-format input, current-row authority and frozen fee evidence without contacting the provider.",

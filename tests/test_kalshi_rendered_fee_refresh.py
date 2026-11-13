@@ -43,12 +43,15 @@ def transport(sources, requests, *, fault=None):
     def respond(request):
         url = str(request.url.copy_with(query=None)) if request.url.params.get('request_id') else str(request.url)
         requests.append(url)
-        assert request.headers['cache-control'] == 'no-cache'
+        if url != kalshi.ROUNDING:
+            assert request.headers['cache-control'] == 'no-cache'
         assert 'authorization' not in request.headers
         if url == RENDERER:
             body = dict(format=kalshi.FORMAT, request_id=request.url.params['request_id'],
                         source_url=kalshi.SOURCE, origin_http_status=200, origin_sha256='a' * 64,
                         origin_retrieved_at=AT.isoformat(), complete=True, page_count=12, text=TEXT)
+        elif url == kalshi.SOURCE:
+            body = '%PDF-fixture'
         else:
             body = deepcopy(sources[url])
         headers = {'date': format_datetime(AT, usegmt=True)}
@@ -131,7 +134,8 @@ def test_scheduled_renewal_reaches_admin_and_ordinary_offer(sources, monkeypatch
     assert requests == [RENDERER, *sources]
     assert admin['state'] == 'verified' and admin['refresh']['state'] == 'verified'
     assert admin['last_verified_at'] == AT.isoformat()
-    assert admin['review_before'] == (AT + timedelta(days=1)).isoformat()
+    assert admin['review_before'] is None and admin['standing_public_terms']
+    assert admin['recheck_due_at'] == (AT + timedelta(days=1)).isoformat()
     assert admin['next_refresh_at'] == (AT + timedelta(hours=6)).isoformat()
     assert admin['direct_pdf'] == DIRECT
     assert admin['retrieval']['series_count'] == 18 and admin['retrieval']['event_history_complete']
@@ -164,6 +168,64 @@ def test_scheduled_renewal_reaches_admin_and_ordinary_offer(sources, monkeypatch
     assert fee['evidence']['verification_revision'] == states[kalshi.KEY]['last_verified']['revision']
     before = products.for_offer(states, row, AT - timedelta(minutes=1))
     assert before['review_before'] == '2026-11-11T04:24:42.474962+00:00'
+
+
+def test_unavailable_pdf_allows_scoped_unchanged_terms_only(sources, monkeypatch):
+    monkeypatch.setattr(kalshi, 'renderer_endpoint', lambda: None)
+
+    def blocked(url, body, headers):
+        if url == kalshi.ROUNDING:
+            headers['age'] = '27000'
+        if url == kalshi.SOURCE:
+            return 429
+
+    requests = []
+    result = attempt(sources, None, fault=blocked, requests=requests)
+    assert requests == [kalshi.SOURCE, *sources]
+    assert result['direct_pdf']['http_status'] == 429
+    admin = products.summary(kalshi.KEY, result, AT)
+    assert admin['state'] == 'market_terms_verified'
+    assert admin['review_before'] is None
+    receipt = admin['retrieval']
+    assert receipt['rounding_document']['age_seconds'] == 27000
+    assert 'rendered_origin' not in receipt
+    assert receipt['series_count'] == 18 and receipt['event_history_complete']
+    assert products.for_offer({kalshi.KEY: result}, {'venue': 'kalshi'}, AT)['verification_scope'] == 'market_terms_only'
+
+    def changed(url, body, headers):
+        if url == kalshi.API + 'series/KXNBAGAME':
+            body['series']['fee_multiplier'] = 2
+        return blocked(url, body, headers)
+
+    revised = attempt(sources, result, fault=changed)
+    assert revised['last_attempt']['error'] == 'kalshi_market_terms_changed'
+    assert products.for_offer({kalshi.KEY: revised}, {'venue': 'kalshi'}, AT)['unavailable_reason'] == products.REVIEW_REQUIRED
+
+
+def test_direct_pdf_is_compared_before_market_checks(sources, monkeypatch):
+    from app.collection import kalshi_fee_renderer
+
+    monkeypatch.setattr(kalshi, 'renderer_endpoint', lambda: None)
+
+    async def render(pdf):
+        assert pdf == b'%PDF-fixture'
+        return TEXT, 12
+
+    monkeypatch.setattr(kalshi_fee_renderer, 'render', render)
+    result = attempt(sources, None)
+    verified = result['last_verified']
+    assert verified['verification_scope'] == 'full_document'
+    assert verified['retrieval']['document_check'] == 'direct_rendering'
+    assert verified['retrieval']['rendered_origin'] == result['direct_pdf']
+
+    async def changed(_pdf):
+        return TEXT + ' Changed fee terms.', 12
+
+    monkeypatch.setattr(kalshi_fee_renderer, 'render', changed)
+    requests = []
+    revised = attempt(sources, result, requests=requests)
+    assert requests == [kalshi.SOURCE]
+    assert revised['last_attempt']['error'] == 'kalshi_rendered_schedule_changed'
 
 
 @pytest.mark.parametrize(('scenario', 'outcome', 'reason'), [

@@ -42,6 +42,32 @@ class Service:
 
 
 class OwnedIngress(IsolatedAsyncioTestCase):
+    async def test_sgo_admission_wakes_publication_only_after_unrevoked_commit(self):
+        class SgoWorker:
+            ingress_source = 'sportsgameodds'
+
+            def __init__(self, service):
+                self.service = service
+
+            @operation
+            def admit(self):
+                yield {'type': 'current_aggregate_records'}, {}
+
+        service = Service()
+        worker = SgoWorker(service)
+        wakes = []
+        service.ingress.on_sgo_admitted = lambda: wakes.append(len(service.sink.finished))
+        task = asyncio.create_task(call(service, worker.admit))
+        await self.entered(service)
+        self.assertEqual(wakes, [])
+        self.assertFalse(await service.ingress.drain(.01, 'sportsgameodds'))
+        service.sink.release.set()
+        with self.assertRaises(asyncio.CancelledError):
+            await task
+        self.assertEqual(wakes, [])
+        await call(service, worker.admit)
+        self.assertEqual(wakes, [1])
+
     async def test_withdrawal_during_precompute_cannot_be_revived_by_older_image(self):
         class NativeService:
             database_mode=True

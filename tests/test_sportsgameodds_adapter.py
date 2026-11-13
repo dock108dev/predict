@@ -40,14 +40,16 @@ def test_live_clock_sample_requires_both_exact_post_start_reference_sides():
     home = event['odds']['points-home-game-sp-home']
     book = dict(available=True, odds='-110', spread='-1.5', lastUpdatedAt=AT)
     home.update(bookOdds='-106', bookOddsAvailable=True, bookSpread='-2.5',
-                byBookmaker={'pinnacle':book, 'novig':book})
+                byBookmaker={'pinnacle':book, 'novig':book, 'fanduel':book, 'draftkings':book})
     away = dict(home, oddID=home['opposingOddID'], opposingOddID=home['oddID'],
-                statEntityID='away', sideID='away', byBookmaker={'pinnacle':dict(book, spread='1.5')})
+                statEntityID='away', sideID='away', byBookmaker={'pinnacle':dict(book, spread='1.5'),
+                                                               'fanduel':dict(book, spread='1.5')})
     event['odds'][away['oddID']] = away
     cohort = ('NBA','live','spread','novig')
     page = parse(data)
     assert page.quotes[0]['consensus'] == dict(available=True, price_american='-106', line='-2.5', source_at=None)
     assert clock_sample(page)[cohort]['live_with_pinnacle_clocks'] == 1
+    assert clock_sample(page)[cohort]['live_with_sportsbook_clocks'] == 1
     assert clock_sample(page)[cohort]['live_with_pinnacle_clocks_at_admission'] == 0
     at_deadline = datetime.fromisoformat('2026-11-10T20:00:15Z')
     after_deadline = datetime.fromisoformat('2026-11-10T20:00:15.001Z')
@@ -55,6 +57,9 @@ def test_live_clock_sample_requires_both_exact_post_start_reference_sides():
     late = clock_sample(page, admitted_at=after_deadline)[cohort]
     assert late['live_fresh'] == late['live_with_pinnacle_clocks'] == 1
     assert late['live_fresh_at_admission'] == late['live_with_pinnacle_clocks_at_admission'] == 0
+    assert late['live_with_sportsbook_clocks_at_admission'] == 0
+    away['byBookmaker']['caesars'] = away['byBookmaker'].pop('fanduel')
+    assert clock_sample(parse(data))[cohort]['live_with_exact_sportsbook_pair'] == 0
     away['byBookmaker']['pinnacle']['lastUpdatedAt'] = '2026-11-10T19:59:54Z'
     old = clock_sample(parse(data))[cohort]
     assert old['live_available'] == old['live_post_start'] == old['live_with_exact_pinnacle_pair'] == 1
@@ -79,6 +84,28 @@ def test_unavailable_vendor_baseline_retains_reported_value_as_context():
     del odd['fairSpread']
     quote, = parse(data).quotes
     assert not quote['fair']['available']
+
+
+def test_market_deeplink_is_attributed_audit_evidence():
+    from app.collection.sportsgameodds_current_rows import current_rows
+    from app.storage.sportsgameodds_reference import prepare_page
+
+    data = response()
+    books = data['data'][0]['odds']['points-home-game-sp-home']['byBookmaker']
+    books['kalshi'] = dict(books.pop('book'), deeplink='https://kalshi.com/markets/kxnbaspread/game?omit=1#outcome')
+    page = parse(data)
+    witness = dict(host='kalshi.com', path='/markets/kxnbaspread/game')
+    assert page.quotes[0]['bookmaker_market_link'] == witness
+    assert prepare_page(page)[0]['facts']['bookmaker_market_link'] == witness
+    rows, _ = current_rows(page, page.receipt_sha256)
+    assert rows[0]['comparison_source_metadata']['bookmaker_market_link'] == witness
+    assert not rows[0]['verified'] and 'shared_provider_ids' not in rows[0]['event']
+    books['kalshi']['deeplink'] = 'https://user@kalshi.com/markets/kxnbaspread/game'
+    assert 'bookmaker_market_link' not in parse(data).quotes[0]
+    books['fanduel'] = dict(books['kalshi'], deeplink='https://sportsbook.fanduel.com/hockey/game')
+    reference = next(row['facts'] for row in prepare_page(parse(data)) if row['facts']['venue'] == 'fanduel')
+    assert reference['bookmaker_market_link'] == dict(host='sportsbook.fanduel.com', path='/hockey/game')
+    assert reference['settlement'] == 'unverified'
 
 
 def test_unavailable_and_missing_source_are_not_offers():
@@ -317,6 +344,31 @@ def test_synthetic_alternate_lines_keep_separate_clocks_and_unpaired_prices():
     from app.storage.current_rows import prepare
     assert all(prepare(row) for row in rows)
     assert next(r for r in rows if r['selection']['signed_line'] == '-3.5')['quote']['state'] == 'unavailable'
+
+
+def test_exact_duplicate_and_conflicting_alternates_are_quote_local():
+    from app.collection.sportsgameodds_current_rows import current_rows
+    from app.storage.sportsgameodds_reference import prepare_page
+
+    data = response()
+    odd = data['data'][0]['odds']['points-home-game-sp-home']
+    main = odd['byBookmaker']['book']
+    alternate = dict(main, spread='-2.5', odds='+110')
+    conflict = dict(main, spread='-3.5', odds='+140')
+    odd['byBookmaker'] = {'novig':dict(main,altLines=[dict(main,spread='-1.50'), alternate,dict(alternate),
+                            conflict,dict(conflict,odds='+130',lastUpdatedAt=AT)]), 'off_scope':main}
+    page = parse_page(json.dumps(data).encode(), AT, venues={'novig'})
+    assert page.alternate_rows == 5 and page.duplicate_alternate_rows == 2
+    assert page.conflicting_alternate_lines == page.ignored_bookmaker_groups == 1
+    assert [(q['line'],q['available'],q.get('alternate',False)) for q in page.quotes] == [
+        ('-1.5',True,False),('-2.5',True,True),('-3.5',False,True)]
+    conflict_row = page.quotes[-1]
+    assert conflict_row['source_at'] == AT and conflict_row['settlement'] == 'unverified'
+    assert conflict_row['unavailable_reason'] == 'conflicting observations at exact line'
+    assert len(prepare_page(page)) == 3
+    rows, exclusions = current_rows(page, page.receipt_sha256)
+    assert len(rows) == 3 and not exclusions
+    assert next(row for row in rows if row['selection']['signed_line']=='-3.5')['quote']['state'] == 'unavailable'
 
 
 def test_offset_clocks_normalize_to_utc_and_aliases_status_are_retained():

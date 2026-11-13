@@ -7,6 +7,7 @@ caller-controlled fetch target. Use the normalized output for explicit review.
 import argparse
 import asyncio
 import re
+from shutil import which
 from time import monotonic
 
 from aiohttp import web
@@ -22,8 +23,10 @@ ATTEMPT_SECONDS = 4
 async def render(pdf):
     if not pdf.startswith(b'%PDF-'):
         raise ValueError('invalid PDF')
+    # The local launcher intentionally uses a minimal system PATH.
+    executable = which('pdftotext') or which('pdftotext', path='/opt/homebrew/bin:/usr/local/bin') or 'pdftotext'
     process = await asyncio.create_subprocess_exec(
-        'pdftotext', '-enc', 'UTF-8', '-', '-', stdin=asyncio.subprocess.PIPE,
+        executable, '-enc', 'UTF-8', '-', '-', stdin=asyncio.subprocess.PIPE,
         stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL)
     try:
         async def send():

@@ -14,12 +14,105 @@ from tests.test_sportsgameodds_adapter import AT, parse, response
 
 @skipUnless(SOCKET, 'Disposable PostgreSQL required')
 class SGOScopeSQL(LatestBoardFixture):
+    async def test_exact_novig_catalog_changes_withdraw_fee_without_withdrawing_price(self):
+        import json
+
+        from app.collection.current_policy import DEFAULT
+        from app.collection.sportsgameodds_adapter import parse_page
+        from app.comparison.snapshot_math import assumptions
+        from app.storage import sgo_native_catalog as catalog
+        from app.storage.comparison_snapshot import capture
+        from app.storage.ordinary_publication import dependencies, prices, project
+        from app.storage.sportsgameodds_reference import prepare_frames, prepare_page, upsert_frames, upsert_rows
+        from app.storage.store import stamp
+        from tests.test_sgo_native_binding import AT, EVENT, HOME, SGO, START, fixture, witness
+
+        raw = response()
+        event = raw['data'][0]
+        event.update(eventID=SGO, leagueID='NHL', links={'bookmakers': {
+            'novig': f'https://novig.com/event-markets/{EVENT}/sportsgameodds'}})
+        event['status']['startsAt'] = START
+        for role, team in (('away', 'Carolina Hurricanes'), ('home', 'Seattle Kraken')):
+            event['teams'][role]['names']['long'] = team
+        offer = event['odds']['points-home-game-sp-home']
+        offer['byBookmaker'] = {'novig': dict(available=True, odds='-135', spread='1.5',
+            lastUpdatedAt=AT, deeplink=f'https://novig.com/events/{HOME}/sportsgameodds')}
+        page = parse_page(json.dumps(raw).encode(), AT)
+        rows, _ = current_rows(page, page.receipt_sha256)
+        _, official_event, official_market = fixture()
+        config = dict(DEFAULT, aggregate_provider='sportsgameodds', aggregate_sports=['NHL'])
+        states = {'sportsgameodds': {'state': 'available'}}
+        owner = dict(healthy=True, active=True, config=config)
+        with self.connect() as db, patch('app.collection.current_policy.load', return_value=config), \
+                patch('app.storage.ordinary_publication.utc', return_value=AT):
+            CurrentRowStore(db).upsert_records(rows, now=AT, source_status=states)
+            catalog.write(db, SGO, witness(official_event, official_market))
+            event_id = db.execute('SELECT id FROM current_event WHERE native_event_id=%s', (SGO,)).fetchone()['id']
+            reference_rows = prepare_page(page)
+            upsert_rows(db, reference_rows)
+            upsert_frames(db, prepare_frames(page, reference_rows))
+            captured = capture(db, at=AT, ordinary=True, event_ids=[event_id])
+            published = prices(captured, assumptions()[0])
+
+            def visible():
+                return project(published, dependencies(db, [event_id]), owner, states, at=stamp(AT),
+                               policy=captured['policy_identity'], epoch=captured['epoch'])['rows'][0]
+
+            row = visible()
+            assert row['price_current'] and row['sgo_native_contract']['available']
+            assert row['trade_fee']['trade_fee_usd'] == '0'
+            db.execute('DELETE FROM current_sgo_native_catalog WHERE event_id=%s', (SGO,))
+            row = visible()
+            assert row['price_current'] and not row['sgo_native_contract']['available']
+            assert row['trade_fee']['reason'] == 'sgo_native_catalog_replaced_or_expired'
+
+    async def test_native_sportsbook_dependencies_bind_exact_book_pair_and_frame(self):
+        from types import SimpleNamespace
+        from app.collection.current_policy import DEFAULT
+        from app.storage.ordinary_publication import dependencies, sportsbook_dependencies
+        from app.storage.sportsgameodds_reference import prepare_frames, prepare_page, upsert_frames, upsert_rows
+
+        data = response()
+        event = data['data'][0]
+        home = event['odds']['points-home-game-sp-home']
+        book = home['byBookmaker']['book']
+        home['byBookmaker'] = {'novig':book, 'fanduel':dict(book,altLines=[dict(book,spread='-2.5')]),
+                              'draftkings':book}
+        away = dict(home, oddID=home['opposingOddID'], opposingOddID=home['oddID'],
+                    statEntityID='away', sideID='away',
+                    byBookmaker={'fanduel':dict(book,spread='1.5',altLines=[dict(book,spread='2.5')])})
+        event['odds'][away['oddID']] = away
+        parsed = parse(data)
+        originals, _ = current_rows(parsed, parsed.receipt_sha256)
+        references = prepare_page(parsed)
+        config = dict(DEFAULT, aggregate_provider='sportsgameodds', aggregate_sports=['NBA'])
+        reviewed = [(dict(event_id=event['eventID'],venue='fanduel',odd_id=odd['oddID'],
+                          frame_id=parsed.receipt_sha256,line=line), {})
+                    for odd, line in ((home, '-1.50'), (away, '1.50'))]
+        with self.connect() as db, patch('app.collection.current_policy.load',return_value=config), \
+                patch('app.storage.ordinary_publication.reviewed_reference_registry',return_value=SimpleNamespace(rows=reviewed)):
+            CurrentRowStore(db).upsert_records(originals, now=AT)
+            upsert_rows(db, references)
+            upsert_frames(db, prepare_frames(parsed, references))
+            event_ids = [row['id'] for row in db.execute('SELECT id FROM current_event').fetchall()]
+            rows = sportsbook_dependencies(db, event_ids)
+            assert len(rows) == 2 and all(row['receipt'].endswith(parsed.receipt_sha256) for row in rows)
+            expected = {row['id'] for row in references if row['bookmaker_id']=='fanduel'
+                        and row['facts']['line'] in ('-1.5', '1.5')}
+            assert {row['contract'] for row in rows} == expected
+            assert {key for key in dependencies(db,event_ids) if key.startswith('sgo-reference:')} == {row['id'] for row in rows}
+            db.execute("UPDATE current_sgo_event_frame SET facts=jsonb_set(facts,'{receipt_sha256}',to_jsonb('new-frame'::text))")
+            assert sportsbook_dependencies(db,event_ids) == []
+
     async def test_sportsbook_baseline_reaches_ordinary_desk_and_expires(self):
         from app.collection.current_policy import DEFAULT
         from app.comparison.snapshot_math import assumptions
-        from app.dashboard.trade_desk import page as desk
+        from app.dashboard.coverage_finance_inputs import measure_inputs
+        from app.dashboard.coverage_funnel import measure
+        from app.dashboard.fee_coverage import census, source_inventory
+        from app.dashboard.trade_desk import add_sgo_prices, page as desk
         from app.storage.comparison_snapshot import capture, defer_details
-        from app.storage.ordinary_publication import prices, project
+        from app.storage.ordinary_publication import prices, project, turn
         from app.storage.sportsgameodds_reference import prepare_frames, prepare_page, upsert_frames, upsert_rows
         from app.storage.store import stamp
 
@@ -29,15 +122,21 @@ class SGOScopeSQL(LatestBoardFixture):
         event['status'].update(startsAt='2026-11-10T19:59:55Z', started=True, live=True)
         home = event['odds']['points-home-game-sp-home']
         offer = dict(available=True, odds='+140', spread='-1.5', lastUpdatedAt=AT)
-        home['byBookmaker'] = {'novig': offer, 'fanduel': dict(offer, odds='+120')}
+        home['byBookmaker'] = {'novig': offer, 'fanduel': dict(offer, odds='+120'),
+                               'draftkings': dict(offer, odds='+130')}
         away = dict(home, oddID=home['opposingOddID'], opposingOddID=home['oddID'], statEntityID='away', sideID='away',
                     byBookmaker={'fanduel': dict(offer, odds='-150', spread='1.5')})
         event['odds'][away['oddID']] = away
         parsed = parse(data)
         records, _ = current_rows(parsed, parsed.receipt_sha256)
         references = prepare_page(parsed)
-        config = dict(DEFAULT, aggregate_provider='sportsgameodds')
+        config = dict(DEFAULT, aggregate_provider='sportsgameodds', aggregate_sports=['NBA'])
         states = {'sportsgameodds': {'state': 'available'}}
+        owner = dict(healthy=True, active=True, config=config)
+        settings = assumptions()[0]
+        self.at = stamp(AT)
+        self.service.config = config
+        self.state.write(self.service)
         with self.connect() as db, patch('app.collection.current_policy.load', return_value=config):
             CurrentRowStore(db).upsert_records(records, now=AT, source_status=states)
             upsert_rows(db, references)
@@ -46,8 +145,44 @@ class SGOScopeSQL(LatestBoardFixture):
             inputs = capture(db, at=AT, ordinary=True, event_ids=event_ids)
             assert len(inputs['quotes']) == 1, inputs['issues']
             assert inputs['quotes'][0].get('sportsbook_baseline')
-            publication = defer_details(prices(inputs, assumptions()[0]))
-        owner = dict(healthy=True, active=True, config=config)
+            publication = defer_details(prices(inputs, settings))
+            at = stamp(AT)
+            projected = project(publication, inputs['dependencies'], owner, states,
+                                at=at, policy=inputs['policy_identity'], epoch=inputs['epoch'])
+            matrix = desk(projected, {'basis': 'sportsbooks', 'browse_odds': '1'}, ('ev', None, 0, 25))
+            add_sgo_prices(db, matrix, projected['rows'], states, at=at, include_retained=False)
+            prices_by_book = matrix['rows'][0]['sportsbook_quotes']
+            assert prices_by_book['draftkings'][0]['price_american'] == '+130'
+            assert prices_by_book['draftkings'][0]['current'] is True
+            assert matrix['rows'][0]['offers'][0]['sportsbook']['book'] == 'fanduel'
+            counts = census(projected, source_inventory(db, inputs['dependencies']))
+            funnel = measure(db, projected, inputs['dependencies'], counts, owner, at=at)
+            novig = next(row for row in funnel['cohorts'] if row['venue'] == 'novig' and row['family'] == 'spread'
+                         and row['phase'] == 'in_game')
+            assert novig['offered_price_units'] is None and not novig['provider_universe_complete']
+            assert novig['source_originals']['fresh_at_original_receipt'] == 1
+            assert novig['sql_working']['current_working_prices'] == 1
+            assert novig['ordinary_publication']['sportsbook_ev'] == 1
+            assert not source_inventory(db, inputs['dependencies'], phase='pregame', at=at)
+            assert len(source_inventory(db, inputs['dependencies'], phase='live', at=at)) == 1
+            pregame = measure(db, projected, inputs['dependencies'], counts, owner, at=at, phase='pregame')
+            assert all(row['phase'] == 'pregame' and row['period'] == 'full_game'
+                       for row in pregame['cohorts'])
+            live_cohorts = measure(db, projected, inputs['dependencies'], counts, owner, at=at, phase='live')
+            assert live_cohorts['cohorts']
+            assert all(row['phase'] == 'in_game' for row in live_cohorts['cohorts'])
+            audit = measure_inputs(inputs, dict(rows=[]), [], inputs['dependencies'], owner, states,
+                                   settings=settings, policy=inputs['policy_identity'], epoch=inputs['epoch'], at=at)
+            assert audit['ev']['eligible_indicative_sgo'] == 1
+            assert audit['ev']['published_of_eligible_indicative_sgo'] == 0
+            assert audit['ev']['eligible_native_before_fee'] == 0
+            assert audit['arb']['eligible_before_fee'] == 0
+            with patch('app.storage.ordinary_publication.utc', return_value=AT), \
+                    patch('app.storage.comparison_snapshot.utc', return_value=AT):
+                published = turn(db)
+            assert published['live_first_price_seal'], published
+            assert published['captured_components'] == 1
+            assert published['price_generation'] is not None
         options = ('ev', 'gross_return_percent', 0, 25)
 
         def view(at):

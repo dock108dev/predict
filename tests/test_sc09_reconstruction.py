@@ -205,7 +205,7 @@ class ReconstructionProcess(IsolatedAsyncioTestCase):
         finally:await worker.close()
 
     async def test_kalshi_removal_keeps_other_book_and_checks_retired_sequence(self):
-        at=datetime.now(timezone.utc);worker=Reconstruction('kalshi',[market(),market('OLD')],1,None,{}, {})
+        at=datetime.now(timezone.utc);worker=Reconstruction('kalshi',[market(),market('OLD')],1,None,{}, {},partitions=2)
         try:
             initial=Batch([(ack(1),at),(frame(1),at),(frame(2,mid='OLD'),at)])
             for _ in range(3):await worker.recv(initial)
@@ -217,7 +217,9 @@ class ReconstructionProcess(IsolatedAsyncioTestCase):
             retired=await worker.recv(replies);healthy=await worker.recv(replies)
             self.assertIsNone(retired['book']);self.assertNotIn('error',retired)
             self.assertEqual(healthy['seq'],4);self.assertIsNotNone(healthy['book'])
-            self.assertIsNone((await worker.recv(replies))['book'])
+            removal_ack=await worker.recv(replies)
+            self.assertIsNone(removal_ack['book'])
+            self.assertEqual(removal_ack['data']['id'],1000001)
             self.assertIsNotNone((await worker.recv(replies))['book'])
             # Once acknowledged, an unexpected retired frame is fail-closed.
             self.assertIn('error',await worker.recv(replies))
@@ -239,12 +241,47 @@ class ReconstructionProcess(IsolatedAsyncioTestCase):
             await worker.reconfigure([us_market()],{SLUG:'new'},['old'])
             later=at+timedelta(seconds=1)
             receiver=Batch([(message('old',transactTime=later.isoformat()),later),
+                            (json.dumps({'requestId':'old','unsubscribed':True}),later),
                             (message('new',transactTime=later.isoformat()),later)])
-            stale=await worker.recv(receiver);fresh=await worker.recv(receiver)
+            stale=await worker.recv(receiver);retirement=await worker.recv(receiver);fresh=await worker.recv(receiver)
             self.assertIsNone(stale['book']);self.assertNotIn('error',stale)
+            self.assertEqual(retirement['data'],{'requestId':'old','unsubscribed':True})
+            self.assertIsNone(retirement['book']);self.assertNotIn('error',retirement)
             self.assertEqual(fresh['data']['requestId'],'new')
             self.assertEqual(fresh['value']['raw']['received_at'],later.isoformat())
             self.assertEqual(fresh['value']['raw']['exchange_at'],later.isoformat())
+        finally:await worker.close()
+
+    async def test_reconstruction_and_catalog_submissions_share_one_partition_boundary(self):
+        import asyncio
+        from unittest.mock import patch
+        from app.collection.native_reconstruction import owned_thread
+
+        at=datetime.now(timezone.utc)
+        worker=Reconstruction('kalshi',[market()],1,None,{}, {},partitions=2)
+        submitting=asyncio.Event()
+        concurrent=0
+        peak=0
+
+        async def measured_submit(function):
+            nonlocal concurrent,peak
+            concurrent+=1
+            peak=max(peak,concurrent)
+            submitting.set()
+            try:
+                await asyncio.sleep(.03)
+                return await owned_thread(function)
+            finally:
+                concurrent-=1
+
+        try:
+            with patch('app.collection.native_reconstruction.owned_thread',side_effect=measured_submit):
+                loading=asyncio.create_task(worker.load(Batch([(ack(1),at),(frame(1),at)])))
+                await submitting.wait()
+                (_,rows,_),_=await asyncio.gather(loading,worker.reconfigure([market(),market('NEW')],None,[]))
+            self.assertEqual(peak,1)
+            self.assertEqual([row['catalog_revision'] for row in rows],[0,0])
+            self.assertEqual(worker.catalog_revision,1)
         finally:await worker.close()
 
     async def test_ordered_deltas_match_direct_and_gap_ends_the_batch(self):

@@ -6,17 +6,23 @@ export function selectionIdentity(offer) {
     offer.before_fee, offer.after_fee, offer.conservative, offer.sportsbook]);
 }
 
+export function selectionCurrent(offer, at = Date.now()) {
+  if (!offer?.current) return false;
+  return [offer.current_until, offer.value != null ? offer.calculation_current_until : null]
+    .every(deadline => deadline == null || Date.parse(deadline) > at);
+}
+
 export async function pinLatestSelection({read, pin, release, isActive}) {
   const offer = await read();
   if (!isActive()) return {state:'closed'};
-  if (!offer?.current) return {state:'unavailable'};
+  if (!selectionCurrent(offer)) return {state:'unavailable'};
   const pinned = await pin(offer);
   let accepted = false;
   try {
     if (!isActive()) return {state:'closed'};
     const current = await read();
     if (!isActive()) return {state:'closed'};
-    if (!current?.current || selectionIdentity(current) !== selectionIdentity(offer)) return {state:'changed'};
+    if (!selectionCurrent(current) || selectionIdentity(current) !== selectionIdentity(offer)) return {state:'changed'};
     accepted = true;
     return {state:'ready', offer, ...pinned};
   } finally {

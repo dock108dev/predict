@@ -156,14 +156,17 @@ def live_metric(row, fee, witnesses):
     """Conditional decisive-outcome benchmark; never infer full settlement EV."""
     from fractions import Fraction
     from .cashflows import exact_wire as wire
+    from .sgo_reference import BEST_BOOKS, BEST_VERSION
     from .snapshot_fee_scope import RANKING_BASIS
     reference = row.get('reference_calculation') or {}
     benchmark = row.get('snapshot_benchmark') or {}
     missing = dict(available=False, reason='novig_live_exact_reference_or_settlement_missing')
     if not fee.get('available'):
         return dict(available=False, reason=fee.get('reason') or 'novig_native_market_phase_and_book_missing')
-    if (not reference.get('available') or reference.get('venue') != 'pinnacle'
+    best = reference.get('method') == BEST_VERSION and reference.get('venue') in BEST_BOOKS
+    if (not reference.get('available') or not (best or reference.get('venue') == 'pinnacle')
             or len(witnesses) != 2 or len({w.get('dependency') for w in witnesses}) != 2
+            or best and any(w.get('venue') != reference['venue'] or w.get('provider') != 'sportsgameodds' for w in witnesses)
             or not all(w.get('dependency') and not w.get('reasons')
                        and w.get('lifecycle', {}).get('state') == 'live' for w in witnesses)
             or not benchmark.get('selected_identity') or not benchmark.get('selected_predicate')
@@ -181,7 +184,7 @@ def live_metric(row, fee, witnesses):
             scenario_net_usd=wire(p-risk), net_per_dollar_risk=wire(value), return_percent=wire(100*value),
             selected_decisive_probability=wire(p), quantity='1', quantity_unit='USD normal claim',
             liquidity_role='taker', fill_count=1, fee_payment='at_fill', evidence=deepcopy(fee['evidence']),
-            condition='One immediate taker fill; exact Pinnacle benchmark is conditional on decisive settlement.',
+            condition='One immediate taker fill; the exact sportsbook benchmark is conditional on decisive settlement.',
             exclusions=['pushes', 'voids', 'cancellations', 'multi-price fills'],
             meaning='Conditional decisive-outcome benchmark; not full-outcome EV or a guaranteed fill.')
     except (KeyError, ValueError, TypeError, ArithmeticError):

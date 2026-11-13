@@ -1,0 +1,9 @@
+{
+  "source_url": "https://docs.polymarket.us/fees",
+  "retrieved_at": "2026-11-12T22:34:28.235785+00:00",
+  "body_sha256": "7009b4de8ccad8155ed2c9189bec19b4bd01088619baaeafd43c941c303de626",
+  "normalized_sha256": "e917d96f8837da45d22d1d4a904652ccfa0dc3cc7bb1390fe8c562088727df18",
+  "body_bytes": 342191,
+  "http_age_seconds": 10434,
+  "review": "The complete official page main text matched the runtime change receipt and repeated direct retrievals. The page retains the 0.095, 0.085, 0.075 and 0.0695 standard taker tiers, the price range 0.01 through 0.99, the coefficient at insertion, the standard contracts-times-price-times-complement formula, half-even cent rounding and the cumulative split-fill cap. The supported conservative standard-sports one-fill model still assumes zero rebates. Combo trading and account-specific coefficients remain outside that model."
+}

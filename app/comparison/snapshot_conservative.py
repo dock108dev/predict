@@ -1,6 +1,7 @@
 """Owner-requested conservative fee estimates, separate from verified-fee ranking."""
 from fractions import Fraction as F
 import json
+from app.fees.evidence import applies
 from .conditional_benchmark import basis
 from .current_dependencies import instant
 from .cashflows import exact_wire as wire
@@ -69,7 +70,7 @@ def prophetx_public_fee(row, *, at, review=None, quantity=None, fills=None):
         result['evidence'] = evidence
         if evidence.get('unavailable_reason'):
             raise ValueError(evidence['unavailable_reason'])
-        if not instant(evidence['reviewed_at']) <= at < instant(evidence['review_before']):
+        if not applies(evidence, at):
             raise ValueError('conditional_fee_review_expired_or_not_effective')
         if 'nhl_taker_coefficient' in evidence:
             policy = dict(policy, version='public-straight-trades-20261105',
@@ -171,7 +172,7 @@ def kalshi_public_fee(row, *, at, review, quantity='1'):
         when=instant(at)
         if review and review.get('unavailable_reason'):
             raise ValueError(review['unavailable_reason'])
-        if not review or not instant(review['reviewed_at']) <= when < instant(review['review_before']):
+        if not applies(review, when):
             raise ValueError('conditional_fee_review_expired_or_not_effective')
         if row['market']['period'] != 'full_game' or row['market']['market'] not in ('winner','spread','total'):
             raise ValueError('kalshi_series_fee_scope_unbound')

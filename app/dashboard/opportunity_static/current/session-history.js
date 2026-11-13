@@ -7,7 +7,8 @@ export class DiagnosticSession {
     if(this.events.length>1000){this.events.shift();this.dropped++;}this.render();
   }
   mount(summary,list){this.summary=summary;this.list=list;this.render();}
-  render(){if(!this.summary)return;
+  unmount(){this.summary=null;this.list=null;}
+  render(){if(!this.summary||this.list.contains(document.activeElement))return;
     this.summary.textContent=`Since ${this.startedAt}: ${this.events.length} retained events, ${this.dropped} older events discarded. This tab's sampled observations cannot establish continuous opportunity duration. Changing filters or pages leaves unobserved gaps.`;
     this.list.replaceChildren(...this.events.slice(-12).reverse().map(x=>{const li=document.createElement('li'),detail=document.createElement('details'),summary=document.createElement('summary'),proof=document.createElement('pre');
       summary.textContent=`${x.observed_at} · ${x.kind.replaceAll('_',' ')}${x.game?' · '+x.game:''}${x.venue?' · '+x.venue:''}${x.direction?' · '+x.direction.replaceAll('_',' '):''}`;

@@ -42,6 +42,9 @@ RETRYABLE_DISCOVERY = frozenset(('provider_backoff_pending', 'native_http_timeou
 
 HOURLY_CAPS = frozenset(('prediction_session_byte_cap', 'prediction_discovery_request_cap',
                         'current_snapshot_request_cap', 'current_connection_cap'))
+QUIET_SNAPSHOT_SECONDS = 8
+QUIET_SNAPSHOT_AGE = 6
+QUIET_SNAPSHOT_LIMIT = 24
 
 
 def top_price_identity(book):
@@ -74,6 +77,9 @@ class NativeWorker:
         self.metrics = dict(requests=0, connections=0, frames=0, books=0, bytes=0,
                             generations=0, reconciliations=0, resyncs=0, retries=0,
                             source_receipt_ms=None, receipt_projection_ms=None)
+        if venue == 'kalshi':
+            self.metrics.update(quiet_snapshot_checks=0,quiet_snapshot_batches=0,quiet_snapshot_requested=0,
+                                quiet_snapshot_correlated=0,quiet_snapshot_confirmed=0,quiet_snapshot_timeouts=0)
         self.budget_started=time.monotonic()
         self.budget_totals=dict(requests=0,bytes=0,connections=0)
         self.http_totals=dict(wire=0,decoded=0)
@@ -122,8 +128,11 @@ class NativeWorker:
         self.queue_accounting=QueueAccounting(venue)
         self.receiver = None
         self.subscription_groups = {}
+        self.subscription_lock = asyncio.Lock()
         self.subscription_transition = None
         self.subscription_blocked = set()
+        self.stream_hot_markets = set()
+        self.pmus_priority_pending = None
         self.retired_subscription_ids = []
         self.reconstruction = None
         from .native_synchronization import Synchronization
@@ -486,6 +495,9 @@ class NativeWorker:
                 old_markets=len(old),new_markets=len(new),retired_markets=sorted(set(old)-set(new)),
                 changed_markets=sorted(mid for mid in old.keys()&new.keys() if old[mid]!=new[mid]),
                 pending_images=len(self.pending_books),reason='subscription_membership_or_material_changed')
+            if self.pmus_priority_pending:
+                await self.stop_stream(reason='quiescence')
+                return
             active=set(getattr(self,'stream_market_index',{}))
             if (self.metrics.get('subscription_priority',{}).get('deferred_markets') and active
                     and self.stream_task and not self.stream_task.done() and self.socket and self.reconstruction
@@ -538,62 +550,315 @@ class NativeWorker:
             return
         if transition.get('kind')=='kalshi_membership':
             engine=self.active_engine
+            markets=transition.get('active_markets',self.markets)
             commands=[];removal_request=None
             for action,members in (('delete_markets',transition['removed']),('add_markets',transition['added'])):
                 if not members:continue
                 rid=self.metrics.get('subscription_update_id',1000000)+1
                 self.metrics['subscription_update_id']=rid
-                if action=='delete_markets':removal_request=rid
+                if action=='delete_markets':
+                    removal_request=rid
+                    for mid in members:self.stream_snapshot_requests.pop(mid,None)
                 else:self.stream_snapshot_requests.update({mid:(rid,utc()) for mid in members})
                 commands.append(dict(id=rid,cmd='update_subscription',params=dict(
                     sids=[engine.sid],market_tickers=sorted(members),action=action)))
-            engine.reconfigure(list(self.markets.values()),removal_request)
-            await self.reconstruction.reconfigure(list(self.markets.values()),None,
+            engine.reconfigure(list(markets.values()),removal_request)
+            await self.reconstruction.reconfigure(list(markets.values()),None,
                 dict(request_id=removal_request) if removal_request is not None else [])
             self.guard()
-            self.stream_markets[:]=list(self.markets.values())
-            self.stream_market_index.clear();self.stream_market_index.update(self.markets)
-            self.stream_seen.intersection_update(self.markets)
-            self.stream_isolated.intersection_update(self.markets)
-            self.synchronization.members=set(self.markets)
+            self.stream_markets[:]=list(markets.values())
+            self.stream_market_index.clear();self.stream_market_index.update(markets)
+            self.stream_seen.intersection_update(markets)
+            self.stream_isolated.intersection_update(markets)
+            self.synchronization.members=set(markets)
             for values in (self.synchronization.images,self.synchronization.persisted,self.synchronization.invalid):
-                values.intersection_update(self.markets)
+                values.intersection_update(markets)
             self.initial_deadline=time.monotonic()+15
             for command in commands:await asyncio.wait_for(self.socket.send(json.dumps(command)),3)
-            self.metrics['catalog_transition']['reimaged_markets']=len(transition['added'])
-            self.metrics.update(initial_images=len(self.stream_seen),missing_initial_images=len(self.markets)-len(self.stream_seen))
+            if 'active_markets' not in transition:
+                self.metrics['catalog_transition']['reimaged_markets']=len(transition['added'])
+            self.subscription_blocked.difference_update(transition['removed'])
+            self.metrics.update(initial_images=len(self.stream_seen),missing_initial_images=len(markets)-len(self.stream_seen))
             self.signature=self.lifecycle.signature();self.subscription_transition=None
             return
         from .native_subscriptions import requests,commands
-        from app.adapters.polymarket_us import next_market_data, market_slug
-        groups=transition['groups'];mapping=requests(groups,self.markets)
+        from app.adapters.polymarket_us import market_slug
+        markets=transition.get('active_markets',self.markets)
+        groups=transition['groups'];mapping=requests(groups,markets)
         self.retired_subscription_ids=(self.retired_subscription_ids+sorted(transition['retired']))[-512:]
         engine=self.active_engine
-        engine.markets={market_slug(m):m for m in self.markets.values()}
+        engine.markets={market_slug(m):m for m in markets.values()}
         engine.market_requests=mapping;engine.retired_requests=set(self.retired_subscription_ids)
-        await self.reconstruction.reconfigure(list(self.markets.values()),mapping,self.retired_subscription_ids)
+        await self.reconstruction.reconfigure(list(markets.values()),mapping,self.retired_subscription_ids)
         self.guard()
-        self.stream_markets[:]=list(self.markets.values())
-        self.stream_market_index.clear();self.stream_market_index.update(self.markets)
+        self.stream_markets[:]=list(markets.values())
+        self.stream_market_index.clear();self.stream_market_index.update(markets)
         self.stream_seen.difference_update(transition['invalidated'])
         self.stream_isolated.difference_update(transition['invalidated'])
-        self.synchronization.members=set(self.markets)
+        self.synchronization.members=set(markets)
         for values in (self.synchronization.images,self.synchronization.persisted,self.synchronization.invalid):
-            values.intersection_update(self.markets)
+            values.intersection_update(markets)
         self.initial_deadline=time.monotonic()+15
         self.subscription_groups=groups
         self.subscription_blocked.clear()
-        for rid in sorted(transition['retired']):
-            await asyncio.wait_for(self.socket.send(json.dumps({'unsubscribe':{'requestId':rid}})),3)
-        for command in commands(transition['added'],self.markets):
+        if not transition.get('retirement_acked'):
+            for rid in sorted(transition['retired']):
+                await asyncio.wait_for(self.socket.send(json.dumps({'unsubscribe':{'requestId':rid}})),3)
+        for command in commands(transition['added'],markets):
             await asyncio.wait_for(self.socket.send(json.dumps(command)),3)
         self.metrics.update(subscription_groups=len(groups),initial_images=len(self.stream_seen),
-            missing_initial_images=len(self.markets)-len(self.stream_seen),
+            missing_initial_images=len(markets)-len(self.stream_seen),
             subscription_group_replacements=self.metrics.get('subscription_group_replacements',0)+len(transition['added']))
-        self.metrics['catalog_transition'].update(reimaged_markets=len(transition['invalidated'] & self.markets.keys()),
-                                                retained_groups=len(groups)-len(transition['added']))
+        if 'active_markets' not in transition:
+            self.metrics['catalog_transition'].update(reimaged_markets=len(transition['invalidated'] & markets.keys()),
+                                                    retained_groups=len(groups)-len(transition['added']))
         self.signature=self.lifecycle.signature()
         self.subscription_transition=None
+
+    def select_priority(self, markets, cursor):
+        from .native_priority import select
+
+        reducer = getattr(getattr(self.service, 'sink', None), 'reducer', None)
+        phase_events = (getattr(reducer, 'inventory', {}).get(self.venue, {}).get('events', [])
+                        if self.venue == 'polymarket_us' else ())
+        return select(markets, self.catalog, datetime.now(timezone.utc), cursor, phase_events=phase_events,
+                      priority_pregame=self.service.config.get('aggregate_provider') == 'sportsgameodds')
+
+    def next_priority(self):
+        all_markets = [market for mid, market in self.markets.items() if mid in self.lifecycle.leases]
+        cursor = getattr(self, 'priority_cursor', 0) + 1
+        chosen, detail = self.select_priority(all_markets, cursor)
+        active = {market.raw.ref.market_id: market for market in chosen}
+        return cursor, active, detail
+
+    async def withdraw_priority_members(self, previous, removed):
+        self.subscription_blocked.update(removed)
+        for mid in removed:
+            self.withdraw_pending([mid], 'retirement')
+            self.synchronization.invalidate(mid)
+            self.lifecycle.leases[mid]['image_current'] = False
+            self.image_versions.pop(mid, None)
+            self.derived_versions.pop(mid, None)
+        if removed and self.publication_task:
+            await asyncio.gather(self.publication_task, return_exceptions=True)
+        retire = [(previous[mid].raw.ref.event_id, mid) for mid in sorted(removed)]
+        for start in range(0, len(retire), 128):
+            self.guard()
+            await call(self.service, self.service.invalidate_markets, self.venue, retire[start:start+128])
+
+    async def rotate_kalshi_priority(self):
+        """Replace only the deferred cohort while the ordered SID remains owned."""
+        self.guard()
+        engine = self.active_engine
+        if (self.venue != 'kalshi' or self.reconstruction is None or engine is None or engine.sid is None
+                or engine.retiring or not self.synchronization.active or self.subscription_transition
+                or self.reconcile_needed or not self.lifecycle_initialized):
+            return False
+        previous = self.stream_market_index.copy()
+        if set(previous) != self.stream_seen | self.stream_isolated:
+            return False
+        cursor, active, detail = self.next_priority()
+        if not active:
+            return False
+        removed, added = set(previous) - set(active), set(active) - set(previous)
+        self.subscription_transition = dict(kind='kalshi_membership', active_markets=active,
+                                            removed=removed, added=added)
+        try:
+            await self.withdraw_priority_members(previous, removed)
+            await self.finish_subscription_transition()
+        except (CatalogResync, ValueError, TimeoutError, OSError):
+            # A partially sent transition has no trustworthy membership. The
+            # stream's normal recovery revokes it and requests fresh images.
+            self.metrics['priority_transition_fallbacks'] = self.metrics.get('priority_transition_fallbacks', 0) + 1
+            return False
+        self.priority_cursor = cursor
+        self.metrics['subscription_priority'] = detail
+        self.metrics['priority_rotations_in_place'] = self.metrics.get('priority_rotations_in_place', 0) + 1
+        self.metrics['priority_last_rotation'] = dict(retained=len(active.keys() & previous.keys()),
+            added=len(added), retired=len(removed), sid=engine.sid, at=utc())
+        return True
+
+    def quiet_kalshi_candidates(self, now, limit):
+        from app.comparison.game_phase import sporting_phase
+        from app.storage.store import stamp
+
+        owned = self.stream_seen & self.synchronization.persisted
+        event_ids = {self.stream_market_index[mid].raw.ref.event_id for mid in owned if mid in self.stream_market_index}
+        active_events = {}
+        for event in self.catalog['events']:
+            start = event.get('scheduled_start')
+            if (event['id'] not in event_ids or not start or event.get('identity') != 'resolved'
+                    or event.get('exclusion') or sporting_phase(event)['state'] != 'live'):
+                continue
+            try:
+                elapsed = (now-stamp(start)).total_seconds()
+                if 0 <= elapsed < 86400:
+                    active_events[event['id']] = elapsed
+            except (ValueError, TypeError, AttributeError):
+                continue
+        candidates = []
+        for mid in owned:
+            if (mid in self.stream_isolated or mid in self.subscription_blocked
+                    or mid in self.material_quarantine or mid in self.stream_snapshot_requests):
+                continue
+            market = self.stream_market_index.get(mid)
+            lease = self.lifecycle.leases.get(mid)
+            book = self.lifecycle.books.get(mid)
+            if (not market or market.state != MarketState.ACTIVE or market.raw.ref.event_id not in active_events
+                    or not lease or not lease['image_current'] or not book
+                    or book['generation'] != self.synchronization.generation
+                    or lease['selection']['event']['id'] != market.raw.ref.event_id):
+                continue
+            clocks = (book['original_source_at'], self.confirmations.latest.get(mid,{}).get('confirmed_at'))
+            clock = max((stamp(value).timestamp() for value in clocks if value), default=float('-inf'))
+            if mid in self.source_highwater:
+                clock = max(clock, float(self.source_highwater[mid]))
+            if now.timestamp() - clock >= QUIET_SNAPSHOT_AGE:
+                candidates.append((active_events[market.raw.ref.event_id], clock, mid))
+        return [mid for _, _, mid in sorted(candidates)[:limit]]
+
+    async def reconfirm_kalshi_quiet_books(self):
+        """Ask the current ordered SID for fresh complete images, without resubscribing."""
+        if self.venue != 'kalshi':
+            return
+        self.metrics['quiet_snapshot_checks'] += 1
+        if self.subscription_lock.locked():
+            self.metrics['quiet_snapshot_state'] = 'catalog_transition'
+            return
+        async with self.subscription_lock:
+            self.guard()
+            engine = self.active_engine
+            if (not self.socket or not engine or engine.retiring
+                    or engine.sid is None or engine.seq is None or not self.synchronization.active
+                    or self.synchronization.subscription != engine.sid or not self.lifecycle_initialized
+                    or self.reconcile_needed or self.subscription_transition or self.invalidation_boundary
+                    or self.metrics.get('receive_backpressure_active') or self.metrics.get('receive_buffer_frames',0) >= 64
+                    or self.metrics.get('reconstruction_inflight_frames',0) >= 64
+                    or self.metrics.get('reconstruction_ready_frames',0) >= 64):
+                self.metrics['quiet_snapshot_state'] = 'waiting_for_ordered_stream'
+                return
+            pending = self.stream_snapshot_requests
+            tick = time.monotonic()
+            waiting = 0
+            for mid, request in pending.items():
+                if len(request) == 2 or request[4] is None:
+                    continue
+                if tick < request[4]:
+                    waiting += 1
+                else:
+                    # Without a response ID an extremely late image cannot
+                    # certify a later request for the same ticker on this SID.
+                    pending[mid] = (*request[:4], None)
+                    self.metrics['quiet_snapshot_timeouts'] = self.metrics.get('quiet_snapshot_timeouts',0)+1
+            limit = QUIET_SNAPSHOT_LIMIT
+            if self.client:
+                # Existing receive guards still charge actual wire bytes.
+                limit = min(limit, self.client.budget.remaining_bytes() // (1024 * 1024))
+            if waiting or not limit:
+                self.metrics['quiet_snapshot_state'] = 'waiting_for_prior_images' if waiting else 'transport_byte_guard'
+                return
+            markets = self.quiet_kalshi_candidates(datetime.now(timezone.utc), limit)
+            if not markets:
+                self.metrics['quiet_snapshot_state'] = 'no_eligible_quiet_books'
+                return
+            request_id = self.metrics.get('subscription_update_id',1000000)+1
+            self.metrics['subscription_update_id'] = request_id
+            command = dict(id=request_id,cmd='update_subscription',params=dict(
+                sids=[engine.sid],market_tickers=markets,action='get_snapshot'))
+            requested_at = utc()
+            pending.update({mid:(request_id,requested_at,engine.sid,engine.seq,tick+QUIET_SNAPSHOT_SECONDS)
+                            for mid in markets})
+            self.metrics['quiet_snapshot_batches'] = self.metrics.get('quiet_snapshot_batches',0)+1
+            self.metrics['quiet_snapshot_requested'] = self.metrics.get('quiet_snapshot_requested',0)+len(markets)
+            self.metrics['quiet_snapshot_last_request'] = dict(at=requested_at,sid=engine.sid,markets=len(markets))
+            self.metrics['quiet_snapshot_state'] = 'requested'
+            try:
+                await asyncio.wait_for(self.socket.send(json.dumps(command)),3)
+            except (TimeoutError,OSError):
+                self.metrics['quiet_snapshot_send_failures'] = self.metrics.get('quiet_snapshot_send_failures',0)+1
+
+    def take_snapshot_request(self, mid, data, received):
+        if data.get('type') != 'orderbook_snapshot':
+            return None
+        pending = self.stream_snapshot_requests
+        request = pending.get(mid)
+        if request and len(request) > 2:
+            _, requested, sid, seq, deadline = request
+            sent = data.get('sending_ts_ms')
+            if (deadline is None or time.monotonic() >= deadline or data.get('sid') != sid
+                    or type(data.get('seq')) is not int or data['seq'] <= seq or type(sent) is not int
+                    or not datetime.fromisoformat(requested).timestamp()*1000 <= sent <= received.timestamp()*1000
+                    or data.get('msg',{}).get('market_ticker') != mid):
+                self.metrics['quiet_snapshot_uncorrelated'] = self.metrics.get('quiet_snapshot_uncorrelated',0)+1
+                return None
+            self.metrics['quiet_snapshot_correlated'] = self.metrics.get('quiet_snapshot_correlated',0)+1
+        return pending.pop(mid,None)
+
+    async def begin_pmus_priority(self):
+        """Send retirements only. Admit replacements after their positive ACKs."""
+        from .native_subscriptions import priority_plan
+
+        self.guard()
+        if (self.reconstruction is None or not self.synchronization.active or self.subscription_transition
+                or self.pmus_priority_pending or self.reconcile_needed or not self.lifecycle_initialized):
+            return False
+        previous = self.stream_market_index.copy()
+        assigned = {mid for members in self.subscription_groups.values() for mid in members}
+        if set(previous) != self.stream_seen | self.stream_isolated or set(previous) != assigned:
+            return False
+        cursor, active, detail = self.next_priority()
+        if not active:
+            return False
+        next_hot = set(list(active)[:len(active)//2])
+        transition = priority_plan(self.subscription_groups, self.stream_hot_markets, next_hot, set(active)-next_hot)
+        if not transition['retired'] or len(transition['groups']) > 8:
+            return False
+        try:
+            await self.withdraw_priority_members(previous, transition['invalidated'])
+            retired = (self.retired_subscription_ids+sorted(transition['retired']))[-512:]
+            self.active_engine.retired_requests = set(retired)
+            await self.reconstruction.reconfigure(list(previous.values()), self.active_engine.market_requests, retired)
+            for rid in sorted(transition['retired']):
+                self.guard()
+                await asyncio.wait_for(self.socket.send(json.dumps({'unsubscribe':{'requestId':rid}})),3)
+        except (CatalogResync, ValueError, TimeoutError, OSError):
+            self.metrics['priority_transition_fallbacks'] = self.metrics.get('priority_transition_fallbacks', 0) + 1
+            return False
+        transition.update(active_markets=active, retirement_acked=True)
+        self.pmus_priority_pending = dict(awaiting=set(transition['retired']), deadline=time.monotonic()+5,
+            transition=transition, cursor=cursor, detail=detail, hot=next_hot)
+        return True
+
+    def acknowledge_pmus_priority(self, data):
+        pending = self.pmus_priority_pending
+        request = data.get('requestId')
+        if not pending or not isinstance(request, str) or request not in pending['awaiting'] or 'unsubscribed' not in data:
+            return
+        if data['unsubscribed'] is not True:
+            raise CatalogResync()
+        pending['awaiting'].remove(request)
+
+    async def finish_pmus_priority(self):
+        pending = self.pmus_priority_pending
+        self.subscription_transition = pending['transition']
+        await self.finish_subscription_transition()
+        self.pmus_priority_pending = None
+        self.stream_hot_markets = pending['hot']
+        self.priority_cursor = pending['cursor']
+        self.metrics['subscription_priority'] = pending['detail']
+        self.metrics['priority_rotations_in_place'] = self.metrics.get('priority_rotations_in_place', 0) + 1
+        transition = pending['transition']
+        self.metrics['priority_last_rotation'] = dict(
+            retained_groups=len(transition['groups'])-len(transition['added']),
+            added_groups=len(transition['added']), retired_groups=len(transition['retired']),
+            acknowledged_groups=len(transition['retired']), at=utc())
+
+    def priority_rotation_deadline(self):
+        from .native_priority import ROTATE_SECONDS
+
+        self.metrics['subscription_priority']['next_rotation_at'] = (
+            datetime.now(timezone.utc)+timedelta(seconds=ROTATE_SECONDS)).isoformat()
+        return time.monotonic()+ROTATE_SECONDS
 
     def guard(self):
         if (self.closed or not self.service.dispatch or self.failed
@@ -761,12 +1026,7 @@ class NativeWorker:
             for milestone in data.get('milestones',[]):
                 for eid in milestone.get('related_event_tickers',[]):
                     if eid not in events:continue
-                    fact=dict(id=milestone.get('id'),source_id=milestone.get('source_id'),
-                        source_provider=milestone.get('source_provider'),start_date=milestone.get('start_date'),
-                        **{k:v for k,v in milestone.get('details',{}).items() if k in
-                           ('season','season_type','season_year','main_game_event_ticker','home_team_id','away_team_id',
-                            'game_number','original_start','schedule_status','status')})
-                    facts.setdefault(eid,[]).append(fact)
+                    facts.setdefault(eid,[]).append(coverage.milestone_identity(milestone))
         changed=False
         for candidate in returned_markets:
             mid=candidate['id'];old=markets.get(mid)
@@ -840,16 +1100,17 @@ class NativeWorker:
             await self.discover()
 
     async def sporting_state_loop(self):
-        from .native_sporting_state import active_leagues,active_events,observations,newest_observations,PAGE_SIZE,POLL_SECONDS
+        from .native_sporting_state import (active_leagues,active_events,handoff_leagues,observations,
+                                            newest_observations,SportingStatePages,PAGE_SIZE,POLL_SECONDS)
         from .native_selectors import LEAGUES
-        offsets={};turn=0;seen={}
+        pages=SportingStatePages();seen={}
         while not self.closed and not self.failed and self.service.dispatch:
             try:
                 self.guard()
                 leagues=[s for s in active_leagues(self.catalog) if s in LEAGUES]
                 if leagues and not self.hourly_pause:
-                    league=leagues[turn%len(leagues)];turn+=1
-                    offset=offsets.get(league,0)
+                    priority=[s for s in handoff_leagues(self.catalog) if s in leagues]
+                    league,offset,lane=pages.next_request(leagues,priority)
                     path='/v2/leagues/'+LEAGUES[league]+'/events'
                     async with self.http_lock:
                         self.sporting_http=True
@@ -857,7 +1118,7 @@ class NativeWorker:
                             rows=await self._get(path,dict(limit=PAGE_SIZE,offset=offset),'events')
                             receipt=dict(self.sporting_receipt)
                         finally:self.sporting_http=False
-                    offsets[league]=offset+len(rows) if len(rows)==PAGE_SIZE else 0
+                    next_offset=pages.record_page(league,offset,lane,len(rows))
                     values=observations(rows,league=league,receipt=receipt)
                     # Same-state confirmations need no catalog rewrite, but
                     # still prevent a later cached response rolling state back.
@@ -869,7 +1130,8 @@ class NativeWorker:
                         await call(self.service,self.service.sporting_states,self.venue,list(accepted.values()))
                         seen.update(accepted)
                     self.metrics['sporting_state_refresh']=dict(at=utc(),league=league,rows=len(rows),
-                        accepted_events=len(accepted),next_offset=offsets[league],request_interval_seconds=POLL_SECONDS,
+                        accepted_events=len(accepted),offset=offset,page_lane=lane,next_offset=next_offset,
+                        request_interval_seconds=POLL_SECONDS,
                         coverage='partial_round_robin_league_pages',source='documented_us_sports_route',
                         received_at=receipt['received_at'],body_sha256=receipt['body_sha256'])
             except asyncio.CancelledError:raise
@@ -1001,56 +1263,57 @@ class NativeWorker:
         # generation, before replacing membership or clearing source highwaters.
         from app.comparison.lifecycle import worker_selections
         selections=await owned_thread(worker_selections,self.venue,parsed,cat)
-        await self.quiesce_catalog(parsed,cat,selections)
-        stage('catalog_validation_and_adoption')
-        try:
-            await call(self.service, self.service.catalog, self.venue, cat)
-        except BaseException:
-            # The proposal is not the owned catalog until ingress commits it.
-            # A failed transition must not reconnect proposed markets against
-            # the previous lifecycle leases. Retain the old complete metadata;
-            # fresh book authority is required after the interrupted transition.
-            await self.stop_stream()
-            self.subscription_transition=None;self.subscription_blocked.clear()
-            raise
-        # Retire unselected/closed catalogs deliberately; leases are independent.
-        self.metrics['generations'] += 1
-        self.catalog, self.markets = cat, parsed
-        self.derived_versions={mid:v for mid,v in self.derived_versions.items() if mid in parsed}
-        from app.adapters.polymarket_us import routing_slugs
-        active_clock_keys = set(parsed) if self.venue == 'kalshi' else await owned_thread(routing_slugs, parsed.values())
-        for key in set(self.source_highwater)-active_clock_keys:self.source_highwater.pop(key)
-        self.metrics['catalog_events'] = len(cat['events'])
-        self.metrics['catalog_markets'] = len(cat['markets'])
-        self.metrics['selected_markets'] = len(parsed)
-        self.metrics['coverage'] = self.findings
-        from .native_identity_trace import identity_trace
-        self.metrics['native_identity_trace']=identity_trace(cat,self.venue,pages=[],selected=ids,
-            selected_events=[e['id'] for e in selected],pass_number=self.metrics['discovery_passes'])
-        trace_bytes=len(json.dumps(self.metrics['native_identity_trace'],separators=(',',':')).encode())
-        self.metrics['identity_exclusions'],self.metrics['identity_exclusions_omitted']=identity_diagnostics(
-            cat,ids,byte_cap=24*1024-trace_bytes-256)
-        from app.comparison.lifecycle import worker_selections
-        delta=self.lifecycle.reconcile(selections,now)
-        self.material_quarantine.clear()
-        self.metrics['material_quarantined_markets']=0
-        self.lifecycle_initialized=True
-        # Metadata adoption and socket subscription completion are independent.
-        # Persist the complete adopted census before fallible socket commands;
-        # a disconnected socket must not force restoration of an older catalog.
-        # Recovery stores metadata only, never connection/book authority.
-        self.guard()
-        if getattr(self,'checkpoint',None):
-            from .native_recovery import save
-            stage('recovery_persistence')
-            cat['acquisition_census_generation']=self.census_generation
-            self.metrics['catalog_recovery']['storage']=await owned_thread(save,self.venue,self.checkpoint.scope,cat,parsed)
-            stage('checkpoint_completion')
-            await owned_thread(self.checkpoint.finish)
-            self.metrics['catalog_recovery'].update(durable_at=utc(),census_generation=self.census_generation,
-                durable_markets=len(cat['markets']),durable_selected=len(parsed))
-        stage('socket_transition')
-        await self.finish_subscription_transition()
+        async with self.subscription_lock:
+            await self.quiesce_catalog(parsed,cat,selections)
+            stage('catalog_validation_and_adoption')
+            try:
+                await call(self.service, self.service.catalog, self.venue, cat)
+            except BaseException:
+                # The proposal is not the owned catalog until ingress commits it.
+                # A failed transition must not reconnect proposed markets against
+                # the previous lifecycle leases. Retain the old complete metadata;
+                # fresh book authority is required after the interrupted transition.
+                await self.stop_stream()
+                self.subscription_transition=None;self.subscription_blocked.clear()
+                raise
+            # Retire unselected/closed catalogs deliberately; leases are independent.
+            self.metrics['generations'] += 1
+            self.catalog, self.markets = cat, parsed
+            self.derived_versions={mid:v for mid,v in self.derived_versions.items() if mid in parsed}
+            from app.adapters.polymarket_us import routing_slugs
+            active_clock_keys = set(parsed) if self.venue == 'kalshi' else await owned_thread(routing_slugs, parsed.values())
+            for key in set(self.source_highwater)-active_clock_keys:self.source_highwater.pop(key)
+            self.metrics['catalog_events'] = len(cat['events'])
+            self.metrics['catalog_markets'] = len(cat['markets'])
+            self.metrics['selected_markets'] = len(parsed)
+            self.metrics['coverage'] = self.findings
+            from .native_identity_trace import identity_trace
+            self.metrics['native_identity_trace']=identity_trace(cat,self.venue,pages=[],selected=ids,
+                selected_events=[e['id'] for e in selected],pass_number=self.metrics['discovery_passes'])
+            trace_bytes=len(json.dumps(self.metrics['native_identity_trace'],separators=(',',':')).encode())
+            self.metrics['identity_exclusions'],self.metrics['identity_exclusions_omitted']=identity_diagnostics(
+                cat,ids,byte_cap=24*1024-trace_bytes-256)
+            from app.comparison.lifecycle import worker_selections
+            delta=self.lifecycle.reconcile(selections,now)
+            self.material_quarantine.clear()
+            self.metrics['material_quarantined_markets']=0
+            self.lifecycle_initialized=True
+            # Metadata adoption and socket subscription completion are independent.
+            # Persist the complete adopted census before fallible socket commands;
+            # a disconnected socket must not force restoration of an older catalog.
+            # Recovery stores metadata only, never connection/book authority.
+            self.guard()
+            if getattr(self,'checkpoint',None):
+                from .native_recovery import save
+                stage('recovery_persistence')
+                cat['acquisition_census_generation']=self.census_generation
+                self.metrics['catalog_recovery']['storage']=await owned_thread(save,self.venue,self.checkpoint.scope,cat,parsed)
+                stage('checkpoint_completion')
+                await owned_thread(self.checkpoint.finish)
+                self.metrics['catalog_recovery'].update(durable_at=utc(),census_generation=self.census_generation,
+                    durable_markets=len(cat['markets']),durable_selected=len(parsed))
+            stage('socket_transition')
+            await self.finish_subscription_transition()
         stage('complete')
         from collections import Counter
         self.metrics['subscription_changes']=dict(delta,actions=delta['actions'][:20],
@@ -1116,6 +1379,7 @@ class NativeWorker:
         while not self.closed and not self.failed and self.service.dispatch:
             rotation_due=False
             rotate_at=None
+            quiet_at=None
             engine = None
             reconstruction = None
             receiver = None
@@ -1138,8 +1402,7 @@ class NativeWorker:
                     markets=[m for mid,m in self.markets.items() if mid in self.lifecycle.leases]
                     if not markets:return
                 if getattr(self.service,'database_mode',False):
-                    from .native_priority import select,ROTATE_SECONDS
-                    markets,priority=select(markets,self.catalog,datetime.now(timezone.utc),getattr(self,'priority_cursor',0))
+                    markets,priority=self.select_priority(markets,getattr(self,'priority_cursor',0))
                     self.metrics['subscription_priority']=priority
                 market_index={m.raw.ref.market_id:m for m in markets}
                 self.stream_market_index=market_index
@@ -1213,8 +1476,12 @@ class NativeWorker:
                     generation = engine.begin_subscription(request_id)
                     command = subscription(tuple(engine.markets), request_id, maximum_markets=None)
                     if getattr(self.service,'database_mode',False):
-                        from .native_subscriptions import plan,requests,commands
-                        self.subscription_groups=plan({}, {}, market_index,set())['groups']
+                        from .native_subscriptions import plan,requests,commands,priority_groups
+                        if self.metrics.get('subscription_priority',{}).get('deferred_markets'):
+                            self.stream_hot_markets=set(list(market_index)[:len(market_index)//2])
+                            self.subscription_groups=priority_groups(self.stream_hot_markets, set(market_index)-self.stream_hot_markets)
+                        else:
+                            self.subscription_groups=plan({}, {}, market_index,set())['groups']
                         engine.market_requests=requests(self.subscription_groups,market_index)
                         self.metrics['subscription_groups']=len(self.subscription_groups)
                 self.active_engine=engine
@@ -1234,10 +1501,9 @@ class NativeWorker:
                 for command_to_send in commands_to_send:
                     await asyncio.wait_for(self.socket.send(json.dumps(command_to_send)), 3)
                 if self.metrics.get('subscription_priority',{}).get('deferred_markets'):
-                    rotate_at=time.monotonic()+ROTATE_SECONDS
-                    self.metrics['subscription_priority']['next_rotation_at']=(datetime.now(timezone.utc)+timedelta(seconds=ROTATE_SECONDS)).isoformat()
-                # Initial snapshots and ordered deltas maintain the subscribed books.
-                # Recovery reconnects the affected subscription; no periodic image renewal.
+                    rotate_at=self.priority_rotation_deadline()
+                if self.venue=='kalshi' and reconstruction is not None:
+                    quiet_at=time.monotonic()+QUIET_SNAPSHOT_SECONDS
                 from .native_receive import NativeReceive
                 receiver=NativeReceive(self.socket,self.metrics,on_failure=lambda:self.synchronization.revoke('transport_lost'))
                 self.receiver=receiver
@@ -1245,6 +1511,16 @@ class NativeWorker:
                 pending_invalidations=[]
                 while True:
                     rotation_due=rotate_at is not None and time.monotonic()>=rotate_at
+                    pmus_pending=self.pmus_priority_pending
+                    if pmus_pending and not pmus_pending['awaiting'] and not self.subscription_lock.locked():
+                        stage='priority_rotation'
+                        async with self.subscription_lock:
+                            await self.finish_pmus_priority()
+                        self.metrics['subscription_rotations']=self.metrics.get('subscription_rotations',0)+1
+                        rotate_at=self.priority_rotation_deadline()
+                        pmus_pending=None
+                    retirement_timed_out=bool(pmus_pending and pmus_pending['awaiting'] and time.monotonic()>=pmus_pending['deadline'])
+                    rotation_due=rotation_due or retirement_timed_out
                     # Accumulate withdrawals only inside this already-received
                     # bounded batch. Newly queued prices cannot publish before
                     # its withdrawal commit; a later active image may then resume.
@@ -1256,8 +1532,36 @@ class NativeWorker:
                             pending_invalidations=[]
                             self.invalidation_boundary=False
                     if rotation_due:
+                        if retirement_timed_out:
+                            self.metrics['priority_transition_fallbacks']=self.metrics.get('priority_transition_fallbacks',0)+1
+                            self.metrics['priority_last_fallback']='subscription_retirement_ack_timeout'
+                        else:
+                            if self.subscription_lock.locked():
+                                self.metrics['priority_rotation_catalog_waits']=self.metrics.get('priority_rotation_catalog_waits',0)+1
+                                rotate_at=time.monotonic()+.25
+                                continue
+                            stage='priority_rotation'
+                            async with self.subscription_lock:
+                                if self.venue=='polymarket_us':
+                                    rotating=await self.begin_pmus_priority()
+                                    if rotating:
+                                        rotate_at=None
+                                        rotation_due=False
+                                        continue
+                                else:
+                                    rotated=await self.rotate_kalshi_priority()
+                                    if rotated:
+                                        self.metrics['subscription_rotations']=self.metrics.get('subscription_rotations',0)+1
+                                        rotate_at=self.priority_rotation_deadline()
+                                        rotation_due=False
+                                        continue
                         self.synchronization.revoke('subscription_rotation')
                         break
+                    if quiet_at is not None and time.monotonic() >= quiet_at:
+                        quiet_at=time.monotonic()+QUIET_SNAPSHOT_SECONDS
+                        receiver.require_active()
+                        stage='quiet_snapshot_request'
+                        await self.reconfirm_kalshi_quiet_books()
                     stage = 'receive'
                     self.metrics['processing_inflight_frames']=0
                     self.metrics['processing_received_at']=None
@@ -1268,6 +1572,8 @@ class NativeWorker:
                     # Count them without copying the whole roster per wire frame.
                     timeout = max(.01, self.initial_deadline-time.monotonic()) if len(seen)+len(isolated)<len(markets) else 30
                     if rotate_at is not None:timeout=min(timeout,max(.01,rotate_at-time.monotonic()))
+                    if quiet_at is not None:timeout=min(timeout,max(.01,quiet_at-time.monotonic()))
+                    if pmus_pending and pmus_pending['awaiting']:timeout=min(timeout,max(.01,pmus_pending['deadline']-time.monotonic()))
                     try:
                         prepared_frame=None
                         if reconstruction is None:
@@ -1277,6 +1583,8 @@ class NativeWorker:
                             body,received=prepared_frame['body'],prepared_frame['received']
                     except TimeoutError:
                         if rotate_at is not None and time.monotonic()>=rotate_at:continue
+                        if quiet_at is not None and time.monotonic()>=quiet_at:continue
+                        if pmus_pending and pmus_pending['awaiting'] and time.monotonic()>=pmus_pending['deadline']:continue
                         if len(seen)+len(isolated)<len(markets): raise ValueError('initial_image_deadline')
                         continue  # quiet books age independently; socket ping owns transport failure
                     receiver.require_active()
@@ -1303,6 +1611,7 @@ class NativeWorker:
                     if not isinstance(data,dict): raise ValueError('malformed_native_frame')
                     if self.venue=='polymarket_us' and engine.market_requests is not None:
                         slug=data.get('marketData',{}).get('marketSlug')
+                        self.acknowledge_pmus_priority(data)
                         if data.get('requestId') in engine.retired_requests:
                             continue
                         if slug and data.get('requestId')!=engine.market_requests.get(slug):
@@ -1344,6 +1653,11 @@ class NativeWorker:
                     self.synchronization.acknowledge(engine.sid if self.venue=='kalshi' else request_id,
                         engine.seq if self.venue=='kalshi' else None)
                     kind=data.get('type','market_data' if book is not None else 'control')
+                    if (self.venue=='kalshi' and kind=='ok' and data.get('sid')==engine.sid
+                            and type(data.get('seq')) is int and data['seq']==engine.seq):
+                        # Reconstruction has already validated the SID and
+                        # sequence. Mirror the ordered removal ACK in the owner.
+                        engine.retiring={mid:rid for mid,rid in engine.retiring.items() if rid!=data.get('id')}
                     if kind in ('orderbook_snapshot','orderbook_delta','market_data'):
                         self.metrics[kind+'_frames']=self.metrics.get(kind+'_frames',0)+1
                         self.metrics[kind+'_bytes']=self.metrics.get(kind+'_bytes',0)+len(raw)
@@ -1400,7 +1714,7 @@ class NativeWorker:
                     else:value=prepared_frame.get('queue_hint',prepared_frame.get('value'))
                     from .current_confirmation import validate
                     stage = 'confirm'
-                    request=pending.pop(book.raw.ref.market_id,None) if data.get('type')=='orderbook_snapshot' else None
+                    request=self.take_snapshot_request(book.raw.ref.market_id,data,received) if self.venue=='kalshi' else None
                     from .current_confirmation import ConfirmationUnavailable
                     try:
                         confirmation=self.confirmations.observe(value,data,raw,generation=self.metrics['connections'],
@@ -1420,6 +1734,9 @@ class NativeWorker:
                     if confirmation:
                         validate(confirmation,value['raw']['ref'],value,_content_sha256=prepared_frame.get('content_sha256') if prepared_frame is not None else None)
                         value['book_confirmation']=confirmation
+                        if request and len(request)>2 and confirmation['request_id']==str(request[0]):
+                            self.metrics['quiet_snapshot_confirmed']=self.metrics.get('quiet_snapshot_confirmed',0)+1
+                            self.metrics['quiet_snapshot_last_confirmed_at']=confirmation['confirmed_at']
                     tick = time.perf_counter()
                     stage = 'queue'
                     self.queue_book(value,_content_sha256=prepared_frame.get('content_sha256') if prepared_frame is not None else None,
@@ -1453,6 +1770,8 @@ class NativeWorker:
                          'Snapshot predates its request','Confirmation clock regressed',
                          'Replayed confirmation payload','Confirmation content mismatch',
                          'Snapshot request/continuity proof missing','Invalid confirmation age at receipt'}
+                known.update(('reconstruction_partition_length_conflict','reconstruction_partition_state_conflict',
+                              'reconstruction_partition_ownership_conflict','reconstruction_partition_revision_conflict'))
                 # Developer-owned vocabulary only; never persist provider text,
                 # handshake headers, credentials or a raw exception repr.
                 self.metrics['last_stream_failure'] = dict(at=utc(), stage=stage,
@@ -1535,6 +1854,7 @@ class NativeWorker:
                 self.active_engine=None
                 self.reconstruction=None
                 self.subscription_groups={};self.subscription_transition=None;self.subscription_blocked.clear()
+                self.pmus_priority_pending=None;self.stream_hot_markets.clear()
                 self.retired_subscription_ids=[]
                 if receiver:await receiver.close()
                 self.receiver=None

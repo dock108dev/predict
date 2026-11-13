@@ -13,6 +13,37 @@ from app.dashboard.snapshot_api import mount
 
 @skipUnless(SOCKET, 'Disposable PostgreSQL required')
 class OrdinarySQL(LatestBoardFixture):
+    async def test_capture_uses_fee_authority_for_newly_seen_venue(self):
+        from types import SimpleNamespace
+        from app.fees import product_schedules
+
+        key = 'kalshi:exchange'
+        terms = {'last_verified': {'approval_id': 'fixture', 'revision': 'fee-revision',
+                                   'verified_at': (self.at + timedelta(hours=1)).isoformat(), 'review_before': None}}
+        with self.connect() as db:
+            product_schedules.write(db, key, terms)
+            self.addCleanup(lambda: self.clear_fixture_fee(key))
+            execute = db.execute
+
+            def lagged_inventory(query, *args, **kwargs):
+                result = execute(query, *args, **kwargs)
+                if query == 'SELECT id,event_id,venue FROM current_contract':
+                    rows = [dict(row, venue='not_yet_observed') if row['venue'] == 'kalshi' else row
+                            for row in result.fetchall()]
+                    return SimpleNamespace(fetchall=lambda: rows)
+                return result
+
+            with patch.object(db, 'execute', side_effect=lagged_inventory):
+                self.assertTrue(live.turn(db)['published'])
+            kalshi = [row for row in self.result(db)['rows'] if row['venue'] == 'kalshi']
+            self.assertTrue(kalshi)
+            expected = product_schedules.revision(terms)
+            self.assertTrue(all(row['current_authority']['public_fee_revision'] == expected for row in kalshi))
+
+    def clear_fixture_fee(self, key):
+        with self.connect() as db:
+            db.execute('DELETE FROM public_fee_schedule WHERE venue=%s', (key,))
+
     async def test_owned_refresh_preserves_prices_but_failure_and_controls_withdraw(self):
         from app.collection.runtime_status import read_runtime
         with self.connect() as db:

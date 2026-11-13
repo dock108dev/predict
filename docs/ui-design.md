@@ -2,14 +2,21 @@
 
 ## Current comparison interface
 
-Opportunities and Markets group offers by outcome. Each book row shows its
-offered odds and available estimates. The default ranking uses EV after reviewed
-trade fees. Math & fees holds the selected offer while the list updates. Its
-update notice names material changes and lets the reader adopt the latest prices.
-The [interface contract](engineering/live-comparison-20261104/L04-interface-contract.md)
-covers keyboard interaction, narrow windows, odds formats and missing inputs.
-The [delivery record](engineering/live-comparison-20261104/L05-delivery.md)
-documents the running app and its measured limits. Owner acceptance is open.
+The [pregame Opportunities decision](live-comparison-plan-20261104.md#november-12--pregame-opportunities-first)
+sets the next implementation scope. The default EV and Arbitrage views use
+pregame full-game markets. A separate Live tab preserves the in-game view.
+Keep original sportsbook prices and the de-vigged estimate visible on demand,
+and put provider identity and operational diagnostics in Admin.
+
+The owner approved the [November 12 line-comparison plan](live-comparison-plan-20261104.md#november-12--compare-every-venue-on-the-line)
+mockups for the dashboard, game and financial inspections. The dashboard ranks
+opportunity cards by EV or modeled arb return. Each card shows all venue prices
+on its exact line and the EV comparison book or selected opposing legs. The game
+view carries the full line matrix. Browse current odds is available during an
+EV outage. The ordinary desk's existing default is Sportsbook EV before fees.
+The redesign preserves keyboard interaction, narrow windows, global odds formats
+and pinned inspections. The [November 6 delivery record](engineering/live-comparison-20261104/L05-delivery.md)
+documents the earlier grouped list and its measured limits.
 
 ## Earlier approved target — November 3, 2026
 

@@ -96,6 +96,8 @@ class Ingress:
         self.slots=asyncio.Semaphore(self.maximum)
         self.revocations={}
         self.catalog_preparer=None
+        self.on_sgo_admitted = None
+        self.on_native_admitted = None
 
     async def run(self, fn, *args, **kwargs):
         source=getattr(fn.__self__, "ingress_source", "the_odds_api") if hasattr(fn.__self__,"service") else args[0] if args else None
@@ -189,6 +191,12 @@ class Ingress:
                             value = await self.service.sink.commit_async(row, states, revoked,
                                 **(dict(precomputed=precomputed) if precomputed is not None else {}))
                             commit_seconds+=monotonic()-tick
+                            if (source == 'sportsgameodds' and row['type'] == 'current_aggregate_records'
+                                    and not revoked.is_set() and self.on_sgo_admitted is not None):
+                                self.on_sgo_admitted()
+                            if (self.on_native_admitted is not None and not revoked.is_set()
+                                    and row['type'] in ('prediction_books', 'prediction_book', 'native_market_invalid')):
+                                self.on_native_admitted()
                         except Exception as exc:
                             try:steps.throw(exc)
                             except StopIteration as done:return done.value
@@ -205,7 +213,7 @@ class Ingress:
                                          catalog_wait_seconds=catalog_wait_seconds,catalog_attempts=catalog_attempts))
         task = asyncio.create_task(execute(), name='predict-ingress-'+fn.__name__)
         self.tasks[task] = revoked
-        self.sources[task] = "the_odds_api" if hasattr(fn.__self__,"service") else args[0] if args else None
+        self.sources[task] = source
         def finished(task):
             self.slots.release()
             self.tasks.pop(task, None)
