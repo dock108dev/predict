@@ -50,6 +50,7 @@ services:
     <<: *runtime
     ports: ['127.0.0.1:8784:8784']
     networks: [web]
+    tmpfs: [/tmp, '/predict/evidence:uid=10001,gid=10001,mode=0700']
     healthcheck:
       test: [CMD, python, deploy/check-health.py, web]
       interval: 10s

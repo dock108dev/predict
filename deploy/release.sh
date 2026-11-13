@@ -10,6 +10,7 @@ IFS= read -r -t 10 image
 [[ $image =~ ^ghcr\.io/dock108dev/predict@sha256:[a-f0-9]{64}$ ]]
 IFS= read -r -t 10 registry_user
 [[ $registry_user =~ ^[a-zA-Z0-9][a-zA-Z0-9_-]*$ ]]
+IFS= read -r -t 10 registry_token
 exec 9>deploy.lock
 flock -x 9
 
@@ -19,7 +20,6 @@ compose() {
 
 registry_config=$(mktemp -d)
 trap 'rm -rf "$registry_config"' EXIT
-IFS= read -r -t 10 registry_token
 printf '%s' "$registry_token" | docker --config "$registry_config" login ghcr.io -u "$registry_user" --password-stdin >/dev/null
 unset registry_token
 docker --config "$registry_config" pull "$image"
