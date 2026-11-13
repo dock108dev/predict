@@ -72,6 +72,21 @@ def test_opaque_identity_preserves_legacy_hold_and_request_history(tmp_path):
     assert book.status('legacy:old')['held'] == 2
 
 
+def test_restart_recovers_abandoned_request_without_freeing_budget(tmp_path):
+    book = ledger(tmp_path)
+    book.reserve('w', 'abandoned', objects=2, now=NOW)
+    book = ObjectLedger(book.path)
+    assert book.recover_interrupted('w', now=NOW + timedelta(seconds=29), minimum_age=30) == 0
+    assert book.status('w')['held'] == 2
+    assert book.recover_interrupted('w', now=NOW + timedelta(seconds=30), minimum_age=30) == 1
+    with pytest.raises(RuntimeError, match='insufficient'):
+        book.reserve('w', 'too-large', objects=79, now=NOW + timedelta(seconds=30))
+    book.reserve('w', 'next', objects=1, now=NOW + timedelta(seconds=30))
+    assert book.status('w')['interrupted'] == 2
+    assert book.status('w')['available'] == 77
+    assert book.interruptions('w')[0]['id'] == 'abandoned'
+
+
 def test_identity_is_persistent_and_ambiguous_legacy_ledger_fails_closed(tmp_path):
     book = ObjectLedger(tmp_path / 'new.sqlite')
     with ThreadPoolExecutor(max_workers=4) as executor:

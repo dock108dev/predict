@@ -279,6 +279,7 @@ export function tradeInspection(offer, group, evidence, {mode, position, basis, 
   details.append(el('p', `Math at capture · ${evidence.captured_at || offer.captured_at}`, 'desk-meta'));
   details.append(section('Price and outcome', facts([
     ['Selected outcome', position], ['Market', [name(offer.market.market), human(offer.market.period)].join(' · ')],
+    ['Price provider', data.source?.provider === 'oddslink_public_board' ? 'OddsLink' : data.source?.provider === 'sportsgameodds' ? 'SportsGameOdds' : null],
     ['Native side', data.source?.native_side && human(data.source.native_side)], ['Original price', original.value == null ? null : `${original.value} ${human(original.units)}`],
     ['Cost per $1 normal claim', usd(gross.cost_usd)], ['Cross-site settlement match', ref.available && ref.contract ? 'Decisive scoring supported' : data.identity.outcome?.supported ? 'Supported' : reasons(data.identity.outcome?.reason || 'Exact settlement evidence missing')]
   ])));
@@ -291,7 +292,7 @@ export function tradeInspection(offer, group, evidence, {mode, position, basis, 
     ...sportsbook.prices.map((leg, index) => [index ? 'Opposite price and clock' : 'Selected price and clock', `${leg.price_american} American · ${leg.source_at}`])
   ]), el('p', 'Fair probability equals selected implied probability divided by the sum of both implied probabilities from the same book. Estimated return is 100 × (fair probability ÷ price per $1 payout − 1).', 'inspection-formula'),
     el('p', 'The estimate uses the full-game two-way result. Pushes, ties, voids and cancellations can settle differently across sites.', 'desk-meta')));
-  const sgoAggregate = data.source?.provider === 'sportsgameodds';
+  const aggregatePrice = ['sportsgameodds', 'oddslink_public_board'].includes(data.source?.provider);
   const native = evidence.row?.sgo_native_contract;
   if (native?.available) {
     const rules = native.settlement;
@@ -317,7 +318,7 @@ export function tradeInspection(offer, group, evidence, {mode, position, basis, 
       block.append(note);
     }
     details.append(block);
-  } else if (data.settlement) details.append(settlement(data.settlement, offer.venue, sgoAggregate));
+  } else if (data.settlement) details.append(settlement(data.settlement, offer.venue, aggregatePrice));
   const reference = section('Qualified reference');
   if (ref.available && ref.contributors?.length) {
     const method = ref.method === 'sgo-best-payout-proportional-1'
@@ -353,7 +354,7 @@ export function tradeInspection(offer, group, evidence, {mode, position, basis, 
     ['Profit if it loses', usd(gross.loss_profit_usd)], ['Expected profit per claim', usd(gross.expected_profit_usd)],
     ['Risk per claim', usd(gross.risk_usd)], ['Return on risk', percent(gross.return_percent)]
   ]), el('p', 'Expected profit = fair chance × win profit + losing chance × loss profit. Return = expected profit ÷ risk.', 'inspection-formula')),
-  fee('EV with reviewed trading fees', data.reviewed, sgoAggregate ? null : data.starting_fee_terms), fee('EV with conservative fees', data.conservative));
+  fee('EV with reviewed trading fees', data.reviewed, aggregatePrice ? null : data.starting_fee_terms), fee('EV with conservative fees', data.conservative));
   const model = data.assumed_scenario || {};
   const scenario = section('Full net EV');
   if (model.available) {

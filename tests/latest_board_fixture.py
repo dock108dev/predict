@@ -46,6 +46,15 @@ def native_key(q):
     return tuple([q['venue'],*[q['source'][k] for k in ('native_event_id','native_market_id','native_outcome_id','native_side')]])
 
 
+def inline_fixture_offers(db, ids=None):
+    """Materialize fixture offers before deliberately perturbing them without source evidence."""
+    db.execute('''UPDATE current_offer_storage AS stored
+        SET price_value=offer.price_value,facts=offer.facts,native_book_id=NULL,native_bid_outcome_id=NULL
+        FROM current_offer AS offer WHERE offer.contract_id=stored.contract_id
+        AND stored.native_book_id IS NOT NULL AND (%s::text[] IS NULL OR stored.contract_id=ANY(%s))''',
+        (ids,ids))
+
+
 def replace_book_revision(db, original_id, substitute_id, *, revision=None, received_at=None):
     """Inject a distinct current-book observation in disposable guard fixtures."""
     with db.transaction():

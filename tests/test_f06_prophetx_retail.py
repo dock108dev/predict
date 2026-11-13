@@ -47,9 +47,10 @@ def test_official_single_fill(review):
 
 
 @pytest.mark.parametrize('phase', ['scheduled', 'live'])
-def test_sgo_american_prices_use_retail_straight_fees_without_depth(review, phase):
+@pytest.mark.parametrize('provider', ['sportsgameodds', 'oddslink_public_board'])
+def test_aggregate_american_prices_use_retail_straight_fees_without_depth(review, phase, provider):
     row = retail_row('NHL', '0.4')
-    row['source']['provider'] = 'sportsgameodds'
+    row['source']['provider'] = provider
     row['original'] = dict(units='american_odds', value='+150')
     row.pop('cost_per_normal_claim')
     if phase == 'live':

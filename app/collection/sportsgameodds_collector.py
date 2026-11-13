@@ -3,17 +3,18 @@
 The owning runtime must bind a fresh account observation, controls and a durable
 consumer. It must not start this component merely because a key exists.
 """
+import asyncio
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 from collections import Counter
 
 from .sportsgameodds_adapter import parse_page
 from .sportsgameodds_schedule import daily_allowance, daily_retry_at, response_object_charge
-from .sportsgameodds_transport import validate_params
+from .sportsgameodds_transport import TransportFailure, validate_params
 
 
 class RejectedCursor(RuntimeError):
-    """The cursor was rejected; its request remains an uncertain charge."""
+    """The cursor was rejected and its request could not be counted."""
 
 
 class DailyObjectPacing(RuntimeError):
@@ -38,9 +39,11 @@ class GuardedPageCollector:
         state = self.ledger.status(self.window_id)
         if state['reset_at'] is None:
             raise RuntimeError('account reset evidence unavailable')
-        # Do not dispatch around a charge whose amount is still uncertain.
+        # Serialize in-flight requests and preserve provider or account pauses.
         if state['held']:
             raise RuntimeError('unresolved provider object reservation')
+        if state['paused'] or (state['retry_after'] and (now or datetime.now(timezone.utc)) < state['retry_after']):
+            raise RuntimeError('collection paused or rate limited')
         observed = await self.account_usage()
         now = now or datetime.now(timezone.utc)
         # A higher provider count is conservatively recorded as external usage.
@@ -73,22 +76,32 @@ class GuardedPageCollector:
         if control['stopped'] or control['source_paused']:
             self.ledger.resolve(attempt, charged=0, evidence='control revoked before dispatch', now=now)
             raise RuntimeError('collection stopped or source paused')
-        response = await self.transport.fetch(params, api_key)
-        self.ledger.record_response(attempt, response)
+        try:
+            response = await self.transport.fetch(params, api_key)
+            self.ledger.record_response(attempt, response)
+            return self._accept(attempt, params, response, now)
+        except asyncio.CancelledError:
+            self.ledger.interrupt(attempt, evidence='request cancelled before accounting completed')
+            raise
+        except (TransportFailure, RuntimeError, ValueError):
+            self.ledger.interrupt(attempt, evidence='scan ended without a verifiable object charge')
+            raise
+
+    def _accept(self, attempt, params, response, now):
         if response.status == 429:
-            if response.retry_after_seconds:
-                received = datetime.fromisoformat(response.received_at.replace('Z','+00:00'))
-                self.ledger.note_rate_limit(self.window_id,
-                    retry_after=received + timedelta(seconds=response.retry_after_seconds), now=received)
-            else:
-                self.ledger.set_paused(self.window_id, True)
-            raise RuntimeError('provider rate limited; charge remains held')
+            received = datetime.fromisoformat(response.received_at.replace('Z','+00:00'))
+            self.ledger.note_rate_limit(self.window_id,
+                retry_after=received + timedelta(seconds=response.retry_after_seconds or 60), now=received)
+            raise RuntimeError('provider rate limited')
         if response.status == 400 and response.invalid_cursor and 'cursor' in params:
-            raise RejectedCursor('provider rejected cursor; charge remains held')
+            raise RejectedCursor('provider rejected cursor')
         if response.status != 200:
-            raise RuntimeError('provider response unsuccessful; charge remains held')
+            raise RuntimeError('provider response unsuccessful')
         venues = set(params['bookmakerID'].split(',')) if 'bookmakerID' in params else None
-        page = parse_page(response.body, response.received_at, venues=venues)
+        try:
+            page = parse_page(response.body, response.received_at, venues=venues)
+        except ValueError as exc:
+            raise TransportFailure('provider page could not be parsed') from exc
         charged = response_object_charge(len(page.events))
         # One object per returned event; the minimum charge on an empty page
         # has no observed event phase. Never infer phase from a request.

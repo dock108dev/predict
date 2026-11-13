@@ -25,25 +25,37 @@ governs account headroom. [Provider plan and reset policy](https://sportsgameodd
 
 Use fresh provider usage and remaining allowance, retain reservations and uncertain exposure across
 the boundary, and require authoritative evidence before recognizing
-replenishment. Retain The Odds API's accounting separately. The startup
-control checks, rejected-cursor hold and resumption after an independently
-evidenced resolution have controlled coverage. Automatic request-specific
-charge attribution and live rejection recovery remain unverified.
+replenishment. Retain The Odds API's accounting separately. If an event
+request ends without a verifiable charge, record it as interrupted, count
+the full reservation toward the budget, and continue on the next eligible
+scan. A rejected cursor restarts its league's traversal from the first page.
+The recovery path preserves owner stops, provider retry delays and budget limits.
 
 On November 12 at 11:08 a.m. Eastern, a refresh was interrupted during
 macOS maintenance sleep. The account-wide reading of 4,913 objects was
 two above the prior reading, and no request-specific response or provider
-request identifier was retained. The two-object reservation stays held.
-Paid event dispatch waits for an attributable provider charge or explicit
-no-charge evidence, and the native workers continue independently.
+request identifier was retained. The two-object reservation is carried as
+interrupted exposure when the runtime resumes.
 The dated accounting observation is in `docs/sgo-paid-observation-20261111.md`.
 
-Admin → Spending shows each held request's local ID and available
+Admin → Spending shows pending and interrupted requests' local IDs and available
 transport evidence. New reservations store the bounded query and preceding
 usage observation in the reservation transaction. Completed HTTP reads
 record the status, receipt time, response digest and a provider request ID
-when supplied. The original hold predates this trace. A later account
-balance does not establish its charge. [Account usage](https://sportsgameodds.com/docs/endpoints/getUsageData)
+when supplied. The sleep interruption predates this trace. Only attributable
+provider evidence can resolve the individual charge. Account-wide increases
+and interrupted reservations are both included in conservative headroom.
+[Account usage](https://sportsgameodds.com/docs/endpoints/getUsageData)
+
+The existing OddsLink public-board poll supplies separate ProphetX full-game
+main-line prices for the retail desk. Each offer keeps the OddsLink bookmaker
+timestamp and provider attribution. In-game display requires independently
+observed game state for the same league, teams and kickoff, plus a price no
+more than 30 seconds old. When the public board shows started events, the
+poll targets 10 seconds and honors the provider's retry delay. The current
+ProphetX retail schedule models fees at the quoted price without depth.
+Coverage follows the fixtures on the public board.
+[OddsLink public board](https://oddslink.app/docs/api-reference/operations/publicboard/)
 
 When rolling daily spend blocks a page, the worker estimates the next
 eligible attempt from available objects, time to the pacing boundary, and

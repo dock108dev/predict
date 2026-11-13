@@ -3,6 +3,7 @@ import asyncio,json,unittest,uuid
 from unittest.mock import patch
 from psycopg import sql
 from app.storage import Store,connect
+from app.storage.store import open_retained
 from app.dashboard.pipeline import Pipeline
 from app.dashboard.controller import Controller,DEFAULTS
 from app.dashboard import repository
@@ -17,7 +18,7 @@ class DashboardStorageTests(unittest.TestCase):
  def tearDownClass(cls):
   cls.admin.execute(sql.SQL('DROP DATABASE {}').format(sql.Identifier(cls.name)));cls.admin.close()
  def setUp(self):
-  self.p=Pipeline('synthetic',dict(DEFAULTS),self.name);self.sid=self.p.start()
+  self.p=Pipeline('synthetic',dict(DEFAULTS),self.name);self.addCleanup(self.p.close_resources);self.sid=self.p.start()
  def tearDown(self):
   if not self.p.db.closed:
    try:self.p.finish('test complete',0)
@@ -30,7 +31,7 @@ class DashboardStorageTests(unittest.TestCase):
    self.assertTrue(view['candidates']);self.assertEqual(view['session']['evidence_class'],'synthetic')
    h=repository.history(self.sid,view['candidates'][0]['id']);self.assertGreaterEqual(len(h['samples']),2)
   with connect(self.name) as db:
-   s=Store(db);self.assertGreaterEqual(s.replay_all(),2)
+   s=Store(open_retained(db));self.assertGreaterEqual(s.replay_all(),2)
  def test_history_bounds_cover_more_than_display_limit(self):
   # Use the real schema and repeated real detector observations, preserving audit links.
   v=self.p.synthetic_bootstrap();cid=v['candidates'][-1]['id']
@@ -54,7 +55,7 @@ class DashboardStorageTests(unittest.TestCase):
   with self.assertRaises(Exception):self.p.synthetic_tick(1)
   with self.assertRaises(Exception):self.p.finish('database failure',0,True)
   with connect(self.name) as db:
-   row=db.execute('SELECT state FROM capture_session WHERE id=%s',(self.sid,)).fetchone()
+   row=db.execute('SELECT state FROM retained.capture_session WHERE id=%s',(self.sid,)).fetchone()
    self.assertEqual(row['state'],'running')
  def test_worker_pipeline_stops_after_receipt_limit(self):
   self.p.limits={**self.p.limits,'receipts':2};self.p.synthetic_bootstrap()
@@ -85,7 +86,7 @@ class DashboardStorageTests(unittest.TestCase):
     self.assertTrue(saved['markets']);self.assertTrue(saved['candidates'])
     self.assertFalse(any(x['current_opportunity'] for x in age_view(saved,active=False)['candidates']))
     with connect(self.name) as db:
-     self.assertGreaterEqual(Store(db).replay_all(),2)
+     self.assertGreaterEqual(Store(open_retained(db)).replay_all(),2)
    finally:await c.close()
   asyncio.run(exercise())
 
@@ -96,7 +97,7 @@ class DashboardStorageTests(unittest.TestCase):
   self.p.synthetic_bootstrap();self.p.shutdown=dict(messages=7,rejected=0,unprocessed=0)
   self.p.finish('Time limit reached',0)
   with connect(self.name) as db:
-   store=Store(db)
+   store=Store(open_retained(db))
    for fixture in fixtures:
     s=fixture['session']
     db.execute("INSERT INTO capture_session(id,environment,evidence_class,started_at,state,config,provenance) VALUES(%s,%s,%s,%s,%s,'{}',%s)",(s['id'],s['environment'],s['evidence_class'],s['started_at'],s['state'],fixture['source']))

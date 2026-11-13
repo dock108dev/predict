@@ -9,7 +9,7 @@ from pathlib import Path
 
 from app.storage import Store,connect,CapturePolicy
 from app.dashboard.bounds import DeadlineConnection
-from app.storage.store import ROOT,encoded
+from app.storage.store import ROOT,encoded,open_retained
 from app.storage.workflow import packet
 from app.storage.replay import detector_audit
 from app.normalization.observations import enrich_event
@@ -47,7 +47,7 @@ class Pipeline:
         if self.db:self.db.close()
 
     def start(self):
-        self.db=connect(self.database)
+        self.db=open_retained(connect(self.database))
         self.db.execute('SET statement_timeout=3000');self.db.execute('SET lock_timeout=1000')
         self.db=DeadlineConnection(self.db)
         self.store=Store(self.db)
@@ -235,6 +235,7 @@ class Pipeline:
         try:
             connector=getattr(self,'connector',connect)
             with connector(self.database) as readback:
+                open_retained(readback)
                 rows=readback.execute('SELECT r.id,octet_length(a.content) bytes FROM receipt r JOIN artifact a ON a.hash=r.raw_hash WHERE r.session_id=%s',(self.sid,)).fetchall()
                 self.receipts=len(rows)
                 self.shutdown['readback_receipts']=[r['id'] for r in rows]

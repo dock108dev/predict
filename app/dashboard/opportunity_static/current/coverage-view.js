@@ -161,7 +161,7 @@ export function renderCoverageOutcome(root, data, filters, readError = '') {
   root.replaceChildren(coverageElement('h2', title), coverageElement('p', scope.join(' · '), 'coverage-scope'));
   root.append(coverageElement('p', coverageClocks(data), 'capture-age'));
   if (readError || failure) root.append(coverageElement('p', (data?.captured_at ? 'Prior captured measurements remain inspectable; freshness is unverified. ' : 'Current coverage cannot be established. ') + (failure || readError)));
-  if (data?.captured_at) root.append(coverageElement('p', coverageCount(counts.current_comparison_observations) + ' observations with a current peer at capture · ' + coverageCount(counts.retained_comparison_observations) + ' retained comparison-source observations'));
+  if (data?.captured_at) root.append(coverageElement('p', coverageCount(counts.current_comparison_observations) + ' observations with a current peer at capture · ' + coverageCount(counts.retained_comparison_observations) + ' retained comparison-source observations. Reference observations excluded.'));
   if (cells.some(cell => cell.configuration_state === 'held')) {
     root.append(coverageElement('p', capturedAccountingNote));
     const admin = coverageElement('a', 'Check current collection status →'); admin.href = '/admin'; root.append(admin);

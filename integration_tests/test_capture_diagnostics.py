@@ -5,6 +5,7 @@ import uuid
 from unittest.mock import patch
 from psycopg import sql
 from app.storage import Store,connect
+from app.storage.store import open_retained
 from app.dashboard.controller import DEFAULTS
 from app.dashboard.diagnostics import Measurements,reconcile
 from app.capture_benchmark import DiagnosticPipeline,fixture,trial
@@ -19,7 +20,7 @@ class CaptureDiagnosticStorageTests(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         with connect() as db:db.execute(sql.SQL('DROP DATABASE {}').format(sql.Identifier(cls.name)))
-    def connector(self,ignored=None):return connect(self.name)
+    def connector(self,ignored=None):return open_retained(connect(self.name))
     def prepared(self):
         m=Measurements();p=DiagnosticPipeline('synthetic',dict(DEFAULTS),self.name,m,self.connector,2)
         p.start();p.parents,p.matcher,p.contexts,p.rows,books=fixture(2)

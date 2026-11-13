@@ -220,9 +220,13 @@ def test_rejected_cursor_clears_checkpoint_but_preserves_observations(tmp_path):
         service = SimpleNamespace(config=deepcopy(DEFAULT), dispatch=True, globally_stopped=False, paused_sources=set())
         worker = SportsGameOddsWorker(service, transport=SimpleNamespace(close=AsyncMock()), now=lambda: NOW)
         worker.ledger = ObjectLedger(tmp_path / 'checkpoint.sqlite')
+        calls = []
         async def fetch(params, key):
+            calls.append(params)
             if 'cursor' in params:
-                raise RejectedCursor('provider rejected cursor; charge remains held')
+                raise RejectedCursor('provider rejected cursor')
+            if sum(p.get('leagueID') == 'NFL' for p in calls) > 2:
+                return Page((), (), None, 'b'*64)
             return Page((event(1),), (), 'opaque', 'a'*64)
         worker.collector = SimpleNamespace(fetch=fetch)
         worker._publish = AsyncMock()
@@ -234,6 +238,11 @@ def test_rejected_cursor_clears_checkpoint_but_preserves_observations(tmp_path):
         assert not worker.ledger.load_discovery_progress(now=NOW)
         assert worker.metrics['discovery_complete']['NFL'] is False
         assert 'NFL' in worker.metrics['discovery_unstable']
+        from unittest.mock import patch
+        with patch('app.collection.sportsgameodds_worker.aggregate_scope', return_value=['NFL']):
+            await worker.cycle()
+        assert calls[-1]['leagueID'] == 'NFL' and 'cursor' not in calls[-1]
+        assert worker.metrics['discovery_complete']['NFL'] is True
     asyncio.run(scenario())
 
 

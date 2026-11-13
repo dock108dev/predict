@@ -286,10 +286,17 @@ def normalized_records(projection, states, previous, *, dated_annotations=True, 
                                     quantity_units='contracts', role='comparison')
                     # The reused purchase_book conversion supplies the original
                     # opposite bid and preserves native liquidity independently.
-                    if value is not None and (venue=='kalshi' or venue == 'polymarket_us' and side.get('role') == 'Short'):
+                    if value is not None and len(ladders) == 2 and (
+                        venue == 'kalshi' or venue == 'polymarket_us' and side.get('role') == 'Short'
+                    ):
+                        other = next(other for key, other in ladders.items() if key != native)
+                        opposing = (other.get('bids') or {}).get('levels', ())
                         with localcontext() as ctx:
                             ctx.prec=600
-                            original.update(native_value=str(Decimal(1)-Decimal(value)), native_units='usd_per_contract', transformation='one_minus_native_bid')
+                            if opposing:
+                                bid = opposing[0]['price']['value']
+                                if Decimal(bid) + Decimal(value) == 1:
+                                    original.update(native_value=str(bid), native_units='usd_per_contract', transformation='one_minus_native_bid')
                     state = 'resyncing' if (venue, market['event_id'], market['id']) in projection.invalid else states[venue]['state']
                     if market.get('comparison_admission',{}).get('reason')=='native_material_changed_capacity':state='stale'
                     source = dict(provider=venue, native_event_id=event['id'], native_market_id=market['id'],

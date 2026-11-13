@@ -273,12 +273,12 @@ class DatabaseIngressSink:
                 phase=name,phase_started=tick,seconds=tick-started,timings=dict(timings))
         phase(active)
         try:
-            if row['type'] not in ('current_aggregate_records','coverage_inventory','prediction_book','prediction_books','source_health','native_market_invalid','novig_native_records','sgo_status'):
+            if row['type'] not in ('current_aggregate_records','coverage_inventory','prediction_book','prediction_books','source_health','native_market_invalid','novig_native_records','sgo_status','oddslink_prophetx_records'):
                 raise ValueError('current_ingress_type_unsupported: use admitted current records or native observations')
             if 'body' in row or 'batches' in row:
                 raise ValueError('current_ingress_raw_payload_unsupported: use admitted current records')
             if row['type']!='coverage_inventory' and len(packed(row))>self.config['ingress_bytes']:raise ValueError('Current ingress observation capacity')
-            if row['type'] in ('novig_native_records','sgo_status'):
+            if row['type'] in ('novig_native_records','sgo_status','oddslink_prophetx_records'):
                 candidate=self.reducer
             elif row['type'] in ('prediction_book','prediction_books','source_health','current_aggregate_records','coverage_inventory','native_market_invalid'):
                 # Immutable catalog/unchanged images are shared until adoption.
@@ -294,7 +294,13 @@ class DatabaseIngressSink:
             records=[];scopes=[];withdraw=set();storage_prepared=False
             sgo_links=None
             deferred_keys=set();catalog_turnover={}
-            if row['type']=='sgo_status':
+            if row['type']=='oddslink_prophetx_records':
+                from .oddslink_prophetx import MAX_OFFERS, SOURCE
+                capture = row['capture']
+                if (row['source'] != SOURCE or capture['sport_key'].upper() != row['sport']
+                        or not isinstance(capture['fixtures'], list) or len(capture['fixtures']) > MAX_OFFERS//6):
+                    raise ValueError('oddslink_prophetx_scope_invalid')
+            elif row['type']=='sgo_status':
                 if row.get('source')!='sportsgameodds' or row.get('state') not in ('connecting','available','budget_delayed','unavailable','stopped'):
                     raise ValueError('sgo_source_status_invalid')
             elif row['type']=='novig_native_records':
@@ -445,6 +451,26 @@ class DatabaseIngressSink:
                              or row['source'] in owner['paused_sources'] or row['type']=='novig_native_records'
                              and 'the_odds_api' in owner['paused_sources'])):
                             raise asyncio.CancelledError()
+                    if row['type']=='oddslink_prophetx_records':
+                        from app.comparison.public_sportsbook_estimate import allowed
+                        from app.storage.current_row_state import source_status
+                        from app.storage.store import stamp
+                        from .oddslink_prophetx import SOURCE, keep_unchanged_schedule, live_occurrences, records as normalize_prophetx
+                        from .runtime_status import read_runtime
+                        owner = read_runtime(db)
+                        if not allowed(owner) or 'prophetx' in owner['paused_sources']:
+                            raise asyncio.CancelledError()
+                        received = capture['received_at']
+                        live = live_occurrences(db, row['sport'], stamp(received))
+                        records = normalize_prophetx(capture, live=live, families=self.config['families'])
+                        if records:
+                            keep_unchanged_schedule(db, records)
+                            source_status(db.execute, SOURCE, dict(state='available', reason_code='oddslink_board_admitted',
+                                          reason='Timestamped ProphetX prices from OddsLink.'), now)
+                            scopes = [dict(venue='prophetx', competition=row['sport'], native_event_id=eid,
+                                           received_at=received, source_at=capture['generated_at'],
+                                           aggregate_route='oddslink_event')
+                                      for eid in sorted({record['event']['id'] for record in records})]
                     if raw_batch is not None:
                         from app.storage.aggregate_receipts import save
                         save(db,kind='featured',sport=row['sport'],received_at=row['received_at'],

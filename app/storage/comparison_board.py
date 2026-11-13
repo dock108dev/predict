@@ -66,10 +66,11 @@ class ReadContext:
         # Bind exact line-local reference pairs from this same SQL capture.
         # Retained ingress attachments may predate reference or rule changes.
         from app.collection.current_benchmark import attach as attach_benchmark
+        from app.comparison.public_sportsbook_estimate import SOURCE as ODDSLINK
         statuses=frame.get('source_status',{})
         for record in records:
             q=record['quote'];provider=q['source']['provider']
-            status=(statuses.get('sportsgameodds',{'state':'unavailable'}) if provider=='sportsgameodds'
+            status=(statuses.get(provider,{'state':'unavailable'}) if provider in ('sportsgameodds', ODDSLINK)
                     else statuses.get(q['venue'],statuses.get(provider,{})))
             if q.get('novig_runtime_id'):continue  # This state describes the aggregate feed.
             if status.get('state') not in (None,'available','budget_delayed'):q['state']=status['state']

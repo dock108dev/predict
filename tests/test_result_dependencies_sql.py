@@ -6,7 +6,7 @@ from app.storage import observation_publication as publication
 from app.storage import result_dependencies as units
 from app.storage import latest_board as latest
 from app.storage.comparison_board import discover
-from tests.latest_board_fixture import LatestBoardFixture, SOCKET
+from tests.latest_board_fixture import LatestBoardFixture, SOCKET, inline_fixture_offers
 
 
 @skipUnless(SOCKET, 'Explicit disposable PostgreSQL lane required')
@@ -69,6 +69,7 @@ class ResultDependenciesSQL(LatestBoardFixture):
             native={r['event_id'] for r in db.execute("SELECT event_id FROM current_contract WHERE venue IN ('kalshi','polymarket_us')")}
             hot=next(r['publication_events'] for r in rows if native.intersection(r['publication_events']))
             cold=next(r['publication_events'] for r in rows if r['publication_events']!=hot)
+            inline_fixture_offers(db)
             db.execute('UPDATE current_offer SET source_at=%s',((self.at-timedelta(minutes=5)).isoformat(),))
             changed=db.execute("UPDATE current_offer SET source_at=%s WHERE contract_id IN (SELECT id FROM current_contract WHERE event_id=ANY(%s) AND venue IN ('kalshi','polymarket_us'))",((self.at-timedelta(seconds=1)).isoformat(),hot))
             self.assertGreater(changed.rowcount,0)
@@ -183,6 +184,7 @@ class ResultDependenciesSQL(LatestBoardFixture):
             frame,bundle=self.capture(db);base=publication.manifest(frame,bundle)
             first=inventory.proof(frame,base['selector'],engine='e',policy='p')
             cid=next(iter(base['observations']))
+            inline_fixture_offers(db,[cid])
             db.execute("UPDATE current_offer SET price_value='0.17',revision=revision||'-price' WHERE contract_id=%s",(cid,))
             changed=publication.capture(db,frame['states'])
             self.assertEqual(first,inventory.proof(changed,base['selector'],engine='e',policy='p'))
@@ -260,6 +262,7 @@ class ResultDependenciesSQL(LatestBoardFixture):
             observed=c.observation_bundles(game=self.first['game_key'])[0]
             return c,index.prepare(c,self.first['game_key'],latest.load(),observed)
         with self.connect() as db:
+            inline_fixture_offers(db)
             c,first=prepare(db)
             self.assertFalse(first['_discovery_reused'])
             cid=next(contract_id(dict(quote=q)) for _,_,q in entries(first['state_inputs'])
@@ -345,6 +348,7 @@ class ResultDependenciesSQL(LatestBoardFixture):
             # Real offer value and its semantic revision change together.
             first=saved[0];other=next(v for v in saved[1:] if set(v['observations'])-set(first['observations']))
             cid=next(iter(set(other['observations'])-set(first['observations'])))
+            inline_fixture_offers(db,[cid])
             db.execute("UPDATE current_offer SET price_value='0.17',revision=revision||'-price' WHERE contract_id=%s",(cid,))
             self.assertFalse(self.invalid(self.check(db,first)))
             self.assertTrue(self.invalid(self.check(db,other)))
@@ -363,6 +367,7 @@ class ResultDependenciesSQL(LatestBoardFixture):
             frame,bundle=self.capture(db)
             saved=units.capture(frame,bundle,units.partitions(bundle)[0])
             cid=next(iter(saved['observations']))
+            inline_fixture_offers(db,[cid])
             db.execute("UPDATE current_offer SET received_at=%s WHERE contract_id=%s",(self.at.isoformat(),cid))
             self.assertFalse(self.invalid(self.check(db,saved)))
             refs=[cid for cid,r in frame['offers'].items() if r['venue']=='pinnacle' and r['event_id'] in {x[0] for x in publication.neighborhood(frame,saved['selector'])}]
@@ -375,6 +380,7 @@ class ResultDependenciesSQL(LatestBoardFixture):
             frame,bundle=self.capture(db)
             saved=units.capture(frame,bundle,units.partitions(bundle)[0])
             cid=next(iter(saved['observations']))
+            inline_fixture_offers(db,[cid])
             db.execute('UPDATE current_offer SET received_at=%s WHERE contract_id=%s',((self.at+timedelta(seconds=1)).isoformat(),cid))
             self.assertIn('result_receipt_clock_invalid',self.check(db,saved)['observations'][cid])
             db.execute('UPDATE current_offer SET received_at=%s,source_at=%s WHERE contract_id=%s',(self.at.isoformat(),self.at.isoformat(),cid))
@@ -408,6 +414,7 @@ class ResultDependenciesSQL(LatestBoardFixture):
                 again=result_publication.seal(db,bundle['game_key'],facts,calculated_at=value['calculated_at'])
                 self.assertEqual(again['reason'],'newer_or_equal_result_unit')
                 peer=next(iter(manifest['result_unit']['peer_inputs']))
+                inline_fixture_offers(db,[peer])
                 db.execute("UPDATE current_offer SET price_value='0.19',revision=revision||'-peer' WHERE contract_id=%s",(peer,))
                 rejected=result_publication.seal(db,bundle['game_key'],facts,calculated_at=value['calculated_at'])
                 self.assertFalse(rejected['published'])
@@ -430,6 +437,7 @@ class ResultDependenciesSQL(LatestBoardFixture):
             independent=next(uid for uid in current-{affected}
                 if cid not in values[uid]['facts']['publication_dependencies']['observations']
                 and cid not in values[uid]['facts']['publication_dependencies']['result_unit']['peer_inputs'])
+            inline_fixture_offers(db,[cid])
             db.execute("UPDATE current_offer SET price_value='0.23',revision=revision||'-meaningful' WHERE contract_id=%s",(cid,))
             after=expand_price_fields(latest.board(latest.snapshot(db,game=key,at=self.at.isoformat()),key,view='ev',filter='all'))
             states={u['unit_id']:u['state'] for u in after['result_units']}
@@ -502,6 +510,7 @@ class ResultDependenciesSQL(LatestBoardFixture):
                 selected=set(first[1]['publication_dependencies']['observations'])
                 peer=set(first[1]['publication_dependencies']['result_unit']['peer_inputs'])
                 other=next(iter(set(second[1]['publication_dependencies']['observations'])-selected-peer))
+                inline_fixture_offers(db,[other])
                 db.execute("UPDATE current_offer SET price_value=%s,revision=revision||%s WHERE contract_id=%s",(str(.2+iteration/100),'-unrelated'+str(iteration),other))
                 result=seal(db,first[0],first[1],calculated_at=first[2]);self.assertTrue(result['published'],result)
                 generations.append(result['generation_id'])
@@ -682,6 +691,7 @@ class ResultDependenciesSQL(LatestBoardFixture):
             pending=db.execute('SELECT count(*) n FROM current_result_work WHERE game_key=%s AND visits=0',(key,)).fetchone()['n']
             self.assertGreater(pending,0)
             ids=list(chosen['facts']['publication_dependencies']['observations'])
+            inline_fixture_offers(db,ids)
             changed=db.execute("UPDATE current_offer SET price_value='0.37',revision=revision||'-required-refresh',received_at=%s WHERE contract_id=(SELECT id FROM current_contract WHERE id=ANY(%s) AND venue IN ('kalshi','polymarket_us') LIMIT 1) RETURNING contract_id",(self.at.isoformat(),ids)).fetchone()
             self.assertIsNotNone(changed)
             waiters=refresh_waiters(db,self.at.isoformat(),engine=engine_binding(),runtime_id=self.service.runtime_id)
@@ -712,6 +722,7 @@ class ResultDependenciesSQL(LatestBoardFixture):
                 and a['visit_order']<b['visit_order'] and not set(a['facts']['publication_dependencies']['observations'])&set(b['facts']['publication_dependencies']['observations']))
         def dirty(db,row):
             ids=list(row['facts']['publication_dependencies']['observations'])
+            inline_fixture_offers(db,ids)
             changed=db.execute("UPDATE current_offer SET price_value='0.37',revision=revision||'-queue-change',received_at=%s WHERE contract_id=(SELECT id FROM current_contract WHERE id=ANY(%s) AND venue IN ('kalshi','polymarket_us') LIMIT 1) RETURNING contract_id",(self.at.isoformat(),ids)).fetchone()
             self.assertIsNotNone(changed)
         self.at+=timedelta(seconds=1);self.state.write(self.service)

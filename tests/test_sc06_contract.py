@@ -327,9 +327,9 @@ class AuthoredOriginals(TestCase):
         self.assertEqual(len(values), 6)
         for row in values:
             original = row['quote']['original']
-            self.assertEqual(original['transformation'], 'identity')
-            self.assertEqual(original['native_value'], original['value'])
-            self.assertEqual(original['native_units'], original['units'])
+            self.assertNotIn('transformation', original)
+            self.assertNotIn('native_value', original)
+            self.assertNotIn('native_units', original)
             self.assertEqual(row['quote']['depth'][0]['price'], original['value'])
 
 

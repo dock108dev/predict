@@ -12,7 +12,7 @@ import unittest
 from uuid import uuid4
 from unittest.mock import patch
 from psycopg import sql
-from app.storage.store import connect,Store,hashed
+from app.storage.store import connect,Store,hashed,open_retained
 from app.storage.current_games import GameStore,calculate,age_result
 from app.comparison.estimated_policy import DEFAULT_POLICY
 from app.comparison.estimated_ev import _ordinary_reference,_grid
@@ -35,7 +35,7 @@ class DurableGames(unittest.TestCase):
     def setUpClass(cls):
         cls.name='prediction_arb_test_ev09_'+uuid4().hex[:12]
         with connect('prediction_arb') as db:db.execute(sql.SQL('CREATE DATABASE {}').format(sql.Identifier(cls.name)))
-        cls.db=connect(cls.name);Store(cls.db).migrate();cls.store=GameStore(cls.db)
+        cls.db=connect(cls.name);Store(cls.db).migrate();cls.store=GameStore(open_retained(cls.db))
         cls.record=actual();cls.store.import_record(cls.record);cls.store.project(KEY)
         cls.snapshot=cls.store.snapshot(KEY,DEFAULT_POLICY,at=cls.record['value']['received_at'])
         cls.result=calculate(cls.snapshot);cls.store.publish(cls.snapshot,cls.result)
@@ -61,7 +61,7 @@ class DurableGames(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             p=Path(folder)/'observations.jsonl';p.write_text(json.dumps(self.record)+'\n'+json.dumps(self.record))
             _,n=self.store.catch_up(p);self.assertEqual(n,1)
-            with connect(self.name) as db:self.assertEqual(GameStore(db).catch_up(p)[1],0)
+            with connect(self.name) as db:self.assertEqual(GameStore(open_retained(db)).catch_up(p)[1],0)
             with p.open('a') as stream:stream.write('\n')
             self.assertEqual(self.store.catch_up(p)[1],1)
             self.assertEqual(self.store.catch_up(p)[1],0)

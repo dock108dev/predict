@@ -24,6 +24,7 @@ def receipt_watermarks(db, aggregate_provider='the_odds_api'):
         JOIN current_event e ON e.id=c.event_id
         WHERE (c.venue=e.provider AND c.venue IN ('kalshi','polymarket_us'))
            OR (c.venue='pinnacle' AND e.provider=%s)
+           OR (c.venue='prophetx' AND e.provider='oddslink_public_board')
            OR (c.venue=e.provider AND c.venue='novig' AND o.facts ? 'novig_runtime_id')
            OR (%s='sportsgameodds' AND e.provider='sportsgameodds'
                AND c.venue IN ('novig','prophetx','kalshi') AND o.facts->>'state'='available'
@@ -57,7 +58,7 @@ def prioritize_current(pending, scope, evidence, at, *, material=(), undelivered
     from app.collection.current_benchmark import MAXIMUM_AGE
     reference_events={r['event_id'] for r in evidence if r['venue']=='pinnacle' and r['at']
         and 0 <= (at-stamp(r['at'])).total_seconds() <= MAXIMUM_AGE}
-    from app.comparison.game_phase import LIVE_SECONDS
+    from app.comparison.game_phase import LIVE_SECONDS, ODDSLINK_LIVE_SECONDS
     # An earlier source clock has less time left in the same freshness window.
     if live_deliveries is None:
         live_deliveries = sgo_live_deliveries(pending, scope, evidence, at, undelivered)
@@ -69,7 +70,7 @@ def prioritize_current(pending, scope, evidence, at, *, material=(), undelivered
     # fairness. This never promotes an expired quote or changes eligibility.
     first_delivery=[key for key in pending if key in undelivered and key not in order]
     if first_delivery and not live_first:order.append(first_delivery[0])
-    for venue, maximum_age in (('kalshi', 30), ('polymarket_us', 30), ('novig', LIVE_SECONDS)):
+    for venue, maximum_age in (('kalshi', 30), ('polymarket_us', 30), ('novig', LIVE_SECONDS), ('prophetx', ODDSLINK_LIVE_SECONDS)):
         recent={r['event_id']:stamp(r['at']) for r in evidence
             if r['venue']==venue and r['at'] and 0 <= (at-stamp(r['at'])).total_seconds() <= maximum_age}
         candidates=[(key not in undelivered,key not in material,reference_events.isdisjoint(scope[key]),-max(recent[e].timestamp() for e in scope[key] if e in recent),index,key)

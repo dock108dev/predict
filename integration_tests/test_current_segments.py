@@ -51,7 +51,7 @@ class CurrentRestartSQL(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(before['records'], after['records'])
                 for table in ('current_envelope', 'current_import_cursor', 'current_game_snapshot', 'current_game_result'):
                     self.assertEqual(db.execute(sql.SQL('SELECT count(*) n FROM {}').format(
-                        sql.Identifier(table))).fetchone()['n'], 0)
+                        sql.Identifier('retained',table))).fetchone()['n'], 0)
         finally:
             with connect() as db:
                 db.execute(sql.SQL('DROP DATABASE {}').format(sql.Identifier(name)))

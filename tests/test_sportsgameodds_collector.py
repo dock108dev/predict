@@ -9,7 +9,7 @@ import pytest
 
 from app.collection.sportsgameodds_collector import DailyObjectPacing, GuardedPageCollector, RejectedCursor
 from app.collection.sportsgameodds_ledger import ObjectLedger
-from app.collection.sportsgameodds_transport import PageResponse
+from app.collection.sportsgameodds_transport import PageResponse, TransportFailure
 
 NOW = datetime(2026, 11, 10, 20, tzinfo=timezone.utc)
 RESET = NOW + timedelta(days=10)
@@ -57,25 +57,34 @@ async def test_event_refresh_category_is_recorded_before_dispatch(tmp_path):
 
 
 @run_async
-async def test_unresolved_response_keeps_request_specific_trace_across_restart(tmp_path):
+@pytest.mark.parametrize('provider_increase', [0, 2])
+async def test_interrupted_response_keeps_trace_and_next_scan_proceeds(tmp_path, provider_increase):
     from hashlib import sha256
 
     params = dict(PARAMS, cursor='opaque-cursor')
     response = PageResponse(200, b'broken provider response', NOW.isoformat(), None,
                             provider_request_id='provider-request-1')
-    collector, ledger, _, transport = setup(tmp_path, response)
-    with pytest.raises(ValueError):
+    collector, ledger, usage, transport = setup(tmp_path, response)
+    with pytest.raises(TransportFailure, match='could not be parsed'):
         await collector.fetch(params, 'private', now=NOW)
     reopened = ObjectLedger(ledger.path)
-    hold, = reopened.holds('w')
-    assert hold['reserved'] == 5 and hold['charged'] is None
-    assert hold['query'] == dict(params, cursor='[present]')
-    assert hold['provider_used_before'] == 10
-    assert hold['provider_request_id'] == 'provider-request-1'
-    assert hold['response_sha256'] == sha256(response.body).hexdigest()
-    with pytest.raises(RuntimeError, match='unresolved'):
-        await collector.fetch(params, 'private', now=NOW)
-    transport.fetch.assert_awaited_once()
+    assert not reopened.holds('w')
+    interrupted, = reopened.interruptions('w')
+    assert interrupted['reserved'] == 5 and interrupted['charged'] is None
+    assert interrupted['query'] == dict(params, cursor='[present]')
+    assert interrupted['provider_used_before'] == 10
+    assert interrupted['provider_request_id'] == 'provider-request-1'
+    assert interrupted['response_sha256'] == sha256(response.body).hexdigest()
+    next_scan = NOW + timedelta(minutes=1)
+    usage.return_value.update(used=10 + provider_increase, at=next_scan)
+    transport.fetch.return_value = PageResponse(200, b'{"success":true,"data":[]}', next_scan.isoformat(), None)
+    collector.ledger = reopened
+    await collector.fetch(dict(params, limit=2), 'private', now=next_scan)
+    assert transport.fetch.await_count == 2
+    status = reopened.status('w')
+    assert (status['held'], status['interrupted'], status['charged']) == (0, 5, 1)
+    assert status['available'] == 74 - provider_increase
+    assert reopened.rolling_objects('w', since=NOW - timedelta(seconds=1)) == 6
 
 
 @run_async
@@ -98,9 +107,10 @@ async def test_single_event_alternate_refresh_keeps_event_billing_and_book_scope
     odd['byBookmaker']['novig']['altLines'] *= 101
     usage.return_value['used'] = 11
     collector.transport.fetch.return_value = PageResponse(200,json.dumps(body).encode(),NOW.isoformat(),None)
-    with pytest.raises(ValueError,match='alternate-line limit'):
+    with pytest.raises(TransportFailure, match='could not be parsed') as caught:
         await collector.fetch(params,'private',now=NOW+timedelta(seconds=1))
-    assert ledger.status('w')['held'] == 1
+    assert 'alternate-line limit' in str(caught.value.__cause__)
+    assert ledger.status('w')['interrupted'] == 1
 
 
 @run_async
@@ -118,25 +128,32 @@ async def test_refresh_attributes_returned_events_not_requested_ids(tmp_path):
 
 @run_async
 async def test_bad_response_or_429_retains_uncertain_reservation(tmp_path):
-    c, ledger, _, _ = setup(tmp_path, PageResponse(429, b'', NOW.isoformat(), 60))
+    c, ledger, usage, transport = setup(tmp_path, PageResponse(429, b'', NOW.isoformat(), None))
     with pytest.raises(RuntimeError, match='rate limited'):
         await c.fetch(PARAMS, 'private', now=NOW)
-    assert ledger.status('w')['held'] == 5
+    assert ledger.status('w')['interrupted'] == 5
     with sqlite3.connect(ledger.path) as db:
         assert db.execute('SELECT category, league FROM sgo_reservation_context').fetchall() == [('discovery', 'NBA')]
     assert ledger.status('w')['retry_after'] == NOW + timedelta(seconds=60)
-    with pytest.raises(RuntimeError, match='unresolved'):
-        await c.fetch(PARAMS, 'private', now=NOW + timedelta(minutes=1))
+    with pytest.raises(RuntimeError, match='rate limited'):
+        await c.fetch(PARAMS, 'private', now=NOW + timedelta(seconds=59))
+    transport.fetch.assert_awaited_once()
+    next_scan = NOW + timedelta(minutes=1)
+    usage.return_value['at'] = next_scan
+    transport.fetch.return_value = PageResponse(200, b'{"success":true,"data":[]}', next_scan.isoformat(), None)
+    await c.fetch(dict(PARAMS, limit=2), 'private', now=next_scan)
+    assert ledger.status('w')['charged'] == 1
 
 
 @run_async
 async def test_rejected_cursor_retains_reservation(tmp_path):
-    c, ledger, _, _ = setup(tmp_path, PageResponse(400, b'', NOW.isoformat(), None, True))
+    c, ledger, _, transport = setup(tmp_path, PageResponse(400, b'', NOW.isoformat(), None, True))
     with pytest.raises(RejectedCursor):
         await c.fetch(dict(PARAMS, cursor='opaque'), 'private', now=NOW)
-    assert ledger.status('w')['held'] == 5
-    with pytest.raises(RuntimeError, match='unresolved'):
-        await c.fetch(PARAMS, 'private', now=NOW)
+    assert ledger.status('w')['interrupted'] == 5
+    transport.fetch.return_value = PageResponse(200, b'{"success":true,"data":[]}', NOW.isoformat(), None)
+    await c.fetch(dict(PARAMS, limit=2), 'private', now=NOW)
+    assert ledger.status('w')['charged'] == 1
 
 
 @run_async

@@ -11,7 +11,7 @@ class StorageReportSQL(LatestBoardFixture):
             report=snapshot(db)
             self.assertEqual(report['evidence_class'],'live_read_only_sql')
             self.assertGreater(report['database']['physical_bytes'],0)
-            rows={r['relation']:r for r in report['relations'] if r['schema']=='public'}
+            rows={r['relation']:r for r in report['relations'] if r['schema']=='retained'}
             self.assertIn('current_grid_blob',rows)
             row=rows['current_grid_blob']
             self.assertEqual(row['total_bytes'],row['table_bytes_including_toast']+row['index_bytes'])
@@ -19,4 +19,4 @@ class StorageReportSQL(LatestBoardFixture):
             self.assertGreater(report['original_packets']['packets'],0)
             self.assertGreater(report['original_packets']['logical_packet_bytes'],0)
             with self.assertRaises(ReadOnlySqlTransaction):
-                db.execute('DELETE FROM current_grid_blob')
+                db.execute('DELETE FROM retained.current_grid_blob')

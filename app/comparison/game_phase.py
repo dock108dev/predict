@@ -5,6 +5,7 @@ from .source_clock import evidence
 
 # Reuse the established live-input freshness ceiling (current_dependencies).
 LIVE_SECONDS = 15
+ODDSLINK_LIVE_SECONDS = 30
 PREGAME_SPORTSBOOK_SECONDS = 15 * 60
 LOOKBACK_HOURS = 24
 
@@ -67,7 +68,11 @@ def price_phase(event, quote, at):
         market_clock=quote.get('provider_clocks',{}).get('market')
         post_start=post_start and bool(market_clock and stamp(market_clock)>=start)
     if post_start and (explicit or aggregate):
-        deadline=stamp(clock)+timedelta(seconds=LIVE_SECONDS)
+        # The public board is a polled, cached aggregate. Its retail price
+        # allowance is independent of the native execution-book freshness cap.
+        from .public_sportsbook_estimate import SOURCE
+        maximum_age = ODDSLINK_LIVE_SECONDS if quote.get('source', {}).get('provider') == SOURCE else LIVE_SECONDS
+        deadline=stamp(clock)+timedelta(seconds=maximum_age)
         return dict(state='live',reason=None if at<=deadline else 'live_price_expired',
             basis='post_start_market_update' if aggregate else 'explicit_source_live_and_current_book',
             observed_at=receipt,current_until=deadline.isoformat())

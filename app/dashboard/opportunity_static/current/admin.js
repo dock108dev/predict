@@ -51,7 +51,7 @@ function sgoDiagnostics(metrics){
     objectsByCategory[row.category] = (objectsByCategory[row.category] || 0) + row.objects;
   }
   return [
-    ['Object use', objects ? `${accounted} accounted · ${objects.held} held · ${objects.reserve} reserved · ${objects.available} available above reserve` : 'Account limits unavailable'],
+    ['Object use', objects ? `${accounted} accounted · ${objects.held} pending · ${objects.interrupted || 0} budgeted for interrupted scans · ${objects.reserve} account reserve · ${objects.available} available` : 'Account limits unavailable'],
     ['Latest provider usage', provider ? `${provider.used} used at ${refreshTime(provider.at)} · ${accounted === provider.used ? 'Agrees with ledger' : 'Ledger and provider snapshots differ'}` : 'No provider observation'],
     ['Next scheduled refresh', refreshTime(metrics.next_refresh_at)],
     ['Estimated daily object use', pace ? `${pace.projected_refresh_objects} refresh + ${pace.projected_discovery_objects ?? 'unknown'} discovery · ${pace.daily_allowance} allowance · variable overhead excluded${pace.projected_headroom_objects == null ? '' : ` · ${pace.projected_headroom_objects} projected headroom`}` : 'No estimate'],
@@ -98,12 +98,15 @@ function render(s){
   const recover=$('account-recovery');
   recover.hidden=!!sgo||!supported;recover.disabled=busy||!healthy||!running||!aggregate?.worker_done||s.data_runtime?.paused_sources?.includes('the_odds_api');
   const sgoHolds = sgo?.metrics?.object_holds || [];
+  const sgoInterruptions = sgo?.metrics?.object_interruptions || [];
+  const sgoRequests = [...sgoHolds, ...sgoInterruptions];
   $('recovery-incident').textContent = sgoHolds.length
     ? sgoHolds.map(hold => `${hold.id} · ${hold.created_at} · ${hold.reserved} held · ${hold.category || 'Request type unknown'} · ${hold.provider_request_id || 'No provider request ID'}`).join(' | ')
       + '. Reconcile each request with its provider response or charge record.'
+    : sgoInterruptions.length ? 'Interrupted scans are recorded below. Their possible charges count toward the budget and collection resumes on the next eligible scan.'
     : incident?incident.attempts.map(a=>`${a.id} · HTTP ${a.status??'unknown'} · ${a.cost} credits · ${a.at}`).join('; ')+` . All ${incident.preserved_credits} credits remain held. `+(supported?'The owned service rechecks exact receipt, account, window and cleanup before one zero-credit balance observation. No missing charge is resolved.':'No supported recovery action for this incident. A new rate-limit exception requires separate authority.'):'No unresolved incident requires a new recovery action.';
-  $('sgo-hold-trace').hidden = !sgoHolds.length;
-  $('sgo-hold-evidence').textContent = sgoHolds.length ? JSON.stringify(sgoHolds, null, 2) : '';
+  $('sgo-hold-trace').hidden = !sgoRequests.length;
+  $('sgo-hold-evidence').textContent = sgoRequests.length ? JSON.stringify(sgoRequests, null, 2) : '';
   $('recovery-outcome').textContent=(q?.recovery_probes||[]).slice(-1).map(p=>`${p.id}: ${p.state}. Next eligible scheduled slot: ${refreshTime(q.next_due_at)}.`).join('');
   const sgoState=sgo?.metrics?.state;
   const sgoReason=sgo?.metrics?.reason_code;
@@ -117,7 +120,8 @@ function render(s){
   if(available==null)$('spending-summary').textContent='Balance unavailable';
   else $('spending-summary').replaceChildren(node('strong',available.toLocaleString()),node('span',sgo?' SportsGameOdds objects available above reserve':' provider credits remaining'));
   const holds=[];
-  if(sgoObjects)holds.push(`${sgoObjects.held.toLocaleString()} SportsGameOdds objects held`);
+  if(sgoObjects?.held)holds.push(`${sgoObjects.held.toLocaleString()} SportsGameOdds objects pending`);
+  if(sgoObjects?.interrupted)holds.push(`${sgoObjects.interrupted.toLocaleString()} SportsGameOdds objects budgeted for interrupted scans`);
   if(q?.held_uncertain_credits!=null)holds.push(`${q.held_uncertain_credits.toLocaleString()} ${sgo?'The Odds API ':''}credits held for unresolved charges`);
   $('spending-holds').textContent=holds.join(' · ');
   const config=s.config||{};

@@ -14,6 +14,61 @@ from tests.test_sportsgameodds_adapter import AT, parse, response
 
 @skipUnless(SOCKET, 'Disposable PostgreSQL required')
 class SGOScopeSQL(LatestBoardFixture):
+    async def test_oddslink_prophetx_quotes_publish_while_sgo_charge_is_held(self):
+        from datetime import timedelta
+
+        from app.collection.current_database import DatabaseIngressSink
+        from app.collection.current_policy import DEFAULT
+        from app.collection.oddslink_prophetx import SOURCE
+        from app.comparison.snapshot_math import assumptions
+        from app.dashboard.trade_desk import page as desk_page
+        from app.fees import schedule_lifecycle
+        from app.storage.comparison_snapshot import capture
+        from app.storage.ordinary_publication import authority, prices, project
+        from app.storage.store import stamp
+
+        at = self.at = stamp(AT)
+        self.service.config = dict(DEFAULT, aggregate_provider='sportsgameodds', aggregate_sports=['NBA'])
+        states = dict(self.service.states, sportsgameodds=dict(state='budget_delayed', reason_code='sgo_charge_unresolved'))
+        self.service.states = states
+        self.state.write(self.service)
+        start = (at + timedelta(hours=1)).isoformat()
+        original = (at-timedelta(seconds=4)).isoformat()
+        capture_body = dict(sport_key='nba', received_at=AT, generated_at=AT, sha256='a'*64, fixtures=[dict(
+            id='nba:retail-fee-fixture', sport_key='nba', commence_time=start, in_play=False,
+            home_team='Orlando Magic', away_team='Milwaukee Bucks', bookmakers=[dict(
+                key='prophetx', kind='exchange', last_update=original, markets=dict(h2h=[
+                    dict(name='Orlando Magic', price=-110), dict(name='Milwaukee Bucks', price=105)]))])])
+        approval = schedule_lifecycle.approved()
+        fee_state = dict(last_verified=dict(approval=approval, verified_at=AT,
+            review_before=(at+timedelta(hours=1)).isoformat(), revision='fixture',
+            retrieval=dict(document=dict(sha256=approval['document_sha256']))))
+        row = dict(type='oddslink_prophetx_records', source=SOURCE, sport='NBA', capture=capture_body)
+        sink = DatabaseIngressSink(None, self.service.config)
+        with self.connect() as db, patch('app.storage.ordinary_publication.utc', return_value=AT), \
+                patch('app.collection.current_database.utc', return_value=AT), \
+                patch('app.collection.current_database.connect', side_effect=self.connect), \
+                patch('app.collection.current_database.sql_usage', return_value=0):
+            schedule_lifecycle.write(db, fee_state)
+            assert sink.prepare(row, states)[2] == 2
+            event_id = db.execute('SELECT id FROM current_event WHERE provider=%s', (SOURCE,)).fetchone()['id']
+            owner, committed = authority(db, at=at)
+            inputs = capture(db, at=AT, ordinary=True, event_ids=[event_id])
+            published = prices(inputs, assumptions()[0])
+            assert len(published['rows']) == 2
+            receipt = (at+timedelta(seconds=1)).isoformat()
+            assert sink.prepare(dict(row, capture=dict(capture_body, received_at=receipt, sha256='b'*64)), states)[2] == 0
+            again = capture(db, at=AT, ordinary=True, event_ids=[event_id])
+            assert {key: dep[:3] for key, dep in inputs['dependencies'].items()} == {
+                key: dep[:3] for key, dep in again['dependencies'].items()}
+            result = project(published, again['dependencies'], owner, committed, at=at,
+                             policy=again['policy_identity'], epoch=again['epoch'])
+            visible = desk_page(result, dict(layout='desk', browse_odds='1', phase='pregame'), ('ev', None, 0, 25))
+            offers = [offer for group in visible['rows'] for offer in group['offers']]
+            assert len(offers) == 2
+            assert all(o['venue'] == 'prophetx' and o['source_provider'] == SOURCE and o['current'] for o in offers)
+            assert all(o['trade_fee']['available'] and o['source_at'] == original for o in offers)
+
     async def test_prophet_exchange_saved_quote_reaches_retail_desk_with_fee(self):
         from datetime import timedelta
         from app.collection.current_policy import DEFAULT

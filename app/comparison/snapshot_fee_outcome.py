@@ -1,5 +1,6 @@
 """Standalone trading fees for the ordinary desk's normalized trade profile."""
 from .conditional_benchmark import basis, reviewed_fee
+from .public_sportsbook_estimate import SOURCE as ODDSLINK
 from app.fees.evidence import applies
 
 VENUES = ('kalshi', 'polymarket_us', 'novig', 'prophetx')
@@ -30,7 +31,7 @@ def outcome(row, *, at, phase, review):
         from .snapshot_novig_live import live_fee
         return live_fee(row, at, row.get('novig_v3_evidence'))
     live_supported = venue in ('kalshi', 'polymarket_us') or (
-        venue == 'prophetx' and row['source']['provider'] == 'sportsgameodds')
+        venue == 'prophetx' and row['source']['provider'] in ('sportsgameodds', ODDSLINK))
     if phase != 'scheduled' and not (phase == 'live' and live_supported):
         return unavailable('live_market_fee_evidence_unbound' if phase == 'live' else 'fee_game_phase_unverified')
     if row['market']['market'] not in FAMILIES or (venue != 'polymarket_us' and row['market']['period'] != 'full_game'):

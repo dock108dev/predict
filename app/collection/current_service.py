@@ -400,6 +400,7 @@ class CurrentService:
 
     async def _pause(self, venue):
         if venue == 'sportsgameodds' and (worker := self.workers.get('public_sportsbook')):
+            self.ingress.revoke(worker.ingress_source)
             worker.closed = True
             self.tasks['public_sportsbook'].cancel()
         if venue in ('novig','prophetx','the_odds_api') and 'novig_native' in self.workers:

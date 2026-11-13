@@ -74,7 +74,7 @@ class BroadCoverageSQL(IsolatedAsyncioTestCase):
             self.assertTrue(all(plan == (False,'off') for plan in plans))
             self.assertEqual(db.execute('SHOW jit').fetchone()['jit'],'on')
             # The same connection still permits compilation outside the capture.
-            outside=db.execute('EXPLAIN (FORMAT JSON) '+coverage_latest._OFFER_SQL,([],0)).fetchone()['QUERY PLAN'][0]
+            outside=db.execute('EXPLAIN (FORMAT JSON) SELECT sum(n) FROM generate_series(1,1000) AS x(n)').fetchone()['QUERY PLAN'][0]
             available=db.execute('SELECT pg_jit_available() AS available').fetchone()['available']
             self.assertEqual('JIT' in outside,available)
 

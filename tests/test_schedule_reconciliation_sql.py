@@ -38,6 +38,9 @@ class ScheduleReconciliationSQL(TestCase):
         book=deepcopy(next(o['book'] for envelope in envelopes() if envelope['record']['kind']=='admitted_books'
             for o in envelope['record']['value']['observations']
             if o['book']['raw']['ref']['venue']=='kalshi' and o['book']['raw']['ref']['market_id']==source['native_market_id']))
+        book.pop('book_confirmation',None)
+        book['raw'].update(exchange_at=rows[0]['quote']['times']['source_at'],
+                           received_at=rows[0]['quote']['times']['received_at'])
         self.store.replace_native_books([book])
         before=self.store.capture();frozen=deepcopy(before)
         self.assertTrue(any(r['quote'].get('depth') for r in before['records']))

@@ -20,7 +20,7 @@ ODD_IDS = frozenset(('points-home-game-ml-home', 'points-away-game-ml-away',
 
 
 class TransportFailure(RuntimeError):
-    """Request outcome is uncertain; the associated reservation stays held."""
+    """The request ended without a verifiable response."""
 
 
 @dataclass(frozen=True)

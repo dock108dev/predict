@@ -12,9 +12,11 @@ from aiohttp import ClientError, ClientSession, ClientTimeout
 
 from app.comparison.public_sportsbook_estimate import HISTORY_SLOTS, MAX_BYTES, SPORTS, allowed, cache_path
 from app.storage.store import stamp
+from .current_ingress import call, operation
 from .current_policy import aggregate_scope, native_scope
 
 POLL_SECONDS = 300
+LIVE_POLL_SECONDS = 10
 BOARD_URL = 'https://oddslink.app/v1/public/board/'
 
 
@@ -61,6 +63,8 @@ def store_capture(root, league, capture):
 
 
 class PublicSportsbookWorker:
+    ingress_source = 'oddslink_public_board'
+
     def __init__(self, service):
         self.service = service
         self.closed = False
@@ -70,18 +74,29 @@ class PublicSportsbookWorker:
         return not self.closed and allowed(dict(active=self.service.dispatch, config=self.service.config,
             global_stopped=self.service.globally_stopped, paused_sources=self.service.paused_sources))
 
+    @operation
+    def admit(self, league, capture):
+        if not self.enabled() or 'prophetx' in self.service.paused_sources:
+            raise asyncio.CancelledError()
+        return (yield self.service.row('oddslink_prophetx_records', self.ingress_source,
+                                      sport=league, capture=capture), self.service.states)
+
     async def run(self):
         from app.storage.store import ROOT
 
         scope = set(aggregate_scope(self.service.config)) & set(native_scope(self.service.config))
         leagues = [league for league in SPORTS if league in scope]
+        due = dict.fromkeys(leagues, 0)
+        saved = {}
         async with ClientSession(timeout=ClientTimeout(total=8), trust_env=True) as client:
             while self.enabled() and leagues:
                 loop = asyncio.get_running_loop()
-                next_poll = loop.time() + POLL_SECONDS
-                for league in leagues:
+                for league in sorted(leagues, key=due.__getitem__):
                     if not self.enabled():
                         return
+                    if due[league] > loop.time():
+                        continue
+                    due[league] = loop.time() + POLL_SECONDS
                     metrics = self.metrics['leagues'].setdefault(league, dict(attempts=0, completed=0))
                     metrics.update(attempts=metrics['attempts'] + 1, attempted_at=datetime.now(timezone.utc).isoformat())
                     try:
@@ -91,13 +106,24 @@ class PublicSportsbookWorker:
                         if capture is None:
                             metrics.update(state='deferred', reason=reason)
                             if delay or reason == 'http_429':
-                                next_poll = max(next_poll, loop.time() + max(delay, POLL_SECONDS))
+                                retry_at = loop.time() + max(delay, LIVE_POLL_SECONDS)
+                                due = {key: max(at, retry_at) for key, at in due.items()}
                                 break
                         else:
-                            store_capture(ROOT, league, capture)
+                            # Preserve the existing history cadence during faster in-game polls.
+                            last_saved = saved.get(league)
+                            if last_saved is None or loop.time() - last_saved >= POLL_SECONDS:
+                                await asyncio.to_thread(store_capture, ROOT, league, capture)
+                                saved[league] = loop.time()
+                            admitted = (await call(self.service, self.admit, league, capture)
+                                        if 'prophetx' not in self.service.paused_sources else None)
+                            live_board = any(fixture.get('in_play') is True for fixture in capture['fixtures'])
+                            if live_board:
+                                due[league] = loop.time() + LIVE_POLL_SECONDS
                             previous = metrics.get('received_at')
                             metrics.update(state='captured', reason=None, completed=metrics['completed'] + 1,
                                 fixtures=len(capture['fixtures']), received_at=capture['received_at'],
+                                prophetx_rows_changed=admitted['current_rows_changed'] if admitted else 0,
                                 generated_at=capture['generated_at'],
                                 previous_received_at=previous,
                                 interval_seconds=(stamp(capture['received_at']) - stamp(previous)).total_seconds() if previous else None)
@@ -105,7 +131,7 @@ class PublicSportsbookWorker:
                         metrics.update(state='deferred', reason=type(error).__name__)
                     await asyncio.sleep(1)
                 self.metrics['state'] = 'polling'
-                await asyncio.sleep(max(0, next_poll - loop.time()))
+                await asyncio.sleep(max(0, min(due.values()) - loop.time()))
 
     async def close(self):
         self.closed = True

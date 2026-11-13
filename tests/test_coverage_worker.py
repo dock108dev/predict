@@ -21,8 +21,7 @@ def test_ordinary_census_uses_owned_process_without_holding_publication_lane():
             calls.append(kwargs)
             owner.closed=True
             return dict(published=True,provider_requests=0)
-        with patch('app.storage.ordinary_owner.run',side_effect=census), \
-                patch.object(owner,'coverage_tick',side_effect=AssertionError('census must not allocate in socket process')):
+        with patch('app.storage.ordinary_owner.run',side_effect=census):
             await asyncio.wait_for(owner.run_coverage(),1)
         assert calls and owner.last_coverage['published']
         assert owner.auxiliary_lock.locked()

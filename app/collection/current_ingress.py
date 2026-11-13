@@ -191,7 +191,8 @@ class Ingress:
                             value = await self.service.sink.commit_async(row, states, revoked,
                                 **(dict(precomputed=precomputed) if precomputed is not None else {}))
                             commit_seconds+=monotonic()-tick
-                            if (source == 'sportsgameodds' and row['type'] == 'current_aggregate_records'
+                            if ((source == 'sportsgameodds' and row['type'] == 'current_aggregate_records'
+                                 or row['type'] == 'oddslink_prophetx_records' and value.get('current_rows_changed'))
                                     and not revoked.is_set() and self.on_sgo_admitted is not None):
                                 self.on_sgo_admitted()
                             if (self.on_native_admitted is not None and not revoked.is_set()

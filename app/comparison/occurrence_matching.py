@@ -174,6 +174,7 @@ class OccurrenceResolver:
         return abs((instant(starts[0]) - instant(starts[1])).total_seconds()) <= 3600
 
     def resolve(self, records, *, clock, result_projector=None):
+        from .public_sportsbook_estimate import SOURCE as PUBLIC_BOARD
         if len(records) > 32768:
             raise ValueError('Occurrence record capacity')
         at = instant(clock)
@@ -184,7 +185,7 @@ class OccurrenceResolver:
             # A native price has a durable provider identity before its shared
             # comparison context is known. Retain it without promoting a typed
             # vendor ID or a remembered join into missing source context.
-            if k[0] in ('kalshi', 'polymarket_us') and (
+            if k[0] == PUBLIC_BOARD or k[0] in ('kalshi', 'polymarket_us') and (
                     any(r['event'].get(field) in (None, '') for field in ('season', 'stage'))
                     or admission.get('reason') == 'comparison_context_missing'):
                 source_local.add(k)
@@ -239,6 +240,8 @@ class OccurrenceResolver:
         # promote shared IDs alone, or admit missing game-number/replacement facts.
         metadata_local=set()
         for k in source_local:
+            if k[0] == PUBLIC_BOARD:
+                continue
             f=facts[k]
             record=next(r for r in records if (r['quote']['source']['provider'],r['quote']['source']['native_event_id'])==k)
             admission=record.get('comparison_source_metadata',{}).get('comparison_admission',{})
@@ -396,11 +399,13 @@ class OccurrenceResolver:
                 original['market_identity']['event'] = provider_key(k[0],original['event'])
                 aggregate = k[0] == 'the_odds_api'
                 sgo = k[0] == 'sportsgameodds'
+                oddslink = k[0] == PUBLIC_BOARD
                 verified=aggregate or r['verified'] is True and k not in source_local and not f['conflict']
                 original['event_scope'] = dict(policy='aggregate-provider-event-2' if aggregate else
                     'sgo-provider-event-unverified-1' if sgo else
+                    'oddslink-provider-event-unverified-1' if oddslink else
                     'native-provider-event-1' if verified else 'native-event-unverified-2',
-                    source=k[0] if aggregate or sgo else original['quote']['venue'],native_event_id=k[1])
+                    source=k[0] if aggregate or sgo or oddslink else original['quote']['venue'],native_event_id=k[1])
                 original['verified'] = verified
             if not unresolved:
                 prior=prior_occurrences.get(oid)

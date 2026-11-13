@@ -1,7 +1,6 @@
 """Disposable oversized publication regressions, without provider calls."""
 from copy import deepcopy
 from unittest import TestCase
-from unittest.mock import patch
 from app.comparison.readiness_encoding import compact, expand, transport_size
 from app.comparison.scanner_readiness import MAX_BYTES
 from app.storage.store import encoded
@@ -51,11 +50,9 @@ class PublicationEncoding(TestCase):
     def test_exact_transport_boundary_and_one_byte_overflow(self):
         result = projection(pair_rows())
         size = transport_size(result)
-        with patch('app.comparison.scanner_readiness.MAX_BYTES', size):
-            self.assertEqual(projection(pair_rows()), result)
-        with patch('app.comparison.scanner_readiness.MAX_BYTES', size - 1):
-            with self.assertRaisesRegex(ValueError, 'readiness_response_capacity'):
-                projection(pair_rows())
+        self.assertEqual(projection(pair_rows(), transport_limit=size), result)
+        with self.assertRaisesRegex(ValueError, 'readiness_response_capacity'):
+            projection(pair_rows(), transport_limit=size - 1)
 
     def test_references_are_validated_and_native_reference_shaped_values_are_literal(self):
         result = projection(pair_rows())

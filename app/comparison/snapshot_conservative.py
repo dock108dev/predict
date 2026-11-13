@@ -5,6 +5,7 @@ from app.fees.evidence import applies
 from .conditional_benchmark import basis
 from .current_dependencies import instant
 from .cashflows import exact_wire as wire
+from .public_sportsbook_estimate import SOURCE as ODDSLINK
 from .snapshot_fee_scope import ROOT, RANKING_BASIS
 
 POLICY=ROOT/'app/fixtures/conservative-conditional-fees-policy-20261104.json'
@@ -76,11 +77,11 @@ def prophetx_public_fee(row, *, at, review=None, quantity=None, fills=None, phas
             policy = dict(policy, version='public-straight-trades-20261105',
                 prophetx=evidence['applicability'], public_schedule=evidence['version'])
         source, original = row['source'], row['original']
-        quote_units = {'the_odds_api': 'decimal_odds', 'sportsgameodds': 'american_odds'}
+        quote_units = {'the_odds_api': 'decimal_odds', 'sportsgameodds': 'american_odds', ODDSLINK: 'american_odds'}
         if (source['native_side'] != 'bookmaker_outcome'
                 or quote_units.get(source['provider']) != original['units']):
             raise ValueError('prophetx_public_site_straight_mapping_unsupported')
-        if (source['provider'] == 'sportsgameodds' and row['league'] == 'NHL'
+        if (source['provider'] in ('sportsgameodds', ODDSLINK) and row['league'] == 'NHL'
                 and 'nhl_taker_coefficient' not in evidence):
             raise ValueError('prophetx_nhl_taker_schedule_required')
         from app.dashboard.current_contract import price as claim_cost

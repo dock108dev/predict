@@ -9,7 +9,7 @@ from unittest import skipUnless
 from unittest.mock import patch
 from app.collection.coverage_worker import run,MAX_PROCESS_BYTES,resume_arguments
 from app.storage import store
-from tests.latest_board_fixture import LatestBoardFixture,SOCKET
+from tests.latest_board_fixture import LatestBoardFixture,SOCKET,inline_fixture_offers
 
 @skipUnless(SOCKET,'Explicit disposable PostgreSQL lane required')
 class FinancialWorkerSQL(LatestBoardFixture):
@@ -145,7 +145,9 @@ financial_worker.main()
         self.at+=timedelta(seconds=1);self.state.write(self.service)
         code=code.replace(old_at,self.at.isoformat())
         with self.connect() as db:
-            changed_cid=db.execute("UPDATE current_offer SET price_value='0.37',revision=revision||'-repeat',received_at=%s WHERE contract_id=(SELECT o.contract_id FROM current_offer o JOIN current_contract c ON c.id=o.contract_id WHERE c.venue='kalshi' LIMIT 1) RETURNING contract_id",(self.at.isoformat(),)).fetchone()['contract_id']
+            cid=db.execute("SELECT o.contract_id FROM current_offer o JOIN current_contract c ON c.id=o.contract_id WHERE c.venue='kalshi' ORDER BY o.contract_id LIMIT 1").fetchone()['contract_id']
+            inline_fixture_offers(db,[cid])
+            changed_cid=db.execute("UPDATE current_offer SET price_value='0.37',revision=revision||'-repeat',received_at=%s WHERE contract_id=%s RETURNING contract_id",(self.at.isoformat(),cid)).fetchone()['contract_id']
         with patch('app.collection.coverage_worker.asyncio.create_subprocess_exec',side_effect=start), \
              patch('app.storage.store.connect',side_effect=self.connect):
             repeated=await run(lambda:False,root=store.ROOT,module='app.collection.financial_worker',arguments=('{}',),on_progress=progress.update)

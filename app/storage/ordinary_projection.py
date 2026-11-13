@@ -141,6 +141,7 @@ def validity(witness, current, at):
 
 def price_reasons(row, current, owner, states, *, at, epoch, publication_epoch, common=()):
     """Validate the exact stored price revision under ordinary display authority."""
+    from app.comparison.public_sportsbook_estimate import SOURCE as ODDSLINK, allowed
     auth = row['current_authority']['price']
     reasons = list(common) + validity(auth, current, at)
     if row.get('publication_epoch', publication_epoch) != epoch:
@@ -149,7 +150,9 @@ def price_reasons(row, current, owner, states, *, at, epoch, publication_epoch, 
     aggregate_provider = owner.get('config', {}).get('aggregate_provider', 'the_odds_api')
     if provider in ('the_odds_api', 'sportsgameodds') and provider != aggregate_provider:
         reasons.append('aggregate_provider_replaced')
-    state = states.get('sportsgameodds' if provider == 'sportsgameodds' else row['venue'], {})
+    state = states.get(provider if provider in ('sportsgameodds', ODDSLINK) else row['venue'], {})
+    if provider == ODDSLINK and (not allowed(owner) or 'prophetx' in owner.get('paused_sources', ())):
+        reasons.append('updates_stopped')
     native_owner = auth.get('novig_runtime_id')
     if native_owner:
         if native_owner != str(owner.get('runtime_id')) or {'novig', 'the_odds_api'} & set(owner.get('paused_sources', ())):

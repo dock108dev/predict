@@ -11,7 +11,7 @@ from .cashflows import exact_wire
 from .game_phase import PREGAME_SPORTSBOOK_SECONDS
 from .sgo_reference import BEST_BOOKS, OPPOSITE, american_probability
 
-SPORTS = ('NBA', 'NFL', 'NHL', 'NCAAF', 'MLB')
+SPORTS = ('NBA', 'NFL', 'NHL', 'NCAAF', 'NCAAB', 'MLB')
 SOURCE = 'oddslink_public_board'
 MAX_BYTES = 512 * 1024
 HISTORY_SLOTS = 11

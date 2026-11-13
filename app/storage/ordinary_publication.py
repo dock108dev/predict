@@ -91,6 +91,7 @@ def policy_identity(provider=None):
               POLICY_ROOT/'app/comparison/sgo_native_binding.py',
               POLICY_ROOT/'app/comparison/sgo_sportsbook_baseline.py',
               POLICY_ROOT/'app/comparison/public_sportsbook_estimate.py',
+              POLICY_ROOT/'app/collection/oddslink_prophetx.py',
               POLICY_ROOT/'app/comparison/sgo_rule_evidence.py', POLICY_ROOT/'app/comparison/sgo_median_publication.py',
               POLICY_ROOT/'app/fixtures/sgo-reviewed-market-rules-20261110.json',
               POLICY_ROOT/'app/fixtures/sgo-reviewed-jurisdiction-bindings.json']

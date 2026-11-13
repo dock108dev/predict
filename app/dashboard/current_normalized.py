@@ -116,6 +116,12 @@ def catalog_from_normalized(envelope, records, *, reference_records=(), selected
                 if record['verified'] is not True or scope['source']!=q['venue'] or q['source']['provider']!=scope['source'] or scope['native_event_id']!=event['id']:
                     raise ValueError('Exact native source-local verified event required')
                 key=provider_key(scope['source'],event)
+            elif scope['policy']=='oddslink-provider-event-unverified-1':
+                from app.comparison.public_sportsbook_estimate import SOURCE
+                if (record['verified'] is not False or q['venue']!='prophetx' or scope['source']!=SOURCE
+                        or q['source']['provider']!=SOURCE or scope['native_event_id']!=event['id']):
+                    raise ValueError('Exact unverified OddsLink source-local event required')
+                key=provider_key(SOURCE,event)
             elif scope['policy'] not in ('native-event-unverified-1','native-event-unverified-2') or record['verified'] is not False or scope['source']!=q['venue'] or scope['native_event_id']!=event['id']:
                 raise ValueError('Exact source-scoped unverified event required')
             else:

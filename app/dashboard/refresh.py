@@ -13,7 +13,7 @@ from app.arbitrage import Policy, wire
 from app.dashboard.bounds import retained_bytes, DeadlineConnection
 from app.dashboard.views import VENUES, side_labels, candidate_view
 from app.storage.replay import detector_audit
-from app.storage.store import Store, encoded
+from app.storage.store import Store, encoded, open_retained
 
 SNAPSHOT_BYTES=8*1024*1024
 RESULT_BYTES=32*1024*1024
@@ -115,7 +115,7 @@ class RefreshWriter:
         prepared=compute(snapshot);computed=monotonic()
         if self.pipeline is None:
             p=Pipeline(self.mode,self.limits,self.database);p.sid=self.sid
-            db=self.connector(self.database)
+            db=open_retained(self.connector(self.database))
             db.execute('SET statement_timeout=3000');db.execute('SET lock_timeout=1000')
             p.db=RefreshConnection(db,self.stop_budget);p.store=RefreshStore(p.db);self.pipeline=p
         p=self.pipeline;p.set_deadline(self.stop_budget.deadline())

@@ -441,6 +441,8 @@ class CurrentRowStore:
                             # rows for the same venue. Cursor completion alone
                             # is not evidence of an authoritative event scope.
                             condition.append("e.provider='sportsgameodds'")
+                        elif route=='oddslink_event' and scope['venue']=='prophetx' and scope.get('native_event_id'):
+                            condition.append("e.provider='oddslink_public_board'")
                         else:
                             raise ValueError('aggregate_refresh_route')
                     for name,owner in (('native_event_id','e'),('native_market_id','c')):
@@ -477,6 +479,7 @@ class CurrentRowStore:
                         JOIN unnest(%s::text[],%s::text[]) lost(venue,state) ON c.venue=lost.venue
                         WHERE c.id=o.contract_id AND o.facts->>'state' IN ('available','budget_delayed')
                         AND (lost.venue NOT IN ('kalshi','polymarket_us') OR e.provider=lost.venue)
+                        AND NOT (c.venue='prophetx' AND e.provider='oddslink_public_board')
                         AND NOT (c.venue='novig' AND o.facts ? 'novig_runtime_id')""",
                         tuple(map(list,zip(*lost))))
                 for venue,state in source_status.items():

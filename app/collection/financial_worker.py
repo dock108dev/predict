@@ -41,6 +41,7 @@ def main():
                     if k in ('estimates_cursor','estimates_after','estimates_rotation_after','estimates_window_turn')})),flush=True)
                 progress_count+=1
         with cancellation(guard),store.connect() as db:
+            store.open_retained(db)
             from app.storage.pipeline_generation import prune
             prune(db)
             if not db.execute('SELECT pg_try_advisory_lock(%s) owned',(LOCK,)).fetchone()['owned']:

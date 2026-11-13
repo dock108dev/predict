@@ -11,7 +11,7 @@ import uuid
 
 from psycopg import sql, errors
 from app.storage import Store, connect, CapturePolicy
-from app.storage.store import hashed
+from app.storage.store import hashed, open_retained
 from app.storage.workflow import packet
 from app.storage.replay import detector_audit
 from app.depth_example import fixture, run
@@ -25,6 +25,7 @@ class PostgreSQLTests(unittest.TestCase):
         cls.admin=connect()
         cls.admin.execute(sql.SQL('CREATE DATABASE {}').format(sql.Identifier(cls.name)))
         cls.db=connect(cls.name); cls.s=Store(cls.db); cls.s.migrate()
+        open_retained(cls.db)
         cls.data,cls.ladders=fixture()
         p,m,obs,ctx,_=cls.data
         cls.audit=json.loads(json.dumps(detector_audit(p,m,obs,ctx,evaluation_time=NOW,fill_grouping='single_fill_per_leg')))
@@ -37,13 +38,14 @@ class PostgreSQLTests(unittest.TestCase):
         cls.admin.close()
 
     def setUp(self):
-        self.tx=self.db.transaction(); self.tx.__enter__()
+        from contextlib import ExitStack
+        self.tx=ExitStack(); self.addCleanup(self.rollback)
+        self.tx.enter_context(self.db.transaction(force_rollback=True))
         self.sid=self.s.start('synthetic','synthetic','integration fixture')
         self.p=packet(self.data[2][0])
 
-    def tearDown(self):
-        # Roll back only this disposable database's case, never historical evidence.
-        self.tx.__exit__(RuntimeError,RuntimeError('test rollback'),None)
+    def rollback(self):
+        self.tx.close()
 
     def test_migrations_idempotent(self):
         from app.storage import store

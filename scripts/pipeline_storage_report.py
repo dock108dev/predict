@@ -77,24 +77,26 @@ def snapshot(db, scan=()):
     result['prepared_transactions'] = db.execute("""SELECT transaction,prepared
         FROM pg_prepared_xacts WHERE database=current_database()""").fetchall()
     names = {r['relation'] for r in result['relations'] if r['schema']=='public'}
-    if {'current_grid_blob','current_grid_projection','current_grid_read_lease'} <= names:
+    retained = {r['relation'] for r in result['relations'] if r['schema']=='retained'}
+    if {'current_grid_blob','current_grid_projection','current_grid_read_lease',
+        'current_result_unit','current_result_parent_original'} <= retained:
         result['original_packets'] = db.execute("""SELECT count(*) AS packets,
             COALESCE(sum(retained_bytes),0) AS logical_packet_bytes,
             count(*) FILTER(WHERE unreferenced_at IS NULL) AS no_retirement_clock,
             count(*) FILTER(WHERE eligible) AS eligible_cleanup_packets,
             COALESCE(sum(retained_bytes) FILTER(WHERE eligible),0) AS eligible_cleanup_logical_bytes
             FROM (SELECT b.*,b.unreferenced_at<clock_timestamp()-interval '180 seconds'
-                AND NOT EXISTS(SELECT 1 FROM current_grid_projection g WHERE g.blob_id=b.id)
-                AND NOT EXISTS(SELECT 1 FROM current_result_unit u WHERE u.original_blob_id=b.id)
-                AND NOT EXISTS(SELECT 1 FROM current_result_parent_original p WHERE p.blob_id=b.id)
-                AND NOT EXISTS(SELECT 1 FROM current_grid_read_lease l WHERE l.packet_ids @> ARRAY[b.id])
-                AS eligible FROM current_grid_blob b) candidates""").fetchone()
-    if 'pipeline_generation' in names:
+                AND NOT EXISTS(SELECT 1 FROM retained.current_grid_projection g WHERE g.blob_id=b.id)
+                AND NOT EXISTS(SELECT 1 FROM retained.current_result_unit u WHERE u.original_blob_id=b.id)
+                AND NOT EXISTS(SELECT 1 FROM retained.current_result_parent_original p WHERE p.blob_id=b.id)
+                AND NOT EXISTS(SELECT 1 FROM retained.current_grid_read_lease l WHERE l.packet_ids @> ARRAY[b.id])
+                AS eligible FROM retained.current_grid_blob b) candidates""").fetchone()
+    if 'pipeline_generation' in retained:
         result['generations'] = db.execute("""SELECT disposition,count(*) AS rows,
             min(admitted_at) AS oldest_admission,min(last_attempt) AS oldest_attempt,
             count(*) FILTER(WHERE disposition IN ('published','superseded')
                 AND last_attempt<clock_timestamp()-interval '2 hours') AS age_cleanup_eligible
-            FROM pipeline_generation GROUP BY disposition ORDER BY disposition""").fetchall()
+            FROM retained.pipeline_generation GROUP BY disposition ORDER BY disposition""").fetchall()
     if 'data_runtime' in names:
         result['runtime'] = db.execute("""SELECT runtime_id,heartbeat_at,global_stopped,
             paused_sources FROM data_runtime""").fetchall()

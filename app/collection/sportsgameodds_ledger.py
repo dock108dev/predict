@@ -4,7 +4,8 @@ One ledger represents one explicitly identified provider account window. The
 caller supplies its observed starting use and optional reset; this module never
 invents a reset or automatically opens a new window. Dispatch must occur only
 after reserve() succeeds, and the provider request must be bounded to that
-reservation. In-flight and failed requests remain held across restarts.
+reservation. An interrupted request retains its full budget exposure without
+blocking later scans.
 """
 from __future__ import annotations
 
@@ -218,7 +219,8 @@ class ObjectLedger:
             other = db.execute("SELECT COUNT(*) FROM sgo_object_reservation WHERE window_id<>? AND (window_id=? OR substr(window_id,1,?)=?) AND status IN ('held','overrun')", (window_id,account,len(prefix),prefix)).fetchone()[0]
             if held or other:
                 raise RuntimeError('unresolved object reservation')
-            if initial + held + charged + objects + reserve > limit:
+            interrupted = self._interrupted_objects(db, window_id)
+            if initial + held + charged + interrupted + objects + reserve > limit:
                 raise RuntimeError('insufficient object allowance')
             db.execute("INSERT INTO sgo_object_reservation(id,window_id,reserved,status,created_at) VALUES(?,?,?,'held',?)",
                        (reservation_id, window_id, objects, current))
@@ -241,7 +243,35 @@ class ObjectLedger:
                         response.provider_request_id, sha256(response.body).hexdigest() if response.body else None,
                         reservation_id))
 
+    @staticmethod
+    def _interrupted_objects(db, window_id):
+        account = window_id.split(':', 1)[0]
+        prefix = account + ':'
+        return db.execute("SELECT COALESCE(sum(reserved),0) FROM sgo_object_reservation "
+                          "WHERE (window_id=? OR substr(window_id,1,?)=?) AND status='interrupted'",
+                          (account,len(prefix),prefix)).fetchone()[0]
+
+    def interrupt(self, reservation_id, *, evidence):
+        with self._connect() as db:
+            db.execute("UPDATE sgo_object_reservation SET status='interrupted',evidence=? "
+                       "WHERE id=? AND status='held'", (evidence, reservation_id))
+
+    def recover_interrupted(self, account, *, now, minimum_age):
+        """Call under exclusive runtime ownership. Preserve trace and exposure."""
+        prefix = account + ':'
+        with self._connect() as db:
+            return db.execute("UPDATE sgo_object_reservation SET status='interrupted', "
+                "evidence='prior runtime ended without a charge receipt' WHERE status='held' "
+                "AND created_at<=? AND (window_id=? OR substr(window_id,1,?)=?)",
+                (_time(now)-minimum_age, account, len(prefix), prefix)).rowcount
+
     def holds(self, window_id):
+        return self._request_records(window_id, ('held', 'overrun'))
+
+    def interruptions(self, window_id):
+        return self._request_records(window_id, ('interrupted', 'interrupted'))
+
+    def _request_records(self, window_id, statuses):
         account = window_id.split(':', 1)[0]
         prefix = account + ':'
         with self._connect() as db:
@@ -253,8 +283,8 @@ class ObjectLedger:
                                  LEFT JOIN sgo_reservation_context c ON c.reservation_id=r.id
                                  LEFT JOIN sgo_request_trace t ON t.reservation_id=r.id
                                  WHERE (r.window_id=? OR r.window_id=? OR substr(r.window_id,1,?)=?)
-                                 AND r.status IN ('held','overrun') ORDER BY r.created_at LIMIT 32''',
-                              (window_id, account, len(prefix), prefix)).fetchall()
+                                 AND r.status IN (?,?) ORDER BY r.created_at DESC LIMIT 32''',
+                              (window_id, account, len(prefix), prefix, *statuses)).fetchall()
         result = []
         for row in rows:
             item = dict(row)
@@ -270,7 +300,7 @@ class ObjectLedger:
 
     def resolve(self, reservation_id: str, *, charged: int, evidence: str, now: datetime,
                 breakdown: dict[tuple[str, str], int] | None = None) -> None:
-        """Resolve only with attributable evidence; unknown failures stay held.
+        """Resolve only with attributable evidence.
 
         Zero is allowed only when the caller has evidence that no response was
         charged. Nonempty evidence is an audit description, never a credential.
@@ -292,11 +322,11 @@ class ObjectLedger:
             if row is None:
                 raise KeyError(reservation_id)
             reserved, status, window_id, prior_charge = row
-            if status not in ('held', 'overrun'):
+            if status not in ('held', 'overrun', 'interrupted'):
                 raise RuntimeError('reservation already resolved')
             if status == 'overrun' and charged != prior_charge:
                 raise ValueError('overrun resolution must retain the observed charge')
-            if charged > reserved and status == 'held':
+            if charged > reserved and status != 'overrun':
                 db.execute("UPDATE sgo_object_reservation SET status='overrun',charged=?,evidence=? WHERE id=?", (charged, evidence, reservation_id))
                 db.execute('UPDATE sgo_object_window SET paused=1 WHERE id=?', (window_id,))
                 db.execute('COMMIT')
@@ -433,9 +463,10 @@ class ObjectLedger:
             held, charged = db.execute('''SELECT COALESCE(SUM(CASE WHEN status IN ('held','overrun') THEN MAX(reserved,COALESCE(charged,0)) ELSE 0 END), 0),
                 COALESCE(SUM(CASE WHEN status='resolved' THEN charged ELSE 0 END), 0)
                 FROM sgo_object_reservation WHERE window_id=?''', (window_id,)).fetchone()
+            interrupted = self._interrupted_objects(db, window_id)
         limit, initial, reserve, reset, paused, retry, request_limit = row
-        return {'limit': limit, 'initial_used': initial, 'held': held, 'charged': charged,
-                'reserve': reserve, 'requests_per_minute': request_limit, 'available': max(0, limit - initial - held - charged - reserve),
+        return {'limit': limit, 'initial_used': initial, 'held': held, 'charged': charged, 'interrupted': interrupted,
+                'reserve': reserve, 'requests_per_minute': request_limit, 'available': max(0, limit - initial - held - charged - interrupted - reserve),
                 'paused': bool(paused),
                 'reset_at': datetime.fromtimestamp(reset, timezone.utc) if reset is not None else None,
                 'retry_after': datetime.fromtimestamp(retry, timezone.utc) if retry is not None else None}

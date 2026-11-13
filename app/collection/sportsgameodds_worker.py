@@ -204,6 +204,7 @@ class SportsGameOddsWorker:
         value = self.ledger.status(self.window_id)
         self.metrics['objects'] = {k: v.isoformat() if isinstance(v, datetime) else v for k,v in value.items()}
         self.metrics['object_holds'] = self.ledger.holds(self.window_id)
+        self.metrics['object_interruptions'] = self.ledger.interruptions(self.window_id)
 
     @operation
     def admit(self, sport, records, reference_rows, event_frames, received_at, receipt_sha256, event_scopes):
@@ -302,7 +303,14 @@ class SportsGameOddsWorker:
                 for event_id in requested - seen - resolved_aliases:
                     if event_id in next_events:
                         next_events[event_id] = dict(next_events[event_id], last_polled_at=self.now().isoformat())
-            await self._publish(page)
+            from psycopg import OperationalError
+            from psycopg.errors import QueryCanceled
+            try:
+                await self._publish(page)
+            except (ValueError, OperationalError, QueryCanceled) as exc:
+                from app.diagnostics import failure
+                failure(__name__, 'sgo_page_admission_interrupted', exc)
+                raise RuntimeError('provider page admission interrupted') from exc
             if alternate is not None:
                 admitted = [quote for quote in page.quotes if quote.get('alternate')]
                 alternate['admitted_alternate_rows'] += len(admitted)
@@ -422,6 +430,12 @@ class SportsGameOddsWorker:
         discovery_cadence = timedelta(hours=12)
         leagues = list(aggregate_scope(self.service.config))
         if self.ledger is not None and self.window_id is not None:
+            # The worker serializes requests. A prior process's transport may
+            # still finish before its timeout, so wait out that interval.
+            if self.account_id is not None and self.ledger.recover_interrupted(
+                self.account_id, now=now, minimum_age=getattr(self.transport, 'timeout_seconds', 30)
+            ):
+                self._account_status()
             account = self.ledger.status(self.window_id)
             rolling = self.ledger.rolling_objects(self.window_id, since=now-timedelta(days=1))
             allowance = daily_allowance(available=account['available'] + rolling, now=now, reset_at=account['reset_at'])
@@ -502,12 +516,11 @@ class SportsGameOddsWorker:
                 try:
                     page = await self._fetch(params)
                 except RejectedCursor:
-                    # Abandon only this incomplete walk. The request's durable
-                    # reservation still blocks dispatch until reconciled.
+                    # Abandon only this incomplete walk. Keep its reserved cost.
                     self.discovery_progress.pop(league, None)
                     if self.ledger is not None:
                         self.ledger.clear_discovery_progress(league)
-                    self.discovery_at[league] = now
+                    self.discovery_at.pop(league, None)
                     self.metrics.setdefault('discovery_complete', {})[league] = False
                     self.metrics.setdefault('discovery_unstable', {})[league] = self.now().isoformat()
                     raise
@@ -611,8 +624,7 @@ class SportsGameOddsWorker:
             while not self.controls()['stopped'] and not self.controls()['source_paused']:
                 try:
                     if self.ledger is not None and self.now() >= self.ledger.status(self.window_id)['reset_at']:
-                        # A new pacing window starts from fresh provider usage;
-                        # outstanding older reservations still block dispatch.
+                        # Start each pacing window from fresh provider usage.
                         await self.initialize()
                     await self.cycle()
                 except RuntimeError as exc:
@@ -643,8 +655,8 @@ class SportsGameOddsWorker:
                        'account reset evidence expired':'The account reset evidence has expired.',
                        'current account usage evidence unavailable or changed':'Current account usage could not be safely reconciled.',
                        'unresolved provider object reservation':'An earlier provider request has an unresolved object charge.',
-                       'provider rate limited; charge remains held':'The provider rate limit was reached; the request charge remains held.',
-                       'provider rejected cursor; charge remains held':'The provider rejected a discovery cursor; the incomplete walk was discarded and the request charge remains held.',
+                       'provider rate limited':'The provider rate limit was reached.',
+                       'provider rejected cursor':'The provider rejected a discovery cursor and the incomplete walk was discarded.',
                        'daily object pacing limit':'The daily object pacing limit has been reached.'}
             reason = reasons.get(str(exc), 'SportsGameOdds collection is unavailable; check account and source status.')
             self.metrics['state']='unavailable'
@@ -662,9 +674,11 @@ class SportsGameOddsWorker:
         if str(exc) == 'request rate limit':
             self.phase, code = 'waiting_for_rate', 'sgo_request_rate'
             reason = 'SportsGameOdds is waiting for its request limit to reset.'
-        elif isinstance(exc, TransportFailure) or str(exc) in (
-                'provider rejected cursor; charge remains held', 'provider rate limited; charge remains held',
-                'provider response unsuccessful; charge remains held', 'unresolved provider object reservation',
+        elif isinstance(exc, (TransportFailure, RejectedCursor)) or str(exc) in (
+                'provider rate limited', 'provider response unsuccessful', 'provider page admission interrupted'):
+            self.phase, code = 'waiting_for_retry', 'sgo_scan_interrupted'
+            reason = 'SportsGameOdds will retry on the next scan. Any uncertain cost remains reserved.'
+        elif str(exc) in ('unresolved provider object reservation',
                 'unresolved object reservation', 'collection paused or rate limited'):
             self.phase, code = 'waiting_for_reconciliation', 'sgo_charge_unresolved'
             reason = 'SportsGameOdds is waiting for accounting or provider controls to allow dispatch.'
