@@ -12,11 +12,13 @@ port. The dashboard checks the local port as part of its browser boundary.
 
 ## Releases
 
-On `main`, CI builds and smoke-tests the locked Linux image after the existing
-readiness checks pass. It publishes the tested image to GHCR and sends its
-digest to `/srv/predict/release.sh` over SSH. The job requires the repository
-variable `HETZNER_DEPLOY_ENABLED=true` and the `hetzner` GitHub environment
-restricted to `main`. Set `HETZNER_HOST` and the pinned `HETZNER_KNOWN_HOSTS`
+The **Deploy Predict dev server** workflow runs when an in-repository PR to
+`main` opens or changes, or when dispatched manually from `main`. It builds and
+smoke-tests the locked Linux image, publishes it to GHCR, and sends its digest to
+`/srv/predict/release.sh` over SSH. The separate CI workflow runs the broader
+regressions. The deploy job requires the repository variable
+`HETZNER_DEPLOY_ENABLED=true` and the `hetzner` GitHub environment with branch
+rules for `main` and `refs/pull/*/merge`. Set `HETZNER_HOST` and the pinned `HETZNER_KNOWN_HOSTS`
 entry as environment variables and `HETZNER_SSH_KEY` as an environment secret.
 The key belongs to the restricted `predict-deploy` account. GitHub's job token
 authenticates the GHCR pull and is discarded after use.

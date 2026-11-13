@@ -908,7 +908,9 @@ dialog.addEventListener('close', () => {
     : [...$('results').querySelectorAll(old?.opener?.dataset.calculationId ? '[data-calculation-id]' : '[data-offer-id]')]
       .find(item => (item.dataset.calculationId ?? item.dataset.offerId) === old?.offer?.id);
   const fallback = $('refresh-list').disabled ? filters.elements.search : $('refresh-list');
-  restoreFocus(old?.opener?.isConnected ? old.opener : current || fallback);
+  const opener = old?.opener?.isConnected ? old.opener : current;
+  if (opener && !document.querySelector('dialog[open]')) opener.focus({preventScroll:true});
+  else restoreFocus(fallback);
 });
 async function checkSelection() {
   const selected = state.selected;
