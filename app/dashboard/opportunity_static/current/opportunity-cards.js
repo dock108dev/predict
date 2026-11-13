@@ -49,25 +49,39 @@ export function quoteAge(source, checkedAt = Date.now()) {
   return `Quote updated ${Math.floor(elapsed / 3600)}h ago`;
 }
 
-function sportsbookCell(group, book, reference, checkedAt) {
+function sportsbookCell(group, book, reference, checkedAt, mode, inspection = false) {
   const cell = el('div', null, 'sportsbook-price');
   const selected = reference?.book === book && reference.prices?.[0];
-  const values = group.sportsbook_quotes?.[book] || (selected ? [selected] : []);
+  const values = group.sportsbook_quotes?.[book] || (selected ? [{...selected, current:true}] : []);
   for (const value of values) {
     const item = el('div');
     item.append(odd(sportsbookOdds(value)));
     if (value.source_at) item.title = value.source_at;
-    if (selected && value.current !== false
-        && value.price_american === selected.price_american && value.source_at === selected.source_at) {
-      item.classList.add('matrix-reference');
-      item.append(el('small', 'EV reference'));
-    } else if (value.current === false) {
-      item.append(el('small', `Last known · ${quoteAge(value.source_at, checkedAt)}`));
-    }
+    const isReference = selected && value.current !== false
+      && value.price_american === selected.price_american && value.source_at === selected.source_at;
+    if (isReference) item.classList.add('matrix-reference');
+    const freshness = el('small', [mode ? (value.current === false ? 'Last known at capture' : 'At capture') :
+      priceStatus(value.current, value.source_at, checkedAt, inspection),
+      isReference && 'EV reference'].filter(Boolean).join(' · '));
+    if (inspection && !mode && value.current === true) freshness.dataset.inspectionBook = '1';
+    item.append(freshness);
     cell.append(item);
   }
-  if (!values.length) cell.append(el('span', '—', 'desk-meta'));
+  if (!values.length) noQuote(cell, name(book));
   return cell;
+}
+
+function noQuote(cell, venue) {
+  const missing = el('span', '—', 'desk-meta');
+  missing.setAttribute('aria-label', `No quote shown from ${venue} for this exact outcome`);
+  missing.title = `No quote shown from ${venue} for this exact outcome`;
+  cell.append(missing);
+}
+
+export function priceStatus(current, at, checkedAt, inspection = false) {
+  const status = current === true ? (inspection ? 'Current at inspection' : 'Current')
+    : current === false ? 'Last known' : 'Freshness unverified';
+  return at ? `${status} · ${quoteAge(at, checkedAt)}` : status;
 }
 
 export function settlementLabel(group) {
@@ -79,16 +93,16 @@ export function winPayout(offer) {
   const cost = num(offer.cost_per_normal_claim);
   const multiplier = cost > 0 ? 1 / cost : num(offer.odds?.decimal);
   return multiplier > 1 && Number.isFinite(multiplier)
-    ? `$10 pays ${cash(multiplier * 10)} on a win before fees` : null;
+    ? `A winning $10 stake returns ${cash(multiplier * 10)} total, including ${cash((multiplier - 1) * 10)} profit before fees.` : null;
 }
 
-export function sportsbookQuotes(group, reference, checkedAt) {
+export function sportsbookQuotes(group, reference, checkedAt, mode, inspection = false) {
   const section = el('div', null, 'sportsbook-comparison');
   section.append(el('small', 'Same-line sportsbook quotes'));
   const prices = el('div', null, 'sportsbook-prices');
   for (const book of books) {
     const cell = el('div');
-    cell.append(el('strong', name(book)), sportsbookCell(group, book, reference, checkedAt));
+    cell.append(el('strong', name(book)), sportsbookCell(group, book, reference, checkedAt, mode, inspection));
     prices.append(cell);
   }
   section.append(prices);
@@ -125,15 +139,17 @@ function quote(offer, group, context, className = '', showResult = true) {
   const item = button('', () => context.inspectOffer(offer, group), `desk-offer ${className}`);
   item.dataset.offerId = offer.id;
   const reason = quoteReason(offer);
+  const freshness = context.mode ? (offer.current ? 'At capture' : 'Last known at capture')
+    : priceStatus(offer.current, offer.source_at || offer.source_clock_at, context.checkedAt);
   item.setAttribute('aria-label', [label, context.position(offer), offer.odds?.american, showResult && (reason || `${percent(offer.value)} EV`),
-    !showResult && !offer.current && 'Last known price'].filter(Boolean).join(', '));
+    freshness].filter(Boolean).join(', '));
   if (showResult) item.append(el('span', label, 'desk-site'));
   item.append(odd(offer.odds));
+  const [status, age] = freshness.split(' · ');
+  const freshnessLabel = el('small', status, 'quote-freshness');
+  if (age) freshnessLabel.title = age;
+  item.append(freshnessLabel);
   if (showResult) item.append(el('small', reason || `${percent(offer.value)} EV`, reason ? 'offer-reason' : tone(offer.value)));
-  else {
-    if (!offer.current) item.append(el('small', 'Last known'));
-    if (offer.current && context.showWinPayout && winPayout(offer)) item.append(el('small', winPayout(offer)));
-  }
   return item;
 }
 
@@ -161,6 +177,8 @@ export function evCard(group, context) {
       const side = price.label || [participant || name(price.side), line].filter(value => value != null).join(' ') || (index ? 'Opposite' : 'Selected');
       const leg = el('span');
       leg.append(`${side} `, odd(sportsbookOdds(price)));
+      leg.append(el('small', context.mode ? 'At capture' : priceStatus(lead.reference_current || !!lead.sportsbook,
+        price.source_at, context.checkedAt)));
       prices.append(leg);
     });
     comparison.append(prices);
@@ -177,7 +195,7 @@ export function evCard(group, context) {
   inspect.dataset.calculationId = lead.id;
   row.append(grid);
   if (settlementLabel(group)) row.append(el('p', settlementLabel(group), 'desk-meta'));
-  if (group.sportsbook_quotes) row.append(sportsbookQuotes(group, reference, context.checkedAt));
+  if (group.sportsbook_quotes) row.append(sportsbookQuotes(group, reference, context.checkedAt, context.mode));
   row.append(cardActions(group, context, inspect));
   return row;
 }
@@ -226,7 +244,7 @@ export function arbCard(group, context, expanded) {
   const legs = best.legs.map(id => offers.get(id));
   const net = best.retail_payoff;
   row.append(cardHeader(group, group.game_title, legs.map(context.position).join(' / '),
-    score(group.score, net?.available ? `${cash(net.minimum_net_profit_usd)} worst modeled result` : 'Net payoff unavailable'), context.clock));
+    score(group.score, net?.available ? 'Return on total funding' : 'Net payoff unavailable'), context.clock));
   const content = el('div', null, 'arb-card-comparison');
   const columns = venueColumns(group.offers);
   const table = el('table', null, 'odds-matrix');
@@ -244,21 +262,24 @@ export function arbCard(group, context, expanded) {
         if (chosen) item.append(el('small', 'Selected leg'));
         cell.append(item);
       }
-      if (!cell.hasChildNodes()) cell.append(el('span', '—', 'desk-meta'));
+      if (!cell.hasChildNodes()) noQuote(cell, name(venue));
     }
   }
   content.append(scrollTable(table, 'Opposing venue prices'));
   const summary = el('div', null, 'opportunity-reference');
   summary.append(el('small', 'Modeled pair'), el('strong', legs.map(venueLabel).join(' + ')));
   if (net?.available) {
-    const size = net.sizing ? `${net.sizing.quantity} contracts per leg · ` : '';
+    const size = net.sizing?.quantity != null ? `${net.sizing.quantity} contracts per leg · ` : '';
     summary.append(el('span', `${size}${cash(net.funding_usd)} total with fees`));
     net.legs?.forEach((leg, index) => {
-      summary.append(el('span', `${cash(leg.acquisition_usd)} on ${context.position(legs[index])} · ${venueLabel(legs[index])}`));
+      const acquisition = leg.acquisition_usd ?? best.inspection?.legs?.[index]?.allocation_usd;
+      if (acquisition != null) {
+        summary.append(el('span', `${cash(acquisition)} on ${context.position(legs[index])} · ${venueLabel(legs[index])}`));
+      }
     });
     if (net.states) {
       const receipts = Object.values(net.states).map(state => num(state.net_receipt_usd)).filter(Number.isFinite);
-      if (receipts.length) summary.append(el('span', `${cash(Math.min(...receipts))} lowest modeled payout`));
+      if (receipts.length) summary.append(el('span', `${money(Math.min(...receipts))} lowest payout · ${money(net.minimum_net_profit_usd)} worst modeled profit/loss`));
     }
   } else summary.append(el('span', evidenceReason(net?.reason || 'pair_settlement_unverified')));
   content.append(summary);
@@ -306,15 +327,20 @@ function orderedMarkets(groups) {
   });
 }
 
-export function gameMatrix(groups, context, {includeAlternates, market}) {
+export function gameMatrix(groups, context, {includeAlternates, market, selectedLine}) {
   const visible = orderedMarkets(groups).filter(group => !group.withdrawn
     && (!market || market === group.market.market)
-    && (includeAlternates || group.offers.some(offer => offer.alternate !== true)));
+    && (group.id === selectedLine || includeAlternates || group.offers.some(offer => offer.alternate !== true)));
   const allOffers = visible.flatMap(group => group.offers);
   const box = el('section', null, 'odds-card');
+  const linked = visible[0] || groups[0];
+  if (linked) {
+    box.dataset.gameKey = linked.game_key;
+    if (linked.source_event) box.dataset.sourceEvent = linked.source_event;
+  }
   const header = el('header');
   header.append(el('h2', context.gameTitle || 'Full-game markets'), el('p', `${visible.length} exact ${visible.length === 1 ? 'outcome' : 'outcomes'}`, 'desk-meta'));
-  if (context.showGameLink && groups[0]) header.append(context.gameLink(groups[0]));
+  if (context.showGameLink && linked) header.append(context.gameLink(linked));
   box.append(header);
   if (!visible.length) {
     box.append(el('p', 'No prices match these market filters.', 'matrix-empty'));
@@ -337,29 +363,37 @@ export function gameMatrix(groups, context, {includeAlternates, market}) {
     const tr = body.insertRow();
     tr.dataset.groupId = group.id;
     const side = heading(context.position(lead), 'row');
-    side.append(el('small', `${group.offers.every(offer => offer.alternate === true) ? 'Alternate ' : ''}${name(group.market.market)} · Full game`));
+    const period = group.market.period === 'full_game' ? 'Full game' : name(group.market.period);
+    side.append(el('small', `${group.offers.every(offer => offer.alternate === true) ? 'Alternate ' : ''}${name(group.market.market)} · ${period}`));
+    if (group.id === selectedLine) {
+      tr.classList.add('selected-game-line');
+      side.append(el('small', 'Selected line'));
+    }
     if (settlementLabel(group)) side.append(el('small', settlementLabel(group)));
     tr.append(side);
     const currentPayouts = group.offers.filter(offer => offer.current).map(offer => num(offer.odds?.decimal));
     const highestPayout = Math.max(...currentPayouts);
     for (const [venue] of columns) {
       const cell = tr.insertCell();
-      for (const offer of group.offers.filter(candidate => venueKey(candidate) === venue && (includeAlternates || candidate.alternate !== true))) {
+      for (const offer of group.offers.filter(candidate => venueKey(candidate) === venue
+        && (group.id === selectedLine || includeAlternates || candidate.alternate !== true))) {
         cell.append(quote(offer, group, context, offer.current && offer.odds?.decimal != null
           && num(offer.odds.decimal) === highestPayout ? 'desk-best' : '', false));
       }
-      if (!cell.hasChildNodes()) cell.append(el('span', '—', 'desk-meta'));
+      if (!cell.hasChildNodes()) noQuote(cell, name(venue));
     }
     for (const book of books) {
-      tr.insertCell().append(sportsbookCell(group, book, reference, context.checkedAt));
+      tr.insertCell().append(sportsbookCell(group, book, reference, context.checkedAt, context.mode));
     }
     const value = tr.insertCell();
     if (lead.value != null) {
       const calculation = button(percent(lead.value), () => context.inspectOffer(lead, group), `opportunity-link ${tone(lead.value)}`);
       calculation.dataset.calculationId = lead.id;
-      value.append(calculation, el('small', venueLabel(lead)));
+      value.append(calculation, el('small', `${venueLabel(lead)} · ${context.mode ? 'At capture' : 'Current EV'}`));
     } else value.append(el('small', quoteReason(lead)));
   }
-  box.append(scrollTable(table, 'Venue and sportsbook odds'), el('p', 'Highlighted venue odds show the highest current payout. A dash means no quote is shown. Turn on Last-known prices to include retained quotes.', 'matrix-legend desk-meta'));
+  box.append(scrollTable(table, 'Venue and sportsbook odds'), el('p',
+    'Highlighted venue odds show the highest current payout. A dash means there is no displayed quote from that site for the exact outcome.'
+    + (context.lastKnown || context.mode ? '' : ' Turn on Last-known prices to include retained quotes.'), 'matrix-legend desk-meta'));
   return box;
 }

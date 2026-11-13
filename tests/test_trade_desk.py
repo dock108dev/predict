@@ -5,7 +5,7 @@ from unittest.mock import Mock, patch
 
 from app.comparison.ordinary_arb import DEFAULT_FUNDING, evaluate as evaluate_arb
 from app.comparison.snapshot_math import before_fee_pair
-from app.dashboard.trade_desk import add_sgo_prices, page
+from app.dashboard.trade_desk import add_sgo_prices, game_source_key, page
 from app.storage.store import hashed, stamp
 from app.storage.comparison_snapshot import before_fee_pairs
 
@@ -124,6 +124,29 @@ class TradeDesk(TestCase):
         self.assertEqual(len(first['rows']), 2)
         selected = page(data, {'browse_odds': '1', 'game_key': 'other'}, options)
         self.assertEqual([row['game_key'] for row in selected['rows']], ['other'])
+
+    def test_game_link_follows_exact_original_contract_through_occurrence_rekey(self):
+        selected = dict(quote('original', 'kalshi'), source=dict(provider='kalshi', native_event_id='event',
+                        native_market_id='market', native_outcome_id='side', native_side='yes'))
+        options = ('ev', None, 0, 10)
+        origin = page(result(selected), {'basis': 'before'}, options)['rows'][0]
+        self.assertEqual(origin['game_source'], game_source_key(selected))
+        revised = dict(selected, id='revised', game_key='replacement')
+        same_title = dict(quote('different', 'polymarket_us'), game_key='different-matchup')
+        query = dict(browse_odds='1', game_key=origin['game_key'], game_source=origin['game_source'],
+                     source_event=origin['source_event'], line=origin['id'])
+        replacement = page(result(revised, same_title), query, options)
+        self.assertEqual(replacement['selected_game_key'], 'replacement')
+        self.assertEqual(replacement['selected_line_id'], replacement['rows'][0]['id'])
+        self.assertEqual(replacement['rows'][0]['offers'][0]['id'], 'revised')
+        ambiguous = page(result(revised, dict(selected, game_key='also-replacement')), query, options)
+        self.assertEqual(ambiguous['rows'], [])
+        remaining = dict(revised, id='another-line', source=dict(revised['source'], native_outcome_id='other-side'),
+                         selection=dict(revised['selection'], signed_line='-3.5'))
+        matchup = page(result(remaining, same_title), query, options)
+        self.assertEqual(matchup['selected_game_key'], 'replacement')
+        self.assertIsNone(matchup['selected_line_id'])
+        self.assertEqual([row['game_key'] for row in matchup['rows']], ['replacement'])
 
     def test_sportsbook_mode_keeps_rank_separate_from_qualified_ev(self):
         first = quote('sgo', 'novig')

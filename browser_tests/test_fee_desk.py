@@ -218,7 +218,9 @@ def run(browser, width, output):
     assert drawer.evaluate("(el) => el.scrollWidth <= el.clientWidth")
     drawer.screenshot(path=output / f"ev-drawer-{width}.png")
     tab.goto(base + "/arbs")
-    expect(tab.get_by_text("$10.17 worst modeled result")).to_be_visible()
+    expect(
+        tab.get_by_text("$10.17 worst modeled profit/loss", exact=False)
+    ).to_be_visible()
     expect(tab.get_by_text("Net payoff unavailable")).to_be_visible()
     inspect = tab.get_by_role("button", name="View payoff calculation ↗").first
     inspect.press("Enter")

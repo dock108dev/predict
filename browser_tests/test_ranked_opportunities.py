@@ -312,6 +312,7 @@ def test_ranked_and_browse_journey(width, tmp_path):
     unavailable = False
     hide_game_prices = False
     replacement = "stable"
+    withdraw_selection = False
     selection_reads = 0
     pair_replacement = "original"
     pair_reads = 0
@@ -386,6 +387,9 @@ def test_ranked_and_browse_journey(width, tmp_path):
                 )
             )
         elif url.path == "/api/comparison-current/selection":
+            if withdraw_selection:
+                route.fulfill(json={"row": None})
+                return
             selected = detroit["offers"][0]
             selection_reads += 1
             row = dict(
@@ -451,7 +455,7 @@ def test_ranked_and_browse_journey(width, tmp_path):
                 [
                     "Denver to cover -2.5Alternate Spread · Full game",
                     "Minnesota to cover +2.5Alternate Spread · Full game",
-                    "Denver to cover +2.5Spread · Full game",
+                    "Denver to cover +2.5Spread · Full gameSelected line",
                     "Minnesota to cover -2.5Spread · Full game",
                     "Denver to cover +3.5Alternate Spread · Full game",
                 ]
@@ -475,7 +479,7 @@ def test_ranked_and_browse_journey(width, tmp_path):
             hide_game_prices = True
             tab.get_by_role("button", name="Refresh list").click()
             expect(
-                tab.get_by_role("heading", name="No current prices match these filters")
+                tab.get_by_role("heading", name="No prices available for this matchup")
             ).to_be_visible()
             expect(tab.get_by_role("heading", name=DENVER)).to_be_visible()
             tab.get_by_label("Last-known prices").check()
@@ -500,6 +504,56 @@ def test_ranked_and_browse_journey(width, tmp_path):
             tab.get_by_role("link", name="Find my game ↗").click()
             expect(tab.get_by_role("heading", name=DETROIT)).to_be_visible()
             quote_button = tab.locator('[data-offer-id="pmus-detroit"]')
+            tab.get_by_role("button", name="Filters", exact=True).click()
+            tab.get_by_role("dialog", name="Filter results").get_by_label(
+                "Winner"
+            ).uncheck()
+            tab.get_by_role("dialog", name="Filter results").get_by_label(
+                "Total"
+            ).uncheck()
+            tab.get_by_role("button", name="Done").click()
+            expect(
+                tab.get_by_role("button", name="Clear Spread filter")
+            ).to_be_visible()
+            tab.locator(".odds-card").filter(has_text=DENVER).get_by_role(
+                "link", name="Open game ↗"
+            ).click()
+            expect(
+                tab.get_by_role("button", name="Spreads", exact=True)
+            ).to_have_attribute("aria-pressed", "true")
+            tab.get_by_role("navigation", name="Current view").get_by_role(
+                "link", name="Back"
+            ).click()
+            expect(
+                tab.get_by_role("button", name="Clear Spread filter")
+            ).to_be_visible()
+            tab.locator(".odds-card").filter(has_text=DENVER).get_by_role(
+                "link", name="Open game ↗"
+            ).click()
+            tab.go_back()
+            expect(
+                tab.get_by_role("button", name="Clear Spread filter")
+            ).to_be_visible()
+            tab.get_by_role("button", name="Clear Spread filter").click()
+            tab.locator('[data-calculation-id="pmus-denver"]').press("Enter")
+            expect(tab.locator("#trade [data-inspection-ev]")).to_have_text(
+                "Current at inspection"
+            )
+            withdraw_selection = True
+            with tab.expect_response(
+                lambda response: (
+                    urlparse(response.url).path == "/api/comparison-current/selection"
+                )
+            ):
+                tab.evaluate("document.getElementById('refresh-list').click()")
+            expect(tab.locator("#trade [data-inspection-price]")).to_have_text(
+                "Last known · pinned"
+            )
+            expect(tab.locator("#trade [data-inspection-ev]")).to_have_text(
+                "Last known EV · pinned"
+            )
+            withdraw_selection = False
+            tab.keyboard.press("Escape")
             quote_button.press("Enter")
             drawer = tab.get_by_role("dialog", name="Polymarket US · Over 205.5")
             expect(drawer.get_by_text("$0.81 per $1 payout")).to_be_visible()

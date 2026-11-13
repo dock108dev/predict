@@ -54,6 +54,10 @@ def first_use(tab, base):
     offer.press("Enter")
     trade = tab.get_by_role("dialog", name="Novig · Harbor Foxes to win")
     expect(trade).to_contain_text("Original price")
+    expect(trade).to_contain_text("Fictional trading fee")
+    expect(trade).to_contain_text("1.00% of the acquisition cost")
+    expect(trade).not_to_contain_text("undefined")
+    expect(trade).to_contain_text("returns $22.00 total, including $12.00 profit")
     expect(trade.get_by_role("button", name="Use latest prices")).to_be_hidden()
     tab.keyboard.press("Escape")
     expect(offer).to_be_focused()
@@ -66,6 +70,18 @@ def first_use(tab, base):
     pair = tab.get_by_role("dialog", name="Arbitrage calculation")
     expect(pair).to_contain_text("Harbor Foxes")
     expect(pair).to_contain_text("Summit Owls")
+    expect(pair).to_contain_text("Worst modeled profit/loss")
+    expect(pair).to_contain_text("-$4.097")
+    expect(pair).to_contain_text("Lowest payout")
+    expect(pair).to_contain_text("$97.46")
+    expect(inspect.locator("xpath=ancestor::article")).not_to_contain_text(
+        "Unavailable on"
+    )
+    pair.get_by_role("button", name="Inspect offer and fees").first.click()
+    expect(trade).to_contain_text(
+        "Fictional fee for this pairing · $0.443 at fill on $44.30"
+    )
+    trade.get_by_role("button", name="Back to pairing").click()
     tab.keyboard.press("Escape")
     expect(inspect).to_be_focused()
 

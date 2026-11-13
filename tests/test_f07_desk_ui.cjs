@@ -36,7 +36,8 @@ async function check() {
     {...group, sportsbook_quotes:{fanduel:[{price_american:'+105', current:false, source_at:'2026-11-10T14:00:00Z'}]}},
     details[old.id + ':old'], {position:'Fixture', checkedAt:'2026-11-10T15:00:00Z'});
   assert.match(before.textContent, /At fill/);
-  assert.match(before.textContent, /Quote updated 8s ago · Est. \$0.01 fee for 1 \$1-payout contract/);
+  assert.match(before.textContent, /Current at inspection · Quote updated 8s ago/);
+  assert.match(before.textContent, /Est. \$0.01 fee for 1 \$1-payout contract/);
   assert.match(before.textContent, /FanDuel\+105.*Last known/);
   assert.doesNotMatch(before.textContent, /Pinnacle/);
   assert.match(before.textContent, /Modeled size1 \$1-payout contract/);
@@ -138,7 +139,7 @@ async function check() {
     assert.match(drawer.textContent, /Acquisition cost\$55\.56/);
     assert.match(drawer.textContent, /Fee at fill\$0\.93/);
     assert.doesNotMatch(drawer.textContent, /Executable size is unverified/);
-    if (row.pairs[0].retail_payoff.available) assert.match(drawer.textContent, /Minimum modeled net payoff\$10\.17/);
+    if (row.pairs[0].retail_payoff.available) assert.match(drawer.textContent, /Worst modeled profit\/loss\$10\.17Lowest payout/);
     else assert.match(drawer.textContent, /Both leg fees are needed/);
   }
   const lines = Object.fromEntries(feeCensusLines(census));

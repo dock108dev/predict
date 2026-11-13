@@ -8,9 +8,10 @@ from app.comparison.sgo_reference import BEST_BOOKS, BEST_VERSION, NAMED_VERSION
 from app.comparison.ordinary_arb import current_payoff
 from app.comparison.game_phase import PREGAME_SPORTSBOOK_SECONDS
 from app.storage.comparison_snapshot import expand_row
+from app.storage.current_rows import contract_id
 from app.storage.store import hashed, stamp
 from .local_security import PublicRequestError
-from .snapshot_display import comparison_groups, decimal, odds, outcome_key, ranking_value, search_index
+from .snapshot_display import comparison_groups, decimal, odds, outcome_id, outcome_key, ranking_value, search_index
 
 
 EV_METRIC = 'conditional_return_percent'
@@ -62,6 +63,27 @@ def filters(query):
     return zone, day, minimum, dollars, stake
 
 
+def unavailable_calculation(row, metric, *, sportsbook_updates_paused=False):
+    reference = row.get('reference_calculation') or {}
+    reasons = row.get('current_reasons', [])
+    if not row.get('price_current'):
+        return 'Price expired' if 'source_expired' in reasons else 'Price unavailable'
+    if metric == SPORTSBOOK_METRIC:
+        return 'sportsbook_baseline_unavailable'
+    if row.get('probability_missing') == 'finance_pending' or 'finance_pending' in reasons:
+        return 'Calculation pending'
+    if not reference.get('available') and reference.get('method') == BEST_VERSION:
+        if sportsbook_updates_paused:
+            return 'sgo_charge_unresolved'
+        if reference.get('reason'):
+            return reference['reason']
+    reasons_by_metric = {'conditional_return_percent':'after_trade_fee_ev',
+                         'conservative_return_percent':'conservative_trade_fee_ev',
+                         'gross_return_percent':'before_fee_ev'}
+    unavailable = row.get('metric_status', {}).get(reasons_by_metric.get(metric), {}).get('reasons', [])
+    return ', '.join(unavailable) or row.get('snapshot_benchmark_reason') or 'exact_reference_pair_unavailable'
+
+
 def offer(original, metric=None, *, sportsbook_updates_paused=False):
     row = expand_row(original)
     price = row['original']
@@ -77,27 +99,7 @@ def offer(original, metric=None, *, sportsbook_updates_paused=False):
     value = ranking_value(row, metric, current=True) if metric and (
         metric == SPORTSBOOK_METRIC or ref_venue == 'pinnacle' or sgo_reference) else None
     reasons = row.get('current_reasons', [])
-    reason = None
-    if metric and value is None:
-        if not row.get('price_current'):
-            reason = 'Price expired' if 'source_expired' in reasons else 'Price unavailable'
-        elif row.get('probability_missing') == 'finance_pending' or 'finance_pending' in reasons:
-            reason = 'Calculation pending'
-        elif metric == SPORTSBOOK_METRIC:
-            reason = row.get('snapshot_benchmark_reason') or 'sportsbook_baseline_unavailable'
-        else:
-            reasons_by_metric={'conditional_return_percent':'after_trade_fee_ev','conservative_return_percent':'conservative_trade_fee_ev','gross_return_percent':'before_fee_ev'}
-            unavailable=row.get('metric_status',{}).get(reasons_by_metric.get(metric),{}).get('reasons',[])
-            reason = ', '.join(unavailable) or row.get('snapshot_benchmark_reason') or 'exact_reference_pair_unavailable'
-    if (reason and row.get('price_current') and reason != 'Calculation pending'
-            and not reference.get('available') and reference.get('method') == BEST_VERSION
-            and reference.get('reason')):
-        reason = reference['reason']
-    if reason and metric != SPORTSBOOK_METRIC and sportsbook_updates_paused and row.get('price_current') and (
-            not reference.get('available') and reference.get('method') == BEST_VERSION):
-        reason = 'sgo_charge_unresolved'
-    if metric == SPORTSBOOK_METRIC and value is None and row.get('price_current'):
-        reason = 'sportsbook_baseline_unavailable'
+    reason = unavailable_calculation(row, metric, sportsbook_updates_paused=sportsbook_updates_paused) if metric and value is None else None
     gross=ranking_value(row,'gross_return_percent',current=True)
     reviewed=ranking_value(row,'conditional_return_percent',current=True)
     conservative=ranking_value(row,'conservative_return_percent',current=True)
@@ -146,6 +148,20 @@ def offer(original, metric=None, *, sportsbook_updates_paused=False):
 def direct_venue_offer(row):
     provider = (row.get('source') or {}).get('provider')
     return row['venue'] not in ('kalshi', 'polymarket_us') or provider in (None, row['venue'])
+
+
+def game_source_key(row):
+    source = row.get('source') or {}
+    if any(not source.get(key) for key in ('provider', 'native_event_id', 'native_market_id', 'native_outcome_id')):
+        return None
+    return contract_id(dict(quote=row))
+
+
+def source_event_key(row):
+    source = row.get('source') or {}
+    if source.get('provider') and source.get('native_event_id'):
+        return hashed([source['provider'], row['league'], source['native_event_id']])
+    return None
 
 
 def sportsbook_selection(offer, roles):
@@ -315,13 +331,33 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
     show_retained = query.get('last_known') == '1' or (
         not (browse or ranked) and 'last_known' not in query)
     leagues, families, venues = (set(query.get(key, '').split(',')) - {''} for key in ('league', 'family', 'venue'))
+    game_key = query.get('game_key')
+    # A published occurrence can acquire a stronger identity on refresh.
+    # A linked line follows its exact contract, while a matchup can also
+    # follow an unambiguous provider event after one contract drops out.
+    game_source = query.get('game_source')
+    source_event = query.get('source_event')
+    if browse and game_key and (game_source or source_event):
+        replacement = set()
+        event_matches = set()
+        for row in result['rows']:
+            if not direct_venue_offer(row):
+                continue
+            if game_source and game_source_key(row) == game_source:
+                replacement.add(row['game_key'])
+            if source_event and source_event_key(row) == source_event:
+                event_matches.add(row['game_key'])
+        if not replacement and game_key not in event_matches:
+            replacement = event_matches
+        if len(replacement) == 1:
+            game_key, = replacement
 
     def matches(row):
         market = row['market']
         local = datetime.fromisoformat(row['start_at']).astimezone(zone) if (
             day or query.get('time_from') or query.get('time_to')) else None
         return (phase_matches(row, phase, read_at)
-                and (not query.get('game_key') or row['game_key'] == query['game_key'])
+                and (not game_key or row['game_key'] == game_key)
                 and (not leagues or row['league'] in leagues) and (not families or market['market'] in families)
                 and (phase == 'pregame' or not query.get('period') or market['period'] == query['period'])
                 and (not day or local.date() == day)
@@ -355,6 +391,7 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
     eligible_pair_count = None
     pair_status = {}
     calculation_reason = None
+    calculation_missing = []
     sportsbook_updates_paused = (result['publication'].get('sources', {}).get('sportsgameodds', {})
                                 .get('reason_code') == 'sgo_charge_unresolved')
     if view == 'arbs':
@@ -405,7 +442,7 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
             calculation_reason = 'Current opposing pairs need applicable fees at the modeled size.'
         elif expired_pairs:
             calculation_reason = 'A previously matched pair lost a current leg.'
-        elif any(row.get('price_current') for row in rows):
+        elif any(row.get('price_current') for row in selected_rows):
             calculation_reason = 'No verified opposing pair has two current prices.'
     else:
         # Old benchmark settings govern their own data source. A proved SGO
@@ -426,17 +463,21 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
             rows = selected_rows
     matched_outcome_count = len(groups)
     ranked_group_count = sum(g['score'] is not None for g in groups)
-    if view != 'arbs' and not ranked_group_count and rows:
-        current = [row for row in rows if row.get('price_current')]
+    if ranked and view != 'arbs' and not ranked_group_count and selected_rows:
+        current = [row for row in selected_rows if row.get('price_current')]
         aggregate = result['publication'].get('sources', {}).get('sportsgameodds', {})
-        if sportsbook_updates_paused and metric != SPORTSBOOK_METRIC:
-            calculation_reason = 'Sportsbook price updates are paused. Current exchange prices are available in Find my game.'
-        elif current and all(row.get('probability_missing') == 'finance_pending' for row in current):
+        if current and all(row.get('probability_missing') == 'finance_pending' for row in current):
             calculation_reason = 'Current prices are waiting for calculation publication.'
-        elif current and aggregate.get('state') == 'held':
+        elif current and metric != SPORTSBOOK_METRIC and aggregate.get('state') == 'held' and not sportsbook_updates_paused:
             calculation_reason = 'The sportsbook reference source is on hold.'
         elif current:
-            calculation_reason = 'Current prices are missing an eligible sportsbook pair or fee for this basis.'
+            if metric == SPORTSBOOK_METRIC:
+                calculation_reason = 'No current same-line sportsbook pair for these offers.'
+            else:
+                reasons = [unavailable_calculation(expand_row(row), metric, sportsbook_updates_paused=sportsbook_updates_paused)
+                           for row in current]
+                calculation_missing = sorted({reason for group in reasons if group for reason in group.split(', ')})[:8]
+                calculation_reason = 'Current prices are missing inputs for the selected calculation.'
     groups = [g for g in groups if (not ranked or g['score'] is not None)
               and passes(Fraction(g['score']) if g['score'] is not None else None, g.get('retail_payoff'))]
     coverage = {}
@@ -460,10 +501,13 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
                           retail_payoff=pair['retail_payoff']) for pair in group['quotes']]
             summary['pairs'] = pairs
             summary['offers'] = [offer(by_id[id_]) for id_ in group['offer_ids']]
+            summary['game_line_id'] = outcome_id(outcome_key(by_id[pairs[0]['legs'][0]]))
             summary['pair_status'] = 'calculated' if group['score'] is not None else pairs[0]['retail_payoff']['reason']
         else:
             summary['offers'] = [offer(row, metric, sportsbook_updates_paused=sportsbook_updates_paused)
                                  for row in group['quotes']]
+            if query.get('group') == 'offer':
+                summary['game_line_id'] = outcome_id(outcome_key(group['quotes'][0]))
             summary['score_source'] = group['score_source']
             if len({row['venue'] for row in group['quotes']}) > 1:
                 identities = [(expand_row(row).get('same_outcome') or {}).get('key') for row in group['quotes']]
@@ -482,9 +526,16 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
                     candidates.update((book['venue'], book['inputs']) for book in reference.get('contributors', ())
                                       if book.get('inputs'))
                 for book, prices in candidates.items():
-                    if prices and prices[0] not in book_prices.setdefault(book, []):
-                        book_prices[book].append(prices[0])
+                    if prices:
+                        price = dict(prices[0], current=True)
+                        if price not in book_prices.setdefault(book, []):
+                            book_prices[book].append(price)
             summary['sportsbook_quotes'] = book_prices
+        target = (by_id[pairs[0]['legs'][0]] if view == 'arbs' else group['quotes'][0])
+        if source_key := game_source_key(target):
+            summary['game_source'] = source_key
+        if event_key := source_event_key(target):
+            summary['source_event'] = event_key
         return summary
 
     page_by_game = browse and not query.get('game_key') and view != 'arbs'
@@ -502,17 +553,27 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
     visible_groups = [group for game in selected for group in game.get('outcomes', [game])] if page_by_game else selected
     visible = [g if g.get('withdrawn') else present(g) for g in visible_groups]
     keys = {g['game_key'] for g in visible}
-    if browse and query.get('game_key'):
-        keys.add(query['game_key'])
+    if browse and game_key:
+        keys.add(game_key)
+    selected_line = None
+    if browse and game_key and (requested_line := query.get('line')):
+        selected_line = next((group['id'] for group in groups if group['id'] == requested_line), None)
+        if not selected_line and game_source:
+            matching_lines = {group['id'] for group in groups
+                              if any(game_source_key(quote) == game_source for quote in group['quotes'])}
+            if len(matching_lines) == 1:
+                selected_line, = matching_lines
     return dict(**({k:v for k,v in session.items() if k not in ('rows','state','total')} if session else {}),
                 state='ready', rows=visible, total=session['total'] if session else len(page_units), offset=offset, limit=limit,
                 page_count=len(selected),
                 games=[g for g in result.get('games', []) if g['game_key'] in keys],
+                selected_game_key=game_key if browse else None, selected_line_id=selected_line,
                 publication=result['publication'], basis=basis, phase=phase, coverage=coverage,
                 matched_offer_count=len(rows), retained_offer_count=sum(not r.get('price_current') for r in scoped_rows),
                 ranked_group_count=ranked_group_count, matched_outcome_count=matched_outcome_count,
                 eligible_pair_count=eligible_pair_count, pair_status=pair_status,
                 calculation_reason=calculation_reason if not ranked_group_count else None,
+                calculation_missing=calculation_missing if not ranked_group_count else [],
                 row_kind=('games' if page_by_game else
                           'offers' if view != 'arbs' and query.get('group') == 'offer' else 'outcomes'),
                 game_count=len({g['game_key'] for g in groups}),outcome_count=len(groups),

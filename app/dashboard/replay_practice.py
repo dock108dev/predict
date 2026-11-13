@@ -52,7 +52,9 @@ def practice(frame):
         # The practice calculator uses the same per-fill payoff path as the desk.
         rate = Fraction(settings['fees'][venue])
         row['trade_fee'] = dict(available=True, classification='synthetic',
-            evidence=dict(fictional_rate=wire(rate)), fee_cashflows=dict(at_fill_usd=wire(rate * cost)))
+            trade_fee_usd=wire(rate * cost), quantity='1', quantity_unit='USD payout contracts',
+            fill_count=1, evidence=dict(fictional_rate=wire(rate)),
+            fee_cashflows=dict(at_fill_usd=wire(rate * cost)))
         row['snapshot_benchmark'] = dict(bookmaker='pinnacle', selected=index, odds=['2', '2'])
         row['reference_calculation'] = dict(available=True, venue='pinnacle', selected=index,
             method='proportional_no_vig', probability='0.5', overround='0', fair_decimal_odds='2',

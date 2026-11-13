@@ -435,6 +435,8 @@ dialog::backdrop { background: #101b3180; }
 .matrix-reference small { color: inherit; }
 .odds-card .odds-matrix td { min-width: 4.7rem; }
 .matrix-legend, .matrix-empty { margin: .6rem 1rem; }
+.odds-matrix .selected-game-line > th { border-inline-start: 3px solid currentColor; }
+.quote-freshness { color: var(--muted); }
 .inspection-price-unit { display: block; font-weight: 500; }
 .inspection-columns { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); gap: 1rem; }
 .inspection-leg { margin-top: .45rem; border: 1px solid var(--rule); border-radius: 8px; padding: .5rem .6rem; }

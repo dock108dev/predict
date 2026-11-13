@@ -39,7 +39,7 @@ const reasonLabels = {
   sgo_native_catalog_phase_or_quote_unverified: 'The catalog could not verify this price for the current game phase.',
   sgo_native_live_fee_requires_signed_book: 'This in-game Novig price needs signed market and book evidence for its fee.',
   sgo_native_pregame_fee_terms_unverified: 'Novig did not supply applicable pregame fee terms for this contract.',
-  sgo_charge_unresolved: 'Sportsbook price updates are paused.',
+  sgo_charge_unresolved: 'SportsGameOdds sportsbook updates are paused.',
   sgo_reference_qualification_unavailable: 'No qualified same-line sportsbook pair.',
   'SportsGameOdds reference awaits verified occurrence, settlement and current contributor evidence': 'No qualified same-line sportsbook pair.',
   sgo_reference_occurrence_unverified: 'The exchange and sportsbook game link is unverified.',

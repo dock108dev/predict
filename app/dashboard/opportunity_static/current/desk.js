@@ -1,5 +1,5 @@
 import './ui-common.js';
-import {tradeInspection, pairInspection} from './desk-inspection.js';
+import {markPinned, tradeInspection, pairInspection} from './desk-inspection.js';
 import {arbCard, evCard, gameMatrix} from './opportunity-cards.js';
 import {pinLatestSelection, selectionCurrent, selectionIdentity} from './desk-evidence.js';
 import {evidenceReason} from './desk-reasons.js';
@@ -13,6 +13,9 @@ const route = new URLSearchParams(location.search);
 const arb = location.pathname === '/arbs' || replay && route.get('view') === 'arbs';
 const gameView = location.pathname === '/game' || replay && route.get('view') === 'game';
 const gameKey = gameView ? route.get('game_key') : null;
+const requestedLine = gameKey ? route.get('line') : null;
+const linkedTitle = gameKey ? route.get('matchup')?.slice(0, 160) : null;
+const linkedLine = requestedLine ? route.get('line_label')?.slice(0, 120) : null;
 const browse = ['/browse-odds', '/game'].includes(location.pathname) || replay && ['odds', 'game'].includes(route.get('view'));
 const opportunityView = !browse && !replay;
 const phase = !replay && (route.get('phase') === 'live' ? 'live'
@@ -29,6 +32,7 @@ const replayMode = () => !replay ? null : dataset === 'practice' ? 'Synthetic pr
 const pageSize = 25;
 const pageLimit = gameKey ? 100 : browse ? 5 : pageSize;
 const filters = $('filters');
+const browseFilterFields = ['league','family','venue','search','day','period','timezone','time_from','time_to','game_state'];
 const defaultZone = timezone();
 const selectedZone = () => filters.elements.timezone.value || defaultZone;
 const clock = at => savedClock(at, selectedZone());
@@ -44,7 +48,7 @@ function restoreFocus(target) {
   if (document.activeElement === document.body) target.focus({preventScroll:true});
 }
 
-$('title').textContent = gameKey ? 'Game odds' : browse ? 'Browse odds' : replay ? (arb ? 'Arbitrage' : 'Expected value') : 'Opportunities';
+$('title').textContent = gameKey ? linkedTitle || 'Game odds' : browse ? 'Browse odds' : replay ? (arb ? 'Arbitrage' : 'Expected value') : 'Opportunities';
 document.title = `Predict · ${$('title').textContent}`;
 $('stake-field').hidden = $('profit-field').hidden = !arb;
 $('basis-field').hidden = arb;
@@ -106,6 +110,7 @@ const evFilterKey = 'ev-filters';
 const filterKey = replay ? `replay-${dataset}-${browse ? 'odds' : arb ? 'arb' : 'ev'}-filters`
   : browse ? 'browse-filters' : phase === 'live' ? (arb ? 'live-arb-filters' : 'live-ev-filters')
     : arb ? 'arb-filters' : evFilterKey;
+const restored = window.history.state?.predictDesk;
 let saved;
 try { saved = JSON.parse(readPreference(filterKey, '{}')); } catch { saved = {}; }
 saved ||= {};
@@ -113,9 +118,10 @@ if (browse) {
   let ordinary = {};
   try { ordinary = JSON.parse(readPreference(evFilterKey, '{}')) || {}; } catch {}
   if (!replay) saved.basis = (phase === 'live' ? null : ordinary.basis) || saved.basis;
-  for (const key of ['league','family','venue','search','day','period','timezone','time_from','time_to','game_state']) {
+  for (const key of [...browseFilterFields, 'basis','last_known','alternates']) {
     if (route.has(key)) saved[key] = route.get(key);
   }
+  if (!gameKey && restored?.filters) Object.assign(saved, restored.filters);
   if (gameKey) {
     for (const key of ['league','family','venue','search','day','period','time_from','time_to','game_state']) delete saved[key];
   }
@@ -132,7 +138,9 @@ for (const key of ['search', 'day', 'sort', 'group', 'period', 'minimum', 'profi
 }
 filters.elements.positive.checked = !browse && saved.positive === 'on';
 filters.elements.last_known.checked = browse && (route.get('last_known') || saved.last_known) === '1';
+if (browse && saved.alternates != null) $('alternates').checked = saved.alternates === '1';
 let marketFamily = gameKey && ['winner','spread','total'].includes(route.get('family')) ? route.get('family') : '';
+let focusSelectedLine = Boolean(requestedLine);
 function marketTabs() {
   if (!browse || !gameKey) return;
   const tabs = $('market-tabs');
@@ -140,6 +148,7 @@ function marketTabs() {
   tabs.replaceChildren(...[['','All markets'],['winner','Winners'],['spread','Spreads'],['total','Totals']].map(([family, label]) => {
     const tab = button(label, () => {
       marketFamily = family;
+      focusSelectedLine = false;
       marketTabs();
       const current = [...tabs.children].find(item => item.getAttribute('aria-pressed') === 'true');
       current?.focus({preventScroll:true});
@@ -175,7 +184,11 @@ function selections() {
   if (browse) {
     for (const key of ['positive','minimum','profit','sort']) delete query[key];
     query.browse_odds = '1';
-    if (gameKey) query.game_key = gameKey;
+    if (gameKey) {
+      query.game_key = gameKey;
+      if (route.get('game_source')) query.game_source = route.get('game_source');
+      if (requestedLine) query.line = requestedLine;
+    }
   } else if (opportunityView) {
     query.ranked = '1';
     delete query.sort;
@@ -206,11 +219,15 @@ function position(offer, game) {
 }
 
 function tradeDetails() {
-  const {offer, group, game, evidence} = state.selected;
+  const {offer, group, game, evidence, pairContext} = state.selected;
   const label = position(offer, game);
   $('trade-title').textContent = `${siteName(offer)} · ${label}`;
   const mode = state.selected.historical ? 'Saved capture · prices at inspection time' : replayMode();
-  $('trade-body').replaceChildren(tradeInspection(offer, group, evidence, {mode, position:label, basis:state.selected.basis, checkedAt:state.selected.checkedAt}));
+  const leg = pairContext?.pair.legs.indexOf(offer.id);
+  const pairFee = pairContext?.pair.retail_payoff?.legs?.[leg];
+  const pairAcquisition = pairFee?.acquisition_usd ?? pairContext?.pair.inspection.legs[leg]?.allocation_usd;
+  $('trade-body').replaceChildren(tradeInspection(offer, group, evidence, {mode, position:label, basis:state.selected.basis,
+    checkedAt:state.selected.checkedAt, pinned:state.selected.pinned, pairLeg:!!pairContext, pairFee, pairAcquisition}));
   $('latest').hidden = replay;
   $('back-to-pair').hidden = !state.selected.pairContext;
 }
@@ -317,35 +334,78 @@ async function pinEvidence(offer){
 }
 
 function browsingLink(label, group, className) {
-  const query = new URLSearchParams();
-  const selected = selections();
-  if (phase) query.set('phase', phase);
-  if (group) {
-    if (filters.elements.last_known.checked) query.set('last_known', '1');
-    query.set('game_key', group.game_key);
-    if (!browse && group.id) query.set('line', group.id);
-    if (!browse && !arb && group.market.market) query.set('family', group.market.market);
-  } else {
-    for (const key of ['league','venue','family','search','day','period','timezone','time_from','time_to','game_state']) {
-      if (selected[key]) query.set(key, selected[key]);
-    }
-  }
-  query.set('back', location.pathname + location.search);
-  const destination = replay ? replayURL(group ? 'game' : 'odds') + '&' + query : `${group ? '/game' : '/browse-odds'}?${query}`;
-  const action = link(label, destination, className);
-  action.addEventListener('click', () => rememberView(group?.id, action));
+  const destination = () => browseDestination(group);
+  const action = link(label, destination(), className);
+  action.addEventListener('focus', () => { action.href = destination(); });
+  action.addEventListener('click', event => {
+    action.href = destination();
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    rememberView(browse ? group?.game_key : group?.id, action);
+  });
   return action;
 }
 
+function browsePreferences() {
+  return {...selections(), timezone:filters.elements.timezone.value,
+    last_known:filters.elements.last_known.checked ? '1' : '0', alternates:$('alternates').checked ? '1' : '0'};
+}
+
+function browseReturnRoute(selected) {
+  const url = new URL(location.href);
+  for (const key of [...browseFilterFields, 'basis','last_known','alternates']) {
+    url.searchParams.set(key, selected[key] ?? '');
+  }
+  return url;
+}
+
+function browseDestination(group) {
+  const query = new URLSearchParams();
+  const selected = selections();
+  if (phase) query.set('phase', phase);
+  if (filters.elements.last_known.checked) query.set('last_known', '1');
+  if (group) {
+    query.set('game_key', group.game_key);
+    query.set('matchup', group.game_title);
+    if (group.game_source) query.set('game_source', group.game_source);
+    if (group.source_event) query.set('source_event', group.source_event);
+    if (!browse && (group.game_line_id || group.id)) {
+      query.set('line', group.game_line_id || group.id);
+      const offer = group.pairs ? group.offers.find(item => item.id === group.pairs[0].legs[0]) : group.offers[0];
+      if (offer) {
+        query.set('family', offer.market.market);
+        query.set('line_label', position(offer));
+      }
+    } else if (selected.family && selected.family.split(',').length === 1) {
+      query.set('family', selected.family);
+    }
+    if (browse) {
+      query.set('alternates', $('alternates').checked ? '1' : '0');
+      query.set('last_known', filters.elements.last_known.checked ? '1' : '0');
+      query.set('basis', selected.basis);
+      query.set('timezone', filters.elements.timezone.value);
+    }
+  } else {
+    for (const key of browseFilterFields) {
+      if (selected[key]) query.set(key, selected[key]);
+    }
+  }
+  const returnRoute = browse && !gameKey ? browseReturnRoute(browsePreferences()) : new URL(location.href);
+  query.set('back', returnRoute.pathname + returnRoute.search);
+  return replay ? replayURL(group ? 'game' : 'odds') + '&' + query : `${group ? '/game' : '/browse-odds'}?${query}`;
+}
+
 function rememberView(groupId, action) {
-  const navigation = {offset:state.offset, scroll:window.scrollY, groupId, browseId:state.page?.browse_id,
-    openerHref:action.href};
-  window.history.replaceState({...window.history.state, predictDesk:navigation}, '');
+  const target = new URL(action.href);
+  const returnRoute = window.PredictUI.localURL(target.searchParams.get('back'));
+  const navigation = {offset:state.offset, groupId, browseId:state.page?.browse_id, openerHref:action.href,
+    sourceEvent:target.searchParams.get('source_event'), openerTop:action.getBoundingClientRect().top, filters:browsePreferences()};
+  window.history.replaceState({...window.history.state, predictDesk:navigation}, '', returnRoute?.href || location.href);
 }
 
 function cardContext(games, gameTitle = null) {
   return {
-    basis:filters.elements.basis.value, clock, checkedAt:state.page?.publication?.read_at, gameTitle, showWinPayout:browse, showGameLink:!gameKey, stableVenues:!replay,
+    basis:filters.elements.basis.value, clock, checkedAt:state.page?.publication?.read_at, gameTitle, mode:replayMode(),
+    lastKnown:filters.elements.last_known.checked, showGameLink:!gameKey, stableVenues:!replay,
     position:offer => position(offer),
     gameLink:group => browsingLink('Open game ↗', group, 'opportunity-link'),
     inspectOffer:(offer, group) => openTrade(offer, group, games.get(group.game_key)),
@@ -388,13 +448,17 @@ function emptyResults(page, publication) {
     title = 'No prices have loaded yet';
     detail = 'The desk will update after the data service publishes its first prices.';
   } else if (browse) {
-    title = 'No current prices match these filters';
-    detail = 'Check last-known prices or broaden the selection.';
+    title = gameKey ? 'No prices available for this matchup' : filters.elements.last_known.checked
+      ? 'No current or last-known prices match these filters' : 'No current prices match these filters';
+    detail = filters.elements.last_known.checked
+      ? (gameKey ? 'This matchup has no published prices for the selected phase or market.' : 'Try another market, matchup, or time window.')
+      : 'Turn on Last-known prices to check for retained quotes.';
   } else if (page.ranked_group_count && (positive.checked || thresholds)) {
     title = thresholds ? 'No results meet the return filters' : 'No positive results';
     detail = 'Clear the return filters to see evaluated results.';
     actions.append(clearReturns);
-  } else if (page.matched_offer_count === 0 && publication.current_prices) {
+  } else if (!page.calculation_reason && page.matched_offer_count === 0 && publication.current_prices
+      && (replay || filters.elements.search.value || $('filter-count').textContent !== '0')) {
     title = 'No offers match these filters';
     detail = 'Try another matchup or broaden your selection.';
     actions.append(button('Edit filters', () => $('open-filters').click()));
@@ -403,12 +467,14 @@ function emptyResults(page, publication) {
     const reason = page.pair_status || {};
     detail = page.calculation_reason || (reason.finance_pending ? 'An opposing pair is waiting for calculation publication.'
       : page.eligible_pair_count ? 'Current pairs are missing applicable fees or settlement evidence.'
-      : 'The current prices have no verified opposing pair.');
+      : page.matched_offer_count ? 'The current prices have no verified opposing pair.'
+        : `No current prices are available${phase === 'live' ? ' for live games' : phase === 'pregame' ? ' for pregame markets' : ''}.`);
   } else {
     title = 'No EV estimates available';
-    detail = page.calculation_reason || (publication.state === 'held' ? 'The reference source is on hold.'
-      : publication.current_prices ? 'Current prices are missing an eligible sportsbook reference for the selected basis.'
-      : 'Current offered prices are unavailable.');
+    detail = page.calculation_missing?.length ? evidenceReason(page.calculation_missing, page.calculation_reason) :
+      page.calculation_reason || (publication.state === 'held' ? 'The sportsbook reference source is on hold.'
+      : page.matched_offer_count ? 'Current prices are missing an eligible sportsbook reference for the selected basis.'
+        : `No current prices are available${phase === 'live' ? ' for live games' : phase === 'pregame' ? ' for pregame markets' : ''}.`);
   }
   if (!browse && !replay) actions.prepend(browsingLink('Find my game ↗', null, 'desk-action desk-primary'));
   if (replay || runtime?.healthy === false || runtime?.stopped || page.state === 'initializing') {
@@ -429,14 +495,17 @@ function render(page) {
   const games = new Map((page.games || []).map(game => [game.game_key, game]));
   const rows = page.rows || [];
   const total = page.total || 0;
+  const selectedLine = focusSelectedLine ? page.selected_line_id || requestedLine : null;
   if (gameKey) {
-    const matchup = games.get(gameKey);
-    const first = rows.find(row => !row.withdrawn);
-    const title = first?.game_title || matchup?.title;
+    const resolved = page.selected_game_key || gameKey;
+    const matchup = games.get(resolved);
+    const first = rows.find(row => !row.withdrawn && row.game_key === resolved);
+    const title = first?.game_title || linkedTitle || matchup?.title;
     if (title) {
       $('title').textContent = title;
-      $('desk-subtitle').textContent = `${first?.league || matchup?.league} · ${clock(first?.start_at || matchup?.start_at)}`;
-      $('desk-subtitle').hidden = false;
+      const start = first?.start_at || matchup?.start_at;
+      $('desk-subtitle').textContent = start ? `${first?.league || matchup?.league} · ${clock(start)}` : '';
+      $('desk-subtitle').hidden = !start;
       document.title = `Predict · ${title}`;
     }
   }
@@ -455,13 +524,17 @@ function render(page) {
   if (state.offset && !replay && !browse) notice.push(page.browse_order || 'Browsing order held.');
   if (rows.length && publication.data_runtime?.stopped) notice.push('Price updates are stopped.');
   if (rows.length && publication.data_runtime?.healthy === false) notice.push('The data service is unavailable. Last-known prices are labeled.');
-  if (browse && publication.sources?.sportsgameodds?.reason_code === 'sgo_charge_unresolved') {
-    notice.push(filters.elements.last_known.checked ? 'Sportsbook updates are paused. Retained prices are labeled Last known.'
-      : 'Sportsbook updates are paused. Turn on Last-known prices to see retained quotes.');
+  if (browse && ['sgo_charge_unresolved', 'updates_stopped'].includes(publication.sources?.sportsgameodds?.reason_code)
+      && !publication.data_runtime?.stopped && publication.data_runtime?.healthy !== false) {
+    notice.push(filters.elements.last_known.checked ? 'SportsGameOdds updates are paused. Its retained prices are labeled Last known.'
+      : 'SportsGameOdds updates are paused. Turn on Last-known prices to see its retained quotes.');
   }
   if (state.resetReason) notice.push(state.resetReason);
   $('notice').textContent = notice.join(' ');
   results.replaceChildren();
+  if (selectedLine && !page.selected_line_id && !rows.some(row => row.id === selectedLine && !row.withdrawn)) {
+    results.append(el('p', `${linkedLine || 'The selected line'} is unavailable for this matchup in the selected view.`, 'desk-note selected-line-unavailable'));
+  }
   if (opportunityView) {
     const action = browsingLink('Find my game ↗', null, 'desk-action');
     action.id = 'browse-link';
@@ -479,8 +552,10 @@ function render(page) {
       const first = gameRows[0];
       const context = cardContext(games, !gameKey && first.game_title);
       context.position = offer => position(offer, games.get(key));
-      results.append(gameMatrix(gameRows, context, {includeAlternates:$('alternates').checked, market:marketFamily}));
+      results.append(gameMatrix(gameRows, context, {includeAlternates:$('alternates').checked, market:marketFamily,
+        selectedLine}));
     }
+    if (!groups.size) results.append(emptyResults(page, publication));
   } else if (rows.length) {
     for (const group of rows) {
       if (group.withdrawn) {
@@ -505,19 +580,20 @@ function render(page) {
   $('previous').parentElement.hidden = !!gameKey || !total;
 }
 
-const restored = window.history.state?.predictDesk;
-const requestedLine = route.get('line');
 let restoreLocation = restored || (gameKey && requestedLine ? {groupId:requestedLine} : null);
 
 function restoreLocationAfterLoad() {
   if (!restoreLocation) return;
-  const {scroll, groupId, openerHref} = restoreLocation;
+  const {openerTop, groupId, openerHref, sourceEvent} = restoreLocation;
   restoreLocation = null;
-  const row = [...$('results').querySelectorAll('[data-group-id]')].find(item => item.dataset.groupId === groupId);
-  if (scroll != null) window.scrollTo(0, scroll);
-  else row?.scrollIntoView({block:'nearest'});
+  const targetId = (gameKey && state.page?.selected_line_id) || groupId;
+  const row = [...$('results').querySelectorAll('[data-group-id], [data-game-key]')].find(item =>
+    (item.dataset.groupId ?? item.dataset.gameKey) === targetId)
+    || (sourceEvent && [...$('results').querySelectorAll('[data-source-event]')].find(item => item.dataset.sourceEvent === sourceEvent));
   const opener = openerHref && [...document.querySelectorAll('main a')].find(item => item.href === openerHref && !item.hidden);
-  const target = opener || row?.querySelector('a,button');
+  const target = opener || row?.querySelector('a,button') || (openerHref && $('browse-link').href === openerHref && $('browse-link'));
+  if (target && openerTop != null) window.scrollBy(0, target.getBoundingClientRect().top - openerTop);
+  else row?.scrollIntoView({block:'nearest'});
   target?.focus({preventScroll:true});
 }
 
@@ -527,7 +603,17 @@ async function fetchPage(query, signal) {
   return response.json();
 }
 
-async function load(offset = state.offset) {
+let resultPointer = null;
+$('results').addEventListener('pointerdown', event => { resultPointer = event.pointerId; });
+for (const type of ['pointerup','pointercancel']) {
+  window.addEventListener(type, event => {
+    if (event.pointerId === resultPointer) resultPointer = null;
+  }, {capture:true});
+}
+window.addEventListener('blur', () => { resultPointer = null; });
+const usingResults = () => resultPointer != null || $('results').contains(document.activeElement);
+
+async function load(offset = state.offset, {background = false} = {}) {
   if (!filters.checkValidity() || !stake.value) return;
   state.request?.abort();
   const controller = new AbortController(); state.request = controller; refreshStatus();
@@ -539,10 +625,14 @@ async function load(offset = state.offset) {
   if (!state.page) $('notice').textContent = 'Loading prices…';
   try {
     const page = await fetchPage(query, controller.signal);
-    if (controller.signal.aborted) return;
+    if (controller.signal.aborted || background && (dialog.open || usingResults())) return;
     if (page.state === 'page_changed') {
       history.record('browsing_reset', {reason:page.reason});
       state.resetReason = page.reason;
+      if (restoreLocation) {
+        restoreLocation.offset = 0;
+        restoreLocation.browseId = null;
+      }
       return load(0);
     }
     if (gameKey && page.rows?.length && page.total > (page.page_count ?? page.rows.length)) {
@@ -560,6 +650,7 @@ async function load(offset = state.offset) {
       }
       page.rows = [...rows.values()];
     }
+    if (background && (dialog.open || usingResults())) return;
     state.page = page;
     state.offset = offset;
     state.lastChecked = new Date();
@@ -645,7 +736,8 @@ function applyFilters() {
   validateTimeWindow();
   refreshStatus();
   if (!filters.checkValidity() || !stake.value) return;
-  if (!gameKey) savePreference(filterKey, JSON.stringify({...selections(), timezone:filters.elements.timezone.value}));
+  if (browse && !gameKey) saveBrowsePreferences();
+  else if (!gameKey) savePreference(filterKey, JSON.stringify({...selections(), timezone:filters.elements.timezone.value}));
   if (arb) savePreference('stake', stake.value);
   if (browse && !replay) {
     let ordinary = {};
@@ -653,6 +745,14 @@ function applyFilters() {
     savePreference(evFilterKey, JSON.stringify({...ordinary, basis:filters.elements.basis.value}));
   }
   clearTimeout(debounce); debounce = setTimeout(() => load(0), 240);
+}
+
+function saveBrowsePreferences() {
+  const chosen = browsePreferences();
+  savePreference(filterKey, JSON.stringify(chosen));
+  // Keep this history entry current even if the user leaves by a different link.
+  const {predictDesk, ...otherState} = window.history.state || {};
+  window.history.replaceState(otherState, '', browseReturnRoute(chosen));
 }
 filters.addEventListener('submit', event => event.preventDefault());
 filters.addEventListener('input', applyFilters);
@@ -676,6 +776,7 @@ $('previous').onclick = () => load(Math.max(0, state.offset - pageLimit));
 $('next').onclick = () => load(state.offset + (state.page?.page_count ?? pageLimit));
 $('alternates').addEventListener('input', event => {
   event.stopPropagation();
+  if (browse && !gameKey) saveBrowsePreferences();
   if (state.page) render(state.page);
 });
 function pairIdentity(context) {
@@ -728,6 +829,23 @@ async function adoptPair(selection, isActive) {
 function adoptionNotice(selection, message) {
   selection.adoptionNotice = true;
   $('trade-note').textContent = message;
+  if (selection.offer) pinSelectionStatus(selection, priceExpired(selection.offer));
+}
+
+function priceExpired(offer) {
+  return !offer.current || (offer.current_until != null && Date.parse(offer.current_until) <= Date.now());
+}
+
+function pinSelectionStatus(selection, price) {
+  selection.pinned = {price:Boolean(price || selection.pinned?.price)};
+  markPinned($('trade-body'), selection.pinned);
+}
+
+function expireInspection() {
+  const selected = state.selected;
+  if (!replay && dialog.open && selected?.offer && !selected.historical && !selectionCurrent(selected.offer)) {
+    pinSelectionStatus(selected, priceExpired(selected.offer));
+  }
 }
 
 $('latest').onclick = async () => {
@@ -767,7 +885,8 @@ $('latest').onclick = async () => {
     if (next.state !== 'ready') return;
     const {offer, evidence, lease} = next;
     const {sportsbook_quotes: _, settlement_match: _match, ...group} = selection.group;
-    state.selected = {...selection, group, offer, evidence, lease, checkedAt:Date.now(), historical:false, retentionError:null};
+    state.selected = {...selection, group, offer, evidence, lease, checkedAt:Date.now(),
+      historical:false, pinned:null, retentionError:null};
     releaseEvidence(selection.lease);
     $('trade-note').textContent = '';
     tradeDetails();
@@ -793,7 +912,8 @@ dialog.addEventListener('close', () => {
 });
 async function checkSelection() {
   const selected = state.selected;
-  if (replay || !dialog.open || !selected || selected.adoptionNotice || $('latest').disabled) return;
+  if (replay || !dialog.open || !selected || selected.historical || selected.adoptionNotice || $('latest').disabled) return;
+  expireInspection();
   try {
     if (selected.pair) {
       const current = await readPair(selected);
@@ -810,23 +930,24 @@ async function checkSelection() {
     if (!response.ok) return;
     const {row} = await response.json();
     if (!dialog.open || selected !== state.selected || selected.adoptionNotice || $('latest').disabled) return;
-    if (selected.retentionError) {
-      $('trade-note').textContent = selected.retentionError;
-      return;
-    }
     const previous = selected.offer;
     let note = '';
     if (phase === 'pregame' && (row?.withdrawn_from_phase || Date.parse(selected.group.start_at) <= Date.now())) {
+      pinSelectionStatus(selected, true);
       note = row?.game_state === 'live' ? 'Game is live. The pregame capture remains pinned.'
         : row?.game_state === 'suspended' ? 'Game is suspended. The pregame capture remains pinned.'
         : row?.game_state === 'final' ? 'Game ended. The pregame capture remains pinned.'
         : 'Market left Pregame. The inspected capture remains pinned.';
-    } else if (!row?.current) note = 'Latest price is unavailable. Inspected evidence remains pinned.';
+    } else if (!row?.current) {
+      pinSelectionStatus(selected, true);
+      note = 'Latest price is unavailable. Inspected evidence remains pinned.';
+    }
     else if (selectionIdentity(row) !== selectionIdentity(previous)) {
+      pinSelectionStatus(selected, row.price_revision !== previous.price_revision);
       const change = row.odds?.decimal === previous.odds?.decimal ? 'Calculation evidence changed.' : 'Price changed.';
       note = `${change} Use latest prices to update the offer, fee and reference together.`;
     }
-    $('trade-note').textContent = note;
+    $('trade-note').textContent = [note, selected.retentionError].filter(Boolean).join(' ');
   } catch {}
 }
 $('session-export').onclick=()=>history.export();
@@ -845,7 +966,11 @@ document.addEventListener('visibilitychange',()=>history.record(document.hidden?
 load(restored?.offset ?? 0);
 openHistorical();
 setInterval(() => {
-  if (!replay && !state.request && !document.hidden && !$('results').contains(document.activeElement)) load();
+  expireInspection();
+  if (!replay && !state.request && !document.hidden) {
+    if (dialog.open) checkSelection();
+    else if (!usingResults()) load(state.offset, {background:true});
+  }
   refreshStatus();
 }, 6500);
 
