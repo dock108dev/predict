@@ -352,9 +352,6 @@ dialog::backdrop { background: #101b3180; }
 }
 .opportunities-app .desk-toggle input { min-height: 0; }
 .opportunities-app #group-field select { max-width: 12rem; }
-.opportunities-app .coverage-strip {
-  border: 0; padding: 0; margin: .85rem 0 .25rem; font-size: .8rem; font-weight: 650;
-}
 .opportunities-app .desk-refresh { margin: .35rem 0 .85rem; }
 .opportunities-app .desk-refresh button { font-size: .78rem; }
 .opportunities-app .desk-empty,
@@ -411,12 +408,25 @@ dialog::backdrop { background: #101b3180; }
   color: var(--accent); font-size: .83rem; font-weight: 680;
 }
 .opportunity-link:hover { text-decoration: underline; }
+.compact-ev { padding: .6rem .8rem; margin-bottom: .5rem; }
+.compact-ev .opportunity-card-header { align-items: center; margin-bottom: .45rem; }
+.compact-ev .opportunity-card-header h2 { font-size: 1.1rem; margin: 0; }
+.compact-ev .opportunity-card-header p { font-size: .78rem; margin: .12rem 0 0; }
+.compact-ev .opportunity-score { display: inline-flex; align-items: baseline; gap: .25rem; white-space: nowrap; border: 0; font-weight: 750; }
+.compact-ev-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .4rem .8rem; }
+.compact-prices { display: flex; flex-wrap: wrap; gap: .3rem; align-items: center; }
+.compact-prices .desk-offer, .compact-book {
+  display: inline-flex; align-items: baseline; gap: .3rem; padding: .22rem .4rem;
+  border: 1px solid var(--rule); border-radius: 6px; font-size: .76rem;
+}
+.compact-prices .desk-offer .p-odds, .compact-book .p-odds { font-size: .8rem; font-weight: 700; }
+.compact-ev-footer > a { white-space: nowrap; }
 .opportunity-arb .desk-expand button { display: block; }
 .arb-card-comparison { display: grid; grid-template-columns: minmax(0, 1fr) minmax(10.5rem, .3fr); gap: .55rem; }
 .arb-card-comparison .odds-scroll { border: 1px solid var(--rule); border-radius: 8px; }
 .odds-card { margin-bottom: 1rem; }
-.odds-card > header { position: relative; padding: .85rem 1rem .65rem; }
-.odds-card > header h2 { font-size: 1.6rem; margin-bottom: .15rem; }
+.odds-card > header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .35rem; padding: .55rem .75rem; }
+.odds-card > header h2 { font-size: 1.2rem; margin: 0; }
 .odds-card > header p { margin: 0; }
 .odds-card > header .opportunity-link { display: inline-block; margin-top: .15rem; }
 .odds-scroll { overflow: auto; max-width: 100%; }

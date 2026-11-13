@@ -74,7 +74,20 @@ def data():
     commission["trade_fee"] = outcome(
         commission, at=AT, phase="scheduled", review=terms
     )
-    ev = page(result(old, stale, commission), {}, ("ev", None, 0, 25))
+    old["original"] = dict(units="decimal_odds", value="2.5")
+    commission["original"] = dict(units="decimal_odds", value="2.5")
+    commission["game_key"] = "commission-game"
+    ev = page(result(old, commission), {}, ("ev", None, 0, 25))
+    # The fee drawer is available for a selected venue even when that venue
+    # lacks a qualified reference, provided the outcome itself qualifies.
+    for group in ev["rows"]:
+        group.update(
+            score="0",
+            sportsbook_quotes={
+                "fanduel": [dict(price_american="-110", current=True)],
+                "draftkings": [dict(price_american="-110", current=True)],
+            },
+        )
     proof = before_fee_pair(old, other, "pair-a")
     arb_input = dict(old, id="pair-a", legs=[old["id"], other["id"]], before_fees=proof)
     incomplete = deepcopy(arb_input)
@@ -199,7 +212,7 @@ def run(browser, width, output):
     base = "https://predict.fixture"
     tab.goto(base + "/ev")
     card = tab.locator('[data-offer-id="prophetx-offer"]')
-    expect(card).to_contain_text("An exact two-sided sportsbook match is missing")
+    expect(tab.locator('[data-calculation-id="commission"]')).to_contain_text("0.00%")
     commission = tab.locator('[data-offer-id="commission"]')
     assert tab.evaluate("document.documentElement.scrollWidth === innerWidth")
     commission.press("Enter")

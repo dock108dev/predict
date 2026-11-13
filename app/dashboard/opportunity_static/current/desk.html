@@ -32,7 +32,7 @@
         <label id="stake-field" hidden>Total stake before fees ($) <input name="stake" type="number" min="0.01" max="1000000" step="0.01" value="100"></label>
         <label id="positive-field" class="desk-toggle"><input name="positive" type="checkbox"> Positive only</label>
         <label id="last-known-field" class="desk-toggle" hidden><input name="last_known" type="checkbox" value="1"> Last-known prices</label>
-        <label id="alternates-field" class="desk-toggle" hidden><input id="alternates" type="checkbox" checked> Alternate lines</label>
+        <label id="alternates-field" class="desk-toggle" hidden><input id="alternates" type="checkbox"> Alternate lines</label>
         <button id="open-filters" type="button" aria-label="Filters" aria-haspopup="dialog">Filters<span id="filter-count" hidden></span></button>
       </div>
       <div class="filter-chips" id="active-filters" aria-label="Active filters" hidden></div>
@@ -66,16 +66,15 @@
         <div class="filter-footer"><button type="button" id="reset">Clear all</button><button type="button" id="filter-done" class="desk-primary">Done</button></div>
       </dialog>
     </form>
-    <p id="coverage-strip" class="coverage-strip" hidden></p>
     <p id="notice" class="desk-note" role="status"></p>
     <div class="desk-refresh">
-      <span id="refresh-status" class="desk-meta"></span>
+      <span id="free-view-note" class="desk-meta">Free view · Sportsbook quotes may be up to 15 minutes old.</span>
+      <span id="refresh-status" class="sr-only"></span>
       <button id="refresh-list" type="button">Refresh list</button>
     </div>
     <div id="results" aria-label="Sorted results"></div>
     <nav class="desk-pages" aria-label="Results pages">
       <button id="previous" type="button" disabled>Previous</button>
-      <span id="count"></span>
       <button id="next" type="button" disabled>Next</button>
     </nav>
     <footer class="desk-session"><a class="desk-action" id="replay-link" href="/replay?dataset=practice">Open replay</a> <button id="open-session" type="button" aria-haspopup="dialog">Session history</button></footer>

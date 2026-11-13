@@ -220,8 +220,25 @@ def fixtures():
         reason=None,
     )
     ev = [
-        group("ev-denver", DENVER, [denver, kalshi_denver], denver_ev),
-        group("ev-washington", WASHINGTON, [negative], "-3"),
+        group(
+            "ev-denver",
+            DENVER,
+            [denver, kalshi_denver],
+            denver_ev,
+            sportsbook_quotes={
+                "draftkings": [dict(price_american="-108", current=True)]
+            },
+        ),
+        group(
+            "ev-washington",
+            WASHINGTON,
+            [negative],
+            "-3",
+            sportsbook_quotes={
+                "fanduel": [dict(price_american="-108", current=True)],
+                "betmgm": [dict(price_american="-110", current=True)],
+            },
+        ),
     ]
     detroit_group = group("ev-detroit", DETROIT, [detroit, *other_detroit])
     denver_matrix = [
@@ -350,6 +367,10 @@ def test_ranked_and_browse_journey(width, tmp_path):
                 rows = deepcopy(
                     denver if query.get("game_key") == DENVER else [detroit, *denver]
                 )
+                if query.get("lines") == "main":
+                    rows = [
+                        row for row in rows if not row["offers"][0].get("alternate")
+                    ]
                 if query.get("last_known") == "1":
                     next(row for row in rows if row["id"] == "ev-denver")[
                         "offers"
@@ -357,6 +378,7 @@ def test_ranked_and_browse_journey(width, tmp_path):
             elif unavailable:
                 rows = []
             else:
+                assert query.get("lines") in ("main", "all")
                 rows = ev
             if query.get("game_key"):
                 rows = [row for row in rows if row["game_key"] == query["game_key"]]
@@ -439,9 +461,12 @@ def test_ranked_and_browse_journey(width, tmp_path):
             expect(cards.first).to_contain_text("+3.26%")
             expect(cards.first).to_contain_text("DraftKings")
             expect(cards.first).to_contain_text("-108")
-            expect(cards.first).to_contain_text("-112")
-            expect(cards.first).to_contain_text("-8.21%")
+            expect(cards.first).not_to_contain_text("Current")
+            expect(cards.first).not_to_contain_text("Comparison sportsbook")
+            expect(cards.first).not_to_contain_text("-112")
             expect(cards.last).to_contain_text("-3.00%")
+            expect(tab.get_by_text("Free view", exact=False)).to_have_count(1)
+            expect(tab.get_by_role("link", name="Arbitrage")).to_have_count(0)
             tab.screenshot(path=tmp_path / f"ranked-ev-{width}.png")
             tab.get_by_role("checkbox", name="Positive only").check()
             expect(cards).to_have_count(1)
@@ -451,14 +476,17 @@ def test_ranked_and_browse_journey(width, tmp_path):
             cards.first.get_by_role("link", name="Open game ↗").press("Enter")
             expect(tab.get_by_role("heading", name=DENVER)).to_be_visible()
             expect(tab.get_by_label("Calculation basis")).to_have_value("conservative")
+            expect(tab.get_by_label("Alternate lines")).not_to_be_checked()
+            expect(tab.locator(".odds-matrix tbody tr")).to_have_count(2)
+            tab.get_by_label("Alternate lines").check()
             expect(tab.locator(".odds-matrix tbody tr")).to_have_count(5)
             expect(tab.locator(".odds-matrix tbody th")).to_have_text(
                 [
-                    "Denver to cover -2.5Alternate Spread · Full game",
-                    "Minnesota to cover +2.5Alternate Spread · Full game",
-                    "Denver to cover +2.5Spread · Full gameSelected line",
-                    "Minnesota to cover -2.5Spread · Full game",
-                    "Denver to cover +3.5Alternate Spread · Full game",
+                    "Denver to cover -2.5",
+                    "Minnesota to cover +2.5",
+                    "Denver to cover +2.5",
+                    "Minnesota to cover -2.5",
+                    "Denver to cover +3.5",
                 ]
             )
             expect(tab.get_by_role("columnheader", name="Novig")).to_be_visible()
@@ -479,9 +507,7 @@ def test_ranked_and_browse_journey(width, tmp_path):
             expect(tab.locator(".odds-matrix tbody tr")).to_have_count(2)
             hide_game_prices = True
             tab.get_by_role("button", name="Refresh list").click()
-            expect(
-                tab.get_by_role("heading", name="No prices available for this matchup")
-            ).to_be_visible()
+            expect(tab.get_by_role("heading", name="No matching odds")).to_be_visible()
             expect(tab.get_by_role("heading", name=DENVER)).to_be_visible()
             tab.get_by_label("Last-known prices").check()
             expect(tab.locator('[data-offer-id="novig-denver"]')).to_contain_text(
@@ -497,7 +523,7 @@ def test_ranked_and_browse_journey(width, tmp_path):
             unavailable = True
             tab.get_by_role("button", name="Refresh list").click()
             expect(
-                tab.get_by_role("heading", name="No EV estimates available")
+                tab.get_by_role("heading", name="No matching EV comparisons")
             ).to_be_visible()
             expect(
                 tab.get_by_text("The sportsbook reference source is on hold.")

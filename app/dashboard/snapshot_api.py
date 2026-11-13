@@ -349,13 +349,20 @@ def mount(app):
                         row=None if row is None else presented(row,{r['id']:r for r in result['rows']}))
                 stage=monotonic()
                 if query.get('layout') == 'desk':
-                    from .trade_desk import add_public_prices, add_sgo_prices, page as desk_page
-                    out = desk_page(result, query, options, captured_pairs=captured_pairs, policy=policy, browsing=browsing)
-                    if out.get('state') == 'ready' and options[0] != 'arbs' and owner.get('config', {}).get('aggregate_provider') == 'sportsgameodds' and 'sportsgameodds' in states:
+                    from .trade_desk import add_public_prices, add_sgo_prices, desk_phase, page as desk_page
+                    def enrich(out, *, include_retained):
+                        if owner.get('config', {}).get('aggregate_provider') != 'sportsgameodds' or 'sportsgameodds' not in states:
+                            return
                         add_sgo_prices(db, out, result['rows'], states, at=at,
-                                       include_retained=query.get('last_known') == '1')
-                        if out.get('phase') != 'live':
-                            add_public_prices(out, owner, at=at, include_retained=query.get('last_known') == '1')
+                                       include_retained=include_retained)
+                        if desk_phase(query) != 'live':
+                            add_public_prices(out, owner, at=at, include_retained=include_retained)
+                    qualify = query.get('lines') in ('main', 'all') and (
+                        query.get('browse_odds') == '1' or query.get('ranked') == '1') and options[0] != 'arbs'
+                    out = desk_page(result, query, options, captured_pairs=captured_pairs, policy=policy,
+                                    browsing=browsing, enrich=enrich if qualify else None)
+                    if not qualify and out.get('state') == 'ready' and options[0] != 'arbs':
+                        enrich(out, include_retained=query.get('last_known') == '1')
                 else:
                     out = page(result, query, options=options)
                 if out.get('state')=='page_changed':return out

@@ -270,7 +270,7 @@ def stage_offer_quotes(db, rows, links):
         ON CONFLICT(id,revision) DO NOTHING''', (Jsonb(selected),))
 
 
-def read_event(db, event_id, *, limit=MAX_ROWS, bookmakers=None):
+def read_event(db, event_id, *, limit=MAX_ROWS, bookmakers=None, source_since=None):
     """Read one bounded event within the caller's coherent snapshot transaction."""
     if not isinstance(event_id, str) or not event_id or len(event_id) > 256:
         raise ValueError('sgo event identity')
@@ -278,8 +278,11 @@ def read_event(db, event_id, *, limit=MAX_ROWS, bookmakers=None):
         raise ValueError('sgo read capacity')
     params = (event_id,) if bookmakers is None else (event_id, list(bookmakers))
     book_filter = '' if bookmakers is None else ' AND bookmaker_id=ANY(%s)'
+    source_filter = '' if source_since is None else ' AND source_order >= %s'
+    if source_since is not None:
+        params += (exact_time(source_since.isoformat()),)
     rows = db.execute('SELECT id,revision,facts FROM current_sgo_reference WHERE event_id=%s'
-                      + book_filter + ' ORDER BY id LIMIT %s', (*params, limit + 1)).fetchall()
+                      + book_filter + source_filter + ' ORDER BY id LIMIT %s', (*params, limit + 1)).fetchall()
     if len(rows) > limit:
         raise ValueError('sgo event exceeds read capacity')
     return rows

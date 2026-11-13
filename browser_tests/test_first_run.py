@@ -42,7 +42,7 @@ def first_use(tab, base):
     ).to_be_visible()
     expect(tab.get_by_label("Calculation basis")).to_have_value("before")
     expect(tab.get_by_label("Odds format")).to_have_value("decimal")
-    expect(tab.locator("#refresh-status")).to_contain_text("UTC")
+    expect(tab.locator("#notice")).to_contain_text("UTC")
     search = tab.get_by_role("searchbox", name="Search teams")
     search.fill("no such team")
     expect(

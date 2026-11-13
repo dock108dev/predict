@@ -29,6 +29,52 @@ def result(*rows):
 
 
 class TradeDesk(TestCase):
+    def test_three_current_sites_per_exact_outcome_before_rank_and_pagination(self):
+        def spread(id_, venue, line, value, *, away=False, current=True):
+            row = quote(id_, venue, value=value, current=current)
+            row['market']['line'] = str(abs(Fraction(line)))
+            row['selection'].update(participant='away' if away else 'home', signed_line=line)
+            return row
+
+        data = result(
+            spread('thin-high', 'novig', '-7.5', '99'),
+            spread('thin-stale', 'polymarket_us', '-7.5', None, current=False),
+            spread('main-home', 'novig', '-2.5', '0'),
+            spread('main-away', 'novig', '2.5', '-3', away=True),
+            spread('main-away-kalshi', 'kalshi', '2.5', '-4', away=True),
+            spread('alt-home', 'novig', '-3.5', '10'),
+            spread('alt-other-side', 'novig', '3.5', '12', away=True),
+            spread('reversed-favorite', 'novig', '2.5', '11'),
+        )
+        data['games'] = [dict(game_key='game', participants=[dict(id='home', role='home'), dict(id='away', role='away')])]
+        def enrich(out, *, include_retained):
+            prices = dict(
+                fanduel=[dict(price_american='-110', current=True), dict(price_american='-105', current=True)],
+                draftkings=[dict(price_american='-110', current=True)],
+            )
+            for group in out['rows']:
+                lead = group['offers'][0]['id']
+                chosen = dict(prices)
+                if lead in ('thin-high', 'alt-other-side'):
+                    chosen['draftkings'] = [dict(price_american='-110', current=False)]
+                elif lead == 'main-home':
+                    chosen['betmgm'] = prices['draftkings']
+                group['sportsbook_quotes'].update(chosen)
+
+        query = {'layout':'desk', 'ranked':'1', 'phase':'', 'basis':'before', 'lines':'main', 'last_known':'1'}
+        def read(**changes):
+            return page(data, dict(query, **changes), ('ev', None, 0, 10), enrich=enrich)
+        first = page(data, query, ('ev', None, 0, 1), enrich=enrich)
+        self.assertEqual((first['total'], first['rows'][0]['score']), (2, '0'))
+        self.assertEqual(set(first['rows'][0]['sportsbook_quotes']), {'fanduel', 'draftkings', 'betmgm'})
+        self.assertEqual([g['score'] for g in read()['rows']], ['0', '-3'])
+        self.assertEqual([g['score'] for g in read(lines='all')['rows']], ['11', '10', '0', '-3'])
+        self.assertEqual(read(positive='on')['total'], 0)
+        alternate = read(lines='all')['rows'][1]['id']
+        game = read(browse_odds='1', ranked='0', game_key='game', line=alternate)
+        self.assertEqual(game['selected_line_id'], alternate)
+        self.assertEqual(game['total'], 3)
+
     def test_live_desk_prefers_direct_exchange_sources_even_with_retained_prices(self):
         direct = dict(quote('direct', 'kalshi'), source={'provider': 'kalshi'})
         aggregate = dict(quote('aggregate', 'kalshi'), source={'provider': 'sportsgameodds'})
