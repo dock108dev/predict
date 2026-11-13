@@ -53,6 +53,20 @@ def test_native_slots_advance_undelivered_games_without_losing_fair_work():
     assert order[:3]==['old','hot_k','hot_us']
 
 
+def test_sportsbook_candidates_cannot_jump_reserved_native_price_slots():
+    at=datetime(2026,11,8,tzinfo=timezone.utc)
+    pending=['old','aggregate','kalshi','polymarket','book1','book2','book3','book4']
+    scope={key:[key] for key in pending}
+    evidence=[dict(event_id='kalshi',venue='kalshi',at=at.isoformat()),
+              dict(event_id='polymarket',venue='polymarket_us',at=at.isoformat())]
+    native_slots=set()
+    order=prioritize_current(pending,scope,evidence,at,undelivered={'aggregate'},
+                             desk_matches={'book1','book2','book3','book4'},native_slots=native_slots)
+    assert order[:4]==['old','aggregate','kalshi','polymarket']
+    assert native_slots=={'kalshi','polymarket'}
+    assert set(order)==set(pending)
+
+
 def test_novig_fresh_slot_uses_the_live_quote_deadline():
     at=datetime(2026,11,8,tzinfo=timezone.utc)
     pending=['old','quiet','novig']

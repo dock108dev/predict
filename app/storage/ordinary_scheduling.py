@@ -47,7 +47,8 @@ def sgo_live_deliveries(pending, scope, evidence, at, undelivered):
         for index, key in enumerate(pending) if key in undelivered and any(e in clocks for e in scope[key]))]
 
 
-def prioritize_current(pending, scope, evidence, at, *, material=(), undelivered=(), live_deliveries=None):
+def prioritize_current(pending, scope, evidence, at, *, material=(), undelivered=(), live_deliveries=None,
+                       desk_matches=(), native_slots=None):
     """Reserve oldest and source slots, then alternate fair and fresh work.
 
     Preserve a fair rotation slot. A fresh explicit SGO live receipt can use
@@ -70,10 +71,11 @@ def prioritize_current(pending, scope, evidence, at, *, material=(), undelivered
     # fairness. This never promotes an expired quote or changes eligibility.
     first_delivery=[key for key in pending if key in undelivered and key not in order]
     if first_delivery and not live_first:order.append(first_delivery[0])
+    desk_matches=set(desk_matches)
     for venue, maximum_age in (('kalshi', 30), ('polymarket_us', 30), ('novig', LIVE_SECONDS), ('prophetx', ODDSLINK_LIVE_SECONDS)):
         recent={r['event_id']:stamp(r['at']) for r in evidence
             if r['venue']==venue and r['at'] and 0 <= (at-stamp(r['at'])).total_seconds() <= maximum_age}
-        candidates=[(key not in undelivered,key not in material,reference_events.isdisjoint(scope[key]),-max(recent[e].timestamp() for e in scope[key] if e in recent),index,key)
+        candidates=[(key not in undelivered,key not in material,key not in desk_matches and reference_events.isdisjoint(scope[key]),-max(recent[e].timestamp() for e in scope[key] if e in recent),index,key)
             for index,key in enumerate(pending) if key not in order and recent.keys() & set(scope[key])]
         for already_delivered,confirmation_only,no_reference,clock,index,key in candidates:
             rank=(already_delivered,confirmation_only,no_reference,clock,index)
@@ -81,7 +83,11 @@ def prioritize_current(pending, scope, evidence, at, *, material=(), undelivered
         # First delivery can also satisfy a native source slot. Prefer that
         # overlap before repeatedly refreshing an already-delivered hot game.
         # Oldest work and each source still retain their reserved turn.
-        if candidates:order.append(min(candidates)[-1])
+        if candidates:
+            key = min(candidates)[-1]
+            order.append(key)
+            if native_slots is not None and venue in ('kalshi', 'polymarket_us'):
+                native_slots.add(key)
     # Previously every slot after the source representatives went to old
     # rotation. Fresh books behind them could expire before their first seal.
     # Keep at least half the remaining slots for rotation (including API work),
@@ -89,7 +95,7 @@ def prioritize_current(pending, scope, evidence, at, *, material=(), undelivered
     scheduled=set(order)
     recent_order=iter(sorted(fresh,key=lambda key:(fresh[key],key)))
     delivery_order=iter(dict.fromkeys([*live_deliveries, *first_delivery]))
-    for key in pending:
+    for key in sorted(pending, key=lambda key: key not in desk_matches):
         if key in scheduled:continue
         order.append(key);scheduled.add(key)
         delivered=False

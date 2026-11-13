@@ -158,7 +158,8 @@ def pregame_sportsbooks(db, owner, states, at, *, frames=None):
         try:
             frame = read_event_frame(db, event)
             if frame and stamp(frame['facts']['received_at']) >= at - timedelta(minutes=15):
-                value = sgo_observation(frame, read_event(db, event, bookmakers=BEST_BOOKS), at=at, occurrence=key)
+                value = sgo_observation(frame, read_event(db, event, bookmakers=BEST_BOOKS,
+                    source_since=at - timedelta(minutes=15)), at=at, occurrence=key)
                 if value:
                     matches.setdefault(key, []).append(value)
         except (KeyError, ValueError):
@@ -678,6 +679,7 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
             capture_structure.clear();capture_materialization.clear()
         with db.transaction():
             db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
+            db.execute('SET LOCAL jit=off')
             epoch=str(db.execute('SELECT epoch FROM current_row_epoch').fetchone()['epoch'])
             settings=current_settings(db)
             owner,source_states=authority(db)
@@ -768,13 +770,17 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
         undelivered = {key for key in pending if awaiting_aggregate(old.get(key, {}).get('facts', {}),
             scope[key], aggregate_receipts, at)}
         live_deliveries = sgo_live_deliveries(pending, scope, native_evidence, at, undelivered)
+        native_slots=set()
         pending=prioritize_current(pending,scope,native_evidence,at,material={key for key in pending
             if old.get(key,{}).get('facts',{}).get('material_identity')!=material[key]},
-            undelivered=undelivered, live_deliveries=live_deliveries)
-        pending.sort(key=lambda key: not public_events.keys() & set(scope[key]))
+            undelivered=undelivered, live_deliveries=live_deliveries,
+            desk_matches={key for key in pending if public_events.keys() & set(scope[key])},
+            native_slots=native_slots)
         timings['planning_seconds']=round(monotonic()-started,6)
         work=[];errors=[];component_trace=[]
         live_first_price_seal = False
+        native_deadlines=[]
+        native_price_seal=False
         snapshots.prune(db)
         head_size=db.execute('''SELECT octet_length(r.result) n FROM comparison_publication p
             JOIN comparison_snapshot_result r ON r.id=p.result_id WHERE p.kind='live' AND p.id='' ''').fetchone()
@@ -785,6 +791,7 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
         # It cannot pin a second unpublished slate on each retry.
         with db.transaction():
             db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ')
+            db.execute('SET LOCAL jit=off')
             if removed:
                 db.execute("DELETE FROM comparison_publication WHERE kind='component' AND id=ANY(%s)",(list(removed),))
                 changed+=len(removed)
@@ -803,6 +810,7 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
                         and prior['facts'].get('finance')!='ready' and not fee_boundary_due(prior['facts'])):
                     input_id=db.execute('SELECT snapshot_id FROM comparison_snapshot_result WHERE id=%s',(prior['result_id'],)).fetchone()['snapshot_id']
                     work.append((key,input_id,dict(prior['facts'])))
+                    native_slots.discard(key)
                     continue
                 inputs=None;capture_diagnostics={};prior_parts=None;costs={}
                 current_dependencies=dependencies(db,scope[key],provider=reference_provider)
@@ -900,8 +908,17 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
                     live_first_price_seal = any(row.get('sportsbook_baseline')
                         and row['current_authority']['price'].get('lifecycle', {}).get('state') == 'live'
                         and not row['current_authority']['price']['reasons'] for row in price_result['rows'])
+                if native_slots:
+                    # Give both dedicated feeds their reserved turn. Once
+                    # captured, publish usable prices before more background
+                    # rotation consumes their short source-clock lifetime.
+                    native_deadlines.extend(stamp(price['current_until']) for row in price_result['rows']
+                        if (price := row['current_authority']['price']).get('provider') in ('kalshi','polymarket_us')
+                        and not price['reasons'] and price['current_until'])
+                    native_slots.discard(key)
+                    native_price_seal=not native_slots and any(deadline > stamp(utc()) for deadline in native_deadlines)
                 del inputs,price_result
-                if live_first_price_seal:
+                if not native_slots and (live_first_price_seal or native_price_seal):
                     break
             timings['capture_seconds']=round(monotonic()-capture_started,6)
             price_seal_started=monotonic()
@@ -918,6 +935,7 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
         checkpoint()
         with db.transaction():
             db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ')
+            db.execute('SET LOCAL jit=off')
             finance_started=monotonic()
             # An unavailable reference owner cannot produce current finance.
             # Keep original evidence in leased members and publish source prices;
@@ -977,6 +995,7 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
             capture_structure=capture_structure.metrics(),materialization=capture_materialization.metrics(),serviced_components=[key for key,_,_ in work],pending_components=len(pending),
             captured_components=len(work),finance_deferred_reason=None if finance_available else 'reference_source_unavailable',
             live_first_price_seal=live_first_price_seal,
+            native_price_seal=native_price_seal,
             published=bool(changed or computed),unchanged=not pending and not removed,computed=computed,errors=errors,
             remaining_components=max(0,len(pending)-(computed if finance_available else len(work))),expected_components=len(scope),
             generation=generation,price_generation=price_generation,price_published_at=price_published_at,
