@@ -130,6 +130,7 @@ def run(browser, width, output):
         service_workers="block",
     )
     tab = context.new_page()
+    tab.clock.set_fixed_time(AT)
     errors = []
     schedule_unavailable = False
     tab.on("pageerror", lambda error: errors.append(str(error)))

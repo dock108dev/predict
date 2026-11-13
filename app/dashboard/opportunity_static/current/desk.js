@@ -909,8 +909,10 @@ dialog.addEventListener('close', () => {
       .find(item => (item.dataset.calculationId ?? item.dataset.offerId) === old?.offer?.id);
   const fallback = $('refresh-list').disabled ? filters.elements.search : $('refresh-list');
   const opener = old?.opener?.isConnected ? old.opener : current;
-  if (opener && !document.querySelector('dialog[open]')) opener.focus({preventScroll:true});
-  else restoreFocus(fallback);
+  const focused = document.activeElement;
+  if (opener && (focused === document.body || focused === document.documentElement || dialog.contains(focused))) {
+    opener.focus({preventScroll:true});
+  } else if (!opener) restoreFocus(fallback);
 });
 async function checkSelection() {
   const selected = state.selected;

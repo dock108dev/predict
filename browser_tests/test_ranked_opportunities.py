@@ -429,6 +429,7 @@ def test_ranked_and_browse_journey(width, tmp_path):
         ) as context:
             context.route("**/*", respond)
             tab = context.new_page()
+            tab.clock.set_fixed_time("2026-11-13T00:00:00Z")
             tab.on("pageerror", lambda error: errors.append(str(error)))
             tab.goto(BASE)
             expect(tab.get_by_role("heading", name="Opportunities")).to_be_visible()
