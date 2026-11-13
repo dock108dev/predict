@@ -1,7 +1,13 @@
 # Predict on Hetzner
 
 Predict runs as `web`, `collector`, and `db` in a dedicated Docker Compose project.
-The dashboard listens on the server's loopback interface. From the Mac, use:
+The [public desk](https://predict.dock108.dev/) is open to visitors. Caddy requires
+authentication for Admin, the database console, and other operational routes.
+Install [the site config](../deploy/predict.Caddyfile) on the server and import it
+from `/etc/caddy/Caddyfile`. Keep the user name and bcrypt hash in the separate
+`/etc/caddy/predict-auth` file readable by Caddy. The `predict` DNS record points
+to the Hetzner host. Caddy terminates TLS, checks the public origin, and forwards
+to the server's loopback interface. For private access from the Mac, use:
 
 ```sh
 ssh -N -L 127.0.0.1:8784:127.0.0.1:8784 hetzner

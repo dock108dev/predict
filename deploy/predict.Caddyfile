@@ -1,0 +1,30 @@
+predict.dock108.dev {
+	# Only the public desk and its inspection APIs bypass authentication.
+	@admin {
+		not {
+			method GET HEAD
+			path / /ev /arbs /browse-odds /game /replay /view/current/* /api/comparison-current /api/comparison-current/updates /api/comparison-current/selection /api/comparison-snapshot/details /api/odds-replay /api/odds-replay/details
+		}
+		not {
+			method POST DELETE
+			path /api/comparison-current/lease
+		}
+	}
+	@foreignOrigin {
+		header Origin *
+		not header Origin https://predict.dock108.dev
+	}
+	@predictOrigin header Origin https://predict.dock108.dev
+
+	route {
+		respond @foreignOrigin 403
+		request_header @predictOrigin Origin http://127.0.0.1:8784
+		basicauth @admin {
+			import /etc/caddy/predict-auth
+		}
+		reverse_proxy 127.0.0.1:8784 {
+			header_up Host 127.0.0.1:8784
+			header_up -Authorization
+		}
+	}
+}
