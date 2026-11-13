@@ -4,9 +4,10 @@ from .board_capture import capture_batches
 from app.comparison.broad_coverage import COUNT_KEYS,MAX_EXAMPLES,totals,ratios
 
 
-def partitions(db,maximum_offers=2048):
+def partitions(db,maximum_offers=2048,*,groups=None):
     sizes={r['event_id']:r['n'] for r in db.execute('SELECT c.event_id,count(*) n FROM current_contract c JOIN current_offer o ON o.contract_id=c.id GROUP BY c.event_id').fetchall()}
-    groups=capture_batches(db);seen=set();packed=[];count=0
+    groups=capture_batches(db) if groups is None else groups
+    seen=set();packed=[];count=0
     for group in groups:
         if seen.intersection(group):
             # A non-disjoint planner cannot silently double-count coverage.

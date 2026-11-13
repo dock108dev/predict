@@ -29,18 +29,18 @@ def test_batch_archives_only_replaced_returned_revisions():
     by_book = {row['bookmaker_id']: row for row in rows}
     previous = [dict(by_book['changed'], revision='old'), by_book['expiry_only'], by_book['unchanged']]
     accepted = [by_book[name] for name in ('changed', 'expiry_only', 'new')]
-    lock, retained, count, write = Mock(), Mock(), Mock(), Mock()
+    lock, retained, count, eligible, clear, write = [Mock() for _ in range(6)]
     retained.fetchall.return_value = previous
     count.fetchone.return_value = {'n': len(previous)}
-    write.fetchall.return_value = [{k: row[k] for k in ('id', 'revision')} for row in accepted]
+    eligible.fetchall.return_value = [{k: row[k] for k in ('id', 'revision')} for row in accepted]
     db = Mock()
-    db.execute.side_effect = [lock, retained, count, write]
+    db.execute.side_effect = [lock, retained, count, eligible, clear, write]
 
     with patch('app.storage.sportsgameodds_reference.archive_revisions') as archive:
         assert upsert_rows(db, rows) == len(accepted)
         archive.assert_called_once_with(db, 'reference', previous[:1])
     statement, params = db.execute.call_args.args
-    assert 'jsonb_to_recordset' in statement and params[0].obj == rows
+    assert 'jsonb_to_recordset' in statement and params[0].obj == [row for row in rows if row in accepted]
 
 
 @unittest.skipUnless(SOCKET, 'Explicit disposable PostgreSQL lane required')

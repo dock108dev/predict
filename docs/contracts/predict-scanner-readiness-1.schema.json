@@ -502,6 +502,27 @@
             null
           ]
         },
+        "score_partition": {
+          "type": "object",
+          "description": "Exact canonical score domain and threshold. Direction home or away denotes the high or low side of this partition.",
+          "properties": {
+            "domain": {
+              "enum": ["home_margin", "combined_score"]
+            },
+            "threshold": {
+              "type": "string",
+              "maxLength": 128,
+              "pattern": "^[+-]?(?:[0-9]+(?:\\.[0-9]+)?|[0-9]+/[1-9][0-9]*)$"
+            }
+          },
+          "required": ["domain", "threshold"],
+          "additionalProperties": false
+        },
+        "native_execution_context": {
+          "type": "string",
+          "description": "Digest of the exact native score partition, phase and scoring rules used for pair compatibility.",
+          "pattern": "^[a-f0-9]{64}$"
+        },
         "overtime": {
           "enum": [
             "included",
@@ -522,13 +543,16 @@
           "type": "object",
           "properties": {
             "participant": {
-              "type": "string"
+              "type": ["string", "null"]
             },
             "predicate": {
               "enum": [
                 "win",
                 "not_win",
-                "draw"
+                "draw",
+                "cover",
+                "over",
+                "under"
               ]
             },
             "signed_line": {
@@ -601,6 +625,7 @@
                 }
               ]
             },
+            "execution_at": {"type": "string", "format": "date-time"},
             "book_at": {
               "anyOf": [
                 {

@@ -11,6 +11,7 @@ from decimal import Decimal
 from psycopg.types.json import Jsonb
 from psycopg.pq import TransactionStatus
 from .store import hashed, encoded, exact_time
+from .current_row_state import refresh_scopes, source_status as write_source_status
 
 VERSION='predict-current-rows-1'
 MAX_EVENTS=4096  # Source mappings: supports 500 games across aggregate + two native sources.
@@ -20,6 +21,20 @@ LOCK=901095
 MAX_PIPELINE_COMMANDS=128
 EVENT_FIELDS=('id','sport','competition','season','stage','scheduled_start','home','away','participants','title',
     'status','state','shared_provider_ids','game_number','original_start','replacement_game_id','neutral_venue','source_participant_roles','native_role_evidence','current_occurrence_binding','observed_identity_facts','occurrence_conflict','conflicting_duplicate','schedule_metadata','schedule_conflict')
+
+_NATIVE_BOOK_JOIN='''FROM current_contract_storage c
+    JOIN current_offer_storage o ON o.contract_id=c.id
+    JOIN native_book_revision b ON b.id=o.native_book_id
+    JOIN native_ladder_revision d ON d.id=b.ladder_refs#>>ARRAY[c.native_outcome_id,'asks']
+    WHERE c.active'''
+_NATIVE_ASKS_SQL='SELECT c.id,d.levels '+_NATIVE_BOOK_JOIN+' AND c.id=ANY(%s)'
+
+
+def native_offer_ask_counts(db, event_ids=None):
+    """Count the same per-offer ladders the selected read will hydrate."""
+    return db.execute('SELECT c.event_id,sum(jsonb_array_length(d.levels)) n '+_NATIVE_BOOK_JOIN+
+        ' AND c.venue IN (\'kalshi\',\'polymarket_us\')'
+        ' AND (%s::text[] IS NULL OR c.event_id=ANY(%s)) GROUP BY c.event_id',(event_ids,event_ids))
 
 
 def utc():return datetime.now(timezone.utc).isoformat()
@@ -90,7 +105,8 @@ class _OfferBatch:
     JSON numeric clocks travel as decimal strings, never floating point.
     """
     fields=('contract_id','price_value','price_units','quantity_units','source_at',
-            'source_order','received_at','received_order','facts','revision')
+            'source_order','received_at','received_order','facts','revision',
+            'sgo_quote_id','sgo_quote_revision')
 
     def __init__(self,execute):
         self.execute=execute;self.rows=[];self.keys=set();self.size=0
@@ -105,14 +121,21 @@ class _OfferBatch:
 
     def flush(self):
         if not self.rows:return
-        self.execute('''INSERT INTO current_offer
-          (contract_id,price_value,price_units,quantity_units,source_at,source_order,received_at,received_order,facts,revision)
+        self.execute('''INSERT INTO current_offer_storage
+          (contract_id,price_value,price_units,quantity_units,source_at,source_order,received_at,received_order,
+            facts,revision,sgo_quote_id,sgo_quote_revision)
           SELECT * FROM jsonb_to_recordset(%s) AS v(contract_id text,price_value text,price_units text,quantity_units text,
-            source_at text,source_order numeric,received_at text,received_order numeric,facts jsonb,revision text)
+            source_at text,source_order numeric,received_at text,received_order numeric,facts jsonb,revision text,
+            sgo_quote_id text,sgo_quote_revision text)
           ON CONFLICT(contract_id) DO UPDATE SET price_value=excluded.price_value,price_units=excluded.price_units,
             quantity_units=excluded.quantity_units,source_at=excluded.source_at,source_order=excluded.source_order,
-            received_at=excluded.received_at,received_order=excluded.received_order,facts=excluded.facts,revision=excluded.revision
-          WHERE current_offer.received_order<>excluded.received_order OR current_offer.revision<>excluded.revision''',
+            received_at=excluded.received_at,received_order=excluded.received_order,facts=excluded.facts,revision=excluded.revision,
+            sgo_quote_id=excluded.sgo_quote_id,sgo_quote_revision=excluded.sgo_quote_revision,
+            native_book_id=NULL,native_bid_outcome_id=NULL
+          WHERE current_offer_storage.received_order<>excluded.received_order
+            OR current_offer_storage.revision<>excluded.revision
+            OR current_offer_storage.sgo_quote_id IS DISTINCT FROM excluded.sgo_quote_id
+            OR current_offer_storage.sgo_quote_revision IS DISTINCT FROM excluded.sgo_quote_revision''',
           (Jsonb(self.rows),),synchronous=True)
         self.rows=[];self.keys=set();self.size=0
 
@@ -257,7 +280,7 @@ class CurrentRowStore:
                 changed.append(captured['id'])
         return changed
 
-    def upsert_records(self,records,*,scopes=(),authoritative=False,now=None,source_status=None,material_rows=None):
+    def upsert_records(self,records,*,scopes=(),authoritative=False,now=None,source_status=None,material_rows=None,quote_links=None):
         """Replace only admitted exact scopes. A caller must assert completeness.
 
         scopes are {venue, competition, native_event_id?, native_market_id?,
@@ -265,9 +288,9 @@ class CurrentRowStore:
         Older authoritative scopes cannot delete newer healthy offers.
         """
         return self._upsert_prepared([prepare(r) for r in records],scopes=scopes,
-            authoritative=authoritative,now=now,source_status=source_status,material_rows=material_rows)
+            authoritative=authoritative,now=now,source_status=source_status,material_rows=material_rows,quote_links=quote_links)
 
-    def _upsert_prepared(self,prepared,*,scopes=(),authoritative=False,now=None,source_status=None,material_rows=None):
+    def _upsert_prepared(self,prepared,*,scopes=(),authoritative=False,now=None,source_status=None,material_rows=None,quote_links=None):
         """Internal prepare() results, optionally produced by the owned CPU worker."""
         changed=0
         with self.db.transaction(), _ordered_writes(self.db) as execute:
@@ -276,19 +299,14 @@ class CurrentRowStore:
             # views after each accepted write so duplicate identities retain
             # exactly the sequential read-after-write conflict semantics.
             old_offers={r['contract_id']:r for r in execute(
-                "SELECT contract_id,source_at,source_order,received_order,revision,price_value,price_units,quantity_units,facts->'book_confirmation' AS confirmation FROM current_offer WHERE contract_id=ANY(%s)",
+                "SELECT contract_id,source_at,source_order,received_order,revision,price_value,price_units,quantity_units,native_book_id,facts->'book_confirmation' AS confirmation FROM current_offer WHERE contract_id=ANY(%s)",
                 (list({p['contract_id'] for p in prepared}),)).fetchall()}
             old_events={r['id']:r for r in execute('SELECT id,facts,expires_order,revision FROM current_event WHERE id=ANY(%s)',
                 (list({p['event_id'] for p in prepared}),)).fetchall()}
             old_contracts={r['id']:r['revision'] for r in execute('SELECT id,revision FROM current_contract WHERE id=ANY(%s)',
                 (list({p['contract_id'] for p in prepared}),)).fetchall()}
-            # Native ladders live in current_native_depth. Avoid a DELETE for
-            # every changing native side when no legacy per-contract rows exist.
-            # Read under the same writer lock; retained legacy rows still get
-            # removed when their accepted replacement is committed.
-            native_legacy_depth={r['contract_id'] for r in execute(
-                'SELECT DISTINCT contract_id FROM current_depth WHERE contract_id=ANY(%s)',
-                (list({p['contract_id'] for p in prepared if p['venue'] in ('kalshi','polymarket_us')}),)).fetchall()}
+            native_offers=[]
+            former_books=set()
             offers=_OfferBatch(execute)
             for p in prepared:
                 source=p['source'];event=p['event'];eid=p['event_id'];cid=p['contract_id']
@@ -351,28 +369,41 @@ class CurrentRowStore:
                         (cid,eid,p['venue'],source['native_market_id'],source['native_outcome_id'],source.get('native_side',''),Jsonb(p['contract']),cf))
                     old_contracts[cid]=cf
                 original=p['quote']['original']
+                if old and old.get('native_book_id'):
+                    former_books.add(old['native_book_id'])
                 if p['missing']:
                     if old is not None:
                         offers.flush()
-                        execute('DELETE FROM current_offer WHERE contract_id=%s',(cid,))
-                    if p['venue'] not in ('kalshi','polymarket_us') or cid in native_legacy_depth:
-                        execute('DELETE FROM current_depth WHERE contract_id=%s',(cid,))
+                        execute('DELETE FROM current_offer_storage WHERE contract_id=%s',(cid,))
+                    execute('UPDATE current_contract_storage SET independent_depth=NULL '
+                            'WHERE id=%s AND independent_depth IS NOT NULL',(cid,))
                     changed+=int(old is not None)
                     old_offers.pop(cid,None)
                     continue
-                offers.append((cid,original['value'],original['units'],original['quantity_units'],p['source_at'],p['source_order'],
-                     p['received_at'],p['received_order'],p['quote'],p['revision']))
+                link=(quote_links or {}).get(cid)
+                value=original['value']
+                facts=p['quote']
+                if link:
+                    value=None
+                    facts=dict(facts,original={k:v for k,v in original.items() if k!='value'})
+                offer=(cid,value,original['units'],original['quantity_units'],p['source_at'],p['source_order'],
+                       p['received_at'],p['received_order'],facts,p['revision'])
+                offers.append(offer+(link or (None,None)))
+                if p['venue'] in ('kalshi','polymarket_us') and p['venue']==source['provider']:
+                    native_offers.append(cid)
                 old_offers[cid]=dict(source_at=p['source_at'],source_order=p['source_order'],received_order=p['received_order'],
                     revision=p['revision'],price_value=original['value'],price_units=original['units'],quantity_units=original['quantity_units'],
                     confirmation=p['quote'].get('book_confirmation'))
                 if old is None or old['revision']!=p['revision']:
-                    if p['venue'] not in ('kalshi','polymarket_us') or cid in native_legacy_depth:
-                        execute('DELETE FROM current_depth WHERE contract_id=%s',(cid,))
-                    for i,level in enumerate(p['depth'] or [] if p['venue'] not in ('kalshi','polymarket_us') else []):
-                        execute('INSERT INTO current_depth VALUES (%s,%s,%s,%s,%s,%s)',
-                            (cid,'asks',i,str(level['price']),str(level['quantity']),original['quantity_units']))
+                    levels = [['asks',i,str(level['price']),str(level['quantity']),original['quantity_units']]
+                              for i,level in enumerate(p['depth'] or [])] if p['venue'] not in ('kalshi','polymarket_us') else []
+                    depth = Jsonb(levels) if levels else None
+                    execute('UPDATE current_contract_storage SET independent_depth=%s '
+                            'WHERE id=%s AND independent_depth IS DISTINCT FROM %s',(depth,cid,depth))
                     changed+=1
             offers.flush()
+            if native_offers:
+                self._link_native_offers(execute, offer_ids=native_offers)
             if authoritative:
                 incoming={p['contract_id'] for p in prepared}
                 # Native book batches have disjoint exact market scopes. Read
@@ -428,15 +459,11 @@ class CurrentRowStore:
                     if bulk:
                         scope_updates.append((key,order,receipt))
                     else:
-                        execute('INSERT INTO current_refresh_scope VALUES (%s,%s,%s) ON CONFLICT(scope) '
-                            'DO UPDATE SET source_order=excluded.source_order,received_order=excluded.received_order',(key,order,receipt))
+                        refresh_scopes(execute, [(key, order, receipt)])
                 if scope_updates:
                     # Bulk keys are unique. The guard above still compares each
                     # scope's original source and receipt order under LOCK.
-                    execute("""INSERT INTO current_refresh_scope SELECT * FROM unnest(%s::text[],%s::numeric[],%s::numeric[])
-                        ON CONFLICT(scope) DO UPDATE SET source_order=excluded.source_order,received_order=excluded.received_order
-                        WHERE (current_refresh_scope.source_order,current_refresh_scope.received_order)
-                           IS DISTINCT FROM (excluded.source_order,excluded.received_order)""",tuple(map(list,zip(*scope_updates))))
+                    refresh_scopes(execute, scope_updates)
             if source_status:
                 lost=[(venue,state.get('state','unavailable')) for venue,state in source_status.items()
                       if state.get('state') not in ('available','budget_delayed')]
@@ -444,7 +471,7 @@ class CurrentRowStore:
                     # One join invalidates all unavailable venues atomically.
                     # Repeat the test even on the same health state so an offer
                     # newly admitted by another writer cannot regain continuity.
-                    execute("""UPDATE current_offer o SET facts=jsonb_set(o.facts,'{state}',to_jsonb(lost.state)),
+                    execute("""UPDATE current_offer_storage o SET facts=jsonb_set(o.facts,'{state}',to_jsonb(lost.state)),
                         revision=encode(sha256(convert_to(o.revision||lost.state,'UTF8')),'hex')
                         FROM current_contract c JOIN current_event e ON e.id=c.event_id
                         JOIN unnest(%s::text[],%s::text[]) lost(venue,state) ON c.venue=lost.venue
@@ -453,11 +480,13 @@ class CurrentRowStore:
                         AND NOT (c.venue='novig' AND o.facts ? 'novig_runtime_id')""",
                         tuple(map(list,zip(*lost))))
                 for venue,state in source_status.items():
-                    execute('''INSERT INTO current_source_status VALUES (%s,%s,%s) ON CONFLICT(venue)
-                      DO UPDATE SET state=excluded.state,received_at=excluded.received_at WHERE current_source_status.state<>excluded.state''',
-                      (venue,Jsonb(state),now or utc()))
+                    write_source_status(execute, venue, state, now or utc())
             # Scope order guards are bounded by current work, never history.
-            execute('DELETE FROM current_refresh_scope WHERE received_order<%s', (exact_time(now or utc())-172800,))
+            execute("DELETE FROM current_row_state WHERE kind='scope' AND received_order<%s",
+                    (exact_time(now or utc())-172800,))
+            if former_books:
+                from .native_ladder_batch import prune
+                prune(execute,limit=len(former_books),book_ids=sorted(former_books))
             self.expire(now=now)
         return changed
 
@@ -472,15 +501,15 @@ class CurrentRowStore:
         values=([k[0] for k in keys],[hashed([k[0],k[1]]) for k in keys],[k[2] for k in keys])
         with self.db.transaction():
             self.db.execute('SELECT pg_advisory_xact_lock(%s)',(LOCK,))
-            tables=('current_contract','current_native_book')
+            tables=('current_contract','native_book_revision')
             if reimaging:
-                self.db.execute("""UPDATE current_offer o SET
+                self.db.execute("""UPDATE current_offer_storage o SET
                     facts=jsonb_set(o.facts,'{state}','"resyncing"'::jsonb),
                     revision=encode(sha256(convert_to(o.revision||'resyncing','UTF8')),'hex')
                     FROM current_contract c JOIN unnest(%s::text[],%s::text[],%s::text[])
                     AS wanted(venue,event_id,native_market_id) USING(venue,event_id,native_market_id)
                     WHERE o.contract_id=c.id AND o.facts->>'state' IN ('available','budget_delayed')""",values)
-                tables=('current_native_book',)
+                tables=('native_book_revision',)
             counts=dict(keys=len(keys),contracts=0,offers=0,books=0)
             if deferred:
                 # Membership and all offers/depth disappear together. The
@@ -491,10 +520,17 @@ class CurrentRowStore:
                     AND c.native_market_id=wanted.market_id RETURNING c.id""",values).fetchall()
                 ids=[r['id'] for r in retired]
                 counts.update(contracts=len(ids),deferred_bodies=len(ids))
-                counts['offers']=self.db.execute('DELETE FROM current_offer WHERE contract_id=ANY(%s)',(ids,)).rowcount
-                self.db.execute('DELETE FROM current_depth WHERE contract_id=ANY(%s)',(ids,))
-                tables=('current_native_book',)
+                counts['offers']=self.db.execute('DELETE FROM current_offer_storage WHERE contract_id=ANY(%s)',(ids,)).rowcount
+                self.db.execute('UPDATE current_contract_storage SET independent_depth=NULL '
+                    'WHERE id=ANY(%s) AND independent_depth IS NOT NULL',(ids,))
+                tables=('native_book_revision',)
             for table in tables:
+                if table=='native_book_revision':
+                    counts['books']=self.db.execute('''UPDATE native_book_revision b SET is_current=false
+                        FROM unnest(%s::text[],%s::text[],%s::text[]) AS wanted(venue,event_id,market_id)
+                        WHERE b.is_current AND (b.venue,b.event_id,b.native_market_id)=
+                              (wanted.venue,wanted.event_id,wanted.market_id)''', values).rowcount
+                    continue
                 delete='DELETE FROM '+table+' AS c USING unnest(%s::text[],%s::text[],%s::text[]) AS wanted(venue,event_id,market_id) '+\
                     'WHERE c.venue=wanted.venue AND c.event_id=wanted.event_id AND c.native_market_id=wanted.market_id'
                 if measure and table=='current_contract':
@@ -505,8 +541,7 @@ class CurrentRowStore:
                         'LEFT JOIN current_offer o ON o.contract_id=r.id',values).fetchone()
                     counts.update(counted)
                 else:
-                    result=self.db.execute(delete,values)
-                    if table=='current_native_book':counts['books']=result.rowcount
+                    self.db.execute(delete,values)
             return counts
 
     def expire_out_of_scope(self,venue,competitions,families):
@@ -524,11 +559,28 @@ class CurrentRowStore:
             keys=[(b['raw']['ref']['venue'],hashed([b['raw']['ref']['venue'],b['raw']['ref']['event_id']]),b['raw']['ref']['market_id']) for b in books]
             events={r['id'] for r in execute('SELECT id FROM current_event WHERE id=ANY(%s)',(list({k[1] for k in keys}),)).fetchall()}
             prior={(r['venue'],r['event_id'],r['native_market_id']):r for r in execute(
-                'SELECT b.venue,b.event_id,b.native_market_id,b.source_at,b.source_order,b.received_order,b.revision,b.confirmation,b.depth_revision '
-                'FROM current_native_book b JOIN unnest(%s::text[],%s::text[],%s::text[]) wanted(venue,event_id,native_market_id) '
-                'USING(venue,event_id,native_market_id)',([k[0] for k in keys],[k[1] for k in keys],[k[2] for k in keys])).fetchall()}
-            from .native_ladder_batch import LadderBatch
-            pending_ladders=LadderBatch(execute)
+                'SELECT b.id,b.venue,b.event_id,b.native_market_id,b.source_at,b.source_order,b.received_at,b.received_order,'
+                'b.revision,b.sequence,b.confirmation,b.depth_revision,b.ladder_refs '
+                'FROM native_book_revision b JOIN unnest(%s::text[],%s::text[],%s::text[]) wanted(venue,event_id,native_market_id) '
+                'USING(venue,event_id,native_market_id) WHERE b.is_current',
+                ([k[0] for k in keys],[k[1] for k in keys],[k[2] for k in keys])).fetchall()}
+            from .native_ladder_batch import LadderBatch, prune
+            ladder_batch=LadderBatch(execute)
+            pending_headers=[]
+            affected={}
+            superseded=set()
+
+            def flush_books():
+                ladder_batch.flush()
+                for retired, params in pending_headers:
+                    if retired:
+                        execute('UPDATE native_book_revision SET is_current=false WHERE id=%s',(retired,))
+                    execute('''INSERT INTO native_book_revision
+                        (id,venue,event_id,native_market_id,source_at,source_order,received_at,received_order,revision,
+                         quantity_units,state,sync,sequence,outcomes,confirmation,depth_revision,ladder_refs)
+                        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                        ON CONFLICT(id) DO UPDATE SET is_current=true''', params)
+                pending_headers.clear()
             for book in books:
                 raw=book['raw'];ref=raw['ref'];venue=ref['venue'];eid=hashed([venue,ref['event_id']]);market=ref['market_id']
                 if book['sync']!='synchronized' or book['state']=='unknown':raise ValueError('current_row_incomplete_book')
@@ -547,9 +599,12 @@ class CurrentRowStore:
                     if receipt<old['received_order']:continue
                     if order==old['source_order'] and receipt<old['received_order']:continue
                 if book['state'] in ('closed','settled','canceled'):
-                    pending_ladders.flush()
+                    flush_books()
+                    execute('SELECT 1')  # Drain pending book writes before nested withdrawal.
                     self.withdraw_native_market(venue,ref['event_id'],market)
                     prior.pop(key,None)
+                    affected.pop(key,None)
+                    if old:superseded.add(old['id'])
                     continue
                 outcomes=[];levels=[]
                 for outcome in book['outcomes']:
@@ -566,22 +621,39 @@ class CurrentRowStore:
                 revision=hashed([at,book['state'],book['sync'],outcomes,levels])
                 if old and (order,receipt)==(old['source_order'],old['received_order']) and old['revision']!=revision:
                     raise ValueError('current_row_equal_clock_book_conflict')
-                execute('''INSERT INTO current_native_book VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-                    ON CONFLICT(venue,event_id,native_market_id) DO UPDATE SET source_at=excluded.source_at,source_order=excluded.source_order,
-                    received_at=excluded.received_at,received_order=excluded.received_order,revision=excluded.revision,state=excluded.state,sync=excluded.sync,
-                    sequence=excluded.sequence,outcomes=excluded.outcomes,confirmation=excluded.confirmation,depth_revision=excluded.depth_revision
-                    WHERE current_native_book.received_order<>excluded.received_order OR current_native_book.revision<>excluded.revision OR current_native_book.confirmation IS DISTINCT FROM excluded.confirmation OR current_native_book.depth_revision IS DISTINCT FROM excluded.depth_revision''',
-                    (*key,at,order,raw['received_at'],receipt,revision,book['quantity_unit'],book['state'],book['sync'],str(book.get('sequence')),Jsonb(outcomes),Jsonb(confirmation) if confirmation else None,depth_revision))
-                prior[key]=dict(source_at=at,source_order=order,received_order=receipt,revision=revision,confirmation=confirmation,depth_revision=depth_revision)
-                if old and old['depth_revision']==depth_revision:continue
-                # One exact side image; rank shifts mutate one compact value,
-                # not every following level. The header/depth revision above is
-                # unchanged and commits atomically with these complete ladders.
-                ladders={}
-                for level in levels:
-                    ladders.setdefault((level[3],level[4]),[]).append(list(level[6:]))
-                pending_ladders.append(key,ladders)
-            pending_ladders.flush()
+                if old and (raw['received_at'],revision,confirmation,depth_revision,str(book.get('sequence')))==(
+                        old['received_at'],old['revision'],old['confirmation'],old['depth_revision'],old['sequence']):
+                    affected[key]=old['id']
+                    continue
+                if old and old['depth_revision']==depth_revision:
+                    refs=old['ladder_refs']
+                else:
+                    ladders={}
+                    for level in levels:
+                        ladders.setdefault((level[3],level[4]),[]).append(list(level[6:]))
+                    refs=ladder_batch.append(ladders)
+                sequence=str(book.get('sequence'))
+                identity=hashed([key,at,raw['received_at'],revision,book['quantity_unit'],sequence,confirmation,refs])
+                if old:
+                    superseded.add(old['id'])
+                pending_headers.append((old['id'] if old else None,
+                    (identity,*key,at,order,raw['received_at'],receipt,revision,book['quantity_unit'],book['state'],
+                     book['sync'],sequence,Jsonb(outcomes),Jsonb(confirmation) if confirmation else None,depth_revision,Jsonb(refs))))
+                prior[key]=dict(id=identity,source_at=at,source_order=order,received_at=raw['received_at'],
+                                received_order=receipt,revision=revision,sequence=sequence,
+                                confirmation=confirmation,depth_revision=depth_revision,ladder_refs=refs)
+                affected[key]=identity
+                if len(pending_headers)>=32:
+                    flush_books()
+            flush_books()
+            if affected:
+                self._link_native_offers(execute, book_ids=list(affected.values()))
+            if superseded:
+                prune(execute,limit=len(superseded),book_ids=sorted(superseded))
+
+    @staticmethod
+    def _link_native_offers(execute, *, offer_ids=None, book_ids=None):
+        execute('SELECT link_native_offers(%s,%s)',(offer_ids,book_ids))
 
     def expire(self,*,now=None):
         now=now or utc()
@@ -617,18 +689,15 @@ class CurrentRowStore:
             by_contract={}
             for level in levels:
                 if level['side']=='asks':by_contract.setdefault(level['contract_id'],[]).append(dict(price=level['price_value'],quantity=level['quantity_value']))
-            native_levels={}
-            for level in (self.db.execute("SELECT * FROM current_native_depth WHERE side='asks' ORDER BY venue,event_id,native_market_id,native_outcome_id,level").fetchall() if include_depth else []):
-                key=tuple(level[k] for k in ('venue','event_id','native_market_id','native_outcome_id'))
-                native_levels.setdefault(key,[]).append(dict(price=level['price_value'],quantity=level['quantity_value']))
+            native_levels=self._native_asks([r['contract_id'] for r in raw]) if include_depth else {}
             records=[]
             for row in raw:
                 q=deepcopy(row['quote']);q.update(id='',revision=1)
                 q['times'].update(source_at=row['source_at'],received_at=row['received_at'])
                 q['times'].setdefault('projected_at',None)
                 if q['venue'] in ('kalshi','polymarket_us'):
-                    source=q['source'];key=(q['venue'],hashed([source['provider'],source['native_event_id']]),source['native_market_id'],source['native_outcome_id'])
-                    if include_depth:q['depth']=native_levels.get(key,[])
+                    if include_depth:
+                        q['depth']=native_levels.get(row['contract_id'],[])
                 elif row['contract_id'] in by_contract:q['depth']=by_contract[row['contract_id']]
                 event=events[row['event_id']]
                 records.append(dict(project_contract(event,row['contract'],row['received_at']),event=deepcopy(event),quote=q))
@@ -642,21 +711,29 @@ class CurrentRowStore:
         """Fetch only selected execution ask ladders, never a whole slate's depth."""
         ids=[contract_id(record) for record in records];depth={}
         if resource_guard is not None:
-            native=self.db.execute('''SELECT COALESCE(sum(jsonb_array_length(d.levels)),0) n FROM current_contract c JOIN current_native_ladder d
-                ON d.venue=c.venue AND d.event_id=c.event_id AND d.native_market_id=c.native_market_id
-                AND d.native_outcome_id=c.native_outcome_id WHERE c.id=ANY(%s) AND d.side='asks' ''',(ids,)).fetchone()['n']
+            native=self.db.execute('SELECT COALESCE(sum(jsonb_array_length(levels)),0) n FROM ('+
+                                   _NATIVE_ASKS_SQL+') native',(ids,)).fetchone()['n']
             aggregate=self.db.execute("SELECT count(*) n FROM current_depth WHERE contract_id=ANY(%s) AND side='asks'",(ids,)).fetchone()['n']
             resource_guard(16*1024*1024+(native+aggregate)*2048+len(encoded(records))*8)
-        rows=self.db.execute('''SELECT c.id AS contract_id,d.level,d.price_value,d.quantity_value FROM current_contract c
-          JOIN current_native_depth d ON d.venue=c.venue AND d.event_id=c.event_id
-            AND d.native_market_id=c.native_market_id AND d.native_outcome_id=c.native_outcome_id
-          WHERE c.id=ANY(%s) AND d.side='asks' ORDER BY c.id,d.level''',(ids,)).fetchall()
-        rows+=self.db.execute('SELECT contract_id,level,price_value,quantity_value FROM current_depth WHERE contract_id=ANY(%s) AND side=%s ORDER BY contract_id,level',(ids,'asks')).fetchall()
+        rows=self.db.execute('SELECT contract_id,level,price_value,quantity_value FROM current_depth WHERE contract_id=ANY(%s) AND side=%s ORDER BY contract_id,level',(ids,'asks')).fetchall()
         for row in rows:depth.setdefault(row['contract_id'],[]).append(dict(price=row['price_value'],quantity=row['quantity_value']))
+        depth.update(self._native_asks(ids))
         out=deepcopy(records)
         for record in out:
             cid=contract_id(record)
             if record['quote']['venue'] in ('kalshi','polymarket_us') or cid in depth:record['quote']['depth']=depth.get(cid,[])
         return out
+
+    def _native_asks(self, contract_ids):
+        rows=self.db.execute(_NATIVE_ASKS_SQL,(contract_ids,)).fetchall()
+        return {row['id']:[dict(price=level[0],quantity=level[2]) for level in row['levels']] for row in rows}
+
+    def native_offer_books(self, contract_ids=None):
+        """Exact native book evidence and current authority for displayed offers."""
+        return {row['id']:row for row in self.db.execute('''SELECT c.id,b.id AS book_id,
+            b.revision,b.source_at,b.received_at,b.quantity_units AS quantity_unit,
+            b.state,b.sync,b.sequence,b.is_current '''+_NATIVE_BOOK_JOIN+'''
+            AND c.venue IN ('kalshi','polymarket_us') AND (%s::text[] IS NULL OR c.id=ANY(%s))
+            ORDER BY c.id''',(contract_ids,contract_ids))}
 
     def records(self):return self.capture()['records']

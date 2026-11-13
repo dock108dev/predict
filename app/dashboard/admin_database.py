@@ -93,8 +93,9 @@ def structure(db, relation):
     """, (oid,)).fetchall()
     details['constraints'] = db.execute("""
         SELECT conname AS name, pg_get_constraintdef(oid, true) AS definition
-        FROM pg_constraint WHERE conrelid = %s ORDER BY conname
-    """, (oid,)).fetchall()
+        FROM pg_constraint WHERE conrelid = %s AND (%s OR conparentid = 0)
+        ORDER BY conname
+    """, (oid, relation['partition'])).fetchall()
     details['indexes'] = db.execute("""
         SELECT c.relname AS name, pg_get_indexdef(c.oid) AS definition
         FROM pg_index i JOIN pg_class c ON c.oid = i.indexrelid

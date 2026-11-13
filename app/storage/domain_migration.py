@@ -14,7 +14,7 @@ import time
 import psycopg
 from psycopg import sql
 from psycopg.rows import dict_row
-from .store import Store,exact_time
+from .store import Store,exact_time,open_retained
 from .payload_codec import payload_row,FRAME_PREFIX,DOMAIN_PREFIX,decode_for_connection
 from .domain_history import encode
 
@@ -82,7 +82,9 @@ def backfill_source_receipts(db):
 
 
 def migrate(db,*,fail_after=None,report=lambda v:None):
-    Store(db).migrate();receipts=backfill_source_receipts(db);out={};total=0
+    Store(db).migrate()
+    open_retained(db)
+    receipts=backfill_source_receipts(db);out={};total=0
     report(dict(table='current_source_projection',source_receipt_backfill=receipts,committed=True))
     for table in TABLES:
         trigger='immutable_'+table

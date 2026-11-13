@@ -1,5 +1,10 @@
 """Optional captured-result overlay. Never calculates or grants current authority."""
-from app.dashboard.comparison_board import expand_price_fields,expand_odds
+
+from . import ordinary_evidence as evidence
+from .comparison_snapshot import SnapshotOperationError
+from .store import encoded
+
+MAX_RESPONSE_BYTES = 1024 * 1024
 
 
 def matches(price,book,observation):
@@ -20,38 +25,43 @@ def matches(price,book,observation):
         and str(source.get('native_side','')).lower()==str(observation['native_side']).lower())
 
 
-def read(db,book,observation,offset=0,limit=20):
-    """Current compact publications, their own input frame and policy, paginated.
+def _candidates(member, book, observation):
+    prices = {row['id']: row for row in member['rows']}
+    wanted = {key for key, row in prices.items() if matches(row, book, observation)}
+    for key in sorted(wanted):
+        yield 'ev', prices[key], [prices[key]]
+    for pair in member['pairs']:
+        legs = pair['legs']
+        if wanted.intersection(legs) and all(leg in prices for leg in legs):
+            yield 'arbs', pair, [prices[leg] for leg in legs]
 
-    A source-local association is not a proof of equivalent financial inputs.
-    Even an identical selected price cannot establish peer/model currentness.
-    Keep every result explicitly captured, including its original source prices.
-    """
-    row=db.execute("SELECT facts->'games' games FROM latest_board_status").fetchone()
-    games=[g['game_key'] for g in (row or {}).get('games',[]) if [book['provider'],book['event_id']] in g.get('members',[])]
-    results=[];count=0
-    for key in games:
-        for view in ('odds','ev','arbs'):
-            row=db.execute("SELECT facts->'boards'->%s board FROM latest_board WHERE game_key=%s",(view,key)).fetchone()
-            if not row or not row['board']:continue
-            board=expand_odds(expand_price_fields(row['board']))
-            prices={p['quote_id']:p for p in board.get('prices',[])}
-            wanted={pid for pid,p in prices.items() if matches(p,book,observation)}
-            if not wanted:continue
-            candidates=([dict(p['gross_comparison'],quote_id=p['quote_id']) for p in prices.values()
-                if p['quote_id'] in wanted and p.get('gross_comparison',{}).get('available')]
-                if view=='odds' else board.get('rows',[]))
-            for result in candidates:
-                ids={result.get('quote_id'),result.get('price_ref')}
-                ids.update(l.get('quote_id') or l.get('price_ref') for l in result.get('legs',[]))
-                if not ids & wanted:continue
-                if offset<=count<offset+limit:
-                    inputs=result['inputs'] if view=='odds' else [prices[pid] for pid in sorted(ids-{None}) if pid in prices]
-                    results.append(dict(state='captured_result',view=view,game_key=key,
-                        calculated_at=board.get('calculated_at'),calculation_context=board.get('calculation_context'),
-                        policy=board.get('policy'),captured_inputs=inputs,result=result,
-                        raw_revision=book['revision'],current_eligibility=False,
-                        association='Exact native identity only; captured prices, clocks, depth and calculation basis govern this result'))
-                count+=1
-    return dict(state='captured_result' if count else 'unavailable',results=results,total=count,
-        next_offset=offset+limit if offset+limit<count else None,provider_requests=0)
+
+def read(db, book, observation, offset=0, limit=20):
+    """Associate by native identity and use only the published member's inputs."""
+    source = dict(provider=book['provider'], native_event_id=book['event_id'])
+    index = evidence.members(db)
+    selected = index.get(evidence.event_id(source), ())
+    results = []
+    count = size = 0
+    for entry in selected:
+        member = evidence.read_member(db, entry)
+        for view, result, inputs in _candidates(member, book, observation):
+            if offset <= count and len(results) < limit and size < MAX_RESPONSE_BYTES:
+                payload = dict(state='captured_result', view=view, game_key=result['game_key'],
+                    calculated_at=member['calculated_at'], captured_at=member['captured_at'],
+                    result_id=member['id'], snapshot_id=member['snapshot_id'],
+                    policy=member['assumptions'], captured_inputs=inputs, result=result,
+                    raw_revision=book['revision'], current_eligibility=False,
+                    association='Exact native identity. Values and clocks come from the published result.')
+                added = len(encoded(payload))
+                if size + added <= MAX_RESPONSE_BYTES:
+                    results.append(payload)
+                else:
+                    size = MAX_RESPONSE_BYTES
+                    if not results:
+                        raise SnapshotOperationError('ordinary_raw_result_capacity')
+                size += added
+            count += 1
+    end = offset + len(results)
+    return dict(state='captured_result' if count else 'unavailable', results=results, total=count,
+                next_offset=end if end < count else None, provider_requests=0)

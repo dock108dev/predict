@@ -19,7 +19,7 @@ from aiohttp import web
 from aiohttp.test_utils import TestClient, TestServer
 
 from app.collection.current_native import NativeWorker
-from app.collection.runtime_client import RuntimeClient
+from tests.latest_board_fixture import RetainedBoardClient
 from app.storage import latest_board as latest
 from app.storage.current_rows import CurrentRowStore
 from tests import test_latest_board_sql as sql_fixtures
@@ -43,7 +43,7 @@ class ConsistentSlateReadsSQL(IsolatedAsyncioTestCase):
     async def api(self):
         from app.dashboard.comparison_board_api import mount, READ_WORK
         app = web.Application()
-        mount(app, RuntimeClient(connector=self.connect))
+        mount(app, RetainedBoardClient(connector=self.connect))
         app[READ_WORK].work_seconds = SEMANTIC_READ_SECONDS
         client = TestClient(TestServer(app))
         await client.start_server()

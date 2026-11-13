@@ -61,7 +61,8 @@ def retire_obsolete(db,game_keys,covered,active,captured_at):
 
 
 def prune(db):
-    if db.execute("SELECT EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='pipeline_generation' AND column_name='trace') present").fetchone()['present']:
+    if db.execute("""SELECT EXISTS(SELECT 1 FROM pg_attribute
+        WHERE attrelid=to_regclass('pipeline_generation') AND attname='trace' AND NOT attisdropped) present""").fetchone()['present']:
         db.execute("""UPDATE pipeline_generation SET trace='{}'::jsonb WHERE trace<>'{}'::jsonb
         AND disposition IN ('published','superseded') AND id IN
         (SELECT id FROM pipeline_generation WHERE trace<>'{}'::jsonb ORDER BY last_attempt DESC,id OFFSET 2000)""")

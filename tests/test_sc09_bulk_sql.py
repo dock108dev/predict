@@ -17,9 +17,87 @@ class Checkpoints(TestCase):
     def setUp(self):
         # Every test owns independent evidence inside the disposable class DB.
         with self.connect() as db:
-            db.execute('TRUNCATE current_acquisition_page,current_acquisition_query,current_acquisition_image_parts,'
-                'current_acquisition_market,current_acquisition_aggregate,current_acquisition_alternate,'
-                'current_acquisition_event_census,current_acquisition_failure,current_native_market_recovery,current_native_catalog_recovery,data_runtime')
+            db.execute('TRUNCATE acquisition_receipt,current_acquisition_image_parts,'
+                'current_acquisition_market,'
+                'current_native_market_recovery,'
+                'current_native_market_body,current_native_catalog_recovery,data_runtime')
+
+    def test_native_metadata_shared_across_census_and_recovery_with_separate_revisions(self):
+        import json
+        from datetime import datetime, timedelta, timezone
+        from psycopg.types.json import Jsonb
+        from app.collection.bulk_checkpoint import save_census
+        from app.collection.native_recovery import decode, encode, load, save
+        from app.storage import native_market_metadata as metadata
+        from app.storage.recovery_codec import freeze, thaw
+
+        catalog, book = native_fixture()
+        event = catalog['events'][0]
+        event['scheduled_start'] = (datetime.now(timezone.utc) + timedelta(days=1)).isoformat()
+        market = catalog['markets'][0]
+        market['_native'] = dict(title='native title', event_ticker='KXNFLGAME-synthetic',
+                                 price='0.400000000000001', payload='original ruling text ' * 400,
+                                 mixed=[{'z': 2.0, 'a': '原本'}, 1e20, -0.0, {'deep': {'b': False, 'a': None}}])
+        market['provenance'] = [dict(receipt='old recovery receipt')]
+        key = 'kalshi', event['id'], market['id']
+
+        def parsed_market(native):
+            wire = json.dumps(dict(market=native, source_receipt_sha256='1' * 64))
+            return decode(dict(raw=dict(book['raw'],json_text=wire,source='fixture'),title='fixture',
+                               market_type='unknown',state='active',period='full_game',canonical_id=None,
+                               outcomes=[]), 'kalshi')
+
+        with (patch('app.collection.bulk_checkpoint.connect', side_effect=self.connect),
+              patch('app.collection.native_recovery.connect', side_effect=self.connect),
+              self.connect() as db):
+            # Inline records can be recovered before they are converted.
+            db.execute('INSERT INTO current_native_catalog_recovery(source,scope,header) VALUES (%s,%s,%s)',
+                       (key[0], 'scope', Jsonb({k:v for k,v in catalog.items() if k != 'markets'})))
+            db.execute('INSERT INTO current_native_market_recovery(source,market_id,metadata,parsed) VALUES (%s,%s,%s,%s)',
+                       (key[0], key[2], Jsonb(freeze(market)), Jsonb(freeze(encode(parsed_market(market['_native']))))))
+            before = load(key[0], 'scope')
+            self.assertEqual(before[0], catalog)
+
+            generation = save_census(key[0], [event], [market], {key[2]})
+            self.assertEqual(metadata.convert(db)['converted'], 1)
+            self.assertEqual(load(key[0], 'scope'), before)
+            rows = db.execute('''SELECT m.metadata_id AS census_id,r.metadata_id AS recovery_id,
+                m.generation,m.metadata AS census,r.metadata AS recovery,r.parsed,r.receipt_fields,
+                m.display_title,m.display_period
+                FROM current_acquisition_market m JOIN current_native_market_recovery r
+                USING (source,market_id)''').fetchone()
+            self.assertEqual(rows['census_id'], rows['recovery_id'])
+            self.assertEqual(rows['generation'], generation)
+            self.assertEqual((rows['display_title'], rows['display_period']), ('native title', 'full_game'))
+            self.assertNotIn('payload', rows['census'])
+            self.assertNotIn('_native', thaw(rows['recovery']))
+            self.assertNotIn('json_text', thaw(rows['parsed'])['raw'])
+            self.assertIn('wire_layout', thaw(rows['receipt_fields']))
+            self.assertEqual(db.execute('SELECT count(*) n FROM current_native_market_body').fetchone()['n'], 1)
+
+            later = dict(market, _native=dict(market['_native'], title='closed', closed=True))
+            save_census(key[0], [event], [later], {})
+            self.assertEqual(metadata.census_body(db, *key), later['_native'])
+            self.assertEqual(load(key[0], 'scope'), before)
+            self.assertEqual(metadata.prune(db), 0)
+            self.assertEqual(db.execute('SELECT count(*) n FROM current_native_market_body').fetchone()['n'], 2)
+            self.assertTrue(db.execute('SELECT withdrawn FROM current_acquisition_market').fetchone()['withdrawn'])
+
+            replacement = dict(catalog, markets=[later])
+            # Reopen the retained market to exercise parsed wire regeneration.
+            later['_native']['closed'] = False
+            obj = parsed_market(later['_native'])
+            save_census(key[0], [event], [later], {})
+            save(key[0], 'scope', replacement, {key[2]: obj})
+            self.assertEqual(load(key[0], 'scope')[0], replacement)
+            self.assertEqual(encode(load(key[0], 'scope')[1][key[2]]), encode(obj))
+            row = db.execute('SELECT parsed,receipt_fields FROM current_native_market_recovery').fetchone()
+            self.assertNotIn('json_text', thaw(row['parsed'])['raw'])
+            self.assertIn('wire_layout', thaw(row['receipt_fields']))
+            self.assertEqual(save(key[0], 'scope', replacement, {key[2]: obj})['writes'], 0)
+            for _ in range(3):
+                metadata.prune(db)
+            self.assertEqual(db.execute('SELECT count(*) n FROM current_native_market_body').fetchone()['n'], 1)
 
     def test_page_codec_preserves_original_receipt_restart_and_raw_reference_with_noop_retries(self):
         import json
@@ -32,21 +110,24 @@ class Checkpoints(TestCase):
         with patch('app.collection.bulk_checkpoint.connect',side_effect=self.connect),self.connect()as db:
             checkpoint=Checkpoint('kalshi',{'sports':['NFL']});key,_=checkpoint.query('/markets',{})
             ref=dict(source='kalshi',query_key=key,position=0)
-            db.execute('INSERT INTO current_acquisition_page VALUES(%s,%s,0,%s)',('kalshi',key,Jsonb(original)))
+            db.execute("INSERT INTO acquisition_receipt (kind,source,scope,position,payload) VALUES('page',%s,%s,0,%s)",
+                       ('kalshi',key,Jsonb(original)))
             before=db.execute('SELECT pg_column_size(receipt) n FROM current_acquisition_page').fetchone()['n']
             self.assertEqual(checkpoint.query('/markets',{})[1],[original])
             checkpoint.page(key,0,original,False)
-            row=db.execute('SELECT receipt,ctid::text tuple_id,pg_column_size(receipt) n FROM current_acquisition_page').fetchone()
+            row=db.execute("SELECT payload AS receipt,ctid::text tuple_id,pg_column_size(payload) n "
+                           "FROM acquisition_receipt WHERE kind='page'").fetchone()
             self.assertIn('_predict_storage',row['receipt']);self.assertLess(row['n'],before)
             for _ in range(10):checkpoint.page(key,0,original,False)
-            self.assertEqual(db.execute('SELECT ctid::text tuple_id FROM current_acquisition_page').fetchone()['tuple_id'],row['tuple_id'])
+            self.assertEqual(db.execute("SELECT ctid::text tuple_id FROM acquisition_receipt WHERE kind='page'").fetchone()['tuple_id'],
+                             row['tuple_id'])
             self.assertEqual(Checkpoint('kalshi',{'sports':['NFL']}).query('/markets',{})[1],[original])
             self.assertEqual(read_page(ref),original)
             with self.assertRaisesRegex(ValueError,'unavailable'):read_page(dict(ref,source='polymarket_us'))
             damaged=deepcopy(row['receipt']);damaged['_predict_storage']['sha256']='f'*64
-            db.execute('UPDATE current_acquisition_page SET receipt=%s',(Jsonb(damaged),))
+            db.execute("UPDATE acquisition_receipt SET payload=%s WHERE kind='page'",(Jsonb(damaged),))
             with self.assertRaisesRegex(ValueError,'integrity'):read_page(ref)
-            db.execute('UPDATE current_acquisition_page SET receipt=%s',(Jsonb(original),))
+            db.execute("UPDATE acquisition_receipt SET payload=%s WHERE kind='page'",(Jsonb(original),))
             self.assertEqual(read_page(ref),original)
             checkpoint.finish();checkpoint.begin()
             with self.assertRaisesRegex(ValueError,'unavailable'):read_page(ref)
@@ -270,15 +351,17 @@ class Checkpoints(TestCase):
             db.execute('DELETE FROM data_runtime')
 
     def test_alternate_prior_cycle_receipt_is_not_current_census_acquisition(self):
-        from psycopg.types.json import Jsonb
         from app.collection.acquisition_report import report
+        from app.storage.aggregate_receipts import save
+        from app.storage.store import now
+
         with self.connect() as db:
-            db.execute('INSERT INTO current_acquisition_event_census VALUES (%s,%s,now(),%s,%s)',
-                ('NFL','new-cycle','census',Jsonb([dict(id='a'),dict(id='b')])))
+            save(db, kind='census', sport='NFL', received_at=now(), cycle_id='new-cycle',
+                 receipt_sha256='census', payload=[dict(id='a'),dict(id='b')])
             for eid,cycle in [('a','old-cycle'),('b','new-cycle')]:
                 payload=dict(id=eid,bookmakers=[dict(key='novig',markets=[dict(key='alternate_spreads',outcomes=[dict(name='A',point=-2.5,price=2)])])])
-                db.execute('INSERT INTO current_acquisition_alternate VALUES (%s,%s,now(),%s,%s,%s,%s)',
-                    ('NFL',eid,cycle,'receipt','received_pending_qualification',Jsonb(payload)))
+                save(db, kind='alternate', sport='NFL', event_id=eid, received_at=now(), cycle_id=cycle,
+                     receipt_sha256='receipt', disposition='received_pending_qualification', payload=payload)
             result=report(db)
         cell=next(c for c in result['cells'] if (c['venue'],c['sport'],c['family'])==('novig','NFL','spread'))
         self.assertEqual(cell['alternate_received'],2)
@@ -505,10 +588,11 @@ class Checkpoints(TestCase):
                     self.assertEqual((stats['receipt_only'],stats['payload_changes'],stats['new'],stats['retired'],
                         stats['unchanged'],stats['writes'],stats['legacy_conversions']),
                         (16,8,1,1,len(markets)-25,25,0))
-                    saved=db.execute('SELECT market_id,metadata,parsed,receipt_fields FROM current_native_market_recovery WHERE source=%s',(source,)).fetchall()
-                    self.assertEqual({r['market_id']:recovery.market_value(r['metadata'],r['receipt_fields']) for r in saved},
+                    from app.storage.native_market_metadata import RECOVERY_ROWS
+                    saved=db.execute(RECOVERY_ROWS+' WHERE r.source=%s',(source,)).fetchall()
+                    self.assertEqual({r['market_id']:recovery.market_value(r['metadata'],r['receipt_fields'],r['native_body']) for r in saved},
                                      {m['id']:m for m in markets})
-                    self.assertEqual({r['market_id']:recovery.parsed_value(r['parsed'],r['receipt_fields']) for r in saved if r['parsed']},values['parsed'])
+                    self.assertEqual({r['market_id']:recovery.parsed_value(r['parsed'],r['receipt_fields'],r['native_body']) for r in saved if r['parsed']},values['parsed'])
                     self.assertEqual(recovery.save(source,'turnover',catalog,parsed)['writes'],0)
                     samples.append(dict(source=source,cycle=cycle,before=before,after=footprint(db),**stats))
                 db.execute('TRUNCATE current_native_market_recovery,current_native_catalog_recovery')

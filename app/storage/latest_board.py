@@ -26,6 +26,7 @@ from .board_capture import SOURCE_PREVIOUS, capture_reservation, capture_batches
 from .board_view import board as board, bounded_page as bounded_page
 from app.comparison.calculation_control import CalculationStopped, cancellation, checkpoint
 from app.comparison.current_dependencies import validation_scope
+from app.collection.runtime_status import runtime_identity, source_states
 
 # Full-scope source + retained financial evidence exceeded 192 MiB with only
 # 75/180 games calculated. This is a disk publication allowance, not an in-memory
@@ -57,14 +58,6 @@ def marker(db, event_ids=None):
 def runtime(db, *, at=None):
     from app.collection.runtime_status import read_runtime
     return read_runtime(db, at=at)
-
-
-def runtime_identity(value):
-    # Runtime revision also describes routine source receipt/status clocks. Those
-    # clocks are not authority to invalidate every unchanged source observation.
-    return dict(**{k:value.get(k) for k in ('runtime_id','active','healthy','config','paused_sources','global_stopped','service_state')},
-        observation_state=value.get('calculations',{}).get('observations','running'),
-        calculation_state=value.get('calculations',{}).get('board','running'))
 
 
 def captured_owner(value):
@@ -109,17 +102,6 @@ def slate_authority(db, *, stopped=False):
         committed={r['venue']:r['state'] for r in db.execute('SELECT venue,state FROM current_source_status').fetchall()}
         authority=_slate_authority(epoch,owner,source_states(committed,owner),_control_barrier(db))
     return hashed([authority,bool(stopped)])
-
-
-def source_states(committed, owner):
-    """Committed ingress beats a delayed heartbeat; explicit controls still win."""
-    states=dict(owner.get('states',{}));states.update(committed)
-    for venue,state in list(states.items()):
-        if not owner.get('healthy'):
-            states[venue]=dict(state,state='unavailable',reason_code='data_runtime_unhealthy')
-        elif not owner.get('active') or venue in owner.get('paused_sources',[]):
-            states[venue]=dict(state,state='stopped',reason_code='updates_stopped')
-    return states
 
 
 def read_context(db, *, at=None, owner=None, event_ids=None, resource_guard=None, tolerate_invalid_catalog=False):

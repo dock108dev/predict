@@ -61,8 +61,8 @@ class WorkerControls(unittest.IsolatedAsyncioTestCase):
             async def recv(self,receiver,timeout):
                 await asyncio.sleep(timeout);raise TimeoutError()
             async def close(self):self.closed=True
-        def choose(markets,catalog,at,offset,*,phase_events):
-            selections.append(offset)
+        def choose(markets,catalog,at,offset,*,phase_events,priority_pregame):
+            selections.append((offset, priority_pregame))
             return markets,dict(deferred_markets=1,active_markets=1)
         with patch('app.collection.current_native.connect',Connector),patch('app.collection.current_native.call',new=AsyncMock()),patch('app.collection.native_reconstruction.Reconstruction',Child),patch('app.collection.native_priority.select',side_effect=choose),patch('app.collection.native_priority.ROTATE_SECONDS',.03):
             task=asyncio.create_task(worker.stream([market()]))
@@ -70,7 +70,7 @@ class WorkerControls(unittest.IsolatedAsyncioTestCase):
                 for _ in range(100):
                     if len(sockets)>=2:break
                     await asyncio.sleep(.005)
-                self.assertEqual(selections[:2],[0,1])
+                self.assertEqual(selections[:2],[(0, False), (1, False)])
                 self.assertTrue(sockets[0].closed and children[0].closed)
                 self.assertEqual(worker.metrics['retries'],0)
                 self.assertEqual(worker.synchronization.generation,2)

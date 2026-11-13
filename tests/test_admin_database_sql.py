@@ -33,8 +33,9 @@ def database():
             FROM generate_series(30, 1, -1) n''')
         db.execute('CREATE VIEW "Admin Fixture".latest AS SELECT id FROM "Admin Fixture"."Stored Values"')
         db.execute('CREATE TABLE "Admin Fixture".empty(id int)')
-        db.execute('CREATE TABLE "Admin Fixture".p(id int) PARTITION BY RANGE (id)')
+        db.execute('CREATE TABLE "Admin Fixture".p(id int PRIMARY KEY) PARTITION BY RANGE (id)')
         db.execute('CREATE TABLE "Admin Fixture".p_first PARTITION OF "Admin Fixture".p FOR VALUES FROM (1) TO (10)')
+        db.execute('CREATE TABLE "Admin Fixture".child(id int REFERENCES "Admin Fixture".p(id))')
     yield store.connect
     with store.connect() as db:
         db.execute('DROP SCHEMA "Admin Fixture" CASCADE')
@@ -76,6 +77,9 @@ async def check_http(database):
         assert 'SELECT' in view['view_sql']
         part = await get('structure', schema=selection['schema'], name='p_first')
         assert part['parents'] == [dict(schema=selection['schema'], name='p')]
+        assert 'PRIMARY KEY' in part['constraints'][0]['definition']
+        child = await get('structure', schema=selection['schema'], name='child')
+        assert [constraint['name'] for constraint in child['constraints']] == ['child_id_fkey']
         first = await get('rows', **selection)
         assert first['primary_key'] == ['id'] and first['next_offset'] == 25
         assert first['rows'][0][0] == dict(text='1', more=False)

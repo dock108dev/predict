@@ -57,15 +57,17 @@ def current_revision(db):
     with db.transaction():
         rows_hash=sha256();rows_hash.update(b'['+encoded(epoch)+b',')
         mapping_into(rows_hash,'SELECT contract_id,revision FROM current_offer ORDER BY contract_id COLLATE "C"','contract_id','revision')
-        native={};charged=0
+        native={};native_heads={};charged=0
         with db.cursor(name='scanner_native_witnesses') as cursor:
             cursor.itersize=256
-            cursor.execute('SELECT b.venue,e.native_event_id,b.native_market_id,b.revision FROM current_native_book b JOIN current_event e ON e.id=b.event_id')
+            cursor.execute('''SELECT b.venue,e.native_event_id,b.native_market_id,b.revision,b.id
+                FROM native_book_revision b JOIN current_event e ON e.id=b.event_id WHERE b.is_current''')
             for row in cursor:
                 key=hashed([row['venue'],row['native_event_id'],row['native_market_id']])
-                charged+=6*len(encoded([key,row['revision']]))+256
+                charged+=6*len(encoded([key,row['revision'],row['id']]))+256
                 if charged>MAX_PROBE_BYTES:raise ValueError('scanner_revision_probe_capacity')
                 native[key]=row['revision']
+                native_heads[key]=row['id']
         rows_hash.update(b','+encoded(native)+b']')
         facts_hash=sha256();facts_hash.update(b'[')
         mapping_into(facts_hash,'SELECT id,revision FROM current_event ORDER BY id COLLATE "C"','id','revision')
@@ -73,6 +75,15 @@ def current_revision(db):
         mapping_into(facts_hash,'SELECT id,revision FROM current_contract ORDER BY id COLLATE "C"','id','revision')
         facts_hash.update(b',')
         mapping_into(facts_hash,'SELECT venue,state FROM current_source_status ORDER BY venue COLLATE "C"','venue','state')
+        # A receipt-only book update can preserve the legacy content revision
+        # while superseding the exact header that authorized captured depth.
+        facts_hash.update(b','+encoded(native_heads))
+        facts_hash.update(b',')
+        mapping_into(facts_hash,'''SELECT contract_id,native_book_id FROM current_offer_storage
+            WHERE native_book_id IS NOT NULL ORDER BY contract_id COLLATE "C"''','contract_id','native_book_id')
+        facts_hash.update(b',')
+        mapping_into(facts_hash,'''SELECT venue,jsonb_build_array(state#>'{last_verified,revision}',state->'review_required') AS revision
+            FROM public_fee_schedule WHERE venue IN ('kalshi:exchange','polymarket_us:standard_sports') ORDER BY venue COLLATE "C"''','venue','revision')
         facts_hash.update(b']')
     return dict(epoch=epoch,current_rows_revision=rows_hash.hexdigest(),facts_revision=facts_hash.hexdigest())
 

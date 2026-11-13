@@ -2,61 +2,35 @@
 
 ## Current comparison interface
 
-The [pregame Opportunities decision](live-comparison-plan-20261104.md#november-12--pregame-opportunities-first)
-sets the next implementation scope. The default EV and Arbitrage views use
-pregame full-game markets. A separate Live tab preserves the in-game view.
-Keep original sportsbook prices and the de-vigged estimate visible on demand,
-and put provider identity and operational diagnostics in Admin.
+Opportunities opens on pregame full-game winners, spreads and totals, including
+available alternate lines. Expected value and Arbitrage rank this cohort. Live
+shows in-game prices. At kickoff or an earlier authoritative phase change, the
+market leaves the pregame results and pinned inspections keep their original
+evidence with an aged-out status.
 
-The owner approved the [November 12 line-comparison plan](live-comparison-plan-20261104.md#november-12--compare-every-venue-on-the-line)
-mockups for the dashboard, game and financial inspections. The dashboard ranks
-opportunity cards by EV or modeled arb return. Each card shows all venue prices
-on its exact line and the EV comparison book or selected opposing legs. The game
-view carries the full line matrix. Browse current odds is available during an
-EV outage. The ordinary desk's existing default is Sportsbook EV before fees.
-The redesign preserves keyboard interaction, narrow windows, global odds formats
-and pinned inspections. The [November 6 delivery record](engineering/live-comparison-20261104/L05-delivery.md)
-documents the earlier grouped list and its measured limits.
+Each ranked card shows the venue prices for its exact outcome, the ranking
+result, and the selected sportsbook pair or opposing arb legs. The game view
+shows both sides of each line with consistent venue columns. Browse odds and
+Find my game remain available when finance is unavailable. A price with a
+blocked estimate carries a specific reason. Detailed inputs retain native sides,
+original sportsbook prices, the de-vigged estimate, fees and settlement states.
+Retail prices and modeled returns can be shown without order-book quantities
+across all exchanges and peer-to-peer venues. The retail views label modeled
+stakes and payoffs and show price freshness. Raw Odds holds book evidence for
+diagnostics, and Advanced Scanner uses it for execution sizing.
 
-## Earlier approved target — November 3, 2026
+American is the default odds format. A persistent Decimal toggle applies across
+formatted views and explanations. Keyboard navigation, narrow windows and pinned
+inspections preserve the selected line. Admin holds provider identity, Coverage,
+collection controls, detailed clocks, settings and raw evidence. Admin → Database
+browses working and retained relations under the local read-only boundary.
+[Storage ownership](storage-ownership.md) · [Security](security.md)
 
-The owner approved the revised Opportunities → Markets → Admin design.
-[Approved design](ui-redesign-20261103.md) controls visual hierarchy, navigation,
-Manrope typography, navy/teal styling, Why explanations, global odds formatting
-and quote-clock placement. [UI01](ui-redesign-implementation.md) is the
-implementation handoff for the Staff Product Engineer, frontend/UI and full-stack
-integration. [UI01 is integrated locally](ui01-delivery-20261103.md); owner acceptance of the running app remains open.
-
-Opportunities leads with game, position, venue, price and estimated advantage.
-Markets preserves the selected game and captured comparison while exposing venue
-prices and alternate lines. Admin owns Coverage, collection controls, detailed
-clocks, settings, formulas and raw evidence. American is the default and a single
-persistent Decimal toggle applies across formatted views and explanations.
-
-Why explains the source of the estimated advantage using offered/fair odds and a
-$100 example with the actual financial basis. Detailed provider update, receipt,
-confirmation and price-change clocks live in Admin. Ordinary screens retain a
-concise delayed/saved/unverified state when material. Keep captured input/result
-identity and required protected evidence through navigation and restart under the
-current runtime/storage contract.
-
-## Historical interface descriptions — superseded where conflicting
-
-The following records describe previous routes and presentation decisions. Their
-system font, gray palette, public timing/details/setup controls, old navigation,
-transient-only storage language and old next-action requirements do not override
-the approved design or current captured-evidence retention contract.
-
-Predict presents collected prices, EV and cross-venue comparisons across the
-supported leagues, markets and periods. Background financial owners calculate
-shared results; the browser validates their context and renders them. Ordinary
-reads consume current SQL publications, while selected Details can size an item. See
-[architecture](architecture.md) and the [board API contract](comparison-board-api-contract.md)
-for storage and transport boundaries.
-
-Sports/test history is disposable. Ordinary use does not require old results,
-snapshots or full provider responses to survive reset or restart. Current inputs
-support the comparison loop; calculation reports are not persisted.
+The background owners calculate shared results and the browser renders their
+revision-bound publications. Selected Details can size an item. Saved captures,
+protected comparison evidence and transient display state follow their existing
+retention owners. [Architecture](architecture.md) ·
+[Current-board API](comparison-board-api-contract.md)
 
 ## Compact views and financial meaning
 

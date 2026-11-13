@@ -48,9 +48,9 @@ class TicketSQL(IsolatedAsyncioTestCase):
                     self.assertEqual(len(decoded),1000)
                     for row in decoded:
                         original=row['quote']['original']
-                        self.assertEqual(original['transformation'],'identity')
-                        self.assertEqual(original['native_value'],original['value'])
-                        self.assertEqual(original['native_units'],original['units'])
+                        self.assertNotIn('transformation', original)
+                        self.assertNotIn('native_value', original)
+                        self.assertNotIn('native_units', original)
                         self.assertEqual(row['quote']['depth'][0]['price'],original['value'])
                 with AuthoredAdapters():
                     frame,inputs,metadata,elapsed=worker._capture()
@@ -144,7 +144,7 @@ class TicketSQL(IsolatedAsyncioTestCase):
                     current,reason=tickets._capture(bound,snapshot=fresh)
                     self.assertIsNone(reason)
                     self.assertEqual(current['dependency_revision'],capture['dependency_revision'])
-                    unrelated=deepcopy(rows[2]);unrelated['quote']['original'].update(value='3.1',native_value='3.1',native_units='decimal_odds',transformation='identity')
+                    unrelated=deepcopy(rows[2]);unrelated['quote']['original']['value']='3.1'
                     unrelated['quote']['depth'][0]['price']='3.1'
                     unrelated['quote']['times'].update(source_at=clock(),received_at=clock())
                     with self.connect() as db:
@@ -178,7 +178,7 @@ class TicketSQL(IsolatedAsyncioTestCase):
                     current,reason=tickets._capture(bound,snapshot=worker._capture_selected(capture))
                     self.assertIsNone(reason)
                     self.assertEqual(current['dependency_revision'],capture['dependency_revision'])
-                    changed=deepcopy(rows[0]);changed['quote']['original'].update(value='0.24',native_value='0.24',native_units='usd_per_contract',transformation='identity')
+                    changed=deepcopy(rows[0]);changed['quote']['original']['value']='0.24'
                     changed['quote']['depth'][0]['price']='0.24'
                     changed['quote']['times'].update(source_at=clock(),received_at=clock())
                     with self.connect() as db:

@@ -1,4 +1,8 @@
-# Background observations and estimate results
+# Retained board observations and estimate results
+
+This describes the historical `LatestBoardOwner`. The installed data process
+publishes ordinary results with `OrdinaryOwner`. See
+[storage ownership](storage-ownership.md) for the current publication.
 
 The independent data runtime owns `LatestBoardOwner`, with separate bounded
 observation and optional-estimate workers. Each polls committed current-row

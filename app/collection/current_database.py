@@ -90,6 +90,8 @@ def validate_sgo_page(row):
             or not isinstance(scopes, dict) or not 1 <= len(scopes) <= 100
             or any(not isinstance(k,str) or not k or len(k)>256 or v not in ('NFL','NCAAF','NBA','NCAAB','MLB','NHL') for k,v in scopes.items())):
         raise ValueError('sgo_reference_scope_invalid')
+    from app.storage.current_rows import contract_id
+    from app.storage.sportsgameodds_reference import offer_quote_link
     try:
         for record in row['records']:
             quote = record['quote']
@@ -107,12 +109,16 @@ def validate_sgo_page(row):
                     or facts['received_at'] != row['received_at']):
                 raise ValueError('sgo_page_identity_mismatch')
         members = {event_id: [] for event_id in scopes}
-        seen_reference_ids = set()
+        references = {}
         for reference in row['sgo_reference_rows']:
-            if reference['id'] in seen_reference_ids:
+            if reference['id'] in references:
                 raise ValueError('sgo_page_identity_mismatch')
-            seen_reference_ids.add(reference['id'])
+            references[reference['id']] = reference
             members[reference['event_id']].append([reference['id'], reference['revision']])
+        links = {contract_id(record): offer_quote_link(record, references)
+                 for record in row['records']}
+        if len(links) != len(row['records']):
+            raise ValueError('sgo_page_duplicate_offer')
         frames = row['sgo_event_frames']
         if not isinstance(frames, list) or len(frames) != len(scopes):
             raise ValueError('sgo_page_identity_mismatch')
@@ -129,6 +135,7 @@ def validate_sgo_page(row):
             frame_ids.add(event_id)
         if frame_ids != set(scopes):
             raise ValueError('sgo_page_identity_mismatch')
+        return links
     except (KeyError, TypeError):
         raise ValueError('sgo_page_identity_mismatch') from None
 
@@ -252,7 +259,7 @@ class DatabaseIngressSink:
         return self._prepare(row,states,revoked,precomputed=precomputed)
 
     def _prepare(self,row,states,revoked=None,*,precomputed=None):
-        from app.storage.current_rows import CurrentRowStore
+        from app.storage.current_rows import CurrentRowStore, LOCK
         from app.dashboard.current_contract import packed
         from copy import deepcopy
         now=utc()
@@ -285,6 +292,7 @@ class DatabaseIngressSink:
             else:
                 candidate=deepcopy(self.reducer)
             records=[];scopes=[];withdraw=set();storage_prepared=False
+            sgo_links=None
             deferred_keys=set();catalog_turnover={}
             if row['type']=='sgo_status':
                 if row.get('source')!='sportsgameodds' or row.get('state') not in ('connecting','available','budget_delayed','unavailable','stopped'):
@@ -309,7 +317,7 @@ class DatabaseIngressSink:
                     withdraw.add(key)
             elif row['type']=='current_aggregate_records':
                 if 'sgo_reference_rows' in row:
-                    validate_sgo_page(row)
+                    sgo_links=validate_sgo_page(row)
                 records=row['records']
                 scopes=[dict(venue=v,competition=row['sport'],received_at=row['received_at'],aggregate_route='featured') for v in row['complete_venues']]
             else:
@@ -412,6 +420,11 @@ class DatabaseIngressSink:
                             native,errors=normalize_current(catalog,books,at=now,revoked=revoked,executor=executor,
                                 current_images=candidate.books,prepare_records=storage_prepared)
                         records.extend(native);self.exclusions=errors[:200]
+            raw_batch=None
+            if row['type']=='current_aggregate_records' and 'raw_payload' in row:
+                from app.comparison.offered_scope import aggregate_inventory
+                raw_batch=dict(events=row['raw_payload'],dispositions=[dict(venue=v,family=f,**aggregate_inventory(row['raw_payload'],v,f,records))
+                    for v in ('novig','prophetx','pinnacle') for f in ('moneyline','spread','total')])
             phase('sql_admission')
             with connect() as db:
                 require_disk_space(Path(__file__).resolve().parents[2]/'.local/postgres')
@@ -421,6 +434,8 @@ class DatabaseIngressSink:
                 with published_transaction(db):
                     # Linearize ingress with persisted Stop/pause, independently
                     # of heartbeat writes. A waiting old command cannot revive it.
+                    # Take the current-row lock before authority, as publication does.
+                    db.execute('SELECT pg_advisory_xact_lock(%s)', (LOCK,))
                     if revoked is not None:
                         from .runtime_status import AUTHORITY_LOCK
                         db.execute('SELECT pg_advisory_xact_lock_shared(%s)', (AUTHORITY_LOCK,))
@@ -430,32 +445,29 @@ class DatabaseIngressSink:
                              or row['source'] in owner['paused_sources'] or row['type']=='novig_native_records'
                              and 'the_odds_api' in owner['paused_sources'])):
                             raise asyncio.CancelledError()
-                    if row['type']=='current_aggregate_records' and 'raw_payload' in row:
-                        from psycopg.types.json import Jsonb
-                        from app.comparison.offered_scope import aggregate_inventory
-                        raw_batch=dict(events=row['raw_payload'],dispositions=[dict(venue=v,family=f,**aggregate_inventory(row['raw_payload'],v,f,records))
-                            for v in ('novig','prophetx','pinnacle') for f in ('moneyline','spread','total')])
-                        db.execute('INSERT INTO current_acquisition_aggregate VALUES (%s,%s,%s) '
-                            'ON CONFLICT (sport) DO UPDATE SET received_at=EXCLUDED.received_at,payload=EXCLUDED.payload '
-                            'WHERE current_acquisition_aggregate.received_at<=EXCLUDED.received_at',
-                            (row['sport'],row['received_at'],Jsonb(raw_batch)))
+                    if raw_batch is not None:
+                        from app.storage.aggregate_receipts import save
+                        save(db,kind='featured',sport=row['sport'],received_at=row['received_at'],
+                             receipt_sha256=row.get('receipt_sha256'),payload=raw_batch)
                     if row['type']=='current_aggregate_records' and 'sgo_reference_rows' in row:
-                        from app.storage.sportsgameodds_reference import upsert_rows, upsert_frames
+                        from app.storage.sportsgameodds_reference import upsert_rows, upsert_frames, stage_offer_quotes
                         phase('sgo_reference')
                         upsert_rows(db, row['sgo_reference_rows'])
+                        stage_offer_quotes(db, row['sgo_reference_rows'], sgo_links)
                         phase('sgo_frames')
                         upsert_frames(db, row['sgo_event_frames'])
                         phase('sql_admission')
                     if row['type']=='sgo_status' or (row['type']=='current_aggregate_records' and row.get('source')=='sportsgameodds'):
-                        from psycopg.types.json import Jsonb
+                        from app.storage.current_row_state import source_status
                         status = (dict(state=row['state'],reason_code=row['reason_code'],reason=row['reason'])
                                   if row['type']=='sgo_status' else dict(state='available',reason_code='sgo_page_received',reason='SportsGameOdds page admitted.'))
-                        db.execute('INSERT INTO current_source_status VALUES (%s,%s,%s) ON CONFLICT(venue) DO UPDATE SET state=excluded.state,received_at=excluded.received_at WHERE current_source_status.state<>excluded.state', ('sportsgameodds',Jsonb(status),now))
+                        source_status(db.execute, 'sportsgameodds', status, now)
                     admit=rows._upsert_prepared if storage_prepared else rows.upsert_records
                     from app.storage.native_admission_metrics import MaterialRows
                     material_rows=MaterialRows() if row['type'] in ('prediction_books','prediction_book') else None
                     changed=admit(records,scopes=scopes,authoritative=bool(scopes),source_status=states,now=now,
-                                  **({'material_rows':material_rows} if material_rows is not None else {}))
+                                  **({'material_rows':material_rows} if material_rows is not None else {}),
+                                  **({'quote_links':sgo_links} if sgo_links else {}))
                     phase('native_depth')
                     if row['type'] in ('prediction_book','prediction_books'):rows.replace_native_books([o['book'] for o in observations])
                     if row['type']=='coverage_inventory':

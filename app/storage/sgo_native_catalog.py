@@ -89,14 +89,14 @@ def write(db, event_id, facts):
         raise ValueError('sgo_native_catalog_capacity')
     at, expiry = (stamp(facts[field]) for field in ('observed_at','expires_at'))
     with db.transaction():
-        db.execute('DELETE FROM current_sgo_native_catalog WHERE expires_at < %s', (at,))
+        db.execute("DELETE FROM sgo_event_evidence WHERE kind='catalog' AND expires_at < %s", (at,))
         count = db.execute('SELECT count(*) n FROM current_sgo_native_catalog WHERE event_id<>%s',
                            (event_id,)).fetchone()['n']
         if count >= MAX_EVENTS or sql_usage(db) + 2 * len(body) >= SQL_BYTE_CAP:
             raise ValueError('sgo_native_catalog_storage_capacity')
-        db.execute('''INSERT INTO current_sgo_native_catalog (event_id,observed_at,expires_at,revision,facts)
-            VALUES (%s,%s,%s,%s,%s) ON CONFLICT(event_id) DO UPDATE
+        db.execute('''INSERT INTO sgo_event_evidence (kind,event_id,observed_at,expires_at,revision,facts)
+            VALUES ('catalog',%s,%s,%s,%s,%s) ON CONFLICT(kind,event_id) DO UPDATE
             SET observed_at=EXCLUDED.observed_at,expires_at=EXCLUDED.expires_at,
                 revision=EXCLUDED.revision,facts=EXCLUDED.facts
-            WHERE EXCLUDED.observed_at > current_sgo_native_catalog.observed_at''',
+            WHERE EXCLUDED.observed_at > sgo_event_evidence.observed_at''',
             (event_id, at, expiry, hashed(facts), Jsonb(facts)))

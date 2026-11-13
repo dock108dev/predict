@@ -15,7 +15,7 @@ Use **Find my game**, **Browse odds**, or open a ranked game to compare both sid
 spreads and totals, including available alternates. An inspection keeps the
 original prices, clocks and calculation pinned until you adopt a coherent
 replacement with **Use latest prices**.
-[Ranked dashboard design](docs/live-comparison-plan-20261104.md#november-12--compare-every-venue-on-the-line)
+[Ranked dashboard design](docs/ui-design.md#current-comparison-interface)
 
 Kalshi and Polymarket US supply independent native prices. The aggregate route
 is selected in the data configuration. The sample selects SportsGameOdds with
@@ -61,6 +61,8 @@ For live collection, follow [source configuration and credentials](docs/configur
 Choose the sports and markets, add your read-only keys, and turn `enabled` on.
 Turn on `aggregate_enabled` to collect SportsGameOdds against your plan's object
 allowance. Use Admin to check sources, spending, Stop, and display settings.
+Admin → Database browses the working schema and the retained archive.
+[Storage ownership](docs/storage-ownership.md).
 
 ```sh
 scripts/opportunity-board check-config

@@ -84,7 +84,7 @@ class OrdinarySQL(LatestBoardFixture):
             previous=snapshots.unpack(blob(),lazy=True,db=db)
             selected=previous['rows'][0]['evidence_result_id'];lease=live.retain(db,selected)
             original=hashed(previous)
-            scope={r['id']:[] for r in db.execute('SELECT id FROM comparison_live_component')}
+            scope={r['id']:[] for r in db.execute("SELECT id FROM comparison_publication WHERE kind='component'")}
             live.compose(db,live.current_settings(db),scope=scope,policy=live.policy_identity(),
                 epoch=previous['publication']['epoch'],started=monotonic())
             content=blob();decode=snapshots._decode
@@ -102,10 +102,10 @@ class OrdinarySQL(LatestBoardFixture):
                 at=self.at,policy=live.policy_identity(),epoch=replaced['publication']['epoch'])
             self.assertTrue(all(not r['price_current'] for r in projected['rows']))
             self.assertEqual(replaced,snapshots.unpack(content,lazy=True,db=db))
-            db.execute('DELETE FROM comparison_live_lease WHERE id=%s',(lease['lease_id'],))
+            db.execute("DELETE FROM comparison_result_reference WHERE kind='lease' AND holder=%s",(lease['lease_id'],))
             # A cached member never hides a missing row in the coherent view.
             member=next(iter(replaced['component_slices']))
-            db.execute('DELETE FROM comparison_live_read_fragment WHERE member_id=%s',(member,))
+            db.execute('UPDATE comparison_snapshot_result SET read_summary=NULL,read_fragment=NULL WHERE id=%s',(member,))
             with self.assertRaisesRegex(snapshots.SnapshotOperationError,'ordinary_fragment_unavailable'):
                 snapshots.unpack(content,lazy=True,db=db,previous=replaced)
 
@@ -118,22 +118,24 @@ class OrdinarySQL(LatestBoardFixture):
             head=live.status(db)
             manifest=snapshots._decode(db.execute('SELECT result FROM comparison_snapshot_result WHERE id=%s',(head['result_id'],)).fetchone()['result'])
             self.assertEqual(manifest['rows'],[])
-            self.assertIn(member,manifest['_read_fragments'])
-            before=db.execute('SELECT member_id,content FROM comparison_live_read_fragment ORDER BY member_id').fetchall()
-            scope={r['id']:[] for r in db.execute('SELECT id FROM comparison_live_component')}
+            self.assertEqual(manifest['_read_fragments'],'publication-members-v1')
+            self.assertIsNotNone(db.execute("SELECT position FROM comparison_result_reference WHERE kind='member' AND holder=%s AND result_id=%s",
+                (head['result_id'],member)).fetchone())
+            before=db.execute('SELECT id,read_fragment FROM comparison_snapshot_result WHERE read_fragment IS NOT NULL ORDER BY id').fetchall()
+            scope={r['id']:[] for r in db.execute("SELECT id FROM comparison_publication WHERE kind='component'")}
             live.compose(db,live.current_settings(db),scope=scope,policy=live.policy_identity(),epoch=original['publication']['epoch'],started=monotonic())
             self.assertEqual(live.status(db)['facts']['new_fragments'],0)
-            self.assertEqual(db.execute('SELECT member_id,content FROM comparison_live_read_fragment ORDER BY member_id').fetchall(),before)
+            self.assertEqual(db.execute('SELECT id,read_fragment FROM comparison_snapshot_result WHERE read_fragment IS NOT NULL ORDER BY id').fetchall(),before)
             self.assertEqual(self.result(db)['rows'],original['rows'])
-            immutable=hashed(db.execute('SELECT content FROM comparison_live_read_fragment WHERE member_id=%s',(member,)).fetchone()['content'].hex())
+            immutable=hashed(db.execute('SELECT read_fragment AS content FROM comparison_snapshot_result WHERE id=%s AND read_fragment IS NOT NULL',(member,)).fetchone()['content'].hex())
             for _ in range(3):self.changed_first();live.turn(db)
             db.execute("UPDATE comparison_snapshot_result SET lease_until=now()-interval '1 second'")
             db.execute("UPDATE comparison_snapshot SET lease_until=now()-interval '1 second'")
             snapshots.prune(db)
-            self.assertEqual(hashed(db.execute('SELECT content FROM comparison_live_read_fragment WHERE member_id=%s',(member,)).fetchone()['content'].hex()),immutable)
-            db.execute('DELETE FROM comparison_live_lease WHERE id=%s',(token['lease_id'],))
+            self.assertEqual(hashed(db.execute('SELECT read_fragment AS content FROM comparison_snapshot_result WHERE id=%s AND read_fragment IS NOT NULL',(member,)).fetchone()['content'].hex()),immutable)
+            db.execute("DELETE FROM comparison_result_reference WHERE kind='lease' AND holder=%s",(token['lease_id'],))
             snapshots.prune(db)
-            self.assertIsNone(db.execute('SELECT member_id FROM comparison_live_read_fragment WHERE member_id=%s',(member,)).fetchone())
+            self.assertIsNone(db.execute('SELECT id FROM comparison_snapshot_result WHERE id=%s AND read_fragment IS NOT NULL',(member,)).fetchone())
 
     async def test_held_reference_defers_optional_finance_without_hiding_prices(self):
         with self.connect() as db:
@@ -159,7 +161,7 @@ class OrdinarySQL(LatestBoardFixture):
         with self.connect() as db:
             live.turn(db)
             before=self.result(db)
-            scope={r['id']:[] for r in db.execute('SELECT id FROM comparison_live_component')}
+            scope={r['id']:[] for r in db.execute("SELECT id FROM comparison_publication WHERE kind='component'")}
             args=dict(scope=scope,settings=before['assumptions'],policy=before['publication']['policy'],
                       epoch=before['publication']['epoch'],started=monotonic())
             # Second seal reuses compact fragments without reading full proofs.
@@ -227,18 +229,15 @@ class OrdinarySQL(LatestBoardFixture):
         for target in ('app.storage.comparison_snapshot.utc','app.storage.ordinary_publication.utc'):
             p=patch(target,side_effect=lambda:self.at.isoformat());p.start();self.addCleanup(p.stop)
         with self.connect() as db:
-            db.execute('TRUNCATE comparison_live_settings')
-            db.execute('UPDATE comparison_live_head SET result_id=NULL,generation=0,facts=\'{}\'')
-            db.execute('TRUNCATE comparison_snapshot_head,comparison_snapshot_result,comparison_snapshot CASCADE')
-            db.execute('INSERT INTO comparison_live_head(singleton) VALUES(true) ON CONFLICT DO NOTHING')
+            db.execute('TRUNCATE comparison_policy_revision,comparison_snapshot_result,comparison_snapshot CASCADE')
+            db.execute("INSERT INTO comparison_publication(kind,id,generation,facts) VALUES('live','',0,'{}')")
 
     def test_reference_only_sport_respects_transport_controls(self):
-        from psycopg.types.json import Jsonb
+        from app.storage.current_row_state import source_status
         state=dict(state='not_offered',reason_code='aggregate_offering_unobserved',
             observed_sports={'NBA':'aggregate_offering_unobserved'},reference_sports={'NBA':'aggregate_observed'})
         with self.connect() as db:
-            db.execute('INSERT INTO current_source_status VALUES (%s,%s,%s) ON CONFLICT(venue) DO UPDATE SET state=excluded.state',
-                ('novig',Jsonb(state),self.at))
+            source_status(db.execute, 'novig', state, self.at)
             owner=dict(healthy=True,active=True,paused_sources=[],status={})
             with patch('app.collection.runtime_status.read_runtime',return_value=owner):
                 _,states=live.authority(db)
@@ -390,7 +389,7 @@ class OrdinarySQL(LatestBoardFixture):
             db.execute("UPDATE comparison_snapshot_result SET lease_until=now()-interval '1 hour' WHERE id<>%s",(selected['id'],))
             db.execute("UPDATE comparison_snapshot SET lease_until=now()-interval '1 hour' WHERE id<>%s",(selected['snapshot_id'],))
             snapshots.prune(db)
-            self.assertEqual(db.execute('SELECT count(*) n FROM comparison_snapshot_result r WHERE r.automatic AND NOT EXISTS(SELECT 1 FROM comparison_live_component c WHERE c.result_id=r.id) AND NOT EXISTS(SELECT 1 FROM comparison_live_member m WHERE m.member_id=r.id)').fetchone()['n'],2)
+            self.assertEqual(db.execute("SELECT count(*) n FROM comparison_snapshot_result r WHERE r.automatic AND NOT EXISTS(SELECT 1 FROM comparison_publication c WHERE c.kind='component' AND c.result_id=r.id) AND NOT EXISTS(SELECT 1 FROM comparison_result_reference m WHERE m.kind='member' AND m.result_id=r.id)").fetchone()['n'],2)
             self.assertEqual(snapshots.current(db,selected['id']),selected)
 
     async def test_automatic_churn_does_not_evict_latest_two_manual_captures(self):
@@ -415,7 +414,16 @@ class OrdinarySQL(LatestBoardFixture):
             self.assertEqual(live.retain(db,old)['result_id'],old)
 
     async def test_settings_withdraw_finance_and_token_lease_releases_exact_members(self):
-        with self.connect() as db:live.turn(db)
+        from app.comparison.display_identity import canonical_key
+        from app.dashboard.snapshot_display import outcome_key
+
+        with self.connect() as db:
+            live.turn(db)
+            published = self.result(db)
+            self.assertTrue(published['rows'])
+            for row in published['rows']:
+                self.assertEqual(outcome_key(row), canonical_key(row) or ('unresolved', row['id']))
+                self.assertIn('display_outcome_key', row)
         app=web.Application();mount(app)
         with patch('app.dashboard.snapshot_api.connect',self.connect):
             async with TestClient(TestServer(app)) as client:
@@ -425,6 +433,7 @@ class OrdinarySQL(LatestBoardFixture):
                 row=first['rows'][0]['quotes'][0]
                 evidence=await (await client.get('/api/comparison-snapshot/details',params=dict(result_id=first['id'],id=row['id'],lease_id=token['lease_id']))).json()
                 self.assertEqual(evidence['originals'][0]['original'],row['original'])
+                self.assertEqual(evidence['row']['display_outcome_key'], row['display_outcome_key'])
                 # A member/details read cannot evict the decoded ordinary root.
                 # Authority is nevertheless checked again, below, after settings.
                 with patch.object(snapshots,'unpack',side_effect=AssertionError('ordinary root evicted by inspection')):
@@ -444,7 +453,7 @@ class OrdinarySQL(LatestBoardFixture):
                 response=await client.delete('/api/comparison-current/lease',params={'lease_id':token['lease_id']})
                 self.assertEqual(response.status,200)
         with self.connect() as db:
-            self.assertEqual(db.execute('SELECT count(*) n FROM comparison_live_lease').fetchone()['n'],0)
+            self.assertEqual(db.execute("SELECT count(*) n FROM comparison_result_reference WHERE kind='lease'").fetchone()['n'],0)
             self.assertTrue(live.turn(db)['published'])
 
     async def test_fee_expiry_does_not_withdraw_gross_or_renew_source_clock(self):
@@ -465,14 +474,14 @@ class OrdinarySQL(LatestBoardFixture):
         with self.connect() as db:
             live.turn(db)
             head=live.status(db)
-            members=db.execute('SELECT * FROM comparison_live_component ORDER BY id').fetchall()
+            members=db.execute("SELECT id,result_id,facts FROM comparison_publication WHERE kind='component' ORDER BY id").fetchall()
             inputs=db.execute('SELECT id FROM comparison_snapshot ORDER BY id').fetchall()
             self.changed_first()
             with patch.object(live,'compose',side_effect=snapshots.SnapshotOperationError('ordinary_retention_capacity')):
                 with self.assertRaises(snapshots.SnapshotOperationError):
                     live.turn(db)
             self.assertEqual(live.status(db),head)
-            self.assertEqual(db.execute('SELECT * FROM comparison_live_component ORDER BY id').fetchall(),members)
+            self.assertEqual(db.execute("SELECT id,result_id,facts FROM comparison_publication WHERE kind='component' ORDER BY id").fetchall(),members)
             self.assertEqual(db.execute('SELECT id FROM comparison_snapshot ORDER BY id').fetchall(),inputs)
             self.assertTrue(live.turn(db)['published'])
 
@@ -528,6 +537,13 @@ class OrdinarySQL(LatestBoardFixture):
             blob=gzip.compress(json.dumps(snapshots.unpack(original)).encode(),compresslevel=1)
             db.execute('UPDATE comparison_snapshot_result SET result=%s WHERE id=%s',(blob,member))
             before=live.retained_bytes(db)
+            with db.transaction(force_rollback=True):
+                db.execute("INSERT INTO comparison_result_reference(kind,holder,result_id) VALUES('review',%s,%s)",
+                           (member,member))
+                with patch.object(live,'MAX_BYTES',1):
+                    live.compact_retention(db,0)
+                self.assertEqual(db.execute('SELECT result FROM comparison_snapshot_result WHERE id=%s',
+                    (member,)).fetchone()['result'],blob)
             with patch.object(live,'MAX_BYTES',before-1):
                 live.compact_retention(db,0)
             self.assertLess(live.retained_bytes(db),before)
@@ -539,8 +555,8 @@ class OrdinarySQL(LatestBoardFixture):
                 self.assertLessEqual(live.retained_bytes(db),live.MAX_BYTES)
                 retained=db.execute('SELECT result FROM comparison_snapshot_result WHERE id=%s',(member,)).fetchone()
                 self.assertEqual(snapshots.unpack(retained['result']),snapshots.unpack(original))
-                self.assertEqual(db.execute('SELECT result_id FROM comparison_live_lease WHERE id=%s',(token['lease_id'],)).fetchone()['result_id'],member)
-            self.assertEqual(db.execute('SELECT count(DISTINCT result_id) n FROM comparison_live_member').fetchone()['n'],1)
+                self.assertEqual(db.execute("SELECT result_id FROM comparison_result_reference WHERE kind='lease' AND holder=%s",(token['lease_id'],)).fetchone()['result_id'],member)
+            self.assertEqual(db.execute("SELECT count(DISTINCT holder) n FROM comparison_result_reference WHERE kind='member'").fetchone()['n'],1)
 
     async def test_retiring_replaced_projection_keeps_source_and_selected_evidence(self):
         from app.storage.store import hashed
@@ -580,13 +596,14 @@ class OrdinarySQL(LatestBoardFixture):
                 else:
                     opts=dict(live.current_settings(db),amount='1234')
                     opts.pop('revision',None)
-                    db.execute('INSERT INTO comparison_live_settings VALUES(true,%s) ON CONFLICT(singleton) DO UPDATE SET assumptions=excluded.assumptions',(Jsonb(snapshots.assumptions(opts)[0]),))
+                    from app.storage.comparison_policy import activate
+                    activate(db, opts, expected=live.current_settings(db)['revision'])
                 turn=live.turn(db)
                 traced=[c for c in turn.get('component_trace',[]) if c['price_capture'].get('fallback')==kind]
                 self.assertTrue(traced,kind)
                 for c in traced:
                     self.assertTrue(c['member_costs']['input_decode_skipped'])
-                    saved=db.execute('SELECT s.inputs,r.result FROM comparison_live_component c JOIN comparison_snapshot_result r ON r.id=c.result_id JOIN comparison_snapshot s ON s.id=r.snapshot_id WHERE c.id=%s',(c['component'],)).fetchone()
+                    saved=db.execute("SELECT s.inputs,r.result FROM comparison_publication c JOIN comparison_snapshot_result r ON r.id=c.result_id JOIN comparison_snapshot s ON s.id=r.snapshot_id WHERE c.kind='component' AND c.id=%s",(c['component'],)).fetchone()
                     actual=snapshots.unpack(saved['inputs'])
                     self.assertEqual(len(c['event_ids']),c['event_count'])
                     complete=snapshots.capture(db,ordinary=True,event_ids=c['event_ids'],at=actual['captured_at'])
@@ -597,4 +614,4 @@ class OrdinarySQL(LatestBoardFixture):
                     expected['id']=money['id']
                     self.assertEqual(money,expected)
                 self.assertEqual(db.execute('SELECT result FROM comparison_snapshot_result WHERE id=%s',(original,)).fetchone()['result'],pinned)
-            db.execute('DELETE FROM comparison_live_lease WHERE id=%s',(lease['lease_id'],))
+            db.execute("DELETE FROM comparison_result_reference WHERE kind='lease' AND holder=%s",(lease['lease_id'],))

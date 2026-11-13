@@ -26,12 +26,12 @@ The pure `app.comparison.scanner_readiness.assemble` seam accepts typed adapter 
 
 Every count carries `{value, denominator, unit, scope}`. Observed-occurrence denominators describe the observed set, not an unknown provider population. Offered contracts divide by discovered contracts; instrument checks divide by selected observed instruments; ready pair inputs divide by exact structurally opposing pair inputs. Evaluated pairs divide by ready pairs. A denominator of zero is an explicit empty set, not a percentage or a checked-empty market. Never sum different units or overlapping causes. `causes` is a stable sorted union with purpose-specific instrument counts and `causes_overlap=true`.
 
-Each instrument preserves occurrence, native event/market/outcome/side, the actual native predicate, units, native contract ID and contract-terms digest. An input pair requires distinct execution venues, the same occurrence/market/period/overtime and opposing decisive directions. This is **structural input compatibility**, not equivalent contracts, supported exceptional joint cashflows or an arb. Native NO is not rewritten as opponent YES; Short remains Short and unresolved collateral blocks its contract readiness.
+Each instrument preserves occurrence, native event/market/outcome/side, the actual native predicate, units, native contract ID and contract-terms digest. An input pair requires distinct execution venues, the same occurrence/market/period/overtime and opposing decisive directions. Modeled native pairs also share an exact score threshold, execution phase and scoring rules before they become ready. Exceptional joint cashflows are evaluated separately. Native NO and Short retain their own predicates, and unresolved collateral blocks contract readiness.
 
 Three independent `checks` have stable reason codes:
 
 - `execution`: source availability, original clocks, age, synchronized book, correct units/price and positive observed legal-minimum depth. Connected transport cannot repair stale or unsynchronized prices. Aggregate odds have no observed synchronized native size; their execution-depth gap remains explicit.
-- `contract`: exact identity/occurrence, applicable fee/payout/quantity/settlement content, actual known grid, pregame stage/overtime, selected model intervals and collateral. Named hypothetical quantities cannot establish a legal execution grid. No required fee/rule/profile expiry is bypassed.
+- `contract` covers exact identity and occurrence, applicable fee and payout terms, the legal execution grid, market phase and overtime, model intervals and collateral. Current direct native adapters can qualify pregame or live execution when the exact venue evidence supports that phase.
 - `ev`: reference/probability dependencies and their original clocks/applicability. It is a fact-dependency check, not a claim of complete numeric EV. Reference absence/expiry never enters cashflow pair input checks. scanner must still prove the relevant probability partition or label conditional EV.
 
 States include `waiting`, `stale_only`, `partial`, `unsupported`, `failed`, `blocked`, `not_evaluated` and `ready`. Purpose checks and reasons remain inspectable even when a scope summary has another dominant state. No compatible input pairs, no ready pairs and not-yet-evaluated pairs are distinct. `reference_sources` counts Pinnacle originals separately; shared `references` retains original book/market/receipt clocks once per profile identity.
@@ -40,7 +40,7 @@ States include `waiting`, `stale_only`, `partial`, `unsupported`, `failed`, `blo
 
 [Policy](../app/fixtures/scanner-readiness-policy-v1.json) is content bound by `policy_revision`, engine identity. Its content includes source-file hashes and the admission rationale. These are fixed admission restrictions, not source update guarantees:
 
-| Source and admitted NFL pregame/full-game winner scope | Original execution-price maximum | Native book maximum | Cross-leg skew maximum | Reference maximum |
+| Source | Original execution-price maximum | Native book maximum | Cross-leg skew maximum | Reference maximum |
 | --- | --- | --- | --- | --- |
 | Kalshi | 30 seconds | 30 seconds | 30 seconds | 1,800 seconds when an explicit supported sportsbook reference is selected |
 | Polymarket US | 30 seconds | 30 seconds | 30 seconds | Same |
@@ -51,7 +51,7 @@ The native cap comes from the existing `current_sink` book-age engineering polic
 
 `source_at`, `received_at`, native `book_at`/`book_received_at`, aggregate `provider_book_at`/`provider_market_at` and `ingress_projected_at` keep their actual meanings. The latter is an ingress projection clock, **not SQL commit time**. `sql_committed_at` is explicitly null because current rows do not retain an authenticated commit-completion clock. Do not manufacture it from receipt or read time. Publication and client timing observations bind causal stages to exact source dependencies and revisions. Existing original/receipt clocks are preserved for that chain.
 
-Future-at-receipt, unknown, conflicting and out-of-order inputs do not age into authority. Receipt/heartbeat/connection/calculation times never renew a source price. The next future `expires_at` is the earliest source/book/model/link/pregame boundary; consumers must recapture at that boundary even without a packet. An already-invalid dependency remains invalid; expiry does not extend any model. `revision` binds selected scopes, source/book/receipt identities, model/policy/engine applicability and readiness state. No durable readiness cache or source-fact archive is introduced.
+Future-at-receipt, unknown, conflicting and out-of-order inputs do not age into authority. Receipt, heartbeat, connection and calculation times never renew a source price. The next future `expires_at` is the earliest source, book, model, link or phase boundary. Consumers must recapture at that boundary even without a packet. `revision` binds selected scopes, source/book/receipt identities, model/policy/engine applicability and readiness state. The [Scanner publication](scanner-projection-contract.md#complete-saved-captures-during-live-ingress) retains a dated census and checks current financial receipts independently.
 
 ## Financial classification integration
 

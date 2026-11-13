@@ -77,62 +77,47 @@ def save_response(sport,event_id,response,cycle_id):
 
 def _save_response(sport,event_id,response,cycle_id):
     from app.storage.store import connect
-    from psycopg.types.json import Jsonb
-    from .current_aggregate_admission import parse_frame
-    if response.get('event_missing'):
-        # Positive absence withdraws this exact route only, preserving featured
-        # markets, unrelated events and original clocks on all retained rows.
-        from app.storage.current_rows import CurrentRowStore
-        with connect() as db:
-            from .runtime_status import AUTHORITY_LOCK
-            db.execute('SELECT pg_advisory_xact_lock_shared(%s)',(AUTHORITY_LOCK,))
-            owner=db.execute('SELECT global_stopped,paused_sources FROM data_runtime WHERE singleton').fetchone()
-            if owner and (owner['global_stopped'] or any(v in owner['paused_sources'] for v in ('the_odds_api','novig','prophetx'))):
-                raise QuotaStop('aggregate_owner_stopped')
-            CurrentRowStore(db).upsert_records([],authoritative=True,scopes=[
-                dict(venue=v,competition=sport,native_event_id=event_id,
-                     aggregate_route='alternate',received_at=response['received_at']) for v in POLICY.bookmakers])
-        return
-    frame=response.get('parsed_frame') or parse_frame(response['body'])
-    payload=frame.payload
-    disposition='received_pending_qualification'
-    if not isinstance(payload,dict) or payload.get('id')!=event_id:
-        disposition='rejected_event_identity'
-    with connect() as db:
-        from .runtime_status import AUTHORITY_LOCK
-        db.execute('SELECT pg_advisory_xact_lock_shared(%s)',(AUTHORITY_LOCK,))
-        owner=db.execute('SELECT global_stopped,paused_sources FROM data_runtime WHERE singleton').fetchone()
-        if owner and (owner['global_stopped'] or any(v in owner['paused_sources'] for v in ('the_odds_api','novig','prophetx'))):
+    from app.storage.current_rows import CurrentRowStore, LOCK
+    from app.storage import aggregate_receipts
+    from .current_aggregate_admission import admit_alternate, parse_frame
+    from .runtime_status import AUTHORITY_LOCK
+
+    frame = None
+    records, complete = [], POLICY.bookmakers
+    disposition = None
+    # Positive absence supplies complete empty scopes for this route only.
+    if not response.get('event_missing'):
+        frame = response.get('parsed_frame') or parse_frame(response['body'])
+        if isinstance(frame.payload, dict) and frame.payload.get('id') == event_id:
+            records, complete, errors = admit_alternate(response['body'], sport, response['received_at'], frame=frame)
+            disposition = 'partial_admission' if errors else 'admitted_exact_lines'
+        else:
+            complete = ()
+            disposition = 'rejected_event_identity'
+
+    with connect() as db, db.transaction():
+        db.execute('SELECT pg_advisory_xact_lock(%s)', (LOCK,))
+        db.execute('SELECT pg_advisory_xact_lock_shared(%s)', (AUTHORITY_LOCK,))
+        owner = db.execute('SELECT global_stopped,paused_sources FROM data_runtime WHERE singleton').fetchone()
+        if owner and (owner['global_stopped'] or any(v in owner['paused_sources'] for v in ('the_odds_api', 'novig', 'prophetx'))):
             raise QuotaStop('aggregate_owner_stopped')
-        db.execute('INSERT INTO current_acquisition_alternate VALUES (%s,%s,%s,%s,%s,%s,%s) '
-            'ON CONFLICT(sport,event_id) DO UPDATE SET received_at=EXCLUDED.received_at,'
-            'cycle_id=EXCLUDED.cycle_id,receipt_sha256=EXCLUDED.receipt_sha256,'
-            'disposition=EXCLUDED.disposition,payload=EXCLUDED.payload '
-            'WHERE current_acquisition_alternate.received_at<=EXCLUDED.received_at',
-            (sport,event_id,response['received_at'],cycle_id,frame.receipt_sha256,disposition,Jsonb(payload)))
-        if disposition=='received_pending_qualification':
-            from .current_aggregate_admission import admit_alternate
-            from app.storage.current_rows import CurrentRowStore
-            records,complete,errors=admit_alternate(response['body'],sport,response['received_at'],frame=frame)
-            CurrentRowStore(db).upsert_records(records,authoritative=True,
-                scopes=[dict(venue=v,competition=sport,native_event_id=event_id,
-                    aggregate_route='alternate',received_at=response['received_at']) for v in complete])
-            db.execute('UPDATE current_acquisition_alternate SET disposition=%s WHERE sport=%s AND event_id=%s AND receipt_sha256=%s',
-                ('partial_admission' if errors else 'admitted_exact_lines',sport,event_id,frame.receipt_sha256))
+        if frame is not None:
+            aggregate_receipts.save(db, kind='alternate', sport=sport, event_id=event_id, received_at=response['received_at'],
+                                    cycle_id=cycle_id, receipt_sha256=frame.receipt_sha256, disposition=disposition, payload=frame.payload)
+        if records or complete:
+            CurrentRowStore(db).upsert_records(records, authoritative=True,
+                scopes=[dict(venue=venue, competition=sport, native_event_id=event_id,
+                    aggregate_route='alternate', received_at=response['received_at']) for venue in complete])
 
 
 def save_event_census(sport,response,cycle_id):
     from app.storage.store import connect
-    from psycopg.types.json import Jsonb
+    from app.storage import aggregate_receipts
     frame=response['parsed_frame']
-    with connect() as db:
-        db.execute('INSERT INTO current_acquisition_event_census VALUES (%s,%s,%s,%s,%s) '
-            'ON CONFLICT(sport) DO UPDATE SET cycle_id=EXCLUDED.cycle_id,received_at=EXCLUDED.received_at,'
-            'receipt_sha256=EXCLUDED.receipt_sha256,payload=EXCLUDED.payload',
-            (sport,cycle_id,response['received_at'],frame.receipt_sha256,Jsonb(frame.payload)))
-        db.execute("DELETE FROM current_acquisition_alternate a WHERE sport=%s AND received_at<now()-interval '2 days' "
-            "AND NOT EXISTS(SELECT 1 FROM jsonb_array_elements(%s::jsonb) e WHERE e->>'id'=a.event_id)",
-            (sport,Jsonb(frame.payload)))
+    with connect() as db, db.transaction():
+        aggregate_receipts.save(db,kind='census',sport=sport,received_at=response['received_at'],
+                                cycle_id=cycle_id,receipt_sha256=frame.receipt_sha256,payload=frame.payload)
+        aggregate_receipts.expire_alternates(db,sport=sport,event_census=frame.payload)
 
 
 def prioritize(requests, received):
@@ -144,7 +129,8 @@ def priority_requests(requests, sports):
     from app.storage.store import connect
     with connect() as db:
         db.execute('SET TRANSACTION READ ONLY')
-        rows=db.execute('SELECT sport,event_id,received_at FROM current_acquisition_alternate WHERE sport=ANY(%s)',
+        rows=db.execute("""SELECT sport,event_id,received_at FROM current_aggregate_receipt
+            WHERE provider='the_odds_api' AND kind='alternate' AND sport=ANY(%s)""",
                         (list(sports),)).fetchall()
     return prioritize(requests,{(r['sport'],r['event_id']):r['received_at'].timestamp() for r in rows})
 

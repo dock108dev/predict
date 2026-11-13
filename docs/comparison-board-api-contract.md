@@ -1,4 +1,8 @@
-# Current comparison board API v2
+# Retained comparison board API v2
+
+The installed app serves its comparison desk at `/api/comparison-current`.
+Legacy board routes documented below return HTTP 410 in the installed app.
+See [storage ownership](storage-ownership.md) for current routes and retained data.
 
 The background owner derives compact latest Odds/EV/Arbs boards from
 `CurrentRowStore`. A profile-free observation pass publishes original source

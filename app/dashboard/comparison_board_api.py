@@ -219,6 +219,10 @@ def mount(app,provider):
         view=req.match_info['view']
         if view=='history' or req.query.get('history')=='true' or req.query.get('result_id'):
             return web.json_response(dict(error='sports_history_unavailable',reason='Ordinary sports history was retired; select a current comparison.',provider_requests=0),status=410)
+        if getattr(provider, 'remote_runtime', False) and view not in ('coverage', 'readiness'):
+            return web.json_response(dict(error='board_transport_retired',
+                reason='Open the current comparison desk for ranked results and exact inputs.',
+                current_api='/api/comparison-current', current_url='/', provider_requests=0), status=410)
         allowed={'game','amount','ceiling','buffer','sizing_mode','benchmark_venue','benchmark_method','filter','context_id','quote','pair','read_token'}
         if view=='slate':allowed=(allowed-{'game','context_id','quote','pair'})|{'view','offset','limit','expected_revision','read_token'}
         if view=='readiness':allowed={'venues','sports','leagues','markets','periods'}

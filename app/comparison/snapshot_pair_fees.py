@@ -42,7 +42,7 @@ def _leg_fee(row, *, stake, price, quantity, receipts):
             at = row['captured_at']
             if venue == 'prophetx':
                 model = prophetx_public_fee(dict(row, cost_per_normal_claim=wire(price)),
-                                            at=at, review=evidence, quantity=quantity)
+                                            at=at, review=evidence, quantity=quantity, phase=row.get('game_state', 'scheduled'))
             elif venue == 'polymarket_us' and evidence.get('order_inserted_at'):
                 model = public_fee(row, at=instant(evidence['order_inserted_at']),
                                    phase=evidence['phase'], review=dict(evidence, profile=PROFILE), quantity=quantity)

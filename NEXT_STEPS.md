@@ -8,12 +8,13 @@ Keep explicit Stop and source pauses, account limits, reserves, and unresolved
 holds. [Product contract](docs/live-comparison-plan-20261104.md) ·
 [Local workflow](AGENTS.md)
 
-The [pregame checkpoint](docs/pregame-checkpoint-20261112.md) records the installed
-EV and arb witnesses, the Washington–Giants event census, and the cleanup.
-The broader product assignment remains paused for the data-architecture
-discussion. The complete Washington–Giants audit found 34 of 231 offered
-sides on the active connections and 8 current on the desk. The full-slate
-offered denominator remains unknown.
+The [pregame checkpoint](docs/pregame-checkpoint-20261112.md) records the
+Washington–Giants audit. It found 34 of 231 offered sides on active connections
+and 8 current on the desk. The [storage cutover](docs/storage-ownership.md)
+established the 25-table working schema. Scanner now publishes the admitted
+slate census and can evaluate a current native financial cohort. The full-slate
+offered denominator remains unknown. Begin with COV-01's independent native
+inventory. The unresolved SGO request still blocks the affected paid inventory.
 
 ## Remaining work
 
@@ -53,7 +54,7 @@ sportsbook jurisdiction and applicable rules. Verify overtime, tie, push,
 void and cancellation treatment with authoritative evidence. Where evidence
 is missing, retain the ordinary price and a specific reason. Independently
 reconcile reference pairs and the exact two-leg arb populations, including
-whole claims, fees, all evidenced states and execution depth. Deliver
+modeled claims, fees and all evidenced states. Deliver
 published numerators and eligible denominators for each calculation basis.
 [Calculation contract](docs/benchmark-ev.md)
 
@@ -91,6 +92,11 @@ Run affected calculation, SQL, browser and package checks. Report exact
 and any external dependencies. Owner review follows engineering verification.
 
 ## Backlog
+
+Advanced Scanner execution sizing for additional venues and complete joint
+cashflows across exceptional settlement states. This work requires exact book
+and quantity evidence, legal sizing and venue settlement terms.
+[Scanner contract](docs/scanner-projection-contract.md)
 
 Live calculation and coverage expansion, additional exchanges and execution
 venues, Circa or Pinnacle acquisition under

@@ -15,7 +15,7 @@ class SnapshotSQL(LatestBoardFixture):
         await super().asyncSetUp()
         change=patch('app.storage.comparison_snapshot.utc',side_effect=lambda:self.at.isoformat())
         change.start();self.addCleanup(change.stop)
-        with self.connect() as db:db.execute('TRUNCATE comparison_snapshot_head,comparison_snapshot_result,comparison_snapshot CASCADE')
+        with self.connect() as db:db.execute('TRUNCATE comparison_snapshot_result,comparison_snapshot CASCADE')
 
     async def test_mvcc_capture_concurrent_update_and_recalculation(self):
         original=CurrentRowStore.capture;changed=[]
@@ -159,8 +159,8 @@ class SnapshotSQL(LatestBoardFixture):
                     'original',now()-interval '1 hour')""",(str(i),i))
                 db.execute("""INSERT INTO comparison_snapshot_result(id,snapshot_id,assumptions,result,lease_until)
                     VALUES (%s,%s,'{}','result',now()-interval '1 hour')""",(str(i),str(i)))
-            db.execute("INSERT INTO comparison_snapshot_head VALUES(true,'0')")
-            db.execute("INSERT INTO comparison_snapshot_review VALUES('1')")
+            db.execute("INSERT INTO comparison_publication(kind,id,result_id) VALUES('manual','','0')")
+            db.execute("INSERT INTO comparison_result_reference(kind,holder,result_id) VALUES('review','1','1')")
             db.execute("UPDATE comparison_snapshot_result SET lease_until=now()+interval '1 hour' WHERE id='2'")
             with reader.transaction():
                 reader.execute("UPDATE comparison_snapshot_result SET lease_until=now()+interval '1 hour' WHERE id='3'")

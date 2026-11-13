@@ -207,7 +207,7 @@ def mount(app):
             return decoded(result_id,ordinary=cache)
         row = db.execute(
             """UPDATE comparison_snapshot_result SET lease_until=now()+interval '2 hours'
-            WHERE id=COALESCE(%s,(SELECT result_id FROM comparison_snapshot_head WHERE singleton))
+            WHERE id=COALESCE(%s,(SELECT result_id FROM comparison_publication WHERE kind='manual' AND id=''))
             RETURNING id,snapshot_id""",
             (result_id,),
         ).fetchone()
@@ -270,9 +270,10 @@ def mount(app):
                 db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
                 head = live.status(db)
                 at = stamp(utc())
-                owner, states = live.authority(db)
-                deps = live.dependencies(db)
-                policy = live.policy_identity()
+                owner, states = live.authority(db, at=at)
+                provider = live.aggregate_provider(owner=owner)
+                deps = live.dependencies(db, provider=provider)
+                policy = live.policy_identity(provider)
                 settings = live.current_settings(db)
                 epoch = str(db.execute('SELECT epoch FROM current_row_epoch').fetchone()['epoch'])
                 timings['authority']=(monotonic()-started)*1000
@@ -377,7 +378,7 @@ def mount(app):
             if not lease_id or len(lease_id)>64:raise PublicRequestError('Exact lease required')
             def release():
                 with connect() as db:
-                    db.execute('DELETE FROM comparison_live_lease WHERE id=%s',(lease_id,))
+                    db.execute("DELETE FROM comparison_result_reference WHERE kind='lease' AND holder=%s",(lease_id,))
                 return dict(released=True,provider_requests=0)
             return web.json_response(await asyncio.to_thread(release))
         body = await read_json(req)
@@ -392,22 +393,20 @@ def mount(app):
             raise PublicRequestError(str(exc)) from None
 
     async def current_settings(req):
-        from app.storage.ordinary_publication import current_settings as settings
-        from psycopg.types.json import Jsonb
+        from app.storage.comparison_policy import activate
         body=await read_json(req)
         if not isinstance(body,dict) or set(body)!={'assumptions','expected'}:
             raise PublicRequestError('Exact settings and prior revision required')
         try:value=assumptions(body['assumptions'])[0]
         except (ValueError,TypeError,ArithmeticError) as exc:raise PublicRequestError(str(exc)) from None
         def work():
-            with connect() as db,db.transaction():
-                db.execute('SELECT pg_advisory_xact_lock(901155)')
-                if settings(db)['revision']!=body['expected']:
-                    raise PublicRequestError('Settings changed; reload before applying')
-                db.execute('''INSERT INTO comparison_live_settings VALUES(true,%s)
-                    ON CONFLICT(singleton) DO UPDATE SET assumptions=excluded.assumptions''',(Jsonb(value),))
-            return dict(state='pending',assumptions=value,provider_requests=0)
-        return web.json_response(await asyncio.to_thread(work))
+            with connect() as db:
+                selected = activate(db, value, expected=body['expected'])
+            return dict(state='pending',assumptions=selected,provider_requests=0)
+        try:
+            return web.json_response(await asyncio.to_thread(work))
+        except snapshots.SnapshotOperationError as exc:
+            raise PublicRequestError(str(exc)) from None
 
     async def operate(req):
         options = page_options(req.query)

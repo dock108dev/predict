@@ -552,6 +552,14 @@
     ]
   },
   {
+    "name": "scanner-native-finance",
+    "tests": [
+      "tests/test_scanner_kalshi.py",
+      "tests/test_scanner_polymarket.py",
+      "tests/test_scanner_native.py"
+    ]
+  },
+  {
     "name": "scanner-client-contract",
     "tests": [
       "tests/test_sc04_contract.py"

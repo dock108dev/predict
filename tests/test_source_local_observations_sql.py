@@ -17,7 +17,7 @@ from aiohttp.test_utils import TestClient, TestServer
 
 from app.collection.current_native import NativeWorker
 from app.collection.current_policy import DEFAULT, validate
-from app.collection.runtime_client import RuntimeClient
+from tests.latest_board_fixture import RetainedBoardClient
 from app.comparison.combined_native import normalize
 from app.comparison.event_links import provider_key
 from app.storage import latest_board as latest
@@ -122,7 +122,7 @@ class SourceLocalObservationsSQL(IsolatedAsyncioTestCase):
     async def api(self):
         from app.dashboard.comparison_board_api import mount
         app = web.Application()
-        mount(app, RuntimeClient(connector=self.connect))
+        mount(app, RetainedBoardClient(connector=self.connect))
         client = TestClient(TestServer(app))
         await client.start_server()
         self.addAsyncCleanup(client.close)
@@ -141,23 +141,26 @@ class SourceLocalObservationsSQL(IsolatedAsyncioTestCase):
         record=next(r for r in self.records() if r['quote']['venue']=='kalshi')
         cid=current_rows.contract_id(record)
         original=current_rows._ordered_writes
-        deletes=[]
+        writes=[]
         @contextmanager
         def traced(db):
             with original(db) as execute:
                 def call(query,params=None,*,synchronous=False):
-                    if query.startswith('DELETE FROM current_depth'):deletes.append(params)
-                    return execute(query,params,synchronous=synchronous)
+                    result=execute(query,params,synchronous=synchronous)
+                    if 'SET independent_depth' in query:
+                        writes.append(result)
+                    return result
                 yield call
         with self.connect() as db:
-            db.execute("INSERT INTO current_depth VALUES (%s,'asks',0,'0.4','10','contracts')",(cid,))
+            db.execute("""UPDATE current_contract_storage SET independent_depth=
+                '[ ["asks",0,"0.4","10","contracts"] ]' WHERE id=%s""",(cid,))
             for turn in range(2):
                 at=(datetime.now(timezone.utc)+timedelta(seconds=turn+1)).isoformat()
                 record['quote']['times'].update(source_at=at,received_at=at)
                 with patch.object(current_rows,'_ordered_writes',traced):
                     CurrentRowStore(db).upsert_records([record])
                 self.assertEqual(db.execute('SELECT count(*) n FROM current_depth WHERE contract_id=%s',(cid,)).fetchone()['n'],0)
-        self.assertEqual(deletes,[(cid,)])
+        self.assertEqual([write.rowcount for write in writes], [1, 0])
 
     async def test_shared_event_context_arrives_before_every_contract_rebinds(self):
         case=source_local_case('NBA','moneyline',uuid4().hex[:10],clock=datetime.now(timezone.utc))

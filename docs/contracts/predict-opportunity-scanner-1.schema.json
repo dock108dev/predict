@@ -345,6 +345,7 @@
                     }
                   ]
                 },
+                "execution_at": {"type": "string", "format": "date-time"},
                 "book_at": {
                   "anyOf": [
                     {
@@ -743,6 +744,17 @@
           "type": "integer",
           "minimum": 0
         },
+        "captured_at": {"type": ["string", "null"], "format": "date-time"},
+        "capture_only": {"type": "boolean"},
+        "captured_instruments": {"type": ["integer", "null"], "minimum": 0},
+        "captured_occurrences": {"type": ["integer", "null"], "minimum": 0},
+        "failed_occurrences": {"type": "integer", "minimum": 0},
+        "cashflow_ready_pairs": {"type": "integer", "minimum": 0},
+        "native_candidate_occurrences": {"type": "integer", "minimum": 0},
+        "native_selected_occurrences": {"type": "integer", "minimum": 0},
+        "partially_evaluated_pairs": {"type": "integer", "minimum": 0},
+        "census_compatible_pairs": {"type": "integer", "minimum": 0},
+        "financial_inputs_at": {"type": ["string", "null"], "format": "date-time"},
         "qualifying_pairs": {
           "anyOf": [
             {

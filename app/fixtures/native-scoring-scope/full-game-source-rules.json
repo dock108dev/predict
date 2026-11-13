@@ -252,8 +252,27 @@
       "league": "NHL",
       "family": "moneyline",
       "period": "full_game",
-      "defaults": {},
-      "evidence": null
+      "defaults": {
+        "overtime": "included",
+        "shootout": "official_final_score"
+      },
+      "evidence": {
+        "path": "app/fixtures/native-scoring-scope/hockey-winner-review-20261112.pdf",
+        "sha256": "adf31742fa165efa8d0fd0fb6126520b07b283a26b4375dde125a5b06e641da5",
+        "contract_terms_url": "https://assets.kalshi.com/contract_terms/HOCKEYWINNINGINPERIOD.pdf",
+        "reviewed_at": "2026-11-13T02:32:18Z",
+        "clause": "Unless the selected period says otherwise, the full-game winner uses the official result including overtime and the shootout. Exceptional settlement remains source-local.",
+        "series_response": {
+          "path": "app/fixtures/kalshi-fees-review-20261110.json",
+          "sha256": "37c5790a27b6b5964579ba398feb69baab79b92291ee20ed4e8b92578845d8bf"
+        },
+        "supporting_evidence": [
+          {
+            "path": "app/fixtures/native-scoring-scope/nhl-2026-27-rule84.txt",
+            "sha256": "fda7f36117388e28115255336f0ea4429894f3496fcbaa6f337a6dc3013c5765"
+          }
+        ]
+      }
     },
     {
       "provider": "kalshi",

@@ -110,6 +110,7 @@ git diff --check
 | Event matching and combined inputs | `test_ev02_occurrence.py`, `test_ev09_n01.py`, `test_comparison_event_links.py` |
 | SQL ingress, expiry and retired routes | `test_database_ingress_repair.py`, `test_current_route_retirement.py`, `test_ev09_ingress_isolation.py` |
 | Native HTTP admission and retry bounds | `test_native_http_reader.py`, `test_ordinary_native_transport.py` |
+| Scanner venue fees, payout terms and depth | `test_scanner_kalshi.py`, `test_scanner_polymarket.py`, `test_scanner_native.py`; `test_sc01_readiness_sql.py` and `test_sc06_performance_sql.py` in disposable SQL |
 | Runtime failure handling and detached reads | `test_data_runtime_unit.py`, `test_selected_read_work.py`, `test_abend_handling.py`, `test_coverage_worker.py`, `test_accounting_process.py`; `test_sc02_sql.py` through the disposable SQL harness |
 | Local browser, error privacy and launcher log targets | `test_security_hardening.py`, `test_dashboard_security.py`, `test_current_board_reads.py` |
 | CI reporting and isolation failures | `test_ci_reporting.py`, `test_ci_environment.py`, `test_ci_assurance.py`, `test_ci_secrets.py` |
@@ -143,6 +144,14 @@ and browser workflow discover the maintained tests below. The SQL harness accept
 
 This review covers the snapshot/display cases and the added recovery cases. It
 does not claim a value audit of every existing test or a hosted CI run.
+
+### Scanner native finance test coverage
+
+| Behavior | Tests and assertion boundary | Maintenance decision |
+| --- | --- | --- |
+| Kalshi selected-market grid and reviewed fees | `test_scanner_kalshi.py` checks exact side and market binding, tick ranges, fee bounds against the fee engine, expired reviews and explicit tie cashflow | Keep; authored receipts and a fixed clock |
+| Polymarket US selected-instrument fees and settlement | `test_scanner_polymarket.py` checks Long and Short, original kickoff and postponement terms, fee rounding and refusal of expired or mismatched evidence | Keep; authored receipts and a fixed clock |
+| Scanner conditional hedge allocation | `test_scanner_native.py` passes both venue models through the Scanner allocator and asserts positive fee bounds, the observed depth cap, unknown terminal profit and no ranked qualification | Keep; detached fixture models cover allocator behavior, while disposable SQL covers storage and publication |
 
 Run resource-sensitive Python modules in fresh processes: some deliberately
 measure process caps. Use authored fixtures and temporary state. For SQL tests,

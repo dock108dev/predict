@@ -1,6 +1,7 @@
 const kinds = {r:'Table', p:'Partitioned table', v:'View', m:'Materialized view', S:'Sequence', f:'Foreign table'};
 const $ = id => document.getElementById('db-' + id);
 const isStorageObject = item => item.partition || item.kind === 'S';
+const isView = item => item.kind === 'v' || item.kind === 'm';
 
 function element(tag, text) {
   const node = document.createElement(tag);
@@ -38,9 +39,9 @@ function matrix(label, columns) {
 }
 
 function definitions(content, title, entries) {
+  if (!entries.length) return;
   const group = element('details');
   group.append(element('summary', title + ' (' + entries.length + ')'));
-  if (!entries.length) group.append(element('p', 'None.'));
   for (const entry of entries) {
     group.append(element('strong', entry.name), element('pre', entry.definition));
   }
@@ -75,19 +76,21 @@ function showStructure(data) {
 
 export function mountDatabase() {
   const schema = $('schema'), search = $('search'), object = $('object');
-  const storage = $('storage');
+  const storage = $('storage'), views = $('views');
   const dialog = $('cell-dialog');
   const locationState = new URLSearchParams(location.search);
   let relations = [], visible = [], relation = null, busy = false, cellBusy = false;
   storage.checked = locationState.get('storage') === 'true';
+  views.checked = locationState.get('views') === 'true';
   let mode = locationState.get('view') === 'structure' ? 'structure' : 'rows';
   let currentPage, cellSelection, cellPart;
 
   function controls() {
     $('refresh').disabled = busy;
     schema.disabled = busy || !schema.options.length;
-    search.disabled = busy;
+    search.disabled = busy || !schema.options.length;
     storage.disabled = busy || !schema.options.length;
+    views.disabled = busy || !schema.options.length;
     object.disabled = busy || !visible.length;
     $('rows').disabled = busy || !relation?.readable;
     $('structure').disabled = busy;
@@ -97,17 +100,25 @@ export function mountDatabase() {
 
   function fillObjects(selected) {
     const term = search.value.trim().toLowerCase();
-    visible = relations.filter(item => item.schema === schema.value && (storage.checked || !isStorageObject(item)) &&
+    const scoped = relations.filter(item => item.schema === schema.value);
+    const tableCount = scoped.filter(item => !isStorageObject(item) && !isView(item)).length;
+    const viewCount = scoped.filter(isView).length;
+    const storageCount = scoped.length - tableCount - viewCount;
+    $('catalog-count').textContent = schema.value ?
+      `${tableCount.toLocaleString()} ${tableCount === 1 ? 'table' : 'tables'}` +
+      (viewCount ? ` · ${viewCount.toLocaleString()} ${viewCount === 1 ? 'view' : 'views'}` : '') +
+      (storage.checked && storageCount ? ` · ${storageCount.toLocaleString()} partitions and sequences` : '') : '';
+    visible = scoped.filter(item => (storage.checked || !isStorageObject(item)) &&
+      (views.checked || !isView(item)) &&
       (item.name + ' ' + kinds[item.kind] + (item.partition ? ' partition' : '')).toLowerCase().includes(term));
-    object.replaceChildren(new Option(storage.checked ? 'Choose an object' : 'Choose a table or view', ''));
-    for (const [index, item] of visible.entries()) {
-      object.add(new Option(item.name + ' · ' + kinds[item.kind] + (item.partition ? ' partition' : ''), String(index)));
+    object.replaceChildren(new Option(storage.checked || views.checked ? 'Choose an object' : 'Choose a table', ''));
+    for (const item of visible) {
+      object.add(new Option(item.name + ' · ' + kinds[item.kind] + (item.partition ? ' partition' : ''), item.name));
     }
-    const found = visible.findIndex(item => item.name === selected);
-    object.value = found === -1 ? '' : String(found);
+    object.value = visible.some(item => item.name === selected) ? selected : '';
     if (!schema.value) $('status').textContent = 'No project schemas are available.';
     else if (!visible.length) $('status').textContent = term ? 'No results match your search.' :
-      storage.checked ? 'This schema has no database objects.' : 'This schema has no top-level tables or views.';
+      'No objects match the selected types.';
     else $('status').textContent = term ? visible.length + (visible.length === 1 ? ' match' : ' matches') : '';
   }
 
@@ -115,7 +126,7 @@ export function mountDatabase() {
     const url = new URL(location.href);
     for (const [key, value] of [
       ['schema', schema.value], ['object', relation?.name], ['view', relation && mode],
-      ['storage', storage.checked && 'true']
+      ['storage', storage.checked && 'true'], ['views', views.checked && 'true']
     ]) {
       if (value) url.searchParams.set(key, value);
       else url.searchParams.delete(key);
@@ -196,6 +207,8 @@ export function mountDatabase() {
   }
 
   async function inspect(offset = 0) {
+    const previous = $('previous'), next = $('next');
+    const pageFocus = [previous, next].find(button => button === document.activeElement);
     $('selection').hidden = !relation;
     $('paging').hidden = true;
     $('content').replaceChildren();
@@ -208,6 +221,7 @@ export function mountDatabase() {
     }
     busy = true;
     controls();
+    $('content').setAttribute('aria-busy', 'true');
     $('object-title').textContent = relation.schema + '.' + relation.name;
     $('object-kind').textContent = kinds[relation.kind] + (relation.partition ? ' partition' : '') +
       (relation.readable ? '' : ' · Structure only');
@@ -232,11 +246,16 @@ export function mountDatabase() {
       }
     } finally {
       busy = false;
+      $('content').setAttribute('aria-busy', 'false');
       controls();
+      if (pageFocus && [document.body, pageFocus].includes(document.activeElement)) {
+        const target = [pageFocus, previous, next].find(button => !button.disabled) || $('rows');
+        target.focus({preventScroll:true});
+      }
     }
   }
 
-  async function load(preferredSchema, preferredObject) {
+  async function load(preferredSchema, preferredObject, restoreType = false) {
     busy = true;
     controls();
     $('status').textContent = 'Reading database catalog…';
@@ -248,9 +267,10 @@ export function mountDatabase() {
         data.schemas.includes('public') ? 'public' : (data.schemas[0] ?? '');
       $('catalog-summary').textContent = data.database + ' · Read only';
       const selected = relations.find(item => item.schema === preferredSchema && item.name === preferredObject);
-      if (selected && isStorageObject(selected)) storage.checked = true;
+      if (restoreType && selected && isStorageObject(selected)) storage.checked = true;
+      if (restoreType && selected && isView(selected)) views.checked = true;
       fillObjects(selected?.name);
-      relation = object.value ? visible[Number(object.value)] : null;
+      relation = selected || null;
     } catch (error) {
       $('status').textContent = error.message;
       busy = false;
@@ -265,17 +285,18 @@ export function mountDatabase() {
   schema.onchange = () => { fillObjects(); relation = null; void inspect(); };
   function filterObjects() {
     fillObjects(relation?.name);
-    if (!object.value && relation) { relation = null; void inspect(); }
-    else { saveSelection(); controls(); }
+    saveSelection();
+    controls();
   }
   search.oninput = filterObjects;
   storage.onchange = filterObjects;
-  object.onchange = () => { relation = object.value ? visible[Number(object.value)] : null; void inspect(); };
+  views.onchange = filterObjects;
+  object.onchange = () => { relation = visible.find(item => item.name === object.value) || null; void inspect(); };
   $('rows').onclick = () => { mode = 'rows'; void inspect(); };
   $('structure').onclick = () => { mode = 'structure'; void inspect(); };
   $('previous').onclick = () => inspect(currentPage.previous_offset);
   $('next').onclick = () => inspect(currentPage.next_offset);
   $('cell-previous').onclick = () => readCell(cellPart.previous_start);
   $('cell-next').onclick = () => readCell(cellPart.next_start);
-  void load(locationState.get('schema'), locationState.get('object'));
+  void load(locationState.get('schema'), locationState.get('object'), true);
 }

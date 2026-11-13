@@ -210,23 +210,34 @@ def write_report(output, records, started):
         for r in records
         if r["name"].startswith("sportsgameodds__") or r["name"] == "test_sgo_drawer"
     ]
+    scanner_checks = [
+        r for r in records if r["name"].startswith("scanner-native-finance__")
+    ]
     behavior = []
-    if fee_checks or sgo_checks:
+    if fee_checks or sgo_checks or scanner_checks:
         behavior = [
             "### What was tested and why it matters",
             "| Behavior checked | Actual result | Why it matters | Evidence / limit |",
             "|---|---|---|---|",
         ]
-        for checks, title, purpose in (
+        for checks, title, purpose, evidence in (
             (
                 fee_checks,
                 "Fee applicability, renewal, rounding and coverage",
                 "Keeps unsupported fees out of current estimates and preserves the denominator",
+                "Fixtures and simulated HTTP. Check results below.",
             ),
             (
                 sgo_checks,
                 "SportsGameOdds collection, recovery and reference qualification",
                 "Protects budget holds, original prices and the exact inputs used in EV",
+                "Fixtures and simulated HTTP. Check results below.",
+            ),
+            (
+                scanner_checks,
+                "Scanner venue fees, payout terms and observed-depth allocation",
+                "Keeps unbound venue terms out of estimates and unknown terminal cashflows out of ranked results",
+                "Authored receipts and allocation. See `scanner-native-finance__*.xml` in this run’s artifact.",
             ),
         ):
             if not checks:
@@ -235,12 +246,11 @@ def write_report(output, records, started):
             if any((r.get("tests") or {}).get("skipped") for r in checks):
                 outcomes.add("SKIPPED")
             behavior.append(
-                f"| {title} | {' / '.join(sorted(outcomes))} | {purpose} "
-                "| Fixtures and simulated HTTP. Check results below. |"
+                f"| {title} | {' / '.join(sorted(outcomes))} | {purpose} | {evidence} |"
             )
         behavior += [
             "",
-            "**Gaps and limits.** Provider collection, live fee renewal and current desk coverage require separate validation.",
+            "**Gaps and limits.** Provider collection, live fee renewal and current desk or full-slate Scanner publication require separate validation.",
         ]
     summary = [
         f"## Offline contract — {overall}",

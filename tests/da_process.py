@@ -78,7 +78,8 @@ async def run(args):
         scanner.projection.evaluator=forbidden
         async def receipt():
             with connect() as db:
-                row=db.execute('SELECT publication,runtime_revision,payload FROM scanner_latest WHERE singleton').fetchone()
+                from app.storage.scanner_latest import read
+                row=read(db)
                 owner=provider.runtime()
                 return dict(provider_requests=0,publication=None if row is None else row['publication'],
                     published_runtime_revision=None if row is None else row['runtime_revision'],
@@ -91,7 +92,8 @@ async def run(args):
                 if scanner.healthy and (previous is None or identity(value)!=identity(previous)):return value
                 await asyncio.sleep(.05)
             with connect() as db:
-                latest=db.execute('SELECT runtime_revision,publication,payload FROM scanner_latest WHERE singleton').fetchone()
+                from app.storage.scanner_latest import read
+                latest=read(db)
                 owner=provider.runtime()
             raise ValueError('Fixture background owner did not reconcile: '+json.dumps(dict(
                 before=previous,publication=latest['publication'],healthy=scanner.healthy,
@@ -104,8 +106,9 @@ async def run(args):
             if action=='change':
                 with connect() as db:
                     row=deepcopy(next(r for r in CurrentRowStore(db).capture(include_depth=True)['records'] if r['quote']['venue']=='kalshi'))
-                    row['quote']['original'].update(value='0.25',native_value='0.25');row['quote']['depth'][0]['price']='0.25'
-                    row['quote']['times'].update(source_at=clock(),received_at=clock())
+                    row['quote']['original']['value']='0.25';row['quote']['depth'][0]['price']='0.25'
+                    observed_at = clock()
+                    row['quote']['times'].update(source_at=observed_at, received_at=observed_at)
                     with transaction(db):
                         rows=CurrentRowStore(db);rows.upsert_records([row],now=clock(),source_status=provider.states);rows.replace_native_books(native_books([row]))
                 return web.json_response(await wait_new(before))

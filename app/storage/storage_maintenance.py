@@ -21,15 +21,16 @@ REWRITE_RUNWAY_BYTES = 64 * 1024 * 1024
 TRANSIENT_REWRITE_BYTES = 512 * 1024 * 1024
 # Rewrites preserve every live row, including immutable Original packets.
 # Account and journal tables are outside this maintenance owner.
-COMPACT_TABLES = ('current_native_market_recovery', 'current_acquisition_image_parts',
-    'current_native_ladder', 'current_contract_storage', 'current_offer', 'current_acquisition_market',
-    'current_acquisition_page', 'latest_board', 'latest_dashboard', 'current_grid_projection',
+COMPACT_TABLES = ('current_native_market_recovery', 'current_native_market_body', 'current_acquisition_image_parts',
+    'current_native_ladder', 'native_ladder_revision', 'native_book_revision',
+    'current_contract_storage', 'current_offer_storage', 'current_acquisition_market',
+    'acquisition_receipt', 'sgo_event_evidence', 'latest_board', 'latest_dashboard', 'current_grid_projection',
     'current_result_unit', 'current_native_book', 'current_native_catalog_recovery',
-    'comparison_snapshot', 'comparison_snapshot_result', 'comparison_live_read_fragment', 'data_runtime', 'current_grid_blob')
+    'comparison_snapshot', 'comparison_snapshot_result', 'comparison_publication', 'data_runtime', 'current_grid_blob')
 MIN_REUSABLE_BYTES = 4 * 1024 * 1024
 HOT_TABLES = ('current_acquisition_image_parts','current_acquisition_market',
-              'current_native_ladder','current_native_book','current_offer',
-              'comparison_snapshot_result','comparison_snapshot','comparison_live_read_fragment')
+              'native_ladder_revision','native_book_revision','current_offer_storage',
+              'comparison_snapshot_result','comparison_snapshot')
 CAPTURE_WAIT_SECONDS = 10
 LIVE_REWRITE_LOCK_TIMEOUT = '100ms'
 REWRITE_TURN_SECONDS = 5
@@ -53,43 +54,58 @@ def maintain(db, *, compact=True, collecting=False):
     try:
         db.execute("SET lock_timeout='1s'")
         db.execute("SET statement_timeout='60s'")
-        if db.execute("SELECT to_regclass('public.comparison_live_lease') r").fetchone()['r']:
+        if db.execute("SELECT to_regclass('public.comparison_result_reference') r").fetchone()['r']:
             from .comparison_snapshot import prune as prune_snapshots
             prune_snapshots(db)
         with db.transaction():
-            if db.execute("SELECT to_regclass('public.current_grid_read_lease') r").fetchone()['r']:
+            if db.execute("SELECT to_regclass('current_grid_read_lease') r").fetchone()['r']:
                 from .grid_packet_store import cleanup
                 cleanup(db)
-            if db.execute("SELECT to_regclass('public.pipeline_generation') r").fetchone()['r']:
+            if db.execute("SELECT to_regclass('pipeline_generation') r").fetchone()['r']:
                 from .pipeline_generation import prune
                 prune(db)
-            if db.execute("SELECT to_regclass('public.current_result_unit') r").fetchone()['r']:
+            if db.execute("SELECT to_regclass('current_result_unit') r").fetchone()['r']:
                 from .result_publication import prune as prune_units
                 prune_units(db)
-            if db.execute("SELECT to_regclass('public.current_result_work') r").fetchone()['r']:
+            if db.execute("SELECT to_regclass('current_result_work') r").fetchone()['r']:
                 from .result_inventory import prune as prune_inventory
                 prune_inventory(db)
-        # SGO evidence shares the current-row writer lock. Do not let a busy
+        # Source evidence shares the current-row writer lock. Do not let a busy
         # writer roll back or delay unrelated retention work above.
         with db.transaction():
             reference = db.execute("SELECT to_regclass('public.current_sgo_reference') r").fetchone()['r']
-            frames = db.execute("SELECT to_regclass('public.current_sgo_event_frame') r").fetchone()['r']
+            frames = db.execute("SELECT to_regclass('public.sgo_event_evidence') r").fetchone()['r']
             history = db.execute("SELECT to_regclass('public.current_sgo_history') r").fetchone()['r']
-            if reference or frames or history:
+            native = db.execute("SELECT to_regclass('public.native_book_revision') r").fetchone()['r']
+            if reference or frames or history or native:
                 from .current_rows import LOCK as CURRENT_ROWS_LOCK
                 if not db.execute('SELECT pg_try_advisory_xact_lock(%s) held', (CURRENT_ROWS_LOCK,)).fetchone()['held']:
-                    result['deferred'].append(dict(table='sportsgameodds_reference', reason='lock_busy'))
+                    if reference or frames or history:
+                        result['deferred'].append(dict(table='sportsgameodds_reference', reason='lock_busy'))
+                    if native:
+                        result['deferred'].append(dict(table='native_book_revision', reason='lock_busy'))
                 else:
                     from .store import now
                     if reference:
                         from .sportsgameodds_reference import prune as prune_sgo
-                        result['sgo_reference_expired'] = prune_sgo(db, at=now())
+                        versioned = db.execute("SELECT to_regclass('public.sgo_quote_revision') IS NOT NULL ready").fetchone()['ready']
+                        if versioned:
+                            result['sgo_reference_expired'] = prune_sgo(db, at=now())
+                        else:
+                            # First startup runs maintenance before forward
+                            # migrations. Leave these quotes for the new owner.
+                            result['deferred'].append(dict(table='sportsgameodds_reference', reason='migration_pending'))
                     if frames:
                         from .sportsgameodds_reference import prune_frames
                         result['sgo_frame_expired'] = prune_frames(db, at=now())
                     if history:
                         from .sportsgameodds_reference import prune_history
                         result['sgo_history_expired'] = prune_history(db, at=now())
+                    if native:
+                        from .native_ladder_batch import prune as prune_native_revisions
+                        def execute_native(query, params, *, synchronous=False):
+                            return db.execute(query, params)
+                        result['native_book_expired'] = prune_native_revisions(execute_native)
         if collecting and result['before_bytes'] >= PRESSURE_BYTES:
             # Full-scope native replacement can consume the remaining runway
             # before the server's default minute autovacuum wake-up. Recycle
@@ -108,14 +124,15 @@ def maintain(db, *, compact=True, collecting=False):
             rewrite_started=monotonic()
             ext = db.execute("SELECT n.nspname AS schema FROM pg_extension e JOIN pg_namespace n ON n.oid=e.extnamespace WHERE e.extname='pgstattuple'").fetchone()
             if ext:
-                candidates = db.execute('''SELECT c.oid,c.relname,c.relfilenode,c.reltoastrelid,COALESCE(parent.relname,c.relname) owner,pg_total_relation_size(c.oid) bytes,
+                candidates = db.execute('''SELECT c.oid,c.relname,c.relfilenode,c.reltoastrelid,n.nspname AS schema,COALESCE(parent.relname,c.relname) owner,pg_total_relation_size(c.oid) bytes,
                     COALESCE(f.members,1) partition_count
-                    FROM pg_class c LEFT JOIN pg_inherits own ON own.inhrelid=c.oid
+                    FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+                    LEFT JOIN pg_inherits own ON own.inhrelid=c.oid
                     LEFT JOIN pg_class parent ON parent.oid=own.inhparent
                     LEFT JOIN (SELECT inhparent,count(*) members FROM pg_inherits GROUP BY inhparent) f ON f.inhparent=own.inhparent
-                    WHERE c.relnamespace='public'::regnamespace AND c.relkind='r'
+                    WHERE c.relnamespace=ANY(current_schemas(false)::regnamespace[]) AND c.relkind='r'
                     AND (c.relname=ANY(%s) OR EXISTS(SELECT 1 FROM pg_inherits i JOIN pg_class p ON p.oid=i.inhparent
-                      WHERE i.inhrelid=c.oid AND p.relnamespace='public'::regnamespace AND p.relname=ANY(%s)))
+                      WHERE i.inhrelid=c.oid AND p.relnamespace=c.relnamespace AND p.relname=ANY(%s)))
                     ORDER BY pg_total_relation_size(c.oid)''', (list(COMPACT_TABLES),list(COMPACT_TABLES))).fetchall()
                 if collecting and candidates:
                     last=_last_collecting_candidate.get(db.info.dbname)
@@ -147,7 +164,7 @@ def maintain(db, *, compact=True, collecting=False):
                     # MB between 12.5% and 25% while their admissions waited.
                     divisor=12
                     if collecting and row['owner']!='current_native_market_recovery':
-                        divisor=8 if row['owner'] in ('current_acquisition_image_parts','current_contract_storage','current_offer') else 4
+                        divisor=8 if row['owner'] in ('current_acquisition_image_parts','current_contract_storage','current_offer_storage') else 4
                     if free < reclaim_unit or free < heap_bytes // divisor:continue
                     floor_key=(db.info.dbname,row['oid'])
                     floor=_rewrite_floor.get(floor_key)
@@ -195,7 +212,7 @@ def maintain(db, *, compact=True, collecting=False):
                     if collecting:
                         db.execute("SELECT set_config('lock_timeout',%s,false)", (LIVE_REWRITE_LOCK_TIMEOUT,))
                     try:
-                        db.execute(sql.SQL('VACUUM (FULL, ANALYZE) {}').format(sql.Identifier('public',row['relname'])))
+                        db.execute(sql.SQL('VACUUM (FULL, ANALYZE) {}').format(sql.Identifier(row['schema'],row['relname'])))
                     except LockNotAvailable:
                         result['deferred'].append(dict(table=row['relname'], reason='lock_timeout'))
                         continue
@@ -233,6 +250,10 @@ def maintain(db, *, compact=True, collecting=False):
         if db.execute("SELECT to_regclass('public.current_native_market_recovery') r").fetchone()['r']:
             from .recovery_codec import repack
             result['recovery_repack']=repack(db)
+        if db.execute("SELECT to_regclass('public.current_native_market_body') r").fetchone()['r']:
+            from . import native_market_metadata
+            result['native_metadata_backfill']=native_market_metadata.convert(db)
+            result['native_metadata_pruned']=native_market_metadata.prune(db)
         result['after_bytes'] = sql_usage(db)
         return result
     finally:

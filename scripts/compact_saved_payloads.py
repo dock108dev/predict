@@ -11,7 +11,7 @@ from uuid import uuid4
 
 from psycopg import sql
 from app.storage.payload_codec import TABLES, decode, encode
-from app.storage.store import connect, encoded, ROOT
+from app.storage.store import connect, encoded, open_retained, ROOT
 from app.collection.current_storage_policy import require_disk_space, sql_usage
 
 COLUMNS = {
@@ -100,7 +100,7 @@ def verify_backup(path, expected=None):
             raise ValueError('full_custom_backup_required')
     listing = subprocess.check_output(['pg_restore', '--list', str(path)], text=True, timeout=30)
     for table in ('current_envelope', 'current_source_projection', 'current_game_projection', *TABLES, 'current_latest_result', 'current_import_cursor'):
-        if 'TABLE DATA public ' + table + ' ' not in listing:
+        if not any('TABLE DATA ' + schema + ' ' + table + ' ' in listing for schema in ('public', 'retained')):
             raise ValueError('backup_table_missing:' + table)
     return dict(path=str(path), sha256=actual, bytes=path.stat().st_size)
 
@@ -127,6 +127,7 @@ def inspect(database, output, backup=None,tables=DEFAULT_TABLES):
     tables = {}
     with connect(database) as db, db.transaction():
         db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
+        open_retained(db)
         db.execute("SET LOCAL TIME ZONE 'UTC'")
         before_sizes = sizes(db,selected)
         before_usage = sql_usage(db)
@@ -169,6 +170,7 @@ def apply(database, output, vacuum=False,tables=None):
     prospective = 2 * sum(t['planned_text_bytes'] for t in plan['tables'].values())
     require_disk_space(ROOT / '.local' / 'postgres', prospective)
     with connect(database) as db:
+        open_retained(db)
         with db.transaction():
             db.execute("SET LOCAL TIME ZONE 'UTC'")
             other = db.execute("SELECT count(*) AS n FROM pg_stat_activity WHERE datname=current_database() AND pid<>pg_backend_pid() AND backend_type='client backend'").fetchone()['n']
@@ -216,8 +218,9 @@ def apply(database, output, vacuum=False,tables=None):
             db.execute('SET TRANSACTION READ ONLY')
             after_sizes = sizes(db,selected)
             after_usage = sql_usage(db)
-            triggers = db.execute('SELECT tgname,tgenabled FROM pg_trigger WHERE tgname=ANY(%s) ORDER BY tgname',
-                (['immutable_'+table for table in selected],)).fetchall()
+            triggers = db.execute('''SELECT tgname,tgenabled FROM pg_trigger
+                WHERE tgname=ANY(%s) AND tgrelid=ANY(SELECT to_regclass(name) FROM unnest(%s::text[]) AS name)
+                ORDER BY tgname''', (['immutable_'+table for table in selected], list(selected))).fetchall()
             if len(triggers)!=len(selected) or any(row['tgenabled']!='O' for row in triggers):
                 raise ValueError('immutable_trigger_inventory_changed')
     result = dict(plan, applied=True, vacuumed=vacuum, after_table_bytes=after_sizes,

@@ -2,6 +2,7 @@
 from decimal import Decimal, localcontext
 from fractions import Fraction
 from functools import lru_cache
+from app.comparison.display_identity import outcome_key as outcome_key
 from .u0_display import quote_display
 
 
@@ -57,32 +58,6 @@ def search_index(result):
                 terms.append(team['name'])
         index[game['game_key']] = ' '.join(terms).casefold()
     return index
-
-
-def outcome_key(row):
-    """A browsing bucket, not proof of identical settlement or financial authority.
-
-    Include event, period, predicate and signed line. In particular a native NO
-    remains not_win; a Short already normalized to a participant is not negated.
-    Missing semantic identity stays source-specific rather than falsely merging.
-    """
-    s, m = row.get('selection', {}), row.get('market', {})
-    predicate = s.get('predicate')
-    participant = s.get('participant')
-    if (not predicate or not row.get('game_key') or not m.get('period') or not m.get('market')
-            or (predicate not in ('over', 'under') and not participant)):
-        return ('unresolved', row['id'])
-    line = s.get('signed_line', m.get('line'))
-    if m['market'] in ('spread', 'total') and line is None:
-        return ('unresolved', row['id'])
-    if line is not None:
-        try:
-            line = str(Fraction(line))
-        except (ValueError, ZeroDivisionError):
-            line = str(line)
-    return (row.get('game_key'), m.get('market'), m.get('period'),
-            participant if predicate not in ('over', 'under') else None,
-            predicate, line, s.get('result_interpretation'))
 
 
 def ranking_value(row, metric, *, current=False):

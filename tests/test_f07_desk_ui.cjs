@@ -46,6 +46,11 @@ async function check() {
   assert.match(after.textContent, /8 decimal/);
   assert.match(after.textContent, /Reviewed-fee EV/);
   assert.match(after.textContent, /EV with conservative fees/);
+  const noBookSize = structuredClone(details[latest.id + ':latest']);
+  noBookSize.inspection.reviewed.missing = ['native quantity and executable depth', 'instrument-level settlement mapping'];
+  const retail = tradeInspection(latest, group, noBookSize, {position:'Fixture', basis:'reviewed'});
+  assert.match(retail.textContent, /instrument-level settlement mapping/);
+  assert.doesNotMatch(retail.textContent, /native quantity and executable depth|Executable size/);
 
   // Authority-only changes can keep both saved revisions. They must still
   // invalidate an in-flight adoption and suppress an older reference in detail.
@@ -121,7 +126,7 @@ async function check() {
     prices:[{price_american:'+120', source_at:'2026-11-10T20:00:00Z'},
             {price_american:'-150', source_at:'2026-11-10T20:00:00Z'}]};
   const withBook = tradeInspection({...latest, sportsbook, value:sportsbook.return_percent}, group, sgoEvidence, {position:'Fixture', basis:'sportsbooks'});
-  assert.match(withBook.textContent, /Sportsbook EV before fees\+3\.45%/);
+  assert.match(withBook.textContent, /Estimated return before fees\+3\.45%/);
   assert.match(withBook.textContent, /Selected bookFanDuel/);
   assert.match(withBook.textContent, /Opposite odds-150/);
   assert.notEqual(selectionIdentity(latest), selectionIdentity({...latest, sportsbook}));
@@ -132,6 +137,7 @@ async function check() {
     assert.match(drawer.textContent, /Acquisition cost\$44\.44/);
     assert.match(drawer.textContent, /Acquisition cost\$55\.56/);
     assert.match(drawer.textContent, /Fee at fill\$0\.93/);
+    assert.doesNotMatch(drawer.textContent, /Executable size is unverified/);
     if (row.pairs[0].retail_payoff.available) assert.match(drawer.textContent, /Minimum modeled net payoff\$10\.17/);
     else assert.match(drawer.textContent, /Both leg fees are needed/);
   }

@@ -1,6 +1,6 @@
 import {mountFeeCensus} from './fee-census-view.js';
 import {coverageNames, coverageFamilies, coverageWords, coverageSport, coverageSource, coverageFamily, coveragePeriod} from './coverage-model.js';
-import {coverageElement, coverageTime, renderCoverageOutcome, renderCoverageTotals, renderFilteredCoverage, renderCoverageMatrix, renderCoverageDetails, cellTitle} from './coverage-view.js';
+import {coverageElement, coverageTime, coverageStale, coverageClocks, renderCoverageOutcome, renderCoverageTotals, renderFilteredCoverage, renderCoverageMatrix, renderCoverageDetails, cellTitle} from './coverage-view.js';
 const get = id => document.getElementById(id), keys = ['league', 'venue', 'market', 'period', 'attention', 'sort'];
 let data = null, paused = false, timer = null, controller = null, failures = 0, active = true, opener = null, initialDataset = true, readError = "";
 const filters = () => Object.fromEntries(keys.map(key => [key, get(key).value]));
@@ -33,7 +33,7 @@ function draw() {
   get('test-notice').hidden = !['synthetic', 'fixture', 'authored'].includes(data.mode);
   get('flow').dataset.state = readError || data.publication_error ? 'error' : 'ready';
   if (get('capture-evidence')) get('capture-evidence').textContent = (readError ? 'Read failed; prior freshness is unverified. ' : '') + (paused ? 'View updates paused. ' : '') + 'Captured ' + coverageTime(data.captured_at) + ' · Published ' + coverageTime(data.publication_at) + ' · ' + coverageWords(data.publication_state || 'published') + '. Measurements are as of capture; source clocks and explicit book confirmations determine freshness.' + (data.capture_age_seconds == null ? '' : ' Capture age: ' + Math.round(data.capture_age_seconds) + 's · Publication age: ' + Math.round(data.publication_age_seconds) + 's · Processing delay: ' + Number(data.capture_to_publication_seconds).toFixed(2) + 's.') + (data.publication_reasons?.length ? ' Summary warning: ' + data.publication_reasons.map(coverageWords).join(', ') + '.' : '');
-  get('flow').textContent = (paused ? 'View updates paused. ' : '') + (readError ? 'Latest read failed; prior capture retained.' : data.publication_error ? 'Background publication is unavailable.' : 'Local publication read · original capture clocks retained.');
+  get('flow').textContent = [paused ? 'View updates paused.' : '', readError ? 'Latest read failed. Prior capture retained.' : ''].filter(Boolean).join(' ');
 }
 const refreshFeeCensus = mountFeeCensus(get('fee-census'), get('export-fee-census'));
 function readFeeCensus() {
@@ -68,9 +68,22 @@ get('filters').onsubmit = event => event.preventDefault();
 for (const key of keys) get(key).addEventListener('change', draw);
 get('clear-filters').onclick = () => {for (const key of keys) get(key).value = key === 'sort' ? 'scope' : ''; draw();};
 get('close-coverage-details').onclick = () => get('coverage-details').close();
-get('coverage-details').addEventListener('close', () => {const id = opener?.dataset.cellId; [...get('coverage').querySelectorAll('button')].find(button => button.dataset.cellId === id)?.focus({preventScroll:true}); opener = null;});
+get('coverage-details').addEventListener('close', () => {
+  const id = opener?.dataset.cellId;
+  const target = [...get('coverage').querySelectorAll('button')].find(button => button.dataset.cellId === id) || get('coverage');
+  target.focus({preventScroll:true});
+  opener = null;
+});
 get('pause-coverage').onclick = () => {paused = !paused; get('pause-coverage').textContent = paused ? 'Resume view updates' : 'Pause view updates'; clearTimeout(timer); if (paused) {controller?.abort(); draw();} else {failures = 0; pull();}};
 get('retry-coverage').onclick = () => {failures = 0; if (paused) {paused = false; get('pause-coverage').textContent = 'Pause view updates';} pull();};
-const ageTimer = setInterval(() => renderCoverageOutcome(get('coverage-outcome'), data, filters(), readError), 1000);
+const ageTimer = setInterval(() => {
+  const outcome = get('coverage-outcome'), clock = outcome.querySelector('.capture-age');
+  if (!clock || outcome.dataset.stale !== String(coverageStale(data))) {
+    renderCoverageOutcome(outcome, data, filters(), readError);
+  } else {
+    const text = coverageClocks(data);
+    if (clock.textContent !== text) clock.textContent = text;
+  }
+}, 1000);
 window.addEventListener('pagehide', () => {active = false; clearInterval(ageTimer); clearTimeout(timer); controller?.abort();});
 pull();

@@ -18,21 +18,26 @@ from app.collection.current_policy import DEFAULT
 from app.comparison.current_dependencies import digest, instant
 from app.comparison.estimated_policy import DEFAULT_POLICY
 from app.comparison.scanner_projection import Projection
-from app.dashboard.scanner_api import ScannerReader, mount
-from app.storage.scanner_latest import snapshot
+from app.dashboard.scanner_api import ScannerReader, component_binding, mount
+from app.storage.scanner_latest import control, native_source_health, snapshot
 from tests.test_sc02_projection import AT, fake, frame
 
 
 class ReadOnlyFixture:
-    def __init__(self, owner):self.owner = owner
+    def __init__(self, owner):self.owner = owner; self.result = None
     def __enter__(self):return self
     def __exit__(self, *args):return False
     def transaction(self):return self
     def execute(self, statement, *args):
         if statement.startswith('SET TRANSACTION'):return self
-        if statement == 'SELECT * FROM scanner_latest WHERE singleton':return self
+        if 'FROM comparison_publication' in statement and "kind='scanner'" in statement:
+            self.result = self.owner.row
+            return self
+        if 'FROM current_row_epoch' in statement:
+            self.result = {'epoch': self.owner.proof['epoch']}
+            return self
         raise AssertionError('Unexpected fixture SQL: ' + statement)
-    def fetchone(self):return deepcopy(self.owner.row)
+    def fetchone(self):return deepcopy(self.result)
 
 
 class ReaderStates(IsolatedAsyncioTestCase):
@@ -79,6 +84,7 @@ class ReaderStates(IsolatedAsyncioTestCase):
         self.assertFalse(view['coverage']['no_qualifying_opportunities'])
         self.assertFalse(view['rows'])
         self.assertFalse(self.reader.projection.receipts)
+        self.assertFalse(self.reader.projection.partial_receipts)
         self.assertFalse(self.reader.projection.cache)
         self.assertFalse(self.reader.projection.targets)
 
@@ -150,6 +156,44 @@ class ReaderStates(IsolatedAsyncioTestCase):
         self.reader.refresh()
         self.assertTrue(self.reader.stopped())
         self.assertFalse(self.reader.projection.rows)
+
+    async def test_partial_component_revalidates_and_withdraws_without_losing_current_census(self):
+        from app.comparison.readiness_encoding import expand
+
+        value = self.row['payload']
+        pair_id, receipt = value['receipts'].popitem()
+        value.update(rows={}, partial_receipts={pair_id: receipt},
+            capture_control_revision=digest(control(self.runtime)),
+            component_authority=dict(witnesses={}, pairs={pair_id: []},
+                binding=component_binding(self.policy, self.reader.preparation.registry()),
+                native_source_health=native_source_health(self.runtime)))
+        captured = expand(value['frame'])
+        self.proof['epoch'] = value['epoch']
+        scopes = deepcopy(captured['scopes'])
+        scopes.append(dict(next(s for s in scopes if s['venue']=='kalshi'), sport='basketball', league='nba'))
+        value['census'] = dict(as_of=captured['as_of'], scopes=scopes,
+            counts=captured['counts'], native_candidate_occurrences=1)
+        self.row['publication'] += 1
+        self.runtime['revision'] += 1
+        self.reader.refresh()
+        shown = self.reader.projection.view()
+        self.assertEqual(shown['coverage']['partially_evaluated_pairs'], 1)
+        self.assertIn('nba', shown['filter_options']['leagues'])
+        self.assertFalse(shown['coverage']['complete'])
+
+        self.reader.preparation.registry = lambda **kwargs:('changed-registry', None)
+        self.reader.refresh()
+        shown = self.reader.projection.view()
+        self.assertEqual(shown['coverage']['state'], 'not_evaluated')
+        self.assertEqual(shown['coverage']['errors'], ['scanner_calculation_binding_changed'])
+        self.assertNotIn('partially_evaluated_pairs', shown['coverage'])
+        self.assertIn('nba', shown['filter_options']['leagues'])
+
+        self.runtime['paused_sources'] = ['kalshi']
+        self.reader.refresh()
+        self.assert_unavailable()
+        self.assertIsNone(self.reader.projection.census)
+        self.assertNotIn('nba', self.reader.projection.view()['filter_options']['leagues'])
 
     async def test_ticket_unavailable_preserves_selected_and_replacement_frames(self):
         from app.comparison.scanner_tickets import Tickets, selector

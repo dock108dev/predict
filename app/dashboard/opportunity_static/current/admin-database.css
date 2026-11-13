@@ -1,4 +1,4 @@
-.db-heading, .db-actions {
+.db-heading, .db-actions, .db-options, .db-row-tools {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -6,16 +6,23 @@
 }
 .db-heading { justify-content: space-between; gap: .75rem; }
 .db-heading :is(h2, h3, p) { margin: 0; overflow-wrap: anywhere; }
+.db-heading > div:first-child { min-width: 0; }
 .db-controls {
   display: grid;
   grid-template-columns: minmax(8rem, 1fr) minmax(12rem, 2fr) minmax(14rem, 3fr);
   gap: .85rem;
-  margin-block: 1.25rem .5rem;
+  margin-block: .85rem .25rem;
 }
 .db-controls > div { display: grid; gap: .3rem; min-width: 0; color: var(--muted); }
 .db-controls :is(select, input) { width: 100%; color: var(--body); }
+.db-controls :is(select, input), .db-browser button { min-height: 44px; }
+.db-options { gap: 0 1rem; }
 .db-storage { display: inline-flex; align-items: center; gap: .45rem; color: var(--muted); }
+.db-options .db-storage { min-height: 36px; cursor: pointer; }
 .db-storage input { margin: 0; }
+.db-options .desk-note { margin: 0 0 0 auto; }
+.db-row-tools { justify-content: space-between; margin: .55rem 0; }
+.db-row-tools .desk-note { margin: 0; }
 .db-actions [aria-pressed="true"] { background: var(--selected); color: var(--selected-text); }
 .db-scroll { overflow: auto; max-height: min(65vh, 44rem); border: 1px solid var(--rule); border-radius: 8px; }
 .db-table { border-collapse: separate; border-spacing: 0; min-width: 100%; text-align: left; font-size: .85rem; }
@@ -25,7 +32,6 @@
 .db-table td code { white-space: pre-wrap; }
 .db-table td em, .db-table tbody th { color: var(--muted); }
 .db-table td button { display: block; margin-top: .35rem; font-size: .8rem; }
-#db-paging { margin-top: .85rem; }
 #db-cell-dialog {
   width: min(90vw, 56rem);
   border: 1px solid var(--control);
@@ -36,4 +42,16 @@
 }
 #db-cell-dialog::backdrop { background: rgb(0 0 0 / 50%); }
 .db-browser pre { white-space: pre-wrap; overflow-wrap: anywhere; }
-@media (max-width: 680px) { .db-controls { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 680px) {
+  main:has(.db-browser:not([hidden])) > .desk-title { margin-bottom: .65rem; }
+  main:has(.db-browser:not([hidden])) > .desk-tabs a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding-block: .35rem;
+  }
+  .db-browser.desk-admin-section { margin-top: 1rem; }
+  .db-controls { grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: .5rem; }
+  .db-controls > :last-child { grid-column: 1 / -1; }
+  .db-options .desk-note { width: 100%; margin: 0 0 .35rem; }
+}

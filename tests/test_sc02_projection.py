@@ -44,6 +44,26 @@ def immutable_capture(f,x):
     return owned,dict(shared['inputs'])
 
 
+def test_capture_only_publication_discards_both_financial_receipt_types():
+    from types import SimpleNamespace
+    from app.storage.scanner_latest import publish
+
+    p = Projection(clock=lambda: AT, evaluator=fake)
+    f, x = frame()
+    p.ingest(f, x)
+    p.drain()
+    p.partial_receipts = dict(p.receipts)
+    assert p.partial_receipts and p.rows
+    scanner = SimpleNamespace(projection=p, summaries=SimpleNamespace(store=None), deadline=None,
+                              marker='captured', provider=SimpleNamespace(runtime_id='authored'))
+    with patch('app.storage.scanner_latest._publish', return_value=True) as save:
+        assert publish(None, scanner, proof={'epoch': f['epoch']}, runtime_revision=1, capture_only=True)
+    payload = save.call_args.args[1]
+    assert payload['capture_only']
+    assert not any(payload[field] for field in ('rows', 'receipts', 'partial_receipts', 'cache', 'targets', 'members'))
+    assert p.partial_receipts and p.rows
+
+
 class Global(TestCase):
     def make(self,n=1,evaluator=fake):
         self.now=AT

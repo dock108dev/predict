@@ -93,7 +93,7 @@ class FullFinanceSQL(IsolatedAsyncioTestCase):
                         native=[i for i in expired['instruments'] if i['venue'] in ('kalshi','polymarket_us')]
                         self.assertTrue(native)
                         self.assertTrue(all(i['checks']['execution']['state']!='ready' for i in native))
-                        db.execute('DELETE FROM current_depth')
+                        db.execute('UPDATE current_contract_storage SET independent_depth=NULL WHERE independent_depth IS NOT NULL')
                         no_depth,_,_=capture(db,config=worker.provider.config,authority=worker.provider.config['authority'],at=clock(),source_status=worker.provider.states)
                         ordinary=[i for i in no_depth['instruments'] if i['venue'] in ('novig','prophetx')]
                         self.assertTrue(ordinary)

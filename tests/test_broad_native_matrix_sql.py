@@ -13,9 +13,8 @@ from app.collection.current_policy import DEFAULT
 from app.collection.runtime_client import RuntimeClient
 from app.collection.runtime_status import RuntimeState
 from app.comparison.capabilities import SPORTS,CORE_FAMILIES
-from app.comparison.estimated_policy import DEFAULT_POLICY
 from app.storage.current_rows import CurrentRowStore
-from app.storage import latest_board as latest
+from app.storage import ordinary_publication as ordinary
 from tests import test_latest_board_sql as fixtures
 from tests.broad_pipeline_fixtures import captured_core_matrix,captured_partial,partial_case
 
@@ -29,13 +28,12 @@ class NativeMatrixFixture(IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         self.at=datetime.now(timezone.utc)
         self.config=dict(deepcopy(DEFAULT),native_sports=list(SPORTS),native_families=list(CORE_FAMILIES))
-        for target in ('app.collection.runtime_client.load','app.storage.latest_board.load','app.dashboard.comparison_board_api.load'):
-            change=patch(target,return_value=self.config if target.endswith('runtime_client.load') else DEFAULT_POLICY)
-            change.start();self.addCleanup(change.stop)
-        for target in ('app.collection.runtime_status.clock','app.storage.current_rows.utc','app.storage.latest_board.utc',
-                       'app.storage.comparison_board.utc','app.dashboard.comparison_board_api.utc','app.storage.coverage_latest.utc'):
-            change=patch(target,side_effect=(lambda:self.at) if target.endswith('.clock') else (lambda:self.at.isoformat()))
-            change.start();self.addCleanup(change.stop)
+        self.enterContext(patch('app.collection.runtime_client.load',return_value=self.config))
+        self.enterContext(patch('app.collection.runtime_status.clock',side_effect=lambda:self.at))
+        for target in ('app.storage.current_rows.utc','app.storage.current_games.utc',
+                       'app.storage.comparison_snapshot.utc','app.storage.ordinary_publication.utc',
+                       'app.storage.comparison_board.utc','app.storage.coverage_latest.utc'):
+            self.enterContext(patch(target,side_effect=lambda:self.at.isoformat()))
         self.service=SimpleNamespace(runtime_id='authored-broad-'+uuid4().hex,config=self.config,
             states={v:dict(state='available') for v in ('kalshi','polymarket_us','novig','prophetx','pinnacle')},
             dispatch=True,background_calculations=dict(board='running'),
@@ -43,7 +41,9 @@ class NativeMatrixFixture(IsolatedAsyncioTestCase):
         self.state=RuntimeState(self.connect)
         with self.connect() as db:
             db.execute('TRUNCATE current_event CASCADE')
-            db.execute('TRUNCATE current_source_status,current_refresh_scope,data_runtime,data_runtime_command,current_result_parent_original,latest_board,latest_board_status,coverage_latest')
+            db.execute("DELETE FROM current_row_state WHERE kind<>'epoch'")
+            db.execute('TRUNCATE data_runtime,data_runtime_command,comparison_publication')
+            db.execute("INSERT INTO comparison_publication(kind,id,generation,facts) VALUES('live','',0,'{}')")
         self.state.write(self.service)
 
     def admit(self,rows,books):
@@ -52,43 +52,70 @@ class NativeMatrixFixture(IsolatedAsyncioTestCase):
             current.upsert_records(rows,now=self.at.isoformat())
             current.replace_native_books(books)
 
+    def publish(self):
+        with self.connect() as db:
+            for _ in range(5):
+                result = ordinary.turn(db)
+                if result['remaining_components'] == 0:
+                    break
+        self.assertEqual(result['remaining_components'], 0, result)
+        return result
+
 
 class BroadNativeMatrixSQL(NativeMatrixFixture):
     async def read_matrix(self,expected_cells,expected_prices):
-        with self.connect() as db:
-            result=latest.reconcile(db,at=self.at.isoformat(),observations_only=True)
-            self.assertTrue(result['published'],result)
-            self.assertFalse(result.get('errors'),result)
         from app.dashboard.comparison_board_api import mount
+        from app.dashboard.snapshot_api import mount as mount_snapshots
         from app.storage.coverage_latest import reconcile
-        with self.connect() as db:self.assertTrue(reconcile(db,at=self.at.isoformat())['published'])
+        self.publish()
+        with self.connect() as db:
+            self.assertTrue(reconcile(db,at=self.at.isoformat())['published'])
         provider=RuntimeClient(connector=self.connect)
         provider.acquire=MagicMock(side_effect=AssertionError('read dispatched provider'))
-        app=web.Application();mount(app,provider)
+        app=web.Application();mount(app,provider);mount_snapshots(app)
         with patch('app.dashboard.comparison_board_api.connect',side_effect=self.connect),\
-                patch('app.dashboard.scanner_api.connect',side_effect=self.connect):
+                patch('app.dashboard.snapshot_api.connect',side_effect=self.connect):
             async with TestClient(TestServer(app)) as client:
-                result=await client.get('/api/boards/slate',params=dict(view='odds',filter='all',limit='50'))
+                query=dict(view='odds',layout='desk',browse_odds='1',last_known='1',limit='50')
+                result=await client.get('/api/comparison-current',params=query)
                 self.assertEqual(result.status,200,await result.text());page=await result.json()
                 self.assertEqual(page['provider_requests'],0)
-                from app.dashboard.comparison_board import expand_price_fields
-                prices=[q for b in page['boards'] for q in expand_price_fields(b)['prices']]
+                prices=[q for g in page['rows'] for q in g['offers']]
                 self.assertEqual(len(prices),expected_prices)
                 self.assertEqual({(g['league'],q['venue'],'moneyline' if q['market']['market']=='winner' else q['market']['market'],q['market']['period'])
-                    for b in page['boards'] for g in page['games'] if b['game_key']==g['game_key'] for q in b['prices']},expected_cells)
+                    for g in page['rows'] for q in g['offers']},expected_cells)
                 # Both ordinary filters and metrics read the same retained facts.
-                for query in ({},{'league':'NBA'},{'period':'first_half'}):
-                    result=await client.get('/api/coverage',params=query)
+                for scope in ({},{'league':'NBA'},{'period':'first_half'}):
+                    result=await client.get('/api/coverage',params=scope)
                     self.assertEqual(result.status,200,await result.text())
                     self.assertEqual((await result.json())['provider_requests'],0)
                 selected=prices[0]
-                result=await client.get('/api/boards/inputs',params=dict(game=page['boards'][0]['game_key'],
-                    context_id=selected['inputs_identity']['context_id'],quote=selected['quote_id']))
+                result=await client.get('/api/comparison-snapshot/details',params=dict(
+                    result_id=selected['evidence_result_id'],id=selected['id']))
                 self.assertEqual(result.status,200,await result.text());original=await result.json()
-                self.assertEqual(original['evidence']['original'],selected['original'])
-                self.assertEqual(original['evidence']['times'],selected['times'])
+                self.assertEqual(original['row']['original'],selected['original'])
+                self.assertEqual(original['row']['times']['source_at'],selected['source_clock_at'])
+                self.assertEqual(original['row']['times']['received_at'],selected['received_at'])
+                current_directions=0
+                for group in page['rows']:
+                    current=[q for q in group['offers'] if q['current']]
+                    if len({q['venue'] for q in current})>1:
+                        current_directions+=len(current)
+                from app.storage.coverage_latest import read
+                with self.connect() as db:
+                    counts=read(db,at=self.at.isoformat())['global_totals']
+                self.assertEqual(counts['displayed_current_comparison_directions'],current_directions)
+
+                self.at+=timedelta(seconds=31);self.state.write(self.service)
+                result=await client.get('/api/comparison-current',params=query)
+                self.assertEqual(result.status,200,await result.text());aged=await result.json()
+                old=[q for group in aged['rows'] for q in group['offers']]
+                def clocks(quotes):
+                    return {q['id']:(q['source_clock_at'],q['received_at'],q['confirmed_at']) for q in quotes}
+                self.assertEqual(clocks(old),clocks(prices))
+                self.assertTrue(all(not q['current'] for q in old))
         provider.acquire.assert_not_called()
-        return prices
+        return counts
 
     async def test_coverage_event_projection_keeps_publication_dependency_semantics(self):
         from psycopg.types.json import Jsonb
@@ -135,25 +162,8 @@ class BroadNativeMatrixSQL(NativeMatrixFixture):
             self.assertEqual(excluded,[]);self.assertEqual(len(records),2)
             rows.extend(records);books.append(book);expected.add((sport,venue,family,period))
         self.admit(rows,books)
-        prices=await self.read_matrix(expected,56)
+        counts=await self.read_matrix(expected,56)
         # Four leagues x three shared first-half families x two outcomes x
         # two native directions. The eight MLB single-source prices have no peer.
-        with self.connect() as db:
-            from app.dashboard.comparison_board import expand_odds
-            from app.storage.coverage_latest import read
-            captured=latest.snapshot(db,at=self.at.isoformat())
-            full_prices=[q for key in captured['rows'] for q in expand_odds(latest.board(captured,key,view='odds',filter='all'))['prices']]
-            self.assertEqual({q['quote_id'] for q in full_prices},{q['quote_id'] for q in prices})
-            self.assertEqual(sum(q['current_comparison'].get('available') and q['current_comparison'].get('display_status')=='current' for q in full_prices),48)
-            counts=read(db,at=self.at.isoformat())['global_totals']
         self.assertEqual(counts['eligible_current_pairs'],24)
         self.assertEqual(counts['displayed_current_comparison_directions'],48)
-        clocks={(q['source']['native_market_id'],q['source']['native_outcome_id']):q['times'] for q in prices}
-        self.at+=timedelta(seconds=31);self.state.write(self.service)
-        with self.connect() as db:
-            captured=latest.snapshot(db,at=self.at.isoformat())
-            aged=[q for key in captured['rows'] for q in expand_odds(latest.board(captured,key,view='odds',filter='all'))['prices']]
-        self.assertEqual(len(aged),56)
-        for quote in aged:
-            self.assertEqual(quote['times'],clocks[(quote['source']['native_market_id'],quote['source']['native_outcome_id'])])
-            self.assertNotEqual(quote['freshness']['status'],'current')

@@ -45,10 +45,11 @@ def row(q=None, p=None, e=None, g=None, book=None, *, at=AT, status=None):
     return instrument(q, p, e, g, at=at, source_status=status or dict(state='available'), authorized=True, book=book)
 
 
-def projection(rows, *, selection=None, evaluations=(), at=AT, scopes=None):
+def projection(rows, *, selection=None, evaluations=(), at=AT, scopes=None, **options):
     selection = selection or Selection(venues=('polymarket_us', 'kalshi'),sports=('football',),leagues=('NFL',),markets=('winner',))
     scopes = scopes or scope_inventory(selection, DEFAULT, GRANT)
-    return assemble(rows, selection=selection, at=at, epoch='authored-epoch', input_revision='authored-inputs', scopes=scopes, evaluations=evaluations)
+    return assemble(rows, selection=selection, at=at, epoch='authored-epoch', input_revision='authored-inputs',
+                    scopes=scopes, evaluations=evaluations, **options)
 
 
 def pair_rows():
@@ -65,6 +66,128 @@ def pair_rows():
 
 
 class Readiness(TestCase):
+    def test_bounded_pair_index_preserves_exact_order_and_identity(self):
+        a, b = pair_rows()
+        rows = [dict(a, id='leg-3'), dict(b, id='leg-4'), dict(a, id='leg-0'), dict(b, id='leg-2'),
+                dict(a, id='leg-1', direction=None), dict(b, id='leg-5', overtime='unknown'),
+                dict(b, id='leg-6', venue=a['venue'], scope_key=a['scope_key']),
+                dict(b, id='leg-7', direction=a['direction'])]
+        self.assertEqual(projection(rows, retain_capacity_gaps=True), projection(rows))
+
+    def test_partitioned_pairs_keep_exact_score_domain_threshold_and_direction(self):
+        a, b = pair_rows()
+
+        def leg(base, id_, market, partition, predicate, **updates):
+            values = dict(base, id=id_, market=market, predicate=predicate, **updates)
+            values['scope_key'] = digest({key: values[key] for key in ('venue','sport','league','market','period')})
+            if partition is not None:
+                values['score_partition'] = dict(domain=partition[0], threshold=partition[1])
+            return values
+
+        selection = Selection(venues=('polymarket_us','kalshi'), sports=('football',),
+                              leagues=('NFL',), markets=('winner','spread','total'))
+        rows = [
+            leg(a, 'winner-low', 'winner', ('home_margin','0'), a['predicate']),
+            leg(b, 'winner-high', 'winner', ('home_margin','0/1'), b['predicate']),
+            leg(b, 'legacy-winner-high', 'winner', None, b['predicate']),
+            leg(a, 'spread-low', 'spread', ('home_margin','-7/2'),
+                dict(participant='away', predicate='cover', signed_line='-3.5')),
+            leg(b, 'spread-high', 'spread', ('home_margin','-3.50'),
+                dict(participant='home', predicate='cover', signed_line='3.5')),
+            leg(b, 'different-spread', 'spread', ('home_margin','7/2'),
+                dict(participant='home', predicate='cover', signed_line='-3.5')),
+            leg(a, 'under', 'total', ('combined_score','91/2'),
+                dict(participant=None, predicate='under', signed_line='45.5')),
+            leg(b, 'over', 'total', ('combined_score','45.5'),
+                dict(participant=None, predicate='over', signed_line='45.5')),
+            leg(b, 'different-total', 'total', ('combined_score','46.5'),
+                dict(participant=None, predicate='over', signed_line='46.5')),
+            leg(b, 'same-direction', 'total', ('combined_score','45.5'),
+                dict(participant=None, predicate='under', signed_line='45.5'), direction=a['direction']),
+        ]
+        brute = projection(rows, selection=selection)
+        indexed = projection(rows, selection=selection, retain_capacity_gaps=True)
+        self.assertEqual(indexed, brute)
+        self.assertEqual([pair['legs'] for pair in indexed['pairs']],
+                         [['over','under'], ['spread-high','spread-low'], ['winner-high','winner-low']])
+
+    def test_score_partition_rejects_wrong_domain_or_nonzero_winner(self):
+        a, b = pair_rows()
+        for partition in (dict(domain='combined_score', threshold='0'), dict(domain='home_margin', threshold='1')):
+            with self.subTest(partition=partition), self.assertRaisesRegex(ValueError, 'readiness_score_partition_invalid'):
+                projection([dict(a, score_partition=partition), b], retain_capacity_gaps=True)
+
+    def test_native_pair_requires_the_same_phase_and_scoring_context(self):
+        from app.comparison.scanner_native import pair_context
+
+        a, b = pair_rows()
+        model = dict(partition=dict(domain='home_margin', threshold='0'), phase='pregame',
+                     scoring=dict(shootout='not_applicable', extra_innings='not_applicable'))
+        a['score_partition'] = b['score_partition'] = model['partition']
+        a['native_execution_context'] = digest(pair_context(model))
+        b['native_execution_context'] = digest(pair_context(dict(model)))
+        self.assertEqual(projection([a, b])['pairs'][0]['input_check']['state'], 'ready')
+        for update in (dict(phase='live'), dict(scoring=dict(model['scoring'], shootout='excluded'))):
+            with self.subTest(update=update):
+                b['native_execution_context'] = digest(pair_context(dict(model, **update)))
+                result = projection([a, b])
+                self.assertEqual(result['counts']['cashflow_pairs_ready']['value'], 0)
+                self.assertEqual(result['pairs'][0]['input_check']['reason_codes'],
+                                 ['native_execution_pair_scope_conflict'])
+
+    def test_bounded_pair_index_keeps_eligible_pairs_past_raw_occurrence_cap(self):
+        from app.comparison.scanner_readiness import MAX_OCCURRENCE_INSTRUMENTS
+
+        a, b = pair_rows()
+        compatible = [a, b]
+        irrelevant = [dict(a, id=f'irrelevant-{index}', direction=None)
+                      for index in range(MAX_OCCURRENCE_INSTRUMENTS)]
+        rows = [*irrelevant, *compatible]
+        with self.assertRaisesRegex(ValueError, 'readiness_occurrence_capacity'):
+            projection(rows)
+        indexed = projection(rows, retain_capacity_gaps=True)
+        self.assertEqual(indexed['pairs'], projection(compatible)['pairs'])
+        self.assertEqual(indexed['counts']['cashflow_pairs_ready']['value'], 1)
+        self.assertEqual(indexed['counts']['observed_instruments']['value'], len(rows))
+        self.assertNotIn('failed_occurrences', indexed)
+
+    def test_bounded_pair_index_still_enforces_true_leg_and_pair_caps(self):
+        from app.comparison.scanner_readiness import MAX_OCCURRENCE_INSTRUMENTS
+
+        a, b = pair_rows()
+        too_many_legs = [dict(a, id=f'candidate-{index}') for index in range(MAX_OCCURRENCE_INSTRUMENTS)]
+        result = projection([b, *too_many_legs], retain_capacity_gaps=True)
+        self.assertEqual(result['failed_occurrences'], [a['occurrence_id']])
+        self.assertFalse(result['pairs'])
+        self.assertFalse(result['evaluation']['no_qualifying_opportunities'])
+
+        too_many_pairs = [a, b, dict(b, id='third-leg')]
+        result = projection(too_many_pairs, retain_capacity_gaps=True, pair_limit=1)
+        self.assertEqual(result['failed_occurrences'], [a['occurrence_id']])
+        self.assertFalse(result['pairs'])
+        self.assertIn('readiness_pair_capacity', result['scopes'][0]['check']['reason_codes'])
+
+    def test_bounded_occurrence_cap_counts_only_events_that_have_structural_pairs(self):
+        from app.comparison.scanner_projection import MAX_OCCURRENCES
+
+        a, b = pair_rows()
+        unpaired = [dict(a, id=f'a-{index:03}', occurrence_id=f'unpaired-{index:03}')
+                    for index in range(MAX_OCCURRENCES + 1)]
+        compatible = [dict(a, id='b-1'), dict(b, id='b-2')]
+        result = projection([*unpaired, *compatible], retain_capacity_gaps=True, occurrence_limit=MAX_OCCURRENCES)
+        self.assertEqual(result['pairs'], projection(compatible)['pairs'])
+        self.assertEqual(result['counts']['observed_occurrences']['value'], MAX_OCCURRENCES + 2)
+        self.assertNotIn('failed_occurrences', result)
+
+        true_overflow = [dict(leg, id=f'{index:03}-{side}', occurrence_id=f'paired-{index:03}')
+                         for index in range(MAX_OCCURRENCES + 1) for side, leg in enumerate((a, b))]
+        result = projection(true_overflow, retain_capacity_gaps=True, occurrence_limit=MAX_OCCURRENCES)
+        self.assertEqual(len(result['pairs']), MAX_OCCURRENCES)
+        self.assertEqual(result['failed_occurrences'], [f'paired-{MAX_OCCURRENCES:03}'])
+        self.assertEqual(result['counts']['observed_occurrences']['value'], MAX_OCCURRENCES + 1)
+        self.assertEqual([pair['occurrence_id'] for pair in result['pairs']],
+                         [f'paired-{index:03}' for index in range(MAX_OCCURRENCES)])
+
     def test_healthy_model_and_native_meaning(self):
         r = row()
         self.assertEqual(r['checks']['contract'], check([]))

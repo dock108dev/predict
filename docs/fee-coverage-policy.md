@@ -9,10 +9,10 @@ coverage within the configured ordinary scope.
 
 - The denominator is every distinct current, displayed-price offer across
   active native and SGO-attributed venues in the configured NFL, NCAAF, NBA,
-  NCAAB, MLB and NHL winner, spread and total scope. Historical ProphetX rows
-  remain identifiable in the diagnostic inventory. Additional venues are backlog
-  work. Include supported periods,
-  alternate lines and in-game offers wherever the live desk publishes them.
+  NCAAB, MLB and NHL winner, spread and total scope. SportsGameOdds'
+  `prophetexchange` prices appear as ProphetX and retain the exact original quote.
+  Include supported periods, alternate lines and in-game offers wherever the
+  live desk publishes them. Additional venues are backlog work.
   Take the census before fee, EV, reference or positive-only filters. Use the
   venue, market and executable side to deduplicate repeated presentations.
 - Count an offer once when Predict can show the fee or fee cashflows for the
@@ -203,7 +203,8 @@ dates. Recheck rates and exceptions before enabling a new market family.
   contracts charge 2% of positive net gains per market at settlement.
   Keep standalone and whole-market position scenarios separate. Capture
   the relevant order-time schedule and verify how the quoted stake treats
-  the NHL fee before comparing funding requirements.
+  the NHL fee before comparing funding requirements. The default retail estimate
+  assumes a single taker fill at the quoted price and can use an aggregate price.
   [Retail straight-contract PDF](https://framerusercontent.com/assets/0PR4FR5AUuNv0xMjMRGkbz8GZ0.pdf)
 - **Retail parlays.** The taker rate per dollar staked is
   `0.021 × (1 − p) / (0.25 + p) + 0.006`. Multiply by the trade cost,

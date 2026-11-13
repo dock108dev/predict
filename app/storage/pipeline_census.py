@@ -7,6 +7,7 @@ age must never be described as queue waiting age without a recorded transition.
 from collections import Counter, defaultdict
 from types import SimpleNamespace
 from .store import stamp, hashed
+from .native_market_metadata import RECOVERY_ROWS
 from app.collection.native_recovery import market_value
 from app.collection.current_sink import normalized_records
 
@@ -16,8 +17,8 @@ def native_receipts(db, at, end, normalized):
     # Recovery metadata precedes normal catalog enrichment. Replay that actual
     # owning stage too; otherwise repaired roles masquerade as current failures.
     catalogs={source:dict(header,markets=[]) for source,header in headers.items()}
-    for row in db.execute('SELECT source,metadata,receipt_fields FROM current_native_market_recovery'):
-        if row['source'] in catalogs:catalogs[row['source']]['markets'].append(market_value(row['metadata'],row['receipt_fields']))
+    for row in db.execute(RECOVERY_ROWS):
+        if row['source'] in catalogs:catalogs[row['source']]['markets'].append(market_value(row['metadata'],row['receipt_fields'],row['native_body']))
     if catalogs:
         from app.collection.current_service import prepare_catalog
         source='kalshi' if 'kalshi' in catalogs else next(iter(catalogs))
@@ -30,12 +31,13 @@ def native_receipts(db, at, end, normalized):
     with db.cursor(name='pipeline_native_receipts') as cur:
         cur.itersize=64
         cur.execute('''SELECT i.source,i.event_id,i.market_id,i.received_at,i.disposition,
-            i.image,r.metadata,r.receipt_fields,r.parsed IS NOT NULL parsed
+            i.image,r.metadata,r.receipt_fields,r.parsed IS NOT NULL parsed,b.body AS native_body
             FROM current_acquisition_image i LEFT JOIN current_native_market_recovery r
             ON r.source=i.source AND r.market_id=i.market_id
+            LEFT JOIN current_native_market_body b ON b.id=r.metadata_id
             ORDER BY i.source,i.event_id,i.market_id''')
         for r in cur:
-            key=(r['source'],r['event_id'],r['market_id']);event=events.get(key[:2]);m=prepared[key] if key in prepared else market_value(r['metadata'],r['receipt_fields']) if r['metadata'] is not None else None;book=r['image']
+            key=(r['source'],r['event_id'],r['market_id']);event=events.get(key[:2]);m=prepared[key] if key in prepared else market_value(r['metadata'],r['receipt_fields'],r['native_body']) if r['metadata'] is not None else None;book=r['image']
             start=(event or {}).get('scheduled_start');within=None if not start else at<=stamp(start)<end
             base=dict(unit='native_book',source=r['source'],event_id=r['event_id'],market_id=r['market_id'],
                 revision=hashed([book.get('sequence'),book.get('raw',{}).get('received_at'),book.get('outcomes')]),

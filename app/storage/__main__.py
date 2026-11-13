@@ -1,7 +1,7 @@
 """python -m app.storage --help"""
 import argparse
 import json
-from .store import Store, connect
+from .store import Store, connect, open_retained
 from .workflow import import_default
 
 
@@ -16,6 +16,8 @@ def main():
     r=commands.add_parser('recover'); r.add_argument('session')
     args=p.parse_args()
     with connect(args.database) as db:
+        if args.command != 'migrate':
+            open_retained(db)
         s=Store(db)
         if args.command=='migrate': s.migrate(); result={'migration':'applied'}
         elif args.command=='ingest-default': result=import_default(s)

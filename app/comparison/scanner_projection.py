@@ -20,6 +20,7 @@ from .calculation_control import checkpoint
 VERSION = 'predict-opportunity-scanner-1'
 RECEIPT_VERSION = 'predict-scanner-evaluation-receipt-2'
 MAX_PAIRS = 2048
+MAX_OCCURRENCES = 500
 MAX_ROWS = 4096
 MAX_CACHE_BYTES = 16 * 1024 * 1024
 MAX_DISPLAY_BYTES = 4 * 1024 * 1024
@@ -85,10 +86,10 @@ def validate_receipt(receipt, pair, frame, dependency_revision, *, evaluator_rev
         raise ValueError('scanner_receipt_clock_conflict')
     by_id = _instruments if _instruments is not None else {i['id']:i for i in frame['instruments']}
     if any(instant(c)>verified for key in pair['legs'] for k,c in by_id[key]['clocks'].items()
-           if c and k in ('source_at','received_at','book_at','book_received_at','provider_book_at','provider_market_at')):
+           if c and k in ('source_at','received_at','book_at','book_received_at','provider_book_at','provider_market_at','execution_at')):
         raise ValueError('scanner_receipt_clock_conflict')
     if any(instant(c)>evaluated for key in pair['legs'] for k,c in by_id[key]['clocks'].items()
-           if c and k in ('source_at','book_at','provider_book_at','provider_market_at')):
+           if c and k in ('source_at','book_at','provider_book_at','provider_market_at','execution_at')):
         raise ValueError('scanner_receipt_original_clock_conflict')
     return True
 
@@ -113,6 +114,8 @@ class Projection:
         self.lock = RLock(); self.epoch = None; self.generation = 0
         self.publication = 0; self.frame = None; self.inputs = {}; self.targets = {}
         self.pending = OrderedDict(); self.cache = {}; self.rows = {}; self.receipts = {}
+        self.partial_receipts = {}
+        self.census = None
         self._display_memo = {}; self._display_bytes = 0; self._display_count = 0
         self._dependency_proofs = {}; self._dependency_proof_bytes = 0
         self.journal = deque(); self.journal_bytes = 0
@@ -156,7 +159,7 @@ class Projection:
             self._clear_display()
             self._clear_dependency_proofs()
             self.generation += 1; self.targets.clear(); self.pending.clear(); self.inputs={}
-            self.cache.clear(); self.receipts.clear(); self.state='incomplete'
+            self.cache.clear(); self.receipts.clear(); self.partial_receipts.clear(); self.state='incomplete'
             self.errors=[str(reason)[:160]]; self.signature=None; self._publish({}, 'capture_failed')
 
     def stop(self):
@@ -165,20 +168,20 @@ class Projection:
             self._clear_display()
             self._clear_dependency_proofs()
             self.stopped=True; self.generation += 1; self.state='stopped'
-            self.pending.clear(); self.targets.clear(); self.inputs={}; self.cache.clear(); self.receipts.clear()
+            self.pending.clear(); self.targets.clear(); self.inputs={}; self.cache.clear(); self.receipts.clear(); self.partial_receipts.clear()
             self.signature=None; self._publish({}, 'stopped')
 
     def ingest(self, frame, inputs, *, capture_ms=None, commit_observation=None, policy=None):
         """Defensively detach ordinary caller inputs after validating capacity."""
         with self.lock:
             if policy is not None:self.policy=policy
-            if len(frame['pairs'])>MAX_PAIRS or len(encoded(inputs))>MAX_INPUT_BYTES or len({i['occurrence_id'] for i in frame['instruments']})>500:
+            if len(frame['pairs'])>MAX_PAIRS or len(encoded(inputs))>MAX_INPUT_BYTES or len({i['occurrence_id'] for i in frame['instruments']})>MAX_OCCURRENCES:
                 self.fail('scanner_input_capacity'); return
             self._ingest_owned(deepcopy(frame),deepcopy(inputs),capture_ms=capture_ms,
                 commit_observation=commit_observation,shared_facts=False)
 
     def _ingest_capture(self, frame, inputs, *, input_bytes_bound, capture_ms=None,
-                        commit_observation=None, policy=None):
+                        commit_observation=None, policy=None, bounded_census=False):
         """Take ownership only of a fresh, already-detached readiness capture.
 
         The private capture owner supplies its conservative JSON byte proof.
@@ -189,7 +192,8 @@ class Projection:
             raise ValueError('scanner_capture_input_bound_invalid')
         with self.lock:
             if policy is not None:self.policy=policy
-            if len(frame['pairs'])>MAX_PAIRS or len({i['occurrence_id'] for i in frame['instruments']})>500:
+            occurrence_limit = len({i['occurrence_id'] for i in frame['instruments']}) > MAX_OCCURRENCES
+            if len(frame['pairs']) > MAX_PAIRS or occurrence_limit and not bounded_census:
                 self.fail('scanner_input_capacity'); return
             self._ingest_owned(frame,inputs,capture_ms=capture_ms,
                 commit_observation=commit_observation,shared_facts=True)
@@ -199,7 +203,7 @@ class Projection:
         self._clear_display()
         if self.epoch != frame['epoch'] or self.stopped:
             self._clear_dependency_proofs()
-            self.generation += 1; self.cache.clear(); self.pending.clear(); self.receipts.clear()
+            self.generation += 1; self.cache.clear(); self.pending.clear(); self.receipts.clear(); self.partial_receipts.clear()
             self.signature=None; self._publish({}, 'epoch_changed' if self.epoch != frame['epoch'] else 'restart')
         self.stopped=False; self.epoch=frame['epoch']; self.frame=frame; self.inputs=inputs
         self.last_capture_ms=capture_ms; self.sql_observation=commit_observation
@@ -244,6 +248,7 @@ class Projection:
                 # an HTTP reader. Withdraw immediately, but never promote newly
                 # completed cache values before the scanner's fresh POST proof.
                 self.receipts={k:v for k,v in self.receipts.items() if k not in expired}
+                self.partial_receipts={k:v for k,v in self.partial_receipts.items() if k not in expired}
                 self.state='incomplete'; self.signature=None
                 self._publish({k:r for k,r in self.rows.items() if r['pair_id'] not in expired}, 'expired')
 
@@ -374,7 +379,7 @@ class Projection:
 
     def _materialize(self, reason):
         if self.frame is None:return
-        frame=self.frame; by_id={i['id']:i for i in frame['instruments']}; rows={}; receipts={}
+        frame=self.frame; by_id={i['id']:i for i in frame['instruments']}; rows={}; receipts={}; partial={}
         evaluator_revision=self.evaluator_revision
         errors=list(self.errors)
         for key,c in self.cache.items():
@@ -389,26 +394,30 @@ class Projection:
                 evaluator_revision=c['evaluator_revision'])
             validate_receipt(receipt,pair,frame,target['dependency'],evaluator_revision=evaluator_revision,at=self.clock(),_instruments=by_id)
             if c['value'].get('evaluation_complete',True):receipts[key]=receipt
-            else:errors.extend(c['value'].get('incomplete_reasons') or ['mandatory_joint_cashflows_unknown'])
+            else:
+                errors.extend(c['value'].get('incomplete_reasons') or ['mandatory_joint_cashflows_unknown'])
+                if c['value'].get('partial_evaluation'):
+                    partial[key]=receipt
             # Receipt/original-clock validation above always precedes memo reuse.
             rows.update(self._display_rows(key,c,pair,by_id))
         if len(rows)>MAX_ROWS or len(encoded(self.cache))>MAX_CACHE_BYTES:
             errors.append('scanner_projection_capacity'); rows={}
         self.receipts=receipts
+        self.partial_receipts=partial
         complete=bool(frame['pairs']) and len(receipts)==len(frame['pairs']) and not self.pending and not errors and all(s['state']=='ready' for s in frame['scopes'])
         qualifying=sum(r['qualifying'] for r in receipts.values())
         state=('evaluated_positive' if qualifying else 'evaluated_zero') if complete else (
             'partial' if receipts else 'unavailable' if not self.targets else 'not_evaluated')
         if errors:state='incomplete'
         # A coherent publication includes coverage even when rows are unchanged.
-        signature=digest(dict(rows=rows,state=state,errors=sorted(set(errors)),revision=frame['revision'],checked=len(receipts)))
+        signature=digest(dict(rows=rows,state=state,errors=sorted(set(errors)),revision=frame['revision'],checked=len(receipts),partial=len(partial)))
         if getattr(self,'signature',None)!=signature:
             self.signature=signature; self.state=state; self.errors=sorted(set(errors))[:32]
             self._publish(rows,reason)
 
     def _options(self):
         # Only installed adapter dimensions with an admitted configured scope.
-        scopes=(self.frame or {}).get('scopes',[])
+        scopes=(self.census or self.frame or {}).get('scopes',[])
         eligible=[s for s in scopes if s.get('supported') and s.get('configured') and s.get('authorized')]
         return {plural:sorted({s[singular] for s in eligible}) for plural,singular in
                 (('venues','venue'),('sports','sport'),('leagues','league'),('markets','market'),('periods','period'))}
@@ -450,11 +459,13 @@ class Projection:
                     for plural,singular in (('sports','sport'),('leagues','league'),('markets','market'),('periods','period')))
             selected_pairs=[p for p in frame.get('pairs',[]) if selected(p)]
             evaluated=sum(p['id'] in self.receipts for p in selected_pairs)
-            relevant_scopes=[s for s in frame.get('scopes',[]) if all(not getattr(filters,plural) or s[singular] in getattr(filters,plural) for plural,singular in
+            partial_evaluated=sum(p['id'] in self.partial_receipts for p in selected_pairs)
+            census = self.census or {}
+            relevant_scopes=[s for s in (census or frame).get('scopes',[]) if all(not getattr(filters,plural) or s[singular] in getattr(filters,plural) for plural,singular in
                 (('venues','venue'),('sports','sport'),('leagues','league'),('markets','market'),('periods','period')))]
-            complete=bool(selected_pairs) and evaluated==len(selected_pairs) and not unsupported and not self.errors and all(s['state']=='ready' for s in relevant_scopes) and not self.stopped
+            complete=not census and bool(selected_pairs) and evaluated==len(selected_pairs) and not unsupported and not self.errors and all(s['state']=='ready' for s in relevant_scopes) and not self.stopped
             selected_qualifying=sum(self.receipts[p['id']]['qualifying'] for p in selected_pairs if p['id'] in self.receipts)
-            coverage_state=('evaluated_positive' if selected_qualifying else 'evaluated_zero') if complete else ('partial' if evaluated else self.state)
+            coverage_state=('evaluated_positive' if selected_qualifying else 'evaluated_zero') if complete else ('partial' if evaluated or partial_evaluated else self.state)
             out=dict(version=VERSION,mode='snapshot' if since is None else 'resync' if resync else 'replace_page' if changed else 'unchanged',
                 server_id=self.server_id,epoch=self.epoch,publication_revision=self.publication,query_id=query,
                 policy=self.policy.to_dict(),readiness_policy_revision=frame.get('policy_revision'),filters=filters.to_dict(),
@@ -463,7 +474,10 @@ class Projection:
                 total_matching=len(rows),offset=offset,limit=limit,next_offset=offset+limit if offset+limit<len(rows) else None,
                 expires_at=min((r['expires_at'] for r in page),key=instant,default=None),published_at=self.published_at,
                 coverage=dict(state=coverage_state,complete=complete,compatible_pairs=len(selected_pairs),evaluated_pairs=evaluated,
-                    captured_at=frame.get('as_of'),capture_only=frame.get('capture_only',False),
+                    captured_at=census.get('as_of',frame.get('as_of')),capture_only=frame.get('capture_only',False),
+                    captured_instruments=(census or frame).get('counts',{}).get('observed_instruments',{}).get('value'),
+                    captured_occurrences=(census or frame).get('counts',{}).get('observed_occurrences',{}).get('value'),
+                    failed_occurrences=census.get('failed_occurrences',len(frame.get('failed_occurrences',()))),
                     qualifying_pairs=selected_qualifying if evaluated else None,no_qualifying_opportunities=complete and not selected_qualifying,
                     readiness_state=frame.get('state','not_evaluated'),errors=self.errors,scopes=deepcopy(relevant_scopes)),
                 causal=dict(readiness_revision=frame.get('revision'),input_revision=self.capture_revision,
@@ -473,6 +487,15 @@ class Projection:
                     payload_bytes=MAX_PAYLOAD,journal_entries=MAX_JOURNAL,journal_bytes=MAX_JOURNAL_BYTES,
                     workers=1,work_per_turn=MAX_WORK_PER_TURN,maximum_page=MAX_PAGE),
                 provider_requests=0)
+            if partial_evaluated:
+                out['coverage']['partially_evaluated_pairs']=partial_evaluated
+            if evaluated or partial_evaluated:
+                out['coverage']['cashflow_ready_pairs']=sum(p['input_check']['state']=='ready' for p in selected_pairs)
+            if census:
+                out['coverage']['census_compatible_pairs']=census['counts']['compatible_pair_inputs']['value']
+                out['coverage']['financial_inputs_at']=frame.get('as_of')
+                out['coverage']['native_candidate_occurrences']=census['native_candidate_occurrences']
+                out['coverage']['native_selected_occurrences']=census.get('native_selected_occurrences',0)
             if len(encoded(out))>MAX_PAYLOAD:
                 out.update(rows=[],ranked_ids=[],mode='resync',total_matching=0,next_offset=None)
                 out['coverage'].update(state='incomplete',complete=False,no_qualifying_opportunities=False,errors=['scanner_payload_capacity'])

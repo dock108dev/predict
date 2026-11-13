@@ -79,8 +79,9 @@ class SeparationSQL(IsolatedAsyncioTestCase):
     @classmethod
     def connect(cls, name=None):
         assert str(SOCKET).startswith('/tmp/predict-pg-'), 'Disposable cluster only'
-        return psycopg.connect(host=SOCKET,port=55432,user='prediction_arb',
-            dbname=name or cls.name,autocommit=True,row_factory=payload_row,connect_timeout=5)
+        from app.storage.store import open_retained
+        return open_retained(psycopg.connect(host=SOCKET,port=55432,user='prediction_arb',
+            dbname=name or cls.name,autocommit=True,row_factory=payload_row,connect_timeout=5))
 
     @classmethod
     def setUpClass(cls):
@@ -103,7 +104,9 @@ class SeparationSQL(IsolatedAsyncioTestCase):
         self.state = RuntimeState(self.connect)
         with self.connect() as db:
             db.execute('TRUNCATE current_event CASCADE')
-            db.execute('TRUNCATE current_source_status,current_refresh_scope,data_runtime,data_runtime_command,scanner_latest,latest_board,latest_board_status')
+            db.execute("DELETE FROM current_row_state WHERE kind<>'epoch'")
+            db.execute('TRUNCATE data_runtime,data_runtime_command,latest_board,latest_board_status,current_result_parent_original')
+            db.execute("DELETE FROM comparison_publication WHERE kind='scanner'")
         self.state.write(self.service)
         self.rows = records(2,at=self.clock())
         self.admit(self.rows)
@@ -128,7 +131,8 @@ class SeparationSQL(IsolatedAsyncioTestCase):
         self.fail('Bounded two-event fixture did not settle')
 
     def latest(self):
-        with self.connect() as db:return db.execute('SELECT * FROM scanner_latest WHERE singleton').fetchone()
+        from app.storage.scanner_latest import read
+        with self.connect() as db:return read(db)
 
     def assert_readable(self, reader):
         reader.start()
@@ -147,7 +151,7 @@ class SeparationSQL(IsolatedAsyncioTestCase):
                 # No app or HTTP object exists during admission/calculation.
                 self.clock.advance()
                 changed = deepcopy(self.rows[0])
-                changed['quote']['original'].update(value='0.24',native_value='0.24')
+                changed['quote']['original']['value']='0.24'
                 changed['quote']['depth'][0]['price'] = '0.24'
                 changed['quote']['times'].update(source_at=self.clock(),received_at=self.clock())
                 self.admit([changed]);self.drain(worker)
@@ -173,8 +177,9 @@ class SeparationSQL(IsolatedAsyncioTestCase):
                 self.assertEqual(worker.projection.evaluations,0)
                 for _ in range(3):self.drain(worker)
                 with self.connect() as db:
-                    self.assertEqual(db.execute('SELECT count(*) n FROM scanner_latest').fetchone()['n'],1)
-                    self.assertLess(db.execute('SELECT octet_length(payload::text) n FROM scanner_latest').fetchone()['n'],1024*1024)
+                    from app.storage.scanner_latest import payload_size
+                    self.assertEqual(db.execute("SELECT count(*) n FROM comparison_publication WHERE kind='scanner'").fetchone()['n'],1)
+                    self.assertLess(payload_size(db),1024*1024)
         finally:await worker.close()
 
     async def test_changed_inputs_preserve_complete_capture_without_financial_authority(self):
@@ -250,7 +255,7 @@ class SeparationSQL(IsolatedAsyncioTestCase):
                 self.clock.advance()
                 self.service.states['kalshi'].update(source_at=self.clock(),received_at=self.clock(),
                     reason_code='native_available',reason='Fixture source clock advanced between runtime heartbeats.')
-                changed=deepcopy(self.rows[0]);changed['quote']['original'].update(value='0.24',native_value='0.24')
+                changed=deepcopy(self.rows[0]);changed['quote']['original']['value']='0.24'
                 changed['quote']['depth'][0]['price']='0.24'
                 changed['quote']['times'].update(source_at=self.clock(),received_at=self.clock())
                 # Actual ingress commits its newest source status with the quote,
@@ -274,7 +279,7 @@ class SeparationSQL(IsolatedAsyncioTestCase):
                 # Stop must immediately invalidate old publication/selection.
                 self.assertEqual(self.state.read()['states']['kalshi']['state'],'available')
                 reader.refresh();self.assertTrue(reader.stopped())
-                self.drain(worker);self.assert_readable(reader)
+                self.drain(worker);reader.refresh()
                 self.assertTrue(all('kalshi' not in row['venues'] for row in reader.projection.rows.values()))
                 frame,_=reader._capture_selected(dict(inputs=selected_inputs))
                 self.assertFalse(any(pair['input_check']['state']=='ready' for pair in frame['pairs']))
@@ -332,6 +337,191 @@ class SeparationSQL(IsolatedAsyncioTestCase):
                 finally:await client.close()
         finally:await worker.close()
 
+    async def test_full_slate_publishes_current_component_after_unrelated_global_churn(self):
+        from app.collection import scanner_worker
+        from app.dashboard.scanner_api import mount
+        from app.storage import scanner_readiness
+
+        original = scanner_readiness.capture
+        capture_witnesses = []
+        unrelated = records(3, at=self.clock())[-1]
+        with self.connect() as db:
+            CurrentRowStore(db).upsert_records([unrelated], now=self.clock())
+
+        def capture_with_unrelated_change(*args, **kwargs):
+            frame, inputs, meta = original(*args, **kwargs)
+            self.assertGreater(len(meta['component_witnesses']), 0)
+            capture_witnesses.extend(meta['component_witnesses'])
+            return frame, inputs, meta
+
+        original_publish = scanner_worker.prepare_publication
+
+        def publish_after_change(db, *args):
+            with self.connect() as writer:
+                affected = writer.execute("UPDATE current_event SET revision=revision||'-fixture-change' "
+                    "WHERE provider=%s AND native_event_id=%s", (unrelated['quote']['source']['provider'],
+                    unrelated['quote']['source']['native_event_id'])).rowcount
+                self.assertEqual(affected, 1)
+            return original_publish(db, *args)
+
+        with AuthoredAdapters(), patch('app.storage.scanner_readiness.capture', side_effect=capture_with_unrelated_change), \
+                patch('app.collection.scanner_worker.prepare_publication', side_effect=publish_after_change), \
+                patch('app.storage.current_games.utc', self.clock):
+            with self.connect() as db:
+                initial = scanner_worker.turn(db, self.service.runtime_id, at=self.clock)
+            self.assertTrue(initial['published'])
+            self.assertGreater(initial['observed_instruments'], 0)
+            self.assertGreater(initial['selected_scopes'], 0)
+            self.assertTrue(capture_witnesses)
+            self.assertGreater(initial['current_receipts'], 0)
+            app = web.Application()
+            reader = mount(app, RuntimeClient(connector=self.connect))
+            reader.connector = self.connect
+            reader.clock = reader.projection.clock = self.clock
+            async with TestClient(TestServer(app)) as client:
+                response = await client.get('/api/scanner')
+                self.assertEqual(response.status, 200)
+                body = await response.json()
+                self.assertEqual(body['provider_requests'], 0)
+                self.assertGreater(body['coverage']['evaluated_pairs'], 0)
+
+    async def test_full_slate_retains_dated_census_across_source_health_revision(self):
+        from app.collection import scanner_worker
+        from app.dashboard.scanner_api import mount
+        from app.storage.scanner_latest import publish_components, read
+
+        original = scanner_worker.prepare_publication
+        before = self.state.read()['revision']
+
+        def publish_after_source_change(db, *args):
+            self.service.states['prophetx'] = dict(state='unavailable', reason_code='fixture_source_failed')
+            self.state.write(self.service)
+            return original(db, *args)
+
+        with AuthoredAdapters(), patch('app.collection.scanner_worker.prepare_publication',
+                side_effect=publish_after_source_change), patch('app.storage.current_games.utc', self.clock):
+            with self.connect() as db:
+                result = scanner_worker.turn(db, self.service.runtime_id, at=self.clock)
+                row = read(db)
+            self.assertTrue(result['published'])
+            self.assertTrue(result['capture_only'])
+            self.assertEqual(result['current_receipts'], 0)
+            self.assertGreater(result['observed_instruments'], 0)
+            self.assertEqual(row['payload']['capture_runtime_revision'], before)
+            self.assertGreater(row['runtime_revision'], before)
+            self.assertEqual(row['payload']['errors'], ['scanner_runtime_sources_changed'])
+
+            app = web.Application()
+            reader = mount(app, RuntimeClient(connector=self.connect))
+            reader.connector = self.connect
+            reader.clock = reader.projection.clock = self.clock
+            async with TestClient(TestServer(app)) as client:
+                response = await client.get('/api/scanner')
+                self.assertEqual(response.status, 200)
+                body = await response.json()
+                self.assertTrue(body['coverage']['capture_only'])
+                self.assertEqual(body['coverage']['state'], 'not_evaluated')
+                self.assertEqual(body['published_at'], row['published_at'].isoformat())
+                self.assertEqual(body['coverage']['evaluated_pairs'], 0)
+                self.assertEqual(body['coverage']['captured_instruments'], result['observed_instruments'])
+
+                self.service.states['prophetx'] = dict(state='disconnected', reason_code='fixture_later_disconnect')
+                self.state.write(self.service)
+                self.assertGreater(self.state.read()['revision'], row['runtime_revision'])
+                response = await client.get('/api/scanner')
+                self.assertEqual(response.status, 200)
+                later = await response.json()
+                self.assertEqual(later['published_at'], body['published_at'])
+                self.assertEqual(later['coverage']['state'], 'not_evaluated')
+                self.assertEqual(later['coverage']['captured_at'], body['coverage']['captured_at'])
+                self.assertFalse(later['coverage']['no_qualifying_opportunities'])
+
+                # A later owner pause must not be treated as source health drift.
+                with self.connect() as db:
+                    owner = self.state.read()
+                    proof = current_revision(db)
+                    self.state.write(self.service, paused_sources=('kalshi',))
+                    self.assertFalse(publish_components(db, row['payload'], owner=owner, proof=proof,
+                        witnesses={}, pairs={}, binding=row['payload']['component_authority']['binding']))
+                paused = await (await client.get('/api/scanner')).json()
+                self.assertEqual(paused['coverage']['state'], 'unavailable')
+
+    async def test_full_slate_recaptures_current_native_component_with_separate_census(self):
+        from app.collection import scanner_worker
+        from app.comparison.current_dependencies import streaming_digest
+        from app.dashboard.scanner_api import mount
+        from app.storage.scanner_latest import read
+        from app.storage import scanner_readiness
+
+        original = scanner_readiness.capture
+        clocks = []
+        refresh_rows = [deepcopy(row) for row in self.rows if row['quote']['venue'] in ('kalshi','polymarket_us')]
+        with self.connect() as db:
+            db.execute("DELETE FROM current_event WHERE provider NOT IN ('kalshi','polymarket_us')")
+
+        def capture(*args, **kwargs):
+            frame, inputs, meta = original(*args, **kwargs)
+            clocks.append((frame['as_of'], kwargs.get('members')))
+            if kwargs.get('members') is None:
+                frame['instruments'] = [dict(instrument, model_versions=dict(
+                    instrument['model_versions'], native_execution='authored-current-model'))
+                    if instrument['venue'] in ('kalshi','polymarket_us') else instrument
+                    for instrument in frame['instruments']]
+                frame['revision'] = streaming_digest(frame)
+                self.clock.advance(31)
+                for row in refresh_rows:
+                    row['quote']['times'].update(source_at=self.clock(), received_at=self.clock(), projected_at=self.clock())
+                self.admit(refresh_rows)
+            return frame, inputs, meta
+
+        with AuthoredAdapters(), patch('app.storage.scanner_readiness.capture', side_effect=capture), \
+                patch('app.storage.current_games.utc', self.clock):
+            with self.connect() as db:
+                result = scanner_worker.turn(db, self.service.runtime_id, at=self.clock)
+                saved = read(db)['payload']
+            self.assertTrue(result['published'])
+            self.assertEqual(len(clocks), 2)
+            self.assertIsNone(clocks[0][1])
+            self.assertEqual({member[0] for member in clocks[1][1]}, {'kalshi','polymarket_us'})
+            self.assertEqual(saved['census']['as_of'], clocks[0][0])
+            self.assertEqual(saved['census']['counts']['selected_scopes']['value'], 72)
+            self.assertEqual(saved['frame']['as_of'], clocks[1][0])
+            self.assertTrue(saved['receipts'])
+            for receipt in saved['receipts'].values():
+                self.assertEqual(receipt['original_readiness_revision'], saved['frame']['revision'])
+                self.assertGreaterEqual(receipt['evaluated_at'], clocks[1][0])
+
+            app = web.Application()
+            reader = mount(app, RuntimeClient(connector=self.connect))
+            reader.connector = self.connect
+            reader.clock = reader.projection.clock = self.clock
+            async with TestClient(TestServer(app)) as client:
+                response = await client.get('/api/scanner')
+                self.assertEqual(response.status, 200)
+                coverage = (await response.json())['coverage']
+                self.assertEqual(coverage['captured_at'], clocks[0][0])
+                self.assertEqual(coverage['financial_inputs_at'], clocks[1][0])
+                self.assertGreater(coverage['evaluated_pairs'], 0)
+                self.assertFalse(coverage['complete'])
+
+            self.clock.advance(3)
+            with self.connect() as db:
+                result = scanner_worker.turn(db, self.service.runtime_id, at=self.clock)
+                saved = read(db)['payload']
+            self.assertTrue(result['published'])
+            self.assertEqual(len(clocks), 3)
+            self.assertEqual(clocks[2][1], clocks[1][1])
+            self.assertEqual(saved['census']['as_of'], clocks[0][0])
+            self.assertEqual(saved['frame']['as_of'], clocks[2][0])
+            self.assertTrue(saved['receipts'])
+
+            self.clock.advance(scanner_worker.CENSUS_SECONDS)
+            with self.connect() as db:
+                result = scanner_worker.turn(db, self.service.runtime_id, at=self.clock)
+            self.assertTrue(result['published'])
+            self.assertIsNone(clocks[3][1])
+            self.assertEqual(result['captured_at'], clocks[3][0])
+
     async def process(self, role, started):
         process=await asyncio.create_subprocess_exec(sys.executable,'-m','tests.da_process',role,
             '--socket',SOCKET,'--database',self.name,'--directory',self.directory.name,
@@ -387,7 +577,7 @@ class SeparationSQL(IsolatedAsyncioTestCase):
                 {k:r['economic_revision'] for k,r in again['payload']['rows'].items()})
             with self.connect() as db:
                 self.assertEqual(db.execute('SELECT sum(dispatched) n FROM da_fixture_dispatch').fetchone()['n'],1)
-                self.assertEqual(db.execute('SELECT count(*) n FROM scanner_latest').fetchone()['n'],1)
+                self.assertEqual(db.execute("SELECT count(*) n FROM comparison_publication WHERE kind='scanner'").fetchone()['n'],1)
             # An abrupt OS death leaves retained rows but loses authority within
             # the real eight-second heartbeat bound, without another app write.
             death_started=perf_counter();data.kill();await asyncio.wait_for(data.wait(),timeout=5);data=None

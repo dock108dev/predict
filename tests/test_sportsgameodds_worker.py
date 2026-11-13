@@ -201,7 +201,7 @@ def test_alternates_use_bounded_approaching_event_refresh_and_track_admission():
         await worker.refresh(due,SchedulePolicy())
         first, other = [c.args[0] for c in worker.collector.fetch.await_args_list]
         assert first['eventIDs'] == 'e1' and first['limit'] == 1 and first['includeAltLines'] is True
-        assert set(first['bookmakerID'].split(',')) == {'kalshi','novig','fanduel','draftkings','betmgm','caesars'}
+        assert set(first['bookmakerID'].split(',')) == {'kalshi','novig','prophetexchange','fanduel','draftkings','betmgm','caesars'}
         assert other['eventIDs'] == 'e2,e3' and other['limit'] == 2
         assert not {'bookmakerID','includeAltLines'} & other.keys()
         metrics = worker.metrics['alternate_refresh']

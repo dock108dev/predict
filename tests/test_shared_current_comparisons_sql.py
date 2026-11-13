@@ -2,7 +2,6 @@
 from copy import deepcopy
 from datetime import timedelta
 from app.collection.current_confirmation import Confirmations
-from app.storage import latest_board as latest
 from app.storage.coverage_latest import reconcile,read
 from app.storage.current_rows import CurrentRowStore
 from tests.test_broad_native_matrix_sql import NativeMatrixFixture
@@ -29,7 +28,15 @@ def confirmed(book,at,sequence=1):
 
 
 class SharedCurrentComparisonsSQL(NativeMatrixFixture):
-    async def test_complete_metadata_replaces_old_source_local_groups_despite_global_noise(self):
+    async def test_complete_metadata_replaces_source_local_groups_without_losing_display(self):
+        from app.storage import latest_board as archived
+
+        def archive_group_count():
+            with self.connect() as db:
+                result=archived.reconcile(db,at=self.at.isoformat(),observations_only=True)
+                self.assertTrue(result['published'],result)
+                return db.execute('SELECT count(*) n FROM latest_board').fetchone()['n']
+
         rows,books=await captured_core_matrix(self.at);incomplete=deepcopy(rows)
         for row in incomplete:
             # A complete peer can now supply the occurrence context for an
@@ -38,60 +45,66 @@ class SharedCurrentComparisonsSQL(NativeMatrixFixture):
                 row['event'][field]=None
                 row['market_identity'][field]=None
             row['comparison_source_metadata']['comparison_admission']=dict(supported=False,reason='comparison_context_missing',missing_fields=['season','stage'])
-        self.admit(incomplete,books);await self.publish()
-        with self.connect() as db:self.assertGreater(db.execute('SELECT count(*) n FROM latest_board').fetchone()['n'],18)
+        self.admit(incomplete,books);self.publish()
+        with patch.object(archived,'utc',return_value=self.at.isoformat()):
+            self.assertGreater(archive_group_count(),18)
+        incomplete_counts=(await self.coherent())['global_totals']
+        self.assertEqual(incomplete_counts['displayed_observations'],72)
         self.admit(rows,books)
-        marker=latest.marker;calls=[0]
+        result=self.publish()
+        self.assertTrue(result['published'],result)
+        marker=archived.marker;calls=[0]
         def unrelated_noise(db,event_ids=None):
             calls[0]+=1;return marker(db,event_ids)+str(calls[0])
-        with patch.object(latest,'marker',unrelated_noise):result=await self.publish()
-        self.assertTrue(result['published'],result)
-        with self.connect() as db:self.assertEqual(db.execute('SELECT count(*) n FROM latest_board').fetchone()['n'],18)
+        with patch.object(archived,'utc',return_value=self.at.isoformat()), \
+                patch.object(archived,'marker',unrelated_noise):
+            self.assertEqual(archive_group_count(),18)
         value=await self.coherent()
         self.assertEqual(value['global_totals']['displayed_observations'],72)
         self.assertEqual(value['global_totals']['displayed_current_comparison_directions'],60)
+        self.assertEqual(value['global_totals']['eligible_current_pairs'],30)
 
     async def test_changed_six_league_inputs_do_not_rehydrate_quiet_slate(self):
         rows,books=await captured_core_matrix(self.at);self.admit(rows,books)
-        await self.publish()
+        self.publish()
+        def components():
+            with self.connect() as db:
+                return {r['id']: r['result_id'] for r in db.execute("SELECT id,result_id FROM comparison_publication WHERE kind='component'")}
+        before=components()
         self.at+=timedelta(seconds=1);self.state.write(self.service)
         changed=[]
         for sport in ('NFL','NCAAF','NBA','NCAAB','MLB','NHL'):
             row=deepcopy(next(r for r in rows if r['event']['competition']==sport and r['market_identity']['family']=='moneyline'))
             row['quote']['times'].update(source_at=self.at.isoformat(),received_at=self.at.isoformat());changed.append(row)
         with self.connect() as db:CurrentRowStore(db).upsert_records(changed,now=self.at.isoformat())
-        hydrated=[];original=CurrentRowStore.hydrate_records
-        def track(store,records,**kwargs):
-            hydrated.extend(records);return original(store,records,**kwargs)
-        with patch.object(CurrentRowStore,'hydrate_records',track):result=await self.publish()
+        with patch.object(CurrentRowStore,'hydrate_records',side_effect=AssertionError('ordinary prices rehydrated depth')):
+            result=self.publish()
         self.assertTrue(result['published'],result)
-        self.assertEqual(result['reused'],12)
-        self.assertEqual(len(hydrated),24)
+        after=components()
+        self.assertEqual(before.keys(),after.keys())
+        self.assertEqual(sum(value == before[key] for key,value in after.items()),12)
         value=await self.coherent()
         self.assertEqual(value['global_totals']['displayed_current_comparison_directions'],60)
 
     async def test_source_continuity_loss_cannot_revive_an_old_confirmation(self):
         rows,books=await captured_core_matrix(self.at);self.admit(rows,books)
-        await self.publish()
+        self.publish()
         with self.connect() as db:
             store=CurrentRowStore(db)
             store.upsert_records([],source_status={'kalshi':dict(state='resyncing')},now=self.at.isoformat())
             store.upsert_records([],source_status={'kalshi':dict(state='available')},now=self.at.isoformat())
-        await self.publish()
+        self.publish()
         value=await self.coherent()
         self.assertEqual(value['global_totals']['eligible_current_pairs'],0)
         self.assertEqual(value['global_totals']['displayed_current_comparison_directions'],0)
         self.at+=timedelta(seconds=2);self.state.write(self.service)
         rows,books=await captured_core_matrix(self.at);self.admit(rows,books)
-        await self.publish()
+        self.publish()
         value=await self.coherent()
         self.assertEqual(value['global_totals']['eligible_current_pairs'],30)
     async def coherent(self):
         with self.connect() as db:
             reconcile(db,at=self.at.isoformat());return read(db,at=self.at.isoformat())
-
-    async def publish(self):
-        with self.connect() as db:return latest.reconcile(db,at=self.at.isoformat(),observations_only=True)
 
     async def test_complete_matrix_current_publication_pending_recovery_and_expiry(self):
         rows,books=await captured_core_matrix(self.at)
@@ -103,7 +116,7 @@ class SharedCurrentComparisonsSQL(NativeMatrixFixture):
         self.assertEqual(counts['input_current_peer_observations'],60)
         self.assertEqual(counts['publication_pending_directions'],60)
         self.assertEqual(counts['displayed_current_comparison_directions'],0)
-        result=await self.publish();self.assertTrue(result['published'],result)
+        result=self.publish();self.assertTrue(result['published'],result)
         value=await self.coherent();counts=value['global_totals']
         self.assertEqual(counts['eligible_current_pairs'],30)
         self.assertEqual(counts['published_current_pairs'],30)
@@ -145,7 +158,7 @@ class SharedCurrentComparisonsSQL(NativeMatrixFixture):
         # The old priced book clock would now be expired. Its exact confirmed
         # replacement remains current through its own independent expiry.
         self.at=first+timedelta(seconds=35);self.state.write(self.service)
-        result=await self.publish();self.assertTrue(result['published'],result)
+        result=self.publish();self.assertTrue(result['published'],result)
         value=await self.coherent();self.assertEqual(value['global_totals']['displayed_current_comparison_directions'],60)
         # A late old delta cannot replace that confirmed snapshot.
         self.admit(rows,books)

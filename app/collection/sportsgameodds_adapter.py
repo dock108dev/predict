@@ -20,7 +20,8 @@ MAX_PAGE_BYTES = 16 * 1024 * 1024
 MAX_EVENTS = 100
 MAX_ODDS_PER_EVENT = 20000
 MAX_BOOKS_PER_ODD = 200
-P2P_BOOKS = frozenset(('novig', 'prophetx', 'prophetexchange', 'kalshi', 'polymarket', 'matchbook', 'betfairexchange'))
+PROPHETX_BOOKMAKER_ID = 'prophetexchange'
+P2P_BOOKS = frozenset(('novig', 'prophetx', PROPHETX_BOOKMAKER_ID, 'kalshi', 'polymarket', 'matchbook', 'betfairexchange'))
 LINK_BOOKS = P2P_BOOKS | {'pinnacle', *BEST_BOOKS}
 OPPOSITE_SIDE = {'home': 'away', 'away': 'home', 'over': 'under', 'under': 'over'}
 

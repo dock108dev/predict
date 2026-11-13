@@ -11,7 +11,7 @@ from aiohttp import web
 from aiohttp.test_utils import TestClient, TestServer
 from psycopg.types.json import Jsonb
 
-from app.collection.runtime_client import RuntimeClient
+from tests.latest_board_fixture import RetainedBoardClient, replace_book_revision, restore_book_revision
 from app.dashboard.comparison_board import expand_odds
 from app.storage import latest_board as latest
 from app.storage.comparison_board import ReadContext
@@ -24,6 +24,7 @@ class SelectedInputGuardsSQL(IsolatedAsyncioTestCase):
     setUpClass=classmethod(sql_fixtures.LatestBoardSQL.setUpClass.__func__)
     tearDownClass=classmethod(sql_fixtures.LatestBoardSQL.tearDownClass.__func__)
     asyncSetUp=sql_fixtures.LatestBoardSQL.asyncSetUp
+    clear_source_state=sql_fixtures.LatestBoardSQL.clear_source_state
     admit=sql_fixtures.LatestBoardSQL.admit
     reconcile=sql_fixtures.LatestBoardSQL.reconcile
     rows=sql_fixtures.LatestBoardSQL.rows
@@ -33,7 +34,7 @@ class SelectedInputGuardsSQL(IsolatedAsyncioTestCase):
         self.reconcile()
         for target in ('app.dashboard.comparison_board_api.connect','app.storage.latest_board.connect'):
             change=patch(target,side_effect=self.connect);change.start();self.addCleanup(change.stop)
-        app=web.Application();mount(app,RuntimeClient(connector=self.connect))
+        app=web.Application();mount(app,RetainedBoardClient(connector=self.connect))
         client=TestClient(TestServer(app,handler_cancellation=True))
         await client.start_server();self.addAsyncCleanup(client.close)
         rows=self.rows();self.key=self.first['game_key'];self.saved=rows[self.key]['facts']['publication_dependencies']
@@ -94,7 +95,7 @@ class SelectedInputGuardsSQL(IsolatedAsyncioTestCase):
             self.assertLess(len(narrow['offers']),len(full['offers']))
             all_events=db.execute('SELECT id FROM current_event').fetchall()
             unrelated=next(row['id'] for row in all_events if row['id'] not in ids)
-            db.execute("UPDATE current_offer SET revision=revision||'-unrelated' WHERE contract_id IN (SELECT id FROM current_contract WHERE event_id=%s)",(unrelated,))
+            db.execute("UPDATE current_offer_storage SET revision=revision||'-unrelated' WHERE contract_id IN (SELECT id FROM current_contract WHERE event_id=%s)",(unrelated,))
             self.assertEqual(before,latest.selected_dependencies(db,self.saved)[0])
         reply=await client.get('/api/boards/inputs',params=self.query)
         value=await reply.json();self.assertEqual(reply.status,200,value)
@@ -122,8 +123,8 @@ class SelectedInputGuardsSQL(IsolatedAsyncioTestCase):
                             selected=next((r for r in rows if r['venue']=='pinnacle'),rows[-1]) if case=='benchmark_offer' else next(r for r in rows if r['id']!=cid)
                             if case=='other_contract':
                                 db.execute("UPDATE current_contract SET revision=revision||'-context' WHERE id=%s",(selected['id'],))
-                            else:db.execute("UPDATE current_offer SET revision=revision||'-benchmark' WHERE contract_id=%s",(selected['id'],))
-                            restore=lambda:db.execute('UPDATE '+('current_contract' if case=='other_contract' else 'current_offer')+' SET revision=%s WHERE '+('id' if case=='other_contract' else 'contract_id')+'=%s',(selected['revision'] if case=='other_contract' else selected['offer_revision'],selected['id']))
+                            else:db.execute("UPDATE current_offer_storage SET revision=revision||'-benchmark' WHERE contract_id=%s",(selected['id'],))
+                            restore=lambda:db.execute('UPDATE '+('current_contract' if case=='other_contract' else 'current_offer_storage')+' SET revision=%s WHERE '+('id' if case=='other_contract' else 'contract_id')+'=%s',(selected['revision'] if case=='other_contract' else selected['offer_revision'],selected['id']))
                         elif case=='new_contract':
                             cid='authored-extra-'+uuid4().hex
                             db.execute('''INSERT INTO current_contract SELECT %s,event_id,venue,native_market_id||'-extra',native_outcome_id,native_side,facts,revision
@@ -132,9 +133,10 @@ class SelectedInputGuardsSQL(IsolatedAsyncioTestCase):
                                 FROM current_offer o JOIN current_contract c ON c.id=o.contract_id WHERE c.event_id=ANY(%s) LIMIT 1''',(cid,ids))
                             restore=lambda:db.execute('DELETE FROM current_contract WHERE id=%s',(cid,))
                         elif case=='book':
-                            book=db.execute('SELECT * FROM current_native_book WHERE event_id=ANY(%s) LIMIT 1',(ids,)).fetchone()
-                            db.execute("UPDATE current_native_book SET revision=revision||'-book' WHERE venue=%s AND event_id=%s AND native_market_id=%s",(book['venue'],book['event_id'],book['native_market_id']))
-                            restore=lambda:db.execute('UPDATE current_native_book SET revision=%s WHERE venue=%s AND event_id=%s AND native_market_id=%s',(book['revision'],book['venue'],book['event_id'],book['native_market_id']))
+                            book=db.execute('SELECT id,revision FROM native_book_revision WHERE is_current AND event_id=ANY(%s) LIMIT 1',(ids,)).fetchone()
+                            replacement=book['id']+'-book'
+                            replace_book_revision(db,book['id'],replacement,revision=book['revision']+'-book')
+                            restore=lambda:restore_book_revision(db,book['id'],replacement)
                         elif case=='source':
                             venue=q['venue'];old=self.service.states[venue]
                             self.service.states[venue]=dict(state='unavailable');self.state.write(self.service)

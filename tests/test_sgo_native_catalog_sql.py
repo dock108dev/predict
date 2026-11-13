@@ -20,7 +20,8 @@ class SGONativeCatalogSQL(LatestBoardFixture):
         quote = dict(anchor,available=True,bookmaker_market_link=row['comparison_source_metadata']['bookmaker_market_link'])
         with self.connect() as db:
             db.execute("INSERT INTO current_event VALUES ('canonical','sportsgameodds',%s,'NHL',%s,0,'{}','event')", (SGO,START))
-            db.execute('INSERT INTO current_sgo_event_frame VALUES (%s,0,%s,0,%s)', (SGO,START,Jsonb(facts)))
+            db.execute("INSERT INTO sgo_event_evidence (kind,event_id,received_order,expires_at,payload_bytes,facts) "
+                       "VALUES ('frame',%s,0,%s,0,%s)", (SGO,START,Jsonb(facts)))
             db.execute("INSERT INTO current_sgo_reference VALUES ('quote',%s,'novig',0,0,%s,'replaced',%s)",
                        (SGO,START,Jsonb(quote)))
             assert catalog.targets(db,at=AT) == []

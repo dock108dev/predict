@@ -85,7 +85,7 @@ def defer_details(result):
     required=set(('id kind venue source game_key game_title league start_at selection market '
         'current_authority publication_epoch publication_policy settings_revision probability '
         'gross_return_percent conditional_return_percent conservative_return_percent net_return_percent '
-        'gross_profit_per_claim price_difference_cents snapshot_benchmark_reason same_outcome '
+        'gross_profit_per_claim price_difference_cents snapshot_benchmark_reason same_outcome display_outcome_key '
         'times original evidence_result_id trade_fee novig_live_financial_qualified kalshi_live_financial_qualified '
         'polymarket_live_financial_qualified '
         'captured_at price_revision economic_revision sportsbook_baseline').split())
@@ -194,12 +194,13 @@ def captured_price(event,group,q,record,game,league):
     return row
 
 
-def capture(db, *, at=None, ordinary=False, event_ids=None, capture_binding=None, price_basis=False, _frame_dependencies=None):
+def capture(db, *, at=None, ordinary=False, event_ids=None, capture_binding=None, price_basis=False,
+            _frame_dependencies=None, reference_provider=None):
     from app.dashboard.comparison_board import entries
     from app.dashboard.grouped_odds import reference_prices
-    from app.collection.current_policy import load as current_policy
+    from .ordinary_publication import aggregate_provider
     at=at or utc();start=monotonic();out=dict(captured_at=at,quotes=[],references=[],games=[],sources={},issues=[],
-        reference_provider=current_policy()['aggregate_provider'])
+        reference_provider=reference_provider)
     if price_basis:
         from .capture_price import begin, remember_frame, remember_catalog
         out['_price_basis']=begin(capture_binding)
@@ -210,14 +211,15 @@ def capture(db, *, at=None, ordinary=False, event_ids=None, capture_binding=None
         if owns_transaction:
             db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
         db.execute('SET LOCAL statement_timeout=30000')
+        out['reference_provider'] = reference_provider or aggregate_provider(db)
         from app.fees.schedule_lifecycle import read as read_fee_schedule
         out['fee_lifecycle'] = read_fee_schedule(db)
         from app.fees.product_schedules import read_all as read_fee_products
         out['fee_products'] = read_fee_products(db)
         if ordinary:
             from .ordinary_publication import dependencies, policy_identity
-            out['dependencies']=dependencies(db,event_ids) if _frame_dependencies is None else _frame_dependencies
-            out['policy_identity']=policy_identity()
+            out['dependencies']=dependencies(db,event_ids,provider=out['reference_provider']) if _frame_dependencies is None else _frame_dependencies
+            out['policy_identity']=policy_identity(out['reference_provider'])
         if ordinary:
             from .board_capture import capture_batches
             components=[event_ids] if event_ids is not None else capture_batches(db)
@@ -548,11 +550,24 @@ def calculate(inputs,value=None):
 def current(db,result_id=None):
     with db.transaction():
         row=db.execute("""UPDATE comparison_snapshot_result SET lease_until=now()+interval '2 hours'
-            WHERE id=COALESCE(%s,(SELECT result_id FROM comparison_snapshot_head))
+            WHERE id=COALESCE(%s,(SELECT result_id FROM comparison_publication WHERE kind='manual' AND id=''))
             RETURNING snapshot_id,result""",(result_id,)).fetchone()
         if row is None:return None
         db.execute("UPDATE comparison_snapshot SET lease_until=now()+interval '2 hours' WHERE id=%s",(row['snapshot_id'],))
     return unpack(row['result'],db=db)
+
+
+def insert_result(db, result, snapshot_id, packed, *, automatic=False):
+    """Store immutable result bytes and bind new results to exact settings."""
+    from .comparison_policy import remember
+
+    settings = result['assumptions']
+    revision = remember(db, settings)
+    db.execute('''INSERT INTO comparison_snapshot_result
+        (id,snapshot_id,assumptions,result,automatic,lease_until,settings_revision)
+        VALUES(%s,%s,%s,%s,%s,clock_timestamp()+%s::interval,%s)''',
+               (result['id'], snapshot_id, Jsonb(settings), packed, automatic,
+                '10 seconds' if automatic else '2 hours', revision))
 
 
 def prune(db):
@@ -560,7 +575,7 @@ def prune(db):
     with db.transaction():
         if not db.execute('SELECT pg_try_advisory_xact_lock(901153) held').fetchone()['held']:
             return
-        db.execute('DELETE FROM comparison_live_lease WHERE expires_at<now()')
+        db.execute("DELETE FROM comparison_result_reference WHERE kind='lease' AND expires_at<now()")
         # Remove expired composites first, then their now-unreferenced members.
         for _ in range(2):
             db.execute('''WITH newest AS (SELECT id FROM comparison_snapshot WHERE NOT automatic ORDER BY captured_at DESC,id DESC LIMIT 2),
@@ -570,12 +585,8 @@ def prune(db):
                     ORDER BY r.snapshot_id,r.calculated_at DESC,r.id DESC)
                 DELETE FROM comparison_snapshot_result WHERE id IN (
                     SELECT id FROM comparison_snapshot_result WHERE lease_until<now()
-                    AND id NOT IN (SELECT result_id FROM comparison_snapshot_head)
-                    AND id NOT IN (SELECT result_id FROM comparison_snapshot_review)
-                    AND id NOT IN (SELECT result_id FROM comparison_live_head WHERE result_id IS NOT NULL)
-                    AND id NOT IN (SELECT result_id FROM comparison_live_component)
-                    AND id NOT IN (SELECT member_id FROM comparison_live_member)
-                AND id NOT IN (SELECT result_id FROM comparison_live_lease)
+                    AND id NOT IN (SELECT result_id FROM comparison_publication WHERE result_id IS NOT NULL)
+                    AND id NOT IN (SELECT result_id FROM comparison_result_reference)
                     AND id NOT IN (SELECT id FROM keep_latest) FOR UPDATE SKIP LOCKED)''')
         db.execute('''DELETE FROM comparison_snapshot WHERE lease_until<now()
             AND id NOT IN (SELECT snapshot_id FROM comparison_snapshot_result)
@@ -606,8 +617,9 @@ def replace(db, *, action, value=None, expected=None):
             raise SnapshotOperationError('Insufficient SQL headroom for snapshot; previous result retained')
         with db.transaction():
             if action=='refresh':db.execute('INSERT INTO comparison_snapshot(id,captured_at,inputs) VALUES (%s,%s,%s)',(inputs['id'],inputs['captured_at'],packed_inputs))
-            db.execute('INSERT INTO comparison_snapshot_result(id,snapshot_id,assumptions,result) VALUES (%s,%s,%s,%s)',(result['id'],inputs['id'],Jsonb(result['assumptions']),packed_result))
-            db.execute('INSERT INTO comparison_snapshot_head(singleton,result_id) VALUES (true,%s) ON CONFLICT(singleton) DO UPDATE SET result_id=EXCLUDED.result_id',(result['id'],))
+            insert_result(db, result, inputs['id'], packed_result)
+            db.execute("""INSERT INTO comparison_publication(kind,id,result_id) VALUES ('manual','',%s)
+                ON CONFLICT(kind,id) DO UPDATE SET result_id=EXCLUDED.result_id""",(result['id'],))
             prune(db)
         return result
     finally:db.execute('SELECT pg_advisory_unlock(901153)')

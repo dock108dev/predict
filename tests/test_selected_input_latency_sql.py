@@ -27,7 +27,7 @@ class SelectedInputLatencySQL(IsolatedAsyncioTestCase):
     async def api(self):
         from aiohttp import web
         from aiohttp.test_utils import TestClient, TestServer
-        from app.collection.runtime_client import RuntimeClient
+        from tests.latest_board_fixture import RetainedBoardClient
         from app.dashboard import comparison_board_api as api
         if os.environ.get('PREDICT_LATENCY_BASELINE') == '1':
             import types
@@ -35,7 +35,7 @@ class SelectedInputLatencySQL(IsolatedAsyncioTestCase):
             exec(compile(Path('test-results/selected-input-latency-20261017/baseline-route.py').read_text(), 'baseline-route', 'exec'), api.__dict__)
         if os.environ.get('PREDICT_LATENCY_BASELINE') == '1':api.connect = self.connect
         self.api_module = api
-        app = web.Application(); api.mount(app, RuntimeClient(connector=self.connect))
+        app = web.Application(); api.mount(app, RetainedBoardClient(connector=self.connect))
         client = TestClient(TestServer(app, handler_cancellation=True))
         await client.start_server(); self.addAsyncCleanup(client.close)
         return client, app

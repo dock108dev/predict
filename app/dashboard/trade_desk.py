@@ -5,11 +5,10 @@ import re
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from app.comparison.sgo_reference import BEST_BOOKS, BEST_VERSION, NAMED_VERSION, VERSION as SGO_MEDIAN
-from app.comparison.inspection_math import pair_math
+from app.comparison.ordinary_arb import current_payoff
 from app.comparison.game_phase import PREGAME_SPORTSBOOK_SECONDS
-from app.comparison.snapshot_pair_fees import pair_fees
 from app.storage.comparison_snapshot import expand_row
-from app.storage.store import stamp
+from app.storage.store import hashed, stamp
 from .local_security import PublicRequestError
 from .snapshot_display import comparison_groups, decimal, odds, outcome_key, ranking_value, search_index
 
@@ -372,17 +371,13 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
                 expired_pairs += 1
             if proof and all(leg in eligible for leg in pair['legs']) and len(
                     {eligible[leg].get('game_state') for leg in pair['legs']}) == 1:
-                legs = []
                 for leg in pair['legs']:
                     if leg not in expanded:
                         expanded[leg] = expand_row(eligible[leg])
-                    legs.append(expanded[leg])
-                inspection = pair_math(proof, stake)
-                payoff = pair_fees(proof, inspection, legs)
-                score = (100 * Fraction(payoff['minimum_net_profit_usd']) / Fraction(payoff['funding_usd'])
-                         if payoff['available'] else None)
+                payoff = current_payoff(pair, [expanded[leg] for leg in pair['legs']], stake)
+                score = Fraction(payoff['score']) if payoff['score'] is not None else None
                 markets.setdefault(proof['market_key'], []).append(
-                    dict(pair, inspection=inspection, retail_payoff=payoff, score=score))
+                    dict(pair, inspection=payoff['inspection'], retail_payoff=payoff['retail_payoff'], score=score))
         # The display can show additional exact-side offers. Only the pair's
         # evidenced legs participate in the payoff.
         sides = {}

@@ -42,10 +42,10 @@ def run(destination):
                     else:
                         receipt_key=(b['kind'],b['sport'],b['event_id'] if b['kind']=='alternate' else None)
                         if receipt_key not in receipts:
-                            if b['kind']=='featured':
-                                payload=db.execute('SELECT payload FROM current_acquisition_aggregate WHERE sport=%s',(b['sport'],)).fetchone()['payload']['events']
-                            else:
-                                payload=[db.execute('SELECT payload FROM current_acquisition_alternate WHERE sport=%s AND event_id=%s',(b['sport'],b['event_id'])).fetchone()['payload']]
+                            receipt=db.execute("""SELECT payload FROM current_aggregate_receipt
+                                WHERE provider='the_odds_api' AND kind=%s AND sport=%s AND event_id=%s""",
+                                (b['kind'],b['sport'],receipt_key[2] or '')).fetchone()['payload']
+                            payload=receipt['events'] if b['kind']=='featured' else [receipt]
                             receipts[receipt_key]={(e['id'],book['key'],m['key']):m['outcomes'] for e in payload for book in e.get('bookmakers',[]) for m in book.get('markets',[])}
                         original=receipts[receipt_key][(b['event_id'],b['venue'],b['market_id'])]
                         originals={(str(o.get('name',i)),str(o.get('point'))):o for i,o in enumerate(original)}

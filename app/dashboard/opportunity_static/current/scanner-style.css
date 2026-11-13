@@ -112,7 +112,14 @@ label input,label select { font-size:.9375rem }
 .scanner-toolbar:has(#scanner-health[hidden]) { display:none }
 #scanner-disclosure { flex:0 1 auto; position:relative; margin:0; font-size:.875rem; color:#526278 }
 #scanner-disclosure>summary { min-height:44px; align-content:center; cursor:pointer; font-weight:600 }
-#scanner-disclosure[open] { flex-basis:100%; padding:14px; background:white; border:1px solid #d9e1ec; border-radius:10px }
+#scanner-disclosure[open] {
+  flex-basis: 100%;
+  padding: 12px 14px;
+  background: white;
+  border: 1px solid #d9e1ec;
+  border-radius: 10px;
+}
+.scanner-recognition :empty { display: none }
 @media(min-width:1001px) {
   .scanner-heading { margin:16px 0 12px }
   .scanner-row { padding:4px 14px; min-height:64px }
@@ -121,12 +128,10 @@ label input,label select { font-size:.9375rem }
   .scanner-row .edge { font-size:1.05rem; line-height:1.2 }
   .scanner-row .edge+small { font-size:.75rem; line-height:1.25 }
 }
-@media(max-width:1000px) {
-  #scanner-disclosure { grid-column:1/4 }
-  #scanner-disclosure[open] { grid-column:1/-1 }
-}
 @media(max-width:760px) {
-  #scanner-disclosure { grid-column:1/-1; justify-self:start }
+  .scanner-list-tools > p { grid-column: 1 }
+  #scanner-disclosure { grid-column: 2; justify-self: end }
+  #scanner-disclosure[open] { grid-column: 1/-1; justify-self: stretch }
   #scanner-filters>.subtle { grid-row:4; grid-column:2 }
   #scanner-filters:has(#scanner-advanced[open])>.subtle { grid-row:auto }
   .scanner-list-tools { margin-top:8px }

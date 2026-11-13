@@ -23,7 +23,8 @@ def selected_market_observation(market, material):
     book receipt cannot date the metadata, and representation/face values do not
     establish a legal quantity grid, settlement, participant channel or costs.
     """
-    fields = ('price_ranges', 'price_level_structure', 'notional_value_dollars')
+    fields = ('price_ranges', 'price_level_structure', 'notional_value_dollars', 'market_type',
+              'settlement_bounds_type', 'fractional_trading_enabled', 'fee_waiver_expiration_time')
     values = {key: deepcopy(material[key]) for key in fields if key in material}
     proof = (market.get('provenance') or [{}])[-1]
     value = dict(version='selected-market-observation-1',

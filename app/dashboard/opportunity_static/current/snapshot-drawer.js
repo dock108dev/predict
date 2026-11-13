@@ -53,7 +53,7 @@ const SnapshotDrawer = (() => {
       const fullFee=details.row[metric==='conservative_return_percent'?'conservative_trade_benchmark':'conditional_trade_benchmark'];
       if(fullFee?.rounding_trace)fees.append(disclosure('Exact fee rounding',el('pre',JSON.stringify(fullFee.rounding_trace,null,2))));
       if(fee?.assumptions)fees.append(el('p',Array.isArray(fee.assumptions)?fee.assumptions.join(' · '):JSON.stringify(fee.assumptions)));
-      fees.append(el('p','The $100 illustration scales the modeled trade; it does not specify a $100 order or establish available depth. Buffer and other costs are excluded.','p-meta'));box.append(fees);
+      fees.append(el('p','The $100 illustration scales the modeled trade and excludes the buffer and other costs.','p-meta'));box.append(fees);
     }
     const clocks=section('Detailed clocks'),original=(details.originals||[]).find(q=>q.id===row.id)||{};
     clocks.append(facts([['Source capture',row.captured_at||details.captured_at],['Provider update',row.times?.source_at],['Successful confirmation',row.book_confirmation?.confirmed_at||original.book_confirmation?.confirmed_at],['Local receipt',row.times?.received_at],['Last price change',row.last_price_change_at||original.last_price_change_at],['Price authority ends',row.current_authority?.price?.current_until]]));

@@ -3,7 +3,7 @@
 Ordinary collection persists typed current events, contracts, offers and shared
 native depth. This guide describes their ownership, ordering and expiry. See
 [architecture](architecture.md) for the application flow and the
-[board API](comparison-board-api-contract.md) for transient read identities.
+[storage ownership](storage-ownership.md) for current read identities.
 
 ## Ordinary write path
 
@@ -14,26 +14,37 @@ native depth. This guide describes their ownership, ordering and expiry. See
 | `current_row_epoch` | Current data/reset generation; app and data restarts preserve it. Runtime identity and fresh exact dependencies independently invalidate old selections. |
 | `current_event` | One exact provider/event mapping, compact allowlisted sporting and occurrence-witness facts, pregame start expiry. |
 | `current_contract` | One exact venue/provider/event/market/outcome/native-side selection, including selections with no offer. |
-| `current_offer` | One actual current offer for a contract; exact price and units, source and receipt clocks stored separately. |
-| `current_native_book` | One synchronized native book header, outcome presence, original sequence and clocks. |
-| `current_native_depth` | Exact ordered bids and asks stored once per native book/outcome/side/level. |
-| `current_depth` | Optional non-native normalized depth; native asks are reconstructed from shared native depth. |
+| `current_offer` | One admitted offer per contract. For native offers, its immutable book revision supplies the exact ask and any original opposite bid used to derive it. |
+| `native_book_revision` | Immutable native book header, outcome presence, sequence, clocks, and ladder references. The current head is a row flag. |
+| `native_ladder_revision` | Exact ordered bids and asks, shared across book revisions when the ladder is identical. |
+| `current_depth` | Read view over optional independent depth held on the normalized contract. |
 | `current_source_status` | Bounded latest source status, without full response bodies. |
 | `current_refresh_scope` | Latest authoritative exact-scope ordering guards; expires after 48 hours and has an explicit capacity. |
 
-Migration `012_current_rows.sql` defines these working tables. They are independent of protected provider account, quota, audit, reservation and financial authority records.
+Migration 012 established the current-row owners. Migrations 086 and 087 give
+native books immutable revisions and move epoch, source status and refresh scope
+into `current_row_state`. Migration 091 links delayed offers to a uniquely
+matching retained book. The offer link supplies native depth and book clocks to
+current readers. Provider account and reservation evidence retains its own
+storage and controls.
+
+Migration 079 gives each exact Kalshi or Polymarket US market metadata body one
+content hash in `current_native_market_body`. The acquisition census and the
+recovery roster reference that body and keep their own generation, scope and
+receipt fields. They can reference different revisions while a catalog is being
+adopted. Recovery can reconstruct the original compact adapter JSON from the
+body and its key order. Other wire formats stay inline. Maintenance converts
+old inline metadata in bounded transactions and reclaims shared bodies only
+after both owners release their references.
 
 Current snapshots and calculation results are not persisted by this owner. Shared financial definitions and user configuration retain their existing separate owners. `capture(include_depth=False)` supplies a coherent repeatable-read metadata frame and semantic dependencies. MVCC binds reads without taking the writer advisory lock; catalog construction cannot hold that write lock. A standalone capture starts its own repeatable-read, read-only transaction; ordinary API callers provide an existing repeatable-read transaction through selected-depth hydration. `hydrate_records` reads only selected execution ask ladders; its caller binds the expected revision before/after hydration. The API integration owner provides the transient calculation and Details context.
 
-The independent background runtime publishes bounded latest results through
-migrations 013–015. `data_runtime` and its bounded command relation provide source
-status, heartbeat, material revisions and actual control acknowledgments.
-`scanner_latest` replaces one compact typed projection (32 MiB cap);
-`latest_board` replaces compact game rows without a fixed game-count cutoff
-(64 MiB total publication guard), with one
-status publication. Inputs, raw source bodies and expanded reports are excluded.
-The [runtime contract](data-app-runtime-contract.md) specifies authority, failure,
-retention and app-read behavior. Existing protected owners remain separate.
+`data_runtime` and its bounded command relation provide source status, heartbeat,
+material revisions and actual control acknowledgments. `scanner_latest` replaces
+one compact typed projection with a 32 MiB cap. `OrdinaryOwner` publishes the
+current comparison head from exact calculated members. The
+[runtime contract](data-app-runtime-contract.md) specifies authority, failure,
+retention and app-read behavior.
 
 ## Bounded ordered SQL writes
 
@@ -159,7 +170,13 @@ Pregame rows expire at scheduled start; explicit completed/final/settled/cancell
 
 ## Compatibility readers and reset
 
-Ordinary startup and `DatabasePipeline` do not reopen journals, restore aggregate diagnostics, import archived snapshots or publish saved calculation results. Both automatic and manual aggregate paths discard response bodies after admission. Provider consumed attempts, charge headers, original response hashes, quota and independent account audit have separate protected owners.
+Ordinary startup and `DatabasePipeline` do not reopen journals, restore aggregate
+diagnostics, import archived snapshots or publish saved calculation results.
+`acquisition_receipt` holds the latest The Odds API originals for each route
+and scope. Alternate admission commits the original receipt, qualification
+and current quotes together under the existing control lock. Provider consumed
+attempts, charge headers, original response hashes, quota and independent account
+audit have separate protected owners.
 
 Legacy codecs/readers remain available to separately selected retained/research paths. Their presence does not create an ordinary startup writer. `storage/current_reset.py` coordinates the explicit sports-only reset. Ingress and startup do not reset owner storage.
 
@@ -184,7 +201,10 @@ epochs, reset data or start acquisition. See the
 
 ## Acquisition and publication
 
-Current acquisition tables retain exact traversal pages, independent native metadata, latest raw books with dispositions, featured payloads and per-event alternate responses. These are replaceable current state, not an update archive. Ordinary current acquisition/capture cardinality bounds were removed; response chunks, per-record validation, memory admission and SQL/disk guards remain explicit. Rejected raw values do not acquire calculation authority.
+`acquisition_receipt` holds exact traversal pages, featured payloads, event
+censuses, per-event alternate responses, and rejected wire evidence. Native
+catalog metadata and latest reconstructed stream images have their own owners.
+Response chunks, validation, memory admission and disk limits bound collection.
 
 See [acquisition](acquisition.md) for ownership, capacity and completeness limits.
 
@@ -203,12 +223,10 @@ day. These bytes have no ordinary rendering or financial authority.
 
 ## Raw display projection
 
-Migrations 028–029 add a compact aggregate display index, native row-write clock
-and reusable compact source metadata. Native full images/depth remain solely in
-acquisition storage; list reads transfer selected top levels only. Aggregate
-projection and deletion are atomic with their source payload. No normalized row
-or financial result is required for display. See [raw prices](raw-prices.md)
-for clocks, snapshot lifetime, memory costs and reconciliation.
+`raw_aggregate_display` projects received aggregate prices from the original
+receipt rows. The native Raw Odds list reads selected top levels from retained
+stream images. Its optional comparison overlay links to the exact immutable
+calculation. See [raw prices](raw-prices.md) for clocks and snapshot lifetime.
 
 Durable scanner notifications are wake-only post-commit signals. They do not scan
 and hash the entire market roster in every price transaction. Exact input capture

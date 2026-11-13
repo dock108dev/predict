@@ -20,6 +20,7 @@ DOCUMENTS = (
     "docs/engineering/live-comparison-20261104/README.md",
     "docs/design/live-comparison-20261104/README.md",
     "README.md",
+    "docs/storage-ownership.md",
     "docs/CI.md",
     "docs/architecture.md",
     "docs/benchmark-ev.md",

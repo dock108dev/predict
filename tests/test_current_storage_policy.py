@@ -34,7 +34,9 @@ class Policy(unittest.TestCase):
         self.assertIn('pg_total_relation_size', query)
         self.assertIn("format('%%I.%%I'", query)
         self.assertEqual(database.execute.call_args.args[1],
-                         (['data_runtime', 'data_runtime_command', 'scanner_latest', 'latest_board', 'latest_dashboard', 'latest_board_status', 'coverage_latest'],))
+                         (['data_runtime', 'data_runtime_command', 'comparison_publication',
+                           'acquisition_receipt', 'native_book_revision', 'native_ladder_revision',
+                           'sgo_event_evidence', 'sgo_quote_revision', 'delivery_clock'], ['acquisition_failure_id']))
         database.execute.assert_called_once()
 
     def test_writer_guard_measures_the_whole_database(self):

@@ -120,11 +120,8 @@ def records(count=EVENTS, at=None):
                     dict(price=top, quantity="150"),
                     dict(price="0.37", quantity="300"),
                 ]
-            q["original"].update(
-                native_value=q["original"]["value"],
-                native_units=q["original"]["units"],
-                transformation="identity",
-            )
+            for key in ("native_value", "native_units", "transformation"):
+                q["original"].pop(key, None)
             # Existing normalized source identity is recalculated from these
             # authored event facts by the actual occurrence resolver.
             from app.comparison.event_links import ordinary_event_key
@@ -151,15 +148,10 @@ def assert_authored_originals(rows):
 
     for row in rows:
         original = row["quote"]["original"]
-        bounded_decimal(original["native_value"])
         bounded_decimal(original["value"])
-        if (
-            original["transformation"] != "identity"
-            or original["native_value"] != original["value"]
-            or original["native_units"] != original["units"]
-        ):
+        if {"transformation", "native_value", "native_units"} & original.keys():
             raise AssertionError(
-                "SC06 authored original native transform conflicts with canonical price"
+                "SC06 authored originals must use the direct observed price"
             )
 
 

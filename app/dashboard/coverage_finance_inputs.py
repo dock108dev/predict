@@ -3,9 +3,8 @@ from collections import Counter, defaultdict
 from datetime import timedelta
 from fractions import Fraction
 
-from app.comparison.inspection_math import pair_math
+from app.comparison.ordinary_arb import DEFAULT_FUNDING, current_payoff, evaluate
 from app.comparison.sgo_reference import MAX_AGE_SECONDS
-from app.comparison.snapshot_pair_fees import pair_fees
 from app.storage import comparison_snapshot as snapshots, ordinary_publication as live
 from app.storage.ordinary_projection import source_allowed
 from app.storage.store import stamp
@@ -155,11 +154,11 @@ def _native_pair_input_gaps(selected, current, raw_pairs, displayed, *, at):
 
 
 def _retail_payoff(pair, rows, *, captured_at=None):
-    proof = pair['before_fees']
     legs = [snapshots.expand_row(rows[leg]) for leg in pair['legs']]
     if captured_at is not None:
         legs = [dict(leg, captured_at=captured_at) for leg in legs]
-    return pair_fees(proof, pair_math(proof, Fraction(100)), legs)
+        return evaluate(pair['before_fees'], legs, DEFAULT_FUNDING)['retail_payoff']
+    return current_payoff(pair, legs, DEFAULT_FUNDING)['retail_payoff']
 
 
 def measure_inputs(inputs, publication, published_pairs, deps, owner, states, *, settings, policy, epoch, at,

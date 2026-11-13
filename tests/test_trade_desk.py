@@ -3,9 +3,10 @@ from fractions import Fraction
 from unittest import TestCase
 from unittest.mock import Mock, patch
 
+from app.comparison.ordinary_arb import DEFAULT_FUNDING, evaluate as evaluate_arb
 from app.comparison.snapshot_math import before_fee_pair
 from app.dashboard.trade_desk import add_sgo_prices, page
-from app.storage.store import stamp
+from app.storage.store import hashed, stamp
 from app.storage.comparison_snapshot import before_fee_pairs
 
 
@@ -235,6 +236,28 @@ class TradeDesk(TestCase):
         self.assertEqual([Fraction(group['score']) for group in ranked['rows']], [8, Fraction(200, 53), 0, -10])
         positive = page(data, {'ranked': '1', 'positive': 'on'}, options, captured_pairs=pairs, policy='policy')
         self.assertEqual(positive['total'], 2)
+
+    def test_arb_reuses_default_result_for_matching_fee_evidence(self):
+        left = quote('left', 'novig', threshold=3)
+        right = quote('right', 'prophetx', threshold=2, operator='le')
+        for row in (left, right):
+            row.update(source={'provider': 'practice'}, trade_fee=dict(available=True,
+                classification='synthetic', evidence={'fictional_rate': '0.01'}, fee_cashflows={'at_fill_usd': '0'}))
+        proof = before_fee_pair(left, right, 'spread')
+        payoff = evaluate_arb(proof, (left, right), DEFAULT_FUNDING)
+        pair = dict(left, id='pair', legs=['left', 'right'], before_fees=proof, default_funding_result=payoff,
+                    default_funding_fee_identity=[hashed(row['trade_fee']) for row in (left, right)])
+        data, options = result(left, right), ('arbs', None, 0, 25)
+        with patch('app.comparison.ordinary_arb.evaluate', wraps=evaluate_arb) as evaluate:
+            published = page(data, {}, options, captured_pairs=[pair], policy='policy')
+            self.assertEqual(published['rows'][0]['score'], payoff['score'])
+            evaluate.assert_not_called()
+            page(data, {'stake': '50'}, options, captured_pairs=[pair], policy='policy')
+            self.assertEqual(evaluate.call_args.args[2], 50)
+            left['trade_fee'] = dict(left['trade_fee'], evidence={'fictional_rate': '0.05'})
+            changed = page(data, {}, options, captured_pairs=[pair], policy='policy')
+            self.assertEqual(evaluate.call_args.args[2], DEFAULT_FUNDING)
+            self.assertNotEqual(changed['rows'][0]['score'], payoff['score'])
 
     def test_price_only_opposites_do_not_need_a_reference_or_fee_settings(self):
         a = quote('a', 'kalshi', threshold=3)

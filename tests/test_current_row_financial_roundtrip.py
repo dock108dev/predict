@@ -82,7 +82,7 @@ class CurrentRowFinancialRoundtrip(TestCase):
                 for table in ('current_envelope', 'current_game_snapshot', 'current_game_result',
                               'current_calculation_attempt'):
                     self.assertEqual(db.execute(sql.SQL('SELECT count(*) n FROM {}').format(
-                        sql.Identifier(table))).fetchone()['n'], 0)
+                        sql.Identifier('retained', table))).fetchone()['n'], 0)
         finally:
             with connect() as admin:
                 admin.execute(sql.SQL('DROP DATABASE {}').format(sql.Identifier(name)))

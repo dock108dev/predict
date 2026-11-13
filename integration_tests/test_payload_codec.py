@@ -14,7 +14,7 @@ import zlib
 import psycopg
 from psycopg import sql
 from app.storage import store as storage
-from app.storage.store import connect, Store, encoded
+from app.storage.store import connect, Store, encoded, open_retained
 from app.storage.current_games import GameStore
 from app.storage.domain_history import FRAME_PREFIX, decode as decode_domain
 from app.storage.payload_codec import PREFIX, LEGACY_PREFIX, decode, encode, logical_size_sql
@@ -43,7 +43,7 @@ class EncodedHistory(unittest.TestCase):
     def setUpClass(cls):
         cls.name='prediction_arb_test_codec_'+uuid4().hex[:12]
         with connect() as db:db.execute(sql.SQL('CREATE DATABASE {}').format(sql.Identifier(cls.name)))
-        cls.db=connect(cls.name);Store(cls.db).migrate();cls.store=GameStore(cls.db)
+        cls.db=connect(cls.name);Store(cls.db).migrate();open_retained(cls.db);cls.store=GameStore(cls.db)
         cls.snapshot,cls.result=values()
         cls.store.immutable('current_game_snapshot','id',cls.snapshot)
         cls.store.immutable('current_game_result','id',cls.result)
@@ -141,6 +141,7 @@ class RepresentationMigration(unittest.TestCase):
                 source='kalshi',kind='catalog',retained_at='2026-10-14T00:00:00+00:00')
             with connect(name) as db:
                 Store(db).migrate()
+                open_retained(db)
                 for table,row in (('current_game_snapshot',snapshot),('current_game_result',result),('current_envelope',envelope)):
                     stored=dict(row)
                     if table!='current_envelope':stored['payload']=encode(row['payload'])
@@ -163,11 +164,13 @@ class RepresentationMigration(unittest.TestCase):
                 with patch.object(migration,'summary',side_effect=fail_verification),self.assertRaisesRegex(ValueError,'injected_after_envelope_rewrite'):
                     migration.apply(name,output,tables=('current_envelope',))
                 with connect(name) as db:
+                    open_retained(db)
                     self.assertEqual(db.execute('SELECT payload AS stored_payload FROM current_envelope').fetchone()['stored_payload'],original)
                     self.assertEqual(db.execute("SELECT tgenabled FROM pg_trigger WHERE tgname='immutable_current_envelope'").fetchone()['tgenabled'],'O')
                 report=migration.apply(name,output,vacuum=True,tables=('current_envelope',))
                 self.assertEqual(report['immutable_triggers'],[dict(tgname='immutable_current_envelope',tgenabled='O')])
                 with connect(name) as db:
+                    open_retained(db)
                     self.assertEqual(db.execute('SELECT payload FROM current_envelope').fetchone()['payload'],original)
                     self.assertTrue(db.execute('SELECT payload AS stored_payload FROM current_envelope').fetchone()['stored_payload'].startswith(PREFIX))
                     for table,row in (('current_game_snapshot',snapshot),('current_game_result',result)):
@@ -184,6 +187,7 @@ class RepresentationMigration(unittest.TestCase):
             snapshot,result=values()
             with connect(name) as db:
                 Store(db).migrate()
+                open_retained(db)
                 for table,row in (('current_game_snapshot',snapshot),('current_game_result',result)):
                     names=list(row)
                     db.execute(sql.SQL('INSERT INTO {} ({}) VALUES ({})').format(sql.Identifier(table),sql.SQL(',').join(map(sql.Identifier,names)),sql.SQL(',').join(sql.Placeholder() for _ in names)),list(row.values()))
@@ -202,6 +206,7 @@ class RepresentationMigration(unittest.TestCase):
                 with patch.object(migration,'summary',side_effect=fail_second_table),self.assertRaisesRegex(ValueError,'injected_before_second_table'):
                     migration.apply(name,output)
                 with connect(name) as db:
+                    open_retained(db)
                     self.assertEqual(db.execute('SELECT payload AS stored_payload FROM current_game_snapshot').fetchone()['stored_payload'],snapshot['payload'])
                     states=db.execute("SELECT tgenabled FROM pg_trigger WHERE tgname IN ('immutable_current_game_snapshot','immutable_current_game_result')").fetchall()
                     self.assertTrue(all(row['tgenabled']=='O' for row in states))
@@ -210,6 +215,7 @@ class RepresentationMigration(unittest.TestCase):
                 self.assertEqual(report['latest_pointer_sha256'],before['latest_pointer_sha256'])
                 self.assertTrue(all(row['tgenabled']=='O' for row in report['immutable_triggers']))
                 with connect(name) as db,db.transaction():
+                    open_retained(db)
                     db.execute("SET LOCAL TIME ZONE 'UTC'")
                     for table,original in (('current_game_snapshot',snapshot),('current_game_result',result)):
                         after=migration.summary(db,table)

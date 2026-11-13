@@ -14,7 +14,7 @@ from .estimated_policy import DEFAULT_POLICY, buffer_usd
 from .net_costs import wire
 from .calculation_control import checkpoint
 
-VERSION = 'predict-scanner-evaluator-1'
+VERSION = 'predict-scanner-evaluator-2'
 MAX_POINTS = 16
 MAX_EVALUATIONS = MAX_POINTS ** 2
 CATEGORIES = ('covered_outcome_arb', 'conditional_hedge', 'ev')
@@ -32,7 +32,7 @@ def exact(value):
 
 
 def _classify_raw(states, capital, *, policy=DEFAULT_POLICY, settlement_complete=True,
-                  probabilities=None, conditional_probabilities=None, ev_current=False):
+                  probabilities=None, conditional_probabilities=None, ev_current=False, equality_feasible=True):
     """One scalar classification owner; no presentation during allocation search."""
     capital = F(capital)
     if capital <= 0:
@@ -42,7 +42,10 @@ def _classify_raw(states, capital, *, policy=DEFAULT_POLICY, settlement_complete
     def minimum(names):
         values = [profits.get(k) for k in names]
         return None if not values or any(x is None for x in values) else min(values) - haircut
-    settlement_complete = settlement_complete and {'a_wins','b_wins','tie','terminal_noncompletion'}.issubset(profits)
+    mandatory = {'a_wins','b_wins','terminal_noncompletion'}
+    if equality_feasible:
+        mandatory.add('tie')
+    settlement_complete = settlement_complete and mandatory.issubset(profits)
     complete = minimum(profits) if settlement_complete else None
     decisive = minimum(('a_wins', 'b_wins'))
     def partition(values, names):
@@ -67,10 +70,11 @@ def _classify_raw(states, capital, *, policy=DEFAULT_POLICY, settlement_complete
 
 
 def classify(states, capital, *, policy=DEFAULT_POLICY, settlement_complete=True,
-             probabilities=None, conditional_probabilities=None, ev_current=False):
+             probabilities=None, conditional_probabilities=None, ev_current=False, equality_feasible=True):
     """Independent category metrics; all mandatory states count even at p=0."""
     values, categories = _classify_raw(states, capital, policy=policy, settlement_complete=settlement_complete,
-        probabilities=probabilities, conditional_probabilities=conditional_probabilities, ev_current=ev_current)
+        probabilities=probabilities, conditional_probabilities=conditional_probabilities, ev_current=ev_current,
+        equality_feasible=equality_feasible)
     capital, haircut, complete, decisive, ev = values
     metrics = dict(complete_minimum_usd=exact(complete), decisive_minimum_usd=exact(decisive),
                    expected_profit_usd=exact(None if ev is None else ev - haircut),
@@ -127,6 +131,7 @@ def dependencies(pair, instruments, inputs, policy, engine):
         for field in ('received_at', 'book_received_at', 'ingress_projected_at', 'sql_committed_at'):
             i['clocks'].pop(field, None)
         rows.append(dict(instrument=i, quote=q, profiles=references(x['quote'], x['profiles']),
+                         native_execution=x.get('native_execution'),
                          event={k:v for k,v in x['event'].items() if k not in ('groups','funded_pairs')},
                          group={k:v for k,v in x['group'].items() if k != 'outcomes'}))
     return digest(dict(rows=rows, policy=policy.to_dict(), evaluator=VERSION, engine=engine))
@@ -166,17 +171,23 @@ def _points(leg, budget):
 
 def evaluate(pair, instruments, inputs, *, at, policy=DEFAULT_POLICY):
     """One pair, bounded observed legal allocations; no maximum-size claim."""
+    from . import scanner_native
+    native = all(inputs[key].get('native_execution') for key in pair['legs'])
     legs = []
     for key in sorted(pair['legs']):
         x = inputs[key]
-        legs.append(Leg(x['quote'], x['group'], x['profiles'], x['event'], instant(at), policy=policy))
+        if native:
+            legs.append(scanner_native.Leg(x, instant(at), policy=policy))
+        else:
+            legs.append(Leg(x['quote'], x['group'], x['profiles'], x['event'], instant(at), policy=policy))
     if len({x.q['venue'] for x in legs}) != 2 or legs[0].sign == legs[1].sign:
         raise ValueError('scanner_distinct_opposing_execution_legs_required')
     keys = [(x.q['venue'], x.q['source']['provider'], *native_key(x.q)[1:4]) for x in legs]
     if keys[0] == keys[1] or legs[0].liquidity_ids & legs[1].liquidity_ids or (
             legs[0].shared_depth and legs[0].shared_depth == legs[1].shared_depth):
         raise ValueError('scanner_shared_depth_conflict')
-    basis, complete = _joint(legs)
+    basis, complete = (None, True) if native else _joint(legs)
+    equality_feasible = not native or any(x.model['equality_feasible'] for x in legs)
     budget = F(policy.capital_ceiling_usd)
     points = [_points(x, budget) for x in legs]
     counts=[max(0,int((x.floor(min(MAX_NATIVE,sum((n for _,n in x.path['levels']),F(0)),budget/x.path['minimum_cost']))-x.lower)//x.increment)+1) for x in legs]
@@ -189,7 +200,7 @@ def evaluate(pair, instruments, inputs, *, at, policy=DEFAULT_POLICY):
             points[index] = sorted(set(points[index][:MAX_POINTS//2] + points[index][-2:] + valid[:MAX_POINTS//2-2]))
     best = {}; evaluations = 0; any_valid = False; cashflows_complete = complete
     # References and their settlement partition are quantity independent.
-    probs, weight, reason = probabilities(legs, basis, policy)
+    probs, weight, reason = (None,None,None) if native else probabilities(legs, basis, policy)
     conditional = None if weight is None else dict(a_wins=weight,b_wins=1-weight)
     ev_current = any(instruments[k]['checks']['ev']['state'] == 'ready' for k in pair['legs'])
     # Leg caches retain bounded scalars only. State algebra uses existing owners.
@@ -203,13 +214,15 @@ def evaluate(pair, instruments, inputs, *, at, policy=DEFAULT_POLICY):
         if any(F(c['pair_support']) != n for c,n in zip(components,qs)):
             continue
         any_valid = True
-        capital, states = economics(components, basis, _profit_only=True)
+        capital, states = scanner_native.cashflows(legs, components) if native else economics(components, basis, _profit_only=True)
         cashflows_complete = cashflows_complete and all(s['profit_usd'] is not None for s in states.values())
         values, categories = _classify_raw(states, capital, policy=policy, settlement_complete=complete,
-            probabilities=probs, conditional_probabilities=conditional, ev_current=ev_current)
+            probabilities=probs, conditional_probabilities=conditional, ev_current=ev_current,
+            equality_feasible=equality_feasible)
         if _needs_provisional_format(values, categories):
             classify(states, capital, policy=policy, settlement_complete=complete,
-                probabilities=probs, conditional_probabilities=conditional, ev_current=ev_current)
+                probabilities=probs, conditional_probabilities=conditional, ev_current=ev_current,
+                equality_feasible=equality_feasible)
         for key, metric, _, _ in categories:
             old = best.get(key)
             # Preserve the previous wire-roundtrip score, including terminating
@@ -223,15 +236,21 @@ def evaluate(pair, instruments, inputs, *, at, policy=DEFAULT_POLICY):
     for key, (score, states, qs, components) in sorted(best.items()):
         capital = score[1]
         metrics, categories = classify(states, capital, policy=policy, settlement_complete=complete,
-            probabilities=probs, conditional_probabilities=conditional, ev_current=ev_current)
+            probabilities=probs, conditional_probabilities=conditional, ev_current=ev_current,
+            equality_feasible=equality_feasible)
         category = next(value for value in categories if value['category'] == key)
         allocation = [dict(native_key=list(native_key(x.q)), predicate=deepcopy(x.q['binding']['selection']),
             native_quantity=wire(n), native_unit=x.unit.unit, grid=x.grid,
             deployed_capital_usd=c['deployed_capital_usd'], acquisition_usd=c['acquisition_usd'])
             for x,n,c in zip(legs,qs,components)]
+        if native:
+            for leg, item, component in zip(legs, allocation, components, strict=True):
+                item.update(entry_fee_bound_usd=component['entry_fee_usd'], model_revision=leg.model['revision'],
+                            evidence=leg.model['evidence'])
+        complete_at_allocation = complete and all(v['profit_usd'] is not None for v in states.values())
         rows.append(dict(**category, metrics=metrics, allocation=allocation,
-            settlement_complete=complete, state_profits={s:v['profit_usd'] for s,v in states.items()},
-            reasons=[] if complete else ['joint_settlement_meaning_unknown'],
+            settlement_complete=complete_at_allocation, state_profits={s:v['profit_usd'] for s,v in states.items()},
+            reasons=[] if complete_at_allocation else ['joint_settlement_meaning_unknown'],
             size_basis='observed_legal_allocation', size_status='supported_size',
             supported_capital_usd=wire(capital)))
     exhaustive=all(len(values)==count for values,count in zip(points,counts))
@@ -239,7 +258,9 @@ def evaluate(pair, instruments, inputs, *, at, policy=DEFAULT_POLICY):
     incomplete_reasons=[] if cashflows_complete else ['mandatory_joint_cashflows_unknown']
     if not exhaustive and not qualified:incomplete_reasons.append('bounded_size_search_incomplete')
     return dict(rows=rows, evaluated=True,
-        evaluation_complete=not incomplete_reasons,incomplete_reasons=incomplete_reasons, qualifying='covered_outcome_arb' in best,
+        evaluation_complete=not incomplete_reasons,
+        partial_evaluation=native and any_valid and bool(incomplete_reasons),
+        incomplete_reasons=incomplete_reasons, qualifying='covered_outcome_arb' in best,
         reasons=[] if any_valid else ['no_supported_meaningful_allocation'],
         search=dict(evaluations=evaluations, maximum_evaluations=MAX_EVALUATIONS,
                     allocation_grid_exhaustive=exhaustive, global_optimality_proven=False, maximum_size_proven=False,

@@ -27,8 +27,7 @@ class CapacitySQL(LatestBoardFixture):
         with self.connect() as db:
             db.execute('TRUNCATE current_event CASCADE')
             db.execute('TRUNCATE comparison_snapshot_result,comparison_snapshot CASCADE')
-            db.execute('UPDATE comparison_live_head SET result_id=NULL,generation=0,facts=\'{}\'')
-            db.execute('INSERT INTO comparison_live_head(singleton) VALUES(true) ON CONFLICT DO NOTHING')
+            db.execute("INSERT INTO comparison_publication(kind,id,generation,facts) VALUES('live','',0,'{}')")
             self.state.write(self.service)
             rows=CurrentRowStore(db);rows.upsert_records(list(records.values()),now=self.at.isoformat())
             timings=[];profile=cProfile.Profile()
@@ -64,7 +63,7 @@ class CapacitySQL(LatestBoardFixture):
                 for _ in range(20):
                     result=live.turn(db,capture_cache=output/'plans.json' if incremental else None);turns.append(result)
                     self.assertGreater(result['computed'],0)
-                    root=snapshots.unpack(db.execute('select result from comparison_snapshot_result where id=(select result_id from comparison_live_head)').fetchone()['result'],db=db)
+                    root=snapshots.unpack(db.execute("SELECT result FROM comparison_snapshot_result WHERE id=(SELECT result_id FROM comparison_publication WHERE kind='live')").fetchone()['result'],db=db)
                     if root['publication']['finance']=='ready' and result['remaining_components']==0:break
                 self.assertEqual(root['publication']['finance'],'ready')
                 self.assertEqual(result['remaining_components'],0)
@@ -127,7 +126,7 @@ class CapacitySQL(LatestBoardFixture):
                     # recapture of its exact scope and evaluation clock.
                     price_paths=[]
                     from app.storage.store import hashed
-                    for member_row in db.execute('SELECT c.id,s.inputs,r.result FROM comparison_live_component c JOIN comparison_snapshot_result r ON r.id=c.result_id JOIN comparison_snapshot s ON s.id=r.snapshot_id'):
+                    for member_row in db.execute("SELECT c.id,s.inputs,r.result FROM comparison_publication c JOIN comparison_snapshot_result r ON r.id=c.result_id JOIN comparison_snapshot s ON s.id=r.snapshot_id WHERE c.kind='component'"):
                         saved=snapshots.unpack(member_row['inputs']);price_paths.append(saved.get('_price_capture'))
                         event_scope=sorted({hashed([q['original_record']['quote']['source']['provider'],q['original_record']['quote']['source']['native_event_id']]) for q in saved['quotes']+saved['references']})
                         oracle=snapshots.capture(db,ordinary=True,event_ids=event_scope,at=saved['captured_at'])
@@ -145,7 +144,7 @@ class CapacitySQL(LatestBoardFixture):
                         self.assertEqual(member_result,expected,(phase_key,member_row['id']))
                     retained=snapshots.unpack(db.execute('SELECT result FROM comparison_snapshot_result WHERE id=%s',(member,)).fetchone()['result'],db=db)
                     self.assertEqual(retained,selected)
-                    self.assertEqual(db.execute('SELECT result_id FROM comparison_live_lease WHERE id=%s',(token['lease_id'],)).fetchone()['result_id'],member)
+                    self.assertEqual(db.execute("SELECT result_id FROM comparison_result_reference WHERE kind='lease' AND holder=%s",(token['lease_id'],)).fetchone()['result_id'],member)
                     self.assertLessEqual(live.retained_bytes(db),live.MAX_BYTES)
                     root=snapshots.unpack(db.execute('SELECT result FROM comparison_snapshot_result WHERE id=%s',(live.status(db)['result_id'],)).fetchone()['result'],db=db)
                     content=db.execute('SELECT result FROM comparison_snapshot_result WHERE id=%s',(root['id'],)).fetchone()['result']
@@ -155,16 +154,16 @@ class CapacitySQL(LatestBoardFixture):
                     self.assertEqual(reused_read,snapshots.unpack(content,lazy=True,db=db))
                     reused_members=len(reused_read['component_slices'].keys()&prior_read['component_slices'].keys())
                     prior_read=reused_read
-                    (output/(phase_key+'-census.json')).write_text(json.dumps(dict(root_rows=len(root['rows']),full_rows=len(expected_sources),components=db.execute('SELECT c.id,c.result_id,f.summary FROM comparison_live_component c JOIN comparison_live_read_fragment f ON f.member_id=c.result_id ORDER BY c.id').fetchall()),default=str,indent=2))
+                    (output/(phase_key+'-census.json')).write_text(json.dumps(dict(root_rows=len(root['rows']),full_rows=len(expected_sources),components=db.execute("SELECT c.id,c.result_id,r.read_summary AS summary FROM comparison_publication c JOIN comparison_snapshot_result r ON r.id=c.result_id WHERE c.kind='component' ORDER BY c.id").fetchall()),default=str,indent=2))
                     self.assertEqual(sorted(json.dumps(r['source'],sort_keys=True) for r in root['rows']), expected_sources)
                     root_bytes=len(db.execute('SELECT result FROM comparison_snapshot_result WHERE id=%s',(root['id'],)).fetchone()['result'])
                     flat_bytes=len(snapshots.pack_read(snapshots.defer_details(root)))
-                    fragment_bytes=db.execute('SELECT COALESCE(sum(octet_length(content)),0) n FROM comparison_live_read_fragment').fetchone()['n']
-                    db.execute('VACUUM comparison_snapshot_result,comparison_snapshot,comparison_live_read_fragment')
+                    fragment_bytes=db.execute('SELECT COALESCE(sum(octet_length(read_fragment)),0) n FROM comparison_snapshot_result').fetchone()['n']
+                    db.execute('VACUUM comparison_snapshot_result,comparison_snapshot')
                     physical=db.execute("SELECT COALESCE(p.relname,c.relname) relname,sum(pg_total_relation_size(c.oid))::bigint bytes "
                         "FROM pg_class c LEFT JOIN pg_inherits i ON i.inhrelid=c.oid LEFT JOIN pg_class p ON p.oid=i.inhparent "
                         "WHERE c.relnamespace='public'::regnamespace AND c.relkind='r' AND COALESCE(p.relname,c.relname)=ANY(%s) "
-                        "GROUP BY COALESCE(p.relname,c.relname)",(['comparison_snapshot','comparison_snapshot_result','comparison_live_read_fragment'],)).fetchall()
+                        "GROUP BY COALESCE(p.relname,c.relname)",(['comparison_snapshot','comparison_snapshot_result'],)).fetchall()
                     churn.append(dict(price_paths=price_paths,kind=phase_key,changed=len(changed),turns=cycle,phase_seconds=perf_counter()-phase_started,physical=physical,retained_bytes=live.retained_bytes(db),
                         read_reuse_seconds=read_seconds,reused_members=reused_members,
                         root_bytes=root_bytes,equivalent_flat_root_bytes=flat_bytes,retained_fragment_bytes=fragment_bytes))
@@ -177,9 +176,9 @@ class CapacitySQL(LatestBoardFixture):
                 self.assertNotEqual(member,replacement)
                 self.assertEqual(latest_member['id'],replacement)
                 self.assertEqual(next(r for r in latest_member['rows'] if r['id']==row_id)['source'],selected['rows'][0]['source'])
-                self.assertEqual(db.execute('SELECT count(*) n FROM comparison_live_lease WHERE id=ANY(%s)',([adopted['lease_id'],token['lease_id']],)).fetchone()['n'],2)
-                db.execute('DELETE FROM comparison_live_lease WHERE id=%s',(token['lease_id'],))
-                self.assertEqual(db.execute('SELECT result_id FROM comparison_live_lease WHERE id=%s',(adopted['lease_id'],)).fetchone()['result_id'],replacement)
-                db.execute('DELETE FROM comparison_live_lease WHERE id=%s',(adopted['lease_id'],))
-                self.assertIsNone(db.execute('SELECT id FROM comparison_live_lease WHERE id=%s',(token['lease_id'],)).fetchone())
+                self.assertEqual(db.execute("SELECT count(*) n FROM comparison_result_reference WHERE kind='lease' AND holder=ANY(%s)",([adopted['lease_id'],token['lease_id']],)).fetchone()['n'],2)
+                db.execute("DELETE FROM comparison_result_reference WHERE kind='lease' AND holder=%s",(token['lease_id'],))
+                self.assertEqual(db.execute("SELECT result_id FROM comparison_result_reference WHERE kind='lease' AND holder=%s",(adopted['lease_id'],)).fetchone()['result_id'],replacement)
+                db.execute("DELETE FROM comparison_result_reference WHERE kind='lease' AND holder=%s",(adopted['lease_id'],))
+                self.assertIsNone(db.execute("SELECT holder FROM comparison_result_reference WHERE kind='lease' AND holder=%s",(token['lease_id'],)).fetchone())
             (output/'timings.json').write_text(json.dumps(dict(records=len(records),admission=timings,capture=capture_seconds,capture_ab=comparisons,incremental=incremental,churn=churn,active_finance=result,active_turns=turns,rows=len(root['rows']),numeric=numeric),indent=2))

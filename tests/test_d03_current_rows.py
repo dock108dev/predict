@@ -90,9 +90,14 @@ class CurrentRows(unittest.TestCase):
         cls.db.close()
         with connect() as db:db.execute(sql.SQL('DROP DATABASE {}').format(sql.Identifier(cls.name)))
     def setUp(self):
-        self.db.execute('TRUNCATE current_event CASCADE');self.db.execute('TRUNCATE current_refresh_scope,current_source_status')
+        self.db.execute('TRUNCATE current_event CASCADE')
+        self.db.execute("DELETE FROM current_row_state WHERE kind<>'epoch'")
     def counts(self):
-        return {t:self.db.execute(sql.SQL('SELECT count(*) AS n FROM {}').format(sql.Identifier(t))).fetchone()['n'] for t in ('current_event','current_contract','current_offer','current_depth','current_envelope','current_game_snapshot','current_game_result')}
+        current = ('current_event', 'current_contract', 'current_offer', 'current_depth')
+        retained = ('current_envelope', 'current_game_snapshot', 'current_game_result')
+        return {table: self.db.execute(sql.SQL('SELECT count(*) AS n FROM {}').format(
+            sql.Identifier(schema, table))).fetchone()['n']
+            for schema, tables in (('public', current), ('retained', retained)) for table in tables}
     def test_capture_shared_event_transfer_matches_join_and_keeps_records_independent(self):
         from app.storage.current_rows import project_contract
         rows=future_records('kalshi');self.store.upsert_records(rows)
@@ -342,8 +347,9 @@ class CurrentRows(unittest.TestCase):
         for i,level in enumerate(ladder['levels']):level['price']['value']=str((i+1)/10)
         self.store.replace_native_books([book])
         def tuples():
-            return {(r['native_outcome_id'],r['side']):r['tuple_id'] for r in
-                self.db.execute('SELECT ctid::text AS tuple_id,* FROM current_native_ladder')}
+            return {(outcome,side):id_ for row in self.db.execute(
+                'SELECT ladder_refs FROM native_book_revision WHERE is_current')
+                for outcome,sides in row['ladder_refs'].items() for side,id_ in sides.items()}
         before=tuples();ladder['levels'][1]['quantity']['value']='777'
         book['raw'].update(exchange_at='2026-10-15T12:01:00Z',received_at='2026-10-15T12:01:01Z')
         self.store.replace_native_books([book]);after=tuples()
@@ -370,19 +376,14 @@ class CurrentRows(unittest.TestCase):
         self.store.replace_native_books([book])
         before=self.store.capture()['revision']
         def depth():
-            return self.db.execute('SELECT ctid::text AS tuple_id,* FROM current_native_ladder ORDER BY native_outcome_id,side').fetchall()
+            return self.db.execute('SELECT ladder_refs FROM native_book_revision WHERE is_current').fetchall()
         stored=depth();self.assertTrue(stored)
         newer=deepcopy(book);newer['raw'].update(exchange_at='2026-10-15T12:01:00Z',received_at='2026-10-15T12:01:01Z')
         self.store.replace_native_books([newer])
         self.assertEqual(stored,depth())
         self.assertNotEqual(before,self.store.capture()['revision'])
         self.assertEqual(self.db.execute('SELECT source_at FROM current_native_book').fetchone()['source_at'],newer['raw']['exchange_at'])
-        # Existing migrated headers have no depth hash: first observation rebuilds
-        # and proves contents; the following identical observation is stable.
-        self.db.execute('UPDATE current_native_book SET depth_revision=NULL')
-        self.store.replace_native_books([newer]);rebuilt=depth()
-        self.assertEqual(stored,rebuilt)
-        self.store.replace_native_books([newer]);self.assertEqual(rebuilt,depth())
+        self.store.replace_native_books([newer]);self.assertEqual(stored,depth())
 
     def test_ladder_rank_shift_bursts_reduce_mutations_and_reclaim_exact_storage(self):
         import json
@@ -397,13 +398,13 @@ class CurrentRows(unittest.TestCase):
         self.db.execute('CREATE TEMP TABLE ranked_depth_burst AS SELECT * FROM current_native_depth')
         self.db.execute('ALTER TABLE ranked_depth_burst ADD PRIMARY KEY(venue,event_id,native_market_id,native_outcome_id,side,level)')
         def sizes():
-            return dict(ladder=self.db.execute("SELECT sum(pg_total_relation_size(relid))::bigint n FROM pg_partition_tree('current_native_ladder') WHERE isleaf").fetchone()['n'],
+            return dict(ladder=self.db.execute("SELECT pg_total_relation_size('native_ladder_revision') n").fetchone()['n'],
                 ranked=self.db.execute("SELECT pg_total_relation_size('ranked_depth_burst') n").fetchone()['n'])
         report=[]
         for cycle in range(3):
             before=sizes();ranked_updates=0
             with self.db.transaction():
-                prior_mutations=self.db.execute("SELECT sum(pg_stat_get_xact_tuples_updated(relid))::bigint n FROM pg_partition_tree('current_native_ladder') WHERE isleaf").fetchone()['n']
+                prior_mutations=self.db.execute("SELECT pg_stat_get_xact_tuples_updated('native_ladder_revision'::regclass) n").fetchone()['n']
                 for tick in range(20):
                     levels=deepcopy(base)
                     if tick%2:levels.insert(0,dict(price=dict(seed['price'],value='0.000000000000000001'),
@@ -421,9 +422,9 @@ class CurrentRows(unittest.TestCase):
                         'WHERE (ranked_depth_burst.price_value,ranked_depth_burst.quantity_value) IS DISTINCT FROM (excluded.price_value,excluded.quantity_value)').rowcount
                     self.assertFalse(self.db.execute('SELECT EXISTS((SELECT * FROM current_native_depth EXCEPT ALL SELECT * FROM ranked_depth_burst) '
                         'UNION ALL (SELECT * FROM ranked_depth_burst EXCEPT ALL SELECT * FROM current_native_depth)) differs').fetchone()['differs'])
-                mutations=self.db.execute("SELECT sum(pg_stat_get_xact_tuples_updated(relid))::bigint n FROM pg_partition_tree('current_native_ladder') WHERE isleaf").fetchone()['n']
+                mutations=self.db.execute("SELECT pg_stat_get_xact_tuples_updated('native_ladder_revision'::regclass) n").fetchone()['n']
             peak=sizes()
-            self.db.execute('VACUUM (FULL,ANALYZE) current_native_ladder,ranked_depth_burst')
+            self.db.execute('VACUUM (FULL,ANALYZE) native_ladder_revision,ranked_depth_burst')
             after=sizes()
             self.assertLessEqual(mutations-prior_mutations,20);self.assertGreater(ranked_updates,4000)
             report.append(dict(cycle=cycle,images=20,ladder_updates=mutations-prior_mutations,ranked_writes=ranked_updates,before=before,peak=peak,after=after))
@@ -454,7 +455,11 @@ class CurrentRows(unittest.TestCase):
         self.assertEqual(self.counts()['current_offer'],0);self.assertEqual(self.counts()['current_event'],1)
         self.assertEqual(self.db.execute('SELECT source_at FROM current_native_book').fetchone()['source_at'],readd['raw']['exchange_at'])
         self.store.upsert_records(rows)
-        self.assertEqual(len(self.store.records()),2);self.assertTrue(any(r['quote'].get('depth') for r in self.store.records()))
+        self.assertEqual(len(self.store.records()),2)
+        self.assertTrue(all(not r['quote'].get('depth') for r in self.store.records()))
+        # A later exact head can supply depth once its original clocks match.
+        self.store.replace_native_books([book])
+        self.assertTrue(any(r['quote'].get('depth') for r in self.store.records()))
 
     def test_mixed_ladder_packet_preserves_duplicate_empty_and_terminal_order(self):
         rows=future_records('polymarket_us')
@@ -499,6 +504,128 @@ class CurrentRows(unittest.TestCase):
         raw=self.db.execute('SELECT source_at,received_at FROM current_native_book').fetchone()
         self.assertEqual((raw['source_at'],raw['received_at']),(book['raw']['exchange_at'],book['raw']['received_at']))
 
+    def test_native_offer_keeps_its_exact_price_and_depth_after_book_head_advances(self):
+        from decimal import Decimal
+
+        rows = future_records('polymarket_us')
+        book = self.native_book(rows)
+        short = next(r for r in rows if r['quote']['source']['native_side'].lower() == 'short')
+        outcome_id = short['quote']['source']['native_outcome_id']
+        outcome = next(o for o in book['outcomes'] if o['outcome_id'] == outcome_id)
+        long = next(o for o in book['outcomes'] if o['outcome_id'] != outcome_id)
+        ask = outcome['asks']['levels'][0]['price']['value']
+        bid = long['bids']['levels'][0]['price']['value']
+        short['quote']['original'].update(value=ask, native_value=bid, native_units='usd_per_contract',
+                                         transformation='one_minus_native_bid')
+        cid = contract_id(short)
+        self.store.upsert_records([short])
+        self.store.replace_native_books([book])
+        stored = self.db.execute('''SELECT o.native_book_id,o.native_bid_outcome_id,o.price_value,
+            o.facts->'original' AS original FROM current_offer_storage o WHERE o.contract_id=%s''',(cid,)).fetchone()
+        self.assertTrue(stored['native_book_id'])
+        self.assertEqual(stored['native_bid_outcome_id'],long['outcome_id'])
+        self.assertIsNone(stored['price_value'])
+        self.assertNotIn('value',stored['original'])
+        self.assertNotIn('native_value',stored['original'])
+
+        changed = deepcopy(book)
+        changed['raw'].update(exchange_at='2026-10-15T12:10:00Z',received_at='2026-10-15T12:10:01Z')
+        changed_short = next(o for o in changed['outcomes'] if o['outcome_id'] == outcome_id)
+        changed_long = next(o for o in changed['outcomes'] if o['outcome_id'] != outcome_id)
+        updated_ask = '0.0101'
+        updated_bid = str(Decimal(1)-Decimal(updated_ask))
+        changed_short['asks']['levels'][0]['price']['value'] = updated_ask
+        changed_long['bids']['levels'][0]['price']['value'] = updated_bid
+        self.store.replace_native_books([changed])
+        exact = self.store.capture()['records'][0]['quote']
+        self.assertEqual(exact['original']['value'],ask)
+        self.assertEqual(exact['original']['native_value'],bid)
+        self.assertEqual(exact['depth'][0]['price'],ask)
+        self.assertFalse(self.db.execute('SELECT is_current FROM native_book_revision WHERE id=%s',
+                                         (stored['native_book_id'],)).fetchone()['is_current'])
+        # The book-only update cannot change the old offer. A matching newer
+        # offer relinks to the new immutable image without reviving the old one.
+        short['quote']['times'].update(source_at=changed['raw']['exchange_at'],received_at=changed['raw']['received_at'])
+        short['quote']['original'].update(value=updated_ask,native_value=updated_bid)
+        self.store.upsert_records([short])
+        proof = self.db.execute('''SELECT o.native_book_id,b.is_current FROM current_offer o
+            JOIN native_book_revision b ON b.id=o.native_book_id WHERE o.contract_id=%s''',(cid,)).fetchone()
+        self.assertNotEqual(proof['native_book_id'],stored['native_book_id'])
+        self.assertTrue(proof['is_current'])
+        self.assertIsNone(self.db.execute('SELECT 1 FROM native_book_revision WHERE id=%s',
+                                         (stored['native_book_id'],)).fetchone())
+        self.assertEqual(self.store.hydrate_records(self.store.capture(include_depth=False)['records'])
+                         [0]['quote']['depth'][0]['price'],updated_ask)
+
+    def test_delayed_offer_links_to_its_retained_book_instead_of_the_head(self):
+        rows = future_records('polymarket_us')
+        long, short = sorted(rows, key=lambda row: row['quote']['source']['native_side'].lower())
+        book = self.native_book(rows)
+        self.store.upsert_records([long])
+        self.store.replace_native_books([book])
+        retained = self.store.native_offer_books()[contract_id(long)]
+
+        head = deepcopy(book)
+        head['raw'].update(exchange_at='2026-10-15T12:01:00Z', received_at='2026-10-15T12:01:01Z')
+        self.store.replace_native_books([head])
+        self.store.upsert_records([short])
+        linked = self.db.execute('SELECT native_book_id FROM current_offer WHERE contract_id=%s',
+                                 (contract_id(short),)).fetchone()
+        self.assertEqual(linked['native_book_id'], retained['book_id'])
+        delayed = self.store.native_offer_books()[contract_id(short)]
+        self.assertFalse(delayed['is_current'])
+        self.assertEqual(delayed['received_at'], book['raw']['received_at'])
+
+    def test_unlinked_complement_keeps_its_price_without_borrowed_depth(self):
+        rows = future_records('polymarket_us')
+        short = next(row for row in rows if row['quote']['source']['native_side'].lower() == 'short')
+        book = self.native_book(rows)
+        short['quote']['original'].update(native_value='0.123', native_units='usd_per_contract',
+                                          transformation='one_minus_native_bid')
+        self.store.upsert_records([short])
+        self.store.replace_native_books([book])
+        self.assertNotIn(contract_id(short), self.store.native_offer_books())
+        quote = self.store.records()[0]['quote']
+        self.assertEqual(quote['original'], short['quote']['original'])
+        self.assertEqual(quote['depth'], [])
+
+    def test_native_binding_upgrade_preserves_originals_and_relinks_existing_offers(self):
+        name = 'prediction_arb_d03_binding_' + uuid4().hex[:10]
+        with connect() as admin:
+            admin.execute(sql.SQL('CREATE DATABASE {}').format(sql.Identifier(name)))
+        try:
+            with connect(name) as db:
+                schema = Store(db)
+                schema.migrate(through='090_sgo_event_evidence.sql')
+                store = CurrentRowStore(db)
+                rows = future_records('polymarket_us')
+                long, short = sorted(rows, key=lambda row: row['quote']['source']['native_side'].lower())
+                book = self.native_book(rows)
+                store.upsert_records([long])
+                store.replace_native_books([book])
+                retained_id = store.native_offer_books()[contract_id(long)]['book_id']
+                head = deepcopy(book)
+                head['raw'].update(exchange_at='2026-10-15T12:01:00Z', received_at='2026-10-15T12:01:01Z')
+                store.replace_native_books([head])
+                store.upsert_records([short])
+                def offer():
+                    return db.execute('SELECT * FROM current_offer WHERE contract_id=%s',
+                                      (contract_id(short),)).fetchone()
+                before = offer()
+                self.assertIsNone(before['native_book_id'])
+                schema.migrate()
+                after = offer()
+                self.assertEqual(after['native_book_id'], retained_id)
+                for key in ('price_value', 'facts', 'price_dependency', 'revision'):
+                    self.assertEqual(after[key], before[key], key)
+                shape = db.execute("""SELECT count(*) AS tables FROM pg_class c
+                    JOIN pg_namespace n ON n.oid=c.relnamespace
+                    WHERE n.nspname='public' AND c.relkind IN ('r','p') AND NOT c.relispartition""").fetchone()
+                self.assertEqual(shape['tables'], 25)
+        finally:
+            with connect() as admin:
+                admin.execute(sql.SQL('DROP DATABASE {}').format(sql.Identifier(name)))
+
     def test_late_native_sql_error_rolls_back_before_publication(self):
         from app.storage.scanner_publication import subscribe,transaction
         rows=future_records('polymarket_us');self.store.upsert_records(rows);book=self.native_book(rows);self.store.replace_native_books([book])
@@ -506,13 +633,13 @@ class CurrentRows(unittest.TestCase):
         changed=deepcopy(book);changed['raw'].update(exchange_at='2026-10-15T12:10:00Z',received_at='2026-10-15T12:10:01Z')
         ladder=next(o['asks'] for o in changed['outcomes'] if o['asks'] and o['asks']['levels'])
         level=deepcopy(ladder['levels'][0]);ladder['levels']=[deepcopy(level) for _ in range(260)];ladder['levels'][-1]['quantity']['value']='123.456789'
-        self.db.execute("ALTER TABLE current_native_ladder ADD CONSTRAINT authored_pipeline_late_failure CHECK(levels::text NOT LIKE '%123.456789%')")
+        self.db.execute("ALTER TABLE native_ladder_revision ADD CONSTRAINT authored_pipeline_late_failure CHECK(levels::text NOT LIKE '%123.456789%')")
         try:
             with self.assertRaises(CheckViolation):
                 with transaction(self.db):self.store.replace_native_books([changed])
             self.assertEqual(events,[]);self.assertEqual(before,self.store.capture())
         finally:
-            close();self.db.execute('ALTER TABLE current_native_ladder DROP CONSTRAINT authored_pipeline_late_failure')
+            close();self.db.execute('ALTER TABLE native_ladder_revision DROP CONSTRAINT authored_pipeline_late_failure')
 
     def test_nested_transaction_publishes_only_after_outer_commit_and_never_rollback(self):
         from app.storage.scanner_publication import subscribe,transaction

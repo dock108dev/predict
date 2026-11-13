@@ -266,7 +266,8 @@ class ReadinessUniverseBounds(TestCase):
     """Selected captures share the ordinary full executable-universe bound."""
     def groups(self, count, *, venue='kalshi'):
         return [[dict(event=dict(scheduled_start=clock(20)), quote=dict(venue=venue,
-            source=dict(provider=venue, native_event_id=f'authored-{index}', native_market_id=f'market-{index}'),
+            source=dict(provider=venue, native_event_id=f'authored-{index}', native_market_id=f'market-{index}',
+                        native_outcome_id=f'outcome-{index}', native_side='yes'),
             times=dict(source_at=clock(), received_at=clock())))] for index in range(count)]
 
     def capture(self, groups, *, members=None, selection=None, contracts=0):
@@ -276,16 +277,17 @@ class ReadinessUniverseBounds(TestCase):
             def transaction(self):return nullcontext()
             def execute(self, statement, args=()):
                 rows = [dict(id=str(i), venue='kalshi', league='NFL', family='moneyline', period='full_game', offered=True)
-                        for i in range(contracts)] if 'SELECT c.id' in statement else []
+                        for i in range(contracts)] if 'e.scheduled_start::timestamptz' in statement else []
                 return SimpleNamespace(fetchall=lambda: rows)
         context = SimpleNamespace(prepared=dict(groups=groups), engine='authored-engine', epoch='authored-epoch')
         frame = dict(records=[], epoch='authored-epoch', revision='authored-revision', source_status={})
         prepared = dict(instruments=[], failures=[], references={}, financial_inputs={}, input_bytes=0)
         with ExitStack() as stack:
             stack.enter_context(patch('app.storage.scanner_publication.current_revision',return_value=dict(epoch='authored',current_rows_revision='authored')))
-            stack.enter_context(patch('app.storage.latest_board.capture_batches',return_value=[['authored-event']]))
+            stack.enter_context(patch('app.storage.board_capture.capture_batches',return_value=[['authored-event']]))
             stack.enter_context(patch.object(scanner_readiness, 'ReadContext', return_value=context))
             stack.enter_context(patch.object(scanner_readiness.CurrentRowStore, 'capture', return_value=frame))
+            stack.enter_context(patch.object(scanner_readiness.CurrentRowStore, 'native_offer_books', return_value={}))
             stack.enter_context(patch('app.storage.scanner_preparation.PreparationCache.registry', return_value=('authored-registry', None)))
             producer = stack.enter_context(patch.object(scanner_readiness, '_prepare_group', return_value=prepared))
             models = stack.enter_context(patch.object(scanner_readiness, 'instrument', side_effect=AssertionError('admission invoked model owner')))

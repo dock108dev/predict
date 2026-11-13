@@ -1,6 +1,7 @@
 """Bound and schedule complete matching components before decoding publications."""
 from .store import stamp
 from . import observation_publication as publication
+from .current_rows import native_offer_ask_counts
 
 
 SOURCE_PREVIOUS = """jsonb_build_object(
@@ -26,15 +27,13 @@ def capture_reservation(db, *, observations_only=False, event_ids=None):
         (event_ids,event_ids,event_ids,event_ids)).fetchone()['n']
     # Hydration keeps exact decimal strings and Python containers. Reserve for
     # selected asks only, with the same conservative bound as selected reads.
-    depth=db.execute('''SELECT COALESCE(sum(n),0) AS n FROM (
-        SELECT 2048::bigint*jsonb_array_length(levels) n FROM current_native_ladder WHERE side='asks' AND (%s::text[] IS NULL OR event_id=ANY(%s))
-        UNION ALL SELECT 2048 FROM current_depth d JOIN current_contract c ON c.id=d.contract_id
-            WHERE side='asks' AND (%s::text[] IS NULL OR c.event_id=ANY(%s))) levels''',
-        (event_ids,event_ids,event_ids,event_ids)).fetchone()['n']
+    native_depth=sum(row['n'] for row in native_offer_ask_counts(db,event_ids))
+    other_depth=db.execute('''SELECT count(*) n FROM current_depth d JOIN current_contract c ON c.id=d.contract_id
+        WHERE side='asks' AND (%s::text[] IS NULL OR c.event_id=ANY(%s))''',(event_ids,event_ids)).fetchone()['n']
     # Full alternate games peak near 456 MB in the isolated measured pipeline:
     # resolution, selected evidence and compaction overlap transiently. Encoded
     # source bytes alone at 8x under-reserved that overlap and could kill ingress.
-    required=int(size)*32+int(depth)+64*1024*1024
+    required=int(size)*32+(native_depth+other_depth)*2048+64*1024*1024
     # Reserve complete MiB pages so ordinary receipt-size changes do not cause
     # needless admission retries; every byte of padding remains charged.
     return ((required+1024*1024-1)//(1024*1024))*1024*1024

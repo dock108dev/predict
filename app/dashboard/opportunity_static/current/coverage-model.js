@@ -93,7 +93,8 @@ export function filteredCoverageTotals(data, cells) {
     const touching = entries => pairs(entries) - pairs(Object.fromEntries(Object.entries(entries).filter(([id]) => !selected.has(id))));
     counts.eligible_current_pairs = data.aggregation.inputs.reduce((n, g) => n + touching(g.current_cells), 0);
     counts.supported_noncurrent_pairs = data.aggregation.inputs.reduce((n, g) => n + touching(g.cells) - touching(g.current_cells), 0);
-    counts.published_current_pairs = (data.aggregation.publications || []).filter(ids => ids.some(id => selected.has(id))).length;
+    counts.published_current_pairs = (data.aggregation.publications || []).reduce((n, group) =>
+      n + (Array.isArray(group) ? Number(group.some(id => selected.has(id))) : touching(group.cells)), 0);
   }
   return counts;
 }

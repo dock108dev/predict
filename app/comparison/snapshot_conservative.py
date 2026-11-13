@@ -47,7 +47,7 @@ def prophetx_market_commission(*, rate, cost_basis, gross_payout):
     return raw, F(-(-cents.numerator // cents.denominator), 100)
 
 
-def prophetx_public_fee(row, *, at, review=None, quantity=None, fills=None):
+def prophetx_public_fee(row, *, at, review=None, quantity=None, fills=None, phase='scheduled'):
     """Resolve the retail estimate at modeled order placement.
 
     Pass order placement as a UTC timestamp string. ProphetX defaults to one
@@ -62,7 +62,7 @@ def prophetx_public_fee(row, *, at, review=None, quantity=None, fills=None):
         policy = json.loads(POLICY.read_bytes())
         if at < instant(policy['enabled_at']):
             raise ValueError('conservative_fee_policy_not_effective')
-        if at >= instant(row['start_at']):
+        if phase != 'live' and at >= instant(row['start_at']):
             raise ValueError('conditional_pregame_ended')
         if row['market']['period'] != 'full_game' or row['market']['market'] not in ('winner', 'spread', 'total'):
             raise ValueError('conditional_pregame_straight_mapping_unsupported')
@@ -76,11 +76,17 @@ def prophetx_public_fee(row, *, at, review=None, quantity=None, fills=None):
             policy = dict(policy, version='public-straight-trades-20261105',
                 prophetx=evidence['applicability'], public_schedule=evidence['version'])
         source, original = row['source'], row['original']
-        if (source['provider'] != 'the_odds_api' or source['native_side'] != 'bookmaker_outcome'
-                or original['units'] != 'decimal_odds'):
+        quote_units = {'the_odds_api': 'decimal_odds', 'sportsgameodds': 'american_odds'}
+        if (source['native_side'] != 'bookmaker_outcome'
+                or quote_units.get(source['provider']) != original['units']):
             raise ValueError('prophetx_public_site_straight_mapping_unsupported')
+        if (source['provider'] == 'sportsgameodds' and row['league'] == 'NHL'
+                and 'nhl_taker_coefficient' not in evidence):
+            raise ValueError('prophetx_nhl_taker_schedule_required')
+        from app.dashboard.current_contract import price as claim_cost
+
         captured_cost = row.get('cost_per_normal_claim')
-        price = 1 / F(original['value']) if captured_cost is None else F(captured_cost)
+        price = claim_cost(row) if captured_cost is None else F(captured_cost)
         if not 0 < price < 1:
             raise ValueError('conditional_invalid_odds')
         size = F(1) if quantity is None else F(quantity)
@@ -97,8 +103,7 @@ def prophetx_public_fee(row, *, at, review=None, quantity=None, fills=None):
             risk, receipt = cost + fee, size
             assumptions = ['Public retail NHL straight contract modeled as taker fills of one new order.',
                 'Each fill rounds half up to cents and carries the remainder to the next fill of that order.',
-                'A marketable limit order is modeled. The site deducts market-order fees from the entered amount.',
-                'The aggregate price does not establish executable depth or actual fills.']
+                'The model assumes a marketable limit order at the quoted price. The site deducts market-order fees from the entered amount.']
             treatment = 'upfront_public_site_nhl_taker_fee'
             details = dict(rounding='half_up_cent_with_order_carry', rounding_trace=trace)
         else:

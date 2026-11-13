@@ -34,6 +34,7 @@ async def run(stopped, *, root, module=None, arguments=(), on_progress=None, wai
     start=time.monotonic()
     coverage=module in (None,__name__)
     ordinary=module=='app.collection.ordinary_worker'
+    scanner=module=='app.collection.scanner_worker'
     if stopped():return dict(published=False,reason='updates_stopped')
     # A census deferred at admission otherwise waits the entire two-minute
     # publication interval, phase-locking with recurring raw-input bursts. Wait
@@ -83,7 +84,7 @@ async def run(stopped, *, root, module=None, arguments=(), on_progress=None, wai
         chunks.append(pending)
         return b''.join(chunks)
     reply=asyncio.create_task(bounded_reply())
-    pausable=coverage and hasattr(signal,'SIGSTOP')
+    pausable=(coverage or scanner) and hasattr(signal,'SIGSTOP')
     paused=False;pause_started=None;paused_seconds=0;pauses=0
     try:
         while not reply.done():

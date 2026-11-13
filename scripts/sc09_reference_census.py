@@ -17,7 +17,9 @@ def census():
             captured=db.execute('SELECT transaction_timestamp()::text at').fetchone()['at']
             with db.cursor(name='reference_census') as cursor:
                 cursor.itersize=1
-                cursor.execute("SELECT 'featured' kind,sport,received_at,payload->'events' events FROM current_acquisition_aggregate UNION ALL SELECT 'alternate',sport,received_at,jsonb_build_array(payload) FROM current_acquisition_alternate")
+                cursor.execute("""SELECT kind,sport,received_at,
+                    CASE WHEN kind='featured' THEN payload->'events' ELSE jsonb_build_array(payload) END AS events
+                    FROM current_aggregate_receipt WHERE provider='the_odds_api' AND kind IN ('featured','alternate')""")
                 for row in cursor:
                     for e in row['events']:
                         phase='pregame' if datetime.fromisoformat(e['commence_time'].replace('Z','+00:00'))>datetime.fromisoformat(captured) else 'started_or_past'

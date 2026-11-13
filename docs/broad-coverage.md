@@ -10,6 +10,8 @@ finance stay useful and visible while coverage work continues.
 
 Ordinary Odds links to `/current/coverage`. Its `/api/coverage` reader consumes a
 compact latest PostgreSQL publication produced by the independent data runtime.
+`display_result_id` identifies the ordinary comparison head sampled in the same
+database read as the coverage cohort. Coverage retains its own capture time.
 Page loading, local filters, sorting, cell inspection and links back to Odds never
 start collection. The prior saved-session `/coverage` page remains a separate
 historical reader.
@@ -295,9 +297,11 @@ funnel across discovery windows. Reference data never enters peer denominators.
 Input eligibility is resolved by the shared occurrence and exact-outcome owners
 before publication; pending publications cannot turn compatible inputs into an
 assertion of absent source offerings. Pair membership groups deduplicate both
-source filters and global counts. Published current pairs deduplicate the two
-selected signed directions. Selected directions are distinct from all possible
-eligible directions when multiple peers exist.
+source filters and global counts. Published current pairs count cross-venue
+combinations in the same displayed outcome group whose prices both pass the
+ordinary current-price checks. Pending and disagreement diagnostics use the
+stricter supported settlement identity. A retained input may have more than
+one eligible peer while awaiting publication.
 
 Currentness uses the original source book clock, or an explicit validated,
 content-bound complete-book confirmation when that is later. Kalshi confirmations
@@ -343,20 +347,16 @@ can remain useful while the independent Coverage worker is unavailable.
 
 ### Projected capture
 
-The capture omits prior display-age calculations and selection prose, retains only
-the event start needed for aging and occurrence facts needed for counts, and keeps
-complete confirmation seals and original input frames. SQL groups projected
-prices once per game. The worker streams complete games in the same repeatable-read
-snapshot; global SQL JSON interning is no longer the runtime capture path.
-Same-board references use the ordinary exact-reference validator before aging.
+Coverage projects admitted source facts in SQL and reads the exact members of the
+current ordinary display generation in the same repeatable-read transaction.
+It decodes one bounded member at a time. Retained counts use the admitted source
+cohort and displayed counts require a corresponding captured price. Displayed
+current counts use the same price authority checks as Browse Odds.
 
-Schedule bindings are projected when event and contract starts differ. Full
-contract dependency hashes and event revisions still govern revocation. A game
-refused by source publication cannot count an older saved board as displayed;
-retained observations remain in the denominator. Preflight includes offers,
-publications, events, books, runtime/control, source status and prior queries.
-The occurrence resolver projects each detached result to metrics facts immediately,
-avoiding retention of a second full audit graph without changing membership.
+Schedule bindings are included when event and contract starts differ. Contract
+and event revisions still govern revocation. A component awaiting publication
+remains in the retained denominator. The occurrence resolver extracts the facts
+needed for Coverage counts and releases the detached audit graph.
 
 ## Outcome-first presentation
 

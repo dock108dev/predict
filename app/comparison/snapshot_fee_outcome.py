@@ -1,7 +1,6 @@
 """Standalone trading fees for the ordinary desk's normalized trade profile."""
 from .conditional_benchmark import basis, reviewed_fee
 from app.fees.evidence import applies
-from .snapshot_conservative import fee_model
 
 VENUES = ('kalshi', 'polymarket_us', 'novig', 'prophetx')
 FAMILIES = ('winner', 'spread', 'total')
@@ -30,7 +29,9 @@ def outcome(row, *, at, phase, review):
     if phase == 'live' and venue == 'novig':
         from .snapshot_novig_live import live_fee
         return live_fee(row, at, row.get('novig_v3_evidence'))
-    if phase != 'scheduled' and not (phase == 'live' and venue in ('kalshi', 'polymarket_us')):
+    live_supported = venue in ('kalshi', 'polymarket_us') or (
+        venue == 'prophetx' and row['source']['provider'] == 'sportsgameodds')
+    if phase != 'scheduled' and not (phase == 'live' and live_supported):
         return unavailable('live_market_fee_evidence_unbound' if phase == 'live' else 'fee_game_phase_unverified')
     if row['market']['market'] not in FAMILIES or (venue != 'polymarket_us' and row['market']['period'] != 'full_game'):
         return unavailable('fee_straight_market_scope_unbound')
@@ -61,7 +62,8 @@ def outcome(row, *, at, phase, review):
         model = public_fee(row, at=at, phase=phase, review=review)
         classification = 'conservative'
     elif venue == 'prophetx':
-        model = fee_model(row, at=at.isoformat(), review=review)
+        from .snapshot_conservative import prophetx_public_fee
+        model = prophetx_public_fee(row, at=at.isoformat(), review=review, phase=phase)
         classification = 'conservative'
     else:
         model = reviewed_fee(row, at=at, event={'start_at': row['start_at']}, group=row['market'], review=review)

@@ -167,7 +167,7 @@ from app.storage.current_games import engine_binding
 assert engine_binding()
 from app.comparison.native_scoring_scope import source_rules
 rules=source_rules()
-for native_type in ('KXNBAGAME', 'KXNHLSPREAD', 'KXNHLTOTAL'):
+for native_type in ('KXNBAGAME', 'KXNHLGAME', 'KXNHLSPREAD', 'KXNHLTOTAL'):
     assert any(r['native_type']==native_type and r['evidence_available'] for r in rules), native_type
 import asyncio, aiohttp
 from aiohttp import web

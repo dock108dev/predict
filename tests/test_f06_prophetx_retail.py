@@ -46,6 +46,20 @@ def test_official_single_fill(review):
         raw_fill_fee_usd='0.8246', carry_in_usd='0', fee_usd='0.82', carry_out_usd='0.0046')]
 
 
+@pytest.mark.parametrize('phase', ['scheduled', 'live'])
+def test_sgo_american_prices_use_retail_straight_fees_without_depth(review, phase):
+    row = retail_row('NHL', '0.4')
+    row['source']['provider'] = 'sportsgameodds'
+    row['original'] = dict(units='american_odds', value='+150')
+    row.pop('cost_per_normal_claim')
+    if phase == 'live':
+        row['start_at'] = (AT - timedelta(minutes=1)).isoformat()
+    nhl = outcome(row, at=AT, phase=phase, review=review)
+    assert nhl['fee_cashflows'] == {'at_fill_usd': '0.01'}
+    nba = outcome(dict(row, league='NBA'), at=AT, phase=phase, review=review)
+    assert nba['fee_cashflows'] == dict(at_fill_usd='0', winning_settlement_usd='0.02', losing_settlement_usd='0')
+
+
 def test_official_split_fill(review):
     row = retail_row('NHL', '0.40')
     model = prophetx_public_fee(row, at=AT.isoformat(), review=review, fills=[(30, '0.40'), (70, '0.40')])

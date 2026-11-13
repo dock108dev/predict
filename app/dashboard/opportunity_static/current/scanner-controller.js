@@ -71,7 +71,10 @@ function bootScanner() {
     if(held){shown=[...shown.filter(id=>target.includes(id)||protectedRemoval.has(id)),...target.filter(id=>!shown.includes(id))];}
     else shown=target;
     byId('order').hidden=!held;byId('order').textContent='Ranking updated · apply order';
-    byId('count').textContent=page.total_matching+' matching '+(filters.category==='covered_outcome_arb'?'arb candidates':filters.category==='conditional_hedge'?'conditional hedges':'EV research rows')+(searchDraft?' · '+matches.length+' found on this page':'')+(held?' · display order held':'');
+    const count = page.total_matching || page.coverage.complete
+      ? page.total_matching+' matching '+(filters.category==='covered_outcome_arb'?'arb candidates':filters.category==='conditional_hedge'?'conditional hedges':'EV research rows')
+      : 'No rows published';
+    byId('count').textContent=count+(searchDraft?' · '+matches.length+' found on this page':'')+(held?' · display order held':'');
     const parent=byId('results');
     for(const id of shown) {
       const entry=nodes.get(id)||createRow(id),r=page.rows.find(r=>r.id===id),rank=page.ranked_ids.indexOf(id);
@@ -87,7 +90,12 @@ function bootScanner() {
     }
     for(const [id,entry] of nodes)if(!shown.includes(id)){entry.n.remove();nodes.delete(id);}
     if(shown.length){empty?.remove();empty=null;shown.forEach((id,i)=>{const n=nodes.get(id).n;if(parent.children[i]!==n)parent.insertBefore(n,parent.children[i]||null);});}
-    else{if(!empty){empty=make('p',undefined,'scanner-empty');parent.append(empty);}empty.textContent=searchDraft?'No matches on this page. Search does not cover other pages.':healthMessage();}
+    else{
+      if(!empty){empty=make('p',undefined,'scanner-empty');empty.setAttribute('role','status');parent.append(empty);}
+      const message=searchDraft?'No matches on this page. Search does not cover other pages.':healthMessage();
+      if(empty.textContent!==message)empty.textContent=message;
+    }
+    updateHealthVisibility();
     byId('prev').disabled=page.offset===0;byId('next').disabled=page.next_offset===null;
     byId('page').textContent=page.total_matching?'Rows '+(page.offset+1)+'–'+(page.offset+page.rows.length)+' of '+page.total_matching:'No result rows';
     if(selected)renderSelected();
@@ -98,15 +106,33 @@ function bootScanner() {
     if(incompatible)return 'Update required to verify this scanner.';if(stopped||page?.coverage.state==='stopped')return 'Collection stopped. Previous comparisons have no current authority.';if(!verified)return 'Current comparison unavailable. Previous prices have unverified freshness.';
     const c=page.coverage;if(Date.now()>=Date.parse(page.expires_at))return 'Original inputs expired. Waiting for a current comparison.';
     if(page.unsupported_filters.length)return 'Selected scope is unavailable or unsupported.';
+    if(c.capture_only&&c.state==='not_evaluated')return 'Market coverage captured. No pairs evaluated.';
     if(c.no_qualifying_opportunities&&c.complete)return 'Checked selected markets · no qualifying opportunities.';
     return ({evaluated_positive:'Selected markets checked',evaluated_zero:'Checked selected markets · no qualifying opportunities.',not_evaluated:'Still evaluating the selected markets…',partial:'Partially evaluated · coverage is incomplete',unavailable:'Comparable markets unavailable',unsupported:'Selected scope is unsupported',stopped:'Collection stopped'})[c.state]||'Coverage is incomplete';
   }
   function updateHealth() {
     byId('health').hidden=false;
     if(!page){byId('health').textContent=incompatible?'Update required to verify this scanner.':'Current comparison unavailable. Waiting for a supported response.';return;}const message=healthMessage();if(byId('health').textContent!==message)byId('health').textContent=message;const c=page.coverage;
-    byId('health').hidden=message==='Selected markets checked' && c.complete && !c.errors.length;
-    byId('coverage-detail').textContent=c.evaluated_pairs+' of '+c.compatible_pairs+' compatible pairs evaluated in the selected scope. '+(c.qualifying_pairs===null?'Qualifying count not established. ':c.qualifying_pairs+' qualifying pairs. ')+(c.complete?'Evaluation complete.':'Incomplete evaluation; zero results do not establish checked-zero.')+(c.errors.length?' A shared evaluation problem affects this scope. See Admin.':'');
-    if(c.capture_only)byId('coverage-detail').textContent+=' Saved scope captured '+(c.captured_at?new Date(c.captured_at).toLocaleString():'at an unknown time')+'. Inputs changed during calculation; current financial results are withdrawn.';
+    updateHealthVisibility();
+    const details=[c.capture_only && c.state==='not_evaluated' ? 'No financial evaluation for this capture.' :
+      c.evaluated_pairs+' of '+c.compatible_pairs+' compatible pairs fully evaluated in the selected scope.'];
+    if(c.partially_evaluated_pairs)details.push(c.partially_evaluated_pairs+' more evaluated for supported outcomes.');
+    if(c.financial_inputs_at)details.push('Financial inputs captured '+new Date(c.financial_inputs_at).toLocaleString()+'.');
+    if(c.census_compatible_pairs!==undefined)details.push(c.census_compatible_pairs+' compatible pairs in the full market capture.');
+    if(c.qualifying_pairs!==null)details.push(c.qualifying_pairs+' qualifying pairs.');
+    if(c.capture_only){
+      if(c.captured_at)details.push('Captured '+new Date(c.captured_at).toLocaleString()+'.');
+      if(c.errors.includes('scanner_runtime_sources_changed'))details.push('Source status changed during the capture.');
+      if(c.errors.includes('scanner_calculation_binding_changed'))details.push('Calculation inputs changed. Waiting for a new evaluation.');
+    }else if(c.errors.length)details.push('A shared evaluation problem affects this scope. See Admin.');
+    if(c.failed_occurrences)details.push(c.failed_occurrences+(c.failed_occurrences===1?' event has incomplete pairing.':' events have incomplete pairing.'));
+    const copy=details.join(' ');
+    if(byId('coverage-detail').textContent!==copy)byId('coverage-detail').textContent=copy;
+  }
+  function updateHealthVisibility() {
+    const c=page.coverage;
+    byId('health').hidden=(!shown.length && !searchDraft) ||
+      (healthMessage()==='Selected markets checked' && c.complete && !c.errors.length);
   }
   function capabilityOptions() {
     const signature=JSON.stringify(page.filter_options);if(signature===optionsSignature)return;optionsSignature=signature;

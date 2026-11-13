@@ -111,10 +111,14 @@
       </div>
       <div class="db-controls">
         <div><label for="db-schema">Schema</label><select id="db-schema" disabled></select></div>
-        <div><label for="db-search">Search</label><input type="search" id="db-search" placeholder="Filter by name or type" maxlength="128"></div>
+        <div><label for="db-search">Search</label><input type="search" id="db-search" placeholder="Name or type" maxlength="128" disabled></div>
         <div><label for="db-object">Database object</label><select id="db-object" disabled></select></div>
       </div>
-      <label class="db-storage"><input type="checkbox" id="db-storage" disabled> Include partitions and sequences</label>
+      <div class="db-options">
+        <label class="db-storage"><input type="checkbox" id="db-views" disabled> Include views</label>
+        <label class="db-storage"><input type="checkbox" id="db-storage" disabled> Include partitions and sequences</label>
+        <p id="db-catalog-count" class="desk-note"></p>
+      </div>
       <p id="db-status" class="desk-note" role="status"></p>
       <section id="db-selection" aria-labelledby="db-object-title" hidden>
         <div class="db-heading">
@@ -124,12 +128,14 @@
             <button id="db-structure" type="button" aria-pressed="false">Structure</button>
           </div>
         </div>
-        <p id="db-read-status" class="desk-note" role="status"></p>
-        <div id="db-content"></div>
-        <div id="db-paging" class="db-actions" aria-label="Row pages" hidden>
-          <button id="db-previous" type="button">Previous page</button>
-          <button id="db-next" type="button">Next page</button>
+        <div class="db-row-tools">
+          <p id="db-read-status" class="desk-note" role="status"></p>
+          <div id="db-paging" class="db-actions" role="group" aria-label="Row pages" hidden>
+            <button id="db-previous" type="button">Previous page</button>
+            <button id="db-next" type="button">Next page</button>
+          </div>
         </div>
+        <div id="db-content"></div>
       </section>
       <dialog id="db-cell-dialog" aria-labelledby="db-cell-title">
         <div class="db-heading">

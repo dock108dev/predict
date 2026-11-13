@@ -6,6 +6,7 @@ from unittest.mock import patch
 from app.collection.current_policy import DEFAULT
 from app.comparison.broad_coverage import build, select, merge_queries, COUNT_KEYS
 from app.comparison.coverage import CoverageLedger, SPORTS, FAMILIES
+from app.comparison.display_identity import canonical_key
 
 AT='2026-10-17T16:00:00Z'
 
@@ -48,6 +49,24 @@ def payload():
 
 
 class BroadCoverage(unittest.TestCase):
+    def test_ordinary_display_peers_do_not_confer_settlement_eligibility(self):
+        rows, prices = zip(*(observation(venue=venue, family='spread')
+                            for venue in ('kalshi', 'polymarket_us', 'novig')))
+        for price, line in zip(prices, ('-2.5', '-5/2', '2.5')):
+            price.update(game_key='same-game', market=dict(market='spread', period='full_game'),
+                         selection=dict(participant='home', predicate='cover', signed_line=line),
+                         price_current=True, same_outcome=dict(supported=False, key=None))
+            price['display_outcome_key'] = list(canonical_key(price))
+        counts = build(rows, prices, config=config(), owner=owner(), at=AT,
+                       ordinary_publication=True)['global_totals']
+        self.assertEqual(counts['displayed_observations'], 3)
+        self.assertEqual(counts['displayed_comparison_directions'], 2)
+        self.assertEqual(counts['displayed_current_comparison_directions'], 2)
+        self.assertEqual(counts['published_current_pairs'], 1)
+        self.assertEqual(counts['eligible_current_pairs'], 0)
+        self.assertEqual(counts['supported_comparison_observations'], 0)
+        self.assertEqual(counts['display_disagreement_directions'], 0)
+
     def test_complete_shared_matrix_and_same_cohort_ratios(self):
         value=payload();counts=value['global_totals']
         self.assertEqual(counts['retained_observations'],36)

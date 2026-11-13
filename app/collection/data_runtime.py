@@ -121,7 +121,8 @@ class DataRuntime:
             await self.persist_control()
             if self.scanner_factory is None:
                 from app.dashboard.scanner_api import Scanner
-                self.scanner = Scanner(self.service, connector=self.connector, durable=True)
+                self.scanner = Scanner(self.service, connector=self.connector, durable=True,
+                                       full_slate_worker=self.connector is connect)
             else:
                 self.scanner = self.scanner_factory(self.service)
             result = self.scanner.start()

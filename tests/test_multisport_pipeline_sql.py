@@ -20,7 +20,7 @@ from app.collection.current_service import CurrentService
 from app.collection.current_native import NativeWorker
 from app.collection.current_database import DatabaseIngressSink
 from app.collection.runtime_status import RuntimeState
-from app.collection.runtime_client import RuntimeClient
+from tests.latest_board_fixture import RetainedBoardClient
 from app.dashboard.comparison_board import expand_odds
 from app.dashboard.current_state import CurrentStore
 from app.storage import latest_board as latest
@@ -40,7 +40,8 @@ class AutomaticMultisportSQL(IsolatedAsyncioTestCase):
         self.directory=TemporaryDirectory();self.addCleanup(self.directory.cleanup)
         with self.connect() as db:
             db.execute('TRUNCATE current_event CASCADE')
-            db.execute('TRUNCATE data_runtime,data_runtime_command,current_result_parent_original,latest_board,latest_board_status,current_source_status,current_refresh_scope')
+            db.execute("DELETE FROM current_row_state WHERE kind<>'epoch'")
+            db.execute('TRUNCATE data_runtime,data_runtime_command,current_result_parent_original,latest_board,latest_board_status')
         self.config=dict(deepcopy(DEFAULT),native_sports=list(SPORTS),native_families=list(FAMILIES),aggregate_enabled=False)
         for target,value in (('app.collection.runtime_client.load',self.config),
             ('app.storage.latest_board.load',DEFAULT_POLICY),('app.dashboard.comparison_board_api.load',DEFAULT_POLICY)):
@@ -128,7 +129,7 @@ class AutomaticMultisportSQL(IsolatedAsyncioTestCase):
 
     async def unseen_event_after_startup(self,league,family,*,flat_season=False):
         from app.dashboard.comparison_board_api import mount
-        proxy=RuntimeClient(connector=self.connect)
+        proxy=RetainedBoardClient(connector=self.connect)
         app=web.Application();mount(app,proxy)
         client=TestClient(TestServer(app));await client.start_server();self.addAsyncCleanup(client.close)
         cases=[]

@@ -36,7 +36,8 @@ class SelectedMarketMetadata(unittest.TestCase):
         self.assertFalse(excluded)
         row = next(r for r in rows if r['quote']['source']['native_market_id'] == self.market['id'])
         actual = row['comparison_source_metadata']['selected_market_observation']
-        fields = ('price_ranges', 'price_level_structure', 'notional_value_dollars')
+        fields = ('price_ranges', 'price_level_structure', 'notional_value_dollars', 'market_type',
+                  'settlement_bounds_type', 'fractional_trading_enabled', 'fee_waiver_expiration_time')
         self.assertEqual(actual['values'], {k: self.material[k] for k in fields if k in self.material})
         self.assertEqual(actual['material_sha256'], stable(self.material))
         self.assertEqual(actual['source']['received_at'], self.market['provenance'][-1]['received_at'])

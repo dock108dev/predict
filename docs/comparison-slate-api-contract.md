@@ -1,4 +1,8 @@
-# Current comparison slate API v2
+# Retained comparison slate API v2
+
+The installed app serves the ordinary slate at `/api/comparison-current`.
+The legacy slate route documented below returns HTTP 410 in the installed app.
+See [storage ownership](storage-ownership.md) for current routes and retained data.
 
 `GET /api/boards/slate?view=odds|ev|arbs&filter=positive|all|hedges` returns `predict-comparison-slate-2`. Each returned board uses the background shared default policy. `requested_policy` records settings reserved for selected Details; `sizing_scope=shared_default_selected_details` makes that distinction explicit. No provider requests, whole-slate finance or account mutations occur in the read. [Latest-result contract](latest-board-results.md).
 

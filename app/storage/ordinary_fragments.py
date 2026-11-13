@@ -15,6 +15,16 @@ class FragmentRoot(dict):
 
 def expand(result,db,*,lazy,previous=None):
     ids=result.pop('_read_fragments')
+    if ids == 'publication-members-v1':
+        entries = db.execute('''SELECT result_id AS member_id,position FROM comparison_result_reference
+            WHERE kind='member' AND holder=%s ORDER BY position LIMIT 32769''', (result['id'],)).fetchall()
+        if any(row['position'] != i for i, row in enumerate(entries, 1)):
+            raise snapshots.SnapshotOperationError('ordinary_fragment_membership_invalid')
+        ids = [row['member_id'] for row in entries]
+        if len(ids) != result['publication']['component_count']:
+            raise snapshots.SnapshotOperationError('ordinary_fragment_membership_invalid')
+    elif not isinstance(ids, list):
+        raise snapshots.SnapshotOperationError('ordinary_fragment_manifest_invalid')
     if len(ids)>32768 or len(ids)!=len(set(ids)):
         raise snapshots.SnapshotOperationError('ordinary_fragment_manifest_invalid')
     prior=previous.get('component_slices',{}) if lazy and isinstance(previous,FragmentRoot) else {}
@@ -23,8 +33,8 @@ def expand(result,db,*,lazy,previous=None):
     # An immutable member ID binds the exact original content. Avoid fetching
     # and decoding that content again from the immediately preceding root.
     blobs={r['member_id']:r['content'] for r in db.execute(
-        'SELECT member_id,CASE WHEN member_id=ANY(%s) THEN NULL ELSE content END content '
-        'FROM comparison_live_read_fragment WHERE member_id=ANY(%s)',(list(reused),ids))}
+        'SELECT id AS member_id,CASE WHEN id=ANY(%s) THEN NULL ELSE read_fragment END content '
+        'FROM comparison_snapshot_result WHERE id=ANY(%s) AND read_fragment IS NOT NULL',(list(reused),ids))}
     if len(blobs)!=len(ids):raise snapshots.SnapshotOperationError('ordinary_fragment_unavailable')
     result['component_slices']={}
     for member in ids:

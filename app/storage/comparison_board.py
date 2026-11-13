@@ -200,20 +200,17 @@ class ReadContext:
                 else:state=drain(serialize_steps(state,prices_only=True,estimate_policy=DEFAULT_POLICY))
                 state['comparison_profiles']={}
                 if self.store.db is not None:
-                    from .current_rows import contract_id
+                    from .current_rows import CurrentRowStore, contract_id
                     from app.dashboard.comparison_board import entries
-                    # A book receipt can advance with an unchanged price.
-                    # Fetch its own clocks from this same selected SQL frame;
-                    # never relabel the retained quote clocks as book clocks.
+                    # Keep the clocks of the same revision that supplied the asks.
                     ids=[contract_id(record) for record in rows]
-                    books=self.store.db.execute('''SELECT c.id AS contract_id,b.source_at,b.received_at,b.revision,
-                        b.quantity_units,b.state,b.sync,b.sequence FROM current_contract c
-                        JOIN current_native_book b ON b.venue=c.venue AND b.event_id=c.event_id
-                            AND b.native_market_id=c.native_market_id WHERE c.id=ANY(%s)''',(ids,)).fetchall()
-                    by_contract={book['contract_id']:{k:v for k,v in book.items() if k!='contract_id'} for book in books}
+                    books=CurrentRowStore(self.store.db).native_offer_books(ids)
                     for _,_,q in entries(state):
-                        book=by_contract.get(contract_id(dict(quote=q)))
-                        if book is not None:q['observed_book']=book
+                        book=books.get(contract_id(dict(quote=q)))
+                        if book is not None:
+                            q['observed_book']={k:book[k] for k in
+                                ('source_at','received_at','revision','state','sync','sequence','is_current')}
+                            q['observed_book']['quantity_units']=book['quantity_unit']
                 benchmark_value=None;benchmark_originals=None;reason=None
                 try:benchmark_value,benchmark_originals=_benchmark(rows,state,benchmark_venue)
                 except (ValueError,KeyError,TypeError,ArithmeticError) as exc:reason=str(exc)[:160] or 'optional_benchmark_unavailable'

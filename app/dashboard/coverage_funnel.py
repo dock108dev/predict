@@ -4,13 +4,14 @@ from datetime import timedelta
 from itertools import product
 
 from app.collection.current_policy import aggregate_scope, native_markets, native_scope
+from app.collection.sportsgameodds_adapter import PROPHETX_BOOKMAKER_ID
 from app.comparison.game_phase import LIVE_SECONDS, PREGAME_SPORTSBOOK_SECONDS
 from app.comparison.sgo_reference import BEST_BOOKS
 
 from .fee_coverage import WORKING_PHASE_SQL, source_key
 
 NATIVE_VENUES = ('kalshi', 'polymarket_us')
-SGO_OFFER_VENUES = ('kalshi', 'novig')
+SGO_OFFER_VENUES = ('kalshi', 'novig', 'prophetx')
 SGO_REFERENCE_VENUES = (*BEST_BOOKS, 'pinnacle')
 PHASES = ('pregame', 'in_game')
 
@@ -45,7 +46,7 @@ def native_observations(cells, *, origin):
 def native_query_inventory(db, owner):
     cells = (owner.get('status') or {}).get('coverage', {}).get('cells', ())
     current = native_observations(cells, origin='current_runtime_query')
-    prior = db.execute("SELECT facts->'query_observations' AS cells FROM coverage_latest WHERE singleton").fetchone()
+    prior = db.execute("SELECT facts->'query_observations' AS cells FROM comparison_publication WHERE kind='coverage' AND id=''").fetchone()
     saved = native_observations(prior['cells'] or (), origin='retained_coverage_query') if prior else []
     queries = {_cohort(row): row for row in saved}
     queries.update({_cohort(row): row for row in current})
@@ -104,7 +105,7 @@ def sgo_observations(db, *, at):
         SELECT f.event_id,f.received_order,f.league,f.phase,f.starts_at,m.value->>0 AS id,m.value->>1 AS revision
         FROM frames f CROSS JOIN LATERAL jsonb_array_elements(f.members) AS m),
       units AS (
-        SELECT m.league,m.phase,r.bookmaker_id AS venue,
+        SELECT m.league,m.phase,CASE WHEN r.bookmaker_id=%(prophetx_book)s THEN 'prophetx' ELSE r.bookmaker_id END AS venue,
             CASE r.facts->>'market' WHEN 'moneyline' THEN 'winner' ELSE r.facts->>'market' END AS family,
             CASE r.facts->>'period' WHEN 'game' THEN 'full_game' ELSE r.facts->>'period' END AS period,
             r.id IS NOT NULL AS matched_revision,
@@ -146,7 +147,8 @@ def sgo_observations(db, *, at):
         to_char(to_timestamp(max(latest_receipt)) AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS last_frame_receipt_at
       FROM phased GROUP BY venue,league,family,period,phase''',
       {'at': at, 'start': at-timedelta(hours=24), 'end': at+timedelta(hours=72),
-       'live': LIVE_SECONDS, 'pregame': PREGAME_SPORTSBOOK_SECONDS}).fetchall()
+       'live': LIVE_SECONDS, 'pregame': PREGAME_SPORTSBOOK_SECONDS,
+       'prophetx_book': PROPHETX_BOOKMAKER_ID}).fetchall()
 
 
 def configured_cohorts(config):

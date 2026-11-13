@@ -33,7 +33,7 @@ export function renderFilteredCoverage(root, data, cells) {
   root.append(coverageElement('p', coverageRatioText(ratioForCounts(counts, 'supported_peer', 'captured comparison-source observations in these filtered cells; reference data excluded'), 'supported-peer observations / retained comparison-source observations')));
   root.append(coverageElement('p', coverageCount(counts.current_observations) + ' current · ' + coverageCount(counts.last_known_observations) + ' last-known · ' + coverageCount(counts.unknown_age_observations) + ' unknown-age observations · ' + coverageCount(counts.gap_observations) + ' observations with gaps'));
   root.append(coverageElement('p', coverageCount(counts.comparable_outcomes) + ' unique comparable outcomes · ' + coverageCount(counts.underlying_pairs) + ' underlying cross-source pairs touching this scope · ' + coverageCount(counts.signed_comparison_directions) + ' signed directions from this scope. Pair and outcome counts are deduplicated; source-cell counts overlap.'));
-  root.append(coverageElement('p', coverageCount(counts.displayed_comparison_directions) + ' displayed comparison directions · ' + coverageCount(counts.displayed_current_comparison_directions) + ' displayed current comparison directions. These selected Odds comparisons are separate from all eligible signed peer directions.'));
+  root.append(coverageElement('p', coverageCount(counts.displayed_comparison_directions) + ' published offers with a peer · ' + coverageCount(counts.displayed_current_comparison_directions) + ' published offers with a current peer.'));
   if (counts.eligible_current_pairs !== undefined) root.append(coverageElement('p', coverageCount(counts.eligible_current_pairs) + ' current compatible input pairs · ' + coverageCount(counts.supported_noncurrent_pairs) + ' supported pairs with old or unknown inputs · ' + coverageCount(counts.published_current_pairs) + ' published current pairs. ' + coverageCount(counts.publication_pending_directions) + ' selected current directions await publication; ' + coverageCount(counts.display_disagreement_directions) + ' reporting disagreements. All use this captured retained cohort.'));
   if (cells.length !== data.cells.length) root.append(coverageElement('p', (data.cells.length - cells.length) + ' cells are hidden by these display filters. Their retained data remains in global totals.'));
 }
@@ -143,24 +143,25 @@ export function coverageAge(value, now = Date.now()) {
   if (seconds < 86400) return Math.floor(seconds / 3600) + 'h ' + Math.floor(seconds % 3600 / 60) + 'm ago';
   return Math.floor(seconds / 86400) + 'd ago';
 }
+export const coverageStale = data => data?.publication_state === 'stale' ||
+  Boolean(data?.captured_at && Date.now() - Date.parse(data.captured_at) > 15000);
+export const coverageClocks = data => 'Capture ' + coverageAge(data?.captured_at) + ' · Publication ' + coverageAge(data?.publication_at);
+
 export function renderCoverageOutcome(root, data, filters, readError = '') {
   if (!root) return;
   const cells = filterCoverageCells(data?.cells || [], filters), counts = data ? filteredCoverageTotals(data, cells) : {};
-  const scope = [filters.league || 'All sports', filters.venue ? sourceName(filters.venue) : 'All sources', filters.market ? coverageFamilies[filters.market] || filters.market : 'All families', filters.period ? coverageWords(filters.period) : 'All periods'];
-  if (filters.attention) scope.push('Investigate: ' + coverageWords(filters.attention));
-  root.replaceChildren(coverageElement('strong', scope.join(' · ')));
+  const scope = [filters.league, filters.venue && sourceName(filters.venue),
+    filters.market && (coverageFamilies[filters.market] || filters.market),
+    filters.period ? coverageWords(filters.period) : 'All periods'].filter(Boolean);
+  if (filters.attention) scope.push({low:'Low comparison coverage', stale:'Last-known prices', gaps:'Coverage gaps'}[filters.attention]);
   const failure = data?.publication_error;
-  const stale = data?.publication_state === 'stale' || (data?.captured_at && Date.now() - Date.parse(data.captured_at) > 15000);
+  const stale = coverageStale(data);
+  root.dataset.stale = String(stale);
   const title = readError ? 'Coverage read failed' : failure ? 'Coverage publication failed' : !data || !data.captured_at ? 'Coverage pending · counts unmeasured' : stale ? 'Last-known coverage capture' : 'Captured comparison availability';
-  root.append(coverageElement('h2', title));
-  root.append(coverageElement('p', 'Capture ' + coverageAge(data?.captured_at) + ' · Publication ' + coverageAge(data?.publication_at), 'capture-age'));
+  root.replaceChildren(coverageElement('h2', title), coverageElement('p', scope.join(' · '), 'coverage-scope'));
+  root.append(coverageElement('p', coverageClocks(data), 'capture-age'));
   if (readError || failure) root.append(coverageElement('p', (data?.captured_at ? 'Prior captured measurements remain inspectable; freshness is unverified. ' : 'Current coverage cannot be established. ') + (failure || readError)));
-  else if (stale) root.append(coverageElement('p', 'These measurements describe the older capture. A successful page read does not verify current comparisons.'));
-  else if (!data?.captured_at) root.append(coverageElement('p', 'No measured capture is available. Pending publication is not zero coverage.'));
-  if (data?.captured_at) root.append(coverageElement('p', coverageCount(counts.current_comparison_observations) + ' observations with current supported peers at capture · ' + coverageCount(counts.retained_comparison_observations) + ' retained purchase-source observations. Reference observations excluded.'));
-  const states = new Map();
-  for (const cell of cells) {const state = coverageCellState(cell); states.set(state, (states.get(state) || 0) + 1);}
-  if (states.size) root.append(coverageElement('p', [...states].map(([state,n]) => n + ' ' + state.toLowerCase() + ' cells').join(' · '), 'scope-states'));
+  if (data?.captured_at) root.append(coverageElement('p', coverageCount(counts.current_comparison_observations) + ' observations with a current peer at capture · ' + coverageCount(counts.retained_comparison_observations) + ' retained comparison-source observations'));
   if (cells.some(cell => cell.configuration_state === 'held')) {
     root.append(coverageElement('p', capturedAccountingNote));
     const admin = coverageElement('a', 'Check current collection status →'); admin.href = '/admin'; root.append(admin);

@@ -3,14 +3,21 @@ import asyncio
 from app.collection.background_work import AcquisitionDeferred
 from app.collection.coverage_worker import run
 from app.diagnostics import failure
-from .latest_board import LatestBoardOwner
 from .store import ROOT
 from .current_games import utc
 
 
-class OrdinaryOwner(LatestBoardOwner):
+class OrdinaryOwner:
+    def __init__(self, service):
+        self.service = service
+        self.closed = False
+        self.task = self.coverage_task = self.drain_task = None
+        self.last = self.last_coverage = None
+        self.error = self.observation_error = self.estimate_error = self.coverage_error = None
+        self.progress = {}
+        self.wake = asyncio.Event()
+
     async def start(self):
-        await asyncio.to_thread(self.retire_legacy)
         self.service.ingress.on_sgo_admitted = self.wake.set
         self.service.ingress.on_native_admitted = self.wake.set
         # One turn seals observations then their optional finance. No legacy
@@ -18,18 +25,27 @@ class OrdinaryOwner(LatestBoardOwner):
         self.task = asyncio.create_task(self.run_ordinary(), name='predict-ordinary-comparison-owner')
         self.coverage_task = asyncio.create_task(self.run_coverage(), name='predict-coverage-owner')
 
-    def retire_legacy(self):
-        from .ordinary_publication import retire_legacy
-        with self.connection() as db:
-            retire_legacy(db)
+    async def close(self):
+        self.closed = True
+        self.wake.set()
+        tasks = [task for task in (self.task, self.coverage_task) if task]
+        if not tasks:
+            return
+        # The child runner observes closed, drains the process and releases
+        # its admission. A caller timing out still leaves that drain owned.
+        if self.drain_task is None:
+            self.drain_task = asyncio.gather(*tasks, return_exceptions=True)
+        results = await asyncio.wait_for(asyncio.shield(self.drain_task), self.service.config['cleanup_seconds'])
+        for result in results:
+            if isinstance(result, BaseException):
+                raise result
 
     async def run_ordinary(self):
         while not self.closed:
             completed=False
             try:
-                async with self.auxiliary_lock:
-                    self.last = await run(lambda: self.closed, root=ROOT,
-                        module='app.collection.ordinary_worker')
+                self.last = await run(lambda: self.closed, root=ROOT,
+                    module='app.collection.ordinary_worker')
                 self.observation_error = self.estimate_error = self.error = None
                 self.progress['ordinary'] = dict(at=utc(), **self.last)
                 completed=True

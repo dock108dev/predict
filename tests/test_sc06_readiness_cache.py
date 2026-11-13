@@ -345,11 +345,16 @@ class ReadinessCaptureReuse(TestCase):
             def execute(self, statement, args=()):
                 if 'current_source_status' in statement:
                     return Rows([dict(venue=k,state=v) for k,v in owner.status.items()])
-                if 'current_native_book' in statement:
-                    return Rows([owner.book])
+                if 'FROM public_fee_schedule' in statement:
+                    return Rows([])
                 if 'SELECT c.id' in statement:
                     return Rows([dict(id='authored-contract', venue=owner.q['venue'],
                         league='NFL', family='moneyline', period='full_game', offered=True)] if owner.record_present else [])
+                if 'SELECT DISTINCT c.event_id' in statement:
+                    from app.storage.store import hashed
+                    source=owner.q['source']
+                    return Rows([dict(event_id=hashed([source['provider'],source['native_event_id']]),
+                        venue=owner.q['venue'],league='NFL',family='moneyline',period='full_game')] if owner.record_present else [])
                 if not statement.startswith('SET TRANSACTION'):
                     raise AssertionError('Unexpected SQL in authored read fake: ' + statement)
                 return Rows([])
@@ -379,10 +384,15 @@ class ReadinessCaptureReuse(TestCase):
         self.stack = ExitStack(); self.addCleanup(self.stack.close)
         self.stack.enter_context(patch('app.storage.scanner_publication.current_revision',
             side_effect=lambda db:dict(epoch=self.epoch,current_rows_revision='unchanged-whole-frame-revision')))
-        self.stack.enter_context(patch('app.storage.latest_board.capture_batches',return_value=[['authored-event']]))
+        from app.storage.store import hashed
+        source=self.q['source']
+        self.stack.enter_context(patch('app.storage.board_capture.capture_batches',
+            return_value=[[hashed([source['provider'],source['native_event_id']])]]))
         self.stack.enter_context(patch('app.storage.current_games.engine_binding',side_effect=lambda:self.engine))
         self.stack.enter_context(patch.object(scanner_readiness, 'ReadContext', Context))
         self.stack.enter_context(patch.object(scanner_readiness.CurrentRowStore, 'capture', side_effect=lambda **kwargs: self.frame()))
+        self.stack.enter_context(patch.object(scanner_readiness.CurrentRowStore, 'native_offer_books',
+            side_effect=lambda: {scanner_readiness.contract_id(dict(quote=self.q)): deepcopy(self.book)}))
         self.instrument = self.stack.enter_context(patch.object(scanner_readiness, 'instrument', wraps=instrument))
         self.stack.enter_context(patch('app.comparison.scanner_finance.evaluate', side_effect=AssertionError('No financial work in readiness capture')))
         self.stack.enter_context(patch('socket.socket.connect', side_effect=AssertionError('No provider/network in readiness capture')))

@@ -19,6 +19,32 @@ HISTORY_BYTES = 32 * 1024 * 1024
 HISTORY_RUNWAY = 64 * 1024 * 1024
 
 
+def quote_identity(event, venue, odd, line):
+    if line is not None:
+        value = Decimal(line)
+        line = '0' if value == 0 else str(value.normalize())
+    return hashed(['sportsgameodds', event, venue, odd, line])
+
+
+def offer_quote_link(record, references):
+    """Resolve the exact accepted source fact before an offer can reference it."""
+    from app.collection.sportsgameodds_current_rows import display_venue, source_bookmaker
+
+    quote = record['quote']
+    source = quote['source']
+    bookmaker = source_bookmaker(record)
+    identity = quote_identity(source['native_event_id'], bookmaker,
+                              source['native_outcome_id'], source['native_line'])
+    witness = references.get(identity)
+    if (display_venue(bookmaker) != quote['venue'] or witness is None
+            or witness['facts']['price_american'] != quote['original']['value']
+            or witness['facts']['source_at'] != quote['times']['source_at']
+            or witness['facts']['available'] != (quote['state'] == 'available')
+            or quote['original']['units'] != 'american_odds'):
+        raise ValueError('sgo_offer_source_quote_mismatch')
+    return identity, witness['revision']
+
+
 def archive_revisions(db, kind, rows):
     """Best-effort prior witnesses, bounded independently of current facts.
 
@@ -80,10 +106,10 @@ def archive_revisions(db, kind, rows):
             FROM jsonb_to_recordset(%s) AS prior(identity text,revision text,event_id text,payload_bytes integer,facts jsonb)
             WHERE true
             ON CONFLICT DO NOTHING''', (kind, Jsonb(candidates))).rowcount
-    db.execute('''UPDATE current_sgo_history_state SET recorded=recorded+%s,
+    db.execute('''UPDATE sgo_event_evidence SET recorded=recorded+%s,
         skipped_capacity=skipped_capacity+%s,skipped_runway=skipped_runway+%s,
         evicted_capacity=evicted_capacity+%s
-        WHERE singleton''', (saved, skipped_capacity, skipped_runway, evicted))
+        WHERE kind='history_state' AND event_id='' ''', (saved, skipped_capacity, skipped_runway, evicted))
     return saved
 
 
@@ -120,12 +146,7 @@ def prepare_page(page):
     rows, ids = [], set()
     for quote in page.quotes:
         event = events[quote['event_id']]
-        line = quote['line']
-        if line is not None:
-            value = Decimal(line)
-            line = '0' if value == 0 else str(value.normalize())
-        identity = ['sportsgameodds', quote['event_id'], quote['venue'], quote['odd_id'], line]
-        row_id = hashed(identity)
+        row_id = quote_identity(quote['event_id'], quote['venue'], quote['odd_id'], quote['line'])
         if row_id in ids:
             raise ValueError('ambiguous repeated SGO book/side/line')
         ids.add(row_id)
@@ -139,7 +160,7 @@ def prepare_page(page):
                      unavailable_reason=quote['unavailable_reason'], source_at=quote['source_at'],
                      source_at_original=quote['source_at_original'], received_at=quote['received_at'],
                      receipt_sha256=page.receipt_sha256, fair=quote['fair'], settlement='unverified')
-        for field in ('consensus', 'bookmaker_market_link'):
+        for field in ('consensus', 'bookmaker_market_link', 'alternate'):
             if field in quote:
                 facts[field] = quote[field]
         revision = hashed({k: v for k, v in facts.items() if k not in ('received_at', 'receipt_sha256')})
@@ -173,11 +194,7 @@ def upsert_rows(db, rows):
             raise ValueError('sgo reference availability')
         if not isinstance(facts.get('receipt_sha256'), str) or not re.fullmatch('[0-9a-f]{64}', facts['receipt_sha256']):
             raise ValueError('sgo reference receipt')
-        line = facts.get('line')
-        if line is not None:
-            value = Decimal(line)
-            line = '0' if value == 0 else str(value.normalize())
-        if row['id'] != hashed(['sportsgameodds', row['event_id'], row['bookmaker_id'], facts['odd_id'], line]):
+        if row['id'] != quote_identity(row['event_id'], row['bookmaker_id'], facts['odd_id'], facts['line']):
             raise ValueError('sgo reference identity')
         if row['id'] in identities:
             raise ValueError('sgo duplicate reference')
@@ -195,38 +212,62 @@ def upsert_rows(db, rows):
     total = db.execute('SELECT count(*) AS n FROM current_sgo_reference').fetchone()['n']
     if total + len(rows) - len(previous) > MAX_CURRENT_ROWS:
         raise ValueError('sgo reference storage capacity')
-    # Apply the same source ordering to the whole validated page in one SQL
-    # statement. Only returned revisions can cause a prior witness to archive.
-    changed = db.execute('''INSERT INTO current_sgo_reference
-            (id,event_id,bookmaker_id,source_order,received_order,expires_at,revision,facts)
-            SELECT id,event_id,bookmaker_id,source_order,received_order,expires_at,revision,facts
-            FROM jsonb_to_recordset(%s) AS incoming(id text,event_id text,bookmaker_id text,
-              source_order numeric,received_order numeric,expires_at timestamptz,revision text,facts jsonb)
-            WHERE true
-            ON CONFLICT (id) DO UPDATE SET
-              source_order=CASE WHEN current_sgo_reference.revision=EXCLUDED.revision THEN current_sgo_reference.source_order ELSE EXCLUDED.source_order END,
-              received_order=CASE WHEN current_sgo_reference.revision=EXCLUDED.revision THEN current_sgo_reference.received_order ELSE EXCLUDED.received_order END,
-              expires_at=EXCLUDED.expires_at,
-              revision=EXCLUDED.revision,
-              facts=CASE WHEN current_sgo_reference.revision=EXCLUDED.revision THEN current_sgo_reference.facts ELSE EXCLUDED.facts END
-            WHERE (current_sgo_reference.revision<>EXCLUDED.revision AND (
-              (EXCLUDED.source_order IS NOT NULL AND current_sgo_reference.source_order IS NULL)
-              OR (EXCLUDED.source_order > current_sgo_reference.source_order)
-              OR (EXCLUDED.source_order IS NULL AND current_sgo_reference.source_order IS NULL
-                  AND EXCLUDED.received_order > current_sgo_reference.received_order)
-              OR (EXCLUDED.source_order = current_sgo_reference.source_order
-                  AND EXCLUDED.received_order >= current_sgo_reference.received_order
-                  AND EXCLUDED.facts->>'available'='false'
-                  AND current_sgo_reference.facts->>'available'='true')
-            )) OR (current_sgo_reference.revision=EXCLUDED.revision
-              AND EXCLUDED.received_order >= current_sgo_reference.received_order
-              AND EXCLUDED.expires_at > current_sgo_reference.expires_at
-              AND current_sgo_reference.expires_at < to_timestamp(EXCLUDED.received_order) + interval '2 days')
-            RETURNING id,revision''', (Jsonb(rows),)).fetchall()
-    replaced = [previous[row['id']] for row in changed
+    return advance_quotes(db, rows, previous)
+
+
+QUOTE_COLUMNS = 'id,event_id,bookmaker_id,source_order,received_order,expires_at,revision,facts'
+QUOTE_INPUT = '''jsonb_to_recordset(%s) AS i(id text,event_id text,bookmaker_id text,
+    source_order numeric,received_order numeric,expires_at timestamptz,revision text,facts jsonb)'''
+
+
+def advance_quotes(db, rows, previous):
+    """Advance the existing reference winner without rewriting its source body."""
+    # Preserve the old comparison rules, including availability closing at the
+    # same source clock. Offer ordering remains a separate consumer of this data.
+    eligible = db.execute(f'''SELECT i.id,i.revision
+        FROM {QUOTE_INPUT}
+        LEFT JOIN sgo_quote_revision q ON q.id=i.id AND q.is_current
+        WHERE q.id IS NULL OR (q.revision<>i.revision AND (
+              (i.source_order IS NOT NULL AND q.source_order IS NULL)
+              OR i.source_order>q.source_order
+              OR (i.source_order IS NULL AND q.source_order IS NULL AND i.received_order>q.received_order)
+              OR (i.source_order=q.source_order AND i.received_order>=q.received_order
+                  AND i.facts->>'available'='false' AND q.facts->>'available'='true')
+        )) OR (q.revision=i.revision AND i.received_order>=q.received_order
+              AND i.expires_at>q.expires_at AND q.expires_at<to_timestamp(i.received_order)+interval '2 days')''',
+        (Jsonb(rows),)).fetchall()
+    if not eligible:
+        return 0
+    selected_ids = {r['id'] for r in eligible}
+    selected = [row for row in rows if row['id'] in selected_ids]
+    replaced = [previous[row['id']] for row in selected
                 if row['id'] in previous and previous[row['id']]['revision'] != row['revision']]
+    if replaced:
+        db.execute('UPDATE sgo_quote_revision SET is_current=false WHERE id=ANY(%s) AND is_current',
+                   ([r['id'] for r in replaced],))
+    # A previously staged losing revision may now win a new receipt. Keep the
+    # incoming head receipt exactly as the old writer did, without changing the
+    # revision's source price. Offer receipts are stored with their own links.
+    db.execute(f'''INSERT INTO sgo_quote_revision({QUOTE_COLUMNS},is_current)
+        SELECT i.*,true FROM {QUOTE_INPUT}
+        ON CONFLICT(id,revision) DO UPDATE SET is_current=true,
+            source_order=CASE WHEN sgo_quote_revision.is_current THEN sgo_quote_revision.source_order ELSE excluded.source_order END,
+            received_order=CASE WHEN sgo_quote_revision.is_current THEN sgo_quote_revision.received_order ELSE excluded.received_order END,
+            expires_at=excluded.expires_at,
+            facts=CASE WHEN sgo_quote_revision.is_current THEN sgo_quote_revision.facts ELSE excluded.facts END''', (Jsonb(selected),))
     archive_revisions(db, 'reference', replaced)
-    return len(changed)
+    return len(selected)
+
+
+def stage_offer_quotes(db, rows, links):
+    """Persist offer-selected revisions that are not the reference winner."""
+    if not links:
+        return
+    ids = {identity for identity, _ in links.values()}
+    selected = [row for row in rows if row['id'] in ids]
+    db.execute(f'''INSERT INTO sgo_quote_revision({QUOTE_COLUMNS},is_current)
+        SELECT i.*,false FROM {QUOTE_INPUT}
+        ON CONFLICT(id,revision) DO NOTHING''', (Jsonb(selected),))
 
 
 def read_event(db, event_id, *, limit=MAX_ROWS, bookmakers=None):
@@ -253,8 +294,14 @@ def prune(db, *, at, limit=PRUNE_BATCH):
     expired = db.execute('''SELECT id,event_id,revision,facts FROM current_sgo_reference
         WHERE expires_at < %s ORDER BY expires_at,id LIMIT %s''', (at, limit)).fetchall()
     archive_revisions(db, 'reference', expired)
-    return db.execute('DELETE FROM current_sgo_reference WHERE id=ANY(%s)',
-                      ([row['id'] for row in expired],)).rowcount
+    retired = db.execute('UPDATE sgo_quote_revision SET is_current=false WHERE id=ANY(%s) AND is_current',
+                         ([row['id'] for row in expired],)).rowcount
+    db.execute('''DELETE FROM sgo_quote_revision q USING (
+        SELECT r.id,r.revision FROM sgo_quote_revision r WHERE NOT r.is_current AND NOT EXISTS (
+            SELECT 1 FROM current_offer_storage o WHERE o.sgo_quote_id=r.id AND o.sgo_quote_revision=r.revision)
+        LIMIT %s
+    ) stale WHERE q.id=stale.id AND q.revision=stale.revision''', (limit,))
+    return retired
 
 
 MAX_FRAMES = 25000
@@ -345,10 +392,10 @@ def upsert_frames(db, frames):
     replaced = []
     changed = 0
     for frame in frames:
-        result = db.execute('''INSERT INTO current_sgo_event_frame (event_id,received_order,expires_at,payload_bytes,facts)
-            VALUES (%s,%s,%s,%s,%s) ON CONFLICT (event_id) DO UPDATE
+        result = db.execute('''INSERT INTO sgo_event_evidence (kind,event_id,received_order,expires_at,payload_bytes,facts)
+            VALUES ('frame',%s,%s,%s,%s,%s) ON CONFLICT (kind,event_id) DO UPDATE
             SET received_order=EXCLUDED.received_order,expires_at=EXCLUDED.expires_at,payload_bytes=EXCLUDED.payload_bytes,facts=EXCLUDED.facts
-            WHERE EXCLUDED.received_order > current_sgo_event_frame.received_order''',
+            WHERE EXCLUDED.received_order > sgo_event_evidence.received_order''',
             (frame['event_id'], frame['received_order'], frame['expires_at'], len(encoded(frame['facts'])), Jsonb(frame['facts'])))
         changed += result.rowcount
         if result.rowcount and frame['event_id'] in previous:
@@ -364,6 +411,58 @@ def read_event_frame(db, event_id):
     return db.execute('SELECT facts FROM current_sgo_event_frame WHERE event_id=%s', (event_id,)).fetchone()
 
 
+def backfill_prophetx(db, *, at):
+    """Project retained ProphetX prices from exact SGO frames using original clocks."""
+    from collections import defaultdict
+    from app.collection.current_policy import aggregate_scope
+    from app.collection.runtime_status import AUTHORITY_LOCK, read_runtime
+    from app.collection.sportsgameodds_adapter import PROPHETX_BOOKMAKER_ID, Page
+    from app.collection.sportsgameodds_current_rows import current_rows
+    from .current_rows import CurrentRowStore, contract_id
+
+    moment = stamp(at)
+    with db.transaction():
+        db.execute('SELECT pg_advisory_xact_lock(%s)', (LOCK,))
+        db.execute('SELECT pg_advisory_xact_lock_shared(%s)', (AUTHORITY_LOCK,))
+        owner = read_runtime(db)
+        config = owner['config']
+        if (not owner['active'] or owner.get('global_stopped')
+                or {'sportsgameodds', 'prophetx'} & set(owner.get('paused_sources', ()))
+                or config.get('aggregate_provider') != 'sportsgameodds' or not config.get('aggregate_enabled')):
+            return 0
+        rows = db.execute('''SELECT f.event_id,f.facts AS frame,q.id,q.revision,q.facts
+            FROM current_sgo_event_frame f
+            CROSS JOIN LATERAL jsonb_array_elements(f.facts->'members') AS m
+            JOIN current_sgo_reference q ON (q.id,q.revision,q.event_id)=(m->>0,m->>1,f.event_id)
+            WHERE q.bookmaker_id=%s AND q.facts->>'receipt_sha256'=f.facts->>'receipt_sha256'
+              AND q.received_order=f.received_order AND q.facts->>'price_american' IS NOT NULL
+              AND f.received_order<=%s
+              AND f.expires_at>%s AND (f.facts->>'starts_at')::timestamptz BETWEEN %s AND %s
+              AND q.facts->>'league'=ANY(%s) AND q.facts->>'market'=ANY(%s)
+            ORDER BY f.event_id,q.id LIMIT %s''',
+            (PROPHETX_BOOKMAKER_ID, exact_time(at), moment, moment-timedelta(hours=24), moment+timedelta(hours=72),
+             aggregate_scope(config), config['families'], MAX_ROWS+1)).fetchall()
+        if len(rows) > MAX_ROWS:
+            raise ValueError('sgo ProphetX backfill capacity')
+        by_event = defaultdict(list)
+        for row in rows:
+            by_event[row['event_id']].append(row)
+        records, links = [], {}
+        for event_id, members in by_event.items():
+            frame = members[0]['frame']
+            context = frame.get('event_context')
+            if not context or any(context['status'].get(key) for key in ('ended', 'completed', 'cancelled')):
+                continue
+            event = dict(context, event_id=event_id, starts_at=frame['starts_at'], received_at=frame['received_at'],
+                         aliases=members[0]['facts']['aliases'])
+            page = Page((event,), tuple(row['facts'] for row in members), None, frame['receipt_sha256'])
+            projected, _ = current_rows(page, page.receipt_sha256)
+            refs = {row['id']: row for row in members}
+            links.update((contract_id(record), offer_quote_link(record, refs)) for record in projected)
+            records.extend(projected)
+        return CurrentRowStore(db).upsert_records(records, now=at, quote_links=links)
+
+
 def prune_frames(db, *, at, limit=PRUNE_BATCH):
     if type(limit) is not int or not 1 <= limit <= PRUNE_BATCH:
         raise ValueError('sgo frame prune capacity')
@@ -372,5 +471,5 @@ def prune_frames(db, *, at, limit=PRUNE_BATCH):
     expired = db.execute('''SELECT event_id,facts FROM current_sgo_event_frame
         WHERE expires_at < %s ORDER BY expires_at,event_id LIMIT %s''', (at, limit)).fetchall()
     archive_revisions(db, 'frame', expired)
-    return db.execute('DELETE FROM current_sgo_event_frame WHERE event_id=ANY(%s)',
+    return db.execute("DELETE FROM sgo_event_evidence WHERE kind='frame' AND event_id=ANY(%s)",
                       ([row['event_id'] for row in expired],)).rowcount

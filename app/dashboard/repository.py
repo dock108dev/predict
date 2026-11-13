@@ -2,12 +2,14 @@
 import json
 from datetime import datetime,timezone
 from app.storage import Store,connect,CapturePolicy
+from app.storage.store import open_retained
 from app.dashboard.views import candidate_view,depth_view,side_labels
 from app.dashboard.session_status import interpret_session
 
 
 def list_sessions():
     with connect() as db:
+        open_retained(db)
         sessions=db.execute('SELECT id,environment,evidence_class,started_at,state FROM capture_session ORDER BY started_at DESC LIMIT 100').fetchall()
         for session in sessions:
             session['saved_status']=interpret_session(session,coverage_events(db,session['id']))
@@ -21,6 +23,7 @@ def coverage_events(db,sid):
 
 def saved_view(sid):
     with connect() as db:
+        open_retained(db)
         s=Store(db)
         session=db.execute('SELECT id,environment,evidence_class,started_at,state FROM capture_session WHERE id=%s',(sid,)).fetchone()
         if not session: raise LookupError('Session not found')
@@ -49,6 +52,7 @@ def saved_view(sid):
 
 def history(sid,cid):
     with connect() as db:
+        open_retained(db)
         rows=db.execute('SELECT observed_at,engine,state,reasons FROM candidate_observation WHERE session_id=%s AND candidate_id=%s ORDER BY observed_at LIMIT 100',(sid,cid)).fetchall()
         bounds=db.execute('SELECT min(observed_at) AS first, max(observed_at) AS last, count(*) AS count FROM candidate_observation WHERE session_id=%s AND candidate_id=%s',(sid,cid)).fetchone()
         return dict(samples=rows,first_observed=bounds['first'],last_observed=bounds['last'],total_observations=bounds['count'],
@@ -57,6 +61,7 @@ def history(sid,cid):
 
 def saved_depth(sid,cid):
     with connect() as db:
+        open_retained(db)
         s=Store(db)
         row=db.execute("SELECT c.audit_hash FROM calculation c JOIN candidate_observation o ON c.session_id=o.session_id AND c.id=o.calculation_id WHERE c.session_id=%s AND o.candidate_id=%s AND c.engine='depth-1' ORDER BY c.observed_at DESC LIMIT 1",(sid,cid)).fetchone()
         if not row: raise LookupError('No saved depth result for this candidate')

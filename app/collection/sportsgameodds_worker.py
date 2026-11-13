@@ -14,7 +14,7 @@ import re
 
 from .current_ingress import call, operation
 from .current_policy import ROOT, aggregate_scope
-from .sportsgameodds_adapter import Traversal
+from .sportsgameodds_adapter import PROPHETX_BOOKMAKER_ID, Traversal, clock_sample
 from .sportsgameodds_collector import DailyObjectPacing, GuardedPageCollector, RejectedCursor
 from .sportsgameodds_current_rows import current_rows
 from .sportsgameodds_ledger import ObjectLedger
@@ -22,13 +22,12 @@ from .sportsgameodds_schedule import (
     PLANNED_FRACTION, REFRESH_TARGET, EventDue, SchedulePolicy, budgeted_policy, daily_allowance,
     discovery_interval, due_events, poll_slot, response_object_charge,
 )
-from .sportsgameodds_adapter import clock_sample
 from .sportsgameodds_transport import ODD_IDS, SportsgameoddsTransport
 from .sportsgameodds_transport import TransportFailure
 from .sportsgameodds_usage import read_usage
 from app.comparison.sgo_reference import BEST_BOOKS
 
-ALTERNATE_REFRESH_BOOKS = ('kalshi', 'novig', *BEST_BOOKS)
+ALTERNATE_REFRESH_BOOKS = ('kalshi', 'novig', PROPHETX_BOOKMAKER_ID, *BEST_BOOKS)
 ALTERNATE_REFRESH_WINDOW = timedelta(hours=2)
 
 
@@ -586,8 +585,7 @@ class SportsGameOddsWorker:
         if self.service.database_mode:
             await call(self.service, self.provider_status, state, code, reason)
         await call(self.service, self.service.source_state, 'novig', state, reason)
-        await call(self.service, self.service.source_state, 'prophetx', 'unavailable',
-                   'SportsGameOdds Prophet Exchange quotes are not verified as current ProphetX contracts.')
+        await call(self.service, self.service.source_state, 'prophetx', state, reason)
 
     async def run(self):
         if not self.service.database_mode:

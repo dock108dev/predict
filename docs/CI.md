@@ -95,7 +95,11 @@ available for the PDF extraction fixture. The fee browser journey checks
 desktop and mobile coverage, pinned evidence and the Admin error state using
 intercepted responses. The ordinary browser journey uses synthetic snapshot
 results and revision-bound Details. Scanner journeys exercise their separate
-publication and ticket contracts.
+publication and ticket contracts. The required `scanner-native-finance` group
+exercises Kalshi and Polymarket venue terms and the Scanner allocator with
+authored receipts. Its job summary reports current-run JUnit outcomes for
+fee bounds, payout evidence and conditional allocation. Verify live market
+evidence and installed full-slate publication separately.
 
 For retained-fixture diagnostics,
 `.venv/bin/python scripts/ci/export.py EMPTY_DESTINATION` copies tracked and
@@ -181,9 +185,10 @@ recorded. These workflows do not publish releases.
 | Area / product risk | Exact workflow / job / command | Event / platform | Policy | Reason / evidence |
 | --- | --- | --- | --- | --- |
 | Python behavior, API boundaries, accounting and recovery | CI / Offline checks / `sh scripts/check-ci` | PR, main, merge group, manual; Ubuntu 24.04 / Python 3.14 | Required | `suites.json`; fresh interpreter per module, JUnit, branch coverage and explicit archival exclusions |
+| Scanner venue fee and payout evidence | CI / Offline checks / `scanner-native-finance` group | Same | Required | Authored Kalshi and Polymarket receipts, fee and quantity bounds, conditional allocation when terminal settlement is unknown |
 | Browser logic, generated inputs and compilation | CI / Offline checks / `scripts/ci/run_checks.py` | Same; Node 24 | Required | Every client module classified; duplicate entries and unexplained omissions rejected; generated asset drift checked |
 | Lint, support formatting and workflow validation | CI / Source, security and package / Ruff, `actionlint -shellcheck=''`, `sh -n scripts/check-ci` | Same | Required | Parser/undefined-name policy for application; formatting for CI/browser support; Actions-aware expressions and inputs |
-| Financial persistence, migrations, expiry and cancellation | CI / PostgreSQL storage / SQL migrations and boards / `python scripts/ci/postgres.py` | Same; PostgreSQL 16 | Required | Temporary socket-only cluster; two disjoint shards, each with a 900-second test limit; 25-minute jobs allow install/start/report/cleanup; fresh report directory required |
+| Financial persistence, migrations, expiry and cancellation | CI / PostgreSQL storage / SQL migrations and boards / `python scripts/ci/postgres.py` | Same; PostgreSQL 16 | Required | Four disjoint shards use temporary socket-only clusters and a 900-second test limit. Each 25-minute job also covers install, startup, reporting and cleanup. |
 | Ordinary navigation, keyboard, errors and narrow layout | CI / Ordinary browser journey / `python -m pytest -q browser_tests` | Same; locked Chromium | Required | Authored intercepted board fixtures plus scanner/ticket loopback journeys; fixed fixture clock and displayed-read lease response |
 | Fresh distribution, imports, assets and HTTP startup | CI / Source, security and package / `python scripts/ci/package_smoke.py` | Same | Required | Publishable Git-listed source build excluding ignored local catalogs, wheel inventory, separate locked installation, no collector; current stored-dashboard landing page |
 | Secrets and dependency advisories | CI / Source, security and package / `secret_scan.py`, `pip_audit` | Same plus weekly dependency refresh | Required | Redacted current-tree Gitleaks with detection controls; CI/browser hash locks and the alternate `uv.lock` audited; scanner outages fail |
@@ -232,10 +237,11 @@ CodeQL default setup is managed by GitHub independently of these workflows. Loca
 checks cannot establish its current status; consult the repository's code-scanning
 results. No additional external coverage or reporting service is configured here.
 
-The storage workflow partitions registered SQL targets across two independent
-PostgreSQL jobs. Both must pass; a failed shard does not cancel the other. Local
-`postgres.py` runs the entire suite by default; use `--shard-index 1 --shard-count 2`
-(or index 2) to reproduce a CI partition. Each artifact includes its target list.
+The storage workflow partitions registered SQL targets across four independent
+PostgreSQL jobs. All must pass, and a failed shard leaves the others running.
+Local `postgres.py` runs the entire suite by default. Use
+`--shard-index 1 --shard-count 4` with index 1 through 4 to reproduce a CI
+partition. Each artifact includes its target list.
 Verbose test names and a thread dump after 120 seconds in one test help diagnose
 stalls. A process timeout records an explicit failure reason without inventing
 JUnit results for unfinished tests.
@@ -249,8 +255,9 @@ merge SHA, PR head and merge-group SHA; inspect the component artifacts for deta
 
 Package checks include authored Markdown, text, HTML and compressed evidence as
 well as code and structured assets. The clean installed smoke evaluates dated
-fee bindings and reviewed source rules, so missing model inputs fail even when
-imports succeed. Public-page fixtures have token-bearing fragments removed;
+fee bindings and reviewed source rules including the Kalshi NHL winner terms,
+so missing model inputs fail even when imports succeed. Public-page fixtures
+have token-bearing fragments removed.
 `app/fixtures/public-capture-redactions-20261028.json` records their provenance.
 
 Each portable check owns a temporary directory to keep pytest cleanup from
@@ -259,14 +266,13 @@ and are not dependencies of the source distribution.
 
 ## Current limitations
 
-Local publication/census, multisport, storage/delivery, capacity and two client
-contract checks have unresolved failures. Passing browser, package or support
-checks does not qualify the complete application. Keep the gates strict and use
-the failing test output to select focused repairs before rerunning the full suite.
-Hosted results must correspond to the source being reviewed.
+The October 28 checkpoint below records failures on earlier source. For the
+November 12 baseline commit `f70865d`, hosted CI passed source quality and all
+four PostgreSQL shards. The offline runner and browser journey failed. Compare
+new runs against the exact source being reviewed. [Hosted baseline run](https://github.com/dock108dev/predict/actions/runs/43339746245)
 
-The workflows do not enforce branch protection themselves. Administrators must
-require `CI readiness` in repository rules. CodeQL default setup is independently
+On November 12, GitHub reported no branch protection or active branch rules for
+`main`. Administrators can require `CI readiness` there. CodeQL default setup is independently
 configured; it is not part of this aggregation. No additional reporting service
 is required. Native summaries and artifacts remain in GitHub Actions; local
 Gitleaks CLI analysis does not upload source to a scanning service. pip-audit sends

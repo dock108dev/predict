@@ -1,6 +1,6 @@
 # Raw prices and original inputs
 
-The ordinary **Odds** view at `/odds` reads retained source-local books from SQL.
+The **Raw Odds** view at `/raw-odds` reads retained source-local books from SQL.
 It does not wait for matching or financial calculations. Filters select league,
 venue, family, period and available source states; search and pagination operate
 on the captured result. **Original inputs** shows source identifiers, original
@@ -9,8 +9,10 @@ values, quantities and clocks. Missing values are not rendered as zero.
 The raw list includes last-known and unusable observations with explicit states.
 Receipt time, provider time, write time and synchronization are different facts.
 Polling or recalculating cannot make an old price fresh. An optional captured
-calculation is associated with its exact input identity and does not grant
-current trading eligibility. See [calculation limits](benchmark-ev.md).
+calculation comes from an immutable member of the ordinary display generation.
+The raw read token pins that generation across pages. The result keeps its own
+captured inputs and clocks, which may differ from the selected raw observation.
+See [calculation limits](benchmark-ev.md).
 
 ## Price interpretation
 

@@ -19,8 +19,10 @@ JOURNAL_BYTE_CAP = 8 * GIB
 JOURNAL_RECORD_BYTE_CAP = 8 * MIB
 SQL_BYTE_CAP = 2 * GIB
 FREE_DISK_BYTE_FLOOR = GIB
-LATEST_WORKING_TABLES = ('data_runtime', 'data_runtime_command', 'scanner_latest',
-                        'latest_board', 'latest_dashboard', 'latest_board_status', 'coverage_latest')
+WRITER_TABLES = ('data_runtime', 'data_runtime_command', 'comparison_publication',
+                 'acquisition_receipt', 'native_book_revision', 'native_ladder_revision',
+                 'sgo_event_evidence', 'sgo_quote_revision', 'delivery_clock')
+WRITER_SEQUENCES = ('acquisition_failure_id',)
 
 
 def writer_subset_usage(db):
@@ -31,8 +33,8 @@ def writer_subset_usage(db):
         "FROM pg_tables WHERE schemaname='public' AND (left(tablename,8)='current_' OR tablename=ANY(%s)) "
         "UNION ALL SELECT pg_relation_size(c.oid) AS bytes FROM pg_class c "
         "JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' "
-        "AND c.relkind='S' AND left(c.relname,8)='current_') owned",
-        (list(LATEST_WORKING_TABLES),),
+        "AND c.relkind='S' AND (left(c.relname,8)='current_' OR c.relname=ANY(%s))) owned",
+        (list(WRITER_TABLES), list(WRITER_SEQUENCES)),
     ).fetchone()
     value = row['n']
     if value is None:

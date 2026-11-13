@@ -148,13 +148,15 @@ class PublicationRepairSQL(IsolatedAsyncioTestCase):
                                 (jsonb_populate_record(NULL::current_event,to_jsonb(e)||
                                 '{"id":"concurrent-event","native_event_id":"concurrent-event"}'::jsonb)).*
                                 FROM current_event e LIMIT 1""")
-                            writer.execute("""INSERT INTO current_contract SELECT
-                                (jsonb_populate_record(NULL::current_contract,to_jsonb(c)||
-                                '{"id":"concurrent-contract","event_id":"concurrent-event"}'::jsonb)).*
-                                FROM current_contract c LIMIT 1""")
-                            writer.execute("""INSERT INTO current_offer SELECT
-                                (jsonb_populate_record(NULL::current_offer,to_jsonb(o)||
-                                '{"contract_id":"concurrent-contract"}'::jsonb)).*
+                            writer.execute("""INSERT INTO current_contract
+                                (id,event_id,venue,native_market_id,native_outcome_id,native_side,facts,revision)
+                                SELECT 'concurrent-contract','concurrent-event',venue,native_market_id,
+                                       native_outcome_id,native_side,facts,revision FROM current_contract LIMIT 1""")
+                            writer.execute("""INSERT INTO current_offer
+                                (contract_id,price_value,price_units,quantity_units,source_at,
+                                 source_order,received_at,received_order,facts,revision)
+                                SELECT 'concurrent-contract',o.price_value,o.price_units,o.quantity_units,
+                                       o.source_at,o.source_order,o.received_at,o.received_order,o.facts,o.revision
                                 FROM current_offer o LIMIT 1""")
                 return result
         with self.connect() as db:
@@ -199,6 +201,7 @@ class PublicationRepairSQL(IsolatedAsyncioTestCase):
     setUpClass=classmethod(fixtures.LatestBoardSQL.setUpClass.__func__)
     tearDownClass=classmethod(fixtures.LatestBoardSQL.tearDownClass.__func__)
     asyncSetUp=fixtures.LatestBoardSQL.asyncSetUp
+    clear_source_state=fixtures.LatestBoardSQL.clear_source_state
     admit=fixtures.LatestBoardSQL.admit
     reconcile=fixtures.LatestBoardSQL.reconcile
     rows=fixtures.LatestBoardSQL.rows
@@ -342,7 +345,11 @@ class PublicationRepairSQL(IsolatedAsyncioTestCase):
             self.assertTrue(all(q['observation_display']['state']=='current' for q in board['prices']))
 
     async def test_observations_commit_before_optional_discovery_and_estimates(self):
-        self.fresh_sources();real=latest.discover;seen=[]
+        from app.storage import discovery_index
+
+        self.fresh_sources();real=discovery_index.prepare;seen=[]
+        with self.connect() as db:
+            self.assertTrue(latest.reconcile(db,at=self.at.isoformat(),observations_only=True)['published'])
         def delayed(*args,**kwargs):
             # An independent connection proves an actual committed publication
             # exists while the slow optional stage has not returned.
@@ -355,7 +362,7 @@ class PublicationRepairSQL(IsolatedAsyncioTestCase):
                 self.assertTrue(all(q['observation_display']['state']=='current' for q in odds['prices']))
             seen.append(True)
             return real(*args,**kwargs)
-        with patch.object(latest,'discover',side_effect=delayed):result=self.reconcile()
+        with patch.object(discovery_index,'prepare',side_effect=delayed):result=self.reconcile()
         self.assertTrue(seen);self.assertTrue(result['published'])
 
     async def test_candidate_add_remove_and_source_health_invalidate_immediately(self):

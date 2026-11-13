@@ -12,7 +12,7 @@ from unittest.mock import patch, MagicMock
 from aiohttp import web
 from aiohttp.test_utils import TestClient, TestServer
 
-from app.collection.runtime_client import RuntimeClient
+from tests.latest_board_fixture import RetainedBoardClient
 from app.storage import latest_board as latest
 from app.dashboard.comparison_board import entries
 from app.comparison.estimated_policy import DEFAULT_POLICY
@@ -45,7 +45,7 @@ class LatestBoardCapacitySQL(LatestBoardFixture):
                     record.setdefault('comparison_source_metadata',{})['original_wording']={'rules':('Authored '+token+' ').ljust(width,'x')}
             self.admit(records)
             with self.connect() as db:
-                db.execute('TRUNCATE latest_board,latest_board_status')
+                db.execute('TRUNCATE current_result_parent_original,latest_board,latest_board_status')
                 ctx=latest.read_context(db,at=self.at.isoformat())
                 observed=ctx.observation_bundles(game=self.first['game_key'])[0]
                 observed['calculation_context']=observation_identity(observed,ctx)
@@ -107,7 +107,7 @@ class LatestBoardCapacitySQL(LatestBoardFixture):
                     from app.collection.current_storage_policy import sql_usage
                     from app.collection.background_work import resident_bytes
                     import shutil
-                    provider=RuntimeClient(connector=self.connect)
+                    provider=RetainedBoardClient(connector=self.connect)
                     provider.acquire=MagicMock(side_effect=AssertionError('provider forbidden'))
                     app=web.Application();mount(app,provider)
                     with patch('app.dashboard.comparison_board_api.connect',side_effect=self.connect):
@@ -164,14 +164,14 @@ class LatestBoardCapacitySQL(LatestBoardFixture):
             self.assertIsNone(row['calculated_at'])
             self.assertIsNone(row['facts']['boards']['odds']['calculated_at'])
             self.assert_source_frame(latest.board(self.snapshot(),game,view='odds',filter='all'))
-        with self.connect() as db:db.execute('TRUNCATE latest_board,latest_board_status')
+        with self.connect() as db:db.execute('TRUNCATE current_result_parent_original,latest_board,latest_board_status')
         with patch('app.comparison.combined_inputs._benchmark',side_effect=ValueError('authored_benchmark_failure')):
             self.assertTrue(self.reconcile()['published'])
         for game in self.rows():self.assert_source_frame(latest.board(self.snapshot(),game,view='odds',filter='all'))
         for error in (CalculationStopped('stop'),MemoryError('process_guard'),TimeoutError('deadline'),
                       OSError('storage_failure'),ValueError('current_read_memory_capacity')):
             with self.subTest(error=type(error).__name__):
-                with self.connect() as db:db.execute('TRUNCATE latest_board,latest_board_status')
+                with self.connect() as db:db.execute('TRUNCATE current_result_parent_original,latest_board,latest_board_status')
                 with patch.object(latest,'_selection_payload',side_effect=error),self.assertRaises(type(error)):
                     with self.connect() as db:latest.reconcile(db,at=self.at.isoformat(),observations_only=True)
                 self.assertFalse(self.rows())

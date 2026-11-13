@@ -19,15 +19,34 @@ from app.storage.scanner_publication import subscribe, lookup
 
 INTERVAL_SECONDS = .25
 CAPTURE_TURN_SECONDS = 5
+FULL_SLATE_INTERVAL_SECONDS = 5
+
+
+def scanner_policy():
+    from dataclasses import replace
+
+    policy = load()
+    return replace(policy, sizing_mode='ceiling') if hasattr(policy, 'sizing_mode') else policy
+
+
+def scanner_marker(rows, config, states, policy, registry):
+    return digest(dict(rows=rows, config=config, states=states, engine=engine_binding(),
+                       policy=policy.to_dict(), registry=registry))
+
+
+def component_binding(policy, registry):
+    return digest(dict(engine=engine_binding(), policy=policy.to_dict(), registry=registry))
 
 
 class Scanner:
-    def __init__(self, provider, *, connector=connect, clock=utc, summary_path=None, durable=False):
+    def __init__(self, provider, *, connector=connect, clock=utc, summary_path=None, durable=False,
+                 full_slate_worker=False):
         self.provider=provider; self.connector=connector; self.clock=clock
         self.projection=Projection(clock=clock); self.task=None; self.wake=Event()
         self.closed=False; self.unsubscribe=None; self.marker=None; self.deadline=None
         self.continuation=None
         self.durable=durable; self.restored=False; self.persisted=None; self.error=None
+        self.full_slate_worker = full_slate_worker
         self.admission_status=None
         from app.storage.scanner_preparation import PreparationCache
         self.preparation=PreparationCache()
@@ -94,13 +113,10 @@ class Scanner:
                     self.database_proof=rows
                     self.capture_config=runtime['config']
                     self.capture_states=runtime['states']
-        policy=load()
-        from dataclasses import replace
-        if hasattr(policy,'sizing_mode'):policy=replace(policy,sizing_mode='ceiling')
-        marker=digest(dict(rows=rows,config=self.capture_config if self.durable else self.provider.config,
-                           states=self.capture_states if self.durable else self.provider.states,
-                           engine=engine_binding(),policy=policy.to_dict(),
-                           registry=self.preparation.registry(at=self.clock())))
+        policy = scanner_policy()
+        marker = scanner_marker(rows, self.capture_config if self.durable else self.provider.config,
+            self.capture_states if self.durable else self.provider.states, policy,
+            self.preparation.registry(at=self.clock()))
         return marker,policy
 
     def _set_deadline(self, frame, metadata):
@@ -126,6 +142,7 @@ class Scanner:
 
     def _once_background(self):
         from app.collection.background_work import BACKGROUND
+        from app.storage.scanner_latest import payload_size
         from app.storage.scanner_readiness import capture_reservation
         # A deterministic roster-cap refusal must not repeatedly hydrate/size
         # every matching component on each incoming book wake. Keep the guard,
@@ -146,8 +163,7 @@ class Scanner:
             self.capacity_retry_at=0
             required=capture_reservation(db)
             if not self.restored:
-                old=db.execute('SELECT octet_length(payload::text) n FROM scanner_latest WHERE singleton').fetchone()
-                required=max(required,(int(old['n'])*8 if old else 0)+16*1024*1024)
+                required=max(required,payload_size(db)*8+16*1024*1024)
         with BACKGROUND.claim('scanner',required) as lease:
             self.admission_status=dict(state='admitted' if lease else 'deferred',reason=lease.reason,
                 reserved_bytes=required,resident_bytes=lease.resident_bytes)
@@ -171,9 +187,9 @@ class Scanner:
 
     def _once_worker(self):
         if self.durable and not self.restored:
-            from app.storage.scanner_latest import restore
+            from app.storage.scanner_latest import read, restore
             with self.connector() as db:
-                old=db.execute('SELECT payload FROM scanner_latest WHERE singleton').fetchone()
+                old = read(db, payload_only=True)
             if old:restore(self.projection,old['payload'],economics_only=True)
             self.restored=True
         self._once()
@@ -247,6 +263,7 @@ class Scanner:
                 self.marker=None
                 with self.projection.lock:
                     self.projection.receipts.clear()
+                    self.projection.partial_receipts.clear()
                     self.projection._publish({}, 'captured_inputs_changed')
                 return
             # Reconcile against the latest detached proof before publishing a
@@ -267,6 +284,7 @@ class Scanner:
 
     async def run(self):
         from app.collection.background_work import optional_thread
+        from app.storage.scanner_latest import withdraw
         try:
             while not self.closed:
                 self.wake.clear()
@@ -288,7 +306,7 @@ class Scanner:
                     if self.durable:
                         try:
                             with self.connector() as db:
-                                db.execute('DELETE FROM scanner_latest WHERE runtime_id=%s',(self.provider.runtime_id,))
+                                withdraw(db, self.provider.runtime_id)
                         except Exception as secondary:
                             # Heartbeat/dependency/expiry guards remain independent.
                             failure(__name__, 'scanner_failure_withdrawal', secondary)
@@ -304,8 +322,53 @@ class Scanner:
         finally:
             self.projection.stop()
 
+    async def run_full_slate(self):
+        from app.collection.coverage_worker import run
+        from app.storage.scanner_latest import observe_publication
+        from app.storage.store import ROOT
+
+        def observe():
+            with self.connector() as db:
+                observe_publication(db, self.provider.runtime_id, self.summaries)
+
+        withdrew = False
+        while not self.closed:
+            self.wake.clear()
+            if self.stopped():
+                if not withdrew:
+                    await asyncio.to_thread(self._once_worker)
+                    withdrew = True
+            else:
+                withdrew = False
+                try:
+                    self.admission_status = dict(state='capturing', provider_requests=0)
+                    result = await run(self.stopped, root=ROOT, module='app.collection.scanner_worker',
+                                       arguments=(self.provider.runtime_id,))
+                    self.admission_status = dict(state='published' if result['published'] else 'deferred', **result)
+                    self.error = None
+                    if result['published']:
+                        try:
+                            await asyncio.to_thread(observe)
+                        except Exception as exc:
+                            failure(__name__, 'scanner_summary_publication', exc)
+                except AcquisitionDeferred as exc:
+                    self.admission_status = dict(state='deferred', reason=str(exc), provider_requests=0)
+                    self.error = None
+                except Exception as exc:
+                    failure(__name__, 'scanner_reconciliation', exc)
+                    self.error = type(exc).__name__
+            # The bounded child already measures a full slate. Do not restart
+            # its capture on each coalesced source wake.
+            for _ in range(round(FULL_SLATE_INTERVAL_SECONDS / INTERVAL_SECONDS)):
+                if self.closed or (not withdrew and self.stopped()):
+                    break
+                await asyncio.sleep(INTERVAL_SECONDS)
+
     def start(self):
         if self.task is None:
+            if self.full_slate_worker:
+                self.task = asyncio.create_task(self.run_full_slate())
+                return
             self.unsubscribe=subscribe(lambda observation:self.wake.set(),proof=not self.durable)
             self.task=asyncio.create_task(self.run())
 
@@ -332,6 +395,7 @@ class ScannerReader(Scanner):
         self.summaries=SummaryReader(self); self.value=None; self.loaded=None
         self.healthy=False; self.authority_until=None
         self.unavailable_reason=None; self.collection_stopped=False
+        self.publication_cursor = None
 
     def stopped(self):
         return (self.closed or self.collection_stopped or not self.healthy or self.authority_until is None
@@ -342,10 +406,12 @@ class ScannerReader(Scanner):
         if not self.stopped():return False
         self.loaded=None
         with self.projection.lock:
+            capture_only = bool(self.projection.frame and self.projection.frame.get('capture_only'))
             if self.closed or self.collection_stopped:
                 self.projection.stop()
-            elif (self.projection.state!='unavailable' or self.projection.stopped
-                  or self.projection.rows or self.projection.receipts or self.projection.cache
+            elif (self.projection.state!='unavailable' and not (capture_only and self.projection.state=='not_evaluated')
+                  or self.projection.stopped
+                  or self.projection.rows or self.projection.receipts or self.projection.partial_receipts or self.projection.cache
                   or self.projection.targets or self.projection.pending or self.projection.inputs):
                 # stopped() also guards unavailable proofs and dead heartbeats.
                 # Those failures clear every financial authority just as Stop
@@ -363,58 +429,106 @@ class ScannerReader(Scanner):
             self._refresh()
 
     def _refresh(self):
-        from dataclasses import replace
         from datetime import timedelta
         from app.collection.runtime_status import read_runtime, HEARTBEAT_SECONDS
-        from app.storage.scanner_latest import restore
+        from app.storage.scanner_latest import control, read, restore, retain_components
         from app.storage.scanner_publication import current_revision
         try:
             with self.connector() as db:
                 with db.transaction():
                     db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
                     runtime=read_runtime(db)
-                    row=db.execute('SELECT * FROM scanner_latest WHERE singleton').fetchone()
-                    proof=current_revision(db)
-            policy=load()
-            if hasattr(policy,'sizing_mode'):policy=replace(policy,sizing_mode='ceiling')
-            marker=digest(dict(rows=proof,config=runtime['config'],states=runtime['states'],
-                engine=engine_binding(),policy=policy.to_dict(),registry=self.preparation.registry(at=self.clock())))
-            value=None if row is None else row['payload']
+                    row = read(db)
+                    policy = scanner_policy()
+                    registry = self.preparation.registry(at=self.clock())
+                    value = None if row is None else row['payload']
+                    same_owner = (runtime['active'] and not runtime.get('global_stopped', False)
+                                  and row is not None and row['runtime_id'] == runtime['runtime_id']
+                                  and runtime.get('calculations', {}).get('scanner', 'running') == 'running')
+                    active = same_owner and row['runtime_revision'] == runtime['revision']
+                    component = value and value.get('component_authority')
+                    census_visible = False
+                    if component:
+                        epoch = db.execute('SELECT epoch FROM current_row_epoch').fetchone()['epoch']
+                        same_epoch = str(epoch) == str(value['epoch'])
+                        same_control = value.get('capture_control_revision') == digest(control(runtime))
+                        census_visible = same_owner and same_epoch and (active or same_control)
+                        exact_binding = component['binding'] == component_binding(policy, registry)
+                        retain_components(db, value, at=self.clock(), authorized=bool(active and same_epoch and exact_binding),
+                            runtime=runtime if census_visible and exact_binding else None)
+                        if census_visible and not exact_binding:
+                            value['errors'] = ['scanner_calculation_binding_changed']
+                        marker = None
+                    else:
+                        proof = current_revision(db)
+                        epoch = proof['epoch']
+                        marker = scanner_marker(proof, runtime['config'], runtime['states'], policy, registry)
             if value is not None:
                 from app.comparison.readiness_encoding import expand
                 value['frame']=expand(value['frame'])
             self.value=value
             self.capture_config=runtime['config']
             self.collection_stopped=bool(runtime.get('global_stopped',False))
-            valid=(runtime['active'] and not self.collection_stopped
-                   and row is not None and row['runtime_id']==runtime['runtime_id']
-                   and runtime.get('calculations',{}).get('scanner','running')=='running'
-                   and row['runtime_revision']==runtime['revision'] and value['source_marker']==marker
-                   and (value['deadline'] is None or instant(self.clock())<instant(value['deadline'])))
+            outcome_ids = set(value['receipts']) | set(value.get('partial_receipts', {})) if value else set()
+            valid=(census_visible and bool(outcome_ids)) if component else (active and value['source_marker']==marker
+                and (value['deadline'] is None or instant(self.clock())<instant(value['deadline'])))
+            identity = None if row is None else (row['runtime_id'], row['publication'], row['runtime_revision'],
+                row['published_at'], tuple(sorted(outcome_ids)) if valid else ())
+            prior = self.publication_cursor
+            if identity != prior:
+                self.publication_cursor = identity
+            cursor = max(self.projection.publication + (identity != prior), value['publication'] if value else 0)
             self.healthy=bool(valid)
             self.unavailable_reason=None if valid else 'background_publication_binding_unavailable'
             self.authority_until=((instant(runtime['heartbeat_at'])+timedelta(seconds=HEARTBEAT_SECONDS)).isoformat()
                                   if runtime['heartbeat_at'] else None)
             if not valid:
-                if value and value.get('capture_only') and row['runtime_id']==runtime['runtime_id']:
+                captured_publication_at = None
+                if (value and value.get('capture_only') and (census_visible or not component)
+                        and row['runtime_id']==runtime['runtime_id']
+                        and value['frame'] and str(value['frame']['epoch']) == str(epoch)):
                     # Keep the exact capture clock and full scope visible, but
                     # fail() below clears all financial/action authority.
                     if self.projection.capture_revision!=value['capture_revision']:
                         self.projection.fail('captured_inputs_changed')
                     self.projection.frame=deepcopy(value['frame'])
+                    self.projection.census=deepcopy(value.get('census'))
                     self.projection.frame['capture_only']=True
                     self.projection.capture_revision=value['capture_revision']
                     self.projection.last_capture_ms=value['last_capture_ms']
-                    self.projection.published_at=row['published_at']
+                    published_at = row['published_at']
+                    captured_publication_at = (published_at if isinstance(published_at, str)
+                                                else published_at.isoformat())
+                    self.projection.epoch = value['epoch']
+                    self.projection.server_id = value['server_id']
+                    self.projection.policy = policy
+                elif (self.projection.census is not None or self.projection.frame
+                      and str(self.projection.frame['epoch']) != str(epoch)):
+                    self.projection.frame = None
+                    self.projection.census = None
+                    self.projection.capture_revision = None
+                if not census_visible and self.projection.state == 'not_evaluated':
+                    self.projection.state = 'unavailable'
                 self.loaded=None; self._withdraw_if_stopped()
+                if (census_visible and value.get('capture_only') and self.projection.frame
+                        and str(self.projection.frame['epoch']) == str(epoch)):
+                    self.projection.state = 'not_evaluated'
+                    self.projection.errors = list(value['errors'])
+                if captured_publication_at is not None:
+                    self.projection.published_at = captured_publication_at
+                self.projection.publication = max(cursor, self.projection.publication)
                 return
-            identity=(row['runtime_id'],row['publication'],row['runtime_revision'],value['source_marker'],row['published_at'])
             if identity!=self.loaded or self.projection.stopped:
                 restore(self.projection,value)
+                published_at = row['published_at']
+                self.projection.published_at = published_at if isinstance(published_at,str) else published_at.isoformat()
+                self.projection.publication = cursor
                 self.value=value; self.loaded=identity
         except Exception as exc:
             failure(__name__, 'scanner_publication_read', exc)
             self.healthy=False; self.loaded=None; self.collection_stopped=False
+            if self.projection.state == 'not_evaluated':
+                self.projection.state = 'unavailable'
             self._withdraw_if_stopped()
             self.unavailable_reason='background_read_'+type(exc).__name__
 

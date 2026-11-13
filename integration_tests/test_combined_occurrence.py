@@ -5,7 +5,7 @@ import json
 import unittest
 from uuid import uuid4
 from psycopg import sql
-from app.storage.store import connect,Store,hashed
+from app.storage.store import connect,Store,hashed,open_retained
 from app.storage.current_games import GameStore,calculate,age_result
 from app.comparison.estimated_policy import DEFAULT_POLICY
 from app.comparison.combined_inputs import build, prepare
@@ -30,7 +30,7 @@ class CombinedStorage(unittest.TestCase):
     def setUpClass(cls):
         cls.name='prediction_arb_test_n01_'+uuid4().hex[:12]
         with connect() as db:db.execute(sql.SQL('CREATE DATABASE {}').format(sql.Identifier(cls.name)))
-        cls.db=connect(cls.name);Store(cls.db).migrate();cls.store=GameStore(cls.db)
+        cls.db=connect(cls.name);Store(cls.db).migrate();open_retained(cls.db);cls.store=GameStore(cls.db)
         cls.bundle=winner_bundle(retained()[0]['envelopes']);cls.key=cls.store.retain_combined(cls.bundle)
         cls.snapshot=cls.store.snapshot(cls.key,DEFAULT_POLICY)
         cls.result=calculate(cls.snapshot);cls.rid,published=cls.store.publish(cls.snapshot,cls.result);assert published

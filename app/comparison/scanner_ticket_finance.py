@@ -47,6 +47,8 @@ def calculate(pair, instruments, inputs, *, at, policy=DEFAULT_POLICY):
     keys=sorted(pair['legs'])
     if len(keys)!=2 or len(set(keys))!=2:
         raise ValueError('ticket_two_distinct_legs_required')
+    if any(inputs[key].get('native_execution') for key in keys):
+        raise ValueError('ticket_mandatory_state_cashflows_unknown')
     legs=[]
     for key in keys:
         checkpoint();x=inputs[key]

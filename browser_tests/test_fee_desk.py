@@ -231,6 +231,7 @@ def run(browser, width, output):
     tab.keyboard.press("Escape")
     expect(inspect).to_be_focused()
     tab.goto(base + "/current/coverage")
+    tab.get_by_text("Trading fee coverage", exact=True).click()
     expect(tab.locator("#fee-census")).to_contain_text("3 of 4 current offers")
     expect(tab.locator("#fee-census")).to_contain_text("5 working prices unpublished")
     expect(tab.locator("#fee-census")).to_contain_text(

@@ -108,6 +108,23 @@ class RawReads:
                 value.update(provider_requests=0,captured_at=frame['at'],source_status=raw_prices.source_information(owner,identity['venue']))
                 return value
 
+    def calculations(self, query):
+        from app.storage.raw_calculations import read
+        from app.storage.comparison_snapshot import SnapshotOperationError
+        with self.lock:
+            book = self.detail({k: v for k, v in query.items() if k not in ('outcome', 'side', 'offset')})
+            observation = next((row for row in book['observations']
+                                if row['outcome_id'] == query['outcome'] and row['side'] == query['side']), None)
+            if observation is None:
+                raise PublicRequestError('Unknown observation')
+            with self.snapshot_read(query['token']):
+                try:
+                    return read(self.frames[query['token']]['db'], book, observation, int(query.get('offset', 0)))
+                except SnapshotOperationError:
+                    # A bounded optional overlay refusal leaves the raw
+                    # repeatable-read snapshot available for price and depth.
+                    raise PublicRequestError('Captured calculation exceeds the read limit.') from None
+
 
 def mount(app):
     reads=RawReads(connect);gate=asyncio.Semaphore(4)
@@ -199,16 +216,8 @@ def mount(app):
     async def calculations(req):
         validate(req.query,True)
         if not req.query.get('outcome') or not req.query.get('side'):raise PublicRequestError('Exact native observation required')
-        def read():
-            from app.storage.raw_calculations import read as captured_results
-            book=reads.detail(dict(req.query))
-            observation=next((o for o in book['observations'] if o['outcome_id']==req.query['outcome'] and o['side']==req.query['side']),None)
-            if observation is None:raise PublicRequestError('Unknown observation')
-            with connect() as db,db.transaction():
-                db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
-                return captured_results(db,book,observation,int(req.query.get('offset',0)))
         if gate.locked():raise web.HTTPTooManyRequests()
-        async with gate:value=await joined(read)
+        async with gate:value=await joined(reads.calculations,dict(req.query))
         return web.json_response(value)
 
     app.router.add_get('/api/raw/calculations',calculations)

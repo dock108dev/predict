@@ -209,7 +209,8 @@ def source_rules(*, detached=True):
     paths = list(roots)
     for rule in result:
         evidence = rule.get('evidence') or {}
-        for item in (evidence,evidence.get('pointer_evidence') or {},*evidence.get('supporting_evidence',[])):
+        for item in (evidence,evidence.get('pointer_evidence') or {},evidence.get('series_response') or {},
+                     *evidence.get('supporting_evidence',[])):
             if item.get('path'):
                 path = ROOT / item['path']
                 if path not in paths:
@@ -255,8 +256,27 @@ def _build_source_rules():
         if len(selected) == 1:
             shared = selected[0];evidence = shared.get('evidence')
             available = False
-            if isinstance(evidence, dict) and evidence.get('contract_terms_url') == row['contract_terms_url']:
+            if isinstance(evidence, dict):
                 try:
+                    terms_url = row['contract_terms_url']
+                    if evidence.get('series_response'):
+                        receipt = evidence['series_response']
+                        receipt_path = Path(receipt['path'])
+                        if receipt_path.is_absolute() or '..' in receipt_path.parts:
+                            raise ValueError('Local series terms pointer required')
+                        receipt_body = (ROOT / receipt_path).read_bytes()
+                        if len(receipt_body) > 256 * 1024 or sha256(receipt_body).hexdigest() != receipt['sha256']:
+                            raise ValueError('Local series terms pointer changed')
+                        review = json.loads(receipt_body)
+                        series = review['series'][row['series_ticker']]
+                        native = series['response']['series']
+                        if (native['ticker'] != row['series_ticker'] or series['league'] != row['sport']
+                                or series['family'] != row['family'] or series['period'] != row['period']):
+                            raise ValueError('Series terms scope conflict')
+                        instant(evidence['reviewed_at'])
+                        terms_url = native['contract_terms_url']
+                    if evidence.get('contract_terms_url') != terms_url:
+                        raise ValueError('Source terms pointer mismatch')
                     path = Path(evidence['path'])
                     if path.is_absolute() or '..' in path.parts:
                         raise ValueError('Local source evidence required')
@@ -279,12 +299,13 @@ def _build_source_rules():
                         governing = json.loads(pointer_body)['governing_terms']
                         available &= (sha256(pointer_body).hexdigest() == pointer['sha256'] and
                             governing['current_series_id'] == row['series_ticker'] and
-                            governing['contract_terms_url'] == row['contract_terms_url'] and
+                            governing['contract_terms_url'] == terms_url and
                             governing['sha256'] == evidence['sha256'])
                 except (OSError, ValueError, KeyError, TypeError):
                     available = False
             rule.update(evidence=deepcopy(evidence),evidence_available=available)
             if available:
+                rule['contract_terms_url'] = terms_url
                 rule.update(shared['defaults'])
         rules.append(rule)
     us_defaults = authored.get('polymarket_us_game_defaults', {})
@@ -330,7 +351,7 @@ def _rule_for(record):
 
 def resolve(record, *, at):
     """Resolve reusable source rules plus this observation's structured facts."""
-    instant(at)
+    moment = instant(at)
     q = record['quote'];event = record['event'];market = record['market_identity']
     meta = record.get('comparison_source_metadata', {})
     terms = (meta.get('combined_native_binding') or {}).get('original_terms')
@@ -381,6 +402,11 @@ def resolve(record, *, at):
     if market.get('period') is None:
         missing.append('period')
     rule = _rule_for(record)
+    if rule and (rule.get('evidence') or {}).get('series_response') and rule.get('evidence_available'):
+        # A newly reviewed official series pointer is prospective. A held
+        # result may still retain its original classification and evidence.
+        if moment < instant(rule['evidence']['reviewed_at']):
+            rule = dict(rule, overtime='unknown', shootout='unknown', evidence=None, evidence_available=False)
     if rule is None:
         if market.get('period') is None or meta.get('series_id') is None and q['venue'] == 'kalshi':
             missing.append('source_type_rule')

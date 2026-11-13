@@ -44,16 +44,61 @@ class RawPrices(TestCase):
         finally:reads.close()
 
     def test_aggregate_alternates_invalid_values_and_delete(self):
+        from app.storage.aggregate_receipts import save
+        from app.storage.store import now
+
         event=dict(id='raw-alternate',away_team='A',home_team='B',bookmakers=[dict(key='novig',markets=[dict(key='alternate_spreads',outcomes=[dict(name='A',point='-2.5',price='NaN'),dict(name='A',point='-3.5',price='2.0')])])])
         with self.connect() as db:
-            db.execute('INSERT INTO current_acquisition_alternate VALUES (%s,%s,now(),%s,%s,%s,%s)',('NFL',event['id'],'cycle','hash','pending',Jsonb(event)))
+            save(db, kind='alternate', sport='NFL', event_id=event['id'], received_at=now(),
+                 cycle_id='cycle', receipt_sha256='hash', disposition='pending', payload=event)
             rows=raw_prices.page(db,dict(event_id=event['id']),0,100,{})
             self.assertEqual(len(rows),1)
             self.assertEqual(len(rows[0]['observations']),2)
             self.assertEqual(rows[0]['observations'][0]['disposition'],'invalid_price')
             self.assertEqual(rows[0]['financial']['state'],'unavailable')
-            db.execute('DELETE FROM current_acquisition_alternate WHERE event_id=%s',(event['id'],))
+            db.execute("DELETE FROM current_aggregate_receipt WHERE provider='the_odds_api' AND kind='alternate' AND event_id=%s",(event['id'],))
             self.assertEqual(raw_prices.total(db,dict(event_id=event['id'])),0)
+
+    def test_aggregate_receipt_upgrade_preserves_scope_and_raw_display(self):
+        from uuid import uuid4
+        from psycopg import sql
+        from app.storage.store import Store
+
+        name = 'prediction_arb_aggregate_upgrade_' + uuid4().hex[:8]
+        featured = dict(id='f', away_team='Away', home_team='Home',
+                        bookmakers=[dict(key='novig', last_update='2026-11-10T21:00:00Z',
+                                         markets=[dict(key='h2h', outcomes=[dict(name='Home', price='2.01')])])])
+        alternate = dict(id='a', away_team='Away', home_team='Home',
+                         bookmakers=[dict(key='pinnacle', last_update='2026-11-10T21:00:10Z',
+                                          markets=[dict(key='alternate_spreads',
+                                                        outcomes=[dict(name='Away', point='1.5', price='2.08')])])])
+        featured_payload = dict(events=[featured], dispositions=[{'source': 'legacy'}])
+        census_payload = [{'id': 'f'}, {'id': 'a'}]
+        receipt = '2026-11-10T21:00:17Z'
+        with self.connect('prediction_arb') as control:
+            control.execute(sql.SQL('CREATE DATABASE {}').format(sql.Identifier(name)))
+            try:
+                with self.connect(name) as db:
+                    Store(db).migrate(through='083_publication_member_order.sql')
+                    db.execute('INSERT INTO current_acquisition_aggregate VALUES (%s,%s,%s)',
+                               ('NFL', receipt, Jsonb(featured_payload)))
+                    db.execute('INSERT INTO current_acquisition_alternate VALUES (%s,%s,%s,%s,%s,%s,%s)',
+                               ('NFL', 'a', receipt, 'cycle', 'alternate-digest', 'admitted_exact_lines', Jsonb(alternate)))
+                    db.execute('INSERT INTO current_acquisition_event_census VALUES (%s,%s,%s,%s,%s)',
+                               ('NFL', 'cycle', receipt, 'census-digest', Jsonb(census_payload)))
+                    before = db.execute('SELECT * FROM raw_aggregate_display ORDER BY kind').fetchall()
+                    Store(db).migrate(through='089_acquisition_receipts.sql')
+                    self.assertEqual(db.execute('SELECT * FROM raw_aggregate_display ORDER BY kind').fetchall(), before)
+                    rows = {r['kind']:r for r in db.execute('SELECT * FROM current_aggregate_receipt').fetchall()}
+                    self.assertEqual({kind:r['payload'] for kind,r in rows.items()},
+                        dict(featured=featured_payload, alternate=alternate, census=census_payload))
+                    self.assertEqual({kind:r['receipt_sha256'] for kind,r in rows.items()},
+                        dict(featured=None, alternate='alternate-digest', census='census-digest'))
+                    from datetime import datetime
+                    self.assertEqual({r['received_at'] for r in rows.values()}, {datetime.fromisoformat(receipt)})
+                    self.assertEqual(db.execute("SELECT relkind FROM pg_class WHERE oid='raw_aggregate_display'::regclass").fetchone()['relkind'], 'v')
+            finally:
+                control.execute(sql.SQL('DROP DATABASE {}').format(sql.Identifier(name)))
 
     def test_sync_is_independent_of_old_price_and_revoked_on_generation(self):
         row=dict(kind='native',venue='kalshi',runtime_id='r',connection_generation=2,census_generation='c',generation='c',withdrawn=False,market_id='m',disposition='pending')
@@ -184,12 +229,13 @@ class CapturedAssociation(TestCase):
         self.assertFalse(matches(p,b,dict(o,side='bids')))
         self.assertFalse(matches(p,b,dict(o,native_side='no')))
         self.assertFalse(matches(dict(p,original=dict(transformation='one_minus_native_bid')),b,o))
-        class DB:
-            def execute(self,query,args=()):
-                self.value=dict(games=[dict(game_key='g',members=[['kalshi','e']])]) if 'latest_board_status' in query else dict(board=dict(prices=[p],rows=[dict(quote_id='q',metric='captured')],calculated_at='old',policy={'revision':'old-policy'},calculation_context={'input':'old'}) if args[0]=='ev' else None)
-                return self
-            def fetchone(self):return self.value
-        result=read(DB(),b,o)
+        from app.storage import ordinary_evidence as evidence
+        row=dict(p,id='r',game_key='g')
+        member=dict(id='result',snapshot_id='capture',rows=[row],pairs=[],
+                    captured_at='old',calculated_at='old',assumptions={'revision':'old-policy'})
+        index={evidence.event_id(dict(provider='kalshi',native_event_id='e')):[{'member_id':'result'}]}
+        with patch.object(evidence,'members',return_value=index), patch.object(evidence,'read_member',return_value=member):
+            result=read(None,b,o)
         self.assertEqual(result['state'],'captured_result')
         self.assertFalse(result['results'][0]['current_eligibility'])
         self.assertEqual(result['results'][0]['captured_inputs'][0]['times']['received_at'],'old')

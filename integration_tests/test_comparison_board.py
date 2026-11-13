@@ -17,7 +17,7 @@ from app.storage.comparison_board import (
 )
 from app.storage.current_games import GameStore
 from app.storage.current_rows import CurrentRowStore, contract_id
-from app.storage.store import connect, Store
+from app.storage.store import connect, open_retained, Store
 from tests.test_ev09_n01 import retained, envelopes, AT, SELECTED
 
 
@@ -89,7 +89,7 @@ class ComparisonBoardSQL(unittest.TestCase):
         for table in ('current_envelope', 'current_game_snapshot', 'current_game_result',
                       'current_calculation_attempt', 'current_import_cursor'):
             self.assertEqual(self.db.execute(sql.SQL('SELECT count(*) n FROM {}').format(
-                sql.Identifier(table))).fetchone()['n'], 0)
+                sql.Identifier('retained', table))).fetchone()['n'], 0)
 
     def test_archive_entry_points_fail_explicitly(self):
         for reader in (capture, saved):
@@ -165,7 +165,7 @@ class ComparisonBoardSQL(unittest.TestCase):
                                        database=SimpleNamespace(status=lambda: dict(state='available')))
             app = web.Application()
             mount(app, provider)
-            with patch('app.dashboard.comparison_board_api.connect', side_effect=lambda: connect(self.name)), \
+            with patch('app.dashboard.comparison_board_api.connect', side_effect=lambda: open_retained(connect(self.name))), \
                  patch('app.dashboard.comparison_board_api.calculate_current', side_effect=AssertionError('requests cannot publish missing background results')), \
                  patch('app.collection.current_account_recovery.observe_and_activate', side_effect=AssertionError('no acquisition')), \
                  patch('httpx.Client.send', side_effect=AssertionError('no provider traffic')):

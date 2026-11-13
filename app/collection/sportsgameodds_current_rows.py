@@ -9,12 +9,21 @@ from app.dashboard.session_projection import stable
 from app.normalization.college_registry import aggregate_registry
 from app.storage.schedule_metadata import VERSION as SCHEDULE_VERSION
 from app.storage.store import hashed
+from .sportsgameodds_adapter import PROPHETX_BOOKMAKER_ID
 
 SPORTS = {'NFL': 'american_football', 'NCAAF': 'american_football', 'NBA': 'basketball',
           'NCAAB': 'basketball', 'MLB': 'baseball', 'NHL': 'ice_hockey'}
-# Provider IDs are not crosswalked to native identities. In particular the
-# provider's 'polymarket' is not established as Polymarket US.
-CURRENT_VENUES = frozenset(('novig', 'prophetx', 'pinnacle', 'kalshi'))
+# Map bookmaker display names while retaining the original SGO quote identity.
+# The provider's 'polymarket' is not established as Polymarket US.
+CURRENT_VENUES = frozenset(('novig', PROPHETX_BOOKMAKER_ID, 'prophetx', 'pinnacle', 'kalshi'))
+
+
+def display_venue(bookmaker_id):
+    return 'prophetx' if bookmaker_id == PROPHETX_BOOKMAKER_ID else bookmaker_id
+
+
+def source_bookmaker(record):
+    return (record.get('comparison_source_metadata') or {}).get('provider_bookmaker_id', record['quote']['venue'])
 
 
 def linked_event_ids(links):
@@ -54,15 +63,21 @@ def current_rows(page, receipt_sha256):
             if quote['market'] == 'spread' and quote['side'] == 'away':
                 value = -value
             line = '0' if value == 0 else str(value.normalize())
-        key = (quote['event_id'], quote['venue'], quote['market'], line)
-        groups.setdefault(key, []).append(quote)
-    batches = []
-    for (event_id, venue, family, _line), quotes in groups.items():
-        if len({q['side'] for q in quotes}) != len(quotes):
+        venue = display_venue(quote['venue'])
+        key = (quote['event_id'], venue, quote['market'], line)
+        side = quote['side']
+        sides = groups.setdefault(key, {})
+        source_side = (quote['venue'], side)
+        if source_side in sides:
             raise ValueError('duplicate same-side price at line')
+        sides[source_side] = quote
+    batches = []
+    for (event_id, venue, family, _line), source_sides in groups.items():
+        # Prefer one feed for the whole line when both spellings are present.
+        bookmaker = PROPHETX_BOOKMAKER_ID if any(k[0] == PROPHETX_BOOKMAKER_ID for k in source_sides) else venue
+        by_side = {side: quote for (book, side), quote in source_sides.items() if book == bookmaker}
         sides = ('over', 'under') if family == 'total' else ('home', 'away')
-        by_side = {q['side']: q for q in quotes}
-        pair = len(by_side) == len(quotes) == 2 and set(by_side) == set(sides)
+        pair = set(by_side) == set(sides)
         if pair:
             a, b = (by_side[side] for side in sides)
             pair = a['odd_id'] == b['opposing_odd_id'] and b['odd_id'] == a['opposing_odd_id']
@@ -74,7 +89,7 @@ def current_rows(page, receipt_sha256):
         # erase a displayed source price. Each unmatched side gets its own
         # unverified group and an empty opposite-outcome descriptor.
         batches.extend([(event_id, venue, family, list(by_side.values()), True)] if pair else
-                       [(event_id, venue, family, [q], False) for q in quotes])
+                       [(event_id, venue, family, [q], False) for q in by_side.values()])
     result = []
     for event_id, venue, family, quotes, paired in batches:
         event = events[event_id]
@@ -164,6 +179,8 @@ def current_rows(page, receipt_sha256):
                            provider_source_clock_original=quote['source_at_original'],
                            provider_opposing_odd_id=quote['opposing_odd_id']),
                        event_scope=dict(policy='sgo-provider-event-unverified-1', source='sportsgameodds', native_event_id=event_id))
+            if venue != quote['venue']:
+                row['comparison_source_metadata']['provider_bookmaker_id'] = quote['venue']
             if market_link := quote.get('bookmaker_market_link'):
                 row['comparison_source_metadata']['bookmaker_market_link'] = market_link.copy()
             if quote.get('alternate') is True:
@@ -173,6 +190,8 @@ def current_rows(page, receipt_sha256):
                            quote['opposing_odd_id'], policy, event['aliases'], event['status'], event['phase']]
             if market_link:
                 fingerprint.append(market_link)
+            if venue != quote['venue']:
+                fingerprint.append(quote['venue'])
             if quote.get('alternate') is True:
                 fingerprint.append('alternate')
             row['_fingerprint'] = stable(fingerprint)

@@ -45,7 +45,7 @@ def dashboard_guard(current_provider, *, logger):
                     dict(
                         error="current_state_transport_retired",
                         reason="Use current SQL comparison boards and their revision-bound Details.",
-                        current_api="/api/boards/slate",
+                        current_api="/api/comparison-current",
                         current_url="/",
                         provider_requests=0,
                     ),

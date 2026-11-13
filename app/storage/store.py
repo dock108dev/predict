@@ -44,6 +44,12 @@ def connect(database='prediction_arb'):
         options='-c statement_timeout=30000 -c lock_timeout=5000')
 
 
+def open_retained(db):
+    """Explicit schema boundary for supported historical commands."""
+    db.execute('SET search_path = public, retained')
+    return db
+
+
 @dataclass(frozen=True)
 class CapturePolicy:
     max_receipts: int = 1000

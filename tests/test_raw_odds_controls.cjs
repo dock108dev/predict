@@ -8,7 +8,7 @@ for(const match of html.matchAll(/id="([^"]+)"/g)){const el=new Element('div');e
 const el=id=>document.getElementById(id);
 const pending=[];
 const context={document,URLSearchParams,Map,Date,JSON,Math,Number,String,Error,
- window:{addEventListener(){}},location:{search:'?sport=NFL'},history:{replaceState(){}},
+ window:{addEventListener(){}},location:{search:'?sport=NFL&period=full_game'},history:{replaceState(){}},
  Option:function(label,value){const n=new Element('option');n.value=value;n.textContent=label;return n;},
  requestAnimationFrame:fn=>fn(),setInterval(){},fetch:url=>new Promise(resolve=>pending.push({url,resolve}))};
 let source=fs.readFileSync('app/dashboard/opportunity_static/current/raw-odds.js','utf8').replace(/^import .*\n/,'');
@@ -19,6 +19,7 @@ const reply=async(value,ok=true)=>{pending.shift().resolve({ok,json:async()=>val
 (async()=>{
  assert.equal(el('content').attributes['aria-busy'],'true');
  assert(el('next').disabled&&el('refresh').disabled);
+ assert.equal(el('extra-filters-label').textContent,'More filters (1)');
  await reply({error:'offline'},false);
  assert(el('status').textContent.includes('could not load'));
  assert(!el('status').textContent.includes('Displayed values'));
@@ -33,6 +34,7 @@ const reply=async(value,ok=true)=>{pending.shift().resolve({ok,json:async()=>val
  assert(el('status').textContent.includes('last-known'));
  el('clear-filters').onclick();assert(!pending[0].url.includes('sport='));assert(pending[0].url.includes('offset=0'));
  await reply(page());assert(el('clear-filters').disabled);
+ assert.equal(el('extra-filters-label').textContent,'More filters');
  const book=context.renderBook({id:'book',title:'Away at Home',venue:'kalshi',sport:'NFL',family:'moneyline',period:'full_game',kind:'native',status:'synchronized',event_id:'event',observations:[{id:'yes',label:'Home',native_side:'yes',side:'asks',price:'0.5',units:'USD'}]});
  assert.equal(book.querySelector('button').attributes['aria-label'],'Original inputs for Away at Home, Kalshi, Home, yes asks');
  assert(!html.includes('id="sort-setting"'));assert(!html.includes('data-filter='));

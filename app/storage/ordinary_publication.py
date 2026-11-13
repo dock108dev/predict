@@ -17,6 +17,7 @@ from . import comparison_snapshot as snapshots
 from .store import hashed, stamp
 from .current_games import utc
 from .current_rows import contract_id
+from .comparison_policy import read as current_settings
 from .ordinary_projection import (
     compact_member, compact_row, counts, without_finance,
     project as project, source_allowed as source_allowed, validity as validity,
@@ -24,6 +25,7 @@ from .ordinary_projection import (
 from .ordinary_scheduling import (
     awaiting_aggregate, captured_aggregate_receipts, prioritize_current, receipt_watermarks, sgo_live_deliveries,
 )
+from app.comparison.display_identity import canonical_key
 from app.comparison.source_clock import assess
 from app.comparison.sgo_reference import BEST_BOOKS, BEST_VERSION
 from app.fees import schedule_lifecycle
@@ -35,7 +37,20 @@ MAX_BYTES = 128 * 1024 * 1024
 POLICY_ROOT = Path(__file__).resolve().parents[2]
 
 
-def policy_identity():
+def aggregate_provider(db=None, *, owner=None):
+    """Use the committed collection config when a data owner has published it."""
+    if owner is None and db is not None:
+        row = db.execute("SELECT config->>'aggregate_provider' AS provider FROM data_runtime WHERE singleton").fetchone()
+        if row and row['provider']:
+            return row['provider']
+    provider = (owner or {}).get('config', {}).get('aggregate_provider')
+    if provider:
+        return provider
+    from app.collection.current_policy import DEFAULT, load
+    return DEFAULT['aggregate_provider'] if db is not None or owner is not None else load()['aggregate_provider']
+
+
+def policy_identity(provider=None):
     # Content, not file mtime: a read/restart cannot renew model authority.
     from .current_games import engine_binding, observation_binding
     paths = sorted((POLICY_ROOT / 'app/fixtures').glob('*conditional-fees*.json'))
@@ -49,8 +64,11 @@ def policy_identity():
         POLICY_ROOT/'app/storage/capture_materialization.py',
         POLICY_ROOT/'app/storage/capture_price.py',POLICY_ROOT/'app/storage/member_packet.py',
         POLICY_ROOT/'app/storage/ordinary_fragments.py',
-        POLICY_ROOT/'app/storage/ordinary_projection.py',
+        POLICY_ROOT/'app/storage/ordinary_projection.py', POLICY_ROOT/'app/storage/comparison_policy.py',
         POLICY_ROOT/'app/comparison/conditional_benchmark.py',
+        POLICY_ROOT/'app/comparison/snapshot_conservative.py', POLICY_ROOT/'app/comparison/snapshot_fee_outcome.py',
+        POLICY_ROOT/'app/comparison/display_identity.py',
+        POLICY_ROOT/'app/comparison/ordinary_arb.py',
         POLICY_ROOT/'app/comparison/game_phase.py',
         POLICY_ROOT/'app/dashboard/snapshot_api.py',
         POLICY_ROOT/'app/comparison/line_reference.py',
@@ -68,7 +86,6 @@ def policy_identity():
             if not evidence.is_absolute():evidence=POLICY_ROOT/evidence
             if evidence.exists():paths.append(evidence)
         except (ValueError,KeyError,TypeError):pass
-    from app.collection.current_policy import load as current_policy
     paths += [POLICY_ROOT/'app/comparison/sgo_reference.py', POLICY_ROOT/'app/comparison/sgo_reference_publication.py',
               POLICY_ROOT/'app/comparison/sgo_fair_display.py', POLICY_ROOT/'app/storage/sportsgameodds_reference.py',
               POLICY_ROOT/'app/comparison/sgo_native_binding.py',
@@ -77,7 +94,7 @@ def policy_identity():
               POLICY_ROOT/'app/comparison/sgo_rule_evidence.py', POLICY_ROOT/'app/comparison/sgo_median_publication.py',
               POLICY_ROOT/'app/fixtures/sgo-reviewed-market-rules-20261110.json',
               POLICY_ROOT/'app/fixtures/sgo-reviewed-jurisdiction-bindings.json']
-    return hashed([VERSION, snapshots.ORDINARY_ARB_POLICY, engine_binding(), observation_binding(), current_policy()['aggregate_provider'],
+    return hashed([VERSION, snapshots.ORDINARY_ARB_POLICY, engine_binding(), observation_binding(), provider or aggregate_provider(),
                    [(str(p.relative_to(POLICY_ROOT)) if p.is_relative_to(POLICY_ROOT) else str(p), sha256(p.read_bytes()).hexdigest()) for p in paths]])
 
 
@@ -148,9 +165,8 @@ def pregame_sportsbooks(db, owner, states, at, *, frames=None):
     return matches
 
 
-def dependencies(db, event_ids=None, *, sportsbook_rows=None, catalog_rows=None):
-    from app.collection.current_policy import load as current_policy
-    frames = (current_policy()['aggregate_provider']=='sportsgameodds' and
+def dependencies(db, event_ids=None, *, sportsbook_rows=None, catalog_rows=None, provider=None):
+    frames = ((provider or aggregate_provider(db))=='sportsgameodds' and
         bool(db.execute("SELECT to_regclass('public.current_sgo_event_frame') AS name").fetchone()['name']))
     frame_join = "LEFT JOIN current_sgo_event_frame f ON e.provider='sportsgameodds' AND f.event_id=e.native_event_id" if frames else ''
     receipt = "concat(o.revision,':',o.received_at,':',coalesce(f.facts->>'receipt_sha256',''))" if frames else "concat(o.revision,':',o.received_at)"
@@ -216,8 +232,7 @@ def owned_refresh(owner, quota):
 
 
 def authority(db, *, at=None):
-    from app.collection.runtime_status import read_runtime
-    from .latest_board import source_states
+    from app.collection.runtime_status import read_runtime, source_states
     owner = dict(read_runtime(db, at=at), fee_lifecycle=schedule_lifecycle.read(db),
                  fee_products=product_schedules.read_all(db))
     committed={r['venue']:r['state'] for r in db.execute('SELECT venue,state FROM current_source_status')}
@@ -361,7 +376,7 @@ def bind(result, inputs, finance):
             from app.comparison.snapshot_metrics import statuses
             statuses(row)
         fee = row.get('conditional_trade_benchmark', {}).get('evidence', {})
-        if source.get('provider') == 'sportsgameodds':
+        if source.get('provider') == 'sportsgameodds' and row['venue'] != 'prophetx':
             row['trade_fee'] = unavailable('sgo_offer_native_contract_unverified')
             binding = original.get('sgo_native_contract')
             if binding:
@@ -439,6 +454,8 @@ def bind(result, inputs, finance):
             row['current_authority']['sgo_native_contract'] = catalog_authority
         if row.get('reference_calculation',{}).get('available'):
             row['reference_calculation']=dict(row['reference_calculation'],authority=witnesses)
+        display_key = canonical_key(row)
+        row['display_outcome_key'] = list(display_key) if display_key is not None else None
         row['settings_revision'] = result['assumptions']['revision']
         # Confirmation clocks and publication IDs are deliberately excluded.
         row['price_revision'] = hashed([row['id'], row['original']])
@@ -448,6 +465,18 @@ def bind(result, inputs, finance):
             row.get('conditional_return_percent'),row.get('conservative_return_percent'),
             row.get('conservative_trade_benchmark',{}).get('evidence'),fee, result['assumptions']['revision'],
             row.get('trade_fee'), (row.get('reference_calculation') or {}).get('basis_sha256'), inputs['policy_identity']])
+    if result['pairs']:
+        from app.comparison.ordinary_arb import DEFAULT_FUNDING, evaluate, fee_identity
+
+        rows = {row['id']: row for row in result['rows']}
+        for pair in result['pairs']:
+            proof = pair.get('before_fees')
+            if proof and all(leg in rows for leg in pair['legs']):
+                legs = [dict(rows[leg], captured_at=inputs['captured_at'],
+                             game_state=rows[leg]['current_authority']['price'].get('lifecycle', {}).get('state'))
+                        for leg in pair['legs']]
+                pair['default_funding_result'] = evaluate(proof, legs, DEFAULT_FUNDING)
+                pair['default_funding_fee_identity'] = fee_identity(legs)
     result['publication'] = dict(schema=VERSION, finance=finance, policy=inputs['policy_identity'],
         epoch=inputs['epoch'], captured_at=inputs['captured_at'], provider_requests=0)
     counts(result)
@@ -455,32 +484,35 @@ def bind(result, inputs, finance):
 
 
 def status(db):
-    row = db.execute('SELECT generation,result_id,facts FROM comparison_live_head WHERE singleton').fetchone()
-    return row
+    return db.execute("SELECT generation,result_id,facts FROM comparison_publication WHERE kind='live' AND id=''").fetchone()
 
 
 def retained_bytes(db):
     return db.execute('''SELECT
-        (SELECT COALESCE(sum(octet_length(result)),0) FROM comparison_snapshot_result WHERE automatic) +
-        (SELECT COALESCE(sum(octet_length(inputs)),0) FROM comparison_snapshot WHERE automatic) +
-        (SELECT COALESCE(sum(octet_length(content)),0) FROM comparison_live_read_fragment) n''').fetchone()['n']
+        (SELECT COALESCE(sum(CASE WHEN automatic THEN octet_length(result) ELSE 0 END
+            + COALESCE(octet_length(read_fragment),0)::bigint),0) FROM comparison_snapshot_result) +
+        (SELECT COALESCE(sum(octet_length(inputs)),0) FROM comparison_snapshot WHERE automatic) n''').fetchone()['n']
 
 
 def compact_retention(db, required):
     """Recover encoding headroom without changing a single retained JSON byte.
 
     Older level-three blobs can strand two component generations behind the head.
-    Re-encode one blob at a time under the publication lock, including leased
-    evidence: identities, contents, clocks and leases do not change. This is
-    storage maintenance, not evidence pruning or permission to exceed a cap.
+    Re-encode one blob at a time under the publication lock. Preserve the
+    physical bytes of explicit review pins and their inputs. Leased evidence
+    keeps exact decoded contents, identities and clocks when re-encoded.
     """
     from app.collection.current_storage_policy import SQL_BYTE_CAP, sql_usage
     from .storage_maintenance import REWRITE_RUNWAY_BYTES
     retained = retained_bytes(db)
     if retained + required <= MAX_BYTES:
         return
-    for table, column in (('comparison_snapshot', 'inputs'), ('comparison_snapshot_result', 'result')):
-        sizes = db.execute(f'SELECT id,octet_length({column}) size FROM {table} WHERE automatic ORDER BY 2 DESC').fetchall()
+    pinned_results = "SELECT result_id FROM comparison_result_reference WHERE kind='review'"
+    pinned_inputs = f"SELECT snapshot_id FROM comparison_snapshot_result WHERE id IN ({pinned_results})"
+    for table, column, pinned in (('comparison_snapshot', 'inputs', pinned_inputs),
+                                  ('comparison_snapshot_result', 'result', pinned_results)):
+        sizes = db.execute(f'''SELECT id,octet_length({column}) size FROM {table}
+            WHERE automatic AND id NOT IN ({pinned}) ORDER BY size DESC''').fetchall()
         for item in sizes:
             if retained + required <= MAX_BYTES:
                 return
@@ -493,8 +525,9 @@ def compact_retention(db, required):
             replacement = gzip.compress(raw, compresslevel=6, mtime=0)
             if len(replacement) < len(packed):
                 assert gzip.decompress(replacement) == raw
-                db.execute(f'UPDATE {table} SET {column}=%s WHERE id=%s', (replacement, item['id']))
-                retained -= len(packed)-len(replacement)
+                changed = db.execute(f'UPDATE {table} SET {column}=%s WHERE id=%s AND id NOT IN ({pinned})',
+                                     (replacement, item['id'])).rowcount
+                retained -= changed*(len(packed)-len(replacement))
 
 
 def seal(db, inputs, result, facts, *, insert_inputs=False, component=None, members=(), prior_parts=None, costs=None):
@@ -522,14 +555,13 @@ def seal(db, inputs, result, facts, *, insert_inputs=False, component=None, memb
         if insert_inputs:
             db.execute('''INSERT INTO comparison_snapshot(id,captured_at,inputs,lease_until,automatic)
                 VALUES(%s,%s,%s,clock_timestamp()+interval '10 seconds',true)''', (inputs['id'], inputs['captured_at'], packed_inputs))
-        db.execute('''INSERT INTO comparison_snapshot_result(id,snapshot_id,assumptions,result,lease_until,automatic)
-            VALUES(%s,%s,%s,%s,clock_timestamp()+interval '10 seconds',true)''', (result['id'], inputs['id'], Jsonb(result['assumptions']), packed_result))
+        snapshots.insert_result(db, result, inputs['id'], packed_result, automatic=True)
         if component is not None:
             if insert_inputs:
                 from .delivery_clocks import captured
                 captured(db,inputs['quotes'],inputs['captured_at'])
-            db.execute('''INSERT INTO comparison_live_component(id,result_id,facts) VALUES(%s,%s,%s)
-                ON CONFLICT(id) DO UPDATE SET result_id=excluded.result_id,facts=excluded.facts''',
+            db.execute('''INSERT INTO comparison_publication(kind,id,result_id,facts) VALUES('component',%s,%s,%s)
+                ON CONFLICT(kind,id) DO UPDATE SET result_id=excluded.result_id,facts=excluded.facts''',
                 (component, result['id'], Jsonb(facts)))
             row=dict(generation=None)
         else:
@@ -537,16 +569,17 @@ def seal(db, inputs, result, facts, *, insert_inputs=False, component=None, memb
             delivery = facts.pop('_delivery_receipts', [])
             live_sportsbook = facts.pop('_live_sportsbook_deadlines', [])
             if members:
-                db.execute('INSERT INTO comparison_live_member SELECT %s,unnest(%s::text[])',
+                db.execute('''INSERT INTO comparison_result_reference (kind,holder,result_id,position)
+                    SELECT 'member',%s,member_id,position FROM unnest(%s::text[]) WITH ORDINALITY AS m(member_id,position)''',
                     (result['id'], list(members)))
             # Grace starts when a displayed head is superseded, not when it was
             # first assembled. A long-lived head must remain selectable while
             # a browser receives/renders its replacement.
             db.execute("""UPDATE comparison_snapshot_result
                 SET lease_until=greatest(lease_until,clock_timestamp()+interval '10 seconds')
-                WHERE id=(SELECT result_id FROM comparison_live_head WHERE singleton)""")
-            row = db.execute('''UPDATE comparison_live_head SET generation=generation+1,result_id=%s,facts=%s
-                WHERE singleton RETURNING generation''', (result['id'], Jsonb(dict(facts, published_at=utc())))).fetchone()
+                WHERE id=(SELECT result_id FROM comparison_publication WHERE kind='live' AND id='')""")
+            row = db.execute('''UPDATE comparison_publication SET generation=generation+1,result_id=%s,facts=%s
+                WHERE kind='live' AND id='' RETURNING generation''', (result['id'], Jsonb(dict(facts, published_at=utc())))).fetchone()
             published(db, delivery, live_sportsbook=live_sportsbook)
         snapshots.prune(db)
     return row['generation']
@@ -573,9 +606,9 @@ def compose(db, settings, *, scope, policy, epoch, started):
         assumptions=settings, rows=[], pairs=[], games=[], references=[], sources={}, issues=[],
         provider_requests=0, capture_seconds=0,
         scope=dict(leagues=list(snapshots.SPORTS),families=['winner','spread','total'],period='full_game',horizon_hours=72))
-    components=db.execute('''SELECT c.id,c.result_id,c.facts,f.summary FROM comparison_live_component c
-        LEFT JOIN comparison_live_read_fragment f ON f.member_id=c.result_id
-        WHERE c.id=ANY(%s) ORDER BY c.id''',(list(scope),)).fetchall()
+    components=db.execute('''SELECT c.id,c.result_id,c.facts,r.read_summary AS summary FROM comparison_publication c
+        JOIN comparison_snapshot_result r ON r.id=c.result_id
+        WHERE c.kind='component' AND c.id=ANY(%s) ORDER BY c.id''',(list(scope),)).fetchall()
     missing=[c['result_id'] for c in components if c['summary'] is None]
     blobs={r['id']:r['result'] for r in db.execute(
         'SELECT id,result FROM comparison_snapshot_result WHERE id=ANY(%s)',(missing,))}
@@ -593,10 +626,13 @@ def compose(db, settings, *, scope, policy, epoch, started):
             if sql_usage(db)+2*len(packed)+REWRITE_RUNWAY_BYTES>=SQL_BYTE_CAP:
                 raise snapshots.SnapshotOperationError('ordinary_sql_headroom')
             from .delivery_clocks import live_sportsbook_deadlines, receipts
+            from .ordinary_evidence import event_id
             summary=dict(captured_at=part['captured_at'],finance=part['publication']['finance'],counts=part['counts'],
+                         event_ids=sorted({event_id(r['source']) for r in part['rows']}),
                          delivery_receipts=receipts(part['rows']), live_sportsbook_deadlines=live_sportsbook_deadlines(part['rows']))
-            db.execute('INSERT INTO comparison_live_read_fragment VALUES(%s,%s,%s)',
-                (c['result_id'],Jsonb(summary),packed));written+=len(packed)
+            db.execute('''UPDATE comparison_snapshot_result SET read_summary=%s,read_fragment=%s
+                WHERE id=%s AND read_fragment IS NULL''', (Jsonb(summary),packed,c['result_id']))
+            written+=len(packed)
         delivery.extend(summary.get('delivery_receipts',[]))
         live_sportsbook.extend(summary.get('live_sportsbook_deadlines', []))
         members.append(c['result_id']);captured.append(summary['captured_at'])
@@ -604,14 +640,14 @@ def compose(db, settings, *, scope, policy, epoch, started):
         for key in totals:totals[key]+=summary['counts'][key]
         if c['facts'].get('next_boundary'):boundaries.append(c['facts']['next_boundary'])
     pending+=len(scope)-len(members)
-    result['_read_fragments']=members
+    result['_read_fragments']='publication-members-v1'
     result['publication']=dict(schema=VERSION,finance='failed' if failed else 'pending' if pending else 'ready',policy=policy,
         epoch=epoch,component_count=len(members),expected_components=len(scope),pending_components=pending,
         oldest_capture=min(captured,key=stamp) if captured else None,provider_requests=0)
     result['counts']=totals
     _,states=authority(db)
     inputs=dict(id=result['snapshot_id'],captured_at=result['captured_at'],quotes=[],references=[],
-        games=[],sources=states,issues=[],capture_seconds=0,components=members)
+        games=[],sources=states,issues=[],capture_seconds=0)
     facts=dict(state='partial' if pending else 'ready',finance=result['publication']['finance'],
         component_count=len(members),expected_components=len(scope),pending_components=pending,
         next_boundary=min(boundaries,key=stamp) if boundaries else None,
@@ -641,10 +677,11 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
             capture_structure.clear();capture_materialization.clear()
         with db.transaction():
             db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
-            policy=policy_identity()
             epoch=str(db.execute('SELECT epoch FROM current_row_epoch').fetchone()['epoch'])
             settings=current_settings(db)
             owner,source_states=authority(db)
+            reference_provider=aggregate_provider(owner=owner)
+            policy=policy_identity(reference_provider)
             fee_state=owner['fee_lifecycle']
             product_states=owner['fee_products']
             fee_revision=schedule_lifecycle.publication_revision(fee_state)
@@ -652,8 +689,6 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
                 {k:owner.get(k) for k in ('runtime_id','global_stopped','paused_sources','dispatch')},
                 {k:v.get('state') for k,v in source_states.items()}]
             frame_binding=capture_binding
-            from app.collection.current_policy import load as current_policy
-            reference_provider=current_policy()['aggregate_provider']
             finance_available=(reference_provider == 'sportsgameodds' or source_allowed(source_states.get('pinnacle',{})))
             at=stamp(utc())
             from app.comparison.public_sportsbook_estimate import identity as reference_identity
@@ -675,11 +710,11 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
             # Include the complete peer component when any member is in scope.
             batches=[b for b in capture_batches(db) if selected.intersection(b)]
             scope={hashed(sorted(b)):b for b in batches}
-            old={c['id']:c for c in db.execute('SELECT * FROM comparison_live_component')}
+            old={c['id']:c for c in db.execute("SELECT id,result_id,facts FROM comparison_publication WHERE kind='component'")}
             sportsbook_rows = sportsbook_dependencies(db) if frames_exist else []
             from .sgo_native_catalog import dependencies as catalog_dependencies
             catalog_rows = catalog_dependencies(db, at=utc()) if reference_provider == 'sportsgameodds' else []
-            dep=dependencies(db, sportsbook_rows=sportsbook_rows, catalog_rows=catalog_rows)
+            dep=dependencies(db, sportsbook_rows=sportsbook_rows, catalog_rows=catalog_rows, provider=reference_provider)
             contracts=db.execute('SELECT id,event_id,venue FROM current_contract').fetchall()
             membership={r['id']:r['event_id'] for r in contracts}
             membership.update((r['id'], r['event_id']) for r in sportsbook_rows)
@@ -740,7 +775,8 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
         work=[];errors=[];component_trace=[]
         live_first_price_seal = False
         snapshots.prune(db)
-        head_size=db.execute('SELECT octet_length(result) n FROM comparison_snapshot_result WHERE id=(SELECT result_id FROM comparison_live_head)').fetchone()
+        head_size=db.execute('''SELECT octet_length(r.result) n FROM comparison_publication p
+            JOIN comparison_snapshot_result r ON r.id=p.result_id WHERE p.kind='live' AND p.id='' ''').fetchone()
         # Recover legacy staging pressure before the atomic batch. This reserved
         # margin is a request for lossless compaction, never extra capacity.
         compact_retention(db, 2*(head_size['n'] if head_size else 0)+8*1024*1024)
@@ -749,7 +785,7 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
         with db.transaction():
             db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ')
             if removed:
-                db.execute('DELETE FROM comparison_live_component WHERE id=ANY(%s)',(list(removed),))
+                db.execute("DELETE FROM comparison_publication WHERE kind='component' AND id=ANY(%s)",(list(removed),))
                 changed+=len(removed)
             capture_started=monotonic()
             for key in pending:
@@ -768,7 +804,7 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
                     work.append((key,input_id,dict(prior['facts'])))
                     continue
                 inputs=None;capture_diagnostics={};prior_parts=None;costs={}
-                current_dependencies=dependencies(db,scope[key])
+                current_dependencies=dependencies(db,scope[key],provider=reference_provider)
                 structure_ids=capture_structure_ids(current_dependencies)
                 prior_facts=prior['facts'] if prior else {}
                 previous_structure=prior_facts.get('capture_structure_ids',{})
@@ -800,7 +836,8 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
                         del previous
                 if inputs is None:
                     prior_parts=None
-                    inputs=snapshots.capture(db,ordinary=True,event_ids=scope[key],capture_binding=capture_binding,price_basis=True,_frame_dependencies=current_dependencies)
+                    inputs=snapshots.capture(db,ordinary=True,event_ids=scope[key],capture_binding=capture_binding,
+                        price_basis=True,_frame_dependencies=current_dependencies,reference_provider=reference_provider)
                     inputs['_price_capture']=dict(path='complete',read_records=len(inputs['dependencies']),**capture_diagnostics)
                 inputs['policy_identity']=policy
                 inputs['reference_provider']=reference_provider
@@ -896,7 +933,7 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
                 except Exception as exc:
                     from app.comparison.calculation_control import CalculationStopped
                     if isinstance(exc,CalculationStopped):raise
-                    db.execute("UPDATE comparison_live_component SET facts=facts || %s WHERE id=%s",
+                    db.execute("UPDATE comparison_publication SET facts=facts || %s WHERE kind='component' AND id=%s",
                         (Jsonb(dict(finance='failed',error='ordinary_finance_failed',visited_at=utc())),key))
                     errors.append(dict(component=key,reason='ordinary_finance_failed'))
                     del inputs
@@ -946,27 +983,22 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
     finally:db.execute('SELECT pg_advisory_unlock(901153)')
 
 
-def current_settings(db):
-    row=db.execute('SELECT assumptions FROM comparison_live_settings WHERE singleton').fetchone()
-    if row is None:
-        row=db.execute('SELECT assumptions FROM comparison_snapshot_result WHERE id=(SELECT result_id FROM comparison_snapshot_head)').fetchone()
-    return snapshots.assumptions(row['assumptions'] if row else None)[0]
-
-
 def retain(db, result_id, lease_id=None):
     with db.transaction():
         db.execute('SELECT pg_advisory_xact_lock(901154)')
-        db.execute('DELETE FROM comparison_live_lease WHERE expires_at<now()')
+        db.execute("DELETE FROM comparison_result_reference WHERE kind='lease' AND expires_at<now()")
         if not db.execute('SELECT 1 FROM comparison_snapshot_result WHERE id=%s FOR KEY SHARE',(result_id,)).fetchone():
             raise snapshots.SnapshotOperationError('Selected evidence expired')
         if lease_id:
-            row=db.execute("UPDATE comparison_live_lease SET expires_at=now()+interval '2 hours' WHERE id=%s AND result_id=%s RETURNING id",(lease_id,result_id)).fetchone()
+            row=db.execute("""UPDATE comparison_result_reference SET expires_at=now()+interval '2 hours'
+                WHERE kind='lease' AND holder=%s AND result_id=%s RETURNING holder""",(lease_id,result_id)).fetchone()
             if not row:raise snapshots.SnapshotOperationError('Evidence lease expired or does not match')
         else:
-            if db.execute('SELECT count(*) n FROM comparison_live_lease').fetchone()['n']>=MAX_RETAINED:
+            if db.execute("SELECT count(*) n FROM comparison_result_reference WHERE kind='lease'").fetchone()['n']>=MAX_RETAINED:
                 raise snapshots.SnapshotOperationError('Selected evidence lease capacity reached')
             lease_id=uuid4().hex
-            db.execute("INSERT INTO comparison_live_lease VALUES(%s,%s,now()+interval '2 hours')",(lease_id,result_id))
+            db.execute("""INSERT INTO comparison_result_reference (kind,holder,result_id,expires_at)
+                VALUES('lease',%s,%s,now()+interval '2 hours')""",(lease_id,result_id))
     return dict(result_id=result_id,lease_id=lease_id,lease_seconds=7200,provider_requests=0)
 
 
@@ -977,6 +1009,7 @@ def retire_legacy(db):
     replaces. Keeping both sets silently spends the bounded publication budget
     twice. No source, settings, journal, snapshot review or accounting row changes.
     """
+    # Kept for historical replay fixtures. Installed startup does not call it.
     from .latest_board import LOCK
     with db.transaction():
         for key in (LOCK,LOCK+1):

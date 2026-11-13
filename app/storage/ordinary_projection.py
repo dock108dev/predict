@@ -1,6 +1,7 @@
 """Compact immutable publication members and validate their read-time authority."""
 from . import comparison_snapshot as snapshots
 from .store import stamp
+from app.comparison.display_identity import canonical_key
 from app.fees import product_schedules, schedule_lifecycle
 from app.fees.evidence import applies
 from app.comparison.sgo_reference import BEST_BOOKS, BEST_VERSION
@@ -15,6 +16,9 @@ def publication_runtime(owner):
 def compact_row(row):
     """Keep list/drawer inputs; full semantic proof stays in the exact member."""
     row = dict(row)
+    if 'display_outcome_key' not in row:
+        display_key = canonical_key(row)
+        row['display_outcome_key'] = list(display_key) if display_key is not None else None
     for key in ('common_odds', 'reference_odds', 'snapshot_identity'):
         row.pop(key, None)
     row['selection'] = {k:v for k,v in row.get('selection', {}).items()
@@ -135,6 +139,28 @@ def validity(witness, current, at):
     return reasons
 
 
+def price_reasons(row, current, owner, states, *, at, epoch, publication_epoch, common=()):
+    """Validate the exact stored price revision under ordinary display authority."""
+    auth = row['current_authority']['price']
+    reasons = list(common) + validity(auth, current, at)
+    if row.get('publication_epoch', publication_epoch) != epoch:
+        reasons.append('input_epoch_replaced')
+    provider = auth.get('provider') or row.get('source', {}).get('provider')
+    aggregate_provider = owner.get('config', {}).get('aggregate_provider', 'the_odds_api')
+    if provider in ('the_odds_api', 'sportsgameodds') and provider != aggregate_provider:
+        reasons.append('aggregate_provider_replaced')
+    state = states.get('sportsgameodds' if provider == 'sportsgameodds' else row['venue'], {})
+    native_owner = auth.get('novig_runtime_id')
+    if native_owner:
+        if native_owner != str(owner.get('runtime_id')) or {'novig', 'the_odds_api'} & set(owner.get('paused_sources', ())):
+            reasons.append('novig_native_authority_withdrawn')
+    elif not source_allowed(state, row.get('league')):
+        reasons.append(state.get('reason_code') or 'source_unavailable')
+    if at >= stamp(row['start_at']) and auth.get('lifecycle', {}).get('state') != 'live':
+        reasons.append('post_start_game_state_unverified')
+    return reasons
+
+
 def project(result, current, owner, states, *, at, policy, epoch, settings=None, sportsbook_frames=()):
     """Fail-closed rank withdrawal; no reference/fee/math is recomputed here."""
     from app.comparison.snapshot_fee_outcome import EXPIRED, unavailable
@@ -167,26 +193,15 @@ def project(result, current, owner, states, *, at, policy, epoch, settings=None,
     for original in result['rows']:
         row = dict(original)
         auth = row['current_authority']
-        reasons = common + validity(auth['price'], current, at)
-        if row.get('publication_epoch', epoch) != epoch: reasons.append('input_epoch_replaced')
-        provider = auth['price'].get('provider') or row.get('source',{}).get('provider')
         aggregate_provider = owner.get('config',{}).get('aggregate_provider', 'the_odds_api')
-        if provider in ('the_odds_api','sportsgameodds') and provider != aggregate_provider:
-            reasons.append('aggregate_provider_replaced')
-        state = states.get('sportsgameodds' if provider == 'sportsgameodds' else row['venue'], {})
-        native_owner = auth['price'].get('novig_runtime_id')
-        if native_owner:
-            if native_owner != str(owner.get('runtime_id')) or {'novig','the_odds_api'} & set(owner.get('paused_sources', ())):
-                reasons.append('novig_native_authority_withdrawn')
-        elif not source_allowed(state,row.get('league')):
-            reasons.append(state.get('reason_code') or 'source_unavailable')
+        reasons = price_reasons(row, current, owner, states, at=at, epoch=epoch,
+                                publication_epoch=result['publication']['epoch'], common=common)
         lifecycle=auth['price'].get('lifecycle',{})
         start = stamp(row['start_at'])
         started = at >= start
         actual = current.get(auth['price'].get('dependency'))
         expected = auth['price'].get('expected')
         event_replaced = bool(actual and expected and actual[2] != expected[2])
-        if started and lifecycle.get('state')!='live':reasons.append('post_start_game_state_unverified')
         row['game_state']=lifecycle.get('state','scheduled' if not started else 'unknown')
         if (started or event_replaced) and row['game_state'] == 'scheduled':
             row['game_state'] = 'unknown'

@@ -131,12 +131,44 @@ measurements and are not implied by small protocol tests.
 
 ## Complete saved captures during live ingress
 
-When the complete readiness capture finishes but its current-row proof has changed,
-publication may retain the frame as `capture_only`, with its actual capture time.
-It removes rows, receipts, cache, targets and pending adoption authority; it is
-unavailable, never an evaluated zero or a current financial result. Runtime identity,
-configuration, reset epoch and Stop authority must still match. A later read exposes
-the saved scope and original clocks explicitly while withdrawing current results.
+The data runtime supervises one bounded full-slate Scanner worker. It captures
+the admitted roster in a single read-only SQL snapshot, evaluates detached
+inputs, and publishes through `comparison_publication`. The capture reports
+pair capacity gaps per occurrence and keeps the measured instrument counts.
+Its pairing limits count legs and occurrences with structurally compatible
+opponents at another venue. Unmatched instruments remain in the census.
+Runtime identity, configuration, reset epoch and Stop authority must still match.
+Scanner reads native book clocks from the same revision as the offer's depth.
+A superseded book retains its evidence clocks and cannot qualify for execution.
+
+When ingress changes the slate during a turn, each evaluated pair needs a
+fresh proof for its entire possible-peer component. The same proof is checked
+again on read. Only receipts that pass and remain inside their original clock
+windows can rank. The response keeps the capture time for the measured scope.
+`capture_only` denotes a captured scope with zero currently validated receipts.
+Source health changes keep the dated census visible while the same runtime,
+configuration, Stop and pause choices, and reset epoch remain in force.
+If the calculation binding changes, the dated census remains visible with
+`scanner_calculation_binding_changed` and current financial counts are withdrawn.
+
+Current direct native evidence binds the observed $1 contract, legal quantity
+and price grids, current taker fee evidence, completed score predicates, and
+explicit settlement clauses. Kalshi uses the public direct-account scenario
+and a fee bound for unobserved fill fragmentation. Polymarket US uses the
+published standard taker tier ceiling and order-level rounding cap. A venue's
+discretionary exceptional settlement stays unknown. The separate
+`partially_evaluated_pairs` count reports evaluated supported cashflows and
+cannot establish complete coverage, a covered arb, or a checked zero.
+
+One worker interleaves fresh native component turns with periodic full captures.
+The API reports the full census and the independently timed, current financial
+cohort. Each partial receipt still requires its selected ask ladder, price and
+contract economics, current book authority, the occurrence's matching
+neighborhood, and applicable fee revision at seal and read. The original
+source deadline remains in force. When a book changes outside the selected
+asks, the existing receipt can stay visible until its original deadline.
+Scope filter options come from the full census. Pair and evaluation counts for
+the selected scope come from the current financial cohort.
 
 ### Durable readiness encoding
 
@@ -150,6 +182,6 @@ reasoning. The revision is still computed from the complete logical frame before
 encoding. The ordinary Scanner API continues to return its existing scope summary.
 Legacy saved frames remain readable. References are checked and expanded into
 detached values; sharing does not discount expanded worker memory reservations.
-The readiness 8 MiB and durable publication 32 MiB limits are unchanged. A full
-saved readiness capture after changed inputs supplies dated scope information,
-never current economic/action authority or an evaluated-zero claim.
+The readiness HTTP response is bounded at 8 MiB and the durable Scanner
+publication at 32 MiB. Capacity gaps and withdrawn receipts prevent a
+checked-zero claim for the affected scope.

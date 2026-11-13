@@ -97,6 +97,26 @@ def read_runtime(db, at=None):
                 global_stopped=row['global_stopped'], owner_pid=row['owner_pid'])
 
 
+def runtime_identity(value):
+    """Capture control identity without renewing authority on a routine heartbeat."""
+    return dict(**{k: value.get(k) for k in (
+        'runtime_id', 'active', 'healthy', 'config', 'paused_sources', 'global_stopped', 'service_state')},
+        observation_state=value.get('calculations', {}).get('observations', 'running'),
+        calculation_state=value.get('calculations', {}).get('board', 'running'))
+
+
+def source_states(committed, owner):
+    """Committed ingress beats a delayed heartbeat; explicit controls still win."""
+    states = dict(owner.get('states', {}))
+    states.update(committed)
+    for venue, state in list(states.items()):
+        if not owner.get('healthy'):
+            states[venue] = dict(state, state='unavailable', reason_code='data_runtime_unhealthy')
+        elif not owner.get('active') or venue in owner.get('paused_sources', []):
+            states[venue] = dict(state, state='stopped', reason_code='updates_stopped')
+    return states
+
+
 class RuntimeState:
     def __init__(self, connector=connect):
         self.connector = connector

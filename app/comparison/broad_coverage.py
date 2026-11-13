@@ -10,6 +10,7 @@ from itertools import islice
 import json
 
 from .capabilities import SPORTS, SOURCES as VENUES
+from .display_identity import published_key
 from app.dashboard.current_contract import stamp
 
 VERSION = 'predict-broad-coverage-1'
@@ -136,7 +137,7 @@ def _freshness(quote, event, at, states, published=None):
         return 'unknown'
 
 
-def _gross_eligibility(quote, published, at):
+def _gross_eligibility(quote, published, at, *, ordinary=False):
     """Same price, binding and effective-link gates as ordinary gross inspection.
 
     A matching predicate alone does not establish a comparable native price.
@@ -152,6 +153,8 @@ def _gross_eligibility(quote, published, at):
     try:
         if any(link_reasons(item,stamp(at)) for item in (quote,published or {})):return False,'comparison_mapping_unavailable'
     except (ValueError,KeyError,TypeError):return False,'comparison_mapping_unavailable'
+    if ordinary:
+        return bool(published), None if published else 'comparison_publication_eligibility_unmeasured'
     gross=(published or {}).get('gross_comparison',{})
     if gross.get('available') or gross.get('reason_code') in ('comparison_peer_missing','comparison_peer_matching_unsupported'):
         return True,None
@@ -266,11 +269,14 @@ def totals(cells, groups, occurrences=None,inputs=None,publications=None):
         return _pair_count(group.values())-_pair_count(n for key,n in group.items() if key not in selected)
     out['eligible_current_pairs']=None if inputs is None else sum(incident(g['current_cells']) for g in inputs)
     out['supported_noncurrent_pairs']=None if inputs is None else sum(incident(g['cells'])-incident(g['current_cells']) for g in inputs)
-    out['published_current_pairs']=None if publications is None else sum(bool(selected.intersection(ids)) for ids in publications)
+    out['published_current_pairs'] = None if publications is None else sum(
+        incident(group['cells']) if isinstance(group, dict) else bool(selected.intersection(group))
+        for group in publications)
     return out
 
 
-def build(records, published, *, config, owner, at, queries=(), encountered=(), exclusions=(), publication_at=None,resolve_inputs=False):
+def build(records, published, *, config, owner, at, queries=(), encountered=(), exclusions=(), publication_at=None,
+          resolve_inputs=False, ordinary_publication=False):
     """Build once in the background from one repeatable-read database capture."""
     from .capabilities import inventory
     from .calculation_control import checkpoint
@@ -366,7 +372,7 @@ def build(records, published, *, config, owner, at, queries=(), encountered=(), 
         publication_codes=set((p or {}).get('observation_display', {}).get('publication_reason_codes',[]))
         published_valid = not (publication_codes-{'runtime_authority_changed','background_observations_unavailable',
             'updates_stopped','data_runtime_unhealthy'})
-        eligible,eligibility_code=_gross_eligibility(q,p,at) if venue!='pinnacle' else (False,None)
+        eligible,eligibility_code=_gross_eligibility(q,p,at,ordinary=ordinary_publication) if venue!='pinnacle' else (False,None)
         if eligibility_code:
             codes.add(eligibility_code)
             mapped=_mapped_reason(eligibility_code)
@@ -402,7 +408,39 @@ def build(records, published, *, config, owner, at, queries=(), encountered=(), 
         by_cell[item['cell']].append(item)
         if item['canonical']: by_outcome[item['canonical']].append(item)
         if item['occurrence']: occurrences[item['occurrence']].add(item['cell'])
+    comparable_groups = []
+    for group in by_outcome.values():
+        checkpoint()
+        venue_counts = Counter(i['quote']['venue'] for i in group)
+        if len(venue_counts) < 2:
+            continue
+        comparable_groups.append(dict(cells=dict(Counter(i['cell'] for i in group))))
+        current_counts = Counter(i['quote']['venue'] for i in group if i['freshness'] == 'current')
+        published_current_venues = ({i['quote']['venue'] for i in group if i['published'].get('price_current')}
+                                    if ordinary_publication else set())
+        for item in group:
+            source = item['quote']['venue']
+            item['peers'] = len(group) - venue_counts[source]
+            item['current_peers'] = sum(current_counts.values()) - current_counts[source] if item['freshness'] == 'current' else 0
+            item['published_current_peer'] = len(published_current_venues) > 1 and bool(item['published'].get('price_current'))
     input_groups=defaultdict(list);published_pairs={}
+    if ordinary_publication:
+        display_groups = defaultdict(list)
+        for item in items:
+            if item['published'] and item['quote']['venue'] != 'pinnacle':
+                display_key = published_key(item['published'])
+                if display_key is not None:
+                    display_groups[display_key].append(item)
+        for group in display_groups.values():
+            current = [item for item in group if item['published'].get('price_current')]
+            venues = {item['quote']['venue'] for item in group}
+            current_venues = {item['quote']['venue'] for item in current}
+            for item in group:
+                item['displayed_peer'] = len(venues) > 1
+                item['displayed_current_peer'] = len(current_venues) > 1 and bool(item['published'].get('price_current'))
+            if len(current_venues) > 1:
+                display_cells = dict(Counter(item['cell'] for item in current))
+                published_pairs[tuple(sorted(item['id'] for item in current))] = display_cells
     candidate_groups=defaultdict(list)
     for item in items:
         if item['input_matched'] and item['quote']['venue']!='pinnacle':
@@ -424,32 +462,24 @@ def build(records, published, *, config, owner, at, queries=(), encountered=(), 
             item['input_peers']=len(peers)
             item['input_current_peers']=sum(i['freshness']=='current' for i in peers) if item['freshness']=='current' else 0
             displayed=(item['published'] or {}).get('current_comparison',{})
-            if item['input_current_peers'] and not (displayed.get('available') and displayed.get('display_status')=='current'):
+            displayed_current = (item.get('published_current_peer') if ordinary_publication else
+                                 displayed.get('available') and displayed.get('display_status') == 'current')
+            if item['input_current_peers'] and not displayed_current:
                 item['reasons'].add('current_inputs_publication_pending')
     published_cells={(i['published'] or {}).get('quote_id'):i['cell'] for i in items if i['published']}
     for item in items:
         if item.get('retained_candidates') and not item.get('input_peers'):
             item['reasons'].add('retained_peer_meaning_unresolved')
         p=item['published'] or {};displayed=p.get('current_comparison',{})
-        if displayed.get('available') and displayed.get('display_status')=='current':
+        if ordinary_publication and item.get('published_current_peer') and not item.get('input_current_peers'):
+            item['reasons'].add('published_display_disagrees')
+        if not ordinary_publication and displayed.get('available') and displayed.get('display_status')=='current':
             if not item.get('input_current_peers'):item['reasons'].add('published_display_disagrees')
             peer=displayed.get('comparison_quote_id')
             if peer and p.get('quote_id'):
                 membership=published_pairs.setdefault(tuple(sorted((p['quote_id'],peer))),set())
                 membership.add(item['cell'])
                 if peer in published_cells:membership.add(published_cells[peer])
-    comparable_groups = []
-    for group in by_outcome.values():
-        checkpoint()
-        counts = Counter(i['cell'] for i in group)
-        if len({i['quote']['venue'] for i in group})<2: continue
-        comparable_groups.append(dict(cells=dict(counts)))
-        current_counts=Counter(i['quote']['venue'] for i in group if i['freshness']=='current')
-        venue_counts=Counter(i['quote']['venue'] for i in group)
-        for item in group:
-            source=item['quote']['venue']
-            item['peers'] = len(group)-venue_counts[source]
-            item['current_peers'] = sum(current_counts.values())-current_counts[source] if item['freshness']=='current' else 0
     cells = []
     for spec in specs:
         checkpoint()
@@ -487,8 +517,10 @@ def build(records, published, *, config, owner, at, queries=(), encountered=(), 
             display_disagreement_directions=sum('published_display_disagrees' in i['reasons'] for i in local),
             retained_comparison_observations=len(local) if venue!='pinnacle' else 0,
             retained_reference_observations=len(local) if venue=='pinnacle' else 0,
-            displayed_comparison_directions=sum(bool((i['published'] or {}).get('gross_comparison',{}).get('available')) for i in local) if venue!='pinnacle' else 0,
-            displayed_current_comparison_directions=sum(bool((i['published'] or {}).get('current_comparison',{}).get('available'))
+            displayed_comparison_directions=sum(bool(i.get('displayed_peer')) if ordinary_publication else
+                bool((i['published'] or {}).get('gross_comparison',{}).get('available')) for i in local) if venue!='pinnacle' else 0,
+            displayed_current_comparison_directions=sum(bool(i.get('displayed_current_peer')) if ordinary_publication else
+                bool((i['published'] or {}).get('current_comparison',{}).get('available'))
                 and (i['published'] or {})['current_comparison'].get('display_status')=='current' and bool(i.get('current_peers')) for i in local) if venue!='pinnacle' else 0,
             current_observations=sum(i['freshness']=='current' for i in local),
             last_known_observations=sum(i['freshness']=='last_known' for i in local),
@@ -517,7 +549,8 @@ def build(records, published, *, config, owner, at, queries=(), encountered=(), 
             examples=[_example(i) for i in local[:MAX_EXAMPLES]],
             odds_scope=dict(league=sport,venue=venue,market='winner' if fam=='moneyline' else fam,period=period)))
     occurrence_groups = [sorted(ids) for ids in occurrences.values()]
-    publication_groups=[sorted(ids) for ids in published_pairs.values()]
+    publication_groups = ([dict(cells=cells) for cells in published_pairs.values()] if ordinary_publication
+                          else [sorted(ids) for ids in published_pairs.values()])
     for cell in cells:
         updated=totals([cell],comparable_groups,None,input_aggregation,publication_groups)
         for key in ('eligible_current_pairs','supported_noncurrent_pairs','published_current_pairs'):cell['counts'][key]=updated[key]
@@ -533,8 +566,10 @@ def build(records, published, *, config, owner, at, queries=(), encountered=(), 
         definitions=dict(cohort='One repeatable-read capture of unexpired retained native price inputs; one observation per source/native side.',
             discovery='Separate exact-query window; reported row counts are distinct from measured unique discovered counts. Unknown provider-universe totals.',
             displayed='Exact retained native inputs with a corresponding ordinary Odds publication, before local display filters.',
-            displayed_comparison_directions='Available lowest-observed gross differences actually present in ordinary Odds; current, last-known, unknown and pending labels remain separate from availability.',
-            displayed_current_comparison_directions='Available current-peer differences actually present in ordinary Odds whose captured display_status is current.',
+            displayed_comparison_directions=('Published Browse Odds observations in an outcome group with another venue, including last-known prices.' if ordinary_publication else
+                'Available lowest-observed gross differences actually present in ordinary Odds; current, last-known, unknown and pending labels remain separate from availability.'),
+            displayed_current_comparison_directions=('Published Browse Odds observations in an outcome group with another venue, where both prices pass ordinary current-price authority.' if ordinary_publication else
+                'Available current-peer differences actually present in ordinary Odds whose captured display_status is current.'),
             comparable_outcomes='Unique canonical outcomes with at least two comparison venues; Pinnacle is excluded.',
             supported_comparison_observations='Exact retained native inputs with a supported peer and valid published matching authority. Material runtime/source-health revocation can withhold this authority pending publication; source-clock aging alone does not erase supported meaning.',
             underlying_pairs='Undirected distinct native observation pairs across venues; global and filtered totals deduplicate source-cell overlap.',

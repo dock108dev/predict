@@ -526,7 +526,8 @@ class AggregateScheduler:
             complete=[venue for venue in batches if venue not in rejected]
             records.extend(batches.get('pinnacle',[]))
             (yield (dict(type='current_aggregate_records',source='the_odds_api',sport=sport,
-                records=records,complete_venues=complete,received_at=response['received_at'],raw_payload=frame.payload), states))
+                records=records,complete_venues=complete,received_at=response['received_at'],
+                receipt_sha256=frame.receipt_sha256,raw_payload=frame.payload), states))
         else:
             (yield (dict(type='current_aggregate',source='the_odds_api',sport=sport,body=response['body'],received_at=response['received_at'],venue_states=venue_states), states))
         admitted_at=now()

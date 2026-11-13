@@ -46,12 +46,17 @@ def cleanup(db):
 
 
 class PacketStore:
-    def __init__(self,parameters):self.parameters=parameters
+    def __init__(self,parameters,*,retained=False):self.parameters=parameters;self.retained=retained
     @classmethod
-    def from_connection(cls,db):return cls(db.info.get_parameters())
+    def from_connection(cls,db):
+        schema=db.execute('SELECT current_schemas(false) AS names').fetchone()['names']
+        return cls(db.info.get_parameters(),retained='retained' in schema)
     @contextmanager
     def connection(self):
         with psycopg.connect(**dict(self.parameters,connect_timeout=5),autocommit=True,row_factory=payload_row) as db:
+            if self.retained:
+                from .store import open_retained
+                open_retained(db)
             db.execute("SET statement_timeout='5s'")
             yield db
     def load(self,key):

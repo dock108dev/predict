@@ -153,11 +153,14 @@ def common_odds(q):
 
 def price(q):
     depth=q.get('depth');total=None if depth is None else len(depth);book=q.get('observed_book')
+    clock_basis='original_quote_frame'
+    if book:
+        clock_basis='current_native_book' if book.get('is_current',True) else 'native_book_revision'
     observed_depth=dict(available=bool(depth),levels=deepcopy((depth or [])[:8]),total_levels=total,
         truncated=total is not None and total>8,quantity_units=q['original']['quantity_units'],price_units=q['original']['units'],
         source_at=book['source_at'] if book else q['times'].get('source_at'),
         received_at=book['received_at'] if book else q['times'].get('received_at'),
-        clock_basis='current_native_book' if book else 'original_quote_frame',book_revision=None if book is None else book['revision'],
+        clock_basis=clock_basis,book_revision=None if book is None else book['revision'],
         reason=None if depth else 'depth_not_retained' if depth is None else 'observed_book_has_no_retained_asks',
         meaning='Original asks; no fill or size assurance')
     result=dict(quote_id=quote_key(q),quote_revision=q['revision'],selection=deepcopy(q['binding']['selection']),venue=q['venue'],

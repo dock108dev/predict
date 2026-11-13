@@ -160,10 +160,19 @@ def model_checks(q, profiles, event, group, at):
                 native_contract=contract, model_versions=versions, deadlines=deadlines)
 
 
-def instrument(q, profiles, event, group, *, at, source_status, authorized, book=None):
+def instrument(q, profiles, event, group, *, at, source_status, authorized, book=None,
+               native_execution=None, native_error=None):
     moment = instant(at)
     m = model_checks(q, profiles, event, group, moment)
     venue = q['venue'];limits = LIMITS[venue]
+    if native_error is not None:
+        m['contract'] = check([*m['contract']['reason_codes'], native_error])
+    if native_execution is not None:
+        m.update(contract=check([]), direction=native_execution['direction'], identity_bound=True,
+                 model_versions={'native_execution':native_execution['revision']}, deadlines=[])
+        for key in ('valid_until','phase_until'):
+            if native_execution.get(key):
+                m['deadlines'].append(native_execution[key])
     execution = []
     status = source_status.get('state', q.get('state', 'unavailable'))
     code = source_status.get('reason_code')
@@ -175,25 +184,36 @@ def instrument(q, profiles, event, group, *, at, source_status, authorized, book
         execution.append('source_failed')
     elif status not in ('available', 'budget_delayed'):
         execution.append('source_disconnected' if status in ('disconnected', 'stopped') else 'source_unavailable')
-    execution.extend(clock_reasons(q['times'].get('source_at'), q['times'].get('received_at'), moment, limits['price_age_seconds']))
+    source = q['times'].get('source_at')
+    source_clock, receipt_clock = source, q['times'].get('received_at')
+    if native_execution is not None:
+        from .source_clock import evidence
+        source_clock, _, errors = evidence(q)
+        execution.extend(errors)
+    execution.extend(clock_reasons(source_clock, receipt_clock, moment, limits['price_age_seconds']))
     if q['times'].get('projected_at') and instant(q['times']['projected_at']) > moment:
         execution.append('projection_clock_conflict')
     # Native transport/confirmation/heartbeat clocks never supply this header.
-    for original in (q.get('provider_clocks', {}).get(k) for k in ('book','market')):
+    for original in (() if native_execution is not None else (q.get('provider_clocks', {}).get(k) for k in ('book','market'))):
         if original is not None:
             execution.extend(clock_reasons(original, q['times'].get('received_at'), moment, limits['price_age_seconds']))
     native = venue in ('kalshi', 'polymarket_us')
-    synchronized = bool(native and book and book.get('sync') == 'synchronized' and book.get('state') == 'active')
-    deadlines = [event['start_at'], *m['deadlines']]
+    synchronized = bool(native and book and book.get('is_current', True)
+                        and book.get('sync') == 'synchronized' and book.get('state') == 'active')
+    live = bool(native_execution and native_execution['phase']=='live')
+    deadlines = list(m['deadlines']) if live else [event['start_at'], *m['deadlines']]
     if native:
         if not synchronized:
             execution.append('book_unsynchronized')
+        if book and not book.get('is_current', True):
+            execution.append('book_revision_superseded')
         if book:
-            execution.extend(clock_reasons(book.get('source_at'), book.get('received_at'), moment, limits['book_age_seconds'], 'book'))
+            book_clock = source_clock if native_execution is not None else book.get('source_at')
+            execution.extend(clock_reasons(book_clock, book.get('received_at'), moment, limits['book_age_seconds'], 'book'))
             if book.get('quantity_unit') != 'contracts':
                 execution.append('book_units_conflict')
-            if book.get('source_at'):
-                deadlines.append((instant(book['source_at'])+timedelta(seconds=limits['book_age_seconds'])).isoformat())
+            if book_clock:
+                deadlines.append((instant(book_clock)+timedelta(seconds=limits['book_age_seconds'])).isoformat())
             if book.get('source_at') != q['times'].get('source_at'):
                 execution.append('book_offer_clock_conflict')
         depth = q.get('depth', [])
@@ -207,7 +227,10 @@ def instrument(q, profiles, event, group, *, at, source_status, authorized, book
                 execution.append('book_offer_price_conflict')
         except (ValueError, KeyError, TypeError, ZeroDivisionError):
             execution.append('observed_depth_unsupported')
-        if q.get('comparison_input_refs'):
+        if native_execution is not None:
+            if 'observed' in locals() and observed < Fraction(native_execution['grid']['minimum']):
+                execution.append('observed_depth_insufficient')
+        elif q.get('comparison_input_refs'):
             values = references(q, profiles)
             minimum = values.get('quantity', {}).get('payload', {}).get('grid', {}).get('minimum_native')
             if minimum is not None and 'observed' in locals() and observed < Fraction(minimum):
@@ -216,20 +239,19 @@ def instrument(q, profiles, event, group, *, at, source_status, authorized, book
         # Aggregated odds disclose neither a synchronized native book nor an
         # observed legal amount. Research prices stay visible; execution waits.
         execution.append('observed_depth_missing')
-    for original in (q.get('provider_clocks', {}).get(k) for k in ('book','market')):
+    for original in (() if native_execution is not None else (q.get('provider_clocks', {}).get(k) for k in ('book','market'))):
         if original is not None:
             try:deadlines.append((instant(original)+timedelta(seconds=limits['price_age_seconds'])).isoformat())
             except (ValueError,TypeError):pass
-    source = q['times'].get('source_at')
-    if source:
-        deadlines.append((instant(source)+timedelta(seconds=limits['price_age_seconds'])).isoformat())
-    if moment >= instant(event['start_at']):
+    if source_clock:
+        deadlines.append((instant(source_clock)+timedelta(seconds=limits['price_age_seconds'])).isoformat())
+    if moment >= instant(event['start_at']) and not live:
         execution.append('pregame_ended')
     future = [d for d in deadlines if instant(d) > moment]
     contract = m['native_contract']
     from .sporting_scope import sport
     scope = dict(venue=venue, sport=sport(event['league']), league=event['league'], market=group['market'], period=group['period'])
-    return dict(id=digest([q['venue'], q['source']]), scope_key=digest(scope), **scope,
+    result = dict(id=digest([q['venue'], q['source']]), scope_key=digest(scope), **scope,
                 occurrence_id=event['id'], direction=m['direction'],
                 overtime=None if contract is None else contract['scope']['overtime'],
                 native_key=[venue, *[q['source'][k] for k in ('native_event_id', 'native_market_id', 'native_outcome_id', 'native_side')]],
@@ -246,3 +268,12 @@ def instrument(q, profiles, event, group, *, at, source_status, authorized, book
                 model_versions=m['model_versions'], limits=limits,
                 expires_at=min(future, key=instant) if future else at,
                 checks=dict(execution=check(execution), contract=m['contract'], ev=m['ev']))
+    if native_execution is not None:
+        from .scanner_native import pair_context
+
+        result['score_partition'] = native_execution['partition']
+        result['native_execution_context'] = digest(pair_context(native_execution))
+        result['checks']['ev'] = check(['native_execution_ev_reference_unqualified'])
+        if source_clock != source:
+            result['clocks']['execution_at'] = source_clock
+    return result

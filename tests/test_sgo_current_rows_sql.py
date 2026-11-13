@@ -14,6 +14,75 @@ from tests.test_sportsgameodds_adapter import AT, parse, response
 
 @skipUnless(SOCKET, 'Disposable PostgreSQL required')
 class SGOScopeSQL(LatestBoardFixture):
+    async def test_prophet_exchange_saved_quote_reaches_retail_desk_with_fee(self):
+        from datetime import timedelta
+        from app.collection.current_policy import DEFAULT
+        from app.collection.runtime_status import read_runtime
+        from app.comparison.snapshot_math import assumptions
+        from app.dashboard.trade_desk import page as desk_page
+        from app.fees import schedule_lifecycle
+        from app.storage.comparison_snapshot import capture
+        from app.storage.current_row_state import source_status
+        from app.storage.ordinary_publication import dependencies, prices, project
+        from app.storage.sportsgameodds_reference import backfill_prophetx, prepare_frames, prepare_page, upsert_frames, upsert_rows
+        from app.storage.store import stamp
+
+        at = stamp(AT)
+        self.at = at
+        raw = response()
+        event = raw['data'][0]
+        event['eventID'] = 'prophet-exchange-retail-fee-fixture'
+        books = event['odds']['points-home-game-sp-home']['byBookmaker']
+        books['prophetexchange'] = books.pop('book')
+        page = parse(raw)
+        record, = current_rows(page, page.receipt_sha256)[0]
+        assert record['quote']['venue'] == 'prophetx'
+        assert record['comparison_source_metadata']['provider_bookmaker_id'] == 'prophetexchange'
+        config = dict(DEFAULT, aggregate_provider='sportsgameodds', aggregate_sports=['NBA'])
+        states = {'sportsgameodds': {'state': 'available'}}
+        self.service.config = config
+        self.state.write(self.service)
+        approval = schedule_lifecycle.approved()
+        fee_state = dict(last_verified=dict(approval=approval, verified_at=AT,
+            review_before=(at+timedelta(hours=1)).isoformat(), revision='fixture',
+            retrieval=dict(document=dict(sha256=approval['document_sha256']))))
+        owner = dict(healthy=True, active=True, config=config, fee_lifecycle=fee_state)
+        with self.connect() as db, patch('app.storage.ordinary_publication.utc', return_value=AT):
+            refs = prepare_page(page)
+            upsert_rows(db, refs)
+            upsert_frames(db, prepare_frames(page, refs))
+            source_status(db.execute, 'sportsgameodds', states['sportsgameodds'], AT)
+            schedule_lifecycle.write(db, fee_state)
+            runtime = read_runtime(db)
+            assert runtime['active'] and runtime['config']['aggregate_provider'] == 'sportsgameodds'
+            assert db.execute('SELECT count(*) AS n FROM current_sgo_reference WHERE bookmaker_id=%s',
+                              ('prophetexchange',)).fetchone()['n'] == 1
+            assert db.execute('SELECT count(*) AS n FROM current_sgo_event_frame WHERE event_id=%s',
+                              (event['eventID'],)).fetchone()['n'] == 1
+            assert backfill_prophetx(db, at=AT) == 1
+            backfill_prophetx(db, at=AT)
+            physical = db.execute("""SELECT q.bookmaker_id,o.received_at,c.event_id,c.independent_depth
+                FROM current_offer_storage o JOIN current_contract_storage c ON c.id=o.contract_id
+                JOIN sgo_quote_revision q ON (q.id,q.revision)=(o.sgo_quote_id,o.sgo_quote_revision)
+                WHERE c.venue='prophetx'""").fetchone()
+            assert physical['bookmaker_id'] == 'prophetexchange'
+            assert physical['received_at'] == page.quotes[0]['received_at']
+            assert physical['independent_depth'] is None
+            assert db.execute("SELECT count(*) AS n FROM current_contract WHERE venue='prophetx'").fetchone()['n'] == 1
+            ids = [physical['event_id']]
+            captured = capture(db, at=AT, ordinary=True, event_ids=ids)
+            assert len(captured['quotes']) == 1, captured['issues']
+            published = prices(captured, assumptions()[0])
+            result = project(published, dependencies(db, ids), owner, states, at=at,
+                             policy=captured['policy_identity'], epoch=captured['epoch'])
+            assert len(result['rows']) == 1
+            assert result['rows'][0]['price_current'], result['rows'][0]['price_reasons']
+            visible = desk_page(result, dict(layout='desk', browse_odds='1', phase='pregame'), ('ev', None, 0, 25))
+            offer, = visible['rows'][0]['offers']
+            assert offer['venue'] == 'prophetx' and offer['original']['value'] == '-110'
+            assert offer['trade_fee']['fee_cashflows'] == dict(at_fill_usd='0', winning_settlement_usd='0.01', losing_settlement_usd='0')
+            assert offer['current'] and visible['provider_requests'] == 0
+
     async def test_exact_novig_catalog_changes_withdraw_fee_without_withdrawing_price(self):
         import json
 
@@ -43,8 +112,9 @@ class SGOScopeSQL(LatestBoardFixture):
         config = dict(DEFAULT, aggregate_provider='sportsgameodds', aggregate_sports=['NHL'])
         states = {'sportsgameodds': {'state': 'available'}}
         owner = dict(healthy=True, active=True, config=config)
-        with self.connect() as db, patch('app.collection.current_policy.load', return_value=config), \
-                patch('app.storage.ordinary_publication.utc', return_value=AT):
+        self.service.config = config
+        self.state.write(self.service)
+        with self.connect() as db, patch('app.storage.ordinary_publication.utc', return_value=AT):
             CurrentRowStore(db).upsert_records(rows, now=AT, source_status=states)
             catalog.write(db, SGO, witness(official_event, official_market))
             event_id = db.execute('SELECT id FROM current_event WHERE native_event_id=%s', (SGO,)).fetchone()['id']
@@ -89,7 +159,9 @@ class SGOScopeSQL(LatestBoardFixture):
         reviewed = [(dict(event_id=event['eventID'],venue='fanduel',odd_id=odd['oddID'],
                           frame_id=parsed.receipt_sha256,line=line), {})
                     for odd, line in ((home, '-1.50'), (away, '1.50'))]
-        with self.connect() as db, patch('app.collection.current_policy.load',return_value=config), \
+        self.service.config = config
+        self.state.write(self.service)
+        with self.connect() as db, \
                 patch('app.storage.ordinary_publication.reviewed_reference_registry',return_value=SimpleNamespace(rows=reviewed)):
             CurrentRowStore(db).upsert_records(originals, now=AT)
             upsert_rows(db, references)

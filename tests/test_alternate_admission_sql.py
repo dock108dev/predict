@@ -69,7 +69,8 @@ class AlternateAdmissionSQL(LatestBoardFixture):
             blocker.execute('SELECT pg_advisory_unlock(%s)',(LOCK,))
             await asyncio.wait_for(task,5)
             with self.connect() as db:
-                raw=db.execute('SELECT received_at,disposition FROM current_acquisition_alternate WHERE event_id=%s',(eid,)).fetchone()
+                raw=db.execute("""SELECT received_at,disposition FROM current_aggregate_receipt
+                    WHERE provider='the_odds_api' AND kind='alternate' AND event_id=%s""",(eid,)).fetchone()
                 from app.storage.store import stamp
                 self.assertEqual(raw['received_at'],stamp(AT))
                 self.assertEqual(raw['disposition'],'admitted_exact_lines')
@@ -79,3 +80,83 @@ class AlternateAdmissionSQL(LatestBoardFixture):
                 db.execute('UPDATE data_runtime SET global_stopped=true')
             with self.assertRaisesRegex(QuotaStop,'owner_stopped'):
                 await asyncio.to_thread(save_response,'MLB',eid,response,'authored-cycle')
+
+    async def test_alternate_admission_rollback_preserves_prior_receipt_and_quotes(self):
+        from datetime import timedelta
+        import json
+        from unittest.mock import patch
+        from app.collection.alternate_acquisition import _save_response
+        from app.collection.runtime_status import AUTHORITY_LOCK
+        from app.storage.store import stamp
+
+        payload = alternate_fixture()
+        event_id = json.loads(payload)['id']
+        with (patch('app.storage.store.connect', side_effect=self.connect),
+              patch('app.storage.current_rows.utc', return_value=AT)):
+            _save_response('MLB', event_id, dict(body=payload, received_at=AT), 'previous-cycle')
+
+            def saved(db):
+                receipt = db.execute("""SELECT received_at,cycle_id,receipt_sha256,disposition,payload
+                    FROM current_aggregate_receipt WHERE provider='the_odds_api' AND kind='alternate'
+                    AND sport='MLB' AND event_id=%s""", (event_id,)).fetchone()
+                offers = db.execute("""SELECT o.* FROM current_offer o JOIN current_contract c ON c.id=o.contract_id
+                    JOIN current_event e ON e.id=c.event_id WHERE e.native_event_id=%s
+                    AND c.native_market_id LIKE 'alternate:%%' ORDER BY o.contract_id""", (event_id,)).fetchall()
+                return receipt, offers
+
+            with self.connect() as db:
+                before = saved(db)
+            self.assertTrue(before[1])
+            later = (stamp(AT) + timedelta(seconds=1)).isoformat()
+            upsert = CurrentRowStore.upsert_records
+
+            def fail_after_quotes(store, *args, **kwargs):
+                upsert(store, *args, **kwargs)
+                with self.connect() as control:
+                    lock = control.execute('SELECT pg_try_advisory_xact_lock(%s) AS held',
+                                           (AUTHORITY_LOCK,)).fetchone()
+                    self.assertFalse(lock['held'])
+                raise RuntimeError('admission failed')
+
+            with patch.object(CurrentRowStore, 'upsert_records', fail_after_quotes):
+                with self.assertRaisesRegex(RuntimeError, 'admission failed'):
+                    _save_response('MLB', event_id, dict(body=payload, received_at=later), 'interrupted-cycle')
+            with self.connect() as db:
+                self.assertEqual(saved(db), before)
+
+    async def test_alternate_waits_for_current_rows_before_taking_control_lock(self):
+        import asyncio
+        import json
+        from unittest.mock import patch
+        from app.collection.alternate_acquisition import _save_response
+        from app.collection.runtime_status import AUTHORITY_LOCK
+        from app.storage.current_rows import LOCK
+
+        payload = alternate_fixture()
+        event_id = json.loads(payload)['id']
+
+        def connection():
+            db = self.connect()
+            db.execute("SET application_name='alternate_lock_order_fixture'")
+            db.execute("SET lock_timeout='5s'")
+            return db
+
+        with (self.connect() as publisher, self.connect() as observer,
+              patch('app.storage.store.connect', side_effect=connection),
+              patch('app.storage.current_rows.utc', return_value=AT)):
+            with publisher.transaction():
+                publisher.execute('SELECT pg_advisory_xact_lock(%s)', (LOCK,))
+                task = asyncio.create_task(asyncio.to_thread(
+                    _save_response, 'MLB', event_id, dict(body=payload, received_at=AT), 'test-cycle'))
+                for _ in range(100):
+                    waiting = observer.execute("""SELECT 1 FROM pg_stat_activity
+                        WHERE application_name='alternate_lock_order_fixture'
+                        AND %s=ANY(pg_blocking_pids(pid))""", (publisher.info.backend_pid,)).fetchone()
+                    if waiting:
+                        break
+                    await asyncio.sleep(.02)
+                self.assertIsNotNone(waiting)
+                control = observer.execute('SELECT pg_try_advisory_xact_lock(%s) AS held',
+                                           (AUTHORITY_LOCK,)).fetchone()
+                self.assertTrue(control['held'])
+            await asyncio.wait_for(task, 5)

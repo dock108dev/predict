@@ -17,7 +17,10 @@ function readControls(){
  $('previous').disabled=busy||!frame||frame.offset===0;
  $('next').disabled=busy||!frame||frame.next_offset===null;
  $('refresh').disabled=busy;$('retry').disabled=busy;
- $('clear-filters').disabled=filters().size===0;
+ const selected=filters();
+ $('clear-filters').disabled=selected.size===0;
+ const extra=['period','state','event_id'].filter(key=>selected.has(key)).length;
+ $('extra-filters-label').textContent=extra?`More filters (${extra})`:'More filters';
 }
 function age(at){if(!at||!Number.isFinite(Date.parse(at)))return 'Unknown';const seconds=Math.max(0,(Date.now()-Date.parse(at))/1000);return seconds<60?Math.floor(seconds)+'s':seconds<3600?Math.floor(seconds/60)+'m':Math.floor(seconds/3600)+'h';}
 async function get(url){const r=await fetch(url,{cache:'no-store'});const v=await r.json();if(!r.ok)throw Error(v.error||'Local read unavailable');if(url.startsWith('/api/raw/prices'))lastDelivery=new Date().toISOString();return v;}
@@ -29,10 +32,11 @@ function renderBook(b){
  for(const o of b.observations){
   const row=node('div',undefined,'raw-row');
   row.append(node('span',`${o.label} · ${o.native_side} · ${o.side}${o.line==null?'':' · '+(o.line_meaning||'line')+' '+o.line}`));
-  row.append(node('strong',o.price==null?(o.disposition==='empty'?'Empty':o.representation==='not_independently_supplied_short_bid'?'Not supplied separately':'Unavailable'):String(o.price)));
-  row.append(node('span',o.units));
+  const price=node('span',undefined,'raw-price');
+  price.append(node('strong',o.price==null?(o.disposition==='empty'?'Empty':o.representation==='not_independently_supplied_short_bid'?'Not supplied separately':'Unavailable'):String(o.price)),node('small',o.units));
+  row.append(price);
   row.append(node('span',o.disposition==='invalid_price'?'Invalid value':o.quantity?`${o.quantity.value} ${o.quantity.unit}`:'Quantity unknown',o.disposition==='invalid_price'?'raw-unqualified':'raw-state'));
-  if(o.representation?.startsWith('derived'))row.append(node('small',o.representation==='derived_short_ask_from_long_bid'?'1 − Long bid':'1 − opposite bid'));
+  if(o.representation?.startsWith('derived'))price.append(node('small',o.representation==='derived_short_ask_from_long_bid'?'1 − Long bid':'1 − opposite bid'));
   const button=node('button','Original inputs');button.dataset.observation=o.id;button.setAttribute('aria-label',`Original inputs for ${b.title}, ${venues[b.venue]||b.venue}, ${o.label}, ${o.native_side} ${o.side}`);button.addEventListener('click',()=>openInputs(b,o,button));row.append(button);article.append(row);
  }
  if(!b.observations.length)article.append(node('p','Received book has no outcome values.'));
@@ -51,7 +55,7 @@ function render(v){
  while(root.children.length>next.length)root.lastChild.remove();
  if(focus&&document.activeElement===document.body)root.querySelector(`[data-observation="${focus}"]`)?.focus({preventScroll:true});
  requestAnimationFrame(()=>requestAnimationFrame(()=>{for(const sample of newSamples){sample.visible_at=new Date().toISOString();sample.receipt_to_visible_seconds=(Date.now()-Date.parse(sample.received_at))/1000;timing.push(sample);}if(timing.length>2048)timing.splice(0,timing.length-2048);}));
- $('status').textContent=v.total_books?`${v.total_books.toLocaleString()} received books · Calculations update separately`:'No received books match these filters.';
+ $('status').textContent=v.total_books?`${v.total_books.toLocaleString()} received books`:'No received books match these filters.';
  $('page-number').textContent=v.total_books?`${v.offset+1}–${v.offset+v.books.length} of ${v.total_books.toLocaleString()}`:'0';
  $('previous').disabled=v.offset===0;$('next').disabled=v.next_offset===null;
  if(selection){const b=v.books.find(b=>b.id===selection.book.id);if(b&&b.revision!==selection.book.revision)$('captured-state').textContent='Captured inputs · A newer price has arrived';}

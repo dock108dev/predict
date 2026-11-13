@@ -12,8 +12,9 @@ import psycopg
 from psycopg import sql
 
 from app.collection.current_policy import DEFAULT
+from app.collection.runtime_client import RuntimeClient
 from app.collection.runtime_status import RuntimeState
-from app.storage.store import Store, stamp
+from app.storage.store import Store, open_retained, stamp
 from app.storage.payload_codec import payload_row
 from app.storage.current_rows import CurrentRowStore
 from app.storage import latest_board as latest
@@ -23,6 +24,11 @@ from tests.test_d03_current_rows import fixture_records
 from tests.test_current_board_reads import context, frame
 
 SOCKET=os.environ.get('DA_TEST_PGSOCKET')
+
+
+class RetainedBoardClient(RuntimeClient):
+    """Exercise the archived board transport in disposable fixtures."""
+    remote_runtime = False
 
 
 @lru_cache(maxsize=1)
@@ -40,12 +46,31 @@ def native_key(q):
     return tuple([q['venue'],*[q['source'][k] for k in ('native_event_id','native_market_id','native_outcome_id','native_side')]])
 
 
+def replace_book_revision(db, original_id, substitute_id, *, revision=None, received_at=None):
+    """Inject a distinct current-book observation in disposable guard fixtures."""
+    with db.transaction():
+        db.execute('UPDATE native_book_revision SET is_current=false WHERE id=%s',(original_id,))
+        db.execute('''INSERT INTO native_book_revision
+            (id,venue,event_id,native_market_id,source_at,source_order,received_at,received_order,
+             revision,quantity_units,state,sync,sequence,outcomes,confirmation,depth_revision,ladder_refs)
+            SELECT %s,venue,event_id,native_market_id,source_at,source_order,COALESCE(%s,received_at),
+              received_order+CASE WHEN %s::text IS NULL THEN 0 ELSE 1 END,COALESCE(%s,revision),
+              quantity_units,state,sync,sequence,outcomes,confirmation,depth_revision,ladder_refs
+            FROM native_book_revision WHERE id=%s''',(substitute_id,received_at,received_at,revision,original_id))
+
+
+def restore_book_revision(db, original_id, substitute_id):
+    with db.transaction():
+        db.execute('DELETE FROM native_book_revision WHERE id=%s',(substitute_id,))
+        db.execute('UPDATE native_book_revision SET is_current=true WHERE id=%s',(original_id,))
+
+
 class LatestBoardFixture(IsolatedAsyncioTestCase):
     @classmethod
     def connect(cls,name=None):
         assert str(SOCKET).startswith('/tmp/predict-pg-'),'Disposable cluster only'
-        return psycopg.connect(host=SOCKET,port=55432,user='prediction_arb',dbname=name or cls.name,
-            autocommit=True,row_factory=payload_row,connect_timeout=5)
+        return open_retained(psycopg.connect(host=SOCKET,port=55432,user='prediction_arb',dbname=name or cls.name,
+            autocommit=True,row_factory=payload_row,connect_timeout=5))
 
     @classmethod
     def setUpClass(cls):
@@ -95,9 +120,13 @@ class LatestBoardFixture(IsolatedAsyncioTestCase):
         self.state=RuntimeState(self.connect)
         with self.connect() as db:
             db.execute('TRUNCATE current_event CASCADE')
-            db.execute('TRUNCATE current_source_status,current_refresh_scope,data_runtime,data_runtime_command,latest_board,latest_board_status,current_result_unit,current_result_inventory CASCADE')
+            self.clear_source_state(db)
+            db.execute('TRUNCATE data_runtime,data_runtime_command,latest_board,latest_board_status,current_result_unit,current_result_inventory CASCADE')
         self.state.write(self.service)
         self.admit(self.records)
+
+    def clear_source_state(self, db):
+        db.execute("DELETE FROM current_row_state WHERE kind<>'epoch'")
 
     def admit(self,records):
         with self.connect() as db:

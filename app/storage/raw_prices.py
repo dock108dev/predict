@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 from app.storage.store import hashed
 from .native_authority import stream_ready
+from .native_market_metadata import census_body
 
 HEADER = """
 SELECT 'native'::text kind,i.source venue,i.event_id,i.market_id,
@@ -118,11 +119,10 @@ def book(db,row,owner):
         # Recovery catalogs contain current subscription members only. Historical
         # books still own source metadata in the durable acquisition roster.
         if not row.get('sides') or row['period']=='unknown' or row['venue']=='polymarket_us':
-            meta=db.execute('SELECT metadata FROM current_acquisition_market WHERE source=%s AND event_id=%s AND market_id=%s',
-                (row['venue'],row['event_id'],row['market_id'])).fetchone()
-            if meta:
+            meta=census_body(db,row['venue'],row['event_id'],row['market_id'])
+            if meta is not None:
                 from .raw_metadata import display
-                recovered=display(row['venue'],meta['metadata'])
+                recovered=display(row['venue'],meta)
                 row=dict(row,**{k:v for k,v in recovered.items() if v and (k!='period' or row['period']=='unknown')})
         # PostgreSQL detoasts only selected images; no complete book crosses into
         # Python for top-of-book pages. Depth is separately bounded by ladder.

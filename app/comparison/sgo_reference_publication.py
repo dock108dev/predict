@@ -39,6 +39,8 @@ class FrameQuoteIndex:
 
 def captured_frame(record, capture, *, index=None):
     """Resolve an original quote against a stored co-observation frame."""
+    from app.collection.sportsgameodds_current_rows import source_bookmaker
+
     try:
         q=record['quote']; s=q['source']; meta=record['comparison_source_metadata']
         frame=capture['frame']['facts']
@@ -53,10 +55,11 @@ def captured_frame(record, capture, *, index=None):
                 or any(c not in '0123456789abcdef' for c in digest)):
             return None
         matched=[]
+        bookmaker = source_bookmaker(record)
         for entry in capture['rows']:
             fact=entry['facts']
             if (members.get(entry['id']) != entry['revision'] or fact.get('event_id') != s['native_event_id']
-                    or fact.get('venue') != q['venue'] or fact.get('odd_id') != s['native_outcome_id']
+                    or fact.get('venue') != bookmaker or fact.get('odd_id') != s['native_outcome_id']
                     or fact.get('opposing_odd_id') != meta.get('provider_opposing_odd_id')
                     or exact_line(fact.get('line')) != exact_line(record['selection'].get('signed_line'))
                     or fact.get('price_american') != q['original']['value']

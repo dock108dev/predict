@@ -4,5 +4,23 @@
 
 .coverage-outcome{padding:18px 20px;background:white;border:1px solid var(--line);border-radius:10px;margin:14px 0;overflow-wrap:anywhere}.coverage-outcome h2{margin:9px 0}.capture-age{font-weight:600}.scope-states{font-size:12px;color:var(--muted)}.coverage-filters,.coverage-measurements{margin:14px 0}.coverage-filters>summary,.coverage-measurements>summary{cursor:pointer;font-weight:600}#flow{margin-bottom:8px}.intro{display:none}@media(max-width:680px){.coverage-outcome{padding:14px}.coverage-outcome>strong{font-size:12px}.coverage-outcome p{font-size:12px}.coverage-outcome h2{font-size:19px}.page-heading{margin-top:16px}}
 
+.coverage-outcome { padding: 12px 16px; }
+.coverage-outcome h2 { margin: 0 0 4px; }
+.coverage-outcome :is(p, a) { font-size: .875rem; }
+.coverage-scope { color: var(--muted); text-transform: capitalize; }
+.coverage-filters, .coverage-measurements, .coverage-fees { margin: 0; }
+main :is(.coverage-filters, .coverage-measurements, .coverage-fees) > summary {
+  min-height: 44px;
+  align-content: center;
+  cursor: pointer;
+  font-weight: 600;
+}
+.coverage-fees[open] { padding-bottom: .75rem; }
+#flow:empty { display: none; }
+.coverage-cell :is(.cell-period, .cell-denominator, .cell-cause, .cell-status) { font-size: .75rem; }
+@media (max-width: 680px) {
+  .page-heading button { max-width: none; min-height: 44px; font-size: .8rem; }
+  .coverage-cell { min-height: 0; }
+}
 .fee-census-facts { display: grid; grid-template-columns: minmax(8rem, 1fr) minmax(0, 3fr); gap: .35rem .75rem; }
 .fee-census-facts dd { margin: 0; overflow-wrap: anywhere; }

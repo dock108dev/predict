@@ -26,6 +26,14 @@ comparison ceilings, current revision cursors and coverage filters. Admin contro
 require a JSON object before action selection; arrays, scalars and null return 422
 without invoking Stop, refresh, pause or recovery.
 
+Admin → Database uses the same single-user loopback boundary. The fixed catalog,
+structure, row and cell routes use one concurrent PostgreSQL read-only transaction
+with statement and lock deadlines. PostgreSQL checks schema and relation privileges.
+Rows and cell chunks have explicit response bounds. The catalog omits PostgreSQL
+system schemas, and foreign table contents are outside the browser's local scope.
+The browser accepts relation and column names for server-quoted identifiers and
+displays the stored contents available to the local app role.
+
 Only explicit `PublicRequestError` validation messages are returned verbatim by
 the shared router. These must be authored messages, never provider text, parser
 errors, user values or messages copied from another exception. Other `ValueError`
@@ -34,6 +42,8 @@ Current comparison reads return only an explicit set of authored recovery/refusa
 codes; arbitrary ValueError text and decoding errors use the fixed
 `current_inputs_unavailable` reason. Scanner reads likewise preserve their explicit
 filter/revision codes and use `scanner_query_invalid` for other caught failures.
+Scanner's native input evidence uses authored reason codes and a fixed fallback
+for unexpected parser or data errors.
 Selected fee control failures use a fixed refusal message before their result can
 enter a persisted acknowledgment. Diagnostic operations are
 `comparison_read_refused`, `scanner_query` and `selected_fee_control_refused`.

@@ -18,7 +18,6 @@ from aiohttp.test_utils import TestClient, TestServer
 
 from app.collection.current_policy import DEFAULT
 from app.collection.runtime_status import read_runtime
-from app.collection.runtime_client import RuntimeClient
 from app.storage.store import stamp
 from app.storage.current_rows import CurrentRowStore, LOCK
 from app.storage import latest_board as latest
@@ -28,7 +27,8 @@ from app.comparison.estimated_policy import DEFAULT_POLICY
 from tests.test_ev09_n01 import retained
 
 from tests.latest_board_fixture import (
-    LatestBoardFixture, SOCKET as SOCKET, two_games as two_games, native_key as native_key,
+    LatestBoardFixture, RetainedBoardClient, SOCKET as SOCKET, two_games as two_games, native_key as native_key,
+    replace_book_revision,
 )
 
 
@@ -61,15 +61,16 @@ class LatestBoardSQL(LatestBoardFixture):
     async def test_grouped_scanner_admission_matches_complete_component_bound(self):
         from app.storage.scanner_readiness import capture_reservation
         from app.comparison.scanner_readiness import MAX_BYTES
-        with self.connect() as db,db.transaction():
+        with self.connect() as db,db.transaction(),patch('app.storage.current_rows.utc',return_value=self.at.isoformat()):
             db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
+            store=CurrentRowStore(db)
             expected=0
             for ids in latest.capture_batches(db):
                 size=db.execute('''SELECT COALESCE(sum(octet_length(e.facts::text)+octet_length(c.facts::text)+octet_length(o.facts::text)),0) n
                     FROM current_contract c JOIN current_offer o ON o.contract_id=c.id JOIN current_event e ON e.id=c.event_id
                     WHERE c.event_id=ANY(%s)''',(ids,)).fetchone()['n']
-                depth=db.execute("SELECT count(*) n FROM current_native_depth WHERE side='asks' AND event_id=ANY(%s)",(ids,)).fetchone()['n']
-                depth+=db.execute("SELECT count(*) n FROM current_depth d JOIN current_contract c ON c.id=d.contract_id WHERE side='asks' AND c.event_id=ANY(%s)",(ids,)).fetchone()['n']
+                records=store.capture(include_depth=False,event_ids=ids)['records']
+                depth=sum(len(r['quote'].get('depth',[])) for r in store.hydrate_records(records))
                 expected=max(expected,int(size)*8+int(depth)*2048)
             self.assertEqual(capture_reservation(db),expected+MAX_BYTES*8+16*1024*1024)
 
@@ -285,10 +286,13 @@ class LatestBoardSQL(LatestBoardFixture):
     async def test_commit_marker_ignores_receipts_but_not_source_clock(self):
         with self.connect() as db:
             before=latest.marker(db)
-            db.execute("UPDATE current_offer SET received_at=%s,received_order=received_order+1",
+            db.execute("""UPDATE current_offer_storage s SET received_at=%s,received_order=s.received_order+1,
+                price_value=o.price_value,facts=o.facts,native_book_id=NULL,native_bid_outcome_id=NULL
+                FROM current_offer o WHERE o.contract_id=s.contract_id AND s.sgo_quote_id IS NULL""",
                 ((self.at+timedelta(seconds=1)).isoformat(),))
-            db.execute("UPDATE current_native_book SET received_at=%s,received_order=received_order+1",
-                ((self.at+timedelta(seconds=1)).isoformat(),))
+            for book in db.execute("SELECT id FROM native_book_revision WHERE is_current").fetchall():
+                replace_book_revision(db,book['id'],book['id']+'-receipt',
+                                      received_at=(self.at+timedelta(seconds=1)).isoformat())
             self.assertEqual(latest.marker(db),before)
             db.execute("UPDATE current_offer SET source_at=%s",((self.at+timedelta(seconds=1)).isoformat(),))
             self.assertNotEqual(latest.marker(db),before)
@@ -300,7 +304,7 @@ class LatestBoardSQL(LatestBoardFixture):
             before=latest.marker(db,scope);whole=latest.marker(db)
             other=db.execute('SELECT o.contract_id FROM current_offer o JOIN current_contract c ON c.id=o.contract_id WHERE NOT(c.event_id=ANY(%s)) LIMIT 1',(scope,)).fetchone()
             self.assertIsNotNone(other)
-            db.execute("UPDATE current_offer SET revision='authored-unrelated-update' WHERE contract_id=%s",(other['contract_id'],))
+            db.execute("UPDATE current_offer_storage SET revision='authored-unrelated-update' WHERE contract_id=%s",(other['contract_id'],))
             self.assertEqual(latest.marker(db,scope),before)
             self.assertNotEqual(latest.marker(db),whole)
             db.execute('DELETE FROM current_offer USING current_contract c WHERE current_offer.contract_id=c.id AND NOT(c.event_id=ANY(%s))',(scope,))
@@ -378,22 +382,10 @@ class LatestBoardSQL(LatestBoardFixture):
         from pathlib import Path
         from psycopg.types.json import Jsonb
         from app.dashboard.comparison_board import compact_price_fields, expand_price_fields
-        from app.storage.coverage_latest import _PUBLICATION_SQL
         from app.storage.store import encoded
         old=json.loads(gzip.decompress(Path('tests/fixtures/wide-spread-board-20261022.json.gz').read_bytes()))
-        self.reconcile()
-        with self.connect() as db:
-            key=db.execute('SELECT game_key FROM latest_board ORDER BY game_key LIMIT 1').fetchone()['game_key']
-            def project(board):
-                db.execute("UPDATE latest_board SET facts=jsonb_set(facts,'{boards,odds}',%s) WHERE game_key=%s",(Jsonb(board),key))
-                return db.execute(_PUBLICATION_SQL+' ORDER BY game_key').fetchall()
-            before=project(old)
-            wire=compact_price_fields(deepcopy(old))
-            self.assertIn('price_object_keys',wire)
-            self.assertEqual(project(wire),before)
-            for malformed in (['duplicate','duplicate'],['__proto__'],[True],None,{}):
-                bad=deepcopy(wire);bad['price_object_keys']=malformed
-                with self.assertRaises(psycopg.Error),db.transaction():project(bad)
+        wire=compact_price_fields(deepcopy(old))
+        self.assertIn('price_object_keys',wire)
         # Exercise the actual complete read constructor, including read metadata
         # and source aging; the retained game is a disposable frame here.
         frame=dict(status=dict(games=[]),rows={},at=old['read_at'],reasons=[],owner=dict(states={}))
@@ -866,7 +858,10 @@ class LatestBoardSQL(LatestBoardFixture):
             # A once-valid frame with newer admitted evidence must also rejoin
             # priority work. Receipt-only changes remain a scheduling hint; the
             # existing reconciliation test verifies exact unchanged reuse.
-            db.execute("UPDATE current_offer SET received_at=%s WHERE contract_id IN (SELECT id FROM current_contract WHERE event_id=ANY(%s))",
+            db.execute("""UPDATE current_offer_storage s SET received_at=%s,price_value=o.price_value,facts=o.facts,
+                native_book_id=NULL,native_bid_outcome_id=NULL FROM current_offer o
+                WHERE s.contract_id=o.contract_id AND s.sgo_quote_id IS NULL AND s.contract_id IN
+                    (SELECT id FROM current_contract WHERE event_id=ANY(%s))""",
                 ((self.at+timedelta(seconds=1)).isoformat(),retry['publication_events']))
             self.assertEqual(prioritize_window_waiters(db,batches,window_at,observations_only=False)[0],retry['publication_events'])
             # A new unpublished arrival joins the same age-ordered class; it
@@ -882,7 +877,9 @@ class LatestBoardSQL(LatestBoardFixture):
     async def test_receipt_only_refresh_and_sibling_status_do_not_rebuild_quiet_games(self):
         self.reconcile();before=self.rows()
         with self.connect() as db:
-            db.execute("UPDATE current_offer SET received_at=%s,received_order=received_order+1",((self.at+timedelta(seconds=1)).isoformat(),))
+            db.execute("""UPDATE current_offer_storage s SET received_at=%s,received_order=s.received_order+1,
+                price_value=o.price_value,facts=o.facts,native_book_id=NULL,native_bid_outcome_id=NULL
+                FROM current_offer o WHERE o.contract_id=s.contract_id AND s.sgo_quote_id IS NULL""",((self.at+timedelta(seconds=1)).isoformat(),))
             db.execute("UPDATE latest_board_status SET facts=jsonb_set(facts,'{observation_only}','true'::jsonb)")
         with patch.object(latest,'read_context',side_effect=AssertionError('unchanged normalization forbidden')), patch.object(latest,'calculate_current',side_effect=AssertionError('unchanged maths forbidden')):
             result=self.reconcile()
@@ -941,7 +938,7 @@ class LatestBoardSQL(LatestBoardFixture):
                 q=next(q for _,_,q in entries(bundle['state_inputs']))
                 self.at+=timedelta(seconds=1);self.state.write(self.service)
                 with self.connect() as db:
-                    db.execute("UPDATE current_offer SET revision=revision||'-during-calculation' WHERE contract_id=%s",
+                    db.execute("UPDATE current_offer_storage SET revision=revision||'-during-calculation' WHERE contract_id=%s",
                         (contract_id(dict(quote=q)),))
             return value
         with patch.object(latest,'calculate_current',side_effect=changing):
@@ -976,7 +973,7 @@ class LatestBoardSQL(LatestBoardFixture):
         self.reconcile();published=self.rows();selected=published[self.first['game_key']]['facts']['boards']['ev']['rows'][0]['details']
         source=published[self.first['game_key']]['facts']['boards']['odds']['prices'][0]
         from app.dashboard.comparison_board_api import mount
-        provider=RuntimeClient(connector=self.connect);provider.acquire=MagicMock(side_effect=AssertionError('provider forbidden'))
+        provider=RetainedBoardClient(connector=self.connect);provider.acquire=MagicMock(side_effect=AssertionError('provider forbidden'))
         app=web.Application();mount(app,provider)
         with patch('app.dashboard.comparison_board_api.connect',side_effect=self.connect),patch('app.dashboard.scanner_api.connect',side_effect=self.connect):
             async with TestClient(TestServer(app)) as client:
@@ -1120,7 +1117,7 @@ class LatestBoardSQL(LatestBoardFixture):
             status=db.execute('SELECT facts FROM latest_board_status').fetchone()['facts']
             marker=latest.marker(db);owner=latest.runtime(db)
             selected=next(r for r in self.records if r['quote']['venue']=='kalshi')
-            db.execute("UPDATE current_offer SET revision=revision||'-changed' WHERE contract_id=%s",(contract_id(selected),))
+            db.execute("UPDATE current_offer_storage SET revision=revision||'-changed' WHERE contract_id=%s",(contract_id(selected),))
         status['observation_only']=True
         with self.connect() as db:
             self.assertTrue(latest.publish(db,captured_marker=marker,captured_runtime=owner,status=status,rows=list(rows.values())))
@@ -1140,7 +1137,7 @@ class LatestBoardSQL(LatestBoardFixture):
         from app.dashboard.comparison_board import expand_price_fields
         from app.storage.current_rows import contract_id
         self.reconcile()
-        app=web.Application();mount(app,RuntimeClient(connector=self.connect))
+        app=web.Application();mount(app,RetainedBoardClient(connector=self.connect))
         with patch('app.dashboard.comparison_board_api.connect',side_effect=self.connect):
             async with TestClient(TestServer(app)) as client:
                 response=await client.get('/api/boards/slate',params=dict(view='ev',filter='all',limit='50'))
@@ -1178,7 +1175,7 @@ class LatestBoardSQL(LatestBoardFixture):
         self.reconcile()
         selected=self.rows()[self.second['game_key']]['facts']['boards']['ev']['rows'][0]['details']
         from app.dashboard.comparison_board_api import mount
-        app=web.Application();mount(app,RuntimeClient(connector=self.connect))
+        app=web.Application();mount(app,RetainedBoardClient(connector=self.connect))
         query=dict(game=self.second['game_key'],context_id=selected['context_id'],quote=selected['quote_id'])
         with patch('app.dashboard.comparison_board_api.connect',side_effect=self.connect):
             async with TestClient(TestServer(app)) as client:

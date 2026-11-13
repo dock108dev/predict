@@ -106,7 +106,9 @@ cases. For two supported native contract legs, the retail calculation buys
 equal whole claims at the captured prices within the selected pre-fee stake,
 reports unused stake and applies each leg's size-specific rounding. Results
 may be negative. The displayed cashflows are modeled for the evidenced
-settlement states. Depth and exceptional settlement may remain unavailable.
+settlement states. The retail comparison uses captured prices without requiring
+resting quantities, and exceptional settlement can remain unavailable. Advanced
+Scanner's execution sizing separately requires observed book depth.
 
 ## November 3 snapshot integration
 

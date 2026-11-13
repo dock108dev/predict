@@ -46,6 +46,9 @@ messages. Failed withdrawal of a scanner publication logs
 `scanner_failure_withdrawal`; heartbeat, dependency and expiry checks still guard
 read eligibility. Publication and selected-proof read failures log
 `scanner_publication_read` and `scanner_selection_capture` and withhold authority.
+The dated Scanner census can survive a calculation binding change while the
+runtime, reset epoch and collection controls still match. The read reports
+`scanner_calculation_binding_changed` and drops complete and partial receipts.
 
 Retained read workers log unexpected errors as `retained_read_worker`, even after
 request cancellation or timeout. Their completion futures carry errors as data,

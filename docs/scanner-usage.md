@@ -17,6 +17,14 @@ use included venues. **Find on this page** searches only the displayed page; it
 does not narrow observation history or arrival cues. Amount is optional and does
 not change discovery rows.
 
+The scope panel shows the full market capture time and the time of the latest
+financial inputs. Scanner can evaluate supported outcomes using current Kalshi
+and Polymarket US books and still leave the pair partially evaluated. Venue rules
+can make cancellation or delayed-game payouts discretionary. A price supplied
+without executable depth, such as an aggregate Novig or ProphetX quote, cannot
+supply an execution allocation. A result count of zero can coexist with actual
+financial evaluations.
+
 Open **Scope, size & observations** for distinct observed episodes in your selected
 category and filters. “Newly qualified” requires an observed prior check without
 that category. “Present at first observation” has unknown earlier history. A gap,

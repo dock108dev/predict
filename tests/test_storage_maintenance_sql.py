@@ -395,6 +395,7 @@ class StorageMaintenanceSQL(LatestBoardFixture):
         from psycopg.errors import DependentObjectsStillExist
         with self.connect() as db,db.transaction(force_rollback=True):
             db.execute('ALTER TABLE current_native_market_recovery DROP COLUMN receipt_fields')
+            db.execute('ALTER TABLE current_native_market_recovery DROP COLUMN metadata_id')
             db.execute('DELETE FROM current_native_market_recovery')
             db.execute('CREATE TEMP TABLE legacy_recovery_shape (LIKE current_native_market_recovery INCLUDING ALL)')
             db.execute('DROP TABLE current_native_market_recovery')
@@ -504,7 +505,8 @@ class StorageMaintenanceSQL(LatestBoardFixture):
             packet=put(db,b'expired despite expiry contention')
             db.execute("UPDATE current_grid_blob SET unreferenced_at=now()-interval '10 minutes' WHERE id=%s",(packet,))
             db.execute("INSERT INTO current_sgo_reference VALUES ('expired-reference','event','book',NULL,1,now()-interval '1 day','revision','{}')")
-            db.execute("INSERT INTO current_sgo_event_frame VALUES ('event',1,now()-interval '1 day',2,'{}')")
+            db.execute("""INSERT INTO sgo_event_evidence (kind,event_id,received_order,expires_at,payload_bytes,facts)
+                VALUES ('frame','event',1,now()-interval '1 day',2,'{}')""")
             with blocker.transaction():
                 blocker.execute('SELECT pg_advisory_xact_lock(%s)',(LOCK,))
                 def connection():
@@ -524,10 +526,53 @@ class StorageMaintenanceSQL(LatestBoardFixture):
 
 
 class WorkingPartitionUpgradeSQL(LatestBoardFixture):
+    def clear_source_state(self, db):
+        db.execute('TRUNCATE current_source_status,current_refresh_scope')
+
     def admit(self,records):
         # Seed the historical ranked schema independently of today's writer.
-        from app.storage.current_rows import CurrentRowStore
-        with patch.object(CurrentRowStore,'replace_native_books'):
+        from contextlib import contextmanager
+        from psycopg.types.json import Jsonb
+        from app.storage.current_rows import CurrentRowStore, _OfferBatch, _ordered_writes
+
+        @contextmanager
+        def historical_writes(db):
+            with _ordered_writes(db) as execute:
+                def historical_execute(query, *args, **kwargs):
+                    if query == "DELETE FROM current_row_state WHERE kind='scope' AND received_order<%s":
+                        query = 'DELETE FROM current_refresh_scope WHERE received_order<%s'
+                    elif query.startswith('SELECT contract_id,source_at,source_order,received_order'):
+                        query = query.replace('native_book_id,','NULL AS native_book_id,')
+                    elif query.startswith('UPDATE current_contract_storage SET independent_depth='):
+                        _, contract, depth = args[0]
+                        execute('DELETE FROM current_depth WHERE contract_id=%s', (contract,))
+                        for level in depth.obj if depth else ():
+                            execute('INSERT INTO current_depth VALUES(%s,%s,%s,%s,%s,%s)', (contract, *level))
+                        return None
+                    return execute(query, *args, **kwargs)
+                yield historical_execute
+
+        def flush_historical_offers(batch):
+            if not batch.rows:
+                return
+            batch.execute('''INSERT INTO current_offer
+                (contract_id,price_value,price_units,quantity_units,source_at,source_order,received_at,received_order,facts,revision)
+                SELECT * FROM jsonb_to_recordset(%s) AS r(contract_id text,price_value text,price_units text,
+                    quantity_units text,source_at text,source_order numeric,received_at text,received_order numeric,
+                    facts jsonb,revision text)
+                ON CONFLICT(contract_id) DO UPDATE SET
+                    price_value=excluded.price_value,price_units=excluded.price_units,quantity_units=excluded.quantity_units,
+                    source_at=excluded.source_at,source_order=excluded.source_order,received_at=excluded.received_at,
+                    received_order=excluded.received_order,facts=excluded.facts,revision=excluded.revision''',
+                (Jsonb(batch.rows),),synchronous=True)
+            batch.rows.clear()
+            batch.keys.clear()
+            batch.size=0
+
+        with (patch.object(CurrentRowStore,'replace_native_books'),
+              patch.object(CurrentRowStore,'_link_native_offers'),
+              patch.object(_OfferBatch,'flush',flush_historical_offers),
+              patch('app.storage.current_rows._ordered_writes', historical_writes)):
             super().admit(records)
         with self.connect() as db:
             c=db.execute("SELECT * FROM current_contract WHERE venue='kalshi' LIMIT 1").fetchone()
@@ -560,20 +605,30 @@ class WorkingPartitionUpgradeSQL(LatestBoardFixture):
             comparison_snapshot='id',comparison_snapshot_result='id',comparison_live_read_fragment='member_id',
             comparison_live_head='singleton',comparison_live_component='id',comparison_live_member='result_id,member_id',
             comparison_live_lease='id')
-        with self.connect() as db,patch.object(live,'utc',lambda:self.at.isoformat()),patch.object(snapshots,'utc',lambda:self.at.isoformat()):
-            # Seed a pre-063 publication. Delivery diagnostics and stored fee
-            # schedules arrived in 069 and 070. Keep the historical schema and
-            # use the real snapshot, fragment and lease paths.
-            with (
-                patch('app.storage.delivery_clocks.captured'),
-                patch('app.storage.delivery_clocks.published'),
-                patch.object(live.schedule_lifecycle, 'read', return_value=None),
-                patch.object(live.product_schedules, 'read_all', return_value={}),
-            ):
-                live.turn(db)
-            head=live.status(db)
-            root=snapshots.unpack(db.execute('SELECT result FROM comparison_snapshot_result WHERE id=%s',(head['result_id'],)).fetchone()['result'],db=db)
-            member=root['rows'][0]['evidence_result_id'];token=live.retain(db,member)
+        with self.connect() as db:
+            # Write the historical SQL shape explicitly. Today's app is an
+            # installed-schema client and does not emulate the pre-063 writer.
+            from psycopg.types.json import Jsonb
+            fields = dict(rows=[], pairs=[], games=[], references=[], issues=[], sources={})
+            member = dict(fields, id='member', rows=[{'evidence_result_id':'member','id':'retained-quote'}],
+                          captured_at=self.at.isoformat(), publication={'finance':'ready'})
+            manifest = dict(fields, id='root', _read_fragments=['member'])
+            for result in (member, manifest):
+                key = result['id']
+                db.execute('INSERT INTO comparison_snapshot (id,captured_at,inputs,automatic) VALUES(%s,%s,%s,true)',
+                           (key, self.at, snapshots.pack({'id':key,'original':'exact'})))
+                db.execute('''INSERT INTO comparison_snapshot_result (id,snapshot_id,assumptions,result,automatic)
+                    VALUES(%s,%s,%s,%s,true)''', (key, key, Jsonb(snapshots.assumptions()[0]), snapshots.pack(result)))
+            db.execute('INSERT INTO comparison_live_read_fragment VALUES(%s,%s,%s)',
+                       ('member', Jsonb({'event_ids':['event'],'finance':'ready'}), snapshots.pack(member)))
+            db.execute("UPDATE comparison_live_head SET result_id='root',generation=7")
+            db.execute("INSERT INTO comparison_live_component VALUES('component','member','{}')")
+            db.execute("INSERT INTO comparison_live_member VALUES('root','member')")
+            db.execute("INSERT INTO comparison_live_lease VALUES('lease','member',now()+interval '2 hours')")
+            db.execute("INSERT INTO comparison_snapshot_review VALUES('root')")
+            db.execute("INSERT INTO comparison_snapshot_head VALUES(true,'root')")
+            db.execute("INSERT INTO coverage_latest VALUES(true,%s,'coverage-revision','{}')", (self.at.isoformat(),))
+            db.execute("INSERT INTO scanner_latest VALUES(true,'runtime',7,'deps',9,%s,'{}')", (self.at,))
             before={table:db.execute('SELECT * FROM '+table+' ORDER BY '+keys).fetchall()for table,keys in order.items()}
             db.execute('CREATE TABLE unknown_working_reference(id text REFERENCES comparison_snapshot_result(id))')
             with self.assertRaisesRegex(RaiseException,'unknown_foreign_dependency'):Store(db).migrate()
@@ -593,7 +648,6 @@ class WorkingPartitionUpgradeSQL(LatestBoardFixture):
             for table,rows in before.items():self.assertEqual(rows,db.execute('SELECT * FROM '+table+' ORDER BY '+order[table]).fetchall())
             for table in tuple(order)[:6]:
                 self.assertEqual(db.execute('SELECT count(*) n FROM pg_partition_tree(%s::regclass) WHERE isleaf',(table,)).fetchone()['n'],16)
-            self.assertEqual(root,snapshots.unpack(db.execute('SELECT result FROM comparison_snapshot_result WHERE id=%s',(head['result_id'],)).fetchone()['result'],db=db))
             with db.transaction(force_rollback=True):
                 contract=before['current_contract'][0]
                 db.execute("UPDATE current_contract SET facts=facts||'{\"rule_note\":\"changed original rule\"}' WHERE id=%s",(contract['id'],))
@@ -609,5 +663,18 @@ class WorkingPartitionUpgradeSQL(LatestBoardFixture):
             self.assertEqual(db.execute("SELECT count(*) n FROM pg_partition_tree('current_native_ladder') WHERE isleaf").fetchone()['n'],16)
             self.assertEqual(before['current_native_depth'],db.execute('SELECT * FROM current_native_depth ORDER BY '+order['current_native_depth']).fetchall())
             self.assertEqual(before['comparison_live_lease'],db.execute('SELECT * FROM comparison_live_lease ORDER BY id').fetchall())
-            db.execute('DELETE FROM comparison_live_lease WHERE id=%s',(token['lease_id'],))
-            self.assertEqual(db.execute('SELECT count(*) n FROM comparison_live_lease').fetchone()['n'],0)
+            Store(db).migrate(through='088_comparison_publication_owners.sql')
+            self.assertEqual(live.status(db)['generation'],7)
+            self.assertEqual(live.status(db)['result_id'],'root')
+            self.assertEqual(db.execute('SELECT id,result FROM comparison_snapshot_result ORDER BY id').fetchall(),
+                             [{k:r[k] for k in ('id','result')} for r in before['comparison_snapshot_result']])
+            self.assertEqual(db.execute('SELECT id,inputs FROM comparison_snapshot ORDER BY id').fetchall(),
+                             [{k:r[k] for k in ('id','inputs')} for r in before['comparison_snapshot']])
+            root = snapshots.unpack(db.execute("SELECT result FROM comparison_snapshot_result WHERE id='root'").fetchone()['result'],db=db)
+            self.assertEqual(root['rows'],member['rows'])
+            self.assertEqual(db.execute("SELECT generation,scanner_runtime_revision FROM comparison_publication WHERE kind='scanner'").fetchone(),
+                             {'generation':9,'scanner_runtime_revision':7})
+            self.assertEqual(db.execute("SELECT revision FROM comparison_publication WHERE kind='coverage'").fetchone()['revision'],'coverage-revision')
+            self.assertEqual(db.execute("SELECT result_id FROM comparison_result_reference WHERE kind='review'").fetchone()['result_id'],'root')
+            db.execute("DELETE FROM comparison_result_reference WHERE kind='lease' AND holder='lease'")
+            self.assertEqual(db.execute("SELECT count(*) n FROM comparison_result_reference WHERE kind='lease'").fetchone()['n'],0)

@@ -229,7 +229,9 @@ async def main(output=OUTPUT):
         await tab.emulate_media(color_scheme="light")
         await tab.locator('[data-row="00000-kalshi"] .p-why-button').click()
         await tab.wait_for_selector(".math-content")
-        assert await tab.get_by_role("heading", name="Novig fair price").is_visible()
+        assert await tab.get_by_role(
+            "heading", name="Sportsbook prices and estimated fair odds"
+        ).is_visible()
         assert await tab.locator("#inspection-source option").count() == 4
         assert "88" not in await tab.locator(".math-values").inner_text()
         await tab.get_by_text("Retained arithmetic & exact inputs", exact=True).click()

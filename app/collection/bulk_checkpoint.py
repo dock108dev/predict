@@ -6,6 +6,7 @@ from uuid import uuid4
 from psycopg.types.json import Jsonb
 from app.storage.store import connect
 from app.storage.recovery_codec import freeze,thaw
+from app.storage import native_market_metadata
 
 
 class Checkpoint:
@@ -23,8 +24,8 @@ class Checkpoint:
                 'AND query_key=%s', (self.source, key)).fetchone()
             if row is None:
                 self.generation = self.generation or str(uuid4())
-                db.execute('INSERT INTO current_acquisition_query '
-                           '(source,query_key,generation,request) VALUES (%s,%s,%s,%s)',
+                db.execute("INSERT INTO acquisition_receipt "
+                           "(kind,source,scope,query_generation,payload,started_at) VALUES ('query',%s,%s,%s,%s,now())",
                            (self.source, key, self.generation, Jsonb(request)))
             else:
                 self.generation = row['generation']
@@ -44,25 +45,25 @@ class Checkpoint:
 
     def page(self, key, index, receipt, complete):
         with connect() as db, db.transaction():
-            db.execute('INSERT INTO current_acquisition_page VALUES (%s,%s,%s,%s) '
-                       'ON CONFLICT (source,query_key,position) DO UPDATE SET receipt=EXCLUDED.receipt '
-                       'WHERE current_acquisition_page.receipt IS DISTINCT FROM EXCLUDED.receipt',
+            db.execute("INSERT INTO acquisition_receipt (kind,source,scope,position,payload) "
+                       "VALUES ('page',%s,%s,%s,%s) ON CONFLICT (kind,source,scope,event_id,position) "
+                       "DO UPDATE SET payload=EXCLUDED.payload WHERE acquisition_receipt.payload IS DISTINCT FROM EXCLUDED.payload",
                        (self.source, key, index, Jsonb(freeze(receipt))))
             if complete:
-                db.execute('UPDATE current_acquisition_query SET completed_at=now() '
-                           'WHERE source=%s AND query_key=%s', (self.source, key))
+                db.execute("UPDATE acquisition_receipt SET completed_at=now() "
+                           "WHERE kind='query' AND source=%s AND scope=%s", (self.source, key))
 
     def finish(self):
         # Publication succeeded. The next pass obtains fresh boundaries; retain
         # this census until its replacement query begins, not an update archive.
         with connect() as db:
-            db.execute('UPDATE current_acquisition_query SET generation=%s WHERE source=%s',
+            db.execute("UPDATE acquisition_receipt SET query_generation=%s WHERE kind='query' AND source=%s",
                        ('published', self.source))
         self.generation = None
 
     def begin(self):
         with connect() as db:
-            db.execute("DELETE FROM current_acquisition_query WHERE source=%s AND generation='published'",
+            db.execute("DELETE FROM acquisition_receipt WHERE kind='query' AND source=%s AND query_generation='published'",
                        (self.source,))
 
     def listing_start(self, proposed):
@@ -157,18 +158,28 @@ def save_census(source, events, markets, parsed):
     at, generation = utc(), str(uuid4())
     parents = {e['id']: e for e in events}
     with connect() as db, db.transaction():
+        native_market_metadata.hold(db)
         with db.cursor() as cur:
-            cur.executemany('INSERT INTO current_acquisition_market '
-                '(source,event_id,market_id,sport,family,generation,observed_at,withdrawn,disposition,metadata) '
-                'VALUES (%s,%s,%s,%s,%s,%s,%s,false,%s,%s) '
-                'ON CONFLICT (source,event_id,market_id) DO UPDATE SET '
-                'sport=EXCLUDED.sport,family=EXCLUDED.family,generation=EXCLUDED.generation,'
-                'observed_at=EXCLUDED.observed_at,withdrawn=false,absent_since=NULL,missing_passes=0,'
-                'disposition=EXCLUDED.disposition,metadata=CASE WHEN current_acquisition_market.metadata=EXCLUDED.metadata '
-                'THEN current_acquisition_market.metadata ELSE EXCLUDED.metadata END',
-                [(source,m['event_id'],m['id'],parents[m['event_id']]['competition'],m['market_type'],
-                  generation,at,'subscribed' if m['id'] in parsed else 'not_subscribed_parser_or_eligibility',
-                  Jsonb(m['_native'])) for m in markets])
+            size = native_market_metadata.MAX_BATCH_ROWS
+            for offset in range(0, len(markets), size):
+                bodies, jobs = {}, []
+                for market in markets[offset:offset + size]:
+                    body = market['_native']
+                    ref = native_market_metadata.body_id(body)
+                    bodies[ref] = body
+                    event = parents[market['event_id']]
+                    disposition = 'subscribed' if market['id'] in parsed else 'not_subscribed_parser_or_eligibility'
+                    jobs.append((source, market['event_id'], market['id'], event['competition'], market['market_type'],
+                                 generation, at, disposition, Jsonb(native_market_metadata.split_census(body)), ref))
+                native_market_metadata.put(db, bodies)
+                cur.executemany('INSERT INTO current_acquisition_market '
+                    '(source,event_id,market_id,sport,family,generation,observed_at,withdrawn,disposition,metadata,metadata_id) '
+                    'VALUES (%s,%s,%s,%s,%s,%s,%s,false,%s,%s,%s) '
+                    'ON CONFLICT (source,event_id,market_id) DO UPDATE SET '
+                    'sport=EXCLUDED.sport,family=EXCLUDED.family,generation=EXCLUDED.generation,'
+                    'observed_at=EXCLUDED.observed_at,withdrawn=false,absent_since=NULL,missing_passes=0,'
+                    'disposition=EXCLUDED.disposition,metadata=EXCLUDED.metadata,metadata_id=EXCLUDED.metadata_id',
+                    jobs)
         db.execute('UPDATE current_acquisition_market SET disposition=%s, '
                    'absent_since=COALESCE(absent_since,%s),missing_passes=missing_passes+1 '
                    'WHERE source=%s AND generation<>%s AND NOT withdrawn',
@@ -209,10 +220,11 @@ def save_failure(source, raw, received_at, generation, stage):
     if not isinstance(raw,bytes) or len(raw)>256*1024:
         raise ValueError('raw_failure_size_invalid')
     with connect() as db, db.transaction():
-        db.execute('INSERT INTO current_acquisition_failure '
-            '(source,received_at,generation,stage,disposition,body_sha256,wire_bytes,body) '
-            'VALUES (%s,%s,%s,%s,%s,%s,%s,%s)',
+        db.execute("INSERT INTO acquisition_receipt "
+            "(kind,scope,position,source,received_at,failure_generation,failure_stage,disposition,receipt_sha256,wire_bytes,wire_body) "
+            "VALUES ('failure','',nextval('acquisition_failure_id'),%s,%s,%s,%s,%s,%s,%s,%s)",
             (source,received_at,generation,stage,'unusable_not_math_eligible',sha256(raw).hexdigest(),len(raw),raw))
-        db.execute("DELETE FROM current_acquisition_failure WHERE received_at<now()-interval '1 day'")
-        db.execute('DELETE FROM current_acquisition_failure WHERE source=%s AND id NOT IN '
-            '(SELECT id FROM current_acquisition_failure WHERE source=%s ORDER BY id DESC LIMIT 64)',(source,source))
+        db.execute("DELETE FROM acquisition_receipt WHERE kind='failure' AND received_at<now()-interval '1 day'")
+        db.execute("DELETE FROM acquisition_receipt WHERE kind='failure' AND source=%s AND position NOT IN "
+            "(SELECT position FROM acquisition_receipt WHERE kind='failure' AND source=%s ORDER BY position DESC LIMIT 64)",
+            (source,source))

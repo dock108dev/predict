@@ -47,9 +47,31 @@ def kalshi_account(at):
 
 def kalshi_scenarios(q, evidence, at, *, quantity='1'):
     """Resolve source metadata once, then use the existing fee engine for rounding."""
-    from app.collection.native_fee_metadata import context
     from app.fees.engine import Registry, calculate
-    body=json.loads((ROOT/evidence['path']).read_bytes())
+    context, registry, evidence = kalshi_fee_context(q, evidence, at)
+    quantity=F(quantity)
+    if quantity <= 0:
+        raise ValueError('kalshi_positive_quantity_required')
+    original=q['original']
+    scope=q.get('fee_applicability') or {}
+    scenarios=[]
+    for membership,precision in [('direct','0.0001'),('non_direct','0.01')]:
+        audit=calculate(dict(context,balance_precision=precision,applicability_evidence=scope,
+            fills=[dict(fill_id='modeled-single-fill',order_id='modeled-single-order',role='taker',
+                price=original['value'],quantity=str(quantity),unit='contracts')]),Registry(registry))
+        if audit['entry_cash_requirement'] is None:raise ValueError('; '.join(audit['unsupported']))
+        scenarios.append(dict(membership=membership,balance_precision=precision,
+            risk=audit['entry_cash_requirement'],fee=str(F(audit['entry_cash_requirement'])-F(original['value'])*quantity),
+            rounding_trace=audit['trace'],resolved_terms=audit['resolved_terms'],
+            account_verified=False,ranking_eligible=False,intermediary_charges='not included'))
+    return scenarios,evidence
+
+
+def kalshi_fee_context(q, evidence, at, *, body=None):
+    """Bind reviewed API series, event override history and fee schedule once."""
+    from app.collection.native_fee_metadata import context
+    if body is None:
+        body=json.loads((ROOT/evidence['path']).read_bytes())
     scope=q.get('fee_applicability') or {};source=q['source']
     series_id=scope.get('series_id');event_id=source['native_event_id']
     market_id=source['native_market_id']
@@ -61,9 +83,6 @@ def kalshi_scenarios(q, evidence, at, *, quantity='1'):
             or not event_id.startswith(series_id+'-') or not market_id.startswith(event_id+'-')
             or scope.get('native_key')!=['kalshi',event_id,market_id,source['native_outcome_id'],source['native_side']]):
         raise ValueError('kalshi_native_fee_identity_conflict')
-    quantity=F(quantity)
-    if quantity <= 0:
-        raise ValueError('kalshi_positive_quantity_required')
     original=q['original']
     if (original['units']!='usd_per_contract' or original.get('quantity_units')!='contracts'
             or original.get('payout_units')!='USD' or F(original.get('payout','0'))!=1):
@@ -78,20 +97,9 @@ def kalshi_scenarios(q, evidence, at, *, quantity='1'):
     until=earliest_end(evidence['review_before'],*future)
     evidence=dict(evidence,review_before=until,series_id=series_id,event_id=event_id,
         metadata_revision=hashed(metadata))
-    registry=Registry(dict(schema=1,schedules=[dict(venue='kalshi',product='event_contract',
+    registry=dict(schema=1,schedules=[dict(venue='kalshi',product='event_contract',
         version=evidence['version'],coefficient=evidence['fee_rate'],
-        effective_from=evidence['reviewed_at'],effective_to=until,sources=[evidence])]))
-    scenarios=[]
-    for membership,precision in [('direct','0.0001'),('non_direct','0.01')]:
-        audit=calculate(dict(venue='kalshi',environment='production',market_id=market_id,
-            product='event_contract',trade_time=at.isoformat(),calculation_time=at.isoformat(),
-            series_id=series_id,event_id=event_id,kalshi_metadata=metadata,balance_precision=precision,
-            applicability_evidence=scope,complete_order_history=True,
-            fills=[dict(fill_id='modeled-single-fill',order_id='modeled-single-order',role='taker',
-                price=original['value'],quantity=str(quantity),unit='contracts')]),registry)
-        if audit['entry_cash_requirement'] is None:raise ValueError('; '.join(audit['unsupported']))
-        scenarios.append(dict(membership=membership,balance_precision=precision,
-            risk=audit['entry_cash_requirement'],fee=str(F(audit['entry_cash_requirement'])-F(original['value'])*quantity),
-            rounding_trace=audit['trace'],resolved_terms=audit['resolved_terms'],
-            account_verified=False,ranking_eligible=False,intermediary_charges='not included'))
-    return scenarios,evidence
+        effective_from=evidence['reviewed_at'],effective_to=until,sources=[evidence])])
+    return dict(venue='kalshi',environment='production',market_id=market_id,product='event_contract',
+        trade_time=at.isoformat(),calculation_time=at.isoformat(),series_id=series_id,event_id=event_id,
+        kalshi_metadata=metadata,complete_order_history=True),registry,evidence

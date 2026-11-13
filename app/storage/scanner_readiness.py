@@ -11,13 +11,13 @@ from app.comparison.current_dependencies import digest, instant, encoded, encode
 from app.comparison.scanner_readiness import Selection, assemble, check, MAX_INSTRUMENTS, POLICY_REVISION, _count
 from app.comparison.readiness_inputs import instrument
 from app.collection.current_policy import GRANT, aggregate_scope, native_scope, native_markets
-from app.storage.store import Store
-from app.storage.current_rows import CurrentRowStore
+from app.storage.store import Store, hashed
+from app.storage.current_rows import CurrentRowStore, contract_id, native_offer_ask_counts
 from app.storage.comparison_board import ReadContext
 
 
 def capture_reservation(db):
-    from .latest_board import capture_batches
+    from .board_capture import capture_batches
     from app.comparison.scanner_readiness import MAX_BYTES
     groups=capture_batches(db)
     # Measure each event once, then sum complete peer components. The previous
@@ -28,10 +28,11 @@ def capture_reservation(db):
             FROM current_contract c JOIN current_offer o ON o.contract_id=c.id GROUP BY c.event_id)
             SELECT e.id event_id,offers.bytes+offers.rows*octet_length(e.facts::text) n
             FROM offers JOIN current_event e ON e.id=offers.event_id''')}
-    depths={r['event_id']:int(r['n']) for r in db.execute('''SELECT event_id,sum(n) n FROM (
-        SELECT event_id,sum(jsonb_array_length(levels)) n FROM current_native_ladder WHERE side='asks' GROUP BY event_id
-        UNION ALL SELECT c.event_id,count(*) FROM current_depth d JOIN current_contract c ON c.id=d.contract_id
-            WHERE side='asks' GROUP BY c.event_id) levels GROUP BY event_id''')}
+    depths={r['event_id']:int(r['n']) for r in native_offer_ask_counts(db)}
+    for row in db.execute('''SELECT c.event_id,count(*) n FROM current_depth d JOIN current_contract c ON c.id=d.contract_id
+        WHERE side='asks' GROUP BY c.event_id'''):
+        event_id=row['event_id']
+        depths[event_id]=depths.get(event_id,0)+row['n']
     maximum=max((sum(sizes.get(eid,0)*8+depths.get(eid,0)*2048 for eid in ids) for ids in groups),default=0)
     # Whole readiness output stays bounded; expensive source/finance preparation
     # owns only one complete possible-peer component at a time.
@@ -42,8 +43,30 @@ def read(db, **kwargs):
     return capture(db, **kwargs)[0]
 
 
+def _selected_components(db, planned, selection, scopes, wanted):
+    """Keep complete possible-peer components for selected execution and references."""
+    offered = db.execute('''SELECT DISTINCT c.event_id, c.venue, e.competition AS league,
+        c.facts#>>'{market_identity,family}' AS family, c.facts#>>'{market_identity,period}' AS period
+        FROM current_contract c JOIN current_event e ON e.id=c.event_id
+        JOIN current_offer o ON o.contract_id=c.id
+        WHERE c.venue=ANY(%s) AND e.competition=ANY(%s)''',
+        ([*selection.venues, 'pinnacle'], list(selection.leagues))).fetchall()
+    exact = {(s['venue'], s['league'], s['market'], s['period']) for s in scopes}
+    execution = {row['event_id'] for row in offered if
+        (row['venue'], row['league'],
+         'winner' if row['family'] in ('moneyline', 'team_binary') else row['family'], row['period']) in exact}
+    reference = {row['event_id'] for row in offered if row['venue'] == 'pinnacle' and
+        league_sport(row['league']) in selection.sports and 'winner' in selection.markets and
+        row['period'] in selection.periods}
+    member_ids = {hashed(member) for member in wanted} if wanted is not None else None
+    for ids in planned:
+        include_execution = execution.intersection(ids) and (member_ids is None or member_ids.intersection(ids))
+        if include_execution or reference.intersection(ids):
+            yield ids, bool(include_execution)
+
+
 def capture(db, *, config, at, selection=None, authority=None, evaluations=(), source_status=None, cache=None, members=None,
-            _shared_facts=False, resource_guard=None):
+            _shared_facts=False, resource_guard=None, retain_capacity_gaps=False, component_proofs=False):
     """Existing authority is required explicitly; config vocabulary is not support.
 
     Do not pass an owner connection without a READ ONLY transaction. All selected
@@ -53,14 +76,15 @@ def capture(db, *, config, at, selection=None, authority=None, evaluations=(), s
     if type(_shared_facts) is not bool:
         raise ValueError('readiness_shared_facts_invalid')
     config = validate(config)
-    selection = selection or Selection()
+    default_selection = Selection()
+    selection = selection or default_selection
     instant(at)
     with db.transaction():
         db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
         # One shared MVCC capture includes bounded ladders. Reusing it avoids a
         # second full-table capture and one depth roundtrip for every event.
         from .scanner_publication import current_revision
-        from .latest_board import capture_batches
+        from .board_capture import capture_batches
         from .current_games import engine_binding
         proof=current_revision(db)
         reserve=capture_reservation(db) if resource_guard is not None else 0
@@ -76,11 +100,11 @@ def capture(db, *, config, at, selection=None, authority=None, evaluations=(), s
             LEFT JOIN current_offer o ON o.contract_id=c.id WHERE e.scheduled_start::timestamptz>%s::timestamptz ORDER BY c.id''',(at,)).fetchall()
         if len(discovered) > MAX_INSTRUMENTS:
             raise ValueError('readiness_contract_capacity')
-        headers = db.execute('''SELECT b.venue, e.native_event_id, b.native_market_id,
-            b.source_at, b.received_at, b.quantity_units AS quantity_unit, b.state, b.sync, b.revision
-            FROM current_native_book b JOIN current_event e ON e.id=b.event_id''').fetchall()
+        books = CurrentRowStore(db).native_offer_books()
+        from app.fees.product_schedules import read_all, revision as fee_revision
+        fee_states = read_all(db)
+        fee_revisions = {key:fee_revision(state,publication=True) for key,state in sorted(fee_states.items())}
         statuses = deepcopy(frame['source_status'] if source_status is None else source_status)
-        books = {(b['venue'], b['native_event_id'], b['native_market_id']): b for b in headers}
         # ReadContext uses precisely this MVCC snapshot. It does no acquisition.
         scopes = scope_inventory(selection, config, authority)
         lookup = {s['key']: s for s in scopes}
@@ -95,39 +119,42 @@ def capture(db, *, config, at, selection=None, authority=None, evaluations=(), s
                 raise ValueError('readiness_selected_members_invalid')
             wanted=set(members)
         planned=capture_batches(db)
+        selected = (_selected_components(db, planned, selection, scopes, wanted)
+                    if wanted is not None or selection != default_selection else ((ids, True) for ids in planned))
         def components():
-            for ids in planned:
+            for ids, include_execution in selected:
                 part=CurrentRowStore(db).capture(include_depth=False,event_ids=ids)
                 frame['records'].extend(r for r in part['records'] if r['quote']['venue']=='pinnacle')
+                if not include_execution:
+                    continue
                 context=ReadContext(Store(db),at=at,frame=part)
                 for rows in context.prepared['groups']:
                     if not any(r['quote']['venue']!='pinnacle' for r in rows):continue
                     if wanted is not None and not wanted.intersection((r['quote']['source']['provider'],r['quote']['source']['native_event_id']) for r in rows):continue
-                    yield context,rows
+                    yield context,rows,ids
         groups=components() if any(s['supported'] for s in scopes) else ()
         from app.storage.scanner_preparation import PreparationCache, boundaries, _freeze_fact
         registry_owner = cache if cache is not None else PreparationCache(max_entries=1)
         registry, registry_boundary = registry_owner.registry(at=at)
         revalidation = [registry_boundary] if registry_boundary else []
         used_keys = set()
-        for context,rows in groups:
+        financial_events = {}
+        for context,rows,ids in groups:
             if not any(r['quote']['venue'] in selection.venues for r in rows):
                 continue
             from app.comparison.calculation_control import checkpoint
             checkpoint()
             venues = {v for r in rows for v in (r['quote']['venue'], r['quote']['source']['provider'])}
-            selected_books = [books[key] for key in sorted({
-                (r['quote']['venue'], r['quote']['source']['native_event_id'], r['quote']['source']['native_market_id'])
-                for r in rows}) if key in books]
+            selected_books = [books[id_] for id_ in sorted({contract_id(r) for r in rows}) if id_ in books]
             key = digest(dict(epoch=context.epoch, engine=context.engine, registry=registry,
                 readiness_policy=POLICY_REVISION,
-                rows=rows, books=selected_books, selection=selection.to_dict(), config=config, authority=authority,
+                rows=rows, books=selected_books, fees=fee_revisions, selection=selection.to_dict(), config=config, authority=authority,
                 statuses={venue:{k:statuses.get(venue, {}).get(k) for k in ('state','reason_code')} for venue in sorted(venues)}))
             used_keys.add(key)
             prepared = None if cache is None else (
                 cache.get_shared(key, at=at) if _shared_facts else cache.get(key, at=at))
             if prepared is None:
-                prepared = _prepare_group(context, rows, lookup, statuses, books, at)
+                prepared = _prepare_group(context, rows, lookup, statuses, books, at, fee_states=fee_states)
                 until = None
                 if not prepared['failures']:
                     # Include clocks which were future/conflicting at admission,
@@ -160,6 +187,8 @@ def capture(db, *, config, at, selection=None, authority=None, evaluations=(), s
             failures.extend(prepared['failures'])
             financial_inputs.update(prepared['financial_inputs'])
             shared_references.update(prepared['references'])
+            if component_proofs and prepared['financial_inputs']:
+                financial_events.update(dict.fromkeys(prepared['financial_inputs'],tuple(sorted(ids))))
             retained_input_bytes += prepared['input_bytes']
             if resource_guard is not None:resource_guard(reserve+retained_input_bytes*8)
             if retained_input_bytes > 64 * 1024 * 1024:
@@ -183,10 +212,38 @@ def capture(db, *, config, at, selection=None, authority=None, evaluations=(), s
                 # scope gap. Never silently claim a complete checked universe.
                 scope['check'] = check([*scope['check']['reason_codes'], 'readiness_check_failed'])
         revision = digest(dict(rows=str(frame['revision']), config=config, engine=engine,
-                               source_status=statuses, headers=[{k: b[k] for k in ('venue', 'native_event_id', 'native_market_id', 'revision', 'received_at')} for b in headers]))
+                               source_status=statuses, headers=list(books.values()), fees=fee_revisions))
+        from app.comparison.scanner_projection import MAX_OCCURRENCES, MAX_PAIRS as MAX_SCANNER_PAIRS
+        options = (dict(pair_limit=MAX_SCANNER_PAIRS, occurrence_limit=MAX_OCCURRENCES,
+                        retain_capacity_gaps=True, transport_limit=None)
+                   if retain_capacity_gaps else {})
         result = assemble(instruments, selection=selection, at=at, epoch=str(frame['epoch']),
-                          input_revision=revision, scopes=scopes, evaluations=evaluations)
-        result['failed_occurrences'] = sorted({f['occurrence'] for f in failures})
+                          input_revision=revision, scopes=scopes, evaluations=evaluations, **options)
+        witnesses, instrument_witnesses = {}, {}
+        if component_proofs:
+            from .scanner_component import capture as component_revision, identity_index, native_witnesses
+            by_events = {}
+            for pair in result['pairs']:
+                if pair['input_check']['state']=='ready':
+                    for leg in pair['legs']:
+                        if leg in financial_events:
+                            by_events.setdefault(financial_events[leg],set()).add(leg)
+            if by_events:
+                index = identity_index(db)
+                for ids, legs in by_events.items():
+                    direct = {leg:contract_id(financial_inputs[leg]) for leg in legs if financial_inputs[leg].get('native_execution')}
+                    if direct:
+                        revisions = native_witnesses(db, ids, sorted(set(direct.values())), index=index)
+                        for leg, contract in sorted(direct.items()):
+                            key = hashed([ids,[contract]])
+                            witnesses[key] = dict(events=list(ids),contracts=[contract],revision=revisions[contract])
+                            instrument_witnesses[leg] = key
+                    others = legs.difference(direct)
+                    if others:
+                        key = hashed([ids,None])
+                        witnesses[key] = dict(events=list(ids),revision=component_revision(db,ids,index=index))
+                        instrument_witnesses.update(dict.fromkeys(others,key))
+        result['failed_occurrences'] = sorted({f['occurrence'] for f in failures} | set(result.get('failed_occurrences', ())))
         result['engine_binding'] = engine
         from app.comparison.scanner_readiness import clock_reasons
         selected_reference_rows = [r for r in frame['records'] if r['quote']['venue']=='pinnacle' and
@@ -199,9 +256,10 @@ def capture(db, *, config, at, selection=None, authority=None, evaluations=(), s
             fresh_originals=_count(sum(not clock_reasons(r['quote']['times'].get('source_at'), r['quote']['times'].get('received_at'), instant(at), 1800, 'reference') for r in selected_reference_rows), n, 'originals', 'selected_reference_only'))]
         result['references'] = shared_references
         from app.comparison.scanner_readiness import MAX_BYTES
-        from app.comparison.readiness_encoding import transport_size
-        if transport_size(result)>MAX_BYTES:
-            raise ValueError('readiness_response_capacity')
+        if not retain_capacity_gaps:
+            from app.comparison.readiness_encoding import transport_size
+            if transport_size(result)>MAX_BYTES:
+                raise ValueError('readiness_response_capacity')
         # Transport sharing does not discount the expanded in-memory frame.
         if resource_guard is not None:
             resource_guard(reserve+retained_input_bytes*8+max(0,encoded_size(result)*8-MAX_BYTES*8))
@@ -214,17 +272,22 @@ def capture(db, *, config, at, selection=None, authority=None, evaluations=(), s
             raise RuntimeError('scanner_financial_capture_capacity')
         return result, financial_inputs, dict(current_rows_revision=frame['revision'],
             publication_proof=proof,
+            component_witnesses=witnesses, instrument_witnesses=instrument_witnesses,
             input_bytes_bound=input_bytes_bound,
             revalidate_at=min(revalidation,key=instant,default=None),
             preparation_cache=None if cache is None else cache.stats())
 
 
-def _prepare_group(context, rows, lookup, statuses, books, at):
+def _prepare_group(context, rows, lookup, statuses, books, at, *, fee_states=None):
     """One occurrence through the existing producer/model owners exactly once."""
     from app.dashboard.current_contract import quotes_of
     from app.comparison.current_dependencies import references
+    from app.comparison.scanner_native import NativeEvidenceError, VENUES, model
+    from app.fees.product_schedules import for_offer
     occurrence = 'current-occurrence:' + digest(rows[0]['market_identity']['event'])
     instruments, failures, shared, inputs, size = [], [], {}, {}, 0
+    by_contract = {contract_id(row):row for row in rows}
+    fee_reviews = {venue:for_offer(fee_states, dict(venue=venue), instant(at)) for venue in VENUES}
     try:
         # No second catalog-only normalization. The supplied group belongs to
         # this fresh ReadContext, and the ordinary bundles adapter remains owner.
@@ -241,9 +304,21 @@ def _prepare_group(context, rows, lookup, statuses, books, at):
                             source = quote['source']
                             status = statuses.get(quote['venue'], statuses.get(source['provider'], {}))
                             try:
+                                cid = contract_id(dict(quote=quote))
+                                book, record = books.get(cid), by_contract.get(cid)
+                                extra = {}
+                                if (quote['venue'] in VENUES and quote['provenance']['real_source']
+                                        and record and record.get('comparison_source_metadata',{}).get('native_key')):
+                                    try:
+                                        extra['native_execution'] = model(quote, record, event, group, book,
+                                            fee_reviews[quote['venue']], at=instant(at))
+                                    except NativeEvidenceError as exc:
+                                        extra['native_error'] = str(exc)
+                                    except (KeyError, ValueError, TypeError, ArithmeticError):
+                                        extra['native_error'] = 'native_execution_evidence_unqualified'
                                 value = instrument(quote, state['comparison_profiles'], event, group, at=at,
                                     source_status=status, authorized=lookup[key]['authorized'],
-                                    book=books.get((quote['venue'], source['native_event_id'], source['native_market_id'])))
+                                    book=book, **extra)
                             except (ValueError, KeyError, TypeError):
                                 failures.append(dict(occurrence=occurrence, scopes=[key]))
                                 continue
@@ -261,6 +336,8 @@ def _prepare_group(context, rows, lookup, statuses, books, at):
                                     profiles={quote['comparison_input_refs']['refs'][kind]: item for kind, item in values.items()},
                                     event={k:deepcopy(v) for k,v in event.items() if k not in ('groups','funded_pairs')},
                                     group={k:deepcopy(v) for k,v in group.items() if k != 'outcomes'})
+                                if 'native_execution' in extra:
+                                    detached['native_execution'] = extra['native_execution']
                                 size += len(encoded(detached))
                                 inputs[value['id']] = detached
                             reference = quote['comparison_input_refs']['refs'].get('reference')

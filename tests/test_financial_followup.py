@@ -83,7 +83,7 @@ def hockey_record():
     return r
 
 
-def test_hockey_review_binds_official_score_but_not_winner_or_exceptions():
+def test_hockey_review_binds_official_score_without_overriding_exceptions():
     r=hockey_record();before=deepcopy(r)
     result=scope.resolve(r,at=AT)
     assert result['status']=='supported' and result['scoring']['shootout']=='official_final_score'
@@ -94,7 +94,15 @@ def test_hockey_review_binds_official_score_but_not_winner_or_exceptions():
     result=scope.resolve(r,at=AT)
     assert result['scoring']['shootout']=='excluded'
     winner=next(r for r in scope.source_rules() if r['native_type']=='KXNHLGAME')
-    assert winner['overtime']=='unknown' and not winner['evidence_available']
+    assert winner['overtime']=='included' and winner['evidence_available']
+    assert winner['contract_terms_url'].endswith('/HOCKEYWINNINGINPERIOD.pdf')
+    original=deepcopy(next(r for r in winners() if r['quote']['venue']=='kalshi'))
+    original['event']['competition']='NHL';original['market_identity']['competition']='NHL'
+    original['comparison_source_metadata']['series_id']='KXNHLGAME'
+    original['comparison_scope']={'overtime':'unknown'}
+    at=instant(winner['evidence']['reviewed_at'])
+    assert scope.resolve(original,at=(at-timedelta(microseconds=1)).isoformat())['overtime']=='unknown'
+    assert scope.resolve(original,at=at.isoformat())['scoring']['shootout']=='official_final_score'
 
 
 def test_hockey_supporting_source_hash_failure_withdraws_new_default():
@@ -104,7 +112,7 @@ def test_hockey_supporting_source_hash_failure_withdraws_new_default():
     with patch.object(Path,'read_bytes',read):
         rules=scope._build_source_rules()
     for r in rules:
-        if r['native_type'] in ('KXNHLSPREAD','KXNHLTOTAL'):
+        if r['native_type'] in ('KXNHLGAME','KXNHLSPREAD','KXNHLTOTAL'):
             assert not r['evidence_available'] and r.get('shootout') is None
 
 

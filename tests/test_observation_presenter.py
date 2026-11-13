@@ -73,24 +73,23 @@ class ObservationPresenter(TestCase):
         self.assertEqual(source['status'],'current');self.assertEqual(source['source_at'],quote['times']['source_at'])
         self.assertEqual(source['received_at'],quote['times']['received_at'])
 
-    def test_book_clocks_advance_without_renewing_the_original_price_clock(self):
+    def test_exact_book_clocks_do_not_renew_the_original_price_clock(self):
         from app.storage.current_rows import contract_id
         records=deepcopy(self.records)
         original=next(r for r in records if r['quote']['venue']=='kalshi')
-        book=dict(contract_id=contract_id(original),source_at='2026-10-14T01:15:02Z',
-            received_at='2026-10-14T01:15:03Z',revision='authored-new-book',quantity_units='contracts',
-            state='active',sync='synchronized',sequence='8')
-        class Database:
-            def execute(self,*args):return SimpleNamespace(fetchall=lambda:[dict(book)])
-        context=self.context(records);context.store.db=Database()
-        with patch('app.storage.current_rows.CurrentRowStore.hydrate_records',side_effect=lambda records,**kwargs:deepcopy(records)):
+        book=dict(source_at='2026-10-14T01:15:02Z',received_at='2026-10-14T01:15:03Z',
+            revision='authored-retained-book',quantity_unit='contracts',state='active',sync='synchronized',
+            sequence='8',is_current=False)
+        context=self.context(records);context.store.db=object()
+        with patch('app.storage.current_rows.CurrentRowStore.hydrate_records',side_effect=lambda records,**kwargs:deepcopy(records)), \
+             patch('app.storage.current_rows.CurrentRowStore.native_offer_books',return_value={contract_id(original):book}):
             bundle=context.observation_bundles()[0]
         quote=next(q for _,_,q in entries(bundle['state_inputs']) if q['source']==original['quote']['source'])
         before=price(quote);identity=observation_identity(bundle,context)
         self.assertEqual(before['times'],original['quote']['times'])
         self.assertEqual(before['observed_depth']['source_at'],book['source_at'])
         self.assertEqual(before['observed_depth']['received_at'],book['received_at'])
-        self.assertEqual(before['observed_depth']['clock_basis'],'current_native_book')
+        self.assertEqual(before['observed_depth']['clock_basis'],'native_book_revision')
         quote['observed_book']['received_at']='2026-10-14T01:15:04Z'
         after=price(quote)
         self.assertEqual(after['times'],before['times'])

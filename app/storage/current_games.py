@@ -29,7 +29,12 @@ def engine_binding():
     paths += ['app/comparison/combined_inputs.py','app/comparison/combined_native.py','app/comparison/occurrence_matching.py','app/collection/current_sink.py','app/collection/current_aggregate_admission.py','app/dashboard/current_normalized.py','app/collection/current_comparison_inputs.py','app/storage/current_games.py']
     paths += ['app/collection/current_aggregate.py','app/collection/alternate_acquisition.py','app/collection/current_benchmark.py','app/reference/odds_sample.py','app/reference/odds_acquire.py','app/comparison/coverage.py']
     paths += ['app/comparison/readiness_encoding.py','app/comparison/scanner_readiness.py','app/comparison/readiness_inputs.py','app/storage/scanner_readiness.py','app/fixtures/scanner-readiness-policy-v1.json']
-    paths += ['app/comparison/scanner_finance.py','app/comparison/scanner_projection.py','app/storage/scanner_publication.py','app/dashboard/scanner_api.py']
+    paths += ['app/comparison/scanner_finance.py','app/comparison/scanner_projection.py','app/storage/scanner_publication.py','app/dashboard/scanner_api.py',
+              'app/storage/scanner_component.py','app/collection/scanner_worker.py',
+              'app/comparison/scanner_native.py','app/comparison/scanner_kalshi.py','app/comparison/scanner_polymarket.py',
+              'app/fees/product_schedules.py','app/comparison/snapshot_fee_scope.py',
+              'app/fixtures/native-scoring-scope/full-game-source-rules.json',
+              'app/fixtures/native-scoring-scope/hockey-winner-review-20261112.pdf']
     paths += ['app/comparison/scanner_ticket_finance.py','app/comparison/scanner_tickets.py','app/comparison/scanner_destinations.py','app/dashboard/scanner_ticket_api.py','app/fixtures/scanner-destinations-v1.json']
     paths += ['app/comparison/scanner_transitions.py','app/comparison/scanner_summaries.py','app/storage/scanner_preparation.py']
     paths += ['app/storage/scanner_latest.py','app/storage/latest_board.py','app/storage/grid_read_packet.py','app/storage/grid_packet_store.py','app/storage/board_capture.py','app/storage/board_view.py','app/storage/selected_frame.py','app/storage/shared_json.py','app/storage/slate_reads.py','app/dashboard/read_work.py',

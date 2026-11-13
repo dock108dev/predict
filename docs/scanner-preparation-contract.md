@@ -58,6 +58,32 @@ private readiness path, bound to an exact occurrence in that read context and
 its guard, returns an empty unused `records` field. Its state inputs, profiles,
 membership, current identity and clocks remain the same.
 
+Scoped readiness and exact ticket requests seed capture from the requested
+scope and native event identities. A selected seed retains its complete
+possible-peer component for occurrence and settlement resolution. The global
+revision and capacity checks still cover the working roster. Selected Pinnacle
+reference counts can include components with zero selected execution rows.
+
+The installed data runtime supervises one lower-priority full-slate Scanner
+child at a time. The child uses a repeatable-read capture and the existing
+calculation-worker deadline and memory cap. Acquisition pressure can suspend the
+read-only capture. Stop cancels the child and awaits its exit. Larger slates use
+the existing 32 MiB durable publication limit. The scoped readiness HTTP
+response keeps its existing limit.
+
+The durable publication carries the full observed instrument census. Its pair
+search indexes structural peers by sport, league, market, period, overtime,
+direction and venue. The per-occurrence cap counts legs that can form a pair.
+The slate pairing cap counts occurrences that contain a structural pair.
+The publication lists occurrences whose pairing exceeded a bound. Other
+occurrences still receive pair checks. Exact finance requires a current runtime and a matching full SQL
+proof or an exact unchanged possible-peer component. A component proof includes
+the event roster, contract and offer receipts, immutable native book IDs and
+participating source states. The app independently rechecks those witnesses
+before displaying evaluated receipts. Coverage retains the original capture time
+and reports a partial scope when only some receipts can be verified. The summary
+owner observes adopted publications and continues to hold its bounded history.
+
 After a real readiness capture releases its SQL transaction and connection, the
 scanner transfers its already detached frame and financial-input dictionaries
 through the private `Projection._ingest_capture` path. The capture caller

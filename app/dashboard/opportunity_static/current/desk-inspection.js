@@ -355,7 +355,7 @@ export function tradeInspection(offer, group, evidence, {mode, position, basis, 
   ]), el('p', 'Expected profit = fair chance × win profit + losing chance × loss profit. Return = expected profit ÷ risk.', 'inspection-formula')),
   fee('EV with reviewed trading fees', data.reviewed, sgoAggregate ? null : data.starting_fee_terms), fee('EV with conservative fees', data.conservative));
   const model = data.assumed_scenario || {};
-  const scenario = section('Full net EV and execution');
+  const scenario = section('Full net EV');
   if (model.available) {
     scenario.append(facts([
       ['Assumed quantity', number(model.quantity_per_leg)], ['Expected profit after assumed fees', usd(model.fee_adjusted_expected_profit_usd)],
@@ -364,7 +364,9 @@ export function tradeInspection(offer, group, evidence, {mode, position, basis, 
     ]), el('p', model.meaning, 'desk-meta'));
   }
   const gaps = [...new Set([...(model.missing || []), ...(data.reviewed?.missing || []),
-    'Full outcome probabilities for pushes, ties and voids', 'Executable size and account-specific costs'])];
+    'Full outcome probabilities for pushes, ties and voids'])]
+    .filter(gap => gap !== 'native quantity and executable depth')
+    .map(gap => gap === 'sizing/depth assumption' ? 'Modeled stake' : gap);
   const list = el('ul'); gaps.forEach(gap => list.append(el('li', gap.includes('_') ? reasons(gap) : gap)));
   scenario.append(el('p', 'Still needed to establish full economics', 'desk-meta'), list); details.append(scenario);
   details.append(section('Quote clocks', facts([
@@ -460,7 +462,7 @@ export function pairInspection(pair, offers, {group, game, position, inspect, mo
         el('td', usd(values.net_profit_usd), tone(values.net_profit_usd)));
       rows.append(tr);
     }
-    net.append(table, el('p', 'Return is the lowest net profit across the shown states divided by total funding. Executable size is unverified.', 'desk-meta'));
+    net.append(table, el('p', 'Return is the lowest modeled net profit across the shown states divided by total funding.', 'desk-meta'));
     if (!Object.keys(retail.states).some(state => state.includes('void') || state.includes('cancel'))) {
       evidence.append(el('p', 'Void and cancellation cashflows are unavailable for this pair.', 'desk-meta'));
     }

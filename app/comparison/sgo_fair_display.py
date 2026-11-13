@@ -4,6 +4,8 @@ from fractions import Fraction
 
 def comparison(record, rows, frame=None, *, index=None):
     """Find an exact captured SGO observation; do not splice receipt frames."""
+    from app.collection.sportsgameodds_current_rows import source_bookmaker
+
     try:
         q=record['quote'];source=q['source'];original=q['original']
         if source['provider'] != 'sportsgameodds':
@@ -17,10 +19,11 @@ def comparison(record, rows, frame=None, *, index=None):
         if index is not None:
             rows = index.selection(source['native_outcome_id'], source.get('native_line'))
         candidates = []
+        bookmaker = source_bookmaker(record)
         for item in rows:
             f=item['facts'];fair=f.get('fair') or {}
             if (f.get('event_id') != source['native_event_id'] or f.get('odd_id') != source['native_outcome_id']
-                    or f.get('venue') != q['venue'] or line(f.get('line')) != line(source.get('native_line'))
+                    or f.get('venue') != bookmaker or line(f.get('line')) != line(source.get('native_line'))
                     or f.get('price_american') != original.get('value')):
                 continue
             original_receipt = (f.get('receipt_sha256') == q.get('provenance',{}).get('sha256')

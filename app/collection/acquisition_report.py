@@ -115,7 +115,7 @@ def report(db):
         cell[row['image_disposition']] += count
     route_units={}
     mapping={'h2h':'moneyline','spreads':'spread','totals':'total'}
-    for batch in db.execute('SELECT * FROM current_acquisition_aggregate'):
+    for batch in db.execute("SELECT * FROM current_aggregate_receipt WHERE provider='the_odds_api' AND kind='featured'"):
         for venue in ('novig','prophetx','pinnacle'):
             for family in mapping.values():
                 cell=cells[(venue,batch['sport'],family)]
@@ -139,14 +139,15 @@ def report(db):
                             featured_offered_price_units=d['unique_offered']['quotes'])
     alternate=[]
     current_alternates=set()
-    for census in db.execute('SELECT * FROM current_acquisition_event_census'):
+    for census in db.execute("SELECT * FROM current_aggregate_receipt WHERE provider='the_odds_api' AND kind='census'"):
         for event in census['payload']:
-            row=db.execute('SELECT * FROM current_acquisition_alternate WHERE sport=%s AND event_id=%s',
+            row=db.execute("""SELECT * FROM current_aggregate_receipt WHERE provider='the_odds_api'
+                AND kind='alternate' AND sport=%s AND event_id=%s""",
                 (census['sport'],event['id'])).fetchone()
             state=event_route_status(census,event,row)
             if state['current_cycle_received']:current_alternates.add((census['sport'],event['id']))
             alternate.append(state)
-    for batch in db.execute('SELECT * FROM current_acquisition_alternate'):
+    for batch in db.execute("SELECT * FROM current_aggregate_receipt WHERE provider='the_odds_api' AND kind='alternate'"):
         payload=batch['payload']
         if not isinstance(payload,dict):continue
         for book in payload.get('bookmakers',[]):
