@@ -173,18 +173,30 @@ def pregame_sportsbooks(db, owner, states, at, *, frames=None):
 def dependencies(db, event_ids=None, *, sportsbook_rows=None, catalog_rows=None, provider=None):
     frames = ((provider or aggregate_provider(db))=='sportsgameodds' and
         bool(db.execute("SELECT to_regclass('public.current_sgo_event_frame') AS name").fetchone()['name']))
-    frame_join = "LEFT JOIN current_sgo_event_frame f ON e.provider='sportsgameodds' AND f.event_id=e.native_event_id" if frames else ''
-    receipt = "concat(o.revision,':',o.received_at,':',coalesce(f.facts->>'receipt_sha256',''))" if frames else "concat(o.revision,':',o.received_at)"
-    rows = db.execute('''SELECT c.id, '''+receipt+''' receipt,
+    frame_join = 'LEFT JOIN frame_revisions f ON f.id=e.id' if frames else ''
+    receipt = "concat(o.revision,':',o.received_at,':',coalesce(f.revision,''))" if frames else "concat(o.revision,':',o.received_at)"
+    at = stamp(utc())
+    if event_ids is None:
+        scope = 'scheduled_start::timestamptz >= %s AND scheduled_start::timestamptz < %s'
+        params = (at-timedelta(hours=24), at+timedelta(hours=72))
+    else:
+        scope = 'id=ANY(%s)'
+        params = (event_ids,)
+    # Extract the SGO frame digest once per event. Inlining this extraction
+    # would repeatedly detoast each large membership packet for every offer.
+    frame_cte = """, frame_revisions AS MATERIALIZED (
+        SELECT e.id, f.facts->>'receipt_sha256' revision
+        FROM events e JOIN current_sgo_event_frame f ON f.event_id=e.native_event_id
+        WHERE e.provider='sportsgameodds')""" if frames else ''
+    rows = db.execute('''WITH events AS (
+        SELECT id, revision, provider, native_event_id FROM current_event WHERE '''+scope+''')'''+frame_cte+'''
+        SELECT c.id, '''+receipt+''' receipt,
         o.price_dependency price,
         c.revision contract,
         e.revision event FROM current_offer_storage o JOIN current_contract c ON c.id=o.contract_id
-        JOIN current_event e ON e.id=c.event_id
+        JOIN events e ON e.id=c.event_id
         '''+frame_join+'''
-        WHERE ((%s::text[] IS NULL AND e.scheduled_start::timestamptz >= %s
-                AND e.scheduled_start::timestamptz < %s)
-            OR c.event_id=ANY(%s)) ORDER BY c.id''',
-        (event_ids,stamp(utc())-timedelta(hours=24),stamp(utc())+timedelta(hours=72),event_ids)).fetchall()
+        ORDER BY c.id''', params).fetchall()
     if frames:
         from .sgo_native_catalog import dependencies as catalog_dependencies
         rows += sportsbook_dependencies(db, event_ids) if sportsbook_rows is None else sportsbook_rows

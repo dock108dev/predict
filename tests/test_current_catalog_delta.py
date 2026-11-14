@@ -25,6 +25,17 @@ def test_catalog_delta_does_not_ignore_unknown_native_fields_or_withdrawal():
     assert changes(old,{})['withdraw']=={key}
 
 
+def test_catalog_delta_preserves_retirement_with_new_unrelated_markets():
+    catalog, _ = native_fixture()
+    old = {'kalshi': catalog}
+    new = deepcopy(old)
+    original = catalog['markets'][0]
+    key = ('kalshi', original['event_id'], original['id'])
+    new['kalshi']['markets'][0]['id'] += '-new'
+    assert changes({}, new) == dict(retained=set(), withdraw=set(), refresh=set())
+    assert changes(old, new) == dict(retained=set(), withdraw={key}, refresh=set())
+
+
 def test_owned_normalization_matches_detached_path_without_mutating_inputs():
     cat,book=native_fixture()
     from app.storage.store import hashed
