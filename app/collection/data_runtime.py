@@ -159,6 +159,15 @@ class DataRuntime:
             worker=self.service.workers.get(venue)
             if worker is None or worker.closed or worker.failed or venue in self.service.paused_sources:continue
             metrics=worker.metrics
+            restoration = metrics.get('restoration') or {}
+            if not critical and restoration.get('stage') in (
+                    'loading_saved_catalog', 'validating_saved_markets', 'admitting_saved_catalog'):
+                # The scanner and coverage processes can retry while the
+                # native source rebuilds its catalog. Ordinary odds delivery
+                # continues and the source keeps its existing guards.
+                task = getattr(self.service, 'tasks', {}).get(venue)
+                if task is not None and not task.done():
+                    return True
             limit=metrics.get('receive_buffer_limit_bytes',32*1024*1024)
             if metrics.get('receive_buffer_bytes',0)>=limit*(.75 if critical else .5):return True
         return False

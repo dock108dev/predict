@@ -217,32 +217,46 @@ class SportsGameOddsWorker:
                     receipt_sha256=receipt_sha256, event_scopes=event_scopes,
                     complete_venues=[], received_at=received_at), states)
 
-    async def _publish(self, page):
+    @staticmethod
+    def _prepare_page(page, ingress_bytes):
         from app.dashboard.current_contract import packed
         from app.storage.sportsgameodds_reference import prepare_page, prepare_frames
         records, exclusions = current_rows(page, page.receipt_sha256)
         reference_rows = prepare_page(page)
         event_frames = prepare_frames(page, reference_rows)
-        self.metrics['excluded'] += len(exclusions)
-        if not records and not reference_rows and not event_frames:
-            return
-        # The entire page is one source-revocable transaction: prices and
-        # reference evidence cannot become visible at different revisions.
+        event_scopes = {event['event_id']: event['league'] for event in page.events}
+        if not event_scopes:
+            return None, len(exclusions)
         sport = page.events[0]['league']
         received_at = page.events[0]['received_at']
-        event_scopes = {event['event_id']: event['league'] for event in page.events}
         envelope = dict(type='current_aggregate_records',source='sportsgameodds',sport=sport,
                         records=records,sgo_reference_rows=reference_rows,sgo_event_frames=event_frames,
                         receipt_sha256=page.receipt_sha256,event_scopes=event_scopes,complete_venues=[],received_at=received_at)
-        if len(packed(envelope)) > self.service.config['ingress_bytes']:
+        if len(packed(envelope)) > ingress_bytes:
             raise ValueError('SGO current page exceeds ingress bound')
-        await call(self.service, self.admit, sport, records, reference_rows, event_frames, received_at, page.receipt_sha256, event_scopes)
+        prepared = dict(sport=sport, records=records, reference_rows=reference_rows, event_frames=event_frames,
+                        received_at=received_at, receipt_sha256=page.receipt_sha256, event_scopes=event_scopes)
+        return prepared, len(exclusions)
+
+    async def _publish(self, page):
+        from .bulk_checkpoint import owned_thread
+
+        # Large alternate pages used to prepare and serialize on the same
+        # event loop that receives both dedicated book streams.
+        prepared, excluded = await owned_thread(self._prepare_page, page, self.service.config['ingress_bytes'])
+        self.metrics['excluded'] += excluded
+        if prepared is None:
+            return
+        # The entire page is one source-revocable transaction: prices and
+        # reference evidence cannot become visible at different revisions.
+        await call(self.service, self.admit, **prepared)
         admitted_at = self.now()
-        self.metrics['records'] += len(records)
-        self.metrics['reference_rows'] = self.metrics.get('reference_rows', 0) + len(reference_rows)
+        self.metrics['records'] += len(prepared['records'])
+        self.metrics['reference_rows'] = self.metrics.get('reference_rows', 0) + len(prepared['reference_rows'])
         cohorts = self.metrics.setdefault('admitted_quote_clock_samples', {})
         self.metrics['last_clock_sample_admitted_at'] = admitted_at.isoformat()
-        for (league, phase, family, venue), tally in clock_sample(page, admitted_at=admitted_at).items():
+        clock_tallies = await owned_thread(clock_sample, page, admitted_at=admitted_at)
+        for (league, phase, family, venue), tally in clock_tallies.items():
             key = ':'.join((league, phase, family, venue))
             totals = cohorts.setdefault(key, dict.fromkeys(tally, 0))
             for field, count in tally.items():

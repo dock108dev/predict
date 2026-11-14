@@ -390,6 +390,24 @@ def test_missing_images_and_replaceable_tails_do_not_veto_current_work():
     assert not runtime.acquisition_pressure()
 
 
+def test_native_restore_defers_optional_work_until_the_source_can_stream():
+    from types import SimpleNamespace
+    from app.collection.data_runtime import DataRuntime
+    worker = SimpleNamespace(closed=False, failed=False, metrics={'restoration': {'stage': 'admitting_saved_catalog'}})
+    task = Mock()
+    task.done.return_value = False
+    runtime = DataRuntime.__new__(DataRuntime)
+    runtime.service = SimpleNamespace(dispatch=True, workers={'polymarket_us': worker},
+                                      tasks={'polymarket_us': task}, paused_sources=set())
+    assert runtime.acquisition_pressure()
+    assert not runtime.acquisition_pressure(critical=True)
+    task.done.return_value = True
+    assert not runtime.acquisition_pressure()
+    task.done.return_value = False
+    worker.metrics['restoration']['stage'] = 'complete'
+    assert not runtime.acquisition_pressure()
+
+
 def test_storage_interval_requires_measured_deferred_work_near_guard():
     from app.collection.data_runtime import needs_storage_interval
     from app.collection.current_storage_policy import SQL_BYTE_CAP, MIB

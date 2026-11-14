@@ -42,6 +42,31 @@ def linked_event_ids(links):
     return ids
 
 
+def _event_record(event, receipt_sha256, received_at, registry):
+    event_id = event['event_id']
+    league = event['league']
+    home_name, away_name = (event['teams'][role]['name'] for role in ('home', 'away'))
+
+    def participant(name, role):
+        resolved = registry.resolve('team', name, league=league, venue='sportsgameodds')
+        return resolved.canonical_id if resolved.status == 'resolved' else f'sportsgameodds:{league}:{event_id}:{role}'
+
+    home, away = participant(home_name, 'home'), participant(away_name, 'away')
+    row = dict(id=event_id, sport=SPORTS[league], competition=league, season='unverified', stage='unverified',
+               scheduled_start=event['starts_at'], home=home, away=away,
+               participants={home_name: home, away_name: away}, title=away_name + ' at ' + home_name,
+               status=sgo_event_status(event['status']))
+    linked = linked_event_ids(event.get('bookmaker_event_links', {}))
+    if linked:
+        row['shared_provider_ids'] = linked
+    witness = dict(version=SCHEDULE_VERSION, native_event_id=event_id,
+                   authority=['sportsgameodds', 'event', event_id], start=event['starts_at'], received_at=received_at,
+                   proofs=[dict(path='sportsgameodds/receipt/' + receipt_sha256,
+                                body_sha256=receipt_sha256, received_at=received_at)])
+    row['schedule_metadata'] = dict(witness, revision=hashed(witness))
+    return row
+
+
 def current_rows(page, receipt_sha256):
     """Return (rows, exclusions); never declares a scope authoritative."""
     if not isinstance(receipt_sha256, str) or not re.fullmatch('[0-9a-f]{64}', receipt_sha256):
@@ -91,6 +116,8 @@ def current_rows(page, receipt_sha256):
         batches.extend([(event_id, venue, family, list(by_side.values()), True)] if pair else
                        [(event_id, venue, family, [q], False) for q in by_side.values()])
     result = []
+    registry = aggregate_registry() if batches else None
+    event_records = {}
     for event_id, venue, family, quotes, paired in batches:
         event = events[event_id]
         sides = ('over', 'under') if family == 'total' else ('home', 'away')
@@ -99,29 +126,13 @@ def current_rows(page, receipt_sha256):
             excluded.append((event_id, venue, 'missing line'))
             continue
         by_side = {q['side']: q for q in quotes}
-        registry = aggregate_registry()
-        def participant(role):
-            name = event['teams'][role]['name']
-            resolved = registry.resolve('team', name, league=event['league'], venue='sportsgameodds')
-            return resolved.canonical_id if resolved.status == 'resolved' else 'sportsgameodds:' + event['league'] + ':' + event_id + ':' + role
-        home, away = participant('home'), participant('away')
         received_at = first['received_at']
-        row_event = dict(id=event_id, sport=SPORTS[event['league']], competition=event['league'],
-                         season='unverified', stage='unverified', scheduled_start=event['starts_at'],
-                         home=home, away=away,
-                         participants={event['teams']['home']['name']: home, event['teams']['away']['name']: away},
-                         title=event['teams']['away']['name'] + ' at ' + event['teams']['home']['name'])
-        row_event['status'] = sgo_event_status(event['status'])
-        linked = linked_event_ids(event.get('bookmaker_event_links', {}))
-        if linked:
-            # Event links identify a venue occurrence. They carry no market
-            # ID, outcome, settlement or price authority.
-            row_event['shared_provider_ids'] = linked
-        witness = dict(version=SCHEDULE_VERSION, native_event_id=event_id,
-                       authority=['sportsgameodds', 'event', event_id], start=event['starts_at'], received_at=received_at,
-                       proofs=[dict(path='sportsgameodds/receipt/' + receipt_sha256,
-                                    body_sha256=receipt_sha256, received_at=received_at)])
-        row_event['schedule_metadata'] = dict(witness, revision=hashed(witness))
+        event_key = (event_id, received_at)
+        if event_key not in event_records:
+            row_event = _event_record(event, receipt_sha256, received_at, registry)
+            event_records[event_key] = (row_event, provider_key('sportsgameodds', row_event))
+        row_event, occurrence = event_records[event_key]
+        home, away = row_event['home'], row_event['away']
         canonical = first['line']
         if family == 'spread' and first['side'] == 'away':
             canonical = str(-Decimal(canonical))
@@ -139,7 +150,7 @@ def current_rows(page, receipt_sha256):
                                    predicate=side if family == 'total' else 'cover' if family == 'spread' else 'win',
                                    signed_line=line,
                                    label=side.title() if family == 'total' else event['teams'][side]['name']))
-        identity = dict(event=provider_key('sportsgameodds', row_event), sport=row_event['sport'],
+        identity = dict(event=occurrence, sport=row_event['sport'],
                         competition=event['league'], season='unverified', stage='unverified',
                         scheduled_start=event['starts_at'], family=family, period='full_game',
                         line=canonical, outcome_set=stable(selections), rules='sportsgameodds-unverified-1')
