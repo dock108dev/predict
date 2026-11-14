@@ -134,7 +134,10 @@ def sportsbook_frames(db, at):
                                 f.facts->>'receipt_sha256' AS frame
                          FROM current_event e JOIN current_sgo_event_frame f ON f.event_id=e.native_event_id
                          WHERE e.provider='sportsgameodds' AND e.scheduled_start::timestamptz > %s
-                           AND e.scheduled_start::timestamptz <= %s""", (at, at+timedelta(hours=72)))
+                           AND e.scheduled_start::timestamptz <= %s
+                           AND f.received_order BETWEEN extract(epoch FROM %s::timestamptz)
+                                                    AND extract(epoch FROM %s::timestamptz)""",
+                      (at, at+timedelta(hours=72), at-timedelta(minutes=15), at))
     return list(rows)
 
 
@@ -175,7 +178,7 @@ def dependencies(db, event_ids=None, *, sportsbook_rows=None, catalog_rows=None,
     rows = db.execute('''SELECT c.id, '''+receipt+''' receipt,
         o.price_dependency price,
         c.revision contract,
-        e.revision event FROM current_offer o JOIN current_contract c ON c.id=o.contract_id
+        e.revision event FROM current_offer_storage o JOIN current_contract c ON c.id=o.contract_id
         JOIN current_event e ON e.id=c.event_id
         '''+frame_join+'''
         WHERE ((%s::text[] IS NULL AND e.scheduled_start::timestamptz >= %s
@@ -233,10 +236,10 @@ def owned_refresh(owner, quota):
         and not panel.get('worker_done'))
 
 
-def authority(db, *, at=None):
+def authority(db, *, at=None, include_diagnostics=True):
     from app.collection.runtime_status import read_runtime, source_states
-    owner = dict(read_runtime(db, at=at), fee_lifecycle=schedule_lifecycle.read(db),
-                 fee_products=product_schedules.read_all(db))
+    owner = dict(read_runtime(db, at=at, ordinary_authority=not include_diagnostics),
+                 fee_lifecycle=schedule_lifecycle.read(db), fee_products=product_schedules.read_all(db))
     committed={r['venue']:r['state'] for r in db.execute('SELECT venue,state FROM current_source_status')}
     # The legacy transport exposes four execution venues. Its shared aggregate
     # receipt also reports Pinnacle independently, including a reference-only sport.
@@ -532,7 +535,8 @@ def compact_retention(db, required):
                 retained -= changed*(len(packed)-len(replacement))
 
 
-def seal(db, inputs, result, facts, *, insert_inputs=False, component=None, members=(), prior_parts=None, costs=None):
+def seal(db, inputs, result, facts, *, insert_inputs=False, component=None, members=(), prior_parts=None,
+         costs=None, batched=False):
     # Automatic replacements favor bounded low-latency encoding; manual saved
     # captures retain their denser encoding. Both use the same checked decoder.
     started_pack=monotonic();reused=0
@@ -547,8 +551,12 @@ def seal(db, inputs, result, facts, *, insert_inputs=False, component=None, memb
         reused_input_bytes=reused,result_bytes=len(packed_result),result_encode_seconds=round(monotonic()-result_start,6))
     from app.collection.current_storage_policy import SQL_BYTE_CAP, sql_usage
     from .storage_maintenance import REWRITE_RUNWAY_BYTES
-    snapshots.prune(db)
+    if not batched:
+        snapshots.prune(db)
     retained = retained_bytes(db)
+    if batched and retained + len(packed_inputs) + len(packed_result) > MAX_BYTES:
+        snapshots.prune(db)
+        retained = retained_bytes(db)
     if retained + len(packed_inputs) + len(packed_result) > MAX_BYTES:
         raise snapshots.SnapshotOperationError('ordinary_retention_capacity')
     if sql_usage(db) + 2*(len(packed_inputs)+len(packed_result)) + REWRITE_RUNWAY_BYTES >= SQL_BYTE_CAP:
@@ -583,7 +591,8 @@ def seal(db, inputs, result, facts, *, insert_inputs=False, component=None, memb
             row = db.execute('''UPDATE comparison_publication SET generation=generation+1,result_id=%s,facts=%s
                 WHERE kind='live' AND id='' RETURNING generation''', (result['id'], Jsonb(dict(facts, published_at=utc())))).fetchone()
             published(db, delivery, live_sportsbook=live_sportsbook)
-        snapshots.prune(db)
+        if not batched:
+            snapshots.prune(db)
     return row['generation']
 
 
@@ -601,7 +610,7 @@ def lease(db, result_id):
     return True
 
 
-def compose(db, settings, *, scope, policy, epoch, started):
+def compose(db, settings, *, scope, policy, epoch, started, batched=False):
     """Atomic manifest of immutable compact members; no whole-root rewrite."""
     from .ordinary_fragments import VERSION as FRAGMENTS
     result = dict(id=uuid4().hex, snapshot_id=uuid4().hex, captured_at=utc(), calculated_at=utc(),
@@ -647,7 +656,7 @@ def compose(db, settings, *, scope, policy, epoch, started):
         epoch=epoch,component_count=len(members),expected_components=len(scope),pending_components=pending,
         oldest_capture=min(captured,key=stamp) if captured else None,provider_requests=0)
     result['counts']=totals
-    _,states=authority(db)
+    _,states=authority(db,include_diagnostics=False)
     inputs=dict(id=result['snapshot_id'],captured_at=result['captured_at'],quotes=[],references=[],
         games=[],sources=states,issues=[],capture_seconds=0)
     facts=dict(state='partial' if pending else 'ready',finance=result['publication']['finance'],
@@ -656,7 +665,7 @@ def compose(db, settings, *, scope, policy, epoch, started):
         _delivery_receipts=delivery,_live_sportsbook_deadlines=live_sportsbook,
         representation=FRAGMENTS,fragment_bytes_written=written,new_fragments=len(missing),
         total_seconds=round(monotonic()-started,3))
-    return seal(db,inputs,result,facts,insert_inputs=True,members=members)
+    return seal(db,inputs,result,facts,insert_inputs=True,members=members,batched=batched)
 
 
 def turn(db, *, turn_seconds=8, capture_cache=None):
@@ -682,7 +691,7 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
             db.execute('SET LOCAL jit=off')
             epoch=str(db.execute('SELECT epoch FROM current_row_epoch').fetchone()['epoch'])
             settings=current_settings(db)
-            owner,source_states=authority(db)
+            owner,source_states=authority(db,include_diagnostics=False)
             reference_provider=aggregate_provider(owner=owner)
             policy=policy_identity(reference_provider)
             fee_state=owner['fee_lifecycle']
@@ -727,7 +736,7 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
             per_event={}
             for cid,value in dep.items():per_event.setdefault(membership[cid],{})[cid]=value
             latest_receipts={r['event_id']:r['at'] for r in db.execute('''SELECT c.event_id,max(o.received_at) at
-                FROM current_offer o JOIN current_contract c ON c.id=o.contract_id GROUP BY c.event_id''')}
+                FROM current_offer_storage o JOIN current_contract c ON c.id=o.contract_id GROUP BY c.event_id''')}
             aggregate_receipts,native_evidence=receipt_watermarks(db, reference_provider)
             prophetx_components={key for key,ids in scope.items()
                                  if any('prophetx' in event_venues.get(eid,()) for eid in ids)}
@@ -781,6 +790,8 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
         live_first_price_seal = False
         native_deadlines=[]
         native_price_seal=False
+        # Under the turn's publication lock, reclaim expired snapshots once
+        # per batch. Each seal still verifies both storage limits.
         snapshots.prune(db)
         head_size=db.execute('''SELECT octet_length(r.result) n FROM comparison_publication p
             JOIN comparison_snapshot_result r ON r.id=p.result_id WHERE p.kind='live' AND p.id='' ''').fetchone()
@@ -885,12 +896,13 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
                 boundaries=[v for row in price_result['rows'] for v in
                     (row['current_authority']['price'].get('current_until'),row['start_at'],
                      (row['current_authority'].get('sgo_native_contract') or {}).get('current_until'),
-                     (row.get('sportsbook_baseline') or {}).get('current_until')) if v]
+                     (row.get('sportsbook_baseline') or {}).get('current_until')) if v and stamp(v)>capture_at]
                 fee_boundaries=[*schedule_boundaries, *(public_boundaries if key in prophetx_components or product_components[key] else ())]
                 facts['next_fee_boundary']=min(fee_boundaries,key=stamp,default=None)
                 boundaries.extend(fee_boundaries)
                 facts['next_boundary']=min(boundaries,key=stamp) if boundaries else None
-                seal(db,inputs,price_result,facts,insert_inputs=True,component=key,prior_parts=prior_parts,costs=costs)
+                seal(db,inputs,price_result,facts,insert_inputs=True,component=key,prior_parts=prior_parts,
+                     costs=costs,batched=True)
                 del prior_parts
                 component_trace.append(dict(component=key,event_ids=sorted(scope[key])[:8],event_count=len(scope[key]),
                     queue_position=pending.index(key),selected_at=at.isoformat(),
@@ -929,13 +941,14 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
             # Repeated whole-board packing per game otherwise dominated acquisition.
             if changed:
                 gc.collect()
-                price_generation=compose(db,settings,scope=scope,policy=policy,epoch=epoch,started=started)
+                price_generation=compose(db,settings,scope=scope,policy=policy,epoch=epoch,started=started,batched=True)
                 price_published_at=status(db)['facts']['published_at']
         timings['price_seal_seconds']=round(monotonic()-price_seal_started,6)
         # Yield at the committed source-only boundary, never while holding the
         # staged component/root transaction. Stop and the child deadline remain
         # binding throughout a cooperative pressure pause.
         checkpoint()
+        snapshots.prune(db)
         with db.transaction():
             db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ')
             db.execute('SET LOCAL jit=off')
@@ -972,14 +985,14 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
                         (row.get('sportsbook_baseline') or {}).get('current_until'),
                         *(w.get('current_until') for w in a['references'])] if v and stamp(v)>now)
                 facts.update(finance='ready',next_boundary=min(future,key=stamp) if future else None,visited_at=utc())
-                seal(db,inputs,result,facts,component=key)
+                seal(db,inputs,result,facts,component=key,batched=True)
                 computed+=1
                 del inputs,result
             timings['finance_seconds']=round(monotonic()-finance_started,6)
             finance_seal_started=monotonic()
             if computed or errors:
                 gc.collect()
-                generation=compose(db,settings,scope=scope,policy=policy,epoch=epoch,started=started)
+                generation=compose(db,settings,scope=scope,policy=policy,epoch=epoch,started=started,batched=True)
             else:generation=status(db)['generation']
         timings['finance_seal_seconds']=round(monotonic()-finance_seal_started,6)
         snapshots.prune(db)

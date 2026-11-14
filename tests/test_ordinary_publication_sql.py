@@ -381,6 +381,25 @@ class OrdinarySQL(LatestBoardFixture):
                 self.assertEqual(selected['state'],'unavailable')
                 self.assertIn('updates_stopped',selected['row']['current_reasons'])
 
+    async def test_current_desk_projection_matches_full_projection_after_price_withdrawal(self):
+        from app.dashboard.trade_desk import page
+
+        with self.connect() as db:
+            live.turn(db)
+            result = self.result(db)
+            self.changed_first()
+            owner, states = live.authority(db, at=self.at)
+            deps = live.dependencies(db)
+            options = dict(at=self.at, policy=live.policy_identity(), epoch=result['publication']['epoch'])
+            full = live.project(result, deps, owner, states, **options)
+            desk = live.project(result, deps, owner, states, current_desk=True, **options)
+        self.assertTrue(any(row['price_current'] for row in full['rows']))
+        self.assertTrue(any(not row['price_current'] for row in full['rows']))
+        for options in (dict(browse_odds='1'), dict(ranked='1')):
+            query = dict(layout='desk', lines='all', **options)
+            self.assertEqual(page(full, query, ('ev', None, 0, 20)),
+                             page(desk, query, ('ev', None, 0, 20)))
+
     async def test_prune_automatic_history_preserves_selected_only(self):
         with self.connect() as db:
             for i in range(3):

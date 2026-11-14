@@ -241,6 +241,9 @@ def mount(app):
         query.setdefault('metric', 'minimum_return_percent' if query.get('view') == 'arbs' else 'conditional_return_percent')
         query.setdefault('group', 'outcome')
         options = None if is_fee_census else page_options(query)
+        current_desk = (options is not None and options[0] != 'arbs' and query.get('layout') == 'desk'
+                        and (query.get('browse_odds') == '1' or query.get('ranked') == '1')
+                        and query.get('last_known') != '1' and not req.path.endswith('/selection'))
         from app.storage import ordinary_publication as live
         from app.fees.schedule_lifecycle import revision as fee_revision
         from app.storage.store import hashed, stamp
@@ -270,7 +273,8 @@ def mount(app):
                 db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
                 head = live.status(db)
                 at = stamp(utc())
-                owner, states = live.authority(db, at=at)
+                owner, states = live.authority(db, at=at,
+                    include_diagnostics=is_fee_census and query.get('funnel') == '1')
                 provider = live.aggregate_provider(owner=owner)
                 deps = live.dependencies(db, provider=provider)
                 policy = live.policy_identity(provider)
@@ -322,7 +326,7 @@ def mount(app):
                     (r.get('sportsbook_baseline') or {}).get('indicative') for r in result['rows'])
                     and owner.get('config', {}).get('aggregate_provider') == 'sportsgameodds' else ())
                 result = live.project(result, deps, owner, states, at=at, policy=policy, epoch=epoch,
-                                      settings=settings, sportsbook_frames=frames)
+                                      settings=settings, sportsbook_frames=frames, current_desk=current_desk)
                 timings['projection']=(monotonic()-stage)*1000
                 if is_fee_census:
                     return dict(fee_census(db, result, deps, owner, states, at, pairs=captured_pairs,

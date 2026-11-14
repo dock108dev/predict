@@ -2,6 +2,7 @@
 import argparse
 import asyncio
 import inspect
+import logging
 import signal
 from app.diagnostics import failure
 from app.storage.store import connect, Store
@@ -210,6 +211,8 @@ class DataRuntime:
                 if needs_storage_interval(maintenance, sql_bytes=self.sql_bytes) and getattr(
                         self.service.workers.get('the_odds_api'), 'phase', None) not in (
                             'reservation','transport','accounting'):
+                    logging.getLogger(__name__).warning(
+                        'Starting storage maintenance interval at %d database bytes', self.sql_bytes)
                     self.storage_interval=True
                     self.stopping.set()
                     break

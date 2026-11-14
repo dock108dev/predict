@@ -6,7 +6,7 @@ from .store import hashed, stamp
 def receipt_watermarks(db, aggregate_provider='the_odds_api'):
     """Keep aggregate delivery separate from short-lived signed book work."""
     aggregate = {r['event_id']:stamp(r['at']) for r in db.execute('''SELECT c.event_id,max(o.received_at) at
-        FROM current_offer o JOIN current_contract c ON c.id=o.contract_id
+        FROM current_offer_storage o JOIN current_contract c ON c.id=o.contract_id
         JOIN current_event e ON e.id=c.event_id
         WHERE e.provider=%s AND c.venue IN ('novig','prophetx','pinnacle','kalshi')
         GROUP BY c.event_id''', (aggregate_provider,))}
@@ -20,7 +20,7 @@ def receipt_watermarks(db, aggregate_provider='the_odds_api'):
              ELSE c.venue END venue,
         max(greatest(o.source_at::timestamptz,
             (o.facts#>>'{book_confirmation,confirmed_at}')::timestamptz))::text at
-        FROM current_offer o JOIN current_contract c ON c.id=o.contract_id
+        FROM current_offer_storage o JOIN current_contract c ON c.id=o.contract_id
         JOIN current_event e ON e.id=c.event_id
         WHERE (c.venue=e.provider AND c.venue IN ('kalshi','polymarket_us'))
            OR (c.venue='pinnacle' AND e.provider=%s)

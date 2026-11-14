@@ -66,9 +66,17 @@ def _unpack_status_sections(status):
         status[key] = json.loads(raw)
 
 
-def read_runtime(db, at=None):
+def read_runtime(db, at=None, *, ordinary_authority=False):
     """Read committed facts, with bounded death detection independent of app life."""
-    row = db.execute('SELECT * FROM data_runtime WHERE singleton=true').fetchone()
+    if ordinary_authority:
+        row = db.execute("""SELECT runtime_id, owner_pid, heartbeat_at, state, config, source_status,
+            dispatch, revision, paused_sources, global_stopped,
+            CASE WHEN config->>'aggregate_provider'='sportsgameodds'
+                 THEN jsonb_build_object('background_calculations', status->'background_calculations')
+                 ELSE status END AS status
+            FROM data_runtime WHERE singleton=true""").fetchone()
+    else:
+        row = db.execute('SELECT * FROM data_runtime WHERE singleton=true').fetchone()
     if row is None:
         return dict(healthy=False, active=False, dispatch=False, runtime_id=None,
                     config={}, states={}, revision=0, service_state='unavailable',
@@ -93,7 +101,7 @@ def read_runtime(db, at=None):
                 config=deepcopy(row['config']), states=states, revision=row['revision'],
                 heartbeat_at=_stamp(row['heartbeat_at']).astimezone(timezone.utc).isoformat(),
                 service_state=row['state'] if healthy else 'unavailable',
-                calculations=deepcopy(row['status'].get('background_calculations', {})),
+                calculations=deepcopy(row['status'].get('background_calculations') or {}),
                 reason_code=None if healthy else 'data_runtime_unhealthy',
                 status=status, paused_sources=row['paused_sources'],
                 global_stopped=row['global_stopped'], owner_pid=row['owner_pid'])

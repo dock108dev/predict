@@ -39,7 +39,7 @@ def identity_index(db):
     # Membership must share the identity query's MVCC snapshot. Planning also
     # runs outside repeatable-read captures while ingestion adds new events.
     events=db.execute('''SELECT e.id,e.provider,e.native_event_id,e.revision,e.facts,
-        EXISTS(SELECT 1 FROM current_contract c JOIN current_offer o ON o.contract_id=c.id
+        EXISTS(SELECT 1 FROM current_contract c JOIN current_offer_storage o ON o.contract_id=c.id
             WHERE c.event_id=e.id) AS active
         FROM current_event e ORDER BY e.id''').fetchall()
     if len(events)>4096:raise ValueError('publication_dependency_capacity')

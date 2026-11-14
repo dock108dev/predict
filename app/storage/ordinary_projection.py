@@ -164,7 +164,8 @@ def price_reasons(row, current, owner, states, *, at, epoch, publication_epoch, 
     return reasons
 
 
-def project(result, current, owner, states, *, at, policy, epoch, settings=None, sportsbook_frames=()):
+def project(result, current, owner, states, *, at, policy, epoch, settings=None, sportsbook_frames=(),
+            current_desk=False):
     """Fail-closed rank withdrawal; no reference/fee/math is recomputed here."""
     from app.comparison.snapshot_fee_outcome import EXPIRED, unavailable
     from app.comparison.sgo_sportsbook_baseline import current as sportsbook_current
@@ -197,8 +198,9 @@ def project(result, current, owner, states, *, at, policy, epoch, settings=None,
         row = dict(original)
         auth = row['current_authority']
         aggregate_provider = owner.get('config',{}).get('aggregate_provider', 'the_odds_api')
-        reasons = price_reasons(row, current, owner, states, at=at, epoch=epoch,
-                                publication_epoch=result['publication']['epoch'], common=common)
+        reasons = ((common if current_desk else []) or
+                   price_reasons(row, current, owner, states, at=at, epoch=epoch,
+                                 publication_epoch=result['publication']['epoch'], common=common))
         lifecycle=auth['price'].get('lifecycle',{})
         start = stamp(row['start_at'])
         started = at >= start
@@ -210,6 +212,11 @@ def project(result, current, owner, states, *, at, policy, epoch, settings=None,
             row['game_state'] = 'unknown'
         row['game_state_basis']=lifecycle.get('basis')
         row['price_current'] = not reasons
+        if current_desk and reasons:
+            # The live desk still needs phase and identity for its scoped
+            # counts and permalinks. It will never present these rows.
+            out['rows'].append(row)
+            continue
         row['price_reasons'] = sorted(set(reasons))
         current_prices += not reasons
         policy_replaced = row.get('publication_policy', result['publication']['policy']) != policy
@@ -342,5 +349,6 @@ def project(result, current, owner, states, *, at, policy, epoch, settings=None,
         data_runtime=publication_runtime(owner),
         retained_prices=len(result['rows'])-current_prices, coverage_complete=False,
         read_at=at.isoformat(), poll_after_ms=2000, provider_requests=0)
-    counts(out)
+    if not current_desk:
+        counts(out)
     return out
