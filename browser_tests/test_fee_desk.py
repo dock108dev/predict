@@ -77,7 +77,7 @@ def data():
     old["original"] = dict(units="decimal_odds", value="2.5")
     commission["original"] = dict(units="decimal_odds", value="2.5")
     commission["game_key"] = "commission-game"
-    ev = page(result(old, commission), {}, ("ev", None, 0, 25))
+    ev = page(result(old, commission, stale), {}, ("ev", None, 0, 25))
     # The fee drawer is available for a selected venue even when that venue
     # lacks a qualified reference, provided the outcome itself qualifies.
     for group in ev["rows"]:

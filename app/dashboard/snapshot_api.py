@@ -325,8 +325,11 @@ def mount(app):
                 frames = (live.sportsbook_frames(db, at) if any(
                     (r.get('sportsbook_baseline') or {}).get('indicative') for r in result['rows'])
                     and owner.get('config', {}).get('aggregate_provider') == 'sportsgameodds' else ())
+                retained_fallback = query.get('browse_odds') == '1' and (
+                    owner.get('global_stopped') or not owner.get('healthy'))
                 result = live.project(result, deps, owner, states, at=at, policy=policy, epoch=epoch,
-                                      settings=settings, sportsbook_frames=frames, current_desk=current_desk)
+                                      settings=settings, sportsbook_frames=frames,
+                                      current_desk=current_desk and not retained_fallback)
                 timings['projection']=(monotonic()-stage)*1000
                 if is_fee_census:
                     return dict(fee_census(db, result, deps, owner, states, at, pairs=captured_pairs,
@@ -354,18 +357,23 @@ def mount(app):
                 stage=monotonic()
                 if query.get('layout') == 'desk':
                     from .trade_desk import add_public_prices, add_sgo_prices, desk_phase, page as desk_page
-                    def enrich(out, *, include_retained):
+                    def enrich(out, *, include_retained, mark_retained=False):
                         if owner.get('config', {}).get('aggregate_provider') != 'sportsgameodds' or 'sportsgameodds' not in states:
                             return
-                        add_sgo_prices(db, out, result['rows'], states, at=at,
-                                       include_retained=include_retained)
+                        quote_states = states
+                        if retained_fallback:
+                            aggregate = dict(states['sportsgameodds'], state='unavailable')
+                            quote_states = dict(states, sportsgameodds=aggregate)
+                        add_sgo_prices(db, out, result['rows'], quote_states, at=at,
+                                       include_retained=include_retained, mark_retained=mark_retained)
                         if desk_phase(query) != 'live':
-                            add_public_prices(out, owner, at=at, include_retained=include_retained)
+                            add_public_prices(out, owner, at=at, include_retained=include_retained,
+                                              mark_retained=mark_retained)
                     qualify = query.get('lines') in ('main', 'all') and (
                         query.get('browse_odds') == '1' or query.get('ranked') == '1') and options[0] != 'arbs'
                     out = desk_page(result, query, options, captured_pairs=captured_pairs, policy=policy,
-                                    browsing=browsing, enrich=enrich if qualify else None)
-                    if not qualify and out.get('state') == 'ready' and options[0] != 'arbs':
+                                    browsing=browsing, enrich=enrich if qualify or retained_fallback else None)
+                    if not qualify and not retained_fallback and out.get('state') == 'ready' and options[0] != 'arbs':
                         enrich(out, include_retained=query.get('last_known') == '1')
                 else:
                     out = page(result, query, options=options)

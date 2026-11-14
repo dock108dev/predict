@@ -327,6 +327,7 @@ def test_ranked_and_browse_journey(width, tmp_path):
     errors = []
     provider_requests = []
     unavailable = False
+    browse_failure = False
     hide_game_prices = False
     replacement = "stable"
     withdraw_selection = False
@@ -347,6 +348,9 @@ def test_ranked_and_browse_journey(width, tmp_path):
         elif url.path.startswith("/view/current/"):
             route.fulfill(path=ASSETS / Path(url.path).name)
         elif url.path == "/api/comparison-current":
+            if browse_failure and query.get("browse_odds") == "1" and not query.get("game_key"):
+                route.fulfill(status=503)
+                return
             if query.get("view") == "arbs":
                 rows = deepcopy(arbs)
                 if query.get("game_key") == WASHINGTON:
@@ -466,7 +470,7 @@ def test_ranked_and_browse_journey(width, tmp_path):
             expect(cards.first).not_to_contain_text("-112")
             expect(cards.last).to_contain_text("-3.00%")
             expect(tab.get_by_text("Free view", exact=False)).to_have_count(1)
-            expect(tab.get_by_role("link", name="Arbitrage")).to_have_count(0)
+            expect(tab.get_by_role("link", name="Arbitrage")).to_be_visible()
             tab.screenshot(path=tmp_path / f"ranked-ev-{width}.png")
             tab.get_by_role("checkbox", name="Positive only").check()
             expect(cards).to_have_count(1)
@@ -494,6 +498,7 @@ def test_ranked_and_browse_journey(width, tmp_path):
                 tab.get_by_role("columnheader", name="Polymarket US")
             ).to_be_visible()
             if width == 390:
+                expect(tab.get_by_text("Swipe or scroll sideways to see more sites →")).to_be_visible()
                 assert tab.locator(".odds-scroll").evaluate(
                     "(el) => el.scrollWidth > el.clientWidth"
                 )
@@ -507,7 +512,7 @@ def test_ranked_and_browse_journey(width, tmp_path):
             expect(tab.locator(".odds-matrix tbody tr")).to_have_count(2)
             hide_game_prices = True
             tab.get_by_role("button", name="Refresh list").click()
-            expect(tab.get_by_role("heading", name="No matching odds")).to_be_visible()
+            expect(tab.get_by_role("heading", name="No prices available for this matchup")).to_be_visible()
             expect(tab.get_by_role("heading", name=DENVER)).to_be_visible()
             tab.get_by_label("Last-known prices").check()
             expect(tab.locator('[data-offer-id="novig-denver"]')).to_contain_text(
@@ -548,12 +553,18 @@ def test_ranked_and_browse_journey(width, tmp_path):
             expect(
                 tab.get_by_role("button", name="Spreads", exact=True)
             ).to_have_attribute("aria-pressed", "true")
+            browse_failure = True
             tab.get_by_role("navigation", name="Current view").get_by_role(
                 "link", name="Back"
             ).click()
             expect(
                 tab.get_by_role("button", name="Clear Spread filter")
             ).to_be_visible()
+            expect(tab.locator("#notice")).to_contain_text("Showing the last loaded quotes")
+            expect(tab.locator(".odds-card").filter(has_text=DENVER)).to_contain_text("Last known")
+            browse_failure = False
+            tab.get_by_role("button", name="Refresh list").click()
+            expect(tab.locator("#notice")).not_to_contain_text("Showing the last loaded quotes")
             tab.locator(".odds-card").filter(has_text=DENVER).get_by_role(
                 "link", name="Open game ↗"
             ).click()
@@ -605,6 +616,10 @@ def test_ranked_and_browse_journey(width, tmp_path):
             replacement = "stable"
             drawer.get_by_role("button", name="Use latest prices").click()
             expect(drawer.get_by_text("$0.80 per $1 payout")).to_be_visible()
+            expect(drawer.get_by_text("Same-line sportsbook quotes")).to_be_visible()
+            drawer.get_by_role("button", name="Use latest prices").click()
+            expect(drawer.get_by_role("status")).to_contain_text("No newer quote")
+            expect(drawer.get_by_text("Same-line sportsbook quotes")).to_be_visible()
             tab.keyboard.press("Escape")
             expect(quote_button).to_be_focused()
 

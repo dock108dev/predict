@@ -73,7 +73,29 @@ class TradeDesk(TestCase):
         alternate = read(lines='all')['rows'][1]['id']
         game = read(browse_odds='1', ranked='0', game_key='game', line=alternate)
         self.assertEqual(game['selected_line_id'], alternate)
-        self.assertEqual(game['total'], 3)
+        self.assertIn(alternate, {row['id'] for row in game['rows']})
+
+    def test_browse_retains_quotes_when_runtime_authority_is_lost(self):
+        live = quote('live', 'novig', value='20')
+        saved = quote('saved', 'prophetx', current=False)
+        data = result(live, saved)
+        options = ('ev', None, 0, 10)
+        query = {'layout':'desk', 'browse_odds':'1', 'basis':'before', 'lines':'main', 'phase':''}
+        thin = page(data, query, options)
+        self.assertTrue(thin['limited_coverage'])
+        self.assertEqual([offer['id'] for offer in thin['rows'][0]['offers']], ['live'])
+        self.assertEqual(thin['rows'][0]['retained_venues'], ['prophetx'])
+        explicit = page(data, dict(query, last_known='1'), options)
+        self.assertEqual({offer['id'] for offer in explicit['rows'][0]['offers']}, {'live', 'saved'})
+        data['rows'] = [dict(live, price_current=False, current_reasons=['data_runtime_unhealthy']), saved]
+        data['publication']['data_runtime'] = {'healthy':False}
+        fallback = page(data, query, options)
+        self.assertTrue(fallback['retained_fallback'])
+        self.assertEqual({offer['id'] for offer in fallback['rows'][0]['offers']}, {'live', 'saved'})
+        self.assertIsNone(fallback['rows'][0]['score'])
+        self.assertTrue(all(not offer['current'] and offer['value'] is None for offer in fallback['rows'][0]['offers']))
+        ranked = page(data, {'layout':'desk', 'ranked':'1', 'phase':'', 'basis':'before', 'lines':'main'}, options)
+        self.assertEqual(ranked['rows'], [])
 
     def test_live_desk_prefers_direct_exchange_sources_even_with_retained_prices(self):
         direct = dict(quote('direct', 'kalshi'), source={'provider': 'kalshi'})

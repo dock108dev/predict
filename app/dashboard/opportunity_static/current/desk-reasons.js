@@ -2,7 +2,7 @@ const reasonLabels = {
   'Price expired': 'The offered price expired.',
   'Price unavailable': 'The offered price is unavailable.',
   'Calculation pending': 'The calculation is pending.',
-  sportsbook_baseline_unavailable: 'No current same-line sportsbook pair.',
+  sportsbook_baseline_unavailable: 'EV needs current prices for both sides of this exact market from one eligible sportsbook. The quotes shown may cover just one side.',
   'Exact settlement evidence missing': 'The exact settlement rules are missing.',
   public_fee_schedule_review_required: 'The public terms need explicit review.',
   public_fee_schedule_refresh_pending: 'The offer is waiting for the latest verified schedule.',

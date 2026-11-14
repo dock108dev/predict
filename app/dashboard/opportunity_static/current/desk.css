@@ -430,6 +430,11 @@ dialog::backdrop { background: #101b3180; }
 .odds-card > header p { margin: 0; }
 .odds-card > header .opportunity-link { display: inline-block; margin-top: .15rem; }
 .odds-scroll { overflow: auto; max-width: 100%; }
+.odds-card { container-type: inline-size; }
+.matrix-scroll-cue { display: none; padding: 0 .75rem; margin: .35rem 0; }
+@container (max-width: 46rem) { .matrix-scroll-cue { display: block; } }
+.missing-quote { font-size: .72rem; }
+.opportunity-link:disabled { opacity: .55; cursor: default; }
 .odds-matrix { border-spacing: 0; border-collapse: separate; width: 100%; text-align: center; font-size: .82rem; }
 .odds-matrix th, .odds-matrix td { padding: .38rem .42rem; border-bottom: 1px solid var(--rule); }
 .odds-matrix thead th { background: var(--soft); color: var(--muted); font-size: .74rem; white-space: nowrap; }

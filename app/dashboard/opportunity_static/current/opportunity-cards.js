@@ -1,7 +1,8 @@
 import {evidenceReason} from './desk-reasons.js';
 
 const {el, num, fmt, name, odd, link, button} = window.PredictUI;
-const basisLabels = {sportsbooks:'Sportsbook estimate before fees', reviewed:'Reviewed-fee EV', conservative:'Modeled EV after fee', before:'Qualified EV before fees'};
+const basisLabels = {sportsbooks:'Sportsbook estimate before fees', reviewed:'Reviewed-fee EV',
+  conservative:'Modeled EV after fee', before:'Qualified EV before fees', practice:'EV after fictional fees'};
 const books = ['fanduel', 'draftkings', 'betmgm', 'caesars'];
 const venues = ['kalshi', 'polymarket_us', 'novig', 'prophetx'];
 const dollars = new Intl.NumberFormat('en-US', {style:'currency', currency:'USD', maximumFractionDigits:6});
@@ -15,7 +16,7 @@ export const basisName = basis => basisLabels[basis];
 export const venueLabel = offer => name(offer.venue);
 
 export function quoteReason(offer) {
-  if (!offer.current) return offer.reason === 'Price unavailable' ? 'Price unavailable' : 'Last known · expired';
+  if (!offer.current) return offer.reason === 'Price expired' ? 'Last known · quote expired' : 'Last known · current quote unavailable';
   if (offer.value != null) return null;
   const reason = String(offer.reason || '').split(', ')[0];
   return evidenceReason(reason, 'No qualified same-line sportsbook pair.').replace(/\.$/, '');
@@ -57,6 +58,11 @@ function sportsbookCell(group, book, reference, checkedAt, mode, inspection = fa
     Number(b.current === true) - Number(a.current === true)
     || (b.source_at || '').localeCompare(a.source_at || '')
     || Number(b.price_american === selected?.price_american) - Number(a.price_american === selected?.price_american)).slice(0, 1);
+  if (selected && !values.some(value => value.current !== false &&
+      value.price_american === selected.price_american && value.source_at === selected.source_at)) {
+    values = [{...selected, current:true}, ...values];
+    if (compact) values = values.slice(0, 1);
+  }
   for (const value of values) {
     const item = el('div');
     item.append(odd(sportsbookOdds(value)));
@@ -65,7 +71,7 @@ function sportsbookCell(group, book, reference, checkedAt, mode, inspection = fa
       && value.price_american === selected.price_american && value.source_at === selected.source_at;
     if (isReference) item.classList.add('matrix-reference');
     if (compact) {
-      if (value.current === false) item.append(el('small', 'Last known'));
+      if (value.current === false) item.append(el('small', priceStatus(false, value.source_at, checkedAt)));
       cell.append(item);
       continue;
     }
@@ -76,14 +82,16 @@ function sportsbookCell(group, book, reference, checkedAt, mode, inspection = fa
     item.append(freshness);
     cell.append(item);
   }
-  if (!values.length) noQuote(cell, name(book));
+  if (!values.length) noQuote(cell, name(book), group.retained_sportsbooks?.includes(book));
   return cell;
 }
 
-function noQuote(cell, venue) {
-  const missing = el('span', '—', 'desk-meta');
-  missing.setAttribute('aria-label', `No quote shown from ${venue} for this exact outcome`);
-  missing.title = `No quote shown from ${venue} for this exact outcome`;
+function noQuote(cell, venue, retained = false) {
+  const missing = el('span', retained ? 'Saved quote' : '—', 'desk-meta missing-quote');
+  const detail = retained ? `Saved quote from ${venue}. Turn on Last-known prices to see it.`
+    : `No quote shown from ${venue} for this exact outcome`;
+  missing.setAttribute('aria-label', detail);
+  missing.title = detail;
   cell.append(missing);
 }
 
@@ -155,7 +163,7 @@ function quote(offer, group, context, className = '', showResult = true) {
   if (showResult) item.append(el('span', label, 'desk-site'));
   item.append(odd(offer.odds));
   const [status, age] = freshness.split(' · ');
-  const freshnessLabel = el('small', status, 'quote-freshness');
+  const freshnessLabel = el('small', offer.current ? status : freshness, 'quote-freshness');
   if (age) freshnessLabel.title = age;
   if (!context.compact || !offer.current) item.append(freshnessLabel);
   if (showResult) item.append(el('small', reason || `${percent(offer.value)} EV`, reason ? 'offer-reason' : tone(offer.value)));
@@ -256,9 +264,7 @@ function venueKey(offer) {
 }
 
 function venueColumns(offers, stable = false) {
-  const columns = new Map(stable ? [
-    ['kalshi', name('kalshi')], ['polymarket_us', name('polymarket_us')], ['novig', name('novig')]
-  ] : []);
+  const columns = new Map(stable ? venues.map(venue => [venue, name(venue)]) : []);
   for (const offer of offers) columns.set(venueKey(offer), venueLabel(offer));
   const priority = key => {
     const index = venues.indexOf(key.split(':')[0]);
@@ -427,7 +433,7 @@ export function gameMatrix(groups, context, {includeAlternates, market, selected
         cell.append(quote(offer, group, context, offer.current && offer.odds?.decimal != null
           && num(offer.odds.decimal) === highestPayout ? 'desk-best' : '', false));
       }
-      if (!cell.hasChildNodes()) noQuote(cell, name(venue));
+      if (!cell.hasChildNodes()) noQuote(cell, name(venue), group.retained_venues?.includes(venue));
     }
     for (const book of books) {
       tr.insertCell().append(sportsbookCell(group, book, reference, context.checkedAt, context.mode, false, context.compact));
@@ -440,15 +446,23 @@ export function gameMatrix(groups, context, {includeAlternates, market, selected
       value.append(calculation);
       if (!context.compact) value.append(el('small', venueLabel(lead)));
     } else {
-      const missing = el('small', context.compact ? '—' : quoteReason(lead));
+      const missing = el('small', context.compact ? 'Unavailable' : quoteReason(lead));
       missing.title = quoteReason(lead);
       missing.setAttribute('aria-label', quoteReason(lead));
-      value.append(missing);
+      if (context.compact) {
+        const price = button('Unavailable', () => context.inspectOffer(lead, group), 'opportunity-link missing-quote');
+        price.title = quoteReason(lead);
+        price.setAttribute('aria-label', `EV unavailable for ${context.position(lead)}. ${quoteReason(lead)}`);
+        value.append(price);
+      } else value.append(missing);
     }
   }
-  box.append(scrollTable(table, 'Venue and sportsbook odds'));
-  if (!context.compact) box.append(el('p',
-    'Highlighted venue odds show the highest current payout. A dash means there is no displayed quote from that site for the exact outcome.'
-    + (context.lastKnown || context.mode ? '' : ' Turn on Last-known prices to include retained quotes.'), 'matrix-legend desk-meta'));
+  const scroll = scrollTable(table, 'Venue and sportsbook odds');
+  const cue = el('p', 'Swipe or scroll sideways to see more sites →', 'matrix-scroll-cue desk-meta');
+  box.append(cue, scroll);
+  const saved = visible.some(group => group.retained_venues?.length || group.retained_sportsbooks?.length);
+  box.append(el('p', 'A dash means no quote is displayed for that site and outcome.'
+    + (saved && !context.lastKnown ? ' Turn on Last-known prices to reveal cells marked Saved quote.' : ''),
+    'matrix-legend desk-meta'));
   return box;
 }

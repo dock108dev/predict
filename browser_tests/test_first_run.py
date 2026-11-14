@@ -20,9 +20,12 @@ def first_use(tab, base):
     tab.goto(base + "/")
     expect(tab.get_by_role("heading", name="Opportunities")).to_be_visible()
     expect(
-        tab.get_by_role("heading", name="The data service is unavailable")
+        tab.get_by_role("heading", name="Price updates are temporarily unavailable")
     ).to_be_visible()
-    tab.get_by_role("link", name="Check data sources").click()
+    expect(tab.get_by_role("link", name="Arbitrage")).to_be_visible()
+    expect(tab.get_by_role("button", name="Retry price updates")).to_be_visible()
+    tab.get_by_role("link", name="Admin", exact=True).click()
+    tab.get_by_role("link", name="Sources", exact=True).click()
     setup = tab.locator("#source-setup")
     expect(setup.locator("summary")).to_be_visible()
     setup.locator("summary").focus()
@@ -62,6 +65,19 @@ def first_use(tab, base):
     tab.keyboard.press("Escape")
     expect(offer).to_be_focused()
 
+    tab.get_by_label("Calculation basis").select_option(label="EV after fictional fees")
+    expect(offer).to_contain_text("+8.91% EV")
+    tab.get_by_role("link", name="Open game ↗").first.click()
+    tab.get_by_role("button", name="Spreads", exact=True).click()
+    expect(tab.locator('[data-offer-id="practice-offer-spread-1"]')).to_contain_text("1.91")
+    tab.get_by_label("Price step").select_option("changed")
+    expect(tab.get_by_role("heading", name="Harbor Foxes vs. Summit Owls")).to_be_visible()
+    expect(tab.get_by_role("button", name="Spreads", exact=True)).to_have_attribute("aria-pressed", "true")
+    expect(tab.locator('[data-offer-id="practice-offer-spread-1"]')).to_contain_text("1.87")
+    tab.get_by_role("button", name="Totals", exact=True).click()
+    expect(tab.locator('[data-offer-id="practice-offer-total-1"]')).to_contain_text("1.95")
+    tab.get_by_label("Price step").select_option("initial")
+
     tab.get_by_role("navigation", name="Replay views").get_by_role(
         "link", name="Arbitrage"
     ).click()
@@ -84,6 +100,19 @@ def first_use(tab, base):
     trade.get_by_role("button", name="Back to pairing").click()
     tab.keyboard.press("Escape")
     expect(inspect).to_be_focused()
+
+    amount = tab.get_by_label("Total stake before fees ($)")
+    assert amount.evaluate("""input => {
+      input.value = '300';
+      input.dispatchEvent(new Event('input', {bubbles:true}));
+      return document.querySelector('[data-pair-id]').disabled;
+    }""")
+    expect(inspect).to_be_enabled()
+    inspect.click()
+    expect(pair).to_contain_text("Calculated for a $300.00 stake before fees")
+    tab.keyboard.press("Escape")
+    amount.fill("100")
+    expect(inspect).to_be_enabled()
 
     filters = tab.get_by_role("button", name="Filters", exact=True)
     inspect.press("Enter")

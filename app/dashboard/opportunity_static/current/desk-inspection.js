@@ -440,6 +440,12 @@ export function pairInspection(pair, offers, {group, game, position, inspect, mo
     ['Total funding', usd(retail?.funding_usd)],
     ['Fees paid at fill', usd(retail?.available ? sum(retail.legs.map(leg => leg.at_fill_usd)) : null)]
   ]));
+  if (retail?.available) {
+    result.append(el('p', `Calculated for a ${usd(sizing?.requested_stake_usd ?? math.funding_usd)} stake before fees. Lowest payout covers the settlement states shown below.`, 'desk-meta'));
+    if (!Object.keys(retail.states).some(state => state.includes('void') || state.includes('cancel'))) {
+      result.append(el('p', 'Void and cancellation cashflows are unavailable for this pair.', 'desk-meta'));
+    }
+  }
   if (!retail?.available) result.append(el('p', reasons(retail?.reason || 'pair_settlement_unverified'), 'inspection-gap'));
   const legs = section('Two legs');
   const evidence = disclosure('Exact prices, settlement terms and fee rounding');
@@ -514,9 +520,6 @@ export function pairInspection(pair, offers, {group, game, position, inspect, mo
       rows.append(tr);
     }
     net.append(table, el('p', 'Return is the lowest modeled net profit across the shown states divided by total funding.', 'desk-meta'));
-    if (!Object.keys(retail.states).some(state => state.includes('void') || state.includes('cancel'))) {
-      evidence.append(el('p', 'Void and cancellation cashflows are unavailable for this pair.', 'desk-meta'));
-    }
   }
   const columns = el('div', null, 'inspection-columns');
   columns.append(legs);

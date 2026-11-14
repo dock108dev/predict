@@ -39,7 +39,7 @@ const selectedZone = () => filters.elements.timezone.value || defaultZone;
 const clock = at => savedClock(at, selectedZone());
 const stake = filters.elements.stake;
 const dialog = $('trade');
-const state = {offset: 0, page: null, request: null, selected: null};
+const state = {offset: 0, page: null, request: null, selected: null, renderedStake: null};
 const history = new DiagnosticSession();
 const siteName = offer => name(offer.venue);
 
@@ -54,7 +54,7 @@ document.title = `Predict · ${$('title').textContent}`;
 $('stake-field').hidden = $('profit-field').hidden = !arb;
 $('basis-field').hidden = arb;
 $('group-field').hidden = arb || !replay;
-$('opportunity-tabs').hidden = !opportunityView || !arb;
+$('opportunity-tabs').hidden = !opportunityView;
 $('free-view-note').hidden = replay;
 $('phase-tabs').hidden = !opportunityView;
 if (opportunityView) {
@@ -104,7 +104,20 @@ if (replay) {
   $('replay-arbs').href = replayURL('arbs');
   $(arb ? 'replay-arbs' : 'replay-ev').setAttribute('aria-current','page');
   $('replay-dataset').onchange = event => location.assign(replayURL(arb ? 'arbs' : 'ev', event.target.value, 'initial'));
-  $('replay-frame').onchange = event => location.assign(replayURL(arb ? 'arbs' : 'ev', dataset, event.target.value));
+  $('replay-frame').onchange = event => {
+    const next = new URL(location.href);
+    next.searchParams.set('frame', event.target.value);
+    if (gameKey) {
+      if (marketFamily) next.searchParams.set('family', marketFamily);
+      else next.searchParams.delete('family');
+      if (safeBack) {
+        const previous = new URL(safeBack, location.origin);
+        if (previous.pathname === '/replay') previous.searchParams.set('frame', event.target.value);
+        next.searchParams.set('back', previous.pathname + previous.search);
+      }
+    }
+    location.assign(next);
+  };
 }
 stake.value = readPreference('stake', '100');
 if (!stake.checkValidity() || !stake.value) stake.value = '100';
@@ -119,7 +132,7 @@ saved ||= {};
 if (browse) {
   let ordinary = {};
   try { ordinary = JSON.parse(readPreference(evFilterKey, '{}')) || {}; } catch {}
-  if (!replay) saved.basis = (phase === 'live' ? null : ordinary.basis) || saved.basis;
+  if (!replay) saved.basis ||= phase === 'live' ? 'reviewed' : ordinary.basis;
   for (const key of [...browseFilterFields, 'basis','last_known','alternates']) {
     if (route.has(key)) saved[key] = route.get(key);
   }
@@ -133,6 +146,9 @@ if (phase === 'pregame') delete saved.period;
 if (phase === 'live' && !saved.basis) saved.basis = 'reviewed';
 if (replay) {
   filters.elements.basis.querySelector('option[value="sportsbooks"]').remove();
+  if (dataset === 'practice') {
+    filters.elements.basis.querySelector('option[value="conservative"]').textContent = 'EV after fictional fees';
+  }
   saved.group ||= 'offer'; saved.basis ||= 'before';
 }
 for (const key of ['search', 'day', 'sort', 'group', 'period', 'minimum', 'profit','basis','timezone','time_from','time_to','game_state']) {
@@ -196,6 +212,7 @@ function selections() {
     if (gameKey) {
       query.game_key = gameKey;
       if (route.get('game_source')) query.game_source = route.get('game_source');
+      if (route.get('source_event')) query.source_event = route.get('source_event');
       if (requestedLine) query.line = requestedLine;
     }
   } else if (opportunityView) {
@@ -236,7 +253,7 @@ function tradeDetails() {
   const leg = pairContext?.pair.legs.indexOf(offer.id);
   const pairFee = pairContext?.pair.retail_payoff?.legs?.[leg];
   const pairAcquisition = pairFee?.acquisition_usd ?? pairContext?.pair.inspection.legs[leg]?.allocation_usd;
-  $('trade-body').replaceChildren(tradeInspection(offer, group, evidence, {mode, position:label, basis:state.selected.basis,
+  $('trade-body').replaceChildren(tradeInspection(offer, group, evidence, {mode, position:label, basis:displayBasis(state.selected.basis),
     checkedAt:state.selected.checkedAt, pinned:state.selected.pinned, pairLeg:!!pairContext, pairFee, pairAcquisition}));
   $('latest').hidden = replay;
   $('back-to-pair').hidden = !state.selected.pairContext;
@@ -405,32 +422,53 @@ function browseDestination(group) {
   return replay ? replayURL(group ? 'game' : 'odds') + '&' + query : `${group ? '/game' : '/browse-odds'}?${query}`;
 }
 
+const browseCacheKey = 'predict-desk-return';
 function rememberView(groupId, action) {
   const target = new URL(action.href);
   const returnRoute = window.PredictUI.localURL(target.searchParams.get('back'));
   const navigation = {offset:state.offset, groupId, browseId:state.page?.browse_id, openerHref:action.href,
-    sourceEvent:target.searchParams.get('source_event'), openerTop:action.getBoundingClientRect().top, filters:browsePreferences()};
+    sourceEvent:target.searchParams.get('source_event'), openerTop:action.getBoundingClientRect().top,
+    scrollY:window.scrollY, filters:browsePreferences(),
+    tableScrolls:[...$('results').querySelectorAll('.odds-card')].map(card =>
+      [card.dataset.gameKey, card.querySelector('.odds-scroll')?.scrollLeft || 0])};
   window.history.replaceState({...window.history.state, predictDesk:navigation}, '', returnRoute?.href || location.href);
+  if (browse && !gameKey && state.page?.rows?.length) {
+    try { sessionStorage.setItem(browseCacheKey, JSON.stringify({url:location.href, page:state.page})); } catch {}
+  }
 }
 
 function cardContext(games, gameTitle = null) {
   return {
-    basis:filters.elements.basis.value, clock, checkedAt:state.page?.publication?.read_at, gameTitle, mode:replayMode(),
+    basis:displayBasis(filters.elements.basis.value), clock, checkedAt:state.page?.publication?.read_at, gameTitle, mode:replayMode(),
     compact:comparable, showGameLink:!gameKey, stableVenues:!replay,
     lastKnown:filters.elements.last_known.checked,
     position:offer => position(offer),
     gameLink:group => browsingLink('Open game ↗', group, 'opportunity-link'),
     inspectOffer:(offer, group) => openTrade(offer, group, games.get(group.game_key)),
-    inspectPair:(pair, offers, group) => openPair(pair, offers, group, games.get(group.game_key))
+    inspectPair:(pair, offers, group) => {
+      if (pairResultsReady()) openPair(pair, offers, group, games.get(group.game_key));
+    }
   };
+}
+
+function displayBasis(basis) {
+  return replay && dataset === 'practice' && basis === 'conservative' ? 'practice' : basis;
+}
+
+function pairResultsReady() {
+  return stake.validity.valid && !!stake.value && Number(stake.value) === state.renderedStake;
 }
 
 function refreshStatus() {
   const mode = !filters.elements.time_to.validity.valid ? 'Correct the time window to refresh.'
+    : arb && state.page && !pairResultsReady()
+      ? (stake.validity.valid && stake.value ? 'Updating payoff for the entered stake…' : 'Enter a valid stake to calculate the payoff.')
     : replay ? (state.request ? 'Loading replay…' : 'Replay clock is fixed.')
     : state.request ? 'Checking for updates…' : '';
   $('refresh-status').textContent = mode;
+  $('refresh-status').classList.toggle('sr-only', !(arb && state.page && !pairResultsReady()));
   $('refresh-list').disabled = !!state.request || !filters.elements.time_to.validity.valid;
+  if (arb) for (const button of $('results').querySelectorAll('[data-pair-id]')) button.disabled = !pairResultsReady();
 }
 
 function emptyResults(page, publication) {
@@ -451,17 +489,22 @@ function emptyResults(page, publication) {
     detail = 'Synthetic practice is included with the app.';
   } else if (!replay && runtime?.stopped) {
     title = 'Price updates are stopped';
-    detail = 'Current prices will return after collection resumes.';
+    detail = browse ? 'No saved quotes match this view.' : 'Browse odds can show saved quotes while updates are stopped.';
   } else if (!replay && runtime?.healthy === false) {
-    title = 'The data service is unavailable';
-    detail = 'Set up or start the local data service to see live prices.';
+    title = 'Price updates are temporarily unavailable';
+    detail = browse ? 'Refresh the list to retry or try another filter.' : 'Browse odds can still show saved quotes.';
+    actions.append(button('Retry price updates', () => load(state.offset)));
   } else if (page.state === 'initializing' && !publication.retained_prices) {
     title = 'No prices have loaded yet';
     detail = 'The desk will update after the data service publishes its first prices.';
-  } else if (comparable && (browse || !positive.checked && !thresholds)) {
+  } else if (comparable && (browse || !positive.checked && !thresholds) && !(browse && gameKey)) {
     title = browse ? 'No matching odds' : 'No matching EV comparisons';
-    detail = !browse && page.ranked_group_count === 0 && page.calculation_reason
-      ? page.calculation_reason : 'Each comparison needs prices from at least three places.';
+    detail = browse ? 'Try another matchup, market, or time window.'
+      : page.ranked_group_count === 0 && page.calculation_reason
+        ? page.calculation_reason : 'Each comparison needs prices from at least three places.';
+    if (browse && !filters.elements.last_known.checked && page.retained_offer_count) {
+      detail += ' Turn on Last-known prices to check for saved quotes.';
+    }
     if (!$('alternates').checked) actions.append(button('Show alternate lines', () => {
       $('alternates').checked = true;
       applyFilters();
@@ -496,10 +539,8 @@ function emptyResults(page, publication) {
       : page.matched_offer_count ? 'Current prices are missing an eligible sportsbook reference for the selected basis.'
         : `No current prices are available${phase === 'live' ? ' for live games' : phase === 'pregame' ? ' for pregame markets' : ''}.`);
   }
-  if (!browse && !replay) actions.prepend(browsingLink('Find my game ↗', null, 'desk-action desk-primary'));
-  if (replay || runtime?.healthy === false || runtime?.stopped || page.state === 'initializing') {
+  if ((replay && dataset !== 'practice') || (!replay && (runtime?.healthy === false || runtime?.stopped || page.state === 'initializing'))) {
     actions.append(link('Try synthetic practice', replayURL(arb ? 'arbs' : 'ev', 'practice', 'initial')));
-    if (!replay) actions.append(link('Check data sources', '/admin?section=sources'));
   }
   empty.append(el('h2', title));
   if (detail) empty.append(el('p', detail, 'desk-note'));
@@ -510,7 +551,8 @@ function emptyResults(page, publication) {
 function render(page) {
   const results = $('results');
   const expanded = new Set([...results.querySelectorAll('details[open]')].map(e => e.dataset.id));
-  const tableScrolls = [...results.querySelectorAll('.odds-scroll')].map(table => table.scrollLeft);
+  const tableScrolls = new Map([...results.querySelectorAll('.odds-card')].map(card =>
+    [card.dataset.gameKey, card.querySelector('.odds-scroll')?.scrollLeft || 0]));
   const games = new Map((page.games || []).map(game => [game.game_key, game]));
   const rows = page.rows || [];
   const total = page.total || 0;
@@ -531,8 +573,13 @@ function render(page) {
   const publication = page.publication || {};
   const notice = [];
   if (replay && page.replay?.captured_at) notice.push(`Captured ${clock(page.replay.captured_at)}.`);
-  if (rows.length && publication.data_runtime?.stopped) notice.push('Price updates are stopped.');
-  if (rows.length && publication.data_runtime?.healthy === false) notice.push('The data service is unavailable. Last-known prices are labeled.');
+  if (page.cached) notice.push('Showing the last loaded quotes while the list reconnects.');
+  else if (rows.length && publication.data_runtime?.stopped) notice.push('Price updates are stopped. Showing last-known quotes.');
+  else if (rows.length && page.retained_fallback) notice.push('Price updates are temporarily unavailable. Showing last-known quotes. Refresh the list to retry.');
+  else if (browse && !replay && rows.length && filters.elements.last_known.checked) {
+    notice.push('Current quotes are shown alongside older quotes labeled Last known.');
+  }
+  if (page.limited_coverage) notice.push('Some exact lines have quotes from fewer than three sites.');
   if (browse && ['sgo_charge_unresolved', 'updates_stopped'].includes(publication.sources?.sportsgameodds?.reason_code)
       && !publication.data_runtime?.stopped && publication.data_runtime?.healthy !== false) {
     notice.push(filters.elements.last_known.checked ? 'SportsGameOdds updates are paused. Its retained prices are labeled Last known.'
@@ -543,12 +590,6 @@ function render(page) {
   results.replaceChildren();
   if (selectedLine && !page.selected_line_id && !rows.some(row => row.id === selectedLine && !row.withdrawn)) {
     results.append(el('p', `${linkedLine || 'The selected line'} is unavailable for this matchup in the selected view.`, 'desk-note selected-line-unavailable'));
-  }
-  if (opportunityView) {
-    const action = browsingLink('Find my game ↗', null, 'desk-action');
-    action.id = 'browse-link';
-    $('browse-link').replaceWith(action);
-    action.hidden = !rows.length;
   }
   if (browse && rows.length) {
     const groups = new Map();
@@ -579,19 +620,34 @@ function render(page) {
   } else {
     results.append(emptyResults(page, publication));
   }
-  [...results.querySelectorAll('.odds-scroll')].forEach((table, index) => table.scrollLeft = tableScrolls[index] || 0);
+  for (const card of results.querySelectorAll('.odds-card')) {
+    const table = card.querySelector('.odds-scroll');
+    if (table) table.scrollLeft = tableScrolls.get(card.dataset.gameKey) || 0;
+  }
   const shown = page.page_count ?? rows.length;
   $('previous').disabled = state.offset === 0;
   $('next').disabled = state.offset + shown >= total;
   $('previous').parentElement.hidden = !!gameKey || ($('previous').disabled && $('next').disabled);
 }
 
+if (opportunityView) {
+  const action = browsingLink('Find my game ↗', null, 'desk-action');
+  action.id = 'browse-link';
+  $('browse-link').replaceWith(action);
+}
+
 let restoreLocation = restored || (gameKey && requestedLine ? {groupId:requestedLine} : null);
 
 function restoreLocationAfterLoad() {
   if (!restoreLocation) return;
-  const {openerTop, groupId, openerHref, sourceEvent} = restoreLocation;
+  const {openerTop, groupId, openerHref, sourceEvent, scrollY, tableScrolls} = restoreLocation;
+  if (!$('results').querySelector('[data-group-id], [data-game-key]')) return;
   restoreLocation = null;
+  for (const [key, left] of tableScrolls || []) {
+    const card = [...$('results').querySelectorAll('.odds-card')].find(item => item.dataset.gameKey === key);
+    const table = card?.querySelector('.odds-scroll');
+    if (table) table.scrollLeft = left;
+  }
   const targetId = (gameKey && state.page?.selected_line_id) || groupId;
   const row = [...$('results').querySelectorAll('[data-group-id], [data-game-key]')].find(item =>
     (item.dataset.groupId ?? item.dataset.gameKey) === targetId)
@@ -599,6 +655,7 @@ function restoreLocationAfterLoad() {
   const opener = openerHref && [...document.querySelectorAll('main a')].find(item => item.href === openerHref && !item.hidden);
   const target = opener || row?.querySelector('a,button') || (openerHref && $('browse-link').href === openerHref && $('browse-link'));
   if (target && openerTop != null) window.scrollBy(0, target.getBoundingClientRect().top - openerTop);
+  else if (scrollY != null) window.scrollTo(0, scrollY);
   else row?.scrollIntoView({block:'nearest'});
   target?.focus({preventScroll:true});
 }
@@ -607,6 +664,20 @@ async function fetchPage(query, signal) {
   const response = await fetch(`${endpoint}?${query}`, {signal});
   if (!response.ok) throw Error('Unavailable');
   return response.json();
+}
+
+function showCachedQuotes(page) {
+  const rows = page.rows.map(group => group.withdrawn ? group : {...group, score:null,
+    offers:group.offers.map(offer => ({...offer, current:false, value:null, sportsbook:null,
+      reference_current:false, before_fee:null, after_fee:null, conservative:null, probability:null, trade_fee:null,
+      reason:'Price unavailable'})),
+    sportsbook_quotes:retainedBookQuotes(group)});
+  state.page = {...page, rows, cached:true};
+  render(state.page);
+}
+
+function matchesInputs(stakeValue, signature) {
+  return stakeValue === stake.value && signature === JSON.stringify(selections());
 }
 
 let resultPointer = null;
@@ -623,15 +694,19 @@ async function load(offset = state.offset, {background = false} = {}) {
   if (!filters.checkValidity() || !stake.value) return;
   state.request?.abort();
   const controller = new AbortController(); state.request = controller; refreshStatus();
-  const query = new URLSearchParams({...selections(), layout: 'desk', view: arb ? 'arbs' : 'ev',
-    stake: stake.value, offset, limit:pageLimit});
+  const requestStake = stake.value;
+  const selected = selections();
+  const requestFilters = JSON.stringify(selected);
+  const query = new URLSearchParams({...selected, layout: 'desk', view: arb ? 'arbs' : 'ev',
+    stake: requestStake, offset, limit:pageLimit});
   if (replay) { query.set('dataset', dataset); query.set('frame', frame); }
-  const browseId = state.page?.browse_id ?? restoreLocation?.browseId;
+  const browseId = (state.query === requestFilters ? state.page?.browse_id : null) ?? restoreLocation?.browseId;
   if (!replay && offset && browseId) query.set('browse_id', browseId);
   if (!state.page) $('notice').textContent = 'Loading prices…';
   try {
     const page = await fetchPage(query, controller.signal);
-    if (controller.signal.aborted || background && (dialog.open || usingResults())) return;
+    if (controller.signal.aborted || !matchesInputs(requestStake, requestFilters)
+        || background && (dialog.open || usingResults())) return;
     if (page.state === 'page_changed') {
       history.record('browsing_reset', {reason:page.reason});
       state.resetReason = page.reason;
@@ -639,7 +714,7 @@ async function load(offset = state.offset, {background = false} = {}) {
         restoreLocation.offset = 0;
         restoreLocation.browseId = null;
       }
-      return load(0);
+      return load(0, {background});
     }
     if (gameKey && page.rows?.length && page.total > (page.page_count ?? page.rows.length)) {
       const rows = new Map(page.rows.map(row => [row.id, row]));
@@ -656,8 +731,18 @@ async function load(offset = state.offset, {background = false} = {}) {
       }
       page.rows = [...rows.values()];
     }
-    if (background && (dialog.open || usingResults())) return;
+    if (controller.signal.aborted || !matchesInputs(requestStake, requestFilters)
+        || background && (dialog.open || usingResults())) return;
+    if (browse && !replay && state.query === requestFilters && state.offset === offset && state.page?.rows?.length
+        && !page.rows?.some(row => !row.withdrawn)
+        && (page.publication?.data_runtime?.healthy === false || page.publication?.data_runtime?.stopped)) {
+      if (!state.page.cached) showCachedQuotes(state.page);
+      restoreLocationAfterLoad();
+      return;
+    }
     state.page = page;
+    state.query = requestFilters;
+    state.renderedStake = Number(requestStake);
     state.offset = offset;
     render(page);
     state.resetReason = null;
@@ -665,10 +750,17 @@ async function load(offset = state.offset, {background = false} = {}) {
     history.observe(page, selections());
     checkSelection();
   } catch (error) {
-    if (error.name !== 'AbortError') {
-      $('notice').textContent = replay ? 'Replay could not be loaded. Refresh the list to retry.' : 'Prices could not be loaded. Retrying automatically.';
+    if (!controller.signal.aborted && error.name !== 'AbortError') {
+      if (browse && !replay && state.page?.rows?.length) {
+        if (!state.page.cached) showCachedQuotes(state.page);
+        restoreLocationAfterLoad();
+      }
+      $('notice').textContent = replay ? 'Replay could not be loaded. Refresh the list to retry.'
+        : state.page?.cached ? (state.query === requestFilters && state.offset === offset
+          ? 'Showing the last loaded quotes. Refresh the list to retry.'
+          : 'Could not load the requested view. Showing the last loaded quotes for the previous results. Refresh the list to retry.')
+          : 'Prices could not be loaded. Refresh the list to retry.';
       history.record('display_gap',{reason:'local_read_failed'});
-      $('next').disabled = $('previous').disabled = true;
     }
   } finally { if (state.request === controller) { state.request = null; refreshStatus(); } }
 }
@@ -740,6 +832,8 @@ function applyFilters() {
   activeFilters();
   validateTimeWindow();
   refreshStatus();
+  clearTimeout(debounce);
+  state.request?.abort();
   if (!filters.checkValidity() || !stake.value) return;
   if (browse && !gameKey) saveBrowsePreferences();
   else if (!gameKey) savePreference(filterKey, JSON.stringify({...selections(), timezone:filters.elements.timezone.value}));
@@ -749,7 +843,7 @@ function applyFilters() {
     try { ordinary = JSON.parse(readPreference(evFilterKey, '{}')) || {}; } catch {}
     savePreference(evFilterKey, JSON.stringify({...ordinary, basis:filters.elements.basis.value}));
   }
-  clearTimeout(debounce); debounce = setTimeout(() => load(0), 240);
+  debounce = setTimeout(() => load(0), 240);
 }
 
 function saveBrowsePreferences() {
@@ -774,7 +868,7 @@ $('reset').onclick = () => {
 };
 activeFilters();
 validateTimeWindow();
-$('refresh-list').onclick = () => load(0);
+$('refresh-list').onclick = () => load(state.query === JSON.stringify(selections()) ? state.offset : 0);
 document.addEventListener('focusin', refreshStatus);
 document.addEventListener('focusout', () => queueMicrotask(refreshStatus));
 $('previous').onclick = () => load(Math.max(0, state.offset - pageLimit));
@@ -829,7 +923,17 @@ async function adoptPair(selection, isActive) {
     adoptionNotice(selection, 'The pair changed during adoption. The earlier calculation is still pinned.');
     return;
   }
+  if (pairIdentity(selection) === pairIdentity(confirmed)) {
+    showRefreshResult(selection, 'No newer pair inputs found. The displayed calculation is unchanged.');
+    return;
+  }
   openPair(confirmed.pair, confirmed.offers, confirmed.group, confirmed.game, selection.opener);
+  showRefreshResult(state.selected, 'Updated both legs and the payoff.');
+}
+
+function showRefreshResult(selection, message) {
+  selection.refreshMessage = message;
+  $('trade-note').textContent = message;
 }
 
 function adoptionNotice(selection, message) {
@@ -858,6 +962,7 @@ $('latest').onclick = async () => {
   const latest = $('latest');
   const selection = state.selected;
   selection.adoptionNotice = false;
+  selection.refreshMessage = '';
   latest.disabled = true;
   $('trade-note').textContent = 'Checking latest price…';
   const isActive = () => dialog.open && state.selected === selection;
@@ -890,12 +995,21 @@ $('latest').onclick = async () => {
     }
     if (next.state !== 'ready') return;
     const {offer, evidence, lease} = next;
-    const {sportsbook_quotes: _, settlement_match: _match, ...group} = selection.group;
+    const unchanged = selectionIdentity(offer) === selectionIdentity(selection.offer);
+    if (unchanged && !selection.pinned && !selection.historical) {
+      releaseEvidence(lease);
+      showRefreshResult(selection, 'No newer quote or calculation inputs found.');
+      return;
+    }
+    const group = {
+      ...selection.group, sportsbook_quotes:retainedBookQuotes(selection.group), settlement_match:undefined
+    };
     state.selected = {...selection, group, offer, evidence, lease, checkedAt:Date.now(),
       historical:false, pinned:null, retentionError:null};
     releaseEvidence(selection.lease);
-    $('trade-note').textContent = '';
     tradeDetails();
+    showRefreshResult(state.selected, Object.keys(group.sportsbook_quotes).length
+      ? 'Updated the offer. Earlier sportsbook quotes are marked Last known.' : 'Updated the offer and calculation inputs.');
   } catch {
     if (isActive()) adoptionNotice(selection, 'Could not check the latest price. The earlier inspection is still pinned.');
   } finally {
@@ -903,6 +1017,11 @@ $('latest').onclick = async () => {
     if (dialog.open && !latest.hidden && !dialog.contains(document.activeElement)) latest.focus({preventScroll:true});
   }
 };
+
+function retainedBookQuotes(group) {
+  return Object.fromEntries(Object.entries(group.sportsbook_quotes || {}).map(([book, prices]) =>
+    [book, prices.map(price => ({...price, current:false}))]));
+}
 dialog.addEventListener('close', () => {
   if (dialog.open) return; // A keyboard user may have reopened before the queued event.
   const old = state.selected;
@@ -931,7 +1050,8 @@ async function checkSelection() {
       $('trade-note').textContent = !current && phase === 'pregame' && Date.parse(selected.group.start_at) <= Date.now()
         ? 'Scheduled start passed. The pregame pair remains pinned.'
         : !current ? 'A current modeled payoff is unavailable. The earlier calculation is still pinned.'
-        : pairIdentity(current) !== pairIdentity(selected) ? 'Pair inputs changed. Use latest prices to update both legs together.' : '';
+        : pairIdentity(current) !== pairIdentity(selected) ? 'Pair inputs changed. Use latest prices to update both legs together.'
+          : selected.refreshMessage || '';
       return;
     }
     const query = new URLSearchParams({id:selected.offer.id, layout:'desk', basis:selected.basis});
@@ -957,7 +1077,7 @@ async function checkSelection() {
       const change = row.odds?.decimal === previous.odds?.decimal ? 'Calculation evidence changed.' : 'Price changed.';
       note = `${change} Use latest prices to update the offer, fee and reference together.`;
     }
-    $('trade-note').textContent = [note, selected.retentionError].filter(Boolean).join(' ');
+    $('trade-note').textContent = [note || selected.refreshMessage, selected.retentionError].filter(Boolean).join(' ');
   } catch {}
 }
 $('session-export').onclick=()=>history.export();
@@ -973,6 +1093,20 @@ session.addEventListener('close', () => {
   restoreFocus($('open-session'));
 });
 document.addEventListener('visibilitychange',()=>history.record(document.hidden?'display_paused':'display_resumed',{reason:'tab_visibility'}));
+if (restored && browse && !gameKey && !replay) {
+  try {
+    const savedPage = JSON.parse(sessionStorage.getItem(browseCacheKey));
+    if (savedPage?.url === location.href) {
+      state.offset = restored.offset;
+      state.query = JSON.stringify(selections());
+      showCachedQuotes(savedPage.page);
+      // Keep the anchor until a successful read can restore focus as well.
+      window.scrollTo(0, restored.scrollY || 0);
+      restoreLocationAfterLoad();
+      restoreLocation = restored;
+    }
+  } catch {}
+}
 load(restored?.offset ?? 0);
 openHistorical();
 setInterval(() => {
