@@ -25,6 +25,7 @@ const phaseURL = (path, value = phase) => path + (value === 'live' ? '?phase=liv
 const back = window.PredictUI.localURL(route.get('back'));
 const safeBack = back && ['/','/ev','/arbs','/browse-odds','/replay'].includes(back.pathname)
   ? back.pathname + back.search : null;
+const browseCacheKey = 'predict-desk-return';
 const dataset = ['frozen','preview','practice'].includes(route.get('dataset')) ? route.get('dataset') : 'practice';
 const frame = route.get('frame') === 'changed' ? 'changed' : 'initial';
 const endpoint = replay ? '/api/odds-replay' : '/api/comparison-current';
@@ -83,9 +84,20 @@ if (browse) {
   $('desk-path').hidden = false;
   const previousView = link('Back', safeBack || (replay ? replayURL('ev') : '/'));
   previousView.addEventListener('click', event => {
-    if (safeBack && document.referrer === new URL(safeBack, location.origin).href) {
+    if (!safeBack || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    const previousURL = new URL(safeBack, location.origin).href;
+    const entry = window.navigation?.currentEntry;
+    const previousEntry = entry && window.navigation.entries()[entry.index - 1];
+    if (previousEntry?.url === previousURL || document.referrer === previousURL) {
       event.preventDefault();
       window.history.back();
+      return;
+    }
+    // Some browsers hide the referrer and have no Navigation API. Carry the
+    // return state through a normal link in that case.
+    const cached = readBrowseReturn();
+    if (cached?.url === previousURL) {
+      try { sessionStorage.setItem(browseCacheKey, JSON.stringify({...cached, restoreOnArrival:true})); } catch {}
     }
   });
   $('desk-path').append(previousView);
@@ -125,7 +137,13 @@ const evFilterKey = 'ev-filters';
 const filterKey = replay ? `replay-${dataset}-${browse ? 'odds' : arb ? 'arb' : 'ev'}-filters`
   : browse ? 'browse-filters' : phase === 'live' ? (arb ? 'live-arb-filters' : 'live-ev-filters')
     : arb ? 'arb-filters' : evFilterKey;
-const restored = window.history.state?.predictDesk;
+const cachedReturn = browse && !gameKey && !replay ? readBrowseReturn() : null;
+const returning = cachedReturn?.url === location.href && cachedReturn.restoreOnArrival;
+const restored = window.history.state?.predictDesk || (returning ? cachedReturn.navigation : null);
+if (returning) {
+  window.history.replaceState({...window.history.state, predictDesk:restored}, '');
+  try { sessionStorage.setItem(browseCacheKey, JSON.stringify({...cachedReturn, restoreOnArrival:false})); } catch {}
+}
 let saved;
 try { saved = JSON.parse(readPreference(filterKey, '{}')); } catch { saved = {}; }
 saved ||= {};
@@ -422,7 +440,10 @@ function browseDestination(group) {
   return replay ? replayURL(group ? 'game' : 'odds') + '&' + query : `${group ? '/game' : '/browse-odds'}?${query}`;
 }
 
-const browseCacheKey = 'predict-desk-return';
+function readBrowseReturn() {
+  try { return JSON.parse(sessionStorage.getItem(browseCacheKey)); } catch { return null; }
+}
+
 function rememberView(groupId, action) {
   const target = new URL(action.href);
   const returnRoute = window.PredictUI.localURL(target.searchParams.get('back'));
@@ -433,7 +454,7 @@ function rememberView(groupId, action) {
       [card.dataset.gameKey, card.querySelector('.odds-scroll')?.scrollLeft || 0])};
   window.history.replaceState({...window.history.state, predictDesk:navigation}, '', returnRoute?.href || location.href);
   if (browse && !gameKey && state.page?.rows?.length) {
-    try { sessionStorage.setItem(browseCacheKey, JSON.stringify({url:location.href, page:state.page})); } catch {}
+    try { sessionStorage.setItem(browseCacheKey, JSON.stringify({url:location.href, page:state.page, navigation})); } catch {}
   }
 }
 
@@ -1094,18 +1115,15 @@ session.addEventListener('close', () => {
 });
 document.addEventListener('visibilitychange',()=>history.record(document.hidden?'display_paused':'display_resumed',{reason:'tab_visibility'}));
 if (restored && browse && !gameKey && !replay) {
-  try {
-    const savedPage = JSON.parse(sessionStorage.getItem(browseCacheKey));
-    if (savedPage?.url === location.href) {
-      state.offset = restored.offset;
-      state.query = JSON.stringify(selections());
-      showCachedQuotes(savedPage.page);
-      // Keep the anchor until a successful read can restore focus as well.
-      window.scrollTo(0, restored.scrollY || 0);
-      restoreLocationAfterLoad();
-      restoreLocation = restored;
-    }
-  } catch {}
+  if (cachedReturn?.url === location.href) {
+    state.offset = restored.offset;
+    state.query = JSON.stringify(selections());
+    showCachedQuotes(cachedReturn.page);
+    // Keep the anchor until a successful read can restore focus as well.
+    window.scrollTo(0, restored.scrollY || 0);
+    restoreLocationAfterLoad();
+    restoreLocation = restored;
+  }
 }
 load(restored?.offset ?? 0);
 openHistorical();

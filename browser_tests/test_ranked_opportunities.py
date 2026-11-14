@@ -344,7 +344,9 @@ def test_ranked_and_browse_journey(width, tmp_path):
             route.abort()
             return
         if url.path in ("/", "/ev", "/arbs", "/browse-odds", "/game"):
-            route.fulfill(path=ASSETS / "desk.html")
+            route.fulfill(
+                path=ASSETS / "desk.html", headers={"Referrer-Policy": "no-referrer"}
+            )
         elif url.path.startswith("/view/current/"):
             route.fulfill(path=ASSETS / Path(url.path).name)
         elif url.path == "/api/comparison-current":
@@ -458,6 +460,10 @@ def test_ranked_and_browse_journey(width, tmp_path):
             viewport={"width": width, "height": 850}, service_workers="block"
         ) as context:
             context.route("**/*", respond)
+            if width == 390:
+                context.add_init_script(
+                    "Object.defineProperty(window, 'navigation', {value: undefined})"
+                )
             tab = context.new_page()
             tab.clock.set_fixed_time("2026-11-13T00:00:00Z")
             tab.on("pageerror", lambda error: errors.append(str(error)))
