@@ -69,13 +69,23 @@ def first_use(tab, base):
     expect(offer).to_contain_text("+8.91% EV")
     tab.get_by_role("link", name="Open game ↗").first.click()
     tab.get_by_role("button", name="Spreads", exact=True).click()
-    expect(tab.locator('[data-offer-id="practice-offer-spread-1"]')).to_contain_text("1.91")
+    expect(tab.locator('[data-offer-id="practice-offer-spread-1"]')).to_contain_text(
+        "1.91"
+    )
     tab.get_by_label("Price step").select_option("changed")
-    expect(tab.get_by_role("heading", name="Harbor Foxes vs. Summit Owls")).to_be_visible()
-    expect(tab.get_by_role("button", name="Spreads", exact=True)).to_have_attribute("aria-pressed", "true")
-    expect(tab.locator('[data-offer-id="practice-offer-spread-1"]')).to_contain_text("1.87")
+    expect(
+        tab.get_by_role("heading", name="Harbor Foxes vs. Summit Owls")
+    ).to_be_visible()
+    expect(tab.get_by_role("button", name="Spreads", exact=True)).to_have_attribute(
+        "aria-pressed", "true"
+    )
+    expect(tab.locator('[data-offer-id="practice-offer-spread-1"]')).to_contain_text(
+        "1.87"
+    )
     tab.get_by_role("button", name="Totals", exact=True).click()
-    expect(tab.locator('[data-offer-id="practice-offer-total-1"]')).to_contain_text("1.95")
+    expect(tab.locator('[data-offer-id="practice-offer-total-1"]')).to_contain_text(
+        "1.95"
+    )
     tab.get_by_label("Price step").select_option("initial")
 
     tab.get_by_role("navigation", name="Replay views").get_by_role(
