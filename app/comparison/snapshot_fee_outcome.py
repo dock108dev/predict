@@ -78,7 +78,7 @@ def outcome(row, *, at, phase, review):
             if key in model['evidence']:
                 evidence[key] = model['evidence'][key]
     elif venue == 'polymarket_us':
-        for key in ('coefficient', 'order_inserted_at', 'phase', 'market_id', 'instrument_id',
+        for key in ('coefficient', 'effective_from', 'order_inserted_at', 'phase', 'market_id', 'instrument_id',
                     'native_side', 'acquired_price_usd'):
             if key in model['evidence']:
                 evidence[key] = model['evidence'][key]
@@ -92,4 +92,5 @@ def outcome(row, *, at, phase, review):
                 quantity=model['quantity'], quantity_unit=model['quantity_unit'],
                 trade_fee_usd=amount, fee_payment=payment, fee_cashflows=cashflows,
                 holding_assumption='Hold the standalone claim to settlement',
-                assumptions=model.get('assumptions', []))
+                assumptions=model.get('assumptions', []),
+                **({'details': model['details']} if model.get('details') else {}))

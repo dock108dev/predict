@@ -365,8 +365,10 @@ class Reconstruction:
                 batch,rows,metrics=await asyncio.shield(task)
                 self.accept(batch,rows,metrics)
             except asyncio.CancelledError:
-                completed=(await asyncio.gather(task,return_exceptions=True))[0]
-                if not isinstance(completed,BaseException):self.accept(*completed)
+                # Stop cannot wait for another frame. load() still joins any
+                # submitted child work before cancellation leaves this owner.
+                task.cancel()
+                await asyncio.gather(task,return_exceptions=True)
                 raise
             finally:self.pending=None
         # Only prefetch bytes already received. A quiet socket cannot hold up a
@@ -383,6 +385,7 @@ class Reconstruction:
 
     async def close(self):
         if self.pending is not None:
+            self.pending.cancel()
             completed=(await asyncio.gather(self.pending,return_exceptions=True))[0]
             if not isinstance(completed,BaseException):self.accept(*completed)
             self.pending=None

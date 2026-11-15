@@ -1,0 +1,26 @@
+{
+  "version": "oddslink-college-aliases-20261115-1",
+  "scope": "Observed OddsLink college football team names; team identity only, with no game or live-state crosswalk.",
+  "aliases": [
+    {
+      "kind": "team", "league": "NCAAF", "venue": "oddslink_public_board",
+      "text": "Utah Utes", "targets": ["NCAAF:NCAA732"],
+      "source": "https://utahutes.com/news/2026/11/9/football-no-2-utah-travels-to-no-22-arizona-for-primetime-clash"
+    },
+    {
+      "kind": "team", "league": "NCAAF", "venue": "oddslink_public_board",
+      "text": "Arizona Wildcats", "targets": ["NCAAF:NCAA29"],
+      "source": "https://utahutes.com/news/2026/11/9/football-no-2-utah-travels-to-no-22-arizona-for-primetime-clash"
+    },
+    {
+      "kind": "team", "league": "NCAAF", "venue": "oddslink_public_board",
+      "text": "Idaho State Bengals", "targets": ["NCAAF:NCAA294"],
+      "source": "https://isubengals.com/news/2026/5/27/football-bengals-selected-for-national-broadcast-vs-montana-in-november.aspx"
+    },
+    {
+      "kind": "team", "league": "NCAAF", "venue": "oddslink_public_board",
+      "text": "Montana Grizzlies", "targets": ["NCAAF:NCAA441"],
+      "source": "https://gogriz.com/news/2026/5/27/football-griz-to-face-bengals-under-the-lights-on-espn-family-of-networks"
+    }
+  ]
+}

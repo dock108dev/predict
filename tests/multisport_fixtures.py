@@ -103,7 +103,7 @@ def source_case(league, family, token, *, clock=None, line=None):
         markets={'kalshi':knative,'polymarket_us':unative},milestone=milestone,series=series,clock=clock)
 
 
-def fake_discovery(worker, cases):
+def fake_discovery(worker, cases, *, received_at=None):
     """Install bounded fake HTTP on a real worker; real catalog/admission executes.
 
     cases is a mutable list: append after startup to prove recurring new discovery.
@@ -131,7 +131,7 @@ def fake_discovery(worker, cases):
                 else (params.get('gameId') is not None and str(c['events'][venue].get('gameId'))==str(params.get('gameId'))) or path.endswith('/'+c['markets'][venue]['id']))]
             rows=[deepcopy(c['markets'][venue]) for c in relevant]
             payload=dict(markets=rows,**({'cursor':''} if venue=='kalshi' else {})) if field=='markets' else dict(market=rows[0])
-        raw=json.dumps(payload).encode();at=datetime.now(timezone.utc).isoformat()
+        raw=json.dumps(payload).encode();at=(received_at or datetime.now(timezone.utc)).isoformat()
         page=dict(source=venue,path=path,params=deepcopy(params),status=200,complete=True,usable_metadata=True,
             received_at=at,body_b64=base64.b64encode(raw).decode(),body_sha256=sha256(raw).hexdigest(),
             native_binding_revision='live-native-binding-2',v1_comparison_policy='manual-comparison-2')

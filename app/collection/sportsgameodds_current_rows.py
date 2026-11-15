@@ -8,7 +8,7 @@ from app.comparison.game_phase import sgo_event_status
 from app.dashboard.session_projection import stable
 from app.normalization.college_registry import aggregate_registry
 from app.storage.schedule_metadata import VERSION as SCHEDULE_VERSION
-from app.storage.store import hashed
+from app.storage.store import hashed, stamp
 from .sportsgameodds_adapter import PROPHETX_BOOKMAKER_ID
 
 SPORTS = {'NFL': 'american_football', 'NCAAF': 'american_football', 'NBA': 'basketball',
@@ -56,6 +56,12 @@ def _event_record(event, receipt_sha256, received_at, registry):
                scheduled_start=event['starts_at'], home=home, away=away,
                participants={home_name: home, away_name: away}, title=away_name + ' at ' + home_name,
                status=sgo_event_status(event['status']))
+    previous_starts = sorted({stamp(value) for value in event.get('previous_starts_at', ())}
+                             - {stamp(event['starts_at'])})
+    if previous_starts:
+        row.update(previous_starts_at=[value.isoformat() for value in previous_starts], schedule_status='rescheduled')
+    if len(previous_starts) == 1:
+        row['original_start'] = previous_starts[0].isoformat()
     linked = linked_event_ids(event.get('bookmaker_event_links', {}))
     if linked:
         row['shared_provider_ids'] = linked

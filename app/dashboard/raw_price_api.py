@@ -69,7 +69,8 @@ class RawReads:
                     db.execute("SET LOCAL statement_timeout='10s'")
                     at=db.execute('SELECT transaction_timestamp() at').fetchone()['at'].isoformat()
                     captured_owner=read_runtime(db)
-                    frame=dict(db=db,filters=filters,expires=monotonic()+120,at=at,owner=captured_owner,total=raw_prices.total(db,filters,captured_owner))
+                    frame=dict(db=db,filters=filters,expires=monotonic()+120,at=at,owner=captured_owner,
+                               total=raw_prices.total(db,filters,captured_owner,product=True))
                     token=uuid4().hex;self.frames[token]=frame
                 except BaseException:
                     try:db.close()
@@ -80,7 +81,8 @@ class RawReads:
             with self.snapshot_read(token):
                 # Authority is always live, including while paging a captured frame.
                 with self.connector() as live:owner=read_runtime(live)
-                rows=[raw_prices.book(frame['db'],r,owner) for r in raw_prices.headers(frame['db'],filters,offset,limit,frame['owner'])]
+                rows=[raw_prices.book(frame['db'],r,owner) for r in raw_prices.headers(
+                    frame['db'],filters,offset,limit,frame['owner'],product=True)]
                 end=offset+len(rows)
                 return dict(schema='predict-raw-prices-1',token=token,captured_at=frame['at'],
                     read_at=datetime.now(timezone.utc).isoformat(),expires_in_seconds=max(0,frame['expires']-monotonic()),
@@ -96,7 +98,7 @@ class RawReads:
             with self.snapshot_read(q['token']):
                 identity={k:q[k] for k in ('kind','venue','sport','event_id','market_id')}
                 with self.connector() as live:owner=read_runtime(live)
-                row=frame['db'].execute('SELECT * FROM ('+raw_prices.HEADER+') h WHERE kind=%s AND venue=%s AND sport=%s AND event_id=%s AND market_id=%s',tuple(identity[k] for k in ('kind','venue','sport','event_id','market_id'))).fetchone()
+                row=frame['db'].execute('SELECT * FROM ('+raw_prices.PRODUCT_HEADER+') h WHERE kind=%s AND venue=%s AND sport=%s AND event_id=%s AND market_id=%s',tuple(identity[k] for k in ('kind','venue','sport','event_id','market_id'))).fetchone()
                 if row is None:raise PublicRequestError('Unknown captured input')
                 value=raw_prices.book(frame['db'],row,owner)
                 if value['revision']!=q['revision']:raise PublicRequestError('Input revision changed')
@@ -170,7 +172,7 @@ def mount(app):
     async def export(req):
         # One server-side cursor, one coherent transaction. Backpressure bounds
         # memory; disconnect/finally closes the snapshot. No provider dependency.
-        if req.query:raise PublicRequestError('Export includes the complete received universe')
+        if req.query:raise PublicRequestError('Export includes all displayed original prices')
         if gate.locked():raise web.HTTPTooManyRequests()
         async with gate:
             db=None
@@ -186,7 +188,7 @@ def mount(app):
                 response=web.StreamResponse(headers={**HEADERS,'Content-Type':'application/x-ndjson','Content-Disposition':'attachment; filename="predict-original-inputs.ndjson"'})
                 await response.prepare(req)
                 cursor=db.cursor(name='raw_export')
-                await joined(cursor.execute,raw_prices.HEADER+' ORDER BY venue,event_id,market_id,kind,sport')
+                await joined(cursor.execute,raw_prices.PRODUCT_HEADER+' ORDER BY venue,event_id,market_id,kind,sport')
                 count=0;units=0
                 while True:
                     rows=await joined(cursor.fetchmany,50)

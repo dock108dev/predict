@@ -574,10 +574,14 @@ def mount(app, provider):
     async def close(app):await scanner.close()
     app.on_cleanup.append(close)
     scanner.summary_reading = False
+    unavailable_ev = 'ev_calibration_or_settlement_unverified'
+
     async def summaries(req):
         dimensions=set(Filters.__dataclass_fields__)
         if set(req.query)-dimensions or any(len(v)>256 for v in req.query.values()):
             return web.json_response(dict(error='summary_query_invalid'),status=400)
+        if req.query.get('category') == 'ev':
+            return web.json_response(dict(error=unavailable_ev, provider_requests=0), status=409)
         if scanner.summary_reading:
             return web.json_response(dict(error='summary_read_capacity'),status=503)
         try:
@@ -607,6 +611,13 @@ def mount(app, provider):
             scanner.start()
             scanner._withdraw_if_stopped()
             out=scanner.projection.view(filters=filters,**args)
+            from .product_finance import visible_assumptions
+
+            out['policy'] = visible_assumptions(out['policy'])
+            if filters.category == 'ev':
+                out.update(rows=[], ranked_ids=[], total_matching=0, next_offset=None, expires_at=None)
+                out['coverage'].update(state='unavailable', complete=False, qualifying_pairs=None,
+                                       no_qualifying_opportunities=False, errors=[unavailable_ev])
             return web.json_response(out)
         except (ValueError,TypeError,ZeroDivisionError) as exc:
             reason=public_reason(exc,allowed={'scanner_page_revision_changed','scanner_category_unsupported',
@@ -618,6 +629,8 @@ def mount(app, provider):
         allowed = dimensions | {'cursor','server_id','epoch','scope'}
         if set(req.query)-allowed or any(len(v)>256 for v in req.query.values()):
             return web.json_response(dict(error='transition_query_invalid'),status=400)
+        if req.query.get('category') == 'ev':
+            return web.json_response(dict(error=unavailable_ev, provider_requests=0), status=409)
         try:
             filters = Filters(**{k:tuple(v.split(',')) if k in ('venues','sports','leagues','markets','periods') else v
                                  for k,v in req.query.items() if k in dimensions})

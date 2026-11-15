@@ -85,6 +85,36 @@ def inputs_for(row, *refs, at=AT):
                 epoch='epoch', id='capture', games=[], references=list(refs), sources={}, issues={}, capture_seconds=0)
 
 
+def test_current_standard_schedule_needs_dated_review_without_claiming_account_fee():
+    from app.comparison.conditional_benchmark import basis
+    from app.comparison.snapshot_fee_outcome import outcome
+    from app.comparison.snapshot_fee_scope import applicability
+    from app.comparison.snapshot_polymarket_fee import CURRENT_CUTOVER
+    from app.fees import product_schedules
+
+    at = instant('2026-11-15T08:00:00Z')
+    row = native('scheduled', 'Long', at=at)
+    row['fee_applicability'] = applicability(row['original_record'])
+    preceding = dict(basis('polymarket_us', at=AT), reviewed_at='2026-11-13T08:00:00Z',
+                     review_before='2026-11-16T08:00:00Z')
+    assert outcome(row, at=at, phase='scheduled', review=preceding)['reason'] == 'public_fee_schedule_review_required'
+    key = 'polymarket_us:standard_sports'
+    approval = product_schedules.approved(key)
+    verified = dict(revision='review', approval_id='new', approval=approval,
+                    retrieval=dict(reviewed_receipt=approval['reviewed_receipt']),
+                    verified_at='2026-11-15T07:58:00Z', recheck_due_at='2026-11-16T07:58:00Z',
+                    review_before=None, standing_public_terms=True, verification_scope='full_document')
+    review = product_schedules.for_offer({key: dict(last_verified=verified)}, row, at, fallback=preceding)
+    assert review['published_effective_from'] == CURRENT_CUTOVER
+    fee = outcome(row, at=at, phase='scheduled', review=review)
+    assert fee['available'] and fee['classification'] == 'conservative'
+    assert fee['evidence']['effective_from'] == CURRENT_CUTOVER
+    assert fee['evidence']['coefficient'] == '0.095'
+    assert fee == outcome(row, at=at + timedelta(seconds=1), phase='scheduled', review=review)
+    assert order_fee('market', inserted_at=CURRENT_CUTOVER, evaluated_at=CURRENT_CUTOVER,
+                     fills=[fill('0.50', '100')])['schedule']['version'] == 'pmus-standard-tiers-2026-11-14'
+
+
 SETTINGS = {'revision': 'settings', 'benchmark_venue': 'pinnacle'}
 OWNER = dict(healthy=True, active=True)
 
@@ -117,7 +147,8 @@ def test_ordinary_standalone_fee_reaches_desk_and_inspection_without_pinnacle(ph
     assert '0.095' in offer_disclosures(expanded, inputs['captured_at'], [row])['starting_fee_terms']['values'][1][1]
     counts = census(result, [])
     assert counts['total']['covered'] == 1
-    assert counts['total']['any_after_fee_ev'] == counts['total']['exact_pinnacle_reference'] == 0
+    assert counts['total']['any_after_fee_ev'] == 0
+    assert 'exact_pinnacle_reference' not in counts['total']
     assert counts['by_scope'][0]['phase'] == ('in_game' if phase == 'live' else 'pregame')
     assert not project(live.prices(inputs, SETTINGS), inputs, pmus='paused')['rows'][0]['trade_fee']['available']
 
@@ -263,15 +294,17 @@ def test_ordinary_after_fee_ev_requires_both_current_reference_and_settlement(ph
             {'polymarket_us':{'state':'available'}, source:{'state':state}}, at=AT, policy='policy', epoch='epoch')['rows'][0]
 
     current = project_reference('available')
-    assert current['exact_pinnacle_reference_current'] is (provider == 'the_odds_api')
     assert current['trade_fee']['available']
     assert current['conditional_return_percent'] is None
-    assert current['gross_return_percent'] is not None, current.get('snapshot_benchmark_reason')
-    assert Fraction(current['gross_return_percent']) == (Fraction(200, 3) if provider == 'sportsgameodds' else Fraction(100, 3))
-    assert Fraction(current['conservative_return_percent']) == (Fraction(225, 4) if provider == 'sportsgameodds' else 25)
     if provider == 'sportsgameodds':
+        assert Fraction(current['gross_return_percent']) == Fraction(200, 3)
+        assert Fraction(current['conservative_return_percent']) == Fraction(225, 4)
         assert {item['dependency'] for item in current['current_authority']['references']} == {
             'sgo-reference:yes:135.5', 'sgo-reference:no:135.5'}
+    else:
+        assert current['gross_return_percent'] is None
+        assert current['conservative_return_percent'] is None
+        assert not current['current_authority']['references']
     withdrawn = project_reference('paused')
     assert withdrawn['trade_fee']['available'] and withdrawn['conservative_return_percent'] is None
 
@@ -282,13 +315,12 @@ def test_ordinary_after_fee_ev_requires_both_current_reference_and_settlement(ph
         row['snapshot_benchmark']['selected_identity']['equality_basis'] = 'assumed'
     ready = live.bind(calculated, inputs, 'ready')
     current = project_reference('available')
-    assert current['exact_pinnacle_reference_current'] is (provider != 'sportsgameodds')
     assert current['trade_fee']['available']
     assert current['conservative_return_percent'] is None
 
 
 @pytest.mark.parametrize('side', ['Long', 'Short'])
-def test_nba_full_game_winner_ev_uses_observed_overtime_and_completed_game_rule(side):
+def test_nba_winner_retains_standalone_fee_with_legacy_reference_withdrawn(side):
     from tests.test_snapshot_benchmark import execution, references
 
     deadline = instant('2026-11-11T01:58:05Z')
@@ -328,18 +360,13 @@ def test_nba_full_game_winner_ev_uses_observed_overtime_and_completed_game_rule(
         return project(snapshots.defer_details(ready), inputs, at=when, pinnacle='available')
 
     result = projected()
-    current, = result['rows']
     counts = census(result, [])['total']
-    assert counts['current'] == counts['covered'] == counts['exact_pinnacle_reference'] == 1
-    assert counts['any_after_fee_ev'] == 1
-    model = snapshots.expand_row(current)['conservative_trade_benchmark']
-    risk = Fraction(row['original']['value']) + Fraction('0.02')
-    assert Fraction(model['return_percent']) == 100 * (Fraction(current['probability']) - risk) / risk
-    assert not model['full_state_net_ev']
-    assert model['evidence']['completed_game_rule']['url'] == 'https://official.nba.com/rule-no-5-scoring-and-timing/'
+    assert counts['current'] == counts['covered'] == 1
+    assert counts['any_after_fee_ev'] == 0
+    assert result['rows'][0]['probability'] is None
 
     expired = census(projected(deadline), [])
-    assert expired['total']['current'] == expired['total']['exact_pinnacle_reference'] == 1
+    assert expired['total']['current'] == 1
     assert expired['total']['covered'] == expired['total']['any_after_fee_ev'] == 0
     assert expired['missing_reasons'] == {'conditional_fee_review_expired_or_not_effective': 1}
 
@@ -347,7 +374,7 @@ def test_nba_full_game_winner_ev_uses_observed_overtime_and_completed_game_rule(
     # The new settlement qualification needs the selected market's wording.
     meta['scoring_scope']['evidence'] = [{'overtime': 'included'}]
     counts = census(projected(), [])['total']
-    assert counts['covered'] == counts['exact_pinnacle_reference'] == 1
+    assert counts['covered'] == 1
     assert counts['any_after_fee_ev'] == 0
 
 

@@ -38,6 +38,8 @@ def _candidates(member, book, observation):
 
 def read(db, book, observation, offset=0, limit=20):
     """Associate by native identity and use only the published member's inputs."""
+    from app.dashboard.product_finance import excluded_reference, visible_assumptions, visible_original, visible_row
+
     source = dict(provider=book['provider'], native_event_id=book['event_id'])
     index = evidence.members(db)
     selected = index.get(evidence.event_id(source), ())
@@ -47,10 +49,16 @@ def read(db, book, observation, offset=0, limit=20):
         member = evidence.read_member(db, entry)
         for view, result, inputs in _candidates(member, book, observation):
             if offset <= count and len(results) < limit and size < MAX_RESPONSE_BYTES:
+                exposed_inputs = [visible_original(visible_row(row)) for row in inputs]
+                if view == 'ev':
+                    result = exposed_inputs[0]
+                elif any(excluded_reference(row) for row in inputs):
+                    result = dict(result, math=dict(available=False, missing=['eligible_reference_unavailable']),
+                                  minimum_return_percent=None)
                 payload = dict(state='captured_result', view=view, game_key=result['game_key'],
                     calculated_at=member['calculated_at'], captured_at=member['captured_at'],
                     result_id=member['id'], snapshot_id=member['snapshot_id'],
-                    policy=member['assumptions'], captured_inputs=inputs, result=result,
+                    policy=visible_assumptions(member['assumptions']), captured_inputs=exposed_inputs, result=result,
                     raw_revision=book['revision'], current_eligibility=False,
                     association='Exact native identity. Values and clocks come from the published result.')
                 added = len(encoded(payload))

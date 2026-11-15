@@ -12,7 +12,7 @@ from .fee_coverage import WORKING_PHASE_SQL, source_key
 
 NATIVE_VENUES = ('kalshi', 'polymarket_us')
 SGO_OFFER_VENUES = ('kalshi', 'novig', 'prophetx')
-SGO_REFERENCE_VENUES = (*BEST_BOOKS, 'pinnacle')
+SGO_REFERENCE_VENUES = BEST_BOOKS
 PHASES = ('pregame', 'in_game')
 
 
@@ -189,7 +189,7 @@ def measure(db, result, deps, counts, owner, *, at, phase=''):
     keys = set(working) | set(by_publication) | configured
     outside = defaultdict(Counter)
     for key, facts in originals.items():
-        if not in_scope(key):
+        if key[1] == 'pinnacle' or not in_scope(key):
             continue
         if key in keys or key[1] in (*SGO_OFFER_VENUES, *SGO_REFERENCE_VENUES, None):
             keys.add(key)
@@ -198,7 +198,7 @@ def measure(db, result, deps, counts, owner, *, at, phase=''):
             'received_frame_members', 'available_retained_originals', 'unavailable_retained_originals')})
     cohorts = []
     for key in sorted(keys, key=str):
-        if not in_scope(key):
+        if key[1] == 'pinnacle' or not in_scope(key):
             continue
         provider, venue, _, _, _, _ = key
         role = ('unattributed_frame_member' if venue is None else

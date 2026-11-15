@@ -7,9 +7,8 @@ import pytest
 from app.comparison.conditional_benchmark import snapshot_metric, rounded_cents
 from app.comparison.snapshot_identity import project, games
 from app.comparison.snapshot_math import assumptions
-from app.comparison.snapshot_named_benchmark import references, bind
+from app.comparison.snapshot_named_benchmark import references, bind, selected_references
 from app.storage.comparison_snapshot import probability
-from app.dashboard.snapshot_api import selected_references
 from tests.test_snapshot_identity import quote
 from tests import test_current_benchmark as benchmark_fixture
 

@@ -104,7 +104,8 @@ function bootScanner() {
   }
   function healthMessage() {
     if(incompatible)return 'Update required to verify this scanner.';if(stopped||page?.coverage.state==='stopped')return 'Collection stopped. Previous comparisons have no current authority.';if(!verified)return 'Current comparison unavailable. Previous prices have unverified freshness.';
-    const c=page.coverage;if(Date.now()>=Date.parse(page.expires_at))return 'Original inputs expired. Waiting for a current comparison.';
+    const c=page.coverage;if(c.errors.includes('ev_calibration_or_settlement_unverified'))return 'EV needs an eligible reference, verified fees and settlement, and calibrated confidence.';
+    if(Date.now()>=Date.parse(page.expires_at))return 'Original inputs expired. Waiting for a current comparison.';
     if(page.unsupported_filters.length)return 'Selected scope is unavailable or unsupported.';
     if(c.capture_only&&c.state==='not_evaluated')return 'Market coverage captured. No pairs evaluated.';
     if(c.no_qualifying_opportunities&&c.complete)return 'Checked selected markets · no qualifying opportunities.';

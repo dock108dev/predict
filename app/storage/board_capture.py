@@ -39,13 +39,19 @@ def capture_reservation(db, *, observations_only=False, event_ids=None):
     return ((required+1024*1024-1)//(1024*1024))*1024*1024
 
 
-def capture_batches(db):
+def capture_batches(db, *, selected=None):
     """Partition complete possible-peer components before decoding contracts.
 
     Packing is deliberately bounded below the source runway. A large component
     gets its own admission decision; it cannot defer healthy components.
     """
-    index=publication.identity_index(db);remaining=set(index['active_events']);groups=[]
+    index=publication.identity_index(db)
+    # Start only from in-scope active events. The full identity index still
+    # supplies every possible peer, including older reschedules.
+    remaining=set(index['active_events'])
+    if selected is not None:
+        remaining.intersection_update(selected)
+    groups=[]
     while remaining:
         from app.comparison.calculation_control import checkpoint
         checkpoint()

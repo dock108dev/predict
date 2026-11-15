@@ -3,6 +3,7 @@ from collections import Counter, defaultdict
 from itertools import product
 from app.comparison.snapshot_fee_outcome import CLASSES, FAMILIES, VENUES
 from app.storage.comparison_snapshot import SPORTS, exact_arb_pair
+from .product_finance import excluded_reference
 from .snapshot_display import ranking_value
 
 
@@ -73,7 +74,7 @@ def census(result, inventory, *, pairs=(), policy=None):
 
     def bucket():
         return Counter(dict.fromkeys(('published', 'retained_unavailable', 'current', 'covered', 'uncovered',
-            'exact_pinnacle_reference', 'sportsbook_ev', 'before_fee_ev', 'reviewed_after_fee_ev', 'conservative_after_fee_ev',
+            'sportsbook_ev', 'before_fee_ev', 'reviewed_after_fee_ev', 'conservative_after_fee_ev',
             'any_after_fee_ev', *CLASSES), 0))
 
     totals = bucket()
@@ -93,14 +94,14 @@ def census(result, inventory, *, pairs=(), policy=None):
             classification = fee.get('classification', 'unknown')
             count.update(current=1, covered=int(covered), uncovered=int(not covered))
             count[classification] += 1
-            exact_reference = bool(row.get('exact_pinnacle_reference_current'))
-            count['exact_pinnacle_reference'] = int(exact_reference)
             for label, metric in (
                     ('sportsbook_ev', 'sportsbook_return_percent'),
                     ('before_fee_ev', 'gross_return_percent'),
                     ('reviewed_after_fee_ev', 'conditional_return_percent'),
                     ('conservative_after_fee_ev', 'conservative_return_percent')):
-                count[label] = int(ranking_value(row, metric, current=True) is not None)
+                count[label] = int((metric == 'sportsbook_return_percent' or not excluded_reference(row))
+                    and ranking_value(row, metric, current=True,
+                                      qualified=metric == 'conditional_return_percent') is not None)
             count['any_after_fee_ev'] = int(count['reviewed_after_fee_ev'] or count['conservative_after_fee_ev'])
             if not covered:
                 reason = fee.get('reason') or 'fee_outcome_not_published'

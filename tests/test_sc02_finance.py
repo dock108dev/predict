@@ -246,7 +246,6 @@ class Finance(TestCase):
                 # owner first, so it exercises that owner's score boundary.
                 return capital,{s:dict(profit_usd=str(profit)) for s in ('a_wins','b_wins','tie','terminal_noncompletion')}
             with patch.object(owner,'Leg',side_effect=[ScalarLeg(0),ScalarLeg(1)]),\
-                    patch.object(owner,'probabilities',return_value=(None,None,None)),\
                     patch.object(owner,'economics',side_effect=states):
                 return owner.evaluate(p,i,x,at=AT.isoformat(),policy=policy)
         for capital_tie in (False,True):

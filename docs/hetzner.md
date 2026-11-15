@@ -116,10 +116,13 @@ accounting intact. Back up PostgreSQL and the accounting files off the server.
 
 ## Observing a live slate
 
-The collector records each appearance of a currently qualified cross-venue
-pair with positive modeled after-fee return at the desk's default $100 funding.
+The collector records each appearance of an exact cross-venue pair with
+positive modeled after-fee return at the desk's default $100 stake before fees.
 The record captures the first qualifying publication's two prices, selections,
-source clocks, and modeled minimum profit. A pair opens another entry if a later
+source clocks, total funding, lowest modeled net payout and profit, and the
+states modeled. It also records when the captured depth does not support the
+allocation. The completed-game model alone does not qualify full arbitrage.
+A pair opens another entry if a later
 publication drops it and it subsequently qualifies again. Closed entries are
 retained for up to 30 days, with a limit of 10,000. From `/srv/predict`, read
 the latest entries with an administrator connection.

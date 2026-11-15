@@ -332,6 +332,7 @@ def test_live_sgo_reference_and_native_kalshi_fee_reach_current_desk(monkeypatch
     from app.comparison.inspection_math import offer_math
     from app.dashboard.trade_desk import offer
     from app.storage import ordinary_publication as ordinary
+    from app.storage.current_rows import contract_id
 
     row, _, binding, _, _ = publication_fixture()
     start = '2026-11-10T19:00:00Z'
@@ -339,25 +340,24 @@ def test_live_sgo_reference_and_native_kalshi_fee_reach_current_desk(monkeypatch
     event = series + '-26NOV10BOSNYK'
     source = dict(provider='kalshi', native_event_id=event, native_market_id=event+'-BOS7',
                   native_side='yes', native_outcome_id='yes')
-    row.update(league='NBA', kind='single', start_at=start, source=source, cost_per_normal_claim=None,
+    row.update(game_key='authored-live-game', league='NBA', kind='single', start_at=start, source=source, cost_per_normal_claim=None,
                original=dict(value='0.4', units='usd_per_contract', quantity_units='contracts', payout_units='USD', payout='1'),
                times={'source_at': AT, 'received_at': AT}, same_outcome={'supported': True})
     scope = dict(series_id=series, phase='live', native_key=['kalshi', event, source['native_market_id'], 'yes', 'yes'])
-    original = dict(row, original_record={'event': {'status': {'live': True}}, 'quote': {'source': source},
-                                         'comparison_source_metadata': scope})
+    record = dict(event=dict(id=event, scheduled_start=start, status=dict(live=True, observed_at=AT)),
+                  quote=dict(venue='kalshi', source=source, times=row['times'], original=row['original'], state='available'),
+                  comparison_source_metadata=scope)
+    original = dict(row, original_record=record)
     quotes = [dict(q, phase='live') for q in pair('fanduel')]
     contract = dict(CONTRACT, phase='live', starts_at=start)
     _, witness = capture_witness(quotes, contract, at=AT, evaluated_venue='kalshi', best_payout=True)
     deps = [dict(q, dependency=q['odd_id'], expected_revision=['r','c','e'], state='available') for q in quotes]
     candidate = dict(witness=witness.wire, binding=dict(binding, contract=contract), dependencies=deps)
-    current = {key: ['r','c','e'] for key in ('home','away','native')}
+    current = {key: ['r','c','e'] for key in ('home','away',contract_id(record))}
     inputs = dict(captured_at=AT, quotes=[original], references=[], dependencies=current,
                   reference_provider='sportsgameodds', policy_identity='policy', epoch='epoch')
     settings = dict(revision='settings', benchmark_venue='pinnacle')
     monkeypatch.setattr(sgo_median_publication, 'owned_median_evidence', lambda *args, **kwargs: candidate)
-    monkeypatch.setattr(ordinary, 'quote_authority', lambda *args, **kwargs: dict(
-        dependency='native', expected=current['native'], provider='kalshi', reasons=[],
-        current_until='2026-11-10T20:00:15Z', lifecycle={'state':'live'}))
     monkeypatch.setattr(snapshot_fee_scope, 'kalshi_account', lambda at: dict(
         membership='direct', review_before='2026-11-10T20:00:10Z'))
 
@@ -376,9 +376,26 @@ def test_live_sgo_reference_and_native_kalshi_fee_reach_current_desk(monkeypatch
     assert offer(current_row, 'gross_return_percent')['reference']['american'] == '+100'
     assert offer_math(current_row)['fair_reference']['contributors'][0]['venue'] == 'fanduel'
     assert offer(current_row, 'sportsbook_return_percent')['value'] == '25'
+    assert offer(current_row, 'conditional_return_percent')['value'] is None
     after_fee_expiry = read('2026-11-10T20:00:11Z')
     assert after_fee_expiry['gross_return_percent'] == '25' and after_fee_expiry['conditional_return_percent'] is None
     assert read('2026-11-10T20:00:16Z')['gross_return_percent'] is None
+
+    saved = result['rows'][0]
+    authority = saved['current_authority']
+    witnesses = authority['references']
+    for incomplete in (witnesses[:1], [witnesses[0], witnesses[0]]):
+        authority['references'] = incomplete
+        partial = read(AT)
+        assert partial['price_current'] and partial['gross_return_percent'] is None
+        assert 'reference_evidence_missing' in partial['current_reasons']
+    authority['references'] = witnesses
+    current[witnesses[0]['dependency']] = ['replacement','c','e']
+    replaced = read(AT)
+    assert replaced['price_current'] and replaced['probability'] is None
+    assert replaced['metric_status']['before_fee_ev']['state'] == 'withdrawn'
+    assert replaced['price_revision'] == saved['price_revision'] and replaced['economic_revision'] == saved['economic_revision']
+    assert saved['probability'] == '1/2'
 
 
 def test_owned_reference_requires_retained_pinnacle_and_native_evidence():

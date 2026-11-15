@@ -57,7 +57,8 @@ def reference_basis(reference):
 
 class Leg:
     """Occurrence-local preparation and bounded scalar allocation cache."""
-    def __init__(self,q,group,profiles,event,at,*,funding=None,policy=DEFAULT_POLICY,benchmark=None):
+    def __init__(self,q,group,profiles,event,at,*,funding=None,policy=DEFAULT_POLICY,benchmark=None,
+                 resolve_reference=True):
         from .current_metrics import calculation_instant
         at=calculation_instant((q,),profiles,at)
         self.q=q;self.group=group;self.profiles=profiles;self.at=at;self.event=event
@@ -97,11 +98,12 @@ class Leg:
         if len(ids)!=len(set(ids)):raise ValueError('pair_duplicate_observed_liquidity')
         self.liquidity_ids=set(ids)
         self.weight=None;self.reference=None;self.reference_reason=None
-        try:
-            self.weight,self.reference=_reference(q,values,self.roles,policy=policy,benchmark=benchmark,at=at)
-            ref=values.get('reference')
-            if ref and ref['expires_at'] and at>=instant(ref['expires_at']):raise ValueError('pair_reference_expired')
-        except (ValueError,KeyError,TypeError) as error:self.reference_reason=str(error);self.weight=None;self.reference=None
+        if resolve_reference:
+            try:
+                self.weight,self.reference=_reference(q,values,self.roles,policy=policy,benchmark=benchmark,at=at)
+                ref=values.get('reference')
+                if ref and ref['expires_at'] and at>=instant(ref['expires_at']):raise ValueError('pair_reference_expired')
+            except (ValueError,KeyError,TypeError) as error:self.reference_reason=str(error);self.weight=None;self.reference=None
         self.rank_reasons=eligibility(q,self.reference,at,event) if self.reference else self._source_reasons()
         if any('reference_clock_future' in r or (getattr(policy,'sizing_mode',None) is not None and r.startswith('reference_') and r!='reference_expired') for r in self.rank_reasons):
             self.reference=None;self.weight=None;self.reference_reason='pair_reference_invalid_or_expired';self.rank_reasons=self._source_reasons()

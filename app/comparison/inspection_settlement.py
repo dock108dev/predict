@@ -78,11 +78,18 @@ def settlement_terms(row, original=None):
         exception_note = 'No exact cancellation, postponement or abandonment payout is captured.'
     normal = facts.get('normal_payout') or {}
     normalized = cost is not None or verified and normal.get('payout') == '1' and normal.get('payout_units') == 'USD'
+    outcomes = [
+        outcome('Selected side wins', Fraction(1) if normalized else None),
+        outcome('Selected side loses', Fraction(0) if normalized else None),
+        outcome(equality_label, equality_payout, equality_note),
+        outcome('Game cancelled or voided', None, exception_note),
+        outcome('Game postponed, suspended or abandoned', None, exception_note),
+        outcome('Game shortened or partially completed', None, exception_note),
+    ]
     return dict(
         wording=wording, fictional=practice, scoring=scoring,
         cost_usd=wire(cost), equality_can_affect_ev=equality_payout is not None,
-        outcomes=[outcome('Selected side wins', Fraction(1) if normalized else None),
-                  outcome('Selected side loses', Fraction(0) if normalized else None),
-                  outcome(equality_label, equality_payout, equality_note),
-                  outcome('Game cancelled, postponed or abandoned', None, exception_note)],
+        outcomes=outcomes,
+        priced_states=[item['label'] for item in outcomes if item['payout_usd'] is not None],
+        unresolved_states=[item['label'] for item in outcomes if item['payout_usd'] is None],
     )

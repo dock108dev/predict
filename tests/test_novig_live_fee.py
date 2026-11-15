@@ -96,15 +96,17 @@ def test_captured_fee_survives_later_evidence_changes():
 
 def test_ordinary_live_metric_requires_exact_reference_and_preserves_replay():
     from fractions import Fraction
+    from app.comparison.sgo_reference import BEST_VERSION
     from app.comparison.snapshot_novig_live import live_metric
     from app.storage.comparison_snapshot import pack, unpack, defer_details, expand_row
     from app.dashboard.snapshot_display import ranking_value
     row, evidence = sample()
     fee = live_fee(row, AT, evidence)
     row.update(probability='3/5', cost_per_normal_claim='1/2', gross_return_percent='20',
-        reference_calculation=dict(available=True, venue='pinnacle'),
+        reference_calculation=dict(available=True, venue='fanduel', method=BEST_VERSION),
         snapshot_benchmark=dict(selected_identity={'occurrence':'game'}, selected_predicate={'operator':'gt'}))
-    witnesses = [dict(dependency=key,reasons=[],lifecycle={'state':'live'}) for key in ('p1','p2')]
+    witnesses = [dict(dependency=key,reasons=[],lifecycle={'state':'live'}, venue='fanduel',
+                      provider='sportsgameodds') for key in ('p1','p2')]
     model = live_metric(row, fee, witnesses)
     assert model['available'] and Fraction(model['return_percent']) == Fraction(1700,103)
     assert Fraction(model['trade_fee_usd']) == Fraction(3,200)
@@ -123,10 +125,9 @@ def test_ordinary_live_metric_requires_exact_reference_and_preserves_replay():
     assert Fraction(expand_row(original)['conditional_trade_benchmark']['trade_fee_usd']) == Fraction(3,200)
 
 
-def test_fixture_publication_projects_and_withdraws_after_replacement(monkeypatch, tmp_path):
+def test_fixture_publication_keeps_live_fee_independent_of_legacy_reference(monkeypatch, tmp_path):
     from app.storage import ordinary_publication as publication, comparison_snapshot as snapshots
     from app.dashboard.snapshot_display import ranking_value
-    from fractions import Fraction
     row, raw = sample()
     from tests.test_novig_v3_stream import ready, T2
     producer = ready()
@@ -156,8 +157,9 @@ def test_fixture_publication_projects_and_withdraws_after_replacement(monkeypatc
     def project(deps, at=AT):
         return publication.project(sealed,deps,{'healthy':True,'active':True},states,at=at,policy='policy',epoch='epoch')['rows'][0]
     current=project(dependencies)
-    assert current['trade_fee']['available'] and current['exact_pinnacle_reference_current']
-    assert ranking_value(current,'conditional_return_percent',current=True)==Fraction(1700,103)
+    assert current['trade_fee']['available']
+    assert not current['current_authority']['references']
+    assert ranking_value(current,'conditional_return_percent',current=True) is None
     changed=deepcopy(dependencies);changed['execution']=['new-price','c','e']
     assert not project(changed)['trade_fee']['available']
     assert ranking_value(project(changed),'conditional_return_percent',current=True) is None
@@ -171,7 +173,7 @@ def test_fixture_publication_projects_and_withdraws_after_replacement(monkeypatc
     from app.dashboard.replay_api import load, board
     inputs.update(dependencies=dependencies, issues=[])
     result.update(id='fixture-capture', captured_at=AT.isoformat(), games=[], references=[], issues=[], replay={})
-    monkeypatch.setattr(snapshots, 'calculate', lambda *args: deepcopy(result))
+    monkeypatch.setattr(snapshots, 'calculate', lambda *args, **kwargs: deepcopy(result))
     monkeypatch.setattr(odds_replay, 'DIRECTORY', tmp_path)
     odds_replay.compile_archive('frozen', (inputs, {'revision':'settings', 'benchmark_venue':'pinnacle'},
         {'healthy':True,'active':True}, states), directory=tmp_path)
@@ -179,4 +181,5 @@ def test_fixture_publication_projects_and_withdraws_after_replacement(monkeypatc
     evidence['market_fee']['coefficient'] = '0.09'
     detail=load(dict(dataset='frozen', id=row['id'], result_id='fixture-capture'), details=True)
     assert detail['inspection']['trade_fee']['evidence']['native']['market_fee']['coefficient']=='0.06'
-    assert Fraction(detail['inspection']['reviewed']['return_percent'])==Fraction(1700,103)
+    assert not detail['inspection']['reviewed']['available']
+    assert detail['inspection']['probability'] is None

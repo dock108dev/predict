@@ -3,18 +3,26 @@
 from .store import hashed, stamp
 
 
-def receipt_watermarks(db, aggregate_provider='the_odds_api'):
+def receipt_watermarks(db, aggregate_provider='the_odds_api', *, at=None):
     """Keep aggregate delivery separate from short-lived signed book work."""
     aggregate = {r['event_id']:stamp(r['at']) for r in db.execute('''SELECT c.event_id,max(o.received_at) at
         FROM current_offer_storage o JOIN current_contract c ON c.id=o.contract_id
         JOIN current_event e ON e.id=c.event_id
-        WHERE e.provider=%s AND c.venue IN ('novig','prophetx','pinnacle','kalshi')
+        WHERE e.provider=%s AND c.venue IN ('novig','prophetx','kalshi')
         GROUP BY c.event_id''', (aggregate_provider,))}
     if aggregate_provider == 'sportsgameodds':
         for row in db.execute('''SELECT e.id,f.facts->>'received_at' AS received_at FROM current_event e
             JOIN current_sgo_event_frame f ON f.event_id=e.native_event_id WHERE e.provider=%s''', (aggregate_provider,)):
             received = stamp(row['received_at'])
             aggregate[row['id']] = max(received, aggregate.get(row['id'], received))
+    # Any eligible source or book-confirmation clock must precede its receipt.
+    # Avoid reading old offer JSON just to discard it during prioritization.
+    receipt_filter = 'AND o.received_order >= %s' if at is not None else ''
+    params = (aggregate_provider,)
+    if at is not None:
+        from .store import exact_time
+        from app.comparison.game_phase import ODDSLINK_LIVE_SECONDS
+        params += (exact_time(at.isoformat()) - max(30, ODDSLINK_LIVE_SECONDS),)
     native = db.execute('''SELECT c.event_id,
         CASE WHEN e.provider='sportsgameodds' AND c.venue<>'pinnacle' THEN 'sgo_live'
              ELSE c.venue END venue,
@@ -22,8 +30,7 @@ def receipt_watermarks(db, aggregate_provider='the_odds_api'):
             (o.facts#>>'{book_confirmation,confirmed_at}')::timestamptz))::text at
         FROM current_offer_storage o JOIN current_contract c ON c.id=o.contract_id
         JOIN current_event e ON e.id=c.event_id
-        WHERE (c.venue=e.provider AND c.venue IN ('kalshi','polymarket_us'))
-           OR (c.venue='pinnacle' AND e.provider=%s)
+        WHERE ((c.venue=e.provider AND c.venue IN ('kalshi','polymarket_us'))
            OR (c.venue='prophetx' AND e.provider='oddslink_public_board')
            OR (c.venue=e.provider AND c.venue='novig' AND o.facts ? 'novig_runtime_id')
            OR (%s='sportsgameodds' AND e.provider='sportsgameodds'
@@ -32,8 +39,8 @@ def receipt_watermarks(db, aggregate_provider='the_odds_api'):
                AND e.facts#>>'{status,closed}' IS DISTINCT FROM 'true'
                AND e.facts#>>'{status,status}' IS DISTINCT FROM 'delayed'
                AND e.scheduled_start::timestamptz <= o.source_at::timestamptz
-               AND o.source_at::timestamptz <= o.received_at::timestamptz)
-        GROUP BY 1,2''', (aggregate_provider, aggregate_provider)).fetchall()
+               AND o.source_at::timestamptz <= o.received_at::timestamptz))
+        '''+receipt_filter+''' GROUP BY 1,2''', params).fetchall()
     return aggregate, native
 
 
@@ -56,9 +63,6 @@ def prioritize_current(pending, scope, evidence, at, *, material=(), undelivered
     Native slots retain their own turns. Reads still validate exact authority.
     """
     if not pending:return []
-    from app.collection.current_benchmark import MAXIMUM_AGE
-    reference_events={r['event_id'] for r in evidence if r['venue']=='pinnacle' and r['at']
-        and 0 <= (at-stamp(r['at'])).total_seconds() <= MAXIMUM_AGE}
     from app.comparison.game_phase import LIVE_SECONDS, ODDSLINK_LIVE_SECONDS
     # An earlier source clock has less time left in the same freshness window.
     if live_deliveries is None:
@@ -75,7 +79,7 @@ def prioritize_current(pending, scope, evidence, at, *, material=(), undelivered
     for venue, maximum_age in (('kalshi', 30), ('polymarket_us', 30), ('novig', LIVE_SECONDS), ('prophetx', ODDSLINK_LIVE_SECONDS)):
         recent={r['event_id']:stamp(r['at']) for r in evidence
             if r['venue']==venue and r['at'] and 0 <= (at-stamp(r['at'])).total_seconds() <= maximum_age}
-        candidates=[(key not in undelivered,key not in material,key not in desk_matches and reference_events.isdisjoint(scope[key]),-max(recent[e].timestamp() for e in scope[key] if e in recent),index,key)
+        candidates=[(key not in undelivered,key not in material,key not in desk_matches,-max(recent[e].timestamp() for e in scope[key] if e in recent),index,key)
             for index,key in enumerate(pending) if key not in order and recent.keys() & set(scope[key])]
         for already_delivered,confirmation_only,no_reference,clock,index,key in candidates:
             rank=(already_delivered,confirmation_only,no_reference,clock,index)

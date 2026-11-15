@@ -20,7 +20,7 @@ def first_use(tab, base):
     tab.goto(base + "/")
     expect(tab.get_by_role("heading", name="Opportunities")).to_be_visible()
     expect(
-        tab.get_by_role("heading", name="Price updates are temporarily unavailable")
+        tab.get_by_role("heading", name="The collector is not gathering prices")
     ).to_be_visible()
     expect(tab.get_by_role("link", name="Arbitrage")).to_be_visible()
     expect(tab.get_by_role("button", name="Refresh list")).to_be_visible()
@@ -58,17 +58,19 @@ def first_use(tab, base):
     offer.press("Enter")
     trade = tab.get_by_role("dialog", name="Novig · Harbor Foxes to win")
     expect(trade).to_contain_text("Original price")
-    expect(trade).to_contain_text("Fictional trading fee")
-    expect(trade).to_contain_text("1.00% of the acquisition cost")
+    expect(trade).to_contain_text("This practice quote has no applicable venue fee or fill evidence")
+    expect(trade).to_contain_text("Authored scenario time")
     expect(trade).not_to_contain_text("undefined")
     expect(trade).to_contain_text("returns $22.00 total, including $12.00 profit")
     expect(trade.get_by_role("button", name="Use latest prices")).to_be_hidden()
     tab.keyboard.press("Escape")
     expect(offer).to_be_focused()
 
-    tab.get_by_label("Calculation basis").select_option(label="EV after fictional fees")
-    expect(offer).to_contain_text("+8.91% EV")
+    tab.get_by_label("Calculation basis").select_option("reviewed")
+    expect(offer).not_to_contain_text("+8.91%")
+    expect(offer).not_to_contain_text("+10.00%")
     tab.get_by_role("link", name="Open game ↗").first.click()
+    expect(tab.get_by_label("Calculation basis")).to_have_value("reviewed")
     tab.get_by_role("button", name="Spreads", exact=True).click()
     expect(tab.locator('[data-offer-id="practice-offer-spread-1"]')).to_contain_text(
         "1.91"
@@ -94,19 +96,16 @@ def first_use(tab, base):
     ).click()
     inspect = tab.get_by_role("button", name="View payoff calculation ↗").first
     inspect.press("Enter")
-    pair = tab.get_by_role("dialog", name="Arbitrage calculation")
+    pair = tab.get_by_role("dialog", name="Pair payoff")
     expect(pair).to_contain_text("Harbor Foxes")
     expect(pair).to_contain_text("Summit Owls")
     expect(pair).to_contain_text("Worst modeled profit/loss")
-    expect(pair).to_contain_text("-$4.097")
-    expect(pair).to_contain_text("Lowest payout")
-    expect(pair).to_contain_text("$97.46")
-    expect(inspect.locator("xpath=ancestor::article")).not_to_contain_text(
-        "Unavailable on"
-    )
+    expect(pair).to_contain_text("Lowest net payout")
+    expect(pair).to_contain_text("Both leg fees are needed to calculate net settlement")
+    expect(pair).not_to_contain_text("-$4.097")
     pair.get_by_role("button", name="Inspect offer and fees").first.click()
     expect(trade).to_contain_text(
-        "Fictional fee for this pairing · $0.443 at fill on $44.30"
+        "This practice quote has no applicable venue fee or fill evidence"
     )
     trade.get_by_role("button", name="Back to pairing").click()
     tab.keyboard.press("Escape")
@@ -120,7 +119,8 @@ def first_use(tab, base):
     }""")
     expect(inspect).to_be_enabled()
     inspect.click()
-    expect(pair).to_contain_text("Calculated for a $300.00 stake before fees")
+    expect(pair).to_contain_text("$300.00")
+    expect(pair).to_contain_text("Both leg fees are needed to calculate net settlement")
     tab.keyboard.press("Escape")
     amount.fill("100")
     expect(inspect).to_be_enabled()
@@ -147,8 +147,8 @@ def first_use(tab, base):
     tab.keyboard.press("Escape")
     expect(filters).to_be_focused()
     tab.get_by_label("Positive only").check()
-    expect(tab.get_by_role("heading", name="No positive results")).to_be_visible()
-    tab.get_by_role("button", name="Clear return filters").press("Enter")
+    expect(tab.get_by_role("heading", name="No arbitrage calculations available")).to_be_visible()
+    tab.get_by_role("button", name="Show unavailable pairings").press("Enter")
     expect(inspect).to_be_visible()
     filters.press("Enter")
     panel.get_by_label("ProphetX").uncheck()

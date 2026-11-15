@@ -27,7 +27,7 @@ def live_occurrences(db, league, at):
         if event.get('schedule_conflict') or event.get('occurrence_conflict') or event.get('neutral_venue'):
             continue
         state = sporting_phase(event)['state']
-        if state not in ('live', 'final', 'suspended'):
+        if state not in ('live', 'final', 'suspended', 'canceled', 'cancelled', 'closed'):
             continue
         start = stamp(row['scheduled_start'])
         clock = (event.get('status') or {}).get('observed_at')
@@ -94,7 +94,7 @@ def fixture_records(fixture, capture, league, live, families):
     registry = occurrence_registry()
     teams = {}
     for role, name in names.items():
-        resolved = registry.resolve('team', name, league=league)
+        resolved = registry.resolve('team', name, league=league, venue=SOURCE)
         teams[role] = resolved.canonical_id or SOURCE+':'+event_id+':'+role
     if len(set(teams.values())) != 2 or len(set(names.values())) != 2:
         return []

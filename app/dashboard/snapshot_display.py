@@ -22,7 +22,8 @@ def odds(value, units='decimal_odds', payout='1'):
 
 def presented(row, by_id=None):
     from app.storage.comparison_snapshot import expand_row
-    row = expand_row(row)
+    from .product_finance import visible_row
+    row = visible_row(expand_row(row))
     out = dict(row)
     original = row.get('original', {})
     display = dict(offered=odds(original.get('value'), original.get('units'), original.get('payout', '1')))
@@ -30,7 +31,7 @@ def presented(row, by_id=None):
     display['fair'] = odds(decimal(1 / Fraction(p))) if p is not None and 0 < Fraction(p) < 1 else None
     ref = row.get('snapshot_benchmark') or row.get('reference') or {}
     display['benchmark'] = [odds(v) for v in ref.get('odds', [])]
-    display['benchmark_venue'] = ref.get('bookmaker', 'pinnacle' if row.get('snapshot_benchmark') else None)
+    display['benchmark_venue'] = ref.get('bookmaker')
     display['gross_profit_per_100'] = row.get('gross_return_percent')
     cost = row.get('cost_per_normal_claim')
     display['win_profit_per_100'] = str(100 * (1 / Fraction(cost) - 1)) if cost else None
@@ -60,11 +61,16 @@ def search_index(result):
     return index
 
 
-def ranking_value(row, metric, *, current=False):
+def ranking_value(row, metric, *, current=False, qualified=False):
     """Only the declared supported current basis may compete; never fill blanks."""
     value = row.get(metric)
     if value is None:
         return None
+    if qualified and row.get('kind') != 'pair':
+        from app.storage.comparison_snapshot import expand_row
+        from .product_finance import qualified_ev
+        if metric != 'conditional_return_percent' or not qualified_ev(expand_row(row)):
+            return None
     if metric == 'sportsbook_return_percent':
         return Fraction(value) if row.get('price_current') and row.get('sportsbook_baseline') else None
     if current and row.get('kind') != 'pair':
@@ -93,10 +99,10 @@ def outcome_id(key):
     return hashed(key)
 
 
-def comparison_groups(rows, by_id, metric, *, pairs=False, current=False, individual=False):
+def comparison_groups(rows, by_id, metric, *, pairs=False, current=False, individual=False, qualified=False):
     """Group the complete filtered slate before pagination; preserve every quote."""
     groups = {}
-    values = {r['id']: ranking_value(r, metric, current=current) for r in rows}
+    values = {r['id']: ranking_value(r, metric, current=current, qualified=qualified) for r in rows}
     def rank(r):
         value = values[r['id']]
         return (value is None, -value if value is not None else 0,

@@ -137,40 +137,26 @@ def test_selected_coefficient_quantity_and_native_series_conflicts_fail_closed()
         assert row['gross_return_percent'] is not None
 
 
-def test_native_current_reference_replacement_fee_expiry_and_retained_identity():
+def test_current_projection_withholds_pinnacle_without_rewriting_retained_proof():
     inp=retained()[1];at=stamp('2026-11-04T23:30:00Z')
-    result=calculate(inp)
-    for row in result['rows']:
-        row['conditional_trade_benchmark']=snapshot_metric(row,at=at.isoformat())
-        row['conditional_return_percent']=row['conditional_trade_benchmark'].get('return_percent')
-    out=live.bind(result,inp,'ready');current=deepcopy(inp['dependencies'])
-    # Authored clocks isolate withdrawal behavior from the capture's real latency.
-    for row in out['rows']:
-        auth=row['current_authority']
-        for w in [auth['price'],*auth['references']]:w.update(reasons=[],current_until=(at+timedelta(hours=1)).isoformat())
-    owner=dict(healthy=True,active=True);states={v:{'state':'available'} for v in ('kalshi','polymarket_us','novig','prophetx','pinnacle')}
-    def read():return live.project(out,current,owner,states,at=at,policy=inp['policy_identity'],epoch=inp['epoch'])
-    selected=next(r for r in out['rows'] if r['venue']=='polymarket_us' and r['gross_return_percent'] is not None)
-    identity=selected['economic_revision'];original=deepcopy(selected)
-    first=next(r for r in read()['rows'] if r['id']==selected['id']);assert first['price_current']
-    witnesses = selected['current_authority']['references']
-    for incomplete in (witnesses[:1], [witnesses[0], witnesses[0]]):
-        selected['current_authority']['references'] = incomplete
-        partial = next(r for r in read()['rows'] if r['id'] == selected['id'])
-        assert partial['price_current'] and partial['gross_return_percent'] is None
-        assert 'reference_evidence_missing' in partial['current_reasons']
-    selected['current_authority']['references'] = witnesses
-    selected['current_authority']['fee_until']=at.isoformat()
-    fee_expired=next(r for r in read()['rows'] if r['id']==selected['id'])
-    assert fee_expired['gross_return_percent']==original['gross_return_percent']
-    assert fee_expired['conditional_return_percent'] is None
-    assert fee_expired['metric_status']['after_trade_fee_ev']['reasons']==['conditional_fee_review_expired_or_not_effective']
-    ref=selected['current_authority']['references'][0]['dependency'];current[ref][0]='new_reference_price'
-    replaced=next(r for r in read()['rows'] if r['id']==selected['id'])
-    assert replaced['price_current'] and replaced['probability'] is None
-    assert replaced['metric_status']['before_fee_ev']['state']=='withdrawn'
-    assert replaced['price_revision']==original['price_revision'] and replaced['economic_revision']==identity
-    assert selected['probability']==original['probability']  # selected immutable evidence unaffected
+    retained_result=calculate(inp)
+    retained_row=next(r for r in retained_result['rows'] if r['venue']=='polymarket_us'
+                      and r['gross_return_percent'] is not None)
+    before=deepcopy(retained_row)
+    result=live.bind(deepcopy(retained_result),inp,'ready')
+    selected=next(r for r in result['rows'] if r['id']==retained_row['id'])
+    # Author a valid price clock to isolate the benchmark change from latency.
+    selected['current_authority']['price'].update(reasons=[], current_until=(at+timedelta(hours=1)).isoformat())
+    owner=dict(healthy=True,active=True)
+    states={'polymarket_us':{'state':'available'}}
+    read=live.project(result,inp['dependencies'],owner,states,at=at,policy=inp['policy_identity'],epoch=inp['epoch'])
+    price=next(r for r in read['rows'] if r['id']==selected['id'])
+    assert price['price_current'] and price['original']==before['original']
+    assert price['price_revision']==selected['price_revision'] and price['economic_revision']==selected['economic_revision']
+    assert price['probability'] is None and price['gross_return_percent'] is None and price['conditional_return_percent'] is None
+    assert price['reference_calculation']['reason']=='eligible_reference_unavailable'
+    assert price['current_authority']['references']==[]
+    assert retained_row==before
 
 
 def test_ordinary_chunk_encoding_preserves_exact_unicode_and_fraction_strings():

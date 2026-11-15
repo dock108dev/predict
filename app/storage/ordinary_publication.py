@@ -396,23 +396,34 @@ def quote_authority(row, inputs, *, reference=False):
                 **({'novig_runtime_id':q['novig_runtime_id']} if q.get('novig_runtime_id') else {}), **clock)
 
 
-def prices(inputs, settings):
+def prices(inputs, settings, *, db=None):
     rows = [];statuses={}
     for q in inputs['quotes']:
         row = {k: v for k, v in q.items() if k not in ('original_record', 'benchmark_quote', 'native_contract')}
-        if inputs.get('reference_provider') == 'sportsgameodds':
-            row.update(reference=None, snapshot_benchmark=None,
-                reference_calculation={'available':False, 'venue':'sportsgameodds_books',
-                    'method':BEST_VERSION})
+        row.update(reference=None, snapshot_benchmark=None,
+                   reference_calculation={'available':False, 'venue':'sportsgameodds_books', 'method':BEST_VERSION})
         row.update(kind='single', cost_per_normal_claim=None)
         rows.append(without_finance(row,'finance_pending',status_cache=statuses,copy_row=False))
     result = dict(id=uuid4().hex, snapshot_id=inputs['id'], captured_at=inputs['captured_at'],
                   calculated_at=None, assumptions=settings, rows=rows,
                   pairs=snapshots.before_fee_pairs(inputs['quotes'], at=inputs['captured_at']), games=inputs['games'],
-                  references=[] if inputs.get('reference_provider') == 'sportsgameodds' else inputs['references'], sources=inputs['sources'], issues=inputs['issues'],
+                  references=[], sources=inputs['sources'], issues=inputs['issues'],
                   provider_requests=0, capture_seconds=inputs['capture_seconds'],
                   scope=dict(leagues=list(snapshots.SPORTS), families=['winner', 'spread', 'total'],
                              period='full_game', horizon_hours=72))
+    if db is not None:
+        from .current_rows import CurrentRowStore, contract_id
+
+        paired = {leg for pair in result['pairs'] if not pair['before_fees'].get('blocker') for leg in pair['legs']}
+        contracts = {q['id']:contract_id(q['original_record']) for q in inputs['quotes']
+                     if q['id'] in paired and q['venue'] in ('kalshi','polymarket_us')
+                     and q.get('original_record')}
+        depth = CurrentRowStore(db).native_top_asks(set(contracts.values()))
+        # A price-only and finance turn share the same frozen book receipt.
+        # Never read a newer book when recalculating the retained member.
+        inputs.pop('arb_depth', None)
+        if depth:
+            inputs['arb_depth'] = {offer:depth[cid] for offer,cid in contracts.items() if cid in depth}
     return bind(result, inputs, 'pending')
 
 
@@ -422,7 +433,6 @@ def bind(result, inputs, finance):
     from app.comparison.snapshot_fee_outcome import outcome, reviews, unavailable
     from app.comparison.sgo_native_binding import pregame_fee
     from .sgo_native_catalog import dependency_id as catalog_dependency_id
-    from app.comparison.snapshot_named_benchmark import references, selected_references
     at = stamp(inputs['captured_at'])
     schedules = reviews(at) if result['rows'] else {}
     fee_state = inputs.get('fee_lifecycle')
@@ -431,7 +441,6 @@ def bind(result, inputs, finance):
     originals = {q['id']: q for q in inputs['quotes']}
     sgo_mode = inputs.get('reference_provider') == 'sportsgameodds'
     registry = reviewed_reference_registry() if sgo_mode and finance=='ready' else False
-    refs = references(inputs['quotes'], inputs['references'], result['assumptions']) if finance=='ready' and not sgo_mode else []
     empty_fee_revision=hashed({})
     if finance == 'ready':
         # The manual snapshot may model metadata associations. Ordinary arb
@@ -447,9 +456,13 @@ def bind(result, inputs, finance):
         source = quote_authority(original, inputs)
         catalog_authority = None
         sgo = None
-        selected = selected_references(row, original, refs) if finance == 'ready' and not sgo_mode else []
-        witnesses = [quote_authority(ref, inputs, reference=True) for ref in selected]
+        witnesses = []
         fee_witnesses = witnesses
+        if finance == 'ready' and not sgo_mode:
+            row.update(reference=None, snapshot_benchmark=None,
+                       snapshot_benchmark_reason='eligible_reference_unavailable',
+                       snapshot_benchmark_missing=None, reference_calculation={})
+            without_finance(row, 'eligible_reference_unavailable', copy_row=False)
         if finance == 'ready' and sgo_mode:
             from app.comparison.sgo_reference_publication import bind_captured
             row.update(snapshot_benchmark=None, reference=None,
@@ -571,7 +584,6 @@ def bind(result, inputs, finance):
         # Confirmation clocks and publication IDs are deliberately excluded.
         row['price_revision'] = hashed([row['id'], row['original']])
         row['economic_revision'] = None if finance != 'ready' else hashed([row['id'], row['original'], row.get('probability'),
-            [(r['source'], r['original']) for r in selected],
             (row.get('snapshot_benchmark') or {}).get('selected_predicate'),row.get('fee_applicability'),
             row.get('conditional_return_percent'),row.get('conservative_return_percent'),
             row.get('conservative_trade_benchmark',{}).get('evidence'),fee, result['assumptions']['revision'],
@@ -583,6 +595,7 @@ def bind(result, inputs, finance):
         for pair in result['pairs']:
             proof = pair.get('before_fees')
             if proof and all(leg in rows for leg in pair['legs']):
+                proof['depth_evidence'] = [(inputs.get('arb_depth') or {}).get(leg) for leg in pair['legs']]
                 legs = [dict(rows[leg], captured_at=inputs['captured_at'],
                              game_state=rows[leg]['current_authority']['price'].get('lifecycle', {}).get('state'))
                         for leg in pair['legs']]
@@ -735,7 +748,9 @@ def arb_candidates(part):
             game_title=' vs. '.join(names) if len(names) == 2 else pair['game_title'],
             before_fees=dict(authority=pair['before_fees']['authority']),
             default_funding_result=dict(score=score, inspection=None, retail_payoff={
-                k: payoff['retail_payoff'][k] for k in ('funding_usd', 'minimum_net_profit_usd')}))
+                k: payoff['retail_payoff'][k] for k in ('funding_usd', 'minimum_net_profit_usd',
+                    'minimum_net_payout_usd','execution_reason','states_covered','full_arbitrage_qualified')
+                if k in payoff['retail_payoff']}))
         pairs.append(compact_pair)
     if not pairs:
         return None
@@ -747,7 +762,7 @@ def arb_candidates(part):
         # Reference calculations are not inputs to the desk's arb payoff.
         auth = row['current_authority']
         rows.append(dict({k: row[k] for k in (
-            'id', 'league', 'start_at', 'venue', 'source', 'market', 'selection', 'original', 'times',
+            'id', 'game_key', 'league', 'start_at', 'venue', 'source', 'market', 'selection', 'original', 'times',
             'trade_fee', 'publication_policy', 'publication_epoch', 'evidence_result_id', 'settings_revision')},
             fee_applicability={'phase': (row.get('fee_applicability') or {}).get('phase')},
             current_authority=dict(price=auth['price'], references=[], reference_required=False,
@@ -785,6 +800,9 @@ def observe_arbs(db, result, candidates, owner, states, *, generation, policy, e
                 line=market.get('line'),
                 return_percent=payoff['score'], requested_funding_usd=str(DEFAULT_FUNDING),
                 funding_usd=retail['funding_usd'], minimum_net_profit_usd=retail['minimum_net_profit_usd'],
+                minimum_net_payout_usd=retail.get('minimum_net_payout_usd'),
+                states_covered=retail.get('states_covered', []), execution_reason=retail.get('execution_reason'),
+                full_arbitrage_qualified=retail.get('full_arbitrage_qualified', False),
                 legs=[dict(venue=leg['venue'], selection=leg['selection'],
                            price={k: leg['original'][k] for k in ('value', 'units')},
                            source_at=leg['times'].get('source_at'), received_at=leg['times'].get('received_at'),
@@ -912,7 +930,6 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
                 {k:owner.get(k) for k in ('runtime_id','global_stopped','paused_sources','dispatch')},
                 {k:v.get('state') for k,v in source_states.items()}]
             frame_binding=capture_binding
-            finance_available=(reference_provider == 'sportsgameodds' or source_allowed(source_states.get('pinnacle',{})))
             at=stamp(utc())
             from app.comparison.public_sportsbook_estimate import identity as reference_identity
             frames_exist = has_reference_frames(db, reference_provider)
@@ -930,19 +947,26 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
                 AND scheduled_start::timestamptz >= %s AND scheduled_start::timestamptz < %s''',
                 (list(snapshots.SPORTS),at-timedelta(hours=24),at+timedelta(hours=72)))}
             # Include the complete peer component when any member is in scope.
-            batches=[b for b in capture_batches(db) if selected.intersection(b)]
+            planning_stage=monotonic()
+            batches=capture_batches(db, selected=selected)
+            timings['scope_seconds']=round(monotonic()-planning_stage,6)
             scope={hashed(sorted(b)):b for b in batches}
             old={c['id']:c for c in db.execute("SELECT id,result_id,facts FROM comparison_publication WHERE kind='component'")}
             scoped_events=sorted({event for batch in batches for event in batch})
+            planning_stage=monotonic()
             signatures=planning_signatures(db, scoped_events, frames=frames_exist, at=at)
+            timings['planning_dependencies_seconds']=round(monotonic()-planning_stage,6)
             event_venues={}
-            for row in db.execute('SELECT DISTINCT event_id, venue FROM current_contract WHERE event_id=ANY(%s)',
-                                  (scoped_events,)):
+            latest_receipts={}
+            for row in db.execute('''SELECT c.event_id,c.venue,max(o.received_at) at
+                FROM current_contract c LEFT JOIN current_offer_storage o ON o.contract_id=c.id
+                WHERE c.event_id=ANY(%s) GROUP BY c.event_id,c.venue''', (scoped_events,)):
                 event_venues.setdefault(row['event_id'],set()).add(row['venue'])
-            latest_receipts={r['event_id']:r['at'] for r in db.execute('''SELECT c.event_id,max(o.received_at) at
-                FROM current_offer_storage o JOIN current_contract c ON c.id=o.contract_id
-                WHERE c.event_id=ANY(%s) GROUP BY c.event_id''', (scoped_events,))}
-            aggregate_receipts,native_evidence=receipt_watermarks(db, reference_provider)
+                if row['at'] is not None:
+                    latest_receipts[row['event_id']]=max(row['at'], latest_receipts.get(row['event_id'], ''))
+            planning_stage=monotonic()
+            aggregate_receipts,native_evidence=receipt_watermarks(db, reference_provider, at=at)
+            timings['planning_source_clocks_seconds']=round(monotonic()-planning_stage,6)
             prophetx_components={key for key,ids in scope.items()
                                  if any('prophetx' in event_venues.get(eid,()) for eid in ids)}
             product_components={key:{product_key for product_key,spec in product_schedules.PRODUCTS.items()
@@ -972,28 +996,34 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
         def fee_boundary_due(facts):
             return facts.get('next_fee_boundary') and stamp(facts['next_fee_boundary'])<=at
 
-        def needs(key):
+        def needs_price(key):
             facts=old.get(key,{}).get('facts',{})
             return (facts.get('price_failure') or facts.get('recapture_input') or facts.get('input_identity')!=desired[key]
-                    or fee_boundary_due(facts) or boundary_due(facts)
-                    or finance_available and facts.get('finance')!='ready')
-        pending=[key for key in scope if needs(key)]
+                    or fee_boundary_due(facts) or boundary_due(facts))
+        dirty=[key for key in scope if needs_price(key)]
+        dirty_ids=set(dirty)
+        finance_only=[key for key in scope if key not in dirty_ids
+                      and old[key]['facts'].get('finance')!='ready']
         # Missing components first, then oldest successful visit: a hot native
         # game cannot starve reference/API updates or quiet leagues.
-        pending.sort(key=lambda key:(key in old,old.get(key,{}).get('facts',{}).get('visited_at',''),
+        dirty.sort(key=lambda key:(key in old,old.get(key,{}).get('facts',{}).get('visited_at',''),
             -max((stamp(latest_receipts[e]).timestamp() for e in scope[key] if e in latest_receipts),default=0),key))
         # A repeated confirmation must not win every fresh slot ahead of a real
         # price/contract change. These hashes schedule only; exact captured
         # dependencies and the existing authority checks still own eligibility.
-        undelivered = {key for key in pending if awaiting_aggregate(old.get(key, {}).get('facts', {}),
+        undelivered = {key for key in dirty if awaiting_aggregate(old.get(key, {}).get('facts', {}),
             scope[key], aggregate_receipts, at)}
-        live_deliveries = sgo_live_deliveries(pending, scope, native_evidence, at, undelivered)
+        live_deliveries = sgo_live_deliveries(dirty, scope, native_evidence, at, undelivered)
         native_slots=set()
-        pending=prioritize_current(pending,scope,native_evidence,at,material={key for key in pending
+        pending=prioritize_current(dirty,scope,native_evidence,at,material={key for key in dirty
             if old.get(key,{}).get('facts',{}).get('material_identity')!=material[key]},
             undelivered=undelivered, live_deliveries=live_deliveries,
-            desk_matches={key for key in pending if public_events.keys() & set(scope[key])},
+            desk_matches={key for key in dirty if public_events.keys() & set(scope[key])},
             native_slots=native_slots)
+        # Reserve finance progress independently. Reusing a priced member
+        # must not consume a fresh delivery slot or delay the price seal.
+        finance_only.sort(key=lambda key:(old[key]['facts'].get('visited_at',''),key))
+        all_pending = set(pending) | set(finance_only)
         timings['planning_seconds']=round(monotonic()-started,6)
         work=[];errors=[];component_trace=[]
         live_first_price_seal = False
@@ -1102,7 +1132,7 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
                             aggregate_receipts=captured_aggregate_receipts(inputs),
                             capture_binding_id=inputs['_price_basis']['binding'],governing_fields=governing,capture_structure_ids=structure_ids)
                         facts['material_identity']=material_identity(key,captured)
-                        binding_start=monotonic();price_result=prices(inputs,settings)
+                        binding_start=monotonic();price_result=prices(inputs,settings,db=db)
                         costs['price_binding_seconds']=round(monotonic()-binding_start,6)
                         # Price-only members may outlive an optional-finance outage.
                         # Their own expiry must still advance browser authority cursors
@@ -1141,8 +1171,7 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
                 # Indicative EV is already in the ordinary price member. Seal
                 # a fresh first delivery before spending the turn on peers.
                 if live_deliveries and key == live_deliveries[0]:
-                    live_first_price_seal = any(row.get('sportsbook_baseline')
-                        and row['current_authority']['price'].get('lifecycle', {}).get('state') == 'live'
+                    live_first_price_seal = any(row['current_authority']['price'].get('lifecycle', {}).get('state') == 'live'
                         and not row['current_authority']['price']['reasons'] for row in price_result['rows'])
                 if native_slots:
                     # Give both dedicated feeds their reserved turn. Once
@@ -1156,7 +1185,7 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
                 del inputs,price_result
                 # An inexpensive turn can finish the next peers without
                 # spending appreciable time from a native price's lifetime.
-                if not native_slots and (live_first_price_seal or native_price_seal
+                if live_first_price_seal or not native_slots and (native_price_seal
                         and monotonic()-capture_started >= turn_seconds/2):
                     break
             timings['capture_seconds']=round(monotonic()-capture_started,6)
@@ -1179,11 +1208,18 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
             db.execute('SET LOCAL jit=off')
             finance_started=monotonic()
             finance_changed=False
-            # An unavailable reference owner cannot produce current finance.
-            # Keep original evidence in leased members and publish source prices;
-            # retry pending finance when actual reference authority returns.
-            # No reference timestamp or accounting state is changed here.
-            for key,input_id,facts in (work if finance_available else ()):
+            # Standalone fees and opposing cashflows do not require a current
+            # sportsbook comparison. Missing reference fields stay unavailable.
+            finance_work = list(work)
+            if finance_only:
+                key = finance_only[0]
+                prior = old[key]
+                saved = db.execute('SELECT snapshot_id FROM comparison_snapshot_result WHERE id=%s',
+                                   (prior['result_id'],)).fetchone()
+                if saved:
+                    finance_work.append((key, saved['snapshot_id'], prior['facts']))
+            finance_work.sort(key=lambda item: (old.get(item[0], {}).get('facts', {}).get('visited_at', ''), item[0]))
+            for key,input_id,facts in finance_work:
                 checkpoint()
                 # Finance shares the turn's wall-time budget with planning and
                 # capture. Keep one oldest job progressing even on a costly turn.
@@ -1194,7 +1230,7 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
                     with db.transaction():
                         inputs=snapshots.unpack(db.execute('SELECT inputs FROM comparison_snapshot WHERE id=%s',(input_id,)).fetchone()['inputs'])
                         decoded=True
-                        result=bind(snapshots.calculate(inputs,settings),inputs,'ready')
+                        result=bind(snapshots.calculate(inputs, settings, product=True),inputs,'ready')
                         now=stamp(utc())
                         future=[v for v in [*schedule_boundaries, *(public_boundaries if key in prophetx_components or product_components[key] else ())]
                                 if stamp(v)>now]
@@ -1233,7 +1269,7 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
         # Exact identities at this turn's planning snapshot. This is a bounded
         # census, not an exhaustive arrival log: intervening updates can coalesce.
         import base64
-        queue=base64.b64encode(gzip.compress(encoded([[key,desired[key],key in pending,
+        queue=base64.b64encode(gzip.compress(encoded([[key,desired[key],key in all_pending,
             old.get(key,{}).get('facts',{}).get('visited_at')] for key in sorted(scope)]),mtime=0)).decode()
         queue_trace=dict(encoding='gzip-base64-json',at=at.isoformat(),count=len(scope),
             value=queue if len(queue)<=32768 else None,omitted=len(scope) if len(queue)>32768 else 0)
@@ -1241,12 +1277,12 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
             capture_structure.save(capture_cache)
             capture_materialization.save(capture_cache.with_suffix('.material.json'))
         return dict(timings=timings,component_trace=component_trace[-8:],component_queue=queue_trace,
-            capture_structure=capture_structure.metrics(),materialization=capture_materialization.metrics(),serviced_components=[key for key,_,_ in work],pending_components=len(pending),
-            captured_components=len(work),finance_deferred_reason=None if finance_available else 'reference_source_unavailable',
+            capture_structure=capture_structure.metrics(),materialization=capture_materialization.metrics(),serviced_components=[key for key,_,_ in work],pending_components=len(all_pending),
+            captured_components=len(work),
             live_first_price_seal=live_first_price_seal,
             native_price_seal=native_price_seal,
-            published=bool(changed or computed or finance_changed),unchanged=not pending and not removed,computed=computed,errors=errors,
-            remaining_components=max(0,len(pending)-(computed if finance_available else len(work))),expected_components=len(scope),
+            published=bool(changed or computed or finance_changed),unchanged=not all_pending and not removed,computed=computed,errors=errors,
+            remaining_components=max(0,len(all_pending)-computed),expected_components=len(scope),
             generation=generation,price_generation=price_generation,price_published_at=price_published_at,
             turn_seconds=round(monotonic()-started,3))
     finally:db.execute('SELECT pg_advisory_unlock(901153)')

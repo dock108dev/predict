@@ -89,9 +89,12 @@ def test_native_pregame_desk_uses_current_books_before_the_slate_catches_up(monk
                 freshness_policy=dict(maximum_age_seconds=30))))
     deps = {contract_id(record): ['price', 'contract', 'event'] for record in records}
 
-    def active(db, *, at, venues, contract):
+    books = {contract_id(record): dict(book_id='book', book_revision='revision', quantity_units='contracts',
+        best_ask=[record['quote']['original']['value'], 'usd_per_contract', '20']) for record in records}
+
+    def active(db, *, at, venues, contract, phase):
         return [record for record in records if record['quote']['venue'] in venues
-                and (contract is None or contract_id(record) == contract)], deps
+                and (contract is None or contract_id(record) == contract)], deps, books
 
     monkeypatch.setattr('app.storage.current_native_desk.active_records', active)
     monkeypatch.setattr('app.storage.ordinary_publication.pregame_sportsbooks',
@@ -102,22 +105,40 @@ def test_native_pregame_desk_uses_current_books_before_the_slate_catches_up(monk
     states = dict(kalshi={'state': 'available'}, polymarket_us={'state': 'available'})
     projected = overlay(None, data, owner, states, at=AT)
     query = dict(layout='desk', ranked='1', basis='sportsbooks', lines='main', summary='1')
-    group, = page(projected, query, ('ev', None, 0, 10))['rows']
+    outcome = page(projected, query, ('ev', None, 0, 10))
+    assert not outcome['rows']
+    group, = outcome['price_preview']
     offers = {offer['venue']: offer for offer in group['offers']}
     assert set(offers) == {'kalshi', 'polymarket_us'}
     for record in records:
         q = record['quote']
         offer = offers[q['venue']]
         assert offer['current'] and offer['live_native_desk']
+        assert offer['book_size']['quantity'] == '20'
         assert offer['fair_reference']['books'] == ['draftkings']
         assert offer['current_until'] == (clock + timedelta(seconds=30)).isoformat()
         assert Fraction(offer['value']) == 100 * (Fraction(36, 77) / Fraction(q['original']['value']) - 1)
     assert projected['rows'][0]['id'] == 'native-current:' + contract_id(records[0])
-    assert len(overlay(None, data, owner, states, at=AT, contract=contract_id(records[0]))['rows']) == 1
+    selected, = overlay(None, data, owner, states, at=AT, contract=contract_id(records[0]))['rows']
+    assert selected['native_inspection']['trade_fee'] == projected['rows'][0]['trade_fee']
+    reviewed = page(projected, dict(query, basis='reviewed'), ('ev', None, 0, 10))
+    assert {offer['id'] for offer in reviewed['price_preview'][0]['offers']} == {offer['id'] for offer in offers.values()}
+    assert all(offer['value'] is None for offer in reviewed['price_preview'][0]['offers'])
     assert overlay(None, data, owner, states, at=AT + timedelta(seconds=31)) is data
     assert overlay(None, data, dict(owner, global_stopped=True), states, at=AT) is data
     assert [offer['venue'] for offer in overlay(None, data,
         dict(owner, paused_sources=['kalshi']), states, at=AT)['rows']] == ['polymarket_us']
+
+    # Product Live admits a book with explicit post-kickoff evidence. A peer
+    # with the same current book but no verified in-play status stays out.
+    for record in records:
+        record['event']['scheduled_start'] = (AT - timedelta(minutes=2)).isoformat()
+    records[0]['event']['status'] = dict(live=True, observed_at=clock.isoformat())
+    live, = overlay(None, data, owner, states, at=AT, phase='live')['rows']
+    assert live['venue'] == 'kalshi' and live['game_state'] == 'live'
+    assert live['game_state_observed_at'] == clock.isoformat()
+    assert live['times']['source_at'] == clock.isoformat() and live['sportsbook_baseline'] is None
+    assert overlay(None, data, owner, states, at=AT + timedelta(seconds=15), phase='live') is data
 
 
 def test_both_original_clocks_kickoff_omission_and_suspension():
@@ -161,8 +182,8 @@ def test_phase_is_applied_before_counts_filters_and_pagination():
     data['publication']['read_at'] = AT.isoformat()
     query = dict(layout='desk', ranked='1', last_known='1', game_state='live', period='first_half')
     pregame = page(data, query, ('ev', None, 0, 1))
-    assert pregame['phase'] == 'pregame' and pregame['basis'] == 'sportsbooks'
-    assert pregame['matched_offer_count'] == pregame['total'] == 1
-    assert pregame['rows'][0]['offers'][0]['id'] == 'eligible'
+    assert pregame['phase'] == 'pregame' and pregame['basis'] == 'reviewed'
+    assert pregame['matched_offer_count'] == 1 and pregame['total'] == 0
+    assert pregame['price_preview'][0]['offers'][0]['id'] == 'eligible'
     assert price_phase({'scheduled_start': START.isoformat(), 'status': {'live': True}}, {}, AT.isoformat()) == {
         'state': 'live', 'reason': 'event_started_before_schedule', 'basis': 'explicit_source_state'}

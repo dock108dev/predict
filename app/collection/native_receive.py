@@ -16,6 +16,7 @@ class NativeReceive:
         self.arrivals=deque()
         self.on_failure=on_failure
         self.error=None
+        self.closed=False
         self.capacity_failed=False
         self.space=asyncio.Event()
         self.space.set()
@@ -66,6 +67,7 @@ class NativeReceive:
     def require_active(self):
         """Live publication cannot drain frames after connection authority is revoked."""
         if self.error is not None:raise self.error
+        if self.closed:raise ConnectionError('Native receiver closed')
 
     def measure(self):
         self.metrics['receive_buffer_bytes']=self.bytes
@@ -75,10 +77,11 @@ class NativeReceive:
     async def recv(self):
         # A lost frame breaks delta continuity. Resynchronize immediately rather
         # than leaving a stopped reader behind minutes of queued work.
-        if self.capacity_failed:raise self.error
+        if self.capacity_failed or self.closed:self.require_active()
         row=await self.queue.get()
         if row is None:
-            raise self.error
+            self.require_active()
+            raise ConnectionError('Native receiver closed')
         body,received,size=row
         self.bytes-=size
         self.space.set()
@@ -104,8 +107,14 @@ class NativeReceive:
         return rows
 
     async def close(self):
+        if self.closed:return
+        self.closed=True
         self.task.cancel()
         await asyncio.gather(self.task,return_exceptions=True)
         self.metrics['receive_frames_discarded_on_resync']=self.metrics.get('receive_frames_discarded_on_resync',0)+len(self.arrivals)
         while not self.queue.empty():self.queue.get_nowait()
         self.bytes=0;self.arrivals.clear();self.measure()
+        # A reconstruction prefetch may already be waiting for this queue.
+        # Its owner joins it after closing the reader. Wake that join even
+        # when the websocket did not emit a terminal frame.
+        self.queue.put_nowait(None)

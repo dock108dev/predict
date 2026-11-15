@@ -59,7 +59,7 @@ def mount(app, scanner):
                 if scanner.stopped() or p.stopped:
                     raise TicketError('ticket_stopped' if p.stopped else 'ticket_current_proof_unavailable')
                 row=p.rows.get(req.query['row_id'])
-                if row is None or p.server_id!=req.query['server_id'] or p.epoch!=req.query['epoch'] or any(row[k]!=req.query[k] for k in ('dependency_revision','economic_revision')):
+                if row is None or row.get('category') == 'ev' or p.server_id!=req.query['server_id'] or p.epoch!=req.query['epoch'] or any(row[k]!=req.query[k] for k in ('dependency_revision','economic_revision')):
                     raise TicketError('ticket_selection_changed')
                 bound=selector(p,row)
                 _,reason=tickets._capture(bound,initial=True)

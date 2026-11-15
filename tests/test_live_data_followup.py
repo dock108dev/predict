@@ -69,7 +69,8 @@ class LiveDataFollowup(TestCase):
         self.assertEqual(page(result(row),dict(day='2026-11-07',timezone='America/New_York',time_from='12:00',time_to='17:00'),options)['total'],0)
         view=page(result(row),dict(day='2026-11-07',timezone='America/New_York',time_from='19:00',time_to='21:00'),options)
         self.assertIsNone(view['rows'][0]['score'])
-        self.assertEqual(view['rows'][0]['offers'][0]['before_fee'],'8')
+        self.assertTrue(view['rows'][0]['offers'][0]['current'])
+        self.assertIsNone(view['rows'][0]['offers'][0]['before_fee'])
         self.assertIsNone(view['rows'][0]['offers'][0]['after_fee'])
 
     def test_active_browse_session_survives_other_first_page_reads(self):

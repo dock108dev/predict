@@ -3,10 +3,9 @@
 <a id="back" class="p-back" hidden>← Back to opportunities</a>
 <div class="p-heading"><div><h1 id="title">Opportunities</h1><p id="caption" class="p-caption">Next 72 hours · Saved comparison</p></div><button id="refresh-snapshot" class="p-action" disabled>Refresh prices</button></div>
 <div id="admin-nav"></div><section id="calculation-panel" hidden><form id="settings" aria-label="Calculation settings">
-<details class="calculation-settings" open><summary><span><strong>Assumptions</strong><span id="applied" class="muted">$1,000 · 0.5% buffer · Pinnacle</span></span></summary><div class="settings-body"><div class="settings-fields">
+<details class="calculation-settings" open><summary><span><strong>Assumptions</strong><span id="applied" class="muted">$1,000 · 0.5% buffer</span></span></summary><div class="settings-body"><div class="settings-fields">
 <label>Requested funding ($)<input id="amount" type="text" inputmode="decimal" value="1000"></label>
 <label>Buffer (%)<input id="buffer" type="text" inputmode="decimal" value="0.5"></label>
-<label class="benchmark-setting">Reference<select id="benchmark"><option value="pinnacle">Pinnacle</option><option value="novig">Novig</option><option value="prophetx">ProphetX</option></select></label>
 <label>Scenario<select id="scenario"><option value="unavailable">Unspecified</option><option value="decisive_only">Conditional: decisive win / loss only</option><option value="refund_other">Assume all other outcomes refund acquisition; fees retained</option></select></label>
 <label>NCAAB scoring<select id="scoring"><option value="unavailable">Use retained scoring evidence only</option><option value="ncaab_full_game_overtime">Assume full-game integer points including overtime</option></select></label>
 <label>Size / depth<select id="sizing"><option value="unavailable">Unspecified</option><option value="hypothetical_fractional">Assume fractional size at top price; depth ignored</option></select></label>

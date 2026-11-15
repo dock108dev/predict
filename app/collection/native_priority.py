@@ -115,7 +115,7 @@ def select(markets,catalog,now,offset,*,limit=MAX_ACTIVE,phase_events=(),priorit
             status = sporting_phase(phase)
             live=0<=elapsed<86400 and status['state']=='live'
             upcoming = priority_pregame and -7200 <= elapsed < 0 and not status['reason'] and status['state'] != 'live'
-            rank=(0 if upcoming else 1 if live else 2,abs(elapsed),eid)
+            rank=(0 if live else 1 if upcoming else 2,abs(elapsed),eid)
         except (TypeError,ValueError):rank=(2,float('inf'),eid)
         priorities[eid]=rank
         return rank
@@ -146,8 +146,13 @@ def select(markets,catalog,now,offset,*,limit=MAX_ACTIVE,phase_events=(),priorit
         # every line without cutting the rotating half or losing other cells.
         seed=fair[:min(fixed,len(cells))]
         pool=fair[len(seed):]
-        hot=sorted((m for m in pool if distance(m.raw.ref.event_id)[0] < 2),
-                    key=lambda m:distance(m.raw.ref.event_id)[:2])
+        def hot_rank(market):
+            ref = market.raw.ref
+            phase, proximity, _ = distance(ref.event_id)
+            exact_main = (ref.market_id in preferred
+                          or metadata.get(ref.market_id, {}).get('market_type') == 'moneyline')
+            return (phase, proximity, not exact_main) if phase == 0 else (phase, not exact_main, proximity)
+        hot=sorted((m for m in pool if distance(m.raw.ref.event_id)[0] < 2), key=hot_rank)
         primary=seed+hot[:fixed-len(seed)]
         fixed_ids={m.raw.ref.market_id for m in primary}
         main_lines=sorted((m for m in pool if m.raw.ref.market_id in preferred and m.raw.ref.market_id not in fixed_ids),
@@ -161,8 +166,8 @@ def select(markets,catalog,now,offset,*,limit=MAX_ACTIVE,phase_events=(),priorit
         chosen=primary+[remaining[(start+i)%len(remaining)] for i in range(width)]
     detail = describe(markets,catalog,chosen,offset)
     if priority_pregame:
-        detail.update(policy='fair-current-subscriptions-4',
-                      meaning='Fixed slots cover each league and family, then favor near-kickoff pregame and observed live lines. Remaining slots rotate.')
+        detail.update(policy='fair-current-subscriptions-5',
+                      meaning='Fixed slots cover each league and family, then favor observed live markets and near-kickoff main lines. Remaining slots rotate.')
     return chosen,detail
 
 

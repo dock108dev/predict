@@ -164,9 +164,9 @@ def live_metric(row, fee, witnesses):
     if not fee.get('available'):
         return dict(available=False, reason=fee.get('reason') or 'novig_native_market_phase_and_book_missing')
     best = reference.get('method') == BEST_VERSION and reference.get('venue') in BEST_BOOKS
-    if (not reference.get('available') or not (best or reference.get('venue') == 'pinnacle')
+    if (not reference.get('available') or not best
             or len(witnesses) != 2 or len({w.get('dependency') for w in witnesses}) != 2
-            or best and any(w.get('venue') != reference['venue'] or w.get('provider') != 'sportsgameodds' for w in witnesses)
+            or any(w.get('venue') != reference['venue'] or w.get('provider') != 'sportsgameodds' for w in witnesses)
             or not all(w.get('dependency') and not w.get('reasons')
                        and w.get('lifecycle', {}).get('state') == 'live' for w in witnesses)
             or not benchmark.get('selected_identity') or not benchmark.get('selected_predicate')

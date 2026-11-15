@@ -11,14 +11,14 @@ from fractions import Fraction as F
 from .calculation_control import checkpoint
 from .current_dependencies import digest, instant
 from .estimated_ev import _fills, cell
-from .estimated_pair import (Leg, economics, native_key, probabilities,
+from .estimated_pair import (Leg, economics, native_key,
                              EXPOSURE_FLOOR, MIN_SHARE, MAX_NATIVE)
 from .estimated_policy import DEFAULT_POLICY, RequestedTradePolicy
 from .net_costs import wire
 from .requested_sizing import allocations
 from .scanner_finance import _joint, classify
 
-VERSION = 'predict-scanner-ticket-finance-1'
+VERSION = 'predict-scanner-ticket-finance-2'
 
 
 def requested_policy(policy):
@@ -52,7 +52,8 @@ def calculate(pair, instruments, inputs, *, at, policy=DEFAULT_POLICY):
     legs=[]
     for key in keys:
         checkpoint();x=inputs[key]
-        legs.append(Leg(x['quote'],x['group'],x['profiles'],x['event'],instant(at),policy=policy))
+        legs.append(Leg(x['quote'],x['group'],x['profiles'],x['event'],instant(at),policy=policy,
+                        resolve_reference=False))
     if len({x.q['venue'] for x in legs})!=2 or any(x.q['venue']=='pinnacle' for x in legs):
         raise ValueError('ticket_distinct_execution_venues_required')
     if legs[0].sign==legs[1].sign:
@@ -104,11 +105,7 @@ def calculate(pair, instruments, inputs, *, at, policy=DEFAULT_POLICY):
     capital,states=economics(components,basis)
     if any(s['profit_usd'] is None for s in states.values()):
         raise ValueError('ticket_mandatory_state_cashflows_unknown')
-    probs,weight,reference_reason=probabilities(legs,basis,policy)
-    conditional=None if weight is None else dict(a_wins=weight,b_wins=1-weight)
-    ev_current=any(instruments[k].get('checks',{}).get('ev',{}).get('state')=='ready' for k in keys)
-    metrics,categories=classify(states,capital,policy=policy,settlement_complete=complete,
-        probabilities=probs,conditional_probabilities=conditional,ev_current=ev_current)
+    metrics,categories=classify(states,capital,policy=policy,settlement_complete=complete)
     reasons=[] if complete else ['joint_settlement_meaning_unknown']
     haircut=F(metrics['buffer_usd'])
     for state in states.values():
@@ -163,11 +160,10 @@ def calculate(pair, instruments, inputs, *, at, policy=DEFAULT_POLICY):
         market={k:deepcopy(inputs[keys[0]]['group'][k]) for k in ('id','market','period') if k in inputs[keys[0]]['group']}),categories=categories,metrics=metrics,legs=rows,manual_legs=summary,
         funding=funding,states=states,reasons=sorted(set(reasons)),settlement_complete=complete,
         size_status='supported_size',search=search,policy=policy.to_dict(),
-        probabilities=None if probs is None else {k:None if p is None else wire(p) for k,p in probs.items()},
-        conditional_probabilities=None if conditional is None else {k:wire(p) for k,p in conditional.items()},
-        ev_reference=dict(available=probs is not None or conditional is not None,current=ev_current,reason=reference_reason),
+        probabilities=None, conditional_probabilities=None,
+        ev_reference=dict(available=False,current=False,reason='eligible_reference_unavailable'),
         constraints=dict(minimum_decisive_exposure_usd=wire(EXPOSURE_FLOOR),minimum_exposure_share=wire(MIN_SHARE)),
-        probability_basis=dict(revision=next((x.reference_basis for x in legs if x.reference is not None),None)),
+        probability_basis=dict(revision=None),
         risks=['modeled_costs_and_settlement; manual_execution_prices_can_change',
                'one_budget_uses_independent_venue_funding; no_cash_reuse',
                'bounded_local_balance_search; global_optimality_and_maximum_size_unproven'],

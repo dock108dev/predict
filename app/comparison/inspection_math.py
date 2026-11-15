@@ -19,17 +19,13 @@ def starting_fee_terms(row, captured_at, assumptions=None):
     """Describe the saved fee inputs independently of offer eligibility."""
     venue = row.get('venue')
     if (row.get('source') or {}).get('provider') == 'practice':
-        rate = (assumptions or {}).get('fees', {}).get(venue)
-        if rate is None:
-            return None
-        return dict(values=[['Fictional assumption', f'{wire(100 * Fraction(rate))}% of acquisition cost']],
-                    scope='Used only in the synthetic fee scenario.')
+        return None
     if venue not in FEE_REQUIREMENTS:
         return None
     try:
         at = instant(captured_at)
         captured = (row.get('trade_fee') or {}).get('evidence') or {}
-        if not captured.get('schedule_revision'):
+        if not captured.get('schedule_revision') and (row.get('trade_fee') or {}).get('classification') != 'recorded_scope':
             captured = (row.get('conservative_trade_benchmark') or {}).get('evidence') or {}
         review = captured if captured.get('schedule_revision') else basis(venue, at=at)
         in_window = applies(review, at)

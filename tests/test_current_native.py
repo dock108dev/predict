@@ -41,6 +41,32 @@ class Socket:
         await asyncio.Event().wait()
 
 class WorkerControls(unittest.IsolatedAsyncioTestCase):
+    async def test_rotation_close_releases_waiting_reconstruction_prefetch(self):
+        from collections import deque
+        from app.collection.native_receive import NativeReceive
+        from app.collection.native_reconstruction import Reconstruction
+
+        receiver = NativeReceive(Socket('polymarket_us', 1), {})
+        # A retirement timeout can leave a prefetch between the socket reader
+        # and its child workers. The replacement socket waits for both to close.
+        started = asyncio.Event()
+        receiver.socket.recv = asyncio.Event().wait
+
+        async def prefetch():
+            started.set()
+            return await receiver.recv_batch(4096, 1024*1024)
+
+        reconstruction = Reconstruction.__new__(Reconstruction)
+        reconstruction.metrics, reconstruction.ready, reconstruction.pools = {}, deque(), []
+        reconstruction.pending = asyncio.create_task(prefetch())
+        await started.wait()
+        await receiver.close()
+        await asyncio.wait_for(reconstruction.close(), 1)
+        self.assertIsNone(reconstruction.pending)
+        self.assertTrue(reconstruction.metrics['reconstruction_worker_stopped'])
+        with self.assertRaises(ConnectionError):
+            await receiver.recv()
+
     async def test_priority_rotation_closes_owned_workers_and_requires_new_images(self):
         from collections import deque
         service=SimpleNamespace(config=deepcopy(DEFAULT),dispatch=True,database_mode=True,

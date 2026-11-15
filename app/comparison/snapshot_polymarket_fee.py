@@ -4,6 +4,7 @@ from functools import lru_cache
 
 from app.collection.public_contracts import load
 from app.fees.engine import Registry, calculate
+from .current_dependencies import instant
 
 from .cashflows import exact_wire as wire
 from .sgo_reference import BEST_BOOKS, BEST_VERSION
@@ -11,6 +12,7 @@ from .snapshot_fee_scope import RANKING_BASIS
 from .snapshot_identity import DECISIVE_EQUALITY_BASIS
 
 CUTOVER = '2026-11-06T18:00:00Z'
+CURRENT_CUTOVER = '2026-11-14T05:00:00Z'
 STANDARD_TIERS = ('0.095', '0.085', '0.075', '0.0695')
 PROFILE = 'standard_retail_taker_high_tier'
 URL = 'https://docs.polymarket.us/fees'
@@ -26,7 +28,9 @@ def _registry(tier):
         dict(standard, version='pmus-standard-2026-10-28', coefficient='0.0695',
              effective_from='2026-10-29T02:00:00Z', effective_to=CUTOVER),
         dict(standard, version='pmus-standard-tiers-2026-11-06', coefficient=tier,
-             effective_from=CUTOVER, effective_to=None),
+             effective_from=CUTOVER, effective_to=CURRENT_CUTOVER),
+        dict(standard, version='pmus-standard-tiers-2026-11-14', coefficient=tier,
+             effective_from=CURRENT_CUTOVER, effective_to=None),
     ]))
 
 
@@ -46,6 +50,8 @@ def public_fee(row, *, at, phase, review, quantity='1'):
     try:
         if review.get('profile') != PROFILE or review['fee_rate'] != STANDARD_TIERS[0]:
             raise ValueError('polymarket_standard_retail_review_unavailable')
+        if at >= instant(CURRENT_CUTOVER) and review.get('published_effective_from') != CURRENT_CUTOVER:
+            raise ValueError('public_fee_schedule_review_required')
         source = row['source']
         original = row['original']
         scope = row['fee_applicability'] or {}
@@ -88,7 +94,13 @@ def public_fee(row, *, at, phase, review, quantity='1'):
         if tick <= 0 or price % tick:
             raise ValueError('polymarket_selected_price_grid_conflict')
 
-        when = at.isoformat()
+        # Use the quote receipt or the later review start for this immediate
+        # hypothetical order. Subsequent reads of the same quote and terms
+        # should verify the same fee result and modeled insertion clock.
+        modeled_at = max(instant(row['times']['received_at']), instant(review['reviewed_at']))
+        if modeled_at > at:
+            raise ValueError('fee_quote_receipt_future')
+        when = modeled_at.isoformat()
         audit = order_fee(market_id, inserted_at=when, evaluated_at=when,
                           fills=[dict(price=original['value'], quantity=wire(size))])
         if audit['entry_fees'] is None:
@@ -138,9 +150,9 @@ def conservative_metric(row, fee, witnesses, phase, *, source_scope=None):
     predicate = benchmark.get('selected_predicate')
     missing = dict(available=False, reason='polymarket_exact_reference_or_settlement_missing')
     best = ref.get('method') == BEST_VERSION and ref.get('venue') in BEST_BOOKS
-    if (not ref.get('available') or not (best or ref.get('venue') == 'pinnacle')
+    if (not ref.get('available') or not best
             or len(witnesses) != 2 or len({w.get('dependency') for w in witnesses}) != 2
-            or best and any(w.get('venue') != ref['venue'] or w.get('provider') != 'sportsgameodds' for w in witnesses)
+            or any(w.get('venue') != ref['venue'] or w.get('provider') != 'sportsgameodds' for w in witnesses)
             or not all(w.get('expected') is not None and not w['reasons']
                        and w['lifecycle']['state'] == phase for w in witnesses)
             or identity.get('scoring_basis') != 'retained source scoring evidence'

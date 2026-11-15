@@ -1,5 +1,5 @@
 // Pure captured-publication helpers. No requests, model estimates or clock edits.
-export const coverageNames = {kalshi:"Kalshi", polymarket_us:"Polymarket US", novig:"Novig", prophetx:"ProphetX", pinnacle:"Pinnacle"};
+export const coverageNames = {kalshi:"Kalshi", polymarket_us:"Polymarket US", novig:"Novig", prophetx:"ProphetX"};
 export const coverageFamilies = {winner:"Winner / moneyline", moneyline:"Winner / moneyline", spread:"Spread", total:"Total", team_total:"Team total", futures:"Futures"};
 export const coverageWords = value => String(value ?? "Unknown").replaceAll("_", " ");
 export const coverageNumber = value => Number.isSafeInteger(value) && value >= 0 ? value : null;

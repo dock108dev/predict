@@ -10,6 +10,8 @@ from .snapshot_polymarket_fee import PROFILE, public_fee
 
 
 def _leg_fee(row, *, stake, price, quantity, receipts):
+    if not stake:
+        return dict(available=False, reason='pair_stake_rounds_to_zero')
     fee = row.get('trade_fee') or {}
     if not fee.get('available'):
         return dict(available=False, reason=fee.get('reason') or 'fee_outcome_not_published')
@@ -18,8 +20,6 @@ def _leg_fee(row, *, stake, price, quantity, receipts):
     venue = row['venue']
     rounding_trace = None
     assumptions = fee.get('assumptions', ())
-    if not stake:
-        return dict(available=False, reason='pair_stake_rounds_to_zero')
     if 'winning_settlement_usd' in cashflows:
         if venue != 'prophetx':
             return dict(available=False, reason='pair_fee_size_unverified')
@@ -102,6 +102,7 @@ def pair_fees(proof, allocation, rows):
     if sizing is not None and sizing['quantity'] == '0':
         return dict(available=False, reason='pair_size_unsupported', legs=[], sizing=sizing)
     legs, receipts = [], []
+    depths = proof.get('depth_evidence') or [None] * len(rows)
     for index, (row, leg) in enumerate(zip(rows, allocation['legs'], strict=True)):
         stake, price = F(leg['allocation_usd']), F(leg['cost_per_claim'])
         quantity = stake / price
@@ -110,11 +111,25 @@ def pair_fees(proof, allocation, rows):
             fee = _leg_fee(row, stake=stake, price=price, quantity=quantity, receipts=receipts[-1])
         except (OSError, ValueError, KeyError, TypeError, ArithmeticError):
             fee = dict(available=False, reason='pair_fee_size_unverified')
-        if sizing is not None:
-            fee['acquisition_usd'] = wire(stake)
+        fee.update(acquisition_usd=wire(stake), quantity=wire(quantity))
+        depth = depths[index]
+        fee['depth_status'] = 'unverified'
+        if (depth and depth.get('received_at') == row.get('times', {}).get('received_at')
+                and F(depth['price']) == price and F(row.get('original', {}).get('payout', '1')) == 1):
+            fee['depth_status'] = 'available' if F(depth['quantity']) >= quantity else 'insufficient'
+            fee['depth_evidence'] = depth
         legs.append(fee)
+    states_covered = list(payouts)
+    omissions = ['void', 'cancellation', 'postponement', 'partial_completion']
+    scope = dict(basis='completed_game_at_captured_prices', states_covered=states_covered,
+                 states_unverified=omissions, full_arbitrage_qualified=False,
+                 execution_reason=('pair_execution_depth_insufficient' if any(leg['depth_status']=='insufficient' for leg in legs)
+                                   else 'pair_execution_depth_unverified' if any(leg['depth_status']!='available' for leg in legs)
+                                   else None))
     if not all(leg['available'] for leg in legs):
-        return dict(available=False, reason='pair_missing_leg_fees', legs=legs, sizing=sizing)
+        reason = ('pair_stake_rounds_to_zero' if any(leg.get('reason')=='pair_stake_rounds_to_zero' for leg in legs)
+                  else 'pair_missing_leg_fees')
+        return dict(available=False, reason=reason, legs=legs, sizing=sizing, **scope)
     funding = F(allocation['funding_usd']) + sum(F(leg['at_fill_usd']) for leg in legs)
     states = {}
     for state in payouts:
@@ -123,4 +138,6 @@ def pair_fees(proof, allocation, rows):
         states[state] = dict(net_receipt_usd=wire(net_receipt), net_profit_usd=wire(net_receipt - funding))
     minimum = min(F(state['net_profit_usd']) for state in states.values())
     return dict(available=True, legs=legs, funding_usd=wire(funding), states=states,
-                minimum_net_profit_usd=wire(minimum), sizing=sizing)
+                fee_basis='conservative' if any(leg.get('classification')=='conservative' for leg in legs) else 'captured_terms',
+                minimum_net_payout_usd=wire(minimum + funding),
+                minimum_net_profit_usd=wire(minimum), sizing=sizing, **scope)

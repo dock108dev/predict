@@ -520,15 +520,16 @@ class CurrentRows(unittest.TestCase):
         self.store.upsert_records(rows)
         self.store.replace_native_books([book])
 
-        captured, deps = active_records(self.db, at=at, venues=['polymarket_us'])
+        captured, deps, books = active_records(self.db, at=at, venues=['polymarket_us'])
         self.assertTrue(captured)
         self.assertEqual(set(deps), {contract_id(row) for row in captured})
-        self.assertEqual(active_records(self.db, at=at + timedelta(seconds=30), venues=['polymarket_us']), ([], {}))
+        self.assertTrue(all(books[key]['book_revision'] and books[key]['best_ask'] for key in deps))
+        self.assertEqual(active_records(self.db, at=at + timedelta(seconds=30), venues=['polymarket_us']), ([], {}, {}))
 
         newer = deepcopy(book)
         newer['raw'].update(exchange_at=at.isoformat(), received_at=at.isoformat())
         self.store.replace_native_books([newer])
-        self.assertEqual(active_records(self.db, at=at, venues=['polymarket_us']), ([], {}))
+        self.assertEqual(active_records(self.db, at=at, venues=['polymarket_us']), ([], {}, {}))
 
     def test_native_offer_keeps_its_exact_price_and_depth_after_book_head_advances(self):
         from decimal import Decimal

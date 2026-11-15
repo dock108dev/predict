@@ -21,6 +21,7 @@ SELECT kind,venue,event_id,market_id,sport,family,'full_game',title,received_at,
  'received_pending_qualification',NULL,NULL,NULL,NULL,false,NULL,NULL
 FROM raw_aggregate_display
 """
+PRODUCT_HEADER = 'SELECT * FROM (' + HEADER + ") raw WHERE venue <> 'pinnacle'"
 FILTERS = ('sport', 'venue', 'family', 'period', 'event_id')
 
 
@@ -55,7 +56,7 @@ def selection(filters,owner):
     return clause,args
 
 
-def headers(db, filters, offset, limit,owner=None):
+def headers(db, filters, offset, limit,owner=None, *, product=False):
     clause,args=selection(filters,owner or {})
     owner=owner or {}
     generations={p.get('provider'):p.get('metrics',{}).get('synchronization',{}).get('generation')
@@ -63,13 +64,13 @@ def headers(db, filters, offset, limit,owner=None):
     order=""" ORDER BY CASE WHEN kind<>'native' OR (runtime_id=%s AND census_generation=generation
         AND connection_generation=CASE venue WHEN 'kalshi' THEN %s::bigint WHEN 'polymarket_us' THEN %s::bigint END)
         THEN 0 ELSE 1 END,venue,event_id,market_id,kind,sport OFFSET %s LIMIT %s"""
-    return db.execute('SELECT * FROM ('+HEADER+') h'+clause+order,
+    return db.execute('SELECT * FROM ('+(PRODUCT_HEADER if product else HEADER)+') h'+clause+order,
         (*args,owner.get('runtime_id'),generations.get('kalshi'),generations.get('polymarket_us'),offset,limit)).fetchall()
 
 
-def total(db,filters,owner=None):
+def total(db,filters,owner=None, *, product=False):
     clause,args=selection(filters,owner or {})
-    return db.execute('SELECT count(*) n FROM ('+HEADER+') h'+clause,args).fetchone()['n']
+    return db.execute('SELECT count(*) n FROM ('+(PRODUCT_HEADER if product else HEADER)+') h'+clause,args).fetchone()['n']
 
 
 def source_information(owner,venue):

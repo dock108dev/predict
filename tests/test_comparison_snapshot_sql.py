@@ -51,7 +51,8 @@ class SnapshotSQL(LatestBoardFixture):
                 response=await client.post('/api/comparison-snapshot',json={'action':'refresh'})
                 self.assertEqual(response.status,200)
                 first=await response.json();self.assertEqual(first['provider_requests'],0)
-                self.assertGreater(first['counts']['gross_numeric'],0)
+                self.assertGreater(first['counts']['observations'],0)
+                self.assertEqual(first['counts']['gross_numeric'],0)
                 for invalid in ('limit=0', 'offset=bad', 'view=bogus', 'metric=bogus'):
                     with patch.object(snapshot, 'replace', wraps=snapshot.replace) as replace:
                         failed = await client.post('/api/comparison-snapshot?' + invalid,
@@ -68,7 +69,8 @@ class SnapshotSQL(LatestBoardFixture):
                 response=await client.post('/api/comparison-snapshot',json={'action':'recalculate','assumptions':opts,'expected':first['id']})
                 revised=await response.json();self.assertEqual(response.status,200)
                 self.assertEqual(first['snapshot_id'],revised['snapshot_id'])
-                self.assertGreater(revised['counts']['net_numeric'],0)
+                self.assertEqual(revised['counts']['net_numeric'],0)
+                self.assertEqual(revised['assumptions']['amount'],'2000')
                 for view in ('ev','odds','arbs'):
                     page=await (await client.get('/api/comparison-snapshot',params={'view':view,'result_id':revised['id'],'offset':'0','limit':'1'})).json()
                     self.assertEqual(page['assumptions'],revised['assumptions'])
@@ -128,28 +130,31 @@ class SnapshotSQL(LatestBoardFixture):
                 self.assertTrue(all(not q['binding']['verified'] for q in evidence['originals']))
         self.assertEqual(hashed(inputs),before)
 
-    async def test_ncaab_exact_benchmark_http_originals_and_revision(self):
+    async def test_ncaab_http_prices_keep_reference_provenance_private(self):
         from tests.test_snapshot_benchmark import execution,references,inputs
-        from fractions import Fraction
+
         captured=inputs([execution()],references())
         app=web.Application();mount(app)
         with patch('app.dashboard.snapshot_api.connect',self.connect),patch.object(snapshot,'capture',return_value=captured):
             async with TestClient(TestServer(app)) as client:
                 first=await (await client.post('/api/comparison-snapshot',json={'action':'refresh'})).json()
-                self.assertEqual(first['counts']['gross_numeric'],1)
+                self.assertEqual(first['counts']['gross_numeric'],0)
                 row=first['rows'][0]
-                self.assertEqual(Fraction(row['gross_return_percent']),50)
+                self.assertIsNone(row['gross_return_percent'])
                 self.assertIsNone(row['net_return_percent'])
                 details='/api/comparison-snapshot/details?result_id='+first['id']+'&id='+row['id']
                 before=await (await client.get(details)).json()
-                self.assertEqual({r['id'] for r in before['references']},set(row['snapshot_benchmark']['ids']))
-                self.assertEqual(before['references'],captured['references'])
+                self.assertEqual(before['references'], [])
+                self.assertEqual(before['row']['original'], row['original'])
+                with self.connect() as db:
+                    raw = db.execute('SELECT inputs FROM comparison_snapshot WHERE id=%s', (captured['id'],)).fetchone()
+                    self.assertEqual(snapshot.unpack(raw['inputs'])['references'], captured['references'])
                 settings=dict(first['assumptions'],scenario='decisive_only',sizing='hypothetical_fractional',fees={'polymarket_us':'0'})
                 second=await (await client.post('/api/comparison-snapshot',json={'action':'recalculate','assumptions':settings})).json()
-                self.assertEqual(Fraction(second['rows'][0]['net_return_percent']),Fraction('49.5'))
+                self.assertIsNone(second['rows'][0]['net_return_percent'])
                 self.assertEqual(await (await client.get(details)).json(),before)
                 grid=await (await client.get('/api/comparison-snapshot?view=odds')).json()
-                self.assertEqual(grid['rows'][0]['quotes'][0]['reference_odds']['role'],'reference_only')
+                self.assertIsNone(grid['rows'][0]['quotes'][0]['reference_odds'])
 
     async def test_independent_retention_respects_heads_pins_and_inflight_readers(self):
         from app.storage.storage_maintenance import maintain

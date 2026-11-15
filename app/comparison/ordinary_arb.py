@@ -10,6 +10,9 @@ DEFAULT_FUNDING = Fraction(100)
 
 
 def evaluate(proof, legs, funding):
+    if blocker := proof.get('blocker'):
+        return dict(inspection=None, score=None, retail_payoff=dict(
+            available=False, reason=blocker, legs=[], full_arbitrage_qualified=False))
     inspection = pair_math(proof, funding)
     payoff = pair_fees(proof, inspection, legs)
     score = (100 * Fraction(payoff['minimum_net_profit_usd']) / Fraction(payoff['funding_usd'])
@@ -34,7 +37,8 @@ def current_payoff(pair, legs, funding):
 def published_payoff(pair, legs):
     saved = pair.get('default_funding_result')
     if saved is None:
-        return None
+        return dict(inspection=None, score=None,
+                    retail_payoff=dict(available=False, reason='pair_fee_publication_pending', legs=[]))
     if pair.get('default_funding_fee_identity') == fee_identity(legs):
         return saved
     return dict(inspection=saved['inspection'], score=None,

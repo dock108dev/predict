@@ -44,7 +44,7 @@ def inputs(qs,refs):
 
 class SnapshotBenchmark(TestCase):
     def test_selection_requires_both_witnesses_from_the_bound_receipt(self):
-        from app.dashboard.snapshot_api import selected_references
+        from app.comparison.snapshot_named_benchmark import selected_references
 
         refs = references()
         quote = execution()

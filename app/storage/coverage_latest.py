@@ -31,6 +31,7 @@ def _pick(expression, fields):
 
 
 _EVENT_FIELDS=('id','competition','season','stage','home','away','participants','title','scheduled_start','original_start',
+    'schedule_status','previous_starts_at',
     'shared_provider_ids','observed_identity_facts','neutral_venue','identity','schedule_conflict',
     'sport','game_number','replacement_game_id','source_participant_roles','schedule_metadata',
     'status','state','occurrence_conflict','conflicting_duplicate','related_game_event_id')
@@ -227,7 +228,7 @@ def reconcile(db, *, at=None):
         return dict(published=True,revision=revision,cells=len(value['cells']),retained_observations=value['global_totals']['retained_observations'],bytes=len(body),provider_requests=0)
 
 
-def read(db, *, at=None, league=None, venue=None, market=None, period=None, resource_guard=None):
+def read(db, *, at=None, league=None, venue=None, market=None, period=None, resource_guard=None, product=False):
     """One compact cohort, with age/authority diagnostics; never recompute it."""
     from . import ordinary_publication as live
     from app.collection.current_policy import DEFAULT
@@ -263,7 +264,23 @@ def read(db, *, at=None, league=None, venue=None, market=None, period=None, reso
             publication_reasons=['waiting_for_publication'],read_revision=None)
         for cell in value['cells']:
             cell['measured']=False
+    if product:
+        from app.comparison.broad_coverage import ratios, totals
+
+        cells = [cell for cell in value['cells'] if cell['venue'] != 'pinnacle']
+        aggregation = value['aggregation']
+        counts = totals(cells, aggregation['outcomes'], aggregation['occurrences'],
+                        aggregation.get('inputs'), aggregation.get('publications'))
+        value.update(cells=cells, total_cells=len(cells), global_totals=counts,
+                     ratios=ratios(counts, 'all captured comparison venue observations'))
+        value['dimensions']['sources'] = [source for source in value['dimensions']['sources'] if source != 'pinnacle']
+        value['source_authority'] = {key: state for key, state in value.get('source_authority', {}).items()
+                                     if key != 'pinnacle'}
+        value['definitions']['comparable_outcomes'] = 'Unique canonical outcomes with at least two comparison venues.'
     value=select(value,league=league,venue=venue,market=market,period=period)
+    if product:
+        value.pop('aggregation', None)
+        value.pop('query_observations', None)
     if row is None:
         value['hidden_by_filter_observations']=None
         for count in (value['global_totals'],value['filtered_totals']):

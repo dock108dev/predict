@@ -57,10 +57,15 @@ class SnapshotMath(TestCase):
             with self.assertRaises(ValueError):assumptions(bad)
 
     def test_rank_includes_zero_negative_and_complete_pages(self):
-        rows=[dict(id=str(i),gross_return_percent=v,start_at='a',game_title='Test',league='NFL',market={}) for i,v in enumerate(['-2','0','3',None])]
+        from tests.test_trade_desk import quote, with_verified_model
+
+        rows=[with_verified_model(quote(str(i), 'novig', value=v), v)
+              for i,v in enumerate(['-2','0','3',None])]
         result=dict(rows=rows,pairs=[],references=[],id='result')
-        self.assertEqual([r['gross_return_percent'] for r in page(result,{'limit':'2'})['rows']],['3','0'])
-        self.assertEqual([r['gross_return_percent'] for r in page(result,{'limit':'2','offset':'2'})['rows']],['-2',None])
+        query = {'metric':'conditional_return_percent', 'limit':'2'}
+        self.assertEqual([r['ranking']['value'] for r in page(result,query)['rows']], ['3','0'])
+        self.assertEqual([r['ranking']['value'] for r in page(result,dict(query,offset='2'))['rows']], ['-2',None])
+        self.assertTrue(all(not r['ranking']['eligible'] for r in page(result,{})['rows']))
 
     def test_grid_does_not_merge_unmatched_outcomes_across_games(self):
         rows=[dict(id=str(i),quote_id=str(i),game_key='game-'+str(i),game_title='Game '+str(i),

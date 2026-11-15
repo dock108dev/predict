@@ -60,7 +60,8 @@ def mount(app,provider):
             from app.storage.coverage_latest import read as coverage_read
             with connect() as db:
                 database_deadline(db)
-                return coverage_read(db,resource_guard=work.guard,**{k:req.query[k] for k in ('league','venue','market','period') if req.query.get(k)})
+                return coverage_read(db, resource_guard=work.guard, product=True,
+                    **{k:req.query[k] for k in ('league','venue','market','period') if req.query.get(k)})
         if view=='readiness':
             from copy import deepcopy
             from app.comparison.scanner_readiness import Selection
@@ -71,8 +72,14 @@ def mount(app,provider):
                 states={v:dict(state='stopped') for v in selected.venues}
             with connect() as db:
                 database_deadline(db)
-                return readiness_read(db,config=deepcopy(provider.config),authority=provider.config.get('authority'),
-                                      at=utc(),selection=selected,source_status=states)
+                readiness = readiness_read(db,config=deepcopy(provider.config),authority=provider.config.get('authority'),
+                                           at=utc(),selection=selected,source_status=states)
+                readiness.pop('reference_sources', None)
+                readiness.pop('references', None)
+                for instrument in readiness.get('instruments', ()):
+                    instrument.get('checks', {})['ev'] = dict(state='unavailable',
+                        reason_codes=['ev_calibration_or_settlement_unverified'])
+                return readiness
         with connect() as db:
             database_deadline(db)
             if view in ('details','inputs') and req.query.get('read_token'):

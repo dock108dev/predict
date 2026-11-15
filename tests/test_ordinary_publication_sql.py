@@ -220,23 +220,22 @@ class OrdinarySQL(LatestBoardFixture):
             snapshots.prune(db)
             self.assertIsNone(db.execute('SELECT id FROM comparison_snapshot_result WHERE id=%s AND read_fragment IS NOT NULL',(member,)).fetchone())
 
-    async def test_held_reference_defers_optional_finance_without_hiding_prices(self):
+    async def test_inactive_legacy_reference_does_not_defer_fee_and_pair_work(self):
         with self.connect() as db:
             self.state.write(self.service,paused_sources=['the_odds_api'])
-            with patch.object(snapshots,'calculate',side_effect=AssertionError('held finance ran')):
-                first=live.turn(db)
-            self.assertEqual(first['finance_deferred_reason'],'reference_source_unavailable')
+            first=live.turn(db)
             self.assertTrue(first['published'])
+            self.assertGreater(first['computed'], 0)
             retained=self.result(db)
             self.assertTrue(retained['rows'])
-            self.assertEqual(retained['publication']['finance'],'pending')
+            self.assertEqual(retained['publication']['finance'],'ready')
+            self.assertTrue(all(row.get('gross_return_percent') is None for row in retained['rows']))
             boundary=min(v for row in retained['rows'] for v in
                 (row['current_authority']['price'].get('current_until'),row['start_at']) if v)
             self.assertEqual(live.status(db)['facts']['next_boundary'],boundary)
             self.assertTrue(live.turn(db)['unchanged'])
             self.state.write(self.service)
-            resumed=live.turn(db)
-            self.assertGreater(resumed['computed'],0)
+            live.turn(db)
             self.assertEqual(self.result(db)['publication']['finance'],'ready')
 
     async def test_reused_root_fragments_equal_full_member_composition(self):
@@ -287,12 +286,14 @@ class OrdinarySQL(LatestBoardFixture):
         self.assertEqual(live.prioritize_current(list(scope),scope,evidence,self.at,material={'changed'}),
                          ['old','changed','confirmation'])
 
-    def test_reference_prioritizes_comparable_native_sport_without_claiming_freshness(self):
+    def test_current_desk_match_prioritizes_native_sport_without_claiming_freshness(self):
         scope={'old':['o'],'native':['n'],'paired':['k','p']}
         evidence=[dict(event_id='n',venue='kalshi',at=self.at.isoformat()),
             dict(event_id='k',venue='kalshi',at=(self.at-timedelta(seconds=2)).isoformat()),
             dict(event_id='p',venue='pinnacle',at=(self.at-timedelta(seconds=30)).isoformat())]
-        self.assertEqual(live.prioritize_current(list(scope),scope,evidence,self.at),['old','paired','native'])
+        self.assertEqual(live.prioritize_current(list(scope),scope,evidence,self.at),['old','native','paired'])
+        self.assertEqual(live.prioritize_current(list(scope),scope,evidence,self.at,
+                                                 desk_matches={'paired'}),['old','paired','native'])
         state=dict(state='budget_delayed',reason_code='aggregate_scope_observed',
             observed_sports={'NBA':'aggregate_observed','NFL':'aggregate_response_invalid'})
         self.assertTrue(live.source_allowed(state,'NBA'))
@@ -348,7 +349,7 @@ class OrdinarySQL(LatestBoardFixture):
         self.state.write(self.service)
         self.fresh_sources()
 
-    async def test_replace_confirmation_evidence_and_reference_only_invalidation(self):
+    async def test_replace_confirmation_evidence_and_exclude_legacy_reference(self):
         with self.connect() as db:
             first=live.turn(db);self.assertTrue(first['published'])
             old=self.result(db);self.assertGreater(len(old['rows']),0)
@@ -373,15 +374,14 @@ class OrdinarySQL(LatestBoardFixture):
             self.assertEqual(updated['original']['value'],'2.91')
             self.assertNotEqual(old['id'],new['id'])
             self.assertEqual(snapshots.current(db,old['id']),old)
-            # Exact reference revision withdrawal, even with no execution change.
-            numeric=next(row for row in new['rows'] if row['current_authority']['references'] and row['gross_return_percent'] is not None)
-            ref=numeric['current_authority']['references'][0]['dependency']
+            # Preserved legacy input cannot determine price visibility or EV.
+            ref=db.execute("SELECT id FROM current_contract WHERE venue='pinnacle' LIMIT 1").fetchone()['id']
             db.execute("UPDATE current_offer SET revision='reference-only-change',facts=jsonb_set(facts,'{original,value}','\"2.99\"') WHERE contract_id=%s",(ref,))
             gated=self.project(db,new)
-            row=next(r for r in gated['rows'] if r['id']==numeric['id'])
+            row=next(r for r in gated['rows'] if r['id']==updated['id'])
             self.assertTrue(row['price_current'])
             self.assertIsNone(row['gross_return_percent'])
-            self.assertIn('input_replaced_or_removed',row['current_reasons'])
+            self.assertNotIn('input_replaced_or_removed',row['current_reasons'])
 
     async def test_prices_survive_finance_failure_and_retry(self):
         with self.connect() as db:
@@ -416,10 +416,10 @@ class OrdinarySQL(LatestBoardFixture):
             self.at+=timedelta(seconds=1);self.state.write(self.service);self.fresh_sources()
             prices=live.prices
 
-            def price_failure(inputs, settings):
+            def price_failure(inputs, settings, **kwargs):
                 if any(affected(r) for r in inputs['quotes']):
                     raise ValueError('fixture component capture failure')
-                return prices(inputs,settings)
+                return prices(inputs,settings,**kwargs)
 
             with patch.object(live,'prices',side_effect=price_failure):
                 turn=live.turn(db)
@@ -672,13 +672,14 @@ class OrdinarySQL(LatestBoardFixture):
         with self.connect() as db:
             live.turn(db);result=self.result(db)
             projected=self.project(db,result)
-            chosen=next(r for r in projected['rows'] if r['price_current'] and r['gross_return_percent'] is not None)
+            chosen=next(r for r in projected['rows'] if r['price_current'])
             row=next(r for r in result['rows'] if r['id']==chosen['id'])
+            row['gross_return_percent']='2'
             row['conditional_return_percent']='1'
             row['current_authority']['fee_until']=(self.at+timedelta(seconds=1)).isoformat()
             original=deepcopy(row['times']);self.at+=timedelta(seconds=2);self.state.write(self.service)
             expired=next(r for r in self.project(db,result)['rows'] if r['id']==row['id'])
-            self.assertIsNotNone(expired['gross_return_percent'])
+            self.assertEqual(expired['gross_return_percent'], '2')
             self.assertIsNone(expired['conditional_return_percent'])
             self.assertEqual(expired['times'],original)
 
@@ -822,7 +823,7 @@ class OrdinarySQL(LatestBoardFixture):
                     self.assertEqual({k:v for k,v in actual.items() if k not in ignored},{k:v for k,v in complete.items() if k not in ignored})
                     money=snapshots.unpack(saved['result']);complete.update(id=actual['id'],capture_seconds=actual['capture_seconds'])
                     with patch.object(snapshots,'utc',return_value=money['calculated_at']):
-                        expected=live.bind(snapshots.calculate(complete,money['assumptions']),complete,'ready')
+                        expected=live.bind(snapshots.calculate(complete,money['assumptions'],product=True),complete,'ready')
                     expected['id']=money['id']
                     self.assertEqual(money,expected)
                 self.assertEqual(db.execute('SELECT result FROM comparison_snapshot_result WHERE id=%s',(original,)).fetchone()['result'],pinned)

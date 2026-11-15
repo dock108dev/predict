@@ -220,6 +220,7 @@ def run(browser, width, output):
     expect(tab.locator("#trade")).to_contain_text("Winning settlement")
     expect(tab.locator("#trade")).to_contain_text("Fee if it loses")
     tab.keyboard.press("Escape")
+    expect(tab.locator("#trade")).to_be_hidden()
     expect(commission).to_be_focused()
     card.press("Enter")
     drawer = tab.locator("#trade")
@@ -228,13 +229,12 @@ def run(browser, width, output):
     expect(drawer).to_contain_text("$0.01")
     tab.locator("#latest").press("Enter")
     expect(drawer).to_contain_text("$0.00")
-    expect(drawer).to_contain_text("8 decimal")
+    expect(drawer.locator(".inspection-tiles")).not_to_contain_text("8 decimal")
     assert drawer.evaluate("(el) => el.scrollWidth <= el.clientWidth")
     drawer.screenshot(path=output / f"ev-drawer-{width}.png")
     tab.goto(base + "/arbs")
-    expect(tab.get_by_text("Modeled return after fees")).to_be_visible()
-    expect(tab.get_by_text("Unavailable", exact=True)).to_be_visible()
-    expect(tab.locator(".opportunity-arb").first).not_to_contain_text("$10.17")
+    expect(tab.get_by_text("Completed-game return after fees").first).to_be_visible()
+    expect(tab.locator(".opportunity-arb").first).to_contain_text("$10.17")
     inspect = tab.get_by_role("button", name="View payoff calculation ↗").first
     inspect.press("Enter")
     expect(drawer).to_contain_text("$44.44")
@@ -250,7 +250,7 @@ def run(browser, width, output):
     expect(tab.locator("#fee-census")).to_contain_text("3 of 4 current offers")
     expect(tab.locator("#fee-census")).to_contain_text("5 working prices unpublished")
     expect(tab.locator("#fee-census")).to_contain_text(
-        "Sportsbook EV estimates before fees"
+        "Indicative sportsbook estimates"
     )
     expect(tab.locator("#fee-census")).to_contain_text(
         "The full provider offer count is unknown"
@@ -261,13 +261,10 @@ def run(browser, width, output):
     tab.clock.install()
     tab.goto(base + "/admin?section=fees")
     expect(tab.locator("#admin-fee-census")).to_contain_text(
-        "Exact Pinnacle references"
+        "Indicative sportsbook estimates"
     )
     expect(tab.locator("#admin-fee-census")).to_contain_text(
-        "Sportsbook EV estimates before fees"
-    )
-    expect(tab.locator("#admin-fee-census")).to_contain_text(
-        "0 reviewed fees · 1 conservative"
+        "2 before fees · 1 conservative after fees"
     )
     schedules = tab.locator("#other-public-fee-schedules")
     expect(schedules).to_contain_text("Market terms verified · PDF recheck unavailable")

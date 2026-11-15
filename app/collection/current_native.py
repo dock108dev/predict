@@ -1865,6 +1865,7 @@ class NativeWorker:
             finally:
                 self.synchronization.revoke(self.synchronization.reason or 'disconnected')
                 self.metrics['stream_connected']=False
+                self.metrics['stream_cleanup_stage']='receiver'
                 self.invalidation_boundary=False
                 self.metrics['processing_inflight_frames']=0
                 self.metrics['processing_received_at']=None
@@ -1875,15 +1876,19 @@ class NativeWorker:
                 self.retired_subscription_ids=[]
                 if receiver:await receiver.close()
                 self.receiver=None
+                self.metrics['stream_cleanup_stage']='reconstruction'
                 if reconstruction:await reconstruction.close()
+                self.metrics['stream_cleanup_stage']='publication'
                 if self.publication_handle:self.publication_handle.cancel()
                 self.publication_handle=None;self.withdraw_pending(list(self.pending_books),'resync')
                 if self.publication_task and not self.publication_task.done():
                     self.publication_task.cancel()
                     await asyncio.gather(self.publication_task,return_exceptions=True)
+                self.metrics['stream_cleanup_stage']='socket'
                 if self.socket:
                     await self.socket.close()
                     self.socket = None
+                self.metrics['stream_cleanup_stage']='closed'
             if rotation_due:
                 self.priority_cursor=getattr(self,'priority_cursor',0)+1
                 self.metrics['subscription_rotations']=self.metrics.get('subscription_rotations',0)+1

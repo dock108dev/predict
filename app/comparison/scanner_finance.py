@@ -8,13 +8,13 @@ from fractions import Fraction as F
 from itertools import product
 
 from .current_dependencies import digest, instant, references
-from .estimated_pair import (Leg, economics, joint_basis, native_key, probabilities,
+from .estimated_pair import (Leg, economics, joint_basis, native_key,
                              expected, EXPOSURE_FLOOR, MIN_SHARE, MAX_NATIVE)
 from .estimated_policy import DEFAULT_POLICY, buffer_usd
 from .net_costs import wire
 from .calculation_control import checkpoint
 
-VERSION = 'predict-scanner-evaluator-2'
+VERSION = 'predict-scanner-evaluator-3'
 MAX_POINTS = 16
 MAX_EVALUATIONS = MAX_POINTS ** 2
 CATEGORIES = ('covered_outcome_arb', 'conditional_hedge', 'ev')
@@ -179,7 +179,8 @@ def evaluate(pair, instruments, inputs, *, at, policy=DEFAULT_POLICY):
         if native:
             legs.append(scanner_native.Leg(x, instant(at), policy=policy))
         else:
-            legs.append(Leg(x['quote'], x['group'], x['profiles'], x['event'], instant(at), policy=policy))
+            legs.append(Leg(x['quote'], x['group'], x['profiles'], x['event'], instant(at), policy=policy,
+                            resolve_reference=False))
     if len({x.q['venue'] for x in legs}) != 2 or legs[0].sign == legs[1].sign:
         raise ValueError('scanner_distinct_opposing_execution_legs_required')
     keys = [(x.q['venue'], x.q['source']['provider'], *native_key(x.q)[1:4]) for x in legs]
@@ -199,10 +200,7 @@ def evaluate(pair, instruments, inputs, *, at, policy=DEFAULT_POLICY):
         if valid and counts[index]>MAX_POINTS:
             points[index] = sorted(set(points[index][:MAX_POINTS//2] + points[index][-2:] + valid[:MAX_POINTS//2-2]))
     best = {}; evaluations = 0; any_valid = False; cashflows_complete = complete
-    # References and their settlement partition are quantity independent.
-    probs, weight, reason = (None,None,None) if native else probabilities(legs, basis, policy)
-    conditional = None if weight is None else dict(a_wins=weight,b_wins=1-weight)
-    ev_current = any(instruments[k]['checks']['ev']['state'] == 'ready' for k in pair['legs'])
+    # The scanner's archived reference profile cannot qualify a product EV.
     # Leg caches retain bounded scalars only. State algebra uses existing owners.
     for qs in product(*points):
         checkpoint(); evaluations += 1
@@ -217,12 +215,9 @@ def evaluate(pair, instruments, inputs, *, at, policy=DEFAULT_POLICY):
         capital, states = scanner_native.cashflows(legs, components) if native else economics(components, basis, _profit_only=True)
         cashflows_complete = cashflows_complete and all(s['profit_usd'] is not None for s in states.values())
         values, categories = _classify_raw(states, capital, policy=policy, settlement_complete=complete,
-            probabilities=probs, conditional_probabilities=conditional, ev_current=ev_current,
-            equality_feasible=equality_feasible)
+                                          equality_feasible=equality_feasible)
         if _needs_provisional_format(values, categories):
-            classify(states, capital, policy=policy, settlement_complete=complete,
-                probabilities=probs, conditional_probabilities=conditional, ev_current=ev_current,
-                equality_feasible=equality_feasible)
+            classify(states, capital, policy=policy, settlement_complete=complete, equality_feasible=equality_feasible)
         for key, metric, _, _ in categories:
             old = best.get(key)
             # Preserve the previous wire-roundtrip score, including terminating
@@ -236,8 +231,7 @@ def evaluate(pair, instruments, inputs, *, at, policy=DEFAULT_POLICY):
     for key, (score, states, qs, components) in sorted(best.items()):
         capital = score[1]
         metrics, categories = classify(states, capital, policy=policy, settlement_complete=complete,
-            probabilities=probs, conditional_probabilities=conditional, ev_current=ev_current,
-            equality_feasible=equality_feasible)
+                                       equality_feasible=equality_feasible)
         category = next(value for value in categories if value['category'] == key)
         allocation = [dict(native_key=list(native_key(x.q)), predicate=deepcopy(x.q['binding']['selection']),
             native_quantity=wire(n), native_unit=x.unit.unit, grid=x.grid,

@@ -18,14 +18,14 @@ PRODUCTS = {
         url='https://support.novig.com/en/articles/16195057-fees-on-novig',
         reference='app/fixtures/novig-fees-review-20261110.html', tag='article',
         reference_sha256='0a76bf94c8d806c6ef6c5956ca64eaf6c59946b588f89deceec4ae99d6b1a422',
-        phase='scheduled', method='direct official HTML; complete normalized article text'),
+        phase='scheduled', method='direct official HTML; complete normalized article text',
+        alternate_receipt='app/fixtures/novig-pregame-fees-review-20261115.json',
+        alternate_receipt_sha256='a6a61f9ec8fcc42ad9eef70f419e59155630f955479fc67a104627243159a323'),
     'polymarket_us:standard_sports': dict(venue='polymarket_us', product='standard_sports',
         url='https://docs.polymarket.us/fees', reference='app/fixtures/polymarket-us-fees-review-20261110.html',
         tag='main', phase=None, method='direct official HTML; complete normalized page text',
-        review_receipt='app/fixtures/polymarket-us-standard-fees-review-20261111.json',
-        review_receipt_sha256='1add70fd37fe03a06e09546a47d97197a4d83443e267e7f7259366c1aafc6ae4',
-        alternate_receipt='app/fixtures/polymarket-us-standard-fees-review-20261112.json',
-        alternate_receipt_sha256='fe99296cc172ed943611aec3088930fb5f3417710d8a84a36e4ff795681123cc'),
+        review_receipt='app/fixtures/polymarket-us-standard-fees-review-20261115.json',
+        review_receipt_sha256='645f15c05e04f7a51d053bf6e33d03eb9ae7007a1a365a03ded5abb3bc550722'),
     'kalshi:exchange': dict(venue='kalshi', product='exchange',
         url='https://kalshi.com/docs/kalshi-fee-schedule.pdf',
         reference='app/fixtures/kalshi-fees-review-20261110.json', tag=None,
@@ -71,8 +71,10 @@ def _receipt(path, digest, url):
             or not all(re.fullmatch('[0-9a-f]{64}', receipt[key])
                        for key in ('body_sha256', 'normalized_sha256'))):
         raise ValueError('reviewed_receipt_invalid')
-    return receipt['normalized_sha256'], dict(path=path, sha256=digest,
-        retrieved_at=stamp(receipt['retrieved_at']).isoformat())
+    evidence = dict(path=path, sha256=digest, retrieved_at=stamp(receipt['retrieved_at']).isoformat())
+    if published := receipt.get('published_effective_from'):
+        evidence['published_effective_from'] = published
+    return receipt['normalized_sha256'], evidence
 
 
 def approved(key):
@@ -153,6 +155,8 @@ def for_offer(states, row, at, *, fallback=None):
     result.update(reviewed_at=verified['verified_at'], review_before=verified['review_before'],
         schedule_revision=revision(state), verification_revision=verified['revision'],
         retrieval=retrieval, review_basis=_review_basis(verified), product=approval['product'])
+    if published := (retrieval.get('reviewed_receipt') or {}).get('published_effective_from'):
+        result.update(published_effective_from=published, published_version='November 14 standard taker tiers')
     if standing:
         result.update(standing_public_terms=True, recheck_due_at=verified['recheck_due_at'],
                       verification_scope=verified['verification_scope'])

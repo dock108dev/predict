@@ -1,0 +1,9 @@
+{
+  "source_url": "https://docs.polymarket.us/fees",
+  "retrieved_at": "2026-11-15T07:24:51.475105+00:00",
+  "body_sha256": "da66cb73f40d40a89a3bfd4b54852d783819af6487d97c1277781c8902210f15",
+  "normalized_sha256": "330f4f1369d79239e58875357d78e5f66e847835afcb3cbfedfdf49f47c01132",
+  "body_bytes": 320144,
+  "review": "The official terms now state November 14 at midnight Eastern. Standard taker tiers and the contract-price fee formula remain applicable. The highest standard tier at insertion, half-even rounding, cumulative order cap and zero rebates support a conservative standard immediate-fill scenario. The new account window, actual account tier and overrides, rebates and combo fees are outside this model.",
+  "published_effective_from": "2026-11-14T05:00:00Z"
+}

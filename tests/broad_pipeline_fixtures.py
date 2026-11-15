@@ -48,7 +48,7 @@ def partial_case(sport, family, period, token, *, clock=None):
 async def captured_partial(case, venue):
     """Exact typed metadata ingress, independent of auto-discovery settings."""
     sport,family,period=case['league'],case['family'],case['period']
-    owner,_=worker(venue,[sport],[family]);fake_discovery(owner,[case])
+    owner,_=worker(venue,[sport],[family]);fake_discovery(owner,[case],received_at=case['clock'])
     owner._coverage_sport=sport;owner._coverage_checked=set()
     if venue=='kalshi':
         selector=selectors_for(f'{sport}/{period}/{family}')[0]
@@ -73,7 +73,7 @@ async def captured_core_matrix(clock=None):
            for sport in SPORTS for family in FAMILIES]
     rows=[];books=[]
     for venue in ('kalshi','polymarket_us'):
-        owner,published=worker(venue);fake_discovery(owner,cases);await owner.discover()
+        owner,published=worker(venue);fake_discovery(owner,cases,received_at=clock);await owner.discover()
         source_books=[current_book(case,venue,clock=clock) for case in cases]
         captured,excluded=normalize(dict(id='authored-joint-'+venue,
             record=dict(source=venue,value=dict(inventory=published[-1]))),

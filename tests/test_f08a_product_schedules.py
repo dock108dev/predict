@@ -73,8 +73,9 @@ def test_polymarket_standard_review_is_independent(monkeypatch):
     prior_spec = {k: v for k, v in products.PRODUCTS[key].items()
                   if not k.startswith(('review_receipt', 'alternate_receipt'))}
     reviewed = products.approved(key)
-    assert reviewed['normalized_sha256'] == '90ee55153cac932effbf2264334b0d3f66d6c7eb00e8e4b2fdacd9c2c8fc2495'
-    assert reviewed['alternate_normalized_sha256'] == 'e917d96f8837da45d22d1d4a904652ccfa0dc3cc7bb1390fe8c562088727df18'
+    assert reviewed['normalized_sha256'] == '330f4f1369d79239e58875357d78e5f66e847835afcb3cbfedfdf49f47c01132'
+    assert reviewed['reviewed_receipt']['published_effective_from'] == '2026-11-14T05:00:00Z'
+    assert 'alternate_normalized_sha256' not in reviewed
     assert attempt(key,body)['review_required']['reason']=='public_product_schedule_changed'
     with monkeypatch.context() as historical:
         historical.setitem(products.PRODUCTS, key, prior_spec)
@@ -95,21 +96,21 @@ def test_polymarket_standard_review_is_independent(monkeypatch):
     assert 'product' not in products.for_offer({key:verified},{'venue':'novig'},AT)
 
 
-def test_polymarket_review_accepts_only_both_complete_approved_variants(monkeypatch):
-    key = 'polymarket_us:standard_sports'
+def test_novig_review_accepts_only_both_complete_approved_variants(monkeypatch):
+    key = 'novig:pregame_straight'
     body = (ROOT / products.PRODUCTS[key]['reference']).read_bytes()
-    alternate = body.replace(b'</main>', b'<p>Second reviewed complete page.</p></main>', 1)
-    unknown = body.replace(b'</main>', b'<p>Unreviewed economics change.</p></main>', 1)
+    alternate = body.replace(b'</article>', b'<p>Second reviewed complete page.</p></article>', 1)
+    unknown = body.replace(b'</article>', b'<p>Unreviewed economics change.</p></article>', 1)
     reviewed = products.approved(key)
     def normalized_digest(html):
-        return sha256(products.normalized(html, 'main').encode()).hexdigest()
+        return sha256(products.normalized(html, 'article').encode()).hexdigest()
 
     fixture = dict(reviewed, normalized_sha256=normalized_digest(body),
                    alternate_normalized_sha256=normalized_digest(alternate))
     monkeypatch.setattr(products, 'approved', lambda _: fixture)
     original = attempt(key, body)
     second = attempt(key, alternate, state=original, at=AT + timedelta(hours=6))
-    assert original['last_attempt']['retrieval']['reviewed_receipt'] == reviewed['reviewed_receipt']
+    assert 'reviewed_receipt' not in original['last_attempt']['retrieval']
     assert second['last_attempt']['retrieval']['reviewed_receipt'] == reviewed['alternate_reviewed_receipt']
     assert second['last_attempt']['state'] == 'unchanged_verified'
     changed = attempt(key, unknown, state=second, at=AT + timedelta(hours=12))
@@ -123,7 +124,7 @@ def test_prospective_polymarket_review_reaches_current_ordinary_offers(monkeypat
 
     key = 'polymarket_us:standard_sports'
     body = (ROOT / products.PRODUCTS[key]['reference']).read_bytes()
-    changed_at = stamp('2026-11-11T22:25:38+00:00')
+    changed_at = stamp('2026-11-15T07:00:00+00:00')
     renewed_at = changed_at + timedelta(hours=3)
     prior = attempt(key, body, at=changed_at)
     assert prior['last_attempt']['state'] == 'review_required'

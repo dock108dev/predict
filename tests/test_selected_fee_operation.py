@@ -317,12 +317,16 @@ class StopOwnerTests(unittest.IsolatedAsyncioTestCase):
         service=SimpleNamespace(runtime_id='fixture-runtime',workers={'kalshi':worker},dispatch=True,
             globally_stopped=False,ingress=SimpleNamespace(revoke=Mock()),cleanup_errors=[])
         async def close():service.dispatch=False;worker.closed=True
-        service.close=close;runtime=DataRuntime(service=service);runtime.persist=Mock();runtime.persist_control=AsyncMock()
+        db = Mock()
+        service.close=close;runtime=DataRuntime(service=service, connector=Mock(return_value=db))
+        runtime.persist=Mock();runtime.persist_control=AsyncMock()
         runtime.selected_fees=SimpleNamespace(stop=AsyncMock(return_value=False))
         runtime.state=Mock()
         runtime.state.pending.return_value=[dict(id='fixture-command',runtime_id='fixture-runtime',action='stop',body={})]
         runtime.state.acknowledge.side_effect=lambda *args,**kwargs:runtime.stopping.set()
         await runtime.commands()
+        runtime.state.pending.assert_called_once_with(db)
+        db.close.assert_called_once_with()
         self.assertFalse(service.dispatch);self.assertTrue(worker.closed)
         args,kwargs=runtime.state.acknowledge.call_args
         self.assertTrue(kwargs['failed']);self.assertEqual(args[1]['error'],'cleanup_safety_unresolved')

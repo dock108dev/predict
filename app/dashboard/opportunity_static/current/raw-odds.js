@@ -1,6 +1,6 @@
 import { capturedCalculation } from "/view/current/raw-result-view.js";
 const $=id=>document.getElementById(id);
-const venues={kalshi:'Kalshi',polymarket_us:'Polymarket US',novig:'Novig',prophetx:'ProphetX',pinnacle:'Pinnacle · Reference'};
+const venues={kalshi:'Kalshi',polymarket_us:'Polymarket US',novig:'Novig',prophetx:'ProphetX'};
 const labels={synchronized:'Synchronized',delayed:'Delayed',last_known:'Last-known',unqualified:'Unqualified',aggregate:'Scheduled refresh'};
 let frame=null,offset=0,busy=false,generation=0,selection=null,opener=null,lastRows=new Map();
 const timing=[];let lastDelivery=null;

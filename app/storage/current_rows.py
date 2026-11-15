@@ -20,7 +20,7 @@ MAX_RECORDS=32768
 MAX_RECORD_BYTES=128*1024
 LOCK=901095
 MAX_PIPELINE_COMMANDS=128
-EVENT_FIELDS=('id','sport','competition','season','stage','scheduled_start','home','away','participants','title',
+EVENT_FIELDS=('id','sport','competition','season','stage','scheduled_start','schedule_status','previous_starts_at','home','away','participants','title',
     'status','state','shared_provider_ids','game_number','original_start','replacement_game_id','neutral_venue','source_participant_roles','native_role_evidence','current_occurrence_binding','observed_identity_facts','occurrence_conflict','conflicting_duplicate','schedule_metadata','schedule_conflict')
 
 _NATIVE_BOOK_JOIN='''FROM current_contract_storage c
@@ -48,7 +48,7 @@ def event_retention(event,quote,at):
     from app.comparison.game_phase import price_phase
     phase=price_phase(event,quote,at)
     start=datetime.fromisoformat(event['scheduled_start'].replace('Z','+00:00'))
-    if phase['state'] in ('live','suspended','final'):
+    if phase['state'] in ('live','suspended','final','cancelled'):
         return exact_time((start+timedelta(hours=24)).isoformat())
     return exact_time(event['scheduled_start'])
 
@@ -752,5 +752,16 @@ class CurrentRowStore:
             b.state,b.sync,b.sequence,b.is_current '''+_NATIVE_BOOK_JOIN+'''
             AND c.venue IN ('kalshi','polymarket_us') AND (%s::text[] IS NULL OR c.id=ANY(%s))
             ORDER BY c.id''',(contract_ids,contract_ids))}
+
+    def native_top_asks(self, contract_ids):
+        """Capture one exact displayed-ask level from each linked current book."""
+        if not contract_ids:
+            return {}
+        return {row['id']:row for row in self.db.execute('''SELECT c.id,
+            b.id AS book_id,b.revision,b.received_at,b.quantity_units,
+            d.levels->0->>0 AS price,d.levels->0->>2 AS quantity '''+_NATIVE_BOOK_JOIN+'''
+            AND c.id=ANY(%s) AND b.is_current AND b.state='active' AND b.sync='synchronized'
+            AND b.quantity_units='contracts' AND c.venue IN ('kalshi','polymarket_us')''',
+            (list(contract_ids),)) if row['price'] is not None and row['quantity'] is not None}
 
     def records(self):return self.capture()['records']

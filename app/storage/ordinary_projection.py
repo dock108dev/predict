@@ -2,6 +2,7 @@
 from . import comparison_snapshot as snapshots
 from .store import stamp
 from app.comparison.display_identity import canonical_key
+from app.comparison.game_phase import scheduled_phase, sporting_clock
 from app.fees import product_schedules, schedule_lifecycle
 from app.fees.evidence import applies
 from app.comparison.sgo_reference import BEST_BOOKS, BEST_VERSION
@@ -150,9 +151,13 @@ def price_reasons(row, current, owner, states, *, at, epoch, publication_epoch, 
     if row.get('publication_epoch', publication_epoch) != epoch:
         reasons.append('input_epoch_replaced')
     provider = auth.get('provider') or row.get('source', {}).get('provider')
-    aggregate_provider = owner.get('config', {}).get('aggregate_provider', 'the_odds_api')
+    config = owner.get('config', {})
+    aggregate_provider = config.get('aggregate_provider', 'the_odds_api')
     if provider in ('the_odds_api', 'sportsgameodds') and provider != aggregate_provider:
         reasons.append('aggregate_provider_replaced')
+    if (row['venue'] in owner.get('paused_sources', ())
+            or provider in ('the_odds_api', 'sportsgameodds') and config.get('aggregate_enabled') is False):
+        reasons.append('updates_stopped')
     state = states.get(provider if provider in ('sportsgameodds', ODDSLINK) else row['venue'], {})
     if provider == ODDSLINK and (not allowed(owner) or 'prophetx' in owner.get('paused_sources', ())):
         reasons.append('updates_stopped')
@@ -167,8 +172,82 @@ def price_reasons(row, current, owner, states, *, at, epoch, publication_epoch, 
     return reasons
 
 
+def event_owners(db, rows, *, at):
+    """Read sporting authority even when its most recent market was withdrawn."""
+    from app.collection.oddslink_prophetx import SOURCE as ODDSLINK, live_occurrences
+    from .store import hashed
+
+    event_ids = {hashed([source['provider'], source['native_event_id']])
+                 for row in rows if (source := row.get('source')) and source.get('provider')
+                 and source.get('native_event_id')}
+    if not event_ids:
+        return {}
+    current = {}
+    native_live = {}
+    for row in db.execute('SELECT provider,native_event_id,facts FROM current_event WHERE id=ANY(%s)',
+                          (list(event_ids),)):
+        event = row['facts']
+        if row['provider'] == ODDSLINK and (event.get('status') or {}).get('live') is True:
+            league = event['competition']
+            if league not in native_live:
+                native_live[league] = live_occurrences(db, league, at)
+            if (stamp(event['scheduled_start']), event['home'], event['away']) not in native_live[league]:
+                event = dict(event, status=dict(status='unknown'))
+        current[(row['provider'], row['native_event_id'])] = event
+    return current
+
+
+def occurrence_key(row):
+    return row['game_key'], stamp(row['start_at'])
+
+
+def current_events(rows, events, at):
+    """Resolve explicit withdrawals across the same bound occurrence and start."""
+    resolved, blocked = {}, {}
+    for row in rows:
+        source = row.get('source') or {}
+        key = (source.get('provider'), source.get('native_event_id'), row['start_at'])
+        if key not in resolved:
+            event = events.get(key[:2])
+            latest = None
+            if event:
+                if stamp(event['scheduled_start']) != stamp(row['start_at']):
+                    latest = dict(state='unknown', reason='event_schedule_replaced', basis='current_source_schedule')
+                else:
+                    latest = dict(scheduled_phase(event, at), observed_at=sporting_clock(event))
+            resolved[key] = latest
+        published = row['current_authority']['price'].get('lifecycle', {})
+        state = resolved[key] or published
+        if state.get('state') in ('final', 'cancelled', 'suspended'):
+            blocked[occurrence_key(row)] = state
+    return resolved, blocked
+
+
+def published_phase(row, at, latest, blocked, *, event_replaced=False):
+    captured = row['current_authority']['price'].get('lifecycle') or {}
+    start = stamp(row['start_at'])
+    if blocked:
+        return blocked
+    if latest and latest.get('reason'):
+        return latest
+    if captured.get('reason'):
+        return captured
+    if start > at:
+        if latest and latest['state'] == 'scheduled':
+            return latest
+        if not event_replaced and captured.get('state', 'scheduled') == 'scheduled':
+            return dict(state='scheduled', reason=None, basis=captured.get('basis'))
+    elif (captured.get('state') == 'live' and not event_replaced
+          and (latest is None or latest['state'] == 'live'
+               or captured.get('basis') == 'post_start_market_update' and latest['basis'] == 'source_state_absent')):
+        return dict(captured, **({'observed_at': latest['observed_at']}
+                                if latest and latest.get('observed_at') else {}))
+    return dict(state='unknown', reason='post_start_game_state_unverified' if start <= at
+                else 'event_schedule_unverified', basis='no_current_occurrence_evidence')
+
+
 def project(result, current, owner, states, *, at, policy, epoch, settings=None, sportsbook_frames=(),
-            current_desk=False, retain_sportsbook_ev=False):
+            current_desk=False, retain_sportsbook_ev=False, event_facts=None):
     """Fail-closed rank withdrawal; no reference/fee/math is recomputed here."""
     from app.comparison.snapshot_fee_outcome import EXPIRED, unavailable
     from app.comparison.sgo_sportsbook_baseline import current as sportsbook_current
@@ -200,6 +279,7 @@ def project(result, current, owner, states, *, at, policy, epoch, settings=None,
     fee_state = owner.get('fee_lifecycle')
     product_states = owner.get('fee_products') or {}
     current_fee_revision = schedule_lifecycle.revision(fee_state)
+    event_states, blocked_occurrences = current_events(result['rows'], event_facts or {}, at)
     for original in result['rows']:
         row = dict(original)
         auth = row['current_authority']
@@ -207,20 +287,25 @@ def project(result, current, owner, states, *, at, policy, epoch, settings=None,
         reasons = ((common if current_desk else []) or
                    price_reasons(row, current, owner, states, at=at, epoch=epoch,
                                  publication_epoch=result['publication']['epoch'], common=common))
-        lifecycle=auth['price'].get('lifecycle',{})
         start = stamp(row['start_at'])
-        started = at >= start
         actual = current.get(auth['price'].get('dependency'))
         expected = auth['price'].get('expected')
         event_replaced = bool(actual and expected and actual[2] != expected[2])
-        row['game_state']=lifecycle.get('state','scheduled' if not started else 'unknown')
-        if (started or event_replaced) and row['game_state'] == 'scheduled':
-            row['game_state'] = 'unknown'
+        source = row.get('source') or {}
+        latest = event_states[(source.get('provider'), source.get('native_event_id'), row['start_at'])]
+        lifecycle = published_phase(row, at, latest, blocked_occurrences.get(occurrence_key(row)),
+                                    event_replaced=event_replaced)
+        if lifecycle.get('reason'):
+            reasons = [*reasons, lifecycle['reason']]
+        row['game_state']=lifecycle['state']
+        row['game_state_reason']=lifecycle.get('reason')
         row['game_state_basis']=lifecycle.get('basis')
+        row['game_state_observed_at']=lifecycle.get('observed_at')
         row['price_current'] = not reasons
         if current_desk and reasons:
             # The live desk still needs phase and identity for its scoped
             # counts and permalinks. It will never present these rows.
+            row['current_reasons'] = sorted(set(reasons))
             out['rows'].append(row)
             continue
         row['price_reasons'] = sorted(set(reasons))

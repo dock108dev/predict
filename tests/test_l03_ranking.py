@@ -7,10 +7,11 @@ from unittest import TestCase
 from app.dashboard.snapshot_api import page
 from app.dashboard.snapshot_display import outcome_key
 from app.comparison.snapshot_fee_scope import RANKING_BASIS
+from tests.test_trade_desk import with_verified_model
 
 
 def source(outcome, venue, value, *, estimate=None):
-    return dict(id=f'{outcome:05}-{venue}', game_key=f'game-{outcome:05}', game_title=f'Game {outcome}',
+    row = dict(id=f'{outcome:05}-{venue}', game_key=f'game-{outcome:05}', game_title=f'Game {outcome}',
         venue=venue, start_at='2026-11-06T12:00:00Z', league='NFL',
         market=dict(market='winner',period='full_game',line=None),
         selection=dict(predicate='win',participant='NFL:BAL',result_interpretation='normal_win'),
@@ -22,6 +23,7 @@ def source(outcome, venue, value, *, estimate=None):
         conservative_trade_benchmark=dict(available=estimate is not None,ranking_basis=RANKING_BASIS,ranking_eligible=False),
         metric_status=dict(after_trade_fee_ev=dict(state='available' if value is not None else 'unavailable'),
                            conservative_trade_fee_ev=dict(state='available' if estimate is not None else 'unavailable')))
+    return with_verified_model(row, value) if value is not None else row
 
 
 def result(rows):
@@ -65,7 +67,9 @@ class GroupedLiveRanking(TestCase):
         self.assertEqual([g['score'] for g in p['rows']],['0','-1',None,None,None,None])
         self.assertEqual(p['unranked_count'],4)
         e=page(result(rows),dict(group='outcome',metric='conservative_return_percent'))
-        self.assertEqual(e['rows'][0]['score'],'80');self.assertEqual(e['ranking']['basis'],'conservative_public_schedule_estimate')
+        self.assertTrue(all(g['score'] is None for g in e['rows']))
+        self.assertEqual(e['rows'][0]['quotes'][0]['conservative_return_percent'],'80')
+        self.assertEqual(e['ranking']['basis'],'conservative_public_schedule_estimate')
 
     def test_identity_and_native_instruments_preserved(self):
         a=source(0,'novig','1');b=deepcopy(a);b['id']='distinct-native';b['source']={'native_market_id':'other'}

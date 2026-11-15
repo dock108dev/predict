@@ -4,9 +4,10 @@ const path=require('node:path');
 require('./ev07_dom.cjs');
 (async()=>{
  const {capturedCalculation}=await import(pathToFileURL(path.resolve('app/dashboard/opportunity_static/current/raw-result-view.js')));
- const record={view:'ev',calculated_at:'2026-10-29T01:30:00Z',captured_inputs:[{venue:'novig',selection:{participant:'Arizona',signed_line:'5.5'},original:{value:'1.70',units:'decimal_odds'},times:{source_at:'original-clock'}}],result:{probability_missing:'exact_pinnacle_opposition_unavailable',conservative_trade_benchmark:{reason:'modeled_winner_basis_expired_or_not_effective'}}};
+ const record={view:'ev',calculated_at:'2026-10-29T01:30:00Z',captured_inputs:[{venue:'novig',selection:{participant:'Arizona',signed_line:'5.5'},original:{value:'1.70',units:'decimal_odds'},times:{source_at:'original-clock'}}],result:{probability_missing:'eligible_reference_unavailable',conservative_trade_benchmark:{reason:'modeled_winner_basis_expired_or_not_effective'}}};
  const before=JSON.stringify(record);let root=capturedCalculation(record);
- assert(root.textContent.includes('No complete Pinnacle pair for this exact event, outcome and line.'));
+ assert(root.textContent.includes('No eligible pair for this exact event, outcome and line.'));
+ assert.doesNotMatch(root.textContent, /Pinnacle/);
  assert(root.textContent.includes('outside its applicability interval'));
  assert(root.textContent.includes('1.70 decimal odds · Source original-clock'));
  assert(!root.textContent.includes('0.00%'));assert.equal(JSON.stringify(record),before);

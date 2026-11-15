@@ -1,10 +1,10 @@
 // Captured overlays never grant current eligibility, even if the saved row did.
 import { numeric, percent } from './board-values.js';
 const words = value => String(value || 'Unknown').replaceAll('_', ' ');
-const venue = value => ({kalshi:'Kalshi',polymarket_us:'Polymarket US',novig:'Novig',prophetx:'ProphetX',pinnacle:'Pinnacle'}[value] || value);
+const venue = value => ({kalshi:'Kalshi',polymarket_us:'Polymarket US',novig:'Novig',prophetx:'ProphetX'}[value] || value);
 const gap = reason => ({
-  exact_pinnacle_opposition_unavailable:'No complete Pinnacle pair for this exact event, outcome and line.',
-  exact_native_reference_pair_absent:'No complete Pinnacle pair for this native outcome and exact line.',
+  eligible_reference_unavailable:'No eligible pair for this exact event, outcome and line.',
+  exact_native_reference_pair_absent:'No eligible pair for this native outcome and exact line.',
   estimate_source_clock_unknown:'The source has not supplied a usable price timestamp.',
   modeled_winner_basis_expired_or_not_effective:'The captured outcome model is outside its applicability interval.',
   conditional_fee_review_expired_or_not_effective:'The captured fee review is outside its applicability interval.',

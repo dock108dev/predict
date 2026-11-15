@@ -356,7 +356,7 @@ def probability(row,settings,at):
     except (ValueError,KeyError,TypeError,ArithmeticError) as exc:return None,str(exc)
 
 
-def opposing_score(original):
+def opposing_score(original, *, diagnostic=False):
     """Use the retained exact predicate, never a display label, for pairing."""
     identity = original.get('same_outcome', {})
     key = identity.get('key')
@@ -370,9 +370,12 @@ def opposing_score(original):
         pivot = F(*boundary) + (operator == 'le')
     elif len(equality) >= 3 and equality[0] == 'fraction' and equality[2] is not None:
         pivot = F(*boundary) + (-1 if operator == 'ge' else 1)
+    elif diagnostic and len(equality) >= 2 and equality[1] is not None:
+        pivot = F(*equality[1])
     else:
         return None
-    match = hashed([key[:7], key[-2:], domain, subject, equality[0], str(pivot)])
+    match = hashed([key[:7], domain, subject, str(pivot)] if diagnostic
+                   else [key[:7], key[-2:], domain, subject, equality[0], str(pivot)])
     return match, 'gt' if operator == 'ge' else 'lt'
 
 
@@ -408,7 +411,7 @@ def before_fee_pairs(quotes, *, at=None):
                 or occurrence.get('conflicts') or occurrence.get('method') not in
                 ('shared_provider_id', 'reviewed_source_id', 'local_reviewed_override')):
             continue
-        score = opposing_score(original)
+        score = opposing_score(original, diagnostic=True)
         if score is None:
             continue
         key, operator = score
@@ -425,8 +428,17 @@ def before_fee_pairs(quotes, *, at=None):
         for left in sides.get('gt', ()):
             for right in sides.get('lt', ()):
                 checkpoint()
-                proof = before_fee_pair(left, right, key)
-                if proof:
+                if left['venue'] != right['venue']:
+                    strict = opposing_score(left)
+                    market = (hashed([left['opposition_witness']['occurrence_id'], strict[0]])
+                              if strict and left['opposition_witness']['occurrence_id'] is not None
+                              else strict[0] if strict else key)
+                    proof = before_fee_pair(left, right, market) or dict(
+                        market_key=key, blocker='pair_settlement_unverified')
+                    scopes = [leg['same_outcome']['key'][-2] for leg in (left, right)]
+                    proof['scoring_scopes'] = [
+                        dict(zip(('overtime', 'extra_innings', 'shootout', 'score_domain'), scope))
+                        for scope in scopes]
                     witnesses = [leg['opposition_witness'] for leg in (left,right)]
                     proof['authority'] = dict(policy=ORDINARY_ARB_POLICY,
                         occurrence_id=witnesses[0]['occurrence_id'], legs=witnesses)
@@ -434,7 +446,7 @@ def before_fee_pairs(quotes, *, at=None):
                                       id=hashed([left['id'], right['id']]), kind='pair',
                                       legs=[left['id'], right['id']], venues=[left['venue'], right['venue']],
                                       before_fees=proof, minimum_return_percent=None,
-                                      math=dict(available=False, missing=['finance_pending'])))
+                                      math=dict(available=False, missing=[proof.get('blocker', 'finance_pending')])))
     return pairs
 
 
@@ -443,7 +455,7 @@ def exact_arb_pair(pair):
     return isinstance(proof, dict) and (proof.get('authority') or {}).get('policy') == ORDINARY_ARB_POLICY
 
 
-def calculate(inputs,value=None):
+def calculate(inputs,value=None, *, product=False):
     from app.dashboard.current_contract import price
     from app.fees.schedule_lifecycle import for_offer
     from app.comparison.current_dependencies import instant
@@ -454,19 +466,18 @@ def calculate(inputs,value=None):
     rows=[];pairs=[];oppositions={}
     from app.comparison.snapshot_benchmark import bind
     from app.comparison import snapshot_named_benchmark as named
-    benchmark_refs=named.references(inputs['quotes'],inputs['references'],settings)
-    if inputs.get('reference_provider') == 'sportsgameodds':
-        benchmark_refs=[]
+    hide_legacy_reference = product or inputs.get('reference_provider') == 'sportsgameodds'
+    benchmark_refs=[] if hide_legacy_reference else named.references(inputs['quotes'],inputs['references'],settings)
     named_quotes=named.bind(inputs['quotes'],benchmark_refs,settings)
     projected,benchmark_diagnostics=bind(named_quotes,benchmark_refs,settings,inputs['captured_at'])
     game_keys={old['game_key']:new['game_key'] for old,new in zip(inputs['quotes'],projected)}
     from app.comparison.snapshot_identity import games as projected_games
     games=projected_games(inputs,projected)
-    references=[] if inputs.get('reference_provider') == 'sportsgameodds' else [dict(r,game_key=game_keys.get(r.get('game_key'),r.get('game_key'))) for r in inputs['references']]
+    references=[] if hide_legacy_reference else [dict(r,game_key=game_keys.get(r.get('game_key'),r.get('game_key'))) for r in inputs['references']]
     for original in projected:
         from app.comparison.calculation_control import checkpoint
         checkpoint()
-        if inputs.get('reference_provider') == 'sportsgameodds':
+        if hide_legacy_reference:
             # The old retained Odds API pair must not become the replacement
             # reference merely because its occurrence and line still match.
             original=dict(original, snapshot_benchmark=None, reference=None, benchmark_quote=None,
@@ -505,7 +516,7 @@ def calculate(inputs,value=None):
         if row['reference_odds']:row['reference_odds'].pop('what_if',None)
         from app.comparison.snapshot_metrics import disclose
         disclose(row,original,benchmark_refs)
-        if inputs.get('reference_provider') == 'sportsgameodds':
+        if hide_legacy_reference:
             row['reference_calculation'].update(venue='sportsgameodds_books',
                 method='sgo-book-median-proportional-1', available=False,
                 reason='sgo_reference_qualification_unavailable')
@@ -593,7 +604,7 @@ def prune(db):
             AND (automatic OR id NOT IN (SELECT id FROM comparison_snapshot WHERE NOT automatic ORDER BY captured_at DESC,id DESC LIMIT 2))''')
 
 
-def replace(db, *, action, value=None, expected=None):
+def replace(db, *, action, value=None, expected=None, product=False):
     # Session lock serializes finite operations across HTTP workers. Readers
     # continue seeing the prior committed head until this one atomically lands.
     if not db.execute('SELECT pg_try_advisory_lock(901153) locked').fetchone()['locked']:
@@ -606,7 +617,8 @@ def replace(db, *, action, value=None, expected=None):
             inputs=unpack(db.execute('SELECT inputs FROM comparison_snapshot WHERE id=%s',(prior['snapshot_id'],)).fetchone()['inputs'])
         elif action=='refresh':inputs=capture(db)
         else:raise SnapshotOperationError('Unknown snapshot operation')
-        result=calculate(inputs,value if value is not None else prior['assumptions'] if prior else None)
+        result=calculate(inputs,value if value is not None else prior['assumptions'] if prior else None,
+                         product=product)
         packed_inputs=pack(inputs) if action=='refresh' else b''
         packed_result=pack(result)
         from app.collection.current_storage_policy import SQL_BYTE_CAP, sql_usage

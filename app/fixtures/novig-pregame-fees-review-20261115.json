@@ -1,0 +1,8 @@
+{
+  "source_url": "https://support.novig.com/en/articles/16195057-fees-on-novig",
+  "retrieved_at": "2026-11-15T07:24:51.308680+00:00",
+  "body_sha256": "5b79648c68e72fc6a8df4b8e58b76707457bfbda13f962de2609a54a526e8b50",
+  "normalized_sha256": "15dd2eea2c8e96478d85cc3efc3268c52d3e8ebebda83624c2950999dc72bbef",
+  "body_bytes": 132762,
+  "review": "Compared the complete official article text with the November 10 approved body. Only the related article links changed. Pregame straight orders on app/web and API remain fee free for both roles. Live per-fill and multi-price examples still disagree and are outside this review."
+}

@@ -62,7 +62,9 @@ def test_stale_terms_keep_supported_leg_and_withhold_net_payoff(review):
     assert pair['inspection']['minimum_profit_usd'] == '11.1'
     retail = pair['retail_payoff']
     assert not retail['available'] and 'states' not in retail
-    assert retail['legs'][0] == {'available': False, 'reason': EXPIRED}
+    assert retail['legs'][0] == {'available': False, 'reason': EXPIRED,
+                                 'quantity': '111.1', 'acquisition_usd': '44.44',
+                                 'depth_status': 'unverified'}
     assert retail['legs'][1]['at_fill_usd'] == '0'
 
 

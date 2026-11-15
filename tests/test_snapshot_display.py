@@ -36,13 +36,14 @@ class SnapshotDisplay(TestCase):
             self.assertEqual(page(result,{'search':term})['total'],1,term)
         self.assertEqual(page(result,{'search':'zzzzz'})['total'],0)
 
-    def test_format_projection_does_not_change_rank_or_originals(self):
+    def test_before_fee_values_remain_inspectable_without_ranking(self):
         rows=[]
         for i,value in enumerate(['-1','0','5',None]):
             row=self.row();row['id']=str(i);row['gross_return_percent']=value;rows.append(row)
         result=dict(rows=rows,pairs=[],references=[]);before=deepcopy(result)
         first=page(result,{'limit':'2'});last=page(result,{'offset':'2','limit':'2'})
-        self.assertEqual([r['gross_return_percent'] for r in first['rows']+last['rows']],['5','0','-1',None])
+        self.assertEqual([r['gross_return_percent'] for r in first['rows']+last['rows']],['-1','0','5',None])
+        self.assertTrue(all(not row['ranking']['eligible'] for row in first['rows']+last['rows']))
         self.assertEqual(result,before)
 
     def test_pair_carries_both_literal_positions_and_prices(self):

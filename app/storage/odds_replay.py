@@ -36,7 +36,7 @@ def compile_archive(dataset, captured, directory=DIRECTORY):
     if not inputs['quotes']:
         raise ValueError('Replay capture contains no usable offers')
     at = stamp(inputs['captured_at'])
-    result = publication.bind(snapshots.calculate(inputs, settings), inputs, 'ready')
+    result = publication.bind(snapshots.calculate(inputs, settings, product=True), inputs, 'ready')
     result = publication.project(result, inputs['dependencies'], owner, states, at=at,
                                  policy=inputs['policy_identity'], epoch=inputs['epoch'], settings=settings)
     result['replay'] = dict(dataset=dataset, captured_at=inputs['captured_at'],

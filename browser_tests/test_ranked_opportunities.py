@@ -126,6 +126,10 @@ def fixtures():
         "total",
         "205.5",
         decimal="100/81",
+        source_clock_at="2026-11-12T23:59:40Z",
+        confirmed_at="2026-11-12T23:59:52Z",
+        received_at="2026-11-12T23:59:53Z",
+        price_basis="native_book",
         trade_fee=dict(
             available=True,
             trade_fee_usd="0.01",
@@ -437,7 +441,10 @@ def test_ranked_and_browse_journey(width, tmp_path):
                     matched_outcome_count=4,
                     ranked_group_count=ranked,
                     ranking_stake="100" if query.get("view") == "arbs" else None,
-                    publication=dict(current_prices=12),
+                        publication=dict(current_prices=12, read_at="2026-11-13T00:00:00Z",
+                                         published_at="2026-11-12T23:59:54Z",
+                                         sources={"sportsgameodds": {"state":"held", "reason_code":"sgo_charge_unresolved"}}
+                                         if unavailable else {}),
                     calculation_reason="The sportsbook reference source is on hold.",
                 )
             )
@@ -517,7 +524,7 @@ def test_ranked_and_browse_journey(width, tmp_path):
             tab.on("pageerror", lambda error: errors.append(str(error)))
             tab.goto(BASE)
             expect(tab.get_by_role("heading", name="Opportunities")).to_be_visible()
-            tab.get_by_label("Calculation basis").select_option("conservative")
+            tab.get_by_label("Calculation basis").select_option("reviewed")
             cards = tab.locator(".opportunity-card")
             expect(cards).to_have_count(2)
             expect(cards.first).to_contain_text("+3.26%")
@@ -543,7 +550,7 @@ def test_ranked_and_browse_journey(width, tmp_path):
             tab.keyboard.press("Escape")
             expect(
                 tab.get_by_text(
-                    "Free odds may be delayed up to 15 minutes.", exact=True
+                    "Open a quote to see its source and receipt times.", exact=True
                 )
             ).to_have_count(1)
             expect(tab.get_by_role("link", name="Arbitrage")).to_be_visible()
@@ -555,7 +562,7 @@ def test_ranked_and_browse_journey(width, tmp_path):
 
             cards.first.get_by_role("link", name="Open game ↗").press("Enter")
             expect(tab.get_by_role("heading", name=DENVER)).to_be_visible()
-            expect(tab.get_by_label("Calculation basis")).to_have_value("conservative")
+            expect(tab.get_by_label("Calculation basis")).to_have_value("reviewed")
             expect(tab.get_by_label("Alternate lines")).not_to_be_checked()
             expect(tab.locator(".odds-matrix tbody tr")).to_have_count(2)
             tab.get_by_label("Alternate lines").check()
@@ -606,7 +613,7 @@ def test_ranked_and_browse_journey(width, tmp_path):
                 tab.locator('[data-offer-id="kalshi-minnesota"]')
             ).not_to_contain_text("EV")
             if width == 390:
-                expect(tab.get_by_text("More sites →", exact=True)).to_be_visible()
+                expect(tab.get_by_role("button", name="Scroll to see more odds columns")).to_be_visible()
                 assert tab.locator(".odds-scroll").evaluate(
                     "(el) => el.scrollWidth > el.clientWidth"
                 )
@@ -631,7 +638,7 @@ def test_ranked_and_browse_journey(width, tmp_path):
                 "link", name="Back"
             ).click()
             expect(cards).to_have_count(2)
-            expect(tab.get_by_label("Calculation basis")).to_have_value("conservative")
+            expect(tab.get_by_label("Calculation basis")).to_have_value("reviewed")
 
             unavailable = True
             tab.get_by_role("button", name="Refresh list").click()
@@ -641,6 +648,7 @@ def test_ranked_and_browse_journey(width, tmp_path):
             expect(
                 tab.get_by_text("The sportsbook reference source is on hold.")
             ).to_be_visible()
+            expect(tab.locator("#notice")).to_contain_text("SportsGameOdds updates are on hold pending provider reconciliation")
             show_current_prices = True
             tab.get_by_role("button", name="Refresh list").click()
             expect(tab.get_by_role("heading", name="Current prices")).to_be_visible()
@@ -652,6 +660,7 @@ def test_ranked_and_browse_journey(width, tmp_path):
             tab.get_by_role("link", name="Find my game ↗").click()
             expect(tab.get_by_role("heading", name=DETROIT)).to_be_visible()
             quote_button = tab.locator('[data-offer-id="pmus-detroit"]')
+            expect(quote_button).to_contain_text("Source 20s ago · confirmed 8s ago")
             tab.get_by_role("button", name="Filters", exact=True).click()
             tab.get_by_role("dialog", name="Filter results").get_by_label(
                 "Winner"
@@ -710,9 +719,18 @@ def test_ranked_and_browse_journey(width, tmp_path):
             )
             withdraw_selection = False
             tab.keyboard.press("Escape")
+            expect(tab.locator("#trade")).to_be_hidden()
             quote_button.press("Enter")
             drawer = tab.get_by_role("dialog", name="Polymarket US · Over 205.5")
             expect(drawer.get_by_text("$0.81 per $1 payout")).to_be_visible()
+            drawer.get_by_text("Quote times", exact=True).click()
+            times = drawer.locator(".inspection-facts").first
+            expect(times.locator("dt")).to_have_text([
+                "Original source update", "Book confirmation", "Collector receipt", "Price capture", "Board publication"
+            ])
+            expect(times.locator("dd")).to_have_text([
+                "2026-11-12T23:59:40Z", "2026-11-12T23:59:52Z", "2026-11-12T23:59:53Z", START, "2026-11-12T23:59:54Z"
+            ])
             expect(
                 drawer.locator(".inspection-tiles").get_by_text("$0.01", exact=True)
             ).to_be_visible()
@@ -742,14 +760,14 @@ def test_ranked_and_browse_journey(width, tmp_path):
             tab.goto(BASE + "/arbs")
             expect(cards).to_have_count(2)
             expect(cards.last.locator(".arb-card-legs li")).to_have_count(2)
-            expect(cards.last).not_to_contain_text("$104.03")
+            expect(cards.last).to_contain_text("$104.03")
             expect(cards.first).to_contain_text("+0.89%")
             expect(cards.last).to_contain_text("-4.84%")
             tab.screenshot(path=tmp_path / f"ranked-arb-{width}.png")
             cards.last.get_by_role("button", name="View payoff calculation ↗").press(
                 "Enter"
             )
-            payoff = tab.get_by_role("dialog", name="Arbitrage calculation")
+            payoff = tab.get_by_role("dialog", name="Pair payoff")
             expect(payoff.get_by_text("$104.03", exact=True)).to_be_visible()
             assert "arb-washington" in inspected
             expect(
