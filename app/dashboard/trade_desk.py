@@ -30,7 +30,7 @@ def desk_phase(query):
 
 def browse_retained(runtime):
     return (runtime.get('stopped') or runtime.get('healthy') is False
-            or runtime.get('reason') == 'data_runtime_not_dispatching')
+            or runtime.get('reason') in ('data_runtime_not_dispatching', 'ordinary_publication_failed'))
 
 
 def phase_matches(row, phase, at):
@@ -156,6 +156,40 @@ def offer(original, metric=None, *, sportsbook_updates_paused=False):
                 overround=reference.get('overround') if value is not None else None,
                 source_at=(row.get('book_confirmation') or {}).get('confirmed_at') or row.get('times', {}).get('source_at'),
                 received_at=row.get('times', {}).get('received_at'))
+
+
+def public_offer(quote, basis):
+    fields = ('id', 'venue', 'selection', 'participant', 'market', 'alternate', 'odds',
+              'current', 'value', 'reason', 'before_fee', 'after_fee', 'conservative',
+              'reference_current', 'current_until', 'calculation_current_until',
+              'price_revision', 'economic_revision', 'evidence_result_id', 'captured_at',
+              'game_state', 'source_clock_at', 'confirmed_at', 'received_at')
+    result = {field: quote[field] for field in fields if field in quote}
+    sportsbook = quote.get('sportsbook')
+    result['fair_odds'] = (sportsbook and sportsbook.get('fair_odds')) if basis == 'sportsbooks' else (
+        quote['reference'] if quote['reference_current'] else None)
+    result['trade_fee_available'] = bool((quote.get('trade_fee') or {}).get('available'))
+    return result
+
+
+def public_group(group, basis):
+    if group.get('withdrawn'):
+        return group
+    result = dict(group, offers=[public_offer(quote, basis) for quote in group['offers']])
+    if 'pairs' in group:
+        result['pairs'] = [dict(id=pair['id'], legs=pair['legs'], score=pair['score'],
+            evidence_result_id=pair['evidence_result_id'],
+            retail_payoff={key: pair['retail_payoff'][key] for key in ('available', 'reason')
+                           if key in pair['retail_payoff']}) for pair in group['pairs']]
+    if 'sportsbook_quotes' in group:
+        result['sportsbook_quotes'] = {}
+        for book, prices in group['sportsbook_quotes'].items():
+            price = max((price for price in prices if price.get('current') is True and price.get('price_american')),
+                        key=lambda price: price.get('source_at') or '', default=None)
+            if price:
+                result['sportsbook_quotes'][book] = [dict(current=True, price_american=price['price_american'],
+                                                          source_at=price.get('source_at'))]
+    return result
 
 
 def direct_venue_offer(row):
@@ -427,9 +461,10 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
     read_at = stamp(result['publication'].get('read_at') or result['captured_at']) if phase else None
     basis = query.get('basis') or ('sportsbooks' if phase == 'pregame' else 'reviewed')
     runtime = result['publication'].get('data_runtime') or {}
-    retained_fallback = browse and view != 'arbs' and browse_retained(runtime)
-    show_retained = retained_fallback or query.get('last_known') == '1' or (
-        not (browse or ranked) and 'last_known' not in query)
+    public_summary = query.get('summary') == '1'
+    retained_fallback = not public_summary and browse and view != 'arbs' and browse_retained(runtime)
+    show_retained = not public_summary and (retained_fallback or query.get('last_known') == '1' or (
+        not (browse or ranked) and 'last_known' not in query))
     leagues, families, venues = (set(query.get(key, '').split(',')) - {''} for key in ('league', 'family', 'venue'))
     game_key = query.get('game_key')
     # A published occurrence can acquire a stronger identity on refresh.
@@ -525,16 +560,18 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
         # The display can show additional exact-side offers. Only the pair's
         # evidenced legs participate in the payoff.
         sides = {}
-        for row in rows:
-            sides.setdefault(outcome_key(row)[:6], []).append(row['id'])
+        if not public_summary:
+            for row in rows:
+                sides.setdefault(outcome_key(row)[:6], []).append(row['id'])
         groups = []
         for key, pairs in markets.items():
             pairs.sort(key=lambda pair: (pair['score'] is None,
                                          -pair['score'] if pair['score'] is not None else 0, pair['id']))
             first = pairs[0]
             offer_ids = dict.fromkeys(leg for pair in pairs for leg in pair['legs'])
-            for leg in tuple(offer_ids):
-                offer_ids.update(dict.fromkeys(sides[outcome_key(by_id[leg])[:6]]))
+            if sides:
+                for leg in tuple(offer_ids):
+                    offer_ids.update(dict.fromkeys(sides[outcome_key(by_id[leg])[:6]]))
             groups.append(dict(first, id=key, quotes=pairs, offer_ids=list(offer_ids),
                                score=None if first['score'] is None else str(first['score'])))
         groups.sort(key=lambda g: (g['score'] is None, -Fraction(g['score']) if g['score'] is not None else 0,
@@ -613,7 +650,7 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
         else:
             summary['offers'] = [offer(row, metric, sportsbook_updates_paused=sportsbook_updates_paused)
                                  for row in group['quotes']]
-            if browse and metric == SPORTSBOOK_METRIC:
+            if browse and not public_summary and metric == SPORTSBOOK_METRIC:
                 for displayed, row in zip(summary['offers'], group['quotes'], strict=True):
                     if displayed['value'] is None and row.get('last_known_sportsbook_ev') is not None:
                         displayed['last_known_ev'] = row['last_known_sportsbook_ev']
@@ -729,7 +766,7 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
                     and old.get('source_at') == price.get('source_at') for old in shown))
             if candidate.get('sportsbook_source_reason'):
                 group['sportsbook_source_reason'] = candidate['sportsbook_source_reason']
-    if browse and not show_retained and visible:
+    if browse and not public_summary and not show_retained and visible:
         visible_games = {group['game_key'] for group in visible}
         retained_venues = {}
         for row in scoped_rows:
@@ -739,10 +776,13 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
         for group in visible:
             if not group.get('withdrawn') and group['id'] in retained_venues:
                 group['retained_venues'] = sorted(retained_venues[group['id']])
-    if browse and enrich and (retained_fallback or not show_retained):
-        # Retained prices and hints are needed only for the returned page.
-        enrich(dict(rows=[g for g in visible if not g.get('withdrawn')], games=list(games.values())),
-               include_retained=retained_fallback, mark_retained=not retained_fallback)
+    if enrich and view != 'arbs':
+        displayed = dict(rows=[g for g in visible if not g.get('withdrawn')], games=list(games.values()))
+        if not comparable and not retained_fallback:
+            enrich(displayed, include_retained=not public_summary and query.get('last_known') == '1')
+        elif browse and not public_summary and (retained_fallback or not show_retained):
+            # Retained prices and hints are needed only for the returned page.
+            enrich(displayed, include_retained=retained_fallback, mark_retained=not retained_fallback)
     keys = {g['game_key'] for g in visible}
     if browse and game_key:
         keys.add(game_key)
@@ -754,6 +794,8 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
                               if any(game_source_key(quote) == game_source for quote in group['quotes'])}
             if len(matching_lines) == 1:
                 selected_line, = matching_lines
+    if public_summary:
+        visible = [public_group(group, basis) for group in visible]
     return dict(**({k:v for k,v in session.items() if k not in ('rows','state','total')} if session else {}),
                 state='ready', rows=visible, total=session['total'] if session else len(page_units), offset=offset, limit=limit,
                 page_count=len(selected),

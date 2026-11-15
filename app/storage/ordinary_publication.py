@@ -9,13 +9,14 @@ import json
 import gc
 import gzip
 from hashlib import sha256
+from itertools import chain
 from time import monotonic
 from uuid import uuid4
 from psycopg import OperationalError
 from psycopg.types.json import Jsonb
 
 from . import comparison_snapshot as snapshots
-from .store import hashed, stamp
+from .store import encoded, hashed, stamp
 from .current_games import utc
 from .current_rows import contract_id
 from .comparison_policy import read as current_settings
@@ -35,6 +36,10 @@ from app.fees import product_schedules
 VERSION = 'ordinary-comparison-1'
 MAX_RETAINED = 32
 MAX_BYTES = 128 * 1024 * 1024
+DEPENDENCY_BATCH = 2048
+MAX_COMPONENT_DEPENDENCIES = 32768
+REFERENCE_PREFIX = 'sgo-reference:'
+CATALOG_PREFIX = 'sgo-native-catalog:novig:'
 POLICY_ROOT = Path(__file__).resolve().parents[2]
 
 
@@ -109,13 +114,17 @@ def reviewed_reference_registry():
         return False
 
 
-def sportsbook_dependencies(db, event_ids=None):
+def sportsbook_dependencies(db, event_ids=None, *, at=None, reference_ids=None):
     registry = reviewed_reference_registry()
     if not registry or not registry.rows:
         return []
     keys = [{key: identity.get(key) for key in ('event_id', 'venue', 'odd_id', 'frame_id', 'line')}
             for identity, _ in registry.rows if identity['venue'] in BEST_BOOKS]
-    at = stamp(utc())
+    at = stamp(at if at is not None else utc())
+    target = ' AND r.id=ANY(%s)' if reference_ids is not None else ''
+    params = (Jsonb(keys),event_ids,at-timedelta(hours=24),at+timedelta(hours=72),event_ids)
+    if reference_ids is not None:
+        params += (reference_ids,)
     return db.execute('''SELECT DISTINCT 'sgo-reference:'||r.id id, r.revision price, r.id contract,
         e.id event_id, e.revision event, concat(r.received_order,':',review.frame_id) receipt
         FROM jsonb_to_recordset(%s) AS review(event_id text,venue text,odd_id text,frame_id text,line numeric)
@@ -125,8 +134,7 @@ def sportsbook_dependencies(db, event_ids=None):
         JOIN current_sgo_event_frame f ON f.event_id=r.event_id AND f.facts->>'receipt_sha256'=review.frame_id
         JOIN current_event e ON e.provider='sportsgameodds' AND e.native_event_id=r.event_id
         WHERE ((%s::text[] IS NULL AND e.scheduled_start::timestamptz >= %s AND e.scheduled_start::timestamptz < %s)
-            OR e.id=ANY(%s)) ORDER BY id''',
-        (Jsonb(keys),event_ids,at-timedelta(hours=24),at+timedelta(hours=72),event_ids)).fetchall()
+            OR e.id=ANY(%s))'''+target+' ORDER BY id', params).fetchall()
 
 
 def sportsbook_frames(db, at):
@@ -171,43 +179,127 @@ def pregame_sportsbooks(db, owner, states, at, *, frames=None):
     return matches
 
 
-def dependencies(db, event_ids=None, *, sportsbook_rows=None, catalog_rows=None, provider=None):
-    frames = ((provider or aggregate_provider(db))=='sportsgameodds' and
-        bool(db.execute("SELECT to_regclass('public.current_sgo_event_frame') AS name").fetchone()['name']))
+def has_reference_frames(db, provider):
+    return provider == 'sportsgameodds' and bool(db.execute(
+        "SELECT to_regclass('public.current_sgo_event_frame') AS name").fetchone()['name'])
+
+
+def offer_dependency_query(event_ids, *, frames, at, offer_ids=None, limit=None):
     frame_join = 'LEFT JOIN frame_revisions f ON f.id=e.id' if frames else ''
     receipt = "concat(o.revision,':',o.received_at,':',coalesce(f.revision,''))" if frames else "concat(o.revision,':',o.received_at)"
-    at = stamp(utc())
     if event_ids is None:
         scope = 'scheduled_start::timestamptz >= %s AND scheduled_start::timestamptz < %s'
         params = (at-timedelta(hours=24), at+timedelta(hours=72))
     else:
         scope = 'id=ANY(%s)'
         params = (event_ids,)
+    if offer_ids is not None:
+        scope += ' AND id IN (SELECT event_id FROM current_contract WHERE id=ANY(%s))'
+        params += (offer_ids,)
+    offers = 'WHERE c.id=ANY(%s)' if offer_ids is not None else ''
+    if offer_ids is not None:
+        params += (offer_ids,)
+    bound = ' LIMIT %s' if limit is not None else ''
+    if limit is not None:
+        params += (limit,)
     # Extract the SGO frame digest once per event. Inlining this extraction
     # would repeatedly detoast each large membership packet for every offer.
     frame_cte = """, frame_revisions AS MATERIALIZED (
         SELECT e.id, f.facts->>'receipt_sha256' revision
         FROM events e JOIN current_sgo_event_frame f ON f.event_id=e.native_event_id
         WHERE e.provider='sportsgameodds')""" if frames else ''
-    rows = db.execute('''WITH events AS (
+    query = '''WITH events AS (
         SELECT id, revision, provider, native_event_id FROM current_event WHERE '''+scope+''')'''+frame_cte+'''
-        SELECT c.id, '''+receipt+''' receipt,
+        SELECT c.id, e.id AS event_id, '''+receipt+''' receipt,
         o.price_dependency price,
         c.revision contract,
         e.revision event FROM current_offer_storage o JOIN current_contract c ON c.id=o.contract_id
         JOIN events e ON e.id=c.event_id
         '''+frame_join+'''
-        ORDER BY c.id''', params).fetchall()
+        '''+offers+''' ORDER BY c.id COLLATE "C"'''+bound
+    return query, params
+
+
+def dependency_value(row):
+    # Receipt-only confirmations schedule new proof without invalidating
+    # identical captured economics or extending its deadline.
+    return [row['price'], row['contract'], row['event'], row['receipt']]
+
+
+def dependencies(db, event_ids=None, *, provider=None, membership=None):
+    """Load exact evidence for a single component or an explicit inventory audit."""
+    frames = has_reference_frames(db, provider or aggregate_provider(db))
+    at = stamp(utc())
+    limit = MAX_COMPONENT_DEPENDENCIES+1 if event_ids is not None else None
+    rows = db.execute(*offer_dependency_query(event_ids, frames=frames, at=at, limit=limit)).fetchall()
     if frames:
         from .sgo_native_catalog import dependencies as catalog_dependencies
-        rows += sportsbook_dependencies(db, event_ids) if sportsbook_rows is None else sportsbook_rows
-        rows += catalog_dependencies(db, event_ids, at=utc()) if catalog_rows is None else catalog_rows
-    if len(rows) > 32768:
-        raise snapshots.SnapshotOperationError('ordinary_dependency_capacity')
-    # The fourth field schedules genuine new confirmation evidence. Only the
-    # first three invalidate captured economics: a newer identical confirmation
-    # cannot invalidate a still-current old proof, nor extend its deadline.
-    return {r['id']: [r['price'], r['contract'], r['event'], r['receipt']] for r in rows}
+        rows += sportsbook_dependencies(db, event_ids, at=at)
+        rows += catalog_dependencies(db, event_ids, at=at)
+    if limit is not None and len(rows) > MAX_COMPONENT_DEPENDENCIES:
+        raise snapshots.SnapshotOperationError('ordinary_component_dependency_capacity')
+    if membership is not None:
+        membership.update((row['id'], row['event_id']) for row in rows)
+    return {row['id']: dependency_value(row) for row in rows}
+
+
+def dependency_signatures(entries):
+    """Reduce an ordered evidence stream to two fixed-size digests per event."""
+    signatures = {}
+    for event, key, value in entries:
+        if event not in signatures:
+            signatures[event] = (sha256(), sha256())
+        receipt, material = signatures[event]
+        receipt.update(encoded((key, value)) + b'\n')
+        material.update(encoded((key, value[:3])) + b'\n')
+    return {event: (receipt.hexdigest(), material.hexdigest())
+            for event, (receipt, material) in signatures.items()}
+
+
+def planning_signatures(db, event_ids, *, frames, at):
+    from app.comparison.calculation_control import checkpoint
+    from .sgo_native_catalog import dependencies as catalog_dependencies
+
+    def offer_rows(cursor):
+        while rows := cursor.fetchmany(DEPENDENCY_BATCH):
+            checkpoint()
+            yield from rows
+
+    # Contract IDs are hex digests and sort before the prefixed SGO keys.
+    extra = sorted(chain(sportsbook_dependencies(db, event_ids, at=at), catalog_dependencies(db, event_ids, at=at)),
+                   key=lambda row: row['id']) if frames else ()
+    with db.cursor(name='ordinary_planning_dependencies') as cursor:
+        cursor.execute(*offer_dependency_query(event_ids, frames=frames, at=at))
+        return dependency_signatures((row['event_id'], row['id'], dependency_value(row))
+                                     for row in chain(offer_rows(cursor), extra))
+
+
+def published_dependencies(db, result, *, provider, at):
+    """Resolve only evidence named in the published revision, in indexed batches."""
+    witnesses = {}
+    for row in result['rows']:
+        authority = row['current_authority']
+        for proof in (authority['price'], *authority['references'], authority.get('sgo_native_contract')):
+            if proof and (key := proof.get('dependency')):
+                witnesses[key] = witnesses.get(key, False) or bool(proof.get('exact_frame'))
+    frames = has_reference_frames(db, provider)
+    offers = sorted(key for key in witnesses if not key.startswith((REFERENCE_PREFIX, CATALOG_PREFIX)))
+    current = {}
+    for offset in range(0, len(offers), DEPENDENCY_BATCH):
+        query = offer_dependency_query(None, frames=frames, at=at,
+                                       offer_ids=offers[offset:offset+DEPENDENCY_BATCH])
+        current.update((row['id'], dependency_value(row)) for row in db.execute(*query))
+    if frames:
+        from .sgo_native_catalog import dependencies as catalog_dependencies
+        references = [key.removeprefix(REFERENCE_PREFIX) for key in witnesses if key.startswith(REFERENCE_PREFIX)]
+        catalog = [key.removeprefix(CATALOG_PREFIX) for key in witnesses if key.startswith(CATALOG_PREFIX)]
+        if references:
+            current.update((row['id'], dependency_value(row))
+                           for row in sportsbook_dependencies(db, at=at, reference_ids=references))
+        if catalog:
+            current.update((row['id'], dependency_value(row)) for row in catalog_dependencies(db, at=at, native_ids=catalog))
+    revision = hashed({key: value if witnesses[key] else value[:3] for key, value in current.items()})
+    return current, revision
 
 
 def capture_structure_ids(deps):
@@ -723,8 +815,7 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
             finance_available=(reference_provider == 'sportsgameodds' or source_allowed(source_states.get('pinnacle',{})))
             at=stamp(utc())
             from app.comparison.public_sportsbook_estimate import identity as reference_identity
-            frames_exist = reference_provider == 'sportsgameodds' and db.execute(
-                "SELECT to_regclass('public.current_sgo_event_frame') AS name").fetchone()['name']
+            frames_exist = has_reference_frames(db, reference_provider)
             frames = sportsbook_frames(db, at) if frames_exist else []
             public_matches = pregame_sportsbooks(db, owner, source_states, at, frames=frames)
             public_events = {}
@@ -742,33 +833,29 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
             batches=[b for b in capture_batches(db) if selected.intersection(b)]
             scope={hashed(sorted(b)):b for b in batches}
             old={c['id']:c for c in db.execute("SELECT id,result_id,facts FROM comparison_publication WHERE kind='component'")}
-            sportsbook_rows = sportsbook_dependencies(db) if frames_exist else []
-            from .sgo_native_catalog import dependencies as catalog_dependencies
-            catalog_rows = catalog_dependencies(db, at=utc()) if reference_provider == 'sportsgameodds' else []
-            dep=dependencies(db, sportsbook_rows=sportsbook_rows, catalog_rows=catalog_rows, provider=reference_provider)
-            contracts=db.execute('SELECT id,event_id,venue FROM current_contract').fetchall()
-            membership={r['id']:r['event_id'] for r in contracts}
-            membership.update((r['id'], r['event_id']) for r in sportsbook_rows)
-            membership.update((r['id'], r['event_id']) for r in catalog_rows)
+            scoped_events=sorted({event for batch in batches for event in batch})
+            signatures=planning_signatures(db, scoped_events, frames=frames_exist, at=at)
             event_venues={}
-            for r in contracts:event_venues.setdefault(r['event_id'],set()).add(r['venue'])
-            per_event={}
-            for cid,value in dep.items():per_event.setdefault(membership[cid],{})[cid]=value
+            for row in db.execute('SELECT DISTINCT event_id, venue FROM current_contract WHERE event_id=ANY(%s)',
+                                  (scoped_events,)):
+                event_venues.setdefault(row['event_id'],set()).add(row['venue'])
             latest_receipts={r['event_id']:r['at'] for r in db.execute('''SELECT c.event_id,max(o.received_at) at
-                FROM current_offer_storage o JOIN current_contract c ON c.id=o.contract_id GROUP BY c.event_id''')}
+                FROM current_offer_storage o JOIN current_contract c ON c.id=o.contract_id
+                WHERE c.event_id=ANY(%s) GROUP BY c.event_id''', (scoped_events,))}
             aggregate_receipts,native_evidence=receipt_watermarks(db, reference_provider)
             prophetx_components={key for key,ids in scope.items()
                                  if any('prophetx' in event_venues.get(eid,()) for eid in ids)}
             product_components={key:{product_key for product_key,spec in product_schedules.PRODUCTS.items()
                 if any(spec['venue'] in event_venues.get(eid,()) for eid in ids)} for key,ids in scope.items()}
-            def input_identity(key, dependencies):
+            def input_identity(key, signatures):
                 return hashed([epoch,policy,settings['revision'],fee_revision if key in prophetx_components else None,
                     {k:product_schedules.revision(product_states.get(k),publication=True) for k in sorted(product_components[key])},
-                    [(eid,dependencies.get(eid,{})) for eid in sorted(scope[key])],
+                    [(eid,signatures.get(eid,(None,None))[0]) for eid in sorted(scope[key])],
                     [public_events[eid] for eid in sorted(scope[key]) if eid in public_events]])
-            desired={key:input_identity(key,per_event) for key in scope}
-            material={key:hashed([epoch,[(eid,{cid:v[:3] for cid,v in per_event.get(eid,{}).items()})
-                for eid in sorted(ids)]]) for key,ids in scope.items()}
+            def material_identity(key, signatures):
+                return hashed([epoch,[(eid,signatures.get(eid,(None,None))[1]) for eid in sorted(scope[key])]])
+            desired={key:input_identity(key,signatures) for key in scope}
+            material={key:material_identity(key,signatures) for key in scope}
         schedule_boundaries=[]
         for path in (POLICY_ROOT/'app/fixtures').glob('*conditional-fees*.json'):
             model=json.loads(path.read_text())
@@ -851,7 +938,8 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
                             native_slots.discard(key)
                             continue
                         inputs=None;capture_diagnostics={};prior_parts=None;costs={}
-                        current_dependencies=dependencies(db,scope[key],provider=reference_provider)
+                        membership={}
+                        current_dependencies=dependencies(db,scope[key],provider=reference_provider,membership=membership)
                         structure_ids=capture_structure_ids(current_dependencies)
                         previous_structure=prior_facts.get('capture_structure_ids',{})
                         changed_structure=[field for field,value in structure_ids.items()
@@ -907,15 +995,13 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
                             prophetx_components.add(key)
                         inputs['fee_lifecycle']=fee_state if key in prophetx_components else None
                         inputs['fee_products']={k:product_states[k] for k in product_components[key] if k in product_states}
-                        captured_dependencies={}
-                        for cid, value in inputs['dependencies'].items():
-                            captured_dependencies.setdefault(membership.get(cid),{})[cid]=value
-                        identity=input_identity(key,captured_dependencies)
+                        captured=dependency_signatures((membership[cid],cid,value)
+                            for cid,value in sorted(inputs['dependencies'].items()))
+                        identity=input_identity(key,captured)
                         facts=dict(input_identity=identity,finance='pending',visited_at=utc(),capture_seconds=inputs['capture_seconds'],
                             aggregate_receipts=captured_aggregate_receipts(inputs),
                             capture_binding_id=inputs['_price_basis']['binding'],governing_fields=governing,capture_structure_ids=structure_ids)
-                        facts['material_identity']=hashed([epoch,[(eid,{cid:v[:3] for cid,v in inputs['dependencies'].items()
-                            if membership.get(cid)==eid}) for eid in sorted(scope[key])]])
+                        facts['material_identity']=material_identity(key,captured)
                         binding_start=monotonic();price_result=prices(inputs,settings)
                         costs['price_binding_seconds']=round(monotonic()-binding_start,6)
                         # Price-only members may outlive an optional-finance outage.
@@ -1045,7 +1131,6 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
         # Exact identities at this turn's planning snapshot. This is a bounded
         # census, not an exhaustive arrival log: intervening updates can coalesce.
         import base64
-        from .store import encoded
         queue=base64.b64encode(gzip.compress(encoded([[key,desired[key],key in pending,
             old.get(key,{}).get('facts',{}).get('visited_at')] for key in sorted(scope)]),mtime=0)).decode()
         queue_trace=dict(encoding='gzip-base64-json',at=at.isoformat(),count=len(scope),

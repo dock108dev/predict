@@ -1,12 +1,10 @@
 import {evidenceReason} from './desk-reasons.js';
 
 const {el, num, fmt, name, odd, link, button} = window.PredictUI;
-const basisLabels = {sportsbooks:'Sportsbook estimate before fees', reviewed:'Reviewed-fee EV',
+const basisLabels = {sportsbooks:'EV vs. sportsbooks before fees', reviewed:'Reviewed-fee EV',
   conservative:'Modeled EV after fee', before:'Qualified EV before fees', practice:'EV after fictional fees'};
 const books = ['fanduel', 'draftkings', 'betmgm', 'caesars'];
 const venues = ['kalshi', 'polymarket_us', 'novig', 'prophetx'];
-const dollars = new Intl.NumberFormat('en-US', {style:'currency', currency:'USD', maximumFractionDigits:6});
-export const money = value => value == null ? 'Unavailable' : dollars.format(num(value));
 const cash = value => value == null ? 'Unavailable' : new Intl.NumberFormat('en-US', {
   style:'currency', currency:'USD'
 }).format(num(value));
@@ -140,7 +138,8 @@ function cardHeader(group, title, subtitle, result, clock) {
   const description = el('div');
   const period = group.market.period === 'full_game' ? 'Full-game' : group.market.period?.replaceAll('_', ' ');
   description.append(el('small', [group.league, clock(group.start_at), [period, group.market.market].filter(Boolean).join(' ')].filter(Boolean).join(' · ')),
-    el('h2', title), el('p', subtitle));
+    el('h2', title));
+  if (subtitle) description.append(el('p', subtitle));
   header.append(description, result);
   return header;
 }
@@ -159,13 +158,13 @@ function quote(offer, group, context, className = '', showResult = true) {
   const freshness = context.mode ? (offer.current ? 'At capture' : 'Last known at capture')
     : priceStatus(offer.current, offer.source_at || offer.source_clock_at, context.checkedAt);
   item.setAttribute('aria-label', [label, context.position(offer), offer.odds?.american, showResult && (reason || `${percent(offer.value)} EV`),
-    freshness].filter(Boolean).join(', '));
+    !context.summary && freshness].filter(Boolean).join(', '));
   if (showResult) item.append(el('span', label, 'desk-site'));
   item.append(odd(offer.odds));
   const [status, age] = freshness.split(' · ');
   const freshnessLabel = el('small', context.compact || offer.current ? status : freshness, 'quote-freshness');
   if (age) freshnessLabel.title = age;
-  if (!context.compact || !offer.current) item.append(freshnessLabel);
+  if (!context.summary && (!context.compact || !offer.current)) item.append(freshnessLabel);
   if (showResult) item.append(el('small', reason || `${percent(offer.value)} EV`, reason ? 'offer-reason' : tone(offer.value)));
   return item;
 }
@@ -222,16 +221,22 @@ function compactEV(group, context) {
   const lead = group.offers[0];
   const row = el('article', null, 'opportunity-card compact-ev');
   row.dataset.groupId = group.id;
-  const header = el('header', null, 'opportunity-card-header');
-  const description = el('div');
-  description.append(el('h2', context.position(lead)), el('p', group.game_title, 'desk-meta'));
-  const inspect = button(percent(group.score), () => context.inspectOffer(lead, group),
+  const fair = lead.fair_odds;
+  const inspect = button('', () => context.inspectOffer(lead, group),
     `opportunity-score ${tone(group.score)}`);
   inspect.title = basisName(context.basis);
   inspect.dataset.calculationId = lead.id;
-  inspect.setAttribute('aria-label', `View EV calculation: ${percent(group.score)}, ${venueLabel(lead)}`);
-  inspect.append(el('small', 'EV'));
-  header.append(description, inspect);
+  inspect.setAttribute('aria-label', [`View EV calculation: ${percent(group.score)}, ${venueLabel(lead)}`,
+    fair && `sportsbook fair odds ${fair.american}`].filter(Boolean).join(', '));
+  const headline = el('span', null, 'compact-ev-result');
+  headline.append(el('strong', percent(group.score)), el('small', 'EV'));
+  inspect.append(headline);
+  if (fair) {
+    const estimate = el('span', 'Sportsbook fair ', 'compact-fair');
+    estimate.append(odd(fair));
+    inspect.append(estimate);
+  }
+  row.append(cardHeader(group, context.position(lead), group.game_title, inspect, context.clock));
   const quotes = el('div', null, 'compact-prices');
   const seen = new Set();
   for (const offer of group.offers) {
@@ -239,6 +244,9 @@ function compactEV(group, context) {
     seen.add(offer.venue);
     const price = quote(offer, group, context, offer === lead ? 'desk-best' : '', false);
     price.prepend(el('span', venueLabel(offer)));
+    if (offer !== lead && offer.value != null) {
+      price.append(el('small', `${percent(offer.value)} EV`, tone(offer.value)));
+    }
     quotes.append(price);
   }
   const reference = selectedReference(lead, context.basis);
@@ -250,13 +258,8 @@ function compactEV(group, context) {
   }
   const footer = el('div', null, 'compact-ev-footer');
   footer.append(quotes, context.gameLink(group));
-  row.append(header, footer);
+  row.append(footer);
   return row;
-}
-
-function sideKey(offer) {
-  const side = offer.selection || {};
-  return JSON.stringify([side.predicate, side.participant ?? offer.participant, num(side.signed_line ?? offer.market.line)]);
 }
 
 function venueKey(offer) {
@@ -295,46 +298,14 @@ export function arbCard(group, context, expanded) {
   const offers = new Map(group.offers.map(offer => [offer.id, offer]));
   const legs = best.legs.map(id => offers.get(id));
   const net = best.retail_payoff;
-  row.append(cardHeader(group, group.game_title, legs.map(context.position).join(' / '),
-    score(group.score, net?.available ? 'Return on total funding' : 'Net payoff unavailable'), context.clock));
-  const content = el('div', null, 'arb-card-comparison');
-  const columns = venueColumns(group.offers);
-  const table = el('table', null, 'odds-matrix');
-  const header = table.createTHead().insertRow();
-  header.append(heading('Opposing sides'), ...columns.map(([, label]) => heading(label)));
-  const body = table.createTBody();
+  row.append(cardHeader(group, group.game_title, '',
+    score(group.score, net?.available ? 'Modeled return after fees' : 'Modeled return'), context.clock));
+  const content = el('ul', null, 'arb-card-legs');
   for (const leg of legs) {
-    const tr = body.insertRow();
-    tr.append(heading(context.position(leg), 'row'));
-    for (const [venue] of columns) {
-      const cell = tr.insertCell();
-      for (const offer of group.offers.filter(candidate => venueKey(candidate) === venue && sideKey(candidate) === sideKey(leg))) {
-        const chosen = best.legs.includes(offer.id);
-        const item = quote(offer, group, context, chosen ? 'desk-best' : '', false);
-        if (chosen) item.append(el('small', 'Selected leg'));
-        cell.append(item);
-      }
-      if (!cell.hasChildNodes()) noQuote(cell, name(venue));
-    }
+    const item = el('li', null, 'desk-best');
+    item.append(el('span', context.position(leg)), el('small', venueLabel(leg)), odd(leg.odds));
+    content.append(item);
   }
-  content.append(scrollTable(table, 'Opposing venue prices'));
-  const summary = el('div', null, 'opportunity-reference');
-  summary.append(el('small', 'Modeled pair'), el('strong', legs.map(venueLabel).join(' + ')));
-  if (net?.available) {
-    const size = net.sizing?.quantity != null ? `${net.sizing.quantity} contracts per leg · ` : '';
-    summary.append(el('span', `${size}${cash(net.funding_usd)} total with fees`));
-    net.legs?.forEach((leg, index) => {
-      const acquisition = leg.acquisition_usd ?? best.inspection?.legs?.[index]?.allocation_usd;
-      if (acquisition != null) {
-        summary.append(el('span', `${cash(acquisition)} on ${context.position(legs[index])} · ${venueLabel(legs[index])}`));
-      }
-    });
-    if (net.states) {
-      const receipts = Object.values(net.states).map(state => num(state.net_receipt_usd)).filter(Number.isFinite);
-      if (receipts.length) summary.append(el('span', `${money(Math.min(...receipts))} lowest payout · ${money(net.minimum_net_profit_usd)} worst modeled profit/loss`));
-    }
-  } else summary.append(el('span', evidenceReason(net?.reason || 'pair_settlement_unverified')));
-  content.append(summary);
   const inspectPair = (pair, label) => {
     const inspect = button(label, () => context.inspectPair(pair, offers, group), 'opportunity-link');
     inspect.dataset.pairId = pair.id;
@@ -348,7 +319,7 @@ export function arbCard(group, context, expanded) {
     detail.append(el('summary', `Other pairings (${group.pairs.length - 1})`));
     for (const pair of group.pairs.slice(1)) {
       const pairLabel = pair.legs.map(id => venueLabel(offers.get(id))).join(' + ');
-      detail.append(inspectPair(pair, `${pairLabel} · ${pair.retail_payoff?.available ? money(pair.retail_payoff.minimum_net_profit_usd) : 'Net payoff unavailable'}`));
+      detail.append(inspectPair(pair, `${pairLabel} · ${percent(pair.score)}`));
     }
     row.append(detail);
   }
@@ -401,12 +372,18 @@ export function gameMatrix(groups, context, {includeAlternates, market, selected
   const columns = venueColumns(allOffers, context.stableVenues);
   const table = el('table', null, 'odds-matrix');
   const thead = table.createTHead(), section = thead.insertRow(), headings = thead.insertRow();
-  const outcome = heading('Exact outcome'), ev = heading('EV');
-  outcome.rowSpan = ev.rowSpan = 2;
-  const exchange = heading('Venue prices', 'colgroup'), sportsbook = heading('Sportsbook quotes', 'colgroup');
+  const outcome = heading('Exact outcome');
+  outcome.rowSpan = 2;
+  const exchange = heading(context.summary ? 'Prediction markets' : 'Venue prices', 'colgroup');
+  const sportsbook = heading(context.summary ? 'Sportsbook odds' : 'Sportsbook quotes', 'colgroup');
   exchange.colSpan = columns.length;
   sportsbook.colSpan = books.length;
-  section.append(outcome, exchange, sportsbook, ev);
+  section.append(outcome, exchange, sportsbook);
+  if (!context.summary) {
+    const ev = heading('EV');
+    ev.rowSpan = 2;
+    section.append(ev);
+  }
   headings.append(...columns.map(([, label]) => heading(label)), ...books.map(book => heading(name(book))));
   const body = table.createTBody();
   for (const group of visible) {
@@ -430,16 +407,24 @@ export function gameMatrix(groups, context, {includeAlternates, market, selected
       for (const offer of group.offers.filter(candidate => venueKey(candidate) === venue
         && (!context.compact || candidate.odds?.american)
         && (context.compact || group.id === selectedLine || includeAlternates || candidate.alternate !== true))) {
-        cell.append(quote(offer, group, context, offer.current && offer.odds?.decimal != null
-          && num(offer.odds.decimal) === highestPayout ? 'desk-best' : '', false));
+        const price = quote(offer, group, context, offer.current && offer.odds?.decimal != null
+          && num(offer.odds.decimal) === highestPayout ? 'desk-best' : '', false);
+        if (context.summary && offer.current && offer.value != null) {
+          const label = `${percent(offer.value)} EV`;
+          price.dataset.calculationId = offer.id;
+          price.append(el('small', label, tone(offer.value)));
+          price.setAttribute('aria-label', `${price.getAttribute('aria-label')}, ${label}, ${basisName(context.basis)}`);
+        }
+        cell.append(price);
       }
-      if (!cell.hasChildNodes()) noQuote(cell, name(venue), group.retained_venues?.includes(venue));
+      if (!cell.hasChildNodes()) noQuote(cell, name(venue), !context.summary && group.retained_venues?.includes(venue));
     }
     for (const book of books) {
       tr.insertCell().append(sportsbookCell(group, book, reference, context.checkedAt, context.mode, false, context.compact));
     }
+    if (context.summary) continue;
     const value = tr.insertCell();
-    const current = group.offers.find(offer => offer.value != null);
+    const current = group.offers.find(offer => offer.current && offer.value != null);
     const saved = !current && group.offers.reduce((best, offer) => (
       offer.last_known_ev != null && (!best || num(offer.last_known_ev) > num(best.last_known_ev)) ? offer : best
     ), null);
@@ -450,17 +435,16 @@ export function gameMatrix(groups, context, {includeAlternates, market, selected
         `opportunity-link ${saved ? '' : tone(choice.value)}`);
       calculation.dataset.calculationId = choice.id;
       if (context.compact) calculation.title = `${venueLabel(choice)} · ${basisName(context.basis)}`;
-      if (saved) calculation.setAttribute('aria-label', `Last known EV ${result} at ${venueLabel(choice)}`);
+      if (choice === saved) calculation.setAttribute('aria-label', `Last known EV ${result} at ${venueLabel(choice)}`);
       value.append(calculation);
-      if (saved || !context.compact) value.append(el('small', saved ? 'Last known' : venueLabel(choice)));
+      if (choice === saved || !context.compact) value.append(el('small', choice === saved ? 'Last known' : venueLabel(choice)));
     } else {
       const missing = el('small', context.compact ? 'Unavailable' : quoteReason(lead));
       missing.title = quoteReason(lead);
       missing.setAttribute('aria-label', quoteReason(lead));
       if (context.compact) {
         const price = button('—', () => context.inspectOffer(lead, group), 'opportunity-link missing-quote');
-        price.title = quoteReason(lead);
-        price.setAttribute('aria-label', `EV unavailable for ${context.position(lead)}. ${quoteReason(lead)}`);
+        price.setAttribute('aria-label', `EV unavailable for ${context.position(lead)}. View details.`);
         value.append(price);
       } else value.append(missing);
     }

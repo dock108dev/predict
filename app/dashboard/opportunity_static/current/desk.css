@@ -417,7 +417,10 @@ dialog::backdrop { background: #101b3180; }
 .compact-ev .opportunity-card-header { align-items: center; margin-bottom: .45rem; }
 .compact-ev .opportunity-card-header h2 { font-size: 1.1rem; margin: 0; }
 .compact-ev .opportunity-card-header p { font-size: .78rem; margin: .12rem 0 0; }
-.compact-ev .opportunity-score { display: inline-flex; align-items: baseline; gap: .25rem; white-space: nowrap; border: 0; font-weight: 750; }
+.compact-ev .opportunity-score { display: flex; align-items: flex-end; gap: .15rem; white-space: nowrap; border: 0; font-weight: 750; }
+.compact-ev-result { display: flex; align-items: baseline; gap: .25rem; }
+.compact-ev .compact-fair { color: var(--muted); font-size: .74rem; font-weight: 500; }
+.compact-ev .compact-fair .p-odds { color: var(--body); }
 .compact-ev-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .4rem .8rem; }
 .compact-prices { display: flex; flex-wrap: wrap; gap: .3rem; align-items: center; }
 .compact-prices .desk-offer, .compact-book {
@@ -427,8 +430,9 @@ dialog::backdrop { background: #101b3180; }
 .compact-prices .desk-offer .p-odds, .compact-book .p-odds { font-size: .8rem; font-weight: 700; }
 .compact-ev-footer > a { white-space: nowrap; }
 .opportunity-arb .desk-expand button { display: block; }
-.arb-card-comparison { display: grid; grid-template-columns: minmax(0, 1fr) minmax(10.5rem, .3fr); gap: .55rem; }
-.arb-card-comparison .odds-scroll { border: 1px solid var(--rule); border-radius: 8px; }
+.arb-card-legs { display: grid; gap: .3rem; padding: 0; margin: .45rem 0 0; list-style: none; }
+.arb-card-legs li { display: flex; align-items: baseline; flex-wrap: wrap; gap: .3rem .55rem; }
+.arb-card-legs small { color: var(--muted); }
 .odds-card { margin-bottom: 1rem; }
 .odds-card > header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .35rem; padding: .55rem .75rem; }
 .odds-card > header h2 { font-size: 1.2rem; margin: 0; }
@@ -486,7 +490,6 @@ dialog::backdrop { background: #101b3180; }
   .opportunity-score { padding-inline: .45rem; min-width: 5rem; }
   .opportunity-score small { max-width: 8rem; font-size: .67rem; }
   .opportunity-quotes { grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)); }
-  .arb-card-comparison { grid-template-columns: minmax(0, 1fr); }
   .odds-matrix tbody th, .odds-matrix thead tr:first-child th:first-child { min-width: 7.4rem; max-width: 8rem; }
 }
 

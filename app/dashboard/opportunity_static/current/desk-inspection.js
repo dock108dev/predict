@@ -415,9 +415,9 @@ export function markPinned(root, pinned) {
   if (!pinned) return;
   const price = root.querySelector('[data-inspection-price]');
   const ev = root.querySelector('[data-inspection-ev]');
-  if (price) price.textContent = pinned.price ? 'Last known · pinned' : 'Pinned price';
+  if (price) price.textContent = 'Price at inspection';
   if (ev) {
-    ev.textContent = 'Last known EV · pinned';
+    ev.textContent = 'EV at inspection';
     ev.parentElement.classList.remove('positive', 'negative');
   }
   for (const book of root.querySelectorAll('[data-inspection-book]')) {

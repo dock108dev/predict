@@ -92,6 +92,26 @@ class TradeDesk(TestCase):
         self.assertTrue(thin['limited_coverage'])
         self.assertEqual([offer['id'] for offer in thin['rows'][0]['offers']], ['live'])
         self.assertEqual(thin['rows'][0]['retained_venues'], ['prophetx'])
+        live.update(probability='1/2', evidence_result_id='capture',
+                    trade_fee=dict(available=True, evidence={'version':'fee-review'}))
+        overview = page(data, dict(query, summary='1', last_known='1'), options)
+        group = overview['rows'][0]
+        self.assertNotIn('retained_venues', group)
+        self.assertEqual([item['id'] for item in group['offers']], ['live'])
+        brief = group['offers'][0]
+        self.assertEqual(brief['fair_odds']['american'], '+100')
+        self.assertEqual(brief['evidence_result_id'], 'capture')
+        for field in ('trade_fee', 'sportsbook', 'reference_calculation', 'source_at', 'last_known_ev'):
+            self.assertNotIn(field, brief)
+        def enrich(out, *, include_retained):
+            self.assertFalse(include_retained)
+            out['rows'][0]['sportsbook_quotes'] = dict(
+                fanduel=[dict(price_american='-110', current=True, proof='full evidence')],
+                draftkings=[dict(price_american='-105', current=False)])
+        legacy_query = {key: value for key, value in query.items() if key != 'lines'}
+        public = page(data, dict(legacy_query, summary='1', last_known='1'), options, enrich=enrich)
+        self.assertEqual(public['rows'][0]['sportsbook_quotes'],
+                         {'fanduel': [dict(current=True, price_american='-110', source_at=None)]})
         explicit = page(data, dict(query, last_known='1'), options)
         self.assertEqual({offer['id'] for offer in explicit['rows'][0]['offers']}, {'live', 'saved'})
         data['rows'] = [dict(live, price_current=False, current_reasons=['data_runtime_unhealthy']), saved]
@@ -105,6 +125,7 @@ class TradeDesk(TestCase):
                 self.assertTrue(all(not offer['current'] and offer['value'] is None for offer in fallback['rows'][0]['offers']))
                 ranked = page(data, {'layout':'desk', 'ranked':'1', 'phase':'', 'basis':'before', 'lines':'main'}, options)
                 self.assertEqual(ranked['rows'], [])
+                self.assertEqual(page(data, dict(query, summary='1', last_known='1'), options)['rows'], [])
 
     def test_live_desk_prefers_direct_exchange_sources_even_with_retained_prices(self):
         direct = dict(quote('direct', 'kalshi'), source={'provider': 'kalshi'})
@@ -435,6 +456,10 @@ class TradeDesk(TestCase):
             self.assertEqual(shown['score'], payoff['score'])
             self.assertEqual(shown['retail_payoff'], payoff['retail_payoff'])
             self.assertEqual(shown['evidence_result_id'], 'immutable-member')
+            overview = page(data, {'summary':'1'}, options, captured_pairs=[pair], policy='policy', published_only=True)
+            short_pair = overview['rows'][0]['pairs'][0]
+            self.assertEqual(short_pair, dict(id='pair', evidence_result_id='immutable-member',
+                legs=['left', 'right'], score=payoff['score'], retail_payoff={'available':True}))
             left['trade_fee'] = dict(left['trade_fee'], evidence={'fictional_rate': '0.05'})
             changed = page(data, {}, options, captured_pairs=[pair], policy='policy', published_only=True)
             withdrawn = changed['rows'][0]['pairs'][0]
@@ -472,6 +497,14 @@ class TradeDesk(TestCase):
             expected = evaluate_arb(proof, [left, right], Fraction(150))
             self.assertEqual(json.loads(response.body), dict(id='pair', evidence_result_id='member',
                 **expected, provider_requests=0))
+            evaluate.reset_mock()
+            detail = make_mocked_request('GET', '/api/comparison-snapshot/details?layout=desk&id=pair'
+                                         '&result_id=member&lease_id=lease', app=app)
+            opened = json.loads(asyncio.run(route.handler(detail)).body)
+            evaluate.assert_not_called()
+            self.assertEqual(opened['inspection'], pair['default_funding_result']['inspection'])
+            self.assertEqual(opened['retail_payoff'], pair['default_funding_result']['retail_payoff'])
+            self.assertEqual([leg['id'] for leg in opened['offers']], ['left', 'right'])
 
     def test_failed_component_withdraws_economics_but_keeps_valid_prices_and_peers(self):
         rows = [quote('failed', 'novig', value='6'), quote('healthy', 'prophetx', value='3')]

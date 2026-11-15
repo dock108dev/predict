@@ -8,12 +8,12 @@ shows in-game prices. At kickoff or an earlier authoritative phase change, the
 market leaves the pregame results and pinned inspections keep their original
 evidence with an aged-out status.
 
-Each ranked card shows the venue prices for its exact outcome, the ranking
-result, and the selected sportsbook pair or opposing arb legs. The game view
-shows both sides of each line with consistent venue columns. Browse odds and
-Find my game remain available when finance is unavailable. A price with a
-blocked estimate carries a specific reason. Detailed inputs retain native sides,
-original sportsbook prices, the de-vigged estimate, fees and settlement states.
+EV cards show the current venue price, estimated fair odds and return. Arbitrage
+cards show the selected opposing legs and modeled return. Open a calculation to
+see the original sportsbook prices, native sides, fees and settlement states.
+Browse odds and Find my game show current prices even when finance is unavailable.
+Missing prices display as a dash. The public pages display “Free odds may be
+delayed up to 15 minutes.”
 Retail prices and modeled returns can be shown without order-book quantities
 across all exchanges and peer-to-peer venues. The retail views label modeled
 stakes and payoffs and show price freshness. Raw Odds holds book evidence for

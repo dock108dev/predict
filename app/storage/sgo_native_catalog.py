@@ -67,17 +67,20 @@ def dependency_id(event_id):
     return 'sgo-native-catalog:novig:' + event_id
 
 
-def dependencies(db, event_ids=None, *, at=None):
+def dependencies(db, event_ids=None, *, at=None, native_ids=None):
     if not _exists(db):
         return []
     at = stamp(at or now())
+    target = ' AND c.event_id=ANY(%s)' if native_ids is not None else ''
+    params = (at,event_ids,at-timedelta(hours=24),at+timedelta(hours=72),event_ids)
+    if native_ids is not None:
+        params += (native_ids,)
     return db.execute('''SELECT 'sgo-native-catalog:novig:'||c.event_id id,
         c.revision price,c.revision contract,c.revision event,c.revision receipt,e.id event_id
         FROM current_sgo_native_catalog c JOIN current_event e
           ON e.provider='sportsgameodds' AND e.native_event_id=c.event_id
         WHERE c.expires_at > %s AND ((%s::text[] IS NULL AND e.scheduled_start::timestamptz >= %s
-          AND e.scheduled_start::timestamptz < %s) OR e.id=ANY(%s)) ORDER BY id''',
-        (at,event_ids,at-timedelta(hours=24),at+timedelta(hours=72),event_ids)).fetchall()
+          AND e.scheduled_start::timestamptz < %s) OR e.id=ANY(%s))'''+target+' ORDER BY id', params).fetchall()
 
 
 def write(db, event_id, facts):

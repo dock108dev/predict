@@ -75,12 +75,20 @@ class RuntimeReadGuards(unittest.TestCase):
         self.assertEqual(source_states({}, blocked)['kalshi']['state'], 'unavailable')
         self.assertEqual(source_states({}, stopped)['kalshi']['state'], 'stopped')
         self.assertIsNone(disabled['reason_code'])
+        def publishing(**progress):
+            status = dict(background_work=dict(progress=dict(ordinary=progress)))
+            return self.read(runtime_row(status=status))
         with patch('app.collection.runtime_status.RuntimeState') as state:
-            state.return_value.read.side_effect = [blocked, stopped, disabled, self.read(runtime_row())]
-            self.assertFalse(health())
-            self.assertTrue(health())
-            self.assertTrue(health())
-            self.assertTrue(health())
+            for runtime, expected in (
+                (blocked, False), (stopped, True), (disabled, True),
+                (publishing(), False),
+                (publishing(last_success_at=AT.isoformat(), unchanged=True), True),
+                (publishing(last_success_at=AT.isoformat(), error='ordinary_publication_failed'), False),
+                (publishing(last_success_at=(AT-timedelta(minutes=4)).isoformat()), False),
+            ):
+                with self.subTest(expected=expected, status=runtime['status']):
+                    state.return_value.read.return_value = runtime
+                    self.assertEqual(health(), expected)
 
     def test_postgres_local_offset_heartbeat_is_returned_as_utc(self):
         value = self.read(runtime_row(heartbeat_at=AT.astimezone(timezone(timedelta(hours=-4)))))

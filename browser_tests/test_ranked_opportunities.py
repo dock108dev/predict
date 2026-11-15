@@ -7,6 +7,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 import pytest
+from app.dashboard.trade_desk import public_group
 
 ASSETS = (
     Path(__file__).resolve().parents[1] / "app/dashboard/opportunity_static/current"
@@ -30,6 +31,15 @@ def quote(key, venue, predicate, family, line=None, *, decimal="1.25", **fields)
             market=dict(market=family, period="full_game", line=line),
             selection=dict(predicate=predicate, signed_line=line),
             value=None,
+            before_fee=None,
+            after_fee=None,
+            conservative=None,
+            reference=None,
+            reference_current=False,
+            current_until=None,
+            calculation_current_until=None,
+            participant=None,
+            alternate=None,
             reason="sgo_reference_book_rules_unverified",
             cost_per_normal_claim=str(1 / payout),
             captured_at=START,
@@ -167,6 +177,7 @@ def fixtures():
         conservative=denver_ev,
         reason=None,
         reference_current=True,
+        reference=dict(american="+102", decimal="2887/1431"),
         reference_calculation=denver_fair,
     )
     kalshi_denver = quote(
@@ -325,7 +336,7 @@ def fixtures():
 def test_ranked_and_browse_journey(width, tmp_path):
     from playwright.sync_api import expect, sync_playwright
 
-    ev, detroit, denver, last_known, arbs = fixtures()
+    ev, detroit, denver, _, arbs = fixtures()
     errors = []
     provider_requests = []
     unavailable = False
@@ -337,6 +348,7 @@ def test_ranked_and_browse_journey(width, tmp_path):
     pair_replacement = "original"
     pair_reads = 0
     sized_pairs = []
+    inspected = []
 
     def respond(route):
         nonlocal selection_reads, pair_reads
@@ -353,6 +365,7 @@ def test_ranked_and_browse_journey(width, tmp_path):
         elif url.path.startswith("/view/current/"):
             route.fulfill(path=ASSETS / Path(url.path).name)
         elif url.path == "/api/comparison-current":
+            assert "last_known" not in query
             if (
                 browse_failure
                 and query.get("browse_odds") == "1"
@@ -385,16 +398,6 @@ def test_ranked_and_browse_journey(width, tmp_path):
                     rows = [
                         row for row in rows if not row["offers"][0].get("alternate")
                     ]
-                if query.get("last_known") == "1":
-                    retained_row = next(row for row in rows if row["id"] == "ev-denver")
-                    retained_row["offers"].append(last_known)
-                    retained_row["sportsbook_quotes"]["fanduel"] = [
-                        dict(
-                            price_american="-105",
-                            current=False,
-                            source_at=last_known["source_at"],
-                        )
-                    ]
             elif unavailable:
                 rows = []
             else:
@@ -402,7 +405,7 @@ def test_ranked_and_browse_journey(width, tmp_path):
                 rows = ev
             if query.get("game_key"):
                 rows = [row for row in rows if row["game_key"] == query["game_key"]]
-                if hide_game_prices and query.get("last_known") != "1":
+                if hide_game_prices:
                     rows = []
             ranked = sum(row["score"] is not None for row in rows)
             if query.get("positive"):
@@ -411,6 +414,8 @@ def test_ranked_and_browse_journey(width, tmp_path):
                     for row in rows
                     if row["score"] is not None and Fraction(row["score"]) > 0
                 ]
+            if query.get("summary") == "1":
+                rows = [public_group(row, query.get("basis")) for row in rows]
             route.fulfill(
                 json=dict(
                     state="ready",
@@ -459,11 +464,23 @@ def test_ranked_and_browse_journey(width, tmp_path):
                 pair["retail_payoff"]["sizing"]["requested_stake_usd"] = "150"
                 route.fulfill(json=pair)
                 return
-            selected = detroit["offers"][0]
+            inspected.append(query["id"])
+            for arb in arbs:
+                pair = arb["pairs"][0]
+                if pair["id"] == query["id"]:
+                    route.fulfill(json=dict(pair, offers=arb["offers"]))
+                    return
+            selected = next(
+                offer
+                for row in [*ev, detroit, *denver]
+                for offer in row["offers"]
+                if offer["id"] == query["id"]
+            )
             route.fulfill(
                 json=dict(
                     captured_at=START,
                     row=selected,
+                    desk_offer=selected,
                     inspection=dict(
                         identity={},
                         original=dict(value="0.81", units="usd"),
@@ -497,12 +514,23 @@ def test_ranked_and_browse_journey(width, tmp_path):
             cards = tab.locator(".opportunity-card")
             expect(cards).to_have_count(2)
             expect(cards.first).to_contain_text("+3.26%")
+            expect(cards.first).to_contain_text("Sportsbook fair +102")
             expect(cards.first).to_contain_text("DraftKings")
             expect(cards.first).to_contain_text("-108")
             expect(cards.first).not_to_contain_text("Current")
             expect(cards.first).not_to_contain_text("Comparison sportsbook")
             expect(cards.first).not_to_contain_text("-112")
             expect(cards.last).to_contain_text("-3.00%")
+            assert not inspected
+            cards.first.get_by_role(
+                "button", name="View EV calculation:", exact=False
+            ).press("Enter")
+            fair = tab.get_by_role(
+                "dialog", name="Polymarket US · Denver to cover +2.5"
+            )
+            expect(fair.get_by_text("-112", exact=False).first).to_be_visible()
+            assert inspected == ["pmus-denver"]
+            tab.keyboard.press("Escape")
             expect(
                 tab.get_by_text(
                     "Free odds may be delayed up to 15 minutes.", exact=True
@@ -535,6 +563,18 @@ def test_ranked_and_browse_journey(width, tmp_path):
             expect(
                 tab.get_by_role("columnheader", name="Polymarket US")
             ).to_be_visible()
+            expect(
+                tab.get_by_role("columnheader", name="EV", exact=True)
+            ).to_have_count(0)
+            expect(tab.locator('[data-offer-id="pmus-denver"]')).to_contain_text(
+                "+3.26% EV"
+            )
+            expect(tab.locator('[data-offer-id="kalshi-denver"]')).to_contain_text(
+                "-8.21% EV"
+            )
+            expect(
+                tab.locator('[data-offer-id="kalshi-minnesota"]')
+            ).not_to_contain_text("EV")
             if width == 390:
                 expect(tab.get_by_text("More sites →", exact=True)).to_be_visible()
                 assert tab.locator(".odds-scroll").evaluate(
@@ -554,15 +594,8 @@ def test_ranked_and_browse_journey(width, tmp_path):
                 tab.get_by_role("heading", name="No prices available for this matchup")
             ).to_be_visible()
             expect(tab.get_by_role("heading", name=DENVER)).to_be_visible()
-            tab.get_by_label("Last-known prices").check()
-            expect(tab.locator('[data-offer-id="novig-denver"]')).to_contain_text(
-                "Last known"
-            )
-            matrix = tab.locator(".odds-matrix")
-            expect(
-                matrix.locator(".sportsbook-price").filter(has_text="-105")
-            ).to_contain_text("Last known")
-            expect(matrix).not_to_contain_text("Quote updated")
+            expect(tab.get_by_label("Last-known prices")).not_to_be_visible()
+            expect(tab.locator('[data-offer-id="novig-denver"]')).to_have_count(0)
             hide_game_prices = False
             tab.get_by_role("navigation", name="Current view").get_by_role(
                 "link", name="Back"
@@ -605,16 +638,12 @@ def test_ranked_and_browse_journey(width, tmp_path):
             expect(
                 tab.get_by_role("button", name="Clear Spread filter")
             ).to_be_visible()
-            expect(tab.locator("#notice")).to_contain_text(
-                "Showing the last loaded quotes"
-            )
-            expect(tab.locator(".odds-card").filter(has_text=DENVER)).to_contain_text(
-                "Last known"
-            )
+            expect(tab.locator("#notice")).to_contain_text("Prices could not be loaded")
+            expect(tab.locator(".odds-card")).to_have_count(0)
             browse_failure = False
             tab.get_by_role("button", name="Refresh list").click()
             expect(tab.locator("#notice")).not_to_contain_text(
-                "Showing the last loaded quotes"
+                "Prices could not be loaded"
             )
             tab.locator(".odds-card").filter(has_text=DENVER).get_by_role(
                 "link", name="Open game ↗"
@@ -636,10 +665,10 @@ def test_ranked_and_browse_journey(width, tmp_path):
             ):
                 tab.evaluate("document.getElementById('refresh-list').click()")
             expect(tab.locator("#trade [data-inspection-price]")).to_have_text(
-                "Last known · pinned"
+                "Price at inspection"
             )
             expect(tab.locator("#trade [data-inspection-ev]")).to_have_text(
-                "Last known EV · pinned"
+                "EV at inspection"
             )
             withdraw_selection = False
             tab.keyboard.press("Escape")
@@ -667,18 +696,15 @@ def test_ranked_and_browse_journey(width, tmp_path):
             replacement = "stable"
             drawer.get_by_role("button", name="Use latest prices").click()
             expect(drawer.get_by_text("$0.80 per $1 payout")).to_be_visible()
-            expect(drawer.get_by_text("Same-line sportsbook quotes")).to_be_visible()
             drawer.get_by_role("button", name="Use latest prices").click()
             expect(drawer.get_by_role("status")).to_contain_text("No newer quote")
-            expect(drawer.get_by_text("Same-line sportsbook quotes")).to_be_visible()
             tab.keyboard.press("Escape")
             expect(quote_button).to_be_focused()
 
             tab.goto(BASE + "/arbs")
             expect(cards).to_have_count(2)
-            expect(
-                tab.get_by_text("Ranked at $100 before fees.", exact=False)
-            ).to_be_visible()
+            expect(cards.last.locator(".arb-card-legs li")).to_have_count(2)
+            expect(cards.last).not_to_contain_text("$104.03")
             expect(cards.first).to_contain_text("+0.89%")
             expect(cards.last).to_contain_text("-4.84%")
             tab.screenshot(path=tmp_path / f"ranked-arb-{width}.png")
@@ -687,6 +713,7 @@ def test_ranked_and_browse_journey(width, tmp_path):
             )
             payoff = tab.get_by_role("dialog", name="Arbitrage calculation")
             expect(payoff.get_by_text("$104.03", exact=True)).to_be_visible()
+            assert "arb-washington" in inspected
             expect(
                 payoff.locator(".inspection-payoffs").get_by_text(
                     "Tie or exact-line settlement"

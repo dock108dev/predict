@@ -29,7 +29,7 @@
         <nav id="opportunity-tabs" class="opportunity-tabs" aria-label="Opportunities"><a id="opportunity-ev" href="/ev">Expected value</a><a id="opportunity-arb" href="/arbs">Arbitrage</a></nav>
         <div id="market-tabs" class="opportunity-tabs" role="group" aria-label="Market family" hidden></div>
         <label class="desk-search"><span class="sr-only">Search teams</span><input name="search" type="search" maxlength="150" placeholder="Search teams or games"></label>
-        <label id="basis-field"><span class="sr-only">Calculation basis</span><select name="basis" disabled><option value="sportsbooks">Sportsbook estimate before fees</option><option value="reviewed">Reviewed-fee EV</option><option value="conservative">Modeled EV after fee</option><option value="before">Qualified before-fee EV</option></select></label>
+        <label id="basis-field"><span class="sr-only">Calculation basis</span><select name="basis" disabled><option value="sportsbooks">EV vs. sportsbooks before fees</option><option value="reviewed">Reviewed-fee EV</option><option value="conservative">Modeled EV after fee</option><option value="before">Qualified before-fee EV</option></select></label>
         <label id="group-field"><span class="sr-only">Rows</span><select name="group"><option value="outcome">By outcome</option><option value="offer">Individual offers</option></select></label>
         <label id="stake-field" hidden>Total stake before fees ($) <input name="stake" type="number" min="0.01" max="1000000" step="0.01" value="100"></label>
         <label id="positive-field" class="desk-toggle"><input name="positive" type="checkbox"> Positive only</label>

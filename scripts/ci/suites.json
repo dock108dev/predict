@@ -489,6 +489,7 @@
   {
     "name": "ordinary-delivery-boundaries",
     "tests": [
+      "tests/test_ordinary_dependencies.py",
       "tests/test_trade_desk.py",
       "tests/test_delivery_scheduling.py",
       "tests/test_live_data_followup.py",

@@ -8,8 +8,11 @@ from app.comparison.sgo_reference import BEST_BOOKS, BEST_VERSION
 
 
 def publication_runtime(owner):
+    reason = owner.get('reason_code')
+    if not reason and owner.get('calculations', {}).get('board') == 'unavailable':
+        reason = 'ordinary_publication_failed'
     return dict(healthy=bool(owner.get('healthy')), active=bool(owner.get('active')),
-                state=owner.get('service_state'), reason=owner.get('reason_code'),
+                state=owner.get('service_state'), reason=reason,
                 stopped=bool(owner.get('global_stopped')), paused_sources=owner.get('paused_sources', []))
 
 
@@ -186,6 +189,8 @@ def project(result, current, owner, states, *, at, policy, epoch, settings=None,
     if result['publication']['epoch'] != epoch: common.append('input_epoch_replaced')
     if not owner.get('healthy'): common.append('data_runtime_unhealthy')
     if not owner.get('active') or owner.get('global_stopped'): common.append('updates_stopped')
+    if publication_runtime(owner)['reason'] == 'ordinary_publication_failed':
+        common.append('ordinary_publication_failed')
     ready = set()
     pair_ready = {}
     # Identical withdrawal statuses are read-only within this response. Share

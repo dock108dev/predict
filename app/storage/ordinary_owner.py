@@ -13,6 +13,7 @@ class OrdinaryOwner:
         self.closed = False
         self.task = self.coverage_task = self.drain_task = None
         self.last = self.last_coverage = None
+        self.last_success_at = None
         self.error = self.observation_error = self.estimate_error = self.coverage_error = None
         self.progress = {}
         self.wake = asyncio.Event()
@@ -47,15 +48,18 @@ class OrdinaryOwner:
                 self.last = await run(lambda: self.closed, root=ROOT,
                     module='app.collection.ordinary_worker')
                 self.observation_error = self.estimate_error = self.error = None
-                self.progress['ordinary'] = dict(at=utc(), **self.last)
+                if self.last.get('published') or self.last.get('unchanged'):
+                    self.last_success_at = utc()
+                self.progress['ordinary'] = dict(at=utc(), last_success_at=self.last_success_at, **self.last)
                 completed=True
             except AcquisitionDeferred:
-                self.progress['ordinary'] = dict(at=utc(), deferred=True, reason='native_acquisition_catching_up')
+                self.progress['ordinary'] = dict(at=utc(), last_success_at=self.last_success_at,
+                    deferred=True, reason='native_acquisition_catching_up')
             except Exception as exc:
                 if self.closed: return
                 failure(__name__, 'ordinary_publication', exc)
                 self.error = self.observation_error = 'ordinary_publication_failed'
-                self.progress['ordinary'] = dict(at=utc(), error=self.error)
+                self.progress['ordinary'] = dict(at=utc(), last_success_at=self.last_success_at, error=self.error)
             # A completed bounded turn with known remaining work need not spend
             # another two seconds polling. The shared lane rechecks acquisition
             # pressure and Stop before admitting every successor child.

@@ -84,9 +84,11 @@ transfer the **latest** database and ledgers before removing that marker.
 Create `/srv/predict/collection-enabled` once the server owns collection. The
 release script then starts the collector as a persistent Compose service. It
 collects and publishes with no web process or browser running, subject to the
-configured source schedules and budget guards. The collector health check flags
-an enabled collector with a live heartbeat that cannot dispatch. Check the
-collector logs for ownership, candidate identity, or startup receipt failures.
+configured source schedules and budget guards. An enabled collector passes its
+health check when it can dispatch and has published or verified unchanged results
+within the last three minutes. A deliberate global Stop can pass the heartbeat
+check. The web check reads the same public odds endpoint used by the browser.
+Check the collector logs for startup, dispatch or publication errors.
 Admin Stop and source pauses stay in PostgreSQL and survive service or host
 restarts. The release script checks the
 applied migration digests, backs up PostgreSQL before forward migrations, and

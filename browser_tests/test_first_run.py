@@ -24,7 +24,7 @@ def first_use(tab, base):
     ).to_be_visible()
     expect(tab.get_by_role("link", name="Arbitrage")).to_be_visible()
     expect(tab.get_by_role("button", name="Refresh list")).to_be_visible()
-    expect(tab.get_by_role("link", name="Browse saved odds")).to_be_visible()
+    expect(tab.get_by_role("link", name="Find my game ↗")).to_be_visible()
     tab.get_by_role("link", name="Admin", exact=True).click()
     tab.get_by_role("link", name="Sources", exact=True).click()
     setup = tab.locator("#source-setup")

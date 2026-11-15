@@ -276,16 +276,23 @@ def mount(app):
                 owner, states = live.authority(db, at=at,
                     include_diagnostics=is_fee_census and query.get('funnel') == '1')
                 provider = live.aggregate_provider(owner=owner)
-                deps = live.dependencies(db, provider=provider)
                 policy = live.policy_identity(provider)
                 settings = live.current_settings(db)
                 epoch = str(db.execute('SELECT epoch FROM current_row_epoch').fetchone()['epoch'])
                 timings['authority']=(monotonic()-started)*1000
+                stage = monotonic()
+                cold = decoded_cache[0] != head['result_id']
+                result = decoded(head['result_id'], db, ordinary=True) if head['result_id'] else None
+                if head['result_id'] and result is None:
+                    raise web.HTTPServiceUnavailable(reason='Published prices unavailable')
+                timings['cold_decode' if cold else 'cached_decode'] = (monotonic()-stage)*1000
+                deps, dependency_revision = live.published_dependencies(db, result, provider=provider, at=at) if result else ({}, None)
                 # No heartbeat/read timestamp in the change cursor.
-                cursor = hashed([head['generation'], {k:v[:3] for k,v in deps.items()}, epoch, policy, settings['revision'],
+                cursor = hashed([head['generation'], dependency_revision, epoch, policy, settings['revision'],
                     fee_revision(owner.get('fee_lifecycle')),
                     owner.get('fee_products'),
                     owner.get('active'), owner.get('healthy'), owner.get('global_stopped'), owner.get('paused_sources'),
+                    owner.get('calculations', {}).get('board'),
                     {k: [s.get('state'), s.get('reason_code'), s.get('observed_sports')] for k,s in states.items()},
                     int(at.timestamp())//2 if head['facts'].get('next_boundary') and at >= stamp(head['facts']['next_boundary']) else None])
                 if req.path.endswith('/updates'):
@@ -296,7 +303,8 @@ def mount(app):
                 if not head['result_id']:
                     if is_fee_census:
                         empty = dict(rows=[], publication=dict(sources=states, read_at=at.isoformat()))
-                        return dict(fee_census(db, empty, deps, owner, states, at, policy=policy, epoch=epoch, settings=settings),
+                        inventory_deps = live.dependencies(db, provider=provider)
+                        return dict(fee_census(db, empty, inventory_deps, owner, states, at, policy=policy, epoch=epoch, settings=settings),
                             state='initializing', cursor=cursor,
                             generation=head['generation'], result_id=None, provider_requests=0)
                     from app.storage.ordinary_projection import publication_runtime
@@ -309,10 +317,6 @@ def mount(app):
                     return dict(state='page_changed', reason='comparison_changed_restart_pagination',
                         cursor=cursor, generation=head['generation'], result_id=head['result_id'],
                         restart_offset=0, rows=[], provider_requests=0)
-                stage=monotonic()
-                cold=decoded_cache[0]!=head['result_id']
-                result = decoded(head['result_id'],db,ordinary=True)
-                timings['cold_decode' if cold else 'cached_decode']=(monotonic()-stage)*1000
                 stage=monotonic()
                 if req.path.endswith('/selection'):
                     selected=req.query.get('id')
@@ -328,8 +332,11 @@ def mount(app):
                 from app.storage.ordinary_projection import publication_runtime
                 from .trade_desk import browse_retained
                 browsing_odds = query.get('browse_odds') == '1'
-                retained_fallback = browsing_odds and browse_retained(publication_runtime(owner))
-                retain_sportsbook_ev = (browsing_odds and query.get('layout') == 'desk' and options is not None
+                public_summary = query.get('summary') == '1'
+                retained_fallback = (browsing_odds and not public_summary
+                                     and browse_retained(publication_runtime(owner)))
+                retain_sportsbook_ev = (browsing_odds and not public_summary
+                                        and query.get('layout') == 'desk' and options is not None
                                         and options[0] != 'arbs' and query.get('basis', 'sportsbooks') == 'sportsbooks')
                 result = live.project(result, deps, owner, states, at=at, policy=policy, epoch=epoch,
                                       settings=settings, sportsbook_frames=frames,
@@ -337,7 +344,8 @@ def mount(app):
                                       retain_sportsbook_ev=retain_sportsbook_ev)
                 timings['projection']=(monotonic()-stage)*1000
                 if is_fee_census:
-                    return dict(fee_census(db, result, deps, owner, states, at, pairs=captured_pairs,
+                    inventory_deps = live.dependencies(db, provider=provider)
+                    return dict(fee_census(db, result, inventory_deps, owner, states, at, pairs=captured_pairs,
                         policy=policy, epoch=epoch, settings=settings),
                         state=result['publication']['state'],
                         cursor=cursor, generation=head['generation'], result_id=head['result_id'], provider_requests=0)
@@ -374,19 +382,14 @@ def mount(app):
                         if desk_phase(query) != 'live':
                             add_public_prices(out, owner, at=at, include_retained=include_retained,
                                               mark_retained=mark_retained)
-                    qualify = query.get('lines') in ('main', 'all') and (
-                        query.get('browse_odds') == '1' or query.get('ranked') == '1') and options[0] != 'arbs'
                     out = desk_page(result, query, options, captured_pairs=captured_pairs, policy=policy,
-                                    browsing=browsing, enrich=enrich if qualify or retained_fallback else None,
-                                    published_only=True)
-                    if not qualify and not retained_fallback and out.get('state') == 'ready' and options[0] != 'arbs':
-                        enrich(out, include_retained=query.get('last_known') == '1')
+                                    browsing=browsing, enrich=enrich, published_only=True)
                 else:
                     out = page(result, query, options=options)
                 if out.get('state')=='page_changed':return out
                 timings['page']=(monotonic()-stage)*1000
                 from app.storage.delivery_clocks import recent
-                out['delivery_clocks']=recent(db)
+                out['delivery_clocks'] = recent(db)
                 out.update(cursor=cursor, generation=head['generation'], publication=dict(
                     out['publication'], **{k:v for k,v in head['facts'].items() if k in (
                         'published_at','price_seconds','total_seconds','error')}))
@@ -508,7 +511,8 @@ def mount(app):
                     if evidence_result is None:
                         raise PublicRequestError('Selected evidence expired')
                     row=next(r for r in [*evidence_result['rows'],*evidence_result['pairs']] if r['id']==row['id'])
-                if stake is not None:
+                pair_details = req.query.get('layout') == 'desk' and snapshots.exact_arb_pair(row)
+                if stake is not None or pair_details:
                     if not snapshots.exact_arb_pair(row) or 'default_funding_result' not in row:
                         raise PublicRequestError('Exact saved arbitrage pair required')
                     from app.comparison.ordinary_arb import current_payoff
@@ -516,8 +520,14 @@ def mount(app):
                     legs = [dict(by_id[leg], captured_at=evidence_result['captured_at'],
                                  game_state=by_id[leg]['current_authority']['price']['lifecycle']['state'])
                             for leg in row['legs']]
-                    return dict(id=row['id'], evidence_result_id=evidence_result['id'],
-                                **current_payoff(row, legs, stake), provider_requests=0)
+                    payoff = row['default_funding_result'] if stake is None else current_payoff(row, legs, stake)
+                    out = dict(id=row['id'], evidence_result_id=evidence_result['id'], **payoff, provider_requests=0)
+                    if pair_details:
+                        from .trade_desk import offer
+                        out['settlement_payouts'] = row['before_fees'].get('settlement_payouts')
+                        out['offers'] = [offer(dict(leg, price_current=True, evidence_result_id=evidence_result['id']))
+                                         for leg in legs]
+                    return out
                 inputs = snapshots.unpack(
                     db.execute(
                         "SELECT inputs FROM comparison_snapshot WHERE id=%s",

@@ -6,6 +6,7 @@ from unittest.mock import patch
 from aiohttp import web
 from aiohttp.test_utils import TestClient, TestServer
 from tests.latest_board_fixture import LatestBoardFixture, SOCKET
+from tests.test_ev09_n01 import SELECTED
 from app.storage import ordinary_publication as live, comparison_snapshot as snapshots
 from app.storage.current_rows import contract_id
 from app.storage.store import stamp
@@ -15,7 +16,6 @@ from app.dashboard.snapshot_api import mount
 @skipUnless(SOCKET, 'Disposable PostgreSQL required')
 class OrdinarySQL(LatestBoardFixture):
     async def test_capture_uses_fee_authority_for_newly_seen_venue(self):
-        from types import SimpleNamespace
         from app.fees import product_schedules
 
         key = 'kalshi:exchange'
@@ -28,10 +28,10 @@ class OrdinarySQL(LatestBoardFixture):
 
             def lagged_inventory(query, *args, **kwargs):
                 result = execute(query, *args, **kwargs)
-                if query == 'SELECT id,event_id,venue FROM current_contract':
+                if query.startswith('SELECT DISTINCT event_id, venue FROM current_contract'):
                     rows = [dict(row, venue='not_yet_observed') if row['venue'] == 'kalshi' else row
-                            for row in result.fetchall()]
-                    return SimpleNamespace(fetchall=lambda: rows)
+                            for row in result]
+                    return iter(rows)
                 return result
 
             with patch.object(db, 'execute', side_effect=lagged_inventory):
@@ -313,8 +313,6 @@ class OrdinarySQL(LatestBoardFixture):
             self.assertEqual(self.result(db)['publication']['finance'],'ready')
 
     async def test_price_capture_failure_keeps_other_components_and_pinned_evidence(self):
-        from tests.test_ev09_n01 import SELECTED
-
         def affected(row):
             source=row['source']
             return (source['provider'],source['native_event_id']) == SELECTED
@@ -360,8 +358,6 @@ class OrdinarySQL(LatestBoardFixture):
             db.execute("DELETE FROM comparison_result_reference WHERE kind='lease' AND holder=%s",(token['lease_id'],))
 
     async def test_finance_seal_failure_rolls_back_only_its_component(self):
-        from tests.test_ev09_n01 import SELECTED
-
         self.prepare_component_isolation()
         with self.connect() as db:
             seal=live.seal
@@ -462,6 +458,39 @@ class OrdinarySQL(LatestBoardFixture):
                 selected=await (await client.get('/api/comparison-current/selection',params={'id':prices[0]})).json()
                 self.assertEqual(selected['state'],'unavailable')
                 self.assertIn('updates_stopped',selected['row']['current_reasons'])
+
+    async def test_oversized_component_does_not_block_unrelated_publication_or_desk_reads(self):
+        self.prepare_component_isolation()
+        with self.connect() as db:
+            db.execute('''INSERT INTO current_contract_storage
+                (id,event_id,venue,native_market_id,native_outcome_id,native_side,facts,revision)
+                SELECT encode(sha256(convert_to('overload-'||i,'UTF8')),'hex'), c.event_id,
+                    c.venue, 'overload-'||i,c.native_outcome_id,c.native_side,c.facts,c.revision
+                FROM (SELECT c.* FROM current_contract c JOIN current_event e ON e.id=c.event_id
+                    WHERE (e.provider,e.native_event_id)=(%s,%s) LIMIT 1) c
+                CROSS JOIN generate_series(1,32769) i''', SELECTED)
+            db.execute('''INSERT INTO current_offer_storage
+                (contract_id,price_value,price_units,quantity_units,received_at,received_order,facts,revision)
+                SELECT id,'1.91','decimal','contracts',%s,0,'{}','fixture-overload'
+                FROM current_contract WHERE native_market_id LIKE 'overload-%%' ''', (self.at.isoformat(),))
+            turn = live.turn(db)
+            self.assertTrue(turn['published'])
+            self.assertEqual([error['reason'] for error in turn['errors']], ['ordinary_price_capture_failed'])
+            self.assertTrue(self.result(db)['rows'])
+
+        app = web.Application()
+        mount(app)
+        with patch('app.dashboard.snapshot_api.connect', self.connect), \
+             patch.object(live, 'dependencies', side_effect=AssertionError('desk must use published evidence')):
+            async with TestClient(TestServer(app)) as client:
+                for filters in ('browse_odds=1', 'ranked=1', 'ranked=1&view=arbs'):
+                    response = await client.get(f'/api/comparison-current?layout=desk&lines=main&{filters}')
+                    self.assertEqual(response.status, 200)
+                    page = await response.json()
+                    self.assertIsInstance(page['rows'], list)
+                    self.assertEqual(page['provider_requests'], 0)
+                update = await client.get('/api/comparison-current/updates')
+                self.assertEqual(update.status, 200)
 
     async def test_current_desk_projection_matches_full_projection_after_price_withdrawal(self):
         from app.dashboard.trade_desk import page
