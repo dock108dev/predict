@@ -456,6 +456,10 @@ dialog::backdrop { background: #101b3180; }
 .odds-matrix .desk-offer { display: inline-grid; text-align: center; padding: .22rem .35rem; margin: .12rem; white-space: nowrap; border-color: transparent; }
 .odds-matrix .desk-offer .p-odds { font-size: .84rem; }
 .odds-matrix td > .p-odds { display: block; white-space: nowrap; font-weight: 650; }
+.odds-matrix .matrix-fair-odds { min-width: 6.25rem; }
+.matrix-fair-odds .p-odds { font-weight: 650; }
+.matrix-fair-odds small { color: var(--muted); }
+.matrix-fair-odds div + div { margin-top: .4rem; }
 .matrix-reference small { color: inherit; }
 .odds-card .odds-matrix td { min-width: 4.7rem; }
 .matrix-empty { margin: .6rem 1rem; }

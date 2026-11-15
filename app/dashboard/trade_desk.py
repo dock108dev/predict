@@ -17,6 +17,7 @@ from .u0_display import quote_display
 
 EV_METRIC = 'conditional_return_percent'
 SPORTSBOOK_METRIC = 'sportsbook_return_percent'
+NATIVE_VENUES = {'kalshi', 'polymarket_us'}
 METRICS={'reviewed':EV_METRIC,'before':'gross_return_percent','conservative':'conservative_return_percent',
          'sportsbooks':SPORTSBOOK_METRIC}
 
@@ -132,9 +133,20 @@ def offer(original, metric=None, *, sportsbook_updates_paused=False):
     if metric is None and (row.get('trade_fee') or {}).get('available'):
         fee_deadline = ((row['trade_fee'].get('evidence') or {}).get('review_before'))
     deadlines = [clock for clock in (price_deadline, fee_deadline, *reference_deadlines) if clock]
+    selected_book = (reference.get('venue') or ref_venue) if sgo_reference else ref_venue
+    fair_reference = None
+    if value is not None:
+        if metric == SPORTSBOOK_METRIC:
+            if sportsbook and sportsbook.get('book'):
+                fair_reference = dict(books=[sportsbook['book']], method='single')
+        elif sgo_reference and reference['method'] == SGO_MEDIAN:
+            fair_reference = dict(books=[item['venue'] for item in reference.get('contributors', ())],
+                                  method='median')
+        elif selected_book:
+            fair_reference = dict(books=[selected_book], method='single')
     return dict(before_fee=None if gross is None else str(gross),after_fee=None if reviewed is None else str(reviewed),
                 conservative=None if conservative is None else str(conservative),metric=metric,
-                sportsbook=sportsbook,
+                sportsbook=sportsbook,fair_reference=fair_reference,
                 trade_fee=row.get('trade_fee'),fee=row.get('conditional_trade_benchmark'),conservative_fee=row.get('conservative_trade_benchmark'),
                 reference_calculation=row.get('reference_calculation'),economic_revision=row.get('economic_revision'),price_revision=row.get('price_revision'),evidence_result_id=row.get('evidence_result_id'),
                 captured_at=row.get('captured_at'),game_state=row.get('game_state','unknown'),
@@ -161,7 +173,7 @@ def offer(original, metric=None, *, sportsbook_updates_paused=False):
 def public_offer(quote, basis):
     fields = ('id', 'venue', 'selection', 'participant', 'market', 'alternate', 'odds',
               'current', 'value', 'reason', 'before_fee', 'after_fee', 'conservative',
-              'reference_current', 'current_until', 'calculation_current_until',
+              'reference_current', 'fair_reference', 'current_until', 'calculation_current_until',
               'price_revision', 'economic_revision', 'evidence_result_id', 'captured_at',
               'game_state', 'source_clock_at', 'confirmed_at', 'received_at')
     result = {field: quote[field] for field in fields if field in quote}
@@ -194,7 +206,7 @@ def public_group(group, basis):
 
 def direct_venue_offer(row):
     provider = (row.get('source') or {}).get('provider')
-    return row['venue'] not in ('kalshi', 'polymarket_us') or provider in (None, row['venue'])
+    return row['venue'] not in NATIVE_VENUES or provider in (None, row['venue'])
 
 
 def game_source_key(row):
@@ -462,6 +474,8 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
     basis = query.get('basis') or ('sportsbooks' if phase == 'pregame' else 'reviewed')
     runtime = result['publication'].get('data_runtime') or {}
     public_summary = query.get('summary') == '1'
+    native_browse = browse and comparable and public_summary
+    native_alternates = native_browse and query.get('lines') == 'all'
     retained_fallback = not public_summary and browse and view != 'arbs' and browse_retained(runtime)
     show_retained = not public_summary and (retained_fallback or query.get('last_known') == '1' or (
         not (browse or ranked) and 'last_known' not in query))
@@ -519,7 +533,11 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
         return dict(row,source_game_title=row['game_title'],game_title=' vs. '.join(names.values()))
     scoped_rows = [row for row in result['rows'] if matches(row)
                    and (query.get('layout') != 'desk' or direct_venue_offer(row))]
-    rows = [labeled(row) for row in scoped_rows if show_retained or row.get('price_current')]
+    # Let the odds matrix show a saved native quote at its exact outcome when
+    # a fresh image is unavailable. The rank and quote-place checks still use
+    # current observations, and no aggregate alias fills a native column.
+    rows = [labeled(row) for row in scoped_rows if show_retained or row.get('price_current')
+            or native_browse and row['venue'] in NATIVE_VENUES]
     selected_rows = [row for row in rows if not venues or row['venue'] in venues]
     by_id = {row['id']: row for row in rows}
     practice = (result.get('replay') or {}).get('synthetic')
@@ -695,7 +713,8 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
         candidates = []
         for group in groups:
             first = group['quotes'][0]
-            if not retained_comparison and not any(row.get('price_current') for row in group['quotes']):
+            if (not retained_comparison and not any(row.get('price_current') for row in group['quotes'])
+                    and not (native_alternates and any(row['venue'] in NATIVE_VENUES for row in group['quotes']))):
                 continue
             offers = []
             books = {}
@@ -738,6 +757,11 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
                                                  requested_source=game_source, retained=True)) - qualified
                 qualified.update(fallback)
                 limited_coverage = bool(fallback)
+        if native_alternates:
+            # A different signed line may have only one direct venue. It
+            # belongs in Browse at that exact line, outside EV qualification.
+            qualified.update(group['id'] for group in candidates
+                             if quote_places(group, retained=True) & NATIVE_VENUES)
         groups = [group for group in groups if group['id'] in qualified]
     groups = [g for g in groups if (not ranked or g['score'] is not None)
               and passes(Fraction(g['score']) if g['score'] is not None else None, g.get('retail_payoff'))]

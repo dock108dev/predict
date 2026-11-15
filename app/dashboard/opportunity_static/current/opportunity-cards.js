@@ -25,10 +25,38 @@ export function selectedReference(offer, basis) {
     return {book:offer.sportsbook.book, prices:offer.sportsbook.prices, candidates:offer.sportsbook.candidates};
   }
   const ref = offer?.reference_current && offer.reference_calculation;
-  const book = ref && ref.contributors?.find(item => item.venue === ref.venue || item.venue === ref.bookmaker)
-    || ref?.contributors?.[0];
+  const book = ref && ref.contributors?.find(item => item.venue === ref.venue || item.venue === ref.bookmaker);
   if (book) return {book:book.venue, prices:book.inputs, candidates:ref.candidates};
   return null;
+}
+
+function fairReferenceLabel(reference) {
+  const names = reference?.books?.map(name);
+  if (!names?.length) return '';
+  return reference.method === 'median' ? `Median · ${names.join(', ')}` : names.join(', ');
+}
+
+function fairOddsCell(offers, basis) {
+  const cell = el('td', null, 'matrix-fair-odds');
+  const entries = new Map();
+  for (const offer of offers) {
+    if (!offer.current || offer.value == null) continue;
+    const fair = offer.fair_odds || (basis === 'sportsbooks' ? offer.sportsbook?.fair_odds
+      : offer.reference_current && offer.reference);
+    const reference = fairReferenceLabel(offer.fair_reference);
+    if (!fair || !reference) continue;
+    const key = JSON.stringify([fair.decimal, reference]);
+    if (!entries.has(key)) entries.set(key, {fair, reference, venues:new Set()});
+    entries.get(key).venues.add(venueLabel(offer));
+  }
+  for (const {fair, reference, venues} of entries.values()) {
+    const price = el('div');
+    price.append(odd(fair), el('small', reference));
+    if (entries.size > 1) price.append(el('small', [...venues].join(', ')));
+    cell.append(price);
+  }
+  if (!entries.size) noQuote(cell, 'the EV reference');
+  return cell;
 }
 
 function sportsbookOdds(price) {
@@ -158,13 +186,13 @@ function quote(offer, group, context, className = '', showResult = true) {
   const freshness = context.mode ? (offer.current ? 'At capture' : 'Last known at capture')
     : priceStatus(offer.current, offer.source_at || offer.source_clock_at, context.checkedAt);
   item.setAttribute('aria-label', [label, context.position(offer), offer.odds?.american, showResult && (reason || `${percent(offer.value)} EV`),
-    !context.summary && freshness].filter(Boolean).join(', '));
+    (!context.summary || !offer.current) && freshness].filter(Boolean).join(', '));
   if (showResult) item.append(el('span', label, 'desk-site'));
   item.append(odd(offer.odds));
   const [status, age] = freshness.split(' · ');
   const freshnessLabel = el('small', context.compact || offer.current ? status : freshness, 'quote-freshness');
   if (age) freshnessLabel.title = age;
-  if (!context.summary && (!context.compact || !offer.current)) item.append(freshnessLabel);
+  if (!offer.current || !context.summary && !context.compact) item.append(freshnessLabel);
   if (showResult) item.append(el('small', reason || `${percent(offer.value)} EV`, reason ? 'offer-reason' : tone(offer.value)));
   return item;
 }
@@ -234,6 +262,8 @@ function compactEV(group, context) {
   if (fair) {
     const estimate = el('span', 'Sportsbook fair ', 'compact-fair');
     estimate.append(odd(fair));
+    const source = fairReferenceLabel(lead.fair_reference);
+    if (source) estimate.append(` · ${source}`);
     inspect.append(estimate);
   }
   row.append(cardHeader(group, context.position(lead), group.game_title, inspect, context.clock));
@@ -374,11 +404,13 @@ export function gameMatrix(groups, context, {includeAlternates, market, selected
   const thead = table.createTHead(), section = thead.insertRow(), headings = thead.insertRow();
   const outcome = heading('Exact outcome');
   outcome.rowSpan = 2;
+  const fairOdds = heading('Fair odds');
+  fairOdds.rowSpan = 2;
   const exchange = heading(context.summary ? 'Prediction markets' : 'Venue prices', 'colgroup');
   const sportsbook = heading(context.summary ? 'Sportsbook odds' : 'Sportsbook quotes', 'colgroup');
   exchange.colSpan = columns.length;
   sportsbook.colSpan = books.length;
-  section.append(outcome, exchange, sportsbook);
+  section.append(outcome, fairOdds, exchange, sportsbook);
   if (!context.summary) {
     const ev = heading('EV');
     ev.rowSpan = 2;
@@ -399,7 +431,7 @@ export function gameMatrix(groups, context, {includeAlternates, market, selected
       tr.setAttribute('aria-current', 'true');
     }
     if (settlementLabel(group) && !context.compact) side.append(el('small', settlementLabel(group)));
-    tr.append(side);
+    tr.append(side, fairOddsCell(group.offers, context.basis));
     const currentPayouts = group.offers.filter(offer => offer.current).map(offer => num(offer.odds?.decimal));
     const highestPayout = Math.max(...currentPayouts);
     for (const [venue] of columns) {

@@ -90,6 +90,7 @@ class NativeWorker:
         self.pages = []
         self.catalog = dict(events=[], markets=[])
         self.markets = {}
+        self.reference_priority = set()
         self.material_quarantine = {}
         self.backoff_until = 0
         self.failed = False
@@ -622,7 +623,21 @@ class NativeWorker:
         phase_events = (getattr(reducer, 'inventory', {}).get(self.venue, {}).get('events', [])
                         if self.venue == 'polymarket_us' else ())
         return select(markets, self.catalog, datetime.now(timezone.utc), cursor, phase_events=phase_events,
-                      priority_pregame=self.service.config.get('aggregate_provider') == 'sportsgameodds')
+                      priority_pregame=self.service.config.get('aggregate_provider') == 'sportsgameodds',
+                      preferred=self.reference_priority)
+
+    async def sportsbook_priority(self, catalog):
+        if not (getattr(self.service, 'database_mode', False)
+                and self.config.get('aggregate_provider') == 'sportsgameodds'):
+            return set()
+        from psycopg import OperationalError
+        from .native_priority import sportsbook_main_markets
+        from app.diagnostics import failure
+        try:
+            return await owned_thread(sportsbook_main_markets, catalog)
+        except OperationalError as exc:
+            failure(__name__, 'native_sportsbook_priority', exc)
+            return set()
 
     def next_priority(self):
         all_markets = [market for mid, market in self.markets.items() if mid in self.lifecycle.leases]
@@ -1263,6 +1278,7 @@ class NativeWorker:
         # generation, before replacing membership or clearing source highwaters.
         from app.comparison.lifecycle import worker_selections
         selections=await owned_thread(worker_selections,self.venue,parsed,cat)
+        reference_priority = await self.sportsbook_priority(cat)
         async with self.subscription_lock:
             await self.quiesce_catalog(parsed,cat,selections)
             stage('catalog_validation_and_adoption')
@@ -1279,6 +1295,7 @@ class NativeWorker:
             # Retire unselected/closed catalogs deliberately; leases are independent.
             self.metrics['generations'] += 1
             self.catalog, self.markets = cat, parsed
+            self.reference_priority = reference_priority
             self.derived_versions={mid:v for mid,v in self.derived_versions.items() if mid in parsed}
             from app.adapters.polymarket_us import routing_slugs
             active_clock_keys = set(parsed) if self.venue == 'kalshi' else await owned_thread(routing_slugs, parsed.values())
@@ -1921,8 +1938,10 @@ class NativeWorker:
         self.metrics['restoration']['stage']='admitting_saved_catalog'
         await call(self.service,self.service.catalog,self.venue,cat)
         self.metrics['restoration']['admission_seconds']=time.monotonic()-validated
+        reference_priority = await self.sportsbook_priority(cat)
         self.guard()
         self.catalog,self.markets=cat,parsed
+        self.reference_priority = reference_priority
         self.census_generation=cat.get('acquisition_census_generation')
         self.lifecycle.reconcile(selections,datetime.now(timezone.utc))
         self.lifecycle_initialized=True

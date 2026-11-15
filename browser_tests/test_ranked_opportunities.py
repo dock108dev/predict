@@ -178,6 +178,7 @@ def fixtures():
         reason=None,
         reference_current=True,
         reference=dict(american="+102", decimal="2887/1431"),
+        fair_reference=dict(books=["draftkings"], method="single"),
         reference_calculation=denver_fair,
     )
     kalshi_denver = quote(
@@ -572,6 +573,18 @@ def test_ranked_and_browse_journey(width, tmp_path):
             expect(
                 tab.get_by_role("columnheader", name="EV", exact=True)
             ).to_have_count(0)
+            expect(
+                tab.locator(".odds-matrix thead tr").first.locator("th")
+            ).to_have_text(
+                ["Exact outcome", "Fair odds", "Prediction markets", "Sportsbook odds"]
+            )
+            fair = (
+                tab.get_by_role("row")
+                .filter(has_text="Denver to cover +2.5")
+                .locator(".matrix-fair-odds")
+            )
+            expect(fair).to_contain_text("+102")
+            expect(fair).to_contain_text("DraftKings")
             expect(tab.locator('[data-offer-id="pmus-denver"]')).to_contain_text(
                 "+3.26% EV"
             )

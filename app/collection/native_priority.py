@@ -1,6 +1,7 @@
 """Explicit bounded current subscriptions; complete catalog discovery is unchanged."""
 from collections import defaultdict,deque,Counter
 from datetime import datetime
+from decimal import Decimal
 
 from app.comparison.game_phase import sporting_phase
 from .native_sporting_state import current_observation, matches_event
@@ -12,7 +13,86 @@ MAX_ACTIVE=256
 ROTATE_SECONDS=20
 
 
-def select(markets,catalog,now,offset,*,limit=MAX_ACTIVE,phase_events=(),priority_pregame=False):
+def sportsbook_main_markets(catalog):
+    """Use retained sportsbook lines as scheduling hints for exact native instruments."""
+    from app.comparison.sgo_reference import BEST_BOOKS
+    from app.storage.store import connect, stamp
+
+    with connect() as db:
+        rows = db.execute("""SELECT DISTINCT ON (e.id,r.bookmaker_id,r.facts->>'market')
+            e.competition,e.scheduled_start,e.facts->>'home' home,e.facts->>'away' away,
+            r.facts->>'market' family,(r.facts->>'line')::numeric line
+            FROM current_event e JOIN current_sgo_reference r ON r.event_id=e.native_event_id
+            WHERE e.provider='sportsgameodds' AND r.bookmaker_id=ANY(%s)
+              AND e.scheduled_start::timestamptz BETWEEN now() AND now()+interval '72 hours'
+              AND r.expires_at>now() AND r.facts->>'phase'='pregame'
+              AND r.facts->>'period'='game' AND r.facts->>'available'='true'
+              AND coalesce(r.facts->>'alternate','false')='false' AND r.facts->>'line' IS NOT NULL
+              AND ((r.facts->>'market',r.facts->>'side') IN (('spread','home'),('total','over')))
+            ORDER BY e.id,r.bookmaker_id,r.facts->>'market',r.received_order DESC,r.source_order DESC,r.id""",
+            (list(BEST_BOOKS),)).fetchall()
+    lines = defaultdict(Counter)
+    for row in rows:
+        key = (row['competition'], stamp(row['scheduled_start']), row['home'], row['away'], row['family'])
+        lines[key][row['line']] += 1
+    main = {key: min(counts, key=lambda line: (-counts[line], line)) for key, counts in lines.items()}
+    return matching_main_markets(catalog, main)
+
+
+def matching_main_markets(catalog, main):
+    from .current_sink import source_local_display_binding
+    from app.storage.store import stamp
+
+    if not main:
+        return set()
+    scheduled = {key[:4] for key in main}
+    occurrences = {}
+    for event in catalog['events']:
+        roles = event.get('source_participant_roles') or event
+        start, home, away = event.get('scheduled_start'), roles.get('home'), roles.get('away')
+        if (start and home and away and home != away and not event.get('exclusion')
+                and not event.get('conflicting_duplicate') and not event.get('occurrence_conflict')):
+            try:
+                key = (event.get('competition'), stamp(start), home, away)
+            except (AttributeError, TypeError, ValueError):
+                continue
+            if key in scheduled:
+                occurrences[event['id']] = (event, key)
+    chosen = set()
+    for market in catalog['markets']:
+        occurrence = occurrences.get(market['event_id'])
+        if not occurrence or market.get('exclusion') or market.get('conflicting_duplicate'):
+            continue
+        event, key = occurrence
+        binding = market.get('v1_raw_binding') or {}
+        fact = binding.get('source_predicate') or {}
+        identity = binding.get('identity') or {}
+        if identity.get('period') != 'full_game':
+            continue
+        family = identity.get('family')
+        if family == 'moneyline':
+            matches = any(isinstance(side, dict) and side.get('predicate') == 'win'
+                          and side.get('participant') in key[2:] for side in binding.get('predicate') or ())
+        elif family in ('spread', 'total') and fact.get('period') == 'full_game' and fact.get('family') == family:
+            line = main.get((*key, family))
+            if line is None:
+                continue
+            participant, native_line = fact['participant'], Decimal(fact['line'])
+            if family == 'total':
+                matches = participant == 'combined' and native_line == line
+            else:
+                matches = participant == key[2] and native_line == line or participant == key[3] and native_line == -line
+        else:
+            continue
+        # A source-local exact side can be scheduled even when season/stage
+        # is unavailable. The subscription confers no comparison authority.
+        if matches and (binding.get('status') == 'BOUND_RAW_PREDICATE'
+                        or source_local_display_binding(event, market, binding, binding.get('source'))):
+            chosen.add(market['id'])
+    return chosen
+
+
+def select(markets,catalog,now,offset,*,limit=MAX_ACTIVE,phase_events=(),priority_pregame=False,preferred=()):
     events={e['id']:e for e in catalog.get('events',[])}
     committed={e['id']:e for e in phase_events}
     metadata={m['id']:m for m in catalog.get('markets',[])}
@@ -45,7 +125,8 @@ def select(markets,catalog,now,offset,*,limit=MAX_ACTIVE,phase_events=(),priorit
         cells[(event.get('competition','unknown'),metadata.get(mid,{}).get('market_type','unknown'))][eid].append(market)
     queues={}
     for cell,groups in sorted(cells.items()):
-        groups={eid:deque(sorted(rows,key=lambda m:m.raw.ref.market_id)) for eid,rows in groups.items()}
+        groups={eid:deque(sorted(rows,key=lambda m:(m.raw.ref.market_id not in preferred,m.raw.ref.market_id)))
+                for eid,rows in groups.items()}
         ordered=[]
         while groups:
             for eid in sorted(groups,key=distance):
@@ -69,6 +150,10 @@ def select(markets,catalog,now,offset,*,limit=MAX_ACTIVE,phase_events=(),priorit
                     key=lambda m:distance(m.raw.ref.event_id)[:2])
         primary=seed+hot[:fixed-len(seed)]
         fixed_ids={m.raw.ref.market_id for m in primary}
+        main_lines=sorted((m for m in pool if m.raw.ref.market_id in preferred and m.raw.ref.market_id not in fixed_ids),
+                          key=lambda m:distance(m.raw.ref.event_id)[:2])
+        primary.extend(main_lines[:fixed-len(primary)])
+        fixed_ids.update(m.raw.ref.market_id for m in primary)
         primary.extend([m for m in pool if m.raw.ref.market_id not in fixed_ids][:fixed-len(primary)])
         fixed_ids.update(m.raw.ref.market_id for m in primary)
         remaining=[m for m in fair if m.raw.ref.market_id not in fixed_ids]

@@ -146,6 +146,29 @@ class TradeDesk(TestCase):
         out = page(result(direct, aggregate, other), {'layout':'desk', 'last_known':'1'}, ('ev', None, 0, 10))
         self.assertEqual({q['id'] for g in out['rows'] for q in g['offers']}, {'direct', 'novig'})
 
+    def test_public_odds_show_fair_reference_and_exact_last_known_native_prices(self):
+        live = dict(quote('novig', 'novig'), sportsbook_return_percent='4',
+                    sportsbook_baseline=dict(book='draftkings', fair_decimal_odds='2.1', prices=[]))
+        saved = dict(quote('poly', 'polymarket_us', current=False), source={'provider': 'polymarket_us'})
+        other = dict(quote('other', 'kalshi', current=False), source={'provider': 'kalshi'}, alternate=True)
+        other['market']['line'] = '3.5'
+        other['selection']['signed_line'] = '-3.5'
+        alias = dict(quote('alias', 'kalshi'), source={'provider': 'sportsgameodds'})
+        data = result(live, saved, other, alias)
+        query = dict(layout='desk', browse_odds='1', basis='sportsbooks', lines='main', summary='1')
+
+        groups = page(data, query, ('ev', None, 0, 10))['rows']
+        self.assertEqual(len(groups), 1)
+        offers = {offer['id']: offer for offer in groups[0]['offers']}
+        self.assertEqual(set(offers), {'novig', 'poly'})
+        self.assertEqual(offers['novig']['fair_odds']['american'], '+110')
+        self.assertEqual(offers['novig']['fair_reference'], {'books': ['draftkings'], 'method': 'single'})
+        self.assertFalse(offers['poly']['current'])
+        self.assertIsNone(offers['poly']['value'])
+        self.assertIsNone(offers['poly']['fair_reference'])
+        all_lines = page(data, dict(query, lines='all'), ('ev', None, 0, 10))['rows']
+        self.assertEqual({offer['id'] for group in all_lines for offer in group['offers']}, {'novig', 'poly', 'other'})
+
     def test_browse_keeps_current_native_games_on_a_mixed_coverage_slate(self):
         covered = [quote(venue, venue, value='1') for venue in ('novig', 'prophetx', 'kalshi')]
         native = [dict(quote(f'native-{venue}', venue, value='1'), game_key=venue,

@@ -1,6 +1,8 @@
 from datetime import datetime,timezone,timedelta
+from decimal import Decimal
 from types import SimpleNamespace
-from app.collection.native_priority import select
+from app.collection.native_priority import matching_main_markets, select
+from app.dashboard.session_projection import stable
 
 
 def population():
@@ -88,3 +90,55 @@ def test_older_live_flags_do_not_crowd_out_alternates_for_a_recent_game():
         assert sum(m.raw.ref.event_id == recent['id'] for m in chosen[:36]) == 12
         assert detail['active_markets'] == 72
         assert all(cell['active'] for cell in detail['cells'])
+
+
+def test_pregame_main_markets_prefer_exact_native_sides():
+    event = dict(id='event', competition='NFL', scheduled_start='2026-11-15T14:30:00Z',
+                 identity='resolved', home='NFL:DET', away='NFL:NE',
+                 participants={'Detroit': 'NFL:DET', 'New England': 'NFL:NE'},
+                 source_participant_roles={'home': 'NFL:DET', 'away': 'NFL:NE'})
+    start = datetime(2026, 11, 15, 14, 30, tzinfo=timezone.utc)
+    game = ('NFL', start, 'NFL:DET', 'NFL:NE')
+    main = {(*game, 'spread'): Decimal('-2.5'), (*game, 'total'): Decimal('49.5')}
+
+    def market(id_, family, participant, line, *, context_missing=False, period='full_game'):
+        sides = [dict(native_id='4316818', operator='gt', equality='unreachable'),
+                 dict(native_id='4316819', operator='le', equality='unreachable')]
+        binding = dict(source='polymarket_us', event_id='event', market_id=id_,
+                       status='IDENTITY_BLOCKED' if context_missing else 'BOUND_RAW_PREDICATE',
+                       blockers=['Exact game identity facts unavailable: season, stage'] if context_missing else [],
+                       identity=dict(competition='NFL', family=family, period=period,
+                                     roles=event['source_participant_roles']),
+                       source_predicate=dict(family=family, period=period, participant=participant,
+                                             line=line, outcomes=sides),
+                       predicate=[participant, line, sides])
+        binding['sha256'] = stable(binding)
+        return dict(id=id_, event_id='event', market_type=family, period=period, v1_raw_binding=binding,
+                    sides=[dict(id=side['native_id']) for side in sides])
+
+    markets = [
+        market('home-favorite', 'spread', 'NFL:DET', '-2.5', context_missing=True),
+        market('away-underdog', 'spread', 'NFL:NE', '2.5'),
+        market('away-favorite', 'spread', 'NFL:NE', '-2.5'),
+        market('other-line', 'spread', 'NFL:DET', '-3.5'),
+        market('total', 'total', 'combined', '49.5'),
+        market('team-total', 'total', 'NFL:DET', '49.5'),
+        market('first-half', 'total', 'combined', '49.5', period='first_half'),
+    ]
+    assert matching_main_markets(dict(events=[event], markets=markets), main) == {
+        'home-favorite', 'away-underdog', 'total',
+    }
+    assert markets[0]['v1_raw_binding']['status'] == 'IDENTITY_BLOCKED'
+
+
+def test_main_market_priority_preserves_rotation_and_cap():
+    markets, catalog, now = population()
+    preferred = {'NFL-2-spread-2', 'NFL-2-moneyline-3'}
+    seen = set()
+    for offset in range(9):
+        chosen, _ = select(markets, catalog, now, offset, limit=72, preferred=preferred)
+        ids = [m.raw.ref.market_id for m in chosen]
+        assert len(ids) == len(set(ids)) == 72
+        assert preferred <= set(ids[:36])
+        seen.update(ids)
+    assert seen == {m.raw.ref.market_id for m in markets}
