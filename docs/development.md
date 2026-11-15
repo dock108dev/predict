@@ -57,17 +57,15 @@ outside collection hours does not change the test outcome.
 
 ## Frozen replay
 
-Open `/replay` on the local app to start **Synthetic practice**. Select a saved
-capture from the dataset menu when a local archive is available.
+Open **Saved odds** on the local app and select an available archive.
 The capture clock stays fixed, including the freshness and fee review decisions
 at that time. Individual offer inspection includes recorded starting fee terms,
 saved rules, and before-fee payouts. A tie that settles to $0.50 has a cashflow
 separate from a stake refund. Full EV needs the probabilities of those outcomes.
 
 The local archives live under `.local/odds-replay/`. The replay read API opens
-those archives read-only. **Open replay** and **Return to live board** switch views.
-Admin Stop controls collection independently. The practice dataset offers two
-price steps for checking a fictional arbitrage and its modeled fees.
+those archives read-only. **Saved odds** and **Return to opportunities** switch views.
+Admin Stop controls collection independently.
 
 ## Install tools
 

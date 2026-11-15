@@ -5,14 +5,22 @@ import pytest
 
 from app.dashboard.local_security import PublicRequestError
 from app.dashboard.replay_api import load
+from app.storage import odds_replay
 from app.comparison.inspection_math import starting_fee_terms
 from app.comparison.inspection_settlement import settlement_terms
+from tests.replay_fixture import write_archives
 
 
-def test_practice_move_keeps_prefee_cashflows_and_withholds_arbitrage():
-    query = dict(dataset='practice', view='arbs', stake='100')
-    assert load(dict(query, frame='initial', positive='on'))['total'] == 0
-    result = load(dict(query, frame='changed'))
+@pytest.fixture
+def saved_archives(tmp_path, monkeypatch):
+    write_archives(tmp_path)
+    monkeypatch.setattr(odds_replay, 'DIRECTORY', tmp_path)
+
+
+def test_saved_prices_keep_prefee_cashflows_and_withhold_arbitrage(saved_archives):
+    query = dict(dataset='frozen', view='arbs', stake='100')
+    assert load(dict(query, positive='on'))['total'] == 0
+    result = load(dict(query, dataset='preview'))
     (group,) = result['rows']
     (pair,) = group['pairs']
     math = pair['inspection']
@@ -22,31 +30,37 @@ def test_practice_move_keeps_prefee_cashflows_and_withholds_arbitrage():
     assert pair['score'] is None
     assert pair['retail_payoff']['reason'] == 'pair_missing_leg_fees'
     assert Fraction(math['ideal_profit_usd']) > Fraction(math['minimum_profit_usd'])
-    assert load(dict(query, frame='changed', profit='7.44'))['total'] == 0
+    assert load(dict(query, dataset='preview', profit='7.44'))['total'] == 0
 
 
-def test_replay_detail_is_revision_bound_and_never_reads_live_data():
-    query = dict(dataset='practice', view='ev', basis='before', group='offer')
+def test_replay_detail_is_revision_bound_and_never_reads_live_data(saved_archives):
+    query = dict(dataset='frozen', view='ev', basis='before', group='offer')
     with patch('app.storage.odds_replay.connect', side_effect=AssertionError('live data connection')):
-        page = load(dict(query, frame='initial'))
-        assert page['replay']['synthetic'] is True
+        page = load(query)
+        assert page['replay']['synthetic'] is False
         assert page['coverage'] == dict(offers=6, current=6, before=6, reviewed=0, conservative=0, sportsbooks=0)
-        modeled = load(dict(query, frame='initial', basis='conservative'))
+        modeled = load(dict(query, basis='conservative'))
         assert all(group['score'] is None for group in modeled['rows'])
         assert all(group['offers'][0]['value'] is None for group in modeled['rows'])
-        reviewed = load(dict(query, frame='initial', basis='reviewed'))
+        reviewed = load(dict(query, basis='reviewed'))
         assert all(group['score'] is None for group in reviewed['rows'])
         offer = next(group['offers'][0] for group in page['rows'] if group['offers'][0]['id'] == 'practice-offer-0')
         assert offer['value'] == '10'
         assert offer['fair_reference']['method'] == 'authored_probability'
         selection = dict(query, id=offer['id'], result_id=offer['evidence_result_id'])
-        detail = load(dict(selection, frame='initial'), details=True)
+        detail = load(selection, details=True)
         assert detail['inspection']['reviewed']['available'] is False
         assert detail['inspection']['starting_fee_terms'] is None
         assert detail['inspection']['assumed_scenario']['available'] is False
         assert detail['inspection']['trade_fee']['reason'] == 'synthetic_account_terms_unavailable'
         with pytest.raises(PublicRequestError, match='revision changed'):
-            load(dict(selection, frame='changed'), details=True)
+            load(dict(selection, dataset='preview'), details=True)
+
+
+@pytest.mark.parametrize('details', [False, True])
+def test_public_replay_rejects_removed_practice_dataset(details):
+    with pytest.raises(PublicRequestError, match='Unknown replay dataset'):
+        load({'dataset': 'practice'}, details=details)
 
 
 def test_retained_novig_recovers_scoped_zero_without_legacy_reference():

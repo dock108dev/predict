@@ -1,4 +1,4 @@
-"""Exercise the credential-free desk journey against authored replay inputs."""
+"""Exercise public odds and saved captures without an Admin challenge."""
 
 import os
 from pathlib import Path
@@ -8,13 +8,14 @@ import pytest
 
 from app.dashboard.replay_api import load
 from app.storage import odds_replay
+from tests.replay_fixture import write_archives
 
 ASSETS = (
     Path(__file__).resolve().parents[1] / "app/dashboard/opportunity_static/current"
 )
 
 
-def first_use(tab, base):
+def first_use(tab, base, archive_directory):
     from playwright.sync_api import expect
 
     tab.goto(base + "/")
@@ -40,9 +41,10 @@ def first_use(tab, base):
     tab.get_by_label("Calculation basis").select_option("conservative")
     tab.reload()
     expect(tab.get_by_label("Calculation basis")).to_have_value("conservative")
-    tab.get_by_role("link", name="Open replay").click()
+    expect(tab.get_by_text("Synthetic practice", exact=False)).to_have_count(0)
+    tab.get_by_role("link", name="Saved odds").click()
     expect(
-        tab.get_by_text("Synthetic practice · fictional prices and inputs")
+        tab.get_by_text("Saved odds · prices at capture")
     ).to_be_visible()
     expect(tab.get_by_label("Calculation basis")).to_have_value("before")
     expect(tab.get_by_label("Odds format")).to_have_value("decimal")
@@ -59,7 +61,7 @@ def first_use(tab, base):
     trade = tab.get_by_role("dialog", name="Novig · Harbor Foxes to win")
     expect(trade).to_contain_text("Original price")
     expect(trade).to_contain_text(
-        "This practice quote has no applicable venue fee or fill evidence"
+        "The recorded inputs do not establish venue fees or fill evidence"
     )
     expect(trade).to_contain_text("Authored scenario time")
     expect(trade).not_to_contain_text("undefined")
@@ -77,7 +79,7 @@ def first_use(tab, base):
     expect(tab.locator('[data-offer-id="practice-offer-spread-1"]')).to_contain_text(
         "1.91"
     )
-    tab.get_by_label("Price step").select_option("changed")
+    tab.get_by_label("Saved capture").select_option("preview")
     expect(
         tab.get_by_role("heading", name="Harbor Foxes vs. Summit Owls")
     ).to_be_visible()
@@ -91,7 +93,7 @@ def first_use(tab, base):
     expect(tab.locator('[data-offer-id="practice-offer-total-1"]')).to_contain_text(
         "1.95"
     )
-    tab.get_by_label("Price step").select_option("initial")
+    tab.get_by_label("Saved capture").select_option("frozen")
 
     tab.get_by_role("navigation", name="Replay views").get_by_role(
         "link", name="Arbitrage"
@@ -107,7 +109,7 @@ def first_use(tab, base):
     expect(pair).not_to_contain_text("-$4.097")
     pair.get_by_role("button", name="Inspect offer and fees").first.click()
     expect(trade).to_contain_text(
-        "This practice quote has no applicable venue fee or fill evidence"
+        "The recorded inputs do not establish venue fees or fill evidence"
     )
     trade.get_by_role("button", name="Back to pairing").click()
     tab.keyboard.press("Escape")
@@ -162,19 +164,18 @@ def first_use(tab, base):
     ).to_be_visible()
     tab.get_by_role("button", name="Clear Except ProphetX filter").press("Enter")
     expect(inspect).to_be_visible()
-    tab.get_by_label("Price step").select_option("changed")
+    tab.get_by_label("Saved capture").select_option("preview")
     expect(inspect).to_be_visible()
     expect(tab.locator(".desk-best").filter(has_text="2.10")).to_have_count(1)
     assert tab.evaluate("document.documentElement.scrollWidth === innerWidth")
 
-    tab.get_by_label("Dataset").select_option("frozen")
+    (archive_directory / "frozen.sqlite3").unlink()
+    tab.get_by_label("Saved capture").select_option("frozen")
     expect(
         tab.get_by_role("heading", name="This saved capture is unavailable")
     ).to_be_visible()
-    tab.get_by_role("link", name="Try synthetic practice").click()
-    expect(
-        tab.get_by_text("Synthetic practice · fictional prices and inputs")
-    ).to_be_visible()
+    expect(tab.get_by_role("link", name="Browse current odds")).to_be_visible()
+    expect(tab.get_by_text("Synthetic practice", exact=False)).to_have_count(0)
     history = tab.get_by_role("button", name="Session history")
     history.press("Enter")
     history_panel = tab.get_by_role("dialog", name="Diagnostic session history")
@@ -190,6 +191,7 @@ def first_use(tab, base):
 def test_first_use_without_credentials(width, tmp_path, monkeypatch):
     from playwright.sync_api import sync_playwright
 
+    write_archives(tmp_path)
     monkeypatch.setattr(odds_replay, "DIRECTORY", tmp_path)
     reads = []
     unexpected = []
@@ -220,8 +222,12 @@ def test_first_use_without_credentials(width, tmp_path, monkeypatch):
             replay = load(params, details=url.path.endswith("/details"))
             assert replay["provider_requests"] == 0
             route.fulfill(json=replay)
-        elif url.path == "/api/admin/status":
-            route.fulfill(json={"data_runtime": {"healthy": False}})
+        elif url.path.startswith("/api/admin/"):
+            if urlparse(route.request.frame.url).path == "/admin":
+                route.fulfill(json={"data_runtime": {"healthy": False}})
+            else:
+                unexpected.append(("public Admin read", route.request.url))
+                route.fulfill(status=401, headers={"WWW-Authenticate": 'Basic realm="Admin"'})
         elif url.path in ("/", "/ev", "/replay", "/admin"):
             route.fulfill(
                 path=ASSETS / ("admin.html" if url.path == "/admin" else "desk.html")
@@ -243,9 +249,8 @@ def test_first_use_without_credentials(width, tmp_path, monkeypatch):
             tab.set_default_timeout(6000)
             errors = []
             tab.on("pageerror", lambda error: errors.append(str(error)))
-            first_use(tab, base)
-            assert reads[0]["timezone"] == "America/Los_Angeles"
-            assert reads[-1]["timezone"] == "UTC"
+            first_use(tab, base, tmp_path)
+            assert reads and all("timezone" not in params for params in reads)
             assert not errors, errors
         browser.close()
     assert not unexpected, unexpected

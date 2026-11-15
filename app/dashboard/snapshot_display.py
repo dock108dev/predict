@@ -86,8 +86,7 @@ def desk_game_aliases(rows, games, event_facts):
     for game_key in sources.keys() & games.keys():
         game = games[game_key]
         league = game.get('league')
-        if not league or league == 'MLB' or not game.get('start_at'):
-            # A doubleheader needs its reported game number.
+        if not league or not game.get('start_at'):
             continue
         teams = defaultdict(set)
         for participant in game['participants']:
@@ -128,7 +127,8 @@ def desk_game_aliases(rows, games, event_facts):
                 break
             source = dict(provider=provider, native_event_id=native_id, binding_version=None)
             facts = resolver._facts(dict(event=event, quote=dict(source=source, provenance={})))
-            if facts['conflict'] or facts['replacement'] or facts['roles'] != roles:
+            if (facts['conflict'] or facts['replacement'] or facts['roles'] != roles
+                    or league == 'MLB' and facts['game_number'] not in (1, 2)):
                 break
             provider_games[provider].add(facts['source_game'])
             witnesses.append(facts)

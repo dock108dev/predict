@@ -15,16 +15,14 @@ const UI = (() => {
   function button(text,fn,cls='p-outline'){const b=el('button',text,cls);b.type='button';b.onclick=fn;return b;}
   function shell(){
     const host=document.querySelector('[data-shell]');if(!host)return;
-    const h=el('header',null,'p-chrome'),brand=link('Predict.','/','p-brand'),nav=el('nav',null,'p-nav');nav.setAttribute('aria-label','Predict');
+    const h=el('header',null,'p-chrome'),brand=link('', '/', 'p-brand'),nav=el('nav',null,'p-nav');nav.setAttribute('aria-label','Predict');
+    const mark=el('img',null,'desk-brand-mark');mark.alt='';mark.width=36;mark.height=36;mark.src='/view/current/predict-icon.png';
+    brand.replaceChildren(mark,'Predict');
     if(document.body.classList.contains('desk-app')){
-      const mark=el('span','p/a','desk-brand-mark');mark.setAttribute('aria-hidden','true');
       const opportunities = document.body.classList.contains('opportunities-app');
       if (opportunities) {
-        mark.textContent='P';
-        brand.replaceChildren(mark,'Predict');
         nav.append(link('Opportunities','/'),link('Browse odds','/browse-odds'),link('Admin','/admin'));
       } else {
-        brand.replaceChildren(mark,'Prediction Arb');
         nav.append(link('EV','/ev'),link('Arbitrage','/arbs'),link('Admin','/admin'));
       }
       const label=el('label','Odds '),choice=el('select');choice.setAttribute('aria-label','Odds format');

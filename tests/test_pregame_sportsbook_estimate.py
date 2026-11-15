@@ -133,8 +133,9 @@ def test_native_pregame_desk_uses_current_books_before_the_slate_catches_up(monk
     records = []
     for venue, cost in [('kalshi', '0.42'), ('polymarket_us', '0.46')]:
         records.append(dict(
-            event=dict(competition='NFL', scheduled_start=START.isoformat(), home='NFL:NYG', away='NFL:WAS',
-                       source_participant_roles=dict(home='NFL:NYG', away='NFL:WAS')),
+            event=dict(id='game', competition='NFL', scheduled_start=START.isoformat(),
+                       participants={'New York Giants':'NFL:NYG', 'Washington Commanders':'NFL:WAS'},
+                       home='NFL:NYG', away='NFL:WAS', source_participant_roles=dict(home='NFL:NYG', away='NFL:WAS')),
             market_identity=dict(family='moneyline', period='full_game', line=None),
             selection=dict(participant='NFL:WAS', predicate='win', signed_line=None),
             quote=dict(venue=venue, state='available',
@@ -181,6 +182,13 @@ def test_native_pregame_desk_uses_current_books_before_the_slate_catches_up(monk
     reviewed = page(projected, dict(query, basis='reviewed'), ('ev', None, 0, 10))
     assert {offer['id'] for offer in reviewed['price_preview'][0]['offers']} == {offer['id'] for offer in offers.values()}
     assert all(offer['value'] is None for offer in reviewed['price_preview'][0]['offers'])
+    with monkeypatch.context() as missing_reference:
+        missing_reference.setattr('app.storage.ordinary_publication.pregame_sportsbooks', lambda *args, **kw: {})
+        current = overlay(None, data, owner, states, at=AT)
+        assert [row['game_key'] for row in current['rows']] == [row['game_key'] for row in projected['rows']]
+        preview, = page(current, query, ('ev', None, 0, 10))['price_preview']
+        assert preview['id'] == group['id']
+        assert {offer['venue'] for offer in preview['offers']} == {'kalshi', 'polymarket_us'}
     assert overlay(None, data, owner, states, at=AT + timedelta(seconds=31)) is data
     assert overlay(None, data, dict(owner, global_stopped=True), states, at=AT) is data
     assert [offer['venue'] for offer in overlay(None, data,

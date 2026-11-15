@@ -1,7 +1,7 @@
 // Tab-local, bounded diagnostics. No provider payload, credentials or full status.
 export class DiagnosticSession {
   constructor(){this.clear();}
-  clear(){this.startedAt=new Date().toISOString();this.events=[];this.observations=new Map();this.visible=new Set();this.dropped=0;this.scope=null;this.lastSources=null;this.lastStatusCheck=0;this.render();}
+  clear(){this.startedAt=new Date().toISOString();this.events=[];this.observations=new Map();this.visible=new Set();this.dropped=0;this.scope=null;this.lastSources=null;this.render();}
   record(kind,facts={}){
     this.events.push({observed_at:new Date().toISOString(),kind,...facts});
     if(this.events.length>1000){this.events.shift();this.dropped++;}this.render();
@@ -18,7 +18,8 @@ export class DiagnosticSession {
     const context=JSON.stringify([filters,page.offset,page.offset?page.browse_id:null]);
     if(context!==this.scope){this.record('display_scope',{filters,offset:page.offset,browse_id:page.browse_id});this.scope=context;this.visible.clear();}
     const visible=new Set();
-    for(const group of page.rows||[])for(const offer of group.offers||[]){
+    const groups=page.rows?.length ? page.rows : page.price_preview || [];
+    for(const group of groups)for(const offer of group.offers||[]){
       visible.add(offer.id);
       const value={id:offer.id,venue:offer.venue,game:group.game_title,selection:offer.selection,
         odds:offer.odds,before_fee:offer.before_fee,after_fee:offer.after_fee,conservative:offer.conservative,current:offer.current,
@@ -44,19 +45,19 @@ export class DiagnosticSession {
     while(this.observations.size>2000)this.observations.delete(this.observations.keys().next().value);
     this.record('display_read',{delivery_clocks:page.delivery_clocks,generation:page.generation,offset:page.offset,publication_at:page.publication?.published_at,
       read_at:page.publication?.read_at,displayed_at:new Date().toISOString(),publication_state:page.publication?.state,
-      rows:(page.rows||[]).length});
-    this.sources();
+      rows:groups.length});
+    this.sources(page.publication);
   }
-  async sources(){
-    if(Date.now()-this.lastStatusCheck<30000)return;this.lastStatusCheck=Date.now();
-    try{const response=await fetch('/api/admin/status');if(!response.ok)throw Error();const status=await response.json();
-      const facts={runtime_healthy:status.data_runtime?.healthy,stopped:status.data_runtime?.global_stopped,paused:status.data_runtime?.paused_sources,
-        sources:(status.sources||[]).map(p=>({provider:p.provider,state:p.worker_behavior,phase:p.processing_phase,
-          last_receipt:p.last_http_received_at,leagues:p.league_collection,
-          restoration:p.metrics?.restoration,close:p.metrics?.last_stream_failure?.close_diagnostic})),
-        quota_pause:status.quota?.pause,next_slot:status.quota?.next_due_at};
-      const key=JSON.stringify(facts);if(key!==this.lastSources)this.record('source_collection_change',facts);this.lastSources=key;
-    }catch{this.record('source_status_gap');}
+  sources(publication){
+    if(!publication?.data_runtime&&!publication?.sources)return;
+    const runtime=publication.data_runtime;
+    const facts={runtime_healthy:runtime?.healthy,stopped:runtime?.stopped,paused:runtime?.paused_sources,
+      sources:Object.entries(publication.sources||{}).map(([provider,source])=>({
+        provider,state:source.state,reason_code:source.reason_code,
+      }))};
+    const key=JSON.stringify(facts);
+    if(key!==this.lastSources)this.record('source_collection_change',facts);
+    this.lastSources=key;
   }
   export(){
     const data={schema:'predict-diagnostic-session-1',started_at:this.startedAt,exported_at:new Date().toISOString(),dropped_events:this.dropped,

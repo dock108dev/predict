@@ -53,13 +53,20 @@ class BrowseSessions:
                 return dict(state='page_changed',reason='Browsing snapshot missing; refresh starts a new order.',rows=[])
             else:
                 order=[{k:g[k] for k in ('id','game_key','game_title','start_at')} for g in groups]
-                size=len(json.dumps(order).encode())
-                if size>8*1024*1024:raise ValueError('browse_membership_capacity')
-                while self.sessions and (len(self.sessions)>=16 or sum(s['bytes'] for s in self.sessions.values())+size>8*1024*1024):
-                    self.sessions.popitem(last=False)
-                token=uuid4().hex
-                session=dict(signature=signature,order=order,created=now,bytes=size)
-                self.sessions[token]=session
+                token = next((key for key in reversed(self.sessions)
+                              if self.sessions[key]['signature'] == signature
+                              and self.sessions[key]['order'] == order), None)
+                if token:
+                    session = self.sessions[token]
+                    self.sessions.move_to_end(token)
+                else:
+                    size=len(json.dumps(order).encode())
+                    if size>8*1024*1024:raise ValueError('browse_membership_capacity')
+                    while self.sessions and (len(self.sessions)>=16 or sum(s['bytes'] for s in self.sessions.values())+size>8*1024*1024):
+                        self.sessions.popitem(last=False)
+                    token=uuid4().hex
+                    session=dict(signature=signature,order=order,created=now,bytes=size)
+                    self.sessions[token]=session
             by_id={g['id']:g for g in groups}
             offset, anchor_state = locate_page(groups, query, offset, limit, order=session['order'])
             rows=[by_id.get(g['id'],dict(g,withdrawn=True,offers=[],reason='No longer in the current matching results. Refresh to update membership.'))

@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Prediction Arb</title>
+  <script async src="/view/current/desk-bootstrap.js"></script>
   <link rel="icon" type="image/png" href="/view/current/predict-icon.png">
   <link rel="apple-touch-icon" href="/view/current/predict-icon.png">
   <link rel="stylesheet" href="/view/current/desk.css">
@@ -19,8 +20,7 @@
       <a class="desk-action" id="browse-link" href="/browse-odds">Find my game ↗</a>
     </div>
     <div class="replay-bar" id="replay-controls" hidden>
-      <label>Dataset <select id="replay-dataset"><option value="practice">Synthetic practice</option><option value="frozen">11 p.m. capture</option><option value="preview">Earlier capture</option></select></label>
-      <label id="replay-frame-field" hidden>Price step <select id="replay-frame"><option value="initial">1. Opening prices</option><option value="changed">2. Price moves</option></select></label>
+      <label>Saved capture <select id="replay-dataset"><option value="frozen">11 p.m. capture</option><option value="preview">Earlier capture</option></select></label>
       <nav aria-label="Replay views"><a id="replay-ev" href="/replay">Offers</a><a id="replay-arbs" href="/replay?view=arbs">Arbitrage</a></nav>
     </div>
     <nav id="phase-tabs" class="opportunity-tabs" aria-label="Game phase" hidden><a id="phase-pregame" href="/ev">Pregame</a><a id="phase-live" href="/ev?phase=live">Live</a></nav>
@@ -80,7 +80,7 @@
       <span class="desk-meta" id="page-range"></span>
       <button id="next" type="button" disabled>Next</button>
     </nav>
-    <footer class="desk-session"><a class="desk-action" id="replay-link" href="/replay?dataset=practice">Open replay</a> <button id="open-session" type="button" aria-haspopup="dialog">Session history</button></footer>
+    <footer class="desk-session"><a class="desk-action" id="replay-link" href="/replay">Saved odds</a> <button id="open-session" type="button" aria-haspopup="dialog">Session history</button></footer>
   </main>
   <dialog id="trade" aria-labelledby="trade-title">
     <div class="desk-title"><h2 id="trade-title">Trade details</h2><form method="dialog"><button>Close</button></form></div>

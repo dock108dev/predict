@@ -266,7 +266,10 @@ def mount(app):
         return web.json_response(await asyncio.to_thread(work))
 
     from .browse_sessions import BrowseSessions
+    from .desk_delivery import ReadBurst
     browsing=BrowseSessions()
+    desk_reads = ReadBurst()
+    app.on_cleanup.append(desk_reads.close)
 
     async def current_read(req):
         timings = {}
@@ -374,6 +377,7 @@ def mount(app):
                 if result is not None and is_selection and is_desk:
                     result = exact_selection(result, selected, live_contract, aggregate_contract)
                 lifecycle_rows = result['rows'] if result else ()
+                dependency_result = result
                 # The summary desk shows available prices. Retained and stopped
                 # reads still have their full pregame authorities for inspection.
                 if (result is not None and current_desk and query.get('summary') == '1'
@@ -381,12 +385,15 @@ def mount(app):
                     relevant = [row for row in result['rows']
                                 if (deadline := row['current_authority']['price'].get('current_until'))
                                 and stamp(deadline) >= at]
-                    result = scoped_result(result, relevant)
-                    relevant_games = {row['game_key'] for row in relevant}
-                    lifecycle_rows = [row for row in lifecycle_rows if row['game_key'] in relevant_games]
+                    dependency_result = scoped_result(result, relevant)
+                    if query.get('phase') != 'pregame':
+                        result = dependency_result
+                        relevant_games = {row['game_key'] for row in relevant}
+                        lifecycle_rows = [row for row in lifecycle_rows if row['game_key'] in relevant_games]
                 timings['scope'] = (monotonic()-stage)*1000
                 stage = monotonic()
-                deps, dependency_revision = live.published_dependencies(db, result, provider=provider, at=at) if result else ({}, None)
+                deps, dependency_revision = (live.published_dependencies(db, dependency_result, provider=provider, at=at)
+                                             if dependency_result else ({}, None))
                 timings['dependencies'] = (monotonic()-stage)*1000
                 # Legacy pagination still binds published dependencies.
                 cursor = update_cursor or hashed([head['generation'], dependency_revision, epoch, policy, settings['revision'],
@@ -513,7 +520,8 @@ def mount(app):
                                        include_retained=include_retained, mark_retained=mark_retained, sgo_inputs=sgo_inputs)
                         if desk_phase(query) != 'live':
                             add_public_prices(out, owner, at=at, include_retained=include_retained,
-                                              mark_retained=mark_retained)
+                                              mark_retained=mark_retained,
+                                              include_history=not public_summary or bool(query.get('game_key')))
                     out = desk_page(result, query, options, captured_pairs=captured_pairs, policy=policy,
                                     browsing=browsing, enrich=enrich, published_only=True, event_facts=event_facts)
                     if not out.get('rows') and not out.get('retained_game'):
@@ -538,9 +546,41 @@ def mount(app):
                         'published_at','price_seconds','total_seconds','error')}))
                 return out
 
-        result=await asyncio.to_thread(work)
-        return web.json_response(result,headers={'Server-Timing': ', '.join(
-            f'{name};dur={duration:.3f}' for name,duration in timings.items())})
+        from .desk_delivery import common_page, encode, packet_response, timing_header
+        if is_updates and is_desk and set(req.query) <= {'layout', 'phase', 'after'}:
+            async def witness():
+                value = await asyncio.to_thread(work)
+                return (value, dict(timings)), float('inf'), 0
+
+            (result, saved_timings), shared = await desk_reads.read(('updates', query['phase']), witness, reuse=0)
+            result = dict(result, changed=query.get('after') != result['cursor'])
+            headers = {'Server-Timing': 'desk_shared;dur=0' if shared else timing_header(saved_timings)}
+            return web.json_response(result, headers=headers)
+
+        if (is_desk and query.get('summary') == '1' and not
+                (is_updates or is_selection or is_fee_census)):
+            def public_packet():
+                started = monotonic()
+                result = work()
+                observed = (result.get('publication') or {}).get('read_at') or utc()
+                stage = monotonic()
+                packet, expires, size = encode(result, at=stamp(observed), started=started)
+                timings['encode'] = (monotonic() - stage) * 1000
+                return (packet, dict(timings)), expires, size
+
+            async def produce():
+                return await asyncio.to_thread(public_packet)
+
+            key = common_page(query, options)
+            if key is None:
+                (packet, saved_timings), _, _ = await produce()
+                shared = False
+            else:
+                (packet, saved_timings), shared = await desk_reads.read(key, produce)
+            return packet_response(req, packet, saved_timings, shared=shared)
+
+        result = await asyncio.to_thread(work)
+        return web.json_response(result, headers={'Server-Timing': timing_header(timings)})
 
     def game_capture_link(db, query, *, allow_live):
         if query.get('layout') != 'desk' or query.get('browse_odds') != '1' or not query.get('game_capture'):

@@ -84,6 +84,58 @@ class TradeDesk(TestCase):
         self.assertTrue(fallback['price_preview_paged'])
         self.assertEqual({item['game_key'] for item in fallback['price_preview']}, {'second'})
 
+    def test_pregame_keeps_last_known_venue_prices_after_the_entire_market_expires(self):
+        venues = ('kalshi', 'polymarket_us', 'novig', 'prophetx')
+        stale = [dict(quote(venue, venue, current=False), game_state='scheduled',
+                      times={'received_at': '2026-11-07T23:58:00Z'},
+                      sportsbook_return_percent='5',
+                      sportsbook_baseline=dict(book='fanduel', fair_decimal_odds='2'),
+                      trade_fee=dict(available=False))
+                 for venue in venues]
+        older = dict(stale[-1], id='older', times={'received_at': '2026-11-07T23:57:00Z'})
+        closed = dict(stale[-1], id='closed', game_key='closed', game_state='cancelled')
+        data = result(*stale, older, closed)
+        data['publication']['read_at'] = '2026-11-08T00:00:00Z'
+        query = dict(layout='desk', basis='sportsbooks', lines='main', summary='1')
+        options = ('ev', None, 0, 12)
+
+        browse = page(data, dict(query, browse_odds='1'), options)
+        group, = browse['rows']
+        self.assertEqual({offer['id'] for offer in group['offers']}, set(venues))
+        self.assertTrue(all(not offer['current'] and offer['value'] is None for offer in group['offers']))
+        ranked = page(data, dict(query, ranked='1'), options)
+        self.assertEqual(ranked['rows'], [])
+        self.assertEqual(ranked['price_preview'][0]['id'], group['id'])
+        self.assertEqual(ranked['ranked_group_count'], 0)
+
+        replacement = dict(stale[-1], id='new', price_current=True, current_reasons=[])
+        renewed = page(dict(data, rows=[*data['rows'], replacement]), dict(query, ranked='1'), options)
+        self.assertEqual(renewed['rows'][0]['id'], group['id'])
+        self.assertEqual([(offer['id'], offer['value']) for offer in renewed['rows'][0]['offers']][:1],
+                         [('new', '5')])
+        self.assertNotIn('prophetx', {offer['id'] for offer in renewed['rows'][0]['offers']})
+
+    def test_mlb_display_aliases_require_matching_game_numbers(self):
+        from app.dashboard.snapshot_display import desk_game_aliases
+
+        roles = {'home': 'MLB:NYY', 'away': 'MLB:BOS'}
+        start = '2026-11-08T01:00:00Z'
+        event = dict(competition='MLB', scheduled_start=start,
+                     participants={'New York Yankees': roles['home'], 'Boston Red Sox': roles['away']},
+                     source_participant_roles=roles, game_number=1, **roles)
+        first, second = 'kalshi-game', 'polymarket-game'
+        rows = [dict(game_key=first, source=dict(provider='kalshi', native_event_id=first)),
+                dict(game_key=second, source=dict(provider='polymarket_us', native_event_id=second))]
+        games = {key: dict(league='MLB', start_at=start,
+                           participants=[dict(id=team, role=role) for role, team in roles.items()])
+                 for key in (first, second)}
+        facts = {('kalshi', first): event, ('polymarket_us', second): dict(event)}
+        self.assertEqual(desk_game_aliases(rows, games, facts), {second: first})
+        facts['polymarket_us', second]['game_number'] = 2
+        self.assertEqual(desk_game_aliases(rows, games, facts), {})
+        facts['polymarket_us', second].pop('game_number')
+        self.assertEqual(desk_game_aliases(rows, games, facts), {})
+
     def test_pregame_display_joins_witnessed_occurrence_without_changing_offer_identity(self):
         from app.storage.schedule_metadata import VERSION
 
@@ -223,7 +275,8 @@ class TradeDesk(TestCase):
         legacy_query = {key: value for key, value in query.items() if key != 'lines'}
         public = page(data, dict(legacy_query, summary='1', last_known='1'), options, enrich=enrich)
         self.assertEqual(public['rows'][0]['sportsbook_quotes'],
-                         {'fanduel': [dict(current=True, price_american='-110', source_at=None)]})
+                         {'fanduel': [dict(current=True, price_american='-110', source_at=None)],
+                          'draftkings': [dict(current=False, price_american='-105', source_at=None)]})
         explicit = page(data, dict(query, last_known='1'), options)
         self.assertEqual({offer['id'] for offer in explicit['rows'][0]['offers']}, {'live', 'saved'})
         data['rows'] = [dict(live, price_current=False, current_reasons=['data_runtime_unhealthy']), saved]
@@ -248,7 +301,8 @@ class TradeDesk(TestCase):
 
     def test_public_odds_show_fair_reference_and_exact_last_known_native_prices(self):
         live = dict(quote('novig', 'novig'), sportsbook_return_percent='4',
-                    sportsbook_baseline=dict(book='draftkings', fair_decimal_odds='2.1', prices=[]))
+                    sportsbook_baseline=dict(book='draftkings', fair_decimal_odds='2.1',
+                                             prices=[dict(price_american='+104')]))
         saved = dict(quote('poly', 'polymarket_us', current=False), source={'provider': 'polymarket_us'})
         other = dict(quote('other', 'kalshi', current=False), source={'provider': 'kalshi'}, alternate=True)
         other['market']['line'] = '3.5'
@@ -262,7 +316,8 @@ class TradeDesk(TestCase):
         offers = {offer['id']: offer for offer in groups[0]['offers']}
         self.assertEqual(set(offers), {'novig', 'poly'})
         self.assertEqual(offers['novig']['fair_odds']['american'], '+110')
-        self.assertEqual(offers['novig']['fair_reference'], {'books': ['draftkings'], 'method': 'single', 'indicative': True})
+        self.assertEqual(offers['novig']['fair_reference'], {'books': ['draftkings'], 'method': 'single',
+            'indicative': True, 'selected_prices': {'draftkings': '+104'}})
         self.assertFalse(offers['poly']['current'])
         self.assertIsNone(offers['poly']['value'])
         self.assertIsNone(offers['poly']['fair_reference'])
@@ -327,6 +382,15 @@ class TradeDesk(TestCase):
                 self.assertEqual(groups['native-no']['sportsbook_quotes'], {})
                 self.assertIsNone(groups['native-home']['offers'][0]['value'])
                 self.assertIsNone(groups['native-home']['score'])
+
+        source = dict(provider='sportsgameodds', native_event_id='sgo-game', native_outcome_id='retail-alt-id')
+        mixed = dict(data, rows=[*data['rows'], dict(home, id='sgo-home', venue='novig', source=source)])
+        db.execute.return_value.fetchall.return_value = [event]
+        out = page(mixed, {'browse_odds':'1'}, options)
+        add_sgo_prices(db, out, mixed['rows'], {'sportsgameodds':{'state':'available'}}, at=at,
+                       include_retained=False, sgo_inputs=inputs)
+        group = next(group for group in out['rows'] if len(group['offers']) == 2)
+        self.assertEqual(group['sportsbook_quotes']['fanduel'][0]['match'], 'schedule_and_teams')
 
     def test_native_short_names_are_searchable_by_canonical_team_names(self):
         row = quote('current', 'polymarket_us')

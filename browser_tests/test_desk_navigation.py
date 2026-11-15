@@ -11,6 +11,8 @@ from app.dashboard.browse_sessions import BrowseSessions
 from app.dashboard.replay_api import load as replay_read
 from app.dashboard.snapshot_api import page_options
 from app.dashboard.trade_desk import page as desk_page
+from app.storage import odds_replay
+from tests.replay_fixture import write_archives
 from tests.test_trade_desk import quote, result
 
 ASSETS = (
@@ -200,9 +202,11 @@ def swipe_chromium(context, tab, card):
 
 
 @pytest.mark.parametrize("engine", ["chromium", "webkit"])
-def test_phone_comparison_return(engine):
+def test_phone_comparison_return(engine, tmp_path, monkeypatch):
     from playwright.sync_api import expect, sync_playwright
 
+    write_archives(tmp_path)
+    monkeypatch.setattr(odds_replay, "DIRECTORY", tmp_path)
     with sync_playwright() as playwright:
         browser_type = getattr(playwright, engine)
         if engine == "webkit" and not Path(browser_type.executable_path).exists():
@@ -290,7 +294,7 @@ def test_phone_comparison_return(engine):
         inspect_and_return(tab, target, "back")
 
         tab.goto(
-            f"{BASE}/replay?view=odds&dataset=practice&frame=changed&search=Harbor&family=spread&basis=before"
+            f"{BASE}/replay?view=odds&dataset=preview&search=Harbor&family=spread&basis=before"
         )
         practice = tab.locator('[data-game-key="practice-game"]')
         expect(practice.get_by_text("Harbor Foxes vs. Summit Owls")).to_be_visible()
@@ -300,9 +304,9 @@ def test_phone_comparison_return(engine):
         expect(practice.locator("[data-game-launcher]")).to_be_focused()
         assert position(practice) == initial_position
         expect(tab.locator("[name=basis]")).to_have_value(basis)
-        expect(tab.locator("#replay-frame")).to_have_value("changed")
+        expect(tab.locator("#replay-dataset")).to_have_value("preview")
 
-        tab.goto(f"{BASE}/replay?view=ev&dataset=practice&frame=initial")
+        tab.goto(f"{BASE}/replay?view=ev&dataset=frozen")
         basis_control = tab.locator("[name=basis]")
         basis_control.select_option("reviewed")
         reviewed_result = tab.locator('[data-offer-id="practice-offer-0"]')
@@ -316,7 +320,7 @@ def test_phone_comparison_return(engine):
         expect(basis_control).to_have_value("reviewed")
         expect(reviewed_result).not_to_contain_text("+10.00%")
 
-        tab.goto(f"{BASE}/replay?view=arbs&dataset=practice&frame=changed")
+        tab.goto(f"{BASE}/replay?view=arbs&dataset=preview")
         payoff = tab.locator("[data-pair-id]").first
         payoff.tap()
         drawer = tab.locator("#trade")

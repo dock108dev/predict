@@ -29,11 +29,13 @@ export function selectedReference(offer, basis) {
   const ref = offer?.reference_current && offer.reference_calculation;
   const book = ref && ref.contributors?.find(item => item.venue === ref.venue || item.venue === ref.bookmaker);
   if (book) return {book:book.venue, prices:book.inputs, candidates:ref.candidates};
+  const [selected] = Object.entries(offer?.fair_reference?.selected_prices || {});
+  if (selected) return {book:selected[0], prices:[{price_american:selected[1]}]};
   return null;
 }
 
 function fairReferenceLabel(reference) {
-  if (reference?.method === 'authored_probability') return 'Authored practice probability';
+  if (reference?.method === 'authored_probability') return 'Authored scenario probability';
   const names = reference?.books?.map(name);
   if (!names?.length) return '';
   if (reference.indicative) return `Indicative · ${names.join(', ')}`;
@@ -119,17 +121,17 @@ export function quoteFreshness(offer, mode, inspection = false) {
 function sportsbookCell(group, book, reference, checkedAt, mode, inspection = false) {
   const cell = el('div', null, 'sportsbook-price');
   const selected = reference?.book === book && reference.prices?.[0];
+  const usesReference = value => selected && value.current !== false
+    && value.price_american === selected.price_american && (!selected.source_at || value.source_at === selected.source_at);
   let values = group.sportsbook_quotes?.[book] || (selected ? [{...selected, current:true}] : []);
-  if (selected && !values.some(value => value.current !== false &&
-      value.price_american === selected.price_american && value.source_at === selected.source_at)) {
+  if (selected && !values.some(usesReference)) {
     values = [{...selected, current:true}, ...values];
   }
   for (const value of values) {
     const item = el('div');
     item.append(odd(sportsbookOdds(value)));
     if (inspection && value.source_at) item.title = value.source_at;
-    const isReference = selected && value.current !== false
-      && value.price_american === selected.price_american && value.source_at === selected.source_at;
+    const isReference = usesReference(value);
     if (isReference) item.classList.add('matrix-reference');
     const label = [mode ? (value.current === false ? 'Last known at capture' : 'At capture') :
       inspection ? priceStatus(value.current, value.source_at, checkedAt, true) :
@@ -295,46 +297,77 @@ export function evCard(group, context) {
 }
 
 function compactEV(group, context) {
-  const lead = group.offers[0];
+  const lead = group.offers.find(offer => offer.id === group.score_source?.id) || group.offers[0];
   const row = el('article', null, 'opportunity-card compact-ev');
   row.dataset.groupId = group.id;
-  const fair = lead.fair_odds;
-  const inspect = button('', event => context.inspectOffer(lead, group, event.currentTarget),
-    `opportunity-score ${tone(group.score)}`);
+  const header = el('header', null, 'compact-ev-meta');
+  const period = group.market.period === 'full_game' ? 'Full-game' : group.market.period?.replaceAll('_', ' ');
+  header.append(el('small', [group.game_title, group.league, context.clock(group.start_at),
+    [period, group.market.market].filter(Boolean).join(' ')].filter(Boolean).join(' · ')), context.gameLink(group));
+  const market = el('div', null, 'compact-ev-market');
+  market.append(el('h2', context.position(lead)));
   const label = compactBasisLabels[context.basis] || 'Return';
-  inspect.title = basisName(context.basis);
-  inspect.dataset.calculationId = lead.id;
-  markCalculationExpiry(inspect, context, group, lead.current_until, lead.calculation_current_until);
-  inspect.setAttribute('aria-label', [`${context.basis === 'reviewed' ? 'View EV calculation' : 'View calculation'}: ${percent(group.score)} ${label}, ${venueLabel(lead)}`,
-    fair && `sportsbook fair odds ${fair.american}`].filter(Boolean).join(', '));
-  const headline = el('span', null, 'compact-ev-result');
-  headline.append(el('strong', percent(group.score)), el('small', label));
-  inspect.append(headline);
-  if (fair) {
-    const estimate = el('span', 'Sportsbook fair ', 'compact-fair');
-    estimate.append(odd(fair));
-    const source = fairReferenceLabel(lead.fair_reference);
-    if (source) estimate.append(` · ${source}`);
-    inspect.append(estimate);
-  }
-  row.append(cardHeader(group, context.position(lead), group.game_title, inspect, context.clock));
   const quotes = el('div', null, 'compact-prices');
+  quotes.setAttribute('role', 'group');
+  quotes.setAttribute('aria-label', 'Prediction market offers');
   const seen = new Set();
+  // The server orders offers by the applicable exact EV basis.
   for (const offer of group.offers) {
-    if (!offer.current || !offer.odds?.american || seen.has(offer.venue)) continue;
+    if (!offer.odds?.american || seen.has(offer.venue)) continue;
     seen.add(offer.venue);
+    const value = offer.current ? offer.value ?? (offer === lead ? group.score : null) : null;
     const price = quote(offer, group, context, offer === lead ? 'desk-best' : '', false);
     price.prepend(el('span', venueLabel(offer)));
-    if (offer !== lead && offer.value != null) {
-      const value = el('small', `${percent(offer.value)} ${label}`, tone(offer.value));
-      markCalculationExpiry(value, context, group, offer.current_until, offer.calculation_current_until);
-      price.append(value);
+    price.dataset.calculationId = offer.id;
+    const accessible = `View trade details: ${venueLabel(offer)}, ${context.position(offer)}, ${offer.odds.american}`;
+    price.dataset.quoteDescription = accessible;
+    price.setAttribute('aria-label', [accessible, value != null ? `${percent(value)} ${label}` : quoteFreshness(offer, context.mode)].join(', '));
+    if (value != null) {
+      const ev = el('strong', percent(value), `compact-ev-return ${tone(value)}`);
+      ev.dataset.quoteCalculation = '1';
+      ev.title = basisName(context.basis) || label;
+      markCalculationExpiry(ev, context, group, offer.current_until, offer.calculation_current_until);
+      price.append(ev);
     }
     quotes.append(price);
   }
-  const footer = el('div', null, 'compact-ev-footer');
-  footer.append(quotes, context.gameLink(group));
-  row.append(footer);
+  market.append(quotes);
+  row.append(header, market, compactBookQuotes(group, lead, context));
+  return row;
+}
+
+function compactBookQuotes(group, lead, context) {
+  const row = el('div', null, 'compact-books');
+  row.setAttribute('role', 'group');
+  row.setAttribute('aria-label', 'Fair odds and sportsbook quotes');
+  const fallback = context.basis === 'sportsbooks' && !lead.fair_odds ? group.sportsbook_reference : null;
+  const fair = lead.fair_odds || (context.basis === 'sportsbooks' ? lead.sportsbook?.fair_odds || fallback?.fair_odds
+    : lead.reference_current && lead.reference);
+  const fairValue = el('span', 'Fair odds ', 'compact-fair');
+  fairValue.append(fair ? odd(fair) : 'unavailable');
+  if (fair) markCalculationExpiry(fairValue, context, group, lead.calculation_current_until, fallback?.current_until);
+  row.append(fairValue);
+
+  const selected = lead.fair_reference?.selected_prices || {};
+  const reference = context.basis === 'sportsbooks' && !lead.sportsbook ? fallback : selectedReference(lead, context.basis);
+  const referenceBooks = lead.fair_reference?.books?.length ? lead.fair_reference.books : reference?.book ? [reference.book] : [];
+  const available = group.sportsbook_quotes || {};
+  const ordered = new Set([...referenceBooks, ...books.filter(book => available[book]), ...Object.keys(available)]);
+  for (const book of ordered) {
+    const comparison = referenceBooks.includes(book);
+    const exact = selected[book] || (reference?.book === book && reference.prices?.[0]?.price_american);
+    const quote = available[book]?.[0];
+    const price = exact || quote?.price_american;
+    if (!price) continue;
+    const item = el('span', `${name(book)} `, comparison && exact ? 'compact-reference-book' : '');
+    item.append(odd(sportsbookOdds(price)));
+    if (comparison && exact) {
+      const use = el('small', 'Used for fair odds');
+      markCalculationExpiry(use, context, group, lead.calculation_current_until, fallback?.current_until);
+      item.append(use);
+    } else if (quote?.current === false) item.append(el('small', 'Last known'));
+    row.append(item);
+  }
   return row;
 }
 

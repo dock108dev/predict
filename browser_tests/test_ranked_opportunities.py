@@ -5,6 +5,7 @@ from datetime import datetime
 from fractions import Fraction
 import os
 from pathlib import Path
+import re
 from urllib.parse import parse_qs, urlparse
 
 import pytest
@@ -193,8 +194,11 @@ def test_update_check_keeps_page_and_conceals_expired_estimate():
         tab.route("**/*", respond)
         tab.clock.install(time=datetime.fromisoformat("2026-11-13T00:00:00+00:00"))
         tab.goto(f"{BASE}/ev")
-        score = tab.locator(".opportunity-score")
-        expect(score).to_have_text("+0.20%Before-fee estimate")
+        score = tab.locator(".compact-ev-return")
+        expect(score).to_have_text("+0.20%")
+        expect(tab.locator('[data-offer-id="novig-over"]')).to_have_attribute(
+            "aria-label", re.compile("Before-fee estimate")
+        )
         expect(tab.get_by_text("1 more outcome")).to_be_visible()
         expect(tab.get_by_label("Calculation basis")).to_have_value("sportsbooks")
         expect(tab.locator("#phase-tabs")).to_be_hidden()
@@ -230,7 +234,7 @@ def test_update_check_keeps_page_and_conceals_expired_estimate():
             lambda response: "/api/comparison-current?" in response.url
         ):
             tab.clock.fast_forward(7000)
-        expect(score).to_have_text("+0.70%Before-fee estimate")
+        expect(score).to_have_text("+0.70%")
         expect(tab.locator("#previous-results")).to_be_hidden()
 
         tab.goto(f"{BASE}/ev?phase=live")
@@ -366,7 +370,9 @@ def fixtures():
             [denver, kalshi_denver],
             denver_ev,
             sportsbook_quotes={
-                "draftkings": [dict(price_american="-108", current=True)]
+                "draftkings": [dict(price_american="-107", current=True)],
+                "fanduel": [dict(price_american="-111", current=True)],
+                "caesars": [dict(price_american="-115", current=False)],
             },
         ),
         group(
@@ -674,24 +680,33 @@ def test_ranked_and_browse_journey(width, tmp_path):
             cards = tab.locator(".opportunity-card")
             expect(cards).to_have_count(2)
             expect(cards.first).to_contain_text("+3.26%")
-            expect(cards.first).to_contain_text("Sportsbook fair +102")
-            expect(cards.first.locator(".compact-prices")).not_to_contain_text(
-                "DraftKings"
-            )
-            expect(cards.first).to_contain_text("DraftKings")
-            expect(cards.first).to_contain_text("-108")
+            market = cards.first.locator(".compact-ev-market")
+            prices = market.get_by_role("group", name="Prediction market offers")
+            expect(market.get_by_role("heading", name="Denver to cover +2.5")).to_be_visible()
+            expect(prices.get_by_role("button")).to_have_text([
+                "Polymarket US+117.39+3.26%", "Kalshi-108.33-8.21%",
+            ])
+            books = cards.first.get_by_role("group", name="Fair odds and sportsbook quotes")
+            expect(books).to_contain_text("Fair odds +102")
+            expect(books.locator(":scope > span")).to_have_text([
+                "Fair odds +102", "DraftKings -108Used for fair odds", "FanDuel -111", "Caesars -115Last known",
+            ])
+            assert market.bounding_box()["y"] < books.bounding_box()["y"]
+            if width == 1440:
+                assert abs(market.get_by_role("heading").bounding_box()["y"] - prices.bounding_box()["y"]) < 7
             expect(cards.first).not_to_contain_text("Current")
             expect(cards.first).not_to_contain_text("Comparison sportsbook")
             expect(cards.first).not_to_contain_text("-112")
             expect(cards.last).to_contain_text("-3.00%")
             assert not inspected
             cards.first.get_by_role(
-                "button", name="View EV calculation:", exact=False
+                "button", name="View trade details: Polymarket US", exact=False
             ).press("Enter")
             fair = tab.get_by_role(
                 "dialog", name="Polymarket US · Denver to cover +2.5"
             )
             expect(fair.get_by_text("-112", exact=False).first).to_be_visible()
+            expect(fair.get_by_role("heading", name="Before-fee cashflows")).to_be_visible()
             assert inspected == ["pmus-denver"]
             tab.keyboard.press("Escape")
             expect(

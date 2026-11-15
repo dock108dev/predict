@@ -4,21 +4,18 @@ Install the app using the [README](../README.md). The ordinary runtime uses a
 local macOS source checkout, Python with the `stream` dependencies and a dedicated
 socket-only PostgreSQL cluster. The web listener binds to loopback.
 
-## Practice without an account
+## Saved odds
 
 Follow the [README quickstart](../README.md#requirements-and-quickstart) to copy
-the acquisition-off example, create the database, and start the app role. On
-the desk, choose **Open replay**. Search for Harbor Foxes, open an offer, and
-compare its original price and calculation. Open **Arbitrage** inside the
-replay, inspect a pairing, then select **Price moves** to step forward. Practice
-has fictional inputs and a fixed clock. The two saved-capture options depend on
-files in `.local/odds-replay`.
+the acquisition-off example, create the database, and start the app role.
+**Saved odds** opens the recorded captures available in `.local/odds-replay`.
+Open an offer to see its original price and calculation at the recorded time.
 
 Use the header's **Odds** control for American or decimal prices. In
 **Admin → Settings**, choose a time zone or follow the device. The EV and
 Arbitrage schedule filters can override the default with Eastern or UTC. The EV
-page remembers its selected calculation basis in the browser. Synthetic replay
-has separate settings and offers the calculation bases supported by its data.
+page remembers its selected calculation basis in the browser. Saved odds has
+separate settings and offers the calculation bases supported by each capture.
 
 On the live desk, an offer can be visible even when its reference, settlement
 terms or fee is unavailable. Clear return filters to see those prices. Arbitrage
@@ -132,7 +129,7 @@ data ends acquisition. Both leave PostgreSQL running; use
 | `/arbs` | Stored opposing-comparison view |
 | `/scanner` | Advanced Scanner, observed episodes and selected manual tickets |
 | `/odds`, `/ev` | Observed source prices and single-trade estimates across games |
-| `/replay?dataset=practice` | Fictional opening prices and a later move for trying EV and Arbitrage without keys |
+| `/replay` | Saved price captures with the original observations and calculations |
 | Details and Original | Selected calculations and original inputs; leased selections retain captured evidence when current inputs change |
 | `/admin` | Source, quota, storage and issue status; collection controls and guarded recovery |
 | `/admin/retained` | Separate finite-session and saved-capture readers |
@@ -178,7 +175,7 @@ a provider request. Use this command only for that route.
 
 Stop data before changing credentials with `scripts/opportunity-board stop --role data`.
 Start it again with the same selected configuration after saving the key.
-Saved inspection and synthetic practice need no provider credentials.
+Saved inspection needs no provider credentials.
 See [security](security.md) for the credential-loading rules.
 
 The Novig key is for the signed, read-only book stream. A missing key

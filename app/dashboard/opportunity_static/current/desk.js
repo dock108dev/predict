@@ -26,12 +26,11 @@ const back = window.PredictUI.localURL(route.get('back'));
 let safeBack = back && ['/','/ev','/arbs','/browse-odds','/game','/replay'].includes(back.pathname)
   ? back.pathname + back.search : null;
 const browseCacheKey = 'predict-desk-return';
-const dataset = ['frozen','preview','practice','retained'].includes(route.get('dataset')) ? route.get('dataset') : 'practice';
+const dataset = ['frozen','preview','retained'].includes(route.get('dataset')) ? route.get('dataset') : 'frozen';
 const retainedResult = replay && dataset === 'retained' ? route.get('result_id') : null;
-const frame = route.get('frame') === 'changed' ? 'changed' : 'initial';
 const endpoint = replay ? '/api/odds-replay' : '/api/comparison-current';
-const replayURL = (view, chosen = dataset === 'retained' ? 'practice' : dataset, step = frame) => '/replay?' + new URLSearchParams({view, dataset:chosen, frame:step});
-const replayMode = () => !replay ? null : dataset === 'practice' ? 'Synthetic practice · fictional prices and inputs' : 'Saved capture · prices at capture';
+const replayURL = (view, chosen = dataset === 'retained' ? 'frozen' : dataset) => '/replay?' + new URLSearchParams({view, dataset:chosen});
+const replayMode = () => replay ? 'Saved odds · prices at capture' : null;
 const pageSize = 25;
 const gamesPerPage = 12;
 const pageLimit = gameKey ? 100 : replay ? (browse ? 5 : pageSize) : arb ? pageSize : gamesPerPage;
@@ -147,7 +146,7 @@ if (browse) {
   });
   $('desk-path').append(previousView);
 }
-$('replay-link').href = replayURL(arb ? 'arbs' : 'ev', 'practice', 'initial');
+$('replay-link').href = replayURL(arb ? 'arbs' : 'ev', 'frozen');
 filters.elements.timezone.options[0].textContent = `Default (${defaultZone.replaceAll('_', ' ')})`;
 if (replay) {
   $('desk-mode').hidden = false;
@@ -155,21 +154,18 @@ if (replay) {
   $('replay-link').textContent = 'Return to opportunities';
   $('replay-link').href = arb ? '/arbs' : '/ev';
   $('replay-dataset').value = dataset;
-  $('replay-frame').value = frame;
-  $('replay-frame-field').hidden = dataset !== 'practice';
   $('replay-ev').href = replayURL('ev');
   $('replay-arbs').href = replayURL('arbs');
   $(arb ? 'replay-arbs' : 'replay-ev').setAttribute('aria-current','page');
-  $('replay-dataset').onchange = event => location.assign(replayURL(arb ? 'arbs' : 'ev', event.target.value, 'initial'));
-  $('replay-frame').onchange = event => {
+  $('replay-dataset').onchange = event => {
     const next = new URL(location.href);
-    next.searchParams.set('frame', event.target.value);
+    next.searchParams.set('dataset', event.target.value);
     if (gameKey) {
       if (marketFamily) next.searchParams.set('family', marketFamily);
       else next.searchParams.delete('family');
       if (safeBack) {
         const previous = new URL(safeBack, location.origin);
-        if (previous.pathname === '/replay') previous.searchParams.set('frame', event.target.value);
+        if (previous.pathname === '/replay') previous.searchParams.set('dataset', event.target.value);
         next.searchParams.set('back', previous.pathname + previous.search);
       }
     }
@@ -597,7 +593,7 @@ async function pinEvidence(offer, basis){
   }
   if(!offer.evidence_result_id)throw Error('Missing exact evidence');
   if (replay) {
-    const query = new URLSearchParams({dataset, frame, result_id:offer.evidence_result_id, id:offer.id});
+    const query = new URLSearchParams({dataset, result_id:offer.evidence_result_id, id:offer.id});
     if (retainedResult) query.set('game_key', gameKey);
     const detail = await fetch(`/api/odds-replay/details?${query}`);
     if (!detail.ok) throw Error('Replay evidence unavailable');
@@ -776,12 +772,13 @@ function emptyResults(page, publication) {
   let title, detail;
   if (replay && page.state === 'initializing') {
     title = 'This saved capture is unavailable';
-    detail = 'Synthetic practice is included with the app.';
+    actions.append(link('Browse current odds', '/browse-odds'));
   } else if (issue && !page.price_preview?.length) {
     [title, detail] = issue;
     if (!browse) actions.append(browsingLink('Browse odds ↗'));
   } else if (!replay && page.price_preview?.length) {
-    title = 'Current prices';
+    title = page.price_preview.some(group => group.offers?.some(offer => offer.current))
+      ? 'Current prices' : 'Last known prices';
     detail = page.calculation_reason || 'No EV comparisons qualify for these filters yet.';
     actions.append(browsingLink('Browse odds ↗'));
   } else if (page.state === 'initializing' && !publication.retained_prices) {
@@ -822,9 +819,6 @@ function emptyResults(page, publication) {
     detail = page.calculation_missing?.length ? evidenceReason(page.calculation_missing, page.calculation_reason) :
       page.calculation_reason || (page.matched_offer_count ? 'Current prices are missing an eligible sportsbook reference for the selected basis.'
         : `No current prices are available${phase === 'live' ? ' for live games' : phase === 'pregame' ? ' for pregame markets' : ''}.`);
-  }
-  if ((replay && dataset !== 'practice') || (!replay && (issue || page.state === 'initializing'))) {
-    actions.append(link('Try synthetic practice', replayURL(arb ? 'arbs' : 'ev', 'practice', 'initial')));
   }
   if (!replay && page.retained_game) {
     const capture = page.retained_game;
@@ -1011,7 +1005,23 @@ function restoreLocationAfterLoad() {
 }
 
 async function fetchPage(query, signal) {
-  const response = await fetch(`${endpoint}?${query}`, {signal});
+  window.PredictDeskStarted = true;
+  if (!replay) {
+    for (const key of [...query.keys()]) if (!query.get(key)) query.delete(key);
+    if (!['day', 'time_from', 'time_to'].some(key => query.has(key))) query.delete('timezone');
+    query.sort();
+  }
+  const url = `${endpoint}?${query}`;
+  const landing = window.PredictDeskLanding;
+  if (landing) {
+    delete window.PredictDeskLanding;
+    if (landing.url === url) {
+      signal.addEventListener('abort', () => landing.controller.abort(), {once:true});
+      const initial = await landing.promise;
+      if (initial) return initial;
+    } else landing.controller.abort();
+  }
+  const response = await fetch(url, {signal});
   if (!response.ok) throw Error('Unavailable');
   return response.json();
 }
@@ -1125,7 +1135,7 @@ async function load(offset = state.offset, {background = false, freshMembership 
     offset:freshMembership ? 0 : offset, limit:pageLimit});
   if (replay) query.set('stake', requestStake);
   else query.set('summary', '1');
-  if (replay) { query.set('dataset', dataset); query.set('frame', frame); }
+  if (replay) query.set('dataset', dataset);
   if (retainedResult) query.set('result_id', retainedResult);
   const browseId = (state.query === requestFilters ? state.page?.browse_id : null) ?? restoreLocation?.browseId;
   if (!replay && !freshMembership && browseId && (offset || background || restoreLocation?.browseId)) query.set('browse_id', browseId);

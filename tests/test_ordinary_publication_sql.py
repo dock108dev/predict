@@ -567,6 +567,21 @@ class OrdinarySQL(LatestBoardFixture):
                     self.assertTrue(signal['changed'])
                     self.assertEqual(signal['generation'], page['generation'])
                     self.assertEqual(signal['provider_requests'], 0)
+                offered = [offer for row in page['rows'] for offer in row['offers']
+                           if offer['current'] and offer['current_until']
+                           and stamp(offer['current_until']) < stamp(row['start_at'])]
+                self.assertTrue(offered)
+                expiring = min(offered, key=lambda offer: stamp(offer['current_until']))
+                self.at = stamp(expiring['current_until']) + timedelta(microseconds=1)
+                self.state.write(self.service)
+                expired_page = await (await client.get('/api/comparison-current', params=query)).json()
+                last_known = next(offer for row in expired_page['rows'] for offer in row['offers']
+                                  if offer['id'] == expiring['id'])
+                self.assertEqual(last_known['original'], expiring['original'])
+                self.assertEqual(last_known['source_clock_at'], expiring['source_clock_at'])
+                self.assertIn('source_expired', last_known['current_reasons'])
+                self.assertFalse(last_known['current'])
+                self.assertIsNone(last_known['value'])
                 self.at = max(stamp(row['start_at']) for row in page['rows'])
                 self.state.write(self.service)
                 after_kickoff = await (await client.get('/api/comparison-current', params=query)).json()
@@ -768,6 +783,29 @@ class OrdinarySQL(LatestBoardFixture):
                 exact=await response.json()
                 self.assertEqual(exact['publication']['count_scope'],'selected_inputs')
                 self.assertEqual(exact['row'],{k:v for k,v in selected.items() if k!='ranking'})
+
+    async def test_concurrent_pregame_summary_shares_projection_body_and_browse_order(self):
+        import asyncio
+
+        with self.connect() as db:
+            self.assertTrue(live.turn(db)['published'])
+        app = web.Application()
+        mount(app)
+        query = dict(layout='desk', view='ev', summary='1', browse_odds='1',
+                     lines='all', phase='pregame', basis='sportsbooks', limit='12')
+        with patch('app.dashboard.snapshot_api.connect', self.connect), \
+                patch.object(live, 'published_dependencies', wraps=live.published_dependencies) as dependencies:
+            async with TestClient(TestServer(app)) as client:
+                responses = await asyncio.gather(*(client.get('/api/comparison-current', params=query,
+                    headers={'Accept-Encoding': 'gzip' if index else 'identity'}) for index in range(12)))
+                self.assertTrue(all(response.status == 200 for response in responses))
+                self.assertNotIn('Content-Encoding', responses[0].headers)
+                self.assertTrue(all(response.headers.get('Content-Encoding') == 'gzip' for response in responses[1:]))
+                pages = [await response.json() for response in responses]
+                self.assertTrue(pages[0]['rows'])
+                self.assertTrue(pages[0]['browse_id'])
+                self.assertTrue(all(page == pages[0] for page in pages))
+                self.assertEqual(dependencies.call_count, 1)
 
     async def test_lossless_headroom_preserves_selected_bytes_and_reclaims_cycles(self):
         import gzip

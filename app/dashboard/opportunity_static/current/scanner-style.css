@@ -142,3 +142,4 @@ label input,label select { font-size:.9375rem }
 
 /* Enlarged navigation keeps every destination within the narrow viewport. */
 @media(max-width:760px) { nav { flex-wrap:wrap } }
+.brand { display: inline-flex; align-items: center; gap: 10px; }

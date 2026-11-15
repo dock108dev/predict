@@ -76,9 +76,10 @@ class LiveDataFollowup(TestCase):
     def test_active_browse_session_survives_other_first_page_reads(self):
         sessions=BrowseSessions();groups=[dict(id='a',game_key='g',game_title='G',start_at='s')]
         active=sessions.page(groups,{},0,1)['browse_id']
-        for _ in range(40):
+        for index in range(40):
             self.assertEqual(sessions.page(groups,{'browse_id':active},0,1)['state'],'ready')
-            sessions.page(groups,{},0,1)
+            self.assertEqual(sessions.page(groups,{},0,1)['browse_id'],active)
+            sessions.page(groups,{'search':str(index)},0,1)
         self.assertEqual(len(sessions.sessions),16)
 
 class NativeLiveDiscovery(TestCase):

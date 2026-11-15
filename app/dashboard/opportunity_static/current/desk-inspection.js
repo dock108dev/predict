@@ -120,7 +120,7 @@ function tradingFee(model) {
     const timing = model.fee_cashflows?.winning_settlement_usd != null ? 'Winning settlement' : 'At fill';
     block.append(facts([
       ['Trading fee', usd(model.trade_fee_usd)], ['Evidence class', feeClasses[model.classification]],
-      ['Trade profile', fictional ? 'Synthetic practice' : 'Manual retail'],
+      ['Trade profile', fictional ? 'Authored scenario' : 'Manual retail'],
       ...(fictional && model.evidence?.fictional_rate != null
         ? [['Fictional rate', `${percent(num(model.evidence.fictional_rate) * 100)} of the acquisition cost`]] : []),
       ...(size ? [['Modeled size', size]] : []),
@@ -244,7 +244,7 @@ export function tradeInspection(offer, group, evidence, {mode, position, basis, 
   priceFreshness.dataset.inspectionPrice = '1';
   quote.append(priceFreshness);
   if (cost != null) quote.append(el('small', `${usd(cost)} per $1 payout`, 'inspection-price-unit'));
-  const priceBasis = {native_book:'Native order book ask', aggregate_snapshot:'Aggregate quote', synthetic:'Authored practice quote'}[offer.price_basis];
+  const priceBasis = {native_book:'Native order book ask', aggregate_snapshot:'Aggregate quote', synthetic:'Authored scenario quote'}[offer.price_basis];
   if (priceBasis) quote.append(el('small', priceBasis, 'inspection-price-unit'));
   if (offer.book_size) quote.append(el('small', `${offer.book_size.quantity} ${offer.book_size.quantity_unit} at this price`, 'inspection-price-unit'));
   const activeFee = (offer.current || mode) && offer.trade_fee?.available ? offer.trade_fee.trade_fee_usd : null;
@@ -311,6 +311,7 @@ export function tradeInspection(offer, group, evidence, {mode, position, basis, 
     return result;
   }
   const details = disclosure('Calculations and settlement');
+  details.open = !pairLeg;
   result.append(details);
   const data = pinnedInspection(offer, evidence.inspection);
   const original = data.original || {};
@@ -319,8 +320,10 @@ export function tradeInspection(offer, group, evidence, {mode, position, basis, 
   details.append(el('p', `Math at capture · ${evidence.captured_at || offer.captured_at}`, 'desk-meta'));
   details.append(section('Price and outcome', facts([
     ['Selected outcome', position], ['Market', [name(offer.market.market), human(offer.market.period)].join(' · ')],
-    ['Price provider', data.source?.provider === 'oddslink_public_board' ? 'OddsLink' : data.source?.provider === 'sportsgameodds' ? 'SportsGameOdds' : data.source?.provider === 'practice' ? 'Synthetic practice' : null],
+    ['Price provider', data.source?.provider === 'oddslink_public_board' ? 'OddsLink' : data.source?.provider === 'sportsgameodds' ? 'SportsGameOdds' : data.source?.provider === 'practice' ? 'Authored scenario' : null],
     ['Native side', data.source?.native_side && human(data.source.native_side)], ['Original price', original.value == null ? null : `${original.value} ${human(original.units)}`],
+    ...[['Native event', data.source?.native_event_id], ['Native market', data.source?.native_market_id],
+      ['Native outcome', data.source?.native_outcome_id]].filter(([, value]) => value != null),
     ['Payout unit', original.payout && `${original.payout} ${original.payout_units || 'USD'}`],
     ['Cost per $1 normal claim', usd(gross.cost_usd)],
     ['Venue outcome and settlement', data.identity.outcome?.supported ? 'Exact outcome identified'

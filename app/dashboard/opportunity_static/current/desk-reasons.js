@@ -67,7 +67,7 @@ const reasonLabels = {
   conditional_pregame_ended: 'The reviewed pregame model ended at kickoff.',
   live_financial_model_unverified: 'A qualified live model and current in-game reference are required.',
   conservative_trade_fee_estimate_not_applicable: 'There is no conservative fee model for this site.',
-  synthetic_account_terms_unavailable: 'This practice quote has no applicable venue fee or fill evidence.',
+  synthetic_account_terms_unavailable: 'The recorded inputs do not establish venue fees or fill evidence.',
   eligible_reference_unavailable: 'No eligible reference covers this exact quote, game and settlement at the capture time.',
   ev_calibration_or_settlement_unverified: 'An executable fee and fill, a full settlement model, and calibrated confidence of at least 99% are required.',
   effective_fill_unverified: 'Applicable charges and executable fills at the modeled size are unverified.',

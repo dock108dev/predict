@@ -74,7 +74,7 @@ def game_signature(game):
     return None
 
 
-def game_for(record, occurrence, published, prior, dependencies, registry, *, has_reference):
+def game_for(record, occurrence, published, prior, dependencies, registry):
     # Carry an existing occurrence only when its exact contract and event
     # revisions still match. A separate source-local identity covers a new game.
     if prior:
@@ -86,8 +86,10 @@ def game_for(record, occurrence, published, prior, dependencies, registry, *, ha
     league, start, home, away = occurrence
     participants = [dict(id=team, role=role, name=registry.entities.get(team, {}).get('name', team))
                     for role, team in (('away', away), ('home', home))]
-    key = (hashed([league, start.isoformat(), home, away]) if has_reference and league != 'MLB'
-           else hashed([source['provider'], source['native_event_id']]))
+    # The presence of a sportsbook reference changes EV eligibility without
+    # changing the occurrence or its link. Cross-venue aliases are adjudicated
+    # from schedule evidence by the desk, independently of reference freshness.
+    key = hashed([source['provider'], source['native_event_id']])
     return dict(game_key='native-current:' + key, title=event.get('title') or ' vs. '.join(p['name'] for p in participants),
                 league=league, start_at=start.isoformat(), participants=participants)
 
@@ -165,8 +167,7 @@ def overlay(db, result, owner, states, *, at, contract=None, phase='pregame', sg
                      book_id=book['book_id'], book_revision=book['book_revision'])
                 if best and Fraction(best[0]) == cost and Fraction(best[2]) > 0 else None)
         prior = prior_rows.get(cid)
-        game = game_for(record, occurrence, published, prior, dependencies[cid], registry,
-                        has_reference=bool(observations.get(occurrence)))
+        game = game_for(record, occurrence, published, prior, dependencies[cid], registry)
         if (game['game_key'], stamp(game['start_at'])) in blocked:
             continue
         published[game['game_key']] = game

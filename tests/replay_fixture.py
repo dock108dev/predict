@@ -1,6 +1,8 @@
-"""An isolated, fictional price change with exact odds and an authored probability."""
+"""Authored odds archives for regression tests, never served by the app."""
+from contextlib import closing
 from fractions import Fraction
 from functools import lru_cache
+import sqlite3
 
 from app.comparison.cashflows import exact_wire as wire
 from app.comparison.inspection_math import offer_math
@@ -8,7 +10,20 @@ from app.comparison.snapshot_fee_outcome import unavailable
 from app.comparison.snapshot_math import assumptions, before_fee_pair
 from app.comparison.snapshot_metrics import statuses
 from app.storage.ordinary_publication import counts
-from .local_security import PublicRequestError
+from app.storage.comparison_snapshot import pack
+from app.dashboard.local_security import PublicRequestError
+
+
+def write_archives(directory, datasets=('frozen', 'preview')):
+    for dataset in datasets:
+        board, proofs = practice('initial' if dataset == 'frozen' else 'changed')
+        board = dict(board, replay=dict(board['replay'], dataset=dataset, synthetic=False))
+        with closing(sqlite3.connect(directory / f'{dataset}.sqlite3')) as db, db:
+            db.execute('CREATE TABLE archive (kind TEXT PRIMARY KEY, payload BLOB NOT NULL)')
+            db.execute('CREATE TABLE detail (id TEXT PRIMARY KEY, payload BLOB NOT NULL)')
+            db.execute('INSERT INTO archive VALUES (?, ?)', ('board', pack(board)))
+            db.executemany('INSERT INTO detail VALUES (?, ?)',
+                           ((offer_id, pack(proof)) for offer_id, proof in proofs.items()))
 
 
 @lru_cache(maxsize=2)

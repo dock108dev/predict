@@ -27,9 +27,8 @@ post-reset book. The
 [fee coverage policy](docs/fee-coverage-policy.md) defines what the desk
 counts independently of reference and calculation eligibility.
 
-**Open replay** starts a fictional practice slate. Local saved captures are
-also available in the dataset selector. The live desk follows the data owner's
-Stop and source controls.
+**Saved odds** opens the recorded captures available on this installation.
+The current desk follows the data owner's Stop and source controls.
 See [replay and local operation](docs/development.md#frozen-replay) and the
 [calculation contract](docs/benchmark-ev.md).
 
@@ -38,8 +37,8 @@ See [replay and local operation](docs/development.md#frozen-replay) and the
 Requires macOS, Python 3.11+ and PostgreSQL tools (`pg_ctl`, `initdb`, `psql`,
 `createdb`) on your PATH. Use Python 3.14 and PostgreSQL 16 for new setups;
 existing databases keep tools matching their cluster major. Node 24 is needed
-only for client tests (`nvm use`). Run commands
-from the repository root. Start with practice to explore the app without keys:
+only for client tests (`nvm use`). Run these commands from the repository root
+to start the app with collection off.
 
 ```sh
 python3 -m venv .venv
@@ -53,9 +52,9 @@ scripts/opportunity-board start --role app --port 8784
 ```
 
 Open the loopback address printed by the launcher. With the command above,
-use [Predict on port 8784](http://127.0.0.1:8784/) and choose **Open replay**. Search for Harbor Foxes and open a price or pairing.
-Switch **Price step** to see how a move changes the math. `cp -n` keeps existing
-settings. `check-config` validates the file and shows what it would collect.
+use [Predict on port 8784](http://127.0.0.1:8784/). Choose **Saved odds** if this
+installation has a recorded capture. `cp -n` keeps existing settings.
+`check-config` validates the file and shows what it would collect.
 
 For live collection, follow [source configuration and credentials](docs/configuration.md#source-configuration).
 Choose the sports and markets, add your read-only keys, and turn `enabled` on.

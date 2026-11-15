@@ -285,9 +285,15 @@ def project(result, current, owner, states, *, at, policy, epoch, settings=None,
         row = dict(original)
         auth = row['current_authority']
         aggregate_provider = owner.get('config',{}).get('aggregate_provider', 'the_odds_api')
-        reasons = ((common if current_desk else []) or
-                   price_reasons(row, current, owner, states, at=at, epoch=epoch,
-                                 publication_epoch=result['publication']['epoch'], common=common))
+        deadline = auth['price'].get('current_until')
+        if current_desk and deadline and at > stamp(deadline):
+            # An expired quote can still be shown with its original price.
+            # No dependency lookup or calculation is needed to withdraw it.
+            reasons = [*common, 'source_expired']
+        else:
+            reasons = ((common if current_desk else []) or
+                       price_reasons(row, current, owner, states, at=at, epoch=epoch,
+                                     publication_epoch=result['publication']['epoch'], common=common))
         start = stamp(row['start_at'])
         actual = current.get(auth['price'].get('dependency'))
         expected = auth['price'].get('expected')
@@ -304,8 +310,8 @@ def project(result, current, owner, states, *, at, policy, epoch, settings=None,
         row['game_state_observed_at']=lifecycle.get('observed_at')
         row['price_current'] = not reasons
         if current_desk and reasons:
-            # The live desk still needs phase and identity for its scoped
-            # counts and permalinks. It will never present these rows.
+            # Preserve observable prices and identity as last-known evidence.
+            row['trade_fee'] = unavailable('fee_source_price_not_current')
             row['current_reasons'] = sorted(set(reasons))
             out['rows'].append(row)
             continue

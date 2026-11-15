@@ -31,7 +31,7 @@ class Assets(unittest.IsolatedAsyncioTestCase):
             return response._path.read_bytes()
 
         icon = "/view/current/predict-icon.png"
-        for path in PUBLIC_DESK_PAGES:
+        for path in (*PUBLIC_DESK_PAGES, "/admin", "/odds", "/raw-odds", "/scanner"):
             html = (await file_bytes(path)).decode()
             icons = re.findall(r'<link rel="(?:icon|apple-touch-icon)"[^>]+href="([^"]+)"', html)
             self.assertEqual(icons, [icon, icon], path)
@@ -48,9 +48,9 @@ class Assets(unittest.IsolatedAsyncioTestCase):
                 response = await client.get(page)
                 self.assertEqual(response.status, 200)
                 html = await response.text()
-                script = re.search(r'<script[^>]+src="([^"]+)"', html).group(1)
+                scripts = re.findall(r'<script[^>]+src="([^"]+)"', html)
                 styles = re.findall(r'<link[^>]+href="([^"]+\.css(?:\?[^"]*)?)"', html)
-                pending = [script, *styles]
+                pending = [*scripts, *styles]
                 seen = set()
                 while pending:
                     path = pending.pop()
@@ -80,7 +80,7 @@ class Assets(unittest.IsolatedAsyncioTestCase):
                         if suffix == ".css"
                         else re.findall(r"(?:from\s+|import\s*)['\"]([^'\"]+)['\"]", source)
                     )
-                    if path == script and "scanner.js" not in path:
+                    if path in scripts and "scanner.js" not in path:
                         endpoint = "/api/comparison-current" if page in PUBLIC_DESK_PAGES else "/api/comparison-snapshot"
                         self.assertIn(endpoint, source)
                         self.assertNotIn("new SavedReadPoller", source)
@@ -88,7 +88,7 @@ class Assets(unittest.IsolatedAsyncioTestCase):
                 expected = (
                     {"board-client.js", "board-contract.js", "board-values.js", "board-read.js", "scanner.css", "scanner.js"}
                     if page == "/scanner" else
-                    {"desk.css", "desk.js", "desk-preferences.js", "ui-common.js", "barlow-semi-condensed-600.ttf"}
+                    {"desk.css", "desk.js", "desk-bootstrap.js", "desk-preferences.js", "ui-common.js", "barlow-semi-condensed-600.ttf"}
                     if page in PUBLIC_DESK_PAGES else {"stored.css", "stored.js", "manrope.ttf"}
                 )
                 self.assertTrue(expected <= {Path(path.split("?")[0]).name for path in seen}, page)

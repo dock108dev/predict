@@ -1,9 +1,10 @@
-"""Browse frozen and synthetic odds without a live source or SQL write."""
+"""Browse saved odds without provider requests or SQL writes."""
 import asyncio
 from functools import lru_cache
 import re
 
 from aiohttp import web
+from psycopg import OperationalError
 
 from app.storage import odds_replay, comparison_snapshot as snapshots
 from app.storage.store import connect, stamp
@@ -105,10 +106,7 @@ def load(query, *, details=False, allow_live=False):
     dataset = query.get('dataset', 'frozen')
     if dataset == 'retained':
         return retained_game(query, details=details, allow_live=allow_live)
-    if dataset == 'practice':
-        from .replay_practice import practice
-        result, proofs = practice(query.get('frame', 'initial'))
-    elif dataset in odds_replay.DATASETS:
+    if dataset in odds_replay.DATASETS:
         path = odds_replay.DIRECTORY / f'{dataset}.sqlite3'
         try:
             info = path.stat()
@@ -122,12 +120,9 @@ def load(query, *, details=False, allow_live=False):
     if details:
         if result['id'] != query.get('result_id'):
             raise PublicRequestError('Replay revision changed. Refresh the list.')
-        if dataset == 'practice':
-            value = proofs.get(query.get('id'))
-        else:
-            with odds_replay.open_archive(path) as db:
-                row = db.execute('SELECT payload FROM detail WHERE id=?', (query.get('id'),)).fetchone()
-                value = snapshots.unpack(row[0]) if row else None
+        with odds_replay.open_archive(path) as db:
+            row = db.execute('SELECT payload FROM detail WHERE id=?', (query.get('id'),)).fetchone()
+            value = snapshots.unpack(row[0]) if row else None
         if not value or value['result_id'] != result['id']:
             raise PublicRequestError('Offer unavailable in this replay revision')
         if not allow_live and not pregame_capture(value['row'], value['captured_at']):
@@ -146,14 +141,20 @@ def load(query, *, details=False, allow_live=False):
 
 def mount(app):
     async def read(req):
+        if req.query.get('dataset', 'frozen') not in (*odds_replay.DATASETS, 'retained'):
+            raise PublicRequestError('Unknown replay dataset')
+
         def work():
             from app.collection.current_policy import live_enabled
             from app.collection.runtime_status import read_runtime
-            # Practice is always an isolated, pregame fixture with no SQL dependency.
             allow_live = False
-            if req.query.get('dataset', 'frozen') != 'practice':
+            try:
                 with connect() as db:
                     allow_live = live_enabled(read_runtime(db, ordinary_authority=True)['config'])
+            except OperationalError:
+                # Disk captures can still supply pregame evidence with SQL offline.
+                if req.query.get('dataset') == 'retained':
+                    raise
             return load(dict(req.query), details=req.path.endswith('/details'), allow_live=allow_live)
 
         return web.json_response(await asyncio.to_thread(work))
