@@ -1,9 +1,9 @@
 # Continuous integration
 
 CI checks source, packaged assets and authored fixtures without paid collection
-or ordinary application data. When CI succeeds for a push to `main`, the
-separate [dev deploy workflow](hetzner.md#releases) builds and tests that commit.
-The workflow files and suite manifests define the current check scope.
+or ordinary application data. The separate [dev deploy workflow](hetzner.md#releases)
+runs on manual dispatch. The workflow files and suite manifests define the current
+check scope.
 
 ## Required checks
 
@@ -174,9 +174,9 @@ production execution destinations.
 
 Workflow tokens use read-only permissions. Fork checks receive no application
 credentials, checkout does not persist credentials, and Actions are pinned by
-commit. A separate GitHub Actions workflow builds, smoke-tests and deploys
-images after successful push CI on `main` and for in-repository PRs targeting
-`main`. A manual run from `main` deploys the latest published main release.
+commit. The separate Hetzner workflow builds, smoke-tests, and publishes images
+for the branch selected at manual dispatch. The deploy job sends those digests
+to Hetzner after verifying the branch tip.
 See the [Hetzner runbook](hetzner.md). Configure `CI readiness` as a required branch check separately;
 workflow success alone cannot enforce merge policy.
 
@@ -206,7 +206,7 @@ recorded. These workflows do not publish releases.
 | Type checking and broad formatting | No repository-wide typing/format migration | N/A | Explicit omission | Dynamic dict/JSON application has no type-check configuration or established typed boundary; compilation, Ruff and executable schema/contract tests remain required. Broad annotation/style migration would be separate product work |
 | Containers and shell syntax | Compose smoke and shell parser checks | Dev deploy workflow and quality lane | Deployment requires the smoke | ShellCheck integration remains disabled |
 | Performance and accessibility scoring | Existing workload, keyboard and overflow assertions | Required functional lanes | Advisory beyond assertions | No stable Lighthouse/burst benchmark or automated WCAG conformance baseline; native/device usability and performance remain separate evidence |
-| Hetzner deployment | Publish tested web, collector, and archive digests. Manual dispatch reads the published main release record. | Successful CI for a `main` push, in-repository PR to `main`, or manual dispatch from `main` | Publish after Compose smoke | Automatic main deploys use the exact CI-tested commit. The smoke checks that a web rollout preserves the running database and worker containers. |
+| Hetzner deployment | Build and publish tested web, collector, and archive digests for the selected commit | Manual dispatch | Publish after Compose smoke | The deploy job checks the branch tip before sending the tested digests. The smoke checks that a web rollout preserves the running database and worker containers. |
 
 Scheduled jobs use the default branch and may be delayed by GitHub; they are not
 exact-time jobs. Treat the latest successful weekly assurance as stale after eight
