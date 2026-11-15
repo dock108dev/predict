@@ -58,7 +58,9 @@ def first_use(tab, base):
     offer.press("Enter")
     trade = tab.get_by_role("dialog", name="Novig · Harbor Foxes to win")
     expect(trade).to_contain_text("Original price")
-    expect(trade).to_contain_text("This practice quote has no applicable venue fee or fill evidence")
+    expect(trade).to_contain_text(
+        "This practice quote has no applicable venue fee or fill evidence"
+    )
     expect(trade).to_contain_text("Authored scenario time")
     expect(trade).not_to_contain_text("undefined")
     expect(trade).to_contain_text("returns $22.00 total, including $12.00 profit")
@@ -147,7 +149,9 @@ def first_use(tab, base):
     tab.keyboard.press("Escape")
     expect(filters).to_be_focused()
     tab.get_by_label("Positive only").check()
-    expect(tab.get_by_role("heading", name="No arbitrage calculations available")).to_be_visible()
+    expect(
+        tab.get_by_role("heading", name="No arbitrage calculations available")
+    ).to_be_visible()
     tab.get_by_role("button", name="Show unavailable pairings").press("Enter")
     expect(inspect).to_be_visible()
     filters.press("Enter")

@@ -441,10 +441,19 @@ def test_ranked_and_browse_journey(width, tmp_path):
                     matched_outcome_count=4,
                     ranked_group_count=ranked,
                     ranking_stake="100" if query.get("view") == "arbs" else None,
-                        publication=dict(current_prices=12, read_at="2026-11-13T00:00:00Z",
-                                         published_at="2026-11-12T23:59:54Z",
-                                         sources={"sportsgameodds": {"state":"held", "reason_code":"sgo_charge_unresolved"}}
-                                         if unavailable else {}),
+                    publication=dict(
+                        current_prices=12,
+                        read_at="2026-11-13T00:00:00Z",
+                        published_at="2026-11-12T23:59:54Z",
+                        sources={
+                            "sportsgameodds": {
+                                "state": "held",
+                                "reason_code": "sgo_charge_unresolved",
+                            }
+                        }
+                        if unavailable
+                        else {},
+                    ),
                     calculation_reason="The sportsbook reference source is on hold.",
                 )
             )
@@ -613,7 +622,9 @@ def test_ranked_and_browse_journey(width, tmp_path):
                 tab.locator('[data-offer-id="kalshi-minnesota"]')
             ).not_to_contain_text("EV")
             if width == 390:
-                expect(tab.get_by_role("button", name="Scroll to see more odds columns")).to_be_visible()
+                expect(
+                    tab.get_by_role("button", name="Scroll to see more odds columns")
+                ).to_be_visible()
                 assert tab.locator(".odds-scroll").evaluate(
                     "(el) => el.scrollWidth > el.clientWidth"
                 )
@@ -648,7 +659,9 @@ def test_ranked_and_browse_journey(width, tmp_path):
             expect(
                 tab.get_by_text("The sportsbook reference source is on hold.")
             ).to_be_visible()
-            expect(tab.locator("#notice")).to_contain_text("SportsGameOdds updates are on hold pending provider reconciliation")
+            expect(tab.locator("#notice")).to_contain_text(
+                "SportsGameOdds updates are on hold pending provider reconciliation"
+            )
             show_current_prices = True
             tab.get_by_role("button", name="Refresh list").click()
             expect(tab.get_by_role("heading", name="Current prices")).to_be_visible()
@@ -725,12 +738,24 @@ def test_ranked_and_browse_journey(width, tmp_path):
             expect(drawer.get_by_text("$0.81 per $1 payout")).to_be_visible()
             drawer.get_by_text("Quote times", exact=True).click()
             times = drawer.locator(".inspection-facts").first
-            expect(times.locator("dt")).to_have_text([
-                "Original source update", "Book confirmation", "Collector receipt", "Price capture", "Board publication"
-            ])
-            expect(times.locator("dd")).to_have_text([
-                "2026-11-12T23:59:40Z", "2026-11-12T23:59:52Z", "2026-11-12T23:59:53Z", START, "2026-11-12T23:59:54Z"
-            ])
+            expect(times.locator("dt")).to_have_text(
+                [
+                    "Original source update",
+                    "Book confirmation",
+                    "Collector receipt",
+                    "Price capture",
+                    "Board publication",
+                ]
+            )
+            expect(times.locator("dd")).to_have_text(
+                [
+                    "2026-11-12T23:59:40Z",
+                    "2026-11-12T23:59:52Z",
+                    "2026-11-12T23:59:53Z",
+                    START,
+                    "2026-11-12T23:59:54Z",
+                ]
+            )
             expect(
                 drawer.locator(".inspection-tiles").get_by_text("$0.01", exact=True)
             ).to_be_visible()
