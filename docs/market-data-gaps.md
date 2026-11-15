@@ -11,8 +11,9 @@ Native and aggregate sources have independent access, timing and availability.
   and payout identity remain separate.
 - Original quote time, receipt time, socket health and browser connection are
   distinct. Persistence, replay and recalculation do not renew quote freshness.
-- A benchmark uses both original outcomes from the selected sportsbook. Missing,
-  crossed or stale originals withhold dependent EV rather than substitute a book.
+- A benchmark uses both original outcomes from the selected sportsbook. The
+  default Sportsbook estimate considers qualifying pairs across books. A named
+  benchmark stays unavailable when its selected book lacks a qualifying pair.
 - Modeled fees, payout recipes, quantity grids and provisional tie/noncompletion
   probabilities are explicit assumptions. Content has bounded effective intervals
   and expiry in `app/fixtures/estimated-content-v1.json`; strictly bound profiles

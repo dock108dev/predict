@@ -6,7 +6,7 @@ import re
 from app.comparison.event_links import provider_key
 from app.comparison.game_phase import sgo_event_status
 from app.dashboard.session_projection import stable
-from app.normalization.college_registry import aggregate_registry
+from app.normalization.college_registry import sgo_registry
 from app.storage.schedule_metadata import VERSION as SCHEDULE_VERSION
 from app.storage.store import hashed, stamp
 from .sportsgameodds_adapter import PROPHETX_BOOKMAKER_ID
@@ -42,20 +42,24 @@ def linked_event_ids(links):
     return ids
 
 
+def participant_ids(teams, league, event_id, registry):
+    ids = {}
+    for role in ('home', 'away'):
+        team = registry.resolve('team', teams[role]['name'], league=league, venue='sportsgameodds')
+        ids[role] = team.canonical_id if team.status == 'resolved' else f'sportsgameodds:{league}:{event_id}:{role}'
+    return ids
+
+
 def _event_record(event, receipt_sha256, received_at, registry):
     event_id = event['event_id']
     league = event['league']
-    home_name, away_name = (event['teams'][role]['name'] for role in ('home', 'away'))
-
-    def participant(name, role):
-        resolved = registry.resolve('team', name, league=league, venue='sportsgameodds')
-        return resolved.canonical_id if resolved.status == 'resolved' else f'sportsgameodds:{league}:{event_id}:{role}'
-
-    home, away = participant(home_name, 'home'), participant(away_name, 'away')
+    teams = event['teams']
+    home_name, away_name = (teams[role]['name'] for role in ('home', 'away'))
+    ids = participant_ids(teams, league, event_id, registry)
     row = dict(id=event_id, sport=SPORTS[league], competition=league, season='unverified', stage='unverified',
-               scheduled_start=event['starts_at'], home=home, away=away,
-               participants={home_name: home, away_name: away}, title=away_name + ' at ' + home_name,
-               status=sgo_event_status(event['status']))
+               scheduled_start=event['starts_at'], **ids,
+               participants={teams[role]['name']: team for role, team in ids.items()},
+               title=away_name + ' at ' + home_name, status=sgo_event_status(event['status']))
     previous_starts = sorted({stamp(value) for value in event.get('previous_starts_at', ())}
                              - {stamp(event['starts_at'])})
     if previous_starts:
@@ -122,7 +126,7 @@ def current_rows(page, receipt_sha256):
         batches.extend([(event_id, venue, family, list(by_side.values()), True)] if pair else
                        [(event_id, venue, family, [q], False) for q in by_side.values()])
     result = []
-    registry = aggregate_registry() if batches else None
+    registry = sgo_registry() if batches else None
     event_records = {}
     for event_id, venue, family, quotes, paired in batches:
         event = events[event_id]

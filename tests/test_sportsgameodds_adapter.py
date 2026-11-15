@@ -32,6 +32,49 @@ def test_exact_source_and_receipt_clocks_and_fair_line():
     assert q['fair'] == {'available': True, 'price_american': '+101', 'line': '-2', 'source_at': None}
 
 
+@pytest.mark.parametrize(('away_name', 'away_id', 'home_name', 'home_id'), [
+    ('Norfolk State', 'NCAAB:M:D1:NCAA485', 'Georgia State Panthers', 'NCAAB:M:D1:NCAA254'),
+    ('Brown Bears', 'NCAAB:M:D1:NCAA80', 'Siena Saints', 'NCAAB:M:D1:NCAA639'),
+    ('Purdue Fort Wayne Mastodons', 'NCAAB:M:D1:NCAA308', 'Eastern Illinois Panthers', 'NCAAB:M:D1:NCAA201'),
+    ('High Point Panthers', 'NCAAB:M:D1:NCAA19651', 'Saint Louis Billikens', 'NCAAB:M:D1:NCAA609'),
+    ('Norfolk State', 'NCAAB:M:D1:NCAA485', 'Panthers', 'sportsgameodds:NCAAB:event:home'),
+])
+def test_sgo_college_team_names_preserve_source_and_signed_line(away_name, away_id, home_name, home_id):
+    from app.collection.sportsgameodds_current_rows import current_rows
+
+    data = response()
+    event, = data['data']
+    event['leagueID'] = 'NCAAB'
+    event['teams']['away']['names']['long'] = away_name
+    event['teams']['home']['names']['long'] = home_name
+    odd_id, = event['odds']
+    books = event['odds'][odd_id]['byBookmaker']
+    books['novig'] = dict(books.pop('book'), spread='-11.5')
+    page = parse(data)
+    rows, exclusions = current_rows(page, page.receipt_sha256)
+    row, = rows
+
+    assert not exclusions
+    assert page.events[0]['teams']['home']['name'] == home_name
+    assert row['event']['participants'] == {away_name: away_id, home_name: home_id}
+    assert (row['event']['away'], row['event']['home']) == (away_id, home_id)
+    assert row['selection']['participant'] == home_id
+    assert row['selection']['signed_line'] == '-11.5'
+    assert row['quote']['source']['native_event_id'] == event['eventID']
+    assert row['quote']['source']['native_outcome_id'] == odd_id
+    assert row['quote']['times']['source_at'] == '2026-11-10T19:59:00Z'
+
+
+def test_sgo_college_aliases_require_the_observed_source_and_league():
+    from app.normalization.college_registry import sgo_registry
+
+    registry = sgo_registry()
+    for scope in (dict(venue='sportsgameodds', league='NCAAF'),
+                  dict(venue='kalshi', league='NCAAB'),
+                  dict(venue='sportsgameodds')):
+        assert registry.resolve('team', 'Georgia State Panthers', **scope).status == 'unknown'
+
+
 def test_live_clock_sample_requires_both_exact_post_start_reference_sides():
     from app.collection.sportsgameodds_adapter import clock_sample
     data = response()

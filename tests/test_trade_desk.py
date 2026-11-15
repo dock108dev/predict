@@ -353,7 +353,8 @@ class TradeDesk(TestCase):
         ])]
         at = stamp('2026-11-08T00:55:00Z')
         source_at = '2026-11-08T00:54:00Z'
-        event = dict(native_event_id='sgo-game', competition='NBA', scheduled_start=start, home='home', away='away')
+        occurrence = ('NBA', stamp(start), 'home', 'away')
+        candidate = dict(valid=True, occurrence=occurrence)
         fact = dict(venue='fanduel', period='game', price_american='-132', starts_at=start,
                     source_at=source_at, received_at=source_at, league='NBA', market='moneyline',
                     phase='pregame', side='home', line=None, odd_id='sgo-moneyline', available=True)
@@ -363,6 +364,7 @@ class TradeDesk(TestCase):
         inputs = Mock()
         inputs.frames.side_effect = lambda event_ids: {key: frame for key in event_ids}
         inputs.quotes.side_effect = lambda event_ids, **kwargs: {key: [book] for key in event_ids}
+        db = Mock()
         for state, retained, duplicates, expected_current in [
             ({'state':'available'}, False, False, True),
             ({'state':'budget_delayed', 'reason_code':'sgo_charge_unresolved'}, True, False, False),
@@ -370,9 +372,10 @@ class TradeDesk(TestCase):
             ({'state':'available'}, False, True, None),
         ]:
             with self.subTest(state=state, retained=retained, duplicates=duplicates):
-                db = Mock()
-                db.execute.return_value.fetchall.return_value = [
-                    event, *([dict(event, native_event_id='another-event')] if duplicates else [])]
+                matches = {'sgo-game': candidate}
+                if duplicates:
+                    matches['another-event'] = candidate
+                inputs.occurrences.return_value = {occurrence: matches}
                 out = page(data, {'browse_odds':'1'}, options)
                 add_sgo_prices(db, out, data['rows'], {'sportsgameodds':state}, at=at, include_retained=retained,
                                sgo_inputs=inputs)
@@ -385,12 +388,25 @@ class TradeDesk(TestCase):
 
         source = dict(provider='sportsgameodds', native_event_id='sgo-game', native_outcome_id='retail-alt-id')
         mixed = dict(data, rows=[*data['rows'], dict(home, id='sgo-home', venue='novig', source=source)])
-        db.execute.return_value.fetchall.return_value = [event]
+        inputs.occurrences.return_value = {occurrence: {'sgo-game': candidate}}
         out = page(mixed, {'browse_odds':'1'}, options)
         add_sgo_prices(db, out, mixed['rows'], {'sportsgameodds':{'state':'available'}}, at=at,
                        include_retained=False, sgo_inputs=inputs)
         group = next(group for group in out['rows'] if len(group['offers']) == 2)
         self.assertEqual(group['sportsbook_quotes']['fanduel'][0]['match'], 'schedule_and_teams')
+
+        shifted = '2026-11-08T01:01:00Z'
+        moved_fact = dict(fact, starts_at=shifted)
+        moved_frame = dict(facts=dict(frame['facts'], starts_at=shifted))
+        inputs.occurrences.return_value = {}
+        inputs.frames.side_effect = lambda event_ids: {key: moved_frame for key in event_ids}
+        inputs.quotes.side_effect = lambda event_ids, **kwargs: {key: [dict(book, facts=moved_fact)] for key in event_ids}
+        mixed['rows'][-1]['source'] = dict(source, native_outcome_id=moved_fact['odd_id'])
+        out = page(mixed, {'browse_odds':'1'}, options)
+        add_sgo_prices(db, out, mixed['rows'], {'sportsgameodds':{'state':'available'}}, at=at,
+                       include_retained=True, sgo_inputs=inputs)
+        group = next(group for group in out['rows'] if len(group['offers']) == 2)
+        self.assertEqual(group['sportsbook_quotes'], {})
 
     def test_native_short_names_are_searchable_by_canonical_team_names(self):
         row = quote('current', 'polymarket_us')

@@ -1,0 +1,46 @@
+{
+  "version": "sportsgameodds-college-aliases-20261115-1",
+  "scope": "Exact SportsGameOdds men's college basketball labels matched to current NCAA member identities in college-2026-27.json. Resolves teams only.",
+  "aliases": [
+    {
+      "kind": "team", "league": "NCAAB", "venue": "sportsgameodds",
+      "text": "Brown Bears", "targets": ["NCAAB:M:D1:NCAA80"],
+      "source": "SportsGameOdds event 9zf3d70b6IRZlPqwxLUm; Brown University, college-2026-27.json"
+    },
+    {
+      "kind": "team", "league": "NCAAB", "venue": "sportsgameodds",
+      "text": "Eastern Illinois Panthers", "targets": ["NCAAB:M:D1:NCAA201"],
+      "source": "SportsGameOdds event Gv0oP0FKOX4i5MGfGmfz; Eastern Illinois University, college-2026-27.json"
+    },
+    {
+      "kind": "team", "league": "NCAAB", "venue": "sportsgameodds",
+      "text": "Georgia State Panthers", "targets": ["NCAAB:M:D1:NCAA254"],
+      "source": "SportsGameOdds event YFW9TL0D3vUuH7fSevBa; Georgia State University, college-2026-27.json"
+    },
+    {
+      "kind": "team", "league": "NCAAB", "venue": "sportsgameodds",
+      "text": "High Point Panthers", "targets": ["NCAAB:M:D1:NCAA19651"],
+      "source": "SportsGameOdds event kVuVRrzMdVvz70DrP3O9; High Point University, college-2026-27.json"
+    },
+    {
+      "kind": "team", "league": "NCAAB", "venue": "sportsgameodds",
+      "text": "Norfolk State", "targets": ["NCAAB:M:D1:NCAA485"],
+      "source": "SportsGameOdds event YFW9TL0D3vUuH7fSevBa; Norfolk State University, college-2026-27.json"
+    },
+    {
+      "kind": "team", "league": "NCAAB", "venue": "sportsgameodds",
+      "text": "Purdue Fort Wayne Mastodons", "targets": ["NCAAB:M:D1:NCAA308"],
+      "source": "SportsGameOdds event Gv0oP0FKOX4i5MGfGmfz; Purdue University Fort Wayne, college-2026-27.json"
+    },
+    {
+      "kind": "team", "league": "NCAAB", "venue": "sportsgameodds",
+      "text": "Saint Louis Billikens", "targets": ["NCAAB:M:D1:NCAA609"],
+      "source": "SportsGameOdds event kVuVRrzMdVvz70DrP3O9; Saint Louis University, college-2026-27.json"
+    },
+    {
+      "kind": "team", "league": "NCAAB", "venue": "sportsgameodds",
+      "text": "Siena Saints", "targets": ["NCAAB:M:D1:NCAA639"],
+      "source": "SportsGameOdds event 9zf3d70b6IRZlPqwxLUm; Siena University, college-2026-27.json"
+    }
+  ]
+}

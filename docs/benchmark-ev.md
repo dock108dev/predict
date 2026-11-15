@@ -24,6 +24,11 @@ changes the bet. The estimate conditions on a decisive result and uses before-fe
 prices. An offer can be available when its fair odds or return is unavailable.
 
 The desk can use exact pregame public-board and SportsGameOdds inputs.
+An SGO event frame can supply sportsbook odds for a game even when that frame
+contains only conventional sportsbooks. The frame must match the league,
+kickoff, and canonical home and away teams. Conflicting or ambiguous event
+evidence withholds the cross-source reference. Reviewed college aliases are
+scoped to the provider and league that used them.
 The shared book order and exact arithmetic live in
 [`sgo_reference.py`](../app/comparison/sgo_reference.py). Open the quote to see
 the originals and the selected book. [Coverage and freshness](broad-coverage.md#freshness-and-verification-window)

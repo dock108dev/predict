@@ -25,6 +25,218 @@ from tests.test_ev09_n01 import AT
 
 @skipUnless(SOCKET, 'Disposable PostgreSQL required')
 class SportsGameOddsPregameDeskSQL(LatestBoardFixture):
+    async def test_native_pregame_book_only_estimates_in_all_leagues(self):
+        from datetime import timedelta
+        from decimal import Decimal
+        from fractions import Fraction
+
+        from aiohttp import web
+        from aiohttp.test_utils import TestClient, TestServer
+        from app.collection.admission_enrichment import repair_registry
+        from app.dashboard.snapshot_api import mount
+        from app.normalization.college_registry import expanded
+        from app.normalization.registry import Registry
+        from app.storage import ordinary_publication
+        from app.storage.current_rows import CurrentRowStore
+        from app.storage.store import stamp
+        from tests.broad_pipeline_fixtures import captured_partial
+        from tests.multisport_fixtures import FAMILIES, SPORTS, source_case
+
+        self.at = stamp('2026-11-15T16:00:00Z')
+        received = self.at.isoformat()
+        config = dict(DEFAULT, aggregate_provider='sportsgameodds', sports=list(SPORTS),
+                      families=list(FAMILIES), live_enabled=False)
+        self.service.config = config
+        self.service.states['sportsgameodds'] = {'state': 'available'}
+        self.state.write(self.service)
+        self.enterContext(patch('app.collection.current_policy.load', return_value=config))
+        self.enterContext(patch('app.comparison.public_sportsbook_estimate.read_captures', return_value={}))
+        self.enterContext(patch('app.comparison.public_sportsbook_estimate.retained_prices', return_value={}))
+
+        # Local transport IDs model reviewed native participants. Only the SGO
+        # team labels exercise the production college alias registry.
+        college = ('NCAAB:M:D1:NCAA254', 'NCAAB:M:D1:NCAA485')
+        registry = json.loads(repair_registry().to_json())
+        for cid in college:
+            team = dict(expanded().entities[cid])
+            registry['entities'].append(team)
+            registry['aliases'].append(dict(kind='team', league='NCAAB', text=team['name'], targets=[cid], source='fixture'))
+            for venue in ('kalshi', 'polymarket_us'):
+                registry['native_mappings'].append(dict(kind='team', league='NCAAB', venue=venue, environment='production',
+                    native_id=f'fixture-{cid}', target=cid, source='fixture'))
+        native_fixture = Registry(registry)
+        self.enterContext(patch('app.collection.admission_enrichment.repair_registry', return_value=native_fixture))
+        self.enterContext(patch('app.normalization.native_registry.native_registry', return_value=native_fixture))
+
+        records, books, events, expected = [], [], [], {}
+        for league in SPORTS:
+            for index, (family, bet_type) in enumerate(zip(FAMILIES, ('ml', 'sp', 'ou'), strict=True)):
+                total = {'NBA': '225.5', 'NCAAB': '123.5', 'MLB': '8.5', 'NHL': '5.5'}.get(league, '45.5')
+                spread = {'NCAAB': '11.5', 'MLB': '1.5', 'NHL': '1.5'}.get(league, '3.5')
+                native_line = {'moneyline': None, 'spread': spread, 'total': total}[family]
+                # Distinct start times keep repeated teams from becoming an ambiguous occurrence.
+                case = source_case(league, family, f'book-only-{league}-{family}',
+                                   clock=self.at + timedelta(minutes=index), line=native_line,
+                                   participants=college if league == 'NCAAB' else None)
+                start = case['event']['scheduled_start']
+                case.update(period='full_game', clock=self.at)
+                for venue in ('kalshi', 'polymarket_us'):
+                    captured, exclusions, book, _ = await captured_partial(case, venue)
+                    self.assertEqual(exclusions, [])
+                    records.extend(captured)
+                    books.append(book)
+
+                event = dict(eventID=f'book-only-{league}-{family}', leagueID=league, odds={},
+                             status=dict(startsAt=start, started=False, live=False),
+                             teams={team['ordering']: dict(teamID=team['id'], names=dict(long=team['name']))
+                                    for team in case['events']['polymarket_us']['teams']})
+                if league == 'NCAAB':
+                    event['teams']['home']['names']['long'] = 'Georgia State Panthers'
+                    event['teams']['away']['names']['long'] = 'Norfolk State'
+                sides = ('over', 'under') if family == 'total' else ('home', 'away')
+                lines = (-Decimal(spread), Decimal(spread)) if family == 'spread' else (native_line, native_line)
+                alternate_total = '144.5' if league == 'NCAAB' else str(Decimal(total) + 1)
+                alternate_spread = Decimal(spread) + 1
+                alternate = {'spread': (-alternate_spread, alternate_spread), 'total': (alternate_total, alternate_total)}.get(family)
+                prices = ('-110', '-120')
+                for position, (side, opposite, line, price) in enumerate(zip(sides, reversed(sides), lines, prices, strict=True)):
+                    book = dict(available=True, odds=price, lastUpdatedAt=received)
+                    by_book = {'fanduel': book}
+                    if alternate:
+                        field = 'spread' if family == 'spread' else 'overUnder'
+                        book[field] = str(line)
+                        by_book['draftkings'] = dict(book, odds='+500', **{field: str(alternate[position])})
+                    odd_id = f'{bet_type}-{side}'
+                    event['odds'][odd_id] = dict(oddID=odd_id, opposingOddID=f'{bet_type}-{opposite}',
+                        periodID='game', statID='points', statEntityID='all' if family == 'total' else side,
+                        betTypeID=bet_type, sideID=side, byBookmaker=by_book)
+                    predicate = 'win' if family == 'moneyline' else 'cover' if family == 'spread' else side
+                    key = (league, 'winner' if family == 'moneyline' else family, predicate,
+                           case['event'][side] if side in ('home', 'away') else None,
+                           None if line is None else Fraction(line))
+                    implied = [Fraction(110, 210), Fraction(120, 220)]
+                    probability = implied[position] / sum(implied)
+                    venues = {'polymarket_us'} if family == 'moneyline' and side == 'away' else {'kalshi', 'polymarket_us'}
+                    expected[key] = (price, prices[1-position], probability, venues)
+                events.append(event)
+
+        parsed = parse_page(json.dumps(dict(success=True, data=events)).encode(), received)
+        self.assertEqual(current_rows(parsed, parsed.receipt_sha256)[0], [])
+        references = prepare_page(parsed)
+        with self.connect() as db:
+            db.execute('TRUNCATE current_event,comparison_publication CASCADE')
+            db.execute("INSERT INTO comparison_publication(kind,id,generation,facts) VALUES('live','',0,'{}')")
+            store = CurrentRowStore(db)
+            store.upsert_records(records, now=received)
+            store.replace_native_books(books)
+            upsert_rows(db, references)
+            upsert_frames(db, prepare_frames(parsed, references))
+            self.assertEqual(db.execute("SELECT count(*) AS n FROM current_event WHERE provider='sportsgameodds'").fetchone()['n'], 0)
+
+        app = web.Application()
+        mount(app)
+        query = dict(layout='desk', phase='pregame', basis='sportsbooks', summary='1', lines='all', limit='25')
+        with patch('app.dashboard.snapshot_api.connect', side_effect=self.connect):
+            async with TestClient(TestServer(app)) as client:
+                async def read(**filters):
+                    response = await client.get('/api/comparison-current', params=dict(query, **filters))
+                    self.assertEqual(response.status, 200, await response.text())
+                    return await response.json()
+
+                for filters in (dict(browse_odds='1'), dict(ranked='1', phase='live')):
+                    page = await read(**filters)
+                    self.assertEqual((page['phase'], page['features'], page['provider_requests']),
+                                     ('pregame', {'live_enabled': False}, 0))
+                    self.assertEqual(len(page['games']), len(events))
+                    matched = set()
+                    for group in page['rows']:
+                        selection = group['offers'][0]['selection']
+                        predicate, line = selection['predicate'], selection['signed_line']
+                        key = (group['league'], group['market']['market'], predicate, selection['participant'],
+                               None if line is None else Fraction(line))
+                        if predicate == 'not_win':
+                            self.assertIn('browse_odds', filters)
+                            self.assertEqual({offer['venue'] for offer in group['offers']}, {'kalshi'}, key)
+                            self.assertFalse(group['sportsbook_quotes'], key)
+                            self.assertIsNone(group['score'], key)
+                            continue
+                        price, opposite, probability, venues = expected[key]
+                        self.assertNotIn(key, matched, 'Exact outcome split across game cards')
+                        matched.add(key)
+                        self.assertEqual({offer['venue'] for offer in group['offers']}, venues, key)
+                        prices = group['sportsbook_quotes']
+                        self.assertEqual(set(prices), {'fanduel'}, key)
+                        self.assertEqual([(item['price_american'], item['current']) for item in prices['fanduel']],
+                                         [(price, True)], key)
+                        for offer in group['offers']:
+                            self.assertTrue(offer['current'], key)
+                            baseline = offer['sportsbook']
+                            self.assertEqual(baseline['book'], 'fanduel', key)
+                            self.assertEqual([p['price_american'] for p in baseline['prices']], [price, opposite], key)
+                            self.assertEqual(Fraction(baseline['probability']), probability, key)
+                            self.assertIsNone(offer['after_fee'], key)
+                            self.assertEqual(Fraction(offer['value']), 100 * (probability / Fraction('0.51') - 1), key)
+                    self.assertEqual(matched, expected.keys())
+
+                reviewed = await read(ranked='1', basis='reviewed')
+                self.assertEqual(reviewed['rows'], [])
+
+                with self.connect() as db, \
+                        patch('app.storage.ordinary_publication.utc', return_value=received), \
+                        patch('app.storage.comparison_snapshot.utc', return_value=received):
+                    published = ordinary_publication.turn(db)
+                    self.assertTrue(published['published'], published)
+                    self.assertEqual(published['errors'], [])
+                # A last-known read bypasses the direct native overlay. Its
+                # published EV still needs the exact book-only frame witness.
+                retained = await read(ranked='1', last_known='1')
+                self.assertGreater(retained['generation'], 0)
+                self.assertEqual({(row['league'], row['market']['market']) for row in retained['rows']},
+                                 {(key[0], key[1]) for key in expected})
+                self.assertTrue(all(offer['value'] is not None and offer['fair_reference']['books'] == ['fanduel']
+                                    for row in retained['rows'] for offer in row['offers']))
+
+                # Confirm the same reviewed team identities coalesce SGO
+                # execution offers on 11.5 while keeping two exact total lines.
+                self.at += timedelta(seconds=1)
+                observed = self.at.isoformat()
+                update = [event for event in events if event['eventID'] in ('book-only-NCAAB-spread', 'book-only-NCAAB-total')]
+                for event in update:
+                    for odd in event['odds'].values():
+                        offers = odd['byBookmaker']
+                        base = offers['fanduel'] if odd['betTypeID'] == 'sp' else offers['draftkings']
+                        for venue in ('novig', 'prophetexchange'):
+                            offers[venue] = dict(base, odds='+115', lastUpdatedAt=observed)
+                        for book in offers.values():
+                            book['lastUpdatedAt'] = observed
+                refreshed = parse_page(json.dumps(dict(success=True, data=update)).encode(), observed)
+                projected, _ = current_rows(refreshed, refreshed.receipt_sha256)
+                self.assertEqual(len(projected), 8)
+                references = prepare_page(refreshed)
+                sink = DatabaseIngressSink(SimpleNamespace(provider=self.service), config)
+                with patch('app.collection.current_database.connect', side_effect=self.connect), \
+                        patch('app.collection.current_database.utc', return_value=observed):
+                    sink.prepare(dict(type='current_aggregate_records', source='sportsgameodds', sport='NCAAB',
+                        records=projected, sgo_reference_rows=references, sgo_event_frames=prepare_frames(refreshed, references),
+                        receipt_sha256=refreshed.receipt_sha256, event_scopes={event['eventID']: 'NCAAB' for event in update},
+                        complete_venues=[], received_at=observed), self.service.states, Event())
+                college_page = await read(browse_odds='1', league='NCAAB')
+                spreads = [row for row in college_page['rows'] if row['market']['market'] == 'spread']
+                self.assertEqual(len(spreads), 2)
+                self.assertEqual(len({row['game_key'] for row in spreads}), 1)
+                for row in spreads:
+                    self.assertEqual({offer['venue'] for offer in row['offers']}, {'kalshi', 'polymarket_us', 'novig', 'prophetx'})
+                    self.assertEqual({Fraction(offer['selection']['signed_line']) for offer in row['offers']},
+                                     {Fraction(row['offers'][0]['selection']['signed_line'])})
+                totals = [row for row in college_page['rows'] if row['market']['market'] == 'total']
+                self.assertEqual(len(totals), 4)
+                self.assertEqual(len({row['game_key'] for row in totals}), 1)
+                for row in totals:
+                    line = Fraction(row['offers'][0]['selection']['signed_line'])
+                    self.assertIn(line, (Fraction('123.5'), Fraction('144.5')))
+                    expected_venues = {'kalshi', 'polymarket_us'} if line == Fraction('123.5') else {'novig', 'prophetx'}
+                    self.assertEqual({offer['venue'] for offer in row['offers']}, expected_venues)
+
     async def test_admitted_pregame_estimates_rank_before_publication_and_leave_at_kickoff(self):
         from datetime import timedelta
 

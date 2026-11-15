@@ -382,14 +382,15 @@ function readBrowseReturn() {
 
 function matrixPositions() {
   return [...$('results').querySelectorAll('.odds-card')].map(card =>
-    [card.dataset.gameKey, card.querySelector('.odds-scroll')?.scrollLeft || 0]);
+    [card.dataset.marketGroup ?? card.dataset.gameKey, card.querySelector('.odds-scroll')?.scrollLeft || 0]);
 }
 
 function restoreMatrices(positions) {
-  const byGame = new Map(positions || []);
+  const byCard = new Map(positions || []);
   for (const card of $('results').querySelectorAll('.odds-card')) {
     const table = card.querySelector('.odds-scroll');
-    if (table && byGame.has(card.dataset.gameKey)) table.scrollLeft = byGame.get(card.dataset.gameKey);
+    const key = card.dataset.marketGroup ?? card.dataset.gameKey;
+    if (table && byCard.has(key)) table.scrollLeft = byCard.get(key);
   }
 }
 
@@ -532,12 +533,17 @@ function emptyResults(page, publication) {
   return empty;
 }
 
-function groupsByGame(rows) {
+function marketGroupKey(row) {
+  return JSON.stringify([row.game_key, row.market.period, row.market.market]);
+}
+
+function groupRows(rows, keyFor) {
   const groups = new Map();
   for (const row of rows) {
     if (row.withdrawn) continue;
-    if (!groups.has(row.game_key)) groups.set(row.game_key, []);
-    groups.get(row.game_key).push(row);
+    const key = keyFor(row);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(row);
   }
   return groups;
 }
@@ -550,13 +556,13 @@ function rankedCard(group, games, nested = false) {
   return evCard(group, context);
 }
 
-function rankedGame(gameRows, games, disclosures) {
-  const [first, ...rest] = gameRows;
+function rankedGroup(key, marketRows, games, disclosures) {
+  const [first, ...rest] = marketRows;
   const card = rankedCard(first, games);
   card.dataset.gameKey = first.game_key;
   if (!rest.length) return card;
   const details = el('details', null, 'ranked-outcomes');
-  details.dataset.id = `ev:${first.game_key}`;
+  details.dataset.id = `ev:${key}`;
   details.append(el('summary', `${rest.length} more ${rest.length === 1 ? 'outcome' : 'outcomes'}`));
   const addCards = () => {
     if (details.open && details.childElementCount === 1) details.append(...rest.map(row => rankedCard(row, games, true)));
@@ -619,22 +625,32 @@ function render(page, keepNodes = false) {
   }
   const preview = rows.length ? [] : (page.price_preview || []);
   const matrixRows = browse ? rows : preview;
+  const separateMarkets = opportunityView && !arb;
+  const groupKey = separateMarkets ? marketGroupKey : row => row.game_key;
   if (matrixRows.length) {
     if (preview.length) content.append(emptyResults(page, publication));
-    const groups = groupsByGame(matrixRows);
+    const groups = groupRows(matrixRows, groupKey);
     const compactGames = !replay && !gameKey && page.row_kind === 'games' && total > 3;
-    for (const [key, gameRows] of groups) {
-      const first = gameRows[0];
-      const context = cardContext(games, !gameKey && first.game_title);
-      context.position = offer => position(offer, games.get(key));
+    for (const [key, matrixGroup] of groups) {
+      const first = matrixGroup[0];
+      let title = first.game_title;
+      if (separateMarkets) {
+        const {market, period} = first.market;
+        const family = market === 'winner' ? 'Moneyline' : name(market);
+        title += ` · ${family}${period && period !== 'full_game' ? ` (${period.replaceAll('_', ' ')})` : ''}`;
+      }
+      const context = cardContext(games, !gameKey && title);
+      context.position = offer => position(offer, games.get(first.game_key));
       const id = `odds:${key}`;
       const disclosure = compactGames ? {id, open:disclosures.get(id) ?? key === groups.keys().next().value} : null;
-      content.append(gameMatrix(gameRows, context, {includeAlternates:$('alternates').checked, market:marketFamily,
-        selectedLine, disclosure}));
+      const card = gameMatrix(matrixGroup, context, {includeAlternates:$('alternates').checked, market:marketFamily,
+        selectedLine, disclosure});
+      if (separateMarkets) card.dataset.marketGroup = key;
+      content.append(card);
     }
     if (!groups.size) content.append(emptyResults(page, publication));
   } else if (!arb && page.row_kind === 'games' && rows.length) {
-    for (const gameRows of groupsByGame(rows).values()) content.append(rankedGame(gameRows, games, disclosures));
+    for (const [key, marketRows] of groupRows(rows, groupKey)) content.append(rankedGroup(key, marketRows, games, disclosures));
     if (!content.firstChild) content.append(emptyResults(page, publication));
   } else if (rows.length) {
     for (const group of rows) {
@@ -754,7 +770,8 @@ function captureResultsFocus(results) {
   const groupId = area.dataset.groupId;
   const game = area.closest('[data-game-key]')?.dataset.gameKey;
   const matchesArea = candidate => candidate.dataset.groupId === groupId
-    && candidate.closest('[data-game-key]')?.dataset.gameKey === game;
+    && candidate.closest('[data-game-key]')?.dataset.gameKey === game
+    && candidate.dataset.marketGroup === area.dataset.marketGroup;
   const key = ['data-desk-quote-key', 'data-offer-id', 'data-pair-id', 'data-calculation-id', 'popovertarget', 'href', 'aria-label']
     .find(attribute => node.hasAttribute(attribute));
   const controls = scope => [...scope.querySelectorAll(node.localName)]
@@ -864,7 +881,7 @@ function visibleAnchor() {
     .sort((a, b) => a.rect.top - b.rect.top)[0];
   const item = visible?.item || candidates[0];
   return {scrollY, top:visible?.rect.top, gameKey:item?.closest('[data-game-key]')?.dataset.gameKey,
-    groupId:item?.dataset.groupId};
+    groupId:item?.dataset.groupId, marketGroup:item?.dataset.marketGroup};
 }
 
 function restoreAnchor(anchor) {
@@ -872,7 +889,8 @@ function restoreAnchor(anchor) {
   const results = $('results');
   const exact = anchor.groupId && [...results.querySelectorAll('[data-group-id]')]
     .find(row => row.dataset.groupId === anchor.groupId && anchorTarget(row).getClientRects().length);
-  const item = exact || [...results.children].find(child => anchor.gameKey && child.dataset.gameKey === anchor.gameKey);
+  const item = exact || [...results.children].find(child => anchor.gameKey && child.dataset.gameKey === anchor.gameKey
+    && child.dataset.marketGroup === anchor.marketGroup);
   if (item && anchor.top != null) window.scrollBy(0, anchorTarget(item).getBoundingClientRect().top - anchor.top);
   else window.scrollTo(0, anchor.scrollY);
 }

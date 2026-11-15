@@ -27,6 +27,89 @@ ASSETS = (
 BASE = "https://predict.fixture"
 
 
+def test_opportunities_separates_market_families_for_the_same_game():
+    from playwright.sync_api import expect, sync_playwright
+
+    market_rows = [
+        group(
+            key,
+            DENVER,
+            [quote(key, "kalshi", side, family, line, participant=team)],
+            score,
+        )
+        for key, family, side, line, team, score in (
+            ("winner", "winner", "win", None, "Denver", "5"),
+            ("over", "total", "over", "205.5", None, "4"),
+            ("cover", "spread", "cover", "2.5", "Denver", "3"),
+            ("under", "total", "under", "205.5", None, "2"),
+            ("opposite", "spread", "cover", "-2.5", "Minnesota", "1"),
+        )
+    ]
+    preview = False
+
+    def respond(route):
+        url = urlparse(route.request.url)
+        query = parse_qs(url.query)
+        if url.path in ("/ev", "/browse-odds"):
+            route.fulfill(path=ASSETS / "desk.html")
+        elif url.path.startswith("/view/current/"):
+            route.fulfill(path=ASSETS / Path(url.path).name)
+        elif url.path == "/api/comparison-current":
+            fallback = preview and "browse_odds" not in query
+            route.fulfill(
+                json=dict(
+                    state="ready",
+                    rows=[] if fallback else market_rows,
+                    price_preview=market_rows if fallback else [],
+                    row_kind="games",
+                    total=1,
+                    page_count=1,
+                    phase="pregame",
+                    features={"live_enabled": False},
+                )
+            )
+        else:
+            route.fulfill(status=404)
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(
+            executable_path=os.getenv("PREDICT_CI_CHROMIUM")
+        )
+        tab = browser.new_page()
+        tab.route("**/*", respond)
+        tab.clock.install(time=datetime.fromisoformat("2026-11-13T00:00:00+00:00"))
+        tab.goto(f"{BASE}/ev")
+        cards = tab.locator("#results > article")
+        expect(cards).to_have_count(3)
+        expect(cards.locator("h2")).to_have_text(
+            ["Denver to win", "Over 205.5", "Denver to cover +2.5"]
+        )
+        cards.nth(1).get_by_text("1 more outcome", exact=True).click()
+        expect(cards.nth(1).get_by_role("heading", name="Under 205.5")).to_be_visible()
+        expect(
+            cards.nth(2).get_by_role("heading", name="Minnesota to cover -2.5")
+        ).to_have_count(0)
+
+        preview = True
+        tab.reload()
+        matrices = tab.locator("#results .odds-card")
+        expect(matrices.locator("h2")).to_have_text(
+            [
+                f"{DENVER} · Moneyline",
+                f"{DENVER} · Total",
+                f"{DENVER} · Spread",
+            ]
+        )
+        expect(matrices.nth(0).locator("tbody tr")).to_have_count(1)
+        expect(matrices.nth(1).locator("tbody tr")).to_have_count(2)
+        expect(matrices.nth(2).locator("tbody tr")).to_have_count(2)
+
+        tab.goto(f"{BASE}/browse-odds")
+        expect(matrices).to_have_count(1)
+        expect(matrices.locator("tbody tr")).to_have_count(5)
+        browser.close()
+
+
 def test_update_check_keeps_page_and_conceals_expired_estimate():
     from playwright.sync_api import expect, sync_playwright
 

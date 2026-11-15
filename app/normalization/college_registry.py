@@ -32,6 +32,17 @@ def aggregate_registry():
 
 
 @lru_cache(maxsize=1)
+def sgo_registry():
+    """Resolve reviewed SGO team names within their observed league."""
+    data = json.loads(aggregate_registry().to_json())
+    aliases_path = Path(__file__).with_name('sportsgameodds-college-aliases-20261115.json')
+    extra = json.loads(aliases_path.read_text())
+    data['version'] += '+' + extra['version']
+    data['aliases'] += extra['aliases']
+    return Registry(data)
+
+
+@lru_cache(maxsize=1)
 def occurrence_registry():
     """Reviewed names for current joins; never rewrite retained admission IDs."""
     data=json.loads(aggregate_registry().to_json())

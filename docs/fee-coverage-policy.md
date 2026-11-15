@@ -11,8 +11,8 @@ coverage within the configured ordinary scope.
   active native and SGO-attributed venues in the configured NFL, NCAAF, NBA,
   NCAAB, MLB and NHL winner, spread and total scope. SportsGameOdds'
   `prophetexchange` prices appear as ProphetX and retain the exact original quote.
-  Include supported periods, alternate lines and in-game offers wherever the
-  live desk publishes them. Additional venues are backlog work.
+  Include supported periods and alternate lines. Include in-game offers when
+  the Live flag is on and those offers are displayed.
   Take the census before fee, EV, reference or positive-only filters. Use the
   venue, market and executable side to deduplicate repeated presentations.
 - Count an offer once when Predict can show the fee or fee cashflows for the
@@ -79,9 +79,8 @@ personalized result incomplete.
 | Polymarket US | Use 0.095, the highest published standard taker coefficient, for the conservative retail estimate. Apply it to contracts times price times one minus price, with half-even cent rounding and the documented cumulative order cap. Model the schedule in effect at order insertion and assume zero rebates. [Polymarket US fee schedule](https://docs.polymarket.us/fees) | None for the public estimate. An active tier or an override matters only for a personalized retail calculation. |
 | ProphetX | Use ProphetX's official retail straight-contract schedule. NHL taker fees use 0.035 times contracts times price times one minus price, with half-up cent rounding and carry across fills. Other straight markets charge 2% of positive net gains per market. For a new standalone position, show that fee in the winning settlement cashflow. [ProphetX retail schedule](https://www.prophetx.co/lobby/t-c/trading-fees) · [Straight-contract PDF](https://framerusercontent.com/assets/0PR4FR5AUuNv0xMjMRGkbz8GZ0.pdf) | None for the public standalone-position estimate. Existing positions matter if the user wants their combined market commission modeled. |
 
-**Owner input.** The manual retail milestone needs no private account terms.
-If a personalized retail calculation is requested later, use existing
-evidence first and request only the missing fact and its effective dates.
+Public retail estimates use the documented terms. A personalized estimate needs
+evidence for any additional account-specific charge and its effective dates.
 Keep credentials and private account evidence out of repository fixtures.
 
 **Kalshi high-end rule.** Use the linked schedule's standard taker formula
@@ -220,13 +219,12 @@ dates. Recheck rates and exceptions before enabling a new market family.
   [Retail fee index](https://www.prophetx.co/lobby/t-c/trading-fees) ·
   [Documented API position-close rules](https://docs.prophetx.co/docs/positions)
 
-### Expansion order
+### Additional fee scopes
 
-After the active 99% milestone, open separate slices for maker and split
-fills, expanded straight markets and sports futures, and combo or parlay
-products. Give each new scope its own source census, effective-time
-fixtures and payoff checks before adding it to the coverage denominator.
-Qualify early exits and optional account programs as separate scenarios.
+Maker, split-fill, futures, combo, and parlay fees have separate applicability
+and effective terms. Each needs its own census, dated fixtures, and payoff
+checks before it can enter the relevant coverage denominator. Evaluate early
+exits and optional account programs as separate scenarios.
 Track deposits, withdrawals, payment-rail costs, intermediary charges,
 funding and taxes separately from trade EV. Expand into other asset
 classes only with their own terms and risk model. Preserve original prices,

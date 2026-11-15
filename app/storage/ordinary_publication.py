@@ -98,6 +98,7 @@ def policy_identity(provider=None):
         except (ValueError,KeyError,TypeError):pass
     paths += [POLICY_ROOT/'app/comparison/sgo_reference.py', POLICY_ROOT/'app/comparison/sgo_reference_publication.py',
               POLICY_ROOT/'app/comparison/sgo_fair_display.py', POLICY_ROOT/'app/storage/sportsgameodds_reference.py',
+              POLICY_ROOT/'app/normalization/sportsgameodds-college-aliases-20261115.json',
               POLICY_ROOT/'app/comparison/sgo_native_binding.py',
               POLICY_ROOT/'app/comparison/sgo_sportsbook_baseline.py',
               POLICY_ROOT/'app/comparison/public_sportsbook_estimate.py',
@@ -141,17 +142,29 @@ def sportsbook_dependencies(db, event_ids=None, *, at=None, reference_ids=None):
             OR e.id=ANY(%s))'''+target+' ORDER BY id', params).fetchall()
 
 
-def sportsbook_frames(db, at):
-    rows = db.execute("""SELECT e.id, e.native_event_id, e.competition, e.scheduled_start,
-                                e.facts->>'home' home, e.facts->>'away' away,
-                                f.facts->>'receipt_sha256' AS frame
-                         FROM current_event e JOIN current_sgo_event_frame f ON f.event_id=e.native_event_id
-                         WHERE e.provider='sportsgameodds' AND e.scheduled_start::timestamptz > %s
-                           AND e.scheduled_start::timestamptz <= %s
-                           AND f.received_order BETWEEN extract(epoch FROM %s::timestamptz)
-                                                    AND extract(epoch FROM %s::timestamptz)""",
-                      (at, at+timedelta(hours=72), at-timedelta(minutes=15), at))
-    return list(rows)
+def sportsbook_frames(db, at, *, sgo_inputs=None):
+    from app.comparison.game_phase import PREGAME_SPORTSBOOK_SECONDS, sgo_event_status, sporting_phase
+    from .sportsgameodds_reference import EventInputs
+    from .store import exact_time
+
+    inputs = sgo_inputs if sgo_inputs is not None else EventInputs(db)
+    since = exact_time((at - timedelta(seconds=PREGAME_SPORTSBOOK_SECONDS)).isoformat())
+    through = exact_time(at.isoformat())
+    frames = []
+    for occurrence, candidates in inputs.occurrences(at).items():
+        league, start, home, away = occurrence
+        if len(candidates) != 1 or not at < start <= at + timedelta(hours=72):
+            continue
+        native_id, row = next(iter(candidates.items()))
+        if (not row['valid'] or row['occurrence'] != occurrence or row['phase'] != 'pregame'
+                or not since <= row['received_order'] <= through
+                or row['received_order'] >= exact_time(start.isoformat())):
+            continue
+        phase = sporting_phase({'status': sgo_event_status(row['status'] or {})})
+        if phase['reason'] is None and phase['state'] != 'live':
+            frames.append(dict(id=event_id('sportsgameodds', native_id), native_event_id=native_id,
+                               competition=league, scheduled_start=start, home=home, away=away, frame=row['frame']))
+    return frames
 
 
 def pregame_sportsbooks(db, owner, states, at, *, frames=None, occurrences=None, sgo_inputs=None):
@@ -161,16 +174,16 @@ def pregame_sportsbooks(db, owner, states, at, *, frames=None, occurrences=None,
 
     if not allowed(owner):
         return {}
+    inputs = sgo_inputs if sgo_inputs is not None else EventInputs(db)
     matches = {key: [value] for key, value in index(read_captures(POLICY_ROOT, at=at), at=at).items()
                if occurrences is None or key in occurrences}
     candidates = defaultdict(list)
-    for row in sportsbook_frames(db, at) if frames is None else frames:
+    for row in sportsbook_frames(db, at, sgo_inputs=inputs) if frames is None else frames:
         if source_allowed(states.get('sportsgameodds', {}), row['competition']):
             key = (row['competition'], stamp(row['scheduled_start']), row['home'], row['away'])
             if occurrences is None or key in occurrences:
                 candidates[key].append(row['native_event_id'])
     events = {key: ids[0] for key, ids in candidates.items() if len(ids) == 1}
-    inputs = sgo_inputs if sgo_inputs is not None else EventInputs(db)
     latest = inputs.frames(events.values())
     since = at - timedelta(minutes=15)
     observations = inputs.quotes(

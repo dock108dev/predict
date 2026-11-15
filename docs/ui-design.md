@@ -9,8 +9,10 @@ payoffs for opposing outcomes. In-game prices and the Live tab require the
 `live_enabled` flag, which is off by default. A game leaves the pregame list at
 kickoff or when an earlier authoritative state change withdraws it.
 
-The EV list groups quotes for the exact outcome. The selected sportsbook, its
-odds, and other available book prices appear alongside the fair-odds reference.
+Opportunities shows moneyline, spread, and total separately for each game.
+Expand a card to see more outcomes for that market. The EV list compares quotes
+for the exact outcome. The selected sportsbook, its odds, and other available
+book prices appear alongside the fair-odds reference.
 **Positive only** filters the selected calculation basis. Open a quote to see the
 prices, fees, model assumptions, and settlement details available for that offer.
 [Calculation basis](benchmark-ev.md) · [Trading fee policy](fee-coverage-policy.md)

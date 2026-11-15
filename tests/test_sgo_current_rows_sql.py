@@ -14,6 +14,95 @@ from tests.test_sportsgameodds_adapter import AT, parse, response
 
 @skipUnless(SOCKET, 'Disposable PostgreSQL required')
 class SGOScopeSQL(LatestBoardFixture):
+    async def test_book_only_schedule_requires_one_consistent_event_witness(self):
+        from app.storage.ordinary_publication import sportsbook_frames
+        from app.storage.sportsgameodds_reference import EventInputs, prepare_frames, prepare_page, upsert_frames, upsert_rows
+        from app.storage.store import stamp
+
+        data = response()
+        event, = data['data']
+        event['eventID'] = 'book-only-sgo-event'
+        event['teams']['home']['names']['long'] = 'Orlando Magic'
+        event['teams']['away']['names']['long'] = 'Milwaukee Bucks'
+        odd, = event['odds'].values()
+        odd['byBookmaker']['fanduel'] = odd['byBookmaker'].pop('book')
+        at = stamp(AT)
+        start = stamp(event['status']['startsAt'])
+        occurrence = ('NBA', start, 'NBA:ORL', 'NBA:MIL')
+
+        def ingest(db, payload):
+            parsed = parse(payload)
+            references = prepare_page(parsed)
+            upsert_rows(db, references)
+            upsert_frames(db, prepare_frames(parsed, references))
+
+        with self.connect() as db:
+            ingest(db, data)
+            assert not db.execute("SELECT 1 FROM current_event WHERE provider='sportsgameodds' AND native_event_id=%s",
+                                  (event['eventID'],)).fetchone()
+            frames = sportsbook_frames(db, at)
+            assert [row['native_event_id'] for row in frames] == [event['eventID']]
+            assert (frames[0]['home'], frames[0]['away']) == occurrence[2:]
+
+            duplicate = deepcopy(event)
+            duplicate['eventID'] = 'second-book-only-sgo-event'
+            ingest(db, dict(data, data=[duplicate]))
+            assert sportsbook_frames(db, at) == []
+            assert set(EventInputs(db).occurrences(at, starts=[start])[occurrence]) == {
+                event['eventID'], duplicate['eventID']}
+
+            db.execute('DELETE FROM current_sgo_event_frame WHERE event_id=%s', (duplicate['eventID'],))
+            odd['byBookmaker']['novig'] = odd['byBookmaker']['fanduel']
+            parsed = parse(data)
+            originals, _ = current_rows(parsed, parsed.receipt_sha256)
+            CurrentRowStore(db).upsert_records(originals, now=AT)
+            db.execute("""UPDATE current_event SET facts=facts||'{"schedule_conflict":{"reason":"start_conflict"}}'::jsonb
+                          WHERE provider='sportsgameodds' AND native_event_id=%s""", (event['eventID'],))
+            assert sportsbook_frames(db, at) == []
+            assert not EventInputs(db).occurrences(at, starts=[start])[occurrence][event['eventID']]['valid']
+
+            db.execute("""UPDATE current_event SET facts=(facts-'schedule_conflict') ||
+                          jsonb_build_object('home', facts->>'away', 'away', facts->>'home')
+                          WHERE provider='sportsgameodds' AND native_event_id=%s""", (event['eventID'],))
+            observed = EventInputs(db).occurrences(at)
+            assert not observed[occurrence][event['eventID']]['valid']
+            assert not observed[(*occurrence[:2], *reversed(occurrence[2:]))][event['eventID']]['valid']
+            assert sportsbook_frames(db, at) == []
+            db.execute('DELETE FROM current_sgo_event_frame WHERE event_id=%s', (event['eventID'],))
+
+    async def test_unnumbered_sgo_frame_cannot_price_two_numbered_mlb_games(self):
+        from psycopg.types.json import Jsonb
+        from app.storage.ordinary_publication import sportsbook_frames
+        from app.storage.sportsgameodds_reference import EventInputs, prepare_frames, prepare_page, upsert_frames
+        from app.storage.store import exact_time, stamp
+
+        data = response()
+        event, = data['data']
+        event.update(eventID='unnumbered-mlb-sgo-event', leagueID='MLB')
+        event['teams']['home']['names']['long'] = 'New York Mets'
+        event['teams']['away']['names']['long'] = 'Philadelphia Phillies'
+        parsed = parse(data)
+        start = event['status']['startsAt']
+        at = stamp(AT)
+        occurrence = ('MLB', stamp(start), 'MLB:NYM', 'MLB:PHI')
+
+        def write_game(db, provider, number):
+            native_id = f'{provider}-fixture-game-{number}'
+            facts = dict(home='MLB:NYM', away='MLB:PHI', game_number=number)
+            db.execute('INSERT INTO current_event VALUES (%s,%s,%s,%s,%s,%s,%s,%s)',
+                       (native_id, provider, native_id, 'MLB', start, exact_time(start), Jsonb(facts), 'fixture'))
+
+        with self.connect() as db:
+            upsert_frames(db, prepare_frames(parsed, prepare_page(parsed)))
+            write_game(db, 'kalshi', 1)
+            write_game(db, 'polymarket_us', 1)
+            assert event['eventID'] in {row['native_event_id'] for row in sportsbook_frames(db, at)}
+
+            write_game(db, 'kalshi', 2)
+            assert event['eventID'] not in {row['native_event_id'] for row in sportsbook_frames(db, at)}
+            assert not EventInputs(db).occurrences(at, starts=[stamp(start)])[occurrence][event['eventID']]['valid']
+            db.execute('DELETE FROM current_sgo_event_frame WHERE event_id=%s', (event['eventID'],))
+
     async def test_oddslink_prophetx_quotes_publish_while_sgo_charge_is_held(self):
         from datetime import timedelta
 

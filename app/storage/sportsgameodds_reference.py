@@ -352,8 +352,74 @@ class EventInputs:
 
     def __init__(self, db):
         self.db = db
+        self.schedule = None
+        self.retained_schedule = {}
         self.event_frames = {}
         self.quote_reads = {}
+
+    def occurrences(self, at, *, starts=()):
+        """Find SGO schedules in this read even for games with sportsbook prices alone."""
+        starts = set(starts)
+        if not starts:
+            if self.schedule is None:
+                from app.comparison.game_phase import PREGAME_SPORTSBOOK_SECONDS
+
+                since = at - timedelta(seconds=PREGAME_SPORTSBOOK_SECONDS)
+                self.schedule = self._read_schedule(
+                    "scheduled_start::timestamptz BETWEEN %s AND %s",
+                    "received_order BETWEEN %s AND %s",
+                    (at - timedelta(hours=24), at + timedelta(hours=72),
+                     exact_time(since.isoformat()), exact_time(at.isoformat())),
+                )
+            return self.schedule
+        missing = sorted(starts - self.retained_schedule.keys())
+        if missing:
+            self.retained_schedule.update((start, {}) for start in missing)
+            matching = self._read_schedule(
+                "scheduled_start::timestamptz=ANY(%s)",
+                "expires_at >= %s AND (facts->>'starts_at')::timestamptz=ANY(%s)",
+                (missing, missing[0] + timedelta(days=1), missing),
+            )
+            for occurrence, candidates in matching.items():
+                if occurrence[1] in self.retained_schedule:
+                    self.retained_schedule[occurrence[1]][occurrence] = candidates
+        return {occurrence: candidates for start in starts
+                for occurrence, candidates in self.retained_schedule[start].items()}
+
+    def _read_schedule(self, event_filter, frame_filter, params):
+        # Seed from scoped schedules or indexed receipt/expiry clocks, then
+        # include the exact counterpart even when its kickoff conflicts.
+        rows = self.db.execute('''WITH events AS (
+                SELECT native_event_id AS event_id FROM current_event WHERE provider='sportsgameodds' AND '''
+            + event_filter + ''' UNION SELECT event_id FROM current_sgo_event_frame WHERE ''' + frame_filter + '''
+            )
+            SELECT events.event_id, e.competition, e.scheduled_start,
+                   e.facts->>'home' AS home, e.facts->>'away' AS away,
+                   (e.facts->'schedule_conflict' NOT IN ('null','false','{}')
+                    OR e.facts->'occurrence_conflict' NOT IN ('null','false','{}')
+                    OR e.facts->'conflicting_duplicate' NOT IN ('null','false','{}')
+                    OR e.facts->>'replacement_game_id' IS NOT NULL) AS conflicted,
+                   f.facts->>'starts_at' AS starts_at, f.facts->>'receipt_sha256' AS frame, f.received_order,
+                   f.facts#>>'{event_context,league}' AS league, f.facts#>'{event_context,teams}' AS teams,
+                   f.facts#>>'{event_context,phase}' AS phase, f.facts#>'{event_context,status}' AS status
+            FROM events LEFT JOIN current_event e
+                ON e.provider='sportsgameodds' AND e.native_event_id=events.event_id
+            LEFT JOIN current_sgo_event_frame f USING(event_id)''', params).fetchall()
+        schedule = schedule_occurrences(rows)
+        starts = sorted({key[1] for key, candidates in schedule.items()
+                         if key[0] == 'MLB' and any(row['valid'] for row in candidates.values())})
+        if starts:
+            # SGO frames do not carry a reviewed game number. One frame
+            # cannot identify which leg of a same-start doubleheader it prices.
+            collisions = self.db.execute('''SELECT scheduled_start::timestamptz AS start,
+                       facts->>'home' AS home, facts->>'away' AS away
+                FROM current_event WHERE provider IN ('kalshi','polymarket_us') AND competition='MLB'
+                  AND scheduled_start::timestamptz=ANY(%s) AND facts->>'game_number' IN ('1','2')
+                GROUP BY 1,2,3 HAVING count(DISTINCT facts->>'game_number') > 1''', (starts,)).fetchall()
+            for row in collisions:
+                for candidate in schedule.get(('MLB', row['start'], row['home'], row['away']), {}).values():
+                    candidate['valid'] = False
+        return schedule
 
     def frames(self, event_ids):
         ids = sorted(set(event_ids))
@@ -403,6 +469,39 @@ class EventInputs:
             cached.update((event_id, rows if len(rows) <= limit else None)
                           for event_id, rows in results.items())
         return {event_id: cached[event_id] for event_id in ids if cached[event_id] is not None}
+
+
+def schedule_occurrences(rows):
+    """Index exact schedule occurrences while retaining blockers for ambiguous joins."""
+    from app.collection.sportsgameodds_current_rows import participant_ids
+    from app.normalization.college_registry import sgo_registry
+
+    registry = sgo_registry()
+    schedule = {}
+    for row in rows:
+        event = row['event_id']
+        projected = ((row['competition'], stamp(row['scheduled_start']), row['home'], row['away'])
+                     if row['competition'] and row['scheduled_start'] and row['home'] and row['away'] else None)
+        observed = None
+        if row['teams'] and row['league'] and row['starts_at'] and row['frame']:
+            try:
+                teams = participant_ids(row['teams'], row['league'], event, registry)
+                if teams['home'] != teams['away']:
+                    observed = (row['league'], stamp(row['starts_at']), teams['home'], teams['away'])
+            except (KeyError, TypeError, ValueError):
+                pass
+        # A new scoped alias can canonicalize a prior provider-local ID. An
+        # existing different canonical team or kickoff is a conflicting witness.
+        compatible = not projected or bool(observed and projected[:2] == observed[:2] and all(
+            old in (new, f'sportsgameodds:{row["league"]}:{event}:{role}')
+            for role, old, new in zip(('home', 'away'), projected[2:], observed[2:], strict=True)))
+        legacy = (projected and row['frame'] and not row['league'] and row['starts_at']
+                  and projected[1] == stamp(row['starts_at']))
+        candidate = dict(row, valid=bool(not row['conflicted'] and (observed and compatible or legacy)),
+                         occurrence=observed)
+        for occurrence in {projected, observed} - {None}:
+            schedule.setdefault(occurrence, {})[event] = candidate
+    return schedule
 
 
 def expiry_filter(at, include_legacy):

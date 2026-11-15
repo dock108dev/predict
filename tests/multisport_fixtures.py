@@ -31,8 +31,8 @@ def compatible_winner_equality(state, venues=('novig','prophetx','polymarket_us'
                     facts['equality'] = dict(treatment='predicate',payout=None,refund_fees='not_applicable',unknown_reason=None)
 
 
-def source_case(league, family, token, *, clock=None, line=None):
-    """New event identity per token, with previously supported participants."""
+def source_case(league, family, token, *, clock=None, line=None, participants=None):
+    """New event identity per token, with participants in the fixture registry."""
     from app.collection.admission_enrichment import repair_registry, TEAM_KEYS
     from app.collection.native_scope_bindings import selectors_for
     from app.collection.native_selectors import LEAGUES
@@ -40,7 +40,7 @@ def source_case(league, family, token, *, clock=None, line=None):
     mappings=[m for m in data['native_mappings'] if m['kind']=='team' and m['venue']=='kalshi'
               and m.get('environment')=='production' and m.get('league')==league]
     unique={m['target']:m['native_id'] for m in mappings}
-    home,away=sorted(unique)[:2]
+    home,away=participants or sorted(unique)[:2]
     teams=[dict(id=unique[cid],name=registry.entities[cid]['name'],league=LEAGUES[league],ordering=role)
            for cid,role in ((home,'home'),(away,'away'))]
     clock=clock or datetime.now(timezone.utc)

@@ -3,6 +3,7 @@ from datetime import timedelta
 from fractions import Fraction
 
 from app.comparison.game_phase import PREGAME_SPORTSBOOK_SECONDS
+from app.comparison.public_sportsbook_estimate import outcome
 from app.comparison.sgo_reference import BEST_BOOKS
 from app.storage.store import stamp
 
@@ -10,21 +11,13 @@ from app.storage.store import stamp
 def sportsbook_selection(offer, roles):
     """Map a browsable outcome to a sportsbook side without inferring settlement."""
     market, selection = offer['market'], offer.get('selection') or {}
-    family = market['market']
     if market['period'] != 'full_game':
         return None
-    predicate = selection.get('predicate')
-    if family == 'winner' and predicate == 'win':
-        side = roles.get(selection.get('participant'))
-        return ('moneyline', side, None) if side else None
-    if family == 'spread' and predicate == 'cover':
-        side = roles.get(selection.get('participant'))
-    elif family == 'total' and predicate in ('over', 'under'):
-        side = predicate
-    else:
+    family = 'moneyline' if market['market'] == 'winner' else market['market']
+    if family != 'total' and not selection.get('participant'):
         return None
-    line = selection.get('signed_line')
-    return (family, side, Fraction(line)) if side and line is not None else None
+    teams = {role: team for team, role in roles.items()}
+    return outcome(family, selection, teams.get('home'), teams.get('away'))
 
 
 def add_sgo_prices(db, out, rows, states, *, at, include_retained, mark_retained=False, sgo_inputs=None):
@@ -47,30 +40,26 @@ def add_sgo_prices(db, out, rows, states, *, at, include_retained, mark_retained
     roles = {key: {p['id']: p['role'] for p in game['participants']
                    if p.get('id') and p.get('role') in ('home', 'away')}
              for key, game in games.items()}
-    signatures = {}
+    inputs = sgo_inputs if sgo_inputs is not None else EventInputs(db)
+    occurrences = {}
     group_games = {group['game_key'] for group in groups}
     for key, game in games.items():
         if key not in group_games:
             continue
         ids = {role: team for team, role in roles[key].items()}
-        if ids.keys() == {'home', 'away'} and game.get('start_at'):
-            signature = (game['league'], stamp(game['start_at']), ids['home'], ids['away'])
-            signatures.setdefault(signature, []).append(key)
-    candidates = {}
+        if len(roles[key]) == 2 and ids.keys() == {'home', 'away'} and game.get('start_at'):
+            occurrences[key] = (game['league'], stamp(game['start_at']), ids['home'], ids['away'])
+    retained_starts = {item[1] for item in occurrences.values()} if include_retained or mark_retained else ()
+    schedule = inputs.occurrences(at, starts=retained_starts) if occurrences else {}
+    matches = {}
     sportsbook_occurrences = {}
-    if signatures:
-        starts = [signature[1] for signature in signatures]
-        events = db.execute("""SELECT native_event_id, competition, scheduled_start,
-                                      facts->>'home' AS home, facts->>'away' AS away
-                               FROM current_event
-                               WHERE provider='sportsgameodds' AND competition=ANY(%s)
-                                 AND scheduled_start::timestamptz BETWEEN %s AND %s""",
-                            (sorted({signature[0] for signature in signatures}), min(starts), max(starts))).fetchall()
-        for event in events:
-            signature = (event['competition'], stamp(event['scheduled_start']), event['home'], event['away'])
-            for key in signatures.get(signature, ()):
-                candidates.setdefault(key, set()).add(event['native_event_id'])
-                sportsbook_occurrences[event['native_event_id']] = signature
+    for game, occurrence in occurrences.items():
+        candidates = schedule.get(occurrence, {})
+        if len(candidates) == 1:
+            event, row = next(iter(candidates.items()))
+            if row['valid']:
+                matches[game] = event
+                sportsbook_occurrences[event] = row['occurrence'] or occurrence
 
     visible_ids = {offer['id'] for group in groups for offer in group['offers']}
     local = {row['id']: row['source'] for row in rows if row['id'] in visible_ids
@@ -80,19 +69,18 @@ def add_sgo_prices(db, out, rows, states, *, at, include_retained, mark_retained
         sources = [local[offer['id']] for offer in group['offers'] if offer['id'] in local]
         ids = {source['native_event_id'] for source in sources}
         game_key = group['game_key']
-        scheduled_ids = candidates.get(game_key, set())
+        event = matches.get(game_key)
         key = sportsbook_selection(group['offers'][0], roles.get(game_key, {}))
-        if key is not None and len(scheduled_ids) == 1 and (not ids or scheduled_ids == ids):
+        if key is not None and event is not None and (not ids or ids == {event}):
             # A featured odd and a book's alternate can have distinct provider
             # IDs, even when their canonical side and signed line are equal.
-            wanted.setdefault(next(iter(scheduled_ids)), {}).setdefault(key, {})[group['id']] = group
+            wanted.setdefault(event, {}).setdefault(key, {})[group['id']] = group
         if len(ids) == 1:
             for source in sources:
                 line = source.get('native_line')
                 key = (source['native_outcome_id'], None if line is None else Fraction(line))
                 wanted.setdefault(source['native_event_id'], {}).setdefault(key, {})[group['id']] = group
 
-    inputs = sgo_inputs if sgo_inputs is not None else EventInputs(db)
     windows = {}
     selected_frames = {}
     for event, frame in inputs.frames(wanted).items():
@@ -126,7 +114,7 @@ def add_sgo_prices(db, out, rows, states, *, at, include_retained, mark_retained
             if observation:
                 for group in event_groups.values():
                     key = sportsbook_selection(group['offers'][0], roles.get(group['game_key'], {}))
-                    if key and candidates.get(group['game_key']) == {event}:
+                    if key and matches.get(group['game_key']) == event:
                         collect_pairs(group.setdefault('_sportsbook_pairs', {}), (observation,), key,
                                       at=at, start=scheduled)
         for row in observations:
@@ -135,7 +123,8 @@ def add_sgo_prices(db, out, rows, states, *, at, include_retained, mark_retained
                     or fact['venue'] not in BEST_BOOKS or members.get(row['id']) != row['revision']):
                 continue
             line = None if fact['line'] is None else Fraction(fact['line'])
-            exact = targets.get((fact['odd_id'], line), {})
+            exact = {group_id: group for group_id, group in targets.get((fact['odd_id'], line), {}).items()
+                     if group['league'] == fact['league'] and stamp(group['start_at']) == scheduled}
             by_schedule = targets.get((fact['market'], fact['side'], line), {})
             if not exact and not by_schedule:
                 continue

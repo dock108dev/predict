@@ -438,7 +438,9 @@ def mount(app):
                     result = exact_selection(result, selected, live_contract, aggregate_contract)
                 captured_pairs = ([pair for pair in result['pairs'] if snapshots.exact_arb_pair(pair)]
                                   if is_fee_census or options[0] == 'arbs' else ())
-                frames = (live.sportsbook_frames(db, at) if dependency_result and any(
+                from app.storage.sportsgameodds_reference import EventInputs
+                sgo_inputs = EventInputs(db)
+                frames = (live.sportsbook_frames(db, at, sgo_inputs=sgo_inputs) if dependency_result and any(
                     (r.get('sportsbook_baseline') or {}).get('indicative') for r in dependency_result['rows'])
                     and owner.get('config', {}).get('aggregate_provider') == 'sportsgameodds' else ())
                 from app.storage.ordinary_projection import event_owners, publication_runtime
@@ -458,8 +460,6 @@ def mount(app):
                                           event_facts=event_facts,
                                           lifecycle_rows=lifecycle_rows if is_desk else None)
                 timings['projection']=(monotonic()-stage)*1000
-                from app.storage.sportsgameodds_reference import EventInputs
-                sgo_inputs = EventInputs(db)
                 if native_desk:
                     from app.storage.current_native_desk import overlay
                     stage=monotonic()
