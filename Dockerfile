@@ -6,7 +6,7 @@ COPY --from=uv /uv /usr/local/bin/uv
 COPY pyproject.toml uv.lock ./
 RUN uv sync --locked --no-dev --extra stream --no-install-project
 
-FROM python:3.14-slim-bookworm@sha256:3fe1a0b6c2d6b2ebb572906cdabeca75aeb558c0c17db5ffefbcf8094871c32b
+FROM python:3.14-slim-bookworm@sha256:3fe1a0b6c2d6b2ebb572906cdabeca75aeb558c0c17db5ffefbcf8094871c32b AS runtime
 WORKDIR /predict
 ENV PATH=/predict/.venv/bin:$PATH PYTHONPATH=/predict PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
 RUN mkdir -p /predict/.local && chown 10001:10001 /predict/.local
@@ -15,4 +15,12 @@ COPY app app
 COPY deploy/check-health.py deploy/check-health.py
 COPY scripts/live_coverage_census.py scripts/pipeline_storage_report.py scripts/sgo_runtime_census.sql scripts/
 USER 10001:10001
+
+FROM runtime AS collector
+CMD ["python", "-m", "app.collection.data_runtime", "--current-config", "/predict/.local/predict-current-config.json"]
+
+FROM runtime AS archive
+CMD ["python", "-m", "app.storage.odds_archive_export"]
+
+FROM runtime AS web
 CMD ["python", "-m", "app.dashboard.opportunity_board", "--host", "0.0.0.0", "--port", "8784"]

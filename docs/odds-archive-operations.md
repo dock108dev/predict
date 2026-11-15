@@ -68,9 +68,9 @@ its own health check and logs.
 From `/srv/predict`, use this wrapper for release-day checks.
 
 ```sh
-export PREDICT_IMAGE=$(cat current-image)
 predict() {
-    docker compose --env-file ./archive.env --profile collection --profile archive "$@"
+    docker compose --env-file ./archive.env --env-file ./current-images.env \
+        --profile collection --profile archive "$@"
 }
 mountpoint -q /srv/predict/odds-archive
 predict config --quiet
@@ -226,16 +226,18 @@ backups.
 
 ```sh
 cd /srv/predict
-rollback_image=$(cat previous-image)
-PREDICT_IMAGE="$rollback_image" docker compose --env-file ./archive.env --profile archive stop archive
-PREDICT_IMAGE="$rollback_image" docker compose --env-file /dev/null --profile collection \
-    up -d --no-deps --wait web
+rollback_image=REPLACE_WITH_CONFIRMED_091_IMAGE_DIGEST
+docker compose --env-file ./archive.env --env-file ./current-images.env --profile archive stop archive
+archive_image=$(sed -n 's/^PREDICT_ARCHIVE_IMAGE=//p' current-images.env)
+PREDICT_WEB_IMAGE="$rollback_image" docker compose --env-file ./current-images.env \
+    --profile collection up -d --no-deps --wait web
 if test -f collection-enabled; then
-    PREDICT_IMAGE="$rollback_image" docker compose --env-file /dev/null --profile collection \
+    PREDICT_COLLECTOR_IMAGE="$rollback_image" docker compose --env-file ./current-images.env --profile collection \
         up -d --no-deps --wait collector
 fi
-printf '%s\n' "$rollback_image" > current-image.tmp
-mv current-image.tmp current-image
+printf 'PREDICT_WEB_IMAGE=%s\nPREDICT_COLLECTOR_IMAGE=%s\nPREDICT_ARCHIVE_IMAGE=%s\n' \
+    "$rollback_image" "$rollback_image" "$archive_image" > current-images.env.tmp
+mv current-images.env.tmp current-images.env
 ```
 
 Verify the current root, leased/saved inspection evidence, current-row epoch,

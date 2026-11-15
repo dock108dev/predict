@@ -38,11 +38,12 @@ curl -sS -D - -o /dev/null https://predict.dock108.dev/admin
 
 ## Releases
 
-The **Deploy Predict dev server** workflow runs when an in-repository PR to
-`main` opens or changes, or when dispatched manually from `main`. It builds and
-smoke-tests the locked Linux image, publishes it to GHCR, and sends its digest to
-`/srv/predict/release.sh` over SSH. The separate CI workflow runs the broader
-regressions. The deploy job requires the repository variable
+The **Deploy Predict dev server** workflow builds and smoke-tests the exact
+commit that passed **CI** for a push to `main`. It checks that the commit is
+still at the tip of `main` before releasing the tested web, collector, and
+archive image digests to
+`/srv/predict/release.sh` over SSH. In-repository PR and manual runs from
+`main` are also supported. The deploy job requires the repository variable
 `HETZNER_DEPLOY_ENABLED=true` and the `hetzner` GitHub environment with branch
 rules for `main` and `refs/pull/*/merge`. Set `HETZNER_HOST` and the pinned `HETZNER_KNOWN_HOSTS`
 entry as environment variables and `HETZNER_SSH_KEY` as an environment secret.
@@ -52,8 +53,21 @@ authenticates the GHCR pull and is discarded after use.
 Install `deploy/compose.yml` and `deploy/release.sh` in `/srv/predict` as root.
 Keep this directory and the forced command root-owned. Apply changes to these
 two host files over the administrator SSH connection before deploying a release
-that needs them. The forced command accepts only a Predict image digest and does
-not offer an interactive shell or any port forwarding.
+that needs them. Install both files before the first split-image deploy. The
+forced command validates the role and build inputs of each Predict image digest.
+
+Web, collector, and archive share Docker layers and have separate image
+references. A release preserves a running service's image when its build inputs
+match. Dashboard assets and dedicated web entry points roll only web. Collector
+worker changes roll only collector. Shared code, dependency locks and migrations
+can roll multiple services. PostgreSQL has its own image and volume. Changes to
+the host Compose file may require quiescing the collector and archive.
+
+The release script records the active references in `current-images.env` and the
+prior references in `previous-images.env`. The first release reads the old
+`current-image` file to recover the previous image. A change to `archive.env`
+reapplies collector and archive configuration on the next release. You can also
+apply it immediately to the affected service with Compose.
 
 Create a private `postgres-bootstrap` file with a random password for a new
 cluster. The database uses a shared Unix socket and a persistent `predict_postgres`
@@ -100,15 +114,14 @@ accounting intact. Back up PostgreSQL and the accounting files off the server.
 ## Observing a live slate
 
 Run the coverage sampler in `web` and save its JSON lines outside the container.
-For example, from `/srv/predict` with `PREDICT_IMAGE` set to `current-image`'s
-contents:
+For example, from `/srv/predict`:
 
 ```sh
-docker compose --env-file /dev/null exec -T web \
+docker compose --env-file ./current-images.env exec -T web \
   python scripts/live_coverage_census.py --phase live --samples 240 > live-coverage.jsonl
-docker compose --env-file /dev/null exec -T web \
+docker compose --env-file ./current-images.env exec -T web \
   python scripts/pipeline_storage_report.py /tmp/storage.json
-docker compose --env-file /dev/null cp web:/tmp/storage.json ./storage.json
+docker compose --env-file ./current-images.env cp web:/tmp/storage.json ./storage.json
 ```
 
 Take storage and account snapshots before and after the window. Compare the
