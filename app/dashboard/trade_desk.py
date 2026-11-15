@@ -246,6 +246,7 @@ def sportsbook_selection(offer, roles):
 def add_sgo_prices(db, out, rows, states, *, at, include_retained, mark_retained=False):
     """Join stored same-line book quotes for display, including native-only groups."""
     from app.comparison.game_phase import LIVE_SECONDS, sgo_event_status, sporting_phase
+    from app.comparison.public_sportsbook_estimate import collect_pairs, sgo_observation
     from app.storage.ordinary_projection import source_allowed
     from app.storage.sportsgameodds_reference import read_event, read_event_frame
 
@@ -272,6 +273,7 @@ def add_sgo_prices(db, out, rows, states, *, at, include_retained, mark_retained
             signature = (game['league'], stamp(game['start_at']), ids['home'], ids['away'])
             signatures.setdefault(signature, []).append(key)
     candidates = {}
+    sportsbook_occurrences = {}
     if signatures:
         starts = [signature[1] for signature in signatures]
         events = db.execute("""SELECT native_event_id, competition, scheduled_start,
@@ -284,6 +286,7 @@ def add_sgo_prices(db, out, rows, states, *, at, include_retained, mark_retained
             signature = (event['competition'], stamp(event['scheduled_start']), event['home'], event['away'])
             for key in signatures.get(signature, ()):
                 candidates.setdefault(key, set()).add(event['native_event_id'])
+                sportsbook_occurrences[event['native_event_id']] = signature
 
     visible_ids = {offer['id'] for group in groups for offer in group['offers']}
     local = {row['id']: row['source'] for row in rows if row['id'] in visible_ids
@@ -325,6 +328,17 @@ def add_sgo_prices(db, out, rows, states, *, at, include_retained, mark_retained
                                       source_since=None if include_retained or mark_retained else at - deadline)
         except ValueError:
             continue
+        if (not live and frame_current and not mark_retained and event in sportsbook_occurrences
+                and source_allowed(state, context.get('league'))):
+            event_groups = {gid: group for matches in targets.values() for gid, group in matches.items()}
+            observation = sgo_observation(frame, observations, at=at,
+                                         occurrence=sportsbook_occurrences[event])
+            if observation:
+                for group in event_groups.values():
+                    key = sportsbook_selection(group['offers'][0], roles.get(group['game_key'], {}))
+                    if key and candidates.get(group['game_key']) == {event}:
+                        collect_pairs(group.setdefault('_sportsbook_pairs', {}), (observation,), key,
+                                      at=at, start=scheduled)
         for row in observations:
             fact = row['facts']
             if (fact['period'] != 'game' or fact.get('price_american') is None
@@ -365,7 +379,7 @@ def add_sgo_prices(db, out, rows, states, *, at, include_retained, mark_retained
 
 
 def add_public_prices(out, owner, *, at, include_retained, mark_retained=False):
-    from app.comparison.public_sportsbook_estimate import LIFETIME, allowed, index, read_captures, retained_prices
+    from app.comparison.public_sportsbook_estimate import LIFETIME, allowed, collect_pairs, index, read_captures, retained_prices
     from app.storage.store import ROOT
 
     if not out['rows'] or not (include_retained or mark_retained or allowed(owner)):
@@ -385,6 +399,9 @@ def add_public_prices(out, owner, *, at, include_retained, mark_retained=False):
         if not key or teams.keys() != {'home', 'away'}:
             continue
         occurrence = (game['league'], stamp(group['start_at']), teams['home'], teams['away'])
+        if not mark_retained and (observation := current.get(occurrence)):
+            collect_pairs(group.setdefault('_sportsbook_pairs', {}), (observation,), key,
+                          at=at, start=occurrence[1])
         for entries, fresh in ((retained, False),) if mark_retained else ((current, True), (retained, False)):
             for book, prices in entries.get(occurrence, {}).get('quotes', {}).get(key, {}).items():
                 if mark_retained:
@@ -475,7 +492,6 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
     runtime = result['publication'].get('data_runtime') or {}
     public_summary = query.get('summary') == '1'
     native_browse = browse and comparable and public_summary
-    native_alternates = native_browse and query.get('lines') == 'all'
     retained_fallback = not public_summary and browse and view != 'arbs' and browse_retained(runtime)
     show_retained = not public_summary and (retained_fallback or query.get('last_known') == '1' or (
         not (browse or ranked) and 'last_known' not in query))
@@ -714,7 +730,7 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
         for group in groups:
             first = group['quotes'][0]
             if (not retained_comparison and not any(row.get('price_current') for row in group['quotes'])
-                    and not (native_alternates and any(row['venue'] in NATIVE_VENUES for row in group['quotes']))):
+                    and not (native_browse and any(row['venue'] in NATIVE_VENUES for row in group['quotes']))):
                 continue
             offers = []
             books = {}
@@ -757,7 +773,7 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
                                                  requested_source=game_source, retained=True)) - qualified
                 qualified.update(fallback)
                 limited_coverage = bool(fallback)
-        if native_alternates:
+        if native_browse and query.get('lines') == 'all':
             # A different signed line may have only one direct venue. It
             # belongs in Browse at that exact line, outside EV qualification.
             qualified.update(group['id'] for group in candidates
@@ -790,13 +806,17 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
                 query.get('lines') != 'main' or not row.get('alternate',
                     ((row.get('source') or {}).get('native_market_id') or '').startswith('alternate:')))],
             by_id, metric, current=True)
-        for group in sorted(current_groups, key=lambda g: (g['start_at'], g['id']))[:limit]:
-            value = public_group(present(group), basis)
-            value['score'] = None
-            for displayed in value['offers']:
-                displayed['value'] = None
-            price_preview.append(value)
-    for group in visible:
+        games_in_preview = {}
+        for group in sorted(current_groups, key=lambda g: (g['start_at'], g['id'])):
+            games_in_preview.setdefault(group['game_key'], []).append(group)
+        for game in list(games_in_preview.values())[:5]:
+            for group in game[:limit]:
+                value = present(group)
+                value['score'] = None
+                for displayed in value['offers']:
+                    displayed['value'] = None
+                price_preview.append(value)
+    for group in (*visible, *price_preview):
         if (candidate := price_lists.get(group['id'])) is not None:
             prices = group['sportsbook_quotes']
             for book, values in candidate['sportsbook_quotes'].items():
@@ -806,6 +826,11 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
                     and old.get('source_at') == price.get('source_at') for old in shown))
             if candidate.get('sportsbook_source_reason'):
                 group['sportsbook_source_reason'] = candidate['sportsbook_source_reason']
+            if basis == 'sportsbooks' and (pairs := candidate.get('_sportsbook_pairs')):
+                from app.comparison.public_sportsbook_estimate import choose_book
+                book, probability = choose_book(pairs)
+                group['sportsbook_reference'] = dict(book=book, fair_odds=odds(decimal(1 / probability)),
+                    prices=[{key: price[key] for key in ('price_american', 'source_at')} for price in pairs[book][2]])
     if browse and not public_summary and not show_retained and visible:
         visible_games = {group['game_key'] for group in visible}
         retained_venues = {}
@@ -836,6 +861,7 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
                 selected_line, = matching_lines
     if public_summary:
         visible = [public_group(group, basis) for group in visible]
+        price_preview = [public_group(group, basis) for group in price_preview]
     return dict(**({k:v for k,v in session.items() if k not in ('rows','state','total')} if session else {}),
                 state='ready', rows=visible, price_preview=price_preview,
                 total=session['total'] if session else len(page_units), offset=offset, limit=limit,

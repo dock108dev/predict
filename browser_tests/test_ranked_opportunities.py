@@ -522,6 +522,9 @@ def test_ranked_and_browse_journey(width, tmp_path):
             expect(cards).to_have_count(2)
             expect(cards.first).to_contain_text("+3.26%")
             expect(cards.first).to_contain_text("Sportsbook fair +102")
+            expect(cards.first.locator(".compact-prices")).not_to_contain_text(
+                "DraftKings"
+            )
             expect(cards.first).to_contain_text("DraftKings")
             expect(cards.first).to_contain_text("-108")
             expect(cards.first).not_to_contain_text("Current")
@@ -575,9 +578,7 @@ def test_ranked_and_browse_journey(width, tmp_path):
             ).to_have_count(0)
             expect(
                 tab.locator(".odds-matrix thead tr").first.locator("th")
-            ).to_have_text(
-                ["Exact outcome", "Fair odds", "Prediction markets", "Sportsbook odds"]
-            )
+            ).to_have_text(["Exact outcome", "Prediction markets", "Fair odds"])
             fair = (
                 tab.get_by_role("row")
                 .filter(has_text="Denver to cover +2.5")
@@ -585,6 +586,16 @@ def test_ranked_and_browse_journey(width, tmp_path):
             )
             expect(fair).to_contain_text("+102")
             expect(fair).to_contain_text("DraftKings")
+            expect(tab.get_by_role("columnheader", name="DraftKings")).to_have_count(0)
+            popout = tab.get_by_role("region", name="Sportsbook prices")
+            expect(popout).to_have_count(0)
+            fair.get_by_role(
+                "button", name="Sportsbook prices for Denver to cover +2.5"
+            ).click()
+            expect(popout).to_be_visible()
+            expect(popout).to_contain_text("-108")
+            tab.keyboard.press("Escape")
+            expect(popout).to_have_count(0)
             expect(tab.locator('[data-offer-id="pmus-denver"]')).to_contain_text(
                 "+3.26% EV"
             )

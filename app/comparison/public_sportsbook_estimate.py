@@ -238,9 +238,13 @@ def select(row, authority, observations, *, at):
     event = record.get('event') or {}
     market = record.get('market_identity') or {}
     original = row['original']
-    if (authority.get('provider') not in ('kalshi', 'polymarket_us') or authority.get('reasons')
+    provider = authority.get('provider')
+    native = provider in ('kalshi', 'polymarket_us') and original.get('units') in ('usd_per_contract', 'cents_per_contract')
+    public_execution = (provider == SOURCE and row['venue'] == 'prophetx'
+                        and original.get('units') == 'american_odds')
+    if (not (native or public_execution) or authority.get('reasons')
             or not authority.get('expected') or authority['lifecycle']['state'] != 'scheduled'
-            or market.get('period') != 'full_game' or original.get('units') not in ('usd_per_contract', 'cents_per_contract')
+            or market.get('period') != 'full_game'
             or original.get('payout') != '1' or original.get('payout_units') != 'USD'):
         return None
     occurrence = signature(event, row['league'])
@@ -251,23 +255,32 @@ def select(row, authority, observations, *, at):
     return estimate(price(row), observations, occurrence, key, at=at)
 
 
-def estimate(cost, observations, occurrence, key, *, at):
-    start = occurrence[1]
-    candidates = {}
-    for observation in observations.get(occurrence, ()):
+def collect_pairs(candidates, observations, key, *, at, start):
+    for observation in observations:
         for book, pair in market_pairs(observation, key, at=at, start=start).items():
             prior = candidates.get(book)
             # Prefer the most recent complete pair without mixing feeds or clocks.
             rank = (min(stamp(item['source_at']) for item in pair), observation['source'] == SOURCE)
             if not prior or rank > prior[0]:
                 candidates[book] = rank, observation, pair
-    if not candidates or not 0 < cost < 1:
-        return None
+
+
+def choose_book(candidates):
     book = min(candidates, key=lambda name: (american_probability(candidates[name][2][0]['price_american']),
                                              BEST_BOOKS.index(name)))
-    _, selected, pair = candidates[book]
+    pair = candidates[book][2]
     implied, opposite = (american_probability(item['price_american']) for item in pair)
-    probability = implied / (implied + opposite)
+    return book, implied / (implied + opposite)
+
+
+def estimate(cost, observations, occurrence, key, *, at):
+    start = occurrence[1]
+    candidates = {}
+    collect_pairs(candidates, observations.get(occurrence, ()), key, at=at, start=start)
+    if not candidates or not 0 < cost < 1:
+        return None
+    book, probability = choose_book(candidates)
+    _, selected, pair = candidates[book]
     prices = {name: [{field: item[field] for field in ('price_american', 'source_at', 'side', 'line')}
                      for item in value[2]] for name, value in candidates.items()}
     deadline = min(start, *(stamp(item['source_at']) + LIFETIME for item in pair))

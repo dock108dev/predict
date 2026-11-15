@@ -423,11 +423,11 @@ dialog::backdrop { background: #101b3180; }
 .compact-ev .compact-fair .p-odds { color: var(--body); }
 .compact-ev-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .4rem .8rem; }
 .compact-prices { display: flex; flex-wrap: wrap; gap: .3rem; align-items: center; }
-.compact-prices .desk-offer, .compact-book {
+.compact-prices .desk-offer {
   display: inline-flex; align-items: baseline; gap: .3rem; padding: .22rem .4rem;
   border: 1px solid var(--rule); border-radius: 6px; font-size: .76rem;
 }
-.compact-prices .desk-offer .p-odds, .compact-book .p-odds { font-size: .8rem; font-weight: 700; }
+.compact-prices .desk-offer .p-odds { font-size: .8rem; font-weight: 700; }
 .compact-ev-footer > a { white-space: nowrap; }
 .opportunity-arb .desk-expand button { display: block; }
 .arb-card-legs { display: grid; gap: .3rem; padding: 0; margin: .45rem 0 0; list-style: none; }
@@ -456,10 +456,17 @@ dialog::backdrop { background: #101b3180; }
 .odds-matrix .desk-offer { display: inline-grid; text-align: center; padding: .22rem .35rem; margin: .12rem; white-space: nowrap; border-color: transparent; }
 .odds-matrix .desk-offer .p-odds { font-size: .84rem; }
 .odds-matrix td > .p-odds { display: block; white-space: nowrap; font-weight: 650; }
-.odds-matrix .matrix-fair-odds { min-width: 6.25rem; }
+.odds-card .odds-matrix .matrix-fair-odds { min-width: 6.25rem; }
 .matrix-fair-odds .p-odds { font-weight: 650; }
 .matrix-fair-odds small { color: var(--muted); }
-.matrix-fair-odds div + div { margin-top: .4rem; }
+.matrix-fair-odds > div + div { margin-top: .4rem; }
+.odds-matrix .matrix-book-trigger { display: block; margin: .2rem auto 0; font-size: .72rem; }
+.matrix-sportsbook-popout {
+  box-sizing: border-box; width: min(29rem, calc(100vw - 2rem)); padding: 1rem;
+  color: var(--ink); background: var(--paper); border: 1px solid var(--rule);
+  border-radius: 10px; box-shadow: 0 8px 36px #101b3130; text-align: start;
+}
+.matrix-sportsbook-popout::backdrop { background: #101b312b; }
 .matrix-reference small { color: inherit; }
 .odds-card .odds-matrix td { min-width: 4.7rem; }
 .matrix-empty { margin: .6rem 1rem; }

@@ -48,6 +48,13 @@ class TradeDesk(TestCase):
                           for offer in group['offers']], [('current', None)])
         self.assertEqual(page(data, dict(query, positive='on'), ('ev', None, 0, 25))['price_preview'], [])
 
+    def test_price_preview_reserves_space_for_multiple_games(self):
+        a = quote('one', 'kalshi')
+        b = dict(quote('two', 'polymarket_us'), game_key='second', game_title='Another matchup')
+        query = dict(layout='desk', ranked='1', phase='', basis='sportsbooks', lines='main', summary='1')
+        preview = page(result(a, b), query, ('ev', None, 0, 1))['price_preview']
+        self.assertEqual({group['game_key'] for group in preview}, {'game', 'second'})
+
     def test_three_current_sites_per_exact_outcome_before_rank_and_pagination(self):
         def spread(id_, venue, line, value, *, away=False, current=True):
             row = quote(id_, venue, value=value, current=current)

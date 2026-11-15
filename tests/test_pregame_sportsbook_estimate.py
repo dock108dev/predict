@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, timezone
 from fractions import Fraction
 
 from app.comparison.game_phase import price_phase
-from app.comparison.public_sportsbook_estimate import SOURCE, estimate, market_pairs, quote
+from app.comparison.public_sportsbook_estimate import SOURCE, collect_pairs, estimate, market_pairs, quote, select
 from app.dashboard.trade_desk import page
 from tests.test_trade_desk import quote as desk_quote, result
 
@@ -37,6 +37,37 @@ def test_best_payout_uses_one_book_and_exact_unrounded_devig():
     assert Fraction(selected['return_percent']) == 100 * (Fraction(36, 77) / Fraction('0.4625') - 1)
     assert [leg['price_american'] for leg in selected['prices']] == ['+105', '-125']
     assert datetime.fromisoformat(selected['current_until']) == START
+
+
+def test_current_public_prophetx_price_has_the_same_exact_line_reference():
+    row = dict(league='NFL', venue='prophetx',
+               original=dict(value='+115', units='american_odds', payout='1', payout_units='USD'),
+               original_record=dict(event=dict(scheduled_start=START.isoformat(), home='NFL:NYG', away='NFL:WAS'),
+                                    market_identity=dict(family='moneyline', period='full_game'),
+                                    selection=dict(participant='NFL:WAS', predicate='win', signed_line=None)))
+    authority = dict(provider=SOURCE, lifecycle=dict(state='scheduled'), expected=['revision'])
+    basis = select(row, authority, {OCCURRENCE: [observation()]}, at=AT)
+    assert basis['book'] == 'draftkings'
+    assert Fraction(basis['return_percent']) == 100 * (Fraction(36, 77) * Fraction(215, 100) - 1)
+    assert select(row, dict(authority, reasons=['source_expired']), {OCCURRENCE: [observation()]}, at=AT) is None
+
+
+def test_public_browse_can_show_fair_odds_while_price_ev_is_pending():
+    saved = dict(desk_quote('native', 'kalshi', current=False), game_key='game')
+    data = result(saved)
+
+    def enrich(out, *, include_retained):
+        for group in out['rows']:
+            pairs = group.setdefault('_sportsbook_pairs', {})
+            collect_pairs(pairs, [observation()], AWAY, at=AT, start=START)
+
+    query = dict(layout='desk', browse_odds='1', basis='sportsbooks', lines='main', summary='1')
+    group, = page(data, query, ('ev', None, 0, 5), enrich=enrich)['rows']
+    ref = group['sportsbook_reference']
+    assert ref['book'] == 'draftkings'
+    assert ref['fair_odds']['american'] == '+113.89'
+    assert group['offers'][0]['value'] is None
+    assert not group['offers'][0]['current']
 
 
 def test_both_original_clocks_kickoff_omission_and_suspension():

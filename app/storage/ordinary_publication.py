@@ -821,7 +821,7 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
             public_events = {}
             if public_matches:
                 for event in db.execute("""SELECT id,competition,scheduled_start,facts->>'home' home,facts->>'away' away
-                    FROM current_event WHERE provider IN ('kalshi','polymarket_us') AND competition=ANY(%s)""",
+                    FROM current_event WHERE provider IN ('kalshi','polymarket_us','oddslink_public_board') AND competition=ANY(%s)""",
                     (sorted({key[0] for key in public_matches}),)):
                     match = public_matches.get((event['competition'], stamp(event['scheduled_start']), event['home'], event['away']))
                     if match:
@@ -977,12 +977,12 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
                             inputs['_price_capture']=dict(path='complete',read_records=len(inputs['dependencies']),**capture_diagnostics)
                         inputs['policy_identity']=policy
                         inputs['reference_provider']=reference_provider
-                        from app.comparison.public_sportsbook_estimate import select as public_estimate
+                        from app.comparison.public_sportsbook_estimate import SOURCE as PUBLIC_BOARD, select as public_estimate
                         capture_at = stamp(inputs['captured_at'])
                         for row in inputs['quotes']:
                             if (row.get('sportsbook_baseline') or {}).get('indicative'):
                                 row.pop('sportsbook_baseline')
-                            if public_matches and (row.get('source') or {}).get('provider') in ('kalshi', 'polymarket_us'):
+                            if public_matches and (row.get('source') or {}).get('provider') in ('kalshi', 'polymarket_us', PUBLIC_BOARD):
                                 estimate = public_estimate(row, quote_authority(row, inputs), public_matches, at=capture_at)
                                 if estimate:
                                     row['sportsbook_baseline'] = estimate

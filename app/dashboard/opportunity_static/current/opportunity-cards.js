@@ -36,12 +36,12 @@ function fairReferenceLabel(reference) {
   return reference.method === 'median' ? `Median · ${names.join(', ')}` : names.join(', ');
 }
 
-function fairOddsCell(offers, basis) {
+function fairOddsCell(group, context) {
   const cell = el('td', null, 'matrix-fair-odds');
   const entries = new Map();
-  for (const offer of offers) {
+  for (const offer of group.offers) {
     if (!offer.current || offer.value == null) continue;
-    const fair = offer.fair_odds || (basis === 'sportsbooks' ? offer.sportsbook?.fair_odds
+    const fair = offer.fair_odds || (context.basis === 'sportsbooks' ? offer.sportsbook?.fair_odds
       : offer.reference_current && offer.reference);
     const reference = fairReferenceLabel(offer.fair_reference);
     if (!fair || !reference) continue;
@@ -55,7 +55,25 @@ function fairOddsCell(offers, basis) {
     if (entries.size > 1) price.append(el('small', [...venues].join(', ')));
     cell.append(price);
   }
-  if (!entries.size) noQuote(cell, 'the EV reference');
+  if (!entries.size && group.sportsbook_reference && context.basis === 'sportsbooks') {
+    cell.append(odd(group.sportsbook_reference.fair_odds), el('small', name(group.sportsbook_reference.book)));
+  } else if (!entries.size) noQuote(cell, 'the EV reference');
+  if (Object.keys(group.sportsbook_quotes || {}).length) {
+    const fallback = !entries.size && context.basis === 'sportsbooks' ? group.sportsbook_reference : null;
+    const reference = selectedReference(group.offers[0], context.basis) ?? fallback;
+    const popout = el('div', null, 'matrix-sportsbook-popout');
+    popout.id = `sportsbook-prices-${group.id}`;
+    popout.setAttribute('popover', 'auto');
+    popout.setAttribute('role', 'region');
+    popout.setAttribute('aria-label', 'Sportsbook prices');
+    popout.append(el('strong', context.position(group.offers[0])),
+      sportsbookQuotes(group, reference, context.checkedAt, context.mode));
+    const trigger = el('button', 'Sportsbooks', 'opportunity-link matrix-book-trigger');
+    trigger.type = 'button';
+    trigger.setAttribute('popovertarget', popout.id);
+    trigger.setAttribute('aria-label', `Sportsbook prices for ${context.position(group.offers[0])}`);
+    cell.append(trigger, popout);
+  }
   return cell;
 }
 
@@ -76,18 +94,13 @@ export function quoteAge(source, checkedAt = Date.now()) {
   return `Quote updated ${Math.floor(elapsed / 3600)}h ago`;
 }
 
-function sportsbookCell(group, book, reference, checkedAt, mode, inspection = false, compact = false) {
+function sportsbookCell(group, book, reference, checkedAt, mode, inspection = false) {
   const cell = el('div', null, 'sportsbook-price');
   const selected = reference?.book === book && reference.prices?.[0];
   let values = group.sportsbook_quotes?.[book] || (selected ? [{...selected, current:true}] : []);
-  if (compact) values = values.filter(sportsbookOdds).sort((a, b) =>
-    Number(b.current === true) - Number(a.current === true)
-    || (b.source_at || '').localeCompare(a.source_at || '')
-    || Number(b.price_american === selected?.price_american) - Number(a.price_american === selected?.price_american)).slice(0, 1);
   if (selected && !values.some(value => value.current !== false &&
       value.price_american === selected.price_american && value.source_at === selected.source_at)) {
     values = [{...selected, current:true}, ...values];
-    if (compact) values = values.slice(0, 1);
   }
   for (const value of values) {
     const item = el('div');
@@ -96,11 +109,6 @@ function sportsbookCell(group, book, reference, checkedAt, mode, inspection = fa
     const isReference = selected && value.current !== false
       && value.price_american === selected.price_american && value.source_at === selected.source_at;
     if (isReference) item.classList.add('matrix-reference');
-    if (compact) {
-      if (value.current === false) item.append(el('small', 'Last known'));
-      cell.append(item);
-      continue;
-    }
     const freshness = el('small', [mode ? (value.current === false ? 'Last known at capture' : 'At capture') :
       priceStatus(value.current, value.source_at, checkedAt, inspection),
       isReference && 'EV reference'].filter(Boolean).join(' · '));
@@ -279,13 +287,6 @@ function compactEV(group, context) {
     }
     quotes.append(price);
   }
-  const reference = selectedReference(lead, context.basis);
-  for (const book of books) {
-    if (!group.sportsbook_quotes?.[book]?.some(price => price.current === true && sportsbookOdds(price))) continue;
-    const chip = el('div', null, 'compact-book');
-    chip.append(el('span', name(book)), sportsbookCell(group, book, reference, context.checkedAt, null, false, true));
-    quotes.append(chip);
-  }
   const footer = el('div', null, 'compact-ev-footer');
   footer.append(quotes, context.gameLink(group));
   row.append(footer);
@@ -407,20 +408,18 @@ export function gameMatrix(groups, context, {includeAlternates, market, selected
   const fairOdds = heading('Fair odds');
   fairOdds.rowSpan = 2;
   const exchange = heading(context.summary ? 'Prediction markets' : 'Venue prices', 'colgroup');
-  const sportsbook = heading(context.summary ? 'Sportsbook odds' : 'Sportsbook quotes', 'colgroup');
   exchange.colSpan = columns.length;
-  sportsbook.colSpan = books.length;
-  section.append(outcome, fairOdds, exchange, sportsbook);
+  section.append(outcome, exchange);
   if (!context.summary) {
     const ev = heading('EV');
     ev.rowSpan = 2;
     section.append(ev);
   }
-  headings.append(...columns.map(([, label]) => heading(label)), ...books.map(book => heading(name(book))));
+  section.append(fairOdds);
+  headings.append(...columns.map(([, label]) => heading(label)));
   const body = table.createTBody();
   for (const group of visible) {
     const lead = group.offers[0];
-    const reference = selectedReference(lead, context.basis);
     const tr = body.insertRow();
     tr.dataset.groupId = group.id;
     const side = heading(context.position(lead), 'row');
@@ -431,7 +430,7 @@ export function gameMatrix(groups, context, {includeAlternates, market, selected
       tr.setAttribute('aria-current', 'true');
     }
     if (settlementLabel(group) && !context.compact) side.append(el('small', settlementLabel(group)));
-    tr.append(side, fairOddsCell(group.offers, context.basis));
+    tr.append(side);
     const currentPayouts = group.offers.filter(offer => offer.current).map(offer => num(offer.odds?.decimal));
     const highestPayout = Math.max(...currentPayouts);
     for (const [venue] of columns) {
@@ -451,10 +450,10 @@ export function gameMatrix(groups, context, {includeAlternates, market, selected
       }
       if (!cell.hasChildNodes()) noQuote(cell, name(venue), !context.summary && group.retained_venues?.includes(venue));
     }
-    for (const book of books) {
-      tr.insertCell().append(sportsbookCell(group, book, reference, context.checkedAt, context.mode, false, context.compact));
+    if (context.summary) {
+      tr.append(fairOddsCell(group, context));
+      continue;
     }
-    if (context.summary) continue;
     const value = tr.insertCell();
     const current = group.offers.find(offer => offer.current && offer.value != null);
     const saved = !current && group.offers.reduce((best, offer) => (
@@ -480,8 +479,9 @@ export function gameMatrix(groups, context, {includeAlternates, market, selected
         value.append(price);
       } else value.append(missing);
     }
+    tr.append(fairOddsCell(group, context));
   }
-  const scroll = scrollTable(table, 'Venue and sportsbook odds');
+  const scroll = scrollTable(table, 'Prediction market odds and fair odds');
   const cue = el('p', 'More sites →', 'matrix-scroll-cue desk-meta');
   box.append(cue, scroll);
   return box;
