@@ -59,7 +59,7 @@ def cursor(db, *, at, phase, head, owner, states, settings, epoch, live_enabled)
 def refresh_at(page, at):
     """First visible pricing, calculation, or kickoff boundary."""
     deadlines = []
-    for row in [*page.get('rows', []), *page.get('price_preview', [])]:
+    for row in page.get('rows', []):
         if row.get('withdrawn'):
             continue
         deadlines.append(row.get('start_at'))

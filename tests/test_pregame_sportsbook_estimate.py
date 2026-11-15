@@ -133,7 +133,9 @@ def test_aggregate_pregame_uses_exact_same_frame_pair_before_finance(monkeypatch
     projected = aggregate_overlay(None, data, owner, states, at=at, phase='pregame', sgo_inputs=inputs)
     comparison = page(projected, query, ('ev', None, 0, 10))
     assert not comparison['rows']
-    observed, = comparison['price_preview'][0]['offers']
+    assert comparison['calculation_reason'] == 'No eligible two-sided sportsbook reference is available for these offers.'
+    browse = page(projected, dict(query, ranked='', browse_odds='1'), ('ev', None, 0, 10))
+    observed, = browse['rows'][0]['offers']
     assert observed['current'] and observed['value'] is None
 
 
@@ -173,7 +175,6 @@ def test_native_pregame_desk_uses_current_books_before_the_slate_catches_up(monk
     query = dict(layout='desk', ranked='1', basis='sportsbooks', lines='main', summary='1')
     outcome = page(projected, query, ('ev', None, 0, 10))
     assert outcome['ranked_group_count'] == 1
-    assert not outcome['price_preview']
     group, = outcome['rows']
     offers = {offer['venue']: offer for offer in group['offers']}
     assert set(offers) == {'kalshi', 'polymarket_us'}
@@ -189,15 +190,18 @@ def test_native_pregame_desk_uses_current_books_before_the_slate_catches_up(monk
     selected, = overlay(None, data, owner, states, at=AT, contract=contract_id(records[0]))['rows']
     assert selected['native_inspection']['trade_fee'] == projected['rows'][0]['trade_fee']
     reviewed = page(projected, dict(query, basis='reviewed'), ('ev', None, 0, 10))
-    assert {offer['id'] for offer in reviewed['price_preview'][0]['offers']} == {offer['id'] for offer in offers.values()}
-    assert all(offer['value'] is None for offer in reviewed['price_preview'][0]['offers'])
+    assert not reviewed['rows']
+    browsed, = page(projected, dict(query, ranked='', browse_odds='1', basis='reviewed'), ('ev', None, 0, 10))['rows']
+    assert {offer['id'] for offer in browsed['offers']} == {offer['id'] for offer in offers.values()}
+    assert all(offer['value'] is None for offer in browsed['offers'])
     with monkeypatch.context() as missing_reference:
         missing_reference.setattr('app.storage.ordinary_publication.pregame_sportsbooks', lambda *args, **kw: {})
         current = overlay(None, data, owner, states, at=AT)
         assert [row['game_key'] for row in current['rows']] == [row['game_key'] for row in projected['rows']]
-        preview, = page(current, query, ('ev', None, 0, 10))['price_preview']
-        assert preview['id'] == group['id']
-        assert {offer['venue'] for offer in preview['offers']} == {'kalshi', 'polymarket_us'}
+        assert not page(current, query, ('ev', None, 0, 10))['rows']
+        browsed, = page(current, dict(query, ranked='', browse_odds='1'), ('ev', None, 0, 10))['rows']
+        assert browsed['id'] == group['id']
+        assert {offer['venue'] for offer in browsed['offers']} == {'kalshi', 'polymarket_us'}
     assert overlay(None, data, owner, states, at=AT + timedelta(seconds=31)) is data
     assert overlay(None, data, dict(owner, global_stopped=True), states, at=AT) is data
     assert [offer['venue'] for offer in overlay(None, data,
@@ -258,6 +262,6 @@ def test_phase_is_applied_before_counts_filters_and_pagination():
     pregame = page(data, query, ('ev', None, 0, 1))
     assert pregame['phase'] == 'pregame' and pregame['basis'] == 'reviewed'
     assert pregame['matched_offer_count'] == 1 and pregame['total'] == 0
-    assert pregame['price_preview'][0]['offers'][0]['id'] == 'eligible'
+    assert not pregame['rows']
     assert price_phase({'scheduled_start': START.isoformat(), 'status': {'live': True}}, {}, AT.isoformat()) == {
         'state': 'live', 'reason': 'event_started_before_schedule', 'basis': 'explicit_source_state'}

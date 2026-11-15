@@ -45,7 +45,7 @@ def test_opportunities_separates_market_families_for_the_same_game():
             ("opposite", "spread", "cover", "-2.5", "Minnesota", "1"),
         )
     ]
-    preview = False
+    estimates_available = True
 
     def respond(route):
         url = urlparse(route.request.url)
@@ -55,12 +55,18 @@ def test_opportunities_separates_market_families_for_the_same_game():
         elif url.path.startswith("/view/current/"):
             route.fulfill(path=ASSETS / Path(url.path).name)
         elif url.path == "/api/comparison-current":
-            fallback = preview and "browse_odds" not in query
+            empty_ev = not estimates_available and "browse_odds" not in query
             route.fulfill(
                 json=dict(
                     state="ready",
-                    rows=[] if fallback else market_rows,
-                    price_preview=market_rows if fallback else [],
+                    rows=[] if empty_ev else market_rows,
+                    # An older API may still send the former fallback payload.
+                    price_preview=market_rows if empty_ev else [],
+                    calculation_reason=(
+                        "No eligible two-sided sportsbook reference is available for these offers."
+                        if empty_ev
+                        else None
+                    ),
                     row_kind="games",
                     total=1,
                     page_count=1,
@@ -90,21 +96,23 @@ def test_opportunities_separates_market_families_for_the_same_game():
             cards.nth(2).get_by_role("heading", name="Minnesota to cover -2.5")
         ).to_have_count(0)
 
-        preview = True
+        estimates_available = False
         tab.reload()
+        results = tab.locator("#results")
         matrices = tab.locator("#results .odds-card")
-        expect(matrices.locator("h2")).to_have_text(
-            [
-                f"{DENVER} · Moneyline",
-                f"{DENVER} · Total",
-                f"{DENVER} · Spread",
-            ]
-        )
-        expect(matrices.nth(0).locator("tbody tr")).to_have_count(1)
-        expect(matrices.nth(1).locator("tbody tr")).to_have_count(2)
-        expect(matrices.nth(2).locator("tbody tr")).to_have_count(2)
+        expect(
+            results.get_by_role("heading", name="No EV estimates available")
+        ).to_be_visible()
+        expect(
+            results.get_by_text(
+                "No eligible two-sided sportsbook reference is available for these offers."
+            )
+        ).to_be_visible()
+        expect(matrices).to_have_count(0)
+        expect(cards).to_have_count(0)
 
-        tab.goto(f"{BASE}/browse-odds")
+        results.get_by_role("link", name="Browse odds ↗").click()
+        expect(tab).to_have_url(re.compile(r"/browse-odds(?:\?|$)"))
         expect(matrices).to_have_count(1)
         expect(matrices.locator("tbody tr")).to_have_count(5)
         browser.close()
@@ -440,7 +448,6 @@ def test_ranked_and_browse_journey(width, tmp_path):
     errors = []
     provider_requests = []
     unavailable = False
-    show_current_prices = False
     browse_failure = False
     hide_game_prices = False
     current_quote = latest_quote
@@ -521,11 +528,6 @@ def test_ranked_and_browse_journey(width, tmp_path):
                 json=dict(
                     state="ready",
                     rows=rows,
-                    price_preview=(
-                        [public_group(detroit, query.get("basis"))]
-                        if show_current_prices and not rows and query.get("ranked")
-                        else []
-                    ),
                     games=[
                         dict(
                             game_key=DENVER, title=DENVER, start_at=START, league="NBA"
@@ -798,7 +800,7 @@ def test_ranked_and_browse_journey(width, tmp_path):
             unavailable = True
             tab.get_by_role("button", name="Refresh list").click()
             expect(
-                tab.get_by_role("heading", name="No matching EV comparisons")
+                tab.get_by_role("heading", name="No EV estimates available")
             ).to_be_visible()
             expect(
                 tab.get_by_text("The sportsbook reference source is on hold.")
@@ -806,14 +808,8 @@ def test_ranked_and_browse_journey(width, tmp_path):
             expect(tab.locator("#notice")).to_contain_text(
                 "SportsGameOdds updates are on hold pending provider reconciliation"
             )
-            show_current_prices = True
-            tab.get_by_role("button", name="Refresh list").click()
-            expect(tab.get_by_role("heading", name="Current prices")).to_be_visible()
-            expect(
-                tab.locator(".odds-card").get_by_role("heading", name=DETROIT)
-            ).to_be_visible()
+            expect(tab.locator("#results .odds-card")).to_have_count(0)
             expect(cards).to_have_count(0)
-            show_current_prices = False
             tab.get_by_role("link", name="Find my game ↗").click()
             expect(tab.get_by_role("heading", name=DETROIT)).to_be_visible()
             quote_button = tab.locator('[data-offer-id="pmus-detroit"]')

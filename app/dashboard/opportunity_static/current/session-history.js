@@ -18,7 +18,7 @@ export class DiagnosticSession {
     const context=JSON.stringify([filters,page.offset,page.offset?page.browse_id:null]);
     if(context!==this.scope){this.record('display_scope',{filters,offset:page.offset,browse_id:page.browse_id});this.scope=context;this.visible.clear();}
     const visible=new Set();
-    const groups=page.rows?.length ? page.rows : page.price_preview || [];
+    const groups=page.rows || [];
     for(const group of groups)for(const offer of group.offers||[]){
       visible.add(offer.id);
       const value={id:offer.id,venue:offer.venue,game:group.game_title,selection:offer.selection,

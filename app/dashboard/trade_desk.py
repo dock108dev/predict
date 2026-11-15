@@ -643,7 +643,6 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
     # Qualify the complete slate before ranking thresholds and pagination.
     # Keep the full evidence decode in present() limited to the returned page.
     price_lists = {}
-    preview_candidates = groups
     limited_coverage = False
     if comparable:
         retained_comparison = browse and (show_retained or show_last_known)
@@ -731,31 +730,17 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
         groups = [g for g in groups if (not ranked or g['score'] is not None)
                   and passes(Fraction(g['score']) if g['score'] is not None else None, g.get('retail_payoff'))]
 
-    show_preview = (ranked and view != 'arbs' and not browse and not groups
-                    and not query.get('positive') and minimum is None and dollars is None)
-    preview_groups = []
-    if show_preview and pregame_desk:
-        if not comparable:
-            preview_groups = preview_candidates
-        else:
-            preview_ids = set(comparable_groups(candidates, games.values(), **comparison_options,
-                                               retained=show_last_known, minimum_places=1))
-            preview_groups = [group for group in preview_candidates if group['id'] in preview_ids]
-    paged_preview = bool(pregame_desk and show_preview and preview_groups)
     page_by_game = (browse or pregame_desk and ranked) and not query.get('game_key') and view != 'arbs'
-    page_units = preview_groups if paged_preview else groups
+    page_units = groups
     if page_by_game:
         by_game = {}
-        if paged_preview:
-            page_units = sorted(page_units, key=lambda g: (g['start_at'], g['id']))
-        for group in page_units:
+        for group in groups:
             game = by_game.setdefault(group['game_key'], dict(id=group['game_key'],
                 game_key=group['game_key'], game_title=group['game_title'], start_at=group['start_at'], outcomes=[]))
             game['outcomes'].append(group)
         page_units = (sorted(by_game.values(), key=lambda game: (game['start_at'], game['id']))
                       if browse else list(by_game.values()))
-    session_query = dict(query, price_preview='1') if paged_preview else query
-    session=browsing.page(page_units,session_query,offset,limit) if browsing else None
+    session=browsing.page(page_units,query,offset,limit) if browsing else None
     if session and session['state']=='page_changed':return session
     if session:
         offset, anchor_state = session['offset'], session['anchor_state']
@@ -764,28 +749,8 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
         offset, anchor_state = locate_page(page_units, query, offset, limit)
     selected = session['rows'] if session else page_units[offset:offset + limit]
     visible_groups = [group for game in selected for group in game.get('outcomes', [game])] if page_by_game else selected
-    visible = [] if paged_preview else [g if g.get('withdrawn') else present(g) for g in visible_groups]
-    price_preview = []
-    if paged_preview:
-        price_preview = [dict(present(group), score=None, score_source=None)
-                         for group in visible_groups if not group.get('withdrawn')]
-    elif show_preview and offset == 0:
-        # Read the same current, scoped prices even when none qualify for EV
-        # ranking. These groups never count as opportunities or ranked pages.
-        current_groups = comparison_groups(
-            [row for row in selected_rows if row.get('price_current') and (
-                query.get('lines') != 'main' or not row.get('alternate',
-                    ((row.get('source') or {}).get('native_market_id') or '').startswith('alternate:')))],
-            by_id, metric, current=True)
-        games_in_preview = {}
-        for group in sorted(current_groups, key=lambda g: (g['start_at'], g['id'])):
-            games_in_preview.setdefault(group['game_key'], []).append(group)
-        for game in list(games_in_preview.values())[:5]:
-            for group in game[:limit]:
-                value = present(group)
-                value['score'] = None
-                price_preview.append(value)
-    display_groups = [group for group in (*visible, *price_preview) if not group.get('withdrawn')]
+    visible = [g if g.get('withdrawn') else present(g) for g in visible_groups]
+    display_groups = [group for group in visible if not group.get('withdrawn')]
     if enrich and show_last_known:
         # Historical book reads are needed only for the returned page.
         enrich(dict(rows=display_groups, games=list(games.values())), include_retained=True)
@@ -827,7 +792,7 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
         elif browse and not public_summary and (retained_fallback or not show_retained):
             # Retained prices and hints are needed only for the returned page.
             enrich(displayed, include_retained=retained_fallback, mark_retained=not retained_fallback)
-    keys = {g['game_key'] for g in (*visible, *price_preview) if not g.get('withdrawn')}
+    keys = {g['game_key'] for g in display_groups}
     if browse and game_key and any(row['game_key'] == game_key for row in phase_rows):
         keys.add(game_key)
     retained_game = None
@@ -848,10 +813,8 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
                 selected_line, = matching_lines
     if public_summary:
         visible = [public_group(group, basis) for group in visible]
-        price_preview = [public_group(group, basis) for group in price_preview]
     return dict(**({k:v for k,v in session.items() if k not in ('rows','state','total','offset','anchor_state')} if session else {}),
-                state='ready', rows=visible, price_preview=price_preview,
-                price_preview_paged=paged_preview,
+                state='ready', rows=visible,
                 total=session['total'] if session else len(page_units), offset=offset, limit=limit,
                 page_count=len(selected), anchor_state=anchor_state,
                 games=[g for key, g in games.items() if key in keys],

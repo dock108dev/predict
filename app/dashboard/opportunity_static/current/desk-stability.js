@@ -40,8 +40,7 @@ function holdRow(row, current) {
 }
 
 export function displayRows(page) {
-  return (page?.rows?.length ? page.rows : page?.price_preview || [])
-    .filter(row => !row.withdrawn);
+  return (page?.rows || []).filter(row => !row.withdrawn);
 }
 
 function order(rows) {
@@ -58,7 +57,6 @@ export function holdDeskPage(previous, next) {
   const keep = rows => (rows || []).map(row =>
     row.withdrawn ? row : holdRow(row, updates.get(rowKey(row))));
   const changed = order(oldRows) !== order(nextRows)
-    || Boolean(previous.price_preview?.length) !== Boolean(next.price_preview?.length)
     || previous.total !== next.total;
   return {
     changed,
@@ -66,8 +64,7 @@ export function holdDeskPage(previous, next) {
       ...next, browse_id:previous.browse_id, offset:previous.offset, total:previous.total,
       page_count:previous.page_count, row_kind:previous.row_kind, games:previous.games,
       retained_game:previous.retained_game, selected_game_key:previous.selected_game_key,
-      selected_line_id:previous.selected_line_id, rows:keep(previous.rows),
-      price_preview:keep(previous.price_preview)
+      selected_line_id:previous.selected_line_id, rows:keep(previous.rows)
     }
   };
 }

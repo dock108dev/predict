@@ -79,10 +79,9 @@ class TradeDesk(TestCase):
                 scenario_page = page(data, dict(query, basis=scenario), ('ev', None, 0, 1))
                 self.assertEqual(scenario_page['rows'][0]['score'], score)
         self.assertEqual(page(data, dict(query, basis='reviewed'), ('ev', None, 0, 1))['rows'], [])
-        fallback = page(data, dict(query, basis='reviewed', positive=''), ('ev', None, 1, 1))
-        self.assertEqual((fallback['page_count'], fallback['total'], fallback['rows']), (1, 3, []))
-        self.assertTrue(fallback['price_preview_paged'])
-        self.assertEqual({item['game_key'] for item in fallback['price_preview']}, {'second'})
+        empty = page(data, dict(query, basis='reviewed', positive=''), ('ev', None, 1, 1))
+        self.assertEqual((empty['page_count'], empty['total'], empty['rows']), (0, 0, []))
+        self.assertNotIn('price_preview', empty)
 
     def test_pregame_keeps_last_known_venue_prices_after_the_entire_market_expires(self):
         venues = ('kalshi', 'polymarket_us', 'novig', 'prophetx')
@@ -105,8 +104,9 @@ class TradeDesk(TestCase):
         self.assertTrue(all(not offer['current'] and offer['value'] is None for offer in group['offers']))
         ranked = page(data, dict(query, ranked='1'), options)
         self.assertEqual(ranked['rows'], [])
-        self.assertEqual(ranked['price_preview'][0]['id'], group['id'])
+        self.assertEqual(ranked['total'], 0)
         self.assertEqual(ranked['ranked_group_count'], 0)
+        self.assertEqual(ranked['calculation_reason'], 'Fresh prices are required to calculate expected value.')
 
         replacement = dict(stale[-1], id='new', price_current=True, current_reasons=[])
         renewed = page(dict(data, rows=[*data['rows'], replacement]), dict(query, ranked='1'), options)
@@ -180,7 +180,7 @@ class TradeDesk(TestCase):
             row['_desk_event'] = dict(aggregate_event, source_participant_roles={'home': roles['away'], 'away': roles['home']})
         self.assertEqual(page(data, query, ('ev', None, 0, 10))['total'], 2)
 
-    def test_empty_opportunities_include_only_current_unranked_prices(self):
+    def test_empty_opportunities_explain_unavailable_ranking_without_listing_prices(self):
         current = quote('current', 'kalshi', value='12')
         expired = quote('expired', 'polymarket_us', current=False)
         data = result(current, expired)
@@ -188,16 +188,9 @@ class TradeDesk(TestCase):
         view = page(data, query, ('ev', None, 0, 25))
         self.assertEqual(view['rows'], [])
         self.assertEqual(view['total'], 0)
-        self.assertEqual([(offer['id'], offer['value']) for group in view['price_preview']
-                          for offer in group['offers']], [('current', None)])
-        self.assertEqual(page(data, dict(query, positive='on'), ('ev', None, 0, 25))['price_preview'], [])
-
-    def test_price_preview_reserves_space_for_multiple_games(self):
-        a = quote('one', 'kalshi')
-        b = dict(quote('two', 'polymarket_us'), game_key='second', game_title='Another matchup')
-        query = dict(layout='desk', ranked='1', phase='', basis='sportsbooks', lines='main', summary='1')
-        preview = page(result(a, b), query, ('ev', None, 0, 1))['price_preview']
-        self.assertEqual({group['game_key'] for group in preview}, {'game', 'second'})
+        self.assertNotIn('price_preview', view)
+        self.assertIsNotNone(view['calculation_reason'])
+        self.assertEqual(page(data, dict(query, positive='on'), ('ev', None, 0, 25))['rows'], [])
 
     def test_three_current_sites_per_exact_outcome_before_rank_and_pagination(self):
         def spread(id_, venue, line, value, *, away=False, current=True):
@@ -339,7 +332,7 @@ class TradeDesk(TestCase):
                          {row['id'] for row in (*covered, *native)})
         ranked = page(data, dict(query, ranked='1'), options)
         self.assertEqual(ranked['rows'], [])
-        self.assertEqual({group['game_key'] for group in ranked['price_preview']}, {'game', 'kalshi', 'polymarket_us'})
+        self.assertEqual(ranked['total'], 0)
 
     def test_native_only_sportsbook_quotes_are_displayed_without_qualifying_ev(self):
         home = quote('native-home', 'kalshi')
