@@ -318,8 +318,13 @@ def mount(app):
                         cursor=cursor, generation=head['generation'], result_id=head['result_id'],
                         restart_offset=0, rows=[], provider_requests=0)
                 stage=monotonic()
-                if req.path.endswith('/selection'):
-                    selected=req.query.get('id')
+                is_selection = req.path.endswith('/selection')
+                selected = req.query.get('id') if is_selection else None
+                live_contract = selected.removeprefix('native-current:') if selected and selected.startswith('native-current:') else None
+                native_desk = (provider == 'sportsgameodds' and options is not None and options[0] != 'arbs'
+                               and query.get('layout') == 'desk' and query.get('basis') == 'sportsbooks'
+                               and query.get('phase') != 'live' and (current_desk or live_contract))
+                if is_selection:
                     if not selected or len(selected)>128:
                         raise PublicRequestError('Exact selection required')
                     pairs=[r for r in result['pairs'] if r['id']==selected]
@@ -343,6 +348,11 @@ def mount(app):
                                       current_desk=current_desk and not retained_fallback,
                                       retain_sportsbook_ev=retain_sportsbook_ev)
                 timings['projection']=(monotonic()-stage)*1000
+                if native_desk:
+                    from app.storage.current_native_desk import overlay
+                    stage=monotonic()
+                    result = overlay(db, result, owner, states, at=at, contract=live_contract)
+                    timings['native_desk']=(monotonic()-stage)*1000
                 if is_fee_census:
                     inventory_deps = live.dependencies(db, provider=provider)
                     return dict(fee_census(db, result, inventory_deps, owner, states, at, pairs=captured_pairs,

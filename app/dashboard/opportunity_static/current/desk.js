@@ -475,6 +475,7 @@ async function reserveEvidence(result_id) {
   return response.json();
 }
 async function pinEvidence(offer, basis){
+  if (offer.live_native_desk) return {evidence:{}};
   if(!offer.evidence_result_id)throw Error('Missing exact evidence');
   if (replay) {
     const query = new URLSearchParams({dataset, frame, result_id:offer.evidence_result_id, id:offer.id});

@@ -150,19 +150,21 @@ def sportsbook_frames(db, at):
     return list(rows)
 
 
-def pregame_sportsbooks(db, owner, states, at, *, frames=None):
+def pregame_sportsbooks(db, owner, states, at, *, frames=None, occurrences=None):
     from app.comparison.public_sportsbook_estimate import allowed, index, read_captures, sgo_observation
     from .sportsgameodds_reference import read_event, read_event_frame
     from collections import defaultdict
 
     if not allowed(owner):
         return {}
-    matches = {key: [value] for key, value in index(read_captures(POLICY_ROOT, at=at), at=at).items()}
+    matches = {key: [value] for key, value in index(read_captures(POLICY_ROOT, at=at), at=at).items()
+               if occurrences is None or key in occurrences}
     candidates = defaultdict(list)
     for row in sportsbook_frames(db, at) if frames is None else frames:
         if source_allowed(states.get('sportsgameodds', {}), row['competition']):
             key = (row['competition'], stamp(row['scheduled_start']), row['home'], row['away'])
-            candidates[key].append(row['native_event_id'])
+            if occurrences is None or key in occurrences:
+                candidates[key].append(row['native_event_id'])
     for key, ids in candidates.items():
         if len(ids) != 1:
             continue

@@ -7,6 +7,7 @@ from copy import deepcopy, copy
 from datetime import datetime, timezone
 from decimal import Decimal, localcontext
 from time import perf_counter
+from app.comparison.source_clock import NATIVE_BOOK_MAX_AGE_SECONDS
 from app.dashboard.session_projection import SessionProjection, stable
 from app.dashboard.current_contract import packed, serialize, quotes_of
 from app.dashboard.current_normalized import catalog_from_normalized
@@ -313,7 +314,7 @@ def normalized_records(projection, states, previous, *, dated_annotations=True, 
                             'Native predicate reviewed; exceptional settlement and costs remain unqualified.'),
                         cost_note='Current applicable costs unavailable',
                         depth=[dict(price=str(l['price']['value']), quantity=str(l['quantity']['value'])) for l in levels],
-                        freshness_policy=dict(version=venue+'-book-age-engineering-1', maximum_age_seconds=30),
+                        freshness_policy=dict(version=venue+'-book-age-engineering-1', maximum_age_seconds=NATIVE_BOOK_MAX_AGE_SECONDS),
                         provenance=dict(mode='current', real_source=True, sha256=binding['sha256']))
                     if book.get('book_confirmation'):
                         q['book_confirmation']=deepcopy(book['book_confirmation'])

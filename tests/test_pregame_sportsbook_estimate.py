@@ -4,6 +4,8 @@ from fractions import Fraction
 from app.comparison.game_phase import price_phase
 from app.comparison.public_sportsbook_estimate import SOURCE, collect_pairs, estimate, market_pairs, quote, select
 from app.dashboard.trade_desk import page
+from app.storage.current_native_desk import overlay
+from app.storage.current_rows import contract_id
 from tests.test_trade_desk import quote as desk_quote, result
 
 
@@ -68,6 +70,54 @@ def test_public_browse_can_show_fair_odds_while_price_ev_is_pending():
     assert ref['fair_odds']['american'] == '+113.89'
     assert group['offers'][0]['value'] is None
     assert not group['offers'][0]['current']
+
+
+def test_native_pregame_desk_uses_current_books_before_the_slate_catches_up(monkeypatch):
+    clock = AT - timedelta(seconds=3)
+    records = []
+    for venue, cost in [('kalshi', '0.42'), ('polymarket_us', '0.46')]:
+        records.append(dict(
+            event=dict(competition='NFL', scheduled_start=START.isoformat(), home='NFL:NYG', away='NFL:WAS',
+                       source_participant_roles=dict(home='NFL:NYG', away='NFL:WAS')),
+            market_identity=dict(family='moneyline', period='full_game', line=None),
+            selection=dict(participant='NFL:WAS', predicate='win', signed_line=None),
+            quote=dict(venue=venue, state='available',
+                source=dict(provider=venue, native_event_id='game', native_market_id='game-winner',
+                            native_outcome_id='away'),
+                original=dict(value=cost, units='usd_per_contract', payout='1', payout_units='USD'),
+                times=dict(source_at=clock.isoformat(), received_at=AT.isoformat()),
+                freshness_policy=dict(maximum_age_seconds=30))))
+    deps = {contract_id(record): ['price', 'contract', 'event'] for record in records}
+
+    def active(db, *, at, venues, contract):
+        return [record for record in records if record['quote']['venue'] in venues
+                and (contract is None or contract_id(record) == contract)], deps
+
+    monkeypatch.setattr('app.storage.current_native_desk.active_records', active)
+    monkeypatch.setattr('app.storage.ordinary_publication.pregame_sportsbooks',
+                        lambda db, owner, states, at, occurrences: {OCCURRENCE: [observation()]})
+    data = dict(result(), games=[])
+    data['publication']['read_at'] = AT.isoformat()
+    owner = dict(active=True, healthy=True)
+    states = dict(kalshi={'state': 'available'}, polymarket_us={'state': 'available'})
+    projected = overlay(None, data, owner, states, at=AT)
+    query = dict(layout='desk', ranked='1', basis='sportsbooks', lines='main', summary='1')
+    group, = page(projected, query, ('ev', None, 0, 10))['rows']
+    offers = {offer['venue']: offer for offer in group['offers']}
+    assert set(offers) == {'kalshi', 'polymarket_us'}
+    for record in records:
+        q = record['quote']
+        offer = offers[q['venue']]
+        assert offer['current'] and offer['live_native_desk']
+        assert offer['fair_reference']['books'] == ['draftkings']
+        assert offer['current_until'] == (clock + timedelta(seconds=30)).isoformat()
+        assert Fraction(offer['value']) == 100 * (Fraction(36, 77) / Fraction(q['original']['value']) - 1)
+    assert projected['rows'][0]['id'] == 'native-current:' + contract_id(records[0])
+    assert len(overlay(None, data, owner, states, at=AT, contract=contract_id(records[0]))['rows']) == 1
+    assert overlay(None, data, owner, states, at=AT + timedelta(seconds=31)) is data
+    assert overlay(None, data, dict(owner, global_stopped=True), states, at=AT) is data
+    assert [offer['venue'] for offer in overlay(None, data,
+        dict(owner, paused_sources=['kalshi']), states, at=AT)['rows']] == ['polymarket_us']
 
 
 def test_both_original_clocks_kickoff_omission_and_suspension():

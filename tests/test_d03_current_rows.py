@@ -504,6 +504,32 @@ class CurrentRows(unittest.TestCase):
         raw=self.db.execute('SELECT source_at,received_at FROM current_native_book').fetchone()
         self.assertEqual((raw['source_at'],raw['received_at']),(book['raw']['exchange_at'],book['raw']['received_at']))
 
+    def test_pregame_desk_reads_only_the_offer_linked_to_the_current_native_book(self):
+        from app.storage.current_native_desk import active_records
+
+        at = datetime.now(timezone.utc)
+        rows = future_records('polymarket_us')
+        for row in rows:
+            start = (at + timedelta(hours=1)).isoformat()
+            row['event']['scheduled_start'] = row['market_identity']['scheduled_start'] = start
+            row['quote']['times'].update(source_at=(at - timedelta(seconds=2)).isoformat(),
+                                        received_at=(at - timedelta(seconds=1)).isoformat())
+        book = self.native_book(rows)
+        book['raw'].update(exchange_at=rows[0]['quote']['times']['source_at'],
+                           received_at=rows[0]['quote']['times']['received_at'])
+        self.store.upsert_records(rows)
+        self.store.replace_native_books([book])
+
+        captured, deps = active_records(self.db, at=at, venues=['polymarket_us'])
+        self.assertTrue(captured)
+        self.assertEqual(set(deps), {contract_id(row) for row in captured})
+        self.assertEqual(active_records(self.db, at=at + timedelta(seconds=30), venues=['polymarket_us']), ([], {}))
+
+        newer = deepcopy(book)
+        newer['raw'].update(exchange_at=at.isoformat(), received_at=at.isoformat())
+        self.store.replace_native_books([newer])
+        self.assertEqual(active_records(self.db, at=at, venues=['polymarket_us']), ([], {}))
+
     def test_native_offer_keeps_its_exact_price_and_depth_after_book_head_advances(self):
         from decimal import Decimal
 

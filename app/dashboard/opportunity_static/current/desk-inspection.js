@@ -295,7 +295,7 @@ export function tradeInspection(offer, group, evidence, {mode, position, basis, 
       candidates:Object.fromEntries(selectedRef.contributors.map(item => [item.venue, item.inputs]))}));
   }
   if (!evidence?.inspection) {
-    result.append(el('p', 'Loading the pinned calculation…', 'desk-meta inspection-loading'));
+    if (!offer.live_native_desk) result.append(el('p', 'Loading the pinned calculation…', 'desk-meta inspection-loading'));
     return result;
   }
   const details = disclosure('Calculations and settlement');

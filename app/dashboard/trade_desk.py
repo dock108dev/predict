@@ -147,6 +147,7 @@ def offer(original, metric=None, *, sportsbook_updates_paused=False):
     return dict(before_fee=None if gross is None else str(gross),after_fee=None if reviewed is None else str(reviewed),
                 conservative=None if conservative is None else str(conservative),metric=metric,
                 sportsbook=sportsbook,fair_reference=fair_reference,
+                **({'live_native_desk': True} if row.get('live_native_desk') else {}),
                 trade_fee=row.get('trade_fee'),fee=row.get('conditional_trade_benchmark'),conservative_fee=row.get('conservative_trade_benchmark'),
                 reference_calculation=row.get('reference_calculation'),economic_revision=row.get('economic_revision'),price_revision=row.get('price_revision'),evidence_result_id=row.get('evidence_result_id'),
                 captured_at=row.get('captured_at'),game_state=row.get('game_state','unknown'),
@@ -178,6 +179,9 @@ def public_offer(quote, basis):
               'game_state', 'source_clock_at', 'confirmed_at', 'received_at')
     result = {field: quote[field] for field in fields if field in quote}
     sportsbook = quote.get('sportsbook')
+    if quote.get('live_native_desk'):
+        result.update(live_native_desk=True, sportsbook=sportsbook,
+                      cost_per_normal_claim=quote['cost_per_normal_claim'])
     result['fair_odds'] = (sportsbook and sportsbook.get('fair_odds')) if basis == 'sportsbooks' else (
         quote['reference'] if quote['reference_current'] else None)
     result['trade_fee_available'] = bool((quote.get('trade_fee') or {}).get('available'))

@@ -3,6 +3,9 @@ from datetime import timedelta
 from app.storage.store import stamp
 
 
+NATIVE_BOOK_MAX_AGE_SECONDS = 30
+
+
 def evidence(quote):
     """An already content-bound ingress proof can date an unchanged book.
 
