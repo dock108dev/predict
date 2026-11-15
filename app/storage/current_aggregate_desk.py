@@ -2,9 +2,13 @@
 from datetime import timedelta
 
 from app.collection.current_policy import aggregate_scope, native_scope
+from app.collection.sportsgameodds_adapter import PROPHETX_BOOKMAKER_ID
 from app.comparison.cashflows import exact_wire
 from app.comparison.game_phase import LIVE_SECONDS, ODDSLINK_LIVE_SECONDS, PREGAME_SPORTSBOOK_SECONDS
-from app.comparison.public_sportsbook_estimate import SOURCE as ODDSLINK, allowed, outcome, signature
+from app.comparison.public_sportsbook_estimate import SOURCE as ODDSLINK, allowed, outcome, select as public_estimate, signature
+from app.comparison.sgo_reference import BEST_BOOKS
+from app.comparison.sgo_reference_publication import FrameQuoteIndex
+from app.comparison.sgo_sportsbook_baseline import select as sportsbook_baseline
 from app.comparison.snapshot_fee_outcome import unavailable
 from app.comparison.sporting_scope import supported
 from app.dashboard.current_contract import price
@@ -14,6 +18,7 @@ from .current_native_desk import game_signature
 from .current_rows import project_contract
 from .ordinary_projection import occurrence_key, source_allowed
 from .schedule_metadata import witness
+from .sportsgameodds_reference import EventInputs
 from .store import hashed, stamp
 
 
@@ -74,9 +79,9 @@ def game_for(event, key, prior, games, dependencies, registry):
                 title=event['title'], league=league, start_at=start.isoformat(), participants=participants)
 
 
-def overlay(db, result, owner, states, *, at, phase, contract=None):
+def overlay(db, result, owner, states, *, at, phase, contract=None, sgo_inputs=None):
     from app.collection.oddslink_prophetx import live_occurrences
-    from .ordinary_publication import quote_authority
+    from .ordinary_publication import pregame_sportsbooks, quote_authority
 
     if not owner.get('healthy') or not allowed(owner):
         return result
@@ -96,8 +101,22 @@ def overlay(db, result, owner, states, *, at, phase, contract=None):
     selected = {}
     registry = Registry.current()
     expected_state = 'live' if phase == 'live' else 'scheduled'
-    for stored in active_offers(db, at=at, phase=phase, venues=venues, providers=providers,
-                                sports=sorted(sports), contract=contract):
+    offers = list(active_offers(db, at=at, phase=phase, venues=venues, providers=providers,
+                                sports=sorted(sports), contract=contract))
+    sportsbook_indexes = {}
+    public_observations = {}
+    if phase == 'pregame':
+        inputs = sgo_inputs if sgo_inputs is not None else EventInputs(db)
+        frames = inputs.frames(item['event']['id'] for item in offers if item['provider'] == SGO)
+        quotes = inputs.quotes(frames, bookmakers=(*BEST_BOOKS, 'novig', 'prophetx', PROPHETX_BOOKMAKER_ID),
+                              source_since=at - timedelta(seconds=PREGAME_SPORTSBOOK_SECONDS))
+        sportsbook_indexes = {event_id: FrameQuoteIndex(rows, frames[event_id]) for event_id, rows in quotes.items()}
+        public_occurrences = {signature(item['event'], item['competition']) for item in offers
+                              if item['provider'] == ODDSLINK}
+        if public_occurrences:
+            public_observations = pregame_sportsbooks(db, owner, states, at, occurrences=public_occurrences,
+                                                      sgo_inputs=inputs)
+    for stored in offers:
         q, event, cid, provider = (stored[key] for key in ('quote','event','id','provider'))
         row_source, league = q['source'], stored['competition']
         if (not source_allowed(states[provider], league) or provider == ODDSLINK and league not in native_sports
@@ -141,11 +160,20 @@ def overlay(db, result, owner, states, *, at, phase, contract=None):
             alternate=(record.get('comparison_source_metadata') or {}).get('alternate'))
         row.update(id=PREFIX + cid, kind='single', game_key=game['game_key'], game_title=game['title'],
             start_at=game['start_at'], price_current=True, game_state=lifecycle['state'],
+            _desk_event=event,
             game_state_basis=lifecycle.get('basis'), game_state_observed_at=lifecycle.get('observed_at'),
             current_reasons=row.get('current_reasons', []), live_aggregate_desk=True,
             captured_at=row.get('captured_at') or at.isoformat(),
             price_revision=hashed([stored['offer_revision'], stored['received_at']]),
             economic_revision=row.get('economic_revision'))
+        baseline = None
+        if provider == SGO and (index := sportsbook_indexes.get(event['id'])) is not None:
+            baseline = sportsbook_baseline(record, (), index.frame, at=at, index=index)
+        elif provider == ODDSLINK and public_observations:
+            baseline = public_estimate(dict(raw, original_record=record), authority, public_observations, at=at)
+        if baseline is not None:
+            row.update(sportsbook_baseline=baseline, sportsbook_return_percent=baseline['return_percent'],
+                       economic_revision=hashed([row['economic_revision'], baseline]))
         if contract is not None:
             from app.comparison.inspection_math import offer_disclosures, offer_math
 

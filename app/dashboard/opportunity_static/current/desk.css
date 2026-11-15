@@ -357,8 +357,10 @@ dialog::backdrop { background: #101b3180; }
 }
 .opportunities-app .desk-toggle input { min-height: 0; }
 .opportunities-app #group-field select { max-width: 12rem; }
-.opportunities-app .desk-refresh { margin: .35rem 0 .85rem; }
+.opportunities-app .desk-refresh { justify-content: end; margin: .35rem 0 .75rem; }
 .opportunities-app .desk-refresh button { font-size: .78rem; }
+.previous-results { color: var(--ink); border-inline-start: 3px solid var(--accent); padding-inline-start: .6rem; }
+[data-expired-calculation] { display: none !important; }
 .opportunities-app .desk-empty,
 .opportunity-card, .odds-card {
   background: var(--paper); border: 1px solid var(--rule); border-radius: 14px;
@@ -429,6 +431,9 @@ dialog::backdrop { background: #101b3180; }
 }
 .compact-prices .desk-offer .p-odds { font-size: .8rem; font-weight: 700; }
 .compact-ev-footer > a { white-space: nowrap; }
+.ranked-outcomes { border-top: 1px solid var(--rule); margin-top: .4rem; padding-top: .25rem; }
+.ranked-outcomes > summary, .market-disclosure > summary { color: var(--accent); font-size: .8rem; cursor: pointer; }
+.ranked-outcomes > .opportunity-card { box-shadow: none; margin: .35rem 0 0; }
 .opportunity-arb .desk-expand button { display: block; }
 .arb-card-legs { display: grid; gap: .3rem; padding: 0; margin: .45rem 0 0; list-style: none; }
 .arb-card-legs li { display: flex; align-items: baseline; flex-wrap: wrap; gap: .3rem .55rem; }
@@ -438,6 +443,10 @@ dialog::backdrop { background: #101b3180; }
 .odds-card > header h2 { font-size: 1.2rem; margin: 0; }
 .odds-card > header p { margin: 0; }
 .odds-card > header .opportunity-link { display: inline-block; margin-top: .15rem; }
+.odds-disclosure { margin-bottom: .45rem; }
+.odds-disclosure > header { padding-bottom: .12rem; }
+.market-disclosure > summary { padding: .1rem .75rem .45rem; }
+.market-disclosure[open] > summary { border-bottom: 1px solid var(--rule); }
 .odds-scroll { overflow: auto; max-width: 100%; }
 .odds-card { container-type: inline-size; }
 .matrix-scroll-cue { display: none; min-height: 44px; padding: 0 .75rem; }
@@ -500,6 +509,7 @@ dialog::backdrop { background: #101b3180; }
   .opportunity-card-header { gap: .35rem; }
   .opportunity-score { padding-inline: .45rem; min-width: 5rem; }
   .opportunity-score small { max-width: 8rem; font-size: .67rem; }
+  .compact-ev .opportunity-score { flex-direction: column; white-space: normal; }
   .opportunity-quotes { grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)); }
   .odds-matrix tbody th, .odds-matrix thead tr:first-child th:first-child { min-width: 7.4rem; max-width: 8rem; }
 }

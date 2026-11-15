@@ -5,7 +5,7 @@ from hashlib import sha256
 import json
 
 from . import coverage
-from .current_policy import native_scope, native_markets
+from .current_policy import live_enabled, native_scope, native_markets
 from .native_scope_bindings import selectors_for
 from .native_selectors import query
 from .current_sink import utc
@@ -147,11 +147,14 @@ async def enumerate_native(worker):
         await owned_thread(checkpoint.begin)
     lower=None
     if worker.venue=='polymarket_us':
-        lower=(datetime.now(timezone.utc)-timedelta(hours=24)).isoformat()
+        include_live = live_enabled(worker.config)
+        now = datetime.now(timezone.utc)
+        lower=(now-timedelta(hours=24) if include_live else now).isoformat()
         if checkpoint and hasattr(checkpoint,'listing_start'):
             lower=await owned_thread(checkpoint.listing_start,lower)
         worker.metrics['listing_window']=dict(start_time_min=lower,start_time_max=None,
-            meaning='Existing 24-hour past-event retention; all future events remain in scope; fixed across resumed pages')
+            meaning=('24-hour past-event allowance and all future events' if include_live else 'Future occurrences')
+                    + '. The listing window stays fixed across resumed pages.')
     selected, native_events, markets = {}, {}, {}
     event_pages={}
     catalogs=[]

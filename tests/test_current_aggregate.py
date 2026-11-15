@@ -56,9 +56,9 @@ class SchedulerTests(unittest.IsolatedAsyncioTestCase):
         self.authority_patch=patch('app.collection.alternate_acquisition.authority',return_value=None)
         self.authority_patch.start();self.addCleanup(self.authority_patch.stop)
         self.temp=tempfile.TemporaryDirectory();self.root=Path(self.temp.name)
-        self.service=CurrentService(config=dict(DEFAULT,sports=['MLB']),directory=self.root/'service',ownership=LocalOwnership(self.root/'owner'),worker_factory=FakeWorker)
+        self.service=CurrentService(config=dict(DEFAULT,sports=['MLB'],live_enabled=True),directory=self.root/'service',ownership=LocalOwnership(self.root/'owner'),worker_factory=FakeWorker)
         self.store=CurrentStore(self.service);self.service.store=self.store
-        self.service.sink=LatestStateSink(self.store,self.service.initial_state());self.service.ownership.acquire(self.service.runtime_id)
+        self.service.sink=LatestStateSink(self.store,self.service.initial_state(),self.service.config);self.service.ownership.acquire(self.service.runtime_id)
         self.service.dispatch=True;self.service.deadline=__import__('time').monotonic()+300;self.service.digest='CONTROLLED-candidate'
         self.q=QuotaLedger(self.root/'quota');self.wire=Wire()
         from app.collection.current_schedule import schedule
@@ -220,6 +220,51 @@ class SchedulerTests(unittest.IsolatedAsyncioTestCase):
     async def test_running_app_without_tabs_dispatches(self):
         await self.scheduler.step()
         self.assertEqual(len(self.wire.calls),2);self.assertEqual(self.q.snapshot()['used'],23)
+
+    async def test_pregame_featured_filters_paid_requests_and_admission_on_both_entry_points(self):
+        self.service.config.pop('live_enabled')
+        at = datetime.now(timezone.utc)
+        live, = json.loads(body(at=at.isoformat()))
+        live.update(id='post-start', commence_time=(at-timedelta(minutes=1)).isoformat())
+        future = dict(live, id='pregame', commence_time=(at+timedelta(hours=1)).isoformat())
+        self.wire.paid_body = json.dumps([live, future]).encode()
+        await self.scheduler.step()
+        await self.scheduler.refresh(['MLB'], 'CONTROLLED-pregame-only')
+
+        paid = [request for request in self.wire.calls if request['path'].endswith('/odds')]
+        self.assertEqual(len(paid), 2)
+        self.assertTrue(all(datetime.fromisoformat(request['params']['commenceTimeFrom']) >= at for request in paid))
+        self.assertEqual({row['event']['id'] for row in self.service.sink.aggregate_records['MLB']}, {'pregame'})
+        charged = [a for a in self.q._read()['attempts'].values() if not a['bootstrap']]
+        self.assertEqual([item['request'] for item in charged], paid)
+
+    async def test_pregame_alternate_kickoff_after_ledger_marker_cancels_without_dispatch(self):
+        from app.collection.alternate_plan import plan
+        from app.collection.current_policy import PregameWindowClosed
+
+        await self.scheduler.step()
+        self.q.transact(lambda value, at: value.update(next_due_at=None))
+        clock = datetime.now(timezone.utc)
+        kickoff = clock + timedelta(minutes=1)
+        request, = plan({'MLB': [{'id': 'fixture'}]})['requests']
+        request = {name: request[name] for name in ('path', 'params')}
+        dispatched = self.q.dispatched
+
+        def crossed_boundary(*args, **kwargs):
+            nonlocal clock
+            result = dispatched(*args, **kwargs)
+            clock = kickoff
+            return result
+
+        with patch('app.collection.current_aggregate.now', side_effect=lambda: clock.isoformat()), \
+                patch.object(self.q, 'dispatched', side_effect=crossed_boundary):
+            with self.assertRaises(PregameWindowClosed):
+                await self.scheduler.dispatch(request, 2, kickoff=kickoff.isoformat())
+
+        self.assertEqual(len(self.wire.calls), 2)
+        self.assertEqual(self.q.snapshot()['reserved'], 0)
+        self.assertEqual(self.q.snapshot()['used'], 23)
+
     async def test_winner_scope_requests_only_winners_and_reconciles_actual_charge(self):
         self.service.config.update(sports=['NFL'],aggregate_sports=['NFL'],families=['moneyline'])
         original=self.wire.request

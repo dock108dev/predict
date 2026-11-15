@@ -144,7 +144,7 @@ def start_role(role, folder, args):
 
 def check_configuration(path):
     sys.path.insert(0, str(ROOT))
-    from app.collection.current_policy import aggregate_scope, load, native_markets, native_scope
+    from app.collection.current_policy import aggregate_scope, live_enabled, load, native_markets, native_scope
 
     config_path = Path(path) if path else ROOT / '.local/predict-current-config.json'
     try:
@@ -162,6 +162,7 @@ def check_configuration(path):
           f"{', '.join(native_scope(config))} · {', '.join(native_markets(config))}.")
     print(f"Aggregate acquisition {aggregate_enabled} · {config['aggregate_provider']} · "
           f"{', '.join(aggregate_scope(config))} · {', '.join(config['families'])}.")
+    print('In-game odds enabled.' if live_enabled(config) else 'Pregame only. In-game odds disabled.')
 
 
 def main():

@@ -123,6 +123,13 @@ def test_live_cadence_uses_only_available_refresh_headroom():
         [EventDue('live', NOW, NOW - timedelta(minutes=5), live=True)], NOW, policy=fast)] == ['live']
 
 
+def test_pregame_only_budget_does_not_reserve_a_kickoff_poll():
+    events = [EventDue('pregame', NOW + timedelta(hours=1))]
+    policy, live_cost = budgeted_policy(events, NOW, 1000)
+    pregame, pregame_cost = budgeted_policy(events, NOW, 1000, include_kickoff=False)
+    assert pregame == policy and pregame_cost == live_cost - 1
+
+
 def test_discovery_budget_adapts_to_retained_slate():
     assert discovery_interval(retained_events=512, daily_budget=4687) == timedelta(hours=12)
     assert discovery_interval(retained_events=991, daily_budget=4687) == timedelta(hours=24)

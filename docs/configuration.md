@@ -65,6 +65,14 @@ check-config` before starting data. With a custom config, run
 path when starting data. The check prints the selected provider and scope from the
 validated configuration. It needs no database, credentials or network access.
 
+`live_enabled` is an optional boolean in the collector configuration. It
+defaults to `false`, including when omitted from an existing file. In this
+mode, the collector schedules pregame prices, the public desk exposes
+Pregame, and a game leaves current results at its verified kickoff or earlier
+withdrawal. Saved pregame evidence stays inspectable. Pregame archive capture
+has its own setting and storage destination. The web app reads the phase
+setting from the collector's recorded configuration.
+
 The SportsGameOdds worker shares its object budget across discovery and event
 refresh. It starts a scan every 15 minutes throughout the day when account
 guards permit it. Event selection and discovery still follow the available

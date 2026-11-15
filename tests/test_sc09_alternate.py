@@ -53,6 +53,24 @@ class AlternateLedger(TestCase):
     tearDown=quota_tests.DurableQuota.tearDown
     bootstrap=quota_tests.DurableQuota.bootstrap
 
+    def test_pregame_lower_bound_tightens_but_cannot_expand_or_duplicate_sealed_cycle(self):
+        from app.collection.current_policy import DEFAULT, aggregate_requests
+
+        self.at='2026-10-03T14:00:00+00:00';self.q.bind_window(WINDOW);self.bootstrap()
+        manifest, = aggregate_requests(DEFAULT, at=self.at)
+        cycle = self.q.begin_cycle(self.owner, [manifest])
+        def request(at):
+            return dict(manifest, params=dict(manifest['params'], commenceTimeFrom=at))
+        with self.assertRaisesRegex(QuotaStop, 'outside_scope'):
+            self.q.reserve(self.owner, 'candidate', request('2026-10-03T13:59:59Z'), 3, cycle_id=cycle)
+        exact = request('2026-10-03T14:00:01Z')
+        aid = self.q.reserve(self.owner, 'candidate', exact, 3, cycle_id=cycle)
+        self.assertEqual(self.q._read()['attempts'][aid]['request'], exact)
+        self.q.dispatched(aid, self.owner)
+        self.q.reconcile(aid, quota_tests.quota(23, 3))
+        with self.assertRaisesRegex(QuotaStop, 'duplicate'):
+            self.q.reserve(self.owner, 'candidate', request('2026-10-03T14:00:02Z'), 3, cycle_id=cycle)
+
     def test_exact_scope_duplicate_and_cycle_budget(self):
         self.at='2026-10-03T14:00:00+00:00';self.q.bind_window(WINDOW);self.bootstrap()
         with patch('app.collection.alternate_acquisition.authority',return_value=GRANT):
@@ -82,7 +100,7 @@ class CompleteRoute(IsolatedAsyncioTestCase):
         priority.start();self.addCleanup(priority.stop)
 
     async def test_over_budget_census_keeps_featured_and_sends_no_alternate_subset(self):
-        scheduler=SimpleNamespace(service=SimpleNamespace(ownership=object()),cycle_id='cycle',metrics={},quota_due=lambda:'2026-10-31T20:15:00+00:00',ledger=Mock())
+        scheduler=SimpleNamespace(service=SimpleNamespace(ownership=object(),config={}),cycle_id='cycle',metrics={},quota_due=lambda:'2026-10-31T20:15:00+00:00',ledger=Mock())
         scheduler.dispatch=AsyncMock(return_value=dict(parsed_frame=SimpleNamespace(payload=[dict(id=str(i),commence_time='2026-10-31T23:00:00Z') for i in range(108)])))
         with patch('app.collection.alternate_acquisition.authority',return_value=GRANT),patch('app.collection.alternate_acquisition.save_event_census'):
             await acquire(scheduler,['NFL'])
@@ -95,13 +113,15 @@ class CompleteRoute(IsolatedAsyncioTestCase):
     async def test_complete_census_exact_event_route_and_original_response_retained(self):
         census=dict(parsed_frame=SimpleNamespace(payload=[dict(id='abc',commence_time='2026-10-31T23:00:00Z')]))
         response=dict(body=b'original')
-        scheduler=SimpleNamespace(service=SimpleNamespace(ownership=object()),cycle_id='cycle',metrics={},quota_due=lambda:'2026-10-31T20:15:00+00:00',ledger=Mock(),permitted=Mock())
+        scheduler=SimpleNamespace(service=SimpleNamespace(ownership=object(),config={}),cycle_id='cycle',metrics={},quota_due=lambda:'2026-10-31T20:15:00+00:00',ledger=Mock(),permitted=Mock())
         scheduler.dispatch=AsyncMock(side_effect=[census,response])
         with patch('app.collection.alternate_acquisition.authority',return_value=GRANT),patch('app.collection.alternate_acquisition.save_response') as saved,patch('app.collection.alternate_acquisition.save_event_census'):
             await acquire(scheduler,['NFL'])
         self.assertEqual(scheduler.metrics['alternate_completed'],1)
         self.assertEqual(scheduler.dispatch.await_args.args[1],2)
-        saved.assert_called_once_with('NFL','abc',response,'cycle')
+        self.assertEqual(scheduler.dispatch.await_args.kwargs['kickoff'], '2026-10-31T23:00:00Z')
+        self.assertEqual(scheduler.dispatch.await_args_list[0].args[0]['params']['commenceTimeFrom'], '2026-10-31T20:00:00Z')
+        saved.assert_called_once_with('NFL','abc',response,'cycle',pregame_only=True)
 
     async def test_deadline_defers_before_census_without_dispatch_or_reservation(self):
         self.now='2026-10-31T20:14:00+00:00'
@@ -116,9 +136,9 @@ class CompleteRoute(IsolatedAsyncioTestCase):
     async def test_paid_response_finishes_and_is_saved_before_deferring_remaining_events(self):
         census=dict(parsed_frame=SimpleNamespace(payload=[dict(id=i,commence_time='2026-10-31T23:00:00Z') for i in ['a','b']]))
         response=dict(body=b'exact paid response')
-        scheduler=SimpleNamespace(service=SimpleNamespace(ownership=object()),cycle_id='cycle',metrics={},
+        scheduler=SimpleNamespace(service=SimpleNamespace(ownership=object(),config={}),cycle_id='cycle',metrics={},
             quota_due=lambda:'2026-10-31T20:15:00+00:00',ledger=Mock(),permitted=Mock())
-        async def dispatch(request,cost):
+        async def dispatch(request,cost,*,kickoff=None):
             if cost==0:return census
             self.now='2026-10-31T20:14:01+00:00'
             return response
@@ -126,7 +146,7 @@ class CompleteRoute(IsolatedAsyncioTestCase):
         with patch('app.collection.alternate_acquisition.authority',return_value=GRANT),patch('app.collection.alternate_acquisition.save_response') as saved,patch('app.collection.alternate_acquisition.save_event_census'):
             await acquire(scheduler,['NFL'])
         self.assertEqual(scheduler.dispatch.await_count,2)
-        saved.assert_called_once_with('NFL','a',response,'cycle')
+        saved.assert_called_once_with('NFL','a',response,'cycle',pregame_only=True)
         self.assertEqual(scheduler.metrics['alternate_completed'],1)
         self.assertEqual(scheduler.metrics['alternate_deferred'],1)
         self.assertEqual(scheduler.metrics['alternate_state'],'deferred_for_scheduled_refresh')

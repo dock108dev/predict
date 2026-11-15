@@ -151,9 +151,9 @@ def sportsbook_frames(db, at):
     return list(rows)
 
 
-def pregame_sportsbooks(db, owner, states, at, *, frames=None, occurrences=None):
+def pregame_sportsbooks(db, owner, states, at, *, frames=None, occurrences=None, sgo_inputs=None):
     from app.comparison.public_sportsbook_estimate import allowed, index, read_captures, sgo_observation
-    from .sportsgameodds_reference import read_event, read_event_frame
+    from .sportsgameodds_reference import EventInputs
     from collections import defaultdict
 
     if not allowed(owner):
@@ -166,15 +166,17 @@ def pregame_sportsbooks(db, owner, states, at, *, frames=None, occurrences=None)
             key = (row['competition'], stamp(row['scheduled_start']), row['home'], row['away'])
             if occurrences is None or key in occurrences:
                 candidates[key].append(row['native_event_id'])
-    for key, ids in candidates.items():
-        if len(ids) != 1:
-            continue
-        event = ids[0]
+    events = {key: ids[0] for key, ids in candidates.items() if len(ids) == 1}
+    inputs = sgo_inputs if sgo_inputs is not None else EventInputs(db)
+    latest = inputs.frames(events.values())
+    since = at - timedelta(minutes=15)
+    observations = inputs.quotes(
+        latest, bookmakers=BEST_BOOKS, source_since=since)
+    for key, event in events.items():
         try:
-            frame = read_event_frame(db, event)
-            if frame and stamp(frame['facts']['received_at']) >= at - timedelta(minutes=15):
-                value = sgo_observation(frame, read_event(db, event, bookmakers=BEST_BOOKS,
-                    source_since=at - timedelta(minutes=15)), at=at, occurrence=key)
+            frame = latest.get(event)
+            if frame and event in observations and stamp(frame['facts']['received_at']) >= since:
+                value = sgo_observation(frame, observations[event], at=at, occurrence=key)
                 if value:
                     matches.setdefault(key, []).append(value)
         except (KeyError, ValueError):
@@ -776,8 +778,10 @@ def observe_arbs(db, result, candidates, owner, states, *, generation, policy, e
     from .arb_appearances import observe
     from app.comparison.ordinary_arb import DEFAULT_FUNDING, published_payoff
     from app.dashboard.trade_desk import phase_matches
+    from app.collection.current_policy import live_enabled
 
     opportunities = {}
+    live_available = live_enabled(owner.get('config', {}))
     if candidates and owner.get('healthy') and owner.get('active') and not owner.get('global_stopped'):
         subset = dict(result, rows=list(chain.from_iterable(c['rows'] for c in candidates)),
                       pairs=list(chain.from_iterable(c['pairs'] for c in candidates)))
@@ -787,6 +791,8 @@ def observe_arbs(db, result, candidates, owner, states, *, generation, policy, e
         for pair in current['pairs']:
             legs = [rows[leg] for leg in pair['legs']]
             phase = 'live' if legs[0]['game_state'] == 'live' else 'pregame'
+            if phase == 'live' and not live_available:
+                continue
             if not all(phase_matches(leg, phase, at) for leg in legs):
                 continue
             payoff = published_payoff(pair, legs)
@@ -921,6 +927,8 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
             epoch=str(db.execute('SELECT epoch FROM current_row_epoch').fetchone()['epoch'])
             settings=current_settings(db)
             owner,source_states=authority(db,include_diagnostics=False)
+            from app.collection.current_policy import live_enabled
+            live_available = live_enabled(owner.get('config', {}))
             reference_provider=aggregate_provider(owner=owner)
             policy=policy_identity(reference_provider)
             fee_state=owner['fee_lifecycle']
@@ -943,12 +951,17 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
                     match = public_matches.get((event['competition'], stamp(event['scheduled_start']), event['home'], event['away']))
                     if match:
                         public_events[event['id']] = [reference_identity(item, at=at) for item in match]
-            selected={r['id'] for r in db.execute('''SELECT id FROM current_event WHERE competition=ANY(%s)
-                AND scheduled_start::timestamptz >= %s AND scheduled_start::timestamptz < %s''',
-                (list(snapshots.SPORTS),at-timedelta(hours=24),at+timedelta(hours=72)))}
+            lower = at - timedelta(hours=24) if live_available else at
+            selected = {r['id'] for r in db.execute('''SELECT id FROM current_event WHERE competition=ANY(%s)
+                AND scheduled_start::timestamptz > %s AND scheduled_start::timestamptz < %s
+                AND (%s OR (facts#>'{status,live}' IS DISTINCT FROM 'true'::jsonb
+                            AND facts#>'{status,ended}' IS DISTINCT FROM 'true'::jsonb))''',
+                (list(snapshots.SPORTS), lower, at + timedelta(hours=72), live_available))}
             # Include the complete peer component when any member is in scope.
             planning_stage=monotonic()
             batches=capture_batches(db, selected=selected)
+            if not live_available:
+                batches = [[event_id for event_id in batch if event_id in selected] for batch in batches]
             timings['scope_seconds']=round(monotonic()-planning_stage,6)
             scope={hashed(sorted(b)):b for b in batches}
             old={c['id']:c for c in db.execute("SELECT id,result_id,facts FROM comparison_publication WHERE kind='component'")}
@@ -972,7 +985,7 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
             product_components={key:{product_key for product_key,spec in product_schedules.PRODUCTS.items()
                 if any(spec['venue'] in event_venues.get(eid,()) for eid in ids)} for key,ids in scope.items()}
             def input_identity(key, signatures):
-                return hashed([epoch,policy,settings['revision'],fee_revision if key in prophetx_components else None,
+                return hashed([epoch,policy,settings['revision'],live_available,fee_revision if key in prophetx_components else None,
                     {k:product_schedules.revision(product_states.get(k),publication=True) for k in sorted(product_components[key])},
                     [(eid,signatures.get(eid,(None,None))[0]) for eid in sorted(scope[key])],
                     [public_events[eid] for eid in sorted(scope[key]) if eid in public_events]])
@@ -1109,6 +1122,11 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
                         inputs['reference_provider']=reference_provider
                         from app.comparison.public_sportsbook_estimate import SOURCE as PUBLIC_BOARD, select as public_estimate
                         capture_at = stamp(inputs['captured_at'])
+                        if not live_available:
+                            from app.comparison.game_phase import scheduled_phase
+                            inputs['quotes'] = [row for row in inputs['quotes']
+                                if stamp(row['start_at']) > capture_at and scheduled_phase(
+                                    (row.get('original_record') or {}).get('event') or row, capture_at)['state'] == 'scheduled']
                         for row in inputs['quotes']:
                             if (row.get('sportsbook_baseline') or {}).get('indicative'):
                                 row.pop('sportsbook_baseline')

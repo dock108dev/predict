@@ -181,7 +181,7 @@ def test_worker_scans_every_fifteen_minutes_overnight_and_keeps_discovery_cursor
 
 def test_active_and_kickoff_refresh_interleave_with_discovery_and_retain_cursor_filter():
     async def scenario():
-        service = SimpleNamespace(config=deepcopy(DEFAULT), dispatch=True, globally_stopped=False, paused_sources=set())
+        service = SimpleNamespace(config=dict(DEFAULT, live_enabled=True), dispatch=True, globally_stopped=False, paused_sources=set())
         now = NOW
         worker = SportsGameOddsWorker(service, transport=SimpleNamespace(close=AsyncMock()), now=lambda: now)
         kickoff = NOW + timedelta(seconds=2)
@@ -220,8 +220,71 @@ def test_active_and_kickoff_refresh_interleave_with_discovery_and_retain_cursor_
     asyncio.run(scenario())
 
 
+def test_pregame_default_skips_kickoff_and_in_play_refreshes_and_preserves_pregame_receipts():
+    async def scenario():
+        service = SimpleNamespace(config=deepcopy(DEFAULT), dispatch=True, globally_stopped=False, paused_sources=set())
+        now = NOW
+        kickoff = NOW + timedelta(seconds=1)
+        worker = SportsGameOddsWorker(service, now=lambda: now)
+        pregame = dict(event(1), starts_at=kickoff.isoformat())
+        live = dict(event(3), phase='live', starts_at=(NOW-timedelta(hours=1)).isoformat())
+        worker.events['e3'] = live
+        requests = []
+
+        async def fetch(params, key):
+            nonlocal now
+            requests.append(params)
+            if 'cursor' in params:
+                return Page((event(2),), ({'event_id':'e2'},), None, 'b'*64)
+            now = kickoff
+            return Page((pregame, live), ({'event_id':'e1'}, {'event_id':'e3'}), 'next', 'a'*64)
+
+        worker.collector = SimpleNamespace(fetch=fetch)
+        worker._publish = AsyncMock()
+        worker.state = AsyncMock()
+        await worker.cycle()
+
+        first, second = requests
+        assert first['started'] is second['started'] is False
+        assert first['live'] is second['live'] is False
+        assert first['startsAfter'] == second['startsAfter'] == NOW.isoformat()
+        assert [call.args[0].quotes for call in worker._publish.await_args_list] == [
+            ({'event_id':'e1'},), ({'event_id':'e2'},)]
+        assert set(worker.events) == {'e2'}
+
+    asyncio.run(scenario())
+
+
+def test_pregame_alternate_retry_does_not_dispatch_when_clock_reaches_kickoff():
+    from app.collection.sportsgameodds_collector import InvalidProviderPage
+
+    async def scenario():
+        service = SimpleNamespace(config=deepcopy(DEFAULT), dispatch=True, globally_stopped=False, paused_sources=set())
+        now = NOW
+        kickoff = NOW + timedelta(seconds=1)
+        worker = SportsGameOddsWorker(service, now=lambda: now)
+        worker.events['e1'] = dict(event(1), starts_at=kickoff.isoformat(),
+                                   received_at=(NOW-timedelta(hours=1)).isoformat())
+        worker.discovery_at['NFL'] = NOW
+
+        async def fetch(params, key):
+            nonlocal now
+            assert params['includeAltLines']
+            now = kickoff
+            raise InvalidProviderPage('fixture crosses kickoff')
+
+        worker.collector = SimpleNamespace(fetch=AsyncMock(side_effect=fetch))
+        worker._publish = AsyncMock()
+        worker.state = AsyncMock()
+        await worker.cycle()
+        worker.collector.fetch.assert_awaited_once()
+        worker._publish.assert_not_awaited()
+
+    asyncio.run(scenario())
+
+
 def test_started_event_uses_active_polling_without_relabeling_phase():
-    service = SimpleNamespace(config=deepcopy(DEFAULT), dispatch=True, globally_stopped=False, paused_sources=set())
+    service = SimpleNamespace(config=dict(DEFAULT, live_enabled=True), dispatch=True, globally_stopped=False, paused_sources=set())
     worker = SportsGameOddsWorker(service, transport=SimpleNamespace(close=AsyncMock()), now=lambda: NOW)
     started = event(1)
     started.update(phase='started', starts_at=(NOW - timedelta(hours=1)).isoformat(),
@@ -251,7 +314,7 @@ def test_unreadable_alternates_try_main_lines_and_keep_scanning(base_readable):
     from app.collection.sportsgameodds_collector import InvalidProviderPage
 
     async def scenario():
-        service = SimpleNamespace(config=deepcopy(DEFAULT), dispatch=True, globally_stopped=False, paused_sources=set())
+        service = SimpleNamespace(config=dict(DEFAULT, live_enabled=True), dispatch=True, globally_stopped=False, paused_sources=set())
         worker = SportsGameOddsWorker(service, transport=SimpleNamespace(close=AsyncMock()), now=lambda: NOW)
         original_receipt = (NOW - timedelta(minutes=16)).isoformat()
         worker.events = {
@@ -303,6 +366,8 @@ def test_alternates_use_bounded_approaching_event_refresh_and_track_admission():
         worker.state = AsyncMock()
         due = [EventDue('e1',NOW+timedelta(hours=2)), EventDue('e2',NOW+timedelta(hours=2,seconds=1)),
                EventDue('e3',NOW+timedelta(hours=12))]
+        worker.events = {item.event_id: dict(event(index), starts_at=item.starts_at.isoformat())
+                         for index, item in enumerate(due, 1)}
         await worker.refresh(due,SchedulePolicy())
         first, other = [c.args[0] for c in worker.collector.fetch.await_args_list]
         assert first['eventIDs'] == 'e1' and first['limit'] == 1 and first['includeAltLines'] is True
@@ -430,6 +495,7 @@ def test_alias_does_not_remove_a_separately_returned_event():
         worker = SportsGameOddsWorker(service, transport=SimpleNamespace(close=AsyncMock()), now=lambda: NOW)
         old, replacement = event(1), event(2)
         replacement['aliases'] = ['e1']
+        worker.events = {'e1': old, 'e2': replacement}
         worker.collector = SimpleNamespace(fetch=AsyncMock(return_value=Page((old, replacement), (), None, 'a'*64)))
         worker._publish = AsyncMock()
         worker.state = AsyncMock()
@@ -742,7 +808,7 @@ def test_discovery_checkpoint_survives_restart_with_original_scope(tmp_path):
         resumed.restore_discovery()
         traversal = resumed.discovery_progress['NFL']
         assert traversal.next_cursor == 'next'
-        assert traversal.starts_after == (NOW - timedelta(hours=12)).isoformat()
+        assert traversal.starts_after == NOW.isoformat()
         assert traversal._seen_events == {'e1'}
         assert traversal.authoritative_absence is False
         assert not traversal.complete
@@ -796,7 +862,7 @@ def test_restored_walk_completes_only_after_new_final_page(tmp_path):
         await second.cycle()
         params = second.collector.fetch.await_args_list[0].args[0]
         assert params['cursor'] == 'next'
-        assert params['startsAfter'] == (NOW - timedelta(hours=12)).isoformat()
+        assert params['startsAfter'] == NOW.isoformat()
         assert second.metrics['discovery_complete']['NFL'] is True
         assert 'NFL' in ledger.discovery_schedule(now=NOW + timedelta(minutes=2))
         assert 'NFL' not in ledger.load_discovery_progress(now=NOW + timedelta(minutes=2))

@@ -29,7 +29,7 @@
         <nav id="opportunity-tabs" class="opportunity-tabs" aria-label="Opportunities"><a id="opportunity-ev" href="/ev">Expected value</a><a id="opportunity-arb" href="/arbs">Arbitrage</a></nav>
         <div id="market-tabs" class="opportunity-tabs" role="group" aria-label="Market family" hidden></div>
         <label class="desk-search"><span class="sr-only">Search teams</span><input name="search" type="search" maxlength="150" placeholder="Search teams or games"></label>
-        <label id="basis-field"><span class="sr-only">Calculation basis</span><select name="basis" disabled><option value="reviewed">Verified after-fee EV</option><option value="sportsbooks">Indicative sportsbook estimate</option><option value="conservative">Conservative after-fee scenario</option><option value="before">Before-fee scenario</option></select></label>
+        <label id="basis-field"><span class="sr-only">Calculation basis</span><select name="basis" disabled><option value="sportsbooks">Indicative sportsbook estimate</option><option value="reviewed">Verified after-fee EV</option><option value="conservative">Conservative after-fee scenario</option><option value="before">Before-fee scenario</option></select></label>
         <label id="group-field"><span class="sr-only">Rows</span><select name="group"><option value="outcome">By outcome</option><option value="offer">Individual offers</option></select></label>
         <label id="stake-field" hidden>Total stake before fees ($) <input name="stake" type="number" min="0.01" max="1000000" step="0.01" value="100"></label>
         <label id="positive-field" class="desk-toggle"><input name="positive" type="checkbox"> Positive only</label>
@@ -70,13 +70,14 @@
     </form>
     <p id="notice" class="desk-note" role="status"></p>
     <div class="desk-refresh">
-      <span id="free-view-note" class="desk-meta">Open a quote to see its source and receipt times.</span>
       <span id="refresh-status" class="sr-only" role="status"></span>
       <button id="refresh-list" type="button">Refresh list</button>
     </div>
+    <p id="previous-results" class="desk-note previous-results" role="status" hidden></p>
     <div id="results" aria-label="Sorted results"></div>
-    <nav class="desk-pages" aria-label="Results pages">
+    <nav class="desk-pages" aria-label="Results pages" hidden>
       <button id="previous" type="button" disabled>Previous</button>
+      <span class="desk-meta" id="page-range"></span>
       <button id="next" type="button" disabled>Next</button>
     </nav>
     <footer class="desk-session"><a class="desk-action" id="replay-link" href="/replay?dataset=practice">Open replay</a> <button id="open-session" type="button" aria-haspopup="dialog">Session history</button></footer>

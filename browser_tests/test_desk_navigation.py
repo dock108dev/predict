@@ -24,7 +24,7 @@ class CurrentSlate:
     def __init__(self):
         self.now = 0
         self.browse = BrowseSessions(clock=lambda: self.now)
-        self.order = list(range(8))
+        self.order = list(range(16))
         self.changed_line = None
         self.drop_token = False
         self.resets = []
@@ -86,6 +86,7 @@ class CurrentSlate:
         response = desk_page(
             board, query, page_options(query), browsing=self.browse, enrich=enrich
         )
+        response.update(features={"live_enabled": True}, phase=query.get("phase"))
         if response["state"] == "page_changed":
             self.resets.append(response["reason"])
         return response
@@ -150,6 +151,8 @@ def inspect_and_return(tab, card, dismiss):
 def launch_game(tab, card, *, back="link"):
     from playwright.sync_api import expect
 
+    if card.locator("details:not([open]) > summary").count():
+        card.locator("details > summary").tap()
     scroll = card.locator(".odds-scroll")
     scroll.evaluate("element => element.scrollLeft = 90")
     opener = card.locator("[data-game-launcher]")
@@ -226,6 +229,9 @@ def test_phone_comparison_return(engine):
         expect(first).to_be_visible()
         assert tab.evaluate("document.documentElement.scrollWidth === innerWidth")
         expect(tab.locator("#phase-pregame")).to_have_attribute("aria-current", "page")
+        expect(tab.locator("#page-range")).to_have_text("1–12 of 16 games")
+        expect(tab.locator(".odds-card")).to_have_count(12)
+        expect(tab.locator(".odds-matrix")).to_have_count(1)
         if engine == "chromium":
             swipe_chromium(context, tab, first)
         first.locator(".matrix-scroll-cue").tap()
@@ -240,8 +246,9 @@ def test_phone_comparison_return(engine):
         inspect_and_return(tab, first, "back")
 
         tab.locator("#next").tap()
-        target = tab.locator('[data-game-key="detroit-5"]')
+        target = tab.locator('[data-game-key="detroit-12"]')
         expect(target).to_be_visible()
+        expect(tab.locator("#page-range")).to_have_text("13–16 of 16 games")
         initial_position, basis = launch_game(tab, target, back="fallback")
         return_from_game(tab, "fallback")
         expect(target.locator("[data-game-launcher]")).to_be_focused()
@@ -249,7 +256,7 @@ def test_phone_comparison_return(engine):
         assert tab.locator("[name=basis]").input_value() == basis
 
         launch_game(tab, target)
-        current.changed_line = 5
+        current.changed_line = 12
         return_from_game(tab, "link")
         expect(target.locator("[data-game-launcher]")).to_be_focused()
         expect(tab.locator("#notice")).to_contain_text(
@@ -259,17 +266,17 @@ def test_phone_comparison_return(engine):
 
         launch_game(tab, target)
         current.now = 901
-        current.order = [5, 0, 1, 2, 3, 4, 6, 7]
+        current.order = [12, *range(12), 13, 14, 15]
         return_from_game(tab, "back")
         expect(target.locator("[data-game-launcher]")).to_be_focused()
         expect(tab.locator("#previous")).to_be_disabled()
         assert "expired" in current.resets[-1]
 
         tab.locator("#next").tap()
-        removed = tab.locator('[data-game-key="detroit-6"]')
+        removed = tab.locator('[data-game-key="detroit-13"]')
         expect(removed).to_be_visible()
         launch_game(tab, removed)
-        current.order.remove(6)
+        current.order.remove(13)
         current.drop_token = True
         return_from_game(tab, "link")
         expect(tab.locator("#notice")).to_contain_text("no longer in these results")

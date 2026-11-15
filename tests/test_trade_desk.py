@@ -53,6 +53,81 @@ def with_verified_model(row, value):
 
 
 class TradeDesk(TestCase):
+    def test_pregame_pages_indicative_results_by_distinct_ranked_games(self):
+        first = with_verified_model(quote('first', 'novig'), '2')
+        first.update(game_state='scheduled', sportsbook_return_percent='10',
+                     sportsbook_baseline=dict(book='fanduel', fair_decimal_odds='2', return_percent='10'),
+                     gross_return_percent='6', conservative_return_percent='1',
+                     conservative_trade_benchmark=dict(first['conditional_trade_benchmark']))
+        first['metric_status']['conservative_trade_fee_ev'] = {'state': 'available'}
+        winner = dict(first, id='winner', market=dict(market='winner', period='full_game', line=None),
+                      selection=dict(participant='home', predicate='win'), sportsbook_return_percent='4')
+        second = dict(first, id='second', game_key='second', start_at='2026-11-08T02:00:00Z',
+                      sportsbook_return_percent='8')
+        third = dict(first, id='third', game_key='third', start_at='2026-11-08T03:00:00Z',
+                     sportsbook_return_percent='-2')
+        data = result(first, winner, second, third)
+        data['publication']['read_at'] = '2026-11-08T00:00:00Z'
+        query = dict(layout='desk', ranked='1', basis='sportsbooks', lines='main', summary='1', positive='on')
+        first_page = page(data, query, ('ev', None, 0, 1))
+        self.assertEqual((first_page['row_kind'], first_page['page_count'], first_page['total']), ('games', 1, 2))
+        self.assertEqual([row['score'] for row in first_page['rows']], ['10', '4'])
+        self.assertIsNone(first_page['calculation_reason'])
+        self.assertEqual(page(data, query, ('ev', None, 1, 1))['rows'][0]['game_key'], 'second')
+        for scenario, score in (('before', '6'), ('conservative', '1')):
+            with self.subTest(scenario=scenario):
+                scenario_page = page(data, dict(query, basis=scenario), ('ev', None, 0, 1))
+                self.assertEqual(scenario_page['rows'][0]['score'], score)
+        self.assertEqual(page(data, dict(query, basis='reviewed'), ('ev', None, 0, 1))['rows'], [])
+        fallback = page(data, dict(query, basis='reviewed', positive=''), ('ev', None, 1, 1))
+        self.assertEqual((fallback['page_count'], fallback['total'], fallback['rows']), (1, 3, []))
+        self.assertTrue(fallback['price_preview_paged'])
+        self.assertEqual({item['game_key'] for item in fallback['price_preview']}, {'second'})
+
+    def test_pregame_display_joins_witnessed_occurrence_without_changing_offer_identity(self):
+        from app.storage.schedule_metadata import VERSION
+
+        roles = {'home': 'NFL:BUF', 'away': 'NFL:NYJ'}
+        teams = ['Buffalo Bills', 'New York Jets']
+        start = '2026-11-08T01:00:00Z'
+        event = dict(competition='NFL', scheduled_start=start, participants=dict(zip(teams, roles.values())),
+                     source_participant_roles=roles, **roles)
+        first = dict(quote('native', 'kalshi'), game_key='native-current:game', league='NFL', start_at=start,
+                     game_state='scheduled', selection=dict(participant=roles['home'], predicate='cover',
+                     signed_line='-2.5'), source=dict(provider='kalshi', native_event_id='native',
+                     native_market_id='spread', native_outcome_id='home'), _desk_event=event)
+        received = '2026-11-08T00:00:00Z'
+        schedule = dict(version=VERSION, native_event_id='retained', authority=['sportsgameodds', 'event', 'retained'],
+                        start=start, received_at=received,
+                        proofs=[dict(body_sha256='a'*64, path='sportsgameodds/receipt', received_at=received)])
+        aggregate_event = dict(event, id='retained', schedule_metadata=dict(schedule, revision=hashed(schedule)))
+        del aggregate_event['source_participant_roles']
+        other = dict(first, id='aggregate', venue='novig', game_key='sealed', source=dict(first['source'],
+                     provider='sportsgameodds', native_event_id='retained'), _desk_event=aggregate_event)
+        away = dict(other, id='away', selection=dict(participant=roles['away'], predicate='cover', signed_line='2.5'))
+        alternate = dict(other, id='alternate', selection=dict(other['selection'], signed_line='-7.5'))
+        data = result(first, other, away, alternate)
+        data['publication']['read_at'] = received
+        data['games'] = [dict(game_key=key, league='NFL', start_at=start, title='Matchup', participants=[
+            dict(id=team, name=name, role=role) for (role, team), name in zip(roles.items(), teams)])
+            for key in (first['game_key'], other['game_key'])]
+        query = dict(layout='desk', browse_odds='1', lines='main', summary='1')
+        first_page = page(data, query, ('ev', None, 0, 10))
+        self.assertEqual(first_page['total'], 1)
+        self.assertEqual({row['game_key'] for row in first_page['rows']}, {'sealed'})
+        by_line = {row['offers'][0]['selection']['signed_line']: row for row in first_page['rows']}
+        self.assertEqual(set(by_line), {'-2.5', '2.5'})
+        self.assertEqual({item['id'] for item in by_line['-2.5']['offers']}, {'native', 'aggregate'})
+        self.assertEqual(first['game_key'], 'native-current:game')
+        from app.dashboard.snapshot_display import outcome_id, outcome_key
+        linked = page(data, dict(query, game_key=first['game_key'], line=outcome_id(outcome_key(first))),
+                      ('ev', None, 0, 10))
+        self.assertEqual(linked['selected_game_key'], 'sealed')
+        self.assertEqual(linked['selected_line_id'], by_line['-2.5']['id'])
+        for row in (other, away, alternate):
+            row['_desk_event'] = dict(aggregate_event, source_participant_roles={'home': roles['away'], 'away': roles['home']})
+        self.assertEqual(page(data, query, ('ev', None, 0, 10))['total'], 2)
+
     def test_empty_opportunities_include_only_current_unranked_prices(self):
         current = quote('current', 'kalshi', value='12')
         expired = quote('expired', 'polymarket_us', current=False)
@@ -230,26 +305,28 @@ class TradeDesk(TestCase):
         book = dict(id='book-row', revision='revision', facts=fact)
         frame = dict(facts=dict(starts_at=start, members=[['book-row', 'revision']], received_at=source_at))
         options = ('ev', None, 0, 10)
-        with patch('app.storage.sportsgameodds_reference.read_event_frame', return_value=frame), patch(
-                'app.storage.sportsgameodds_reference.read_event', return_value=[book]):
-            for state, retained, duplicates, expected_current in [
-                ({'state':'available'}, False, False, True),
-                ({'state':'budget_delayed', 'reason_code':'sgo_charge_unresolved'}, True, False, False),
-                ({'state':'budget_delayed', 'reason_code':'sgo_charge_unresolved'}, False, False, None),
-                ({'state':'available'}, False, True, None),
-            ]:
-                with self.subTest(state=state, retained=retained, duplicates=duplicates):
-                    db = Mock()
-                    db.execute.return_value.fetchall.return_value = [
-                        event, *([dict(event, native_event_id='another-event')] if duplicates else [])]
-                    out = page(data, {'browse_odds':'1'}, options)
-                    add_sgo_prices(db, out, data['rows'], {'sportsgameodds':state}, at=at, include_retained=retained)
-                    groups = {g['offers'][0]['id']:g for g in out['rows']}
-                    prices = groups['native-home']['sportsbook_quotes'].get('fanduel', [])
-                    self.assertEqual([p['current'] for p in prices], [] if expected_current is None else [expected_current])
-                    self.assertEqual(groups['native-no']['sportsbook_quotes'], {})
-                    self.assertIsNone(groups['native-home']['offers'][0]['value'])
-                    self.assertIsNone(groups['native-home']['score'])
+        inputs = Mock()
+        inputs.frames.side_effect = lambda event_ids: {key: frame for key in event_ids}
+        inputs.quotes.side_effect = lambda event_ids, **kwargs: {key: [book] for key in event_ids}
+        for state, retained, duplicates, expected_current in [
+            ({'state':'available'}, False, False, True),
+            ({'state':'budget_delayed', 'reason_code':'sgo_charge_unresolved'}, True, False, False),
+            ({'state':'budget_delayed', 'reason_code':'sgo_charge_unresolved'}, False, False, None),
+            ({'state':'available'}, False, True, None),
+        ]:
+            with self.subTest(state=state, retained=retained, duplicates=duplicates):
+                db = Mock()
+                db.execute.return_value.fetchall.return_value = [
+                    event, *([dict(event, native_event_id='another-event')] if duplicates else [])]
+                out = page(data, {'browse_odds':'1'}, options)
+                add_sgo_prices(db, out, data['rows'], {'sportsgameodds':state}, at=at, include_retained=retained,
+                               sgo_inputs=inputs)
+                groups = {g['offers'][0]['id']:g for g in out['rows']}
+                prices = groups['native-home']['sportsbook_quotes'].get('fanduel', [])
+                self.assertEqual([p['current'] for p in prices], [] if expected_current is None else [expected_current])
+                self.assertEqual(groups['native-no']['sportsbook_quotes'], {})
+                self.assertIsNone(groups['native-home']['offers'][0]['value'])
+                self.assertIsNone(groups['native-home']['score'])
 
     def test_native_short_names_are_searchable_by_canonical_team_names(self):
         row = quote('current', 'polymarket_us')

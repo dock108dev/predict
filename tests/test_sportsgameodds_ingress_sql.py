@@ -23,6 +23,76 @@ from tests.test_ev09_n01 import AT
 
 
 @skipUnless(SOCKET, 'Disposable PostgreSQL required')
+class SportsGameOddsPregameDeskSQL(LatestBoardFixture):
+    async def test_admitted_pregame_estimates_rank_before_publication_and_leave_at_kickoff(self):
+        from aiohttp import web
+        from aiohttp.test_utils import TestClient, TestServer
+        from app.dashboard.snapshot_api import mount
+        from app.storage.store import stamp
+        from tests.test_sportsgameodds_adapter import AT as receipt_at
+
+        self.at = stamp(receipt_at)
+        raw = response()
+        event, = raw['data']
+        event['eventID'] = 'ranked-pregame-e2e'
+        event['teams']['home']['names']['long'] = 'Detroit Pistons'
+        event['teams']['away']['names']['long'] = 'Boston Celtics'
+        home, = event['odds'].values()
+        book, = home['byBookmaker'].values()
+        home['byBookmaker'] = {'novig': dict(book, odds='+120'),
+                             'prophetexchange': dict(book, odds='+115'), 'fanduel': book}
+        away = dict(home, oddID=home['opposingOddID'], opposingOddID=home['oddID'],
+                    statEntityID='away', sideID='away', byBookmaker={'fanduel': dict(book, spread='1.5')})
+        event['odds'][away['oddID']] = away
+        self.service.config.update(aggregate_provider='sportsgameodds', sports=['NBA'], families=['spread'])
+        self.service.states['sportsgameodds'] = {'state': 'available'}
+        self.state.write(self.service)
+        parsed = parse(raw)
+        records, _ = current_rows(parsed, parsed.receipt_sha256)
+        references = prepare_page(parsed)
+        sink = DatabaseIngressSink(SimpleNamespace(provider=self.service), self.service.config)
+        with self.connect() as db:
+            db.execute('TRUNCATE current_event,comparison_publication CASCADE')
+            db.execute("INSERT INTO comparison_publication(kind,id,generation,facts) VALUES('live','',0,'{}')")
+        with patch('app.collection.current_database.connect', side_effect=self.connect), \
+                patch('app.collection.current_database.utc', return_value=receipt_at):
+            sink.prepare(dict(type='current_aggregate_records', source='sportsgameodds', sport='NBA',
+                records=records, sgo_reference_rows=references, sgo_event_frames=prepare_frames(parsed, references),
+                receipt_sha256=parsed.receipt_sha256, event_scopes={event['eventID']: 'NBA'},
+                complete_venues=[], received_at=receipt_at), self.service.states, Event())
+
+        app = web.Application()
+        mount(app)
+        query = dict(layout='desk', phase='pregame', ranked='1', basis='sportsbooks',
+                     summary='1', lines='main', positive='1')
+        with patch('app.dashboard.snapshot_api.connect', side_effect=self.connect):
+            async with TestClient(TestServer(app)) as client:
+                result = await client.get('/api/comparison-current', params=query)
+                self.assertEqual(result.status, 200, await result.text())
+                page = await result.json()
+                self.assertEqual((page['generation'], page['provider_requests']), (0, 0))
+                group, = page['rows']
+                self.assertEqual(group['score'], '10')
+                self.assertEqual({row['venue']: row['value'] for row in group['offers']},
+                                 {'novig': '10', 'prophetx': '15/2'})
+                offer = next(row for row in group['offers'] if row['venue'] == 'novig')
+                selection = dict(id=offer['id'], layout='desk', phase='pregame', basis='sportsbooks')
+                selected = await (await client.get('/api/comparison-current/selection', params=selection)).json()
+                self.assertEqual(selected['row']['value'], '10')
+                self.assertEqual(stamp(selected['row']['source_clock_at']), stamp(book['lastUpdatedAt']))
+                reviewed = await (await client.get('/api/comparison-current',
+                    params=dict(query, basis='reviewed'))).json()
+                self.assertEqual(reviewed['rows'], [])
+                self.at = stamp(event['status']['startsAt'])
+                self.state.write(self.service)
+                after = await (await client.get('/api/comparison-current', params=dict(query, phase='live'))).json()
+                self.assertEqual(after['features'], {'live_enabled': False})
+                self.assertEqual((after['phase'], after['rows']), ('pregame', []))
+                closed = await (await client.get('/api/comparison-current/selection', params=selection)).json()
+                self.assertIsNone(closed['row'])
+
+
+@skipUnless(SOCKET, 'Disposable PostgreSQL required')
 class SportsGameOddsAtomicIngress(LatestBoardFixture):
     async def test_upgrade_links_exact_legacy_value_and_preserves_each_receipt(self):
         from uuid import uuid4
@@ -162,7 +232,10 @@ class SportsGameOddsAtomicIngress(LatestBoardFixture):
             upsert_frames(db, prepare_frames(page, prepare_page(page)))
             self.assertEqual(db.execute("SELECT count(*) n FROM current_event WHERE provider='sportsgameodds'").fetchone()['n'], 0)
         with patch('app.storage.store.connect', side_effect=self.connect):
-            events, truncated = retained_schedule(['NBA'], datetime(2026, 11, 10, 20, tzinfo=timezone.utc), 10)
+            at = datetime(2026, 11, 10, 20, tzinfo=timezone.utc)
+            pregame, _ = retained_schedule(['NBA'], at, 10)
+            events, truncated = retained_schedule(['NBA'], at, 10, include_live=True)
+        self.assertNotIn('recovery-event', pregame)
         self.assertFalse(truncated)
         self.assertEqual(events['recovery-event']['phase'], 'live')
         self.assertEqual(events['recovery-event']['received_at'], page.events[0]['received_at'])

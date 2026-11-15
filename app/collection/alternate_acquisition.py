@@ -1,7 +1,7 @@
 """Complete event-odds route with explicit owner authority and durable raw values."""
 from datetime import datetime, timedelta
 import json
-from .current_policy import ROOT
+from .current_policy import ROOT, PregameWindowClosed, live_enabled, odds_api_cutoff
 from .current_quota import QuotaStop
 from .current_aggregate_policy import POLICY
 from app.reference.product import SPORT_KEYS
@@ -38,12 +38,20 @@ def check_expiry(at):
             raise QuotaStop('aggregate_owner_authority_expired')
 
 
-def event_request(sport):
-    return dict(path='/v4/sports/'+SPORT_KEYS[sport]+'/events',params={})
+def event_request(sport, *, at=None):
+    return dict(path='/v4/sports/'+SPORT_KEYS[sport]+'/events',
+                params={} if at is None else {'commenceTimeFrom': odds_api_cutoff(at)})
 
 
 def validate_request(request, cost):
     if cost==0 and request in [event_request(s) for s in SPORT_KEYS]:return
+    if cost==0 and isinstance(request.get('params'), dict):
+        cutoff = request['params'].get('commenceTimeFrom')
+        if isinstance(cutoff, str):
+            try:
+                if request in [event_request(s, at=cutoff) for s in SPORT_KEYS]:return
+            except ValueError:
+                pass
     path=request.get('path','').split('/')
     if (cost!=2 or len(path)!=7 or path[:3]!=['','v4','sports'] or path[3] not in SPORT_KEYS.values()
             or path[4]!='events' or path[6]!='odds' or not path[5].isalnum()
@@ -60,10 +68,18 @@ def missing_event(request,cost,status,charged):
     return True
 
 
-def save_response(sport,event_id,response,cycle_id):
+def save_response(sport,event_id,response,cycle_id,*,pregame_only=False):
     """Retry only the already-paid local write; preserve its original receipt."""
     from time import monotonic, sleep
     from psycopg.errors import LockNotAvailable, DeadlockDetected, SerializationFailure
+    if pregame_only and not response.get('event_missing'):
+        from app.storage.odds_retention import pregame
+        from .current_aggregate_admission import parse_frame
+
+        frame = response.get('parsed_frame') or parse_frame(response['body'])
+        if isinstance(frame.payload, dict) and not pregame(frame.payload.get('commence_time'), response['received_at']):
+            return
+        response = dict(response, parsed_frame=frame)
     deadline=monotonic()+30
     while True:
         try:
@@ -156,7 +172,8 @@ async def acquire(scheduler,sports):
                              alternate_state='event_census')
     scheduler.metrics.pop('alternate_plan',None)
     if handoff_due(scheduler,now(),deadline,None):return
-    free=[event_request(s) for s in sports]
+    pregame_only = not live_enabled(scheduler.service.config)
+    free=[event_request(s, at=now() if pregame_only else None) for s in sports]
     scheduler.ledger.extend_cycle(scheduler.service.ownership,scheduler.cycle_id,free,0)
     events={}
     for sport,request in zip(sports,free):
@@ -181,11 +198,16 @@ async def acquire(scheduler,sports):
     scheduler.metrics['alternate_plan']['reason']=f"Explicit owner authority: {grant['credits_per_cycle']}/cycle and {grant['credits_per_day']}/day; expiry {grant.get('expires_at') or 'renewed by owner without a new cutoff'}"
     scheduler.metrics['alternate_state']='acquiring'
     scheduler.metrics['alternate_completed']=0
+    starts = {(sport, event['id']): event['commence_time'] for sport, slate in events.items() for event in slate}
     for index,(item,request) in enumerate(zip(ordered,requests)):
         if handoff_due(scheduler,now(),deadline,len(requests)-index):return
-        response=await scheduler.dispatch(request,2)
+        try:
+            kickoff = starts[(item['sport'], item['event_id'])] if pregame_only else None
+            response=await scheduler.dispatch(request,2,kickoff=kickoff)
+        except PregameWindowClosed:
+            continue
         scheduler.permitted()
-        await owned_thread(save_response,item['sport'],item['event_id'],response,scheduler.cycle_id)
+        await owned_thread(save_response,item['sport'],item['event_id'],response,scheduler.cycle_id,pregame_only=pregame_only)
         scheduler.metrics['alternate_completed']+=1
         if response.get('event_missing'):
             scheduler.metrics['alternate_missing_events']=scheduler.metrics.get('alternate_missing_events',0)+1

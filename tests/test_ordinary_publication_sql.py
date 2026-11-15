@@ -541,6 +541,38 @@ class OrdinarySQL(LatestBoardFixture):
                 self.assertEqual(selected['state'],'unavailable')
                 self.assertIn('updates_stopped',selected['row']['current_reasons'])
 
+    async def test_pregame_desk_updates_bypass_projection_and_watch_admitted_prices(self):
+        with self.connect() as db:
+            self.assertTrue(live.turn(db)['published'])
+        app = web.Application()
+        mount(app)
+        query = dict(layout='desk', view='ev', summary='1', browse_odds='1',
+                     lines='all', phase='live', basis='sportsbooks')
+        with patch('app.dashboard.snapshot_api.connect', self.connect):
+            async with TestClient(TestServer(app)) as client:
+                response = await client.get('/api/comparison-current', params=query)
+                page = await response.json()
+                self.assertEqual(response.status, 200)
+                self.assertEqual(page['features'], {'live_enabled': False})
+                self.assertEqual(page['phase'], 'pregame')
+                self.assertTrue(page['rows'])
+                phase_query = dict(layout='desk', phase='pregame', after=page['update_cursor'])
+                with patch.object(live, 'published_dependencies', side_effect=AssertionError('update decoded slate')):
+                    same = await client.get('/api/comparison-current/updates', params=phase_query)
+                    self.assertFalse((await same.json())['changed'])
+                    self.assertNotIn('dependencies;', same.headers['Server-Timing'])
+                    self.changed_first()
+                    changed = await client.get('/api/comparison-current/updates', params=phase_query)
+                    signal = await changed.json()
+                    self.assertTrue(signal['changed'])
+                    self.assertEqual(signal['generation'], page['generation'])
+                    self.assertEqual(signal['provider_requests'], 0)
+                self.at = max(stamp(row['start_at']) for row in page['rows'])
+                self.state.write(self.service)
+                after_kickoff = await (await client.get('/api/comparison-current', params=query)).json()
+                self.assertEqual(after_kickoff['phase'], 'pregame')
+                self.assertTrue(all(stamp(row['start_at']) > self.at for row in after_kickoff['rows']))
+
     async def test_oversized_component_does_not_block_unrelated_publication_or_desk_reads(self):
         self.prepare_component_isolation()
         with self.connect() as db:

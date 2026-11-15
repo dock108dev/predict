@@ -22,7 +22,7 @@ from .native_scope_bindings import selectors_for, POLICY as SCOPE_POLICY
 from .native_selectors import query, candidates, PAGE_SIZE
 from .venue_access import ENDPOINTS, load_credentials
 from .current_sink import utc
-from .current_policy import native_scope, native_markets
+from .current_policy import live_enabled, native_scope, native_markets
 from .odds_http import BudgetStop
 
 # Re-export existing helper imports while keeping socket ownership in this module.
@@ -149,6 +149,8 @@ class NativeWorker:
         """Keep one fully reconstructed latest image per subscribed market."""
         mid=book['raw']['ref']['market_id']
         if mid in self.subscription_blocked:return
+        if self.lifecycle_initialized and not self.book_in_scope(mid, coverage.stamp(book['raw']['received_at'])):
+            return
         if mid in self.material_quarantine:
             self.metrics['quarantined_books_skipped']=self.metrics.get('quarantined_books_skipped',0)+1
             return
@@ -547,6 +549,7 @@ class NativeWorker:
             if previous.get('next_rotation_at'):priority['next_rotation_at']=previous['next_rotation_at']
             self.metrics['subscription_priority']=priority
             self.metrics['catalog_transition']['reimaged_markets']=0
+            self.set_kickoff_boundary(self.stream_market_index)
             self.signature=self.lifecycle.signature();self.subscription_transition=None
             return
         if transition.get('kind')=='kalshi_membership':
@@ -567,6 +570,7 @@ class NativeWorker:
             await self.reconstruction.reconfigure(list(markets.values()),None,
                 dict(request_id=removal_request) if removal_request is not None else [])
             self.guard()
+            self.set_kickoff_boundary(markets)
             self.stream_markets[:]=list(markets.values())
             self.stream_market_index.clear();self.stream_market_index.update(markets)
             self.stream_seen.intersection_update(markets)
@@ -575,7 +579,10 @@ class NativeWorker:
             for values in (self.synchronization.images,self.synchronization.persisted,self.synchronization.invalid):
                 values.intersection_update(markets)
             self.initial_deadline=time.monotonic()+15
-            for command in commands:await asyncio.wait_for(self.socket.send(json.dumps(command)),3)
+            for command in commands:
+                if command['params']['action'] == 'add_markets':
+                    self.require_open_subscription()
+                await asyncio.wait_for(self.socket.send(json.dumps(command)),3)
             if 'active_markets' not in transition:
                 self.metrics['catalog_transition']['reimaged_markets']=len(transition['added'])
             self.subscription_blocked.difference_update(transition['removed'])
@@ -592,6 +599,7 @@ class NativeWorker:
         engine.market_requests=mapping;engine.retired_requests=set(self.retired_subscription_ids)
         await self.reconstruction.reconfigure(list(markets.values()),mapping,self.retired_subscription_ids)
         self.guard()
+        self.set_kickoff_boundary(markets)
         self.stream_markets[:]=list(markets.values())
         self.stream_market_index.clear();self.stream_market_index.update(markets)
         self.stream_seen.difference_update(transition['invalidated'])
@@ -606,6 +614,7 @@ class NativeWorker:
             for rid in sorted(transition['retired']):
                 await asyncio.wait_for(self.socket.send(json.dumps({'unsubscribe':{'requestId':rid}})),3)
         for command in commands(transition['added'],markets):
+            self.require_open_subscription()
             await asyncio.wait_for(self.socket.send(json.dumps(command)),3)
         self.metrics.update(subscription_groups=len(groups),initial_images=len(self.stream_seen),
             missing_initial_images=len(markets)-len(self.stream_seen),
@@ -619,12 +628,39 @@ class NativeWorker:
     def select_priority(self, markets, cursor):
         from .native_priority import select
 
+        now = datetime.now(timezone.utc)
+        if not live_enabled(self.config):
+            events = {event['id'] for event in self.catalog['events'] if self.event_in_scope(event, now)}
+            markets = [market for market in markets if market.raw.ref.event_id in events]
         reducer = getattr(getattr(self.service, 'sink', None), 'reducer', None)
         phase_events = (getattr(reducer, 'inventory', {}).get(self.venue, {}).get('events', [])
                         if self.venue == 'polymarket_us' else ())
-        return select(markets, self.catalog, datetime.now(timezone.utc), cursor, phase_events=phase_events,
+        return select(markets, self.catalog, now, cursor, phase_events=phase_events,
                       priority_pregame=self.service.config.get('aggregate_provider') == 'sportsgameodds',
                       preferred=self.reference_priority)
+
+    def event_in_scope(self, event, at):
+        from app.comparison.event_eligibility import assess
+
+        return live_enabled(self.config) or assess(event, at)['eligible']
+
+    def book_in_scope(self, market_id, at):
+        lease = self.lifecycle.leases.get(market_id)
+        return live_enabled(self.config) or bool(lease and self.event_in_scope(lease['selection']['event'], at))
+
+    def set_kickoff_boundary(self, markets):
+        self.kickoff_at = None
+        if markets and self.lifecycle_initialized and not live_enabled(self.config):
+            now = datetime.now(timezone.utc)
+            if any(not self.book_in_scope(mid, now) for mid in markets):
+                self.kickoff_at = now.timestamp()
+            else:
+                self.kickoff_at = min(coverage.stamp(self.lifecycle.leases[mid]['selection']['event']['scheduled_start']).timestamp()
+                                      for mid in markets)
+
+    def require_open_subscription(self):
+        if self.kickoff_at is not None and time.time() >= self.kickoff_at:
+            raise CatalogResync()
 
     async def sportsbook_priority(self, catalog):
         if not (getattr(self.service, 'database_mode', False)
@@ -734,7 +770,7 @@ class NativeWorker:
 
     async def reconfirm_kalshi_quiet_books(self):
         """Ask the current ordered SID for fresh complete images, without resubscribing."""
-        if self.venue != 'kalshi':
+        if self.venue != 'kalshi' or not live_enabled(self.config):
             return
         self.metrics['quiet_snapshot_checks'] += 1
         if self.subscription_lock.locked():
@@ -1210,6 +1246,7 @@ class NativeWorker:
         # Unknown semantics remain inspectable raw values with no derived authority.
         events_by_id={e['id']:e for e in cat['events']}
         eligible_markets=[]
+        observed_at = datetime.now(timezone.utc)
         for market in cat['markets']:
             parent=events_by_id[market['event_id']]
             native=market.get('_native',{})
@@ -1217,8 +1254,10 @@ class NativeWorker:
             closed=native.get('closed') is True or native.get('status') in ('closed','settled','finalized')
             if market.get('subscription_evidence_exclusion') in ('ambiguous_subscription_slug','ambiguous_native_subscription_identity'):
                 market['subscription_exclusion']=market['subscription_evidence_exclusion']
-            elif closed or start and coverage.stamp(start)<datetime.now(timezone.utc)-timedelta(hours=24):
+            elif closed or start and coverage.stamp(start)<observed_at-timedelta(hours=24):
                 market['subscription_exclusion']='closed_or_outside_retained_game_window'
+            elif not self.event_in_scope(parent, observed_at):
+                market['subscription_exclusion'] = 'outside_pregame_scope'
             else:
                 eligible_markets.append(market)
         # Do not retain another source’s superseded catalog across HTTP discovery.
@@ -1315,6 +1354,8 @@ class NativeWorker:
             self.material_quarantine.clear()
             self.metrics['material_quarantined_markets']=0
             self.lifecycle_initialized=True
+            if not self.subscription_transition and self.stream_task and not self.stream_task.done():
+                self.set_kickoff_boundary(getattr(self, 'stream_market_index', {}))
             # Metadata adoption and socket subscription completion are independent.
             # Persist the complete adopted census before fallible socket commands;
             # a disconnected socket must not force restoration of an older catalog.
@@ -1421,6 +1462,7 @@ class NativeWorker:
                 if getattr(self.service,'database_mode',False):
                     markets,priority=self.select_priority(markets,getattr(self,'priority_cursor',0))
                     self.metrics['subscription_priority']=priority
+                    if not markets:return
                 market_index={m.raw.ref.market_id:m for m in markets}
                 self.stream_market_index=market_index
                 self.stream_seen=seen;self.stream_isolated=isolated;self.stream_markets=markets
@@ -1514,12 +1556,14 @@ class NativeWorker:
                     await reconstruction.warm()
                     self.guard()
                 stage = 'subscribe'
+                self.set_kickoff_boundary(market_index)
                 commands_to_send=commands(self.subscription_groups,market_index) if self.venue=='polymarket_us' and self.subscription_groups else [command]
                 for command_to_send in commands_to_send:
+                    self.require_open_subscription()
                     await asyncio.wait_for(self.socket.send(json.dumps(command_to_send)), 3)
                 if self.metrics.get('subscription_priority',{}).get('deferred_markets'):
                     rotate_at=self.priority_rotation_deadline()
-                if self.venue=='kalshi' and reconstruction is not None:
+                if self.venue=='kalshi' and reconstruction is not None and live_enabled(self.config):
                     quiet_at=time.monotonic()+QUIET_SNAPSHOT_SECONDS
                 from .native_receive import NativeReceive
                 receiver=NativeReceive(self.socket,self.metrics,on_failure=lambda:self.synchronization.revoke('transport_lost'))
@@ -1536,8 +1580,10 @@ class NativeWorker:
                         self.metrics['subscription_rotations']=self.metrics.get('subscription_rotations',0)+1
                         rotate_at=self.priority_rotation_deadline()
                         pmus_pending=None
+                    kickoff_boundary = self.kickoff_at if pmus_pending is None else None
+                    kickoff_due = kickoff_boundary is not None and time.time() >= kickoff_boundary
                     retirement_timed_out=bool(pmus_pending and pmus_pending['awaiting'] and time.monotonic()>=pmus_pending['deadline'])
-                    rotation_due=rotation_due or retirement_timed_out
+                    rotation_due=rotation_due or kickoff_due or retirement_timed_out
                     # Accumulate withdrawals only inside this already-received
                     # bounded batch. Newly queued prices cannot publish before
                     # its withdrawal commit; a later active image may then resume.
@@ -1589,6 +1635,7 @@ class NativeWorker:
                     # Count them without copying the whole roster per wire frame.
                     timeout = max(.01, self.initial_deadline-time.monotonic()) if len(seen)+len(isolated)<len(markets) else 30
                     if rotate_at is not None:timeout=min(timeout,max(.01,rotate_at-time.monotonic()))
+                    if kickoff_boundary is not None:timeout=min(timeout,max(.01,kickoff_boundary-time.time()))
                     if quiet_at is not None:timeout=min(timeout,max(.01,quiet_at-time.monotonic()))
                     if pmus_pending and pmus_pending['awaiting']:timeout=min(timeout,max(.01,pmus_pending['deadline']-time.monotonic()))
                     try:
@@ -1600,6 +1647,7 @@ class NativeWorker:
                             body,received=prepared_frame['body'],prepared_frame['received']
                     except TimeoutError:
                         if rotate_at is not None and time.monotonic()>=rotate_at:continue
+                        if kickoff_boundary is not None and time.time() >= kickoff_boundary:continue
                         if quiet_at is not None and time.monotonic()>=quiet_at:continue
                         if pmus_pending and pmus_pending['awaiting'] and time.monotonic()>=pmus_pending['deadline']:continue
                         if len(seen)+len(isolated)<len(markets): raise ValueError('initial_image_deadline')
@@ -1680,6 +1728,8 @@ class NativeWorker:
                         self.metrics[kind+'_bytes']=self.metrics.get(kind+'_bytes',0)+len(raw)
                     if book is None:
                         if self.metrics['frames']%64==0:await asyncio.sleep(0)
+                        continue
+                    if self.lifecycle_initialized and not self.book_in_scope(book.raw.ref.market_id, received):
                         continue
                     if book.sync != BookSync.SYNCHRONIZED:
                         raise ValueError('incomplete_native_image')
@@ -1926,6 +1976,11 @@ class NativeWorker:
         from app.comparison.lifecycle import worker_selections
         started=time.monotonic()
         restored=await owned_thread(load,self.venue,self.checkpoint.scope)
+        if restored is None and self.venue == 'polymarket_us' and not live_enabled(self.config):
+            from .bulk_checkpoint import Checkpoint
+
+            previous = Checkpoint(self.venue, dict(sports=native_scope(self.config), families=native_markets(self.config)))
+            restored = await owned_thread(load, self.venue, previous.scope)
         loaded=time.monotonic()
         self.metrics['restoration']['load_seconds']=loaded-started
         if restored is None:
@@ -1973,9 +2028,12 @@ class NativeWorker:
             native_payload.configure_transport(self.client, spec)
             if getattr(self.service,'database_mode',False):
                 from .bulk_checkpoint import Checkpoint
-                self.checkpoint=Checkpoint(self.venue,dict(sports=native_scope(self.config),families=native_markets(self.config)))
+                scope = dict(sports=native_scope(self.config), families=native_markets(self.config))
+                if self.venue == 'polymarket_us' and not live_enabled(self.config):
+                    scope['phase'] = 'pregame'
+                self.checkpoint=Checkpoint(self.venue,scope)
             if getattr(self,'checkpoint',None):await self.restore_catalog()
-            if self.venue=='polymarket_us' and getattr(self.service,'database_mode',False):
+            if self.venue=='polymarket_us' and getattr(self.service,'database_mode',False) and live_enabled(self.config):
                 self.sporting_task=asyncio.create_task(self.sporting_state_loop(),name='predict-us-sporting-state')
             if self.venue=='polymarket_us': self.client.request_interval = .5
             # Conservative 1/s Kalshi bootstrap; no account data/trading calls.

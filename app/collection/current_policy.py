@@ -20,7 +20,11 @@ DEFAULT = dict(schema=VERSION, authority=GRANT, enabled=True, aggregate_enabled=
     backoff_seconds=[2, 5, 15, 30, 60], reconnect_failures=5,
     ingress_records=16000, ingress_bytes=8*MIB, issue_records=200,
     issue_bytes=MIB, discovery_pages=36)
-OPTIONAL_FLAGS = ('direct_novig_enabled',)
+OPTIONAL_FLAGS = ('direct_novig_enabled', 'live_enabled')
+
+
+class PregameWindowClosed(Exception):
+    """A scheduled request reached kickoff before dispatch."""
 
 
 def validate(value):
@@ -71,6 +75,22 @@ def native_markets(config):
     return list(config.get('native_families') or config['families'])
 
 
+def live_enabled(config):
+    """Only an explicit opt-in enables in-play collection and reads."""
+    return (config or {}).get('live_enabled') is True
+
+
+def odds_api_cutoff(at):
+    from datetime import timedelta, timezone
+    from app.storage.store import stamp
+
+    at = stamp(at).astimezone(timezone.utc)
+    whole_second = at.replace(microsecond=0)
+    if at.microsecond:
+        whole_second += timedelta(seconds=1)
+    return whole_second.strftime('%Y-%m-%dT%H:%M:%SZ')
+
+
 def aggregate_markets(config):
     families=config.get('families',DEFAULT['families'])
     mapping={'moneyline':'h2h','spread':'spreads','total':'totals'}
@@ -79,7 +99,7 @@ def aggregate_markets(config):
     return tuple(mapping[family] for family in DEFAULT['families'] if family in families)
 
 
-def aggregate_requests(config, sports=None):
+def aggregate_requests(config, sports=None, *, at=None):
     """Exact configured requests shared by scheduled and explicit refresh work."""
     from app.reference.product import SPORT_KEYS
     configured=aggregate_scope(config)
@@ -89,6 +109,8 @@ def aggregate_requests(config, sports=None):
         raise ValueError('aggregate_scope_not_configured')
     params=dict(bookmakers=','.join(AGGREGATE_POLICY.bookmakers),
         markets=','.join(aggregate_markets(config)),oddsFormat='decimal',dateFormat='iso')
+    if at is not None and not live_enabled(config):
+        params['commenceTimeFrom'] = odds_api_cutoff(at)
     return [dict(path='/v4/sports/'+SPORT_KEYS[sport]+'/odds',params=deepcopy(params))
             for sport in selected]
 

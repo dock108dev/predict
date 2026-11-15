@@ -19,10 +19,11 @@ const linkedLine = requestedLine ? route.get('line_label')?.slice(0, 120) : null
 const browse = ['/browse-odds', '/game'].includes(location.pathname) || replay && ['odds', 'game'].includes(route.get('view'));
 const opportunityView = !browse && !replay;
 const comparable = !replay && !arb;
-const phase = !replay && (route.get('phase') === 'live' ? 'live' : 'pregame');
+let phase = !replay && (route.get('phase') === 'live' ? 'live' : 'pregame');
+let liveEnabled = false;
 const phaseURL = (path, value = phase) => path + (value === 'live' ? '?phase=live' : '');
 const back = window.PredictUI.localURL(route.get('back'));
-const safeBack = back && ['/','/ev','/arbs','/browse-odds','/game','/replay'].includes(back.pathname)
+let safeBack = back && ['/','/ev','/arbs','/browse-odds','/game','/replay'].includes(back.pathname)
   ? back.pathname + back.search : null;
 const browseCacheKey = 'predict-desk-return';
 const dataset = ['frozen','preview','practice','retained'].includes(route.get('dataset')) ? route.get('dataset') : 'practice';
@@ -32,7 +33,8 @@ const endpoint = replay ? '/api/odds-replay' : '/api/comparison-current';
 const replayURL = (view, chosen = dataset === 'retained' ? 'practice' : dataset, step = frame) => '/replay?' + new URLSearchParams({view, dataset:chosen, frame:step});
 const replayMode = () => !replay ? null : dataset === 'practice' ? 'Synthetic practice · fictional prices and inputs' : 'Saved capture · prices at capture';
 const pageSize = 25;
-const pageLimit = gameKey ? 100 : browse ? 5 : pageSize;
+const gamesPerPage = 12;
+const pageLimit = gameKey ? 100 : replay ? (browse ? 5 : pageSize) : arb ? pageSize : gamesPerPage;
 const filters = $('filters');
 const browseFilterFields = ['league','family','venue','search','day','period','timezone','time_from','time_to','game_state'];
 const defaultZone = timezone();
@@ -85,9 +87,10 @@ $('profit-field').hidden = !arb;
 $('basis-field').hidden = arb;
 $('group-field').hidden = arb || !replay;
 $('opportunity-tabs').hidden = !opportunityView;
-$('free-view-note').hidden = replay;
-$('phase-tabs').hidden = replay;
-if (!replay) {
+function updatePhaseView() {
+  if (replay) return;
+  $('phase-tabs').hidden = !liveEnabled;
+  for (const value of ['pregame','live']) $(`phase-${value}`).removeAttribute('aria-current');
   $(phase === 'live' ? 'phase-live' : 'phase-pregame').setAttribute('aria-current', 'page');
   if (browse) updateBrowsePhaseLinks();
   else {
@@ -96,9 +99,15 @@ if (!replay) {
     $('opportunity-ev').href = phaseURL('/ev');
     $('opportunity-arb').href = phaseURL('/arbs');
   }
+  $('period-field').hidden = phase === 'pregame';
+  if (browse) {
+    if (safeBack && $('desk-path').firstElementChild) $('desk-path').firstElementChild.href = safeBack;
+    $('browse-link').href = gameKey ? phaseURL('/browse-odds') : phaseURL('/');
+  }
 }
+updatePhaseView();
 $('game-state-field').hidden = !!phase;
-$('period-field').hidden = phase === 'pregame';
+if (replay) $('period-field').hidden = false;
 $(arb ? 'opportunity-arb' : 'opportunity-ev').setAttribute('aria-current', 'page');
 $('positive-field').hidden = browse;
 $('return-filters').hidden = browse;
@@ -114,7 +123,7 @@ if (browse) {
     : gameKey ? phaseURL('/browse-odds') : phaseURL('/');
   $('browse-link').textContent = gameKey ? 'All games' : 'Opportunities';
   if (dataset === 'retained') {
-    $('browse-link').href = phaseURL('/browse-odds', route.get('return_phase'));
+    $('browse-link').href = '/browse-odds';
     $('browse-link').textContent = 'Current games';
   }
   $('desk-path').hidden = false;
@@ -143,8 +152,8 @@ filters.elements.timezone.options[0].textContent = `Default (${defaultZone.repla
 if (replay) {
   $('desk-mode').hidden = false;
   $('desk-mode').textContent = replayMode();
-  $('replay-link').textContent = 'Return to live board';
-  $('replay-link').href = phaseURL(arb ? '/arbs' : '/ev', 'live');
+  $('replay-link').textContent = 'Return to opportunities';
+  $('replay-link').href = arb ? '/arbs' : '/ev';
   $('replay-dataset').value = dataset;
   $('replay-frame').value = frame;
   $('replay-frame-field').hidden = dataset !== 'practice';
@@ -170,7 +179,7 @@ if (replay) {
 stake.value = readPreference('stake', '100');
 if (!stake.checkValidity() || !stake.value) stake.value = '100';
 const evFilterKey = 'ev-filters';
-const filterKey = replay ? `replay-${dataset}-${browse ? 'odds' : arb ? 'arb' : 'ev'}-filters`
+const filterKey = () => replay ? `replay-${dataset}-${browse ? 'odds' : arb ? 'arb' : 'ev'}-filters`
   : browse ? 'browse-filters' : phase === 'live' ? (arb ? 'live-arb-filters' : 'live-ev-filters')
     : arb ? 'arb-filters' : evFilterKey;
 const cachedReturn = !gameKey ? readBrowseReturn() : null;
@@ -181,7 +190,7 @@ if (returning) {
   try { sessionStorage.setItem(browseCacheKey, JSON.stringify({...cachedReturn, restoreOnArrival:false})); } catch {}
 }
 let saved;
-try { saved = JSON.parse(readPreference(filterKey, '{}')); } catch { saved = {}; }
+try { saved = JSON.parse(readPreference(filterKey(), '{}')); } catch { saved = {}; }
 saved ||= {};
 if (!gameKey && restored?.filters) Object.assign(saved, restored.filters);
 if (browse) {
@@ -328,8 +337,11 @@ async function openTrade(offer, group, game, pairContext = null, opener = docume
     nodes:[...$('trade-body').childNodes], scrollTop:dialog.scrollTop,
     title:$('trade-title').textContent, note:$('trade-note').textContent, latestHidden:$('latest').hidden, opener
   };
-  state.selected = {offer, group, game, opener, pairContext, basis:filters.elements.basis.value, checkedAt:Date.now(),
-    publication:pairContext?.publication ?? state.page?.publication};
+  const previous = Boolean(state.previousReason || opener?.hasAttribute('data-expired-quote'));
+  state.selected = {offer, group, game, opener, pairContext,
+    basis:state.page?.basis || filters.elements.basis.value,
+    checkedAt:previous ? Date.parse(state.page?.publication?.read_at) || Date.now() : Date.now(),
+    pinned:previous, publication:pairContext?.publication ?? state.page?.publication};
   if (parent) {
     state.selected.parent = parent;
     if (inspection) pushInspection(2);
@@ -700,13 +712,17 @@ function restoreMatrices(positions) {
   }
 }
 
+function disclosureStates() {
+  return new Map([...$('results').querySelectorAll('details[data-id]')].map(item => [item.dataset.id, item.open]));
+}
+
 function rememberView(group, action) {
   const target = new URL(action.href);
   const returnRoute = window.PredictUI.localURL(target.searchParams.get('back'));
   const navigation = {offset:state.offset, groupId:group?.id, gameKey:group?.game_key,
     browseId:state.page?.browse_id, openerHref:action.href, sourceEvent:target.searchParams.get('source_event'),
     openerTop:action.getBoundingClientRect().top, scrollY:window.scrollY,
-    filters:browsePreferences(), tableScrolls:matrixPositions()};
+    filters:browsePreferences(), tableScrolls:matrixPositions(), disclosures:[...disclosureStates()]};
   window.history.scrollRestoration = 'manual';
   window.history.replaceState({...window.history.state, predictDesk:navigation}, '', returnRoute?.href || location.href);
   try { sessionStorage.setItem(browseCacheKey, JSON.stringify({url:location.href, navigation})); } catch {}
@@ -714,7 +730,7 @@ function rememberView(group, action) {
 
 function cardContext(games, gameTitle = null) {
   return {
-    basis:filters.elements.basis.value, clock,
+    basis:pageBasis(), clock, phase,
     checkedAt:state.page?.replay?.captured_at ?? state.page?.publication?.read_at, gameTitle, mode:replayMode(),
     compact:comparable, summary:!replay, showGameLink:!gameKey, stableVenues:!replay,
     position:offer => position(offer),
@@ -725,6 +741,8 @@ function cardContext(games, gameTitle = null) {
     }
   };
 }
+
+const pageBasis = () => state.page?.basis || filters.elements.basis.value;
 
 function pairResultsReady() {
   return !replay || stake.validity.valid && !!stake.value && Number(stake.value) === state.renderedStake;
@@ -764,7 +782,7 @@ function emptyResults(page, publication) {
     if (!browse) actions.append(browsingLink('Browse odds ↗'));
   } else if (!replay && page.price_preview?.length) {
     title = 'Current prices';
-    detail = 'No EV comparisons qualify for these filters yet.';
+    detail = page.calculation_reason || 'No EV comparisons qualify for these filters yet.';
     actions.append(browsingLink('Browse odds ↗'));
   } else if (page.state === 'initializing' && !publication.retained_prices) {
     title = 'No prices have loaded yet';
@@ -823,9 +841,44 @@ function emptyResults(page, publication) {
   return empty;
 }
 
+function groupsByGame(rows) {
+  const groups = new Map();
+  for (const row of rows) {
+    if (row.withdrawn) continue;
+    if (!groups.has(row.game_key)) groups.set(row.game_key, []);
+    groups.get(row.game_key).push(row);
+  }
+  return groups;
+}
+
+function rankedCard(group, games) {
+  const context = cardContext(games);
+  context.game = games.get(group.game_key);
+  context.position = offer => position(offer, context.game);
+  return evCard(group, context);
+}
+
+function rankedGame(gameRows, games, disclosures) {
+  const [first, ...rest] = gameRows;
+  const card = rankedCard(first, games);
+  card.dataset.gameKey = first.game_key;
+  if (!rest.length) return card;
+  const details = el('details', null, 'ranked-outcomes');
+  details.dataset.id = `ev:${first.game_key}`;
+  details.append(el('summary', `${rest.length} more ${rest.length === 1 ? 'outcome' : 'outcomes'}`));
+  const addCards = () => {
+    if (details.open && details.childElementCount === 1) details.append(...rest.map(row => rankedCard(row, games)));
+  };
+  details.open = disclosures.get(details.dataset.id) || rest.some(row => row.id === restoreLocation?.groupId);
+  addCards();
+  details.addEventListener('toggle', addCards);
+  card.append(details);
+  return card;
+}
+
 function render(page) {
   const results = $('results');
-  const expanded = new Set([...results.querySelectorAll('details[open]')].map(e => e.dataset.id));
+  const disclosures = new Map([...disclosureStates(), ...restoreLocation?.disclosures || []]);
   const tableScrolls = matrixPositions();
   const games = new Map((page.games || []).map(game => [game.game_key, game]));
   const rows = page.rows || [];
@@ -875,20 +928,21 @@ function render(page) {
   const matrixRows = browse ? rows : preview;
   if (matrixRows.length) {
     if (preview.length) results.append(emptyResults(page, publication));
-    const groups = new Map();
-    for (const row of matrixRows) {
-      if (row.withdrawn) continue;
-      if (!groups.has(row.game_key)) groups.set(row.game_key, []);
-      groups.get(row.game_key).push(row);
-    }
+    const groups = groupsByGame(matrixRows);
+    const compactGames = !replay && !gameKey && page.row_kind === 'games' && total > 3;
     for (const [key, gameRows] of groups) {
       const first = gameRows[0];
       const context = cardContext(games, !gameKey && first.game_title);
       context.position = offer => position(offer, games.get(key));
+      const id = `odds:${key}`;
+      const disclosure = compactGames ? {id, open:disclosures.get(id) ?? key === groups.keys().next().value} : null;
       results.append(gameMatrix(gameRows, context, {includeAlternates:$('alternates').checked, market:marketFamily,
-        selectedLine}));
+        selectedLine, disclosure}));
     }
     if (!groups.size) results.append(emptyResults(page, publication));
+  } else if (!arb && page.row_kind === 'games' && rows.length) {
+    for (const gameRows of groupsByGame(rows).values()) results.append(rankedGame(gameRows, games, disclosures));
+    if (!results.firstChild) results.append(emptyResults(page, publication));
   } else if (rows.length) {
     for (const group of rows) {
       if (group.withdrawn) {
@@ -898,7 +952,7 @@ function render(page) {
       const context = cardContext(games);
       context.game = games.get(group.game_key);
       context.position = offer => position(offer, context.game);
-      results.append(arb ? arbCard(group, context, expanded.has(group.id)) : evCard(group, context));
+      results.append(arb ? arbCard(group, context, disclosures.get(group.id)) : evCard(group, context));
     }
   } else {
     results.append(emptyResults(page, publication));
@@ -906,9 +960,11 @@ function render(page) {
   restoreMatrices(tableScrolls);
   updateMatrixCues(results);
   const shown = page.page_count ?? rows.length;
+  const unit = page.row_kind === 'games' ? 'games' : 'results';
+  $('page-range').textContent = shown ? `${state.offset + 1}–${state.offset + shown} of ${total} ${unit}` : '';
   $('previous').disabled = state.offset === 0;
   $('next').disabled = state.offset + shown >= total;
-  $('previous').parentElement.hidden = !!gameKey || ($('previous').disabled && $('next').disabled);
+  $('previous').parentElement.hidden = !!gameKey || !total;
 }
 
 if (opportunityView) {
@@ -973,34 +1029,119 @@ for (const type of ['pointerup','pointercancel']) {
 }
 window.addEventListener('blur', () => { resultPointer = null; });
 window.addEventListener('resize', () => updateMatrixCues($('results')));
-const usingResults = () => resultPointer != null || $('results').contains(document.activeElement);
+const usingResults = () => resultPointer != null || $('results').contains(document.activeElement)
+  || !!$('results').querySelector(':popover-open');
 
-async function load(offset = state.offset, {background = false} = {}) {
+function applyDeskFeatures(page) {
+  if (replay || !page.features) return;
+  liveEnabled = page.features.live_enabled === true;
+  if (!liveEnabled && phase === 'live' && page.phase === 'pregame') {
+    phase = 'pregame';
+    filters.elements.period.value = '';
+    route.delete('phase');
+    const url = new URL(location.href);
+    url.searchParams.delete('phase');
+    if (safeBack) {
+      const destination = new URL(safeBack, location.origin);
+      if (destination.searchParams.get('phase') === 'live') destination.searchParams.delete('phase');
+      safeBack = destination.pathname + destination.search;
+      url.searchParams.set('back', safeBack);
+    }
+    window.history.replaceState(window.history.state, '', url.href);
+  }
+  updatePhaseView();
+}
+
+function previousResults(message = '') {
+  state.previousReason = message;
+  const notice = $('previous-results');
+  if (notice.textContent !== message) notice.textContent = message;
+  notice.hidden = !message;
+}
+
+function expireResultValues() {
+  if (replay) return;
+  const now = Date.now();
+  for (const value of $('results').querySelectorAll('[data-calculation-deadline]')) {
+    if (Number(value.dataset.calculationDeadline) > now || value.hasAttribute('data-expired-calculation')) continue;
+    value.setAttribute('data-expired-calculation', '');
+    if (value.dataset.quoteCalculation) {
+      const price = value.parentElement;
+      price.setAttribute('aria-label', `${price.dataset.quoteDescription}, Calculation expired`);
+    }
+  }
+  for (const price of $('results').querySelectorAll('[data-quote-deadline]:not([data-expired-quote])')) {
+    if (Number(price.dataset.quoteDeadline) > now) continue;
+    price.setAttribute('data-expired-quote', '');
+    if (price.dataset.quoteDescription) price.setAttribute('aria-label', `${price.dataset.quoteDescription}, Last known price`);
+    price.append(el('small', 'Last known', 'quote-freshness'));
+  }
+}
+$('results').addEventListener('toggle', () => queueMicrotask(expireResultValues), true);
+
+function visibleAnchor() {
+  const scrollY = window.scrollY;
+  const candidates = [...$('results').children].filter(item => item.dataset.gameKey || item.dataset.groupId);
+  const visible = candidates.find(item => {
+    const {top, bottom} = item.getBoundingClientRect();
+    return bottom > 0 && top < window.innerHeight;
+  });
+  const item = visible || candidates[0];
+  return {scrollY, top:visible?.getBoundingClientRect().top, gameKey:item?.dataset.gameKey,
+    groupId:item?.dataset.groupId || item?.querySelector('[data-group-id]')?.dataset.groupId};
+}
+
+function restoreAnchor(anchor) {
+  if (!anchor) return;
+  const item = [...$('results').children].find(child => anchor.gameKey
+    ? child.dataset.gameKey === anchor.gameKey : child.dataset.groupId === anchor.groupId);
+  if (item && anchor.top != null) window.scrollBy(0, item.getBoundingClientRect().top - anchor.top);
+  else window.scrollTo(0, anchor.scrollY);
+}
+
+function resultSignature(page) {
+  const stripReadClock = rows => rows?.map(row => ({...row, offers:row.offers?.map(offer => {
+    if (!offer.live_native_desk && !offer.live_aggregate_desk) return offer;
+    const {captured_at, ...stable} = offer;
+    return stable;
+  })}));
+  const {data_runtime:runtime = {}, sources} = page.publication || {};
+  return JSON.stringify([stripReadClock(page.rows), stripReadClock(page.price_preview), page.games, page.retained_game,
+    page.total, page.page_count, page.offset, page.pair_status, page.calculation_reason, page.calculation_missing,
+    page.state, page.basis, page.phase, page.anchor_state, page.selected_line_id, page.selected_game_key,
+    page.ranked_group_count, page.matched_offer_count, runtime.stopped, runtime.healthy, runtime.reason, runtime.paused_sources,
+    Object.values(sources || {}).map(source => [source.state, source.reason_code])]);
+}
+
+async function load(offset = state.offset, {background = false, freshMembership = false, anchor = null} = {}) {
   if (!filters.checkValidity() || !stake.value) return;
+  if (background && state.request) return;
   state.request?.abort();
   const controller = new AbortController(); state.request = controller; refreshStatus();
   const requestStake = replay ? stake.value : '100';
   const selected = selections();
   const requestFilters = JSON.stringify(selected);
   const query = new URLSearchParams({...selected, layout: 'desk', view: arb ? 'arbs' : 'ev',
-    offset, limit:pageLimit});
+    offset:freshMembership ? 0 : offset, limit:pageLimit});
   if (replay) query.set('stake', requestStake);
   else query.set('summary', '1');
   if (replay) { query.set('dataset', dataset); query.set('frame', frame); }
   if (retainedResult) query.set('result_id', retainedResult);
   const browseId = (state.query === requestFilters ? state.page?.browse_id : null) ?? restoreLocation?.browseId;
-  if (!replay && browseId && (offset || restoreLocation?.browseId)) query.set('browse_id', browseId);
-  if (!gameKey && restoreLocation?.groupId) {
-    query.set('locate', restoreLocation.groupId);
-    if (restoreLocation.gameKey) query.set('locate_game', restoreLocation.gameKey);
+  if (!replay && !freshMembership && browseId && (offset || background || restoreLocation?.browseId)) query.set('browse_id', browseId);
+  const locator = restoreLocation || (freshMembership && anchor);
+  if (!gameKey && locator && (locator.groupId || locator.gameKey)) {
+    query.set('locate', locator.groupId || locator.gameKey);
+    if (locator.gameKey) query.set('locate_game', locator.gameKey);
   }
   if (!state.page) $('notice').textContent = 'Loading prices…';
   try {
     const page = await fetchPage(query, controller.signal);
     if (controller.signal.aborted || !matchesInputs(requestStake, requestFilters)
         || background && (dialog.open || usingResults())) return;
-    if (page.state === 'page_changed' || (query.has('browse_id') && page.anchor_state === 'removed'
-        && !page.rows.some(row => !row.withdrawn))) {
+    const emptyPage = !page.rows?.some(row => !row.withdrawn) && !page.price_preview?.length;
+    if (page.state === 'page_changed' || query.has('browse_id') && emptyPage && (page.total || page.anchor_state === 'removed')) {
+      if (freshMembership) throw Error('Browsing order unavailable');
       const reason = page.reason || 'The comparison order changed.';
       history.record('browsing_reset', {reason});
       state.resetReason = reason;
@@ -1008,7 +1149,8 @@ async function load(offset = state.offset, {background = false} = {}) {
         restoreLocation.offset = 0;
         restoreLocation.browseId = null;
       }
-      return load(0, {background});
+      state.request = null;
+      return load(0, {background, freshMembership:true, anchor:anchor || visibleAnchor()});
     }
     if (page.anchor_state === 'removed') {
       state.resetReason = 'The previous game or line is no longer in these results.';
@@ -1032,27 +1174,39 @@ async function load(offset = state.offset, {background = false} = {}) {
     }
     if (controller.signal.aborted || !matchesInputs(requestStake, requestFilters)
         || background && (dialog.open || usingResults())) return;
+    applyDeskFeatures(page);
+    const prior = background && !restoreLocation ? anchor || visibleAnchor() : anchor;
+    const signature = resultSignature(page);
+    const repaint = !background || !state.page || state.renderSignature !== signature || state.resetReason;
     state.page = page;
-    state.query = requestFilters;
+    state.query = JSON.stringify(selections());
+    state.renderSignature = signature;
     state.renderedStake = Number(requestStake);
-    state.offset = page.offset ?? offset;
-    render(page);
+    state.offset = page.offset ?? (freshMembership ? 0 : offset);
+    previousResults();
+    if (repaint) {
+      render(page);
+      restoreAnchor(prior);
+    }
+    expireResultValues();
     state.resetReason = null;
     restoreLocationAfterLoad();
     history.observe(page, selections());
     checkSelection();
   } catch (error) {
     if (!controller.signal.aborted && error.name !== 'AbortError') {
-      if (!replay) {
-        state.page = null;
-        $('results').replaceChildren();
-        $('previous').parentElement.hidden = true;
-      }
-      $('notice').textContent = replay ? 'Replay could not be loaded. Refresh the list to retry.'
+      if (state.page && !replay) previousResults('Could not check the latest prices. Showing the previous results.');
+      else $('notice').textContent = replay ? 'Replay could not be loaded. Refresh the list to retry.'
         : 'Prices could not be loaded. Refresh the list to retry.';
       history.record('display_gap',{reason:'local_read_failed'});
     }
-  } finally { if (state.request === controller) { state.request = null; refreshStatus(); } }
+  } finally {
+    if (state.request === controller) {
+      state.request = null;
+      refreshStatus();
+      scheduleUpdates();
+    }
+  }
 }
 
 const panel = $('filter-panel');
@@ -1126,7 +1280,7 @@ function applyFilters() {
   state.request?.abort();
   if (!filters.checkValidity() || !stake.value) return;
   if (browse && !gameKey) saveBrowsePreferences();
-  else if (!gameKey) savePreference(filterKey, JSON.stringify({...selections(), timezone:filters.elements.timezone.value}));
+  else if (!gameKey) savePreference(filterKey(), JSON.stringify({...selections(), timezone:filters.elements.timezone.value}));
   if (arb && replay) savePreference('stake', stake.value);
   if (browse && !replay) {
     let ordinary = {};
@@ -1138,7 +1292,7 @@ function applyFilters() {
 
 function saveBrowsePreferences() {
   const chosen = browsePreferences();
-  savePreference(filterKey, JSON.stringify(chosen));
+  savePreference(filterKey(), JSON.stringify(chosen));
   // Keep this history entry current even if the user leaves by a different link.
   const {predictDesk, ...otherState} = window.history.state || {};
   window.history.replaceState(otherState, '', browseReturnRoute(chosen));
@@ -1159,7 +1313,11 @@ $('reset').onclick = () => {
 };
 activeFilters();
 validateTimeWindow();
-$('refresh-list').onclick = () => load(state.query === JSON.stringify(selections()) ? state.offset : 0);
+$('refresh-list').onclick = () => {
+  const sameFilters = state.query === JSON.stringify(selections());
+  const anchor = sameFilters && state.offset ? visibleAnchor() : null;
+  load(sameFilters ? state.offset : 0, {freshMembership:!!state.page?.browse_id && (!state.offset || !!anchor), anchor});
+};
 document.addEventListener('focusin', refreshStatus);
 document.addEventListener('focusout', () => queueMicrotask(refreshStatus));
 $('previous').onclick = () => load(Math.max(0, state.offset - pageLimit));
@@ -1411,16 +1569,56 @@ window.addEventListener('pageshow', event => {
     load(location.offset);
   }
 });
+let updateTimer;
+let updateDelay = 6500;
+let checkedBoundary;
+
+function scheduleUpdates() {
+  if (replay) return;
+  clearTimeout(updateTimer);
+  const deadline = Date.parse(state.page?.refresh_at) - Date.now();
+  updateTimer = setTimeout(followUpdates, deadline > 0 ? Math.min(updateDelay, Math.max(deadline, 250)) : updateDelay);
+}
+
+async function followUpdates() {
+  try {
+    if (document.hidden) return;
+    expireInspection();
+    expireResultValues();
+    if (dialog.open) {
+      await checkSelection();
+      return;
+    }
+    const page = state.page;
+    if (!page?.update_cursor || state.request || state.query !== JSON.stringify(selections())) return;
+    const expired = Date.parse(page.refresh_at) <= Date.now();
+    if (expired && !state.previousReason) previousResults('Some results have expired.');
+    if (usingResults()) return;
+    const query = new URLSearchParams({layout:'desk', phase, after:page.update_cursor});
+    let change;
+    try {
+      const response = await fetch(`/api/comparison-current/updates?${query}`);
+      if (!response.ok) throw Error('Price status unavailable');
+      change = await response.json();
+    } catch {
+      if (state.page === page && !state.request) previousResults('Could not check the latest prices. Showing the previous results.');
+      return;
+    }
+    if (state.page !== page || state.request || dialog.open || usingResults()) return;
+    updateDelay = Math.max(1000, Number(change.poll_after_ms) || 6500);
+    const recheckExpiry = expired && checkedBoundary !== page.refresh_at;
+    if (change.changed || recheckExpiry || change.phase && change.phase !== phase) {
+      checkedBoundary = page.refresh_at;
+      await load(state.offset, {background:true});
+    } else if (!expired) previousResults();
+  } finally {
+    scheduleUpdates();
+  }
+}
+
 load(restored?.offset ?? 0);
 openHistorical();
-setInterval(() => {
-  expireInspection();
-  if (!replay && !state.request && !document.hidden) {
-    if (dialog.open) checkSelection();
-    else if (!usingResults()) load(state.offset, {background:true});
-  }
-  refreshStatus();
-}, 6500);
+scheduleUpdates();
 
 setInterval(async () => {
   const selected = state.selected;

@@ -9,6 +9,7 @@ from uuid import uuid4
 from collections import Counter
 
 from .sportsgameodds_adapter import parse_page
+from .current_policy import PregameWindowClosed
 from .sportsgameodds_schedule import daily_allowance, daily_retry_at, response_object_charge
 from .sportsgameodds_transport import TransportFailure, validate_params
 
@@ -31,15 +32,18 @@ class DailyObjectPacing(RuntimeError):
 
 
 class GuardedPageCollector:
-    def __init__(self, ledger, window_id, transport, *, controls, account_usage):
+    def __init__(self, ledger, window_id, transport, *, controls, account_usage, eligible=None):
         self.ledger = ledger
         self.window_id = window_id
         self.transport = transport
         self.controls = controls
         self.account_usage = account_usage
+        self.eligible = eligible
 
     async def fetch(self, params, api_key, *, now=None):
         params = validate_params(params)
+        if self.eligible and not self.eligible(params):
+            raise PregameWindowClosed()
         state = self.ledger.status(self.window_id)
         if state['reset_at'] is None:
             raise RuntimeError('account reset evidence unavailable')
@@ -69,6 +73,8 @@ class GuardedPageCollector:
                 reset_at=state['reset_at'], expirations=self.ledger.rolling_expirations(self.window_id, now=now))
             raise DailyObjectPacing(retry_at=retry, requested=params['limit'], rolling=rolling, allowance=per_day)
         control = self.controls()
+        if self.eligible and not self.eligible(params):
+            raise PregameWindowClosed()
         attempt = str(uuid4())
         self.ledger.reserve(self.window_id, attempt, objects=params['limit'], now=now,
                             stopped=control['stopped'], source_paused=control['source_paused'],
@@ -80,6 +86,9 @@ class GuardedPageCollector:
         if control['stopped'] or control['source_paused']:
             self.ledger.resolve(attempt, charged=0, evidence='control revoked before dispatch', now=now)
             raise RuntimeError('collection stopped or source paused')
+        if self.eligible and not self.eligible(params):
+            self.ledger.resolve(attempt, charged=0, evidence='pregame window closed before dispatch', now=now)
+            raise PregameWindowClosed()
         try:
             response = await self.transport.fetch(params, api_key)
             self.ledger.record_response(attempt, response)

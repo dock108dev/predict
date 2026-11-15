@@ -14,6 +14,7 @@ import psycopg
 from app.comparison.sgo_native_binding import capture_catalog
 from app.storage import sgo_native_catalog
 from app.storage.store import connect, now
+from .current_policy import live_enabled
 
 HOST = 'https://api.novig.com'
 LEAGUES = 'NFL,NCAAF,NBA,NCAAB,MLB,NHL'
@@ -157,6 +158,9 @@ class NovigPublicDiscovery:
                             continue
                     except (httpx.HTTPError, psycopg.Error, ValueError, KeyError, TypeError) as exc:
                         self.metrics['sgo_catalog_state'] = 'novig_public_catalog_unavailable:' + type(exc).__name__
+                    if not live_enabled(self.service.config):
+                        await asyncio.sleep(delay)
+                        continue
                     try:
                         await self.poll()
                     except httpx.HTTPStatusError as exc:

@@ -152,7 +152,7 @@ DISCOVERY_HOURS = (12, 24, 48, 72, 96)
 
 def budgeted_policy(events: list[EventDue], now: datetime, daily_budget: int, *,
                     discovery_walk_objects: int = 0, priority_pregame=False,
-                    allow_faster_refresh=True) -> tuple[SchedulePolicy, int]:
+                    allow_faster_refresh=True, include_kickoff=True) -> tuple[SchedulePolicy, int]:
     """Budget the static slate, preserving kickoff and active refresh priority.
 
     Project current live events as live all day. Reserve capacity for the
@@ -172,7 +172,8 @@ def budgeted_policy(events: list[EventDue], now: datetime, daily_budget: int, *,
             raise ValueError('event clocks must be timezone-aware')
         hours = (event.starts_at - now).total_seconds() / 3600
         tiers[0 if event.active else 1 if hours <= 2 else 2 if hours <= 12 else 3 if hours <= 72 else 4] += 1
-        if not event.active and hours <= 24 and (event.last_received_at is None or event.last_received_at < event.starts_at):
+        if (include_kickoff and not event.active and hours <= 24
+                and (event.last_received_at is None or event.last_received_at < event.starts_at)):
             kickoff_polls += 1
     # Keep the normal 15-minute live target as we stretch distant, near and
     # imminent pregame polling. Kickoff remains an independent one-time poll.

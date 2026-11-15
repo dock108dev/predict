@@ -8,7 +8,7 @@ import json
 import os
 import time
 from uuid import uuid4
-from .current_policy import load, validate, candidate, consume, ROOT, VERSION, APP_RUNNING_DURATION, aggregate_scope, native_scope, native_markets
+from .current_policy import load, validate, candidate, consume, ROOT, VERSION, APP_RUNNING_DURATION, aggregate_scope, live_enabled, native_scope, native_markets
 from .local_ownership import LocalOwnership
 from .current_sink import LatestStateSink, utc
 from app.dashboard.current_state import unavailable
@@ -160,11 +160,12 @@ class CurrentService:
         if (self.database_mode and self.config['aggregate_enabled'] and self.config.get('direct_novig_enabled', True)
                 and not ({'novig', 'the_odds_api'} & self.paused_sources)):
             from .novig_v3_public import NovigPublicDiscovery
-            from .novig_v3_current import NovigCurrentWorker
             self.workers['novig_public'] = NovigPublicDiscovery(self)
             self.tasks['novig_public'] = asyncio.create_task(self.run_worker('novig_public'), name='predict-novig-public')
-            self.workers['novig_native'] = NovigCurrentWorker(self)
-            self.tasks['novig_native'] = asyncio.create_task(self.run_worker('novig_native'), name='predict-novig-native')
+            if live_enabled(self.config):
+                from .novig_v3_current import NovigCurrentWorker
+                self.workers['novig_native'] = NovigCurrentWorker(self)
+                self.tasks['novig_native'] = asyncio.create_task(self.run_worker('novig_native'), name='predict-novig-native')
         self.watchdog = asyncio.create_task(self.watch(), name='predict-current-resources')
 
     async def run_worker(self, venue):

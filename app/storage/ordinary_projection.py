@@ -247,7 +247,7 @@ def published_phase(row, at, latest, blocked, *, event_replaced=False):
 
 
 def project(result, current, owner, states, *, at, policy, epoch, settings=None, sportsbook_frames=(),
-            current_desk=False, retain_sportsbook_ev=False, event_facts=None):
+            current_desk=False, retain_sportsbook_ev=False, event_facts=None, lifecycle_rows=None):
     """Fail-closed rank withdrawal; no reference/fee/math is recomputed here."""
     from app.comparison.snapshot_fee_outcome import EXPIRED, unavailable
     from app.comparison.sgo_sportsbook_baseline import current as sportsbook_current
@@ -279,7 +279,8 @@ def project(result, current, owner, states, *, at, policy, epoch, settings=None,
     fee_state = owner.get('fee_lifecycle')
     product_states = owner.get('fee_products') or {}
     current_fee_revision = schedule_lifecycle.revision(fee_state)
-    event_states, blocked_occurrences = current_events(result['rows'], event_facts or {}, at)
+    event_states, blocked_occurrences = current_events(
+        result['rows'] if lifecycle_rows is None else lifecycle_rows, event_facts or {}, at)
     for original in result['rows']:
         row = dict(original)
         auth = row['current_authority']

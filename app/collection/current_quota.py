@@ -48,6 +48,25 @@ def now():
     return datetime.now(timezone.utc).isoformat()
 
 
+def cycle_request_matches(planned, request):
+    if planned == request:
+        return True
+    # A scheduled league request may tighten its exact pregame cutoff while
+    # waiting for its turn. Every other route and parameter remains exact.
+    path = planned['path']
+    if path != request['path'] or not re.fullmatch(r'/v4/sports/[a-z0-9_]+/odds', path):
+        return False
+    original, actual = planned['params'], request['params']
+    before, after = (params.get('commenceTimeFrom') for params in (original, actual))
+    template = r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z'
+    if not all(isinstance(value, str) and re.fullmatch(template, value) for value in (before, after)):
+        return False
+    try:
+        return stamp(after) >= stamp(before) and actual == dict(original, commenceTimeFrom=after)
+    except ValueError:
+        return False
+
+
 def window(value):
     if value is None:
         return None
@@ -736,7 +755,10 @@ class QuotaLedger:
                     used=sum(a['cost'] for a in v['attempts'].values() if a.get('cycle_id')==cycle_id)
                     if grant is None or daily+cost>grant['credits_per_day'] or used+cost>grant['credits_per_cycle']:
                         raise QuotaStop('alternate_authorized_budget_exceeded')
-                if in_cycle and (request not in cycle['requests'] or any(a.get('cycle_id')==cycle_id and a['request']==request for a in v['attempts'].values())):raise QuotaStop('cycle_dispatch_duplicate_or_outside_scope')
+                if in_cycle:
+                    planned=next((r for r in cycle['requests'] if cycle_request_matches(r,request)),None)
+                    if planned is None or any(a.get('cycle_id')==cycle_id and cycle_request_matches(planned,a['request']) for a in v['attempts'].values()):
+                        raise QuotaStop('cycle_dispatch_duplicate_or_outside_scope')
                 if not diagnostic and not in_cycle and v['next_due_at'] and stamp(at)<stamp(v['next_due_at']):
                     raise QuotaStop('aggregate_budget_delayed')
                 seconds=(stamp(v['window']['ends_at'])-stamp(at)).total_seconds()

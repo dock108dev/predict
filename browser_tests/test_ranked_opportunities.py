@@ -1,6 +1,7 @@
 """Exercise the approved ranked journey at desktop and mobile widths."""
 
 from copy import deepcopy
+from datetime import datetime
 from fractions import Fraction
 import os
 from pathlib import Path
@@ -116,6 +117,127 @@ def settlement(
         ),
     )
     return group(key, title, [lead, opposite], score, pairs=[pair])
+
+
+def test_update_check_keeps_page_and_conceals_expired_estimate():
+    from playwright.sync_api import expect, sync_playwright
+
+    revision = "a"
+    read_failure = False
+    list_reads = []
+    signals = []
+
+    def respond(route):
+        url = urlparse(route.request.url)
+        query = {key: values[0] for key, values in parse_qs(url.query).items()}
+        if url.path == "/ev":
+            route.fulfill(path=ASSETS / "desk.html")
+        elif url.path.startswith("/view/current/"):
+            route.fulfill(path=ASSETS / Path(url.path).name)
+        elif url.path == "/api/comparison-current/updates":
+            signals.append(query)
+            route.fulfill(
+                json=dict(
+                    changed=query["after"] != revision,
+                    cursor=revision,
+                    phase="pregame",
+                    features={"live_enabled": False},
+                    poll_after_ms=6500,
+                )
+            )
+        elif url.path == "/api/comparison-current":
+            list_reads.append(query)
+            if read_failure:
+                route.fulfill(status=503)
+                return
+            deadline = "2026-11-13T00:00:20Z" if revision == "a" else START
+            value = "1/5" if revision == "a" else "7/10"
+            lead = quote(
+                "novig-over",
+                "novig",
+                "over",
+                "total",
+                "215.5",
+                value=value,
+                current_until=deadline,
+                calculation_current_until=deadline,
+            )
+            other = quote("novig-under", "novig", "under", "total", "215.5", value="-1")
+            route.fulfill(
+                json=dict(
+                    state="ready",
+                    phase="pregame",
+                    features={"live_enabled": False},
+                    update_cursor=revision,
+                    refresh_at=deadline,
+                    browse_id="keep-first-page",
+                    basis=query["basis"],
+                    rows=[
+                        group("lead", DETROIT, [lead], value),
+                        group("other", DETROIT, [other], "-1"),
+                    ],
+                    row_kind="games",
+                    page_count=1,
+                    total=1,
+                    publication={},
+                )
+            )
+        else:
+            route.fulfill(status=404)
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(
+            executable_path=os.getenv("PREDICT_CI_CHROMIUM")
+        )
+        tab = browser.new_page(viewport={"width": 390, "height": 844})
+        tab.route("**/*", respond)
+        tab.clock.install(time=datetime.fromisoformat("2026-11-13T00:00:00+00:00"))
+        tab.goto(f"{BASE}/ev")
+        score = tab.locator(".opportunity-score")
+        expect(score).to_have_text("+0.20%Before-fee estimate")
+        expect(tab.get_by_text("1 more outcome")).to_be_visible()
+        expect(tab.get_by_label("Calculation basis")).to_have_value("sportsbooks")
+        expect(tab.locator("#phase-tabs")).to_be_hidden()
+        assert tab.evaluate("document.documentElement.scrollWidth === innerWidth")
+        tab.evaluate("window.initialCard = document.querySelector('.opportunity-card')")
+
+        with tab.expect_response(lambda response: "/updates?" in response.url):
+            tab.clock.fast_forward(7000)
+        assert len(list_reads) == 1
+        assert signals[0]["after"] == "a"
+        assert tab.evaluate(
+            "window.initialCard === document.querySelector('.opportunity-card')"
+        )
+
+        revision = "b"
+        read_failure = True
+        with tab.expect_response(lambda response: response.status == 503):
+            tab.clock.fast_forward(7000)
+        expect(tab.locator("#previous-results")).to_contain_text(
+            "Showing the previous results"
+        )
+        assert list_reads[-1]["browse_id"] == "keep-first-page"
+        expect(tab.locator('[data-offer-id="novig-over"]')).to_be_visible()
+        expect(score).to_be_visible()
+
+        with tab.expect_response(lambda response: response.status == 503):
+            tab.clock.fast_forward(7000)
+        expect(score).to_be_hidden()
+        expect(tab.locator('[data-offer-id="novig-over"]')).to_contain_text("Last known")
+
+        read_failure = False
+        with tab.expect_response(
+            lambda response: "/api/comparison-current?" in response.url
+        ):
+            tab.clock.fast_forward(7000)
+        expect(score).to_have_text("+0.70%Before-fee estimate")
+        expect(tab.locator("#previous-results")).to_be_hidden()
+
+        tab.goto(f"{BASE}/ev?phase=live")
+        expect(tab).to_have_url(f"{BASE}/ev")
+        expect(tab.locator("#phase-tabs")).to_be_hidden()
+        assert list_reads[-1]["phase"] == "live"
+        browser.close()
 
 
 def fixtures():
@@ -576,7 +698,7 @@ def test_ranked_and_browse_journey(width, tmp_path):
                 tab.get_by_text(
                     "Open a quote to see its source and receipt times.", exact=True
                 )
-            ).to_have_count(1)
+            ).to_have_count(0)
             expect(tab.get_by_role("link", name="Arbitrage")).to_be_visible()
             tab.screenshot(path=tmp_path / f"ranked-ev-{width}.png")
             tab.get_by_role("checkbox", name="Positive only").check()
@@ -628,10 +750,10 @@ def test_ranked_and_browse_journey(width, tmp_path):
             tab.keyboard.press("Escape")
             expect(popout).to_have_count(0)
             expect(tab.locator('[data-offer-id="pmus-denver"]')).to_contain_text(
-                "+3.26% EV"
+                "+3.26% After-fee EV"
             )
             expect(tab.locator('[data-offer-id="kalshi-denver"]')).to_contain_text(
-                "-8.21% EV"
+                "-8.21% After-fee EV"
             )
             expect(
                 tab.locator('[data-offer-id="kalshi-minnesota"]')
@@ -701,7 +823,8 @@ def test_ranked_and_browse_journey(width, tmp_path):
             tab.get_by_role("link", name="Find my game ↗").click()
             expect(tab.get_by_role("heading", name=DETROIT)).to_be_visible()
             quote_button = tab.locator('[data-offer-id="pmus-detroit"]')
-            expect(quote_button).to_contain_text("Source 20s ago · confirmed 8s ago")
+            expect(quote_button).not_to_contain_text("20s ago")
+            assert quote_button.get_attribute("title") is None
             tab.get_by_role("button", name="Filters", exact=True).click()
             tab.get_by_role("dialog", name="Filter results").get_by_label(
                 "Winner"

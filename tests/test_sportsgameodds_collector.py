@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
+from app.collection.current_policy import PregameWindowClosed
 from app.collection.sportsgameodds_collector import DailyObjectPacing, GuardedPageCollector, RejectedCursor
 from app.collection.sportsgameodds_ledger import ObjectLedger
 from app.collection.sportsgameodds_transport import PageResponse, TransportFailure
@@ -54,6 +55,21 @@ async def test_event_refresh_category_is_recorded_before_dispatch(tmp_path):
     transport.fetch.side_effect = fetch
     await c.fetch({'eventIDs': 'event-1', 'oddID': PARAMS['oddID'], 'limit': 1}, 'private', now=NOW)
     assert ledger.status('w')['charged'] == 1
+
+
+@run_async
+@pytest.mark.parametrize('checks', [(True, False), (True, True, False)])
+async def test_pregame_scope_expiring_during_request_preparation_never_dispatches(tmp_path, checks):
+    collector, ledger, usage, transport = setup(tmp_path, None)
+    checks = iter(checks)
+    collector.eligible = lambda params: next(checks)
+    params = {'eventIDs': 'event-1', 'oddID': PARAMS['oddID'], 'limit': 1}
+    with pytest.raises(PregameWindowClosed):
+        await collector.fetch(params, 'private', now=NOW)
+    usage.assert_awaited_once()
+    transport.fetch.assert_not_awaited()
+    status = ledger.status('w')
+    assert (status['charged'], status['held'], status['interrupted']) == (0, 0, 0)
 
 
 @run_async

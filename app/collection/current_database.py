@@ -455,13 +455,14 @@ class DatabaseIngressSink:
                         from app.comparison.public_sportsbook_estimate import allowed
                         from app.storage.current_row_state import source_status
                         from app.storage.store import stamp
+                        from .current_policy import live_enabled
                         from .oddslink_prophetx import SOURCE, keep_unchanged_schedule, live_occurrences, records as normalize_prophetx
                         from .runtime_status import read_runtime
                         owner = read_runtime(db)
                         if not allowed(owner) or 'prophetx' in owner['paused_sources']:
                             raise asyncio.CancelledError()
                         received = capture['received_at']
-                        live = live_occurrences(db, row['sport'], stamp(received))
+                        live = live_occurrences(db, row['sport'], stamp(received)) if live_enabled(self.config) else None
                         records = normalize_prophetx(capture, live=live, families=self.config['families'])
                         if records:
                             keep_unchanged_schedule(db, records)

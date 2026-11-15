@@ -31,7 +31,7 @@ def active_records(db, *, at, venues, contract=None, phase='pregame'):
         JOIN current_event e ON e.id=c.event_id
         JOIN native_book_revision b ON b.id=o.native_book_id
         LEFT JOIN native_ladder_revision d ON d.id=b.ladder_refs#>>ARRAY[c.native_outcome_id,'asks']
-        WHERE c.venue=ANY(%s) AND e.provider=c.venue
+        WHERE o.native_book_id IS NOT NULL AND c.venue=ANY(%s) AND e.provider=c.venue
           AND (%s::text IS NULL OR c.id=%s)
           AND e.scheduled_start::timestamptz <= %s
           AND (e.scheduled_start::timestamptz > %s) = %s
@@ -114,7 +114,7 @@ def carry_published_finance(row, prior):
     row['economic_revision'] = hashed([row['economic_revision'], prior.get('economic_revision')])
 
 
-def overlay(db, result, owner, states, *, at, contract=None, phase='pregame'):
+def overlay(db, result, owner, states, *, at, contract=None, phase='pregame', sgo_inputs=None):
     """Replace native rows for this view using exact original clocks and pairs.
 
     The ordinary capture still owns archived evidence and cross-venue pairs.
@@ -147,7 +147,7 @@ def overlay(db, result, owner, states, *, at, contract=None, phase='pregame'):
         captured.append((cid, row, authority, occurrence))
     if not captured:
         return result
-    observations = (pregame_sportsbooks(db, owner, states, at,
+    observations = (pregame_sportsbooks(db, owner, states, at, sgo_inputs=sgo_inputs,
                     occurrences={occurrence for _, _, _, occurrence in captured}) if phase == 'pregame' else {})
     registry = Registry.current()
     schedules = reviews(at)
@@ -173,6 +173,7 @@ def overlay(db, result, owner, states, *, at, contract=None, phase='pregame'):
         baseline = select(row, authority, observations, at=at)
         row.update(id='native-current:' + cid, kind='single', game_key=game['game_key'],
             game_title=game['title'], start_at=game['start_at'], live_native_desk=True,
+            _desk_event=record['event'],
             market=dict(market='winner' if market['family'] == 'moneyline' else market['family'],
                         period=market['period'], line=market.get('line')),
             selection=dict({'result_interpretation': 'normal_win'}, **record['selection']),
@@ -198,4 +199,7 @@ def overlay(db, result, owner, states, *, at, contract=None, phase='pregame'):
         row.pop('original_record')
         rows[cid] = row
     retained = [row for row in result['rows'] if row['current_authority']['price'].get('dependency') not in rows]
-    return dict(result, rows=retained + list(rows.values()), games=list(published.values()))
+    visible = retained + list(rows.values())
+    current_prices = sum(bool(row.get('price_current')) for row in visible)
+    return dict(result, rows=visible, games=list(published.values()),
+                publication=dict(result['publication'], current_prices=current_prices, retained_prices=len(visible)-current_prices))

@@ -297,6 +297,61 @@ def read_event(db, event_id, *, limit=MAX_ROWS, bookmakers=None, source_since=No
     return rows
 
 
+class EventInputs:
+    """Batch exact sportsbook evidence within one repeatable-read snapshot."""
+
+    def __init__(self, db):
+        self.db = db
+        self.event_frames = {}
+        self.quote_reads = {}
+
+    def frames(self, event_ids):
+        ids = sorted(set(event_ids))
+        missing = [event_id for event_id in ids if event_id not in self.event_frames]
+        if missing:
+            self.event_frames.update(dict.fromkeys(missing))
+            for row in self.db.execute(
+                'SELECT event_id,facts FROM current_sgo_event_frame WHERE event_id=ANY(%s)',
+                (missing,),
+            ):
+                self.event_frames[row['event_id']] = row
+        return {event_id: self.event_frames[event_id] for event_id in ids
+                if self.event_frames[event_id] is not None}
+
+    def quotes(self, event_ids, *, bookmakers=None, source_since=None, limit=MAX_ROWS):
+        if type(limit) is not int or not 1 <= limit <= MAX_ROWS:
+            raise ValueError('sgo read capacity')
+        ids = sorted(set(event_ids))
+        books = None if bookmakers is None else tuple(sorted(set(bookmakers)))
+        since = None if source_since is None else exact_time(source_since.isoformat())
+        cached = self.quote_reads.setdefault((books, since, limit), {})
+        missing = [event_id for event_id in ids if event_id not in cached]
+        for offset in range(0, len(missing), 16):
+            batch = missing[offset:offset + 16]
+            books_sql = '' if books is None else ' AND bookmaker_id=ANY(%s)'
+            clock_sql = '' if since is None else ' AND source_order >= %s'
+            params = [batch]
+            if books is not None:
+                params.append(list(books))
+            if since is not None:
+                params.append(since)
+            params.append(limit + 1)
+            results = {event_id: [] for event_id in batch}
+            for row in self.db.execute(
+                '''SELECT events.event_id,q.id,q.revision,q.facts
+                   FROM unnest(%s::text[]) AS events(event_id)
+                   CROSS JOIN LATERAL (
+                       SELECT id,revision,facts FROM current_sgo_reference
+                       WHERE event_id=events.event_id'''
+                + books_sql + clock_sql + ' ORDER BY id LIMIT %s) q',
+                params,
+            ):
+                results[row['event_id']].append(row)
+            cached.update((event_id, rows if len(rows) <= limit else None)
+                          for event_id, rows in results.items())
+        return {event_id: cached[event_id] for event_id in ids if cached[event_id] is not None}
+
+
 def expiry_filter(at, include_legacy):
     if not include_legacy:
         return 'expires_at < %s', (at,)

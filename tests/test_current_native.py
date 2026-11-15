@@ -41,6 +41,30 @@ class Socket:
         await asyncio.Event().wait()
 
 class WorkerControls(unittest.IsolatedAsyncioTestCase):
+    async def test_pregame_default_keeps_post_start_markets_out_of_roster_and_ingress(self):
+        service = SimpleNamespace(config=deepcopy(DEFAULT), dispatch=True)
+        worker = NativeWorker(service, 'kalshi')
+        now = datetime.now(timezone.utc)
+        kickoff = now + timedelta(minutes=15)
+        upcoming = market('UPCOMING')
+        started = market('LIVE')
+        started = replace(started, raw=replace(started.raw, ref=replace(started.raw.ref, event_id='live-event')))
+        upcoming_event = dict(id=upcoming.raw.ref.event_id, competition='NFL', scheduled_start=kickoff.isoformat())
+        live_event = dict(id='live-event', competition='NFL', status={'live': True},
+                          scheduled_start=(now-timedelta(minutes=1)).isoformat())
+        worker.catalog['events'] = [upcoming_event, live_event]
+        worker.lifecycle_initialized = True
+        worker.lifecycle.leases = {'UPCOMING': {'selection': {'event': upcoming_event}},
+                                   'LIVE': {'selection': {'event': live_event}}}
+
+        roster, _ = worker.select_priority([started, upcoming], 0)
+        self.assertEqual(roster, [upcoming])
+        worker.set_kickoff_boundary({'UPCOMING': upcoming})
+        self.assertEqual(worker.kickoff_at, kickoff.timestamp())
+        self.assertTrue(worker.book_in_scope('UPCOMING', kickoff-timedelta(microseconds=1)))
+        worker.queue_book({'raw': {'ref': {'market_id': 'UPCOMING'}, 'received_at': kickoff.isoformat()}})
+        self.assertEqual(len(worker.pending_books), 0)
+
     async def test_rotation_close_releases_waiting_reconstruction_prefetch(self):
         from collections import deque
         from app.collection.native_receive import NativeReceive
@@ -69,7 +93,7 @@ class WorkerControls(unittest.IsolatedAsyncioTestCase):
 
     async def test_priority_rotation_closes_owned_workers_and_requires_new_images(self):
         from collections import deque
-        service=SimpleNamespace(config=deepcopy(DEFAULT),dispatch=True,database_mode=True,
+        service=SimpleNamespace(config=dict(DEFAULT, live_enabled=True),dispatch=True,database_mode=True,
             deadline=asyncio.get_running_loop().time()+10,source_state=lambda *a:None,issue=lambda *a:None)
         worker=NativeWorker(service,'kalshi');worker.credential=Credential()
         sockets=[];children=[];selections=[]
@@ -349,7 +373,7 @@ class WorkerControls(unittest.IsolatedAsyncioTestCase):
 
     async def test_kalshi_catalog_removal_keeps_socket_without_reimaging_survivors(self):
         from app.adapters.kalshi_stream import BookReconstructor
-        service=SimpleNamespace(config=deepcopy(DEFAULT),dispatch=True,deadline=asyncio.get_running_loop().time()+10)
+        service=SimpleNamespace(config=dict(DEFAULT, live_enabled=True),dispatch=True,deadline=asyncio.get_running_loop().time()+10)
         worker=NativeWorker(service,'kalshi');current=market();old=market('OLD')
         mid=current.raw.ref.market_id
         selections=[dict(market_id=m.raw.ref.market_id,event=dict(id=m.raw.ref.event_id),material_revision='same') for m in (current,old)]
@@ -378,7 +402,7 @@ class WorkerControls(unittest.IsolatedAsyncioTestCase):
 
     async def test_kalshi_tail_rotation_retires_only_the_outgoing_member_on_the_same_sid(self):
         from app.adapters.kalshi_stream import BookReconstructor
-        service=SimpleNamespace(config=deepcopy(DEFAULT),dispatch=True,invalidate_markets=object(),
+        service=SimpleNamespace(config=dict(DEFAULT, live_enabled=True),dispatch=True,invalidate_markets=object(),
                                 deadline=asyncio.get_running_loop().time()+10)
         worker=NativeWorker(service,'kalshi')
         hot, retired, added=(market(mid) for mid in ('HOT','TAIL-OLD','TAIL-NEW'))
@@ -419,7 +443,7 @@ class WorkerControls(unittest.IsolatedAsyncioTestCase):
         worker.socket.close.assert_not_awaited()
 
     async def test_kalshi_quiet_snapshot_requests_only_durable_live_quiet_members(self):
-        service=SimpleNamespace(config=deepcopy(DEFAULT),dispatch=True,deadline=time.monotonic()+10)
+        service=SimpleNamespace(config=dict(DEFAULT, live_enabled=True),dispatch=True,deadline=time.monotonic()+10)
         worker=NativeWorker(service,'kalshi')
         now=datetime.now(timezone.utc)
         old=(now-timedelta(seconds=20)).isoformat()
@@ -516,7 +540,7 @@ class WorkerControls(unittest.IsolatedAsyncioTestCase):
 
     async def test_catalog_group_replacement_keeps_socket_and_waits_for_new_request_images(self):
         from app.adapters.polymarket_us_stream import MarketStream
-        service=SimpleNamespace(config=deepcopy(DEFAULT),dispatch=True,deadline=asyncio.get_running_loop().time()+10)
+        service=SimpleNamespace(config=dict(DEFAULT, live_enabled=True),dispatch=True,deadline=asyncio.get_running_loop().time()+10)
         worker=NativeWorker(service,'polymarket_us');m=us_market();mid=m.raw.ref.market_id
         selection=dict(market_id=mid,event=dict(id=m.raw.ref.event_id),material_revision='old')
         worker.lifecycle.leases={mid:dict(selection=selection)};worker.lifecycle_initialized=True
@@ -545,7 +569,7 @@ class WorkerControls(unittest.IsolatedAsyncioTestCase):
     async def test_pmus_tail_rotation_waits_for_every_ack_and_keeps_hot_request(self):
         from app.collection.current_native import CatalogResync
 
-        service=SimpleNamespace(config=deepcopy(DEFAULT),dispatch=True,invalidate_markets=object(),
+        service=SimpleNamespace(config=dict(DEFAULT, live_enabled=True),dispatch=True,invalidate_markets=object(),
                                 deadline=asyncio.get_running_loop().time()+10)
         worker=NativeWorker(service,'polymarket_us')
         hot={'HOT-A','HOT-B'}
@@ -712,7 +736,7 @@ class WorkerControls(unittest.IsolatedAsyncioTestCase):
                 self.assertTrue(all(s.closed for s in sockets));self.assertIsNone(worker.socket)
 
     async def test_reconnect_uses_adopted_roster_while_durable_save_is_pending(self):
-        service=SimpleNamespace(config=deepcopy(DEFAULT),dispatch=True,deadline=asyncio.get_running_loop().time()+10,
+        service=SimpleNamespace(config=dict(DEFAULT, live_enabled=True),dispatch=True,deadline=asyncio.get_running_loop().time()+10,
             source_state=lambda *a:None,issue=lambda *a:None)
         service.config['backoff_seconds']=[.001]*5
         worker=NativeWorker(service,'kalshi');worker.credential=Credential()

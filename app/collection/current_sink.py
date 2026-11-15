@@ -484,17 +484,19 @@ class LatestStateSink:
         if row['type'] in ('current_aggregate','current_aggregate_batches'):
             batches = row['batches'] if row['type']=='current_aggregate_batches' else [row]
             for batch_row in batches:
-                from .current_aggregate_admission import admit_venues, admit
+                from .current_aggregate_admission import admit_venues, admit, parse_frame, pregame_frame
+                from .current_policy import live_enabled
                 sport=batch_row['sport']
                 aggregate_states[sport]=deepcopy(batch_row.get('venue_states',states))
                 if aggregate_receipts.get(sport) and batch_row['received_at']<=aggregate_receipts[sport]:
                     raise ValueError('Stale aggregate response')
-                accepted,rejected=admit_venues(batch_row['body'],sport,batch_row['received_at'])
+                frame = None if live_enabled(self.config) else pregame_frame(parse_frame(batch_row['body']), batch_row['received_at'])
+                accepted,rejected=admit_venues(batch_row['body'],sport,batch_row['received_at'],frame=frame)
                 if len(rejected)==2:raise ValueError('Malformed aggregate response')
                 prior=aggregate_records.get(sport,[])
                 incoming={r['_instrument'] for batch in accepted.values() for r in batch}
                 aggregate_records[sport]=[r for r in prior if r['quote']['venue'] in rejected and r.get('_instrument') not in incoming]+[r for batch in accepted.values() for r in batch]
-                try:references=admit(batch_row['body'],sport,batch_row['received_at'],venue='pinnacle')
+                try:references=admit(batch_row['body'],sport,batch_row['received_at'],venue='pinnacle',frame=frame)
                 except (ValueError,KeyError,TypeError,ArithmeticError,StopIteration):references=[]
                 # Reference records need identity, originals and clocks, not venue
                 # presentation fields or duplicated outcome descriptors.

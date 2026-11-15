@@ -15,7 +15,7 @@ AT='2026-10-15T12:00:00Z'
 
 def ordinary_scheduler():
     committed=[];issues=[]
-    service=SimpleNamespace(states=unavailable()['source_status'],database=object(),config=dict(sports=['NFL']),
+    service=SimpleNamespace(states=unavailable()['source_status'],database=object(),config=dict(sports=['NFL'],live_enabled=True),
         coverage=CoverageLedger({v:['NFL'] for v in ('novig','prophetx','pinnacle')}),
         sink=SimpleNamespace(commit=lambda row,states:committed.append((row,states))),
         observation=lambda *args:None,issue=lambda *args:issues.append(args))

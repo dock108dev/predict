@@ -7,13 +7,14 @@ from an incomplete, moving, or successful-but-not-snapshot traversal.
 import asyncio
 from collections import Counter
 from copy import deepcopy
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 import os
 from pathlib import Path
 import re
 
 from .current_ingress import call, operation
-from .current_policy import ROOT, aggregate_scope
+from .current_policy import ROOT, PregameWindowClosed, aggregate_scope, live_enabled
 from .sportsgameodds_adapter import PROPHETX_BOOKMAKER_ID, Traversal, clock_sample
 from .sportsgameodds_collector import DailyObjectPacing, GuardedPageCollector, InvalidProviderPage, RejectedCursor
 from .sportsgameodds_current_rows import current_rows
@@ -85,7 +86,7 @@ def pacing_reset(observed, now):
     return datetime(year, month, 1, tzinfo=timezone.utc), 'assumed_calendar_month'
 
 
-def retained_schedule(scope, now, limit):
+def retained_schedule(scope, now, limit, *, include_live=False):
     """Seed polling from retained receipts; never restore quote authority.
 
     The event frame's receipt is used only to order future polling. No
@@ -101,12 +102,15 @@ def retained_schedule(scope, now, limit):
             WHERE COALESCE(f.facts->'event_context'->>'league',e.competition)=ANY(%s)
               AND COALESCE(f.facts->>'starts_at',e.scheduled_start)::timestamptz >= %s
             ORDER BY COALESCE(f.facts->>'starts_at',e.scheduled_start)::timestamptz,f.event_id LIMIT %s''',
-            (list(scope), now-timedelta(hours=12), limit+1)).fetchall()
+            (list(scope), now-timedelta(hours=12) if include_live else now, limit+1)).fetchall()
     result = {}
     for row in rows[:limit]:
         facts = row['facts']; context = facts.get('event_context') or {}
         status = context.get('status') or {}
         if any(status.get(k) is True for k in ('ended', 'completed', 'cancelled')):
+            continue
+        if not include_live and (context.get('phase') != 'pregame'
+                                 or datetime.fromisoformat(row['scheduled_start']) <= now):
             continue
         event_id = row['native_event_id']
         result[event_id] = dict(event_id=event_id, league=row['competition'], starts_at=row['scheduled_start'],
@@ -156,6 +160,20 @@ class SportsGameOddsWorker:
                 or (self.storage_interval_requested and not self.page_in_progress),
                 'source_paused': 'sportsgameodds' in self.service.paused_sources}
 
+    def event_in_scope(self, event, at):
+        return live_enabled(self.service.config) or (
+            event['phase'] == 'pregame' and at < datetime.fromisoformat(event['starts_at']))
+
+    def request_in_scope(self, params):
+        if live_enabled(self.service.config):
+            return True
+        if 'leagueID' in params:
+            return params.get('started') is False and params.get('live') is False and 'startsAfter' in params
+        # The provider ignores phase and start filters on exact event-ID requests.
+        at = self.now()
+        return all(event_id in self.events and self.event_in_scope(self.events[event_id], at)
+                   for event_id in params['eventIDs'].split(','))
+
     def request_storage_interval(self):
         """Let the owned page settle and publish, then prevent another dispatch."""
         self.storage_interval_requested = True
@@ -196,7 +214,8 @@ class SportsGameOddsWorker:
                 raise RuntimeError('current account usage evidence unavailable or changed')
             return dict(current, reset_at=current_reset)
         self.collector = GuardedPageCollector(self.ledger, self.window_id, self.transport,
-                                              controls=self.controls, account_usage=pacing_usage)
+                                              controls=self.controls, account_usage=pacing_usage,
+                                              eligible=self.request_in_scope)
         self.metrics.update(state='waiting', account_tier=observed.get('tier'), reset_basis=reset_basis)
         self._account_status()
 
@@ -272,6 +291,8 @@ class SportsGameOddsWorker:
                 totals[field] += count
 
     async def _fetch(self, params):
+        if not self.request_in_scope(params):
+            raise PregameWindowClosed()
         self.page_in_progress = True
         self.phase = 'collecting'
         try:
@@ -303,11 +324,14 @@ class SportsGameOddsWorker:
             # the source-revocable ingress transaction succeeds. Stage schedule
             # changes so a failed admission cannot postpone retry or discard an
             # older event/alias from the in-memory schedule.
-            next_events = dict(self.events)
+            observed_at = self.now()
+            next_events = {event_id: event for event_id, event in self.events.items()
+                           if self.event_in_scope(event, observed_at)}
             for event in page.events:
                 if event['league'] not in aggregate_scope(self.service.config):
                     raise ValueError('provider returned outside configured scope')
-                if event['status'].get('ended') or event['status'].get('completed') or event['status'].get('cancelled'):
+                if (not self.event_in_scope(event, observed_at) or event['status'].get('ended')
+                        or event['status'].get('completed') or event['status'].get('cancelled')):
                     next_events.pop(event['event_id'], None)
                 else:
                     next_events[event['event_id']] = event
@@ -330,13 +354,22 @@ class SportsGameOddsWorker:
                         next_events[event_id] = dict(next_events[event_id], last_polled_at=self.now().isoformat())
             from psycopg import OperationalError
             from psycopg.errors import QueryCanceled
+            admitted_page = page
+            if not live_enabled(self.service.config):
+                events = tuple(event for event in page.events
+                               if self.event_in_scope(event, datetime.fromisoformat(event['received_at'])))
+                if len(events) != len(page.events):
+                    admitted_ids = {event['event_id'] for event in events}
+                    admitted_page = replace(page, events=events,
+                                            quotes=tuple(quote for quote in page.quotes
+                                                         if quote['event_id'] in admitted_ids))
             try:
-                await self._publish(page)
+                await self._publish(admitted_page)
             except (ValueError, OperationalError, QueryCanceled) as exc:
                 failure(__name__, 'sgo_page_admission_interrupted', exc)
                 raise RuntimeError('provider page admission interrupted') from exc
             if alternate is not None:
-                admitted = [quote for quote in page.quotes if quote.get('alternate')]
+                admitted = [quote for quote in admitted_page.quotes if quote.get('alternate')]
                 alternate['admitted_alternate_rows'] += len(admitted)
                 alternate['admitted_available_alternate_rows'] += sum(quote.get('available') is True for quote in admitted)
             self.events = next_events
@@ -353,6 +386,8 @@ class SportsGameOddsWorker:
                   'includeOpposingOdds': True}
         if league is not None:
             result['leagueID'] = league
+            if not live_enabled(self.service.config):
+                result.update(started=False, live=False)
         else:
             result['eventIDs'] = ','.join(event_ids)
             result['limit'] = len(event_ids)
@@ -414,10 +449,11 @@ class SportsGameOddsWorker:
                 continue
         self.metrics['discovery_restored'] = len(self.discovery_progress)
 
-    def scheduled_events(self):
+    def scheduled_events(self, *, at):
         return [EventDue(e['event_id'], datetime.fromisoformat(e['starts_at']),
                          datetime.fromisoformat(e.get('last_polled_at', e['received_at'])),
-                         live=e['phase']=='live', started=e['phase']=='started') for e in self.events.values()]
+                         live=e['phase']=='live', started=e['phase']=='started') for e in self.events.values()
+                if self.event_in_scope(e, at)]
 
     async def refresh(self, due, policy, *, between_discovery_pages=False):
         def needs_alternates(event, at):
@@ -445,6 +481,8 @@ class SportsGameOddsWorker:
                     failure(__name__, 'sgo_alternate_refresh_parse', exc.__cause__ or exc)
                     self.metrics['alternate_parse_fallbacks'] = self.metrics.get('alternate_parse_fallbacks', 0) + 1
                     await self._fetch(self.params(event_ids=event_ids))
+            except PregameWindowClosed:
+                continue
             except InvalidProviderPage as exc:
                 failure(__name__, 'sgo_refresh_parse', exc.__cause__ or exc)
                 # Leave the previous prices and source clocks as recorded. Only
@@ -468,7 +506,7 @@ class SportsGameOddsWorker:
     async def cycle(self):
         now = self.now()
         # Receipt time schedules polling and carries no source-price authority.
-        candidates = self.scheduled_events()
+        candidates = self.scheduled_events(at=now)
         policy = SchedulePolicy()
         discovery_cadence = timedelta(hours=12)
         leagues = list(aggregate_scope(self.service.config))
@@ -486,7 +524,8 @@ class SportsGameOddsWorker:
             prior_cost = self.ledger.discovery_cost(now=now)
             walk_objects = sum(max(1, by_league[league], prior_cost.get(league, 0)) for league in leagues)
             policy, projected = budgeted_policy(candidates, now, allowance, discovery_walk_objects=walk_objects,
-                                                priority_pregame=True, allow_faster_refresh=False)
+                                                priority_pregame=True, allow_faster_refresh=False,
+                                                include_kickoff=live_enabled(self.service.config))
             discovery_cadence = discovery_interval(retained_events=walk_objects, daily_budget=allowance,
                                                    projected_refresh_objects=projected)
             discovery_per_day = walk_objects * timedelta(days=1) / discovery_cadence
@@ -512,7 +551,7 @@ class SportsGameOddsWorker:
 
         def due_now():
             at = self.now()
-            due = due_events(self.scheduled_events(), at, policy=policy, **self.controls_to_schedule())
+            due = due_events(self.scheduled_events(at=at), at, policy=policy, **self.controls_to_schedule())
             urgent, scheduled = [], []
             for event in due:
                 (urgent if event.active or event.starts_at <= at else scheduled).append(event)
@@ -540,10 +579,9 @@ class SportsGameOddsWorker:
             # The 2,000-event schedule bound permits up to 1,000 two-event
             # pages. A smaller traversal cap silently abandoned large slates.
             traversal = self.discovery_progress.setdefault(league, Traversal(max_pages=1000))
-            # Keep the filter stable across cursor pages; include recently
-            # started games so live events are not discarded by discovery.
+            # Keep the filter stable across cursor pages.
             if not hasattr(traversal, 'starts_after'):
-                traversal.starts_after = (now - timedelta(hours=12)).isoformat()
+                traversal.starts_after = (now-timedelta(hours=12) if live_enabled(self.service.config) else now).isoformat()
             for _ in range(self.max_pages):
                 # A live update or kickoff can become due during a multi-page
                 # walk. Give it the next guarded request before spending on
@@ -630,7 +668,8 @@ class SportsGameOddsWorker:
                 try:
                     await self.initialize()
                     retained, truncated = await asyncio.to_thread(
-                        retained_schedule, aggregate_scope(self.service.config), self.now(), self.max_events)
+                        retained_schedule, aggregate_scope(self.service.config), self.now(), self.max_events,
+                        include_live=live_enabled(self.service.config))
                     self.events.update(retained)
                     self.metrics.update(retained_schedule_events=len(retained), retained_schedule_truncated=truncated)
                     if self.ledger is not None:

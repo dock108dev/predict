@@ -9,7 +9,7 @@ from app.storage import odds_replay, comparison_snapshot as snapshots
 from app.storage.store import connect, stamp
 from .local_security import PublicRequestError
 from .product_finance import retained_novig_fee, visible_assumptions, visible_row
-from .snapshot_api import page_options
+from .snapshot_api import page_options, pregame_capture, retained_pregame
 from .trade_desk import page
 
 
@@ -60,11 +60,13 @@ def retained_capture(db, result_id, game_key):
     return dict(result, rows=rows, games=[g for g in result['games'] if g['game_key'] == game_key])
 
 
-def retained_game(query, *, details=False):
+def retained_game(query, *, details=False, allow_live=False):
     result_id, game_key = query.get('result_id'), query.get('game_key')
     with connect() as db, db.transaction():
         db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
         result = retained_capture(db, result_id, game_key)
+        if result and not allow_live:
+            result = retained_pregame(result)
         if not result:
             if details:
                 raise PublicRequestError('Game capture expired')
@@ -97,10 +99,12 @@ def retained_game(query, *, details=False):
     return dict(out, replay=replay)
 
 
-def load(query, *, details=False):
+def load(query, *, details=False, allow_live=False):
+    if not allow_live:
+        query = {key: value for key, value in query.items() if key != 'phase'}
     dataset = query.get('dataset', 'frozen')
     if dataset == 'retained':
-        return retained_game(query, details=details)
+        return retained_game(query, details=details, allow_live=allow_live)
     if dataset == 'practice':
         from .replay_practice import practice
         result, proofs = practice(query.get('frame', 'initial'))
@@ -126,7 +130,14 @@ def load(query, *, details=False):
                 value = snapshots.unpack(row[0]) if row else None
         if not value or value['result_id'] != result['id']:
             raise PublicRequestError('Offer unavailable in this replay revision')
+        if not allow_live and not pregame_capture(value['row'], value['captured_at']):
+            raise PublicRequestError('Offer unavailable in this replay revision')
         return archive_detail(value, result['id'])
+    if not allow_live:
+        result = retained_pregame(result)
+        from app.storage.ordinary_projection import counts
+        result = dict(result)
+        counts(result)
     out = page(result, query, page_options(query), captured_pairs=result['pairs'],
                policy=result['publication']['policy'])
     out.update(replay=result['replay'], archive_counts=result['counts'])
@@ -135,7 +146,17 @@ def load(query, *, details=False):
 
 def mount(app):
     async def read(req):
-        return web.json_response(await asyncio.to_thread(load, dict(req.query), details=req.path.endswith('/details')))
+        def work():
+            from app.collection.current_policy import live_enabled
+            from app.collection.runtime_status import read_runtime
+            # Practice is always an isolated, pregame fixture with no SQL dependency.
+            allow_live = False
+            if req.query.get('dataset', 'frozen') != 'practice':
+                with connect() as db:
+                    allow_live = live_enabled(read_runtime(db, ordinary_authority=True)['config'])
+            return load(dict(req.query), details=req.path.endswith('/details'), allow_live=allow_live)
+
+        return web.json_response(await asyncio.to_thread(work))
 
     app.router.add_get('/api/odds-replay', read)
     app.router.add_get('/api/odds-replay/details', read)

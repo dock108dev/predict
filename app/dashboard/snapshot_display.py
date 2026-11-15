@@ -1,4 +1,5 @@
 """Read-only presentation of exact captured inputs; never changes rank or records."""
+from collections import defaultdict
 from decimal import Decimal, localcontext
 from fractions import Fraction
 from functools import lru_cache
@@ -61,6 +62,86 @@ def search_index(result):
     return index
 
 
+def desk_game_aliases(rows, games, event_facts):
+    """Join only exact, unambiguous schedule identities for display."""
+    from app.comparison.occurrence_matching import OccurrenceResolver
+    from app.normalization.college_registry import expanded
+    from app.storage.schedule_metadata import witness
+    from app.storage.store import stamp
+
+    sources = defaultdict(set)
+    events = dict(event_facts or {})
+    for row in rows:
+        source = row.get('source') or {}
+        if source.get('provider') and source.get('native_event_id'):
+            key = source['provider'], source['native_event_id']
+            sources[row['game_key']].add(key)
+            if row.get('_desk_event') is not None:
+                events[key] = row['_desk_event']
+        else:
+            sources[row['game_key']].add(None)
+
+    entities = expanded().entities
+    scheduled = defaultdict(list)
+    for game_key in sources.keys() & games.keys():
+        game = games[game_key]
+        league = game.get('league')
+        if not league or league == 'MLB' or not game.get('start_at'):
+            # A doubleheader needs its reported game number.
+            continue
+        teams = defaultdict(set)
+        for participant in game['participants']:
+            if participant.get('id') and participant.get('role') in ('home', 'away'):
+                teams[participant['role']].add(participant['id'])
+        if len(teams['home']) != 1 or len(teams['away']) != 1:
+            continue
+        home, away = next(iter(teams['home'])), next(iter(teams['away']))
+        if home == away or any(entities.get(team, {}).get('league') != league
+                               or entities[team].get('kind') != 'team' for team in (home, away)):
+            continue
+        scheduled[league, stamp(game['start_at']), home, away].append(game_key)
+
+    resolver = OccurrenceResolver()
+    aliases = {}
+    for (league, start, home, away), keys in scheduled.items():
+        if len(keys) < 2:
+            continue
+        witnesses = []
+        provider_games = defaultdict(set)
+        roles = {'home': home, 'away': away}
+        for key in {source for game in keys for source in sources[game]}:
+            event = events.get(key)
+            if (event is None or event.get('schedule_conflict') or event.get('competition') != league
+                    or not event.get('participants') or not event.get('scheduled_start')
+                    or stamp(event['scheduled_start']) != start
+                    or any(event.get(role) != team for role, team in roles.items())):
+                break
+            provider, native_id = key
+            stated_roles = event.get('source_participant_roles')
+            if stated_roles is None and provider in ('sportsgameodds', 'oddslink_public_board'):
+                # These adapters preserve their explicit home/away fields and
+                # bind the schedule to the original provider-event receipt.
+                schedule = witness(event)
+                if schedule and schedule['authority'] == [provider, 'event', native_id]:
+                    stated_roles = roles
+            if stated_roles != roles:
+                break
+            source = dict(provider=provider, native_event_id=native_id, binding_version=None)
+            facts = resolver._facts(dict(event=event, quote=dict(source=source, provenance={})))
+            if facts['conflict'] or facts['replacement'] or facts['roles'] != roles:
+                break
+            provider_games[provider].add(facts['source_game'])
+            witnesses.append(facts)
+        else:
+            if (any(len(ids) != 1 for ids in provider_games.values())
+                    or any(not resolver._consistent(a, b) for index, a in enumerate(witnesses)
+                           for b in witnesses[index + 1:])):
+                continue
+            canonical = min(keys, key=lambda key: (key.startswith(('native-current:', 'aggregate-current:')), key))
+            aliases.update((key, canonical) for key in keys if key != canonical)
+    return aliases
+
+
 def ranking_value(row, metric, *, current=False, qualified=False):
     """Only the declared supported current basis may compete; never fill blanks."""
     value = row.get(metric)
@@ -99,10 +180,12 @@ def outcome_id(key):
     return hashed(key)
 
 
-def comparison_groups(rows, by_id, metric, *, pairs=False, current=False, individual=False, qualified=False):
+def comparison_groups(rows, by_id, metric, *, pairs=False, current=False, individual=False, qualified=False,
+                      score_row=None):
     """Group the complete filtered slate before pagination; preserve every quote."""
     groups = {}
-    values = {r['id']: ranking_value(r, metric, current=current, qualified=qualified) for r in rows}
+    values = {r['id']: score_row(r) if score_row else ranking_value(r, metric, current=current, qualified=qualified)
+              for r in rows}
     def rank(r):
         value = values[r['id']]
         return (value is None, -value if value is not None else 0,

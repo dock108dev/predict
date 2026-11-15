@@ -13,7 +13,7 @@ from aiohttp import ClientError, ClientSession, ClientTimeout
 from app.comparison.public_sportsbook_estimate import HISTORY_SLOTS, MAX_BYTES, SPORTS, allowed, cache_path
 from app.storage.store import stamp
 from .current_ingress import call, operation
-from .current_policy import aggregate_scope, native_scope
+from .current_policy import aggregate_scope, live_enabled, native_scope
 
 POLL_SECONDS = 300
 LIVE_POLL_SECONDS = 10
@@ -117,7 +117,8 @@ class PublicSportsbookWorker:
                                 saved[league] = loop.time()
                             admitted = (await call(self.service, self.admit, league, capture)
                                         if 'prophetx' not in self.service.paused_sources else None)
-                            live_board = any(fixture.get('in_play') is True for fixture in capture['fixtures'])
+                            live_board = live_enabled(self.service.config) and any(
+                                fixture.get('in_play') is True for fixture in capture['fixtures'])
                             if live_board:
                                 due[league] = loop.time() + LIVE_POLL_SECONDS
                             previous = metrics.get('received_at')

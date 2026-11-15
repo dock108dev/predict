@@ -12,7 +12,7 @@ from urllib.parse import quote
 import aiohttp
 from app.dashboard.current_contract import stamp
 from app.reference.product import SPORT_KEYS
-from .current_policy import ROOT, aggregate_scope, aggregate_requests
+from .current_policy import ROOT, PregameWindowClosed, aggregate_scope, aggregate_requests, live_enabled, odds_api_cutoff
 from .current_aggregate_policy import POLICY
 from .current_quota import QuotaLedger, QuotaStop, load_window, now
 
@@ -218,10 +218,10 @@ class AggregateScheduler:
         (yield (svc.row('source_health','the_odds_api',state=state), states))
         svc.states=states
 
-    async def dispatch(self, request, cost, *, bootstrap=False):
+    async def dispatch(self, request, cost, *, bootstrap=False, kickoff=None):
         self.active_dispatch_task=asyncio.current_task()
         try:
-            return await self._dispatch(request,cost,bootstrap=bootstrap)
+            return await self._dispatch(request,cost,bootstrap=bootstrap,kickoff=kickoff)
         finally:
             self.active_request=None
             self.active_dispatch_task=None
@@ -234,7 +234,7 @@ class AggregateScheduler:
             return None
         return dict(self.active_request,runtime_id=self.service.runtime_id,candidate_digest=self.service.digest)
 
-    async def _dispatch(self, request, cost, *, bootstrap=False):
+    async def _dispatch(self, request, cost, *, bootstrap=False, kickoff=None):
         self.phase='scheduled_admission'
         self.permitted()
         await self.accounting('check_binding')
@@ -252,11 +252,20 @@ class AggregateScheduler:
         # Seal exact request/candidate/cost durably before loading secrets.
         self.phase='reservation'
         reservation={}
+        before = request['params'].get('commenceTimeFrom')
+        if before and request['path'].endswith('/odds'):
+            cutoff = max(before, odds_api_cutoff(now()))
+            request = dict(request, params=dict(request['params'], commenceTimeFrom=cutoff))
+        def require_pregame():
+            if kickoff is not None and stamp(now()) >= stamp(kickoff):
+                raise PregameWindowClosed()
         try:
+            require_pregame()
             aid=await self.accounting('reserve',self.service.digest,request,cost,
                 bootstrap=bootstrap,qualification=self.qualification,cycle_id=self.cycle_id,result=reservation)
             self.active_request=dict(id=aid,stage='reserved')
-            self.issue_context=dict(attempt_id=aid,charged_credits=None,endpoint_class='sports_bootstrap' if bootstrap else 'sport_odds')
+            self.issue_context=dict(attempt_id=aid,charged_credits=None,
+                                    endpoint_class='sports_bootstrap' if bootstrap else 'sport_odds', request=request)
             sport=next((s for s,k in SPORT_KEYS.items() if request['path']=='/v4/sports/'+k+'/odds'),None)
             if sport:self.issue_context['sport']=sport
             self.service.observation('the_odds_api','reservation',dict(attempt_id=aid,request=request,worst_case_credits=cost))
@@ -267,18 +276,20 @@ class AggregateScheduler:
             # A cancellation before here joins the marker and records positive
             # local evidence that no request task was ever created.
             self.permitted()
+            require_pregame()
         except (Exception,asyncio.CancelledError):
             if reservation.get('id'):
                 await self.accounting('cancel_before_transport',reservation['id'])
             raise
-        self.cycle_requests+=1;self.cycle_credits+=cost
-        self.metrics['requests']+=1;self.metrics['worst_case_credits']+=cost
-        if bootstrap:self.metrics['bootstrap_requests']+=1
-        else:self.metrics['batches']+=1
         transport_started=False
         async def send_once():
             nonlocal transport_started
             self.permitted()
+            require_pregame()
+            self.cycle_requests+=1;self.cycle_credits+=cost
+            self.metrics['requests']+=1;self.metrics['worst_case_credits']+=cost
+            if bootstrap:self.metrics['bootstrap_requests']+=1
+            else:self.metrics['batches']+=1
             transport_started=True
             self.active_request['stage']='transport'
             return await self.transport.request(request,self.key)
@@ -387,7 +398,7 @@ class AggregateScheduler:
         if self.acquisition_lock.locked():raise QuotaStop('aggregate_refresh_in_progress')
         async with self.acquisition_lock:
             self.permitted()
-            try:requests=aggregate_requests(self.service.config,sports)
+            try:requests=aggregate_requests(self.service.config,sports,at=now())
             except ValueError as exc:raise QuotaStop(str(exc)) from None
             quota=await self.quota_snapshot()
             if quota['pause']:raise QuotaStop(quota['pause'])
@@ -466,10 +477,8 @@ class AggregateScheduler:
             self.phase='waiting_for_cycle'
             await call(self.service, self.state, 'budget_delayed', 'aggregate_budget_delayed', 'Shared aggregate cycle every 15 minutes, 09:00–23:00 Eastern. Selected scope: '+', '.join(aggregate_scope(self.service.config))+'. Inspect original source ages.')
             return
-        # Inventory activity is advisory: an empty odds response costs no credits
-        # and explicitly retires old quotes for a sport between seasons/rounds.
         sports=list(aggregate_scope(self.service.config))
-        requests=aggregate_requests(self.service.config)
+        requests=aggregate_requests(self.service.config,at=now())
         self.cycle_id=self.ledger.begin_cycle(self.service.ownership,requests)
         if self.cycle_id is None:return
         self.metrics['selected_scope']=list(aggregate_scope(self.service.config))
@@ -490,11 +499,13 @@ class AggregateScheduler:
         self.issue_context['sport']=sport
         states=deepcopy(self.service.states)
         due=self.quota_due()
-        from .current_aggregate_admission import admit_venues,market_exclusions,parse_frame
+        from .current_aggregate_admission import admit_venues,market_exclusions,parse_frame,pregame_frame
         decode_started=time.perf_counter()
         self.phase='decoding'
         if response.get('parse_error'):raise ValueError('aggregate_json_invalid')
         frame=response.get('parsed_frame') or parse_frame(response['body'])
+        if not live_enabled(self.service.config):
+            frame=pregame_frame(frame,response['received_at'])
         decoded_at=now();normalize_started=time.perf_counter()
         self.phase='normalization'
         exclusions=market_exclusions(response['body'],frame=frame)
@@ -543,7 +554,7 @@ class AggregateScheduler:
         if hasattr(self.service,'coverage'):
             from app.comparison.coverage import aggregate_observation
             aggregate_observation(self.service.coverage,response['body'],sport,response['received_at'],rejected,parsed_frame=frame,records=records,
-                started_at=self.metrics.get('request_started_at'),query=aggregate_requests(self.service.config,[sport])[0],admitted_at=now())
+                started_at=self.metrics.get('request_started_at'),query=self.issue_context.get('request') or aggregate_requests(self.service.config,[sport])[0],admitted_at=now())
         self.phase='admitted'
         self.service.states=states
         self.service.observation('the_odds_api','admission',dict(sport=sport,quotes=len(records),venues=sorted({r['quote']['venue'] for r in records})))

@@ -55,7 +55,7 @@ def test_current_public_prophetx_price_has_the_same_exact_line_reference():
 
 
 def test_public_browse_can_show_fair_odds_while_price_ev_is_pending():
-    saved = dict(desk_quote('native', 'kalshi', current=False), game_key='game')
+    saved = dict(desk_quote('native', 'kalshi', current=False), game_key='game', start_at=START.isoformat())
     data = result(saved)
 
     def enrich(out, *, include_retained):
@@ -68,8 +68,64 @@ def test_public_browse_can_show_fair_odds_while_price_ev_is_pending():
     ref = group['sportsbook_reference']
     assert ref['book'] == 'draftkings'
     assert ref['fair_odds']['american'] == '+113.89'
+    assert ref['current_until'] == START.isoformat()
     assert group['offers'][0]['value'] is None
     assert not group['offers'][0]['current']
+
+
+def test_aggregate_pregame_uses_exact_same_frame_pair_before_finance(monkeypatch):
+    from unittest.mock import Mock
+
+    from app.collection.sportsgameodds_current_rows import current_rows
+    from app.storage.current_aggregate_desk import overlay as aggregate_overlay
+    from app.storage.current_rows import prepare
+    from app.storage.sportsgameodds_reference import prepare_frames, prepare_page
+    from app.storage.store import stamp
+    from tests.test_sportsgameodds_adapter import parse, response
+
+    raw = response()
+    event, = raw['data']
+    event['teams']['home']['names']['long'] = 'Detroit Pistons'
+    event['teams']['away']['names']['long'] = 'Boston Celtics'
+    home, = event['odds'].values()
+    book, = home['byBookmaker'].values()
+    home['byBookmaker'] = {'novig': dict(book, odds='+120'), 'fanduel': book}
+    away = dict(home, oddID=home['opposingOddID'], opposingOddID=home['oddID'],
+                statEntityID='away', sideID='away', byBookmaker={'fanduel': dict(book, spread='1.5')})
+    event['odds'][away['oddID']] = away
+
+    def stored_inputs():
+        parsed = parse(raw)
+        record, = [r for r in current_rows(parsed, parsed.receipt_sha256)[0] if r['quote']['venue'] == 'novig']
+        stored = prepare(record)
+        stored.update(id=stored['contract_id'], provider='sportsgameodds', competition='NBA',
+                      offer_revision=stored['revision'], price_revision=stored['revision'])
+        references = prepare_page(parsed)
+        frame, = prepare_frames(parsed, references)
+        inputs = Mock()
+        inputs.frames.return_value = {event['eventID']: frame}
+        inputs.quotes.return_value = {event['eventID']: references}
+        return stored, stamp(stored['received_at']), inputs
+
+    stored, at, inputs = stored_inputs()
+    monkeypatch.setattr('app.storage.current_aggregate_desk.active_offers', lambda *args, **kwargs: [stored])
+    data = dict(result(), games=[])
+    data['publication']['read_at'] = at.isoformat()
+    owner = dict(healthy=True, active=True, config=dict(sports=['NBA'], families=['spread'],
+        aggregate_provider='sportsgameodds', aggregate_enabled=True))
+    states = dict(sportsgameodds={'state':'available'})
+    query = dict(layout='desk', ranked='1', basis='sportsbooks', lines='main', summary='1')
+    projected = aggregate_overlay(None, data, owner, states, at=at, phase='pregame', sgo_inputs=inputs)
+    ranked, = page(projected, query, ('ev', None, 0, 10))['rows']
+    offer, = ranked['offers']
+    assert (ranked['score'], offer['value'], offer['after_fee'], offer['fair_odds']['american']) == ('10', '10', None, '+100')
+    away['byBookmaker']['fanduel']['spread'] = '2.5'
+    stored, at, inputs = stored_inputs()
+    projected = aggregate_overlay(None, data, owner, states, at=at, phase='pregame', sgo_inputs=inputs)
+    comparison = page(projected, query, ('ev', None, 0, 10))
+    assert not comparison['rows']
+    observed, = comparison['price_preview'][0]['offers']
+    assert observed['current'] and observed['value'] is None
 
 
 def test_native_pregame_desk_uses_current_books_before_the_slate_catches_up(monkeypatch):
@@ -98,7 +154,7 @@ def test_native_pregame_desk_uses_current_books_before_the_slate_catches_up(monk
 
     monkeypatch.setattr('app.storage.current_native_desk.active_records', active)
     monkeypatch.setattr('app.storage.ordinary_publication.pregame_sportsbooks',
-                        lambda db, owner, states, at, occurrences: {OCCURRENCE: [observation()]})
+                        lambda db, owner, states, at, **kwargs: {OCCURRENCE: [observation()]})
     data = dict(result(), games=[])
     data['publication']['read_at'] = AT.isoformat()
     owner = dict(active=True, healthy=True)
@@ -106,8 +162,9 @@ def test_native_pregame_desk_uses_current_books_before_the_slate_catches_up(monk
     projected = overlay(None, data, owner, states, at=AT)
     query = dict(layout='desk', ranked='1', basis='sportsbooks', lines='main', summary='1')
     outcome = page(projected, query, ('ev', None, 0, 10))
-    assert not outcome['rows']
-    group, = outcome['price_preview']
+    assert outcome['ranked_group_count'] == 1
+    assert not outcome['price_preview']
+    group, = outcome['rows']
     offers = {offer['venue']: offer for offer in group['offers']}
     assert set(offers) == {'kalshi', 'polymarket_us'}
     for record in records:

@@ -27,6 +27,17 @@ def parse_frame(body):
     return ParsedAggregateFrame(strict_json(body,parse_float=str),sha256(body).hexdigest())
 
 
+def pregame_frame(frame, received_at):
+    from app.storage.odds_retention import pregame
+
+    if not isinstance(frame.payload, list):
+        return frame
+    # Keep original receipt identity. Only its scheduled subset is admissible.
+    selected = [event for event in frame.payload if isinstance(event, dict)
+                and pregame(event.get('commence_time'), received_at)]
+    return ParsedAggregateFrame(selected, frame.receipt_sha256)
+
+
 def _frame(body,frame):
     frame=parse_frame(body) if frame is None else frame
     # A retained SQL parse already carries its original receipt identity. Never
