@@ -32,6 +32,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Verify public proxy routes and Admin authentication
+        run: |
+          sudo apt-get update
+          package=$(mktemp -d)
+          trap 'rm -rf "$package"' EXIT
+          (cd "$package" && apt-get download caddy && dpkg-deb -x ./*.deb .)
+          CADDY_BIN="$package/usr/bin/caddy" bash deploy/smoke-proxy.sh
       - name: Build Linux image and smoke test Compose
         run: |
           docker build --label "org.opencontainers.image.source=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" \

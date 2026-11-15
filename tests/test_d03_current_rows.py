@@ -613,7 +613,7 @@ class CurrentRows(unittest.TestCase):
                                       (contract_id(short),)).fetchone()
                 before = offer()
                 self.assertIsNone(before['native_book_id'])
-                schema.migrate()
+                schema.migrate(through='091_exact_native_offer_binding.sql')
                 after = offer()
                 self.assertEqual(after['native_book_id'], retained_id)
                 for key in ('price_value', 'facts', 'price_dependency', 'revision'):

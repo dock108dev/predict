@@ -18,6 +18,24 @@ ssh -N -L 127.0.0.1:8784:127.0.0.1:8784 hetzner
 Open `http://127.0.0.1:8784/`. Stop the local web process first if it uses that
 port. The dashboard checks the local port as part of its browser boundary.
 
+The image release leaves the host's Caddy config in place. When
+`deploy/predict.Caddyfile` changes, replace the imported site file on the host,
+validate the full configuration, and reload Caddy. Keep `predict-auth` in place.
+
+```sh
+sudo caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+sudo systemctl reload caddy
+```
+
+After reloading, check the public site without credentials. The favicon request
+should redirect to `/view/current/predict-icon.png`. Admin should return
+`401` with a `WWW-Authenticate` header.
+
+```sh
+curl -sS -D - -o /dev/null https://predict.dock108.dev/favicon.ico
+curl -sS -D - -o /dev/null https://predict.dock108.dev/admin
+```
+
 ## Releases
 
 The **Deploy Predict dev server** workflow runs when an in-repository PR to

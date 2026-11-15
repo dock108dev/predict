@@ -7,13 +7,36 @@ from unittest.mock import patch
 import unittest
 from pathlib import Path
 from urllib.parse import urljoin
-from aiohttp.test_utils import TestClient, TestServer
+from aiohttp.test_utils import TestClient, TestServer, make_mocked_request
+from aiohttp.web import FileResponse
 from app.dashboard.multi_game_server import create_app
 from tests.current_fixture import InjectedTestProvider
 from tests.test_current_state import owner
 
 
+PUBLIC_DESK_PAGES = ("/", "/ev", "/arbs", "/browse-odds", "/game", "/replay")
+
+
 class Assets(unittest.IsolatedAsyncioTestCase):
+    async def test_public_desk_declares_the_packaged_browser_icon(self):
+        provider = InjectedTestProvider()
+        provider.database_mode = True
+        app = create_app(owner=owner(), sessions={}, current_provider=provider)
+
+        async def file_bytes(path):
+            match = await app.router.resolve(make_mocked_request("GET", path, app=app))
+            request = make_mocked_request("GET", path, app=app, match_info=match)
+            response = await match.handler(request)
+            self.assertIsInstance(response, FileResponse, path)
+            return response._path.read_bytes()
+
+        icon = "/view/current/predict-icon.png"
+        for path in PUBLIC_DESK_PAGES:
+            html = (await file_bytes(path)).decode()
+            icons = re.findall(r'<link rel="(?:icon|apple-touch-icon)"[^>]+href="([^"]+)"', html)
+            self.assertEqual(icons, [icon, icon], path)
+        self.assertTrue((await file_bytes(icon)).startswith(b"\x89PNG\r\n\x1a\n"))
+
     async def test_ordinary_pages_deliver_their_module_graph(self):
         provider = InjectedTestProvider()
         provider.database_mode = True
@@ -21,7 +44,7 @@ class Assets(unittest.IsolatedAsyncioTestCase):
         async with TestClient(TestServer(app)) as client:
             binding = await (await client.get('/api/scanner/client')).json()
             self.assertTrue(binding['assets_valid'])
-            for page in ("/", "/ev", "/arbs", "/odds", "/scanner"):
+            for page in (*PUBLIC_DESK_PAGES, "/odds", "/scanner"):
                 response = await client.get(page)
                 self.assertEqual(response.status, 200)
                 html = await response.text()
@@ -58,7 +81,7 @@ class Assets(unittest.IsolatedAsyncioTestCase):
                         else re.findall(r"(?:from\s+|import\s*)['\"]([^'\"]+)['\"]", source)
                     )
                     if path == script and "scanner.js" not in path:
-                        endpoint = "/api/comparison-current" if page in ("/", "/ev", "/arbs") else "/api/comparison-snapshot"
+                        endpoint = "/api/comparison-current" if page in PUBLIC_DESK_PAGES else "/api/comparison-snapshot"
                         self.assertIn(endpoint, source)
                         self.assertNotIn("new SavedReadPoller", source)
                     pending.extend(urljoin(path, module) for module in imports)
@@ -66,7 +89,7 @@ class Assets(unittest.IsolatedAsyncioTestCase):
                     {"board-client.js", "board-contract.js", "board-values.js", "board-read.js", "scanner.css", "scanner.js"}
                     if page == "/scanner" else
                     {"desk.css", "desk.js", "desk-preferences.js", "ui-common.js", "barlow-semi-condensed-600.ttf"}
-                    if page in ("/", "/ev", "/arbs") else {"stored.css", "stored.js", "manrope.ttf"}
+                    if page in PUBLIC_DESK_PAGES else {"stored.css", "stored.js", "manrope.ttf"}
                 )
                 self.assertTrue(expected <= {Path(path.split("?")[0]).name for path in seen}, page)
             self.assertEqual(

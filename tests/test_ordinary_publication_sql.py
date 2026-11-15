@@ -8,6 +8,7 @@ from aiohttp.test_utils import TestClient, TestServer
 from tests.latest_board_fixture import LatestBoardFixture, SOCKET
 from app.storage import ordinary_publication as live, comparison_snapshot as snapshots
 from app.storage.current_rows import contract_id
+from app.storage.store import stamp
 from app.dashboard.snapshot_api import mount
 
 
@@ -258,6 +259,13 @@ class OrdinarySQL(LatestBoardFixture):
         return live.project(result,live.dependencies(db),owner,states,at=self.at,
             policy=live.policy_identity(),epoch=result['publication']['epoch'])
 
+    def prepare_component_isolation(self):
+        # The shared board fixture's second game is outside the ordinary
+        # publisher's 72-hour window at its default read clock.
+        self.at = stamp(self.first['start_at']) - timedelta(hours=1)
+        self.state.write(self.service)
+        self.fresh_sources()
+
     async def test_replace_confirmation_evidence_and_reference_only_invalidation(self):
         with self.connect() as db:
             first=live.turn(db);self.assertTrue(first['published'])
@@ -311,11 +319,19 @@ class OrdinarySQL(LatestBoardFixture):
             source=row['source']
             return (source['provider'],source['native_event_id']) == SELECTED
 
+        peer_sources = {tuple(member) for member in self.second['members']}
+
+        def peer_members(result):
+            return {r['evidence_result_id'] for r in result['rows']
+                    if (r['source']['provider'], r['source']['native_event_id']) in peer_sources}
+
+        self.prepare_component_isolation()
         with self.connect() as db:
             live.turn(db)
             before=self.result(db)
             prior={r['evidence_result_id'] for r in before['rows'] if affected(r)}
             self.assertEqual(len(prior),1)
+            self.assertTrue(peer_members(before) - prior)
             member=next(iter(prior));token=live.retain(db,member)
             self.at+=timedelta(seconds=1);self.state.write(self.service);self.fresh_sources()
             prices=live.prices
@@ -336,8 +352,7 @@ class OrdinarySQL(LatestBoardFixture):
             self.assertTrue(failed)
             self.assertTrue(all(r['gross_return_percent'] is None for r in failed))
             self.assertTrue(all('ordinary_price_capture_failed' in r['current_reasons'] for r in failed))
-            before_ids={r['evidence_result_id'] for r in before['rows']}
-            self.assertTrue(any(r['evidence_result_id'] not in before_ids for r in projected['rows']))
+            self.assertTrue(peer_members(projected) - peer_members(before))
             self.assertFalse(any(p['evidence_result_id']==member for p in projected['pairs']))
             self.assertIsNotNone(snapshots.current(db,member))
             self.assertTrue(live.turn(db)['published'])
@@ -347,8 +362,8 @@ class OrdinarySQL(LatestBoardFixture):
     async def test_finance_seal_failure_rolls_back_only_its_component(self):
         from tests.test_ev09_n01 import SELECTED
 
+        self.prepare_component_isolation()
         with self.connect() as db:
-            self.at+=timedelta(seconds=1);self.state.write(self.service);self.fresh_sources()
             seal=live.seal
 
             def seal_failure(db, inputs, result, facts, **kw):

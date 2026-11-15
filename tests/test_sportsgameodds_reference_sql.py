@@ -18,6 +18,12 @@ from tests.latest_board_fixture import SOCKET
 from tests.test_sportsgameodds_adapter import AT, response
 
 
+# The fixture starts November 10 at 21:00 UTC. Its initial receipt is
+# earlier than kickoff, so the 24-hour game-day window controls expiry.
+BEFORE_GAME_DAY_EXPIRY = '2026-11-11T20:59:59Z'
+AFTER_GAME_DAY_EXPIRY = '2026-11-11T21:00:01Z'
+
+
 def test_batch_archives_only_replaced_returned_revisions():
     raw = response()
     raw['data'][0]['eventID'] = 'batch'
@@ -139,7 +145,7 @@ class SportsGameOddsReferenceSQL(unittest.TestCase):
         rows = prepare_page(page)
         with self.db.transaction():
             upsert_rows(self.db, rows)
-            self.assertEqual(prune(self.db, at='2026-11-24T20:59:59Z'), 0)
+            self.assertEqual(prune(self.db, at=BEFORE_GAME_DAY_EXPIRY), 0)
         self.assertEqual(len(read_event(self.db, 'event')), 2)
         # Capacity fails closed; it never discards a current row to make room.
         other = response()
@@ -151,8 +157,8 @@ class SportsGameOddsReferenceSQL(unittest.TestCase):
                     upsert_rows(self.db, prepare_page(other_page))
         self.assertEqual(len(read_event(self.db, 'event')), 2)
         with self.db.transaction():
-            self.assertEqual(prune(self.db, at='2026-11-24T21:00:01Z', limit=1), 1)
-            self.assertEqual(prune(self.db, at='2026-11-24T21:00:01Z'), 1)
+            self.assertEqual(prune(self.db, at=AFTER_GAME_DAY_EXPIRY, limit=1), 1)
+            self.assertEqual(prune(self.db, at=AFTER_GAME_DAY_EXPIRY), 1)
         protected = self.db.execute('SELECT runtime_id,paused_sources,global_stopped FROM data_runtime').fetchone()
         self.assertEqual(protected, {'runtime_id': 'protected', 'paused_sources': ['kalshi'], 'global_stopped': True})
 
@@ -160,14 +166,16 @@ class SportsGameOddsReferenceSQL(unittest.TestCase):
         page = self.page(available=False)
         with self.db.transaction():
             upsert_rows(self.db, prepare_page(page))
-        later = self.page(available=False, received='2026-11-24T20:30:00Z')
+        later = self.page(available=False, received='2026-11-11T20:30:00Z')
         with self.db.transaction():
             self.assertEqual(upsert_rows(self.db, prepare_page(later)), 2)
         facts = [r['facts'] for r in read_event(self.db, 'event')]
         self.assertTrue(all(f['received_at'] == AT and f['source_at'] == '2026-11-10T19:59:00Z' for f in facts))
         from app.storage.sportsgameodds_reference import prune
         with self.db.transaction():
-            self.assertEqual(prune(self.db, at='2026-11-24T21:00:01Z'), 0)
+            self.assertEqual(prune(self.db, at=AFTER_GAME_DAY_EXPIRY), 0)
+            self.assertEqual(prune(self.db, at='2026-11-12T02:29:59Z'), 0)
+            self.assertEqual(prune(self.db, at='2026-11-12T02:30:01Z'), 2)
 
     def test_event_frame_binds_unchanged_and_changed_sides_without_refreshing_clock(self):
         from app.storage.sportsgameodds_reference import prepare_frames, read_event_frame, read_history, upsert_frames
@@ -235,7 +243,7 @@ class SportsGameOddsReferenceSQL(unittest.TestCase):
                     upsert_frames(self.db, frames)
         with self.db.transaction():
             upsert_frames(self.db, frames)
-            self.assertEqual(prune_frames(self.db, at='2026-11-24T20:59:59Z'), 0)
+            self.assertEqual(prune_frames(self.db, at=BEFORE_GAME_DAY_EXPIRY), 0)
         self.assertIsNotNone(read_event_frame(self.db, 'event'))
         other = response()
         other['data'][0]['eventID'] = 'event-2'
@@ -245,7 +253,7 @@ class SportsGameOddsReferenceSQL(unittest.TestCase):
                 with self.db.transaction():
                     upsert_frames(self.db, prepare_frames(other_page, prepare_page(other_page)))
         with self.db.transaction():
-            self.assertEqual(prune_frames(self.db, at='2026-11-24T21:00:01Z'), 1)
+            self.assertEqual(prune_frames(self.db, at=AFTER_GAME_DAY_EXPIRY), 1)
         self.assertIsNone(read_event_frame(self.db, 'event'))
         protected = self.db.execute('SELECT runtime_id,paused_sources,global_stopped FROM data_runtime').fetchone()
         self.assertEqual(protected, {'runtime_id': 'protected', 'paused_sources': ['kalshi'], 'global_stopped': True})
