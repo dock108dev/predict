@@ -14,8 +14,16 @@ IFS= read -r -t 10 registry_token
 exec 9>deploy.lock
 flock -x 9
 
+archive_env=/srv/predict/archive.env
+compose_env=/dev/null
+if [[ -f "$archive_env" ]]; then compose_env=$archive_env; fi
 compose() {
-    PREDICT_IMAGE="$image" docker compose --env-file /dev/null --profile collection "$@"
+    PREDICT_IMAGE="$image" docker compose --env-file "$compose_env" --profile collection --profile archive "$@"
+}
+archive_was_running=''
+if [[ -f "$archive_env" ]]; then archive_was_running=$(compose ps --status running --quiet archive); fi
+resume_archive() {
+    if [[ -n "$archive_was_running" ]]; then compose start archive || true; fi
 }
 
 registry_config=$(mktemp -d)
@@ -28,6 +36,7 @@ rm -rf "$registry_config"
 # before Compose replaces PostgreSQL and revokes its database ownership.
 if [[ -f current-image ]] && ! cmp -s compose.yml applied-compose.yml; then
     compose stop collector
+    if [[ -n "$archive_was_running" ]]; then compose stop archive; fi
 fi
 compose up -d --wait db
 
@@ -55,18 +64,21 @@ if [[ -f current-image ]]; then
 fi
 if (( pending > 0 )); then
     compose stop web collector
+    if [[ -n "$archive_was_running" ]]; then compose stop archive; fi
     backup=$(mktemp backups/before-migration.XXXXXXXX.dump)
     if ! compose exec -T db pg_dump -h /run/predict-postgres -U prediction_arb -p 55432 -Fc -d prediction_arb > "$backup"; then
         rm -f "$backup"
         # No migration ran. Restore the previously installed services.
         compose start web
         if [[ -f collection-enabled ]]; then compose start collector; fi
+        resume_archive
         exit 1
     fi
     if ! compose run --rm --no-deps -T web python -m app.storage migrate; then
         # The migration transaction rolls back as a unit.
         compose start web
         if [[ -f collection-enabled ]]; then compose start collector; fi
+        resume_archive
         exit 1
     fi
 fi
@@ -78,10 +90,15 @@ if ! compose up -d --no-deps --wait --wait-timeout 180 "${services[@]}"; then
         echo 'Health check failed. Restoring the previous image with current data.' >&2
         image=$previous
         compose up -d --no-deps --wait --wait-timeout 180 "${services[@]}"
+        resume_archive
     else
         echo 'Health check failed. Inspect the services and the retained database backup.' >&2
     fi
     exit 1
+fi
+
+if [[ -f "$archive_env" ]] && ! compose up -d --no-deps archive; then
+    echo 'Odds archive did not start. Check the off-host mount and staging status.' >&2
 fi
 
 printf '%s\n' "$image" > current-image.tmp

@@ -10,7 +10,7 @@ def main():
     from app.storage import store
     from .coverage_worker import MAX_SECONDS, MAX_PROCESS_BYTES
     from .continuous import rss
-    from app.comparison.calculation_control import cancellation
+    from app.comparison.calculation_control import CalculationStopped, cancellation
     from app.storage.ordinary_publication import turn
     store.ROOT = Path(sys.argv[1])
     parent = int(sys.argv[2])
@@ -24,8 +24,8 @@ def main():
 
     def stopped():
         if os.getppid() != parent: return True
-        if time.monotonic()-start > MAX_SECONDS: raise ValueError('ordinary_worker_deadline')
-        if rss() >= MAX_PROCESS_BYTES: raise ValueError('ordinary_worker_memory_capacity')
+        if time.monotonic()-start > MAX_SECONDS: raise CalculationStopped('ordinary_worker_deadline')
+        if rss() >= MAX_PROCESS_BYTES: raise CalculationStopped('ordinary_worker_memory_capacity')
         return False
 
     try:

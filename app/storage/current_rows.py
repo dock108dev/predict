@@ -12,6 +12,7 @@ from psycopg.types.json import Jsonb
 from psycopg.pq import TransactionStatus
 from .store import hashed, encoded, exact_time
 from .current_row_state import refresh_scopes, source_status as write_source_status
+from . import odds_archive
 
 VERSION='predict-current-rows-1'
 MAX_EVENTS=4096  # Source mappings: supports 500 games across aggregate + two native sources.
@@ -293,7 +294,7 @@ class CurrentRowStore:
     def _upsert_prepared(self,prepared,*,scopes=(),authoritative=False,now=None,source_status=None,material_rows=None,quote_links=None):
         """Internal prepare() results, optionally produced by the owned CPU worker."""
         changed=0
-        with self.db.transaction(), _ordered_writes(self.db) as execute:
+        with self.db.transaction(), odds_archive.capture(self.db) as archive, _ordered_writes(self.db) as execute:
             execute('SELECT pg_advisory_xact_lock(%s)',(LOCK,))
             # The writer lock makes these batch reads stable. Update the local
             # views after each accepted write so duplicate identities retain
@@ -359,6 +360,9 @@ class CurrentRowStore:
                 if not price_admitted:continue
                 if material_rows is not None:material_rows.observe(p,old,event)
                 cf=p.get('contract_revision') or hashed(p['contract'])
+                if archive is not None and source['provider'] in odds_archive.FEEDS:
+                    archive.append((source['provider'], odds_archive.normalized_definition,
+                                    (p,event,ef,cf), {'link': (quote_links or {}).get(cid)}))
                 if old_contracts.get(cid)!=cf:
                     if material_rows is not None:
                         if cid in old_contracts:material_rows.contract_updates+=1
@@ -557,10 +561,13 @@ class CurrentRowStore:
 
     def replace_native_books(self,books):
         """Replace synchronized exact affected books atomically with the offers."""
-        with self.db.transaction(), _ordered_writes(self.db) as execute:
+        with self.db.transaction(), odds_archive.capture(self.db) as archive, _ordered_writes(self.db) as execute:
             execute('SELECT pg_advisory_xact_lock(%s)',(LOCK,))
             keys=[(b['raw']['ref']['venue'],hashed([b['raw']['ref']['venue'],b['raw']['ref']['event_id']]),b['raw']['ref']['market_id']) for b in books]
-            events={r['id'] for r in execute('SELECT id FROM current_event WHERE id=ANY(%s)',(list({k[1] for k in keys}),)).fetchall()}
+            fields = 'id,scheduled_start,facts' if archive is not None else 'id'
+            events = {r['id']: r for r in execute(
+                f'SELECT {fields} FROM current_event WHERE id=ANY(%s)',
+                (list({k[1] for k in keys}),)).fetchall()}
             prior={(r['venue'],r['event_id'],r['native_market_id']):r for r in execute(
                 'SELECT b.id,b.venue,b.event_id,b.native_market_id,b.source_at,b.source_order,b.received_at,b.received_order,'
                 'b.revision,b.sequence,b.confirmation,b.depth_revision,b.ladder_refs '
@@ -602,6 +609,10 @@ class CurrentRowStore:
                     if receipt<old['received_order']:continue
                     if order==old['source_order'] and receipt<old['received_order']:continue
                 if book['state'] in ('closed','settled','canceled'):
+                    if archive is not None:
+                        archive.append((venue, odds_archive.native_book, (book,), dict(
+                            revision=hashed([key,at,raw['received_at'],book['state']]),
+                            event=events[eid]['facts'], starts_at=events[eid]['scheduled_start'])))
                     flush_books()
                     execute('SELECT 1')  # Drain pending book writes before nested withdrawal.
                     self.withdraw_native_market(venue,ref['event_id'],market)
@@ -628,6 +639,9 @@ class CurrentRowStore:
                         old['received_at'],old['revision'],old['confirmation'],old['depth_revision'],old['sequence']):
                     affected[key]=old['id']
                     continue
+                if archive is not None:
+                    archive.append((venue, odds_archive.native_book, (book,), dict(
+                        revision=revision, event=events[eid]['facts'], starts_at=events[eid]['scheduled_start'])))
                 if old and old['depth_revision']==depth_revision:
                     refs=old['ladder_refs']
                 else:

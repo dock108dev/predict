@@ -328,6 +328,12 @@ above the JavaScript review threshold. A later extraction can move inspection
 lease management as one unit once its drawer focus and replacement contracts
 can be exercised independently.
 
+`ordinary_publication.py` owns the background commit sequence from price capture
+through component finance and root publication. Component retries reuse the
+same dependency identity, deadlines, and authority checks. Keep those decisions
+with the transactions that mark a component failed or publish its replacement.
+Read-time projection and scheduling policy already live in separate modules.
+
 CI regression tests are separated into `test_ci_reporting.py`,
 `test_ci_environment.py`, `test_ci_assurance.py` and `test_ci_secrets.py`, with
 tool loading in `tests/ci_support.py`. The quality workflow runs all four:

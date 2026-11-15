@@ -136,6 +136,8 @@ class SportsGameOddsWorker:
                             largest_page_bytes=0, bookmaker_filter=list(ALTERNATE_REFRESH_BOOKS),
                             vendor_consensus_contributors='unspecified_for_filtered_response')}
         self.phase = 'initializing'
+        self.page_in_progress = False
+        self.storage_interval_requested = False
         self.ledger = None
         self.window_id = None
         self.collector = None
@@ -149,8 +151,14 @@ class SportsGameOddsWorker:
         self.request_limit = 1
 
     def controls(self):
-        return {'stopped': self.closed or not self.service.dispatch or self.service.globally_stopped,
+        return {'stopped': self.closed or not self.service.dispatch or self.service.globally_stopped
+                or (self.storage_interval_requested and not self.page_in_progress),
                 'source_paused': 'sportsgameodds' in self.service.paused_sources}
+
+    def request_storage_interval(self):
+        """Let the owned page settle and publish, then prevent another dispatch."""
+        self.storage_interval_requested = True
+        return not self.page_in_progress
 
     async def usage(self):
         if self.controls()['stopped'] or self.controls()['source_paused']:
@@ -263,6 +271,7 @@ class SportsGameOddsWorker:
                 totals[field] += count
 
     async def _fetch(self, params):
+        self.page_in_progress = True
         self.phase = 'collecting'
         try:
             page = await self.collector.fetch(params, self.key)
@@ -336,6 +345,7 @@ class SportsGameOddsWorker:
                                  'SportsGameOdds page received; individual source clocks and availability apply.')
             return page
         finally:
+            self.page_in_progress = False
             self._account_status()
 
     def params(self, *, league=None, event_ids=None, cursor=None, include_alternates=False):
@@ -414,7 +424,7 @@ class SportsGameOddsWorker:
             return event.active or event.starts_at - at <= ALTERNATE_REFRESH_WINDOW
 
         start = 0
-        while start < len(due):
+        while start < len(due) and not self.storage_interval_requested:
             attempted_at = self.now()
             include_alternates = needs_alternates(due[start], attempted_at)
             batch = [due[start]]

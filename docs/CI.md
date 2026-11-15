@@ -88,7 +88,10 @@ retained storage codecs and HTTP 410 responses for retired history routes.
 The SportsGameOdds offline group covers normalization, pacing, checkpoint
 recovery, usage holds, exact reference selection and the saved drawer.
 Disposable PostgreSQL adds batch admission, provider selection, history
-rotation, current sportsbook EV and expiry. The offline fee modules cover
+rotation, current sportsbook EV and expiry. The same lane checks that odds
+archive staging rolls back with source admission and that an export retry
+preserves the batch and verifies its checksum before deleting staged rows.
+The archive fixture uses a temporary directory. The offline fee modules cover
 review windows, venue rounding, failed renewal,
 and the coverage denominator. The primary offline workflow ensures Poppler is
 available for the PDF extraction fixture. The fee browser journey checks

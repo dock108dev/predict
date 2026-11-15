@@ -90,9 +90,10 @@ class SportsGameOddsAtomicIngress(LatestBoardFixture):
     async def test_history_rotates_oldest_at_capacity(self):
         from app.storage.sportsgameodds_reference import archive_revisions
         from app.storage.store import encoded
+        pregame = dict(phase='pregame', starts_at='2026-11-11T00:00:00Z', received_at='2026-11-10T20:00:00Z')
         def row(n):
-            return dict(id=str(n), event_id='rotation-fixture', revision=str(n), facts={'n': n})
-        with self.connect() as db, patch('app.storage.sportsgameodds_reference.HISTORY_BYTES', 2 * len(encoded({'n': 1}))):
+            return dict(id=str(n), event_id='rotation-fixture', revision=str(n), facts=dict(pregame, n=n))
+        with self.connect() as db, patch('app.storage.sportsgameodds_reference.HISTORY_BYTES', 2 * len(encoded(row(1)['facts']))):
             with db.transaction():
                 archive_revisions(db, 'reference', [row(1)])
                 archive_revisions(db, 'reference', [row(2)])

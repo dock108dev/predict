@@ -99,6 +99,27 @@ class Checkpoints(TestCase):
                 metadata.prune(db)
             self.assertEqual(db.execute('SELECT count(*) n FROM current_native_market_body').fetchone()['n'], 1)
 
+    def test_metadata_prune_resumes_inside_window_and_preserves_references(self):
+        from app.collection.bulk_checkpoint import save_census
+        from app.storage import native_market_metadata as metadata
+
+        bodies = {metadata.body_id(body): body for body in ({'title': str(index)} for index in range(5))}
+        live_id = sorted(bodies)[1]
+        event = dict(id='event', competition='NFL')
+        market = dict(id='live', event_id='event', market_type='spread', _native=bodies[live_id])
+        with patch('app.collection.bulk_checkpoint.connect', side_effect=self.connect):
+            save_census('kalshi', [event], [market], {'live'})
+
+        with self.connect() as db, patch.object(metadata, '_pruned_after', {}), \
+                patch.object(metadata, 'PRUNE_SCAN_ROWS', 5), patch.object(metadata, 'PRUNE_DELETE_ROWS', 2):
+            with db.transaction():
+                metadata.put(db, bodies)
+            self.assertEqual(metadata.prune(db), 2)
+            self.assertEqual(metadata.prune(db), 2)
+            self.assertEqual(metadata.prune(db), 0)
+            self.assertEqual(db.execute('SELECT id FROM current_native_market_body').fetchall(), [dict(id=live_id)])
+            self.assertEqual(metadata.census_body(db, 'kalshi', 'event', 'live'), bodies[live_id])
+
     def test_page_codec_preserves_original_receipt_restart_and_raw_reference_with_noop_retries(self):
         import json
         from psycopg.types.json import Jsonb

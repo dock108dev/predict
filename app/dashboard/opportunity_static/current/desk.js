@@ -43,6 +43,7 @@ const dialog = $('trade');
 const state = {offset: 0, page: null, request: null, selected: null, renderedStake: null};
 const history = new DiagnosticSession();
 const siteName = offer => name(offer.venue);
+const updatesUnavailable = runtime => runtime?.healthy === false || runtime?.reason === 'data_runtime_not_dispatching';
 
 function restoreFocus(target) {
   // The native dialog restores focus before the queued close event. Only supply
@@ -52,7 +53,8 @@ function restoreFocus(target) {
 
 $('title').textContent = gameKey ? linkedTitle || 'Game odds' : browse ? 'Browse odds' : replay ? (arb ? 'Arbitrage' : 'Expected value') : 'Opportunities';
 document.title = `Predict · ${$('title').textContent}`;
-$('stake-field').hidden = $('profit-field').hidden = !arb;
+$('stake-field').hidden = !arb || !replay;
+$('profit-field').hidden = !arb;
 $('basis-field').hidden = arb;
 $('group-field').hidden = arb || !replay;
 $('opportunity-tabs').hidden = !opportunityView;
@@ -301,17 +303,76 @@ async function openTrade(offer, group, game, pairContext = null) {
 }
 
 function openPair(pair, offers, group, game, opener = document.activeElement) {
-  const context = {pair, offers, group, game, opener};
-  if (!dialog.open) releaseEvidence(state.selected?.lease);
+  releaseEvidence(state.selected?.lease);
+  releaseEvidence(state.selected?.pairContext?.lease);
+  const context = {pair, publishedPair:pair, offers, group, game, opener};
+  renderPair(context);
+  if (!dialog.open) dialog.showModal();
+  dialog.scrollTop = 0;
+  if (!replay && pair.evidence_result_id && pair.retail_payoff?.reason !== 'pair_fee_publication_pending') {
+    context.reservation = reserveEvidence(pair.evidence_result_id).then(lease => {
+      if (dialog.open && (state.selected === context || state.selected?.pairContext === context)) {
+        context.lease = lease;
+        return lease;
+      }
+      releaseEvidence(lease);
+      return null;
+    }).catch(() => null);
+  }
+  return context;
+}
+
+function renderPair(context) {
+  const {pair, offers, group, game} = context;
   state.selected = context;
   $('trade-title').textContent = 'Arbitrage calculation';
   $('trade-note').textContent = '';
   $('latest').hidden = replay;
   $('back-to-pair').hidden = true;
-  $('trade-body').replaceChildren(pairInspection(pair, offers, {group, game, position, mode:replayMode(),
+  const customSizing = !replay && pair.evidence_result_id && pair.retail_payoff?.reason !== 'pair_fee_publication_pending';
+  const mode = context.requestedStake ? 'Sized from the captured prices and fees' : replayMode();
+  const body = $('trade-body');
+  body.replaceChildren(pairInspection(pair, offers, {group, game, position, mode,
     inspect: offer => openTrade(offer, group, game, context)}));
-  if (!dialog.open) dialog.showModal();
-  dialog.scrollTop = 0;
+  if (customSizing) {
+    const form = el('form', null, 'pair-sizing');
+    const label = el('label', 'Total stake before fees ($) ');
+    const amount = Object.assign(el('input'), {type:'number', min:'0.01', max:'1000000', step:'0.01',
+      required:true, value:context.requestedStake ?? '100'});
+    const calculate = el('button', 'Size this pair');
+    const status = el('p');
+    status.setAttribute('role', 'status');
+    label.append(amount);
+    form.append(label, calculate, status);
+    form.addEventListener('submit', async event => {
+      event.preventDefault();
+      calculate.disabled = true;
+      status.textContent = 'Sizing the captured pair…';
+      try {
+        await sizePair(context, amount.value);
+        if (dialog.open && state.selected === context) $('trade-body').querySelector('form input')?.focus();
+      } catch {
+        status.textContent = 'Could not size this capture. The previous calculation is still displayed.';
+      } finally { calculate.disabled = false; }
+    });
+    body.prepend(form);
+  }
+}
+
+async function sizePair(context, requestedStake) {
+  const lease = await context.reservation;
+  if (!lease) throw Error('Pair evidence unavailable');
+  const {id, evidence_result_id} = context.pair;
+  const query = new URLSearchParams({id, result_id:evidence_result_id, lease_id:lease.lease_id, stake:requestedStake});
+  const response = await fetch(`/api/comparison-snapshot/details?${query}`);
+  if (!response.ok) throw Error('Pair evidence unavailable');
+  const {id:pairID, evidence_result_id:resultID, inspection, retail_payoff, score} = await response.json();
+  if (pairID !== id || resultID !== evidence_result_id) throw Error('Pair evidence changed');
+  if (dialog.open && state.selected === context) {
+    context.requestedStake = requestedStake;
+    context.pair = {...context.pair, inspection, retail_payoff, score};
+    renderPair(context);
+  }
 }
 
 async function openHistorical() {
@@ -347,7 +408,8 @@ async function openHistorical() {
 $('back-to-pair').onclick = () => {
   const {pairContext, lease} = state.selected;
   releaseEvidence(lease);
-  openPair(pairContext.pair, pairContext.offers, pairContext.group, pairContext.game, pairContext.opener);
+  renderPair(pairContext);
+  dialog.scrollTop = 0;
   dialog.querySelector('form button').focus();
 };
 async function releaseEvidence(lease){
@@ -360,6 +422,11 @@ async function releaseEvidence(lease){
     });
   }catch{}
 }
+async function reserveEvidence(result_id) {
+  const response=await fetch('/api/comparison-current/lease',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({result_id})});
+  if (!response.ok) throw Error('Evidence expired');
+  return response.json();
+}
 async function pinEvidence(offer){
   if(!offer.evidence_result_id)throw Error('Missing exact evidence');
   if (replay) {
@@ -371,8 +438,7 @@ async function pinEvidence(offer){
         evidence.row.economic_revision !== offer.economic_revision) throw Error('Replay revision changed');
     return {evidence};
   }
-  const response=await fetch('/api/comparison-current/lease',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({result_id:offer.evidence_result_id})});
-  if(!response.ok)throw Error('Evidence expired');const lease=await response.json();
+  const lease=await reserveEvidence(offer.evidence_result_id);
   try{const detail=await fetch('/api/comparison-snapshot/details?'+new URLSearchParams({result_id:offer.evidence_result_id,id:offer.id,lease_id:lease.lease_id}));if(!detail.ok)throw Error();const evidence=await detail.json();
     if(evidence.row.id!==offer.id||evidence.row.price_revision!==offer.price_revision||evidence.row.economic_revision!==offer.economic_revision)throw Error();return {lease,evidence};
   }catch(error){releaseEvidence(lease);throw error;}
@@ -462,7 +528,6 @@ function cardContext(games, gameTitle = null) {
   return {
     basis:displayBasis(filters.elements.basis.value), clock, checkedAt:state.page?.publication?.read_at, gameTitle, mode:replayMode(),
     compact:comparable, showGameLink:!gameKey, stableVenues:!replay,
-    lastKnown:filters.elements.last_known.checked,
     position:offer => position(offer),
     gameLink:group => browsingLink('Open game ↗', group, 'opportunity-link'),
     inspectOffer:(offer, group) => openTrade(offer, group, games.get(group.game_key)),
@@ -477,7 +542,7 @@ function displayBasis(basis) {
 }
 
 function pairResultsReady() {
-  return stake.validity.valid && !!stake.value && Number(stake.value) === state.renderedStake;
+  return !replay || stake.validity.valid && !!stake.value && Number(stake.value) === state.renderedStake;
 }
 
 function refreshStatus() {
@@ -511,10 +576,10 @@ function emptyResults(page, publication) {
   } else if (!replay && runtime?.stopped) {
     title = 'Price updates are stopped';
     detail = browse ? 'No saved quotes match this view.' : 'Browse odds can show saved quotes while updates are stopped.';
-  } else if (!replay && runtime?.healthy === false) {
+  } else if (!replay && updatesUnavailable(runtime)) {
     title = 'Price updates are temporarily unavailable';
-    detail = browse ? 'Refresh the list to retry or try another filter.' : 'Browse odds can still show saved quotes.';
-    actions.append(button('Retry price updates', () => load(state.offset)));
+    detail = browse ? 'No saved quotes match this view.' : 'The background collector is unavailable. Saved quotes may still be available.';
+    if (!browse) actions.append(link('Browse saved odds', $('browse-link').href));
   } else if (page.state === 'initializing' && !publication.retained_prices) {
     title = 'No prices have loaded yet';
     detail = 'The desk will update after the data service publishes its first prices.';
@@ -560,7 +625,7 @@ function emptyResults(page, publication) {
       : page.matched_offer_count ? 'Current prices are missing an eligible sportsbook reference for the selected basis.'
         : `No current prices are available${phase === 'live' ? ' for live games' : phase === 'pregame' ? ' for pregame markets' : ''}.`);
   }
-  if ((replay && dataset !== 'practice') || (!replay && (runtime?.healthy === false || runtime?.stopped || page.state === 'initializing'))) {
+  if ((replay && dataset !== 'practice') || (!replay && (updatesUnavailable(runtime) || runtime?.stopped || page.state === 'initializing'))) {
     actions.append(link('Try synthetic practice', replayURL(arb ? 'arbs' : 'ev', 'practice', 'initial')));
   }
   empty.append(el('h2', title));
@@ -594,15 +659,13 @@ function render(page) {
   const publication = page.publication || {};
   const notice = [];
   if (replay && page.replay?.captured_at) notice.push(`Captured ${clock(page.replay.captured_at)}.`);
+  if (arb && !replay && rows.length && page.ranking_stake) notice.push(`Ranked at $${page.ranking_stake} before fees. Size a pair in its calculation.`);
   if (page.cached) notice.push('Showing the last loaded quotes while the list reconnects.');
   else if (rows.length && publication.data_runtime?.stopped) notice.push('Price updates are stopped. Showing last-known quotes.');
-  else if (rows.length && page.retained_fallback) notice.push('Price updates are temporarily unavailable. Showing last-known quotes. Refresh the list to retry.');
-  else if (browse && !replay && rows.length && filters.elements.last_known.checked) {
-    notice.push('Current quotes are shown alongside older quotes labeled Last known.');
-  }
+  else if (rows.length && page.retained_fallback) notice.push('Price updates unavailable. Showing last-known odds.');
   if (page.limited_coverage) notice.push('Some exact lines have quotes from fewer than three sites.');
   if (browse && ['sgo_charge_unresolved', 'updates_stopped'].includes(publication.sources?.sportsgameodds?.reason_code)
-      && !publication.data_runtime?.stopped && publication.data_runtime?.healthy !== false) {
+      && !publication.data_runtime?.stopped && !updatesUnavailable(publication.data_runtime)) {
     notice.push(filters.elements.last_known.checked ? 'SportsGameOdds updates are paused. Its retained prices are labeled Last known.'
       : 'SportsGameOdds updates are paused. Turn on Last-known prices to see its retained quotes.');
   }
@@ -687,9 +750,10 @@ async function fetchPage(query, signal) {
   return response.json();
 }
 
-function showCachedQuotes(page) {
+function showCachedQuotes(page, keepEV = true) {
   const rows = page.rows.map(group => group.withdrawn ? group : {...group, score:null,
     offers:group.offers.map(offer => ({...offer, current:false, value:null, sportsbook:null,
+      last_known_ev:keepEV ? offer.value ?? offer.last_known_ev : null,
       reference_current:false, before_fee:null, after_fee:null, conservative:null, probability:null, trade_fee:null,
       reason:'Price unavailable'})),
     sportsbook_quotes:retainedBookQuotes(group)});
@@ -698,7 +762,7 @@ function showCachedQuotes(page) {
 }
 
 function matchesInputs(stakeValue, signature) {
-  return stakeValue === stake.value && signature === JSON.stringify(selections());
+  return (!replay || stakeValue === stake.value) && signature === JSON.stringify(selections());
 }
 
 let resultPointer = null;
@@ -715,11 +779,12 @@ async function load(offset = state.offset, {background = false} = {}) {
   if (!filters.checkValidity() || !stake.value) return;
   state.request?.abort();
   const controller = new AbortController(); state.request = controller; refreshStatus();
-  const requestStake = stake.value;
+  const requestStake = replay ? stake.value : '100';
   const selected = selections();
   const requestFilters = JSON.stringify(selected);
   const query = new URLSearchParams({...selected, layout: 'desk', view: arb ? 'arbs' : 'ev',
-    stake: requestStake, offset, limit:pageLimit});
+    offset, limit:pageLimit});
+  if (replay) query.set('stake', requestStake);
   if (replay) { query.set('dataset', dataset); query.set('frame', frame); }
   const browseId = (state.query === requestFilters ? state.page?.browse_id : null) ?? restoreLocation?.browseId;
   if (!replay && offset && browseId) query.set('browse_id', browseId);
@@ -756,7 +821,7 @@ async function load(offset = state.offset, {background = false} = {}) {
         || background && (dialog.open || usingResults())) return;
     if (browse && !replay && state.query === requestFilters && state.offset === offset && state.page?.rows?.length
         && !page.rows?.some(row => !row.withdrawn)
-        && (page.publication?.data_runtime?.healthy === false || page.publication?.data_runtime?.stopped)) {
+        && (updatesUnavailable(page.publication?.data_runtime) || page.publication?.data_runtime?.stopped)) {
       if (!state.page.cached) showCachedQuotes(state.page);
       restoreLocationAfterLoad();
       return;
@@ -773,7 +838,9 @@ async function load(offset = state.offset, {background = false} = {}) {
   } catch (error) {
     if (!controller.signal.aborted && error.name !== 'AbortError') {
       if (browse && !replay && state.page?.rows?.length) {
-        if (!state.page.cached) showCachedQuotes(state.page);
+        if (!state.page.cached || state.query !== requestFilters) {
+          showCachedQuotes(state.page, state.query === requestFilters);
+        }
         restoreLocationAfterLoad();
       }
       $('notice').textContent = replay ? 'Replay could not be loaded. Refresh the list to retry.'
@@ -858,7 +925,7 @@ function applyFilters() {
   if (!filters.checkValidity() || !stake.value) return;
   if (browse && !gameKey) saveBrowsePreferences();
   else if (!gameKey) savePreference(filterKey, JSON.stringify({...selections(), timezone:filters.elements.timezone.value}));
-  if (arb) savePreference('stake', stake.value);
+  if (arb && replay) savePreference('stake', stake.value);
   if (browse && !replay) {
     let ordinary = {};
     try { ordinary = JSON.parse(readPreference(evFilterKey, '{}')) || {}; } catch {}
@@ -901,7 +968,7 @@ $('alternates').addEventListener('input', event => {
   if (state.page) render(state.page);
 });
 function pairIdentity(context) {
-  const {pair, offers} = context;
+  const {publishedPair:pair, offers} = context;
   const payoff = pair.retail_payoff;
   const fees = payoff.legs.map(leg => [leg.available, leg.classification, leg.quantity, leg.acquisition_usd,
     leg.at_fill_usd, leg.settlement_usd, leg.receipts_usd]);
@@ -911,7 +978,7 @@ function pairIdentity(context) {
 
 async function readPair(selection) {
   const query = new URLSearchParams({
-    layout:'desk', view:'arbs', stake:selection.pair.inspection.funding_usd, game_key:selection.group.game_key,
+    layout:'desk', view:'arbs', game_key:selection.group.game_key,
     family:selection.group.market.market, period:selection.group.market.period, limit:pageSize
   });
   if (phase) query.set('phase', phase);
@@ -921,7 +988,7 @@ async function readPair(selection) {
     const page = await fetchPage(query);
     const group = page.rows?.find(row => row.id === selection.group.id);
     const pair = group?.pairs.find(item => [...item.legs].sort().join('\u001f') === ids && item.retail_payoff?.available);
-    if (pair) return {pair, group, offers:new Map(group.offers.map(offer => [offer.id, offer])),
+    if (pair) return {pair, publishedPair:pair, group, offers:new Map(group.offers.map(offer => [offer.id, offer])),
       game:page.games?.find(item => item.game_key === group.game_key)};
     if (group || !page.total || offset + pageSize >= page.total) return null;
     if (page.browse_id) query.set('browse_id', page.browse_id);
@@ -948,8 +1015,15 @@ async function adoptPair(selection, isActive) {
     showRefreshResult(selection, 'No newer pair inputs found. The displayed calculation is unchanged.');
     return;
   }
-  openPair(confirmed.pair, confirmed.offers, confirmed.group, confirmed.game, selection.opener);
-  showRefreshResult(state.selected, 'Updated both legs and the payoff.');
+  const replacement = openPair(confirmed.pair, confirmed.offers, confirmed.group, confirmed.game, selection.opener);
+  if (selection.requestedStake) {
+    try { await sizePair(replacement, selection.requestedStake); }
+    catch {
+      if (dialog.open && state.selected === replacement) showRefreshResult(replacement, 'Updated both legs. The published payoff is shown while custom sizing is unavailable.');
+      return;
+    }
+  }
+  if (dialog.open && state.selected === replacement) showRefreshResult(replacement, 'Updated both legs and the payoff.');
 }
 
 function showRefreshResult(selection, message) {
@@ -1048,6 +1122,7 @@ dialog.addEventListener('close', () => {
   const old = state.selected;
   state.selected = null;
   releaseEvidence(old?.lease);
+  releaseEvidence(old?.pairContext?.lease);
   const pair = old?.pairContext?.pair || old?.pair;
   const current = pair
     ? [...$('results').querySelectorAll('[data-pair-id]')].find(item => item.dataset.pairId === pair.id)
@@ -1136,4 +1211,19 @@ setInterval(() => {
   refreshStatus();
 }, 6500);
 
-setInterval(async()=>{const selected=state.selected;if(!dialog.open||!selected?.lease)return;try{const response=await fetch('/api/comparison-current/lease',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({result_id:selected.offer.evidence_result_id,lease_id:selected.lease.lease_id})});if(!response.ok&&selected===state.selected){selected.retentionError='Evidence retention expired; displayed inspection remains saved.';$('trade-note').textContent=selected.retentionError;}}catch{}},30000);
+setInterval(async () => {
+  const selected = state.selected;
+  if (!dialog.open || !selected) return;
+  for (const subject of [selected, selected.pairContext]) {
+    if (!subject?.lease) continue;
+    const result_id = (subject.offer || subject.pair).evidence_result_id;
+    try {
+      const response = await fetch('/api/comparison-current/lease', {method:'POST', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({result_id, lease_id:subject.lease.lease_id})});
+      if (!response.ok && selected === state.selected) {
+        selected.retentionError = 'Evidence retention expired; displayed inspection remains saved.';
+        $('trade-note').textContent = selected.retentionError;
+      }
+    } catch {}
+  }
+}, 30000);

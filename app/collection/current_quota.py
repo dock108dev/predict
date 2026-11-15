@@ -104,14 +104,16 @@ def storage_admission_proof(proof, receipt):
     from .current_journal import CurrentJournal, MANIFEST_BYTE_CAP, MANIFEST_VERSION
     from .current_storage_policy import (
         VERSION, JOURNAL_SEGMENT_BYTE_CAP, JOURNAL_BYTE_CAP,
-        JOURNAL_RECORD_BYTE_CAP, SQL_BYTE_CAP, FREE_DISK_BYTE_FLOOR,
+        JOURNAL_RECORD_BYTE_CAP, LOCAL_SQL_BYTE_CAP, FREE_DISK_BYTE_FLOOR,
     )
     from .odds_http import BudgetStop
+    # Existing replay proofs bind the local-storage policy even when the
+    # collector using the retained ledger has a larger deployment ceiling.
     expected_policy = dict(version=VERSION,
         journal_segment_byte_cap=JOURNAL_SEGMENT_BYTE_CAP,
         journal_total_byte_cap=JOURNAL_BYTE_CAP,
         journal_record_byte_cap=JOURNAL_RECORD_BYTE_CAP,
-        sql_byte_cap=SQL_BYTE_CAP, free_disk_byte_floor=FREE_DISK_BYTE_FLOOR)
+        sql_byte_cap=LOCAL_SQL_BYTE_CAP, free_disk_byte_floor=FREE_DISK_BYTE_FLOOR)
     try:
         if (proof.get('response_receipt_sha256') != digest(receipt)
                 or proof.get('storage_policy') != expected_policy

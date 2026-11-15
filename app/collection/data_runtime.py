@@ -35,6 +35,7 @@ class DataRuntime:
         self.memory_task = None
         self.account_projection = None
         self.retained_memory = None
+        self.storage_interval_requested = False
         self.storage_interval = False
         self.sql_bytes = None
 
@@ -197,6 +198,12 @@ class DataRuntime:
                 if self.command_task and self.command_task.done():
                     self.command_task.result()
                     raise RuntimeError('data_runtime_controls_stopped')
+                if (not self.global_stopped and getattr(self.service, 'stop_reason', None)
+                        and getattr(self.service, 'closed', False)):
+                    # The source watchdog can finish its own cleanup before the
+                    # runtime heartbeat observes the resource spike. Exiting
+                    # hands recovery back to the process supervisor.
+                    raise RuntimeError('data_runtime_resource_shutdown')
                 for worker, attribute, error_field in (
                     (self.scanner, 'task', 'error'),
                     (self.board, 'task', 'observation_error'),
@@ -217,14 +224,14 @@ class DataRuntime:
                 # Measured pressure/deferred rewrites initiate an orderly interval.
                 # Close every dispatch owner before startup uses its separate allowance.
                 maintenance=getattr(getattr(self.service,'database',None),'maintenance',None)
-                if needs_storage_interval(maintenance, sql_bytes=self.sql_bytes) and getattr(
-                        self.service.workers.get('the_odds_api'), 'phase', None) not in (
-                            'reservation','transport','accounting'):
-                    logging.getLogger(__name__).warning(
-                        'Starting storage maintenance interval at %d database bytes', self.sql_bytes)
-                    self.storage_interval=True
-                    self.stopping.set()
-                    break
+                if self.storage_interval_requested or needs_storage_interval(maintenance, sql_bytes=self.sql_bytes):
+                    self.storage_interval_requested = True
+                    if self.storage_interval_ready():
+                        logging.getLogger(__name__).warning(
+                            'Starting storage maintenance interval at %d database bytes', self.sql_bytes)
+                        self.storage_interval=True
+                        self.stopping.set()
+                        break
                 await self.persist_heartbeat()
                 try:
                     await asyncio.wait_for(self.stopping.wait(), 1)
@@ -238,6 +245,13 @@ class DataRuntime:
             except Exception as secondary:
                 failure(__name__, 'data_runtime_failure_status', secondary)
             await self.service.close()
+
+    def storage_interval_ready(self):
+        worker = self.service.workers.get('sportsgameodds')
+        if worker is not None:
+            return worker.request_storage_interval()
+        worker = self.service.workers.get('the_odds_api')
+        return getattr(worker, 'phase', None) not in ('reservation', 'transport', 'accounting')
 
     async def commands(self):
         # Keep one session for the command poll instead of opening ten database

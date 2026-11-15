@@ -11,6 +11,7 @@ import gzip
 from hashlib import sha256
 from time import monotonic
 from uuid import uuid4
+from psycopg import OperationalError
 from psycopg.types.json import Jsonb
 
 from . import comparison_snapshot as snapshots
@@ -260,8 +261,6 @@ def authority(db, *, at=None, include_diagnostics=True):
         committed['pinnacle']=dict(state='budget_delayed',reason_code='aggregate_scope_observed',
             observed_sports=reference_scopes)
     states=source_states(committed,owner)
-    if 'sportsgameodds' in committed:
-        states['sportsgameodds']=committed['sportsgameodds']
     if 'sportsgameodds' in owner.get('paused_sources', []) or owner.get('global_stopped'):
         states['sportsgameodds']=dict(state='stopped',reason_code='sgo_paused_or_stopped')
     odds_active = owner.get('config', {}).get('aggregate_provider', 'the_odds_api') == 'the_odds_api'
@@ -636,6 +635,7 @@ def compose(db, settings, *, scope, policy, epoch, started, batched=False):
     blobs={r['id']:r['result'] for r in db.execute(
         'SELECT id,result FROM comparison_snapshot_result WHERE id=ANY(%s)',(missing,))}
     members=[];captured=[];boundaries=[];pending=0;failed=0;written=0;delivery=[];live_sportsbook=[]
+    failed_captures = []
     totals=dict(observations=0,gross_numeric=0,conditional_numeric=0,conservative_numeric=0,net_numeric=0,pairs=0,unmatched=0)
     for c in components:
         summary=c['summary']
@@ -659,11 +659,17 @@ def compose(db, settings, *, scope, policy, epoch, started, batched=False):
         delivery.extend(summary.get('delivery_receipts',[]))
         live_sportsbook.extend(summary.get('live_sportsbook_deadlines', []))
         members.append(c['result_id']);captured.append(summary['captured_at'])
-        pending+=summary['finance']!='ready';failed+=c['facts'].get('finance')=='failed'
+        capture_failed = c['facts'].get('price_failure')
+        if capture_failed:
+            failed_captures.append(c['result_id'])
+        pending+=bool(capture_failed or summary['finance']!='ready')
+        failed+=bool(capture_failed or c['facts'].get('finance')=='failed')
         for key in totals:totals[key]+=summary['counts'][key]
         if c['facts'].get('next_boundary'):boundaries.append(c['facts']['next_boundary'])
     pending+=len(scope)-len(members)
     result['_read_fragments']='publication-members-v1'
+    if failed_captures:
+        result['_failed_price_members'] = failed_captures
     result['publication']=dict(schema=VERSION,finance='failed' if failed else 'pending' if pending else 'ready',policy=policy,
         epoch=epoch,component_count=len(members),expected_components=len(scope),pending_components=pending,
         oldest_capture=min(captured,key=stamp) if captured else None,provider_requests=0)
@@ -687,7 +693,8 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
     matching-component partition. No component is excluded for being slow.
     """
     from .board_capture import capture_batches
-    from app.comparison.calculation_control import checkpoint
+    from app.comparison.calculation_control import CalculationStopped, checkpoint
+    from app.diagnostics import failure_details
     if not db.execute('SELECT pg_try_advisory_lock(901153) held').fetchone()['held']:
         return dict(published=False,reason='snapshot_operation_running')
     started=monotonic();changed=0;computed=0;price_generation=None;price_published_at=None;timings={}
@@ -772,14 +779,17 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
                               and stamp(deadline) > at]
 
         removed=set(old)-set(scope)
+        def boundary_due(facts):
+            return facts.get('next_boundary') and stamp(facts['next_boundary'])<=at
+
         def fee_boundary_due(facts):
             return facts.get('next_fee_boundary') and stamp(facts['next_fee_boundary'])<=at
 
         def needs(key):
             facts=old.get(key,{}).get('facts',{})
-            return (facts.get('input_identity')!=desired[key] or fee_boundary_due(facts) or finance_available and (
-                    facts.get('finance')!='ready' or
-                    facts.get('next_boundary') and stamp(facts['next_boundary'])<=at))
+            return (facts.get('price_failure') or facts.get('recapture_input') or facts.get('input_identity')!=desired[key]
+                    or fee_boundary_due(facts) or boundary_due(facts)
+                    or finance_available and facts.get('finance')!='ready')
         pending=[key for key in scope if needs(key)]
         # Missing components first, then oldest successful visit: a hot native
         # game cannot starve reference/API updates or quiet leagues.
@@ -825,97 +835,113 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
                 # four distinct reserved slots. Cutting after three repeatedly
                 # postponed US whenever aggregate and Kalshi work were pending.
                 if len(work)>=4 and monotonic()-capture_started>=turn_seconds/2:break
-                capture_binding=component_binding(frame_binding,{v for eid in scope[key] for v in event_venues.get(eid,())})
-                capture_binding_id=hashed(capture_binding)
-                governing=governing_fields(capture_binding)
                 prior=old.get(key)
-                if (prior and prior['facts'].get('input_identity')==desired[key]
-                        and prior['facts'].get('finance')!='ready' and not fee_boundary_due(prior['facts'])):
-                    input_id=db.execute('SELECT snapshot_id FROM comparison_snapshot_result WHERE id=%s',(prior['result_id'],)).fetchone()['snapshot_id']
-                    work.append((key,input_id,dict(prior['facts'])))
-                    native_slots.discard(key)
-                    continue
-                inputs=None;capture_diagnostics={};prior_parts=None;costs={}
-                current_dependencies=dependencies(db,scope[key],provider=reference_provider)
-                structure_ids=capture_structure_ids(current_dependencies)
                 prior_facts=prior['facts'] if prior else {}
-                previous_structure=prior_facts.get('capture_structure_ids',{})
-                changed_structure=[field for field,value in structure_ids.items()
-                    if field in previous_structure and previous_structure[field]!=value]
-                # A known mismatch can only force the complete owner. Reuse
-                # still requires the entire new transaction's dependency closure.
-                if prior and prior['facts'].get('capture_binding_id',capture_binding_id)!=capture_binding_id:
-                    capture_diagnostics['fallback']='governing_binding_changed_before_decode'
-                    old_fields=prior_facts.get('governing_fields')
-                    capture_diagnostics['changed_fields']=(['legacy_unknown'] if old_fields is None else
-                        sorted(k for k in governing.keys()|old_fields.keys() if governing.get(k)!=old_fields.get(k)))
-                    costs['input_decode_skipped']=True
-                elif changed_structure:
-                    capture_diagnostics.update(fallback=changed_structure[0],changed_fields=changed_structure)
-                    costs['input_decode_skipped']=True
-                elif prior:
-                    from .capture_price import capture as capture_price
-                    saved=db.execute('SELECT s.inputs FROM comparison_snapshot_result r JOIN comparison_snapshot s ON s.id=r.snapshot_id WHERE r.id=%s',
-                        (prior['result_id'],)).fetchone()
-                    if saved:
-                        from . import member_packet
-                        reading=monotonic()
-                        if saved['inputs'].startswith(member_packet.MAGIC):previous,prior_parts=member_packet.read(saved['inputs'],borrow=True)
-                        else:previous=snapshots.unpack(saved['inputs'])
-                        costs['input_decode_seconds']=round(monotonic()-reading,6)
-                        del saved
-                        inputs=capture_price(db,previous,at=utc(),binding=capture_binding,event_ids=scope[key],diagnostics=capture_diagnostics,_frame_dependencies=current_dependencies)
-                        del previous
-                if inputs is None:
-                    prior_parts=None
-                    inputs=snapshots.capture(db,ordinary=True,event_ids=scope[key],capture_binding=capture_binding,
-                        price_basis=True,_frame_dependencies=current_dependencies,reference_provider=reference_provider)
-                    inputs['_price_capture']=dict(path='complete',read_records=len(inputs['dependencies']),**capture_diagnostics)
-                inputs['policy_identity']=policy
-                inputs['reference_provider']=reference_provider
-                from app.comparison.public_sportsbook_estimate import select as public_estimate
-                capture_at = stamp(inputs['captured_at'])
-                for row in inputs['quotes']:
-                    if (row.get('sportsbook_baseline') or {}).get('indicative'):
-                        row.pop('sportsbook_baseline')
-                    if public_matches and (row.get('source') or {}).get('provider') in ('kalshi', 'polymarket_us'):
-                        estimate = public_estimate(row, quote_authority(row, inputs), public_matches, at=capture_at)
-                        if estimate:
-                            row['sportsbook_baseline'] = estimate
-                # Ingress can add a venue between planning and this capture.
-                # Fee authority must cover the actual quotes in this member.
-                captured_venues = {row['venue'] for row in inputs['quotes']}
-                product_components[key].update(product_key for product_key, spec in product_schedules.PRODUCTS.items()
-                                               if spec['venue'] in captured_venues)
-                if 'prophetx' in captured_venues:
-                    prophetx_components.add(key)
-                inputs['fee_lifecycle']=fee_state if key in prophetx_components else None
-                inputs['fee_products']={k:product_states[k] for k in product_components[key] if k in product_states}
-                captured_dependencies={}
-                for cid, value in inputs['dependencies'].items():
-                    captured_dependencies.setdefault(membership.get(cid),{})[cid]=value
-                identity=input_identity(key,captured_dependencies)
-                facts=dict(input_identity=identity,finance='pending',visited_at=utc(),capture_seconds=inputs['capture_seconds'],
-                    aggregate_receipts=captured_aggregate_receipts(inputs),
-                    capture_binding_id=inputs['_price_basis']['binding'],governing_fields=governing,capture_structure_ids=structure_ids)
-                facts['material_identity']=hashed([epoch,[(eid,{cid:v[:3] for cid,v in inputs['dependencies'].items()
-                    if membership.get(cid)==eid}) for eid in sorted(scope[key])]])
-                binding_start=monotonic();price_result=prices(inputs,settings)
-                costs['price_binding_seconds']=round(monotonic()-binding_start,6)
-                # Price-only members may outlive an optional-finance outage.
-                # Their own expiry must still advance browser authority cursors
-                # even if no provider update or further calculation occurs.
-                boundaries=[v for row in price_result['rows'] for v in
-                    (row['current_authority']['price'].get('current_until'),row['start_at'],
-                     (row['current_authority'].get('sgo_native_contract') or {}).get('current_until'),
-                     (row.get('sportsbook_baseline') or {}).get('current_until')) if v and stamp(v)>capture_at]
-                fee_boundaries=[*schedule_boundaries, *(public_boundaries if key in prophetx_components or product_components[key] else ())]
-                facts['next_fee_boundary']=min(fee_boundaries,key=stamp,default=None)
-                boundaries.extend(fee_boundaries)
-                facts['next_boundary']=min(boundaries,key=stamp) if boundaries else None
-                seal(db,inputs,price_result,facts,insert_inputs=True,component=key,prior_parts=prior_parts,
-                     costs=costs,batched=True)
-                del prior_parts
+                force_capture=bool(prior_facts.get('price_failure') or prior_facts.get('recapture_input'))
+                try:
+                    with db.transaction():
+                        capture_binding=component_binding(frame_binding,{v for eid in scope[key] for v in event_venues.get(eid,())})
+                        capture_binding_id=hashed(capture_binding)
+                        governing=governing_fields(capture_binding)
+                        if (prior and not force_capture and prior['facts'].get('input_identity')==desired[key]
+                                and prior['facts'].get('finance')!='ready'
+                                and not (fee_boundary_due(prior['facts']) or boundary_due(prior['facts']))):
+                            input_id=db.execute('SELECT snapshot_id FROM comparison_snapshot_result WHERE id=%s',(prior['result_id'],)).fetchone()['snapshot_id']
+                            work.append((key,input_id,dict(prior['facts'])))
+                            native_slots.discard(key)
+                            continue
+                        inputs=None;capture_diagnostics={};prior_parts=None;costs={}
+                        current_dependencies=dependencies(db,scope[key],provider=reference_provider)
+                        structure_ids=capture_structure_ids(current_dependencies)
+                        previous_structure=prior_facts.get('capture_structure_ids',{})
+                        changed_structure=[field for field,value in structure_ids.items()
+                            if field in previous_structure and previous_structure[field]!=value]
+                        # A known mismatch can only force the complete owner. Reuse
+                        # still requires the entire new transaction's dependency closure.
+                        if force_capture:
+                            capture_diagnostics['fallback']='prior_component_capture_failed'
+                        elif prior and prior['facts'].get('capture_binding_id',capture_binding_id)!=capture_binding_id:
+                            capture_diagnostics['fallback']='governing_binding_changed_before_decode'
+                            old_fields=prior_facts.get('governing_fields')
+                            capture_diagnostics['changed_fields']=(['legacy_unknown'] if old_fields is None else
+                                sorted(k for k in governing.keys()|old_fields.keys() if governing.get(k)!=old_fields.get(k)))
+                            costs['input_decode_skipped']=True
+                        elif changed_structure:
+                            capture_diagnostics.update(fallback=changed_structure[0],changed_fields=changed_structure)
+                            costs['input_decode_skipped']=True
+                        elif prior:
+                            from .capture_price import capture as capture_price
+                            saved=db.execute('SELECT s.inputs FROM comparison_snapshot_result r JOIN comparison_snapshot s ON s.id=r.snapshot_id WHERE r.id=%s',
+                                (prior['result_id'],)).fetchone()
+                            if saved:
+                                from . import member_packet
+                                reading=monotonic()
+                                if saved['inputs'].startswith(member_packet.MAGIC):previous,prior_parts=member_packet.read(saved['inputs'],borrow=True)
+                                else:previous=snapshots.unpack(saved['inputs'])
+                                costs['input_decode_seconds']=round(monotonic()-reading,6)
+                                del saved
+                                inputs=capture_price(db,previous,at=utc(),binding=capture_binding,event_ids=scope[key],diagnostics=capture_diagnostics,_frame_dependencies=current_dependencies)
+                                del previous
+                        if inputs is None:
+                            prior_parts=None
+                            inputs=snapshots.capture(db,ordinary=True,event_ids=scope[key],capture_binding=capture_binding,
+                                price_basis=True,_frame_dependencies=current_dependencies,reference_provider=reference_provider)
+                            inputs['_price_capture']=dict(path='complete',read_records=len(inputs['dependencies']),**capture_diagnostics)
+                        inputs['policy_identity']=policy
+                        inputs['reference_provider']=reference_provider
+                        from app.comparison.public_sportsbook_estimate import select as public_estimate
+                        capture_at = stamp(inputs['captured_at'])
+                        for row in inputs['quotes']:
+                            if (row.get('sportsbook_baseline') or {}).get('indicative'):
+                                row.pop('sportsbook_baseline')
+                            if public_matches and (row.get('source') or {}).get('provider') in ('kalshi', 'polymarket_us'):
+                                estimate = public_estimate(row, quote_authority(row, inputs), public_matches, at=capture_at)
+                                if estimate:
+                                    row['sportsbook_baseline'] = estimate
+                        # Ingress can add a venue between planning and this capture.
+                        # Fee authority must cover the actual quotes in this member.
+                        captured_venues = {row['venue'] for row in inputs['quotes']}
+                        product_components[key].update(product_key for product_key, spec in product_schedules.PRODUCTS.items()
+                                                       if spec['venue'] in captured_venues)
+                        if 'prophetx' in captured_venues:
+                            prophetx_components.add(key)
+                        inputs['fee_lifecycle']=fee_state if key in prophetx_components else None
+                        inputs['fee_products']={k:product_states[k] for k in product_components[key] if k in product_states}
+                        captured_dependencies={}
+                        for cid, value in inputs['dependencies'].items():
+                            captured_dependencies.setdefault(membership.get(cid),{})[cid]=value
+                        identity=input_identity(key,captured_dependencies)
+                        facts=dict(input_identity=identity,finance='pending',visited_at=utc(),capture_seconds=inputs['capture_seconds'],
+                            aggregate_receipts=captured_aggregate_receipts(inputs),
+                            capture_binding_id=inputs['_price_basis']['binding'],governing_fields=governing,capture_structure_ids=structure_ids)
+                        facts['material_identity']=hashed([epoch,[(eid,{cid:v[:3] for cid,v in inputs['dependencies'].items()
+                            if membership.get(cid)==eid}) for eid in sorted(scope[key])]])
+                        binding_start=monotonic();price_result=prices(inputs,settings)
+                        costs['price_binding_seconds']=round(monotonic()-binding_start,6)
+                        # Price-only members may outlive an optional-finance outage.
+                        # Their own expiry must still advance browser authority cursors
+                        # even if no provider update or further calculation occurs.
+                        boundaries=[v for row in price_result['rows'] for v in
+                            (row['current_authority']['price'].get('current_until'),row['start_at'],
+                             (row['current_authority'].get('sgo_native_contract') or {}).get('current_until'),
+                             (row.get('sportsbook_baseline') or {}).get('current_until')) if v and stamp(v)>capture_at]
+                        fee_boundaries=[*schedule_boundaries, *(public_boundaries if key in prophetx_components or product_components[key] else ())]
+                        facts['next_fee_boundary']=min(fee_boundaries,key=stamp,default=None)
+                        boundaries.extend(fee_boundaries)
+                        facts['next_boundary']=min(boundaries,key=stamp) if boundaries else None
+                        seal(db,inputs,price_result,facts,insert_inputs=True,component=key,prior_parts=prior_parts,
+                             costs=costs,batched=True)
+                        del prior_parts
+                except (CalculationStopped, MemoryError, OperationalError):
+                    raise
+                except Exception as exc:
+                    errors.append(dict(component=key,reason='ordinary_price_capture_failed',failure=failure_details(exc)))
+                    native_slots.discard(key)
+                    if prior:
+                        db.execute("UPDATE comparison_publication SET facts=facts || %s WHERE kind='component' AND id=%s",
+                            (Jsonb(dict(price_failure=True,visited_at=utc())),key))
+                        changed+=not prior_facts.get('price_failure')
+                    continue
                 component_trace.append(dict(component=key,event_ids=sorted(scope[key])[:8],event_count=len(scope[key]),
                     queue_position=pending.index(key),selected_at=at.isoformat(),
                     aggregate_receipts=facts['aggregate_receipts'],
@@ -965,6 +991,7 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
             db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ')
             db.execute('SET LOCAL jit=off')
             finance_started=monotonic()
+            finance_changed=False
             # An unavailable reference owner cannot produce current finance.
             # Keep original evidence in leased members and publish source prices;
             # retry pending finance when actual reference authority returns.
@@ -974,35 +1001,42 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
                 # Finance shares the turn's wall-time budget with planning and
                 # capture. Keep one oldest job progressing even on a costly turn.
                 if computed and monotonic()-started>=turn_seconds:break
-                inputs=snapshots.unpack(db.execute('SELECT inputs FROM comparison_snapshot WHERE id=%s',(input_id,)).fetchone()['inputs'])
+                decoded=False
+                previous_failure=facts.get('finance')=='failed'
                 try:
-                    result=bind(snapshots.calculate(inputs,settings),inputs,'ready')
+                    with db.transaction():
+                        inputs=snapshots.unpack(db.execute('SELECT inputs FROM comparison_snapshot WHERE id=%s',(input_id,)).fetchone()['inputs'])
+                        decoded=True
+                        result=bind(snapshots.calculate(inputs,settings),inputs,'ready')
+                        now=stamp(utc())
+                        future=[v for v in [*schedule_boundaries, *(public_boundaries if key in prophetx_components or product_components[key] else ())]
+                                if stamp(v)>now]
+                        for row in result['rows']:
+                            a=row['current_authority']
+                            future.extend(v for v in [a.get('fee_until'),a.get('conservative_fee_until'),
+                                (row.get('trade_fee',{}).get('evidence') or {}).get('review_before'),
+                                (a.get('sgo_native_contract') or {}).get('current_until'),
+                                a['start_at'],a['price'].get('current_until'),
+                                (row.get('sportsbook_baseline') or {}).get('current_until'),
+                                *(w.get('current_until') for w in a['references'])] if v and stamp(v)>now)
+                        renewed=dict(facts,finance='ready',next_boundary=min(future,key=stamp) if future else None,visited_at=utc())
+                        renewed.pop('error',None)
+                        renewed.pop('recapture_input',None)
+                        seal(db,inputs,result,renewed,component=key,batched=True)
+                except (CalculationStopped, MemoryError, OperationalError):
+                    raise
                 except Exception as exc:
-                    from app.comparison.calculation_control import CalculationStopped
-                    if isinstance(exc,CalculationStopped):raise
                     db.execute("UPDATE comparison_publication SET facts=facts || %s WHERE kind='component' AND id=%s",
-                        (Jsonb(dict(finance='failed',error='ordinary_finance_failed',visited_at=utc())),key))
-                    errors.append(dict(component=key,reason='ordinary_finance_failed'))
-                    del inputs
+                        (Jsonb(dict(finance='failed',error='ordinary_finance_failed',visited_at=utc(),
+                               recapture_input=not decoded)),key))
+                    errors.append(dict(component=key,reason='ordinary_finance_failed',failure=failure_details(exc)))
+                    finance_changed=finance_changed or not previous_failure
                     continue
-                now=stamp(utc())
-                future=[v for v in [*schedule_boundaries, *(public_boundaries if key in prophetx_components or product_components[key] else ())]
-                        if stamp(v)>now]
-                for row in result['rows']:
-                    a=row['current_authority']
-                    future.extend(v for v in [a.get('fee_until'),a.get('conservative_fee_until'),
-                        (row.get('trade_fee',{}).get('evidence') or {}).get('review_before'),
-                        (a.get('sgo_native_contract') or {}).get('current_until'),
-                        a['start_at'],a['price'].get('current_until'),
-                        (row.get('sportsbook_baseline') or {}).get('current_until'),
-                        *(w.get('current_until') for w in a['references'])] if v and stamp(v)>now)
-                facts.update(finance='ready',next_boundary=min(future,key=stamp) if future else None,visited_at=utc())
-                seal(db,inputs,result,facts,component=key,batched=True)
                 computed+=1
                 del inputs,result
             timings['finance_seconds']=round(monotonic()-finance_started,6)
             finance_seal_started=monotonic()
-            if computed or errors:
+            if computed or finance_changed:
                 gc.collect()
                 generation=compose(db,settings,scope=scope,policy=policy,epoch=epoch,started=started,batched=True)
             else:generation=status(db)['generation']
@@ -1024,7 +1058,7 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
             captured_components=len(work),finance_deferred_reason=None if finance_available else 'reference_source_unavailable',
             live_first_price_seal=live_first_price_seal,
             native_price_seal=native_price_seal,
-            published=bool(changed or computed),unchanged=not pending and not removed,computed=computed,errors=errors,
+            published=bool(changed or computed or finance_changed),unchanged=not pending and not removed,computed=computed,errors=errors,
             remaining_components=max(0,len(pending)-(computed if finance_available else len(work))),expected_components=len(scope),
             generation=generation,price_generation=price_generation,price_published_at=price_published_at,
             turn_seconds=round(monotonic()-started,3))

@@ -304,6 +304,73 @@ class OrdinarySQL(LatestBoardFixture):
             self.assertTrue(live.turn(db)['published'])
             self.assertEqual(self.result(db)['publication']['finance'],'ready')
 
+    async def test_price_capture_failure_keeps_other_components_and_pinned_evidence(self):
+        from tests.test_ev09_n01 import SELECTED
+
+        def affected(row):
+            source=row['source']
+            return (source['provider'],source['native_event_id']) == SELECTED
+
+        with self.connect() as db:
+            live.turn(db)
+            before=self.result(db)
+            prior={r['evidence_result_id'] for r in before['rows'] if affected(r)}
+            self.assertEqual(len(prior),1)
+            member=next(iter(prior));token=live.retain(db,member)
+            self.at+=timedelta(seconds=1);self.state.write(self.service);self.fresh_sources()
+            prices=live.prices
+
+            def price_failure(inputs, settings):
+                if any(affected(r) for r in inputs['quotes']):
+                    raise ValueError('fixture component capture failure')
+                return prices(inputs,settings)
+
+            with patch.object(live,'prices',side_effect=price_failure):
+                turn=live.turn(db)
+            self.assertTrue(turn['published'])
+            self.assertEqual([error['reason'] for error in turn['errors']],['ordinary_price_capture_failed'])
+            after=self.result(db)
+            self.assertEqual(after['_failed_price_members'],[member])
+            projected=self.project(db,after)
+            failed=[r for r in projected['rows'] if r['evidence_result_id']==member]
+            self.assertTrue(failed)
+            self.assertTrue(all(r['gross_return_percent'] is None for r in failed))
+            self.assertTrue(all('ordinary_price_capture_failed' in r['current_reasons'] for r in failed))
+            before_ids={r['evidence_result_id'] for r in before['rows']}
+            self.assertTrue(any(r['evidence_result_id'] not in before_ids for r in projected['rows']))
+            self.assertFalse(any(p['evidence_result_id']==member for p in projected['pairs']))
+            self.assertIsNotNone(snapshots.current(db,member))
+            self.assertTrue(live.turn(db)['published'])
+            self.assertNotIn('_failed_price_members',self.result(db))
+            db.execute("DELETE FROM comparison_result_reference WHERE kind='lease' AND holder=%s",(token['lease_id'],))
+
+    async def test_finance_seal_failure_rolls_back_only_its_component(self):
+        from tests.test_ev09_n01 import SELECTED
+
+        with self.connect() as db:
+            self.at+=timedelta(seconds=1);self.state.write(self.service);self.fresh_sources()
+            seal=live.seal
+
+            def seal_failure(db, inputs, result, facts, **kw):
+                generation=seal(db,inputs,result,facts,**kw)
+                if kw.get('component') and facts['finance']=='ready' and any(
+                    (r['source']['provider'],r['source']['native_event_id'])==SELECTED for r in inputs['quotes']):
+                    raise RuntimeError('fixture failure after component writes')
+                return generation
+
+            with patch.object(live,'seal',side_effect=seal_failure):
+                turn=live.turn(db)
+            self.assertTrue(turn['computed'])
+            self.assertEqual([error['reason'] for error in turn['errors']],['ordinary_finance_failed'])
+            states={r['facts']['finance'] for r in db.execute("SELECT facts FROM comparison_publication WHERE kind='component'")}
+            self.assertTrue({'ready','failed'} <= states)
+            after=self.result(db)
+            failed=[r for r in after['rows'] if (r['source']['provider'],r['source']['native_event_id'])==SELECTED]
+            self.assertTrue(failed)
+            self.assertTrue(all(r['gross_return_percent'] is None for r in failed))
+            self.assertTrue(live.turn(db)['published'])
+            self.assertEqual(self.result(db)['publication']['finance'],'ready')
+
     async def test_stop_pause_reconnect_expiry_and_policy_do_not_renew_prices(self):
         with self.connect() as db:
             live.turn(db);result=self.result(db)

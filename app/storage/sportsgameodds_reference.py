@@ -9,6 +9,8 @@ import re
 from psycopg.types.json import Jsonb
 
 from app.storage.current_rows import LOCK
+from app.storage import odds_archive
+from app.storage.odds_retention import sgo_pregame, sgo_working_expiry
 from app.storage.store import encoded, exact_time, hashed, stamp
 
 MAX_ROWS = 16000
@@ -51,6 +53,7 @@ def archive_revisions(db, kind, rows):
     The caller holds LOCK and supplies only replaced revisions. Rotate the
     oldest witnesses at the logical cap and skip writes near the database cap.
     """
+    rows = [row for row in rows if sgo_pregame(row['facts'])]
     if not rows:
         return 0
     from app.collection.current_storage_policy import SQL_BYTE_CAP, sql_usage
@@ -114,7 +117,7 @@ def archive_revisions(db, kind, rows):
 
 
 def prune_history(db, *, at, limit=PRUNE_BATCH):
-    """Delete only this best-effort history after seven days."""
+    """Expire pregame diagnostics in seven days and legacy in-game data in one."""
     if type(limit) is not int or not 1 <= limit <= PRUNE_BATCH:
         raise ValueError('sgo history prune capacity')
     stamp(at)
@@ -122,7 +125,9 @@ def prune_history(db, *, at, limit=PRUNE_BATCH):
     return db.execute('''DELETE FROM current_sgo_history WHERE (kind,identity,revision) IN
         (SELECT kind,identity,revision FROM current_sgo_history
          WHERE archived_at < %s::timestamptz - interval '7 days'
-         ORDER BY archived_at,kind,identity,revision LIMIT %s)''', (at, limit)).rowcount
+            OR (archived_at < %s::timestamptz - interval '1 day'
+                AND COALESCE(facts#>>'{event_context,phase}',facts->>'phase') IN ('live','started'))
+         ORDER BY archived_at,kind,identity,revision LIMIT %s)''', (at, at, limit)).rowcount
 
 
 def read_history(db, event_id, *, limit=1000):
@@ -167,8 +172,7 @@ def prepare_page(page):
         rows.append(dict(id=row_id, event_id=quote['event_id'], bookmaker_id=quote['venue'],
                          source_order=str(exact_time(quote['source_at'])) if quote['source_at'] else None,
                          received_order=str(exact_time(quote['received_at'])),
-                         expires_at=max(stamp(event['starts_at']) + timedelta(days=14),
-                                        stamp(quote['received_at']) + timedelta(days=1)).isoformat(),
+                         expires_at=sgo_working_expiry(event['starts_at'], quote['received_at']).isoformat(),
                          revision=revision, facts=facts))
     if len(encoded(rows)) > MAX_BYTES:
         raise ValueError('sgo reference page byte capacity')
@@ -203,7 +207,7 @@ def upsert_rows(db, rows):
             raise ValueError('sgo reference revision')
         if row['source_order'] != (str(exact_time(facts['source_at'])) if facts['source_at'] else None) or row['received_order'] != str(exact_time(facts['received_at'])):
             raise ValueError('sgo reference clocks')
-        expected_expiry = max(stamp(facts['starts_at']) + timedelta(days=14), stamp(facts['received_at']) + timedelta(days=1))
+        expected_expiry = sgo_working_expiry(facts['starts_at'], facts['received_at'])
         if stamp(row['expires_at']) != expected_expiry:
             raise ValueError('sgo reference retention')
     db.execute('SELECT pg_advisory_xact_lock(%s)', (LOCK,))
@@ -234,7 +238,8 @@ def advance_quotes(db, rows, previous):
               OR (i.source_order=q.source_order AND i.received_order>=q.received_order
                   AND i.facts->>'available'='false' AND q.facts->>'available'='true')
         )) OR (q.revision=i.revision AND i.received_order>=q.received_order
-              AND i.expires_at>q.expires_at AND q.expires_at<to_timestamp(i.received_order)+interval '2 days')''',
+              AND ((i.expires_at>q.expires_at AND q.expires_at<to_timestamp(i.received_order)+interval '2 days')
+                   OR i.expires_at<q.expires_at-interval '1 day'))''',
         (Jsonb(rows),)).fetchall()
     if not eligible:
         return 0
@@ -256,6 +261,10 @@ def advance_quotes(db, rows, previous):
             expires_at=excluded.expires_at,
             facts=CASE WHEN sgo_quote_revision.is_current THEN sgo_quote_revision.facts ELSE excluded.facts END''', (Jsonb(selected),))
     archive_revisions(db, 'reference', replaced)
+    if odds_archive.enabled():
+        with odds_archive.capture(db) as archive:
+            archive.extend(('sportsgameodds', odds_archive.sgo_quote, (row,previous.get(row['id'])), {})
+                           for row in selected)
     return len(selected)
 
 
@@ -288,14 +297,25 @@ def read_event(db, event_id, *, limit=MAX_ROWS, bookmakers=None, source_since=No
     return rows
 
 
-def prune(db, *, at, limit=PRUNE_BATCH):
+def expiry_filter(at, include_legacy):
+    if not include_legacy:
+        return 'expires_at < %s', (at,)
+    # Previously written heads have a 14-day schedule anchor. Use its existing
+    # expiry index to bound the candidate scan, and confirm both original clocks.
+    return '''expires_at < %s OR (expires_at < %s::timestamptz + interval '13 days'
+              AND (facts->>'starts_at')::timestamptz < %s::timestamptz - interval '1 day'
+              AND received_order < %s)''', (at, at, at, exact_time(at)-21600)
+
+
+def prune(db, *, at, limit=PRUNE_BATCH, include_legacy=False):
     """Remove only expired current reference facts; never touches audit or controls."""
     if type(limit) is not int or not 1 <= limit <= PRUNE_BATCH:
         raise ValueError('sgo prune capacity')
     stamp(at)
     db.execute('SELECT pg_advisory_xact_lock(%s)', (LOCK,))
-    expired = db.execute('''SELECT id,event_id,revision,facts FROM current_sgo_reference
-        WHERE expires_at < %s ORDER BY expires_at,id LIMIT %s''', (at, limit)).fetchall()
+    expiry, bounds = expiry_filter(at, include_legacy)
+    expired = db.execute(f'''SELECT id,event_id,revision,facts FROM current_sgo_reference
+        WHERE {expiry} ORDER BY expires_at,id LIMIT %s''', (*bounds, limit)).fetchall()
     archive_revisions(db, 'reference', expired)
     retired = db.execute('UPDATE sgo_quote_revision SET is_current=false WHERE id=ANY(%s) AND is_current',
                          ([row['id'] for row in expired],)).rowcount
@@ -340,8 +360,7 @@ def prepare_frames(page, rows):
             if event.get(field):
                 facts['event_context'][field] = event[field]
         frames.append(dict(event_id=event_id, received_order=str(exact_time(event['received_at'])),
-                           expires_at=max(stamp(event['starts_at']) + timedelta(days=14),
-                                          stamp(event['received_at']) + timedelta(days=1)).isoformat(),
+                           expires_at=sgo_working_expiry(event['starts_at'], event['received_at']).isoformat(),
                            facts=facts))
     if len(encoded(frames)) > MAX_BYTES:
         raise ValueError('sgo frame page byte capacity')
@@ -381,7 +400,7 @@ def upsert_frames(db, frames):
             raise ValueError('sgo duplicate frame member')
         if frame['received_order'] != str(exact_time(facts['received_at'])):
             raise ValueError('sgo frame clock')
-        expiry = max(stamp(facts['starts_at']) + timedelta(days=14), stamp(facts['received_at']) + timedelta(days=1))
+        expiry = sgo_working_expiry(facts['starts_at'], facts['received_at'])
         if stamp(frame['expires_at']) != expiry:
             raise ValueError('sgo frame retention')
     db.execute('SELECT pg_advisory_xact_lock(%s)', (LOCK,))
@@ -466,13 +485,14 @@ def backfill_prophetx(db, *, at):
         return CurrentRowStore(db).upsert_records(records, now=at, quote_links=links)
 
 
-def prune_frames(db, *, at, limit=PRUNE_BATCH):
+def prune_frames(db, *, at, limit=PRUNE_BATCH, include_legacy=False):
     if type(limit) is not int or not 1 <= limit <= PRUNE_BATCH:
         raise ValueError('sgo frame prune capacity')
     stamp(at)
     db.execute('SELECT pg_advisory_xact_lock(%s)', (LOCK,))
-    expired = db.execute('''SELECT event_id,facts FROM current_sgo_event_frame
-        WHERE expires_at < %s ORDER BY expires_at,event_id LIMIT %s''', (at, limit)).fetchall()
+    expiry, bounds = expiry_filter(at, include_legacy)
+    expired = db.execute(f'''SELECT event_id,facts FROM current_sgo_event_frame
+        WHERE {expiry} ORDER BY expires_at,event_id LIMIT %s''', (*bounds, limit)).fetchall()
     archive_revisions(db, 'frame', expired)
     return db.execute("DELETE FROM sgo_event_evidence WHERE kind='frame' AND event_id=ANY(%s)",
                       ([row['event_id'] for row in expired],)).rowcount

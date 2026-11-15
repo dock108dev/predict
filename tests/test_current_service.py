@@ -65,6 +65,34 @@ class ServiceLifecycle(unittest.IsolatedAsyncioTestCase):
         await self.store.close();await self.service.close()
         self.assertTrue(self.service.cleanup_complete);self.assertIsNone(self.service.ownership.file)
         self.assertEqual(len(records),1)
+
+    async def test_standing_collection_starts_with_full_legacy_receipt_directory(self):
+        directory = self.service.directory
+        directory.mkdir()
+        prior = {directory / f'attempt-retained-{index}.json': b'prior receipt' for index in range(1024)}
+        for path, body in prior.items():
+            path.write_bytes(body)
+
+        await self.service.start(self.store)
+        await asyncio.sleep(0)
+
+        self.assertTrue(self.service.dispatch)
+        self.assertEqual(sorted(FakeWorker.starts), ['kalshi', 'polymarket_us'])
+        self.assertTrue((directory / f'attempt-{self.service.runtime_id}.json').is_file())
+        self.assertEqual({path: path.read_bytes() for path in prior}, prior)
+
+    async def test_startup_receipt_still_requires_disk_headroom(self):
+        from app.collection.odds_http import BudgetStop
+
+        with patch('app.collection.current_storage_policy.require_disk_space',
+                   side_effect=BudgetStop('current_observation_disk_free_floor')):
+            await self.service.start(self.store)
+
+        self.assertFalse(self.service.dispatch)
+        self.assertEqual(FakeWorker.starts, [])
+        self.assertIsNone(self.service.ownership.file)
+        self.assertEqual(self.service.issues[-1]['code'], 'current_observation_disk_free_floor')
+        self.assertFalse(list(self.service.directory.glob('attempt-*.json')))
     async def test_multiple_tabs_admin_security_and_legacy_conflict(self):
         async with TestClient(TestServer(create_app(owner=owner(),sessions={},current_provider=self.service))) as c:
             a=await c.get('/api/current/updates');b=await c.get('/api/current/updates')

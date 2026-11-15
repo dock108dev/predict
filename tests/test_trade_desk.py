@@ -1,13 +1,20 @@
 """Price and rank contracts for the installed EV and arbitrage lists."""
+import asyncio
+import json
 from fractions import Fraction
 from unittest import TestCase
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, Mock, patch
+
+from aiohttp import web
+from aiohttp.test_utils import make_mocked_request
 
 from app.comparison.ordinary_arb import DEFAULT_FUNDING, evaluate as evaluate_arb
 from app.comparison.snapshot_math import before_fee_pair
+from app.dashboard.snapshot_api import mount
 from app.dashboard.trade_desk import add_sgo_prices, game_source_key, page
 from app.storage.store import hashed, stamp
-from app.storage.comparison_snapshot import before_fee_pairs
+from app.storage.comparison_snapshot import ORDINARY_ARB_POLICY, before_fee_pairs, pack
+from app.storage.ordinary_projection import project
 
 
 def quote(id_, venue, *, value=None, current=True, threshold=0, operator='ge', equality=None):
@@ -88,14 +95,16 @@ class TradeDesk(TestCase):
         explicit = page(data, dict(query, last_known='1'), options)
         self.assertEqual({offer['id'] for offer in explicit['rows'][0]['offers']}, {'live', 'saved'})
         data['rows'] = [dict(live, price_current=False, current_reasons=['data_runtime_unhealthy']), saved]
-        data['publication']['data_runtime'] = {'healthy':False}
-        fallback = page(data, query, options)
-        self.assertTrue(fallback['retained_fallback'])
-        self.assertEqual({offer['id'] for offer in fallback['rows'][0]['offers']}, {'live', 'saved'})
-        self.assertIsNone(fallback['rows'][0]['score'])
-        self.assertTrue(all(not offer['current'] and offer['value'] is None for offer in fallback['rows'][0]['offers']))
-        ranked = page(data, {'layout':'desk', 'ranked':'1', 'phase':'', 'basis':'before', 'lines':'main'}, options)
-        self.assertEqual(ranked['rows'], [])
+        for runtime in ({'healthy':False}, {'healthy':True, 'active':False, 'reason':'data_runtime_not_dispatching'}):
+            with self.subTest(runtime=runtime):
+                data['publication']['data_runtime'] = runtime
+                fallback = page(data, query, options)
+                self.assertTrue(fallback['retained_fallback'])
+                self.assertEqual({offer['id'] for offer in fallback['rows'][0]['offers']}, {'live', 'saved'})
+                self.assertIsNone(fallback['rows'][0]['score'])
+                self.assertTrue(all(not offer['current'] and offer['value'] is None for offer in fallback['rows'][0]['offers']))
+                ranked = page(data, {'layout':'desk', 'ranked':'1', 'phase':'', 'basis':'before', 'lines':'main'}, options)
+                self.assertEqual(ranked['rows'], [])
 
     def test_live_desk_prefers_direct_exchange_sources_even_with_retained_prices(self):
         direct = dict(quote('direct', 'kalshi'), source={'provider': 'kalshi'})
@@ -103,6 +112,22 @@ class TradeDesk(TestCase):
         other = dict(quote('novig', 'novig'), source={'provider': 'sportsgameodds'})
         out = page(result(direct, aggregate, other), {'layout':'desk', 'last_known':'1'}, ('ev', None, 0, 10))
         self.assertEqual({q['id'] for g in out['rows'] for q in g['offers']}, {'direct', 'novig'})
+
+    def test_browse_keeps_current_native_games_on_a_mixed_coverage_slate(self):
+        covered = [quote(venue, venue, value='1') for venue in ('novig', 'prophetx', 'kalshi')]
+        native = [dict(quote(f'native-{venue}', venue, value='1'), game_key=venue,
+                       source={'provider': venue}) for venue in ('kalshi', 'polymarket_us')]
+        data = result(*covered, *native)
+        options = ('ev', None, 0, 10)
+        query = {'layout': 'desk', 'basis': 'before', 'lines': 'main', 'phase': ''}
+
+        browse = page(data, dict(query, browse_odds='1'), options)
+        self.assertEqual(browse['total'], 3)
+        self.assertTrue(browse['limited_coverage'])
+        self.assertEqual({offer['id'] for group in browse['rows'] for offer in group['offers'] if offer['current']},
+                         {row['id'] for row in (*covered, *native)})
+        ranked = page(data, dict(query, ranked='1'), options)
+        self.assertEqual({group['game_key'] for group in ranked['rows']}, {'game'})
 
     def test_native_only_sportsbook_quotes_are_displayed_without_qualifying_ev(self):
         home = quote('native-home', 'kalshi')
@@ -230,6 +255,47 @@ class TradeDesk(TestCase):
         self.assertEqual(view['rows'][0]['offers'][0]['sportsbook']['book'], 'fanduel')
         self.assertIsNone(view['rows'][0]['offers'][1]['value'])
 
+    def test_browse_shows_published_sportsbook_ev_after_its_authority_expires(self):
+        captured_at = '2026-11-08T00:00:00+00:00'
+        deadline = '2026-11-08T00:15:00+00:00'
+        dependency = ['price', 'contract', 'event', 'aggregate:frame']
+        saved = quote('saved', 'novig')
+        saved.update(captured_at=captured_at, settings_revision='settings', evidence_result_id='member',
+            current_authority=dict(price=dict(dependency='quote', expected=dependency, current_until=deadline,
+                                               lifecycle={'state':'scheduled'}),
+                                   references=[], reference_required=False, fee_until=None, conservative_fee_until=None),
+            sportsbook_baseline=dict(book='fanduel', frame_id='frame', fair_decimal_odds='2',
+                                     return_percent='0', current_until=deadline,
+                                     prices=[dict(source_at=captured_at), dict(source_at=captured_at)]))
+        data = dict(result(saved), captured_at=captured_at, pairs=[], assumptions={'revision':'settings'},
+                    publication={'epoch':'epoch', 'policy':'policy', 'finance':'ready'})
+        owner = {'active':True, 'healthy':True}
+        sources = {'novig':{'state':'available'}}
+        query = {'layout':'desk', 'browse_odds':'1', 'basis':'sportsbooks', 'lines':'main', 'last_known':'1'}
+        options = ('ev', None, 0, 10)
+
+        def read(at, runtime=owner, **changes):
+            return project(dict(data, **changes), {'quote':dependency}, runtime, sources, at=stamp(at),
+                           policy='policy', epoch='epoch', retain_sportsbook_ev=True)
+
+        current = page(read(captured_at), query, options)['rows'][0]
+        self.assertEqual(current['score'], '0')
+        self.assertNotIn('last_known_ev', current['offers'][0])
+        expired = read('2026-11-08T00:16:00+00:00')
+        fallback = page(expired, query, options)['rows'][0]
+        self.assertIsNone(fallback['score'])
+        self.assertIsNone(fallback['offers'][0]['value'])
+        self.assertEqual(fallback['offers'][0]['last_known_ev'], '0')
+        outage = read('2026-11-08T00:16:00+00:00', {'active':False, 'healthy':False})
+        automatic = page(outage, dict(query, last_known='0'), options)
+        self.assertTrue(automatic['retained_fallback'])
+        self.assertEqual(automatic['rows'][0]['offers'][0]['last_known_ev'], '0')
+        self.assertNotIn('last_known_ev', page(expired, dict(query, basis='reviewed'), options)['rows'][0]['offers'][0])
+        ranked = page(expired, dict(query, browse_odds='0', ranked='1'), options)
+        self.assertFalse(ranked['rows'])
+        failed = read('2026-11-08T00:16:00+00:00', _failed_price_members=['member'])
+        self.assertNotIn('last_known_ev', page(failed, query, options)['rows'][0]['offers'][0])
+
     def test_qualified_sgo_rank_is_independent_of_historical_reference_setting(self):
         from app.comparison.sgo_reference import BEST_VERSION
 
@@ -349,6 +415,84 @@ class TradeDesk(TestCase):
             changed = page(data, {}, options, captured_pairs=[pair], policy='policy')
             self.assertEqual(evaluate.call_args.args[2], DEFAULT_FUNDING)
             self.assertNotEqual(changed['rows'][0]['score'], payoff['score'])
+
+    def test_live_arb_lists_read_published_payoff_and_withdraw_replaced_fees(self):
+        left = quote('left', 'novig', threshold=3)
+        right = quote('right', 'prophetx', threshold=2, operator='le')
+        for row in (left, right):
+            row.update(source={'provider': 'practice'}, trade_fee=dict(available=True,
+                classification='synthetic', evidence={'fictional_rate': '0.01'}, fee_cashflows={'at_fill_usd': '0'}))
+        proof = before_fee_pair(left, right, 'spread')
+        payoff = evaluate_arb(proof, (left, right), DEFAULT_FUNDING)
+        pair = dict(left, id='pair', legs=['left', 'right'], before_fees=proof, default_funding_result=payoff,
+                    evidence_result_id='immutable-member',
+                    default_funding_fee_identity=[hashed(row['trade_fee']) for row in (left, right)])
+        data, options = result(left, right), ('arbs', None, 0, 25)
+        with patch('app.comparison.ordinary_arb.evaluate', side_effect=AssertionError('live list must read published payoff')):
+            published = page(data, {'stake': '50'}, options, captured_pairs=[pair], policy='policy', published_only=True)
+            shown = published['rows'][0]['pairs'][0]
+            self.assertEqual(published['ranking_stake'], '100')
+            self.assertEqual(shown['score'], payoff['score'])
+            self.assertEqual(shown['retail_payoff'], payoff['retail_payoff'])
+            self.assertEqual(shown['evidence_result_id'], 'immutable-member')
+            left['trade_fee'] = dict(left['trade_fee'], evidence={'fictional_rate': '0.05'})
+            changed = page(data, {}, options, captured_pairs=[pair], policy='policy', published_only=True)
+            withdrawn = changed['rows'][0]['pairs'][0]
+            self.assertIsNone(withdrawn['score'])
+            self.assertEqual(withdrawn['retail_payoff'], dict(available=False, reason='pair_fee_publication_pending', legs=[]))
+
+    def test_selected_stake_reuses_exact_pair_member_and_existing_evaluator(self):
+        at = '2026-11-07T23:00:00+00:00'
+        left = quote('left', 'novig', threshold=3)
+        right = quote('right', 'prophetx', threshold=2, operator='le')
+        for row in (left, right):
+            row.update(source={'provider':'practice'}, trade_fee=dict(available=True, classification='synthetic',
+                evidence={'fictional_rate':'0.01'}), current_authority={'price': {'lifecycle': {'state':'scheduled'}}})
+        proof = dict(before_fee_pair(left, right, 'spread'), authority={'policy':ORDINARY_ARB_POLICY})
+        pair = dict(id='pair', kind='pair', legs=['left', 'right'], before_fees=proof,
+                    default_funding_result=evaluate_arb(proof, [left, right], DEFAULT_FUNDING))
+        data = dict(id='member', captured_at=at, rows=[left, right], pairs=[pair])
+        db = MagicMock()
+        db.execute.return_value.fetchone.return_value = {'result': pack(data)}
+        app = web.Application()
+        mount(app)
+        route = next(item for item in app.router.routes() if item.method == 'GET'
+                     and item.resource.canonical == '/api/comparison-snapshot/details')
+        request = make_mocked_request('GET', '/api/comparison-snapshot/details?id=pair&result_id=member'
+                                     '&lease_id=lease&stake=150', app=app)
+        with patch('app.dashboard.snapshot_api.connect') as connect, \
+                patch('app.storage.ordinary_publication.retain') as retain, \
+                patch('app.comparison.ordinary_arb.evaluate', wraps=evaluate_arb) as evaluate:
+            connect.return_value.__enter__.return_value = db
+            response = asyncio.run(route.handler(request))
+            retain.assert_called_once_with(db, 'member', 'lease')
+            evaluate.assert_called_once()
+            self.assertEqual(evaluate.call_args.args[2], 150)
+            self.assertEqual([leg['id'] for leg in evaluate.call_args.args[1]], ['left', 'right'])
+            expected = evaluate_arb(proof, [left, right], Fraction(150))
+            self.assertEqual(json.loads(response.body), dict(id='pair', evidence_result_id='member',
+                **expected, provider_requests=0))
+
+    def test_failed_component_withdraws_economics_but_keeps_valid_prices_and_peers(self):
+        rows = [quote('failed', 'novig', value='6'), quote('healthy', 'prophetx', value='3')]
+        for row in rows:
+            row.update(settings_revision='settings', evidence_result_id=row['id'] + '-member',
+                current_authority=dict(price=dict(dependency=row['id'], expected=['price', 'contract', 'event'],
+                    current_until='2026-11-08T00:30:00+00:00', lifecycle={'state':'scheduled'}),
+                    references=[], reference_required=False, fee_until=None, conservative_fee_until=None))
+        state = dict(rows=rows, pairs=[], assumptions={'revision':'settings'},
+            publication={'epoch':'epoch', 'policy':'policy', 'finance':'failed'},
+            _failed_price_members=['failed-member'])
+        projected = project(state, {row['id']:row['current_authority']['price']['expected'] for row in rows},
+            {'active':True, 'healthy':True}, {row['venue']:{'state':'available'} for row in rows},
+            at=stamp('2026-11-08T00:00:00+00:00'), policy='policy', epoch='epoch')
+        failed, healthy = projected['rows']
+        self.assertEqual(projected['publication']['current_prices'], 2)
+        self.assertTrue(failed['price_current'] and healthy['price_current'])
+        self.assertIsNone(failed['gross_return_percent'])
+        self.assertEqual(failed['current_reasons'], ['ordinary_price_capture_failed'])
+        self.assertEqual(healthy['gross_return_percent'], '3')
+        self.assertEqual(healthy['current_reasons'], [])
 
     def test_price_only_opposites_do_not_need_a_reference_or_fee_settings(self):
         a = quote('a', 'kalshi', threshold=3)

@@ -2,8 +2,9 @@ name: predict
 
 x-runtime: &runtime
   image: ${PREDICT_IMAGE:?Set the tested Predict image}
-  environment:
+  environment: &runtime-environment
     PREDICT_DB_SOCKET: /run/predict-postgres
+    PREDICT_DATABASE_CAP_GIB: '4'
   volumes:
     - ./state:/predict/.local
     - ./socket:/run/predict-postgres:ro
@@ -63,8 +64,9 @@ services:
     profiles: [collection]
     command: [python, -m, app.collection.data_runtime, --current-config, /predict/.local/predict-current-config.json]
     environment:
-      PREDICT_DB_SOCKET: /run/predict-postgres
+      <<: *runtime-environment
       PREDICT_SECRET_DIRECTORY: /run/predict-secrets
+      PREDICT_ODDS_ARCHIVE_CAPTURE: ${PREDICT_ODDS_ARCHIVE_CAPTURE:-0}
     volumes:
       - ./state:/predict/.local
       - ./socket:/run/predict-postgres:ro
@@ -77,6 +79,28 @@ services:
       timeout: 8s
       start_period: 60s
       retries: 6
+
+  archive:
+    <<: *runtime
+    profiles: [archive]
+    command: [python, -m, app.storage.odds_archive_export]
+    network_mode: none
+    environment:
+      <<: *runtime-environment
+      PREDICT_ODDS_ARCHIVE_ROOT: /archive
+      PREDICT_ODDS_ARCHIVE_ID: ${PREDICT_ODDS_ARCHIVE_ID:-}
+    volumes:
+      - ./socket:/run/predict-postgres:ro
+      - type: bind
+        source: ${PREDICT_ODDS_ARCHIVE_MOUNT:-/srv/predict/odds-archive}
+        target: /archive
+        bind:
+          create_host_path: false
+    healthcheck:
+      test: [CMD, python, -m, app.storage.odds_archive_export, --check]
+      interval: 1m
+      timeout: 10s
+      retries: 3
 
 networks:
   web:

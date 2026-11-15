@@ -139,9 +139,10 @@ restart revalidates persisted compact economics against fresh SQL before reuse.
 Expiry, removal, Stop, configuration/model/policy/engine and epoch changes each
 withdraw affected authority without requiring a new source packet. A failed
 scanner capture removes its latest publication; runtime death is separately
-bounded by the heartbeat. The 2 GiB SQL ceiling and 1 GiB free-disk floor
-remain; the process guard follows configured RSS (currently 3 GiB). Autovacuum applies to replaceable storage; physical database
-growth is still guarded rather than assumed impossible.
+bounded by the heartbeat. The SQL ceiling is 2 GiB by default and 4 GiB in
+the Hetzner Compose deployment. Both use the same early reclamation threshold
+and 1 GiB free-disk floor. The process guard follows configured RSS. Autovacuum
+and bounded online rewrites reclaim physical space in replaceable tables.
 
 ## App reads, tickets and observations
 

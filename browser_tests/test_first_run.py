@@ -23,7 +23,8 @@ def first_use(tab, base):
         tab.get_by_role("heading", name="Price updates are temporarily unavailable")
     ).to_be_visible()
     expect(tab.get_by_role("link", name="Arbitrage")).to_be_visible()
-    expect(tab.get_by_role("button", name="Retry price updates")).to_be_visible()
+    expect(tab.get_by_role("button", name="Refresh list")).to_be_visible()
+    expect(tab.get_by_role("link", name="Browse saved odds")).to_be_visible()
     tab.get_by_role("link", name="Admin", exact=True).click()
     tab.get_by_role("link", name="Sources", exact=True).click()
     setup = tab.locator("#source-setup")
@@ -202,7 +203,11 @@ def test_first_use_without_credentials(width, tmp_path, monkeypatch):
                 json={
                     "state": "initializing",
                     "publication": {
-                        "data_runtime": {"healthy": False},
+                        "data_runtime": {
+                            "healthy": True,
+                            "active": False,
+                            "reason": "data_runtime_not_dispatching",
+                        },
                         "current_prices": 0,
                     },
                 }

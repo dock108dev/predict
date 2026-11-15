@@ -120,12 +120,10 @@ def candidate():
 def consume(directory, runtime, config, digest):
     """Small immutable attempt identity before credentials or dispatch; no quotes."""
     from datetime import datetime, timezone
+    from .current_storage_policy import require_disk_space
     from .venue_access import ENDPOINTS
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=True, mode=0o700)
-    attempts = list(directory.glob('attempt-*.json'))
-    if len(attempts) >= 1024 or sum(p.stat().st_size for p in attempts) > 4*1024*1024:
-        raise ValueError('Operational authority capacity; preserve records before reopening')
     value = dict(schema=VERSION, authority=GRANT, runtime_id=runtime, attempt_id=runtime,
         candidate_digest=digest, at=datetime.now(timezone.utc).isoformat(),
         endpoints=ENDPOINTS, config=config, consumed=True, odds_api_requests=0,
@@ -133,9 +131,19 @@ def consume(directory, runtime, config, digest):
         aggregate_policy=(AGGREGATE_POLICY.record(aggregate_scope(config),markets=aggregate_markets(config))
             if config['aggregate_provider']=='the_odds_api' else dict(provider='sportsgameodds', scope=aggregate_scope(config), status='awaiting_account_and_integration')))
     import os
+    # Standing operation can accumulate startup receipts indefinitely. Keep
+    # every prior receipt and apply the disk floor to this append only. Provider
+    # quotas and dispatch attempts are recorded and guarded separately.
+    body = json.dumps(value, sort_keys=True).encode()
+    require_disk_space(directory, len(body))
     fd = os.open(directory/('attempt-'+runtime+'.json'), os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
-    with os.fdopen(fd, 'w') as stream:
-        json.dump(value, stream, sort_keys=True)
+    with os.fdopen(fd, 'wb') as stream:
+        stream.write(body)
         stream.flush()
         os.fsync(stream.fileno())
+    fd = os.open(directory, os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
     return value

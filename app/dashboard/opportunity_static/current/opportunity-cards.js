@@ -71,7 +71,7 @@ function sportsbookCell(group, book, reference, checkedAt, mode, inspection = fa
       && value.price_american === selected.price_american && value.source_at === selected.source_at;
     if (isReference) item.classList.add('matrix-reference');
     if (compact) {
-      if (value.current === false) item.append(el('small', priceStatus(false, value.source_at, checkedAt)));
+      if (value.current === false) item.append(el('small', 'Last known'));
       cell.append(item);
       continue;
     }
@@ -163,7 +163,7 @@ function quote(offer, group, context, className = '', showResult = true) {
   if (showResult) item.append(el('span', label, 'desk-site'));
   item.append(odd(offer.odds));
   const [status, age] = freshness.split(' · ');
-  const freshnessLabel = el('small', offer.current ? status : freshness, 'quote-freshness');
+  const freshnessLabel = el('small', context.compact || offer.current ? status : freshness, 'quote-freshness');
   if (age) freshnessLabel.title = age;
   if (!context.compact || !offer.current) item.append(freshnessLabel);
   if (showResult) item.append(el('small', reason || `${percent(offer.value)} EV`, reason ? 'offer-reason' : tone(offer.value)));
@@ -439,18 +439,26 @@ export function gameMatrix(groups, context, {includeAlternates, market, selected
       tr.insertCell().append(sportsbookCell(group, book, reference, context.checkedAt, context.mode, false, context.compact));
     }
     const value = tr.insertCell();
-    if (lead.value != null) {
-      const calculation = button(percent(lead.value), () => context.inspectOffer(lead, group), `opportunity-link ${tone(lead.value)}`);
-      calculation.dataset.calculationId = lead.id;
-      if (context.compact) calculation.title = `${venueLabel(lead)} · ${basisName(context.basis)}`;
+    const current = group.offers.find(offer => offer.value != null);
+    const saved = !current && group.offers.reduce((best, offer) => (
+      offer.last_known_ev != null && (!best || num(offer.last_known_ev) > num(best.last_known_ev)) ? offer : best
+    ), null);
+    const choice = current || saved;
+    if (choice) {
+      const result = percent(choice.value ?? choice.last_known_ev);
+      const calculation = button(result, () => context.inspectOffer(choice, group),
+        `opportunity-link ${saved ? '' : tone(choice.value)}`);
+      calculation.dataset.calculationId = choice.id;
+      if (context.compact) calculation.title = `${venueLabel(choice)} · ${basisName(context.basis)}`;
+      if (saved) calculation.setAttribute('aria-label', `Last known EV ${result} at ${venueLabel(choice)}`);
       value.append(calculation);
-      if (!context.compact) value.append(el('small', venueLabel(lead)));
+      if (saved || !context.compact) value.append(el('small', saved ? 'Last known' : venueLabel(choice)));
     } else {
       const missing = el('small', context.compact ? 'Unavailable' : quoteReason(lead));
       missing.title = quoteReason(lead);
       missing.setAttribute('aria-label', quoteReason(lead));
       if (context.compact) {
-        const price = button('Unavailable', () => context.inspectOffer(lead, group), 'opportunity-link missing-quote');
+        const price = button('—', () => context.inspectOffer(lead, group), 'opportunity-link missing-quote');
         price.title = quoteReason(lead);
         price.setAttribute('aria-label', `EV unavailable for ${context.position(lead)}. ${quoteReason(lead)}`);
         value.append(price);
@@ -458,11 +466,7 @@ export function gameMatrix(groups, context, {includeAlternates, market, selected
     }
   }
   const scroll = scrollTable(table, 'Venue and sportsbook odds');
-  const cue = el('p', 'Swipe or scroll sideways to see more sites →', 'matrix-scroll-cue desk-meta');
+  const cue = el('p', 'More sites →', 'matrix-scroll-cue desk-meta');
   box.append(cue, scroll);
-  const saved = visible.some(group => group.retained_venues?.length || group.retained_sportsbooks?.length);
-  box.append(el('p', 'A dash means no quote is displayed for that site and outcome.'
-    + (saved && !context.lastKnown ? ' Turn on Last-known prices to reveal cells marked Saved quote.' : ''),
-    'matrix-legend desk-meta'));
   return box;
 }

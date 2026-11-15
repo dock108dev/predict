@@ -66,6 +66,51 @@ def test_discovery_continues_beyond_first_twenty_events_without_withdrawal():
     asyncio.run(scenario())
 
 
+def test_planned_storage_interval_waits_for_paid_page_and_blocks_next_dispatch():
+    from app.collection.data_runtime import DataRuntime
+
+    async def scenario():
+        service = SimpleNamespace(config=deepcopy(DEFAULT), dispatch=True, globally_stopped=False, paused_sources=set())
+        worker = SportsGameOddsWorker(service, transport=SimpleNamespace(close=AsyncMock()), now=lambda: NOW)
+        service.workers = {'sportsgameodds': worker}
+        runtime = DataRuntime(service=service)
+        fetching, finish_fetch = asyncio.Event(), asyncio.Event()
+        admitting, finish_admission = asyncio.Event(), asyncio.Event()
+        page = Page((event(1),), (), 'next-cursor', 'a'*64)
+
+        async def fetch(params, key):
+            fetching.set()
+            await finish_fetch.wait()
+            assert worker.controls() == {'stopped': False, 'source_paused': False}
+            return page
+
+        async def publish(admitted_page):
+            assert admitted_page is page
+            admitting.set()
+            await finish_admission.wait()
+            assert worker.controls() == {'stopped': False, 'source_paused': False}
+
+        worker.collector = SimpleNamespace(fetch=AsyncMock(side_effect=fetch))
+        worker._publish = publish
+        worker.state = AsyncMock()
+        cycle = asyncio.create_task(worker.cycle())
+        await asyncio.wait_for(fetching.wait(), 1)
+        assert not runtime.storage_interval_ready()
+        finish_fetch.set()
+        await asyncio.wait_for(admitting.wait(), 1)
+        assert not runtime.storage_interval_ready()
+        finish_admission.set()
+        await asyncio.wait_for(cycle, 1)
+        assert runtime.storage_interval_ready()
+        assert worker.events == {'e1': event(1)}
+        assert worker.discovery_progress['NFL'].next_cursor == 'next-cursor'
+        assert worker.controls() == {'stopped': True, 'source_paused': False}
+        assert service.dispatch and not service.globally_stopped and not service.paused_sources
+        worker.collector.fetch.assert_awaited_once()
+
+    asyncio.run(scenario())
+
+
 def test_large_discovery_keeps_cursor_past_old_hundred_page_limit():
     async def scenario():
         service = SimpleNamespace(config=deepcopy(DEFAULT), dispatch=True, globally_stopped=False, paused_sources=set())

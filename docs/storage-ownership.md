@@ -15,10 +15,12 @@ moved those relations and their foreign keys in place.
 | Calculation settings, inputs, and results | `comparison_policy_revision` has one active settings revision. `comparison_snapshot` and `comparison_snapshot_result` preserve original inputs and exact result bytes. New results also bind the settings revision with a foreign key. Ordinary results hold EV values and the default $100 modeled arbitrage payoff, with its fee evidence identity. | Live and manual comparisons, replay, and pinned Details. |
 | Display and inspection | `comparison_publication` holds live and manual heads, current components, Coverage, and Scanner. `comparison_result_reference` holds ordered members, review pins, and leases. The compact read projection is on the exact result row. | Opportunities, Browse Odds, game pages, Coverage, Raw Odds, and Scanner. |
 | Operations and policy evidence | `data_runtime` and `data_runtime_command` own Stop, pauses, heartbeat, and control acknowledgments. `current_row_state` holds reset epoch, committed source status, and refresh ordering. `delivery_clock` holds delivery telemetry. `public_fee_schedule` holds reviewed fee evidence and `schema_migration` records the upgrade history. | Admin, runtime authority, delivery diagnostics, and calculation. |
+| Odds history | The opt-in collector stages admitted pregame material changes and their source witnesses in `odds_archive_*`. An independent worker verifies immutable off-host shards before acknowledging their staged membership. In-game quotes are working data, with exact evidence retained for saved or pinned inspections. | [Archive verification and replay](odds-archive-operations.md). |
 
 ## Remaining working relations
 
-The working schema has 25 top-level tables, including the migration ledger.
+The working schema before migration 092 has 25 top-level tables, including the
+migration ledger. Migration 092 adds five bounded archive tables.
 `retained` has 45 top-level historical tables. The Database tab can include
 SQL read views, partitions, and sequences on demand. The views expose the
 existing query shapes without additional stored copies.

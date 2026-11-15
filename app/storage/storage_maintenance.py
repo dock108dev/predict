@@ -8,12 +8,14 @@ successful rewrite is expected to lower the physical database guard quantity.
 from psycopg import sql
 from psycopg.errors import LockNotAvailable
 from psycopg.pq import TransactionStatus
-from app.collection.current_storage_policy import SQL_BYTE_CAP, sql_usage, require_disk_space
+from app.collection.current_storage_policy import LOCAL_SQL_BYTE_CAP, SQL_BYTE_CAP, sql_usage, require_disk_space
 from .store import ROOT
 from time import monotonic
 
 LOCK = 120046
-PRESSURE_BYTES = SQL_BYTE_CAP * 3 // 5
+# Reclaim from the same physical size on every install. A larger hosted cap
+# reserves room for online rewrites instead of postponing maintenance.
+PRESSURE_BYTES = LOCAL_SQL_BYTE_CAP * 3 // 5
 REWRITE_RUNWAY_BYTES = 64 * 1024 * 1024
 # Maintenance owns one transactional replacement, never collection capacity.
 # The original remains recoverable until VACUUM commits. Host free-space and
@@ -24,12 +26,14 @@ TRANSIENT_REWRITE_BYTES = 512 * 1024 * 1024
 COMPACT_TABLES = ('current_native_market_recovery', 'current_native_market_body', 'current_acquisition_image_parts',
     'current_native_ladder', 'native_ladder_revision', 'native_book_revision',
     'current_contract_storage', 'current_offer_storage', 'current_acquisition_market',
-    'acquisition_receipt', 'sgo_event_evidence', 'sgo_quote_revision', 'latest_board', 'latest_dashboard', 'current_grid_projection',
+    'acquisition_receipt', 'sgo_event_evidence', 'sgo_quote_revision', 'current_sgo_history', 'latest_board', 'latest_dashboard', 'current_grid_projection',
     'current_result_unit', 'current_native_book', 'current_native_catalog_recovery',
-    'comparison_snapshot', 'comparison_snapshot_result', 'comparison_publication', 'data_runtime', 'current_grid_blob')
+    'comparison_snapshot', 'comparison_snapshot_result', 'comparison_publication', 'data_runtime', 'current_grid_blob',
+    'odds_archive_head', 'odds_archive_stage')
 MIN_REUSABLE_BYTES = 4 * 1024 * 1024
 HOT_TABLES = ('current_acquisition_image_parts','current_acquisition_market',
-              'native_ladder_revision','native_book_revision','current_offer_storage',
+              'current_native_market_body','native_ladder_revision','native_book_revision','current_offer_storage',
+              'sgo_quote_revision','current_sgo_history',
               'comparison_snapshot_result','comparison_snapshot')
 CAPTURE_WAIT_SECONDS = 10
 LIVE_REWRITE_LOCK_TIMEOUT = '100ms'
@@ -58,6 +62,9 @@ def maintain(db, *, compact=True, collecting=False):
             from .comparison_snapshot import prune as prune_snapshots
             prune_snapshots(db)
         with db.transaction():
+            if db.execute("SELECT to_regclass('public.odds_archive_head') r").fetchone()['r']:
+                from .odds_archive_export import expire_heads
+                result['odds_archive_heads_expired'] = expire_heads(db)
             if db.execute("SELECT to_regclass('current_grid_read_lease') r").fetchone()['r']:
                 from .grid_packet_store import cleanup
                 cleanup(db)
@@ -90,14 +97,14 @@ def maintain(db, *, compact=True, collecting=False):
                         from .sportsgameodds_reference import prune as prune_sgo
                         versioned = db.execute("SELECT to_regclass('public.sgo_quote_revision') IS NOT NULL ready").fetchone()['ready']
                         if versioned:
-                            result['sgo_reference_expired'] = prune_sgo(db, at=now())
+                            result['sgo_reference_expired'] = prune_sgo(db, at=now(), include_legacy=compact)
                         else:
                             # First startup runs maintenance before forward
                             # migrations. Leave these quotes for the new owner.
                             result['deferred'].append(dict(table='sportsgameodds_reference', reason='migration_pending'))
                     if frames:
                         from .sportsgameodds_reference import prune_frames
-                        result['sgo_frame_expired'] = prune_frames(db, at=now())
+                        result['sgo_frame_expired'] = prune_frames(db, at=now(), include_legacy=compact)
                     if history:
                         from .sportsgameodds_reference import prune_history
                         result['sgo_history_expired'] = prune_history(db, at=now())
@@ -106,6 +113,10 @@ def maintain(db, *, compact=True, collecting=False):
                         def execute_native(query, params, *, synchronous=False):
                             return db.execute(query, params)
                         result['native_book_expired'] = prune_native_revisions(execute_native)
+        has_metadata = db.execute("SELECT to_regclass('public.current_native_market_body') r").fetchone()['r']
+        if has_metadata:
+            from . import native_market_metadata
+            result['native_metadata_pruned'] = native_market_metadata.prune(db)
         if collecting and result['before_bytes'] >= PRESSURE_BYTES:
             # Full-scope native replacement can consume the remaining runway
             # before the server's default minute autovacuum wake-up. Recycle
@@ -250,10 +261,8 @@ def maintain(db, *, compact=True, collecting=False):
         if db.execute("SELECT to_regclass('public.current_native_market_recovery') r").fetchone()['r']:
             from .recovery_codec import repack
             result['recovery_repack']=repack(db)
-        if db.execute("SELECT to_regclass('public.current_native_market_body') r").fetchone()['r']:
-            from . import native_market_metadata
+        if has_metadata:
             result['native_metadata_backfill']=native_market_metadata.convert(db)
-            result['native_metadata_pruned']=native_market_metadata.prune(db)
         result['after_bytes'] = sql_usage(db)
         return result
     finally:

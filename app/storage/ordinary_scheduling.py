@@ -88,6 +88,13 @@ def prioritize_current(pending, scope, evidence, at, *, material=(), undelivered
             order.append(key)
             if native_slots is not None and venue in ('kalshi', 'polymarket_us'):
                 native_slots.add(key)
+        elif native_slots is not None and venue in ('kalshi', 'polymarket_us'):
+            # The only fresh book for a native feed can already be selected
+            # for rotation or first aggregate delivery. Count that slot so the
+            # price publisher can seal it before more background work.
+            existing = next((key for key in order if any(event in recent for event in scope[key])), None)
+            if existing is not None:
+                native_slots.add(existing)
     # Previously every slot after the source representatives went to old
     # rotation. Fresh books behind them could expire before their first seal.
     # Keep at least half the remaining slots for rotation (including API work),

@@ -325,11 +325,16 @@ def mount(app):
                 frames = (live.sportsbook_frames(db, at) if any(
                     (r.get('sportsbook_baseline') or {}).get('indicative') for r in result['rows'])
                     and owner.get('config', {}).get('aggregate_provider') == 'sportsgameodds' else ())
-                retained_fallback = query.get('browse_odds') == '1' and (
-                    owner.get('global_stopped') or not owner.get('healthy'))
+                from app.storage.ordinary_projection import publication_runtime
+                from .trade_desk import browse_retained
+                browsing_odds = query.get('browse_odds') == '1'
+                retained_fallback = browsing_odds and browse_retained(publication_runtime(owner))
+                retain_sportsbook_ev = (browsing_odds and query.get('layout') == 'desk' and options is not None
+                                        and options[0] != 'arbs' and query.get('basis', 'sportsbooks') == 'sportsbooks')
                 result = live.project(result, deps, owner, states, at=at, policy=policy, epoch=epoch,
                                       settings=settings, sportsbook_frames=frames,
-                                      current_desk=current_desk and not retained_fallback)
+                                      current_desk=current_desk and not retained_fallback,
+                                      retain_sportsbook_ev=retain_sportsbook_ev)
                 timings['projection']=(monotonic()-stage)*1000
                 if is_fee_census:
                     return dict(fee_census(db, result, deps, owner, states, at, pairs=captured_pairs,
@@ -372,7 +377,8 @@ def mount(app):
                     qualify = query.get('lines') in ('main', 'all') and (
                         query.get('browse_odds') == '1' or query.get('ranked') == '1') and options[0] != 'arbs'
                     out = desk_page(result, query, options, captured_pairs=captured_pairs, policy=policy,
-                                    browsing=browsing, enrich=enrich if qualify or retained_fallback else None)
+                                    browsing=browsing, enrich=enrich if qualify or retained_fallback else None,
+                                    published_only=True)
                     if not qualify and not retained_fallback and out.get('state') == 'ready' and options[0] != 'arbs':
                         enrich(out, include_retained=query.get('last_known') == '1')
                 else:
@@ -466,6 +472,13 @@ def mount(app):
     async def details(req):
         if not req.query.get("result_id") or not req.query.get("id"):
             raise PublicRequestError("Exact result revision and selection required")
+        stake = None
+        if 'stake' in req.query:
+            from .trade_desk import funding
+            try:
+                stake = funding(req.query['stake'])
+            except (ValueError, ZeroDivisionError):
+                raise PublicRequestError('Enter a stake between $0.01 and $1,000,000') from None
 
         def work():
             with connect() as db:
@@ -495,6 +508,16 @@ def mount(app):
                     if evidence_result is None:
                         raise PublicRequestError('Selected evidence expired')
                     row=next(r for r in [*evidence_result['rows'],*evidence_result['pairs']] if r['id']==row['id'])
+                if stake is not None:
+                    if not snapshots.exact_arb_pair(row) or 'default_funding_result' not in row:
+                        raise PublicRequestError('Exact saved arbitrage pair required')
+                    from app.comparison.ordinary_arb import current_payoff
+                    by_id = {leg['id']:leg for leg in evidence_result['rows'] if leg['id'] in row['legs']}
+                    legs = [dict(by_id[leg], captured_at=evidence_result['captured_at'],
+                                 game_state=by_id[leg]['current_authority']['price']['lifecycle']['state'])
+                            for leg in row['legs']]
+                    return dict(id=row['id'], evidence_result_id=evidence_result['id'],
+                                **current_payoff(row, legs, stake), provider_requests=0)
                 inputs = snapshots.unpack(
                     db.execute(
                         "SELECT inputs FROM comparison_snapshot WHERE id=%s",

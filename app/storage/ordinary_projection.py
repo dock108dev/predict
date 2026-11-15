@@ -165,7 +165,7 @@ def price_reasons(row, current, owner, states, *, at, epoch, publication_epoch, 
 
 
 def project(result, current, owner, states, *, at, policy, epoch, settings=None, sportsbook_frames=(),
-            current_desk=False):
+            current_desk=False, retain_sportsbook_ev=False):
     """Fail-closed rank withdrawal; no reference/fee/math is recomputed here."""
     from app.comparison.snapshot_fee_outcome import EXPIRED, unavailable
     from app.comparison.sgo_sportsbook_baseline import current as sportsbook_current
@@ -179,6 +179,7 @@ def project(result, current, owner, states, *, at, policy, epoch, settings=None,
                                for item in sportsbook_frames if source_allowed(
                                    states.get('sportsgameodds', {}), item['competition']))
     out = dict(result, rows=[], pairs=[])
+    failed_captures = set(out.pop('_failed_price_members', ()))
     common = []
     settings=settings or result['assumptions']
     out['assumptions']=settings
@@ -220,7 +221,10 @@ def project(result, current, owner, states, *, at, policy, epoch, settings=None,
         row['price_reasons'] = sorted(set(reasons))
         current_prices += not reasons
         policy_replaced = row.get('publication_policy', result['publication']['policy']) != policy
-        if not reasons and not policy_replaced:
+        capture_failed = row.get('evidence_result_id') in failed_captures
+        if capture_failed:
+            row['comparison_capture_failed'] = True
+        if not reasons and not policy_replaced and not capture_failed:
             pair_ready[row['id']] = row['game_state']
         baseline = row.get('sportsbook_baseline')
         if baseline and not baseline.get('verified_native'):
@@ -232,7 +236,7 @@ def project(result, current, owner, states, *, at, policy, epoch, settings=None,
                 current_baseline = sportsbook_current(baseline, current.get(auth['price']['dependency']), at=at)
             if row['game_state'] == 'scheduled':
                 current_baseline = current_baseline and clocks_current(baseline.get('prices', ()), at=at, start=start)
-            if reasons or policy_replaced or not current_baseline:
+            if reasons or policy_replaced or capture_failed or not current_baseline:
                 row['sportsbook_baseline'] = None
             else:
                 if baseline.get('candidates') and row['game_state'] == 'scheduled':
@@ -266,6 +270,8 @@ def project(result, current, owner, states, *, at, policy, epoch, settings=None,
             if not applies(evidence, at):
                 row['trade_fee'] = unavailable(EXPIRED, evidence=evidence)
         financial = list(reasons)
+        if capture_failed:
+            financial.append('ordinary_price_capture_failed')
         if policy_replaced:
             financial.append('policy_replaced')
         if row.get('settings_revision') != settings['revision']:
@@ -294,6 +300,14 @@ def project(result, current, owner, states, *, at, policy, epoch, settings=None,
                 row['sportsbook_baseline'] = None
             else:
                 row['sportsbook_return_percent'] = baseline['return_percent']
+        if retain_sportsbook_ev and baseline and not row.get('sportsbook_baseline') and not capture_failed:
+            # Browse can show the captured result after current authority ends.
+            # Keep it outside the metric used for current ranking.
+            price = auth['price']
+            if (price.get('expected') and not price.get('reasons') and price.get('current_until')
+                    and baseline.get('current_until') and row.get('captured_at')
+                    and stamp(row['captured_at']) <= min(stamp(price['current_until']), stamp(baseline['current_until']))):
+                row['last_known_sportsbook_ev'] = baseline['return_percent']
         row['exact_pinnacle_reference_current'] = not financial and auth.get('exact_pinnacle_reference', False)
         live_fee_unqualified = row['game_state']=='live' and not (
             (row.get('novig_live_financial_qualified') or row.get('kalshi_live_financial_qualified')

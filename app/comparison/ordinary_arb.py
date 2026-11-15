@@ -29,3 +29,13 @@ def current_payoff(pair, legs, funding):
     if saved is not None and pair.get('default_funding_fee_identity') == fee_identity(legs):
         return saved
     return evaluate(pair['before_fees'], legs, funding)
+
+
+def published_payoff(pair, legs):
+    saved = pair.get('default_funding_result')
+    if saved is None:
+        return None
+    if pair.get('default_funding_fee_identity') == fee_identity(legs):
+        return saved
+    return dict(inspection=saved['inspection'], score=None,
+                retail_payoff=dict(available=False, reason='pair_fee_publication_pending', legs=[]))

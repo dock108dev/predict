@@ -67,6 +67,20 @@ def test_sportsbook_candidates_cannot_jump_reserved_native_price_slots():
     assert set(order)==set(pending)
 
 
+def test_native_prices_already_selected_for_rotation_or_aggregate_keep_their_seal():
+    at = datetime(2026, 11, 8, tzinfo=timezone.utc)
+    pending = ['rotation', 'quiet', 'aggregate']
+    scope = {'rotation': ['kalshi'], 'quiet': ['quiet'], 'aggregate': ['sgo', 'poly']}
+    evidence = [dict(event_id='kalshi', venue='kalshi', at=at.isoformat()),
+                dict(event_id='poly', venue='polymarket_us', at=at.isoformat())]
+    native_slots = set()
+
+    order = prioritize_current(pending, scope, evidence, at, undelivered={'aggregate'}, native_slots=native_slots)
+
+    assert order == ['rotation', 'aggregate', 'quiet']
+    assert native_slots == {'rotation', 'aggregate'}
+
+
 def test_novig_fresh_slot_uses_the_live_quote_deadline():
     at=datetime(2026,11,8,tzinfo=timezone.utc)
     pending=['old','quiet','novig']

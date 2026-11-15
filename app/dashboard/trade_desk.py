@@ -5,7 +5,7 @@ import re
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from app.comparison.sgo_reference import BEST_BOOKS, BEST_VERSION, NAMED_VERSION, VERSION as SGO_MEDIAN
-from app.comparison.ordinary_arb import current_payoff
+from app.comparison.ordinary_arb import DEFAULT_FUNDING, current_payoff, published_payoff
 from app.comparison.game_phase import PREGAME_SPORTSBOOK_SECONDS
 from app.storage.comparison_snapshot import expand_row
 from app.storage.current_rows import contract_id
@@ -28,6 +28,11 @@ def desk_phase(query):
     return phase
 
 
+def browse_retained(runtime):
+    return (runtime.get('stopped') or runtime.get('healthy') is False
+            or runtime.get('reason') == 'data_runtime_not_dispatching')
+
+
 def phase_matches(row, phase, at):
     if not phase:
         return True
@@ -44,6 +49,13 @@ def number(value):
     return Fraction(value)
 
 
+def funding(value):
+    stake = number(value)
+    if not 0 < stake <= 1_000_000 or (stake * 100).denominator != 1:
+        raise ValueError('Invalid stake')
+    return stake
+
+
 def filters(query):
     try:
         zone = ZoneInfo(query.get('timezone') or 'UTC')
@@ -56,9 +68,7 @@ def filters(query):
             raise ValueError()
         if query.get('game_state','') not in ('','scheduled','live','suspended','final','unknown'):raise ValueError()
         if query.get('basis','reviewed') not in METRICS:raise ValueError()
-        stake = number(query.get('stake', '100'))
-        if not 0 < stake <= 1_000_000 or (stake * 100).denominator != 1:
-            raise ValueError()
+        stake = funding(query.get('stake', '100'))
     except (ValueError, ZeroDivisionError, ZoneInfoNotFoundError):
         raise PublicRequestError('Check the date, time zone, stake and minimums') from None
     return zone, day, minimum, dollars, stake
@@ -405,7 +415,7 @@ def comparable_groups(groups, games, *, alternates, requested, requested_source,
             or len(linked) == 1 and group['id'] in linked]
 
 
-def page(result, query, options, *, captured_pairs=(), policy=None, browsing=None, enrich=None):
+def page(result, query, options, *, captured_pairs=(), policy=None, browsing=None, enrich=None, published_only=False):
     view, _, offset, limit = options
     zone, day, minimum, dollars, stake = filters(query)
     terms = query.get('search', '').casefold().split()
@@ -417,8 +427,7 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
     read_at = stamp(result['publication'].get('read_at') or result['captured_at']) if phase else None
     basis = query.get('basis') or ('sportsbooks' if phase == 'pregame' else 'reviewed')
     runtime = result['publication'].get('data_runtime') or {}
-    retained_fallback = (browse and view != 'arbs'
-                         and (runtime.get('stopped') or runtime.get('healthy') is False))
+    retained_fallback = browse and view != 'arbs' and browse_retained(runtime)
     show_retained = retained_fallback or query.get('last_known') == '1' or (
         not (browse or ranked) and 'last_known' not in query)
     leagues, families, venues = (set(query.get(key, '').split(',')) - {''} for key in ('league', 'family', 'venue'))
@@ -488,7 +497,7 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
                                 .get('reason_code') == 'sgo_charge_unresolved')
     if view == 'arbs':
         eligible = {r['id']: r for r in selected_rows if r.get('price_current')
-                    and r.get('publication_policy') == policy}
+                    and r.get('publication_policy') == policy and not r.get('comparison_capture_failed')}
         markets = {}
         expanded = {}
         scoped_ids = {r['id'] for r in scoped_rows}
@@ -500,10 +509,16 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
                 expired_pairs += 1
             if proof and all(leg in eligible for leg in pair['legs']) and len(
                     {eligible[leg].get('game_state') for leg in pair['legs']}) == 1:
-                for leg in pair['legs']:
-                    if leg not in expanded:
-                        expanded[leg] = expand_row(eligible[leg])
-                payoff = current_payoff(pair, [expanded[leg] for leg in pair['legs']], stake)
+                legs = [eligible[leg] for leg in pair['legs']]
+                if published_only:
+                    payoff = published_payoff(pair, legs)
+                    if payoff is None:
+                        continue
+                else:
+                    for leg in legs:
+                        if leg['id'] not in expanded:
+                            expanded[leg['id']] = expand_row(leg)
+                    payoff = current_payoff(pair, [expanded[leg] for leg in pair['legs']], stake)
                 score = Fraction(payoff['score']) if payoff['score'] is not None else None
                 markets.setdefault(proof['market_key'], []).append(
                     dict(pair, inspection=payoff['inspection'], retail_payoff=payoff['retail_payoff'], score=score))
@@ -525,7 +540,8 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
         groups.sort(key=lambda g: (g['score'] is None, -Fraction(g['score']) if g['score'] is not None else 0,
                                    g['start_at'], g['id']))
         eligible_pair_count = sum(len(g['quotes']) for g in groups)
-        pending_pairs = sum('finance_pending' in (pair.get('math') or {}).get('missing', ())
+        pending_pairs = sum(('finance_pending' in (pair.get('math') or {}).get('missing', ())
+                             or pair['retail_payoff'].get('reason') == 'pair_fee_publication_pending')
                             and pair['score'] is None for pairs in markets.values() for pair in pairs)
         pair_status = dict(finance_pending=pending_pairs, stale_or_replaced_legs=expired_pairs)
         if pending_pairs:
@@ -586,6 +602,7 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
         summary['source_titles']=sorted({q.get('source_game_title',q.get('game_title','')) for q in group['quotes']}) if view!='arbs' else []
         if view == 'arbs':
             pairs = [dict(pair['before_fees'], id=pair['id'], legs=pair['legs'],
+                          evidence_result_id=pair.get('evidence_result_id'),
                           inspection=pair['inspection'], assumed_scenario=pair.get('math'),
                           score=None if pair['score'] is None else str(pair['score']),
                           retail_payoff=pair['retail_payoff']) for pair in group['quotes']]
@@ -596,6 +613,10 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
         else:
             summary['offers'] = [offer(row, metric, sportsbook_updates_paused=sportsbook_updates_paused)
                                  for row in group['quotes']]
+            if browse and metric == SPORTSBOOK_METRIC:
+                for displayed, row in zip(summary['offers'], group['quotes'], strict=True):
+                    if displayed['value'] is None and row.get('last_known_sportsbook_ev') is not None:
+                        displayed['last_known_ev'] = row['last_known_sportsbook_ev']
             if query.get('group') == 'offer':
                 summary['game_line_id'] = outcome_id(outcome_key(group['quotes'][0]))
             summary['score_source'] = group['score_source']
@@ -666,14 +687,14 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
                                          requested_source=game_source if game_key and query.get('line') else None,
                                          retained=retained_comparison))
         if browse and candidates and not retained_comparison:
-            missing = candidates if not qualified else []
-            if game_key and qualified:
-                available = {(group['market']['market'], group['market']['period'])
-                             for group in candidates if group['id'] in qualified}
-                missing = [group for group in candidates if (group['market']['market'], group['market']['period'])
-                           not in available or group['id'] == query.get('line')]
-            # Comparison depth can drop from one update to the next. Keep
-            # the surviving exact quotes available even with a single site.
+            def game_market(group):
+                return group['game_key'], group['market']['market'], group['market']['period']
+
+            available = {game_market(group) for group in candidates if group['id'] in qualified}
+            # A well-covered game elsewhere on the slate supplies no coverage
+            # for this matchup. Keep its surviving quotes available in Browse.
+            missing = [group for group in candidates if game_market(group) not in available
+                       or game_key and group['id'] == query.get('line')]
             if missing:
                 fallback = set(comparable_groups(missing, games.values(), alternates=query['lines'] == 'all',
                                                  requested=query.get('line'),
@@ -743,6 +764,7 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
                 matched_offer_count=len(rows), retained_offer_count=sum(not r.get('price_current') for r in scoped_rows),
                 ranked_group_count=ranked_group_count, matched_outcome_count=matched_outcome_count,
                 eligible_pair_count=eligible_pair_count, pair_status=pair_status,
+                ranking_stake=str(DEFAULT_FUNDING if published_only else stake) if view == 'arbs' else None,
                 calculation_reason=calculation_reason if not ranked_group_count else None,
                 calculation_missing=calculation_missing if not ranked_group_count else [],
                 row_kind=('games' if page_by_game else

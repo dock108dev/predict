@@ -270,6 +270,11 @@ dialog::backdrop { background: #101b3180; }
 #trade > .desk-title { position: sticky; top: 0; z-index: 1; align-items: center; margin: 0; padding: .9rem 1.1rem; background: var(--paper); border-bottom: 1px solid var(--rule); flex-wrap: nowrap; }
 #trade h2 { font-size: clamp(21px, 4vw, 28px); margin: 0; }
 #trade-body { padding: .85rem 1.1rem .35rem; }
+.pair-sizing { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+.pair-sizing label { display: inline-flex; align-items: center; flex-wrap: wrap; gap: .4rem; }
+.pair-sizing input { width: 7rem; }
+.pair-sizing p { flex-basis: 100%; margin: 0; }
+.pair-sizing p:empty { display: none; }
 .inspection-matchup { font-size: .93rem; font-weight: 650; }
 .inspection-mode { font-size: .79rem; color: var(--muted); }
 .inspection-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .45rem; margin-block: .55rem .85rem; }
@@ -449,7 +454,7 @@ dialog::backdrop { background: #101b3180; }
 .odds-matrix td > .p-odds { display: block; white-space: nowrap; font-weight: 650; }
 .matrix-reference small { color: inherit; }
 .odds-card .odds-matrix td { min-width: 4.7rem; }
-.matrix-legend, .matrix-empty { margin: .6rem 1rem; }
+.matrix-empty { margin: .6rem 1rem; }
 .odds-matrix .selected-game-line > th { border-inline-start: 3px solid currentColor; }
 .quote-freshness { color: var(--muted); }
 .inspection-price-unit { display: block; font-weight: 500; }

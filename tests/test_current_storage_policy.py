@@ -8,7 +8,8 @@ from unittest.mock import Mock, patch
 
 from app.collection.current_storage_policy import (
     FREE_DISK_BYTE_FLOOR, GIB, JOURNAL_BYTE_CAP, JOURNAL_RECORD_BYTE_CAP,
-    JOURNAL_SEGMENT_BYTE_CAP, MIB, SQL_BYTE_CAP, require_disk_space, sql_usage, writer_subset_usage,
+    JOURNAL_SEGMENT_BYTE_CAP, LOCAL_SQL_BYTE_CAP, MIB, SQL_BYTE_CAP,
+    database_byte_cap, require_disk_space, sql_usage, writer_subset_usage,
 )
 from app.collection.odds_http import BudgetStop
 
@@ -18,7 +19,14 @@ class Policy(unittest.TestCase):
         self.assertEqual(JOURNAL_SEGMENT_BYTE_CAP, 256 * MIB)
         self.assertEqual(JOURNAL_RECORD_BYTE_CAP, 8 * MIB)
         self.assertEqual(JOURNAL_BYTE_CAP, 8 * GIB)
-        self.assertEqual(SQL_BYTE_CAP, 2 * GIB)
+        self.assertEqual(LOCAL_SQL_BYTE_CAP, 2 * GIB)
+
+    def test_database_ceiling_requires_a_supported_whole_gib_value(self):
+        for gib in (2, 3, 4):
+            self.assertEqual(database_byte_cap(str(gib)), gib * GIB)
+        for invalid in ('', '1', '4.1', '5', 'unlimited'):
+            with self.subTest(invalid=invalid), self.assertRaisesRegex(ValueError, 'PREDICT_DATABASE_CAP_GIB'):
+                database_byte_cap(invalid)
 
     def database(self, value):
         database = Mock()
@@ -27,7 +35,7 @@ class Policy(unittest.TestCase):
 
     def test_sql_usage_reads_current_and_latest_public_table_storage(self):
         database = self.database(Decimal('2147483648'))
-        self.assertEqual(writer_subset_usage(database), SQL_BYTE_CAP)
+        self.assertEqual(writer_subset_usage(database), 2 * GIB)
         query = database.execute.call_args.args[0]
         self.assertIn("schemaname='public'", query)
         self.assertIn("left(tablename,8)='current_'", query)

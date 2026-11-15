@@ -112,14 +112,23 @@ class CurrentService:
             # Retained prices remain inspectable while all dispatch is disabled.
             for venue in ('kalshi','polymarket_us'): await call(self, self.source_state, venue, 'unavailable', 'Acquisition is disabled in operational configuration; retained observations remain historical.')
             return
+        from app.diagnostics import failure
+        from .odds_http import BudgetStop
+        stage = 'source_ownership'
         try:
             self.ownership.acquire(self.runtime_id)
+            stage = 'source_candidate_identity'
             self.digest, _ = candidate()
+            stage = 'source_startup_receipt'
             self.attempt = consume(self.directory, self.runtime_id, self.config, self.digest)
-        except (ValueError, OSError):
+        except (ValueError, OSError, BudgetStop) as exc:
+            failure(__name__, stage, exc)
             if self.ownership.file: self.ownership.release()
             for venue in ('kalshi','polymarket_us','novig','prophetx'): await call(self, self.source_state, venue, 'unavailable', 'Native acquisition ownership or operational authority is unavailable.')
-            self.issue('service','ownership','ownership_or_authority_unavailable')
+            if isinstance(exc, BudgetStop):
+                self.issue('service', 'resource', 'current_observation_disk_free_floor')
+            else:
+                self.issue('service','ownership','ownership_or_authority_unavailable')
             return
         self.deadline = float('inf') if self.config['duration_seconds']==APP_RUNNING_DURATION else time.monotonic()+self.config['duration_seconds']
         self.dispatch = True

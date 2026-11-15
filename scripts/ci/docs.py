@@ -21,6 +21,7 @@ DOCUMENTS = (
     "docs/design/live-comparison-20261104/README.md",
     "README.md",
     "docs/storage-ownership.md",
+    "docs/odds-archive-operations.md",
     "docs/CI.md",
     "docs/hetzner.md",
     "docs/architecture.md",

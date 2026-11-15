@@ -11,6 +11,10 @@ predict.dock108.dev {
 		}
 	}
 	@adminPage path /view/current/admin.html /view/current/raw-odds.html /view/current/stored.html /view/current/coverage.html /view/current/scanner.html
+	@browserIcons {
+		method GET HEAD
+		path_regexp browserIcons ^/(favicon\.ico|apple-touch-icon(-[0-9]+x[0-9]+)?(-precomposed)?\.png)$
+	}
 	@foreignOrigin {
 		header Origin *
 		not header Origin https://predict.dock108.dev
@@ -19,6 +23,8 @@ predict.dock108.dev {
 
 	route {
 		respond @foreignOrigin 403
+		# Missing browser icons must not trigger a sign-in dialog on public pages.
+		respond @browserIcons 404
 		request_header @predictOrigin Origin http://127.0.0.1:8784
 		basicauth @adminPage {
 			import /etc/caddy/predict-auth

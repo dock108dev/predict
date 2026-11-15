@@ -1,6 +1,8 @@
 # Predict on Hetzner
 
 Predict runs as `web`, `collector`, and `db` in a dedicated Docker Compose project.
+The optional `archive` service exports odds history to an off-host mount.
+See [archive deployment and verification](odds-archive-operations.md).
 The [public desk](https://predict.dock108.dev/) is open to visitors. Caddy requires
 authentication for Admin, the database console, and other operational routes.
 Install [the site config](../deploy/predict.Caddyfile) on the server and import it
@@ -37,7 +39,10 @@ not offer an interactive shell or any port forwarding.
 
 Create a private `postgres-bootstrap` file with a random password for a new
 cluster. The database uses a shared Unix socket and a persistent `predict_postgres`
-volume. Source credentials live in `/srv/predict/provider-secrets` as mode 0600
+volume. Compose gives both services a 4 GiB SQL storage ceiling. PostgreSQL
+reclamation still starts at about 1.2 GiB, leaving room for rewrites under load.
+The 1 GiB free-disk floor and logical retention limits still apply. Source
+credentials live in `/srv/predict/provider-secrets` as mode 0600
 files owned by UID 10001. The collector alone mounts them. Use `kalshi.json`
 and `polymarket_us.json` with the fields in
 [Credentials](configuration.md#credentials), and put the SportsGameOdds key on
@@ -59,8 +64,13 @@ once the server owns collection. To move ownership back, quiesce the server and
 transfer the **latest** database and ledgers before removing that marker.
 
 Create `/srv/predict/collection-enabled` once the server owns collection. The
-release script then manages both services. Admin Stop and source pauses stay in
-PostgreSQL and survive service or host restarts. The release script checks the
+release script then starts the collector as a persistent Compose service. It
+collects and publishes with no web process or browser running, subject to the
+configured source schedules and budget guards. The collector health check flags
+an enabled collector with a live heartbeat that cannot dispatch. Check the
+collector logs for ownership, candidate identity, or startup receipt failures.
+Admin Stop and source pauses stay in PostgreSQL and survive service or host
+restarts. The release script checks the
 applied migration digests, backs up PostgreSQL before forward migrations, and
 restores the previous image after a failed health check when the schema is
 unchanged. For a failed release that did migrate, inspect the retained backup

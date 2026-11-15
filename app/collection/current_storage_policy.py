@@ -1,10 +1,11 @@
-"""Approved light local disk allowances for ordinary Predict collection.
+"""Disk allowances for ordinary Predict collection.
 
 These are disk allowances, separate from the unchanged runtime memory guard.
 The free-space floor protects the host filesystem without reserving the entire
 journal allowance up front. No helper deletes observations or modifies SQL.
 """
 from decimal import Decimal
+import os
 from pathlib import Path
 import shutil
 
@@ -17,7 +18,16 @@ GIB = 1024 * MIB
 JOURNAL_SEGMENT_BYTE_CAP = 256 * MIB
 JOURNAL_BYTE_CAP = 8 * GIB
 JOURNAL_RECORD_BYTE_CAP = 8 * MIB
-SQL_BYTE_CAP = 2 * GIB
+LOCAL_SQL_BYTE_CAP = 2 * GIB
+
+
+def database_byte_cap(gib):
+    if gib not in ('2', '3', '4'):
+        raise ValueError('PREDICT_DATABASE_CAP_GIB must be 2, 3, or 4')
+    return int(gib) * GIB
+
+
+SQL_BYTE_CAP = database_byte_cap(os.environ.get('PREDICT_DATABASE_CAP_GIB', '2'))
 FREE_DISK_BYTE_FLOOR = GIB
 WRITER_TABLES = ('data_runtime', 'data_runtime_command', 'comparison_publication',
                  'acquisition_receipt', 'native_book_revision', 'native_ladder_revision',

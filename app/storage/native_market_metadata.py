@@ -16,6 +16,8 @@ RECOVERY = 'current_native_market_recovery'
 MAX_BATCH_ROWS = 256
 MAX_BATCH_BYTES = 8 * 1024 * 1024
 MAX_TURN_SECONDS = 1.0
+PRUNE_DELETE_ROWS = 1024
+PRUNE_SCAN_ROWS = 4096
 _after = {}
 _pruned_after = {}
 
@@ -202,18 +204,28 @@ def prune(db):
     with db.transaction():
         if not db.execute('SELECT pg_try_advisory_xact_lock(%s) AS held', (LOCK,)).fetchone()['held']:
             return 0
-        bound = _pruned_after.get(key, b'')
-        rows = db.execute('''SELECT id FROM current_native_market_body
-            WHERE id>%s ORDER BY id LIMIT %s''', (bound, 4 * MAX_BATCH_ROWS)).fetchall()
-        if not rows:
-            _pruned_after.pop(key, None)
-            return 0
-        ids = [row['id'] for row in rows]
-        deleted = db.execute('''
-            DELETE FROM current_native_market_body b
-            WHERE b.id=ANY(%s::bytea[])
-              AND NOT EXISTS (SELECT 1 FROM current_acquisition_market m WHERE m.metadata_id=b.id)
-              AND NOT EXISTS (SELECT 1 FROM current_native_market_recovery r WHERE r.metadata_id=b.id)
-        ''', (ids,)).rowcount
-    _pruned_after[key] = bytes(ids[-1])
-    return deleted
+        # Live references should not use up the deletion allowance. Bound the
+        # index walk separately so a dense live catalog cannot extend the lock.
+        result = db.execute('''
+            WITH candidates AS MATERIALIZED (
+                SELECT id FROM current_native_market_body WHERE id>%s ORDER BY id LIMIT %s
+            ), unreferenced AS (
+                SELECT b.id FROM candidates b
+                WHERE NOT EXISTS (SELECT 1 FROM current_acquisition_market m WHERE m.metadata_id=b.id)
+                  AND NOT EXISTS (SELECT 1 FROM current_native_market_recovery r WHERE r.metadata_id=b.id)
+                ORDER BY b.id LIMIT %s
+            ), deleted AS (
+                DELETE FROM current_native_market_body b USING unreferenced u
+                WHERE b.id=u.id RETURNING b.id
+            )
+            SELECT (SELECT id FROM candidates ORDER BY id DESC LIMIT 1) AS last_scanned,
+                   (SELECT id FROM deleted ORDER BY id DESC LIMIT 1) AS last_deleted,
+                   (SELECT count(*) FROM deleted) AS deleted
+        ''', (_pruned_after.get(key, b''), PRUNE_SCAN_ROWS, PRUNE_DELETE_ROWS)).fetchone()
+    # Resume within the scanned range when the deletion budget was used up.
+    following = result['last_deleted'] if result['deleted'] == PRUNE_DELETE_ROWS else result['last_scanned']
+    if following is None:
+        _pruned_after.pop(key, None)
+    else:
+        _pruned_after[key] = bytes(following)
+    return result['deleted']

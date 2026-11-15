@@ -517,6 +517,39 @@ class DatabaseIngressSink:
                     if row['type']=='current_aggregate_records' and 'sgo_reference_rows' in row:
                         from app.storage.delivery_clocks import sgo_admitted
                         sgo_admitted(db, set(row['event_scopes'].values()), row['received_at'])
+                    from app.storage import odds_archive
+                    if odds_archive.enabled():
+                        with odds_archive.capture(db) as archive:
+                            if row['type'] in ('coverage_inventory','native_market_invalid'):
+                                prior_inventory = self.reducer.inventory.get(row['source'], {})
+                                prior_events = {event['id']: event for event in prior_inventory.get('events', ())}
+                            if row['type']=='coverage_inventory':
+                                inventory = row['inventory'].get(row['source'], {})
+                                events = {event['id']: event for event in inventory.get('events', ())}
+                                for market in inventory.get('markets', ()):
+                                    if market.get('inventory_recovery_disposition')=='suspected_absent':
+                                        key = (row['source'], market['event_id'], market['id'])
+                                        archive.append((key[0], odds_archive.observation_gap,
+                                                        (key, now, 'discovery_suspected_absent'),
+                                                        {'event': events.get(key[1])}))
+                                for key in sorted(withdraw-deferred_keys-reimaging):
+                                    if key[0] in odds_archive.FEEDS:
+                                        archive.append((key[0], odds_archive.observation_gap,
+                                                        (key, now, 'discovery_or_definition_changed'),
+                                                        {'event': events.get(key[1]) or prior_events.get(key[1])}))
+                            if row['type']=='native_market_invalid' or row['type']=='coverage_inventory':
+                                for key in sorted(withdraw if row['type']=='native_market_invalid' else reimaging):
+                                    if key[0] in odds_archive.FEEDS:
+                                        archive.append((key[0], odds_archive.observation_gap,
+                                                        (key, now, 'native_synchronization_lost'),
+                                                        {'event': prior_events.get(key[1])}))
+                            current_states = {f: state for f,state in states.items() if f in odds_archive.FEEDS}
+                            if row['type']=='sgo_status' or (row['type']=='current_aggregate_records' and row.get('source')=='sportsgameodds'):
+                                current_states['sportsgameodds'] = status
+                            for feed, state in current_states.items():
+                                archive.append((feed, odds_archive.source_status, (feed,state,now), {}))
+                            if row['type']=='current_aggregate_records' and 'sgo_reference_rows' in row:
+                                archive.append(('sportsgameodds', odds_archive.sgo_page, (row,), {}))
                     phase('commit_observation')
             if row['type']=='coverage_inventory':
                 self.metrics['catalog_storage_turnover']=dict(at=utc(),source=row['source'],generation=row['generation'],reasons=catalog_turnover)

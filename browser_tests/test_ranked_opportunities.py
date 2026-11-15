@@ -91,6 +91,7 @@ def settlement(
     )
     pair = dict(
         id=key,
+        evidence_result_id=key + "-capture",
         legs=[lead["id"], opposite["id"]],
         score=score,
         retail_payoff=payoff,
@@ -207,6 +208,7 @@ def fixtures():
         participant="Denver",
         current=False,
         reason="Price expired",
+        source_at="2026-11-12T07:00:00Z",
         source_provider="sportsgameodds",
     )
     negative = quote(
@@ -334,6 +336,7 @@ def test_ranked_and_browse_journey(width, tmp_path):
     selection_reads = 0
     pair_replacement = "original"
     pair_reads = 0
+    sized_pairs = []
 
     def respond(route):
         nonlocal selection_reads, pair_reads
@@ -358,6 +361,7 @@ def test_ranked_and_browse_journey(width, tmp_path):
                 route.fulfill(status=503)
                 return
             if query.get("view") == "arbs":
+                assert "stake" not in query
                 rows = deepcopy(arbs)
                 if query.get("game_key") == WASHINGTON:
                     pair_reads += 1
@@ -382,9 +386,15 @@ def test_ranked_and_browse_journey(width, tmp_path):
                         row for row in rows if not row["offers"][0].get("alternate")
                     ]
                 if query.get("last_known") == "1":
-                    next(row for row in rows if row["id"] == "ev-denver")[
-                        "offers"
-                    ].append(last_known)
+                    retained_row = next(row for row in rows if row["id"] == "ev-denver")
+                    retained_row["offers"].append(last_known)
+                    retained_row["sportsbook_quotes"]["fanduel"] = [
+                        dict(
+                            price_american="-105",
+                            current=False,
+                            source_at=last_known["source_at"],
+                        )
+                    ]
             elif unavailable:
                 rows = []
             else:
@@ -414,6 +424,7 @@ def test_ranked_and_browse_journey(width, tmp_path):
                     matched_offer_count=12,
                     matched_outcome_count=4,
                     ranked_group_count=ranked,
+                    ranking_stake="100" if query.get("view") == "arbs" else None,
                     publication=dict(current_prices=12),
                     calculation_reason="The sportsbook reference source is on hold.",
                 )
@@ -435,6 +446,19 @@ def test_ranked_and_browse_journey(width, tmp_path):
         elif url.path == "/api/comparison-current/lease":
             route.fulfill(json={"lease_id": "fixture"})
         elif url.path == "/api/comparison-snapshot/details":
+            if "stake" in query:
+                pair = deepcopy(arbs[1]["pairs"][0])
+                assert query == dict(
+                    id=pair["id"],
+                    result_id=pair["evidence_result_id"],
+                    lease_id="fixture",
+                    stake="150",
+                )
+                sized_pairs.append(pair["id"])
+                pair["inspection"]["funding_usd"] = "150"
+                pair["retail_payoff"]["sizing"]["requested_stake_usd"] = "150"
+                route.fulfill(json=pair)
+                return
             selected = detroit["offers"][0]
             route.fulfill(
                 json=dict(
@@ -479,7 +503,11 @@ def test_ranked_and_browse_journey(width, tmp_path):
             expect(cards.first).not_to_contain_text("Comparison sportsbook")
             expect(cards.first).not_to_contain_text("-112")
             expect(cards.last).to_contain_text("-3.00%")
-            expect(tab.get_by_text("Free view", exact=False)).to_have_count(1)
+            expect(
+                tab.get_by_text(
+                    "Free odds may be delayed up to 15 minutes.", exact=True
+                )
+            ).to_have_count(1)
             expect(tab.get_by_role("link", name="Arbitrage")).to_be_visible()
             tab.screenshot(path=tmp_path / f"ranked-ev-{width}.png")
             tab.get_by_role("checkbox", name="Positive only").check()
@@ -508,9 +536,7 @@ def test_ranked_and_browse_journey(width, tmp_path):
                 tab.get_by_role("columnheader", name="Polymarket US")
             ).to_be_visible()
             if width == 390:
-                expect(
-                    tab.get_by_text("Swipe or scroll sideways to see more sites →")
-                ).to_be_visible()
+                expect(tab.get_by_text("More sites →", exact=True)).to_be_visible()
                 assert tab.locator(".odds-scroll").evaluate(
                     "(el) => el.scrollWidth > el.clientWidth"
                 )
@@ -532,6 +558,11 @@ def test_ranked_and_browse_journey(width, tmp_path):
             expect(tab.locator('[data-offer-id="novig-denver"]')).to_contain_text(
                 "Last known"
             )
+            matrix = tab.locator(".odds-matrix")
+            expect(
+                matrix.locator(".sportsbook-price").filter(has_text="-105")
+            ).to_contain_text("Last known")
+            expect(matrix).not_to_contain_text("Quote updated")
             hide_game_prices = False
             tab.get_by_role("navigation", name="Current view").get_by_role(
                 "link", name="Back"
@@ -645,6 +676,9 @@ def test_ranked_and_browse_journey(width, tmp_path):
 
             tab.goto(BASE + "/arbs")
             expect(cards).to_have_count(2)
+            expect(
+                tab.get_by_text("Ranked at $100 before fees.", exact=False)
+            ).to_be_visible()
             expect(cards.first).to_contain_text("+0.89%")
             expect(cards.last).to_contain_text("-4.84%")
             tab.screenshot(path=tmp_path / f"ranked-arb-{width}.png")
@@ -684,6 +718,15 @@ def test_ranked_and_browse_journey(width, tmp_path):
             expect(payoff.locator(".inspection-payoffs tr").last).to_contain_text(
                 "-$4.99"
             )
+            payoff.get_by_label("Total stake before fees ($)").fill("150")
+            payoff.get_by_role("button", name="Size this pair").click()
+            expect(
+                payoff.get_by_text(
+                    "Calculated for a $150.00 stake before fees", exact=False
+                )
+            ).to_be_visible()
+            assert sized_pairs == [arbs[1]["pairs"][0]["id"]]
+            expect(cards.first).to_contain_text("+0.89%")
             assert tab.evaluate("document.documentElement.scrollWidth === innerWidth")
         browser.close()
     assert not errors, errors

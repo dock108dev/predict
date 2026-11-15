@@ -27,8 +27,18 @@ trap cleanup EXIT
 
 compose up -d --wait db
 compose run --rm --no-deps -T web python -m app.storage migrate
-compose up -d --no-deps --wait --wait-timeout 180 web collector
-before=$(curl -fsS http://127.0.0.1:8784/api/admin/status | jq -er 'select(.dispatch_enabled == false and .data_runtime.healthy) | .runtime_id')
+# The data service must start and report readiness before the first web process.
+compose up -d --no-deps --wait --wait-timeout 180 collector
+before=$(compose exec -T collector python -c '
+from app.collection.runtime_status import RuntimeState
+
+runtime = RuntimeState().read()
+assert runtime["healthy"] and runtime["service_state"] == "running" and not runtime["active"]
+print(runtime["runtime_id"])
+')
+compose up -d --no-deps --wait --wait-timeout 180 web
+first=$(curl -fsS http://127.0.0.1:8784/api/admin/status | jq -er 'select(.dispatch_enabled == false and .data_runtime.healthy) | .runtime_id')
+[[ "$before" == "$first" ]]
 compose up -d --force-recreate --no-deps --wait web
 after=$(curl -fsS http://127.0.0.1:8784/api/admin/status | jq -er '.runtime_id')
 [[ "$before" == "$after" ]]

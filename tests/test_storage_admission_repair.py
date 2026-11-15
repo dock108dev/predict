@@ -11,7 +11,7 @@ from app.collection.current_journal import CurrentJournal
 from app.collection.current_quota import QuotaStop
 from app.collection.current_storage_policy import (
     VERSION, JOURNAL_SEGMENT_BYTE_CAP, JOURNAL_BYTE_CAP, JOURNAL_RECORD_BYTE_CAP,
-    SQL_BYTE_CAP, FREE_DISK_BYTE_FLOOR,
+    LOCAL_SQL_BYTE_CAP, FREE_DISK_BYTE_FLOOR,
 )
 from tests.test_current_conservative_recovery import ConservativeRecovery, CANDIDATE, counters
 from tests.test_current_quota import WINDOW
@@ -45,7 +45,7 @@ class StorageAdmissionRepair(unittest.TestCase):
             response_receipt_sha256=digest(self.receipt),
             storage_policy=dict(version=VERSION,journal_segment_byte_cap=JOURNAL_SEGMENT_BYTE_CAP,
                 journal_total_byte_cap=JOURNAL_BYTE_CAP,journal_record_byte_cap=JOURNAL_RECORD_BYTE_CAP,
-                sql_byte_cap=SQL_BYTE_CAP,free_disk_byte_floor=FREE_DISK_BYTE_FLOOR),
+                sql_byte_cap=LOCAL_SQL_BYTE_CAP,free_disk_byte_floor=FREE_DISK_BYTE_FLOOR),
             original_journal=dict(path=str(self.original),bytes=len(self.original_bytes),sha256=sha256(self.original_bytes).hexdigest()),
             segmented_manifest=dict(path=str(self.manifest),sha256=sha256(self.manifest.read_bytes()).hexdigest()))
         self.proof_path=self.root/'replay.json'

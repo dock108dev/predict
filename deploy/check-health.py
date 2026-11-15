@@ -15,7 +15,10 @@ def web_health():
 
 def collector_health():
     from app.collection.runtime_status import RuntimeState
-    return RuntimeState().read()['healthy']
+    runtime = RuntimeState().read()
+    return runtime['healthy'] and runtime['service_state'] == 'running' and (
+        runtime['active'] or runtime['global_stopped'] or not runtime['config']['enabled']
+    )
 
 
 if __name__ == '__main__':

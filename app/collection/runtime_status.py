@@ -96,13 +96,18 @@ def read_runtime(db, at=None, *, ordinary_authority=False):
         for state in states.values():
             state.update(state='unavailable', reason_code='data_runtime_unhealthy',
                          reason='Background data runtime is stopped or its heartbeat expired.')
+    reason = None
+    if not healthy:
+        reason = 'data_runtime_unhealthy'
+    elif row['state'] == 'running' and not row['dispatch'] and not row['global_stopped'] and row['config'].get('enabled'):
+        reason = 'data_runtime_not_dispatching'
     return dict(healthy=healthy, active=healthy and row['dispatch'],
                 dispatch=healthy and row['dispatch'], runtime_id=row['runtime_id'],
                 config=deepcopy(row['config']), states=states, revision=row['revision'],
                 heartbeat_at=_stamp(row['heartbeat_at']).astimezone(timezone.utc).isoformat(),
                 service_state=row['state'] if healthy else 'unavailable',
                 calculations=deepcopy(row['status'].get('background_calculations') or {}),
-                reason_code=None if healthy else 'data_runtime_unhealthy',
+                reason_code=reason,
                 status=status, paused_sources=row['paused_sources'],
                 global_stopped=row['global_stopped'], owner_pid=row['owner_pid'])
 
@@ -122,7 +127,11 @@ def source_states(committed, owner):
     for venue, state in list(states.items()):
         if not owner.get('healthy'):
             states[venue] = dict(state, state='unavailable', reason_code='data_runtime_unhealthy')
-        elif not owner.get('active') or venue in owner.get('paused_sources', []):
+        elif owner.get('global_stopped') or venue in owner.get('paused_sources', []):
+            states[venue] = dict(state, state='stopped', reason_code='updates_stopped')
+        elif owner.get('reason_code') == 'data_runtime_not_dispatching':
+            states[venue] = dict(state, state='unavailable', reason_code=owner['reason_code'])
+        elif not owner.get('active'):
             states[venue] = dict(state, state='stopped', reason_code='updates_stopped')
     return states
 
@@ -256,6 +265,12 @@ class RuntimeState:
             (value['runtime_id'], os.getpid(), self.started_at, clock(), value['state'], Jsonb(value['config']),
              Jsonb(value['states']), value['dispatch'], Jsonb(value['status']), value['fingerprint'],
              Jsonb(value['paused_sources']), value['global_stopped']))
+        from app.storage import odds_archive
+        if odds_archive.enabled():
+            with odds_archive.capture(db) as archive:
+                at = clock().isoformat()
+                for feed in sorted(odds_archive.FEEDS):
+                    archive.append((feed, odds_archive.runtime_status, (feed,value,at), {}))
 
     def read(self):
         with self.connector() as db:

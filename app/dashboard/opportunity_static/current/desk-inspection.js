@@ -246,9 +246,11 @@ export function tradeInspection(offer, group, evidence, {mode, position, basis, 
   quote.append(priceFreshness);
   if (cost != null) quote.append(el('small', `${usd(cost)} per $1 payout`, 'inspection-price-unit'));
   const activeFee = (offer.current || mode) && offer.trade_fee?.available ? offer.trade_fee.trade_fee_usd : null;
-  const ev = el('span', signedPercent(offer.value), tone(offer.value));
-  if (offer.value != null) {
-    const evFreshness = el('small', mode ? 'At capture' : 'Current at inspection', 'inspection-price-unit');
+  const value = offer.value ?? offer.last_known_ev;
+  const ev = el('span', signedPercent(value), tone(offer.value));
+  if (value != null) {
+    const freshness = offer.value == null ? 'Last known EV' : mode ? 'At capture' : 'Current at inspection';
+    const evFreshness = el('small', freshness, 'inspection-price-unit');
     evFreshness.dataset.inspectionEv = '1';
     ev.append(evFreshness);
   }
@@ -266,7 +268,7 @@ export function tradeInspection(offer, group, evidence, {mode, position, basis, 
     : fictionalRate != null ? `${percent(num(fictionalRate) * 100)} fictional fee on acquisition cost${size ? ' · ' + size : ''}`
       : `${estimated}${usd(activeFee)} fee${size ? ' for ' + size : ''}`;
   const summary = [feeSummary];
-  if (!pairLeg && offer.value == null) {
+  if (!pairLeg && value == null) {
     summary.push(`EV unavailable · ${reasons(offer.reason, 'No qualified same-line sportsbook pair.')}`);
   }
   result.append(el('p', summary.join(' · '), 'inspection-quote-status desk-meta'));
@@ -277,8 +279,8 @@ export function tradeInspection(offer, group, evidence, {mode, position, basis, 
   }
   const comparison = [winPayout(offer), settlementLabel(group)].filter(Boolean);
   if (comparison.length) result.append(el('p', comparison.join(' · '), 'desk-meta'));
-  if (offer.value != null) {
-    const estimate = num(offer.value);
+  if (value != null) {
+    const estimate = num(value);
     result.append(el('p', `${usd(Math.abs(estimate))} average ${estimate < 0 ? 'loss' : 'profit'} per $100 risked under this model.`, 'desk-meta'));
   }
   if (group.sportsbook_quotes) {

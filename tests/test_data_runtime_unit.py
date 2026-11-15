@@ -62,6 +62,26 @@ class RuntimeReadGuards(unittest.TestCase):
         self.assertFalse(value['active'])
         self.assertEqual(value['revision'], 0)
 
+    def test_live_heartbeat_does_not_pass_health_when_enabled_dispatch_is_blocked(self):
+        from runpy import run_path
+        from app.collection.runtime_status import source_states
+
+        health = run_path('deploy/check-health.py')['collector_health']
+        blocked = self.read(runtime_row(dispatch=False, paused_sources=['polymarket_us']))
+        stopped = self.read(runtime_row(dispatch=False, global_stopped=True))
+        disabled = self.read(runtime_row(dispatch=False, config=dict(DEFAULT, enabled=False)))
+        self.assertTrue(blocked['healthy'])
+        self.assertEqual(blocked['reason_code'], 'data_runtime_not_dispatching')
+        self.assertEqual(source_states({}, blocked)['kalshi']['state'], 'unavailable')
+        self.assertEqual(source_states({}, stopped)['kalshi']['state'], 'stopped')
+        self.assertIsNone(disabled['reason_code'])
+        with patch('app.collection.runtime_status.RuntimeState') as state:
+            state.return_value.read.side_effect = [blocked, stopped, disabled, self.read(runtime_row())]
+            self.assertFalse(health())
+            self.assertTrue(health())
+            self.assertTrue(health())
+            self.assertTrue(health())
+
     def test_postgres_local_offset_heartbeat_is_returned_as_utc(self):
         value = self.read(runtime_row(heartbeat_at=AT.astimezone(timezone(timedelta(hours=-4)))))
         self.assertEqual(value['heartbeat_at'], '2026-10-16T12:00:00+00:00')
@@ -168,6 +188,29 @@ class PersistedStopGates(unittest.IsolatedAsyncioTestCase):
 
 
 class CalculationIsolation(unittest.IsolatedAsyncioTestCase):
+    async def test_ordinary_publisher_runs_on_admission_with_no_web_process(self):
+        import asyncio
+        from types import SimpleNamespace
+        from app.storage.ordinary_owner import OrdinaryOwner
+
+        turns = asyncio.Queue()
+
+        async def run(stopped, *, root, module=None, **options):
+            if module == 'app.collection.ordinary_worker':
+                turns.put_nowait('published')
+            return {'published': True}
+
+        service = SimpleNamespace(ingress=SimpleNamespace(), config={'cleanup_seconds': 2})
+        publisher = OrdinaryOwner(service)
+        with patch('app.storage.ordinary_owner.run', side_effect=run):
+            await publisher.start()
+            try:
+                self.assertEqual(await asyncio.wait_for(turns.get(), .5), 'published')
+                service.ingress.on_native_admitted()
+                self.assertEqual(await asyncio.wait_for(turns.get(), .5), 'published')
+            finally:
+                await publisher.close()
+
     async def test_slow_accounting_projection_does_not_block_source_loop(self):
         import asyncio
         from threading import Event
@@ -299,6 +342,17 @@ class RuntimeFailureHandling(IsolatedRuntimeClient):
         runtime.service.close.assert_awaited_once()
         self.assertNotIn('SECRET',' '.join(logs.output))
 
+    async def test_source_resource_shutdown_exits_for_process_supervisor(self):
+        runtime = self.runtime()
+        runtime.service.closed = True
+        runtime.service.stop_reason = 'resource guard stopped acquisition'
+        with self.assertLogs('app.collection.data_runtime', level='ERROR'):
+            await runtime.heartbeat()
+        self.assertTrue(runtime.failed)
+        self.assertTrue(runtime.stopping.is_set())
+        runtime.persist_control.assert_awaited_once_with('stopping')
+        runtime.service.close.assert_awaited_once()
+
     async def test_estimate_and_coverage_task_deaths_are_detected(self):
         import asyncio
         from types import SimpleNamespace
@@ -418,3 +472,20 @@ def test_storage_interval_requires_measured_deferred_work_near_guard():
     assert not needs_storage_interval(dict(state='busy'))
     assert needs_storage_interval(dict(state='busy'),sql_bytes=SQL_BYTE_CAP-128*MIB)
     assert not needs_storage_interval(dict(state='busy'),sql_bytes=SQL_BYTE_CAP-128*MIB-1)
+
+
+def test_hosted_ceiling_keeps_early_maintenance_without_restarting_at_old_ceiling():
+    import os
+    import subprocess
+    import sys
+
+    subprocess.run([sys.executable, '-c', '''
+from app.collection.current_storage_policy import GIB, MIB, SQL_BYTE_CAP
+from app.collection.data_runtime import needs_storage_interval
+from app.storage.storage_maintenance import PRESSURE_BYTES
+
+assert SQL_BYTE_CAP == 4 * GIB
+assert PRESSURE_BYTES == (2 * GIB) * 3 // 5
+assert not needs_storage_interval({'state': 'busy'}, sql_bytes=2 * GIB)
+assert needs_storage_interval({'state': 'busy'}, sql_bytes=SQL_BYTE_CAP - 128 * MIB)
+'''], env=dict(os.environ, PREDICT_DATABASE_CAP_GIB='4'), check=True)
