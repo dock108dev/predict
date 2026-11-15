@@ -66,7 +66,10 @@ path when starting data. The check prints the selected provider and scope from t
 validated configuration. It needs no database, credentials or network access.
 
 The SportsGameOdds worker shares its object budget across discovery and event
-refresh. Admin shows the plan, account usage, reserve, holds and pacing. The
+refresh. It starts a scan every 15 minutes throughout the day when account
+guards permit it. Event selection and discovery still follow the available
+object budget. Kalshi and Polymarket US quotes arrive through their live streams.
+Admin shows the plan, account usage, reserve, holds and pacing. The
 first-of-month UTC boundary is a provisional pacing assumption whenever the
 provider supplies no reset. Choose sports and market scope to fit your provider
 allowance. Check **Admin → Spending** for remaining allowance, reserve and any

@@ -151,7 +151,8 @@ DISCOVERY_HOURS = (12, 24, 48, 72, 96)
 
 
 def budgeted_policy(events: list[EventDue], now: datetime, daily_budget: int, *,
-                    discovery_walk_objects: int = 0, priority_pregame=False) -> tuple[SchedulePolicy, int]:
+                    discovery_walk_objects: int = 0, priority_pregame=False,
+                    allow_faster_refresh=True) -> tuple[SchedulePolicy, int]:
     """Budget the static slate, preserving kickoff and active refresh priority.
 
     Project current live events as live all day. Reserve capacity for the
@@ -195,14 +196,14 @@ def budgeted_policy(events: list[EventDue], now: datetime, daily_budget: int, *,
     for policy in candidates:
         projected = cost(policy)
         if projected <= normal_limit:
-            if tiers[0]:
+            if tiers[0] and allow_faster_refresh:
                 for minutes in (5, 10):
                     faster = replace(policy, live=timedelta(minutes=minutes))
                     if cost(faster) <= normal_limit:
                         policy = faster
                         break
             if priority_pregame and tiers[1]:
-                for minutes in (5, 10, 15):
+                for minutes in ((5, 10, 15) if allow_faster_refresh else (15,)):
                     faster = replace(policy, approaching=timedelta(minutes=minutes))
                     if cost(faster) <= normal_limit:
                         policy = faster

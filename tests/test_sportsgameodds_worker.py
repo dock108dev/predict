@@ -56,13 +56,11 @@ def test_discovery_continues_beyond_first_twenty_events_without_withdrawal():
         assert worker.state.await_args_list[0].args[:2] == ('available', 'sgo_page_received')
         assert len(worker.events) == 20
         assert worker.metrics['discovery_complete']['NFL'] is False
-        assert worker.next_cycle_delay() == 60
         await worker.cycle()
         assert cursors == list(range(11))
         assert len(worker.events) == 22
         assert worker.metrics['discovery_complete']['NFL'] is True
         assert not worker.discovery_progress
-        assert worker.next_cycle_delay() == 15 * 60
     asyncio.run(scenario())
 
 
@@ -147,15 +145,38 @@ def test_incomplete_page_cap_does_not_schedule_a_completed_walk():
     asyncio.run(scenario())
 
 
-def test_worker_wakes_when_game_enters_approaching_window():
-    from app.collection.sportsgameodds_schedule import SchedulePolicy
-    service = SimpleNamespace(config=deepcopy(DEFAULT), dispatch=True, globally_stopped=False, paused_sources=set())
-    worker = SportsGameOddsWorker(service, transport=SimpleNamespace(close=AsyncMock()), now=lambda: NOW)
-    worker.schedule_policy = SchedulePolicy(imminent=timedelta(hours=2))
-    upcoming = event(1)
-    upcoming['starts_at'] = (NOW + timedelta(hours=2, minutes=5)).isoformat()
-    worker.events['e1'] = upcoming
-    assert worker.next_cycle_delay() == 5 * 60
+def test_worker_scans_every_fifteen_minutes_overnight_and_keeps_discovery_cursor():
+    from unittest.mock import patch
+
+    async def scenario():
+        service = SimpleNamespace(config=deepcopy(DEFAULT), dispatch=True, globally_stopped=False,
+                                  paused_sources=set(), database_mode=True)
+        now = datetime(2026, 11, 11, 4, 55, tzinfo=timezone.utc)
+        worker = SportsGameOddsWorker(service, transport=SimpleNamespace(close=AsyncMock()), now=lambda: now)
+        worker.initialize, worker.state = AsyncMock(), AsyncMock()
+        worker.discovery_progress['NFL'] = object()
+        start_times = []
+
+        async def cycle():
+            nonlocal now
+            start_times.append(now)
+            now += timedelta(seconds=20)
+            if len(start_times) == 3:
+                service.dispatch = False
+
+        async def sleep(delay):
+            nonlocal now
+            assert delay == 880
+            now += timedelta(seconds=delay)
+
+        worker.cycle = cycle
+        with patch('app.collection.sportsgameodds_worker.asyncio.sleep', side_effect=sleep), \
+             patch('app.collection.sportsgameodds_worker.retained_schedule', return_value=({}, False)):
+            await worker.run()
+        assert start_times == [start_times[0] + timedelta(minutes=15 * index) for index in range(3)]
+        assert worker.discovery_progress
+
+    asyncio.run(scenario())
 
 
 def test_active_and_kickoff_refresh_interleave_with_discovery_and_retain_cursor_filter():
@@ -200,15 +221,12 @@ def test_active_and_kickoff_refresh_interleave_with_discovery_and_retain_cursor_
 
 
 def test_started_event_uses_active_polling_without_relabeling_phase():
-    from app.collection.sportsgameodds_schedule import SchedulePolicy
     service = SimpleNamespace(config=deepcopy(DEFAULT), dispatch=True, globally_stopped=False, paused_sources=set())
     worker = SportsGameOddsWorker(service, transport=SimpleNamespace(close=AsyncMock()), now=lambda: NOW)
-    worker.schedule_policy = SchedulePolicy()
     started = event(1)
     started.update(phase='started', starts_at=(NOW - timedelta(hours=1)).isoformat(),
                    received_at=(NOW - timedelta(minutes=14)).isoformat())
     worker.events['e1'] = started
-    assert worker.next_cycle_delay() == 60
     assert worker.events['e1']['phase'] == 'started'
 
     async def check_due():
@@ -226,6 +244,48 @@ def test_started_event_uses_active_polling_without_relabeling_phase():
         await worker.cycle()
         assert [call.args[0]['eventIDs'] for call in worker._fetch.await_args_list] == ['e2','e1']
     asyncio.run(check_due())
+
+
+@pytest.mark.parametrize('base_readable', [True, False])
+def test_unreadable_alternates_try_main_lines_and_keep_scanning(base_readable):
+    from app.collection.sportsgameodds_collector import InvalidProviderPage
+
+    async def scenario():
+        service = SimpleNamespace(config=deepcopy(DEFAULT), dispatch=True, globally_stopped=False, paused_sources=set())
+        worker = SportsGameOddsWorker(service, transport=SimpleNamespace(close=AsyncMock()), now=lambda: NOW)
+        original_receipt = (NOW - timedelta(minutes=16)).isoformat()
+        worker.events = {
+            f'e{i}': dict(event(i), starts_at=(NOW - timedelta(hours=1)).isoformat(),
+                          received_at=original_receipt, phase='live')
+            for i in (1, 2)
+        }
+        worker.discovery_at['NFL'] = NOW
+        calls = []
+
+        async def fetch(params, key):
+            identifier = params['eventIDs']
+            alternates = params.get('includeAltLines', False)
+            calls.append((identifier, alternates))
+            if identifier == 'e1' and (alternates or not base_readable):
+                raise InvalidProviderPage('fixture unreadable page')
+            return Page((dict(worker.events[identifier], received_at=NOW.isoformat()),), (), None, 'a'*64)
+
+        worker.collector = SimpleNamespace(fetch=fetch)
+        worker._publish = AsyncMock()
+        worker.state = AsyncMock()
+        await worker.cycle()
+
+        assert calls == [('e1', True), ('e1', False), ('e2', True)]
+        assert worker.events['e2']['received_at'] == NOW.isoformat()
+        assert worker.metrics['alternate_parse_fallbacks'] == 1
+        if base_readable:
+            assert worker.events['e1']['received_at'] == NOW.isoformat()
+        else:
+            assert worker.events['e1']['received_at'] == original_receipt
+            assert worker.events['e1']['last_polled_at'] == NOW.isoformat()
+            assert worker.metrics['unreadable_refresh_events'] == 1
+
+    asyncio.run(scenario())
 
 
 def test_alternates_use_bounded_approaching_event_refresh_and_track_admission():
@@ -563,7 +623,7 @@ def test_local_rate_limit_backs_off_then_resumes_without_losing_cursor():
             service.dispatch = False
         worker.cycle = cycle
         async def immediate_sleep(delay):
-            assert delay in (60, 900)
+            assert delay == 900
         with patch('app.collection.sportsgameodds_worker.asyncio.sleep', side_effect=immediate_sleep), \
                 patch('app.collection.sportsgameodds_worker.retained_schedule', return_value=({}, False)):
             await worker.run()
@@ -573,7 +633,8 @@ def test_local_rate_limit_backs_off_then_resumes_without_losing_cursor():
     asyncio.run(scenario())
 
 
-def test_daily_pacing_wakes_at_headroom_before_the_hourly_recheck():
+@pytest.mark.parametrize(('headroom_seconds', 'expected_delay'), [(92, 900), (1200, 1200)])
+def test_daily_pacing_waits_for_both_scan_and_headroom(headroom_seconds, expected_delay):
     from unittest.mock import patch
 
     from app.collection.sportsgameodds_collector import DailyObjectPacing
@@ -586,7 +647,7 @@ def test_daily_pacing_wakes_at_headroom_before_the_hourly_recheck():
         worker.state = AsyncMock()
         cursor = object()
         worker.discovery_progress['NFL'] = cursor
-        retry_at = NOW+timedelta(seconds=92)
+        retry_at = NOW+timedelta(seconds=headroom_seconds)
 
         async def cycle():
             assert worker.discovery_progress['NFL'] is cursor
@@ -599,7 +660,7 @@ def test_daily_pacing_wakes_at_headroom_before_the_hourly_recheck():
              patch('app.collection.sportsgameodds_worker.retained_schedule', return_value=({}, False)):
             await worker.run()
         assert worker.cycle.await_count == 2
-        assert wait.await_args_list[0].args == (92,)
+        assert wait.await_args_list[0].args == (expected_delay,)
         assert any(call.args[1] == 'sgo_daily_pacing' for call in worker.state.await_args_list)
         assert 'daily_pacing' not in worker.metrics
 
@@ -619,7 +680,7 @@ def test_balance_mismatch_waits_for_a_new_usage_read_without_abandoning_work():
         worker.discovery_progress['NFL'] = cursor
 
         async def recover(delay):
-            assert delay == 60 and worker.discovery_progress['NFL'] is cursor
+            assert delay == 900 and worker.discovery_progress['NFL'] is cursor
 
         async def cycle():
             assert worker.discovery_progress['NFL'] is cursor

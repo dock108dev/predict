@@ -17,6 +17,10 @@ class RejectedCursor(RuntimeError):
     """The cursor was rejected and its request could not be counted."""
 
 
+class InvalidProviderPage(TransportFailure):
+    """A successful HTTP response could not be parsed as an odds page."""
+
+
 class DailyObjectPacing(RuntimeError):
     def __init__(self, *, retry_at, requested, rolling, allowance):
         super().__init__('daily object pacing limit')
@@ -101,7 +105,7 @@ class GuardedPageCollector:
         try:
             page = parse_page(response.body, response.received_at, venues=venues)
         except ValueError as exc:
-            raise TransportFailure('provider page could not be parsed') from exc
+            raise InvalidProviderPage('provider page could not be parsed') from exc
         charged = response_object_charge(len(page.events))
         # One object per returned event; the minimum charge on an empty page
         # has no observed event phase. Never infer phase from a request.
