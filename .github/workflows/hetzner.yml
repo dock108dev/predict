@@ -9,6 +9,11 @@ on:
     types: [completed]
     branches: [main]
   workflow_dispatch:
+    inputs:
+      publish_only:
+        description: Build and publish the latest main release without deploying
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -29,12 +34,15 @@ jobs:
        github.event.workflow_run.conclusion == 'success' &&
        github.event.workflow_run.head_repository.full_name == github.repository &&
        github.event.workflow_run.head_sha != '') ||
-      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.publish_only) ||
       (github.event_name == 'pull_request' &&
        github.event.pull_request.head.repo.full_name == github.repository &&
        github.event.pull_request.user.login != 'dependabot[bot]')
     runs-on: ubuntu-24.04
     timeout-minutes: 20
+    concurrency:
+      group: predict-hetzner-image-${{ github.event_name == 'pull_request' && github.run_id || 'main' }}
+      cancel-in-progress: false
     permissions:
       contents: read
       packages: write
@@ -82,10 +90,30 @@ jobs:
             printf '%s %s\n' "$image" "$inputs"
           done < "$RUNNER_TEMP/predict-image-inputs" > "$manifest"
           printf 'images<<PREDICT_IMAGES\n%s\nPREDICT_IMAGES\n' "$(cat "$manifest")" >> "$GITHUB_OUTPUT"
+      - name: Publish the latest main release record
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tip=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')
+          if [[ $tip != "$RELEASE_SHA" ]]; then
+            echo 'Main advanced before publication.'
+            exit 0
+          fi
+          # Publish all three tested digests in one registry operation.
+          repo="ghcr.io/${GITHUB_REPOSITORY,,}"
+          docker build --tag "$repo:latest" \
+            --label "org.opencontainers.image.revision=$RELEASE_SHA" \
+            --label "dev.dock108.predict.images=$(cat "$RUNNER_TEMP/predict-image-manifest")" \
+            - <<<'FROM scratch'
+          docker push "$repo:latest"
   deploy-hetzner:
     name: Deploy Predict to Hetzner
     needs: release-image
-    if: ${{ vars.HETZNER_DEPLOY_ENABLED == 'true' }}
+    if: >-
+      !cancelled() && vars.HETZNER_DEPLOY_ENABLED == 'true' &&
+      ((github.event_name != 'workflow_dispatch' && needs.release-image.result == 'success') ||
+       (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && !inputs.publish_only))
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     environment: hetzner
@@ -107,21 +135,39 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_HEAD: ${{ github.event.pull_request.head.sha }}
         run: |
-          if [[ -n $PR_NUMBER ]]; then
-            tip=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER" --jq 'select(.state == "open") | .head.sha')
-            expected=$PR_HEAD
+          if [[ $GITHUB_EVENT_NAME == workflow_dispatch ]]; then
+            printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+            latest="ghcr.io/${GITHUB_REPOSITORY,,}:latest"
+            if ! labels=$(docker buildx imagetools inspect "$latest" --format '{{json .Image.Config.Labels}}'); then
+              echo 'Could not read the latest main release. Run the workflow with publish_only to create it.' >&2
+              exit 1
+            fi
+            revision=$(jq -er '."org.opencontainers.image.revision" | select(test("^[a-f0-9]{40}$"))' <<< "$labels")
+            PREDICT_IMAGES=$(jq -er '."dev.dock108.predict.images" | strings' <<< "$labels")
+            echo "Deploying the latest published main release $revision."
           else
-            tip=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')
-            expected=$RELEASE_SHA
-          fi
-          if [[ "$tip" != "$expected" ]]; then
-            echo 'This run no longer matches the selected branch or open PR.'
-            exit 0
+            if [[ -n $PR_NUMBER ]]; then
+              tip=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER" --jq 'select(.state == "open") | .head.sha')
+              expected=$PR_HEAD
+            else
+              tip=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')
+              expected=$RELEASE_SHA
+            fi
+            if [[ "$tip" != "$expected" ]]; then
+              echo 'This run no longer matches the selected branch or open PR.'
+              exit 0
+            fi
           fi
           [[ $SSH_HOST =~ ^[a-zA-Z0-9][a-zA-Z0-9.-]+$ && -n $SSH_KEY && -n $SSH_KNOWN_HOSTS ]]
-          [[ $(wc -l <<< "$PREDICT_IMAGES") -eq 3 ]]
+          if [[ $(wc -l <<< "$PREDICT_IMAGES") -ne 3 ]]; then
+            echo 'The release must contain web, collector, and archive images.' >&2
+            exit 1
+          fi
           while read -r image inputs extra; do
-            [[ $image =~ ^ghcr\.io/dock108dev/predict@sha256:[a-f0-9]{64}$ && $inputs =~ ^[a-f0-9]{64}$ && -z $extra ]]
+            if [[ ! $image =~ ^ghcr\.io/dock108dev/predict@sha256:[a-f0-9]{64}$ || ! $inputs =~ ^[a-f0-9]{64}$ || -n $extra ]]; then
+              echo 'The release contains an invalid image digest or input fingerprint.' >&2
+              exit 1
+            fi
           done <<< "$PREDICT_IMAGES"
           umask 077
           keydir=$(mktemp -d)

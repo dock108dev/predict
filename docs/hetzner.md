@@ -40,10 +40,14 @@ curl -sS -D - -o /dev/null https://predict.dock108.dev/admin
 
 The **Deploy Predict dev server** workflow builds and smoke-tests the exact
 commit that passed **CI** for a push to `main`. It checks that the commit is
-still at the tip of `main` before releasing the tested web, collector, and
-archive image digests to
-`/srv/predict/release.sh` over SSH. In-repository PR and manual runs from
-`main` are also supported. The deploy job requires the repository variable
+still at the tip of `main` before publishing the web, collector, and archive
+digests together in the GHCR `:latest` release record. A manual run from
+`main` reads that record and sends the published digests to
+`/srv/predict/release.sh` over SSH. The first successful automatic main build
+creates the record. To publish it on demand, run the workflow from `main` with
+`publish_only` selected. This runs the same image build and Compose smoke checks.
+In-repository PRs build and deploy their own tested digests.
+The deploy job requires the repository variable
 `HETZNER_DEPLOY_ENABLED=true` and the `hetzner` GitHub environment with branch
 rules for `main` and `refs/pull/*/merge`. Set `HETZNER_HOST` and the pinned `HETZNER_KNOWN_HOSTS`
 entry as environment variables and `HETZNER_SSH_KEY` as an environment secret.

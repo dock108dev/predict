@@ -32,9 +32,11 @@ def exact_time(t):
     return Decimal(whole.days*86400+whole.seconds)+Decimal('0.'+(match[2] or '0'))
 def hashed(v): return sha256(encoded(v)).hexdigest()
 def stamp(t):
-    d=datetime.fromisoformat(t.replace('Z','+00:00'))
-    if d.utcoffset() is None: raise ValueError('timezone required')
-    return d
+    """Accept an ISO timestamp or an already parsed, timezone-aware datetime."""
+    parsed = t if isinstance(t, datetime) else datetime.fromisoformat(t.replace('Z', '+00:00'))
+    if parsed.utcoffset() is None:
+        raise ValueError('timezone required')
+    return parsed
 
 
 def connect(database='prediction_arb'):

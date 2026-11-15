@@ -49,7 +49,7 @@ services:
 
   web:
     <<: *runtime
-    image: ${PREDICT_WEB_IMAGE:-${PREDICT_IMAGE:?Set the tested web image}}
+    image: ${PREDICT_WEB_IMAGE:-${PREDICT_IMAGE:-}}
     ports: ['127.0.0.1:8784:8784']
     networks: [web]
     tmpfs: [/tmp, '/predict/evidence:uid=10001,gid=10001,mode=0700']
@@ -61,7 +61,7 @@ services:
 
   collector:
     <<: *runtime
-    image: ${PREDICT_COLLECTOR_IMAGE:-${PREDICT_IMAGE:?Set the tested collector image}}
+    image: ${PREDICT_COLLECTOR_IMAGE:-${PREDICT_IMAGE:-}}
     profiles: [collection]
     command: [python, -m, app.collection.data_runtime, --current-config, /predict/.local/predict-current-config.json]
     environment:
@@ -83,7 +83,7 @@ services:
 
   archive:
     <<: *runtime
-    image: ${PREDICT_ARCHIVE_IMAGE:-${PREDICT_IMAGE:?Set the tested archive image}}
+    image: ${PREDICT_ARCHIVE_IMAGE:-${PREDICT_IMAGE:-}}
     profiles: [archive]
     command: [python, -m, app.storage.odds_archive_export]
     network_mode: none
