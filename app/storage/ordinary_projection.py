@@ -189,8 +189,8 @@ def project(result, current, owner, states, *, at, policy, epoch, settings=None,
     if result['publication']['epoch'] != epoch: common.append('input_epoch_replaced')
     if not owner.get('healthy'): common.append('data_runtime_unhealthy')
     if not owner.get('active') or owner.get('global_stopped'): common.append('updates_stopped')
-    if publication_runtime(owner)['reason'] == 'ordinary_publication_failed':
-        common.append('ordinary_publication_failed')
+    # A failed successor cannot invalidate an already committed witness.
+    # Runtime controls, component failures and exact input clocks still apply.
     ready = set()
     pair_ready = {}
     # Identical withdrawal statuses are read-only within this response. Share

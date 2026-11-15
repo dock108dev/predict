@@ -30,7 +30,7 @@ def desk_phase(query):
 
 def browse_retained(runtime):
     return (runtime.get('stopped') or runtime.get('healthy') is False
-            or runtime.get('reason') in ('data_runtime_not_dispatching', 'ordinary_publication_failed'))
+            or runtime.get('reason') == 'data_runtime_not_dispatching')
 
 
 def phase_matches(row, phase, at):
@@ -756,6 +756,22 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
     selected = session['rows'] if session else page_units[offset:offset + limit]
     visible_groups = [group for game in selected for group in game.get('outcomes', [game])] if page_by_game else selected
     visible = [g if g.get('withdrawn') else present(g) for g in visible_groups]
+    price_preview = []
+    if (ranked and view != 'arbs' and not browse and not groups and offset == 0
+            and not query.get('positive') and minimum is None and dollars is None):
+        # Read the same current, scoped prices even when none qualify for EV
+        # ranking. These groups never count as opportunities or ranked pages.
+        current_groups = comparison_groups(
+            [row for row in selected_rows if row.get('price_current') and (
+                query.get('lines') != 'main' or not row.get('alternate',
+                    ((row.get('source') or {}).get('native_market_id') or '').startswith('alternate:')))],
+            by_id, metric, current=True)
+        for group in sorted(current_groups, key=lambda g: (g['start_at'], g['id']))[:limit]:
+            value = public_group(present(group), basis)
+            value['score'] = None
+            for displayed in value['offers']:
+                displayed['value'] = None
+            price_preview.append(value)
     for group in visible:
         if (candidate := price_lists.get(group['id'])) is not None:
             prices = group['sportsbook_quotes']
@@ -783,7 +799,7 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
         elif browse and not public_summary and (retained_fallback or not show_retained):
             # Retained prices and hints are needed only for the returned page.
             enrich(displayed, include_retained=retained_fallback, mark_retained=not retained_fallback)
-    keys = {g['game_key'] for g in visible}
+    keys = {g['game_key'] for g in (*visible, *price_preview)}
     if browse and game_key:
         keys.add(game_key)
     selected_line = None
@@ -797,7 +813,8 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
     if public_summary:
         visible = [public_group(group, basis) for group in visible]
     return dict(**({k:v for k,v in session.items() if k not in ('rows','state','total')} if session else {}),
-                state='ready', rows=visible, total=session['total'] if session else len(page_units), offset=offset, limit=limit,
+                state='ready', rows=visible, price_preview=price_preview,
+                total=session['total'] if session else len(page_units), offset=offset, limit=limit,
                 page_count=len(selected),
                 games=[g for g in result.get('games', []) if g['game_key'] in keys],
                 selected_game_key=game_key if browse else None, selected_line_id=selected_line,

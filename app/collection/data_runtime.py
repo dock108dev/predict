@@ -80,7 +80,7 @@ class DataRuntime:
         self.prepare_status()
         value=self.state.snapshot(self.service, paused_sources=self.paused_sources,
                                   global_stopped=self.global_stopped,accounting=accounting)
-        return await asyncio.to_thread(self.state.write_snapshot, value, heartbeat=True)
+        return await owned_thread(self.state.write_snapshot, value, heartbeat=True)
 
     async def start(self):
         # Acquire before migration, epoch access, source construction or dispatch.
@@ -190,6 +190,7 @@ class DataRuntime:
 
     async def heartbeat(self):
         observed_tasks = set()
+        status_task = None
         try:
             while not self.stopping.is_set():
                 # Also prove that our session-level database ownership survived.
@@ -232,7 +233,14 @@ class DataRuntime:
                         self.storage_interval=True
                         self.stopping.set()
                         break
-                await self.persist_heartbeat()
+                # A slow account projection can span multiple heartbeat
+                # intervals. Keep one status writer and renew liveness only
+                # after checking ownership and resource guards on this tick.
+                if status_task is None or status_task.done():
+                    if status_task is not None:
+                        status_task.result()
+                    status_task = asyncio.create_task(self.persist_heartbeat(), name='predict-runtime-status')
+                await asyncio.to_thread(self.state.renew_heartbeat, self.service.runtime_id)
                 try:
                     await asyncio.wait_for(self.stopping.wait(), 1)
                 except TimeoutError:
@@ -245,6 +253,10 @@ class DataRuntime:
             except Exception as secondary:
                 failure(__name__, 'data_runtime_failure_status', secondary)
             await self.service.close()
+        finally:
+            if status_task is not None:
+                status_task.cancel()
+                await asyncio.gather(status_task, return_exceptions=True)
 
     def storage_interval_ready(self):
         worker = self.service.workers.get('sportsgameodds')

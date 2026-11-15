@@ -225,6 +225,18 @@ class RuntimeState:
                     states=states, dispatch=bool(service.dispatch), fingerprint=fingerprint,
                     paused_sources=sorted(paused_sources), global_stopped=global_stopped)
 
+    def renew_heartbeat(self, runtime_id):
+        """Refresh owner liveness independently of the diagnostic status payload."""
+        from psycopg.errors import LockNotAvailable
+        with self.connector() as db:
+            db.execute("SET lock_timeout='100ms'")
+            try:
+                return bool(db.execute("""UPDATE data_runtime SET heartbeat_at=%s
+                    WHERE singleton AND runtime_id=%s AND state='running'""",
+                    (clock(), runtime_id)).rowcount)
+            except LockNotAvailable:
+                return False
+
     def write_snapshot(self, value, *, heartbeat=False):
         from psycopg.errors import LockNotAvailable
         with self.connector() as db:

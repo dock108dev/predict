@@ -340,6 +340,7 @@ def test_ranked_and_browse_journey(width, tmp_path):
     errors = []
     provider_requests = []
     unavailable = False
+    show_current_prices = False
     browse_failure = False
     hide_game_prices = False
     replacement = "stable"
@@ -420,6 +421,11 @@ def test_ranked_and_browse_journey(width, tmp_path):
                 json=dict(
                     state="ready",
                     rows=rows,
+                    price_preview=(
+                        [public_group(detroit, query.get("basis"))]
+                        if show_current_prices and not rows and query.get("ranked")
+                        else []
+                    ),
                     games=[
                         dict(
                             game_key=DENVER, title=DENVER, start_at=START, league="NBA"
@@ -611,6 +617,14 @@ def test_ranked_and_browse_journey(width, tmp_path):
             expect(
                 tab.get_by_text("The sportsbook reference source is on hold.")
             ).to_be_visible()
+            show_current_prices = True
+            tab.get_by_role("button", name="Refresh list").click()
+            expect(tab.get_by_role("heading", name="Current prices")).to_be_visible()
+            expect(
+                tab.locator(".odds-card").get_by_role("heading", name=DETROIT)
+            ).to_be_visible()
+            expect(cards).to_have_count(0)
+            show_current_prices = False
             tab.get_by_role("link", name="Find my game ↗").click()
             expect(tab.get_by_role("heading", name=DETROIT)).to_be_visible()
             quote_button = tab.locator('[data-offer-id="pmus-detroit"]')

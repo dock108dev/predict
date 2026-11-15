@@ -246,7 +246,7 @@ class CalculationIsolation(unittest.IsolatedAsyncioTestCase):
         from unittest.mock import AsyncMock
         from app.collection.data_runtime import DataRuntime
         entered=Event();release=Event();source_progress=[]
-        runtime=DataRuntime(service=SimpleNamespace(close=AsyncMock(),background_calculations={},status_accounting=lambda:{}))
+        runtime=DataRuntime(service=SimpleNamespace(runtime_id='runtime',close=AsyncMock(),background_calculations={},status_accounting=lambda:{}))
         runtime.lock_connection=Mock();runtime.resource_guard=Mock();runtime.state=Mock()
         def busy(*args,**kwargs):
             entered.set();release.wait(2)
@@ -255,7 +255,8 @@ class CalculationIsolation(unittest.IsolatedAsyncioTestCase):
         task=asyncio.create_task(runtime.heartbeat())
         try:
             while not entered.is_set():await asyncio.sleep(.001)
-            # A normal source turn can run while SQL publication holds authority.
+            # Status can be busy while the liveness write and sources proceed.
+            while runtime.state.renew_heartbeat.call_count < 2:await asyncio.sleep(.001)
             source_progress.append('complete image committed')
             self.assertFalse(task.done())
             runtime.stopping.set();release.set();await task
@@ -274,11 +275,12 @@ class CalculationIsolation(unittest.IsolatedAsyncioTestCase):
         async def fail():raise RuntimeError('authored calculation failure')
         task=asyncio.create_task(fail())
         await asyncio.sleep(0)
-        service=SimpleNamespace(close=AsyncMock(),background_calculations={},status_accounting=lambda:{})
+        service=SimpleNamespace(runtime_id='runtime',close=AsyncMock(),background_calculations={},status_accounting=lambda:{})
         runtime=DataRuntime(service=service)
         runtime.lock_connection=Mock();runtime.resource_guard=Mock();runtime.state=Mock()
         runtime.board=SimpleNamespace(task=task,error=None)
-        def written(*args,**kwargs):runtime.stopping.set()
+        loop=asyncio.get_running_loop()
+        def written(*args,**kwargs):loop.call_soon_threadsafe(runtime.stopping.set)
         runtime.state.write_snapshot.side_effect=written
         await runtime.heartbeat()
         service.close.assert_not_awaited()
@@ -368,10 +370,11 @@ class RuntimeFailureHandling(IsolatedRuntimeClient):
         async def fail():raise OSError('SECRET background')
         tasks=[asyncio.create_task(fail()) for _ in range(2)]
         await asyncio.sleep(0)
-        runtime=DataRuntime(service=SimpleNamespace(background_calculations={},status_accounting=lambda:{}))
+        runtime=DataRuntime(service=SimpleNamespace(runtime_id='runtime',background_calculations={},status_accounting=lambda:{}))
         runtime.board=SimpleNamespace(task=None,estimate_task=tasks[0],coverage_task=tasks[1],error=None)
         runtime.lock_connection=Mock();runtime.resource_guard=Mock();runtime.state=Mock()
-        runtime.state.write_snapshot.side_effect=lambda *a,**kw:runtime.stopping.set()
+        loop=asyncio.get_running_loop()
+        runtime.state.write_snapshot.side_effect=lambda *a,**kw:loop.call_soon_threadsafe(runtime.stopping.set)
         with self.assertLogs('app.collection.data_runtime',level='ERROR') as logs:
             await runtime.heartbeat()
         self.assertEqual(runtime.service.background_calculations['coverage'],'unavailable')

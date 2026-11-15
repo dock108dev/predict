@@ -13,15 +13,25 @@ ENDPOINTS = {
 REFERENCES = {'kalshi':'keychain:prediction-arb.kalshi.production/market-data',
               'polymarket_us':'keychain:prediction-arb.polymarket-us/retail-api'}
 
+def _echo_forms(values):
+    return tuple(form for value in values for form in (value, base64.b64encode(value)))
+
+
 class Credential:
     def __init__(self, venue, data):
         self.venue=venue
         self.signer=(KSigner(data['key_id'],data['private_key']) if venue=='kalshi' else PSigner(data['key_id'],data['secret_key']))
-        self._secrets=tuple(v.encode() for v in data.values() if isinstance(v,str) and v)
+        self._secrets = _echo_forms(v.encode() for v in data.values() if isinstance(v, str) and v)
+        self._header_check = (), ()
     def __repr__(self):return 'Credential(<redacted>)'
     def check(self, raw, headers=None):
-        secrets=self._secrets+tuple(str(v).encode() for k,v in (headers or {}).items() if 'key' in k.lower() or 'signature' in k.lower())
-        if any(s in raw or base64.b64encode(s) in raw for s in secrets):
+        values = tuple(str(v).encode() for k, v in (headers or {}).items()
+                       if 'key' in k.lower() or 'signature' in k.lower())
+        cached, forms = self._header_check
+        if values != cached:
+            forms = _echo_forms(values)
+            self._header_check = values, forms
+        if any(secret in raw for secret in (*self._secrets, *forms)):
             raise ValueError('credential echo suppressed')
     def headers(self, path=None):
         if path is None:return self.signer.headers()

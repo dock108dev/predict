@@ -36,6 +36,18 @@ def result(*rows):
 
 
 class TradeDesk(TestCase):
+    def test_empty_opportunities_include_only_current_unranked_prices(self):
+        current = quote('current', 'kalshi', value='12')
+        expired = quote('expired', 'polymarket_us', current=False)
+        data = result(current, expired)
+        query = {'layout': 'desk', 'ranked': '1', 'phase': '', 'basis': 'before', 'lines': 'main', 'summary': '1'}
+        view = page(data, query, ('ev', None, 0, 25))
+        self.assertEqual(view['rows'], [])
+        self.assertEqual(view['total'], 0)
+        self.assertEqual([(offer['id'], offer['value']) for group in view['price_preview']
+                          for offer in group['offers']], [('current', None)])
+        self.assertEqual(page(data, dict(query, positive='on'), ('ev', None, 0, 25))['price_preview'], [])
+
     def test_three_current_sites_per_exact_outcome_before_rank_and_pagination(self):
         def spread(id_, venue, line, value, *, away=False, current=True):
             row = quote(id_, venue, value=value, current=current)

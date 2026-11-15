@@ -44,7 +44,7 @@ const state = {offset: 0, page: null, request: null, selected: null, renderedSta
 const history = new DiagnosticSession();
 const siteName = offer => name(offer.venue);
 const updatesUnavailable = runtime => runtime?.healthy === false
-  || ['data_runtime_not_dispatching', 'ordinary_publication_failed'].includes(runtime?.reason);
+  || runtime?.reason === 'data_runtime_not_dispatching';
 
 function restoreFocus(target) {
   // The native dialog restores focus before the queued close event. Only supply
@@ -627,6 +627,11 @@ function emptyResults(page, publication) {
     title = 'Price updates are stopped';
   } else if (!replay && updatesUnavailable(runtime)) {
     title = 'Price updates are temporarily unavailable';
+    actions.append(browsingLink('Browse odds ↗'));
+  } else if (!replay && page.price_preview?.length) {
+    title = 'Current prices';
+    detail = 'No EV comparisons qualify for these filters yet.';
+    actions.append(browsingLink('Browse odds ↗'));
   } else if (page.state === 'initializing' && !publication.retained_prices) {
     title = 'No prices have loaded yet';
     detail = 'The desk will update after the data service publishes its first prices.';
@@ -705,9 +710,12 @@ function render(page) {
   if (selectedLine && !page.selected_line_id && !rows.some(row => row.id === selectedLine && !row.withdrawn)) {
     results.append(el('p', `${linkedLine || 'The selected line'} is unavailable for this matchup in the selected view.`, 'desk-note selected-line-unavailable'));
   }
-  if (browse && rows.length) {
+  const preview = rows.length ? [] : (page.price_preview || []);
+  const matrixRows = browse ? rows : preview;
+  if (matrixRows.length) {
+    if (preview.length) results.append(emptyResults(page, publication));
     const groups = new Map();
-    for (const row of rows) {
+    for (const row of matrixRows) {
       if (row.withdrawn) continue;
       if (!groups.has(row.game_key)) groups.set(row.game_key, []);
       groups.get(row.game_key).push(row);

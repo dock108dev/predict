@@ -1101,8 +1101,11 @@ class LatestBoardSQL(LatestBoardFixture):
         with self.connect() as publication,publication.transaction():
             publication.execute('SELECT pg_advisory_xact_lock_shared(%s)',(AUTHORITY_LOCK,))
             self.at+=timedelta(seconds=9)
-            self.assertTrue(self.state.write_snapshot(self.state.snapshot(self.service),heartbeat=True))
+            self.assertFalse(self.state.renew_heartbeat('another-runtime'))
+            self.assertFalse(self.state.read()['healthy'])
+            self.assertTrue(self.state.renew_heartbeat(self.service.runtime_id))
             self.assertTrue(self.state.read()['healthy'])
+            self.assertTrue(self.state.write_snapshot(self.state.snapshot(self.service),heartbeat=True))
             with self.connect() as control:
                 control.execute("SET lock_timeout='100ms'")
                 with self.assertRaises(LockNotAvailable),control.transaction():

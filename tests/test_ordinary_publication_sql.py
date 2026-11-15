@@ -60,6 +60,10 @@ class OrdinarySQL(LatestBoardFixture):
                 return live.project(result,deps,actual,states,at=self.at,policy=live.policy_identity(),
                     epoch=result['publication']['epoch'])
             before=projected(original)
+            failed_successor=projected(dict(original,calculations={'board':'unavailable'}))
+            self.assertEqual(failed_successor['publication']['data_runtime']['reason'],'ordinary_publication_failed')
+            self.assertEqual([r['id'] for r in failed_successor['rows'] if r['price_current']],
+                [r['id'] for r in before['rows'] if r['price_current']])
             current=projected(owner)
             self.assertEqual([(r['id'],r['price_current']) for r in before['rows']],
                 [(r['id'],r['price_current']) for r in current['rows']])
