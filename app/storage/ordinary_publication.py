@@ -4,6 +4,7 @@ A data-owned turn seals prices before optional finance. HTTP only validates
 committed dependencies/expiry and reads a revision; it never acquires or computes.
 """
 from datetime import timedelta
+from fractions import Fraction
 from pathlib import Path
 import json
 import gc
@@ -715,7 +716,83 @@ def lease(db, result_id):
     return True
 
 
-def compose(db, settings, *, scope, policy, epoch, started, batched=False):
+def arb_candidates(part):
+    """Keep only the legs and payoff inputs of potentially qualifying pairs."""
+    from app.dashboard.trade_desk import direct_venue_offer
+
+    games = {game['game_key']: game for game in part['games']}
+    pairs = []
+    for pair in part['pairs']:
+        payoff = pair.get('default_funding_result') or {}
+        score = payoff.get('score')
+        if not snapshots.exact_arb_pair(pair) or len(set(pair['venues'])) != 2 or score is None or Fraction(score) <= 0:
+            continue
+        game = games.get(pair['game_key'], {})
+        names = [p['name'] for p in game.get('participants', ()) if p.get('name')]
+        compact_pair = {k: pair[k] for k in (
+            'id', 'game_key', 'league', 'start_at', 'market', 'legs', 'default_funding_fee_identity')}
+        compact_pair.update(
+            game_title=' vs. '.join(names) if len(names) == 2 else pair['game_title'],
+            before_fees=dict(authority=pair['before_fees']['authority']),
+            default_funding_result=dict(score=score, inspection=None, retail_payoff={
+                k: payoff['retail_payoff'][k] for k in ('funding_usd', 'minimum_net_profit_usd')}))
+        pairs.append(compact_pair)
+    if not pairs:
+        return None
+    ids = {leg for pair in pairs for leg in pair['legs']}
+    rows = []
+    for row in part['rows']:
+        if row['id'] not in ids or not direct_venue_offer(row):
+            continue
+        # Reference calculations are not inputs to the desk's arb payoff.
+        auth = row['current_authority']
+        rows.append(dict({k: row[k] for k in (
+            'id', 'league', 'start_at', 'venue', 'source', 'market', 'selection', 'original', 'times',
+            'trade_fee', 'publication_policy', 'publication_epoch', 'evidence_result_id', 'settings_revision')},
+            fee_applicability={'phase': (row.get('fee_applicability') or {}).get('phase')},
+            current_authority=dict(price=auth['price'], references=[], reference_required=False,
+                public_fee_revision=auth['public_fee_revision'], fee_until=None,
+                sgo_native_contract=auth.get('sgo_native_contract'))))
+    return dict(rows=rows, pairs=pairs)
+
+
+def observe_arbs(db, result, candidates, owner, states, *, generation, policy, epoch, at):
+    """Journal the exact positive payoffs with authority at this publication."""
+    from .arb_appearances import observe
+    from app.comparison.ordinary_arb import DEFAULT_FUNDING, published_payoff
+    from app.dashboard.trade_desk import phase_matches
+
+    opportunities = {}
+    if candidates and owner.get('healthy') and owner.get('active') and not owner.get('global_stopped'):
+        subset = dict(result, rows=list(chain.from_iterable(c['rows'] for c in candidates)),
+                      pairs=list(chain.from_iterable(c['pairs'] for c in candidates)))
+        deps, _ = published_dependencies(db, subset, provider=aggregate_provider(owner=owner), at=at)
+        current = project(subset, deps, owner, states, at=at, policy=policy, epoch=epoch)
+        rows = {row['id']: row for row in current['rows']}
+        for pair in current['pairs']:
+            legs = [rows[leg] for leg in pair['legs']]
+            phase = 'live' if legs[0]['game_state'] == 'live' else 'pregame'
+            if not all(phase_matches(leg, phase, at) for leg in legs):
+                continue
+            payoff = published_payoff(pair, legs)
+            if payoff['score'] is None:
+                continue
+            retail = payoff['retail_payoff']
+            market = pair['market']
+            opportunities[pair['id']] = dict(
+                game=pair['game_title'], game_key=pair['game_key'], league=pair['league'],
+                starts_at=pair['start_at'], phase=phase, market=market['market'], period=market['period'],
+                line=market.get('line'),
+                return_percent=payoff['score'], requested_funding_usd=str(DEFAULT_FUNDING),
+                funding_usd=retail['funding_usd'], minimum_net_profit_usd=retail['minimum_net_profit_usd'],
+                legs=[dict(venue=leg['venue'], selection=leg['selection'],
+                           price={k: leg['original'][k] for k in ('value', 'units')},
+                           source_at=leg['times'].get('source_at'), received_at=leg['times'].get('received_at'),
+                           quote_id=leg['id']) for leg in legs])
+    observe(db, at=at, generation=generation, opportunities=opportunities)
+
+
+def compose(db, settings, *, scope, policy, epoch, started, batched=False, errors=None):
     """Atomic manifest of immutable compact members; no whole-root rewrite."""
     from .ordinary_fragments import VERSION as FRAGMENTS
     result = dict(id=uuid4().hex, snapshot_id=uuid4().hex, captured_at=utc(), calculated_at=utc(),
@@ -730,23 +807,28 @@ def compose(db, settings, *, scope, policy, epoch, started, batched=False):
         'SELECT id,result FROM comparison_snapshot_result WHERE id=ANY(%s)',(missing,))}
     members=[];captured=[];boundaries=[];pending=0;failed=0;written=0;delivery=[];live_sportsbook=[]
     failed_captures = []
+    candidates = []
     totals=dict(observations=0,gross_numeric=0,conditional_numeric=0,conservative_numeric=0,net_numeric=0,pairs=0,unmatched=0)
     for c in components:
         summary=c['summary']
         if summary is None:
             part=compact_member(snapshots.unpack(blobs.pop(c['result_id'])))
             packed=snapshots.pack_read(snapshots.defer_details(part))
+            arbs = arb_candidates(part)
+            size = len(packed) + (len(encoded(arbs)) if arbs else 0)
             from app.collection.current_storage_policy import SQL_BYTE_CAP,sql_usage
             from .storage_maintenance import REWRITE_RUNWAY_BYTES
-            if retained_bytes(db)+len(packed)>MAX_BYTES:
+            if retained_bytes(db)+size>MAX_BYTES:
                 raise snapshots.SnapshotOperationError('ordinary_retention_capacity')
-            if sql_usage(db)+2*len(packed)+REWRITE_RUNWAY_BYTES>=SQL_BYTE_CAP:
+            if sql_usage(db)+2*size+REWRITE_RUNWAY_BYTES>=SQL_BYTE_CAP:
                 raise snapshots.SnapshotOperationError('ordinary_sql_headroom')
             from .delivery_clocks import live_sportsbook_deadlines, receipts
             from .ordinary_evidence import event_id
             summary=dict(captured_at=part['captured_at'],finance=part['publication']['finance'],counts=part['counts'],
                          event_ids=sorted({event_id(r['source']) for r in part['rows']}),
                          delivery_receipts=receipts(part['rows']), live_sportsbook_deadlines=live_sportsbook_deadlines(part['rows']))
+            if arbs:
+                summary['arb_candidates'] = arbs
             db.execute('''UPDATE comparison_snapshot_result SET read_summary=%s,read_fragment=%s
                 WHERE id=%s AND read_fragment IS NULL''', (Jsonb(summary),packed,c['result_id']))
             written+=len(packed)
@@ -756,6 +838,8 @@ def compose(db, settings, *, scope, policy, epoch, started, batched=False):
         capture_failed = c['facts'].get('price_failure')
         if capture_failed:
             failed_captures.append(c['result_id'])
+        elif arbs := summary.get('arb_candidates'):
+            candidates.append(arbs)
         pending+=bool(capture_failed or summary['finance']!='ready')
         failed+=bool(capture_failed or c['facts'].get('finance')=='failed')
         for key in totals:totals[key]+=summary['counts'][key]
@@ -768,7 +852,7 @@ def compose(db, settings, *, scope, policy, epoch, started, batched=False):
         epoch=epoch,component_count=len(members),expected_components=len(scope),pending_components=pending,
         oldest_capture=min(captured,key=stamp) if captured else None,provider_requests=0)
     result['counts']=totals
-    _,states=authority(db,include_diagnostics=False)
+    owner,states=authority(db,include_diagnostics=False)
     inputs=dict(id=result['snapshot_id'],captured_at=result['captured_at'],quotes=[],references=[],
         games=[],sources=states,issues=[],capture_seconds=0)
     facts=dict(state='partial' if pending else 'ready',finance=result['publication']['finance'],
@@ -777,7 +861,21 @@ def compose(db, settings, *, scope, policy, epoch, started, batched=False):
         _delivery_receipts=delivery,_live_sportsbook_deadlines=live_sportsbook,
         representation=FRAGMENTS,fragment_bytes_written=written,new_fragments=len(missing),
         total_seconds=round(monotonic()-started,3))
-    return seal(db,inputs,result,facts,insert_inputs=True,members=members,batched=batched)
+    with db.transaction():
+        generation = seal(db,inputs,result,facts,insert_inputs=True,members=members,batched=batched)
+        try:
+            with db.transaction():
+                observe_arbs(db, result, candidates, owner, states, generation=generation,
+                             policy=policy, epoch=epoch, at=stamp(utc()))
+        except Exception as exc:
+            # History is auxiliary. Keep the live comparison and surface a
+            # safe failure in the worker's ordinary publication diagnostics.
+            from app.diagnostics import failure, failure_details
+            if errors is None:
+                failure(__name__, 'ordinary_arb_appearances', exc)
+            else:
+                errors.append(dict(reason='ordinary_arb_appearance_failed', failure=failure_details(exc)))
+    return generation
 
 
 def turn(db, *, turn_seconds=8, capture_cache=None):
@@ -1067,7 +1165,8 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
             # Repeated whole-board packing per game otherwise dominated acquisition.
             if changed:
                 gc.collect()
-                price_generation=compose(db,settings,scope=scope,policy=policy,epoch=epoch,started=started,batched=True)
+                price_generation=compose(db,settings,scope=scope,policy=policy,epoch=epoch,started=started,
+                                         batched=True,errors=errors)
                 price_published_at=status(db)['facts']['published_at']
         timings['price_seal_seconds']=round(monotonic()-price_seal_started,6)
         # Yield at the committed source-only boundary, never while holding the
@@ -1126,7 +1225,8 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
             finance_seal_started=monotonic()
             if computed or finance_changed:
                 gc.collect()
-                generation=compose(db,settings,scope=scope,policy=policy,epoch=epoch,started=started,batched=True)
+                generation=compose(db,settings,scope=scope,policy=policy,epoch=epoch,started=started,
+                                   batched=True,errors=errors)
             else:generation=status(db)['generation']
         timings['finance_seal_seconds']=round(monotonic()-finance_seal_started,6)
         snapshots.prune(db)

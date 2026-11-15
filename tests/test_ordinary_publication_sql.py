@@ -15,6 +15,84 @@ from app.dashboard.snapshot_api import mount
 
 @skipUnless(SOCKET, 'Disposable PostgreSQL required')
 class OrdinarySQL(LatestBoardFixture):
+    async def test_background_publication_records_each_net_positive_arb_appearance(self):
+        from fractions import Fraction
+        from app.storage.current_rows import CurrentRowStore
+        from tests.broad_pipeline_fixtures import captured_partial
+        from tests.multisport_fixtures import current_book, source_case
+
+        case = dict(source_case('NBA', 'spread', 'arb-appearance', clock=self.at), period='full_game')
+
+        async def publish_price(db, ask):
+            self.at += timedelta(seconds=1)
+            case['clock'] = self.at
+            self.state.write(self.service)
+
+            def paired_book(case, venue, *, clock):
+                book = current_book(case, venue, clock=clock, price='0.60')
+                book['sequence'] = str(int(clock.timestamp()))
+                side = book['outcomes'][0 if venue == 'kalshi' else 1]
+                side['asks']['levels'][0]['price']['value'] = ask
+                return book
+
+            store = CurrentRowStore(db)
+            for venue in ('kalshi', 'polymarket_us'):
+                with patch('tests.broad_pipeline_fixtures.current_book', side_effect=paired_book):
+                    records, exclusions, book, _ = await captured_partial(case, venue)
+                self.assertEqual(exclusions, [])
+                store.upsert_records(records, now=self.at.isoformat())
+                store.replace_native_books([book])
+            turn = live.turn(db)
+            self.assertTrue(turn['published'], turn)
+            self.assertEqual(turn['errors'], [])
+            return self.result(db)
+
+        def appearances(db):
+            return db.execute('SELECT pair_id, appeared_at, disappeared_at, generation, facts '
+                              'FROM arb_appearance ORDER BY id').fetchall()
+
+        fixture_fee = dict(available=True, classification='exact_public', fee_cashflows={'at_fill_usd': '0'},
+                           evidence=dict(reviewed_at=self.at.isoformat(), standing_public_terms=True))
+
+        def waived_trade_fee(row, *, stake, price, quantity, receipts):
+            return dict(available=True, at_fill_usd='0', settlement_usd=dict.fromkeys(receipts, '0'))
+
+        with self.connect() as db:
+            db.execute('TRUNCATE arb_appearance')
+            before = await publish_price(db, '0.40')
+            self.assertTrue(any(Fraction(pair['before_fees']['value']) > 0 for pair in before['pairs']))
+            self.assertEqual(appearances(db), [])
+
+            # Use authored zero-fee terms while the production worker matches and prices both legs.
+            with patch('app.comparison.snapshot_fee_outcome.outcome', return_value=fixture_fee), \
+                    patch('app.comparison.snapshot_pair_fees._leg_fee', side_effect=waived_trade_fee):
+                result = await publish_price(db, '0.40')
+                positive, = [p for p in result['pairs'] if Fraction(p['default_funding_result']['score'] or '0') > 0]
+                current = self.project(db, result)
+                current_legs = {r['id']: (r['price_reasons'], r['trade_fee']) for r in current['rows'] if r['id'] in positive['legs']}
+                self.assertIn(positive, current['pairs'], current_legs)
+                first, = appearances(db)
+                self.assertEqual(first['pair_id'], positive['id'])
+                self.assertEqual(first['appeared_at'], self.at)
+                self.assertLessEqual(first['generation'], live.status(db)['generation'])
+                self.assertIsNone(first['disappeared_at'])
+                facts = first['facts']
+                self.assertEqual(facts['period'], 'full_game')
+                self.assertEqual(facts['return_percent'], positive['default_funding_result']['score'])
+                self.assertEqual({leg['venue'] for leg in facts['legs']}, {'kalshi', 'polymarket_us'})
+                self.assertEqual({leg['source_at'] for leg in facts['legs']}, {self.at.isoformat()})
+
+                await publish_price(db, '0.41')
+                self.assertEqual(appearances(db), [first])
+                await publish_price(db, '0.55')
+                self.assertEqual(appearances(db), [dict(first, disappeared_at=self.at)])
+                await publish_price(db, '0.40')
+                closed, reopened = appearances(db)
+                self.assertLess(closed['appeared_at'], closed['disappeared_at'])
+                self.assertEqual(reopened['pair_id'], positive['id'])
+                self.assertEqual(reopened['appeared_at'], self.at)
+                self.assertIsNone(reopened['disappeared_at'])
+
     async def test_capture_uses_fee_authority_for_newly_seen_venue(self):
         from app.fees import product_schedules
 

@@ -116,6 +116,20 @@ accounting intact. Back up PostgreSQL and the accounting files off the server.
 
 ## Observing a live slate
 
+The collector records each appearance of a currently qualified cross-venue
+pair with positive modeled after-fee return at the desk's default $100 funding.
+The record captures the first qualifying publication's two prices, selections,
+source clocks, and modeled minimum profit. A pair opens another entry if a later
+publication drops it and it subsequently qualifies again. Closed entries are
+retained for up to 30 days, with a limit of 10,000. From `/srv/predict`, read
+the latest entries with an administrator connection.
+
+```sh
+docker compose --env-file ./current-images.env exec -T db \
+  psql -h /run/predict-postgres -p 55432 -U prediction_arb -d prediction_arb -x \
+  -c 'SELECT appeared_at, disappeared_at, pair_id, generation, facts FROM arb_appearance ORDER BY appeared_at DESC, id DESC LIMIT 25'
+```
+
 Run the coverage sampler in `web` and save its JSON lines outside the container.
 For example, from `/srv/predict`:
 
