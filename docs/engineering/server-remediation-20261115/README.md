@@ -57,3 +57,12 @@ venues directly from the response to the rendered button. No current Live offers
 in that watch. The disposable Live paths separately exercised exact newly admitted revisions
 before the first publication, including source pause, source-clock expiry and an independent
 final state withdrawing OddsLink prices.
+
+On the first remediated deployment (`9e46881`), the NCAAB Novig spread at −113
+matched the stored SportsGameOdds quote. The original was 2:43:14.059 a.m.;
+receipt was 2:43:42.629 and admission was 2:43:44.702. The 390 px Browse read
+rendered it at 2:43:50.910 on head 73,312. The receipt's first ordinary seal was
+2:44:39.797, about 49 seconds after the browser read. The same probe traced a
+ProphetX NFL spread at −111 from the OddsLink board through its own source and
+receipt clocks, without attributing either price to the shared head's seal.
+The production Live tab was empty at the time of the probe.

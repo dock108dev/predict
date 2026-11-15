@@ -182,7 +182,8 @@ class RawHTTP(IsolatedAsyncioTestCase):
         from app.dashboard.local_security import PublicRequestError
         reads=RawReads(self.connect)
         opened=[]
-        def fail_sql(db,*args):
+        def fail_sql(db, *args, product):
+            self.assertTrue(product)
             opened.append(db)
             db.execute('SELECT 1/0')
         try:

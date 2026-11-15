@@ -26,7 +26,7 @@ from tests.test_novig_v3_stream import delta, life, snapshot
 
 @skipUnless(SOCKET, 'Explicit disposable PostgreSQL lane required')
 class NovigCurrentAdmission(LatestBoardFixture):
-    async def test_signed_source_ingress_ordinary_math_and_archive_survive_disconnect(self):
+    async def test_signed_source_ingress_fee_and_archive_survive_disconnect_without_legacy_ev(self):
         self.at = datetime.now(timezone.utc)
         self.state.write(self.service)
         start = int((self.at - timedelta(minutes=2)).timestamp() * 1000)
@@ -98,7 +98,7 @@ class NovigCurrentAdmission(LatestBoardFixture):
             states['novig'] = held
             states['pinnacle'] = dict(state='available')
             assert len(inputs['quotes']) == 1, inputs['issues']
-            result = publication.bind(snapshots.calculate(inputs, settings), inputs, 'ready')
+            result = publication.bind(snapshots.calculate(inputs, settings, product=True), inputs, 'ready')
             def project(authority):
                 return publication.project(result, inputs['dependencies'], authority, states,
                                            at=self.at, policy=inputs['policy_identity'], epoch=inputs['epoch'])
@@ -120,10 +120,12 @@ class NovigCurrentAdmission(LatestBoardFixture):
             # Deliberately select the existing NCAAB overtime scenario in the
             # disposable fixture. The producer never infers it from a price.
             settings, _ = snapshots.assumptions(dict(scoring='ncaab_full_game_overtime', scenario='decisive_only'))
-            result = publication.bind(snapshots.calculate(inputs, settings), inputs, 'ready')
+            archived_inputs = snapshots.calculate(inputs, settings)
+            assert archived_inputs['benchmark_diagnostics']['bound_observations'] == 1
+            result = publication.bind(snapshots.calculate(inputs, settings, product=True), inputs, 'ready')
             matched = project(owner)['rows'][0]
-            assert matched['exact_pinnacle_reference_current'], (result['benchmark_diagnostics'], matched.get('snapshot_identity'), matched['current_reasons'])
-            assert matched['conditional_return_percent'] == '1700/103'
+            assert matched['price_current'] and matched['trade_fee']['trade_fee_usd'] == '0.01500'
+            assert matched['conditional_return_percent'] is None and not matched['current_authority']['references']
             observed['id'] = matched['id']
             observed['capture'] = (inputs, settings, owner, states)
 
@@ -144,5 +146,6 @@ class NovigCurrentAdmission(LatestBoardFixture):
                 detail = load(dict(dataset='frozen', result_id=archive['id'], id=observed['id']), details=True)
             assert detail['row']['price_current']
             assert detail['inspection']['trade_fee']['trade_fee_usd'] == '0.01500'
-            assert detail['row']['conditional_return_percent'] == '1700/103'
+            assert detail['row']['conditional_return_percent'] is None
+            assert 'pinnacle' not in json.dumps(detail).casefold()
             assert detail['provider_requests'] == 0

@@ -73,17 +73,35 @@ class BroadNativeMatrixSQL(NativeMatrixFixture):
         provider=RuntimeClient(connector=self.connect)
         provider.acquire=MagicMock(side_effect=AssertionError('read dispatched provider'))
         app=web.Application();mount(app,provider);mount_snapshots(app)
+        full_game = all(period == 'full_game' for _, _, _, period in expected_cells)
+
+        def offers(group):
+            if full_game:
+                return group['offers']
+            return [dict(quote, current=quote['price_current'],
+                         source_clock_at=quote['times'].get('source_at'),
+                         received_at=quote['times'].get('received_at'),
+                         confirmed_at=(quote.get('book_confirmation') or {}).get('confirmed_at'))
+                    for quote in group['quotes']]
+
         with patch('app.dashboard.comparison_board_api.connect',side_effect=self.connect),\
                 patch('app.dashboard.snapshot_api.connect',side_effect=self.connect):
             async with TestClient(TestServer(app)) as client:
                 query=dict(view='odds',layout='desk',browse_odds='1',last_known='1',limit='50')
+                if not full_game:
+                    desk = await client.get('/api/comparison-current', params=query)
+                    self.assertEqual(desk.status, 200, await desk.text())
+                    self.assertEqual((await desk.json())['rows'], [])
+                    # Partial-period representations still publish and retain
+                    # their exact clocks on the ordinary Odds board.
+                    query = dict(view='odds', group='outcome', limit='50')
                 result=await client.get('/api/comparison-current',params=query)
                 self.assertEqual(result.status,200,await result.text());page=await result.json()
                 self.assertEqual(page['provider_requests'],0)
-                prices=[q for g in page['rows'] for q in g['offers']]
+                prices=[q for g in page['rows'] for q in offers(g)]
                 self.assertEqual(len(prices),expected_prices)
                 self.assertEqual({(g['league'],q['venue'],'moneyline' if q['market']['market']=='winner' else q['market']['market'],q['market']['period'])
-                    for g in page['rows'] for q in g['offers']},expected_cells)
+                    for g in page['rows'] for q in offers(g)},expected_cells)
                 # Both ordinary filters and metrics read the same retained facts.
                 for scope in ({},{'league':'NBA'},{'period':'first_half'}):
                     result=await client.get('/api/coverage',params=scope)
@@ -98,7 +116,7 @@ class BroadNativeMatrixSQL(NativeMatrixFixture):
                 self.assertEqual(original['row']['times']['received_at'],selected['received_at'])
                 current_directions=0
                 for group in page['rows']:
-                    current=[q for q in group['offers'] if q['current']]
+                    current=[q for q in offers(group) if q['current']]
                     if len({q['venue'] for q in current})>1:
                         current_directions+=len(current)
                 from app.storage.coverage_latest import read
@@ -109,7 +127,7 @@ class BroadNativeMatrixSQL(NativeMatrixFixture):
                 self.at+=timedelta(seconds=31);self.state.write(self.service)
                 result=await client.get('/api/comparison-current',params=query)
                 self.assertEqual(result.status,200,await result.text());aged=await result.json()
-                old=[q for group in aged['rows'] for q in group['offers']]
+                old=[q for group in aged['rows'] for q in offers(group)]
                 def clocks(quotes):
                     return {q['id']:(q['source_clock_at'],q['received_at'],q['confirmed_at']) for q in quotes}
                 self.assertEqual(clocks(old),clocks(prices))

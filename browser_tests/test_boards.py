@@ -7,6 +7,7 @@ from urllib.parse import parse_qsl, urlencode, urlparse
 import pytest
 from playwright.sync_api import expect, sync_playwright
 
+from app.dashboard.product_finance import visible_assumptions, visible_original
 from app.dashboard.snapshot_api import page as result_page
 from app.dashboard.snapshot_display import presented
 from app.storage.comparison_snapshot import calculate
@@ -76,9 +77,13 @@ def test_saved_board_journey(width, back):
                         snapshot_id=result["snapshot_id"],
                         row=presented(row, {r["id"]: r for r in result["rows"]}),
                         captured_at=result["captured_at"],
-                        assumptions=result["assumptions"],
-                        originals=[q for q in captured["quotes"] if q["id"] in ids],
-                        references=captured["references"],
+                        assumptions=visible_assumptions(result["assumptions"]),
+                        originals=[
+                            visible_original(q)
+                            for q in captured["quotes"]
+                            if q["id"] in ids
+                        ],
+                        references=[],
                     )
                 )
             elif url.path in ("/api/comparison-snapshot", "/api/comparison-current"):
@@ -103,7 +108,9 @@ def test_saved_board_journey(width, back):
                 + urlencode({"back": back, "result_id": result["id"]})
             )
             expect(page.locator(".compare-group")).to_have_count(2)
-            expect(page.locator("#content")).to_contain_text("Pinnacle")
+            expect(page.locator("#content")).to_contain_text("Reference unavailable")
+            expect(page.locator("#content")).not_to_contain_text("Pinnacle")
+            expect(page.locator("#content")).to_contain_text("Polymarket US")
             page.get_by_role("link", name="Opportunities", exact=True).click()
             expect(page.locator(".compare-group")).to_have_count(2)
             page.get_by_role("button", name="Decimal", exact=True).click()
@@ -111,10 +118,12 @@ def test_saved_board_journey(width, back):
             why.focus()
             page.keyboard.press("Enter")
             expect(page.locator(".math-content")).to_contain_text("per $100")
+            expect(page.locator(".math-content")).not_to_contain_text("Pinnacle")
             page.get_by_role("link", name="Inspect exact inputs in Admin").click()
             expect(page.locator(".inspection")).to_contain_text(
                 "Exact calculation records"
             )
+            expect(page.locator(".inspection")).not_to_contain_text("Pinnacle")
             expect(
                 page.get_by_role("button", name="Decimal", exact=True)
             ).to_have_attribute("aria-pressed", "true")

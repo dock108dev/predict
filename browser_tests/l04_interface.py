@@ -9,7 +9,9 @@ import json
 from pathlib import Path
 from urllib.parse import urlparse, parse_qs
 from playwright.async_api import async_playwright
+from app.dashboard.product_finance import visible_assumptions
 from app.dashboard.snapshot_api import page
+from app.comparison.sgo_reference import BEST_VERSION
 from app.comparison.snapshot_math import assumptions
 from tests.test_l03_ranking import source
 
@@ -36,6 +38,7 @@ CONTRAST = """() => {
 
 async def main(output=OUTPUT):
     output.mkdir(parents=True, exist_ok=True)
+    defaults = visible_assumptions(assumptions()[0])
     rows = [
         source(0, v, value, estimate="2")
         for v, value in [
@@ -61,27 +64,31 @@ async def main(output=OUTPUT):
         r["reference"] = {
             "odds": ["1.91", "1.95"],
             "selected": 0,
-            "bookmaker": "novig",
+            "bookmaker": "fanduel",
         }
-        r["reference_calculation"] = {
-            "available": True,
-            "venue": "novig",
-            "selected": 0,
-            "probability": "1/2",
-            "overround": "1/20",
-            "fair_decimal_odds": "2",
-            "pair": [
-                {
-                    "id": f"ref-{i}",
-                    "selection": {"label": label, "predicate": "win"},
-                    "original": {"value": value, "units": "decimal_odds"},
-                }
-                for i, label, value in [
-                    (0, "Baltimore Ravens", "1.91"),
-                    (1, "Jacksonville Jaguars", "1.95"),
-                ]
-            ],
-        }
+        # Keep the source fixture's eligibility proof when adding display inputs.
+        r.setdefault("reference_calculation", {}).update(
+            {
+                "available": True,
+                "venue": "fanduel",
+                "method": BEST_VERSION,
+                "selected": 0,
+                "probability": "1/2",
+                "overround": "1/20",
+                "fair_decimal_odds": "2",
+                "pair": [
+                    {
+                        "id": f"ref-{i}",
+                        "selection": {"label": label, "predicate": "win"},
+                        "original": {"value": value, "units": "decimal_odds"},
+                    }
+                    for i, label, value in [
+                        (0, "Baltimore Ravens", "1.91"),
+                        (1, "Jacksonville Jaguars", "1.95"),
+                    ]
+                ],
+            }
+        )
         r["conditional_trade_benchmark"].update(
             quantity="1",
             quantity_unit="USD normal claim",
@@ -121,7 +128,7 @@ async def main(output=OUTPUT):
             pairs=[],
             references=[],
             games=[],
-            assumptions=assumptions({"benchmark_venue": "novig"})[0],
+            assumptions=defaults,
             captured_at="2026-11-04T23:00:00Z",
             publication=dict(state="partial", current_prices=4, retained_prices=0),
         )
@@ -152,9 +159,7 @@ async def main(output=OUTPUT):
                 return await req.fulfill(
                     json=dict(
                         row=evidence[q["id"]],
-                        assumptions=dict(
-                            assumptions({"benchmark_venue": "novig"})[0], amount="123"
-                        ),
+                        assumptions=dict(defaults, amount="123"),
                         originals=[],
                         references=[],
                         result_id="member",
@@ -174,7 +179,7 @@ async def main(output=OUTPUT):
                         row=row,
                         state="ready",
                         result_id="root",
-                        assumptions=assumptions({"benchmark_venue": "novig"})[0],
+                        assumptions=defaults,
                     )
                 )
             if u.path == "/api/comparison-current":
@@ -262,7 +267,7 @@ async def main(output=OUTPUT):
         await tab.wait_for_selector("#selection-update")
         notice = await tab.locator("#selection-update").inner_text()
         assert (
-            "Novig reference" in notice
+            "FanDuel reference" in notice
             and "1.91" in notice
             and "1.97" in notice
             and "Reviewed fees" in notice

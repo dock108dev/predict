@@ -222,6 +222,16 @@ def run(browser, width, output):
     tab.keyboard.press("Escape")
     expect(tab.locator("#trade")).to_be_hidden()
     expect(commission).to_be_focused()
+    commission.press("Enter")
+    expect(tab.locator("#trade")).to_be_visible()
+    tab.evaluate("""() => {
+      // A real focus change can land before the queued close listener runs.
+      document.getElementById('trade').addEventListener('close', () => {
+        document.querySelector('[data-offer-id="prophetx-offer"]').focus();
+      }, {capture:true, once:true});
+    }""")
+    tab.keyboard.press("Escape")
+    expect(card).to_be_focused()
     card.press("Enter")
     drawer = tab.locator("#trade")
     expect(drawer).to_contain_text("Modeled size")

@@ -106,6 +106,14 @@ def retained_novig_fee(row, captured_at):
 def visible_row(row):
     """Remove legacy financial derivatives while preserving exact venue terms."""
     if not excluded_reference(row):
+        authority = row.get('current_authority') or {}
+        if 'exact_pinnacle_reference' not in authority and 'exact_pinnacle_reference_current' not in row:
+            return row
+        row = dict(row)
+        row.pop('exact_pinnacle_reference_current', None)
+        if 'exact_pinnacle_reference' in authority:
+            row['current_authority'] = {key: value for key, value in authority.items()
+                                        if key != 'exact_pinnacle_reference'}
         return row
     from app.storage.ordinary_projection import without_finance
 

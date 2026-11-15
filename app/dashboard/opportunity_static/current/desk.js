@@ -528,7 +528,7 @@ function dismissInspection() {
       window.history.back();
     }
   } else if (state.selected?.parent) returnToPair();
-  else dialog.close();
+  else closeInspection();
 }
 
 dialog.querySelector('form[method="dialog"]').addEventListener('submit', event => {
@@ -554,10 +554,7 @@ window.addEventListener('popstate', event => {
     return;
   }
   inspection.closing = false;
-  if (marker?.id !== inspection.id) {
-    inspection.returnFocus = true;
-    dialog.close();
-  }
+  if (marker?.id !== inspection.id) closeInspection();
   else if (marker.depth === 1 && state.selected?.parent) returnToPair();
   else if (marker.depth === 2 && !state.selected?.parent) clearInspectionEntry();
 });
@@ -1317,8 +1314,13 @@ $('latest').onclick = async () => {
   }
 };
 
-dialog.addEventListener('close', () => {
-  if (dialog.open) return; // A keyboard user may have reopened before the queued event.
+function closeInspection() {
+  dialog.close();
+  finishInspection(true);
+}
+
+function finishInspection(restoreOpener = false) {
+  if (dialog.open || !state.selected) return;
   const old = state.selected;
   const position = inspection;
   inspection = null;
@@ -1334,7 +1336,7 @@ dialog.addEventListener('close', () => {
   const previousOpener = old?.pairContext?.opener || old?.opener;
   const opener = previousOpener?.isConnected ? previousOpener : current;
   const focused = document.activeElement;
-  if (opener && (position?.returnFocus || focused === document.body || focused === document.documentElement || dialog.contains(focused))) {
+  if (opener && (restoreOpener || focused === document.body || focused === document.documentElement || dialog.contains(focused))) {
     opener.focus({preventScroll:true});
   }
   else restoreFocus(fallback);
@@ -1343,7 +1345,10 @@ dialog.addEventListener('close', () => {
     window.scrollTo(0, position.scrollY);
     window.history.scrollRestoration = position.scrollRestoration;
   }
-});
+}
+// A native close event follows later. Clean up external closes without moving
+// focus after the user has already reached another control.
+dialog.addEventListener('close', () => finishInspection());
 async function checkSelection() {
   const selected = state.selected;
   if (replay || !dialog.open || !selected || selected.historical || selected.adoptionNotice || $('latest').disabled) return;
