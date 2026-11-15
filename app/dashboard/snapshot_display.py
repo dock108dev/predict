@@ -4,7 +4,40 @@ from decimal import Decimal, localcontext
 from fractions import Fraction
 from functools import lru_cache
 from app.comparison.display_identity import outcome_key as outcome_key
+from app.storage.store import stamp
 from .u0_display import quote_display
+
+
+def scoped_result(result, rows):
+    """Keep the selected rows and only their complete pairs and games."""
+    if len(rows) == len(result['rows']):
+        return result
+    ids = {row['id'] for row in rows}
+    games = {row['game_key'] for row in rows}
+    return dict(result, rows=rows, games=[game for game in result.get('games', []) if game['game_key'] in games],
+                pairs=[pair for pair in result['pairs'] if all(leg in ids for leg in pair['legs'])])
+
+
+def pregame_at(row, at):
+    if not row.get('start_at') or not at or stamp(at) >= stamp(row['start_at']):
+        return False
+    price = (row.get('current_authority') or {}).get('price') or {}
+    return price.get('lifecycle', {}).get('state') != 'live' and row.get('game_state') != 'live'
+
+
+def saved_pregame(row, captured_at):
+    """An individual capture supplies its own clock when one was retained."""
+    return pregame_at(row, row.get('captured_at') or captured_at)
+
+
+def retained_pregame(result):
+    from app.storage.ordinary_projection import counts
+
+    captured_at = result.get('captured_at')
+    selected = scoped_result(result, [row for row in result['rows'] if saved_pregame(row, captured_at)])
+    if selected is not result:
+        counts(selected)
+    return selected
 
 
 def decimal(value):
@@ -67,7 +100,6 @@ def desk_game_aliases(rows, games, event_facts):
     from app.comparison.occurrence_matching import OccurrenceResolver
     from app.normalization.college_registry import expanded
     from app.storage.schedule_metadata import witness
-    from app.storage.store import stamp
 
     sources = defaultdict(set)
     events = dict(event_facts or {})

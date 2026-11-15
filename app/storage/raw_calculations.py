@@ -2,6 +2,7 @@
 
 from . import ordinary_evidence as evidence
 from .comparison_snapshot import SnapshotOperationError
+from .current_rows import event_id
 from .store import encoded
 
 MAX_RESPONSE_BYTES = 1024 * 1024
@@ -40,9 +41,8 @@ def read(db, book, observation, offset=0, limit=20):
     """Associate by native identity and use only the published member's inputs."""
     from app.dashboard.product_finance import excluded_reference, visible_assumptions, visible_original, visible_row
 
-    source = dict(provider=book['provider'], native_event_id=book['event_id'])
     index = evidence.members(db)
-    selected = index.get(evidence.event_id(source), ())
+    selected = index.get(event_id(book['provider'], book['event_id']), ())
     results = []
     count = size = 0
     for entry in selected:

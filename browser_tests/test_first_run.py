@@ -20,14 +20,11 @@ def first_use(tab, base, archive_directory):
 
     tab.goto(base + "/")
     expect(tab.get_by_role("heading", name="Opportunities")).to_be_visible()
-    expect(
-        tab.get_by_role("heading", name="The collector is not gathering prices")
-    ).to_be_visible()
+    expect(tab.get_by_role("heading", name="Price collection is off")).to_be_visible()
     expect(tab.get_by_role("link", name="Arbitrage")).to_be_visible()
     expect(tab.get_by_role("button", name="Refresh list")).to_be_visible()
     expect(tab.get_by_role("link", name="Find my game ↗")).to_be_visible()
-    tab.get_by_role("link", name="Admin", exact=True).click()
-    tab.get_by_role("link", name="Sources", exact=True).click()
+    tab.get_by_role("link", name="Source status", exact=True).click()
     setup = tab.locator("#source-setup")
     expect(setup.locator("summary")).to_be_visible()
     setup.locator("summary").focus()
@@ -43,9 +40,7 @@ def first_use(tab, base, archive_directory):
     expect(tab.get_by_label("Calculation basis")).to_have_value("conservative")
     expect(tab.get_by_text("Synthetic practice", exact=False)).to_have_count(0)
     tab.get_by_role("link", name="Saved odds").click()
-    expect(
-        tab.get_by_text("Saved odds · prices at capture")
-    ).to_be_visible()
+    expect(tab.get_by_text("Saved odds · prices at capture")).to_be_visible()
     expect(tab.get_by_label("Calculation basis")).to_have_value("before")
     expect(tab.get_by_label("Odds format")).to_have_value("decimal")
     expect(tab.locator("#notice")).to_contain_text("UTC")
@@ -65,7 +60,10 @@ def first_use(tab, base, archive_directory):
     )
     expect(trade).to_contain_text("Authored scenario time")
     expect(trade).not_to_contain_text("undefined")
-    expect(trade).to_contain_text("returns $22.00 total, including $12.00 profit")
+    trade.get_by_text("Calculations and settlement", exact=True).click()
+    expect(
+        trade.get_by_text("returns $22.00 total, including $12.00 profit", exact=False)
+    ).to_be_visible()
     expect(trade.get_by_role("button", name="Use latest prices")).to_be_hidden()
     tab.keyboard.press("Escape")
     expect(offer).to_be_focused()
@@ -103,8 +101,6 @@ def first_use(tab, base, archive_directory):
     pair = tab.get_by_role("dialog", name="Pair payoff")
     expect(pair).to_contain_text("Harbor Foxes")
     expect(pair).to_contain_text("Summit Owls")
-    expect(pair).to_contain_text("Worst modeled profit/loss")
-    expect(pair).to_contain_text("Lowest net payout")
     expect(pair).to_contain_text("Both leg fees are needed to calculate net settlement")
     expect(pair).not_to_contain_text("-$4.097")
     pair.get_by_role("button", name="Inspect offer and fees").first.click()
@@ -227,7 +223,9 @@ def test_first_use_without_credentials(width, tmp_path, monkeypatch):
                 route.fulfill(json={"data_runtime": {"healthy": False}})
             else:
                 unexpected.append(("public Admin read", route.request.url))
-                route.fulfill(status=401, headers={"WWW-Authenticate": 'Basic realm="Admin"'})
+                route.fulfill(
+                    status=401, headers={"WWW-Authenticate": 'Basic realm="Admin"'}
+                )
         elif url.path in ("/", "/ev", "/replay", "/admin"):
             route.fulfill(
                 path=ASSETS / ("admin.html" if url.path == "/admin" else "desk.html")

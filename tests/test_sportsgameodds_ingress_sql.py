@@ -2,6 +2,7 @@
 import asyncio
 import json
 from copy import deepcopy
+from pathlib import Path
 from threading import Event
 from types import SimpleNamespace
 from unittest import skipUnless
@@ -25,6 +26,8 @@ from tests.test_ev09_n01 import AT
 @skipUnless(SOCKET, 'Disposable PostgreSQL required')
 class SportsGameOddsPregameDeskSQL(LatestBoardFixture):
     async def test_admitted_pregame_estimates_rank_before_publication_and_leave_at_kickoff(self):
+        from datetime import timedelta
+
         from aiohttp import web
         from aiohttp.test_utils import TestClient, TestServer
         from app.dashboard.snapshot_api import mount
@@ -32,6 +35,7 @@ class SportsGameOddsPregameDeskSQL(LatestBoardFixture):
         from tests.test_sportsgameodds_adapter import AT as receipt_at
 
         self.at = stamp(receipt_at)
+        prior_repair = (Path(__file__).resolve().parents[1] / 'app/storage/migrations/095_sgo_quote_state.sql').read_text()
         raw = response()
         event, = raw['data']
         event['eventID'] = 'ranked-pregame-e2e'
@@ -46,20 +50,45 @@ class SportsGameOddsPregameDeskSQL(LatestBoardFixture):
         event['odds'][away['oddID']] = away
         self.service.config.update(aggregate_provider='sportsgameodds', sports=['NBA'], families=['spread'])
         self.service.states['sportsgameodds'] = {'state': 'available'}
+        # The old venue transports are separate from the aggregate fallback.
+        self.service.states.update(novig={'state': 'stopped'}, prophetx={'state': 'stopped'})
         self.state.write(self.service)
-        parsed = parse(raw)
-        records, _ = current_rows(parsed, parsed.receipt_sha256)
-        references = prepare_page(parsed)
         sink = DatabaseIngressSink(SimpleNamespace(provider=self.service), self.service.config)
+
+        def admit():
+            received = self.at.isoformat().replace('+00:00', 'Z')
+            parsed = parse_page(json.dumps(raw).encode(), received)
+            records, _ = current_rows(parsed, parsed.receipt_sha256)
+            references = prepare_page(parsed)
+            with patch('app.collection.current_database.connect', side_effect=self.connect), \
+                    patch('app.collection.current_database.utc', return_value=received):
+                sink.prepare(dict(type='current_aggregate_records', source='sportsgameodds', sport='NBA',
+                    records=records, sgo_reference_rows=references, sgo_event_frames=prepare_frames(parsed, references),
+                    receipt_sha256=parsed.receipt_sha256, event_scopes={event['eventID']: 'NBA'},
+                    complete_venues=[], received_at=received), self.service.states, Event())
+
+        def offers(db):
+            return db.execute('''SELECT c.venue,o.facts->>'state' state,o.source_at,o.received_at,
+                o.revision,o.price_dependency,o.sgo_quote_id,o.sgo_quote_revision,c.native_outcome_id
+                FROM current_offer_storage o JOIN current_contract_storage c ON c.id=o.contract_id
+                WHERE o.sgo_quote_id IS NOT NULL ORDER BY c.venue,c.native_outcome_id''').fetchall()
+
         with self.connect() as db:
             db.execute('TRUNCATE current_event,comparison_publication CASCADE')
             db.execute("INSERT INTO comparison_publication(kind,id,generation,facts) VALUES('live','',0,'{}')")
-        with patch('app.collection.current_database.connect', side_effect=self.connect), \
-                patch('app.collection.current_database.utc', return_value=receipt_at):
-            sink.prepare(dict(type='current_aggregate_records', source='sportsgameodds', sport='NBA',
-                records=records, sgo_reference_rows=references, sgo_event_frames=prepare_frames(parsed, references),
-                receipt_sha256=parsed.receipt_sha256, event_scopes={event['eventID']: 'NBA'},
-                complete_venues=[], received_at=receipt_at), self.service.states, Event())
+        admit()
+        with self.connect() as db, db.transaction():
+            original = offers(db)
+            self.assertEqual([(row['venue'], row['state']) for row in original],
+                             [('novig', 'available'), ('prophetx', 'available')])
+            db.execute("UPDATE current_offer_storage SET facts=jsonb_set(facts,'{state}','\"stopped\"'::jsonb) "
+                       "WHERE sgo_quote_id IS NOT NULL")
+            db.execute(prior_repair)
+            restored = offers(db)
+            self.assertEqual([dict(row, revision=None) for row in restored],
+                             [dict(row, revision=None) for row in original])
+            Store(db).migrate()
+            self.assertEqual(restored, offers(db))
 
         app = web.Application()
         mount(app)
@@ -83,6 +112,46 @@ class SportsGameOddsPregameDeskSQL(LatestBoardFixture):
                 reviewed = await (await client.get('/api/comparison-current',
                     params=dict(query, basis='reviewed'))).json()
                 self.assertEqual(reviewed['rows'], [])
+
+                self.at += timedelta(seconds=1)
+                novig = home['byBookmaker']['novig']
+                novig.update(available=False)
+                del novig['odds']
+                # Exact provider closure at the same source clock, with no price.
+                admit()
+                with self.connect() as db, db.transaction():
+                    novig_offer, _ = offers(db)
+                    self.assertEqual(novig_offer['state'], 'unavailable')
+                    self.assertEqual(novig_offer['received_at'], receipt_at)
+                    db.execute("UPDATE current_offer_storage SET facts=jsonb_set(facts,'{state}','\"available\"'::jsonb) "
+                               "WHERE sgo_quote_id=%s", (novig_offer['sgo_quote_id'],))
+                    db.execute(prior_repair)
+                    self.assertEqual(offers(db)[0]['state'], 'unavailable')
+                    db.execute("UPDATE current_offer_storage SET facts=jsonb_set(facts,'{state}','\"stopped\"'::jsonb) "
+                               "WHERE sgo_quote_id=%s", (novig_offer['sgo_quote_id'],))
+                    db.execute(prior_repair)
+                    self.assertEqual(offers(db)[0]['state'], 'stopped')
+                closed_group, = (await (await client.get('/api/comparison-current', params=query)).json())['rows']
+                self.assertEqual([row['venue'] for row in closed_group['offers'] if row['current']], ['prophetx'])
+
+                self.at += timedelta(seconds=1)
+                older = (stamp(novig['lastUpdatedAt']) - timedelta(seconds=1)).isoformat()
+                novig.update(available=True, odds='+120', lastUpdatedAt=older)
+                admit()
+                with self.connect() as db:
+                    self.assertEqual(offers(db)[0]['state'], 'stopped')
+
+                self.at += timedelta(seconds=1)
+                novig.update(available=True, odds='+120', lastUpdatedAt=self.at.isoformat())
+                admit()
+                fresh, = (await (await client.get('/api/comparison-current', params=query)).json())['rows']
+                self.assertEqual({row['venue'] for row in fresh['offers'] if row['current']}, {'novig', 'prophetx'})
+
+                self.at += timedelta(seconds=1)
+                self.state.write(self.service, paused_sources=['sportsgameodds'])
+                paused = await (await client.get('/api/comparison-current', params=query)).json()
+                self.assertEqual(paused['rows'], [])
+                self.state.write(self.service)
                 self.at = stamp(event['status']['startsAt'])
                 self.state.write(self.service)
                 after = await (await client.get('/api/comparison-current', params=dict(query, phase='live'))).json()
@@ -96,6 +165,8 @@ class SportsGameOddsPregameDeskSQL(LatestBoardFixture):
 class SportsGameOddsAtomicIngress(LatestBoardFixture):
     async def test_upgrade_links_exact_legacy_value_and_preserves_each_receipt(self):
         from uuid import uuid4
+
+        from psycopg.errors import CheckViolation
 
         name = 'prediction_arb_sgo_upgrade_' + uuid4().hex[:8]
         raw = response()
@@ -137,6 +208,17 @@ class SportsGameOddsAtomicIngress(LatestBoardFixture):
                     assert physical['price_value'] is None and 'value' not in physical['facts']['original']
                     assert (physical['sgo_quote_id'],physical['sgo_quote_revision']) == (reference['id'],reference['revision'])
                     assert before['facts']['provenance']['sha256'] != refs[0]['facts']['receipt_sha256']
+                    Store(db).migrate(through='095_sgo_quote_state.sql')
+                    original_reference = db.execute('SELECT * FROM current_sgo_reference').fetchone()
+                    original_offer = db.execute('SELECT * FROM current_offer').fetchone()
+                    Store(db).migrate()
+                    self.assertEqual(db.execute('SELECT * FROM current_sgo_reference').fetchone(), original_reference)
+                    self.assertEqual(db.execute('SELECT * FROM current_offer').fetchone(), original_offer)
+                    self.assertIsNone(db.execute('SELECT closure_received_order FROM sgo_quote_revision')
+                                      .fetchone()['closure_received_order'])
+                    with self.assertRaises(CheckViolation) as raised, db.transaction():
+                        db.execute('UPDATE sgo_quote_revision SET closure_received_order=received_order-1')
+                    self.assertEqual(raised.exception.diag.constraint_name, 'sgo_closure_receipt_order')
             finally:
                 control.execute(sql.SQL('DROP DATABASE {}').format(sql.Identifier(name)))
 
@@ -270,6 +352,13 @@ class SportsGameOddsAtomicIngress(LatestBoardFixture):
         sink = DatabaseIngressSink(SimpleNamespace(provider=self.service), DEFAULT)
         from app.collection.current_database import validate_sgo_page
         validate_sgo_page(row)
+        missing_reference = dict(row)
+        del missing_reference['sgo_reference_rows']
+        with patch('app.collection.current_database.connect', side_effect=AssertionError('invalid page opened SQL')):
+            with self.assertRaisesRegex(ValueError, 'sgo_page_identity_mismatch'):
+                sink.prepare(missing_reference, self.service.states, Event())
+            with self.assertRaisesRegex(ValueError, 'sgo_reference_scope_invalid'):
+                sink.prepare(dict(row, raw_payload=[]), self.service.states, Event())
         mismatch = deepcopy(row)
         mismatch['sgo_reference_rows'][0]['facts']['receipt_sha256'] = 'f'*64
         with self.assertRaises(ValueError): validate_sgo_page(mismatch)
@@ -408,6 +497,152 @@ class SportsGameOddsAtomicIngress(LatestBoardFixture):
             prune(db, at='2026-11-11T12:00:00Z')
             self.assertEqual(db.execute("SELECT count(*) n FROM sgo_quote_revision WHERE NOT is_current AND event_id=%s",
                                         (event_id,)).fetchone()['n'], 1)
+
+    async def test_sql_timeout_after_frame_retries_the_settled_page_without_another_request(self):
+        from datetime import timedelta
+        from pathlib import Path
+        from tempfile import TemporaryDirectory
+        from unittest.mock import AsyncMock
+
+        from app.collection.current_ingress import Ingress
+        from app.collection.sportsgameodds_collector import GuardedPageCollector
+        from app.collection.sportsgameodds_ledger import ObjectLedger
+        from app.collection.sportsgameodds_transport import PageResponse
+        from app.collection.sportsgameodds_worker import SportsGameOddsWorker
+        from app.storage.store import stamp
+        from tests.test_sportsgameodds_adapter import AT as received_at
+
+        self.at = stamp(received_at)
+        raw = response()
+        event, = raw['data']
+        event_id = event['eventID'] = 'retried-sgo-page'
+        odd, = event['odds'].values()
+        odd['byBookmaker']['novig'] = odd['byBookmaker'].pop('book')
+        body = json.dumps(raw).encode()
+        socket = SimpleNamespace(fetch=AsyncMock(return_value=PageResponse(200, body, received_at, None)))
+        service = self.service
+        service.config.update(aggregate_provider='sportsgameodds', sports=['NBA'])
+        service.database_mode = True
+        service.globally_stopped = False
+        service.paused_sources = set()
+        service.sink = DatabaseIngressSink(SimpleNamespace(provider=service), service.config)
+        service.sink.finish = lambda prepared, states: dict(current_rows_changed=prepared[2])
+        service.ingress = Ingress(service)
+        self.state.write(service)
+        frames_attempted = []
+
+        def timeout_after_first_frame(db, frames):
+            frames_attempted.append(frames)
+            if len(frames_attempted) == 2:
+                with self.connect() as observer:
+                    self.assertIsNone(observer.execute(
+                        'SELECT event_id FROM current_sgo_event_frame WHERE event_id=%s', (event_id,)).fetchone())
+                    self.assertIsNone(observer.execute(
+                        'SELECT id FROM sgo_quote_revision WHERE event_id=%s', (event_id,)).fetchone())
+            result = upsert_frames(db, frames)
+            if len(frames_attempted) == 1:
+                # Force a real PostgreSQL statement timeout after both inputs
+                # have been staged in the production admission transaction.
+                db.execute("SET LOCAL statement_timeout='1ms'")
+                db.execute('SELECT pg_sleep(0.02)')
+            return result
+
+        with TemporaryDirectory(prefix='predict-sgo-ledger-') as folder:
+            ledger = ObjectLedger(Path(folder) / 'ledger.sqlite')
+            reset = self.at + timedelta(days=1)
+            ledger.create_window('fixture', limit=100, initial_used=4, reserve=10,
+                                 reset_at=reset, requests_per_minute=10)
+            usage = AsyncMock(return_value=dict(used=4, limit=100, reset_at=reset,
+                                               requests_per_minute=10, at=self.at))
+            worker = SportsGameOddsWorker(service, transport=socket, now=lambda: self.at)
+            worker.state = AsyncMock()
+            collector = GuardedPageCollector(ledger, 'fixture', socket, controls=worker.controls, account_usage=usage)
+            worker.collector = SimpleNamespace(fetch=lambda params, key: collector.fetch(params, key, now=self.at))
+            params = worker.params(league='NBA', starts_after=received_at)
+            with patch('app.collection.current_database.connect', side_effect=self.connect), \
+                    patch('app.collection.current_database.utc', return_value=received_at), \
+                    patch('app.storage.sportsgameodds_reference.upsert_frames', side_effect=timeout_after_first_frame):
+                admitted = await worker._fetch(params)
+            socket.fetch.assert_awaited_once()
+            usage.assert_awaited_once()
+            account = ledger.status('fixture')
+            self.assertEqual((account['charged'], account['held'], account['interrupted']), (1, 0, 0))
+
+        self.assertEqual(len(frames_attempted), 2)
+        self.assertEqual(frames_attempted[0], frames_attempted[1])
+        self.assertEqual(service.sink.metrics['transaction_retries'], 1)
+        self.assertEqual(service.sink.metrics['rejected_observations'], 0)
+        self.assertEqual(worker.events[event_id]['received_at'], received_at)
+        with self.connect() as db:
+            offer = db.execute('''SELECT o.source_at,o.received_at,q.facts->>'receipt_sha256' AS digest
+                FROM current_offer_storage o JOIN sgo_quote_revision q ON (q.id,q.revision)=(o.sgo_quote_id,o.sgo_quote_revision)
+                WHERE q.event_id=%s''', (event_id,)).fetchone()
+            self.assertEqual(stamp(offer['source_at']), stamp(odd['byBookmaker']['novig']['lastUpdatedAt']))
+            self.assertEqual(stamp(offer['received_at']), stamp(received_at))
+            self.assertEqual(offer['digest'], admitted.receipt_sha256)
+
+    async def test_repeated_exact_closure_orders_offers_after_newer_partial_frame_and_replay(self):
+        from datetime import timedelta
+
+        from app.storage.store import exact_time, stamp
+        from tests.test_sportsgameodds_adapter import AT as receipt_at
+
+        self.at = stamp(receipt_at)
+        raw = response()
+        event, = raw['data']
+        event_id = event['eventID'] = 'repeated-sgo-closure'
+        odd, = event['odds'].values()
+        open_book = odd['byBookmaker'].pop('book')
+        closed_book = {key: value for key, value in open_book.items() if key != 'odds'}
+        closed_book['available'] = False
+        self.service.config.update(aggregate_provider='sportsgameodds', sports=['NBA'])
+        self.state.write(self.service)
+        sink = DatabaseIngressSink(SimpleNamespace(provider=self.service), self.service.config)
+
+        def receipt(seconds):
+            return (stamp(receipt_at) + timedelta(seconds=seconds)).isoformat().replace('+00:00', 'Z')
+
+        def admit(book, received):
+            odd['byBookmaker'] = {'novig': book} if book is not None else {}
+            page = parse_page(json.dumps(raw).encode(), received)
+            records, _ = current_rows(page, page.receipt_sha256)
+            refs = prepare_page(page)
+            with patch('app.collection.current_database.connect', side_effect=self.connect), \
+                    patch('app.collection.current_database.utc', return_value=self.at.isoformat()):
+                sink.prepare(dict(type='current_aggregate_records', source='sportsgameodds', sport='NBA',
+                    records=records, sgo_reference_rows=refs, sgo_event_frames=prepare_frames(page, refs),
+                    receipt_sha256=page.receipt_sha256, event_scopes={event_id:'NBA'},
+                    complete_venues=[], received_at=received), self.service.states, Event())
+            with self.connect() as db:
+                quote = db.execute('''SELECT o.facts->>'state' state,o.source_at,o.received_at,q.facts->>'price_american' price
+                    FROM current_offer_storage o JOIN sgo_quote_revision q ON (q.id,q.revision)=(o.sgo_quote_id,o.sgo_quote_revision)
+                    WHERE q.event_id=%s''', (event_id,)).fetchone()
+                reference = db.execute('''SELECT id,revision,source_order,received_order,facts,closure_received_order
+                    FROM sgo_quote_revision WHERE event_id=%s AND is_current''', (event_id,)).fetchone()
+            return quote, reference
+
+        self.assertEqual(admit(open_book, receipt(0))[0]['state'], 'available')
+        closed, original = admit(closed_book, receipt(1))
+        self.assertEqual(closed['state'], 'unavailable')
+        self.assertIsNone(original['closure_received_order'])
+        reopened, _ = admit(open_book, receipt(2))
+        self.assertEqual(reopened['state'], 'available')
+        closed, renewed = admit(closed_book, receipt(3))
+        self.assertEqual(closed, dict(reopened, state='unavailable'))
+        self.assertEqual(renewed, dict(original, closure_received_order=exact_time(receipt(3))))
+        # Frame membership may rotate even while the exact quote's last
+        # closure remains authoritative over an older, delayed replay.
+        admit(None, receipt(4))
+        with self.connect() as db:
+            frame = db.execute('SELECT facts FROM current_sgo_event_frame WHERE event_id=%s', (event_id,)).fetchone()['facts']
+            self.assertEqual(frame['members'], [])
+            self.assertEqual(frame['received_at'], receipt(4))
+        self.assertEqual(admit(open_book, receipt(2)), (closed, renewed))
+        self.assertEqual(admit(closed_book, receipt(1)), (closed, renewed))
+        latest, ref = admit(dict(open_book, lastUpdatedAt=receipt(5)), receipt(5))
+        self.assertEqual(latest['state'], 'available')
+        self.assertEqual(latest['source_at'], receipt(5))
+        self.assertIsNone(ref['closure_received_order'])
 
     async def test_switch_marks_old_aggregate_historical_but_preserves_native(self):
         from copy import deepcopy

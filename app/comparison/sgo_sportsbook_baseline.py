@@ -2,16 +2,12 @@
 from datetime import timedelta
 from fractions import Fraction
 
-from app.collection.current_benchmark import proportional_probability
 from app.storage.store import stamp
 from .cashflows import exact_wire
 from .game_phase import LIVE_SECONDS, PREGAME_SPORTSBOOK_SECONDS, original_price_phase
 from .public_sportsbook_estimate import outcome
-from .sgo_reference import BEST_BOOKS, OPPOSITE, american_probability
+from .sgo_reference import BEST_BOOKS, OPPOSITE, american_probability, best_payout_book, no_vig_probability
 from .sgo_reference_publication import captured_frame, exact_line
-
-BOOKS = BEST_BOOKS
-
 
 def select(record, rows, frame, *, at, index=None):
     """Compare a source-local SGO offer with books from the same event frame."""
@@ -55,7 +51,7 @@ def select(record, rows, frame, *, at, index=None):
     if received > captured or (received >= start) != live:
         return None
     lifetime = timedelta(seconds=LIVE_SECONDS if live else PREGAME_SPORTSBOOK_SECONDS)
-    book_rows = {book: [] for book in BOOKS}
+    book_rows = {book: [] for book in BEST_BOOKS}
     for entry in rows:
         fact = entry['facts']
         book = fact.get('venue')
@@ -80,7 +76,7 @@ def select(record, rows, frame, *, at, index=None):
         if (line == target_line and (clock >= start) == live
                 and clock <= original_receipt <= received and captured <= clock + lifetime):
             book_rows[book].append((fact, implied, clock))
-    candidates = []
+    candidates = {}
     for book, prices in book_rows.items():
         if len(prices) != 2:
             continue
@@ -91,18 +87,19 @@ def select(record, rows, frame, *, at, index=None):
         if (target[0].get('opposing_odd_id') != opposing or other[0].get('opposing_odd_id') != wanted
                 or OPPOSITE.get(target[0].get('side')) != other[0].get('side')):
             continue
-        candidates.append((target[1], book, target, other))
+        candidates[book] = target, other
     if not candidates:
         return None
-    _, book, target, other = min(candidates, key=lambda item: (item[0], BOOKS.index(item[1])))
-    fair = proportional_probability([1 / target[1], 1 / other[1]], 0)
+    book = best_payout_book({venue: selected[1] for venue, (selected, _) in candidates.items()})
+    target, other = candidates[book]
+    fair = no_vig_probability(target[1], other[1])
     cost = american_probability(quote['original']['value'])
     deadline = min(target[2], other[2]) + lifetime if live else min(
-        min(selected[2], opposing[2]) for _, _, selected, opposing in candidates) + lifetime
+        min(selected[2], opposing[2]) for selected, opposing in candidates.values()) + lifetime
     book_prices = {
         venue: [{key: leg[0][key] for key in ('price_american', 'source_at', 'side', 'line')}
                 for leg in (selected, opposing)]
-        for _, venue, selected, opposing in candidates
+        for venue, (selected, opposing) in candidates.items()
     }
     return dict(book=book, candidate_books=len(candidates), frame_id=observed['frame_id'],
                 frame_received_at=observed['frame_received_at'],

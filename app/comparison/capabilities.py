@@ -4,9 +4,9 @@ The registry is derived from configured sources, their retained native selectors
 and the shared representation registries. A supported class is conditional on
 each record's identity and source facts; it never qualifies an unseen offering.
 """
-from app.collection.current_aggregate_policy import POLICY as AGGREGATE_POLICY
+from app.collection.current_aggregate_policy import MARKET_FAMILIES, POLICY as AGGREGATE_POLICY
 from app.collection.current_policy import (
-    DEFAULT, SPORTS as CONFIGURED_SPORTS, aggregate_scope, native_scope, native_markets,
+    DEFAULT, SPORTS as CONFIGURED_SPORTS, aggregate_provider, aggregate_scope, native_scope, native_markets,
 )
 
 SPORTS = tuple(CONFIGURED_SPORTS)
@@ -42,9 +42,9 @@ def inventory(config=None, encountered=()):
     from app.collection.public_contracts import load
     from .sporting_scope import supported
     config = DEFAULT if config is None else config
-    aggregate_provider = config.get('aggregate_provider', 'the_odds_api')
-    aggregate_selectors = {'moneyline': ['h2h'], 'spread': ['spreads'], 'total': ['totals']}
-    if aggregate_provider == 'sportsgameodds':
+    active_provider = aggregate_provider(config)
+    aggregate_selectors = {family: [market] for market, family in MARKET_FAMILIES.items()}
+    if active_provider == 'sportsgameodds':
         from app.collection.sportsgameodds_adapter import MARKETS
         from app.collection.sportsgameodds_transport import ODD_IDS
         aggregate_selectors = {family: [] for family in MARKETS.values()}
@@ -102,7 +102,7 @@ def inventory(config=None, encountered=()):
             reasons.append('outside_configured_acquisition_scope')
         state = 'reference_only' if reference and normalization else 'implemented' if comparison else 'unsupported'
         result.append(dict(league=sport, source=source, source_role='reference' if reference else 'native' if native else 'aggregate_venue',
-            acquisition_provider=source if native else aggregate_provider, family=family, period=period,
+            acquisition_provider=source if native else active_provider, family=family, period=period,
             configured=configured, acquisition_enabled=configured and bool(config.get('enabled')) and (
                 native or bool(config.get('aggregate_enabled'))),
             discovery_supported=discovery, normalization_supported=normalization,

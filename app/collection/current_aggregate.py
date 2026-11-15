@@ -17,7 +17,6 @@ from .current_aggregate_policy import POLICY
 from .current_quota import QuotaLedger, QuotaStop, load_window, now
 
 BASE=POLICY.endpoint
-SPORTS=('MLB','NCAAF','NBA','NHL','NCAAB','NFL')
 PARAMS=dict(bookmakers=','.join(POLICY.bookmakers),markets=','.join(POLICY.markets),oddsFormat='decimal',dateFormat='iso')
 
 

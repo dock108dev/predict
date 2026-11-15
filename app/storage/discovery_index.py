@@ -11,7 +11,7 @@ import json
 from threading import RLock
 from time import monotonic
 from .store import encoded, hashed, stamp
-from .current_rows import contract_id
+from .current_rows import contract_id, event_id
 
 MAX_BYTES = 6 * 1024 * 1024
 MAX_ENTRIES = 512
@@ -87,7 +87,8 @@ def prepare(context, game, policy, observed):
     frame=getattr(context,'publication_frame',None)
     if frame is not None:
         from . import result_inventory as inventory
-        event_ids=sorted({hashed([r['quote']['source']['provider'],r['quote']['source']['native_event_id']]) for r in rows})
+        sources=(row['quote']['source'] for row in rows)
+        event_ids=sorted({event_id(source['provider'], source['native_event_id']) for source in sources})
         events=[frame['events'][eid] for eid in event_ids if eid in frame['events']]
         selector=dict(events=event_ids,occurrences=[[e['pair'],e['start']] for e in events],shared=[v for e in events for v in e['shared']])
         universe=inventory.proof(frame,selector,engine=context.engine,policy=policy.revision,owner=context.publication_runtime)
@@ -250,7 +251,7 @@ def resolve(records, *, at, engine, epoch):
     # reusable, even when the actual structural projection is small.
     projections=[];audits={};size=32
     for original,r in zip(records,out):
-        source=r['quote']['source'];audit_key=hashed([source['provider'],source['native_event_id']])
+        source=r['quote']['source'];audit_key=event_id(source['provider'], source['native_event_id'])
         if audit_key not in audits:
             audit={k:v for k,v in r['quote']['occurrence_match'].items()
                 if k not in ('original_event','original_market_identity','original_selection','revision')}

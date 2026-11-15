@@ -5,9 +5,27 @@ inputs:
     description: Python minor version
     required: true
     default: '3.14'
+  browser:
+    description: Install the optional locked browser dependencies with the CI lock
+    required: false
+    default: 'false'
 runs:
   using: composite
   steps:
+    - name: Validate toolchain inputs
+      shell: bash
+      env:
+        CI_PYTHON: ${{ inputs.python }}
+        CI_BROWSER: ${{ inputs.browser }}
+      run: |
+        case "$CI_PYTHON" in
+          3.11|3.14) ;;
+          *) echo "Unsupported CI Python version" >&2; exit 1 ;;
+        esac
+        case "$CI_BROWSER" in
+          false|true) ;;
+          *) echo "Expected true or false for the CI browser option" >&2; exit 1 ;;
+        esac
     - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
       with:
         python-version: ${{ inputs.python }}
@@ -19,8 +37,14 @@ runs:
       with:
         node-version-file: '.nvmrc'
     - shell: bash
+      env:
+        CI_BROWSER: ${{ inputs.browser }}
       run: |
-        python -m pip install --require-hashes -r requirements-ci.txt
+        locks=(-r requirements-ci.txt)
+        if [[ $CI_BROWSER == true ]]; then
+          locks+=(-r requirements-browser.txt)
+        fi
+        python -m pip install --require-hashes "${locks[@]}"
         python scripts/ci/validate_lock.py
         python -m pip install --no-deps --no-build-isolation -e '.[stream]'
         python -m pip check

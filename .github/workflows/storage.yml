@@ -21,6 +21,8 @@ jobs:
     name: SQL migrations and boards
     runs-on: ubuntu-24.04
     timeout-minutes: 25
+    env:
+      PG_CONFIG: /usr/lib/postgresql/16/bin/pg_config
     strategy:
       fail-fast: false
       matrix:
@@ -32,13 +34,18 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup
+        id: setup
         with:
           python: ${{ inputs.python }}
       - name: Use runner PostgreSQL 16 binaries
-        run: echo '/usr/lib/postgresql/16/bin' >> "$GITHUB_PATH"
+        id: binaries
+        run: '"$PG_CONFIG" --version'
       - name: Disposable migrations and transaction tests
         id: postgres
-        run: python scripts/ci/postgres.py --shard-index ${{ matrix.shard }} --shard-count ${{ strategy.job-total }}
+        env:
+          SHARD_INDEX: ${{ matrix.shard }}
+          SHARD_COUNT: ${{ strategy.job-total }}
+        run: python scripts/ci/postgres.py --shard-index "$SHARD_INDEX" --shard-count "$SHARD_COUNT"
       - name: Storage summary
         if: always()
         env:

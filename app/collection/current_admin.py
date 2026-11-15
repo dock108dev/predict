@@ -3,6 +3,7 @@ from copy import deepcopy
 import re
 import time
 from app.dashboard.current_contract import packed, stamp
+from .current_policy import SPORTS, aggregate_provider
 from .current_sink import utc
 
 VENUES = ('kalshi','polymarket_us','novig','prophetx')
@@ -92,11 +93,11 @@ def project(service, raw, *, accounting=None):
                 sport=event.get('competition',event.get('sport'))
                 family=market.get('market_type') or market.get('family') or 'unknown'
                 period=market.get('period') or 'unknown'
-                if sport in ('NFL','NCAAF','NBA','NCAAB','MLB','NHL') and source in service.coverage.configured:
+                if sport in SPORTS and source in service.coverage.configured:
                     encountered.add((sport,source,str(family)[:100],str(period)[:100]))
         raw['coverage']['encountered_types']=[dict(league=s,source=v,family=f,period=p) for s,v,f,p in sorted(encountered)[:256]]
     panels=[]
-    for provider,venues in (('kalshi',['kalshi']),('polymarket_us',['polymarket_us']),(service.config.get('aggregate_provider','the_odds_api'),['novig','prophetx'])):
+    for provider,venues in (('kalshi',['kalshi']),('polymarket_us',['polymarket_us']),(aggregate_provider(service.config),['novig','prophetx'])):
         worker=service.workers.get(provider)
         metrics=deepcopy(getattr(worker,'metrics',{}))
         quotes=[x['quote'] for x in index.values() if x['quote']['venue'] in venues]

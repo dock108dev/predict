@@ -147,6 +147,14 @@ def main(argv=None):
         root = Path(directory)
         socket = root / ".local/pgsocket"
         socket.mkdir(parents=True)
+        # libpq can pick up service definitions, host addresses and connection
+        # options even when a command supplies a host. Keep every child on
+        # this cluster, including tests that use Store.connect() directly.
+        environment = {
+            key: value
+            for key, value in os.environ.items()
+            if not key.startswith("PG") and key != "PREDICT_DB_SOCKET"
+        }
         subprocess.run(
             [
                 str(binary / "initdb"),
@@ -161,8 +169,10 @@ def main(argv=None):
             check=True,
             timeout=60,
             stdout=subprocess.DEVNULL,
+            env=environment,
         )
         running = False
+        failed = True
         try:
             subprocess.run(
                 [
@@ -180,6 +190,7 @@ def main(argv=None):
                 ],
                 check=True,
                 timeout=40,
+                env=environment,
             )
             running = True
             subprocess.run(
@@ -195,6 +206,7 @@ def main(argv=None):
                 ],
                 check=True,
                 timeout=20,
+                env=environment,
             )
             # The application connects only to its checkout-specific socket. Redirect
             # that root inside this test process, never alter application configuration.
@@ -284,7 +296,11 @@ def main(argv=None):
                 + repr(tests)
                 + ',"--junitxml="+__import__("sys").argv[2]]))'
             )
-            environment = os.environ.copy()
+            environment["PREDICT_DB_SOCKET"] = str(socket)
+            environment["PGHOST"] = str(socket)
+            environment["PGPORT"] = "55432"
+            environment["PGUSER"] = "prediction_arb"
+            environment["PGDATABASE"] = "prediction_arb"
             environment["SC01_TEST_PGSOCKET"] = str(socket)
             environment["SC02_TEST_PGSOCKET"] = str(socket)
             environment["DA_TEST_PGSOCKET"] = str(socket)
@@ -312,23 +328,34 @@ def main(argv=None):
                 environment,
                 output,
             )
+            failed = False
         finally:
             if running or (root / "db/postmaster.pid").exists():
-                subprocess.run(
-                    [
-                        str(binary / "pg_ctl"),
-                        "-D",
-                        str(root / "db"),
-                        "-w",
-                        "-t",
-                        "30",
-                        "-m",
-                        "immediate",
-                        "stop",
-                    ],
-                    check=True,
-                    timeout=40,
-                )
+                try:
+                    subprocess.run(
+                        [
+                            str(binary / "pg_ctl"),
+                            "-D",
+                            str(root / "db"),
+                            "-w",
+                            "-t",
+                            "30",
+                            "-m",
+                            "immediate",
+                            "stop",
+                        ],
+                        check=True,
+                        timeout=40,
+                        env=environment,
+                    )
+                except (OSError, subprocess.SubprocessError) as error:
+                    print(
+                        f"Could not stop disposable PostgreSQL ({type(error).__name__})",
+                        file=sys.stderr,
+                        flush=True,
+                    )
+                    if not failed:
+                        raise
 
 
 if __name__ == "__main__":

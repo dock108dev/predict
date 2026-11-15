@@ -109,6 +109,29 @@ class OwnedIngress(IsolatedAsyncioTestCase):
             self.assertTrue(all(call.args[0] is row for call in sink.prepare.call_args_list))
             self.assertEqual(sink.finished, [] if repeat else [row])
 
+    async def test_sgo_timeout_exhaustion_leaves_one_rejection_and_no_pending_retry(self):
+        from psycopg.errors import QueryCanceled
+
+        sink = SlowSink()
+        attempts = []
+
+        def prepare(row, states, revoked):
+            attempts.append(row)
+            sink.metrics['rejected_observations'] += 1
+            raise QueryCanceled()
+
+        sink.prepare = prepare
+        page = {'type': 'current_aggregate_records', 'source': 'sportsgameodds'}
+        with self.assertRaises(QueryCanceled):
+            await sink.commit_async(page, {}, Event())
+        self.assertEqual(len(attempts), 2)
+        self.assertTrue(all(attempt is page for attempt in attempts))
+        self.assertEqual(sink.finished, [])
+        self.assertEqual(sink.metrics['transaction_retries'], 1)
+        self.assertEqual(sink.metrics['rejected_observations'], 1)
+        self.assertEqual(sink.metrics['admission_state'], 'receiving')
+        self.assertIsNone(sink.metrics['retry_reason'])
+
     async def entered(self, service):
         for _ in range(100):
             if service.sink.entered.is_set():return

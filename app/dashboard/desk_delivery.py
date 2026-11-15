@@ -11,7 +11,7 @@ from app.storage.store import stamp
 
 
 BURST_SECONDS = 0.5
-MAX_SHARED_READS = 16
+MAX_DESK_READS = 16
 MAX_CACHED_BYTES = 4 * 1024 * 1024
 PUBLIC_LIST_FIELDS = frozenset({
     'basis', 'group', 'league', 'family', 'venue', 'ranked', 'phase', 'lines',
@@ -35,52 +35,68 @@ def timing_header(timings):
 
 
 class ReadBurst:
-    """One in-flight read per key, with a short reuse window after completion."""
+    """Bound distinct work while sharing in-flight and briefly reusable reads."""
 
     def __init__(self, clock=monotonic):
         self.clock = clock
         self.pending = {}
         self.ready = OrderedDict()
+        self.active = set()
+        self.closed = False
 
     async def read(self, key, load, *, reuse=BURST_SECONDS):
-        now = self.clock()
-        if key in self.ready:
-            expiry, value, _ = self.ready[key]
-            if now < expiry:
-                self.ready.move_to_end(key)
+        arrived = self.clock()
+        while not self.closed:
+            if key in self.ready:
+                expiry, value, _ = self.ready[key]
+                if self.clock() < expiry:
+                    self.ready.move_to_end(key)
+                    return value, True
+                del self.ready[key]
+            if key not in self.pending:
+                break
+            value, deadline = await asyncio.shield(self.pending[key])
+            # A request arriving after the first boundary cannot reuse an
+            # in-flight response captured before that boundary.
+            if arrived < deadline:
                 return value, True
-            del self.ready[key]
-        if key in self.pending:
-            return await asyncio.shield(self.pending[key]), True
-        if len(self.pending) >= MAX_SHARED_READS:
-            return (await load())[0], False
+        if self.closed or len(self.active) >= MAX_DESK_READS:
+            raise web.HTTPServiceUnavailable(reason='Price reads are busy')
 
         async def fill():
             try:
                 value, deadline, size = await load()
-                expires = min(self.clock() + reuse, deadline)
-                if expires > self.clock() and size <= MAX_CACHED_BYTES:
+                now = self.clock()
+                expires = min(now + reuse, deadline)
+                if key is not None and expires > now and size <= MAX_CACHED_BYTES:
                     self.ready[key] = (expires, value, size)
-                    while (len(self.ready) > MAX_SHARED_READS
+                    while (len(self.ready) > MAX_DESK_READS
                             or sum(entry[2] for entry in self.ready.values()) > MAX_CACHED_BYTES):
                         self.ready.popitem(last=False)
-                return value
+                return value, deadline
             finally:
-                del self.pending[key]
+                self.pending.pop(key, None)
 
         task = asyncio.create_task(fill())
-        self.pending[key] = task
+        self.active.add(task)
+        if key is not None:
+            self.pending[key] = task
 
-        def collect_failure(completed):
+        def retire(completed):
+            self.active.remove(completed)
+            if self.pending.get(key) is completed:
+                del self.pending[key]
             # If every client disconnected, still retrieve this task's error.
             if not completed.cancelled():
                 completed.exception()
 
-        task.add_done_callback(collect_failure)
-        return await asyncio.shield(task), False
+        task.add_done_callback(retire)
+        value, _ = await asyncio.shield(task)
+        return value, False
 
     async def close(self, _app):
-        tasks = list(self.pending.values())
+        self.closed = True
+        tasks = list(self.active)
         for task in tasks:
             task.cancel()
         await asyncio.gather(*tasks, return_exceptions=True)

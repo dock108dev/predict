@@ -651,6 +651,36 @@ class OrdinarySQL(LatestBoardFixture):
             self.assertEqual(db.execute("SELECT count(*) n FROM comparison_snapshot_result r WHERE r.automatic AND NOT EXISTS(SELECT 1 FROM comparison_publication c WHERE c.kind='component' AND c.result_id=r.id) AND NOT EXISTS(SELECT 1 FROM comparison_result_reference m WHERE m.kind='member' AND m.result_id=r.id)").fetchone()['n'],2)
             self.assertEqual(snapshots.current(db,selected['id']),selected)
 
+    async def test_legacy_lease_reserves_result_before_concurrent_prune(self):
+        with self.connect() as db:
+            live.turn(db)
+            selected = self.result(db)
+            self.changed_first()
+            live.turn(db)
+            self.assertNotEqual(live.status(db)['result_id'], selected['id'])
+            db.execute("""UPDATE comparison_snapshot_result SET lease_until=now()-interval '1 hour'
+                WHERE id=%s""", (selected['id'],))
+            db.execute("""UPDATE comparison_snapshot SET lease_until=now()-interval '1 hour'
+                WHERE id=%s""", (selected['snapshot_id'],))
+            execute = db.execute
+            ran_prune = False
+
+            def competing_prune(query, *params):
+                nonlocal ran_prune
+                rows = execute(query, *params)
+                if query.lstrip().startswith('SELECT automatic,lease_until'):
+                    with self.connect() as pruning:
+                        snapshots.prune(pruning)
+                    ran_prune = True
+                return rows
+
+            with patch.object(db, 'execute', side_effect=competing_prune):
+                self.assertTrue(live.lease(db, selected['id']))
+            self.assertTrue(ran_prune)
+            self.assertEqual(snapshots.current(db, selected['id']), selected)
+            self.assertTrue(db.execute('''SELECT lease_until>now() retained FROM comparison_snapshot
+                WHERE id=%s''', (selected['snapshot_id'],)).fetchone()['retained'])
+
     async def test_automatic_churn_does_not_evict_latest_two_manual_captures(self):
         with self.connect() as db:
             manual=[]
@@ -807,6 +837,44 @@ class OrdinarySQL(LatestBoardFixture):
                 self.assertTrue(all(page == pages[0] for page in pages))
                 self.assertEqual(dependencies.call_count, 1)
 
+    async def test_current_read_overload_refuses_extra_work_and_recovers(self):
+        import asyncio
+        from threading import Event
+
+        with self.connect() as db:
+            self.assertTrue(live.turn(db)['published'])
+        app = web.Application()
+        mount(app)
+        loop = asyncio.get_running_loop()
+        started = asyncio.Event()
+        release = Event()
+
+        def held_connect():
+            loop.call_soon_threadsafe(started.set)
+            if not release.wait(5):
+                raise AssertionError('HTTP fixture never released the admitted read')
+            return self.connect()
+
+        query = dict(layout='desk', summary='1', browse_odds='1', lines='all', phase='pregame', limit='12')
+        with patch('app.dashboard.snapshot_api.connect', side_effect=held_connect) as connect, \
+                patch('app.dashboard.desk_delivery.MAX_DESK_READS', 1):
+            async with TestClient(TestServer(app)) as client:
+                reading = asyncio.create_task(client.get('/api/comparison-current', params=query))
+                try:
+                    await asyncio.wait_for(started.wait(), 5)
+                    response = await client.get('/api/comparison-current', params=dict(query, search='fixture'))
+                    self.assertEqual(response.status, 503, await response.text())
+                    selected = await client.get('/api/comparison-current/selection', params={'id': 'absent'})
+                    self.assertEqual(selected.status, 503, await selected.text())
+                    self.assertEqual(connect.call_count, 1)
+                finally:
+                    release.set()
+                self.assertEqual((await reading).status, 200)
+                retried = await client.get('/api/comparison-current/selection', params={'id': 'absent'})
+                self.assertEqual(retried.status, 200, await retried.text())
+                self.assertEqual((await retried.json())['state'], 'removed')
+                self.assertEqual(connect.call_count, 2)
+
     async def test_lossless_headroom_preserves_selected_bytes_and_reclaims_cycles(self):
         import gzip
         import json
@@ -840,21 +908,6 @@ class OrdinarySQL(LatestBoardFixture):
                 self.assertEqual(snapshots.unpack(retained['result']),snapshots.unpack(original))
                 self.assertEqual(db.execute("SELECT result_id FROM comparison_result_reference WHERE kind='lease' AND holder=%s",(token['lease_id'],)).fetchone()['result_id'],member)
             self.assertEqual(db.execute("SELECT count(DISTINCT holder) n FROM comparison_result_reference WHERE kind='member'").fetchone()['n'],1)
-
-    async def test_retiring_replaced_projection_keeps_source_and_selected_evidence(self):
-        from app.storage.store import hashed
-        from app.storage.grid_packet_store import PacketStore
-        with self.connect() as db:
-            before=live.dependencies(db)
-            saved=snapshots.replace(db,action='refresh')
-            db.execute("INSERT INTO current_grid_blob(id,packet,unreferenced_at) VALUES(%s,%s,now()-interval '1 hour')",('a'*64,b'leased-original'))
-            db.execute("INSERT INTO current_grid_read_lease VALUES('retained-lease',now()+interval '1 hour',%s)",(['a'*64],))
-            db.execute("INSERT INTO latest_board VALUES('retired','d','e','2026-01-01','{}')")
-            live.retire_legacy(db)
-            self.assertEqual(live.dependencies(db),before)
-            self.assertEqual(snapshots.current(db,saved['id']),saved)
-            self.assertEqual(db.execute('SELECT packet FROM current_grid_blob WHERE id=%s',('a'*64,)).fetchone()['packet'],b'leased-original')
-            self.assertFalse(db.execute('SELECT 1 FROM latest_board').fetchone())
 
     async def test_early_structural_rejections_keep_complete_inputs_money_and_selection(self):
         from psycopg.types.json import Jsonb

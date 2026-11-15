@@ -9,6 +9,29 @@ from tests.ci_support import load
 
 
 class EnvironmentTests(unittest.TestCase):
+    def test_package_smoke_redirects_application_and_libpq_to_same_absent_socket(self):
+        import os
+        from unittest.mock import patch
+
+        with (
+            tempfile.TemporaryDirectory() as folder,
+            patch.dict(
+                os.environ,
+                {
+                    "PREDICT_DB_SOCKET": "/fixture/ordinary",
+                    "PGHOST": "/fixture/owner",
+                    "PGHOSTADDR": "192.0.2.1",
+                    "PGSERVICE": "fixture-remote",
+                },
+            ),
+        ):
+            environment = load("package_smoke").smoke_environment(Path(folder))
+            self.assertEqual(environment["PGHOST"], environment["PREDICT_DB_SOCKET"])
+            self.assertEqual(Path(environment["PGHOST"]).parent, Path(folder))
+            self.assertFalse(Path(environment["PGHOST"]).exists())
+            self.assertNotIn("PGHOSTADDR", environment)
+            self.assertNotIn("PGSERVICE", environment)
+
     def test_package_source_excludes_ignored_local_inputs(self):
         import subprocess
 
@@ -90,6 +113,39 @@ class EnvironmentTests(unittest.TestCase):
             self.assertIn("exceeded 900 seconds", text)
             self.assertNotIn("No such file", text)
 
+    def test_sql_teardown_failure_preserves_original_test_failure(self):
+        from contextlib import redirect_stderr
+        import io
+        import subprocess
+        from unittest.mock import patch
+
+        module = load("postgres")
+        tests_failed = subprocess.CalledProcessError(7, "pytest")
+        cleanup_failed = subprocess.TimeoutExpired("postgres stop", 40)
+
+        def run(command, **kwargs):
+            if command[-1] == "stop":
+                raise cleanup_failed
+
+        for failure in (None, tests_failed):
+            with (
+                self.subTest(test_failure=failure is not None),
+                tempfile.TemporaryDirectory() as folder,
+                patch.object(
+                    module,
+                    "postgres_tools",
+                    return_value=(Path("/fixture-tools"), "PostgreSQL 16", 16),
+                ),
+                patch.object(module.subprocess, "run", side_effect=run),
+                patch.object(module, "run_tests", side_effect=failure),
+                redirect_stderr(io.StringIO()) as stderr,
+            ):
+                expected = failure or cleanup_failed
+                with self.assertRaises(type(expected)) as outcome:
+                    module.main(["--report-dir", folder, "--tests", "fixture.py"])
+                self.assertIs(outcome.exception, expected)
+                self.assertIn("Could not stop disposable PostgreSQL", stderr.getvalue())
+
     def test_primary_sql_rejects_accidental_older_postgres_selection(self):
         from unittest.mock import patch
 
@@ -142,6 +198,44 @@ class EnvironmentTests(unittest.TestCase):
             self.assertEqual(error.exception.code, 2)
             run.assert_not_called()
             self.assertEqual(evidence.read_text(), "prior evidence")
+
+    def test_sql_runner_replaces_inherited_connection_targets(self):
+        from unittest.mock import patch
+
+        module = load("postgres")
+        inherited = {
+            "PREDICT_DB_SOCKET": "/private-socket",
+            "PGHOST": "/other-cluster",
+            "PGHOSTADDR": "127.0.0.2",
+            "PGSERVICE": "other-cluster",
+            "PGSERVICEFILE": "/service-definitions",
+            "PGOPTIONS": "-c search_path=other_schema",
+        }
+        with (
+            tempfile.TemporaryDirectory() as folder,
+            patch.dict(module.os.environ, inherited),
+            patch.object(
+                module,
+                "postgres_tools",
+                return_value=(Path("/fixture-tools"), "PostgreSQL 16", 16),
+            ),
+            patch.object(module.os, "geteuid", return_value=501),
+            patch.object(module.subprocess, "run") as run,
+            patch.object(module, "run_tests") as run_tests,
+        ):
+            module.main(["--report-dir", folder, "--tests", "fixture"])
+            command, environment, _output = run_tests.call_args.args
+            socket = str(Path(command[-2]) / ".local/pgsocket")
+            self.assertEqual(environment["PREDICT_DB_SOCKET"], socket)
+            self.assertEqual(environment["PGHOST"], socket)
+            self.assertEqual(environment["DA_TEST_PGSOCKET"], socket)
+            self.assertEqual(environment["PGDATABASE"], "prediction_arb")
+            for target in [
+                environment,
+                *(call.kwargs["env"] for call in run.call_args_list),
+            ]:
+                for key, value in inherited.items():
+                    self.assertNotEqual(target.get(key), value)
 
     def test_project_postgres_requires_tools_matching_existing_cluster(self):
         import os
@@ -434,13 +528,14 @@ class EnforcementTests(unittest.TestCase):
             module = load("run_checks")
             for required, expected in ((True, "FAIL"), (False, "PASS")):
                 records = [
+                    dict(name="compile", status="PASS", tests=None),
                     dict(
                         name="skip",
                         status="SKIPPED",
                         required=required,
                         tests=None,
                         reason="archival",
-                    )
+                    ),
                 ]
                 module.write_report(root, records, time.monotonic())
                 self.assertEqual(

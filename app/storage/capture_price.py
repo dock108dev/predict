@@ -11,7 +11,7 @@ from time import monotonic
 from uuid import uuid4
 
 from .store import hashed, stamp
-from .current_rows import CurrentRowStore, contract_id
+from .current_rows import CurrentRowStore, contract_id, event_id
 from .capture_structure import structure, topology, slots, restore_events
 
 
@@ -27,7 +27,7 @@ def remember_frame(basis,frame,at):
     from .comparison_board import _records
     for r in _records(frame['records'],at):
         source=r['quote']['source']
-        basis['audit_heads'][hashed([source['provider'],source['native_event_id']])]=contract_id(r)
+        basis['audit_heads'][event_id(source['provider'], source['native_event_id'])]=contract_id(r)
     basis['temporal']=temporal(at)
 
 

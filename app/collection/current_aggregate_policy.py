@@ -4,6 +4,10 @@ Keep attempt declarations, schedule slots, quota reservations and transport boun
 on this immutable policy. Reading it does not access credentials or owner state.
 """
 from dataclasses import dataclass
+from types import MappingProxyType
+
+
+MARKET_FAMILIES = MappingProxyType({'h2h': 'moneyline', 'spreads': 'spread', 'totals': 'total'})
 
 
 @dataclass(frozen=True)
@@ -11,7 +15,7 @@ class AggregatePolicy:
     version: str = 'predict-daytime-odds-3'
     endpoint: str = 'https://api.the-odds-api.com'
     bookmakers: tuple[str, ...] = ('novig', 'prophetx', 'pinnacle')
-    markets: tuple[str, ...] = ('h2h', 'spreads', 'totals')
+    markets: tuple[str, ...] = tuple(MARKET_FAMILIES)
     interval_seconds: int = 900
     timezone: str = 'America/New_York'
     opens_at_hour: int = 9

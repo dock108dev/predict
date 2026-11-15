@@ -1,5 +1,6 @@
 """Read-only bulk reconciliation over durable source evidence, never dispatch."""
 from datetime import datetime, timezone
+from .current_aggregate_policy import MARKET_FAMILIES
 from .current_policy import SPORTS
 from .price_units import native_boundary, aggregate_units, merge_units
 
@@ -114,10 +115,9 @@ def report(db):
         cell['received'] += count
         cell[row['image_disposition']] += count
     route_units={}
-    mapping={'h2h':'moneyline','spreads':'spread','totals':'total'}
     for batch in db.execute("SELECT * FROM current_aggregate_receipt WHERE provider='the_odds_api' AND kind='featured'"):
         for venue in ('novig','prophetx','pinnacle'):
-            for family in mapping.values():
+            for family in MARKET_FAMILIES.values():
                 cell=cells[(venue,batch['sport'],family)]
                 cell.update(denominator_status='complete_exact_featured_query',received_at=batch['received_at'].isoformat(),
                             scope_limitation='Featured response only; event-route completeness reported separately; full-provider denominator unknown')
@@ -125,12 +125,12 @@ def report(db):
         for event in payload.get('events',[]) if isinstance(payload,dict) else payload:
             for book in event.get('bookmakers',[]):
                 for market in book.get('markets',[]):
-                    cell=cells.get((book['key'],batch['sport'],mapping.get(market['key'])))
+                    cell=cells.get((book['key'],batch['sport'],MARKET_FAMILIES.get(market['key'])))
                     if cell is None:continue
                     cell['known_markets']+=1
                     cell['received']+=sum(o.get('price') is not None for o in market.get('outcomes',[]))
         for venue in ('novig','prophetx','pinnacle'):
-            for family in mapping.values():
+            for family in MARKET_FAMILIES.values():
                 route_units[(venue,batch['sport'],family)]=aggregate_units(payload.get('events',[]) if isinstance(payload,dict) else payload,venue,family,'featured')
         if isinstance(payload,dict):
             for d in payload.get('dispositions',[]):

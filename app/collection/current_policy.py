@@ -3,7 +3,7 @@ from copy import deepcopy
 from hashlib import sha256
 import json
 from pathlib import Path
-from .current_aggregate_policy import POLICY as AGGREGATE_POLICY
+from .current_aggregate_policy import MARKET_FAMILIES, POLICY as AGGREGATE_POLICY
 
 ROOT = Path(__file__).resolve().parents[2]
 VERSION = 'predict-native-current-1'
@@ -27,10 +27,15 @@ class PregameWindowClosed(Exception):
     """A scheduled request reached kickoff before dispatch."""
 
 
+def aggregate_provider(config):
+    """Resolve the provider for present and older native configurations."""
+    return (config or {}).get('aggregate_provider') or DEFAULT['aggregate_provider']
+
+
 def validate(value):
     if isinstance(value,dict):
         value=dict(value)
-        value.setdefault('aggregate_provider','the_odds_api')
+        value.setdefault('aggregate_provider', aggregate_provider(value))
         for key in ('aggregate_sports','native_sports','native_families'):
             value.setdefault(key,[])
     if not isinstance(value, dict) or set(value) - set(OPTIONAL_FLAGS) != set(DEFAULT):
@@ -93,10 +98,9 @@ def odds_api_cutoff(at):
 
 def aggregate_markets(config):
     families=config.get('families',DEFAULT['families'])
-    mapping={'moneyline':'h2h','spread':'spreads','total':'totals'}
-    if not isinstance(families,list) or not families or len(set(families))!=len(families) or set(families)-set(mapping):
+    if not isinstance(families,list) or not families or len(set(families))!=len(families) or set(families)-set(MARKET_FAMILIES.values()):
         raise ValueError('Exact aggregate market families required')
-    return tuple(mapping[family] for family in DEFAULT['families'] if family in families)
+    return tuple(market for market, family in MARKET_FAMILIES.items() if family in families)
 
 
 def aggregate_requests(config, sports=None, *, at=None):

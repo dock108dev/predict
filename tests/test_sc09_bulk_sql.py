@@ -379,12 +379,17 @@ class Checkpoints(TestCase):
         with self.connect() as db:
             save(db, kind='census', sport='NFL', received_at=now(), cycle_id='new-cycle',
                  receipt_sha256='census', payload=[dict(id='a'),dict(id='b')])
+            featured = dict(id='c', bookmakers=[dict(key='novig', markets=[
+                dict(key='spreads', outcomes=[dict(name='A', point=-3.5, price=2)])])])
+            save(db, kind='featured', sport='NFL', received_at=now(), cycle_id='new-cycle',
+                 receipt_sha256='featured', payload=[featured])
             for eid,cycle in [('a','old-cycle'),('b','new-cycle')]:
                 payload=dict(id=eid,bookmakers=[dict(key='novig',markets=[dict(key='alternate_spreads',outcomes=[dict(name='A',point=-2.5,price=2)])])])
                 save(db, kind='alternate', sport='NFL', event_id=eid, received_at=now(), cycle_id=cycle,
                      receipt_sha256='receipt', disposition='received_pending_qualification', payload=payload)
             result=report(db)
         cell=next(c for c in result['cells'] if (c['venue'],c['sport'],c['family'])==('novig','NFL','spread'))
+        self.assertEqual((cell['known_markets'], cell['received']), (1, 1))
         self.assertEqual(cell['alternate_received'],2)
         self.assertEqual(cell['alternate_current_cycle_received'],1)
         self.assertEqual(cell['alternate_prior_cycle_retained'],1)

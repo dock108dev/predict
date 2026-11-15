@@ -9,6 +9,7 @@ import pytest
 
 from app.collection.current_policy import DEFAULT
 from app.collection.sportsgameodds_adapter import Page
+from app.collection.sportsgameodds_schedule import SchedulePolicy
 from app.collection.sportsgameodds_worker import SportsGameOddsWorker
 
 NOW = datetime(2026, 11, 10, 20, tzinfo=timezone.utc)
@@ -420,7 +421,7 @@ def test_page_cap_and_controls_are_bounded():
     async def scenario():
         service = SimpleNamespace(config=deepcopy(DEFAULT), dispatch=True, globally_stopped=False, paused_sources=set())
         worker = SportsGameOddsWorker(service, transport=SimpleNamespace(close=AsyncMock()), now=lambda: NOW)
-        assert worker.params(league='NFL')['limit'] == 2
+        assert worker.params(league='NFL', starts_after=NOW.isoformat())['limit'] == 2
         service.globally_stopped = True
         assert worker.controls()['stopped']
         service.globally_stopped = False
@@ -764,6 +765,56 @@ def test_balance_mismatch_waits_for_a_new_usage_read_without_abandoning_work():
     asyncio.run(scenario())
 
 
+@pytest.mark.parametrize('scan_delay', [0, 2])
+def test_pregame_refresh_between_scans_does_not_restart_discovery(scan_delay):
+    from unittest.mock import patch
+
+    async def scenario():
+        service = SimpleNamespace(config=deepcopy(DEFAULT), dispatch=True, globally_stopped=False,
+                                  paused_sources=set(), database_mode=True)
+        moment = NOW
+        worker = SportsGameOddsWorker(service, transport=SimpleNamespace(close=AsyncMock()), now=lambda: moment)
+        worker.initialize = AsyncMock()
+        worker.state = AsyncMock()
+        policy = SchedulePolicy(approaching=timedelta(minutes=15))
+        delays = []
+
+        async def cycle():
+            nonlocal moment
+            if not worker.events:
+                # The first receipt lands just after its sweep began. The same
+                # instant in the next sweep is too early for this exact quote.
+                moment += timedelta(seconds=1)
+                worker.events['e1'] = dict(event(1), starts_at=(NOW + timedelta(hours=1)).isoformat(),
+                                           received_at=moment.isoformat())
+            else:
+                # The last discovery page can finish after the event is due.
+                moment += timedelta(seconds=scan_delay)
+            return policy
+
+        async def sleep(delay):
+            nonlocal moment
+            delays.append(delay)
+            moment += timedelta(seconds=delay)
+
+        async def refresh(due, selected):
+            assert [entry.event_id for entry in due] == ['e1']
+            assert selected is policy
+            assert moment == NOW + timedelta(minutes=15, seconds=max(1, scan_delay))
+            service.dispatch = False
+
+        worker.cycle = AsyncMock(side_effect=cycle)
+        worker.refresh = AsyncMock(side_effect=refresh)
+        with patch('app.collection.sportsgameodds_worker.asyncio.sleep', side_effect=sleep), \
+             patch('app.collection.sportsgameodds_worker.retained_schedule', return_value=({}, False)):
+            await worker.run()
+        assert delays[:2] == [899, max(0, 1 - scan_delay)]
+        assert worker.cycle.await_count == 2
+        worker.refresh.assert_awaited_once()
+
+    asyncio.run(scenario())
+
+
 def test_rate_interruption_rotates_discovery_without_losing_cursors():
     from unittest.mock import patch
     async def scenario():
@@ -829,13 +880,19 @@ def test_stale_or_changed_discovery_checkpoint_is_not_restored(tmp_path):
     ledger = ObjectLedger(tmp_path / 'ledger.sqlite')
     worker = SportsGameOddsWorker(service, now=lambda: NOW)
     worker.ledger = ledger
-    params = dict(worker.params(league='NFL'), startsAfter=(NOW-timedelta(hours=12)).isoformat())
+    params = worker.params(league='NFL', starts_after=(NOW-timedelta(hours=12)).isoformat())
     ledger.save_discovery_progress('NFL', {'params': params, 'next_cursor': 'next', 'pages': 1,
                                    'seen_cursors': [], 'seen_events': ['e1']}, now=NOW)
     later = SportsGameOddsWorker(service, now=lambda: NOW + timedelta(days=2))
     later.ledger = ledger
     later.restore_discovery()
     assert not later.discovery_progress
+    live_service = SimpleNamespace(config=dict(service.config, live_enabled=True), dispatch=True,
+                                   globally_stopped=False, paused_sources=set())
+    live = SportsGameOddsWorker(live_service, now=lambda: NOW)
+    live.ledger = ledger
+    live.restore_discovery()
+    assert not live.discovery_progress
     worker.page_limit = 3
     worker.restore_discovery()
     assert not worker.discovery_progress
@@ -853,6 +910,11 @@ def test_restored_walk_completes_only_after_new_final_page(tmp_path):
         first.state = AsyncMock()
         first.collector = SimpleNamespace(fetch=AsyncMock(return_value=Page((event(1),), (), 'next', 'a'*64)))
         await first.cycle()
+        original_query = first.collector.fetch.await_args.args[0]
+        checkpoint = ledger.load_discovery_progress(now=NOW)['NFL']
+        assert checkpoint['params'] == original_query
+        assert original_query['started'] is original_query['live'] is False
+        assert original_query['startsAfter'] == NOW.isoformat()
         second = SportsGameOddsWorker(service, now=lambda: NOW + timedelta(minutes=2))
         second.ledger = ObjectLedger(tmp_path / 'ledger.sqlite')
         second.restore_discovery()
@@ -861,8 +923,7 @@ def test_restored_walk_completes_only_after_new_final_page(tmp_path):
         second.collector = SimpleNamespace(fetch=AsyncMock(return_value=Page((event(2),), (), None, 'b'*64)))
         await second.cycle()
         params = second.collector.fetch.await_args_list[0].args[0]
-        assert params['cursor'] == 'next'
-        assert params['startsAfter'] == NOW.isoformat()
+        assert params == dict(original_query, cursor='next')
         assert second.metrics['discovery_complete']['NFL'] is True
         assert 'NFL' in ledger.discovery_schedule(now=NOW + timedelta(minutes=2))
         assert 'NFL' not in ledger.load_discovery_progress(now=NOW + timedelta(minutes=2))

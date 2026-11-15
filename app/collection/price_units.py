@@ -5,6 +5,9 @@ additional source-native quotes. No received-only count claims a complete census
 """
 from decimal import Decimal, InvalidOperation
 from app.comparison.offered_scope import identity
+from .current_aggregate_policy import MARKET_FAMILIES
+
+AGGREGATE_ROUTE_MARKETS = {**MARKET_FAMILIES, 'alternate_spreads': 'spread', 'alternate_totals': 'total'}
 
 
 def native_slots(source, metadata):
@@ -41,14 +44,13 @@ def native_boundary(source, metadata, image):
 
 
 def aggregate_units(events, venue, family, route):
-    keys={'h2h':'moneyline','spreads':'spread','alternate_spreads':'spread','totals':'total','alternate_totals':'total'}
     units={}
     for event in events:
         for book in event.get('bookmakers',[]):
             if book.get('key')!=venue:
                 continue
             for market in book.get('markets',[]):
-                if keys.get(market.get('key'))!=family:
+                if AGGREGATE_ROUTE_MARKETS.get(market.get('key'))!=family:
                     continue
                 for outcome in market.get('outcomes',[]):
                     line=outcome.get('point')

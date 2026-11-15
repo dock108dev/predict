@@ -124,6 +124,8 @@ class SportsGameOddsWorker:
     page_limit = 2
     max_pages = 10
     max_events = 2000
+    # One discovery walk can cover the 2,000-event schedule in two-event pages.
+    max_discovery_pages = 1000
 
     def __init__(self, service, *, key_loader=credential, usage_reader=read_usage,
                  transport=None, ledger_path=None, now=clock):
@@ -381,11 +383,13 @@ class SportsGameOddsWorker:
             self.page_in_progress = False
             self._account_status()
 
-    def params(self, *, league=None, event_ids=None, cursor=None, include_alternates=False):
+    def params(self, *, league=None, event_ids=None, starts_after=None, cursor=None, include_alternates=False):
         result = {'oddID': ','.join(sorted(ODD_IDS)), 'limit': self.page_limit,
                   'includeOpposingOdds': True}
         if league is not None:
-            result['leagueID'] = league
+            if starts_after is None:
+                raise ValueError('league discovery requires a fixed start cutoff')
+            result.update(leagueID=league, startsAfter=starts_after)
             if not live_enabled(self.service.config):
                 result.update(started=False, live=False)
         else:
@@ -403,7 +407,7 @@ class SportsGameOddsWorker:
         if self.ledger is None:
             return
         self.ledger.save_discovery_progress(league, {
-            'params': dict(self.params(league=league), startsAfter=traversal.starts_after),
+            'params': self.params(league=league, starts_after=traversal.starts_after),
             'next_cursor': traversal.next_cursor,
             'pages': len(traversal.pages),
             'charged_objects': traversal.charged_objects,
@@ -420,14 +424,14 @@ class SportsGameOddsWorker:
                 if league not in aggregate_scope(self.service.config) or not isinstance(value, dict):
                     continue
                 params = value['params']
-                expected = dict(self.params(league=league), startsAfter=params['startsAfter'])
+                expected = self.params(league=league, starts_after=params['startsAfter'])
                 if params != expected:
                     continue
                 if not isinstance(value['next_cursor'], str) or not value['next_cursor']:
                     continue
                 validate_params(dict(params, cursor=value['next_cursor']))
                 pages, cursors, events = value['pages'], value['seen_cursors'], value['seen_events']
-                if (type(pages) is not int or not 1 <= pages < 1000
+                if (type(pages) is not int or not 1 <= pages < self.max_discovery_pages
                         or not isinstance(cursors, list) or len(cursors) != pages - 1
                         or not isinstance(events, list) or len(events) > pages * self.page_limit
                         or any(not isinstance(x, str) or not x or len(x) > 2048 for x in cursors + events)
@@ -437,7 +441,7 @@ class SportsGameOddsWorker:
                 objects = value.get('charged_objects', max(pages, len(events)))
                 if type(objects) is not int or not max(pages, len(events)) <= objects <= pages * self.page_limit:
                     continue
-                traversal = Traversal(max_pages=1000)
+                traversal = Traversal(max_pages=self.max_discovery_pages)
                 traversal.charged_objects = objects
                 traversal.starts_after = params['startsAfter']
                 traversal.next_cursor = value['next_cursor']
@@ -576,9 +580,7 @@ class SportsGameOddsWorker:
             # not repeatedly favor the first leagues on the next cycle. Cursors
             # remain attached to their own league and retain their query filter.
             self.discovery_next_league = leagues[(index + 1) % len(leagues)]
-            # The 2,000-event schedule bound permits up to 1,000 two-event
-            # pages. A smaller traversal cap silently abandoned large slates.
-            traversal = self.discovery_progress.setdefault(league, Traversal(max_pages=1000))
+            traversal = self.discovery_progress.setdefault(league, Traversal(max_pages=self.max_discovery_pages))
             # Keep the filter stable across cursor pages.
             if not hasattr(traversal, 'starts_after'):
                 traversal.starts_after = (now-timedelta(hours=12) if live_enabled(self.service.config) else now).isoformat()
@@ -591,8 +593,7 @@ class SportsGameOddsWorker:
                 if self.controls()['stopped'] or self.controls()['source_paused']:
                     return
                 cursor = traversal.next_cursor
-                params = self.params(league=league, cursor=cursor)
-                params['startsAfter'] = traversal.starts_after
+                params = self.params(league=league, starts_after=traversal.starts_after, cursor=cursor)
                 try:
                     page = await self._fetch(params)
                 except RejectedCursor:
@@ -642,6 +643,20 @@ class SportsGameOddsWorker:
                 await self.refresh(scheduled[:self.page_limit], policy)
             self.metrics.setdefault('discovery_complete', {})[league] = traversal.complete
         self.phase = 'waiting_for_cycle'
+        return policy
+
+    def approaching_events(self, at, policy):
+        return [event for event in self.scheduled_events(at=at)
+                if not event.active and at < event.starts_at <= at + policy.approaching_window]
+
+    def next_pregame_refresh(self, at, policy, next_scan):
+        # A fixed sweep can fall just before the last receipt plus its cadence.
+        # Wake for that exact event deadline without starting extra discovery.
+        if policy is None or policy.approaching > SCAN_INTERVAL:
+            return next_scan
+        return min((max(at, due) for event in self.approaching_events(at, policy)
+                    if (due := poll_slot(event, at, policy)[1]) < event.starts_at),
+                   default=next_scan)
 
     def controls_to_schedule(self):
         c = self.controls()
@@ -680,14 +695,25 @@ class SportsGameOddsWorker:
                     if not await self.wait_for_dispatch(exc, retry_at=self.now()+timedelta(minutes=1)):
                         raise
                     await asyncio.sleep(60)
+            next_scan = self.now()
+            policy = None
             while not self.controls()['stopped'] and not self.controls()['source_paused']:
-                next_scan = self.now() + SCAN_INTERVAL
+                now = self.now()
+                scanning = policy is None or now >= next_scan
+                if scanning:
+                    next_scan = now + SCAN_INTERVAL
                 try:
                     if self.ledger is not None and self.now() >= self.ledger.status(self.window_id)['reset_at']:
                         # Start each pacing window from fresh provider usage.
                         await self.initialize()
-                    await self.cycle()
+                    if scanning:
+                        policy = await self.cycle()
+                    else:
+                        due = due_events(self.approaching_events(now, policy), now, policy=policy,
+                                         **self.controls_to_schedule())
+                        await self.refresh(due, policy)
                 except RuntimeError as exc:
+                    policy = None
                     if str(exc) == 'daily object pacing limit':
                         self.phase = 'waiting_for_budget'
                         delay, code = 60*60, 'sgo_daily_pacing'
@@ -705,8 +731,10 @@ class SportsGameOddsWorker:
                     if self.metrics['state'] != 'available':
                         await self.state('available', 'sgo_cycle_complete',
                                          'SportsGameOdds scans are scheduled. Individual source clocks and availability apply.')
-                self.metrics['next_refresh_at'] = next_scan.isoformat()
-                await asyncio.sleep(max(0, (next_scan-self.now()).total_seconds()))
+                at = self.now()
+                wake_at = min(next_scan, self.next_pregame_refresh(at, policy, next_scan))
+                self.metrics['next_refresh_at'] = wake_at.isoformat()
+                await asyncio.sleep(max(0, (wake_at-at).total_seconds()))
         except asyncio.CancelledError:
             raise
         except Exception as exc:

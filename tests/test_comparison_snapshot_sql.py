@@ -1,5 +1,6 @@
 """Coherent SQL + ordinary HTTP replacement, without provider or queue work."""
 from copy import deepcopy
+from datetime import timedelta
 from unittest import skipUnless
 from unittest.mock import patch
 from aiohttp import web
@@ -108,9 +109,11 @@ class SnapshotSQL(LatestBoardFixture):
         from app.storage.store import hashed
         inputs=dict(id='ncaab-fixed',captured_at=self.at.isoformat(),capture_seconds=0,
             quotes=[],games=[],references=[],sources={},issues=[])
+        starts_at = (self.at + timedelta(minutes=1)).isoformat()
         for native in ('yes','no'):
             q=quote(native=native);r=q['original_record']
-            q.update(quote_id=q['id'],venue='polymarket_us',game_title='Home / Away',start_at=self.at.isoformat(),
+            r['event']['scheduled_start'] = starts_at
+            q.update(quote_id=q['id'],venue='polymarket_us',game_title='Home / Away',start_at=starts_at,
                 market={'market':'total','period':'full_game','line':'135.5'},
                 original=r['quote']['original'],common_odds={'supported':True},binding={'verified':False},
                 selection=r['selection'])
@@ -130,12 +133,38 @@ class SnapshotSQL(LatestBoardFixture):
                 self.assertTrue(all(not q['binding']['verified'] for q in evidence['originals']))
         self.assertEqual(hashed(inputs),before)
 
+    async def test_saved_snapshot_operation_and_read_share_pregame_cutoff(self):
+        from tests.test_snapshot_benchmark import execution, inputs
+
+        quote = execution()
+        captured = dict(inputs([quote], []), captured_at=quote['start_at'])
+        app = web.Application()
+        mount(app)
+        with patch('app.dashboard.snapshot_api.connect', self.connect), \
+                patch.object(snapshot, 'capture', return_value=captured):
+            async with TestClient(TestServer(app)) as client:
+                response = await client.post('/api/comparison-snapshot', json={'action': 'refresh'})
+                self.assertEqual(response.status, 200)
+                posted = await response.json()
+                response = await client.get('/api/comparison-snapshot', params={'result_id': posted['id']})
+                self.assertEqual(response.status, 200)
+                read = await response.json()
+                self.assertEqual(posted['rows'], [])
+                self.assertEqual(posted['counts']['observations'], 0)
+                self.assertEqual(read['rows'], posted['rows'])
+                self.assertEqual(read['counts'], posted['counts'])
+        with self.connect() as db:
+            saved = snapshot.current(db, posted['id'])
+            self.assertEqual(len(saved['rows']), 1)
+            self.assertEqual(saved['rows'][0]['start_at'], quote['start_at'])
+
     async def test_ncaab_http_prices_keep_reference_provenance_private(self):
         from tests.test_snapshot_benchmark import execution,references,inputs
 
         captured=inputs([execution()],references())
         app=web.Application();mount(app)
-        with patch('app.dashboard.snapshot_api.connect',self.connect),patch.object(snapshot,'capture',return_value=captured):
+        with patch('app.dashboard.snapshot_api.connect', wraps=self.connect) as connect, \
+                patch.object(snapshot, 'capture', return_value=captured):
             async with TestClient(TestServer(app)) as client:
                 first=await (await client.post('/api/comparison-snapshot',json={'action':'refresh'})).json()
                 self.assertEqual(first['counts']['gross_numeric'],0)
@@ -143,7 +172,9 @@ class SnapshotSQL(LatestBoardFixture):
                 self.assertIsNone(row['gross_return_percent'])
                 self.assertIsNone(row['net_return_percent'])
                 details='/api/comparison-snapshot/details?result_id='+first['id']+'&id='+row['id']
+                connect.reset_mock()
                 before=await (await client.get(details)).json()
+                connect.assert_called_once()
                 self.assertEqual(before['references'], [])
                 self.assertEqual(before['row']['original'], row['original'])
                 with self.connect() as db:

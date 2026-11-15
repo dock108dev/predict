@@ -1,24 +1,11 @@
-"""Check shipped project guides without private or local-planning exemptions."""
+"""Check that shipped guides refer to publishable project files."""
 
 from pathlib import Path
 import re
+import subprocess
 
 ROOT = Path(__file__).resolve().parents[2]
 DOCUMENTS = (
-    "docs/engineering/live-comparison-20261104/L05-continuation.md",
-    "docs/live-comparison-plan-20261104.md",
-    "docs/engineering/live-comparison-20261104/L01-runtime.md",
-    "docs/engineering/live-comparison-20261104/L01-publication-contract.md",
-    "docs/engineering/live-comparison-20261104/L02-finance.md",
-    "docs/engineering/live-comparison-20261104/L02-financial-contract.md",
-    "docs/engineering/live-comparison-20261104/L03-ranking.md",
-    "docs/engineering/live-comparison-20261104/L03-ranking-contract.md",
-    "docs/engineering/live-comparison-20261104/L04-interface-contract.md",
-    "docs/engineering/live-comparison-20261104/L04-interface.md",
-    "docs/engineering/live-comparison-20261104/L05-verification.md",
-    "docs/engineering/live-comparison-20261104/L05-delivery.md",
-    "docs/engineering/live-comparison-20261104/README.md",
-    "docs/design/live-comparison-20261104/README.md",
     "README.md",
     "docs/storage-ownership.md",
     "docs/odds-archive-operations.md",
@@ -66,10 +53,6 @@ DOCUMENTS = (
     "docs/examples/scanner-1/README.md",
     "docs/sports-integration.md",
     "docs/ui-design.md",
-    "docs/ui-redesign-20261103.md",
-    "docs/ui-redesign-implementation.md",
-    "docs/ui01-delivery-20261103.md",
-    "docs/completion-20261103.md",
     "docs/contracts/predict-admin-1.md",
     "docs/contracts/predict-current-1.md",
     "docs/contracts/predict-retained-prices-1.md",
@@ -78,6 +61,7 @@ DOCUMENTS = (
 
 def validate(root):
     root = root.resolve()
+    local_links = {}
     for name in DOCUMENTS:
         document = root / name
         if not document.is_file():
@@ -112,6 +96,27 @@ def validate(root):
                 raise ValueError(
                     f"Local-only reference in maintained link: {name}: {target}"
                 )
+            if relative.parts:
+                local_links.setdefault(relative.as_posix(), (name, target))
+
+    # In a checkout, a link to an ignored artifact can exist locally and still
+    # break when CI checks the published tree. Tracked files remain valid even
+    # when they match an ignore rule.
+    if local_links and (root / ".git").exists():
+        result = subprocess.run(
+            ["git", "check-ignore", "--stdin", "-z"],
+            cwd=root,
+            input="\0".join(local_links) + "\0",
+            text=True,
+            capture_output=True,
+        )
+        if result.returncode != 1:
+            result.check_returncode()
+        if result.stdout:
+            name, target = local_links[result.stdout.split("\0", 1)[0]]
+            raise ValueError(
+                f"Local-only reference in maintained link: {name}: {target}"
+            )
     print(f"PASS: {len(DOCUMENTS)} maintained documents; all shipped references exist")
 
 

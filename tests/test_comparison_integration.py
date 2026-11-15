@@ -36,7 +36,8 @@ async def workload():
                     payload=json.loads(body())
                     event=payload[0];event['sport_key']=SPORT_KEYS[sport]
                     event['id']=EVENT if sport=='NFL' else 'authored:'+sport+':one'
-                    event['commence_time']='2026-10-09T00:15:00Z' if cycle==0 else '2026-10-09T00:18:00Z'
+                    kickoff = started + timedelta(hours=4, minutes=0 if cycle == 0 else 3)
+                    event['commence_time'] = kickoff.isoformat()
                     # Unresolved provider slots still remain visible for other sports.
                     if sport!='NFL':event.update(home_team='CONTROLLED '+sport+' HOME',away_team='CONTROLLED '+sport+' AWAY')
                     base=event['bookmakers'][0];base['last_update']=source

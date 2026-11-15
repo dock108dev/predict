@@ -1,44 +1,23 @@
 # Predict
 
-Predict is a local, read-only prediction-market comparison app for macOS.
+Predict is a read-only prediction-market comparison app for macOS. The desk
+opens on **Pregame Opportunities**, with ranked Expected value and Arbitrage
+views. In-game collection and display require `live_enabled`, which defaults
+to `false`.
 
-The desk opens on **Pregame Opportunities** with ranked EV and Arbitrage views.
-Use **Live** to switch to in-game prices. Each EV
-card groups an exact outcome and shows its venue offers and selected comparison
-book. The default before-fee basis de-vigs both prices from the qualifying
-sportsbook with the highest payout on that outcome. Qualified before-fee,
-reviewed-fee and conservative EV remain separate bases. Arbitrage ranks the
-lowest modeled net return on total funding across the evidenced settlement
-states, with both fees included.
-
-Use **Find my game**, **Browse odds**, or open a ranked game to compare both sides of full-game winners,
-spreads and totals, including available alternates. An inspection keeps the
-original prices, clocks and calculation pinned until you adopt a coherent
-replacement with **Use latest prices**.
-[Ranked dashboard design](docs/ui-design.md#current-comparison-interface)
-
-Kalshi and Polymarket US supply independent native prices. The aggregate route
-is selected in the data configuration. The sample selects SportsGameOdds with
-acquisition off. SGO supplies labeled offers and bookmaker
-observations. The current sportsbook EV basis uses FanDuel, DraftKings, BetMGM
-and Caesars. The Odds API has a separate legacy route and accounting.
-Novig also supports a signed read-only feed for eligible in-game offers with a
-post-reset book. The
-[fee coverage policy](docs/fee-coverage-policy.md) defines what the desk
-counts independently of reference and calculation eligibility.
-
-**Saved odds** opens the recorded captures available on this installation.
-The current desk follows the data owner's Stop and source controls.
-See [replay and local operation](docs/development.md#frozen-replay) and the
-[calculation contract](docs/benchmark-ev.md).
+Use **Browse odds** or **Find my game** to compare full-game winners, spreads,
+and totals. **Refresh list** updates the ranking. An open inspection keeps its
+prices, clocks, and calculation pinned until you select **Use latest prices**.
+**Saved odds** opens recorded captures available on the installation.
+[Desk and inspection guide](docs/ui-design.md#current-comparison-interface)
 
 ## Requirements and quickstart
 
-Requires macOS, Python 3.11+ and PostgreSQL tools (`pg_ctl`, `initdb`, `psql`,
-`createdb`) on your PATH. Use Python 3.14 and PostgreSQL 16 for new setups;
-existing databases keep tools matching their cluster major. Node 24 is needed
-only for client tests (`nvm use`). Run these commands from the repository root
-to start the app with collection off.
+Local operation requires macOS, Python 3.11 or later, and PostgreSQL tools.
+Use Python 3.14 and PostgreSQL 16 for new setups. The launcher selects tools
+that match an existing cluster's major version. Client tests use Node 24.
+Run these commands from the repository root to start the web app. The sample
+configuration leaves acquisition disabled.
 
 ```sh
 python3 -m venv .venv
@@ -51,17 +30,17 @@ scripts/project-postgres start
 scripts/opportunity-board start --role app --port 8784
 ```
 
-Open the loopback address printed by the launcher. With the command above,
-use [Predict on port 8784](http://127.0.0.1:8784/). Choose **Saved odds** if this
-installation has a recorded capture. `cp -n` keeps existing settings.
-`check-config` validates the file and shows what it would collect.
+Open the loopback address printed by the launcher. If port 8784 is free,
+use [Predict on port 8784](http://127.0.0.1:8784/). The desk needs committed
+prices to show current offers. Choose **Saved odds** to open an available capture.
+`cp -n` preserves an existing config, and `check-config` prints its acquisition scope.
 
-For live collection, follow [source configuration and credentials](docs/configuration.md#source-configuration).
-Choose the sports and markets, add your read-only keys, and turn `enabled` on.
-Turn on `aggregate_enabled` to collect SportsGameOdds against your plan's object
-allowance. Use Admin to check sources, spending, Stop, and display settings.
-Admin → Database browses the working schema and the retained archive.
-[Storage ownership](docs/storage-ownership.md).
+## Collect prices
+
+Set up read-only credentials and select the sports and markets before turning
+on `enabled`. The sample selects SportsGameOdds as the aggregate provider.
+`aggregate_enabled` opts into the selected provider's metered collection.
+[Source configuration and credentials](docs/configuration.md#source-configuration)
 
 ```sh
 scripts/opportunity-board check-config
@@ -70,16 +49,11 @@ scripts/opportunity-board status
 scripts/opportunity-board stop
 ```
 
-The launcher uses a dedicated socket-only PostgreSQL cluster and independent
-background data and app processes. Add `--role app` or `--role data` to start,
-stop or check either process on its own. Closing/restarting the app leaves collection and shared
-calculations running. [Lifecycle and result contract](docs/data-app-runtime-contract.md).
-The [Hetzner runbook](docs/hetzner.md) covers the same runtime on a private Linux
-host. The data process can restart itself after successful
-planned storage maintenance; it preserves Stop choices and source pauses.
-Current prices keep their original clocks; a recent
-calculation does not make an old price fresh. Fee and payout models have bounded
-applicability, so missing or expired models can withhold estimates.
+The launcher runs the app and collector as independent processes against a
+socket-only PostgreSQL cluster. Use `--role app` or `--role data` to target one
+process. Admin shows source health, spending, Stop controls, and the database
+browser. [Process lifecycle](docs/data-app-runtime-contract.md) ·
+[Storage ownership](docs/storage-ownership.md) · [Hetzner runbook](docs/hetzner.md)
 
 ## Testing and maintenance
 
@@ -88,19 +62,15 @@ checks after installing those tools are:
 
 ```sh
 .venv/bin/python -m pytest -q tests/test_ev09_asset_delivery.py
-node tests/test_stored_views.cjs
+node tests/test_f07_desk_ui.cjs
 .venv/bin/python scripts/ci/docs.py
 ```
 
 Use affected tests for small changes; [CI](docs/CI.md) describes the broader
 automated checks.
 
-- [Scanner filters, observations and manual tickets](docs/scanner-usage.md)
-- [Architecture and module ownership](docs/architecture.md)
-- [Acquisition and accounting boundaries](docs/acquisition.md)
-- [Raw prices and original inputs](docs/raw-prices.md)
-- [Calculation basis and limitations](docs/benchmark-ev.md)
-- [Current-board API](docs/comparison-board-api-contract.md)
-- [Interface design](docs/ui-design.md)
-- [Security](docs/security.md) and [failure recovery](docs/error-handling.md)
-- [Sport support](docs/sports-integration.md) and [data limitations](docs/market-data-gaps.md)
+- [Calculation and fee policy](docs/benchmark-ev.md) · [Raw prices](docs/raw-prices.md)
+- [Scanner filters and manual tickets](docs/scanner-usage.md)
+- [Architecture, APIs, and module ownership](docs/architecture.md)
+- [Acquisition and accounting](docs/acquisition.md) · [Data limitations](docs/market-data-gaps.md)
+- [Security](docs/security.md) · [Failure recovery](docs/error-handling.md)

@@ -5,32 +5,21 @@ from time import monotonic
 from threading import RLock
 from datetime import datetime
 from aiohttp import web
+from app.owned_work import joined_thread
 from app.storage.store import connect, stamp
 from app.storage import comparison_snapshot as snapshots
 from app.comparison.snapshot_math import assumptions
 from .local_security import read_json, PublicRequestError
-from .snapshot_display import presented, search_index, comparison_groups, ranking_value
+from .snapshot_display import (
+    comparison_groups, pregame_at, presented, ranking_value, retained_pregame, saved_pregame, scoped_result, search_index,
+)
 
 
-def scoped_result(result, rows):
-    if len(rows) == len(result['rows']):
-        return result
-    ids = {row['id'] for row in rows}
-    games = {row['game_key'] for row in rows}
-    return dict(result, rows=rows, games=[game for game in result.get('games', []) if game['game_key'] in games],
-                pairs=[pair for pair in result['pairs'] if all(leg in ids for leg in pair['legs'])])
+def runtime_allows_live(db):
+    from app.collection.current_policy import live_enabled
+    from app.collection.runtime_status import read_runtime
 
-
-def pregame_capture(row, at):
-    if not row.get('start_at') or not at or stamp(at) >= stamp(row['start_at']):
-        return False
-    price = (row.get('current_authority') or {}).get('price') or {}
-    return price.get('lifecycle', {}).get('state') != 'live' and row.get('game_state') != 'live'
-
-
-def retained_pregame(result):
-    return scoped_result(result, [row for row in result['rows']
-                                  if pregame_capture(row, row.get('captured_at') or result.get('captured_at'))])
+    return live_enabled(read_runtime(db, ordinary_authority=True)['config'])
 
 
 def page_options(query):
@@ -212,15 +201,13 @@ def mount(app):
     # Evidence retention/authority is still checked at its owning read boundary.
     decoded_cache=(None,None)
     decode_lock=RLock()
-    def decoded(result_id, db=None, *, ordinary=False):
+    def decoded(result_id, db, *, ordinary=False):
         nonlocal decoded_cache
         # Concurrent viewer/inspection reads share one cold decode. Otherwise
         # each can allocate the same large root and contend in Python's GC.
         with decode_lock:
             cached_id,cached_result=decoded_cache
             if cached_id==result_id:return cached_result
-            if db is None:
-                with connect() as connection:return decoded(result_id,connection,ordinary=ordinary)
             row=db.execute('SELECT result FROM comparison_snapshot_result WHERE id=%s',
                 (result_id,)).fetchone()
             result=snapshots.unpack(row['result'],lazy=ordinary,db=db,
@@ -234,7 +221,7 @@ def mount(app):
             from app.storage.ordinary_publication import lease
             if not lease(db, result_id):
                 return None
-            return decoded(result_id,ordinary=cache)
+            return decoded(result_id,db,ordinary=cache)
         row = db.execute(
             """UPDATE comparison_snapshot_result SET lease_until=now()+interval '2 hours'
             WHERE id=COALESCE(%s,(SELECT result_id FROM comparison_publication WHERE kind='manual' AND id=''))
@@ -247,21 +234,22 @@ def mount(app):
             "UPDATE comparison_snapshot SET lease_until=now()+interval '2 hours' WHERE id=%s",
             (row["snapshot_id"],),
         )
-        return decoded(row["id"],ordinary=cache)
+        return decoded(row["id"],db,ordinary=cache)
+
+    def saved_page(db, result, query, options):
+        if result and not runtime_allows_live(db):
+            result = retained_pregame(result)
+        return history(db, page(result, query, options=options))
 
     async def read(req):
         options = page_options(req.query)
 
         def work():
             with connect() as db:
-                from app.collection.current_policy import live_enabled
-                from app.collection.runtime_status import read_runtime
                 result = leased_result(db, req.query.get("result_id"),cache=True)
                 if req.query.get("result_id") and result is None:
                     raise PublicRequestError("Selected snapshot expired")
-                if result and not live_enabled(read_runtime(db, ordinary_authority=True)['config']):
-                    result = retained_pregame(result)
-                return history(db, page(result, req.query, options=options))
+                return saved_page(db, result, req.query, options)
 
         return web.json_response(await asyncio.to_thread(work))
 
@@ -373,23 +361,33 @@ def mount(app):
                 timings['cold_decode' if cold else 'cached_decode'] = (monotonic()-stage)*1000
                 stage = monotonic()
                 if result is not None and not is_fee_census and not live_available:
-                    result = scoped_result(result, [row for row in result['rows'] if pregame_capture(row, at)])
+                    result = scoped_result(result, [row for row in result['rows'] if pregame_at(row, at)])
                 if result is not None and is_selection and is_desk:
                     result = exact_selection(result, selected, live_contract, aggregate_contract)
+                overlay_events = None
+                public_summary = query.get('summary') == '1'
+                if current_desk and public_summary and query.get('phase') == 'pregame':
+                    from .desk_scope import pregame_search
+                    games, overlay_events = pregame_search(db, result, query, at)
+                    if result is not None and games is not None:
+                        result = scoped_result(result, [row for row in result['rows'] if row['game_key'] in games])
                 lifecycle_rows = result['rows'] if result else ()
                 dependency_result = result
-                # The summary desk shows available prices. Retained and stopped
-                # reads still have their full pregame authorities for inspection.
-                if (result is not None and current_desk and query.get('summary') == '1'
-                        and owner.get('active') and not owner.get('global_stopped')):
-                    relevant = [row for row in result['rows']
-                                if (deadline := row['current_authority']['price'].get('current_until'))
-                                and stamp(deadline) >= at]
-                    dependency_result = scoped_result(result, relevant)
-                    if query.get('phase') != 'pregame':
-                        result = dependency_result
-                        relevant_games = {row['game_key'] for row in relevant}
-                        lifecycle_rows = [row for row in lifecycle_rows if row['game_key'] in relevant_games]
+                # Held pregame prices still have their lifecycle and original
+                # evidence. They cannot rank, so omit calculation dependencies.
+                if result is not None and current_desk and public_summary:
+                    if query['phase'] == 'pregame' and (
+                            not owner.get('healthy') or not owner.get('active') or owner.get('global_stopped')):
+                        dependency_result = None
+                    elif owner.get('active') and not owner.get('global_stopped'):
+                        relevant = [row for row in result['rows']
+                                    if (deadline := row['current_authority']['price'].get('current_until'))
+                                    and stamp(deadline) >= at]
+                        dependency_result = scoped_result(result, relevant)
+                        if query.get('phase') != 'pregame':
+                            result = dependency_result
+                            relevant_games = {row['game_key'] for row in relevant}
+                            lifecycle_rows = [row for row in lifecycle_rows if row['game_key'] in relevant_games]
                 timings['scope'] = (monotonic()-stage)*1000
                 stage = monotonic()
                 deps, dependency_revision = (live.published_dependencies(db, dependency_result, provider=provider, at=at)
@@ -424,7 +422,7 @@ def mount(app):
                                         current_prices=0, retained_prices=0, data_runtime=publication_runtime(owner))
                     result = dict(id=None, rows=[], pairs=[], games=[], publication=initializing,
                                   captured_at=at.isoformat(), assumptions=settings)
-                    if not aggregate_desk:
+                    if not (native_desk or aggregate_desk or is_selection and is_desk):
                         fallback = game_capture_link(db, query, allow_live=live_available)
                         return dict(state='initializing', publication=initializing, **features,
                             cursor=cursor, generation=head['generation'], rows=[], total=0, provider_requests=0,
@@ -438,14 +436,14 @@ def mount(app):
                 stage=monotonic()
                 if is_selection and not is_desk:
                     result = exact_selection(result, selected, live_contract, aggregate_contract)
-                captured_pairs = [pair for pair in result['pairs'] if snapshots.exact_arb_pair(pair)]
-                frames = (live.sportsbook_frames(db, at) if any(
-                    (r.get('sportsbook_baseline') or {}).get('indicative') for r in result['rows'])
+                captured_pairs = ([pair for pair in result['pairs'] if snapshots.exact_arb_pair(pair)]
+                                  if is_fee_census or options[0] == 'arbs' else ())
+                frames = (live.sportsbook_frames(db, at) if dependency_result and any(
+                    (r.get('sportsbook_baseline') or {}).get('indicative') for r in dependency_result['rows'])
                     and owner.get('config', {}).get('aggregate_provider') == 'sportsgameodds' else ())
                 from app.storage.ordinary_projection import event_owners, publication_runtime
                 from .trade_desk import browse_retained
                 browsing_odds = query.get('browse_odds') == '1'
-                public_summary = query.get('summary') == '1'
                 retained_fallback = (browsing_odds and not public_summary
                                      and browse_retained(publication_runtime(owner)))
                 retain_sportsbook_ev = (browsing_odds and not public_summary
@@ -467,12 +465,14 @@ def mount(app):
                     stage=monotonic()
                     from .trade_desk import desk_phase
                     result = overlay(db, result, owner, states, at=at, contract=live_contract,
-                                     phase=desk_phase(query) or 'pregame', sgo_inputs=sgo_inputs)
+                                     phase=desk_phase(query) or 'pregame', sgo_inputs=sgo_inputs,
+                                     event_ids=overlay_events)
                     timings['native_desk']=(monotonic()-stage)*1000
                 if aggregate_desk:
                     stage = monotonic()
                     result = current_aggregate_desk.overlay(db, result, owner, states, at=at, phase=query['phase'],
-                                                            contract=aggregate_contract, sgo_inputs=sgo_inputs)
+                                                            contract=aggregate_contract, sgo_inputs=sgo_inputs,
+                                                            event_ids=overlay_events)
                     timings['aggregate_desk'] = (monotonic()-stage)*1000
                 if not head['result_id'] and not result['rows'] and not is_selection:
                     fallback = game_capture_link(db, query, allow_live=live_available)
@@ -547,12 +547,13 @@ def mount(app):
                 return out
 
         from .desk_delivery import common_page, encode, packet_response, timing_header
-        if is_updates and is_desk and set(req.query) <= {'layout', 'phase', 'after'}:
-            async def witness():
-                value = await asyncio.to_thread(work)
-                return (value, dict(timings)), float('inf'), 0
 
-            (result, saved_timings), shared = await desk_reads.read(('updates', query['phase']), witness, reuse=0)
+        async def read_work():
+            value = await joined_thread(__name__, 'desk_read_after_cancellation', work)
+            return (value, dict(timings)), float('inf'), 0
+
+        if is_updates and is_desk and set(req.query) <= {'layout', 'phase', 'after'}:
+            (result, saved_timings), shared = await desk_reads.read(('updates', query['phase']), read_work, reuse=0)
             result = dict(result, changed=query.get('after') != result['cursor'])
             headers = {'Server-Timing': 'desk_shared;dur=0' if shared else timing_header(saved_timings)}
             return web.json_response(result, headers=headers)
@@ -569,18 +570,14 @@ def mount(app):
                 return (packet, dict(timings)), expires, size
 
             async def produce():
-                return await asyncio.to_thread(public_packet)
+                return await joined_thread(__name__, 'desk_read_after_cancellation', public_packet)
 
             key = common_page(query, options)
-            if key is None:
-                (packet, saved_timings), _, _ = await produce()
-                shared = False
-            else:
-                (packet, saved_timings), shared = await desk_reads.read(key, produce)
+            (packet, saved_timings), shared = await desk_reads.read(key, produce)
             return packet_response(req, packet, saved_timings, shared=shared)
 
-        result = await asyncio.to_thread(work)
-        return web.json_response(result, headers={'Server-Timing': timing_header(timings)})
+        (result, saved_timings), _ = await desk_reads.read(None, read_work)
+        return web.json_response(result, headers={'Server-Timing': timing_header(saved_timings)})
 
     def game_capture_link(db, query, *, allow_live):
         if query.get('layout') != 'desk' or query.get('browse_odds') != '1' or not query.get('game_capture'):
@@ -648,20 +645,14 @@ def mount(app):
 
         def work():
             with connect() as db:
-                return history(
+                result = snapshots.replace(
                     db,
-                    page(
-                        snapshots.replace(
-                            db,
-                            action=body.get("action"),
-                            value=body.get("assumptions"),
-                            expected=body.get("expected"),
-                            product=True,
-                        ),
-                        req.query,
-                        options=options,
-                    ),
+                    action=body.get("action"),
+                    value=body.get("assumptions"),
+                    expected=body.get("expected"),
+                    product=True,
                 )
+                return saved_page(db, result, req.query, options)
 
         try:
             return web.json_response(await asyncio.to_thread(work))
@@ -684,7 +675,7 @@ def mount(app):
                 if req.query.get('lease_id'):
                     from app.storage.ordinary_publication import retain
                     retain(db, req.query['result_id'], req.query['lease_id'])
-                    result=decoded(req.query['result_id'])
+                    result=decoded(req.query['result_id'], db)
                 else:
                     result = leased_result(db, req.query.get("result_id"))
                 if result is None:
@@ -703,7 +694,7 @@ def mount(app):
                 # components. Bind inspection to that exact member's inputs.
                 evidence_result = result
                 if row.get('evidence_result_id'):
-                    evidence_result = decoded(row['evidence_result_id'])
+                    evidence_result = decoded(row['evidence_result_id'], db)
                     if evidence_result is None:
                         raise PublicRequestError('Selected evidence expired')
                     row=next(r for r in [*evidence_result['rows'],*evidence_result['pairs']] if r['id']==row['id'])
@@ -711,11 +702,8 @@ def mount(app):
                 legs = set(row['legs']) if row.get('kind') == 'pair' else None
                 entries = ([leg for leg in evidence_result['rows'] if leg['id'] in legs]
                            if legs is not None else [row])
-                if not entries or not all(pregame_capture(leg, leg.get('captured_at') or capture_at)
-                                          for leg in entries):
-                    from app.collection.current_policy import live_enabled
-                    from app.collection.runtime_status import read_runtime
-                    if not live_enabled(read_runtime(db, ordinary_authority=True)['config']):
+                if not entries or not all(saved_pregame(leg, capture_at) for leg in entries):
+                    if not runtime_allows_live(db):
                         raise PublicRequestError('Selection is not in this result revision')
                 pair_details = req.query.get('layout') == 'desk' and snapshots.exact_arb_pair(row)
                 if stake is not None or pair_details:

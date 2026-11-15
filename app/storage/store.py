@@ -88,22 +88,31 @@ class Store:
         migrations=sorted((Path(__file__).parent/'migrations').glob('*.sql'))
         if through is not None and through not in {p.name for p in migrations}:
             raise ValueError('unknown migration boundary')
+        if not migrations:
+            raise ValueError('no packaged migrations found')
         with self.db.transaction():
             self.db.execute('SELECT pg_advisory_xact_lock(120012)')
-            self.db.execute('CREATE TABLE IF NOT EXISTS schema_migration(version text PRIMARY KEY, sha256 text NOT NULL)')
-            for p in migrations:
-                h=sha256(p.read_bytes()).hexdigest()
-                old=self.db.execute('SELECT sha256 FROM schema_migration WHERE version=%s',(p.name,)).fetchone()
-                if old:
-                    if old['sha256']!=h: raise ValueError('applied migration changed')
-                elif through is not None and p.name>through:
-                    # Explicit offline upgrades can commit bounded replacement
-                    # stages, releasing old physical files before the next copy.
-                    # Default startup still applies all pending migrations atomically.
-                    continue
-                else:
-                    self.db.execute(p.read_text())
-                    self.db.execute('INSERT INTO schema_migration VALUES (%s,%s)',(p.name,h))
+            self.db.execute('CREATE TABLE IF NOT EXISTS public.schema_migration(version text PRIMARY KEY, sha256 text NOT NULL)')
+            applied = self.db.execute('SELECT version,sha256 FROM public.schema_migration ORDER BY version').fetchall()
+            for index, row in enumerate(applied):
+                version = row['version']
+                if index >= len(migrations) or migrations[index].name != version:
+                    raise ValueError(f'applied migration is outside the packaged history: {version}')
+                if sha256(migrations[index].read_bytes()).hexdigest() != row['sha256']:
+                    raise ValueError(f'applied migration changed: {version}')
+            # An explicit offline upgrade can commit bounded stages and release
+            # old files between copies. The default remains one atomic update.
+            for path in migrations[len(applied):]:
+                if through is not None and path.name > through:
+                    break
+                body = path.read_bytes()
+                try:
+                    self.db.execute(body.decode('utf-8'))
+                    self.db.execute('INSERT INTO public.schema_migration VALUES (%s,%s)',
+                                    (path.name, sha256(body).hexdigest()))
+                except psycopg.Error as exc:
+                    exc.add_note(f'While applying migration {path.name}')
+                    raise
 
     def immutable(self, table, row, keys):
         """A retry must match every field; never silently accept identity collisions."""

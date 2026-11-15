@@ -10,7 +10,8 @@ from app.storage import odds_replay, comparison_snapshot as snapshots
 from app.storage.store import connect, stamp
 from .local_security import PublicRequestError
 from .product_finance import retained_novig_fee, visible_assumptions, visible_row
-from .snapshot_api import page_options, pregame_capture, retained_pregame
+from .snapshot_api import page_options, runtime_allows_live
+from .snapshot_display import retained_pregame, saved_pregame
 from .trade_desk import page
 
 
@@ -125,14 +126,11 @@ def load(query, *, details=False, allow_live=False):
             value = snapshots.unpack(row[0]) if row else None
         if not value or value['result_id'] != result['id']:
             raise PublicRequestError('Offer unavailable in this replay revision')
-        if not allow_live and not pregame_capture(value['row'], value['captured_at']):
+        if not allow_live and not saved_pregame(value['row'], result['captured_at']):
             raise PublicRequestError('Offer unavailable in this replay revision')
         return archive_detail(value, result['id'])
     if not allow_live:
         result = retained_pregame(result)
-        from app.storage.ordinary_projection import counts
-        result = dict(result)
-        counts(result)
     out = page(result, query, page_options(query), captured_pairs=result['pairs'],
                policy=result['publication']['policy'])
     out.update(replay=result['replay'], archive_counts=result['counts'])
@@ -145,12 +143,10 @@ def mount(app):
             raise PublicRequestError('Unknown replay dataset')
 
         def work():
-            from app.collection.current_policy import live_enabled
-            from app.collection.runtime_status import read_runtime
             allow_live = False
             try:
                 with connect() as db:
-                    allow_live = live_enabled(read_runtime(db, ordinary_authority=True)['config'])
+                    allow_live = runtime_allows_live(db)
             except OperationalError:
                 # Disk captures can still supply pregame evidence with SQL offline.
                 if req.query.get('dataset') == 'retained':

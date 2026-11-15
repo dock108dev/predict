@@ -27,6 +27,7 @@ from .board_view import board as board, bounded_page as bounded_page
 from app.comparison.calculation_control import CalculationStopped, cancellation, checkpoint
 from app.comparison.current_dependencies import validation_scope
 from app.collection.runtime_status import runtime_identity, source_states
+from app.collection.current_policy import aggregate_provider
 
 # Full-scope source + retained financial evidence exceeded 192 MiB with only
 # 75/180 games calculated. This is a disk publication allowance, not an in-memory
@@ -111,7 +112,7 @@ def read_context(db, *, at=None, owner=None, event_ids=None, resource_guard=None
     frame=CurrentRowStore(db).capture(include_depth=False,event_ids=event_ids,resource_guard=resource_guard)
     # Retain old provider rows in storage and raw history, but do not let a
     # newly rebuilt board promote an inactive aggregate source as current.
-    active_provider=owner.get('config',{}).get('aggregate_provider','the_odds_api')
+    active_provider=aggregate_provider(owner.get('config'))
     frame['records']=[r for r in frame['records'] if r['quote']['source']['provider'] not in ('the_odds_api','sportsgameodds')
                       or r['quote']['source']['provider']==active_provider]
     captured_ms=round((monotonic()-started)*1000,3)

@@ -1,15 +1,27 @@
 # Independent data runtime and latest results
 
-## Current ordinary publication — November 4, 2026
+## Current ordinary publication
 
-The [L01 contract](engineering/live-comparison-20261104/L01-publication-contract.md)
-is implemented locally. Ordinary Opportunities reads `/api/comparison-current`
-and follows a bounded two-second notification cursor. The data process's
+Ordinary Opportunities reads `/api/comparison-current`
+and checks a lightweight notification cursor between full reads. The data process's
 `OrdinaryOwner` replaces legacy board observation/estimate loops, reusing the
 snapshot math engine and matching-component partition. It publishes source-only
 prices before optional finance and atomically replaces immutable current roots.
 Explicit historical snapshots remain readable; selected evidence uses bounded
-leases. The [inspection controller](engineering/live-comparison-20261104/L03-ranking-contract.md) keeps a selected revision pinned as the list advances.
+leases. The inspection controller keeps a selected revision pinned as the list
+advances. [Desk and inspection](ui-design.md)
+
+The desk limits distinct in-flight current read work to 16 per web process,
+including custom filters and exact selections. Requests for an identical shared
+page can use the same read while there is no room for new work. New work at
+capacity receives HTTP 503 and can be retried as slots finish. A disconnected
+viewer leaves an admitted read owned until it finishes. Requests arriving after
+a shared page's first quote or kickoff deadline take a fresh SQL snapshot.
+An exact native quote read can return its original price and evidence before
+the first ordinary publication, subject to current source controls and clocks.
+Saved snapshot refreshes and recalculations return the same pregame rows as
+saved snapshot reads when Live is disabled. The retained inputs still contain
+the original observations.
 
 The installation uses the same two processes and PostgreSQL database.
 `app.collection.data_runtime` owns `CurrentService`, maintenance, ordinary
@@ -46,6 +58,11 @@ the loop in order. Cancellation revokes adoption while the actual worker remains
 owned. Stop/pause withdraw dispatch immediately, then persist their authority;
 the transaction rechecks runtime/control identity and revocation before commit.
 Shutdown reports incomplete cleanup rather than releasing a live ingress owner.
+
+Ordinary publication waits its usual two-second interval after a failed turn.
+Incoming quotes can wake a healthy publisher without bypassing that retry
+delay. Close still interrupts the wait. The legacy saved-result read takes a
+row lock before renewing its lease so pruning can skip that result.
 
 Estimates, Scanner and Coverage share one reusable optional-work thread. Each of
 the three owners awaits its existing turn before submitting another; queued work
@@ -183,8 +200,7 @@ requests. Fixture evidence supplies engineering verification, not current source
 qualification, exact production destinations, hosted CI or live operational validity.
 
 
-October 20 broad-acquisition integration: the runtime status
-bound applies after deduplicating structured metrics. Full discovery, identity
+The runtime status bound applies after deduplicating structured metrics. Full discovery, identity
 and coverage diagnostics are retained once in `sources[].metrics`; legacy root
 `metrics` retains scalar counters and any distinct unmirrored fields.
 `status_retention.structured_metrics_location` identifies the detail location.
@@ -193,12 +209,9 @@ large diagnostic structures twice. Account/quota/hold history, source panels,
 clocks, controls, Coverage meaning and the final hard capacity guard are preserved.
 
 
-The status envelope is 1 MiB to carry all 90 configured
-source/league/family inventory cells, their last successful boundaries and retained
-account evidence. Exact repeated source metrics are still deduplicated. The prior
-256 KiB bound was exceeded by honest inventory diagnostics during integration;
-a 90-cell regression checks preservation of coverage, source and account fields.
-The hard guard remains; no source scope is trimmed to make status fit.
+The 1 MiB status envelope carries configured source, league, and family inventory
+cells, their last successful boundaries, and retained account evidence. The
+capacity guard applies without trimming the reporting scope.
 
 ## Acquisition and publication
 
@@ -261,7 +274,7 @@ failure recovery writes still persist complete images with the same ordering gua
 
 ## Native synchronization and delta acquisition
 
-The revised [coverage contract](broad-coverage.md#freshness-and-verification-window)
+[Coverage and freshness](broad-coverage.md#freshness-and-verification-window)
 separates native synchronization from last-change age. The running native owner
 requires a current-generation subscription, valid initial images and durable raw
 images. Ordered continuity and pending work are reported independently. An active

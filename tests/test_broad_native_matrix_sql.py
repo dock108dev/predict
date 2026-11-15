@@ -63,6 +63,41 @@ class NativeMatrixFixture(IsolatedAsyncioTestCase):
 
 
 class BroadNativeMatrixSQL(NativeMatrixFixture):
+    async def test_native_selection_before_the_first_ordinary_seal(self):
+        from app.dashboard.snapshot_api import mount
+
+        self.config['aggregate_provider'] = 'sportsgameodds'
+        self.state.write(self.service)
+        rows, books = await captured_core_matrix(self.at)
+        self.admit(rows, books)
+        app = web.Application()
+        mount(app)
+        query = dict(layout='desk', view='ev', browse_odds='1', summary='1',
+                     basis='before', phase='pregame', lines='all', league='NBA')
+        with patch('app.dashboard.snapshot_api.connect', self.connect):
+            async with TestClient(TestServer(app)) as client:
+                response = await client.get('/api/comparison-current', params=query)
+                self.assertEqual(response.status, 200, await response.text())
+                page = await response.json()
+                quote = next(offer for row in page['rows'] for offer in row['offers']
+                             if offer['current'] and offer['id'].startswith('native-current:'))
+                selection = dict(layout='desk', basis='before', phase='pregame', id=quote['id'])
+                response = await client.get('/api/comparison-current/selection', params=selection)
+                self.assertEqual(response.status, 200, await response.text())
+                detail = await response.json()
+                self.assertEqual(detail['row']['id'], quote['id'])
+                self.assertEqual(detail['row']['original'], quote['original'])
+                self.assertEqual(detail['row']['source_clock_at'], quote['source_clock_at'])
+                self.assertTrue(detail['evidence']['inspection'])
+                self.assertEqual(detail['provider_requests'], 0)
+
+                self.state.write(self.service, paused_sources=[quote['venue']])
+                paused = await client.get('/api/comparison-current/selection', params=selection)
+                self.assertIsNone((await paused.json())['row'])
+                selection['id'] = 'native-current:absent-contract'
+                missing = await client.get('/api/comparison-current/selection', params=selection)
+                self.assertIsNone((await missing.json())['row'])
+
     async def read_matrix(self,expected_cells,expected_prices):
         from app.dashboard.comparison_board_api import mount
         from app.dashboard.snapshot_api import mount as mount_snapshots

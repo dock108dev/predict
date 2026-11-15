@@ -1,71 +1,8 @@
 # Development
 
-Use Python 3.11+ from a source checkout. Python 3.14 and Node 24 match primary CI.
-Run commands from the repository root. Native operation uses macOS Keychain;
-portable offline tests also run on Linux.
-
-## Ordinary app and background data
-
-```sh
-scripts/opportunity-board start
-scripts/opportunity-board status
-scripts/opportunity-board stop --role app
-scripts/opportunity-board start --role app
-scripts/opportunity-board status --role data
-scripts/opportunity-board stop --role data
-scripts/opportunity-board start --role data
-```
-
-The default role is both. App-only stop/restart leaves acquisition and shared
-calculations running. Stopping data ends its process; Admin global/source Stop
-is an acknowledged acquisition control with a persistent Stop latch. Starting a
-data process preserves explicit pauses and unresolved accounting; it does not
-clear holds or force catch-up. Use existing guarded Admin recovery only with its
-required evidence. [Runtime contract](data-app-runtime-contract.md).
-
-Focused separation SQL and the small authored working loop use disposable storage:
-
-```sh
-.venv/bin/python scripts/ci/postgres.py --da-separation --report-dir test-results/da-separation/sql
-```
-
-This focused lane excludes the broader compatibility manifest and stress workloads.
-Its fixture sources make zero provider requests. It also verifies independent
-observation publication under missing/expired/malformed finance, bounded depth,
-source health versus estimate validity, per-game reuse and database-only Inputs. Ordinary authorized source
-activity is attributed separately.
-
-For freshness and comparison changes, use authored mixed-state inputs and the
-affected latest-board SQL tests. Preserve original source clocks, exact peer
-identity and explicit missing-input states. Browser filters and age updates must
-not dispatch providers or calculate the whole slate.
-
-Original-input identity binds the retained source facts, independently of elapsed
-age. Crossing the native 30-second freshness boundary keeps unchanged inputs
-inspectable and labels them expired; changed quotes, books, matching dependencies
-or runtime authority still invalidate the selection. Ordinary slate reads decode
-only the requested stored Odds/EV/Arbs view, within the existing read deadline and
-memory guards. The consistent-slate SQL test covers expiry between page and Details,
-view projection, and pagination through the actual browser module imports.
-
-Background shutdown cancels active SQL operations as well as cooperative Python
-work. Connections and worker tasks remain owned until they finish, including when
-the cleanup deadline expires. The multisport SQL lane verifies cancellation of
-an active 30-second database sleep within the existing cleanup limit. Offline
-recovery fixtures use their authored clock for scheduler windows, so running CI
-outside collection hours does not change the test outcome.
-
-## Frozen replay
-
-Open **Saved odds** on the local app and select an available archive.
-The capture clock stays fixed, including the freshness and fee review decisions
-at that time. Individual offer inspection includes recorded starting fee terms,
-saved rules, and before-fee payouts. A tie that settles to $0.50 has a cashflow
-separate from a stake refund. Full EV needs the probabilities of those outcomes.
-
-The local archives live under `.local/odds-replay/`. The replay read API opens
-those archives read-only. **Saved odds** and **Return to opportunities** switch views.
-Admin Stop controls collection independently.
+Run commands from the repository root. Python 3.14 and Node 24 match primary
+CI. The package supports Python 3.11 and later. Some native sources use macOS
+Keychain. Linux can run the portable tests and the container deployment.
 
 ## Install tools
 
@@ -78,114 +15,78 @@ nvm use
 .venv/bin/python -m pip check
 ```
 
-The hash lock includes runtime, stream, test and build dependencies. The smaller
-editable installation in the [README](../README.md) is enough for ordinary use.
+The CI lock includes runtime, stream, test, and build dependencies. The
+[README](../README.md) uses a smaller installation for ordinary operation.
+For PostgreSQL and browser prerequisites, see [CI](CI.md).
+
+## Ordinary app and background data
+
+Follow the [README quickstart](../README.md#requirements-and-quickstart) to
+start the web app without starting a collector. Use `--role app` or
+`--role data` with the launcher to manage each process independently.
+Stopping the web app leaves collection and shared calculations running.
+Stopping data ends acquisition. Restarting either role preserves the collector's
+explicit pauses and accounting holds. [Operation](configuration.md#start-and-stop) ·
+[Runtime contract](data-app-runtime-contract.md)
+
+Open **Saved odds** in the app to inspect an available archive. The reader
+latches the capture clock and opens local archives under `.local/odds-replay/`
+read-only. [Saved odds](#frozen-replay)
+
+## Frozen replay
+
+Saved offers preserve their recorded prices, fee terms, and before-fee
+payouts. A tie that pays $0.50 is a different outcome from a stake refund.
+Computing full EV requires probabilities for those outcomes.
+[Calculation basis](benchmark-ev.md)
 
 ## Focused checks
 
-Use existing tests for the behavior you change. The manifests under `scripts/ci/`
-distinguish portable tests from SQL tests and older acquisition tools that require
-captured inputs or provider access. Do not run every discovered test against
-ordinary local data.
+Choose the checks that exercise the changed behavior. CI's portable manifest
+and disposable database harness separate ordinary tests from historical tools
+that require local evidence. Avoid running SQL tests directly against the
+ordinary project database.
 
 ```sh
 .venv/bin/python -m ruff check app tests scripts/ci browser_tests
 .venv/bin/python scripts/ci/docs.py
 .venv/bin/python -m pytest -q tests/test_ev09_asset_delivery.py
-node tests/test_stored_views.cjs
-node tests/test_comparison_usability.cjs
+node tests/test_f07_desk_ui.cjs
 git diff --check
 ```
 
-| Change | Useful tests under `tests/` |
+| Change | Focused tests |
 | --- | --- |
-| Asset delivery and calculation cancellation | `test_ev09_asset_delivery.py`, `test_ev09_b01.py`, `test_ev09_calculation_stop.py` |
-| Ordinary snapshot matching, math and presentation | `test_comparison_snapshot.py`, `test_snapshot_identity.py`, `test_snapshot_benchmark.py`, `test_snapshot_completion.py`, `test_snapshot_display.py`; `test_comparison_snapshot_sql.py` in disposable SQL; `browser_tests/test_boards.py` |
-| Settings, game selection and polling | `test_ev09_u01.cjs`, `test_ev09_game_continuity.cjs`, `test_ev09_read_polling.cjs` |
-| Current board contracts and selected Details | `test_current_board_reads.py`, `test_d03_current_client.cjs`, `check_current_api_client.cjs` |
-| Captured multi-page reads and recovery | `test_consistent_slate_reads_sql.py` in the disposable SQL lane, `test_consistent_slate_reads.cjs` |
-| Calculation policy and requested funding | `test_estimated_policy.py`, `test_ev09_s01.py`, `test_comparison_cashflows.py` |
-| Event matching and combined inputs | `test_ev02_occurrence.py`, `test_ev09_n01.py`, `test_comparison_event_links.py` |
-| SQL ingress, expiry and retired routes | `test_database_ingress_repair.py`, `test_current_route_retirement.py`, `test_ev09_ingress_isolation.py` |
-| Native HTTP admission and retry bounds | `test_native_http_reader.py`, `test_ordinary_native_transport.py` |
-| Scanner venue fees, payout terms and depth | `test_scanner_kalshi.py`, `test_scanner_polymarket.py`, `test_scanner_native.py`; `test_sc01_readiness_sql.py` and `test_sc06_performance_sql.py` in disposable SQL |
-| Runtime failure handling and detached reads | `test_data_runtime_unit.py`, `test_selected_read_work.py`, `test_abend_handling.py`, `test_coverage_worker.py`, `test_accounting_process.py`; `test_sc02_sql.py` through the disposable SQL harness |
-| Local browser, error privacy and launcher log targets | `test_security_hardening.py`, `test_dashboard_security.py`, `test_current_board_reads.py` |
-| CI reporting and isolation failures | `test_ci_reporting.py`, `test_ci_environment.py`, `test_ci_assurance.py`, `test_ci_secrets.py` |
+| Desk rendering, selection, and refresh | `tests/test_f07_desk_ui.cjs`, `browser_tests/test_ranked_opportunities.py` |
+| Snapshot math and evidence | `tests/test_snapshot_display.py`, `tests/test_snapshot_benchmark.py`, `tests/test_comparison_snapshot_sql.py` |
+| Source lifecycle and acquisition | `tests/test_current_service.py`, `tests/test_ordinary_native_transport.py`, `tests/test_data_runtime_unit.py` |
+| Scanner policy, settlement, and fees | `tests/test_scanner_kalshi.py`, `tests/test_scanner_polymarket.py`, `tests/test_scanner_native.py` |
+| Failure handling and launcher security | `tests/test_abend_handling.py`, `tests/test_security_hardening.py`, `tests/test_dashboard_security.py` |
 
-Client tests that generate server fixtures also need the locked Python environment.
-Set `PYTHON="$PWD/.venv/bin/python"` when running them directly, for example
-`PYTHON="$PWD/.venv/bin/python" node tests/test_b02_client.cjs`. The full portable
-runner selects its own Python interpreter for these child processes.
+For fixture-generating Node tests, set `PYTHON="$PWD/.venv/bin/python"` if
+your test interpreter differs. The portable runner sets it itself.
 
-For the live comparison, run `browser_tests/test_live_comparison.py` with pytest.
-Each journey writes its screenshots inside that test's temporary directory.
-The standalone fixture entry points retain their documented output directories.
-The optional `tests/test_l05_capacity_sql.py` replay needs explicit
-`L05_CAPTURE_LOAD` and `L05_LOAD_OUTPUT` paths and a disposable PostgreSQL
-cluster. Routine SQL checks use authored inputs.
-
-### Snapshot and recovery test coverage
-
-Local selection uses the explicit modules above and the affected callers; this
-repository has no dependency-aware test selection cache. The portable manifest
-and browser workflow discover the maintained tests below. The SQL harness accepts
-`--tests tests/test_comparison_snapshot_sql.py` for an isolated snapshot-only run.
-
-| Behavior | Tests and assertion boundary | Maintenance decision |
-| --- | --- | --- |
-| Named benchmark, clock validation and missing reference | `test_current_benchmark.py`, `test_snapshot_completion.py`: independent probabilities, selected-book failure messages, malformed clock rejection and incomplete-pair refusal using authored receipts | Keep; no live source claim |
-| Exact display and stable saved inputs | `test_snapshot_display.py`: rational arithmetic, full-name search, null ordering and unchanged input objects | Keep; display conversion does not establish executable returns |
-| Saved navigation and recovery | `browser_tests/test_boards.py::test_saved_board_journey`: real Chromium, desktop/narrow layout, keyboard Why, exact inspection, persistent odds preference, failed refresh retaining rows, first use, and malformed/external return links | Keep; intercepted HTTP isolates providers; invalid links must neither blank results nor leave the app |
-| Snapshot replacement and retention | `test_comparison_snapshot_sql.py`: concurrent capture, failed replacement preserving the head, unchanged Originals, recalculation and retention leases on disposable PostgreSQL | Keep; fixtures establish transactional behavior, not sustained provider coverage |
-| Collection cancellation and recovery | Added cases in `test_current_aggregate.py`, `test_current_service.py`, `test_current_conservative_recovery.py` and `test_current_admin.py`: no transport entry or reused receipt, maintenance versus Stop drain limits, exact held-record preservation, and active accounting display | Keep; mocked transport and controlled owned tasks protect cancellation/accounting boundaries |
-
-This review covers the snapshot/display cases and the added recovery cases. It
-does not claim a value audit of every existing test or a hosted CI run.
-
-### Scanner native finance test coverage
-
-| Behavior | Tests and assertion boundary | Maintenance decision |
-| --- | --- | --- |
-| Kalshi selected-market grid and reviewed fees | `test_scanner_kalshi.py` checks exact side and market binding, tick ranges, fee bounds against the fee engine, expired reviews and explicit tie cashflow | Keep; authored receipts and a fixed clock |
-| Polymarket US selected-instrument fees and settlement | `test_scanner_polymarket.py` checks Long and Short, original kickoff and postponement terms, fee rounding and refusal of expired or mismatched evidence | Keep; authored receipts and a fixed clock |
-| Scanner conditional hedge allocation | `test_scanner_native.py` passes both venue models through the Scanner allocator and asserts positive fee bounds, the observed depth cap, unknown terminal profit and no ranked qualification | Keep; detached fixture models cover allocator behavior, while disposable SQL covers storage and publication |
-
-Run resource-sensitive Python modules in fresh processes: some deliberately
-measure process caps. Use authored fixtures and temporary state. For SQL tests,
-use `.venv/bin/python scripts/ci/postgres.py`; it creates a disposable socket-only
-cluster, redirects the storage root, runs `integration_tests` and the registered
-current-row roundtrips, then tears down the cluster. Do not invoke those SQL
-modules directly against ordinary storage. The harness also keeps socket paths
-short enough for Unix limits. Primary SQL qualification requires PostgreSQL 16;
-set `PG_CONFIG` to that installation's `pg_config` when PATH selects another
-major. `--report-dir` (or `PREDICT_CI_POSTGRES_REPORT_DIR`) preserves separate
-environment results, including a `toolchain.json` identity receipt. The explicit
-`--allow-other-postgres` flag labels intentional older-major diagnostics as
-compatibility runs. Python 3.11 remains a supported compatibility lane.
+The SQL harness creates and tears down a disposable socket-only PostgreSQL
+cluster. Primary SQL checks use PostgreSQL 16. If needed, pass
+`--pg-config /path/to/postgresql@16/bin/pg_config` to select tools.
+Select specific modules with `--tests`, or use the registered suite with no
+selection. Use a fresh report directory for each run.
 
 ```sh
-.venv/bin/python scripts/ci/postgres.py --report-dir test-results/postgres-py314-pg16
+.venv/bin/python scripts/ci/postgres.py --report-dir test-results/snapshot-sql \
+  --tests tests/test_comparison_snapshot_sql.py
 ```
 
-The SQL lane includes small financial current-row roundtrips, ready tickets,
-original-clock expiry and missing-depth refusal. Full-scale performance and
-burst testing are not routine CI prerequisites or established performance claims.
+Use `--da-separation` when checking app and collector isolation, per-game
+result reuse, or publication of observations while financial results are
+unavailable. Fixtures make zero provider requests.
+`PATH="$PWD/.venv/bin:$PATH" sh scripts/check-ci` runs the portable manifest.
+[CI checks and reports](CI.md)
 
-The ordinary launcher selects tools matching its existing cluster's `PG_VERSION`
-even when PATH selects PostgreSQL 16. `PREDICT_PG_BIN` can select that matching
-installation explicitly. An existing database requires a separate data migration
-to change major versions; these test commands never migrate it.
-
-`PATH="$PWD/.venv/bin:$PATH" sh scripts/check-ci` runs the full portable manifest
-and writes ignored reports under `test-results/ci`. See [CI](CI.md) for browser,
-packaging and scheduled checks. A documentation-only edit usually needs the
-documentation checker, reference review and whitespace check.
-
-The optional `browser_tests/test_u02_browser.cjs` replay takes explicit response
-and partial-failure JSON paths and uses `PREDICT_PLAYWRIGHT_MODULE` to locate an
-installed Playwright module. Its reports stay under `test-results/u02-replay/`;
-it does not read an implicit temporary export or contact the running app.
+The ordinary database launcher selects tools for the existing cluster's
+`PG_VERSION`. Set `PREDICT_PG_BIN` to a matching installation if needed.
+A cluster major upgrade requires a data migration. The SQL harness uses
+separate state.
 
 ## Synthetic preview
 
@@ -193,53 +94,31 @@ it does not read an implicit temporary export or contact the running app.
 .venv/bin/python -m tests.current_integration_server --synthetic-test --port 8797
 ```
 
-Open its loopback address, `/arbs` or `/admin`; stop with Ctrl-C. The provider is
-synthetic and does not acquire source data. Its `/__test/commit` route belongs
-only to this test server. `.venv/bin/python -m tests.comparison_preview` supplies
-additional comparison fixtures. Injected previews and intercepted browser tests
-exercise presentation and contracts; SQL persistence and live coverage have
-separate tests.
+Open the printed loopback address. The injected provider makes no source
+requests. Stop it with Ctrl-C. `/__test/commit` is a route on this test server.
+Browser fixtures exercise presentation and API contracts, while disposable SQL
+tests exercise persistence.
 
 ## Frontend sources
 
-The authored frontend is under `app/dashboard/opportunity_static/current/`:
+The authored frontend is under `app/dashboard/opportunity_static/current/`.
 
-- `scanner-client.js` validates scanner v1, bounded page reads and compatibility;
-  `scanner-controller.js`, `scanner-style.css` and `scanner-shell.html` own the
-  advanced Scanner at `/scanner`. `ticket-client.js` and `ticket-view.js` own selected
-  commands, persistent panel/sheet and exact frame presentation;
-  `scanner-arrivals.js` consumes filter-wide server transition observations;
-  `scanner-summaries.js` validates the optional bounded observed-summary disclosure. The generator
-  also produces scanner.js/css/html and scanner-runtime.json. See the
-  [client contract](scanner-client-contract.md) for bounds, ticket interaction and summary reads.
-- [Readiness preparation reuse](scanner-preparation-contract.md) documents the
-  bounded scanner/selected-ticket caches, exact invalidation and temporal proof.
-- `snapshot-controller.js` owns the ordinary immutable-result lifecycle, filters,
-  navigation context, paging and refresh/recalculation. `snapshot-views.js` renders
-  grouped offers and their pricing reference. `snapshot-live.js` owns the pinned
-  selection and its lease. `snapshot-drawer.js` renders Math & fees and its
-  update notice. `ui-common.js` owns the shared shell and odds preference.
-  These modules and the `ui01.css` and `live-comparison.css` styles compose the
-  shipped `stored.js` and `stored.css`.
-- `snapshot_api.py` reads/captures/recalculates results. `snapshot_display.py` projects
-  display odds and $100 amounts without mutating saved records or ranking, reusing
-  `u0_display.quote_display` with optional presentation precision.
-- `admin.js` retains the real collection/status controls. `admin.html` serves overview
-  and usage; calculation/inspection/timing sections use the snapshot shell. Coverage
-  keeps its existing reader and uses `coverage-shell.js` for the shared navigation.
-- **Admin → Database** (`/admin?section=database`) discovers project schemas, tables
-  and views on catalog refresh. Turn on **Include partitions and sequences** to see
-  those storage objects in the picker. Structure shows
-  columns, defaults, constraints, indexes, partition metadata and view definitions.
-  Rows shows paged stored values, including encoded payloads, and opens long values
-  in chunks. Pages are live and ordered by the primary key where available.
-  The loopback browser uses bounded read-only transactions and does not call providers.
-  PostgreSQL system schemas are excluded; foreign tables show structure only.
-- Earlier `stored-controller.js`, `stored-views.js`, `stored-details.js` and board
-  client modules remain compatible retained/scanner code. They are not the ordinary
-  snapshot shell’s source of truth. The older stored CSS files are no longer composed.
+- `desk.html` is the shared shell for Opportunities, Arbitrage, Browse odds,
+  game detail, and Saved odds. `desk.js` owns list state and fetches current and
+  saved data. `desk-drawer.js` owns selection history, leases, and adoption.
+  `desk-inspection.js` renders the captured evidence.
+- `snapshot-controller.js`, `snapshot-views.js`, `snapshot-live.js`,
+  `snapshot-drawer.js`, and `ui-common.js` supply the stored results view.
+- `scanner-controller.js`, `scanner-client.js`, `scanner-style.css`, and
+  `scanner-shell.html` supply Scanner. The ticket, arrival, and summary modules
+  own their respective reads and controls. [Scanner API](scanner-client-contract.md)
+- Raw Odds and Coverage have their own authored HTML, CSS, and JavaScript entry
+  points. Admin uses `admin.html` and `admin.js`. Its Database tab uses bounded
+  read-only transactions and shows schema and paged stored values.
 
-Regenerate the public assets after editing their authored sources:
+After editing an authored input to the stored or Scanner bundles, regenerate
+the tracked assets. The generator handles a closed set of named imports.
+Edit the authored files and keep the generated files in sync.
 
 ```sh
 .venv/bin/python scripts/build_stored_frontend.py
@@ -247,139 +126,55 @@ Regenerate the public assets after editing their authored sources:
 node --check app/dashboard/opportunity_static/current/stored.js
 ```
 
-The dependency-free generator handles this closed graph and unaliased named
-imports; add new client symbols to `CLIENT_NAMES`. It is not a general JavaScript
-bundler. Generated `stored.js` and `stored.css` are required packaged resources:
-keep them tracked and do not edit them directly. CI checks for drift. Reload the
-page after rebuilding assets; restart the app after backend or credential changes.
+Reload frontend changes in the browser. Restart the affected app or collector
+process after changing its backend code.
 
 ## Maintenance boundaries
 
-[Architecture](architecture.md) describes module ownership. Ordinary ingress uses
-`CurrentRowStore`; background owners calculate affected shared results and the app
-reads latest database publications. Only selected Details/tickets calculate amounts
-on request. Details binds to the clicked input context. A leased selected frame preserves
-its original evidence across current-input changes, labels it captured and withdraws
-current eligibility; View updated results selects the latest inputs. Expired or
-unknown frames still require a new selection. Older archive readers serve separate retained-research
-interfaces. See the [storage guide](current-row-storage.md) and
-[board contract](comparison-board-api-contract.md).
+[Architecture](architecture.md) describes module ownership. Preserve public
+imports, packaged asset paths, protocol versions, and applied migration files.
 
-Preserve public imports, packaged resource paths, protocol versions and applied
-migrations. Keep financial validation beside the models it admits, collection
-Stop and cleanup ordering with lifecycle owners, and quota/hold updates with
-their accounting owners. Prefer focused helpers when a module gains a distinct
-responsibility; keep controller state and CSS cascade ordering coherent.
+Review mixed responsibilities above 500 physical lines in Python, 300 in
+authored JavaScript or CSS, 250 in templates, and 100 in shell. Above twice
+the review length, extract a cohesive owner or document the state or transaction
+that belongs together. Generated assets follow their source boundaries.
 
-Keep credentials, local state, generated reports and coding notes out of Git.
-Required fixtures belong in `tests/fixtures` or `app/fixtures`; schemas and wire
-examples belong in `docs/contracts`. Retained fee documents and the exact inputs
-used by sealed executor packages are test/runtime inputs, not disposable output.
-Public documentation should use repository-owned paths and explain current
-behavior without depending on local plans or reports.
+- Keep source Stop, synchronization, and socket shutdown in the transport
+  lifecycle. Exact book persistence acknowledges the active generation before
+  downstream publication. Catalog selection and diagnostic helpers live in
+  `app/collection/current_native_catalog.py`.
+- Keep authority checks and transaction boundaries with the publication
+  owners. `ordinary_publication.py` owns capture, retries, sealing, and leases.
+  `ordinary_dependencies.py` reads exact dependency witnesses.
+  `ordinary_result.py` binds capture authority, fees, and payoff.
+  `desk_sportsbooks.py` enriches exact desk lines without dispatching data.
+- Current reads use the read clock for pregame cutoff. Saved lists and details
+  use each offer's capture clock, falling back to its result clock.
+  Preserve source clocks and exact offer identities across list and detail reads.
+- The desk list controller shares ranking, filters, fetch cancellation, scroll,
+  and Back state. Its drawer owns focused evidence and leases. Keep ranked
+  browser case names stable when editing fixtures.
+- `deploy/release.sh` keeps digest validation, migration checks, and rollback
+  under one restricted-SSH rollout transaction.
 
-Review Python modules above 500 physical lines and extract a cohesive responsibility
-or document a concrete retention reason above 1,000. For authored JavaScript and
-CSS use 300/600 lines. Tests use their language's thresholds. Judge extensionless
-launchers by their shebang: `scripts/opportunity-board` is Python. These are review
-triggers, not reasons to compress formatting or add forwarding fragments.
-
-Latest-board SQL capture sizing and fair source scheduling live in
-`storage/board_capture.py`; `storage/board_view.py` renders captured results and
-bounds wire pages without acquiring inputs. `latest_board.py` owns transactional
-publication, reconciliation, snapshot authority and its background task. The
-public `board`/`bounded_page` imports remain available there. Engine identity
-includes both extracted modules. SQL tests share disposable setup in
-`tests/latest_board_fixture.py`; `test_latest_board_sql.py` retains its public test
-class and independently reset behavioral cases. Capacity/refusal isolation tests
-live in `tests/test_latest_board_capacity_sql.py`, using the same fixture. Both
-modules run in `postgres.py --da-separation`; the two standard-lane node names
-remain unchanged. The split preserves all 37 test methods and avoids importing
-one collected test class into another module.
-
-Native catalog selection and bounded diagnostics live in
-`collection/current_native_catalog.py`; `current_native.py` preserves public helper
-imports and owns transport lifecycle. Its raw-image persistence,
-subscription transitions and synchronization acknowledgement still share one
-credential/budget and cancellation/Stop owner with discovery and socket replacement.
-Raw persistence must acknowledge the exact active generation before downstream
-publication; splitting these methods across stateful owners would obscure that
-ordering. Stateless image material, synchronization records and catalog helpers
-already have separate modules. The catalog extraction remains the stateless boundary;
-stateful mixins or a second publication owner would obscure shutdown and resync
-ordering. The legacy `stored-controller.js`
-likewise retains one UI lifecycle: generation cancellation, applied settings,
-selection leases, modal focus and Stop all mutate the same current view. Rendering,
-wire validation, pagination and read scheduling are already separate modules;
-extract a new controller only when it can own an independent state lifecycle.
-The background publisher in `storage/latest_board.py` retains the committed-authority
-protocol: publication validation, reconciliation and repeatable-read snapshots
-share the epoch, source-state and control barriers. Keeping those transaction
-boundaries together makes stale-result rejection auditable; capture sizing and
-wire rendering are already separate. Do not extract a second authority owner or
-duplicate these barriers to meet a line target.
-Review these decisions when those responsibilities change.
-The Opportunities controller keeps navigation history, filter state, request
-cancellation, and pinned inspection adoption together. Card and drawer rendering
-live in `opportunity-cards.js` and `desk-inspection.js`. The controller remains
-above the JavaScript review threshold. A later extraction can move inspection
-lease management as one unit once its drawer focus and replacement contracts
-can be exercised independently.
-
-`ordinary_publication.py` owns the background commit sequence from price capture
-through component finance and root publication. Component retries reuse the
-same dependency identity, deadlines, and authority checks. Keep those decisions
-with the transactions that mark a component failed or publish its replacement.
-Read-time projection and scheduling policy already live in separate modules.
-
-CI regression tests are separated into `test_ci_reporting.py`,
-`test_ci_environment.py`, `test_ci_assurance.py` and `test_ci_secrets.py`, with
-tool loading in `tests/ci_support.py`. The quality workflow runs all four:
-
-```sh
-.venv/bin/python -m pytest -q tests/test_ci_*.py
-```
-
-Generated runtime bundles (`stored.js`, `stored.css` and `scanner.*`) are excluded
-from mechanical splitting; review their authored modules and generator instead.
-Keep generated runtime resources tracked. The PDFs under the native scoring and
-retained-retail fixtures and the sealed `scripts/v1_*_package/SOURCE.zip` archives
-are required fixture or frozen-package inputs. Preserve them alongside their
-manifests; they are not disposable test evidence. Existing ignore rules cover
-local output, caches, reports and private state; inspect tracked ignored files
-with `git ls-files -ci --exclude-standard` before adding new exceptions.
-
-EV uses the dashboard's metric-specific renderer with a single EV scope. Its
-controller requests all retained results so an empty positive subset cannot stand
-in for complete evaluation. `coverage.js`, `coverage-model.js` and
-`coverage-view.js` are authored ES modules served directly, with `coverage.html`
-and `coverage.css`; they are not generated into `stored.js`. After changing the
-Coverage read contract, restart the app owner. Static-only edits need the normal
-asset build (for stored modules) and reload.
+Keep credentials, operator state, local reports, and coding notes out of Git.
+Keep required fixtures in `tests/fixtures` or `app/fixtures`, and keep reusable
+wire examples with their contracts. Preserve the packaged frontend assets and
+the exact sources and guard receipts required by sealed tools. To find paths
+already tracked despite ignore rules, run
+`git ls-files -ci --exclude-standard`.
 
 ## Acquisition and publication
 
-Use the existing disposable PostgreSQL lane for census, cancellation and current-row regressions. `python -m app.collection.acquisition_report` reads a coherent SQL census without provider dispatch. Do not qualify full-provider acquisition from featured queries or partial native census counts.
-
-See [acquisition](acquisition.md) for ownership, capacity and completeness limits.
+Use authored mixed-state fixtures and the disposable PostgreSQL lane for
+census, cancellation, and current-row checks. The acquisition report reads
+committed census data without fetching providers. A partial census or featured
+query cannot establish full-provider coverage.
+[Acquisition boundaries](acquisition.md)
 
 ## Raw reader
 
-`raw-odds.html`, `raw-odds.js` and `raw-odds.css` are authored static assets served
-directly; they are not generated into `stored.js`. `raw_price_api.py` owns bounded
-read snapshots; `raw_prices.py` selects compact acquisition data; optional captured
-calculations have a separate read owner. The disposable SQL suite registers
-`tests/test_raw_prices_sql.py`. Restart the app for backend changes; migrations
-028–029 must be installed through the ordinary Store migration owner. See
-[raw prices and read lifecycle](raw-prices.md).
-
-## October 28 repository cleanup evidence
-
-Four capacity/refusal SQL cases were extracted into
-`tests/test_latest_board_capacity_sql.py`, retaining the focused SQL lane and all
-37 original test methods. The four moved cases and 13 subtests passed on a
-disposable cluster; 51 CI support tests and 34 subtests passed. The ownership and
-size decisions above describe the resulting source organization. No generated
-tracked artifacts needed removal; sealed source archives and local evidence were
-preserved. This focused cleanup did not resolve the full-app CI failures recorded
-in [CI](CI.md).
+`raw_price_api.py` owns read snapshots and `raw_prices.py` reads acquisition
+rows. Optional captured calculations have a separate owner. Exercise changed
+reads through `tests/test_raw_prices_sql.py` in the disposable SQL harness.
+[Raw prices and read lifecycle](raw-prices.md)

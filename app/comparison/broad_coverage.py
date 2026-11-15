@@ -9,6 +9,7 @@ from hashlib import sha256
 from itertools import islice
 import json
 
+from app.collection.current_policy import aggregate_provider
 from .capabilities import SPORTS, SOURCES as VENUES
 from .display_identity import published_key
 from app.dashboard.current_contract import stamp
@@ -298,7 +299,7 @@ def build(records, published, *, config, owner, at, queries=(), encountered=(), 
         # but release each detached audit graph after extracting metrics facts.
         for key,row,identity in OccurrenceResolver().resolve(_records(records,at),clock=at,result_projector=project):
             input_facts[key]=(row,identity)
-    aggregate = _aggregate_acquisition(owner, (config or {}).get('aggregate_provider', 'the_odds_api'))
+    aggregate = _aggregate_acquisition(owner, aggregate_provider(config))
     # Keep historical query records in storage and display only evidence for
     # the selected aggregate provider.
     queries = [c for c in queries if _query_source(c)[0] not in AGGREGATE_VENUES

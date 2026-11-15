@@ -1,20 +1,12 @@
 # Architecture and data
 
-The ordinary data owner seals comparison members in
-`app/storage/ordinary_publication.py`. The immutable list representation and
-read-time price, reference and fee authority are owned by
-`app/storage/ordinary_projection.py`. The HTTP desk reads and validates the
-sealed result within one database snapshot. See the
-[live comparison plan](live-comparison-plan-20261104.md) and
-[coverage contract](broad-coverage.md).
-
-## Live comparisons
-
-The data process publishes prices and calculated results. The app reads each
-publication, groups matching offers and ranks the complete filtered list before
-pagination. An open drawer holds a lease on the selected evidence while newer
-publications reach the list. See the [publication contract](engineering/live-comparison-20261104/L01-publication-contract.md)
-and the [ranking and inspection contract](engineering/live-comparison-20261104/L03-ranking-contract.md).
+The data process collects prices and publishes comparisons. It seals comparison
+members in `app/storage/ordinary_publication.py`.
+`app/storage/ordinary_projection.py` validates price, reference, and fee authority
+at read time. The HTTP desk groups and ranks the filtered results before
+pagination. An open drawer can hold a lease on the selected evidence while the
+published list advances. [Runtime and publication](data-app-runtime-contract.md) ·
+[Coverage and freshness](broad-coverage.md)
 
 ## Ordinary comparison snapshots
 
@@ -99,24 +91,29 @@ bounded transient sizing.
 
 | Surface | Responsibility |
 | --- | --- |
-| `/` | Ranked single-trade comparisons in the selected snapshot |
-| `/arbs` | Opposing-outcome scenarios from the selected snapshot |
+| `/`, `/ev`, `/arbs`, `/browse-odds`, `/game` | Ordinary SQL desk for ranked estimates, arbitrage, browse, and game views |
+| `/api/comparison-current` | Current desk results, selected evidence, update metadata, and fee coverage |
+| `/replay`, `/api/odds-replay` | Replay list and revision-bound details from saved captures |
 | `/scanner` | Advanced globally ranked Scanner, observed episodes and selected manual tickets |
-| `/odds`, `/ev` | Observed prices and single-trade estimates |
+| `/odds` | Archived odds browser |
+| `/raw-odds` | Received source-local prices and original inputs |
 | `/api/comparison-snapshot` | GET a ranked or grouped page. POST captures local inputs or recalculates the selected assumptions. |
 | `/api/comparison-snapshot/details` | Exact captured inputs for one result revision and selection |
-| `/api/boards/{view}` | Latest shared results, revision-bound selected Details and typed Original |
+| `/api/boards/readiness`, `/api/boards/coverage` | Current board readiness and coverage |
+| Other `/api/boards/{view}` result reads | HTTP 410 in ordinary SQL mode |
 | `/api/stored/games`, `/api/stored/result`, `/api/boards/history` | HTTP 410: retired ordinary sports history |
 | `/admin`, `/api/admin/status`, `/api/admin/current` | Sources, quota, storage, pause, Stop and guarded recovery |
 | `/api/current` and its subroutes | HTTP 410 in ordinary SQL mode; validated state and bounded notices in explicitly injected mode |
 | `/api/comparison`, `/api/arbs` | HTTP 410 in ordinary SQL mode; explicitly injected inspection only |
 | `/api/coverage`, `/current/coverage` | Latest bounded Coverage publication and current coverage page |
 | `/api/selections` and its subroutes | HTTP 410 in ordinary SQL mode; injected inspection and manual What-if only |
-| `/admin/retained`, `/game`, `/coverage` | Finite-session and retained capture interfaces |
+| `/admin/retained`, `/coverage` | Finite-session and retained capture interfaces |
 
-The [board contract](comparison-board-api-contract.md) defines current v2 reads;
-the [current-state contract](contracts/predict-current-1.md) describes injected and
-compatibility readers. Shared Host/Origin and request validation applies to both.
+The [storage ownership contract](storage-ownership.md) describes the ordinary
+publication and current read surface. The [board contract](comparison-board-api-contract.md)
+and [current-state contract](contracts/predict-current-1.md) document the retained
+board and injected readers. Shared Host/Origin and request validation applies to
+these surfaces.
 
 ## Identity and calculation
 
@@ -250,13 +247,20 @@ Ordinary bulk discovery stores exact query/pages before catalog publication. It 
 
 See [acquisition](acquisition.md) for ownership, capacity and completeness limits.
 
-## Shared completion ownership and raw view authority
+## Shared policy and view ownership
 
 | Domain | SSOT module/file | Why authoritative | Known callers |
 | --- | --- | --- | --- |
+| Aggregate provider and phase configuration | `app/collection/current_policy.py` | Validates runtime configuration and owns provider and Live defaults. | Collection workers, SQL publication, Scanner and Raw Odds. |
+| SportsGameOdds discovery scope | `app/collection/sportsgameodds_worker.py`, `app/collection/sportsgameodds_adapter.py` | The worker builds the exact request used across a cursor walk. The adapter owns the supported leagues and page bounds. | Worker, transport, checkpoint restore, accounting and SQL admission. |
+| The Odds API featured market keys | `app/collection/current_aggregate_policy.py` | Maps the product market families to their provider request keys. | Configuration, scheduler, quota declarations, quote admission and coverage reporting. |
+| Persisted current event and contract identity | `app/storage/current_rows.py` | Builds the identifiers used to persist and find exact event and contract rows. | Admission, desk overlays, ordinary publication, Scanner and Coverage. |
+| Ordinary desk shell | `app/dashboard/multi_game_server.py` | Mounts all six ordinary SQL desk routes with one shared handler. | Opportunities, EV, Arbitrage, Browse odds, Game and Replay. |
+| Desk and replay phase selection | `app/dashboard/snapshot_display.py` | Applies the pregame boundary consistently to selected rows and related games and pairs. | Current and captured snapshot reads, replay lists and replay details. |
+| Best sportsbook payout and two-sided de-vig | `app/comparison/sgo_reference.py` | Owns the book order, tie-break, exact American-price parsing and normalization of a qualified pair. | Settlement-reviewed SGO reference, direct public book estimates, Browse odds and same-frame SGO baseline. |
 | Joined thread cancellation | `app/owned_work.py` (`joined_thread`) | Owns result/error-as-data, repeated-cancellation joining and error precedence in one implementation. | `collection/bulk_checkpoint.py::owned_thread` and the raw API's `joined` binding; checkpoint, ingress, accounting shutdown and raw read/export operations. |
 | Safe failure details | `app/diagnostics.py` | Builds class/frame-only diagnostics without messages or payloads. | Shared completion helper, runtime, storage and disposable calculation workers. |
-| Raw Odds controls | `dashboard/opportunity_static/current/raw-odds.js` and its `raw-odds.html` shell | Owns received-price filtering, pagination, selection and loading state. | `/odds`; `tests/test_raw_odds_controls.cjs`. |
+| Raw Odds controls | `app/dashboard/opportunity_static/current/raw-odds.js` and its `raw-odds.html` shell | Owns received-price filtering, pagination, selection and loading state. | `/raw-odds` and `tests/test_raw_odds_controls.cjs`. |
 
 The checkpoint `owned_thread` import remains supported because acquisition,
 ingress and accounting owners actively use it. It and the raw API binding supply

@@ -15,6 +15,8 @@ import sqlite3
 import json
 from uuid import uuid4
 
+from .sportsgameodds_adapter import LEAGUES
+
 
 def _integer(value: int, name: str, *, positive: bool = False) -> int:
     if isinstance(value, bool) or not isinstance(value, int) or value < (1 if positive else 0):
@@ -189,7 +191,7 @@ class ObjectLedger:
             raise ValueError('reservation id required')
         if category not in (None, 'discovery', 'event_refresh'):
             raise ValueError('invalid request category')
-        if league is not None and (category != 'discovery' or league not in ('NFL', 'NCAAF', 'NBA', 'NCAAB', 'MLB', 'NHL')):
+        if league is not None and (category != 'discovery' or not isinstance(league, str) or league not in LEAGUES):
             raise ValueError('invalid request league')
         if request is not None:
             from .sportsgameodds_transport import validate_params
@@ -311,7 +313,8 @@ class ObjectLedger:
             raise ValueError('evidence required')
         if breakdown is not None:
             for (league, phase), count in breakdown.items():
-                if league not in ('NFL', 'NCAAF', 'NBA', 'NCAAB', 'MLB', 'NHL', 'unknown') or phase not in ('pregame', 'live', 'started', 'unknown'):
+                if ((league != 'unknown' and league not in LEAGUES)
+                        or phase not in ('pregame', 'live', 'started', 'unknown')):
                     raise ValueError('invalid charge breakdown')
                 _integer(count, 'breakdown objects', positive=True)
             if sum(breakdown.values()) != charged:
@@ -377,7 +380,7 @@ class ObjectLedger:
                 for category, league, phase, objects in rows]
 
     def save_discovery_progress(self, league: str, checkpoint: dict, *, now: datetime) -> None:
-        if league not in ('NFL', 'NCAAF', 'NBA', 'NCAAB', 'MLB', 'NHL'):
+        if not isinstance(league, str) or league not in LEAGUES:
             raise ValueError('invalid discovery league')
         data = json.dumps(checkpoint, sort_keys=True, separators=(',', ':'))
         if len(data.encode()) > 3_000_000:
@@ -407,7 +410,7 @@ class ObjectLedger:
 
     def record_discovery(self, league: str, *, completed_at: datetime, objects: int | None = None) -> None:
         """Persist scheduling only; traversal completion never implies absence."""
-        if league not in ('NFL', 'NCAAF', 'NBA', 'NCAAB', 'MLB', 'NHL'):
+        if not isinstance(league, str) or league not in LEAGUES:
             raise ValueError('invalid discovery league')
         if objects is not None:
             _integer(objects, 'discovery objects', positive=True)

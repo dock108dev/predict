@@ -179,7 +179,7 @@ def test_fixture_publication_keeps_live_fee_independent_of_legacy_reference(monk
         {'healthy':True,'active':True}, states), directory=tmp_path)
     board.cache_clear()
     evidence['market_fee']['coefficient'] = '0.09'
-    detail=load(dict(dataset='frozen', id=row['id'], result_id='fixture-capture'), details=True)
+    detail=load(dict(dataset='frozen', id=row['id'], result_id='fixture-capture'), details=True, allow_live=True)
     assert detail['inspection']['trade_fee']['evidence']['native']['market_fee']['coefficient']=='0.06'
     assert not detail['inspection']['reviewed']['available']
     assert detail['inspection']['probability'] is None

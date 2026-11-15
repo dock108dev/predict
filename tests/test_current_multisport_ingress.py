@@ -230,9 +230,9 @@ class NativeMatrix(unittest.IsolatedAsyncioTestCase):
                 if venue=='polymarket_us':
                     # A completed census starts a new rolling window. Every
                     # page/league inside one census must share the exact bound.
-                    self.assertEqual(first_nfl['params']['startTimeMin'],(at-timedelta(hours=24)).isoformat())
+                    self.assertEqual(first_nfl['params']['startTimeMin'],at.isoformat())
                     self.assertEqual({c['params']['startTimeMin'] for c in listing_calls},
-                        {(at+timedelta(minutes=1)-timedelta(hours=24)).isoformat()})
+                        {(at+timedelta(minutes=1)).isoformat()})
                     self.assertTrue(all('startTimeMax' not in c['params'] for c in listing_calls))
                 finding=next(f for f in w.findings if f['sport']=='NFL')
                 self.assertTrue(finding['traversal_exhausted'])
@@ -244,7 +244,7 @@ class NativeMatrix(unittest.IsolatedAsyncioTestCase):
                     (c['params'].get('series_ticker')=='KXNFLGAME' or c['params'].get('tagSlug')=='nfl'))
                 self.assertEqual(nfl['params'].get('cursor','') if venue=='kalshi' else nfl['params']['offset'],'' if venue=='kalshi' else 0)
                 if venue=='polymarket_us':
-                    self.assertEqual(nfl['params']['startTimeMin'],(at+timedelta(minutes=2)-timedelta(hours=24)).isoformat())
+                    self.assertEqual(nfl['params']['startTimeMin'],(at+timedelta(minutes=2)).isoformat())
 
     async def test_total_without_game_id_uses_only_observed_embedded_market_locator(self):
         case=source_case('NHL','total','no-game-id');case['events']['polymarket_us'].pop('gameId')
@@ -309,7 +309,7 @@ class NativeMatrix(unittest.IsolatedAsyncioTestCase):
             case=source_case('NCAAB','total','missing-schedule')
             if venue=='kalshi':case['milestone']['type']='unrecognized_schedule_kind'
             else:case['events'][venue]['teams'][0]['league']='nba'
-            w,_=worker(venue,['NCAAB'],['total']);fake_discovery(w,[case]);await w.discover()
+            w,_=worker(venue,['NCAAB'],['total'],live_enabled=True);fake_discovery(w,[case]);await w.discover()
             self.assertTrue(w.markets)
             self.assertTrue(any(m.get("exclusion") or m.get("v1_raw_binding",{}).get("status")!="BOUND_RAW_PREDICATE" for m in w.catalog["markets"]))
 

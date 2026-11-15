@@ -26,7 +26,7 @@ SGO = 'sportsgameodds'
 PREFIX = 'aggregate-current:'
 
 
-def active_offers(db, *, at, phase, venues, providers, sports, contract=None):
+def active_offers(db, *, at, phase, venues, providers, sports, contract=None, event_ids=None):
     # An accepted aggregate source clock cannot be later than its receipt.
     maximum = max(LIVE_SECONDS, ODDSLINK_LIVE_SECONDS) if phase == 'live' else PREGAME_SPORTSBOOK_SECONDS
     return db.execute('''SELECT c.id, c.venue, e.provider, e.competition, e.facts AS event, c.facts AS contract,
@@ -42,6 +42,7 @@ def active_offers(db, *, at, phase, venues, providers, sports, contract=None):
           AND (sgo.facts->>'line')::numeric IS NOT DISTINCT FROM (o.facts#>>'{source,native_line}')::numeric
         WHERE e.provider=ANY(%s) AND e.competition=ANY(%s) AND c.venue=ANY(%s)
           AND (%s::text IS NULL OR c.id=%s)
+          AND (%s::text[] IS NULL OR e.id=ANY(%s))
           AND e.scheduled_start::timestamptz <= %s AND (e.scheduled_start::timestamptz > %s)=%s
           AND e.expires_order >= extract(epoch FROM %s::timestamptz)
           AND o.source_order >= extract(epoch FROM %s::timestamptz) AND o.source_order <= o.received_order
@@ -50,7 +51,7 @@ def active_offers(db, *, at, phase, venues, providers, sports, contract=None):
           AND ((e.provider='sportsgameodds' AND sgo.id IS NOT NULL)
                OR (e.provider=%s AND c.venue='prophetx' AND o.sgo_quote_id IS NULL))
         ORDER BY c.id''',
-        (providers, sports, venues, contract, contract, at + timedelta(hours=72), at, phase == 'pregame',
+        (providers, sports, venues, contract, contract, event_ids, event_ids, at + timedelta(hours=72), at, phase == 'pregame',
          at, at - timedelta(seconds=maximum), at, ODDSLINK))
 
 
@@ -79,7 +80,7 @@ def game_for(event, key, prior, games, dependencies, registry):
                 title=event['title'], league=league, start_at=start.isoformat(), participants=participants)
 
 
-def overlay(db, result, owner, states, *, at, phase, contract=None, sgo_inputs=None):
+def overlay(db, result, owner, states, *, at, phase, contract=None, sgo_inputs=None, event_ids=None):
     from app.collection.oddslink_prophetx import live_occurrences
     from .ordinary_publication import pregame_sportsbooks, quote_authority
 
@@ -101,15 +102,16 @@ def overlay(db, result, owner, states, *, at, phase, contract=None, sgo_inputs=N
     selected = {}
     registry = Registry.current()
     expected_state = 'live' if phase == 'live' else 'scheduled'
+    scope = {} if event_ids is None else {'event_ids': event_ids}
     offers = list(active_offers(db, at=at, phase=phase, venues=venues, providers=providers,
-                                sports=sorted(sports), contract=contract))
+                                sports=sorted(sports), contract=contract, **scope))
     sportsbook_indexes = {}
     public_observations = {}
     if phase == 'pregame':
         inputs = sgo_inputs if sgo_inputs is not None else EventInputs(db)
         frames = inputs.frames(item['event']['id'] for item in offers if item['provider'] == SGO)
         quotes = inputs.quotes(frames, bookmakers=(*BEST_BOOKS, 'novig', 'prophetx', PROPHETX_BOOKMAKER_ID),
-                              source_since=at - timedelta(seconds=PREGAME_SPORTSBOOK_SECONDS))
+                              source_since=at - timedelta(seconds=PREGAME_SPORTSBOOK_SECONDS), game_markets=True)
         sportsbook_indexes = {event_id: FrameQuoteIndex(rows, frames[event_id]) for event_id, rows in quotes.items()}
         public_occurrences = {signature(item['event'], item['competition']) for item in offers
                               if item['provider'] == ODDSLINK}

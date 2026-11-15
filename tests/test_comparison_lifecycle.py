@@ -126,7 +126,10 @@ class LifecycleTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(published[0]['raw']['exchange_at'],AUTHORED['expected']['source_clock'])
         await worker.close()
         self.assertFalse(worker.lifecycle.dispatch)
-        with self.assertRaises(ValueError):worker.queue_book(book())
+        worker.queue_book(book())
+        worker.flush_books()
+        self.assertEqual(worker.pending_books, {})
+        self.assertEqual(len(published), 1)
 
     def test_current_worker_material_signature_excludes_schedule_status_and_receipt(self):
         cat,_=native_fixture();mid=cat['markets'][0]['id'];eid=cat['events'][0]['id']

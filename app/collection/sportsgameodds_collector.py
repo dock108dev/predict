@@ -8,7 +8,7 @@ from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 from collections import Counter
 
-from .sportsgameodds_adapter import parse_page
+from .sportsgameodds_adapter import LEAGUES, parse_page
 from .current_policy import PregameWindowClosed
 from .sportsgameodds_schedule import daily_allowance, daily_retry_at, response_object_charge
 from .sportsgameodds_transport import TransportFailure, validate_params
@@ -118,9 +118,8 @@ class GuardedPageCollector:
         charged = response_object_charge(len(page.events))
         # One object per returned event; the minimum charge on an empty page
         # has no observed event phase. Never infer phase from a request.
-        leagues = {'NFL', 'NCAAF', 'NBA', 'NCAAB', 'MLB', 'NHL'}
         phases = {'pregame', 'live', 'started'}
-        breakdown = Counter((event.get('league') if event.get('league') in leagues else 'unknown',
+        breakdown = Counter((event.get('league') if event.get('league') in LEAGUES else 'unknown',
                              event.get('phase') if event.get('phase') in phases else 'unknown')
                             for event in page.events)
         if not page.events:

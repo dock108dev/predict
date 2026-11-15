@@ -6,6 +6,16 @@ the working schema. Select `retained` for historical research and retired
 board records. Historical tools opt in with `open_retained()`. Migration 082
 moved those relations and their foreign keys in place.
 
+`current_rows.event_id()` and `current_rows.contract_id()` define the persisted
+keys used by admission, current offer updates, and exact comparison witnesses.
+The publication writes member event keys with that same event identity for
+Coverage and Raw Odds to resolve. The worker capture and native desk use
+`current_rows.project_quote()` to restore the SQL-owned source and receipt
+clocks. The committed `data_runtime.config` selects
+the active aggregate provider for working reads. `current_policy` supplies the
+default for older configurations that omit that setting. Captured evidence
+retains its own provider provenance.
+
 | Facts | Authoritative storage and owner | Readers |
 | --- | --- | --- |
 | Source receipts | `acquisition_receipt` holds native queries, pages, rejected frames, and The Odds API featured, alternate, and census responses. `current_acquisition_image_parts` holds native stream images with their own synchronization and disposition. | Restart, acquisition diagnostics, alternate scheduling, and Raw Odds. |
@@ -44,14 +54,24 @@ source clocks and supplies no book depth to readers.
 The ordinary app answers the superseded board endpoints with HTTP 410 and
 points to `/api/comparison-current`. `/api/boards/readiness`, `/api/coverage` and
 `/api/scanner` are still served. The historical `latest_board` tables are
-available in Admin under `retained`.
+available in Admin under `retained`. Ordinary startup publishes through
+`OrdinaryOwner` and migration 082 owns the historical table transition.
 
-For an installed upgrade, quiesce the app and data processes and make a private
-database restore point. Verify the previous schema, saved review hashes, and
-durable Stop and pause state. Apply forward migrations in order and verify
-the same records before restarting normal collection. A database restore
-requires the matching application version. Keep any later provider accounting
-records and the upgraded data available if investigating a rollback.
+For an installed upgrade, quiesce the app and data processes and create a
+private custom-format PostgreSQL dump with `pg_dump -Fc`. Capture exports
+cover historical captures only. Keep the provider accounting files with the
+upgrade evidence. The migration owner verifies the exact applied filename
+and checksum prefix before running pending scripts in one transaction.
+If it reports an unfamiliar version or changed checksum, check the source
+version and database target before retrying.
+
+Rehearse recovery by restoring the dump to an empty separate database on the
+matching PostgreSQL major version with `pg_restore --exit-on-error
+--single-transaction`. Check the migration ledger, saved review hashes, and
+durable Stop and pause state against the restore point. Repeat those checks
+after the forward upgrade. A restored database requires the matching
+application version. Keep any later provider accounting records and the
+upgraded data available if investigating a rollback.
 
 Native metadata conversion proceeds in bounded maintenance turns. Legacy inline
 rows remain readable while they convert. Existing capacity limits still apply.

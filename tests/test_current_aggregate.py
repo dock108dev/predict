@@ -234,9 +234,14 @@ class SchedulerTests(unittest.IsolatedAsyncioTestCase):
         paid = [request for request in self.wire.calls if request['path'].endswith('/odds')]
         self.assertEqual(len(paid), 2)
         self.assertTrue(all(datetime.fromisoformat(request['params']['commenceTimeFrom']) >= at for request in paid))
-        self.assertEqual({row['event']['id'] for row in self.service.sink.aggregate_records['MLB']}, {'pregame'})
+        self.assertEqual({request['params']['markets'] for request in paid}, {'h2h,spreads,totals'})
+        records = self.service.sink.aggregate_records['MLB']
+        self.assertEqual({row['event']['id'] for row in records}, {'pregame'})
+        self.assertEqual({row['market_identity']['family'] for row in records}, {'moneyline', 'spread', 'total'})
         charged = [a for a in self.q._read()['attempts'].values() if not a['bootstrap']]
-        self.assertEqual([item['request'] for item in charged], paid)
+        # A reloaded ledger is keyed by random attempt IDs. Verify each exact
+        # request and its multiplicity independently of JSON map order.
+        self.assertCountEqual([item['request'] for item in charged], paid)
 
     async def test_pregame_alternate_kickoff_after_ledger_marker_cancels_without_dispatch(self):
         from app.collection.alternate_plan import plan

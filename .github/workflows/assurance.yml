@@ -15,7 +15,7 @@ env:
 permissions:
   contents: read
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}-${{ inputs.scope || 'all' }}
   cancel-in-progress: false
 jobs:
   compatibility:
@@ -35,7 +35,18 @@ jobs:
         id: setup
         with:
           python: ${{ matrix.python }}
-      - run: sh scripts/check-ci
+      - name: Ensure Poppler is available for PDF renderer checks
+        id: poppler
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: '1'
+        run: |
+          if ! command -v pdftotext >/dev/null; then
+            brew install poppler
+          fi
+          pdftotext -v
+      - name: Syntax and offline regressions
+        id: offline
+        run: sh scripts/check-ci
       - name: Report interrupted compatibility execution
         if: always()
         env:

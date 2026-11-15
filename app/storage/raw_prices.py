@@ -1,6 +1,7 @@
 """Selective raw acquisition reads. No normalization, matching or calculation owner."""
 from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
+from app.collection.current_policy import aggregate_provider
 from app.storage.store import hashed
 from .native_authority import stream_ready
 from .native_market_metadata import census_body
@@ -78,7 +79,7 @@ def source_information(owner,venue):
     provider=venue if native else 'the_odds_api'
     panel=next((p for p in owner.get('status',{}).get('sources',[]) if p.get('provider')==provider),{})
     if native:return dict(synchronization=panel.get('metrics',{}).get('synchronization',{}))
-    if owner.get('config',{}).get('aggregate_provider','the_odds_api') != 'the_odds_api':
+    if aggregate_provider(owner.get('config')) != 'the_odds_api':
         return dict(refresh_status='last_known',source_age_is_receipt_age=False,reason='The Odds API is no longer the active aggregate source.')
     quota=owner.get('status',{}).get('quota',{})
     stopped=(not owner.get('active') or not owner.get('healthy') or owner.get('global_stopped') or provider in owner.get('paused_sources',[]))

@@ -1,4 +1,6 @@
+from contextlib import closing
 from fractions import Fraction
+import sqlite3
 from unittest.mock import patch
 
 import pytest
@@ -6,6 +8,7 @@ import pytest
 from app.dashboard.local_security import PublicRequestError
 from app.dashboard.replay_api import load
 from app.storage import odds_replay
+from app.storage.comparison_snapshot import pack, unpack
 from app.comparison.inspection_math import starting_fee_terms
 from app.comparison.inspection_settlement import settlement_terms
 from tests.replay_fixture import write_archives
@@ -55,6 +58,33 @@ def test_replay_detail_is_revision_bound_and_never_reads_live_data(saved_archive
         assert detail['inspection']['trade_fee']['reason'] == 'synthetic_account_terms_unavailable'
         with pytest.raises(PublicRequestError, match='revision changed'):
             load(dict(selection, dataset='preview'), details=True)
+
+
+def test_saved_list_and_detail_use_the_same_per_offer_pregame_cutoff(saved_archives):
+    path = odds_replay.DIRECTORY / 'frozen.sqlite3'
+    offer_id = 'practice-offer-0'
+    with closing(sqlite3.connect(path)) as db, db:
+        board = unpack(db.execute("SELECT payload FROM archive WHERE kind='board'").fetchone()[0])
+        offer = next(row for row in board['rows'] if row['id'] == offer_id)
+        offer['captured_at'] = offer['start_at']
+        db.execute("UPDATE archive SET payload=? WHERE kind='board'", (pack(board),))
+        (payload,) = db.execute('SELECT payload FROM detail WHERE id=?', (offer_id,)).fetchone()
+        detail = unpack(payload)
+        detail['row']['captured_at'] = offer['captured_at']
+        db.execute('UPDATE detail SET payload=? WHERE id=?', (pack(detail), offer_id))
+
+    query = dict(dataset='frozen', view='ev', basis='before', group='offer')
+    default = load(query)
+    assert default['archive_counts']['observations'] == 5
+    assert default['archive_counts']['pairs'] == 0
+    assert offer_id not in {offer['id'] for group in default['rows'] for offer in group['offers']}
+    selection = dict(query, id=offer_id, result_id=board['id'])
+    with pytest.raises(PublicRequestError, match='Offer unavailable'):
+        load(selection, details=True)
+    opted_in = load(query, allow_live=True)
+    assert opted_in['archive_counts']['observations'] == 6
+    assert opted_in['archive_counts']['pairs'] == 1
+    assert load(selection, details=True, allow_live=True)['row']['id'] == offer_id
 
 
 @pytest.mark.parametrize('details', [False, True])

@@ -42,8 +42,42 @@ app/reviews/*
 /build/
 /dist/
 
+# Local approval and spent-attempt records from the sealed counterpart launcher
+/scripts/v1_counterpart_package/owner-approval.json
+/scripts/v1_counterpart_package/reservation.lock
+/scripts/v1_counterpart_package/reservations-started.json
+/scripts/v1_counterpart_package/reservations.jsonl
+/scripts/v1_counterpart_package/children/
+
 # Local planning, reviews and superseded documentation
+/NEXT_STEPS.md
 /PLAN.md
+/docs/completion-20261103.md
+/docs/dashboard-d01-d04-20261030.md
+/docs/dashboard-d02-20261030.md
+/docs/dashboard-d02-sources/
+/docs/f04-kalshi-20261109.md
+/docs/f08-coverage-20261110.md
+/docs/f08a-kalshi-rendered-renewal.md
+/docs/f09-coverage-20261110.md
+/docs/fee-coverage-validation-20261110.md
+/docs/live-comparison-plan-20261104.md
+/docs/live-pricing-implementation.md
+/docs/pregame-checkpoint-20261112.md
+/docs/sgo-paid-observation-20261111.md
+/docs/sgo-reference-rules-20261110.md
+/docs/sportsgameodds-evaluation-plan-20261110.md
+/docs/sportsgameodds-free-evaluation-20261110.md
+/docs/sportsgameodds-pivot-decision-20261110.md
+/docs/ui-redesign-20261103.md
+/docs/ui-redesign-implementation.md
+/docs/ui01-delivery-20261103.md
+/docs/engineering/live-comparison-20261104/
+/docs/engineering/live-data-20261107/
+/docs/engineering/server-remediation-20261115/
+/docs/design/approved-20261103/
+/docs/design/completion-20261103/
+/docs/design/live-comparison-20261104/
 /docs/all-games-operating-instructions.md
 /docs/practical-use-requirements.md
 /docs/predict-estimated-value-plan-20261011.md

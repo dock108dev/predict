@@ -500,21 +500,36 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
     from pathlib import Path
     static_root=Path(__file__).parent
     database_mode=getattr(current_provider,'database_mode',False)
-    async def page(req):return web.FileResponse(static_root/('opportunity_static/current/desk.html' if database_mode else 'opportunity_static/current/index.html'))
     from .raw_price_api import mount as mount_raw_prices
     if database_mode:
+        async def desk_page(req):
+            return web.FileResponse(static_root/'opportunity_static/current/desk.html')
+
+        for route in ('/', '/ev', '/arbs', '/browse-odds', '/game', '/replay'):
+            app.router.add_get(route, desk_page)
+
         from .admin_database import mount as mount_admin_database
         from .quote_quality import mount as mount_quote_quality
         mount_admin_database(app)
         mount_raw_prices(app)
         mount_quote_quality(app)
+    else:
+        preview_pages = {
+            '/': 'opportunity_static/current/index.html',
+            '/ev': 'opportunity_static/current/ev.html',
+            '/arbs': 'opportunity_static/current/arbs.html',
+            '/game': 'opportunity_static/index.html',
+        }
+
+        async def preview_page(req):
+            return web.FileResponse(static_root/preview_pages[req.path])
+
+        for route in preview_pages:
+            app.router.add_get(route, preview_page)
     async def odds_page(req):return web.FileResponse(static_root/'opportunity_static/current/stored.html')
     async def raw_odds_page(req):return web.FileResponse(static_root/'opportunity_static/current/raw-odds.html')
     app.router.add_get('/raw-odds',raw_odds_page)
     app.router.add_get('/odds',odds_page)
-    if database_mode:
-        app.router.add_get('/browse-odds',page)
-        app.router.add_get('/game',page)
     async def scanner_page(req):return web.FileResponse(static_root/'opportunity_static/current/scanner.html')
     app.router.add_get('/scanner',scanner_page)
     async def admin(req):
@@ -523,7 +538,6 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
         return web.FileResponse(static_root/'opportunity_static/current'/filename)
     async def retained_page(req):return web.FileResponse(static_root/'opportunity_static/dashboard.html')
     app.router.add_get('/admin',admin)
-    async def arbs_page(req):return web.FileResponse(static_root/('opportunity_static/current/desk.html' if database_mode else 'opportunity_static/current/arbs.html'))
     async def arbs_data(req):
         from .current_state import CURRENT_KEY
         from .current_contract import arbitrage_pairs
@@ -543,7 +557,6 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
             return web.json_response(dict(schema='predict-arbs-changes-1',base_revision=revision,
                 snapshot={k:v for k,v in value.items() if k!='pairs'},changed_event_ids=sorted(changed),pairs=value['pairs']))
         return web.json_response(value)
-    app.router.add_get('/arbs',arbs_page)
     app.router.add_get('/api/arbs',arbs_data)
     async def comparison_data(req):
         from .current_response import CurrentResponse
@@ -616,11 +629,9 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
         value.update(runtime_id=store._state['runtime_id'],state_revision=store._state['state_revision'],
             clock_at=store._state['clock_at'],mode=store._state['mode'],acquisition_requests=0)
         return web.json_response(value)
-    async def ev_page(req):return web.FileResponse(static_root/('opportunity_static/current/desk.html' if database_mode else 'opportunity_static/current/ev.html'))
     async def comparison_coverage_page(req):return web.FileResponse(static_root/'opportunity_static/current/coverage.html')
     app.router.add_get('/api/comparison',comparison_data)
     if not database_mode:app.router.add_get('/api/coverage',comparison_coverage)
-    app.router.add_get('/ev',ev_page)
     # The retained session coverage page has its own reader at /coverage;
     # current comparison coverage is explicitly namespaced.
     app.router.add_get('/current/coverage',comparison_coverage_page)
@@ -634,7 +645,6 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
         mount_snapshots(app)
         from .replay_api import mount as mount_replay
         mount_replay(app)
-        app.router.add_get('/replay', ev_page)
         from .scanner_client_api import mount as mount_client
         mount_client(app)
     async def current_admin(req):
@@ -693,10 +703,9 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
         if name not in allowed:raise web.HTTPNotFound()
         return web.FileResponse(allowed[name])
     app.router.add_get('/current/assets/{name}',current_asset)
-    async def game(req):return web.FileResponse(static_root/'opportunity_static/index.html')
     async def style(req):return web.FileResponse(static_root/'static/style.css')
     async def shared(req):return web.FileResponse(static_root/'e5_static/state.js')
-    app.add_routes([web.get('/',page),web.get('/game',game),web.get('/style.css',style),web.get('/shared-state.js',shared),web.get('/api/status',state),web.post('/api/start',start),web.post('/api/stop',stop),web.post('/api/references',import_references),web.post('/api/resolutions',import_resolutions),web.get('/api/resolution',resolution),web.get('/api/dashboard',dashboard),web.get('/api/sessions',catalog),web.get('/api/calculate',calculation)])
+    app.add_routes([web.get('/style.css',style),web.get('/shared-state.js',shared),web.get('/api/status',state),web.post('/api/start',start),web.post('/api/stop',stop),web.post('/api/references',import_references),web.post('/api/resolutions',import_resolutions),web.get('/api/resolution',resolution),web.get('/api/dashboard',dashboard),web.get('/api/sessions',catalog),web.get('/api/calculate',calculation)])
     app.router.add_static('/view/',static_root/'opportunity_static')
     async def cleanup(app):
         await resolution_cache.close()

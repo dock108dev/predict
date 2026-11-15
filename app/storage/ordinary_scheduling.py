@@ -1,9 +1,10 @@
 """Fair delivery order and source receipt watermarks for ordinary publication."""
 
-from .store import hashed, stamp
+from .current_rows import event_id
+from .store import stamp
 
 
-def receipt_watermarks(db, aggregate_provider='the_odds_api', *, at=None):
+def receipt_watermarks(db, aggregate_provider, *, at=None):
     """Keep aggregate delivery separate from short-lived signed book work."""
     aggregate = {r['event_id']:stamp(r['at']) for r in db.execute('''SELECT c.event_id,max(o.received_at) at
         FROM current_offer_storage o JOIN current_contract c ON c.id=o.contract_id
@@ -126,15 +127,15 @@ def captured_aggregate_receipts(inputs):
     for q in (*inputs['quotes'],*inputs.get('references',[])):
         source=q['source']
         if source['provider'] != provider:continue
-        key=hashed([source['provider'],source['native_event_id']])
+        key=event_id(source['provider'], source['native_event_id'])
         received=q['times']['received_at']
         if key not in receipts or stamp(received)>stamp(receipts[key]):receipts[key]=received
     if provider == 'sportsgameodds':
-        for event_id, value in (inputs.get('sgo_reference_events') or {}).items():
+        for native_event_id, value in (inputs.get('sgo_reference_events') or {}).items():
             frame = (value.get('frame') or {}).get('facts') or {}
-            if frame.get('provider') != provider or frame.get('event_id') != event_id:
+            if frame.get('provider') != provider or frame.get('event_id') != native_event_id:
                 continue
-            key = hashed([provider, event_id])
+            key = event_id(provider, native_event_id)
             received = frame['received_at']
             if key not in receipts or stamp(received) > stamp(receipts[key]):
                 receipts[key] = received

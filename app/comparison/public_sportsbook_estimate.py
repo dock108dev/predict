@@ -9,7 +9,7 @@ from app.normalization.registry import Registry
 from app.storage.store import hashed, stamp
 from .cashflows import exact_wire
 from .game_phase import PREGAME_SPORTSBOOK_SECONDS
-from .sgo_reference import BEST_BOOKS, OPPOSITE, american_probability
+from .sgo_reference import BEST_BOOKS, OPPOSITE, american_probability, best_payout_book, no_vig_probability
 
 SPORTS = ('NBA', 'NFL', 'NHL', 'NCAAF', 'NCAAB', 'MLB')
 SOURCE = 'oddslink_public_board'
@@ -266,11 +266,11 @@ def collect_pairs(candidates, observations, key, *, at, start):
 
 
 def choose_book(candidates):
-    book = min(candidates, key=lambda name: (american_probability(candidates[name][2][0]['price_american']),
-                                             BEST_BOOKS.index(name)))
-    pair = candidates[book][2]
-    implied, opposite = (american_probability(item['price_american']) for item in pair)
-    return book, implied / (implied + opposite)
+    selected_implied = {book: american_probability(pair[0]['price_american'])
+                        for book, (_, _, pair) in candidates.items()}
+    book = best_payout_book(selected_implied)
+    opposite = american_probability(candidates[book][2][1]['price_american'])
+    return book, no_vig_probability(selected_implied[book], opposite)
 
 
 def estimate(cost, observations, occurrence, key, *, at):

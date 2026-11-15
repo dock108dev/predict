@@ -1,6 +1,8 @@
 """Compact immutable publication members and validate their read-time authority."""
 from . import comparison_snapshot as snapshots
+from .current_rows import event_id
 from .store import stamp
+from app.collection.current_policy import aggregate_provider
 from app.comparison.display_identity import canonical_key
 from app.comparison.game_phase import scheduled_phase, sporting_clock
 from app.fees import product_schedules, schedule_lifecycle
@@ -152,8 +154,7 @@ def price_reasons(row, current, owner, states, *, at, epoch, publication_epoch, 
         reasons.append('input_epoch_replaced')
     provider = auth.get('provider') or row.get('source', {}).get('provider')
     config = owner.get('config', {})
-    aggregate_provider = config.get('aggregate_provider', 'the_odds_api')
-    if provider in ('the_odds_api', 'sportsgameodds') and provider != aggregate_provider:
+    if provider in ('the_odds_api', 'sportsgameodds') and provider != aggregate_provider(config):
         reasons.append('aggregate_provider_replaced')
     if (row['venue'] in owner.get('paused_sources', ())
             or provider in ('the_odds_api', 'sportsgameodds') and config.get('aggregate_enabled') is False):
@@ -175,9 +176,8 @@ def price_reasons(row, current, owner, states, *, at, epoch, publication_epoch, 
 def event_owners(db, rows, *, at):
     """Read sporting authority even when its most recent market was withdrawn."""
     from app.collection.oddslink_prophetx import SOURCE as ODDSLINK, live_occurrences
-    from .store import hashed
 
-    event_ids = {hashed([source['provider'], source['native_event_id']])
+    event_ids = {event_id(source['provider'], source['native_event_id'])
                  for row in rows if (source := row.get('source')) and source.get('provider')
                  and source.get('native_event_id')}
     if not event_ids:
@@ -281,10 +281,10 @@ def project(result, current, owner, states, *, at, policy, epoch, settings=None,
     current_fee_revision = schedule_lifecycle.revision(fee_state)
     event_states, blocked_occurrences = current_events(
         result['rows'] if lifecycle_rows is None else lifecycle_rows, event_facts or {}, at)
+    active_provider = aggregate_provider(owner.get('config'))
     for original in result['rows']:
         row = dict(original)
         auth = row['current_authority']
-        aggregate_provider = owner.get('config',{}).get('aggregate_provider', 'the_odds_api')
         deadline = auth['price'].get('current_until')
         if current_desk and deadline and at > stamp(deadline):
             # An expired quote can still be shown with its original price.
@@ -375,7 +375,7 @@ def project(result, current, owner, states, *, at, policy, epoch, settings=None,
             financial.append('settings_replaced')
         for witness in auth['references']:
             witness_provider = witness.get('provider') or 'the_odds_api'
-            if witness_provider in ('the_odds_api','sportsgameodds') and witness_provider != aggregate_provider:
+            if witness_provider in ('the_odds_api','sportsgameodds') and witness_provider != active_provider:
                 financial.append('reference_provider_replaced')
             financial.extend(validity(witness, current, at))
             reference_source = witness.get('provider') if witness.get('provider') == 'sportsgameodds' else witness.get('venue')
@@ -450,8 +450,7 @@ def project(result, current, owner, states, *, at, policy, epoch, settings=None,
         for row in out['rows']:
             row['price_difference_cents'] = None
     held = owner.get('global_stopped') or owner.get('paused_sources') or any(s.get('state') == 'held' for s in states.values())
-    aggregate = owner.get('config', {}).get('aggregate_provider', 'the_odds_api')
-    required_sources = ('kalshi', 'polymarket_us', 'sportsgameodds') if aggregate == 'sportsgameodds' else ('kalshi', 'polymarket_us', 'novig', 'prophetx', 'pinnacle')
+    required_sources = ('kalshi', 'polymarket_us', 'sportsgameodds') if active_provider == 'sportsgameodds' else ('kalshi', 'polymarket_us', 'novig', 'prophetx', 'pinnacle')
     healthy_sources = all(source_allowed(states.get(v, {})) for v in required_sources)
     state = ('held' if held else 'failed' if not owner.get('healthy') else
              'initializing' if not result['rows'] else

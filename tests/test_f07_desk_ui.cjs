@@ -39,7 +39,7 @@ async function check() {
   assert.match(before.textContent, /At fill/);
   assert.match(before.textContent, /Current at inspection/);
   assert.match(before.textContent, /Original source update2026-11-10T14:59:52ZBook confirmation2026-11-10T14:59:56ZCollector receipt2026-11-10T14:59:58Z/);
-  assert.match(before.textContent, /Est. \$0.01 fee for 1 \$1-payout contract/);
+  assert.match(before.textContent, /Trading fee\$0.01Conservative estimate/);
   assert.match(before.textContent, /FanDuel\+105.*Last known/);
   assert.doesNotMatch(before.textContent, /Pinnacle/);
   assert.match(before.textContent, /Modeled size1 \$1-payout contract/);

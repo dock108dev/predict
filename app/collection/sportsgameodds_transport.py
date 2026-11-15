@@ -11,7 +11,7 @@ import json
 
 import aiohttp
 
-from .sportsgameodds_adapter import LEAGUES, MAX_PAGE_BYTES
+from .sportsgameodds_adapter import LEAGUES, MAX_EVENTS, MAX_PAGE_BYTES
 
 ENDPOINT = 'https://api.sportsgameodds.com/v2/events/'
 ODD_IDS = frozenset(('points-home-game-ml-home', 'points-away-game-ml-away',
@@ -62,14 +62,14 @@ def validate_params(params):
     """Allow only bounded, scope-bearing event queries; never accept secrets."""
     if not isinstance(params, dict) or set(params) - {'leagueID', 'eventIDs', 'oddID', 'bookmakerID', 'limit', 'cursor', 'includeOpposingOdds', 'includeAltLines', 'live', 'started', 'startsAfter', 'startsBefore'}:
         raise ValueError('unsupported request parameters')
-    if type(params.get('limit')) is not int or not 1 <= params['limit'] <= 100:
+    if type(params.get('limit')) is not int or not 1 <= params['limit'] <= MAX_EVENTS:
         raise ValueError('bounded page limit required')
     if ('leagueID' in params) == ('eventIDs' in params):
         raise ValueError('exactly one event or league scope required')
     if 'leagueID' in params and not set(_csv(params['leagueID'])) <= LEAGUES:
         raise ValueError('unsupported league')
     if 'eventIDs' in params:
-        _csv(params['eventIDs'])
+        _csv(params['eventIDs'], limit=MAX_EVENTS)
     if not set(_csv(params.get('oddID'))) <= ODD_IDS:
         raise ValueError('unsupported odds filter')
     if 'bookmakerID' in params:

@@ -1,181 +1,57 @@
-# SportsGameOdds operations foundation
+# SportsGameOdds operations
 
-## November 11–12 running state and account controls
+SportsGameOdds is a selectable aggregate collector. It supplies attributed
+exchange prices and sportsbook observations alongside the independent Kalshi
+and Polymarket US native streams. The example configuration selects it with
+acquisition off. Follow the [configuration guide](configuration.md#source-configuration)
+for credentials and opt-in.
 
-The local configuration runs SGO on Rookie alongside independent Kalshi and
-Polymarket US workers. The November 11 local reload confirmed the collector
-counters, batch admission and split reference and frame SQL timings. The
-observed slate selected a 15-minute live target and 72-hour repeat discovery.
-Its combined projection was 4,166.33 objects/day against a 4,770 allowance.
-The rolling budget guard remained active. The November 12 transport window
-spent 21 refresh objects over two hours, with no completed discovery traversal.
-At 2:16 a.m. Eastern the changed slate projected 2,874 combined objects/day
-against a 4,813 allowance. The inherited rolling spend still deferred a due
-two-object request until the estimated 2:27:24 a.m. retry. Compare the
-observed objects and original price clocks across future active slates and
-normal discovery runs. The dated measurements are in
-`docs/sgo-paid-observation-20261111.md`. `NEXT_STEPS.md` tracks the remaining
-work.
+## Collection and budget
 
-The provider reported a 100,000-object limit, 50 requests per minute and no
-reset timestamp. The worker uses the owner-directed **00:00 UTC on the first
-of each month** as a provisional pacing boundary. SGO describes the account
-allowance as a rolling 30-day period from first use. The reported usage still
-governs account headroom. [Provider plan and reset policy](https://sportsgameodds.com/pricing)
+**Admin → Sources** shows scheduled collection and provider status.
+**Admin → Spending** shows object allowance, reserves, charges, and outstanding
+requests. Use the provider-reported usage and account limits. Keep SportsGameOdds
+and The Odds API ledgers separate.
 
-Use fresh provider usage and remaining allowance, retain reservations and uncertain exposure across
-the boundary, and require authoritative evidence before recognizing
-replenishment. Retain The Odds API's accounting separately. If an event
-request ends without a verifiable charge, record it as interrupted, count
-the full reservation toward the budget, and continue on the next eligible
-scan. A rejected cursor restarts its league's traversal from the first page.
-The recovery path preserves owner stops, provider retry delays and budget limits.
+Collection checks Stop, source pause, request rate, and the object budget before
+dispatch. A request reserves objects before transport. If its charge is
+unverifiable, it remains held or interrupted at its reserved exposure. A
+difference in account-wide usage does not identify which request consumed it.
+Use attributable provider evidence to reconcile an individual charge.
+[Provider usage endpoint](https://sportsgameodds.com/docs/endpoints/getUsageData)
 
-On November 12 at 11:08 a.m. Eastern, a refresh was interrupted during
-macOS maintenance sleep. The account-wide reading of 4,913 objects was
-two above the prior reading, and no request-specific response or provider
-request identifier was retained. The two-object reservation is carried as
-interrupted exposure when the runtime resumes.
-The dated accounting observation is in `docs/sgo-paid-observation-20261111.md`.
+The worker uses a first-of-month UTC pacing boundary when the provider reports
+no reset. Treat this as a scheduling assumption. It does not establish actual
+replenishment or resolve prior exposure. A due date shown during rolling
+pacing is an estimate and the worker checks the budget again before dispatch.
 
-Admin → Spending shows pending and interrupted requests' local IDs and available
-transport evidence. New reservations store the bounded query and preceding
-usage observation in the reservation transaction. Completed HTTP reads
-record the status, receipt time, response digest and a provider request ID
-when supplied. The sleep interruption predates this trace. Only attributable
-provider evidence can resolve the individual charge. Account-wide increases
-and interrupted reservations are both included in conservative headroom.
-[Account usage](https://sportsgameodds.com/docs/endpoints/getUsageData)
+## Discovery and refresh
 
-The existing OddsLink public-board poll supplies separate ProphetX full-game
-main-line prices for the retail desk. Each offer keeps the OddsLink bookmaker
-timestamp and provider attribution. In-game display requires independently
-observed game state for the same league, teams and kickoff, plus a price no
-more than 30 seconds old. When the public board shows started events, the
-poll targets 10 seconds and honors the provider's retry delay. The current
-ProphetX retail schedule models fees at the quoted price without depth.
-Coverage follows the fixtures on the public board.
-[OddsLink public board](https://oddslink.app/docs/api-reference/operations/publicboard/)
+League discovery keeps the same scope and start cutoff across its cursor walk.
+A saved cursor resumes only for the matching query and phase configuration.
+A rejected cursor restarts the affected traversal. Event refresh and
+discovery share the object budget. Near-start refresh can request alternate
+lines for one event at a time. Only the supported book and market inputs
+are eligible for the desk. [Coverage limits](broad-coverage.md)
 
-When rolling daily spend blocks a page, the worker estimates the next
-eligible attempt from available objects, time to the pacing boundary, and
-the ledger's charge ages. The next dispatch checks current usage and all
-existing guards again. The estimated retry can be earlier than the hourly
-status recheck. It does not grant spending or renew a quote's source time.
+The desk uses both original sportsbook clocks for same-book fair odds. Vendor
+fair odds and book consensus have separate meanings from Predict's own estimate.
+A refreshed frame does not make an old source quote fresh.
+[Calculation basis](benchmark-ev.md)
 
-SQL verified bounded SGO history near its 32 MiB logical cap. Capacity
-evictions can reduce effective retention below the seven-day age limit.
-Current facts and pinned originals retain their separate authority.
+## Interrupted admission and retained prices
 
-The ordinary desk also supports the highest-payout same-book de-vig basis
-using FanDuel, DraftKings, BetMGM and Caesars on the existing account. The
-price and reference clocks govern currency independently of polling.
-The SGO developer guidance defines each odd by period, family and side, and
-its optional bookmaker market links are retained as audit observations. Keep
-both sides of a reference within one book and preserve original source clocks.
-Discovery cursor requests reuse the original query unchanged. [SGO developer guidance](https://sportsgameodds.com/docs/info/ai-vibe-coding) ·
-[Cursor rules](https://sportsgameodds.com/docs/guides/data-batches)
+A PostgreSQL timeout rolls back the whole page admission. The running collector
+can retry the same settled page once while Stop and pause checks still allow
+it. The retry preserves the original receipt and does not issue a second
+provider request. A retry that times out leaves the source status visible and
+collection follows its normal retry schedule. Restart does not guarantee replay
+of a settled page that never reached storage.
 
-Confirmed live events and due kickoffs take priority over the older started-only
-backlog. Started-only events retain their active polling target. Event-ID
-refreshes for active games and games within two hours request alternate lines
-one event at a time, bounded to Novig, Kalshi and the four reference books.
-Distant polls and discovery retain their ordinary main-line requests. Each
-alternate refresh uses the same quota, request, admission and hold guards.
-The response can include closed lines. Vendor fair and consensus values are
-labeled with their lines, and the vendor does not disclose the contributor
-set for a filtered response. [Events request fields](https://sportsgameodds.com/docs/endpoints/getEvents)
-
-The [configuration guide](configuration.md) explains the SGO key and safe
-opt-in. Use the [coverage contract](broad-coverage.md) for the offered-data
-denominator and sustained coverage target.
-
-## November 10 foundation and evaluation record
-
-The following observations describe the earlier evaluation configuration and
-account. The November 11–12 section above records the running selection and
-supersedes the earlier pacing and reset requirements.
-
-The existing protected evaluation credential was checked against the provider's
-`/v2/account/usage` endpoint on November 10, 2026. The response explicitly
-identified the active tier as **amateur**, with 10 requests per minute and 2,500
-objects per month; 11 monthly objects had been used. It did not supply an
-account reset timestamp. The credential is not reproduced here. This identifies
-only the configured evaluation key, not any other account or the paid plan the
-owner described. Paid coverage, limits, object reset, and update cadence remain
-unverified for this key. No subscription was purchased and no event collection
-was performed in this check.
-
-The isolated scheduling primitives in `app/collection/sportsgameodds_schedule.py`
-rank due live, imminent, near and distant events at illustrative intervals of
-15 minutes, 30 minutes, 3 hours and 12 hours. These are starting policy values,
-not an observed affordable production schedule. They suppress work on Stop or
-pause, reject duplicate IDs and invalid clocks, and use receipt time only for
-scheduling, never as a substitute for a quote's source clock. The accounting
-helpers distinguish objects from requests, apply the minimum one object for an
-empty response, reserve headroom and outstanding exposure, and require an
-explicit reset time for pacing. The caller must persist a reservation before
-dispatch, bound the response to the reservation, and retain uncertain exposure
-until an authoritative reconciliation. A 429 should pause dispatch through its
-reported retry time and must not silently release an uncertain reservation.
-
-The separate `sportsgameodds_ledger.py` foundation persists atomic object
-reservations, a conservative one-in-flight rule, bounded request-rate history and a source pause, retains uncertain requests through restart and across account windows,
-and records a durable retry deadline for 429s. A response that exceeds its
-reservation latches a pause until the overrun is explicitly recorded. It uses
-its own prefixed tables and never changes The Odds API records. The caller must
-identify one provider account window and avoid opening overlapping windows or
-ignoring use by other clients; an initial usage snapshot alone cannot observe
-external use. An unknown reset is retained as unknown, not guessed.
-
-Each ledger uses a persistent, randomly assigned accounting identity independent
-of the API key. Replacing a key does not reset its rate history or bypass holds.
-An existing ledger with one legacy identity keeps that identity and its records;
-multiple legacy identities fail closed until their accounting is reconciled.
-Use a separate ledger only for a genuinely separate, reconciled account.
-
-A guarded collector and runtime worker now bind these controls to bounded
-transport and serialized current-row ingress. Provider selection and source
-pause preserve the direct native workers. The worker requires a fresh matching
-account usage observation and explicitly evidenced reset, counts usage calls
-and event calls in one durable request-rate history, applies a rolling daily
-object pace, and refuses another request while a charge is uncertain. It walks
-two-event pages in bounded turns and retains incomplete cursors for later turns.
-Moving or incomplete traversals never authorize removals. It retains event IDs
-in memory, discards payloads after admission, and publishes only source-attributed
-current rows. The two-event bound reflects the free capture size, not a paid
-feed measurement or guarantee. The 15-minute polling and 12-hour discovery
-intervals are provisional; account-specific affordability and paid coverage
-have not been measured.
-
-The ordinary configuration still selects The Odds API. The configured
-evaluation account's response did not supply a reset, so the SportsGameOdds
-worker fails closed before event requests. The current usage reader also
-requires finite numeric object and request limits; unlimited-plan handling and
-authoritative recovery from uncertain charges remain unverified. The runtime
-worker and current-row adapter require end-to-end paid-feed, matching, reference,
-EV and user-journey verification before cutover. Do not infer a reset time
-from a published rolling-month description or treat provisional cadences as
-proof that a 2,500-object account can sustain the requested scope.
-See [provider limits](https://sportsgameodds.com/docs/info/rate-limiting).
-
-The runtime persists a separately keyed `sportsgameodds` source status; it does
-not overwrite direct Kalshi or Polymarket US source health. Successful page
-admission commits product, reference facts and compact event-frame evidence together,
-with receipt, event scope and exact reference-membership checks. Migration 072
-is required before frame admission. Explicit source pause and global Stop revoke admission. Local
-request pacing waits before trying again; a provider 429 or uncertain request
-retains its reservation and does not automatically retry until reconciled.
-
-Validation used synthetic fixtures and a disposable PostgreSQL 14 compatibility
-cluster. Those tests do not establish paid entitlements, live coverage, schedule
-cost or end-to-end app behavior. The configured key reports Amateur and 11 of
-2,500 objects used; its documented usage endpoint returned no reset field. No
-paid event requests or subscription purchases were made during integration.
-
-When the configured aggregate provider changes, ordinary result reads mark the
-other provider's retained prices historical and withdraw its reference authority.
-The latest-board context excludes the inactive aggregate provider, and the raw
-Odds API view labels its retained entries last-known. Direct native prices and
-pinned original evidence remain intact. These are read-time safeguards; the
-underlying historical rows and protected accounting records are preserved.
+An exact venue closure withdraws the current quote. The later closure receipt
+can prevent an older replay from restoring it while keeping the original price
+and clocks inspectable. The working history has age and space limits. Pinned
+evidence and saved odds use their separate retention rules. Switching the
+aggregate provider withdraws the old provider's current authority while its
+retained evidence remains accessible. [Storage ownership](storage-ownership.md) ·
+[Runtime controls](data-app-runtime-contract.md#lifecycle-and-controls)

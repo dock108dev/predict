@@ -257,7 +257,7 @@ class SGOScopeSQL(LatestBoardFixture):
         parsed = parse(data)
         records, _ = current_rows(parsed, parsed.receipt_sha256)
         references = prepare_page(parsed)
-        config = dict(DEFAULT, aggregate_provider='sportsgameodds', aggregate_sports=['NBA'])
+        config = dict(DEFAULT, aggregate_provider='sportsgameodds', aggregate_sports=['NBA'], live_enabled=True)
         states = {'sportsgameodds': {'state': 'available'}}
         owner = dict(healthy=True, active=True, config=config)
         settings = assumptions()[0]

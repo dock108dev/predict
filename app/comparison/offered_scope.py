@@ -2,7 +2,7 @@
 from hashlib import sha256
 import json
 
-FAMILIES={'h2h':'moneyline','spreads':'spread','totals':'total'}
+from app.collection.current_aggregate_policy import MARKET_FAMILIES
 
 
 def identity(*parts):
@@ -15,7 +15,7 @@ def aggregate_inventory(payload, venue, family, records, *, rejected=False):
         for book in event.get('bookmakers',[]):
             if book.get('key')!=venue:continue
             for market in book.get('markets',[]):
-                if FAMILIES.get(market.get('key'))!=family:continue
+                if MARKET_FAMILIES.get(market.get('key'))!=family:continue
                 eid=event['id'];games.add(eid)
                 outcomes=market.get('outcomes') or []
                 mid=identity(venue,eid,market['key'],sorted((o.get('name'),str(o.get('point'))) for o in outcomes),'full_game');markets.add(mid)
@@ -28,7 +28,7 @@ def aggregate_inventory(payload, venue, family, records, *, rejected=False):
     for record in records:
         q=record['quote'];source=q['source']
         if q['venue']==venue and record['market_identity']['family']==family:
-            key=next(k for k,v in FAMILIES.items() if v==family)
+            key=next(k for k,v in MARKET_FAMILIES.items() if v==family)
             admitted.add(identity(venue,source['native_event_id'],key,source['native_outcome_id'],str(source.get('native_line')),'full_game','bookmaker_outcome'))
     received=set(units);admitted &= received
     return dict(unique_offered=dict(games=len(games),markets=len(markets),quotes=len(received)),

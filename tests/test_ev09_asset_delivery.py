@@ -18,6 +18,20 @@ PUBLIC_DESK_PAGES = ("/", "/ev", "/arbs", "/browse-odds", "/game", "/replay")
 
 
 class Assets(unittest.IsolatedAsyncioTestCase):
+    async def test_preview_routes_keep_their_retained_shells(self):
+        provider = InjectedTestProvider()
+        app = create_app(owner=owner(), sessions={}, current_provider=provider)
+        for path, shell in {
+            '/': 'current/index.html', '/ev': 'current/ev.html',
+            '/arbs': 'current/arbs.html', '/game': 'index.html',
+        }.items():
+            with self.subTest(path=path):
+                match = await app.router.resolve(make_mocked_request('GET', path, app=app))
+                request = make_mocked_request('GET', path, app=app, match_info=match)
+                response = await match.handler(request)
+                self.assertIsInstance(response, FileResponse)
+                self.assertTrue(response._path.as_posix().endswith(f'/opportunity_static/{shell}'))
+
     async def test_public_desk_declares_the_packaged_browser_icon(self):
         provider = InjectedTestProvider()
         provider.database_mode = True
@@ -88,7 +102,7 @@ class Assets(unittest.IsolatedAsyncioTestCase):
                 expected = (
                     {"board-client.js", "board-contract.js", "board-values.js", "board-read.js", "scanner.css", "scanner.js"}
                     if page == "/scanner" else
-                    {"desk.css", "desk.js", "desk-bootstrap.js", "desk-preferences.js", "ui-common.js", "barlow-semi-condensed-600.ttf"}
+                    {"desk.css", "desk.js", "desk-bootstrap.js", "desk-drawer.js", "desk-preferences.js", "ui-common.js", "barlow-semi-condensed-600.ttf"}
                     if page in PUBLIC_DESK_PAGES else {"stored.css", "stored.js", "manrope.ttf"}
                 )
                 self.assertTrue(expected <= {Path(path.split("?")[0]).name for path in seen}, page)

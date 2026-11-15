@@ -3,6 +3,7 @@ from copy import deepcopy
 from contextlib import ExitStack
 from app.collection.runtime_status import runtime_identity
 from . import ordinary_evidence as evidence
+from .current_rows import event_id
 from .ordinary_projection import price_reasons
 from psycopg.types.json import Jsonb
 from app.comparison.broad_coverage import build, select, merge_queries, VERSION
@@ -93,7 +94,7 @@ def _displayed(member, event_ids, dependencies, owner, states, *, instant, epoch
     if not owner.get('active') or owner.get('global_stopped'):
         common.append('updates_stopped')
     for row in member['rows']:
-        if not direct_venue_offer(row) or evidence.event_id(row['source']) not in event_ids:
+        if not direct_venue_offer(row) or event_id(row['source']['provider'], row['source']['native_event_id']) not in event_ids:
             continue
         reasons = price_reasons(row, dependencies, owner, states, at=instant,
                                 epoch=epoch, publication_epoch=publication['epoch'], common=common)

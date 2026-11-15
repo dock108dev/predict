@@ -126,6 +126,7 @@ def main():
         verify_rules(binary, config)
         with tempfile.TemporaryDirectory(prefix="predict-secrets-") as folder:
             source = Path(folder) / "source"
+            raw_report = Path(folder) / "scanner.json"
             stage = "publishable file export"
             export(source, include_retained=False)
             stage = "gitleaks execution"
@@ -140,26 +141,38 @@ def main():
                     "--no-banner",
                     "--report-format=json",
                     "--report-path",
-                    str((output / "gitleaks.json").resolve()),
+                    str(raw_report),
                 ],
                 capture_output=True,
                 text=True,
                 timeout=120,
             )
             stage = "gitleaks report validation"
-            report = output / "gitleaks.json"
-            findings = json.loads(report.read_text()) if report.exists() else None
-            if not isinstance(findings, list):
-                raise ValueError(
-                    "Secret scan report missing or malformed; evidence unavailable"
+            findings = json.loads(raw_report.read_text())
+            if not isinstance(findings, list) or result.returncode != int(
+                bool(findings)
+            ):
+                raise ValueError("Scanner exit status and finding report disagree")
+            # Publish only validated location metadata. Raw findings stay
+            # disposable even when parsing or sanitization fails.
+            safe = []
+            for row in findings:
+                rule, start, end = (
+                    row[key] for key in ("RuleID", "StartLine", "EndLine")
                 )
-            # Paths only: never publish raw secret/match content or arbitrary scanner logs.
-            safe = [
-                {k: row.get(k) for k in ("RuleID", "StartLine", "EndLine")}
-                | {"File": str(Path(row["File"]).relative_to(source))}
-                for row in findings
-            ]
-            report.write_text(json.dumps(safe, indent=2) + "\n")
+                if (
+                    not isinstance(rule, str)
+                    or not re.fullmatch(r"[A-Za-z0-9_.-]+", rule)
+                    or type(start) is not int
+                    or type(end) is not int
+                    or not 0 < start <= end
+                ):
+                    raise ValueError("Invalid scanner finding location")
+                path = Path(row["File"]).resolve().relative_to(source.resolve())
+                safe.append(
+                    dict(RuleID=rule, StartLine=start, EndLine=end, File=str(path))
+                )
+            (output / "gitleaks.json").write_text(json.dumps(safe, indent=2) + "\n")
             (output / "secret-metrics.json").write_text(
                 json.dumps(
                     dict(

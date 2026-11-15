@@ -54,6 +54,15 @@ def american_probability(value):
     return Fraction(100, 1) / (n + 100) if n > 0 else -n / (-n + 100)
 
 
+def best_payout_book(selected_implied):
+    """Pick the highest selected payout from already-qualified sportsbook pairs."""
+    return min(selected_implied, key=lambda book: (selected_implied[book], BEST_BOOKS.index(book)))
+
+
+def no_vig_probability(selected_implied, opposite_implied):
+    return selected_implied / (selected_implied + opposite_implied)
+
+
 def _digest(value):
     wire = json.dumps(value, sort_keys=True, separators=(',', ':'), ensure_ascii=False)
     return hashlib.sha256(wire.encode()).hexdigest()
@@ -160,7 +169,7 @@ def calculate(quotes, contract, *, at, evaluated_venue, named_venue=None, best_p
                 raise ValueError('settlement_unverified_or_incompatible')
             if pair[0].get('jurisdiction') != pair[1].get('jurisdiction'):
                 raise ValueError('pair_jurisdiction_conflict')
-            probability = implied[0] / sum(implied)
+            probability = no_vig_probability(*implied)
             evidence = [{k: q.get(k) for k in ('frame_id', 'frame_received_at', 'odd_id', 'opposing_odd_id', 'side', 'line', 'price_american', 'source_at', 'received_at', 'settlement', 'settlement_evidence', 'jurisdiction', 'rule_source', 'rule_reviewed_at')} for q in pair]
             contributors.append({'venue': venue, 'probability': str(probability), 'inputs': evidence})
         except (ValueError, TypeError, ZeroDivisionError, OverflowError) as exc:
@@ -177,11 +186,11 @@ def calculate(quotes, contract, *, at, evaluated_venue, named_venue=None, best_p
              'maximum_age_seconds': maximum_age_seconds, 'captured_at': at,
              'contributors': contributors, 'exclusions': exclusions}
     if best_payout:
-        selected = min(contributors, key=lambda contributor: (
-            american_probability(contributor['inputs'][0]['price_american']),
-            BEST_BOOKS.index(contributor['venue'])))
-        basis['selected_venue'] = selected['venue']
-        probability = Fraction(selected['probability'])
+        by_venue = {contributor['venue']: contributor for contributor in contributors}
+        venue = best_payout_book({book: american_probability(contributor['inputs'][0]['price_american'])
+                                  for book, contributor in by_venue.items()})
+        basis['selected_venue'] = venue
+        probability = Fraction(by_venue[venue]['probability'])
     return {'available': True, 'probability': str(probability), 'fair_decimal_odds': str(1 / probability),
             'conditioning': 'decisive win/loss; pushes, ties and exceptional settlement excluded',
             'basis': basis, 'basis_sha256': _digest(basis), 'contributors': contributors, 'exclusions': exclusions}

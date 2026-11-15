@@ -2,12 +2,16 @@
 
 import importlib.util
 from pathlib import Path
+import sys
 
 
 def load(name):
-    spec = importlib.util.spec_from_file_location(
-        name, Path(__file__).resolve().parents[1] / "scripts/ci" / (name + ".py")
-    )
+    scripts = Path(__file__).resolve().parents[1] / "scripts/ci"
+    spec = importlib.util.spec_from_file_location(name, scripts / (name + ".py"))
     module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    sys.path.insert(0, str(scripts))
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        sys.path.remove(str(scripts))
     return module

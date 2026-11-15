@@ -41,6 +41,69 @@ class SecretControlIsolationTests(unittest.TestCase):
 
 
 class SecretScanFailureTests(unittest.TestCase):
+    def test_only_validated_locations_can_enter_uploaded_reports(self):
+        import sys
+        from types import SimpleNamespace
+        from unittest.mock import patch
+
+        with patch.dict(sys.modules, {"export": SimpleNamespace(export=None)}):
+            module = load("secret_scan")
+
+        for issue in (None, "malformed", "out-of-tree", "scanner error"):
+            with self.subTest(issue=issue), tempfile.TemporaryDirectory() as folder:
+                output = Path(folder) / "quality"
+
+                def scanner(command, **kwargs):
+                    source = Path(command[2])
+                    path = source / "app.py"
+                    if issue == "out-of-tree":
+                        path = source / ".." / "outside.py"
+                    raw = Path(command[command.index("--report-path") + 1])
+                    finding = dict(
+                        File=str(path),
+                        RuleID="example-rule",
+                        StartLine=3,
+                        EndLine=3,
+                        Match="private scanner detail",
+                    )
+                    raw.write_text(
+                        "private scanner detail"
+                        if issue == "malformed"
+                        else json.dumps([] if issue == "scanner error" else [finding])
+                    )
+                    return SimpleNamespace(
+                        returncode=2 if issue == "scanner error" else 1
+                    )
+
+                with (
+                    patch.object(
+                        sys, "argv", ["secret_scan.py", "--output", str(output)]
+                    ),
+                    patch.object(module, "verify_rules"),
+                    patch.object(module, "export"),
+                    patch.object(module.subprocess, "run", side_effect=scanner),
+                ):
+                    self.assertEqual(module.main(), 1)
+                metrics = json.loads((output / "secret-metrics.json").read_text())
+                report = output / "gitleaks.json"
+                self.assertEqual(metrics["status"], "FAIL")
+                if issue:
+                    self.assertIsNone(metrics["findings"])
+                    self.assertFalse(report.exists())
+                else:
+                    self.assertEqual(metrics["findings"], 1)
+                    self.assertEqual(
+                        json.loads(report.read_text()),
+                        [
+                            dict(
+                                File="app.py",
+                                RuleID="example-rule",
+                                StartLine=3,
+                                EndLine=3,
+                            )
+                        ],
+                    )
+
     def test_checkout_scan_does_not_require_retained_resource_manifest(self):
         module = load("export")
         with tempfile.TemporaryDirectory() as folder:

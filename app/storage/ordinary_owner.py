@@ -7,6 +7,9 @@ from .store import ROOT
 from .current_games import utc
 
 
+TURN_INTERVAL_SECONDS = 2
+
+
 class OrdinaryOwner:
     def __init__(self, service):
         self.service = service
@@ -68,9 +71,23 @@ class OrdinaryOwner:
                 self.wake.clear()
                 await asyncio.sleep(.25)
                 continue
-            delay=.05 if completed and self.last.get('published') and self.last.get('remaining_components',0)>0 else 2
-            try: await asyncio.wait_for(self.wake.wait(), timeout=delay)
-            except TimeoutError: pass
+            if not completed:
+                # Ingress can keep waking the publisher during an outage.
+                # Retry on the ordinary interval while still observing close.
+                loop = asyncio.get_running_loop()
+                deadline = loop.time() + TURN_INTERVAL_SECONDS
+                while not self.closed and (remaining := deadline - loop.time()) > 0:
+                    self.wake.clear()
+                    try:
+                        await asyncio.wait_for(self.wake.wait(), timeout=remaining)
+                    except TimeoutError:
+                        break
+            else:
+                delay = .05 if self.last.get('published') and self.last.get('remaining_components', 0) > 0 else TURN_INTERVAL_SECONDS
+                try:
+                    await asyncio.wait_for(self.wake.wait(), timeout=delay)
+                except TimeoutError:
+                    pass
             self.wake.clear()
 
     async def run_coverage(self):

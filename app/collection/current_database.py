@@ -6,6 +6,7 @@ from time import monotonic
 from app.storage.current_games import utc
 from app.storage.store import connect,Store
 from .current_storage_policy import SQL_BYTE_CAP,sql_usage,require_disk_space
+from .sportsgameodds_adapter import LEAGUES, MAX_EVENTS
 
 
 class NativeAdmissionError(ValueError):
@@ -85,10 +86,11 @@ def validate_sgo_page(row):
     """Bind all product and reference facts to the same bounded page receipt."""
     import re
     digest, scopes = row.get('receipt_sha256'), row.get('event_scopes')
-    if (row.get('source') != 'sportsgameodds' or row.get('complete_venues') != []
+    if (row.get('source') != 'sportsgameodds' or row.get('complete_venues') != [] or 'raw_payload' in row
             or not isinstance(digest, str) or not re.fullmatch(r'[0-9a-f]{64}', digest)
-            or not isinstance(scopes, dict) or not 1 <= len(scopes) <= 100
-            or any(not isinstance(k,str) or not k or len(k)>256 or v not in ('NFL','NCAAF','NBA','NCAAB','MLB','NHL') for k,v in scopes.items())):
+            or not isinstance(scopes, dict) or not 1 <= len(scopes) <= MAX_EVENTS
+            or any(not isinstance(event_id, str) or not event_id or len(event_id) > 256
+                   or not isinstance(league, str) or league not in LEAGUES for event_id, league in scopes.items())):
         raise ValueError('sgo_reference_scope_invalid')
     from app.storage.current_rows import contract_id
     from app.storage.sportsgameodds_reference import offer_quote_link
@@ -215,27 +217,30 @@ class DatabaseIngressSink:
         from .background_work import ingress_thread
         from psycopg.errors import LockNotAvailable, DeadlockDetected, SerializationFailure, QueryCanceled
         retries = 0
-        while True:
-            if revoked.is_set():raise asyncio.CancelledError()
-            try:
-                prepared = await ingress_thread(self.prepare, row, states, revoked, **(dict(precomputed=precomputed) if precomputed is not None else {}))
-                break
-            except (LockNotAvailable, DeadlockDetected, SerializationFailure, QueryCanceled) as exc:
-                if isinstance(exc, QueryCanceled):
-                    # A native depth statement can time out after the offers were
-                    # staged. Retry the rolled-back image once, under the same guard.
-                    if retries or row.get('type') not in ('prediction_book', 'prediction_books') or revoked.is_set():
-                        raise
-                # PostgreSQL rolled back the entire transaction. Retain this exact
-                # already-received image; never redispatch a paid request.
-                from app.diagnostics import failure
-                failure(__name__, 'current_ingress_transaction_retry', exc)
-                retries += 1
-                self.metrics['rejected_observations']-=1  # rolled back and pending, not rejected
-                self.metrics.update(transaction_retries=self.metrics.get('transaction_retries',0)+1,
-                    admission_state='retrying',retry_reason=type(exc).__name__)
-                await asyncio.sleep(min(retries * .1, 2))
-        self.metrics.update(admission_state='receiving',retry_reason=None)
+        try:
+            while True:
+                if revoked.is_set():raise asyncio.CancelledError()
+                try:
+                    prepared = await ingress_thread(self.prepare, row, states, revoked, **(dict(precomputed=precomputed) if precomputed is not None else {}))
+                    break
+                except (LockNotAvailable, DeadlockDetected, SerializationFailure, QueryCanceled) as exc:
+                    if isinstance(exc, QueryCanceled):
+                        # PostgreSQL rolled back the entire native image or SGO
+                        # page. Give that same receipt one more admission attempt.
+                        retryable = (row.get('type') in ('prediction_book', 'prediction_books')
+                                     or row.get('type') == 'current_aggregate_records'
+                                     and row.get('source') == 'sportsgameodds')
+                        if retries or not retryable or revoked.is_set():
+                            raise
+                    from app.diagnostics import failure
+                    failure(__name__, 'current_ingress_transaction_retry', exc)
+                    retries += 1
+                    self.metrics['rejected_observations']-=1  # rolled back and pending, not rejected
+                    self.metrics.update(transaction_retries=self.metrics.get('transaction_retries',0)+1,
+                        admission_state='retrying',retry_reason=type(exc).__name__)
+                    await asyncio.sleep(min(retries * .1, 2))
+        finally:
+            self.metrics.update(admission_state='receiving',retry_reason=None)
         if revoked.is_set():raise asyncio.CancelledError()
         return self.finish(prepared, states)
 
@@ -322,7 +327,7 @@ class DatabaseIngressSink:
                     candidate.books.pop(key,None);candidate.metadata.pop(key,None);candidate.invalid.add(key)
                     withdraw.add(key)
             elif row['type']=='current_aggregate_records':
-                if 'sgo_reference_rows' in row:
+                if row.get('source')=='sportsgameodds' or 'sgo_reference_rows' in row:
                     sgo_links=validate_sgo_page(row)
                 records=row['records']
                 scopes=[dict(venue=v,competition=row['sport'],received_at=row['received_at'],aggregate_route='featured') for v in row['complete_venues']]
@@ -476,15 +481,15 @@ class DatabaseIngressSink:
                         from app.storage.aggregate_receipts import save
                         save(db,kind='featured',sport=row['sport'],received_at=row['received_at'],
                              receipt_sha256=row.get('receipt_sha256'),payload=raw_batch)
-                    if row['type']=='current_aggregate_records' and 'sgo_reference_rows' in row:
-                        from app.storage.sportsgameodds_reference import upsert_rows, upsert_frames, stage_offer_quotes
+                    if sgo_links is not None:
+                        from app.storage.sportsgameodds_reference import upsert_rows, upsert_frames, stage_offer_quotes, withdraw_current_offers
                         phase('sgo_reference')
                         upsert_rows(db, row['sgo_reference_rows'])
                         stage_offer_quotes(db, row['sgo_reference_rows'], sgo_links)
                         phase('sgo_frames')
                         upsert_frames(db, row['sgo_event_frames'])
                         phase('sql_admission')
-                    if row['type']=='sgo_status' or (row['type']=='current_aggregate_records' and row.get('source')=='sportsgameodds'):
+                    if row['type']=='sgo_status' or sgo_links is not None:
                         from app.storage.current_row_state import source_status
                         status = (dict(state=row['state'],reason_code=row['reason_code'],reason=row['reason'])
                                   if row['type']=='sgo_status' else dict(state='available',reason_code='sgo_page_received',reason='SportsGameOdds page admitted.'))
@@ -495,6 +500,8 @@ class DatabaseIngressSink:
                     changed=admit(records,scopes=scopes,authoritative=bool(scopes),source_status=states,now=now,
                                   **({'material_rows':material_rows} if material_rows is not None else {}),
                                   **({'quote_links':sgo_links} if sgo_links else {}))
+                    if sgo_links is not None:
+                        changed += withdraw_current_offers(db, row['sgo_reference_rows'], sgo_links)
                     phase('native_depth')
                     if row['type'] in ('prediction_book','prediction_books'):rows.replace_native_books([o['book'] for o in observations])
                     if row['type']=='coverage_inventory':
@@ -515,7 +522,7 @@ class DatabaseIngressSink:
                             if keys:catalog_turnover[reason]=rows.withdraw_native_markets(keys,reimaging=reason=='reimage',deferred=reason=='derived_refresh',measure=True)
                     else:rows.withdraw_native_markets(withdraw)
                     if revoked is not None and revoked.is_set():raise asyncio.CancelledError()
-                    if row['type']=='current_aggregate_records' and 'sgo_reference_rows' in row:
+                    if sgo_links is not None:
                         from app.storage.delivery_clocks import sgo_admitted
                         sgo_admitted(db, set(row['event_scopes'].values()), row['received_at'])
                     from app.storage import odds_archive
@@ -545,11 +552,11 @@ class DatabaseIngressSink:
                                                         (key, now, 'native_synchronization_lost'),
                                                         {'event': prior_events.get(key[1])}))
                             current_states = {f: state for f,state in states.items() if f in odds_archive.FEEDS}
-                            if row['type']=='sgo_status' or (row['type']=='current_aggregate_records' and row.get('source')=='sportsgameodds'):
+                            if row['type']=='sgo_status' or sgo_links is not None:
                                 current_states['sportsgameodds'] = status
                             for feed, state in current_states.items():
                                 archive.append((feed, odds_archive.source_status, (feed,state,now), {}))
-                            if row['type']=='current_aggregate_records' and 'sgo_reference_rows' in row:
+                            if sgo_links is not None:
                                 archive.append(('sportsgameodds', odds_archive.sgo_page, (row,), {}))
                     phase('commit_observation')
             if row['type']=='coverage_inventory':
@@ -559,7 +566,7 @@ class DatabaseIngressSink:
             phase('complete')
             prepared = dict(self.metrics['preparation'], records=len(records), scopes=len(scopes), withdrawn=len(withdraw))
             self.metrics['recent_preparations'] = (self.metrics.get('recent_preparations', []) + [prepared])[-32:]
-            if row['type'] == 'current_aggregate_records' and 'sgo_reference_rows' in row:
+            if sgo_links is not None:
                 # Native book admissions can fill the shared ring while SGO is waiting for budget.
                 sample = dict(prepared, received_at=row['received_at'],
                               leagues=sorted(set(row['event_scopes'].values())),

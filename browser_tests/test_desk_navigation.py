@@ -327,8 +327,12 @@ def test_phone_comparison_return(engine, tmp_path, monkeypatch):
         body = drawer.locator("#trade-body")
         leg = drawer.get_by_role("button", name="Inspect offer and fees").last
         expect(leg).to_be_visible()
+        drawer.get_by_text(
+            "Exact prices, settlement terms and fee rounding", exact=True
+        ).tap()
         parent = body.inner_text()
         for dismiss in ("close", "back", "pair link"):
+            drawer.evaluate("element => { element.scrollTop = 48; }")
             leg.scroll_into_view_if_needed()
             leg_scroll = drawer.evaluate("element => element.scrollTop")
             assert leg_scroll > 0

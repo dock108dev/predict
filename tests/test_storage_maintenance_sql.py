@@ -9,6 +9,15 @@ from app.collection import native_recovery
 
 
 class StorageMaintenanceSQL(LatestBoardFixture):
+    async def test_failed_initial_measurement_releases_maintenance_lock(self):
+        from app.storage import storage_maintenance as maintenance
+
+        with self.connect() as db, self.connect() as retry:
+            with patch.object(maintenance, 'sql_usage', side_effect=RuntimeError('fixture probe failed')):
+                with self.assertRaisesRegex(RuntimeError, 'fixture probe failed'):
+                    maintain(db)
+            self.assertNotEqual(maintain(retry, compact=False).get('state'), 'busy')
+
     async def test_partitioning_does_not_multiply_the_logical_reclaim_threshold(self):
         import os
         from psycopg.types.json import Jsonb

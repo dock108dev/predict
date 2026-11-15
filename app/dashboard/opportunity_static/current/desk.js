@@ -1,12 +1,12 @@
 import './ui-common.js';
-import {markPinned, tradeInspection, pairInspection} from './desk-inspection.js';
-import {arbCard, evCard, gameMatrix, quoteFreshness, selectedReference, updateMatrixCues} from './opportunity-cards.js';
-import {pinLatestSelection, selectionCurrent, selectionIdentity} from './desk-evidence.js';
+import {createDeskDrawer, position} from './desk-drawer.js';
+import {arbCard, evCard, gameMatrix, updateMatrixCues} from './opportunity-cards.js';
+import {displayRows, holdDeskPage} from './desk-stability.js';
 import {evidenceReason} from './desk-reasons.js';
 import {DiagnosticSession} from './session-history.js';
 import {clock as savedClock, readPreference, savePreference, timezone} from './desk-preferences.js';
 
-const {el, num, fmt, name, odd, link, button} = window.PredictUI;
+const {el, fmt, name, odd, link, button} = window.PredictUI;
 const $ = id => document.getElementById(id);
 const replay = location.pathname === '/replay';
 const route = new URLSearchParams(location.search);
@@ -40,23 +40,22 @@ const defaultZone = timezone();
 const selectedZone = () => filters.elements.timezone.value || defaultZone;
 const clock = at => savedClock(at, selectedZone());
 const stake = filters.elements.stake;
-const dialog = $('trade');
-const state = {offset: 0, page: null, request: null, selected: null, renderedStake: null};
+const state = {offset: 0, page: null, request: null, renderedStake: null};
 const history = new DiagnosticSession();
-const siteName = offer => name(offer.venue);
 function collectionIssue(runtime) {
-  if (runtime?.stopped) return ['Price updates are stopped', 'Collection was stopped in Admin.'];
+  if (runtime?.stopped) return 'Price updates are stopped';
   switch (runtime?.reason) {
-    case 'data_runtime_absent': return ['Price collection has not started', 'This desk has no collector heartbeat.'];
-    case 'data_runtime_not_dispatching': return ['The collector is not gathering prices', 'The collector reports in but is not requesting prices.'];
-    case 'data_runtime_unhealthy': return ['Price collection is unavailable', 'The collector has not reported a healthy heartbeat.'];
-    case 'ordinary_publication_failed': return ['Price publication is delayed', 'The latest price update could not be published to the desk.'];
-    default: return runtime?.healthy === false ? ['Price collection is unavailable', 'The desk cannot confirm the collector is running.'] : null;
+    case 'data_runtime_absent': return 'Price collection has not started';
+    case 'data_runtime_not_dispatching': return 'Price collection is off';
+    case 'data_runtime_unhealthy': return 'Price feed unavailable';
+    case 'ordinary_publication_failed': return 'Prices are delayed';
+    default: return runtime?.healthy === false ? 'Price feed unavailable' : null;
   }
 }
 
 function sourceNotices(publication) {
   const notices = [];
+  const reconnecting = [];
   const paused = publication.data_runtime?.paused_sources || [];
   if (paused.length) notices.push(`Updates paused for ${paused.map(name).join(', ')}.`);
   for (const site of ['sportsgameodds', 'novig', 'prophetx', 'kalshi', 'polymarket_us']) {
@@ -67,9 +66,10 @@ function sourceNotices(publication) {
     } else if (source.reason_code === 'sgo_usage_unreconciled') {
       notices.push('SportsGameOdds updates are waiting for a confirmed provider balance.');
     } else if (source.state === 'resyncing') {
-      notices.push(`${name(site)} is rebuilding its price feed.`);
+      reconnecting.push(name(site));
     }
   }
+  if (reconnecting.length) notices.push(`Reconnecting to ${reconnecting.join(', ')}.`);
   return notices;
 }
 
@@ -116,7 +116,7 @@ $('last-known-field').hidden = !browse || !replay;
 $('alternates-field').hidden = !browse && !comparable;
 $('filters').querySelector('.desk-search').hidden = !!gameKey;
 $('replay-controls').hidden = !replay || dataset === 'retained';
-$('browse-link').hidden = replay && !browse;
+$('browse-link').hidden = replay ? !browse : browse && !gameKey;
 if (browse) {
   $('browse-link').href = replay ? replayURL(gameKey ? 'odds' : 'ev')
     : gameKey ? phaseURL('/browse-odds') : phaseURL('/');
@@ -125,7 +125,7 @@ if (browse) {
     $('browse-link').href = '/browse-odds';
     $('browse-link').textContent = 'Current games';
   }
-  $('desk-path').hidden = false;
+  $('desk-path').hidden = !safeBack && !replay && !gameKey;
   const previousView = link('Back', safeBack || (replay ? replayURL('ev') : '/'));
   previousView.addEventListener('click', event => {
     if (!safeBack || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
@@ -288,326 +288,11 @@ function selections() {
   return query;
 }
 
-function position(offer, game) {
-  const selection = offer.selection || {};
-  const participant = game?.participants?.find(p => p.id === selection.participant)?.name || offer.participant || selection.label;
-  const line = selection.signed_line ?? offer.market.line;
-  const signed = line == null ? '' : `${num(line) > 0 ? '+' : ''}${num(line)}`;
-  switch (selection.predicate) {
-    case 'win': return `${participant || 'Outcome'} to win`;
-    case 'not_win': return `${participant || 'Outcome'} not to win`;
-    case 'cover': return `${participant || 'Outcome'} to cover ${signed}`;
-    case 'not_cover': return `${participant || 'Outcome'} not to cover ${signed}`;
-    case 'over': return `Over ${num(line) ?? ''}`.trim();
-    case 'under': return `Under ${num(line) ?? ''}`.trim();
-    default: return [participant, selection.predicate?.replaceAll('_', ' '), signed].filter(Boolean).join(' ') || 'Outcome unavailable';
-  }
-}
-
-function tradeDetails() {
-  const {offer, group, game, evidence, pairContext} = state.selected;
-  const label = position(offer, game);
-  $('trade-title').textContent = `${siteName(offer)} · ${label}`;
-  const mode = state.selected.historical ? 'Saved capture · prices at inspection time' : replayMode();
-  const leg = pairContext?.pair.legs.indexOf(offer.id);
-  const pairFee = pairContext?.pair.retail_payoff?.legs?.[leg];
-  const pairAcquisition = pairFee?.acquisition_usd ?? pairContext?.pair.inspection?.legs[leg]?.allocation_usd;
-  $('trade-body').replaceChildren(tradeInspection(offer, group, evidence, {mode, position:label, basis:state.selected.basis,
-    checkedAt:state.selected.checkedAt, pinned:state.selected.pinned, publication:state.selected.publication,
-    pairLeg:!!pairContext, pairFee, pairAcquisition}));
-  $('latest').hidden = replay;
-  $('back-to-pair').hidden = !state.selected.pairContext;
-}
-
-let inspection;
-function pushInspection(depth) {
-  if (depth === 1) inspection = {id:crypto.randomUUID(), scrollY:window.scrollY, tableScrolls:matrixPositions(),
-    scrollRestoration:window.history.scrollRestoration};
-  window.history.scrollRestoration = 'manual';
-  window.history.pushState({...window.history.state, predictInspection:{id:inspection.id, depth}}, '');
-}
-
-async function openTrade(offer, group, game, pairContext = null, opener = document.activeElement) {
-  if (!dialog.open) releaseEvidence(state.selected?.lease);
-  const parent = pairContext && {
-    nodes:[...$('trade-body').childNodes], scrollTop:dialog.scrollTop,
-    title:$('trade-title').textContent, note:$('trade-note').textContent, latestHidden:$('latest').hidden, opener
-  };
-  const previous = Boolean(state.previousReason || opener?.hasAttribute('data-expired-quote'));
-  state.selected = {offer, group, game, opener, pairContext,
-    basis:state.page?.basis || filters.elements.basis.value,
-    checkedAt:previous ? Date.parse(state.page?.publication?.read_at) || Date.now() : Date.now(),
-    pinned:previous, publication:pairContext?.publication ?? state.page?.publication};
-  if (parent) {
-    state.selected.parent = parent;
-    if (inspection) pushInspection(2);
-  } else if (!dialog.open) pushInspection(1);
-  $('trade-note').textContent = '';
-  tradeDetails();
-  if (!dialog.open) dialog.showModal();
-  else dialog.querySelector('form button').focus();
-  dialog.scrollTop=0;
-  const selected=state.selected;
-  try {
-    const pinned=await pinEvidence(offer, selected.basis);
-    if(state.selected!==selected||!dialog.open){releaseEvidence(pinned.lease);return;}
-    Object.assign(selected,pinned);
-    const detail = pinned.evidence.desk_offer;
-    if (detail) {
-      selected.offer = {...detail, ...offer};
-      if (offer.trade_fee_available === false && detail.trade_fee?.available) {
-        selected.offer.trade_fee = {available:false, reason:'fee_outcome_not_published'};
-      }
-      if (selected.basis === 'sportsbooks' && offer.fair_odds === null) selected.offer.sportsbook = null;
-    }
-    tradeDetails();
-  } catch {
-    if(state.selected===selected&&dialog.open){
-      selected.retentionError='Full evidence could not be loaded. Displayed prices and returns remain pinned.';
-      $('trade-note').textContent=selected.retentionError;
-      $('trade-body').querySelector('.inspection-loading')?.remove();
-    }
-  }
-}
-
-function openPair(pair, offers, group, game, opener = document.activeElement) {
-  releaseEvidence(state.selected?.lease);
-  releaseEvidence(state.selected?.pairContext?.lease);
-  const context = {pair, publishedPair:pair, offers, group, game, opener, publication:state.page?.publication};
-  renderPair(context);
-  if (!dialog.open) {
-    pushInspection(1);
-    dialog.showModal();
-  }
-  dialog.scrollTop = 0;
-  if (!replay && pair.evidence_result_id && !['pair_leg_stale_or_replaced', 'pair_settlement_unverified'].includes(pair.retail_payoff?.reason)) {
-    context.reservation = reserveEvidence(pair.evidence_result_id).then(lease => {
-      if (dialog.open && (state.selected === context || state.selected?.pairContext === context)) {
-        context.lease = lease;
-        return lease;
-      }
-      releaseEvidence(lease);
-      return null;
-    }).catch(() => null);
-    if (!pair.inspection) loadPairDetails(context);
-  }
-  return context;
-}
-
-async function loadPairDetails(context) {
-  const {publishedPair:pair} = context;
-  try {
-    const lease = await context.reservation;
-    if (!lease || !dialog.open || state.selected !== context) throw Error('Evidence unavailable');
-    const query = new URLSearchParams({layout:'desk', id:pair.id, result_id:pair.evidence_result_id, lease_id:lease.lease_id});
-    const response = await fetch(`/api/comparison-snapshot/details?${query}`);
-    if (!response.ok) throw Error('Evidence unavailable');
-    const detail = await response.json();
-    if (detail.id !== pair.id || detail.evidence_result_id !== pair.evidence_result_id || !detail.inspection) {
-      throw Error('Evidence changed');
-    }
-    if (!dialog.open || state.selected !== context) return;
-    const retail = pair.retail_payoff;
-    const hydrated = {...pair, inspection:detail.inspection, settlement_payouts:detail.settlement_payouts,
-      retail_payoff:retail.available || retail.reason === detail.retail_payoff?.reason
-        ? detail.retail_payoff : {...retail, legs:[]}};
-    for (const offer of detail.offers || []) {
-      if (context.offers.has(offer.id)) {
-        context.offers.set(offer.id, {...offer, ...context.offers.get(offer.id)});
-      }
-    }
-    context.pair = context.publishedPair = hydrated;
-    renderPair(context);
-  } catch {
-    if (dialog.open && state.selected === context) {
-      $('trade-body').replaceChildren(el('p', 'This calculation could not be loaded.'));
-      $('latest').hidden = false;
-    }
-  }
-}
-
-function renderPair(context) {
-  const {pair, offers, group, game} = context;
-  state.selected = context;
-  $('trade-title').textContent = 'Pair payoff';
-  $('trade-note').textContent = '';
-  $('latest').hidden = replay || !pair.inspection;
-  $('back-to-pair').hidden = true;
-  const customSizing = !replay && pair.inspection && pair.evidence_result_id
-    && pair.retail_payoff?.reason !== 'pair_fee_publication_pending';
-  const mode = context.requestedStake ? 'Sized from the captured prices and fees' : replayMode();
-  const body = $('trade-body');
-  if (!pair.inspection && !replay && pair.evidence_result_id
-      && !['pair_leg_stale_or_replaced', 'pair_settlement_unverified'].includes(pair.retail_payoff?.reason)) {
-    body.replaceChildren(el('p', 'Loading the calculation…', 'desk-meta'));
-    return;
-  }
-  body.replaceChildren(pairInspection(pair, offers, {group, game, position, mode,
-    inspect: (offer, opener) => openTrade(offer, group, game, context, opener)}));
-  if (customSizing) {
-    const form = el('form', null, 'pair-sizing');
-    const label = el('label', 'Total stake before fees ($) ');
-    const amount = Object.assign(el('input'), {type:'number', min:'0.01', max:'1000000', step:'0.01',
-      required:true, value:context.requestedStake ?? '100'});
-    const calculate = el('button', 'Size this pair');
-    const status = el('p');
-    status.setAttribute('role', 'status');
-    label.append(amount);
-    form.append(label, calculate, status);
-    form.addEventListener('submit', async event => {
-      event.preventDefault();
-      calculate.disabled = true;
-      status.textContent = 'Sizing the captured pair…';
-      try {
-        await sizePair(context, amount.value);
-        if (dialog.open && state.selected === context) $('trade-body').querySelector('form input')?.focus();
-      } catch {
-        status.textContent = 'Could not size this capture. The previous calculation is still displayed.';
-      } finally { calculate.disabled = false; }
-    });
-    body.prepend(form);
-  }
-}
-
-async function sizePair(context, requestedStake) {
-  const lease = await context.reservation;
-  if (!lease) throw Error('Pair evidence unavailable');
-  const {id, evidence_result_id} = context.pair;
-  const query = new URLSearchParams({id, result_id:evidence_result_id, lease_id:lease.lease_id, stake:requestedStake});
-  const response = await fetch(`/api/comparison-snapshot/details?${query}`);
-  if (!response.ok) throw Error('Pair evidence unavailable');
-  const {id:pairID, evidence_result_id:resultID, inspection, retail_payoff, score} = await response.json();
-  if (pairID !== id || resultID !== evidence_result_id) throw Error('Pair evidence changed');
-  if (dialog.open && state.selected === context) {
-    context.requestedStake = requestedStake;
-    context.pair = {...context.pair, inspection, retail_payoff, score};
-    renderPair(context);
-  }
-}
-
-async function openHistorical() {
-  const capture = route.get('result_id');
-  const id = route.get('selection');
-  if (replay || !capture || !id) return;
-  const basis = filters.elements.basis.value;
-  let lease;
-  try {
-    const reservation = await fetch('/api/comparison-current/lease', {
-      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({result_id:capture})
-    });
-    if (!reservation.ok) throw Error('Capture unavailable');
-    lease = await reservation.json();
-    const query = new URLSearchParams({id, result_id:capture, layout:'desk', basis, lease_id:lease.lease_id});
-    const detail = await fetch(`/api/comparison-snapshot/details?${query}`);
-    if (!detail.ok) throw Error('Capture unavailable');
-    const evidence = await detail.json();
-    if (!evidence.desk_offer || evidence.row.id !== id) throw Error('Saved offer unavailable');
-    if (dialog.open) { releaseEvidence(lease); return; }
-    const {game_key, game_title, league, start_at, market} = evidence.row;
-    state.selected = {offer:evidence.desk_offer, group:{game_key, game_title, league, start_at, market},
-      basis, lease, evidence, historical:true, checkedAt:evidence.captured_at || evidence.desk_offer.captured_at};
-    $('trade-note').textContent = '';
-    tradeDetails();
-    dialog.showModal();
-  } catch {
-    releaseEvidence(lease);
-    $('notice').textContent = 'The saved offer could not be opened.';
-  }
-}
-
-function returnToPair() {
-  const {pairContext, lease, parent} = state.selected;
-  releaseEvidence(lease);
-  state.selected = pairContext;
-  $('trade-title').textContent = parent.title;
-  $('trade-note').textContent = parent.note;
-  $('latest').hidden = parent.latestHidden;
-  $('back-to-pair').hidden = true;
-  $('trade-body').replaceChildren(...parent.nodes);
-  parent.opener.focus({preventScroll:true});
-  dialog.scrollTop = parent.scrollTop;
-}
-
-function dismissInspection() {
-  const current = window.history.state?.predictInspection;
-  if (inspection && current?.id === inspection.id) {
-    if (!inspection.closing) {
-      inspection.closing = true;
-      window.history.back();
-    }
-  } else if (state.selected?.parent) returnToPair();
-  else closeInspection();
-}
-
-dialog.querySelector('form[method="dialog"]').addEventListener('submit', event => {
-  event.preventDefault();
-  dismissInspection();
+const drawer = createDeskDrawer({
+  replay, dataset, retainedResult, gameKey, pageSize, captureMode:replayMode(),
+  viewContext: () => ({phase, page:state.page, previousReason:state.previousReason}),
+  fetchPage, matrixPositions, restoreMatrices, restoreFocus
 });
-dialog.addEventListener('cancel', event => {
-  event.preventDefault();
-  dismissInspection();
-});
-$('back-to-pair').onclick = dismissInspection;
-
-function clearInspectionEntry() {
-  const {predictInspection, ...entry} = window.history.state || {};
-  if (predictInspection) window.history.replaceState(entry, '');
-}
-// A reload can open directly at a modal entry whose in-memory capture is gone.
-clearInspectionEntry();
-window.addEventListener('popstate', event => {
-  const marker = event.state?.predictInspection;
-  if (!dialog.open || !inspection) {
-    clearInspectionEntry();
-    return;
-  }
-  inspection.closing = false;
-  if (marker?.id !== inspection.id) closeInspection();
-  else if (marker.depth === 1 && state.selected?.parent) returnToPair();
-  else if (marker.depth === 2 && !state.selected?.parent) clearInspectionEntry();
-});
-async function releaseEvidence(lease){
-  if(!lease)return;
-  try{
-    await fetch('/api/comparison-current/lease?'+new URLSearchParams({lease_id:lease.lease_id}), {
-      method:'DELETE',
-      headers:{'Content-Type':'application/json'},
-      keepalive:true
-    });
-  }catch{}
-}
-async function reserveEvidence(result_id) {
-  const response=await fetch('/api/comparison-current/lease',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({result_id})});
-  if (!response.ok) throw Error('Evidence expired');
-  return response.json();
-}
-async function pinEvidence(offer, basis){
-  if (offer.live_native_desk || offer.live_aggregate_desk) {
-    const query = new URLSearchParams({id:offer.id, layout:'desk', basis, phase:offer.game_state === 'live' ? 'live' : 'pregame'});
-    const response = await fetch(`/api/comparison-current/selection?${query}`);
-    if (!response.ok) throw Error('Price evidence unavailable');
-    const {row, evidence} = await response.json();
-    if (!evidence || row?.price_revision !== offer.price_revision ||
-        row?.economic_revision !== offer.economic_revision) throw Error('Price or evidence changed');
-    return {evidence:{...evidence, desk_offer:row}};
-  }
-  if(!offer.evidence_result_id)throw Error('Missing exact evidence');
-  if (replay) {
-    const query = new URLSearchParams({dataset, result_id:offer.evidence_result_id, id:offer.id});
-    if (retainedResult) query.set('game_key', gameKey);
-    const detail = await fetch(`/api/odds-replay/details?${query}`);
-    if (!detail.ok) throw Error('Replay evidence unavailable');
-    const evidence = await detail.json();
-    if (evidence.row.id !== offer.id || evidence.row.price_revision !== offer.price_revision ||
-        evidence.row.economic_revision !== offer.economic_revision) throw Error('Replay revision changed');
-    return {evidence};
-  }
-  const lease=await reserveEvidence(offer.evidence_result_id);
-  try{const detail=await fetch('/api/comparison-snapshot/details?'+new URLSearchParams({layout:'desk',basis,
-    result_id:offer.evidence_result_id,id:offer.id,lease_id:lease.lease_id}));if(!detail.ok)throw Error();const evidence=await detail.json();
-    if(evidence.row.id!==offer.id||evidence.row.price_revision!==offer.price_revision||evidence.row.economic_revision!==offer.economic_revision)throw Error();return {lease,evidence};
-  }catch(error){releaseEvidence(lease);throw error;}
-}
 
 function browsingLink(label, group, className) {
   const destination = () => browseDestination(group);
@@ -731,9 +416,17 @@ function cardContext(games, gameTitle = null) {
     compact:comparable, summary:!replay, showGameLink:!gameKey, stableVenues:!replay,
     position:offer => position(offer),
     gameLink:group => browsingLink('Open game ↗', group, 'opportunity-link'),
-    inspectOffer:(offer, group, opener) => openTrade(offer, group, games.get(group.game_key), null, opener),
+    inspectOffer:(offer, group, opener) => {
+      const shown = displayRows(state.page).find(row => row.id === group.id && row.game_key === group.game_key) || group;
+      const exact = shown.offers.find(quote => quote.id === offer.id) || offer;
+      return drawer.openTrade(exact, shown, games.get(group.game_key), null, opener);
+    },
     inspectPair:(pair, offers, group, opener) => {
-      if (pairResultsReady()) openPair(pair, offers, group, games.get(group.game_key), opener);
+      if (!pairResultsReady()) return;
+      const shown = displayRows(state.page).find(row => row.id === group.id && row.game_key === group.game_key) || group;
+      const exact = shown.pairs?.find(candidate => candidate.id === pair.id) || pair;
+      drawer.openPair(exact, shown === group ? offers : new Map(shown.offers.map(quote => [quote.id, quote])),
+        shown, games.get(group.game_key), opener);
     }
   };
 }
@@ -751,8 +444,15 @@ function refreshStatus() {
     : replay ? (state.request ? 'Loading replay…' : 'Replay clock is fixed.')
     : state.request ? 'Checking for updates…' : '';
   $('refresh-status').textContent = mode;
-  $('refresh-status').classList.toggle('sr-only', !(arb && state.page && !pairResultsReady()));
-  $('refresh-list').disabled = !!state.request || !filters.elements.time_to.validity.valid;
+  const invalidWindow = !filters.elements.time_to.validity.valid;
+  $('refresh-status').classList.toggle('sr-only', !invalidWindow && !(arb && state.page && !pairResultsReady()));
+  const refresh = $('refresh-list');
+  const label = state.loadFailed ? 'Retry' : 'Refresh list';
+  if (refresh.textContent !== label) refresh.textContent = label;
+  if (state.loadFailed) refresh.setAttribute('aria-describedby', 'notice');
+  else refresh.removeAttribute('aria-describedby');
+  refresh.disabled = invalidWindow;
+  refresh.setAttribute('aria-disabled', String(!!state.request && !state.backgroundRequest || invalidWindow));
   if (arb) for (const button of $('results').querySelectorAll('[data-pair-id]')) button.disabled = !pairResultsReady();
 }
 
@@ -774,20 +474,18 @@ function emptyResults(page, publication) {
     title = 'This saved capture is unavailable';
     actions.append(link('Browse current odds', '/browse-odds'));
   } else if (issue && !page.price_preview?.length) {
-    [title, detail] = issue;
-    if (!browse) actions.append(browsingLink('Browse odds ↗'));
+    title = issue;
+    actions.append(link('Source status', '/admin?section=sources', 'desk-action'));
   } else if (!replay && page.price_preview?.length) {
     title = page.price_preview.some(group => group.offers?.some(offer => offer.current))
       ? 'Current prices' : 'Last known prices';
     detail = page.calculation_reason || 'No EV comparisons qualify for these filters yet.';
     actions.append(browsingLink('Browse odds ↗'));
   } else if (page.state === 'initializing' && !publication.retained_prices) {
-    title = 'No prices have loaded yet';
-    detail = 'The desk will update after the data service publishes its first prices.';
+    title = 'Waiting for the first prices';
   } else if (comparable && (browse || !positive.checked && !thresholds) && !(browse && gameKey)) {
     title = browse ? 'No matching odds' : 'No matching EV comparisons';
-    detail = browse ? 'Try another matchup, market, or time window.'
-      : page.calculation_reason || 'No verified after-fee EV matches these filters.';
+    detail = browse ? null : page.calculation_reason;
     if (!$('alternates').checked) actions.append(button('Show alternate lines', () => {
       $('alternates').checked = true;
       applyFilters();
@@ -800,7 +498,6 @@ function emptyResults(page, publication) {
     }
   } else if (page.ranked_group_count && (positive.checked || thresholds)) {
     title = thresholds ? 'No results meet the return filters' : 'No positive results';
-    detail = 'Clear the return filters to see evaluated results.';
     actions.append(clearReturns);
   } else if (!page.calculation_reason && page.matched_offer_count === 0 && publication.current_prices
       && (replay || filters.elements.search.value || $('filter-count').textContent !== '0')) {
@@ -845,8 +542,9 @@ function groupsByGame(rows) {
   return groups;
 }
 
-function rankedCard(group, games) {
+function rankedCard(group, games, nested = false) {
   const context = cardContext(games);
+  context.nested = nested;
   context.game = games.get(group.game_key);
   context.position = offer => position(offer, context.game);
   return evCard(group, context);
@@ -861,7 +559,7 @@ function rankedGame(gameRows, games, disclosures) {
   details.dataset.id = `ev:${first.game_key}`;
   details.append(el('summary', `${rest.length} more ${rest.length === 1 ? 'outcome' : 'outcomes'}`));
   const addCards = () => {
-    if (details.open && details.childElementCount === 1) details.append(...rest.map(row => rankedCard(row, games)));
+    if (details.open && details.childElementCount === 1) details.append(...rest.map(row => rankedCard(row, games, true)));
   };
   details.open = disclosures.get(details.dataset.id) || rest.some(row => row.id === restoreLocation?.groupId);
   addCards();
@@ -870,8 +568,10 @@ function rankedGame(gameRows, games, disclosures) {
   return card;
 }
 
-function render(page) {
+function render(page, keepNodes = false) {
   const results = $('results');
+  const focus = keepNodes && captureResultsFocus(results);
+  const content = document.createDocumentFragment();
   const disclosures = new Map([...disclosureStates(), ...restoreLocation?.disclosures || []]);
   const tableScrolls = matrixPositions();
   const games = new Map((page.games || []).map(game => [game.game_key, game]));
@@ -897,13 +597,12 @@ function render(page) {
   if (!replay) {
     if (rows.some(row => !row.withdrawn) || page.price_preview?.length) {
       const issue = collectionIssue(publication.data_runtime);
-      if (issue) notice.push(`${issue[0]}. ${issue[1]}`);
+      if (issue) notice.push(`${issue}.`);
     }
     if (!publication.data_runtime?.stopped) notice.push(...sourceNotices(publication));
   }
   if (state.resetReason) notice.push(state.resetReason);
   $('notice').textContent = notice.join(' ');
-  results.replaceChildren();
   if (arb && page.pair_status?.withheld) {
     const withheld = el('p', `${page.pair_status.withheld} pairing(s) lack a payoff under these filters. `, 'desk-note');
     withheld.append(button('Show unavailable pairings', () => {
@@ -913,15 +612,15 @@ function render(page) {
       }
       applyFilters();
     }));
-    results.append(withheld);
+    content.append(withheld);
   }
   if (selectedLine && !page.selected_line_id && !rows.some(row => row.id === selectedLine && !row.withdrawn)) {
-    results.append(el('p', `${linkedLine || 'The selected line'} is unavailable for this matchup in the selected view.`, 'desk-note selected-line-unavailable'));
+    content.append(el('p', `${linkedLine || 'The selected line'} is unavailable for this matchup in the selected view.`, 'desk-note selected-line-unavailable'));
   }
   const preview = rows.length ? [] : (page.price_preview || []);
   const matrixRows = browse ? rows : preview;
   if (matrixRows.length) {
-    if (preview.length) results.append(emptyResults(page, publication));
+    if (preview.length) content.append(emptyResults(page, publication));
     const groups = groupsByGame(matrixRows);
     const compactGames = !replay && !gameKey && page.row_kind === 'games' && total > 3;
     for (const [key, gameRows] of groups) {
@@ -930,29 +629,45 @@ function render(page) {
       context.position = offer => position(offer, games.get(key));
       const id = `odds:${key}`;
       const disclosure = compactGames ? {id, open:disclosures.get(id) ?? key === groups.keys().next().value} : null;
-      results.append(gameMatrix(gameRows, context, {includeAlternates:$('alternates').checked, market:marketFamily,
+      content.append(gameMatrix(gameRows, context, {includeAlternates:$('alternates').checked, market:marketFamily,
         selectedLine, disclosure}));
     }
-    if (!groups.size) results.append(emptyResults(page, publication));
+    if (!groups.size) content.append(emptyResults(page, publication));
   } else if (!arb && page.row_kind === 'games' && rows.length) {
-    for (const gameRows of groupsByGame(rows).values()) results.append(rankedGame(gameRows, games, disclosures));
-    if (!results.firstChild) results.append(emptyResults(page, publication));
+    for (const gameRows of groupsByGame(rows).values()) content.append(rankedGame(gameRows, games, disclosures));
+    if (!content.firstChild) content.append(emptyResults(page, publication));
   } else if (rows.length) {
     for (const group of rows) {
       if (group.withdrawn) {
-        results.append(el('p', `${group.game_title}: ${group.reason}`, 'desk-note'));
+        content.append(el('p', `${group.game_title}: ${group.reason}`, 'desk-note'));
         continue;
       }
       const context = cardContext(games);
       context.game = games.get(group.game_key);
       context.position = offer => position(offer, context.game);
-      results.append(arb ? arbCard(group, context, disclosures.get(group.id)) : evCard(group, context));
+      content.append(arb ? arbCard(group, context, disclosures.get(group.id)) : evCard(group, context));
     }
   } else {
-    results.append(emptyResults(page, publication));
+    content.append(emptyResults(page, publication));
   }
+  if (keepNodes) {
+    const previous = [...results.children];
+    const next = [...content.children];
+    for (const [index, node] of next.entries()) {
+      const old = previous[index];
+      if (!old) results.append(node);
+      else if (!old.isEqualNode(node)) old.replaceWith(node);
+    }
+    for (const node of previous.slice(next.length)) node.remove();
+  } else results.replaceChildren(content);
   restoreMatrices(tableScrolls);
+  if (focus && !focus.node.isConnected) {
+    const area = [...results.querySelectorAll(focus.selector)].find(focus.matchesArea);
+    const replacement = area && focus.controls(area)[focus.index];
+    if (replacement) restoreFocus(replacement);
+  }
   updateMatrixCues(results);
+  scheduleResultExpiry();
   const shown = page.page_count ?? rows.length;
   const unit = page.row_kind === 'games' ? 'games' : 'results';
   $('page-range').textContent = shown ? `${state.offset + 1}–${state.offset + shown} of ${total} ${unit}` : '';
@@ -1030,6 +745,24 @@ function matchesInputs(stakeValue, signature) {
   return (!replay || stakeValue === stake.value) && signature === JSON.stringify(selections());
 }
 
+function captureResultsFocus(results) {
+  const node = document.activeElement;
+  if (!results.contains(node)) return null;
+  const selector = '[data-group-id], [data-game-key]';
+  const area = node.closest(selector);
+  if (!area) return null;
+  const groupId = area.dataset.groupId;
+  const game = area.closest('[data-game-key]')?.dataset.gameKey;
+  const matchesArea = candidate => candidate.dataset.groupId === groupId
+    && candidate.closest('[data-game-key]')?.dataset.gameKey === game;
+  const key = ['data-desk-quote-key', 'data-offer-id', 'data-pair-id', 'data-calculation-id', 'popovertarget', 'href', 'aria-label']
+    .find(attribute => node.hasAttribute(attribute));
+  const controls = scope => [...scope.querySelectorAll(node.localName)]
+    .filter(candidate => candidate.closest(selector) === scope
+      && (!key || candidate.getAttribute(key) === node.getAttribute(key)));
+  return {node, selector, matchesArea, controls, index:controls(area).indexOf(node)};
+}
+
 let resultPointer = null;
 $('results').addEventListener('pointerdown', event => { resultPointer = event.pointerId; });
 for (const type of ['pointerup','pointercancel']) {
@@ -1039,8 +772,7 @@ for (const type of ['pointerup','pointercancel']) {
 }
 window.addEventListener('blur', () => { resultPointer = null; });
 window.addEventListener('resize', () => updateMatrixCues($('results')));
-const usingResults = () => resultPointer != null || $('results').contains(document.activeElement)
-  || !!$('results').querySelector(':popover-open');
+const usingResults = () => resultPointer != null || !!$('results').querySelector(':popover-open');
 
 function applyDeskFeatures(page) {
   if (replay || !page.features) return;
@@ -1063,50 +795,91 @@ function applyDeskFeatures(page) {
 }
 
 function previousResults(message = '') {
+  if (state.previousReason === message) return;
+  const anchor = scrollY ? visibleAnchor() : null;
   state.previousReason = message;
   const notice = $('previous-results');
-  if (notice.textContent !== message) notice.textContent = message;
+  notice.textContent = message;
   notice.hidden = !message;
+  restoreAnchor(anchor);
 }
 
 function expireResultValues() {
   if (replay) return;
   const now = Date.now();
-  for (const value of $('results').querySelectorAll('[data-calculation-deadline]')) {
-    if (Number(value.dataset.calculationDeadline) > now || value.hasAttribute('data-expired-calculation')) continue;
+  const results = $('results');
+  const oldCalculations = [...results.querySelectorAll('[data-calculation-deadline]:not([data-expired-calculation])')]
+    .filter(value => Number(value.dataset.calculationDeadline) <= now);
+  const oldPrices = [...results.querySelectorAll('[data-quote-deadline]:not([data-expired-quote])')]
+    .filter(price => Number(price.dataset.quoteDeadline) <= now);
+  if (!oldCalculations.length && !oldPrices.length) return;
+  const anchor = scrollY ? visibleAnchor() : null;
+  for (const value of oldCalculations) {
     value.setAttribute('data-expired-calculation', '');
     if (value.dataset.quoteCalculation) {
       const price = value.parentElement;
       price.setAttribute('aria-label', `${price.dataset.quoteDescription}, Calculation expired`);
     }
   }
-  for (const price of $('results').querySelectorAll('[data-quote-deadline]:not([data-expired-quote])')) {
-    if (Number(price.dataset.quoteDeadline) > now) continue;
+  for (const price of oldPrices) {
     price.setAttribute('data-expired-quote', '');
+    price.classList.remove('desk-best');
     if (price.dataset.quoteDescription) price.setAttribute('aria-label', `${price.dataset.quoteDescription}, Last known price`);
     price.append(el('small', 'Last known', 'quote-freshness'));
   }
+  restoreAnchor(anchor);
 }
-$('results').addEventListener('toggle', () => queueMicrotask(expireResultValues), true);
+let resultExpiryTimer;
+function scheduleResultExpiry() {
+  if (replay) return;
+  clearTimeout(resultExpiryTimer);
+  const now = Date.now();
+  const due = [...$('results').querySelectorAll('[data-calculation-deadline]:not([data-expired-calculation]), [data-quote-deadline]:not([data-expired-quote])')]
+    .flatMap(item => [
+      item.hasAttribute('data-expired-calculation') ? null : Number(item.dataset.calculationDeadline),
+      item.hasAttribute('data-expired-quote') ? null : Number(item.dataset.quoteDeadline)
+    ]).filter(Number.isFinite);
+  if (!due.length) return;
+  resultExpiryTimer = setTimeout(() => {
+    expireResultValues();
+    scheduleResultExpiry();
+  }, Math.min(2147483647, Math.max(0, Math.min(...due) - now)));
+}
+$('results').addEventListener('toggle', () => queueMicrotask(() => {
+  expireResultValues();
+  scheduleResultExpiry();
+}), true);
+
+function anchorTarget(row) {
+  return row.querySelector('h2, th[scope=row]') || row;
+}
 
 function visibleAnchor() {
   const scrollY = window.scrollY;
-  const candidates = [...$('results').children].filter(item => item.dataset.gameKey || item.dataset.groupId);
-  const visible = candidates.find(item => {
-    const {top, bottom} = item.getBoundingClientRect();
-    return bottom > 0 && top < window.innerHeight;
-  });
-  const item = visible || candidates[0];
-  return {scrollY, top:visible?.getBoundingClientRect().top, gameKey:item?.dataset.gameKey,
-    groupId:item?.dataset.groupId || item?.querySelector('[data-group-id]')?.dataset.groupId};
+  const results = $('results');
+  const rows = [...results.querySelectorAll('[data-group-id]')];
+  const candidates = [...rows, ...[...results.children].filter(item => item.dataset.gameKey && !item.dataset.groupId)];
+  const visible = candidates.map(item => ({item, rect:anchorTarget(item).getBoundingClientRect()}))
+    .filter(({rect}) => rect.height && rect.bottom > 0 && rect.top < window.innerHeight)
+    .sort((a, b) => a.rect.top - b.rect.top)[0];
+  const item = visible?.item || candidates[0];
+  return {scrollY, top:visible?.rect.top, gameKey:item?.closest('[data-game-key]')?.dataset.gameKey,
+    groupId:item?.dataset.groupId};
 }
 
 function restoreAnchor(anchor) {
   if (!anchor) return;
-  const item = [...$('results').children].find(child => anchor.gameKey
-    ? child.dataset.gameKey === anchor.gameKey : child.dataset.groupId === anchor.groupId);
-  if (item && anchor.top != null) window.scrollBy(0, item.getBoundingClientRect().top - anchor.top);
+  const results = $('results');
+  const exact = anchor.groupId && [...results.querySelectorAll('[data-group-id]')]
+    .find(row => row.dataset.groupId === anchor.groupId && anchorTarget(row).getClientRects().length);
+  const item = exact || [...results.children].find(child => anchor.gameKey && child.dataset.gameKey === anchor.gameKey);
+  if (item && anchor.top != null) window.scrollBy(0, anchorTarget(item).getBoundingClientRect().top - anchor.top);
   else window.scrollTo(0, anchor.scrollY);
+}
+
+function updatesReady(value) {
+  $('updates-ready').hidden = !value;
+  $('refresh-list').classList.toggle('has-update', value);
 }
 
 function resultSignature(page) {
@@ -1127,17 +900,22 @@ async function load(offset = state.offset, {background = false, freshMembership 
   if (!filters.checkValidity() || !stake.value) return;
   if (background && state.request) return;
   state.request?.abort();
-  const controller = new AbortController(); state.request = controller; refreshStatus();
+  const controller = new AbortController();
+  state.request = controller;
+  state.backgroundRequest = background;
+  if (!replay) state.lastListRead = Date.now();
+  refreshStatus();
   const requestStake = replay ? stake.value : '100';
   const selected = selections();
   const requestFilters = JSON.stringify(selected);
+  const readMember = (background && state.backgroundPage) || state.page;
   const query = new URLSearchParams({...selected, layout: 'desk', view: arb ? 'arbs' : 'ev',
-    offset:freshMembership ? 0 : offset, limit:pageLimit});
+    offset:freshMembership ? 0 : background ? readMember?.offset ?? offset : offset, limit:pageLimit});
   if (replay) query.set('stake', requestStake);
   else query.set('summary', '1');
   if (replay) query.set('dataset', dataset);
   if (retainedResult) query.set('result_id', retainedResult);
-  const browseId = (state.query === requestFilters ? state.page?.browse_id : null) ?? restoreLocation?.browseId;
+  const browseId = (state.query === requestFilters ? readMember?.browse_id : null) ?? restoreLocation?.browseId;
   if (!replay && !freshMembership && browseId && (offset || background || restoreLocation?.browseId)) query.set('browse_id', browseId);
   const locator = restoreLocation || (freshMembership && anchor);
   if (!gameKey && locator && (locator.groupId || locator.gameKey)) {
@@ -1146,15 +924,15 @@ async function load(offset = state.offset, {background = false, freshMembership 
   }
   if (!state.page) $('notice').textContent = 'Loading prices…';
   try {
-    const page = await fetchPage(query, controller.signal);
+    let page = await fetchPage(query, controller.signal);
     if (controller.signal.aborted || !matchesInputs(requestStake, requestFilters)
-        || background && (dialog.open || usingResults())) return;
+        || background && (drawer.isOpen() || usingResults())) return;
     const emptyPage = !page.rows?.some(row => !row.withdrawn) && !page.price_preview?.length;
     if (page.state === 'page_changed' || query.has('browse_id') && emptyPage && (page.total || page.anchor_state === 'removed')) {
       if (freshMembership) throw Error('Browsing order unavailable');
       const reason = page.reason || 'The comparison order changed.';
       history.record('browsing_reset', {reason});
-      state.resetReason = reason;
+      if (!background) state.resetReason = reason;
       if (restoreLocation) {
         restoreLocation.offset = 0;
         restoreLocation.browseId = null;
@@ -1162,9 +940,9 @@ async function load(offset = state.offset, {background = false, freshMembership 
       state.request = null;
       return load(0, {background, freshMembership:true, anchor:anchor || visibleAnchor()});
     }
-    if (page.anchor_state === 'removed') {
+    if (!background && page.anchor_state === 'removed') {
       state.resetReason = 'The previous game or line is no longer in these results.';
-    } else if (page.anchor_state === 'game') {
+    } else if (!background && page.anchor_state === 'game') {
       state.resetReason = 'The previous line left these results. Other prices for the game are shown.';
     }
     if (gameKey && page.rows?.length && page.total > (page.page_count ?? page.rows.length)) {
@@ -1183,36 +961,50 @@ async function load(offset = state.offset, {background = false, freshMembership 
       page.rows = [...rows.values()];
     }
     if (controller.signal.aborted || !matchesInputs(requestStake, requestFilters)
-        || background && (dialog.open || usingResults())) return;
+        || background && (drawer.isOpen() || usingResults())) return;
     applyDeskFeatures(page);
-    const prior = background && !restoreLocation ? anchor || visibleAnchor() : anchor;
+    const held = background && displayRows(state.page).length && state.page.phase === page.phase;
+    const prior = background && !restoreLocation && scrollY ? anchor || visibleAnchor() : anchor;
+    if (held) {
+      state.backgroundPage = {offset:page.offset, browse_id:page.browse_id};
+      const result = holdDeskPage(state.page, page);
+      page = result.page;
+      updatesReady(result.changed);
+    } else {
+      state.backgroundPage = null;
+      updatesReady(false);
+    }
     const signature = resultSignature(page);
     const repaint = !background || !state.page || state.renderSignature !== signature || state.resetReason;
     state.page = page;
+    state.loadFailed = false;
     state.query = JSON.stringify(selections());
     state.renderSignature = signature;
     state.renderedStake = Number(requestStake);
     state.offset = page.offset ?? (freshMembership ? 0 : offset);
     previousResults();
     if (repaint) {
-      render(page);
+      render(page, held);
       restoreAnchor(prior);
     }
     expireResultValues();
     state.resetReason = null;
     restoreLocationAfterLoad();
     history.observe(page, selections());
-    checkSelection();
+    drawer.checkSelection();
   } catch (error) {
     if (!controller.signal.aborted && error.name !== 'AbortError') {
-      if (state.page && !replay) previousResults('Could not check the latest prices. Showing the previous results.');
-      else $('notice').textContent = replay ? 'Replay could not be loaded. Refresh the list to retry.'
-        : 'Prices could not be loaded. Refresh the list to retry.';
+      if (state.page && !replay) previousResults('Price update failed. Showing previous results.');
+      else {
+        state.loadFailed = true;
+        $('notice').textContent = replay ? 'Saved odds could not be loaded.' : 'Prices could not be loaded.';
+      }
       history.record('display_gap',{reason:'local_read_failed'});
     }
   } finally {
     if (state.request === controller) {
       state.request = null;
+      state.backgroundRequest = false;
       refreshStatus();
       scheduleUpdates();
     }
@@ -1324,8 +1116,9 @@ $('reset').onclick = () => {
 activeFilters();
 validateTimeWindow();
 $('refresh-list').onclick = () => {
+  if ($('refresh-list').getAttribute('aria-disabled') === 'true') return;
   const sameFilters = state.query === JSON.stringify(selections());
-  const anchor = sameFilters && state.offset ? visibleAnchor() : null;
+  const anchor = sameFilters && (state.offset || scrollY) ? visibleAnchor() : null;
   load(sameFilters ? state.offset : 0, {freshMembership:!!state.page?.browse_id && (!state.offset || !!anchor), anchor});
 };
 document.addEventListener('focusin', refreshStatus);
@@ -1338,226 +1131,6 @@ $('alternates').addEventListener('input', event => {
   if (browse && !gameKey) saveBrowsePreferences();
   if (state.page) render(state.page);
 });
-function pairIdentity(context) {
-  const {publishedPair:pair, offers} = context;
-  const payoff = pair.retail_payoff;
-  const fees = payoff.legs?.map(leg => [leg.available, leg.classification, leg.quantity, leg.acquisition_usd,
-    leg.at_fill_usd, leg.settlement_usd, leg.receipts_usd]);
-  return JSON.stringify([pair.id, pair.legs.map(id => {
-    const offer = offers.get(id);
-    return [offer.id, offer.price_revision, offer.economic_revision, offer.odds, offer.current];
-  }),
-    payoff.available, payoff.reason, payoff.funding_usd, payoff.states, payoff.sizing, fees, pair.score]);
-}
-
-async function readPair(selection) {
-  const query = new URLSearchParams({
-    layout:'desk', view:'arbs', game_key:selection.group.game_key,
-    family:selection.group.market.market, period:selection.group.market.period, limit:pageSize
-  });
-  if (phase) query.set('phase', phase);
-  const ids = [...selection.pair.legs].sort().join('\u001f');
-  for (let offset = 0; ; offset += pageSize) {
-    query.set('offset', offset);
-    const page = await fetchPage(query);
-    const group = page.rows?.find(row => row.id === selection.group.id);
-    const pair = group?.pairs.find(item => [...item.legs].sort().join('\u001f') === ids && item.retail_payoff?.available);
-    if (pair) return {pair, publishedPair:pair, group, offers:new Map(group.offers.map(offer => [offer.id, offer])),
-      game:page.games?.find(item => item.game_key === group.game_key)};
-    if (group || !page.total || offset + pageSize >= page.total) return null;
-    if (page.browse_id) query.set('browse_id', page.browse_id);
-  }
-}
-
-async function adoptPair(selection, isActive) {
-  const next = await readPair(selection);
-  if (!isActive()) return;
-  if (!next) {
-    adoptionNotice(selection, phase === 'pregame' && Date.parse(selection.group.start_at) <= Date.now()
-      ? 'Scheduled start passed. The pregame pair remains pinned.'
-      : 'These legs no longer have a current modeled payoff. The earlier calculation is still pinned.');
-    return;
-  }
-  const confirmed = await readPair(selection);
-  if (!isActive()) return;
-  if (!confirmed || pairIdentity(next) !== pairIdentity(confirmed)
-      || !confirmed.pair.legs.every(id => selectionCurrent(confirmed.offers.get(id)))) {
-    adoptionNotice(selection, 'The pair changed during adoption. The earlier calculation is still pinned.');
-    return;
-  }
-  if (pairIdentity(selection) === pairIdentity(confirmed)) {
-    showRefreshResult(selection, 'No newer pair inputs found. The displayed calculation is unchanged.');
-    return;
-  }
-  const replacement = openPair(confirmed.pair, confirmed.offers, confirmed.group, confirmed.game, selection.opener);
-  if (selection.requestedStake) {
-    try { await sizePair(replacement, selection.requestedStake); }
-    catch {
-      if (dialog.open && state.selected === replacement) showRefreshResult(replacement, 'Updated both legs. The published payoff is shown while custom sizing is unavailable.');
-      return;
-    }
-  }
-  if (dialog.open && state.selected === replacement) showRefreshResult(replacement, 'Updated both legs and the payoff.');
-}
-
-function showRefreshResult(selection, message) {
-  selection.refreshMessage = message;
-  $('trade-note').textContent = message;
-}
-
-function adoptionNotice(selection, message) {
-  selection.adoptionNotice = true;
-  $('trade-note').textContent = message;
-  if (selection.offer) pinSelectionStatus(selection);
-}
-
-function pinSelectionStatus(selection) {
-  selection.pinned = true;
-  markPinned($('trade-body'), selection.pinned);
-}
-
-function expireInspection() {
-  const selected = state.selected;
-  if (!replay && dialog.open && selected?.offer && !selected.historical && !selectionCurrent(selected.offer)) {
-    pinSelectionStatus(selected);
-  }
-}
-
-$('latest').onclick = async () => {
-  const latest = $('latest');
-  const selection = state.selected;
-  selection.adoptionNotice = false;
-  selection.refreshMessage = '';
-  latest.disabled = true;
-  $('trade-note').textContent = 'Checking latest price…';
-  const isActive = () => dialog.open && state.selected === selection;
-  try {
-    if (selection.pair) {
-      await adoptPair(selection, isActive);
-      return;
-    }
-    const query = new URLSearchParams({id:selection.offer.id, layout:'desk', basis:selection.basis});
-    if (phase) query.set('phase', phase);
-    const next = await pinLatestSelection({
-      read: async () => {
-        const response = await fetch(`/api/comparison-current/selection?${query}`);
-        if (!response.ok) throw Error('Unavailable');
-        const {row} = await response.json();
-        return selection.offer.value != null && row?.value == null ? null : row;
-      },
-      pin: offer => pinEvidence(offer, selection.basis), release: releaseEvidence, isActive
-    });
-    if (!isActive()) { if (next.state === 'ready') releaseEvidence(next.lease); return; }
-    if (next.state === 'unavailable') {
-      adoptionNotice(selection, phase === 'pregame' && Date.parse(selection.group.start_at) <= Date.now()
-        ? 'Scheduled start passed. The pregame capture remains pinned.'
-        : 'No current replacement for this inspection. The earlier capture remains pinned.');
-      return;
-    }
-    if (next.state === 'changed') {
-      adoptionNotice(selection, 'The price, fee, or reference changed during adoption. The earlier inspection is still pinned.');
-      return;
-    }
-    if (next.state !== 'ready') return;
-    const {offer, evidence, lease} = next;
-    const unchanged = selectionIdentity(offer) === selectionIdentity(selection.offer);
-    if (unchanged && !selection.pinned && !selection.historical) {
-      releaseEvidence(lease);
-      showRefreshResult(selection, 'No newer quote or calculation inputs found.');
-      return;
-    }
-    const reference = selectedReference(offer, selection.basis);
-    const group = {...selection.group, settlement_match:undefined,
-      sportsbook_quotes:reference?.prices?.[0] ? {[reference.book]: [{...reference.prices[0], current:true}]} : undefined};
-    state.selected = {...selection, group, offer, evidence, lease, checkedAt:Date.now(),
-      historical:false, pinned:null, retentionError:null, publication:null};
-    releaseEvidence(selection.lease);
-    tradeDetails();
-    showRefreshResult(state.selected, 'Updated the offer and calculation inputs.');
-  } catch {
-    if (isActive()) adoptionNotice(selection, 'Could not check the latest price. The earlier inspection is still pinned.');
-  } finally {
-    latest.disabled = false;
-    if (dialog.open && !latest.hidden && !dialog.contains(document.activeElement)) latest.focus({preventScroll:true});
-  }
-};
-
-function closeInspection() {
-  dialog.close();
-  finishInspection(true);
-}
-
-function finishInspection(restoreOpener = false) {
-  if (dialog.open || !state.selected) return;
-  const old = state.selected;
-  const position = inspection;
-  inspection = null;
-  state.selected = null;
-  releaseEvidence(old?.lease);
-  releaseEvidence(old?.pairContext?.lease);
-  const pair = old?.pairContext?.pair || old?.pair;
-  const current = pair
-    ? [...$('results').querySelectorAll('[data-pair-id]')].find(item => item.dataset.pairId === pair.id)
-    : [...$('results').querySelectorAll(old?.opener?.dataset.calculationId ? '[data-calculation-id]' : '[data-offer-id]')]
-      .find(item => (item.dataset.calculationId ?? item.dataset.offerId) === old?.offer?.id);
-  const fallback = $('refresh-list').disabled ? filters.elements.search : $('refresh-list');
-  const previousOpener = old?.pairContext?.opener || old?.opener;
-  const opener = previousOpener?.isConnected ? previousOpener : current;
-  const focused = document.activeElement;
-  if (opener && (restoreOpener || focused === document.body || focused === document.documentElement || dialog.contains(focused))) {
-    opener.focus({preventScroll:true});
-  }
-  else restoreFocus(fallback);
-  if (position) {
-    restoreMatrices(position.tableScrolls);
-    window.scrollTo(0, position.scrollY);
-    window.history.scrollRestoration = position.scrollRestoration;
-  }
-}
-// A native close event follows later. Clean up external closes without moving
-// focus after the user has already reached another control.
-dialog.addEventListener('close', () => finishInspection());
-async function checkSelection() {
-  const selected = state.selected;
-  if (replay || !dialog.open || !selected || selected.historical || selected.adoptionNotice || $('latest').disabled) return;
-  expireInspection();
-  try {
-    if (selected.pair) {
-      if (!selected.pair.inspection) return;
-      const current = await readPair(selected);
-      if (!dialog.open || selected !== state.selected || selected.adoptionNotice || $('latest').disabled) return;
-      $('trade-note').textContent = !current && phase === 'pregame' && Date.parse(selected.group.start_at) <= Date.now()
-        ? 'Scheduled start passed. The pregame pair remains pinned.'
-        : !current ? 'A current modeled payoff is unavailable. The earlier calculation is still pinned.'
-        : pairIdentity(current) !== pairIdentity(selected) ? 'Pair inputs changed. Use latest prices to update both legs together.'
-          : selected.refreshMessage || '';
-      return;
-    }
-    const query = new URLSearchParams({id:selected.offer.id, layout:'desk', basis:selected.basis});
-    if (phase) query.set('phase', phase);
-    const response = await fetch(`/api/comparison-current/selection?${query}`);
-    if (!response.ok) return;
-    const {row, withdrawn_from_phase, reason} = await response.json();
-    if (!dialog.open || selected !== state.selected || selected.adoptionNotice || $('latest').disabled) return;
-    const previous = selected.offer;
-    let note = '';
-    if (withdrawn_from_phase || row?.withdrawn_from_phase ||
-        phase === 'pregame' && Date.parse(selected.group.start_at) <= Date.now()) {
-      pinSelectionStatus(selected);
-      note = evidenceReason(reason, `This quote is no longer eligible for ${phase === 'live' ? 'Live' : 'Pregame'}.`)
-        + ' The inspected price remains pinned.';
-    } else if (!row?.current) {
-      pinSelectionStatus(selected);
-      note = `${row ? quoteFreshness(row) + '.' : 'Latest price is unavailable.'} The inspected price remains pinned.`;
-    }
-    else if (selectionIdentity(row) !== selectionIdentity(previous)) {
-      pinSelectionStatus(selected);
-      const change = row.odds?.decimal === previous.odds?.decimal ? 'Calculation evidence changed.' : 'Price changed.';
-      note = `${change} Use latest prices to update the offer, fee and reference together.`;
-    }
-    $('trade-note').textContent = [note || selected.refreshMessage, selected.retentionError].filter(Boolean).join(' ');
-  } catch {}
-}
 $('session-export').onclick=()=>history.export();
 $('session-clear').onclick=()=>history.clear();
 const session = $('session-history');
@@ -1579,9 +1152,15 @@ window.addEventListener('pageshow', event => {
     load(location.offset);
   }
 });
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) return;
+  expireResultValues();
+  scheduleResultExpiry();
+});
 let updateTimer;
 let updateDelay = 6500;
 let checkedBoundary;
+const HELD_LIST_UPDATE_MS = 12000;
 
 function scheduleUpdates() {
   if (replay) return;
@@ -1593,16 +1172,15 @@ function scheduleUpdates() {
 async function followUpdates() {
   try {
     if (document.hidden) return;
-    expireInspection();
+    drawer.expireInspection();
     expireResultValues();
-    if (dialog.open) {
-      await checkSelection();
+    if (drawer.isOpen()) {
+      await drawer.checkSelection();
       return;
     }
     const page = state.page;
     if (!page?.update_cursor || state.request || state.query !== JSON.stringify(selections())) return;
     const expired = Date.parse(page.refresh_at) <= Date.now();
-    if (expired && !state.previousReason) previousResults('Some results have expired.');
     if (usingResults()) return;
     const query = new URLSearchParams({layout:'desk', phase, after:page.update_cursor});
     let change;
@@ -1611,13 +1189,14 @@ async function followUpdates() {
       if (!response.ok) throw Error('Price status unavailable');
       change = await response.json();
     } catch {
-      if (state.page === page && !state.request) previousResults('Could not check the latest prices. Showing the previous results.');
+      if (state.page === page && !state.request) previousResults('Price update failed. Showing previous results.');
       return;
     }
-    if (state.page !== page || state.request || dialog.open || usingResults()) return;
+    if (state.page !== page || state.request || drawer.isOpen() || usingResults()) return;
     updateDelay = Math.max(1000, Number(change.poll_after_ms) || 6500);
     const recheckExpiry = expired && checkedBoundary !== page.refresh_at;
     if (change.changed || recheckExpiry || change.phase && change.phase !== phase) {
+      if (displayRows(page).length && Date.now() - state.lastListRead < HELD_LIST_UPDATE_MS) return;
       checkedBoundary = page.refresh_at;
       await load(state.offset, {background:true});
     } else if (!expired) previousResults();
@@ -1627,22 +1206,5 @@ async function followUpdates() {
 }
 
 load(restored?.offset ?? 0);
-openHistorical();
+drawer.openHistorical(route.get('result_id'), route.get('selection'));
 scheduleUpdates();
-
-setInterval(async () => {
-  const selected = state.selected;
-  if (!dialog.open || !selected) return;
-  for (const subject of [selected, selected.pairContext]) {
-    if (!subject?.lease) continue;
-    const result_id = (subject.offer || subject.pair).evidence_result_id;
-    try {
-      const response = await fetch('/api/comparison-current/lease', {method:'POST', headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({result_id, lease_id:subject.lease.lease_id})});
-      if (!response.ok && selected === state.selected) {
-        selected.retentionError = 'Evidence retention expired; displayed inspection remains saved.';
-        $('trade-note').textContent = selected.retentionError;
-      }
-    } catch {}
-  }
-}, 30000);

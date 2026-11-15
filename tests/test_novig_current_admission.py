@@ -89,7 +89,7 @@ class NovigCurrentAdmission(LatestBoardFixture):
                 rows.upsert_records([], scopes=[dict(venue='novig', competition='NCAAB',
                     received_at=self.at.isoformat(), aggregate_route='featured')],
                     authoritative=True, source_status={'novig': held}, now=self.at.isoformat())
-                aggregate, native = receipt_watermarks(db)
+                aggregate, native = receipt_watermarks(db, 'the_odds_api')
                 assert not aggregate
                 assert [row['venue'] for row in native] == ['novig']
                 owner, states = publication.authority(db, at=self.at)
@@ -143,7 +143,8 @@ class NovigCurrentAdmission(LatestBoardFixture):
             directory = Path(tmp)
             archive = odds_replay.compile_archive('frozen', observed['capture'], directory)
             with patch.object(odds_replay, 'DIRECTORY', directory):
-                detail = load(dict(dataset='frozen', result_id=archive['id'], id=observed['id']), details=True)
+                detail = load(dict(dataset='frozen', result_id=archive['id'], id=observed['id']),
+                              details=True, allow_live=True)
             assert detail['row']['price_current']
             assert detail['inspection']['trade_fee']['trade_fee_usd'] == '0.01500'
             assert detail['row']['conditional_return_percent'] is None

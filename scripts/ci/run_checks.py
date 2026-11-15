@@ -15,6 +15,15 @@ import time
 import tempfile
 import xml.etree.ElementTree as ET
 
+from reporting import (
+    behavior_table,
+    case_id,
+    case_status,
+    junit as read_junit,
+    run_reference,
+    safe,
+)
+
 ROOT = Path(__file__).resolve().parents[2]
 
 
@@ -40,21 +49,7 @@ def coverage_totals(path):
 
 
 def junit_counts(path):
-    root = ET.parse(path).getroot()
-    cases = list(root.iter("testcase"))
-    if not cases:
-        raise ValueError("Required test report contains zero test cases")
-    durations = [float(c.get("time", "0")) for c in cases]
-    if any(not math.isfinite(value) or value < 0 for value in durations):
-        raise ValueError("Invalid JUnit duration")
-    return {
-        "tests": len(cases),
-        "failed": sum(
-            c.find("failure") is not None or c.find("error") is not None for c in cases
-        ),
-        "skipped": sum(c.find("skipped") is not None for c in cases),
-        "seconds": sum(durations),
-    }
+    return read_junit(path)[1]
 
 
 def require_client_report(path):
@@ -69,7 +64,11 @@ def execute(name, command, output, timeout=300, junit=False):
     record = {"name": name, "command": command, "status": "NOT RUN", "tests": None}
     print(f"::group::{name}", flush=True)
     try:
-        environment = os.environ.copy()
+        environment = {
+            key: value
+            for key, value in os.environ.items()
+            if not key.startswith("PG") and key != "PREDICT_DB_SOCKET"
+        }
         # Client fixtures must use this locked interpreter, including in a clean
         # hosted checkout with no developer .venv directory.
         environment["PYTHON"] = sys.executable
@@ -89,7 +88,14 @@ def execute(name, command, output, timeout=300, junit=False):
             tempfile.TemporaryDirectory(prefix="predict-ci-check-") as temporary,
             (output / f"{name}.log").open("w") as log,
         ):
-            environment.update(TMPDIR=temporary, TEMP=temporary, TMP=temporary)
+            socket = str(Path(temporary) / "no-postgres")
+            environment.update(
+                TMPDIR=temporary,
+                TEMP=temporary,
+                TMP=temporary,
+                PREDICT_DB_SOCKET=socket,
+                PGHOST=socket,
+            )
             result = subprocess.run(
                 command,
                 cwd=ROOT,
@@ -101,7 +107,12 @@ def execute(name, command, output, timeout=300, junit=False):
         record["exit_code"] = result.returncode
         record["status"] = "PASS" if result.returncode == 0 else "FAIL"
         if junit:
-            record["tests"] = junit_counts(output / f"{name}.xml")
+            cases, record["tests"], record["junit_declared"] = read_junit(
+                output / f"{name}.xml"
+            )
+            record["failing_tests"] = [
+                case_id(case) for case in cases if case_status(case) == "FAIL"
+            ][:10]
             if (
                 record["tests"]["failed"]
                 or record["tests"]["skipped"] == record["tests"]["tests"]
@@ -138,21 +149,8 @@ def execute(name, command, output, timeout=300, junit=False):
     return record
 
 
-def safe(value):
-    import html
-
-    return (
-        html.escape(str(value))
-        .replace("|", "&#124;")
-        .replace("`", "&#96;")
-        .replace("\n", " ")
-    )
-
-
 def write_report(output, records, started):
-    for record in records:
-        if record["status"] == "SKIPPED" and record.get("required", True):
-            record.update(status="FAIL", reason="Required check unexpectedly skipped")
+    required = [r for r in records if r.get("required", True)]
     totals = {
         k: sum(r["tests"][k] for r in records if r.get("tests"))
         for k in ("tests", "failed", "skipped")
@@ -160,9 +158,10 @@ def write_report(output, records, started):
     totals["passed"] = totals["tests"] - totals["failed"] - totals["skipped"]
     overall = (
         "FAIL"
-        if any(r["status"] == "FAIL" for r in records)
+        if not required
+        or any(r["status"] in ("FAIL", "SKIPPED", "CANCELLED") for r in required)
         else "NOT RUN"
-        if any(r["status"] in ("NOT RUN", "CANCELLED") for r in records)
+        if any(r["status"] == "NOT RUN" for r in required)
         else "PASS"
     )
     report = {
@@ -177,13 +176,15 @@ def write_report(output, records, started):
         "pr_head": os.environ.get("PR_HEAD_SHA"),
         "merge_queue_sha": os.environ.get("MERGE_QUEUE_SHA"),
         "event": os.environ.get("GITHUB_EVENT_NAME", "local"),
+        "run_id": os.environ.get("GITHUB_RUN_ID"),
+        "run_attempt": os.environ.get("GITHUB_RUN_ATTEMPT"),
         "ref": os.environ.get("GITHUB_REF"),
         "run_url": os.environ.get("CI_RUN_URL"),
         "python": sys.version,
         "platform": platform.platform(),
         "seconds": round(time.monotonic() - started, 3),
         "checks": records,
-        "counts": totals,
+        "counts": totals if any(r.get("tests") for r in records) else None,
         "coverage": None,
         "baseline": None,
     }
@@ -214,50 +215,56 @@ def write_report(output, records, started):
         r for r in records if r["name"].startswith("scanner-native-finance__")
     ]
     behavior = []
-    if fee_checks or sgo_checks or scanner_checks:
-        behavior = [
-            "### What was tested and why it matters",
-            "| Behavior checked | Actual result | Why it matters | Evidence / limit |",
-            "|---|---|---|---|",
-        ]
-        for checks, title, purpose, evidence in (
-            (
-                fee_checks,
-                "Fee applicability, renewal, rounding and coverage",
-                "Keeps unsupported fees out of current estimates and preserves the denominator",
-                "Fixtures and simulated HTTP. Check results below.",
-            ),
-            (
-                sgo_checks,
-                "SportsGameOdds collection, recovery and reference qualification",
-                "Protects budget holds, original prices and the exact inputs used in EV",
-                "Fixtures and simulated HTTP. Check results below.",
-            ),
-            (
-                scanner_checks,
-                "Scanner venue fees, payout terms and observed-depth allocation",
-                "Keeps unbound venue terms out of estimates and unknown terminal cashflows out of ranked results",
-                "Authored receipts and allocation. See `scanner-native-finance__*.xml` in this run’s artifact.",
-            ),
+    for checks, title, purpose, evidence in (
+        (
+            fee_checks,
+            "Fee applicability, renewal, rounding and coverage",
+            "Keeps unsupported fees out of current estimates and preserves the denominator",
+            "Fixtures and simulated HTTP. Check results below.",
+        ),
+        (
+            sgo_checks,
+            "SportsGameOdds collection, recovery and reference qualification",
+            "Protects budget holds, original prices and the exact inputs used in EV",
+            "Fixtures and simulated HTTP. Check results below.",
+        ),
+        (
+            scanner_checks,
+            "Scanner venue fees, payout terms and observed-depth allocation",
+            "Keeps unbound venue terms out of estimates and unknown terminal cashflows out of ranked results",
+            "Authored receipts and allocation. See `scanner-native-finance__*.xml` in this run’s artifact.",
+        ),
+    ):
+        if not checks:
+            continue
+        outcomes = {r["status"] for r in checks}
+        if any(
+            (r.get("tests") or {}).get("skipped")
+            or r.get("junit_declared", {}).get("skipped")
+            for r in checks
         ):
-            if not checks:
-                continue
-            outcomes = {r["status"] for r in checks}
-            if any((r.get("tests") or {}).get("skipped") for r in checks):
-                outcomes.add("SKIPPED")
-            behavior.append(
-                f"| {title} | {' / '.join(sorted(outcomes))} | {purpose} | {evidence} |"
+            outcomes.add("SKIPPED")
+        behavior.append((title, " / ".join(sorted(outcomes)), purpose, evidence))
+    if not behavior:
+        behavior.append(
+            (
+                "Offline suite as configured",
+                overall,
+                "Surfaces contract failures before integration",
+                "Metrics and check details below",
             )
-        behavior += [
-            "",
-            "**Gaps and limits.** Provider collection, live fee renewal and current desk or full-slate Scanner publication require separate validation.",
-        ]
+        )
     summary = [
         f"## Offline contract — {overall}",
         f"Candidate: `{safe(report['tested_sha'])}`; PR head: `{safe(report['pr_head'])}`; event: {safe(report['event'])}",
         f"{safe(report['platform'])}; Python {safe(platform.python_version())}; tools: {safe(report['tools'])}",
-        f"Ref: `{safe(report['ref'])}`; run: {safe(report['run_url'])}; merge queue candidate: `{safe(report['merge_queue_sha'])}`",
-        f"Tests: {totals['tests']}; passed: {totals['passed']}; failed: {totals['failed']}; skipped: {totals['skipped']}. Elapsed: {report['seconds']} s.",
+        f"Ref: `{safe(report['ref'])}`; {run_reference()}; merge queue candidate: `{safe(report['merge_queue_sha'])}`",
+        (
+            f"JUnit case records: {totals['tests']}; passed: {totals['passed']}; failed: {totals['failed']}; skipped: {totals['skipped']}."
+            if report["counts"] is not None
+            else "JUnit case counts unavailable."
+        )
+        + f" Elapsed: {report['seconds']} s.",
         "| Check | Outcome | Seconds | Reason |",
         "|---|---|---:|---|",
     ]
@@ -265,6 +272,15 @@ def write_report(output, records, started):
         f"| {safe(r['name'])} | {r['status']} | {r.get('seconds', 'unavailable')} | {safe(r.get('reason', ''))} |"
         for r in records
     ]
+    failing = [test for record in records for test in record.get("failing_tests", [])][
+        :10
+    ]
+    if failing:
+        summary.append(
+            "\nFirst failing case records: "
+            + ", ".join(f"`{safe(test)}`" for test in failing)
+            + "."
+        )
     if report["coverage"]:
         c = report["coverage"]
         summary.append(
@@ -273,15 +289,23 @@ def write_report(output, records, started):
     summary.append(
         "Diagnostics: this run’s `ci-*` artifact (JUnit, coverage, logs, metrics). A failing check requires inspecting its log; NOT RUN requires fixing the earlier blocker. Existing optional-catalog skips are listed in JUnit. These checks do not establish live provider or owner acceptance."
     )
-    text = "\n\n".join(summary[:4]) + "\n\n"
-    if behavior:
-        text += "\n".join(behavior) + "\n\n"
+    text = (
+        summary[0]
+        + "\n\n"
+        + behavior_table(
+            behavior,
+            "Provider collection, live fee renewal and installed full-slate publication require separate validation. JUnit case records do not include a separate row for every subtest. Explicit archive exclusions are listed below.",
+        )
+    )
+    text += "\n\n".join(summary[1:4]) + "\n\n"
+    text += "### Why these tests ran\n\nThis command runs the registered offline suites in fresh processes. No changed-file selection or cached test outcome enters this report.\n\n"
     text += summary[4] + "\n\n" + "\n".join(summary[5:]) + "\n"
     (output / "summary.md").write_text(text)
     if os.environ.get("GITHUB_STEP_SUMMARY"):
         # The command file belongs to this step. Replace progress snapshots so
         # repeated updates cannot overflow GitHub's 1 MiB summary limit.
         Path(os.environ["GITHUB_STEP_SUMMARY"]).write_text(text)
+    return overall
 
 
 def main():
@@ -409,13 +433,12 @@ def main():
         for name, reason in {**policy["deferred"], **policy["archival_nodes"]}.items()
     )
     write_report(output, records, started)
-    failed = False
     for index, (name, command, junit) in enumerate(commands):
         # Continue independent suites after failures, bounded by job and process limits.
         record = execute(name, command, output, junit=junit)
         records[index] = record
-        failed |= record["status"] != "PASS"
-        write_report(output, records, started)
+        overall = write_report(output, records, started)
+    failed = overall != "PASS"
     failures = [r for r in records if r["status"] == "FAIL"]
     print(
         f"Offline contract: {'FAIL' if failed else 'PASS'}; {len(failures)} failed checks",

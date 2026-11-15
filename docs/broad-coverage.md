@@ -1,424 +1,77 @@
-# Retained coverage
+# Coverage and freshness
 
-## Current planning authority — November 12, 2026
+Coverage answers separate questions about what a source listed, what Predict
+received, which quotes are current, and which comparisons reached the desk.
+View it under **Coverage**. The app reads a bounded committed coverage result.
+A failed worker can leave a previous capture inspectable with its original
+clock. The public view cannot enumerate every offer available at every venue.
 
-The [live comparison plan](live-comparison-plan-20261104.md) governs the
-existing desk. The 99% offered-data target and sustained verification below
-apply to pregame full-game markets for this delivery. Preserve in-game
-measurements as a separate cohort for later work. Source prices with missing
-finance stay useful and visible while coverage work continues.
+## Scope and denominators
 
-Ordinary Odds links to `/current/coverage`. Its `/api/coverage` reader consumes a
-compact latest PostgreSQL publication produced by the independent data runtime.
-`display_result_id` identifies the ordinary comparison head sampled in the same
-database read as the coverage cohort. Coverage retains its own capture time.
-Page loading, local filters, sorting, cell inspection and links back to Odds never
-start collection. The prior saved-session `/coverage` page remains a separate
-historical reader.
+The configured sports can include NFL, NCAAF, NBA, NCAAB, MLB, and NHL. The
+ordinary pregame scope is full-game winner, spread, and total, including
+available alternate lines. Source selectors and the configured provider
+determine which requests can enumerate that scope. Kalshi and Polymarket US
+supply independent native prices. SportsGameOdds and The Odds API are selectable
+aggregate routes with separate accounting.
 
-## Current scope of this document
+An offered price unit is the provider, venue, native event, native market,
+native outcome or side, line, and period. Repeated pages and reconnects can
+report the same unit. Distinct native sides and lines are separate units.
+Discovery can also count listing-only markets with no price. A complete
+offered denominator requires all relevant pages or an authoritative inventory
+boundary. A failed, capped, or partial query leaves the denominator unknown.
 
-The ordinary product is a coherent comparison snapshot and math under explicit
-assumptions. The numerical targets below measure coverage and sustained live completeness.
-Partial snapshots and calculations with valid inputs still serve the desk while
-the target remains open. Historical results retain their measured scope. Preserve actual
-source coverage, missing/held-source disclosure and exact observed clocks.
-
-## Next-version target — bulk live data and 99% coverage
-
-The October 26 direction established the offered-data target. The November 11
-SportsGameOdds cutover updated the active routes and benchmark. The repository
-root `NEXT_STEPS.md` is the engineering queue. The synchronized census below
-can locate gaps among retained working rows. A provider-wide offered price
-denominator remains unknown where the feeds cannot enumerate that population.
-
-### Scope and denominator
-
-Measure the authorized NFL, NCAAF, NBA, NCAAB, MLB and NHL full-game winner,
-spread and total pregame scope across direct Kalshi and Polymarket US and
-supported SGO-attributed offers. Include all available lines and native sides
-on the in-scope routes. Keep any in-game observations outside these milestone
-denominators.
-FanDuel, DraftKings, BetMGM and Caesars are sportsbook reference inputs.
-Existing source-local SGO Novig and Kalshi observations retain their distinct
-identities. New P2P venues, Pinnacle or Circa acquisition, and other market
-periods remain backlog work. Keep any feed-limited or inaccessible population
-visible. Report seasonal absence and start, suspend and end transitions with
-source evidence.
-
-Define one offered unit as provider + venue + native event + native market +
-outcome/side + native line + period. Deduplicate reconnects and repeated pages;
-do not deduplicate distinct native sides into a synthetic outcome. Measure the
-available authorized source route, not an unobservable entire provider business.
-Reconcile listing identities and price-bearing responses at documented capture
-boundaries, including additions, withdrawals and pagination races. Listing-only
-markets with no offered price are counted separately with evidence.
-
-A denominator is complete only when all relevant listing/response pages or an
-authoritative inventory/delta boundary are accounted for. Report route, scope,
-start/end, exhaustion/continuation, failures and completeness. An unmeasured,
-failed or truncated inventory cannot pass as 99%; retained-row ratios cannot
-stand in for offered coverage. Zero offered units is N/A with fresh complete-query
-evidence. Provider absence must not be inferred from a failed request or a cap.
-
-### Acceptance measures
-
-| Measure | Required result and denominator |
+| Stage | What to count |
 | --- | --- |
-| Raw acquisition coverage | At least 99% of independently enumerated offered price units have faithful raw values, native units/IDs and original available clocks locally inspectable. |
-| Raw display coverage | At least 99% of those offered units are reachable in ordinary paginated Odds/Original views, including unmatched, stale and rejected-for-calculation values with explicit labels. Raw visibility never grants calculation authority. |
-| Fresh coverage | At least 99% of offered units have valid, independently supported currentness at the sampled time under the declared source-specific policy. Recent receipt, ingestion or model time cannot make an old source quote fresh. |
-| Validation accounting | 100% of received units have an explicit valid, invalid, missing-fact, stale, unsupported or pending disposition, with reason and provenance. This accounting percentage is not the raw/fresh coverage percentage. |
-| Comparison processing | At least 99% of reference-enumerated eligible cross-venue comparisons are evaluated and published; count deterministic output selections separately from all evaluated candidates. Missing peers and unresolved meaning remain measured gaps. |
-| Numeric fees | At least 99% of distinct current displayed offers have applicable fees or documented conservative fees. Use the unfiltered offer cohort and count fee-only qualification independently of EV. |
-| EV processing | At least 99% of independently enumerated eligible offer/reference inputs are computed and published. Report sportsbook, qualified before-fee and after-fee results separately. Show eligible versus offered and all upstream missing inputs. |
-| Arbitrage processing | At least 99% of independently enumerated eligible opposing two-leg inputs are computed and published. Report before-fee, both-fee and execution-qualified coverage separately. A complete evaluation may have zero positive results. An empty eligible population has no percentage. |
+| Offered | Independently enumerated price-bearing units within the exact requested scope. |
+| Received and admitted | Observations actually received and their recorded disposition. Include rejected and pending items in the accounting. |
+| Current and displayed | Distinct valid original prices with supported freshness and visibility. Inspect publication and display filters separately. |
+| Comparisons | Eligible matched outcomes or opposing pairs against independently enumerated inputs. Report evaluated, pending, missing, and published groups. |
+| Fees and EV | Distinct displayed offers with applicable fees and exact reference comparisons. Count each type of estimate using its own eligibility rules. |
 
-Raw acquisition, display and freshness targets apply both globally and to each
-nonempty venue/league/family cell, with reference cells reported separately. A
-large NFL cell cannot hide a missing NHL cell. Report numerators,
-denominators and residual gaps, not only rounded percentages. Use the smallest
-integer numerator meeting 0.99 times the denominator. Rejected or unsupported
-received rows remain in raw coverage denominators; only evidenced source absence
-or genuine out-of-scope units leave the offered cohort.
+The coverage goals are 99% for offered acquisition, display, and freshness, and
+99% for applicable fees and independently enumerated eligible comparisons.
+Account for every received unit, including rejected and pending observations.
+Report counts by venue, league, and family so one large cohort cannot hide a
+missing smaller one. A retained-row fraction cannot measure offered coverage.
+Report an unknown denominator as unknown. An empty, successfully covered scope
+has no measurable percentage. [Fee denominator](fee-coverage-policy.md)
 
-Missing contract/financial evidence cannot be removed from the overall gap
-report by shrinking an eligibility denominator. The core type-driven contracts
-and maths must work across the full selected scope. Missing evidence is explicit
-remaining work or a named owner-accepted limitation; neither is called 99%
-financial coverage. This target does not promise 99% profitable opportunities,
-identical venue offerings, actual fills or execution-qualified returns.
+## Freshness and verification window
 
-### Running census
+Record the original source change, receipt, admission, publication, and read
+times separately. An unchanged native book can remain supported by a valid
+current-generation initial image and continuous ordered updates. Connectivity
+alone supplies no book confirmation. A new receipt or calculation does not
+renew an old source price.
 
-For the November 12 usability follow-up, begin with the saved Detroit–Washington
-Over 205.5 offer. It exposes a quote with a numeric fee and an unverified
-sportsbook rules binding. Use a synchronized active-slate read to count the
-separate losses at source availability, working storage, current display,
-reference or opposing-pair qualification, calculation and ordinary publication.
-At 3:56 p.m. Eastern, there were 34 current working and 28 current displayed
-prices, all displayed prices had fees, and the independent EV and arb eligible
-sets were empty. That read keeps the full offered universe unknown. Render
-calculated, pending, unavailable and last-known counts in their actual units.
+The pregame sportsbook estimate checks both original book clocks within 15
+minutes and stops at kickoff. Native and aggregate quotes follow their own
+currentness policy. A source failure, unauthorized binding, or missing input
+can leave a recorded price inspectable without an eligible comparison.
+[Runtime and synchronization](data-app-runtime-contract.md#native-synchronization-and-delta-acquisition)
 
-Use the synchronized local read to see ordinary currentness, publication gaps,
-exact scope query boundaries, and SGO frame and original clock counts. Keep the
-native catalog market count, book-side count and offered price denominator
-separate. The response sets the offered count to unknown where the provider
-response lacks a complete price inventory.
+For an authorized local diagnostic, the following command reads retained working
+rows and local sportsbook captures to check eligible pregame inputs. It can take
+longer than a regular desk read and can run with acquisition off.
 
-```bash
-.venv/bin/python scripts/live_coverage_census.py --samples 121
+```sh
 .venv/bin/python scripts/live_coverage_census.py --phase pregame --independent-finance
 ```
 
-The first command samples all phases and reads sized pair outcomes periodically.
-The second reconstructs eligible pregame inputs from retained working rows and
-the local sportsbook captures. Both use local read routes and can run with acquisition off.
-The exact input reconstruction may take longer than a regular desk read.
-Only compare counts from matching timestamps and stage populations.
+Compare counts only when their scope, stage, and capture times agree. Capture
+enough of the source availability, polling, or restart scenario to describe
+what was measured. Desktop and installed service performance require their own
+evidence.
 
-### Freshness and verification window
+## Diagnose a gap
 
-Record native source/complete-book confirmation time, aggregate source update,
-receipt, admission, publication and display separately. Establish a documented
-policy per feed using its actual update semantics. Preserve the existing native
-quote authority. The pregame sportsbook estimate uses a 15-minute window
-on both original book clocks, capped at kickoff, independently of native
-quote freshness and stricter financial authority. Target five-minute polls
-for priority pregame markets where measured source limits and budgets allow.
-Measure scheduled completeness, actual source age and between-poll currentness
-separately. Keep deferred live data out of the milestone denominators.
+Start with **Admin → Sources** for source health, schedules, query limits, and
+holds. **Raw Odds** shows whether the original quote was actually received. Use
+the exact game and line in **Browse odds** to check admitted display coverage.
+Then inspect the quote for matching, reference, settlement, and fees. A missing
+price and a missing calculation are separate outcomes.
 
-Verify coverage with independently enumerated populations and synchronized
-stage counts. Include cold catch-up and representative operating samples,
-including completed refresh boundaries where they occur. The owner removed the
-fixed two-hour duration for the November 12 ranked desk closeout. Report the
-actual sampling interval and each measured cohort against its applicable target.
-SGO uses adaptive refresh and discovery. Record natural discovery completion
-and interleaving at their actual due times. The prior eight fixed-cycle rule
-described the old 15-minute Odds API scheduler. Use controlled regressions for
-transitions that do not occur during observation. Recheck app-only restart and
-independent data-owner continuity.
-
-If a source's offering, timestamps, cadence or account budget cannot satisfy the
-target, retain the measured deficit and concrete alternative. Do not silently
-substitute last-known prices, change scope, or spend beyond the authorized plan.
-An explicit owner decision is needed only for a real change to budget/scope or
-acceptance of a measured limitation, not routine implementation or live validation.
-
-### Capacity policy for this version
-
-Remove product cardinality cutoffs wherever they prevent complete acquisition,
-retention, processing or access. The October 26 baseline included 24-event/20-market
-selections, fixed discovery-page windows and metadata truncation; subsequent bulk
-repairs supersede that implementation inventory. Verify current configuration and
-whole-slate limits against actual full-scope demand; chunk limits must not become
-silent coverage limits. This policy is not a claim of completed qualification.
-
-Use incremental current-state updates, shared metadata, streamed complete pages,
-indexed SQL and resumable fair queues so chunk size limits memory in flight,
-not total represented games. Paginated/virtualized display is compatible with
-all values being reachable. Reassess fixed memory/storage budgets from measured
-full-scope demand; the old numeric ceilings are not immutable requirements.
-Persist progress and make backpressure visible without dropping tail records or
-starving leagues. Text wire size alone does not establish decoded graph, depth,
-join or calculation memory cost; measure these separately without turning a
-speculative large stress campaign into a prerequisite for real bulk operation.
-
-Actual provider limits, paid credit authority, accounting/hold integrity, explicit
-Stop and correct cleanup still apply. They are distinct from arbitrary product
-coverage caps. No backup, cloned checkout or per-game rehearsal gate is required.
-
-## Reading coverage correctly
-
-Coverage separates discovered offerings, received raw values, synchronized books,
-matching and financial publication. A retained-row ratio is not an independently
-measured provider-wide coverage percentage. The software does not currently
-establish a universal 99% acquisition, display or financial-completeness result.
-
-The November 12 installed two-hour sample measured 97.83% numeric fee
-coverage across 12,169 current offer observations, with 100% on the 11,905
-native observations. The closing independent census counted 46 eligible
-pregame indicative SGO inputs, all published after the new receipt was
-processed. It counted zero native EV inputs. A separate closing read
-verified one eligible exact arb and one published pair. These measurements
-describe different cohorts. The offered-price universe remained unknown.
-See `docs/sgo-paid-observation-20261111.md` for the dated evidence.
-
-An offered unit is provider, venue, native event, native market, outcome/side,
-native line and period. Repeated receipts are deduplicated; distinct sides and
-lines are not collapsed. A complete denominator requires all relevant pages or
-an authoritative inventory boundary, including failures and continuation state.
-Unknown and truncated inventories remain unknown. Zero offerings requires a
-complete successful query, not an empty result after a failed request.
-
-Source change time, receipt, admission, publication and display measure different
-things. An unchanged native book can remain synchronized if its initial image,
-subscription and ordered feed continuity remain valid. Connectivity alone is
-insufficient; loss of continuity, missing initial images and backlog remain
-visible. Synchronization does not remove financial identity, settlement, depth
-or model requirements.
-
-See [acquisition](acquisition.md) for source ownership and backpressure, and
-[raw prices](raw-prices.md) for access to retained observations independently of
-matching and financial availability.
-
-## Scope and capability
-
-The matrix comes from shared configuration, source selectors and representation
-registries, plus encountered retained catalog types. NFL, NCAAF, NBA, NCAAB, MLB
-and NHL share the same pipeline. Kalshi and Polymarket US are native acquisition
-sources. Novig and ProphetX are venues supplied by `the_odds_api`; Pinnacle remains
-reference data supplied by that same upstream provider. The aggregate source has
-one shared budget and existing holds, independent of the native scope.
-
-Configuration, acquisition enabled state, implemented discovery/normalization,
-comparison capability and observed support describe different facts. A supported
-class still needs the individual source's participant, sporting occurrence,
-period, predicate, signed line, equality and scoring facts. Unsupported family or
-period cells stay visible. Registry support never proves a provider lists a market.
-
-## Measurements and denominators
-
-A retained observation is one distinct source-native event, market, outcome and
-side with a retained price. Matching original source and receipt clocks bind it
-to the corresponding ordinary publication. An outcome is a canonical predicate
-with occurrence, subject, period, line, equality and scoring meaning. An underlying
-pair is an undirected pair of distinct observations from different comparison
-venues. Its two signed directions are a different unit. Pinnacle contributes
-reference observations separately and cannot become a comparison peer.
-
-Ratios name the numerator, denominator and captured retained scope. Supported-peer
-observations, current-peer observations and current observations use the same
-captured retained cohort. A zero denominator produces N/A. Unknown measurements
-remain null. Original source clocks and separately validated complete-book confirmations
-determine age; a metric capture, heartbeat, receipt or metadata update cannot renew
-a quote. Current comparisons require both original inputs to be current under
-their own rules.
-
-Exact discovery diagnostics describe their own query time, request identity and
-complete, partial or unmeasured listing scope. Unique games, markets and native
-outcomes are measured before admission where possible. Reported rows and measured
-unique identities are distinct fields. Failed queries have unknown offered counts.
-An exact empty query does not establish provider-wide absence. Discovery and
-retained-price windows are never presented as a single conversion funnel.
-
-Global totals remain visible beside filtered totals. Native observations can be
-summed across cells; canonical outcomes, occurrences and underlying pairs use
-compact shared membership groups to avoid counting the same unit twice.
-
-## Gap explanations
-
-Structured causes distinguish configuration, source omissions, implementation,
-identity/meaning, operational limits, freshness, publication and display filters.
-Counts can overlap. Each affected observation also receives a deterministic primary
-cause so primary counts reconcile. Bounded representative observations retain the
-original price, source identifiers, source/receipt clocks, missing fields and
-captured selection identity; technical codes remain available inside disclosures.
-
-No retained comparison is promoted by optional model returns, fees or estimates.
-Missing identity or source meaning can prevent a comparison while leaving its
-valid original source-local price inspectable. Valid groups continue publishing
-beside an invalid group. Details preserves its original captured inputs and the
-existing changed-input and authority checks.
-
-## Current implementation bounds and operation
-
-Coverage stores only the latest compact summary with bounded example records and
-canonical membership counts. PostgreSQL projects the required metric fields
-before decoding; full wording, depth and repeated peer input bodies are excluded.
-The projected capture is capped at 8 MiB and its work reservation at 128 MiB.
-Estimates and Scanner share one fair optional work slot with current
-resident-memory admission. Small-runtime Coverage uses this slot; bulk Coverage
-uses one bounded disposable process as described below. A separate source-publication runway remains available
-while optional work runs. Deferred work retries at its ordinary cadence; live
-synchronous workers retain their reservation after cancellation of an await.
-The bounded admission state is available in Admin's retained runtime status.
-Ordinary reads use the existing bounded ordinary lane and read a committed summary;
-they do not scan or normalize the full store. Existing selected-input lanes,
-deadlines, cancellation ownership, captured-slate frame/page/byte limits, source
-limits, storage limits and process memory guards continue to apply.
-
-Authored transport and disposable PostgreSQL results establish local engineering
-capability. Installed captures describe only the retained owner cohort at their
-capture times. Neither establishes a provider universe, hosted CI, formal load
-qualification or current-source financial applicability.
-
-## Shared current-input and publication breakdown
-
-The compact cohort now also measures resolved-identity observations, observations
-with supported comparison meaning, retained inputs with supported/current peers,
-current eligible undirected pairs, supported pairs with at least one noncurrent
-input, eligible signed directions, selected current directions awaiting
-publication, published current pairs and reporting disagreements. These are
-parallel measures over the same repeatable-read retained cohort. They are not a
-funnel across discovery windows. Reference data never enters peer denominators.
-Input eligibility is resolved by the shared occurrence and exact-outcome owners
-before publication; pending publications cannot turn compatible inputs into an
-assertion of absent source offerings. Pair membership groups deduplicate both
-source filters and global counts. Published current pairs count cross-venue
-combinations in the same displayed outcome group whose prices both pass the
-ordinary current-price checks. Pending and disagreement diagnostics use the
-stricter supported settlement identity. A retained input may have more than
-one eligible peer while awaiting publication.
-
-Currentness uses the original source book clock, or an explicit validated,
-content-bound complete-book confirmation when that is later. Kalshi confirmations
-retain the requested complete snapshot's `sending_ts_ms`, subscription/sequence,
-generation, request and payload/content seals. US confirmations retain the exact
-complete market-data `transactTime`; last-trade statistics and metadata timestamps
-are separate. Receipt alone, heartbeat, publication, price equality and metadata
-cannot date a book. Original source/receipt clocks remain visible and unchanged.
-Missing original clocks may coexist with a known confirmation age. Invalid,
-future, replayed, regressing or mismatched proof is refused. The existing
-30-second engineering native-book age limit is unchanged and includes its exact
-maximum-age instant. Pregame and effective-mapping boundaries still apply.
-Continuity loss withdraws old observation authority until that instrument is
-received again. Stop, withdrawal, reset and runtime replacement still revoke
-current display authority; saved Original Details remains frozen.
-
-The native workers keep 256 active markets per venue. A fixed half covers the
-league/family cells and gives the remaining slots to confirmed live lines
-nearest kickoff. The other half rotates across the deferred catalog. This
-keeps older live status records from crowding out recent live alternates.
-Kalshi can request up to 24 quiet live books every eight seconds on its
-existing ordered subscription, subject to the normal capacity and control
-guards. Verify the current working and published stages separately, including
-ordinary expiration during storage maintenance and calculation delays.
-
-Capture age, publication age and capture-to-publication processing time are
-separate clocks. Coverage compares material runtime and source authority;
-receipt/status revision increments alone do not make its summary stale. A
-runtime replacement, control/configuration change, source-state change, epoch
-change, unhealthy owner or delayed capture remains an explicit warning. Numbers
-always describe the dated captured cohort, including an authentic measured zero.
-
-Primary source descriptions: [Kalshi complete snapshots and deltas](https://docs.kalshi.com/websockets/orderbook-updates)
-and [US full market data versus trade messages](https://docs.polymarket.us/api-reference/websocket/markets).
-These support the existing book-evidence policy; they do not qualify executions,
-fees, sizes or settlement.
-
-If Coverage reports a capture-capacity or memory-capacity failure, its summary is
-unavailable rather than a measured zero. Check Admin and the safe operation log;
-diagnose the current guard and redesign its work granularity under the next-version
-capacity policy rather than silently discard inputs. Source prices and other background publications
-can remain useful while the independent Coverage worker is unavailable.
-
-### Projected capture
-
-Coverage projects admitted source facts in SQL and reads the exact members of the
-current ordinary display generation in the same repeatable-read transaction.
-It decodes one bounded member at a time. Retained counts use the admitted source
-cohort and displayed counts require a corresponding captured price. Displayed
-current counts use the same price authority checks as Browse Odds.
-
-Schedule bindings are included when event and contract starts differ. Contract
-and event revisions still govern revocation. A component awaiting publication
-remains in the retained denominator. The occurrence resolver extracts the facts
-needed for Coverage counts and releases the detached audit graph.
-
-## Outcome-first presentation
-
-Coverage leads with the selected captured scope, original capture/publication
-ages and availability. Ratios and exact clocks remain in a disclosure. Local
-elapsed-time display never renews a capture; a failed read warning persists
-through filtering or pausing. Source/capability, accounting hold, explicit pause,
-missing matching facts, pending publication and unmeasured counts remain distinct.
-Reference observations never substitute for an unknown purchase-peer denominator.
-
-The read response additively carries `publication_worker_state` and
-`publication_error` from the current runtime owner. These describe the worker,
-independently of `publication_state` and the retained capture. In particular,
-`background_coverage_unavailable` can coexist with an inspectable stale capture
-or an unmeasured first publication. Displaying that failure does not repair it.
-
-### Complete streamed capture
-
-Every complete game is consumed before publishing denominators. Cursor and
-reservation lifetimes belong to the transaction/worker and cancellation. The
-largest streamed record is bounded at 8 MiB. The full encoded input sum is charged
-at six times its size plus 24 MiB, capped at 1 GiB. This replaces the former
-128 MiB work ceiling, which could not process the complete acquired universe.
-Bulk Coverage runs in one owned disposable process with a 1 GiB RSS guard,
-180-second deadline and 64 KiB reply bound. Stop, parent loss and critical
-acquisition pressure cancel it. The source process retains its 3 GiB guard
-and 768 MiB source runway;
-no observation is dropped to fit. Source clocks and matching authority remain
-owned by the existing validators. See [calculation basis](benchmark-ev.md) for
-financial applicability and remaining limitations.
-
-## Offered-scope instrumentation
-
-Exact aggregate responses now report source-native deduplicated game, market and
-price-unit counts separately for each family and venue, including Pinnacle as
-reference. Query hashes, request/receipt clocks, traversal completion, listing-only
-markets, received/admitted/rejected counts and omission reasons are exposed in each
-cell's discovery inventory. Complete response replacements reconcile additions and
-withdrawals; the first boundary after restart explicitly lacks a previous census.
-Admission counts describe the received batch, not a promise that every observation
-is current or display-qualified. Original source clocks remain separate.
-
-Native cells report listing traversal start/completion, page/continuation evidence,
-unique listing identities, metadata/subscription omissions and latest received
-book units. Reconnects replace the same event/market/outcome/ask-or-bid units.
-Empty book images withdraw their previous units. Partial listings do not prove
-withdrawal or zero offerings; unobserved price denominators remain unknown, and
-known received-book counts are labeled as a runtime subset. Native metadata and
-subscription gaps remain acquisition limitations; raw display is described in
-[raw prices](raw-prices.md).
-
-The bulk aggregate route requests featured `h2h,spreads,totals`; its complete
-response is not the complete alternate-line or provider-website universe.
-[Provider market documentation](https://the-odds-api.com/sports-odds-data/betting-markets.html)
-places alternate spreads/totals on per-event odds routes. Featured and alternate routes have separate scopes. Alternate dispatch requires
-a complete budgeted manifest and valid local authority; configured credit limits
-must not be inferred from the number of featured queries. Coverage fields expose
-measurement boundaries, not a completeness guarantee. See [acquisition](acquisition.md).
-
-
-## Acquisition and publication
-
-See [calculation basis](benchmark-ev.md) for exact conditional benchmark
-arithmetic and its limits. Raw display, valid matching and supported financial
-models are separate stages; none establishes a complete offered denominator.
+[Acquisition](acquisition.md) · [Raw Odds](raw-prices.md) ·
+[Calculation basis](benchmark-ev.md) · [Data limitations](market-data-gaps.md)

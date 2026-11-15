@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from pathlib import Path
 from unittest.mock import MagicMock, Mock
 
 from app.storage import ordinary_publication as live
@@ -7,6 +8,47 @@ from app.storage import ordinary_publication as live
 def dependency(event_id, index):
     return dict(event_id=event_id, id=f'{index:064x}', price='price', contract='contract',
                 event='event', receipt='receipt')
+
+
+def test_publication_policy_binds_calculations_and_ignores_http_edits(monkeypatch, tmp_path):
+    monkeypatch.setattr('app.comparison.snapshot_fee_scope.ACCOUNT_PATH', tmp_path / 'account.json')
+    provider = 'sportsgameodds'
+    baseline = live.policy_identity(provider)
+    read_bytes = Path.read_bytes
+    changed = live.POLICY_ROOT / 'app/dashboard/snapshot_api.py'
+
+    def edited(path):
+        content = read_bytes(path)
+        return content + b'\n# changed\n' if path == changed else content
+
+    monkeypatch.setattr(Path, 'read_bytes', edited)
+    assert live.policy_identity(provider) == baseline
+    for name in ('app/comparison/game_phase.py', 'app/storage/ordinary_dependencies.py',
+                 'app/storage/ordinary_result.py'):
+        changed = live.POLICY_ROOT / name
+        assert live.policy_identity(provider) != baseline
+
+
+def test_aggregate_authority_prefers_committed_config_and_keeps_the_legacy_default(monkeypatch):
+    from app.collection import current_policy
+
+    local = Mock(return_value={'aggregate_provider': 'sportsgameodds'})
+    monkeypatch.setattr(current_policy, 'load', local)
+    db = Mock()
+    stored = db.execute.return_value.fetchone
+
+    stored.return_value = {'config': {'aggregate_provider': 'sportsgameodds'}}
+    assert live.aggregate_provider(db) == 'sportsgameodds'
+    stored.return_value = {'config': {}}
+    assert live.aggregate_provider(db) == current_policy.DEFAULT['aggregate_provider']
+    stored.return_value = None
+    assert live.aggregate_provider(db) == current_policy.DEFAULT['aggregate_provider']
+    assert live.aggregate_provider(db, owner={'config': {'aggregate_provider': 'the_odds_api'}}) == 'the_odds_api'
+    assert db.execute.call_count == 3
+    local.assert_not_called()
+
+    assert live.aggregate_provider() == 'sportsgameodds'
+    local.assert_called_once_with()
 
 
 def test_large_planning_scan_keeps_only_event_signatures():

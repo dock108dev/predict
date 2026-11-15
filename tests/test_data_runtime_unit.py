@@ -196,6 +196,55 @@ class PersistedStopGates(unittest.IsolatedAsyncioTestCase):
 
 
 class CalculationIsolation(unittest.IsolatedAsyncioTestCase):
+    async def test_ordinary_worker_backs_off_after_failure_despite_ingress_wakes(self):
+        import asyncio
+        from types import SimpleNamespace
+        from app.storage import ordinary_owner
+
+        owner = ordinary_owner.OrdinaryOwner(SimpleNamespace(config={'cleanup_seconds': 2}))
+        loop = asyncio.get_running_loop()
+        attempts = []
+        delay = .05
+
+        async def run(stopped, **options):
+            attempts.append(loop.time())
+            if len(attempts) == 1:
+                owner.wake.set()
+                loop.call_soon(owner.wake.set)
+                loop.call_later(delay / 4, owner.wake.set)
+                raise RuntimeError('fixture publication failure')
+            owner.closed = True
+            return {'published': True}
+
+        with patch.object(ordinary_owner, 'TURN_INTERVAL_SECONDS', delay), \
+             patch.object(ordinary_owner, 'run', side_effect=run):
+            await asyncio.wait_for(owner.run_ordinary(), timeout=2)
+        self.assertEqual(len(attempts), 2)
+        self.assertGreaterEqual(attempts[1] - attempts[0], delay)
+        self.assertIsNone(owner.error)
+        self.assertEqual(owner.progress['ordinary']['published'], True)
+
+    async def test_ordinary_worker_can_close_during_retry_delay(self):
+        import asyncio
+        from types import SimpleNamespace
+        from app.storage import ordinary_owner
+
+        owner = ordinary_owner.OrdinaryOwner(SimpleNamespace(config={'cleanup_seconds': 2}))
+        failed = asyncio.Event()
+
+        async def run(stopped, **options):
+            failed.set()
+            raise RuntimeError('fixture publication failure')
+
+        with patch.object(ordinary_owner, 'TURN_INTERVAL_SECONDS', 60), \
+             patch.object(ordinary_owner, 'run', side_effect=run) as worker:
+            owner.task = asyncio.create_task(owner.run_ordinary())
+            try:
+                await asyncio.wait_for(failed.wait(), timeout=2)
+            finally:
+                await owner.close()
+            worker.assert_awaited_once()
+
     async def test_ordinary_publisher_runs_on_admission_with_no_web_process(self):
         import asyncio
         from types import SimpleNamespace

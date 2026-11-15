@@ -12,10 +12,6 @@ MAX_MEMBERS = 4096
 MAX_MEMBER_BYTES = 8 * 1024 * 1024
 
 
-def event_id(source):
-    return hashed([source['provider'], source['native_event_id']])
-
-
 def members(db, *, legacy_components=None):
     """Read only index metadata; work staged ahead of the head is invisible."""
     rows = db.execute('''

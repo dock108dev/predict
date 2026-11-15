@@ -13,6 +13,7 @@ from app.dashboard.current_contract import stamp, bounded_decimal
 from app.reference.odds_sample import normalize
 from app.reference.aggregate import bind, VENUES
 from app.reference.product import SPORT_KEYS
+from .current_aggregate_policy import MARKET_FAMILIES
 
 
 @dataclass(frozen=True)
@@ -81,7 +82,7 @@ def admit(body, sport, received_at, *, venue=None, event_ids=None, frame=None):
             if book.get('key') not in (*VENUES,'pinnacle') or book['key'] in books: raise ValueError('aggregate_book_identity')
             books.add(book['key']);markets=set();valid_markets=[]
             for market in book['markets']:
-                if market['key'] in markets or market['key'] not in ('h2h','spreads','totals'): raise ValueError('aggregate_market_identity')
+                if market['key'] in markets or market['key'] not in MARKET_FAMILIES: raise ValueError('aggregate_market_identity')
                 markets.add(market['key']);supported_prices=True
                 if len(market['outcomes'])!=2: raise ValueError('aggregate_complete_two_way_required')
                 names=[o['name'] for o in market['outcomes']]
@@ -131,7 +132,7 @@ def admit(body, sport, received_at, *, venue=None, event_ids=None, frame=None):
         event['schedule_metadata']=dict(witness,revision=hashed(witness))
         from app.comparison.event_links import provider_key
         key=provider_key('the_odds_api',event)
-        family={'h2h':'moneyline','spreads':'spread','totals':'total'}[market]
+        family=MARKET_FAMILIES[market]
         canonical=None if market=='h2h' else next(x['original']['point'] for x in values if market=='totals' or x['participant']==home)
         selections=[dict(participant=None if market=='totals' else x['participant'],predicate=x['predicate'] if market!='spreads' else 'cover',
             signed_line=x['original']['point'],label=x['original']['outcome']) for x in values]

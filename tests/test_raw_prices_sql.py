@@ -231,10 +231,11 @@ class CapturedAssociation(TestCase):
         self.assertFalse(matches(p,b,dict(o,native_side='no')))
         self.assertFalse(matches(dict(p,original=dict(transformation='one_minus_native_bid')),b,o))
         from app.storage import ordinary_evidence as evidence
+        from app.storage.current_rows import event_id
         row=dict(p,id='r',game_key='g')
         member=dict(id='result',snapshot_id='capture',rows=[row],pairs=[],
                     captured_at='old',calculated_at='old',assumptions={'revision':'old-policy'})
-        index={evidence.event_id(dict(provider='kalshi',native_event_id='e')):[{'member_id':'result'}]}
+        index={event_id('kalshi', 'e'):[{'member_id':'result'}]}
         with patch.object(evidence,'members',return_value=index), patch.object(evidence,'read_member',return_value=member):
             result=read(None,b,o)
         self.assertEqual(result['state'],'captured_result')

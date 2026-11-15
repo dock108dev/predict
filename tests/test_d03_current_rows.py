@@ -112,6 +112,7 @@ class CurrentRows(unittest.TestCase):
         actual=self.store.capture(include_depth=False)['records']
         self.assertEqual(actual,expected);self.assertGreater(len(actual),1)
         actual[0]['event']['shared_provider_ids']={'mutation':'must-not-escape'}
+        actual[0]['quote']['original']['value']='must-not-escape'
         self.assertEqual(actual[1],expected[1])
         self.assertEqual(self.store.capture(include_depth=False)['records'],expected)
 

@@ -442,7 +442,7 @@ class WorkerControls(unittest.IsolatedAsyncioTestCase):
         assert worker.metrics['connections']==1 and worker.priority_cursor==1
         worker.socket.close.assert_not_awaited()
 
-    async def test_kalshi_quiet_snapshot_requests_only_durable_live_quiet_members(self):
+    async def test_kalshi_quiet_snapshot_requests_only_durable_eligible_members(self):
         service=SimpleNamespace(config=dict(DEFAULT, live_enabled=True),dispatch=True,deadline=time.monotonic()+10)
         worker=NativeWorker(service,'kalshi')
         now=datetime.now(timezone.utc)
@@ -497,6 +497,15 @@ class WorkerControls(unittest.IsolatedAsyncioTestCase):
         assert worker.metrics['quiet_snapshot_requested']==24
         assert set(worker.stream_snapshot_requests)==set(quiet[:24])
         assert all(value[0]==sent['id'] and value[2:4]==(7,19) for value in worker.stream_snapshot_requests.values())
+
+        service.config['live_enabled'] = False
+        worker.socket.send.reset_mock()
+        worker.stream_snapshot_requests.clear()
+        await worker.reconfirm_kalshi_quiet_books()
+        worker.socket.send.assert_awaited_once()
+        assert json.loads(worker.socket.send.await_args.args[0])['params'] == dict(
+            sids=[7], market_tickers=['PREGAME'], action='get_snapshot')
+
         service.paused_sources={'kalshi'}
         with self.assertRaises(asyncio.CancelledError):
             await worker.reconfirm_kalshi_quiet_books()

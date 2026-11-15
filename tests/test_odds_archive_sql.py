@@ -229,6 +229,34 @@ def files(path):
     return len(list(path.rglob('*.jsonl.gz')))
 
 
+def test_archive_health_check_reports_staging_lag_and_recovers(db, tmp_path, monkeypatch):
+    from contextlib import nullcontext
+    from datetime import timedelta
+    from app.storage import odds_archive_export as exporter
+
+    identity = 'archive-fixture'
+    (tmp_path / exporter.MARKER).write_text(identity + '\n')
+    monkeypatch.setenv('PREDICT_ODDS_ARCHIVE_ROOT', str(tmp_path))
+    monkeypatch.setenv('PREDICT_ODDS_ARCHIVE_ID', identity)
+    monkeypatch.setattr('sys.argv', ['odds_archive_export', '--check'])
+    monkeypatch.setattr(exporter, 'connect', lambda: nullcontext(db))
+    assert exporter.main() == 0
+
+    now = db.execute('SELECT clock_timestamp() AS at').fetchone()['at']
+    received_at = (now - timedelta(hours=1)).isoformat()
+    item = observation(FEED, 'top', ['fixture-winner', 'away', 'asks'], 'fixture-event',
+                       received_at, received_at, ['fixture-book'], ['0.51'])
+    record(db, FEED, [item])
+    assert exporter.main() == 1
+    assert [row['id'].hex() for row in staged(db)] == [item['id']]
+
+    batch = exporter.claim(db)
+    archive = exporter.DirectoryArchive(tmp_path, identity)
+    receipt = archive.write(batch, exporter.load_batch(db, batch))
+    assert exporter.acknowledge(db, batch, receipt)
+    assert exporter.main() == 0
+
+
 def test_exporter_reuses_verified_object_and_refuses_wrong_mount_or_content(tmp_path):
     import gzip
 

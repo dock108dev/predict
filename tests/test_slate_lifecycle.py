@@ -84,6 +84,7 @@ class CurrentSlateLifecycle(LatestBoardFixture):
         from app.storage.sportsgameodds_reference import prepare_frames, prepare_page
         from tests.test_sportsgameodds_adapter import response
 
+        self.service.config['live_enabled'] = True
         raw = response()
         event, = raw['data']
         event['status'].update(startsAt=(self.at - timedelta(seconds=6)).isoformat(), started=True, live=True)
@@ -155,6 +156,7 @@ class CurrentSlateLifecycle(LatestBoardFixture):
         from app.collection.oddslink_prophetx import SOURCE
         from app.storage.store import exact_time
 
+        self.service.config['live_enabled'] = True
         start = self.at - timedelta(minutes=5)
         source_at = self.at - timedelta(seconds=4)
         home, away = 'Arizona Wildcats', 'Utah Utes'
@@ -267,6 +269,8 @@ class CurrentSlateLifecycle(LatestBoardFixture):
                 self.assertEqual(detail['row']['times']['source_at'], captured_quote['source_clock_at'])
 
     async def test_live_route_requires_post_start_original_price(self):
+        self.service.config['live_enabled'] = True
+        self.state.write(self.service)
         with self.connect() as db:
             turn = live.turn(db)
             self.assertTrue(turn['published'], turn)

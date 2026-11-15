@@ -83,6 +83,16 @@ def copy_source(root, source):
         shutil.copy2(path, destination)
 
 
+def smoke_environment(root):
+    """Force runtime checks to use no PostgreSQL server."""
+    environment = {
+        key: value for key, value in os.environ.items() if not key.startswith("PG")
+    }
+    socket = str(root / "pgsocket-absent")
+    environment.update(PGHOST=socket, PREDICT_DB_SOCKET=socket)
+    return environment
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--report-dir", default="test-results/package")
@@ -154,6 +164,7 @@ for name in ('index.html', 'current.js', 'arbs.html', 'arbs.js', 'admin.html', '
              'stored.css', 'ui-common.js', 'coverage-shell.js',
              'manrope.ttf', 'manrope-OFL.txt', 'barlow-semi-condensed-600.ttf',
              'barlow-OFL.txt', 'desk.html', 'desk.js', 'desk.css', 'desk-preferences.js',
+             'desk-bootstrap.js', 'desk-drawer.js', 'desk-inspection.js', 'desk-stability.js',
              'opportunity-cards.js', 'predict-icon.png'):
     assert (root / 'opportunity_static/current' / name).is_file(), name
 assert '/env/' in str(root), root
@@ -200,6 +211,9 @@ async def smoke():
                          '/view/current/admin-database.css',
                          '/view/current/barlow-semi-condensed-600.ttf',
                          '/view/current/desk.js','/view/current/desk.css','/view/current/desk-preferences.js',
+                         '/view/current/desk-bootstrap.js','/view/current/desk-drawer.js',
+                         '/view/current/desk-inspection.js',
+                         '/view/current/desk-stability.js',
                          '/view/current/predict-icon.png',
                          '/view/current/coverage-shell.js','/view/current/opportunity-cards.js',
                          '/current/assets/board-contract.js','/current/assets/board-values.js'):
@@ -234,20 +248,30 @@ from app.dashboard import multi_game_server as app_module
 from app.dashboard.current_state import CURRENT_KEY as current_key
 asyncio.run(smoke())
 """
-        subprocess.run([str(python), "-c", code], cwd=root, check=True, timeout=30)
+        environment = smoke_environment(root)
         subprocess.run(
-            [str(python), "-m", "app.dashboard", "--help"],
+            [str(python), "-I", "-c", code],
             cwd=root,
+            env=environment,
+            check=True,
+            timeout=30,
+        )
+        subprocess.run(
+            [str(python), "-I", "-m", "app.dashboard", "--help"],
+            cwd=root,
+            env=environment,
             check=True,
             timeout=30,
         )
         inventory = subprocess.check_output(
             [
                 str(python),
+                "-I",
                 "-c",
                 "import importlib.metadata as m,json; print(json.dumps(sorted([dict(name=d.metadata['Name'],version=d.version,license_expression=d.metadata.get('License-Expression')) for d in m.distributions()],key=lambda d:d['name'].lower())))",
             ],
             cwd=root,
+            env=environment,
             text=True,
             timeout=30,
         )

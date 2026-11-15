@@ -22,7 +22,7 @@ from .native_scope_bindings import selectors_for, POLICY as SCOPE_POLICY
 from .native_selectors import query, candidates, PAGE_SIZE
 from .venue_access import ENDPOINTS, load_credentials
 from .current_sink import utc
-from .current_policy import live_enabled, native_scope, native_markets
+from .current_policy import aggregate_provider, live_enabled, native_scope, native_markets
 from .odds_http import BudgetStop
 
 # Re-export existing helper imports while keeping socket ownership in this module.
@@ -636,7 +636,7 @@ class NativeWorker:
         phase_events = (getattr(reducer, 'inventory', {}).get(self.venue, {}).get('events', [])
                         if self.venue == 'polymarket_us' else ())
         return select(markets, self.catalog, now, cursor, phase_events=phase_events,
-                      priority_pregame=self.service.config.get('aggregate_provider') == 'sportsgameodds',
+                      priority_pregame=aggregate_provider(self.service.config) == 'sportsgameodds',
                       preferred=self.reference_priority)
 
     def event_in_scope(self, event, at):
@@ -664,7 +664,7 @@ class NativeWorker:
 
     async def sportsbook_priority(self, catalog):
         if not (getattr(self.service, 'database_mode', False)
-                and self.config.get('aggregate_provider') == 'sportsgameodds'):
+                and aggregate_provider(self.config) == 'sportsgameodds'):
             return set()
         from psycopg import OperationalError
         from .native_priority import sportsbook_main_markets
@@ -730,21 +730,29 @@ class NativeWorker:
         return True
 
     def quiet_kalshi_candidates(self, now, limit):
-        from app.comparison.game_phase import sporting_phase
+        from app.comparison.game_phase import scheduled_phase
+        from app.comparison.source_clock import NATIVE_BOOK_MAX_AGE_SECONDS
         from app.storage.store import stamp
 
         owned = self.stream_seen & self.synchronization.persisted
         event_ids = {self.stream_market_index[mid].raw.ref.event_id for mid in owned if mid in self.stream_market_index}
         active_events = {}
+        include_live = live_enabled(self.config)
+        pregame_age = NATIVE_BOOK_MAX_AGE_SECONDS - 2 * QUIET_SNAPSHOT_SECONDS
         for event in self.catalog['events']:
             start = event.get('scheduled_start')
             if (event['id'] not in event_ids or not start or event.get('identity') != 'resolved'
-                    or event.get('exclusion') or sporting_phase(event)['state'] != 'live'):
+                    or event.get('exclusion')):
                 continue
             try:
                 elapsed = (now-stamp(start)).total_seconds()
-                if 0 <= elapsed < 86400:
-                    active_events[event['id']] = elapsed
+                phase = scheduled_phase(event, now)
+                if phase['reason']:
+                    continue
+                if include_live and phase['state'] == 'live' and 0 <= elapsed < 86400:
+                    active_events[event['id']] = (0, elapsed, QUIET_SNAPSHOT_AGE)
+                elif phase['state'] == 'scheduled' and elapsed < 0:
+                    active_events[event['id']] = (1, -elapsed, pregame_age)
             except (ValueError, TypeError, AttributeError):
                 continue
         candidates = []
@@ -764,13 +772,14 @@ class NativeWorker:
             clock = max((stamp(value).timestamp() for value in clocks if value), default=float('-inf'))
             if mid in self.source_highwater:
                 clock = max(clock, float(self.source_highwater[mid]))
-            if now.timestamp() - clock >= QUIET_SNAPSHOT_AGE:
-                candidates.append((active_events[market.raw.ref.event_id], clock, mid))
-        return [mid for _, _, mid in sorted(candidates)[:limit]]
+            tier, proximity, age = active_events[market.raw.ref.event_id]
+            if now.timestamp() - clock >= age:
+                candidates.append((tier, proximity, clock, mid))
+        return [mid for _, _, _, mid in sorted(candidates)[:limit]]
 
     async def reconfirm_kalshi_quiet_books(self):
         """Ask the current ordered SID for fresh complete images, without resubscribing."""
-        if self.venue != 'kalshi' or not live_enabled(self.config):
+        if self.venue != 'kalshi':
             return
         self.metrics['quiet_snapshot_checks'] += 1
         if self.subscription_lock.locked():
@@ -1563,7 +1572,7 @@ class NativeWorker:
                     await asyncio.wait_for(self.socket.send(json.dumps(command_to_send)), 3)
                 if self.metrics.get('subscription_priority',{}).get('deferred_markets'):
                     rotate_at=self.priority_rotation_deadline()
-                if self.venue=='kalshi' and reconstruction is not None and live_enabled(self.config):
+                if self.venue=='kalshi' and reconstruction is not None:
                     quiet_at=time.monotonic()+QUIET_SNAPSHOT_SECONDS
                 from .native_receive import NativeReceive
                 receiver=NativeReceive(self.socket,self.metrics,on_failure=lambda:self.synchronization.revoke('transport_lost'))

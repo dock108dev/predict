@@ -51,11 +51,12 @@ def maintain(db, *, compact=True, collecting=False):
         raise ValueError('storage_maintenance_requires_independent_transaction')
     if not db.execute('SELECT pg_try_advisory_lock(%s) held', (LOCK,)).fetchone()['held']:
         return dict(state='busy')
-    result = dict(before_bytes=sql_usage(db), rewrites=[], deferred=[])
-    settings = {name: db.execute(sql.SQL('SHOW {}').format(sql.Identifier(name))).fetchone()[name]
-                for name in ('lock_timeout', 'statement_timeout')}
+    settings = {}
     capture_lock=False
     try:
+        result = dict(before_bytes=sql_usage(db), rewrites=[], deferred=[])
+        settings = {name: db.execute(sql.SQL('SHOW {}').format(sql.Identifier(name))).fetchone()[name]
+                    for name in ('lock_timeout', 'statement_timeout')}
         db.execute("SET lock_timeout='1s'")
         db.execute("SET statement_timeout='60s'")
         if db.execute("SELECT to_regclass('public.comparison_result_reference') r").fetchone()['r']:
@@ -266,6 +267,8 @@ def maintain(db, *, compact=True, collecting=False):
         result['after_bytes'] = sql_usage(db)
         return result
     finally:
-        if capture_lock:db.execute('SELECT pg_advisory_unlock(901153)')
-        for name,value in settings.items():db.execute('SELECT set_config(%s,%s,false)', (name,value))
-        db.execute('SELECT pg_advisory_unlock(%s)', (LOCK,))
+        try:
+            if capture_lock:db.execute('SELECT pg_advisory_unlock(901153)')
+            for name,value in settings.items():db.execute('SELECT set_config(%s,%s,false)', (name,value))
+        finally:
+            db.execute('SELECT pg_advisory_unlock(%s)', (LOCK,))

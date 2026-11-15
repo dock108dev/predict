@@ -224,8 +224,27 @@ QUOTE_INPUT = '''jsonb_to_recordset(%s) AS i(id text,event_id text,bookmaker_id 
     source_order numeric,received_order numeric,expires_at timestamptz,revision text,facts jsonb)'''
 
 
+def retain_repeated_closure_receipts(db, rows):
+    """Record later closures without replacing the original quote receipt."""
+    from app.collection.sportsgameodds_current_rows import CURRENT_VENUES
+
+    closures = [dict(id=row['id'], revision=row['revision'], received_order=row['received_order'])
+                for row in rows if row['bookmaker_id'] in CURRENT_VENUES and row['source_order'] is not None
+                and not row['facts']['available']
+                and (not row['facts']['provider_available'] or row['facts']['price_american'] is not None)]
+    if closures:
+        db.execute('''UPDATE sgo_quote_revision q SET closure_received_order=i.received_order
+            FROM jsonb_to_recordset(%s) AS i(id text,revision text,received_order numeric)
+            WHERE (q.id,q.revision)=(i.id,i.revision) AND q.is_current
+              AND q.source_order<=i.received_order
+              AND i.received_order>COALESCE(q.closure_received_order,q.received_order)''', (Jsonb(closures),))
+
+
 def advance_quotes(db, rows, previous):
     """Advance the existing reference winner without rewriting its source body."""
+    from app.collection.sportsgameodds_current_rows import CURRENT_VENUES
+
+    retain_repeated_closure_receipts(db, rows)
     # Preserve the old comparison rules, including availability closing at the
     # same source clock. Offer ordering remains a separate consumer of this data.
     eligible = db.execute(f'''SELECT i.id,i.revision
@@ -253,13 +272,21 @@ def advance_quotes(db, rows, previous):
     # A previously staged losing revision may now win a new receipt. Keep the
     # incoming head receipt exactly as the old writer did, without changing the
     # revision's source price. Offer receipts are stored with their own links.
-    db.execute(f'''INSERT INTO sgo_quote_revision({QUOTE_COLUMNS},is_current)
+    db.execute(f'''INSERT INTO sgo_quote_revision AS q ({QUOTE_COLUMNS},is_current)
         SELECT i.*,true FROM {QUOTE_INPUT}
         ON CONFLICT(id,revision) DO UPDATE SET is_current=true,
-            source_order=CASE WHEN sgo_quote_revision.is_current THEN sgo_quote_revision.source_order ELSE excluded.source_order END,
-            received_order=CASE WHEN sgo_quote_revision.is_current THEN sgo_quote_revision.received_order ELSE excluded.received_order END,
+            source_order=CASE WHEN q.is_current THEN q.source_order ELSE excluded.source_order END,
+            received_order=CASE WHEN q.is_current THEN q.received_order ELSE excluded.received_order END,
+            closure_received_order=CASE
+                WHEN q.is_current THEN q.closure_received_order
+                WHEN q.bookmaker_id=ANY(%s) AND q.facts->'available'='false'::jsonb
+                    AND (q.facts->'provider_available'='false'::jsonb OR q.facts->>'price_american' IS NOT NULL)
+                    AND q.source_order<=COALESCE(q.closure_received_order,q.received_order)
+                    AND excluded.received_order<COALESCE(q.closure_received_order,q.received_order)
+                THEN COALESCE(q.closure_received_order,q.received_order)
+                END,
             expires_at=excluded.expires_at,
-            facts=CASE WHEN sgo_quote_revision.is_current THEN sgo_quote_revision.facts ELSE excluded.facts END''', (Jsonb(selected),))
+            facts=CASE WHEN q.is_current THEN q.facts ELSE excluded.facts END''', (Jsonb(selected), sorted(CURRENT_VENUES)))
     archive_revisions(db, 'reference', replaced)
     if odds_archive.enabled():
         with odds_archive.capture(db) as archive:
@@ -277,6 +304,29 @@ def stage_offer_quotes(db, rows, links):
     db.execute(f'''INSERT INTO sgo_quote_revision({QUOTE_COLUMNS},is_current)
         SELECT i.*,false FROM {QUOTE_INPUT}
         ON CONFLICT(id,revision) DO NOTHING''', (Jsonb(selected),))
+
+
+def withdraw_current_offers(db, rows, links):
+    """Apply accepted, exact closures even when the page supplied no price."""
+    from app.collection.sportsgameodds_current_rows import CURRENT_VENUES
+
+    ids = {row['id'] for row in rows if row['bookmaker_id'] in CURRENT_VENUES and not row['facts']['available']}
+    ids.update(identity for identity, _ in links.values())
+    if not ids:
+        return 0
+    return db.execute('''UPDATE current_offer_storage o
+        SET facts=jsonb_set(o.facts,'{state}','"unavailable"'::jsonb),
+            revision=encode(sha256(convert_to(o.revision||closure.revision,'UTF8')),'hex')
+        FROM sgo_quote_revision closure
+        WHERE closure.id=ANY(%s) AND closure.is_current AND o.sgo_quote_id=closure.id
+          AND o.facts->>'state'='available' AND closure.facts->'available'='false'::jsonb
+          AND (closure.facts->'provider_available'='false'::jsonb
+               OR closure.facts->>'price_american' IS NOT NULL)
+          AND closure.source_order<=COALESCE(closure.closure_received_order,closure.received_order)
+          AND (closure.source_order>o.source_order OR
+               (closure.source_order=o.source_order
+                AND COALESCE(closure.closure_received_order,closure.received_order)>=o.received_order))''',
+        (sorted(ids),)).rowcount
 
 
 def read_event(db, event_id, *, limit=MAX_ROWS, bookmakers=None, source_since=None):
@@ -318,18 +368,21 @@ class EventInputs:
         return {event_id: self.event_frames[event_id] for event_id in ids
                 if self.event_frames[event_id] is not None}
 
-    def quotes(self, event_ids, *, bookmakers=None, source_since=None, limit=MAX_ROWS):
+    def quotes(self, event_ids, *, bookmakers=None, source_since=None, game_markets=False, limit=MAX_ROWS):
         if type(limit) is not int or not 1 <= limit <= MAX_ROWS:
             raise ValueError('sgo read capacity')
         ids = sorted(set(event_ids))
         books = None if bookmakers is None else tuple(sorted(set(bookmakers)))
         since = None if source_since is None else exact_time(source_since.isoformat())
-        cached = self.quote_reads.setdefault((books, since, limit), {})
+        cached = self.quote_reads.setdefault((books, since, game_markets, limit), {})
         missing = [event_id for event_id in ids if event_id not in cached]
         for offset in range(0, len(missing), 16):
             batch = missing[offset:offset + 16]
             books_sql = '' if books is None else ' AND bookmaker_id=ANY(%s)'
             clock_sql = '' if since is None else ' AND source_order >= %s'
+            market_sql = (""" AND facts->>'period'='game'
+                            AND facts->>'market' IN ('moneyline','spread','total')
+                            AND source_order IS NOT NULL""" if game_markets else '')
             params = [batch]
             if books is not None:
                 params.append(list(books))
@@ -343,7 +396,7 @@ class EventInputs:
                    CROSS JOIN LATERAL (
                        SELECT id,revision,facts FROM current_sgo_reference
                        WHERE event_id=events.event_id'''
-                + books_sql + clock_sql + ' ORDER BY id LIMIT %s) q',
+                + books_sql + clock_sql + market_sql + ' ORDER BY id LIMIT %s) q',
                 params,
             ):
                 results[row['event_id']].append(row)

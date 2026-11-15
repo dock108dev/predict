@@ -5,6 +5,7 @@ on:
   push:
     branches: [main]
   merge_group:
+    types: [checks_requested]
   workflow_dispatch:
 
 env:
@@ -16,7 +17,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  # Only successive revisions of the same PR compete for the pending slot.
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -24,9 +26,6 @@ jobs:
     name: Offline checks
     runs-on: ubuntu-24.04
     timeout-minutes: 35
-    env:
-      PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-      CI_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -36,6 +35,7 @@ jobs:
         with:
           python: '3.14'
       - name: Ensure Poppler is available for PDF renderer checks
+        id: poppler
         run: |
           if ! command -v pdftotext >/dev/null; then
             sudo apt-get update
@@ -43,6 +43,7 @@ jobs:
           fi
           pdftotext -v
       - name: Syntax and offline regressions
+        id: offline
         run: sh scripts/check-ci
       - name: Report interrupted setup or execution
         if: always()
@@ -84,10 +85,13 @@ jobs:
         run: python scripts/ci/secret_scan.py
       - name: Actions and shell syntax
         id: workflow
-        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.tools.outcome == 'success' }}
         run: |
           .local/ci-tools/actionlint -shellcheck=''
           sh -n scripts/check-ci
+          for script in deploy/release.sh deploy/smoke.sh deploy/smoke-proxy.sh; do
+            bash -n "$script"
+          done
       - name: Maintained documentation references
         id: docs
         if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
@@ -144,10 +148,10 @@ jobs:
         id: setup
         with:
           python: '3.14'
-      - name: Install locked browser tooling and matching Chromium
-        run: |
-          python -m pip install --require-hashes -r requirements-browser.txt
-          python -m playwright install --with-deps chromium
+          browser: 'true'
+      - name: Install matching Chromium and Linux system libraries
+        id: chromium
+        run: python -m playwright install --with-deps chromium
       - name: Offline ordinary journey and keyboard checks
         id: browser
         run: |

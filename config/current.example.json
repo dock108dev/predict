@@ -3,6 +3,7 @@
   "authority": "predict-standing-native-20261002",
   "enabled": false,
   "aggregate_enabled": false,
+  "live_enabled": false,
   "aggregate_provider": "sportsgameodds",
   "sports": [
     "NFL"

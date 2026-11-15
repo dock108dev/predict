@@ -8,6 +8,8 @@ import statistics
 import time
 import urllib.request
 
+from reporting import behavior_table, run_reference, safe
+
 
 def selected_runs(runs, now):
     window = now - timedelta(days=30)
@@ -48,14 +50,19 @@ def analyze(runs, now):
         first = [value for value in first if value in ("success", "failure")]
         durations = []
         for r in selected:
-            if r["conclusion"] in ("success", "failure") and r.get("job_completed_at"):
+            if (
+                r["run_attempt"] == 1
+                and r["conclusion"] in ("success", "failure")
+                and r.get("job_completed_at")
+            ):
                 start = datetime.fromisoformat(
                     r["run_started_at"].replace("Z", "+00:00")
                 )
                 end = datetime.fromisoformat(
                     r["job_completed_at"].replace("Z", "+00:00")
                 )
-                durations.append((end - start).total_seconds())
+                if end >= start:
+                    durations.append((end - start).total_seconds())
         result["events"][event] = {
             "runs": len(selected),
             "first_attempt_observed": len(first),
@@ -146,8 +153,9 @@ def collect(fetch, now):
             - datetime.fromisoformat(r["created_at"].replace("Z", "+00:00"))
         ).total_seconds()
         for r in selected_runs(runs, now)
-        if r.get("first_job_started_at")
+        if r["run_attempt"] == 1 and r.get("first_job_started_at")
     ]
+    queues = [seconds for seconds in queues if seconds >= 0]
     metrics["queue_seconds"] = (
         dict(
             sample=len(queues),
@@ -206,6 +214,43 @@ def resource_sample(fetch):
     return result
 
 
+def render_summary(metrics):
+    measured = metrics["status"] == "PASS" and metrics["ci_runs"] > 0
+    result = "PASS" if measured else "NOT RUN"
+    text = "## CI health (advisory)\n\n" + behavior_table(
+        [
+            (
+                "Read a bounded sample of completed CI runs",
+                result,
+                "Shows how often CI succeeds on the first attempt and where reruns occur",
+                "Read-only Actions API. "
+                + (
+                    f"{metrics['ci_runs']} runs in the 30-day window"
+                    if measured
+                    else metrics.get("reason", "No completed runs in the window")
+                ),
+            )
+        ],
+        "The sample covers up to 30 completed runs across changing commits. Timings use first attempts, and p95 uses the existing minimum of 20 observations. A rerun recovery does not identify a flaky test. Critical path, billing and comparable performance baselines are unavailable.",
+    )
+    text += f"Sampled {safe(metrics['retrieved_at'])}. {run_reference()}.\n\n"
+    text += "| Event | Runs | First-attempt successes | Reruns / recovered | Cancelled | Median / p95 elapsed (s) |\n|---|---:|---|---|---:|---|\n"
+    for event, values in metrics["events"].items():
+        rate = values["first_attempt_pass_rate"]
+        observed = values["first_attempt_observed"]
+        first = "Unavailable" if rate is None else f"{rate:.0%} of {observed} observed"
+        text += (
+            f"| {safe(event)} | {values['runs']} | {first} | "
+            f"{values['rerun_runs']} / {values['observed_rerun_recoveries']} | {values['cancelled']} | "
+            f"{safe(values['median_elapsed_seconds'])} / {safe(values['p95_elapsed_seconds'])} "
+            f"({values['duration_sample']} measured) |\n"
+        )
+    queue = metrics.get("queue_seconds")
+    text += f"\nMedian time to first job (s): {safe(queue['median'] if queue else None)}. Observed runner minutes: {safe(metrics.get('runner_minutes'))}.\n"
+    text += f"\nRepository cache bytes: {safe(metrics.get('cache_bytes'))}. Bytes in sampled artifacts: {safe(metrics.get('artifact_sample_bytes'))}. See the current health artifact for job failures and measurement limits.\n"
+    return text
+
+
 def main():
     now = datetime.now(timezone.utc)
     runs = []
@@ -248,6 +293,8 @@ def main():
         event=os.environ.get("GITHUB_EVENT_NAME", "local"),
         ref=os.environ.get("GITHUB_REF"),
         run_url=os.environ.get("CI_RUN_URL"),
+        run_id=os.environ.get("GITHUB_RUN_ID"),
+        run_attempt=os.environ.get("GITHUB_RUN_ATTEMPT"),
         baseline=None,
     )
     output = Path("test-results/health")
@@ -280,11 +327,7 @@ def main():
         )
         + "\n"
     )
-    summary = (
-        "## CI health (advisory)\n\nUp to 30 completed CI workflow runs from 30 days; separate events. No comparable performance baseline, no flake claim. Elapsed uses last completed job minus workflow start; p95 requires 20 durations. Queue measures creation to first job start when available; critical path/quota unavailable. Runner minutes are observed job time, not a bill. Reruns without first-attempt evidence are excluded from pass rate.\n\n```json\n"
-        + json.dumps(metrics, indent=2).replace("`", "\\u0060").replace("<", "\\u003c")
-        + "\n```\n"
-    )
+    summary = render_summary(metrics)
     (output / "summary.md").write_text(summary)
     if os.environ.get("GITHUB_STEP_SUMMARY"):
         with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as stream:

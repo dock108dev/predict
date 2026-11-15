@@ -141,6 +141,11 @@ class _OfferBatch:
         self.rows=[];self.keys=set();self.size=0
 
 
+def event_id(provider, native_event_id):
+    """Storage key shared by current events and their exact published witnesses."""
+    return hashed([provider, native_event_id])
+
+
 def contract_id(record):
     q=record['quote'];source=q['source']
     return hashed([q['venue'],source['provider'],source['native_event_id'],source['native_market_id'],source['native_outcome_id'],source.get('native_side','')])
@@ -174,6 +179,14 @@ def project_contract(event,contract,received_at):
     return value
 
 
+def project_quote(row):
+    """Restore the clocks held beside an exact normalized quote."""
+    quote = dict(row['quote'], id='', revision=1)
+    quote['times'] = dict(quote['times'], source_at=row['source_at'], received_at=row['received_at'])
+    quote['times'].setdefault('projected_at', None)
+    return quote
+
+
 def prepare(record, *, batch_events=None):
     # Only EVENT_FIELDS survive storage. Copying the full native event (often
     # packaging many markets) just to discard it repeated per price and side.
@@ -200,7 +213,8 @@ def prepare(record, *, batch_events=None):
         if batch_events is not None:batch_events[key]=(original_event,event,event_revision,event_clockless,schedule)
     else:_,event,event_revision,event_clockless,schedule=entry
     if schedule is not None:row.setdefault('comparison_source_metadata',{})['schedule_binding']=schedule
-    eid=hashed([source['provider'],source['native_event_id']]);cid=hashed([venue,source['provider'],source['native_event_id'],source['native_market_id'],source['native_outcome_id'],source.get('native_side','')])
+    eid=event_id(source['provider'], source['native_event_id'])
+    cid=contract_id(record)
     missing=row.pop('offer_missing',False)
     original=q['original']
     if not missing:
@@ -474,15 +488,16 @@ class CurrentRowStore:
                 lost=[(venue,state.get('state','unavailable')) for venue,state in source_status.items()
                       if state.get('state') not in ('available','budget_delayed')]
                 if lost:
-                    # One join invalidates all unavailable venues atomically.
-                    # Repeat the test even on the same health state so an offer
-                    # newly admitted by another writer cannot regain continuity.
+                    # Invalidate continuity for this transport's offers, even
+                    # on a repeated health state. SGO's venue prices are facts
+                    # from an independent transport with its own status guard.
                     execute("""UPDATE current_offer_storage o SET facts=jsonb_set(o.facts,'{state}',to_jsonb(lost.state)),
                         revision=encode(sha256(convert_to(o.revision||lost.state,'UTF8')),'hex')
                         FROM current_contract c JOIN current_event e ON e.id=c.event_id
                         JOIN unnest(%s::text[],%s::text[]) lost(venue,state) ON c.venue=lost.venue
                         WHERE c.id=o.contract_id AND o.facts->>'state' IN ('available','budget_delayed')
                         AND (lost.venue NOT IN ('kalshi','polymarket_us') OR e.provider=lost.venue)
+                        AND e.provider<>'sportsgameodds'
                         AND NOT (c.venue='prophetx' AND e.provider='oddslink_public_board')
                         AND NOT (c.venue='novig' AND o.facts ? 'novig_runtime_id')""",
                         tuple(map(list,zip(*lost))))
@@ -505,7 +520,7 @@ class CurrentRowStore:
         """One atomic set operation for an exact catalog delta, never a source wipe."""
         keys=sorted(set(keys))
         if not keys:return
-        values=([k[0] for k in keys],[hashed([k[0],k[1]]) for k in keys],[k[2] for k in keys])
+        values=([k[0] for k in keys],[event_id(k[0], k[1]) for k in keys],[k[2] for k in keys])
         with self.db.transaction():
             self.db.execute('SELECT pg_advisory_xact_lock(%s)',(LOCK,))
             tables=('current_contract','native_book_revision')
@@ -563,7 +578,10 @@ class CurrentRowStore:
         """Replace synchronized exact affected books atomically with the offers."""
         with self.db.transaction(), odds_archive.capture(self.db) as archive, _ordered_writes(self.db) as execute:
             execute('SELECT pg_advisory_xact_lock(%s)',(LOCK,))
-            keys=[(b['raw']['ref']['venue'],hashed([b['raw']['ref']['venue'],b['raw']['ref']['event_id']]),b['raw']['ref']['market_id']) for b in books]
+            keys=[]
+            for book in books:
+                ref=book['raw']['ref']
+                keys.append((ref['venue'], event_id(ref['venue'], ref['event_id']), ref['market_id']))
             fields = 'id,scheduled_start,facts' if archive is not None else 'id'
             events = {r['id']: r for r in execute(
                 f'SELECT {fields} FROM current_event WHERE id=ANY(%s)',
@@ -591,8 +609,8 @@ class CurrentRowStore:
                         VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                         ON CONFLICT(id) DO UPDATE SET is_current=true''', params)
                 pending_headers.clear()
-            for book in books:
-                raw=book['raw'];ref=raw['ref'];venue=ref['venue'];eid=hashed([venue,ref['event_id']]);market=ref['market_id']
+            for book, key in zip(books, keys):
+                raw=book['raw'];ref=raw['ref'];venue,eid,market=key
                 if book['sync']!='synchronized' or book['state']=='unknown':raise ValueError('current_row_incomplete_book')
                 if eid not in events:continue
                 at=raw.get('exchange_at');order=exact_time(at) if at else None;receipt=exact_time(raw['received_at'])
@@ -600,7 +618,6 @@ class CurrentRowStore:
                 if confirmation:
                     from app.collection.current_confirmation import validate
                     validate(confirmation,ref,book)
-                key=(venue,eid,market)
                 old=prior.get(key)
                 if old:
                     incoming=_evidence_order(at,confirmation);previous=_evidence_order(old['source_at'],old['confirmation'])
@@ -709,9 +726,7 @@ class CurrentRowStore:
             native_levels=self._native_asks([r['contract_id'] for r in raw]) if include_depth else {}
             records=[]
             for row in raw:
-                q=deepcopy(row['quote']);q.update(id='',revision=1)
-                q['times'].update(source_at=row['source_at'],received_at=row['received_at'])
-                q['times'].setdefault('projected_at',None)
+                q=project_quote(row)
                 if q['venue'] in ('kalshi','polymarket_us'):
                     if include_depth:
                         q['depth']=native_levels.get(row['contract_id'],[])

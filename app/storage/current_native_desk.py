@@ -11,7 +11,7 @@ from app.comparison.sporting_scope import supported
 from app.dashboard.current_contract import price
 from app.fees import product_schedules
 from app.normalization.registry import Registry
-from .current_rows import CurrentRowStore, contract_id
+from .current_rows import contract_id, event_id, project_contract, project_quote
 from .ordinary_projection import source_allowed
 from .store import hashed, stamp
 
@@ -19,7 +19,7 @@ from .store import hashed, stamp
 VENUES = ('kalshi', 'polymarket_us')
 
 
-def active_records(db, *, at, venues, contract=None, phase='pregame'):
+def active_records(db, *, at, venues, contract=None, phase='pregame', event_ids=None):
     # An admissible source or confirmation clock cannot exceed its receipt.
     # This bounds the SQL read before revalidating each exact book's clock.
     rows = db.execute("""SELECT c.id, c.event_id, o.price_dependency AS price,
@@ -33,18 +33,31 @@ def active_records(db, *, at, venues, contract=None, phase='pregame'):
         LEFT JOIN native_ladder_revision d ON d.id=b.ladder_refs#>>ARRAY[c.native_outcome_id,'asks']
         WHERE o.native_book_id IS NOT NULL AND c.venue=ANY(%s) AND e.provider=c.venue
           AND (%s::text IS NULL OR c.id=%s)
+          AND (%s::text[] IS NULL OR e.id=ANY(%s))
           AND e.scheduled_start::timestamptz <= %s
           AND (e.scheduled_start::timestamptz > %s) = %s
-          AND o.received_order >= extract(epoch FROM %s::timestamptz)
+          AND e.expires_order >= extract(epoch FROM %s::timestamptz)
+          AND o.received_order BETWEEN extract(epoch FROM %s::timestamptz) AND extract(epoch FROM %s::timestamptz)
           AND b.is_current AND b.state='active' AND b.sync='synchronized'""",
-        (venues, contract, contract, at + timedelta(hours=72), at, phase == 'pregame',
-         at - timedelta(seconds=NATIVE_BOOK_MAX_AGE_SECONDS))).fetchall()
+        (venues, contract, contract, event_ids, event_ids, at + timedelta(hours=72), at, phase == 'pregame',
+         at, at - timedelta(seconds=NATIVE_BOOK_MAX_AGE_SECONDS), at)).fetchall()
     if not rows:
         return [], {}, {}
-    frame = CurrentRowStore(db).capture(include_depth=False,
-        event_ids=list({row['event_id'] for row in rows}), contract_ids=[row['id'] for row in rows])
+    # These rows already passed the exact native book join. Read the referenced
+    # contracts only, using the same normalized offer view as the full capture.
+    # Loading frame-wide source states, metadata hashes and unrelated books is
+    # unnecessary here. Event facts are read once per event and only inspected.
+    events = {row['id']: row['facts'] for row in db.execute(
+        'SELECT id,facts FROM current_event WHERE id=ANY(%s)', (list({row['event_id'] for row in rows}),))}
+    records = []
+    for row in db.execute('''SELECT c.event_id,c.facts AS contract,o.facts AS quote,o.source_at,o.received_at
+        FROM current_contract c JOIN current_offer o ON o.contract_id=c.id
+        WHERE c.id=ANY(%s) ORDER BY c.id''', ([row['id'] for row in rows],)):
+        event = events[row['event_id']]
+        records.append(dict(project_contract(event, row['contract'], row['received_at']),
+                            event=event, quote=project_quote(row)))
     dependencies = {row['id']: [row[field] for field in ('price', 'contract', 'event')] for row in rows}
-    return frame['records'], dependencies, {row['id']: row for row in rows}
+    return records, dependencies, {row['id']: row for row in rows}
 
 
 def supported_occurrence(record):
@@ -89,7 +102,7 @@ def game_for(record, occurrence, published, prior, dependencies, registry):
     # The presence of a sportsbook reference changes EV eligibility without
     # changing the occurrence or its link. Cross-venue aliases are adjudicated
     # from schedule evidence by the desk, independently of reference freshness.
-    key = hashed([source['provider'], source['native_event_id']])
+    key = event_id(source['provider'], source['native_event_id'])
     return dict(game_key='native-current:' + key, title=event.get('title') or ' vs. '.join(p['name'] for p in participants),
                 league=league, start_at=start.isoformat(), participants=participants)
 
@@ -116,7 +129,7 @@ def carry_published_finance(row, prior):
     row['economic_revision'] = hashed([row['economic_revision'], prior.get('economic_revision')])
 
 
-def overlay(db, result, owner, states, *, at, contract=None, phase='pregame', sgo_inputs=None):
+def overlay(db, result, owner, states, *, at, contract=None, phase='pregame', sgo_inputs=None, event_ids=None):
     """Replace native rows for this view using exact original clocks and pairs.
 
     The ordinary capture still owns archived evidence and cross-venue pairs.
@@ -128,7 +141,8 @@ def overlay(db, result, owner, states, *, at, contract=None, phase='pregame', sg
               and venue not in owner.get('paused_sources', ())]
     if not venues or not owner.get('healthy') or not owner.get('active') or owner.get('global_stopped'):
         return result
-    records, dependencies, books = active_records(db, at=at, venues=venues, contract=contract, phase=phase)
+    scope = {} if event_ids is None else {'event_ids': event_ids}
+    records, dependencies, books = active_records(db, at=at, venues=venues, contract=contract, phase=phase, **scope)
     if not records:
         return result
     published = {game['game_key']: game for game in result['games']}

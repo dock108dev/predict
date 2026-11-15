@@ -1,6 +1,7 @@
 """Compact, sorted views of the ordinary publication for the three-page desk."""
 from datetime import date, datetime, time, timedelta
 from fractions import Fraction
+from functools import lru_cache
 import re
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -11,6 +12,9 @@ from app.comparison.sporting_scope import supported
 from app.storage.comparison_snapshot import expand_row
 from app.storage.current_rows import contract_id
 from app.storage.store import hashed, stamp
+from .desk_sportsbooks import add_public_prices as add_public_prices
+from .desk_sportsbooks import add_sgo_prices as add_sgo_prices
+from .desk_sportsbooks import sportsbook_selection as sportsbook_selection
 from .local_security import PublicRequestError
 from .product_finance import EV_UNQUALIFIED, effective_quote, qualified_ev, reference_allowed, visible_publication, visible_row
 from .snapshot_display import comparison_groups, decimal, desk_game_aliases, odds, outcome_id, outcome_key, ranking_value, search_index
@@ -158,7 +162,8 @@ def offer(original, metric=None, *, sportsbook_updates_paused=False):
     reference_price = odds(decimal(fair)) if fair else None
     source_metadata = (row.get('original_record') or {}).get('comparison_source_metadata') or {}
     authority = row.get('current_authority') or {}
-    price_deadline = (authority.get('price') or {}).get('current_until')
+    price_authority = authority.get('price') or {}
+    price_deadline = price_authority.get('current_until')
     reference_deadlines = [item['current_until'] for item in authority.get('references', ()) if item.get('current_until')] if metric else []
     if metric and sportsbook and sportsbook.get('current_until'):
         reference_deadlines.append(sportsbook['current_until'])
@@ -202,7 +207,7 @@ def offer(original, metric=None, *, sportsbook_updates_paused=False):
                 participant=row.get('participant_label'), market=row['market'],
                 alternate=row.get('alternate', source_metadata.get('alternate')),
                 original=price, cost_per_normal_claim=cost, book_size=row.get('book_size'),
-                current_until=price_deadline,
+                current_until=price_deadline, desk_quote_key=price_authority.get('dependency'),
                 calculation_current_until=min(deadlines, key=stamp) if (value is not None or metric is None) and deadlines else None,
                 odds=odds(price['value'], price['units'], price.get('payout', '1')),
                 current=bool(row.get('price_current')), value=None if value is None else str(value), reason=reason,
@@ -217,7 +222,7 @@ def offer(original, metric=None, *, sportsbook_updates_paused=False):
 def public_offer(quote, basis):
     fields = ('id', 'venue', 'selection', 'participant', 'market', 'alternate', 'odds',
               'current', 'value', 'reason', 'before_fee', 'after_fee', 'conservative',
-              'reference_current', 'fair_reference', 'current_until', 'calculation_current_until',
+              'reference_current', 'fair_reference', 'current_until', 'calculation_current_until', 'desk_quote_key',
               'price_revision', 'economic_revision', 'evidence_result_id', 'captured_at',
               'game_state', 'game_state_basis', 'game_state_reason', 'game_state_observed_at', 'current_reasons',
               'source_clock_at', 'confirmed_at', 'received_at', 'native_side', 'live_aggregate_desk',
@@ -289,213 +294,10 @@ def source_event_key(row):
     return None
 
 
-def sportsbook_selection(offer, roles):
-    """Map a browsable outcome to a sportsbook side without inferring settlement."""
-    market, selection = offer['market'], offer.get('selection') or {}
-    family = market['market']
-    if market['period'] != 'full_game':
-        return None
-    predicate = selection.get('predicate')
-    if family == 'winner' and predicate == 'win':
-        side = roles.get(selection.get('participant'))
-        return ('moneyline', side, None) if side else None
-    if family == 'spread' and predicate == 'cover':
-        side = roles.get(selection.get('participant'))
-    elif family == 'total' and predicate in ('over', 'under'):
-        side = predicate
-    else:
-        return None
-    line = selection.get('signed_line')
-    return (family, side, Fraction(line)) if side and line is not None else None
-
-
-def add_sgo_prices(db, out, rows, states, *, at, include_retained, mark_retained=False, sgo_inputs=None):
-    """Join stored same-line book quotes for display, including native-only groups."""
-    from app.comparison.game_phase import LIVE_SECONDS, sgo_event_status, sporting_phase
-    from app.comparison.public_sportsbook_estimate import collect_pairs, sgo_observation
-    from app.storage.ordinary_projection import source_allowed
-    from app.storage.sportsgameodds_reference import EventInputs
-
-    groups = [group for group in out['rows'] if group.get('offers')]
-    if not groups:
-        return
-    state = states['sportsgameodds']
-    if state.get('reason_code') == 'sgo_charge_unresolved':
-        for group in groups:
-            group['sportsbook_source_reason'] = 'sgo_charge_unresolved'
-        if not (include_retained or mark_retained):
-            return
-    games = {game['game_key']: game for game in out['games']}
-    roles = {key: {p['id']: p['role'] for p in game['participants']
-                   if p.get('id') and p.get('role') in ('home', 'away')}
-             for key, game in games.items()}
-    signatures = {}
-    group_games = {group['game_key'] for group in groups}
-    for key, game in games.items():
-        if key not in group_games:
-            continue
-        ids = {role: team for team, role in roles[key].items()}
-        if ids.keys() == {'home', 'away'} and game.get('start_at'):
-            signature = (game['league'], stamp(game['start_at']), ids['home'], ids['away'])
-            signatures.setdefault(signature, []).append(key)
-    candidates = {}
-    sportsbook_occurrences = {}
-    if signatures:
-        starts = [signature[1] for signature in signatures]
-        events = db.execute("""SELECT native_event_id, competition, scheduled_start,
-                                      facts->>'home' AS home, facts->>'away' AS away
-                               FROM current_event
-                               WHERE provider='sportsgameodds' AND competition=ANY(%s)
-                                 AND scheduled_start::timestamptz BETWEEN %s AND %s""",
-                            (sorted({signature[0] for signature in signatures}), min(starts), max(starts))).fetchall()
-        for event in events:
-            signature = (event['competition'], stamp(event['scheduled_start']), event['home'], event['away'])
-            for key in signatures.get(signature, ()):
-                candidates.setdefault(key, set()).add(event['native_event_id'])
-                sportsbook_occurrences[event['native_event_id']] = signature
-
-    visible_ids = {offer['id'] for group in groups for offer in group['offers']}
-    local = {row['id']: row['source'] for row in rows if row['id'] in visible_ids
-             and (row.get('source') or {}).get('provider') == 'sportsgameodds'}
-    wanted = {}
-    for group in groups:
-        sources = [local[offer['id']] for offer in group['offers'] if offer['id'] in local]
-        ids = {source['native_event_id'] for source in sources}
-        game_key = group['game_key']
-        scheduled_ids = candidates.get(game_key, set())
-        key = sportsbook_selection(group['offers'][0], roles.get(game_key, {}))
-        if key is not None and len(scheduled_ids) == 1 and (not ids or scheduled_ids == ids):
-            # A featured odd and a book's alternate can have distinct provider
-            # IDs, even when their canonical side and signed line are equal.
-            wanted.setdefault(next(iter(scheduled_ids)), {}).setdefault(key, {})[group['id']] = group
-        if len(ids) == 1:
-            for source in sources:
-                line = source.get('native_line')
-                key = (source['native_outcome_id'], None if line is None else Fraction(line))
-                wanted.setdefault(source['native_event_id'], {}).setdefault(key, {})[group['id']] = group
-
-    inputs = sgo_inputs if sgo_inputs is not None else EventInputs(db)
-    windows = {}
-    selected_frames = {}
-    for event, frame in inputs.frames(wanted).items():
-        facts = frame['facts']
-        members = dict(facts['members'])
-        context = facts.get('event_context') or {}
-        phase = sporting_phase({'status': sgo_event_status(context.get('status') or {})})
-        frame_at = stamp(facts['received_at'])
-        scheduled = stamp(facts['starts_at'])
-        live = at >= scheduled
-        deadline = timedelta(seconds=LIVE_SECONDS if live else PREGAME_SPORTSBOOK_SECONDS)
-        frame_current = (at - deadline <= frame_at <= at and phase['reason'] is None
-                         and (phase['state'] == 'live') == live)
-        if not frame_current and not (include_retained or mark_retained):
-            continue
-        source_since = None if include_retained or mark_retained else at - deadline
-        windows.setdefault(source_since, []).append(event)
-        selected_frames[event] = frame, members, context, frame_at, scheduled, live, deadline, frame_current
-    event_quotes = {}
-    for source_since, events_in_window in windows.items():
-        event_quotes.update(inputs.quotes(events_in_window, bookmakers=BEST_BOOKS, source_since=source_since))
-    for event, observations in event_quotes.items():
-        targets = wanted[event]
-        frame, members, context, frame_at, scheduled, live, deadline, frame_current = selected_frames[event]
-        if (not live and frame_current and not mark_retained and event in sportsbook_occurrences
-                and source_allowed(state, context.get('league'))):
-            event_groups = {gid: group for matches in targets.values() for gid, group in matches.items()}
-            observation = sgo_observation(frame, observations, at=at,
-                                         occurrence=sportsbook_occurrences[event])
-            if observation:
-                for group in event_groups.values():
-                    key = sportsbook_selection(group['offers'][0], roles.get(group['game_key'], {}))
-                    if key and candidates.get(group['game_key']) == {event}:
-                        collect_pairs(group.setdefault('_sportsbook_pairs', {}), (observation,), key,
-                                      at=at, start=scheduled)
-        for row in observations:
-            fact = row['facts']
-            if (fact['period'] != 'game' or fact.get('price_american') is None
-                    or fact['venue'] not in BEST_BOOKS or members.get(row['id']) != row['revision']):
-                continue
-            line = None if fact['line'] is None else Fraction(fact['line'])
-            exact = targets.get((fact['odd_id'], line), {})
-            by_schedule = targets.get((fact['market'], fact['side'], line), {})
-            if not exact and not by_schedule:
-                continue
-            starts = stamp(fact['starts_at'])
-            if starts != scheduled:
-                continue
-            source_at = stamp(fact['source_at']) if fact.get('source_at') else None
-            received_at = stamp(fact['received_at'])
-            if (not fact['available'] or fact['phase'] != ('live' if live else 'pregame')
-                    or not source_at or not source_at <= received_at <= frame_at <= at
-                    or (source_at >= starts) != live):
-                continue
-            current = bool(frame_current and at <= source_at + deadline and source_allowed(state, fact['league']))
-            if mark_retained:
-                if not current:
-                    for group in (by_schedule | exact).values():
-                        hidden = group.setdefault('retained_sportsbooks', [])
-                        if fact['venue'] not in hidden:
-                            hidden.append(fact['venue'])
-            elif current or include_retained:
-                for group_id, group in (by_schedule | exact).items():
-                    book = group['sportsbook_quotes'].setdefault(fact['venue'], [])
-                    prior = next((price for price in book if price.get('price_american') == fact['price_american']
-                                  and price.get('source_at') == fact['source_at']), None)
-                    if prior is not None:
-                        prior['alternate'] = fact.get('alternate')
-                    else:
-                        book.append(dict(price_american=fact['price_american'], source_at=fact['source_at'],
-                                         current=current, side=fact['side'], line=fact['line'],
-                                         alternate=fact.get('alternate'),
-                                         match='source_event' if group_id in exact else 'schedule_and_teams'))
-
-
-def add_public_prices(out, owner, *, at, include_retained, mark_retained=False, include_history=True):
-    from app.comparison.public_sportsbook_estimate import LIFETIME, allowed, collect_pairs, index, read_captures, retained_prices
-    from app.storage.store import ROOT
-
-    if not out['rows'] or not (include_retained or mark_retained or allowed(owner)):
-        return
-    captures = read_captures(ROOT, at=at)
-    current = index(captures, at=at) if allowed(owner) else {}
-    retained = {}
-    if include_retained or mark_retained:
-        retained = (retained_prices(ROOT, captures, at=at, leagues={group.get('league') for group in out['rows']})
-                    if include_history else index(captures, at=at, retained=True))
-    games = {game['game_key']: game for game in out['games']}
-    for group in out['rows']:
-        game = games.get(group['game_key'])
-        if not game or not group.get('offers'):
-            continue
-        roles = {p['id']: p['role'] for p in game['participants'] if p.get('id') and p.get('role') in ('home', 'away')}
-        teams = {role: team for team, role in roles.items()}
-        key = sportsbook_selection(group['offers'][0], roles)
-        if not key or teams.keys() != {'home', 'away'}:
-            continue
-        occurrence = (game['league'], stamp(group['start_at']), teams['home'], teams['away'])
-        if not mark_retained and (observation := current.get(occurrence)):
-            collect_pairs(group.setdefault('_sportsbook_pairs', {}), (observation,), key,
-                          at=at, start=occurrence[1])
-        for entries, fresh in ((retained, False),) if mark_retained else ((current, True), (retained, False)):
-            observation = entries.get(occurrence)
-            if (not observation or not observation['scheduled']
-                    or stamp(observation['frame_received_at']) >= occurrence[1]):
-                continue
-            for book, prices in observation['quotes'].get(key, {}).items():
-                if mark_retained:
-                    if prices and not group['sportsbook_quotes'].get(book):
-                        hidden = group.setdefault('retained_sportsbooks', [])
-                        if book not in hidden:
-                            hidden.append(book)
-                    continue
-                display = group['sportsbook_quotes'].setdefault(book, [])
-                for price in prices:
-                    source = stamp(price['source_at'])
-                    if source >= occurrence[1] or fresh and not source <= at <= source + LIFETIME:
-                        continue
-                    if not any(old['price_american'] == price['price_american']
-                               and old.get('source_at') == price['source_at'] for old in display):
-                        display.append(dict(price, current=fresh))
+@lru_cache(maxsize=2048)
+def quote_supported(value, units, payout):
+    """Reuse the formatter's support predicate for identical price inputs."""
+    return quote_display(value, units, payout)['supported']
 
 
 def quote_places(group, *, retained=False, minimum_places=3):
@@ -506,9 +308,12 @@ def quote_places(group, *, retained=False, minimum_places=3):
     offers = [quote for quote in group['offers'] if retained or quote['current']]
     if not retained and len(books | {quote['venue'] for quote in offers}) < minimum_places:
         return set()
-    return books | {quote['venue'] for quote in offers if quote_display(
-        quote['original']['value'], quote['original']['units'],
-        quote['original'].get('payout', '1'))['supported']}
+    for quote in offers:
+        original = quote['original']
+        inputs = original['value'], original['units'], original.get('payout', '1')
+        if all(isinstance(part, str) for part in inputs) and quote_supported(*inputs):
+            books.add(quote['venue'])
+    return books
 
 
 def main_line_key(group, roles):
@@ -807,7 +612,7 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
                 summary['game_line_id'] = outcome_id(outcome_key(group['quotes'][0]))
             summary['score_source'] = group['score_source']
             if len({row['venue'] for row in group['quotes']}) > 1:
-                identities = [(expand_row(row).get('same_outcome') or {}).get('key') for row in group['quotes']]
+                identities = [(row.get('same_outcome') or {}).get('key') for row in group['quotes']]
                 if all(identities):
                     summary['settlement_match'] = 'matched' if all(key == identities[0] for key in identities) else 'different'
                 else:
@@ -838,7 +643,7 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
     # Qualify the complete slate before ranking thresholds and pagination.
     # Keep the full evidence decode in present() limited to the returned page.
     price_lists = {}
-    preview_groups = groups
+    preview_candidates = groups
     limited_coverage = False
     if comparable:
         retained_comparison = browse and (show_retained or show_last_known)
@@ -877,10 +682,6 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
         minimum_places = 1 if pregame_desk and (browse or metric != EV_METRIC) else 3
         qualified = set(comparable_groups(candidates, games.values(), **comparison_options,
                                          retained=retained_comparison, minimum_places=minimum_places))
-        if pregame_desk and ranked:
-            preview_ids = set(comparable_groups(candidates, games.values(), **comparison_options,
-                                               retained=show_last_known, minimum_places=1))
-            preview_groups = [group for group in groups if group['id'] in preview_ids]
         if show_last_known and browse:
             limited_coverage = any(not any(offer['current'] for offer in candidate['offers'])
                                    for candidate in candidates if candidate['id'] in qualified)
@@ -932,6 +733,14 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
 
     show_preview = (ranked and view != 'arbs' and not browse and not groups
                     and not query.get('positive') and minimum is None and dollars is None)
+    preview_groups = []
+    if show_preview and pregame_desk:
+        if not comparable:
+            preview_groups = preview_candidates
+        else:
+            preview_ids = set(comparable_groups(candidates, games.values(), **comparison_options,
+                                               retained=show_last_known, minimum_places=1))
+            preview_groups = [group for group in preview_candidates if group['id'] in preview_ids]
     paged_preview = bool(pregame_desk and show_preview and preview_groups)
     page_by_game = (browse or pregame_desk and ranked) and not query.get('game_key') and view != 'arbs'
     page_units = preview_groups if paged_preview else groups

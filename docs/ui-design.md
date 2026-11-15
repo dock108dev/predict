@@ -1,212 +1,48 @@
-# Interface design
+# Predict desk
 
 ## Current comparison interface
 
-Opportunities opens on pregame full-game winners, spreads and totals, including
-available alternate lines. Expected value and Arbitrage rank this cohort. Live
-shows in-game prices. At kickoff or an earlier authoritative phase change, the
-market leaves the pregame results and pinned inspections keep their original
-evidence with an aged-out status.
+**Opportunities** opens on pregame full-game winners, spreads, and totals, including
+available alternate lines. Use **Expected value** to compare offers against a
+sportsbook estimate or another calculation basis. Use **Arbitrage** to see modeled
+payoffs for opposing outcomes. In-game prices and the Live tab require the
+`live_enabled` flag, which is off by default. A game leaves the pregame list at
+kickoff or when an earlier authoritative state change withdraws it.
 
-EV cards show the current venue price, estimated fair odds and return. Arbitrage
-cards show the selected opposing legs and modeled return. Open a calculation to
-see the original sportsbook prices, native sides, fees and settlement states.
-Browse odds and Find my game show current prices even when finance is unavailable.
-Missing prices display as a dash. The public pages display “Free odds may be
-delayed up to 15 minutes.”
-Retail prices and modeled returns can be shown without order-book quantities
-across all exchanges and peer-to-peer venues. The retail views label modeled
-stakes and payoffs and show price freshness. Raw Odds holds book evidence for
-diagnostics, and Advanced Scanner uses it for execution sizing.
+The EV list groups quotes for the exact outcome. The selected sportsbook, its
+odds, and other available book prices appear alongside the fair-odds reference.
+**Positive only** filters the selected calculation basis. Open a quote to see the
+prices, fees, model assumptions, and settlement details available for that offer.
+[Calculation basis](benchmark-ev.md) · [Trading fee policy](fee-coverage-policy.md)
 
-American is the default odds format. A persistent Decimal toggle applies across
-formatted views and explanations. Keyboard navigation, narrow windows and pinned
-inspections preserve the selected line. Admin holds provider identity, Coverage,
-collection controls, detailed clocks, settings and raw evidence. Admin → Database
-browses working and retained relations under the local read-only boundary.
-[Storage ownership](storage-ownership.md) · [Security](security.md)
+## Find and compare games
 
-The background owners calculate shared results and the browser renders their
-revision-bound publications. Selected Details can size an item. Saved captures,
-protected comparison evidence and transient display state follow their existing
-retention owners. [Architecture](architecture.md) ·
-[Current-board API](comparison-board-api-contract.md)
+Use **Find my game** or **Browse odds** to navigate by team or game, including
+when a comparison lacks enough inputs to show EV. Browse shows aligned venue
+columns for each exact outcome. An unavailable quote is shown as a dash. A
+retained price can be labeled **Last known**.
 
-## Compact views and financial meaning
+The desk updates visible prices in place. **Refresh list** applies the latest
+ranking and adds newly qualifying games. Open details keep the selected quote and
+its evidence pinned while the list changes. **Use latest prices** adopts a
+coherent update when one is available. If a first read fails, use **Retry**.
+**Source status** links to collection information when the data worker is stopped
+or unavailable. [Data and freshness limits](market-data-gaps.md)
 
-**Dashboard** at `/` shows separate positive EV and arbitrage sections, ranked
-by their own exact supplied percentages. It distinguishes current positives,
-evaluated no-positive, partial, unavailable and last-known states. Nonpositive
-research sorts least negative first; conditional, hypothetical and gross results
-retain separate labels. Filters narrow already collected results.
+American odds are the default. The **Decimal** option changes display formatting
+without changing ranking or calculation inputs. The game table scrolls within
+narrow windows. Dialogs support keyboard focus, Escape, and return to the
+opening control.
 
-**Odds** defaults to All games and restores a valid saved game/filter selection,
-grouping observed supported games into
-compact game/team rows with venue columns. Search and game selection are optional.
-Observed Polymarket US Long and Short appear inline with their actual participant,
-side and predicate. Keep NO/Short distinct from opponent YES/Long and bookmaker
-wins, including material tie/refund differences. Missing offers remain unavailable.
+## Saved odds and diagnostics
 
-Distinguish **Pinnacle raw American** from **Pinnacle fair American** after the named
-no-vig treatment. Fair odds are a derived reference, not an executable offer.
-Exact originals, probabilities, method, conditioning and clocks are inspectable
-in Details. A missing selected reference is not replaced implicitly.
+**Saved odds** opens the recorded captures available on this installation. Capture
+time governs the archived price, freshness, and applicable fee evidence.
+[Open a saved capture](development.md#frozen-replay)
 
-**EV** at `/ev` reads All comparisons and leads with the EV outcome, followed by
-ranked labeled research. Complete-state, conditional decisive and gross benchmark
-values have separate meanings. Supported older inputs appear as **Last-known**
-estimates and cannot enter current-positive results. Missing references,
-unsupported inputs, calculation failures and evaluated no-positive states remain
-distinct. Older inputs from different times do not establish a simultaneous
-historical trade.
-
-**Arbs** at `/arbs` is the stored opposing-comparison view, with Positive as its
-initial filter and separate All comparisons and rule-sensitive research.
-**Advanced Scanner** at `/scanner` ranks supported covered-outcome, conditional
-and EV opportunities globally and supports manual tickets and observed episodes.
-Its venue filters require both execution legs. Rule-sensitive hedges stay separate
-from pairs positive across every modeled state. One short material status/risk
-note remains visible; full fee and scenario reports belong in Details. A complete
-evaluated no-positive scope is a normal result; unavailable evaluation is different.
-
-Defaults are **$1,000 requested funding, one 0.5% buffer on actual deployed capital
-and Pinnacle reference**. A pair shares funding across both legs, modeled upfront
-fees and required collateral. Reduced deployment and residual funding have stated
-reasons. Actual fills, charges and grades remain unknown unless observed; fee,
-liquidity and probability models retain their labels. See the
-[financial contract](requested-trade-financial-contract.md) and
-[benchmark meaning](benchmark-ev.md).
-
-## Current Details and updates
-
-Details binds the selected game and instrument or pair to its input-dependency,
-policy and engine revisions. Original-price Details leads with the exact selected
-price and captured peer when available, native position, simple age and comparison
-meaning. Financial Details starts with exact positions and original prices, then
-the supplied metric and its complete, conditional or hypothetical meaning.
-Optional funding, quantities, reconciliation, models and technical source evidence
-remain inspectable without dominating ordinary discovery.
-
-Use a bounded transient context or explicitly report that the comparison changed,
-was removed or expired. Never silently replace the clicked selection or show new
-source ages beside old financial values. Refuse crossed/delayed responses. Ordinary
-Details uses revision-bound contexts and bounded selection leases, with no legacy
-history/envelope controls or permanent result IDs. A surviving leased frame keeps
-captured inputs inspectable across replacement while withdrawing current eligibility.
-
-Apply and Enter submit the same settings; Restore returns to calculation defaults.
-Navigation and updates preserve useful filters, settings, scroll, focus and
-disclosures. Withhold results from mismatched dependencies or policy. A source
-clock remains distinct from receipt, calculation and read time; none of those
-later clocks makes an old quote fresh.
-
-Keep bounded reads with one request in flight and no request per game. The roughly
-500-game bound uses pages of at most 50 games with a shared revision; changed
-revisions discard the partial collection. All games labels and counts describe
-the complete covered in-scope set.
-Reads and Details never acquire data or restart collection; Stop remains reachable.
-
-## Accessibility and states
-
-Use light surfaces, slate text, restrained blue actions, readable body text and
-comfortable controls at least 44px high. Preserve visible focus, wrap long names
-and financial strings, respect reduced motion and supplement color with text.
-Desktop venue columns align; 390px layouts label values without page-level clipping
-and support increased text size. Dialogs support a focus loop, Escape/Close and
-focus return to the opening row or a useful fallback. Collapsed sections do not
-leave hidden controls in the tab sequence.
-
-Common game/search filters stay visible. Optional **Details settings** uses an
-expandable disclosure for amount, buffer and reference, with Apply and Restore
-defaults. Shared discovery keeps its server policy; selected settings do not
-rerank the slate. Dashboard and EV keep settings secondary to the outcome.
-Polls preserve drafts and focus, and navigation keeps Stop available. Source
-clocks use at least 12px text while game/team names and prices carry the main
-visual hierarchy.
-
-First use offers Admin source status when no game is available. Positive empty
-states offer All comparisons. Failed reads offer Retry with a useful reason;
-pending, stopped and unavailable-saving states remain distinct. Source clocks and
-one concise material note stay on ordinary boards; quota, recovery and storage
-diagnostics belong in Admin. Sports reset is separate from protected configuration,
-credentials and provider account/quota/audit/attempt/hold records.
-
-Healthy routine status prose stays out of the price rows; actual source times
-remain beside prices and shared native limitations appear once per displayed
-slate. Empty first use shows one source-setup action. Failed reads lead with
-Retry/Admin guidance and retain technical reasons in a disclosure. Details leads
-with prices and meaning, followed by the supplied metric where available; funding,
-reconciliation, modeled outcomes and technical evidence remain inspectable.
-Opposing Details shows the supplied modeled minimum or its explicit unknown state.
-Ordinary negative results use neutral copy; material uncertainty retains caution
-styling. These presentation choices do not alter financial or protocol guards.
-
-[Development](development.md#frontend-sources) describes the readable frontend
-modules, generated public assets and verification boundaries.
-
-## Layout and interaction
-
-Scanner and Odds share navigation, 44px primary controls and visible keyboard
-focus. Scanner keeps core scope filters visible and groups optional size, edge
-and source restrictions in a disclosure whose summary names active restrictions.
-Odds groups league/game/market filters and keeps Details settings beside its
-heading. Identical shared and selected settings appear once; differing policies
-remain explicit.
-
-First use offers source setup. Pending, partial, expired, stopped and unavailable
-states stay visible; a complete checked zero can be quiet. Details uses available
-width while retaining funding, residuals, reconciliation and original clocks.
-Narrow layouts must preserve value labels, focus containment/return and readable
-long identities without horizontal page overflow. Synthetic browser fixtures test
-these interactions; they do not establish current source availability or full-scale
-performance. See [scanner usage](scanner-usage.md) for the user workflow.
-
-## Interface refinement
-
-The current Dashboard → Odds → Details journey keeps the cool light palette,
-system typography and restrained blue actions from the shared design requirements.
-Navigation and Stop use the same 44px control family on desktop and narrow screens.
-Dashboard filters remain readable; a healthy refresh does not leave a redundant
-Reload button. When positive results are unavailable, Browse available prices
-precedes the separate arbitrage/EV availability panels. Unknown is never zero.
-
-Odds groups diagnostic counts and comparison readiness under one Price coverage
-& availability disclosure. Current and last-known groups retain their own aligned
-venue headings. Original prices, native sides and source ages stay visible.
-Selected Original Inputs states comparison unavailability once, preserves the
-captured-frame reminder, and keeps complete wording, exact clocks, reasons and
-depth in Source details & observed depth. Selected sizing stays secondary in a
-full-width Details settings control with retained drafts.
-
-EV research rows explicitly place identity, metric and Details at each breakpoint;
-team names use full mobile width rather than inheriting a narrow desktop column.
-Footer links stay grouped. Existing captured selection leases preserve original
-evidence across updates; changing current inputs withdraw eligibility without
-silently replacing the selected evidence.
-
-Matched intercepted fixtures were visually reviewed at 1280px and 390px, including
-populated Odds, unavailable estimates, Original Inputs, empty and failed reads.
-Expanded conditional results, financial Details, enlarged text and long names were
-also inspected. These are presentation checks, not owner or new-user acceptance,
-current source qualification or commercial readiness.
-
-## Raw-first Odds
-
-Ordinary Odds now groups native books locally by source identity, showing native
-sides/units and separate synchronization or scheduled-refresh status. All received
-books are paged; no game selection is required. Original Inputs retains the clicked
-frame, pages depth and loads optional captured financial evidence independently.
-Pinnacle is reference-only. A complete streamed export and unqualified native-frame
-inspection are available from the view. Search/filter URL state, unchanged row
-nodes, scroll and focus are retained during polls. See [raw prices](raw-prices.md)
-for complete browser reconciliation and the remaining qualification boundaries.
-
-
-Odds uses native filter controls with a Clear filters action and marks its current
-navigation link. During a read, the price region exposes `aria-busy` and page,
-refresh and retry buttons are disabled; page navigation cannot overlap a pending
-read. Status text distinguishes an initial load failure from failed refresh with
-last-known rows. Previous page / Next page labels describe navigation explicitly,
-and Original inputs buttons include the game, venue and outcome in their accessible
-names. Filters may still change during a read; the existing generation guard
-loads the latest requested filters afterward.
+**Raw Odds** shows source-local evidence. **Scanner** uses observed depth for
+execution sizing and offers manually selected tickets. Predict does not place
+orders. **Admin** contains source, coverage, spending, Stop, and settings
+controls. **Admin → Database** is a read-only browser for working and retained
+relations. [Raw Odds](raw-prices.md) · [Scanner](scanner-usage.md) ·
+[Admin access](security.md)

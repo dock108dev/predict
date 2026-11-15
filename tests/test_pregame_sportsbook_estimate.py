@@ -41,6 +41,15 @@ def test_best_payout_uses_one_book_and_exact_unrounded_devig():
     assert datetime.fromisoformat(selected['current_until']) == START
 
 
+def test_tied_selected_price_uses_configured_book_order_and_its_opposite():
+    match = observation()
+    match['quotes'][AWAY]['fanduel'][0]['price_american'] = '+105'
+    selected = estimate(Fraction('0.4625'), {OCCURRENCE: [match]}, OCCURRENCE, AWAY, at=AT)
+    assert selected['book'] == 'fanduel'
+    assert [leg['price_american'] for leg in selected['prices']] == ['+105', '-118']
+    assert Fraction(selected['probability']) == Fraction(2180, 4599)
+
+
 def test_current_public_prophetx_price_has_the_same_exact_line_reference():
     row = dict(league='NFL', venue='prophetx',
                original=dict(value='+115', units='american_odds', payout='1', payout_units='USD'),

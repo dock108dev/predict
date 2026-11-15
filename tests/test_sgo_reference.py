@@ -72,7 +72,7 @@ def test_named_pair_and_minimum_and_self_reference():
 
 
 def test_best_native_reference_uses_highest_payout_and_same_books_other_side():
-    quotes = pair('fanduel', '+105', '-120') + pair('draftkings', '-105', '-150')
+    quotes = pair('draftkings', '+105', '-150') + pair('fanduel', '+105', '-120')
     quotes += pair('betmgm', '+106', '-280') + pair('caesars', '+103', '+190') + pair('pinnacle', '+999')
     result, witness = capture_witness(quotes, CONTRACT, at=AT, evaluated_venue='kalshi', best_payout=True)
     assert result['basis']['selected_venue'] == 'betmgm'
@@ -82,10 +82,12 @@ def test_best_native_reference_uses_highest_payout_and_same_books_other_side():
     quotes[5]['line'] = '6'
     fallback = calc(quotes, best_payout=True)
     assert fallback['basis']['selected_venue'] == 'fanduel'
+    assert Fraction(fallback['probability']) == Fraction(110, 233)
     assert fallback['exclusions']['betmgm'] == 'exact_opposing_pair_missing'
-    quotes[0]['jurisdiction'], quotes[1]['jurisdiction'] = 'US-NJ', 'US-NY'
+    quotes[2]['jurisdiction'], quotes[3]['jurisdiction'] = 'US-NJ', 'US-NY'
     fallback = calc(quotes, best_payout=True)
     assert fallback['exclusions']['fanduel'] == 'pair_jurisdiction_conflict'
+    assert fallback['basis']['selected_venue'] == 'draftkings'
 
 
 def test_shared_frame_does_not_refresh_unchanged_original_clocks():
@@ -213,7 +215,7 @@ def test_best_payout_selects_one_book_then_devigs_its_opposite():
     home['byBookmaker'] = {
         'novig': offer,
         'fanduel': dict(offer, odds='+120'),
-        'draftkings': dict(offer, odds='+110'),
+        'draftkings': dict(offer, odds='+120'),
         'betmgm': dict(offer, odds='-105'),
         'caesars': dict(offer, odds='+200', spread='-2.5'),
     }
@@ -238,7 +240,7 @@ def test_best_payout_selects_one_book_then_devigs_its_opposite():
     assert value['book'] == 'fanduel' and value['candidate_books'] == 3
     assert [leg['price_american'] for leg in value['prices']] == ['+120', '-150']
     assert {book: [leg['price_american'] for leg in pair] for book, pair in value['candidates'].items()} == {
-        'fanduel': ['+120', '-150'], 'draftkings': ['+110', '-115'], 'betmgm': ['-105', '-110']}
+        'fanduel': ['+120', '-150'], 'draftkings': ['+120', '-115'], 'betmgm': ['-105', '-110']}
     assert Fraction(value['probability']) == Fraction(25, 58)
     assert Fraction(value['return_percent']) == Fraction(100, 29)
     assert current(value, ['quote', 'contract', 'event', 'receipt:'+value['frame_id']], at=stamp(AT))

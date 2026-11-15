@@ -6,6 +6,7 @@ import tempfile
 import unittest
 
 from tests.ci_support import load
+from tests.test_ci_reporting import browser_cases
 
 
 class HealthTests(unittest.TestCase):
@@ -41,6 +42,29 @@ class HealthTests(unittest.TestCase):
 
         result = load("health").analyze([], datetime(2026, 10, 7, tzinfo=timezone.utc))
         self.assertIsNone(result["events"]["push"]["first_attempt_pass_rate"])
+
+    def test_elapsed_measurement_excludes_delayed_rerun_but_counts_recovery(self):
+        from datetime import datetime, timezone
+
+        module = load("health")
+        run = dict(
+            name="CI",
+            status="completed",
+            event="pull_request",
+            conclusion="success",
+            run_attempt=2,
+            first_attempt_conclusion="failure",
+            created_at="2026-10-06T00:00:00Z",
+            run_started_at="2026-10-06T00:00:01Z",
+            job_completed_at="2026-10-06T00:00:11Z",
+        )
+        metrics = module.analyze([run], datetime(2026, 10, 7, tzinfo=timezone.utc))
+        values = metrics["events"]["pull_request"]
+        self.assertIsNone(values["median_elapsed_seconds"])
+        self.assertEqual(values["observed_rerun_recoveries"], 1)
+        summary = module.render_summary(dict(metrics, status="PASS"))
+        self.assertIn("What was tested and why it matters", summary)
+        self.assertIn("1 / 1", summary)
 
 
 class MetricsTests(unittest.TestCase):
@@ -91,7 +115,12 @@ class RequiredGateTests(unittest.TestCase):
             )
             (root / "browser").mkdir()
             (root / "browser/junit.xml").write_text(
-                "<testsuite><testcase/></testsuite>"
+                "<testsuite>"
+                + "".join(
+                    f'<testcase classname="{group}" name="{name}"/>'
+                    for group, name in browser_cases()
+                )
+                + "</testsuite>"
             )
             self.assertFalse(
                 report.render({"browser": {"outcome": "success"}}, root, browser=True)[
@@ -163,6 +192,31 @@ class RequiredGateTests(unittest.TestCase):
                 guide.write_text("[guide](notes.md)")
                 (root / "notes.md").write_text("private notes")
                 with self.assertRaisesRegex(ValueError, "Local-only"):
+                    module.validate(root)
+
+    def test_project_docs_reject_links_to_an_ignored_local_artifact(self):
+        from subprocess import run
+        from unittest.mock import patch
+
+        module = load("docs")
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            artifact = "diagnostics.json"
+            (root / ".gitignore").write_text(f"/{artifact}\n")
+            (root / artifact).write_text("{}\n")
+            (root / "guide.md").write_text(f"[Diagnostics]({artifact})\n")
+            run(["git", "init", "-q"], cwd=root, check=True)
+            run(["git", "add", "-f", "--", artifact], cwd=root, check=True)
+
+            with patch.object(module, "DOCUMENTS", ("guide.md",)):
+                module.validate(root)
+                run(
+                    ["git", "rm", "-q", "--cached", "--", artifact],
+                    cwd=root,
+                    check=True,
+                )
+                self.assertTrue((root / artifact).is_file())
+                with self.assertRaisesRegex(ValueError, "Local-only.*diagnostics.json"):
                     module.validate(root)
 
 
