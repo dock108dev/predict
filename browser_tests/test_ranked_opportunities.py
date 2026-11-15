@@ -342,22 +342,41 @@ def test_ranked_and_browse_journey(width, tmp_path):
     from playwright.sync_api import expect, sync_playwright
 
     ev, detroit, denver, _, arbs = fixtures()
+    original_quote = detroit["offers"][0]
+    latest_quote = dict(
+        original_quote,
+        odds=dict(american="-400", decimal="1.25"),
+        cost_per_normal_claim="0.80",
+        price_revision="pmus-detroit-latest-price",
+        economic_revision="pmus-detroit-latest-economics",
+        evidence_result_id="pmus-detroit-latest-capture",
+    )
+    revised_quote = dict(
+        latest_quote,
+        trade_fee=dict(latest_quote["trade_fee"], trade_fee_usd="0.02"),
+        economic_revision="pmus-detroit-revised-economics",
+        evidence_result_id="pmus-detroit-revised-capture",
+    )
+    detroit_evidence = {
+        offer["evidence_result_id"]: offer
+        for offer in (original_quote, latest_quote, revised_quote)
+    }
     errors = []
     provider_requests = []
     unavailable = False
     show_current_prices = False
     browse_failure = False
     hide_game_prices = False
-    replacement = "stable"
+    current_quote = latest_quote
+    change_during_adoption = False
     withdraw_selection = False
-    selection_reads = 0
     pair_replacement = "original"
     pair_reads = 0
     sized_pairs = []
     inspected = []
 
     def respond(route):
-        nonlocal selection_reads, pair_reads
+        nonlocal current_quote, pair_reads
         url = urlparse(route.request.url)
         query = {k: v[0] for k, v in parse_qs(url.query).items()}
         if url.hostname != "predict.fixture":
@@ -458,19 +477,7 @@ def test_ranked_and_browse_journey(width, tmp_path):
                 )
             )
         elif url.path == "/api/comparison-current/selection":
-            if withdraw_selection:
-                route.fulfill(json={"row": None})
-                return
-            selected = detroit["offers"][0]
-            selection_reads += 1
-            row = dict(
-                selected,
-                odds=dict(american="-400", decimal="1.25"),
-                cost_per_normal_claim="0.80",
-            )
-            if replacement == "changes" and selection_reads % 2 == 0:
-                row["economic_revision"] = "newer-economics"
-            route.fulfill(json={"row": row})
+            route.fulfill(json={"row": None if withdraw_selection else current_quote})
         elif url.path == "/api/comparison-current/lease":
             route.fulfill(json={"lease_id": "fixture"})
         elif url.path == "/api/comparison-snapshot/details":
@@ -493,12 +500,20 @@ def test_ranked_and_browse_journey(width, tmp_path):
                 if pair["id"] == query["id"]:
                     route.fulfill(json=dict(pair, offers=arb["offers"]))
                     return
-            selected = next(
-                offer
-                for row in [*ev, detroit, *denver]
-                for offer in row["offers"]
-                if offer["id"] == query["id"]
-            )
+            cost = "0.81"
+            if query["id"] == original_quote["id"]:
+                selected = detroit_evidence[query["result_id"]]
+                cost = selected["cost_per_normal_claim"]
+                # Publish the fee change after the adoption request has found exact evidence.
+                if change_during_adoption and selected is latest_quote:
+                    current_quote = revised_quote
+            else:
+                selected = next(
+                    offer
+                    for row in [*ev, detroit, *denver]
+                    for offer in row["offers"]
+                    if offer["id"] == query["id"]
+                )
             route.fulfill(
                 json=dict(
                     captured_at=START,
@@ -506,9 +521,9 @@ def test_ranked_and_browse_journey(width, tmp_path):
                     desk_offer=selected,
                     inspection=dict(
                         identity={},
-                        original=dict(value="0.81", units="usd"),
+                        original=dict(value=cost, units="usd"),
                         source={},
-                        before_fees=dict(cost_usd="0.81"),
+                        before_fees=dict(cost_usd=cost),
                         fair_reference=dict(available=False),
                     ),
                 )
@@ -622,13 +637,26 @@ def test_ranked_and_browse_journey(width, tmp_path):
                 tab.locator('[data-offer-id="kalshi-minnesota"]')
             ).not_to_contain_text("EV")
             if width == 390:
-                expect(
-                    tab.get_by_role("button", name="Scroll to see more odds columns")
-                ).to_be_visible()
-                assert tab.locator(".odds-scroll").evaluate(
-                    "(el) => el.scrollWidth > el.clientWidth"
+                matrix = tab.locator(".odds-scroll")
+                assert matrix.evaluate("el => el.scrollWidth > el.clientWidth")
+                # Opening the sportsbook popout can already scroll to the last column.
+                matrix.evaluate("el => { el.scrollLeft = el.scrollWidth; }")
+                first_columns = tab.get_by_role(
+                    "button", name="Scroll to the first odds column"
                 )
-                tab.locator(".odds-scroll").evaluate("(el) => el.scrollLeft = 120")
+                expect(first_columns).to_be_visible()
+                first_columns.click()
+                tab.wait_for_function(
+                    "document.querySelector('.odds-scroll').scrollLeft === 0"
+                )
+                more_columns = tab.get_by_role(
+                    "button", name="Scroll to see more odds columns"
+                )
+                expect(more_columns).to_be_visible()
+                more_columns.click()
+                tab.wait_for_function(
+                    "document.querySelector('.odds-scroll').scrollLeft > 0"
+                )
                 assert tab.get_by_role(
                     "rowheader", name="Denver to cover +2.5", exact=False
                 ).evaluate(
@@ -765,8 +793,16 @@ def test_ranked_and_browse_journey(width, tmp_path):
                 )
             ).to_be_visible()
 
-            replacement = "changes"
-            selection_reads = 0
+            change_during_adoption = True
+            passive_read = tab.evaluate(
+                """async id => {
+                    const query = new URLSearchParams({id, layout: 'desk', basis: 'reviewed', phase: 'pregame'});
+                    const response = await fetch(`/api/comparison-current/selection?${query}`);
+                    return (await response.json()).row.evidence_result_id;
+                }""",
+                original_quote["id"],
+            )
+            assert passive_read == latest_quote["evidence_result_id"]
             drawer.get_by_role("button", name="Use latest prices").click()
             expect(
                 drawer.get_by_text(
@@ -774,9 +810,11 @@ def test_ranked_and_browse_journey(width, tmp_path):
                 )
             ).to_be_visible()
             expect(drawer.get_by_text("$0.81 per $1 payout")).to_be_visible()
-            replacement = "stable"
             drawer.get_by_role("button", name="Use latest prices").click()
             expect(drawer.get_by_text("$0.80 per $1 payout")).to_be_visible()
+            expect(
+                drawer.locator(".inspection-tiles").get_by_text("$0.02", exact=True)
+            ).to_be_visible()
             drawer.get_by_role("button", name="Use latest prices").click()
             expect(drawer.get_by_role("status")).to_contain_text("No newer quote")
             tab.keyboard.press("Escape")
