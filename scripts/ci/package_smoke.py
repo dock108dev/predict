@@ -13,12 +13,13 @@ import time
 import zipfile
 
 
-UI_FONT_ASSETS = frozenset(
+UI_ASSETS = frozenset(
     {
         "app/dashboard/opportunity_static/current/manrope.ttf",
         "app/dashboard/opportunity_static/current/manrope-OFL.txt",
         "app/dashboard/opportunity_static/current/barlow-semi-condensed-600.ttf",
         "app/dashboard/opportunity_static/current/barlow-OFL.txt",
+        "app/dashboard/opportunity_static/current/predict-icon.png",
     }
 )
 
@@ -31,7 +32,7 @@ def validate_wheel(names, source):
         and "__pycache__" not in p.parts
         and (
             p.suffix in {".py", ".json", ".js", ".css", ".html", ".sql"}
-            or p.relative_to(source).as_posix() in UI_FONT_ASSETS
+            or p.relative_to(source).as_posix() in UI_ASSETS
             or p.suffix in {".pdf", ".txt", ".md", ".gz"}
             and source / "app/fixtures" in p.parents
         )
@@ -153,7 +154,7 @@ for name in ('index.html', 'current.js', 'arbs.html', 'arbs.js', 'admin.html', '
              'stored.css', 'ui-common.js', 'coverage-shell.js',
              'manrope.ttf', 'manrope-OFL.txt', 'barlow-semi-condensed-600.ttf',
              'barlow-OFL.txt', 'desk.html', 'desk.js', 'desk.css', 'desk-preferences.js',
-             'opportunity-cards.js'):
+             'opportunity-cards.js', 'predict-icon.png'):
     assert (root / 'opportunity_static/current' / name).is_file(), name
 assert '/env/' in str(root), root
 # Imports alone do not prove that current model evidence survived packaging.
@@ -199,6 +200,7 @@ async def smoke():
                          '/view/current/admin-database.css',
                          '/view/current/barlow-semi-condensed-600.ttf',
                          '/view/current/desk.js','/view/current/desk.css','/view/current/desk-preferences.js',
+                         '/view/current/predict-icon.png',
                          '/view/current/coverage-shell.js','/view/current/opportunity-cards.js',
                          '/current/assets/board-contract.js','/current/assets/board-values.js'):
                 async with client.get(url+path) as response:
@@ -222,7 +224,9 @@ async def smoke():
             for path in ('/', '/browse-odds', '/game?game_key=smoke'):
                 async with client.get(url+path) as response:
                     assert response.status==200,(path,response.status)
-                    assert '/view/current/desk.js' in await response.text()
+                    html = await response.text()
+                    assert '/view/current/desk.js' in html
+                    assert '/view/current/predict-icon.png' in html
             assert app[current_key].provider.__class__.__name__=='CurrentStateProvider'
     finally:
         await runner.cleanup()

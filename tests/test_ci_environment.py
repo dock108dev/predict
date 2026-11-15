@@ -474,7 +474,7 @@ class EnforcementTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     validate(names, root)
 
-    def test_package_requires_bundled_font_and_license_without_allowing_other_files(
+    def test_package_requires_bundled_font_license_and_icon_without_allowing_other_files(
         self,
     ):
         with tempfile.TemporaryDirectory() as folder:
@@ -482,11 +482,12 @@ class EnforcementTests(unittest.TestCase):
             names = [
                 "app/dashboard/opportunity_static/current/manrope.ttf",
                 "app/dashboard/opportunity_static/current/manrope-OFL.txt",
+                "app/dashboard/opportunity_static/current/predict-icon.png",
             ]
             for name in names:
                 asset = root / name
                 asset.parent.mkdir(parents=True, exist_ok=True)
-                asset.write_bytes(b"authored font or license fixture")
+                asset.write_bytes(b"authored asset fixture")
             validate = load("package_smoke").validate_wheel
             validate(names, root)
             for missing in names:
@@ -495,7 +496,7 @@ class EnforcementTests(unittest.TestCase):
                     self.assertRaisesRegex(ValueError, "Missing package inputs"),
                 ):
                     validate([name for name in names if name != missing], root)
-            for extra in ("unreviewed.ttf", "private.txt"):
+            for extra in ("unreviewed.ttf", "private.txt", "unreviewed.png"):
                 name = "app/dashboard/opportunity_static/current/" + extra
                 (root / name).write_text("not an approved package input")
                 with (
