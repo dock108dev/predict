@@ -69,24 +69,28 @@ function fairOddsCell(group, context) {
     price.append(odd(group.sportsbook_reference.fair_odds), el('small', name(group.sportsbook_reference.book)));
     markCalculationExpiry(price, context, group, group.sportsbook_reference.current_until);
     cell.append(price);
-  } else if (!entries.size) noQuote(cell, 'the EV reference');
-  if (Object.keys(group.sportsbook_quotes || {}).length) {
-    const fallback = !entries.size && context.basis === 'sportsbooks' ? group.sportsbook_reference : null;
-    const reference = selectedReference(group.offers[0], context.basis) ?? fallback;
-    const popout = el('div', null, 'matrix-sportsbook-popout');
-    popout.id = `sportsbook-prices-${group.id}`;
-    popout.setAttribute('popover', 'auto');
-    popout.setAttribute('role', 'region');
-    popout.setAttribute('aria-label', 'Sportsbook prices');
-    popout.append(el('strong', context.position(group.offers[0])),
-      sportsbookQuotes(group, reference, context.checkedAt, context.mode));
-    const trigger = el('button', 'Sportsbooks', 'opportunity-link matrix-book-trigger');
-    trigger.type = 'button';
-    trigger.setAttribute('popovertarget', popout.id);
-    trigger.setAttribute('aria-label', `Sportsbook prices for ${context.position(group.offers[0])}`);
-    cell.append(trigger, popout);
-  }
+  } else if (!entries.size) cell.append(el('small', 'Reference estimate unavailable'));
   return cell;
+}
+
+function appendSportsbookTrigger(cell, group, context) {
+  if (!Object.values(group.sportsbook_quotes || {}).some(quotes => quotes.length)) return;
+  const offer = group.offers[0];
+  const outcome = context.position(offer);
+  const reference = selectedReference(offer, context.basis)
+    ?? (context.basis === 'sportsbooks' ? group.sportsbook_reference : null);
+  const popout = el('div', null, 'matrix-sportsbook-popout');
+  popout.id = `sportsbook-prices-${group.id}`;
+  popout.setAttribute('popover', 'auto');
+  popout.setAttribute('role', 'region');
+  popout.setAttribute('aria-label', 'Sportsbook prices');
+  popout.append(el('strong', outcome),
+    sportsbookQuotes(group, reference, context.checkedAt, context.mode));
+  const trigger = el('button', 'Same-line sportsbook quotes', 'opportunity-link matrix-book-trigger');
+  trigger.type = 'button';
+  trigger.setAttribute('popovertarget', popout.id);
+  trigger.setAttribute('aria-label', `Same-line sportsbook quotes for ${outcome}`);
+  cell.append(trigger, popout);
 }
 
 function sportsbookOdds(price) {
@@ -116,8 +120,9 @@ export function quoteFreshness(offer, mode, inspection = false) {
   const codes = [...(offer.current_reasons || []), offer.reason];
   const labels = {
     sgo_charge_unresolved:'source on hold', ambiguous_dispatch_unresolved:'source on hold',
-    updates_stopped:'updates inactive', sgo_paused_or_stopped:'updates paused',
     source_expired:'quote expired', 'Price expired':'quote expired',
+    data_runtime_unhealthy:'price feed unavailable',
+    updates_stopped:'updates inactive', sgo_paused_or_stopped:'updates paused',
     input_replaced_or_removed:'quote replaced or removed', source_unknown:'source time unverified'
   };
   const status = Object.entries(labels).find(([code]) => codes.includes(code))?.[1] || 'current quote unavailable';
@@ -136,12 +141,12 @@ function sportsbookCell(group, book, reference, checkedAt, mode, inspection = fa
   for (const value of values) {
     const item = el('div');
     item.append(odd(sportsbookOdds(value)));
-    if (inspection && value.source_at) item.title = value.source_at;
+    if (value.source_at) item.title = value.source_at;
     const isReference = usesReference(value);
     if (isReference) item.classList.add('matrix-reference');
-    const label = [mode ? (value.current === false ? 'Last known at capture' : 'At capture') :
-      inspection ? priceStatus(value.current, value.source_at, checkedAt, true) :
-      value.current === false ? 'Last known' : null,
+    const label = [mode ? [value.current === false ? 'Last known at capture' : 'At capture',
+      value.source_at && quoteAge(value.source_at, checkedAt)].filter(Boolean).join(' · ') :
+      priceStatus(value.current, value.source_at, checkedAt, inspection),
       isReference && 'EV reference'].filter(Boolean).join(' · ');
     if (label) {
       const freshness = el('small', label);
@@ -247,10 +252,12 @@ function quote(offer, group, context, className = '', showResult = true) {
   const freshness = quoteFreshness(offer, context.mode);
   const calculation = reason || `${percent(offer.value)} ${basisName(context.basis) || 'return'}`;
   const description = [label, context.position(offer), offer.odds?.american].filter(Boolean).join(', ');
-  item.setAttribute('aria-label', [description, freshness, showResult && offer.current && calculation].filter(Boolean).join(', '));
+  item.setAttribute('aria-label', [description, freshness, showResult && offer.current && calculation, 'Quote details'].filter(Boolean).join(', '));
   markQuoteExpiry(item, context, group, offer, description);
   if (showResult) item.append(el('span', label, 'desk-site'));
-  item.append(odd(offer.odds));
+  const price = el('span', null, 'quote-price');
+  price.append(odd(offer.odds));
+  item.append(price);
   if (!offer.current || context.mode) {
     const status = !offer.current && context.summary && !context.mode ? 'Last known' : freshness;
     item.append(el('small', status, 'quote-freshness'));
@@ -464,7 +471,10 @@ export function arbCard(group, context, expanded) {
   } else {
     row.append(el('p', evidenceReason(net?.reason), 'desk-meta'));
   }
-  row.append(cardActions(group, context, inspectPair(best, 'View payoff calculation ↗')));
+  const pairLabel = net?.reason === 'pair_leg_stale_or_replaced' ? 'Inspect last-known legs ↗'
+    : net?.available || best.inspection || best.evidence_result_id && net?.reason !== 'pair_settlement_unverified'
+      ? 'View payoff calculation ↗' : 'Inspect pairing evidence ↗';
+  row.append(cardActions(group, context, inspectPair(best, pairLabel)));
   if (group.pairs.length > 1) {
     const detail = el('details', null, 'desk-expand');
     detail.dataset.id = group.id;
@@ -551,7 +561,8 @@ export function gameMatrix(groups, context, {includeAlternates, market, selected
 
 function appendMarketMatrix(container, visible, context, {selectedLine, includeAlternates, actions}) {
   const allOffers = visible.flatMap(group => group.offers);
-  const columns = venueColumns(allOffers, context.stableVenues);
+  const columns = venueColumns(allOffers, context.stableVenues)
+    .filter(([venue]) => !context.selectedVenues || context.selectedVenues.includes(venue));
   const table = el('table', null, 'odds-matrix');
   if (context.summary && context.stableVenues && columns.length === venues.length) {
     table.classList.add('standard-columns');
@@ -563,6 +574,7 @@ function appendMarketMatrix(container, visible, context, {selectedLine, includeA
   const outcomes = heading('Outcome');
   const fairOdds = heading('Fair odds');
   const venueHeadings = columns.map(([, label]) => heading(label));
+  venueHeadings.forEach((cell, index) => { cell.dataset.venueColumn = columns[index][0]; });
   if (context.summary) {
     thead.insertRow().append(outcomes, ...venueHeadings, fairOdds);
   } else {
@@ -575,11 +587,13 @@ function appendMarketMatrix(container, visible, context, {selectedLine, includeA
     thead.insertRow().append(...venueHeadings);
   }
   const body = table.createTBody();
+  const quotedVenues = new Set();
   for (const group of visible) {
     const lead = group.offers[0];
     const tr = body.insertRow();
     tr.dataset.groupId = group.id;
-    const side = heading(context.position(lead), 'row');
+    const side = heading(null, 'row');
+    side.append(el('span', context.position(lead), 'matrix-outcome'));
     const period = group.market.period === 'full_game' ? 'Full game' : name(group.market.period);
     if (!context.compact || group.market.period !== 'full_game') side.append(el('small', `${name(group.market.market)} · ${period}`));
     if (group.id === selectedLine) {
@@ -587,9 +601,11 @@ function appendMarketMatrix(container, visible, context, {selectedLine, includeA
       tr.setAttribute('aria-current', 'true');
     }
     if (settlementLabel(group) && !context.compact) side.append(el('small', settlementLabel(group)));
+    appendSportsbookTrigger(side, group, context);
     tr.append(side);
     const currentPayouts = group.offers.filter(offer => offer.current).map(offer => num(offer.odds?.decimal));
     const highestPayout = Math.max(...currentPayouts);
+    let hasQuote = false;
     for (const [venue] of columns) {
       const cell = tr.insertCell();
       for (const offer of group.offers.filter(candidate => venueKey(candidate) === venue
@@ -605,11 +621,18 @@ function appendMarketMatrix(container, visible, context, {selectedLine, includeA
           price.append(value);
           price.setAttribute('aria-label', `${price.getAttribute('aria-label')}, ${label} ${basisName(context.basis) || 'return'}`);
           value.dataset.quoteCalculation = '1';
+        } else if (context.summary && offer.current) {
+          const gap = el('small', 'EV unavailable', 'offer-reason');
+          gap.title = quoteReason(offer);
+          price.append(gap);
         }
         cell.append(price);
+        quotedVenues.add(venue);
+        hasQuote = true;
       }
       if (!cell.hasChildNodes()) noQuote(cell, name(venue), !context.summary && group.retained_venues?.includes(venue));
     }
+    if (!hasQuote && context.selectedVenues) side.append(el('small', 'No quote from selected sites', 'desk-meta'));
     if (context.summary) {
       tr.append(fairOddsCell(group, context));
       continue;
@@ -647,14 +670,26 @@ function appendMarketMatrix(container, visible, context, {selectedLine, includeA
     tr.append(fairOddsCell(group, context));
   }
   const scroll = scrollTable(table, 'Prediction market odds and fair odds');
+  for (const cell of venueHeadings) cell.toggleAttribute('data-has-quotes', quotedVenues.has(cell.dataset.venueColumn));
   const cue = button('More columns →', () => {
     const atEnd = scroll.scrollLeft >= scroll.scrollWidth - scroll.clientWidth - 1;
-    scroll.scrollBy({left:atEnd ? -scroll.scrollWidth : Math.round(scroll.clientWidth * .65), behavior:'smooth'});
+    const next = nextQuoteColumn(scroll);
+    const stickyWidth = outcomes.getBoundingClientRect().width;
+    const shift = next ? next.getBoundingClientRect().left - scroll.getBoundingClientRect().left - stickyWidth
+      : Math.round(scroll.clientWidth * .65);
+    const left = atEnd ? 0 : scroll.scrollLeft + shift;
+    scroll.scrollTo({left, behavior:'instant'});
   }, 'matrix-scroll-cue opportunity-link');
   cue.hidden = true;
   scroll.addEventListener('scroll', () => updateMatrixCue(scroll));
   (actions || container).append(cue);
+  if (context.summary) container.append(el('p', 'Select odds marked ↗ for quote details. A dash means no quote shown for that site and exact outcome.', 'matrix-key desk-meta'));
   container.append(scroll);
+}
+
+function nextQuoteColumn(scroll) {
+  const right = scroll.getBoundingClientRect().right;
+  return [...scroll.querySelectorAll('[data-has-quotes]')].find(cell => cell.getBoundingClientRect().right > right + 6);
 }
 
 function updateMatrixCue(scroll) {
@@ -662,8 +697,10 @@ function updateMatrixCue(scroll) {
   const extent = scroll.scrollWidth - scroll.clientWidth;
   const atEnd = scroll.scrollLeft >= extent - 1;
   cue.hidden = extent <= 1;
-  cue.textContent = atEnd ? 'First columns ←' : 'More columns →';
-  cue.setAttribute('aria-label', atEnd ? 'Scroll to the first odds column' : 'Scroll to see more odds columns');
+  const next = nextQuoteColumn(scroll);
+  cue.textContent = atEnd ? 'First columns ←' : next ? `See ${next.textContent} prices →` : 'More columns →';
+  cue.setAttribute('aria-label', atEnd ? 'Scroll to the first odds column'
+    : next ? `See ${next.textContent} prices in the next columns` : 'Scroll to see more odds columns');
 }
 
 export function updateMatrixCues(results) {

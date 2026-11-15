@@ -80,6 +80,7 @@ function restoreFocus(target) {
 }
 
 $('title').textContent = gameKey ? linkedTitle || 'Game odds' : browse ? 'Browse odds' : replay ? (arb ? 'Arbitrage' : 'Expected value') : 'Opportunities';
+document.body.classList.toggle('game-odds-view', !!gameKey);
 document.title = `Predict · ${$('title').textContent}`;
 $('stake-field').hidden = !arb || !replay;
 $('profit-field').hidden = !arb;
@@ -223,24 +224,33 @@ if (comparable) {
 }
 let marketFamily = gameKey && ['winner','spread','total'].includes(route.get('family')) ? route.get('family') : '';
 let focusSelectedLine = Boolean(requestedLine);
+let revealMarket = false;
 function marketTabs() {
-  if (!browse || !gameKey) return;
+  if (!browse) return;
   const tabs = $('market-tabs');
+  const checked = [...$('families').querySelectorAll('input:checked')];
+  const active = gameKey ? marketFamily : checked.length === 1 ? checked[0].value : checked.length === 3 ? '' : null;
   tabs.hidden = false;
-  tabs.replaceChildren(...[['','All markets'],['winner','Winners'],['spread','Spreads'],['total','Totals']].map(([family, label]) => {
+  const options = [['','All markets'], ...(gameKey ? [['winner','Winners']] : []), ['spread','Spreads'],['total','Totals']];
+  tabs.replaceChildren(...options.map(([family, label]) => {
     const tab = button(label, () => {
-      marketFamily = family;
-      focusSelectedLine = false;
-      marketTabs();
-      const current = [...tabs.children].find(item => item.getAttribute('aria-pressed') === 'true');
-      current?.focus({preventScroll:true});
-      if (state.page) render(state.page);
+      if (gameKey) {
+        marketFamily = family;
+        focusSelectedLine = false;
+        revealMarket = true;
+        restoreLocation = null;
+        marketTabs();
+        if (state.page) render(state.page);
+      } else {
+        for (const field of $('families').querySelectorAll('input')) field.checked = !family || field.value === family;
+        applyFilters();
+      }
+      [...tabs.children].find(item => item.getAttribute('aria-pressed') === 'true')?.focus({preventScroll:true});
     });
-    tab.setAttribute('aria-pressed', String(marketFamily === family));
+    tab.setAttribute('aria-pressed', String(active === family));
     return tab;
   }));
 }
-marketTabs();
 for (const [id, key, values] of [
   ['leagues', 'league', ['NBA', 'NFL', 'MLB', 'NHL', 'NCAAB', 'NCAAF']],
   ['families', 'family', ['winner', 'spread', 'total']],
@@ -289,7 +299,7 @@ function selections() {
 }
 
 const drawer = createDeskDrawer({
-  replay, dataset, retainedResult, gameKey, pageSize, captureMode:replayMode(),
+  replay, dataset, retainedResult, gameKey, pageSize, captureMode:replayMode(), clock,
   viewContext: () => ({phase, page:state.page, previousReason:state.previousReason}),
   fetchPage, matrixPositions, restoreMatrices, restoreFocus
 });
@@ -460,9 +470,8 @@ function refreshStatus() {
 function emptyResults(page, publication) {
   const empty = el('section', null, 'desk-empty');
   const actions = el('div', null, 'desk-empty-actions');
-  const runtime = publication.data_runtime;
-  const issue = !replay && collectionIssue(runtime);
   const {positive, minimum, profit} = filters.elements;
+  const search = filters.elements.search.value.trim();
   const thresholds = minimum.value || (arb && profit.value);
   const clearReturns = button('Clear return filters', () => {
     positive.checked = false;
@@ -483,9 +492,14 @@ function emptyResults(page, publication) {
   if (replay && page.state === 'initializing') {
     title = 'This saved capture is unavailable';
     actions.append(link('Browse current odds', '/browse-odds'));
-  } else if (issue) {
-    title = issue;
-    actions.append(link('Source status', '/admin?section=sources', 'desk-action'));
+  } else if (search && !page.matched_offer_count && page.state !== 'initializing') {
+    title = `No results for “${search}”`;
+    detail = 'Try another team name or matchup, or broaden your filters.';
+    actions.append(button('Clear search', () => {
+      filters.elements.search.value = '';
+      applyFilters();
+      filters.elements.search.focus();
+    }));
   } else if (page.state === 'initializing' && !publication.retained_prices) {
     title = 'Waiting for the first prices';
   } else if (comparable && browse && !gameKey) {
@@ -496,7 +510,7 @@ function emptyResults(page, publication) {
     if (!replay && page.retained_game?.lifecycle) {
       detail = evidenceReason(page.retained_game.lifecycle, 'The matchup is outside this phase of the current slate.');
     }
-  } else if (page.ranked_group_count && (positive.checked || thresholds)) {
+  } else if ((page.ranked_group_count || page.eligible_pair_count) && (positive.checked || thresholds)) {
     title = thresholds ? 'No results meet the return filters' : 'No positive results';
     actions.append(clearReturns);
   } else if (!page.calculation_reason && page.matched_offer_count === 0 && publication.current_prices
@@ -507,17 +521,18 @@ function emptyResults(page, publication) {
   } else if (arb) {
     title = 'No arbitrage calculations available';
     const reason = page.pair_status || {};
-    detail = page.calculation_reason || (reason.finance_pending ? 'An opposing pair is waiting for calculation publication.'
+    detail = page.calculation_missing?.length ? evidenceReason(page.calculation_missing, page.calculation_reason)
+      : page.calculation_reason || (reason.finance_pending ? 'An opposing pair is waiting for calculation publication.'
       : page.eligible_pair_count ? 'Current pairs are missing applicable fees or settlement evidence.'
       : page.matched_offer_count ? 'The current prices have no verified opposing pair.'
         : `No current prices are available${phase === 'live' ? ' for live games' : phase === 'pregame' ? ' for pregame markets' : ''}.`);
   } else {
     title = 'No EV estimates available';
     detail = page.calculation_missing?.length ? evidenceReason(page.calculation_missing, page.calculation_reason)
-      : page.calculation_reason;
+      : page.calculation_reason || 'No current offers have the inputs required for the selected calculation.';
     if (opportunityView && page.calculation_reason) showAlternates();
   }
-  if (opportunityView && !arb) actions.append(browsingLink('Browse odds ↗'));
+  if (opportunityView) actions.append(browsingLink('Browse odds ↗'));
   if (!replay && page.retained_game) {
     const capture = page.retained_game;
     const query = new URLSearchParams({view:'game', dataset:'retained', game_key:capture.game_key,
@@ -583,7 +598,7 @@ function render(page, keepNodes = false) {
   const games = new Map((page.games || []).map(game => [game.game_key, game]));
   const rows = page.rows || [];
   const total = page.total || 0;
-  const selectedLine = focusSelectedLine ? page.selected_line_id || requestedLine : null;
+  const selectedLine = page.selected_line_id || requestedLine;
   if (gameKey) {
     const resolved = page.selected_game_key || gameKey;
     const matchup = games.get(resolved);
@@ -601,10 +616,9 @@ function render(page, keepNodes = false) {
   const notice = [];
   if (replay && page.replay?.captured_at) notice.push(`Captured ${clock(page.replay.captured_at)}.`);
   if (!replay) {
-    if (rows.some(row => !row.withdrawn)) {
-      const issue = collectionIssue(publication.data_runtime);
-      if (issue) notice.push(`${issue}.`);
-    }
+    const issue = collectionIssue(publication.data_runtime);
+    if (issue) notice.push(`${issue}.`);
+    if (!issue && publication.state === 'failed') notice.push('Price publication is delayed.');
     if (!publication.data_runtime?.stopped) notice.push(...sourceNotices(publication));
   }
   if (state.resetReason) notice.push(state.resetReason);
@@ -620,7 +634,7 @@ function render(page, keepNodes = false) {
     }));
     content.append(withheld);
   }
-  if (selectedLine && !page.selected_line_id && !rows.some(row => row.id === selectedLine && !row.withdrawn)) {
+  if (focusSelectedLine && selectedLine && !page.selected_line_id && !rows.some(row => row.id === selectedLine && !row.withdrawn)) {
     content.append(el('p', `${linkedLine || 'The selected line'} is unavailable for this matchup in the selected view.`, 'desk-note selected-line-unavailable'));
   }
   if (browse && rows.length) {
@@ -629,6 +643,7 @@ function render(page, keepNodes = false) {
     for (const [key, matrixGroup] of groups) {
       const first = matrixGroup[0];
       const context = cardContext(games, !gameKey && first.game_title);
+      context.selectedVenues = page.selected_venues;
       context.position = offer => position(offer, games.get(first.game_key));
       const id = `odds:${key}`;
       const disclosure = compactGames ? {id, open:disclosures.get(id) ?? key === groups.keys().next().value} : null;
@@ -678,6 +693,12 @@ function render(page, keepNodes = false) {
   $('previous').disabled = state.offset === 0;
   $('next').disabled = state.offset + shown >= total;
   $('previous').parentElement.hidden = !!gameKey || !total;
+  if (revealMarket && page.state !== 'initializing') {
+    const first = results.querySelector('.odds-matrix tbody tr, .matrix-empty, .desk-empty');
+    const bottom = first?.getBoundingClientRect().bottom;
+    if (bottom > innerHeight - 12) window.scrollBy({top:bottom - innerHeight + 12, behavior:'instant'});
+    revealMarket = false;
+  }
 }
 
 if (opportunityView) {
@@ -820,7 +841,7 @@ function expireResultValues() {
   const anchor = scrollY ? visibleAnchor() : null;
   for (const value of oldCalculations) {
     value.setAttribute('data-expired-calculation', '');
-    if (value.dataset.quoteCalculation) {
+    if (value.dataset.quoteCalculation && value.parentElement.dataset.quoteDescription) {
       const price = value.parentElement;
       price.setAttribute('aria-label', `${price.dataset.quoteDescription}, Calculation expired`);
     }
@@ -895,7 +916,7 @@ function resultSignature(page) {
   const {data_runtime:runtime = {}, sources} = page.publication || {};
   return JSON.stringify([stripReadClock(page.rows), page.games, page.retained_game,
     page.total, page.page_count, page.offset, page.pair_status, page.calculation_reason, page.calculation_missing,
-    page.state, page.basis, page.phase, page.anchor_state, page.selected_line_id, page.selected_game_key,
+    page.state, page.basis, page.phase, page.anchor_state, page.selected_line_id, page.selected_game_key, page.selected_venues,
     page.ranked_group_count, page.matched_offer_count, runtime.stopped, runtime.healthy, runtime.reason, runtime.paused_sources,
     Object.values(sources || {}).map(source => [source.state, source.reason_code])]);
 }
@@ -1080,6 +1101,7 @@ function activeFilters() {
 let debounce;
 function applyFilters() {
   activeFilters();
+  if (!gameKey) marketTabs();
   validateTimeWindow();
   refreshStatus();
   clearTimeout(debounce);
@@ -1118,6 +1140,7 @@ $('reset').onclick = () => {
   applyFilters();
 };
 activeFilters();
+marketTabs();
 validateTimeWindow();
 $('refresh-list').onclick = () => {
   if ($('refresh-list').getAttribute('aria-disabled') === 'true') return;

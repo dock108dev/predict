@@ -275,6 +275,7 @@ dialog::backdrop { background: #101b3180; }
 .pair-sizing p:empty { display: none; }
 .inspection-matchup { color: var(--muted); font-size: .9rem; font-weight: 600; margin: 0 0 .65rem; overflow-wrap: anywhere; }
 .inspection-mode { font-size: .82rem; color: var(--muted); }
+.inspection-win-example { margin: .35rem 0 .65rem; font-weight: 600; }
 .inspection-tiles { margin: 0 0 .85rem; background: var(--soft); border: 1px solid var(--rule); border-radius: 10px; padding: .8rem .85rem; }
 .inspection-primary, .inspection-supporting, .inspection-reference-prices { display: grid; gap: .65rem .9rem; margin: 0; }
 .inspection-primary { grid-template-columns: repeat(auto-fit, minmax(min(100%, 8.5rem), 1fr)); align-items: start; }
@@ -420,6 +421,11 @@ dialog::backdrop { background: #101b3180; }
 }
 .desk-path { margin: 0 0 .45rem; font-size: .85rem; }
 .desk-path a { color: var(--muted); }
+.game-odds-view .desk-path {
+  position: sticky; top: 0; z-index: 3; width: fit-content;
+  background: var(--paper); border-radius: 7px;
+}
+.game-odds-view .desk-path a { display: inline-grid; align-items: center; min-height: 44px; padding: 0 .65rem; }
 .opportunity-card { padding: .9rem 1rem; margin-bottom: .75rem; }
 .opportunity-card :focus-visible, .odds-matrix :focus-visible { outline-offset: -2px; }
 .opportunity-card-header { display: flex; justify-content: space-between; align-items: start; gap: .75rem; }
@@ -496,6 +502,9 @@ dialog::backdrop { background: #101b3180; }
 .odds-card { container-type: inline-size; }
 .matrix-scroll-cue { display: block; min-height: 44px; padding: 0 .85rem; margin-inline-start: auto; }
 .missing-quote { color: var(--muted); font-size: .82rem; }
+.matrix-key { margin: .15rem .85rem .4rem; }
+.quote-price { display: inline-flex; align-items: baseline; justify-content: center; gap: .18rem; }
+.quote-price::after { content: '↗' / ''; color: var(--accent); font-size: .72rem; }
 .opportunity-link:disabled { opacity: .55; cursor: default; }
 .odds-matrix { border-spacing: 0; border-collapse: separate; width: 100%; text-align: center; font-size: .85rem; }
 .odds-matrix.standard-columns { table-layout: fixed; min-width: 42rem; }
@@ -520,7 +529,10 @@ dialog::backdrop { background: #101b3180; }
 .matrix-fair-odds .p-odds { font-weight: 650; }
 .matrix-fair-odds small { color: var(--muted); }
 .matrix-fair-odds > div + div { margin-top: .4rem; }
-.odds-matrix .matrix-book-trigger { display: block; margin: .15rem auto 0; font-size: .78rem; }
+.odds-matrix .matrix-book-trigger {
+  display: block; min-height: 2.75rem; margin: .1rem 0 0; padding: 0;
+  font-size: .78rem; text-align: start; white-space: normal;
+}
 .matrix-sportsbook-popout {
   box-sizing: border-box; width: min(29rem, calc(100vw - 2rem)); padding: 1rem;
   color: var(--ink); background: var(--paper); border: 1px solid var(--rule);

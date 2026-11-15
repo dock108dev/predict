@@ -17,7 +17,10 @@ from .desk_sportsbooks import add_sgo_prices as add_sgo_prices
 from .desk_sportsbooks import sportsbook_selection as sportsbook_selection
 from .local_security import PublicRequestError
 from .product_finance import EV_UNQUALIFIED, effective_quote, qualified_ev, reference_allowed, visible_publication, visible_row
-from .snapshot_display import comparison_groups, decimal, desk_game_aliases, odds, outcome_id, outcome_key, ranking_value, search_index
+from .snapshot_display import (
+    comparison_groups, decimal, desk_game_aliases, matchup_search, odds, outcome_id, outcome_key, ranking_value,
+    search_index, search_parts,
+)
 from .u0_display import quote_display
 
 
@@ -381,7 +384,8 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
          event_facts=None):
     view, _, offset, limit = options
     zone, day, minimum, dollars, stake = filters(query)
-    terms = query.get('search', '').casefold().split()
+    search_query = search_parts(query.get('search', ''))
+    terms = search_query[0]
     browse = query.get('browse_odds') == '1'
     ranked = query.get('ranked') == '1'
     comparable = query.get('lines') in ('main', 'all') and view != 'arbs' and (browse or ranked)
@@ -409,15 +413,18 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
     phase_rows = [row for row in result['rows'] if phase_matches(row, phase, read_at)
                   and (query.get('layout') != 'desk' or direct_venue_offer(row))]
     games = {g['game_key']: g for g in result.get('games', [])}
-    search = search_index(result) if terms else {}
+    search = search_index(result) if terms and len(search_query) == 1 else {}
+    search_games = {}
     if pregame_desk and view != 'arbs' and (aliases := desk_game_aliases(phase_rows, games, event_facts)):
         game_key = aliases.get(game_key, game_key)
         if query.get('locate_game') in aliases:
             query = dict(query, locate_game=aliases[query['locate_game']])
         linked_outcomes = {name: query[name] for name in ('line', 'locate') if query.get(name)}
         for alias, canonical in aliases.items():
-            if terms:
+            if search:
                 search[canonical] = ' '.join((search.get(canonical, ''), search.get(alias, '')))
+            if len(search_query) == 2 and alias in games:
+                search_games.setdefault(canonical, []).append(games[alias])
         for index, row in enumerate(phase_rows):
             if (canonical := aliases.get(row['game_key'])):
                 display = dict(row, game_key=canonical)
@@ -443,6 +450,13 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
         if len(replacement) == 1:
             game_key, = replacement
 
+    def matches_search(row):
+        key, title = row['game_key'], row['game_title']
+        if len(search_query) == 1:
+            return all(term in (title.casefold() + ' ' + search.get(key, '')) for term in terms)
+        return any(matchup_search(search_query, game, title)
+                   for game in (games.get(key, {}), *search_games.get(key, ())))
+
     def matches(row):
         market = row['market']
         local = datetime.fromisoformat(row['start_at']).astimezone(zone) if (
@@ -454,7 +468,7 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
                 and (not query.get('time_from') or local.time()>=time.fromisoformat(query['time_from']))
                 and (not query.get('time_to') or local.time()<time.fromisoformat(query['time_to']))
                 and (phase or not query.get('game_state') or row.get('game_state','unknown')==query['game_state'])
-                and all(term in (row['game_title'].casefold() + ' ' + search.get(row['game_key'], '')) for term in terms))
+                and matches_search(row))
 
     def passes(value, payoff=None):
         profit = (Fraction(payoff['minimum_net_profit_usd']) if payoff and payoff['available']
@@ -500,6 +514,7 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
                 and not r.get('price_current') and (not venues or r['venue'] in venues)
                 and direct_venue_offer(r))
         blocker_counts = {}
+        eligible_pair_count = 0
         for pair in captured_pairs:
             proof = pair.get('before_fees')
             if not proof or not all(leg in scoped_legs for leg in pair['legs']):
@@ -523,6 +538,7 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
                             expanded[leg['id']] = expand_row(leg)
                     payoff = current_payoff(pair, [expanded[leg] for leg in pair['legs']], stake)
             score = Fraction(payoff['score']) if payoff['score'] is not None else None
+            eligible_pair_count += score is not None
             if reason := payoff['retail_payoff'].get('reason'):
                 blocker_counts[reason] = blocker_counts.get(reason, 0) + 1
             if not passes(score, payoff['retail_payoff']):
@@ -549,7 +565,6 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
                                score=None if first['score'] is None else str(first['score'])))
         groups.sort(key=lambda g: (g['score'] is None, -Fraction(g['score']) if g['score'] is not None else 0,
                                    g['start_at'], g['id']))
-        eligible_pair_count = sum(pair['score'] is not None for pairs in markets.values() for pair in pairs)
         pending_pairs = blocker_counts.get('pair_fee_publication_pending', 0)
         expired_pairs = blocker_counts.get('pair_leg_stale_or_replaced', 0)
         pair_status = dict(finance_pending=pending_pairs, stale_or_replaced_legs=expired_pairs,
@@ -557,10 +572,11 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
                            if query.get('positive') or minimum is not None or dollars is not None else 0)
         if pending_pairs:
             calculation_reason = 'An opposing pair is waiting for calculation publication.'
-        elif blocker_counts and not eligible_pair_count:
-            calculation_reason = 'Some opposing prices lack the evidence needed for a payoff.'
-        elif expired_pairs:
+        elif expired_pairs and len(blocker_counts) == 1:
             calculation_reason = 'A previously matched pair lost a current leg.'
+        elif blocker_counts and not eligible_pair_count:
+            calculation_missing = sorted(blocker_counts)
+            calculation_reason = 'Some opposing prices lack the evidence needed for a payoff.'
         elif any(row.get('price_current') for row in selected_rows):
             calculation_reason = 'No verified opposing pair has two current prices.'
     else:
@@ -573,8 +589,10 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
         candidates = comparison_groups(rows if show_complete_outcomes else selected_rows,
                                        by_id, metric, current=True, individual=query.get('group') == 'offer',
                                        qualified=True, score_row=rank_row if ranked else None)
-        groups = [group for group in candidates if not venues or any(
-            row['venue'] in venues for row in group['quotes'])]
+        # Browse chooses the main line from every venue. The site filter may
+        # leave that outcome without a price, but cannot nominate a new line.
+        groups = candidates if browse and comparable else [
+            group for group in candidates if not venues or any(row['venue'] in venues for row in group['quotes'])]
         if not show_complete_outcomes:
             rows = selected_rows
     matched_outcome_count = len(groups)
@@ -705,6 +723,9 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
             qualified.update(group['id'] for group in candidates
                              if quote_places(group, retained=True) & NATIVE_VENUES)
         groups = [group for group in groups if group['id'] in qualified]
+        if browse and venues and query['lines'] == 'all':
+            groups = [group for group in groups if group['id'] == query.get('line')
+                      or any(row['venue'] in venues for row in group['quotes'])]
     ranked_group_count = sum(g['score'] is not None for g in groups)
     if ranked and view != 'arbs' and not ranked_group_count and selected_rows:
         current_rows = [row for row in selected_rows if row.get('price_current')]
@@ -819,6 +840,7 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
                 page_count=len(selected), anchor_state=anchor_state,
                 games=[g for key, g in games.items() if key in keys],
                 selected_game_key=game_key if browse else None, selected_line_id=selected_line,
+                **({'selected_venues': sorted(venues)} if browse and comparable and venues else {}),
                 **({'retained_game': retained_game} if retained_game else {}),
                 publication=visible_publication(result['publication']), basis=basis, phase=phase, coverage=coverage,
                 retained_fallback=bool(retained_fallback), limited_coverage=limited_coverage,

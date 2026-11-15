@@ -1610,7 +1610,13 @@ class NativeWorker:
                         else:
                             if self.subscription_lock.locked():
                                 self.metrics['priority_rotation_catalog_waits']=self.metrics.get('priority_rotation_catalog_waits',0)+1
-                                rotate_at=time.monotonic()+.25
+                                if kickoff_due:
+                                    # A passed wall-clock boundary stays due even
+                                    # after moving the monotonic rotation deadline.
+                                    # Let catalog adoption finish before retrying.
+                                    await asyncio.sleep(.25)
+                                else:
+                                    rotate_at=time.monotonic()+.25
                                 continue
                             stage='priority_rotation'
                             async with self.subscription_lock:

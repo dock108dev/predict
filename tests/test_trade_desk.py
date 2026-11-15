@@ -409,9 +409,36 @@ class TradeDesk(TestCase):
             dict(id='NHL:CAR', name='Hurricanes'), dict(id='NHL:SEA', name='Kraken'),
         ])]
         options = ('ev', None, 0, 25)
-        for search in ('Carolina Seattle', 'Hurricanes Kraken'):
+        for search in ('Carolina Seattle', 'Hurricanes Kraken', 'Hurricanes vs Kraken',
+                       'Carolina Hurricanes vs. Seattle Kraken', 'Kraken@Hurricanes'):
             self.assertEqual(page(data, {'search': search}, options)['matched_offer_count'], 1)
-        self.assertEqual(page(data, {'search': 'Boston Seattle'}, options)['matched_offer_count'], 0)
+        for search in ('Boston Seattle', 'Boston vs Seattle', 'Carolina vs Hurricanes'):
+            self.assertEqual(page(data, {'search': search}, options)['matched_offer_count'], 0)
+
+    def test_browse_site_filter_keeps_main_and_linked_exact_outcomes(self):
+        main = [dict(quote(venue, venue), game_state='scheduled')
+                for venue in ('novig', 'prophetx')]
+        alternate = dict(quote('alt', 'kalshi'), game_state='scheduled', alternate=True,
+                         market=dict(market='spread', period='full_game', line='9.5'),
+                         selection=dict(participant='home', predicate='cover', signed_line='9.5'))
+        data = result(*main, alternate)
+        data['publication']['read_at'] = '2026-11-08T00:00:00Z'
+        query = dict(layout='desk', browse_odds='1', summary='1', lines='main')
+        options = ('ev', None, 0, 12)
+
+        original, = page(data, query, options)['rows']
+        filtered = page(data, dict(query, venue='kalshi,polymarket_us'), options)
+        same, = filtered['rows']
+        self.assertEqual(same['id'], original['id'])
+        self.assertEqual(same['offers'][0]['selection']['signed_line'], '-2.5')
+        self.assertEqual(filtered['selected_venues'], ['kalshi', 'polymarket_us'])
+        self.assertTrue(set(filtered['selected_venues']).isdisjoint(offer['venue'] for offer in same['offers']))
+        alternates = page(data, dict(query, venue='kalshi', lines='all', game_key='game'), options)
+        exact, = alternates['rows']
+        self.assertEqual(exact['offers'][0]['selection']['signed_line'], '9.5')
+        linked = page(data, dict(query, venue='polymarket_us', game_key='game', line=exact['id']), options)
+        self.assertEqual(linked['selected_line_id'], exact['id'])
+        self.assertEqual({row['id'] for row in linked['rows']}, {original['id'], exact['id']})
 
     def test_empty_filter_and_unavailable_rank_have_distinct_pre_threshold_counts(self):
         options = ('ev', 'gross_return_percent', 0, 25)
@@ -617,8 +644,10 @@ class TradeDesk(TestCase):
                     captured_pairs=pairs, policy='policy')
         self.assertEqual([p['value'] for p in view['rows'][0]['pairs']], ['10'])
         self.assertEqual(Fraction(view['rows'][0]['score']), Fraction(900, 101))
-        self.assertEqual(page(result(a, b, c, d), {'positive': 'on', 'profit': '10'}, options,
-                              captured_pairs=pairs, policy='policy')['total'], 0)
+        excluded = page(result(a, b, c, d), {'positive': 'on', 'profit': '10'}, options,
+                        captured_pairs=pairs, policy='policy')
+        self.assertEqual(excluded['total'], 0)
+        self.assertEqual(excluded['eligible_pair_count'], 2)
         a['price_current'] = False
         filtered = page(result(a, b, c, d), {'positive': 'on'}, options,
                         captured_pairs=pairs, policy='policy')

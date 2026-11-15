@@ -105,7 +105,18 @@ async function check() {
   aggregateEvidence.inspection.settlement = {scoring:{},outcomes:[],wording:[],fictional:false};
   const aggregate = tradeInspection(commission, group, aggregateEvidence, {position:'Fixture'});
   assert.match(aggregate.textContent, /Illustrative outcomes · contract rules unverified/);
-  assert.doesNotMatch(aggregate.textContent, /venue formula/);
+  assert.match(aggregate.querySelector('.inspection-win-example').textContent, /\$25\.00 total.*\$15\.00 profit before fees/);
+  assert.match(aggregate.textContent, /Recorded fee policyFormulavenue formulavenue scope/);
+  const novigEvidence = structuredClone(aggregateEvidence);
+  novigEvidence.inspection.starting_fee_terms = {values:[['Recorded pregame fee','$0.00 per $1 claim']],
+    scope:'Eligible pregame straight trades.'};
+  const novig = tradeInspection({...commission, venue:'novig', cost_per_normal_claim:'13/20',
+    odds:{american:'-185.71', decimal:'20/13'},
+    trade_fee:{available:false, reason:'sgo_native_pregame_fee_terms_unverified'}},
+  group, novigEvidence, {position:'Los Angeles Lakers to win'});
+  assert.match(novig.querySelector('.inspection-win-example').textContent, /\$15\.38 total.*\$5\.38 profit before fees/);
+  assert.match(novig.querySelector('.inspection-tiles').textContent, /Trading feeUnavailableNovig did not supply applicable pregame fee terms/);
+  assert.match(novig.textContent, /Recorded fee policyRecorded pregame fee\$0\.00 per \$1 claimEligible pregame straight trades/);
   aggregateEvidence.row.sgo_native_contract = {available:true, phase_verified:false,
     market_id:'novig-market', outcome_id:'novig-outcome', settlement:{available:true,
       extra_innings:'included', equality:'void_without_official_winner',

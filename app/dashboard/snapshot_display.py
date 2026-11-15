@@ -3,6 +3,7 @@ from collections import defaultdict
 from decimal import Decimal, localcontext
 from fractions import Fraction
 from functools import lru_cache
+import re
 from app.comparison.display_identity import outcome_key as outcome_key
 from app.storage.store import stamp
 from .u0_display import quote_display
@@ -78,21 +79,50 @@ def presented(row, by_id=None):
     return out
 
 
-def search_index(result):
+MATCHUP_SEPARATOR = re.compile(r'\s+vs\.?\s+|\s*@\s*', re.IGNORECASE)
+SEARCH_WORD = re.compile(r'[^\W_]+')
+
+
+def search_parts(value):
+    text = value.casefold().strip()
+    sides = MATCHUP_SEPARATOR.split(text, maxsplit=1)
+    if len(sides) == 2 and all(words := tuple(tuple(SEARCH_WORD.findall(side)) for side in sides)):
+        return words
+    return (tuple(text.split()),)
+
+
+def participant_search(game):
     from app.normalization.registry import Registry
 
     entities = Registry.current().entities
+    for participant in game.get('participants', []):
+        identifier = participant.get('id', '')
+        terms = [str(identifier), str(participant.get('name', ''))]
+        team = entities.get(identifier, {})
+        if team.get('kind') == 'team' and team.get('league') == game.get('league'):
+            terms.append(team['name'])
+        yield ' '.join(terms).casefold()
+
+
+def search_index(result):
     index = {}
     for game in result.get('games', []):
-        terms = [game.get('title', '')]
-        for participant in game.get('participants', []):
-            identifier = participant.get('id', '')
-            terms.extend((str(identifier), str(participant.get('name', ''))))
-            team = entities.get(identifier, {})
-            if team.get('kind') == 'team' and team.get('league') == game.get('league'):
-                terms.append(team['name'])
-        index[game['game_key']] = ' '.join(terms).casefold()
+        index[game['game_key']] = ' '.join((game.get('title', '').casefold(), *participant_search(game)))
     return index
+
+
+def matchup_search(parts, game, title):
+    left, right = parts
+    participants = tuple(participant_search(game))
+    for sides in (participants, MATCHUP_SEPARATOR.split(title.casefold(), maxsplit=1),
+                  MATCHUP_SEPARATOR.split(game.get('title', '').casefold(), maxsplit=1)):
+        if len(sides) != 2 or sides[0] == sides[1]:
+            continue
+        first, second = (set(SEARCH_WORD.findall(side)) for side in sides)
+        if (first.issuperset(left) and second.issuperset(right)
+                or first.issuperset(right) and second.issuperset(left)):
+            return True
+    return False
 
 
 def desk_game_aliases(rows, games, event_facts):

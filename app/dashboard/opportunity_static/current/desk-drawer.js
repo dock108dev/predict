@@ -21,9 +21,20 @@ export function position(offer, game) {
   }
 }
 
+function sameOffer(previous, next) {
+  if (!previous || !next || previous.venue !== next.venue) return false;
+  const sameKey = previous.desk_quote_key ? previous.desk_quote_key === next.desk_quote_key : previous.id === next.id;
+  const exact = offer => {
+    const selection = offer.selection || {};
+    const {market, period, line} = offer.market;
+    return JSON.stringify([market, period, selection.participant, selection.predicate, num(selection.signed_line ?? line)]);
+  };
+  return sameKey && exact(previous) === exact(next);
+}
+
 // Keep a selected capture, its dialog history, and its evidence lease together.
 export function createDeskDrawer({replay, dataset, retainedResult, gameKey, pageSize, captureMode,
-  viewContext, fetchPage, matrixPositions, restoreMatrices, restoreFocus}) {
+  clock, viewContext, fetchPage, matrixPositions, restoreMatrices, restoreFocus}) {
   const $ = id => document.getElementById(id);
   const dialog = $('trade');
   const filters = $('filters');
@@ -33,7 +44,11 @@ export function createDeskDrawer({replay, dataset, retainedResult, gameKey, page
     const {offer, group, game, evidence, pairContext} = currentSelection;
     const label = position(offer, game);
     $('trade-title').textContent = `${name(offer.venue)} · ${label}`;
-    const mode = currentSelection.historical ? 'Saved capture · prices at inspection time' : captureMode;
+    const capturedAt = evidence?.captured_at || offer.captured_at || currentSelection.capturedAt;
+    const mode = currentSelection.historical || replay
+      ? [currentSelection.historical ? 'Saved capture' : captureMode, capturedAt && `Captured ${clock(capturedAt)}`]
+        .filter(Boolean).join(' · ')
+      : captureMode;
     const leg = pairContext?.pair.legs.indexOf(offer.id);
     const pairFee = pairContext?.pair.retail_payoff?.legs?.[leg];
     const pairAcquisition = pairFee?.acquisition_usd ?? pairContext?.pair.inspection?.legs[leg]?.allocation_usd;
@@ -63,7 +78,7 @@ export function createDeskDrawer({replay, dataset, retainedResult, gameKey, page
     currentSelection = {offer, group, game, opener, pairContext,
       basis:page?.basis || filters.elements.basis.value,
       checkedAt:previous ? Date.parse(page?.publication?.read_at) || Date.now() : Date.now(),
-      pinned:previous, publication:pairContext?.publication ?? page?.publication};
+      pinned:previous, publication:pairContext?.publication ?? page?.publication, capturedAt:page?.replay?.captured_at};
     if (parent) {
       currentSelection.parent = parent;
       if (inspection) pushInspection(2);
@@ -99,7 +114,9 @@ export function createDeskDrawer({replay, dataset, retainedResult, gameKey, page
   function openPair(pair, offers, group, game, opener = document.activeElement) {
     releaseEvidence(currentSelection?.lease);
     releaseEvidence(currentSelection?.pairContext?.lease);
-    const context = {pair, publishedPair:pair, offers, group, game, opener, publication:viewContext().page?.publication};
+    const {page} = viewContext();
+    const context = {pair, publishedPair:pair, offers, group, game, opener, publication:page?.publication,
+      capturedAt:page?.replay?.captured_at};
     renderPair(context);
     if (!dialog.open) {
       pushInspection(1);
@@ -146,8 +163,8 @@ export function createDeskDrawer({replay, dataset, retainedResult, gameKey, page
       renderPair(context);
     } catch {
       if (dialog.open && currentSelection === context) {
-        $('trade-body').replaceChildren(el('p', 'This calculation could not be loaded.'));
-        $('latest').hidden = false;
+        context.detailsUnavailable = true;
+        renderPair(context);
       }
     }
   }
@@ -157,19 +174,21 @@ export function createDeskDrawer({replay, dataset, retainedResult, gameKey, page
     currentSelection = context;
     $('trade-title').textContent = 'Pair payoff';
     $('trade-note').textContent = '';
-    $('latest').hidden = replay || !pair.inspection;
+    $('latest').hidden = replay;
     $('back-to-pair').hidden = true;
     const customSizing = !replay && pair.inspection && pair.evidence_result_id
       && pair.retail_payoff?.reason !== 'pair_fee_publication_pending';
-    const mode = context.requestedStake ? 'Sized from the captured prices and fees' : captureMode;
+    const mode = context.requestedStake ? 'Sized from the captured prices and fees'
+      : [captureMode, context.capturedAt && `Captured ${clock(context.capturedAt)}`].filter(Boolean).join(' · ');
     const body = $('trade-body');
-    if (!pair.inspection && !replay && pair.evidence_result_id
-        && !['pair_leg_stale_or_replaced', 'pair_settlement_unverified'].includes(pair.retail_payoff?.reason)) {
-      body.replaceChildren(el('p', 'Loading the calculation…', 'desk-meta'));
-      return;
-    }
     body.replaceChildren(pairInspection(pair, offers, {group, game, position, mode,
       inspect: (offer, opener) => openTrade(offer, group, game, context, opener)}));
+    if (!pair.inspection && !replay && pair.evidence_result_id
+        && !['pair_leg_stale_or_replaced', 'pair_settlement_unverified'].includes(pair.retail_payoff?.reason)) {
+      const message = context.detailsUnavailable
+        ? 'The calculation could not be loaded. The captured legs are shown.' : 'Loading the captured calculation…';
+      $('trade-note').textContent = message;
+    }
     if (customSizing) {
       const form = el('form', null, 'pair-sizing');
       const label = Object.assign(el('label', 'Total stake before fees ($)'), {htmlFor:'pair-stake-amount'});
@@ -370,9 +389,13 @@ export function createDeskDrawer({replay, dataset, retainedResult, gameKey, page
       query.set('offset', offset);
       const page = await fetchPage(query);
       const group = page.rows?.find(row => row.id === selection.group.id);
-      const pair = group?.pairs.find(item => [...item.legs].sort().join('\u001f') === ids && item.retail_payoff?.available);
-      if (pair) return {pair, publishedPair:pair, group, offers:new Map(group.offers.map(offer => [offer.id, offer])),
-        game:page.games?.find(item => item.game_key === group.game_key)};
+      if (group) {
+        const offers = new Map(group.offers.map(offer => [offer.id, offer]));
+        const pair = group.pairs.find(item => [...item.legs].sort().join('\u001f') === ids && item.retail_payoff?.available
+          && item.legs.every(id => sameOffer(selection.offers.get(id), offers.get(id))));
+        if (pair) return {pair, publishedPair:pair, group, offers,
+          game:page.games?.find(item => item.game_key === group.game_key)};
+      }
       if (group || !page.total || offset + pageSize >= page.total) return null;
       if (page.browse_id) query.set('browse_id', page.browse_id);
     }
@@ -384,7 +407,7 @@ export function createDeskDrawer({replay, dataset, retainedResult, gameKey, page
     if (!next) {
       adoptionNotice(selection, viewContext().phase === 'pregame' && Date.parse(selection.group.start_at) <= Date.now()
         ? 'Scheduled start passed. The pregame pair remains pinned.'
-        : 'These legs no longer have a current modeled payoff. The earlier calculation is still pinned.');
+        : 'A current modeled payoff for these exact legs is unavailable. The earlier capture remains pinned.');
       return;
     }
     const confirmed = await readPair(selection);
@@ -420,6 +443,22 @@ export function createDeskDrawer({replay, dataset, retainedResult, gameKey, page
     if (selection.offer) pinSelectionStatus(selection);
   }
 
+  function unavailableQuote(selection, reason) {
+    if (viewContext().phase === 'pregame' && Date.parse(selection.group.start_at) <= Date.now()) {
+      return 'Scheduled start passed. The pregame capture remains pinned.';
+    }
+    return `${evidenceReason(reason, 'No current replacement for this exact quote.')} The earlier capture remains pinned.`;
+  }
+
+  function latestQuoteQuery(selection) {
+    const {offer, basis} = selection;
+    const query = new URLSearchParams({id:offer.id, layout:'desk', basis});
+    const {phase} = viewContext();
+    if (phase) query.set('phase', phase);
+    if (offer.desk_quote_key) query.set('quote_key', offer.desk_quote_key);
+    return query;
+  }
+
   function pinSelectionStatus(selection) {
     selection.pinned = true;
     markPinned($('trade-body'), selection.pinned);
@@ -445,23 +484,26 @@ export function createDeskDrawer({replay, dataset, retainedResult, gameKey, page
         await adoptPair(selection, isActive);
         return;
       }
-      const query = new URLSearchParams({id:selection.offer.id, layout:'desk', basis:selection.basis});
-      const {phase} = viewContext();
-      if (phase) query.set('phase', phase);
+      const query = latestQuoteQuery(selection);
+      let unavailable;
       const next = await pinLatestSelection({
         read: async () => {
           const response = await fetch(`/api/comparison-current/selection?${query}`);
           if (!response.ok) throw Error('Unavailable');
-          const {row} = await response.json();
-          return selection.offer.value != null && row?.value == null ? null : row;
+          const {row, reason} = await response.json();
+          unavailable = reason || row?.reason;
+          if (!row) return null;
+          if (!sameOffer(selection.offer, row)) {
+            unavailable = 'selection_exact_outcome_changed';
+            return null;
+          }
+          return selection.offer.value != null && row.value == null ? null : row;
         },
         pin: offer => pinEvidence(offer, selection.basis), release: releaseEvidence, isActive
       });
       if (!isActive()) { if (next.state === 'ready') releaseEvidence(next.lease); return; }
       if (next.state === 'unavailable') {
-        adoptionNotice(selection, viewContext().phase === 'pregame' && Date.parse(selection.group.start_at) <= Date.now()
-          ? 'Scheduled start passed. The pregame capture remains pinned.'
-          : 'No current replacement for this inspection. The earlier capture remains pinned.');
+        adoptionNotice(selection, unavailableQuote(selection, unavailable));
         return;
       }
       if (next.state === 'changed') {
@@ -509,7 +551,8 @@ export function createDeskDrawer({replay, dataset, retainedResult, gameKey, page
     const current = pair
       ? [...$('results').querySelectorAll('[data-pair-id]')].find(item => item.dataset.pairId === pair.id)
       : [...$('results').querySelectorAll(old?.opener?.dataset.calculationId ? '[data-calculation-id]' : '[data-offer-id]')]
-        .find(item => (item.dataset.calculationId ?? item.dataset.offerId) === old?.offer?.id);
+        .find(item => (item.dataset.calculationId ?? item.dataset.offerId) === old?.offer?.id
+          || old?.offer?.desk_quote_key && item.dataset.deskQuoteKey === old.offer.desk_quote_key);
     const fallback = $('refresh-list').getAttribute('aria-disabled') === 'true' ? filters.elements.search : $('refresh-list');
     const previousOpener = old?.pairContext?.opener || old?.opener;
     const opener = previousOpener?.isConnected ? previousOpener : current;
@@ -543,9 +586,7 @@ export function createDeskDrawer({replay, dataset, retainedResult, gameKey, page
             : selected.refreshMessage || '';
         return;
       }
-      const query = new URLSearchParams({id:selected.offer.id, layout:'desk', basis:selected.basis});
-      const {phase} = viewContext();
-      if (phase) query.set('phase', phase);
+      const query = latestQuoteQuery(selected);
       const response = await fetch(`/api/comparison-current/selection?${query}`);
       if (!response.ok) return;
       const {row, withdrawn_from_phase, reason} = await response.json();
@@ -558,9 +599,9 @@ export function createDeskDrawer({replay, dataset, retainedResult, gameKey, page
         pinSelectionStatus(selected);
         note = evidenceReason(reason, `This quote is no longer eligible for ${currentPhase === 'live' ? 'Live' : 'Pregame'}.`)
           + ' The inspected price remains pinned.';
-      } else if (!row?.current) {
+      } else if (!row?.current || !sameOffer(previous, row)) {
         pinSelectionStatus(selected);
-        note = `${row ? quoteFreshness(row) + '.' : 'Latest price is unavailable.'} The inspected price remains pinned.`;
+        note = unavailableQuote(selected, row?.current ? 'selection_exact_outcome_changed' : reason || row?.reason);
       }
       else if (selectionIdentity(row) !== selectionIdentity(previous)) {
         pinSelectionStatus(selected);

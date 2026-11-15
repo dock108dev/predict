@@ -19,7 +19,7 @@ def test_pregame_search_keeps_all_sources_for_exact_matching_occurrences():
     published_game = dict(game_key='saved', league='NFL', start_at=kickoff, title='N.O. vs Atlanta',
         participants=[dict(id='NFL:NO', role='home'), dict(id='NFL:ATL', role='away')])
     result = {'games': [published_game], 'rows': [dict(published_game, game_title='N.O. vs Atlanta')]}
-    games, events = pregame_search(db, result, {'search': 'Saints Atlanta'}, now)
+    games, events = pregame_search(db, result, {'search': 'Saints vs. Atlanta'}, now)
     assert games == {'saved'}
     assert events == ['aggregate', 'native']
 

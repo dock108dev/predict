@@ -6,7 +6,7 @@ from app.collection.current_policy import SPORTS
 from app.normalization.registry import Registry
 from app.storage.store import stamp
 
-from .snapshot_display import search_index
+from .snapshot_display import search_index, search_parts
 
 
 def occurrence(league, start, home, away):
@@ -22,7 +22,7 @@ def pregame_search(db, result, query, at):
     source-event titles can differ, so pool their searchable names by exact
     league, kickoff and home/away identity before excluding any candidates.
     """
-    terms = query.get('search', '').casefold().split()
+    terms = tuple(term for part in search_parts(query.get('search', '')) for term in part)
     leagues = set(query.get('league', '').split(',')) - {''}
     leagues = leagues & set(SPORTS) if leagues else set(SPORTS)
     if not terms and leagues == set(SPORTS):

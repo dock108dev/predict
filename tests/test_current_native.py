@@ -41,6 +41,61 @@ class Socket:
         await asyncio.Event().wait()
 
 class WorkerControls(unittest.IsolatedAsyncioTestCase):
+    async def test_kickoff_during_catalog_adoption_yields_before_rotating(self):
+        service = SimpleNamespace(config=deepcopy(DEFAULT), dispatch=True,
+                                  deadline=time.monotonic()+5, source_state=lambda *args: None,
+                                  issue=lambda *args: None)
+        worker = NativeWorker(service, 'kalshi')
+        worker.credential = Credential()
+        released = asyncio.Event()
+
+        class CatalogLock(asyncio.Lock):
+            def locked(self):
+                # Bound the failing case even if the stream never yields.
+                if worker.metrics.get('priority_rotation_catalog_waits', 0) > 2:
+                    raise asyncio.CancelledError()
+                return super().locked()
+
+        worker.subscription_lock = CatalogLock()
+
+        class KickoffSocket(Socket):
+            async def send(self, raw):
+                await super().send(raw)
+                await worker.subscription_lock.acquire()
+                worker.kickoff_at = time.time() - 1
+
+                def finish_catalog():
+                    worker.subscription_lock.release()
+                    released.set()
+
+                asyncio.get_running_loop().call_soon(finish_catalog)
+
+            async def recv(self):
+                await asyncio.Event().wait()
+
+        socket = KickoffSocket('kalshi', 1)
+
+        class Connector:
+            def __init__(self, *args, **kwargs):
+                pass
+
+            def __await__(self):
+                async def connected():
+                    return socket
+                return connected().__await__()
+
+        async def rotate():
+            self.assertTrue(released.is_set())
+            worker.closed = True
+            return False
+
+        with (patch('app.collection.current_native.connect', Connector),
+              patch('app.collection.current_native.call', new=AsyncMock()),
+              patch.object(worker, 'rotate_kalshi_priority', side_effect=rotate) as rotation):
+            await asyncio.wait_for(worker.stream([market()]), 2)
+        rotation.assert_awaited_once()
+        self.assertTrue(socket.closed)
+
     async def test_pregame_default_keeps_post_start_markets_out_of_roster_and_ingress(self):
         service = SimpleNamespace(config=deepcopy(DEFAULT), dispatch=True)
         worker = NativeWorker(service, 'kalshi')

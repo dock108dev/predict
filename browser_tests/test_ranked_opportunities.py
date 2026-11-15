@@ -427,8 +427,10 @@ def test_ranked_and_browse_journey(width, tmp_path):
 
     ev, detroit, denver, _, arbs = ranked_fixtures()
     original_quote = detroit["offers"][0]
+    original_quote["desk_quote_key"] = "a" * 64
     latest_quote = dict(
         original_quote,
+        id="new-desk-projection",
         odds=dict(american="-400", decimal="1.25"),
         cost_per_normal_claim="0.80",
         price_revision="pmus-detroit-latest-price",
@@ -453,6 +455,7 @@ def test_ranked_and_browse_journey(width, tmp_path):
     current_quote = latest_quote
     change_during_adoption = False
     withdraw_selection = False
+    different_line = False
     pair_replacement = "original"
     pair_reads = 0
     sized_pairs = []
@@ -555,7 +558,11 @@ def test_ranked_and_browse_journey(width, tmp_path):
                 )
             )
         elif url.path == "/api/comparison-current/selection":
-            route.fulfill(json={"row": None if withdraw_selection else current_quote})
+            row = current_quote
+            if different_line:
+                row = dict(row, market=dict(row["market"], line="206.5"),
+                           selection=dict(row["selection"], signed_line="206.5"))
+            route.fulfill(json={"row": None if withdraw_selection else row})
         elif url.path == "/api/comparison-current/lease":
             route.fulfill(json={"lease_id": "fixture"})
         elif url.path == "/api/comparison-snapshot/details":
@@ -579,7 +586,7 @@ def test_ranked_and_browse_journey(width, tmp_path):
                     route.fulfill(json=dict(pair, offers=arb["offers"]))
                     return
             cost = "0.81"
-            if query["id"] == original_quote["id"]:
+            if query["id"] in (original_quote["id"], latest_quote["id"]):
                 selected = detroit_evidence[query["result_id"]]
                 cost = selected["cost_per_normal_claim"]
                 # Publish the fee change after the adoption request has found exact evidence.
@@ -707,7 +714,7 @@ def test_ranked_and_browse_journey(width, tmp_path):
             expect(tab.locator(".odds-matrix tbody tr")).to_have_count(2)
             tab.get_by_label("Alternate lines").check()
             expect(tab.locator(".odds-matrix tbody tr")).to_have_count(5)
-            expect(tab.locator(".odds-matrix tbody th")).to_have_text(
+            expect(tab.locator(".odds-matrix .matrix-outcome")).to_have_text(
                 [
                     "Denver to cover -2.5",
                     "Minnesota to cover +2.5",
@@ -738,8 +745,8 @@ def test_ranked_and_browse_journey(width, tmp_path):
             expect(tab.get_by_role("columnheader", name="DraftKings")).to_have_count(0)
             popout = tab.get_by_role("region", name="Sportsbook prices")
             expect(popout).to_have_count(0)
-            fair.get_by_role(
-                "button", name="Sportsbook prices for Denver to cover +2.5"
+            tab.get_by_role(
+                "button", name="Same-line sportsbook quotes for Denver to cover +2.5"
             ).click()
             expect(popout).to_be_visible()
             expect(popout).to_contain_text("-108")
@@ -753,7 +760,7 @@ def test_ranked_and_browse_journey(width, tmp_path):
                 )
             expect(
                 tab.locator('[data-offer-id="kalshi-minnesota"]')
-            ).not_to_contain_text("EV")
+            ).to_contain_text("EV unavailable")
             if width == 390:
                 matrix = tab.locator(".odds-scroll")
                 assert matrix.evaluate("el => el.scrollWidth > el.clientWidth")
@@ -767,9 +774,7 @@ def test_ranked_and_browse_journey(width, tmp_path):
                 tab.wait_for_function(
                     "document.querySelector('.odds-scroll').scrollLeft === 0"
                 )
-                more_columns = tab.get_by_role(
-                    "button", name="Scroll to see more odds columns"
-                )
+                more_columns = tab.locator(".matrix-scroll-cue")
                 expect(more_columns).to_be_visible()
                 more_columns.click()
                 tab.wait_for_function(
@@ -919,6 +924,11 @@ def test_ranked_and_browse_journey(width, tmp_path):
                 )
             ).to_be_visible()
 
+            different_line = True
+            drawer.get_by_role("button", name="Use latest prices").click()
+            expect(drawer.get_by_role("status")).to_contain_text("The latest price is for a different exact outcome.")
+            expect(drawer.get_by_text("$0.81 per $1 payout")).to_be_visible()
+            different_line = False
             change_during_adoption = True
             passive_read = tab.evaluate(
                 """async id => {

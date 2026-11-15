@@ -45,17 +45,9 @@ function feeAuthority(source) {
   ];
 }
 
-function fee(title, model, startingTerms) {
+function fee(title, model) {
   model ||= {};
   const block = section(title);
-  if (startingTerms) {
-    const starting = el('div', null, 'inspection-formula');
-    starting.append(el('strong', 'Starting fee terms'), facts(startingTerms.values), el('p', startingTerms.scope));
-    if (startingTerms.in_review_window === false) {
-      starting.append(el('p', 'This capture falls outside the recorded fee review window.', 'desk-meta'));
-    }
-    block.append(starting);
-  }
   if (model.available) {
     block.append(facts([
       ['Trade fee', usd(model.trade_fee_usd)], ['Fee treatment', human(model.fee_payment || 'Upfront modeled trade fee')],
@@ -231,6 +223,8 @@ export function tradeInspection(offer, group, evidence, {mode, position, basis, 
   const result = document.createDocumentFragment();
   result.append(el('p', group.game_title, 'inspection-matchup'));
   if (mode) result.append(el('p', mode, 'inspection-mode'));
+  const payout = winPayout(offer);
+  if (payout) result.append(el('p', payout, 'inspection-win-example'));
   const sportsbook = offer.sportsbook;
   const selectedRef = (basis !== 'sportsbooks' && offer.reference_current && offer.reference_calculation) || sportsbook;
   const cost = offer.cost_per_normal_claim ?? evidence?.inspection?.before_fees?.cost_usd;
@@ -264,7 +258,11 @@ export function tradeInspection(offer, group, evidence, {mode, position, basis, 
     const feeClass = feeClasses[tradeFee.classification];
     const timing = tradeFee.fee_cashflows?.winning_settlement_usd != null ? 'if it wins' : 'at fill';
     feeReadout.append(el('small', [feeClass, timing].filter(Boolean).join(' · '), 'inspection-price-unit'));
-  } else if (tradeFee?.reason) feeReadout.append(el('small', reasons(tradeFee.reason), 'inspection-price-unit'));
+  } else {
+    const reason = tradeFee?.reason || (tradeFee?.available && 'fee_source_price_not_current')
+      || (offer.trade_fee_available === false && 'fee_outcome_not_published');
+    if (reason) feeReadout.append(el('small', reasons(reason), 'inspection-price-unit'));
+  }
   const effective = el('span', offer.effective_quote ? number(offer.effective_quote.decimal_odds) : 'Unavailable',
     offer.effective_quote ? '' : 'inspection-unavailable');
   if (!offer.effective_quote && offer.effective_reason) {
@@ -273,6 +271,14 @@ export function tradeInspection(offer, group, evidence, {mode, position, basis, 
   result.append(tiles([['Venue quote', quote], ...(!pairLeg ? [[basisName(basis) || 'Expected value', ev]] : [])], [
     ['Trading fee', feeReadout], ['Effective decimal odds', effective]
   ]));
+  const terms = evidence?.inspection?.starting_fee_terms;
+  if (terms) {
+    const policy = section('Recorded fee policy', facts(terms.values), el('p', terms.scope, 'desk-meta'));
+    if (terms.in_review_window === false) {
+      policy.append(el('p', 'This capture falls outside the recorded fee review window.', 'desk-meta'));
+    }
+    result.append(policy);
+  }
   if (pairFee?.available) {
     const modeled = pairFee.classification === 'synthetic' ? 'Fictional pairing fee' : 'Modeled pairing fee';
     const acquisition = pairAcquisition != null ? ` on ${usd(pairAcquisition)} of acquisition cost` : '';
@@ -287,7 +293,7 @@ export function tradeInspection(offer, group, evidence, {mode, position, basis, 
   } : null;
   const bookQuotes = Object.values(group.sportsbook_quotes || {}).some(quotes => quotes.length);
   if (comparison || bookQuotes || group.sportsbook_source_reason) {
-    const books = section('Sportsbooks');
+    const books = section('Same-line sportsbook quotes');
     const extra = [];
     if (comparison) {
       books.append(sportsbookReference(comparison));
@@ -420,13 +426,12 @@ export function tradeInspection(offer, group, evidence, {mode, position, basis, 
     reference.append(el('p', reasons(ref.reason || data.identity.probability_reason || data.identity.reference_reason || 'exact_reference_pair_unavailable'), 'inspection-gap'));
   }
   details.append(reference);
-  const payout = winPayout(offer);
-  details.append(section('Before-fee cashflows', ...(payout ? [el('p', payout, 'desk-meta')] : []), facts([
+  details.append(section('Before-fee cashflows', facts([
     ['Normal winning payout', usd(gross.win_receipt_usd)], ['Profit if it wins', usd(gross.win_profit_usd)],
     ['Profit if it loses', usd(gross.loss_profit_usd)], ['Expected profit per claim', usd(gross.expected_profit_usd)],
     ['Risk per claim', usd(gross.risk_usd)], ['Return on risk', percent(gross.return_percent)]
   ]), el('p', 'Expected profit = fair chance × win profit + losing chance × loss profit. Return = expected profit ÷ risk.', 'inspection-formula')),
-  fee('EV with reviewed trading fees', data.reviewed, aggregatePrice ? null : data.starting_fee_terms), fee('EV with conservative fees', data.conservative));
+  fee('EV with reviewed trading fees', data.reviewed), fee('EV with conservative fees', data.conservative));
   const model = data.assumed_scenario || {};
   const scenario = section('Full net EV');
   if (model.available) {
@@ -480,13 +485,27 @@ export function pairInspection(pair, offers, {group, game, position, inspect, mo
       const offer = offers.get(id);
       if (!offer) continue;
       const action = button(`Inspect ${name(offer.venue)} offer`, event => inspect(offer, event.currentTarget), 'desk-action');
-      const label = el('p', `${position(offer, game)} · ${offer.current ? 'Current' : 'Last known'}`);
+      const label = el('p', `${position(offer, game)} · ${quoteFreshness(offer, mode)}`);
       label.append(' ', odd(offer.odds));
       result.append(label, action);
     }
     if (scoring) result.append(scoring);
     return result;
   }
+  const decisiveReceipts = sizing?.quantity != null
+    ? math.legs.map(() => num(sizing.quantity))
+    : math.legs.map(leg => num(leg.win_receipt_usd));
+  if (decisiveReceipts.length === 2 && decisiveReceipts.every(value => Number.isFinite(value) && value > 0)) {
+    const stake = sizing ? `${usd(sizing.requested_stake_usd, 2)} budget` : `${usd(math.funding_usd, 2)} staked`;
+    result.append(section('Lowest decisive payout before fees', el('strong', `${usd(Math.min(...decisiveReceipts), 2)} on ${stake}`)));
+  }
+  const feeStatus = retail?.available
+    ? retail.fee_basis === 'conservative' ? 'After-fee payoff modeled with conservative fees.' : 'After-fee payoff modeled with applicable fees.'
+    : `After-fee payoff unavailable. ${retail?.reason === 'pair_settlement_unverified'
+      ? 'Joint settlement cashflows are missing.' : reasons(retail?.reason)}`;
+  const jointStatus = retail?.full_arbitrage_qualified ? 'Joint settlement verified.'
+    : 'Full joint settlement unverified for outcomes such as voids, cancellations and postponed games.';
+  result.append(el('p', `${feeStatus} ${jointStatus}`, 'desk-meta'));
   const minimum = retail?.available ? retail.minimum_net_profit_usd : null;
   const receipts = Object.values(retail?.states || {}).map(state => num(state.net_receipt_usd)).filter(Number.isFinite);
   if (retail?.available) {
@@ -499,11 +518,6 @@ export function pairInspection(pair, offers, {group, game, position, inspect, mo
       ['Fees paid at fill', usd(sum(retail.legs.map(leg => leg.at_fill_usd)))],
       ['Stake used before fees', usd(sizing?.requested_stake_usd ?? math.funding_usd)]
     ]));
-    if (!Object.keys(retail.states).some(state => state.includes('void') || state.includes('cancel'))) {
-      result.append(el('p', 'Modeled for completed games only. Voids, cancellations, postponements, and partial games are unverified.', 'desk-meta'));
-    }
-  } else {
-    result.append(el('p', reasons(retail?.reason || 'pair_settlement_unverified'), 'inspection-gap'));
   }
   if (retail?.execution_reason) result.append(el('p', reasons(retail.execution_reason), 'desk-meta'));
   const legs = section('Two legs');
@@ -536,11 +550,14 @@ export function pairInspection(pair, offers, {group, game, position, inspect, mo
     const label = `${name(offer.venue)} · ${position(offer, game)}`;
     const offered = el('strong');
     offered.append(odd(offer.odds));
+    const priceBasis = {native_book:'Native order book', aggregate_snapshot:'Aggregate quote'}[offer.price_basis];
     info.append(el('h4', label), offered,
-      facts([['Modeled $1 claims', charge?.quantity],
+      facts([['Price basis', [priceBasis, quoteFreshness(offer, mode)].filter(Boolean).join(' · ')],
+        ...(charge?.quantity == null ? [] : [['Modeled $1 claims', charge.quantity]]),
         ['Acquisition cost', usd(charge?.acquisition_usd ?? leg.allocation_usd)],
         [charge?.classification === 'synthetic' ? 'Fictional fee at fill' : 'Fee at fill',
-          charge?.available ? usd(charge.at_fill_usd) : 'Unavailable'],
+          charge?.available ? [usd(charge.at_fill_usd), feeClasses[charge.classification]].filter(Boolean).join(' · ')
+            : `Unavailable · ${reasons(charge?.reason || 'pair_fee_size_unverified')}`],
         ...(offer.trade_fee?.evidence?.fictional_rate != null
           ? [['Fictional rate', `${percent(num(offer.trade_fee.evidence.fictional_rate) * 100)} of the acquisition cost`]] : [])]),
       button('Inspect offer and fees', event => inspect(offer, event.currentTarget), 'desk-action'));

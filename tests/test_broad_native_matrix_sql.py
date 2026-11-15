@@ -91,8 +91,18 @@ class BroadNativeMatrixSQL(NativeMatrixFixture):
                 self.assertTrue(detail['evidence']['inspection'])
                 self.assertEqual(detail['provider_requests'], 0)
 
+                previous = dict(selection, id='prior-sealed-offer', quote_key=quote['desk_quote_key'])
+                response = await client.get('/api/comparison-current/selection', params=previous)
+                self.assertEqual(response.status, 200, await response.text())
+                adopted = await response.json()
+                self.assertEqual(adopted['row']['id'], quote['id'])
+                self.assertEqual(adopted['row']['desk_quote_key'], quote['desk_quote_key'])
+                self.assertTrue(adopted['evidence']['inspection'])
+
                 self.state.write(self.service, paused_sources=[quote['venue']])
                 paused = await client.get('/api/comparison-current/selection', params=selection)
+                self.assertIsNone((await paused.json())['row'])
+                paused = await client.get('/api/comparison-current/selection', params=previous)
                 self.assertIsNone((await paused.json())['row'])
                 selection['id'] = 'native-current:absent-contract'
                 missing = await client.get('/api/comparison-current/selection', params=selection)

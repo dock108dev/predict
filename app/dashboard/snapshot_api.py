@@ -4,6 +4,7 @@ import asyncio
 from time import monotonic
 from threading import RLock
 from datetime import datetime
+import re
 from aiohttp import web
 from app.owned_work import joined_thread
 from app.storage.store import connect, stamp
@@ -269,6 +270,9 @@ def mount(app):
         query.setdefault('metric', 'minimum_return_percent' if query.get('view') == 'arbs' else 'conditional_return_percent')
         query.setdefault('group', 'outcome')
         is_desk = query.get('layout') == 'desk'
+        quote_key = query.get('quote_key') if is_selection and is_desk else None
+        if quote_key is not None and not re.fullmatch(r'[a-f0-9]{64}', quote_key):
+            raise PublicRequestError('Invalid exact quote key')
         if is_desk:
             from .trade_desk import desk_phase
             query['phase'] = desk_phase(query, current=True)
@@ -341,6 +345,13 @@ def mount(app):
                                  if selected and selected.startswith('native-current:') else None)
                 aggregate_contract = (selected.removeprefix(current_aggregate_desk.PREFIX)
                     if selected and selected.startswith(current_aggregate_desk.PREFIX) else None)
+                if quote_key and not (live_contract or aggregate_contract):
+                    source = db.execute('''SELECT e.provider FROM current_contract c
+                        JOIN current_event e ON e.id=c.event_id WHERE c.id=%s''', (quote_key,)).fetchone()
+                    if source and source['provider'] in ('kalshi', 'polymarket_us'):
+                        live_contract = quote_key
+                    elif source and source['provider'] in (current_aggregate_desk.SGO, current_aggregate_desk.ODDSLINK):
+                        aggregate_contract = quote_key
                 if is_desk and not is_fee_census and not is_selection:
                     from .desk_updates import cursor as desk_cursor
                     stage = monotonic()
@@ -493,6 +504,13 @@ def mount(app):
                         paused = states.get('sportsgameodds', {}).get('reason_code') == 'sgo_charge_unresolved'
                         phase = desk_phase(query)
                         basis = query.get('basis', 'reviewed')
+                        if quote_key and not row and quote_key in (live_contract, aggregate_contract):
+                            # The direct desk can replace a sealed offer ID.
+                            # Follow only the same admitted source contract.
+                            rows = [item for item in result['rows'] if item.get('price_current')
+                                    and item['current_authority']['price'].get('dependency') == quote_key]
+                            if len(rows) == 1:
+                                row, = rows
                         value = (offer(row, METRICS.get(basis,EV_METRIC), sportsbook_updates_paused=paused)
                                  if row and row['kind'] == 'single' and direct_venue_offer(row) else None)
                         if value and not phase_matches(row, phase, at):
@@ -500,7 +518,9 @@ def mount(app):
                                         reason=row.get('game_state_reason') or 'phase_price_unavailable', provider_requests=0)
                         inspection = (row.get('native_inspection') or row.get('aggregate_inspection')) if value else None
                         evidence = dict(captured_at=row['captured_at'], inspection=inspection) if inspection else None
-                        return dict(row=value, evidence=evidence, provider_requests=0, **features)
+                        reason = (publication_runtime(owner).get('reason') if not owner.get('healthy')
+                                  else (value or {}).get('reason') or (None if value else 'input_replaced_or_removed'))
+                        return dict(row=value, evidence=evidence, reason=reason, provider_requests=0, **features)
                     return dict(result_id=result['id'],generation=head['generation'],cursor=cursor,
                         state='removed' if row is None else 'ready' if row.get('price_current',True) else 'unavailable',
                         publication=result['publication'],assumptions=result['assumptions'],provider_requests=0,

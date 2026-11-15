@@ -30,6 +30,8 @@ class CurrentSlate:
         self.changed_line = None
         self.drop_token = False
         self.resets = []
+        self.venues = ("kalshi", "polymarket_us", "novig", "prophetx")
+        self.feed_unavailable = False
 
     def read(self, query):
         rows, games = [], []
@@ -52,8 +54,8 @@ class CurrentSlate:
                     ],
                 )
             )
-            for mobile_venue in ("kalshi", "polymarket_us", "novig", "prophetx"):
-                item = quote(f"{key}-{mobile_venue}", mobile_venue)
+            for mobile_venue in self.venues:
+                item = quote(f"{key}-{mobile_venue}", mobile_venue, current=not self.feed_unavailable)
                 if number == self.changed_line:
                     item["market"]["line"] = "3.5"
                     item["selection"]["signed_line"] = "-3.5"
@@ -73,7 +75,9 @@ class CurrentSlate:
             games=games,
             captured_at=AT.isoformat(),
             publication=dict(
-                read_at=AT.isoformat(), state="ready", current_prices=len(rows)
+                read_at=AT.isoformat(), state="ready",
+                current_prices=0 if self.feed_unavailable else len(rows),
+                data_runtime=dict(healthy=not self.feed_unavailable),
             ),
         )
         if self.drop_token:
@@ -105,7 +109,7 @@ def intercept(context, current):
             route.fulfill(json={"row": None})
         elif path.startswith("/api/odds-replay"):
             route.fulfill(json=replay_read(query, details=path.endswith("/details")))
-        elif path in ("/browse-odds", "/game", "/replay", "/ev"):
+        elif path in ("/", "/browse-odds", "/game", "/replay", "/ev"):
             route.fulfill(path=ASSETS / "desk.html")
         elif path.startswith("/view/current/") and (ASSETS / Path(path).name).is_file():
             route.fulfill(path=ASSETS / Path(path).name)
@@ -201,6 +205,52 @@ def swipe_chromium(context, tab, card):
     direction.detach()
 
 
+def test_phone_site_filter_keeps_outcome_and_points_to_offscreen_quotes():
+    from playwright.sync_api import expect, sync_playwright
+
+    current = CurrentSlate()
+    current.order = [0, 10]
+    current.venues = ("novig", "prophetx")
+    current.feed_unavailable = True
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(executable_path=os.getenv("PREDICT_CI_CHROMIUM"))
+        context = browser.new_context(viewport={"width": 390, "height": 664}, has_touch=True)
+        intercept(context, current)
+        tab = context.new_page()
+        tab.goto(BASE)
+        tab.get_by_role("link", name="Find my game ↗").tap()
+        tab.get_by_role("button", name="Spreads", exact=True).tap()
+        search = tab.get_by_role("searchbox")
+        search.fill("Detroit vs. Example 0")
+        expect(tab.locator(".odds-card")).to_have_count(1)
+        game = tab.locator('[data-game-key="detroit-0"]')
+        outcome = game.locator(".matrix-outcome")
+        expect(outcome).to_have_text("Detroit to cover -2.5")
+        expect(game.get_by_text("Reference estimate unavailable")).to_be_attached()
+        books = game.get_by_role("button", name="Same-line sportsbook quotes for Detroit to cover -2.5")
+        books.tap()
+        expect(tab.get_by_role("region", name="Sportsbook prices")).to_contain_text("FanDuel")
+        tab.keyboard.press("Escape")
+        cue = game.get_by_role("button", name="See Novig prices in the next columns")
+        cue.tap()
+        expect(game.get_by_role("columnheader", name="Novig")).to_be_in_viewport()
+        expect(outcome).to_be_in_viewport()
+        tab.get_by_role("button", name="Filters", exact=True).tap()
+        tab.locator('#venues input[value="novig"]').uncheck()
+        tab.locator('#venues input[value="prophetx"]').uncheck()
+        tab.get_by_role("button", name="Done", exact=True).tap()
+        expect(game.get_by_text("No quote from selected sites")).to_be_visible()
+        expect(outcome).to_have_text("Detroit to cover -2.5")
+        expect(game.locator("[data-offer-id]")).to_have_count(0)
+        expect(game.get_by_label("No quote shown from Kalshi for this exact outcome")).to_be_visible()
+        search.fill("Detroit @ Example 1")
+        expect(tab.get_by_role("heading", name="No results for “Detroit @ Example 1”")).to_be_visible()
+        expect(tab.locator("#notice")).to_contain_text("Price feed unavailable")
+        tab.get_by_role("button", name="Clear search").tap()
+        expect(search).to_have_value("")
+        browser.close()
+
+
 @pytest.mark.parametrize("engine", ["chromium", "webkit"])
 def test_phone_comparison_return(engine, tmp_path, monkeypatch):
     from playwright.sync_api import expect, sync_playwright
@@ -221,7 +271,7 @@ def test_phone_comparison_return(engine, tmp_path, monkeypatch):
             )
         )
         context = browser.new_context(
-            viewport={"width": 390, "height": 844}, has_touch=True
+            viewport={"width": 390, "height": 664}, has_touch=True
         )
         current = CurrentSlate()
         intercept(context, current)
@@ -240,7 +290,7 @@ def test_phone_comparison_return(engine, tmp_path, monkeypatch):
             swipe_chromium(context, tab, first)
         first.locator(".matrix-scroll-cue").tap()
         sportsbook = first.get_by_role(
-            "button", name="Sportsbook prices for", exact=False
+            "button", name="Same-line sportsbook quotes for", exact=False
         )
         sportsbook.tap()
         expect(first.locator(".matrix-sportsbook-popout")).to_be_visible()
