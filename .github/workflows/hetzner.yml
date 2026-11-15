@@ -65,7 +65,7 @@ jobs:
           while read -r role inputs; do
             tag="$repo:$role-$RELEASE_SHA"
             docker tag "predict:$role-test" "$tag"
-            docker push "$tag"
+            docker push "$tag" >&2
             image=$(docker image inspect "$tag" --format '{{range .RepoDigests}}{{println .}}{{end}}' | grep -F "$repo@")
             [[ $image =~ ^ghcr\.io/dock108dev/predict@sha256:[a-f0-9]{64}$ ]]
             printf '%s %s\n' "$image" "$inputs"
