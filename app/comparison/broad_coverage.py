@@ -398,6 +398,7 @@ def build(records, published, *, config, owner, at, queries=(), encountered=(), 
         if venue == 'pinnacle': reasons.add('reference_only')
         items.append(dict(id=sha256(json.dumps(key).encode()).hexdigest(),cell=cid,quote=q,record=record,
             published=p,canonical=canonical,occurrence=match.get('occurrence_id') if match.get('status')=='matched' else None,
+            published_fresh=bool(p and p.get('price_current')) and fresh == 'current',
             input_canonical=input_canonical,input_matched=(resolved['quote'].get('occurrence_match',{}).get('status')=='matched') if resolved else match.get('status')=='matched',
             input_occurrence=(resolved['quote'].get('occurrence_match',{}).get('occurrence_id') if resolved else match.get('occurrence_id')),
             clock_evidence=assess(q,stamp(at)),
@@ -417,13 +418,13 @@ def build(records, published, *, config, owner, at, queries=(), encountered=(), 
             continue
         comparable_groups.append(dict(cells=dict(Counter(i['cell'] for i in group))))
         current_counts = Counter(i['quote']['venue'] for i in group if i['freshness'] == 'current')
-        published_current_venues = ({i['quote']['venue'] for i in group if i['published'].get('price_current')}
+        published_current_venues = ({i['quote']['venue'] for i in group if i['published_fresh']}
                                     if ordinary_publication else set())
         for item in group:
             source = item['quote']['venue']
             item['peers'] = len(group) - venue_counts[source]
             item['current_peers'] = sum(current_counts.values()) - current_counts[source] if item['freshness'] == 'current' else 0
-            item['published_current_peer'] = len(published_current_venues) > 1 and bool(item['published'].get('price_current'))
+            item['published_current_peer'] = len(published_current_venues) > 1 and item['published_fresh']
     input_groups=defaultdict(list);published_pairs={}
     if ordinary_publication:
         display_groups = defaultdict(list)
@@ -433,12 +434,12 @@ def build(records, published, *, config, owner, at, queries=(), encountered=(), 
                 if display_key is not None:
                     display_groups[display_key].append(item)
         for group in display_groups.values():
-            current = [item for item in group if item['published'].get('price_current')]
+            current = [item for item in group if item['published_fresh']]
             venues = {item['quote']['venue'] for item in group}
             current_venues = {item['quote']['venue'] for item in current}
             for item in group:
                 item['displayed_peer'] = len(venues) > 1
-                item['displayed_current_peer'] = len(current_venues) > 1 and bool(item['published'].get('price_current'))
+                item['displayed_current_peer'] = len(current_venues) > 1 and item['published_fresh']
             if len(current_venues) > 1:
                 display_cells = dict(Counter(item['cell'] for item in current))
                 published_pairs[tuple(sorted(item['id'] for item in current))] = display_cells
@@ -569,7 +570,7 @@ def build(records, published, *, config, owner, at, queries=(), encountered=(), 
             displayed='Exact retained native inputs with a corresponding ordinary Odds publication, before local display filters.',
             displayed_comparison_directions=('Published Browse Odds observations in an outcome group with another venue, including last-known prices.' if ordinary_publication else
                 'Available lowest-observed gross differences actually present in ordinary Odds; current, last-known, unknown and pending labels remain separate from availability.'),
-            displayed_current_comparison_directions=('Published Browse Odds observations in an outcome group with another venue, where both prices pass ordinary current-price authority.' if ordinary_publication else
+            displayed_current_comparison_directions=('Published Browse Odds observations with a published peer at another venue, where both sources pass the input freshness and continuity checks.' if ordinary_publication else
                 'Available current-peer differences actually present in ordinary Odds whose captured display_status is current.'),
             comparable_outcomes='Unique canonical outcomes with at least two comparison venues; Pinnacle is excluded.',
             supported_comparison_observations='Exact retained native inputs with a supported peer and valid published matching authority. Material runtime/source-health revocation can withhold this authority pending publication; source-clock aging alone does not erase supported meaning.',

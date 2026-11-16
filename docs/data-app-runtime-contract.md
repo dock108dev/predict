@@ -17,8 +17,9 @@ page can use the same read while there is no room for new work. New work at
 capacity receives HTTP 503 and can be retried as slots finish. A disconnected
 viewer leaves an admitted read owned until it finishes. Requests arriving after
 a shared page's first quote or kickoff deadline take a fresh SQL snapshot.
-An exact native quote read can return its original price and evidence before
+An exact native live quote read can return its original price and evidence before
 the first ordinary publication, subject to current source controls and clocks.
+Pregame selections use committed results.
 Saved snapshot refreshes and recalculations return the same pregame rows as
 saved snapshot reads when Live is disabled. The retained inputs still contain
 the original observations.
@@ -321,6 +322,10 @@ ordinary comparison publication. Ingress keeps the latest observation for
 each exact source contract. A partial response, a collection pause, or an
 old source clock does not remove a pregame observation. Explicit closures
 and the latest authoritative kickoff still govern eligibility.
+An authoritative alternate response can replace its own route. Coverage
+counts published pregame prices separately from prices with fresh book
+evidence. A source reconnect without a new observation does not restore
+book continuity.
 
 The data worker freezes the price, sportsbook sides, and available fee and
 settlement evidence together. When a replacement for the same component is

@@ -3,7 +3,7 @@ import re
 from fractions import Fraction as F
 
 from .cashflows import exact_wire as wire
-from .snapshot_pair_fees import _leg_fee
+from . import snapshot_pair_fees
 
 
 def parse_amount(value):
@@ -44,8 +44,8 @@ def preview(row, amount):
     size_limit = F(depth['quantity']) if depth.get('quantity') is not None else None
 
     def fee(size):
-        return _leg_fee(row, stake=size * cost, price=cost, quantity=size,
-                        receipts={'win': size, 'loss': F(0)}, allow_fractional=True)
+        return snapshot_pair_fees._leg_fee(row, stake=size * cost, price=cost, quantity=size,
+                                          receipts={'win': size, 'loss': F(0)}, allow_fractional=True)
 
     if step is None:
         quantity = amount / cost

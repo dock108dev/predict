@@ -117,7 +117,7 @@ def test_opportunities_separates_market_families_for_the_same_game():
         browser.close()
 
 
-def test_update_check_keeps_page_and_conceals_expired_estimate():
+def test_update_check_keeps_pregame_estimate_until_kickoff_and_recovers():
     from playwright.sync_api import expect, sync_playwright
 
     revision = "a"
@@ -224,8 +224,8 @@ def test_update_check_keeps_page_and_conceals_expired_estimate():
         with tab.expect_response(lambda response: response.status == 503):
             tab.clock.fast_forward(7000)
         assert len(list_reads) == 3
-        expect(tab.locator('[data-offer-id="novig-over"]')).to_have_count(0)
-        expect(tab.locator('[data-offer-id="novig-under"]')).to_contain_text("−1.00%")
+        expect(tab.locator('[data-offer-id="novig-over"]')).to_be_visible()
+        expect(score).to_have_text("+0.20%")
 
         read_failure = False
         with tab.expect_response(
@@ -239,6 +239,9 @@ def test_update_check_keeps_page_and_conceals_expired_estimate():
         expect(tab).to_have_url(f"{BASE}/ev")
         expect(tab.locator("#phase-tabs")).to_be_hidden()
         assert list_reads[-1]["phase"] == "live"
+        tab.clock.set_fixed_time(datetime.fromisoformat(START))
+        tab.clock.fast_forward(3_600_000)
+        expect(tab.locator('[data-offer-id="novig-over"]')).to_have_count(0)
         browser.close()
 
 

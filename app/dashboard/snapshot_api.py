@@ -440,6 +440,8 @@ def mount(app):
                     if not out.get('rows'):
                         fallback = game_capture_link(db, query, allow_live=live_available)
                         if fallback:
+                            if lifecycle := result['pregame_withdrawals'].get(fallback['game_key']):
+                                fallback['lifecycle'] = lifecycle
                             out['retained_game'] = fallback
                     out.update(metadata, refresh_at=refresh_at(out, at))
                     timings['page'] = (monotonic() - stage) * 1000

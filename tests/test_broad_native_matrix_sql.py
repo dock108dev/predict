@@ -76,6 +76,7 @@ class BroadNativeMatrixSQL(NativeMatrixFixture):
         self.state.write(self.service)
         rows, books = await captured_core_matrix(self.at)
         self.admit(rows, books)
+        self.publish()
         query = dict(layout='desk', view='ev', browse_odds='1', summary='1',
                      basis='before', phase='pregame', lines='all', league='NBA')
         path = '/api/comparison-current'
@@ -148,7 +149,7 @@ class BroadNativeMatrixSQL(NativeMatrixFixture):
                 fixture='desk-polymarket-nba-v2', outage_budget_seconds=outage_budget, **timings
             ), indent=2) + '\n')
 
-    async def test_native_selection_before_the_first_ordinary_seal(self):
+    async def test_native_selection_uses_the_committed_pregame_price(self):
         from app.dashboard.snapshot_api import mount
 
         self.config['aggregate_provider'] = 'sportsgameodds'
@@ -164,8 +165,12 @@ class BroadNativeMatrixSQL(NativeMatrixFixture):
                 response = await client.get('/api/comparison-current', params=query)
                 self.assertEqual(response.status, 200, await response.text())
                 page = await response.json()
-                quote = next(offer for row in page['rows'] for offer in row['offers']
-                             if offer['current'] and offer['id'].startswith('native-current:'))
+                self.assertEqual((page['state'], page['rows']), ('initializing', []))
+                self.publish()
+                response = await client.get('/api/comparison-current', params=query)
+                self.assertEqual(response.status, 200, await response.text())
+                page = await response.json()
+                quote = next(offer for row in page['rows'] for offer in row['offers'] if offer['current'])
                 selection = dict(layout='desk', basis='before', phase='pregame', id=quote['id'])
                 response = await client.get('/api/comparison-current/selection', params=selection)
                 self.assertEqual(response.status, 200, await response.text())
@@ -173,8 +178,13 @@ class BroadNativeMatrixSQL(NativeMatrixFixture):
                 self.assertEqual(detail['row']['id'], quote['id'])
                 self.assertEqual(detail['row']['original'], quote['original'])
                 self.assertEqual(detail['row']['source_clock_at'], quote['source_clock_at'])
-                self.assertTrue(detail['evidence']['inspection'])
                 self.assertEqual(detail['provider_requests'], 0)
+                response = await client.get('/api/comparison-snapshot/details', params=dict(
+                    result_id=quote['evidence_result_id'], id=quote['id']))
+                self.assertEqual(response.status, 200, await response.text())
+                captured = (await response.json())['row']
+                self.assertEqual(captured['original'], quote['original'])
+                self.assertEqual(captured['times']['source_at'], quote['source_clock_at'])
 
                 previous = dict(selection, id='prior-sealed-offer', quote_key=quote['desk_quote_key'])
                 response = await client.get('/api/comparison-current/selection', params=previous)
@@ -182,13 +192,12 @@ class BroadNativeMatrixSQL(NativeMatrixFixture):
                 adopted = await response.json()
                 self.assertEqual(adopted['row']['id'], quote['id'])
                 self.assertEqual(adopted['row']['desk_quote_key'], quote['desk_quote_key'])
-                self.assertTrue(adopted['evidence']['inspection'])
 
+                # Pausing collection leaves the committed pregame price available.
                 self.state.write(self.service, paused_sources=[quote['venue']])
-                paused = await client.get('/api/comparison-current/selection', params=selection)
-                self.assertIsNone((await paused.json())['row'])
-                paused = await client.get('/api/comparison-current/selection', params=previous)
-                self.assertIsNone((await paused.json())['row'])
+                for params in (selection, previous):
+                    paused = await client.get('/api/comparison-current/selection', params=params)
+                    self.assertEqual((await paused.json())['row']['id'], quote['id'])
                 selection['id'] = 'native-current:absent-contract'
                 missing = await client.get('/api/comparison-current/selection', params=selection)
                 self.assertIsNone((await missing.json())['row'])
@@ -265,20 +274,25 @@ class BroadNativeMatrixSQL(NativeMatrixFixture):
                 self.at+=timedelta(seconds=31);self.state.write(self.service)
                 result=await client.get('/api/comparison-current',params=query)
                 self.assertEqual(result.status,200,await result.text());aged=await result.json()
+                retained = [q for group in aged['rows'] for q in offers(group)]
+                self.assertTrue(all(q['current'] for q in retained))
+                self.assertEqual(len(retained), expected_prices)
+                self.assertEqual(clocks(retained), clocks(prices))
                 if full_game:
-                    self.assertEqual(aged['rows'], [])
-                    # Read the exact publication that supplied the fresh desk.
+                    self.at = max(datetime.fromisoformat(group['start_at']) for group in aged['rows'])
+                    self.state.write(self.service)
+                    result = await client.get('/api/comparison-current', params=query)
+                    self.assertEqual(result.status, 200, await result.text())
+                    self.assertEqual((await result.json())['rows'], [])
+                    # Kickoff only affects the current view.
                     result = await client.get('/api/comparison-snapshot', params=dict(
                         result_id=result_id, view='odds', group='outcome', limit='50'))
                     self.assertEqual(result.status, 200, await result.text())
                     saved = await result.json()
                     self.assertEqual(saved['provider_requests'], 0)
                     retained = [q for group in saved['rows'] for q in snapshot_offers(group)]
-                else:
-                    retained = [q for group in aged['rows'] for q in offers(group)]
-                    self.assertTrue(all(not q['current'] for q in retained))
-                self.assertEqual(len(retained), expected_prices)
-                self.assertEqual(clocks(retained), clocks(prices))
+                    self.assertEqual(len(retained), expected_prices)
+                    self.assertEqual(clocks(retained), clocks(prices))
         provider.acquire.assert_not_called()
         return counts
 

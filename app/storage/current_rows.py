@@ -475,9 +475,12 @@ class CurrentRowStore:
                             raise ValueError('aggregate_refresh_route')
                     for name,owner in (('native_event_id','e'),('native_market_id','c')):
                         if name in scope:condition.append(owner+'.'+name+'=%s');params.append(scope[name])
-                    condition.append("NOT (e.scheduled_start::timestamptz > %s "
-                                     "AND e.facts#>>'{status,live}' IS DISTINCT FROM 'true')")
-                    params.append(scope['received_at'])
+                    # An authoritative alternate response replaces only its
+                    # route. Partial board and book refreshes keep pregame odds.
+                    if scope.get('aggregate_route') != 'alternate':
+                        condition.append("NOT (e.scheduled_start::timestamptz > %s "
+                                         "AND e.facts#>>'{status,live}' IS DISTINCT FROM 'true')")
+                        params.append(scope['received_at'])
                     candidates=by_scope[key] if bulk else execute('''SELECT c.id,o.source_order,o.received_order FROM current_contract c
                         JOIN current_event e ON e.id=c.event_id LEFT JOIN current_offer o ON o.contract_id=c.id
                         WHERE '''+' AND '.join(condition),params).fetchall()
@@ -501,20 +504,22 @@ class CurrentRowStore:
                 lost=[(venue,state.get('state','unavailable')) for venue,state in source_status.items()
                       if state.get('state') not in ('available','budget_delayed')]
                 if lost:
-                    # Invalidate continuity for this transport's offers, even
-                    # on a repeated health state. SGO's venue prices are facts
-                    # from an independent transport with its own status guard.
-                    execute("""UPDATE current_offer_storage o SET facts=jsonb_set(o.facts,'{state}',to_jsonb(lost.state)),
+                    # A pregame price remains displayable while its transport
+                    # awaits a new image. Keep that distinct from an explicit
+                    # unavailable quote, which also withdraws the price.
+                    execute("""UPDATE current_offer_storage o SET facts=jsonb_set(o.facts,'{state}',to_jsonb(
+                            CASE WHEN e.scheduled_start::timestamptz>%s
+                                      AND e.facts#>>'{status,live}' IS DISTINCT FROM 'true'
+                                 THEN 'resyncing' ELSE lost.state END)),
                         revision=encode(sha256(convert_to(o.revision||lost.state,'UTF8')),'hex')
                         FROM current_contract c JOIN current_event e ON e.id=c.event_id
                         JOIN unnest(%s::text[],%s::text[]) lost(venue,state) ON c.venue=lost.venue
                         WHERE c.id=o.contract_id AND o.facts->>'state' IN ('available','budget_delayed')
                         AND (lost.venue NOT IN ('kalshi','polymarket_us') OR e.provider=lost.venue)
                         AND e.provider<>'sportsgameodds'
-                        AND (e.scheduled_start::timestamptz<=%s OR e.facts#>>'{status,live}'='true')
                         AND NOT (c.venue='prophetx' AND e.provider='oddslink_public_board')
                         AND NOT (c.venue='novig' AND o.facts ? 'novig_runtime_id')""",
-                        (*map(list,zip(*lost)), now or utc()))
+                        (now or utc(), *map(list,zip(*lost))))
                 for venue,state in source_status.items():
                     write_source_status(execute, venue, state, now or utc())
             # Scope order guards are bounded by current work, never history.

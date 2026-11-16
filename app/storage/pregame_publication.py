@@ -47,6 +47,7 @@ def project(db, result, owner, states, *, at, epoch, withdrawn):
                 corrections[occurrence] = (revision, schedules[key])
     rows = []
     starts = {}
+    withdrawals = {}
     for original in candidates:
         price = original['current_authority']['price']
         source = original.get('source') or {}
@@ -56,6 +57,8 @@ def project(db, result, owner, states, *, at, epoch, withdrawn):
         if correction and not phase.get('reason') and phase.get('state') != 'live':
             phase, start = correction[1]
         start = stamp(start).isoformat()
+        if phase.get('state') in ('cancelled', 'final', 'suspended') and phase.get('reason'):
+            withdrawals[original['game_key']] = phase['reason']
         if (stamp(start) <= at or phase.get('state') != 'scheduled' or phase.get('reason')
                 or set(price.get('reasons', ())) - {'source_expired'} or not price.get('expected')):
             continue
@@ -85,4 +88,5 @@ def project(db, result, owner, states, *, at, epoch, withdrawn):
         data_runtime=runtime, current_prices=len(rows), retained_prices=0,
         state='held' if runtime['stopped'] or runtime['paused_sources'] else
         'ready' if result['publication']['finance'] == 'ready' else 'partial')
-    return dict(result, rows=rows, pairs=pairs, games=games, publication=publication)
+    return dict(result, rows=rows, pairs=pairs, games=games, publication=publication,
+                pregame_withdrawals={key: reason for key, reason in withdrawals.items() if key not in starts})

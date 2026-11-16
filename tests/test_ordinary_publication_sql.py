@@ -90,7 +90,7 @@ class OrdinarySQL(LatestBoardFixture):
         fixture_fee = dict(available=True, classification='exact_public', fee_cashflows={'at_fill_usd': '0'},
                            evidence=dict(reviewed_at=self.at.isoformat(), standing_public_terms=True))
 
-        def waived_trade_fee(row, *, stake, price, quantity, receipts):
+        def waived_trade_fee(row, *, stake, price, quantity, receipts, allow_fractional=False):
             return dict(available=True, at_fill_usd='0', settlement_usd=dict.fromkeys(receipts, '0'))
 
         with self.connect() as db:
