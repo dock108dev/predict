@@ -26,7 +26,7 @@ def selected_game(games, game_id):
     return game
 
 
-def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_provider=None):
+def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_provider=None,desk_cache=None):
     if owner is None:
         from app.dashboard.coverage_owner import CoverageOwner
         owner=CoverageOwner(output,spec_factory=configuration,product_mode=True,pilot_output=ROOT/'evidence/product-sessions')
@@ -653,7 +653,7 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
         from .stored_games import mount as mount_stored
         mount_stored(app,current_provider)
         from .snapshot_api import mount as mount_snapshots
-        mount_snapshots(app)
+        mount_snapshots(app, last_known=desk_cache)
         from .replay_api import mount as mount_replay
         mount_replay(app)
         from .scanner_client_api import mount as mount_client

@@ -429,7 +429,8 @@ function rememberView(group, action) {
 function cardContext(games, gameTitle = null) {
   return {
     basis:pageBasis(), clock, phase,
-    checkedAt:state.page?.replay?.captured_at ?? state.page?.publication?.read_at, gameTitle, mode:replayMode(),
+    checkedAt:state.page?.last_known_at ? Date.now()
+      : state.page?.replay?.captured_at ?? state.page?.publication?.read_at, gameTitle, mode:replayMode(),
     compact:comparable, summary:!replay, showGameLink:!gameKey, stableVenues:!replay,
     position:offer => position(offer),
     gameLink:group => browsingLink('Open game ↗', group, 'opportunity-link'),
@@ -624,7 +625,9 @@ function render(page, keepNodes = false) {
   const publication = page.publication || {};
   const notice = [];
   if (replay && page.replay?.captured_at) notice.push(`Captured ${clock(page.replay.captured_at)}.`);
-  if (!replay) {
+  if (page.last_known_at) {
+    notice.push(`Prices are temporarily unavailable. Showing last known prices from ${clock(page.last_known_at)}.`);
+  } else if (!replay) {
     const issue = collectionIssue(publication.data_runtime);
     if (issue && (rows.length || page.state !== 'initializing' || publication.retained_prices)) {
       notice.push(`${issue}.`);
@@ -928,7 +931,8 @@ function resultSignature(page) {
   const {data_runtime:runtime = {}, sources} = page.publication || {};
   return JSON.stringify([stripReadClock(page.rows), page.games, page.retained_game,
     page.total, page.page_count, page.offset, page.pair_status, page.calculation_reason, page.calculation_missing,
-    page.state, page.basis, page.phase, page.anchor_state, page.selected_line_id, page.selected_game_key, page.selected_venues,
+    page.state, page.last_known_at, page.basis, page.phase, page.anchor_state, page.selected_line_id, page.selected_game_key,
+    page.selected_venues,
     page.ranked_group_count, page.matched_offer_count, runtime.stopped, runtime.healthy, runtime.reason, runtime.paused_sources,
     Object.values(sources || {}).map(source => [source.state, source.reason_code])]);
 }
@@ -940,7 +944,6 @@ async function load(offset = state.offset, {background = false, freshMembership 
   const controller = new AbortController();
   state.request = controller;
   state.backgroundRequest = background;
-  if (!replay) state.lastListRead = Date.now();
   refreshStatus();
   const requestStake = replay ? stake.value : '100';
   const selected = selections();
@@ -959,11 +962,12 @@ async function load(offset = state.offset, {background = false, freshMembership 
     query.set('locate', locator.groupId || locator.gameKey);
     if (locator.gameKey) query.set('locate_game', locator.gameKey);
   }
-  if (!state.page) $('notice').textContent = 'Loading prices…';
+  if (!state.page && !state.loadFailed) $('notice').textContent = 'Loading prices…';
+  const backgroundBlocked = () => background && (!receivingUpdates() || usingResults()
+    || !postedDesk() && !state.page?.last_known_at && drawer.isOpen());
   try {
     let page = await fetchPage(query, controller.signal);
-    if (controller.signal.aborted || !matchesInputs(requestStake, requestFilters)
-        || background && (!receivingUpdates() || !postedDesk() && drawer.isOpen() || usingResults())) return;
+    if (controller.signal.aborted || !matchesInputs(requestStake, requestFilters) || backgroundBlocked()) return;
     const emptyPage = !displayRows(page).length;
     if (page.state === 'page_changed' || query.has('browse_id') && emptyPage && (page.total || page.anchor_state === 'removed')) {
       if (freshMembership) throw Error('Browsing order unavailable');
@@ -982,13 +986,14 @@ async function load(offset = state.offset, {background = false, freshMembership 
     } else if (!background && page.anchor_state === 'game') {
       state.resetReason = 'The previous line left these results. Other prices for the game are shown.';
     }
-    if (gameKey && page.rows?.length && page.total > (page.page_count ?? page.rows.length)) {
+    if (gameKey && !page.last_known_at && page.rows?.length && page.total > (page.page_count ?? page.rows.length)) {
       const rows = new Map(page.rows.map(row => [row.id, row]));
       let seen = page.page_count ?? page.rows.length;
       while (seen < page.total) {
         query.set('offset', seen);
         if (page.browse_id) query.set('browse_id', page.browse_id);
         const next = await fetchPage(query, controller.signal);
+        if (next.last_known_at) break;
         if (next.state === 'page_changed' || !next.rows?.length) {
           throw Error('Game prices changed during read');
         }
@@ -997,10 +1002,10 @@ async function load(offset = state.offset, {background = false, freshMembership 
       }
       page.rows = [...rows.values()];
     }
-    if (controller.signal.aborted || !matchesInputs(requestStake, requestFilters)
-        || background && (!receivingUpdates() || !postedDesk() && drawer.isOpen() || usingResults())) return;
+    if (controller.signal.aborted || !matchesInputs(requestStake, requestFilters) || backgroundBlocked()) return;
     applyDeskFeatures(page);
-    const held = background && displayRows(state.page).length && state.page.phase === page.phase;
+    const held = background && !page.last_known_at && !state.page?.last_known_at
+      && displayRows(state.page).length && state.page.phase === page.phase;
     const prior = background && !restoreLocation && scrollY ? anchor || visibleAnchor() : anchor;
     if (held) {
       state.backgroundPage = {offset:page.offset, browse_id:page.browse_id};
@@ -1214,13 +1219,14 @@ document.addEventListener('visibilitychange', () => {
 let updateTimer;
 let updateDelay = 6500;
 let checkedBoundary;
-const HELD_LIST_UPDATE_MS = 12000;
+const RECOVERY_POLL_MS = 2000;
 
 function scheduleUpdates() {
   if (replay) return;
   clearTimeout(updateTimer);
   const deadline = Date.parse(state.page?.refresh_at) - Date.now();
-  updateTimer = setTimeout(followUpdates, deadline > 0 ? Math.min(updateDelay, Math.max(deadline, 250)) : updateDelay);
+  const delay = state.loadFailed || state.previousReason || state.page?.last_known_at ? RECOVERY_POLL_MS : updateDelay;
+  updateTimer = setTimeout(followUpdates, deadline > 0 ? Math.min(delay, Math.max(deadline, 250)) : delay);
 }
 
 async function followUpdates() {
@@ -1229,6 +1235,10 @@ async function followUpdates() {
     drawer.expireInspection();
     expireResultValues();
     if (!receivingUpdates()) return;
+    if ((state.loadFailed || state.previousReason || state.page?.last_known_at) && !state.request && !usingResults()) {
+      await load(state.offset, {background:true, freshMembership:postedDesk(), anchor:visibleAnchor()});
+      return;
+    }
     if (drawer.isOpen() && !postedDesk()) {
       await drawer.checkSelection();
       return;
@@ -1244,14 +1254,15 @@ async function followUpdates() {
       if (!response.ok) throw Error('Price status unavailable');
       change = await response.json();
     } catch {
-      if (state.page === page && !state.request) previousResults('Price update failed. Showing previous results.');
+      if (state.page === page && !state.request) {
+        await load(state.offset, {background:true, freshMembership:postedDesk(), anchor:visibleAnchor()});
+      }
       return;
     }
     if (state.page !== page || state.request || !receivingUpdates() || !postedDesk() && drawer.isOpen() || usingResults()) return;
     updateDelay = Math.max(1000, Number(change.poll_after_ms) || 6500);
     const recheckExpiry = expired && checkedBoundary !== page.refresh_at;
     if (change.changed || recheckExpiry || change.phase && change.phase !== phase) {
-      if (displayRows(page).length && Date.now() - state.lastListRead < HELD_LIST_UPDATE_MS) return;
       checkedBoundary = page.refresh_at;
       await load(state.offset, {background:true, freshMembership:postedDesk(),
         anchor:postedDesk() && scrollY ? visibleAnchor() : undefined});

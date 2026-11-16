@@ -173,6 +173,13 @@ health withdraw financial authority without renewing or withdrawing healthy sour
 clocks; separate collection and estimate labels expose those meanings. Checked-zero requires
 complete current evaluated scope; absent/failed/partial storage is unavailable.
 
+The public desk keeps a bounded local copy of recent Opportunities, Browse Odds,
+and game queries. If PostgreSQL fails or a read misses the desk's response budget,
+an exact cached view can show its last known venue and sportsbook prices with
+their original clocks. Pregame rows age out at kickoff. The copy carries no
+current-price, fee, depth, EV, or arbitrage authority. It survives an app restart,
+and the desk retries SQL in the background while auto-update is enabled.
+
 In database mode, native image continuity binds original source event/market
 material rather than derived comparison season/stage or counterpart enrichment.
 An unchanged image keeps its exact source/receipt/confirmation clocks while new

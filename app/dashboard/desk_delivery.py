@@ -11,6 +11,9 @@ from app.storage.store import stamp
 
 
 BURST_SECONDS = 0.5
+RESPONSE_SECONDS = 1.0
+# A list that missed its response budget can finish between browser retries.
+LATE_LIST_REUSE_SECONDS = 3.5
 MAX_DESK_READS = 16
 MAX_CACHED_BYTES = 4 * 1024 * 1024
 PUBLIC_LIST_FIELDS = frozenset({
@@ -34,6 +37,15 @@ def timing_header(timings):
     return ', '.join(f'{name};dur={duration:.3f}' for name, duration in timings.items())
 
 
+async def read_desk(read):
+    """Bound the response while ReadBurst retains ownership of the SQL work."""
+    try:
+        async with asyncio.timeout(RESPONSE_SECONDS):
+            return await read
+    except TimeoutError:
+        raise web.HTTPServiceUnavailable(reason='Prices temporarily unavailable') from None
+
+
 class ReadBurst:
     """Bound distinct work while sharing in-flight and briefly reusable reads."""
 
@@ -42,20 +54,37 @@ class ReadBurst:
         self.pending = {}
         self.ready = OrderedDict()
         self.active = set()
+        self.abandoned = set()
         self.closed = False
 
-    async def read(self, key, load, *, reuse=BURST_SECONDS):
+    async def read(self, key, load, *, reuse=BURST_SECONDS, late_reuse=0):
         arrived = self.clock()
+
+        async def receive(task):
+            try:
+                # Waiting does not cancel the owned load. Only a current
+                # caller retrieves its result, so a late SQL error stays
+                # inside the request diagnostics instead of asyncio logs.
+                await asyncio.wait((task,))
+                return task.result()
+            except asyncio.CancelledError:
+                if late_reuse and not task.done():
+                    self.abandoned.add(task)
+                raise
+
         while not self.closed:
             if key in self.ready:
-                expiry, value, _ = self.ready[key]
+                expiry, value, _, late = self.ready[key]
                 if self.clock() < expiry:
-                    self.ready.move_to_end(key)
+                    if late:
+                        del self.ready[key]
+                    else:
+                        self.ready.move_to_end(key)
                     return value, True
                 del self.ready[key]
             if key not in self.pending:
                 break
-            value, deadline = await asyncio.shield(self.pending[key])
+            value, deadline = await receive(self.pending[key])
             # A request arriving after the first boundary cannot reuse an
             # in-flight response captured before that boundary.
             if arrived < deadline:
@@ -67,9 +96,10 @@ class ReadBurst:
             try:
                 value, deadline, size = await load()
                 now = self.clock()
-                expires = min(now + reuse, deadline)
+                late = asyncio.current_task() in self.abandoned
+                expires = min(now + (max(reuse, late_reuse) if late else reuse), deadline)
                 if key is not None and expires > now and size <= MAX_CACHED_BYTES:
-                    self.ready[key] = (expires, value, size)
+                    self.ready[key] = (expires, value, size, late)
                     while (len(self.ready) > MAX_DESK_READS
                             or sum(entry[2] for entry in self.ready.values()) > MAX_CACHED_BYTES):
                         self.ready.popitem(last=False)
@@ -84,6 +114,7 @@ class ReadBurst:
 
         def retire(completed):
             self.active.remove(completed)
+            self.abandoned.discard(completed)
             if self.pending.get(key) is completed:
                 del self.pending[key]
             # If every client disconnected, still retrieve this task's error.
@@ -91,7 +122,7 @@ class ReadBurst:
                 completed.exception()
 
         task.add_done_callback(retire)
-        value, _ = await asyncio.shield(task)
+        value, _ = await receive(task)
         return value, False
 
     async def close(self, _app):

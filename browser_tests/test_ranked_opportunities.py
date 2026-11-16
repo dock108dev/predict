@@ -222,9 +222,9 @@ def test_update_check_keeps_page_and_conceals_expired_estimate():
         expect(tab.locator('[data-offer-id="novig-over"]')).to_be_visible()
         expect(score).to_be_visible()
 
-        with tab.expect_response(lambda response: "/updates?" in response.url):
+        with tab.expect_response(lambda response: response.status == 503):
             tab.clock.fast_forward(7000)
-        assert len(list_reads) == 2
+        assert len(list_reads) == 3
         expect(score).to_be_hidden()
         expect(tab.locator('[data-offer-id="novig-over"]')).to_contain_text(
             "Last known"
@@ -242,6 +242,75 @@ def test_update_check_keeps_page_and_conceals_expired_estimate():
         expect(tab).to_have_url(f"{BASE}/ev")
         expect(tab.locator("#phase-tabs")).to_be_hidden()
         assert list_reads[-1]["phase"] == "live"
+        browser.close()
+
+
+def test_desk_renders_last_known_polymarket_quote_and_recovers_on_first_poll():
+    from playwright.sync_api import expect, sync_playwright
+
+    from app.dashboard.desk_last_known import LastKnownDesk
+    from app.storage.store import stamp
+
+    observed = "2026-11-13T00:00:00+00:00"
+    version = 0
+    detail_reads = []
+
+    def page():
+        price = ("+104", "+110", "+118")[version]
+        offer = quote("poly", "polymarket_us", "win", "winner", None, participant="Denver", value="2")
+        offer["odds"] = {"american": price}
+        result = dict(state="ready", phase="pregame", update_cursor=str(version),
+                      features={"live_enabled": False, "posted_pregame": True},
+                      basis="sportsbooks", row_kind="games", page_count=1, total=1,
+                      rows=[group("winner", DENVER, [offer], "2")], publication={"read_at": observed})
+        if not version:
+            cache = LastKnownDesk()
+            cache.remember("odds", result)
+            return cache.read("odds", stamp(observed))
+        return result
+
+    def respond(route):
+        url = urlparse(route.request.url)
+        if url.path == "/browse-odds":
+            route.fulfill(path=ASSETS / "desk.html")
+        elif url.path.startswith("/view/current/"):
+            route.fulfill(path=ASSETS / Path(url.path).name)
+        elif url.path == "/api/comparison-current":
+            route.fulfill(json=page())
+        elif url.path == "/api/comparison-current/updates":
+            route.fulfill(json={"changed": parse_qs(url.query)["after"] != [str(version)], "poll_after_ms": 6500})
+        elif url.path == "/api/comparison-current/selection":
+            detail_reads.append(url.path)
+            route.fulfill(status=503)
+        else:
+            route.fulfill(status=404)
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(executable_path=os.getenv("PREDICT_CI_CHROMIUM"))
+        tab = browser.new_page()
+        tab.route("**/*", respond)
+        tab.clock.install(time=stamp(observed))
+        tab.goto(f"{BASE}/browse-odds")
+        price = tab.locator('[data-offer-id="poly"]')
+        expect(price).to_contain_text("+104")
+        expect(price).to_contain_text("Last known")
+        expect(tab.locator("#notice")).to_contain_text("Showing last known prices")
+        price.click()
+        expect(tab.locator("#trade-note")).to_contain_text("Current calculations and fee verification are unavailable")
+        expect(tab.locator("#latest")).to_be_hidden()
+        assert not detail_reads
+
+        version = 1
+        with tab.expect_response(lambda response: "/api/comparison-current?" in response.url):
+            tab.clock.fast_forward(2200)
+        expect(tab.locator("#notice")).not_to_contain_text("Showing last known prices")
+        tab.locator("#trade").get_by_role("button", name="Close").click()
+        expect(price).to_contain_text("+110")
+
+        version = 2
+        with tab.expect_response(lambda response: "/api/comparison-current?" in response.url):
+            tab.clock.fast_forward(6600)
+        expect(price).to_contain_text("+118")
         browser.close()
 
 

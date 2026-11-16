@@ -1,6 +1,9 @@
 """One disposable PostgreSQL 16 matrix through ingress, publication and HTTP."""
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from threading import Event
 from types import SimpleNamespace
 from unittest import IsolatedAsyncioTestCase, skipUnless
 from unittest.mock import MagicMock,patch
@@ -8,6 +11,7 @@ from uuid import uuid4
 
 from aiohttp import web
 from aiohttp.test_utils import TestClient,TestServer
+from psycopg import OperationalError
 
 from app.collection.current_policy import DEFAULT
 from app.collection.runtime_client import RuntimeClient
@@ -63,6 +67,81 @@ class NativeMatrixFixture(IsolatedAsyncioTestCase):
 
 
 class BroadNativeMatrixSQL(NativeMatrixFixture):
+    async def test_desk_keeps_last_polymarket_price_during_sql_stall_and_reconnect(self):
+        from app.dashboard.desk_last_known import LastKnownDesk
+        from app.dashboard.snapshot_api import mount
+
+        self.config['aggregate_provider'] = 'sportsgameodds'
+        self.state.write(self.service)
+        rows, books = await captured_core_matrix(self.at)
+        self.admit(rows, books)
+        query = dict(layout='desk', view='ev', browse_odds='1', summary='1',
+                     basis='before', phase='pregame', lines='all', league='NBA')
+        path = '/api/comparison-current'
+        waiting, release = Event(), Event()
+        stalled = False
+        reads = 0
+
+        def connect():
+            nonlocal reads
+            reads += 1
+            if stalled:
+                waiting.set()
+                if not release.wait(5):
+                    raise AssertionError('SQL read was not released')
+            return self.connect()
+
+        def poly(page):
+            return next(offer for row in page['rows'] for offer in row['offers']
+                        if offer['venue'] == 'polymarket_us')
+
+        with TemporaryDirectory() as folder:
+            cache_file = Path(folder) / 'view.sqlite3'
+            app = web.Application()
+            mount(app, last_known=LastKnownDesk(cache_file))
+            with patch('app.dashboard.snapshot_api.connect', connect):
+                async with TestClient(TestServer(app)) as client:
+                    response = await client.get(path, params=query)
+                    self.assertEqual(response.status, 200, await response.text())
+                    fresh = poly(await response.json())
+                    self.assertTrue(fresh['current'])
+                    stalled = True
+                    try:
+                        with patch('app.dashboard.desk_delivery.RESPONSE_SECONDS', 0.1):
+                            for _ in range(2):
+                                response = await client.get(path, params=query)
+                                self.assertEqual(response.status, 200, await response.text())
+                                saved = await response.json()
+                                self.assertIn('last_known_at', saved)
+                                self.assertIn('desk_last_known', response.headers['Server-Timing'])
+                        self.assertTrue(waiting.is_set())
+                        self.assertEqual(reads, 2)
+                        previous = poly(saved)
+                        self.assertEqual(previous['original'], fresh['original'])
+                        self.assertEqual(previous['source_clock_at'], fresh['source_clock_at'])
+                        self.assertFalse(previous['current'])
+                        self.assertFalse(previous['posted_price'])
+                        self.assertIsNone(previous['value'])
+                        for field in ('effective_quote', 'book_size', 'current_until', 'evidence_result_id'):
+                            self.assertNotIn(field, previous)
+                    finally:
+                        stalled = False
+                        release.set()
+                    response = await client.get(path, params=query)
+                    resumed = await response.json()
+                    self.assertNotIn('last_known_at', resumed)
+                    self.assertTrue(poly(resumed)['current'])
+
+            restarted = web.Application()
+            mount(restarted, last_known=LastKnownDesk(cache_file))
+            with patch('app.dashboard.snapshot_api.connect', side_effect=OperationalError):
+                async with TestClient(TestServer(restarted)) as client:
+                    response = await client.get(path, params=query)
+                    self.assertEqual(response.status, 200, await response.text())
+                    self.assertEqual(poly(await response.json())['original'], fresh['original'])
+                    uncached = await client.get(path, params=dict(query, league='NFL'))
+                    self.assertEqual(uncached.status, 503)
+
     async def test_native_selection_before_the_first_ordinary_seal(self):
         from app.dashboard.snapshot_api import mount
 

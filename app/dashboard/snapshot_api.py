@@ -6,6 +6,7 @@ from threading import RLock
 from datetime import datetime
 import re
 from aiohttp import web
+from psycopg import OperationalError
 from app.owned_work import joined_thread
 from app.storage.store import connect, stamp
 from app.storage import comparison_snapshot as snapshots
@@ -196,7 +197,7 @@ def history(db, out):
     return out
 
 
-def mount(app):
+def mount(app, *, last_known=None):
     # Result IDs are immutable. Keep one list root, bounded to one revision.
     # Reading a small selected member must not evict the large rolling root.
     # Evidence retention/authority is still checked at its owning read boundary.
@@ -255,9 +256,12 @@ def mount(app):
         return web.json_response(await asyncio.to_thread(work))
 
     from .browse_sessions import BrowseSessions
-    from .desk_delivery import ReadBurst
+    from .desk_delivery import ReadBurst, read_desk
+    from .desk_last_known import LastKnownDesk
     browsing=BrowseSessions()
     desk_reads = ReadBurst()
+    if last_known is None:
+        last_known = LastKnownDesk()
     app.on_cleanup.append(desk_reads.close)
 
     async def current_read(req):
@@ -581,24 +585,37 @@ def mount(app):
                         'published_at','price_seconds','total_seconds','error')}))
                 return out
 
-        from .desk_delivery import common_page, encode, packet_response, timing_header
+        from .desk_delivery import (
+            BURST_SECONDS, LATE_LIST_REUSE_SECONDS, common_page, encode, packet_response, timing_header,
+        )
 
         async def read_work():
             value = await joined_thread(__name__, 'desk_read_after_cancellation', work)
             return (value, dict(timings)), float('inf'), 0
 
         if is_updates and is_desk and set(req.query) <= {'layout', 'phase', 'after'}:
-            (result, saved_timings), shared = await desk_reads.read(('updates', query['phase']), read_work, reuse=0)
+            (result, saved_timings), shared = await read_desk(
+                desk_reads.read(('updates', query['phase']), read_work, reuse=0))
             result = dict(result, changed=query.get('after') != result['cursor'])
             headers = {'Server-Timing': 'desk_shared;dur=0' if shared else timing_header(saved_timings)}
             return web.json_response(result, headers=headers)
 
         if (is_desk and query.get('summary') == '1' and not
                 (is_updates or is_selection or is_fee_census)):
+            # Follow the full request identity, including filters and membership.
+            # Slow requests continue one shared read while callers use the copy.
+            common = common_page(query, options)
+            exact = ('desk', tuple(sorted(query.items())))
+            cache_key = hashed(exact) if options[0] != 'arbs' else None
+
             def public_packet():
                 started = monotonic()
                 result = work()
                 observed = (result.get('publication') or {}).get('read_at') or utc()
+                if cache_key is not None:
+                    stage = monotonic()
+                    last_known.remember(cache_key, result)
+                    timings['remember_prices'] = (monotonic() - stage) * 1000
                 stage = monotonic()
                 packet, expires, size = encode(result, at=stamp(observed), started=started)
                 timings['encode'] = (monotonic() - stage) * 1000
@@ -607,10 +624,23 @@ def mount(app):
             async def produce():
                 return await joined_thread(__name__, 'desk_read_after_cancellation', public_packet)
 
-            key = common_page(query, options)
-            (packet, saved_timings), shared = await desk_reads.read(key, produce)
-            return packet_response(req, packet, saved_timings, shared=shared)
+            try:
+                (packet, saved_timings), shared = await read_desk(
+                    desk_reads.read(common or exact, produce, reuse=BURST_SECONDS if common else 0,
+                                    late_reuse=LATE_LIST_REUSE_SECONDS))
+                return packet_response(req, packet, saved_timings, shared=shared)
+            except (web.HTTPServiceUnavailable, OperationalError):
+                saved = last_known.read(cache_key, stamp(utc())) if cache_key is not None else None
+                if saved is None:
+                    raise web.HTTPServiceUnavailable(reason='Prices temporarily unavailable') from None
+                return web.json_response(saved, headers={
+                    'Server-Timing': timing_header({'desk_last_known': (monotonic() - submitted) * 1000}),
+                })
 
+        if is_selection and is_desk:
+            (result, saved_timings), _ = await read_desk(
+                desk_reads.read(('selection', tuple(sorted(query.items()))), read_work, reuse=0))
+            return web.json_response(result, headers={'Server-Timing': timing_header(saved_timings)})
         (result, saved_timings), _ = await desk_reads.read(None, read_work)
         return web.json_response(result, headers={'Server-Timing': timing_header(saved_timings)})
 

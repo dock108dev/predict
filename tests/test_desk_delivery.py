@@ -2,14 +2,58 @@
 import asyncio
 from datetime import datetime, timedelta, timezone
 from gzip import decompress
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from unittest import IsolatedAsyncioTestCase
 
 from aiohttp.web import HTTPServiceUnavailable
 
 from app.dashboard.desk_delivery import MAX_DESK_READS, ReadBurst, common_page, encode, gzip_allowed
+from app.dashboard.desk_last_known import LastKnownDesk
 
 
 class TestDeskDelivery(IsolatedAsyncioTestCase):
+    def test_saved_pregame_prices_expire_at_kickoff_and_respect_authoritative_removal(self):
+        at = datetime(2026, 11, 15, 15, tzinfo=timezone.utc)
+        kickoff = at + timedelta(minutes=20)
+        page = dict(state='ready', phase='pregame', publication={'read_at': at.isoformat()},
+                    rows=[dict(id='row', start_at=kickoff.isoformat(), offers=[dict(id='price')])])
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / 'desk.sqlite3'
+            cache = LastKnownDesk(path)
+            cache.remember('slate', page)
+            self.assertIsNotNone(LastKnownDesk(path).read('slate', at))
+            self.assertIsNone(cache.read('slate', kickoff))
+            later = at + timedelta(minutes=1)
+            cache.remember('slate', dict(page, rows=[], publication={'read_at': later.isoformat()}))
+            cache.remember('slate', page)
+            self.assertIsNone(LastKnownDesk(path).read('slate', later))
+
+    async def test_late_list_completion_can_be_picked_up_by_the_next_retry(self):
+        clock = [0.0]
+        reads = ReadBurst(clock=lambda: clock[0])
+        entered, finish = asyncio.Event(), asyncio.Event()
+        calls = 0
+
+        async def load():
+            nonlocal calls
+            calls += 1
+            entered.set()
+            await finish.wait()
+            return calls, 6.0, 100
+
+        first = asyncio.create_task(reads.read('list', load, reuse=0, late_reuse=3.5))
+        await entered.wait()
+        first.cancel()
+        with self.assertRaises(asyncio.CancelledError):
+            await first
+        clock[0] = 1.5
+        finish.set()
+        await asyncio.gather(*reads.active)
+        clock[0] = 3.0
+        self.assertEqual(await reads.read('list', load, reuse=0, late_reuse=3.5), (1, True))
+        self.assertEqual(await reads.read('list', load, reuse=0, late_reuse=3.5), (2, False))
+
     async def test_distinct_and_unshared_reads_share_capacity_until_completion(self):
         reads = ReadBurst()
         full = asyncio.Event()

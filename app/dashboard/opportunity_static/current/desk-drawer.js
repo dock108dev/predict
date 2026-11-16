@@ -79,7 +79,7 @@ export function createDeskDrawer({replay, dataset, retainedResult, gameKey, page
     $('trade-body').replaceChildren(tradeInspection(offer, group, evidence, {mode, position:label, basis:currentSelection.basis,
       checkedAt:currentSelection.checkedAt, pinned:currentSelection.pinned, publication:currentSelection.publication,
       pairLeg:!!pairContext, pairFee, pairAcquisition}));
-    $('latest').hidden = replay;
+    $('latest').hidden = replay || currentSelection.lastKnown;
     $('back-to-pair').hidden = !currentSelection.pairContext;
   }
 
@@ -98,11 +98,12 @@ export function createDeskDrawer({replay, dataset, retainedResult, gameKey, page
       title:$('trade-title').textContent, note:$('trade-note').textContent, latestHidden:$('latest').hidden, opener
     };
     const {page, previousReason, autoUpdate} = viewContext();
-    const previous = Boolean(previousReason || opener?.hasAttribute('data-expired-quote'));
+    const lastKnown = Boolean(page?.last_known_at);
+    const previous = lastKnown || Boolean(previousReason || opener?.hasAttribute('data-expired-quote'));
     currentSelection = {offer, group, game, opener, pairContext,
       basis:page?.basis || filters.elements.basis.value,
-      checkedAt:previous ? Date.parse(page?.publication?.read_at) || Date.now() : Date.now(),
-      pinned:previous, publication:pairContext?.publication ?? page?.publication, capturedAt:page?.replay?.captured_at};
+      checkedAt:previous && !lastKnown ? Date.parse(page?.publication?.read_at) || Date.now() : Date.now(),
+      lastKnown, pinned:previous, publication:pairContext?.publication ?? page?.publication, capturedAt:page?.replay?.captured_at};
     if (offer.posted_price && !replay && !pairContext) {
       Object.assign(currentSelection, {posted:true, loading:true, closed:false, size:'10'});
       amount.value = currentSelection.size;
@@ -117,6 +118,11 @@ export function createDeskDrawer({replay, dataset, retainedResult, gameKey, page
     else dialog.querySelector('form button').focus();
     dialog.scrollTop=0;
     const selected=currentSelection;
+    if (lastKnown) {
+      $('trade-body').querySelector('.inspection-loading')?.remove();
+      $('trade-note').textContent = 'Last known quote. Current calculations and fee verification are unavailable.';
+      return;
+    }
     if (selected.posted) {
       await readPostedSelection(selected, {adopt:autoUpdate});
       return;
@@ -678,7 +684,7 @@ export function createDeskDrawer({replay, dataset, retainedResult, gameKey, page
       if (!dialog.open || selected.ended || !refresh && !viewContext().autoUpdate) return;
       return readPostedSelection(selected, {adopt:refresh ? 'refresh' : true});
     }
-    if (replay || !dialog.open || !selected || selected.historical || selected.adoptionNotice || $('latest').disabled) return;
+    if (replay || !dialog.open || !selected || selected.lastKnown || selected.historical || selected.adoptionNotice || $('latest').disabled) return;
     expireInspection();
     try {
       if (selected.pair) {
