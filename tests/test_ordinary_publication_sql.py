@@ -115,6 +115,21 @@ class OrdinarySQL(LatestBoardFixture):
                 facts = first['facts']
                 self.assertEqual(facts['period'], 'full_game')
                 self.assertEqual(facts['return_percent'], positive['default_funding_result']['score'])
+                # Both legs buy a $1 claim at $0.40 with zero modeled
+                # fees in this fixture. 125 units per leg cost $100 and pay $125.
+                self.assertEqual(Fraction(facts['return_percent']), 25)
+                app = web.Application()
+                mount(app)
+                with patch('app.dashboard.snapshot_api.connect', self.connect):
+                    async with TestClient(TestServer(app)) as client:
+                        query = dict(layout='desk', phase='pregame', view='arbs', summary='1', refresh='1')
+                        response = await client.get('/api/comparison-current', params=query)
+                        self.assertEqual(response.status, 200)
+                        arb_page = await response.json()
+                        pair, = [p for group in arb_page['rows'] for p in group['pairs']
+                                 if p['id'] == positive['id']]
+                        self.assertEqual(Fraction(pair['score']), 25)
+                        self.assertEqual(pair['retail_payoff']['minimum_net_profit_usd'], '25')
                 self.assertEqual({leg['venue'] for leg in facts['legs']}, {'kalshi', 'polymarket_us'})
                 self.assertEqual({leg['source_at'] for leg in facts['legs']}, {self.at.isoformat()})
 
@@ -523,8 +538,9 @@ class OrdinarySQL(LatestBoardFixture):
                 policy='changed',epoch=result['publication']['epoch'])
             self.assertTrue(all(r['gross_return_percent'] is None for r in changed['rows']))
             self.at+=timedelta(hours=2);self.state.write(self.service)
-            expired=self.project(db,result)
-            self.assertTrue(all(not r['price_current'] for r in expired['rows']))
+            retained=self.project(db,result)
+            self.assertTrue(any(r['price_current'] for r in retained['rows']))
+            self.assertTrue(all(stamp(r['start_at']) > self.at for r in retained['rows'] if r['price_current']))
 
     async def test_http_reads_notify_without_collection_or_recalculation(self):
         with self.connect() as db:live.turn(db)
@@ -577,7 +593,7 @@ class OrdinarySQL(LatestBoardFixture):
                 self.assertEqual(selected['state'],'unavailable')
                 self.assertIn('updates_stopped',selected['row']['current_reasons'])
 
-    async def test_pregame_desk_updates_bypass_projection_and_watch_admitted_prices(self):
+    async def test_pregame_desk_updates_bypass_projection_and_watch_committed_prices(self):
         with self.connect() as db:
             self.assertTrue(live.turn(db)['published'])
         app = web.Application()
@@ -589,7 +605,7 @@ class OrdinarySQL(LatestBoardFixture):
                 response = await client.get('/api/comparison-current', params=query)
                 page = await response.json()
                 self.assertEqual(response.status, 200)
-                self.assertEqual(page['features'], {'live_enabled': False})
+                self.assertEqual(page['features'], {'live_enabled': False, 'auto_update': True})
                 self.assertEqual(page['phase'], 'pregame')
                 self.assertTrue(page['rows'])
                 phase_query = dict(layout='desk', phase='pregame', after=page['update_cursor'])
@@ -598,20 +614,16 @@ class OrdinarySQL(LatestBoardFixture):
                     self.assertFalse((await same.json())['changed'])
                     self.assertNotIn('dependencies;', same.headers['Server-Timing'])
                     self.changed_first()
-                    changed = await client.get('/api/comparison-current/updates', params=phase_query)
-                    signal = await changed.json()
-                    self.assertTrue(signal['changed'])
-                    self.assertEqual(signal['generation'], page['generation'])
-                    self.assertEqual(signal['provider_requests'], 0)
-                offered = [offer for row in page['rows'] for offer in row['offers']
-                           if offer['current'] and offer['current_until']
-                           and stamp(offer['current_until']) < stamp(row['start_at'])]
-                self.assertTrue(offered)
-                expiring = min(offered, key=lambda offer: stamp(offer['current_until']))
-                self.at = stamp(expiring['current_until']) + timedelta(microseconds=1)
-                self.state.write(self.service)
-                expired_page = await (await client.get('/api/comparison-current', params=query)).json()
-                self.assertNotIn(expiring['id'], {offer['id'] for row in expired_page['rows'] for offer in row['offers']})
+                    pending = await client.get('/api/comparison-current/updates', params=phase_query)
+                    self.assertFalse((await pending.json())['changed'])
+                with self.connect() as db:
+                    self.assertTrue(live.turn(db)['published'])
+                changed = await client.get('/api/comparison-current/updates', params=phase_query)
+                signal = await changed.json()
+                self.assertTrue(signal['changed'])
+                self.assertGreater(signal['generation'], page['generation'])
+                self.assertEqual(signal['provider_requests'], 0)
+                self.assertEqual(stamp(page['refresh_at']), min(stamp(row['start_at']) for row in page['rows']))
                 self.at = max(stamp(row['start_at']) for row in page['rows'])
                 self.state.write(self.service)
                 after_kickoff = await (await client.get('/api/comparison-current', params=query)).json()
@@ -865,7 +877,7 @@ class OrdinarySQL(LatestBoardFixture):
                 self.assertTrue(pages[0]['rows'])
                 self.assertTrue(pages[0]['browse_id'])
                 self.assertTrue(all(page == pages[0] for page in pages))
-                self.assertEqual(dependencies.call_count, 1)
+                self.assertEqual(dependencies.call_count, 0)
 
     async def test_current_read_overload_refuses_extra_work_and_recovers(self):
         import asyncio

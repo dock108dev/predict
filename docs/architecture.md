@@ -62,9 +62,9 @@ and epoch; explicit collection Stop has acknowledged cross-process semantics.
 4. Scanner, Odds and EV reads filter/page stored results without acquisition or
    whole-slate finance. Selected tickets/Details may calculate the selected amount
    from exact fresh database inputs. Expanded reports remain transient.
-5. Original expiry, Stop, configuration/model/policy/epoch changes and an
-   eight-second missing heartbeat withdraw current action eligibility. Stored
-   observations remain last-known where useful; reading never renews freshness.
+5. The pregame desk keeps published prices and calculations until the game
+   starts or an explicit sporting change withdraws it. Live and execution
+   paths use their own freshness and runtime authority checks.
 
 `DatabaseIngressSink` commits directly through `CurrentRowStore`; ordinary
 collection does not construct a journal or import old diagnostics. Migrations
@@ -259,7 +259,7 @@ See [acquisition](acquisition.md) for ownership, capacity and completeness limit
 | Ordinary desk shell | `app/dashboard/multi_game_server.py` | Mounts all six ordinary SQL desk routes with one shared handler. | Opportunities, EV, Arbitrage, Browse odds, Game and Replay. |
 | Desk and replay phase selection | `app/dashboard/snapshot_display.py` | Applies the pregame boundary consistently to selected rows and related games and pairs. | Current and captured snapshot reads, replay lists and replay details. |
 | Best sportsbook payout and two-sided de-vig | `app/comparison/sgo_reference.py` | Owns the book order, tie-break, exact American-price parsing and normalization of a qualified pair. | Settlement-reviewed SGO reference, direct public book estimates, Browse odds and same-frame SGO baseline. |
-| Desk sportsbook line selection and enrichment | `app/dashboard/desk_sportsbooks.py` | Matches sportsbook prices to the exact displayed line and supplies their read-time freshness. | Current snapshot list and Quote Quality. |
+| Desk sportsbook line selection and enrichment | `app/dashboard/desk_sportsbooks.py` | Matches sportsbook prices to the exact displayed live line and applies live freshness. | Live snapshot list and Quote Quality. |
 | Joined thread cancellation | `app/owned_work.py` (`joined_thread`) | Owns result/error-as-data, repeated-cancellation joining and error precedence in one implementation. | `collection/bulk_checkpoint.py::owned_thread` and the raw API's `joined` binding; checkpoint, ingress, accounting shutdown and raw read/export operations. |
 | Safe failure details | `app/diagnostics.py` | Builds class/frame-only diagnostics without messages or payloads. | Shared completion helper, runtime, storage and disposable calculation workers. |
 | Raw Odds controls | `app/dashboard/opportunity_static/current/raw-odds.js` and its `raw-odds.html` shell | Owns received-price filtering, pagination, selection and loading state. | `/raw-odds` and `tests/test_raw_odds_controls.cjs`. |

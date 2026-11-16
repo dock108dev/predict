@@ -160,7 +160,8 @@ def calculate(quotes, contract, *, at, evaluated_venue, named_venue=None, best_p
                     raise ValueError('clock_future')
                 if live_start is not None and source < live_start:
                     raise ValueError('reference_pre_start')
-                if (clock - source).total_seconds() > maximum_age_seconds:
+                if (live_start is not None or contract.get('pregame_retained') is not True) and (
+                        clock - source).total_seconds() > maximum_age_seconds:
                     raise ValueError('source_stale')
                 implied.append(american_probability(q.get('price_american')))
             if qualify_pair is not None:

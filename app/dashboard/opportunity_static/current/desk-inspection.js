@@ -436,6 +436,8 @@ export function tradeInspection(offer, group, evidence, {mode, position, basis, 
     ['Fair probability', probability(sportsbook.probability)],
     ['Offered price per $1 payout', usd(cost)],
     ['Estimated return before fees', signedPercent(sportsbook.return_percent)],
+    ...(offer.sportsbook_after_fee != null
+      ? [['Estimated return after fees', signedPercent(offer.sportsbook_after_fee)]] : []),
     ...sportsbook.prices.map((leg, index) => [index ? 'Opposite price and clock' : 'Selected price and clock', `${leg.price_american} American · ${leg.source_at}`])
   ]), el('p', 'Fair probability equals selected implied probability divided by the sum of both implied probabilities from the same book. Estimated return is 100 × (fair probability ÷ price per $1 payout − 1).', 'inspection-formula'),
     el('p', 'The estimate uses the full-game two-way result. Pushes, ties, voids and cancellations can settle differently across sites.', 'desk-meta')));

@@ -349,7 +349,9 @@ def apply_event_lifecycle(db, frames, references, records):
             FROM current_sgo_event_frame f LEFT JOIN current_event e
               ON e.native_event_id=f.event_id AND e.provider='sportsgameodds'
             WHERE f.event_id=ANY(%s) AND (f.event_id=ANY(%s) OR e.facts ? 'sgo_closed_at'
-              OR e.facts#>>'{status,status}' IN ('cancelled','suspended','delayed') OR e.facts#>>'{status,ended}'='true')""",
+              OR e.facts#>>'{status,status}' IN ('cancelled','suspended','delayed') OR e.facts#>>'{status,ended}'='true'
+              OR e.scheduled_start::timestamptz <> (f.facts->>'starts_at')::timestamptz
+              OR (f.facts#>>'{event_context,status,live}'='true' AND e.facts#>>'{status,live}' IS DISTINCT FROM 'true'))""",
             (sorted(candidates), sorted(terminal))).fetchall()
     if not previous:
         return 0, records
@@ -374,8 +376,10 @@ def apply_event_lifecycle(db, frames, references, records):
         key = row['event_id']
         frame = candidates[key]
         prior = row['facts']
-        if prior and stamp(frame['starts_at']) != stamp(prior['scheduled_start']):
-            continue  # A schedule change goes through ordinary occurrence admission.
+        context = frame.get('event_context') or {}
+        changed_schedule = bool(prior and stamp(frame['starts_at']) != stamp(prior['scheduled_start']))
+        started = sgo_event_status(context.get('status') or {})
+        left_pregame = started['live'] or started['status'] == 'started'
         closed = bool(prior and sporting_phase(prior)['state'] in terminal_states)
         metadata = witness(prior) if closed else None
         cutoff = (prior or {}).get('sgo_closed_at') or (metadata or {}).get('received_at')
@@ -385,7 +389,8 @@ def apply_event_lifecycle(db, frames, references, records):
             blocked.add(key)
         if row['receipt'] != frame['receipt_sha256'] or not frame.get('event_context'):
             continue
-        if key not in terminal and (not closed or not cutoff or key not in sources or sources[key] <= stamp(cutoff)):
+        reopening = closed and cutoff and key in sources and sources[key] > stamp(cutoff)
+        if key not in terminal and not (reopening or not closed and (changed_schedule or left_pregame)):
             continue
         observation = event_record(dict(frame['event_context'], event_id=key, starts_at=frame['starts_at']),
                                    frame['receipt_sha256'], frame['received_at'], sgo_registry())
@@ -397,12 +402,17 @@ def apply_event_lifecycle(db, frames, references, records):
             cutoff = frame['received_at']
         else:
             blocked.discard(key)
-        observation['sgo_closed_at'] = cutoff
-        cutoffs[key] = cutoff
+        if cutoff:
+            observation['sgo_closed_at'] = cutoff
+            cutoffs[key] = cutoff
         eid = row['id'] or event_id('sportsgameodds', key)
         if prior:
-            db.execute('UPDATE current_event SET facts=%s,revision=%s WHERE id=%s',
-                       (Jsonb(observation), hashed(observation), eid))
+            start = observation['scheduled_start']
+            new_end = stamp(start) + (timedelta(hours=24) if key in terminal or left_pregame else timedelta(0))
+            db.execute('''UPDATE current_event SET facts=%s,revision=%s,scheduled_start=%s,
+                          expires_order=CASE WHEN scheduled_start=%s THEN greatest(expires_order,%s) ELSE %s END
+                          WHERE id=%s''',
+                       (Jsonb(observation), hashed(observation), start, start, exact_time(new_end.isoformat()), exact_time(new_end.isoformat()), eid))
         else:
             start = observation['scheduled_start']
             db.execute("""INSERT INTO current_event VALUES (%s,'sportsgameodds',%s,%s,%s,%s,%s,%s)""",
@@ -466,14 +476,11 @@ class EventInputs:
         starts = set(starts)
         if not starts:
             if self.schedule is None:
-                from app.comparison.game_phase import PREGAME_SPORTSBOOK_SECONDS
-
-                since = at - timedelta(seconds=PREGAME_SPORTSBOOK_SECONDS)
                 self.schedule = self._read_schedule(
                     "scheduled_start::timestamptz BETWEEN %s AND %s",
-                    "received_order BETWEEN %s AND %s",
-                    (at - timedelta(hours=24), at + timedelta(hours=72),
-                     exact_time(since.isoformat()), exact_time(at.isoformat())),
+                    "(facts->>'starts_at')::timestamptz BETWEEN %s AND %s AND received_order <= %s",
+                    (at - timedelta(hours=24), at + timedelta(hours=72), at, at + timedelta(hours=72),
+                     exact_time(at.isoformat())),
                 )
             return self.schedule
         missing = sorted(starts - self.retained_schedule.keys())
@@ -626,7 +633,10 @@ def prune(db, *, at, limit=PRUNE_BATCH, include_legacy=False):
     db.execute('SELECT pg_advisory_xact_lock(%s)', (LOCK,))
     expiry, bounds = expiry_filter(at, include_legacy)
     expired = db.execute(f'''SELECT id,event_id,revision,facts FROM current_sgo_reference
-        WHERE {expiry} ORDER BY expires_at,id LIMIT %s''', (*bounds, limit)).fetchall()
+        WHERE ({expiry}) AND NOT EXISTS (
+            SELECT 1 FROM current_event e WHERE e.provider='sportsgameodds'
+                AND e.native_event_id=current_sgo_reference.event_id AND e.scheduled_start::timestamptz > %s)
+        ORDER BY expires_at,id LIMIT %s''', (*bounds, at, limit)).fetchall()
     archive_revisions(db, 'reference', expired)
     retired = db.execute('UPDATE sgo_quote_revision SET is_current=false WHERE id=ANY(%s) AND is_current',
                          ([row['id'] for row in expired],)).rowcount
@@ -806,7 +816,10 @@ def prune_frames(db, *, at, limit=PRUNE_BATCH, include_legacy=False):
     db.execute('SELECT pg_advisory_xact_lock(%s)', (LOCK,))
     expiry, bounds = expiry_filter(at, include_legacy)
     expired = db.execute(f'''SELECT event_id,facts FROM current_sgo_event_frame
-        WHERE {expiry} ORDER BY expires_at,event_id LIMIT %s''', (*bounds, limit)).fetchall()
+        WHERE ({expiry}) AND NOT EXISTS (
+            SELECT 1 FROM current_event e WHERE e.provider='sportsgameodds'
+                AND e.native_event_id=current_sgo_event_frame.event_id AND e.scheduled_start::timestamptz > %s)
+        ORDER BY expires_at,event_id LIMIT %s''', (*bounds, at, limit)).fetchall()
     archive_revisions(db, 'frame', expired)
     return db.execute("DELETE FROM sgo_event_evidence WHERE kind='frame' AND event_id=ANY(%s)",
                       ([row['event_id'] for row in expired],)).rowcount

@@ -1,5 +1,6 @@
 """Build ordinary price and financial result packets from a captured snapshot."""
 
+from fractions import Fraction
 from uuid import uuid4
 
 from app.comparison.display_identity import canonical_key
@@ -24,14 +25,16 @@ def quote_authority(row, inputs, *, reference=False):
         from app.collection.current_benchmark import MAXIMUM_AGE
         q=dict(q,freshness_policy=dict(maximum_age_seconds=MAXIMUM_AGE))
     cid = contract_id(record)
-    clock = assess(q, stamp(inputs['captured_at']), maximum_age=CURRENT_DESK_MAX_AGE_SECONDS)
     from app.comparison.game_phase import original_price_phase
-    lifecycle=original_price_phase(record,inputs['captured_at'])
+    lifecycle = original_price_phase(record, inputs['captured_at'])
+    clock = assess(q, stamp(inputs['captured_at']), maximum_age=CURRENT_DESK_MAX_AGE_SECONDS,
+                   pregame_until=record['event']['scheduled_start'] if lifecycle['state'] == 'scheduled' else None)
     if lifecycle['reason']:clock['reasons'].append(lifecycle['reason'])
     if lifecycle.get('current_until') and clock.get('current_until'):
         clock['current_until']=min(clock['current_until'],lifecycle['current_until'])
-    if q.get('state') in ('stopped','unavailable','error','resyncing','stale'):
-        clock['reasons'].append('quote_'+q['state'])
+    state = q.get('state')
+    if state == 'unavailable' or lifecycle['state'] != 'scheduled' and state in ('stopped', 'error', 'resyncing', 'stale'):
+        clock['reasons'].append('quote_'+state)
     return dict(dependency=cid, expected=inputs['dependencies'].get(cid),
                 venue=row['venue'], provider=q.get('source',{}).get('provider'), lifecycle=lifecycle,
                 **({'novig_runtime_id':q['novig_runtime_id']} if q.get('novig_runtime_id') else {}), **clock)
@@ -148,6 +151,8 @@ def bind(result, inputs, finance, *, load_registry):
             binding = original.get('sgo_native_contract')
             if binding:
                 row['sgo_native_contract'] = binding
+            if binding and not binding['available']:
+                row['trade_fee'] = pregame_fee(binding)
             if binding and binding['available']:
                 dependency = catalog_dependency_id(original['source']['native_event_id'])
                 expected = inputs['dependencies'].get(dependency)
@@ -204,6 +209,22 @@ def bind(result, inputs, finance, *, load_registry):
                 row['conservative_return_percent'] = row['conservative_trade_benchmark'].get('return_percent')
                 row['polymarket_live_financial_qualified'] = phase == 'live' and row['conservative_trade_benchmark']['available']
                 statuses(row)
+        baseline = row.get('sportsbook_baseline')
+        if finance == 'ready' and source.get('lifecycle', {}).get('state') == 'scheduled' and baseline:
+            from app.comparison.cashflows import exact_wire
+            from app.dashboard.current_contract import price
+
+            standalone = row.get('trade_fee') or {}
+            cashflows = standalone.get('fee_cashflows') or {}
+            if standalone.get('available') and set(cashflows) <= {'at_fill_usd', 'winning_settlement_usd',
+                                                                  'losing_settlement_usd'} and 'at_fill_usd' in cashflows:
+                probability = Fraction(baseline['probability'])
+                risk = price(row) + Fraction(cashflows['at_fill_usd'])
+                win = 1 - Fraction(cashflows.get('winning_settlement_usd', '0'))
+                loss = -Fraction(cashflows.get('losing_settlement_usd', '0'))
+                if risk > 0:
+                    row['sportsbook_after_fee_percent'] = exact_wire(100 * ((probability * win +
+                        (1 - probability) * loss) / risk - 1))
         metadata = (original.get('original_record') or {}).get('comparison_source_metadata') or {}
         if metadata.get('alternate') is True:
             row['alternate'] = True
@@ -217,6 +238,11 @@ def bind(result, inputs, finance, *, load_registry):
             fee_until=fee.get('review_before'),fee_from=fee.get('reviewed_at'),fee_revision=hashed(fee) if fee else empty_fee_revision,
             conservative_fee_until=row.get('conservative_trade_benchmark',{}).get('evidence',{}).get('review_before'),
             start_at=row['start_at'])
+        occurrence = ((original.get('original_record') or {}).get('quote', {}).get('occurrence_match') or {})
+        if (occurrence.get('status') == 'matched' and occurrence.get('estimated') is False
+                and not occurrence.get('conflicts') and occurrence.get('method') in
+                ('shared_provider_id', 'reviewed_source_id', 'local_reviewed_override')):
+            row['current_authority']['occurrence_id'] = occurrence.get('occurrence_id')
         if catalog_authority is not None:
             row['current_authority']['sgo_native_contract'] = catalog_authority
         if row.get('reference_calculation',{}).get('available'):
@@ -230,7 +256,8 @@ def bind(result, inputs, finance, *, load_registry):
             (row.get('snapshot_benchmark') or {}).get('selected_predicate'),row.get('fee_applicability'),
             row.get('conditional_return_percent'),row.get('conservative_return_percent'),
             row.get('conservative_trade_benchmark',{}).get('evidence'),fee, result['assumptions']['revision'],
-            row.get('trade_fee'), (row.get('reference_calculation') or {}).get('basis_sha256'), inputs['policy_identity']])
+            row.get('trade_fee'), row.get('sportsbook_baseline'), row.get('sportsbook_after_fee_percent'),
+            (row.get('reference_calculation') or {}).get('basis_sha256'), inputs['policy_identity']])
     if result['pairs']:
         from app.comparison.ordinary_arb import DEFAULT_FUNDING, evaluate, fee_identity
 
@@ -243,6 +270,9 @@ def bind(result, inputs, finance, *, load_registry):
                              game_state=rows[leg]['current_authority']['price'].get('lifecycle', {}).get('state'))
                         for leg in pair['legs']]
                 pair['default_funding_result'] = evaluate(proof, legs, DEFAULT_FUNDING)
+                if not proof.get('blocker') and all(leg['game_state'] == 'scheduled' for leg in legs):
+                    from app.comparison.inspection_math import pair_math
+                    pair['before_fee_inspection'] = pair_math(proof, DEFAULT_FUNDING)
                 pair['default_funding_fee_identity'] = fee_identity(legs)
     result['publication'] = dict(schema=VERSION, finance=finance, policy=inputs['policy_identity'],
         epoch=inputs['epoch'], captured_at=inputs['captured_at'], provider_requests=0)

@@ -167,7 +167,7 @@ class SGOScopeSQL(LatestBoardFixture):
         from app.fees import schedule_lifecycle
         from app.storage.comparison_snapshot import capture
         from app.storage.current_row_state import source_status
-        from app.storage.ordinary_publication import dependencies, prices, project
+        from app.storage.ordinary_publication import dependencies, prices, project, turn
         from app.storage.sportsgameodds_reference import backfill_prophetx, prepare_frames, prepare_page, upsert_frames, upsert_rows
         from app.storage.store import stamp
 
@@ -220,8 +220,10 @@ class SGOScopeSQL(LatestBoardFixture):
             assert db.execute("SELECT count(*) AS n FROM current_contract WHERE venue='prophetx'").fetchone()['n'] == 1
             ids = [physical['event_id']]
 
-            # The normal desk can serve the admitted price and fee before a
-            # comparison worker seals a new calculation.
+            # The normal desk reads the admitted price, terms and benchmark
+            # from the same committed member.
+            with patch('app.storage.comparison_snapshot.utc', return_value=AT):
+                self.assertTrue(turn(db)['published'])
             from aiohttp import web
             from aiohttp.test_utils import TestClient, TestServer
             from app.dashboard.snapshot_api import mount
@@ -233,13 +235,13 @@ class SGOScopeSQL(LatestBoardFixture):
             with patch('app.dashboard.snapshot_api.connect', self.connect):
                 async with TestClient(TestServer(app)) as client:
                     query = dict(layout='desk', phase='pregame', basis='sportsbooks',
-                                 summary='1', ranked='1', lines='main', venue='prophetx')
+                                 summary='1', ranked='1', lines='main', venue='prophetx', refresh='1')
                     reply = await client.get('/api/comparison-current', params=query)
                     assert reply.status == 200
                     listed = await reply.json()
                     item, = [offer for group in listed['rows'] for offer in group['offers']
                              if offer['desk_quote_key'] == key]
-                    assert item['posted_price'] and item['trade_fee_available']
+                    assert item['current'] and item['trade_fee_available']
                     assert item['fair_reference']['books'] == ['fanduel']
                     selected = await (await client.get('/api/comparison-current/selection', params=dict(
                         layout='desk', id=item['id'], quote_key=key, phase='pregame', basis='sportsbooks'))).json()
@@ -251,12 +253,14 @@ class SGOScopeSQL(LatestBoardFixture):
                     assert Fraction(selected['row']['trade_preview']['estimated_return_percent']) == Fraction(-1209, 220)
                     coverage = await (await client.get('/api/comparison-current/fee-coverage',
                         params={'layout': 'desk', 'phase': 'pregame'})).json()
-                    assert coverage['total']['posted_modeled_after_fee'] == 1
+                    assert coverage['total']['covered'] == 1
+                    assert selected['row']['after_fee'] == item['after_fee']
                     assert selected['provider_requests'] == 0
                     source_status(db.execute, 'sportsgameodds',
                                   {'state': 'budget_delayed', 'reason_code': 'sgo_usage_unreconciled'}, AT)
                     held = await (await client.get('/api/comparison-current', params=query)).json()
-                    assert all(offer['desk_quote_key'] != key for group in held['rows'] for offer in group['offers'])
+                    assert any(offer['desk_quote_key'] == key for group in held['rows'] for offer in group['offers'])
+                    assert held['publication']['sources']['sportsgameodds']['reason_code'] == 'sgo_usage_unreconciled'
                     source_status(db.execute, 'sportsgameodds', states['sportsgameodds'], AT)
             captured = capture(db, at=AT, ordinary=True, event_ids=ids)
             assert len(captured['quotes']) == 1, captured['issues']
@@ -279,7 +283,7 @@ class SGOScopeSQL(LatestBoardFixture):
         from app.comparison.snapshot_math import assumptions
         from app.storage import sgo_native_catalog as catalog
         from app.storage.comparison_snapshot import capture
-        from app.storage.ordinary_publication import dependencies, prices, project
+        from app.storage.ordinary_publication import dependencies, prices, project, turn
         from app.storage.sportsgameodds_reference import prepare_frames, prepare_page, upsert_frames, upsert_rows
         from app.storage.store import stamp
         from tests.test_sgo_native_binding import AT, EVENT, HOME, SGO, START, fixture, witness
@@ -521,7 +525,7 @@ class SGOScopeSQL(LatestBoardFixture):
             store = CurrentRowStore(db)
             store.upsert_records([*sgo, *legacy], now='2026-10-03T00:00:00Z')
             scope = dict(venue='novig', competition='MLB', native_event_id='CONTROLLED-event',
-                         received_at=AT, aggregate_route='sgo_event')
+                         received_at='2026-11-10T21:00:01Z', aggregate_route='sgo_event')
             store.upsert_records([], now='2026-10-03T00:00:00Z', authoritative=True, scopes=[scope])
             counts = db.execute("""SELECT e.provider,count(*) n FROM current_contract c
                 JOIN current_event e ON e.id=c.event_id WHERE c.venue='novig'

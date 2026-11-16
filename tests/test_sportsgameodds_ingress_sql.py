@@ -132,6 +132,9 @@ class SportsGameOddsPregameDeskSQL(LatestBoardFixture):
             upsert_rows(db, references)
             upsert_frames(db, prepare_frames(parsed, references))
             self.assertEqual(db.execute("SELECT count(*) AS n FROM current_event WHERE provider='sportsgameodds'").fetchone()['n'], 0)
+            with patch('app.storage.ordinary_publication.utc', return_value=received), \
+                    patch('app.storage.comparison_snapshot.utc', return_value=received):
+                self.assertTrue(ordinary_publication.turn(db)['published'])
 
         app = web.Application()
         mount(app)
@@ -185,7 +188,7 @@ class SportsGameOddsPregameDeskSQL(LatestBoardFixture):
                         patch('app.storage.ordinary_publication.utc', return_value=received), \
                         patch('app.storage.comparison_snapshot.utc', return_value=received):
                     published = ordinary_publication.turn(db)
-                    self.assertTrue(published['published'], published)
+                    self.assertTrue(published['published'] or published['unchanged'], published)
                     self.assertEqual(published['errors'], [])
                 # A committed publication still needs the exact book-only frame witness.
                 retained = await read(ranked='1')
@@ -219,7 +222,10 @@ class SportsGameOddsPregameDeskSQL(LatestBoardFixture):
                         records=projected, sgo_reference_rows=references, sgo_event_frames=prepare_frames(refreshed, references),
                         receipt_sha256=refreshed.receipt_sha256, event_scopes={event['eventID']: 'NCAAB' for event in update},
                         complete_venues=[], received_at=observed), self.service.states, Event())
-                college_page = await read(browse_odds='1', league='NCAAB')
+                with self.connect() as db, patch('app.storage.ordinary_publication.utc', return_value=observed), \
+                        patch('app.storage.comparison_snapshot.utc', return_value=observed):
+                    self.assertTrue(ordinary_publication.turn(db)['published'])
+                college_page = await read(browse_odds='1', league='NCAAB', refresh='1')
                 spreads = [row for row in college_page['rows'] if row['market']['market'] == 'spread']
                 self.assertEqual(len(spreads), 2)
                 self.assertEqual(len({row['game_key'] for row in spreads}), 1)
@@ -236,7 +242,7 @@ class SportsGameOddsPregameDeskSQL(LatestBoardFixture):
                     expected_venues = {'kalshi', 'polymarket_us'} if line == Fraction('123.5') else {'novig', 'prophetx'}
                     self.assertEqual({offer['venue'] for offer in row['offers']}, expected_venues)
 
-    async def test_admitted_pregame_estimates_rank_before_publication_and_leave_at_kickoff(self):
+    async def test_published_pregame_estimates_persist_and_leave_at_kickoff(self):
         from datetime import timedelta
 
         from aiohttp import web
@@ -279,6 +285,14 @@ class SportsGameOddsPregameDeskSQL(LatestBoardFixture):
                     receipt_sha256=parsed.receipt_sha256, event_scopes={event['eventID']: 'NBA'},
                     complete_venues=[], received_at=received), self.service.states, Event())
 
+        def publish():
+            from app.storage import ordinary_publication
+            self.state.write(self.service)
+            with self.connect() as db, patch('app.storage.ordinary_publication.utc', return_value=self.at.isoformat()), \
+                    patch('app.storage.comparison_snapshot.utc', return_value=self.at.isoformat()):
+                result = ordinary_publication.turn(db)
+                self.assertEqual(result['errors'], [])
+
         def offers(db):
             return db.execute('''SELECT c.venue,o.facts->>'state' state,o.source_at,o.received_at,
                 o.revision,o.price_dependency,o.sgo_quote_id,o.sgo_quote_revision,c.native_outcome_id
@@ -305,13 +319,17 @@ class SportsGameOddsPregameDeskSQL(LatestBoardFixture):
         app = web.Application()
         mount(app)
         query = dict(layout='desk', phase='pregame', ranked='1', basis='sportsbooks',
-                     summary='1', lines='main', positive='1')
+                     summary='1', lines='main', positive='1', refresh='1')
         with patch('app.dashboard.snapshot_api.connect', side_effect=self.connect):
             async with TestClient(TestServer(app)) as client:
+                first = await (await client.get('/api/comparison-current', params=query)).json()
+                self.assertEqual((first['state'], first['rows']), ('initializing', []))
+                publish()
                 result = await client.get('/api/comparison-current', params=query)
                 self.assertEqual(result.status, 200, await result.text())
                 page = await result.json()
-                self.assertEqual((page['generation'], page['provider_requests']), (0, 0))
+                self.assertGreater(page['generation'], 0)
+                self.assertEqual(page['provider_requests'], 0)
                 group, = page['rows']
                 self.assertEqual(group['score'], '10')
                 self.assertEqual({row['venue']: row['value'] for row in group['offers']},
@@ -343,6 +361,9 @@ class SportsGameOddsPregameDeskSQL(LatestBoardFixture):
                                "WHERE sgo_quote_id=%s", (novig_offer['sgo_quote_id'],))
                     db.execute(prior_repair)
                     self.assertEqual(offers(db)[0]['state'], 'stopped')
+                    db.execute("UPDATE current_offer_storage SET facts=jsonb_set(facts,'{state}','\"unavailable\"'::jsonb) "
+                               "WHERE sgo_quote_id=%s", (novig_offer['sgo_quote_id'],))
+                publish()
                 closed_group, = (await (await client.get('/api/comparison-current', params=query)).json())['rows']
                 self.assertEqual([row['venue'] for row in closed_group['offers'] if row['current']], ['prophetx'])
 
@@ -351,11 +372,12 @@ class SportsGameOddsPregameDeskSQL(LatestBoardFixture):
                 novig.update(available=True, odds='+120', lastUpdatedAt=older)
                 admit()
                 with self.connect() as db:
-                    self.assertEqual(offers(db)[0]['state'], 'stopped')
+                    self.assertEqual(offers(db)[0]['state'], 'unavailable')
 
                 self.at += timedelta(seconds=1)
                 novig.update(available=True, odds='+120', lastUpdatedAt=self.at.isoformat())
                 admit()
+                publish()
                 fresh, = (await (await client.get('/api/comparison-current', params=query)).json())['rows']
                 self.assertEqual({row['venue'] for row in fresh['offers'] if row['current']}, {'novig', 'prophetx'})
 
@@ -365,7 +387,7 @@ class SportsGameOddsPregameDeskSQL(LatestBoardFixture):
                 event['odds'] = {}
                 admit()
                 browse = dict(layout='desk', phase='pregame', browse_odds='1',
-                              basis='sportsbooks', summary='1', lines='main')
+                              basis='sportsbooks', summary='1', lines='all', refresh='1')
                 partial = await (await client.get('/api/comparison-current', params=browse)).json()
                 self.assertEqual({offer['venue'] for row in partial['rows'] for offer in row['offers']}, {'novig', 'prophetx'})
 
@@ -412,6 +434,7 @@ class SportsGameOddsPregameDeskSQL(LatestBoardFixture):
                 home['byBookmaker']['prophetexchange']['odds'] = '-120'
                 self.state.write(self.service)
                 admit()
+                publish()
                 reopened = await (await client.get('/api/comparison-current',
                     params={k:v for k,v in query.items() if k != 'positive'})).json()
                 row, = reopened['rows']
@@ -420,30 +443,29 @@ class SportsGameOddsPregameDeskSQL(LatestBoardFixture):
                 self.assertFalse(any(offer['trade_fee_available'] for offer in row['offers']))
                 self.assertEqual(reopened['coverage']['same_line_reference'], 2)
                 self.assertEqual(reopened['coverage']['visible_groups'], 1)
-                self.assertEqual(reopened['publication']['count_scope'], 'current_sportsbook_estimates')
                 positive = await (await client.get('/api/comparison-current', params=query)).json()
                 self.assertEqual(positive['rows'], [])
 
-                # The exchange clock advances, but the co-observed FanDuel
-                # pair keeps its older source timestamp and can only explain
-                # why the calculation stopped.
+                # The exchange clock advances independently of the FanDuel pair.
+                # Both input clocks and the supported estimate remain visible.
                 self.at += timedelta(minutes=15, seconds=1)
                 for venue in ('novig', 'prophetexchange'):
                     home['byBookmaker'][venue]['lastUpdatedAt'] = self.at.isoformat()
                 self.state.write(self.service)
                 admit()
+                publish()
                 scanned = await (await client.get('/api/comparison-current', params=browse)).json()
                 shown = next(o for g in scanned['rows'] for o in g['offers'] if o['venue'] == 'novig')
-                self.assertIsNone(shown['value'])
+                self.assertEqual(shown['value'], '-50/11')
                 checked = await (await client.get('/api/comparison-current/selection',
                     params=dict(selection, id=shown['id']))).json()
-                self.assertEqual(checked['row']['reason'], 'reference_price_stale')
-                self.assertIsNone(checked['row']['value'])
+                self.assertEqual(checked['row']['value'], '-50/11')
 
                 self.at += timedelta(seconds=1)
                 self.state.write(self.service, paused_sources=['sportsgameodds'])
-                paused = await (await client.get('/api/comparison-current', params=query)).json()
-                self.assertEqual(paused['rows'], [])
+                paused = await (await client.get('/api/comparison-current', params=browse)).json()
+                self.assertEqual(paused['publication']['data_runtime']['paused_sources'], ['sportsgameodds'])
+                self.assertTrue(paused['rows'])
                 self.state.write(self.service)
                 self.at = stamp(event['status']['startsAt'])
                 self.state.write(self.service)

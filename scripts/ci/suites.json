@@ -492,7 +492,6 @@
       "tests/test_ordinary_dependencies.py",
       "tests/test_trade_desk.py",
       "tests/test_desk_delivery.py",
-      "tests/test_desk_scope.py",
       "tests/test_delivery_scheduling.py",
       "tests/test_oddslink_prophetx.py",
       "tests/test_live_data_followup.py",

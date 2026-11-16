@@ -8,7 +8,6 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from app.comparison.sgo_reference import BEST_BOOKS, BEST_VERSION, NAMED_VERSION, VERSION as SGO_MEDIAN
 from app.comparison.ordinary_arb import DEFAULT_FUNDING, current_payoff, published_payoff
-from app.comparison.game_phase import PREGAME_SPORTSBOOK_SECONDS
 from app.comparison.sporting_scope import supported
 from app.storage.comparison_snapshot import expand_row
 from app.storage.current_rows import contract_id
@@ -167,6 +166,12 @@ def offer(original, metric=None, *, sportsbook_updates_paused=False):
     reason = unavailable_calculation(row, metric, sportsbook_updates_paused=sportsbook_updates_paused) if metric and value is None else None
     gross = desk_ranking_value(row, 'gross_return_percent')
     reviewed = desk_ranking_value(row, EV_METRIC)
+    pregame = row.get('game_state') == 'scheduled'
+    if sportsbook and pregame:
+        if gross is None:
+            gross = sportsbook['return_percent']
+        if reviewed is None:
+            reviewed = row.get('sportsbook_after_fee_percent')
     conservative = desk_ranking_value(row, 'conservative_return_percent')
     fair = reference.get('fair_decimal_odds') if reference_allowed(row) else None
     if reference_allowed(row) and row.get('probability') is not None:
@@ -184,7 +189,8 @@ def offer(original, metric=None, *, sportsbook_updates_paused=False):
                                   'conservative_return_percent': 'conservative_fee_until'}.get(metric))
     if metric is None and (row.get('trade_fee') or {}).get('available'):
         fee_deadline = ((row['trade_fee'].get('evidence') or {}).get('review_before'))
-    deadlines = [clock for clock in (price_deadline, fee_deadline, *reference_deadlines) if clock]
+    deadlines = [price_deadline] if pregame and price_deadline else [
+        clock for clock in (price_deadline, fee_deadline, *reference_deadlines) if clock]
     selected_book = (reference.get('venue') or ref_venue) if sgo_reference else ref_venue
     fair_reference = None
     if reference_price or sportsbook:
@@ -201,6 +207,7 @@ def offer(original, metric=None, *, sportsbook_updates_paused=False):
     return dict(before_fee=None if gross is None else str(gross),after_fee=None if reviewed is None else str(reviewed),
                 conservative=None if conservative is None else str(conservative),metric=metric,
                 sportsbook=sportsbook,fair_reference=fair_reference,
+                sportsbook_after_fee=row.get('sportsbook_after_fee_percent') if pregame else None,
                 value_basis=('before' if metric == SPORTSBOOK_METRIC and value is not None and not sportsbook else None),
                 calculation_expiry_reason=('fee_unavailable' if fee_deadline and
                     all(stamp(fee_deadline) < stamp(clock) for clock in reference_deadlines if clock)
@@ -239,13 +246,17 @@ def offer(original, metric=None, *, sportsbook_updates_paused=False):
 def public_offer(quote, basis):
     fields = ('posted_price', 'id', 'venue', 'selection', 'participant', 'market', 'alternate', 'odds',
               'current', 'value', 'reason', 'calculation_expiry_reason', 'before_fee', 'after_fee', 'conservative',
-              'value_basis', 'best_payout', 'reference_current', 'fair_reference', 'current_until', 'calculation_current_until', 'desk_quote_key',
+              'value_basis', 'best_payout', 'sportsbook_after_fee', 'reference_current', 'fair_reference', 'current_until', 'calculation_current_until', 'desk_quote_key',
               'price_revision', 'economic_revision', 'evidence_result_id', 'captured_at',
               'game_state', 'game_state_basis', 'game_state_reason', 'game_state_observed_at', 'current_reasons',
               'source_clock_at', 'confirmed_at', 'received_at', 'native_side', 'live_aggregate_desk',
               'price_basis', 'source_provider', 'original', 'cost_per_normal_claim', 'effective_quote', 'effective_reason', 'book_size')
     result = {field: quote[field] for field in fields if field in quote}
     sportsbook = quote.get('sportsbook')
+    if quote.get('game_state') == 'scheduled' and sportsbook:
+        result['sportsbook'] = {key: sportsbook[key] for key in ('book', 'prices', 'probability', 'return_percent',
+                                 'candidate_books', 'fair_odds', 'indicative')
+                                if key in sportsbook}
     if quote.get('live_native_desk'):
         result.update(live_native_desk=True, sportsbook=sportsbook,
                       cost_per_normal_claim=quote['cost_per_normal_claim'])
@@ -267,6 +278,9 @@ def public_offer(quote, basis):
     fee = quote.get('trade_fee') or {}
     result['trade_fee_available'] = bool(fee.get('available'))
     result['trade_fee_reason'] = fee.get('reason')
+    if quote.get('game_state') == 'scheduled' and fee.get('available'):
+        result['trade_fee'] = {key: fee[key] for key in ('classification', 'trade_fee_usd', 'quantity', 'quantity_unit',
+                                                         'fee_cashflows', 'fee_payment', 'available') if key in fee}
     return result
 
 
@@ -564,7 +578,7 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
     selected_rows = [row for row in rows if not venues or row['venue'] in venues]
     by_id = {row['id']: row for row in rows}
     metric = METRICS[basis]
-    show_posted_unscored = not published_only and pregame_desk and ranked and metric == SPORTSBOOK_METRIC
+    show_unscored_prices = pregame_desk and ranked and metric == SPORTSBOOK_METRIC
     eligible_pair_count = None
     pair_status = {}
     calculation_reason = None
@@ -614,8 +628,10 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
             retail = payoff['retail_payoff']
             inspection = payoff['inspection']
             if current_legs and not proof.get('blocker') and inspection is None:
-                from app.comparison.inspection_math import pair_math
-                inspection = pair_math(proof, DEFAULT_FUNDING if published_only else stake)
+                inspection = pair.get('before_fee_inspection')
+                if not published_only or phase == 'live':
+                    from app.comparison.inspection_math import pair_math
+                    inspection = pair_math(proof, DEFAULT_FUNDING if published_only else stake)
                 payoff = dict(payoff, inspection=inspection)
             after_fee = payoff['score']
             before_fee = (inspection or {}).get('rounded_return_percent')
@@ -750,7 +766,7 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
     price_lists = {}
     limited_coverage = False
     if comparable:
-        retained_comparison = show_posted_unscored or browse and (show_retained or show_last_known)
+        retained_comparison = (show_unscored_prices and not published_only) or browse and (show_retained or show_last_known)
         candidates = []
         for group in groups:
             if (not (retained_comparison or show_last_known) and not any(row.get('price_current') for row in group['quotes'])
@@ -839,13 +855,13 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
             calculation_missing = sorted({reason for text in reasons if text for reason in text.split(', ')})[:8]
             calculation_reason = 'Current prices are missing inputs for the selected calculation.'
     if view != 'arbs':
-        def posted_without_estimate(group):
-            return show_posted_unscored and any(
-                row.get('posted_price') and (not venues or row['venue'] in venues)
+        def price_without_estimate(group):
+            return show_unscored_prices and any(
+                (row.get('price_current') or row.get('posted_price')) and (not venues or row['venue'] in venues)
                 and (row.get('selection') or {}).get('predicate') in ('win', 'cover', 'over', 'under')
                 for row in group['quotes'])
 
-        groups = [g for g in groups if (not ranked or g['score'] is not None or posted_without_estimate(g))
+        groups = [g for g in groups if (not ranked or g['score'] is not None or price_without_estimate(g))
                   and passes(Fraction(g['score']) if g['score'] is not None else None, g.get('retail_payoff'))]
 
     page_by_game = (browse or pregame_desk and ranked) and not query.get('game_key') and view != 'arbs'
@@ -895,8 +911,7 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
             from app.comparison.public_sportsbook_estimate import choose_book
             book, probability = choose_book(pairs)
             pair = pairs[book][2]
-            deadline = min(stamp(group['start_at']), *(
-                stamp(price['source_at']) + timedelta(seconds=PREGAME_SPORTSBOOK_SECONDS) for price in pair))
+            deadline = stamp(group['start_at'])
             group['sportsbook_reference'] = dict(book=book, fair_odds=odds(decimal(1 / probability)),
                 current_until=deadline.isoformat(),
                 prices=[{key: price[key] for key in ('price_american', 'source_at')} for price in pair])

@@ -32,7 +32,7 @@ def order_step(row):
 
 
 def preview(row, amount):
-    cost = F(row['cost_per_normal_claim'])
+    cost = F(row.get('cost_per_normal_claim') or 0)
     if not 0 < cost < 1:
         return dict(available=False, reason='source_price_or_selection_unsupported')
     original_fee = row.get('trade_fee') or {}

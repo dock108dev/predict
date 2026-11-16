@@ -1,6 +1,5 @@
 """Exact-line display matching and indicative pregame sportsbook estimates."""
 from collections import Counter
-from datetime import timedelta
 from fractions import Fraction
 import json
 
@@ -9,14 +8,12 @@ from app.dashboard.current_contract import price
 from app.normalization.registry import Registry
 from app.storage.store import hashed, stamp
 from .cashflows import exact_wire
-from .game_phase import PREGAME_SPORTSBOOK_SECONDS
 from .sgo_reference import BEST_BOOKS, OPPOSITE, american_probability, best_payout_book, no_vig_probability
 
 SPORTS = ('NBA', 'NFL', 'NHL', 'NCAAF', 'NCAAB', 'MLB')
 SOURCE = 'oddslink_public_board'
 MAX_BYTES = 512 * 1024
 HISTORY_SLOTS = 11
-LIFETIME = timedelta(seconds=PREGAME_SPORTSBOOK_SECONDS)
 FAMILIES = {'h2h': 'moneyline', 'spreads': 'spread', 'totals': 'total'}
 
 
@@ -69,6 +66,10 @@ def retained_prices(root, captures, *, at, leagues):
                     quotes = latest['quotes'].setdefault(side, {})
                     for book, prices in books.items():
                         quotes.setdefault(book, prices)
+    for match in matches.values():
+        quotes = match['quotes']
+        match['revision'] = hashed([match['event_id'], match['scheduled'],
+            [(str(selection), quotes[selection]) for selection in sorted(quotes, key=str)]])
     return matches
 
 
@@ -110,7 +111,7 @@ def quote(american, clock, key):
 
 def clocks_current(prices, *, at, start):
     return (at < start and len(prices) == 2 and all(
-        (clock := stamp(item['source_at'])) < start and clock <= at <= clock + LIFETIME
+        stamp(item['source_at']) <= at
         for item in prices))
 
 
@@ -212,7 +213,7 @@ def sgo_observation(frame, rows, *, at, occurrence):
     quotes = {}
     for row in rows:
         fact = row['facts']
-        if (members.get(row['id']) != row['revision'] or fact.get('provider') != 'sportsgameodds'
+        if (fact.get('provider') != 'sportsgameodds'
                 or fact['event_id'] != facts['event_id'] or fact['league'] != league
                 or fact['period'] != 'game' or fact['phase'] != 'pregame' or not fact['available']
                 or fact['venue'] not in BEST_BOOKS or not fact.get('source_at')
@@ -227,12 +228,14 @@ def sgo_observation(frame, rows, *, at, occurrence):
                 continue
             key = (family, side, line)
             item = quote(fact['price_american'], fact['source_at'], key)
-            item.update(odd_id=fact['odd_id'], opposing_odd_id=fact['opposing_odd_id'])
+            item.update(odd_id=fact['odd_id'], opposing_odd_id=fact['opposing_odd_id'],
+                        received_at=fact['received_at'], revision=row.get('revision'))
             quotes.setdefault(key, {}).setdefault(fact['venue'], []).append(item)
         except (KeyError, TypeError, ValueError, ArithmeticError):
             continue
     return dict(source='sportsgameodds', event_id=facts['event_id'], frame_id=facts['receipt_sha256'],
-                frame_received_at=facts['received_at'], quotes=quotes, scheduled=True)
+                frame_received_at=facts['received_at'], quotes=quotes, scheduled=True,
+                revision=hashed([(str(key), quotes[key]) for key in sorted(quotes, key=str)]))
 
 
 def select(row, authority, observations, *, at):
@@ -257,12 +260,51 @@ def select(row, authority, observations, *, at):
     return estimate(price(row), observations, occurrence, key, at=at)
 
 
+def has_retained_public_pair(baseline):
+    return any(item[0] == SOURCE for item in (baseline.get('reference_inputs') or {}).values())
+
+
+def restore_public_pairs(row, prior, observations, *, at):
+    """Reuse the exact selected public pairs from the last immutable component.
+
+    The rolling provider cache is for recent polling. Once a complete pair has
+    been published, a page that omits that market must not retire its inputs.
+    Reconstitution is limited to the same stored offer contract and schedule.
+    """
+    event = row['original_record']['event']
+    occurrence = signature(event, row['league'])
+    prior_record = prior['original_record']
+    if (signature(prior_record['event'], prior['league']) != occurrence
+            or stamp(prior['start_at']) != occurrence[1] or at >= occurrence[1]):
+        return observations
+    baseline = prior.get('sportsbook_baseline') or {}
+    current = observations.get(occurrence, ())
+    if any(item['source'] == SOURCE and not item.get('scheduled') for item in current):
+        return observations
+    market = row['original_record']['market_identity']
+    key = outcome(market['family'], row['original_record']['selection'], event['home'], event['away'])
+    saved = []
+    prior_key = outcome(prior_record['market_identity']['family'], prior_record['selection'],
+                        prior_record['event']['home'], prior_record['event']['away'])
+    if key and key == prior_key:
+        for book, pair in (baseline.get('candidates') or {}).items():
+            evidence = baseline.get('reference_inputs', {}).get(book, ())
+            if len(evidence) != 3 or evidence[0] != SOURCE or not clocks_current(pair, at=at, start=occurrence[1]):
+                continue
+            _, event_id, revision = evidence
+            saved.append(dict(source=SOURCE, event_id=event_id, revision=revision, frame_id=revision,
+                frame_received_at=baseline['frame_received_at'], scheduled=True,
+                quotes={key: {book: [pair[0]]}, opposing(key): {book: [pair[1]]}}))
+    return {occurrence: [*current, *saved]} if saved else observations
+
+
 def collect_pairs(candidates, observations, key, *, at, start):
     for observation in observations:
         for book, pair in market_pairs(observation, key, at=at, start=start).items():
             prior = candidates.get(book)
             # Prefer the most recent complete pair without mixing feeds or clocks.
-            rank = (min(stamp(item['source_at']) for item in pair), observation['source'] == SOURCE)
+            clocks = sorted(stamp(item['source_at']) for item in pair)
+            rank = (*clocks, observation['source'] == SOURCE)
             if not prior or rank > prior[0]:
                 candidates[book] = rank, observation, pair
 
@@ -283,9 +325,10 @@ def estimate(cost, observations, occurrence, key, *, at):
         return None
     book, probability = choose_book(candidates)
     _, selected, pair = candidates[book]
-    prices = {name: [{field: item[field] for field in ('price_american', 'source_at', 'side', 'line')}
+    prices = {name: [{field: item[field] for field in ('price_american', 'source_at', 'received_at', 'side', 'line')
+                      if field in item}
                      for item in value[2]] for name, value in candidates.items()}
-    deadline = min(start, *(stamp(item['source_at']) + LIFETIME for item in pair))
+    deadline = start
     return dict(source=selected['source'], event_id=selected['event_id'], frame_id=selected['frame_id'],
                 frame_received_at=selected['frame_received_at'], book=book, candidate_books=len(prices),
                 current_until=deadline.isoformat(), probability=exact_wire(probability),
@@ -297,7 +340,4 @@ def estimate(cost, observations, occurrence, key, *, at):
 
 
 def identity(observation, *, at):
-    current = sorted((str(key), book, item['source_at']) for key, books in observation['quotes'].items()
-                     for book, prices in books.items() for item in prices
-                     if at <= stamp(item['source_at']) + LIFETIME)
-    return [observation.get('revision', observation['frame_id']), current]
+    return observation.get('revision', observation['frame_id'])

@@ -26,7 +26,7 @@ const autoUpdateKey = 'pregame-auto-update';
 const autoUpdateToggle = $('auto-update');
 let autoUpdate = readPreference(autoUpdateKey, 'on') !== 'off';
 autoUpdateToggle.checked = autoUpdate;
-const supportsAutoUpdate = (page = state.page) => !replay && !arb && phase === 'pregame' && page?.features?.auto_update === true;
+const supportsAutoUpdate = (page = state.page) => !replay && phase === 'pregame' && page?.features?.auto_update === true;
 const receivingUpdates = () => !supportsAutoUpdate() || autoUpdate;
 const phaseURL = (path, value = phase) => path + (value === 'live' ? '?phase=live' : '');
 const back = window.PredictUI.localURL(route.get('back'));
@@ -645,7 +645,7 @@ function render(page, keepNodes = false) {
   if (replay && page.replay?.captured_at) notice.push(`Captured ${clock(page.replay.captured_at)}.`);
   if (!replay) {
     if (!emptyIssue) {
-      notice.push('Odds may be delayed up to 15 minutes.');
+      notice.push('Odds may be delayed.');
       if (issue) notice.push(`${issue}.`);
     }
     if (!publication.data_runtime?.stopped) notice.push(...sourceNotices(publication));

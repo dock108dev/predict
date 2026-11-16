@@ -222,6 +222,7 @@ def capture(db, *, at=None, ordinary=False, event_ids=None, capture_binding=None
         from app.fees.product_schedules import read_all as read_fee_products
         out['fee_products'] = read_fee_products(db)
         if ordinary:
+            out['pregame_publication'] = True
             from .ordinary_publication import dependencies, policy_identity
             out['dependencies']=dependencies(db,event_ids,provider=out['reference_provider']) if _frame_dependencies is None else _frame_dependencies
             out['policy_identity']=policy_identity(out['reference_provider'])

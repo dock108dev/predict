@@ -1,7 +1,7 @@
 """Change witnesses for the public desk without replaying a publication."""
 from datetime import timedelta
 
-from app.comparison.game_phase import LIVE_SECONDS, ODDSLINK_LIVE_SECONDS, PREGAME_SPORTSBOOK_SECONDS
+from app.comparison.game_phase import LIVE_SECONDS, ODDSLINK_LIVE_SECONDS
 from app.comparison.source_clock import NATIVE_BOOK_MAX_AGE_SECONDS
 from app.fees.schedule_lifecycle import revision as fee_revision
 from app.storage.store import exact_time, hashed, stamp
@@ -10,30 +10,20 @@ from app.storage.store import exact_time, hashed, stamp
 def cursor(db, *, at, phase, head, owner, provider, states, settings, epoch, live_enabled):
     """Watch displayed inputs, leaving routine book confirmations to expiry."""
     pregame = phase == 'pregame'
-    latest = exact_time(at.isoformat())
-    native_since = exact_time((at - timedelta(seconds=NATIVE_BOOK_MAX_AGE_SECONDS)).isoformat())
-    aggregate_age = PREGAME_SPORTSBOOK_SECONDS if pregame else max(LIVE_SECONDS, ODDSLINK_LIVE_SECONDS)
-    aggregate_since = exact_time((at - timedelta(seconds=aggregate_age)).isoformat())
-
-    if pregame and provider == 'sportsgameodds' and (owner.get('config') or {}).get('direct_novig_enabled') is False:
-        # The direct reader revisits committed offers on every list request.
-        # Watch the indexed receipt watermarks and the much smaller sporting
-        # closure set, rather than joining and decoding the entire slate just
-        # to decide whether the browser should read it again.
+    if pregame:
+        # The head owns all economics; only sporting changes can bypass it.
         witness = db.execute("""
-            SELECT (SELECT max(received_order) FROM current_offer_storage
-                    WHERE native_book_id IS NOT NULL AND received_order BETWEEN %s AND %s) native,
-                   (SELECT max(source_order) FROM current_offer_storage
-                    WHERE native_book_id IS NULL AND source_order BETWEEN %s AND %s) aggregate,
-                   (SELECT max(received_order) FROM sgo_event_evidence
-                    WHERE kind='frame' AND received_order BETWEEN %s AND %s) references,
-                   (SELECT md5(string_agg(concat_ws(':',id,revision), ',' ORDER BY id))
-                    FROM current_event WHERE scheduled_start::timestamptz BETWEEN %s AND %s
-                      AND (facts#>>'{status,status}' IN ('cancelled','canceled','postponed','delayed','suspended')
-                           OR facts#>>'{status,ended}'='true')) closures
-            """, (native_since, latest, aggregate_since, latest, aggregate_since, latest, at, at + timedelta(hours=72))
-        ).fetchone()
+            SELECT md5(string_agg(concat_ws(':',id,scheduled_start,
+                facts#>>'{status,status}',facts#>>'{status,ended}',facts#>>'{status,live}',
+                facts->>'occurrence_conflict',facts->>'schedule_conflict'), ',' ORDER BY id)) schedule
+            FROM current_event
+            WHERE scheduled_start::timestamptz BETWEEN %s AND %s
+            """, (at - timedelta(hours=24), at + timedelta(hours=72))).fetchone()
     else:
+        latest = exact_time(at.isoformat())
+        native_since = exact_time((at - timedelta(seconds=NATIVE_BOOK_MAX_AGE_SECONDS)).isoformat())
+        aggregate_age = max(LIVE_SECONDS, ODDSLINK_LIVE_SECONDS)
+        aggregate_since = exact_time((at - timedelta(seconds=aggregate_age)).isoformat())
         witness = db.execute(
             """WITH recent AS (
                    SELECT contract_id,price_dependency,revision,native_book_id
@@ -82,12 +72,11 @@ def refresh_at(page, at):
         if row.get('withdrawn'):
             continue
         deadlines.append(row.get('start_at'))
+        if page.get('phase') == 'pregame':
+            continue
         for offer in row.get('offers', []):
             if offer.get('current'):
                 deadlines.extend((offer.get('current_until'), offer.get('calculation_current_until')))
         deadlines.extend(pair.get('calculation_current_until') for pair in row.get('pairs', ()))
-        if page.get('phase') == 'pregame':
-            reference = row.get('sportsbook_reference') or {}
-            deadlines.append(reference.get('current_until'))
     future = [stamp(deadline) for deadline in deadlines if deadline and stamp(deadline) > at]
     return min(future).isoformat() if future else None

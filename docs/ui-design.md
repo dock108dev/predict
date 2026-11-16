@@ -26,10 +26,10 @@ when a comparison lacks enough inputs to show EV. Browse shows aligned venue
 columns for each exact outcome. An unavailable quote is shown as a dash. A
 saved capture preserves the original price.
 
-The current board shows only eligible prices. Its notice, **Odds may be delayed
-up to 15 minutes**, applies to source timestamps or valid book confirmations.
-Some feeds and calculations expire sooner. A list refresh does not extend a
-quote's life. **Saved odds** preserves earlier observations.
+The desk says **Odds may be delayed.** Pregame shows the latest published
+prices and calculations for eligible games until kickoff. Quote inspection
+shows when each price was observed. Live uses separate freshness rules.
+**Saved odds** preserves earlier observations.
 
 Open a quote to inspect the price, the same-line reference, and the fee and
 settlement evidence. The default EV ranks signed before-fee returns, including
@@ -40,8 +40,8 @@ return is labeled accordingly. Amount and fill assumptions for after-fee
 calculations are in **Calculation details**.
 
 On **Browse odds**, the separate trade preview can estimate costs for a chosen
-amount where the venue evidence supports it. **Auto-update** controls updates
-to the current comparison; pausing it does not prevent prices from expiring.
+amount where the venue evidence supports it. **Auto-update** controls whether
+the pregame list picks up new results. Games still leave the list at kickoff.
 **Trading fees** explains the venue terms. **Source status** shows collection
 problems. [Data and freshness limits](market-data-gaps.md)
 

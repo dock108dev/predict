@@ -105,16 +105,18 @@ class ScheduleReconciliationSQL(TestCase):
         self.assertEqual(context.catalog()['games'],[])
         self.assertEqual(context.catalog_errors[0]['reason'],'schedule_equal_metadata_conflict')
 
-    def test_expired_rows_cannot_be_extended_by_metadata_with_old_prices(self):
+    def test_newer_schedule_correction_can_retain_pregame_prices_with_original_clocks(self):
         rows=self.authored();self.store.upsert_records(rows)
         start=stamp(rows[0]['event']['scheduled_start'])
         changed=self.later(rows[0],minutes=60)
         self.store.upsert_records([changed],now=(start+timedelta(minutes=1)).isoformat())
-        self.assertEqual(self.db.execute('SELECT count(*) n FROM current_event').fetchone()['n'],0)
-        self.assertEqual(self.db.execute('SELECT count(*) n FROM current_offer').fetchone()['n'],0)
-        self.assertEqual(CurrentRowStore(self.db).capture()['records'],[])
+        records = CurrentRowStore(self.db).capture()['records']
+        self.assertEqual(len(records), len(rows))
+        for original, revised in zip(sorted(rows, key=contract_id), sorted(records, key=contract_id), strict=True):
+            self.assertEqual(revised['quote']['times']['source_at'], original['quote']['times']['source_at'])
+            self.assertEqual(revised['event']['scheduled_start'], changed['event']['scheduled_start'])
 
-    def test_later_receipt_cannot_revive_expired_prices_but_new_source_evidence_can(self):
+    def test_later_schedule_and_new_price_clocks_are_admitted_independently(self):
         rows=self.authored()
         start=stamp(rows[0]['event']['scheduled_start'])
         at=(start+timedelta(minutes=1)).isoformat()
@@ -129,14 +131,12 @@ class ScheduleReconciliationSQL(TestCase):
                 self.store.upsert_records([changed],now=at)
                 with patch('app.storage.current_rows.utc',return_value=at):
                     captured=self.store.capture()['records']
-                if fresh_source:
-                    self.assertTrue(captured)
-                    updated=next(r for r in captured if contract_id(r)==contract_id(changed))
-                    self.assertEqual(updated['quote']['times']['source_at'],at)
-                    self.assertEqual(updated['quote']['times']['received_at'],at)
-                    self.assertEqual(updated['event']['scheduled_start'],changed['event']['scheduled_start'])
-                else:
-                    self.assertEqual(captured,[])
+                self.assertTrue(captured)
+                updated = next(r for r in captured if contract_id(r) == contract_id(changed))
+                self.assertEqual(updated['quote']['times']['source_at'], at if fresh_source else
+                                 rows[0]['quote']['times']['source_at'])
+                self.assertEqual(updated['quote']['times']['received_at'], at)
+                self.assertEqual(updated['event']['scheduled_start'], changed['event']['scheduled_start'])
 
     def snapshot(self):
         return json.loads(json.dumps(dict(observed_at='2026-10-17T12:30:00Z',

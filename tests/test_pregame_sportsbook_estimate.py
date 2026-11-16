@@ -163,8 +163,8 @@ def test_native_pregame_desk_uses_current_books_before_the_slate_catches_up(monk
     books = {contract_id(record): dict(book_id='book', book_revision='revision', quantity_units='contracts',
         best_ask=[record['quote']['original']['value'], 'usd_per_contract', '20']) for record in records}
 
-    def active(db, *, at, venues, contract, phase, posted):
-        assert posted == (phase == 'pregame')
+    def active(db, *, at, venues, contract, phase):
+        assert phase in ('pregame', 'live')
         return [record for record in records if record['quote']['venue'] in venues
                 and (contract is None or contract_id(record) == contract)], deps, books
 
@@ -188,7 +188,7 @@ def test_native_pregame_desk_uses_current_books_before_the_slate_catches_up(monk
         assert offer['current'] and offer['live_native_desk']
         assert offer['book_size']['quantity'] == '20'
         assert offer['fair_reference']['books'] == ['draftkings']
-        assert offer['current_until'] == (clock + timedelta(seconds=30)).isoformat()
+        assert offer['current_until'] == START.isoformat()
         assert Fraction(offer['value']) == 100 * (Fraction(36, 77) / Fraction(q['original']['value']) - 1)
     assert projected['rows'][0]['id'] == 'native-current:' + contract_id(records[0])
     selected, = overlay(None, data, owner, states, at=AT, contract=contract_id(records[0]))['rows']
@@ -210,10 +210,10 @@ def test_native_pregame_desk_uses_current_books_before_the_slate_catches_up(monk
         assert {offer['venue'] for offer in browsed['offers']} == {'kalshi', 'polymarket_us'}
     expired = overlay(None, data, owner, states, at=AT + timedelta(seconds=31))['rows']
     stopped = overlay(None, data, dict(owner, global_stopped=True), states, at=AT)['rows']
-    for held in (expired, stopped):
-        assert {row['venue'] for row in held} == {'kalshi', 'polymarket_us'}
-        assert all(row['posted_price'] and not row['price_current'] for row in held)
-        assert all(row['times']['source_at'] == clock.isoformat() for row in held)
+    assert {row['venue'] for row in expired} == {'kalshi', 'polymarket_us'}
+    assert all(row['posted_price'] and row['price_current'] and row['times']['source_at'] == clock.isoformat()
+               for row in expired)
+    assert all(not row['price_current'] for row in stopped)
     assert [offer['venue'] for offer in overlay(None, data,
         dict(owner, paused_sources=['kalshi']), states, at=AT)['rows']] == ['polymarket_us']
 
@@ -238,7 +238,7 @@ def test_both_original_clocks_kickoff_omission_and_suspension():
     assert 'draftkings' in pairs
     match['frame_received_at'] = (AT + timedelta(seconds=1)).isoformat()
     later = AT + timedelta(microseconds=1)
-    assert set(market_pairs(match, AWAY, at=later, start=START)) == {'fanduel'}
+    assert set(market_pairs(match, AWAY, at=later, start=START)) == {'draftkings', 'fanduel'}
     assert estimate(Fraction('0.46'), {OCCURRENCE: [match]}, OCCURRENCE, AWAY, at=START) is None
     match['quotes'][HOME].clear()
     assert not market_pairs(match, AWAY, at=AT, start=START)
@@ -277,3 +277,21 @@ def test_phase_is_applied_before_counts_filters_and_pagination():
     assert not pregame['rows']
     assert price_phase({'scheduled_start': START.isoformat(), 'status': {'live': True}}, {}, AT.isoformat()) == {
         'state': 'live', 'reason': 'event_started_before_schedule', 'basis': 'explicit_source_state'}
+
+
+def test_price_change_reuses_the_public_pair_after_the_polling_cache_omits_it():
+    from app.comparison.public_sportsbook_estimate import restore_public_pairs
+
+    match = observation()
+    original = estimate(Fraction('0.46'), {OCCURRENCE: [match]}, OCCURRENCE, AWAY, at=AT)
+    record = dict(event=dict(scheduled_start=START.isoformat(), home=OCCURRENCE[2], away=OCCURRENCE[3]),
+                  market_identity=dict(family='moneyline'),
+                  selection=dict(predicate='win', signed_line=None, participant=OCCURRENCE[3]))
+    current = dict(league=OCCURRENCE[0], original_record=record)
+    prior = dict(current, start_at=START.isoformat(), sportsbook_baseline=original)
+    later = AT + timedelta(minutes=3)
+    retained = restore_public_pairs(current, prior, {}, at=later)
+    updated = estimate(Fraction('0.35'), retained, OCCURRENCE, AWAY, at=later)
+    assert updated['prices'] == original['prices']
+    assert Fraction(updated['return_percent']) == 100 * (Fraction(original['probability']) / Fraction('0.35') - 1)
+    assert not restore_public_pairs(current, prior, {}, at=START)

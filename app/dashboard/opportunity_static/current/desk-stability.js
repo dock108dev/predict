@@ -25,8 +25,8 @@ function expired(timestamp, now) {
   return timestamp && Date.parse(timestamp) <= now;
 }
 
-function sportsbookDeadline(price, live) {
-  return Date.parse(price.source_at) + (live ? 15_000 : 15 * 60_000);
+function sportsbookDeadline(price) {
+  return Date.parse(price.source_at) + 15_000;
 }
 
 export function nextDeskDeadline(page, now, {live}) {
@@ -35,7 +35,10 @@ export function nextDeskDeadline(page, now, {live}) {
     if (timestamp > now && timestamp < next) next = timestamp;
   };
   for (const row of displayRows(page)) {
-    if (!live) consider(Date.parse(row.start_at));
+    if (!live) {
+      consider(Date.parse(row.start_at));
+      continue;
+    }
     consider(Date.parse(row.sportsbook_reference?.current_until));
     for (const offer of row.offers) {
       consider(Date.parse(offer.current_until));
@@ -45,7 +48,7 @@ export function nextDeskDeadline(page, now, {live}) {
       if (pair.retail_payoff?.available) consider(Date.parse(pair.calculation_current_until));
     }
     for (const prices of Object.values(row.sportsbook_quotes || {})) {
-      for (const price of prices) consider(sportsbookDeadline(price, live));
+      for (const price of prices) consider(sportsbookDeadline(price));
     }
   }
   return next;
@@ -55,11 +58,11 @@ export function expirePage(page, now, {ranked, live}) {
   let changed = false;
   const rows = displayRows(page).flatMap(row => {
     const offers = row.offers.flatMap(offer => {
-      if (offer.current === false || (!live && expired(row.start_at, now)) || expired(offer.current_until, now)) {
+      if (offer.current === false || (!live && expired(row.start_at, now)) || (live && expired(offer.current_until, now))) {
         changed = true;
         return [];
       }
-      if (offer.value != null && expired(offer.calculation_current_until, now)) {
+      if (live && offer.value != null && expired(offer.calculation_current_until, now)) {
         changed = true;
         return [{...offer, value:null, before_fee:null, after_fee:null, conservative:null, fair_odds:null,
           fair_reference:null, sportsbook:null, reference_current:false, reason:offer.calculation_expiry_reason || 'reference_price_stale'}];
@@ -69,20 +72,20 @@ export function expirePage(page, now, {ranked, live}) {
     if (!offers.length) return [];
     const pairs = row.pairs?.filter(pair => pair.legs.every(id => offers.some(offer => offer.id === id)))
       .map(pair => {
-        if (!expired(pair.calculation_current_until, now) || !pair.retail_payoff?.available) return pair;
+        if (!live || !expired(pair.calculation_current_until, now) || !pair.retail_payoff?.available) return pair;
         changed = true;
         return {...pair, score:pair.before_fee_return ?? null, display_allocations:pair.before_fee_allocations,
           retail_payoff:{available:false, reason:'fee_unavailable'}};
       });
     if (pairs && !pairs.length) return [];
     const lead = offers.find(offer => offer.value != null);
-    if (ranked && !lead) return [];
+    if (live && ranked && !lead) return [];
     const score = pairs ? pairs[0].score : lead?.value ?? null;
     const reference = row.sportsbook_reference;
-    const referenceExpired = expired(reference?.current_until, now);
+    const referenceExpired = live && expired(reference?.current_until, now);
     changed ||= Boolean(referenceExpired);
     const books = Object.fromEntries(Object.entries(row.sportsbook_quotes || {}).map(([book, prices]) => {
-      const current = prices.filter(price => price.current !== false && (!price.source_at || sportsbookDeadline(price, live) > now));
+      const current = prices.filter(price => price.current !== false && (!live || !price.source_at || sportsbookDeadline(price) > now));
       changed ||= current.length !== prices.length;
       return [book, current];
     }));

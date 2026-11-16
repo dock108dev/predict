@@ -52,6 +52,8 @@ const reasonLabels = {
   comparison_scoring_scope_missing: 'The full scoring and settlement rules are unverified for cross-site pairing.',
   exact_reference_pair_unavailable: 'An exact two-sided sportsbook match is missing.',
   sgo_offer_native_contract_unverified: 'The observed price has no verified native contract and settlement binding.',
+  sgo_native_catalog_unavailable: 'Novig has not verified terms for this linked market yet.',
+  sgo_native_outcome_link_unavailable: 'The provider did not supply an exact Novig outcome link.',
   sgo_native_catalog_replaced_or_expired: 'The verified Novig contract evidence was replaced or reached its applicability boundary.',
   sgo_native_catalog_phase_or_quote_unverified: 'The catalog could not verify this price for the current game phase.',
   sgo_native_live_fee_requires_signed_book: 'This in-game Novig price needs signed market and book evidence for its fee.',

@@ -174,8 +174,8 @@ class CurrentRows(unittest.TestCase):
             self.store.upsert_records(rows,scopes=scopes,authoritative=True)
             self.assertEqual(self.counts()['current_offer'],512)
         self.store.upsert_records([],scopes=[scopes[0]],authoritative=True)
-        self.assertEqual(self.counts()['current_offer'],511)
-        self.assertIsNone(self.db.execute('SELECT 1 FROM current_offer WHERE contract_id=%s',
+        self.assertEqual(self.counts()['current_offer'],512)
+        self.assertIsNotNone(self.db.execute('SELECT 1 FROM current_offer WHERE contract_id=%s',
             (contract_id(rows[0]),)).fetchone())
 
     def test_native_receipt_clock_updates_without_rewriting_unchanged_contract(self):
@@ -244,11 +244,11 @@ class CurrentRows(unittest.TestCase):
         for source in ('2026-10-15T11:00:00Z',None):
             changed=deepcopy(rows);changed[0]['quote']['times'].update(source_at=source,received_at='2026-10-15T12:10:00Z');changed[0]['quote']['original']['value']='9'
             self.store.upsert_records(changed);self.assertEqual(before['revision'],self.store.capture()['revision'])
-    def test_partial_one_side_authoritative_and_stale_removal(self):
+    def test_pregame_omission_and_stale_removal_keep_the_last_quotes(self):
         rows=future_records();self.store.upsert_records(rows)
         scope=dict(venue='novig',competition='NFL',native_event_id=rows[0]['event']['id'],received_at='2026-10-15T12:01:00Z',source_at='2026-10-15T12:00:00Z')
         self.store.upsert_records(rows[:1],scopes=[scope]);self.assertEqual(len(self.store.records()),2)
-        self.store.upsert_records(rows[:1],scopes=[scope],authoritative=True);self.assertEqual(len(self.store.records()),1)
+        self.store.upsert_records(rows[:1],scopes=[scope],authoritative=True);self.assertEqual(len(self.store.records()),2)
         self.store.upsert_records(rows);self.assertEqual(len(self.store.records()),2)
         old=dict(scope,received_at='2026-10-15T11:00:00Z',source_at='2026-10-15T11:00:00Z')
         self.store.upsert_records([],scopes=[old],authoritative=True);self.assertEqual(len(self.store.records()),2)
@@ -326,9 +326,9 @@ class CurrentRows(unittest.TestCase):
         broad=dict(venue='novig',competition='NFL',source_at='2026-10-15T12:05:00Z',received_at='2026-10-15T12:05:01Z')
         narrow=dict(broad,native_event_id=first['quote']['source']['native_event_id'],source_at='2026-10-15T12:06:00Z',received_at='2026-10-15T12:06:01Z')
         older=dict(broad,source_at='2026-10-15T12:04:00Z',received_at='2026-10-15T12:04:01Z')
-        self.assertEqual(self.store.upsert_records([stale,missing],scopes=[broad,narrow,older],authoritative=True,now='2026-10-15T12:10:01Z'),2)
-        self.assertEqual(self.counts()['current_contract'],2);self.assertEqual(self.counts()['current_offer'],1)
-        saved=self.store.records()[0]
+        self.assertEqual(self.store.upsert_records([stale,missing],scopes=[broad,narrow,older],authoritative=True,now='2026-10-15T12:10:01Z'),1)
+        self.assertEqual(self.counts()['current_contract'],3);self.assertEqual(self.counts()['current_offer'],2)
+        saved=next(row for row in self.store.records() if contract_id(row)==contract_id(first))
         self.assertEqual(contract_id(saved),contract_id(first));self.assertEqual(saved['quote']['original'],first['quote']['original'])
         guard=self.db.execute('SELECT source_order,received_order FROM current_refresh_scope WHERE scope=%s',(hashed(dict(venue='novig',competition='NFL')),)).fetchone()
         from app.storage.store import exact_time

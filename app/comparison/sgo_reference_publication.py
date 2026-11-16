@@ -370,7 +370,9 @@ def bind_captured(row, source, inputs, *, selected_venue='pinnacle', best_payout
             maximum_age=result['reference_calculation']['maximum_age_seconds']
             phase = result['reference_calculation']['contract']['phase']
             for authority in authorities:
-                authority['current_until']=(stamp(authority.pop('source_at'))+timedelta(seconds=maximum_age)).isoformat()
+                authority['clock_at'] = authority.pop('source_at')
+                authority['current_until'] = ((stamp(authority['clock_at']) + timedelta(seconds=maximum_age)).isoformat()
+                                              if phase == 'live' else row['start_at'])
                 authority['lifecycle'] = {'state': 'live' if phase == 'live' else 'scheduled'}
                 if best_payout:
                     authority['exact_frame'] = True

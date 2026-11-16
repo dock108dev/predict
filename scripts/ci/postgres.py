@@ -275,6 +275,7 @@ def main(argv=None):
                     "tests/test_dashboard_results_sql.py",
                     "tests/test_comparison_snapshot_sql.py",
                     "tests/test_ordinary_publication_sql.py",
+                    "tests/test_pregame_publication_sql.py",
                     "tests/test_slate_lifecycle.py",
                     "tests/test_odds_archive_sql.py",
                     "tests/test_capture_price_sql.py",

@@ -333,6 +333,9 @@ class CurrentRowStore:
                     original=p['quote']['original']
                     if not p['missing'] and (p['source_order'],p['received_order'])==(old['source_order'],old['received_order']) and (original['value'],original['units'],original['quantity_units'])!=(old['price_value'],old['price_units'],old['quantity_units']):
                         raise ValueError('current_row_equal_clock_price_conflict')
+                    if (p['source_at'] and old['source_at'] and p['source_order'] < old['source_order']
+                            and original['value'] != old['price_value']):
+                        price_admitted = False
                     previous=_evidence_order(old['source_at'],old['confirmation'])
                     if incoming is not None and previous is not None:
                         if incoming<previous:price_admitted=False
@@ -343,11 +346,6 @@ class CurrentRowStore:
                 if not price_admitted and not witness(event):continue
                 prior_event=old_events.get(eid)
                 # Metadata admission is independent of price-source ordering.
-                # A later schedule or receipt cannot revive an expired offering
-                # around an old book. Require admitted source/confirmation
-                # evidence after the prior expiry, independently of metadata.
-                if prior_event and prior_event['expires_order']<exact_time(now or utc()):
-                    if not price_admitted or incoming is None or incoming<=prior_event['expires_order']:continue
                 # prepare() already detached and validated this exact metadata.
                 # Identical non-conflicted events need no repeated witness/core
                 # hashing for every outcome in a native batch. Changed metadata
@@ -355,6 +353,15 @@ class CurrentRowStore:
                 incoming_revision=p.get('event_revision') or hashed(event)
                 if not (prior_event and prior_event['revision']==incoming_revision and not event.get('schedule_conflict')):
                     event=choose(prior_event['facts'] if prior_event else None,event,observed_at=now or utc())
+                if prior_event and prior_event['expires_order']<exact_time(now or utc()):
+                    # A verified future start can restore pregame visibility.
+                    # Other expired offers need a new book or confirmation.
+                    corrected_pregame = (event is not prior_event['facts'] and
+                        event['scheduled_start'] != prior_event['facts']['scheduled_start'] and
+                        exact_time(event['scheduled_start']) > exact_time(now or utc()))
+                    if not corrected_pregame and (
+                            not price_admitted or incoming is None or incoming<=prior_event['expires_order']):
+                        continue
                 phase_quote=dict(p['quote'],times=dict(p['quote']['times'],source_at=p['source_at'],received_at=p['received_at']))
                 expiry=event_retention(event,phase_quote,now or utc())
                 # A sibling's older pregame quote cannot retire an occurrence
@@ -435,12 +442,15 @@ class CurrentRowStore:
                     prior_scopes={r['scope']:r for r in execute('SELECT scope,source_order,received_order FROM current_refresh_scope WHERE scope=ANY(%s)',(scope_keys,)).fetchall()}
                     by_scope={key:[] for key in scope_keys}
                     query='''SELECT w.scope,c.id,o.source_order,o.received_order FROM
-                        unnest(%s::text[],%s::text[],%s::text[],%s::text[],%s::text[])
-                        AS w(scope,venue,competition,event_id,market_id)
+                        unnest(%s::text[],%s::text[],%s::text[],%s::text[],%s::text[],%s::timestamptz[])
+                        AS w(scope,venue,competition,event_id,market_id,received_at)
                         JOIN current_event e ON e.native_event_id=w.event_id AND e.competition=w.competition
                         JOIN current_contract c ON c.event_id=e.id AND c.venue=w.venue AND c.native_market_id=w.market_id
-                        LEFT JOIN current_offer o ON o.contract_id=c.id'''
-                    for candidate in execute(query,(scope_keys,*[[s[k] for s in scopes] for k in ('venue','competition','native_event_id','native_market_id')])).fetchall():
+                        LEFT JOIN current_offer o ON o.contract_id=c.id
+                        WHERE NOT (
+                            e.scheduled_start::timestamptz > w.received_at AND
+                            e.facts#>>'{status,live}' IS DISTINCT FROM 'true')'''
+                    for candidate in execute(query,(scope_keys,*[[s[k] for s in scopes] for k in ('venue','competition','native_event_id','native_market_id','received_at')])).fetchall():
                         by_scope[candidate['scope']].append(candidate)
                 scope_updates=[]
                 for scope,key in zip(scopes,scope_keys):
@@ -465,6 +475,9 @@ class CurrentRowStore:
                             raise ValueError('aggregate_refresh_route')
                     for name,owner in (('native_event_id','e'),('native_market_id','c')):
                         if name in scope:condition.append(owner+'.'+name+'=%s');params.append(scope[name])
+                    condition.append("NOT (e.scheduled_start::timestamptz > %s "
+                                     "AND e.facts#>>'{status,live}' IS DISTINCT FROM 'true')")
+                    params.append(scope['received_at'])
                     candidates=by_scope[key] if bulk else execute('''SELECT c.id,o.source_order,o.received_order FROM current_contract c
                         JOIN current_event e ON e.id=c.event_id LEFT JOIN current_offer o ON o.contract_id=c.id
                         WHERE '''+' AND '.join(condition),params).fetchall()
@@ -498,9 +511,10 @@ class CurrentRowStore:
                         WHERE c.id=o.contract_id AND o.facts->>'state' IN ('available','budget_delayed')
                         AND (lost.venue NOT IN ('kalshi','polymarket_us') OR e.provider=lost.venue)
                         AND e.provider<>'sportsgameodds'
+                        AND (e.scheduled_start::timestamptz<=%s OR e.facts#>>'{status,live}'='true')
                         AND NOT (c.venue='prophetx' AND e.provider='oddslink_public_board')
                         AND NOT (c.venue='novig' AND o.facts ? 'novig_runtime_id')""",
-                        tuple(map(list,zip(*lost))))
+                        (*map(list,zip(*lost)), now or utc()))
                 for venue,state in source_status.items():
                     write_source_status(execute, venue, state, now or utc())
             # Scope order guards are bounded by current work, never history.

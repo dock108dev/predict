@@ -67,11 +67,14 @@ class ReadContext:
         # Retained ingress attachments may predate reference or rule changes.
         from app.collection.current_benchmark import attach as attach_benchmark
         from app.comparison.public_sportsbook_estimate import SOURCE as ODDSLINK
+        from app.comparison.game_phase import original_price_phase
         statuses=frame.get('source_status',{})
         for record in records:
             q=record['quote'];provider=q['source']['provider']
             status=(statuses.get(provider,{'state':'unavailable'}) if provider in ('sportsgameodds', ODDSLINK)
                     else statuses.get(q['venue'],statuses.get(provider,{})))
+            if reuse_catalog_inputs and original_price_phase(record, self.at)['state'] == 'scheduled':
+                continue  # Operational status is reported separately from retained price evidence.
             if q.get('novig_runtime_id'):continue  # This state describes the aggregate feed.
             if status.get('state') not in (None,'available','budget_delayed'):q['state']=status['state']
             elif q['source']['provider']=='the_odds_api' and status.get('state') in ('available','budget_delayed') and q['state'] in ('stopped','error','connecting','resyncing'):

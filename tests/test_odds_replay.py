@@ -20,7 +20,7 @@ def saved_archives(tmp_path, monkeypatch):
     monkeypatch.setattr(odds_replay, 'DIRECTORY', tmp_path)
 
 
-def test_saved_prices_keep_prefee_cashflows_and_withhold_arbitrage(saved_archives):
+def test_saved_prices_show_prefee_payoff_and_withhold_after_fee_payoff(saved_archives):
     query = dict(dataset='frozen', view='arbs', stake='100')
     assert load(dict(query, positive='on'))['total'] == 0
     result = load(dict(query, dataset='preview'))
@@ -30,7 +30,8 @@ def test_saved_prices_keep_prefee_cashflows_and_withhold_arbitrage(saved_archive
     assert [leg['allocation_usd'] for leg in math['legs']] == ['48.84', '51.16']
     assert [leg['win_receipt_usd'] for leg in math['legs']] == ['107.448', '107.436']
     assert math['minimum_profit_usd'] == '7.436'
-    assert pair['score'] is None
+    assert Fraction(pair['score']) == Fraction(math['minimum_profit_usd'])
+    assert pair['retail_payoff']['available'] is False
     assert pair['retail_payoff']['reason'] == 'pair_missing_leg_fees'
     assert Fraction(math['ideal_profit_usd']) > Fraction(math['minimum_profit_usd'])
     assert load(dict(query, dataset='preview', profit='7.44'))['total'] == 0
@@ -41,7 +42,9 @@ def test_replay_detail_is_revision_bound_and_never_reads_live_data(saved_archive
     with patch('app.storage.odds_replay.connect', side_effect=AssertionError('live data connection')):
         page = load(query)
         assert page['replay']['synthetic'] is False
-        assert page['coverage'] == dict(offers=6, current=6, before=6, reviewed=0, conservative=0, sportsbooks=0)
+        assert page['coverage'] == dict(offers=6, current=6, before=6, reviewed=0, conservative=0, sportsbooks=6)
+        sportsbook_view = load(dict(query, basis='sportsbooks'))
+        assert all(group['offers'][0]['value_basis'] == 'before' for group in sportsbook_view['rows'])
         modeled = load(dict(query, basis='conservative'))
         assert all(group['score'] is None for group in modeled['rows'])
         assert all(group['offers'][0]['value'] is None for group in modeled['rows'])

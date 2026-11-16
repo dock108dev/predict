@@ -276,9 +276,6 @@ def mount(app):
         current_desk = (options is not None and options[0] != 'arbs' and query.get('layout') == 'desk'
                         and (query.get('browse_odds') == '1' or query.get('ranked') == '1')
                         and not is_selection)
-        default_estimates = (current_desk and query.get('summary') == '1' and query['phase'] == 'pregame'
-                             and query.get('ranked') == '1' and query.get('browse_odds') != '1'
-                             and query.get('basis') == 'sportsbooks')
         from app.storage import ordinary_publication as live
         from app.storage import current_aggregate_desk
         from app.fees.schedule_lifecycle import revision as fee_revision
@@ -318,7 +315,7 @@ def mount(app):
             started = monotonic()
             timings['queue'] = (started - submitted) * 1000
             from app.collection.current_policy import aggregate_provider, live_enabled
-            from app.storage.ordinary_projection import authority_deadline, event_owners, publication_runtime, withdrawn_events
+            from app.storage.ordinary_projection import event_owners, publication_runtime, withdrawn_events
             with connect() as db, db.transaction():
                 db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
                 db.execute('SET LOCAL jit=off')
@@ -333,9 +330,8 @@ def mount(app):
                 if not live_available:
                     query['phase'] = 'pregame'
                 if is_desk:
-                    features = dict(features=dict(live_enabled=live_available), phase=query['phase'])
-                    if provider == 'sportsgameodds':
-                        features['features']['auto_update'] = True
+                    features = dict(features=dict(live_enabled=live_available, auto_update=query['phase'] == 'pregame'),
+                                    phase=query['phase'])
                 else:
                     features = {}
                 timings['authority']=(monotonic()-started)*1000
@@ -347,7 +343,7 @@ def mount(app):
                                  if selected and selected.startswith('native-current:') else None)
                 aggregate_contract = (selected.removeprefix(current_aggregate_desk.PREFIX)
                     if selected and selected.startswith(current_aggregate_desk.PREFIX) else None)
-                if quote_key and not (live_contract or aggregate_contract):
+                if quote_key and query['phase'] != 'pregame' and not (live_contract or aggregate_contract):
                     source = db.execute('''SELECT e.provider FROM current_contract c
                         JOIN current_event e ON e.id=c.event_id WHERE c.id=%s''', (quote_key,)).fetchone()
                     if source and source['provider'] in ('kalshi', 'polymarket_us'):
@@ -365,56 +361,90 @@ def mount(app):
                                     poll_after_ms=6500, generation=head['generation'], provider_requests=0,
                                     **features)
                     features['update_cursor'] = update_cursor
-                policy = live.policy_identity(provider)
-                # In the SGO-only pregame configuration, all four display
-                # venues have direct committed reads. An indicative estimate
-                # needs current quotes and book pairs, not every historical
-                # financial member of the ordinary publication.
-                fast_desk = (default_estimates and provider == 'sportsgameodds'
-                    and (owner.get('config') or {}).get('direct_novig_enabled') is False
-                    and owner.get('healthy') and owner.get('active') and not owner.get('global_stopped'))
-                if fast_desk:
-                    from app.storage.current_native_desk import overlay as native_overlay
-                    from app.storage.sportsgameodds_reference import EventInputs
-                    from .desk_scope import pregame_search
+                pregame = (is_desk or is_fee_census) and query.get('phase') == 'pregame'
+                if pregame:
+                    from app.storage.pregame_publication import occurrence_rows, project as project_pregame
                     from .desk_updates import refresh_at
-                    from .trade_desk import page as desk_page
+                    from .trade_desk import EV_METRIC, METRICS, direct_venue_offer, offer, page as desk_page
 
                     stage = monotonic()
-                    _, event_ids = pregame_search(db, None, query, at)
-                    sgo_inputs = EventInputs(db)
-                    withdrawn = withdrawn_events(db, at=at)
-                    direct = dict(rows=[], pairs=[], games=[], captured_at=at.isoformat(), assumptions=settings,
-                        publication=dict(state='ready', read_at=at.isoformat(), data_runtime=publication_runtime(owner),
-                                         sources=states, current_prices=0, retained_prices=0))
-                    direct = native_overlay(db, direct, owner, states, at=at, phase='pregame',
-                                            sgo_inputs=sgo_inputs, event_ids=event_ids, withdrawn=withdrawn)
-                    direct = current_aggregate_desk.overlay(db, direct, owner, states, at=at, phase='pregame',
-                                                            sgo_inputs=sgo_inputs, event_ids=event_ids, withdrawn=withdrawn)
-                    # Evaluate source time again after the reads. The MVCC
-                    # inputs are unchanged; elapsed time can only revoke them.
-                    rendered_at = stamp(utc())
-                    direct['rows'] = [row for row in direct['rows']
-                        if row['price_current'] and stamp(row['start_at']) > rendered_at
-                        and (deadline := authority_deadline(row['current_authority']['price']))
-                        and stamp(deadline) > rendered_at]
-                    direct['publication']['current_prices'] = len(direct['rows'])
-                    for row in direct['rows']:
-                        baseline = row.get('sportsbook_baseline')
-                        if baseline and stamp(baseline['current_until']) <= rendered_at:
-                            row.update(sportsbook_baseline=None, sportsbook_return_percent=None,
-                                       sportsbook_reference_reason='reference_price_stale')
-                    if any(row.get('sportsbook_return_percent') is not None for row in direct['rows']):
-                        out = desk_page(direct, query, options, browsing=browsing, published_only=True, policy=policy)
-                        if out.get('state') == 'page_changed':
-                            return out
-                        if out.get('ranked_group_count'):
-                            timings['direct_desk'] = (monotonic() - stage) * 1000
-                            out.update(features, cursor=update_cursor, generation=head['generation'],
-                                       refresh_at=refresh_at(out, at))
-                            out['publication']['count_scope'] = 'current_sportsbook_estimates'
-                            return out
-                    timings['direct_fallback'] = (monotonic() - stage) * 1000
+                    result = decoded(head['result_id'], db, ordinary=True) if head['result_id'] else None
+                    timings['publication_read'] = (monotonic() - stage) * 1000
+                    metadata = dict(result_id=head['result_id'], generation=head['generation'], cursor=update_cursor,
+                                    provider_requests=0, **features)
+                    if head['result_id'] and result is None:
+                        raise web.HTTPServiceUnavailable(reason='Published prices unavailable')
+                    if is_fee_census:
+                        policy = result['publication']['policy'] if result else live.policy_identity(provider)
+                        if result:
+                            result = project_pregame(db, result, owner, states, at=at, epoch=epoch,
+                                                     withdrawn=withdrawn_events(db, at=at))
+                        else:
+                            result = dict(rows=[], pairs=[], publication=dict(
+                                sources=states, read_at=at.isoformat(), state='initializing'))
+                        pairs = [pair for pair in result['pairs'] if snapshots.exact_arb_pair(pair)]
+                        inventory = live.dependencies(db, provider=provider)
+                        return dict(fee_census(db, result, inventory, owner, states, at, pairs=pairs,
+                                               policy=policy, epoch=epoch, settings=settings),
+                                    state=result['publication']['state'], **metadata)
+                    if result is None:
+                        if is_selection:
+                            return dict(row=None, **metadata)
+                        fallback = game_capture_link(db, query, allow_live=live_available)
+                        return dict(state='initializing', rows=[], total=0, publication=dict(
+                            state='initializing', sources=states, data_runtime=publication_runtime(owner),
+                            read_at=at.isoformat()), **metadata,
+                            **({'retained_game': fallback} if fallback else {}))
+                    if is_selection:
+                        selection_rows = [row for row in result['rows'] if row['id'] == selected or
+                            quote_key and row['current_authority']['price'].get('dependency') == quote_key]
+                        result = scoped_result(result, occurrence_rows(result['rows'], selection_rows))
+                    elif game_key := query.get('game_key'):
+                        # Scope an exact game before reading its sporting authority.
+                        # Leave the page's source-event fallback intact if it was renamed.
+                        game_rows = [row for row in result['rows'] if row['game_key'] == game_key]
+                        if game_rows:
+                            result = scoped_result(result, occurrence_rows(result['rows'], game_rows))
+                    stage = monotonic()
+                    result = project_pregame(db, result, owner, states, at=at, epoch=epoch,
+                                             withdrawn=withdrawn_events(db, at=at))
+                    timings['schedule'] = (monotonic() - stage) * 1000
+                    if is_selection:
+                        selected_rows = [row for row in result['rows'] if direct_venue_offer(row) and
+                                         (row['id'] == selected or quote_key and
+                                          row['current_authority']['price'].get('dependency') == quote_key)]
+                        if len(selected_rows) != 1:
+                            return dict(row=None, withdrawn_from_phase=True, reason='phase_price_unavailable', **metadata)
+                        row, = selected_rows
+                        from app.comparison.trade_preview import preview
+                        value = offer(row, METRICS.get(query.get('basis'), EV_METRIC))
+                        preview_row = dict(snapshots.expand_row(row), cost_per_normal_claim=value['cost_per_normal_claim'])
+                        if (row['venue'] in ('kalshi', 'polymarket_us')
+                                and (row.get('trade_fee') or {}).get('available')
+                                and not preview_row.get('fee_applicability')
+                                and (member_id := row.get('evidence_result_id'))):
+                            # Compact list rows can omit the native sizing terms.
+                            # Use the selected member's terms, not newer metadata.
+                            member = decoded(member_id, db)
+                            if member:
+                                captured = next((item for item in member['rows'] if item['id'] == row['id']), None)
+                                if captured:
+                                    preview_row['fee_applicability'] = captured.get('fee_applicability')
+                        value.update(start_at=row['start_at'], trade_preview=preview(preview_row, preview_amount))
+                        return dict(row=value, reason=value['reason'], **metadata)
+                    stage = monotonic()
+                    captured_pairs = ([pair for pair in result['pairs'] if snapshots.exact_arb_pair(pair)]
+                                      if options[0] == 'arbs' else ())
+                    out = desk_page(result, query, options, captured_pairs=captured_pairs,
+                                    policy=result['publication']['policy'], browsing=browsing, published_only=True)
+                    if not out.get('rows'):
+                        fallback = game_capture_link(db, query, allow_live=live_available)
+                        if fallback:
+                            out['retained_game'] = fallback
+                    out.update(metadata, refresh_at=refresh_at(out, at))
+                    timings['page'] = (monotonic() - stage) * 1000
+                    return out
+                policy = live.policy_identity(provider)
                 stage = monotonic()
                 cold = decoded_cache[0] != head['result_id']
                 result = decoded(head['result_id'], db, ordinary=True) if head['result_id'] else None
@@ -426,30 +456,17 @@ def mount(app):
                     result = scoped_result(result, [row for row in result['rows'] if pregame_at(row, at)])
                 if result is not None and is_selection and is_desk:
                     result = exact_selection(result, selected, live_contract, aggregate_contract)
-                overlay_events = None
                 public_summary = query.get('summary') == '1'
-                if current_desk and public_summary and query.get('phase') == 'pregame':
-                    from .desk_scope import pregame_search
-                    games, overlay_events = pregame_search(db, result, query, at)
-                    if result is not None and games is not None:
-                        result = scoped_result(result, [row for row in result['rows'] if row['game_key'] in games])
                 lifecycle_rows = result['rows'] if result else ()
                 dependency_result = result
-                # Held pregame prices still have their lifecycle and original
-                # evidence. They cannot rank, so omit calculation dependencies.
-                if result is not None and current_desk and public_summary:
-                    if query['phase'] == 'pregame' and (
-                            not owner.get('healthy') or not owner.get('active') or owner.get('global_stopped')):
-                        dependency_result = None
-                    elif owner.get('active') and not owner.get('global_stopped'):
-                        relevant = [row for row in result['rows']
-                                    if (deadline := row['current_authority']['price'].get('current_until'))
-                                    and stamp(deadline) >= at]
-                        dependency_result = scoped_result(result, relevant)
-                        if query.get('phase') != 'pregame':
-                            result = dependency_result
-                            relevant_games = {row['game_key'] for row in relevant}
-                            lifecycle_rows = [row for row in lifecycle_rows if row['game_key'] in relevant_games]
+                if (result is not None and current_desk and public_summary
+                        and owner.get('active') and not owner.get('global_stopped')):
+                    relevant = [row for row in result['rows']
+                                if (deadline := row['current_authority']['price'].get('current_until'))
+                                and stamp(deadline) >= at]
+                    result = dependency_result = scoped_result(result, relevant)
+                    relevant_games = {row['game_key'] for row in relevant}
+                    lifecycle_rows = [row for row in lifecycle_rows if row['game_key'] in relevant_games]
                 timings['scope'] = (monotonic()-stage)*1000
                 stage = monotonic()
                 deps, dependency_revision = (live.published_dependencies(db, dependency_result, provider=provider, at=at)
@@ -520,13 +537,13 @@ def mount(app):
                     from .trade_desk import desk_phase
                     result = overlay(db, result, owner, states, at=at, contract=live_contract,
                                      phase=desk_phase(query) or 'pregame', sgo_inputs=sgo_inputs,
-                                     event_ids=overlay_events, include_preview_inputs=census_desk, withdrawn=withdrawn)
+                                     include_preview_inputs=census_desk, withdrawn=withdrawn)
                     timings['native_desk']=(monotonic()-stage)*1000
                 if aggregate_desk:
                     stage = monotonic()
                     result = current_aggregate_desk.overlay(db, result, owner, states, at=at, phase=query['phase'],
                                                             contract=aggregate_contract, sgo_inputs=sgo_inputs,
-                                                            event_ids=overlay_events, withdrawn=withdrawn)
+                                                            withdrawn=withdrawn)
                     timings['aggregate_desk'] = (monotonic()-stage)*1000
                 if not head['result_id'] and not result['rows'] and not (is_selection or is_fee_census):
                     fallback = game_capture_link(db, query, allow_live=live_available)
@@ -559,12 +576,6 @@ def mount(app):
                         if value and (not row.get('price_current') or not phase_matches(row, phase, at)):
                             return dict(row=None, withdrawn_from_phase=True,
                                         reason=row.get('game_state_reason') or 'phase_price_unavailable', provider_requests=0)
-                        if value and value['reason'] == 'reference_price_missing' and phase == 'pregame' and provider == 'sportsgameodds':
-                            from .desk_sportsbooks import stale_sgo_reference
-
-                            game = next((game for game in result['games'] if game['game_key'] == row['game_key']), None)
-                            if stale_sgo_reference(row, game, sgo_inputs, at=at):
-                                value['reason'] = 'reference_price_stale'
                         inspection = (row.get('native_inspection') or row.get('aggregate_inspection')) if value else None
                         evidence = dict(captured_at=row['captured_at'], inspection=inspection) if inspection else None
                         if value and row.get('posted_price'):
@@ -582,17 +593,13 @@ def mount(app):
                         row=None if row is None else presented(row,{r['id']:r for r in result['rows']}))
                 stage=monotonic()
                 if query.get('layout') == 'desk':
-                    from .desk_sportsbooks import add_public_prices, add_sgo_prices
-                    from .trade_desk import desk_phase, page as desk_page
+                    from .desk_sportsbooks import add_sgo_prices
+                    from .trade_desk import page as desk_page
                     def enrich(out, *, include_retained, mark_retained=False):
                         if provider != 'sportsgameodds' or 'sportsgameodds' not in states:
                             return
                         add_sgo_prices(db, out, result['rows'], states, at=at,
                                        include_retained=include_retained, mark_retained=mark_retained, sgo_inputs=sgo_inputs)
-                        if desk_phase(query) != 'live':
-                            add_public_prices(out, owner, at=at, include_retained=include_retained,
-                                              mark_retained=mark_retained,
-                                              include_history=not public_summary or bool(query.get('game_key')))
                     out = desk_page(result, query, options, captured_pairs=captured_pairs, policy=policy,
                                     browsing=browsing, enrich=enrich, published_only=True, event_facts=event_facts)
                     if not out.get('rows') and not out.get('retained_game'):
@@ -618,7 +625,7 @@ def mount(app):
                 return out
 
         from .desk_delivery import (
-            BURST_SECONDS, ESTIMATE_RESPONSE_SECONDS, LATE_LIST_REUSE_SECONDS, common_page, encode, packet_response, timing_header,
+            BURST_SECONDS, LATE_LIST_REUSE_SECONDS, common_page, encode, packet_response, timing_header,
         )
 
         async def read_work():
@@ -654,8 +661,7 @@ def mount(app):
             try:
                 (packet, saved_timings), shared = await read_desk(
                     desk_reads.read(common or exact, produce, reuse=BURST_SECONDS if common else 0,
-                                    late_reuse=0 if explicit_refresh else LATE_LIST_REUSE_SECONDS),
-                    timeout=ESTIMATE_RESPONSE_SECONDS if default_estimates else None)
+                                    late_reuse=0 if explicit_refresh else LATE_LIST_REUSE_SECONDS))
                 return packet_response(req, packet, saved_timings, shared=shared)
             except (web.HTTPServiceUnavailable, OperationalError):
                 # An outage cannot prove that prices still exist. Saved odds

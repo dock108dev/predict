@@ -27,7 +27,7 @@ def evidence(quote):
         return None,'invalid_confirmation',['book_confirmation_invalid']
 
 
-def assess(quote, at, *, maximum_age=None):
+def assess(quote, at, *, maximum_age=None, pregame_until=None):
     times=quote.get('times',{});source=times.get('source_at');receipt=times.get('received_at')
     clock,basis,reasons=evidence(quote);reasons=list(reasons)
     deadline=None
@@ -43,7 +43,8 @@ def assess(quote, at, *, maximum_age=None):
         else:
             start=stamp(clock)
             age = quote.get('freshness_policy', {}).get('maximum_age_seconds', CURRENT_DESK_MAX_AGE_SECONDS)
-            deadline = start + timedelta(seconds=age if maximum_age is None else min(age, maximum_age))
+            deadline = (stamp(pregame_until) if pregame_until else
+                        start + timedelta(seconds=age if maximum_age is None else min(age, maximum_age)))
             if start>at:reasons.append('source_future')
             elif at>deadline:reasons.append('source_expired')
     except (ValueError,TypeError,KeyError,AttributeError):

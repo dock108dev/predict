@@ -93,7 +93,7 @@ def policy_identity(provider):
             if evidence.exists():paths.append(evidence)
         except (ValueError,KeyError,TypeError):pass
     paths += [POLICY_ROOT/'app/comparison/sgo_reference.py', POLICY_ROOT/'app/comparison/sgo_reference_publication.py',
-              POLICY_ROOT/'app/comparison/sgo_fair_display.py', POLICY_ROOT/'app/storage/sportsgameodds_reference.py',
+              POLICY_ROOT/'app/comparison/sgo_fair_display.py', POLICY_ROOT/'app/comparison/sgo_median_publication.py', POLICY_ROOT/'app/storage/sportsgameodds_reference.py',
               POLICY_ROOT/'app/normalization/sportsgameodds-college-aliases-20261115.json',
               POLICY_ROOT/'app/comparison/sgo_native_binding.py',
               POLICY_ROOT/'app/comparison/sgo_sportsbook_baseline.py',
@@ -139,12 +139,11 @@ def sportsbook_dependencies(db, event_ids=None, *, at=None, reference_ids=None):
 
 
 def sportsbook_frames(db, at, *, sgo_inputs=None):
-    from app.comparison.game_phase import PREGAME_SPORTSBOOK_SECONDS, sgo_event_status, sporting_phase
+    from app.comparison.game_phase import sgo_event_status, sporting_phase
     from .sportsgameodds_reference import EventInputs
     from .store import exact_time
 
     inputs = sgo_inputs if sgo_inputs is not None else EventInputs(db)
-    since = exact_time((at - timedelta(seconds=PREGAME_SPORTSBOOK_SECONDS)).isoformat())
     through = exact_time(at.isoformat())
     frames = []
     for occurrence, candidates in inputs.occurrences(at).items():
@@ -153,7 +152,7 @@ def sportsbook_frames(db, at, *, sgo_inputs=None):
             continue
         native_id, row = next(iter(candidates.items()))
         if (not row['valid'] or row['occurrence'] != occurrence or row['phase'] != 'pregame'
-                or not since <= row['received_order'] <= through
+                or row['received_order'] > through
                 or row['received_order'] >= exact_time(start.isoformat())):
             continue
         phase = sporting_phase({'status': sgo_event_status(row['status'] or {})})
@@ -164,30 +163,28 @@ def sportsbook_frames(db, at, *, sgo_inputs=None):
 
 
 def pregame_sportsbooks(db, owner, states, at, *, frames=None, occurrences=None, sgo_inputs=None):
-    from app.comparison.public_sportsbook_estimate import allowed, index, read_captures, sgo_observation
+    from app.comparison.public_sportsbook_estimate import read_captures, retained_prices, sgo_observation
     from .sportsgameodds_reference import EventInputs
     from collections import defaultdict
 
-    if not allowed(owner):
+    if configured_aggregate_provider(owner.get('config')) != 'sportsgameodds':
         return {}
     inputs = sgo_inputs if sgo_inputs is not None else EventInputs(db)
-    matches = {key: [value] for key, value in index(read_captures(POLICY_ROOT, at=at), at=at).items()
+    matches = {key: [value] for key, value in retained_prices(POLICY_ROOT, read_captures(POLICY_ROOT, at=at),
+                                                             at=at, leagues=snapshots.SPORTS).items()
                if occurrences is None or key in occurrences}
     candidates = defaultdict(list)
     for row in sportsbook_frames(db, at, sgo_inputs=inputs) if frames is None else frames:
-        if source_allowed(states.get('sportsgameodds', {}), row['competition']):
-            key = (row['competition'], stamp(row['scheduled_start']), row['home'], row['away'])
-            if occurrences is None or key in occurrences:
-                candidates[key].append(row['native_event_id'])
+        key = (row['competition'], stamp(row['scheduled_start']), row['home'], row['away'])
+        if occurrences is None or key in occurrences:
+            candidates[key].append(row['native_event_id'])
     events = {key: ids[0] for key, ids in candidates.items() if len(ids) == 1}
     latest = inputs.frames(events.values())
-    since = at - timedelta(minutes=15)
-    observations = inputs.quotes(
-        latest, bookmakers=BEST_BOOKS, source_since=since, game_markets=True)
+    observations = inputs.quotes(latest, bookmakers=BEST_BOOKS, game_markets=True)
     for key, event in events.items():
         try:
             frame = latest.get(event)
-            if frame and event in observations and stamp(frame['facts']['received_at']) >= since:
+            if frame and event in observations:
                 value = sgo_observation(frame, observations[event], at=at, occurrence=key)
                 if value:
                     matches.setdefault(key, []).append(value)
@@ -432,6 +429,7 @@ def arb_candidates(part):
             fee_applicability={'phase': (row.get('fee_applicability') or {}).get('phase')},
             current_authority=dict(price=auth['price'], references=[], reference_required=False,
                 public_fee_revision=auth['public_fee_revision'], fee_until=None,
+                occurrence_id=auth.get('occurrence_id'),
                 sgo_native_contract=auth.get('sgo_native_contract'))))
     return dict(rows=rows, pairs=pairs)
 
@@ -448,8 +446,22 @@ def observe_arbs(db, result, candidates, owner, states, *, generation, policy, e
     if candidates and owner.get('healthy') and owner.get('active') and not owner.get('global_stopped'):
         subset = dict(result, rows=list(chain.from_iterable(c['rows'] for c in candidates)),
                       pairs=list(chain.from_iterable(c['pairs'] for c in candidates)))
-        deps, _ = published_dependencies(db, subset, provider=configured_aggregate_provider(owner.get('config')), at=at)
-        current = project(subset, deps, owner, states, at=at, policy=policy, epoch=epoch)
+        from .pregame_publication import project as project_pregame
+        from .ordinary_projection import withdrawn_events
+        pregame = project_pregame(db, subset, owner, states, at=at, epoch=epoch,
+                                  withdrawn=withdrawn_events(db, at=at))
+        if live_available:
+            live_rows = [row for row in subset['rows']
+                         if row['current_authority']['price'].get('lifecycle', {}).get('state') == 'live']
+            if live_rows:
+                live_ids = {row['id'] for row in live_rows}
+                live_subset = dict(subset, rows=live_rows,
+                                   pairs=[p for p in subset['pairs'] if set(p['legs']) <= live_ids])
+                deps, _ = published_dependencies(db, live_subset, provider=configured_aggregate_provider(owner.get('config')), at=at)
+                live_result = project(live_subset, deps, owner, states, at=at, policy=policy, epoch=epoch)
+                pregame['rows'].extend(live_result['rows'])
+                pregame['pairs'].extend(live_result['pairs'])
+        current = pregame
         rows = {row['id']: row for row in current['rows']}
         for pair in current['pairs']:
             legs = [rows[leg] for leg in pair['legs']]
@@ -486,8 +498,8 @@ def compose(db, settings, *, scope, policy, epoch, started, batched=False, error
         assumptions=settings, rows=[], pairs=[], games=[], references=[], sources={}, issues=[],
         provider_requests=0, capture_seconds=0,
         scope=dict(leagues=list(snapshots.SPORTS),families=['winner','spread','total'],period='full_game',horizon_hours=72))
-    components=db.execute('''SELECT c.id,c.result_id,c.facts,r.read_summary AS summary FROM comparison_publication c
-        JOIN comparison_snapshot_result r ON r.id=c.result_id
+    components=db.execute('''SELECT c.id,r.id AS result_id,c.facts,r.read_summary AS summary FROM comparison_publication c
+        JOIN comparison_snapshot_result r ON r.id=coalesce(c.facts->>'published_result_id', c.result_id)
         WHERE c.kind='component' AND c.id=ANY(%s) ORDER BY c.id''',(list(scope),)).fetchall()
     missing=[c['result_id'] for c in components if c['summary'] is None]
     blobs={r['id']:r['result'] for r in db.execute(
@@ -523,7 +535,7 @@ def compose(db, settings, *, scope, policy, epoch, started, batched=False, error
         live_sportsbook.extend(summary.get('live_sportsbook_deadlines', []))
         members.append(c['result_id']);captured.append(summary['captured_at'])
         capture_failed = c['facts'].get('price_failure')
-        if capture_failed:
+        if capture_failed and not c['facts'].get('published_result_id'):
             failed_captures.append(c['result_id'])
         elif arbs := summary.get('arb_candidates'):
             candidates.append(arbs)
@@ -657,13 +669,20 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
             desired={key:input_identity(key,signatures) for key in scope}
             material={key:material_identity(key,signatures) for key in scope}
         schedule_boundaries=[]
+        model_starts=[]
         for path in (POLICY_ROOT/'app/fixtures').glob('*conditional-fees*.json'):
             model=json.loads(path.read_text())
             schedule_boundaries.extend(model[k] for k in ('reviewed_at','review_before') if model.get(k) and stamp(model[k])>at)
+            if model.get('reviewed_at') and stamp(model['reviewed_at']) > at:
+                model_starts.append(model['reviewed_at'])
         public_boundaries=schedule_lifecycle.boundaries(fee_state,at)
         public_boundaries += [deadline for v in product_states.values()
                               if (deadline := (v.get('last_verified') or {}).get('review_before'))
                               and stamp(deadline) > at]
+
+        fee_cutovers = [rule['effective_from'] for rule in
+            ((fee_state or {}).get('last_verified') or {}).get('approval', {}).get('rules', ())
+            if rule.get('effective_from') and stamp(rule['effective_from']) > at]
 
         removed=set(old)-set(scope)
         def boundary_due(facts):
@@ -744,6 +763,7 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
                             native_slots.discard(key)
                             continue
                         inputs=None;capture_diagnostics={};prior_parts=None;costs={}
+                        previous = None
                         membership={}
                         current_dependencies=dependencies(db,scope[key],provider=reference_provider,membership=membership)
                         structure_ids=capture_structure_ids(current_dependencies)
@@ -775,7 +795,6 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
                                 costs['input_decode_seconds']=round(monotonic()-reading,6)
                                 del saved
                                 inputs=capture_price(db,previous,at=utc(),binding=capture_binding,event_ids=scope[key],diagnostics=capture_diagnostics,_frame_dependencies=current_dependencies)
-                                del previous
                         if inputs is None:
                             prior_parts=None
                             inputs=snapshots.capture(db,ordinary=True,event_ids=scope[key],capture_binding=capture_binding,
@@ -783,7 +802,22 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
                             inputs['_price_capture']=dict(path='complete',read_records=len(inputs['dependencies']),**capture_diagnostics)
                         inputs['policy_identity']=policy
                         inputs['reference_provider']=reference_provider
-                        from app.comparison.public_sportsbook_estimate import SOURCE as PUBLIC_BOARD, select as public_estimate
+                        from app.comparison.public_sportsbook_estimate import (
+                            SOURCE as PUBLIC_BOARD, has_retained_public_pair, restore_public_pairs, select as public_estimate,
+                        )
+                        from .current_rows import contract_id
+                        previous_public = {}
+                        if prior_facts.get('has_public_book_pair') and reference_provider == 'sportsgameodds':
+                            if previous is None:
+                                stored = db.execute('''SELECT s.inputs FROM comparison_snapshot_result r
+                                    JOIN comparison_snapshot s ON s.id=r.snapshot_id WHERE r.id=%s''',
+                                    (prior_facts.get('published_result_id') or prior['result_id'],)).fetchone()
+                                if stored:
+                                    previous = snapshots.unpack(stored['inputs'])
+                            previous_public = {contract_id(q['original_record']): q for q in (previous or {}).get('quotes', ())
+                                if has_retained_public_pair(q.get('sportsbook_baseline') or {})}
+                        del previous
+                        has_public_book_pair = False
                         capture_at = stamp(inputs['captured_at'])
                         if not live_available:
                             from app.comparison.game_phase import scheduled_phase
@@ -791,12 +825,16 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
                                 if stamp(row['start_at']) > capture_at and scheduled_phase(
                                     (row.get('original_record') or {}).get('event') or row, capture_at)['state'] == 'scheduled']
                         for row in inputs['quotes']:
-                            if (row.get('sportsbook_baseline') or {}).get('indicative'):
+                            if (baseline := row.get('sportsbook_baseline')) and baseline.get('indicative') and not baseline.get('source_local'):
                                 row.pop('sportsbook_baseline')
-                            if public_matches and (row.get('source') or {}).get('provider') in ('kalshi', 'polymarket_us', PUBLIC_BOARD):
-                                estimate = public_estimate(row, quote_authority(row, inputs), public_matches, at=capture_at)
+                            if (public_matches or previous_public) and row['source']['provider'] in ('kalshi', 'polymarket_us', PUBLIC_BOARD):
+                                prior_quote = previous_public.get(contract_id(row['original_record']))
+                                observations = (restore_public_pairs(row, prior_quote, public_matches, at=capture_at)
+                                                if prior_quote else public_matches)
+                                estimate = public_estimate(row, quote_authority(row, inputs), observations, at=capture_at)
                                 if estimate:
                                     row['sportsbook_baseline'] = estimate
+                                    has_public_book_pair |= has_retained_public_pair(estimate)
                         # Ingress can add a venue between planning and this capture.
                         # Fee authority must cover the actual quotes in this member.
                         captured_venues = {row['venue'] for row in inputs['quotes']}
@@ -813,6 +851,8 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
                             aggregate_receipts=captured_aggregate_receipts(inputs),
                             capture_binding_id=inputs['_price_basis']['binding'],governing_fields=governing,capture_structure_ids=structure_ids)
                         facts['material_identity']=material_identity(key,captured)
+                        if has_public_book_pair:
+                            facts['has_public_book_pair'] = True
                         binding_start=monotonic();price_result=prices(inputs,settings,db=db)
                         costs['price_binding_seconds']=round(monotonic()-binding_start,6)
                         # Price-only members may outlive an optional-finance outage.
@@ -822,10 +862,20 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
                             (row['current_authority']['price'].get('current_until'),row['start_at'],
                              (row['current_authority'].get('sgo_native_contract') or {}).get('current_until'),
                              (row.get('sportsbook_baseline') or {}).get('current_until')) if v and stamp(v)>capture_at]
-                        fee_boundaries=[*schedule_boundaries, *(public_boundaries if key in prophetx_components or product_components[key] else ())]
+                        has_live = any(r['current_authority']['price']['lifecycle']['state'] == 'live'
+                                       for r in price_result['rows'])
+                        fee_boundaries = ([*schedule_boundaries, *public_boundaries] if has_live else
+                                          [*model_starts, *(fee_cutovers if key in prophetx_components else ())])
                         facts['next_fee_boundary']=min(fee_boundaries,key=stamp,default=None)
                         boundaries.extend(fee_boundaries)
                         facts['next_boundary']=min(boundaries,key=stamp) if boundaries else None
+                        if prior and not has_live:
+                            # Keep the displayed root's ready member pinned by
+                            # its member reference while the component owns
+                            # the recoverable successor input.
+                            fallback = prior_facts.get('published_result_id')
+                            if fallback or prior_facts.get('finance') == 'ready':
+                                facts['published_result_id'] = fallback or prior['result_id']
                         seal(db,inputs,price_result,facts,insert_inputs=True,component=key,prior_parts=prior_parts,
                              costs=costs,batched=True)
                         del prior_parts
@@ -913,19 +963,23 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
                         decoded=True
                         result=bind(snapshots.calculate(inputs, settings, product=True),inputs,'ready')
                         now=stamp(utc())
-                        future=[v for v in [*schedule_boundaries, *(public_boundaries if key in prophetx_components or product_components[key] else ())]
-                                if stamp(v)>now]
+                        future = [v for v in [facts.get('next_fee_boundary')] if v and stamp(v) > now]
                         for row in result['rows']:
                             a=row['current_authority']
-                            future.extend(v for v in [a.get('fee_until'),a.get('conservative_fee_until'),
-                                (row.get('trade_fee',{}).get('evidence') or {}).get('review_before'),
-                                (a.get('sgo_native_contract') or {}).get('current_until'),
-                                a['start_at'],a['price'].get('current_until'),
-                                (row.get('sportsbook_baseline') or {}).get('current_until'),
-                                *(w.get('current_until') for w in a['references'])] if v and stamp(v)>now)
+                            if a['price']['lifecycle']['state'] == 'scheduled':
+                                if stamp(a['start_at']) > now:
+                                    future.append(a['start_at'])
+                            else:
+                                future.extend(v for v in [a.get('fee_until'),a.get('conservative_fee_until'),
+                                    (row.get('trade_fee',{}).get('evidence') or {}).get('review_before'),
+                                    (a.get('sgo_native_contract') or {}).get('current_until'),
+                                    a['start_at'],a['price'].get('current_until'),
+                                    (row.get('sportsbook_baseline') or {}).get('current_until'),
+                                    *(w.get('current_until') for w in a['references'])] if v and stamp(v)>now)
                         renewed=dict(facts,finance='ready',next_boundary=min(future,key=stamp) if future else None,visited_at=utc())
                         renewed.pop('error',None)
                         renewed.pop('recapture_input',None)
+                        renewed.pop('published_result_id',None)
                         seal(db,inputs,result,renewed,component=key,batched=True)
                 except (CalculationStopped, MemoryError, OperationalError):
                     raise

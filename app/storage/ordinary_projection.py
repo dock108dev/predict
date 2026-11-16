@@ -138,7 +138,7 @@ def counts(result):
 def authority_deadline(witness):
     deadline = witness.get('current_until')
     source = witness.get('clock_at')
-    if deadline and source:
+    if deadline and source and (witness.get('lifecycle') or {}).get('state') != 'scheduled':
         # Older committed publications can predate the board cap.
         return min(stamp(deadline), stamp(source) + timedelta(seconds=CURRENT_DESK_MAX_AGE_SECONDS)).isoformat()
     return deadline
@@ -294,7 +294,7 @@ def project(result, current, owner, states, *, at, policy, epoch, settings=None,
     from app.comparison.public_sportsbook_estimate import SOURCE, allowed, clocks_current, index, read_captures
     from .store import ROOT
     baseline_inputs = set()
-    if allowed(owner) and any((row.get('sportsbook_baseline') or {}).get('indicative') for row in result['rows']):
+    if allowed(owner) and any((row.get('sportsbook_baseline') or {}).get('indicative') and not (row.get('sportsbook_baseline') or {}).get('source_local') for row in result['rows']):
         baseline_inputs.update((SOURCE, match['event_id'], match['revision'])
                                for match in index(read_captures(ROOT, at=at), at=at).values() if match['scheduled'])
         baseline_inputs.update(('sportsgameodds', item['native_event_id'], item['frame'])
@@ -367,7 +367,7 @@ def project(result, current, owner, states, *, at, policy, epoch, settings=None,
             pair_ready[row['id']] = row['game_state']
         baseline = row.get('sportsbook_baseline')
         if baseline and not baseline.get('verified_native'):
-            if baseline.get('indicative'):
+            if baseline.get('indicative') and not baseline.get('source_local'):
                 refs = baseline.get('reference_inputs') or {}
                 current_baseline = bool(refs and all(tuple(ref) in baseline_inputs for ref in refs.values())
                                         and at <= stamp(baseline['current_until']))

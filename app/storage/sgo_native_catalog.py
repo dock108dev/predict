@@ -36,13 +36,16 @@ def targets(db, *, at, exclude=()):
             continue
         members = dict(facts['members'])
         rows = db.execute('''SELECT id,revision,facts FROM current_sgo_reference WHERE event_id=%s
-            AND id=ANY(%s) AND bookmaker_id='novig' AND facts ? 'bookmaker_market_link'
-            AND facts->>'available'='true' ''', (event_id, list(members)))
+            AND bookmaker_id='novig' AND facts ? 'bookmaker_market_link'
+            AND facts->>'available'='true' ORDER BY id LIMIT 4097''', (event_id,)).fetchall()
+        if len(rows) > 4096:
+            continue
         outcomes = {}
         for row in rows:
             original = row['facts']
             link = outcome_link_id(original.get('bookmaker_market_link'))
-            if link and members[row['id']] == row['revision']:
+            if link and (row['id'] not in members and facts['event_context']['phase'] == 'pregame'
+                         or members.get(row['id']) == row['revision']):
                 outcomes.setdefault(link, []).append({key:original.get(key) for key in (
                     'odd_id','opposing_odd_id','side','line','market','period')})
         if outcomes:
@@ -72,14 +75,14 @@ def dependencies(db, event_ids=None, *, at=None, native_ids=None):
         return []
     at = stamp(at or now())
     target = ' AND c.event_id=ANY(%s)' if native_ids is not None else ''
-    params = (at,event_ids,at-timedelta(hours=24),at+timedelta(hours=72),event_ids)
+    params = (at,at,event_ids,at-timedelta(hours=24),at+timedelta(hours=72),event_ids)
     if native_ids is not None:
         params += (native_ids,)
     return db.execute('''SELECT 'sgo-native-catalog:novig:'||c.event_id id,
         c.revision price,c.revision contract,c.revision event,c.revision receipt,e.id event_id
         FROM current_sgo_native_catalog c JOIN current_event e
           ON e.provider='sportsgameodds' AND e.native_event_id=c.event_id
-        WHERE c.expires_at > %s AND ((%s::text[] IS NULL AND e.scheduled_start::timestamptz >= %s
+        WHERE (c.expires_at > %s OR e.scheduled_start::timestamptz > %s) AND ((%s::text[] IS NULL AND e.scheduled_start::timestamptz >= %s
           AND e.scheduled_start::timestamptz < %s) OR e.id=ANY(%s))'''+target+' ORDER BY id', params).fetchall()
 
 
@@ -92,7 +95,9 @@ def write(db, event_id, facts):
         raise ValueError('sgo_native_catalog_capacity')
     at, expiry = (stamp(facts[field]) for field in ('observed_at','expires_at'))
     with db.transaction():
-        db.execute("DELETE FROM sgo_event_evidence WHERE kind='catalog' AND expires_at < %s", (at,))
+        db.execute('''DELETE FROM sgo_event_evidence c WHERE kind='catalog' AND expires_at < %s
+            AND NOT EXISTS (SELECT 1 FROM current_event e WHERE e.provider='sportsgameodds'
+                AND e.native_event_id=c.event_id AND e.scheduled_start::timestamptz > %s)''', (at, at))
         count = db.execute('SELECT count(*) n FROM current_sgo_native_catalog WHERE event_id<>%s',
                            (event_id,)).fetchone()['n']
         if count >= MAX_EVENTS or sql_usage(db) + 2 * len(body) >= SQL_BYTE_CAP:

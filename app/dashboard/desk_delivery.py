@@ -12,10 +12,6 @@ from app.storage.store import stamp
 
 BURST_SECONDS = 0.5
 RESPONSE_SECONDS = 1.0
-# The indexed direct pregame read took about 2 seconds on the collection
-# host. Allow it to complete without falling back to a historical packet.
-# ReadBurst still rejects an answer that crossed a quote's evidence deadline.
-ESTIMATE_RESPONSE_SECONDS = 3.0
 # A list that missed its response budget can finish between browser retries.
 LATE_LIST_REUSE_SECONDS = 3.5
 MAX_DESK_READS = 16
@@ -41,10 +37,10 @@ def timing_header(timings):
     return ', '.join(f'{name};dur={duration:.3f}' for name, duration in timings.items())
 
 
-async def read_desk(read, *, timeout=None):
+async def read_desk(read):
     """Bound the response while ReadBurst retains ownership of the SQL work."""
     try:
-        async with asyncio.timeout(RESPONSE_SECONDS if timeout is None else timeout):
+        async with asyncio.timeout(RESPONSE_SECONDS):
             return await read
     except TimeoutError:
         raise web.HTTPServiceUnavailable(reason='Prices temporarily unavailable') from None

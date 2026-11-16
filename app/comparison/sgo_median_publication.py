@@ -126,6 +126,8 @@ def owned_median_evidence(row, inputs, source, *, best_payout=False, diagnostics
                 occurrence_evidence=occurrence_evidence,frame_id=frame_id,frame_received_at=frame_at)
             if live_start is not None:
                 contract['starts_at'] = live_start.isoformat()
+            elif inputs.get('pregame_publication'):
+                contract['pregame_retained'] = True
             calculate = reviewed_best_payout if best_payout else reviewed_median
             result,witness=calculate(quotes,contract,at=inputs['captured_at'],evaluated_venue=row['venue'],registry=registry)
             if not result.get('available'):

@@ -4,7 +4,7 @@ from fractions import Fraction
 
 from app.storage.store import stamp
 from .cashflows import exact_wire
-from .game_phase import LIVE_SECONDS, PREGAME_SPORTSBOOK_SECONDS, original_price_phase
+from .game_phase import LIVE_SECONDS, original_price_phase
 from .public_sportsbook_estimate import outcome
 from .sgo_reference import BEST_BOOKS, OPPOSITE, american_probability, best_payout_book, no_vig_probability
 from .sgo_reference_publication import captured_frame, exact_line
@@ -40,22 +40,33 @@ def select(record, rows, frame, *, at, index=None):
     else:
         offer_rows = rows
     observed = captured_frame(record, {'frame': frame, 'rows': offer_rows}, index=index)
-    if observed is None:
+    live = phase['state'] == 'live'
+    if live and observed is None or not frame:
         return None
     facts = frame['facts']
+    if observed is None:
+        # A page can omit the offer. Its exact retained row still owns its
+        # clock and opposition; the current event receipt owns the schedule.
+        if not any(e['facts'].get('event_id') == source['native_event_id']
+                   and e['facts'].get('venue') == quote['venue']
+                   and e['facts'].get('odd_id') == wanted
+                   and e['facts'].get('source_at') == quote['times']['source_at']
+                   and e['facts'].get('price_american') == quote['original']['value']
+                   and e['facts'].get('available') is True for e in offer_rows):
+            return None
+        observed = dict(frame_id=facts['receipt_sha256'], frame_received_at=facts['received_at'])
     members = index.members if index is not None else dict(facts['members'])
     captured = stamp(at)
     received = stamp(observed['frame_received_at'])
     start = stamp(record['event']['scheduled_start'])
-    live = phase['state'] == 'live'
     if received > captured or (received >= start) != live:
         return None
-    lifetime = timedelta(seconds=LIVE_SECONDS if live else PREGAME_SPORTSBOOK_SECONDS)
+    lifetime = timedelta(seconds=LIVE_SECONDS)
     book_rows = {book: [] for book in BEST_BOOKS}
     for entry in rows:
         fact = entry['facts']
         book = fact.get('venue')
-        if (book not in book_rows or members.get(entry['id']) != entry['revision']
+        if (book not in book_rows or live and members.get(entry['id']) != entry['revision']
                 or fact.get('provider') != 'sportsgameodds'
                 or fact.get('event_id') != source['native_event_id']
                 or fact.get('league') != record['event']['competition']
@@ -74,7 +85,7 @@ def select(record, rows, frame, *, at, index=None):
         except (KeyError, TypeError, ValueError, ArithmeticError):
             continue
         if (line == target_line and (clock >= start) == live
-                and clock <= original_receipt <= received and captured <= clock + lifetime):
+                and clock <= original_receipt <= received and (not live or captured <= clock + lifetime)):
             book_rows[book].append((fact, implied, clock))
     candidates = {}
     for book, prices in book_rows.items():
@@ -94,10 +105,9 @@ def select(record, rows, frame, *, at, index=None):
     target, other = candidates[book]
     fair = no_vig_probability(target[1], other[1])
     cost = american_probability(quote['original']['value'])
-    deadline = min(target[2], other[2]) + lifetime if live else min(
-        min(selected[2], opposing[2]) for selected, opposing in candidates.values()) + lifetime
+    deadline = min(target[2], other[2]) + lifetime if live else start
     book_prices = {
-        venue: [{key: leg[0][key] for key in ('price_american', 'source_at', 'side', 'line')}
+        venue: [{key: leg[0][key] for key in ('price_american', 'source_at', 'received_at', 'side', 'line')}
                 for leg in (selected, opposing)]
         for venue, (selected, opposing) in candidates.items()
     }
@@ -106,7 +116,8 @@ def select(record, rows, frame, *, at, index=None):
                 current_until=(deadline if live else min(deadline, start)).isoformat(),
                 probability=exact_wire(fair), fair_decimal_odds=exact_wire(1 / fair),
                 return_percent=exact_wire(100 * (fair / cost - 1)),
-                prices=book_prices[book], candidates=book_prices)
+                prices=book_prices[book], candidates=book_prices, indicative=not live,
+                source_local=True)
 
 
 def current(baseline, dependency, *, at):

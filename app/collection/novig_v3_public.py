@@ -52,6 +52,7 @@ class NovigPublicDiscovery:
     def catalog_enabled(self):
         return (not self.closed and self.service.dispatch and not self.service.globally_stopped
                 and not {'novig','sportsgameodds'}.intersection(self.service.paused_sources)
+                and self.service.config.get('aggregate_enabled', True)
                 and self.service.config['aggregate_provider'] == 'sportsgameodds')
 
     def catalog_targets(self, attempted):
@@ -158,7 +159,9 @@ class NovigPublicDiscovery:
                             continue
                     except (httpx.HTTPError, psycopg.Error, ValueError, KeyError, TypeError) as exc:
                         self.metrics['sgo_catalog_state'] = 'novig_public_catalog_unavailable:' + type(exc).__name__
-                    if not live_enabled(self.service.config):
+                    if (not self.service.config.get('direct_novig_enabled', True)
+                            or {'novig', 'the_odds_api'} & self.service.paused_sources
+                            or not live_enabled(self.service.config)):
                         await asyncio.sleep(delay)
                         continue
                     try:

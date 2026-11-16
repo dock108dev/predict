@@ -178,12 +178,11 @@ health withdraw financial authority without renewing or withdrawing healthy sour
 clocks; separate collection and estimate labels expose those meanings. Checked-zero requires
 complete current evaluated scope; absent/failed/partial storage is unavailable.
 
-The public desk keeps a bounded local copy of recent Opportunities, Browse Odds,
-and game queries. If PostgreSQL fails or a read misses the desk's response budget,
-an exact cached view can show its last known venue and sportsbook prices with
-their original clocks. Pregame rows age out at kickoff. The copy carries no
-current-price, fee, depth, EV, or arbitrage authority. It survives an app restart,
-and the desk retries SQL in the background while auto-update is enabled.
+If a public desk read fails, an open page can keep its previous results and
+shows a message that the update failed. A failed first load offers Retry.
+The server's short reuse window applies only to successful reads and ends
+at the first applicable display boundary. Saved odds is a separate capture
+reader.
 
 In database mode, native image continuity binds original source event/market
 material rather than derived comparison season/stage or counterpart enrichment.
@@ -314,6 +313,31 @@ when known, and joins process shutdown before acquisition ownership is released.
 No account/credit/hold record is dropped or reconstructed to reduce CPU cost.
 Finite injected-ledger fixtures retain the joined-thread implementation. Child
 RSS must be reported separately alongside parent and combined process use.
+
+## Pregame prices and calculations
+
+Browse Odds, Open Game, Opportunities, and Arbitrage use the same committed
+ordinary comparison publication. Ingress keeps the latest observation for
+each exact source contract. A partial response, a collection pause, or an
+old source clock does not remove a pregame observation. Explicit closures
+and the latest authoritative kickoff still govern eligibility.
+
+The data worker freezes the price, sportsbook sides, and available fee and
+settlement evidence together. When a replacement for the same component is
+waiting for calculations, the public head keeps the previous complete member;
+the worker can recover the committed replacement input after interruption.
+Price, fee, and reference availability are independent. A sportsbook estimate
+with a supported fee is a modeled decisive return, not a verified fill or a
+full settlement EV. The page displays the original clocks in quote inspection.
+
+The web process reads and pages the committed terms; only sporting authority
+can withdraw a published offer ahead of another generation. Linked offers
+use the same schedule in the list, game page, and quote inspection. The
+pregame fee census counts the same published offers. Open pages use the
+next visible kickoff and the update cursor. Live views keep their separate
+freshness rules. The Novig public catalog verifies eligible SportsGameOdds
+links independently of direct Novig price collection, subject to source pause
+and Stop controls.
 
 ## Independent ordinary raw reads
 

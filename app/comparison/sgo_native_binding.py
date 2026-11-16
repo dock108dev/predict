@@ -268,9 +268,10 @@ def bind(record, witness, *, at):
             return missing('sgo_native_catalog_unavailable')
         at = stamp(at)
         observed, expiry = stamp(witness['observed_at']), stamp(witness['expires_at'])
-        if not observed <= at < expiry or expiry - observed > CATALOG_AGE:
-            return missing('sgo_native_catalog_expired')
         native_event = witness['event']
+        pregame = native_event['status'] == 'OPEN_PREGAME' and at < stamp(event['scheduled_start'])
+        if not observed <= at or not observed < expiry <= observed + CATALOG_AGE or (not pregame and at >= expiry):
+            return missing('sgo_native_catalog_expired')
         native_market = witness['markets'].get(outcome_id)
         if not native_market:
             return missing('sgo_native_outcome_absent_from_catalog')
@@ -332,7 +333,7 @@ def bind(record, witness, *, at):
             subject_role_anchors=witness.get('subject_role_anchors', []) if family != 'total' else [],
             venue_fee=native_market.get('fee'), revision=witness['revision'],
             event_receipt=witness['event_receipt'], market_receipt=native_market['receipt'],
-            current_until=(min(kickoff, expiry) if phase_verified and phase == 'scheduled' else expiry).isoformat())
+            current_until=(kickoff if phase_verified and phase == 'scheduled' else expiry).isoformat())
     except (ArithmeticError, AttributeError, KeyError, StopIteration, TypeError, ValueError):
         return missing('sgo_native_catalog_evidence_invalid')
 

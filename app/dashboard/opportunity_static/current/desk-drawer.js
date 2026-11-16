@@ -129,7 +129,8 @@ export function createDeskDrawer({replay, browse, dataset, retainedResult, gameK
       Object.assign(selected,pinned);
       const detail = pinned.evidence.desk_offer;
       if (detail) {
-        selected.offer = {...detail, ...offer};
+        selected.offer = {...detail, ...offer, trade_fee:detail.trade_fee || offer.trade_fee,
+          sportsbook:detail.sportsbook || offer.sportsbook};
         if (offer.value == null && detail.reason === 'reference_price_stale') selected.offer.reason = detail.reason;
         if (offer.trade_fee_available === false && detail.trade_fee?.available) {
           selected.offer.trade_fee = {available:false, reason:'fee_outcome_not_published'};
@@ -492,9 +493,8 @@ export function createDeskDrawer({replay, browse, dataset, retainedResult, gameK
       const {row, evidence, reason, withdrawn_from_phase} = await response.json();
       if (!active()) return;
       const canAdopt = adopt === 'refresh' || adopt && viewContext().autoUpdate;
-      const occurrenceChanged = row?.start_at && Date.parse(row.start_at) !== Date.parse(selected.group.start_at);
-      if (canAdopt && (withdrawn_from_phase || !row?.posted_price || !sameOffer(selected.offer, row) || occurrenceChanged)) {
-        const ended = !!occurrenceChanged || Date.parse(selected.group.start_at) <= Date.now();
+      if (canAdopt && (withdrawn_from_phase || !row?.posted_price || !sameOffer(selected.offer, row))) {
+        const ended = Date.parse(selected.group.start_at) <= Date.now();
         closePosted(selected, ended ? 'Pregame closed'
           : evidenceReason(reason, 'This posted quote was withdrawn.'), ended);
         return;
@@ -504,12 +504,14 @@ export function createDeskDrawer({replay, browse, dataset, retainedResult, gameK
           && (canAdopt || row.price_revision === selected.offer.price_revision
             && row.economic_revision === selected.offer.economic_revision)) {
         const before = selected.offer;
+        const scheduleChanged = row.start_at && Date.parse(row.start_at) !== Date.parse(selected.group.start_at);
+        if (scheduleChanged) selected.group = {...selected.group, start_at:row.start_at};
         selected.closed = false;
         selected.ended = false;
         selected.offer = {...row, odds:row.odds && (row.odds.decimal === before.odds?.decimal ? before.odds : row.odds)};
         selected.evidence = evidence;
         $('trade-note').textContent = '';
-        if (before.price_revision !== row.price_revision || before.economic_revision !== row.economic_revision
+        if (scheduleChanged || before.price_revision !== row.price_revision || before.economic_revision !== row.economic_revision
             || before !== row && JSON.stringify(before.trade_preview) !== JSON.stringify(row.trade_preview)) tradeDetails();
         return;
       }

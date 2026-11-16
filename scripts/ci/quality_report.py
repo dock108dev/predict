@@ -51,12 +51,20 @@ BROWSER_BEHAVIOR = (
 
 STORAGE_BEHAVIOR = (
     (
+        "Published pregame prices, references and fees agree across desk reads",
+        "Preserves a complete comparison during partial pages, retries and schedule corrections",
+        "tests.test_pregame_publication_sql.PregamePublicationSQL",
+        (
+            "test_aged_price_and_reference_publish_together_until_authoritative_start",
+            "test_novig_catalog_publishes_zero_fee_and_same_after_fee_estimate",
+            "test_quote_details_follow_linked_sources_corrected_start",
+        ),
+    ),
+    (
         "Pregame sportsbook EV is withdrawn at kickoff with Live off",
         "Keeps started games out of the pregame desk while preserving captured inputs",
         "tests.test_sportsgameodds_ingress_sql.SportsGameOddsPregameDeskSQL",
-        (
-            "test_admitted_pregame_estimates_rank_before_publication_and_leave_at_kickoff",
-        ),
+        ("test_published_pregame_estimates_persist_and_leave_at_kickoff",),
     ),
     (
         "Retry a settled page after SQL timeout without fetching it again",
