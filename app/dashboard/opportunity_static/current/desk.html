@@ -41,6 +41,7 @@
           <label id="positive-field" class="desk-toggle"><input name="positive" type="checkbox"> Positive only</label>
           <label id="last-known-field" class="desk-toggle" hidden><input name="last_known" type="checkbox" value="1"> Last-known prices</label>
           <label id="alternates-field" class="desk-toggle" hidden><input id="alternates" type="checkbox"> Alternate lines</label>
+          <label id="auto-update-field" class="desk-toggle" hidden><input id="auto-update" type="checkbox" checked> Auto-update</label>
           <button id="refresh-list" type="button">Refresh list</button>
         </div>
       </div>
@@ -90,9 +91,13 @@
   </main>
   <dialog id="trade" aria-labelledby="trade-title">
     <div class="desk-title"><h2 id="trade-title">Trade details</h2><form method="dialog"><button>Close</button></form></div>
+    <div id="preview-controls" hidden>
+      <label for="preview-amount">Maximum upfront cost <span class="preview-input">$ <input id="preview-amount" type="number" min="0.01" max="1000000" step="0.01" value="10"></span></label>
+    </div>
     <div id="trade-body"></div>
     <footer class="inspection-footer">
       <button id="back-to-pair" type="button" hidden>Back to pairing</button><button id="latest" type="button">Use latest prices</button>
+      <button id="refresh-preview" type="button" hidden>Refresh</button>
       <p id="trade-note" role="status"></p>
     </footer>
   </dialog>

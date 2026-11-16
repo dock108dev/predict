@@ -9,7 +9,9 @@ from app.comparison.public_sportsbook_estimate import SOURCE as ODDSLINK, allowe
 from app.comparison.sgo_reference import BEST_BOOKS
 from app.comparison.sgo_reference_publication import FrameQuoteIndex
 from app.comparison.sgo_sportsbook_baseline import select as sportsbook_baseline
-from app.comparison.snapshot_fee_outcome import unavailable
+from app.comparison.sgo_native_binding import bind as bind_novig, pregame_fee
+from app.comparison.snapshot_fee_outcome import outcome as trade_fee, reviews, unavailable
+from app.fees import product_schedules, schedule_lifecycle
 from app.comparison.sporting_scope import supported
 from app.dashboard.current_contract import price
 from app.normalization.registry import Registry
@@ -45,14 +47,14 @@ def active_offers(db, *, at, phase, venues, providers, sports, contract=None, ev
           AND (%s::text[] IS NULL OR e.id=ANY(%s))
           AND e.scheduled_start::timestamptz <= %s AND (e.scheduled_start::timestamptz > %s)=%s
           AND e.expires_order >= extract(epoch FROM %s::timestamptz)
-          AND o.source_order >= extract(epoch FROM %s::timestamptz) AND o.source_order <= o.received_order
+          AND (%s OR o.source_order >= extract(epoch FROM %s::timestamptz)) AND o.source_order <= o.received_order
           AND o.received_order <= extract(epoch FROM %s::timestamptz)
           AND o.native_book_id IS NULL AND o.facts->>'state'='available'
-          AND ((e.provider='sportsgameodds' AND sgo.id IS NOT NULL)
+          AND ((e.provider='sportsgameodds' AND sgo.is_current)
                OR (e.provider=%s AND c.venue='prophetx' AND o.sgo_quote_id IS NULL))
         ORDER BY c.id''',
         (providers, sports, venues, contract, contract, event_ids, event_ids, at + timedelta(hours=72), at, phase == 'pregame',
-         at, at - timedelta(seconds=maximum), at, ODDSLINK))
+         at, phase == 'pregame', at - timedelta(seconds=maximum), at, ODDSLINK))
 
 
 def prior_finance(prior, quote, authority):
@@ -84,13 +86,18 @@ def overlay(db, result, owner, states, *, at, phase, contract=None, sgo_inputs=N
     from app.collection.oddslink_prophetx import live_occurrences
     from .ordinary_publication import pregame_sportsbooks, quote_authority
 
-    if not owner.get('healthy') or not allowed(owner):
+    pregame = phase == 'pregame'
+    running = owner.get('healthy') and allowed(owner)
+    if not running and not pregame:
         return result
-    config = owner['config']
-    venues = [name for name in ('novig', 'prophetx') if name not in owner.get('paused_sources', ())]
+    config = owner.get('config') or {}
+    venues = [name for name in ('novig', 'prophetx')
+              if pregame or name not in owner.get('paused_sources', ())]
+    if 'sports' not in config:
+        return result
     sports = set(aggregate_scope(config))
     native_sports = set(native_scope(config))
-    providers = [provider for provider in (SGO, ODDSLINK) if source_allowed(states.get(provider, {}))]
+    providers = [provider for provider in (SGO, ODDSLINK) if pregame or source_allowed(states.get(provider, {}))]
     if not (venues and sports and providers):
         return result
     games = {game['game_key']: game for game in result['games']}
@@ -107,7 +114,13 @@ def overlay(db, result, owner, states, *, at, phase, contract=None, sgo_inputs=N
                                 sports=sorted(sports), contract=contract, **scope))
     sportsbook_indexes = {}
     public_observations = {}
-    if phase == 'pregame':
+    native_catalog = {}
+    schedules = reviews(at) if pregame and offers else {}
+    if pregame:
+        from .sgo_native_catalog import read as read_native_catalog
+
+        native_catalog = read_native_catalog(db, {
+            row['event']['id'] for row in offers if row['provider'] == SGO and row['venue'] == 'novig'})
         inputs = sgo_inputs if sgo_inputs is not None else EventInputs(db)
         frames = inputs.frames(item['event']['id'] for item in offers if item['provider'] == SGO)
         quotes = inputs.quotes(frames, bookmakers=(*BEST_BOOKS, 'novig', 'prophetx', PROPHETX_BOOKMAKER_ID),
@@ -121,7 +134,8 @@ def overlay(db, result, owner, states, *, at, phase, contract=None, sgo_inputs=N
     for stored in offers:
         q, event, cid, provider = (stored[key] for key in ('quote','event','id','provider'))
         row_source, league = q['source'], stored['competition']
-        if (not source_allowed(states[provider], league) or provider == ODDSLINK and league not in native_sports
+        source_active = source_allowed(states.get(provider, {}), league)
+        if ((not pregame and not source_active) or provider == ODDSLINK and league not in native_sports
                 or row_source['provider'] != provider or row_source['native_event_id'] != event['id']
                 or q['venue'] != stored['venue'] or q['original']['units'] != 'american_odds'):
             continue
@@ -144,8 +158,13 @@ def overlay(db, result, owner, states, *, at, phase, contract=None, sgo_inputs=N
         raw = dict(original=q['original'], source=row_source, venue=q['venue'], league=league, times=q['times'])
         authority = quote_authority(dict(raw, original_record=record), dict(captured_at=at, dependencies={cid: dependencies}))
         lifecycle = authority['lifecycle']
-        if authority['reasons'] or not authority['expected'] or lifecycle['state'] != expected_state:
+        reasons = set(authority['reasons'])
+        if pregame:
+            reasons.discard('source_expired')
+        if reasons or not authority['expected'] or lifecycle['state'] != expected_state:
             continue
+        current = bool(running and source_active and raw['venue'] not in owner.get('paused_sources', ())
+                       and not authority['reasons'])
         original = prior.get(cid)
         game = game_for(event, occurrence, original, games, dependencies, registry)
         if (game['game_key'], stamp(game['start_at'])) in blocked:
@@ -161,18 +180,32 @@ def overlay(db, result, owner, states, *, at, phase, contract=None, sgo_inputs=N
             cost_per_normal_claim=exact_wire(price(raw)),
             alternate=(record.get('comparison_source_metadata') or {}).get('alternate'))
         row.update(id=PREFIX + cid, kind='single', game_key=game['game_key'], game_title=game['title'],
-            start_at=game['start_at'], price_current=True, game_state=lifecycle['state'],
+            start_at=game['start_at'], price_current=current, posted_price=pregame, game_state=lifecycle['state'],
             _desk_event=event,
             game_state_basis=lifecycle.get('basis'), game_state_observed_at=lifecycle.get('observed_at'),
             current_reasons=row.get('current_reasons', []), live_aggregate_desk=True,
             captured_at=row.get('captured_at') or at.isoformat(),
             price_revision=hashed([stored['offer_revision'], stored['received_at']]),
             economic_revision=row.get('economic_revision'))
+        if pregame:
+            if row['venue'] == 'novig':
+                binding = bind_novig(record, native_catalog.get(event['id']), at=at)
+                row['sgo_native_contract'] = binding
+                review = product_schedules.for_offer(owner.get('fee_products'), row, at,
+                                                     fallback=schedules['novig'])
+                row['trade_fee'] = (unavailable(review['unavailable_reason'])
+                                    if review and review.get('unavailable_reason') else pregame_fee(binding))
+            else:
+                review = schedule_lifecycle.for_offer(owner.get('fee_lifecycle'), row, at,
+                                                      fallback=schedules['prophetx'])
+                row['trade_fee'] = trade_fee(row, at=at, phase=lifecycle['state'], review=review)
+            row['economic_revision'] = hashed([row['economic_revision'], row['trade_fee']])
         baseline = None
-        if provider == SGO and (index := sportsbook_indexes.get(event['id'])) is not None:
+        if running and source_active and provider == SGO and (index := sportsbook_indexes.get(event['id'])) is not None:
             baseline = sportsbook_baseline(record, (), index.frame, at=at, index=index)
-        elif provider == ODDSLINK and public_observations:
-            baseline = public_estimate(dict(raw, original_record=record), authority, public_observations, at=at)
+        elif running and provider == ODDSLINK and public_observations:
+            baseline = public_estimate(dict(raw, original_record=record), dict(authority, reasons=[]),
+                                       public_observations, at=at)
         if baseline is not None:
             row.update(sportsbook_baseline=baseline, sportsbook_return_percent=baseline['return_percent'],
                        economic_revision=hashed([row['economic_revision'], baseline]))
@@ -182,9 +215,10 @@ def overlay(db, result, owner, states, *, at, phase, contract=None, sgo_inputs=N
             exact = dict(id=row['id'], original_record=record)
             row['aggregate_inspection'] = dict(offer_math(row), **offer_disclosures(row, row['captured_at'], [exact]))
         selected[cid] = row
-    if not selected:
-        return result
-    retained = [row for row in result['rows'] if row['current_authority']['price'].get('dependency') not in selected]
+    retained = [row for row in result['rows']
+                if row['current_authority']['price'].get('dependency') not in selected
+                and not (pregame and row.get('game_state') == 'scheduled'
+                         and (row.get('source') or {}).get('provider') in providers)]
     rows = retained + list(selected.values())
     current_prices = sum(bool(row.get('price_current')) for row in rows)
     return dict(result, rows=rows, games=list(games.values()),

@@ -6,9 +6,10 @@ views. In-game collection and display require `live_enabled`, which defaults
 to `false`.
 
 Use **Browse odds** or **Find my game** to compare full-game winners, spreads,
-and totals. **Refresh list** updates the ranking. An open inspection keeps its
-prices, clocks, and calculation pinned until you select **Use latest prices**.
-**Saved odds** opens recorded captures available on the installation.
+and totals. The SportsGameOdds-backed pregame desk shows the latest posted price
+and updates the list and trade preview when **Auto-update** is on. **Refresh list**
+reads the latest board on demand. **Trading fees** explains the supported retail
+estimates. **Saved odds** opens recorded captures available on the installation.
 [Desk and inspection guide](docs/ui-design.md#current-comparison-interface)
 
 ## Requirements and quickstart

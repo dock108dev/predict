@@ -481,7 +481,7 @@ class WorkerControls(unittest.IsolatedAsyncioTestCase):
                 patch('app.collection.current_native.call',new=AsyncMock()) as invalidate:
             assert await worker.rotate_kalshi_priority()
             invalidate.assert_awaited_once_with(service,service.invalidate_markets,'kalshi',
-                                                [(retired.raw.ref.event_id,'TAIL-OLD')])
+                                                [(retired.raw.ref.event_id,'TAIL-OLD')], reimaging=True)
             assert not await worker.rotate_kalshi_priority()  # No new rotation ahead of an outstanding ordered delete ACK.
         messages=[json.loads(sent.args[0]) for sent in worker.socket.send.await_args_list]
         assert [msg['params']['action'] for msg in messages]==['delete_markets','add_markets']
@@ -663,7 +663,7 @@ class WorkerControls(unittest.IsolatedAsyncioTestCase):
                 patch('app.adapters.polymarket_us.market_slug',side_effect=lambda m: m.raw.ref.market_id):
             assert await worker.begin_pmus_priority()
             invalidate.assert_awaited_once_with(service,service.invalidate_markets,'polymarket_us',
-                                                [('game','TAIL-A'),('game','TAIL-B')])
+                                                [('game','TAIL-A'),('game','TAIL-B')], reimaging=True)
             first=[json.loads(sent.args[0]) for sent in worker.socket.send.await_args_list]
             assert first==[{'unsubscribe':{'requestId':'tail-a'}},{'unsubscribe':{'requestId':'tail-b'}}]
             assert worker.synchronization.images==worker.synchronization.persisted==hot

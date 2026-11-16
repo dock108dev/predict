@@ -176,8 +176,13 @@ class SGOScopeSQL(LatestBoardFixture):
         raw = response()
         event = raw['data'][0]
         event['eventID'] = 'prophet-exchange-retail-fee-fixture'
-        books = event['odds']['points-home-game-sp-home']['byBookmaker']
+        home = event['odds']['points-home-game-sp-home']
+        books = home['byBookmaker']
         books['prophetexchange'] = books.pop('book')
+        books['fanduel'] = dict(books['prophetexchange'])
+        away = dict(home, oddID='points-away-game-sp-away', opposingOddID=home['oddID'],
+                    statEntityID='away', sideID='away', byBookmaker={'fanduel': dict(books['fanduel'], spread='1.5')})
+        event['odds'][away['oddID']] = away
         page = parse(raw)
         record, = current_rows(page, page.receipt_sha256)[0]
         assert record['quote']['venue'] == 'prophetx'
@@ -210,10 +215,52 @@ class SGOScopeSQL(LatestBoardFixture):
                 JOIN sgo_quote_revision q ON (q.id,q.revision)=(o.sgo_quote_id,o.sgo_quote_revision)
                 WHERE c.venue='prophetx'""").fetchone()
             assert physical['bookmaker_id'] == 'prophetexchange'
-            assert physical['received_at'] == page.quotes[0]['received_at']
+            assert physical['received_at'] == record['quote']['times']['received_at']
             assert physical['independent_depth'] is None
             assert db.execute("SELECT count(*) AS n FROM current_contract WHERE venue='prophetx'").fetchone()['n'] == 1
             ids = [physical['event_id']]
+
+            # The normal desk can serve the admitted price and fee before a
+            # comparison worker seals a new calculation.
+            from aiohttp import web
+            from aiohttp.test_utils import TestClient, TestServer
+            from app.dashboard.snapshot_api import mount
+            from app.storage.current_rows import contract_id
+
+            app = web.Application()
+            mount(app)
+            key = contract_id(record)
+            with patch('app.dashboard.snapshot_api.connect', self.connect):
+                async with TestClient(TestServer(app)) as client:
+                    query = dict(layout='desk', phase='pregame', basis='sportsbooks',
+                                 summary='1', ranked='1', lines='main', venue='prophetx')
+                    reply = await client.get('/api/comparison-current', params=query)
+                    assert reply.status == 200
+                    listed = await reply.json()
+                    item, = [offer for group in listed['rows'] for offer in group['offers']
+                             if offer['desk_quote_key'] == key]
+                    assert item['posted_price'] and item['trade_fee_available']
+                    assert item['fair_reference']['books'] == ['fanduel']
+                    selected = await (await client.get('/api/comparison-current/selection', params=dict(
+                        layout='desk', id=item['id'], quote_key=key, phase='pregame', basis='sportsbooks'))).json()
+                    assert selected['row']['price_revision'] == item['price_revision']
+                    assert selected['row']['trade_preview']['fee_if_win_usd'] == '0.19'
+                    assert selected['row']['trade_preview']['upfront_usd'] == '10'
+                    from fractions import Fraction
+
+                    assert Fraction(selected['row']['trade_preview']['estimated_return_percent']) == Fraction(-1209, 220)
+                    coverage = await (await client.get('/api/comparison-current/fee-coverage',
+                        params={'layout': 'desk', 'phase': 'pregame'})).json()
+                    assert coverage['total']['posted_modeled_after_fee'] == 1
+                    assert selected['provider_requests'] == 0
+                    source_status(db.execute, 'sportsgameodds',
+                                  {'state': 'budget_delayed', 'reason_code': 'sgo_usage_unreconciled'}, AT)
+                    held = await (await client.get('/api/comparison-current', params=query)).json()
+                    held_item, = [offer for group in held['rows'] for offer in group['offers']
+                                  if offer['desk_quote_key'] == key]
+                    assert held_item['posted_price'] and not held_item['current']
+                    assert held_item['trade_fee_available'] and held_item['original'] == item['original']
+                    source_status(db.execute, 'sportsgameodds', states['sportsgameodds'], AT)
             captured = capture(db, at=AT, ordinary=True, event_ids=ids)
             assert len(captured['quotes']) == 1, captured['issues']
             published = prices(captured, assumptions()[0])

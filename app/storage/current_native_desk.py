@@ -8,6 +8,7 @@ from app.comparison.snapshot_fee_outcome import outcome, reviews
 from app.comparison.snapshot_fee_scope import applicability
 from app.comparison.source_clock import NATIVE_BOOK_MAX_AGE_SECONDS
 from app.comparison.sporting_scope import supported
+from app.comparison.trade_preview import order_step
 from app.dashboard.current_contract import price
 from app.fees import product_schedules
 from app.normalization.registry import Registry
@@ -19,9 +20,10 @@ from .store import hashed, stamp
 VENUES = ('kalshi', 'polymarket_us')
 
 
-def active_records(db, *, at, venues, contract=None, phase='pregame', event_ids=None):
-    # An admissible source or confirmation clock cannot exceed its receipt.
-    # This bounds the SQL read before revalidating each exact book's clock.
+def active_records(db, *, at, venues, contract=None, phase='pregame', event_ids=None, posted=False):
+    # Strict consumers retain the current-book query. The pregame display
+    # also reads the last admitted price, including a detached rotated book.
+    posted = posted and phase == 'pregame'
     rows = db.execute("""SELECT c.id, c.event_id, o.price_dependency AS price,
                                 c.revision AS contract, e.revision AS event,
                                 b.id AS book_id, b.revision AS book_revision, b.quantity_units,
@@ -29,18 +31,21 @@ def active_records(db, *, at, venues, contract=None, phase='pregame', event_ids=
         FROM current_offer_storage o
         JOIN current_contract c ON c.id=o.contract_id
         JOIN current_event e ON e.id=c.event_id
-        JOIN native_book_revision b ON b.id=o.native_book_id
+        LEFT JOIN native_book_revision b ON b.id=o.native_book_id
         LEFT JOIN native_ladder_revision d ON d.id=b.ladder_refs#>>ARRAY[c.native_outcome_id,'asks']
-        WHERE o.native_book_id IS NOT NULL AND c.venue=ANY(%s) AND e.provider=c.venue
+        WHERE c.venue=ANY(%s) AND e.provider=c.venue
           AND (%s::text IS NULL OR c.id=%s)
           AND (%s::text[] IS NULL OR e.id=ANY(%s))
           AND e.scheduled_start::timestamptz <= %s
           AND (e.scheduled_start::timestamptz > %s) = %s
           AND e.expires_order >= extract(epoch FROM %s::timestamptz)
-          AND o.received_order BETWEEN extract(epoch FROM %s::timestamptz) AND extract(epoch FROM %s::timestamptz)
-          AND b.is_current AND b.state='active' AND b.sync='synchronized'""",
+          AND o.received_order <= extract(epoch FROM %s::timestamptz)
+          AND (b.is_current AND b.state='active' AND b.sync='synchronized' AND o.facts->>'state'='available'
+               OR %s AND o.facts->>'state'='resyncing' AND o.price_value IS NOT NULL)
+          AND (%s OR o.received_order >= extract(epoch FROM %s::timestamptz))""",
         (venues, contract, contract, event_ids, event_ids, at + timedelta(hours=72), at, phase == 'pregame',
-         at, at - timedelta(seconds=NATIVE_BOOK_MAX_AGE_SECONDS), at)).fetchall()
+         at, at, posted, posted,
+         at - timedelta(seconds=NATIVE_BOOK_MAX_AGE_SECONDS))).fetchall()
     if not rows:
         return [], {}, {}
     # These rows already passed the exact native book join. Read the referenced
@@ -64,7 +69,7 @@ def supported_occurrence(record):
     event, quote = record['event'], record['quote']
     market = record['market_identity']
     league = event['competition']
-    if (quote['state'] != 'available' or market['period'] != 'full_game'
+    if (quote['state'] not in ('available', 'resyncing') or market['period'] != 'full_game'
             or market['family'] not in ('moneyline', 'spread', 'total')
             or not supported(league, market['family'], market['period'])
             or event.get('conflicting_duplicate') or event.get('occurrence_conflict')
@@ -129,7 +134,8 @@ def carry_published_finance(row, prior):
     row['economic_revision'] = hashed([row['economic_revision'], prior.get('economic_revision')])
 
 
-def overlay(db, result, owner, states, *, at, contract=None, phase='pregame', sgo_inputs=None, event_ids=None):
+def overlay(db, result, owner, states, *, at, contract=None, phase='pregame', sgo_inputs=None, event_ids=None,
+            include_preview_inputs=False):
     """Replace native rows for this view using exact original clocks and pairs.
 
     The ordinary capture still owns archived evidence and cross-venue pairs.
@@ -137,14 +143,15 @@ def overlay(db, result, owner, states, *, at, contract=None, phase='pregame', sg
     """
     from .ordinary_publication import pregame_sportsbooks, quote_authority
 
-    venues = [venue for venue in VENUES if source_allowed(states.get(venue, {}))
-              and venue not in owner.get('paused_sources', ())]
-    if not venues or not owner.get('healthy') or not owner.get('active') or owner.get('global_stopped'):
+    pregame = phase == 'pregame'
+    running = owner.get('healthy') and owner.get('active') and not owner.get('global_stopped')
+    current_venues = {venue for venue in VENUES if running and source_allowed(states.get(venue, {}))
+                      and venue not in owner.get('paused_sources', ())}
+    venues = list(VENUES) if pregame else sorted(current_venues)
+    if not venues:
         return result
     scope = {} if event_ids is None else {'event_ids': event_ids}
-    records, dependencies, books = active_records(db, at=at, venues=venues, contract=contract, phase=phase, **scope)
-    if not records:
-        return result
+    records, dependencies, books = active_records(db, at=at, venues=venues, contract=contract, phase=phase, posted=pregame, **scope)
     published = {game['game_key']: game for game in result['games']}
     prior_rows = {row['current_authority']['price']['dependency']: row for row in result['rows']
                   if (row.get('source') or {}).get('provider') in VENUES}
@@ -158,13 +165,14 @@ def overlay(db, result, owner, states, *, at, contract=None, phase='pregame', sg
         row = dict(original_record=record, original=q['original'], source=q['source'],
                    venue=q['venue'], league=occurrence[0], times=q['times'])
         authority = quote_authority(row, dict(captured_at=at, dependencies=dependencies))
-        if authority['reasons'] or authority['lifecycle']['state'] != expected_state or not authority['expected']:
+        reasons = set(authority['reasons'])
+        if pregame:
+            reasons -= {'source_expired', 'quote_resyncing'}
+        if reasons or authority['lifecycle']['state'] != expected_state or not authority['expected']:
             continue
         captured.append((cid, row, authority, occurrence))
-    if not captured:
-        return result
     observations = (pregame_sportsbooks(db, owner, states, at, sgo_inputs=sgo_inputs,
-                    occurrences={occurrence for _, _, _, occurrence in captured}) if phase == 'pregame' else {})
+                    occurrences={occurrence for _, _, _, occurrence in captured}) if pregame and captured else {})
     registry = Registry.current()
     schedules = reviews(at)
     product_states = owner.get('fee_products') or {}
@@ -177,24 +185,25 @@ def overlay(db, result, owner, states, *, at, contract=None, phase='pregame', sg
         book = books[cid]
         cost = price(row)
         best = book['best_ask']
+        current = row['venue'] in current_venues and not authority['reasons']
         size = (dict(quantity=best[2], quantity_unit=book['quantity_units'],
                      book_id=book['book_id'], book_revision=book['book_revision'])
-                if best and Fraction(best[0]) == cost and Fraction(best[2]) > 0 else None)
+                if current and best and Fraction(best[0]) == cost and Fraction(best[2]) > 0 else None)
         prior = prior_rows.get(cid)
         game = game_for(record, occurrence, published, prior, dependencies[cid], registry)
         if (game['game_key'], stamp(game['start_at'])) in blocked:
             continue
         published[game['game_key']] = game
-        baseline = select(row, authority, observations, at=at)
+        baseline = select(row, dict(authority, reasons=[]), observations, at=at) if pregame else None
         row.update(id='native-current:' + cid, kind='single', game_key=game['game_key'],
             game_title=game['title'], start_at=game['start_at'], live_native_desk=True,
             _desk_event=record['event'],
             market=dict(market='winner' if market['family'] == 'moneyline' else market['family'],
                         period=market['period'], line=market.get('line')),
             selection=dict({'result_interpretation': 'normal_win'}, **record['selection']),
-            price_current=True, game_state=authority['lifecycle']['state'],
+            price_current=current, posted_price=pregame, game_state=authority['lifecycle']['state'],
             game_state_basis=authority['lifecycle'].get('basis'),
-            game_state_observed_at=authority['lifecycle'].get('observed_at'), current_reasons=[],
+            game_state_observed_at=authority['lifecycle'].get('observed_at'), current_reasons=authority['reasons'],
             current_authority=dict(price=authority, references=[]),
             book_confirmation=q.get('book_confirmation'), captured_at=at.isoformat(),
             price_revision=hashed([*dependencies[cid], authority['clock_at']]),
@@ -203,9 +212,14 @@ def overlay(db, result, owner, states, *, at, contract=None, phase='pregame', sg
             alternate=(record.get('comparison_source_metadata') or {}).get('alternate'))
         fee_input = dict(row, fee_applicability=applicability(record))
         review = product_schedules.for_offer(product_states, fee_input, at, fallback=schedules[row['venue']])
-        row['trade_fee'] = outcome(fee_input, at=at, phase=row['game_state'], review=review)
+        step = order_step(fee_input) if pregame and row['venue'] == 'polymarket_us' else None
+        quantity = step if step and step > 0 and 1 % step else '1'
+        row['trade_fee'] = outcome(fee_input, at=at, phase=row['game_state'], review=review, quantity=quantity)
         row['economic_revision'] = hashed([baseline, row['trade_fee'], size])
-        carry_published_finance(row, prior)
+        if current:
+            carry_published_finance(row, prior)
+        if pregame and (contract is not None or include_preview_inputs):
+            row['preview_fee_input'] = fee_input['fee_applicability']
         if contract is not None:
             from app.comparison.inspection_math import offer_disclosures, offer_math
 
@@ -213,7 +227,10 @@ def overlay(db, result, owner, states, *, at, contract=None, phase='pregame', sg
             row['native_inspection'] = dict(offer_math(row), **offer_disclosures(row, at.isoformat(), [original]))
         row.pop('original_record')
         rows[cid] = row
-    retained = [row for row in result['rows'] if row['current_authority']['price'].get('dependency') not in rows]
+    retained = [row for row in result['rows']
+                if row['current_authority']['price'].get('dependency') not in rows
+                and not (pregame and row.get('game_state') == 'scheduled'
+                         and (row.get('source') or {}).get('provider') in VENUES)]
     visible = retained + list(rows.values())
     current_prices = sum(bool(row.get('price_current')) for row in visible)
     return dict(result, rows=visible, games=list(published.values()),

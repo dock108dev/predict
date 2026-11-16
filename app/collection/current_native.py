@@ -695,7 +695,7 @@ class NativeWorker:
         retire = [(previous[mid].raw.ref.event_id, mid) for mid in sorted(removed)]
         for start in range(0, len(retire), 128):
             self.guard()
-            await call(self.service, self.service.invalidate_markets, self.venue, retire[start:start+128])
+            await call(self.service, self.service.invalidate_markets, self.venue, retire[start:start+128], reimaging=True)
 
     async def rotate_kalshi_priority(self):
         """Replace only the deferred cohort while the ordered SID remains owned."""

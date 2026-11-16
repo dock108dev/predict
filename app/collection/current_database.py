@@ -520,7 +520,7 @@ class DatabaseIngressSink:
                         for reason,keys in (('derived_refresh',deferred_keys),('reimage',reimaging),
                                             ('retirement_or_native_change',withdraw-reimaging-deferred_keys)):
                             if keys:catalog_turnover[reason]=rows.withdraw_native_markets(keys,reimaging=reason=='reimage',deferred=reason=='derived_refresh',measure=True)
-                    else:rows.withdraw_native_markets(withdraw)
+                    else:rows.withdraw_native_markets(withdraw,reimaging=row.get('reimaging') is True)
                     if revoked is not None and revoked.is_set():raise asyncio.CancelledError()
                     if sgo_links is not None:
                         from app.storage.delivery_clocks import sgo_admitted

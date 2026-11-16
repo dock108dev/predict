@@ -46,8 +46,22 @@ def cursor(db, *, at, phase, head, owner, states, settings, epoch, live_enabled)
         (native_since, latest, aggregate_since, latest, native_since, latest, at, pregame, at + timedelta(hours=72),
          aggregate_since, latest),
     ).fetchone()
+    posted = None
+    if pregame and (owner.get('config') or {}).get('aggregate_provider') == 'sportsgameodds':
+        # An explicit removal or a new posted price can happen after the
+        # original price has left the short execution-authority witness.
+        posted = db.execute('''SELECT md5(string_agg(concat_ws(':', c.id, o.price_dependency,
+                c.revision, e.revision, o.sgo_quote_revision, qr.is_current, b.is_current),
+                ',' ORDER BY c.id)) AS quotes
+            FROM current_event e JOIN current_contract c ON c.event_id=e.id
+            JOIN current_offer_storage o ON o.contract_id=c.id
+            LEFT JOIN native_book_revision b ON b.id=o.native_book_id
+            LEFT JOIN sgo_quote_revision qr ON (qr.id,qr.revision)=(o.sgo_quote_id,o.sgo_quote_revision)
+            WHERE e.scheduled_start::timestamptz > %s AND e.scheduled_start::timestamptz <= %s
+              AND c.venue IN ('kalshi','polymarket_us','novig','prophetx')''',
+            (at, at + timedelta(hours=72))).fetchone()['quotes']
     return hashed([
-        head['generation'], phase, live_enabled, epoch, settings['revision'], dict(witness),
+        head['generation'], phase, live_enabled, epoch, settings['revision'], dict(witness), posted,
         fee_revision(owner.get('fee_lifecycle')), owner.get('fee_products'),
         owner.get('active'), owner.get('healthy'), owner.get('global_stopped'), owner.get('paused_sources'),
         owner.get('calculations', {}).get('board'), owner.get('config', {}).get('aggregate_provider'),

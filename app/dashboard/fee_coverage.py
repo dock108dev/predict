@@ -1,6 +1,9 @@
 """Reconcile an unfiltered ordinary publication to its working source inventory."""
 from collections import Counter, defaultdict
 from itertools import product
+from fractions import Fraction
+
+from app.comparison.trade_preview import preview
 from app.comparison.snapshot_fee_outcome import CLASSES, FAMILIES, VENUES
 from app.storage.comparison_snapshot import SPORTS, exact_arb_pair
 from .product_finance import excluded_reference
@@ -75,21 +78,29 @@ def census(result, inventory, *, pairs=(), policy=None):
     def bucket():
         return Counter(dict.fromkeys(('published', 'retained_unavailable', 'current', 'covered', 'uncovered',
             'sportsbook_ev', 'before_fee_ev', 'reviewed_after_fee_ev', 'conservative_after_fee_ev',
-            'any_after_fee_ev', *CLASSES), 0))
+            'any_after_fee_ev', 'posted', 'posted_fee', 'posted_modeled_after_fee', *CLASSES), 0))
 
     totals = bucket()
     dimensions = defaultdict(bucket)
     providers = defaultdict(bucket)
     reasons = defaultdict(Counter)
     provider_reasons = defaultdict(Counter)
+    posted_gaps = Counter()
     price_gaps = Counter()
     for row in by_offer.values():
         phase = {'scheduled': 'pregame', 'live': 'in_game'}.get(row.get('game_state'), row.get('game_state', 'unknown'))
         key = (row['venue'], row['league'], row['market']['market'], row['market']['period'], phase)
         provider_key = (row.get('source', {}).get('provider') or 'unknown', *key)
         count = Counter(published=1)
+        fee = row.get('trade_fee') or {}
+        if row.get('posted_price'):
+            count['posted'] = 1
+            count['posted_fee'] = int(bool(fee.get('available')))
+            if not count['posted_fee']:
+                posted_gaps[fee.get('reason') or 'fee_outcome_not_published'] += 1
+            if count['posted_fee'] and row.get('sportsbook_baseline'):
+                count['posted_modeled_after_fee'] = int(preview(row, Fraction(10)).get('estimated_return_percent') is not None)
         if row['price_current']:
-            fee = row.get('trade_fee') or {}
             covered = bool(fee.get('available'))
             classification = fee.get('classification', 'unknown')
             count.update(current=1, covered=int(covered), uncovered=int(not covered))
@@ -109,14 +120,16 @@ def census(result, inventory, *, pairs=(), policy=None):
                 provider_reasons[provider_key][reason] += 1
         else:
             count['retained_unavailable'] = 1
-            price_gaps.update(row.get('price_reasons') or ['source_price_not_current'])
+            price_gaps.update(row.get('price_reasons') or row.get('current_reasons') or ['source_price_not_current'])
         totals.update(count)
         dimensions[key].update(count)
         providers[provider_key].update(count)
 
     def with_rate(count):
         return dict(count, fee_coverage_percent=round(100 * count['covered'] / count['current'], 4)
-                    if count['current'] else None)
+                    if count['current'] else None,
+                    posted_fee_coverage_percent=round(100 * count['posted_fee'] / count['posted'], 4)
+                    if count['posted'] else None)
 
     source = defaultdict(Counter)
     unpublished = 0
@@ -154,6 +167,7 @@ def census(result, inventory, *, pairs=(), policy=None):
                            publication=result.get('scope'), profile='manual_retail'),
                 total=with_rate(totals), coverage_complete=bool(result['publication'].get('coverage_complete')),
                 missing_reasons=dict(gaps.most_common()),
+                posted_fee_missing_reasons=dict(posted_gaps.most_common()),
                 by_scope=[dict(labels(key), **with_rate(counts), missing_reasons=dict(reasons[key]))
                           for key, counts in sorted(dimensions.items(), key=lambda item: str(item[0]))],
                 by_provider=[dict(provider=key[0], **labels(key[1:]), **with_rate(counts),

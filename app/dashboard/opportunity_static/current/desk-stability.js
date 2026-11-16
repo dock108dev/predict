@@ -53,6 +53,15 @@ function order(rows) {
 export function holdDeskPage(previous, next) {
   const oldRows = displayRows(previous);
   const nextRows = displayRows(next);
+  if (next.features?.posted_pregame && next.phase === 'pregame'
+      && (nextRows.some(row => row.offers.some(offer => offer.posted_price))
+          || oldRows.some(row => row.offers.some(offer => offer.posted_price)))) {
+    const orderByKey = new Map(oldRows.map((row, i) => [rowKey(row), i]));
+    const ranked = nextRows.map(row => rowKey(row));
+    const rows = [...nextRows].sort((a, b) =>
+      (orderByKey.get(rowKey(a)) ?? Infinity) - (orderByKey.get(rowKey(b)) ?? Infinity));
+    return {page:{...next, rows}, changed:rows.some((row, i) => rowKey(row) !== ranked[i])};
+  }
   const updates = new Map(nextRows.map(row => [rowKey(row), row]));
   const keep = rows => (rows || []).map(row =>
     row.withdrawn ? row : holdRow(row, updates.get(rowKey(row))));

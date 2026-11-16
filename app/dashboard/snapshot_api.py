@@ -271,6 +271,13 @@ def mount(app):
         query.setdefault('group', 'outcome')
         is_desk = query.get('layout') == 'desk'
         quote_key = query.get('quote_key') if is_selection and is_desk else None
+        if is_selection and is_desk:
+            from app.comparison.trade_preview import parse_amount
+
+            try:
+                preview_amount = parse_amount(query.get('preview_amount', '10'))
+            except ValueError as exc:
+                raise PublicRequestError(str(exc)) from exc
         if quote_key is not None and not re.fullmatch(r'[a-f0-9]{64}', quote_key):
             raise PublicRequestError('Invalid exact quote key')
         if is_desk:
@@ -334,6 +341,8 @@ def mount(app):
                     query['phase'] = 'pregame'
                 if is_desk:
                     features = dict(features=dict(live_enabled=live_available), phase=query['phase'])
+                    if provider == 'sportsgameodds':
+                        features['features']['posted_pregame'] = True
                 else:
                     features = {}
                 timings['authority']=(monotonic()-started)*1000
@@ -419,10 +428,11 @@ def mount(app):
                         generation=head['generation'], result_id=head['result_id'],
                         publication=head['facts'], poll_after_ms=2000, provider_requests=0)
                 direct_desk = provider == 'sportsgameodds' and options is not None and options[0] != 'arbs' and query.get('layout') == 'desk'
-                native_desk = direct_desk and (current_desk or live_contract)
-                aggregate_desk = direct_desk and (current_desk or aggregate_contract)
+                census_desk = provider == 'sportsgameodds' and is_fee_census and is_desk
+                native_desk = census_desk or direct_desk and (current_desk or live_contract)
+                aggregate_desk = census_desk or direct_desk and (current_desk or aggregate_contract)
                 if not head['result_id']:
-                    if is_fee_census:
+                    if is_fee_census and not census_desk:
                         empty = dict(rows=[], publication=dict(sources=states, read_at=at.isoformat()))
                         inventory_deps = live.dependencies(db, provider=provider)
                         return dict(fee_census(db, empty, inventory_deps, owner, states, at, policy=policy, epoch=epoch, settings=settings),
@@ -477,7 +487,7 @@ def mount(app):
                     from .trade_desk import desk_phase
                     result = overlay(db, result, owner, states, at=at, contract=live_contract,
                                      phase=desk_phase(query) or 'pregame', sgo_inputs=sgo_inputs,
-                                     event_ids=overlay_events)
+                                     event_ids=overlay_events, include_preview_inputs=census_desk)
                     timings['native_desk']=(monotonic()-stage)*1000
                 if aggregate_desk:
                     stage = monotonic()
@@ -485,7 +495,7 @@ def mount(app):
                                                             contract=aggregate_contract, sgo_inputs=sgo_inputs,
                                                             event_ids=overlay_events)
                     timings['aggregate_desk'] = (monotonic()-stage)*1000
-                if not head['result_id'] and not result['rows'] and not is_selection:
+                if not head['result_id'] and not result['rows'] and not (is_selection or is_fee_census):
                     fallback = game_capture_link(db, query, allow_live=live_available)
                     return dict(state='initializing', publication=result['publication'], cursor=cursor, **features,
                                 generation=head['generation'], rows=[], total=0, provider_requests=0,
@@ -507,7 +517,7 @@ def mount(app):
                         if quote_key and not row and quote_key in (live_contract, aggregate_contract):
                             # The direct desk can replace a sealed offer ID.
                             # Follow only the same admitted source contract.
-                            rows = [item for item in result['rows'] if item.get('price_current')
+                            rows = [item for item in result['rows'] if (item.get('price_current') or item.get('posted_price'))
                                     and item['current_authority']['price'].get('dependency') == quote_key]
                             if len(rows) == 1:
                                 row, = rows
@@ -518,6 +528,11 @@ def mount(app):
                                         reason=row.get('game_state_reason') or 'phase_price_unavailable', provider_requests=0)
                         inspection = (row.get('native_inspection') or row.get('aggregate_inspection')) if value else None
                         evidence = dict(captured_at=row['captured_at'], inspection=inspection) if inspection else None
+                        if value and row.get('posted_price'):
+                            from app.comparison.trade_preview import preview
+
+                            value['trade_preview'] = preview(row, preview_amount)
+                            value['start_at'] = row['start_at']
                         reason = (publication_runtime(owner).get('reason') if not owner.get('healthy')
                                   else (value or {}).get('reason') or (None if value else 'input_replaced_or_removed'))
                         return dict(row=value, evidence=evidence, reason=reason, provider_requests=0, **features)

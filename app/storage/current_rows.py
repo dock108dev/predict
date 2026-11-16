@@ -525,12 +525,18 @@ class CurrentRowStore:
             self.db.execute('SELECT pg_advisory_xact_lock(%s)',(LOCK,))
             tables=('current_contract','native_book_revision')
             if reimaging:
+                # Preserve the exact admitted price without keeping the retired
+                # book and its depth ladders alive through this offer.
                 self.db.execute("""UPDATE current_offer_storage o SET
-                    facts=jsonb_set(o.facts,'{state}','"resyncing"'::jsonb),
+                    facts=jsonb_set(posted.facts,'{state}','"resyncing"'::jsonb),
+                    price_value=posted.price_value, native_book_id=NULL, native_bid_outcome_id=NULL,
                     revision=encode(sha256(convert_to(o.revision||'resyncing','UTF8')),'hex')
                     FROM current_contract c JOIN unnest(%s::text[],%s::text[],%s::text[])
                     AS wanted(venue,event_id,native_market_id) USING(venue,event_id,native_market_id)
-                    WHERE o.contract_id=c.id AND o.facts->>'state' IN ('available','budget_delayed')""",values)
+                    JOIN current_offer posted ON posted.contract_id=c.id
+                    WHERE o.contract_id=c.id AND o.native_book_id IS NOT NULL
+                      AND posted.price_value IS NOT NULL
+                      AND o.facts->>'state' IN ('available','budget_delayed')""",values)
                 tables=('native_book_revision',)
             counts=dict(keys=len(keys),contracts=0,offers=0,books=0)
             if deferred:

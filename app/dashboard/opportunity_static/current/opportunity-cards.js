@@ -116,6 +116,7 @@ function elapsedAge(source, checkedAt = Date.now()) {
 }
 
 export function quoteFreshness(offer, mode, inspection = false) {
+  if (offer.posted_price && !mode) return 'Latest posted pregame price';
   if (offer.current) return mode ? 'Current at capture' : inspection ? 'Current at inspection' : 'Current';
   const codes = [...(offer.current_reasons || []), offer.reason];
   const labels = {
@@ -219,7 +220,7 @@ function markCalculationExpiry(element, context, group, ...dates) {
 }
 
 function markQuoteExpiry(element, context, group, offer, description) {
-  if (!offer.current || context.mode) return;
+  if (!offer.current || context.mode || offer.posted_price) return;
   const deadline = earliestDeadline(context.phase === 'pregame' && group.start_at, offer.current_until);
   if (!deadline) return;
   element.dataset.quoteDeadline = deadline;
@@ -258,7 +259,7 @@ function quote(offer, group, context, className = '', showResult = true) {
   const price = el('span', null, 'quote-price');
   price.append(odd(offer.odds));
   item.append(price);
-  if (!offer.current || context.mode) {
+  if (!offer.posted_price && (!offer.current || context.mode)) {
     const status = !offer.current && context.summary && !context.mode ? 'Last known' : freshness;
     item.append(el('small', status, 'quote-freshness'));
   }

@@ -508,6 +508,17 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
         for route in ('/', '/ev', '/arbs', '/browse-odds', '/game', '/replay'):
             app.router.add_get(route, desk_page)
 
+        async def trading_fees_page(req):
+            return web.FileResponse(static_root/'opportunity_static/current/trading-fees.html')
+
+        async def trading_fees(req):
+            from .fee_guide import guide
+
+            return web.json_response(await asyncio.to_thread(guide))
+
+        app.router.add_get('/trading-fees', trading_fees_page)
+        app.router.add_get('/api/trading-fees', trading_fees)
+
         from .admin_database import mount as mount_admin_database
         from .quote_quality import mount as mount_quote_quality
         mount_admin_database(app)

@@ -61,7 +61,7 @@ check() {
     fi
 }
 
-for path in / /ev /arbs /browse-odds /game /replay /view/current/desk.js \
+for path in / /ev /arbs /browse-odds /game /replay /trading-fees /api/trading-fees /view/current/desk.js \
             /view/current/predict-icon.png /api/comparison-current /api/comparison-current/updates \
             /api/comparison-current/selection /api/comparison-snapshot/details \
             /api/odds-replay /api/odds-replay/details; do

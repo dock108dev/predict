@@ -219,6 +219,83 @@ function roundingTrace(trace) {
   return traceView;
 }
 
+export function tradePreview(offer, group, evidence, {clock, closed, loading}) {
+  const result = document.createDocumentFragment();
+  result.append(el('p', group.game_title, 'inspection-matchup'));
+  const quote = el('div', null, 'trade-preview-price');
+  quote.append(odd(offer.odds), el('span', offer.cost_per_normal_claim != null
+    ? `${usd(offer.cost_per_normal_claim)} per $1 payout` : '', 'desk-meta'));
+  result.append(quote);
+
+  const model = offer.trade_preview;
+  const charge = offer.trade_fee;
+  if (closed) {
+    result.append(el('p', 'This is the last price shown for this selection.', 'desk-meta'));
+  } else if (model?.available) {
+    const feeOnWin = model.fee_timing === 'commission_deducted_from_winning_market_gains';
+    const pregameZero = offer.venue === 'novig' && model.fee_available && num(model.fee_at_entry_usd) === 0;
+    const summary = section('Trade preview');
+    if (model.fee_available) {
+      summary.append(facts([
+        ['Upfront cost', usd(model.upfront_usd, 2)],
+        [pregameZero ? 'Pregame trading fee' : feeOnWin ? 'Estimated fee if it wins' : 'Estimated upfront fee',
+          usd(feeOnWin ? model.fee_if_win_usd : model.fee_at_entry_usd, 2)],
+        ['If it wins', `${usd(model.net_win_payout_usd, 2)} returned · ${usd(model.net_win_profit_usd, 2)} profit`],
+        ['If it loses', `${usd(model.net_loss_usd, 2)} loss`]
+      ]));
+    } else {
+      summary.append(facts([
+        ['Cost before fees', usd(model.acquisition_usd, 2)],
+        ['If it wins before fees', `${usd(model.gross_win_payout_usd, 2)} returned · ${usd(model.gross_win_profit_usd, 2)} profit`],
+        ['If it loses before fees', `${usd(model.acquisition_usd, 2)} loss`]
+      ]), el('p', reasons(model.fee_reason, 'An estimate is unavailable for this fee.'), 'desk-meta'));
+    }
+    const sizing = [model.quantity != null && `${number(model.quantity)} ${model.quantity_unit}`,
+      model.modeled && 'Modeled at the posted odds', 'Held to settlement'].filter(Boolean);
+    summary.append(el('p', sizing.join(' · '), 'desk-meta'));
+    result.append(summary);
+  } else if (loading) {
+    result.append(el('p', 'Calculating trade preview…', 'desk-meta'));
+  } else if (model) {
+    result.append(el('p', reasons(model.reason, 'A trade preview is unavailable at this size.'), 'desk-meta'));
+  }
+
+  if (!closed && offer.sportsbook) {
+    const ref = offer.sportsbook;
+    const net = model?.estimated_return_percent;
+    result.append(section('Sportsbook comparison', sportsbookReference(ref),
+      facts([[net == null ? 'Estimated return before fees' : 'Estimated return after fees',
+        signedPercent(net ?? ref.return_percent)]]),
+      el('p', 'At the posted price · decisive win or loss only', 'desk-meta')));
+  } else if (!closed && !loading) {
+    result.append(el('p', 'Sportsbook estimate needs both sides of this exact line from one book.', 'desk-meta'));
+  }
+
+  const terms = charge?.evidence;
+  const saved = evidence?.inspection;
+  const source = saved?.source;
+  const detail = disclosure('Calculation details', facts([
+    ['Price source', name(offer.source_provider)],
+    ['Source update', offer.source_clock_at && clock(offer.source_clock_at)],
+    ['Received', offer.received_at && clock(offer.received_at)],
+    ...(terms ? [['Fee schedule', terms.published_version || terms.version],
+      ...feeAuthority(terms), ['Applied rate or coefficient', terms.coefficient ?? terms.fee_rate]] : []),
+    ...(offer.sportsbook?.prices || []).map((item, i) =>
+      [i ? 'Opposite sportsbook quote' : 'Selected sportsbook quote',
+        `${item.price_american} · ${item.source_at ? clock(item.source_at) : 'Time unavailable'}`])
+  ]));
+  if (charge?.assumptions?.length) detail.append(el('p', charge.assumptions.join(' '), 'desk-meta'));
+  if (model?.rounding_trace?.length) detail.append(roundingTrace(model.rounding_trace));
+  if (saved?.settlement) detail.append(settlement(saved.settlement, offer.venue, offer.price_basis === 'aggregate_snapshot'));
+  if (source?.native_market_id) {
+    detail.append(disclosure('Source identifiers', facts([
+      ['Event', source.native_event_id], ['Market', source.native_market_id], ['Outcome', source.native_outcome_id]
+    ])));
+  }
+  result.append(detail, window.PredictUI.link('Trading fees', '/trading-fees'));
+  return result;
+}
+
 export function tradeInspection(offer, group, evidence, {mode, position, basis, checkedAt, pinned, pairLeg, pairFee, pairAcquisition, publication}) {
   const result = document.createDocumentFragment();
   result.append(el('p', group.game_title, 'inspection-matchup'));

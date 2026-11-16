@@ -21,6 +21,12 @@ const opportunityView = !browse && !replay;
 const comparable = !replay && !arb;
 let phase = !replay && (route.get('phase') === 'live' ? 'live' : 'pregame');
 let liveEnabled = false;
+const autoUpdateKey = 'pregame-auto-update';
+const autoUpdateToggle = $('auto-update');
+let autoUpdate = readPreference(autoUpdateKey, 'on') !== 'off';
+autoUpdateToggle.checked = autoUpdate;
+const postedDesk = () => !replay && !arb && phase === 'pregame' && !!state.page?.features?.posted_pregame;
+const receivingUpdates = () => !postedDesk() || autoUpdate;
 const phaseURL = (path, value = phase) => path + (value === 'live' ? '?phase=live' : '');
 const back = window.PredictUI.localURL(route.get('back'));
 let safeBack = back && ['/','/ev','/arbs','/browse-odds','/game','/replay'].includes(back.pathname)
@@ -300,8 +306,8 @@ function selections() {
 
 const drawer = createDeskDrawer({
   replay, dataset, retainedResult, gameKey, pageSize, captureMode:replayMode(), clock,
-  viewContext: () => ({phase, page:state.page, previousReason:state.previousReason}),
-  fetchPage, matrixPositions, restoreMatrices, restoreFocus
+  viewContext: () => ({phase, page:state.page, previousReason:state.previousReason, autoUpdate}),
+  fetchPage, matrixPositions, restoreMatrices, restoreFocus, refreshDesk
 });
 
 function browsingLink(label, group, className) {
@@ -453,10 +459,11 @@ function refreshStatus() {
     : arb && state.page && !pairResultsReady()
       ? (stake.validity.valid && stake.value ? 'Updating payoff for the entered stake…' : 'Enter a valid stake to calculate the payoff.')
     : replay ? (state.request ? 'Loading replay…' : 'Replay clock is fixed.')
-    : state.request ? 'Checking for updates…' : '';
+    : state.request ? 'Checking for updates…'
+      : postedDesk() && !autoUpdate ? 'Updates held. Refresh to show the latest prices.' : '';
   $('refresh-status').textContent = mode;
   const invalidWindow = !filters.elements.time_to.validity.valid;
-  $('refresh-status').classList.toggle('sr-only', !invalidWindow && !(arb && state.page && !pairResultsReady()));
+  $('refresh-status').classList.toggle('sr-only', !invalidWindow && !(arb && state.page && !pairResultsReady()) && !(postedDesk() && !autoUpdate));
   const refresh = $('refresh-list');
   const label = state.loadFailed ? 'Retry' : 'Refresh list';
   if (refresh.textContent !== label) refresh.textContent = label;
@@ -817,6 +824,7 @@ function applyDeskFeatures(page) {
     window.history.replaceState(window.history.state, '', url.href);
   }
   updatePhaseView();
+  $('auto-update-field').hidden = arb || phase !== 'pregame' || !page.features.posted_pregame;
 }
 
 function previousResults(message = '') {
@@ -830,7 +838,7 @@ function previousResults(message = '') {
 }
 
 function expireResultValues() {
-  if (replay) return;
+  if (replay || !receivingUpdates()) return;
   const now = Date.now();
   const results = $('results');
   const oldCalculations = [...results.querySelectorAll('[data-calculation-deadline]:not([data-expired-calculation])')]
@@ -921,7 +929,7 @@ function resultSignature(page) {
     Object.values(sources || {}).map(source => [source.state, source.reason_code])]);
 }
 
-async function load(offset = state.offset, {background = false, freshMembership = false, anchor = null} = {}) {
+async function load(offset = state.offset, {background = false, freshMembership = false, anchor = null, refresh = false} = {}) {
   if (!filters.checkValidity() || !stake.value) return;
   if (background && state.request) return;
   state.request?.abort();
@@ -951,7 +959,7 @@ async function load(offset = state.offset, {background = false, freshMembership 
   try {
     let page = await fetchPage(query, controller.signal);
     if (controller.signal.aborted || !matchesInputs(requestStake, requestFilters)
-        || background && (drawer.isOpen() || usingResults())) return;
+        || background && (!receivingUpdates() || !postedDesk() && drawer.isOpen() || usingResults())) return;
     const emptyPage = !displayRows(page).length;
     if (page.state === 'page_changed' || query.has('browse_id') && emptyPage && (page.total || page.anchor_state === 'removed')) {
       if (freshMembership) throw Error('Browsing order unavailable');
@@ -986,7 +994,7 @@ async function load(offset = state.offset, {background = false, freshMembership 
       page.rows = [...rows.values()];
     }
     if (controller.signal.aborted || !matchesInputs(requestStake, requestFilters)
-        || background && (drawer.isOpen() || usingResults())) return;
+        || background && (!receivingUpdates() || !postedDesk() && drawer.isOpen() || usingResults())) return;
     applyDeskFeatures(page);
     const held = background && displayRows(state.page).length && state.page.phase === page.phase;
     const prior = background && !restoreLocation && scrollY ? anchor || visibleAnchor() : anchor;
@@ -1016,7 +1024,7 @@ async function load(offset = state.offset, {background = false, freshMembership 
     state.resetReason = null;
     restoreLocationAfterLoad();
     history.observe(page, selections());
-    drawer.checkSelection();
+    drawer.checkSelection(refresh);
   } catch (error) {
     if (!controller.signal.aborted && error.name !== 'AbortError') {
       if (state.page && !replay) previousResults('Price update failed. Showing previous results.');
@@ -1127,7 +1135,9 @@ function saveBrowsePreferences() {
   if (!replay) updateBrowsePhaseLinks();
 }
 filters.addEventListener('submit', event => event.preventDefault());
-filters.addEventListener('input', applyFilters);
+filters.addEventListener('input', event => {
+  if (event.target !== autoUpdateToggle) applyFilters(event);
+});
 filters.elements.basis.disabled = false;
 $('reset').onclick = () => {
   const amount = stake.value;
@@ -1142,11 +1152,24 @@ $('reset').onclick = () => {
 activeFilters();
 marketTabs();
 validateTimeWindow();
-$('refresh-list').onclick = () => {
+function refreshDesk() {
   if ($('refresh-list').getAttribute('aria-disabled') === 'true') return;
   const sameFilters = state.query === JSON.stringify(selections());
   const anchor = sameFilters && (state.offset || scrollY) ? visibleAnchor() : null;
-  load(sameFilters ? state.offset : 0, {freshMembership:!!state.page?.browse_id && (!state.offset || !!anchor), anchor});
+  load(sameFilters ? state.offset : 0, {freshMembership:!!state.page?.browse_id && (!state.offset || !!anchor), anchor, refresh:true});
+}
+$('refresh-list').onclick = refreshDesk;
+autoUpdateToggle.onchange = () => {
+  autoUpdate = autoUpdateToggle.checked;
+  savePreference(autoUpdateKey, autoUpdate ? 'on' : 'off');
+  if (autoUpdate) refreshDesk();
+  else {
+    if (state.backgroundRequest) state.request?.abort();
+    updatesReady(false);
+    drawer.checkSelection();
+  }
+  refreshStatus();
+  scheduleUpdates();
 };
 document.addEventListener('focusin', refreshStatus);
 document.addEventListener('focusout', () => queueMicrotask(refreshStatus));
@@ -1201,7 +1224,8 @@ async function followUpdates() {
     if (document.hidden) return;
     drawer.expireInspection();
     expireResultValues();
-    if (drawer.isOpen()) {
+    if (!receivingUpdates()) return;
+    if (drawer.isOpen() && !postedDesk()) {
       await drawer.checkSelection();
       return;
     }
@@ -1219,14 +1243,18 @@ async function followUpdates() {
       if (state.page === page && !state.request) previousResults('Price update failed. Showing previous results.');
       return;
     }
-    if (state.page !== page || state.request || drawer.isOpen() || usingResults()) return;
+    if (state.page !== page || state.request || !receivingUpdates() || !postedDesk() && drawer.isOpen() || usingResults()) return;
     updateDelay = Math.max(1000, Number(change.poll_after_ms) || 6500);
     const recheckExpiry = expired && checkedBoundary !== page.refresh_at;
     if (change.changed || recheckExpiry || change.phase && change.phase !== phase) {
       if (displayRows(page).length && Date.now() - state.lastListRead < HELD_LIST_UPDATE_MS) return;
       checkedBoundary = page.refresh_at;
-      await load(state.offset, {background:true});
-    } else if (!expired) previousResults();
+      await load(state.offset, {background:true, freshMembership:postedDesk(),
+        anchor:postedDesk() && scrollY ? visibleAnchor() : undefined});
+    } else if (!expired) {
+      previousResults();
+      if (postedDesk() && drawer.isOpen()) await drawer.checkSelection();
+    }
   } finally {
     scheduleUpdates();
   }

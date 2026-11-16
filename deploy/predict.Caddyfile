@@ -15,7 +15,7 @@
 predict.dock108.dev {
 	@publicRead {
 		method GET HEAD
-		path / /ev /arbs /browse-odds /game /replay /view/current/desk.html /api/comparison-current /api/comparison-current/updates /api/comparison-current/selection /api/comparison-snapshot/details /api/odds-replay /api/odds-replay/details
+		path / /ev /arbs /browse-odds /game /replay /trading-fees /api/trading-fees /view/current/desk.html /api/comparison-current /api/comparison-current/updates /api/comparison-current/selection /api/comparison-snapshot/details /api/odds-replay /api/odds-replay/details
 	}
 	@publicAssets {
 		method GET HEAD

@@ -340,10 +340,10 @@ class CurrentService:
         yield (self.row('native_market_invalid',venue,event_id=event_id,market_id=market_id),self.states)
 
     @operation
-    def invalidate_markets(self,venue,markets):
+    def invalidate_markets(self,venue,markets, *, reimaging=False):
         if not self.dispatch:raise asyncio.CancelledError()
         if not 1<=len(markets)<=128:raise ValueError('native_invalidation_batch_capacity')
-        yield (self.row('native_market_invalid',venue,markets=markets),self.states)
+        yield (self.row('native_market_invalid',venue,markets=markets,reimaging=reimaging),self.states)
 
     @operation
     def books(self, venue, books):

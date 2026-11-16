@@ -22,14 +22,20 @@ prices, fees, model assumptions, and settlement details available for that offer
 Use **Find my game** or **Browse odds** to navigate by team or game, including
 when a comparison lacks enough inputs to show EV. Browse shows aligned venue
 columns for each exact outcome. An unavailable quote is shown as a dash. A
-retained price can be labeled **Last known**.
+saved capture preserves the original price.
 
-The desk updates visible prices in place. **Refresh list** applies the latest
-ranking and adds newly qualifying games. Open details keep the selected quote and
-its evidence pinned while the list changes. **Use latest prices** adopts a
-coherent update when one is available. If a first read fails, use **Retry**.
-**Source status** links to collection information when the data worker is stopped
-or unavailable. [Data and freshness limits](market-data-gaps.md)
+The SportsGameOdds-backed pregame desk keeps the latest posted price until the
+source replaces or withdraws it or the game leaves pregame. **Auto-update** is on
+by default. It applies updates in place and keeps the open trade preview on the
+same selection and stake. With Auto-update off, use **Refresh list** or reload
+to read the latest board. The collector runs independently of this choice.
+
+The trade preview starts with a $10 maximum upfront cost and shows the modeled
+fee at that size, including when it applies. **Trading fees** explains each
+venue's terms. Execution and qualified financial calculations still require
+the corresponding current evidence. Saved captures preserve their own fee
+terms and calculations. **Source status** links to collection information when
+the data worker is stopped or unavailable. [Data and freshness limits](market-data-gaps.md)
 
 American odds are the default. The **Decimal** option changes display formatting
 without changing ranking or calculation inputs. The game table scrolls within

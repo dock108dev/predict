@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Trading fees · Predict</title>
+  <link rel="stylesheet" href="/view/current/desk.css">
+  <script type="module" src="/view/current/trading-fees.js"></script>
+</head>
+<body class="desk-app opportunities-app">
+  <a class="skip-link" href="#main-content">Skip to trading fees</a>
+  <div data-shell></div>
+  <main id="main-content">
+    <header class="page-heading">
+      <h1>Trading fees</h1>
+      <p>Predict models a new standalone position placed directly with the venue, taking the posted price and holding to settlement.</p>
+      <p>The preview uses the high end of the applicable standard taker schedule. Upfront fees count against your budget. A winning commission comes out of your payout.</p>
+    </header>
+    <div id="fee-guide">
+      <section class="inspection-section" id="guide-kalshi">
+        <h2>Kalshi</h2>
+        <p>Pay when your order fills. The exchange fee depends on contract price, quantity, and the applicable market multiplier. Predict uses the higher documented exchange rounding case.</p>
+        <p>Access through an intermediary can carry separate charges.</p>
+        <a href="https://kalshi.com/fee-schedule">Official Kalshi fee schedule</a>
+      </section>
+      <section class="inspection-section" id="guide-polymarket_us">
+        <h2>Polymarket US</h2>
+        <p>Pay when your taker order fills. The fee depends on the price, contract quantity, and the tier set when the order is entered. Predict uses the highest applicable standard tier and assumes zero rebates.</p>
+        <p>Order rounding and caps can change the effective charge at different trade sizes.</p>
+        <a href="https://docs.polymarket.us/fees">Official Polymarket US fee schedule</a>
+      </section>
+      <section class="inspection-section" id="guide-novig">
+        <h2>Novig</h2>
+        <p>Eligible pregame straight trades have no taker fee. Predict verifies the exact market and its pregame status before showing a zero fee. In-game, futures, and parlay terms can differ.</p>
+        <a href="https://docs.novig.com/api/concepts/fees">Official Novig fee rules</a>
+      </section>
+      <section class="inspection-section" id="guide-prophetx">
+        <h2>ProphetX</h2>
+        <p>NHL straight trades can incur a fee at each fill. Other supported straight markets charge commission on positive net gains at settlement.</p>
+        <p>Fill prices and carry-forward rounding affect NHL charges. For settlement commission, other positions in the same market can change net gains. The preview models one standalone position.</p>
+        <a href="https://www.prophetx.co/lobby/t-c/trading-fees">Official ProphetX fee schedule</a>
+      </section>
+    </div>
+    <p id="fee-guide-status" class="desk-meta" role="status"></p>
+  </main>
+</body>
+</html>

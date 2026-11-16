@@ -25,7 +25,7 @@ def reviews(at):
     return results
 
 
-def outcome(row, *, at, phase, review):
+def outcome(row, *, at, phase, review, quantity='1'):
     venue = row['venue']
     if phase == 'live' and venue == 'novig':
         from .snapshot_novig_live import live_fee
@@ -44,7 +44,8 @@ def outcome(row, *, at, phase, review):
         evidence['path'] = review['path']
     for key in ('document_url', 'published_version', 'published_update', 'published_effective_from', 'effective_from',
                 'effective_time_basis', 'verification_deadline', 'next_change_at', 'market_override', 'schedule_revision',
-                'retrieval', 'review_basis', 'product', 'verification_revision', 'standing_public_terms',
+                'retrieval', 'review_basis', 'product', 'profile', 'allowed_taker_coefficients',
+                'verification_revision', 'standing_public_terms',
                 'recheck_due_at', 'verification_scope', 'nhl_taker_coefficient', 'nhl_maker_coefficient',
                 'nhl_rounding', 'commission_basis'):
         if key in review:
@@ -60,7 +61,7 @@ def outcome(row, *, at, phase, review):
         classification = 'conservative'
     elif venue == 'polymarket_us' and (phase == 'live' or review.get('profile')):
         from .snapshot_polymarket_fee import public_fee
-        model = public_fee(row, at=at, phase=phase, review=review)
+        model = public_fee(row, at=at, phase=phase, review=review, quantity=quantity)
         classification = 'conservative'
     elif venue == 'prophetx':
         from .snapshot_conservative import prophetx_public_fee

@@ -582,7 +582,7 @@ dialog::backdrop { background: #101b3180; }
 @media (max-width: 560px) {
   .opportunities-app main { padding: .7rem .8rem 1.5rem; }
   .opportunities-app .p-chrome { gap: .22rem .65rem; padding: .4rem .8rem; }
-  .opportunities-app .p-nav { padding: 0; gap: .15rem; grid-template-columns: 1.35fr 1fr .65fr; }
+  .opportunities-app .p-nav { padding: 0; gap: .15rem; grid-template-columns: repeat(4, auto); }
   .opportunities-app .p-nav a { padding-inline: .2rem; }
   .opportunities-app .page-heading { margin-bottom: .4rem; }
   .opportunities-app #browse-link { padding-inline: .3rem; }
@@ -610,3 +610,28 @@ dialog::backdrop { background: #101b3180; }
 @media (max-width: 480px) {
   .sportsbook-prices { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+#preview-controls {
+  padding: 0.65rem 1.1rem;
+  border-bottom: 1px solid var(--border, #e2e5eb);
+}
+
+#preview-controls label, .preview-input {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+#preview-amount {
+  width: 7rem;
+  min-height: 2.25rem;
+}
+
+.trade-preview-price {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.trade-preview-price .p-odds { font-size: 1.35rem; }

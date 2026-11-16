@@ -120,8 +120,9 @@ basis in the browser. The other bases are **Verified after-fee EV**,
 **Conservative after-fee EV**, and **Before-fee scenario**. A price can be
 visible while its calculation is unavailable. Clear return filters to see
 prices and open an offer to inspect the reason. Arbitrage requires opposing
-offers with compatible settlement terms. **Use latest prices** checks for a
-current replacement while the existing inspection keeps its captured values.
+offers with compatible settlement terms. The SportsGameOdds-backed pregame
+desk updates the open trade preview with the list when **Auto-update** is on.
+Use **Refresh list** to read the latest board when updates are held.
 [Calculation basis and limitations](benchmark-ev.md)
 
 **Admin → Settings** controls the display time zone. The EV and Arbitrage schedule

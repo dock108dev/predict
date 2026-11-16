@@ -15,6 +15,48 @@ from app.dashboard.snapshot_api import mount
 
 @skipUnless(SOCKET, 'Disposable PostgreSQL required')
 class OrdinarySQL(LatestBoardFixture):
+    async def test_posted_native_quote_survives_rotation_and_loses_execution_authority(self):
+        from app.storage.current_native_desk import overlay
+        from app.storage.current_rows import CurrentRowStore
+        from tests.broad_pipeline_fixtures import captured_partial
+        from tests.multisport_fixtures import source_case
+
+        case = dict(source_case('NBA', 'spread', 'posted-preview', clock=self.at), period='full_game')
+        records, exclusions, book, _ = await captured_partial(case, 'kalshi')
+        self.assertFalse(exclusions)
+        ref = book['raw']['ref']
+        key = (ref['venue'], ref['event_id'], ref['market_id'])
+        selection = contract_id(records[0])
+        empty = dict(rows=[], games=[], publication={})
+        owner = dict(healthy=True, active=True, paused_sources=[], config=self.service.config)
+        states = {'kalshi': {'state': 'available'}}
+        with self.connect() as db:
+            store = CurrentRowStore(db)
+            store.upsert_records(records, now=self.at.isoformat())
+            store.replace_native_books([book])
+            fresh, = overlay(db, empty, owner, states, at=self.at, contract=selection)['rows']
+            self.assertTrue(fresh['price_current'])
+            self.assertTrue(fresh['posted_price'])
+            self.assertTrue(fresh['book_size'])
+            later = self.at + timedelta(minutes=2)
+            held, = overlay(db, empty, owner, states, at=later, contract=selection)['rows']
+            self.assertFalse(held['price_current'])
+            self.assertEqual(held['original'], fresh['original'])
+            self.assertEqual(held['times'], fresh['times'])
+            store.withdraw_native_markets([key], reimaging=True)
+            stored = db.execute('SELECT native_book_id, price_value FROM current_offer_storage WHERE contract_id=%s',
+                                (selection,)).fetchone()
+            self.assertIsNone(stored['native_book_id'])
+            self.assertEqual(stored['price_value'], fresh['original']['value'])
+            rotated, = overlay(db, empty, owner, states, at=later, contract=selection)['rows']
+            self.assertEqual(rotated['original'], fresh['original'])
+            self.assertTrue(rotated['posted_price'])
+            self.assertIsNone(rotated['book_size'])
+            self.assertFalse(overlay(db, empty, owner, states, at=stamp(fresh['start_at']),
+                                     contract=selection)['rows'])
+            store.withdraw_native_markets([key])
+            self.assertFalse(overlay(db, empty, owner, states, at=later, contract=selection)['rows'])
+
     async def test_background_publication_records_each_net_positive_arb_appearance(self):
         from fractions import Fraction
         from app.storage.current_rows import CurrentRowStore
