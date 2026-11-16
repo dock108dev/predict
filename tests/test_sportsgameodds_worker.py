@@ -11,8 +11,7 @@ from app.collection.current_policy import DEFAULT
 from app.collection.sportsgameodds_adapter import Page
 from app.collection.sportsgameodds_schedule import SchedulePolicy
 from app.collection.sportsgameodds_worker import SportsGameOddsWorker
-
-NOW = datetime(2026, 11, 10, 20, tzinfo=timezone.utc)
+from tests.sportsgameodds_fixtures import NOW, event
 
 
 def test_credential_requires_private_untracked_file(tmp_path, monkeypatch):
@@ -32,37 +31,6 @@ def test_credential_requires_private_untracked_file(tmp_path, monkeypatch):
     subprocess.run(['git', 'add', '-f', '.env'], cwd=tmp_path, check=True)
     with pytest.raises(ValueError, match='credential unavailable'):
         worker.credential()
-
-
-def event(n):
-    return {'event_id': f'e{n}', 'league':'NFL', 'starts_at':(NOW + timedelta(days=4)).isoformat(),
-            'received_at':NOW.isoformat(), 'phase':'pregame', 'status':{}}
-
-
-def test_discovery_continues_beyond_first_twenty_events_without_withdrawal():
-    async def scenario():
-        service = SimpleNamespace(config=deepcopy(DEFAULT), dispatch=True, globally_stopped=False, paused_sources=set())
-        worker = SportsGameOddsWorker(service, transport=SimpleNamespace(close=AsyncMock()), now=lambda: NOW)
-        cursors = []
-        async def fetch(params, key):
-            n = int(params.get('cursor', '0'))
-            cursors.append(n)
-            return Page((event(2*n),event(2*n+1)), (), str(n+1) if n < 10 else None, 'a'*64)
-        worker.collector = SimpleNamespace(fetch=fetch)
-        worker.key = 'fixture'
-        worker._publish = AsyncMock()
-        worker.state = AsyncMock()
-        await worker.cycle()
-        assert cursors == list(range(10))
-        assert worker.state.await_args_list[0].args[:2] == ('available', 'sgo_page_received')
-        assert len(worker.events) == 20
-        assert worker.metrics['discovery_complete']['NFL'] is False
-        await worker.cycle()
-        assert cursors == list(range(11))
-        assert len(worker.events) == 22
-        assert worker.metrics['discovery_complete']['NFL'] is True
-        assert not worker.discovery_progress
-    asyncio.run(scenario())
 
 
 def test_planned_storage_interval_waits_for_paid_page_and_blocks_next_dispatch():
@@ -107,42 +75,6 @@ def test_planned_storage_interval_waits_for_paid_page_and_blocks_next_dispatch()
         assert service.dispatch and not service.globally_stopped and not service.paused_sources
         worker.collector.fetch.assert_awaited_once()
 
-    asyncio.run(scenario())
-
-
-def test_large_discovery_keeps_cursor_past_old_hundred_page_limit():
-    async def scenario():
-        service = SimpleNamespace(config=deepcopy(DEFAULT), dispatch=True, globally_stopped=False, paused_sources=set())
-        worker = SportsGameOddsWorker(service, transport=SimpleNamespace(close=AsyncMock()), now=lambda: NOW)
-        async def fetch(params, key):
-            n = int(params.get('cursor', '0'))
-            return Page((event(2*n), event(2*n+1)), (), str(n+1) if n < 101 else None, 'a'*64)
-        worker.collector = SimpleNamespace(fetch=fetch)
-        worker.key = 'fixture'
-        worker._publish = AsyncMock()
-        worker.state = AsyncMock()
-        for _ in range(11):
-            await worker.cycle()
-        assert len(worker.events) == 204
-        assert worker.metrics['discovery_complete']['NFL'] is True
-        assert not worker.discovery_progress
-    asyncio.run(scenario())
-
-
-def test_incomplete_page_cap_does_not_schedule_a_completed_walk():
-    from unittest.mock import patch
-    from app.collection.sportsgameodds_adapter import Traversal
-    async def scenario():
-        service = SimpleNamespace(config=deepcopy(DEFAULT), dispatch=True, globally_stopped=False, paused_sources=set())
-        worker = SportsGameOddsWorker(service, transport=SimpleNamespace(close=AsyncMock()), now=lambda: NOW)
-        worker.collector = SimpleNamespace(fetch=AsyncMock(return_value=Page((event(1),), (), 'next', 'a'*64)))
-        worker._publish = AsyncMock()
-        worker.state = AsyncMock()
-        with patch('app.collection.sportsgameodds_worker.Traversal', side_effect=lambda **_: Traversal(max_pages=1)):
-            await worker.cycle()
-        assert worker.metrics['discovery_complete']['NFL'] is False
-        assert 'NFL' in worker.metrics['discovery_unstable']
-        assert 'NFL' not in worker.discovery_progress
     asyncio.run(scenario())
 
 
@@ -383,40 +315,6 @@ def test_alternates_use_bounded_approaching_event_refresh_and_track_admission():
     asyncio.run(scenario())
 
 
-def test_rejected_cursor_clears_checkpoint_but_preserves_observations(tmp_path):
-    import pytest
-    from app.collection.sportsgameodds_collector import RejectedCursor
-    from app.collection.sportsgameodds_ledger import ObjectLedger
-    async def scenario():
-        service = SimpleNamespace(config=deepcopy(DEFAULT), dispatch=True, globally_stopped=False, paused_sources=set())
-        worker = SportsGameOddsWorker(service, transport=SimpleNamespace(close=AsyncMock()), now=lambda: NOW)
-        worker.ledger = ObjectLedger(tmp_path / 'checkpoint.sqlite')
-        calls = []
-        async def fetch(params, key):
-            calls.append(params)
-            if 'cursor' in params:
-                raise RejectedCursor('provider rejected cursor')
-            if sum(p.get('leagueID') == 'NFL' for p in calls) > 2:
-                return Page((), (), None, 'b'*64)
-            return Page((event(1),), (), 'opaque', 'a'*64)
-        worker.collector = SimpleNamespace(fetch=fetch)
-        worker._publish = AsyncMock()
-        worker.state = AsyncMock()
-        with pytest.raises(RejectedCursor):
-            await worker.cycle()
-        assert 'e1' in worker.events
-        assert 'NFL' not in worker.discovery_progress
-        assert not worker.ledger.load_discovery_progress(now=NOW)
-        assert worker.metrics['discovery_complete']['NFL'] is False
-        assert 'NFL' in worker.metrics['discovery_unstable']
-        from unittest.mock import patch
-        with patch('app.collection.sportsgameodds_worker.aggregate_scope', return_value=['NFL']):
-            await worker.cycle()
-        assert calls[-1]['leagueID'] == 'NFL' and 'cursor' not in calls[-1]
-        assert worker.metrics['discovery_complete']['NFL'] is True
-    asyncio.run(scenario())
-
-
 def test_page_cap_and_controls_are_bounded():
     async def scenario():
         service = SimpleNamespace(config=deepcopy(DEFAULT), dispatch=True, globally_stopped=False, paused_sources=set())
@@ -523,36 +421,6 @@ def test_missing_reset_uses_labeled_calendar_assumption(tmp_path):
         assert worker.metrics['provider_usage']['reset_at'] is None
         assert worker.ledger.status(worker.window_id)['reset_at'] == datetime(2026, 12, 1, tzinfo=timezone.utc)
         assert 'fixture-secret' not in str(worker.metrics)
-    asyncio.run(scenario())
-
-
-def test_moving_event_list_stops_traversal_without_removal():
-    async def scenario():
-        service = SimpleNamespace(config=deepcopy(DEFAULT), dispatch=True, globally_stopped=False, paused_sources=set())
-        worker = SportsGameOddsWorker(service, transport=SimpleNamespace(close=AsyncMock()), now=lambda: NOW)
-        async def fetch(params, key):
-            return Page((event(1),), (), '1' if 'cursor' not in params else None, 'a'*64)
-        worker.collector = SimpleNamespace(fetch=fetch)
-        worker.key = 'fixture'
-        worker._publish = AsyncMock()
-        worker.state = AsyncMock()
-        await worker.cycle()
-        assert 'e1' in worker.events
-        assert worker.discovery_at['NFL'] == NOW
-        assert worker.metrics['discovery_complete']['NFL'] is False
-        assert 'NFL' not in worker.discovery_progress
-        # An unstable walk is retried after a short delay, not the normal
-        # twelve-hour complete-discovery interval.
-        worker.now = lambda: NOW + timedelta(minutes=14)
-        worker.collector.fetch = AsyncMock()
-        await worker.cycle()
-        worker.collector.fetch.assert_not_awaited()
-        worker.now = lambda: NOW + timedelta(minutes=15)
-        worker.collector.fetch = AsyncMock(return_value=Page((event(2),), (), None, 'a'*64))
-        await worker.cycle()
-        worker.collector.fetch.assert_awaited_once()
-        assert worker.metrics['discovery_complete']['NFL'] is True
-        assert 'NFL' not in worker.metrics['discovery_unstable']
     asyncio.run(scenario())
 
 
@@ -812,119 +680,4 @@ def test_pregame_refresh_between_scans_does_not_restart_discovery(scan_delay):
         assert worker.cycle.await_count == 2
         worker.refresh.assert_awaited_once()
 
-    asyncio.run(scenario())
-
-
-def test_rate_interruption_rotates_discovery_without_losing_cursors():
-    from unittest.mock import patch
-    async def scenario():
-        service = SimpleNamespace(config=deepcopy(DEFAULT), dispatch=True, globally_stopped=False,
-                                  paused_sources=set())
-        worker = SportsGameOddsWorker(service, transport=SimpleNamespace(close=AsyncMock()), now=lambda: NOW)
-        calls = []
-        async def fetch(params):
-            calls.append(params['leagueID'])
-            if len(calls) == 1:
-                raise RuntimeError('request rate limit')
-            return Page((), (), None, 'a'*64)
-        worker._fetch = fetch
-        with patch('app.collection.sportsgameodds_worker.aggregate_scope', return_value=['NFL', 'NBA']):
-            try:
-                await worker.cycle()
-            except RuntimeError as exc:
-                assert str(exc) == 'request rate limit'
-            original = worker.discovery_progress['NFL']
-            await worker.cycle()
-        assert calls == ['NFL', 'NBA', 'NFL']
-        assert original.complete
-        assert worker.metrics['discovery_complete'] == {'NBA': True, 'NFL': True}
-    asyncio.run(scenario())
-
-
-def test_discovery_checkpoint_survives_restart_with_original_scope(tmp_path):
-    from app.collection.sportsgameodds_ledger import ObjectLedger
-    async def scenario():
-        service = SimpleNamespace(config=deepcopy(DEFAULT), dispatch=True, globally_stopped=False, paused_sources=set())
-        ledger = ObjectLedger(tmp_path / 'ledger.sqlite')
-        worker = SportsGameOddsWorker(service, now=lambda: NOW)
-        worker.ledger = ledger
-        worker.max_pages = 1
-        worker._publish = AsyncMock()
-        worker.state = AsyncMock()
-        worker.collector = SimpleNamespace(fetch=AsyncMock(return_value=Page((event(1),), (), 'next', 'a'*64)))
-        # Avoid requiring a budget window in this isolated checkpoint test.
-        await worker.cycle()
-        resumed = SportsGameOddsWorker(service, now=lambda: NOW + timedelta(minutes=2))
-        resumed.ledger = ObjectLedger(tmp_path / 'ledger.sqlite')
-        resumed.restore_discovery()
-        traversal = resumed.discovery_progress['NFL']
-        assert traversal.next_cursor == 'next'
-        assert traversal.starts_after == NOW.isoformat()
-        assert traversal._seen_events == {'e1'}
-        assert traversal.authoritative_absence is False
-        assert not traversal.complete
-        resumed.collector = SimpleNamespace(fetch=AsyncMock(return_value=Page((event(1),), (), None, 'b'*64)))
-        resumed._publish = AsyncMock()
-        resumed.state = AsyncMock()
-        await resumed.cycle()
-        assert resumed.metrics['discovery_complete']['NFL'] is False
-        assert 'NFL' not in resumed.discovery_progress
-        assert 'NFL' not in ledger.load_discovery_progress(now=NOW + timedelta(minutes=2))
-        assert 'NFL' not in ledger.discovery_schedule(now=NOW + timedelta(minutes=2))
-    asyncio.run(scenario())
-
-
-def test_stale_or_changed_discovery_checkpoint_is_not_restored(tmp_path):
-    from app.collection.sportsgameodds_ledger import ObjectLedger
-    service = SimpleNamespace(config=deepcopy(DEFAULT), dispatch=True, globally_stopped=False, paused_sources=set())
-    ledger = ObjectLedger(tmp_path / 'ledger.sqlite')
-    worker = SportsGameOddsWorker(service, now=lambda: NOW)
-    worker.ledger = ledger
-    params = worker.params(league='NFL', starts_after=(NOW-timedelta(hours=12)).isoformat())
-    ledger.save_discovery_progress('NFL', {'params': params, 'next_cursor': 'next', 'pages': 1,
-                                   'seen_cursors': [], 'seen_events': ['e1']}, now=NOW)
-    later = SportsGameOddsWorker(service, now=lambda: NOW + timedelta(days=2))
-    later.ledger = ledger
-    later.restore_discovery()
-    assert not later.discovery_progress
-    live_service = SimpleNamespace(config=dict(service.config, live_enabled=True), dispatch=True,
-                                   globally_stopped=False, paused_sources=set())
-    live = SportsGameOddsWorker(live_service, now=lambda: NOW)
-    live.ledger = ledger
-    live.restore_discovery()
-    assert not live.discovery_progress
-    worker.page_limit = 3
-    worker.restore_discovery()
-    assert not worker.discovery_progress
-
-
-def test_restored_walk_completes_only_after_new_final_page(tmp_path):
-    from app.collection.sportsgameodds_ledger import ObjectLedger
-    async def scenario():
-        service = SimpleNamespace(config=deepcopy(DEFAULT), dispatch=True, globally_stopped=False, paused_sources=set())
-        ledger = ObjectLedger(tmp_path / 'ledger.sqlite')
-        first = SportsGameOddsWorker(service, now=lambda: NOW)
-        first.ledger = ledger
-        first.max_pages = 1
-        first._publish = AsyncMock()
-        first.state = AsyncMock()
-        first.collector = SimpleNamespace(fetch=AsyncMock(return_value=Page((event(1),), (), 'next', 'a'*64)))
-        await first.cycle()
-        original_query = first.collector.fetch.await_args.args[0]
-        checkpoint = ledger.load_discovery_progress(now=NOW)['NFL']
-        assert checkpoint['params'] == original_query
-        assert original_query['started'] is original_query['live'] is False
-        assert original_query['startsAfter'] == NOW.isoformat()
-        second = SportsGameOddsWorker(service, now=lambda: NOW + timedelta(minutes=2))
-        second.ledger = ObjectLedger(tmp_path / 'ledger.sqlite')
-        second.restore_discovery()
-        second._publish = AsyncMock()
-        second.state = AsyncMock()
-        second.collector = SimpleNamespace(fetch=AsyncMock(return_value=Page((event(2),), (), None, 'b'*64)))
-        await second.cycle()
-        params = second.collector.fetch.await_args_list[0].args[0]
-        assert params == dict(original_query, cursor='next')
-        assert second.metrics['discovery_complete']['NFL'] is True
-        assert 'NFL' in ledger.discovery_schedule(now=NOW + timedelta(minutes=2))
-        assert 'NFL' not in ledger.load_discovery_progress(now=NOW + timedelta(minutes=2))
     asyncio.run(scenario())

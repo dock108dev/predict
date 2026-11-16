@@ -166,32 +166,65 @@ def slowest_job(data):
     return max(durations, key=lambda job: job["seconds"], default=None)
 
 
+def inherited_artifact_attempts(data, run, attempt):
+    """An older report qualifies only when GitHub kept that successful job."""
+    lanes = {
+        "Offline checks": ("ci-offline", None),
+        "Source, security and package": ("ci-quality", None),
+        "Ordinary browser journey": ("ci-browser", None),
+    }
+    attempts = {}
+    seen = set()
+    for job in data.get("jobs", []):
+        name = job.get("name", "")
+        shard = re.fullmatch(
+            r"PostgreSQL storage / SQL migrations and boards \((\d+)\)", name
+        )
+        key = ("storage", shard[1]) if shard else lanes.get(name)
+        if key is None:
+            continue
+        version = job.get("run_attempt")
+        if key in seen:
+            attempts.pop(key, None)
+        elif (
+            str(job.get("run_id")) == str(run)
+            and job.get("status") == "completed"
+            and job.get("conclusion") == "success"
+            and type(version) is int
+            and 0 < version < int(attempt)
+        ):
+            attempts[key] = version
+        seen.add(key)
+    return attempts
+
+
 def collect(root, sha, run, destination):
     payload = os.environ.get("GITHUB_EVENT_PATH")
     event = read_json(Path(payload)) if payload else {}
     base = commit(os.environ.get("CI_SIGNALS_BASE")) or base_sha(
         root, sha, os.environ.get("GITHUB_EVENT_NAME"), event
     )
-    context = dict(base_sha=base, baseline=None, slowest=None, health=None)
+    context = dict(
+        base_sha=base, baseline=None, slowest=None, health=None, inherited_attempts={}
+    )
     repo = os.environ.get("GITHUB_REPOSITORY", "")
     if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repo) or not os.environ.get(
         "GH_TOKEN"
     ):
         return context
     now = datetime.now(timezone.utc)
+    if str(run).isdigit():
+        try:
+            data = actions(repo, f"runs/{run}/jobs", filter="latest", per_page=100)
+            context["inherited_attempts"] = inherited_artifact_attempts(
+                data, run, os.environ.get("GITHUB_RUN_ATTEMPT", "1")
+            )
+            context["slowest"] = slowest_job(data)
+        except (OSError, KeyError, TypeError, ValueError, subprocess.SubprocessError):
+            pass
     operations = (
         ("base_available", lambda: load_base(root, repo, base)),
         ("baseline", lambda: baseline(repo, base, destination)),
-        (
-            "slowest",
-            lambda: (
-                slowest_job(
-                    actions(repo, f"runs/{run}/jobs", filter="latest", per_page=30)
-                )
-                if str(run).isdigit()
-                else None
-            ),
-        ),
         (
             "health",
             lambda: analyze(

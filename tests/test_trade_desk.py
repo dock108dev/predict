@@ -11,7 +11,8 @@ from aiohttp.test_utils import make_mocked_request
 from app.comparison.ordinary_arb import DEFAULT_FUNDING, evaluate as evaluate_arb
 from app.comparison.snapshot_math import before_fee_pair
 from app.dashboard.snapshot_api import mount
-from app.dashboard.trade_desk import add_sgo_prices, game_source_key, page
+from app.dashboard.desk_sportsbooks import add_sgo_prices
+from app.dashboard.trade_desk import game_source_key, page
 from app.storage.store import hashed, stamp
 from app.storage.comparison_snapshot import ORDINARY_ARB_POLICY, before_fee_pairs, pack
 from app.storage.ordinary_projection import project
@@ -767,7 +768,7 @@ class TradeDesk(TestCase):
         request = make_mocked_request('GET', '/api/comparison-snapshot/details?id=pair&result_id=member'
                                      '&lease_id=lease&stake=150', app=app)
         with patch('app.dashboard.snapshot_api.connect') as connect, \
-                patch('app.storage.ordinary_publication.retain') as retain, \
+                patch('app.storage.comparison_snapshot.retain_evidence') as retain, \
                 patch('app.comparison.ordinary_arb.evaluate', wraps=evaluate_arb) as evaluate:
             connect.return_value.__enter__.return_value = db
             response = asyncio.run(route.handler(request))

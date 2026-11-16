@@ -12,9 +12,6 @@ from app.comparison.sporting_scope import supported
 from app.storage.comparison_snapshot import expand_row
 from app.storage.current_rows import contract_id
 from app.storage.store import hashed, stamp
-from .desk_sportsbooks import add_public_prices as add_public_prices
-from .desk_sportsbooks import add_sgo_prices as add_sgo_prices
-from .desk_sportsbooks import sportsbook_selection as sportsbook_selection
 from .local_security import PublicRequestError
 from .product_finance import EV_UNQUALIFIED, effective_quote, qualified_ev, reference_allowed, visible_publication, visible_row
 from .snapshot_display import (

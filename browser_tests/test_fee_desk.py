@@ -215,15 +215,21 @@ def run(browser, width, output):
     expect(tab.locator('[data-calculation-id="commission"]')).to_contain_text("0.00%")
     commission = tab.locator('[data-offer-id="commission"]')
     assert tab.evaluate("document.documentElement.scrollWidth === innerWidth")
+    drawer = tab.locator("#trade")
     commission.press("Enter")
-    expect(tab.locator("#trade")).to_contain_text("$0.02")
-    expect(tab.locator("#trade")).to_contain_text("Winning settlement")
-    expect(tab.locator("#trade")).to_contain_text("Fee if it loses")
+    expect(drawer).to_contain_text("$0.02")
+    expect(drawer).to_contain_text("Winning settlement")
+    expect(drawer).to_contain_text("Fee if it loses")
+    drawer.evaluate("""dialog => {
+      // A hidden dialog can still have a native close event queued.
+      dialog.addEventListener('close', () => dialog.dataset.firstClose = 'seen', {once:true});
+    }""")
     tab.keyboard.press("Escape")
-    expect(tab.locator("#trade")).to_be_hidden()
+    expect(drawer).to_be_hidden()
+    expect(drawer).to_have_attribute("data-first-close", "seen")
     expect(commission).to_be_focused()
     commission.press("Enter")
-    expect(tab.locator("#trade")).to_be_visible()
+    expect(drawer).to_be_visible()
     tab.evaluate("""() => {
       // A real focus change can land before the queued close listener runs.
       document.getElementById('trade').addEventListener('close', () => {
@@ -233,7 +239,6 @@ def run(browser, width, output):
     tab.keyboard.press("Escape")
     expect(card).to_be_focused()
     card.press("Enter")
-    drawer = tab.locator("#trade")
     expect(drawer).to_contain_text("Modeled size")
     expect(drawer).to_contain_text("An exact current sportsbook match is unavailable")
     expect(drawer).to_contain_text("$0.01")

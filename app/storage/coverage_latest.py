@@ -123,7 +123,7 @@ def reconcile(db, *, at=None):
     from . import ordinary_publication as live
     from .board_capture import capture_batches
     from .store import exact_time
-    from app.collection.current_policy import DEFAULT
+    from app.collection.current_policy import DEFAULT, aggregate_provider
     from app.comparison.calculation_control import checkpoint
     from app.collection.background_work import BACKGROUND
     at=at or utc()
@@ -138,7 +138,7 @@ def reconcile(db, *, at=None):
             # Keep the setting local to this capture, including on rollback.
             db.execute('SET LOCAL jit=off')
             owner, states = live.authority(db, at=instant)
-            provider = live.aggregate_provider(owner=owner)
+            provider = aggregate_provider(owner.get('config'))
             policy = live.policy_identity(provider)
             head = live.status(db)
             display_result_id = head['result_id'] if head else None

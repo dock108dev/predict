@@ -7,7 +7,7 @@ from app.fees.schedule_lifecycle import revision as fee_revision
 from app.storage.store import exact_time, hashed, stamp
 
 
-def cursor(db, *, at, phase, head, owner, states, settings, epoch, live_enabled):
+def cursor(db, *, at, phase, head, owner, provider, states, settings, epoch, live_enabled):
     """Watch displayed inputs, leaving routine book confirmations to expiry."""
     pregame = phase == 'pregame'
     latest = exact_time(at.isoformat())
@@ -47,7 +47,7 @@ def cursor(db, *, at, phase, head, owner, states, settings, epoch, live_enabled)
          aggregate_since, latest),
     ).fetchone()
     posted = None
-    if pregame and (owner.get('config') or {}).get('aggregate_provider') == 'sportsgameodds':
+    if pregame and provider == 'sportsgameodds':
         # An explicit removal or a new posted price can happen after the
         # original price has left the short execution-authority witness.
         posted = db.execute('''SELECT md5(string_agg(concat_ws(':', c.id, o.price_dependency,
@@ -64,7 +64,7 @@ def cursor(db, *, at, phase, head, owner, states, settings, epoch, live_enabled)
         head['generation'], phase, live_enabled, epoch, settings['revision'], dict(witness), posted,
         fee_revision(owner.get('fee_lifecycle')), owner.get('fee_products'),
         owner.get('active'), owner.get('healthy'), owner.get('global_stopped'), owner.get('paused_sources'),
-        owner.get('calculations', {}).get('board'), owner.get('config', {}).get('aggregate_provider'),
+        owner.get('calculations', {}).get('board'), provider,
         {key: [state.get('state'), state.get('reason_code'), state.get('observed_sports')]
          for key, state in states.items()},
     ])

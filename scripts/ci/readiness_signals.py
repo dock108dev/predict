@@ -19,6 +19,7 @@ from signals_evidence import (
     patch_lines,
     read_json,
     timing,
+    timing_scope,
     totals,
 )
 
@@ -169,7 +170,9 @@ def quality_metrics(selected):
 
 
 def build(root, inputs, sha, run, attempt, context):
-    selected = artifacts(inputs, sha, run, attempt)
+    selected = artifacts(
+        inputs, sha, run, attempt, context.get("inherited_attempts", {})
+    )
     base = context["base_sha"]
     changes = patch_lines(root, base, sha)
     coverage = coverage_metrics(root, selected, changes)
@@ -186,6 +189,7 @@ def build(root, inputs, sha, run, attempt, context):
     browser = artifact_for(selected, "ci-browser")
     if browser:
         sample = read_json(browser["path"] / "desk-paint.json")
+        tools = browser["report"].get("tools")
         if (
             sample.get("fixture") == "desk-browser-intercept-v1"
             and (seconds := number(sample.get("seconds"))) is not None
@@ -195,6 +199,11 @@ def build(root, inputs, sha, run, attempt, context):
                 fixture=sample["fixture"],
                 samples=1,
                 artifact=browser["path"].name,
+                scope=timing_scope(
+                    browser,
+                    "playwright",
+                    tools.get("playwright") if isinstance(tools, dict) else None,
+                ),
             )
     return dict(
         schema=1,
@@ -217,6 +226,11 @@ def build(root, inputs, sha, run, attempt, context):
         slowest_job=context["slowest"],
         health=(context["health"] or {}).get("events", {}),
         artifacts=sorted(entry["path"].name for entry in selected.values()),
+        reused_artifacts=sorted(
+            entry["path"].name
+            for entry in selected.values()
+            if str(entry["attempt"]) != str(attempt)
+        ),
     )
 
 
@@ -367,11 +381,16 @@ def render(value, baseline):
         if not now:
             text.append(f"| {name} | — | — | Unavailable |")
             continue
-        same_fixture = old and (now["fixture"], now.get("response_budget")) == (
-            old["fixture"],
-            old.get("response_budget"),
+        comparable_timing = (
+            isinstance(old, dict)
+            and number(old.get("seconds")) is not None
+            and now.get("scope")
+            and all(
+                now.get(key) == old.get(key)
+                for key in ("fixture", "response_budget", "samples", "scope")
+            )
         )
-        delt = f"{now['seconds'] - old['seconds']:+.3f}" if same_fixture else "—"
+        delt = f"{now['seconds'] - old['seconds']:+.3f}" if comparable_timing else "—"
         detail = f"{now['fixture']} · n={now['samples']}"
         if now.get("response_budget") is not None:
             detail += f" · test response budget {now['response_budget']:g} s"
@@ -379,7 +398,7 @@ def render(value, baseline):
 
     text += [
         "",
-        "Timing samples use disposable or intercepted fixtures. Compare runs with the same fixture and runner class.",
+        "Timing samples use disposable or intercepted fixtures. Deltas require matching fixtures, sample counts, runner class and toolchain.",
         "",
         "#### Security and maintainability",
         "",
@@ -460,6 +479,14 @@ def render(value, baseline):
         text.append("\nFirst-attempt history unavailable.")
     text += [
         "",
+        "Prior attempts contribute evidence only for jobs GitHub reports as inherited. A missing report for a rerun job leaves its case evidence unavailable.",
+        (
+            "Inherited reports: "
+            + ", ".join(map(safe, value["reused_artifacts"]))
+            + "."
+            if value["reused_artifacts"]
+            else "No inherited reports were used."
+        ),
         "Full case identities, coverage gaps, timing samples and source artifacts are indexed in `signals.json`.",
         "Coverage measures the offline Python instrumentation. Fixture checks measure the cases listed above.",
         "",

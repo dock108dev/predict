@@ -73,7 +73,7 @@ class CapacitySQL(LatestBoardFixture):
             churn=[]
             if incremental:
                 prior_read=snapshots.unpack(db.execute('SELECT result FROM comparison_snapshot_result WHERE id=%s',(root['id'],)).fetchone()['result'],lazy=True,db=db)
-                member=root['rows'][0]['evidence_result_id'];token=live.retain(db,member)
+                member=root['rows'][0]['evidence_result_id'];token=snapshots.retain_evidence(db,member)
                 selected=snapshots.unpack(db.execute('SELECT result FROM comparison_snapshot_result WHERE id=%s',(member,)).fetchone()['result'],db=db)
                 repeats=int(os.environ.get('L05_REPEAT_LOAD','1'))
                 self.assertTrue(1<=repeats<=5)
@@ -171,7 +171,7 @@ class CapacitySQL(LatestBoardFixture):
                 # selected row. Verify both leases coexist until explicit swap.
                 row_id=selected['rows'][0]['id']
                 replacement=next(r['evidence_result_id'] for r in root['rows'] if r['id']==row_id)
-                adopted=live.retain(db,replacement)
+                adopted=snapshots.retain_evidence(db,replacement)
                 latest_member=snapshots.unpack(db.execute('SELECT result FROM comparison_snapshot_result WHERE id=%s',(replacement,)).fetchone()['result'])
                 self.assertNotEqual(member,replacement)
                 self.assertEqual(latest_member['id'],replacement)

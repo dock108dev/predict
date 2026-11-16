@@ -421,6 +421,12 @@ def main():
                 "merge_queue_sha": os.environ.get("MERGE_QUEUE_SHA"),
                 "platform": platform.platform(),
                 "python": platform.python_version(),
+                "runner": {
+                    "environment": os.environ.get("RUNNER_ENVIRONMENT"),
+                    "os": os.environ.get("RUNNER_OS"),
+                    "arch": os.environ.get("RUNNER_ARCH"),
+                    "image": os.environ.get("ImageOS"),
+                },
                 "overall": "FAIL" if failed else "PASS",
                 "pr_head": os.environ.get("PR_HEAD_SHA"),
                 "ref": os.environ.get("GITHUB_REF"),

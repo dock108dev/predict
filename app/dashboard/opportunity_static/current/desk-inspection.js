@@ -1,6 +1,6 @@
 import {evidenceReason as reasons} from './desk-reasons.js';
 import {pinnedInspection} from './desk-evidence.js';
-import {basisName, quoteFreshness, selectedReference, settlementLabel, sportsbookQuotes, winPayout, percent as signedPercent, tone} from './opportunity-cards.js';
+import {basisName, quoteFreshness, selectedReference, settlementLabel, sportsbookQuotes, winPayout, percent as signedPercent, tone} from './desk-quote-display.js';
 // The server owns the exact inputs and cashflows. Formatting happens here.
 const {el, num, fmt, odd, name, button} = window.PredictUI;
 const percent = value => value == null ? 'Unavailable' : `${fmt(value)}%`;

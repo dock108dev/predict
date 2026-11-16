@@ -61,8 +61,13 @@ Shutdown reports incomplete cleanup rather than releasing a live ingress owner.
 
 Ordinary publication waits its usual two-second interval after a failed turn.
 Incoming quotes can wake a healthy publisher without bypassing that retry
-delay. Close still interrupts the wait. The legacy saved-result read takes a
-row lock before renewing its lease so pruning can skip that result.
+delay. Close still interrupts the wait. Reading the implicit manual snapshot
+head locks the pointer while renewing the exact result and its input together.
+A failed renewal rolls back both leases. Explicit saved-result reads use the
+same renewal and take a result-row lock so pruning can skip the selected result.
+The timestamp lease checks and explicit token leases share the duration and
+capacity policy. Their populations are counted separately. PostgreSQL supplies
+the clock for both the automatic timestamp capacity check and renewal.
 
 Estimates, Scanner and Coverage share one reusable optional-work thread. Each of
 the three owners awaits its existing turn before submitting another; queued work

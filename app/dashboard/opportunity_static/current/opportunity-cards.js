@@ -1,39 +1,15 @@
 import {evidenceReason} from './desk-reasons.js';
+import {basisName, books, cash, noQuote, percent, quoteFreshness, quoteReason, selectedReference,
+  settlementLabel, sportsbookOdds, sportsbookQuotes, tone, venueLabel} from './desk-quote-display.js';
 
-const {el, num, fmt, name, odd, link, button} = window.PredictUI;
-const basisLabels = {sportsbooks:'Indicative before-fee estimate', reviewed:'Verified after-fee EV',
-  conservative:'Conservative after-fee scenario', before:'Before-fee scenario'};
+const {el, num, name, odd, link, button} = window.PredictUI;
+export {basisName, percent, priceStatus, quoteAge, quoteFreshness, quoteReason, selectedReference,
+  settlementLabel, sportsbookQuotes, tone, venueLabel, winPayout} from './desk-quote-display.js';
+
 const compactBasisLabels = {sportsbooks:'Before-fee estimate', reviewed:'After-fee EV',
   conservative:'Conservative scenario', before:'Before-fee scenario'};
 const matrixBasisLabels = {sportsbooks:'est.', reviewed:'EV', conservative:'est.', before:'scenario'};
-const books = ['fanduel', 'draftkings', 'betmgm', 'caesars'];
 const venues = ['kalshi', 'polymarket_us', 'novig', 'prophetx'];
-const cash = value => value == null ? 'Unavailable' : new Intl.NumberFormat('en-US', {
-  style:'currency', currency:'USD'
-}).format(num(value));
-export const percent = value => value == null ? 'Unavailable' : `${num(value) > 0 ? '+' : ''}${fmt(value)}%`;
-export const tone = value => num(value) > 0 ? 'positive' : num(value) < 0 ? 'negative' : '';
-export const basisName = basis => basisLabels[basis];
-export const venueLabel = offer => name(offer.venue);
-
-export function quoteReason(offer) {
-  if (!offer.current) return quoteFreshness(offer);
-  if (offer.value != null) return null;
-  const reason = String(offer.reason || '').split(', ')[0];
-  return evidenceReason(reason, 'No qualified same-line sportsbook pair.').replace(/\.$/, '');
-}
-
-export function selectedReference(offer, basis) {
-  if (basis === 'sportsbooks' && offer?.sportsbook) {
-    return {book:offer.sportsbook.book, prices:offer.sportsbook.prices, candidates:offer.sportsbook.candidates};
-  }
-  const ref = offer?.reference_current && offer.reference_calculation;
-  const book = ref && ref.contributors?.find(item => item.venue === ref.venue || item.venue === ref.bookmaker);
-  if (book) return {book:book.venue, prices:book.inputs, candidates:ref.candidates};
-  const [selected] = Object.entries(offer?.fair_reference?.selected_prices || {});
-  if (selected) return {book:selected[0], prices:[{price_american:selected[1]}]};
-  return null;
-}
 
 function fairReferenceLabel(reference) {
   if (reference?.method === 'authored_probability') return 'Authored scenario probability';
@@ -91,116 +67,6 @@ function appendSportsbookTrigger(cell, group, context) {
   trigger.setAttribute('popovertarget', popout.id);
   trigger.setAttribute('aria-label', `Same-line sportsbook quotes for ${outcome}`);
   cell.append(trigger, popout);
-}
-
-function sportsbookOdds(price) {
-  if (price?.american && price?.decimal) return price;
-  const american = price?.price_american ?? price?.american ?? price;
-  const amount = num(american);
-  if (!Number.isFinite(amount) || !amount) return null;
-  return {american:amount > 0 ? `+${amount}` : String(amount),
-    decimal:amount > 0 ? 1 + amount / 100 : 1 + 100 / -amount};
-}
-
-export function quoteAge(source, checkedAt = Date.now()) {
-  const age = elapsedAge(source, checkedAt);
-  return age ? `Quote updated ${age}` : 'Quote time unknown';
-}
-
-function elapsedAge(source, checkedAt = Date.now()) {
-  const elapsed = Math.floor((new Date(checkedAt) - new Date(source)) / 1000);
-  if (!source || !Number.isFinite(elapsed) || elapsed < 0) return null;
-  if (elapsed < 60) return `${elapsed}s ago`;
-  if (elapsed < 3600) return `${Math.floor(elapsed / 60)}m ago`;
-  return `${Math.floor(elapsed / 3600)}h ago`;
-}
-
-export function quoteFreshness(offer, mode, inspection = false) {
-  if (offer.posted_price && !mode) return 'Latest posted pregame price';
-  if (offer.current) return mode ? 'Current at capture' : inspection ? 'Current at inspection' : 'Current';
-  const codes = [...(offer.current_reasons || []), offer.reason];
-  const labels = {
-    sgo_charge_unresolved:'source on hold', ambiguous_dispatch_unresolved:'source on hold',
-    source_expired:'quote expired', 'Price expired':'quote expired',
-    data_runtime_unhealthy:'price feed unavailable',
-    updates_stopped:'updates inactive', sgo_paused_or_stopped:'updates paused',
-    input_replaced_or_removed:'quote replaced or removed', source_unknown:'source time unverified'
-  };
-  const status = Object.entries(labels).find(([code]) => codes.includes(code))?.[1] || 'current quote unavailable';
-  return `${mode ? 'Last known at capture' : 'Last known'} · ${status}`;
-}
-
-function sportsbookCell(group, book, reference, checkedAt, mode, inspection = false) {
-  const cell = el('div', null, 'sportsbook-price');
-  const selected = reference?.book === book && reference.prices?.[0];
-  const usesReference = value => selected && value.current !== false
-    && value.price_american === selected.price_american && (!selected.source_at || value.source_at === selected.source_at);
-  let values = group.sportsbook_quotes?.[book] || (selected ? [{...selected, current:true}] : []);
-  if (selected && !values.some(usesReference)) {
-    values = [{...selected, current:true}, ...values];
-  }
-  for (const value of values) {
-    const item = el('div');
-    item.append(odd(sportsbookOdds(value)));
-    if (value.source_at) item.title = value.source_at;
-    const isReference = usesReference(value);
-    if (isReference) item.classList.add('matrix-reference');
-    const label = [mode ? [value.current === false ? 'Last known at capture' : 'At capture',
-      value.source_at && quoteAge(value.source_at, checkedAt)].filter(Boolean).join(' · ') :
-      priceStatus(value.current, value.source_at, checkedAt, inspection),
-      isReference && 'EV reference'].filter(Boolean).join(' · ');
-    if (label) {
-      const freshness = el('small', label);
-      if (inspection && !mode && value.current === true) freshness.dataset.inspectionBook = '1';
-      item.append(freshness);
-    }
-    cell.append(item);
-  }
-  if (!values.length) noQuote(cell, name(book), group.retained_sportsbooks?.includes(book));
-  return cell;
-}
-
-function noQuote(cell, venue, retained = false) {
-  const missing = el('span', retained ? 'Saved quote' : '—', 'desk-meta missing-quote');
-  const detail = retained ? `Saved quote from ${venue}. Turn on Last-known prices to see it.`
-    : `No quote shown from ${venue} for this exact outcome`;
-  missing.setAttribute('aria-label', detail);
-  missing.title = detail;
-  cell.append(missing);
-}
-
-export function priceStatus(current, at, checkedAt, inspection = false) {
-  const status = current === true ? (inspection ? 'Current at inspection' : 'Current')
-    : current === false ? 'Last known' : 'Freshness unverified';
-  return at ? `${status} · ${quoteAge(at, checkedAt)}` : status;
-}
-
-export function settlementLabel(group) {
-  return ({matched:'Venue settlement rules match', different:'Venue settlement rules differ',
-    unverified:'Venue settlement match unverified'})[group.settlement_match];
-}
-
-export function winPayout(offer) {
-  const cost = num(offer.cost_per_normal_claim);
-  const multiplier = cost > 0 ? 1 / cost : num(offer.odds?.decimal);
-  return multiplier > 1 && Number.isFinite(multiplier)
-    ? `A winning $10 stake returns ${cash(multiplier * 10)} total, including ${cash((multiplier - 1) * 10)} profit before fees.` : null;
-}
-
-export function sportsbookQuotes(group, reference, checkedAt, mode, inspection = false) {
-  const section = el('div', null, 'sportsbook-comparison');
-  const listed = inspection ? books.filter(book => group.sportsbook_quotes?.[book]?.length || reference?.book === book) : books;
-  const prices = el('div', null, 'sportsbook-prices');
-  for (const book of listed) {
-    const cell = el('div');
-    cell.append(el('strong', name(book)), sportsbookCell(group, book, reference, checkedAt, mode, inspection));
-    prices.append(cell);
-  }
-  if (listed.length) section.append(...(inspection ? [] : [el('small', 'Same-line sportsbook quotes')]), prices);
-  if (group.sportsbook_source_reason) {
-    section.append(el('small', evidenceReason(group.sportsbook_source_reason)));
-  }
-  return section;
 }
 
 function score(value, label) {
@@ -349,7 +215,7 @@ function compactEV(group, context) {
     if (!offer.odds?.american || seen.has(offer.venue)) continue;
     seen.add(offer.venue);
     const value = offer.current ? offer.value ?? (offer === lead ? group.score : null) : null;
-    const price = quote(offer, group, context, offer === lead && offer.current ? 'desk-best' : '', false);
+    const price = quote(offer, group, context, offer === lead && value != null ? 'desk-best' : '', false);
     price.prepend(el('span', venueLabel(offer), 'compact-venue'));
     price.dataset.calculationId = offer.id;
     const accessible = `View trade details: ${venueLabel(offer)}, ${context.position(offer)}, ${offer.odds.american}`;
@@ -376,10 +242,14 @@ function compactBookQuotes(group, lead, context) {
   const fallback = context.basis === 'sportsbooks' && !lead.fair_odds ? group.sportsbook_reference : null;
   const fair = lead.fair_odds || (context.basis === 'sportsbooks' ? lead.sportsbook?.fair_odds || fallback?.fair_odds
     : lead.reference_current && lead.reference);
-  const fairValue = el('span', 'Fair odds ', 'compact-fair');
-  fairValue.append(fair ? odd(fair) : 'unavailable');
-  if (fair) markCalculationExpiry(fairValue, context, group, lead.calculation_current_until, fallback?.current_until);
-  row.append(fairValue);
+  const unavailable = group.score == null && lead.current && quoteReason(lead);
+  if (fair) {
+    const fairValue = el('span', 'Fair odds ', 'compact-fair');
+    fairValue.append(odd(fair));
+    markCalculationExpiry(fairValue, context, group, lead.calculation_current_until, fallback?.current_until);
+    row.append(fairValue);
+  }
+  if (unavailable) row.append(el('span', `EV unavailable · ${unavailable}`, 'compact-ev-gap'));
 
   const selected = lead.fair_reference?.selected_prices || {};
   const reference = context.basis === 'sportsbooks' && !lead.sportsbook ? fallback : selectedReference(lead, context.basis);
@@ -448,7 +318,7 @@ export function arbCard(group, context, expanded) {
   for (const leg of legs) {
     const item = el('li', null, leg.current ? 'desk-best' : '');
     item.append(el('span', context.position(leg)), el('small', venueLabel(leg)), odd(leg.odds));
-    if (!leg.current) item.append(el('small', quoteFreshness(leg, context.mode)));
+    if (!leg.current) item.append(el('small', quoteFreshness(leg, context.mode), 'quote-freshness'));
     markQuoteExpiry(item, context, group, leg);
     content.append(item);
   }
@@ -464,10 +334,18 @@ export function arbCard(group, context, expanded) {
   };
   row.append(content);
   if (net?.available) {
-    const funds = el('p', `Funding ${cash(net.funding_usd)} · Lowest net payout ${cash(net.minimum_net_payout_usd)} · Worst profit/loss ${cash(net.minimum_net_profit_usd)}`, 'desk-meta');
+    const funds = el('dl', null, 'arb-payoff');
+    for (const [label, amount] of [
+      ['Funding', net.funding_usd], ['Lowest net payout', net.minimum_net_payout_usd],
+      ['Worst profit/loss', net.minimum_net_profit_usd],
+    ]) {
+      const item = el('div');
+      item.append(el('dt', label), el('dd', cash(amount)));
+      funds.append(item);
+    }
     markCalculationExpiry(funds, context, group, ...legs.map(leg => leg.current_until), best.calculation_current_until);
     row.append(funds);
-    row.append(el('p', 'Completed-game states only · Full arbitrage unverified', 'desk-meta'));
+    row.append(el('p', 'Full arbitrage unverified', 'desk-meta'));
     if (net.execution_reason) row.append(el('p', evidenceReason(net.execution_reason), 'desk-meta'));
   } else {
     row.append(el('p', evidenceReason(net?.reason), 'desk-meta'));
@@ -684,7 +562,6 @@ function appendMarketMatrix(container, visible, context, {selectedLine, includeA
   cue.hidden = true;
   scroll.addEventListener('scroll', () => updateMatrixCue(scroll));
   (actions || container).append(cue);
-  if (context.summary) container.append(el('p', 'Select odds marked ↗ for quote details. A dash means no quote shown for that site and exact outcome.', 'matrix-key desk-meta'));
   container.append(scroll);
 }
 

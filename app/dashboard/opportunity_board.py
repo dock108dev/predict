@@ -1,6 +1,5 @@
 """Opportunity board entry point and retained-capture presentation helpers."""
 import argparse
-import os
 from aiohttp import web
 from app.dashboard import e6_real as historical
 from app.dashboard.e6_live import validate_saved
@@ -37,11 +36,14 @@ def main():
     if not 1 <= a.port <= 65535:
         p.error('Loopback port must be between 1 and 65535')
     from app.collection.runtime_client import RuntimeClient
-    from app.storage.store import hashed
+    from app.storage.store import hashed, socket_directory
     from .desk_last_known import LastKnownDesk
 
     state = ROOT / '.local'
-    database = os.environ.get('PREDICT_DB_SOCKET', str(state / 'pgsocket'))
+    try:
+        database = socket_directory()
+    except ValueError as exc:
+        p.error(str(exc))
     desk_cache = LastKnownDesk(state / 'desk-read-cache' / (hashed(database) + '.sqlite3'))
     application=create_app(current_provider=RuntimeClient(), desk_cache=desk_cache)
     web.run_app(application,host=a.host,port=a.port,access_log=None,handler_cancellation=True)

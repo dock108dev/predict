@@ -220,23 +220,11 @@ def mount(app, *, last_known=None):
 
     def leased_result(db, result_id, *, cache=False):
         if result_id:
-            from app.storage.ordinary_publication import lease
-            if not lease(db, result_id):
+            if not snapshots.renew_result_lease(db, result_id):
                 return None
             return decoded(result_id,db,ordinary=cache)
-        row = db.execute(
-            """UPDATE comparison_snapshot_result SET lease_until=now()+interval '2 hours'
-            WHERE id=COALESCE(%s,(SELECT result_id FROM comparison_publication WHERE kind='manual' AND id=''))
-            RETURNING id,snapshot_id""",
-            (result_id,),
-        ).fetchone()
-        if not row:
-            return None
-        db.execute(
-            "UPDATE comparison_snapshot SET lease_until=now()+interval '2 hours' WHERE id=%s",
-            (row["snapshot_id"],),
-        )
-        return decoded(row["id"],db,ordinary=cache)
+        head = snapshots.renew_manual_head(db)
+        return decoded(head, db, ordinary=cache) if head is not None else None
 
     def saved_page(db, result, query, options):
         if result and not runtime_allows_live(db):
@@ -329,7 +317,7 @@ def mount(app, *, last_known=None):
         def work():
             started = monotonic()
             timings['queue'] = (started - submitted) * 1000
-            from app.collection.current_policy import live_enabled
+            from app.collection.current_policy import aggregate_provider, live_enabled
             with connect() as db, db.transaction():
                 db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
                 db.execute('SET LOCAL jit=off')
@@ -337,7 +325,7 @@ def mount(app, *, last_known=None):
                 at = stamp(utc())
                 owner, states = live.authority(db, at=at,
                     include_diagnostics=is_fee_census and query.get('funnel') == '1')
-                provider = live.aggregate_provider(owner=owner)
+                provider = aggregate_provider(owner.get('config'))
                 settings = live.current_settings(db)
                 epoch = str(db.execute('SELECT epoch FROM current_row_epoch').fetchone()['epoch'])
                 live_available = live_enabled(owner.get('config', {}))
@@ -368,7 +356,7 @@ def mount(app, *, last_known=None):
                 if is_desk and not is_fee_census and not is_selection:
                     from .desk_updates import cursor as desk_cursor
                     stage = monotonic()
-                    update_cursor = desk_cursor(db, at=at, phase=query['phase'], head=head, owner=owner,
+                    update_cursor = desk_cursor(db, at=at, phase=query['phase'], head=head, owner=owner, provider=provider,
                         states=states, settings=settings, epoch=epoch, live_enabled=live_available)
                     timings['desk_revision'] = (monotonic()-stage)*1000
                     if is_updates:
@@ -467,7 +455,7 @@ def mount(app, *, last_known=None):
                 sgo_inputs = EventInputs(db)
                 frames = (live.sportsbook_frames(db, at, sgo_inputs=sgo_inputs) if dependency_result and any(
                     (r.get('sportsbook_baseline') or {}).get('indicative') for r in dependency_result['rows'])
-                    and owner.get('config', {}).get('aggregate_provider') == 'sportsgameodds' else ())
+                    and provider == 'sportsgameodds' else ())
                 from app.storage.ordinary_projection import event_owners, publication_runtime
                 from .trade_desk import browse_retained
                 browsing_odds = query.get('browse_odds') == '1'
@@ -547,9 +535,10 @@ def mount(app, *, last_known=None):
                         row=None if row is None else presented(row,{r['id']:r for r in result['rows']}))
                 stage=monotonic()
                 if query.get('layout') == 'desk':
-                    from .trade_desk import add_public_prices, add_sgo_prices, desk_phase, page as desk_page
+                    from .desk_sportsbooks import add_public_prices, add_sgo_prices
+                    from .trade_desk import desk_phase, page as desk_page
                     def enrich(out, *, include_retained, mark_retained=False):
-                        if owner.get('config', {}).get('aggregate_provider') != 'sportsgameodds' or 'sportsgameodds' not in states:
+                        if provider != 'sportsgameodds' or 'sportsgameodds' not in states:
                             return
                         quote_states = states
                         if retained_fallback:
@@ -656,13 +645,12 @@ def mount(app, *, last_known=None):
         return dict(game_key=game_key, result_id=result_id, captured_at=result['captured_at'])
 
     async def evidence_lease(req):
-        from app.storage.ordinary_publication import retain
         if req.method == 'DELETE':
             lease_id=req.query.get('lease_id')
             if not lease_id or len(lease_id)>64:raise PublicRequestError('Exact lease required')
             def release():
                 with connect() as db:
-                    db.execute("DELETE FROM comparison_result_reference WHERE kind='lease' AND holder=%s",(lease_id,))
+                    snapshots.release_evidence(db, lease_id)
                 return dict(released=True,provider_requests=0)
             return web.json_response(await asyncio.to_thread(release))
         body = await read_json(req)
@@ -670,7 +658,7 @@ def mount(app, *, last_known=None):
             raise PublicRequestError('Exact evidence revision required')
         def work():
             with connect() as db:
-                return retain(db, body['result_id'], body.get('lease_id'))
+                return snapshots.retain_evidence(db, body['result_id'], body.get('lease_id'))
         try:
             return web.json_response(await asyncio.to_thread(work))
         except snapshots.SnapshotOperationError as exc:
@@ -738,8 +726,7 @@ def mount(app, *, last_known=None):
         def work():
             with connect() as db:
                 if req.query.get('lease_id'):
-                    from app.storage.ordinary_publication import retain
-                    retain(db, req.query['result_id'], req.query['lease_id'])
+                    snapshots.retain_evidence(db, req.query['result_id'], req.query['lease_id'])
                     result=decoded(req.query['result_id'], db)
                 else:
                     result = leased_result(db, req.query.get("result_id"))

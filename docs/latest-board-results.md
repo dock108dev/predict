@@ -52,7 +52,7 @@ make publication succeed. Selected reads keep strict validation and refuse the
 conflicting occurrence. Background shutdown cooperates at catalog, occurrence,
 financial and publication boundaries within the existing five-second drain.
 
-The October 20 C1 repair isolates the exact `board_compact_response_capacity`
+The retained publisher isolates the exact `board_compact_response_capacity`
 refusal per game before observation publication. Failed games remain in the
 catalog with explicit `observation_errors`; scope stays partial, and ordinary
 reads refuse even a retained older row for that failed game. Valid neighbors

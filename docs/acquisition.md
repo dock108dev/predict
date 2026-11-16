@@ -63,8 +63,9 @@ storage out of test fixtures.
 
 ## SportsGameOdds collection
 
-SportsGameOdds is the aggregate on the current local setup. The page adapter,
-object ledger, event scheduler and reference capture run in the data owner.
+The example configuration selects SportsGameOdds as its aggregate provider.
+Its page adapter, object ledger, scheduler and reference capture run in the
+data process.
 The adapter retains original bookmaker clocks and availability,
 including per-book alternate lines, and refuses incomplete or ambiguous input
 rather than authorizing an absence-based withdrawal. Cursor completion alone is
@@ -72,14 +73,6 @@ not an authoritative census. Unknown settlement and unjoined native contracts
 remain unqualified for reference and EV. The direct Kalshi and Polymarket US
 owners remain separate.
 
-The reference table's bounds, retention and disposable cached/synthetic replay
-measurements are documented in [current-row storage](current-row-storage.md#sportsgameodds-reference-observations-integration-work).
-Those results use free cached pages and invented scale fixtures, not paid-plan
-coverage, live freshness, account allowance or actual cost. Exact plan terms,
-venue access and operating cadence require the authorized account's own evidence.
-
-The ten cached free NBA/NHL event objects contained SGO event IDs, teams,
-status and bookmaker links, but no typed external shared game ID. SGO event IDs
-and aliases remain provider-local; bookmaker URLs or matching names must not be
-promoted to a foreign event-ID namespace. This observation does not establish
-what every paid response may contain.
+SportsGameOdds event IDs and aliases are provider-local. Bookmaker URLs and
+matching team names carry no shared event identity.
+[Reference storage and retention](current-row-storage.md#sportsgameodds-reference-observations)

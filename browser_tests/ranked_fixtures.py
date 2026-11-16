@@ -1,6 +1,12 @@
 """Authored ranked comparison payloads shared by the desk journeys."""
 
 from fractions import Fraction
+from pathlib import Path
+
+ASSETS = (
+    Path(__file__).resolve().parents[1] / "app/dashboard/opportunity_static/current"
+)
+BASE = "https://predict.fixture"
 
 START = "2026-11-13T01:00:00Z"
 DENVER = "Denver Nuggets vs. Minnesota Timberwolves"

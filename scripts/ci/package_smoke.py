@@ -163,9 +163,9 @@ for name in ('index.html', 'current.js', 'arbs.html', 'arbs.js', 'admin.html', '
              'scanner.css', 'scanner-runtime.json', 'stored.html', 'stored.js',
              'stored.css', 'ui-common.js', 'coverage-shell.js',
              'manrope.ttf', 'manrope-OFL.txt', 'barlow-semi-condensed-600.ttf',
-             'barlow-OFL.txt', 'desk.html', 'desk.js', 'desk.css', 'desk-preferences.js',
+             'barlow-OFL.txt', 'desk.html', 'desk.js', 'desk.css', 'desk-components.css', 'desk-preferences.js',
              'desk-bootstrap.js', 'desk-drawer.js', 'desk-inspection.js', 'desk-stability.js',
-             'opportunity-cards.js', 'predict-icon.png'):
+             'desk-polling.js', 'desk-quote-display.js', 'opportunity-cards.js', 'predict-icon.png'):
     assert (root / 'opportunity_static/current' / name).is_file(), name
 assert '/env/' in str(root), root
 # Imports alone do not prove that current model evidence survived packaging.
@@ -211,6 +211,7 @@ async def smoke():
                          '/view/current/admin-database.css',
                          '/view/current/barlow-semi-condensed-600.ttf',
                          '/view/current/desk.js','/view/current/desk.css','/view/current/desk-preferences.js',
+                         '/view/current/desk-components.css','/view/current/desk-polling.js','/view/current/desk-quote-display.js',
                          '/view/current/desk-bootstrap.js','/view/current/desk-drawer.js',
                          '/view/current/desk-inspection.js',
                          '/view/current/desk-stability.js',

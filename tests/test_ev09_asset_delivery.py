@@ -102,7 +102,9 @@ class Assets(unittest.IsolatedAsyncioTestCase):
                 expected = (
                     {"board-client.js", "board-contract.js", "board-values.js", "board-read.js", "scanner.css", "scanner.js"}
                     if page == "/scanner" else
-                    {"desk.css", "desk.js", "desk-bootstrap.js", "desk-drawer.js", "desk-preferences.js", "ui-common.js", "barlow-semi-condensed-600.ttf"}
+                    {"desk.css", "desk-components.css", "desk.js", "desk-bootstrap.js", "desk-drawer.js",
+                     "desk-polling.js", "desk-preferences.js", "desk-quote-display.js", "ui-common.js",
+                     "barlow-semi-condensed-600.ttf"}
                     if page in PUBLIC_DESK_PAGES else {"stored.css", "stored.js", "manrope.ttf"}
                 )
                 self.assertTrue(expected <= {Path(path.split("?")[0]).name for path in seen}, page)

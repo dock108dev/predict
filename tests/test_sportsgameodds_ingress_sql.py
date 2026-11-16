@@ -534,6 +534,38 @@ class SportsGameOddsAtomicIngress(LatestBoardFixture):
         self.assertEqual(events['recovery-event']['phase'], 'live')
         self.assertEqual(events['recovery-event']['received_at'], page.events[0]['received_at'])
 
+    async def test_restart_limits_only_eligible_retained_events(self):
+        from datetime import datetime, timezone
+        from app.collection.sportsgameodds_worker import retained_schedule
+
+        at = datetime(2027, 1, 4, 20, tzinfo=timezone.utc)
+        template, = response()['data']
+        events = []
+        for event_id, minute, state in (
+                ('kickoff', 0, {}), ('cancelled', 1, {'cancelled': True}),
+                ('started', 2, {'started': True}), ('next', 3, {}),
+                ('later', 4, {}), ('completed', 5, {'completed': True})):
+            status = dict(template['status'], startsAt=f'2027-01-04T20:{minute:02}:00Z') | state
+            events.append(dict(template, eventID=event_id, leagueID='NHL', odds={}, status=status))
+        page = parse_page(json.dumps(dict(success=True, data=events)).encode(), at.isoformat())
+        def cleanup():
+            with self.connect() as db:
+                db.execute("DELETE FROM sgo_event_evidence WHERE kind='frame' AND event_id=ANY(%s)",
+                           ([event['eventID'] for event in events],))
+        self.addCleanup(cleanup)
+        with self.connect() as db:
+            upsert_frames(db, prepare_frames(page, []))
+        with patch('app.storage.store.connect', side_effect=self.connect):
+            pregame, truncated = retained_schedule(['NHL'], at, 2)
+            self.assertEqual(list(pregame), ['next', 'later'])
+            self.assertFalse(truncated)
+            pregame, truncated = retained_schedule(['NHL'], at, 1)
+            self.assertEqual(list(pregame), ['next'])
+            self.assertTrue(truncated)
+            live, truncated = retained_schedule(['NHL'], at, 4, include_live=True)
+            self.assertEqual(list(live), ['kickoff', 'started', 'next', 'later'])
+            self.assertFalse(truncated)
+
     async def test_old_provider_hold_does_not_mark_sgo_venues_held(self):
         from app.storage import ordinary_publication as live
         from app.collection.runtime_status import read_runtime
@@ -872,7 +904,7 @@ class SportsGameOddsAtomicIngress(LatestBoardFixture):
             current = live.dependencies(db)
             owner = read_runtime(db)
             states = {v: {'state':'available'} for v in ('novig','prophetx','kalshi','polymarket_us','pinnacle','sportsgameodds')}
-            policy = live.policy_identity()
+            policy = live.policy_identity(live.committed_aggregate_provider(db))
             old = live.project(result,current,owner,states,at=self.at,policy=policy,epoch=result['publication']['epoch'])
             changed = deepcopy(owner)
             changed['config']['aggregate_provider'] = 'sportsgameodds'

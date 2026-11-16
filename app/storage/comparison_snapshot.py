@@ -21,6 +21,10 @@ from app.comparison.cashflows import exact_wire as wire
 
 SPORTS=('NFL','NCAAF','NBA','NCAAB','MLB','NHL')
 ORDINARY_ARB_POLICY = 'ordinary-verified-opposition-1'
+EVIDENCE_LEASE_DURATION = timedelta(hours=2)
+EVIDENCE_LEASE_LIMIT = 32
+EVIDENCE_LEASE_LOCK = 901154
+AUTOMATIC_LEASE_GRACE = timedelta(seconds=30)
 
 
 class SnapshotOperationError(ValueError):
@@ -198,7 +202,7 @@ def capture(db, *, at=None, ordinary=False, event_ids=None, capture_binding=None
             _frame_dependencies=None, reference_provider=None):
     from app.dashboard.comparison_board import entries
     from app.dashboard.grouped_odds import reference_prices
-    from .ordinary_publication import aggregate_provider
+    from .ordinary_publication import committed_aggregate_provider
     at=at or utc();start=monotonic();out=dict(captured_at=at,quotes=[],references=[],games=[],sources={},issues=[],
         reference_provider=reference_provider)
     if price_basis:
@@ -211,7 +215,8 @@ def capture(db, *, at=None, ordinary=False, event_ids=None, capture_binding=None
         if owns_transaction:
             db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
         db.execute('SET LOCAL statement_timeout=30000')
-        out['reference_provider'] = reference_provider or aggregate_provider(db)
+        out['reference_provider'] = (committed_aggregate_provider(db)
+                                     if reference_provider is None else reference_provider)
         from app.fees.schedule_lifecycle import read as read_fee_schedule
         out['fee_lifecycle'] = read_fee_schedule(db)
         from app.fees.product_schedules import read_all as read_fee_products
@@ -558,14 +563,86 @@ def calculate(inputs,value=None, *, product=False):
         live_eligibility='not assessed; captured math does not establish current source availability or executable size')
 
 
-def current(db,result_id=None):
+def _renew_snapshot_rows(db, result_id):
+    db.execute('''WITH renewed AS (
+            UPDATE comparison_snapshot_result SET lease_until=now()+%s
+            WHERE id=%s RETURNING snapshot_id
+        )
+        UPDATE comparison_snapshot s SET lease_until=now()+%s
+        FROM renewed WHERE s.id=renewed.snapshot_id''',
+        (EVIDENCE_LEASE_DURATION, result_id, EVIDENCE_LEASE_DURATION))
+
+
+def renew_manual_head(db):
+    """Choose one committed manual head and renew its result and input together."""
     with db.transaction():
-        row=db.execute("""UPDATE comparison_snapshot_result SET lease_until=now()+interval '2 hours'
-            WHERE id=COALESCE(%s,(SELECT result_id FROM comparison_publication WHERE kind='manual' AND id=''))
-            RETURNING snapshot_id,result""",(result_id,)).fetchone()
-        if row is None:return None
-        db.execute("UPDATE comparison_snapshot SET lease_until=now()+interval '2 hours' WHERE id=%s",(row['snapshot_id'],))
-    return unpack(row['result'],db=db)
+        head = db.execute('''SELECT result_id FROM comparison_publication
+            WHERE kind='manual' AND id='' FOR SHARE''').fetchone()
+        if head is None:
+            return None
+        # A head swap may commit while acquiring the pointer lock. Renew in
+        # a new statement so it can see the result inserted by that swap.
+        _renew_snapshot_rows(db, head['result_id'])
+        return head['result_id']
+
+
+def renew_result_lease(db, result_id):
+    """Renew a timestamp lease for a selected result, with bounded automatic history."""
+    with db.transaction():
+        db.execute('SELECT pg_advisory_xact_lock(%s)', (EVIDENCE_LEASE_LOCK,))
+        # Keep the reservation visible to prune's SKIP LOCKED while checking
+        # capacity. Use the same database clock as the count and renewal.
+        row = db.execute('''SELECT automatic,lease_until>now()+%s AS retained
+            FROM comparison_snapshot_result WHERE id=%s FOR NO KEY UPDATE''',
+            (AUTOMATIC_LEASE_GRACE, result_id)).fetchone()
+        if row is None:
+            return False
+        if row['automatic'] and not row['retained']:
+            count = db.execute('''SELECT count(*) n FROM comparison_snapshot_result
+                WHERE automatic AND lease_until>now()+%s''', (AUTOMATIC_LEASE_GRACE,)).fetchone()['n']
+            if count >= EVIDENCE_LEASE_LIMIT:
+                raise SnapshotOperationError('Selected evidence lease capacity reached')
+        _renew_snapshot_rows(db, result_id)
+        return True
+
+
+def retain_evidence(db, result_id, lease_id=None):
+    """Create or renew a token bound to exactly one result."""
+    with db.transaction():
+        db.execute('SELECT pg_advisory_xact_lock(%s)', (EVIDENCE_LEASE_LOCK,))
+        db.execute("DELETE FROM comparison_result_reference WHERE kind='lease' AND expires_at<now()")
+        if not db.execute('SELECT 1 FROM comparison_snapshot_result WHERE id=%s FOR KEY SHARE',
+                          (result_id,)).fetchone():
+            raise SnapshotOperationError('Selected evidence expired')
+        if lease_id:
+            row = db.execute("""UPDATE comparison_result_reference SET expires_at=now()+%s
+                WHERE kind='lease' AND holder=%s AND result_id=%s RETURNING holder""",
+                (EVIDENCE_LEASE_DURATION, lease_id, result_id)).fetchone()
+            if not row:
+                raise SnapshotOperationError('Evidence lease expired or does not match')
+        else:
+            if db.execute("SELECT count(*) n FROM comparison_result_reference WHERE kind='lease'").fetchone()['n'] >= EVIDENCE_LEASE_LIMIT:
+                raise SnapshotOperationError('Selected evidence lease capacity reached')
+            lease_id = uuid4().hex
+            db.execute("""INSERT INTO comparison_result_reference (kind,holder,result_id,expires_at)
+                VALUES('lease',%s,%s,now()+%s)""", (lease_id, result_id, EVIDENCE_LEASE_DURATION))
+    return dict(result_id=result_id, lease_id=lease_id,
+                lease_seconds=int(EVIDENCE_LEASE_DURATION.total_seconds()), provider_requests=0)
+
+
+def release_evidence(db, lease_id):
+    db.execute("DELETE FROM comparison_result_reference WHERE kind='lease' AND holder=%s", (lease_id,))
+
+
+def current(db, result_id=None):
+    if result_id is None:
+        result_id = renew_manual_head(db)
+        if result_id is None:
+            return None
+    elif not renew_result_lease(db, result_id):
+        return None
+    row = db.execute('SELECT result FROM comparison_snapshot_result WHERE id=%s', (result_id,)).fetchone()
+    return unpack(row['result'], db=db)
 
 
 def insert_result(db, result, snapshot_id, packed, *, automatic=False):
@@ -578,7 +655,7 @@ def insert_result(db, result, snapshot_id, packed, *, automatic=False):
         (id,snapshot_id,assumptions,result,automatic,lease_until,settings_revision)
         VALUES(%s,%s,%s,%s,%s,clock_timestamp()+%s::interval,%s)''',
                (result['id'], snapshot_id, Jsonb(settings), packed, automatic,
-                '10 seconds' if automatic else '2 hours', revision))
+                timedelta(seconds=10) if automatic else EVIDENCE_LEASE_DURATION, revision))
 
 
 def prune(db):

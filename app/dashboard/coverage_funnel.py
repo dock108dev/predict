@@ -3,7 +3,7 @@ from collections import Counter, defaultdict
 from datetime import timedelta
 from itertools import product
 
-from app.collection.current_policy import aggregate_scope, native_markets, native_scope
+from app.collection.current_policy import aggregate_provider, aggregate_scope, native_markets, native_scope
 from app.collection.sportsgameodds_adapter import PROPHETX_BOOKMAKER_ID
 from app.comparison.game_phase import LIVE_SECONDS, PREGAME_SPORTSBOOK_SECONDS
 from app.comparison.sgo_reference import BEST_BOOKS
@@ -156,7 +156,7 @@ def configured_cohorts(config):
         return set()
     native = {(venue, venue, league, _family(family), 'full_game', phase)
               for venue, league, family, phase in product(NATIVE_VENUES, native_scope(config), native_markets(config), PHASES)}
-    if not config.get('aggregate_enabled') or config.get('aggregate_provider') != 'sportsgameodds':
+    if not config.get('aggregate_enabled') or aggregate_provider(config) != 'sportsgameodds':
         return native
     return native | {('sportsgameodds', venue, league, _family(family), 'full_game', phase)
                      for venue, league, family, phase in product((*SGO_OFFER_VENUES, *SGO_REFERENCE_VENUES),

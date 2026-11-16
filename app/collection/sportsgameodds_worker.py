@@ -16,7 +16,9 @@ import re
 from .current_ingress import call, operation
 from .current_policy import ROOT, PregameWindowClosed, aggregate_scope, live_enabled
 from .sportsgameodds_adapter import PROPHETX_BOOKMAKER_ID, Traversal, clock_sample
-from .sportsgameodds_collector import DailyObjectPacing, GuardedPageCollector, InvalidProviderPage, RejectedCursor
+from .sportsgameodds_collector import (
+    DailyObjectPacing, DiscoveryScopeMismatch, GuardedPageCollector, InvalidProviderPage, RejectedCursor,
+)
 from .sportsgameodds_current_rows import current_rows
 from .sportsgameodds_ledger import ObjectLedger
 from .sportsgameodds_schedule import (
@@ -94,27 +96,26 @@ def retained_schedule(scope, now, limit, *, include_live=False):
     """
     from app.storage.store import connect
     with connect() as db:
-        rows = db.execute('''SELECT f.event_id AS native_event_id,
-                COALESCE(f.facts->'event_context'->>'league',e.competition) AS competition,
-                COALESCE(f.facts->>'starts_at',e.scheduled_start) AS scheduled_start, f.facts
-            FROM current_sgo_event_frame f
-            LEFT JOIN current_event e ON e.native_event_id=f.event_id AND e.provider='sportsgameodds'
-            WHERE COALESCE(f.facts->'event_context'->>'league',e.competition)=ANY(%s)
-              AND COALESCE(f.facts->>'starts_at',e.scheduled_start)::timestamptz >= %s
-            ORDER BY COALESCE(f.facts->>'starts_at',e.scheduled_start)::timestamptz,f.event_id LIMIT %s''',
-            (list(scope), now-timedelta(hours=12) if include_live else now, limit+1)).fetchall()
-    result = {}
-    for row in rows[:limit]:
-        facts = row['facts']; context = facts.get('event_context') or {}
-        status = context.get('status') or {}
-        if any(status.get(k) is True for k in ('ended', 'completed', 'cancelled')):
-            continue
-        if not include_live and (context.get('phase') != 'pregame'
-                                 or datetime.fromisoformat(row['scheduled_start']) <= now):
-            continue
-        event_id = row['native_event_id']
-        result[event_id] = dict(event_id=event_id, league=row['competition'], starts_at=row['scheduled_start'],
-                                received_at=facts['received_at'], phase=context.get('phase', 'unknown'), status=status)
+        rows = db.execute('''WITH schedule AS (
+                SELECT f.event_id,
+                    COALESCE(f.facts#>>'{event_context,league}',e.competition) AS league,
+                    COALESCE(f.facts->>'starts_at',e.scheduled_start) AS starts_at,
+                    f.facts->>'received_at' AS received_at,
+                    f.facts#>>'{event_context,phase}' AS phase,
+                    f.facts#>'{event_context,status}' AS status
+                FROM current_sgo_event_frame f
+                LEFT JOIN current_event e ON e.native_event_id=f.event_id AND e.provider='sportsgameodds'
+            )
+            SELECT * FROM schedule WHERE league=ANY(%s)
+              AND starts_at::timestamptz >= %s
+              AND (%s OR (phase='pregame' AND starts_at::timestamptz > %s))
+              AND status->'ended' IS DISTINCT FROM 'true'::jsonb
+              AND status->'completed' IS DISTINCT FROM 'true'::jsonb
+              AND status->'cancelled' IS DISTINCT FROM 'true'::jsonb
+            ORDER BY starts_at::timestamptz,event_id LIMIT %s''',
+            (list(scope), now-timedelta(hours=12) if include_live else now, include_live, now, limit+1)).fetchall()
+    result = {row['event_id']: dict(row, phase=row['phase'] or 'unknown', status=row['status'] or {})
+              for row in rows[:limit]}
     return result, len(rows) > limit
 
 
@@ -596,6 +597,9 @@ class SportsGameOddsWorker:
                 params = self.params(league=league, starts_after=traversal.starts_after, cursor=cursor)
                 try:
                     page = await self._fetch(params)
+                except DiscoveryScopeMismatch:
+                    self.metrics.setdefault('discovery_complete', {})[league] = False
+                    raise
                 except RejectedCursor:
                     # Abandon only this incomplete walk. Keep its reserved cost.
                     self.discovery_progress.pop(league, None)
@@ -761,6 +765,9 @@ class SportsGameOddsWorker:
         if str(exc) == 'request rate limit':
             self.phase, code = 'waiting_for_rate', 'sgo_request_rate'
             reason = 'SportsGameOdds is waiting for its request limit to reset.'
+        elif isinstance(exc, DiscoveryScopeMismatch):
+            self.phase, code = 'waiting_for_retry', 'sgo_discovery_league_mismatch'
+            reason = 'SportsGameOdds returned events outside the requested league. Discovery did not advance.'
         elif isinstance(exc, (TransportFailure, RejectedCursor)) or str(exc) in (
                 'provider rate limited', 'provider response unsuccessful', 'provider page admission interrupted'):
             self.phase, code = 'waiting_for_retry', 'sgo_scan_interrupted'

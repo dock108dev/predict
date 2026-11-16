@@ -1,4 +1,5 @@
 import asyncio
+import json
 import sqlite3
 from functools import wraps
 from datetime import datetime, timedelta, timezone
@@ -131,11 +132,15 @@ async def test_single_event_alternate_refresh_keeps_event_billing_and_book_scope
 
 @run_async
 async def test_refresh_attributes_returned_events_not_requested_ids(tmp_path):
-    c, ledger, _, _ = setup(tmp_path, PageResponse(200, b'{}', NOW.isoformat(), None))
-    page = SimpleNamespace(events=[{'league': 'NBA', 'phase': 'live'},
-                                   {'league': 'NCAAB', 'phase': 'started'}])
-    with patch('app.collection.sportsgameodds_collector.parse_page', return_value=page):
-        await c.fetch({'eventIDs': 'a,b', 'oddID': PARAMS['oddID'], 'limit': 2}, 'private', now=NOW)
+    from tests.test_sportsgameodds_adapter import response
+
+    first, = response()['data']
+    first.update(eventID='a', status=dict(first['status'], started=True, live=True))
+    second = dict(first, eventID='b', leagueID='NCAAB', status=dict(first['status'], live=False))
+    body = json.dumps(dict(success=True, data=[first, second])).encode()
+    c, ledger, _, _ = setup(tmp_path, PageResponse(200, body, NOW.isoformat(), None))
+    page = await c.fetch({'eventIDs': 'a,b', 'oddID': PARAMS['oddID'], 'limit': 2}, 'private', now=NOW)
+    assert {event['event_id'] for event in page.events} == {'a', 'b'}
     assert ledger.charge_breakdown('w', since=NOW - timedelta(seconds=1)) == [
         {'category': 'event_refresh', 'league': 'NBA', 'phase': 'live', 'objects': 1},
         {'category': 'event_refresh', 'league': 'NCAAB', 'phase': 'started', 'objects': 1},

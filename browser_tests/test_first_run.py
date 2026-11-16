@@ -24,6 +24,14 @@ def first_use(tab, base, archive_directory):
     expect(tab.get_by_role("link", name="Arbitrage")).to_be_visible()
     expect(tab.get_by_role("button", name="Refresh list")).to_be_visible()
     expect(tab.get_by_role("link", name="Find my game ↗")).to_be_visible()
+    saved = tab.get_by_role("link", name="Saved odds", exact=True)
+    expect(saved).to_have_count(1)
+    expect(
+        tab.locator("#desk-readiness").get_by_role("link", name="Saved odds")
+    ).to_be_visible()
+    saved.focus()
+    tab.keyboard.press("Tab")
+    expect(tab.get_by_role("link", name="Source status", exact=True)).to_be_focused()
     tab.get_by_role("link", name="Source status", exact=True).click()
     setup = tab.locator("#source-setup")
     expect(setup.locator("summary")).to_be_visible()
@@ -250,6 +258,19 @@ def test_first_use_without_credentials(width, tmp_path, monkeypatch):
             errors = []
             tab.on("pageerror", lambda error: errors.append(str(error)))
             first_use(tab, base, tmp_path)
+            if width == 390:
+                tab.add_style_tag(
+                    content="html { font-size: 200%; } .desk-app { font-size: .9375rem; }"
+                )
+                nav = tab.get_by_role("navigation", name="Predict", exact=True)
+                assert nav.get_by_role("link", name="Opportunities").evaluate("""link => {
+                    const text = document.createRange();
+                    text.selectNodeContents(link);
+                    return text.getClientRects().length === 1;
+                }""")
+                assert tab.evaluate(
+                    "document.documentElement.scrollWidth === innerWidth"
+                )
             assert reads and all("timezone" not in params for params in reads)
             assert not errors, errors
         browser.close()

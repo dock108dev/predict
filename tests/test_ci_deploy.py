@@ -1,14 +1,148 @@
 from pathlib import Path
 from runpy import run_path
 import subprocess
+import sys
+import json
 
 import pytest
+
+from tests.ci_support import load
 
 
 ROOT = Path(__file__).resolve().parents[1]
 RELEASE = ROOT / "deploy/release.sh"
 ROLES = ("web", "collector", "archive")
 DIGEST_PREFIX = "ghcr.io/dock108dev/predict@sha256:"
+
+
+@pytest.mark.parametrize(
+    (
+        "image",
+        "stages",
+        "deploy",
+        "deploy_step",
+        "publish_only",
+        "enabled",
+        "branch",
+        "result",
+        "reason",
+    ),
+    [
+        (
+            "success",
+            ("success",) * 3,
+            "success",
+            "success",
+            False,
+            True,
+            True,
+            "PASS",
+            None,
+        ),
+        (
+            "success",
+            ("success",) * 3,
+            "skipped",
+            None,
+            True,
+            True,
+            True,
+            "PASS",
+            "Publish-only",
+        ),
+        (
+            "success",
+            ("success",) * 3,
+            "skipped",
+            None,
+            False,
+            False,
+            True,
+            "PASS",
+            "deployment variable",
+        ),
+        (
+            "failure",
+            ("success", "failure", "skipped"),
+            "skipped",
+            None,
+            False,
+            True,
+            True,
+            "FAIL",
+            "did not succeed",
+        ),
+        ("success", ("success",) * 3, "skipped", None, False, True, True, "FAIL", None),
+        ("success", ("success",) * 3, "success", None, False, True, True, "FAIL", None),
+        (
+            "cancelled",
+            (),
+            "skipped",
+            None,
+            False,
+            True,
+            True,
+            "CANCELLED",
+            "did not succeed",
+        ),
+        ("skipped", (), "skipped", None, False, True, False, "SKIPPED", "branch-only"),
+    ],
+)
+def test_release_summary_uses_observed_stages_and_intentional_skips(
+    image, stages, deploy, deploy_step, publish_only, enabled, branch, result, reason
+):
+    report = load("release_report")
+    needs = {
+        "release-image": dict(
+            result=image, outputs=dict(zip(("proxy", "smoke", "publish"), stages))
+        ),
+        "deploy-hetzner": dict(result=deploy, outputs={"deploy": deploy_step}),
+    }
+    overall, steps, skipped, _, _ = report.evaluate(
+        needs, branch=branch, publish_only=publish_only, deploy_enabled=enabled
+    )
+    assert overall == result
+    if reason:
+        assert reason in skipped
+    else:
+        assert skipped is None
+    if deploy == "skipped":
+        assert steps["deploy"] == "SKIPPED"
+
+
+def test_release_workflow_report_preserves_failed_stage_and_retains_artifact(
+    tmp_path, monkeypatch
+):
+    monkeypatch.setenv("GITHUB_REF_TYPE", "branch")
+    monkeypatch.setenv("GITHUB_SHA", "a" * 40)
+    monkeypatch.setenv("RELEASE_DEPLOY_ENABLED", "true")
+    monkeypatch.setenv("RELEASE_PUBLISH_ONLY", "false")
+    summary = tmp_path / "job-summary.md"
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(summary))
+    monkeypatch.setenv(
+        "RELEASE_OUTCOMES",
+        json.dumps(
+            {
+                "release-image": {
+                    "result": "failure",
+                    "outputs": {"proxy": "success", "smoke": "failure"},
+                },
+                "deploy-hetzner": {"result": "skipped"},
+            }
+        ),
+    )
+    process = subprocess.run(
+        [sys.executable, str(ROOT / "scripts/ci/release_report.py")],
+        cwd=tmp_path,
+        timeout=10,
+    )
+    assert process.returncode == 1
+    result = json.loads((tmp_path / "test-results/release/metrics.json").read_text())
+    assert result["tested_sha"] == "a" * 40
+    assert result["steps"] == dict(
+        proxy="PASS", smoke="FAIL", publish="NOT RUN", deploy="SKIPPED"
+    )
+    assert "What was tested and why it matters" in summary.read_text()
 
 
 @pytest.mark.parametrize(

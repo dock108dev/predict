@@ -645,6 +645,7 @@ def backfill_prophetx(db, *, at):
     from collections import defaultdict
     from app.collection.current_policy import aggregate_scope
     from app.collection.runtime_status import AUTHORITY_LOCK, read_runtime
+    from app.collection.current_policy import aggregate_provider
     from app.collection.sportsgameodds_adapter import PROPHETX_BOOKMAKER_ID, Page
     from app.collection.sportsgameodds_current_rows import current_rows
     from .current_rows import CurrentRowStore, contract_id
@@ -657,7 +658,7 @@ def backfill_prophetx(db, *, at):
         config = owner['config']
         if (not owner['active'] or owner.get('global_stopped')
                 or {'sportsgameodds', 'prophetx'} & set(owner.get('paused_sources', ()))
-                or config.get('aggregate_provider') != 'sportsgameodds' or not config.get('aggregate_enabled')):
+                or aggregate_provider(config) != 'sportsgameodds' or not config.get('aggregate_enabled')):
             return 0
         rows = db.execute('''SELECT f.event_id,f.facts AS frame,q.id,q.revision,q.facts
             FROM current_sgo_event_frame f

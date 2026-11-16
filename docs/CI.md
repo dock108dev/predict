@@ -11,22 +11,25 @@ The [CI workflow](../.github/workflows/ci.yml) runs on pull requests, pushes to
 `main`, merge groups, and manual dispatch. Its Ubuntu 24.04 runners use Python
 3.14 and Node 24.
 
-| Job | What it checks |
-| --- | --- |
-| Offline | Portable Python and client behavior, compilation, JavaScript syntax, generated frontend drift, and coverage |
-| Source, security and package | Ruff, CI formatting, actionlint, shell syntax, maintained links, report validation, dependency locks, secret and advisory scans, and a fresh wheel install with HTTP startup |
-| PostgreSQL storage | Four shards on disposable PostgreSQL 16 covering migrations, transactions, admission, publication, expiry, and recovery |
-| Ordinary browser journey | Locked browser tooling with intercepted or loopback fixtures for first use, stable ranked refresh, desktop and mobile fee details, and Scanner journeys |
+| Product risk | Exact workflow, job and entry point | Event and platform | Policy |
+| --- | --- | --- | --- |
+| Incorrect prices, fees, matching or delivery | `CI` / `Offline checks` / `sh scripts/check-ci` checks portable Python and Node behavior, compilation, JavaScript syntax, generated assets and the test manifest. It retains JUnit and Python line and branch coverage. | PR, `main` push, merge group, manual / Ubuntu 24.04 | Required by `CI readiness` |
+| Unshippable package or unsafe source | `CI` / `Source, security and package` runs Ruff, actionlint, shell syntax, docs and `pytest tests/test_ci_*.py`, plus the redacted Gitleaks scan, pip-audit for both lock sources, and a wheel build, locked install and HTTP startup. | Same CI events / Ubuntu 24.04 | Required by `CI readiness`. Duplication and complexity measurements are advisory. |
+| Transaction, migration or recovery failure | `CI` / `PostgreSQL storage` calls `Shared disposable storage assurance`. Four shards run `scripts/ci/postgres.py` against temporary PostgreSQL 16 databases. | Same CI events and assurance / Ubuntu 24.04 | Required by the calling workflow |
+| Desk and Scanner journeys break | `CI` / `Ordinary browser journey` / `pytest browser_tests` uses locked Chromium and intercepted or loopback fixtures for first use, ranked refresh, keyboard, fee details and Scanner journeys. | Same CI events / Ubuntu 24.04 | Required by `CI readiness` |
+| Supported macOS versions or dependencies drift | `Scheduled assurance` / `macOS Python 3.11` and `macOS Python 3.14` run portable checks and wheel smoke on macOS 15. `Dependency refresh` audits locks on Ubuntu. `CI health sample` reads bounded Actions history on Ubuntu. | Weekly default branch or manual scope | Required within the selected assurance scope. History is advisory. |
+| Deployment uses an unverified image | `Deploy Predict dev server` / `Build and verify Hetzner images` runs the proxy and Compose smoke scripts before GHCR publication. `Deploy Predict to Hetzner` consumes the verified digests, and `Release result` retains the stage outcomes. | Manual branch dispatch / Ubuntu 24.04 | Release workflow. The repo variable, dispatch input and `hetzner` environment govern deployment. |
 
 `CI readiness` requires all four jobs to pass in the same run. Missing, failed,
 cancelled, or unexpectedly skipped required jobs fail the gate. To enforce the
 check for merges, require `CI readiness` in a GitHub branch protection rule or
 ruleset. PR runs validate GitHub's merge commit and report the PR head separately.
-CI concurrency cancels superseded runs within the same pull request.
+CI cancels superseded runs within the same pull request.
 
 [Scheduled assurance](../.github/workflows/assurance.yml) runs Mondays at 07:23
-UTC on the default branch. It checks macOS with Python 3.11 and 3.14, reuses the
-PostgreSQL workflow, refreshes dependency advisories, and samples CI health.
+UTC on the default branch, subject to runner scheduling. It tests macOS with
+Python 3.11 and 3.14, runs PostgreSQL checks, refreshes dependency advisories,
+and samples CI history.
 Manual scopes are `all`, `compatibility`, `postgres`, and `security`. Every
 scope includes the advisory health sample. CodeQL and Dependabot run separately
 from readiness. Check jobs set `contents: read` and leave checkout credentials out
@@ -95,12 +98,25 @@ optional `scripts/ci/export.py` command validates
 set. Ordinary setup and portable tests use the shipped source and authored
 fixtures.
 
+The test contract checks that the portable dispositions and the quality job's
+`tests/test_ci_*.py` collection agree. A file marked quality-only with a name
+outside that glob fails validation. SQL `--tests` reports identify a focused run
+and retain its exact targets separately from the full registered shard lane.
+
+### Selecting local cases
+
+Use pytest node IDs or affected modules for routine changes. Check discovery
+with `--collect-only -q` when a selector is uncertain. Pass SQL node IDs to
+`postgres.py --tests`. An unexpected zero-case pytest result exits with code
+5. When a shared fixture or configuration change has unclear reach, run the
+affected suite. Pytest's `--lf` uses failure history.
+
 ## Reports and dependencies
 
 GitHub job summaries collect check, coverage, and case outcomes. Artifacts are
 retained for 14 days. The compact readiness report is retained for 90 days,
-subject to GitHub's retention policy. Local reports default to ignored `test-results/`. Use a
-fresh output directory for each invocation that preserves existing reports.
+subject to GitHub's retention policy. Local reports go to the ignored
+`test-results/` directory by default. Use a fresh output directory per run.
 JUnit summaries count serialized cases separately from pytest's totals, which
 can include subtests. Inconsistent reports fail required checks. Coverage
 describes the executed scope. Fixture results do not establish live provider
@@ -110,8 +126,12 @@ The readiness summary collects advisory measurements from the same workflow.
 It reports named correctness cases for quote authority, financial eligibility,
 exact pairing, accounting, and outage recovery. The outcome requires the
 listed case evidence and shows failures, skips, and missing cases explicitly.
-Artifacts from earlier attempts are eligible when they belong to the same run
-and tested commit. Required job conclusions still determine the gate.
+Case artifacts must match the run, commit and execution attempt. An earlier
+artifact is eligible only when the Actions Jobs API identifies that job as a
+successful job carried over into the rerun. If the API or the new artifact is
+unavailable, the missing case evidence stays visible. The advisory summary
+lists carried-over artifacts separately. Required job conclusions determine the
+gate. [GitHub rerun behavior](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/re-run-workflows-and-jobs)
 
 Python coverage reports lines and branches separately, with component totals
 and coverage of executable lines and branch origins added or modified in the
@@ -127,9 +147,17 @@ Ruff complexity findings, secret and dependency audit counts, the slowest
 completed job and the sampled first-attempt pass rate. Dependency count changes
 can reflect updates to advisory databases. Timing measurements come from the
 existing browser, PostgreSQL selection and desk recovery fixtures, including the
-fixture and sample count. They describe the test environment and are useful for
-spotting large changes on comparable runners. The compact `signals.json` keeps
-commit and artifact identities, coverage gaps, named cases and timing samples.
+fixture and sample count. Timing deltas require the same fixture, sample count,
+response budget where applicable, runner class, Python and PostgreSQL or
+Playwright versions. Older reports missing that metadata still show their
+measurements. The compact `signals.json` keeps commit and artifact identities,
+coverage gaps, named cases and timing samples.
+
+Manual release attempts retain `release-result-<run>-<attempt>` for 14 days.
+The report lists proxy, Compose smoke, digest publication and deployment step
+outcomes. It records the reason for a publish-only, disabled or unreached
+deployment. An unexpectedly skipped requested deployment is visible as a
+failure. The report job can read contents and receives no deployment secrets.
 
 Gitleaks scans the publishable worktree. Published findings include validated
 relative paths, rule IDs, and line numbers. Dependency audits check the two

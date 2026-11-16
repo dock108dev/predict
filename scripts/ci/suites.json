@@ -641,6 +641,7 @@
       "tests/test_sgo_rule_evidence.py",
       "tests/test_sportsgameodds_adapter.py",
       "tests/test_sportsgameodds_collector.py",
+      "tests/test_sportsgameodds_discovery.py",
       "tests/test_sportsgameodds_ledger.py",
       "tests/test_sportsgameodds_schedule.py",
       "tests/test_sportsgameodds_service_selection.py",

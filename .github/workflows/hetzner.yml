@@ -17,6 +17,7 @@ concurrency:
 
 env:
   RELEASE_SHA: ${{ github.sha }}
+  CI_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
 jobs:
   release-image:
@@ -29,12 +30,16 @@ jobs:
       packages: write
     outputs:
       images: ${{ steps.publish.outputs.images }}
+      proxy: ${{ steps.proxy.outcome }}
+      smoke: ${{ steps.smoke.outcome }}
+      publish: ${{ steps.publish.outcome }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
       - name: Verify public proxy routes and Admin authentication
+        id: proxy
         run: |
           sudo apt-get update
           package=$(mktemp -d)
@@ -42,6 +47,7 @@ jobs:
           (cd "$package" && apt-get download caddy && dpkg-deb -x ./*.deb .)
           CADDY_BIN="$package/usr/bin/caddy" bash deploy/smoke-proxy.sh
       - name: Build service images and smoke test Compose
+        id: smoke
         run: |
           [[ $(git rev-parse HEAD) == "$RELEASE_SHA" ]]
           python3 deploy/image-inputs.py > "$RUNNER_TEMP/predict-image-inputs"
@@ -84,8 +90,11 @@ jobs:
     permissions:
       contents: read
       packages: read
+    outputs:
+      deploy: ${{ steps.deploy.outcome }}
     steps:
       - name: Deploy the smoke-tested images
+        id: deploy
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SSH_KEY: ${{ secrets.HETZNER_SSH_KEY }}
@@ -118,3 +127,27 @@ jobs:
           printf '%s\n' predict-images-v1 "$GITHUB_ACTOR" "$GH_TOKEN" "$PREDICT_IMAGES" | ssh -i "$keydir/key" \
             -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
             -o "UserKnownHostsFile=$keydir/known_hosts" -o ConnectTimeout=15 "predict-deploy@$SSH_HOST"
+  report:
+    name: Release result
+    needs: [release-image, deploy-hetzner]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Report smoke, publication and deploy outcomes
+        env:
+          RELEASE_OUTCOMES: ${{ toJSON(needs) }}
+          RELEASE_PUBLISH_ONLY: ${{ inputs.publish_only }}
+          RELEASE_DEPLOY_ENABLED: ${{ vars.HETZNER_DEPLOY_ENABLED == 'true' }}
+        run: python3 scripts/ci/release_report.py
+      - name: Retain release result
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-result-${{ github.run_id }}-${{ github.run_attempt }}
+          path: test-results/release/
+          if-no-files-found: error
+          retention-days: 14

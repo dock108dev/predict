@@ -491,6 +491,13 @@ class SuiteContractTests(unittest.TestCase):
             added.write_text("")
             with self.assertRaisesRegex(ValueError, "classification drift"):
                 module.validate(root)
+            policy["quality"] = ["tests/test_new.py"]
+            path.write_text(json.dumps(policy))
+            with self.assertRaisesRegex(
+                ValueError, "Quality job collection drift.*test_new.py"
+            ):
+                module.validate(root)
+            policy["quality"] = []
             added.unlink()
             policy["archival_nodes"]["tests/test_unit.py::Cases::test_missing"] = (
                 "old oracle"

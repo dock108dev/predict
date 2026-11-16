@@ -132,8 +132,8 @@ attempts, holds, balances and due times are preserved, no new accounting epoch i
 created, and no provider request is made. It can run outside collection hours;
 ordinary paid collection still waits for 09:00 Eastern. Missing or contradictory
 clock evidence, uncovered attempts and incompatible windows continue to refuse.
-Do not clear the pause or edit the ledger manually to bypass that proof. See the
-[repair evidence](acquisition.md#recovery-from-an-interrupted-os-clock-check).
+Keep the pause in place until accounting continuity is established.
+[Acquisition and accounting](acquisition.md#accounting-and-observation)
 
 ## Socket and resource cleanup
 

@@ -10,7 +10,7 @@ from app.storage.sportsgameodds_reference import read_event, read_event_frame
 from app.storage.store import connect
 from .local_security import PublicRequestError
 from .snapshot_display import odds
-from .trade_desk import sportsbook_selection
+from .desk_sportsbooks import sportsbook_selection
 
 BOOKS = {'kalshi': 'kalshi', 'polymarket_us': 'polymarket'}
 

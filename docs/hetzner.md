@@ -45,10 +45,12 @@ the branch's selected commit, publishes the web, collector, and archive images
 to GHCR, and sends their digests to `/srv/predict/release.sh` over SSH. If the
 branch advances during the run, dispatch again for the new tip. Select
 `publish_only` to run the build, smoke checks, and publication without deploying.
+The **Release result** job retains the exact SHA and proxy, Compose,
+publication and deployment outcomes in the run summary and its release-result
+artifact. Publish-only and disabled deployment appear as intentional skips.
 
 The deploy job requires `HETZNER_DEPLOY_ENABLED=true` and a branch allowed by
-the `hetzner` GitHub environment. Its current rules allow `main` for manual
-deployment. Set `HETZNER_HOST` and the pinned `HETZNER_KNOWN_HOSTS`
+the `hetzner` GitHub environment. Set `HETZNER_HOST` and the pinned `HETZNER_KNOWN_HOSTS`
 entry as environment variables and `HETZNER_SSH_KEY` as an environment secret.
 The key belongs to the restricted `predict-deploy` account. GitHub's job token
 authenticates the GHCR pull and is discarded after use.

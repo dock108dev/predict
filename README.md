@@ -6,29 +6,24 @@ views. In-game collection and display require `live_enabled`, which defaults
 to `false`.
 
 Use **Browse odds** or **Find my game** to compare full-game winners, spreads,
-and totals. The SportsGameOdds-backed pregame desk shows the latest posted price
-and updates the list and trade preview when **Auto-update** is on. **Refresh list**
-reads the latest board on demand. **Trading fees** explains the supported retail
-estimates. **Saved odds** opens recorded captures available on the installation.
+and totals. **Saved odds** opens available recorded captures.
 [Desk and inspection guide](docs/ui-design.md#current-comparison-interface)
 
 ## Requirements and quickstart
 
 Local operation requires macOS, Python 3.11 or later, and PostgreSQL tools.
-Use Python 3.14 and PostgreSQL 16 for new setups. The launcher selects tools
-that match an existing cluster's major version. Client tests use Node 24.
-Run these commands from the repository root to start the web app. The sample
-configuration leaves acquisition disabled.
+The commands below use Python 3.14 and PostgreSQL 16. Run them from the
+repository root. The sample configuration leaves acquisition disabled.
 
 ```sh
-python3 -m venv .venv
+python3.14 -m venv .venv
 .venv/bin/python -m pip install -e '.[stream]'
 mkdir -p .local
 cp -n config/current.example.json .local/predict-current-config.json
-scripts/opportunity-board check-config
+.venv/bin/python scripts/opportunity-board check-config
 scripts/project-postgres start
 .venv/bin/python -m app.storage migrate
-scripts/opportunity-board start --role app --port 8784
+.venv/bin/python scripts/opportunity-board start --role app --port 8784
 ```
 
 Open the loopback address printed by the launcher. If port 8784 is free,
@@ -38,28 +33,18 @@ prices to show current offers. Choose **Saved odds** to open an available captur
 
 ## Collect prices
 
-Set up read-only credentials and select the sports and markets before turning
-on `enabled`. The sample selects SportsGameOdds as the aggregate provider.
-`aggregate_enabled` opts into the selected provider's metered collection.
-[Source configuration and credentials](docs/configuration.md#source-configuration)
+Set up [source configuration and credentials](docs/configuration.md#source-configuration)
+before enabling collection. Start the data process with
+`.venv/bin/python scripts/opportunity-board start --role data`.
 
-```sh
-scripts/opportunity-board check-config
-scripts/opportunity-board start --role data
-scripts/opportunity-board status
-scripts/opportunity-board stop
-```
-
-The launcher runs the app and collector as independent processes against a
-socket-only PostgreSQL cluster. Use `--role app` or `--role data` to target one
-process. Admin shows source health, spending, Stop controls, and the database
-browser. [Process lifecycle](docs/data-app-runtime-contract.md) ·
+Admin shows source health, spending, and Stop controls.
+[Start and stop individual roles](docs/configuration.md#start-and-stop) ·
 [Storage ownership](docs/storage-ownership.md) · [Hetzner runbook](docs/hetzner.md)
 
 ## Testing and maintenance
 
-[Development](docs/development.md) explains the locked test environment. Basic
-checks after installing those tools are:
+[Development](docs/development.md#install-tools) explains the locked test
+environment, including Node 24 for client checks.
 
 ```sh
 .venv/bin/python -m pytest -q tests/test_ev09_asset_delivery.py

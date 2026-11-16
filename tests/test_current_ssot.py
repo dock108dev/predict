@@ -53,6 +53,50 @@ class RuntimeEntrypoints(unittest.TestCase):
         serve.assert_called_once_with(app.return_value, host='127.0.0.1', port=8799,
                                       access_log=None, handler_cancellation=True)
 
+    def test_desk_cache_and_postgres_use_the_same_validated_socket(self):
+        from app.dashboard import opportunity_board
+        from app.storage import store
+
+        with (
+            tempfile.TemporaryDirectory() as folder,
+            patch.object(opportunity_board, 'ROOT', Path(folder)),
+            patch.object(store, 'ROOT', Path(folder)),
+            patch('sys.argv', ['predict']),
+            patch('app.collection.runtime_client.RuntimeClient') as client,
+            patch.object(opportunity_board, 'create_app') as app,
+            patch.object(opportunity_board.web, 'run_app'),
+            patch.object(store.psycopg, 'connect') as pg,
+        ):
+            for environment, expected in (
+                ({}, str(Path(folder) / '.local/pgsocket')),
+                ({'PREDICT_DB_SOCKET': '/fixture/socket'}, '/fixture/socket'),
+            ):
+                with self.subTest(environment=environment), patch.dict('os.environ', environment, clear=True):
+                    store.connect()
+                    opportunity_board.main()
+                    self.assertEqual(pg.call_args.kwargs['host'], expected)
+                    cache = app.call_args.kwargs['desk_cache']
+                    self.assertEqual(cache.path.name, store.hashed(expected) + '.sqlite3')
+
+            pg.reset_mock()
+            app.reset_mock()
+            client.reset_mock()
+            with (
+                patch.dict('os.environ', PREDICT_DB_SOCKET='relative/socket'),
+                patch('sys.stderr', new_callable=io.StringIO),
+                self.assertRaises(SystemExit) as error,
+            ):
+                opportunity_board.main()
+            self.assertEqual(error.exception.code, 2)
+            with (
+                patch.dict('os.environ', PREDICT_DB_SOCKET='relative/socket'),
+                self.assertRaisesRegex(ValueError, 'absolute PostgreSQL socket'),
+            ):
+                store.connect()
+            pg.assert_not_called()
+            client.assert_not_called()
+            app.assert_not_called()
+
     def test_data_runtime_owns_foreground_configuration(self):
         from app.collection import data_runtime
         with patch('sys.argv', ['predict-data', '--current-config', 'synthetic.json']), \

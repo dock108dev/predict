@@ -13,7 +13,10 @@ Opportunities shows moneyline, spread, and total separately for each game.
 Expand a card to see more outcomes for that market. The EV list compares quotes
 for the exact outcome. The selected sportsbook, its odds, and other available
 book prices appear alongside the fair-odds reference.
-**Positive only** filters the selected calculation basis. Open a quote to see the
+When EV is unavailable, the card gives the reason alongside the prices. The
+Arbitrage cards align each leg's venue and odds and show funding, lowest payout,
+and worst profit or loss together. **Positive only** sits beside the calculation
+basis it filters. Open a quote to see the
 prices, fees, model assumptions, and settlement details available for that offer.
 [Calculation basis](benchmark-ev.md) · [Trading fee policy](fee-coverage-policy.md)
 
@@ -38,14 +41,17 @@ terms and calculations. **Source status** links to collection information when
 the data worker is stopped or unavailable. [Data and freshness limits](market-data-gaps.md)
 
 American odds are the default. The **Decimal** option changes display formatting
-without changing ranking or calculation inputs. The game table scrolls within
-narrow windows. Dialogs support keyboard focus, Escape, and return to the
+without changing ranking or calculation inputs. On a narrow screen, the
+game table keeps the outcome column in place. The button above it moves to
+more odds columns. Dialogs support keyboard focus, Escape, and return to the
 opening control.
 
 ## Saved odds and diagnostics
 
-**Saved odds** opens the recorded captures available on this installation. Capture
-time governs the archived price, freshness, and applicable fee evidence.
+While the desk is waiting for its first prices, **Saved odds** and **Source status**
+appear above the filters. **Saved odds** opens the recorded captures available on
+this installation. Capture time governs the archived price, freshness, and
+applicable fee evidence.
 [Open a saved capture](development.md#frozen-replay)
 
 **Raw Odds** shows source-local evidence. **Scanner** uses observed depth for

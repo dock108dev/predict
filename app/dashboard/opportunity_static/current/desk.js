@@ -1,4 +1,5 @@
 import './ui-common.js';
+import {createDeskPolling} from './desk-polling.js';
 import {createDeskDrawer, position} from './desk-drawer.js';
 import {arbCard, evCard, gameMatrix, updateMatrixCues} from './opportunity-cards.js';
 import {displayRows, holdDeskPage} from './desk-stability.js';
@@ -152,6 +153,7 @@ if (browse) {
     }
   });
   $('desk-path').append(previousView);
+  if (gameKey) $('desk-path').append($('browse-link'));
 }
 $('replay-link').href = replayURL(arb ? 'arbs' : 'ev', 'frozen');
 filters.elements.timezone.options[0].textContent = `Default (${defaultZone.replaceAll('_', ' ')})`;
@@ -461,10 +463,10 @@ function refreshStatus() {
       ? (stake.validity.valid && stake.value ? 'Updating payoff for the entered stake…' : 'Enter a valid stake to calculate the payoff.')
     : replay ? (state.request ? 'Loading replay…' : 'Replay clock is fixed.')
     : state.request ? 'Checking for updates…'
-      : postedDesk() && !autoUpdate ? 'Updates held. Refresh to show the latest prices.' : '';
+      : postedDesk() && !autoUpdate ? 'Auto-update paused.' : '';
   $('refresh-status').textContent = mode;
   const invalidWindow = !filters.elements.time_to.validity.valid;
-  $('refresh-status').classList.toggle('sr-only', !invalidWindow && !(arb && state.page && !pairResultsReady()) && !(postedDesk() && !autoUpdate));
+  $('refresh-status').classList.toggle('sr-only', !invalidWindow && !(arb && state.page && !pairResultsReady()));
   const refresh = $('refresh-list');
   const label = state.loadFailed ? 'Retry' : 'Refresh list';
   if (refresh.textContent !== label) refresh.textContent = label;
@@ -502,7 +504,6 @@ function emptyResults(page, publication) {
     actions.append(link('Browse current odds', '/browse-odds'));
   } else if (search && !page.matched_offer_count && page.state !== 'initializing') {
     title = `No results for “${search}”`;
-    detail = 'Try another team name or matchup, or broaden your filters.';
     actions.append(button('Clear search', () => {
       filters.elements.search.value = '';
       applyFilters();
@@ -511,6 +512,7 @@ function emptyResults(page, publication) {
   } else if (page.state === 'initializing' && !publication.retained_prices) {
     const issue = collectionIssue(publication.data_runtime);
     title = issue || 'Waiting for the first prices';
+    if (opportunityView) actions.append(link('Saved odds', $('replay-link').href, 'desk-action desk-primary'));
     if (issue) actions.append(link('Source status', '/admin?section=sources', 'desk-action'));
   } else if (comparable && browse && !gameKey) {
     title = 'No matching odds';
@@ -526,7 +528,6 @@ function emptyResults(page, publication) {
   } else if (!page.calculation_reason && page.matched_offer_count === 0 && publication.current_prices
       && (replay || filters.elements.search.value || $('filter-count').textContent !== '0')) {
     title = 'No offers match these filters';
-    detail = 'Try another matchup or broaden your selection.';
     actions.append(button('Edit filters', () => $('open-filters').click()));
   } else if (arb) {
     title = 'No arbitrage calculations available';
@@ -542,7 +543,9 @@ function emptyResults(page, publication) {
       : page.calculation_reason || 'No current offers have the inputs required for the selected calculation.';
     if (opportunityView && page.calculation_reason) showAlternates();
   }
-  if (opportunityView) actions.append(browsingLink('Browse odds ↗'));
+  if (opportunityView && (page.state !== 'initializing' || publication.retained_prices)) {
+    actions.append(browsingLink('Browse odds ↗'));
+  }
   if (!replay && page.retained_game) {
     const capture = page.retained_game;
     const query = new URLSearchParams({view:'game', dataset:'retained', game_key:capture.game_key,
@@ -623,10 +626,20 @@ function render(page, keepNodes = false) {
     }
   }
   const publication = page.publication || {};
+  const awaitingPrices = opportunityView && page.state === 'initializing'
+    && !rows.length && !publication.retained_prices;
+  const readiness = $('desk-readiness');
+  readiness.hidden = !awaitingPrices;
+  if (awaitingPrices) {
+    const start = emptyResults(page, publication);
+    if (!readiness.firstElementChild?.isEqualNode(start)) readiness.replaceChildren(start);
+  } else if (readiness.hasChildNodes()) readiness.replaceChildren();
+  $('replay-link').hidden = awaitingPrices;
+  if (opportunityView) $('browse-link').classList.toggle('desk-primary', !awaitingPrices);
   const notice = [];
   if (replay && page.replay?.captured_at) notice.push(`Captured ${clock(page.replay.captured_at)}.`);
   if (page.last_known_at) {
-    notice.push(`Prices are temporarily unavailable. Showing last known prices from ${clock(page.last_known_at)}.`);
+    notice.push(`Showing last known prices from ${clock(page.last_known_at)}.`);
   } else if (!replay) {
     const issue = collectionIssue(publication.data_runtime);
     if (issue && (rows.length || page.state !== 'initializing' || publication.retained_prices)) {
@@ -680,7 +693,7 @@ function render(page, keepNodes = false) {
       context.position = offer => position(offer, context.game);
       content.append(arb ? arbCard(group, context, disclosures.get(group.id)) : evCard(group, context));
     }
-  } else {
+  } else if (!awaitingPrices) {
     content.append(emptyResults(page, publication));
   }
   if (keepNodes) {
@@ -706,6 +719,8 @@ function render(page, keepNodes = false) {
   $('page-range').textContent = shown ? `${state.offset + 1}–${state.offset + shown} of ${total} ${unit}` : '';
   $('previous').disabled = state.offset === 0;
   $('next').disabled = state.offset + shown >= total;
+  const singlePage = $('previous').disabled && $('next').disabled;
+  $('previous').hidden = $('next').hidden = singlePage;
   $('previous').parentElement.hidden = !!gameKey || !total;
   if (revealMarket && page.state !== 'initializing') {
     const first = results.querySelector('.odds-matrix tbody tr, .matrix-empty, .desk-empty');
@@ -716,7 +731,7 @@ function render(page, keepNodes = false) {
 }
 
 if (opportunityView) {
-  const action = browsingLink('Find my game ↗', null, 'desk-action');
+  const action = browsingLink('Find my game ↗', null, 'desk-action desk-primary');
   action.id = 'browse-link';
   $('browse-link').replaceWith(action);
 }
@@ -1216,64 +1231,8 @@ document.addEventListener('visibilitychange', () => {
   expireResultValues();
   scheduleResultExpiry();
 });
-let updateTimer;
-let updateDelay = 6500;
-let checkedBoundary;
-const RECOVERY_POLL_MS = 2000;
-
-function scheduleUpdates() {
-  if (replay) return;
-  clearTimeout(updateTimer);
-  const deadline = Date.parse(state.page?.refresh_at) - Date.now();
-  const delay = state.loadFailed || state.previousReason || state.page?.last_known_at ? RECOVERY_POLL_MS : updateDelay;
-  updateTimer = setTimeout(followUpdates, deadline > 0 ? Math.min(delay, Math.max(deadline, 250)) : delay);
-}
-
-async function followUpdates() {
-  try {
-    if (document.hidden) return;
-    drawer.expireInspection();
-    expireResultValues();
-    if (!receivingUpdates()) return;
-    if ((state.loadFailed || state.previousReason || state.page?.last_known_at) && !state.request && !usingResults()) {
-      await load(state.offset, {background:true, freshMembership:postedDesk(), anchor:visibleAnchor()});
-      return;
-    }
-    if (drawer.isOpen() && !postedDesk()) {
-      await drawer.checkSelection();
-      return;
-    }
-    const page = state.page;
-    if (!page?.update_cursor || state.request || state.query !== JSON.stringify(selections())) return;
-    const expired = Date.parse(page.refresh_at) <= Date.now();
-    if (usingResults()) return;
-    const query = new URLSearchParams({layout:'desk', phase, after:page.update_cursor});
-    let change;
-    try {
-      const response = await fetch(`/api/comparison-current/updates?${query}`);
-      if (!response.ok) throw Error('Price status unavailable');
-      change = await response.json();
-    } catch {
-      if (state.page === page && !state.request) {
-        await load(state.offset, {background:true, freshMembership:postedDesk(), anchor:visibleAnchor()});
-      }
-      return;
-    }
-    if (state.page !== page || state.request || !receivingUpdates() || !postedDesk() && drawer.isOpen() || usingResults()) return;
-    updateDelay = Math.max(1000, Number(change.poll_after_ms) || 6500);
-    const recheckExpiry = expired && checkedBoundary !== page.refresh_at;
-    if (change.changed || recheckExpiry || change.phase && change.phase !== phase) {
-      checkedBoundary = page.refresh_at;
-      await load(state.offset, {background:true, freshMembership:postedDesk(),
-        anchor:postedDesk() && scrollY ? visibleAnchor() : undefined});
-    } else if (!expired) {
-      previousResults();
-      if (postedDesk() && drawer.isOpen()) await drawer.checkSelection();
-    }
-  } finally {
-    scheduleUpdates();
-  }
-}
+const scheduleUpdates = createDeskPolling({state, replay, currentPhase:() => phase, drawer, expireResultValues,
+  receivingUpdates, postedDesk, usingResults, visibleAnchor, load, selections, previousResults});
 
 load(restored?.offset ?? 0);
 drawer.openHistorical(route.get('result_id'), route.get('selection'));

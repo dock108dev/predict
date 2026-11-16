@@ -8,14 +8,13 @@ pagination. An open drawer can hold a lease on the selected evidence while the
 published list advances. [Runtime and publication](data-app-runtime-contract.md) ·
 [Coverage and freshness](broad-coverage.md)
 
-## Ordinary comparison snapshots
+## Current and saved comparisons
 
-Ordinary dashboard, Odds, EV and opposing-outcome views use the current publication API; explicit saved-result URLs use the immutable snapshot API.
-`app.storage.comparison_snapshot` captures current SQL rows in one consistent
-read, matches outcomes, calculates results and atomically replaces the selected
-head. Recalculation creates a result revision over the same captured inputs.
-`app.dashboard.snapshot_api` filters and ranks that revision before pagination.
-Details resolves the selected row and its Originals against the same revision.
+Opportunities and Browse odds read `/api/comparison-current`. Saved odds uses
+`/api/odds-replay`. The explicit snapshot API captures a consistent SQL read
+and atomically replaces the manual snapshot head. Recalculation creates a
+result revision over the same captured inputs. Snapshot Details resolves the
+selected row and its Originals against that revision.
 An explicit benchmark pair binds both source IDs to the original receipt, book,
 prices and clocks. A current estimate requires two distinct reference contracts.
 If either side is missing, the app can still show the source offer.
@@ -251,13 +250,16 @@ See [acquisition](acquisition.md) for ownership, capacity and completeness limit
 
 | Domain | SSOT module/file | Why authoritative | Known callers |
 | --- | --- | --- | --- |
-| Aggregate provider and phase configuration | `app/collection/current_policy.py` | Validates runtime configuration and owns provider and Live defaults. | Collection workers, SQL publication, Scanner and Raw Odds. |
+| Aggregate provider and phase configuration | `app/collection/current_policy.py` and the committed `data_runtime.config` | Validates provider choices and Live defaults. Read-side code passes the provider from its committed runtime snapshot into publication identity and desk update cursors. | Collection workers, SQL publication, desk reads, Coverage, Scanner and Raw Odds. |
+| PostgreSQL socket and outage cache partition | `app/storage/store.py::socket_directory` | Resolves and validates the same absolute socket for PostgreSQL connections and the corresponding last-known desk cache. | Storage connections and the ordinary app launcher. |
+| Comparison evidence leases | `app/storage/comparison_snapshot.py` | Owns two-hour renewals and bounds explicit selections using the PostgreSQL clock. Result and input timestamps renew together. Evidence tokens retain exact published revisions independently. | Manual refresh and recalculation, saved reads, and current Details. |
 | SportsGameOdds discovery scope | `app/collection/sportsgameodds_worker.py`, `app/collection/sportsgameodds_adapter.py` | The worker builds the exact request used across a cursor walk. The adapter owns the supported leagues and page bounds. | Worker, transport, checkpoint restore, accounting and SQL admission. |
 | The Odds API featured market keys | `app/collection/current_aggregate_policy.py` | Maps the product market families to their provider request keys. | Configuration, scheduler, quota declarations, quote admission and coverage reporting. |
 | Persisted current event and contract identity | `app/storage/current_rows.py` | Builds the identifiers used to persist and find exact event and contract rows. | Admission, desk overlays, ordinary publication, Scanner and Coverage. |
 | Ordinary desk shell | `app/dashboard/multi_game_server.py` | Mounts all six ordinary SQL desk routes with one shared handler. | Opportunities, EV, Arbitrage, Browse odds, Game and Replay. |
 | Desk and replay phase selection | `app/dashboard/snapshot_display.py` | Applies the pregame boundary consistently to selected rows and related games and pairs. | Current and captured snapshot reads, replay lists and replay details. |
 | Best sportsbook payout and two-sided de-vig | `app/comparison/sgo_reference.py` | Owns the book order, tie-break, exact American-price parsing and normalization of a qualified pair. | Settlement-reviewed SGO reference, direct public book estimates, Browse odds and same-frame SGO baseline. |
+| Desk sportsbook line selection and enrichment | `app/dashboard/desk_sportsbooks.py` | Matches sportsbook prices to the exact displayed line and supplies their read-time freshness. | Current snapshot list and Quote Quality. |
 | Joined thread cancellation | `app/owned_work.py` (`joined_thread`) | Owns result/error-as-data, repeated-cancellation joining and error precedence in one implementation. | `collection/bulk_checkpoint.py::owned_thread` and the raw API's `joined` binding; checkpoint, ingress, accounting shutdown and raw read/export operations. |
 | Safe failure details | `app/diagnostics.py` | Builds class/frame-only diagnostics without messages or payloads. | Shared completion helper, runtime, storage and disposable calculation workers. |
 | Raw Odds controls | `app/dashboard/opportunity_static/current/raw-odds.js` and its `raw-odds.html` shell | Owns received-price filtering, pagination, selection and loading state. | `/raw-odds` and `tests/test_raw_odds_controls.cjs`. |

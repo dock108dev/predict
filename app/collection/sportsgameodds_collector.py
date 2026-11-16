@@ -22,6 +22,10 @@ class InvalidProviderPage(TransportFailure):
     """A successful HTTP response could not be parsed as an odds page."""
 
 
+class DiscoveryScopeMismatch(InvalidProviderPage):
+    """A billable page contained events outside the discovery query."""
+
+
 class DailyObjectPacing(RuntimeError):
     def __init__(self, *, retry_at, requested, rolling, allowance):
         super().__init__('daily object pacing limit')
@@ -96,6 +100,9 @@ class GuardedPageCollector:
         except asyncio.CancelledError:
             self.ledger.interrupt(attempt, evidence='request cancelled before accounting completed')
             raise
+        except DiscoveryScopeMismatch:
+            # The response and its known charge have already been recorded.
+            raise
         except (TransportFailure, RuntimeError, ValueError):
             self.ledger.interrupt(attempt, evidence='scan ended without a verifiable object charge')
             raise
@@ -124,6 +131,10 @@ class GuardedPageCollector:
                             for event in page.events)
         if not page.events:
             breakdown[(params.get('leagueID', 'unknown'), 'unknown')] = 1
-        self.ledger.resolve(attempt, charged=charged, evidence='parsed provider response', now=now,
-                            breakdown=dict(breakdown))
+        leagues = set(params.get('leagueID', '').split(',')) if 'leagueID' in params else None
+        wrong_league = leagues is not None and any(event['league'] not in leagues for event in page.events)
+        self.ledger.resolve(attempt, charged=charged, now=now, breakdown=dict(breakdown),
+                            evidence='provider discovery league mismatch' if wrong_league else 'parsed provider response')
+        if wrong_league:
+            raise DiscoveryScopeMismatch('provider discovery page returned outside requested league')
         return page

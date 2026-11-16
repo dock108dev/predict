@@ -373,7 +373,8 @@ class SGOScopeSQL(LatestBoardFixture):
         from app.dashboard.coverage_finance_inputs import measure_inputs
         from app.dashboard.coverage_funnel import measure
         from app.dashboard.fee_coverage import census, source_inventory
-        from app.dashboard.trade_desk import add_sgo_prices, page as desk
+        from app.dashboard.desk_sportsbooks import add_sgo_prices
+        from app.dashboard.trade_desk import page as desk
         from app.storage.comparison_snapshot import capture, defer_details
         from app.storage.ordinary_publication import prices, project, turn
         from app.storage.sportsgameodds_reference import prepare_frames, prepare_page, upsert_frames, upsert_rows

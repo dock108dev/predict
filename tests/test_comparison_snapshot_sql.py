@@ -1,4 +1,5 @@
 """Coherent SQL + ordinary HTTP replacement, without provider or queue work."""
+import asyncio
 from copy import deepcopy
 from datetime import timedelta
 from unittest import skipUnless
@@ -212,9 +213,109 @@ class SnapshotSQL(LatestBoardFixture):
             maintain(db,compact=False)
             self.assertEqual(db.execute('SELECT count(*) n FROM comparison_snapshot').fetchone()['n'],4)
 
+    async def test_manual_read_rolls_back_both_leases_when_input_renewal_fails(self):
+        from app.dashboard.request_guard import dashboard_guard
+
+        def leases(db, result_id):
+            return db.execute('''SELECT r.lease_until AS result_lease,s.lease_until AS input_lease
+                FROM comparison_snapshot_result r JOIN comparison_snapshot s ON s.id=r.snapshot_id
+                WHERE r.id=%s''', (result_id,)).fetchone()
+
+        with self.connect() as db:
+            prior = snapshot.replace(db, action='refresh')
+            db.execute("UPDATE comparison_snapshot_result SET lease_until=now()-interval '1 minute' WHERE id=%s",
+                       (prior['id'],))
+            db.execute("UPDATE comparison_snapshot SET lease_until=now()-interval '1 minute' WHERE id=%s",
+                       (prior['snapshot_id'],))
+            before = leases(db, prior['id'])
+            db.execute('''CREATE FUNCTION reject_input_renewal() RETURNS trigger LANGUAGE plpgsql AS $$
+                BEGIN RAISE EXCEPTION 'fixture input renewal failure'; END $$;
+                CREATE TRIGGER reject_input_renewal BEFORE UPDATE ON comparison_snapshot
+                    FOR EACH ROW EXECUTE FUNCTION reject_input_renewal()''')
+            try:
+                app = web.Application(middlewares=[dashboard_guard(None, logger=__name__)])
+                mount(app)
+                with patch('app.dashboard.snapshot_api.connect', self.connect):
+                    async with TestClient(TestServer(app)) as client:
+                        failed = await client.get('/api/comparison-snapshot')
+                        self.assertEqual(failed.status, 503)
+                        self.assertEqual(leases(db, prior['id']), before)
+                        db.execute('DROP TRIGGER reject_input_renewal ON comparison_snapshot')
+                        retried = await client.get('/api/comparison-snapshot')
+                        self.assertEqual(retried.status, 200)
+                        self.assertEqual((await retried.json())['id'], prior['id'])
+                renewed = leases(db, prior['id'])
+                self.assertGreater(renewed['result_lease'], before['result_lease'])
+                self.assertEqual(renewed['result_lease'], renewed['input_lease'])
+            finally:
+                db.execute('DROP TRIGGER IF EXISTS reject_input_renewal ON comparison_snapshot')
+                db.execute('DROP FUNCTION reject_input_renewal()')
+
     async def test_guarded_capture_retains_previous_head(self):
         with self.connect() as db:
             original=snapshot.replace(db,action='refresh')
             with patch('app.collection.current_storage_policy.SQL_BYTE_CAP',1),self.assertRaisesRegex(ValueError,'headroom'):
                 snapshot.replace(db,action='refresh')
             self.assertEqual(snapshot.current(db),original)
+
+    async def test_manual_read_renews_the_head_committed_during_pointer_lock(self):
+        app = web.Application()
+        mount(app)
+        loop = asyncio.get_running_loop()
+        reader_pid = loop.create_future()
+
+        def connect_reader():
+            db = self.connect()
+            loop.call_soon_threadsafe(reader_pid.set_result, db.info.backend_pid)
+            return db
+
+        with self.connect() as writer, patch('app.dashboard.snapshot_api.connect', connect_reader):
+            prior = snapshot.replace(writer, action='refresh')
+            replacement = dict(prior, id='replacement-manual-head')
+            async with TestClient(TestServer(app)) as client, asyncio.TaskGroup() as group:
+                with writer.transaction():
+                    snapshot.insert_result(writer, replacement, prior['snapshot_id'], snapshot.pack(replacement))
+                    writer.execute("UPDATE comparison_snapshot_result SET lease_until=now()-interval '1 minute'"
+                                   " WHERE id=%s", (replacement['id'],))
+                    writer.execute("UPDATE comparison_publication SET result_id=%s WHERE kind='manual' AND id=''",
+                                   (replacement['id'],))
+                    request = group.create_task(client.get('/api/comparison-snapshot'))
+                    async with asyncio.timeout(3):
+                        pid = await reader_pid
+                        while writer.info.backend_pid not in writer.execute(
+                                'SELECT pg_blocking_pids(%s) AS blockers', (pid,)).fetchone()['blockers']:
+                            await asyncio.sleep(0.01)
+                response = await request
+                self.assertEqual(response.status, 200)
+                self.assertEqual((await response.json())['id'], replacement['id'])
+            row = writer.execute('''SELECT r.lease_until=s.lease_until AND r.lease_until>now() AS renewed
+                FROM comparison_snapshot_result r JOIN comparison_snapshot s ON s.id=r.snapshot_id
+                WHERE r.id=%s''', (replacement['id'],)).fetchone()
+            self.assertTrue(row['renewed'])
+
+    async def test_selected_result_lease_capacity_uses_one_database_clock(self):
+        with self.connect() as db, db.transaction(force_rollback=True):
+            prior = snapshot.replace(db, action='refresh')
+            for result_id in ('automatic-held', 'automatic-unleased'):
+                result = dict(prior, id=result_id)
+                snapshot.insert_result(db, result, prior['snapshot_id'], snapshot.pack(result), automatic=True)
+            db.execute("""UPDATE comparison_snapshot_result SET lease_until=now()-interval '1 minute'
+                WHERE automatic""")
+            with patch.object(snapshot, 'EVIDENCE_LEASE_LIMIT', 1), \
+                    patch.object(snapshot, 'utc', return_value='2000-01-01T00:00:00Z'):
+                self.assertTrue(snapshot.renew_result_lease(db, 'automatic-held'))
+                self.assertTrue(snapshot.renew_result_lease(db, 'automatic-held'))
+                with self.assertRaisesRegex(snapshot.SnapshotOperationError, 'lease capacity reached'):
+                    snapshot.current(db, 'automatic-unleased')
+                state = db.execute('''SELECT lease_until<now() expired FROM comparison_snapshot_result
+                    WHERE id='automatic-unleased' ''').fetchone()
+                self.assertTrue(state['expired'])
+
+                token = snapshot.retain_evidence(db, 'automatic-unleased')
+                self.assertEqual(token['lease_seconds'], 7200)
+                self.assertEqual(snapshot.retain_evidence(db, 'automatic-unleased', token['lease_id']), token)
+                with self.assertRaisesRegex(snapshot.SnapshotOperationError, 'lease capacity reached'):
+                    snapshot.retain_evidence(db, 'automatic-held')
+                snapshot.release_evidence(db, token['lease_id'])
+                self.assertFalse(db.execute('SELECT 1 FROM comparison_result_reference WHERE holder=%s',
+                                            (token['lease_id'],)).fetchone())

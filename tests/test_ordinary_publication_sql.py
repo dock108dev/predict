@@ -177,7 +177,7 @@ class OrdinarySQL(LatestBoardFixture):
             def projected(o):
                 with patch('app.collection.runtime_status.read_runtime',return_value=o):
                     actual,states=live.authority(db)
-                return live.project(result,deps,actual,states,at=self.at,policy=live.policy_identity(),
+                return live.project(result,deps,actual,states,at=self.at,policy=live.policy_identity(live.committed_aggregate_provider(db)),
                     epoch=result['publication']['epoch'])
             before=projected(original)
             failed_successor=projected(dict(original,calculations={'board':'unavailable'}))
@@ -207,10 +207,10 @@ class OrdinarySQL(LatestBoardFixture):
                 return db.execute('SELECT result FROM comparison_snapshot_result WHERE id=%s',
                     (live.status(db)['result_id'],)).fetchone()['result']
             previous=snapshots.unpack(blob(),lazy=True,db=db)
-            selected=previous['rows'][0]['evidence_result_id'];lease=live.retain(db,selected)
+            selected=previous['rows'][0]['evidence_result_id'];lease=snapshots.retain_evidence(db,selected)
             original=hashed(previous)
             scope={r['id']:[] for r in db.execute("SELECT id FROM comparison_publication WHERE kind='component'")}
-            live.compose(db,live.current_settings(db),scope=scope,policy=live.policy_identity(),
+            live.compose(db,live.current_settings(db),scope=scope,policy=live.policy_identity(live.committed_aggregate_provider(db)),
                 epoch=previous['publication']['epoch'],started=monotonic())
             content=blob();decode=snapshots._decode
             with patch.object(snapshots,'_decode',wraps=decode) as called:
@@ -224,7 +224,7 @@ class OrdinarySQL(LatestBoardFixture):
             self.assertEqual(hashed(previous),original)
             owner,states=live.authority(db)
             projected=live.project(replaced,live.dependencies(db),dict(owner,global_stopped=True),states,
-                at=self.at,policy=live.policy_identity(),epoch=replaced['publication']['epoch'])
+                at=self.at,policy=live.policy_identity(live.committed_aggregate_provider(db)),epoch=replaced['publication']['epoch'])
             self.assertTrue(all(not r['price_current'] for r in projected['rows']))
             self.assertEqual(replaced,snapshots.unpack(content,lazy=True,db=db))
             db.execute("DELETE FROM comparison_result_reference WHERE kind='lease' AND holder=%s",(lease['lease_id'],))
@@ -239,7 +239,7 @@ class OrdinarySQL(LatestBoardFixture):
         from time import monotonic
         with self.connect() as db:
             live.turn(db);original=self.result(db)
-            member=original['rows'][0]['evidence_result_id'];token=live.retain(db,member)
+            member=original['rows'][0]['evidence_result_id'];token=snapshots.retain_evidence(db,member)
             head=live.status(db)
             manifest=snapshots._decode(db.execute('SELECT result FROM comparison_snapshot_result WHERE id=%s',(head['result_id'],)).fetchone()['result'])
             self.assertEqual(manifest['rows'],[])
@@ -248,7 +248,7 @@ class OrdinarySQL(LatestBoardFixture):
                 (head['result_id'],member)).fetchone())
             before=db.execute('SELECT id,read_fragment FROM comparison_snapshot_result WHERE read_fragment IS NOT NULL ORDER BY id').fetchall()
             scope={r['id']:[] for r in db.execute("SELECT id FROM comparison_publication WHERE kind='component'")}
-            live.compose(db,live.current_settings(db),scope=scope,policy=live.policy_identity(),epoch=original['publication']['epoch'],started=monotonic())
+            live.compose(db,live.current_settings(db),scope=scope,policy=live.policy_identity(live.committed_aggregate_provider(db)),epoch=original['publication']['epoch'],started=monotonic())
             self.assertEqual(live.status(db)['facts']['new_fragments'],0)
             self.assertEqual(db.execute('SELECT id,read_fragment FROM comparison_snapshot_result WHERE read_fragment IS NOT NULL ORDER BY id').fetchall(),before)
             self.assertEqual(self.result(db)['rows'],original['rows'])
@@ -382,7 +382,7 @@ class OrdinarySQL(LatestBoardFixture):
     def project(self, db, result):
         owner,states=live.authority(db,at=self.at)
         return live.project(result,live.dependencies(db),owner,states,at=self.at,
-            policy=live.policy_identity(),epoch=result['publication']['epoch'])
+            policy=live.policy_identity(live.committed_aggregate_provider(db)),epoch=result['publication']['epoch'])
 
     def prepare_component_isolation(self):
         # The shared board fixture's second game is outside the ordinary
@@ -396,7 +396,7 @@ class OrdinarySQL(LatestBoardFixture):
             first=live.turn(db);self.assertTrue(first['published'])
             old=self.result(db);self.assertGreater(len(old['rows']),0)
             self.assertTrue(live.turn(db)['unchanged'])
-            live.lease(db,old['id'])
+            snapshots.renew_result_lease(db,old['id'])
             # New receipt for identical source economics must not prompt adoption.
             r=deepcopy(next(r for r in self.records if r['quote']['venue']=='novig'))
             r['quote']['times']['received_at']=(self.at+timedelta(seconds=1)).isoformat()
@@ -454,7 +454,7 @@ class OrdinarySQL(LatestBoardFixture):
             prior={r['evidence_result_id'] for r in before['rows'] if affected(r)}
             self.assertEqual(len(prior),1)
             self.assertTrue(peer_members(before) - prior)
-            member=next(iter(prior));token=live.retain(db,member)
+            member=next(iter(prior));token=snapshots.retain_evidence(db,member)
             self.at+=timedelta(seconds=1);self.state.write(self.service);self.fresh_sources()
             prices=live.prices
 
@@ -672,7 +672,7 @@ class OrdinarySQL(LatestBoardFixture):
             self.changed_first()
             owner, states = live.authority(db, at=self.at)
             deps = live.dependencies(db)
-            options = dict(at=self.at, policy=live.policy_identity(), epoch=result['publication']['epoch'])
+            options = dict(at=self.at, policy=live.policy_identity(live.committed_aggregate_provider(db)), epoch=result['publication']['epoch'])
             full = live.project(result, deps, owner, states, **options)
             desk = live.project(result, deps, owner, states, current_desk=True, **options)
         self.assertTrue(any(row['price_current'] for row in full['rows']))
@@ -686,7 +686,7 @@ class OrdinarySQL(LatestBoardFixture):
         with self.connect() as db:
             for i in range(3):
                 self.changed_first();live.turn(db)
-                if i==0: selected=self.result(db);live.lease(db,selected['id'])
+                if i==0: selected=self.result(db);snapshots.renew_result_lease(db,selected['id'])
             db.execute("UPDATE comparison_snapshot_result SET lease_until=now()-interval '1 hour' WHERE id<>%s",(selected['id'],))
             db.execute("UPDATE comparison_snapshot SET lease_until=now()-interval '1 hour' WHERE id<>%s",(selected['snapshot_id'],))
             snapshots.prune(db)
@@ -717,7 +717,7 @@ class OrdinarySQL(LatestBoardFixture):
                 return rows
 
             with patch.object(db, 'execute', side_effect=competing_prune):
-                self.assertTrue(live.lease(db, selected['id']))
+                self.assertTrue(snapshots.renew_result_lease(db, selected['id']))
             self.assertTrue(ran_prune)
             self.assertEqual(snapshots.current(db, selected['id']), selected)
             self.assertTrue(db.execute('''SELECT lease_until>now() retained FROM comparison_snapshot
@@ -742,7 +742,7 @@ class OrdinarySQL(LatestBoardFixture):
             self.changed_first();live.turn(db)
             self.assertNotEqual(live.status(db)['result_id'],old)
             self.assertTrue(db.execute('SELECT lease_until>now() retained FROM comparison_snapshot_result WHERE id=%s',(old,)).fetchone()['retained'])
-            self.assertEqual(live.retain(db,old)['result_id'],old)
+            self.assertEqual(snapshots.retain_evidence(db,old)['result_id'],old)
 
     async def test_settings_withdraw_finance_and_token_lease_releases_exact_members(self):
         from app.comparison.display_identity import canonical_key
@@ -924,7 +924,7 @@ class OrdinarySQL(LatestBoardFixture):
             live.turn(db)
             selected=self.result(db)
             member=selected['rows'][0]['evidence_result_id']
-            token=live.retain(db,member)
+            token=snapshots.retain_evidence(db,member)
             original=db.execute('SELECT result FROM comparison_snapshot_result WHERE id=%s',(member,)).fetchone()['result']
             # Reproduce legacy low-density storage without altering logical data.
             blob=gzip.compress(json.dumps(snapshots.unpack(original)).encode(),compresslevel=1)
@@ -957,7 +957,7 @@ class OrdinarySQL(LatestBoardFixture):
         ignored={'id','capture_seconds','_price_basis','_price_capture'}
         with self.connect() as db:
             live.turn(db)
-            original=self.result(db)['rows'][0]['evidence_result_id'];lease=live.retain(db,original)
+            original=self.result(db)['rows'][0]['evidence_result_id'];lease=snapshots.retain_evidence(db,original)
             pinned=db.execute('SELECT result FROM comparison_snapshot_result WHERE id=%s',(original,)).fetchone()['result']
             contract=db.execute('SELECT c.id,c.event_id,c.facts FROM current_contract c JOIN current_offer o ON o.contract_id=c.id ORDER BY c.id LIMIT 1').fetchone()
             for kind in ('contract_revision','event_revision','offer_membership','governing_binding_changed_before_decode'):

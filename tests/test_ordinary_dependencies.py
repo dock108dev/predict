@@ -2,6 +2,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import MagicMock, Mock
 
+import pytest
+
 from app.storage import ordinary_publication as live
 
 
@@ -38,17 +40,21 @@ def test_aggregate_authority_prefers_committed_config_and_keeps_the_legacy_defau
     stored = db.execute.return_value.fetchone
 
     stored.return_value = {'config': {'aggregate_provider': 'sportsgameodds'}}
-    assert live.aggregate_provider(db) == 'sportsgameodds'
+    assert live.committed_aggregate_provider(db) == 'sportsgameodds'
     stored.return_value = {'config': {}}
-    assert live.aggregate_provider(db) == current_policy.DEFAULT['aggregate_provider']
+    assert live.committed_aggregate_provider(db) == current_policy.DEFAULT['aggregate_provider']
     stored.return_value = None
-    assert live.aggregate_provider(db) == current_policy.DEFAULT['aggregate_provider']
-    assert live.aggregate_provider(db, owner={'config': {'aggregate_provider': 'the_odds_api'}}) == 'the_odds_api'
+    assert live.committed_aggregate_provider(db) == current_policy.DEFAULT['aggregate_provider']
     assert db.execute.call_count == 3
     local.assert_not_called()
 
-    assert live.aggregate_provider() == 'sportsgameodds'
-    local.assert_called_once_with()
+    assert not hasattr(live, 'aggregate_provider')
+    with pytest.raises(TypeError):
+        live.policy_identity()
+    for provider in (None, '', 'other'):
+        with pytest.raises(ValueError, match='supported aggregate provider'):
+            live.policy_identity(provider)
+    local.assert_not_called()
 
 
 def test_large_planning_scan_keeps_only_event_signatures():

@@ -286,7 +286,7 @@ expired-token refusal and fresh-read recovery, alongside ordinary pagination and
 export. No migration or data transformation is required. These small fixtures
 establish correctness, not production throughput or backup/restore qualification.
 
-### SportsGameOdds reference observations (integration work)
+### SportsGameOdds reference observations
 
 Migration `071_sportsgameodds_reference.sql` adds a replaceable, source-local
 current reference table separate from native depth and execution offers. Each
@@ -310,35 +310,6 @@ scheduled start and 24 hours after receipt. A repeated unchanged observation nea
 expiry can extend retention without changing its stored source or receipt clock.
 This is current-state retention, not a settled-outcome research archive; account,
 hold, Stop, audit and native-depth records are outside this cleanup.
-
-A local disposable-PostgreSQL replay on November 10 used the cached free NBA and
-NHL first-page captures, compactly reserialized as response bodies. One measured
-run is below; it is not a paid-plan or full-slate measurement. It measures reference-row writes only and excludes event-frame writes, execution
-rows, the runtime queue, full product publication, WAL and concurrent provider traffic.
-`tracemalloc` adds instrumentation overhead; table growth includes PostgreSQL
-allocation and indexes, not an exact per-row disk cost.
-
-| Replay | Events / reference rows | Body | Parse / traced peak | First SQL upsert | Unchanged SQL replay | Table growth |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| NBA cached first page | 5 / 240 | 4,643,298 B | 0.109 s / 16.48 MiB | 0.020 s, 240 changed | 0.017 s, 0 changed | 466,944 B |
-| NHL cached first page | 5 / 220 | 6,592,746 B | 0.136 s / 22.90 MiB | 0.018 s, 220 changed | 0.017 s, 0 changed | 352,256 B |
-| Synthetic 100 books per market | 5 / 3,000 | 3,950,001 B prepared rows | not measured | 0.237 s, 3,000 changed | 0.246 s, 0 changed | 4,956,160 B |
-
-The synthetic case duplicates each distinct NBA event/odd observation across 100
-invented bookmaker IDs to exercise storage cardinality; it is not an observed
-bookmaker slate or an HTTP payload. The prepared synthetic rows took 0.080 s to
-build. Cache replay row preparation took 0.006 s for each page. Run the helper
-from the repository root with the local captures; it creates and drops a randomly
-named disposable project database and makes no provider request:
-
-```sh
-.venv/bin/python -m scripts.sgo_storage_measure .local/sgo-evaluation-20261110/nba.json .local/sgo-evaluation-20261110/nhl.json
-```
-
-The captures themselves are local and may be absent on another installation.
-Individual timings and allocation sizes vary; filtered paid-tier payloads,
-queue pressure, sustained throughput and actual object usage remain to be
-measured before treating these figures as an operating guarantee.
 
 Migration `072_sportsgameodds_frames.sql` adds one bounded latest receipt frame
 per event. It stores the receipt digest and time alongside the IDs and input

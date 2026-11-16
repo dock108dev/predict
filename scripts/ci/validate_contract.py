@@ -27,6 +27,12 @@ def validate(root):
         raise ValueError(
             f"Python test classification drift: new={sorted(actual - known)}, missing={sorted(known - actual)}"
         )
+    quality = {str(p.relative_to(root)) for p in (root / "tests").glob("test_ci_*.py")}
+    if quality != categories[2] or len(quality) != len(policy["quality"]):
+        raise ValueError(
+            f"Quality job collection drift: unclassified={sorted(quality - categories[2])}, "
+            f"uncollected={sorted(categories[2] - quality)}"
+        )
     for node, reason in policy["archival_nodes"].items():
         file, *parts = node.split("::")
         if file not in categories[0] or not reason.strip():

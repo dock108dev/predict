@@ -3,6 +3,7 @@ from collections import Counter, defaultdict
 from datetime import timedelta
 from fractions import Fraction
 
+from app.collection.current_policy import aggregate_provider
 from app.comparison.ordinary_arb import DEFAULT_FUNDING, current_payoff, evaluate
 from app.comparison.sgo_reference import MAX_AGE_SECONDS
 from app.storage import comparison_snapshot as snapshots, ordinary_publication as live
@@ -340,12 +341,14 @@ def measure_inputs(inputs, publication, published_pairs, deps, owner, states, *,
 
 
 def measure(db, publication, published_pairs, deps, owner, states, *, settings, policy, epoch, at, phase=''):
-    if owner.get('config', {}).get('aggregate_provider') != 'sportsgameodds':
+    provider = aggregate_provider(owner.get('config'))
+    if provider != 'sportsgameodds':
         return dict(evidence_scope='SportsGameOdds working inputs', state='sgo_not_selected')
     event_ids = capture_candidates(db, deps, at=at)
     # Preserve normal league and component boundaries in the snapshot reader.
     # The result is never written back to a publication or source owner.
-    inputs = snapshots.capture(db, at=at.isoformat(), ordinary=True, event_ids=event_ids, _frame_dependencies=deps)
+    inputs = snapshots.capture(db, at=at.isoformat(), ordinary=True, event_ids=event_ids,
+                               _frame_dependencies=deps, reference_provider=provider)
     inputs['policy_identity'] = policy
     inputs['fee_products'] = owner.get('fee_products', {})
     inputs['fee_lifecycle'] = owner.get('fee_lifecycle')

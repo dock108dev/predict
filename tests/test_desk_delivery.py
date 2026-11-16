@@ -22,11 +22,19 @@ class TestDeskDelivery(IsolatedAsyncioTestCase):
             path = Path(directory) / 'desk.sqlite3'
             cache = LastKnownDesk(path)
             cache.remember('slate', page)
-            self.assertIsNotNone(LastKnownDesk(path).read('slate', at))
+            self.assertEqual(LastKnownDesk(path).read('slate', at)['rows'][0]['id'], 'row')
+            independent_writer = LastKnownDesk(path)
             self.assertIsNone(cache.read('slate', kickoff))
             later = at + timedelta(minutes=1)
             cache.remember('slate', dict(page, rows=[], publication={'read_at': later.isoformat()}))
             cache.remember('slate', page)
+            self.assertIsNone(cache.read('slate', later))
+            self.assertIsNone(LastKnownDesk(path).read('slate', later))
+
+            # This writer never saw the empty page, so only the SQLite guard can reject its stale write.
+            slightly_newer = at + timedelta(seconds=30)
+            independent_writer.remember('slate', dict(page, publication={'read_at': slightly_newer.isoformat()}))
+            self.assertIsNone(LastKnownDesk(path).read('slate', later))
             self.assertIsNone(LastKnownDesk(path).read('slate', later))
 
     async def test_late_list_completion_can_be_picked_up_by_the_next_retry(self):

@@ -1,5 +1,5 @@
 import {markPinned, tradeInspection, pairInspection, tradePreview} from './desk-inspection.js';
-import {quoteFreshness, selectedReference} from './opportunity-cards.js';
+import {quoteFreshness, selectedReference} from './desk-quote-display.js';
 import {pinLatestSelection, selectionCurrent, selectionIdentity} from './desk-evidence.js';
 import {evidenceReason} from './desk-reasons.js';
 

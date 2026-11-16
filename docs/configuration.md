@@ -16,9 +16,9 @@ determines which calculation bases are available. See the
 <a id="saved-review-and-live-collection"></a>
 
 Copy [config/current.example.json](../config/current.example.json) to
-`.local/predict-current-config.json` before starting a collector. Validate the
-file with `scripts/opportunity-board check-config`. This command needs no
-database, credentials, or network access. To select another file, pass
+`.local/predict-current-config.json` before starting a collector. Validate it
+with `.venv/bin/python scripts/opportunity-board check-config`. Validation
+requires only the configuration file. To select another file, pass
 `--current-config PATH` to both `check-config` and `start --role data`. An
 explicit missing path fails validation. Starting without the default file
 selects internal defaults that enable acquisition, so create the file first.
@@ -36,7 +36,8 @@ selects internal defaults that enable acquisition, so create the file first.
 The [configuration validator](../app/collection/current_policy.py) defines bounds
 and types. With Live off, a game leaves current results at verified kickoff or
 earlier withdrawal. Saved pregame evidence can still be inspected. The web
-app uses the collector's recorded setting.
+app reads the selected provider and Live setting from the committed data
+runtime.
 
 SportsGameOdds shares its object budget across discovery and event refresh.
 Its worker schedules scans at 15-minute intervals when account guards permit.
@@ -52,9 +53,9 @@ Run these commands from the repository root after setting up the intended
 configuration.
 
 ```sh
-scripts/opportunity-board start
-scripts/opportunity-board status
-scripts/opportunity-board stop
+.venv/bin/python scripts/opportunity-board start
+.venv/bin/python scripts/opportunity-board status
+.venv/bin/python scripts/opportunity-board stop
 ```
 
 The launcher starts the database and both roles by default. Use `--role app`
@@ -84,6 +85,9 @@ scripts/project-postgres start
 Ctrl-C stops the foreground role. PostgreSQL stays running until
 `scripts/project-postgres stop`. The project state under `.local/` includes
 stored data, controls, and provider accounting.
+For foreground or container operation, `PREDICT_DB_SOCKET` can select an
+absolute PostgreSQL socket directory. The local default is `.local/pgsocket`.
+The app keys its last-known desk cache by the same socket directory.
 
 ## Credentials
 

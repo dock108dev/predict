@@ -39,13 +39,17 @@ def stamp(t):
     return parsed
 
 
+def socket_directory():
+    directory = os.environ.get('PREDICT_DB_SOCKET', str(ROOT/'.local/pgsocket'))
+    if not Path(directory).is_absolute():
+        raise ValueError('An absolute PostgreSQL socket directory is required')
+    return directory
+
+
 def connect(database='prediction_arb'):
     if not database.startswith('prediction_arb'): raise ValueError('dedicated project databases only')
     from .payload_codec import payload_row
-    socket_directory = os.environ.get('PREDICT_DB_SOCKET', str(ROOT/'.local/pgsocket'))
-    if not Path(socket_directory).is_absolute():
-        raise ValueError('An absolute PostgreSQL socket directory is required')
-    return psycopg.connect(host=socket_directory,port=55432,user='prediction_arb',
+    return psycopg.connect(host=socket_directory(),port=55432,user='prediction_arb',
         dbname=database,autocommit=True,row_factory=payload_row,connect_timeout=5,
         options='-c statement_timeout=30000 -c lock_timeout=5000')
 

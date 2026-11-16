@@ -132,7 +132,9 @@ def main(argv=None):
         "shard_index": args.shard_index,
         "shard_count": args.shard_count,
         "suite": (
-            "da-separation-browser"
+            "focused-sql"
+            if args.tests
+            else "da-separation-browser"
             if args.da_browser
             else "da-separation"
             if args.da_separation

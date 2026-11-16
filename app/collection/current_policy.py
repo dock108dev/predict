@@ -21,6 +21,7 @@ DEFAULT = dict(schema=VERSION, authority=GRANT, enabled=True, aggregate_enabled=
     ingress_records=16000, ingress_bytes=8*MIB, issue_records=200,
     issue_bytes=MIB, discovery_pages=36)
 OPTIONAL_FLAGS = ('direct_novig_enabled', 'live_enabled')
+AGGREGATE_PROVIDERS = ('the_odds_api', 'sportsgameodds')
 
 
 class PregameWindowClosed(Exception):
@@ -44,7 +45,7 @@ def validate(value):
         raise ValueError('Invalid optional source setting')
     if value['schema'] != VERSION or value['authority'] != GRANT or any(type(value[k]) is not bool for k in ('enabled','aggregate_enabled')):
         raise ValueError('Native operational authority/schema conflict')
-    if value['aggregate_provider'] not in ('the_odds_api', 'sportsgameodds'):
+    if value['aggregate_provider'] not in AGGREGATE_PROVIDERS:
         raise ValueError('Unsupported aggregate provider')
     for k in ('sports', 'families'):
         allowed=SPORTS if k=='sports' else DEFAULT[k]

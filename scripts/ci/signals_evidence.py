@@ -80,8 +80,8 @@ def read_json(path):
         return {}
 
 
-def artifacts(root, sha, run, attempt):
-    """Use newest available attempt per lane/shard for the exact tested commit."""
+def artifacts(root, sha, run, attempt, inherited_attempts):
+    """Bind each lane to its actual execution attempt and tested commit."""
     selected = {}
     if not sha or not str(attempt).isdigit():
         return selected
@@ -93,9 +93,10 @@ def artifacts(root, sha, run, attempt):
         if not match:
             continue
         lane, number, version, shard = match.groups()
+        key = (lane, shard)
         if (
             number != str(run)
-            or int(version) > int(attempt)
+            or int(version) != inherited_attempts.get(key, int(attempt))
             or (lane == "storage") != bool(shard)
         ):
             continue
@@ -108,9 +109,7 @@ def artifacts(root, sha, run, attempt):
             str(metadata.get("run_attempt")),
         ) != (sha, number, version):
             continue
-        key = (lane, shard)
-        if key not in selected or int(version) > selected[key]["attempt"]:
-            selected[key] = dict(path=path, report=metadata, attempt=int(version))
+        selected[key] = dict(path=path, report=metadata, attempt=int(version))
     return selected
 
 
@@ -305,12 +304,34 @@ def number(value):
     )
 
 
+def timing_scope(artifact, tool, version):
+    report = artifact["report"]
+    runner = report.get("runner")
+    fields = ("environment", "os", "arch", "image")
+    if (
+        not isinstance(runner, dict)
+        or not all(isinstance(runner.get(key), str) and runner[key] for key in fields)
+        or not isinstance(report.get("python"), str)
+        or not isinstance(version, str)
+        or not version
+    ):
+        return None
+    return dict(
+        runner={key: runner[key] for key in fields},
+        python=report["python"],
+        **{tool: version},
+    )
+
+
 def timing(selected):
     measurements = {}
     for (lane, _), artifact in selected.items():
         if lane != "storage":
             continue
         path = artifact["path"]
+        scope = timing_scope(
+            artifact, "postgres", read_json(path / "toolchain.json").get("postgres")
+        )
         values = read_json(path / "selected-input-latency.json")
         if (
             values.get("evidence")
@@ -331,6 +352,7 @@ def timing(selected):
                             fixture="selected-input-60-games-v1",
                             samples=1,
                             artifact=path.name,
+                            scope=scope,
                         )
         recovery = read_json(path / "desk-recovery.json")
         if recovery.get("fixture") == "desk-polymarket-nba-v1":
@@ -347,6 +369,7 @@ def timing(selected):
                     samples=len(samples),
                     artifact=path.name,
                     response_budget=budget,
+                    scope=scope,
                 )
             for label, key in (
                 ("First desk response", "first_seconds"),
@@ -363,5 +386,6 @@ def timing(selected):
                         fixture=recovery["fixture"],
                         samples=1,
                         artifact=path.name,
+                        scope=scope,
                     )
     return measurements

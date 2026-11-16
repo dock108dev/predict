@@ -3,12 +3,12 @@
 Run commands from the repository root. Python 3.14 and Node 24 match primary
 CI. The package supports Python 3.11 and later. Some native sources use macOS
 Keychain. Linux can run the portable tests and the container deployment.
+If you use nvm, run `nvm use` to select the project's Node version.
 
 ## Install tools
 
 ```sh
 python3.14 -m venv .venv
-nvm use
 .venv/bin/python -m pip install --require-hashes -r requirements-ci.txt
 .venv/bin/python scripts/ci/validate_lock.py
 .venv/bin/python -m pip install --no-deps --no-build-isolation -e '.[stream]'
@@ -29,12 +29,9 @@ Stopping data ends acquisition. Restarting either role preserves the collector's
 explicit pauses and accounting holds. [Operation](configuration.md#start-and-stop) ·
 [Runtime contract](data-app-runtime-contract.md)
 
-Open **Saved odds** in the app to inspect an available archive. The reader
-latches the capture clock and opens local archives under `.local/odds-replay/`
-read-only. [Saved odds](#frozen-replay)
-
 ## Frozen replay
 
+Use [Saved odds](configuration.md#saved-odds) to inspect an available capture.
 Saved offers preserve their recorded prices, fee terms, and before-fee
 payouts. A tie that pays $0.50 is a different outcome from a stake refund.
 Computing full EV requires probabilities for those outcomes.
@@ -57,9 +54,10 @@ git diff --check
 
 | Change | Focused tests |
 | --- | --- |
-| Desk rendering, selection, and refresh | `tests/test_f07_desk_ui.cjs`, `browser_tests/test_ranked_opportunities.py` |
+| Desk rendering, selection, and refresh | `tests/test_f07_desk_ui.cjs`, `browser_tests/test_ranked_opportunities.py`, `browser_tests/test_ranked_desk_journey.py` |
 | Snapshot math and evidence | `tests/test_snapshot_display.py`, `tests/test_snapshot_benchmark.py`, `tests/test_comparison_snapshot_sql.py` |
 | Source lifecycle and acquisition | `tests/test_current_service.py`, `tests/test_ordinary_native_transport.py`, `tests/test_data_runtime_unit.py` |
+| SportsGameOdds scheduling, discovery and cursor recovery | `tests/test_sportsgameodds_worker.py`, `tests/test_sportsgameodds_discovery.py` |
 | Scanner policy, settlement, and fees | `tests/test_scanner_kalshi.py`, `tests/test_scanner_polymarket.py`, `tests/test_scanner_native.py` |
 | Failure handling and launcher security | `tests/test_abend_handling.py`, `tests/test_security_hardening.py`, `tests/test_dashboard_security.py` |
 
@@ -73,7 +71,7 @@ Select specific modules with `--tests`, or use the registered suite with no
 selection. Use a fresh report directory for each run.
 
 ```sh
-.venv/bin/python scripts/ci/postgres.py --report-dir test-results/snapshot-sql \
+.venv/bin/python scripts/ci/postgres.py --report-dir "$(mktemp -d)" \
   --tests tests/test_comparison_snapshot_sql.py
 ```
 
@@ -104,9 +102,15 @@ tests exercise persistence.
 The authored frontend is under `app/dashboard/opportunity_static/current/`.
 
 - `desk.html` is the shared shell for Opportunities, Arbitrage, Browse odds,
-  game detail, and Saved odds. `desk.js` owns list state and fetches current and
-  saved data. `desk-drawer.js` owns selection history, leases, and adoption.
-  `desk-inspection.js` renders the captured evidence.
+  game detail, and Saved odds. `desk.js` owns the list and its current/saved
+  requests. `desk-polling.js` owns the update timer and expiry rechecks.
+  `opportunity-cards.js` assembles cards and matrices. `desk-quote-display.js`
+  shares quote and reference presentation with the drawer. `desk-drawer.js`
+  owns selection history, leases, and adoption. `desk-inspection.js` renders
+  captured evidence and the trade preview.
+- Pages that share desk styling load `desk.css` before `desk-components.css`.
+  The first defines fonts, chrome and base styles. The second adds the
+  toolbar, inspection, card and matrix rules in cascade order.
 - `snapshot-controller.js`, `snapshot-views.js`, `snapshot-live.js`,
   `snapshot-drawer.js`, and `ui-common.js` supply the stored results view.
 - `scanner-controller.js`, `scanner-client.js`, `scanner-style.css`, and
@@ -151,17 +155,25 @@ that belongs together. Generated assets follow their source boundaries.
 - Current reads use the read clock for pregame cutoff. Saved lists and details
   use each offer's capture clock, falling back to its result clock.
   Preserve source clocks and exact offer identities across list and detail reads.
-- The desk list controller shares ranking, filters, fetch cancellation, scroll,
-  and Back state. Its drawer owns focused evidence and leases. Keep ranked
-  browser case names stable when editing fixtures.
+- The desk list controller keeps ranking, filters, fetch cancellation, scroll,
+  and Back state together so it can restore the exact loaded page. The drawer
+  keeps leases, adoption, and cancellation under one selection lifecycle.
+- The compatibility `latest_board.py` coordinates retained publication and
+  detached snapshot and slate reads. SQL fixtures cover restart and captured
+  reads. Changes to targeted tests also need to update the SQL runner's selectors.
+- The compatibility `stored-controller.js` owns polling, retained list state,
+  and selection for the older reader. Its checks run separately from the
+  current desk.
 - `deploy/release.sh` keeps digest validation, migration checks, and rollback
   under one restricted-SSH rollout transaction.
 
 Keep credentials, operator state, local reports, and coding notes out of Git.
 Keep required fixtures in `tests/fixtures` or `app/fixtures`, and keep reusable
 wire examples with their contracts. Preserve the packaged frontend assets and
-the exact sources and guard receipts required by sealed tools. To find paths
-already tracked despite ignore rules, run
+the exact sources and guard receipts required by sealed tools. Each `SOURCE.zip`
+under `scripts/v1_coverage_package` and `scripts/v1_counterpart_package` has an
+exact digest in its seal and is used by offline tests or the package launcher.
+To find paths already tracked despite ignore rules, run
 `git ls-files -ci --exclude-standard`.
 
 ## Acquisition and publication

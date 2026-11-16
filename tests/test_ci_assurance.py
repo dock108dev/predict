@@ -421,8 +421,28 @@ class ReadinessSignalsTests(unittest.TestCase):
                 "</testcase></testsuite>"
             )
             context = dict(base_sha=None, baseline=None, slowest=None, health=None)
+            missing = signals.build(root, root, sha, "19", "2", context)
+            self.assertEqual(missing["artifacts"], ["storage-19-2-2"])
+            self.assertEqual(
+                missing["contracts"]["Desk shows last-known prices and recovers"][
+                    "status"
+                ],
+                "MISSING",
+            )
+
+            browser_job = dict(
+                name="Ordinary browser journey",
+                run_id=19,
+                run_attempt=1,
+                status="completed",
+                conclusion="success",
+            )
+            jobs = dict(jobs=[browser_job])
+            inherited = load("signals_context").inherited_artifact_attempts
+            context["inherited_attempts"] = inherited(jobs, "19", "2")
             result = signals.build(root, root, sha, "19", "2", context)
             self.assertEqual(result["artifacts"], ["ci-browser-19-1", "storage-19-2-2"])
+            self.assertEqual(result["reused_artifacts"], ["ci-browser-19-1"])
             checks = result["contracts"]
             self.assertEqual(
                 checks["Desk shows last-known prices and recovers"]["status"], "SKIPPED"
@@ -436,6 +456,33 @@ class ReadinessSignalsTests(unittest.TestCase):
             text = signals.render(result, None)
             self.assertIn("Comparable base artifact unavailable", text)
             self.assertIn("Changed-code coverage unavailable", text)
+            browser.write_text(browser.read_text().replace("<skipped/>", ""))
+            self.assertEqual(
+                signals.build(root, root, sha, "19", "2", context)["contracts"][
+                    "Desk shows last-known prices and recovers"
+                ]["status"],
+                "PASS",
+            )
+            jobs["jobs"] = [dict(browser_job, run_attempt=2, conclusion="failure")]
+            context["inherited_attempts"] = inherited(jobs, "19", "2")
+            self.assertEqual(
+                signals.build(root, root, sha, "19", "2", context)["contracts"][
+                    "Desk shows last-known prices and recovers"
+                ]["status"],
+                "MISSING",
+            )
+
+            scope = dict(runner={"os": "Linux"}, python="3.14.5", playwright="1.61")
+            measurement = dict(
+                fixture="desk-browser-intercept-v1", samples=1, seconds=2.0, scope=scope
+            )
+            result["timings"][signals.BROWSER_PAINT] = measurement
+            base = dict(timings={signals.BROWSER_PAINT: dict(measurement, seconds=1.0)})
+            self.assertIn("| 2.000 | +1.000 |", signals.render(result, base))
+            base["timings"][signals.BROWSER_PAINT]["scope"] = dict(
+                scope, python="3.11.9"
+            )
+            self.assertIn("| 2.000 | — |", signals.render(result, base))
 
     def test_duplicate_detection_ignores_wrappers_and_docstring_differences(self):
         code = load("code_signals")

@@ -29,10 +29,15 @@ pacing is an estimate and the worker checks the budget again before dispatch.
 
 League discovery keeps the same scope and start cutoff across its cursor walk.
 A saved cursor resumes only for the matching query and phase configuration.
-A rejected cursor restarts the affected traversal. Event refresh and
-discovery share the object budget. Near-start refresh can request alternate
-lines for one event at a time. Only the supported book and market inputs
-are eligible for the desk. [Coverage limits](broad-coverage.md)
+A parsed page containing another league records its response hash and actual
+object charge. Admin reports `sgo_discovery_league_mismatch`, and the worker
+keeps the last valid cursor for the next scheduled attempt. A rejected cursor
+restarts the affected traversal. Exact event-ID refresh can span leagues.
+Restart seeding applies phase, kickoff and terminal status before the schedule
+limit. The truncation flag reports whether more eligible retained events exist.
+Event refresh and discovery share the object budget. Near-start refresh can
+request alternate lines for one event at a time. Only the supported book and
+market inputs are eligible for the desk. [Coverage limits](broad-coverage.md)
 
 The desk uses both original sportsbook clocks for same-book fair odds. Vendor
 fair odds and book consensus have separate meanings from Predict's own estimate.

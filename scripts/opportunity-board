@@ -112,9 +112,8 @@ def start_role(role, folder, args):
         command += ['app.dashboard.opportunity_board', '--port', str(port)]
     environment={'PATH': '/usr/bin:/bin', 'PYTHONUNBUFFERED': '1', 'PYTHONDONTWRITEBYTECODE': '1'}
     if role=='data' and sys.platform=='darwin':
-        # Full-cohort replay on the installed Python showed that forced mimalloc
-        # retained freed object pages across catalog/update workloads. Darwin's
-        # allocator releases their physical footprint; keep the RSS guard intact.
+        # Use Darwin's allocator so freed catalog pages can reduce resident
+        # memory between updates while the RSS guard stays in force.
         environment['PYTHONMALLOC']='malloc'
     else:
         allocator=subprocess.check_output([command[0], '-c',

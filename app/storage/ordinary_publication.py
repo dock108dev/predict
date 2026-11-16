@@ -37,29 +37,25 @@ from .ordinary_projection import (
 from .ordinary_scheduling import (
     awaiting_aggregate, captured_aggregate_receipts, prioritize_current, receipt_watermarks, sgo_live_deliveries,
 )
-from app.collection.current_policy import aggregate_provider as configured_aggregate_provider
+from app.collection.current_policy import AGGREGATE_PROVIDERS, aggregate_provider as configured_aggregate_provider
 from app.comparison.sgo_reference import BEST_BOOKS
 from app.fees import schedule_lifecycle
 from app.fees import product_schedules
 
-MAX_RETAINED = 32
 MAX_BYTES = 128 * 1024 * 1024
 MAX_COMPONENT_DEPENDENCIES = 32768
 POLICY_ROOT = Path(__file__).resolve().parents[2]
 
 
-def aggregate_provider(db=None, *, owner=None):
-    """Use the committed collection config when a data owner has published it."""
-    if owner is not None:
-        return configured_aggregate_provider(owner.get('config'))
-    if db is not None:
-        config = db.execute('SELECT config FROM data_runtime WHERE singleton').fetchone()
-        return configured_aggregate_provider(config['config'] if config else None)
-    from app.collection.current_policy import load
-    return configured_aggregate_provider(load())
+def committed_aggregate_provider(db):
+    """Resolve the provider for readers without a captured runtime owner."""
+    config = db.execute('SELECT config FROM data_runtime WHERE singleton').fetchone()
+    return configured_aggregate_provider(config['config'] if config else None)
 
 
-def policy_identity(provider=None):
+def policy_identity(provider):
+    if provider not in AGGREGATE_PROVIDERS:
+        raise ValueError('Publication requires a supported aggregate provider')
     # Bind stored comparisons to the code that builds their inputs and results.
     # Public request routing and formatting can change without resealing them.
     from .current_games import engine_binding, observation_binding
@@ -106,7 +102,7 @@ def policy_identity(provider=None):
               POLICY_ROOT/'app/comparison/sgo_rule_evidence.py', POLICY_ROOT/'app/comparison/sgo_median_publication.py',
               POLICY_ROOT/'app/fixtures/sgo-reviewed-market-rules-20261110.json',
               POLICY_ROOT/'app/fixtures/sgo-reviewed-jurisdiction-bindings.json']
-    return hashed([VERSION, snapshots.ORDINARY_ARB_POLICY, engine_binding(), observation_binding(), provider or aggregate_provider(),
+    return hashed([VERSION, snapshots.ORDINARY_ARB_POLICY, engine_binding(), observation_binding(), provider,
                    [(str(p.relative_to(POLICY_ROOT)) if p.is_relative_to(POLICY_ROOT) else str(p), sha256(p.read_bytes()).hexdigest()) for p in paths]])
 
 
@@ -207,7 +203,7 @@ def has_reference_frames(db, provider):
 
 def dependencies(db, event_ids=None, *, provider=None, membership=None):
     """Load exact evidence for a single component or an explicit inventory audit."""
-    frames = has_reference_frames(db, provider or aggregate_provider(db))
+    frames = has_reference_frames(db, provider if provider is not None else committed_aggregate_provider(db))
     at = stamp(utc())
     limit = MAX_COMPONENT_DEPENDENCIES+1 if event_ids is not None else None
     rows = db.execute(*offer_dependency_query(event_ids, frames=frames, at=at, limit=limit)).fetchall()
@@ -266,7 +262,7 @@ def authority(db, *, at=None, include_diagnostics=True):
     states=source_states(committed,owner)
     if 'sportsgameodds' in owner.get('paused_sources', []) or owner.get('global_stopped'):
         states['sportsgameodds']=dict(state='stopped',reason_code='sgo_paused_or_stopped')
-    odds_active = aggregate_provider(owner=owner) == 'the_odds_api'
+    odds_active = configured_aggregate_provider(owner.get('config')) == 'the_odds_api'
     if odds_active and 'the_odds_api' in owner.get('paused_sources', []):
         for venue in ('novig', 'prophetx', 'pinnacle'):
             states[venue] = dict(state='stopped', reason_code='aggregate_paused')
@@ -398,23 +394,6 @@ def seal(db, inputs, result, facts, *, insert_inputs=False, component=None, memb
     return row['generation']
 
 
-def lease(db, result_id):
-    """Bound explicit evidence leases; ordinary notifications never retain history."""
-    with db.transaction():
-        db.execute('SELECT pg_advisory_xact_lock(901154)')
-        # Snapshot pruning skips locked results. Reserve the selected row
-        # before deciding whether a lease can be renewed.
-        row = db.execute('''SELECT automatic,lease_until FROM comparison_snapshot_result
-            WHERE id=%s FOR NO KEY UPDATE''', (result_id,)).fetchone()
-        if row is None: return False
-        if row['automatic'] and row['lease_until'] <= stamp(utc())+timedelta(seconds=30):
-            n = db.execute("SELECT count(*) n FROM comparison_snapshot_result WHERE automatic AND lease_until>now()+interval '30 seconds'").fetchone()['n']
-            if n >= MAX_RETAINED: raise snapshots.SnapshotOperationError('Selected evidence lease capacity reached')
-        db.execute("UPDATE comparison_snapshot_result SET lease_until=now()+interval '2 hours' WHERE id=%s", (result_id,))
-        db.execute("UPDATE comparison_snapshot SET lease_until=now()+interval '2 hours' WHERE id=(SELECT snapshot_id FROM comparison_snapshot_result WHERE id=%s)", (result_id,))
-    return True
-
-
 def arb_candidates(part):
     """Keep only the legs and payoff inputs of potentially qualifying pairs."""
     from app.dashboard.trade_desk import direct_venue_offer
@@ -469,7 +448,7 @@ def observe_arbs(db, result, candidates, owner, states, *, generation, policy, e
     if candidates and owner.get('healthy') and owner.get('active') and not owner.get('global_stopped'):
         subset = dict(result, rows=list(chain.from_iterable(c['rows'] for c in candidates)),
                       pairs=list(chain.from_iterable(c['pairs'] for c in candidates)))
-        deps, _ = published_dependencies(db, subset, provider=aggregate_provider(owner=owner), at=at)
+        deps, _ = published_dependencies(db, subset, provider=configured_aggregate_provider(owner.get('config')), at=at)
         current = project(subset, deps, owner, states, at=at, policy=policy, epoch=epoch)
         rows = {row['id']: row for row in current['rows']}
         for pair in current['pairs']:
@@ -613,7 +592,7 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
             owner,source_states=authority(db,include_diagnostics=False)
             from app.collection.current_policy import live_enabled
             live_available = live_enabled(owner.get('config', {}))
-            reference_provider=aggregate_provider(owner=owner)
+            reference_provider=configured_aggregate_provider(owner.get('config'))
             policy=policy_identity(reference_provider)
             fee_state=owner['fee_lifecycle']
             product_states=owner['fee_products']
@@ -988,24 +967,3 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
             generation=generation,price_generation=price_generation,price_published_at=price_published_at,
             turn_seconds=round(monotonic()-started,3))
     finally:db.execute('SELECT pg_advisory_unlock(901153)')
-
-
-def retain(db, result_id, lease_id=None):
-    with db.transaction():
-        db.execute('SELECT pg_advisory_xact_lock(901154)')
-        db.execute("DELETE FROM comparison_result_reference WHERE kind='lease' AND expires_at<now()")
-        if not db.execute('SELECT 1 FROM comparison_snapshot_result WHERE id=%s FOR KEY SHARE',(result_id,)).fetchone():
-            raise snapshots.SnapshotOperationError('Selected evidence expired')
-        if lease_id:
-            row=db.execute("""UPDATE comparison_result_reference SET expires_at=now()+interval '2 hours'
-                WHERE kind='lease' AND holder=%s AND result_id=%s RETURNING holder""",(lease_id,result_id)).fetchone()
-            if not row:raise snapshots.SnapshotOperationError('Evidence lease expired or does not match')
-        else:
-            if db.execute("SELECT count(*) n FROM comparison_result_reference WHERE kind='lease'").fetchone()['n']>=MAX_RETAINED:
-                raise snapshots.SnapshotOperationError('Selected evidence lease capacity reached')
-            lease_id=uuid4().hex
-            db.execute("""INSERT INTO comparison_result_reference (kind,holder,result_id,expires_at)
-                VALUES('lease',%s,%s,now()+interval '2 hours')""",(lease_id,result_id))
-    return dict(result_id=result_id,lease_id=lease_id,lease_seconds=7200,provider_requests=0)
-        # Existing packet-lifetime triggers and cleanup retain exact leased
-        # Originals independently of the working rows, including the grace period.

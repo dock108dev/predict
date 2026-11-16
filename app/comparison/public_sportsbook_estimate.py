@@ -4,6 +4,7 @@ from datetime import timedelta
 from fractions import Fraction
 import json
 
+from app.collection.current_policy import aggregate_provider
 from app.dashboard.current_contract import price
 from app.normalization.registry import Registry
 from app.storage.store import hashed, stamp
@@ -74,7 +75,7 @@ def retained_prices(root, captures, *, at, leagues):
 def allowed(owner):
     config = owner.get('config') or {}
     return bool(owner.get('active') and not owner.get('global_stopped')
-                and config.get('aggregate_enabled') and config.get('aggregate_provider') == 'sportsgameodds'
+                and config.get('aggregate_enabled') and aggregate_provider(config) == 'sportsgameodds'
                 and 'sportsgameodds' not in owner.get('paused_sources', ()))
 
 
