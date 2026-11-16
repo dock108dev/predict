@@ -126,7 +126,7 @@ def test_ordinary_live_metric_requires_exact_reference_and_preserves_replay():
 
 
 def test_fixture_publication_keeps_live_fee_independent_of_legacy_reference(monkeypatch, tmp_path):
-    from app.storage import ordinary_publication as publication, comparison_snapshot as snapshots
+    from app.storage import ordinary_publication as publication, comparison_snapshot as snapshots, ordinary_result
     from app.dashboard.snapshot_display import ranking_value
     row, raw = sample()
     from tests.test_novig_v3_stream import ready, T2
@@ -144,7 +144,7 @@ def test_fixture_publication_keeps_live_fee_independent_of_legacy_reference(monk
         dep = q['id'] if reference else 'execution'
         return dict(dependency=dep,expected=['p','c','e'],venue='pinnacle' if reference else 'novig',
                     reasons=[],current_until='2026-11-09T20:00:22Z',lifecycle={'state':'live'})
-    monkeypatch.setattr(publication,'quote_authority',authority)
+    monkeypatch.setattr(ordinary_result,'quote_authority',authority)
     monkeypatch.setattr('app.comparison.snapshot_fee_outcome.reviews',lambda at: {'novig':None})
     monkeypatch.setattr('app.comparison.snapshot_named_benchmark.references',lambda *args: selected)
     monkeypatch.setattr('app.comparison.snapshot_named_benchmark.selected_references',lambda *args: selected)

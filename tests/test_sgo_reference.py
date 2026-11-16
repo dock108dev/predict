@@ -292,7 +292,7 @@ def test_publication_rejects_removed_input_unverified_binding_and_stale_frame():
 
 
 def test_ordinary_publication_sgo_mode_uses_all_dependencies_and_never_legacy(monkeypatch):
-    from app.storage import ordinary_publication as ordinary
+    from app.storage import ordinary_publication as ordinary, ordinary_result
     from app.comparison import snapshot_fee_outcome
     from app.comparison import sgo_median_publication
     row, _, binding, _, _ = publication_fixture()
@@ -312,7 +312,7 @@ def test_ordinary_publication_sgo_mode_uses_all_dependencies_and_never_legacy(mo
     result = {'rows': [row], 'pairs': [], 'assumptions': {'revision': 'settings', 'benchmark_venue': 'pinnacle'}}
     monkeypatch.setattr(snapshot_fee_outcome, 'reviews', lambda at: {})
     monkeypatch.setattr(sgo_median_publication, 'owned_median_evidence', lambda row, inputs, source, **kwargs: (inputs.get('sgo_reference_inputs') or {}).get(row['id']))
-    monkeypatch.setattr(ordinary, 'quote_authority', lambda *args, **kwargs: {
+    monkeypatch.setattr(ordinary_result, 'quote_authority', lambda *args, **kwargs: {
         'dependency': 'native', 'expected': ['r', 'c', 'e'], 'reasons': [],
         'current_until': '2026-11-10T20:30:00Z', 'lifecycle': {'state': 'scheduled'}})
     output = ordinary.bind(result, inputs, 'ready')['rows'][0]
