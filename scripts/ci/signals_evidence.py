@@ -57,16 +57,16 @@ CONTRACTS = {
             "test_sql_timeout_after_frame_retries_the_settled_page_without_another_request",
         ),
     ),
-    "Desk shows last-known prices and recovers": (
+    "Desk withholds prices during outages and recovers": (
         (
             "storage",
             "tests.test_broad_native_matrix_sql.BroadNativeMatrixSQL",
-            "test_desk_keeps_last_polymarket_price_during_sql_stall_and_reconnect",
+            "test_desk_withholds_prices_during_sql_stall_and_reconnects",
         ),
         (
             "ci-browser",
             "browser_tests.test_ranked_opportunities",
-            "test_desk_renders_last_known_polymarket_quote_and_recovers_on_first_poll",
+            "test_desk_reports_outage_without_old_quotes_then_recovers_on_refresh",
         ),
     ),
 }
@@ -355,16 +355,27 @@ def timing(selected):
                             scope=scope,
                         )
         recovery = read_json(path / "desk-recovery.json")
-        if recovery.get("fixture") in {"desk-polymarket-nba-v1", "desk-polymarket-nba-v2"}:
+        if recovery.get("fixture") in {
+            "desk-polymarket-nba-v1",
+            "desk-polymarket-nba-v2",
+        }:
             v2 = recovery["fixture"].endswith("-v2")
-            budget = number(recovery.get("outage_budget_seconds" if v2 else "fallback_budget_seconds"))
+            budget = number(
+                recovery.get(
+                    "outage_budget_seconds" if v2 else "fallback_budget_seconds"
+                )
+            )
             samples = recovery.get("outage_samples" if v2 else "fallback_samples")
             if (
                 isinstance(samples, list)
                 and samples
                 and all(number(sample) is not None for sample in samples)
             ):
-                label = "Desk reports SQL outage" if v2 else "Desk fallback during held SQL read"
+                label = (
+                    "Desk reports SQL outage"
+                    if v2
+                    else "Desk fallback during held SQL read"
+                )
                 measurements[label] = dict(
                     seconds=median(samples),
                     fixture=recovery["fixture"],

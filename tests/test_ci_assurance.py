@@ -226,13 +226,13 @@ class AssuranceContractTests(unittest.TestCase):
         for scope, selected in module.SCOPES.items():
             needs = {
                 name: {"result": "success" if name in selected else "skipped"}
-                for name in ("compatibility", "postgres", "security")
+                for name in ("postgres", "security")
             }
             needs["health"] = {"result": "failure"}
             passed, records = module.evaluate(scope, needs)
             self.assertTrue(passed)
             self.assertEqual(
-                sum(r["status"] == "N/A" for r in records), 3 - len(selected)
+                sum(r["status"] == "N/A" for r in records), 2 - len(selected)
             )
             for name in selected:
                 for failure in ("failure", "cancelled", "skipped", None):
@@ -334,10 +334,7 @@ class AssuranceArtifactTests(unittest.TestCase):
 
         for outcome, expected in (("success", 0), ("failure", 1)):
             with tempfile.TemporaryDirectory() as folder, contextlib.chdir(folder):
-                needs = {
-                    name: {"result": "skipped"}
-                    for name in ("compatibility", "postgres", "health")
-                }
+                needs = {name: {"result": "skipped"} for name in ("postgres", "health")}
                 needs["security"] = {"result": outcome}
                 with patch.dict(
                     os.environ,
@@ -409,13 +406,13 @@ class ReadinessSignalsTests(unittest.TestCase):
             browser = root / "ci-browser-19-1" / "junit.xml"
             browser.write_text(
                 '<testsuite tests="1"><testcase classname="browser_tests.test_ranked_opportunities" '
-                'name="test_desk_renders_last_known_polymarket_quote_and_recovers_on_first_poll"><skipped/>'
+                'name="test_desk_reports_outage_without_old_quotes_then_recovers_on_refresh"><skipped/>'
                 "</testcase></testsuite>"
             )
             storage = root / "storage-19-2-2" / "junit.xml"
             storage.write_text(
                 '<testsuite tests="2"><testcase classname="tests.test_broad_native_matrix_sql.BroadNativeMatrixSQL" '
-                'name="test_desk_keeps_last_polymarket_price_during_sql_stall_and_reconnect"/>'
+                'name="test_desk_withholds_prices_during_sql_stall_and_reconnects"/>'
                 '<testcase classname="tests.test_ordinary_publication_sql.OrdinarySQL" '
                 'name="test_posted_native_quote_survives_rotation_and_loses_execution_authority"><failure/>'
                 "</testcase></testsuite>"
@@ -424,9 +421,9 @@ class ReadinessSignalsTests(unittest.TestCase):
             missing = signals.build(root, root, sha, "19", "2", context)
             self.assertEqual(missing["artifacts"], ["storage-19-2-2"])
             self.assertEqual(
-                missing["contracts"]["Desk shows last-known prices and recovers"][
-                    "status"
-                ],
+                missing["contracts"][
+                    "Desk withholds prices during outages and recovers"
+                ]["status"],
                 "MISSING",
             )
 
@@ -445,7 +442,8 @@ class ReadinessSignalsTests(unittest.TestCase):
             self.assertEqual(result["reused_artifacts"], ["ci-browser-19-1"])
             checks = result["contracts"]
             self.assertEqual(
-                checks["Desk shows last-known prices and recovers"]["status"], "SKIPPED"
+                checks["Desk withholds prices during outages and recovers"]["status"],
+                "SKIPPED",
             )
             self.assertEqual(
                 checks["Stale native prices lose current authority"]["status"], "FAIL"
@@ -459,7 +457,7 @@ class ReadinessSignalsTests(unittest.TestCase):
             browser.write_text(browser.read_text().replace("<skipped/>", ""))
             self.assertEqual(
                 signals.build(root, root, sha, "19", "2", context)["contracts"][
-                    "Desk shows last-known prices and recovers"
+                    "Desk withholds prices during outages and recovers"
                 ]["status"],
                 "PASS",
             )
@@ -467,7 +465,7 @@ class ReadinessSignalsTests(unittest.TestCase):
             context["inherited_attempts"] = inherited(jobs, "19", "2")
             self.assertEqual(
                 signals.build(root, root, sha, "19", "2", context)["contracts"][
-                    "Desk shows last-known prices and recovers"
+                    "Desk withholds prices during outages and recovers"
                 ]["status"],
                 "MISSING",
             )
@@ -485,8 +483,12 @@ class ReadinessSignalsTests(unittest.TestCase):
             self.assertIn("| 2.000 | — |", signals.render(result, base))
             self.assertNotIn(signals.RECOVERY_PAINT, signals.render(result, base))
             result["timings"] = {
-                signals.RECOVERY_PAINT: dict(measurement, fixture="desk-browser-intercept-recovery-v2"),
-                signals.OUTAGE_RESPONSE: dict(measurement, fixture="desk-polymarket-nba-v2"),
+                signals.RECOVERY_PAINT: dict(
+                    measurement, fixture="desk-browser-intercept-recovery-v2"
+                ),
+                signals.OUTAGE_RESPONSE: dict(
+                    measurement, fixture="desk-polymarket-nba-v2"
+                ),
             }
             text = signals.render(result, base)
             self.assertNotIn(signals.BROWSER_PAINT, text)

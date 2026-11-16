@@ -113,7 +113,9 @@ def first_use(tab, base, archive_directory):
     expect(pair).to_contain_text("Summit Owls")
     expect(pair).to_contain_text("Both leg fees are needed to calculate net settlement")
     expect(pair).not_to_contain_text("-$4.097")
-    expect(pair.get_by_text("Lowest decisive return before fees", exact=True)).to_be_visible()
+    expect(
+        pair.get_by_text("Lowest decisive return before fees", exact=True)
+    ).to_be_visible()
     expect(pair.get_by_role("spinbutton")).to_have_count(0)
     pair.get_by_role("button", name="Inspect offer and fees").first.click()
     expect(trade).to_contain_text(
@@ -145,9 +147,7 @@ def first_use(tab, base, archive_directory):
     tab.keyboard.press("Escape")
     expect(filters).to_be_focused()
     tab.get_by_label("Positive only").check()
-    expect(
-        tab.get_by_role("heading", name="No positive results")
-    ).to_be_visible()
+    expect(tab.get_by_role("heading", name="No positive results")).to_be_visible()
     tab.get_by_role("button", name="Show unavailable pairings").press("Enter")
     expect(inspect).to_be_visible()
     filters.press("Enter")

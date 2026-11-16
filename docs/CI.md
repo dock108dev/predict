@@ -15,9 +15,9 @@ The [CI workflow](../.github/workflows/ci.yml) runs on pull requests, pushes to
 | --- | --- | --- | --- |
 | Incorrect prices, fees, matching or delivery | `CI` / `Offline checks` / `sh scripts/check-ci` checks portable Python and Node behavior, compilation, JavaScript syntax, generated assets and the test manifest. It retains JUnit and Python line and branch coverage. | PR, `main` push, merge group, manual / Ubuntu 24.04 | Required by `CI readiness` |
 | Unshippable package or unsafe source | `CI` / `Source, security and package` runs Ruff, actionlint, shell syntax, docs and `pytest tests/test_ci_*.py`, plus the redacted Gitleaks scan, pip-audit for both lock sources, and a wheel build, locked install and HTTP startup. | Same CI events / Ubuntu 24.04 | Required by `CI readiness`. Duplication and complexity measurements are advisory. |
-| Transaction, migration or recovery failure | `CI` / `PostgreSQL storage` calls `Shared disposable storage assurance`. Four shards run `scripts/ci/postgres.py` against temporary PostgreSQL 16 databases. | Same CI events and assurance / Ubuntu 24.04 | Required by the calling workflow |
+| Transaction, migration or recovery failure | `CI` / `PostgreSQL storage` calls `Shared disposable storage assurance`. Four shards run `scripts/ci/postgres.py` against temporary PostgreSQL 16 databases. | Same CI events and manual assurance / Ubuntu 24.04 | Required by the calling workflow |
 | Desk and Scanner journeys break | `CI` / `Ordinary browser journey` / `pytest browser_tests` uses locked Chromium and intercepted or loopback fixtures for first use, ranked refresh, keyboard, fee details and Scanner journeys. | Same CI events / Ubuntu 24.04 | Required by `CI readiness` |
-| Supported macOS versions or dependencies drift | `Scheduled assurance` / `macOS Python 3.11` and `macOS Python 3.14` run portable checks and wheel smoke on macOS 15. `Dependency refresh` audits locks on Ubuntu. `CI health sample` reads bounded Actions history on Ubuntu. | Weekly default branch or manual scope | Required within the selected assurance scope. History is advisory. |
+| New advisories for locked dependencies | `Scheduled assurance` / `Dependency refresh` audits both hash-locked requirements files and the `uv.lock` export. `CI health sample` reads bounded Actions history. | Weekly default branch or manual assurance / Ubuntu 24.04 | Dependency audit required in the security scope. History is advisory. |
 | Deployment uses an unverified image | `Deploy Predict dev server` / `Build and verify Hetzner images` runs the proxy and Compose smoke scripts before GHCR publication. `Deploy Predict to Hetzner` consumes the verified digests, and `Release result` retains the stage outcomes. | Manual branch dispatch / Ubuntu 24.04 | Release workflow. The repo variable, dispatch input and `hetzner` environment govern deployment. |
 
 `CI readiness` requires all four jobs to pass in the same run. Missing, failed,
@@ -27,12 +27,14 @@ ruleset. PR runs validate GitHub's merge commit and report the PR head separatel
 CI cancels superseded runs within the same pull request.
 
 [Scheduled assurance](../.github/workflows/assurance.yml) runs Mondays at 07:23
-UTC on the default branch, subject to runner scheduling. It tests macOS with
-Python 3.11 and 3.14, runs PostgreSQL checks, refreshes dependency advisories,
-and samples CI history.
-Manual scopes are `all`, `compatibility`, `postgres`, and `security`. Every
-scope includes the advisory health sample. CodeQL and Dependabot run separately
-from readiness. Check jobs set `contents: read` and leave checkout credentials out
+UTC on the default branch, subject to runner scheduling. The weekly run checks
+for new dependency advisories between code changes, including the combined CI
+locks excluded from Dependabot version updates. Manual scopes are `all`,
+`postgres`, and `security`. The regular CI workflow runs the same PostgreSQL
+suite on code changes. Every assurance scope includes the advisory health sample.
+Verify macOS-specific setup locally using the [quickstart](../README.md#requirements-and-quickstart).
+CodeQL and Dependabot run separately from readiness. Check jobs set
+`contents: read` and leave checkout credentials out
 of later steps. The scheduled history reader adds `actions: read`. The manual
 Hetzner workflow builds and smoke-tests images before
 publishing them by digest. Deployment also requires its environment controls.

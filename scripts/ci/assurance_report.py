@@ -9,17 +9,11 @@ from pathlib import Path
 from reporting import behavior_table, run_reference, safe, step_status
 
 SCOPES = {
-    "all": {"compatibility", "postgres", "security"},
-    "compatibility": {"compatibility"},
+    "all": {"postgres", "security"},
     "postgres": {"postgres"},
     "security": {"security"},
 }
 CHECKS = {
-    "compatibility": (
-        "Install and test on macOS with supported Python versions",
-        "Catches runtime and packaged-asset compatibility regressions",
-        "macOS offline checks and package reports",
-    ),
     "postgres": (
         "Migrations and transactions on disposable PostgreSQL",
         "Checks stored data and publication behavior",
@@ -47,7 +41,7 @@ def evaluate(scope, needs):
     if (
         scope not in SCOPES
         or not isinstance(needs, dict)
-        or set(needs) != {"compatibility", "postgres", "security", "health"}
+        or set(needs) != {"postgres", "security", "health"}
     ):
         return False, [
             dict(
@@ -57,7 +51,7 @@ def evaluate(scope, needs):
             )
         ]
     records = []
-    for name in ("compatibility", "postgres", "security"):
+    for name in ("postgres", "security"):
         result = needs[name].get("result") if isinstance(needs[name], dict) else None
         required = name in SCOPES[scope]
         passed = result == ("success" if required else "skipped")

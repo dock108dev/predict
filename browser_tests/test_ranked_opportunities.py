@@ -326,7 +326,9 @@ def test_desk_reports_outage_without_old_quotes_then_recovers_on_refresh():
     if report := os.environ.get("PREDICT_CI_REPORT_ROOT"):
         (Path(report) / "desk-paint.json").write_text(
             json.dumps(
-                dict(fixture="desk-browser-intercept-recovery-v2", seconds=paint_seconds),
+                dict(
+                    fixture="desk-browser-intercept-recovery-v2", seconds=paint_seconds
+                ),
                 indent=2,
             )
             + "\n"
@@ -473,7 +475,9 @@ def test_ev_updates_prices_without_reranking_or_displacing_a_reader(width):
         renewed = over.locator('[data-offer-id="native-current:exact-kalshi"]')
         expect(renewed).to_contain_text("-300")
         expect(renewed).to_be_focused()
-        expect(over.locator('[data-offer-id="detroit-over-novig"]')).to_have_attribute("data-desk-quote-key", "another-contract")
+        expect(over.locator('[data-offer-id="detroit-over-novig"]')).to_have_attribute(
+            "data-desk-quote-key", "another-contract"
+        )
         assert abs(under.bounding_box()["y"] - anchor_top) <= 1
 
         tab.locator("#refresh-list").evaluate("button => button.click()")

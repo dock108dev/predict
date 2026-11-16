@@ -262,7 +262,9 @@ def run(browser, width, output):
     expect(drawer).to_contain_text("44.44%")
     expect(drawer).to_contain_text("55.56%")
     drawer.get_by_text("Calculation details", exact=True).click()
-    expect(drawer.get_by_text("Total modeled funding with fees", exact=True)).to_be_visible()
+    expect(
+        drawer.get_by_text("Total modeled funding with fees", exact=True)
+    ).to_be_visible()
     expect(drawer).to_contain_text("$100.93")
     expect(drawer).to_contain_text("$0.93")
     expect(drawer).to_contain_text("$10.17")

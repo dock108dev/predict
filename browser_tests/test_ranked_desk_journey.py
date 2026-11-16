@@ -564,7 +564,7 @@ def test_ranked_and_browse_journey(width, tmp_path):
             expect(cards).to_have_count(2)
             expect(cards.last.locator(".arb-card-legs li")).to_have_count(2)
             expect(cards.last).to_contain_text("Lowest modeled return after fees")
-            expect(tab.locator('[name=profit], [name=stake]')).to_have_count(0)
+            expect(tab.locator("[name=profit], [name=stake]")).to_have_count(0)
             expect(cards.first).to_contain_text("+0.89%")
             expect(cards.last).to_contain_text("−4.84%")
             tab.screenshot(path=tmp_path / f"ranked-arb-{width}.png")
@@ -572,7 +572,9 @@ def test_ranked_and_browse_journey(width, tmp_path):
                 "Enter"
             )
             payoff = tab.get_by_role("dialog", name="Pair payoff")
-            expect(payoff.get_by_text("Lowest modeled return after fees", exact=True)).to_be_visible()
+            expect(
+                payoff.get_by_text("Lowest modeled return after fees", exact=True)
+            ).to_be_visible()
             assert "arb-washington" in inspected
             payoff.get_by_text("Calculation details", exact=True).click()
             expect(
@@ -600,8 +602,10 @@ def test_ranked_and_browse_journey(width, tmp_path):
             )
             pair_replacement = "stable"
             payoff.get_by_role("button", name="Use latest prices").click()
-            expect(payoff.locator(".inspection-payoffs tr").last).to_contain_text("-$4.99")
-            expect(payoff.locator('input[type=number]')).to_have_count(0)
+            expect(payoff.locator(".inspection-payoffs tr").last).to_contain_text(
+                "-$4.99"
+            )
+            expect(payoff.locator("input[type=number]")).to_have_count(0)
             assert not sized_pairs
             expect(cards.first).to_contain_text("+0.89%")
             assert tab.evaluate("document.documentElement.scrollWidth === innerWidth")
