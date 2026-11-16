@@ -47,8 +47,10 @@ def first_use(tab, base, archive_directory):
     search = tab.get_by_role("searchbox", name="Search teams")
     search.fill("no such team")
     expect(
-        tab.get_by_role("heading", name="No offers match these filters")
+        tab.get_by_role("heading", name="No results for “no such team”")
     ).to_be_visible()
+    tab.get_by_role("button", name="Clear search").click()
+    expect(search).to_have_value("")
     search.fill("Harbor Foxes")
     offer = tab.locator('[data-offer-id="practice-offer-0"]')
     expect(offer).to_contain_text("2.20")

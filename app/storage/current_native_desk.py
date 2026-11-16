@@ -145,9 +145,9 @@ def overlay(db, result, owner, states, *, at, contract=None, phase='pregame', sg
 
     pregame = phase == 'pregame'
     running = owner.get('healthy') and owner.get('active') and not owner.get('global_stopped')
-    current_venues = {venue for venue in VENUES if running and source_allowed(states.get(venue, {}))
-                      and venue not in owner.get('paused_sources', ())}
-    venues = list(VENUES) if pregame else sorted(current_venues)
+    enabled_venues = [venue for venue in VENUES if venue not in owner.get('paused_sources', ())]
+    current_venues = {venue for venue in enabled_venues if running and source_allowed(states.get(venue, {}))}
+    venues = enabled_venues if pregame else sorted(current_venues)
     if not venues:
         return result
     scope = {} if event_ids is None else {'event_ids': event_ids}

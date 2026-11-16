@@ -50,7 +50,7 @@ def active_offers(db, *, at, phase, venues, providers, sports, contract=None, ev
           AND (%s OR o.source_order >= extract(epoch FROM %s::timestamptz)) AND o.source_order <= o.received_order
           AND o.received_order <= extract(epoch FROM %s::timestamptz)
           AND o.native_book_id IS NULL AND o.facts->>'state'='available'
-          AND ((e.provider='sportsgameodds' AND sgo.is_current)
+          AND ((e.provider='sportsgameodds' AND sgo.id IS NOT NULL)
                OR (e.provider=%s AND c.venue='prophetx' AND o.sgo_quote_id IS NULL))
         ORDER BY c.id''',
         (providers, sports, venues, contract, contract, event_ids, event_ids, at + timedelta(hours=72), at, phase == 'pregame',
@@ -91,8 +91,7 @@ def overlay(db, result, owner, states, *, at, phase, contract=None, sgo_inputs=N
     if not running and not pregame:
         return result
     config = owner.get('config') or {}
-    venues = [name for name in ('novig', 'prophetx')
-              if pregame or name not in owner.get('paused_sources', ())]
+    venues = [name for name in ('novig', 'prophetx') if name not in owner.get('paused_sources', ())]
     if 'sports' not in config:
         return result
     sports = set(aggregate_scope(config))

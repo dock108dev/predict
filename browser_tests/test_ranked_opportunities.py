@@ -560,8 +560,11 @@ def test_ranked_and_browse_journey(width, tmp_path):
         elif url.path == "/api/comparison-current/selection":
             row = current_quote
             if different_line:
-                row = dict(row, market=dict(row["market"], line="206.5"),
-                           selection=dict(row["selection"], signed_line="206.5"))
+                row = dict(
+                    row,
+                    market=dict(row["market"], line="206.5"),
+                    selection=dict(row["selection"], signed_line="206.5"),
+                )
             route.fulfill(json={"row": None if withdraw_selection else row})
         elif url.path == "/api/comparison-current/lease":
             route.fulfill(json={"lease_id": "fixture"})
@@ -758,9 +761,9 @@ def test_ranked_and_browse_journey(width, tmp_path):
                 expect(price).to_have_accessible_name(
                     re.compile(re.escape(f"{value} Verified after-fee EV"))
                 )
-            expect(
-                tab.locator('[data-offer-id="kalshi-minnesota"]')
-            ).to_contain_text("EV unavailable")
+            expect(tab.locator('[data-offer-id="kalshi-minnesota"]')).to_contain_text(
+                "EV unavailable"
+            )
             if width == 390:
                 matrix = tab.locator(".odds-scroll")
                 assert matrix.evaluate("el => el.scrollWidth > el.clientWidth")
@@ -926,7 +929,9 @@ def test_ranked_and_browse_journey(width, tmp_path):
 
             different_line = True
             drawer.get_by_role("button", name="Use latest prices").click()
-            expect(drawer.get_by_role("status")).to_contain_text("The latest price is for a different exact outcome.")
+            expect(drawer.get_by_role("status")).to_contain_text(
+                "The latest price is for a different exact outcome."
+            )
             expect(drawer.get_by_text("$0.81 per $1 payout")).to_be_visible()
             different_line = False
             change_during_adoption = True
@@ -1017,86 +1022,131 @@ def test_ranked_and_browse_journey(width, tmp_path):
 def test_posted_pregame_preview_updates_with_the_board_and_can_be_held():
     from playwright.sync_api import expect, sync_playwright
 
-    key = 'a' * 64
-    selected = quote('posted', 'prophetx', 'win', 'winner', None, participant='Denver')
-    selected.update(posted_price=True, current=False, desk_quote_key=key,
-                    current_until='2026-11-13T00:00:01Z', cost_per_normal_claim='0.5')
+    key = "a" * 64
+    selected = quote("posted", "prophetx", "win", "winner", None, participant="Denver")
+    selected.update(
+        posted_price=True,
+        current=False,
+        desk_quote_key=key,
+        current_until="2026-11-13T00:00:01Z",
+        cost_per_normal_claim="0.5",
+    )
     revision = 0
-    prices = ['+100', '+104', '+110']
-    reads = {'list': 0, 'selection': 0}
+    prices = ["+100", "+104", "+110"]
+    reads = {"list": 0, "selection": 0}
 
     def offer():
-        return dict(selected, odds={'american': prices[revision], 'decimal': ['2', '2.04', '2.1'][revision]},
-                    price_revision=str(revision), economic_revision=str(revision), value=None)
+        return dict(
+            selected,
+            odds={
+                "american": prices[revision],
+                "decimal": ["2", "2.04", "2.1"][revision],
+            },
+            price_revision=str(revision),
+            economic_revision=str(revision),
+            value=None,
+        )
 
     def respond(route):
         url = urlparse(route.request.url)
-        if url.path in ('/ev', '/browse-odds', '/game'):
-            route.fulfill(path=ASSETS / 'desk.html')
-        elif url.path.startswith('/view/current/'):
+        if url.path in ("/ev", "/browse-odds", "/game"):
+            route.fulfill(path=ASSETS / "desk.html")
+        elif url.path.startswith("/view/current/"):
             route.fulfill(path=ASSETS / Path(url.path).name)
-        elif url.path == '/api/comparison-current':
-            reads['list'] += 1
-            body = group('posted-group', DENVER, [offer()], None)
-            route.fulfill(json=dict(state='ready', rows=[body], phase='pregame', total=1,
-                                    features=dict(live_enabled=False, posted_pregame=True),
-                                    update_cursor=str(revision), refresh_at=START))
-        elif url.path == '/api/comparison-current/updates':
-            after = parse_qs(url.query)['after'][0]
-            route.fulfill(json=dict(changed=after != str(revision), cursor=str(revision), poll_after_ms=1000))
-        elif url.path == '/api/comparison-current/selection':
-            reads['selection'] += 1
-            budget = parse_qs(url.query)['preview_amount'][0]
-            route.fulfill(json=dict(row=dict(offer(), start_at=START, trade_preview=dict(
-                available=True, fee_available=True, amount_usd=budget, upfront_usd=budget,
-                fee_timing='commission_deducted_from_winning_market_gains', fee_at_entry_usd='0',
-                fee_if_win_usd='0.21', net_win_payout_usd='20.19', net_win_profit_usd='10.19',
-                net_loss_usd=budget, modeled=True))))
+        elif url.path == "/api/comparison-current":
+            reads["list"] += 1
+            body = group("posted-group", DENVER, [offer()], None)
+            route.fulfill(
+                json=dict(
+                    state="ready",
+                    rows=[body],
+                    phase="pregame",
+                    total=1,
+                    features=dict(live_enabled=False, posted_pregame=True),
+                    update_cursor=str(revision),
+                    refresh_at=START,
+                )
+            )
+        elif url.path == "/api/comparison-current/updates":
+            after = parse_qs(url.query)["after"][0]
+            route.fulfill(
+                json=dict(
+                    changed=after != str(revision),
+                    cursor=str(revision),
+                    poll_after_ms=1000,
+                )
+            )
+        elif url.path == "/api/comparison-current/selection":
+            reads["selection"] += 1
+            budget = parse_qs(url.query)["preview_amount"][0]
+            route.fulfill(
+                json=dict(
+                    row=dict(
+                        offer(),
+                        start_at=START,
+                        trade_preview=dict(
+                            available=True,
+                            fee_available=True,
+                            amount_usd=budget,
+                            upfront_usd=budget,
+                            fee_timing="commission_deducted_from_winning_market_gains",
+                            fee_at_entry_usd="0",
+                            fee_if_win_usd="0.21",
+                            net_win_payout_usd="20.19",
+                            net_win_profit_usd="10.19",
+                            net_loss_usd=budget,
+                            modeled=True,
+                        ),
+                    )
+                )
+            )
         else:
             route.fulfill(status=404)
 
     with sync_playwright() as playwright:
-        browser = playwright.chromium.launch(executable_path=os.getenv('PREDICT_CI_CHROMIUM'))
+        browser = playwright.chromium.launch(
+            executable_path=os.getenv("PREDICT_CI_CHROMIUM")
+        )
         tab = browser.new_page()
         errors = []
-        tab.on('pageerror', lambda err: errors.append(str(err)))
-        tab.route('**/*', respond)
-        tab.clock.install(time=datetime.fromisoformat('2026-11-13T00:00:00+00:00'))
-        tab.goto(f'{BASE}/ev')
-        toggle = tab.get_by_role('checkbox', name='Auto-update')
+        tab.on("pageerror", lambda err: errors.append(str(err)))
+        tab.route("**/*", respond)
+        tab.clock.install(time=datetime.fromisoformat("2026-11-13T00:00:00+00:00"))
+        tab.goto(f"{BASE}/ev")
+        toggle = tab.get_by_role("checkbox", name="Auto-update")
         expect(toggle).to_be_checked()
-        tile = tab.locator('#results [data-desk-quote-key]').first
-        expect(tile).to_contain_text('+100')
+        tile = tab.locator("#results [data-desk-quote-key]").first
+        expect(tile).to_contain_text("+100")
         tab.clock.fast_forward(35_000)
-        expect(tile).to_contain_text('+100')
-        expect(tile).not_to_contain_text('Last known')
+        expect(tile).to_contain_text("+100")
+        expect(tile).not_to_contain_text("Last known")
         tile.click()
-        detail = tab.get_by_role('dialog', name='ProphetX · Denver to win')
-        expect(detail).to_contain_text('$20.19 returned')
-        expect(detail.get_by_role('button', name='Use latest prices')).to_be_hidden()
-        amount = detail.get_by_label('Maximum upfront cost')
-        amount.fill('15')
-        amount.press('Tab')
-        expect(detail).to_contain_text('$15.00 loss')
+        detail = tab.get_by_role("dialog", name="ProphetX · Denver to win")
+        expect(detail).to_contain_text("$20.19 returned")
+        expect(detail.get_by_role("button", name="Use latest prices")).to_be_hidden()
+        amount = detail.get_by_label("Maximum upfront cost")
+        amount.fill("15")
+        amount.press("Tab")
+        expect(detail).to_contain_text("$15.00 loss")
 
         revision = 1
         tab.clock.fast_forward(18_000)
-        expect(detail).to_contain_text('+104')
-        expect(tile).to_contain_text('+104')
-        expect(amount).to_have_value('15')
-        detail.get_by_role('button', name='Close').click()
+        expect(detail).to_contain_text("+104")
+        expect(tile).to_contain_text("+104")
+        expect(amount).to_have_value("15")
+        detail.get_by_role("button", name="Close").click()
         toggle.uncheck()
         before = dict(reads)
         revision = 2
         tab.clock.fast_forward(20_000)
-        expect(tile).to_contain_text('+104')
+        expect(tile).to_contain_text("+104")
         assert reads == before
         tile.click()
-        expect(detail).to_contain_text('+104')
-        detail.get_by_role('button', name='Refresh', exact=True).click()
-        expect(detail).to_contain_text('+110')
-        expect(tile).to_contain_text('+110')
-        detail.get_by_role('button', name='Close').click()
+        expect(detail).to_contain_text("+104")
+        detail.get_by_role("button", name="Refresh", exact=True).click()
+        expect(detail).to_contain_text("+110")
+        expect(tile).to_contain_text("+110")
+        detail.get_by_role("button", name="Close").click()
         tab.reload()
         expect(toggle).not_to_be_checked()
         assert not errors, errors

@@ -534,8 +534,7 @@ class CurrentRowStore:
                     FROM current_contract c JOIN unnest(%s::text[],%s::text[],%s::text[])
                     AS wanted(venue,event_id,native_market_id) USING(venue,event_id,native_market_id)
                     JOIN current_offer posted ON posted.contract_id=c.id
-                    WHERE o.contract_id=c.id AND o.native_book_id IS NOT NULL
-                      AND posted.price_value IS NOT NULL
+                    WHERE o.contract_id=c.id AND posted.price_value IS NOT NULL
                       AND o.facts->>'state' IN ('available','budget_delayed')""",values)
                 tables=('native_book_revision',)
             counts=dict(keys=len(keys),contracts=0,offers=0,books=0)

@@ -146,7 +146,7 @@ class SportsGameOddsPregameDeskSQL(LatestBoardFixture):
                 for filters in (dict(browse_odds='1'), dict(ranked='1', phase='live')):
                     page = await read(**filters)
                     self.assertEqual((page['phase'], page['features'], page['provider_requests']),
-                                     ('pregame', {'live_enabled': False}, 0))
+                                     ('pregame', {'live_enabled': False, 'posted_pregame': True}, 0))
                     self.assertEqual(len(page['games']), len(events))
                     matched = set()
                     for group in page['rows']:
@@ -367,7 +367,7 @@ class SportsGameOddsPregameDeskSQL(LatestBoardFixture):
                 self.at = stamp(event['status']['startsAt'])
                 self.state.write(self.service)
                 after = await (await client.get('/api/comparison-current', params=dict(query, phase='live'))).json()
-                self.assertEqual(after['features'], {'live_enabled': False})
+                self.assertEqual(after['features'], {'live_enabled': False, 'posted_pregame': True})
                 self.assertEqual((after['phase'], after['rows']), ('pregame', []))
                 closed = await (await client.get('/api/comparison-current/selection', params=selection)).json()
                 self.assertIsNone(closed['row'])

@@ -55,7 +55,11 @@ class CurrentSlate:
                 )
             )
             for mobile_venue in self.venues:
-                item = quote(f"{key}-{mobile_venue}", mobile_venue, current=not self.feed_unavailable)
+                item = quote(
+                    f"{key}-{mobile_venue}",
+                    mobile_venue,
+                    current=not self.feed_unavailable,
+                )
                 if number == self.changed_line:
                     item["market"]["line"] = "3.5"
                     item["selection"]["signed_line"] = "-3.5"
@@ -75,7 +79,8 @@ class CurrentSlate:
             games=games,
             captured_at=AT.isoformat(),
             publication=dict(
-                read_at=AT.isoformat(), state="ready",
+                read_at=AT.isoformat(),
+                state="ready",
                 current_prices=0 if self.feed_unavailable else len(rows),
                 data_runtime=dict(healthy=not self.feed_unavailable),
             ),
@@ -213,8 +218,12 @@ def test_phone_site_filter_keeps_outcome_and_points_to_offscreen_quotes():
     current.venues = ("novig", "prophetx")
     current.feed_unavailable = True
     with sync_playwright() as playwright:
-        browser = playwright.chromium.launch(executable_path=os.getenv("PREDICT_CI_CHROMIUM"))
-        context = browser.new_context(viewport={"width": 390, "height": 664}, has_touch=True)
+        browser = playwright.chromium.launch(
+            executable_path=os.getenv("PREDICT_CI_CHROMIUM")
+        )
+        context = browser.new_context(
+            viewport={"width": 390, "height": 664}, has_touch=True
+        )
         intercept(context, current)
         tab = context.new_page()
         tab.goto(BASE)
@@ -227,9 +236,13 @@ def test_phone_site_filter_keeps_outcome_and_points_to_offscreen_quotes():
         outcome = game.locator(".matrix-outcome")
         expect(outcome).to_have_text("Detroit to cover -2.5")
         expect(game.get_by_text("Reference estimate unavailable")).to_be_attached()
-        books = game.get_by_role("button", name="Same-line sportsbook quotes for Detroit to cover -2.5")
+        books = game.get_by_role(
+            "button", name="Same-line sportsbook quotes for Detroit to cover -2.5"
+        )
         books.tap()
-        expect(tab.get_by_role("region", name="Sportsbook prices")).to_contain_text("FanDuel")
+        expect(tab.get_by_role("region", name="Sportsbook prices")).to_contain_text(
+            "FanDuel"
+        )
         tab.keyboard.press("Escape")
         cue = game.get_by_role("button", name="See Novig prices in the next columns")
         cue.tap()
@@ -242,9 +255,13 @@ def test_phone_site_filter_keeps_outcome_and_points_to_offscreen_quotes():
         expect(game.get_by_text("No quote from selected sites")).to_be_visible()
         expect(outcome).to_have_text("Detroit to cover -2.5")
         expect(game.locator("[data-offer-id]")).to_have_count(0)
-        expect(game.get_by_label("No quote shown from Kalshi for this exact outcome")).to_be_visible()
+        expect(
+            game.get_by_label("No quote shown from Kalshi for this exact outcome")
+        ).to_be_visible()
         search.fill("Detroit @ Example 1")
-        expect(tab.get_by_role("heading", name="No results for “Detroit @ Example 1”")).to_be_visible()
+        expect(
+            tab.get_by_role("heading", name="No results for “Detroit @ Example 1”")
+        ).to_be_visible()
         expect(tab.locator("#notice")).to_contain_text("Price feed unavailable")
         tab.get_by_role("button", name="Clear search").tap()
         expect(search).to_have_value("")

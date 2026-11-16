@@ -399,7 +399,6 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
     runtime = result['publication'].get('data_runtime') or {}
     public_summary = query.get('summary') == '1'
     pregame_desk = current and phase == 'pregame' and public_summary and query.get('layout') == 'desk'
-    posted_board = pregame_desk and any(row.get('posted_price') for row in result['rows'])
     show_last_known = pregame_desk and (browse or ranked) and view != 'arbs'
     native_browse = browse and comparable and public_summary
     retained_fallback = (browse and phase != 'live' and view != 'arbs' and browse_retained(runtime)
@@ -496,6 +495,7 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
     selected_rows = [row for row in rows if not venues or row['venue'] in venues]
     by_id = {row['id']: row for row in rows}
     metric = METRICS[basis]
+    show_posted_unscored = pregame_desk and ranked and metric == SPORTSBOOK_METRIC
     eligible_pair_count = None
     pair_status = {}
     calculation_reason = None
@@ -666,7 +666,7 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
     price_lists = {}
     limited_coverage = False
     if comparable:
-        retained_comparison = posted_board or browse and (show_retained or show_last_known)
+        retained_comparison = show_posted_unscored or browse and (show_retained or show_last_known)
         candidates = []
         for group in groups:
             if (not (retained_comparison or show_last_known) and not any(row.get('price_current') for row in group['quotes'])
@@ -751,7 +751,13 @@ def page(result, query, options, *, captured_pairs=(), policy=None, browsing=Non
             calculation_missing = sorted({reason for text in reasons if text for reason in text.split(', ')})[:8]
             calculation_reason = 'Current prices are missing inputs for the selected calculation.'
     if view != 'arbs':
-        groups = [g for g in groups if (not ranked or g['score'] is not None or posted_board)
+        def posted_without_estimate(group):
+            return show_posted_unscored and any(
+                row.get('posted_price') and (not venues or row['venue'] in venues)
+                and (row.get('selection') or {}).get('predicate') in ('win', 'cover', 'over', 'under')
+                for row in group['quotes'])
+
+        groups = [g for g in groups if (not ranked or g['score'] is not None or posted_without_estimate(g))
                   and passes(Fraction(g['score']) if g['score'] is not None else None, g.get('retail_payoff'))]
 
     page_by_game = (browse or pregame_desk and ranked) and not query.get('game_key') and view != 'arbs'

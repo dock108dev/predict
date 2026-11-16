@@ -508,7 +508,9 @@ function emptyResults(page, publication) {
       filters.elements.search.focus();
     }));
   } else if (page.state === 'initializing' && !publication.retained_prices) {
-    title = 'Waiting for the first prices';
+    const issue = collectionIssue(publication.data_runtime);
+    title = issue || 'Waiting for the first prices';
+    if (issue) actions.append(link('Source status', '/admin?section=sources', 'desk-action'));
   } else if (comparable && browse && !gameKey) {
     title = 'No matching odds';
     showAlternates();
@@ -624,7 +626,9 @@ function render(page, keepNodes = false) {
   if (replay && page.replay?.captured_at) notice.push(`Captured ${clock(page.replay.captured_at)}.`);
   if (!replay) {
     const issue = collectionIssue(publication.data_runtime);
-    if (issue) notice.push(`${issue}.`);
+    if (issue && (rows.length || page.state !== 'initializing' || publication.retained_prices)) {
+      notice.push(`${issue}.`);
+    }
     if (!issue && publication.state === 'failed') notice.push('Price publication is delayed.');
     if (!publication.data_runtime?.stopped) notice.push(...sourceNotices(publication));
   }
