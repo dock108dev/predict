@@ -21,7 +21,7 @@ const UI = (() => {
     if(document.body.classList.contains('desk-app')){
       const opportunities = document.body.classList.contains('opportunities-app');
       if (opportunities) {
-        nav.append(link('Opportunities','/'),link('Browse odds','/browse-odds'),link('Admin','/admin'));
+        nav.append(link('Opportunities','/'),link('Browse odds','/browse-odds'),link('Trading fees','/trading-fees'),link('Admin','/admin'));
       } else {
         nav.append(link('EV','/ev'),link('Arbitrage','/arbs'),link('Admin','/admin'));
       }
@@ -34,7 +34,7 @@ const UI = (() => {
       label.append(choice);label.className='p-format';
       h.append(brand,nav,label);host.replaceChildren(h);
       const path = opportunities
-        ? ['/browse-odds', '/game'].includes(location.pathname) ? '/browse-odds' : '/'
+        ? ['/browse-odds', '/game'].includes(location.pathname) ? '/browse-odds' : location.pathname === '/trading-fees' ? '/trading-fees' : '/'
         : location.pathname==='/'?'/ev':location.pathname;
       nav.querySelectorAll('a').forEach(a=>{if(a.pathname===path)a.setAttribute('aria-current','page');});
       return;

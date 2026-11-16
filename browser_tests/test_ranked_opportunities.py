@@ -3,9 +3,11 @@
 from copy import deepcopy
 from datetime import datetime
 from fractions import Fraction
+import json
 import os
 from pathlib import Path
 import re
+from time import monotonic
 from urllib.parse import parse_qs, urlparse
 
 import pytest
@@ -313,9 +315,12 @@ def test_desk_renders_last_known_polymarket_quote_and_recovers_on_first_poll():
         tab = browser.new_page()
         tab.route("**/*", respond)
         tab.clock.install(time=stamp(observed))
+        start = monotonic()
         tab.goto(f"{BASE}/browse-odds")
         price = tab.locator('[data-offer-id="poly"]')
+        expect(price).to_be_visible()
         expect(price).to_contain_text("+104")
+        paint_seconds = monotonic() - start
         expect(price).to_contain_text("Last known")
         expect(tab.locator("#notice")).to_contain_text("Showing last known prices")
         price.click()
@@ -341,6 +346,14 @@ def test_desk_renders_last_known_polymarket_quote_and_recovers_on_first_poll():
             tab.clock.fast_forward(6600)
         expect(price).to_contain_text("+118")
         browser.close()
+    if report := os.environ.get("PREDICT_CI_REPORT_ROOT"):
+        (Path(report) / "desk-paint.json").write_text(
+            json.dumps(
+                dict(fixture="desk-browser-intercept-v1", seconds=paint_seconds),
+                indent=2,
+            )
+            + "\n"
+        )
 
 
 @pytest.mark.parametrize("width", [1440, 390])

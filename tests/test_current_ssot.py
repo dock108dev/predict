@@ -36,13 +36,20 @@ class RuntimeEntrypoints(unittest.TestCase):
 
     def test_app_uses_runtime_client_and_authoritative_factory(self):
         from app.dashboard import opportunity_board
-        with patch('sys.argv', ['predict', '--port', '8799']), \
+        from app.dashboard.desk_last_known import LastKnownDesk
+        with tempfile.TemporaryDirectory() as folder, \
+                patch.object(opportunity_board, 'ROOT', Path(folder)), \
+                patch('sys.argv', ['predict', '--port', '8799']), \
                 patch('app.collection.runtime_client.RuntimeClient') as client, \
                 patch.object(opportunity_board, 'create_app') as app, \
                 patch.object(opportunity_board.web, 'run_app') as serve:
             opportunity_board.main()
         client.assert_called_once_with()
-        app.assert_called_once_with(current_provider=client.return_value)
+        app.assert_called_once()
+        self.assertEqual(app.call_args.kwargs['current_provider'], client.return_value)
+        cache = app.call_args.kwargs['desk_cache']
+        self.assertIsInstance(cache, LastKnownDesk)
+        self.assertEqual(cache.path.parent, Path(folder) / '.local' / 'desk-read-cache')
         serve.assert_called_once_with(app.return_value, host='127.0.0.1', port=8799,
                                       access_log=None, handler_cancellation=True)
 

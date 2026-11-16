@@ -79,6 +79,10 @@ jobs:
         run: |
           python -m ruff check app tests scripts/ci browser_tests
           python -m ruff format --check scripts/ci browser_tests tests/test_ci_*.py tests/ci_support.py
+      - name: Measure Python duplication and complexity
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
+        continue-on-error: true
+        run: python scripts/ci/code_signals.py
       - name: Redacted publishable-tree secret scan
         id: secrets
         if: ${{ !cancelled() && steps.setup.outcome == 'success' && steps.tools.outcome == 'success' }}
@@ -154,6 +158,8 @@ jobs:
         run: python -m playwright install --with-deps chromium
       - name: Offline ordinary journey and keyboard checks
         id: browser
+        env:
+          PREDICT_CI_REPORT_ROOT: test-results/browser
         run: |
           mkdir -p test-results/browser
           python -m pytest -q browser_tests --junitxml=test-results/browser/junit.xml
@@ -176,14 +182,30 @@ jobs:
     if: always()
     runs-on: ubuntu-24.04
     timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          fetch-depth: 2
       - name: Require every same-run gate
         env:
           NEEDS_JSON: ${{ toJSON(needs) }}
         run: python3 scripts/ci/gate.py
+      - name: Download this run's test and quality evidence
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          path: test-results/signals-inputs/current
+      - name: Publish advisory validation signals
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/ci/readiness_signals.py
       - name: Retain same-run readiness result
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -191,4 +213,4 @@ jobs:
           name: ci-readiness-${{ github.run_id }}-${{ github.run_attempt }}
           path: test-results/readiness/
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 90

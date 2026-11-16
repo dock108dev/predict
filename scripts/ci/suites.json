@@ -620,6 +620,7 @@
       "tests/test_f05_polymarket_public.py",
       "tests/test_f06_prophetx_retail.py",
       "tests/test_f07_desk.py",
+      "tests/test_trade_preview.py",
       "tests/test_f08a_product_schedules.py",
       "tests/test_kalshi_fee_renderer.py",
       "tests/test_kalshi_rendered_fee_refresh.py",

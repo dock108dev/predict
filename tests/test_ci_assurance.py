@@ -364,6 +364,100 @@ class AssuranceArtifactTests(unittest.TestCase):
                 )
 
 
+class ReadinessSignalsTests(unittest.TestCase):
+    def test_changed_coverage_keeps_missing_branches_and_unmeasured_files_distinct(
+        self,
+    ):
+        evidence = load("signals_evidence")
+        changes = {
+            "app/a.py": [(8, 3)],
+            "app/new.py": [(1, 2)],
+            "app/removed.py": [(8, 0)],
+        }
+        info = {
+            "executed_lines": [1, 8, 20],
+            "missing_lines": [9, 15],
+            "executed_branches": [[8, 9], [1, 2]],
+            "missing_branches": [[8, 10], [15, 16]],
+        }
+        result = evidence.changed_coverage({"app/a.py": info}, changes)
+        self.assertEqual(result["lines"], {"covered": 1, "total": 2, "percent": 50})
+        self.assertEqual(result["branches"], {"covered": 1, "total": 2, "percent": 50})
+        self.assertEqual(result["files"][0]["missing_branches"], [[8, 10]])
+        self.assertEqual(result["unmeasured"], ["app/new.py"])
+        self.assertIsNone(evidence.changed_coverage({}, None))
+
+    def test_evidence_uses_same_commit_and_reports_skipped_missing_and_failed_cases(
+        self,
+    ):
+        signals = load("readiness_signals")
+        sha = "a" * 40
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for lane, attempt, suffix, tested in (
+                ("ci-browser", 1, "", sha),
+                ("ci-browser", 2, "", "b" * 40),
+                ("storage", 2, "-2", sha),
+            ):
+                folder = root / f"{lane}-19-{attempt}{suffix}"
+                folder.mkdir()
+                (folder / "metrics.json").write_text(
+                    json.dumps(
+                        dict(tested_sha=tested, run_id="19", run_attempt=str(attempt))
+                    )
+                )
+            browser = root / "ci-browser-19-1" / "junit.xml"
+            browser.write_text(
+                '<testsuite tests="1"><testcase classname="browser_tests.test_ranked_opportunities" '
+                'name="test_desk_renders_last_known_polymarket_quote_and_recovers_on_first_poll"><skipped/>'
+                "</testcase></testsuite>"
+            )
+            storage = root / "storage-19-2-2" / "junit.xml"
+            storage.write_text(
+                '<testsuite tests="2"><testcase classname="tests.test_broad_native_matrix_sql.BroadNativeMatrixSQL" '
+                'name="test_desk_keeps_last_polymarket_price_during_sql_stall_and_reconnect"/>'
+                '<testcase classname="tests.test_ordinary_publication_sql.OrdinarySQL" '
+                'name="test_posted_native_quote_survives_rotation_and_loses_execution_authority"><failure/>'
+                "</testcase></testsuite>"
+            )
+            context = dict(base_sha=None, baseline=None, slowest=None, health=None)
+            result = signals.build(root, root, sha, "19", "2", context)
+            self.assertEqual(result["artifacts"], ["ci-browser-19-1", "storage-19-2-2"])
+            checks = result["contracts"]
+            self.assertEqual(
+                checks["Desk shows last-known prices and recovers"]["status"], "SKIPPED"
+            )
+            self.assertEqual(
+                checks["Stale native prices lose current authority"]["status"], "FAIL"
+            )
+            self.assertEqual(
+                checks["Ranked pairs use exact opposing markets"]["status"], "MISSING"
+            )
+            text = signals.render(result, None)
+            self.assertIn("Comparable base artifact unavailable", text)
+            self.assertIn("Changed-code coverage unavailable", text)
+
+    def test_duplicate_detection_ignores_wrappers_and_docstring_differences(self):
+        code = load("code_signals")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            app = root / "app"
+            app.mkdir()
+            body = "\n    a = x\n    b = a\n    c = b\n    d = c\n    return d\n"
+            (app / "one.py").write_text(
+                'def first(x):\n    """first"""' + body + "\ndef a(x): return x\n"
+            )
+            (app / "two.py").write_text(
+                'def second(x):\n    """second"""' + body + "\ndef b(x): return x\n"
+            )
+            functions, groups = code.duplicates(root)
+            self.assertEqual(functions, 2)
+            self.assertEqual(len(groups), 1)
+            self.assertEqual(
+                [f["name"] for f in groups[0]["functions"]], ["first", "second"]
+            )
+
+
 class ReadinessArtifactTests(unittest.TestCase):
     def test_gate_retains_identity_and_failure_even_for_malformed_input(self):
         import os

@@ -98,12 +98,38 @@ fixtures.
 ## Reports and dependencies
 
 GitHub job summaries collect check, coverage, and case outcomes. Artifacts are
-retained for 14 days. Local reports default to ignored `test-results/`. Use a
+retained for 14 days. The compact readiness report is retained for 90 days,
+subject to GitHub's retention policy. Local reports default to ignored `test-results/`. Use a
 fresh output directory for each invocation that preserves existing reports.
 JUnit summaries count serialized cases separately from pytest's totals, which
 can include subtests. Inconsistent reports fail required checks. Coverage
 describes the executed scope. Fixture results do not establish live provider
 coverage or installed load times.
+
+The readiness summary collects advisory measurements from the same workflow.
+It reports named correctness cases for quote authority, financial eligibility,
+exact pairing, accounting, and outage recovery. The outcome requires the
+listed case evidence and shows failures, skips, and missing cases explicitly.
+Artifacts from earlier attempts are eligible when they belong to the same run
+and tested commit. Required job conclusions still determine the gate.
+
+Python coverage reports lines and branches separately, with component totals
+and coverage of executable lines and branch origins added or modified in the
+tested tree. The report links missed lines or branches to the tested commit.
+For pull requests the comparison base is the tested merge commit's first
+parent. Pushes and merge groups use their event's previous or base SHA.
+Coverage deltas require a successful exact-base artifact with matching offline
+manifest, platform family, Python and coverage tools. The summary lists
+unmeasured changed files and withholds comparisons when evidence is unavailable.
+
+The advisory summary also includes exact duplicate Python function bodies and
+Ruff complexity findings, secret and dependency audit counts, the slowest
+completed job and the sampled first-attempt pass rate. Dependency count changes
+can reflect updates to advisory databases. Timing measurements come from the
+existing browser, PostgreSQL selection and desk recovery fixtures, including the
+fixture and sample count. They describe the test environment and are useful for
+spotting large changes on comparable runners. The compact `signals.json` keeps
+commit and artifact identities, coverage gaps, named cases and timing samples.
 
 Gitleaks scans the publishable worktree. Published findings include validated
 relative paths, rule IDs, and line numbers. Dependency audits check the two

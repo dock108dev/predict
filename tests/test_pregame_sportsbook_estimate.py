@@ -118,6 +118,7 @@ def test_aggregate_pregame_uses_exact_same_frame_pair_before_finance(monkeypatch
 
     stored, at, inputs = stored_inputs()
     monkeypatch.setattr('app.storage.current_aggregate_desk.active_offers', lambda *args, **kwargs: [stored])
+    monkeypatch.setattr('app.storage.sgo_native_catalog.read', lambda db, event_ids: {})
     data = dict(result(), games=[])
     data['publication']['read_at'] = at.isoformat()
     owner = dict(healthy=True, active=True, config=dict(sports=['NBA'], families=['spread'],
@@ -132,7 +133,9 @@ def test_aggregate_pregame_uses_exact_same_frame_pair_before_finance(monkeypatch
     stored, at, inputs = stored_inputs()
     projected = aggregate_overlay(None, data, owner, states, at=at, phase='pregame', sgo_inputs=inputs)
     comparison = page(projected, query, ('ev', None, 0, 10))
-    assert not comparison['rows']
+    unranked, = comparison['rows']
+    assert unranked['score'] is None
+    assert all(offer['value'] is None for offer in unranked['offers'])
     assert comparison['calculation_reason'] == 'No eligible two-sided sportsbook reference is available for these offers.'
     browse = page(projected, dict(query, ranked='', browse_odds='1'), ('ev', None, 0, 10))
     observed, = browse['rows'][0]['offers']
@@ -160,7 +163,8 @@ def test_native_pregame_desk_uses_current_books_before_the_slate_catches_up(monk
     books = {contract_id(record): dict(book_id='book', book_revision='revision', quantity_units='contracts',
         best_ask=[record['quote']['original']['value'], 'usd_per_contract', '20']) for record in records}
 
-    def active(db, *, at, venues, contract, phase):
+    def active(db, *, at, venues, contract, phase, posted):
+        assert posted == (phase == 'pregame')
         return [record for record in records if record['quote']['venue'] in venues
                 and (contract is None or contract_id(record) == contract)], deps, books
 
@@ -198,12 +202,18 @@ def test_native_pregame_desk_uses_current_books_before_the_slate_catches_up(monk
         missing_reference.setattr('app.storage.ordinary_publication.pregame_sportsbooks', lambda *args, **kw: {})
         current = overlay(None, data, owner, states, at=AT)
         assert [row['game_key'] for row in current['rows']] == [row['game_key'] for row in projected['rows']]
-        assert not page(current, query, ('ev', None, 0, 10))['rows']
+        unranked, = page(current, query, ('ev', None, 0, 10))['rows']
+        assert unranked['score'] is None
+        assert all(offer['value'] is None for offer in unranked['offers'])
         browsed, = page(current, dict(query, ranked='', browse_odds='1'), ('ev', None, 0, 10))['rows']
         assert browsed['id'] == group['id']
         assert {offer['venue'] for offer in browsed['offers']} == {'kalshi', 'polymarket_us'}
-    assert overlay(None, data, owner, states, at=AT + timedelta(seconds=31)) is data
-    assert overlay(None, data, dict(owner, global_stopped=True), states, at=AT) is data
+    expired = overlay(None, data, owner, states, at=AT + timedelta(seconds=31))['rows']
+    stopped = overlay(None, data, dict(owner, global_stopped=True), states, at=AT)['rows']
+    for held in (expired, stopped):
+        assert {row['venue'] for row in held} == {'kalshi', 'polymarket_us'}
+        assert all(row['posted_price'] and not row['price_current'] for row in held)
+        assert all(row['times']['source_at'] == clock.isoformat() for row in held)
     assert [offer['venue'] for offer in overlay(None, data,
         dict(owner, paused_sources=['kalshi']), states, at=AT)['rows']] == ['polymarket_us']
 
@@ -216,7 +226,9 @@ def test_native_pregame_desk_uses_current_books_before_the_slate_catches_up(monk
     assert live['venue'] == 'kalshi' and live['game_state'] == 'live'
     assert live['game_state_observed_at'] == clock.isoformat()
     assert live['times']['source_at'] == clock.isoformat() and live['sportsbook_baseline'] is None
-    assert overlay(None, data, owner, states, at=AT + timedelta(seconds=15), phase='live') is data
+    after_expiry = overlay(None, data, owner, states, at=AT + timedelta(seconds=15), phase='live')
+    assert not after_expiry['rows']
+    assert after_expiry['publication']['current_prices'] == 0
 
 
 def test_both_original_clocks_kickoff_omission_and_suspension():

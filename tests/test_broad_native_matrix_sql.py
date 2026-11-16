@@ -1,9 +1,12 @@
 """One disposable PostgreSQL 16 matrix through ingress, publication and HTTP."""
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
+import json
+import os
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from threading import Event
+from time import monotonic
 from types import SimpleNamespace
 from unittest import IsolatedAsyncioTestCase, skipUnless
 from unittest.mock import MagicMock,patch
@@ -81,6 +84,8 @@ class BroadNativeMatrixSQL(NativeMatrixFixture):
         waiting, release = Event(), Event()
         stalled = False
         reads = 0
+        fallback_budget = 0.1
+        timings = {}
 
         def connect():
             nonlocal reads
@@ -101,21 +106,32 @@ class BroadNativeMatrixSQL(NativeMatrixFixture):
             mount(app, last_known=LastKnownDesk(cache_file))
             with patch('app.dashboard.snapshot_api.connect', connect):
                 async with TestClient(TestServer(app)) as client:
+                    start = monotonic()
                     response = await client.get(path, params=query)
                     self.assertEqual(response.status, 200, await response.text())
                     fresh = poly(await response.json())
+                    timings['first_seconds'] = monotonic() - start
                     self.assertTrue(fresh['current'])
+                    start = monotonic()
+                    warm = await client.get(path, params=query)
+                    self.assertEqual(warm.status, 200, await warm.text())
+                    self.assertTrue(poly(await warm.json())['current'])
+                    timings['warm_seconds'] = monotonic() - start
                     stalled = True
                     try:
-                        with patch('app.dashboard.desk_delivery.RESPONSE_SECONDS', 0.1):
+                        with patch('app.dashboard.desk_delivery.RESPONSE_SECONDS', fallback_budget):
+                            fallback_samples = []
                             for _ in range(2):
+                                start = monotonic()
                                 response = await client.get(path, params=query)
                                 self.assertEqual(response.status, 200, await response.text())
                                 saved = await response.json()
+                                fallback_samples.append(monotonic() - start)
                                 self.assertIn('last_known_at', saved)
                                 self.assertIn('desk_last_known', response.headers['Server-Timing'])
+                        timings['fallback_samples'] = fallback_samples
                         self.assertTrue(waiting.is_set())
-                        self.assertEqual(reads, 2)
+                        self.assertEqual(reads, 3)
                         previous = poly(saved)
                         self.assertEqual(previous['original'], fresh['original'])
                         self.assertEqual(previous['source_clock_at'], fresh['source_clock_at'])
@@ -127,8 +143,10 @@ class BroadNativeMatrixSQL(NativeMatrixFixture):
                     finally:
                         stalled = False
                         release.set()
+                    start = monotonic()
                     response = await client.get(path, params=query)
                     resumed = await response.json()
+                    timings['resumed_seconds'] = monotonic() - start
                     self.assertNotIn('last_known_at', resumed)
                     self.assertTrue(poly(resumed)['current'])
 
@@ -136,11 +154,17 @@ class BroadNativeMatrixSQL(NativeMatrixFixture):
             mount(restarted, last_known=LastKnownDesk(cache_file))
             with patch('app.dashboard.snapshot_api.connect', side_effect=OperationalError):
                 async with TestClient(TestServer(restarted)) as client:
+                    start = monotonic()
                     response = await client.get(path, params=query)
                     self.assertEqual(response.status, 200, await response.text())
                     self.assertEqual(poly(await response.json())['original'], fresh['original'])
+                    timings['restart_seconds'] = monotonic() - start
                     uncached = await client.get(path, params=dict(query, league='NFL'))
                     self.assertEqual(uncached.status, 503)
+        if report := os.environ.get('PREDICT_CI_REPORT_ROOT'):
+            (Path(report) / 'desk-recovery.json').write_text(json.dumps(dict(
+                fixture='desk-polymarket-nba-v1', fallback_budget_seconds=fallback_budget, **timings
+            ), indent=2) + '\n')
 
     async def test_native_selection_before_the_first_ordinary_seal(self):
         from app.dashboard.snapshot_api import mount
