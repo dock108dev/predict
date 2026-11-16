@@ -148,11 +148,11 @@ async function check() {
   for (const row of arbs.rows) {
     const drawer = pairInspection(row.pairs[0], new Map(row.offers.map(o => [o.id, o])),
       {group:row, position:() => 'Fixture', inspect:() => {}});
-    assert.match(drawer.textContent, /Acquisition cost\$44\.44/);
-    assert.match(drawer.textContent, /Acquisition cost\$55\.56/);
+    assert.match(drawer.textContent, /Allocation44\.44%/);
+    assert.match(drawer.textContent, /Allocation55\.56%/);
     assert.match(drawer.textContent, /Fee at fill\$0\.93/);
     assert.match(drawer.textContent, /The captured prices do not establish executable depth/);
-    if (row.pairs[0].retail_payoff.available) assert.match(drawer.textContent, /Worst modeled profit\/loss\$10\.17Lowest net payout/);
+    if (row.pairs[0].retail_payoff.available) assert.match(drawer.textContent, /Lowest modeled return with conservative fees\+10\.08%/);
     else assert.match(drawer.textContent, /Both leg fees are needed/);
   }
   const lines = Object.fromEntries(feeCensusLines(census));

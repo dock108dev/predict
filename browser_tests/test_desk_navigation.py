@@ -60,6 +60,10 @@ class CurrentSlate:
                     mobile_venue,
                     current=not self.feed_unavailable,
                 )
+                if mobile_venue in ("novig", "prophetx"):
+                    american, cost = ("-108", "27/52") if mobile_venue == "novig" else ("-107", "107/207")
+                    item.update(original=dict(value=american, units="american_odds", payout="1"),
+                                cost_per_normal_claim=cost)
                 if number == self.changed_line:
                     item["market"]["line"] = "3.5"
                     item["selection"]["signed_line"] = "-3.5"
@@ -216,7 +220,6 @@ def test_phone_site_filter_keeps_outcome_and_points_to_offscreen_quotes():
     current = CurrentSlate()
     current.order = [0, 10]
     current.venues = ("novig", "prophetx")
-    current.feed_unavailable = True
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(
             executable_path=os.getenv("PREDICT_CI_CHROMIUM")
@@ -226,6 +229,7 @@ def test_phone_site_filter_keeps_outcome_and_points_to_offscreen_quotes():
         )
         intercept(context, current)
         tab = context.new_page()
+        tab.clock.set_fixed_time(AT)
         tab.goto(BASE)
         tab.get_by_role("link", name="Find my game ↗").tap()
         tab.get_by_role("button", name="Spreads", exact=True).tap()
@@ -236,16 +240,27 @@ def test_phone_site_filter_keeps_outcome_and_points_to_offscreen_quotes():
         outcome = game.locator(".matrix-outcome")
         expect(outcome).to_have_text("Detroit to cover -2.5")
         expect(game.get_by_text("Reference estimate unavailable")).to_be_attached()
+        tab.get_by_label("Odds format").select_option("decimal")
+        expect(game.locator('[data-offer-id="detroit-0-novig"] .p-odds')).to_have_text("1.926")
+        better = game.locator('[data-offer-id="detroit-0-prophetx"]')
+        expect(better.locator(".p-odds")).to_have_text("1.935")
+        expect(better).to_have_class("desk-offer desk-best")
+        game.get_by_role("button", name="See Novig prices in the next columns").tap()
+        better.tap()
+        drawer = tab.locator("#trade")
+        expect(drawer.locator(".inspection-metric-value").first).to_have_text("1.935")
+        drawer.get_by_role("button", name="Close", exact=True).tap()
         books = game.get_by_role(
             "button", name="Same-line sportsbook quotes for Detroit to cover -2.5"
         )
         books.tap()
-        expect(tab.get_by_role("region", name="Sportsbook prices")).to_contain_text(
+        expect(tab.get_by_role("dialog", name="Same-line sportsbook quotes")).to_contain_text(
             "FanDuel"
         )
         tab.keyboard.press("Escape")
         cue = game.get_by_role("button", name="See Novig prices in the next columns")
-        cue.tap()
+        if cue.is_visible():
+            cue.tap()
         expect(game.get_by_role("columnheader", name="Novig")).to_be_in_viewport()
         expect(outcome).to_be_in_viewport()
         tab.get_by_role("button", name="Filters", exact=True).tap()
@@ -262,9 +277,13 @@ def test_phone_site_filter_keeps_outcome_and_points_to_offscreen_quotes():
         expect(
             tab.get_by_role("heading", name="No results for “Detroit @ Example 1”")
         ).to_be_visible()
-        expect(tab.locator("#notice")).to_contain_text("Price feed unavailable")
         tab.get_by_role("button", name="Clear search").tap()
         expect(search).to_have_value("")
+        current.feed_unavailable = True
+        tab.goto(f"{BASE}/browse-odds?search=Unavailable")
+        expect(tab.get_by_role("heading", name="Price feed unavailable")).to_be_visible()
+        expect(tab.get_by_role("button", name="Clear search")).to_have_count(0)
+        expect(tab.get_by_role("link", name="Source status")).to_be_visible()
         browser.close()
 
 
@@ -293,6 +312,7 @@ def test_phone_comparison_return(engine, tmp_path, monkeypatch):
         current = CurrentSlate()
         intercept(context, current)
         tab = context.new_page()
+        tab.clock.set_fixed_time(AT)
         errors = []
         tab.on("pageerror", lambda error: errors.append(str(error)))
         tab.goto(f"{BASE}/browse-odds?search=Detroit&family=spread&basis=reviewed")
@@ -313,9 +333,31 @@ def test_phone_comparison_return(engine, tmp_path, monkeypatch):
         expect(first.locator(".matrix-sportsbook-popout")).to_be_visible()
         tab.keyboard.press("Escape")
         expect(first.locator(".matrix-sportsbook-popout")).to_be_hidden()
+        expect(sportsbook).to_be_focused()
+        sportsbook.tap()
+        popup = first.locator(".matrix-sportsbook-popout")
+        expect(popup.get_by_role("button", name="Close", exact=True)).to_be_visible()
+        totals = tab.get_by_role("button", name="Totals", exact=True)
+        rect = totals.bounding_box()
+        dialog_box = popup.bounding_box()
+        x = rect["x"] + rect["width"] / 2
+        y = rect["y"] + rect["height"] / 2
+        if 0 < y < dialog_box["y"]:
+            tab.touchscreen.tap(x, y)
+        else:
+            tab.touchscreen.tap(3, 3)
+        expect(popup).to_be_hidden()
+        expect(tab.get_by_role("button", name="Spreads", exact=True)).to_have_attribute("aria-pressed", "true")
+        expect(sportsbook).to_be_focused()
+        sportsbook.tap()
+        popup.get_by_role("button", name="Close", exact=True).tap()
+        expect(sportsbook).to_be_focused()
         inspect_and_return(tab, first, "close")
         inspect_and_return(tab, first, "back")
 
+        with tab.expect_response(lambda response: "refresh=1" in response.url):
+            tab.locator("#refresh-list").tap()
+        expect(tab.locator("#refresh-list")).to_have_attribute("aria-disabled", "false")
         tab.locator("#next").tap()
         target = tab.locator('[data-game-key="detroit-12"]')
         expect(target).to_be_visible()
@@ -395,7 +437,7 @@ def test_phone_comparison_return(engine, tmp_path, monkeypatch):
         leg = drawer.get_by_role("button", name="Inspect offer and fees").last
         expect(leg).to_be_visible()
         drawer.get_by_text(
-            "Exact prices, settlement terms and fee rounding", exact=True
+            "Calculation details", exact=True
         ).tap()
         parent = body.inner_text()
         for dismiss in ("close", "back", "pair link"):
@@ -417,5 +459,90 @@ def test_phone_comparison_return(engine, tmp_path, monkeypatch):
         drawer.get_by_role("button", name="Close", exact=True).tap()
         expect(drawer).to_be_hidden()
         expect(payoff).to_be_focused()
+        tab.goto(f"{BASE}/browse-odds?search=Detroit&family=spread&basis=reviewed")
+        expect(tab.locator('[data-game-key="detroit-9"]')).to_be_visible()
+        # A mid-list matchup keeps the selected venue columns and market across
+        # the game view, a quote inspection, and the return to its open card.
+        tab.get_by_role("button", name="Filters", exact=True).tap()
+        for venue in ("kalshi", "polymarket_us"):
+            tab.locator(f'#venues input[value="{venue}"]').uncheck()
+        tab.get_by_role("button", name="Done", exact=True).tap()
+        target = tab.locator('[data-game-key="detroit-9"]')
+        expect(target).to_be_visible()
+        target.locator("details > summary").tap()
+        expect(target.locator("th[data-venue-column]")).to_have_text(["Novig", "ProphetX"])
+        opener = target.locator("[data-game-launcher]")
+        opener.scroll_into_view_if_needed()
+        before = position(target)
+        opener.tap()
+        expect(tab.locator("th[data-venue-column]")).to_have_text(["Novig", "ProphetX"])
+        expect(tab.get_by_role("button", name="Spreads", exact=True)).to_have_attribute("aria-pressed", "true")
+        tab.locator(".odds-matrix [data-offer-id]").first.tap()
+        expect(tab.locator("#trade")).to_be_visible()
+        tab.locator("#trade").get_by_role("button", name="Close", exact=True).tap()
+        return_from_game(tab, "link")
+        expect(target.locator("details")).to_have_attribute("open", "")
+        expect(target.locator("th[data-venue-column]")).to_have_text(["Novig", "ProphetX"])
+        assert position(target) == before
         assert not errors
+        browser.close()
+
+
+def test_sportsbook_dialog_touch_does_not_open_other_pick_or_totals():
+    from copy import deepcopy
+    from playwright.sync_api import expect, sync_playwright
+
+    class SpreadSlate(CurrentSlate):
+        def read(self, query):
+            page = super().read(query)
+            if not page["rows"]:
+                return page
+            ravens = page["rows"][0]
+            chargers = deepcopy(ravens)
+            game = page["games"][0]
+            game["title"] = "Ravens vs. Chargers"
+            for participant in game["participants"]:
+                participant["name"] = "Ravens" if participant["id"] == "home" else "Chargers"
+            for group, team, line in ((ravens, "home", "-4.5"), (chargers, "away", "4.5")):
+                group["id"] = team
+                group["game_title"] = game["title"]
+                group["market"]["line"] = "4.5"
+                for item in group["offers"]:
+                    item["id"] = f"{team}-{item['venue']}"
+                    item["selection"].update(participant=team, signed_line=line)
+            chargers["sportsbook_quotes"] = {}
+            page["rows"] = [ravens, chargers]
+            return page
+
+    slate = SpreadSlate()
+    slate.order = [0]
+    slate.venues = ("novig", "prophetx")
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(executable_path=os.getenv("PREDICT_CI_CHROMIUM"))
+        context = browser.new_context(viewport={"width": 390, "height": 800}, has_touch=True)
+        intercept(context, slate)
+        tab = context.new_page()
+        tab.clock.set_fixed_time(AT)
+        tab.goto(f"{BASE}/game?game_key=detroit-0&family=spread&venue=novig,prophetx")
+        opener = tab.get_by_role("button", name="Same-line sportsbook quotes for Ravens to cover -4.5")
+        # A taller screen places the opposite pick and market controls on
+        # opposite sides of the centered modal. Use their actual tap targets.
+        opposite = tab.locator('[data-offer-id="away-novig"]')
+        totals = tab.get_by_role("button", name="Totals", exact=True)
+        for target in (opposite, totals):
+            box = target.bounding_box()
+            assert box is not None
+            x, y = box["x"] + box["width"] / 2, box["y"] + box["height"] / 2
+            assert 0 < x < 390 and 0 < y < 800
+            opener.tap()
+            popup = tab.locator(".matrix-sportsbook-popout")
+            expect(popup).to_be_visible()
+            bounds = popup.bounding_box()
+            assert not (bounds["x"] <= x <= bounds["x"] + bounds["width"]
+                        and bounds["y"] <= y <= bounds["y"] + bounds["height"])
+            tab.touchscreen.tap(x, y)
+            expect(popup).to_be_hidden()
+            expect(opener).to_be_focused()
+            expect(tab.locator("#trade")).to_be_hidden()
+            expect(tab.get_by_role("button", name="Spreads", exact=True)).to_have_attribute("aria-pressed", "true")
         browser.close()

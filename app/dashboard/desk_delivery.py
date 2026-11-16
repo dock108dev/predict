@@ -12,6 +12,10 @@ from app.storage.store import stamp
 
 BURST_SECONDS = 0.5
 RESPONSE_SECONDS = 1.0
+# The indexed direct pregame read took about 2 seconds on the collection
+# host. Allow it to complete without falling back to a historical packet.
+# ReadBurst still rejects an answer that crossed a quote's evidence deadline.
+ESTIMATE_RESPONSE_SECONDS = 3.0
 # A list that missed its response budget can finish between browser retries.
 LATE_LIST_REUSE_SECONDS = 3.5
 MAX_DESK_READS = 16
@@ -37,10 +41,10 @@ def timing_header(timings):
     return ', '.join(f'{name};dur={duration:.3f}' for name, duration in timings.items())
 
 
-async def read_desk(read):
+async def read_desk(read, *, timeout=None):
     """Bound the response while ReadBurst retains ownership of the SQL work."""
     try:
-        async with asyncio.timeout(RESPONSE_SECONDS):
+        async with asyncio.timeout(RESPONSE_SECONDS if timeout is None else timeout):
             return await read
     except TimeoutError:
         raise web.HTTPServiceUnavailable(reason='Prices temporarily unavailable') from None
@@ -58,7 +62,6 @@ class ReadBurst:
         self.closed = False
 
     async def read(self, key, load, *, reuse=BURST_SECONDS, late_reuse=0):
-        arrived = self.clock()
 
         async def receive(task):
             try:
@@ -85,9 +88,8 @@ class ReadBurst:
             if key not in self.pending:
                 break
             value, deadline = await receive(self.pending[key])
-            # A request arriving after the first boundary cannot reuse an
-            # in-flight response captured before that boundary.
-            if arrived < deadline:
+            # A caller can wait across an evidence deadline.
+            if self.clock() < deadline:
                 return value, True
         if self.closed or len(self.active) >= MAX_DESK_READS:
             raise web.HTTPServiceUnavailable(reason='Price reads are busy')
@@ -122,7 +124,9 @@ class ReadBurst:
                 completed.exception()
 
         task.add_done_callback(retire)
-        value, _ = await receive(task)
+        value, deadline = await receive(task)
+        if self.clock() >= deadline:
+            raise web.HTTPServiceUnavailable(reason='Prices changed during the read')
         return value, False
 
     async def close(self, _app):
@@ -160,7 +164,7 @@ def gzip_allowed(value):
 
 def packet_response(request, packet, timings, *, shared=False):
     raw, packed = packet
-    headers = {'Server-Timing': timing_header(timings), 'Vary': 'Accept-Encoding'}
+    headers = {'Server-Timing': timing_header(timings), 'Vary': 'Accept-Encoding', 'Cache-Control': 'no-store'}
     if shared:
         headers['Server-Timing'] = 'desk_shared;dur=0'
     if packed and gzip_allowed(request.headers.get('Accept-Encoding', '')):

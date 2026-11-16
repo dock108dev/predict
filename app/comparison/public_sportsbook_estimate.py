@@ -172,7 +172,7 @@ def index(captures, *, at, retained=False):
     return {key: value for key, value in matches.items() if key not in duplicates}
 
 
-def market_pairs(observation, key, *, at, start):
+def market_pairs(observation, key, *, at, start, require_current=True):
     if not observation or not observation['scheduled'] or at >= start:
         return {}
     selected = observation['quotes'].get(key, {})
@@ -187,7 +187,8 @@ def market_pairs(observation, key, *, at, start):
                     or first[0]['opposing_odd_id'] != second[0]['odd_id']
                     or second[0]['opposing_odd_id'] != first[0]['odd_id']):
                 continue
-            if clocks_current(pair, at=at, start=start):
+            if (clocks_current(pair, at=at, start=start) if require_current else
+                    all(stamp(item['source_at']) < start and stamp(item['source_at']) <= at for item in pair)):
                 pairs[book] = pair
     return pairs
 

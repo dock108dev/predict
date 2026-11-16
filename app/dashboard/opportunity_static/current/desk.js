@@ -2,7 +2,7 @@ import './ui-common.js';
 import {createDeskPolling} from './desk-polling.js';
 import {createDeskDrawer, position} from './desk-drawer.js';
 import {arbCard, evCard, gameMatrix, updateMatrixCues} from './opportunity-cards.js';
-import {displayRows, holdDeskPage} from './desk-stability.js';
+import {displayRows, expirePage, holdDeskPage, nextDeskDeadline} from './desk-stability.js';
 import {evidenceReason} from './desk-reasons.js';
 import {DiagnosticSession} from './session-history.js';
 import {clock as savedClock, readPreference, savePreference, timezone} from './desk-preferences.js';
@@ -26,8 +26,8 @@ const autoUpdateKey = 'pregame-auto-update';
 const autoUpdateToggle = $('auto-update');
 let autoUpdate = readPreference(autoUpdateKey, 'on') !== 'off';
 autoUpdateToggle.checked = autoUpdate;
-const postedDesk = () => !replay && !arb && phase === 'pregame' && !!state.page?.features?.posted_pregame;
-const receivingUpdates = () => !postedDesk() || autoUpdate;
+const supportsAutoUpdate = (page = state.page) => !replay && !arb && phase === 'pregame' && page?.features?.auto_update === true;
+const receivingUpdates = () => !supportsAutoUpdate() || autoUpdate;
 const phaseURL = (path, value = phase) => path + (value === 'live' ? '?phase=live' : '');
 const back = window.PredictUI.localURL(route.get('back'));
 let safeBack = back && ['/','/ev','/arbs','/browse-odds','/game','/replay'].includes(back.pathname)
@@ -46,8 +46,7 @@ const browseFilterFields = ['league','family','venue','search','day','period','t
 const defaultZone = timezone();
 const selectedZone = () => filters.elements.timezone.value || defaultZone;
 const clock = at => savedClock(at, selectedZone());
-const stake = filters.elements.stake;
-const state = {offset: 0, page: null, request: null, renderedStake: null};
+const state = {offset: 0, page: null, request: null};
 const history = new DiagnosticSession();
 function collectionIssue(runtime) {
   if (runtime?.stopped) return 'Price updates are stopped';
@@ -89,8 +88,6 @@ function restoreFocus(target) {
 $('title').textContent = gameKey ? linkedTitle || 'Game odds' : browse ? 'Browse odds' : replay ? (arb ? 'Arbitrage' : 'Expected value') : 'Opportunities';
 document.body.classList.toggle('game-odds-view', !!gameKey);
 document.title = `Predict · ${$('title').textContent}`;
-$('stake-field').hidden = !arb || !replay;
-$('profit-field').hidden = !arb;
 $('basis-field').hidden = arb;
 $('group-field').hidden = arb || !replay;
 $('opportunity-tabs').hidden = !opportunityView;
@@ -181,8 +178,6 @@ if (replay) {
     location.assign(next);
   };
 }
-stake.value = readPreference('stake', '100');
-if (!stake.checkValidity() || !stake.value) stake.value = '100';
 const evFilterKey = 'ev-filters';
 const filterKey = () => replay ? `replay-${dataset}-${browse ? 'odds' : arb ? 'arb' : 'ev'}-filters`
   : browse ? 'browse-filters' : phase === 'live' ? (arb ? 'live-arb-filters' : 'live-ev-filters')
@@ -206,7 +201,8 @@ if (browse) {
     if (route.has(key)) saved[key] = route.get(key);
   }
   if (gameKey) {
-    for (const key of ['league','family','venue','search','day','period','time_from','time_to','game_state']) delete saved[key];
+    for (const key of ['league','family','search','day','period','time_from','time_to','game_state']) delete saved[key];
+    if (!route.has('venue')) delete saved.venue;
   }
 }
 if (phase) delete saved.game_state;
@@ -217,7 +213,7 @@ if (replay) {
   if (saved.basis === 'sportsbooks') saved.basis = dataset === 'retained' ? 'reviewed' : 'before';
   saved.group ||= 'offer'; saved.basis ||= 'before';
 }
-for (const key of ['search', 'day', 'sort', 'group', 'period', 'minimum', 'profit','basis','timezone','time_from','time_to','game_state']) {
+for (const key of ['search', 'day', 'sort', 'group', 'period', 'minimum','basis','timezone','time_from','time_to','game_state']) {
   if (saved[key]) filters.elements[key].value = saved[key];
 }
 filters.elements.positive.checked = !browse && saved.positive === 'on';
@@ -278,12 +274,10 @@ function selections() {
     const chosen = data.getAll(key);
     query[key] = chosen.length ? chosen.join(',') : 'none';
   }
-  delete query.stake;
   if (!replay) delete query.last_known;
-  if (!arb) delete query.profit;
   if (!replay || browse) query.group = 'outcome';
   if (browse) {
-    for (const key of ['positive','minimum','profit','sort']) delete query[key];
+    for (const key of ['positive','minimum','sort']) delete query[key];
     query.browse_odds = '1';
     if (gameKey) {
       query.game_key = gameKey;
@@ -307,14 +301,14 @@ function selections() {
 }
 
 const drawer = createDeskDrawer({
-  replay, dataset, retainedResult, gameKey, pageSize, captureMode:replayMode(), clock,
+  replay, browse, dataset, retainedResult, gameKey, pageSize, captureMode:replayMode(), clock,
   viewContext: () => ({phase, page:state.page, previousReason:state.previousReason, autoUpdate}),
   fetchPage, matrixPositions, restoreMatrices, restoreFocus, refreshDesk
 });
 
 function browsingLink(label, group, className) {
-  const destination = () => browseDestination(group);
-  const action = link(label, destination(), className);
+  const action = link(label, browseDestination(group), className);
+  const destination = () => browseDestination(group, revealedVenues(action));
   if (group) action.dataset.gameLauncher = '';
   action.addEventListener('focus', () => { action.href = destination(); });
   action.addEventListener('click', event => {
@@ -353,7 +347,19 @@ function updateBrowsePhaseLinks() {
   }
 }
 
-function browseDestination(group) {
+function revealedVenues(action) {
+  const scroll = browse && action.closest('.odds-card')?.querySelector('.odds-scroll');
+  if (!scroll || scroll.scrollLeft < 1) return [];
+  const bounds = scroll.getBoundingClientRect();
+  const first = scroll.querySelector('th')?.getBoundingClientRect();
+  return [...scroll.querySelectorAll('[data-venue-column]')].filter(cell => {
+    const column = cell.getBoundingClientRect();
+    const visible = Math.min(bounds.right, column.right) - Math.max(first?.right ?? bounds.left, column.left);
+    return visible >= column.width / 2;
+  }).map(cell => cell.dataset.venueColumn);
+}
+
+function browseDestination(group, revealed = []) {
   const query = new URLSearchParams();
   const selected = selections();
   if (phase) query.set('phase', phase);
@@ -369,6 +375,9 @@ function browseDestination(group) {
       if (sealed) query.set('game_capture', sealed.evidence_result_id);
     }
     query.set('basis', selected.basis);
+    const restricted = $('venues').querySelector('input:not(:checked)');
+    if (restricted) query.set('venue', selected.venue);
+    else if (revealed.length) query.set('venue', revealed.join(','));
     query.set('timezone', filters.elements.timezone.value);
     if (!browse && (group.game_line_id || group.id)) {
       query.set('line', group.game_line_id || group.id);
@@ -431,8 +440,7 @@ function rememberView(group, action) {
 function cardContext(games, gameTitle = null) {
   return {
     basis:pageBasis(), clock, phase,
-    checkedAt:state.page?.last_known_at ? Date.now()
-      : state.page?.replay?.captured_at ?? state.page?.publication?.read_at, gameTitle, mode:replayMode(),
+    checkedAt:state.page?.replay?.captured_at ?? state.page?.publication?.read_at, gameTitle, mode:replayMode(),
     compact:comparable, summary:!replay, showGameLink:!gameKey, stableVenues:!replay,
     position:offer => position(offer),
     gameLink:group => browsingLink('Open game ↗', group, 'opportunity-link'),
@@ -442,7 +450,6 @@ function cardContext(games, gameTitle = null) {
       return drawer.openTrade(exact, shown, games.get(group.game_key), null, opener);
     },
     inspectPair:(pair, offers, group, opener) => {
-      if (!pairResultsReady()) return;
       const shown = displayRows(state.page).find(row => row.id === group.id && row.game_key === group.game_key) || group;
       const exact = shown.pairs?.find(candidate => candidate.id === pair.id) || pair;
       drawer.openPair(exact, shown === group ? offers : new Map(shown.offers.map(quote => [quote.id, quote])),
@@ -453,20 +460,14 @@ function cardContext(games, gameTitle = null) {
 
 const pageBasis = () => state.page?.basis || filters.elements.basis.value;
 
-function pairResultsReady() {
-  return !replay || stake.validity.valid && !!stake.value && Number(stake.value) === state.renderedStake;
-}
-
 function refreshStatus() {
   const mode = !filters.elements.time_to.validity.valid ? 'Correct the time window to refresh.'
-    : arb && state.page && !pairResultsReady()
-      ? (stake.validity.valid && stake.value ? 'Updating payoff for the entered stake…' : 'Enter a valid stake to calculate the payoff.')
     : replay ? (state.request ? 'Loading replay…' : 'Replay clock is fixed.')
     : state.request ? 'Checking for updates…'
-      : postedDesk() && !autoUpdate ? 'Auto-update paused.' : '';
+      : supportsAutoUpdate() && !autoUpdate ? 'Auto-update paused.' : '';
   $('refresh-status').textContent = mode;
   const invalidWindow = !filters.elements.time_to.validity.valid;
-  $('refresh-status').classList.toggle('sr-only', !invalidWindow && !(arb && state.page && !pairResultsReady()));
+  $('refresh-status').classList.toggle('sr-only', !invalidWindow);
   const refresh = $('refresh-list');
   const label = state.loadFailed ? 'Retry' : 'Refresh list';
   if (refresh.textContent !== label) refresh.textContent = label;
@@ -474,18 +475,17 @@ function refreshStatus() {
   else refresh.removeAttribute('aria-describedby');
   refresh.disabled = invalidWindow;
   refresh.setAttribute('aria-disabled', String(!!state.request && !state.backgroundRequest || invalidWindow));
-  if (arb) for (const button of $('results').querySelectorAll('[data-pair-id]')) button.disabled = !pairResultsReady();
 }
 
-function emptyResults(page, publication) {
+function emptyResults(page, publication, issue) {
   const empty = el('section', null, 'desk-empty');
   const actions = el('div', null, 'desk-empty-actions');
-  const {positive, minimum, profit} = filters.elements;
+  const {positive, minimum} = filters.elements;
   const search = filters.elements.search.value.trim();
-  const thresholds = minimum.value || (arb && profit.value);
+  const thresholds = minimum.value;
   const clearReturns = button('Clear return filters', () => {
     positive.checked = false;
-    minimum.value = profit.value = '';
+    minimum.value = '';
     applyFilters();
     $('open-filters').focus();
   });
@@ -502,6 +502,12 @@ function emptyResults(page, publication) {
   if (replay && page.state === 'initializing') {
     title = 'This saved capture is unavailable';
     actions.append(link('Browse current odds', '/browse-odds'));
+  } else if (issue || (page.state === 'initializing' && !publication.retained_prices)) {
+    title = issue || 'Waiting for the first prices';
+    if (opportunityView && page.state === 'initializing' && !publication.retained_prices) {
+      actions.append(link('Saved odds', $('replay-link').href, 'desk-action desk-primary'));
+    }
+    if (issue) actions.append(link('Source status', '/admin?section=sources', 'desk-action'));
   } else if (search && !page.matched_offer_count && page.state !== 'initializing') {
     title = `No results for “${search}”`;
     actions.append(button('Clear search', () => {
@@ -509,11 +515,6 @@ function emptyResults(page, publication) {
       applyFilters();
       filters.elements.search.focus();
     }));
-  } else if (page.state === 'initializing' && !publication.retained_prices) {
-    const issue = collectionIssue(publication.data_runtime);
-    title = issue || 'Waiting for the first prices';
-    if (opportunityView) actions.append(link('Saved odds', $('replay-link').href, 'desk-action desk-primary'));
-    if (issue) actions.append(link('Source status', '/admin?section=sources', 'desk-action'));
   } else if (comparable && browse && !gameKey) {
     title = 'No matching odds';
     showAlternates();
@@ -539,6 +540,7 @@ function emptyResults(page, publication) {
         : `No current prices are available${phase === 'live' ? ' for live games' : phase === 'pregame' ? ' for pregame markets' : ''}.`);
   } else {
     title = 'No EV estimates available';
+    if (page.data_incident) actions.append(link('Source status', '/admin?section=sources', 'desk-action'));
     detail = page.calculation_missing?.length ? evidenceReason(page.calculation_missing, page.calculation_reason)
       : page.calculation_reason || 'No current offers have the inputs required for the selected calculation.';
     if (opportunityView && page.calculation_reason) showAlternates();
@@ -609,7 +611,7 @@ function render(page, keepNodes = false) {
   const disclosures = new Map([...disclosureStates(), ...restoreLocation?.disclosures || []]);
   const tableScrolls = matrixPositions();
   const games = new Map((page.games || []).map(game => [game.game_key, game]));
-  const rows = page.rows || [];
+  const rows = displayRows(page);
   const total = page.total || 0;
   const selectedLine = page.selected_line_id || requestedLine;
   if (gameKey) {
@@ -626,26 +628,26 @@ function render(page, keepNodes = false) {
     }
   }
   const publication = page.publication || {};
+  const issue = replay ? null : collectionIssue(publication.data_runtime)
+    || (publication.state === 'failed' ? 'Price publication is delayed' : null);
+  const emptyIssue = !rows.length && !publication.current_prices ? issue : null;
   const awaitingPrices = opportunityView && page.state === 'initializing'
     && !rows.length && !publication.retained_prices;
   const readiness = $('desk-readiness');
   readiness.hidden = !awaitingPrices;
   if (awaitingPrices) {
-    const start = emptyResults(page, publication);
+    const start = emptyResults(page, publication, emptyIssue);
     if (!readiness.firstElementChild?.isEqualNode(start)) readiness.replaceChildren(start);
   } else if (readiness.hasChildNodes()) readiness.replaceChildren();
   $('replay-link').hidden = awaitingPrices;
   if (opportunityView) $('browse-link').classList.toggle('desk-primary', !awaitingPrices);
   const notice = [];
   if (replay && page.replay?.captured_at) notice.push(`Captured ${clock(page.replay.captured_at)}.`);
-  if (page.last_known_at) {
-    notice.push(`Showing last known prices from ${clock(page.last_known_at)}.`);
-  } else if (!replay) {
-    const issue = collectionIssue(publication.data_runtime);
-    if (issue && (rows.length || page.state !== 'initializing' || publication.retained_prices)) {
-      notice.push(`${issue}.`);
+  if (!replay) {
+    if (!emptyIssue) {
+      notice.push('Odds may be delayed up to 15 minutes.');
+      if (issue) notice.push(`${issue}.`);
     }
-    if (!issue && publication.state === 'failed') notice.push('Price publication is delayed.');
     if (!publication.data_runtime?.stopped) notice.push(...sourceNotices(publication));
   }
   if (state.resetReason) notice.push(state.resetReason);
@@ -653,7 +655,7 @@ function render(page, keepNodes = false) {
   if (arb && page.pair_status?.withheld) {
     const withheld = el('p', `${page.pair_status.withheld} pairing(s) lack a payoff under these filters. `, 'desk-note');
     withheld.append(button('Show unavailable pairings', () => {
-      for (const key of ['positive', 'minimum', 'profit']) {
+      for (const key of ['positive', 'minimum']) {
         if (key === 'positive') filters.elements[key].checked = false;
         else filters.elements[key].value = '';
       }
@@ -694,7 +696,7 @@ function render(page, keepNodes = false) {
       content.append(arb ? arbCard(group, context, disclosures.get(group.id)) : evCard(group, context));
     }
   } else if (!awaitingPrices) {
-    content.append(emptyResults(page, publication));
+    content.append(emptyResults(page, publication, emptyIssue));
   }
   if (keepNodes) {
     const previous = [...results.children];
@@ -795,8 +797,8 @@ async function fetchPage(query, signal) {
   return response.json();
 }
 
-function matchesInputs(stakeValue, signature) {
-  return (!replay || stakeValue === stake.value) && signature === JSON.stringify(selections());
+function matchesInputs(signature) {
+  return signature === JSON.stringify(selections());
 }
 
 function captureResultsFocus(results) {
@@ -809,7 +811,7 @@ function captureResultsFocus(results) {
   const game = area.closest('[data-game-key]')?.dataset.gameKey;
   const matchesArea = candidate => candidate.dataset.groupId === groupId
     && candidate.closest('[data-game-key]')?.dataset.gameKey === game;
-  const key = ['data-desk-quote-key', 'data-offer-id', 'data-pair-id', 'data-calculation-id', 'popovertarget', 'href', 'aria-label']
+  const key = ['data-desk-quote-key', 'data-offer-id', 'data-pair-id', 'data-calculation-id', 'aria-controls', 'href', 'aria-label']
     .find(attribute => node.hasAttribute(attribute));
   const controls = scope => [...scope.querySelectorAll(node.localName)]
     .filter(candidate => candidate.closest(selector) === scope
@@ -826,7 +828,7 @@ for (const type of ['pointerup','pointercancel']) {
 }
 window.addEventListener('blur', () => { resultPointer = null; });
 window.addEventListener('resize', () => updateMatrixCues($('results')));
-const usingResults = () => resultPointer != null || !!$('results').querySelector(':popover-open');
+const usingResults = () => resultPointer != null || !!$('results').querySelector('.matrix-sportsbook-popout[open]');
 
 function applyDeskFeatures(page) {
   if (replay || !page.features) return;
@@ -846,7 +848,7 @@ function applyDeskFeatures(page) {
     window.history.replaceState(window.history.state, '', url.href);
   }
   updatePhaseView();
-  $('auto-update-field').hidden = arb || phase !== 'pregame' || !page.features.posted_pregame;
+  $('auto-update-field').hidden = !supportsAutoUpdate(page);
 }
 
 function previousResults(message = '') {
@@ -860,45 +862,26 @@ function previousResults(message = '') {
 }
 
 function expireResultValues() {
-  if (replay || !receivingUpdates()) return;
-  const now = Date.now();
-  const results = $('results');
-  const oldCalculations = [...results.querySelectorAll('[data-calculation-deadline]:not([data-expired-calculation])')]
-    .filter(value => Number(value.dataset.calculationDeadline) <= now);
-  const oldPrices = [...results.querySelectorAll('[data-quote-deadline]:not([data-expired-quote])')]
-    .filter(price => Number(price.dataset.quoteDeadline) <= now);
-  if (!oldCalculations.length && !oldPrices.length) return;
+  if (replay || !state.page) return;
+  const current = expirePage(state.page, Date.now(), {ranked:opportunityView && !arb, live:phase === 'live'});
+  if (current === state.page) return;
   const anchor = scrollY ? visibleAnchor() : null;
-  for (const value of oldCalculations) {
-    value.setAttribute('data-expired-calculation', '');
-    if (value.dataset.quoteCalculation && value.parentElement.dataset.quoteDescription) {
-      const price = value.parentElement;
-      price.setAttribute('aria-label', `${price.dataset.quoteDescription}, Calculation expired`);
-    }
-  }
-  for (const price of oldPrices) {
-    price.setAttribute('data-expired-quote', '');
-    price.classList.remove('desk-best');
-    if (price.dataset.quoteDescription) price.setAttribute('aria-label', `${price.dataset.quoteDescription}, Last known price`);
-    price.append(el('small', 'Last known', 'quote-freshness'));
-  }
+  state.page = current;
+  state.renderSignature = resultSignature(current);
+  render(current, true);
   restoreAnchor(anchor);
 }
 let resultExpiryTimer;
 function scheduleResultExpiry() {
-  if (replay) return;
   clearTimeout(resultExpiryTimer);
+  if (replay || !state.page) return;
   const now = Date.now();
-  const due = [...$('results').querySelectorAll('[data-calculation-deadline]:not([data-expired-calculation]), [data-quote-deadline]:not([data-expired-quote])')]
-    .flatMap(item => [
-      item.hasAttribute('data-expired-calculation') ? null : Number(item.dataset.calculationDeadline),
-      item.hasAttribute('data-expired-quote') ? null : Number(item.dataset.quoteDeadline)
-    ]).filter(Number.isFinite);
-  if (!due.length) return;
+  const due = nextDeskDeadline(state.page, now, {live:phase === 'live'});
+  if (!Number.isFinite(due)) return;
   resultExpiryTimer = setTimeout(() => {
     expireResultValues();
     scheduleResultExpiry();
-  }, Math.min(2147483647, Math.max(0, Math.min(...due) - now)));
+  }, Math.max(1, due - now));
 }
 $('results').addEventListener('toggle', () => queueMicrotask(() => {
   expireResultValues();
@@ -946,32 +929,33 @@ function resultSignature(page) {
   const {data_runtime:runtime = {}, sources} = page.publication || {};
   return JSON.stringify([stripReadClock(page.rows), page.games, page.retained_game,
     page.total, page.page_count, page.offset, page.pair_status, page.calculation_reason, page.calculation_missing,
-    page.state, page.last_known_at, page.basis, page.phase, page.anchor_state, page.selected_line_id, page.selected_game_key,
+    page.state, page.basis, page.phase, page.anchor_state, page.selected_line_id, page.selected_game_key,
     page.selected_venues,
     page.ranked_group_count, page.matched_offer_count, runtime.stopped, runtime.healthy, runtime.reason, runtime.paused_sources,
     Object.values(sources || {}).map(source => [source.state, source.reason_code])]);
 }
 
 async function load(offset = state.offset, {background = false, freshMembership = false, anchor = null, refresh = false} = {}) {
-  if (!filters.checkValidity() || !stake.value) return;
+  if (!filters.checkValidity()) return;
   if (background && state.request) return;
   state.request?.abort();
   const controller = new AbortController();
   state.request = controller;
   state.backgroundRequest = background;
   refreshStatus();
-  const requestStake = replay ? stake.value : '100';
   const selected = selections();
   const requestFilters = JSON.stringify(selected);
   const readMember = (background && state.backgroundPage) || state.page;
   const query = new URLSearchParams({...selected, layout: 'desk', view: arb ? 'arbs' : 'ev',
     offset:freshMembership ? 0 : background ? readMember?.offset ?? offset : offset, limit:pageLimit});
-  if (replay) query.set('stake', requestStake);
-  else query.set('summary', '1');
+  if (!replay) {
+    query.set('summary', '1');
+    if (refresh) query.set('refresh', '1');
+  }
   if (replay) query.set('dataset', dataset);
   if (retainedResult) query.set('result_id', retainedResult);
   const browseId = (state.query === requestFilters ? readMember?.browse_id : null) ?? restoreLocation?.browseId;
-  if (!replay && !freshMembership && browseId && (offset || background || restoreLocation?.browseId)) query.set('browse_id', browseId);
+  if (!replay && !freshMembership && browseId && (offset || restoreLocation?.browseId)) query.set('browse_id', browseId);
   const locator = restoreLocation || (freshMembership && anchor);
   if (!gameKey && locator && (locator.groupId || locator.gameKey)) {
     query.set('locate', locator.groupId || locator.gameKey);
@@ -979,10 +963,10 @@ async function load(offset = state.offset, {background = false, freshMembership 
   }
   if (!state.page && !state.loadFailed) $('notice').textContent = 'Loading prices…';
   const backgroundBlocked = () => background && (!receivingUpdates() || usingResults()
-    || !postedDesk() && !state.page?.last_known_at && drawer.isOpen());
+    || !supportsAutoUpdate() && drawer.isOpen());
   try {
     let page = await fetchPage(query, controller.signal);
-    if (controller.signal.aborted || !matchesInputs(requestStake, requestFilters) || backgroundBlocked()) return;
+    if (controller.signal.aborted || !matchesInputs(requestFilters) || backgroundBlocked()) return;
     const emptyPage = !displayRows(page).length;
     if (page.state === 'page_changed' || query.has('browse_id') && emptyPage && (page.total || page.anchor_state === 'removed')) {
       if (freshMembership) throw Error('Browsing order unavailable');
@@ -1001,14 +985,13 @@ async function load(offset = state.offset, {background = false, freshMembership 
     } else if (!background && page.anchor_state === 'game') {
       state.resetReason = 'The previous line left these results. Other prices for the game are shown.';
     }
-    if (gameKey && !page.last_known_at && page.rows?.length && page.total > (page.page_count ?? page.rows.length)) {
+    if (gameKey && page.rows?.length && page.total > (page.page_count ?? page.rows.length)) {
       const rows = new Map(page.rows.map(row => [row.id, row]));
       let seen = page.page_count ?? page.rows.length;
       while (seen < page.total) {
         query.set('offset', seen);
         if (page.browse_id) query.set('browse_id', page.browse_id);
         const next = await fetchPage(query, controller.signal);
-        if (next.last_known_at) break;
         if (next.state === 'page_changed' || !next.rows?.length) {
           throw Error('Game prices changed during read');
         }
@@ -1017,10 +1000,10 @@ async function load(offset = state.offset, {background = false, freshMembership 
       }
       page.rows = [...rows.values()];
     }
-    if (controller.signal.aborted || !matchesInputs(requestStake, requestFilters) || backgroundBlocked()) return;
+    if (controller.signal.aborted || !matchesInputs(requestFilters) || backgroundBlocked()) return;
+    if (!replay) page = expirePage(page, Date.now(), {ranked:opportunityView && !arb, live:phase === 'live'});
     applyDeskFeatures(page);
-    const held = background && !page.last_known_at && !state.page?.last_known_at
-      && displayRows(state.page).length && state.page.phase === page.phase;
+    const held = background && displayRows(state.page).length && state.page.phase === page.phase;
     const prior = background && !restoreLocation && scrollY ? anchor || visibleAnchor() : anchor;
     if (held) {
       state.backgroundPage = {offset:page.offset, browse_id:page.browse_id};
@@ -1037,7 +1020,6 @@ async function load(offset = state.offset, {background = false, freshMembership 
     state.loadFailed = false;
     state.query = JSON.stringify(selections());
     state.renderSignature = signature;
-    state.renderedStake = Number(requestStake);
     state.offset = page.offset ?? (freshMembership ? 0 : offset);
     previousResults();
     if (repaint) {
@@ -1103,9 +1085,9 @@ function activeFilters() {
       add(label, () => fields.forEach(field => field.checked = true));
     }
   }
-  for (const [key, prefix] of [['day',''], ['game_state',''], ['period',''], ['minimum','Min EV '], ['profit','Min profit $']]) {
+  for (const [key, prefix] of [['day',''], ['game_state',''], ['period',''], ['minimum','Min return ']]) {
     const field = filters.elements[key];
-    if (field.value && (key !== 'profit' || arb)) {
+    if (field.value) {
       const value = field.selectedOptions?.[0]?.textContent || field.value;
       add(`${prefix}${value}${key === 'minimum' ? '%' : ''}`, () => field.value = '');
     }
@@ -1138,10 +1120,9 @@ function applyFilters() {
   refreshStatus();
   clearTimeout(debounce);
   state.request?.abort();
-  if (!filters.checkValidity() || !stake.value) return;
+  if (!filters.checkValidity()) return;
   if (browse && !gameKey) saveBrowsePreferences();
   else if (!gameKey) savePreference(filterKey(), JSON.stringify({...selections(), timezone:filters.elements.timezone.value}));
-  if (arb && replay) savePreference('stake', stake.value);
   if (browse && !replay) {
     let ordinary = {};
     try { ordinary = JSON.parse(readPreference(evFilterKey, '{}')) || {}; } catch {}
@@ -1164,10 +1145,9 @@ filters.addEventListener('input', event => {
 });
 filters.elements.basis.disabled = false;
 $('reset').onclick = () => {
-  const amount = stake.value;
   const {value: basis} = filters.elements.basis;
   const {value: group} = filters.elements.group;
-  filters.reset(); stake.value = amount;
+  filters.reset();
   filters.elements.basis.value = basis;
   filters.elements.group.value = group;
   for (const field of filters.querySelectorAll('fieldset input')) field.checked = true;
@@ -1232,7 +1212,7 @@ document.addEventListener('visibilitychange', () => {
   scheduleResultExpiry();
 });
 const scheduleUpdates = createDeskPolling({state, replay, currentPhase:() => phase, drawer, expireResultValues,
-  receivingUpdates, postedDesk, usingResults, visibleAnchor, load, selections, previousResults});
+  receivingUpdates, supportsAutoUpdate, usingResults, visibleAnchor, load, selections, previousResults});
 
 load(restored?.offset ?? 0);
 drawer.openHistorical(route.get('result_id'), route.get('selection'));

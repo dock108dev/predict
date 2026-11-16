@@ -7,7 +7,7 @@ export const books = ['fanduel', 'draftkings', 'betmgm', 'caesars'];
 export const cash = value => value == null ? 'Unavailable' : new Intl.NumberFormat('en-US', {
   style:'currency', currency:'USD'
 }).format(num(value));
-export const percent = value => value == null ? 'Unavailable' : `${num(value) > 0 ? '+' : ''}${fmt(value)}%`;
+export const percent = value => value == null ? 'Unavailable' : `${num(value) > 0 ? '+' : ''}${fmt(value).replace(/^-/, '−')}%`;
 export const tone = value => num(value) > 0 ? 'positive' : num(value) < 0 ? 'negative' : '';
 export const basisName = basis => basisLabels[basis];
 export const venueLabel = offer => name(offer.venue);
@@ -77,15 +77,20 @@ function sportsbookCell(group, book, reference, checkedAt, mode, inspection = fa
   if (selected && !values.some(usesReference)) {
     values = [{...selected, current:true}, ...values];
   }
+  const allOdds = Object.values(group.sportsbook_quotes || {}).flat().map(sportsbookOdds).filter(Boolean);
+  const decimals = [...new Set(allOdds.map(price => Number(price.decimal)))];
+  let places = 2;
+  while (places < 10 && new Set(decimals.map(price => price.toFixed(places))).size < decimals.length) places++;
   for (const value of values) {
     const item = el('div');
-    item.append(odd(sportsbookOdds(value)));
-    if (value.source_at) item.title = value.source_at;
+    const odds = sportsbookOdds(value);
+    item.append(odd(odds && {...odds, decimal_places:places}));
+    if (value.source_at && (mode || inspection)) item.title = value.source_at;
     const isReference = usesReference(value);
     if (isReference) item.classList.add('matrix-reference');
     const label = [mode ? [value.current === false ? 'Last known at capture' : 'At capture',
       value.source_at && quoteAge(value.source_at, checkedAt)].filter(Boolean).join(' · ') :
-      priceStatus(value.current, value.source_at, checkedAt, inspection),
+      inspection && priceStatus(value.current, value.source_at, checkedAt, true),
       isReference && 'EV reference'].filter(Boolean).join(' · ');
     if (label) {
       const freshness = el('small', label);

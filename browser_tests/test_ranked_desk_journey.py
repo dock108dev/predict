@@ -247,8 +247,8 @@ def test_ranked_and_browse_journey(width, tmp_path):
             ).to_be_visible()
             expect(prices.get_by_role("button")).to_have_text(
                 [
-                    "Polymarket US+117.39+3.26%",
-                    "Kalshi-108.33-8.21%",
+                    "Polymarket US+117.39+3.26%After-fee EV",
+                    "Kalshi-108.33−8.21%After-fee EV",
                 ]
             )
             assert all(
@@ -264,7 +264,6 @@ def test_ranked_and_browse_journey(width, tmp_path):
                     "Fair odds +102",
                     "DraftKings -108Used for fair odds",
                     "FanDuel -111",
-                    "Caesars -115Last known",
                 ]
             )
             assert market.bounding_box()["y"] < books.bounding_box()["y"]
@@ -281,7 +280,7 @@ def test_ranked_and_browse_journey(width, tmp_path):
             expect(cards.first).not_to_contain_text("Current")
             expect(cards.first).not_to_contain_text("Comparison sportsbook")
             expect(cards.first).not_to_contain_text("-112")
-            expect(cards.last).to_contain_text("-3.00%")
+            expect(cards.last).to_contain_text("−3.00%")
             assert not inspected
             cards.first.get_by_role(
                 "button", name="View trade details: Polymarket US", exact=False
@@ -346,7 +345,7 @@ def test_ranked_and_browse_journey(width, tmp_path):
             expect(fair).to_contain_text("+102")
             expect(fair).to_contain_text("DraftKings")
             expect(tab.get_by_role("columnheader", name="DraftKings")).to_have_count(0)
-            popout = tab.get_by_role("region", name="Sportsbook prices")
+            popout = tab.get_by_role("dialog", name="Same-line sportsbook quotes")
             expect(popout).to_have_count(0)
             tab.get_by_role(
                 "button", name="Same-line sportsbook quotes for Denver to cover +2.5"
@@ -355,7 +354,7 @@ def test_ranked_and_browse_journey(width, tmp_path):
             expect(popout).to_contain_text("-108")
             tab.keyboard.press("Escape")
             expect(popout).to_have_count(0)
-            for key, value in (("pmus-denver", "+3.26%"), ("kalshi-denver", "-8.21%")):
+            for key, value in (("pmus-denver", "+3.26%"), ("kalshi-denver", "−8.21%")):
                 price = tab.locator(f'[data-offer-id="{key}"]')
                 expect(price).to_contain_text(f"{value} EV")
                 expect(price).to_have_accessible_name(
@@ -564,19 +563,18 @@ def test_ranked_and_browse_journey(width, tmp_path):
             tab.goto(BASE + "/arbs")
             expect(cards).to_have_count(2)
             expect(cards.last.locator(".arb-card-legs li")).to_have_count(2)
-            expect(cards.last.locator(".arb-payoff")).to_contain_text("$104.03")
-            expect(cards.last.locator(".arb-payoff")).to_contain_text(
-                "Worst profit/loss"
-            )
+            expect(cards.last).to_contain_text("Lowest modeled return after fees")
+            expect(tab.locator('[name=profit], [name=stake]')).to_have_count(0)
             expect(cards.first).to_contain_text("+0.89%")
-            expect(cards.last).to_contain_text("-4.84%")
+            expect(cards.last).to_contain_text("−4.84%")
             tab.screenshot(path=tmp_path / f"ranked-arb-{width}.png")
             cards.last.get_by_role("button", name="View payoff calculation ↗").press(
                 "Enter"
             )
             payoff = tab.get_by_role("dialog", name="Pair payoff")
-            expect(payoff.get_by_text("$104.03", exact=True)).to_be_visible()
+            expect(payoff.get_by_text("Lowest modeled return after fees", exact=True)).to_be_visible()
             assert "arb-washington" in inspected
+            payoff.get_by_text("Calculation details", exact=True).click()
             expect(
                 payoff.locator(".inspection-payoffs").get_by_text(
                     "Tie or exact-line settlement"
@@ -585,9 +583,6 @@ def test_ranked_and_browse_journey(width, tmp_path):
             expect(payoff.locator(".inspection-payoffs tr").last).to_contain_text(
                 "-$5.03"
             )
-            payoff.get_by_text(
-                "Exact prices, settlement terms and fee rounding", exact=True
-            ).click()
             expect(payoff.get_by_text("Payout by leg")).to_be_visible()
             expect(
                 payoff.get_by_text("Kalshi $49.50 · Polymarket US $49.50")
@@ -605,16 +600,9 @@ def test_ranked_and_browse_journey(width, tmp_path):
             )
             pair_replacement = "stable"
             payoff.get_by_role("button", name="Use latest prices").click()
-            expect(payoff.locator(".inspection-payoffs tr").last).to_contain_text(
-                "-$4.99"
-            )
-            payoff.get_by_label("Total stake before fees ($)").fill("150")
-            payoff.get_by_role("button", name="Size this pair").click()
-            applied_stake = payoff.get_by_text("Stake used before fees", exact=True)
-            expect(applied_stake.locator("xpath=following-sibling::dd")).to_have_text(
-                "$150.00"
-            )
-            assert sized_pairs == [arbs[1]["pairs"][0]["id"]]
+            expect(payoff.locator(".inspection-payoffs tr").last).to_contain_text("-$4.99")
+            expect(payoff.locator('input[type=number]')).to_have_count(0)
+            assert not sized_pairs
             expect(cards.first).to_contain_text("+0.89%")
             assert tab.evaluate("document.documentElement.scrollWidth === innerWidth")
         browser.close()

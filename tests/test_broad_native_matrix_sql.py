@@ -4,7 +4,6 @@ from datetime import datetime, timedelta, timezone
 import json
 import os
 from pathlib import Path
-from tempfile import TemporaryDirectory
 from threading import Event
 from time import monotonic
 from types import SimpleNamespace
@@ -70,8 +69,7 @@ class NativeMatrixFixture(IsolatedAsyncioTestCase):
 
 
 class BroadNativeMatrixSQL(NativeMatrixFixture):
-    async def test_desk_keeps_last_polymarket_price_during_sql_stall_and_reconnect(self):
-        from app.dashboard.desk_last_known import LastKnownDesk
+    async def test_desk_withholds_prices_during_sql_stall_and_reconnects(self):
         from app.dashboard.snapshot_api import mount
 
         self.config['aggregate_provider'] = 'sportsgameodds'
@@ -84,7 +82,7 @@ class BroadNativeMatrixSQL(NativeMatrixFixture):
         waiting, release = Event(), Event()
         stalled = False
         reads = 0
-        fallback_budget = 0.1
+        outage_budget = 0.1
         timings = {}
 
         def connect():
@@ -100,70 +98,54 @@ class BroadNativeMatrixSQL(NativeMatrixFixture):
             return next(offer for row in page['rows'] for offer in row['offers']
                         if offer['venue'] == 'polymarket_us')
 
-        with TemporaryDirectory() as folder:
-            cache_file = Path(folder) / 'view.sqlite3'
-            app = web.Application()
-            mount(app, last_known=LastKnownDesk(cache_file))
-            with patch('app.dashboard.snapshot_api.connect', connect):
-                async with TestClient(TestServer(app)) as client:
-                    start = monotonic()
-                    response = await client.get(path, params=query)
-                    self.assertEqual(response.status, 200, await response.text())
-                    fresh = poly(await response.json())
-                    timings['first_seconds'] = monotonic() - start
-                    self.assertTrue(fresh['current'])
-                    start = monotonic()
-                    warm = await client.get(path, params=query)
-                    self.assertEqual(warm.status, 200, await warm.text())
-                    self.assertTrue(poly(await warm.json())['current'])
-                    timings['warm_seconds'] = monotonic() - start
-                    stalled = True
-                    try:
-                        with patch('app.dashboard.desk_delivery.RESPONSE_SECONDS', fallback_budget):
-                            fallback_samples = []
-                            for _ in range(2):
-                                start = monotonic()
-                                response = await client.get(path, params=query)
-                                self.assertEqual(response.status, 200, await response.text())
-                                saved = await response.json()
-                                fallback_samples.append(monotonic() - start)
-                                self.assertIn('last_known_at', saved)
-                                self.assertIn('desk_last_known', response.headers['Server-Timing'])
-                        timings['fallback_samples'] = fallback_samples
-                        self.assertTrue(waiting.is_set())
-                        self.assertEqual(reads, 3)
-                        previous = poly(saved)
-                        self.assertEqual(previous['original'], fresh['original'])
-                        self.assertEqual(previous['source_clock_at'], fresh['source_clock_at'])
-                        self.assertFalse(previous['current'])
-                        self.assertFalse(previous['posted_price'])
-                        self.assertIsNone(previous['value'])
-                        for field in ('effective_quote', 'book_size', 'current_until', 'evidence_result_id'):
-                            self.assertNotIn(field, previous)
-                    finally:
-                        stalled = False
-                        release.set()
-                    start = monotonic()
-                    response = await client.get(path, params=query)
-                    resumed = await response.json()
-                    timings['resumed_seconds'] = monotonic() - start
-                    self.assertNotIn('last_known_at', resumed)
-                    self.assertTrue(poly(resumed)['current'])
+        app = web.Application()
+        mount(app)
+        with patch('app.dashboard.snapshot_api.connect', connect):
+            async with TestClient(TestServer(app)) as client:
+                start = monotonic()
+                response = await client.get(path, params=query)
+                self.assertEqual(response.status, 200, await response.text())
+                self.assertTrue(poly(await response.json())['current'])
+                timings['first_seconds'] = monotonic() - start
+                start = monotonic()
+                warm = await client.get(path, params=query)
+                self.assertEqual(warm.status, 200, await warm.text())
+                self.assertTrue(poly(await warm.json())['current'])
+                timings['warm_seconds'] = monotonic() - start
+                stalled = True
+                try:
+                    with patch('app.dashboard.desk_delivery.RESPONSE_SECONDS', outage_budget):
+                        outage_samples = []
+                        for _ in range(2):
+                            start = monotonic()
+                            response = await client.get(path, params=query)
+                            self.assertEqual(response.status, 503)
+                            self.assertNotIn('polymarket_us', await response.text())
+                            outage_samples.append(monotonic() - start)
+                    timings['outage_samples'] = outage_samples
+                    self.assertTrue(waiting.is_set())
+                    self.assertEqual(reads, 3)
+                finally:
+                    stalled = False
+                    release.set()
+                start = monotonic()
+                response = await client.get(path, params=query)
+                resumed = await response.json()
+                timings['resumed_seconds'] = monotonic() - start
+                self.assertTrue(poly(resumed)['current'])
 
-            restarted = web.Application()
-            mount(restarted, last_known=LastKnownDesk(cache_file))
-            with patch('app.dashboard.snapshot_api.connect', side_effect=OperationalError):
-                async with TestClient(TestServer(restarted)) as client:
-                    start = monotonic()
-                    response = await client.get(path, params=query)
-                    self.assertEqual(response.status, 200, await response.text())
-                    self.assertEqual(poly(await response.json())['original'], fresh['original'])
-                    timings['restart_seconds'] = monotonic() - start
-                    uncached = await client.get(path, params=dict(query, league='NFL'))
-                    self.assertEqual(uncached.status, 503)
+        restarted = web.Application()
+        mount(restarted)
+        with patch('app.dashboard.snapshot_api.connect', side_effect=OperationalError):
+            async with TestClient(TestServer(restarted)) as client:
+                start = monotonic()
+                response = await client.get(path, params=query)
+                self.assertEqual(response.status, 503)
+                self.assertNotIn('polymarket_us', await response.text())
+                timings['restart_seconds'] = monotonic() - start
         if report := os.environ.get('PREDICT_CI_REPORT_ROOT'):
             (Path(report) / 'desk-recovery.json').write_text(json.dumps(dict(
-                fixture='desk-polymarket-nba-v1', fallback_budget_seconds=fallback_budget, **timings
+                fixture='desk-polymarket-nba-v2', outage_budget_seconds=outage_budget, **timings
             ), indent=2) + '\n')
 
     async def test_native_selection_before_the_first_ordinary_seal(self):

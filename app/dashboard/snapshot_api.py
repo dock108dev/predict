@@ -197,7 +197,7 @@ def history(db, out):
     return out
 
 
-def mount(app, *, last_known=None):
+def mount(app):
     # Result IDs are immutable. Keep one list root, bounded to one revision.
     # Reading a small selected member must not evict the large rolling root.
     # Evidence retention/authority is still checked at its owning read boundary.
@@ -245,11 +245,8 @@ def mount(app, *, last_known=None):
 
     from .browse_sessions import BrowseSessions
     from .desk_delivery import ReadBurst, read_desk
-    from .desk_last_known import LastKnownDesk
     browsing=BrowseSessions()
     desk_reads = ReadBurst()
-    if last_known is None:
-        last_known = LastKnownDesk()
     app.on_cleanup.append(desk_reads.close)
 
     async def current_read(req):
@@ -278,7 +275,10 @@ def mount(app, *, last_known=None):
         options = None if is_fee_census else page_options(query)
         current_desk = (options is not None and options[0] != 'arbs' and query.get('layout') == 'desk'
                         and (query.get('browse_odds') == '1' or query.get('ranked') == '1')
-                        and query.get('last_known') != '1' and not req.path.endswith('/selection'))
+                        and not is_selection)
+        default_estimates = (current_desk and query.get('summary') == '1' and query['phase'] == 'pregame'
+                             and query.get('ranked') == '1' and query.get('browse_odds') != '1'
+                             and query.get('basis') == 'sportsbooks')
         from app.storage import ordinary_publication as live
         from app.storage import current_aggregate_desk
         from app.fees.schedule_lifecycle import revision as fee_revision
@@ -318,6 +318,7 @@ def mount(app, *, last_known=None):
             started = monotonic()
             timings['queue'] = (started - submitted) * 1000
             from app.collection.current_policy import aggregate_provider, live_enabled
+            from app.storage.ordinary_projection import authority_deadline, event_owners, publication_runtime, withdrawn_events
             with connect() as db, db.transaction():
                 db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
                 db.execute('SET LOCAL jit=off')
@@ -334,7 +335,7 @@ def mount(app, *, last_known=None):
                 if is_desk:
                     features = dict(features=dict(live_enabled=live_available), phase=query['phase'])
                     if provider == 'sportsgameodds':
-                        features['features']['posted_pregame'] = True
+                        features['features']['auto_update'] = True
                 else:
                     features = {}
                 timings['authority']=(monotonic()-started)*1000
@@ -365,6 +366,55 @@ def mount(app, *, last_known=None):
                                     **features)
                     features['update_cursor'] = update_cursor
                 policy = live.policy_identity(provider)
+                # In the SGO-only pregame configuration, all four display
+                # venues have direct committed reads. An indicative estimate
+                # needs current quotes and book pairs, not every historical
+                # financial member of the ordinary publication.
+                fast_desk = (default_estimates and provider == 'sportsgameodds'
+                    and (owner.get('config') or {}).get('direct_novig_enabled') is False
+                    and owner.get('healthy') and owner.get('active') and not owner.get('global_stopped'))
+                if fast_desk:
+                    from app.storage.current_native_desk import overlay as native_overlay
+                    from app.storage.sportsgameodds_reference import EventInputs
+                    from .desk_scope import pregame_search
+                    from .desk_updates import refresh_at
+                    from .trade_desk import page as desk_page
+
+                    stage = monotonic()
+                    _, event_ids = pregame_search(db, None, query, at)
+                    sgo_inputs = EventInputs(db)
+                    withdrawn = withdrawn_events(db, at=at)
+                    direct = dict(rows=[], pairs=[], games=[], captured_at=at.isoformat(), assumptions=settings,
+                        publication=dict(state='ready', read_at=at.isoformat(), data_runtime=publication_runtime(owner),
+                                         sources=states, current_prices=0, retained_prices=0))
+                    direct = native_overlay(db, direct, owner, states, at=at, phase='pregame',
+                                            sgo_inputs=sgo_inputs, event_ids=event_ids, withdrawn=withdrawn)
+                    direct = current_aggregate_desk.overlay(db, direct, owner, states, at=at, phase='pregame',
+                                                            sgo_inputs=sgo_inputs, event_ids=event_ids, withdrawn=withdrawn)
+                    # Evaluate source time again after the reads. The MVCC
+                    # inputs are unchanged; elapsed time can only revoke them.
+                    rendered_at = stamp(utc())
+                    direct['rows'] = [row for row in direct['rows']
+                        if row['price_current'] and stamp(row['start_at']) > rendered_at
+                        and (deadline := authority_deadline(row['current_authority']['price']))
+                        and stamp(deadline) > rendered_at]
+                    direct['publication']['current_prices'] = len(direct['rows'])
+                    for row in direct['rows']:
+                        baseline = row.get('sportsbook_baseline')
+                        if baseline and stamp(baseline['current_until']) <= rendered_at:
+                            row.update(sportsbook_baseline=None, sportsbook_return_percent=None,
+                                       sportsbook_reference_reason='reference_price_stale')
+                    if any(row.get('sportsbook_return_percent') is not None for row in direct['rows']):
+                        out = desk_page(direct, query, options, browsing=browsing, published_only=True, policy=policy)
+                        if out.get('state') == 'page_changed':
+                            return out
+                        if out.get('ranked_group_count'):
+                            timings['direct_desk'] = (monotonic() - stage) * 1000
+                            out.update(features, cursor=update_cursor, generation=head['generation'],
+                                       refresh_at=refresh_at(out, at))
+                            out['publication']['count_scope'] = 'current_sportsbook_estimates'
+                            return out
+                    timings['direct_fallback'] = (monotonic() - stage) * 1000
                 stage = monotonic()
                 cold = decoded_cache[0] != head['result_id']
                 result = decoded(head['result_id'], db, ordinary=True) if head['result_id'] else None
@@ -430,7 +480,6 @@ def mount(app, *, last_known=None):
                         return dict(fee_census(db, empty, inventory_deps, owner, states, at, policy=policy, epoch=epoch, settings=settings),
                             state='initializing', cursor=cursor,
                             generation=head['generation'], result_id=None, provider_requests=0)
-                    from app.storage.ordinary_projection import publication_runtime
                     initializing = dict(state='initializing', sources=states, read_at=at.isoformat(),
                                         current_prices=0, retained_prices=0, data_runtime=publication_runtime(owner))
                     result = dict(id=None, rows=[], pairs=[], games=[], publication=initializing,
@@ -456,22 +505,14 @@ def mount(app, *, last_known=None):
                 frames = (live.sportsbook_frames(db, at, sgo_inputs=sgo_inputs) if dependency_result and any(
                     (r.get('sportsbook_baseline') or {}).get('indicative') for r in dependency_result['rows'])
                     and provider == 'sportsgameodds' else ())
-                from app.storage.ordinary_projection import event_owners, publication_runtime
-                from .trade_desk import browse_retained
-                browsing_odds = query.get('browse_odds') == '1'
-                retained_fallback = (browsing_odds and not public_summary
-                                     and browse_retained(publication_runtime(owner)))
-                retain_sportsbook_ev = (browsing_odds and not public_summary
-                                        and query.get('layout') == 'desk' and options is not None
-                                        and options[0] != 'arbs' and query.get('basis', 'sportsbooks') == 'sportsbooks')
                 event_facts = event_owners(db, lifecycle_rows, at=at) if is_desk else None
+                withdrawn = withdrawn_events(db, at=at) if is_desk else None
                 if head['result_id']:
                     result = live.project(result, deps, owner, states, at=at, policy=policy, epoch=epoch,
                                           settings=settings, sportsbook_frames=frames,
-                                          current_desk=current_desk and not retained_fallback,
-                                          retain_sportsbook_ev=retain_sportsbook_ev,
+                                          current_desk=current_desk,
                                           event_facts=event_facts,
-                                          lifecycle_rows=lifecycle_rows if is_desk else None)
+                                          lifecycle_rows=lifecycle_rows if is_desk else None, withdrawn=withdrawn)
                 timings['projection']=(monotonic()-stage)*1000
                 if native_desk:
                     from app.storage.current_native_desk import overlay
@@ -479,13 +520,13 @@ def mount(app, *, last_known=None):
                     from .trade_desk import desk_phase
                     result = overlay(db, result, owner, states, at=at, contract=live_contract,
                                      phase=desk_phase(query) or 'pregame', sgo_inputs=sgo_inputs,
-                                     event_ids=overlay_events, include_preview_inputs=census_desk)
+                                     event_ids=overlay_events, include_preview_inputs=census_desk, withdrawn=withdrawn)
                     timings['native_desk']=(monotonic()-stage)*1000
                 if aggregate_desk:
                     stage = monotonic()
                     result = current_aggregate_desk.overlay(db, result, owner, states, at=at, phase=query['phase'],
                                                             contract=aggregate_contract, sgo_inputs=sgo_inputs,
-                                                            event_ids=overlay_events)
+                                                            event_ids=overlay_events, withdrawn=withdrawn)
                     timings['aggregate_desk'] = (monotonic()-stage)*1000
                 if not head['result_id'] and not result['rows'] and not (is_selection or is_fee_census):
                     fallback = game_capture_link(db, query, allow_live=live_available)
@@ -515,9 +556,15 @@ def mount(app, *, last_known=None):
                                 row, = rows
                         value = (offer(row, METRICS.get(basis,EV_METRIC), sportsbook_updates_paused=paused)
                                  if row and row['kind'] == 'single' and direct_venue_offer(row) else None)
-                        if value and not phase_matches(row, phase, at):
+                        if value and (not row.get('price_current') or not phase_matches(row, phase, at)):
                             return dict(row=None, withdrawn_from_phase=True,
                                         reason=row.get('game_state_reason') or 'phase_price_unavailable', provider_requests=0)
+                        if value and value['reason'] == 'reference_price_missing' and phase == 'pregame' and provider == 'sportsgameodds':
+                            from .desk_sportsbooks import stale_sgo_reference
+
+                            game = next((game for game in result['games'] if game['game_key'] == row['game_key']), None)
+                            if stale_sgo_reference(row, game, sgo_inputs, at=at):
+                                value['reason'] = 'reference_price_stale'
                         inspection = (row.get('native_inspection') or row.get('aggregate_inspection')) if value else None
                         evidence = dict(captured_at=row['captured_at'], inspection=inspection) if inspection else None
                         if value and row.get('posted_price'):
@@ -540,11 +587,7 @@ def mount(app, *, last_known=None):
                     def enrich(out, *, include_retained, mark_retained=False):
                         if provider != 'sportsgameodds' or 'sportsgameodds' not in states:
                             return
-                        quote_states = states
-                        if retained_fallback:
-                            aggregate = dict(states['sportsgameodds'], state='unavailable')
-                            quote_states = dict(states, sportsgameodds=aggregate)
-                        add_sgo_prices(db, out, result['rows'], quote_states, at=at,
+                        add_sgo_prices(db, out, result['rows'], states, at=at,
                                        include_retained=include_retained, mark_retained=mark_retained, sgo_inputs=sgo_inputs)
                         if desk_phase(query) != 'live':
                             add_public_prices(out, owner, at=at, include_retained=include_retained,
@@ -575,7 +618,7 @@ def mount(app, *, last_known=None):
                 return out
 
         from .desk_delivery import (
-            BURST_SECONDS, LATE_LIST_REUSE_SECONDS, common_page, encode, packet_response, timing_header,
+            BURST_SECONDS, ESTIMATE_RESPONSE_SECONDS, LATE_LIST_REUSE_SECONDS, common_page, encode, packet_response, timing_header,
         )
 
         async def read_work():
@@ -591,20 +634,15 @@ def mount(app, *, last_known=None):
 
         if (is_desk and query.get('summary') == '1' and not
                 (is_updates or is_selection or is_fee_census)):
-            # Follow the full request identity, including filters and membership.
-            # Slow requests continue one shared read while callers use the copy.
-            common = common_page(query, options)
+            # Share only a validated packet, and only before its first expiry.
+            explicit_refresh = query.get('refresh') == '1'
+            common = None if explicit_refresh else common_page(query, options)
             exact = ('desk', tuple(sorted(query.items())))
-            cache_key = hashed(exact) if options[0] != 'arbs' else None
 
             def public_packet():
                 started = monotonic()
                 result = work()
                 observed = (result.get('publication') or {}).get('read_at') or utc()
-                if cache_key is not None:
-                    stage = monotonic()
-                    last_known.remember(cache_key, result)
-                    timings['remember_prices'] = (monotonic() - stage) * 1000
                 stage = monotonic()
                 packet, expires, size = encode(result, at=stamp(observed), started=started)
                 timings['encode'] = (monotonic() - stage) * 1000
@@ -616,15 +654,13 @@ def mount(app, *, last_known=None):
             try:
                 (packet, saved_timings), shared = await read_desk(
                     desk_reads.read(common or exact, produce, reuse=BURST_SECONDS if common else 0,
-                                    late_reuse=LATE_LIST_REUSE_SECONDS))
+                                    late_reuse=0 if explicit_refresh else LATE_LIST_REUSE_SECONDS),
+                    timeout=ESTIMATE_RESPONSE_SECONDS if default_estimates else None)
                 return packet_response(req, packet, saved_timings, shared=shared)
             except (web.HTTPServiceUnavailable, OperationalError):
-                saved = last_known.read(cache_key, stamp(utc())) if cache_key is not None else None
-                if saved is None:
-                    raise web.HTTPServiceUnavailable(reason='Prices temporarily unavailable') from None
-                return web.json_response(saved, headers={
-                    'Server-Timing': timing_header({'desk_last_known': (monotonic() - submitted) * 1000}),
-                })
+                # An outage cannot prove that prices still exist. Saved odds
+                # is the separate route for inspecting captured history.
+                raise web.HTTPServiceUnavailable(reason='Prices temporarily unavailable') from None
 
         if is_selection and is_desk:
             (result, saved_timings), _ = await read_desk(

@@ -55,7 +55,12 @@ of a settled page that never reached storage.
 
 An exact venue closure withdraws the current quote. The later closure receipt
 can prevent an older replay from restoring it while keeping the original price
-and clocks inspectable. The working history has age and space limits. Pinned
+and clocks inspectable. A cancellation, suspension, or final status withdraws
+the occurrence. Reopening requires a later nonterminal status with a fresh
+price timestamped after the closure was observed. Each offer must clear that
+same cutoff before it can return to the desk.
+
+The working history has age and space limits. Pinned
 evidence and saved odds use their separate retention rules. Switching the
 aggregate provider withdraws the old provider's current authority while its
 retained evidence remains accessible. [Storage ownership](storage-ownership.md) ·

@@ -50,7 +50,7 @@ def participant_ids(teams, league, event_id, registry):
     return ids
 
 
-def _event_record(event, receipt_sha256, received_at, registry):
+def event_record(event, receipt_sha256, received_at, registry):
     event_id = event['event_id']
     league = event['league']
     teams = event['teams']
@@ -139,7 +139,7 @@ def current_rows(page, receipt_sha256):
         received_at = first['received_at']
         event_key = (event_id, received_at)
         if event_key not in event_records:
-            row_event = _event_record(event, receipt_sha256, received_at, registry)
+            row_event = event_record(event, receipt_sha256, received_at, registry)
             event_records[event_key] = (row_event, provider_key('sportsgameodds', row_event))
         row_event, occurrence = event_records[event_key]
         home, away = row_event['home'], row_event['away']

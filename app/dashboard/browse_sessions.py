@@ -38,7 +38,7 @@ class BrowseSessions:
 
     def page(self, groups, query, offset, limit):
         signature={k:v for k,v in query.items()
-                   if k not in ('offset','limit','expected_cursor','browse_id','locate','locate_game')}
+                   if k not in ('offset','limit','expected_cursor','browse_id','locate','locate_game','refresh')}
         with self.lock:
             now=self.clock()
             for key in list(self.sessions):

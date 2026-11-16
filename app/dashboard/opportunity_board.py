@@ -36,16 +36,13 @@ def main():
     if not 1 <= a.port <= 65535:
         p.error('Loopback port must be between 1 and 65535')
     from app.collection.runtime_client import RuntimeClient
-    from app.storage.store import hashed, socket_directory
-    from .desk_last_known import LastKnownDesk
+    from app.storage.store import socket_directory
 
-    state = ROOT / '.local'
     try:
-        database = socket_directory()
+        socket_directory()
     except ValueError as exc:
         p.error(str(exc))
-    desk_cache = LastKnownDesk(state / 'desk-read-cache' / (hashed(database) + '.sqlite3'))
-    application=create_app(current_provider=RuntimeClient(), desk_cache=desk_cache)
+    application=create_app(current_provider=RuntimeClient())
     web.run_app(application,host=a.host,port=a.port,access_log=None,handler_cancellation=True)
 
 if __name__=='__main__':main()

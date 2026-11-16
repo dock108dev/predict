@@ -266,7 +266,7 @@ def parse_page(body, received_at, *, leagues=LEAGUES, venues=None):
                     game_results[role] = _number(values['points'])
         event_row = {'event_id': event_id, 'aliases': aliases, 'league': league, 'teams': names,
                      'starts_at': _time(status.get('startsAt')), 'phase': phase,
-                     'status': {key: status.get(key) for key in ('started', 'live', 'ended', 'completed', 'cancelled', 'delayed', 'finalized')},
+                     'status': {key: status.get(key) for key in ('started', 'live', 'ended', 'completed', 'cancelled', 'delayed', 'suspended', 'finalized')},
                      'scores': scores, 'game_results': game_results,
                      'received_at': received_at}
         previous_starts = status.get('previousStartsAt')

@@ -18,7 +18,7 @@ from app.normalization.registry import Registry
 from .comparison_snapshot import expand_row
 from .current_native_desk import game_signature
 from .current_rows import project_contract
-from .ordinary_projection import occurrence_key, source_allowed
+from .ordinary_projection import event_signature, occurrence_key, source_allowed
 from .schedule_metadata import witness
 from .sportsgameodds_reference import EventInputs
 from .store import hashed, stamp
@@ -47,14 +47,14 @@ def active_offers(db, *, at, phase, venues, providers, sports, contract=None, ev
           AND (%s::text[] IS NULL OR e.id=ANY(%s))
           AND e.scheduled_start::timestamptz <= %s AND (e.scheduled_start::timestamptz > %s)=%s
           AND e.expires_order >= extract(epoch FROM %s::timestamptz)
-          AND (%s OR o.source_order >= extract(epoch FROM %s::timestamptz)) AND o.source_order <= o.received_order
+          AND o.source_order >= extract(epoch FROM %s::timestamptz) AND o.source_order <= o.received_order
           AND o.received_order <= extract(epoch FROM %s::timestamptz)
           AND o.native_book_id IS NULL AND o.facts->>'state'='available'
           AND ((e.provider='sportsgameodds' AND sgo.id IS NOT NULL)
                OR (e.provider=%s AND c.venue='prophetx' AND o.sgo_quote_id IS NULL))
         ORDER BY c.id''',
         (providers, sports, venues, contract, contract, event_ids, event_ids, at + timedelta(hours=72), at, phase == 'pregame',
-         at, phase == 'pregame', at - timedelta(seconds=maximum), at, ODDSLINK))
+         at, at - timedelta(seconds=maximum), at, ODDSLINK))
 
 
 def prior_finance(prior, quote, authority):
@@ -82,13 +82,13 @@ def game_for(event, key, prior, games, dependencies, registry):
                 title=event['title'], league=league, start_at=start.isoformat(), participants=participants)
 
 
-def overlay(db, result, owner, states, *, at, phase, contract=None, sgo_inputs=None, event_ids=None):
+def overlay(db, result, owner, states, *, at, phase, contract=None, sgo_inputs=None, event_ids=None, withdrawn=None):
     from app.collection.oddslink_prophetx import live_occurrences
     from .ordinary_publication import pregame_sportsbooks, quote_authority
 
     pregame = phase == 'pregame'
     running = owner.get('healthy') and allowed(owner)
-    if not running and not pregame:
+    if not running:
         return result
     config = owner.get('config') or {}
     venues = [name for name in ('novig', 'prophetx') if name not in owner.get('paused_sources', ())]
@@ -96,7 +96,7 @@ def overlay(db, result, owner, states, *, at, phase, contract=None, sgo_inputs=N
         return result
     sports = set(aggregate_scope(config))
     native_sports = set(native_scope(config))
-    providers = [provider for provider in (SGO, ODDSLINK) if pregame or source_allowed(states.get(provider, {}))]
+    providers = [provider for provider in (SGO, ODDSLINK) if source_allowed(states.get(provider, {}))]
     if not (venues and sports and providers):
         return result
     games = {game['game_key']: game for game in result['games']}
@@ -147,6 +147,8 @@ def overlay(db, result, owner, states, *, at, phase, contract=None, sgo_inputs=N
                 or not outcome(family, record['selection'], event['home'], event['away'])
                 or not witness(event)):
             continue
+        if event_signature(event) in (withdrawn or {}):
+            continue
         occurrence = signature(event, league)
         if provider == ODDSLINK and phase == 'live':
             if league not in live_oddslink:
@@ -157,10 +159,8 @@ def overlay(db, result, owner, states, *, at, phase, contract=None, sgo_inputs=N
         raw = dict(original=q['original'], source=row_source, venue=q['venue'], league=league, times=q['times'])
         authority = quote_authority(dict(raw, original_record=record), dict(captured_at=at, dependencies={cid: dependencies}))
         lifecycle = authority['lifecycle']
-        reasons = set(authority['reasons'])
-        if pregame:
-            reasons.discard('source_expired')
-        if reasons or not authority['expected'] or lifecycle['state'] != expected_state:
+        if (not source_active or authority['reasons'] or stamp(authority['current_until']) <= at
+                or not authority['expected'] or lifecycle['state'] != expected_state):
             continue
         current = bool(running and source_active and raw['venue'] not in owner.get('paused_sources', ())
                        and not authority['reasons'])
@@ -208,6 +208,8 @@ def overlay(db, result, owner, states, *, at, phase, contract=None, sgo_inputs=N
         if baseline is not None:
             row.update(sportsbook_baseline=baseline, sportsbook_return_percent=baseline['return_percent'],
                        economic_revision=hashed([row['economic_revision'], baseline]))
+        if baseline is None and original and original.get('sportsbook_reference_reason'):
+            row['sportsbook_reference_reason'] = original['sportsbook_reference_reason']
         if contract is not None:
             from app.comparison.inspection_math import offer_disclosures, offer_math
 

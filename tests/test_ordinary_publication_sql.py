@@ -15,7 +15,7 @@ from app.dashboard.snapshot_api import mount
 
 @skipUnless(SOCKET, 'Disposable PostgreSQL required')
 class OrdinarySQL(LatestBoardFixture):
-    async def test_posted_native_quote_survives_rotation_and_loses_execution_authority(self):
+    async def test_current_native_quote_expires_and_rotation_preserves_only_the_stored_price(self):
         from app.storage.current_native_desk import overlay
         from app.storage.current_rows import CurrentRowStore
         from tests.broad_pipeline_fixtures import captured_partial
@@ -39,19 +39,13 @@ class OrdinarySQL(LatestBoardFixture):
             self.assertTrue(fresh['posted_price'])
             self.assertTrue(fresh['book_size'])
             later = self.at + timedelta(minutes=2)
-            held, = overlay(db, empty, owner, states, at=later, contract=selection)['rows']
-            self.assertFalse(held['price_current'])
-            self.assertEqual(held['original'], fresh['original'])
-            self.assertEqual(held['times'], fresh['times'])
+            self.assertFalse(overlay(db, empty, owner, states, at=later, contract=selection)['rows'])
             store.withdraw_native_markets([key], reimaging=True)
             stored = db.execute('SELECT native_book_id, price_value FROM current_offer_storage WHERE contract_id=%s',
                                 (selection,)).fetchone()
             self.assertIsNone(stored['native_book_id'])
             self.assertEqual(stored['price_value'], fresh['original']['value'])
-            rotated, = overlay(db, empty, owner, states, at=later, contract=selection)['rows']
-            self.assertEqual(rotated['original'], fresh['original'])
-            self.assertTrue(rotated['posted_price'])
-            self.assertIsNone(rotated['book_size'])
+            self.assertFalse(overlay(db, empty, owner, states, at=later, contract=selection)['rows'])
             self.assertFalse(overlay(db, empty, owner, states, at=stamp(fresh['start_at']),
                                      contract=selection)['rows'])
             store.withdraw_native_markets([key])
@@ -617,13 +611,7 @@ class OrdinarySQL(LatestBoardFixture):
                 self.at = stamp(expiring['current_until']) + timedelta(microseconds=1)
                 self.state.write(self.service)
                 expired_page = await (await client.get('/api/comparison-current', params=query)).json()
-                last_known = next(offer for row in expired_page['rows'] for offer in row['offers']
-                                  if offer['id'] == expiring['id'])
-                self.assertEqual(last_known['original'], expiring['original'])
-                self.assertEqual(last_known['source_clock_at'], expiring['source_clock_at'])
-                self.assertIn('source_expired', last_known['current_reasons'])
-                self.assertFalse(last_known['current'])
-                self.assertIsNone(last_known['value'])
+                self.assertNotIn(expiring['id'], {offer['id'] for row in expired_page['rows'] for offer in row['offers']})
                 self.at = max(stamp(row['start_at']) for row in page['rows'])
                 self.state.write(self.service)
                 after_kickoff = await (await client.get('/api/comparison-current', params=query)).json()

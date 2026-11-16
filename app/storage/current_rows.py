@@ -21,7 +21,7 @@ MAX_RECORD_BYTES=128*1024
 LOCK=901095
 MAX_PIPELINE_COMMANDS=128
 EVENT_FIELDS=('id','sport','competition','season','stage','scheduled_start','schedule_status','previous_starts_at','home','away','participants','title',
-    'status','state','shared_provider_ids','game_number','original_start','replacement_game_id','neutral_venue','source_participant_roles','native_role_evidence','current_occurrence_binding','observed_identity_facts','occurrence_conflict','conflicting_duplicate','schedule_metadata','schedule_conflict')
+    'status','state','shared_provider_ids','game_number','original_start','replacement_game_id','neutral_venue','source_participant_roles','native_role_evidence','current_occurrence_binding','observed_identity_facts','occurrence_conflict','conflicting_duplicate','schedule_metadata','schedule_conflict','sgo_closed_at')
 
 _NATIVE_BOOK_JOIN='''FROM current_contract_storage c
     JOIN current_offer_storage o ON o.contract_id=c.id

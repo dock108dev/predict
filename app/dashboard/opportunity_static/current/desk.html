@@ -39,7 +39,6 @@
         <div class="desk-analysis">
           <label id="basis-field"><span class="sr-only">Calculation basis</span><select name="basis" disabled><option value="sportsbooks">Sportsbook estimate</option><option value="reviewed">Verified after-fee EV</option><option value="conservative">Conservative after-fee EV</option><option value="before">Before-fee scenario</option></select></label>
           <label id="group-field"><span class="sr-only">Rows</span><select name="group"><option value="outcome">By outcome</option><option value="offer">Individual offers</option></select></label>
-          <label id="stake-field" hidden>Total stake before fees ($) <input name="stake" type="number" min="0.01" max="1000000" step="0.01" value="100"></label>
           <label id="positive-field" class="desk-toggle"><input name="positive" type="checkbox"> Positive only</label>
         </div>
         <div class="desk-list-tools">
@@ -73,7 +72,6 @@
           <div class="desk-thresholds">
             <label id="sort-field" hidden>Sort <select name="sort"><option value="return">Highest return</option><option value="start">Soonest start</option></select></label>
             <label>Minimum return (%) <input name="minimum" type="number" step="any"></label>
-            <label id="profit-field" hidden>Minimum profit ($) <input name="profit" type="number" step="any"></label>
           </div>
         </details>
         <div class="filter-footer"><button type="button" id="reset">Clear all</button><button type="button" id="filter-done" class="desk-primary">Done</button></div>

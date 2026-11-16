@@ -186,9 +186,6 @@
 }
 .opportunities-app .desk-session :is(a,button):hover { color: var(--accent); text-decoration: underline; }
 .previous-results { color: var(--ink); border-inline-start: 3px solid var(--accent); padding-inline-start: .6rem; }
-[data-expired-calculation] { display: none !important; }
-.expired-matrix-value { display: none; }
-[data-expired-calculation] + .expired-matrix-value { display: inline; }
 .opportunities-app .desk-empty,
 .opportunity-card, .odds-card {
   background: var(--paper); border: 1px solid var(--rule); border-radius: 12px; overflow: hidden;
@@ -350,6 +347,7 @@
   color: var(--ink); background: var(--paper); border: 1px solid var(--rule);
   border-radius: 10px; box-shadow: 0 8px 36px #101b3130; text-align: start;
 }
+.matrix-sportsbook-popout > header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
 .matrix-sportsbook-popout::backdrop { background: #101b312b; }
 .matrix-reference small { color: inherit; }
 .odds-card .odds-matrix:not(.standard-columns) td { min-width: 4.7rem; }

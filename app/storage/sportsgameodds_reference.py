@@ -329,6 +329,110 @@ def withdraw_current_offers(db, rows, links):
         (sorted(ids),)).rowcount
 
 
+def apply_event_lifecycle(db, frames, references, records):
+    """Apply sporting status before admitting execution prices under the writer lock."""
+    from app.collection.sportsgameodds_current_rows import event_record
+    from app.comparison.game_phase import PREGAME_SPORTSBOOK_SECONDS, sgo_event_status, sporting_phase
+    from app.normalization.college_registry import sgo_registry
+    from .current_rows import event_id
+    from .schedule_metadata import choose, witness
+
+    terminal_states = {'cancelled', 'final', 'suspended'}
+    candidates = {frame['event_id']: frame['facts'] for frame in frames}
+    terminal = {key for key, frame in candidates.items() if sporting_phase({
+        'status': sgo_event_status((frame.get('event_context') or {}).get('status') or {})
+    })['state'] in terminal_states}
+    if not candidates:
+        return 0, records
+
+    previous = db.execute("""SELECT e.id,e.facts, f.event_id, f.facts->>'receipt_sha256' AS receipt
+            FROM current_sgo_event_frame f LEFT JOIN current_event e
+              ON e.native_event_id=f.event_id AND e.provider='sportsgameodds'
+            WHERE f.event_id=ANY(%s) AND (f.event_id=ANY(%s) OR e.facts ? 'sgo_closed_at'
+              OR e.facts#>>'{status,status}' IN ('cancelled','suspended','delayed') OR e.facts#>>'{status,ended}'='true')""",
+            (sorted(candidates), sorted(terminal))).fetchall()
+    if not previous:
+        return 0, records
+
+    # A receipt can repeat an old price. Reopening requires a fresh offered
+    # price whose provider clock is strictly later than the closure witness.
+    blocked = set(terminal)
+    cutoffs = {}
+    sources = {}
+    affected = {row['event_id'] for row in previous}
+    for row in references:
+        fact = row['facts']
+        if (row['event_id'] in affected and fact.get('available') and fact.get('source_at')
+                and fact.get('period') == 'game'):
+            source_at = stamp(fact['source_at'])
+            age = (stamp(fact['received_at']) - source_at).total_seconds()
+            if 0 <= age < PREGAME_SPORTSBOOK_SECONDS:
+                sources[row['event_id']] = max(sources.get(row['event_id'], source_at), source_at)
+
+    changed = 0
+    for row in previous:
+        key = row['event_id']
+        frame = candidates[key]
+        prior = row['facts']
+        if prior and stamp(frame['starts_at']) != stamp(prior['scheduled_start']):
+            continue  # A schedule change goes through ordinary occurrence admission.
+        closed = bool(prior and sporting_phase(prior)['state'] in terminal_states)
+        metadata = witness(prior) if closed else None
+        cutoff = (prior or {}).get('sgo_closed_at') or (metadata or {}).get('received_at')
+        if cutoff:
+            cutoffs[key] = cutoff
+        if closed:
+            blocked.add(key)
+        if row['receipt'] != frame['receipt_sha256'] or not frame.get('event_context'):
+            continue
+        if key not in terminal and (not closed or not cutoff or key not in sources or sources[key] <= stamp(cutoff)):
+            continue
+        observation = event_record(dict(frame['event_context'], event_id=key, starts_at=frame['starts_at']),
+                                   frame['receipt_sha256'], frame['received_at'], sgo_registry())
+        if prior and any(observation[field] != prior[field] for field in ('competition', 'home', 'away')):
+            continue
+        if choose(prior, observation, observed_at=frame['received_at']) is not observation:
+            continue
+        if key in terminal:
+            cutoff = frame['received_at']
+        else:
+            blocked.discard(key)
+        observation['sgo_closed_at'] = cutoff
+        cutoffs[key] = cutoff
+        eid = row['id'] or event_id('sportsgameodds', key)
+        if prior:
+            db.execute('UPDATE current_event SET facts=%s,revision=%s WHERE id=%s',
+                       (Jsonb(observation), hashed(observation), eid))
+        else:
+            start = observation['scheduled_start']
+            db.execute("""INSERT INTO current_event VALUES (%s,'sportsgameodds',%s,%s,%s,%s,%s,%s)""",
+                       (eid, key, observation['competition'], start, exact_time((stamp(start) + timedelta(hours=24)).isoformat()),
+                        Jsonb(observation), hashed(observation)))
+        changed += 1
+        if key in terminal:
+            changed += db.execute("""UPDATE current_offer_storage o
+                SET facts=jsonb_set(o.facts,'{state}','"unavailable"'::jsonb),
+                    revision=encode(sha256(convert_to(o.revision||%s,'UTF8')),'hex')
+                FROM current_contract c WHERE c.id=o.contract_id AND c.event_id=%s
+                  AND o.received_order<=%s AND o.facts->>'state'='available'""",
+                (frame['receipt_sha256'], eid, exact_time(cutoff))).rowcount
+
+    admitted = []
+    for record in records:
+        quote = record['quote']
+        key = quote['source']['native_event_id']
+        if key in blocked:
+            continue
+        if cutoff := cutoffs.get(key):
+            clocks = quote['times']
+            at = clocks['source_at']
+            if not at or not stamp(cutoff) < stamp(at) <= stamp(clocks['received_at']):
+                continue
+            record = dict(record, event=dict(record['event'], sgo_closed_at=cutoff))
+        admitted.append(record)
+    return changed, admitted
+
+
 def read_event(db, event_id, *, limit=MAX_ROWS, bookmakers=None, source_since=None):
     """Read one bounded event within the caller's coherent snapshot transaction."""
     if not isinstance(event_id, str) or not event_id or len(event_id) > 256:
@@ -677,7 +781,7 @@ def backfill_prophetx(db, *, at):
         by_event = defaultdict(list)
         for row in rows:
             by_event[row['event_id']].append(row)
-        records, links = [], {}
+        records, links, frames = [], {}, []
         for event_id, members in by_event.items():
             frame = members[0]['frame']
             context = frame.get('event_context')
@@ -690,7 +794,9 @@ def backfill_prophetx(db, *, at):
             refs = {row['id']: row for row in members}
             links.update((contract_id(record), offer_quote_link(record, refs)) for record in projected)
             records.extend(projected)
-        return CurrentRowStore(db).upsert_records(records, now=at, quote_links=links)
+            frames.append(dict(event_id=event_id, facts=frame))
+        changed, admitted = apply_event_lifecycle(db, frames, rows, records)
+        return changed + CurrentRowStore(db).upsert_records(admitted, now=at, quote_links=links)
 
 
 def prune_frames(db, *, at, limit=PRUNE_BATCH, include_legacy=False):

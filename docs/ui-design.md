@@ -14,9 +14,8 @@ Expand a card to see more outcomes for that market. The EV list compares quotes
 for the exact outcome. The selected sportsbook, its odds, and other available
 book prices appear alongside the fair-odds reference.
 When EV is unavailable, the card gives the reason alongside the prices. The
-Arbitrage cards align each leg's venue and odds and show funding, lowest payout,
-and worst profit or loss together. **Positive only** sits beside the calculation
-basis it filters. Open a quote to see the
+Arbitrage cards align each leg's venue, odds and allocation percentage with the
+lowest modeled return. **Positive only** filters the selected calculation. Open a quote to see the
 prices, fees, model assumptions, and settlement details available for that offer.
 [Calculation basis](benchmark-ev.md) · [Trading fee policy](fee-coverage-policy.md)
 
@@ -27,24 +26,24 @@ when a comparison lacks enough inputs to show EV. Browse shows aligned venue
 columns for each exact outcome. An unavailable quote is shown as a dash. A
 saved capture preserves the original price.
 
-The SportsGameOdds-backed pregame desk keeps the latest posted price until the
-source replaces or withdraws it or the game leaves pregame. **Auto-update** is on
-by default. It applies updates in place and keeps the open trade preview on the
-same selection and stake. With Auto-update off, use **Refresh list** or reload
-to read the latest board. The collector runs independently of this choice.
+The current board shows only eligible prices. Its notice, **Odds may be delayed
+up to 15 minutes**, applies to source timestamps or valid book confirmations.
+Some feeds and calculations expire sooner. A list refresh does not extend a
+quote's life. **Saved odds** preserves earlier observations.
 
-The trade preview starts with a $10 maximum upfront cost and shows the modeled
-fee at that size, including when it applies. **Trading fees** explains each
-venue's terms. Execution and qualified financial calculations still require
-the corresponding current evidence. Saved captures preserve their own fee
-terms and calculations. **Source status** links to collection information when
-the data worker is stopped or unavailable. [Data and freshness limits](market-data-gaps.md)
+Open a quote to inspect the price, the same-line reference, and the fee and
+settlement evidence. The default EV ranks signed before-fee returns, including
+negative returns, when the offer and reference support the estimate. Arbitrage
+shows allocation percentages and the lowest modeled return for the settlement
+states covered. When only decisive outcomes can be modeled, the before-fee
+return is labeled accordingly. Amount and fill assumptions for after-fee
+calculations are in **Calculation details**.
 
-American odds are the default. The **Decimal** option changes display formatting
-without changing ranking or calculation inputs. On a narrow screen, the
-game table keeps the outcome column in place. The button above it moves to
-more odds columns. Dialogs support keyboard focus, Escape, and return to the
-opening control.
+On **Browse odds**, the separate trade preview can estimate costs for a chosen
+amount where the venue evidence supports it. **Auto-update** controls updates
+to the current comparison; pausing it does not prevent prices from expiring.
+**Trading fees** explains the venue terms. **Source status** shows collection
+problems. [Data and freshness limits](market-data-gaps.md)
 
 ## Saved odds and diagnostics
 

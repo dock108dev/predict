@@ -7,7 +7,7 @@ const UI = (() => {
   const name=v=>names[v]||v;
   let format='american';try{format=localStorage.getItem('predict-odds-format')==='decimal'?'decimal':'american';}catch{}
   function updateOdds(){for(const e of document.querySelectorAll('[data-american]'))e.textContent=e.dataset[format]||'Unavailable';for(const b of document.querySelectorAll('[data-format]'))b.setAttribute('aria-pressed',String(b.dataset.format===format));}
-  function odd(o,cls='p-odds'){const e=el('span',null,cls);e.dataset.american=o?.american||'';e.dataset.decimal=o?.decimal?fmt(o.decimal):'';e.textContent=e.dataset[format]||'Unavailable';return e;}
+  function odd(o,cls='p-odds'){const e=el('span',null,cls);e.dataset.american=o?.american||'';e.dataset.decimal=o?.decimal_display || (o?.decimal?fmt(o.decimal,o.decimal_places || 2):'');e.textContent=e.dataset[format]||'Unavailable';return e;}
   function link(text,path,cls){const a=el('a',text,cls);a.href=path;return a;}
   function button(text,fn,cls='p-outline'){const b=el('button',text,cls);b.type='button';b.onclick=fn;return b;}
   function shell(){

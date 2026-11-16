@@ -87,7 +87,7 @@ Ctrl-C stops the foreground role. PostgreSQL stays running until
 stored data, controls, and provider accounting.
 For foreground or container operation, `PREDICT_DB_SOCKET` can select an
 absolute PostgreSQL socket directory. The local default is `.local/pgsocket`.
-The app keys its last-known desk cache by the same socket directory.
+Current desk reads fail closed if the reader cannot validate committed price and event evidence. Saved captures remain separate.
 
 ## Credentials
 
@@ -126,7 +126,8 @@ visible while its calculation is unavailable. Clear return filters to see
 prices and open an offer to inspect the reason. Arbitrage requires opposing
 offers with compatible settlement terms. The SportsGameOdds-backed pregame
 desk updates the open trade preview with the list when **Auto-update** is on.
-Use **Refresh list** to read the latest board when updates are held.
+Prices and estimates still expire while Auto-update is off. Use **Refresh list**
+to read the latest board when updates are held.
 [Calculation basis and limitations](benchmark-ev.md)
 
 **Admin → Settings** controls the display time zone. The EV and Arbitrage schedule

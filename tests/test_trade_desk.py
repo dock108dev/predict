@@ -54,6 +54,53 @@ def with_verified_model(row, value):
 
 
 class TradeDesk(TestCase):
+    def test_single_negative_before_fee_result_survives_default_comparison_and_missing_fees(self):
+        first = with_verified_model(quote('first', 'novig'), '-1')
+        first.update(game_state='scheduled', gross_return_percent='-4/5',
+                     conditional_return_percent=None, trade_fee=dict(available=False, reason='fee_unavailable'))
+        data = dict(result(first), captured_at='2026-11-08T00:00:00Z')
+        query = dict(layout='desk', summary='1', phase='pregame', basis='sportsbooks', ranked='1', lines='main')
+        response = page(data, query, ('ev', None, 0, 12), published_only=True)
+        item, = response['rows']
+        offered, = item['offers']
+        self.assertEqual(offered['value'], '-4/5')
+        self.assertEqual(offered['value_basis'], 'before')
+        self.assertFalse(offered['trade_fee_available'])
+        self.assertEqual(response['coverage']['visible_groups'], 1)
+        self.assertFalse(page(data, dict(query, positive='1'), ('ev', None, 0, 12), published_only=True)['rows'])
+
+    def test_decimal_prices_use_exact_payout_order_and_extra_precision(self):
+        from app.dashboard.trade_desk import compare_prices, offer
+
+        offers = []
+        for value, cost in (('-108', '27/52'), ('-107', '107/207')):
+            row = quote(value, 'novig')
+            row.update(original=dict(value=value, units='american_odds', payout='1'), cost_per_normal_claim=cost)
+            offers.append(offer(row))
+        compare_prices(offers)
+        self.assertEqual([o['odds']['decimal_places'] for o in offers], [3, 3])
+        self.assertEqual([f"{float(o['odds']['decimal']):.3f}" for o in offers], ['1.926', '1.935'])
+        self.assertEqual([o['best_payout'] for o in offers], [False, True])
+
+    def test_negative_decisive_pair_ranks_when_the_fill_fees_are_unavailable(self):
+        left = quote('left', 'novig', threshold=3)
+        right = quote('right', 'prophetx', threshold=2, operator='le')
+        for quote_row in (left, right):
+            quote_row.update(original=dict(value='1.99', units='decimal_odds', payout='1'),
+                             cost_per_normal_claim='100/199', game_state='scheduled',
+                             trade_fee=dict(available=False))
+        proof = before_fee_pair(left, right, 'spread')
+        pair = dict(left, id='pair', legs=['left', 'right'], before_fees=proof, evidence_result_id=None)
+        data = dict(result(left, right), captured_at='2026-11-08T00:00:00Z')
+        opts = ('arbs', None, 0, 25)
+        packet = page(data, {'summary':'1'}, opts, captured_pairs=[pair], policy='policy', published_only=True)
+        shown, = packet['rows'][0]['pairs']
+        self.assertEqual(Fraction(shown['score']), Fraction('-0.50'))
+        self.assertFalse(shown['retail_payoff']['available'])
+        self.assertEqual(shown['display_allocations'], ['50', '50'])
+        self.assertFalse(page(data, {'positive':'1'}, opts, captured_pairs=[pair], policy='policy',
+                              published_only=True)['rows'])
+
     def test_pregame_pages_indicative_results_by_distinct_ranked_games(self):
         first = with_verified_model(quote('first', 'novig'), '2')
         first.update(game_state='scheduled', sportsbook_return_percent='10',
@@ -734,8 +781,10 @@ class TradeDesk(TestCase):
             self.assertEqual(shown['evidence_result_id'], 'immutable-member')
             overview = page(data, {'summary':'1'}, options, captured_pairs=[pair], policy='policy', published_only=True)
             short_pair = overview['rows'][0]['pairs'][0]
-            self.assertEqual({k:v for k,v in short_pair.items() if k != 'retail_payoff'},
-                dict(id='pair', evidence_result_id='immutable-member', legs=['left', 'right'], score=payoff['score']))
+            self.assertEqual(short_pair['legs'], ['left', 'right'])
+            self.assertEqual(short_pair['score'], payoff['score'])
+            self.assertEqual(short_pair['display_allocations'], ['50', '50'])
+            self.assertEqual(short_pair['before_fee_return'], '10')
             net = short_pair['retail_payoff']
             self.assertTrue(net['available'])
             self.assertEqual(Fraction(net['minimum_net_payout_usd']) - Fraction(net['funding_usd']),
@@ -745,7 +794,7 @@ class TradeDesk(TestCase):
             left['trade_fee'] = dict(left['trade_fee'], evidence={'fictional_rate': '0.05'})
             changed = page(data, {}, options, captured_pairs=[pair], policy='policy', published_only=True)
             withdrawn = changed['rows'][0]['pairs'][0]
-            self.assertIsNone(withdrawn['score'])
+            self.assertEqual(withdrawn['score'], '10')
             self.assertEqual(withdrawn['retail_payoff'], dict(available=False, reason='pair_fee_publication_pending', legs=[]))
 
     def test_selected_stake_reuses_exact_pair_member_and_existing_evaluator(self):

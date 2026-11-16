@@ -256,10 +256,7 @@ class SGOScopeSQL(LatestBoardFixture):
                     source_status(db.execute, 'sportsgameodds',
                                   {'state': 'budget_delayed', 'reason_code': 'sgo_usage_unreconciled'}, AT)
                     held = await (await client.get('/api/comparison-current', params=query)).json()
-                    held_item, = [offer for group in held['rows'] for offer in group['offers']
-                                  if offer['desk_quote_key'] == key]
-                    assert held_item['posted_price'] and not held_item['current']
-                    assert held_item['trade_fee_available'] and held_item['original'] == item['original']
+                    assert all(offer['desk_quote_key'] != key for group in held['rows'] for offer in group['offers'])
                     source_status(db.execute, 'sportsgameodds', states['sportsgameodds'], AT)
             captured = capture(db, at=AT, ordinary=True, event_ids=ids)
             assert len(captured['quotes']) == 1, captured['issues']

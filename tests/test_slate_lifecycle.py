@@ -9,7 +9,7 @@ from aiohttp import web
 from aiohttp.test_utils import TestClient, TestServer
 from psycopg.types.json import Jsonb
 
-from app.collection.sportsgameodds_current_rows import _event_record
+from app.collection.sportsgameodds_current_rows import event_record
 from app.comparison.event_eligibility import assess
 from app.comparison.game_phase import price_phase
 from app.dashboard import replay_api, snapshot_api
@@ -26,7 +26,7 @@ def test_reschedule_needs_bound_schedule_history():
     event = dict(event_id='authored-reschedule', league='NFL', starts_at=start,
                  previous_starts_at=[old], status=dict(live=False, started=False),
                  teams=dict(home=dict(name='Detroit Lions'), away=dict(name='New England Patriots')))
-    linked = _event_record(event, 'a'*64, seen, aggregate_registry())
+    linked = event_record(event, 'a'*64, seen, aggregate_registry())
     assert price_phase(linked, {}, seen) == dict(state='scheduled', reason=None, basis='linked_reschedule')
     assert assess(linked, seen)['eligible']
     for change in (dict(original_start=None, previous_starts_at=[]), dict(schedule_metadata=None), dict(competition='MLB')):
@@ -35,7 +35,7 @@ def test_reschedule_needs_bound_schedule_history():
         assert not assess(ambiguous, seen)['eligible']
     delayed = dict(linked, status=dict(status='delayed'))
     assert price_phase(delayed, {}, seen)['reason'] == 'event_postponed'
-    successive = _event_record(dict(event, previous_starts_at=[old, '2026-11-15T17:45:00Z']),
+    successive = event_record(dict(event, previous_starts_at=[old, '2026-11-15T17:45:00Z']),
                                'b'*64, seen, aggregate_registry())
     assert 'original_start' not in successive and assess(successive, seen)['eligible']
 

@@ -2,78 +2,94 @@ function rowKey(row) {
   return `${row.game_key}\u001f${row.id}`;
 }
 
-function quoteKey(offer) {
-  return offer.desk_quote_key || offer.id;
-}
-
-function staleOffer(offer) {
-  return {
-    ...offer, current:false, value:null, fair_odds:null, fair_reference:null,
-    reference_current:false, sportsbook:null, current_reasons:['input_replaced_or_removed']
-  };
-}
-
-function staleBooks(books = {}) {
-  return Object.fromEntries(Object.entries(books).map(([book, prices]) =>
-    [book, prices.map(price => ({...price, current:false}))]));
-}
-
-function holdRow(row, current) {
-  const nextOffers = new Map((current?.offers || []).map(offer => [quoteKey(offer), offer]));
-  const offers = row.offers.map(offer => nextOffers.get(quoteKey(offer)) || staleOffer(offer));
-  const updatedIds = new Map(row.offers.map((offer, index) => [offer.id, offers[index].id]));
-  const lead = offers.find(offer => offer.id === updatedIds.get(row.score_source?.id)) || offers[0];
-  const nextPairs = new Map((current?.pairs || []).map(pair => [pair.id, pair]));
-  const pairs = row.pairs?.map(pair => nextPairs.get(pair.id) || {
-    ...pair, legs:pair.legs.map(id => updatedIds.get(id) || id), score:null,
-    retail_payoff:{available:false, reason:'pair_leg_stale_or_replaced'}
-  });
-  return {
-    ...row, ...current, offers,
-    ...(pairs ? {pairs} : {}),
-    matrix_order:row.matrix_order,
-    score_source:row.score_source && {...row.score_source, id:lead.id},
-    score:pairs ? pairs[0]?.score ?? null : lead?.current ? lead.value : null,
-    sportsbook_quotes:{...staleBooks(row.sportsbook_quotes), ...current?.sportsbook_quotes},
-    sportsbook_reference:current?.sportsbook_reference
-  };
-}
-
 export function displayRows(page) {
   return (page?.rows || []).filter(row => !row.withdrawn);
 }
 
-function order(rows) {
-  return JSON.stringify(rows.map(row => {
-    const lead = row.offers.find(offer => offer.id === row.score_source?.id);
-    return [rowKey(row), lead && quoteKey(lead), row.offers.map(quoteKey), row.pairs?.map(pair => pair.id)];
-  }));
+export function holdDeskPage(previous, next) {
+  // Keep the scroll order of surviving rows, but take both membership
+  // and prices from the latest read. An omitted quote cannot be revived.
+  const order = new Map(displayRows(previous).map((row, i) => [rowKey(row), i]));
+  const ranked = displayRows(next);
+  if (ranked.some(row => !order.has(rowKey(row)) && row.score != null)) {
+    // A newly eligible result must be visible at its rank, even after a
+    // preceding update removed it or temporarily left the board empty.
+    return {page:{...next, rows:ranked}, changed:false};
+  }
+  const rows = [...ranked].sort((a, b) =>
+    (order.get(rowKey(a)) ?? Infinity) - (order.get(rowKey(b)) ?? Infinity));
+  return {page:{...next, rows}, changed:rows.some((row, i) => row !== ranked[i])};
 }
 
-export function holdDeskPage(previous, next) {
-  const oldRows = displayRows(previous);
-  const nextRows = displayRows(next);
-  if (next.features?.posted_pregame && next.phase === 'pregame'
-      && (nextRows.some(row => row.offers.some(offer => offer.posted_price))
-          || oldRows.some(row => row.offers.some(offer => offer.posted_price)))) {
-    const orderByKey = new Map(oldRows.map((row, i) => [rowKey(row), i]));
-    const ranked = nextRows.map(row => rowKey(row));
-    const rows = [...nextRows].sort((a, b) =>
-      (orderByKey.get(rowKey(a)) ?? Infinity) - (orderByKey.get(rowKey(b)) ?? Infinity));
-    return {page:{...next, rows}, changed:rows.some((row, i) => rowKey(row) !== ranked[i])};
-  }
-  const updates = new Map(nextRows.map(row => [rowKey(row), row]));
-  const keep = rows => (rows || []).map(row =>
-    row.withdrawn ? row : holdRow(row, updates.get(rowKey(row))));
-  const changed = order(oldRows) !== order(nextRows)
-    || previous.total !== next.total;
-  return {
-    changed,
-    page: {
-      ...next, browse_id:previous.browse_id, offset:previous.offset, total:previous.total,
-      page_count:previous.page_count, row_kind:previous.row_kind, games:previous.games,
-      retained_game:previous.retained_game, selected_game_key:previous.selected_game_key,
-      selected_line_id:previous.selected_line_id, rows:keep(previous.rows)
-    }
+function expired(timestamp, now) {
+  return timestamp && Date.parse(timestamp) <= now;
+}
+
+function sportsbookDeadline(price, live) {
+  return Date.parse(price.source_at) + (live ? 15_000 : 15 * 60_000);
+}
+
+export function nextDeskDeadline(page, now, {live}) {
+  let next = Infinity;
+  const consider = timestamp => {
+    if (timestamp > now && timestamp < next) next = timestamp;
   };
+  for (const row of displayRows(page)) {
+    if (!live) consider(Date.parse(row.start_at));
+    consider(Date.parse(row.sportsbook_reference?.current_until));
+    for (const offer of row.offers) {
+      consider(Date.parse(offer.current_until));
+      if (offer.value != null) consider(Date.parse(offer.calculation_current_until));
+    }
+    for (const pair of row.pairs || []) {
+      if (pair.retail_payoff?.available) consider(Date.parse(pair.calculation_current_until));
+    }
+    for (const prices of Object.values(row.sportsbook_quotes || {})) {
+      for (const price of prices) consider(sportsbookDeadline(price, live));
+    }
+  }
+  return next;
+}
+
+export function expirePage(page, now, {ranked, live}) {
+  let changed = false;
+  const rows = displayRows(page).flatMap(row => {
+    const offers = row.offers.flatMap(offer => {
+      if (offer.current === false || (!live && expired(row.start_at, now)) || expired(offer.current_until, now)) {
+        changed = true;
+        return [];
+      }
+      if (offer.value != null && expired(offer.calculation_current_until, now)) {
+        changed = true;
+        return [{...offer, value:null, before_fee:null, after_fee:null, conservative:null, fair_odds:null,
+          fair_reference:null, sportsbook:null, reference_current:false, reason:offer.calculation_expiry_reason || 'reference_price_stale'}];
+      }
+      return [offer];
+    });
+    if (!offers.length) return [];
+    const pairs = row.pairs?.filter(pair => pair.legs.every(id => offers.some(offer => offer.id === id)))
+      .map(pair => {
+        if (!expired(pair.calculation_current_until, now) || !pair.retail_payoff?.available) return pair;
+        changed = true;
+        return {...pair, score:pair.before_fee_return ?? null, display_allocations:pair.before_fee_allocations,
+          retail_payoff:{available:false, reason:'fee_unavailable'}};
+      });
+    if (pairs && !pairs.length) return [];
+    const lead = offers.find(offer => offer.value != null);
+    if (ranked && !lead) return [];
+    const score = pairs ? pairs[0].score : lead?.value ?? null;
+    const reference = row.sportsbook_reference;
+    const referenceExpired = expired(reference?.current_until, now);
+    changed ||= Boolean(referenceExpired);
+    const books = Object.fromEntries(Object.entries(row.sportsbook_quotes || {}).map(([book, prices]) => {
+      const current = prices.filter(price => price.current !== false && (!price.source_at || sportsbookDeadline(price, live) > now));
+      changed ||= current.length !== prices.length;
+      return [book, current];
+    }));
+    return [{...row, offers, ...(pairs && {pairs}), score,
+      score_source:lead && {...row.score_source, id:lead.id},
+      sportsbook_reference:referenceExpired ? null : reference, sportsbook_quotes:books}];
+  });
+  if (!changed) return page;
+  return {...page, rows, page_count:page.row_kind === 'games' ? new Set(rows.map(row => row.game_key)).size : rows.length};
 }

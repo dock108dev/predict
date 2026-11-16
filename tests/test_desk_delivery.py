@@ -2,41 +2,14 @@
 import asyncio
 from datetime import datetime, timedelta, timezone
 from gzip import decompress
-from pathlib import Path
-from tempfile import TemporaryDirectory
 from unittest import IsolatedAsyncioTestCase
 
 from aiohttp.web import HTTPServiceUnavailable
 
 from app.dashboard.desk_delivery import MAX_DESK_READS, ReadBurst, common_page, encode, gzip_allowed
-from app.dashboard.desk_last_known import LastKnownDesk
 
 
 class TestDeskDelivery(IsolatedAsyncioTestCase):
-    def test_saved_pregame_prices_expire_at_kickoff_and_respect_authoritative_removal(self):
-        at = datetime(2026, 11, 15, 15, tzinfo=timezone.utc)
-        kickoff = at + timedelta(minutes=20)
-        page = dict(state='ready', phase='pregame', publication={'read_at': at.isoformat()},
-                    rows=[dict(id='row', start_at=kickoff.isoformat(), offers=[dict(id='price')])])
-        with TemporaryDirectory() as directory:
-            path = Path(directory) / 'desk.sqlite3'
-            cache = LastKnownDesk(path)
-            cache.remember('slate', page)
-            self.assertEqual(LastKnownDesk(path).read('slate', at)['rows'][0]['id'], 'row')
-            independent_writer = LastKnownDesk(path)
-            self.assertIsNone(cache.read('slate', kickoff))
-            later = at + timedelta(minutes=1)
-            cache.remember('slate', dict(page, rows=[], publication={'read_at': later.isoformat()}))
-            cache.remember('slate', page)
-            self.assertIsNone(cache.read('slate', later))
-            self.assertIsNone(LastKnownDesk(path).read('slate', later))
-
-            # This writer never saw the empty page, so only the SQLite guard can reject its stale write.
-            slightly_newer = at + timedelta(seconds=30)
-            independent_writer.remember('slate', dict(page, publication={'read_at': slightly_newer.isoformat()}))
-            self.assertIsNone(LastKnownDesk(path).read('slate', later))
-            self.assertIsNone(LastKnownDesk(path).read('slate', later))
-
     async def test_late_list_completion_can_be_picked_up_by_the_next_retry(self):
         clock = [0.0]
         reads = ReadBurst(clock=lambda: clock[0])
@@ -98,7 +71,7 @@ class TestDeskDelivery(IsolatedAsyncioTestCase):
         self.assertEqual(started, MAX_DESK_READS)
         self.assertEqual(await reads.read(None, load), ('packet', False))
 
-    async def test_follower_arriving_after_quote_deadline_reads_a_new_packet(self):
+    async def test_no_waiter_receives_a_packet_that_expired_in_flight(self):
         clock = [10.0]
         reads = ReadBurst(clock=lambda: clock[0])
         fill_started = asyncio.Event()
@@ -122,9 +95,10 @@ class TestDeskDelivery(IsolatedAsyncioTestCase):
         late = asyncio.create_task(reads.read('list', load))
         await asyncio.sleep(0)
         finish.set()
-        self.assertEqual(await first, ('first packet', False))
-        self.assertEqual(await early, ('first packet', True))
-        self.assertEqual(await late, ('new packet', False))
+        with self.assertRaises(HTTPServiceUnavailable):
+            await first
+        self.assertEqual((await early)[0], 'new packet')
+        self.assertEqual((await late)[0], 'new packet')
         self.assertEqual(calls, 2)
 
     async def test_one_fill_for_a_burst_and_no_reuse_past_quote_deadline(self):

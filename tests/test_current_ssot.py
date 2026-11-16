@@ -36,7 +36,6 @@ class RuntimeEntrypoints(unittest.TestCase):
 
     def test_app_uses_runtime_client_and_authoritative_factory(self):
         from app.dashboard import opportunity_board
-        from app.dashboard.desk_last_known import LastKnownDesk
         with tempfile.TemporaryDirectory() as folder, \
                 patch.object(opportunity_board, 'ROOT', Path(folder)), \
                 patch('sys.argv', ['predict', '--port', '8799']), \
@@ -47,13 +46,10 @@ class RuntimeEntrypoints(unittest.TestCase):
         client.assert_called_once_with()
         app.assert_called_once()
         self.assertEqual(app.call_args.kwargs['current_provider'], client.return_value)
-        cache = app.call_args.kwargs['desk_cache']
-        self.assertIsInstance(cache, LastKnownDesk)
-        self.assertEqual(cache.path.parent, Path(folder) / '.local' / 'desk-read-cache')
         serve.assert_called_once_with(app.return_value, host='127.0.0.1', port=8799,
                                       access_log=None, handler_cancellation=True)
 
-    def test_desk_cache_and_postgres_use_the_same_validated_socket(self):
+    def test_app_and_postgres_validate_socket(self):
         from app.dashboard import opportunity_board
         from app.storage import store
 
@@ -75,8 +71,7 @@ class RuntimeEntrypoints(unittest.TestCase):
                     store.connect()
                     opportunity_board.main()
                     self.assertEqual(pg.call_args.kwargs['host'], expected)
-                    cache = app.call_args.kwargs['desk_cache']
-                    self.assertEqual(cache.path.name, store.hashed(expected) + '.sqlite3')
+                    app.assert_called_with(current_provider=client.return_value)
 
             pg.reset_mock()
             app.reset_mock()

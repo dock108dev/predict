@@ -33,18 +33,20 @@ function sameOffer(previous, next) {
 }
 
 // Keep a selected capture, its dialog history, and its evidence lease together.
-export function createDeskDrawer({replay, dataset, retainedResult, gameKey, pageSize, captureMode,
+export function createDeskDrawer({replay, browse, dataset, retainedResult, gameKey, pageSize, captureMode,
   clock, viewContext, fetchPage, matrixPositions, restoreMatrices, restoreFocus, refreshDesk}) {
   const $ = id => document.getElementById(id);
   const dialog = $('trade');
   const filters = $('filters');
+  const previewControls = $('preview-controls');
+  if (!browse || replay) previewControls.remove();
   const amount = $('preview-amount');
   const previewRefresh = $('refresh-preview');
   let currentSelection = null;
 
   function tradeDetails() {
     const {offer, group, game, evidence, pairContext, posted} = currentSelection;
-    $('preview-controls').hidden = !posted;
+    previewControls.hidden = !posted;
     previewRefresh.hidden = !posted || viewContext().autoUpdate;
     const label = position(offer, game);
     $('trade-title').textContent = `${name(offer.venue)} · ${label}`;
@@ -79,7 +81,7 @@ export function createDeskDrawer({replay, dataset, retainedResult, gameKey, page
     $('trade-body').replaceChildren(tradeInspection(offer, group, evidence, {mode, position:label, basis:currentSelection.basis,
       checkedAt:currentSelection.checkedAt, pinned:currentSelection.pinned, publication:currentSelection.publication,
       pairLeg:!!pairContext, pairFee, pairAcquisition}));
-    $('latest').hidden = replay || currentSelection.lastKnown;
+    $('latest').hidden = replay;
     $('back-to-pair').hidden = !currentSelection.pairContext;
   }
 
@@ -98,13 +100,12 @@ export function createDeskDrawer({replay, dataset, retainedResult, gameKey, page
       title:$('trade-title').textContent, note:$('trade-note').textContent, latestHidden:$('latest').hidden, opener
     };
     const {page, previousReason, autoUpdate} = viewContext();
-    const lastKnown = Boolean(page?.last_known_at);
-    const previous = lastKnown || Boolean(previousReason || opener?.hasAttribute('data-expired-quote'));
+    const previous = Boolean(previousReason);
     currentSelection = {offer, group, game, opener, pairContext,
       basis:page?.basis || filters.elements.basis.value,
-      checkedAt:previous && !lastKnown ? Date.parse(page?.publication?.read_at) || Date.now() : Date.now(),
-      lastKnown, pinned:previous, publication:pairContext?.publication ?? page?.publication, capturedAt:page?.replay?.captured_at};
-    if (offer.posted_price && !replay && !pairContext) {
+      checkedAt:previous ? Date.parse(page?.publication?.read_at) || Date.now() : Date.now(),
+      pinned:previous, publication:pairContext?.publication ?? page?.publication, capturedAt:page?.replay?.captured_at};
+    if (browse && offer.posted_price && !replay && !pairContext) {
       Object.assign(currentSelection, {posted:true, loading:true, closed:false, size:'10'});
       amount.value = currentSelection.size;
     }
@@ -118,11 +119,6 @@ export function createDeskDrawer({replay, dataset, retainedResult, gameKey, page
     else dialog.querySelector('form button').focus();
     dialog.scrollTop=0;
     const selected=currentSelection;
-    if (lastKnown) {
-      $('trade-body').querySelector('.inspection-loading')?.remove();
-      $('trade-note').textContent = 'Last known quote. Current calculations and fee verification are unavailable.';
-      return;
-    }
     if (selected.posted) {
       await readPostedSelection(selected, {adopt:autoUpdate});
       return;
@@ -134,6 +130,7 @@ export function createDeskDrawer({replay, dataset, retainedResult, gameKey, page
       const detail = pinned.evidence.desk_offer;
       if (detail) {
         selected.offer = {...detail, ...offer};
+        if (offer.value == null && detail.reason === 'reference_price_stale') selected.offer.reason = detail.reason;
         if (offer.trade_fee_available === false && detail.trade_fee?.available) {
           selected.offer.trade_fee = {available:false, reason:'fee_outcome_not_published'};
         }
@@ -214,12 +211,9 @@ export function createDeskDrawer({replay, dataset, retainedResult, gameKey, page
     $('trade-note').textContent = '';
     $('latest').hidden = replay;
     $('back-to-pair').hidden = true;
-    const customSizing = !replay && pair.inspection && pair.evidence_result_id
-      && pair.retail_payoff?.reason !== 'pair_fee_publication_pending';
-    const mode = context.requestedStake ? 'Sized from the captured prices and fees'
-      : [captureMode, context.capturedAt && `Captured ${clock(context.capturedAt)}`].filter(Boolean).join(' · ');
+    const mode = [captureMode, context.capturedAt && `Captured ${clock(context.capturedAt)}`].filter(Boolean).join(' · ');
     const body = $('trade-body');
-    $('preview-controls').hidden = true;
+    previewControls.hidden = true;
     previewRefresh.hidden = true;
     body.replaceChildren(pairInspection(pair, offers, {group, game, position, mode,
       inspect: (offer, opener) => openTrade(offer, group, game, context, opener)}));
@@ -228,44 +222,6 @@ export function createDeskDrawer({replay, dataset, retainedResult, gameKey, page
       const message = context.detailsUnavailable
         ? 'The calculation could not be loaded. The captured legs are shown.' : 'Loading the captured calculation…';
       $('trade-note').textContent = message;
-    }
-    if (customSizing) {
-      const form = el('form', null, 'pair-sizing');
-      const label = Object.assign(el('label', 'Total stake before fees ($)'), {htmlFor:'pair-stake-amount'});
-      const amount = Object.assign(el('input'), {id:'pair-stake-amount', type:'number', min:'0.01', max:'1000000', step:'0.01',
-        required:true, value:context.requestedStake ?? '100'});
-      const calculate = el('button', 'Size this pair');
-      const status = el('p');
-      status.setAttribute('role', 'status');
-      form.append(label, amount, calculate, status);
-      form.addEventListener('submit', async event => {
-        event.preventDefault();
-        calculate.disabled = true;
-        status.textContent = 'Sizing the captured pair…';
-        try {
-          await sizePair(context, amount.value);
-          if (dialog.open && currentSelection === context) $('trade-body').querySelector('form input')?.focus();
-        } catch {
-          status.textContent = 'Could not size this capture. The previous calculation is still displayed.';
-        } finally { calculate.disabled = false; }
-      });
-      body.prepend(form);
-    }
-  }
-
-  async function sizePair(context, requestedStake) {
-    const lease = await context.reservation;
-    if (!lease) throw Error('Pair evidence unavailable');
-    const {id, evidence_result_id} = context.pair;
-    const query = new URLSearchParams({id, result_id:evidence_result_id, lease_id:lease.lease_id, stake:requestedStake});
-    const response = await fetch(`/api/comparison-snapshot/details?${query}`);
-    if (!response.ok) throw Error('Pair evidence unavailable');
-    const {id:pairID, evidence_result_id:resultID, inspection, retail_payoff, score} = await response.json();
-    if (pairID !== id || resultID !== evidence_result_id) throw Error('Pair evidence changed');
-    if (dialog.open && currentSelection === context) {
-      context.requestedStake = requestedStake;
-      context.pair = {...context.pair, inspection, retail_payoff, score};
-      renderPair(context);
     }
   }
 
@@ -550,7 +506,7 @@ export function createDeskDrawer({replay, dataset, retainedResult, gameKey, page
         const before = selected.offer;
         selected.closed = false;
         selected.ended = false;
-        selected.offer = row;
+        selected.offer = {...row, odds:row.odds && (row.odds.decimal === before.odds?.decimal ? before.odds : row.odds)};
         selected.evidence = evidence;
         $('trade-note').textContent = '';
         if (before.price_revision !== row.price_revision || before.economic_revision !== row.economic_revision
@@ -567,7 +523,7 @@ export function createDeskDrawer({replay, dataset, retainedResult, gameKey, page
     }
   }
 
-  amount.addEventListener('change', () => {
+  amount?.addEventListener('change', () => {
     if (!currentSelection?.posted || !amount.reportValidity() || !amount.value) return;
     currentSelection.size = Number(amount.value).toFixed(2);
     currentSelection.loading = true;
@@ -684,7 +640,7 @@ export function createDeskDrawer({replay, dataset, retainedResult, gameKey, page
       if (!dialog.open || selected.ended || !refresh && !viewContext().autoUpdate) return;
       return readPostedSelection(selected, {adopt:refresh ? 'refresh' : true});
     }
-    if (replay || !dialog.open || !selected || selected.lastKnown || selected.historical || selected.adoptionNotice || $('latest').disabled) return;
+    if (replay || !dialog.open || !selected || selected.historical || selected.adoptionNotice || $('latest').disabled) return;
     expireInspection();
     try {
       if (selected.pair) {

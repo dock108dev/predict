@@ -53,13 +53,18 @@ SCAN_NAMES = {
     "uv_audit": "Alternate runtime lock",
 }
 BROWSER_PAINT = "Browser navigation to first fallback quote"
+RECOVERY_PAINT = "Desk paint after manual recovery"
+OUTAGE_RESPONSE = "Desk reports SQL outage"
+FALLBACK_RESPONSE = "Desk fallback during held SQL read"
 EXPECTED_TIMINGS = (
     "Selected quote HTTP read",
     "Two ordinary pages during held selection",
     BROWSER_PAINT,
     "First desk response",
     "Warm desk response",
-    "Desk fallback during held SQL read",
+    RECOVERY_PAINT,
+    OUTAGE_RESPONSE,
+    FALLBACK_RESPONSE,
     "Desk response after SQL resumes",
     "Desk response with SQL unavailable after app restart",
 )
@@ -191,10 +196,11 @@ def build(root, inputs, sha, run, attempt, context):
         sample = read_json(browser["path"] / "desk-paint.json")
         tools = browser["report"].get("tools")
         if (
-            sample.get("fixture") == "desk-browser-intercept-v1"
+            sample.get("fixture") in {"desk-browser-intercept-v1", "desk-browser-intercept-recovery-v2"}
             and (seconds := number(sample.get("seconds"))) is not None
         ):
-            measurements[BROWSER_PAINT] = dict(
+            label = RECOVERY_PAINT if sample["fixture"].endswith("-v2") else BROWSER_PAINT
+            measurements[label] = dict(
                 seconds=seconds,
                 fixture=sample["fixture"],
                 samples=1,
@@ -376,10 +382,15 @@ def render(value, baseline):
         "| Measurement | Seconds | Δ vs base | Evidence |",
         "|---|---:|---:|---|",
     ]
+    timing_counterparts = {
+        BROWSER_PAINT: RECOVERY_PAINT, RECOVERY_PAINT: BROWSER_PAINT,
+        FALLBACK_RESPONSE: OUTAGE_RESPONSE, OUTAGE_RESPONSE: FALLBACK_RESPONSE,
+    }
     for name in EXPECTED_TIMINGS:
         now, old = value["timings"].get(name), previous.get(name)
         if not now:
-            text.append(f"| {name} | — | — | Unavailable |")
+            if timing_counterparts.get(name) not in value["timings"]:
+                text.append(f"| {name} | — | — | Unavailable |")
             continue
         comparable_timing = (
             isinstance(old, dict)

@@ -355,15 +355,17 @@ def timing(selected):
                             scope=scope,
                         )
         recovery = read_json(path / "desk-recovery.json")
-        if recovery.get("fixture") == "desk-polymarket-nba-v1":
-            budget = number(recovery.get("fallback_budget_seconds"))
-            samples = recovery.get("fallback_samples")
+        if recovery.get("fixture") in {"desk-polymarket-nba-v1", "desk-polymarket-nba-v2"}:
+            v2 = recovery["fixture"].endswith("-v2")
+            budget = number(recovery.get("outage_budget_seconds" if v2 else "fallback_budget_seconds"))
+            samples = recovery.get("outage_samples" if v2 else "fallback_samples")
             if (
                 isinstance(samples, list)
                 and samples
                 and all(number(sample) is not None for sample in samples)
             ):
-                measurements["Desk fallback during held SQL read"] = dict(
+                label = "Desk reports SQL outage" if v2 else "Desk fallback during held SQL read"
+                measurements[label] = dict(
                     seconds=median(samples),
                     fixture=recovery["fixture"],
                     samples=len(samples),

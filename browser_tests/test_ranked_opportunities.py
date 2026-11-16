@@ -217,24 +217,22 @@ def test_update_check_keeps_page_and_conceals_expired_estimate():
         expect(tab.locator("#previous-results")).to_contain_text(
             "Showing previous results"
         )
-        assert list_reads[-1]["browse_id"] == "keep-first-page"
+        assert "browse_id" not in list_reads[-1]
         expect(tab.locator('[data-offer-id="novig-over"]')).to_be_visible()
         expect(score).to_be_visible()
 
         with tab.expect_response(lambda response: response.status == 503):
             tab.clock.fast_forward(7000)
         assert len(list_reads) == 3
-        expect(score).to_be_hidden()
-        expect(tab.locator('[data-offer-id="novig-over"]')).to_contain_text(
-            "Last known"
-        )
+        expect(tab.locator('[data-offer-id="novig-over"]')).to_have_count(0)
+        expect(tab.locator('[data-offer-id="novig-under"]')).to_contain_text("−1.00%")
 
         read_failure = False
         with tab.expect_response(
             lambda response: "/api/comparison-current?" in response.url
         ):
             tab.clock.fast_forward(7000)
-        expect(score).to_have_text("+0.70%")
+        expect(tab.locator('[data-offer-id="novig-over"]')).to_contain_text("+0.70%")
         expect(tab.locator("#previous-results")).to_be_hidden()
 
         tab.goto(f"{BASE}/ev?phase=live")
@@ -244,10 +242,9 @@ def test_update_check_keeps_page_and_conceals_expired_estimate():
         browser.close()
 
 
-def test_desk_renders_last_known_polymarket_quote_and_recovers_on_first_poll():
+def test_desk_reports_outage_without_old_quotes_then_recovers_on_refresh():
     from playwright.sync_api import expect, sync_playwright
 
-    from app.dashboard.desk_last_known import LastKnownDesk
     from app.storage.store import stamp
 
     observed = "2026-11-13T00:00:00+00:00"
@@ -270,7 +267,7 @@ def test_desk_renders_last_known_polymarket_quote_and_recovers_on_first_poll():
             state="ready",
             phase="pregame",
             update_cursor=str(version),
-            features={"live_enabled": False, "posted_pregame": True},
+            features={"live_enabled": False, "auto_update": True},
             basis="sportsbooks",
             row_kind="games",
             page_count=1,
@@ -278,10 +275,6 @@ def test_desk_renders_last_known_polymarket_quote_and_recovers_on_first_poll():
             rows=[group("winner", DENVER, [offer], "2")],
             publication={"read_at": observed},
         )
-        if not version:
-            cache = LastKnownDesk()
-            cache.remember("odds", result)
-            return cache.read("odds", stamp(observed))
         return result
 
     def respond(route):
@@ -291,7 +284,7 @@ def test_desk_renders_last_known_polymarket_quote_and_recovers_on_first_poll():
         elif url.path.startswith("/view/current/"):
             route.fulfill(path=ASSETS / Path(url.path).name)
         elif url.path == "/api/comparison-current":
-            route.fulfill(json=page())
+            route.fulfill(json=page()) if version else route.fulfill(status=503)
         elif url.path == "/api/comparison-current/updates":
             route.fulfill(
                 json={
@@ -312,29 +305,16 @@ def test_desk_renders_last_known_polymarket_quote_and_recovers_on_first_poll():
         tab = browser.new_page()
         tab.route("**/*", respond)
         tab.clock.install(time=stamp(observed))
-        start = monotonic()
         tab.goto(f"{BASE}/browse-odds")
         price = tab.locator('[data-offer-id="poly"]')
-        expect(price).to_be_visible()
-        expect(price).to_contain_text("+104")
-        paint_seconds = monotonic() - start
-        expect(price).to_contain_text("Last known")
-        expect(tab.locator("#notice")).to_contain_text("Showing last known prices")
-        price.click()
-        expect(tab.locator("#trade-note")).to_contain_text(
-            "Current calculations and fee verification are unavailable"
-        )
-        expect(tab.locator("#latest")).to_be_hidden()
+        expect(tab.locator("#notice")).to_contain_text("Prices could not be loaded.")
+        expect(price).to_have_count(0)
         assert not detail_reads
-
         version = 1
-        with tab.expect_response(
-            lambda response: "/api/comparison-current?" in response.url
-        ):
-            tab.clock.fast_forward(2200)
-        expect(tab.locator("#notice")).not_to_contain_text("Showing last known prices")
-        tab.locator("#trade").get_by_role("button", name="Close").click()
+        start = monotonic()
+        tab.locator("#refresh-list").click()
         expect(price).to_contain_text("+110")
+        paint_seconds = monotonic() - start
 
         version = 2
         with tab.expect_response(
@@ -346,7 +326,7 @@ def test_desk_renders_last_known_polymarket_quote_and_recovers_on_first_poll():
     if report := os.environ.get("PREDICT_CI_REPORT_ROOT"):
         (Path(report) / "desk-paint.json").write_text(
             json.dumps(
-                dict(fixture="desk-browser-intercept-v1", seconds=paint_seconds),
+                dict(fixture="desk-browser-intercept-recovery-v2", seconds=paint_seconds),
                 indent=2,
             )
             + "\n"
@@ -473,7 +453,7 @@ def test_ev_updates_prices_without_reranking_or_displacing_a_reader(width):
         expect(kalshi_chip).to_contain_text("-200")
         expect(first).to_have_attribute("data-group-id", "detroit-over")
         expect(ranked_chips.first).to_have_attribute(
-            "data-offer-id", "detroit-over-kalshi"
+            "data-offer-id", "detroit-over-novig"
         )
         expect(disclosure).to_be_focused()
         expect(under).to_be_visible()
@@ -489,15 +469,11 @@ def test_ev_updates_prices_without_reranking_or_displacing_a_reader(width):
             )
         ):
             tab.clock.fast_forward(13000)
-        assert reads[-2]["browse_id"] == "original"
-        assert reads[-1]["locate"] == "detroit-under"
         expect(first).to_have_attribute("data-group-id", "detroit-over")
         renewed = over.locator('[data-offer-id="native-current:exact-kalshi"]')
         expect(renewed).to_contain_text("-300")
         expect(renewed).to_be_focused()
-        expect(over.locator('[data-offer-id="detroit-over-novig"]')).to_contain_text(
-            "Last known"
-        )
+        expect(over.locator('[data-offer-id="detroit-over-novig"]')).to_have_attribute("data-desk-quote-key", "another-contract")
         assert abs(under.bounding_box()["y"] - anchor_top) <= 1
 
         tab.locator("#refresh-list").evaluate("button => button.click()")
@@ -536,9 +512,9 @@ def test_posted_pregame_preview_updates_with_the_board_and_can_be_held():
     selected = quote("posted", "prophetx", "win", "winner", None, participant="Denver")
     selected.update(
         posted_price=True,
-        current=False,
+        current=True,
         desk_quote_key=key,
-        current_until="2026-11-13T00:00:01Z",
+        current_until=START,
         cost_per_normal_claim="0.5",
     )
     revision = 0
@@ -572,7 +548,7 @@ def test_posted_pregame_preview_updates_with_the_board_and_can_be_held():
                     rows=[body],
                     phase="pregame",
                     total=1,
-                    features=dict(live_enabled=False, posted_pregame=True),
+                    features=dict(live_enabled=False, auto_update=True),
                     update_cursor=str(revision),
                     refresh_at=START,
                 )
@@ -622,8 +598,9 @@ def test_posted_pregame_preview_updates_with_the_board_and_can_be_held():
         tab.on("pageerror", lambda err: errors.append(str(err)))
         tab.route("**/*", respond)
         tab.clock.install(time=datetime.fromisoformat("2026-11-13T00:00:00+00:00"))
-        tab.goto(f"{BASE}/ev")
+        tab.goto(f"{BASE}/browse-odds")
         toggle = tab.get_by_role("checkbox", name="Auto-update")
+        expect(toggle).to_be_visible()
         expect(toggle).to_be_checked()
         tile = tab.locator("#results [data-desk-quote-key]").first
         expect(tile).to_contain_text("+100")
@@ -659,5 +636,10 @@ def test_posted_pregame_preview_updates_with_the_board_and_can_be_held():
         detail.get_by_role("button", name="Close").click()
         tab.reload()
         expect(toggle).not_to_be_checked()
+        expect(tile).to_contain_text("+110")
+        before = dict(reads)
+        tab.clock.fast_forward(3_600_000)
+        expect(tile).to_have_count(0)
+        assert reads == before
         assert not errors, errors
         browser.close()

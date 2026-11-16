@@ -204,3 +204,28 @@ def add_public_prices(out, owner, *, at, include_retained, mark_retained=False, 
                     if not any(old['price_american'] == price['price_american']
                                and old.get('source_at') == price['source_at'] for old in display):
                         display.append(dict(price, current=fresh))
+
+
+def stale_sgo_reference(row, game, inputs, *, at):
+    """Diagnose the exact matchup and line without using stale inputs in a calculation."""
+    from app.comparison.public_sportsbook_estimate import clocks_current, market_pairs, sgo_observation
+
+    roles = {p['id']: p['role'] for p in (game or {}).get('participants', ())
+             if p.get('id') and p.get('role') in ('home', 'away')}
+    teams = {role: team for team, role in roles.items()}
+    key = sportsbook_selection(row, roles)
+    if not key or teams.keys() != {'home', 'away'}:
+        return False
+    occurrence = (row['league'], stamp(row['start_at']), teams['home'], teams['away'])
+    occurrences = inputs.occurrences(at, starts=(occurrence[1],))
+    candidates = occurrences.get(occurrence, {})
+    if len(candidates) != 1:
+        return False
+    event, match = next(iter(candidates.items()))
+    if not match['valid']:
+        return False
+    frame = inputs.frames((event,)).get(event)
+    rows = inputs.quotes((event,), bookmakers=BEST_BOOKS, game_markets=True).get(event, ())
+    observation = sgo_observation(frame, rows, at=at, occurrence=occurrence)
+    pairs = market_pairs(observation, key, at=at, start=occurrence[1], require_current=False)
+    return bool(pairs) and all(not clocks_current(pair, at=at, start=occurrence[1]) for pair in pairs.values())

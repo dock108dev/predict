@@ -482,12 +482,14 @@ class DatabaseIngressSink:
                         save(db,kind='featured',sport=row['sport'],received_at=row['received_at'],
                              receipt_sha256=row.get('receipt_sha256'),payload=raw_batch)
                     if sgo_links is not None:
-                        from app.storage.sportsgameodds_reference import upsert_rows, upsert_frames, stage_offer_quotes, withdraw_current_offers
+                        from app.storage.sportsgameodds_reference import upsert_rows, upsert_frames, stage_offer_quotes, withdraw_current_offers, apply_event_lifecycle
                         phase('sgo_reference')
                         upsert_rows(db, row['sgo_reference_rows'])
                         stage_offer_quotes(db, row['sgo_reference_rows'], sgo_links)
                         phase('sgo_frames')
                         upsert_frames(db, row['sgo_event_frames'])
+                        lifecycle_changes, records = apply_event_lifecycle(
+                            db, row['sgo_event_frames'], row['sgo_reference_rows'], records)
                         phase('sql_admission')
                     if row['type']=='sgo_status' or sgo_links is not None:
                         from app.storage.current_row_state import source_status
@@ -501,7 +503,7 @@ class DatabaseIngressSink:
                                   **({'material_rows':material_rows} if material_rows is not None else {}),
                                   **({'quote_links':sgo_links} if sgo_links else {}))
                     if sgo_links is not None:
-                        changed += withdraw_current_offers(db, row['sgo_reference_rows'], sgo_links)
+                        changed += lifecycle_changes + withdraw_current_offers(db, row['sgo_reference_rows'], sgo_links)
                     phase('native_depth')
                     if row['type'] in ('prediction_book','prediction_books'):rows.replace_native_books([o['book'] for o in observations])
                     if row['type']=='coverage_inventory':

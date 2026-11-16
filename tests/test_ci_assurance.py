@@ -483,6 +483,16 @@ class ReadinessSignalsTests(unittest.TestCase):
                 scope, python="3.11.9"
             )
             self.assertIn("| 2.000 | — |", signals.render(result, base))
+            self.assertNotIn(signals.RECOVERY_PAINT, signals.render(result, base))
+            result["timings"] = {
+                signals.RECOVERY_PAINT: dict(measurement, fixture="desk-browser-intercept-recovery-v2"),
+                signals.OUTAGE_RESPONSE: dict(measurement, fixture="desk-polymarket-nba-v2"),
+            }
+            text = signals.render(result, base)
+            self.assertNotIn(signals.BROWSER_PAINT, text)
+            self.assertNotIn(signals.FALLBACK_RESPONSE, text)
+            self.assertIn("Desk paint after manual recovery | 2.000 | — |", text)
+            self.assertIn("First desk response | — | — | Unavailable", text)
 
     def test_duplicate_detection_ignores_wrappers_and_docstring_differences(self):
         code = load("code_signals")

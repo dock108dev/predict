@@ -359,13 +359,17 @@ class SportsGameOddsWorker:
             from psycopg.errors import QueryCanceled
             admitted_page = page
             if not live_enabled(self.service.config):
-                events = tuple(event for event in page.events
-                               if self.event_in_scope(event, datetime.fromisoformat(event['received_at'])))
-                if len(events) != len(page.events):
-                    admitted_ids = {event['event_id'] for event in events}
+                pregame = {event['event_id'] for event in page.events
+                           if self.event_in_scope(event, datetime.fromisoformat(event['received_at']))}
+                # A provider may report an explicit closure with started=true.
+                # Admit its lifecycle evidence without admitting post-start odds.
+                events = tuple(event for event in page.events if event['event_id'] in pregame or
+                               any(event['status'].get(key) is True for key in
+                                   ('cancelled', 'completed', 'ended', 'delayed', 'suspended')))
+                if len(pregame) != len(page.events):
                     admitted_page = replace(page, events=events,
                                             quotes=tuple(quote for quote in page.quotes
-                                                         if quote['event_id'] in admitted_ids))
+                                                         if quote['event_id'] in pregame))
             try:
                 await self._publish(admitted_page)
             except (ValueError, OperationalError, QueryCanceled) as exc:

@@ -1,4 +1,6 @@
 """Compact immutable publication members and validate their read-time authority."""
+from datetime import timedelta
+
 from . import comparison_snapshot as snapshots
 from .current_rows import event_id
 from .store import stamp
@@ -8,6 +10,7 @@ from app.comparison.game_phase import scheduled_phase, sporting_clock
 from app.fees import product_schedules, schedule_lifecycle
 from app.fees.evidence import applies
 from app.comparison.sgo_reference import BEST_BOOKS, BEST_VERSION
+from app.comparison.source_clock import CURRENT_DESK_MAX_AGE_SECONDS
 
 
 def publication_runtime(owner):
@@ -132,6 +135,15 @@ def counts(result):
         unmatched=sum(not r.get('same_outcome', {}).get('supported') for r in rows))
 
 
+def authority_deadline(witness):
+    deadline = witness.get('current_until')
+    source = witness.get('clock_at')
+    if deadline and source:
+        # Older committed publications can predate the board cap.
+        return min(stamp(deadline), stamp(source) + timedelta(seconds=CURRENT_DESK_MAX_AGE_SECONDS)).isoformat()
+    return deadline
+
+
 def validity(witness, current, at):
     reasons = list(witness.get('reasons', []))
     expected=witness.get('expected')
@@ -139,8 +151,8 @@ def validity(witness, current, at):
     if (expected is None or actual is None or actual[:3] != expected[:3]
             or witness.get('exact_frame') and actual != expected):
         reasons.append('input_replaced_or_removed')
-    deadline = witness.get('current_until')
-    if deadline is None or at > stamp(deadline):
+    deadline = authority_deadline(witness)
+    if deadline is None or at >= stamp(deadline):
         reasons.append('source_expired' if deadline else 'source_unknown')
     return reasons
 
@@ -197,11 +209,38 @@ def event_owners(db, rows, *, at):
     return current
 
 
+def event_signature(event):
+    if event.get('competition') and event.get('scheduled_start') and event.get('home') and event.get('away'):
+        # A numbered doubleheader needs a stronger identity than teams and start.
+        return (event['competition'], stamp(event['scheduled_start']), event['home'], event['away'],
+                event.get('game_number') if event['competition'] == 'MLB' else None)
+    return None
+
+
+def withdrawn_events(db, *, at):
+    """Find explicitly withdrawn occurrences even after all their offers leave the head."""
+    withdrawn = {}
+    for row in db.execute("""SELECT facts FROM current_event
+        WHERE scheduled_start::timestamptz BETWEEN %s AND %s
+          AND (lower(facts#>>'{status,status}') IN
+             ('cancelled','canceled','abandoned','postponed','delayed','suspended','final','completed','complete','finished')
+              OR facts#>>'{status,ended}'='true')""",
+        (at - timedelta(hours=24), at + timedelta(hours=72))).fetchall():
+        event = row['facts']
+        signature = event_signature(event)
+        if not signature or signature[0] == 'MLB' and signature[-1] is None:
+            continue
+        phase = scheduled_phase(event, at)
+        if phase['state'] in ('cancelled', 'final', 'suspended'):
+            withdrawn[signature] = dict(phase, observed_at=sporting_clock(event))
+    return withdrawn
+
+
 def occurrence_key(row):
     return row['game_key'], stamp(row['start_at'])
 
 
-def current_events(rows, events, at):
+def current_events(rows, events, at, *, withdrawn=None):
     """Resolve explicit withdrawals across the same bound occurrence and start."""
     resolved, blocked = {}, {}
     for row in rows:
@@ -214,7 +253,8 @@ def current_events(rows, events, at):
                 if stamp(event['scheduled_start']) != stamp(row['start_at']):
                     latest = dict(state='unknown', reason='event_schedule_replaced', basis='current_source_schedule')
                 else:
-                    latest = dict(scheduled_phase(event, at), observed_at=sporting_clock(event))
+                    latest = (withdrawn or {}).get(event_signature(event)) or dict(
+                        scheduled_phase(event, at), observed_at=sporting_clock(event))
             resolved[key] = latest
         published = row['current_authority']['price'].get('lifecycle', {})
         state = resolved[key] or published
@@ -247,7 +287,7 @@ def published_phase(row, at, latest, blocked, *, event_replaced=False):
 
 
 def project(result, current, owner, states, *, at, policy, epoch, settings=None, sportsbook_frames=(),
-            current_desk=False, retain_sportsbook_ev=False, event_facts=None, lifecycle_rows=None):
+            current_desk=False, retain_sportsbook_ev=False, event_facts=None, lifecycle_rows=None, withdrawn=None):
     """Fail-closed rank withdrawal; no reference/fee/math is recomputed here."""
     from app.comparison.snapshot_fee_outcome import EXPIRED, unavailable
     from app.comparison.sgo_sportsbook_baseline import current as sportsbook_current
@@ -280,13 +320,15 @@ def project(result, current, owner, states, *, at, policy, epoch, settings=None,
     product_states = owner.get('fee_products') or {}
     current_fee_revision = schedule_lifecycle.revision(fee_state)
     event_states, blocked_occurrences = current_events(
-        result['rows'] if lifecycle_rows is None else lifecycle_rows, event_facts or {}, at)
+        result['rows'] if lifecycle_rows is None else lifecycle_rows, event_facts or {}, at, withdrawn=withdrawn)
     active_provider = aggregate_provider(owner.get('config'))
     for original in result['rows']:
         row = dict(original)
         auth = row['current_authority']
-        deadline = auth['price'].get('current_until')
-        if current_desk and deadline and at > stamp(deadline):
+        deadline = authority_deadline(auth['price'])
+        if deadline != auth['price'].get('current_until'):
+            row['current_authority'] = dict(auth, price=dict(auth['price'], current_until=deadline))
+        if current_desk and deadline and at >= stamp(deadline):
             # An expired quote can still be shown with its original price.
             # No dependency lookup or calculation is needed to withdraw it.
             reasons = [*common, 'source_expired']
@@ -334,6 +376,8 @@ def project(result, current, owner, states, *, at, policy, epoch, settings=None,
             if row['game_state'] == 'scheduled':
                 current_baseline = current_baseline and clocks_current(baseline.get('prices', ()), at=at, start=start)
             if reasons or policy_replaced or capture_failed or not current_baseline:
+                if baseline.get('current_until') and at >= stamp(baseline['current_until']):
+                    row['sportsbook_reference_reason'] = 'reference_price_stale'
                 row['sportsbook_baseline'] = None
             else:
                 if baseline.get('candidates') and row['game_state'] == 'scheduled':
@@ -394,6 +438,8 @@ def project(result, current, owner, states, *, at, policy, epoch, settings=None,
             pregame_baseline_expired = row['game_state'] == 'scheduled' and not clocks_current(
                 baseline.get('prices', ()), at=at, start=start)
             if financial or pregame_baseline_expired:
+                if pregame_baseline_expired or any('source_expired' in validity(w, current, at) for w in references):
+                    row['sportsbook_reference_reason'] = 'reference_price_stale'
                 row['sportsbook_baseline'] = None
             else:
                 row['sportsbook_return_percent'] = baseline['return_percent']

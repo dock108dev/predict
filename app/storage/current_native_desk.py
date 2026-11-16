@@ -13,7 +13,7 @@ from app.dashboard.current_contract import price
 from app.fees import product_schedules
 from app.normalization.registry import Registry
 from .current_rows import contract_id, event_id, project_contract, project_quote
-from .ordinary_projection import source_allowed
+from .ordinary_projection import event_signature, source_allowed
 from .store import hashed, stamp
 
 
@@ -135,7 +135,7 @@ def carry_published_finance(row, prior):
 
 
 def overlay(db, result, owner, states, *, at, contract=None, phase='pregame', sgo_inputs=None, event_ids=None,
-            include_preview_inputs=False):
+            include_preview_inputs=False, withdrawn=None):
     """Replace native rows for this view using exact original clocks and pairs.
 
     The ordinary capture still owns archived evidence and cross-venue pairs.
@@ -147,17 +147,19 @@ def overlay(db, result, owner, states, *, at, contract=None, phase='pregame', sg
     running = owner.get('healthy') and owner.get('active') and not owner.get('global_stopped')
     enabled_venues = [venue for venue in VENUES if venue not in owner.get('paused_sources', ())]
     current_venues = {venue for venue in enabled_venues if running and source_allowed(states.get(venue, {}))}
-    venues = enabled_venues if pregame else sorted(current_venues)
+    venues = sorted(current_venues)
     if not venues:
         return result
     scope = {} if event_ids is None else {'event_ids': event_ids}
-    records, dependencies, books = active_records(db, at=at, venues=venues, contract=contract, phase=phase, posted=pregame, **scope)
+    records, dependencies, books = active_records(db, at=at, venues=venues, contract=contract, phase=phase, **scope)
     published = {game['game_key']: game for game in result['games']}
     prior_rows = {row['current_authority']['price']['dependency']: row for row in result['rows']
                   if (row.get('source') or {}).get('provider') in VENUES}
     captured = []
     expected_state = 'live' if phase == 'live' else 'scheduled'
     for record in records:
+        if event_signature(record['event']) in (withdrawn or {}):
+            continue
         if (occurrence := supported_occurrence(record)) is None:
             continue
         q = record['quote']
@@ -165,10 +167,7 @@ def overlay(db, result, owner, states, *, at, contract=None, phase='pregame', sg
         row = dict(original_record=record, original=q['original'], source=q['source'],
                    venue=q['venue'], league=occurrence[0], times=q['times'])
         authority = quote_authority(row, dict(captured_at=at, dependencies=dependencies))
-        reasons = set(authority['reasons'])
-        if pregame:
-            reasons -= {'source_expired', 'quote_resyncing'}
-        if reasons or authority['lifecycle']['state'] != expected_state or not authority['expected']:
+        if authority['reasons'] or stamp(authority['current_until']) <= at or authority['lifecycle']['state'] != expected_state or not authority['expected']:
             continue
         captured.append((cid, row, authority, occurrence))
     observations = (pregame_sportsbooks(db, owner, states, at, sgo_inputs=sgo_inputs,
@@ -194,7 +193,8 @@ def overlay(db, result, owner, states, *, at, contract=None, phase='pregame', sg
         if (game['game_key'], stamp(game['start_at'])) in blocked:
             continue
         published[game['game_key']] = game
-        baseline = select(row, dict(authority, reasons=[]), observations, at=at) if pregame else None
+        baseline = select(row, authority, observations, at=at) if pregame else None
+        reference_reason = (prior or {}).get('sportsbook_reference_reason')
         row.update(id='native-current:' + cid, kind='single', game_key=game['game_key'],
             game_title=game['title'], start_at=game['start_at'], live_native_desk=True,
             _desk_event=record['event'],
@@ -207,7 +207,7 @@ def overlay(db, result, owner, states, *, at, contract=None, phase='pregame', sg
             current_authority=dict(price=authority, references=[]),
             book_confirmation=q.get('book_confirmation'), captured_at=at.isoformat(),
             price_revision=hashed([*dependencies[cid], authority['clock_at']]),
-            sportsbook_baseline=baseline, sportsbook_return_percent=baseline['return_percent'] if baseline else None,
+            sportsbook_reference_reason=reference_reason, sportsbook_baseline=baseline, sportsbook_return_percent=baseline['return_percent'] if baseline else None,
             cost_per_normal_claim=exact_wire(cost), book_size=size,
             alternate=(record.get('comparison_source_metadata') or {}).get('alternate'))
         fee_input = dict(row, fee_applicability=applicability(record))

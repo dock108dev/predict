@@ -4,7 +4,7 @@ from uuid import uuid4
 
 from app.comparison.display_identity import canonical_key
 from app.comparison.sgo_reference import BEST_VERSION
-from app.comparison.source_clock import assess
+from app.comparison.source_clock import CURRENT_DESK_MAX_AGE_SECONDS, assess
 from app.fees import product_schedules, schedule_lifecycle
 
 from . import comparison_snapshot as snapshots
@@ -24,7 +24,7 @@ def quote_authority(row, inputs, *, reference=False):
         from app.collection.current_benchmark import MAXIMUM_AGE
         q=dict(q,freshness_policy=dict(maximum_age_seconds=MAXIMUM_AGE))
     cid = contract_id(record)
-    clock = assess(q, stamp(inputs['captured_at']))
+    clock = assess(q, stamp(inputs['captured_at']), maximum_age=CURRENT_DESK_MAX_AGE_SECONDS)
     from app.comparison.game_phase import original_price_phase
     lifecycle=original_price_phase(record,inputs['captured_at'])
     if lifecycle['reason']:clock['reasons'].append(lifecycle['reason'])
