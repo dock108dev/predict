@@ -175,6 +175,7 @@ def test_ordinary_projection_withholds_changed_terms_but_keeps_frozen_capture():
         epoch='epoch',id='capture',games=[],references=[],sources={},issues=[],capture_seconds=0,
         fee_products={key:state})
     result=live.prices(inputs,{'revision':'settings'})
+    assert result['rows'][0]['current_authority']['price']['current_until']==row['start_at']
     captured=result['rows'][0]['trade_fee']
     assert captured['available'] and captured['evidence']['reviewed_at']==AT.isoformat()
     projected=live.project(result,deps,dict(healthy=True,active=True,fee_products={key:changed}),

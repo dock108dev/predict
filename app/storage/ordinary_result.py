@@ -25,10 +25,10 @@ def quote_authority(row, inputs, *, reference=False):
         from app.collection.current_benchmark import MAXIMUM_AGE
         q=dict(q,freshness_policy=dict(maximum_age_seconds=MAXIMUM_AGE))
     cid = contract_id(record)
-    from app.comparison.game_phase import original_price_phase
+    from app.comparison.game_phase import original_price_phase, scheduled_start
     lifecycle = original_price_phase(record, inputs['captured_at'])
     clock = assess(q, stamp(inputs['captured_at']), maximum_age=CURRENT_DESK_MAX_AGE_SECONDS,
-                   pregame_until=record['event']['scheduled_start'] if lifecycle['state'] == 'scheduled' else None)
+                   pregame_until=scheduled_start(record['event']) if lifecycle['state'] == 'scheduled' else None)
     if lifecycle['reason']:clock['reasons'].append(lifecycle['reason'])
     if lifecycle.get('current_until') and clock.get('current_until'):
         clock['current_until']=min(clock['current_until'],lifecycle['current_until'])

@@ -80,6 +80,10 @@ def sporting_clock(event):
         event.get('schedule_metadata') or {}).get('received_at')
 
 
+def scheduled_start(event):
+    return event.get('scheduled_start', event.get('start_at'))
+
+
 def scheduled_phase(event, at):
     """Classify authority of the occurrence's start and explicit source state."""
     at = stamp(at)
@@ -92,7 +96,7 @@ def scheduled_phase(event, at):
             return dict(state='unknown', reason='event_status_unknown', basis='source_state_clock')
     if phase['reason'] is not None:
         return phase
-    start = event.get('scheduled_start', event.get('start_at'))
+    start = scheduled_start(event)
     if not start:
         return dict(state='unknown', reason='event_schedule_unknown', basis='missing_schedule')
     if stamp(start) > at:
@@ -108,7 +112,7 @@ def price_phase(event, quote, at):
     phase=scheduled_phase(event, at)
     if phase['reason'] is not None:return phase
     if phase['state'] == 'scheduled':return phase
-    start=stamp(event.get('scheduled_start',event.get('start_at')))
+    start=stamp(scheduled_start(event))
     clock,_,errors=evidence(quote)
     receipt=quote.get('times',{}).get('received_at')
     post_start=bool(clock and receipt and not errors and start<=stamp(clock)<=stamp(receipt)<=at)

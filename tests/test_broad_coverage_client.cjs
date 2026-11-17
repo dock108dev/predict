@@ -7,9 +7,12 @@ const {fixture, board, copy} = require('./current_board_fixture.cjs');
 const asset = name => pathToFileURL(path.resolve('app/dashboard/opportunity_static/current', name)).href;
 let reads = 0, feeReads = 0, dispatches = 0;
 global.fetch = async url => {
- if (url === '/api/comparison-current/fee-coverage') {
+ if (url === '/api/comparison-current/fee-coverage?phase=pregame') {
   feeReads++;
-  return {ok:true,json:async()=>({total:{covered:1,current:2,fee_coverage_percent:50},missing_reasons:{}})};
+  return {ok:true,json:async()=>({total:{
+   posted_fee:1,posted:2,posted_fee_coverage_percent:50,
+   posted_modeled_after_fee:1,reviewed_after_fee_ev:0,
+  },posted_fee_missing_reasons:{}})};
  }
  if (url !== '/api/coverage') {dispatches++; throw Error('Only captured local coverage may be read');}
  reads++; return {ok:true,json:async()=>copy(payload)};
@@ -70,23 +73,32 @@ const payload={schema:'predict-broad-coverage-1',captured_at:at,publication_at:a
  for(const id of ids){const node=new Element(['league','venue','market','period','attention','sort'].includes(id)?'select':id==='coverage-details'?'dialog':'div');node.id=id;if(id==='sort')node.value='scope';document.body.append(node);}
  const handlers={};global.window={addEventListener:(type,fn)=>handlers[type]=fn};
  const dialog=document.getElementById('coverage-details');dialog.showModal=()=>{dialog.open=true;};dialog.close=()=>{dialog.open=false;dialog.onclose?.();};
- await import(asset('coverage.js'));await new Promise(resolve=>setImmediate(resolve));
- assert.equal(reads,1);assert.equal(feeReads,1);
- assert.match(document.getElementById('fee-census').textContent,/1 of 2 current offers/);
- assert.equal(document.getElementById('period').value,'full_game','first dataset opens the ordinary full-game scope');assert.equal(document.getElementById('coverage').querySelectorAll('button').length,90);
- document.getElementById('league').value='NFL';document.getElementById('league').onchange();
- document.getElementById('venue').value='kalshi';document.getElementById('venue').onchange();
- document.getElementById('coverage').querySelector('button').onclick();assert(dialog.open);const frame=document.getElementById('cell-content').textContent;
- document.getElementById('market').value='spread';document.getElementById('market').onchange();assert.equal(document.getElementById('cell-content').textContent,frame);
- document.getElementById('close-coverage-details').onclick();assert(!dialog.open);assert.equal(reads,1);assert.equal(feeReads,1);assert.equal(dispatches,0);
- document.getElementById('period').value='';document.getElementById('period').onchange();document.getElementById('pause-coverage').onclick();document.getElementById('pause-coverage').onclick();await new Promise(resolve=>setImmediate(resolve));assert.equal(reads,2);assert.equal(feeReads,2);assert.equal(document.getElementById('period').value,'','a subsequent dataset preserves the owner choice of All periods');assert.equal(dispatches,0);
- global.fetch=async()=>{reads++;return {ok:false,json:async()=>({reason:'authored_read_failure'})};};
- document.getElementById('retry-coverage').onclick();await new Promise(resolve=>setImmediate(resolve));
- document.getElementById('league').value='NBA';document.getElementById('league').onchange();
- assert.match(document.getElementById('flow').textContent,/failed/);
- assert.match(document.getElementById('coverage-outcome').textContent,/freshness is unverified/);
- assert.equal(document.getElementById('flow').dataset.state,'error');
- handlers.pagehide();
+ try {
+  await import(asset('coverage.js'));await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(reads,1);assert.equal(feeReads,1);
+  const census = document.getElementById('fee-census');
+  assert.match(census.textContent,/1 of 2 posted offers · 50\.00%/);
+  const values = census.querySelectorAll('dd');
+  const feeCounts = Object.fromEntries(census.querySelectorAll('dt').map((term,index) =>
+   [term.textContent,values[index].textContent]));
+  assert.equal(feeCounts['Modeled returns after fees'],'1');
+  assert.equal(feeCounts['Verified after-fee EV'],'0');
+  assert.equal(document.getElementById('period').value,'full_game','first dataset opens the ordinary full-game scope');assert.equal(document.getElementById('coverage').querySelectorAll('button').length,90);
+  document.getElementById('league').value='NFL';document.getElementById('league').onchange();
+  document.getElementById('venue').value='kalshi';document.getElementById('venue').onchange();
+  document.getElementById('coverage').querySelector('button').onclick();assert(dialog.open);const frame=document.getElementById('cell-content').textContent;
+  document.getElementById('market').value='spread';document.getElementById('market').onchange();assert.equal(document.getElementById('cell-content').textContent,frame);
+  document.getElementById('close-coverage-details').onclick();assert(!dialog.open);assert.equal(reads,1);assert.equal(feeReads,1);assert.equal(dispatches,0);
+  document.getElementById('period').value='';document.getElementById('period').onchange();document.getElementById('pause-coverage').onclick();document.getElementById('pause-coverage').onclick();await new Promise(resolve=>setImmediate(resolve));assert.equal(reads,2);assert.equal(feeReads,2);assert.equal(document.getElementById('period').value,'','a subsequent dataset preserves the owner choice of All periods');assert.equal(dispatches,0);
+  global.fetch=async()=>{reads++;return {ok:false,json:async()=>({reason:'authored_read_failure'})};};
+  document.getElementById('retry-coverage').onclick();await new Promise(resolve=>setImmediate(resolve));
+  document.getElementById('league').value='NBA';document.getElementById('league').onchange();
+  assert.match(document.getElementById('flow').textContent,/failed/);
+  assert.match(document.getElementById('coverage-outcome').textContent,/freshness is unverified/);
+  assert.equal(document.getElementById('flow').dataset.state,'error');
+ } finally {
+  handlers.pagehide?.();
+ }
  // A source filter retains exact peer snapshots for Original Details.
  document.createTextNode=text=>{const node=new Element('span');node.textContent=text;return node;};
  const {createComparisonSlate}=await import(asset('comparison-slate-views.js'));
