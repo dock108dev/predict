@@ -2,7 +2,9 @@
 
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
+from hashlib import sha256
 import os
+from pathlib import Path
 import subprocess
 from threading import Barrier
 from uuid import uuid4
@@ -14,8 +16,6 @@ from app.storage import store
 
 
 BEFORE_QUOTE_REPAIR = '094_desk_recent_inputs.sql'
-QUOTE_REPAIR = '095_sgo_quote_state.sql'
-CLOSURE_RECEIPT = '096_sgo_closure_receipt.sql'
 
 
 @pytest.fixture
@@ -46,6 +46,12 @@ def ledger(db):
     return db.execute('SELECT * FROM public.schema_migration ORDER BY version').fetchall()
 
 
+def packaged_ledger():
+    migrations = Path(store.__file__).with_name('migrations')
+    return [dict(version=path.name, sha256=sha256(path.read_bytes()).hexdigest())
+            for path in sorted(migrations.glob('*.sql'))]
+
+
 def test_concurrent_fresh_migrations_share_the_committed_history(disposable_socket):
     with empty_database() as name:
         start = Barrier(2, timeout=5)
@@ -59,8 +65,7 @@ def test_concurrent_fresh_migrations_share_the_committed_history(disposable_sock
         with ThreadPoolExecutor(max_workers=2) as pool:
             calls = [pool.submit(migrate), pool.submit(migrate)]
             first, second = (call.result() for call in calls)
-        assert first == second
-        assert [row['version'] for row in first[-2:]] == [QUOTE_REPAIR, CLOSURE_RECEIPT]
+        assert first == second == packaged_ledger()
 
 
 def test_refuses_a_gapped_or_newer_ledger_before_pending_migrations(disposable_socket):
@@ -90,7 +95,8 @@ def test_refuses_a_gapped_or_newer_ledger_before_pending_migrations(disposable_s
         schema.migrate()
         upgraded = ledger(db)
         assert upgraded[:len(original)] == original
-        assert [row['version'] for row in upgraded[len(original):]] == [QUOTE_REPAIR, CLOSURE_RECEIPT]
+        assert len(upgraded) > len(original)
+        assert upgraded == packaged_ledger()
 
 
 def test_restore_before_upgrade_preserves_retained_evidence_and_pauses(disposable_socket, tmp_path):
