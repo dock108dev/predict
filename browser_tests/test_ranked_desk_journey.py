@@ -113,6 +113,7 @@ def test_ranked_and_browse_journey(width, tmp_path):
                 rows = []
             else:
                 assert query.get("lines") in ("main", "all")
+                assert query["basis"] == "after_fees"
                 rows = ev
             if query.get("game_key"):
                 rows = [row for row in rows if row["game_key"] == query["game_key"]]
@@ -234,9 +235,9 @@ def test_ranked_and_browse_journey(width, tmp_path):
             tab = context.new_page()
             tab.clock.set_fixed_time("2026-11-13T00:00:00Z")
             tab.on("pageerror", lambda error: errors.append(str(error)))
-            tab.goto(BASE)
+            tab.goto(BASE + "/ev?board=0")
             expect(tab.get_by_role("heading", name="Opportunities")).to_be_visible()
-            tab.get_by_label("Calculation basis").select_option("reviewed")
+            expect(tab.get_by_label("Calculation basis")).to_be_hidden()
             cards = tab.locator(".opportunity-card")
             expect(cards).to_have_count(2)
             expect(cards.first).to_contain_text("+3.26%")
@@ -247,8 +248,8 @@ def test_ranked_and_browse_journey(width, tmp_path):
             ).to_be_visible()
             expect(prices.get_by_role("button")).to_have_text(
                 [
-                    "Polymarket US+117.39+3.26%After-fee EV",
-                    "Kalshi-108.33−8.21%After-fee EV",
+                    "Polymarket US+117.39+3.26%Estimated EV after fees",
+                    "Kalshi-108.33−8.21%Estimated EV after fees",
                 ]
             )
             assert all(
@@ -311,7 +312,7 @@ def test_ranked_and_browse_journey(width, tmp_path):
 
             cards.first.get_by_role("link", name="Open game ↗").press("Enter")
             expect(tab.get_by_role("heading", name=DENVER)).to_be_visible()
-            expect(tab.get_by_label("Calculation basis")).to_have_value("reviewed")
+            expect(tab.get_by_label("Calculation basis")).to_have_value("after_fees")
             expect(tab.get_by_label("Alternate lines")).not_to_be_checked()
             expect(tab.locator(".odds-matrix tbody tr")).to_have_count(2)
             tab.get_by_label("Alternate lines").check()
@@ -358,7 +359,7 @@ def test_ranked_and_browse_journey(width, tmp_path):
                 price = tab.locator(f'[data-offer-id="{key}"]')
                 expect(price).to_contain_text(f"{value} EV")
                 expect(price).to_have_accessible_name(
-                    re.compile(re.escape(f"{value} Verified after-fee EV"))
+                    re.compile(re.escape(f"{value} Estimated EV after fees"))
                 )
             expect(tab.locator('[data-offer-id="kalshi-minnesota"]')).to_contain_text(
                 "EV unavailable"
@@ -402,12 +403,12 @@ def test_ranked_and_browse_journey(width, tmp_path):
                 "link", name="Back"
             ).click()
             expect(cards).to_have_count(2)
-            expect(tab.get_by_label("Calculation basis")).to_have_value("reviewed")
+            expect(tab.get_by_label("Calculation basis")).to_be_hidden()
 
             unavailable = True
             tab.get_by_role("button", name="Refresh list").click()
             expect(
-                tab.get_by_role("heading", name="No EV estimates available")
+                tab.get_by_role("heading", name="No after-fee EV estimates available")
             ).to_be_visible()
             expect(
                 tab.get_by_text("The sportsbook reference source is on hold.")
@@ -563,7 +564,7 @@ def test_ranked_and_browse_journey(width, tmp_path):
             tab.goto(BASE + "/arbs")
             expect(cards).to_have_count(2)
             expect(cards.last.locator(".arb-card-legs li")).to_have_count(2)
-            expect(cards.last).to_contain_text("Lowest modeled return after fees")
+            expect(cards.last).to_contain_text("Modeled loss if the game completes")
             expect(tab.locator("[name=profit], [name=stake]")).to_have_count(0)
             expect(cards.first).to_contain_text("+0.89%")
             expect(cards.last).to_contain_text("−4.84%")
@@ -573,9 +574,11 @@ def test_ranked_and_browse_journey(width, tmp_path):
             )
             payoff = tab.get_by_role("dialog", name="Pair payoff")
             expect(
-                payoff.get_by_text("Lowest modeled return after fees", exact=True)
+                payoff.get_by_text("Modeled loss if the game completes", exact=True)
             ).to_be_visible()
-            assert "arb-washington" in inspected
+            assert (
+                "arb-washington" not in inspected
+            )  # The published list includes the exact payoff.
             payoff.get_by_text("Calculation details", exact=True).click()
             expect(
                 payoff.locator(".inspection-payoffs").get_by_text(

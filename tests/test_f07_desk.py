@@ -9,6 +9,7 @@ from aiohttp.test_utils import make_mocked_request
 from app.comparison.snapshot_fee_outcome import EXPIRED, outcome
 from app.comparison.snapshot_math import before_fee_pair
 from app.comparison.snapshot_pair_fees import pair_fees
+from app.comparison.sgo_native_binding import fee_offer_identity, pregame_fee
 from app.dashboard.multi_game_server import create_app
 from app.dashboard.trade_desk import page
 from tests.current_fixture import InjectedTestProvider
@@ -17,14 +18,25 @@ from tests.test_f06_prophetx_retail import AT, retail_row, review  # noqa: F401
 from tests.test_trade_desk import quote, result
 
 
+def novig_schedule_quote(price='0.5', *, at=AT):
+    source = dict(provider='sportsgameodds', native_event_id='fixture-game', native_market_id='fixture-market',
+                  native_outcome_id='points-away-game-sp-away', native_side='bookmaker_outcome', native_line='2.5')
+    fee = pregame_fee(dict(available=True, phase_verified=True, quote_available=True, phase='scheduled',
+        venue_fee=dict(charged='WHEN_LIVE', coefficient='0.06', makerCredit='0.25'),
+        fee_evaluated_at=at.isoformat(), fee_price=price, offer_identity=fee_offer_identity(source),
+        market_id='fixture-catalog-market', event_id='fixture-catalog-event', outcome_id='fixture-catalog-outcome',
+        revision='fixture-catalog-revision', market_receipt=dict(observed_at=at.isoformat()),
+        current_until='2026-12-31T00:00:00Z'))
+    assert fee['available']
+    return dict(venue='novig', game_state='scheduled', source=source, trade_fee=fee, cost_per_normal_claim=price)
+
+
 def paired(league, review):
     left = retail_row(league, '0.4')
     left.update(captured_at=AT.isoformat(), game_state='scheduled')
     right = quote('novig-offer', 'novig', operator='le', threshold=-1)
-    right.update(start_at=left['start_at'], cost_per_normal_claim='0.5', league=league, game_state='scheduled')
+    right.update(novig_schedule_quote(), start_at=left['start_at'], league=league)
     left['trade_fee'] = outcome(left, at=AT, phase='scheduled', review=review)
-    right['trade_fee'] = dict(available=True, classification='exact_public', fee_cashflows={'at_fill_usd': '0'},
-                              evidence={'fee_rate': '0'})
     return left, right
 
 
@@ -64,8 +76,33 @@ def test_stale_terms_keep_supported_leg_and_withhold_net_payoff(review):
     assert not retail['available'] and 'states' not in retail
     assert retail['legs'][0] == {'available': False, 'reason': EXPIRED,
                                  'quantity': '111.1', 'acquisition_usd': '44.44',
-                                 'depth_status': 'unverified'}
+                                 'depth_status': 'unverified', 'size_status': 'unverified'}
     assert retail['legs'][1]['at_fill_usd'] == '0'
+
+
+def test_pair_stake_budget_excludes_entry_fees_and_state_specific_reserves():
+    from app.comparison.inspection_math import pair_math
+
+    left = quote('left', 'novig', threshold=3)
+    right = quote('right', 'prophetx', operator='le', threshold=2)
+    for row in (left, right):
+        row.update(cost_per_normal_claim='0.40', source={'provider': 'practice'},
+                   trade_fee=dict(available=True, classification='synthetic', quantity='125',
+                                  evidence={'fictional_rate': '0.02'}, fee_cashflows={'at_fill_usd': '1'}))
+    proof = before_fee_pair(left, right, 'fixed-reserve')
+    allocation = pair_math(proof, F(100))
+    fees = pair_fees(proof, allocation, [left, right])
+    assert fees['funding_usd'] == '102'
+    assert fees['minimum_net_payout_usd'] == '125'
+    assert fees['minimum_net_profit_usd'] == '23'
+    left['trade_fee']['fee_cashflows'].update(held_reserve_usd='3',
+        reserve_released_usd={'first_wins': '3', 'second_wins': '1'})
+    held = pair_fees(proof, allocation, [left, right])
+    assert held['funding_usd'] == '105'
+    assert held['states'] == dict(first_wins=dict(net_receipt_usd='128', net_profit_usd='23'),
+                                 second_wins=dict(net_receipt_usd='126', net_profit_usd='21'))
+    assert held['minimum_net_payout_usd'] == '126'
+    assert held['minimum_net_profit_usd'] == '21'
 
 
 def test_independent_payoff_uses_working_capture_clock(review):
@@ -120,8 +157,7 @@ def test_native_sized_fee_reuses_selected_terms_and_rounds_at_size(venue, amount
     row['trade_fee'] = outcome(row, at=at, phase='scheduled', review=terms)
     proof = dict(value='0', weights=['0.5', '0.5'],
                  settlement_payouts={'first_wins': ['1', '0'], 'second_wins': ['0', '1']})
-    other = dict(venue='novig', game_state='scheduled', trade_fee=dict(available=True,
-                 classification='exact_public', fee_cashflows={'at_fill_usd': '0'}, evidence={'fee_rate': '0'}))
+    other = novig_schedule_quote(at=at)
     priced = pair_fees(proof, pair_math(proof, F(100)), [row, other])
     assert priced['available'] and priced['legs'][0]['at_fill_usd'] == amount
     assert priced['minimum_net_profit_usd'] == '-' + amount

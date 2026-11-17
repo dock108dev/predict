@@ -1,0 +1,1224 @@
+{
+  "result_id": "68d34d59cf3f47cdbb5ad307e55fc6f5",
+  "generation": 2,
+  "cursor": null,
+  "provider_requests": 0,
+  "features": {
+    "live_enabled": false,
+    "auto_update": true
+  },
+  "phase": "pregame",
+  "row": {
+    "before_fee": "6",
+    "after_fee": null,
+    "conservative": null,
+    "metric": "conditional_return_percent",
+    "sportsbook": {
+      "book": "fanduel",
+      "conditioning": null,
+      "current_until": "2026-11-17T03:00:00+00:00",
+      "fair_decimal_odds": "2",
+      "indicative": true,
+      "prices": [
+        {
+          "line": "-18.5",
+          "odd_id": "points-home-game-sp-home",
+          "opposing_odd_id": "points-away-game-sp-away",
+          "price_american": "-110",
+          "received_at": "2026-11-16T19:06:03+00:00",
+          "revision": "61dc1d1c17f8a7d2d22d771afc2041e47151816d4f0e33dc69703eb7f93537fd",
+          "side": "home",
+          "source_at": "2026-11-16T19:06:03+00:00"
+        },
+        {
+          "line": "18.5",
+          "odd_id": "points-away-game-sp-away",
+          "opposing_odd_id": "points-home-game-sp-home",
+          "price_american": "-110",
+          "received_at": "2026-11-16T19:06:03+00:00",
+          "revision": "2c40cf95756fdce49bcad90b2160e248faeef941a8f9632cfc0184103bce9e20",
+          "side": "away",
+          "source_at": "2026-11-16T19:06:03+00:00"
+        }
+      ],
+      "probability": "0.5",
+      "return_percent": "6",
+      "snapshot_id": "02036442adb23c455e25111bb3e4a61b7c1fdbce8aa93e3ad82906d905736634",
+      "fair_odds": {
+        "american": "+100",
+        "decimal": "2",
+        "reason": null
+      }
+    },
+    "fair_reference": {
+      "books": [
+        "fanduel"
+      ],
+      "method": "single",
+      "indicative": true
+    },
+    "sportsbook_after_fee": null,
+    "value_basis": null,
+    "calculation_expiry_reason": "reference_price_stale",
+    "trade_fee": {
+      "available": false,
+      "classification": "partial",
+      "evidence": {
+        "applicability": "Straight contracts on the public site. NHL uses a per-fill price-based fee, all other events use positive net gains per market. Privately negotiated API terms remain unbound.",
+        "fee_rate": "0.02",
+        "nhl_taker_coefficient": "0.035",
+        "path": "app/fixtures/prophetx-fees-review-20261105.md",
+        "published_version": "1.0",
+        "review_before": "2026-11-07T04:12:09.865787+00:00",
+        "reviewed_at": "2026-11-06T04:12:09.865787+00:00",
+        "sha256": "fdee82a41f37ba6bf3542b359422911561b061365be873eb876f0b7aeaffac85",
+        "source_url": "https://www.prophetx.co/lobby/t-c/trading-fees",
+        "version": "prophetx-conditional-20261105-review"
+      },
+      "reason": "conditional_fee_review_expired_or_not_effective"
+    },
+    "effective_quote": null,
+    "pregame_reference": {
+      "available": true,
+      "bet_id": "d4e16436969d8533af7f08210945a038244fd5f71c0e2d14572fed9d5ff8991a",
+      "book": "fanduel",
+      "conditioning": null,
+      "event_id": "synthetic-saint-marys",
+      "exclusions": {},
+      "fair_decimal_odds": "2",
+      "frame_id": "727697d95b677edf7623281954d8419bfaebbfe8e4e85bc840592ae0c34860a6",
+      "frame_received_at": "2026-11-16T19:06:03+00:00",
+      "implied": {
+        "away": "11/21",
+        "home": "11/21"
+      },
+      "market": {
+        "away": "sportsgameodds:NCAAB:synthetic-saint-marys:away",
+        "family": "spread",
+        "home": "sportsgameodds:NCAAB:synthetic-saint-marys:home",
+        "kickoff": "2026-11-17T03:00:00+00:00",
+        "league": "NCAAB",
+        "line": "-18.5",
+        "outcomes": [
+          "home",
+          "away"
+        ],
+        "period": "full_game"
+      },
+      "policy_version": "pregame-sportsbook-priority-1",
+      "prices": [
+        {
+          "line": "-18.5",
+          "odd_id": "points-home-game-sp-home",
+          "opposing_odd_id": "points-away-game-sp-away",
+          "price_american": "-110",
+          "received_at": "2026-11-16T19:06:03+00:00",
+          "revision": "61dc1d1c17f8a7d2d22d771afc2041e47151816d4f0e33dc69703eb7f93537fd",
+          "side": "home",
+          "source_at": "2026-11-16T19:06:03+00:00"
+        },
+        {
+          "line": "18.5",
+          "odd_id": "points-away-game-sp-away",
+          "opposing_odd_id": "points-home-game-sp-home",
+          "price_american": "-110",
+          "received_at": "2026-11-16T19:06:03+00:00",
+          "revision": "2c40cf95756fdce49bcad90b2160e248faeef941a8f9632cfc0184103bce9e20",
+          "side": "away",
+          "source_at": "2026-11-16T19:06:03+00:00"
+        }
+      ],
+      "probabilities": {
+        "away": "0.5",
+        "home": "0.5"
+      },
+      "probability": "0.5",
+      "rules": {
+        "available": true,
+        "cancellation": "full_outlay",
+        "equality": "not_possible",
+        "equality_cashflow": "full_outlay",
+        "evidence": {
+          "version": "authored-rules-1"
+        },
+        "extra_innings": "not_applicable",
+        "forfeit": "void",
+        "outcomes": [
+          "home",
+          "away"
+        ],
+        "overtime": "included",
+        "refund_charges": "none",
+        "scope": "completed_full_game",
+        "shootout": "not_applicable",
+        "shootout_count": null,
+        "shortened_game": "void",
+        "void": "full_outlay"
+      },
+      "selected_outcome": "home",
+      "snapshot_id": "02036442adb23c455e25111bb3e4a61b7c1fdbce8aa93e3ad82906d905736634",
+      "source": "sportsgameodds"
+    },
+    "settlement_assessment": {
+      "available": true,
+      "comparable": true,
+      "probability_missing": null,
+      "reason": null,
+      "scope": "event_goes_ahead",
+      "sportsbook_rules": {
+        "available": true,
+        "cancellation": "full_outlay",
+        "equality": "not_possible",
+        "equality_cashflow": "full_outlay",
+        "evidence": {
+          "version": "authored-rules-1"
+        },
+        "extra_innings": "not_applicable",
+        "forfeit": "void",
+        "outcomes": [
+          "home",
+          "away"
+        ],
+        "overtime": "included",
+        "refund_charges": "none",
+        "scope": "completed_full_game",
+        "shootout": "not_applicable",
+        "shootout_count": null,
+        "shortened_game": "void",
+        "void": "full_outlay"
+      },
+      "state_probabilities": {
+        "loss": "0.5",
+        "win": "0.5"
+      },
+      "venue_rules": {
+        "available": true,
+        "cancellation": "full_outlay",
+        "equality": "not_possible",
+        "equality_cashflow": "full_outlay",
+        "evidence": {
+          "version": "authored-rules-1"
+        },
+        "extra_innings": "not_applicable",
+        "forfeit": "void",
+        "outcomes": [
+          "home",
+          "away"
+        ],
+        "overtime": "included",
+        "refund_charges": "none",
+        "scope": "completed_full_game",
+        "shootout": "not_applicable",
+        "shootout_count": null,
+        "shortened_game": "void",
+        "void": "full_outlay"
+      },
+      "version": "pregame-sportsbook-priority-1"
+    },
+    "effective_reason": "conditional_fee_review_expired_or_not_effective",
+    "fee": {
+      "available": false,
+      "reason": "unit_size_valuation_pending"
+    },
+    "conservative_fee": {
+      "available": false,
+      "reason": "unit_size_valuation_pending"
+    },
+    "reference_calculation": {
+      "available": false,
+      "conditioning": "decisive win/loss only; equality, ties, pushes and exceptional settlement excluded",
+      "fair_american_odds": null,
+      "fair_decimal_odds": null,
+      "full_state_probability": false,
+      "method": "sgo-book-median-proportional-1",
+      "overround": null,
+      "pair": [],
+      "probability": null,
+      "provenance": "exact retained pair; original provider prices and clocks",
+      "reason": "unit_size_valuation_pending",
+      "selected": null,
+      "selected_equality": null,
+      "selected_id": null,
+      "selected_predicate": null,
+      "venue": "sportsgameodds_books"
+    },
+    "economic_revision": "2997d25654f1c047ccea30d94c7b670916c9d712a52f0106544125a60fa899cc",
+    "price_revision": "90e9350cd5ec481a60f65291aa923f86fb31dd219960e9f7e0dffe1a7b21be58",
+    "evidence_result_id": "7325fb9bec8144fbaed7865c34670e0a",
+    "captured_at": "2026-11-16T19:06:03+00:00",
+    "game_state": "scheduled",
+    "quote_freshness": "fresh",
+    "reference_feed_available": null,
+    "game_state_basis": null,
+    "game_state_reason": null,
+    "game_state_observed_at": null,
+    "current_reasons": [],
+    "source_clock_at": "2026-11-16T19:06:03+00:00",
+    "confirmed_at": null,
+    "projected_at": null,
+    "id": "9785be7b42cf5dc7a6209ad83b3a2f1331b87ea3b6319604e1da793fa6b9140b",
+    "venue": "prophetx",
+    "source_provider": "sportsgameodds",
+    "selection": {
+      "participant": "sportsgameodds:NCAAB:synthetic-saint-marys:home",
+      "predicate": "cover",
+      "result_interpretation": "normal_win",
+      "signed_line": "-18.5"
+    },
+    "native_side": "bookmaker_outcome",
+    "price_basis": "aggregate_snapshot",
+    "participant": "Saint Mary's Gaels",
+    "market": {
+      "line": "-18.5",
+      "market": "spread",
+      "period": "full_game"
+    },
+    "alternate": false,
+    "original": {
+      "payout": "1",
+      "payout_units": "USD",
+      "quantity_units": "unknown",
+      "role": "comparison",
+      "units": "american_odds",
+      "value": "+112"
+    },
+    "cost_per_normal_claim": "25/53",
+    "book_size": null,
+    "current_until": "2026-11-17T03:00:00+00:00",
+    "desk_quote_key": "0a109b585d8316c25b3f7ac36e86c2cae34b4db43277f260bea4b1b9f3a8de8a",
+    "calculation_current_until": null,
+    "odds": {
+      "american": "+112",
+      "decimal": "2.12",
+      "reason": null
+    },
+    "current": true,
+    "posted_price": true,
+    "value": null,
+    "reason": "conditional_fee_review_expired_or_not_effective",
+    "reference": null,
+    "reference_current": false,
+    "probability": null,
+    "overround": null,
+    "source_at": "2026-11-16T19:06:03+00:00",
+    "received_at": "2026-11-16T19:06:03+00:00",
+    "start_at": "2026-11-17T03:00:00+00:00",
+    "source": {
+      "binding_id": "379788089074c2fd065f07c0c5c2ac6d40a7ddc7daca481fc3118c0cb6759ddd",
+      "binding_version": "sgo-current-unverified-1",
+      "native_event_id": "synthetic-saint-marys",
+      "native_line": "-18.5",
+      "native_market_id": "d939937201a1d4fe1f6624173041c8b904ad39e58e23fce792ddb5c965b4de96",
+      "native_outcome_id": "points-home-game-sp-home",
+      "native_side": "bookmaker_outcome",
+      "provider": "sportsgameodds",
+      "quote_side": "buy"
+    },
+    "valuation": {
+      "actual_outlay_usd": "25",
+      "bet_id": "d4e16436969d8533af7f08210945a038244fd5f71c0e2d14572fed9d5ff8991a",
+      "canonical_game_id": "snapshot-game:0209779e72930cb2348cc69ffe663f91d41b2d4cbd764ba6ce68ae640ba294ab",
+      "canonical_market": {
+        "away": "sportsgameodds:NCAAB:synthetic-saint-marys:away",
+        "family": "spread",
+        "home": "sportsgameodds:NCAAB:synthetic-saint-marys:home",
+        "kickoff": "2026-11-17T03:00:00+00:00",
+        "league": "NCAAB",
+        "line": "-18.5",
+        "outcomes": [
+          "home",
+          "away"
+        ],
+        "period": "full_game"
+      },
+      "canonical_selection": {
+        "participant": "sportsgameodds:NCAAB:synthetic-saint-marys:home",
+        "predicate": "cover",
+        "result_interpretation": "normal_win",
+        "signed_line": "-18.5"
+      },
+      "captured_at": "2026-11-16T19:06:03+00:00",
+      "display": {
+        "actual_outlay_usd": "25.00",
+        "after_fee_odds": "+106",
+        "expected_net_profit_usd": "0.71",
+        "fee": "$0.75",
+        "net_ev": "+2.82%",
+        "opportunity_score": "267",
+        "selected_usd": "25.00",
+        "stake_usd": "24.25"
+      },
+      "economic_revision": "2997d25654f1c047ccea30d94c7b670916c9d712a52f0106544125a60fa899cc",
+      "evidence_class": "fixture",
+      "fee_evidence": {
+        "class": "fixture",
+        "revision": "saint-marys-fixture-fee-1",
+        "source": "Sprint 3 worked sample (simulation)"
+      },
+      "fee_revision": "saint-marys-fixture-fee-1",
+      "fees": {
+        "basis": "actual_fill",
+        "cash_terms": {
+          "entry_rate": "0.03",
+          "evidence": {
+            "class": "fixture",
+            "revision": "saint-marys-fixture-fee-1",
+            "source": "Sprint 3 worked sample (simulation)"
+          },
+          "flat_entry_usd": "0.02",
+          "order_type": "straight_stake"
+        },
+        "entry_usd": "0.75",
+        "kind": "fixed",
+        "reserve_usd": "0",
+        "rounding_trace": [],
+        "total_usd": "0.75"
+      },
+      "fill": {
+        "increment": "0.01",
+        "levels": [],
+        "maximum": "1000",
+        "minimum": "0.01",
+        "order_type": "straight_stake",
+        "quantity": null,
+        "stake_usd": "24.25"
+      },
+      "fill_evidence": {
+        "source": "Sprint 3 worked sample (simulation)"
+      },
+      "fill_revision": "saint-marys-fixture-fill-1",
+      "indicative_before_fee": {
+        "basis": "posted_price_decisive_states",
+        "conditioning": null,
+        "display": "+6.00%",
+        "ranking_eligible": false,
+        "raw": "0.06"
+      },
+      "member_result_id": "7325fb9bec8144fbaed7865c34670e0a",
+      "native_source": {
+        "binding_id": "379788089074c2fd065f07c0c5c2ac6d40a7ddc7daca481fc3118c0cb6759ddd",
+        "binding_version": "sgo-current-unverified-1",
+        "native_event_id": "synthetic-saint-marys",
+        "native_line": "-18.5",
+        "native_market_id": "d939937201a1d4fe1f6624173041c8b904ad39e58e23fce792ddb5c965b4de96",
+        "native_outcome_id": "points-home-game-sp-home",
+        "native_side": "bookmaker_outcome",
+        "provider": "sportsgameodds",
+        "quote_side": "buy"
+      },
+      "offer": {
+        "payout": "1",
+        "payout_units": "USD",
+        "quantity_units": "unknown",
+        "role": "comparison",
+        "units": "american_odds",
+        "value": "+112"
+      },
+      "offer_id": "9785be7b42cf5dc7a6209ad83b3a2f1331b87ea3b6319604e1da793fa6b9140b",
+      "offer_snapshot_id": "c2cc2210914941b790b761720f96abf8",
+      "price_revision": "90e9350cd5ec481a60f65291aa923f86fb31dd219960e9f7e0dffe1a7b21be58",
+      "publication_id": "68d34d59cf3f47cdbb5ad307e55fc6f5",
+      "quote_freshness": null,
+      "raw": {
+        "after_fee_decimal": "2.0564",
+        "expected_net_profit_usd": "0.705",
+        "net_ev": "0.0282",
+        "opportunity_score": "705000/2641"
+      },
+      "reasons": {},
+      "reference": {
+        "available": true,
+        "bet_id": "d4e16436969d8533af7f08210945a038244fd5f71c0e2d14572fed9d5ff8991a",
+        "book": "fanduel",
+        "conditioning": null,
+        "event_id": "synthetic-saint-marys",
+        "exclusions": {},
+        "fair_decimal_odds": "2",
+        "frame_id": "727697d95b677edf7623281954d8419bfaebbfe8e4e85bc840592ae0c34860a6",
+        "frame_received_at": "2026-11-16T19:06:03+00:00",
+        "implied": {
+          "away": "11/21",
+          "home": "11/21"
+        },
+        "market": {
+          "away": "sportsgameodds:NCAAB:synthetic-saint-marys:away",
+          "family": "spread",
+          "home": "sportsgameodds:NCAAB:synthetic-saint-marys:home",
+          "kickoff": "2026-11-17T03:00:00+00:00",
+          "league": "NCAAB",
+          "line": "-18.5",
+          "outcomes": [
+            "home",
+            "away"
+          ],
+          "period": "full_game"
+        },
+        "policy_version": "pregame-sportsbook-priority-1",
+        "prices": [
+          {
+            "line": "-18.5",
+            "odd_id": "points-home-game-sp-home",
+            "opposing_odd_id": "points-away-game-sp-away",
+            "price_american": "-110",
+            "received_at": "2026-11-16T19:06:03+00:00",
+            "revision": "61dc1d1c17f8a7d2d22d771afc2041e47151816d4f0e33dc69703eb7f93537fd",
+            "side": "home",
+            "source_at": "2026-11-16T19:06:03+00:00"
+          },
+          {
+            "line": "18.5",
+            "odd_id": "points-away-game-sp-away",
+            "opposing_odd_id": "points-home-game-sp-home",
+            "price_american": "-110",
+            "received_at": "2026-11-16T19:06:03+00:00",
+            "revision": "2c40cf95756fdce49bcad90b2160e248faeef941a8f9632cfc0184103bce9e20",
+            "side": "away",
+            "source_at": "2026-11-16T19:06:03+00:00"
+          }
+        ],
+        "probabilities": {
+          "away": "0.5",
+          "home": "0.5"
+        },
+        "probability": "0.5",
+        "rules": {
+          "available": true,
+          "cancellation": "full_outlay",
+          "equality": "not_possible",
+          "equality_cashflow": "full_outlay",
+          "evidence": {
+            "version": "authored-rules-1"
+          },
+          "extra_innings": "not_applicable",
+          "forfeit": "void",
+          "outcomes": [
+            "home",
+            "away"
+          ],
+          "overtime": "included",
+          "refund_charges": "none",
+          "scope": "completed_full_game",
+          "shootout": "not_applicable",
+          "shootout_count": null,
+          "shortened_game": "void",
+          "void": "full_outlay"
+        },
+        "selected_outcome": "home",
+        "snapshot_id": "02036442adb23c455e25111bb3e4a61b7c1fdbce8aa93e3ad82906d905736634",
+        "source": "sportsgameodds"
+      },
+      "reference_snapshot_id": "02036442adb23c455e25111bb3e4a61b7c1fdbce8aa93e3ad82906d905736634",
+      "selected_usd": "25",
+      "settlement": {
+        "available": true,
+        "comparable": true,
+        "probability_missing": null,
+        "reason": null,
+        "scope": "event_goes_ahead",
+        "sportsbook_rules": {
+          "available": true,
+          "cancellation": "full_outlay",
+          "equality": "not_possible",
+          "equality_cashflow": "full_outlay",
+          "evidence": {
+            "version": "authored-rules-1"
+          },
+          "extra_innings": "not_applicable",
+          "forfeit": "void",
+          "outcomes": [
+            "home",
+            "away"
+          ],
+          "overtime": "included",
+          "refund_charges": "none",
+          "scope": "completed_full_game",
+          "shootout": "not_applicable",
+          "shootout_count": null,
+          "shortened_game": "void",
+          "void": "full_outlay"
+        },
+        "state_probabilities": {
+          "loss": "0.5",
+          "win": "0.5"
+        },
+        "venue_rules": {
+          "available": true,
+          "cancellation": "full_outlay",
+          "equality": "not_possible",
+          "equality_cashflow": "full_outlay",
+          "evidence": {
+            "version": "authored-rules-1"
+          },
+          "extra_innings": "not_applicable",
+          "forfeit": "void",
+          "outcomes": [
+            "home",
+            "away"
+          ],
+          "overtime": "included",
+          "refund_charges": "none",
+          "scope": "completed_full_game",
+          "shootout": "not_applicable",
+          "shootout_count": null,
+          "shortened_game": "void",
+          "void": "full_outlay"
+        },
+        "version": "pregame-sportsbook-priority-1"
+      },
+      "settlement_revision": "f1c2f9f20ed8c885cf3fc671d190a641c856b1464b5453c1c1061999f65cd678",
+      "sizing_policy": "under-budget-max-1pct-capped-at-1usd-v1",
+      "sizing_tolerance_usd": "0.25",
+      "source_clocks": {
+        "projected_at": null,
+        "received_at": "2026-11-16T19:06:03+00:00",
+        "source_at": "2026-11-16T19:06:03+00:00",
+        "source_time_kind": "provider_book"
+      },
+      "states": {
+        "loss": {
+          "display_fee_usd": "0.75",
+          "display_receipt_usd": "0.00",
+          "entry_fee_refunded_usd": "0",
+          "gross_receipt_usd": "0",
+          "net_profit_usd": "-25",
+          "net_receipt_usd": "0",
+          "net_return": "-1",
+          "probability": "0.5",
+          "reserve_returned_usd": "0",
+          "settlement_fee_usd": "0",
+          "settlement_rebate_usd": "0",
+          "total_fee_usd": "0.75"
+        },
+        "win": {
+          "display_fee_usd": "0.75",
+          "display_receipt_usd": "51.41",
+          "entry_fee_refunded_usd": "0",
+          "gross_receipt_usd": "51.41",
+          "net_profit_usd": "26.41",
+          "net_receipt_usd": "51.41",
+          "net_return": "1.0564",
+          "probability": "0.5",
+          "reserve_returned_usd": "0",
+          "settlement_fee_usd": "0",
+          "settlement_rebate_usd": "0",
+          "total_fee_usd": "0.75"
+        }
+      },
+      "status": "qualified",
+      "venue": "prophetx",
+      "venue_native_ids": {
+        "event_id": "synthetic-saint-marys",
+        "market_id": "d939937201a1d4fe1f6624173041c8b904ad39e58e23fce792ddb5c965b4de96",
+        "outcome_id": "points-home-game-sp-home"
+      },
+      "venue_type": "marketplace",
+      "version": "predict-pregame-valuation-1"
+    },
+    "board_id": "ab1ac7ebb34342c4c572ae885f124add79fbef2a3a2392fd4c2a12ce70e959d6",
+    "unit_usd": "25"
+  },
+  "reason": "conditional_fee_review_expired_or_not_effective",
+  "board_id": "ab1ac7ebb34342c4c572ae885f124add79fbef2a3a2392fd4c2a12ce70e959d6",
+  "comparison": [
+    {
+      "actual_outlay_usd": "25",
+      "bet_id": "d4e16436969d8533af7f08210945a038244fd5f71c0e2d14572fed9d5ff8991a",
+      "canonical_game_id": "snapshot-game:0209779e72930cb2348cc69ffe663f91d41b2d4cbd764ba6ce68ae640ba294ab",
+      "canonical_market": {
+        "away": "sportsgameodds:NCAAB:synthetic-saint-marys:away",
+        "family": "spread",
+        "home": "sportsgameodds:NCAAB:synthetic-saint-marys:home",
+        "kickoff": "2026-11-17T03:00:00+00:00",
+        "league": "NCAAB",
+        "line": "-18.5",
+        "outcomes": [
+          "home",
+          "away"
+        ],
+        "period": "full_game"
+      },
+      "canonical_selection": {
+        "participant": "sportsgameodds:NCAAB:synthetic-saint-marys:home",
+        "predicate": "cover",
+        "result_interpretation": "normal_win",
+        "signed_line": "-18.5"
+      },
+      "captured_at": "2026-11-16T19:06:03+00:00",
+      "display": {
+        "actual_outlay_usd": "25.00",
+        "after_fee_odds": "+106",
+        "expected_net_profit_usd": "0.71",
+        "fee": "$0.75",
+        "net_ev": "+2.82%",
+        "opportunity_score": "267",
+        "selected_usd": "25.00",
+        "stake_usd": "24.25"
+      },
+      "economic_revision": "2997d25654f1c047ccea30d94c7b670916c9d712a52f0106544125a60fa899cc",
+      "evidence_class": "fixture",
+      "fee_evidence": {
+        "class": "fixture",
+        "revision": "saint-marys-fixture-fee-1",
+        "source": "Sprint 3 worked sample (simulation)"
+      },
+      "fee_revision": "saint-marys-fixture-fee-1",
+      "fees": {
+        "basis": "actual_fill",
+        "cash_terms": {
+          "entry_rate": "0.03",
+          "evidence": {
+            "class": "fixture",
+            "revision": "saint-marys-fixture-fee-1",
+            "source": "Sprint 3 worked sample (simulation)"
+          },
+          "flat_entry_usd": "0.02",
+          "order_type": "straight_stake"
+        },
+        "entry_usd": "0.75",
+        "kind": "fixed",
+        "reserve_usd": "0",
+        "rounding_trace": [],
+        "total_usd": "0.75"
+      },
+      "fill": {
+        "increment": "0.01",
+        "levels": [],
+        "maximum": "1000",
+        "minimum": "0.01",
+        "order_type": "straight_stake",
+        "quantity": null,
+        "stake_usd": "24.25"
+      },
+      "fill_evidence": {
+        "source": "Sprint 3 worked sample (simulation)"
+      },
+      "fill_revision": "saint-marys-fixture-fill-1",
+      "indicative_before_fee": {
+        "basis": "posted_price_decisive_states",
+        "conditioning": null,
+        "display": "+6.00%",
+        "ranking_eligible": false,
+        "raw": "0.06"
+      },
+      "member_result_id": "7325fb9bec8144fbaed7865c34670e0a",
+      "native_source": {
+        "binding_id": "379788089074c2fd065f07c0c5c2ac6d40a7ddc7daca481fc3118c0cb6759ddd",
+        "binding_version": "sgo-current-unverified-1",
+        "native_event_id": "synthetic-saint-marys",
+        "native_line": "-18.5",
+        "native_market_id": "d939937201a1d4fe1f6624173041c8b904ad39e58e23fce792ddb5c965b4de96",
+        "native_outcome_id": "points-home-game-sp-home",
+        "native_side": "bookmaker_outcome",
+        "provider": "sportsgameodds",
+        "quote_side": "buy"
+      },
+      "offer": {
+        "payout": "1",
+        "payout_units": "USD",
+        "quantity_units": "unknown",
+        "role": "comparison",
+        "units": "american_odds",
+        "value": "+112"
+      },
+      "offer_id": "9785be7b42cf5dc7a6209ad83b3a2f1331b87ea3b6319604e1da793fa6b9140b",
+      "offer_snapshot_id": "c2cc2210914941b790b761720f96abf8",
+      "price_revision": "90e9350cd5ec481a60f65291aa923f86fb31dd219960e9f7e0dffe1a7b21be58",
+      "publication_id": "68d34d59cf3f47cdbb5ad307e55fc6f5",
+      "quote_freshness": null,
+      "raw": {
+        "after_fee_decimal": "2.0564",
+        "expected_net_profit_usd": "0.705",
+        "net_ev": "0.0282",
+        "opportunity_score": "705000/2641"
+      },
+      "reasons": {},
+      "reference": {
+        "available": true,
+        "bet_id": "d4e16436969d8533af7f08210945a038244fd5f71c0e2d14572fed9d5ff8991a",
+        "book": "fanduel",
+        "conditioning": null,
+        "event_id": "synthetic-saint-marys",
+        "exclusions": {},
+        "fair_decimal_odds": "2",
+        "frame_id": "727697d95b677edf7623281954d8419bfaebbfe8e4e85bc840592ae0c34860a6",
+        "frame_received_at": "2026-11-16T19:06:03+00:00",
+        "implied": {
+          "away": "11/21",
+          "home": "11/21"
+        },
+        "market": {
+          "away": "sportsgameodds:NCAAB:synthetic-saint-marys:away",
+          "family": "spread",
+          "home": "sportsgameodds:NCAAB:synthetic-saint-marys:home",
+          "kickoff": "2026-11-17T03:00:00+00:00",
+          "league": "NCAAB",
+          "line": "-18.5",
+          "outcomes": [
+            "home",
+            "away"
+          ],
+          "period": "full_game"
+        },
+        "policy_version": "pregame-sportsbook-priority-1",
+        "prices": [
+          {
+            "line": "-18.5",
+            "odd_id": "points-home-game-sp-home",
+            "opposing_odd_id": "points-away-game-sp-away",
+            "price_american": "-110",
+            "received_at": "2026-11-16T19:06:03+00:00",
+            "revision": "61dc1d1c17f8a7d2d22d771afc2041e47151816d4f0e33dc69703eb7f93537fd",
+            "side": "home",
+            "source_at": "2026-11-16T19:06:03+00:00"
+          },
+          {
+            "line": "18.5",
+            "odd_id": "points-away-game-sp-away",
+            "opposing_odd_id": "points-home-game-sp-home",
+            "price_american": "-110",
+            "received_at": "2026-11-16T19:06:03+00:00",
+            "revision": "2c40cf95756fdce49bcad90b2160e248faeef941a8f9632cfc0184103bce9e20",
+            "side": "away",
+            "source_at": "2026-11-16T19:06:03+00:00"
+          }
+        ],
+        "probabilities": {
+          "away": "0.5",
+          "home": "0.5"
+        },
+        "probability": "0.5",
+        "rules": {
+          "available": true,
+          "cancellation": "full_outlay",
+          "equality": "not_possible",
+          "equality_cashflow": "full_outlay",
+          "evidence": {
+            "version": "authored-rules-1"
+          },
+          "extra_innings": "not_applicable",
+          "forfeit": "void",
+          "outcomes": [
+            "home",
+            "away"
+          ],
+          "overtime": "included",
+          "refund_charges": "none",
+          "scope": "completed_full_game",
+          "shootout": "not_applicable",
+          "shootout_count": null,
+          "shortened_game": "void",
+          "void": "full_outlay"
+        },
+        "selected_outcome": "home",
+        "snapshot_id": "02036442adb23c455e25111bb3e4a61b7c1fdbce8aa93e3ad82906d905736634",
+        "source": "sportsgameodds"
+      },
+      "reference_snapshot_id": "02036442adb23c455e25111bb3e4a61b7c1fdbce8aa93e3ad82906d905736634",
+      "selected_usd": "25",
+      "settlement": {
+        "available": true,
+        "comparable": true,
+        "probability_missing": null,
+        "reason": null,
+        "scope": "event_goes_ahead",
+        "sportsbook_rules": {
+          "available": true,
+          "cancellation": "full_outlay",
+          "equality": "not_possible",
+          "equality_cashflow": "full_outlay",
+          "evidence": {
+            "version": "authored-rules-1"
+          },
+          "extra_innings": "not_applicable",
+          "forfeit": "void",
+          "outcomes": [
+            "home",
+            "away"
+          ],
+          "overtime": "included",
+          "refund_charges": "none",
+          "scope": "completed_full_game",
+          "shootout": "not_applicable",
+          "shootout_count": null,
+          "shortened_game": "void",
+          "void": "full_outlay"
+        },
+        "state_probabilities": {
+          "loss": "0.5",
+          "win": "0.5"
+        },
+        "venue_rules": {
+          "available": true,
+          "cancellation": "full_outlay",
+          "equality": "not_possible",
+          "equality_cashflow": "full_outlay",
+          "evidence": {
+            "version": "authored-rules-1"
+          },
+          "extra_innings": "not_applicable",
+          "forfeit": "void",
+          "outcomes": [
+            "home",
+            "away"
+          ],
+          "overtime": "included",
+          "refund_charges": "none",
+          "scope": "completed_full_game",
+          "shootout": "not_applicable",
+          "shootout_count": null,
+          "shortened_game": "void",
+          "void": "full_outlay"
+        },
+        "version": "pregame-sportsbook-priority-1"
+      },
+      "settlement_revision": "f1c2f9f20ed8c885cf3fc671d190a641c856b1464b5453c1c1061999f65cd678",
+      "sizing_policy": "under-budget-max-1pct-capped-at-1usd-v1",
+      "sizing_tolerance_usd": "0.25",
+      "source_clocks": {
+        "projected_at": null,
+        "received_at": "2026-11-16T19:06:03+00:00",
+        "source_at": "2026-11-16T19:06:03+00:00",
+        "source_time_kind": "provider_book"
+      },
+      "states": {
+        "loss": {
+          "display_fee_usd": "0.75",
+          "display_receipt_usd": "0.00",
+          "entry_fee_refunded_usd": "0",
+          "gross_receipt_usd": "0",
+          "net_profit_usd": "-25",
+          "net_receipt_usd": "0",
+          "net_return": "-1",
+          "probability": "0.5",
+          "reserve_returned_usd": "0",
+          "settlement_fee_usd": "0",
+          "settlement_rebate_usd": "0",
+          "total_fee_usd": "0.75"
+        },
+        "win": {
+          "display_fee_usd": "0.75",
+          "display_receipt_usd": "51.41",
+          "entry_fee_refunded_usd": "0",
+          "gross_receipt_usd": "51.41",
+          "net_profit_usd": "26.41",
+          "net_receipt_usd": "51.41",
+          "net_return": "1.0564",
+          "probability": "0.5",
+          "reserve_returned_usd": "0",
+          "settlement_fee_usd": "0",
+          "settlement_rebate_usd": "0",
+          "total_fee_usd": "0.75"
+        }
+      },
+      "status": "qualified",
+      "venue": "prophetx",
+      "venue_native_ids": {
+        "event_id": "synthetic-saint-marys",
+        "market_id": "d939937201a1d4fe1f6624173041c8b904ad39e58e23fce792ddb5c965b4de96",
+        "outcome_id": "points-home-game-sp-home"
+      },
+      "venue_type": "marketplace",
+      "version": "predict-pregame-valuation-1"
+    },
+    {
+      "actual_outlay_usd": "25",
+      "bet_id": "d4e16436969d8533af7f08210945a038244fd5f71c0e2d14572fed9d5ff8991a",
+      "canonical_game_id": "snapshot-game:0209779e72930cb2348cc69ffe663f91d41b2d4cbd764ba6ce68ae640ba294ab",
+      "canonical_market": {
+        "away": "sportsgameodds:NCAAB:synthetic-saint-marys:away",
+        "family": "spread",
+        "home": "sportsgameodds:NCAAB:synthetic-saint-marys:home",
+        "kickoff": "2026-11-17T03:00:00+00:00",
+        "league": "NCAAB",
+        "line": "-18.5",
+        "outcomes": [
+          "home",
+          "away"
+        ],
+        "period": "full_game"
+      },
+      "canonical_selection": {
+        "participant": "sportsgameodds:NCAAB:synthetic-saint-marys:home",
+        "predicate": "cover",
+        "result_interpretation": "normal_win",
+        "signed_line": "-18.5"
+      },
+      "captured_at": "2026-11-16T19:06:03+00:00",
+      "display": {
+        "actual_outlay_usd": "25.00",
+        "after_fee_odds": "-117",
+        "expected_net_profit_usd": "-1.85",
+        "fee": "$0.75",
+        "net_ev": "-7.41%",
+        "opportunity_score": "0",
+        "selected_usd": "25.00",
+        "stake_usd": "24.25"
+      },
+      "economic_revision": "3c81fb6373935d679ba6389500245819eaf27f771dab4ab0d1b8a041ee39cddb",
+      "evidence_class": "fixture",
+      "fee_evidence": {
+        "class": "fixture",
+        "revision": "saint-marys-fixture-fee-1",
+        "source": "Sprint 3 worked sample (simulation)"
+      },
+      "fee_revision": "saint-marys-fixture-fee-1",
+      "fees": {
+        "basis": "actual_fill",
+        "cash_terms": {
+          "entry_rate": "0.03",
+          "evidence": {
+            "class": "fixture",
+            "revision": "saint-marys-fixture-fee-1",
+            "source": "Sprint 3 worked sample (simulation)"
+          },
+          "flat_entry_usd": "0.02",
+          "order_type": "straight_stake"
+        },
+        "entry_usd": "0.75",
+        "kind": "fixed",
+        "reserve_usd": "0",
+        "rounding_trace": [],
+        "total_usd": "0.75"
+      },
+      "fill": {
+        "increment": "0.01",
+        "levels": [],
+        "maximum": "1000",
+        "minimum": "0.01",
+        "order_type": "straight_stake",
+        "quantity": null,
+        "stake_usd": "24.25"
+      },
+      "fill_evidence": {
+        "source": "Sprint 3 worked sample (simulation)"
+      },
+      "fill_revision": "saint-marys-fixture-fill-1",
+      "indicative_before_fee": {
+        "basis": "posted_price_decisive_states",
+        "conditioning": null,
+        "display": "-4.55%",
+        "ranking_eligible": false,
+        "raw": "-1/22"
+      },
+      "member_result_id": "7325fb9bec8144fbaed7865c34670e0a",
+      "native_source": {
+        "binding_id": "f5aec65b79117fbbd8cb799b7d32ff2651032f2d692cc646be3704aa7eaca73f",
+        "binding_version": "sgo-current-unverified-1",
+        "native_event_id": "synthetic-saint-marys",
+        "native_line": "-18.5",
+        "native_market_id": "d939937201a1d4fe1f6624173041c8b904ad39e58e23fce792ddb5c965b4de96",
+        "native_outcome_id": "points-home-game-sp-home",
+        "native_side": "bookmaker_outcome",
+        "provider": "sportsgameodds",
+        "quote_side": "buy"
+      },
+      "offer": {
+        "payout": "1",
+        "payout_units": "USD",
+        "quantity_units": "unknown",
+        "role": "comparison",
+        "units": "american_odds",
+        "value": "-110"
+      },
+      "offer_id": "a577731532772d42825a1ee93f1500cc6d7437424d43df3bbfe70544f5fef2d5",
+      "offer_snapshot_id": "c2cc2210914941b790b761720f96abf8",
+      "price_revision": "aa8168c07ef4b10849b6e2d6fe416e1c7eb06f435134d9239178a7273da5f0d9",
+      "publication_id": "68d34d59cf3f47cdbb5ad307e55fc6f5",
+      "quote_freshness": null,
+      "raw": {
+        "after_fee_decimal": "2037/1100",
+        "expected_net_profit_usd": "-163/88",
+        "net_ev": "-163/2200",
+        "opportunity_score": "0"
+      },
+      "reasons": {},
+      "reference": {
+        "available": true,
+        "bet_id": "d4e16436969d8533af7f08210945a038244fd5f71c0e2d14572fed9d5ff8991a",
+        "book": "fanduel",
+        "conditioning": null,
+        "event_id": "synthetic-saint-marys",
+        "exclusions": {},
+        "fair_decimal_odds": "2",
+        "frame_id": "727697d95b677edf7623281954d8419bfaebbfe8e4e85bc840592ae0c34860a6",
+        "frame_received_at": "2026-11-16T19:06:03+00:00",
+        "implied": {
+          "away": "11/21",
+          "home": "11/21"
+        },
+        "market": {
+          "away": "sportsgameodds:NCAAB:synthetic-saint-marys:away",
+          "family": "spread",
+          "home": "sportsgameodds:NCAAB:synthetic-saint-marys:home",
+          "kickoff": "2026-11-17T03:00:00+00:00",
+          "league": "NCAAB",
+          "line": "-18.5",
+          "outcomes": [
+            "home",
+            "away"
+          ],
+          "period": "full_game"
+        },
+        "policy_version": "pregame-sportsbook-priority-1",
+        "prices": [
+          {
+            "line": "-18.5",
+            "odd_id": "points-home-game-sp-home",
+            "opposing_odd_id": "points-away-game-sp-away",
+            "price_american": "-110",
+            "received_at": "2026-11-16T19:06:03+00:00",
+            "revision": "61dc1d1c17f8a7d2d22d771afc2041e47151816d4f0e33dc69703eb7f93537fd",
+            "side": "home",
+            "source_at": "2026-11-16T19:06:03+00:00"
+          },
+          {
+            "line": "18.5",
+            "odd_id": "points-away-game-sp-away",
+            "opposing_odd_id": "points-home-game-sp-home",
+            "price_american": "-110",
+            "received_at": "2026-11-16T19:06:03+00:00",
+            "revision": "2c40cf95756fdce49bcad90b2160e248faeef941a8f9632cfc0184103bce9e20",
+            "side": "away",
+            "source_at": "2026-11-16T19:06:03+00:00"
+          }
+        ],
+        "probabilities": {
+          "away": "0.5",
+          "home": "0.5"
+        },
+        "probability": "0.5",
+        "rules": {
+          "available": true,
+          "cancellation": "full_outlay",
+          "equality": "not_possible",
+          "equality_cashflow": "full_outlay",
+          "evidence": {
+            "version": "authored-rules-1"
+          },
+          "extra_innings": "not_applicable",
+          "forfeit": "void",
+          "outcomes": [
+            "home",
+            "away"
+          ],
+          "overtime": "included",
+          "refund_charges": "none",
+          "scope": "completed_full_game",
+          "shootout": "not_applicable",
+          "shootout_count": null,
+          "shortened_game": "void",
+          "void": "full_outlay"
+        },
+        "selected_outcome": "home",
+        "snapshot_id": "02036442adb23c455e25111bb3e4a61b7c1fdbce8aa93e3ad82906d905736634",
+        "source": "sportsgameodds"
+      },
+      "reference_snapshot_id": "02036442adb23c455e25111bb3e4a61b7c1fdbce8aa93e3ad82906d905736634",
+      "selected_usd": "25",
+      "settlement": {
+        "available": true,
+        "comparable": true,
+        "probability_missing": null,
+        "reason": null,
+        "scope": "event_goes_ahead",
+        "sportsbook_rules": {
+          "available": true,
+          "cancellation": "full_outlay",
+          "equality": "not_possible",
+          "equality_cashflow": "full_outlay",
+          "evidence": {
+            "version": "authored-rules-1"
+          },
+          "extra_innings": "not_applicable",
+          "forfeit": "void",
+          "outcomes": [
+            "home",
+            "away"
+          ],
+          "overtime": "included",
+          "refund_charges": "none",
+          "scope": "completed_full_game",
+          "shootout": "not_applicable",
+          "shootout_count": null,
+          "shortened_game": "void",
+          "void": "full_outlay"
+        },
+        "state_probabilities": {
+          "loss": "0.5",
+          "win": "0.5"
+        },
+        "venue_rules": {
+          "available": true,
+          "cancellation": "full_outlay",
+          "equality": "not_possible",
+          "equality_cashflow": "full_outlay",
+          "evidence": {
+            "version": "authored-rules-1"
+          },
+          "extra_innings": "not_applicable",
+          "forfeit": "void",
+          "outcomes": [
+            "home",
+            "away"
+          ],
+          "overtime": "included",
+          "refund_charges": "none",
+          "scope": "completed_full_game",
+          "shootout": "not_applicable",
+          "shootout_count": null,
+          "shortened_game": "void",
+          "void": "full_outlay"
+        },
+        "version": "pregame-sportsbook-priority-1"
+      },
+      "settlement_revision": "f1c2f9f20ed8c885cf3fc671d190a641c856b1464b5453c1c1061999f65cd678",
+      "sizing_policy": "under-budget-max-1pct-capped-at-1usd-v1",
+      "sizing_tolerance_usd": "0.25",
+      "source_clocks": {
+        "projected_at": null,
+        "received_at": "2026-11-16T19:06:03+00:00",
+        "source_at": "2026-11-16T19:06:03+00:00",
+        "source_time_kind": "provider_book"
+      },
+      "states": {
+        "loss": {
+          "display_fee_usd": "0.75",
+          "display_receipt_usd": "0.00",
+          "entry_fee_refunded_usd": "0",
+          "gross_receipt_usd": "0",
+          "net_profit_usd": "-25",
+          "net_receipt_usd": "0",
+          "net_return": "-1",
+          "probability": "0.5",
+          "reserve_returned_usd": "0",
+          "settlement_fee_usd": "0",
+          "settlement_rebate_usd": "0",
+          "total_fee_usd": "0.75"
+        },
+        "win": {
+          "display_fee_usd": "0.75",
+          "display_receipt_usd": "46.30",
+          "entry_fee_refunded_usd": "0",
+          "gross_receipt_usd": "2037/44",
+          "net_profit_usd": "937/44",
+          "net_receipt_usd": "2037/44",
+          "net_return": "937/1100",
+          "probability": "0.5",
+          "reserve_returned_usd": "0",
+          "settlement_fee_usd": "0",
+          "settlement_rebate_usd": "0",
+          "total_fee_usd": "0.75"
+        }
+      },
+      "status": "qualified",
+      "venue": "novig",
+      "venue_native_ids": {
+        "event_id": "synthetic-saint-marys",
+        "market_id": "d939937201a1d4fe1f6624173041c8b904ad39e58e23fce792ddb5c965b4de96",
+        "outcome_id": "points-home-game-sp-home"
+      },
+      "venue_type": "marketplace",
+      "version": "predict-pregame-valuation-1"
+    }
+  ]
+}

@@ -6,6 +6,7 @@ import {displayRows, expirePage, holdDeskPage, nextDeskDeadline} from './desk-st
 import {evidenceReason} from './desk-reasons.js';
 import {DiagnosticSession} from './session-history.js';
 import {clock as savedClock, readPreference, savePreference, timezone} from './desk-preferences.js';
+import {createUnitPicker, sameBoardUnit, ticketboardEmpty, ticketCard} from './desk-ticketboard.js';
 
 const {el, fmt, name, odd, link, button} = window.PredictUI;
 const $ = id => document.getElementById(id);
@@ -19,25 +20,37 @@ const linkedTitle = gameKey ? route.get('matchup')?.slice(0, 160) : null;
 const linkedLine = requestedLine ? route.get('line_label')?.slice(0, 120) : null;
 const browse = ['/browse-odds', '/game'].includes(location.pathname) || replay && ['odds', 'game'].includes(route.get('view'));
 const opportunityView = !browse && !replay;
+const afterFeeView = opportunityView && !arb;
 const comparable = !replay && !arb;
 let phase = !replay && (route.get('phase') === 'live' ? 'live' : 'pregame');
 let liveEnabled = false;
+const unitBoard = () => afterFeeView && phase === 'pregame' && route.get('board') !== '0';
 const autoUpdateKey = 'pregame-auto-update';
 const autoUpdateToggle = $('auto-update');
 let autoUpdate = readPreference(autoUpdateKey, 'on') !== 'off';
 autoUpdateToggle.checked = autoUpdate;
-const supportsAutoUpdate = (page = state.page) => !replay && phase === 'pregame' && page?.features?.auto_update === true;
+const supportsAutoUpdate = (page = state.page) => !replay && !unitBoard() && phase === 'pregame' && page?.features?.auto_update === true;
 const receivingUpdates = () => !supportsAutoUpdate() || autoUpdate;
 const phaseURL = (path, value = phase) => path + (value === 'live' ? '?phase=live' : '');
 const back = window.PredictUI.localURL(route.get('back'));
 let safeBack = back && ['/','/ev','/arbs','/browse-odds','/game','/replay'].includes(back.pathname)
   ? back.pathname + back.search : null;
 const browseCacheKey = 'predict-desk-return';
-const dataset = ['frozen','preview','retained'].includes(route.get('dataset')) ? route.get('dataset') : 'frozen';
+// Referrer-Policy can hide even same-origin URLs from the Navigation API.
+// A same-tab launch records its origin once; copied links have no launch record.
+if (browse && safeBack) {
+  const cached = readBrowseReturn();
+  if (cached?.pending === location.href && cached.url === new URL(safeBack, location.origin).href) {
+    window.history.replaceState({...window.history.state, predictDeskFrom:{url:cached.url, key:cached.navigation.entryKey}}, '');
+    try { sessionStorage.setItem(browseCacheKey, JSON.stringify({...cached, pending:null})); } catch {}
+  }
+}
+const dataset = ['frozen','preview','retained','practice'].includes(route.get('dataset')) ? route.get('dataset') : 'frozen';
+const practice = replay && dataset === 'practice';
 const retainedResult = replay && dataset === 'retained' ? route.get('result_id') : null;
 const endpoint = replay ? '/api/odds-replay' : '/api/comparison-current';
 const replayURL = (view, chosen = dataset === 'retained' ? 'frozen' : dataset) => '/replay?' + new URLSearchParams({view, dataset:chosen});
-const replayMode = () => replay ? 'Saved odds · prices at capture' : null;
+const replayMode = () => practice ? 'Practice example · simulated odds' : replay ? 'Saved odds · prices at capture' : null;
 const pageSize = 25;
 const gamesPerPage = 12;
 const pageLimit = gameKey ? 100 : replay ? (browse ? 5 : pageSize) : arb ? pageSize : gamesPerPage;
@@ -47,6 +60,7 @@ const defaultZone = timezone();
 const selectedZone = () => filters.elements.timezone.value || defaultZone;
 const clock = at => savedClock(at, selectedZone());
 const state = {offset: 0, page: null, request: null};
+const unitPicker = createUnitPicker({readPreference, savePreference, changed:changeBoardUnit});
 const history = new DiagnosticSession();
 function collectionIssue(runtime) {
   if (runtime?.stopped) return 'Price updates are stopped';
@@ -88,8 +102,8 @@ function restoreFocus(target) {
 $('title').textContent = gameKey ? linkedTitle || 'Game odds' : browse ? 'Browse odds' : replay ? (arb ? 'Arbitrage' : 'Expected value') : 'Opportunities';
 document.body.classList.toggle('game-odds-view', !!gameKey);
 document.title = `Predict · ${$('title').textContent}`;
-$('basis-field').hidden = arb;
-$('group-field').hidden = arb || !replay;
+$('basis-field').hidden = arb || afterFeeView || practice;
+$('group-field').hidden = arb || !replay || practice;
 $('opportunity-tabs').hidden = !opportunityView;
 function updatePhaseView() {
   if (replay) return;
@@ -104,6 +118,10 @@ function updatePhaseView() {
     $('opportunity-arb').href = phaseURL('/arbs');
   }
   $('period-field').hidden = phase === 'pregame';
+  const ticketboard = unitBoard();
+  document.body.classList.toggle('ticketboard', ticketboard);
+  $('board-unit-field').hidden = !ticketboard;
+  $('opportunity-tabs').hidden = !opportunityView || ticketboard;
   if (browse) {
     if (safeBack && $('desk-path').firstElementChild) $('desk-path').firstElementChild.href = safeBack;
     $('browse-link').href = gameKey ? phaseURL('/browse-odds') : phaseURL('/');
@@ -113,7 +131,7 @@ updatePhaseView();
 $('game-state-field').hidden = !!phase;
 if (replay) $('period-field').hidden = false;
 $(arb ? 'opportunity-arb' : 'opportunity-ev').setAttribute('aria-current', 'page');
-$('positive-field').hidden = browse;
+$('positive-field').hidden = browse || unitBoard();
 $('return-filters').hidden = browse;
 $('sort-field').hidden = !replay;
 if (replay) $('return-title').textContent = 'Sorting and return thresholds';
@@ -131,13 +149,16 @@ if (browse) {
     $('browse-link').textContent = 'Current games';
   }
   $('desk-path').hidden = !safeBack && !replay && !gameKey;
-  const previousView = link('Back', safeBack || (replay ? replayURL('ev') : '/'));
+  const previousView = link('Back', safeBack || (replay ? replayURL(gameKey ? 'odds' : 'ev') : phaseURL(gameKey ? '/browse-odds' : '/')));
   previousView.addEventListener('click', event => {
     if (!safeBack || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     const previousURL = new URL(safeBack, location.origin).href;
     const entry = window.navigation?.currentEntry;
     const previousEntry = entry && window.navigation.entries()[entry.index - 1];
-    if (previousEntry?.url === previousURL || document.referrer === previousURL) {
+    const from = window.history.state?.predictDeskFrom;
+    if (previousEntry?.url === previousURL
+        || previousEntry?.key && from?.url === previousURL && previousEntry.key === from.key
+        || !window.navigation && window.history.length > 1 && (from?.url === previousURL || document.referrer === previousURL)) {
       event.preventDefault();
       window.history.back();
       return;
@@ -153,11 +174,13 @@ if (browse) {
   if (gameKey) $('desk-path').append($('browse-link'));
 }
 $('replay-link').href = replayURL(arb ? 'arbs' : 'ev', 'frozen');
+$('practice-link').hidden = replay || browse;
+$('practice-link').href = replayURL(arb ? 'arbs' : 'ev', 'practice');
 filters.elements.timezone.options[0].textContent = `Default (${defaultZone.replaceAll('_', ' ')})`;
 if (replay) {
   $('desk-mode').hidden = false;
   $('desk-mode').textContent = replayMode();
-  $('replay-link').textContent = 'Return to opportunities';
+  $('replay-link').textContent = arb ? 'Return to Arbitrage' : 'Return to Opportunities';
   $('replay-link').href = arb ? '/arbs' : '/ev';
   $('replay-dataset').value = dataset;
   $('replay-ev').href = replayURL('ev');
@@ -208,6 +231,7 @@ if (browse) {
 if (phase) delete saved.game_state;
 if (phase === 'pregame') delete saved.period;
 if (phase === 'live' && !saved.basis) saved.basis = 'reviewed';
+if (afterFeeView) saved.basis = 'after_fees';
 if (replay) {
   filters.elements.basis.querySelector('option[value="sportsbooks"]').remove();
   if (saved.basis === 'sportsbooks') saved.basis = dataset === 'retained' ? 'reviewed' : 'before';
@@ -288,6 +312,15 @@ function selections() {
     }
   } else if (opportunityView) {
     if (!arb) query.ranked = '1';
+    if (unitBoard()) {
+      query.board = '1';
+      if (unitPicker.value()) query.unit_usd = unitPicker.value();
+      Object.assign(query, {league:'NBA,NFL,MLB,NHL,NCAAB,NCAAF', family:'winner,spread,total',
+        venue:'kalshi,polymarket_us,novig,prophetx'});
+      for (const key of ['search','day','time_from','time_to','minimum','positive']) delete query[key];
+    } else if (!arb && route.get('board') === '0') {
+      query.board = '0';
+    }
     delete query.sort;
   }
   if (phase) {
@@ -295,7 +328,7 @@ function selections() {
     delete query.game_state;
     if (phase === 'pregame') delete query.period;
   }
-  if (comparable) query.lines = $('alternates').checked ? 'all' : 'main';
+  if (comparable) query.lines = !unitBoard() && $('alternates').checked ? 'all' : 'main';
   query.timezone = selectedZone();
   return query;
 }
@@ -303,16 +336,16 @@ function selections() {
 const drawer = createDeskDrawer({
   replay, browse, dataset, retainedResult, gameKey, pageSize, captureMode:replayMode(), clock,
   viewContext: () => ({phase, page:state.page, previousReason:state.previousReason, autoUpdate}),
-  fetchPage, matrixPositions, restoreMatrices, restoreFocus, refreshDesk
+  fetchPage, matrixPositions, restoreMatrices, restoreFocus, refreshDesk, unitSize:unitPicker.value
 });
 
-function browsingLink(label, group, className) {
-  const action = link(label, browseDestination(group), className);
-  const destination = () => browseDestination(group, revealedVenues(action));
-  if (group) action.dataset.gameLauncher = '';
-  action.addEventListener('focus', () => { action.href = destination(); });
+const deskLinks = new WeakMap();
+function browsingLink(label, group, className, pinned = !browse) {
+  const destination = () => browseDestination(group, pinned);
+  const action = link(label, destination(), className);
+  deskLinks.set(action, destination);
+  if (group) action.dataset[pinned && browse ? 'lineLauncher' : 'gameLauncher'] = '';
   action.addEventListener('click', event => {
-    action.href = destination();
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     rememberView(group, action);
   });
@@ -347,19 +380,7 @@ function updateBrowsePhaseLinks() {
   }
 }
 
-function revealedVenues(action) {
-  const scroll = browse && action.closest('.odds-card')?.querySelector('.odds-scroll');
-  if (!scroll || scroll.scrollLeft < 1) return [];
-  const bounds = scroll.getBoundingClientRect();
-  const first = scroll.querySelector('th')?.getBoundingClientRect();
-  return [...scroll.querySelectorAll('[data-venue-column]')].filter(cell => {
-    const column = cell.getBoundingClientRect();
-    const visible = Math.min(bounds.right, column.right) - Math.max(first?.right ?? bounds.left, column.left);
-    return visible >= column.width / 2;
-  }).map(cell => cell.dataset.venueColumn);
-}
-
-function browseDestination(group, revealed = []) {
+function browseDestination(group, pinned) {
   const query = new URLSearchParams();
   const selected = selections();
   if (phase) query.set('phase', phase);
@@ -368,18 +389,17 @@ function browseDestination(group, revealed = []) {
   if (group) {
     query.set('game_key', group.game_key);
     query.set('matchup', group.game_title);
-    if (group.game_source) query.set('game_source', group.game_source);
+    if (pinned && group.game_source) query.set('game_source', group.game_source);
     if (group.source_event) query.set('source_event', group.source_event);
     if (!replay) {
       const sealed = group.offers.find(offer => offer.evidence_result_id && !offer.live_native_desk);
       if (sealed) query.set('game_capture', sealed.evidence_result_id);
     }
     query.set('basis', selected.basis);
-    const restricted = $('venues').querySelector('input:not(:checked)');
-    if (restricted) query.set('venue', selected.venue);
-    else if (revealed.length) query.set('venue', revealed.join(','));
+    // An omitted venue means all are selected. Matrix scroll belongs to return state.
+    if ($('venues').querySelector('input:not(:checked)')) query.set('venue', selected.venue);
     query.set('timezone', filters.elements.timezone.value);
-    if (!browse && (group.game_line_id || group.id)) {
+    if (pinned && (group.game_line_id || group.id)) {
       query.set('line', group.game_line_id || group.id);
       const offer = group.pairs ? group.offers.find(item => item.id === group.pairs[0].legs[0]) : group.offers[0];
       if (offer) {
@@ -429,12 +449,47 @@ function rememberView(group, action) {
   const target = new URL(action.href);
   const returnRoute = window.PredictUI.localURL(target.searchParams.get('back'));
   const navigation = {offset:state.offset, groupId:group?.id, gameKey:group?.game_key,
-    browseId:state.page?.browse_id, openerHref:action.href, sourceEvent:target.searchParams.get('source_event'),
+    browseId:state.page?.browse_id, boardCursor:state.page?.board_cursor, openerHref:action.href, sourceEvent:target.searchParams.get('source_event'),
+    entryKey:window.navigation?.currentEntry?.key,
     openerTop:action.getBoundingClientRect().top, scrollY:window.scrollY,
-    filters:browsePreferences(), tableScrolls:matrixPositions(), disclosures:[...disclosureStates()]};
+    filters:browsePreferences(), oddsFormat:window.PredictUI.oddsFormat(),
+    tableScrolls:matrixPositions(), disclosures:[...disclosureStates()]};
   window.history.scrollRestoration = 'manual';
   window.history.replaceState({...window.history.state, predictDesk:navigation}, '', returnRoute?.href || location.href);
-  try { sessionStorage.setItem(browseCacheKey, JSON.stringify({url:location.href, navigation})); } catch {}
+  const venues = new Set(navigation.filters.venue.split(','));
+  const offers = browse && group ? displayRows(state.page).filter(row => row.game_key === group.game_key && !row.withdrawn)
+    .flatMap(row => row.offers.filter(offer => venues.has(offer.venue)).map(offer => offer.desk_quote_key || offer.id)) : [];
+  try { sessionStorage.setItem(browseCacheKey, JSON.stringify({url:location.href, navigation, offers, pending:target.href})); } catch {}
+}
+
+function rememberGameInspection(offer) {
+  if (!gameKey || !safeBack) return;
+  const cached = readBrowseReturn();
+  const key = offer.desk_quote_key || offer.id;
+  if (cached?.url !== new URL(safeBack, location.origin).href || cached.navigation?.gameKey !== gameKey) return;
+  const inspectedQuote = cached.offers?.includes(key) ? key : null;
+  try { sessionStorage.setItem(browseCacheKey, JSON.stringify({...cached, inspectedQuote})); } catch {}
+}
+
+function gameIdentityNote(group) {
+  return ({schedule_conflict:'Source listing · kickoff records conflict. Game unconfirmed.',
+    source_listing_unverified:'Source listing · occurrence could not be confirmed across sources.'})[group?.game_identity_status];
+}
+
+function occurrenceLabel(game, group) {
+  const league = game?.league || group?.league;
+  const start = game?.start_at || group?.start_at;
+  const unverified = game?.game_identity_status || group?.game_identity_status;
+  return [league, unverified && start ? `Reported kickoff: ${clock(start)}` : clock(start)].filter(Boolean).join(' · ');
+}
+
+function explainQuoteGap(venue, outcome, detail, opener) {
+  const dialog = $('quote-gap');
+  $('quote-gap-title').textContent = venue;
+  $('quote-gap-outcome').textContent = outcome;
+  $('quote-gap-detail').textContent = detail;
+  dialog.addEventListener('close', () => restoreFocus(opener), {once:true});
+  dialog.showModal();
 }
 
 function cardContext(games, gameTitle = null) {
@@ -445,9 +500,19 @@ function cardContext(games, gameTitle = null) {
     selectedVenues:state.page?.selected_venues,
     position:offer => position(offer),
     gameLink:group => browsingLink('Open game ↗', group, 'opportunity-link'),
+    lineLink:browse && !gameKey && !replay ? group => {
+      const action = browsingLink('Open line ↗', group, 'opportunity-link matrix-line-link', true);
+      action.setAttribute('aria-label', `Open line: ${position(group.offers[0], games.get(group.game_key))}`);
+      return action;
+    } : null,
+    explainQuoteGap,
     inspectOffer:(offer, group, opener) => {
+      if (offer.board_id || offer.practice_ticket) {
+        return drawer.openTrade(offer, group, games.get(group.game_key), null, opener);
+      }
       const shown = displayRows(state.page).find(row => row.id === group.id && row.game_key === group.game_key) || group;
       const exact = shown.offers.find(quote => quote.id === offer.id) || offer;
+      rememberGameInspection(exact);
       return drawer.openTrade(exact, shown, games.get(group.game_key), null, opener);
     },
     inspectPair:(pair, offers, group, opener) => {
@@ -462,12 +527,12 @@ function cardContext(games, gameTitle = null) {
 const pageBasis = () => state.page?.basis || filters.elements.basis.value;
 
 function refreshStatus() {
-  const mode = !filters.elements.time_to.validity.valid ? 'Correct the time window to refresh.'
+  const invalidWindow = !unitBoard() && !filters.elements.time_to.validity.valid;
+  const mode = invalidWindow ? 'Correct the time window to refresh.'
     : replay ? (state.request ? 'Loading replay…' : 'Replay clock is fixed.')
     : state.request ? 'Checking for updates…'
       : supportsAutoUpdate() && !autoUpdate ? 'Auto-update paused.' : '';
   $('refresh-status').textContent = mode;
-  const invalidWindow = !filters.elements.time_to.validity.valid;
   $('refresh-status').classList.toggle('sr-only', !invalidWindow);
   const refresh = $('refresh-list');
   const label = state.loadFailed ? 'Retry' : 'Refresh list';
@@ -524,7 +589,8 @@ function emptyResults(page, publication, issue) {
     if (!replay && page.retained_game?.lifecycle) {
       detail = evidenceReason(page.retained_game.lifecycle, 'The matchup is outside this phase of the current slate.');
     }
-  } else if ((page.ranked_group_count || page.eligible_pair_count) && (positive.checked || thresholds)) {
+  } else if ((page.ranked_group_count || page.eligible_pair_count || page.pair_status?.withheld)
+      && (positive.checked || thresholds)) {
     title = thresholds ? 'No results meet the return filters' : 'No positive results';
     actions.append(clearReturns);
   } else if (!page.calculation_reason && page.matched_offer_count === 0 && publication.current_prices
@@ -540,14 +606,17 @@ function emptyResults(page, publication, issue) {
       : page.matched_offer_count ? 'The current prices have no verified opposing pair.'
         : `No current prices are available${phase === 'live' ? ' for live games' : phase === 'pregame' ? ' for pregame markets' : ''}.`);
   } else {
-    title = 'No EV estimates available';
+    title = afterFeeView ? 'No after-fee EV estimates available' : 'No EV estimates available';
     if (page.data_incident) actions.append(link('Source status', '/admin?section=sources', 'desk-action'));
     detail = page.calculation_missing?.length ? evidenceReason(page.calculation_missing, page.calculation_reason)
       : page.calculation_reason || 'No current offers have the inputs required for the selected calculation.';
-    if (opportunityView && page.calculation_reason) showAlternates();
+    if (opportunityView && page.calculation_reason && (!afterFeeView || page.coverage?.after_fees)) showAlternates();
   }
   if (opportunityView && (page.state !== 'initializing' || publication.retained_prices)) {
     actions.append(browsingLink('Browse odds ↗'));
+  }
+  if (arb && !replay) {
+    actions.append(link('Try a practice example', $('practice-link').href, 'desk-action desk-primary'));
   }
   if (!replay && page.retained_game) {
     const capture = page.retained_game;
@@ -606,6 +675,7 @@ function rankedGroup(key, marketRows, games, disclosures) {
 }
 
 function render(page, keepNodes = false) {
+  $('positive-field').hidden = browse || page.schema === 'predict-pregame-board-1';
   const results = $('results');
   const focus = keepNodes && captureResultsFocus(results);
   const content = document.createDocumentFragment();
@@ -613,25 +683,30 @@ function render(page, keepNodes = false) {
   const tableScrolls = matrixPositions();
   const games = new Map((page.games || []).map(game => [game.game_key, game]));
   const rows = displayRows(page);
+  const board = unitBoard() && page.schema === 'predict-pregame-board-1';
   const total = page.total || 0;
   const selectedLine = page.selected_line_id || requestedLine;
   if (gameKey) {
     const resolved = page.selected_game_key || gameKey;
     const matchup = games.get(resolved);
     const first = rows.find(row => !row.withdrawn && row.game_key === resolved);
-    const title = first?.game_title || linkedTitle || matchup?.title;
+    const title = first?.game_title || matchup?.title || linkedTitle;
     if (title) {
       $('title').textContent = title;
-      const start = first?.start_at || matchup?.start_at;
-      $('desk-subtitle').textContent = start ? `${first?.league || matchup?.league} · ${clock(start)}` : '';
-      $('desk-subtitle').hidden = !start;
+      $('desk-subtitle').textContent = matchup || first ? occurrenceLabel(matchup, first) : '';
+      $('desk-subtitle').hidden = !matchup && !first;
+      const identity = gameIdentityNote(matchup?.game_identity_status ? matchup : first);
+      $('game-identity').textContent = identity || '';
+      $('game-identity').hidden = !identity;
       document.title = `Predict · ${title}`;
     }
   }
   const publication = page.publication || {};
   const issue = replay ? null : collectionIssue(publication.data_runtime)
     || (publication.state === 'failed' ? 'Price publication is delayed' : null);
-  const emptyIssue = !rows.length && !publication.current_prices ? issue : null;
+  const hasQuotedOffers = publication.current_prices || publication.posted_prices
+    || afterFeeView && page.matched_offer_count;
+  const emptyIssue = !rows.length && !hasQuotedOffers ? issue : null;
   const awaitingPrices = opportunityView && page.state === 'initializing'
     && !rows.length && !publication.retained_prices;
   const readiness = $('desk-readiness');
@@ -641,10 +716,13 @@ function render(page, keepNodes = false) {
     if (!readiness.firstElementChild?.isEqualNode(start)) readiness.replaceChildren(start);
   } else if (readiness.hasChildNodes()) readiness.replaceChildren();
   $('replay-link').hidden = awaitingPrices;
+  $('practice-link').hidden = replay || browse || arb && !rows.length;
   if (opportunityView) $('browse-link').classList.toggle('desk-primary', !awaitingPrices);
   const notice = [];
   if (replay && page.replay?.captured_at) notice.push(`Captured ${clock(page.replay.captured_at)}.`);
-  if (!replay) {
+  if (board) {
+    notice.push('Odds may be delayed.');
+  } else if (!replay) {
     if (!emptyIssue) {
       notice.push('Odds may be delayed.');
       if (issue) notice.push(`${issue}.`);
@@ -664,21 +742,43 @@ function render(page, keepNodes = false) {
     }));
     content.append(withheld);
   }
-  if (focusSelectedLine && selectedLine && !page.selected_line_id && !rows.some(row => row.id === selectedLine && !row.withdrawn)) {
+  const pinnedRow = selectedLine && rows.find(row => row.id === selectedLine && !row.withdrawn);
+  const pinnedAvailable = pinnedRow && (replay || pinnedRow.offers.some(offer =>
+    offer.odds?.american && (!page.selected_venues || page.selected_venues.includes(offer.venue))));
+  if (focusSelectedLine && page.state === 'ready' && !pinnedAvailable) {
     content.append(el('p', `${linkedLine || 'The selected line'} is unavailable for this matchup in the selected view.`, 'desk-note selected-line-unavailable'));
   }
-  if (browse && rows.length) {
+  $('ticketboard-order').hidden = !board || !rows.length;
+  if (board) {
+    let announcement;
+    if (rows.length) {
+      announcement = `${total} ${total === 1 ? 'opportunity' : 'opportunities'} ranked by Opportunity Score.`;
+      for (const group of rows) content.append(ticketCard(group, cardContext(games)));
+    } else {
+      const visibleState = page.state === 'ready' && total ? {...page, state:'valuation_pending'} : page;
+      const empty = ticketboardEmpty(visibleState, {amount:unitPicker.value(), retry:refreshDesk,
+        browseLink:browsingLink('Browse Odds', null, 'desk-action')});
+      announcement = empty.firstElementChild.textContent;
+      content.append(empty);
+    }
+    $('ticketboard-status').textContent = announcement;
+  } else if (practice && page.practice_ticket && rows.length) {
+    for (const group of rows) content.append(ticketCard(group, cardContext(games)));
+  } else if (browse && rows.length) {
     const groups = groupRows(rows, row => row.game_key);
     const compactGames = !replay && !gameKey && page.row_kind === 'games' && total > 3;
     for (const [key, matrixGroup] of groups) {
       const first = matrixGroup[0];
       const context = cardContext(games, !gameKey && first.game_title);
+      const occurrence = games.get(key);
+      context.occurrenceLabel = occurrenceLabel(occurrence, first);
+      context.identityNote = gameIdentityNote(occurrence?.game_identity_status ? occurrence : first);
       context.selectedVenues = page.selected_venues;
       context.position = offer => position(offer, games.get(first.game_key));
       const id = `odds:${key}`;
       const disclosure = compactGames ? {id, open:disclosures.get(id) ?? key === groups.keys().next().value} : null;
       content.append(gameMatrix(matrixGroup, context, {includeAlternates:$('alternates').checked, market:marketFamily,
-        selectedLine, disclosure}));
+        selectedLine:pinnedAvailable ? selectedLine : null, disclosure}));
     }
     if (!groups.size) content.append(emptyResults(page, publication));
   } else if (!arb && page.row_kind === 'games' && rows.length) {
@@ -714,6 +814,7 @@ function render(page, keepNodes = false) {
     const area = [...results.querySelectorAll(focus.selector)].find(focus.matchesArea);
     const replacement = area && focus.controls(area)[focus.index];
     if (replacement) restoreFocus(replacement);
+    else if (board) restoreFocus($('board-unit'));
   }
   updateMatrixCues(results);
   scheduleResultExpiry();
@@ -724,7 +825,7 @@ function render(page, keepNodes = false) {
   $('next').disabled = state.offset + shown >= total;
   const singlePage = $('previous').disabled && $('next').disabled;
   $('previous').hidden = $('next').hidden = singlePage;
-  $('previous').parentElement.hidden = !!gameKey || !total;
+  $('previous').parentElement.hidden = !!gameKey || !total || board && (singlePage || !rows.length);
   if (revealMarket && page.state !== 'initializing') {
     const first = results.querySelector('.odds-matrix tbody tr, .matrix-empty, .desk-empty');
     const bottom = first?.getBoundingClientRect().bottom;
@@ -743,27 +844,29 @@ let restoreLocation = restored || (gameKey && requestedLine ? {groupId:requested
 
 function restoreLocationAfterLoad() {
   if (!restoreLocation) return;
-  const {openerTop, groupId, gameKey:anchorGame, openerHref, sourceEvent, scrollY, tableScrolls} = restoreLocation;
+  const {openerTop, groupId, gameKey:anchorGame, openerHref, sourceEvent, scrollY, tableScrolls, oddsFormat} = restoreLocation;
   restoreLocation = null;
   if (window.history.state?.predictDesk) {
     const {predictDesk, ...entry} = window.history.state;
     window.history.replaceState(entry, '');
   }
   restoreMatrices(tableScrolls);
+  if (oddsFormat) window.PredictUI.setOddsFormat(oddsFormat);
   const targetId = (gameKey && state.page?.selected_line_id) || groupId;
   const row = targetId && [...$('results').querySelectorAll('[data-group-id]')]
     .find(item => item.dataset.groupId === targetId);
   const card = [...$('results').querySelectorAll('.odds-card')].find(item =>
     item.dataset.gameKey === anchorGame || sourceEvent && item.dataset.sourceEvent === sourceEvent);
   const opener = openerHref && [...document.querySelectorAll('main a')]
-    .find(item => item.href === openerHref && !item.hidden);
-  const target = opener || (row?.closest('.odds-card') || card || row)?.querySelector('[data-game-launcher]')
+    .find(item => item.href === openerHref && item.getClientRects().length);
+  const target = opener || (openerHref && row?.querySelector('[data-line-launcher]'))
+    || (row?.closest('.odds-card') || card || row)?.querySelector('[data-game-launcher]')
     || row?.querySelector('a,button');
   if (target && openerTop != null && state.page?.anchor_state !== 'removed') {
     window.scrollBy(0, target.getBoundingClientRect().top - openerTop);
   }
   else if (scrollY != null) window.scrollTo(0, scrollY);
-  else row?.scrollIntoView({block:'nearest'});
+  else if (!gameKey || row?.matches('[aria-current=true]')) row?.scrollIntoView({block:'nearest'});
   if (target && state.page?.anchor_state !== 'removed') target.focus({preventScroll:true});
   else if (openerHref) {
     const results = $('results');
@@ -772,7 +875,9 @@ function restoreLocationAfterLoad() {
                     - Math.abs(b.getBoundingClientRect().top - (openerTop ?? 0)))[0];
     const heading = results.querySelector('h2');
     if (heading) heading.tabIndex = -1;
-    (nearby || heading || $('refresh-list')).focus({preventScroll:true});
+    const fallback = nearby || heading || $('refresh-list');
+    fallback.focus({preventScroll:true});
+    fallback.scrollIntoView({block:'nearest'});
   }
 }
 
@@ -788,13 +893,19 @@ async function fetchPage(query, signal) {
   if (landing) {
     delete window.PredictDeskLanding;
     if (landing.url === url) {
-      signal.addEventListener('abort', () => landing.controller.abort(), {once:true});
+      signal?.addEventListener('abort', () => landing.controller.abort(), {once:true});
       const initial = await landing.promise;
       if (initial) return initial;
     } else landing.controller.abort();
   }
   const response = await fetch(url, {signal});
-  if (!response.ok) throw Error('Unavailable');
+  if (!response.ok) {
+    if (response.status === 503 && query.get('ranked') === '1' && query.get('board') !== '0') {
+      const result = await response.json();
+      if (result.schema === 'predict-pregame-board-1' && result.state === 'read_failed') return result;
+    }
+    throw Error('Unavailable');
+  }
   return response.json();
 }
 
@@ -829,7 +940,8 @@ for (const type of ['pointerup','pointercancel']) {
 }
 window.addEventListener('blur', () => { resultPointer = null; });
 window.addEventListener('resize', () => updateMatrixCues($('results')));
-const usingResults = () => resultPointer != null || !!$('results').querySelector('.matrix-sportsbook-popout[open]');
+const usingResults = () => resultPointer != null || $('quote-gap').open
+  || !!$('results').querySelector('.matrix-sportsbook-popout[open]');
 
 function applyDeskFeatures(page) {
   if (replay || !page.features) return;
@@ -864,13 +976,25 @@ function previousResults(message = '') {
 
 function expireResultValues() {
   if (replay || !state.page) return;
-  const current = expirePage(state.page, Date.now(), {ranked:opportunityView && !arb, live:phase === 'live'});
+  const current = expirePage(state.page, Date.now(), expiryOptions());
   if (current === state.page) return;
   const anchor = scrollY ? visibleAnchor() : null;
+  if (unitBoard() && !displayRows(current).length && state.loadFailed) {
+    state.page = null;
+    previousResults();
+    render(boardPlaceholder('read_failed'));
+    restoreAnchor(anchor);
+    return;
+  }
   state.page = current;
   state.renderSignature = resultSignature(current);
   render(current, true);
   restoreAnchor(anchor);
+}
+function expiryOptions() {
+  const fields = filters.elements;
+  return {ranked:opportunityView && !arb, live:phase === 'live',
+    netFilter:arb && Boolean(fields.positive.checked || fields.minimum.value || fields.profit?.value)};
 }
 let resultExpiryTimer;
 function scheduleResultExpiry() {
@@ -880,6 +1004,7 @@ function scheduleResultExpiry() {
   const due = nextDeskDeadline(state.page, now, {live:phase === 'live'});
   if (!Number.isFinite(due)) return;
   resultExpiryTimer = setTimeout(() => {
+    drawer.expireInspection();
     expireResultValues();
     scheduleResultExpiry();
   }, Math.max(1, due - now));
@@ -890,7 +1015,7 @@ $('results').addEventListener('toggle', () => queueMicrotask(() => {
 }), true);
 
 function anchorTarget(row) {
-  return row.querySelector('h2, th[scope=row]') || row;
+  return row.querySelector('h2, h3, th[scope=row]') || row;
 }
 
 function visibleAnchor() {
@@ -930,14 +1055,16 @@ function resultSignature(page) {
   const {data_runtime:runtime = {}, sources} = page.publication || {};
   return JSON.stringify([stripReadClock(page.rows), page.games, page.retained_game,
     page.total, page.page_count, page.offset, page.pair_status, page.calculation_reason, page.calculation_missing,
-    page.state, page.basis, page.phase, page.anchor_state, page.selected_line_id, page.selected_game_key,
-    page.selected_venues,
+    page.state, page.board_id, page.selected_usd, page.basis, page.phase, page.anchor_state, page.selected_line_id, page.selected_game_key,
+    page.selected_venues, page.board_cursor, page.replacement_pending, page.qualified_offer_count,
+    page.qualified_board_offer_count, page.blocker_counts,
     page.ranked_group_count, page.matched_offer_count, runtime.stopped, runtime.healthy, runtime.reason, runtime.paused_sources,
     Object.values(sources || {}).map(source => [source.state, source.reason_code])]);
 }
 
 async function load(offset = state.offset, {background = false, freshMembership = false, anchor = null, refresh = false} = {}) {
-  if (!filters.checkValidity()) return;
+  const boardRead = unitBoard();
+  if (!boardRead && !filters.checkValidity()) return;
   if (background && state.request) return;
   state.request?.abort();
   const controller = new AbortController();
@@ -957,17 +1084,26 @@ async function load(offset = state.offset, {background = false, freshMembership 
   if (retainedResult) query.set('result_id', retainedResult);
   const browseId = (state.query === requestFilters ? readMember?.browse_id : null) ?? restoreLocation?.browseId;
   if (!replay && !freshMembership && browseId && (offset || restoreLocation?.browseId)) query.set('browse_id', browseId);
+  const boardCursor = (state.query === requestFilters ? readMember?.board_cursor : null) ?? restoreLocation?.boardCursor;
+  if (unitBoard() && offset && !freshMembership && !refresh && boardCursor) query.set('board_cursor', boardCursor);
+  if ((readMember?.schema === 'predict-pregame-board-1' || restoreLocation?.boardCursor)
+      && !query.has('board_cursor')) query.set('offset', '0');
   const locator = restoreLocation || (freshMembership && anchor);
-  if (!gameKey && locator && (locator.groupId || locator.gameKey)) {
+  if (!unitBoard() && !gameKey && locator && (locator.groupId || locator.gameKey)) {
     query.set('locate', locator.groupId || locator.gameKey);
     if (locator.gameKey) query.set('locate_game', locator.gameKey);
+    if (freshMembership && restoreLocation) query.set('offset', restoreLocation.offset || 0);
   }
-  if (!state.page && !state.loadFailed) $('notice').textContent = 'Loading prices…';
+  if (!unitBoard() && !state.page && !state.loadFailed) $('notice').textContent = 'Loading prices…';
   const backgroundBlocked = () => background && (!receivingUpdates() || usingResults()
     || !supportsAutoUpdate() && drawer.isOpen());
   try {
     let page = await fetchPage(query, controller.signal);
     if (controller.signal.aborted || !matchesInputs(requestFilters) || backgroundBlocked()) return;
+    if (boardRead) {
+      if (page.schema !== 'predict-pregame-board-1' || page.state === 'read_failed'
+          || !sameBoardUnit(page.selected_usd, selected.unit_usd)) throw Error('Selected-unit board unavailable');
+    }
     const emptyPage = !displayRows(page).length;
     if (page.state === 'page_changed' || query.has('browse_id') && emptyPage && (page.total || page.anchor_state === 'removed')) {
       if (freshMembership) throw Error('Browsing order unavailable');
@@ -975,8 +1111,8 @@ async function load(offset = state.offset, {background = false, freshMembership 
       history.record('browsing_reset', {reason});
       if (!background) state.resetReason = reason;
       if (restoreLocation) {
-        restoreLocation.offset = 0;
         restoreLocation.browseId = null;
+        restoreLocation.boardCursor = null;
       }
       state.request = null;
       return load(0, {background, freshMembership:true, anchor:anchor || visibleAnchor()});
@@ -985,6 +1121,13 @@ async function load(offset = state.offset, {background = false, freshMembership 
       state.resetReason = 'The previous game or line is no longer in these results.';
     } else if (!background && page.anchor_state === 'game') {
       state.resetReason = 'The previous line left these results. Other prices for the game are shown.';
+    } else if (!background && restoreLocation && browse && !gameKey && page.state === 'ready') {
+      const cached = readBrowseReturn();
+      if (cached?.url === location.href && cached.navigation?.openerHref === restoreLocation.openerHref
+          && cached.inspectedQuote && !displayRows(page).some(row => row.offers.some(offer =>
+            (offer.desk_quote_key || offer.id) === cached.inspectedQuote))) {
+        state.resetReason = 'The inspected quote is no longer in these results.';
+      }
     }
     if (gameKey && page.rows?.length && page.total > (page.page_count ?? page.rows.length)) {
       const rows = new Map(page.rows.map(row => [row.id, row]));
@@ -1002,9 +1145,13 @@ async function load(offset = state.offset, {background = false, freshMembership 
       page.rows = [...rows.values()];
     }
     if (controller.signal.aborted || !matchesInputs(requestFilters) || backgroundBlocked()) return;
-    if (!replay) page = expirePage(page, Date.now(), {ranked:opportunityView && !arb, live:phase === 'live'});
+    if (!replay) page = expirePage(page, Date.now(), expiryOptions());
     applyDeskFeatures(page);
-    const held = background && displayRows(state.page).length && state.page.phase === page.phase;
+    if (!boardRead && unitBoard()) {
+      changeBoardUnit();
+      return;
+    }
+    const held = background && page.schema !== 'predict-pregame-board-1' && displayRows(state.page).length && state.page.phase === page.phase;
     const prior = background && !restoreLocation && scrollY ? anchor || visibleAnchor() : anchor;
     if (held) {
       state.backgroundPage = {offset:page.offset, browse_id:page.browse_id};
@@ -1022,19 +1169,34 @@ async function load(offset = state.offset, {background = false, freshMembership 
     state.query = JSON.stringify(selections());
     state.renderSignature = signature;
     state.offset = page.offset ?? (freshMembership ? 0 : offset);
-    previousResults();
+    previousResults(page.replacement_pending ? 'Prices are updating. Showing the previous complete board.' : '');
     if (repaint) {
-      render(page, held);
+      const retryFocused = document.activeElement === $('retry-board');
+      render(page, held || boardRead);
+      if (retryFocused) restoreFocus(unitPicker.value() ? $('refresh-list') : $('board-unit'));
       restoreAnchor(prior);
     }
     expireResultValues();
     state.resetReason = null;
     restoreLocationAfterLoad();
     history.observe(page, selections());
-    drawer.checkSelection(refresh);
+    drawer.checkSelection(refresh && !unitBoard());
   } catch (error) {
-    if (!controller.signal.aborted && error.name !== 'AbortError') {
-      if (state.page && !replay) previousResults('Price update failed. Showing previous results.');
+    if (!controller.signal.aborted && error.name !== 'AbortError' && matchesInputs(requestFilters)) {
+      if (unitBoard()) {
+        state.loadFailed = true;
+        expireResultValues();
+        if (state.query === requestFilters && state.page?.state === 'ready' && displayRows(state.page).length) {
+          previousResults('Opportunities could not be loaded. Showing previous results.');
+        } else {
+          state.page = null;
+          previousResults();
+          render(boardPlaceholder('read_failed'));
+        }
+      } else if (state.page && !replay) {
+        state.loadFailed = true;
+        previousResults('Price update failed. Showing previous results.');
+      }
       else {
         state.loadFailed = true;
         $('notice').textContent = replay ? 'Saved odds could not be loaded.' : 'Prices could not be loaded.';
@@ -1123,11 +1285,20 @@ function applyFilters() {
   state.request?.abort();
   if (!filters.checkValidity()) return;
   if (browse && !gameKey) saveBrowsePreferences();
-  else if (!gameKey) savePreference(filterKey(), JSON.stringify({...selections(), timezone:filters.elements.timezone.value}));
+  else if (!gameKey) {
+    const savedFilters = selections();
+    delete savedFilters.unit_usd;
+    delete savedFilters.board;
+    savePreference(filterKey(), JSON.stringify({...savedFilters, timezone:filters.elements.timezone.value}));
+  }
   if (browse && !replay) {
     let ordinary = {};
     try { ordinary = JSON.parse(readPreference(evFilterKey, '{}')) || {}; } catch {}
     savePreference(evFilterKey, JSON.stringify({...ordinary, basis:filters.elements.basis.value}));
+  }
+  for (const action of document.querySelectorAll('main a')) {
+    const destination = deskLinks.get(action);
+    if (destination) action.href = destination();
   }
   debounce = setTimeout(() => load(0), 240);
 }
@@ -1140,9 +1311,25 @@ function saveBrowsePreferences() {
   window.history.replaceState(otherState, '', browseReturnRoute(chosen));
   if (!replay) updateBrowsePhaseLinks();
 }
+function boardPlaceholder(status = unitPicker.value() ? 'valuation_pending' : 'unit_needed') {
+  return {schema:'predict-pregame-board-1', state:status, rows:[], total:0, phase};
+}
+
+function changeBoardUnit() {
+  state.request?.abort();
+  clearTimeout(debounce);
+  state.page = state.backgroundPage = state.query = null;
+  state.offset = 0;
+  state.loadFailed = false;
+  restoreLocation = null;
+  previousResults();
+  render(boardPlaceholder());
+  load(0);
+}
+
 filters.addEventListener('submit', event => event.preventDefault());
 filters.addEventListener('input', event => {
-  if (event.target !== autoUpdateToggle) applyFilters(event);
+  if (event.target !== autoUpdateToggle && !$('board-unit-field').contains(event.target)) applyFilters();
 });
 filters.elements.basis.disabled = false;
 $('reset').onclick = () => {
@@ -1201,6 +1388,14 @@ session.addEventListener('close', () => {
 document.addEventListener('visibilitychange',()=>history.record(document.hidden?'display_paused':'display_resumed',{reason:'tab_visibility'}));
 window.addEventListener('pageshow', event => {
   if (!event.persisted || gameKey) return;
+  if (unitBoard()) {
+    const previous = unitPicker.value();
+    unitPicker.restore();
+    if (previous !== unitPicker.value()) {
+      changeBoardUnit();
+      return;
+    }
+  }
   const location = window.history.state?.predictDesk;
   if (location) {
     restoreLocation = location;
@@ -1212,9 +1407,10 @@ document.addEventListener('visibilitychange', () => {
   expireResultValues();
   scheduleResultExpiry();
 });
-const scheduleUpdates = createDeskPolling({state, replay, currentPhase:() => phase, drawer, expireResultValues,
-  receivingUpdates, supportsAutoUpdate, usingResults, visibleAnchor, load, selections, previousResults});
+const scheduleUpdates = createDeskPolling({state, replay, arb, currentPhase:() => phase, drawer, expireResultValues,
+  receivingUpdates, supportsAutoUpdate, usingResults, visibleAnchor, load, selections, unitBoard, previousResults});
 
+if (unitBoard()) render(boardPlaceholder());
 load(restored?.offset ?? 0);
 drawer.openHistorical(route.get('result_id'), route.get('selection'));
 scheduleUpdates();

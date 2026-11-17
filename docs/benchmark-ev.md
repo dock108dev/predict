@@ -1,13 +1,38 @@
 # Fair odds, expected value, and arbitrage
 
-## Sportsbook estimate
+## Pregame Opportunities
 
-The default Pregame basis is **Sportsbook estimate**. For an exact full-game
+The ordinary ticketboard ranks qualified main-line offers at the user's
+selected maximum upfront cost. It uses the first eligible reference book in
+FanDuel, DraftKings, BetMGM, and Caesars order. The reference is a complete,
+coherent set of prices for the same market from one book. Each fair probability
+is its implied probability divided by the sum across that set. Matching the
+venue bet to the reference also requires applicable market and settlement rules.
+
+The unit model sizes a supported fill and applies its documented fee, reserve,
+and settlement terms. If `C` is the actual cash committed and `R[s]` is the
+net cash returned in state `s`, effective decimal odds are `R[win] / C` and
+Net EV is `sum(p[s] × (R[s] − C)) / C`. A push or refund needs its own probability
+and cash flow when it materially affects the model. Keep the observed quote and
+any supported fee visible when a required valuation input is missing.
+
+For each exact bet, the board chooses the qualified marketplace offer with the
+highest Net EV. Positive offers sort by Opportunity Score, then Net EV and
+stable bet ID. The score is the positive modeled Kelly fraction in basis
+points. The comparison drawer sorts venues by Net EV. Both use unrounded
+metrics. [Selected-unit examples](examples/pregame-board-1/README.md)
+
+## Indicative sportsbook estimate
+
+**Sportsbook estimate** is an indicative comparison available outside the
+selected-unit board. For an exact full-game
 winner, signed spread, or total, Predict chooses the highest payout on the
 selected side among qualifying FanDuel, DraftKings, BetMGM, and Caesars pairs.
 Ties follow that order. Both sides must be from the same book and a coherent
-observation. Both original source clocks must be within 15 minutes, with a
-kickoff cutoff. The evaluated offer has its own source and lifecycle checks.
+observation. Both original source clocks remain visible. The desk keeps the
+committed pregame estimate with its original price until authoritative kickoff,
+replacement, or withdrawal of a required input. The evaluated offer has its own
+source and lifecycle checks.
 
 For the selected book's decimal odds `a` on the outcome and `b` on its opposite:
 
@@ -40,7 +65,7 @@ the originals and the selected book. [Coverage and freshness](broad-coverage.md#
 | Sportsbook estimate | Indicative, before-fee comparison against the exact two-sided sportsbook pair. |
 | Before-fee scenario | A separate comparison under the applicable captured reference and settlement assumptions. |
 | Conservative after-fee EV | A modeled fee case with its applicable payout and input assumptions. |
-| Verified after-fee EV | A full-state calibrated model with verified market and fee evidence, a current qualified quote, and at least 99% model confidence under the product policy. |
+| Verified after-fee EV | A separate model classification governed by its reference, evidence, and calculation policy. |
 
 Market and settlement identity are separate checks. Native NO and Short maintain
 their native predicates and collateral requirements. A tie, push, refund, or
@@ -62,13 +87,15 @@ separately. [Requested-trade contract](requested-trade-financial-contract.md) ·
 
 ## Arbitrage and funding
 
-The ordinary desk uses a default $100 comparison funding amount. An arbitrage
+The ordinary Arbitrage desk uses a default $100 stake budget before fees. An arbitrage
 comparison pairs exact opposing outcomes and ranks the minimum modeled net
-return across the supported joint settlement states. The legs share funding,
-including applicable modeled fees. The drawer can size the selected pair for
-another amount. Residual cash is separate from deployed funding.
+return across the supported joint settlement states. Total committed cash
+includes the purchase costs, entry fees, and required reserves. Each state
+credits returned cash and released reserves and subtracts its settlement
+charges. The ordinary drawer uses the same published allocation as the list.
 
-A positive modeled minimum applies to the listed cases and sizing assumptions.
+A positive completed-game minimum applies to the listed outcomes and sizing
+assumptions. Unverified exceptional states remain visible in details.
 Observed liquidity, actual fills, private charges, and execution qualification
 have separate evidence requirements. A positive single-offer estimate does not
 establish an arbitrage pair. Stale or stopped inputs lose current eligibility

@@ -1,0 +1,583 @@
+{
+  "canonical_market": {
+    "away": "NCAAF:NCAA47",
+    "family": "moneyline",
+    "home": "NCAAF:NCAA519",
+    "kickoff": "2026-11-18T00:00:00+00:00",
+    "league": "NCAAF",
+    "line": null,
+    "outcomes": [
+      "home",
+      "away"
+    ],
+    "period": "full_game"
+  },
+  "contract_id": "6c493a0227968d0c1f6688ca5a5322c6d916c18025a33b770a47333ae1b05466",
+  "event_title": "Ball State at Ohio",
+  "evidence_class": "installed-retained-replay",
+  "exact_bet_id": "75773b67bdf3ce73beab40ee8ef4c547896f6ef96cada62718d6f323ffc323a2",
+  "fee_schedule": {
+    "assumptions": [
+      "schedule effective time unknown; explicitly pinned documentation scenario",
+      "Novig v3 one-cent contracts; native market.fee and match-time phase supplied; non-trading charges separate"
+    ],
+    "available": true,
+    "classification": "exact_public",
+    "details": {
+      "rounding_trace": [
+        {
+          "amount": "0",
+          "charged": false,
+          "contracts": "1",
+          "fill_ids": [
+            "modeled-fill"
+          ],
+          "raw": "0",
+          "regime": "v3_one_cent_contracts"
+        }
+      ]
+    },
+    "evidence": {
+      "catalog_fee_terms": {
+        "charged": "WHEN_LIVE",
+        "coefficient": "0.06",
+        "makerCredit": "0.25"
+      },
+      "fee_evaluated_at": "2026-11-17T04:37:59.668433+00:00",
+      "fee_price": "4/5",
+      "fee_rate": "0",
+      "fee_verification_revision": "0f6dd16a5c2ea0785d433f05c414d82edded6f2c1a0021388fcaf9a731a325df",
+      "market_receipt": {
+        "age": null,
+        "cache_control": "public, max-age=10, stale-while-revalidate=10",
+        "date": "Tue, 17 Nov 2026 03:34:30 GMT",
+        "etag": null,
+        "observed_at": "2026-11-17T03:34:30.955812+00:00",
+        "path": "/v3/public/catalog/markets",
+        "sha256": "bea21700d6bcc7ea88824f4d35c4cab1e0bea8d5012aec96b7d2fe4476b26779"
+      },
+      "native_binding_revision": "71b07dbdd54f994f8385fe9577cb042ba60311a9d76bcdab35a0b3ccfa7eee71",
+      "native_event_id": "01a1c2d7-5cab-7973-a1ac-996fb5cba1dc",
+      "native_market_id": "01a1d166-defe-7110-bea9-f2c9605d2e0a",
+      "native_outcome_id": "01a1d166-defe-7110-bea9-f2d197ea06e8",
+      "offer_identity": [
+        "sportsgameodds",
+        "I8fosj9K2G780jGvcpiD",
+        "02845a4019fbb1727b520cf27302e392d7afce70df344d90a48b330896f0f332",
+        "points-home-game-ml-home",
+        "bookmaker_outcome",
+        null
+      ],
+      "review_before": "2026-11-18T00:00:00+00:00",
+      "reviewed_at": "2026-11-17T03:34:30.955812+00:00",
+      "schedule_hash": "d1489864512c178ed8ffca4152ca40c24509b5129977379388654e7a28d7b496",
+      "schedule_version": "novig-v3-observed-20260930",
+      "source_url": "https://docs.novig.com/api/concepts/fees",
+      "version": "sgo-native-contract-1"
+    },
+    "fee_cashflows": {
+      "at_fill_usd": "0"
+    },
+    "fee_payment": "at_fill",
+    "fill_count": 1,
+    "liquidity_role": "taker",
+    "profile": "manual_retail",
+    "quantity": "1",
+    "quantity_unit": "USD payout claim",
+    "reason": null,
+    "trade_fee_usd": "0"
+  },
+  "member_result_id": "6c10228cd3214d6b8163b11832bacc39",
+  "native_binding": {
+    "available": true,
+    "current_until": "2026-11-18T00:00:00+00:00",
+    "event_id": "01a1c2d7-5cab-7973-a1ac-996fb5cba1dc",
+    "event_receipt": {
+      "age": null,
+      "cache_control": "public, max-age=15, stale-while-revalidate=15",
+      "date": "Tue, 17 Nov 2026 03:34:30 GMT",
+      "etag": null,
+      "observed_at": "2026-11-17T03:34:30.918816+00:00",
+      "path": "/v3/public/catalog/events/01a1c2d7-5cab-7973-a1ac-996fb5cba1dc",
+      "sha256": "602e424fcf9930be7b5297774a1d6c4a19b4dbc48de7af79e19ace3c7d48a441"
+    },
+    "fee_evaluated_at": "2026-11-17T04:37:59.668433+00:00",
+    "fee_price": "4/5",
+    "market_id": "01a1d166-defe-7110-bea9-f2c9605d2e0a",
+    "market_receipt": {
+      "age": null,
+      "cache_control": "public, max-age=10, stale-while-revalidate=10",
+      "date": "Tue, 17 Nov 2026 03:34:30 GMT",
+      "etag": null,
+      "observed_at": "2026-11-17T03:34:30.955812+00:00",
+      "path": "/v3/public/catalog/markets",
+      "sha256": "bea21700d6bcc7ea88824f4d35c4cab1e0bea8d5012aec96b7d2fe4476b26779"
+    },
+    "offer_identity": [
+      "sportsgameodds",
+      "I8fosj9K2G780jGvcpiD",
+      "02845a4019fbb1727b520cf27302e392d7afce70df344d90a48b330896f0f332",
+      "points-home-game-ml-home",
+      "bookmaker_outcome",
+      null
+    ],
+    "opposite_outcome_id": "01a1d166-defe-7110-bea9-f2ee3a2f3e5f",
+    "original_event_link": "01a1c2d7-5cab-7973-a1ac-996fb5cba1dc",
+    "original_link": {
+      "host": "novig.com",
+      "path": "/events/01a1d166-defe-7110-bea9-f2d197ea06e8/sportsgameodds"
+    },
+    "outcome_id": "01a1d166-defe-7110-bea9-f2d197ea06e8",
+    "phase": "scheduled",
+    "phase_verified": true,
+    "quote_available": true,
+    "reason": null,
+    "revision": "71b07dbdd54f994f8385fe9577cb042ba60311a9d76bcdab35a0b3ccfa7eee71",
+    "selected_side": "home",
+    "settlement": {
+      "available": true,
+      "class_url": "https://ludlow-filings.s3.us-east-1.amazonaws.com/NCAAF-Winner-Class-Certification.pdf",
+      "equality": "half_face",
+      "equality_payout": "0.5",
+      "exceptional_payoff_available": false,
+      "extra_innings": "not_applicable",
+      "forfeit": "forfeit_only_winner_does_not_qualify",
+      "normal_loss": "0",
+      "normal_win": "1",
+      "overtime": "included",
+      "rule_id": "NCAAFWIN",
+      "scope": "completed_full_game",
+      "shootout": "not_applicable",
+      "shootout_count": null,
+      "shortened_game": "governing_body_official_winner_or_filed_tie_rule",
+      "source_url": "https://ludlow-filings.s3.us-east-1.amazonaws.com/NCAAF-winner-anchor-2.0-a.pdf",
+      "void": "fair_market_value",
+      "void_payout": null
+    },
+    "signed_line": null,
+    "subject_role_anchors": [
+      {
+        "outcomes": [
+          {
+            "name": "OHIO +6.5",
+            "outcomeId": "01a1e0f5-1326-76c3-91f0-47c733e8e5d1",
+            "subjectId": "0089d341-10a5-440c-a34e-f41122696087"
+          },
+          {
+            "name": "BALL -6.5",
+            "outcomeId": "01a1e0f5-1326-76c3-91f0-47d558dbe623",
+            "subjectId": "02ff2d40-bf0a-4465-a706-e3bd47be3c3e"
+          }
+        ],
+        "rules_url": "https://docs.novig.com/api/catalog",
+        "sha256": "b5a3a300bed590688652306a2daf5fccd1be2562b12b3cce75b8060866d89317",
+        "spread": {
+          "eventId": "01a1c2d7-5cab-7973-a1ac-996fb5cba1dc",
+          "marketId": "01a1e0f5-1326-76c3-91f0-47b8af4b4b2f",
+          "marketType": "SPREAD",
+          "startsTs": 1794960000000,
+          "strike": "6.5"
+        },
+        "url": "https://api.novig.com/v3/public/catalog/markets?event=01a1c2d7-5cab-7973-a1ac-996fb5cba1dc&marketType=SPREAD&limit=20"
+      }
+    ],
+    "venue": "novig",
+    "venue_fee": {
+      "charged": "WHEN_LIVE",
+      "coefficient": "0.06",
+      "makerCredit": "0.25"
+    },
+    "version": "sgo-native-contract-1"
+  },
+  "observed_reference": {
+    "available": false,
+    "exclusions": {
+      "betmgm": [
+        "reference_exact_partition_incomplete"
+      ],
+      "caesars": [
+        "reference_exact_partition_incomplete"
+      ],
+      "draftkings": [
+        "reference_exact_partition_incomplete"
+      ],
+      "fanduel": [
+        "sportsbook_settlement_rules_unverified"
+      ]
+    },
+    "observed_snapshot": {
+      "available": false,
+      "book": "fanduel",
+      "conditioning": null,
+      "event_id": "I8fosj9K2G780jGvcpiD",
+      "exclusions": {},
+      "fair_decimal_odds": "6631/4891",
+      "frame_id": "e76410b379d75fd68ea043c8dbc555c3c7b6c97a0a43368802cec448e1441ea3",
+      "frame_received_at": "2026-11-13T05:09:27.836784+00:00",
+      "implied": {
+        "away": "20/73",
+        "home": "67/87"
+      },
+      "market": {
+        "away": "NCAAF:NCAA47",
+        "family": "moneyline",
+        "home": "NCAAF:NCAA519",
+        "kickoff": "2026-11-18T00:00:00+00:00",
+        "league": "NCAAF",
+        "line": null,
+        "outcomes": [
+          "home",
+          "away"
+        ],
+        "period": "full_game"
+      },
+      "policy_version": "pregame-sportsbook-priority-1",
+      "prices": [
+        {
+          "line": null,
+          "odd_id": "points-home-game-ml-home",
+          "opposing_odd_id": "points-away-game-ml-away",
+          "price_american": "-335",
+          "received_at": "2026-11-13T05:09:27.836784+00:00",
+          "revision": "a449a85057c98bdaccd181cdd6d110d6e02347179456191ce94fb8c3f5de2bbb",
+          "side": "home",
+          "source_at": "2026-11-13T05:08:35.776Z"
+        },
+        {
+          "line": null,
+          "odd_id": "points-away-game-ml-away",
+          "opposing_odd_id": "points-home-game-ml-home",
+          "price_american": "+265",
+          "received_at": "2026-11-13T05:09:27.836784+00:00",
+          "revision": "c9ff972d635a1c78dd529f8160ad9f70bb8c5d9c3448f2d9d3b062984ceb3434",
+          "side": "away",
+          "source_at": "2026-11-13T05:08:35.776Z"
+        }
+      ],
+      "probabilities": {
+        "away": "1740/6631",
+        "home": "4891/6631"
+      },
+      "probability": "4891/6631",
+      "rules": null,
+      "selected_outcome": "home",
+      "snapshot_id": "afe27c0aca31e13f45230dc2db4080983ce6def402abf1339efe05ea8e17e582",
+      "source": "sportsgameodds"
+    },
+    "policy_version": "pregame-sportsbook-priority-1",
+    "reason": "sportsbook_settlement_rules_unverified"
+  },
+  "offer_price": {
+    "payout": "1",
+    "payout_units": "USD",
+    "quantity_units": "unknown",
+    "role": "comparison",
+    "units": "american_odds",
+    "value": "-400"
+  },
+  "offer_source_clocks": {
+    "projected_at": null,
+    "received_at": "2026-11-13T05:09:27.836784+00:00",
+    "source_at": "2026-11-13T05:09:08.463Z",
+    "source_time_kind": "provider_book"
+  },
+  "prior_kickoff": "2026-11-17T23:00:00.000Z",
+  "publication": {
+    "generation": 71172,
+    "result_id": "a4351209e75f47b188509164da59fda4"
+  },
+  "published_kickoff": "2026-11-18T00:00:00+00:00",
+  "quote_id": "6dd1ab1fb40c81d8cc7d5dfae690879361d0caebf9fce3d99c7f393efbf20a94",
+  "schema": "predict-sprint3-pregame-input-1",
+  "selected_outcome": "home",
+  "settlement": {
+    "available": false,
+    "reason": "sportsbook_settlement_rules_unverified",
+    "reference_reason": "sportsbook_settlement_rules_unverified",
+    "scope": "event_goes_ahead",
+    "sportsbook_rules": null,
+    "state_probabilities": null,
+    "venue_rules": {
+      "available": true,
+      "class_url": "https://ludlow-filings.s3.us-east-1.amazonaws.com/NCAAF-Winner-Class-Certification.pdf",
+      "equality": "half_face",
+      "equality_payout": "0.5",
+      "evidence": {
+        "catalog_revision": "71b07dbdd54f994f8385fe9577cb042ba60311a9d76bcdab35a0b3ccfa7eee71",
+        "market_receipt": {
+          "age": null,
+          "cache_control": "public, max-age=10, stale-while-revalidate=10",
+          "date": "Tue, 17 Nov 2026 03:34:30 GMT",
+          "etag": null,
+          "observed_at": "2026-11-17T03:34:30.955812+00:00",
+          "path": "/v3/public/catalog/markets",
+          "sha256": "bea21700d6bcc7ea88824f4d35c4cab1e0bea8d5012aec96b7d2fe4476b26779"
+        },
+        "source_url": "https://ludlow-filings.s3.us-east-1.amazonaws.com/NCAAF-winner-anchor-2.0-a.pdf",
+        "version": "sgo-native-contract-1"
+      },
+      "exceptional_payoff_available": false,
+      "extra_innings": "not_applicable",
+      "forfeit": "forfeit_only_winner_does_not_qualify",
+      "normal_loss": "0",
+      "normal_win": "1",
+      "outcomes": [
+        "home",
+        "away"
+      ],
+      "overtime": "included",
+      "rule_id": "NCAAFWIN",
+      "scope": "completed_full_game",
+      "shootout": "not_applicable",
+      "shootout_count": null,
+      "shortened_game": "governing_body_official_winner_or_filed_tie_rule",
+      "source_url": "https://ludlow-filings.s3.us-east-1.amazonaws.com/NCAAF-winner-anchor-2.0-a.pdf",
+      "void": "fair_market_value",
+      "void_payout": null
+    },
+    "version": "pregame-sportsbook-priority-1"
+  },
+  "source_ids": {
+    "binding_id": "557387a6c2338645c7b1ebfa2bd53513e9c19693aa014baf063562c3ed85f484",
+    "binding_version": "sgo-current-unverified-1",
+    "native_event_id": "I8fosj9K2G780jGvcpiD",
+    "native_line": null,
+    "native_market_id": "02845a4019fbb1727b520cf27302e392d7afce70df344d90a48b330896f0f332",
+    "native_outcome_id": "points-home-game-ml-home",
+    "native_side": "bookmaker_outcome",
+    "provider": "sportsgameodds",
+    "quote_side": "buy"
+  },
+  "sql_snapshot": {
+    "contract": {
+      "anchor_participant": null,
+      "comparison_source_metadata": {
+        "bookmaker_market_link": {
+          "host": "novig.com",
+          "path": "/events/01a1d166-defe-7110-bea9-f2d197ea06e8/sportsgameodds"
+        },
+        "provider_event_aliases": [],
+        "provider_event_status": {
+          "cancelled": false,
+          "completed": false,
+          "delayed": false,
+          "ended": false,
+          "finalized": false,
+          "live": false,
+          "started": false
+        },
+        "provider_opposing_odd_id": "points-away-game-ml-away",
+        "provider_phase": "pregame",
+        "provider_source_clock_original": "2026-11-13T05:09:08.463Z",
+        "schedule_binding": {
+          "core": "80577cdb26a70fb3326ccac3da397a6cbe9d84a2a3a0e92908e03256aee1a0a0",
+          "metadata": {
+            "authority": [
+              "sportsgameodds",
+              "event",
+              "I8fosj9K2G780jGvcpiD"
+            ],
+            "native_event_id": "I8fosj9K2G780jGvcpiD",
+            "proofs": [
+              {
+                "body_sha256": "e76410b379d75fd68ea043c8dbc555c3c7b6c97a0a43368802cec448e1441ea3",
+                "path": "sportsgameodds/receipt/e76410b379d75fd68ea043c8dbc555c3c7b6c97a0a43368802cec448e1441ea3",
+                "received_at": "2026-11-13T05:09:27.836784+00:00"
+              }
+            ],
+            "received_at": "2026-11-13T05:09:27.836784+00:00",
+            "revision": "a798f894effe852185012ce0468fbb72a605ebd454e9fde598612ac55e411050",
+            "start": "2026-11-17T23:00:00.000Z",
+            "version": "predict-schedule-metadata-1"
+          },
+          "native_event_id": "I8fosj9K2G780jGvcpiD",
+          "original_start": "2026-11-17T23:00:00.000Z",
+          "version": "predict-schedule-metadata-1"
+        }
+      },
+      "event_scope": {
+        "native_event_id": "I8fosj9K2G780jGvcpiD",
+        "policy": "sgo-provider-event-unverified-1",
+        "source": "sportsgameodds"
+      },
+      "market_identity": {
+        "competition": "NCAAF",
+        "event": [
+          "comparison-provider-occurrence-1",
+          "sportsgameodds",
+          "NCAAF",
+          "I8fosj9K2G780jGvcpiD",
+          "sportsgameodds:NCAAF:I8fosj9K2G780jGvcpiD:home",
+          "sportsgameodds:NCAAF:I8fosj9K2G780jGvcpiD:away"
+        ],
+        "family": "moneyline",
+        "line": null,
+        "outcome_set": "a462eeae485842118a51d72d49ad2cf532be943824995761a629f3e982b16677",
+        "period": "full_game",
+        "rules": "sportsgameodds-unverified-1",
+        "scheduled_start": "2026-11-17T23:00:00.000Z",
+        "season": "unverified",
+        "sport": "american_football",
+        "stage": "unverified"
+      },
+      "orientation_evidence": [
+        "sgo-current-unverified-1",
+        "e76410b379d75fd68ea043c8dbc555c3c7b6c97a0a43368802cec448e1441ea3"
+      ],
+      "outcome_cardinality": 2,
+      "outcome_selections": [
+        {
+          "label": "Ohio",
+          "participant": "sportsgameodds:NCAAF:I8fosj9K2G780jGvcpiD:home",
+          "predicate": "win",
+          "signed_line": null
+        },
+        {
+          "label": "Ball State",
+          "participant": "sportsgameodds:NCAAF:I8fosj9K2G780jGvcpiD:away",
+          "predicate": "win",
+          "signed_line": null
+        }
+      ],
+      "period_boundary": "Provider full-game market; exceptional settlement unverified",
+      "result_policy": "sportsgameodds-unverified-1:moneyline",
+      "selection": {
+        "label": "Ohio",
+        "participant": "sportsgameodds:NCAAF:I8fosj9K2G780jGvcpiD:home",
+        "predicate": "win",
+        "signed_line": null
+      },
+      "verified": false
+    },
+    "contract_revision": "196b790aeb840121ccf4e0c05cb4bd35e424b2d0de81ff036da6c96d4b633584",
+    "event": {
+      "away": "sportsgameodds:NCAAF:I8fosj9K2G780jGvcpiD:away",
+      "competition": "NCAAF",
+      "home": "sportsgameodds:NCAAF:I8fosj9K2G780jGvcpiD:home",
+      "id": "I8fosj9K2G780jGvcpiD",
+      "participants": {
+        "Ball State": "sportsgameodds:NCAAF:I8fosj9K2G780jGvcpiD:away",
+        "Ohio": "sportsgameodds:NCAAF:I8fosj9K2G780jGvcpiD:home"
+      },
+      "schedule_metadata": {
+        "authority": [
+          "sportsgameodds",
+          "event",
+          "I8fosj9K2G780jGvcpiD"
+        ],
+        "native_event_id": "I8fosj9K2G780jGvcpiD",
+        "proofs": [
+          {
+            "body_sha256": "e76410b379d75fd68ea043c8dbc555c3c7b6c97a0a43368802cec448e1441ea3",
+            "path": "sportsgameodds/receipt/e76410b379d75fd68ea043c8dbc555c3c7b6c97a0a43368802cec448e1441ea3",
+            "received_at": "2026-11-13T05:09:27.836784+00:00"
+          }
+        ],
+        "received_at": "2026-11-13T05:09:27.836784+00:00",
+        "reviewed_correction": {
+          "effective_at": "2026-11-17T04:13:29.124152+00:00",
+          "native_event_id": "01a1c2d7-5cab-7973-a1ac-996fb5cba1dc",
+          "native_event_receipt": {
+            "age": null,
+            "cache_control": "public, max-age=15, stale-while-revalidate=15",
+            "date": "Tue, 17 Nov 2026 03:34:30 GMT",
+            "etag": null,
+            "observed_at": "2026-11-17T03:34:30.918816+00:00",
+            "path": "/v3/public/catalog/events/01a1c2d7-5cab-7973-a1ac-996fb5cba1dc",
+            "sha256": "602e424fcf9930be7b5297774a1d6c4a19b4dbc48de7af79e19ace3c7d48a441"
+          },
+          "original": {
+            "authority": [
+              "sportsgameodds",
+              "event",
+              "I8fosj9K2G780jGvcpiD"
+            ],
+            "native_event_id": "I8fosj9K2G780jGvcpiD",
+            "proofs": [
+              {
+                "body_sha256": "e76410b379d75fd68ea043c8dbc555c3c7b6c97a0a43368802cec448e1441ea3",
+                "path": "sportsgameodds/receipt/e76410b379d75fd68ea043c8dbc555c3c7b6c97a0a43368802cec448e1441ea3",
+                "received_at": "2026-11-13T05:09:27.836784+00:00"
+              }
+            ],
+            "received_at": "2026-11-13T05:09:27.836784+00:00",
+            "revision": "a798f894effe852185012ce0468fbb72a605ebd454e9fde598612ac55e411050",
+            "start": "2026-11-17T23:00:00.000Z",
+            "version": "predict-schedule-metadata-1"
+          },
+          "school_url": "https://ohiobobcats.com/news/2026/11/14/ohio-football-returns-home-to-host-ball-state",
+          "version": "sgo-reviewed-occurrence-20261116-1"
+        },
+        "revision": "f6b69e2259ebf459d253046cafd79bb414c2ee5f9c4999382df57944be8d16fe",
+        "start": "2026-11-18T00:00:00+00:00",
+        "version": "predict-schedule-metadata-1"
+      },
+      "scheduled_start": "2026-11-18T00:00:00+00:00",
+      "season": "unverified",
+      "shared_provider_ids": {
+        "novig_event": "01a1c2d7-5cab-7973-a1ac-996fb5cba1dc"
+      },
+      "sport": "american_football",
+      "stage": "unverified",
+      "status": {
+        "closed": false,
+        "ended": false,
+        "live": false,
+        "status": null
+      },
+      "title": "Ball State at Ohio"
+    },
+    "event_revision": "455f68fefc656c32ae645484bbbf396d51a02765154c93954eb74f1322e09808",
+    "id": "6c493a0227968d0c1f6688ca5a5322c6d916c18025a33b770a47333ae1b05466",
+    "offer": {
+      "cost_note": "American odds retained exactly; fees, execution and depth are unverified.",
+      "observation_time_evidence": "SportsGameOdds bookmaker clock; upstream delay unknown.",
+      "original": {
+        "payout": "1",
+        "payout_units": "USD",
+        "quantity_units": "unknown",
+        "role": "comparison",
+        "units": "american_odds"
+      },
+      "provenance": {
+        "mode": "current",
+        "real_source": true,
+        "sha256": "e76410b379d75fd68ea043c8dbc555c3c7b6c97a0a43368802cec448e1441ea3"
+      },
+      "provider_clocks": {
+        "book": "2026-11-13T05:09:08.463Z",
+        "market": null,
+        "selected_basis": "book"
+      },
+      "rule_note": "SportsGameOdds aggregate full-game outcome; settlement and native occurrence association unverified.",
+      "source": {
+        "binding_id": "557387a6c2338645c7b1ebfa2bd53513e9c19693aa014baf063562c3ed85f484",
+        "binding_version": "sgo-current-unverified-1",
+        "native_event_id": "I8fosj9K2G780jGvcpiD",
+        "native_line": null,
+        "native_market_id": "02845a4019fbb1727b520cf27302e392d7afce70df344d90a48b330896f0f332",
+        "native_outcome_id": "points-home-game-ml-home",
+        "native_side": "bookmaker_outcome",
+        "provider": "sportsgameodds",
+        "quote_side": "buy"
+      },
+      "state": "available",
+      "times": {
+        "projected_at": null,
+        "source_time_kind": "provider_book"
+      },
+      "venue": "novig"
+    },
+    "offer_revision": "b66997ca47fde4e4d7a75896d581c444c66441f7ec956c96046ba1a33906912a",
+    "received_at": "2026-11-13T05:09:27.836784+00:00",
+    "sgo_quote_id": "ce7b7525e88daeeaf5a22b1caddfd3e82a709ec3cdeb0a3692d4a8bdbbb6d274",
+    "sgo_quote_revision": "c4e0a157a318a72ee18b888bc74f7abcb690c19bc37c391b1cc6ef2302051100",
+    "source_at": "2026-11-13T05:09:08.463Z"
+  },
+  "venue_native_ids": {
+    "event_id": "01a1c2d7-5cab-7973-a1ac-996fb5cba1dc",
+    "market_id": "01a1d166-defe-7110-bea9-f2c9605d2e0a",
+    "opposite_outcome_id": "01a1d166-defe-7110-bea9-f2ee3a2f3e5f",
+    "outcome_id": "01a1d166-defe-7110-bea9-f2d197ea06e8"
+  }
+}

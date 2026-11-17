@@ -8,7 +8,7 @@ from app.collection.sportsgameodds_adapter import PROPHETX_BOOKMAKER_ID
 from app.comparison.game_phase import LIVE_SECONDS, PREGAME_SPORTSBOOK_SECONDS
 from app.comparison.sgo_reference import BEST_BOOKS
 
-from .fee_coverage import WORKING_PHASE_SQL, source_key
+from .fee_coverage import WORKING_PHASE_SQL, offer_key, source_key
 
 NATIVE_VENUES = ('kalshi', 'polymarket_us')
 SGO_OFFER_VENUES = ('kalshi', 'novig', 'prophetx')
@@ -163,7 +163,7 @@ def configured_cohorts(config):
                          aggregate_scope(config), config['families'], PHASES)}
 
 
-def measure(db, result, deps, counts, owner, *, at, phase=''):
+def measure(db, result, deps, counts, owner, *, at, phase='', published_rows=None):
     selected_phase = {'pregame': 'pregame', 'live': 'in_game'}.get(phase)
 
     def in_scope(key):
@@ -172,21 +172,37 @@ def measure(db, result, deps, counts, owner, *, at, phase=''):
     by_publication = {_cohort(row): row for row in counts['by_provider']}
     price_gaps = defaultdict(Counter)
     identity = defaultdict(Counter)
-    for row in result['rows']:
+    display = defaultdict(lambda: defaultdict(set))
+    from .trade_desk import direct_venue_offer, phase_matches
+
+    def quote_cohort(row):
         row_phase = {'scheduled': 'pregame', 'live': 'in_game'}.get(row.get('game_state'), row.get('game_state', 'unknown'))
-        key = (row.get('source', {}).get('provider') or 'unknown', row['venue'], row['league'],
-               row['market']['market'], row['market']['period'], row_phase)
+        return (row.get('source', {}).get('provider') or 'unknown', row['venue'], row['league'],
+                row['market']['market'], row['market']['period'], row_phase)
+
+    for row in result['rows'] if published_rows is None else published_rows:
+        if phase and not phase_matches(row, phase, at):
+            continue
+        key = quote_cohort(row)
+        if not in_scope(key):
+            continue
+        unit = offer_key(row)
+        display[key]['published'].add(unit)
+        if not direct_venue_offer(row):
+            display[key]['excluded_aggregate_relay'].add(unit)
+        elif row.get('price_current'):
+            display[key]['available_in_exact_browse'].add(unit)
+    for row in result['rows']:
+        key = quote_cohort(row)
         if row['price_current']:
             supported = bool((row.get('same_outcome') or {}).get('supported'))
             identity[key]['current_supported_outcome' if supported else 'current_unresolved_outcome'] += 1
         else:
             price_gaps[key].update(row.get('price_reasons') or ['source_price_not_current'])
     working = {_cohort(row): row for row in working_inventory(db, deps, result, at=at)}
-    for row in working.values():
-        row['published_current_working_prices'] = row['current_working_prices']
     originals = {_cohort(row): row for row in sgo_observations(db, at=at)}
     configured = configured_cohorts(owner.get('config') or {})
-    keys = set(working) | set(by_publication) | configured
+    keys = set(working) | set(by_publication) | set(display) | configured
     outside = defaultdict(Counter)
     for key, facts in originals.items():
         if key[1] == 'pinnacle' or not in_scope(key):
@@ -205,9 +221,12 @@ def measure(db, result, deps, counts, owner, *, at, phase=''):
                 'reference_only' if provider == 'sportsgameodds' and venue in SGO_REFERENCE_VENUES else
                 'reference_or_audit_only' if provider == 'sportsgameodds' and venue not in SGO_OFFER_VENUES else 'offer')
         boundary = (owner.get('states') or {}).get(provider, {})
+        desk = display.get(key)
         cohorts.append(dict(_labels(key), role=role, configured=key in configured, offered_price_units=None,
             provider_universe_complete=False, source_originals=originals.get(key),
             sql_working=working.get(key), ordinary_publication=by_publication.get(key),
+            desk_access={field: len(desk.get(field, ())) for field in (
+                'published', 'available_in_exact_browse', 'excluded_aggregate_relay')} if desk else None,
             publication_price_gaps=dict(price_gaps[key]), outcome_identity=dict(identity[key]),
             source_state=boundary.get('state'), source_reason=boundary.get('reason_code')))
 
@@ -219,7 +238,7 @@ def measure(db, result, deps, counts, owner, *, at, phase=''):
             sgo='Latest committed event-frame members and retained originals in the desk horizon; missing pages or revisions do not establish withdrawals.',
             phase='Original phase for SGO facts, admitted schedule and explicit status for SQL, and validated price lifecycle for ordinary publication.',
             counts='Stages use their own units and evidence clocks. Only working-to-published keys are directly reconciled.',
-            published_current_working_prices='Working keys with an already-current desk row. Use the independent finance audit for all current working keys.',
+            desk_access='Exact Browse eligibility across all lines; default line selection, filters and pagination still apply.',
             price_reasons='More than one reason can apply to one retained presentation.',
             page_clock='A page publication can serve different facts from that page.'),
         ev=dict(independently_eligible_offer_reference_inputs=None, completeness='unmeasured',

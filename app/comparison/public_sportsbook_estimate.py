@@ -48,8 +48,9 @@ def read_captures(root, *, at):
     return captures
 
 
-def retained_prices(root, captures, *, at, leagues):
+def retained_prices(root, captures, *, at, leagues, coherent=False):
     matches = index(captures, at=at, retained=True)
+    frames = {key: [observation] for key, observation in matches.items()} if coherent else None
     directory = cache_path(root).parent / 'public-sportsbook-history'
     for league in SPORTS:
         if league not in leagues:
@@ -61,6 +62,11 @@ def retained_prices(root, captures, *, at, leagues):
                 continue
             older = index({league: capture}, at=at, retained=True)
             for key, observation in older.items():
+                if coherent:
+                    saved = frames.setdefault(key, [])
+                    if not any(item['frame_id'] == observation['frame_id'] for item in saved):
+                        saved.append(observation)
+                    continue
                 latest = matches.setdefault(key, observation)
                 for side, books in observation['quotes'].items():
                     quotes = latest['quotes'].setdefault(side, {})
@@ -70,7 +76,7 @@ def retained_prices(root, captures, *, at, leagues):
         quotes = match['quotes']
         match['revision'] = hashed([match['event_id'], match['scheduled'],
             [(str(selection), quotes[selection]) for selection in sorted(quotes, key=str)]])
-    return matches
+    return frames if coherent else matches
 
 
 def allowed(owner):
@@ -147,13 +153,16 @@ def index(captures, *, at, retained=False):
                     roles = dict(zip(names, ('home', 'away'), strict=True))
                     for market, family in FAMILIES.items():
                         sides = book['markets'].get(market, [])
-                        # Two-way public board markets only. A three-way winner is a different predicate.
-                        if len(sides) > 2:
+                        if len(sides) > (3 if family == 'moneyline' else 2):
                             continue
+                        is_three_way = family == 'moneyline' and len(sides) == 3
                         for side in sides:
                             label = side['name']
                             role = label.lower() if family == 'total' else roles.get(label)
-                            if role not in (('over', 'under') if family == 'total' else ('home', 'away')):
+                            if is_three_way and label.lower() == 'draw':
+                                role = 'draw'
+                            valid_roles = ('over', 'under') if family == 'total' else ('home', 'away', 'draw')
+                            if role not in valid_roles or role == 'draw' and not is_three_way:
                                 continue
                             point = side.get('point')
                             value = side['price']
@@ -161,8 +170,10 @@ def index(captures, *, at, retained=False):
                                     (family == 'moneyline') != (point is None)):
                                 continue
                             selection = (family, role, None if point is None else Fraction(str(point)))
-                            quotes.setdefault(selection, {}).setdefault(venue, []).append(
-                                quote(f'{value:+d}', clock, selection))
+                            item = quote(f'{value:+d}', clock, selection)
+                            if is_three_way:
+                                item['partition'] = 'three_way'
+                            quotes.setdefault(selection, {}).setdefault(venue, []).append(item)
                 matches[key] = dict(source=SOURCE, event_id=event['id'], frame_id=capture['sha256'],
                                     frame_received_at=capture['received_at'], quotes=quotes,
                                     scheduled=event['in_play'] is False)
@@ -183,6 +194,8 @@ def market_pairs(observation, key, *, at, start, require_current=True):
         first, second = selected.get(book, ()), other.get(book, ())
         if len(first) == len(second) == 1:
             pair = [first[0], second[0]]
+            if any(leg.get('partition') == 'three_way' for leg in pair):
+                continue
             if observation['source'] != SOURCE and (
                     first[0]['odd_id'] == second[0]['odd_id']
                     or first[0]['opposing_odd_id'] != second[0]['odd_id']
@@ -194,8 +207,9 @@ def market_pairs(observation, key, *, at, start, require_current=True):
     return pairs
 
 
-def sgo_observation(frame, rows, *, at, occurrence):
+def sgo_observation(frame, rows, *, at, occurrence, coherent=False):
     from .game_phase import sgo_event_status, sporting_phase
+    from app.storage.sgo_schedule_review import frame_start
 
     facts = (frame or {}).get('facts') or {}
     context = facts.get('event_context') or {}
@@ -204,38 +218,50 @@ def sgo_observation(frame, rows, *, at, occurrence):
     received = stamp(facts['received_at']) if facts.get('received_at') else None
     if (not received or received > at or received >= start or at >= start
             or facts.get('provider') != 'sportsgameodds' or context.get('league') != league
-            or context.get('phase') != 'pregame' or stamp(facts['starts_at']) != start
-            or lifecycle['reason'] or lifecycle['state'] == 'live'):
+            or stamp(frame_start(facts['event_id'], league, context.get('teams'), facts['starts_at'],
+                                 facts['receipt_sha256'], at=at)) != start):
+        return None
+    scheduled = context.get('phase') == 'pregame' and not lifecycle['reason'] and lifecycle['state'] != 'live'
+    if not scheduled and not coherent:
         return None
     members = dict(facts['members'])
     if len(members) != len(facts['members']):
         return None
-    quotes = {}
+    quotes, retired = {}, {}
     for row in rows:
         fact = row['facts']
         if (fact.get('provider') != 'sportsgameodds'
                 or fact['event_id'] != facts['event_id'] or fact['league'] != league
-                or fact['period'] != 'game' or fact['phase'] != 'pregame' or not fact['available']
+                or fact['period'] != 'game' or fact['phase'] != 'pregame'
                 or fact['venue'] not in BEST_BOOKS or not fact.get('source_at')
-                or fact['market'] not in FAMILIES.values() or fact['side'] not in OPPOSITE):
+                or fact['market'] not in FAMILIES.values() or fact['side'] not in (*OPPOSITE, 'draw')):
             continue
         try:
             family, side = fact['market'], fact['side']
             line = None if fact['line'] is None else Fraction(fact['line'])
             if ((family == 'moneyline') != (line is None)
-                    or side not in (('over', 'under') if family == 'total' else ('home', 'away'))
+                    or side not in (('over', 'under') if family == 'total' else ('home', 'away', 'draw'))
                     or not stamp(fact['source_at']) <= stamp(fact['received_at']) <= received):
                 continue
             key = (family, side, line)
+            if not fact['available']:
+                if coherent:
+                    retired[(fact['venue'], fact['odd_id'], None if line is None else exact_wire(line))] = fact['source_at']
+                continue
+            if coherent and members.get(row['id']) != row['revision']:
+                continue
             item = quote(fact['price_american'], fact['source_at'], key)
             item.update(odd_id=fact['odd_id'], opposing_odd_id=fact['opposing_odd_id'],
                         received_at=fact['received_at'], revision=row.get('revision'))
+            if fact.get('partition'):
+                item['partition'] = fact['partition']
             quotes.setdefault(key, {}).setdefault(fact['venue'], []).append(item)
         except (KeyError, TypeError, ValueError, ArithmeticError):
             continue
     return dict(source='sportsgameodds', event_id=facts['event_id'], frame_id=facts['receipt_sha256'],
-                frame_received_at=facts['received_at'], quotes=quotes, scheduled=True,
-                revision=hashed([(str(key), quotes[key]) for key in sorted(quotes, key=str)]))
+                frame_received_at=facts['received_at'], quotes=quotes, scheduled=scheduled, retired=retired,
+                revision=hashed([scheduled, [(str(key), quotes[key]) for key in sorted(quotes, key=str)],
+                                 sorted(retired.items(), key=str)]))
 
 
 def select(row, authority, observations, *, at):

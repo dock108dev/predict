@@ -35,17 +35,18 @@ export function nextDeskDeadline(page, now, {live}) {
     if (timestamp > now && timestamp < next) next = timestamp;
   };
   for (const row of displayRows(page)) {
+    for (const pair of row.pairs || []) {
+      if (pair.retail_payoff?.available) consider(Date.parse(pair.calculation_current_until));
+    }
     if (!live) {
       consider(Date.parse(row.start_at));
+      if (page.board_id) for (const offer of row.offers) consider(Date.parse(offer.calculation_current_until));
       continue;
     }
     consider(Date.parse(row.sportsbook_reference?.current_until));
     for (const offer of row.offers) {
       consider(Date.parse(offer.current_until));
       if (offer.value != null) consider(Date.parse(offer.calculation_current_until));
-    }
-    for (const pair of row.pairs || []) {
-      if (pair.retail_payoff?.available) consider(Date.parse(pair.calculation_current_until));
     }
     for (const prices of Object.values(row.sportsbook_quotes || {})) {
       for (const price of prices) consider(sportsbookDeadline(price));
@@ -54,11 +55,12 @@ export function nextDeskDeadline(page, now, {live}) {
   return next;
 }
 
-export function expirePage(page, now, {ranked, live}) {
+export function expirePage(page, now, {ranked, live, netFilter}) {
   let changed = false;
   const rows = displayRows(page).flatMap(row => {
     const offers = row.offers.flatMap(offer => {
-      if (offer.current === false || (!live && expired(row.start_at, now)) || (live && expired(offer.current_until, now))) {
+      if (offer.current === false || (!live && expired(row.start_at, now)) || (live && expired(offer.current_until, now))
+          || page.board_id && expired(offer.calculation_current_until, now)) {
         changed = true;
         return [];
       }
@@ -71,11 +73,17 @@ export function expirePage(page, now, {ranked, live}) {
     });
     if (!offers.length) return [];
     const pairs = row.pairs?.filter(pair => pair.legs.every(id => offers.some(offer => offer.id === id)))
-      .map(pair => {
-        if (!live || !expired(pair.calculation_current_until, now) || !pair.retail_payoff?.available) return pair;
+      .flatMap(pair => {
+        if (!expired(pair.calculation_current_until, now) || !pair.retail_payoff?.available) return [pair];
         changed = true;
-        return {...pair, score:pair.before_fee_return ?? null, display_allocations:pair.before_fee_allocations,
-          retail_payoff:{available:false, reason:'fee_unavailable'}};
+        if (netFilter) return [];
+        const {acquisition_usd, minimum_gross_payout_usd, minimum_gross_profit_usd, sizing} = pair.retail_payoff;
+        const legs = pair.retail_payoff.legs?.map(({quantity, acquisition_usd, depth_status, depth_evidence, quantity_increment}) =>
+          ({quantity, acquisition_usd, depth_status, depth_evidence, quantity_increment,
+            available:false, reason:'conditional_fee_review_expired_or_not_effective'}));
+        return [{...pair, score:null, display_allocations:pair.before_fee_allocations,
+          retail_payoff:{available:false, reason:'conditional_fee_review_expired_or_not_effective',
+            acquisition_usd, minimum_gross_payout_usd, minimum_gross_profit_usd, sizing, legs}}];
       });
     if (pairs && !pairs.length) return [];
     const lead = offers.find(offer => offer.value != null);

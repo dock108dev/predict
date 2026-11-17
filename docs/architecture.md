@@ -48,7 +48,8 @@ The ordinary launcher runs an independent background data process and an app
 process against the existing PostgreSQL database. The data runtime owns
 collection, expiry, the shared scanner, Odds/EV calculations and compact episode
 summaries. The app serves comparison snapshots and reads background publications for other views. Opening a page is
-not necessary to start calculation. App-only restart preserves the data identity
+not necessary to start ordinary calculation. A selected unit can queue an
+independent valuation job from committed inputs. App-only restart preserves the data identity
 and epoch; explicit collection Stop has acknowledged cross-process semantics.
 [Runtime and latest-result contract](data-app-runtime-contract.md).
 
@@ -60,8 +61,9 @@ and epoch; explicit collection Stop has acknowledged cross-process semantics.
 3. Final publication compares exact dependencies and runtime authority under the
    current-writer lock, replacing compact latest rows and scope status.
 4. Scanner, Odds and EV reads filter/page stored results without acquisition or
-   whole-slate finance. Selected tickets/Details may calculate the selected amount
-   from exact fresh database inputs. Expanded reports remain transient.
+   whole-slate finance. Opportunities pages a selected-unit publication.
+   Direct quote inspection can size one exact published offer. Expanded reports
+   remain transient.
 5. The pregame desk keeps published prices and calculations until the game
    starts or an explicit sporting change withdraws it. Live and execution
    paths use their own freshness and runtime authority checks.
@@ -90,9 +92,9 @@ bounded transient sizing.
 
 | Surface | Responsibility |
 | --- | --- |
-| `/`, `/ev`, `/arbs`, `/browse-odds`, `/game` | Ordinary SQL desk for ranked estimates, arbitrage, browse, and game views |
+| `/`, `/ev`, `/arbs`, `/browse-odds`, `/game` | Ordinary SQL desk for selected-unit Opportunities, modeled opposing positions, browse, and game views |
 | `/api/comparison-current` | Current desk results, selected evidence, update metadata, and fee coverage |
-| `/replay`, `/api/odds-replay` | Replay list and revision-bound details from saved captures |
+| `/replay`, `/api/odds-replay` | Saved captures and fictional practice with revision-bound details |
 | `/scanner` | Advanced globally ranked Scanner, observed episodes and selected manual tickets |
 | `/odds` | Archived odds browser |
 | `/raw-odds` | Received source-local prices and original inputs |
@@ -112,7 +114,7 @@ The [storage ownership contract](storage-ownership.md) describes the ordinary
 publication and current read surface. The [board contract](comparison-board-api-contract.md)
 and [current-state contract](contracts/predict-current-1.md) document the retained
 board and injected readers. Shared Host/Origin and request validation applies to
-these surfaces.
+these surfaces. [Selected-unit contract and examples](examples/pregame-board-1/README.md)
 
 ## Identity and calculation
 

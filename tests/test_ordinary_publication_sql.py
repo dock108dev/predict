@@ -1,6 +1,8 @@
 """Ordinary publication against disposable source rows; no provider traffic."""
 from copy import deepcopy
 from datetime import timedelta
+import os
+from pathlib import Path
 from unittest import skipUnless
 from unittest.mock import patch
 from aiohttp import web
@@ -58,8 +60,10 @@ class OrdinarySQL(LatestBoardFixture):
         from tests.multisport_fixtures import current_book, source_case
 
         case = dict(source_case('NBA', 'spread', 'arb-appearance', clock=self.at), period='full_game')
+        case['markets']['polymarket_us'].update(minimumTradeQty='1', orderPriceMinTickSize='0.01')
+        case['events']['polymarket_us']['markets'] = [deepcopy(case['markets']['polymarket_us'])]
 
-        async def publish_price(db, ask):
+        async def admit_price(db, ask):
             self.at += timedelta(seconds=1)
             case['clock'] = self.at
             self.state.write(self.service)
@@ -69,6 +73,7 @@ class OrdinarySQL(LatestBoardFixture):
                 book['sequence'] = str(int(clock.timestamp()))
                 side = book['outcomes'][0 if venue == 'kalshi' else 1]
                 side['asks']['levels'][0]['price']['value'] = ask
+                side['asks']['levels'][0]['quantity']['value'] = '200'
                 return book
 
             store = CurrentRowStore(db)
@@ -78,6 +83,9 @@ class OrdinarySQL(LatestBoardFixture):
                 self.assertEqual(exclusions, [])
                 store.upsert_records(records, now=self.at.isoformat())
                 store.replace_native_books([book])
+
+        async def publish_price(db, ask):
+            await admit_price(db, ask)
             turn = live.turn(db)
             self.assertTrue(turn['published'], turn)
             self.assertEqual(turn['errors'], [])
@@ -143,6 +151,99 @@ class OrdinarySQL(LatestBoardFixture):
                 self.assertEqual(reopened['pair_id'], positive['id'])
                 self.assertEqual(reopened['appeared_at'], self.at)
                 self.assertIsNone(reopened['disappeared_at'])
+                await self._verify_arb_read_authority(db, positive['id'], admit_price)
+
+    async def _verify_arb_read_authority(self, db, pair_id, admit_price):
+        from contextlib import AsyncExitStack
+        from app.fees import product_schedules
+
+        result = self.result(db)
+        pair = next(pair for pair in result['pairs'] if pair['id'] == pair_id)
+        kickoff = stamp(pair['start_at'])
+        row = next(row for row in result['rows'] if row['id'] == pair['legs'][0])
+        contract = row['current_authority']['price']['dependency']
+        generation = live.status(db)['generation']
+        app = web.Application()
+        assets = Path(__file__).resolve().parents[1] / 'app/dashboard/opportunity_static/current'
+
+        async def desk(_):
+            return web.FileResponse(assets / 'desk.html')
+
+        app.router.add_get('/arbs', desk)
+        app.router.add_static('/view/current', assets)
+        mount(app)
+        with patch('app.dashboard.snapshot_api.connect', self.connect):
+            async with AsyncExitStack() as stack:
+                client = await stack.enter_async_context(TestClient(TestServer(app)))
+
+                async def read():
+                    response = await client.get('/api/comparison-current', params=dict(
+                        layout='desk', phase='pregame', view='arbs', summary='1', refresh='1'))
+                    self.assertEqual(response.status, 200)
+                    data = await response.json()
+                    self.assertEqual(data['generation'], generation)
+                    self.assertEqual(data['provider_requests'], 0)
+                    return next((p for group in data['rows'] for p in group['pairs'] if p['id'] == pair_id), None)
+
+                tab = None
+                if os.getenv('PREDICT_PREGAME_BROWSER'):
+                    from playwright.async_api import async_playwright, expect
+
+                    pw = await stack.enter_async_context(async_playwright())
+                    browser = await pw.chromium.launch(executable_path=os.getenv('PREDICT_CI_CHROMIUM'))
+                    stack.push_async_callback(browser.close)
+                    tab = await browser.new_page(viewport={'width': 390, 'height': 900})
+                    await tab.clock.install(time=self.at)
+                    await tab.goto(str(client.make_url('/arbs')))
+                    await expect(tab.get_by_text('Modeled profit if the game completes')).to_be_visible()
+
+                original = await read()
+                self.assertEqual(original['retail_payoff']['minimum_net_profit_usd'], '25')
+                await admit_price(db, '0.41')
+                self.assertEqual(await read(), original)
+
+                product = 'polymarket_us:standard_sports'
+                stored = product_schedules.read_all(db).get(product)
+                product_schedules.write(db, product, dict(review_required=dict(reason='fixture_changed_fee')))
+                affected = await read()
+                self.assertIsNone(affected['score'])
+                self.assertEqual(affected['retail_payoff']['reason'], 'pair_fee_publication_pending')
+                self.assertEqual(affected['retail_payoff']['minimum_gross_payout_usd'], '125')
+                if tab:
+                    await tab.get_by_role('button', name='Refresh list').click()
+                    await expect(tab.get_by_text('Net payoff unavailable')).to_be_visible()
+                    await expect(tab.get_by_text('Lowest payout before fees')).to_be_visible()
+                if stored is None:
+                    db.execute('DELETE FROM public_fee_schedule WHERE venue=%s', (product,))
+                else:
+                    product_schedules.write(db, product, stored)
+                self.assertEqual(await read(), original)
+
+                if tab:
+                    await tab.get_by_role('button', name='Refresh list').click()
+                    await expect(tab.get_by_text('Modeled profit if the game completes')).to_be_visible()
+                    await expect(tab.locator('#refresh-list')).to_have_attribute('aria-disabled', 'false')
+                    await tab.get_by_role('button', name='View payoff calculation ↗').click()
+                db.execute('DELETE FROM current_offer_storage WHERE contract_id=%s', (contract,))
+                self.assertIsNone(await read())
+                if tab:
+                    await tab.clock.run_for(7_000)
+                    await expect(tab.locator('#trade-note')).to_contain_text('A current modeled payoff is unavailable')
+                    await expect(tab.locator('#trade .inspection-mode')).to_have_text('Earlier published calculation')
+                    await tab.keyboard.press('Escape')
+                    await expect(tab.locator(f'[data-pair-id="{pair_id}"]')).to_have_count(0)
+                    await expect(tab.locator('#results').get_by_text('Modeled profit if the game completes')).to_have_count(0)
+                await admit_price(db, '0.41')
+                self.assertEqual(await read(), original)
+                if tab:
+                    await tab.get_by_role('button', name='Refresh list').click()
+                    await expect(tab.locator('#results').get_by_text('Modeled profit if the game completes')).to_be_visible()
+                self.at = kickoff
+                self.assertIsNone(await read())
+                if tab:
+                    await tab.clock.fast_forward(int(kickoff.timestamp() * 1000) - await tab.evaluate('Date.now()'))
+                    market = pair['before_fees']['market_key']
+                    await expect(tab.locator(f'#results [data-group-id="{market}"]')).to_have_count(0)
 
     async def test_capture_uses_fee_authority_for_newly_seen_venue(self):
         from app.fees import product_schedules
@@ -985,8 +1086,18 @@ class OrdinarySQL(LatestBoardFixture):
                     actual=snapshots.unpack(saved['inputs'])
                     self.assertEqual(len(c['event_ids']),c['event_count'])
                     complete=snapshots.capture(db,ordinary=True,event_ids=c['event_ids'],at=actual['captured_at'])
+                    # A full structural capture is upstream of the pregame
+                    # reference and execution evidence sealed by the publisher.
+                    from app.storage.pregame_reference_publication import publish as publish_reference
+                    from app.storage.store import stamp
+
+                    observed_at = stamp(complete['captured_at'])
+                    owner, states = live.authority(db, at=observed_at)
+                    publish_reference(complete, live.pregame_sportsbooks(db, owner, states, observed_at, coherent=True), {})
+                    money=snapshots.unpack(saved['result'])
+                    live.prices(complete, money['assumptions'], db=db)
                     self.assertEqual({k:v for k,v in actual.items() if k not in ignored},{k:v for k,v in complete.items() if k not in ignored})
-                    money=snapshots.unpack(saved['result']);complete.update(id=actual['id'],capture_seconds=actual['capture_seconds'])
+                    complete.update(id=actual['id'],capture_seconds=actual['capture_seconds'])
                     with patch.object(snapshots,'utc',return_value=money['calculated_at']):
                         expected=live.bind(snapshots.calculate(complete,money['assumptions'],product=True),complete,'ready')
                     expected['id']=money['id']

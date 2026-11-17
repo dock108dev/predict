@@ -23,4 +23,7 @@ main :is(.coverage-filters, .coverage-measurements, .coverage-fees) > summary {
   .coverage-cell { min-height: 0; }
 }
 .fee-census-facts { display: grid; grid-template-columns: minmax(8rem, 1fr) minmax(0, 3fr); gap: .35rem .75rem; }
+.fee-funnel-table { overflow-x: auto; margin-block: .75rem; }
+.fee-funnel-table table { border-collapse: collapse; width: 100%; font-size: .85rem; }
+.fee-funnel-table :is(th, td) { border-bottom: 1px solid var(--line); padding: .4rem; text-align: left; }
 .fee-census-facts dd { margin: 0; overflow-wrap: anywhere; }

@@ -235,22 +235,27 @@ class SGOScopeSQL(LatestBoardFixture):
             with patch('app.dashboard.snapshot_api.connect', self.connect):
                 async with TestClient(TestServer(app)) as client:
                     query = dict(layout='desk', phase='pregame', basis='sportsbooks',
-                                 summary='1', ranked='1', lines='main', venue='prophetx', refresh='1')
+                                 summary='1', ranked='1', lines='main', venue='prophetx', board='0', refresh='1')
                     reply = await client.get('/api/comparison-current', params=query)
                     assert reply.status == 200
                     listed = await reply.json()
                     item, = [offer for group in listed['rows'] for offer in group['offers']
                              if offer['desk_quote_key'] == key]
                     assert item['current'] and item['trade_fee_available']
-                    assert item['fair_reference']['books'] == ['fanduel']
+                    # The admitted fee does not supply the jurisdiction or
+                    # the execution limits of the aggregate price.
+                    assert item['fair_reference'] is None
                     selected = await (await client.get('/api/comparison-current/selection', params=dict(
-                        layout='desk', id=item['id'], quote_key=key, phase='pregame', basis='sportsbooks'))).json()
+                        layout='desk', id=item['id'], quote_key=key, phase='pregame', basis='sportsbooks',
+                        unit_usd='10', preview_amount='10'))).json()
                     assert selected['row']['price_revision'] == item['price_revision']
                     assert selected['row']['trade_preview']['fee_if_win_usd'] == '0.19'
                     assert selected['row']['trade_preview']['upfront_usd'] == '10'
-                    from fractions import Fraction
-
-                    assert Fraction(selected['row']['trade_preview']['estimated_return_percent']) == Fraction(-1209, 220)
+                    assert selected['row']['trade_preview'].get('estimated_return_percent') is None
+                    valuation = selected['row']['valuation']
+                    assert valuation['selected_usd'] == '10'
+                    assert valuation['reasons']['fill'] == 'unit_fill_depth_unverified'
+                    assert 'net_ev' not in valuation['raw']
                     coverage = await (await client.get('/api/comparison-current/fee-coverage',
                         params={'layout': 'desk', 'phase': 'pregame'})).json()
                     assert coverage['total']['covered'] == 1

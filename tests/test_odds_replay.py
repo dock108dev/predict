@@ -30,10 +30,11 @@ def test_saved_prices_show_prefee_payoff_and_withhold_after_fee_payoff(saved_arc
     assert [leg['allocation_usd'] for leg in math['legs']] == ['48.84', '51.16']
     assert [leg['win_receipt_usd'] for leg in math['legs']] == ['107.448', '107.436']
     assert math['minimum_profit_usd'] == '7.436'
-    assert Fraction(pair['score']) == Fraction(math['minimum_profit_usd'])
+    assert pair['score'] is None
     assert pair['retail_payoff']['available'] is False
     assert pair['retail_payoff']['reason'] == 'pair_missing_leg_fees'
     assert Fraction(math['ideal_profit_usd']) > Fraction(math['minimum_profit_usd'])
+    assert load(dict(query, dataset='preview', positive='on'))['total'] == 0
     assert load(dict(query, dataset='preview', profit='7.44'))['total'] == 0
 
 
@@ -42,7 +43,8 @@ def test_replay_detail_is_revision_bound_and_never_reads_live_data(saved_archive
     with patch('app.storage.odds_replay.connect', side_effect=AssertionError('live data connection')):
         page = load(query)
         assert page['replay']['synthetic'] is False
-        assert page['coverage'] == dict(offers=6, current=6, before=6, reviewed=0, conservative=0, sportsbooks=6)
+        assert page['coverage'] == dict(offers=6, current=6, before=6, reviewed=0, conservative=0, sportsbooks=6,
+                                        after_fees=0)
         sportsbook_view = load(dict(query, basis='sportsbooks'))
         assert all(group['offers'][0]['value_basis'] == 'before' for group in sportsbook_view['rows'])
         modeled = load(dict(query, basis='conservative'))
@@ -90,10 +92,34 @@ def test_saved_list_and_detail_use_the_same_per_offer_pregame_cutoff(saved_archi
     assert load(selection, details=True, allow_live=True)['row']['id'] == offer_id
 
 
-@pytest.mark.parametrize('details', [False, True])
-def test_public_replay_rejects_removed_practice_dataset(details):
-    with pytest.raises(PublicRequestError, match='Unknown replay dataset'):
-        load({'dataset': 'practice'}, details=details)
+def test_practice_does_not_use_archives_and_selection_requires_exact_revision(tmp_path, monkeypatch):
+    monkeypatch.setattr(odds_replay, 'DIRECTORY', tmp_path)
+    rows = load(dict(dataset='practice', view='arbs'))['rows']
+    payoffs = {row['game_key']: row['pairs'][0]['retail_payoff'] for row in rows}
+    positive = payoffs['practice-positive']
+    assert (positive['funding_usd'], positive['minimum_net_payout_usd'], positive['minimum_net_profit_usd']) == (
+        '100', '125', '25')
+    assert {state['net_receipt_usd'] for state in positive['states'].values()} == {'125'}
+    assert 'partial_completion' in positive['states_unverified']
+    assert not positive['full_arbitrage_qualified']
+    assert payoffs['practice-shortfall']['minimum_gross_profit_usd'] == '-0.5'
+    assert payoffs['practice-depth']['reason'] == 'pair_execution_depth_insufficient'
+    assert payoffs['practice-rules']['reason'] == 'pair_settlement_unverified'
+    assert [r['game_key'] for r in load(dict(dataset='practice', view='arbs', positive='on'))['rows']] == [
+        'practice-positive']
+
+    ev = load(dict(dataset='practice'))
+    offer = ev['rows'][0]['offers'][0]
+    query = dict(dataset='practice', id=offer['id'], result_id=ev['replay']['id'])
+    detail = load(query, details=True)
+    assert detail['provider_requests'] == 0
+    assert ev['replay']['synthetic'] is True and 'captured_at' not in ev['replay']
+    assert offer['valuation_summary']['display'] == detail['valuation']['display']
+    assert detail['valuation']['fees']['entry_usd'] == '0.75'
+    assert detail['valuation']['display']['net_ev'] == '+2.82%'
+    assert list(tmp_path.iterdir()) == []
+    with pytest.raises(PublicRequestError, match='Offer unavailable in this replay revision'):
+        load(dict(query, result_id='another-revision'), details=True)
 
 
 def test_retained_novig_recovers_scoped_zero_without_legacy_reference():

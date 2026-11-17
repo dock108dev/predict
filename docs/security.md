@@ -1,9 +1,14 @@
 # Local security
 
-The supported application is a single-user service bound to `127.0.0.1`, with
-automatic configured read-only acquisition, Stop controls and separate saved-session readers. It has no accounts, tenant isolation,
-public webhooks or order execution. Remote, reverse-proxy and shared-user deployment
-are unsupported. Browser protections do not authenticate other local processes.
+The application process is a single-user service bound to `127.0.0.1`, with
+configured read-only acquisition, Stop controls and separate saved-session readers.
+It has no application accounts, tenant isolation, public webhooks, or order
+execution. Browser protections do not authenticate other local processes.
+
+The documented Hetzner deployment fronts this same loopback service with Caddy.
+Caddy terminates TLS, validates the public Origin, and permits specific public
+desk, asset and evidence-lease routes. It requires separate proxy authentication
+for Admin, database access and other operational routes. [Hetzner boundary](hetzner.md)
 
 ## HTTP and browser boundary
 
@@ -120,10 +125,10 @@ their normal dedicated fields. Healthy source isolation is unchanged.
 
 ## Support limits
 
-Remote or shared-user deployment needs authentication, filesystem isolation and a
-TLS/proxy design. Importing untrusted capture directories needs a defined staging
-boundary and symlink-safe file handling. Neither is supported by the current local
-workflow. Global request quotas and a connection/header deadline are not
+Direct remote access to the application listener and shared-user deployments
+are outside the supported boundary. Importing untrusted capture directories
+would need a staging boundary and symlink-safe file handling. Global request
+quotas and a connection/header deadline are not
 implemented. The JSON body deadline and notification quota do not cap every
 expensive saved-reader path or authenticate local clients.
 

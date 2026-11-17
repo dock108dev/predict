@@ -899,6 +899,34 @@
       "applicability": "Exact provider full-game score observation; no venue payout, publication clock, segment completion or authoritative league finality inferred",
       "effective_date": null,
       "conflicts": []
+    },
+    "okst-mbb-20261116": {
+      "id": "okst-mbb-20261116",
+      "url": "https://okstate.com/sports/mens-basketball/schedule/2026-27",
+      "final_url": "https://okstate.com/sports/mens-basketball/schedule/2026-27",
+      "status": 200,
+      "retrieved_at": "2026-11-17T03:35:08Z",
+      "sha256": "de24d583805ce1392effd50abbd387f9bc691fb9555c3aa2b85d8e160e5ddce0",
+      "clause": "Official regular season men's basketball home matchup and local start time.",
+      "applicability": "Exact men's basketball occurrence and participant roles; no nearest-time join.",
+      "effective_date": "2026-11-16",
+      "conflicts": [],
+      "evidence_class": "official_public_document_extract",
+      "path": "app/fixtures/sprint1-kalshi-schedule-evidence.json"
+    },
+    "ucsd-mbb-20261116": {
+      "id": "ucsd-mbb-20261116",
+      "url": "https://ucsdtritons.com/news/2026/11/15/mens-basketball-uc-san-diego-welcomes-tigers-on-military-appreciation-night.aspx",
+      "final_url": "https://ucsdtritons.com/news/2026/11/15/mens-basketball-uc-san-diego-welcomes-tigers-on-military-appreciation-night.aspx",
+      "status": 200,
+      "retrieved_at": "2026-11-17T03:35:08Z",
+      "sha256": "de24d583805ce1392effd50abbd387f9bc691fb9555c3aa2b85d8e160e5ddce0",
+      "clause": "Official regular season men's basketball home matchup and local start time.",
+      "applicability": "Exact men's basketball occurrence and participant roles; no nearest-time join.",
+      "effective_date": "2026-11-16",
+      "conflicts": [],
+      "evidence_class": "official_public_document_extract",
+      "path": "app/fixtures/sprint1-kalshi-schedule-evidence.json"
     }
   },
   "events": [
@@ -1003,6 +1031,44 @@
       ],
       "original_start_policy": "No original/rescheduled identity inferred from current scheduled time",
       "conflicts": []
+    },
+    {
+      "competition": "NCAAB",
+      "home": "NCAAB:M:D1:NCAA521",
+      "away": "NCAAB:M:D1:NCAA1004",
+      "scheduled_start": "2026-11-17T01:00:00+00:00",
+      "season": "2026-2027",
+      "stage": "regular_season",
+      "native_ids": {
+        "kalshi": "KXNCAAMBGAME-26NOV16CARKOKST"
+      },
+      "sources": [
+        "okst-mbb-20261116"
+      ],
+      "conflicts": [],
+      "kalshi_winner_predicates": {
+        "KXNCAAMBGAME-26NOV16CARKOKST-OKST": "381a9afb67ac4b8edf79c93dac2105db68a83446ee14a4531cdc6a3a87c4ca9b",
+        "KXNCAAMBGAME-26NOV16CARKOKST-CARK": "c69fef8ef0e6298e30b1f12fb39ed578b20179a24e612d5d120522856f476529"
+      }
+    },
+    {
+      "competition": "NCAAB",
+      "away": "NCAAB:M:D1:NCAA699",
+      "home": "NCAAB:M:D1:NCAA112",
+      "scheduled_start": "2026-11-17T03:00:00+00:00",
+      "season": "2026-2027",
+      "stage": "regular_season",
+      "native_ids": {
+        "kalshi": "KXNCAAMBGAME-26NOV16TXSOUCSD"
+      },
+      "sources": [
+        "ucsd-mbb-20261116"
+      ],
+      "conflicts": [],
+      "kalshi_winner_predicates": {
+        "KXNCAAMBGAME-26NOV16TXSOUCSD-TXSO": "fee341f0f7a9c1b8efa1261a12d53c8d9e9ffe1e31b7ad09b325d7f9c04b0826",
+        "KXNCAAMBGAME-26NOV16TXSOUCSD-UCSD": "da8456ee446f07ed2e6142801bd87b9d91b9ed438dcf406ce07432ac6bfc1213"
+      }
     }
   ],
   "ncaab_membership": {
@@ -7273,7 +7339,7 @@
       "reason": "Linked document unavailable404; no class/payout terms or non-support inferred"
     }
   ],
-  "sha256": "9fb16b1236bb2ec213a2af3a0651da0cbff194a75958c10d176b401fdbe5939f",
+  "sha256": "34144bd73ffc80ce8f05e856ac58e9ffbe3b22505efe1dab40eebb4b372cc1d6",
   "award_crosswalks": [
     {
       "native_metadata_sha256": "af59ee431560e3df229ee524dce21c5a4b27567013a75444e293333811ce1d95",

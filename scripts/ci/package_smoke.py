@@ -1,6 +1,7 @@
 """Build and install fresh output, then check imports/assets outside the checkout."""
 
 import argparse
+from hashlib import sha256
 import json
 import os
 import platform
@@ -164,6 +165,7 @@ for name in ('index.html', 'current.js', 'arbs.html', 'arbs.js', 'admin.html', '
              'stored.css', 'ui-common.js', 'coverage-shell.js',
              'manrope.ttf', 'manrope-OFL.txt', 'barlow-semi-condensed-600.ttf',
              'barlow-OFL.txt', 'desk.html', 'desk.js', 'desk.css', 'desk-components.css', 'desk-preferences.js',
+             'desk-ticketboard.css', 'desk-ticketboard.js',
              'desk-bootstrap.js', 'desk-drawer.js', 'desk-inspection.js', 'desk-stability.js',
              'desk-polling.js', 'desk-quote-display.js', 'opportunity-cards.js', 'predict-icon.png'):
     assert (root / 'opportunity_static/current' / name).is_file(), name
@@ -212,6 +214,7 @@ async def smoke():
                          '/view/current/barlow-semi-condensed-600.ttf',
                          '/view/current/desk.js','/view/current/desk.css','/view/current/desk-preferences.js',
                          '/view/current/desk-components.css','/view/current/desk-polling.js','/view/current/desk-quote-display.js',
+                         '/view/current/desk-ticketboard.css','/view/current/desk-ticketboard.js',
                          '/view/current/desk-bootstrap.js','/view/current/desk-drawer.js',
                          '/view/current/desk-inspection.js',
                          '/view/current/desk-stability.js',
@@ -242,6 +245,16 @@ async def smoke():
                     html = await response.text()
                     assert '/view/current/desk.js' in html
                     assert '/view/current/predict-icon.png' in html
+            for view in ('arbs', 'ev'):
+                async with client.get(url+'/api/odds-replay', params={'dataset':'practice','view':view}) as response:
+                    practice=await response.json()
+                    assert response.status==200 and practice['provider_requests']==0
+                    assert practice['replay']['synthetic'] is True
+                    if view=='arbs':
+                        assert practice['rows'][0]['pairs'][0]['retail_payoff']['minimum_net_profit_usd']=='25'
+                    else:
+                        offer=practice['rows'][0]['offers'][0]
+                        assert offer['valuation_summary']['display']['net_ev']=='+2.82%'
             assert app[current_key].provider.__class__.__name__=='CurrentStateProvider'
     finally:
         await runner.cleanup()
@@ -279,6 +292,7 @@ asyncio.run(smoke())
         result = {
             "status": "PASS",
             "wheel_bytes": wheel.stat().st_size,
+            "wheel_sha256": sha256(wheel.read_bytes()).hexdigest(),
             "files": len(names),
             "seconds": round(time.monotonic() - started, 3),
             "baseline": None,

@@ -1,8 +1,9 @@
 import {evidenceReason} from './desk-reasons.js';
 
-const {el, num, fmt, name, odd} = window.PredictUI;
+const {el, num, fmt, name, odd, button} = window.PredictUI;
 const basisLabels = {sportsbooks:'Indicative before-fee estimate', reviewed:'Verified after-fee EV',
-  conservative:'Conservative after-fee scenario', before:'Before-fee scenario'};
+  conservative:'Conservative after-fee scenario', before:'Before-fee scenario',
+  after_fees:'Estimated EV after fees', sportsbook_after_fees:'Modeled after-fee estimate'};
 export const books = ['fanduel', 'draftkings', 'betmgm', 'caesars'];
 export const cash = value => value == null ? 'Unavailable' : new Intl.NumberFormat('en-US', {
   style:'currency', currency:'USD'
@@ -19,8 +20,10 @@ export function quoteReason(offer) {
   return evidenceReason(reason, 'No qualified same-line sportsbook pair.').replace(/\.$/, '');
 }
 
+export const usesSportsbookReference = (offer, basis) => basis === 'sportsbooks' || offer?.value_basis === 'sportsbook_after_fees';
+
 export function selectedReference(offer, basis) {
-  if (basis === 'sportsbooks' && offer?.sportsbook) {
+  if (usesSportsbookReference(offer, basis) && offer?.sportsbook) {
     return {book:offer.sportsbook.book, prices:offer.sportsbook.prices, candidates:offer.sportsbook.candidates};
   }
   const ref = offer?.reference_current && offer.reference_calculation;
@@ -115,12 +118,17 @@ function sportsbookCell(group, book, reference, checkedAt, mode, inspection = fa
   return cell;
 }
 
-export function noQuote(cell, venue, retained = false) {
-  const missing = el('span', retained ? 'Saved quote' : '—', 'desk-meta missing-quote');
-  const detail = retained ? `Saved quote from ${venue}. Turn on Last-known prices to see it.`
-    : `No quote shown from ${venue} for this exact outcome`;
-  missing.setAttribute('aria-label', detail);
-  missing.title = detail;
+export function noQuote(cell, venue, retained = false, explain = null, outcome = null) {
+  const detail = retained ? 'A saved quote is available. Turn on Last-known prices to see it.'
+    : 'No quote shown for this exact line.';
+  const label = retained ? 'Saved quote' : 'No quote';
+  const missing = explain ? button(label, event => explain(venue, outcome, detail, event.currentTarget), 'opportunity-link missing-quote')
+    : el('span', label, 'desk-meta missing-quote');
+  if (explain) {
+    missing.setAttribute('aria-label', [venue, outcome, detail].filter(Boolean).join(' · '));
+    missing.setAttribute('aria-haspopup', 'dialog');
+    missing.setAttribute('aria-controls', 'quote-gap');
+  } else missing.setAttribute('aria-label', detail);
   cell.append(missing);
 }
 

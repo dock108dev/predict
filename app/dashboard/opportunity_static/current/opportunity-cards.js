@@ -1,4 +1,6 @@
 import {evidenceReason} from './desk-reasons.js';
+import {pairPayoff, pairLegSize} from './desk-inspection.js';
+import {ticketFacts} from './desk-ticketboard.js';
 import {basisName, books, noQuote, percent, quoteFreshness, quoteReason, selectedReference,
   settlementLabel, sportsbookOdds, sportsbookQuotes, tone, venueLabel} from './desk-quote-display.js';
 
@@ -7,8 +9,10 @@ export {basisName, percent, priceStatus, quoteAge, quoteFreshness, quoteReason, 
   settlementLabel, sportsbookQuotes, tone, venueLabel, winPayout} from './desk-quote-display.js';
 
 const compactBasisLabels = {sportsbooks:'Before-fee estimate', reviewed:'After-fee EV',
-  conservative:'Conservative scenario', before:'Before-fee scenario'};
-const matrixBasisLabels = {sportsbooks:'est.', reviewed:'EV', conservative:'est.', before:'scenario'};
+  conservative:'Conservative after-fee estimate', before:'Before-fee scenario',
+  after_fees:'Estimated EV after fees', sportsbook_after_fees:'Modeled after-fee estimate'};
+const matrixBasisLabels = {sportsbooks:'est.', reviewed:'EV', conservative:'est.', before:'scenario',
+  after_fees:'EV', sportsbook_after_fees:'est.'};
 const venues = ['kalshi', 'polymarket_us', 'novig', 'prophetx'];
 
 function fairReferenceLabel(reference) {
@@ -94,7 +98,8 @@ function cardHeader(group, title, subtitle, result, clock) {
     el('h2', title));
   if (subtitle) description.append(el('p', subtitle));
   if (group.game_identity_status) description.append(el('small', 'Source listing · game identity unverified'));
-  header.append(description, result);
+  header.append(description);
+  if (result) header.append(result);
   return header;
 }
 
@@ -128,6 +133,20 @@ function quote(offer, group, context, className = '', showResult = true) {
 }
 
 export function evCard(group, context) {
+  if (group.offers[0]?.valuation_summary) {
+    const lead = group.offers[0];
+    const summary = lead.valuation_summary;
+    const row = el('article', null, 'opportunity-card');
+    row.dataset.groupId = group.id;
+    row.append(cardHeader(group, context.position(lead), group.game_title,
+      score(group.score, `${venueLabel(lead)} · Net EV`), context.clock));
+    row.append(el('p', `Opportunity Score ${summary.display.opportunity_score} · After-fee odds ${summary.display.after_fee_odds}`, 'desk-meta'));
+    if (summary.evidence_class === 'fixture') row.append(el('p', 'Fixture data', 'desk-meta'));
+    const inspect = button('View EV calculation ↗', event => context.inspectOffer(lead, group, event.currentTarget), 'opportunity-link');
+    inspect.dataset.calculationId = lead.id;
+    row.append(cardActions(group, context, inspect));
+    return row;
+  }
   if (context.compact) return compactEV(group, context);
   const lead = group.offers[0];
   const row = el('article', null, 'opportunity-card');
@@ -211,7 +230,7 @@ function compactEV(group, context) {
       quoteFreshness(offer, context.mode)].filter(Boolean).join(', '));
     if (value != null) {
       const ev = el('strong', percent(value), `compact-ev-return ${tone(value)}`);
-      ev.title = basisName(context.basis) || label;
+      ev.title = basisName(offer.value_basis || context.basis) || label;
       price.append(ev, el('small', label, 'compact-ev-basis'));
     }
     quotes.append(price);
@@ -293,16 +312,14 @@ export function arbCard(group, context, expanded) {
   const offers = new Map(group.offers.map(offer => [offer.id, offer]));
   const legs = best.legs.map(id => offers.get(id));
   const net = best.retail_payoff;
-  const payoffScore = score(group.score, net?.available
-    ? net.fee_basis === 'conservative' ? 'Lowest modeled return with conservative fees' : 'Lowest modeled return after fees'
-    : group.score == null ? 'Return unavailable' : 'Lowest decisive return before fees');
-  row.append(cardHeader(group, group.game_title, '', payoffScore, context.clock));
+  row.append(cardHeader(group, group.game_title, context.mode || '',
+    net?.available ? score(group.score, 'Lowest modeled return') : null, context.clock));
   const content = el('ul', null, 'arb-card-legs');
   for (const [index, leg] of legs.entries()) {
     const item = el('li', null, leg.current ? 'desk-best' : '');
     item.append(el('span', context.position(leg)), el('small', venueLabel(leg)), odd(leg.odds));
-    const allocation = best.display_allocations?.[index];
-    if (allocation != null) item.append(el('small', `${num(allocation).toFixed(2)}% allocation`));
+    const sizing = pairLegSize(best, index);
+    if (sizing.length) item.append(ticketFacts(sizing, 'arb-leg-sizing'));
     if (leg.posted_price || !leg.current && context.mode) {
       item.append(el('small', quoteFreshness(leg, context.mode), 'quote-freshness'));
     }
@@ -317,11 +334,7 @@ export function arbCard(group, context, expanded) {
     }
     return inspect;
   };
-  row.append(content);
-  row.append(el('p', net?.full_arbitrage_qualified ? 'Joint settlement verified'
-    : 'Full settlement coverage unverified', 'desk-meta'));
-  if (!net?.available) row.append(el('p', evidenceReason(net?.reason), 'desk-meta'));
-  if (net?.execution_reason) row.append(el('p', evidenceReason(net.execution_reason), 'desk-meta'));
+  row.append(content, pairPayoff(best));
   const pairLabel = net?.reason === 'pair_leg_stale_or_replaced' ? 'Inspect last-known legs ↗'
     : net?.available || best.inspection || best.evidence_result_id && net?.reason !== 'pair_settlement_unverified'
       ? 'View payoff calculation ↗' : 'Inspect pairing evidence ↗';
@@ -378,8 +391,11 @@ export function gameMatrix(groups, context, {includeAlternates, market, selected
   let actions;
   if (context.gameTitle || context.showGameLink) {
     const header = el('header');
-    header.append(el('h2', context.gameTitle || 'Markets'));
-    if (linked?.game_identity_status) header.append(el('small', 'Source listing · game identity unverified', 'desk-meta'));
+    const description = el('div', null, 'odds-occurrence');
+    description.append(el('h2', context.gameTitle || 'Markets'));
+    if (context.occurrenceLabel) description.append(el('p', context.occurrenceLabel, 'desk-meta'));
+    if (context.identityNote) description.append(el('p', context.identityNote, 'desk-note'));
+    header.append(description);
     if (context.showGameLink && linked) {
       actions = el('div', null, 'odds-card-actions');
       actions.append(context.gameLink(linked));
@@ -446,7 +462,8 @@ function appendMarketMatrix(container, visible, context, {selectedLine, includeA
     const tr = body.insertRow();
     tr.dataset.groupId = group.id;
     const side = heading(null, 'row');
-    side.append(el('span', context.position(lead), 'matrix-outcome'));
+    const outcome = context.position(lead);
+    side.append(el('span', outcome, 'matrix-outcome'));
     if (group.line_role === 'unknown') side.append(el('small', 'Main line unverified', 'desk-meta'));
     const period = group.market.period === 'full_game' ? 'Full game' : name(group.market.period);
     if (!context.compact || group.market.period !== 'full_game') side.append(el('small', `${name(group.market.market)} · ${period}`));
@@ -456,6 +473,7 @@ function appendMarketMatrix(container, visible, context, {selectedLine, includeA
     }
     if (settlementLabel(group) && !context.compact) side.append(el('small', settlementLabel(group)));
     appendSportsbookTrigger(side, group, context);
+    if (context.lineLink) side.append(context.lineLink(group));
     tr.append(side);
     let hasQuote = false;
     for (const [venue] of columns) {
@@ -479,7 +497,8 @@ function appendMarketMatrix(container, visible, context, {selectedLine, includeA
         quotedVenues.add(venue);
         hasQuote = true;
       }
-      if (!cell.hasChildNodes()) noQuote(cell, name(venue), !context.summary && group.retained_venues?.includes(venue));
+      if (!cell.hasChildNodes()) noQuote(cell, name(venue), !context.summary && group.retained_venues?.includes(venue),
+        context.explainQuoteGap, outcome);
     }
     if (!hasQuote && context.selectedVenues) side.append(el('small', 'No quote from selected sites', 'desk-meta'));
     if (context.summary) {

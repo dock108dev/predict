@@ -45,7 +45,14 @@ def _bind_v1(event, market, venue, *, revised=False, share_metadata=False):
         if participant is None and revised and resolved.status!='conflicting':
             from .native_role_binding import kalshi_participant
             participant=kalshi_participant(event,(native.get('custom_strike') or {}).get(TEAM_KEYS.get(event.get('competition'))),team)
-        if participant is not None and text.startswith('If '+str(team)+' wins ') and text.endswith(', then the market resolves to Yes.'):
+        reviewed = (event.get('public_identity') or {}).get('enrichment', {}).get('kalshi_winner_predicates', {})
+        terms = {key: native.get(key) for key in ('ticker', 'event_ticker', 'strike_type', 'custom_strike',
+                                                'yes_sub_title', 'no_sub_title', 'rules_primary')}
+        if market['id'] in reviewed and stable(terms) != reviewed[market['id']]:
+            result['blockers'].append('Exact retained winner predicate conflicts with current native contract')
+        elif (participant is not None and isinstance(text, str)
+                and text.startswith('If '+str(team)+' wins ') and text.endswith(', then the market resolves to Yes.')
+                and (not revised or native.get('event_ticker') == event['id'] and native.get('ticker') == market['id'])):
             result['predicate']=[dict(native_id='yes',participant=participant,predicate='win'),
                                  dict(native_id='no',participant=participant,predicate='not_win')]
         else: result['blockers'].append('Exact full-game native winner literal unavailable')

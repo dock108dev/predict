@@ -1,9 +1,11 @@
 """Official Novig authority stays separate from current offers and SGO spend."""
+from datetime import timedelta
 from unittest import skipUnless
 
 from psycopg.types.json import Jsonb
 
 from app.storage import sgo_native_catalog as catalog
+from app.storage.store import stamp
 from tests.latest_board_fixture import LatestBoardFixture, SOCKET
 from tests.test_sgo_native_binding import AT, EVENT, HOME, SGO, START, fixture, witness
 
@@ -43,3 +45,19 @@ class SGONativeCatalogSQL(LatestBoardFixture):
             assert catalog.dependencies(db,at='2026-11-12T17:09:00+00:00') == []
             catalog.write(db,SGO,witness(event,market,'2026-11-12T16:53:00+00:00'))
             assert catalog.read(db,[SGO])[SGO] == saved
+
+            # A stale pregame phase still has retained links and may be closer
+            # by wall clock. It must not starve upcoming linked markets.
+            stale = (stamp(AT) - timedelta(minutes=1)).isoformat()
+            future = (stamp(START) + timedelta(hours=3)).isoformat()
+            for event_id, kickoff in (('stale', stale), ('future', future)):
+                member = event_id + '-member'
+                frame = dict(facts, starts_at=kickoff, members=[[member, 'observed']])
+                db.execute("INSERT INTO sgo_event_evidence (kind,event_id,received_order,expires_at,payload_bytes,facts) "
+                           "VALUES ('frame',%s,0,%s,0,%s)", (event_id, future, Jsonb(frame)))
+                db.execute("INSERT INTO current_sgo_reference VALUES (%s,%s,'novig',0,0,%s,'observed',%s)",
+                           (member, event_id, future, Jsonb(quote)))
+            db.execute("UPDATE sgo_event_evidence SET observed_at=%s WHERE kind='catalog' AND event_id=%s",
+                       ((stamp(AT) - timedelta(minutes=11)).isoformat(), SGO))
+            later = (stamp(AT) + timedelta(minutes=1)).isoformat()
+            assert [entry[0] for entry in catalog.targets(db, at=later, include_live=False)] == ['future', SGO]

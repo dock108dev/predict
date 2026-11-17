@@ -15,7 +15,7 @@ from urllib.parse import urlsplit
 from app.comparison.sgo_reference import BEST_BOOKS
 
 LEAGUES = frozenset(('NFL', 'NCAAF', 'NBA', 'NCAAB', 'MLB', 'NHL'))
-MARKETS = {'ml': 'moneyline', 'sp': 'spread', 'ou': 'total'}
+MARKETS = {'ml': 'moneyline', 'ml3way': 'moneyline', 'sp': 'spread', 'ou': 'total'}
 MAX_PAGE_BYTES = 16 * 1024 * 1024
 MAX_EVENTS = 100
 MAX_ODDS_PER_EVENT = 20000
@@ -80,13 +80,13 @@ def _baseline(odd, typ, prefix):
     try:
         if odd.get(odds_key) is not None:
             result['price_american'] = _price(odd[odds_key])
-        if typ != 'ml':
+        if typ in ('sp', 'ou'):
             line_key = prefix + ('Spread' if typ == 'sp' else 'OverUnder')
             if odd.get(line_key) is not None:
                 result['line'] = _number(odd[line_key])
     except ValueError:
         result['available'] = False
-    if result['price_american'] is None or (typ != 'ml' and result['line'] is None):
+    if result['price_american'] is None or (typ in ('sp', 'ou') and result['line'] is None):
         result['available'] = False
     return result
 
@@ -265,7 +265,8 @@ def parse_page(body, received_at, *, leagues=LEAGUES, venues=None):
                 if isinstance(values, dict) and values.get('points') is not None:
                     game_results[role] = _number(values['points'])
         event_row = {'event_id': event_id, 'aliases': aliases, 'league': league, 'teams': names,
-                     'starts_at': _time(status.get('startsAt')), 'phase': phase,
+                     'starts_at': _time(status.get('startsAt')), 'starts_at_original': status['startsAt'],
+                     'phase': phase,
                      'status': {key: status.get(key) for key in ('started', 'live', 'ended', 'completed', 'cancelled', 'delayed', 'suspended', 'finalized')},
                      'scores': scores, 'game_results': game_results,
                      'received_at': received_at}
@@ -288,12 +289,15 @@ def parse_page(body, received_at, *, leagues=LEAGUES, venues=None):
                 continue
             if typ in ('ml', 'sp') and (side not in ('home', 'away') or entity != side):
                 continue
+            if typ == 'ml3way' and not (side in ('home', 'away') and entity == side
+                                       or side == 'draw' and entity in ('all', 'draw')):
+                continue
             if typ == 'ou' and (side not in ('over', 'under') or entity != 'all'):
                 continue
             if odd.get('oddID') != odd_id:
                 raise ValueError('odd identity mismatch')
             _identity(odd_id)
-            opposite = _identity(odd.get('opposingOddID'))
+            opposite = None if typ == 'ml3way' else _identity(odd.get('opposingOddID'))
             by_book = odd.get('byBookmaker', {})
             if not isinstance(by_book, dict) or len(by_book) > MAX_BOOKS_PER_ODD:
                 raise ValueError('book shape or limit')
@@ -320,13 +324,13 @@ def parse_page(body, received_at, *, leagues=LEAGUES, venues=None):
                     try:
                         if 'odds' in entry:
                             price = _price(entry['odds'])
-                        if typ != 'ml' and ('spread' if typ == 'sp' else 'overUnder') in entry:
+                        if typ in ('sp', 'ou') and ('spread' if typ == 'sp' else 'overUnder') in entry:
                             line = _number(entry['spread' if typ == 'sp' else 'overUnder'])
                         if entry.get('lastUpdatedAt') is not None:
                             source_at = _time(entry['lastUpdatedAt'])
                     except ValueError:
                         reason = 'invalid price, line or source clock'
-                    if price is None or source_at is None or (typ != 'ml' and line is None):
+                    if price is None or source_at is None or (typ in ('sp', 'ou') and line is None):
                         reason = reason or 'missing price, line or source clock'
                     if not entry['available']:
                         reason = reason or 'provider unavailable'
@@ -346,6 +350,7 @@ def parse_page(body, received_at, *, leagues=LEAGUES, venues=None):
                                    'odd_id': odd_id, 'opposing_odd_id': opposite,
                                    'alternate': index != 0,
                                    'settlement': 'unverified', 'fair': fair.copy(),
+                                   **({'partition': 'three_way'} if typ == 'ml3way' else {}),
                                    **({'bookmaker_market_link': market_link} if market_link else {}),
                                    **({'consensus': consensus.copy()} if consensus is not None else {})}
                     line_key = Decimal(line) if line is not None else None

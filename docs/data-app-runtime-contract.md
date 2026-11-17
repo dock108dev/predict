@@ -349,14 +349,22 @@ retained prices when the source is unavailable or the confirmation ages out,
 and keeps the published price and its calculations available until kickoff or
 explicit closure.
 
-The web process reads and pages the committed terms; only sporting authority
-can withdraw a published offer ahead of another generation. Linked offers
+The web process reads and pages the committed terms. Sporting authority can
+remove a pregame offer before another generation. An explicit quote withdrawal
+or an invalidated reference, fee, or settlement input also constrains the
+affected comparison. Linked offers
 use the same schedule in the list, game page, and quote inspection. The
 pregame fee census counts the same published offers. Open pages use the
 next visible kickoff and the update cursor. Live views keep their separate
 freshness rules. The Novig public catalog verifies eligible SportsGameOdds
 links independently of direct Novig price collection, subject to source pause
 and Stop controls.
+
+Opportunities queues a bounded selected-unit calculation and reads a committed
+board. The worker caches valuations by amount, immutable member, and policy.
+It seals the board only after checking the root and epoch. An app-only process
+can service unit demand from committed inputs while the ordinary data owner is
+absent. These requests make zero provider calls. [Selected-unit wire contract](examples/pregame-board-1/README.md)
 
 ## Independent ordinary raw reads
 

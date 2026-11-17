@@ -78,7 +78,7 @@ def test_opportunities_separates_market_families_for_the_same_game():
         tab = browser.new_page()
         tab.route("**/*", respond)
         tab.clock.install(time=datetime.fromisoformat("2026-11-13T00:00:00+00:00"))
-        tab.goto(f"{BASE}/ev")
+        tab.goto(f"{BASE}/ev?board=0")
         cards = tab.locator("#results > article")
         expect(cards).to_have_count(3)
         expect(cards.locator("h2")).to_have_text(
@@ -100,7 +100,7 @@ def test_opportunities_separates_market_families_for_the_same_game():
         results = tab.locator("#results")
         matrices = tab.locator("#results .odds-card")
         expect(
-            results.get_by_role("heading", name="No EV estimates available")
+            results.get_by_role("heading", name="No after-fee EV estimates available")
         ).to_be_visible()
         expect(
             results.get_by_text(
@@ -190,14 +190,19 @@ def test_update_check_keeps_pregame_estimate_until_kickoff_and_recovers():
         tab = browser.new_page(viewport={"width": 390, "height": 844})
         tab.route("**/*", respond)
         tab.clock.install(time=datetime.fromisoformat("2026-11-13T00:00:00+00:00"))
-        tab.goto(f"{BASE}/ev")
+        tab.goto(f"{BASE}/ev?board=0")
         score = tab.locator(".compact-ev-return")
         expect(score).to_have_text("+0.20%")
+        expect(score).to_have_css("white-space", "nowrap")
+        expect(tab.locator('[data-offer-id="novig-over"] .p-odds')).to_have_css(
+            "white-space", "nowrap"
+        )
         expect(tab.locator('[data-offer-id="novig-over"]')).to_have_attribute(
-            "aria-label", re.compile("Before-fee estimate")
+            "aria-label", re.compile("Estimated EV after fees")
         )
         expect(tab.get_by_text("1 more outcome")).to_be_visible()
-        expect(tab.get_by_label("Calculation basis")).to_have_value("sportsbooks")
+        expect(tab.get_by_label("Calculation basis")).to_be_hidden()
+        assert list_reads[0]["basis"] == "after_fees"
         expect(tab.locator("#phase-tabs")).to_be_hidden()
         assert tab.evaluate("document.documentElement.scrollWidth === innerWidth")
         tab.evaluate("window.initialCard = document.querySelector('.opportunity-card')")
@@ -235,8 +240,8 @@ def test_update_check_keeps_pregame_estimate_until_kickoff_and_recovers():
         expect(tab.locator('[data-offer-id="novig-over"]')).to_contain_text("+0.70%")
         expect(tab.locator("#previous-results")).to_be_hidden()
 
-        tab.goto(f"{BASE}/ev?phase=live")
-        expect(tab).to_have_url(f"{BASE}/ev")
+        tab.goto(f"{BASE}/ev?phase=live&board=0")
+        expect(tab).to_have_url(f"{BASE}/ev?board=0")
         expect(tab.locator("#phase-tabs")).to_be_hidden()
         assert list_reads[-1]["phase"] == "live"
         tab.clock.set_fixed_time(datetime.fromisoformat(START))
@@ -430,7 +435,7 @@ def test_ev_updates_prices_without_reranking_or_displacing_a_reader(width):
         tab = browser.new_page(viewport={"width": width, "height": 720})
         tab.route("**/*", respond)
         tab.clock.install(time=datetime.fromisoformat("2026-11-13T00:00:00+00:00"))
-        tab.goto(f"{BASE}/ev")
+        tab.goto(f"{BASE}/ev?board=0")
         first = tab.locator("#results > article").first
         over = tab.locator('[data-group-id="detroit-over"]')
         under = tab.locator('[data-group-id="detroit-under"] > .compact-ev-market h2')
@@ -537,6 +542,7 @@ def test_posted_pregame_preview_updates_with_the_board_and_can_be_held():
             },
             price_revision=str(revision),
             economic_revision=str(revision),
+            evidence_result_id=f"member-{revision}",
             value=None,
         )
 
@@ -571,26 +577,38 @@ def test_posted_pregame_preview_updates_with_the_board_and_can_be_held():
             )
         elif url.path == "/api/comparison-current/selection":
             reads["selection"] += 1
-            budget = parse_qs(url.query)["preview_amount"][0]
+            budget = parse_qs(url.query).get("unit_usd", [None])[0]
+            row = offer()
             route.fulfill(
                 json=dict(
+                    result_id=f"root-{revision}",
                     row=dict(
-                        offer(),
+                        row,
                         start_at=START,
-                        trade_preview=dict(
-                            available=True,
-                            fee_available=True,
-                            amount_usd=budget,
-                            upfront_usd=budget,
-                            fee_timing="commission_deducted_from_winning_market_gains",
-                            fee_at_entry_usd="0",
-                            fee_if_win_usd="0.21",
-                            net_win_payout_usd="20.19",
-                            net_win_profit_usd="10.19",
-                            net_loss_usd=budget,
-                            modeled=True,
+                        valuation=dict(
+                            offer_id=row["id"],
+                            member_result_id=row["evidence_result_id"],
+                            publication_id=f"root-{revision}",
+                            price_revision=row["price_revision"],
+                            economic_revision=row["economic_revision"],
+                            selected_usd=budget,
+                            fill={"levels": []} if budget else None,
+                            display=dict(
+                                actual_outlay_usd=budget, stake_usd=budget, fee="$0.21"
+                            )
+                            if budget
+                            else {},
+                            states={}
+                            if budget is None
+                            else dict(
+                                win=dict(
+                                    display_receipt_usd="20.19", display_fee_usd="0.21"
+                                )
+                            ),
+                            raw={},
+                            reasons={} if budget else {"size": "unit_size_unset"},
                         ),
-                    )
+                    ),
                 )
             )
         else:
@@ -616,12 +634,13 @@ def test_posted_pregame_preview_updates_with_the_board_and_can_be_held():
         expect(tile).not_to_contain_text("Last known")
         tile.click()
         detail = tab.get_by_role("dialog", name="ProphetX · Denver to win")
-        expect(detail).to_contain_text("$20.19 returned")
+        expect(detail).to_contain_text("Enter a maximum upfront cost")
         expect(detail.get_by_role("button", name="Use latest prices")).to_be_hidden()
         amount = detail.get_by_label("Maximum upfront cost")
         amount.fill("15")
         amount.press("Tab")
-        expect(detail).to_contain_text("$15.00 loss")
+        expect(detail).to_contain_text("$15.00")
+        expect(detail).to_contain_text("$20.19 returned")
 
         revision = 1
         tab.clock.fast_forward(18_000)

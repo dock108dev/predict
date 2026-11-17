@@ -207,6 +207,21 @@ def measure_inputs(inputs, publication, published_pairs, deps, owner, states, *,
             continue
         seen.add(cid)
         cohorts[key]['current_input_keys'] += 1
+        selected_quote = selected[row['id']]
+        if reference := selected_quote.get('pregame_reference'):
+            if selected_quote.get('sportsbook_baseline'):
+                indicative.add(cid)
+                kind = 'sgo' if row['source']['provider'] == 'sportsgameodds' else 'native'
+                if kind == 'sgo':
+                    indicative_sgo.add(cid)
+                cohorts[key][f'eligible_indicative_{kind}'] += 1
+                cohorts[key][f'published_indicative_{kind}'] += cid in published_indicative
+            assessment = selected_quote['settlement_assessment']
+            reason = reference.get('reason') or assessment.get('reason')
+            if reason:
+                gaps[reason] += 1
+                cohort_gaps[key][reason] += 1
+            continue
         reason = None
         native_indicative = (phase != 'live' and row['source']['provider'] in NATIVE_VENUES and sportsbook_observations and
                              sportsbook_estimate(selected[row['id']], source, sportsbook_observations, at=at))
@@ -352,7 +367,10 @@ def measure(db, publication, published_pairs, deps, owner, states, *, settings, 
     inputs['policy_identity'] = policy
     inputs['fee_products'] = owner.get('fee_products', {})
     inputs['fee_lifecycle'] = owner.get('fee_lifecycle')
-    observations = live.pregame_sportsbooks(db, owner, states, at) if phase != 'live' else None
+    if phase != 'live':
+        from app.storage.pregame_reference_publication import prior_snapshots, publish
+
+        observations = live.pregame_sportsbooks(db, owner, states, at, coherent=True)
+        publish(inputs, observations, prior_snapshots(publication['rows']))
     return dict(measure_inputs(inputs, publication, published_pairs, deps, owner, states,
-        settings=settings, policy=policy, epoch=epoch, at=at, phase=phase,
-        sportsbook_observations=observations), candidate_events=len(event_ids))
+        settings=settings, policy=policy, epoch=epoch, at=at, phase=phase), candidate_events=len(event_ids))

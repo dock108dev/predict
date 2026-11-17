@@ -130,6 +130,8 @@ def desk_game_aliases(rows, games, event_facts, *, unresolved=None):
     from app.comparison.occurrence_matching import OccurrenceResolver
     from app.normalization.college_registry import expanded, sgo_registry
     from app.storage.schedule_metadata import witness
+    from app.storage.sgo_schedule_review import canonical_roles
+    from app.storage.store import now
 
     sources = defaultdict(set)
     events = dict(event_facts or {})
@@ -147,6 +149,7 @@ def desk_game_aliases(rows, games, event_facts, *, unresolved=None):
     scheduled = defaultdict(list)
     source_roles = {}
     mapped_games = set()
+    observed_at = now()
 
     def projected_role(game, team):
         if team in entities:
@@ -162,6 +165,10 @@ def desk_game_aliases(rows, games, event_facts, *, unresolved=None):
                          if team == f"sportsgameodds:{event['competition']}:{key[1]}:{role}"), None)
             if not role or not event.get(role):
                 continue
+            original = (event['competition'], stamp(event['scheduled_start']), event['home'], event['away'])
+            reviewed = canonical_roles(key[1], original, at=observed_at)
+            if reviewed != original:
+                return reviewed[2 if role == 'home' else 3]
             names = [name for name, identifier in event.get('participants', {}).items() if identifier == event[role]]
             if len(names) == 1:
                 match = sgo_registry().resolve('team', names[0], league=event['competition'], venue='sportsgameodds')
@@ -247,7 +254,14 @@ def desk_game_aliases(rows, games, event_facts, *, unresolved=None):
         for keys in (*scheduled.values(), *matchups.values()):
             resolved = {aliases.get(key, key) for key in keys}
             if len(resolved) > 1:
-                unresolved.update(resolved)
+                unresolved.update(dict.fromkeys(resolved, 'source_listing_unverified'))
+        for game, members in sources.items():
+            canonical = aliases.get(game, game)
+            facts = [events.get(member) or {} for member in members]
+            if any(event.get('schedule_conflict') for event in facts):
+                unresolved[canonical] = 'schedule_conflict'
+            elif any(event.get('occurrence_conflict') or event.get('conflicting_duplicate') for event in facts):
+                unresolved.setdefault(canonical, 'source_listing_unverified')
     return aliases
 
 

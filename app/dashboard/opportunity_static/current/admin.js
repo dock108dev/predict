@@ -145,7 +145,12 @@ function render(s){
       return node('li', `${league} · ${poll.completed}/${poll.attempts} polls · ${poll.reason || poll.state}${received}${interval}`);
     }));
   }
-  $('novig-public-status').textContent=!novigPublic ? 'Novig public discovery is not running.' :
+  const novigCatalog = config.aggregate_provider === 'sportsgameodds' && config.direct_novig_enabled === false;
+  $('novig-public-status').textContent=novigCatalog ?
+    `Novig fee evidence for SportsGameOdds offers: ${novigPublic?.sgo_catalog_events || 0} catalog event checks · ` +
+      `${(novigPublic?.sgo_catalog_state || (novigPublic ? 'waiting' : 'not running')).replaceAll('_',' ')}. ` +
+      'Direct Novig prices are disabled.' :
+    !novigPublic ? 'Novig public discovery is not running.' :
     novigPublic.state === 'initializing' ? 'Novig public discovery is waiting for its first read.' :
     `Novig public discovery: ${novigPublic.events || 0} live events observed; ${novigPublic.books || 0} books sampled. ` +
     (novigPublic.state === 'unavailable' ? `Public discovery is unavailable (${String(novigPublic.gap || 'source error').replaceAll('_',' ')}).` :

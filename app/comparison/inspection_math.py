@@ -119,9 +119,13 @@ def pair_math(proof, funding):
     amounts = [first, funding - first]
     receipts = [amount / cost for amount, cost in zip(amounts, costs)]
     profits = [receipt - funding for receipt in receipts]
+    by_state = {state: sum(receipt * Fraction(payout) for receipt, payout in zip(receipts, legs, strict=True))
+                for state, legs in proof.get('settlement_payouts', {}).items()}
+    minimum = min(by_state.values(), default=min(receipts))
     return dict(funding_usd=wire(funding), ideal_payout_usd=wire(funding * (1 + roi)),
-                ideal_profit_usd=wire(funding * roi), minimum_profit_usd=wire(min(profits)),
-                rounded_return_percent=wire(100 * min(profits) / funding),
+                ideal_profit_usd=wire(funding * roi), minimum_gross_payout_usd=wire(minimum),
+                minimum_profit_usd=wire(minimum - funding),
+                rounded_return_percent=wire(100 * (minimum - funding) / funding),
                 legs=[dict(cost_per_claim=wire(cost), ideal_allocation_usd=wire(ideal),
                            allocation_usd=wire(amount), win_receipt_usd=wire(receipt),
                            win_profit_usd=wire(profit))

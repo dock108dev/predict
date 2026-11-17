@@ -49,7 +49,7 @@ class BrowseSessions:
                 if not session or session['signature']!=signature:
                     return dict(state='page_changed',reason='Browsing snapshot expired or filters changed; refresh starts a new order.',rows=[])
                 self.sessions.move_to_end(token)
-            elif offset:
+            elif offset and not query.get('locate'):
                 return dict(state='page_changed',reason='Browsing snapshot missing; refresh starts a new order.',rows=[])
             else:
                 order=[{k:g[k] for k in ('id','game_key','game_title','start_at')} for g in groups]

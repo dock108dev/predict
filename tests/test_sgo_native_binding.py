@@ -63,15 +63,25 @@ def test_public_catalog_binds_exact_quote_and_pregame_terms_without_claiming_exe
     assert result['current_until'] == START
     fee = pregame_fee(result)
     assert fee['available'] and fee['trade_fee_usd'] == '0'
+    assert fee['evidence']['schedule_version'] == 'novig-v3-observed-20260930'
+    assert fee['details']['rounding_trace'][0]['charged'] is False
     assert fee['evidence']['native_binding_revision'] == 'current'
     result['settlement'] = dict(available=False)
     assert pregame_fee(result)['trade_fee_usd'] == '0'
 
 
+def test_incomplete_terms_do_not_calculate_zero_from_charge_condition_alone():
+    row, event, market = fixture()
+    market['fee'].pop('coefficient')
+    result = pregame_fee(bind(row, witness(event, market), at=AT))
+    assert not result['available']
+    assert result['reason'] == 'sgo_native_pregame_fee_terms_unverified'
+
+
 @pytest.mark.parametrize('alter,reason', [
     ('opposite', 'sgo_native_selected_side_conflict'),
     ('line', 'sgo_native_line_conflict'),
-    ('start', 'sgo_native_market_scope_conflict'),
+    ('start', 'sgo_native_kickoff_conflict'),
     ('host', 'sgo_native_outcome_link_unavailable'),
     ('expiry', 'sgo_native_catalog_expired'),
 ])

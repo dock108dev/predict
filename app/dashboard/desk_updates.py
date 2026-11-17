@@ -72,11 +72,11 @@ def refresh_at(page, at):
         if row.get('withdrawn'):
             continue
         deadlines.append(row.get('start_at'))
+        deadlines.extend(pair.get('calculation_current_until') for pair in row.get('pairs', ()))
         if page.get('phase') == 'pregame':
             continue
         for offer in row.get('offers', []):
             if offer.get('current'):
                 deadlines.extend((offer.get('current_until'), offer.get('calculation_current_until')))
-        deadlines.extend(pair.get('calculation_current_until') for pair in row.get('pairs', ()))
     future = [stamp(deadline) for deadline in deadlines if deadline and stamp(deadline) > at]
     return min(future).isoformat() if future else None

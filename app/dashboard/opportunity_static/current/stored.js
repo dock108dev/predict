@@ -10,6 +10,14 @@ const UI = (() => {
   const name=v=>names[v]||v;
   let format='american';try{format=localStorage.getItem('predict-odds-format')==='decimal'?'decimal':'american';}catch{}
   function updateOdds(){for(const e of document.querySelectorAll('[data-american]'))e.textContent=e.dataset[format]||'Unavailable';for(const b of document.querySelectorAll('[data-format]'))b.setAttribute('aria-pressed',String(b.dataset.format===format));}
+  function setOddsFormat(value, persist=false){
+    if(!['american','decimal'].includes(value))return;
+    format=value;
+    if(persist){try{localStorage.setItem('predict-odds-format',format);}catch{}}
+    const choice=document.querySelector('select[aria-label="Odds format"]');
+    if(choice)choice.value=format;
+    updateOdds();
+  }
   function odd(o,cls='p-odds'){const e=el('span',null,cls);e.dataset.american=o?.american||'';e.dataset.decimal=o?.decimal_display || (o?.decimal?fmt(o.decimal,o.decimal_places || 2):'');e.textContent=e.dataset[format]||'Unavailable';return e;}
   function link(text,path,cls){const a=el('a',text,cls);a.href=path;return a;}
   function button(text,fn,cls='p-outline'){const b=el('button',text,cls);b.type='button';b.onclick=fn;return b;}
@@ -22,6 +30,10 @@ const UI = (() => {
       const opportunities = document.body.classList.contains('opportunities-app');
       if (opportunities) {
         nav.append(link('Opportunities','/'),link('Browse odds','/browse-odds'),link('Trading fees','/trading-fees'),link('Admin','/admin'));
+        if (['/', '/ev'].includes(location.pathname) && new URLSearchParams(location.search).get('board') !== '0') {
+          nav.children[1].after(link('Arbitrage','/arbs'));
+          nav.classList.add('pregame-nav');
+        }
       } else {
         nav.append(link('EV','/ev'),link('Arbitrage','/arbs'),link('Admin','/admin'));
       }
@@ -30,18 +42,19 @@ const UI = (() => {
         const option=el('option',title);option.value=value;choice.append(option);
       }
       choice.value=format;
-      choice.onchange=()=>{format=choice.value;try{localStorage.setItem('predict-odds-format',format);}catch{}updateOdds();};
+      choice.onchange=()=>setOddsFormat(choice.value,true);
       label.append(choice);label.className='p-format';
       h.append(brand,nav,label);host.replaceChildren(h);
       const path = opportunities
-        ? ['/browse-odds', '/game'].includes(location.pathname) ? '/browse-odds' : location.pathname === '/trading-fees' ? '/trading-fees' : '/'
+        ? ['/browse-odds', '/game'].includes(location.pathname) ? '/browse-odds'
+          : location.pathname === '/trading-fees' ? '/trading-fees' : '/'
         : location.pathname==='/'?'/ev':location.pathname;
       nav.querySelectorAll('a').forEach(a=>{if(a.pathname===path)a.setAttribute('aria-current','page');});
       return;
     }
     nav.append(link('Opportunities','/'),link('Markets','/odds'));
     const f=el('div',null,'p-format');f.setAttribute('aria-label','Odds format');
-    for(const [key,label] of [['american','American'],['decimal','Decimal']]){const b=button(label,()=>{format=key;try{localStorage.setItem('predict-odds-format',key);}catch{}updateOdds();},'');b.dataset.format=key;f.append(b);}
+    for(const [key,label] of [['american','American'],['decimal','Decimal']]){const b=button(label,()=>setOddsFormat(key,true),'');b.dataset.format=key;f.append(b);}
     h.append(brand,nav,f,link('Admin','/admin','p-admin'));host.replaceChildren(h);
     const path=location.pathname;for(const a of h.querySelectorAll('a'))if(a.pathname===(path==='/arbs'||path==='/ev'?'/':path))a.setAttribute('aria-current','page');
     updateOdds();
@@ -72,7 +85,7 @@ const UI = (() => {
       a.href=u;
     }
   }
-  shell();return {el,num,fmt,name,odd,link,button,updateOdds,adminNav,carry,localURL};
+  shell();return {el,num,fmt,name,odd,link,button,updateOdds,oddsFormat:()=>format,setOddsFormat,adminNav,carry,localURL};
 })();
 window.PredictUI=UI;
 

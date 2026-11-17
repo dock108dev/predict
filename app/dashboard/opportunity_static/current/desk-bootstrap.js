@@ -5,22 +5,22 @@
       || window.history.state?.predictDesk || window.PredictDeskStarted) return;
   const browse = path === '/browse-odds';
   const arb = path === '/arbs';
+  if (!browse && !arb) return; // The ticketboard first restores its selected unit.
   const fields = {
-    basis: 'sportsbooks', family: 'winner,spread,total', group: 'outcome',
+    basis: browse || arb ? 'sportsbooks' : 'after_fees', family: 'winner,spread,total', group: 'outcome',
     layout: 'desk', league: 'NBA,NFL,MLB,NHL,NCAAB,NCAAF', limit: arb ? '25' : '12',
     offset: '0', phase: 'pregame', summary: '1', venue: 'kalshi,polymarket_us,novig,prophetx',
     view: arb ? 'arbs' : 'ev',
   };
   if (browse) fields.browse_odds = '1';
-  else if (!arb) fields.ranked = '1';
   if (!arb) fields.lines = 'main';
   try {
     const saved = JSON.parse(localStorage.getItem(`predict-desk-${browse ? 'browse' : arb ? 'arb' : 'ev'}-filters`) || '{}') || {};
     const returnState = JSON.parse(sessionStorage.getItem('predict-desk-return') || 'null');
     if (returnState?.url === location.href && returnState.restoreOnArrival) return;
     const ev = browse && JSON.parse(localStorage.getItem('predict-desk-ev-filters') || '{}');
-    const basis = saved.basis || ev?.basis || fields.basis;
-    if (!['sportsbooks', 'reviewed', 'conservative', 'before'].includes(basis)) return;
+    const basis = browse || arb ? saved.basis || ev?.basis || fields.basis : fields.basis;
+    if (!['after_fees', 'sportsbooks', 'reviewed', 'conservative', 'before'].includes(basis)) return;
     fields.basis = basis;
     for (const key of ['league', 'venue', 'family']) {
       if (!saved[key]) continue;

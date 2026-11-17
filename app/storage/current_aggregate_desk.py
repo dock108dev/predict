@@ -9,7 +9,7 @@ from app.comparison.public_sportsbook_estimate import SOURCE as ODDSLINK, allowe
 from app.comparison.sgo_reference import BEST_BOOKS
 from app.comparison.sgo_reference_publication import FrameQuoteIndex
 from app.comparison.sgo_sportsbook_baseline import select as sportsbook_baseline
-from app.comparison.sgo_native_binding import bind as bind_novig, pregame_fee
+from app.comparison.sgo_native_binding import bind as bind_novig, published_pregame_fee
 from app.comparison.snapshot_fee_outcome import outcome as trade_fee, reviews, unavailable
 from app.fees import product_schedules, schedule_lifecycle
 from app.comparison.sporting_scope import supported
@@ -192,8 +192,7 @@ def overlay(db, result, owner, states, *, at, phase, contract=None, sgo_inputs=N
                 row['sgo_native_contract'] = binding
                 review = product_schedules.for_offer(owner.get('fee_products'), row, at,
                                                      fallback=schedules['novig'])
-                row['trade_fee'] = (unavailable(review['unavailable_reason'])
-                                    if review and review.get('unavailable_reason') else pregame_fee(binding))
+                row['trade_fee'] = published_pregame_fee(record, binding, at=at, review=review)
             else:
                 review = schedule_lifecycle.for_offer(owner.get('fee_lifecycle'), row, at,
                                                       fallback=schedules['prophetx'])

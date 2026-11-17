@@ -1,5 +1,6 @@
 """JUnit, quality-result and failed-command reporting."""
 
+import ast
 import json
 from pathlib import Path
 import tempfile
@@ -24,6 +25,29 @@ def browser_cases():
 
 
 class ReportingTests(unittest.TestCase):
+    def test_behavior_rows_name_existing_test_cases(self):
+        module = load("quality_report")
+        root = Path(__file__).resolve().parents[1]
+        for _, _, location, cases in module.BROWSER_BEHAVIOR + module.STORAGE_BEHAVIOR:
+            package, file, *classes = location.split(".")
+            nodes = ast.parse((root / package / f"{file}.py").read_text()).body
+            for class_name in classes:
+                nodes = next(
+                    node.body
+                    for node in nodes
+                    if isinstance(node, ast.ClassDef) and node.name == class_name
+                )
+            defined = {
+                node.name
+                for node in nodes
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+            }
+            self.assertEqual(
+                {case for case in cases if case.partition("[")[0] not in defined},
+                set(),
+                location,
+            )
+
     def test_optional_resource_outage_preserves_unavailable_values(self):
         module = load("health")
 

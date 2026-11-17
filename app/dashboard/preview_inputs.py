@@ -56,10 +56,23 @@ def prepared_preview(row, amount, members):
         row = dict(row, fee_applicability=members.get((row.get('evidence_result_id'), row['id'])))
     baseline = row.get('sportsbook_baseline') or {}
     prices = baseline.get('prices') or ()
-    if len(prices) != 2 or any(not price.get('price_american') for price in prices):
+    if len(prices) not in (2, 3) or any(not price.get('price_american') for price in prices):
         row = dict(row, sportsbook_baseline=None)
     result = preview(dict(row, cost_per_normal_claim=claim_cost(row)), amount)
     if result.get('estimated_return_percent') is None:
         result['estimated_return_reason'] = (result.get('reason') or result.get('fee_reason')
+                                             or (row.get('settlement_assessment') or {}).get('reason')
                                              or 'exact_reference_pair_unavailable')
     return result
+
+
+def prepared_valuation(db, row, amount, publication_id):
+    from app.comparison.pregame_valuation import valuation
+
+    row = snapshots.expand_row(row)
+    member = row.get('evidence_result_id')
+    stored = db.execute('SELECT snapshot_id FROM comparison_snapshot_result WHERE id=%s',
+                        (member,)).fetchone() if member else None
+    if not stored:
+        return None
+    return valuation(row, amount, publication_id=publication_id, snapshot_id=stored['snapshot_id'])

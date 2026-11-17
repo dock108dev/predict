@@ -105,6 +105,15 @@ The test contract checks that the portable dispositions and the quality job's
 outside that glob fails validation. SQL `--tests` reports identify a focused run
 and retain its exact targets separately from the full registered shard lane.
 
+The portable pregame reference cases assert priority fallback, complete
+same-line partitions, and exact push/draw probabilities. The valuation cases
+assert actual outlay, fee rounding, per-state returns, and ranking using
+authored terms. The storage shard summaries also name the selected-unit
+publication, pagination, and real PostgreSQL lock-recovery cases. The ordinary
+browser first-use cases include the fictional practice journeys at desktop and
+phone widths. These checks use fixtures and disposable storage. Live reference,
+fee, fill, and collection coverage require separate evidence.
+
 ### Selecting local cases
 
 Use pytest node IDs or affected modules for routine changes. Check discovery

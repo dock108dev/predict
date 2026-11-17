@@ -1,0 +1,128 @@
+.ticketboard {
+  --canvas: #f3f1ed;
+  --ticket: #fffdfa;
+  --ticket-stub: #eef1f5;
+  --ticket-ink: #263b57;
+  --perforation: #b5bfcb;
+}
+.opportunities-app .pregame-nav { grid-template-columns: repeat(5, minmax(0, 1fr)); width: min(32rem, 100%); }
+.ticketboard .desk-find, .ticketboard .desk-analysis, .ticketboard #alternates-field,
+.ticketboard #auto-update-field, .ticketboard #active-filters, .ticketboard #browse-link { display: none; }
+.ticketboard #filters { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: .65rem 1.3rem; margin-block: 1.1rem .35rem; }
+.board-unit-field { display: flex; flex-wrap: wrap; align-items: end; gap: .45rem .6rem; }
+.board-unit-field > label { min-width: 11rem; }
+.board-unit-field :is(select,input,button) { min-height: 44px; }
+#board-unit { width: 100%; min-height: 44px; font-weight: 700; }
+#custom-unit-field { display: flex; align-items: end; gap: .45rem; }
+#custom-unit { max-width: 9.5rem; }
+#unit-help { flex-basis: 100%; margin: 0; color: var(--muted); font-size: .82rem; }
+.ticketboard .desk-toolbar { margin-top: 1.47rem; }
+.ticketboard #refresh-list { font-size: .82rem; }
+.ticketboard:has(.ticketboard-empty #retry-board) #refresh-list,
+.ticketboard:has(#board-unit option[value=""]:checked):not(:has(.previous-results:not([hidden]))) #refresh-list { display: none; }
+.ticketboard .desk-feedback #notice { background: none; border: 0; padding: 0; margin-block: .15rem 1.1rem; }
+.ticketboard #results { display: grid; gap: .85rem; }
+#ticketboard-order { display: flex; flex-wrap: wrap; gap: .18rem .65rem; align-items: baseline; margin-block: .45rem .7rem; }
+#ticketboard-order h2 { font: 700 .88rem/1.4 Manrope, system-ui, sans-serif; margin: 0; }
+#ticketboard-order p { color: var(--muted); font-size: .82rem; margin: 0; }
+.ticketboard-empty { background: var(--ticket); border: 1px solid var(--control); border-radius: 14px; padding: clamp(1rem, 3vw, 2rem); }
+.ticketboard-empty h2 { font-size: clamp(1.35rem, 3vw, 1.85rem); }
+.ticketboard-empty :is(p,ul) { color: var(--muted); max-width: 42rem; font-size: .9rem; }
+.ticketboard-empty ul { margin: .7rem 0 1rem; padding-inline-start: 1.2rem; }
+.ticketboard-empty li + li { margin-block-start: .2rem; }
+.ticketboard-empty .desk-empty-actions :is(a,button) { min-height: 44px; }
+
+.pregame-ticket {
+  position: relative; display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) minmax(12rem, .72fr);
+  background: var(--ticket); border: 1px solid var(--control); border-radius: 14px;
+  box-shadow: 0 2px 4px #10182707; font-variant-numeric: tabular-nums;
+}
+.pregame-ticket :is(.ticket-bet,.ticket-pricing,.ticket-stub) { padding: .95rem clamp(.85rem, 2vw, 1.4rem); min-width: 0; }
+.ticket-time, .ticket-context { color: var(--muted); font-size: .77rem; margin: .16rem 0; }
+.ticket-bet h3 { margin: .2rem 0 .3rem; font-size: clamp(1.4rem, 2.45vw, 2rem); overflow-wrap: anywhere; }
+.ticket-matchup, .ticket-venue { font-size: .87rem; margin: 0 0 .25rem; }
+.ticket-venue { font-weight: 760; }
+.ticket-prices, .ticket-metrics { display: flex; flex-wrap: wrap; column-gap: .9rem; row-gap: .35rem; margin: 0; }
+.ticket-prices { margin-block: .3rem; }
+.ticket-prices dt, .ticket-metrics dt { font-size: .75rem; font-weight: 640; color: var(--muted); }
+.ticket-prices dd, .ticket-metrics dd { margin: 0; font-weight: 750; }
+.ticket-prices dd { font-size: 1.05rem; }
+.ticket-metrics { align-items: end; justify-content: space-between; column-gap: .55rem; margin: 0 0 .65rem; }
+.ticket-metrics div:first-child dd {
+  color: var(--gain); font: 600 clamp(1.9rem, 3vw, 2.8rem)/1 var(--headline); letter-spacing: -.02em;
+}
+.ticket-metrics div:last-child dd { font-size: 1.15rem; }
+.ticket-stub {
+  position: relative; background: var(--ticket-stub); border-inline-start: 1px dashed var(--perforation);
+  border-radius: 0 13px 13px 0;
+}
+.ticket-stub::before, .ticket-stub::after {
+  content: ""; pointer-events: none; position: absolute; left: -.43rem; width: .86rem; height: .86rem;
+  border: 1px solid var(--control); background: var(--canvas); border-radius: 50%;
+}
+.ticket-stub::before { top: -.44rem; clip-path: inset(50% 0 0); }
+.ticket-stub::after { bottom: -.44rem; clip-path: inset(0 0 50%); }
+.ticket-compare {
+  min-height: 44px; width: 100%; color: var(--ticket-ink); font-weight: 740; background: var(--ticket);
+}
+.ticket-compare:hover { border-color: var(--ticket-ink); }
+
+#trade.posted-inspection {
+  position: fixed; inset: 0 0 0 auto; margin: 0; height: 100dvh; max-height: 100dvh;
+  width: min(42rem, 100%); max-width: 100%; border-radius: 0; border-block: 0; border-inline-end: 0;
+}
+#trade.posted-inspection .desk-title { min-height: 3.65rem; }
+#trade.posted-inspection #trade-body { padding-block-start: .85rem; }
+.comparison-unit { margin: 0 0 .65rem; color: var(--muted); font-size: .83rem; }
+.comparison-reference { background: var(--soft); border: 1px solid var(--rule); padding: .7rem .85rem; border-radius: 9px; margin: .6rem 0 .8rem; }
+.comparison-reference h3 { margin-bottom: .35rem; }
+.comparison-reference ul { padding-left: 1.2rem; margin: 0; font-size: .85rem; }
+.comparison-reference .ticket-prices { gap: .55rem 1.35rem; }
+.comparison-offers { display: grid; gap: .55rem; margin-block: .4rem .9rem; }
+.comparison-offer { border: 1px solid var(--control); border-radius: 9px; padding: .65rem .8rem; }
+.comparison-offer.selected { border-color: var(--accent); background: var(--soft); }
+.comparison-offer h4 { font-size: .96rem; margin: 0 0 .35rem; }
+.comparison-offer h4 small { font-weight: 550; margin-inline-start: .4rem; }
+.comparison-offer .ticket-prices { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.comparison-offer .ticket-prices dd { overflow-wrap: anywhere; }
+.comparison-offer p { font-size: .83rem; margin: .42rem 0 0; }
+.comparison-offer + details { margin-top: .35rem; }
+.comparison-offer .inspection-disclosure { margin-top: .55rem; }
+.comparison-offer .negative { color: var(--negative); }
+.comparison-external { display: inline-block; font-size: .85rem; margin-block-start: .5rem; }
+
+@media (min-width: 900px) {
+  .opportunities-app .pregame-nav { width: 100%; grid-template-columns: 1fr; }
+  .ticketboard main { max-width: 88rem; }
+}
+@media (max-width: 720px) {
+  .pregame-ticket { grid-template-columns: 1fr; }
+  .pregame-ticket .ticket-bet { padding-bottom: .2rem; }
+  .pregame-ticket .ticket-pricing { padding-top: .35rem; }
+  .ticket-stub { border-inline-start: 0; border-block-start: 1px dashed var(--perforation); border-radius: 0 0 13px 13px; }
+  .ticket-stub::before { top: -.43rem; left: -.44rem; clip-path: inset(0 0 0 50%); }
+  .ticket-stub::after { top: -.43rem; right: -.44rem; left: auto; clip-path: inset(0 50% 0 0); }
+  .ticket-stub { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: .6rem .8rem; }
+  .ticket-metrics { margin: 0; justify-content: start; gap: .25rem .55rem; }
+  .ticket-compare { min-width: 8rem; white-space: nowrap; }
+}
+@media (max-width: 560px) {
+  .ticketboard #filters { margin-block: .7rem .25rem; gap: .35rem; }
+  .ticketboard .pregame-nav a { flex: 1 1 auto; min-height: 40px; font-size: .74rem; padding-inline: .18rem; }
+  .ticket-metrics dt { font-size: .7rem; }
+  .ticket-compare { font-size: .86rem; padding-inline: .6rem; }
+  #trade.posted-inspection { width: 100%; border: 0; }
+  .comparison-offer .ticket-prices { gap: .4rem .5rem; }
+  .comparison-offer .ticket-prices dd { font-size: .91rem; }
+}
+@media (max-width: 355px) {
+  .ticket-stub { grid-template-columns: 1fr; }
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .ticketboard {
+    --canvas: #101723; --ticket: #182230; --ticket-stub: #223144; --ticket-ink: #deebff; --perforation: #65758b;
+  }
+}
+:root[data-theme="dark"] .ticketboard {
+  --canvas: #101723; --ticket: #182230; --ticket-stub: #223144; --ticket-ink: #deebff; --perforation: #65758b;
+}

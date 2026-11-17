@@ -12,6 +12,7 @@ def main():
     from .continuous import rss
     from app.comparison.calculation_control import CalculationStopped, cancellation
     from app.storage.ordinary_publication import turn
+    from app.storage.pregame_unit_board import app_turn
     store.ROOT = Path(sys.argv[1])
     parent = int(sys.argv[2])
     start = time.monotonic()
@@ -30,7 +31,8 @@ def main():
 
     try:
         with cancellation(lambda:pause.checkpoint(db,stopped)), store.connect() as db:
-            result = turn(db,capture_cache=store.ROOT/'.local/ordinary-capture-structure.json')
+            result = (app_turn(db) if '--units-only' in sys.argv[3:] else
+                      turn(db,capture_cache=store.ROOT/'.local/ordinary-capture-structure.json'))
         result.update(worker_seconds=round(time.monotonic()-start,3), worker_peak_rss_bytes=rss())
     except Exception as exc:
         from app.diagnostics import failure_details

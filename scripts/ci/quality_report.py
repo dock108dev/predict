@@ -24,8 +24,8 @@ from reporting import (
 
 BROWSER_BEHAVIOR = (
     (
-        "Setup and first use without credentials",
-        "Keeps ordinary pages accessible on desktop and mobile",
+        "Setup, first use and fictional practice without credentials",
+        "Keeps ordinary pages and the practice price and payoff journeys accessible on desktop and mobile",
         "browser_tests.test_first_run",
         (
             "test_first_use_without_credentials[1440]",
@@ -56,8 +56,18 @@ STORAGE_BEHAVIOR = (
         "tests.test_pregame_publication_sql.PregamePublicationSQL",
         (
             "test_aged_price_and_reference_publish_together_until_authoritative_start",
-            "test_novig_catalog_publishes_zero_fee_and_same_after_fee_estimate",
+            "test_novig_catalog_publishes_zero_fee_with_settlement_gap",
             "test_quote_details_follow_linked_sources_corrected_start",
+        ),
+    ),
+    (
+        "Selected-unit board uses one committed calculation and recovers from a blocked read",
+        "Keeps pinned offer evidence, ordering and pagination coherent and allows retry after a database lock",
+        "tests.test_pregame_publication_sql.PregamePublicationSQL",
+        (
+            "test_saint_marys_published_unit_selection_and_replacement",
+            "test_selected_unit_order_eligibility_and_pagination",
+            "test_selected_unit_read_budget_recovers_from_blocked_postgres",
         ),
     ),
     (

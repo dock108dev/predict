@@ -803,4 +803,17 @@ class CurrentRowStore:
             AND b.quantity_units='contracts' AND c.venue IN ('kalshi','polymarket_us')''',
             (list(contract_ids),)) if row['price'] is not None and row['quantity'] is not None}
 
+    def native_valuation_asks(self, contract_ids, *, cap):
+        """Freeze bounded executable asks from the book linked to this exact offer."""
+        if not contract_ids:
+            return {}
+        return {row['id']:row for row in self.db.execute('''SELECT c.id,
+            b.id AS book_id,b.revision,b.received_at,b.source_at,b.depth_revision,
+            (SELECT jsonb_agg(level ORDER BY n)
+             FROM jsonb_array_elements(d.levels) WITH ORDINALITY AS asks(level,n)
+             WHERE n<=%s) AS levels '''+_NATIVE_BOOK_JOIN+'''
+            AND c.id=ANY(%s) AND b.is_current AND b.state='active' AND b.sync='synchronized'
+            AND b.quantity_units='contracts' AND c.venue IN ('kalshi','polymarket_us')''',
+            (cap, list(contract_ids))) if row['levels']}
+
     def records(self):return self.capture()['records']

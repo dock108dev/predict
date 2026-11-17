@@ -92,7 +92,8 @@ def defer_details(result):
         'gross_profit_per_claim price_difference_cents snapshot_benchmark_reason same_outcome display_outcome_key '
         'times original evidence_result_id trade_fee novig_live_financial_qualified kalshi_live_financial_qualified '
         'polymarket_live_financial_qualified '
-        'captured_at price_revision economic_revision sportsbook_baseline alternate fee_applicability').split())
+        'captured_at price_revision economic_revision sportsbook_baseline sportsbook_after_fee_percent '
+        'alternate fee_applicability sportsbook_reference_reason settlement_assessment pregame_reference').split())
     rows=[]
     for row in result['rows']:
         if '_detail_json' in row:
@@ -328,9 +329,10 @@ def capture(db, *, at=None, ordinary=False, event_ids=None, capture_binding=None
                 index = indexes[event_id]
                 value=vendor_fair(record, events[event_id], frame, index=index)
                 if value is not None:row['sgo_fair_comparison']=value
-                baseline = sportsbook_baseline(record, events[event_id], frame, at=at, index=index)
-                if baseline is not None:
-                    row['sportsbook_baseline'] = baseline
+                if not ordinary or stamp(row['start_at']) <= stamp(at):
+                    baseline = sportsbook_baseline(record, events[event_id], frame, at=at, index=index)
+                    if baseline is not None:
+                        row['sportsbook_baseline'] = baseline
                 if row['venue'] == 'novig':
                     row['sgo_native_contract'] = bind_native_catalog(record, native_catalog.get(event_id), at=at)
             if frames_exist:
@@ -675,6 +677,7 @@ def prune(db):
                 DELETE FROM comparison_snapshot_result WHERE id IN (
                     SELECT id FROM comparison_snapshot_result WHERE lease_until<now()
                     AND id NOT IN (SELECT result_id FROM comparison_publication WHERE result_id IS NOT NULL)
+                    AND id NOT IN (SELECT root_id FROM pregame_unit_board WHERE root_id IS NOT NULL)
                     AND id NOT IN (SELECT result_id FROM comparison_result_reference)
                     AND id NOT IN (SELECT id FROM keep_latest) FOR UPDATE SKIP LOCKED)''')
         db.execute('''DELETE FROM comparison_snapshot WHERE lease_until<now()

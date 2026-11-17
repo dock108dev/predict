@@ -1,7 +1,7 @@
 """Single-fill Novig v3 evidence; no aggregate-to-native identity inference."""
 from copy import deepcopy
 from datetime import timedelta
-from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from decimal import Decimal, InvalidOperation
 from .current_dependencies import instant
 
 URL = 'https://docs.novig.com/api/concepts/fees'
@@ -136,13 +136,19 @@ def live_fee(row, at, evidence):
             raise ValueError('unsupported quote units')
         if abs(quoted - price) > Decimal('0.000000000001'):
             return missing('novig_quote_price_conflict')
-        amount = (coefficient * price * (1-price)).quantize(Decimal('.00001'), rounding=ROUND_HALF_UP)
+        from app.fees.novig_v3 import taker_fill
+
+        fee_model = taker_fill(market_id=expected['market_id'], terms=fee, event_status=state,
+                               at=at.isoformat(), price=price, quantity='1')
+        charge = fee_model['amount']
+        amount = format(Decimal(charge.numerator) / Decimal(charge.denominator), '.5f')
     except (KeyError, TypeError, ValueError, InvalidOperation, ArithmeticError):
         return missing('novig_live_evidence_incomplete')
     captured = dict(version='Novig v3 market fee', source_url=URL,
         reviewed_at=min(quote_at, phase_at, terms_at).isoformat(), review_before=deadline.isoformat(),
         applicability='Exact market and observed event state; one immediate taker fill',
-        native=deepcopy(evidence))
+        native=deepcopy(evidence), schedule_version=fee_model['schedule_version'],
+        schedule_hash=fee_model['schedule_hash'])
     return dict(available=True, classification='exact_public', reason=None, evidence=captured,
         profile='manual_retail', liquidity_role='taker', fill_count=1, quantity='100',
         quantity_unit='Novig native contracts (one-cent payout each)', trade_fee_usd=str(amount),

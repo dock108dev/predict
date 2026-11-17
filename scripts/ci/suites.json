@@ -619,6 +619,7 @@
       "tests/test_f05_polymarket_public.py",
       "tests/test_f06_prophetx_retail.py",
       "tests/test_f07_desk.py",
+      "tests/test_pregame_valuation.py",
       "tests/test_trade_preview.py",
       "tests/test_f08a_product_schedules.py",
       "tests/test_kalshi_fee_renderer.py",
@@ -633,6 +634,7 @@
   {
     "name": "sportsgameodds",
     "tests": [
+      "tests/test_pregame_reference.py",
       "tests/test_pregame_sportsbook_estimate.py",
       "tests/test_sgo_free_evaluation.py",
       "tests/test_sgo_native_binding.py",

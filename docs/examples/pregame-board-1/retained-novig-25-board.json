@@ -1,0 +1,94 @@
+{
+  "result_id": "0bbdc456936c42fdac57b45085602853",
+  "generation": 4,
+  "cursor": "9a7f814849179665aa3b8ee9b4adf136f80f60fedb1bbc5fba534221bb1082b6",
+  "provider_requests": 0,
+  "features": {
+    "live_enabled": false,
+    "auto_update": true
+  },
+  "phase": "pregame",
+  "update_cursor": "9a7f814849179665aa3b8ee9b4adf136f80f60fedb1bbc5fba534221bb1082b6",
+  "schema": "predict-pregame-board-1",
+  "rows": [],
+  "total": 0,
+  "offset": 0,
+  "limit": 25,
+  "page_count": 0,
+  "basis": "selected_unit",
+  "row_kind": "bets",
+  "valuation_version": "predict-pregame-valuation-1",
+  "selected_usd": "25",
+  "publication": {
+    "component_count": 4,
+    "current_prices": 0,
+    "data_runtime": {
+      "healthy": false,
+      "active": false,
+      "state": "unavailable",
+      "reason": "data_runtime_unhealthy",
+      "stopped": false,
+      "paused_sources": []
+    },
+    "epoch": "040de035aec310708c7db52b44bea853",
+    "expected_components": 4,
+    "finance": "ready",
+    "oldest_capture": "2026-11-17T15:55:03.270938+00:00",
+    "pending_components": 0,
+    "policy": "52b8ff92117c505bcec104d94a523194f5d37f6f8a432c7ecc20344109372e34",
+    "posted_prices": 18,
+    "provider_requests": 0,
+    "read_at": "2026-11-17T04:39:00+00:00",
+    "retained_prices": 18,
+    "schema": "ordinary-comparison-1",
+    "sources": {
+      "novig": {
+        "state": "unavailable",
+        "reason_code": "data_runtime_unhealthy",
+        "reason": "Background data runtime is stopped or its heartbeat expired."
+      },
+      "kalshi": {
+        "state": "unavailable",
+        "reason_code": "data_runtime_unhealthy",
+        "reason": "Background data runtime is stopped or its heartbeat expired."
+      },
+      "prophetx": {
+        "state": "unavailable",
+        "reason_code": "data_runtime_unhealthy",
+        "reason": "Background data runtime is stopped or its heartbeat expired."
+      },
+      "polymarket_us": {
+        "state": "unavailable",
+        "reason_code": "data_runtime_unhealthy",
+        "reason": "Background data runtime is stopped or its heartbeat expired."
+      }
+    },
+    "state": "ready"
+  },
+  "matched_offer_count": 18,
+  "offer_count": 18,
+  "ranked_group_count": 0,
+  "calculation_missing": [
+    "settlement_novig_void_fair_value_unverified",
+    "sportsbook_settlement_rules_unverified",
+    "unit_fee_order_type_unverified",
+    "unit_fill_depth_unverified"
+  ],
+  "board_id": "e0e778c4f6f170befeec1ac6c8827080194f41d8ca702f3a49421db5ca3440be",
+  "source_result_id": "0bbdc456936c42fdac57b45085602853",
+  "board_cursor": "c3cc9ad2b2836e0e893aec57ffbf9595ac3b6feb9226d214b7c1305f3e12dcad",
+  "valuation_policy_revision": "de13adac83c4a228aa408feb1474408f8ec3ce5c0cf2e9cb9509286ea916bc14",
+  "replacement_pending": false,
+  "state": "ready",
+  "board_state": "empty",
+  "blocker_counts": {
+    "settlement_novig_void_fair_value_unverified": 18,
+    "sportsbook_settlement_rules_unverified": 18,
+    "unit_fee_order_type_unverified": 18,
+    "unit_fill_depth_unverified": 18
+  },
+  "qualified_offer_count": 0,
+  "calculation_reason": "No posted offers qualify for a selected-unit valuation.",
+  "games": [],
+  "refresh_at": "2026-11-17T23:00:00+00:00"
+}

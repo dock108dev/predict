@@ -37,6 +37,9 @@ payouts. A tie that pays $0.50 is a different outcome from a stake refund.
 Computing full EV requires probabilities for those outcomes.
 [Calculation basis](benchmark-ev.md)
 
+Use **Try a practice example** on Opportunities or Arbitrage for packaged
+fictional cases. Practice requires neither an archive nor a database.
+
 ## Focused checks
 
 Choose the checks that exercise the changed behavior. CI's portable manifest
@@ -152,12 +155,17 @@ that belongs together. Generated assets follow their source boundaries.
   `ordinary_dependencies.py` reads exact dependency witnesses.
   `ordinary_result.py` binds capture authority, fees, and payoff.
   `desk_sportsbooks.py` enriches exact desk lines without dispatching data.
+- `desk_lines.py` resolves published main-line roles for Browse and the unit
+  board. Retained comparisons use the same signed-line normalization with
+  their existing coverage-based selection.
 - Current reads use the read clock for pregame cutoff. Saved lists and details
   use each offer's capture clock, falling back to its result clock.
   Preserve source clocks and exact offer identities across list and detail reads.
 - The desk list controller keeps ranking, filters, fetch cancellation, scroll,
   and Back state together so it can restore the exact loaded page. The drawer
   keeps leases, adoption, and cancellation under one selection lifecycle.
+  Inspection retains its single-quote and pair renderers together where they
+  share fee evidence, source clocks, state labels, and disclosure primitives.
 - The compatibility `latest_board.py` coordinates retained publication and
   detached snapshot and slate reads. SQL fixtures cover restart and captured
   reads. Changes to targeted tests also need to update the SQL runner's selectors.

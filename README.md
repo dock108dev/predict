@@ -1,12 +1,15 @@
 # Predict
 
 Predict is a read-only prediction-market comparison app for macOS. The desk
-opens on **Pregame Opportunities**, with ranked Expected value and Arbitrage
-views. In-game collection and display require `live_enabled`, which defaults
-to `false`.
+opens on **Pregame Opportunities**. Choose a unit size to rank qualified
+main-line offers by Opportunity Score. **Compare prices** shows the posted
+quote and how the published Net EV was calculated. In-game collection and
+display require `live_enabled`, which defaults to `false`.
 
-Use **Browse odds** or **Find my game** to compare full-game winners, spreads,
-and totals. **Saved odds** opens available recorded captures.
+Use **Browse odds** to compare full-game winners, spreads, and totals or find an
+alternate line. **Arbitrage** shows modeled opposing positions. **Saved odds**
+opens recorded captures. **Try a practice example** opens simulated odds and
+calculations without a provider connection or saved capture.
 [Desk and inspection guide](docs/ui-design.md#current-comparison-interface)
 
 ## Requirements and quickstart
@@ -28,7 +31,7 @@ scripts/project-postgres start
 
 Open the loopback address printed by the launcher. If port 8784 is free,
 use [Predict on port 8784](http://127.0.0.1:8784/). The desk needs committed
-prices to show current offers. Choose **Saved odds** to open an available capture.
+prices to show current offers. Choose **Try a practice example** to explore the desk.
 `cp -n` preserves an existing config, and `check-config` prints its acquisition scope.
 
 ## Collect prices

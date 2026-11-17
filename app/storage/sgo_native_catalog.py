@@ -10,23 +10,27 @@ MAX_EVENTS = 512
 MAX_BYTES = 128 * 1024
 
 
-def targets(db, *, at, exclude=()):
-    """Pick the newest in-scope receipts that need independent catalog terms."""
+def targets(db, *, at, exclude=(), include_live=True):
+    """Prioritize uncaptured terms for eligible games over periodic rechecks."""
     frames = db.execute('''SELECT f.event_id, f.facts
         FROM current_sgo_event_frame f LEFT JOIN current_sgo_native_catalog c USING (event_id)
+        CROSS JOIN LATERAL (SELECT (f.facts->>'starts_at')::timestamptz AS kickoff,
+            f.facts->'event_context'->>'phase' AS phase) scope
         WHERE f.facts->'event_context'->'bookmaker_event_links' ? 'novig'
-          AND (f.facts->>'starts_at')::timestamptz BETWEEN %s::timestamptz - interval '4 hours'
-                                                        AND %s::timestamptz + interval '72 hours'
-          AND f.facts->'event_context'->>'phase' IN ('pregame','live')
+          AND ((scope.phase='pregame' AND scope.kickoff > %(at)s
+                AND scope.kickoff <= %(at)s::timestamptz + interval '72 hours')
+               OR (%(include_live)s AND scope.phase='live' AND scope.kickoff <= %(at)s
+                   AND scope.kickoff >= %(at)s::timestamptz - interval '4 hours'))
           AND (c.observed_at IS NULL OR NOT c.facts ? 'subject_roles'
-               OR c.observed_at < %s::timestamptz - interval '10 minutes')
-          AND NOT f.event_id=ANY(%s)
+               OR c.observed_at < %(at)s::timestamptz - interval '10 minutes')
+          AND NOT f.event_id=ANY(%(exclude)s)
           AND EXISTS (SELECT 1 FROM current_sgo_reference r WHERE r.event_id=f.event_id
               AND r.bookmaker_id='novig' AND r.facts ? 'bookmaker_market_link'
               AND r.facts->>'available'='true')
-        ORDER BY (f.facts->'event_context'->>'phase'='live') DESC,
-          abs(extract(epoch from (f.facts->>'starts_at')::timestamptz - %s::timestamptz)),
-          f.received_order DESC, f.event_id LIMIT 12''', (at, at, at, list(exclude), at)).fetchall()
+        ORDER BY (c.observed_at IS NOT NULL), (scope.phase='live') DESC,
+          c.observed_at NULLS FIRST, abs(extract(epoch from scope.kickoff - %(at)s::timestamptz)),
+          f.received_order DESC, f.event_id LIMIT 12''',
+        dict(at=at, exclude=list(exclude), include_live=include_live)).fetchall()
     result = []
     for frame in frames:
         facts = frame['facts']

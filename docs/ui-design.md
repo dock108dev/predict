@@ -2,56 +2,64 @@
 
 ## Current comparison interface
 
-**Opportunities** opens on pregame full-game winners, spreads, and totals, including
-available alternate lines. Use **Expected value** to compare offers against a
-sportsbook estimate or another calculation basis. Use **Arbitrage** to see modeled
-payoffs for opposing outcomes. In-game prices and the Live tab require the
-`live_enabled` flag, which is off by default. A game leaves the pregame list at
-kickoff or when an earlier authoritative state change withdraws it.
+**Opportunities** at `/` and `/ev` opens on the pregame ticketboard. **Unit
+size** is the maximum upfront commitment for one offer. Choose a preset or
+enter a custom dollar amount. Predict remembers that choice on the device.
+Main-line tickets are ranked by Opportunity Score, which uses modeled win
+chance and after-fee payoff. Net EV gives the modeled return per dollar.
 
-Opportunities shows moneyline, spread, and total separately for each game.
-Expand a card to see more outcomes for that market. The EV list compares quotes
-for the exact outcome. The selected sportsbook, its odds, and other available
-book prices appear alongside the fair-odds reference.
-When EV is unavailable, the card gives the reason alongside the prices. The
-Arbitrage cards align each leg's venue, odds and allocation percentage with the
-lowest modeled return. **Positive only** filters the selected calculation. Open a quote to see the
-prices, fees, model assumptions, and settlement details available for that offer.
+**Compare prices** opens the exact published quote and its unit in a desktop
+drawer or a full-screen view on mobile. It shows the reference book's original
+prices, Predict's no-vig fair odds and the qualified venues in Net EV order.
+Indicative offers show the evidence they need. Use **Calculation and
+settlement details** to see the outlay, modeled fill or stake, fee timing,
+settlement returns, and source clocks.
+
+**Arbitrage** shows both legs and the lowest modeled payoff over the supported
+settlement states. The stake budget excludes entry fees and reserves. **Total
+cash committed** includes them. Open the calculation for outcomes outside the
+model. In-game prices and the Live tab require the `live_enabled` flag, which
+is off by default. A game
+leaves the pregame list at kickoff or when an earlier authoritative state
+change withdraws it.
 [Calculation basis](benchmark-ev.md) · [Trading fee policy](fee-coverage-policy.md)
 
 ## Find and compare games
 
-Use **Find my game** or **Browse odds** to navigate by team or game, including
-when a comparison lacks enough inputs to show EV. Browse shows aligned venue
-columns for each exact outcome. An unavailable quote is shown as a dash. A
-saved capture preserves the original price.
+Use **Browse odds** to find a game, market, venue, or alternate line. It works
+before you choose a unit and when the board has no qualifying offers. Browse
+shows aligned venue columns for each exact outcome. Select **No quote** to
+read what Predict knows about the missing price for that venue and line.
+Saved and retained prices are labeled when available.
+
+Each Browse card shows the league and scheduled kickoff, including the time
+zone, even when its outcomes are collapsed. Use **Open game** to see the
+matchup or **Open line** to pin a specific outcome. Swiping across the matrix
+leaves the venue filters alone. **Back** restores the Browse filters and
+position. If the game or quote has left the results, the desk explains the
+change and returns to the closest available results.
 
 The desk says **Odds may be delayed.** Pregame shows the latest published
 prices and calculations for eligible games until kickoff. Quote inspection
 shows when each price was observed. Live uses separate freshness rules.
 **Saved odds** preserves earlier observations.
 
-Open a quote to inspect the price, the same-line reference, and the fee and
-settlement evidence. The default EV ranks signed before-fee returns, including
-negative returns, when the offer and reference support the estimate. Arbitrage
-shows allocation percentages and the lowest modeled return for the settlement
-states covered. When only decisive outcomes can be modeled, the before-fee
-return is labeled accordingly. Amount and fill assumptions for after-fee
-calculations are in **Calculation details**.
-
-On **Browse odds**, the separate trade preview can estimate costs for a chosen
-amount where the venue evidence supports it. **Auto-update** controls whether
-the pregame list picks up new results. Games still leave the list at kickoff.
-**Trading fees** explains the venue terms. **Source status** shows collection
-problems. [Data and freshness limits](market-data-gaps.md)
+Open a Browse quote to inspect its posted price, any verified fee, and the
+reference, fill, and settlement evidence. The trade preview starts with the
+saved board unit when one exists and supports adjusting the amount for that
+quote. **Auto-update** controls Browse list updates. **Trading fees** explains
+the venue terms. Admin's **Sources** view shows collection problems.
+[Data and freshness limits](market-data-gaps.md)
 
 ## Saved odds and diagnostics
 
-While the desk is waiting for its first prices, **Saved odds** and **Source status**
-appear above the filters. **Saved odds** opens the recorded captures available on
-this installation. Capture time governs the archived price, freshness, and
-applicable fee evidence.
+**Saved odds** opens the recorded captures available on this installation.
+Capture time governs the archived price, freshness, and applicable fee evidence.
 [Open a saved capture](development.md#frozen-replay)
+
+**Try a practice example** opens labeled fictional offers and opposing legs
+without a capture. The practice EV ticket shows its own unit and leaves the
+user's saved Opportunities unit available on return.
 
 **Raw Odds** shows source-local evidence. **Scanner** uses observed depth for
 execution sizing and offers manually selected tickets. Predict does not place

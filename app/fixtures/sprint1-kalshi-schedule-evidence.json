@@ -1,0 +1,28 @@
+[
+  {
+    "source": "okst-mbb-20261116",
+    "url": "https://okstate.com/sports/mens-basketball/schedule/2026-27",
+    "document_sha256": "a000aed64b8b63b7e1aaab996849af85a0087fa0150a312f30ddd9f49e33a612",
+    "retrieved_at": "2026-11-17T03:35:08Z",
+    "local_start": "2026-11-16 19:00 America/Chicago",
+    "competition": "NCAAB",
+    "home": "NCAAB:M:D1:NCAA521",
+    "away": "NCAAB:M:D1:NCAA1004",
+    "scheduled_start": "2026-11-17T01:00:00+00:00",
+    "stage": "regular_season",
+    "season": "2026-2027"
+  },
+  {
+    "source": "ucsd-mbb-20261116",
+    "url": "https://ucsdtritons.com/news/2026/11/15/mens-basketball-uc-san-diego-welcomes-tigers-on-military-appreciation-night.aspx",
+    "document_sha256": "647d0ea9364fa81231ee673cc5ba2809fe91f6a7559d9ab55c1dd31da899f1d4",
+    "retrieved_at": "2026-11-17T03:35:08Z",
+    "local_start": "2026-11-16 19:00 America/Los_Angeles",
+    "competition": "NCAAB",
+    "home": "NCAAB:M:D1:NCAA112",
+    "away": "NCAAB:M:D1:NCAA699",
+    "scheduled_start": "2026-11-17T03:00:00+00:00",
+    "stage": "regular_season",
+    "season": "2026-2027"
+  }
+]

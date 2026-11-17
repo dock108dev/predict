@@ -54,6 +54,28 @@ def with_verified_model(row, value):
 
 
 class TradeDesk(TestCase):
+    def test_after_fee_list_ranks_supported_values_without_before_fee_fallback(self):
+        from app.dashboard.trade_desk import AFTER_FEE_METRIC, offer
+
+        verified = with_verified_model(quote('verified', 'kalshi'), '-1')
+        verified.update(game_state='scheduled', sportsbook_after_fee_percent='9',
+                        sportsbook_baseline=dict(book='fanduel', fair_decimal_odds='2',
+                                                 prices=[dict(price_american='-110'), dict(price_american='-110')]))
+        modeled = dict(quote('modeled', 'novig'), game_state='scheduled', game_key='second',
+                       sportsbook_baseline=verified['sportsbook_baseline'], sportsbook_after_fee_percent='2',
+                       trade_fee=dict(available=True, trade_fee_usd='0', classification='exact_public'))
+        missing = dict(modeled, id='missing', game_key='third', sportsbook_return_percent='50',
+                       sportsbook_after_fee_percent=None, trade_fee=dict(available=False))
+        packet = page(dict(result(verified, modeled, missing), captured_at='2026-11-08T00:00:00Z'),
+                      dict(layout='desk', summary='1', phase='pregame', basis='after_fees', ranked='1', lines='main'),
+                      ('ev', None, 0, 12), published_only=True)
+        self.assertEqual([group['score'] for group in packet['rows']], ['2', '-1'])
+        self.assertEqual(offer(verified, AFTER_FEE_METRIC)['value_basis'], 'reviewed')
+        modeled_offer = offer(modeled, AFTER_FEE_METRIC)
+        self.assertEqual(modeled_offer['value_basis'], 'sportsbook_after_fees')
+        self.assertEqual(modeled_offer['fair_reference']['books'], ['fanduel'])
+        self.assertIsNone(offer(missing, AFTER_FEE_METRIC)['value'])
+
     def test_single_negative_before_fee_result_survives_default_comparison_and_missing_fees(self):
         first = with_verified_model(quote('first', 'novig'), '-1')
         first.update(game_state='scheduled', gross_return_percent='-4/5',
@@ -82,7 +104,7 @@ class TradeDesk(TestCase):
         self.assertEqual([f"{float(o['odds']['decimal']):.3f}" for o in offers], ['1.926', '1.935'])
         self.assertEqual([o['best_payout'] for o in offers], [False, True])
 
-    def test_negative_decisive_pair_ranks_when_the_fill_fees_are_unavailable(self):
+    def test_negative_decisive_pair_shows_gross_shortfall_when_fees_are_unavailable(self):
         left = quote('left', 'novig', threshold=3)
         right = quote('right', 'prophetx', threshold=2, operator='le')
         for quote_row in (left, right):
@@ -97,7 +119,8 @@ class TradeDesk(TestCase):
         opts = ('arbs', None, 0, 25)
         packet = page(data, {'summary':'1'}, opts, captured_pairs=[pair], policy='policy', published_only=True)
         shown, = packet['rows'][0]['pairs']
-        self.assertEqual(Fraction(shown['score']), Fraction('-0.50'))
+        self.assertIsNone(shown['score'])
+        self.assertEqual(shown['retail_payoff']['minimum_gross_profit_usd'], '-0.5')
         self.assertFalse(shown['retail_payoff']['available'])
         self.assertEqual(shown['display_allocations'], ['50', '50'])
         self.assertFalse(page(data, {'positive':'1'}, opts, captured_pairs=[pair], policy='policy',
@@ -287,6 +310,13 @@ class TradeDesk(TestCase):
                            original=dict(value=price, units='american_odds', payout='1'))
                 rows.append(row)
 
+        extreme = dict(rows[0], id='novig-extreme-alternate', alternate=True,
+                       market=dict(market='spread', period='full_game', line='28.5'),
+                       selection=dict(rows[0]['selection'], signed_line='+28.5'),
+                       source=dict(rows[0]['source'], native_market_id='alternate:novig-28.5'),
+                       original=dict(value='-4000', units='american_odds', payout='1'))
+        rows[0]['alternate'] = rows[1]['alternate'] = False
+        rows.append(extreme)
         data = dict(result(*rows), games=games)
         data['publication']['read_at'] = '2026-11-16T23:25:48Z'
         query = dict(layout='desk', phase='pregame', basis='sportsbooks', summary='1', lines='main')
@@ -304,20 +334,20 @@ class TradeDesk(TestCase):
             self.assertEqual(lines(default), {'-13.5', '13.5'})
             all_lines = read({view: '1', 'lines': 'all'})
             self.assertEqual(all_lines['total'], 1)
-            self.assertEqual(lines(all_lines), {'-13.5', '13.5', '-6.5', '6.5'})
+            self.assertEqual(lines(all_lines), {'-13.5', '13.5', '-6.5', '6.5', '+28.5'})
             self.assertEqual({entry['line_role'] for entry in all_lines['rows']}, {'main', 'alternate'})
 
         exact = next(group for group in read({'browse_odds': '1', 'lines': 'all'})['rows']
                      if group['line_role'] == 'alternate')
-        selected_rows = occurrence_rows(rows, rows[2:], possible_peers=True)
-        self.assertEqual(len(selected_rows), 4)
+        selected_rows = occurrence_rows(rows, rows[2:4], possible_peers=True)
+        self.assertEqual(len(selected_rows), 5)
         linked = read(dict(browse_odds='1', game_key='native', line=exact['id']), rows=selected_rows)
         self.assertEqual(linked['selected_line_id'], exact['id'])
         self.assertIn(exact['id'], {row['id'] for row in linked['rows']})
         filtered = read(dict(browse_odds='1', venue='polymarket_us'))
         self.assertEqual(lines(filtered), {'-13.5', '13.5'})
         self.assertTrue(all(offer['venue'] != 'polymarket_us' for group in filtered['rows'] for offer in group['offers']))
-        unknown = read({'browse_odds': '1'}, rows=rows[2:])
+        unknown = read({'browse_odds': '1'}, rows=rows[2:4])
         self.assertEqual({entry['line_role'] for entry in unknown['rows']}, {'unknown'})
 
         conflict = dict(facts)
@@ -326,6 +356,13 @@ class TradeDesk(TestCase):
         separate = read({'browse_odds': '1'}, events=conflict)
         self.assertEqual(separate['total'], 2)
         self.assertEqual({entry['game_identity_status'] for entry in separate['rows']}, {'source_listing_unverified'})
+        conflict['polymarket_us', native_id]['schedule_conflict'] = {'reason': 'start_conflict'}
+        separate = read({'browse_odds': '1', 'game_key': 'native'}, events=conflict)
+        self.assertEqual(separate['games'][0]['game_identity_status'], 'schedule_conflict')
+        conflict['polymarket_us', native_id].pop('schedule_conflict')
+        conflict['polymarket_us', native_id]['occurrence_conflict'] = True
+        separate = read({'browse_odds': '1'}, rows=rows[2:4], events=conflict)
+        self.assertEqual(separate['games'][0]['game_identity_status'], 'source_listing_unverified')
 
     def test_committed_freshness_and_feed_outage_do_not_change_pregame_economics(self):
         from app.storage.pregame_publication import project as pregame
@@ -664,6 +701,16 @@ class TradeDesk(TestCase):
         self.assertEqual(replacement['selected_game_key'], 'replacement')
         self.assertEqual(replacement['selected_line_id'], replacement['rows'][0]['id'])
         self.assertEqual(replacement['rows'][0]['offers'][0]['id'], 'revised')
+        for changed_game in ('game', 'replacement'):
+            # A provider reused its original market/outcome IDs at a different
+            # strike. Only the occurrence can follow the provider's identifier.
+            changed_line = dict(revised, game_key=changed_game,
+                                market=dict(revised['market'], line='3.5'),
+                                selection=dict(revised['selection'], signed_line='-3.5'))
+            stale = page(result(changed_line), query, options)
+            self.assertEqual(stale['selected_game_key'], changed_game)
+            self.assertIsNone(stale['selected_line_id'])
+            self.assertNotEqual(stale['rows'][0]['id'], origin['id'])
         ambiguous = page(result(revised, dict(selected, game_key='also-replacement')), query, options)
         self.assertEqual(ambiguous['rows'], [])
         remaining = dict(revised, id='another-line', source=dict(revised['source'], native_outcome_id='other-side'),
@@ -794,7 +841,9 @@ class TradeDesk(TestCase):
         payoff = evaluate_arb(proof, [left, right], DEFAULT_FUNDING)['retail_payoff']
         self.assertEqual(payoff['execution_reason'], 'pair_execution_depth_insufficient')
         self.assertEqual([leg['depth_status'] for leg in payoff['legs']], ['insufficient', 'available'])
-        self.assertEqual(Fraction(payoff['minimum_net_payout_usd']) - Fraction(payoff['funding_usd']), 10)
+        self.assertFalse(payoff['available'])
+        self.assertEqual(payoff['minimum_gross_profit_usd'], '10')
+        self.assertNotIn('minimum_net_payout_usd', payoff)
         self.assertFalse(payoff['full_arbitrage_qualified'])
         # Half of a one-cent stake rounds half-even to zero, so there is no two-leg trade.
         unavailable = evaluate_arb(proof, [left, right], Fraction(1,100))['retail_payoff']
@@ -919,8 +968,12 @@ class TradeDesk(TestCase):
             left['trade_fee'] = dict(left['trade_fee'], evidence={'fictional_rate': '0.05'})
             changed = page(data, {}, options, captured_pairs=[pair], policy='policy', published_only=True)
             withdrawn = changed['rows'][0]['pairs'][0]
-            self.assertEqual(withdrawn['score'], '10')
-            self.assertEqual(withdrawn['retail_payoff'], dict(available=False, reason='pair_fee_publication_pending', legs=[]))
+            self.assertIsNone(withdrawn['score'])
+            retail = withdrawn['retail_payoff']
+            self.assertEqual(retail['reason'], 'pair_fee_publication_pending')
+            self.assertFalse(retail['available'])
+            self.assertNotIn('states', retail)
+            self.assertEqual([leg['acquisition_usd'] for leg in retail['legs']], ['50', '50'])
 
     def test_selected_stake_reuses_exact_pair_member_and_existing_evaluator(self):
         at = '2026-11-07T23:00:00+00:00'

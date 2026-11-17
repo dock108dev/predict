@@ -9,6 +9,7 @@
   <link rel="apple-touch-icon" href="/view/current/predict-icon.png">
   <link rel="stylesheet" href="/view/current/desk.css">
   <link rel="stylesheet" href="/view/current/desk-components.css">
+  <link rel="stylesheet" href="/view/current/desk-ticketboard.css">
   <link rel="modulepreload" href="/view/current/desk-drawer.js">
   <link rel="modulepreload" href="/view/current/desk-inspection.js">
   <script type="module" src="/view/current/desk.js"></script>
@@ -19,16 +20,37 @@
   <main id="main-content">
     <nav id="desk-path" class="desk-path" aria-label="Current view" hidden></nav>
     <header class="desk-title page-heading">
-      <div><p class="desk-kicker" id="desk-mode" hidden></p><h1 id="title">Opportunities</h1><p id="desk-subtitle" class="desk-meta" hidden></p></div>
-      <a class="desk-action" id="browse-link" href="/browse-odds">Find my game ↗</a>
+      <div><p class="desk-kicker" id="desk-mode" hidden></p><h1 id="title">Opportunities</h1><p id="desk-subtitle" class="desk-meta" hidden></p><p id="game-identity" class="desk-note" hidden></p></div>
+      <div class="desk-heading-actions">
+        <a class="desk-action" id="browse-link" href="/browse-odds">Find my game ↗</a>
+        <a class="desk-action" id="practice-link" href="/replay?dataset=practice" hidden>Try a practice example</a>
+      </div>
     </header>
     <div id="desk-readiness" hidden></div>
     <div class="replay-bar" id="replay-controls" hidden>
-      <label>Saved capture <select id="replay-dataset"><option value="frozen">11 p.m. capture</option><option value="preview">Earlier capture</option></select></label>
+      <label>Replay dataset <select id="replay-dataset"><option value="frozen">Saved capture</option><option value="preview">Earlier capture</option><option value="practice">Practice examples</option></select></label>
       <nav aria-label="Replay views"><a id="replay-ev" href="/replay">Offers</a><a id="replay-arbs" href="/replay?view=arbs">Arbitrage</a></nav>
     </div>
     <nav id="phase-tabs" class="opportunity-tabs" aria-label="Game phase" hidden><a id="phase-pregame" href="/ev">Pregame</a><a id="phase-live" href="/ev?phase=live">Live</a></nav>
     <form id="filters" class="desk-filters">
+      <div id="board-unit-field" class="board-unit-field" hidden>
+        <label for="board-unit">Unit size
+          <select id="board-unit" aria-describedby="unit-help">
+            <option value="" disabled selected>Choose unit size</option>
+            <option value="5.00">$5</option><option value="10.00">$10</option>
+            <option value="12.00">$12</option><option value="25.00">$25</option>
+            <option value="50.00">$50</option><option value="100.00">$100</option>
+            <option value="custom">Custom amount</option>
+          </select>
+        </label>
+        <div id="custom-unit-field" hidden>
+          <label for="custom-unit">Custom amount in dollars
+            <input id="custom-unit" type="text" inputmode="decimal" maxlength="10" autocomplete="off">
+          </label>
+          <button id="apply-unit" type="button">Apply</button>
+        </div>
+        <p id="unit-help">Maximum you commit upfront for one offer.</p>
+      </div>
       <div class="desk-toolbar">
         <nav id="opportunity-tabs" class="opportunity-tabs" aria-label="Opportunities"><a id="opportunity-ev" href="/ev">Expected value</a><a id="opportunity-arb" href="/arbs">Arbitrage</a></nav>
         <div id="market-tabs" class="opportunity-tabs" role="group" aria-label="Market family" hidden></div>
@@ -37,7 +59,7 @@
           <button id="open-filters" type="button" aria-label="Filters" aria-haspopup="dialog">Filters<span id="filter-count" hidden></span></button>
         </div>
         <div class="desk-analysis">
-          <label id="basis-field"><span class="sr-only">Calculation basis</span><select name="basis" disabled><option value="sportsbooks">Sportsbook estimate</option><option value="reviewed">Verified after-fee EV</option><option value="conservative">Conservative after-fee EV</option><option value="before">Before-fee scenario</option></select></label>
+          <label id="basis-field" hidden><span class="sr-only">Calculation basis</span><select name="basis" disabled><option value="sportsbooks">Sportsbook estimate</option><option value="after_fees">Estimated EV after fees</option><option value="reviewed">Verified after-fee EV</option><option value="conservative">Conservative after-fee EV</option><option value="before">Before-fee scenario</option></select></label>
           <label id="group-field"><span class="sr-only">Rows</span><select name="group"><option value="outcome">By outcome</option><option value="offer">Individual offers</option></select></label>
           <label id="positive-field" class="desk-toggle"><input name="positive" type="checkbox"> Positive only</label>
         </div>
@@ -83,6 +105,11 @@
       <p id="updates-ready" class="desk-note" role="status" hidden>New order available</p>
     </div>
     <p id="previous-results" class="desk-note previous-results" role="status" hidden></p>
+    <div id="ticketboard-order" hidden>
+      <h2>Ranked by Opportunity Score</h2>
+      <p>The score uses modeled win chance and after-fee payoff to rank offers.</p>
+    </div>
+    <p id="ticketboard-status" class="sr-only" role="status"></p>
     <div id="results" aria-label="Sorted results"></div>
     <nav class="desk-pages" aria-label="Results pages" hidden>
       <button id="previous" type="button" disabled>Previous</button>
@@ -91,14 +118,20 @@
     </nav>
     <footer class="desk-session"><a class="desk-action" id="replay-link" href="/replay">Saved odds</a> <button id="open-session" type="button" aria-haspopup="dialog">Session history</button></footer>
   </main>
+  <dialog id="quote-gap" aria-labelledby="quote-gap-title" aria-describedby="quote-gap-outcome quote-gap-detail">
+    <div class="desk-title"><h2 id="quote-gap-title">Quote status</h2><form method="dialog"><button>Close</button></form></div>
+    <p id="quote-gap-outcome" class="desk-meta"></p>
+    <p id="quote-gap-detail"></p>
+  </dialog>
   <dialog id="trade" aria-labelledby="trade-title">
     <div class="desk-title"><h2 id="trade-title">Trade details</h2><form method="dialog"><button>Close</button></form></div>
     <div id="preview-controls" hidden>
-      <label for="preview-amount">Maximum upfront cost <span class="preview-input">$ <input id="preview-amount" type="number" min="0.01" max="1000000" step="0.01" value="10"></span></label>
+      <label for="preview-amount">Maximum upfront cost <span class="preview-input">$ <input id="preview-amount" type="number" min="0.01" max="1000000" step="0.01" inputmode="decimal"></span></label>
     </div>
     <div id="trade-body"></div>
     <footer class="inspection-footer">
       <button id="back-to-pair" type="button" hidden>Back to pairing</button><button id="latest" type="button">Use latest prices</button>
+      <button id="refresh-comparison" type="button" hidden>Refresh calculation</button>
       <button id="refresh-preview" type="button" hidden>Refresh</button>
       <p id="trade-note" role="status"></p>
     </footer>

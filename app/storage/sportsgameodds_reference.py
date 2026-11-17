@@ -11,7 +11,7 @@ from psycopg.types.json import Jsonb
 from app.storage.current_rows import LOCK
 from app.storage import odds_archive
 from app.storage.odds_retention import sgo_pregame, sgo_working_expiry
-from app.storage.store import encoded, exact_time, hashed, stamp
+from app.storage.store import encoded, exact_time, hashed, stamp, now
 
 MAX_ROWS = 16000
 MAX_BYTES = 8 * 1024 * 1024
@@ -165,7 +165,7 @@ def prepare_page(page):
                      unavailable_reason=quote['unavailable_reason'], source_at=quote['source_at'],
                      source_at_original=quote['source_at_original'], received_at=quote['received_at'],
                      receipt_sha256=page.receipt_sha256, fair=quote['fair'], settlement='unverified')
-        for field in ('consensus', 'bookmaker_market_link', 'alternate'):
+        for field in ('consensus', 'bookmaker_market_link', 'alternate', 'partition'):
             if field in quote:
                 facts[field] = quote[field]
         revision = hashed({k: v for k, v in facts.items() if k not in ('received_at', 'receipt_sha256')})
@@ -586,6 +586,7 @@ def schedule_occurrences(rows):
     """Index exact schedule occurrences while retaining blockers for ambiguous joins."""
     from app.collection.sportsgameodds_current_rows import participant_ids
     from app.normalization.college_registry import sgo_registry
+    from .sgo_schedule_review import frame_start
 
     registry = sgo_registry()
     schedule = {}
@@ -598,7 +599,8 @@ def schedule_occurrences(rows):
             try:
                 teams = participant_ids(row['teams'], row['league'], event, registry)
                 if teams['home'] != teams['away']:
-                    observed = (row['league'], stamp(row['starts_at']), teams['home'], teams['away'])
+                    start = frame_start(event, row['league'], row['teams'], row['starts_at'], row['frame'], at=now())
+                    observed = (row['league'], stamp(start), teams['home'], teams['away'])
             except (KeyError, TypeError, ValueError):
                 pass
         # A new scoped alias can canonicalize a prior provider-local ID. An
@@ -677,7 +679,7 @@ def prepare_frames(page, rows):
                      event_context=dict(league=event['league'], phase=event['phase'], teams=event['teams'],
                                         status=event['status'], scores=event.get('scores', {}),
                                         game_results=event.get('game_results', {})))
-        for field in ('bookmaker_event_links', 'previous_starts_at'):
+        for field in ('bookmaker_event_links', 'previous_starts_at', 'starts_at_original'):
             if event.get(field):
                 facts['event_context'][field] = event[field]
         frames.append(dict(event_id=event_id, received_order=str(exact_time(event['received_at'])),
@@ -703,7 +705,7 @@ def upsert_frames(db, frames):
         context = facts.get('event_context')
         context_required = {'league', 'phase', 'teams', 'status', 'scores', 'game_results'}
         if context is not None and (not isinstance(context, dict) or not context_required <= set(context)
-                or set(context) - context_required - {'bookmaker_event_links', 'previous_starts_at'}
+                or set(context) - context_required - {'bookmaker_event_links', 'previous_starts_at', 'starts_at_original'}
                 or len(encoded(context)) > 8192):
             raise ValueError('sgo event context invalid')
         if (facts['provider'] != 'sportsgameodds' or facts['event_id'] != frame['event_id']

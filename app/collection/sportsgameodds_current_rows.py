@@ -74,7 +74,9 @@ def event_record(event, receipt_sha256, received_at, registry):
                    proofs=[dict(path='sportsgameodds/receipt/' + receipt_sha256,
                                 body_sha256=receipt_sha256, received_at=received_at)])
     row['schedule_metadata'] = dict(witness, revision=hashed(witness))
-    return row
+    from app.storage.sgo_schedule_review import correct
+
+    return correct(row, at=received_at)
 
 
 def current_rows(page, receipt_sha256):
@@ -86,6 +88,8 @@ def current_rows(page, receipt_sha256):
     events = {event['event_id']: event for event in page.events}
     groups, excluded = {}, []
     for quote in page.quotes:
+        if quote.get('partition') == 'three_way':
+            continue  # Reference evidence only until placement settlement is mapped.
         if quote['venue'] not in CURRENT_VENUES:
             excluded.append((quote['event_id'], quote['venue'], 'unsupported current-row venue'))
             continue
@@ -162,7 +166,7 @@ def current_rows(page, receipt_sha256):
                                    label=side.title() if family == 'total' else event['teams'][side]['name']))
         identity = dict(event=occurrence, sport=row_event['sport'],
                         competition=event['league'], season='unverified', stage='unverified',
-                        scheduled_start=event['starts_at'], family=family, period='full_game',
+                        scheduled_start=row_event['scheduled_start'], family=family, period='full_game',
                         line=canonical, outcome_set=stable(selections), rules='sportsgameodds-unverified-1')
         policy = 'sportsgameodds-unverified-1:' + family
         if not paired:

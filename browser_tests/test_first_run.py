@@ -15,24 +15,116 @@ ASSETS = (
 )
 
 
+def practice_journey(tab, base):
+    from playwright.sync_api import expect
+
+    tab.goto(base + "/arbs")
+    tab.get_by_role("link", name="Try a practice example", exact=True).click()
+    expect(tab.get_by_role("heading", name="Arbitrage", exact=True)).to_be_visible()
+    expect(tab.locator("#desk-mode")).to_have_text("Practice example · simulated odds")
+    cards = tab.locator(".opportunity-arb")
+    positive = cards.filter(has_text="Harbor Foxes")
+    expect(positive).to_contain_text("Modeled profit if the game completes")
+    expect(positive).to_contain_text("125")
+    expect(positive).to_contain_text("$100.00")
+    expect(positive).to_contain_text("$125.00")
+    expect(positive).to_contain_text("$25.00")
+    expect(positive).to_contain_text("Novig")
+    expect(positive).to_contain_text("ProphetX")
+    expect(positive.get_by_text("$0.00", exact=True)).to_have_count(2)
+    positive.get_by_role("button", name="View payoff calculation ↗").click()
+    pair = tab.get_by_role("dialog", name="Pair payoff")
+    expect(
+        pair.get_by_text("Practice example · simulated odds", exact=True)
+    ).to_be_visible()
+    expect(pair).to_contain_text("$25.00")
+    pair.get_by_text("Calculation details", exact=True).click()
+    expect(pair).to_contain_text("void, cancellation, postponement, partial completion")
+    expect(pair.locator(".inspection-payoffs tbody tr")).to_have_count(2)
+    for state in pair.locator(".inspection-payoffs tbody tr").all():
+        expect(state).to_contain_text("$125.00")
+        expect(state).to_contain_text("$25.00")
+    pair.get_by_role("button", name="Inspect offer and fees").first.click()
+    expect(tab.locator("#trade .inspection-mode")).to_have_text(
+        "Practice example · simulated odds"
+    )
+    tab.get_by_role("button", name="Back to pairing").click()
+    tab.keyboard.press("Escape")
+    expect(
+        positive.get_by_role("button", name="View payoff calculation ↗")
+    ).to_be_focused()
+    shortfall = cards.filter(has_text="Canyon Hawks")
+    expect(shortfall).to_contain_text("Shortfall before fees")
+    expect(shortfall).to_contain_text("$0.50")
+    expect(shortfall).to_contain_text("$99.50")
+    expect(shortfall).to_contain_text("Net payoff unavailable")
+    expect(cards.filter(has_text="Prairie Bears")).to_contain_text("fewer claims")
+    expect(cards.filter(has_text="River Otters")).to_contain_text(
+        "joint settlement cashflows"
+    )
+    tab.get_by_label("Positive only").check()
+    expect(cards).to_have_count(1)
+    expect(cards.first).to_contain_text("Harbor Foxes")
+    tab.get_by_role("checkbox", name="Positive only").uncheck()
+    assert tab.evaluate("document.documentElement.scrollWidth === innerWidth")
+
+    tab.goto(base + "/ev")
+    tab.get_by_role("link", name="Try a practice example", exact=True).click()
+    ticket = tab.locator(".pregame-ticket")
+    expect(ticket).to_contain_text("Saint Mary's Gaels")
+    expect(ticket).to_contain_text("+2.82%")
+    expect(ticket).to_contain_text("$25 unit")
+    expect(tab.get_by_label("Calculation basis")).to_be_hidden()
+    expect(tab.get_by_label("Rows", exact=True)).to_be_hidden()
+    ticket.get_by_role("button", name="Compare prices for", exact=False).click()
+    drawer = tab.locator("#trade")
+    expect(drawer).to_contain_text("Practice example · simulated odds")
+    expect(drawer).to_contain_text("Unit $25")
+    expect(drawer).to_contain_text("$0.75")
+    expect(drawer).to_contain_text("+2.82%")
+    drawer.get_by_text("Calculation and settlement details").click()
+    expect(drawer).to_contain_text("$24.25")
+    expect(drawer).to_contain_text("$51.41 returned")
+    tab.keyboard.press("Escape")
+    tab.get_by_role("link", name="Return to Opportunities", exact=True).click()
+    expect(tab.get_by_role("heading", name="Opportunities", exact=True)).to_be_visible()
+
+
 def first_use(tab, base, archive_directory):
     from playwright.sync_api import expect
 
     tab.goto(base + "/")
     expect(tab.get_by_role("heading", name="Opportunities")).to_be_visible()
-    expect(tab.get_by_role("heading", name="Price collection is off")).to_be_visible()
+    expect(
+        tab.get_by_role("heading", name="Choose a unit size to rank offers after fees.")
+    ).to_be_visible()
     expect(tab.get_by_role("link", name="Arbitrage")).to_be_visible()
-    expect(tab.get_by_role("button", name="Refresh list")).to_be_visible()
-    expect(tab.get_by_role("link", name="Find my game ↗")).to_be_visible()
+    expect(tab.get_by_label("Unit size")).to_have_value("")
+    expect(
+        tab.locator("#results").get_by_role("link", name="Browse Odds")
+    ).to_be_visible()
+    expect(tab.get_by_role("button", name="Filters", exact=True)).to_be_hidden()
+    unit = tab.get_by_label("Unit size")
+    unit.select_option("custom")
+    custom = tab.get_by_label("Custom amount in dollars")
+    custom.fill("12.345")
+    custom.press("Enter")
+    assert not custom.evaluate("input => input.validity.valid")
+    custom.fill("19.37")
+    custom.press("Enter")
+    expect(
+        tab.get_by_role("heading", name="Calculating opportunities for $19.37")
+    ).to_be_visible()
+    tab.goto(base + "/ev")
+    expect(unit).to_have_value("19.37")
+    unit.select_option("custom")
+    expect(custom).to_have_value("19.37")
+    custom.press("Escape")
+    expect(unit).to_have_value("19.37")
     saved = tab.get_by_role("link", name="Saved odds", exact=True)
     expect(saved).to_have_count(1)
-    expect(
-        tab.locator("#desk-readiness").get_by_role("link", name="Saved odds")
-    ).to_be_visible()
-    saved.focus()
-    tab.keyboard.press("Tab")
-    expect(tab.get_by_role("link", name="Source status", exact=True)).to_be_focused()
-    tab.get_by_role("link", name="Source status", exact=True).click()
+    tab.get_by_role("link", name="Admin", exact=True).click()
+    tab.get_by_role("link", name="Sources", exact=True).click()
     setup = tab.locator("#source-setup")
     expect(setup.locator("summary")).to_be_visible()
     setup.locator("summary").focus()
@@ -43,9 +135,9 @@ def first_use(tab, base, archive_directory):
     tab.get_by_label("Time zone").select_option("UTC")
     tab.get_by_label("Odds format").select_option("decimal")
     tab.get_by_role("link", name="EV", exact=True).click()
-    tab.get_by_label("Calculation basis").select_option("conservative")
+    expect(tab.get_by_label("Calculation basis")).to_be_hidden()
     tab.reload()
-    expect(tab.get_by_label("Calculation basis")).to_have_value("conservative")
+    expect(tab.get_by_label("Calculation basis")).to_be_hidden()
     expect(tab.get_by_text("Synthetic practice", exact=False)).to_have_count(0)
     tab.get_by_role("link", name="Saved odds").click()
     expect(tab.get_by_text("Saved odds · prices at capture")).to_be_visible()
@@ -87,7 +179,7 @@ def first_use(tab, base, archive_directory):
     expect(tab.locator('[data-offer-id="practice-offer-spread-1"]')).to_contain_text(
         "1.91"
     )
-    tab.get_by_label("Saved capture").select_option("preview")
+    tab.get_by_label("Replay dataset").select_option("preview")
     expect(
         tab.get_by_role("heading", name="Harbor Foxes vs. Summit Owls")
     ).to_be_visible()
@@ -101,7 +193,7 @@ def first_use(tab, base, archive_directory):
     expect(tab.locator('[data-offer-id="practice-offer-total-1"]')).to_contain_text(
         "1.95"
     )
-    tab.get_by_label("Saved capture").select_option("frozen")
+    tab.get_by_label("Replay dataset").select_option("frozen")
 
     tab.get_by_role("navigation", name="Replay views").get_by_role(
         "link", name="Arbitrage"
@@ -113,9 +205,7 @@ def first_use(tab, base, archive_directory):
     expect(pair).to_contain_text("Summit Owls")
     expect(pair).to_contain_text("Both leg fees are needed to calculate net settlement")
     expect(pair).not_to_contain_text("-$4.097")
-    expect(
-        pair.get_by_text("Lowest decisive return before fees", exact=True)
-    ).to_be_visible()
+    expect(pair.get_by_text("Lowest payout before fees", exact=True)).to_be_visible()
     expect(pair.get_by_role("spinbutton")).to_have_count(0)
     pair.get_by_role("button", name="Inspect offer and fees").first.click()
     expect(trade).to_contain_text(
@@ -158,13 +248,13 @@ def first_use(tab, base, archive_directory):
     ).to_be_visible()
     tab.get_by_role("button", name="Clear Except ProphetX filter").press("Enter")
     expect(inspect).to_be_visible()
-    tab.get_by_label("Saved capture").select_option("preview")
+    tab.get_by_label("Replay dataset").select_option("preview")
     expect(inspect).to_be_visible()
     expect(tab.locator(".desk-best").filter(has_text="2.10")).to_have_count(1)
     assert tab.evaluate("document.documentElement.scrollWidth === innerWidth")
 
     (archive_directory / "frozen.sqlite3").unlink()
-    tab.get_by_label("Saved capture").select_option("frozen")
+    tab.get_by_label("Replay dataset").select_option("frozen")
     expect(
         tab.get_by_role("heading", name="This saved capture is unavailable")
     ).to_be_visible()
@@ -183,7 +273,7 @@ def first_use(tab, base, archive_directory):
 
 @pytest.mark.parametrize("width", [1440, 390])
 def test_first_use_without_credentials(width, tmp_path, monkeypatch):
-    from playwright.sync_api import sync_playwright
+    from playwright.sync_api import expect, sync_playwright
 
     write_archives(tmp_path)
     monkeypatch.setattr(odds_replay, "DIRECTORY", tmp_path)
@@ -201,15 +291,12 @@ def test_first_use_without_credentials(width, tmp_path, monkeypatch):
             reads.append(params)
             route.fulfill(
                 json={
-                    "state": "initializing",
-                    "publication": {
-                        "data_runtime": {
-                            "healthy": True,
-                            "active": False,
-                            "reason": "data_runtime_not_dispatching",
-                        },
-                        "current_prices": 0,
-                    },
+                    "schema": "predict-pregame-board-1",
+                    "state": "valuation_pending"
+                    if params.get("unit_usd")
+                    else "unit_needed",
+                    "rows": [],
+                    "selected_usd": params.get("unit_usd"),
                 }
             )
         elif url.path.startswith("/api/odds-replay"):
@@ -224,7 +311,7 @@ def test_first_use_without_credentials(width, tmp_path, monkeypatch):
                 route.fulfill(
                     status=401, headers={"WWW-Authenticate": 'Basic realm="Admin"'}
                 )
-        elif url.path in ("/", "/ev", "/replay", "/admin"):
+        elif url.path in ("/", "/ev", "/arbs", "/replay", "/admin"):
             route.fulfill(
                 path=ASSETS / ("admin.html" if url.path == "/admin" else "desk.html")
             )
@@ -246,6 +333,8 @@ def test_first_use_without_credentials(width, tmp_path, monkeypatch):
             errors = []
             tab.on("pageerror", lambda error: errors.append(str(error)))
             first_use(tab, base, tmp_path)
+            practice_journey(tab, base)
+            expect(tab.get_by_label("Unit size")).to_have_value("19.37")
             if width == 390:
                 tab.add_style_tag(
                     content="html { font-size: 200%; } .desk-app { font-size: .9375rem; }"

@@ -1,5 +1,5 @@
 {
-  "version": "retained-native-admission-3",
+  "version": "retained-native-admission-4",
   "collection_authorized": false,
   "mappings": [
     {
@@ -3399,7 +3399,7 @@
           "market_id": "KXNHL-27-MTL",
           "native_metadata_sha256": "cf2081c4cbaa19359beadaa095c61823cc291afdcc742a378c410e217d590057",
           "canonical_id": "NHL:MTL",
-          "label": "Montr\u00e9al Canadiens",
+          "label": "Montréal Canadiens",
           "body_sha256": "6cbe7c3ab5f00fc24d8dbad22310e9909ec2eb5aaed06ed9208975f266d0564b"
         },
         {
@@ -4373,7 +4373,103 @@
           "institution_alias": true
         }
       ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAB",
+      "native_id": "b02b26b8-07f7-4a4c-bbb5-e3fe92653b2d",
+      "target": "NCAAB:M:D1:NCAA521",
+      "source": "Sprint 1: structured winner market matched to the linked Kalshi milestone role and official school schedule",
+      "evidence": [
+        {
+          "market_id": "KXNCAAMBGAME-26NOV16CARKOKST-OKST",
+          "event_id": "KXNCAAMBGAME-26NOV16CARKOKST",
+          "milestone_id": "41ee843b-cb42-59e1-9824-9a74033e17c0",
+          "native_metadata_sha256": "b954f964c7210c5318168401a46bd94c0339752783a6158b08e9d650bc91b2b7",
+          "canonical_id": "NCAAB:M:D1:NCAA521",
+          "label": "Oklahoma St.",
+          "body_sha256": "7d4f6497e57e00edb1af7cfa67f3c5cb6f96228e73e62c36e38dc9d789974aae",
+          "source_path": "/trade-api/v2/events",
+          "institution_url": "https://okstate.com/sports/mens-basketball/schedule/2026-27",
+          "institution_name": "Oklahoma State University",
+          "identity_only": true
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAB",
+      "native_id": "314b4428-f0c4-42ef-858c-e2df16234695",
+      "target": "NCAAB:M:D1:NCAA1004",
+      "source": "Sprint 1: structured winner market matched to the linked Kalshi milestone role and official school schedule",
+      "evidence": [
+        {
+          "market_id": "KXNCAAMBGAME-26NOV16CARKOKST-CARK",
+          "event_id": "KXNCAAMBGAME-26NOV16CARKOKST",
+          "milestone_id": "41ee843b-cb42-59e1-9824-9a74033e17c0",
+          "native_metadata_sha256": "8f86a79fd65f2d0c4fc2a418ec9c5b698998a79c160f2b448ed8499907673639",
+          "canonical_id": "NCAAB:M:D1:NCAA1004",
+          "label": "Central Arkansas",
+          "body_sha256": "7d4f6497e57e00edb1af7cfa67f3c5cb6f96228e73e62c36e38dc9d789974aae",
+          "source_path": "/trade-api/v2/events",
+          "institution_url": "https://okstate.com/sports/mens-basketball/schedule/2026-27",
+          "institution_name": "University of Central Arkansas",
+          "identity_only": true
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAB",
+      "native_id": "350de762-1259-444e-8f6c-cf289a4efa98",
+      "target": "NCAAB:M:D1:NCAA699",
+      "source": "Sprint 1: structured winner market matched to the linked Kalshi milestone role and official school schedule",
+      "evidence": [
+        {
+          "market_id": "KXNCAAMBGAME-26NOV16TXSOUCSD-TXSO",
+          "event_id": "KXNCAAMBGAME-26NOV16TXSOUCSD",
+          "milestone_id": "0c56fbcd-809c-57ef-9887-83fcd3327400",
+          "native_metadata_sha256": "d8ac0286dfe5faa4e71d9c83a306d5b27fd8a172f7a7cd2d1ec35681a0337f09",
+          "canonical_id": "NCAAB:M:D1:NCAA699",
+          "label": "Texas Southern",
+          "body_sha256": "7d4f6497e57e00edb1af7cfa67f3c5cb6f96228e73e62c36e38dc9d789974aae",
+          "source_path": "/trade-api/v2/events",
+          "institution_url": "https://ucsdtritons.com/news/2026/11/15/mens-basketball-uc-san-diego-welcomes-tigers-on-military-appreciation-night.aspx",
+          "institution_name": "Texas Southern University",
+          "identity_only": true
+        }
+      ]
+    },
+    {
+      "kind": "team",
+      "venue": "kalshi",
+      "environment": "production",
+      "league": "NCAAB",
+      "native_id": "1901cb1f-f0bd-41ec-b5ff-19f7aee7614d",
+      "target": "NCAAB:M:D1:NCAA112",
+      "source": "Sprint 1: structured winner market matched to the linked Kalshi milestone role and official school schedule",
+      "evidence": [
+        {
+          "market_id": "KXNCAAMBGAME-26NOV16TXSOUCSD-UCSD",
+          "event_id": "KXNCAAMBGAME-26NOV16TXSOUCSD",
+          "milestone_id": "0c56fbcd-809c-57ef-9887-83fcd3327400",
+          "native_metadata_sha256": "9229c90f1fd370a8841bb399afd14cae53afc7a783ee70a88d2debbb65ea684b",
+          "canonical_id": "NCAAB:M:D1:NCAA112",
+          "label": "UC San Diego",
+          "body_sha256": "7d4f6497e57e00edb1af7cfa67f3c5cb6f96228e73e62c36e38dc9d789974aae",
+          "source_path": "/trade-api/v2/events",
+          "institution_url": "https://ucsdtritons.com/news/2026/11/15/mens-basketball-uc-san-diego-welcomes-tigers-on-military-appreciation-night.aspx",
+          "institution_name": "University of California, San Diego",
+          "identity_only": true
+        }
+      ]
     }
   ],
-  "sha256": "82139cfc383008b01cbdd95d3aa31f341cede23d9c96ced73edb3cfcc32259de"
+  "sha256": "16f190286fa5a58d9e2e27cb2a21c2e4044babaaf036c531c954e87751e7974e"
 }

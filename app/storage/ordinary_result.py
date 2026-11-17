@@ -42,6 +42,9 @@ def quote_authority(row, inputs, *, reference=False):
 
 def price_only(inputs, settings, *, db=None):
     """Prepare a price-only result with the same frozen depth used by finance."""
+    if db is not None:
+        from .pregame_valuation_inputs import freeze
+        freeze(db, inputs)
     rows = [];statuses={}
     for q in inputs['quotes']:
         row = {k: v for k, v in q.items() if k not in ('original_record', 'benchmark_quote', 'native_contract')}
@@ -58,11 +61,16 @@ def price_only(inputs, settings, *, db=None):
                              period='full_game', horizon_hours=72))
     if db is not None:
         from .current_rows import CurrentRowStore
+        from .pregame_publication import arb_contracts
 
-        paired = {leg for pair in result['pairs'] if not pair['before_fees'].get('blocker') for leg in pair['legs']}
-        contracts = {q['id']:contract_id(q['original_record']) for q in inputs['quotes']
-                     if q['id'] in paired and q['venue'] in ('kalshi','polymarket_us')
-                     and q.get('original_record')}
+        paired = {leg for pair in result['pairs'] for leg in pair['legs']}
+        bindings = {q['id']: contract_id(q['original_record']) for q in inputs['quotes']
+                    if q['id'] in paired and q.get('original_record')}
+        inputs['arb_contracts'] = {
+            cid: semantic for cid, (revision, semantic) in arb_contracts(db, set(bindings.values())).items()
+            if cid in inputs['dependencies'] and revision == inputs['dependencies'][cid][1]}
+        contracts = {q['id']: bindings[q['id']] for q in inputs['quotes']
+                     if q['id'] in bindings and q['venue'] in ('kalshi', 'polymarket_us')}
         depth = CurrentRowStore(db).native_top_asks(set(contracts.values()))
         # A price-only and finance turn share the same frozen book receipt.
         # Never read a newer book when recalculating the retained member.
@@ -77,7 +85,7 @@ def bind(result, inputs, finance, *, load_registry):
     from app.comparison.game_phase import sporting_phase
     from app.comparison.snapshot_fee_scope import applicability
     from app.comparison.snapshot_fee_outcome import outcome, reviews, unavailable
-    from app.comparison.sgo_native_binding import pregame_fee
+    from app.comparison.sgo_native_binding import published_pregame_fee
     from .sgo_native_catalog import dependency_id as catalog_dependency_id
     at = stamp(inputs['captured_at'])
     schedules = reviews(at) if result['rows'] else {}
@@ -104,12 +112,18 @@ def bind(result, inputs, finance, *, load_registry):
         sgo = None
         witnesses = []
         fee_witnesses = witnesses
-        if finance == 'ready' and not sgo_mode:
+        if finance == 'ready' and 'pregame_reference' in row:
+            ref = row['pregame_reference']
+            settlement = row['settlement_assessment']
+            without_finance(row, ref.get('reason') or settlement.get('reason') or 'unit_size_valuation_pending',
+                            copy_row=False)
+            row.update(reference=None, snapshot_benchmark=None)
+        elif finance == 'ready' and not sgo_mode:
             row.update(reference=None, snapshot_benchmark=None,
                        snapshot_benchmark_reason='eligible_reference_unavailable',
                        snapshot_benchmark_missing=None, reference_calculation={})
             without_finance(row, 'eligible_reference_unavailable', copy_row=False)
-        if finance == 'ready' and sgo_mode:
+        if finance == 'ready' and sgo_mode and 'pregame_reference' not in row:
             from app.comparison.sgo_reference_publication import bind_captured
             row.update(snapshot_benchmark=None, reference=None,
                        snapshot_benchmark_reason='sgo_reference_qualification_unavailable',
@@ -151,19 +165,16 @@ def bind(result, inputs, finance, *, load_registry):
             binding = original.get('sgo_native_contract')
             if binding:
                 row['sgo_native_contract'] = binding
+                review = product_schedules.for_offer(product_states, row, at, fallback=schedules[row['venue']])
             if binding and not binding['available']:
-                row['trade_fee'] = pregame_fee(binding)
+                row['trade_fee'] = published_pregame_fee(original.get('original_record'), binding, at=at, review=review)
             if binding and binding['available']:
                 dependency = catalog_dependency_id(original['source']['native_event_id'])
                 expected = inputs['dependencies'].get(dependency)
                 if expected and expected[0] == binding['revision']:
                     catalog_authority = dict(dependency=dependency, expected=expected,
                         current_until=binding['current_until'])
-                    row['trade_fee'] = pregame_fee(binding)
-                    if row['trade_fee']['available']:
-                        review = product_schedules.for_offer(product_states, row, at, fallback=schedules[row['venue']])
-                        if review and review.get('unavailable_reason'):
-                            row['trade_fee'] = unavailable(review['unavailable_reason'])
+                    row['trade_fee'] = published_pregame_fee(original.get('original_record'), binding, at=at, review=review)
         elif row['venue'] in schedules and original.get('original_record'):
             record = original['original_record']
             phase = source.get('lifecycle', {}).get('state')
@@ -176,7 +187,14 @@ def bind(result, inputs, finance, *, load_registry):
             review = (schedule_lifecycle.for_offer(fee_state, fee_input, at, fallback=schedules[row['venue']])
                       if row['venue'] == 'prophetx' else
                       product_schedules.for_offer(product_states, fee_input, at, fallback=schedules[row['venue']]))
-            row['trade_fee'] = outcome(fee_input, at=at, phase=phase, review=review)
+            quantity = '1'
+            if row['venue'] == 'polymarket_us' and phase == 'scheduled':
+                from app.comparison.trade_preview import order_step
+
+                step = order_step(fee_input)
+                if step and step > 0 and 1 % step:
+                    quantity = step
+            row['trade_fee'] = outcome(fee_input, at=at, phase=phase, review=review, quantity=quantity)
             if sgo and sgo.get('available') and review is not None and (phase == 'scheduled' or row['venue'] == 'kalshi'):
                 from app.comparison.conditional_benchmark import snapshot_metric
                 metric = snapshot_metric(fee_input, at=inputs['captured_at'], review=review, verified_live=phase == 'live')
@@ -210,7 +228,10 @@ def bind(result, inputs, finance, *, load_registry):
                 row['polymarket_live_financial_qualified'] = phase == 'live' and row['conservative_trade_benchmark']['available']
                 statuses(row)
         baseline = row.get('sportsbook_baseline')
-        if finance == 'ready' and source.get('lifecycle', {}).get('state') == 'scheduled' and baseline:
+        settlement = row.get('settlement_assessment')
+        binary = settlement is None or (settlement.get('available') and
+            set(settlement['state_probabilities']) == {'win', 'loss'})
+        if finance == 'ready' and source.get('lifecycle', {}).get('state') == 'scheduled' and baseline and binary:
             from app.comparison.cashflows import exact_wire
             from app.dashboard.current_contract import price
 
@@ -225,7 +246,12 @@ def bind(result, inputs, finance, *, load_registry):
                 if risk > 0:
                     row['sportsbook_after_fee_percent'] = exact_wire(100 * ((probability * win +
                         (1 - probability) * loss) / risk - 1))
-        metadata = (original.get('original_record') or {}).get('comparison_source_metadata') or {}
+        captured_record = original.get('original_record') or {}
+        metadata = captured_record.get('comparison_source_metadata') or {}
+        if captured_record and source.get('lifecycle', {}).get('state') == 'scheduled':
+            row['pregame_contract_authority'] = dict(
+                settlement_rules=(captured_record.get('market_identity') or {}).get('rules'),
+                scoring_scope=metadata.get('scoring_scope'))
         if isinstance(metadata.get('alternate'), bool):
             row['alternate'] = metadata['alternate']
         reference = row.get('reference_calculation') or {}
@@ -238,6 +264,8 @@ def bind(result, inputs, finance, *, load_registry):
             fee_until=fee.get('review_before'),fee_from=fee.get('reviewed_at'),fee_revision=hashed(fee) if fee else empty_fee_revision,
             conservative_fee_until=row.get('conservative_trade_benchmark',{}).get('evidence',{}).get('review_before'),
             start_at=row['start_at'])
+        if semantic := inputs.get('arb_contracts', {}).get(source.get('dependency')):
+            row['current_authority']['arb_contract'] = semantic
         occurrence = ((original.get('original_record') or {}).get('quote', {}).get('occurrence_match') or {})
         if (occurrence.get('status') == 'matched' and occurrence.get('estimated') is False
                 and not occurrence.get('conflicts') and occurrence.get('method') in
@@ -257,6 +285,7 @@ def bind(result, inputs, finance, *, load_registry):
             row.get('conditional_return_percent'),row.get('conservative_return_percent'),
             row.get('conservative_trade_benchmark',{}).get('evidence'),fee, result['assumptions']['revision'],
             row.get('trade_fee'), row.get('sportsbook_baseline'), row.get('sportsbook_after_fee_percent'),
+            row.get('pregame_reference'), row.get('settlement_assessment'), row.get('valuation_fill_terms'),
             (row.get('reference_calculation') or {}).get('basis_sha256'), inputs['policy_identity']])
     if result['pairs']:
         from app.comparison.ordinary_arb import DEFAULT_FUNDING, evaluate, fee_identity

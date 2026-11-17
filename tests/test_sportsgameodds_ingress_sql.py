@@ -21,10 +21,26 @@ from app.storage.store import Store
 from tests.latest_board_fixture import LatestBoardFixture, SOCKET
 from tests.test_sportsgameodds_adapter import parse, response
 from tests.test_ev09_n01 import AT
+from tests.test_pregame_reference import rule
+
+
+def authored_book_rule(_observation, _book, family, _legs, _at):
+    return rule(outcomes=('over', 'under') if family == 'total' else ('home', 'away'))
+
+
+def authored_venue_rule(row):
+    family = row['original_record']['market_identity']['family']
+    return authored_book_rule(None, None, family, None, None), None
 
 
 @skipUnless(SOCKET, 'Disposable PostgreSQL required')
 class SportsGameOddsPregameDeskSQL(LatestBoardFixture):
+    def reviewed_fixture(self):
+        self.enterContext(patch('app.storage.pregame_reference_publication.reviewed_rules',
+                                return_value=authored_book_rule))
+        self.enterContext(patch('app.storage.pregame_reference_publication.venue_rules',
+                                side_effect=authored_venue_rule))
+
     async def test_native_pregame_book_only_estimates_in_all_leagues(self):
         from datetime import timedelta
         from decimal import Decimal
@@ -42,6 +58,7 @@ class SportsGameOddsPregameDeskSQL(LatestBoardFixture):
         from tests.broad_pipeline_fixtures import captured_partial
         from tests.multisport_fixtures import FAMILIES, SPORTS, source_case
 
+        self.reviewed_fixture()
         self.at = stamp('2026-11-15T16:00:00Z')
         received = self.at.isoformat()
         config = dict(DEFAULT, aggregate_provider='sportsgameodds', sports=list(SPORTS),
@@ -146,7 +163,7 @@ class SportsGameOddsPregameDeskSQL(LatestBoardFixture):
                     self.assertEqual(response.status, 200, await response.text())
                     return await response.json()
 
-                for filters in (dict(browse_odds='1'), dict(ranked='1', phase='live')):
+                for filters in (dict(browse_odds='1'), dict(ranked='1', phase='live', board='0')):
                     page = await read(**filters)
                     self.assertEqual((page['phase'], page['features'], page['provider_requests']),
                                      ('pregame', {'live_enabled': False, 'auto_update': True}, 0))
@@ -181,7 +198,7 @@ class SportsGameOddsPregameDeskSQL(LatestBoardFixture):
                             self.assertEqual(Fraction(offer['value']), 100 * (probability / Fraction('0.51') - 1), key)
                     self.assertEqual(matched, expected.keys())
 
-                reviewed = await read(ranked='1', basis='reviewed')
+                reviewed = await read(ranked='1', basis='reviewed', board='0')
                 self.assertEqual(reviewed['rows'], [])
 
                 with self.connect() as db, \
@@ -191,7 +208,7 @@ class SportsGameOddsPregameDeskSQL(LatestBoardFixture):
                     self.assertTrue(published['published'] or published['unchanged'], published)
                     self.assertEqual(published['errors'], [])
                 # A committed publication still needs the exact book-only frame witness.
-                retained = await read(ranked='1')
+                retained = await read(ranked='1', board='0')
                 self.assertGreater(retained['generation'], 0)
                 self.assertEqual({(row['league'], row['market']['market']) for row in retained['rows']},
                                  {(key[0], key[1]) for key in expected})
@@ -251,6 +268,7 @@ class SportsGameOddsPregameDeskSQL(LatestBoardFixture):
         from app.storage.store import stamp
         from tests.test_sportsgameodds_adapter import AT as receipt_at
 
+        self.reviewed_fixture()
         self.at = stamp(receipt_at)
         prior_repair = (Path(__file__).resolve().parents[1] / 'app/storage/migrations/095_sgo_quote_state.sql').read_text()
         raw = response()
@@ -318,7 +336,7 @@ class SportsGameOddsPregameDeskSQL(LatestBoardFixture):
 
         app = web.Application()
         mount(app)
-        query = dict(layout='desk', phase='pregame', ranked='1', basis='sportsbooks',
+        query = dict(layout='desk', phase='pregame', ranked='1', basis='sportsbooks', board='0',
                      summary='1', lines='main', positive='1', refresh='1')
         with patch('app.dashboard.snapshot_api.connect', side_effect=self.connect):
             async with TestClient(TestServer(app)) as client:

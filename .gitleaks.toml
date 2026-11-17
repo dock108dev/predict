@@ -1,4 +1,4 @@
-# Reviewed October 14, 2026. Review after: 2027-01-14.
+# Reviewed February 16, 2027. Review after: 2027-05-16.
 # No credential rules or whole directories are disabled.
 [extend]
 useDefault = true
@@ -36,7 +36,7 @@ regexTarget = "match"
 regexes = ['''(?:the_odds_)?api\\?["']\s*,\s*\\?["']21b26266f3d78af02eb672e606275d95''']
 
 
-# Reviewed 2026-10-17; same 2027-01-14 review deadline above.
+# Exact scanner scope digests are tied to authored examples.
 [[allowlists]]
 description = "Exact recomputed scanner scope digests in named authored examples; real key fields in these files remain scanned"
 condition = "AND"
@@ -61,3 +61,11 @@ targetRules = ["generic-api-key"]
 paths = ['''(?:^|/)tests/fixtures/l02-native-20261104\.json$''']
 regexTarget = "match"
 regexes = ['''the_odds_api"\s*,\s*"(?:87d2b814c3f0d3691e9cebbf2de76295|c75744790b7acf6260c78ba5e739c0e5)"''']
+
+[[allowlists]]
+description = "Exact synthetic Saint Mary's contract selector in the authored unit-board examples"
+condition = "AND"
+targetRules = ["generic-api-key"]
+paths = ['''(?:^|/)docs/examples/pregame-board-1/saint-marys-(?:12-board|25-board|25-selection)\.json$''']
+regexTarget = "match"
+regexes = ['''desk_quote_key"?\s*:\s*"0a109b585d8316c25b3f7ac36e86c2cae34b4db43277f260bea4b1b9f3a8de8a"''']

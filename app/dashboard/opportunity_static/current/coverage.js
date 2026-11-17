@@ -1,4 +1,4 @@
-import {mountFeeCensus} from './fee-census-view.js';
+import {mountCoverageFunnel, mountFeeCensus} from './fee-census-view.js';
 import {coverageNames, coverageFamilies, coverageWords, coverageSport, coverageSource, coverageFamily, coveragePeriod} from './coverage-model.js';
 import {coverageElement, coverageTime, coverageStale, coverageClocks, renderCoverageOutcome, renderCoverageTotals, renderFilteredCoverage, renderCoverageMatrix, renderCoverageDetails, cellTitle} from './coverage-view.js';
 const get = id => document.getElementById(id), keys = ['league', 'venue', 'market', 'period', 'attention', 'sort'];
@@ -36,6 +36,7 @@ function draw() {
   get('flow').textContent = [paused ? 'View updates paused.' : '', readError ? 'Latest read failed. Prior capture retained.' : ''].filter(Boolean).join(' ');
 }
 const refreshFeeCensus = mountFeeCensus(get('fee-census'), get('export-fee-census'));
+mountCoverageFunnel(get('coverage-funnel'));
 function readFeeCensus() {
   if (['synthetic', 'fixture', 'authored'].includes(data?.mode)) {
     get('fee-census').textContent = 'The live fee census is not part of this preview.';

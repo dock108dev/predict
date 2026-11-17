@@ -39,7 +39,19 @@ def published_payoff(pair, legs):
     if saved is None:
         return dict(inspection=None, score=None,
                     retail_payoff=dict(available=False, reason='pair_fee_publication_pending', legs=[]))
-    if pair.get('default_funding_fee_identity') == fee_identity(legs):
+    identities = pair.get('default_funding_fee_identity')
+    if identities == fee_identity(legs):
         return saved
-    return dict(inspection=saved['inspection'], score=None,
-                retail_payoff=dict(available=False, reason='pair_fee_publication_pending', legs=[]))
+    # Keep the published stake allocation and gross receipts when a fee is
+    # withdrawn. Reverting to the unsized cent split could change both legs.
+    retail = saved['retail_payoff']
+    gross = {key: retail[key] for key in (
+        'acquisition_usd', 'minimum_gross_payout_usd', 'minimum_gross_profit_usd',
+        'gross_receipts_usd', 'sizing', 'states_covered', 'states_unverified') if key in retail}
+    gross_legs = [{key: leg[key] for key in ('acquisition_usd', 'quantity', 'depth_status',
+        'depth_evidence', 'quantity_increment', 'size_status') if key in leg} for leg in retail['legs']]
+    for gross_leg, row in zip(gross_legs, legs):
+        gross_leg.update(available=False, reason=(row.get('trade_fee') or {}).get('reason')
+                         or 'pair_fee_publication_pending')
+    return dict(inspection=saved['inspection'], score=None, retail_payoff=dict(
+        available=False, reason='pair_fee_publication_pending', legs=gross_legs, **gross))

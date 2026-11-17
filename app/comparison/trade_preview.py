@@ -97,7 +97,10 @@ def preview(row, amount):
                   net_win_payout_usd=wire(win_receipt), net_win_profit_usd=wire(win_receipt-upfront),
                   net_loss_usd=wire(upfront+loss_fee), classification=original_fee.get('classification'),
                   rounding_trace=charge.get('rounding_trace'))
-    if sportsbook.get('probability') is not None:
+    settlement = row.get('settlement_assessment')
+    binary = settlement is None or (settlement.get('available') and
+        set(settlement['state_probabilities']) == {'win', 'loss'})
+    if sportsbook.get('probability') is not None and binary:
         probability = F(sportsbook['probability'])
         ev = probability * win_receipt - (1 - probability) * loss_fee - upfront
         result['estimated_return_percent'] = wire(100 * ev / upfront)

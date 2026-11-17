@@ -57,7 +57,8 @@ class NovigPublicDiscovery:
 
     def catalog_targets(self, attempted):
         with connect() as db:
-            return sgo_native_catalog.targets(db, at=now(), exclude=attempted)
+            return sgo_native_catalog.targets(db, at=now(), exclude=attempted,
+                                              include_live=live_enabled(self.service.config))
 
     def save_catalog(self, event_id, witness):
         if self.catalog_enabled():

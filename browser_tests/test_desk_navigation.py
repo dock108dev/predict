@@ -3,7 +3,7 @@
 import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from urllib.parse import parse_qsl, urlsplit
+from urllib.parse import parse_qs, parse_qsl, urlsplit
 
 import pytest
 
@@ -32,6 +32,8 @@ class CurrentSlate:
         self.resets = []
         self.venues = ("kalshi", "polymarket_us", "novig", "prophetx")
         self.feed_unavailable = False
+        self.missing_offers = set()
+        self.repeat_matchup = False
 
     def read(self, query):
         rows, games = [], []
@@ -42,6 +44,13 @@ class CurrentSlate:
             ).isoformat()
             key = f"detroit-{number}"
             title = f"Detroit vs. Example {number}"
+            other_team = f"Example {number}"
+            if self.repeat_matchup and number in (0, 1):
+                # Two independent authored fixtures, each with a confirmed
+                # kickoff, occurrence ID and venue event IDs.
+                start = (AT + timedelta(days=1 + number, hours=7)).isoformat()
+                other_team = "Example City"
+                title = "Detroit vs. Example City"
             games.append(
                 dict(
                     game_key=key,
@@ -50,11 +59,13 @@ class CurrentSlate:
                     start_at=start,
                     participants=[
                         dict(id="home", name="Detroit", role="home"),
-                        dict(id="away", name=f"Example {number}", role="away"),
+                        dict(id="away", name=other_team, role="away"),
                     ],
                 )
             )
             for mobile_venue in self.venues:
+                if (number, mobile_venue) in self.missing_offers:
+                    continue
                 item = quote(
                     f"{key}-{mobile_venue}",
                     mobile_venue,
@@ -75,6 +86,17 @@ class CurrentSlate:
                 if number == self.changed_line:
                     item["market"]["line"] = "3.5"
                     item["selection"]["signed_line"] = "-3.5"
+                if self.repeat_matchup:
+                    item["source"] = dict(
+                        provider=mobile_venue,
+                        native_event_id=f"{mobile_venue}-{key}",
+                        native_market_id="full-game-spread",
+                        native_outcome_id="home",
+                    )
+                    item["current_authority"]["occurrence_id"] = key
+                    item["posted_price"] = True
+                    item["market"]["line"] = "2.5" if number == 0 else "5.5"
+                    item["selection"]["signed_line"] = "-" + item["market"]["line"]
                 rows.append(
                     dict(
                         item,
@@ -123,11 +145,35 @@ def intercept(context, current):
         if path == "/api/comparison-current":
             route.fulfill(json=current.read(query))
         elif path == "/api/comparison-current/selection":
-            route.fulfill(json={"row": None})
+            if current.repeat_matchup:
+                exact = current.read(
+                    dict(
+                        layout="desk",
+                        view="ev",
+                        browse_odds="1",
+                        phase="pregame",
+                        family="spread",
+                        summary="1",
+                    )
+                )
+                row = next(
+                    (
+                        offer
+                        for group in exact["rows"]
+                        for offer in group["offers"]
+                        if offer["id"] == query["id"]
+                    ),
+                    None,
+                )
+                route.fulfill(json={"row": row, "provider_requests": 0})
+            else:
+                route.fulfill(json={"row": None})
         elif path.startswith("/api/odds-replay"):
             route.fulfill(json=replay_read(query, details=path.endswith("/details")))
         elif path in ("/", "/browse-odds", "/game", "/replay", "/ev"):
-            route.fulfill(path=ASSETS / "desk.html")
+            route.fulfill(
+                path=ASSETS / "desk.html", headers={"referrer-policy": "no-referrer"}
+            )
         elif path.startswith("/view/current/") and (ASSETS / Path(path).name).is_file():
             route.fulfill(path=ASSETS / Path(path).name)
         else:
@@ -171,26 +217,55 @@ def inspect_and_return(tab, card, dismiss):
     assert position(card) == before
 
 
-def launch_game(tab, card, *, back="link"):
+def launch_game(tab, card, *, back="link", venues=None, keyboard=False, left=90):
     from playwright.sync_api import expect
 
     if card.locator("details:not([open]) > summary").count():
         card.locator("details > summary").tap()
     scroll = card.locator(".odds-scroll")
-    scroll.evaluate("element => element.scrollLeft = 90")
+    if left is not None:
+        scroll.evaluate("(element, left) => element.scrollLeft = left", left)
     opener = card.locator("[data-game-launcher]")
     opener.scroll_into_view_if_needed()
     before = position(card)
     assert before[1] > 0
     basis = tab.locator("[name=basis]").input_value()
-    opener.tap()
+    current = urlsplit(tab.url).path != "/replay"
+    endpoint = "/api/comparison-current?" if current else "/api/odds-replay?"
+    with tab.expect_response(
+        lambda response: endpoint in response.url and "game_key=" in response.url
+    ) as destination:
+        if keyboard:
+            opener.press("Enter")
+        else:
+            opener.tap()
     expect(tab.locator("#results [data-offer-id]").first).to_be_visible()
     assert tab.locator("[name=basis]").input_value() == basis
+    packet = destination.value
+    if current:
+        assert packet.json()["provider_requests"] == 0
+    if venues:
+        assert parse_qs(urlsplit(tab.url).query).get("venue") == (
+            None if len(venues) == 4 else [",".join(venues)]
+        )
+        assert parse_qs(urlsplit(packet.url).query)["venue"] == [",".join(venues)]
+        expect(tab.locator("th[data-venue-column]")).to_have_text(
+            [
+                {
+                    "kalshi": "Kalshi",
+                    "polymarket_us": "Polymarket US",
+                    "novig": "Novig",
+                    "prophetx": "ProphetX",
+                }[venue]
+                for venue in venues
+            ]
+        )
     if back == "fallback":
         # WebKit uses the session return record if a same-view referrer is hidden.
         tab.evaluate(
             "Object.defineProperty(document, 'referrer', {value:''});"
             "Object.defineProperty(window, 'navigation', {value:undefined});"
+            "history.replaceState({...history.state, predictDeskFrom:null}, '');"
         )
     return before, basis
 
@@ -239,7 +314,9 @@ def test_phone_site_filter_keeps_outcome_and_points_to_offscreen_quotes():
         tab = context.new_page()
         tab.clock.set_fixed_time(AT)
         tab.goto(BASE)
-        tab.get_by_role("link", name="Find my game ↗").tap()
+        tab.get_by_role("navigation", name="Predict").get_by_role(
+            "link", name="Browse odds"
+        ).tap()
         tab.get_by_role("button", name="Spreads", exact=True).tap()
         search = tab.get_by_role("searchbox")
         search.fill("Detroit vs. Example 0")
@@ -280,9 +357,23 @@ def test_phone_site_filter_keeps_outcome_and_points_to_offscreen_quotes():
         expect(game.get_by_text("No quote from selected sites")).to_be_visible()
         expect(outcome).to_have_text("Detroit to cover -2.5")
         expect(game.locator("[data-offer-id]")).to_have_count(0)
+        gap = game.get_by_role(
+            "button",
+            name="Kalshi · Detroit to cover -2.5 · No quote shown for this exact line.",
+        )
+        gap.tap()
+        dialog = tab.get_by_role("dialog", name="Kalshi")
         expect(
-            game.get_by_label("No quote shown from Kalshi for this exact outcome")
+            dialog.get_by_text("No quote shown for this exact line.")
         ).to_be_visible()
+        tab.keyboard.press("Escape")
+        expect(gap).to_be_focused()
+        gap.press("Enter")
+        expect(
+            dialog.get_by_text("No quote shown for this exact line.")
+        ).to_be_visible()
+        dialog.get_by_role("button", name="Close").tap()
+        expect(gap).to_be_focused()
         search.fill("Detroit @ Example 1")
         expect(
             tab.get_by_role("heading", name="No results for “Detroit @ Example 1”")
@@ -369,6 +460,16 @@ def test_phone_comparison_return(engine, tmp_path, monkeypatch):
         inspect_and_return(tab, first, "close")
         inspect_and_return(tab, first, "back")
 
+        matrix = first.locator(".odds-scroll")
+        matrix.evaluate("element => element.scrollLeft = element.scrollWidth")
+        expect(first.get_by_role("columnheader", name="Kalshi")).not_to_be_in_viewport()
+        all_venues = ("kalshi", "polymarket_us", "novig", "prophetx")
+        before, _ = launch_game(tab, first, venues=all_venues, left=None)
+        expect(tab.locator('[data-offer-id="detroit-0-kalshi"]')).to_have_count(1)
+        return_from_game(tab, "back")
+        expect(first.locator("[data-game-launcher]")).to_be_focused()
+        assert position(first) == before
+
         with tab.expect_response(lambda response: "refresh=1" in response.url):
             tab.locator("#refresh-list").tap()
         expect(tab.locator("#refresh-list")).to_have_attribute("aria-disabled", "false")
@@ -410,7 +511,7 @@ def test_phone_comparison_return(engine, tmp_path, monkeypatch):
         expect(removed).to_have_count(0)
         expect(tab.locator("[data-game-launcher]:focus")).to_have_count(1)
         expect(tab.locator("[name=search]")).to_have_value("Detroit")
-        assert "missing" in current.resets[-1]
+        expect(tab.locator("#page-range")).to_have_text("13–15 of 15 games")
 
         tab.locator("#phase-live").tap()
         expect(tab.locator("#phase-live")).to_have_attribute("aria-current", "page")
@@ -476,20 +577,54 @@ def test_phone_comparison_return(engine, tmp_path, monkeypatch):
         # A mid-list matchup keeps the selected venue columns and market across
         # the game view, a quote inspection, and the return to its open card.
         tab.get_by_role("button", name="Filters", exact=True).tap()
-        for venue in ("kalshi", "polymarket_us"):
-            tab.locator(f'#venues input[value="{venue}"]').uncheck()
+        tab.locator('#venues input[value="polymarket_us"]').uncheck()
         tab.get_by_role("button", name="Done", exact=True).tap()
         target = tab.locator('[data-game-key="detroit-9"]')
         expect(target).to_be_visible()
         target.locator("details > summary").tap()
         expect(target.locator("th[data-venue-column]")).to_have_text(
-            ["Novig", "ProphetX"]
+            ["Kalshi", "Novig", "ProphetX"]
         )
-        opener = target.locator("[data-game-launcher]")
-        opener.scroll_into_view_if_needed()
-        before = position(target)
-        opener.tap()
-        expect(tab.locator("th[data-venue-column]")).to_have_text(["Novig", "ProphetX"])
+        odds_format = tab.get_by_label("Odds format")
+        odds_format.select_option("decimal")
+        new_tab = context.new_page()
+        new_tab.clock.set_fixed_time(AT)
+        target.locator(".odds-scroll").evaluate(
+            "element => element.scrollLeft = element.scrollWidth"
+        )
+        # The sticky outcome column can cover a venue that's still inside the
+        # browser's viewport. Confirm it occludes the Kalshi quote's tap target.
+        assert target.locator('[data-offer-id="detroit-9-kalshi"]').evaluate("""quote => {
+            const box = quote.getBoundingClientRect();
+            const sticky = quote.closest('tr').querySelector('th').getBoundingClientRect();
+            return box.x + box.width / 2 < sticky.right;
+        }""")
+        href = target.locator("[data-game-launcher]").evaluate("opener => opener.href")
+        with new_tab.expect_response(
+            lambda response: (
+                "/api/comparison-current?" in response.url
+                and "game_key=" in response.url
+            )
+        ) as opened:
+            new_tab.goto(href)
+        assert parse_qs(urlsplit(opened.value.url).query)["venue"] == [
+            "kalshi,novig,prophetx"
+        ]
+        expect(new_tab.locator("th[data-venue-column]")).to_have_text(
+            ["Kalshi", "Novig", "ProphetX"]
+        )
+        new_tab.close()
+        before = launch_game(
+            tab,
+            target,
+            venues=("kalshi", "novig", "prophetx"),
+            keyboard=True,
+            left=None,
+        )[0]
+        odds_format.select_option("american")
+        expect(tab.locator("th[data-venue-column]")).to_have_text(
+            ["Kalshi", "Novig", "ProphetX"]
+        )
         expect(tab.get_by_role("button", name="Spreads", exact=True)).to_have_attribute(
             "aria-pressed", "true"
         )
@@ -499,10 +634,117 @@ def test_phone_comparison_return(engine, tmp_path, monkeypatch):
         return_from_game(tab, "link")
         expect(target.locator("details")).to_have_attribute("open", "")
         expect(target.locator("th[data-venue-column]")).to_have_text(
-            ["Novig", "ProphetX"]
+            ["Kalshi", "Novig", "ProphetX"]
         )
+        expect(odds_format).to_have_value("decimal")
         assert position(target) == before
         assert not errors
+        browser.close()
+
+
+def test_repeat_matchup_opens_each_occurrence_and_exact_line():
+    from playwright.sync_api import expect, sync_playwright
+
+    current = CurrentSlate()
+    current.order = [0, 1, 2, 3]
+    current.repeat_matchup = True
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(
+            executable_path=os.getenv("PREDICT_CI_CHROMIUM")
+        )
+        context = browser.new_context(
+            viewport={"width": 390, "height": 800},
+            has_touch=True,
+            timezone_id="America/New_York",
+        )
+        intercept(context, current)
+        tab = context.new_page()
+        tab.clock.set_fixed_time(AT)
+        tab.goto(f"{BASE}/browse-odds?search=Original")
+        tab.goto(f"{BASE}/browse-odds")
+        with tab.expect_response(
+            lambda response: (
+                "/api/comparison-current?" in response.url
+                and "family=spread" in response.url
+                and "lines=all" in response.url
+                and "search=Detroit" in response.url
+            )
+        ):
+            tab.get_by_role("searchbox", name="Search teams").fill("Detroit")
+            tab.get_by_role("button", name="Spreads", exact=True).tap()
+            tab.get_by_label("Alternate lines").check()
+
+        second = tab.locator('.odds-card[data-game-key="detroit-1"]')
+        expect(second.locator("details")).not_to_have_attribute("open", "")
+        for number, day, spread in ((0, 16, "-2.5"), (1, 17, "-5.5")):
+            key = f"detroit-{number}"
+            kickoff = f"NBA · Nov {day}, 2:00 PM EST"
+            card = tab.locator(f'.odds-card[data-game-key="{key}"]')
+            expect(
+                card.get_by_role("heading", name="Detroit vs. Example City")
+            ).to_be_visible()
+            expect(card.get_by_text(kickoff)).to_be_visible()
+            if not card.locator("details").evaluate("element => element.open"):
+                card.locator("summary").tap()
+            opener = card.get_by_role(
+                "link", name=f"Open line: Detroit to cover {spread}"
+            )
+            with tab.expect_response(
+                lambda response: (
+                    "/api/comparison-current?" in response.url
+                    and "game_key=" in response.url
+                )
+            ) as opened:
+                opener.press("Enter")
+            response = opened.value
+            selected = response.json()
+            params = parse_qs(urlsplit(response.url).query)
+            assert params["game_key"] == [key]
+            assert selected["selected_game_key"] == key
+            assert params["line"] == [selected["selected_line_id"]]
+            assert selected["provider_requests"] == 0
+            expect(tab.locator("#desk-subtitle")).to_have_text(kickoff)
+            pick = tab.locator(f'[data-offer-id="{key}-novig"]')
+            expect(pick.locator(".p-odds")).to_have_text("-108")
+            expect(tab.locator("tr[aria-current=true] th")).to_contain_text(spread)
+            with tab.expect_response(
+                lambda response: (
+                    "/api/comparison-current/selection?" in response.url
+                    and f"id={key}-novig" in response.url
+                )
+            ) as inspected:
+                pick.press("Enter")
+            quote = inspected.value.json()
+            assert quote["provider_requests"] == 0
+            assert quote["row"]["selection"]["signed_line"] == spread
+            assert quote["row"]["id"] == f"{key}-novig"
+            drawer = tab.get_by_role("dialog", name="Quote details", exact=False)
+            expect(tab.locator("#trade")).to_contain_text(spread)
+            expect(
+                tab.locator("#trade").get_by_text("-108", exact=True).first
+            ).to_be_visible()
+            tab.go_back()
+            expect(drawer).to_be_hidden()
+            expect(pick).to_be_focused()
+            if number == 1:
+                current.missing_offers.add((number, "novig"))
+            return_from_game(tab, "link" if number == 0 else "back")
+            expect(opener).to_be_focused()
+            expect(card.locator("details")).to_have_attribute("open", "")
+            expect(tab.get_by_role("searchbox")).to_have_value("Detroit")
+            expect(
+                tab.get_by_role("button", name="Spreads", exact=True)
+            ).to_have_attribute("aria-pressed", "true")
+            expect(tab.get_by_label("Alternate lines")).to_be_checked()
+            if number == 1:
+                expect(tab.locator("#notice")).to_contain_text(
+                    "The inspected quote is no longer in these results."
+                )
+                expect(card.locator(f'[data-offer-id="{key}-prophetx"]')).to_have_count(
+                    1
+                )
+        tab.go_back()
+        expect(tab.get_by_role("searchbox")).to_have_value("Original")
         browser.close()
 
 

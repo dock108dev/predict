@@ -55,6 +55,14 @@ def verify_rules(binary, config):
             + json.dumps(["the_odds_api", credential])
             + "\n"
         )
+        board_name = "docs/examples/pregame-board-1/saint-marys-25-board.json"
+        selector = "0a109b585d8316c25b3f7ac36e86c2cae34b4db43277f260bea4b1b9f3a8de8a"
+        (root / "source" / board_name).parent.mkdir(parents=True)
+        (root / "source" / board_name).write_text(
+            f'"desk_quote_key": "{selector}"\n'
+            f'"api_key": "{selector}"\n'
+            f'"desk_quote_key": "{credential}"\n'
+        )
         expected = {
             ("app/dashboard/opportunity_board.py", 2),
             (example_name, 2),
@@ -62,6 +70,8 @@ def verify_rules(binary, config):
             (finance_name, 2),
             (finance_name, 3),
             (finance_name, 4),
+            (board_name, 2),
+            (board_name, 3),
         }
         report = root / "report.json"
         result = subprocess.run(
@@ -99,7 +109,7 @@ def verify_rules(binary, config):
                 "Secret scanner detection/exception controls failed; no source scan can qualify"
             )
     print(
-        "Secret scanner controls: PASS; four excepted file classes checked, credential fields and unlisted event values detected"
+        "Secret scanner controls: PASS; five excepted file classes checked, credential fields and unlisted event values detected"
     )
 
 

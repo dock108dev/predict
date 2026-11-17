@@ -45,6 +45,7 @@ DOCUMENTS = (
     "docs/scanner-preparation-contract.md",
     "docs/scanner-readiness-contract.md",
     "docs/examples/scanner-readiness-1/README.md",
+    "docs/examples/pregame-board-1/README.md",
     "docs/scanner-usage.md",
     "docs/examples/opportunity-summaries-1/README.md",
     "docs/examples/scanner-transitions-1/README.md",

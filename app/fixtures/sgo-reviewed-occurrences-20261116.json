@@ -1,0 +1,198 @@
+{
+  "version": "sgo-reviewed-occurrence-20261116-1",
+  "reviewed_at": "2026-11-17T04:13:29.124152+00:00",
+  "events": {
+    "ztAyBKDJBEYtuaJ1Tgcx": {
+      "league": "NCAAF",
+      "teams": {
+        "away": {
+          "id": "MIAMI_OH_NCAAF",
+          "name": "Miami (OH)"
+        },
+        "home": {
+          "id": "KENT_STATE_NCAAF",
+          "name": "Kent State"
+        }
+      },
+      "novig_event_id": "01a1c2d7-5e63-7ab1-919a-fb65dfb9e64e",
+      "official_start": "2026-11-18T00:00:00+00:00",
+      "school_url": "https://kentstatesports.com/calendar/print/month/0/11-1-2026/12-6-2026/null",
+      "native_event_receipt": {
+        "path": "/v3/public/catalog/events/01a1c2d7-5e63-7ab1-919a-fb65dfb9e64e",
+        "observed_at": "2026-11-17T03:34:30.745592+00:00",
+        "sha256": "cd21f8031e35990f4fda49857935da0ddf2659f403354df303b67afffdcac132",
+        "date": "Tue, 17 Nov 2026 03:34:30 GMT",
+        "age": null,
+        "cache_control": "public, max-age=15, stale-while-revalidate=15",
+        "etag": null
+      },
+      "source_observations": [
+        {
+          "start": "2026-11-17T23:00:00.000Z",
+          "path": "sportsgameodds/receipt/54781ba86f864c9096d89bf90a786d6ae80aa86b6bf4961860e7ce7786d37715",
+          "body_sha256": "54781ba86f864c9096d89bf90a786d6ae80aa86b6bf4961860e7ce7786d37715",
+          "received_at": "2026-11-13T05:09:31.412395+00:00"
+        },
+        {
+          "start": "2026-11-17T23:00:00.000Z",
+          "body_sha256": "ddcc94174e023c31255c098c45181fe5da9b7439d40d31490293e00b4af76d44",
+          "received_at": "2026-11-17T03:26:25.283031+00:00"
+        }
+      ],
+      "canonical_roles": {
+        "home": "NCAAF:NCAA331",
+        "away": "NCAAF:MIAOH"
+      }
+    },
+    "jQFk5hoS12aFmA5XU8zT": {
+      "league": "NCAAF",
+      "teams": {
+        "away": {
+          "id": "CENTRAL_MICHIGAN_NCAAF",
+          "name": "Central Michigan"
+        },
+        "home": {
+          "id": "BUFFALO_NCAAF",
+          "name": "Buffalo Bulls"
+        }
+      },
+      "novig_event_id": "01a1c818-d8dd-7e90-9df9-1c081c56176b",
+      "official_start": "2026-11-19T00:30:00+00:00",
+      "school_url": "https://ubbulls.com/game-center/8306",
+      "native_event_receipt": {
+        "path": "/v3/public/catalog/events/01a1c818-d8dd-7e90-9df9-1c081c56176b",
+        "observed_at": "2026-11-17T03:34:30.807507+00:00",
+        "sha256": "a35b479c63f742ef0f181af90b6685a4e5736f3fb35e24d7bc9d7bcd2611e7b1",
+        "date": "Tue, 17 Nov 2026 03:34:30 GMT",
+        "age": null,
+        "cache_control": "public, max-age=15, stale-while-revalidate=15",
+        "etag": null
+      },
+      "source_observations": [
+        {
+          "start": "2026-11-18T23:30:00.000Z",
+          "path": "sportsgameodds/receipt/a18f532b3d27f426bb93254bc8a0d6892c0f2be3911fe0cc4f0048cb73f239e9",
+          "body_sha256": "a18f532b3d27f426bb93254bc8a0d6892c0f2be3911fe0cc4f0048cb73f239e9",
+          "received_at": "2026-11-13T05:09:33.078585+00:00"
+        },
+        {
+          "start": "2026-11-18T23:30:00.000Z",
+          "body_sha256": "09ac57ebe1997698d48014d24823ab436068ed2f4e7cd08f1551beabd7ebefaa",
+          "received_at": "2026-11-17T03:25:33.750604+00:00"
+        }
+      ],
+      "canonical_roles": {
+        "home": "NCAAF:NCAA86",
+        "away": "NCAAF:NCAA129"
+      }
+    },
+    "I8fosj9K2G780jGvcpiD": {
+      "league": "NCAAF",
+      "teams": {
+        "away": {
+          "id": "BALL_STATE_NCAAF",
+          "name": "Ball State"
+        },
+        "home": {
+          "id": "OHIO_NCAAF",
+          "name": "Ohio"
+        }
+      },
+      "novig_event_id": "01a1c2d7-5cab-7973-a1ac-996fb5cba1dc",
+      "official_start": "2026-11-18T00:00:00+00:00",
+      "school_url": "https://ohiobobcats.com/news/2026/11/14/ohio-football-returns-home-to-host-ball-state",
+      "native_event_receipt": {
+        "path": "/v3/public/catalog/events/01a1c2d7-5cab-7973-a1ac-996fb5cba1dc",
+        "observed_at": "2026-11-17T03:34:30.918816+00:00",
+        "sha256": "602e424fcf9930be7b5297774a1d6c4a19b4dbc48de7af79e19ace3c7d48a441",
+        "date": "Tue, 17 Nov 2026 03:34:30 GMT",
+        "age": null,
+        "cache_control": "public, max-age=15, stale-while-revalidate=15",
+        "etag": null
+      },
+      "source_observations": [
+        {
+          "start": "2026-11-17T23:00:00.000Z",
+          "path": "sportsgameodds/receipt/e76410b379d75fd68ea043c8dbc555c3c7b6c97a0a43368802cec448e1441ea3",
+          "body_sha256": "e76410b379d75fd68ea043c8dbc555c3c7b6c97a0a43368802cec448e1441ea3",
+          "received_at": "2026-11-13T05:09:27.836784+00:00"
+        },
+        {
+          "start": "2026-11-17T23:00:00.000Z",
+          "body_sha256": "9a443feb282f841dcda326b6d888f25833ea5ba91cc602e894e9e09d8df51a30",
+          "received_at": "2026-11-17T03:24:59.592791+00:00"
+        }
+      ],
+      "novig_roles": {
+        "url": "https://api.novig.com/v3/public/catalog/markets?event=01a1c2d7-5cab-7973-a1ac-996fb5cba1dc&marketType=SPREAD&limit=20",
+        "sha256": "b5a3a300bed590688652306a2daf5fccd1be2562b12b3cce75b8060866d89317",
+        "rules_url": "https://docs.novig.com/api/catalog",
+        "spread": {
+          "eventId": "01a1c2d7-5cab-7973-a1ac-996fb5cba1dc",
+          "marketId": "01a1e0f5-1326-76c3-91f0-47b8af4b4b2f",
+          "marketType": "SPREAD",
+          "startsTs": 1794960000000,
+          "strike": "6.5"
+        },
+        "outcomes": [
+          {
+            "outcomeId": "01a1e0f5-1326-76c3-91f0-47c733e8e5d1",
+            "subjectId": "0089d341-10a5-440c-a34e-f41122696087",
+            "name": "OHIO +6.5"
+          },
+          {
+            "outcomeId": "01a1e0f5-1326-76c3-91f0-47d558dbe623",
+            "subjectId": "02ff2d40-bf0a-4465-a706-e3bd47be3c3e",
+            "name": "BALL -6.5"
+          }
+        ]
+      },
+      "canonical_roles": {
+        "home": "NCAAF:NCAA519",
+        "away": "NCAAF:NCAA47"
+      }
+    },
+    "qNBU3JElEnRTDDl7qgGR": {
+      "league": "NCAAF",
+      "teams": {
+        "away": {
+          "id": "EASTERN_MICHIGAN_NCAAF",
+          "name": "Eastern Michigan"
+        },
+        "home": {
+          "id": "WESTERN_MICHIGAN_NCAAF",
+          "name": "Western Michigan"
+        }
+      },
+      "novig_event_id": "01a1c2d7-5a89-7d80-b3bb-6ac768aa520d",
+      "official_start": "2026-11-17T23:00:00+00:00",
+      "school_url": "https://wmubroncos.com/story.aspx?file_date=11%2F11%2F2026&filename=football-home-game-against-eastern-michigan-shifted-to-6-pm",
+      "native_event_receipt": {
+        "path": "/v3/public/catalog/events/01a1c2d7-5a89-7d80-b3bb-6ac768aa520d",
+        "observed_at": "2026-11-17T03:34:30.866511+00:00",
+        "sha256": "7af9a7e4aba4f2686de1150060cb44605866661ca7aac25d1d46c9d4cbae4b6e",
+        "date": "Tue, 17 Nov 2026 03:34:30 GMT",
+        "age": null,
+        "cache_control": "public, max-age=15, stale-while-revalidate=15",
+        "etag": null
+      },
+      "source_observations": [
+        {
+          "start": "2026-11-17T23:00:00.000Z",
+          "path": "sportsgameodds/receipt/54781ba86f864c9096d89bf90a786d6ae80aa86b6bf4961860e7ce7786d37715",
+          "body_sha256": "54781ba86f864c9096d89bf90a786d6ae80aa86b6bf4961860e7ce7786d37715",
+          "received_at": "2026-11-13T05:09:31.412395+00:00"
+        },
+        {
+          "start": "2026-11-17T22:00:00.000Z",
+          "body_sha256": "09ac57ebe1997698d48014d24823ab436068ed2f4e7cd08f1551beabd7ebefaa",
+          "received_at": "2026-11-17T03:25:33.750604+00:00"
+        }
+      ],
+      "canonical_roles": {
+        "home": "NCAAF:NCAA774",
+        "away": "NCAAF:NCAA204"
+      }
+    }
+  }
+}

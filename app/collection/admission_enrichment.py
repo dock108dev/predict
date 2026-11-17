@@ -227,8 +227,15 @@ def enrich_game(event, *, share_metadata=False):
     if len(participants)==2 and None not in participants and e.get('scheduled_start'):
         p=event_identity(source=e.get('source','kalshi'),event_id=e.get('related_game_event_id') or e['id'],competition=e.get('competition'),participants=participants,scheduled_start=e['scheduled_start'],provider_season=e.get('season'),provider_stage=e.get('stage'),provider_label=native.get('seriesSlug'))
         if p.get('enrichment'):
-            if p['conflicts']:e['identity_conflicts']=p['conflicts']
-            e.update(season=p['enrichment']['season'],stage=p['enrichment']['stage'],public_identity=p)
+            reviewed = p['enrichment']
+            conflicts = list(p['conflicts'])
+            roles = e.get('source_participant_roles') or {}
+            if any(roles.get(role) not in (None, reviewed[role]) for role in ('home', 'away')):
+                conflicts.append('Explicit native participant roles conflict with authoritative event crosswalk')
+            if conflicts:
+                e['identity_conflicts'] = [*e.get('identity_conflicts', []), *conflicts]
+            else:
+                e.update(season=reviewed['season'],stage=reviewed['stage'],public_identity=p)
     # Discovery's legacy pregame exclusion must not suppress a source-evidenced
     # live game. This only admits metadata/books; the price owner still requires
     # a post-start source clock, intact continuity and the 15-second live ceiling.

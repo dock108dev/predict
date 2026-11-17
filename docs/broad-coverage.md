@@ -46,10 +46,13 @@ current-generation initial image and continuous ordered updates. Connectivity
 alone supplies no book confirmation. A new receipt or calculation does not
 renew an old source price.
 
-The pregame sportsbook estimate checks both original book clocks within 15
-minutes and stops at kickoff. Native and aggregate quotes follow their own
-currentness policy. A source failure, unauthorized binding, or missing input
-can leave a recorded price inspectable without an eligible comparison.
+The ordinary pregame desk keeps the latest valid committed price and its
+supported estimate until the latest authoritative kickoff. It keeps the
+original book and receipt clocks, even if the next page is partial or the
+source is temporarily unavailable. An authoritative withdrawal invalidates
+the affected input. The 15-minute pregame source check measures recent
+confirmation; it does not expire a committed pregame offer or estimate. Live
+prices and calculations retain their separate freshness limits.
 [Runtime and synchronization](data-app-runtime-contract.md#native-synchronization-and-delta-acquisition)
 
 For an authorized local diagnostic, the following command reads retained working

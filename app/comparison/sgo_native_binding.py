@@ -220,6 +220,27 @@ def _side_matches(outcome, side, event, family, line, subject_roles):
     return resolved is True or bool(subject_roles)
 
 
+def _reviewed_subject_roles(event, native_event, *, at):
+    """Use Novig's own home handicap to orient the two native competitors."""
+    from app.storage.sgo_schedule_review import review
+
+    entry = review(event.get('id'), event['competition'], at=at) or {}
+    evidence = entry.get('novig_roles')
+    if not evidence:
+        return {}, []
+    spread = evidence['spread']
+    if (entry['novig_event_id'] != native_event['eventId'] or spread['eventId'] != native_event['eventId']
+            or spread['marketType'] != 'SPREAD' or spread['startsTs'] != native_event['startsTs']):
+        return {}, []
+    strike = Fraction(spread['strike'])
+    lines = {Fraction(outcome['name'].rsplit(' ', 1)[-1]): outcome['subjectId']
+             for outcome in evidence['outcomes']}
+    if (not strike or set(lines) != {strike, -strike} or len(set(lines.values())) != 2
+            or not all(_uuid(subject) for subject in lines.values())):
+        return {}, []
+    return {'home': lines[strike], 'away': lines[-strike]}, [evidence]
+
+
 def settlement_profile(league, family, line, voids):
     """Describe the filed full-game rule while leaving exceptional payoffs open."""
     rule = RULES.get((league,family))
@@ -283,9 +304,11 @@ def bind(record, witness, *, at):
             return missing('sgo_native_catalog_identity_conflict')
         league, family = event['competition'], market['family']
         kickoff = _start(native_event['startsTs'])
-        if (native_event['league'] != league or native_market['startsTs'] != native_event['startsTs']
-                or kickoff != stamp(event['scheduled_start']) or kickoff != stamp(market['scheduled_start'])
-                or MARKET_TYPES.get(native_market['marketType']) != family or market['period'] != 'full_game'):
+        if (native_market['startsTs'] != native_event['startsTs']
+                or kickoff != stamp(event['scheduled_start']) or kickoff != stamp(market['scheduled_start'])):
+            return missing('sgo_native_kickoff_conflict')
+        if (native_event['league'] != league or MARKET_TYPES.get(native_market['marketType']) != family
+                or market['period'] != 'full_game'):
             return missing('sgo_native_market_scope_conflict')
         side = SIDES.get(source['native_outcome_id'])
         line = None if source['native_line'] is None else Fraction(source['native_line'])
@@ -312,6 +335,13 @@ def bind(record, witness, *, at):
         if family != 'total' and witness.get('subject_role_conflict'):
             return missing('sgo_native_subject_roles_conflict')
         subject_roles = witness.get('subject_roles') or {}
+        role_anchors = witness.get('subject_role_anchors', [])
+        if family == 'moneyline':
+            official_roles, official_anchors = _reviewed_subject_roles(event, native_event, at=at)
+            if subject_roles and official_roles and subject_roles != official_roles:
+                return missing('sgo_native_subject_roles_conflict')
+            if official_roles:
+                subject_roles, role_anchors = official_roles, official_anchors
         if (not _side_matches(selected, side, event, family, line, subject_roles)
                 or not _side_matches(other, OPPOSITE[side], event, family, other_line, subject_roles)
                 or family != 'total' and selected['subjectId'] == other['subjectId']):
@@ -325,21 +355,101 @@ def bind(record, witness, *, at):
         quote_available = (quote['state'] == 'available' and original['units'] == 'american_odds'
                            and original['payout'] == '1' and original['payout_units'] == 'USD'
                            and abs(Fraction(original['value'])) >= 100)
+        price = None
+        if quote_available:
+            odds = Fraction(original['value'])
+            price = str(100 / (odds + 100) if odds > 0 else -odds / (100 - odds))
         return dict(available=True, reason=None, version=VERSION, venue='novig', phase=phase,
             phase_verified=phase_verified, quote_available=quote_available,
             event_id=event_id, market_id=market_id, outcome_id=outcome_id, opposite_outcome_id=other['outcomeId'],
             original_link=meta['bookmaker_market_link'], original_event_link=event_id,
             selected_side=side, signed_line=source['native_line'], settlement=settlement,
-            subject_role_anchors=witness.get('subject_role_anchors', []) if family != 'total' else [],
+            subject_role_anchors=role_anchors if family != 'total' else [],
             venue_fee=native_market.get('fee'), revision=witness['revision'],
+            fee_price=price, fee_evaluated_at=at.isoformat(), offer_identity=fee_offer_identity(source),
             event_receipt=witness['event_receipt'], market_receipt=native_market['receipt'],
             current_until=(kickoff if phase_verified and phase == 'scheduled' else expiry).isoformat())
     except (ArithmeticError, AttributeError, KeyError, StopIteration, TypeError, ValueError):
         return missing('sgo_native_catalog_evidence_invalid')
 
 
-def pregame_fee(binding):
-    """Apply only the native market's observed pregame zero-fee term."""
+def fee_offer_identity(source):
+    return [source.get(key) for key in ('provider', 'native_event_id', 'native_market_id',
+                                        'native_outcome_id', 'native_side', 'native_line')]
+
+
+def published_pregame_fee(record, binding, *, at, review):
+    """Use the exact catalog when present, or the reviewed public straight schedule.
+
+    A positively conflicting or incomplete catalog cannot be replaced by the
+    general schedule. An independently typed, linked pregame offer can use the
+    retail schedule while the optional catalog check is still pending.
+    """
+    from app.fees.novig_v3 import retail_pregame_fill
+    from .cashflows import exact_wire
+    from .game_phase import original_price_phase
+    from .snapshot_fee_outcome import unavailable
+
+    if binding.get('reason') != 'sgo_native_catalog_unavailable':
+        return pregame_fee(binding, review=review)
+    if not record or not review or not review.get('standing_public_terms'):
+        return pregame_fee(binding, review=review)
+    if review.get('unavailable_reason'):
+        return unavailable(review['unavailable_reason'])
+    try:
+        quote, event, market = (record[k] for k in ('quote', 'event', 'market_identity'))
+        selected = record['selection']
+        source = quote['source']
+        metadata = record['comparison_source_metadata']
+        native_event = (event.get('shared_provider_ids') or {}).get('novig_event')
+        native_outcome = outcome_link_id(metadata.get('bookmaker_market_link'))
+        family = market['family']
+        side = SIDES.get(source['native_outcome_id'])
+        family_code = {'moneyline': 'ml', 'spread': 'sp', 'total': 'ou'}.get(family)
+        if (quote['venue'] != 'novig' or source['provider'] != 'sportsgameodds'
+                or source['native_side'] != 'bookmaker_outcome' or source['quote_side'] != 'buy'
+                or source['native_event_id'] != event['id'] or not source['native_market_id']
+                or not _uuid(native_event) or not native_outcome or not side or not family_code
+                or source['native_outcome_id'].split('-')[-2] != family_code
+                or event['competition'] != market['competition'] or (event['competition'], family) not in RULES
+                or market['period'] != 'full_game' or stamp(market['scheduled_start']) != stamp(event['scheduled_start'])
+                or metadata.get('provider_phase') != 'pregame'
+                or original_price_phase(record, at)['state'] != 'scheduled'
+                or (family == 'total' and selected['predicate'] != side)
+                or (family != 'total' and (side not in ('home', 'away') or selected['participant'] != event[side]
+                    or selected['predicate'] != ('win' if family == 'moneyline' else 'cover')))):
+            return unavailable('sgo_native_pregame_public_schedule_scope_unverified')
+        line, selected_line = source['native_line'], selected['signed_line']
+        if (family == 'moneyline' and (line is not None or selected_line is not None)
+                or family != 'moneyline' and Fraction(line) != Fraction(selected_line)):
+            return unavailable('sgo_native_pregame_public_schedule_scope_unverified')
+        original = quote['original']
+        odds = Fraction(original['value'])
+        if (quote['state'] != 'available' or original['units'] != 'american_odds' or original['payout'] != '1'
+                or original['payout_units'] != 'USD' or abs(odds) < 100):
+            return unavailable('sgo_native_catalog_phase_or_quote_unverified')
+        price = 100 / (odds + 100) if odds > 0 else -odds / (100 - odds)
+        evaluated_at = stamp(at).isoformat()
+        model = retail_pregame_fill(market_id=source['native_market_id'], review=review, at=evaluated_at,
+                                    price=price, quantity='1')
+    except (ValueError, KeyError, TypeError, ArithmeticError):
+        return unavailable('sgo_native_pregame_public_schedule_scope_unverified')
+    amount = exact_wire(model['amount'])
+    return dict(available=True, classification='exact_public', reason=None, trade_fee_usd=amount,
+        quantity='1', quantity_unit='USD payout claim', fill_count=1, liquidity_role='taker',
+        fee_payment='at_fill', fee_cashflows={'at_fill_usd': amount}, profile='manual_retail',
+        assumptions=[*model['assumptions'], 'SportsGameOdds labels the linked offer as a full-game pregame straight.'],
+        details=dict(rounding_trace=model['trace']),
+        evidence=dict(review, basis='reviewed_retail_pregame_straight', offer_identity=fee_offer_identity(source),
+            native_event_id=native_event, native_outcome_id=native_outcome, native_market_id=None,
+            fee_price=str(price), fee_evaluated_at=evaluated_at, schedule_market_id=source['native_market_id'],
+            schedule_hash=model['schedule_hash'], schedule_version=model['schedule_version']))
+
+
+def pregame_fee(binding, *, review=None):
+    """Calculate from the exact official Novig market terms, including zero."""
+    from app.fees.novig_v3 import taker_fill
+    from .cashflows import exact_wire
     from .snapshot_fee_outcome import unavailable
 
     if not binding.get('available'):
@@ -348,14 +458,28 @@ def pregame_fee(binding):
         return unavailable('sgo_native_catalog_phase_or_quote_unverified')
     if binding['phase'] != 'scheduled':
         return unavailable('sgo_native_live_fee_requires_signed_book')
-    fee = binding.get('venue_fee') or {}
-    if fee.get('charged') != 'WHEN_LIVE':
+    if review and review.get('unavailable_reason'):
+        return unavailable(review['unavailable_reason'])
+    native_terms = binding.get('venue_fee') or {}
+    if native_terms.get('charged') != 'WHEN_LIVE':
         return unavailable('sgo_native_pregame_fee_terms_unverified')
-    return dict(available=True, classification='exact_public', reason=None, trade_fee_usd='0',
+    try:
+        result = taker_fill(market_id=binding['market_id'], terms=native_terms, event_status='OPEN_PREGAME',
+                            at=binding['fee_evaluated_at'], price=binding['fee_price'], quantity='1')
+    except (ValueError, TypeError, KeyError, ArithmeticError):
+        return unavailable('sgo_native_pregame_fee_terms_unverified')
+    amount = exact_wire(result['amount'])
+    return dict(available=True, classification='exact_public', reason=None, trade_fee_usd=amount,
         quantity='1', quantity_unit='USD payout claim', fill_count=1, liquidity_role='taker',
-        fee_payment='at_fill', fee_cashflows={'at_fill_usd':'0'}, profile='manual_retail',
-        assumptions=['The exact Novig game contract charges taker fees only while in-game.'],
-        evidence=dict(version=VERSION, source_url=FEE_URL, fee_rate='0',
+        fee_payment='at_fill', fee_cashflows={'at_fill_usd':amount}, profile='manual_retail',
+        assumptions=result['assumptions'],
+        details=dict(rounding_trace=result['trace']),
+        evidence=dict(version=VERSION, source_url=FEE_URL,
+            fee_rate='0',
             reviewed_at=binding['market_receipt']['observed_at'],review_before=binding['current_until'],
-            native_market_id=binding['market_id'],native_outcome_id=binding['outcome_id'],
+            native_event_id=binding['event_id'], native_market_id=binding['market_id'],native_outcome_id=binding['outcome_id'],
+            catalog_fee_terms=native_terms, fee_evaluated_at=binding['fee_evaluated_at'],
+            fee_price=binding['fee_price'], schedule_version=result['schedule_version'], schedule_hash=result['schedule_hash'],
+            offer_identity=binding['offer_identity'],
+            fee_verification_revision=(review or {}).get('verification_revision'),
             market_receipt=binding['market_receipt'], native_binding_revision=binding['revision']))

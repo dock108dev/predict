@@ -7,6 +7,7 @@ from app.comparison.conditional_benchmark import basis
 from tests.test_f04_kalshi_public import input_row
 from tests.test_f05_polymarket_public import AT as PM_AT, native
 from tests.test_f06_prophetx_retail import AT, retail_row, review as prophetx_review
+from tests.test_f07_desk import novig_schedule_quote
 
 
 def sized(row, review, at):
@@ -60,10 +61,7 @@ def test_polymarket_applied_tier_is_visible_and_uses_the_size_grid():
 
 
 def test_confirmed_novig_zero_and_unknown_fee_are_distinct():
-    fee = dict(available=True, classification='exact_public', quantity='1',
-               fee_payment='at_fill', fee_cashflows={'at_fill_usd': '0'}, evidence={'fee_rate': '0'})
-    row = dict(venue='novig', league='NCAAB', game_state='scheduled',
-               trade_fee=fee, cost_per_normal_claim='0.25')
+    row = dict(novig_schedule_quote('0.25'), league='NCAAB')
     result = preview(row, Fraction(10))
     assert result['quantity'] == '4000'
     assert result['fee_available'] and result['fee_at_entry_usd'] == '0'

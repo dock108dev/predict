@@ -130,6 +130,22 @@ def project(event, contract):
         return deepcopy(contract)
 
 
+def reviewed_prior_roles(event, prior, correction):
+    from .sgo_schedule_review import review
+
+    league, event_id = event['competition'], event['id']
+    entry = review(event_id, league, at=correction['effective_at'])
+    if not entry or any(event[role] != entry['canonical_roles'][role] for role in ('home', 'away')):
+        return None, {}
+    original_roles = {role: f'sportsgameodds:{league}:{event_id}:{role}' for role in ('home', 'away')}
+    current_roles = {event[role]: original_roles[role] for role in ('home', 'away')}
+    original = dict(event, **original_roles,
+        participants={name: current_roles[team] for name, team in event['participants'].items()})
+    if core(original) != prior['core']:
+        return None, {}
+    return original, {old: new for new, old in current_roles.items()}
+
+
 def _project(event, contract):
     value=deepcopy(contract)
     if event.get('schedule_conflict'):return value
@@ -138,16 +154,45 @@ def _project(event, contract):
     meta=value.get('comparison_source_metadata',{})
     prior=meta.get('schedule_binding',{})
     old=prior.get('metadata');new=witness(event)
+    correction=(new or {}).get('reviewed_correction')
+    participant_map={}
+    recorded_event=event
+    if prior.get('core')!=core(event) and correction:
+        recorded_event,participant_map=reviewed_prior_roles(event,prior,correction)
+        if recorded_event is None:return value
     # Validate the retained earlier witness against the earlier derived start.
-    original=dict(event,scheduled_start=market['scheduled_start'],schedule_metadata=old)
+    original=dict(recorded_event,scheduled_start=market['scheduled_start'],schedule_metadata=old)
     if (prior.get('version')!=VERSION or prior.get('native_event_id')!=event['id']
-            or prior.get('core')!=core(event) or witness(original) is None or new is None
-            or old['authority']!=new['authority']
-            or not before(old,new)):return value
+            or prior.get('core')!=core(recorded_event) or witness(original) is None or new is None
+            or old['authority']!=new['authority']):return value
+    reason='newer_same_source_event_metadata'
+    if correction:
+        from .sgo_schedule_review import correct
+
+        reviewed = correct(original, at=correction['effective_at'])
+        source = correction['original']
+        retained_same_schedule = (exact_time(old['start']) == exact_time(source['start'])
+                                  and before(old, source))
+        if (exact_time(reviewed['scheduled_start']) != exact_time(event['scheduled_start'])
+                and not retained_same_schedule):
+            return value
+        reason='reviewed_official_kickoff'
+    elif not before(old,new):
+        return value
     market['scheduled_start']=event['scheduled_start']
-    meta['schedule_reconciliation']=dict(version=VERSION,reason='newer_same_source_event_metadata',
+    if participant_map:
+        from app.comparison.event_links import provider_key
+        from app.dashboard.session_projection import stable
+
+        for selection in [value['selection'], *value['outcome_selections']]:
+            selection['participant']=participant_map.get(selection['participant'],selection['participant'])
+        value['anchor_participant']=participant_map.get(value['anchor_participant'],value['anchor_participant'])
+        market['event']=provider_key('sportsgameodds',event)
+        market['outcome_set']=stable(value['outcome_selections'])
+    meta['schedule_reconciliation']=dict(version=VERSION,reason=reason,
         original_derived_start=prior['original_start'],current_derived_start=event['scheduled_start'],
-        original_metadata_revision=old['revision'],current_metadata=deepcopy(new))
+        original_metadata_revision=old['revision'],current_metadata=deepcopy(new),
+        **({'participant_reconciliation': participant_map} if participant_map else {}))
     return value
 
 

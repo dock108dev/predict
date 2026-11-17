@@ -87,6 +87,7 @@ def census(result, inventory, *, pairs=(), policy=None, load_preview_members=Non
     reasons = defaultdict(Counter)
     provider_reasons = defaultdict(Counter)
     posted_gaps = Counter()
+    reference_gaps, settlement_gaps = Counter(), Counter()
     price_gaps = Counter()
     modeled_candidates = {row['id']: row for row in by_offer.values() if row.get('posted_price')
                           and (row.get('trade_fee') or {}).get('available') and row.get('sportsbook_baseline')}
@@ -102,6 +103,14 @@ def census(result, inventory, *, pairs=(), policy=None, load_preview_members=Non
             count['posted_fee'] = int(bool(fee.get('available')))
             if not count['posted_fee']:
                 posted_gaps[fee.get('reason') or 'fee_outcome_not_published'] += 1
+            if reference := row.get('pregame_reference'):
+                count['posted_named_reference'] = int(reference['available'])
+                if not reference['available']:
+                    reference_gaps[reference['reason']] += 1
+            if settlement := row.get('settlement_assessment'):
+                count['posted_settlement_qualified'] = int(settlement['available'])
+                if not settlement['available']:
+                    settlement_gaps[settlement['reason']] += 1
             if row['id'] in modeled_candidates:
                 modeled = prepared_preview(row, Fraction(10), members)
                 count['posted_modeled_after_fee'] = int(modeled.get('estimated_return_percent') is not None)
@@ -177,6 +186,8 @@ def census(result, inventory, *, pairs=(), policy=None, load_preview_members=Non
                 total=with_rate(totals), coverage_complete=bool(result['publication'].get('coverage_complete')),
                 missing_reasons=dict(gaps.most_common()),
                 posted_fee_missing_reasons=dict(posted_gaps.most_common()),
+                posted_reference_missing_reasons=dict(reference_gaps.most_common()),
+                posted_settlement_missing_reasons=dict(settlement_gaps.most_common()),
                 by_scope=[dict(labels(key), **with_rate(counts), missing_reasons=dict(reasons[key]))
                           for key, counts in sorted(dimensions.items(), key=lambda item: str(item[0]))],
                 by_provider=[dict(provider=key[0], **labels(key[1:]), **with_rate(counts),
