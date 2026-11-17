@@ -333,7 +333,21 @@ waiting for calculations, the public head keeps the previous complete member;
 the worker can recover the committed replacement input after interruption.
 Price, fee, and reference availability are independent. A sportsbook estimate
 with a supported fee is a modeled decisive return, not a verified fill or a
-full settlement EV. The page displays the original clocks in quote inspection.
+full settlement EV. The quote drawer and Admin use the same sizing inputs from
+the exact published member. The census reports available fees (including zero),
+modeled returns and verified after-fee EV separately.
+
+For spreads and totals, Browse Odds, Open Game and Opportunities use the same
+supported main-line evidence before ranking or paging. A site filter does not
+select a different line. An unverified line is labeled as such, and an exact
+link can still open an alternate. Independent, compatible role and schedule
+witnesses are required to reconcile two published game listings.
+
+Quote and reference times remain separate from the board read and publication
+times. The desk reports the original quote or receipt clock, identifies
+retained prices when the source is unavailable or the confirmation ages out,
+and keeps the published price and its calculations available until kickoff or
+explicit closure.
 
 The web process reads and pages the committed terms; only sporting authority
 can withdraw a published offer ahead of another generation. Linked offers

@@ -50,7 +50,10 @@ def compact_member(part):
                       'provider_clocks','observation_time_evidence','source_health',
                       'input_basis','native_contract_id','observation_revision'):
             row.pop(field,None)
-        if row['id'] not in paired:
+        if (row['id'] not in paired
+                and not (row['venue'] in ('kalshi', 'polymarket_us')
+                         and (row.get('trade_fee') or {}).get('available')
+                         and row['current_authority']['price'].get('lifecycle', {}).get('state') == 'scheduled')):
             row.pop('fee_applicability', None)
         # Full financial provenance belongs to the immutable selected
         # member. The root keeps exact numeric inputs, IDs and clocks,

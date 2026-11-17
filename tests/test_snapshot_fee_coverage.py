@@ -23,7 +23,7 @@ def test_price_only_publication_keeps_novig_fee_without_pinnacle_until_review_ex
     row.update(start_at=start, source=dict(provider='the_odds_api', native_event_id='game',
         native_market_id='alternate_spread', native_outcome_id='away-2.5', native_side='bookmaker_outcome'),
         times=dict(source_at=at.isoformat(), received_at=at.isoformat()))
-    record = dict(event={'start_at': start}, quote=row.copy())
+    record = dict(event={'scheduled_start': start}, quote=row.copy())
     row['original_record'] = record
     deps = {contract_id(record): ['price', 'contract', 'event', 'receipt']}
     inputs = dict(quotes=[row], captured_at=at.isoformat(), dependencies=deps, policy_identity='policy',
@@ -101,3 +101,41 @@ def test_unfiltered_census_deduplicates_offers_and_keeps_gaps_and_ev_separate():
     assert next(row for row in counts['by_scope'] if row['phase'] == 'in_game')['uncovered'] == 1
     assert counts['retained_price_gap_reasons'] == {'source_expired': 1}
     assert counts['missing_reasons'] == {'live_market_fee_evidence_unbound': 1}
+
+
+def test_census_and_drawer_size_the_same_older_kalshi_member():
+    from unittest.mock import Mock
+
+    from app.dashboard.preview_inputs import prepared_preview, published_members
+    from tests.test_f04_kalshi_public import input_row
+
+    original, review, at = input_row()
+    original.update(id='chargers', captured_at=at.isoformat(), game_state='scheduled',
+                    cost_per_normal_claim='0.5', price_current=True, posted_price=True,
+                    sportsbook_baseline=dict(probability='1/2', prices=[
+                        dict(price_american='-110'), dict(price_american='-110')]),
+                    current_authority={'price': {'dependency': 'exact-contract'}})
+    original['trade_fee'] = outcome(original, at=at, phase='scheduled', review=review)
+    compact = {key: value for key, value in original.items()
+               if key not in ('fee_applicability', 'cost_per_normal_claim')}
+    compact.update(evidence_result_id='exact-member', venue='kalshi', quote_freshness='retained')
+    db = Mock()
+    db.execute.return_value = [dict(id='exact-member', result=snapshots.pack(dict(rows=[original])))]
+    members = published_members(db, [compact, dict(compact, id='other')])
+    db.execute.assert_called_once()
+    drawer = prepared_preview(compact, Fraction(10), members)
+    assert drawer['quantity'] == '19'
+    assert drawer['fee_at_entry_usd'] == '0.34'
+    assert Fraction(drawer['estimated_return_percent']) == -Fraction('0.34') / Fraction('9.84') * 100
+    assert prepared_preview(compact, Fraction(10), {})['estimated_return_reason'] != 'exact_reference_pair_unavailable'
+    count = census(dict(rows=[compact], publication={}), [], load_preview_members=lambda rows: members)['total']
+    assert (count['posted_fee'], count['posted_modeled_after_fee'], count['reviewed_after_fee_ev']) == (1, 1, 0)
+    assert (count['retained_posted'], count['fresh_confirmations'], count['source_time_unknown']) == (1, 0, 1)
+    missing_reference = prepared_preview(dict(compact, sportsbook_baseline=None), Fraction(10), members)
+    assert missing_reference['fee_available']
+    assert missing_reference['estimated_return_reason'] == 'exact_reference_pair_unavailable'
+    missing_fee = prepared_preview(dict(compact, trade_fee=unavailable('public_fee_schedule_review_required')),
+                                   Fraction(10), members)
+    assert missing_fee['gross_win_payout_usd'] == '20'
+    assert not missing_fee['fee_available']
+    assert missing_fee['estimated_return_reason'] == 'public_fee_schedule_review_required'

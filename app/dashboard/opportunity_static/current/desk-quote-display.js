@@ -54,8 +54,20 @@ function elapsedAge(source, checkedAt = Date.now()) {
 }
 
 export function quoteFreshness(offer, mode, inspection = false) {
-  if (offer.posted_price && !mode) return 'Latest posted pregame price';
-  if (offer.current) return mode ? 'Current at capture' : inspection ? 'Current at inspection' : 'Current';
+  const source = offer.source_clock_at;
+  const receipt = offer.received_at;
+  const clock = value => new Date(value).toLocaleString();
+  if (offer.posted_price && !mode) {
+    const status = {fresh:'Recently confirmed', retained:inspection ? 'Retained pregame price' : 'Retained',
+      unknown:'Freshness unverified'}[offer.quote_freshness] || 'Posted pregame price';
+    return [status, source ? inspection ? 'Source ' + clock(source) : elapsedAge(source) || 'Source time unverified'
+      : receipt ? 'Source time unknown · received ' + (inspection ? clock(receipt) : quoteAge(receipt).replace('Quote updated ', ''))
+      : 'Source time unknown',
+    inspection && offer.confirmed_at && offer.confirmed_at !== source && 'Book confirmation ' + clock(offer.confirmed_at)]
+      .filter(Boolean).join(' · ');
+  }
+  if (offer.current) return mode ? 'Current at capture' : source ? quoteAge(source)
+    : receipt ? 'Source time unknown · received ' + clock(receipt) : 'Source time unknown';
   const codes = [...(offer.current_reasons || []), offer.reason];
   const labels = {
     sgo_charge_unresolved:'source on hold', ambiguous_dispatch_unresolved:'source on hold',
@@ -90,7 +102,7 @@ function sportsbookCell(group, book, reference, checkedAt, mode, inspection = fa
     if (isReference) item.classList.add('matrix-reference');
     const label = [mode ? [value.current === false ? 'Last known at capture' : 'At capture',
       value.source_at && quoteAge(value.source_at, checkedAt)].filter(Boolean).join(' · ') :
-      inspection && priceStatus(value.current, value.source_at, checkedAt, true),
+      inspection && priceStatus(value.current, value.source_at, checkedAt),
       isReference && 'EV reference'].filter(Boolean).join(' · ');
     if (label) {
       const freshness = el('small', label);
@@ -112,10 +124,9 @@ export function noQuote(cell, venue, retained = false) {
   cell.append(missing);
 }
 
-export function priceStatus(current, at, checkedAt, inspection = false) {
-  const status = current === true ? (inspection ? 'Current at inspection' : 'Current')
-    : current === false ? 'Last known' : 'Freshness unverified';
-  return at ? `${status} · ${quoteAge(at, checkedAt)}` : status;
+export function priceStatus(current, at, checkedAt) {
+  const status = current === false ? 'Last known' : 'Published quote';
+  return at ? `${status} · ${quoteAge(at, checkedAt)}` : `${status} · Source time unknown`;
 }
 
 export function settlementLabel(group) {

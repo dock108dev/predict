@@ -171,7 +171,7 @@ def bind(result, inputs, finance, *, load_registry):
                 phase = 'live'
             fee_input = dict(row, fee_applicability=row.get('fee_applicability') or applicability(record),
                              novig_v3_evidence=record['quote'].get('novig_v3_evidence'))
-            if row['id'] in paired_ids:
+            if row['id'] in paired_ids or row['venue'] in ('kalshi', 'polymarket_us') and phase == 'scheduled':
                 row['fee_applicability'] = fee_input['fee_applicability']
             review = (schedule_lifecycle.for_offer(fee_state, fee_input, at, fallback=schedules[row['venue']])
                       if row['venue'] == 'prophetx' else
@@ -226,8 +226,8 @@ def bind(result, inputs, finance, *, load_registry):
                     row['sportsbook_after_fee_percent'] = exact_wire(100 * ((probability * win +
                         (1 - probability) * loss) / risk - 1))
         metadata = (original.get('original_record') or {}).get('comparison_source_metadata') or {}
-        if metadata.get('alternate') is True:
-            row['alternate'] = True
+        if isinstance(metadata.get('alternate'), bool):
+            row['alternate'] = metadata['alternate']
         reference = row.get('reference_calculation') or {}
         row['current_authority'] = dict(price=source, references=witnesses,
             reference_required=row.get('probability') is not None,

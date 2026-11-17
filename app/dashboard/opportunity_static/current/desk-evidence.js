@@ -3,7 +3,7 @@ export function selectionIdentity(offer) {
   return JSON.stringify([offer.id, offer.price_revision, offer.economic_revision, offer.odds,
     offer.current, offer.trade_fee, offer.reference_current, offer.reference,
     offer.reference_current ? offer.reference_calculation?.probability : null,
-    offer.before_fee, offer.after_fee, offer.conservative, offer.sportsbook]);
+    offer.before_fee, offer.after_fee, offer.conservative, offer.sportsbook_after_fee, offer.sportsbook]);
 }
 
 export function selectionCurrent(offer, at = Date.now()) {

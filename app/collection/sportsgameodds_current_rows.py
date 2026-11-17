@@ -204,8 +204,8 @@ def current_rows(page, receipt_sha256):
                 row['comparison_source_metadata']['provider_bookmaker_id'] = quote['venue']
             if market_link := quote.get('bookmaker_market_link'):
                 row['comparison_source_metadata']['bookmaker_market_link'] = market_link.copy()
-            if quote.get('alternate') is True:
-                row['comparison_source_metadata']['alternate'] = True
+            if isinstance(quote.get('alternate'), bool):
+                row['comparison_source_metadata']['alternate'] = quote['alternate']
             row['_instrument'] = instrument
             fingerprint = [source, original, q['state'], identity, at, quote['source_at_original'],
                            quote['opposing_odd_id'], policy, event['aliases'], event['status'], event['phase']]
@@ -215,6 +215,8 @@ def current_rows(page, receipt_sha256):
                 fingerprint.append(quote['venue'])
             if quote.get('alternate') is True:
                 fingerprint.append('alternate')
+            elif quote.get('alternate') is False:
+                fingerprint.append('main')
             row['_fingerprint'] = stable(fingerprint)
             result.append(row)
     return result, excluded

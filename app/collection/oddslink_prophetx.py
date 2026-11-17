@@ -171,7 +171,7 @@ def fixture_records(fixture, capture, league, live, families):
                                period_boundary='OddsLink full-game main line', orientation_evidence=[VERSION],
                                result_policy=VERSION+':'+family,
                                anchor_participant=teams['home'] if family == 'spread' else None,
-                               comparison_source_metadata=dict(provider_event_link=market_link),
+                               comparison_source_metadata=dict(provider_event_link=market_link, alternate=False),
                                event_scope=dict(policy='oddslink-provider-event-unverified-1', source=SOURCE,
                                                 native_event_id=event_id)))
     return output

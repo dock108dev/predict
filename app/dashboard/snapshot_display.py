@@ -125,10 +125,10 @@ def matchup_search(parts, game, title):
     return False
 
 
-def desk_game_aliases(rows, games, event_facts):
+def desk_game_aliases(rows, games, event_facts, *, unresolved=None):
     """Join only exact, unambiguous schedule identities for display."""
     from app.comparison.occurrence_matching import OccurrenceResolver
-    from app.normalization.college_registry import expanded
+    from app.normalization.college_registry import expanded, sgo_registry
     from app.storage.schedule_metadata import witness
 
     sources = defaultdict(set)
@@ -145,15 +145,49 @@ def desk_game_aliases(rows, games, event_facts):
 
     entities = expanded().entities
     scheduled = defaultdict(list)
+    source_roles = {}
+    mapped_games = set()
+
+    def projected_role(game, team):
+        if team in entities:
+            return team
+        for key in sources[game]:
+            event = events.get(key) or {}
+            if not key or key[0] != 'sportsgameodds' or not event:
+                continue
+            schedule = witness(event)
+            if not schedule or schedule['authority'] != ['sportsgameodds', 'event', key[1]]:
+                continue
+            role = next((role for role in ('home', 'away')
+                         if team == f"sportsgameodds:{event['competition']}:{key[1]}:{role}"), None)
+            if not role or not event.get(role):
+                continue
+            names = [name for name, identifier in event.get('participants', {}).items() if identifier == event[role]]
+            if len(names) == 1:
+                match = sgo_registry().resolve('team', names[0], league=event['competition'], venue='sportsgameodds')
+                if match.status == 'resolved' and event[role] in (team, match.canonical_id):
+                    return match.canonical_id
+        return team
+
+    matchups = defaultdict(set)
     for game_key in sources.keys() & games.keys():
         game = games[game_key]
         league = game.get('league')
         if not league or not game.get('start_at'):
             continue
         teams = defaultdict(set)
+        labels = set()
         for participant in game['participants']:
             if participant.get('id') and participant.get('role') in ('home', 'away'):
-                teams[participant['role']].add(participant['id'])
+                team = projected_role(game_key, participant['id'])
+                teams[participant['role']].add(team)
+                source_roles[game_key, participant['id']] = team
+                if team != participant['id']:
+                    mapped_games.add(game_key)
+            if label := participant.get('name'):
+                labels.add(label.casefold())
+        if len(labels) == 2:
+            matchups[league, stamp(game['start_at']), tuple(sorted(labels))].add(game_key)
         if len(teams['home']) != 1 or len(teams['away']) != 1:
             continue
         home, away = next(iter(teams['home'])), next(iter(teams['away']))
@@ -170,25 +204,33 @@ def desk_game_aliases(rows, games, event_facts):
         witnesses = []
         provider_games = defaultdict(set)
         roles = {'home': home, 'away': away}
-        for key in {source for game in keys for source in sources[game]}:
+        bindings = {(game, source) for game in keys for source in sources[game]}
+        mapped_local_team = not mapped_games.isdisjoint(keys)
+        for game, key in bindings:
             event = events.get(key)
             if (event is None or event.get('schedule_conflict') or event.get('competition') != league
                     or not event.get('participants') or not event.get('scheduled_start')
                     or stamp(event['scheduled_start']) != start
-                    or any(event.get(role) != team for role, team in roles.items())):
+                    or any(source_roles.get((game, event.get(role)), event.get(role)) != team
+                           for role, team in roles.items())):
                 break
             provider, native_id = key
+            if mapped_local_team:
+                schedule = witness(event)
+                if not schedule or schedule['authority'][0] != provider:
+                    break
             stated_roles = event.get('source_participant_roles')
             if stated_roles is None and provider in ('sportsgameodds', 'oddslink_public_board'):
                 # These adapters preserve their explicit home/away fields and
                 # bind the schedule to the original provider-event receipt.
                 schedule = witness(event)
                 if schedule and schedule['authority'] == [provider, 'event', native_id]:
-                    stated_roles = roles
-            if stated_roles != roles:
+                    stated_roles = {role: event.get(role) for role in roles}
+            if not stated_roles or any(stated_roles.get(role) != event.get(role) for role in roles):
                 break
             source = dict(provider=provider, native_event_id=native_id, binding_version=None)
-            facts = resolver._facts(dict(event=event, quote=dict(source=source, provenance={})))
+            normalized = dict(event, source_participant_roles=roles, **roles)
+            facts = resolver._facts(dict(event=normalized, quote=dict(source=source, provenance={})))
             if (facts['conflict'] or facts['replacement'] or facts['roles'] != roles
                     or league == 'MLB' and facts['game_number'] not in (1, 2)):
                 break
@@ -201,6 +243,11 @@ def desk_game_aliases(rows, games, event_facts):
                 continue
             canonical = min(keys, key=lambda key: (key.startswith(('native-current:', 'aggregate-current:')), key))
             aliases.update((key, canonical) for key in keys if key != canonical)
+    if unresolved is not None:
+        for keys in (*scheduled.values(), *matchups.values()):
+            resolved = {aliases.get(key, key) for key in keys}
+            if len(resolved) > 1:
+                unresolved.update(resolved)
     return aliases
 
 
@@ -243,11 +290,9 @@ def outcome_id(key):
 
 
 def comparison_groups(rows, by_id, metric, *, pairs=False, current=False, individual=False, qualified=False,
-                      score_row=None):
+                      score_row=None, eligible=None):
     """Group the complete filtered slate before pagination; preserve every quote."""
     groups = {}
-    values = {r['id']: score_row(r) if score_row else ranking_value(r, metric, current=current, qualified=qualified)
-              for r in rows}
     def rank(r):
         value = values[r['id']]
         return (value is None, -value if value is not None else 0,
@@ -260,6 +305,10 @@ def comparison_groups(rows, by_id, metric, *, pairs=False, current=False, indivi
         else:
             key = ('offer', row['id']) if individual else outcome_key(row)
         groups.setdefault(key, []).append(row)
+    if eligible is not None:
+        groups = eligible(groups)
+    values = {r['id']: score_row(r) if score_row else ranking_value(r, metric, current=current, qualified=qualified)
+              for members in groups.values() for r in members}
     result = []
     for key, members in groups.items():
         members = sorted(members, key=rank)

@@ -344,6 +344,7 @@ def parse_page(body, received_at, *, leagues=LEAGUES, venues=None):
                                    'available': entry['available'] and reason is None,
                                    'provider_available': entry['available'], 'unavailable_reason': reason,
                                    'odd_id': odd_id, 'opposing_odd_id': opposite,
+                                   'alternate': index != 0,
                                    'settlement': 'unverified', 'fair': fair.copy(),
                                    **({'bookmaker_market_link': market_link} if market_link else {}),
                                    **({'consensus': consensus.copy()} if consensus is not None else {})}
@@ -362,8 +363,6 @@ def parse_page(body, received_at, *, leagues=LEAGUES, venues=None):
                         if source_at is not None and (prior_at is None or
                                 datetime.fromisoformat(source_at) > datetime.fromisoformat(prior_at)):
                             book_quotes[line_key] = observation
-                    if index and book_quotes[line_key] is observation:
-                        observation['alternate'] = True
                 for line_key in conflicts:
                     book_quotes[line_key].update(available=False, unavailable_reason='conflicting observations at exact line')
                 conflicting_alternate_lines += len(conflicts)

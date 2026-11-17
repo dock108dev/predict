@@ -206,6 +206,13 @@ function sportsbookReference(reference) {
   ], 'inspection-reference-prices');
 }
 
+function referenceFreshness(offer, prices = []) {
+  const clocks = prices.map(price => Date.parse(price.source_at));
+  const oldest = clocks.length && clocks.every(Number.isFinite) ? Math.min(...clocks) : null;
+  const status = offer.reference_feed_available === false ? 'Retained reference' : 'Published estimate';
+  return `${status} · ${oldest == null ? 'Reference source time unknown' : 'Reference as of ' + new Date(oldest).toLocaleString()}`;
+}
+
 function roundingTrace(trace) {
   const traceView = disclosure('Sized fee rounding');
   for (const [index, fill] of trace.entries()) {
@@ -225,6 +232,7 @@ export function tradePreview(offer, group, evidence, {clock, closed, loading}) {
   const quote = el('div', null, 'trade-preview-price');
   quote.append(odd(offer.odds), el('span', offer.cost_per_normal_claim != null
     ? `${usd(offer.cost_per_normal_claim)} per $1 payout` : '', 'desk-meta'));
+  quote.append(el('small', quoteFreshness(offer, false, true), 'desk-meta'));
   result.append(quote);
 
   const model = offer.trade_preview;
@@ -264,8 +272,10 @@ export function tradePreview(offer, group, evidence, {clock, closed, loading}) {
     const ref = offer.sportsbook;
     const net = model?.estimated_return_percent;
     result.append(section('Sportsbook comparison', sportsbookReference(ref),
-      facts([[net == null ? 'Estimated return before fees' : 'Estimated return after fees',
-        signedPercent(net ?? ref.return_percent)]]),
+      facts([['Estimated return before fees', signedPercent(ref.return_percent)],
+        ['Modeled return after fees', net == null
+          ? (model && reasons(model.estimated_return_reason, 'Unavailable')) : signedPercent(net)]]),
+      el('p', referenceFreshness(offer, ref.prices), 'desk-meta'),
       el('p', 'At the posted price · decisive win or loss only', 'desk-meta')));
   } else if (!closed && !loading) {
     result.append(el('p', reasons(offer.reason, 'Reference price missing for this exact line.'), 'desk-meta'));
@@ -319,7 +329,8 @@ export function tradeInspection(offer, group, evidence, {mode, position, basis, 
   const ev = el('span', null, tone(offer.value));
   if (value != null) {
     ev.append(el('span', signedPercent(value), 'inspection-metric-value'));
-    const freshness = offer.value == null ? 'Last known EV' : mode ? 'At capture' : 'Current at inspection';
+    const freshness = offer.value == null ? 'Last known EV' : mode ? 'At capture'
+      : referenceFreshness(offer, selectedRef?.prices ?? selectedRef?.contributors?.flatMap(book => book.inputs || []));
     const evFreshness = el('small', freshness, 'inspection-price-unit');
     evFreshness.dataset.inspectionEv = '1';
     ev.append(evFreshness);
@@ -432,12 +443,12 @@ export function tradeInspection(offer, group, evidence, {mode, position, basis, 
   ])));
   if (offer.trade_fee) details.append(tradingFee(offer.trade_fee));
   if (sportsbook) details.append(section('Sportsbook de-vig', facts([
-    ['Books with a current pair', sportsbook.candidate_books],
+    ['Books with a published pair', sportsbook.candidate_books],
     ['Fair probability', probability(sportsbook.probability)],
     ['Offered price per $1 payout', usd(cost)],
     ['Estimated return before fees', signedPercent(sportsbook.return_percent)],
     ...(offer.sportsbook_after_fee != null
-      ? [['Estimated return after fees', signedPercent(offer.sportsbook_after_fee)]] : []),
+      ? [['Modeled return after fees', signedPercent(offer.sportsbook_after_fee)]] : []),
     ...sportsbook.prices.map((leg, index) => [index ? 'Opposite price and clock' : 'Selected price and clock', `${leg.price_american} American · ${leg.source_at}`])
   ]), el('p', 'Fair probability equals selected implied probability divided by the sum of both implied probabilities from the same book. Estimated return is 100 × (fair probability ÷ price per $1 payout − 1).', 'inspection-formula'),
     el('p', 'The estimate uses the full-game two-way result. Pushes, ties, voids and cancellations can settle differently across sites.', 'desk-meta')));

@@ -3,9 +3,9 @@ from collections import Counter, defaultdict
 from itertools import product
 from fractions import Fraction
 
-from app.comparison.trade_preview import preview
 from app.comparison.snapshot_fee_outcome import CLASSES, FAMILIES, VENUES
 from app.storage.comparison_snapshot import SPORTS, exact_arb_pair
+from .preview_inputs import prepared_preview
 from .product_finance import excluded_reference
 from .snapshot_display import ranking_value
 
@@ -47,7 +47,7 @@ def offer_key(row):
     return source_key(row)
 
 
-def census(result, inventory, *, pairs=(), policy=None):
+def census(result, inventory, *, pairs=(), policy=None, load_preview_members=None):
     by_offer = {}
     published_source_keys = set()
     pair_keys = {}
@@ -78,7 +78,8 @@ def census(result, inventory, *, pairs=(), policy=None):
     def bucket():
         return Counter(dict.fromkeys(('published', 'retained_unavailable', 'current', 'covered', 'uncovered',
             'sportsbook_ev', 'before_fee_ev', 'reviewed_after_fee_ev', 'conservative_after_fee_ev',
-            'any_after_fee_ev', 'posted', 'posted_fee', 'posted_modeled_after_fee', *CLASSES), 0))
+            'any_after_fee_ev', 'posted', 'posted_fee', 'posted_modeled_after_fee',
+            'fresh_confirmations', 'retained_posted', 'source_time_unknown', *CLASSES), 0))
 
     totals = bucket()
     dimensions = defaultdict(bucket)
@@ -87,6 +88,9 @@ def census(result, inventory, *, pairs=(), policy=None):
     provider_reasons = defaultdict(Counter)
     posted_gaps = Counter()
     price_gaps = Counter()
+    modeled_candidates = {row['id']: row for row in by_offer.values() if row.get('posted_price')
+                          and (row.get('trade_fee') or {}).get('available') and row.get('sportsbook_baseline')}
+    members = load_preview_members(modeled_candidates.values()) if load_preview_members and modeled_candidates else {}
     for row in by_offer.values():
         phase = {'scheduled': 'pregame', 'live': 'in_game'}.get(row.get('game_state'), row.get('game_state', 'unknown'))
         key = (row['venue'], row['league'], row['market']['market'], row['market']['period'], phase)
@@ -98,8 +102,13 @@ def census(result, inventory, *, pairs=(), policy=None):
             count['posted_fee'] = int(bool(fee.get('available')))
             if not count['posted_fee']:
                 posted_gaps[fee.get('reason') or 'fee_outcome_not_published'] += 1
-            if count['posted_fee'] and row.get('sportsbook_baseline'):
-                count['posted_modeled_after_fee'] = int(preview(row, Fraction(10)).get('estimated_return_percent') is not None)
+            if row['id'] in modeled_candidates:
+                modeled = prepared_preview(row, Fraction(10), members)
+                count['posted_modeled_after_fee'] = int(modeled.get('estimated_return_percent') is not None)
+            freshness = row.get('quote_freshness')
+            count['fresh_confirmations'] = int(freshness == 'fresh')
+            count['retained_posted'] = int(freshness == 'retained')
+            count['source_time_unknown'] = int(not (row.get('times') or {}).get('source_at'))
         if row['price_current']:
             covered = bool(fee.get('available'))
             classification = fee.get('classification', 'unknown')
@@ -186,4 +195,5 @@ def census(result, inventory, *, pairs=(), policy=None):
                     for key in product(VENUES, SPORTS, FAMILIES) if key not in present],
                 outside_scope_published=[dict(labels(key), rows=n) for key, n in outside.items() if n],
                 source_states=result['publication'].get('sources', {}),
+                published_at=result['publication'].get('published_at'),
                 read_at=result['publication'].get('read_at'))

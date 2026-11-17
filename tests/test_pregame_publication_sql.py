@@ -126,6 +126,7 @@ class PregamePublicationSQL(LatestBoardFixture):
         self.assertEqual(round(float(100 * expected), 2), 27.93)
         self.assertEqual(original['odds']['american'], '+1900')
         self.assertEqual(Fraction(original['before_fee']), 100 * expected)
+        self.assertEqual(original['quote_freshness'], 'fresh')
         self.assertFalse(original['trade_fee_available'])
         self.assertEqual(original['sportsbook']['prices'][0]['price_american'], '+1400')
         scope = dict(BROWSE, game_key=browse['rows'][0]['game_key'])
@@ -146,6 +147,9 @@ class PregamePublicationSQL(LatestBoardFixture):
         self.admit_page(raw)
         self.publish()
         await same_price_and_math('+1900', 100 * expected)
+        old = self.novig(await self.read(dict(BROWSE, refresh='1')))
+        self.assertEqual(old['quote_freshness'], 'retained')
+        self.assertEqual(old['source_clock_at'], original['source_clock_at'])
 
         # Interrupt optional work after committing the new input. A restarted
         # worker (new turn/connection) can seal it without a new provider receipt.
@@ -260,16 +264,23 @@ class PregamePublicationSQL(LatestBoardFixture):
         self.publish()
         after = self.novig(await self.read(dict(BROWSE, refresh='1')))
         self.assertEqual(after['trade_fee']['trade_fee_usd'], '0')
-        self.assertEqual(after['after_fee'], before['before_fee'])
+        self.assertEqual(after['sportsbook_after_fee'], before['before_fee'])
+        self.assertIsNone(after['after_fee'])
         ranked = self.novig(await self.read(RANKED))
         selected = (await self.read(dict(layout='desk', phase='pregame', id=after['id'],
                                          quote_key=after['desk_quote_key']), API + '/selection'))['row']
         for other in (ranked, selected):
-            self.assertEqual((other['economic_revision'], other['after_fee'], other['trade_fee']['trade_fee_usd']),
-                             (after['economic_revision'], after['after_fee'], '0'))
+            self.assertEqual((other['economic_revision'], other['sportsbook_after_fee'], other['trade_fee']['trade_fee_usd']),
+                             (after['economic_revision'], after['sportsbook_after_fee'], '0'))
+            self.assertIsNone(other['after_fee'])
         self.assertTrue(after['posted_price'])
         self.assertTrue(selected['trade_preview']['fee_available'])
         self.assertEqual(selected['trade_preview']['fee_at_entry_usd'], '0')
+        self.assertIsNotNone(selected['trade_preview']['estimated_return_percent'])
+        census = await self.read(dict(phase='pregame'), API + '/fee-coverage')
+        self.assertEqual(census['total']['posted_modeled_after_fee'], 1)
+        self.assertEqual(census['total']['reviewed_after_fee_ev'], 0)
+        self.assertIsNotNone(census['published_at'])
 
         self.at += timedelta(hours=3)
         home['fanduel'].update(available=False, lastUpdatedAt=self.at.isoformat())
@@ -285,6 +296,7 @@ class PregamePublicationSQL(LatestBoardFixture):
         census = await self.read(dict(phase='pregame'), API + '/fee-coverage')
         self.assertEqual(census['generation'], (await self.read(RANKED))['generation'])
         self.assertEqual((census['total']['current'], census['total']['covered']), (1, 1))
+        self.assertEqual(census['total']['posted_modeled_after_fee'], 0)
 
     @skipUnless(os.getenv('PREDICT_PREGAME_BROWSER'), 'Opt in with disposable PostgreSQL and Playwright')
     async def test_open_browser_observes_price_publication_and_kickoff(self):

@@ -442,6 +442,7 @@ function cardContext(games, gameTitle = null) {
     basis:pageBasis(), clock, phase,
     checkedAt:state.page?.replay?.captured_at ?? state.page?.publication?.read_at, gameTitle, mode:replayMode(),
     compact:comparable, summary:!replay, showGameLink:!gameKey, stableVenues:!replay,
+    selectedVenues:state.page?.selected_venues,
     position:offer => position(offer),
     gameLink:group => browsingLink('Open game ↗', group, 'opportunity-link'),
     inspectOffer:(offer, group, opener) => {

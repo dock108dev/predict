@@ -1,7 +1,17 @@
 {
   "version": "sportsgameodds-college-aliases-20261115-1",
-  "scope": "Exact SportsGameOdds men's college basketball labels matched to current NCAA member identities in college-2026-27.json. Resolves teams only.",
+  "scope": "Exact SportsGameOdds college labels matched to current NCAA member identities in college-2026-27.json. Resolves teams only.",
   "aliases": [
+    {
+      "kind": "team", "league": "NCAAF", "venue": "sportsgameodds",
+      "text": "Eastern Michigan", "targets": ["NCAAF:NCAA204"],
+      "source": "SportsGameOdds event qNBU3JElEnRTDDl7qgGR; Eastern Michigan University, college-2026-27.json"
+    },
+    {
+      "kind": "team", "league": "NCAAF", "venue": "sportsgameodds",
+      "text": "Western Michigan", "targets": ["NCAAF:NCAA774"],
+      "source": "SportsGameOdds event qNBU3JElEnRTDDl7qgGR; Western Michigan University, college-2026-27.json"
+    },
     {
       "kind": "team", "league": "NCAAB", "venue": "sportsgameodds",
       "text": "Brown Bears", "targets": ["NCAAB:M:D1:NCAA80"],

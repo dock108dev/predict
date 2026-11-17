@@ -293,15 +293,19 @@ def mount(app):
                 rows = [row for row in result['rows'] if (row['game_key'], row['start_at']) in occurrences]
             return dict(result, rows=rows, pairs=pairs)
 
-        def fee_census(db, result, deps, owner, states, at, *, pairs=(), policy=None, epoch=None, settings=None):
+        def fee_census(db, result, deps, owner, states, at, *, published_at, pairs=(), policy=None, epoch=None, settings=None):
             from .fee_coverage import census, source_inventory
             from .trade_desk import desk_phase, direct_venue_offer, phase_matches
             phase = desk_phase(query)
             if phase:
                 result = dict(result, rows=[row for row in result['rows']
                     if direct_venue_offer(row) and phase_matches(row, phase, at)])
-            counts = census(result, source_inventory(db, deps, phase=phase, at=at), pairs=pairs, policy=policy)
+            from .preview_inputs import published_members
+
+            counts = census(result, source_inventory(db, deps, phase=phase, at=at), pairs=pairs, policy=policy,
+                            load_preview_members=lambda rows: published_members(db, rows))
             counts['phase'] = phase
+            counts['published_at'] = published_at
             if query.get('funnel') == '1':
                 from .coverage_funnel import measure
                 counts['synchronized_funnel'] = measure(db, result, deps, counts, owner, at=at, phase=phase)
@@ -384,7 +388,7 @@ def mount(app):
                                 sources=states, read_at=at.isoformat(), state='initializing'))
                         pairs = [pair for pair in result['pairs'] if snapshots.exact_arb_pair(pair)]
                         inventory = live.dependencies(db, provider=provider)
-                        return dict(fee_census(db, result, inventory, owner, states, at, pairs=pairs,
+                        return dict(fee_census(db, result, inventory, owner, states, at, published_at=head['facts'].get('published_at'), pairs=pairs,
                                                policy=policy, epoch=epoch, settings=settings),
                                     state=result['publication']['state'], **metadata)
                     if result is None:
@@ -404,10 +408,11 @@ def mount(app):
                         # Leave the page's source-event fallback intact if it was renamed.
                         game_rows = [row for row in result['rows'] if row['game_key'] == game_key]
                         if game_rows:
-                            result = scoped_result(result, occurrence_rows(result['rows'], game_rows))
+                            result = scoped_result(result, occurrence_rows(result['rows'], game_rows, possible_peers=True))
                     stage = monotonic()
                     result = project_pregame(db, result, owner, states, at=at, epoch=epoch,
                                              withdrawn=withdrawn_events(db, at=at))
+                    result['publication']['published_at'] = head['facts'].get('published_at')
                     timings['schedule'] = (monotonic() - stage) * 1000
                     if is_selection:
                         selected_rows = [row for row in result['rows'] if direct_venue_offer(row) and
@@ -416,27 +421,18 @@ def mount(app):
                         if len(selected_rows) != 1:
                             return dict(row=None, withdrawn_from_phase=True, reason='phase_price_unavailable', **metadata)
                         row, = selected_rows
-                        from app.comparison.trade_preview import preview
+                        from .preview_inputs import prepared_preview, published_members
+
                         value = offer(row, METRICS.get(query.get('basis'), EV_METRIC))
-                        preview_row = dict(snapshots.expand_row(row), cost_per_normal_claim=value['cost_per_normal_claim'])
-                        if (row['venue'] in ('kalshi', 'polymarket_us')
-                                and (row.get('trade_fee') or {}).get('available')
-                                and not preview_row.get('fee_applicability')
-                                and (member_id := row.get('evidence_result_id'))):
-                            # Compact list rows can omit the native sizing terms.
-                            # Use the selected member's terms, not newer metadata.
-                            member = decoded(member_id, db)
-                            if member:
-                                captured = next((item for item in member['rows'] if item['id'] == row['id']), None)
-                                if captured:
-                                    preview_row['fee_applicability'] = captured.get('fee_applicability')
-                        value.update(start_at=row['start_at'], trade_preview=preview(preview_row, preview_amount))
+                        value.update(start_at=row['start_at'],
+                                     trade_preview=prepared_preview(row, preview_amount, published_members(db, [row])))
                         return dict(row=value, reason=value['reason'], **metadata)
                     stage = monotonic()
                     captured_pairs = ([pair for pair in result['pairs'] if snapshots.exact_arb_pair(pair)]
                                       if options[0] == 'arbs' else ())
                     out = desk_page(result, query, options, captured_pairs=captured_pairs,
-                                    policy=result['publication']['policy'], browsing=browsing, published_only=True)
+                                    policy=result['publication']['policy'], browsing=browsing, published_only=True,
+                                    event_facts=result['desk_event_facts'])
                     if not out.get('rows'):
                         fallback = game_capture_link(db, query, allow_live=live_available)
                         if fallback:
@@ -496,7 +492,7 @@ def mount(app):
                     if is_fee_census and not census_desk:
                         empty = dict(rows=[], publication=dict(sources=states, read_at=at.isoformat()))
                         inventory_deps = live.dependencies(db, provider=provider)
-                        return dict(fee_census(db, empty, inventory_deps, owner, states, at, policy=policy, epoch=epoch, settings=settings),
+                        return dict(fee_census(db, empty, inventory_deps, owner, states, at, published_at=head['facts'].get('published_at'), policy=policy, epoch=epoch, settings=settings),
                             state='initializing', cursor=cursor,
                             generation=head['generation'], result_id=None, provider_requests=0)
                     initializing = dict(state='initializing', sources=states, read_at=at.isoformat(),
@@ -554,7 +550,7 @@ def mount(app):
                                 **({'retained_game': fallback} if fallback else {}))
                 if is_fee_census:
                     inventory_deps = live.dependencies(db, provider=provider)
-                    return dict(fee_census(db, result, inventory_deps, owner, states, at, pairs=captured_pairs,
+                    return dict(fee_census(db, result, inventory_deps, owner, states, at, published_at=head['facts'].get('published_at'), pairs=captured_pairs,
                         policy=policy, epoch=epoch, settings=settings),
                         state=result['publication']['state'],
                         cursor=cursor, generation=head['generation'], result_id=head['result_id'], provider_requests=0)
@@ -581,9 +577,9 @@ def mount(app):
                         inspection = (row.get('native_inspection') or row.get('aggregate_inspection')) if value else None
                         evidence = dict(captured_at=row['captured_at'], inspection=inspection) if inspection else None
                         if value and row.get('posted_price'):
-                            from app.comparison.trade_preview import preview
+                            from .preview_inputs import prepared_preview, published_members
 
-                            value['trade_preview'] = preview(row, preview_amount)
+                            value['trade_preview'] = prepared_preview(row, preview_amount, published_members(db, [row]))
                             value['start_at'] = row['start_at']
                         reason = (publication_runtime(owner).get('reason') if not owner.get('healthy')
                                   else (value or {}).get('reason') or (None if value else 'input_replaced_or_removed'))

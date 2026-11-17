@@ -92,7 +92,7 @@ def defer_details(result):
         'gross_profit_per_claim price_difference_cents snapshot_benchmark_reason same_outcome display_outcome_key '
         'times original evidence_result_id trade_fee novig_live_financial_qualified kalshi_live_financial_qualified '
         'polymarket_live_financial_qualified '
-        'captured_at price_revision economic_revision sportsbook_baseline').split())
+        'captured_at price_revision economic_revision sportsbook_baseline alternate fee_applicability').split())
     rows=[]
     for row in result['rows']:
         if '_detail_json' in row:

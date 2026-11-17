@@ -33,11 +33,13 @@ async function check() {
   assert.equal(tradingFeeLabel(old.trade_fee), 'Trading fee $0.01 at fill · Conservative estimate');
   assert.equal(tradingFeeSize(old.trade_fee), '1 $1-payout contract · 1 immediate taker fill');
   const before = tradeInspection({...old, source_clock_at:'2026-11-10T14:59:52Z',
-    confirmed_at:'2026-11-10T14:59:56Z', received_at:'2026-11-10T14:59:58Z'},
+    confirmed_at:'2026-11-10T14:59:56Z', received_at:'2026-11-10T14:59:58Z',
+    posted_price:true, quote_freshness:'retained'},
     {...group, sportsbook_quotes:{fanduel:[{price_american:'+105', current:false, source_at:'2026-11-10T14:00:00Z'}]}},
     details[old.id + ':old'], {position:'Fixture', checkedAt:'2026-11-10T15:00:00Z'});
   assert.match(before.textContent, /At fill/);
-  assert.match(before.textContent, /Current at inspection/);
+  assert.match(before.textContent, /Retained pregame price · Source/);
+  assert.doesNotMatch(before.textContent, /Current at inspection/);
   assert.match(before.textContent, /Original source update2026-11-10T14:59:52ZBook confirmation2026-11-10T14:59:56ZCollector receipt2026-11-10T14:59:58Z/);
   assert.match(before.textContent, /Trading fee\$0.01Conservative estimate/);
   assert.match(before.textContent, /FanDuel\+105.*Last known/);
@@ -159,10 +161,12 @@ async function check() {
   assert.match(lines['Trading fees'], /3 of 4/);
   assert.doesNotMatch(JSON.stringify(lines), /Pinnacle/);
   assert.equal(lines['Indicative sportsbook estimates'], '3');
+  assert.equal(lines['Modeled returns after fees'], '1');
   assert.equal(lines['Verified after-fee EV'], '0');
   assert.match(lines['Scoped scenarios'], /2 before fees · 1 conservative after fees/);
   assert.match(lines['Source prices'], /8 working prices published · 5 working prices unpublished/);
-  assert.match(lines['Fee gaps among current offers'], /fee review does not cover/);
+  assert.match(lines['Fee gaps among posted offers'], /fee review does not cover/);
+  assert.match(lines['Posted price freshness'], /1 recently confirmed · 3 retained/);
   const requests = [];
   global.fetch = async (path, options) => {
     requests.push([path, options.method || 'GET']);
@@ -174,7 +178,7 @@ async function check() {
   assert.equal(coverage.textContent, admin.textContent);
   assert.match(coverage.textContent, /The full provider offer count is unknown/);
   assert.equal(download.disabled, false);
-  assert.deepEqual(requests, Array(2).fill(['/api/comparison-current/fee-coverage', 'GET']));
+  assert.deepEqual(requests, Array(2).fill(['/api/comparison-current/fee-coverage?phase=pregame', 'GET']));
   console.log('PASS F07 DOM fixtures: fee, size, timing, pinned reference withdrawal, arb payoffs and owner counts');
 }
 

@@ -112,10 +112,18 @@ def data():
     }
     census = dict(
         read_at=AT.isoformat(),
+        published_at=AT.isoformat(),
         total=dict(
             covered=3,
             current=4,
             fee_coverage_percent=75,
+            posted=4,
+            posted_fee=3,
+            posted_fee_coverage_percent=75,
+            posted_modeled_after_fee=1,
+            fresh_confirmations=1,
+            retained_posted=3,
+            source_time_unknown=1,
             exact_pinnacle_reference=2,
             sportsbook_ev=3,
             before_fee_ev=2,
@@ -128,6 +136,9 @@ def data():
         unpublished_working_prices=5,
         coverage_complete=False,
         missing_reasons={"conditional_fee_review_expired_or_not_effective": 1},
+        posted_fee_missing_reasons={
+            "conditional_fee_review_expired_or_not_effective": 1
+        },
         provider_requests=0,
     )
     return ev, arbs, offer(latest), details, census
@@ -274,7 +285,7 @@ def run(browser, width, output):
     expect(inspect).to_be_focused()
     tab.goto(base + "/current/coverage")
     tab.get_by_text("Trading fee coverage", exact=True).click()
-    expect(tab.locator("#fee-census")).to_contain_text("3 of 4 current offers")
+    expect(tab.locator("#fee-census")).to_contain_text("3 of 4 posted offers")
     expect(tab.locator("#fee-census")).to_contain_text("5 working prices unpublished")
     expect(tab.locator("#fee-census")).to_contain_text(
         "Indicative sportsbook estimates"

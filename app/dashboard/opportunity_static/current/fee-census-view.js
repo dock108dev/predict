@@ -5,15 +5,19 @@ const count = n => n == null ? 'Unavailable' : n.toLocaleString();
 export function feeCensusLines(report) {
   const t = report.total;
   const time = report.read_at ? new Date(report.read_at).toLocaleString() : 'time unavailable';
-  const rate = t.current ? `${t.fee_coverage_percent.toFixed(2)}%` : 'No current offers';
+  const published = report.published_at ? new Date(report.published_at).toLocaleString() : 'Time unavailable';
+  const rate = t.posted_fee_coverage_percent != null ? `${t.posted_fee_coverage_percent.toFixed(2)}%` : 'No posted offers';
   return [
-    ['Trading fees', `${count(t.covered)} of ${count(t.current)} current offers · ${rate}`],
+    ['Trading fees', `${count(t.posted_fee)} of ${count(t.posted)} posted offers · ${rate}`],
     ['Indicative sportsbook estimates', count(t.sportsbook_ev)],
+    ['Modeled returns after fees', count(t.posted_modeled_after_fee)],
     ['Verified after-fee EV', count(t.reviewed_after_fee_ev)],
     ['Scoped scenarios', `${count(t.before_fee_ev)} before fees · ${count(t.conservative_after_fee_ev)} conservative after fees`],
     ['Source prices', `${count(report.published_working_prices)} working prices published · ${count(report.unpublished_working_prices)} working prices unpublished · ${count(t.retained_unavailable)} retained unavailable offers`],
-    ['Fee gaps among current offers', Object.entries(report.missing_reasons || {})
+    ['Posted price freshness', `${count(t.fresh_confirmations)} recently confirmed · ${count(t.retained_posted)} retained · ${count(t.source_time_unknown)} without a source time`],
+    ['Fee gaps among posted offers', Object.entries(report.posted_fee_missing_reasons || {})
       .map(([reason, n]) => `${count(n)} · ${evidenceReason(reason)}`).join(' ') || 'None observed'],
+    ['Latest publication', published],
     ['Local census read', time]
   ];
 }
@@ -33,7 +37,7 @@ export function mountFeeCensus(root, exportButton) {
     if (pending) return;
     pending = true;
     try {
-      const response = await fetch('/api/comparison-current/fee-coverage', {
+      const response = await fetch('/api/comparison-current/fee-coverage?phase=pregame', {
         cache:'no-store', signal:AbortSignal.timeout(5000)
       });
       if (!response.ok) throw Error('Unavailable');

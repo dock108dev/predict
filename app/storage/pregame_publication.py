@@ -1,19 +1,41 @@
 """Read the committed economics against the current sporting schedule."""
 
+from datetime import timedelta
+
 from app.comparison.game_phase import scheduled_phase, sporting_clock
+from app.comparison.source_clock import CURRENT_DESK_MAX_AGE_SECONDS
 from app.storage.store import stamp
-from .ordinary_projection import event_owners, event_signature, publication_runtime
+from .ordinary_projection import event_owners, event_signature, publication_runtime, source_allowed
 
 
-def occurrence_rows(rows, selected):
+def occurrence_rows(rows, selected, *, possible_peers=False):
     """Keep schedule witnesses from every source in a verified occurrence."""
     ids = {row['id'] for row in selected}
     occurrences = {occurrence for row in selected
                    if (occurrence := row['current_authority'].get('occurrence_id'))}
-    if not occurrences:
+    # The display can reconcile separate published occurrence keys using
+    # independent source facts. Supply the same-start candidates on Open Game.
+    slots = {(row['league'], stamp(row['start_at'])) for row in selected} if possible_peers else set()
+    if not occurrences and not slots:
         return selected
     return [row for row in rows if row['id'] in ids
-            or row['current_authority'].get('occurrence_id') in occurrences]
+            or row['current_authority'].get('occurrence_id') in occurrences
+            or (row['league'], stamp(row['start_at'])) in slots]
+
+
+def feed_available(owner, states, provider, venue, league):
+    return (owner.get('healthy') and owner.get('active') and not owner.get('global_stopped')
+            and not {provider, venue}.intersection(owner.get('paused_sources', ()))
+            and source_allowed(states.get(provider, states.get(venue, {})), league))
+
+
+def quote_freshness(row, price, owner, states, provider, at):
+    times = row.get('times') or {}
+    clock = price.get('clock_at') or times.get('source_at')
+    if not clock:
+        return 'retained' if not feed_available(owner, states, provider, row['venue'], row['league']) else 'unknown'
+    fresh = at - timedelta(seconds=CURRENT_DESK_MAX_AGE_SECONDS) <= stamp(clock) <= at
+    return 'fresh' if fresh and feed_available(owner, states, provider, row['venue'], row['league']) else 'retained'
 
 
 def project(db, result, owner, states, *, at, epoch, withdrawn):
@@ -63,13 +85,16 @@ def project(db, result, owner, states, *, at, epoch, withdrawn):
                 or set(price.get('reasons', ())) - {'source_expired'} or not price.get('expected')):
             continue
         row = dict(original, start_at=start, price_current=True, posted_price=True, game_state='scheduled',
-                   game_state_reason=None, game_state_basis=phase.get('basis'), current_reasons=[])
+                   game_state_reason=None, game_state_basis=phase.get('basis'), current_reasons=[],
+                   quote_freshness=quote_freshness(original, price, owner, states, key[0], at))
         authority = original['current_authority']
         row['current_authority'] = dict(authority, start_at=start,
             price=dict(price, current_until=start, lifecycle=phase),
             references=[dict(ref, current_until=start) for ref in authority['references']])
         baseline = row.get('sportsbook_baseline')
         if baseline:
+            provider = baseline.get('source') or 'sportsgameodds'
+            row['reference_feed_available'] = bool(feed_available(owner, states, provider, provider, row['league']))
             row['sportsbook_baseline'] = dict(baseline, current_until=start)
             row['sportsbook_return_percent'] = baseline['return_percent']
         starts.setdefault(row['game_key'], set()).add(start)
@@ -84,9 +109,13 @@ def project(db, result, owner, states, *, at, epoch, withdrawn):
     games = [dict(game, start_at=next(iter(times))) if len(times) == 1 else game
              for game in result['games'] if (times := starts.get(game['game_key']))]
     runtime = publication_runtime(owner)
+    fresh_count = sum(row['quote_freshness'] == 'fresh' for row in rows)
     publication = dict(result['publication'], read_at=at.isoformat(), sources=states,
-        data_runtime=runtime, current_prices=len(rows), retained_prices=0,
+        data_runtime=runtime, current_prices=fresh_count,
+        retained_prices=sum(row['quote_freshness'] == 'retained' for row in rows),
+        posted_prices=len(rows),
         state='held' if runtime['stopped'] or runtime['paused_sources'] else
         'ready' if result['publication']['finance'] == 'ready' else 'partial')
     return dict(result, rows=rows, pairs=pairs, games=games, publication=publication,
+                desk_event_facts=events,
                 pregame_withdrawals={key: reason for key, reason in withdrawals.items() if key not in starts})

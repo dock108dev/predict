@@ -90,7 +90,9 @@ class TradeDesk(TestCase):
                              cost_per_normal_claim='100/199', game_state='scheduled',
                              trade_fee=dict(available=False))
         proof = before_fee_pair(left, right, 'spread')
-        pair = dict(left, id='pair', legs=['left', 'right'], before_fees=proof, evidence_result_id=None)
+        pair = dict(left, id='pair', legs=['left', 'right'], before_fees=proof, evidence_result_id=None,
+                    default_funding_result=evaluate_arb(proof, [left, right], DEFAULT_FUNDING),
+                    default_funding_fee_identity=[hashed(row['trade_fee']) for row in (left, right)])
         data = dict(result(left, right), captured_at='2026-11-08T00:00:00Z')
         opts = ('arbs', None, 0, 25)
         packet = page(data, {'summary':'1'}, opts, captured_pairs=[pair], policy='policy', published_only=True)
@@ -239,6 +241,129 @@ class TradeDesk(TestCase):
         self.assertNotIn('price_preview', view)
         self.assertIsNotNone(view['calculation_reason'])
         self.assertEqual(page(data, dict(query, positive='on'), ('ev', None, 0, 25))['rows'], [])
+
+    def test_published_michigan_sources_use_one_occurrence_and_one_main_line(self):
+        from app.collection.sportsgameodds_current_rows import event_record
+        from app.normalization.college_registry import sgo_registry
+        from app.storage.pregame_publication import occurrence_rows
+        from app.storage.schedule_metadata import VERSION
+
+        start, received = '2026-11-17T23:00:00Z', '2026-11-13T05:09:31Z'
+        sgo_id, native_id = 'qNBU3JElEnRTDDl7qgGR', '229334'
+        teams = dict(home=dict(name='Western Michigan'), away=dict(name='Eastern Michigan'))
+        raw = dict(event_id=sgo_id, league='NCAAF', teams=teams, starts_at=start, status={})
+        sgo = event_record(raw, 'a' * 64, received, sgo_registry())
+        self.assertEqual((sgo['away'], sgo['home']), ('NCAAF:NCAA204', 'NCAAF:NCAA774'))
+
+        def participants(event):
+            return [dict(id=event[role], name=team['name'], role=role) for role, team in teams.items()]
+
+        schedule = dict(version=VERSION, native_event_id=native_id, authority=['polymarket_us', 'event', native_id],
+                        start=start, received_at=received, proofs=[dict(
+                            body_sha256='b' * 64, path='/v1/events/229334', received_at=received)])
+        native = dict(sgo, id=native_id, schedule_metadata=dict(schedule, revision=hashed(schedule)),
+                      source_participant_roles={role: sgo[role] for role in teams})
+        # Retained SGO member used provider-local team IDs before the alias fix.
+        local_roles = {role: f'sportsgameodds:NCAAF:{sgo_id}:{role}' for role in teams}
+        sgo = dict(sgo, **local_roles, participants={t['name']: local_roles[role] for role, t in teams.items()})
+        facts = {('sportsgameodds', sgo_id): sgo, ('polymarket_us', native_id): native}
+        games = [dict(game_key=key, league='NCAAF', start_at=start, title='Eastern Michigan vs. Western Michigan',
+                      participants=participants(event)) for key, event in [('aggregate', sgo), ('native', native)]]
+
+        rows = []
+        for (provider, event_id), event in facts.items():
+            aggregate = provider == 'sportsgameodds'
+            for role in ('home', 'away'):
+                line = ('-' if role == 'home' else '') + ('13.5' if aggregate else '6.5')
+                row = quote(provider + role, 'novig' if aggregate else provider)
+                price = '-133' if aggregate else '-9900'
+                row.update(league='NCAAF', start_at=start, game_state='scheduled', posted_price=True,
+                           game_key='aggregate' if aggregate else 'native', game_title=games[0]['title'],
+                           market=dict(market='spread', period='full_game', line=line.lstrip('-')),
+                           selection=dict(participant=event[role], predicate='cover', signed_line=line),
+                           source=dict(provider=provider, native_event_id=event_id,
+                                       native_market_id='novig-main' if aggregate else '2467167',
+                                       native_outcome_id=role),
+                           original=dict(value=price, units='american_odds', payout='1'))
+                rows.append(row)
+
+        data = dict(result(*rows), games=games)
+        data['publication']['read_at'] = '2026-11-16T23:25:48Z'
+        query = dict(layout='desk', phase='pregame', basis='sportsbooks', summary='1', lines='main')
+
+        def read(q, *, rows=rows, events=facts):
+            return page(dict(data, rows=rows), dict(query, **q), ('ev', None, 0, 12), published_only=True,
+                        event_facts=events)
+
+        def lines(packet):
+            return {row['offers'][0]['selection']['signed_line'] for row in packet['rows']}
+
+        for view in ('browse_odds', 'ranked'):
+            default = read({view: '1'})
+            self.assertEqual(default['total'], 1)
+            self.assertEqual(lines(default), {'-13.5', '13.5'})
+            all_lines = read({view: '1', 'lines': 'all'})
+            self.assertEqual(all_lines['total'], 1)
+            self.assertEqual(lines(all_lines), {'-13.5', '13.5', '-6.5', '6.5'})
+            self.assertEqual({entry['line_role'] for entry in all_lines['rows']}, {'main', 'alternate'})
+
+        exact = next(group for group in read({'browse_odds': '1', 'lines': 'all'})['rows']
+                     if group['line_role'] == 'alternate')
+        selected_rows = occurrence_rows(rows, rows[2:], possible_peers=True)
+        self.assertEqual(len(selected_rows), 4)
+        linked = read(dict(browse_odds='1', game_key='native', line=exact['id']), rows=selected_rows)
+        self.assertEqual(linked['selected_line_id'], exact['id'])
+        self.assertIn(exact['id'], {row['id'] for row in linked['rows']})
+        filtered = read(dict(browse_odds='1', venue='polymarket_us'))
+        self.assertEqual(lines(filtered), {'-13.5', '13.5'})
+        self.assertTrue(all(offer['venue'] != 'polymarket_us' for group in filtered['rows'] for offer in group['offers']))
+        unknown = read({'browse_odds': '1'}, rows=rows[2:])
+        self.assertEqual({entry['line_role'] for entry in unknown['rows']}, {'unknown'})
+
+        conflict = dict(facts)
+        conflict['polymarket_us', native_id] = dict(native, source_participant_roles={'home': native['away'],
+                                                                                    'away': native['home']})
+        separate = read({'browse_odds': '1'}, events=conflict)
+        self.assertEqual(separate['total'], 2)
+        self.assertEqual({entry['game_identity_status'] for entry in separate['rows']}, {'source_listing_unverified'})
+
+    def test_committed_freshness_and_feed_outage_do_not_change_pregame_economics(self):
+        from app.storage.pregame_publication import project as pregame
+
+        at = stamp('2026-11-16T23:25:48Z')
+        start = '2026-11-17T01:00:00Z'
+        clock = '2026-11-13T05:09:08Z'
+        baseline = dict(book='fanduel', fair_decimal_odds='2', return_percent='3',
+                        prices=[dict(price_american='-110', source_at=clock)] * 2)
+        price = dict(expected=['prior-economics'], clock_at=clock, lifecycle={'state': 'scheduled'})
+        row = dict(quote('retained', 'novig'), start_at=start, current_authority=dict(price=price, references=[]),
+                   times=dict(source_at=clock, received_at='2026-11-13T05:10:00Z'), sportsbook_baseline=baseline,
+                   source=dict(provider='sportsgameodds', native_event_id='schedule'))
+        data = dict(result(row), pairs=[], games=[], publication=dict(epoch='epoch', finance='ready'))
+        owner = dict(healthy=True, active=True)
+        states = dict(sportsgameodds={'state': 'available'})
+
+        def read(now, runtime, events=None):
+            with patch('app.storage.pregame_publication.event_owners', return_value=events or {}):
+                return pregame(None, data, runtime, states, at=now, epoch='epoch', withdrawn={})
+
+        before = read(stamp('2026-11-13T05:12:00Z'), owner)
+        self.assertEqual(before['rows'][0]['quote_freshness'], 'fresh')
+        outage = read(at, dict(owner, healthy=False))
+        kept, = outage['rows']
+        self.assertEqual(kept['quote_freshness'], 'retained')
+        self.assertEqual(kept['times'], row['times'])
+        self.assertTrue(kept['price_current'])
+        self.assertEqual(outage['publication']['retained_prices'], 1)
+        self.assertEqual(outage['publication']['current_prices'], 0)
+        view = page(outage, dict(layout='desk', browse_odds='1', phase='pregame', summary='1', lines='main',
+                                 basis='sportsbooks'), ('ev', None, 0, 12), published_only=True)
+        offer, = view['rows'][0]['offers']
+        self.assertEqual((offer['source_clock_at'], offer['quote_freshness'], offer['value']), (clock, 'retained', '3'))
+        self.assertFalse(offer['reference_feed_available'])
+        self.assertEqual(read(stamp(start), owner)['rows'], [])
+        self.assertEqual(read(at, owner, {('sportsgameodds', 'schedule'): dict(scheduled_start=start,
+            status={'status': 'cancelled'})})['rows'], [])
 
     def test_three_current_sites_per_exact_outcome_before_rank_and_pagination(self):
         def spread(id_, venue, line, value, *, away=False, current=True):

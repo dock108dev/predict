@@ -325,7 +325,7 @@ def estimate(cost, observations, occurrence, key, *, at):
         return None
     book, probability = choose_book(candidates)
     _, selected, pair = candidates[book]
-    prices = {name: [{field: item[field] for field in ('price_american', 'source_at', 'received_at', 'side', 'line')
+    prices = {name: [{field: item[field] for field in ('price_american', 'source_at', 'received_at', 'side', 'line', 'alternate')
                       if field in item}
                      for item in value[2]] for name, value in candidates.items()}
     deadline = start

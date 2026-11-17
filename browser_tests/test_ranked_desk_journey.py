@@ -473,8 +473,8 @@ def test_ranked_and_browse_journey(width, tmp_path):
             ).to_be_visible()
             tab.get_by_role("button", name="Clear Spread filter").click()
             tab.locator('[data-calculation-id="pmus-denver"]').press("Enter")
-            expect(tab.locator("#trade [data-inspection-ev]")).to_have_text(
-                "Current at inspection"
+            expect(tab.locator("#trade [data-inspection-ev]")).to_contain_text(
+                "Published estimate"
             )
             withdraw_selection = True
             with tab.expect_response(
