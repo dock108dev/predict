@@ -1,7 +1,9 @@
 """Exact shared current/zero matrix on disposable PostgreSQL; no providers."""
 from copy import deepcopy
 from datetime import timedelta
+from functools import partial
 from app.collection.current_confirmation import Confirmations
+from app.storage import ordinary_publication
 from app.storage.coverage_latest import reconcile,read
 from app.storage.current_rows import CurrentRowStore
 from tests.test_broad_native_matrix_sql import NativeMatrixFixture
@@ -66,7 +68,9 @@ class SharedCurrentComparisonsSQL(NativeMatrixFixture):
 
     async def test_changed_six_league_inputs_do_not_rehydrate_quiet_slate(self):
         rows,books=await captured_core_matrix(self.at);self.admit(rows,books)
-        self.publish()
+        # Exhaust the wall-clock budget so each turn can finish only its reserved finance job.
+        with patch.object(ordinary_publication, 'turn', partial(ordinary_publication.turn, turn_seconds=0)):
+            self.publish()
         def components():
             with self.connect() as db:
                 return {r['id']: r['result_id'] for r in db.execute("SELECT id,result_id FROM comparison_publication WHERE kind='component'")}

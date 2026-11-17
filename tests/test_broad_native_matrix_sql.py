@@ -60,12 +60,15 @@ class NativeMatrixFixture(IsolatedAsyncioTestCase):
 
     def publish(self):
         with self.connect() as db:
-            for _ in range(5):
+            result = ordinary.turn(db)
+            self.assertFalse(result['errors'], result)
+            # The fixture holds inputs and the clock fixed. Each successful
+            # turn must shrink the queue, even when its budget fits one job.
+            while remaining := result['remaining_components']:
                 result = ordinary.turn(db)
-                if result['remaining_components'] == 0:
-                    break
-        self.assertEqual(result['remaining_components'], 0, result)
-        return result
+                self.assertFalse(result['errors'], result)
+                self.assertLess(result['remaining_components'], remaining, result)
+            return result
 
 
 class BroadNativeMatrixSQL(NativeMatrixFixture):
