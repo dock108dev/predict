@@ -66,13 +66,18 @@ class SourceMappings(TestCase):
         event=dict(id='authored-ncaaf',competition='NCAAF',identity='resolved',season='2026',stage='regular_season',
             participants={'Appalachian State University':'NCAAF:NCAA27','James Madison University':'NCAAF:NCAA317'},
             home='NCAAF:NCAA27',away='NCAAF:NCAA317',scheduled_start=START)
-        native=dict(yes_sub_title='Appalachian St.',custom_strike=dict(football_team='7d548f70-b3f7-480b-9ee9-cd6b600bbffc'),
+        native=dict(ticker='authored-market',event_ticker=event['id'],
+            yes_sub_title='Appalachian St.',custom_strike=dict(football_team='7d548f70-b3f7-480b-9ee9-cd6b600bbffc'),
             rules_primary='If Appalachian St. wins the authored college football game, then the market resolves to Yes.')
         market=dict(id='authored-market',event_id=event['id'],market_type='moneyline',period='full_game',_native=native)
         value=bind(event,market,'kalshi',policy='manual-comparison-2')
         self.assertEqual(value['status'],'BOUND_RAW_PREDICATE')
         self.assertEqual([(p['participant'],p['predicate']) for p in value['predicate']],
             [('NCAAF:NCAA27','win'),('NCAAF:NCAA27','not_win')])
+        for field in ('ticker', 'event_ticker'):
+            with self.subTest(field=field):
+                other = dict(market, _native=dict(native, **{field: 'unrelated'}))
+                self.assertEqual(bind(event,other,'kalshi',policy='manual-comparison-2')['status'],'IDENTITY_BLOCKED')
         native['custom_strike']['football_team']='70ddf80a-3853-481a-9903-05200c42c955'
         self.assertEqual(bind(event,market,'kalshi',policy='manual-comparison-2')['status'],'IDENTITY_BLOCKED')
 

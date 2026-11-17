@@ -168,17 +168,19 @@ def conservative_metric(row, fee, witnesses, phase, *, source_scope=None):
         probability = Fraction(row['probability'])
         cost = Fraction(fee['evidence']['acquired_price_usd'])
         charge = Fraction(fee['trade_fee_usd'])
-        if not 0 < probability < 1 or cost != Fraction(row['cost_per_normal_claim']):
+        size = Fraction(fee['quantity'])
+        if not 0 < probability < 1 or cost != Fraction(row['cost_per_normal_claim']) or size <= 0:
             return missing
     except (KeyError, ValueError, TypeError, ArithmeticError):
         return missing
-    risk = cost + charge
+    risk = size * cost + charge
+    expected_profit = probability * size - risk
     return dict(available=True, reason=None, classification='conservative_trade_fee_estimate',
                 account_verified=False, execution_qualified=False, full_state_net_ev=False,
                 ranking_basis=RANKING_BASIS, percentage_denominator='acquisition_plus_modeled_trade_fee',
-                normalization_risk_usd=wire(risk), normal_win_receipt_usd='1',
-                win_profit_usd=wire(1-risk), loss_profit_usd=wire(-risk),
-                scenario_net_usd=wire(probability-risk), return_percent=wire(100*(probability-risk)/risk),
+                normalization_risk_usd=wire(risk), normal_win_receipt_usd=wire(size),
+                win_profit_usd=wire(size-risk), loss_profit_usd=wire(-risk),
+                scenario_net_usd=wire(expected_profit), return_percent=wire(100*expected_profit/risk),
                 selected_decisive_probability=wire(probability), expected_trade_fee_usd=wire(charge),
                 condition='Conditional on decisive settlement with the exact sportsbook reference.',
                 exclusions=['ties', 'pushes', 'voids', 'cancellations', 'multi-price fills'],

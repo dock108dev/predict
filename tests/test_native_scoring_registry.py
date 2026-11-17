@@ -100,6 +100,7 @@ class NativeScoringRegistry(TestCase):
                 event.update(identity='resolved', canonical_key=[event['scheduled_start'], sorted(event['participants'].values())],
                     _native=dict(series_ticker='KXNFLGAME'))
                 metadata = row['comparison_source_metadata'];wording = deepcopy(metadata['original_wording'])
+                wording.update(ticker=key(row)[2], event_ticker=event['id'])
                 market = dict(id=key(row)[2], event_id=event['id'], title=wording['title'],
                     market_type='moneyline', period='full_game',
                     terms=deepcopy(metadata['combined_native_binding']['original_terms']),

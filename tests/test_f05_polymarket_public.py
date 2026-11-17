@@ -196,7 +196,7 @@ def test_retained_native_long_and_short_metadata_bind_without_an_account_tier():
     ('native_value', '0.65', 'polymarket_short_acquisition_price_unbound'),
     ('is_combo', True, 'polymarket_fee_product_scope_unbound'),
     ('long', True, 'polymarket_fee_product_scope_unbound'),
-    ('minimumTradeQty', '2', 'polymarket_one_claim_quantity_unsupported'),
+    ('minimumTradeQty', '0', 'polymarket_one_claim_quantity_unsupported'),
 ])
 def test_offer_scope_fails_closed(field, value, reason):
     row = native('scheduled', 'Short')
@@ -209,9 +209,11 @@ def test_offer_scope_fails_closed(field, value, reason):
     assert not current['trade_fee']['available'] and current['trade_fee']['reason'] == reason
 
 
-@pytest.mark.parametrize('phase', ['scheduled', 'live'])
+@pytest.mark.parametrize(('phase', 'quantity', 'fee'), [
+    ('scheduled', '1', '0.02'), ('scheduled', '2', '0.04'), ('live', '1', '0.02'),
+])
 @pytest.mark.parametrize('provider', ['the_odds_api', 'sportsgameodds'])
-def test_ordinary_after_fee_ev_requires_both_current_reference_and_settlement(phase, provider, tmp_path, monkeypatch):
+def test_ordinary_after_fee_ev_requires_both_current_reference_and_settlement(phase, quantity, fee, provider, tmp_path, monkeypatch):
     import json
     from app.comparison import sgo_rule_evidence
     from app.comparison.line_reference import scoring
@@ -230,6 +232,7 @@ def test_ordinary_after_fee_ev_requires_both_current_reference_and_settlement(ph
     meta['native_market_type'] = 'basketball_team_full_game_total'
     meta['native_key'][3] = 'no'
     meta['public_retail_observation']['instrument_id'] = 'no'
+    meta['public_retail_observation']['values']['minimumTradeQty'] = quantity
     record['comparison_source_metadata'].update(meta)
 
     refs = references()
@@ -295,10 +298,16 @@ def test_ordinary_after_fee_ev_requires_both_current_reference_and_settlement(ph
 
     current = project_reference('available')
     assert current['trade_fee']['available']
+    assert (current['trade_fee']['quantity'], current['trade_fee']['trade_fee_usd']) == (quantity, fee)
     assert current['conditional_return_percent'] is None
     if provider == 'sportsgameodds':
         assert Fraction(current['gross_return_percent']) == Fraction(200, 3)
         assert Fraction(current['conservative_return_percent']) == Fraction(225, 4)
+        model = snapshots.expand_row(current)['conservative_trade_benchmark']
+        assert Fraction(model['normalization_risk_usd']) == Fraction('0.32') * Fraction(quantity)
+        assert Fraction(model['normal_win_receipt_usd']) == Fraction(quantity)
+        if phase == 'scheduled':
+            assert Fraction(current['sportsbook_after_fee_percent']) == Fraction(225, 4)
         assert {item['dependency'] for item in current['current_authority']['references']} == {
             'sgo-reference:yes:135.5', 'sgo-reference:no:135.5'}
     else:

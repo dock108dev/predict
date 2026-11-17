@@ -7,7 +7,7 @@ import hashlib
 import json
 from pathlib import Path
 import unittest
-from tests.comparison_oracles import artifact_path
+from tests.comparison_oracles import artifact_bytes
 
 from app.comparison.costs import (
     VERSION as COST_VERSION, CostRegistry, CostRequest, CostRule, CreditInputs,
@@ -98,7 +98,7 @@ class NetCostTests(unittest.TestCase):
 
     def test_accepted_oracles_are_unchanged(self):
         for ref in self.fixture["upstream_inputs"]:
-            self.assertEqual(hashlib.sha256(artifact_path(ref["path"]).read_bytes()).hexdigest(), ref["sha256"])
+            self.assertEqual(hashlib.sha256(artifact_bytes(ref["path"])).hexdigest(), ref["sha256"])
 
     def test_two_sizes_tiny_prices_and_rounding_boundaries(self):
         for vector in self.fixture["vectors"]:

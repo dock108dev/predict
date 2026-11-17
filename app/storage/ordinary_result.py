@@ -240,8 +240,9 @@ def bind(result, inputs, finance, *, load_registry):
             if standalone.get('available') and set(cashflows) <= {'at_fill_usd', 'winning_settlement_usd',
                                                                   'losing_settlement_usd'} and 'at_fill_usd' in cashflows:
                 probability = Fraction(baseline['probability'])
-                risk = price(row) + Fraction(cashflows['at_fill_usd'])
-                win = 1 - Fraction(cashflows.get('winning_settlement_usd', '0'))
+                size = Fraction(standalone['quantity']) if row['venue'] == 'polymarket_us' else 1
+                risk = size * price(row) + Fraction(cashflows['at_fill_usd'])
+                win = size - Fraction(cashflows.get('winning_settlement_usd', '0'))
                 loss = -Fraction(cashflows.get('losing_settlement_usd', '0'))
                 if risk > 0:
                     row['sportsbook_after_fee_percent'] = exact_wire(100 * ((probability * win +
