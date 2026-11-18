@@ -405,14 +405,14 @@ class ReadinessSignalsTests(unittest.TestCase):
                 )
             browser = root / "ci-browser-19-1" / "junit.xml"
             browser.write_text(
-                '<testsuite tests="1"><testcase classname="browser_tests.test_ranked_opportunities" '
-                'name="test_desk_reports_outage_without_old_quotes_then_recovers_on_refresh"><skipped/>'
+                '<testsuite tests="1"><testcase classname="browser_tests.test_pregame_current" '
+                'name="test_current_pregame_journey[1440]"><skipped/>'
                 "</testcase></testsuite>"
             )
             storage = root / "storage-19-2-2" / "junit.xml"
             storage.write_text(
                 '<testsuite tests="2"><testcase classname="tests.test_broad_native_matrix_sql.BroadNativeMatrixSQL" '
-                'name="test_desk_withholds_prices_during_sql_stall_and_reconnects"/>'
+                'name="test_current_read_failure_recovers_without_discarding_stored_values"/>'
                 '<testcase classname="tests.test_ordinary_publication_sql.OrdinarySQL" '
                 'name="test_posted_native_quote_survives_rotation_and_loses_execution_authority"><failure/>'
                 "</testcase></testsuite>"
@@ -422,7 +422,7 @@ class ReadinessSignalsTests(unittest.TestCase):
             self.assertEqual(missing["artifacts"], ["storage-19-2-2"])
             self.assertEqual(
                 missing["contracts"][
-                    "Desk withholds prices during outages and recovers"
+                    "SQL read failures recover without changing stored prices"
                 ]["status"],
                 "MISSING",
             )
@@ -442,7 +442,9 @@ class ReadinessSignalsTests(unittest.TestCase):
             self.assertEqual(result["reused_artifacts"], ["ci-browser-19-1"])
             checks = result["contracts"]
             self.assertEqual(
-                checks["Desk withholds prices during outages and recovers"]["status"],
+                checks["SQL read failures recover without changing stored prices"][
+                    "status"
+                ],
                 "SKIPPED",
             )
             self.assertEqual(
@@ -457,7 +459,7 @@ class ReadinessSignalsTests(unittest.TestCase):
             browser.write_text(browser.read_text().replace("<skipped/>", ""))
             self.assertEqual(
                 signals.build(root, root, sha, "19", "2", context)["contracts"][
-                    "Desk withholds prices during outages and recovers"
+                    "SQL read failures recover without changing stored prices"
                 ]["status"],
                 "PASS",
             )
@@ -465,7 +467,7 @@ class ReadinessSignalsTests(unittest.TestCase):
             context["inherited_attempts"] = inherited(jobs, "19", "2")
             self.assertEqual(
                 signals.build(root, root, sha, "19", "2", context)["contracts"][
-                    "Desk withholds prices during outages and recovers"
+                    "SQL read failures recover without changing stored prices"
                 ]["status"],
                 "MISSING",
             )

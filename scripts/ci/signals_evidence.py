@@ -57,16 +57,16 @@ CONTRACTS = {
             "test_sql_timeout_after_frame_retries_the_settled_page_without_another_request",
         ),
     ),
-    "Desk withholds prices during outages and recovers": (
+    "SQL read failures recover without changing stored prices": (
         (
             "storage",
             "tests.test_broad_native_matrix_sql.BroadNativeMatrixSQL",
-            "test_desk_withholds_prices_during_sql_stall_and_reconnects",
+            "test_current_read_failure_recovers_without_discarding_stored_values",
         ),
         (
             "ci-browser",
-            "browser_tests.test_ranked_opportunities",
-            "test_desk_reports_outage_without_old_quotes_then_recovers_on_refresh",
+            "browser_tests.test_pregame_current",
+            "test_current_pregame_journey",
         ),
     ),
 }

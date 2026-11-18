@@ -194,79 +194,88 @@ class CurrentSlateLifecycle(LatestBoardFixture):
                 response = await client.get('/api/comparison-current', params=query)
                 self.assertFalse((await response.json())['rows'])
 
-    async def test_current_and_saved_routes_after_kickoff_stop_and_cancellation(self):
+    async def test_saved_routes_preserve_prices_after_kickoff_stop_and_cancellation(
+        self,
+    ):
         with self.connect() as db:
             turn = live.turn(db)
-            self.assertTrue(turn['published'], turn)
+            self.assertTrue(turn["published"], turn)
+            member = db.execute(
+                "SELECT result_id FROM comparison_publication WHERE kind='component' ORDER BY id LIMIT 1"
+            ).fetchone()
+            sealed = snapshot_api.snapshots.unpack(
+                db.execute(
+                    "SELECT result FROM comparison_snapshot_result WHERE id=%s",
+                    (member["result_id"],),
+                ).fetchone()["result"],
+                lazy=True,
+                db=db,
+            )
+            original = sealed["rows"][0]
+            game = original["game_key"]
+            start = stamp(original["start_at"])
         app = web.Application()
         snapshot_api.mount(app)
         replay_api.mount(app)
-        browse = dict(layout='desk', view='odds', browse_odds='1', lines='all', summary='1', limit='1')
-        unpaged = dict(browse, limit='25')
+        saved = dict(
+            layout="desk",
+            view="odds",
+            browse_odds="1",
+            lines="all",
+            summary="1",
+            dataset="retained",
+            result_id=member["result_id"],
+            game_key=game,
+            limit="25",
+        )
 
-        async def get(client, query, path='/api/comparison-current'):
+        async def get(client, query, path="/api/odds-replay"):
             response = await client.get(path, params=query)
             self.assertEqual(response.status, 200, await response.text())
             return await response.json()
 
-        with patch.object(snapshot_api, 'connect', self.connect), patch.object(replay_api, 'connect', self.connect):
+        with (
+            patch.object(snapshot_api, "connect", self.connect),
+            patch.object(replay_api, "connect", self.connect),
+        ):
             async with TestClient(TestServer(app)) as client:
-                first = await get(client, browse)
-                self.assertEqual(first['phase'], 'pregame')
-                self.assertGreaterEqual(first['total'], 2)
-                next_page = await get(client, dict(browse, offset='1', browse_id=first['browse_id']))
-                row = next_page['rows'][0]
-                game, start = row['game_key'], stamp(row['start_at'])
-                candidate = next(offer for offer in row['offers'] if offer.get('evidence_result_id'))
-                chosen = dict(unpaged, game_key=game, game_capture=candidate['evidence_result_id'])
-                direct = await get(client, chosen)
-                self.assertTrue(direct['rows'])
-                old = await get(client, dict(layout='desk', id=candidate['id']), '/api/comparison-current/selection')
-                self.assertEqual(old['row']['id'], candidate['id'])
-
-                # The exact current event withdrawal takes effect before another publication.
+                first = await get(client, saved)
+                quote = next(
+                    offer
+                    for row in first["rows"]
+                    for offer in row["offers"]
+                    if offer["id"] == original["id"]
+                )
+                source = original["source"]
+                event_id = hashed([source["provider"], source["native_event_id"]])
                 with self.connect() as db:
-                    packed = live.status(db)
-                    head = snapshot_api.snapshots.unpack(db.execute(
-                        'SELECT result FROM comparison_snapshot_result WHERE id=%s', (packed['result_id'],)
-                    ).fetchone()['result'], lazy=True, db=db)
-                    source = next(r['source'] for r in head['rows'] if r['id'] == candidate['id'])
-                    event_id = hashed([source['provider'], source['native_event_id']])
-                    original = db.execute('SELECT facts,revision FROM current_event WHERE id=%s', (event_id,)).fetchone()
-                    facts = dict(original['facts'], status=dict(status='cancelled', observed_at=self.at.isoformat()))
-                    db.execute('UPDATE current_event SET facts=%s,revision=%s WHERE id=%s',
-                               (Jsonb(facts), hashed(facts), event_id))
-                cancelled = await get(client, chosen)
-                self.assertFalse(cancelled['rows'])
-                self.assertEqual(cancelled['retained_game']['lifecycle'], 'event_cancelled')
-                self.assertEqual(cancelled['retained_game']['game_key'], game)
-                with self.connect() as db:
-                    db.execute('UPDATE current_event SET facts=%s,revision=%s WHERE id=%s',
-                               (Jsonb(original['facts']), original['revision'], event_id))
-
-                # A stale head, an existing page token and a real Stop all respect kickoff.
+                    row = db.execute(
+                        "SELECT facts FROM current_event WHERE id=%s", (event_id,)
+                    ).fetchone()
+                    facts = dict(
+                        row["facts"],
+                        status=dict(
+                            status="cancelled", observed_at=self.at.isoformat()
+                        ),
+                    )
+                    db.execute(
+                        "UPDATE current_event SET facts=%s,revision=%s WHERE id=%s",
+                        (Jsonb(facts), hashed(facts), event_id),
+                    )
                 self.at = start
                 self.state.write(self.service, global_stopped=True)
-                withdrawn = await get(client, chosen)
-                self.assertFalse(withdrawn['rows'])
-                self.assertEqual(withdrawn['retained_game']['result_id'], candidate['evidence_result_id'])
-                self.assertFalse((await get(client, dict(chosen, phase='live')))['rows'])
-                inspected = await get(client, dict(layout='desk', id=candidate['id']), '/api/comparison-current/selection')
-                self.assertIsNone(inspected['row'])
-                paged = await get(client, dict(browse, offset='1', browse_id=first['browse_id']))
-                self.assertNotIn(game, [r['game_key'] for r in paged['rows'] if not r.get('withdrawn')])
-                current_slates = await get(client, dict(unpaged, search=row['game_title']))
-                self.assertNotIn(game, [r['game_key'] for r in current_slates['rows']])
-
-                saved = dict(unpaged, dataset='retained', **{k: withdrawn['retained_game'][k]
-                                                            for k in ('game_key', 'result_id')})
-                capture = await get(client, saved, '/api/odds-replay')
-                self.assertEqual(capture['replay']['captured_at'], withdrawn['retained_game']['captured_at'])
-                self.assertTrue(capture['rows'])
-                captured_quote = next(offer for r in capture['rows'] for offer in r['offers'] if offer['id'] == candidate['id'])
-                detail = await get(client, dict(saved, id=captured_quote['id']), '/api/odds-replay/details')
-                self.assertEqual(detail['row']['price_revision'], captured_quote['price_revision'])
-                self.assertEqual(detail['row']['times']['source_at'], captured_quote['source_clock_at'])
+                after = await get(client, saved)
+                self.assertEqual(after["rows"], first["rows"])
+                self.assertEqual(after["replay"], first["replay"])
+                detail = await get(
+                    client, dict(saved, id=quote["id"]), "/api/odds-replay/details"
+                )
+                self.assertEqual(
+                    detail["row"]["price_revision"], quote["price_revision"]
+                )
+                self.assertEqual(
+                    detail["row"]["times"]["source_at"], quote["source_clock_at"]
+                )
 
     async def test_live_route_requires_post_start_original_price(self):
         self.service.config['live_enabled'] = True

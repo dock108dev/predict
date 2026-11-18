@@ -4,7 +4,6 @@ from datetime import datetime, timedelta, timezone
 import json
 import os
 from pathlib import Path
-from threading import Event
 from time import monotonic
 from types import SimpleNamespace
 from unittest import IsolatedAsyncioTestCase, skipUnless
@@ -46,7 +45,7 @@ class NativeMatrixFixture(IsolatedAsyncioTestCase):
             status=lambda:dict(issues=[],exclusions=[],database=dict(state='available')))
         self.state=RuntimeState(self.connect)
         with self.connect() as db:
-            db.execute('TRUNCATE current_event CASCADE')
+            db.execute('TRUNCATE current_event,sgo_event_evidence,sgo_quote_revision,current_pregame_work CASCADE')
             db.execute("DELETE FROM current_row_state WHERE kind<>'epoch'")
             db.execute('TRUNCATE data_runtime,data_runtime_command,comparison_publication')
             db.execute("INSERT INTO comparison_publication(kind,id,generation,facts) VALUES('live','',0,'{}')")
@@ -72,138 +71,122 @@ class NativeMatrixFixture(IsolatedAsyncioTestCase):
 
 
 class BroadNativeMatrixSQL(NativeMatrixFixture):
-    async def test_desk_withholds_prices_during_sql_stall_and_reconnects(self):
+    def prepare_current(self):
+        from app.fees import pricing
+        from app.storage import current_pregame
+        from app.storage.store import stamp
+        from tests.test_current_pregame_sql import CurrentPregameSQL, page, AT
+        from tests.test_fee_pricing import rule
+
+        self.at = stamp(AT)
+        self.config["aggregate_provider"] = "sportsgameodds"
+        self.state.write(self.service)
+        self.enterContext(
+            patch("app.storage.current_pregame.utc", side_effect=lambda: self.at)
+        )
+        with self.connect() as db:
+            pricing.write(db, "prophetx", [rule("prophetx")])
+            CurrentPregameSQL.ingest(self, db, page())
+            current_pregame.process(db, at=self.at)
+
+    async def test_current_read_failure_recovers_without_discarding_stored_values(self):
         from app.dashboard.snapshot_api import mount
 
-        self.config['aggregate_provider'] = 'sportsgameodds'
-        self.state.write(self.service)
-        rows, books = await captured_core_matrix(self.at)
-        self.admit(rows, books)
-        self.publish()
-        query = dict(layout='desk', view='ev', browse_odds='1', summary='1',
-                     basis='before', phase='pregame', lines='all', league='NBA')
-        path = '/api/comparison-current'
-        waiting, release = Event(), Event()
-        stalled = False
+        self.prepare_current()
+        failed = False
         reads = 0
-        outage_budget = 0.1
         timings = {}
 
         def connect():
             nonlocal reads
             reads += 1
-            if stalled:
-                waiting.set()
-                if not release.wait(5):
-                    raise AssertionError('SQL read was not released')
+            if failed:
+                raise OperationalError("Authored SQL outage")
             return self.connect()
 
-        def poly(page):
-            return next(offer for row in page['rows'] for offer in row['offers']
-                        if offer['venue'] == 'polymarket_us')
-
         app = web.Application()
         mount(app)
-        with patch('app.dashboard.snapshot_api.connect', connect):
+        query = dict(layout="desk", browse_odds="1", league="NBA")
+        with patch("app.dashboard.snapshot_api.connect", connect):
             async with TestClient(TestServer(app)) as client:
-                start = monotonic()
-                response = await client.get(path, params=query)
-                self.assertEqual(response.status, 200, await response.text())
-                self.assertTrue(poly(await response.json())['current'])
-                timings['first_seconds'] = monotonic() - start
-                start = monotonic()
-                warm = await client.get(path, params=query)
-                self.assertEqual(warm.status, 200, await warm.text())
-                self.assertTrue(poly(await warm.json())['current'])
-                timings['warm_seconds'] = monotonic() - start
-                stalled = True
-                try:
-                    with patch('app.dashboard.desk_delivery.RESPONSE_SECONDS', outage_budget):
-                        outage_samples = []
-                        for _ in range(2):
-                            start = monotonic()
-                            response = await client.get(path, params=query)
-                            self.assertEqual(response.status, 503)
-                            self.assertNotIn('polymarket_us', await response.text())
-                            outage_samples.append(monotonic() - start)
-                    timings['outage_samples'] = outage_samples
-                    self.assertTrue(waiting.is_set())
-                    self.assertEqual(reads, 3)
-                finally:
-                    stalled = False
-                    release.set()
-                start = monotonic()
-                response = await client.get(path, params=query)
-                resumed = await response.json()
-                timings['resumed_seconds'] = monotonic() - start
-                self.assertTrue(poly(resumed)['current'])
+                original = None
+                for label in ("first", "warm"):
+                    start = monotonic()
+                    response = await client.get("/api/comparison-current", params=query)
+                    self.assertEqual(response.status, 200, await response.text())
+                    value = await response.json()
+                    self.assertTrue(value["rows"])
+                    self.assertTrue(
+                        all(
+                            row["source"]["provider"] == "sportsgameodds"
+                            for row in value["rows"]
+                        )
+                    )
+                    original = value["rows"]
+                    timings[label + "_seconds"] = monotonic() - start
+                failed = True
+                for _ in range(2):
+                    response = await client.get("/api/comparison-current", params=query)
+                    self.assertEqual(response.status, 503)
+                    self.assertNotIn("prophetx", await response.text())
+                failed = False
+                resumed = await client.get("/api/comparison-current", params=query)
+                self.assertEqual((await resumed.json())["rows"], original)
+                self.assertEqual(reads, 5)
+        if report := os.environ.get("PREDICT_CI_REPORT_ROOT"):
+            (Path(report) / "desk-recovery.json").write_text(
+                json.dumps(
+                    dict(fixture="current-pregame-committed-read", **timings), indent=2
+                )
+                + "\n"
+            )
 
-        restarted = web.Application()
-        mount(restarted)
-        with patch('app.dashboard.snapshot_api.connect', side_effect=OperationalError):
-            async with TestClient(TestServer(restarted)) as client:
-                start = monotonic()
-                response = await client.get(path, params=query)
-                self.assertEqual(response.status, 503)
-                self.assertNotIn('polymarket_us', await response.text())
-                timings['restart_seconds'] = monotonic() - start
-        if report := os.environ.get('PREDICT_CI_REPORT_ROOT'):
-            (Path(report) / 'desk-recovery.json').write_text(json.dumps(dict(
-                fixture='desk-polymarket-nba-v2', outage_budget_seconds=outage_budget, **timings
-            ), indent=2) + '\n')
-
-    async def test_native_selection_uses_the_committed_pregame_price(self):
+    async def test_selection_reads_committed_price_without_publication(self):
         from app.dashboard.snapshot_api import mount
+        from app.storage import current_pregame
 
-        self.config['aggregate_provider'] = 'sportsgameodds'
-        self.state.write(self.service)
-        rows, books = await captured_core_matrix(self.at)
-        self.admit(rows, books)
+        self.prepare_current()
         app = web.Application()
         mount(app)
-        query = dict(layout='desk', view='ev', browse_odds='1', summary='1',
-                     basis='before', phase='pregame', lines='all', league='NBA')
-        with patch('app.dashboard.snapshot_api.connect', self.connect):
+        query = dict(layout="desk", browse_odds="1", league="NBA")
+        with (
+            patch("app.dashboard.snapshot_api.connect", self.connect),
+            patch.object(
+                current_pregame,
+                "process",
+                side_effect=AssertionError("Read scheduled calculation"),
+            ),
+        ):
             async with TestClient(TestServer(app)) as client:
-                response = await client.get('/api/comparison-current', params=query)
+                response = await client.get("/api/comparison-current", params=query)
                 self.assertEqual(response.status, 200, await response.text())
-                page = await response.json()
-                self.assertEqual((page['state'], page['rows']), ('initializing', []))
-                self.publish()
-                response = await client.get('/api/comparison-current', params=query)
-                self.assertEqual(response.status, 200, await response.text())
-                page = await response.json()
-                quote = next(offer for row in page['rows'] for offer in row['offers'] if offer['current'])
-                selection = dict(layout='desk', basis='before', phase='pregame', id=quote['id'])
-                response = await client.get('/api/comparison-current/selection', params=selection)
-                self.assertEqual(response.status, 200, await response.text())
-                detail = await response.json()
-                self.assertEqual(detail['row']['id'], quote['id'])
-                self.assertEqual(detail['row']['original'], quote['original'])
-                self.assertEqual(detail['row']['source_clock_at'], quote['source_clock_at'])
-                self.assertEqual(detail['provider_requests'], 0)
-                response = await client.get('/api/comparison-snapshot/details', params=dict(
-                    result_id=quote['evidence_result_id'], id=quote['id']))
-                self.assertEqual(response.status, 200, await response.text())
-                captured = (await response.json())['row']
-                self.assertEqual(captured['original'], quote['original'])
-                self.assertEqual(captured['times']['source_at'], quote['source_clock_at'])
-
-                previous = dict(selection, id='prior-sealed-offer', quote_key=quote['desk_quote_key'])
-                response = await client.get('/api/comparison-current/selection', params=previous)
-                self.assertEqual(response.status, 200, await response.text())
-                adopted = await response.json()
-                self.assertEqual(adopted['row']['id'], quote['id'])
-                self.assertEqual(adopted['row']['desk_quote_key'], quote['desk_quote_key'])
-
-                # Pausing collection leaves the committed pregame price available.
-                self.state.write(self.service, paused_sources=[quote['venue']])
-                for params in (selection, previous):
-                    paused = await client.get('/api/comparison-current/selection', params=params)
-                    self.assertEqual((await paused.json())['row']['id'], quote['id'])
-                selection['id'] = 'native-current:absent-contract'
-                missing = await client.get('/api/comparison-current/selection', params=selection)
-                self.assertIsNone((await missing.json())['row'])
+                quote = (await response.json())["rows"][0]
+                selection = dict(layout="desk", id=quote["id"])
+                for params in (selection, dict(layout="desk", quote_key=quote["id"])):
+                    response = await client.get(
+                        "/api/comparison-current/selection", params=params
+                    )
+                    self.assertEqual(response.status, 200, await response.text())
+                    detail = await response.json()
+                    self.assertEqual(detail["rows"], [quote])
+                    self.assertEqual(detail["provider_requests"], 0)
+                    self.assertEqual(detail["scheduled_calculations"], 0)
+                retired = await client.get(
+                    "/api/comparison-current", params=dict(query, basis="before")
+                )
+                self.assertEqual(retired.status, 410)
+                self.state.write(
+                    self.service, paused_sources=["sportsgameodds"], global_stopped=True
+                )
+                paused = await client.get(
+                    "/api/comparison-current/selection", params=selection
+                )
+                self.assertEqual((await paused.json())["rows"], [quote])
+                missing = await client.get(
+                    "/api/comparison-current/selection",
+                    params=dict(layout="desk", id="absent-contract"),
+                )
+                self.assertEqual((await missing.json())["rows"], [])
 
     async def read_matrix(self,expected_cells,expected_prices):
         from app.dashboard.comparison_board_api import mount
@@ -226,8 +209,7 @@ class BroadNativeMatrixSQL(NativeMatrixFixture):
                     for quote in group['quotes']]
 
         def offers(group):
-            return group['offers'] if full_game else [
-                dict(quote, current=quote['price_current']) for quote in snapshot_offers(group)]
+            return [dict(quote, current=quote['price_current']) for quote in snapshot_offers(group)]
 
         def clocks(quotes):
             return {q['id']:(q['source_clock_at'],q['received_at'],q['confirmed_at']) for q in quotes}
@@ -235,14 +217,19 @@ class BroadNativeMatrixSQL(NativeMatrixFixture):
         with patch('app.dashboard.comparison_board_api.connect',side_effect=self.connect),\
                 patch('app.dashboard.snapshot_api.connect',side_effect=self.connect):
             async with TestClient(TestServer(app)) as client:
-                query=dict(view='odds',layout='desk',browse_odds='1',last_known='1',limit='50')
-                if not full_game:
-                    desk = await client.get('/api/comparison-current', params=query)
-                    self.assertEqual(desk.status, 200, await desk.text())
-                    self.assertEqual((await desk.json())['rows'], [])
-                    # Partial-period representations still publish and retain
-                    # their exact clocks on the ordinary Odds board.
-                    query = dict(view='odds', group='outcome', limit='50')
+                # The source matrix has no complete sportsbook references.
+                # Its original quotes remain available to research and replay.
+                from app.storage import current_pregame
+
+                with self.connect() as db:
+                    current_pregame.process(db, at=self.at)
+                desk = await client.get(
+                    "/api/comparison-current",
+                    params=dict(layout="desk", browse_odds="1"),
+                )
+                self.assertEqual(desk.status, 200, await desk.text())
+                self.assertEqual((await desk.json())["rows"], [])
+                query = dict(view="odds", group="outcome", limit="50")
                 result=await client.get('/api/comparison-current',params=query)
                 self.assertEqual(result.status,200,await result.text());page=await result.json()
                 self.assertEqual(page['provider_requests'],0)

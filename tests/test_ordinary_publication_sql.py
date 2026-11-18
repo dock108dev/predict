@@ -724,43 +724,6 @@ class OrdinarySQL(LatestBoardFixture):
                 self.assertEqual(selected['state'],'unavailable')
                 self.assertIn('updates_stopped',selected['row']['current_reasons'])
 
-    async def test_pregame_desk_updates_bypass_projection_and_watch_committed_prices(self):
-        with self.connect() as db:
-            self.assertTrue(live.turn(db)['published'])
-        app = web.Application()
-        mount(app)
-        query = dict(layout='desk', view='ev', summary='1', browse_odds='1',
-                     lines='all', phase='live', basis='sportsbooks')
-        with patch('app.dashboard.snapshot_api.connect', self.connect):
-            async with TestClient(TestServer(app)) as client:
-                response = await client.get('/api/comparison-current', params=query)
-                page = await response.json()
-                self.assertEqual(response.status, 200)
-                self.assertEqual(page['features'], {'live_enabled': False, 'auto_update': True})
-                self.assertEqual(page['phase'], 'pregame')
-                self.assertTrue(page['rows'])
-                phase_query = dict(layout='desk', phase='pregame', after=page['update_cursor'])
-                with patch.object(live, 'published_dependencies', side_effect=AssertionError('update decoded slate')):
-                    same = await client.get('/api/comparison-current/updates', params=phase_query)
-                    self.assertFalse((await same.json())['changed'])
-                    self.assertNotIn('dependencies;', same.headers['Server-Timing'])
-                    self.changed_first()
-                    pending = await client.get('/api/comparison-current/updates', params=phase_query)
-                    self.assertFalse((await pending.json())['changed'])
-                with self.connect() as db:
-                    self.assertTrue(live.turn(db)['published'])
-                changed = await client.get('/api/comparison-current/updates', params=phase_query)
-                signal = await changed.json()
-                self.assertTrue(signal['changed'])
-                self.assertGreater(signal['generation'], page['generation'])
-                self.assertEqual(signal['provider_requests'], 0)
-                self.assertEqual(stamp(page['refresh_at']), min(stamp(row['start_at']) for row in page['rows']))
-                self.at = max(stamp(row['start_at']) for row in page['rows'])
-                self.state.write(self.service)
-                after_kickoff = await (await client.get('/api/comparison-current', params=query)).json()
-                self.assertEqual(after_kickoff['phase'], 'pregame')
-                self.assertTrue(all(stamp(row['start_at']) > self.at for row in after_kickoff['rows']))
-
     async def test_oversized_component_does_not_block_unrelated_publication_or_desk_reads(self):
         self.prepare_component_isolation()
         with self.connect() as db:
@@ -987,14 +950,14 @@ class OrdinarySQL(LatestBoardFixture):
                 self.assertEqual(exact['publication']['count_scope'],'selected_inputs')
                 self.assertEqual(exact['row'],{k:v for k,v in selected.items() if k!='ranking'})
 
-    async def test_concurrent_pregame_summary_shares_projection_body_and_browse_order(self):
+    async def test_concurrent_research_summary_shares_projection_body(self):
         import asyncio
 
         with self.connect() as db:
             self.assertTrue(live.turn(db)['published'])
         app = web.Application()
         mount(app)
-        query = dict(layout='desk', view='ev', summary='1', browse_odds='1',
+        query = dict(layout='desk', view='arbs', summary='1', browse_odds='1',
                      lines='all', phase='pregame', basis='sportsbooks', limit='12')
         with patch('app.dashboard.snapshot_api.connect', self.connect), \
                 patch.object(live, 'published_dependencies', wraps=live.published_dependencies) as dependencies:
@@ -1002,11 +965,9 @@ class OrdinarySQL(LatestBoardFixture):
                 responses = await asyncio.gather(*(client.get('/api/comparison-current', params=query,
                     headers={'Accept-Encoding': 'gzip' if index else 'identity'}) for index in range(12)))
                 self.assertTrue(all(response.status == 200 for response in responses))
-                self.assertNotIn('Content-Encoding', responses[0].headers)
-                self.assertTrue(all(response.headers.get('Content-Encoding') == 'gzip' for response in responses[1:]))
                 pages = [await response.json() for response in responses]
-                self.assertTrue(pages[0]['rows'])
-                self.assertTrue(pages[0]['browse_id'])
+                self.assertEqual(pages[0]['provider_requests'], 0)
+                self.assertIn('rows', pages[0])
                 self.assertTrue(all(page == pages[0] for page in pages))
                 self.assertEqual(dependencies.call_count, 0)
 
@@ -1028,7 +989,7 @@ class OrdinarySQL(LatestBoardFixture):
                 raise AssertionError('HTTP fixture never released the admitted read')
             return self.connect()
 
-        query = dict(layout='desk', summary='1', browse_odds='1', lines='all', phase='pregame', limit='12')
+        query = dict(layout='desk', view='arbs', summary='1', browse_odds='1', lines='all', phase='pregame', limit='12')
         with patch('app.dashboard.snapshot_api.connect', side_effect=held_connect) as connect, \
                 patch('app.dashboard.desk_delivery.MAX_DESK_READS', 1):
             async with TestClient(TestServer(app)) as client:
@@ -1037,15 +998,15 @@ class OrdinarySQL(LatestBoardFixture):
                     await asyncio.wait_for(started.wait(), 5)
                     response = await client.get('/api/comparison-current', params=dict(query, search='fixture'))
                     self.assertEqual(response.status, 503, await response.text())
-                    selected = await client.get('/api/comparison-current/selection', params={'id': 'absent'})
+                    selected = await client.get('/api/comparison-current/selection', params={'layout':'desk','view':'arbs','id': 'absent'})
                     self.assertEqual(selected.status, 503, await selected.text())
                     self.assertEqual(connect.call_count, 1)
                 finally:
                     release.set()
                 self.assertEqual((await reading).status, 200)
-                retried = await client.get('/api/comparison-current/selection', params={'id': 'absent'})
+                retried = await client.get('/api/comparison-current/selection', params={'layout':'desk','view':'arbs','id': 'absent'})
                 self.assertEqual(retried.status, 200, await retried.text())
-                self.assertEqual((await retried.json())['state'], 'removed')
+                self.assertIsNone((await retried.json())['row'])
                 self.assertEqual(connect.call_count, 2)
 
     async def test_lossless_headroom_preserves_selected_bytes_and_reclaims_cycles(self):

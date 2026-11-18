@@ -140,6 +140,73 @@ class CurrentPregameSQL(LatestBoardFixture):
                 len(records),
             )
 
+    async def test_http_updates_watch_committed_prices_without_publication(self):
+        from aiohttp import web
+        from aiohttp.test_utils import TestClient, TestServer
+        from app.dashboard import snapshot_api
+
+        with self.connect() as db:
+            data = page()
+            self.ingest(db, data)
+            self.process(db)
+        app = web.Application()
+        snapshot_api.mount(app)
+        with (
+            patch.object(snapshot_api, "connect", self.connect),
+            patch.object(board, "utc", return_value=stamp(AT)),
+        ):
+            async with TestClient(TestServer(app)) as client:
+                query = dict(layout="desk", browse_odds="1")
+                first = await (
+                    await client.get("/api/comparison-current", params=query)
+                ).json()
+                self.assertTrue(first["rows"])
+                update_query = dict(layout="desk", after=first["cursor"])
+                with patch(
+                    "app.storage.ordinary_publication.published_dependencies",
+                    side_effect=AssertionError("Update decoded publication"),
+                ):
+                    same = await (
+                        await client.get(
+                            "/api/comparison-current/updates", params=update_query
+                        )
+                    ).json()
+                    self.assertFalse(same["changed"])
+                    changed = deepcopy(data)
+                    for odd in changed["data"][0]["odds"].values():
+                        odd["byBookmaker"]["prophetx"]["odds"] = "+130"
+                        odd["byBookmaker"]["prophetx"]["lastUpdatedAt"] = (
+                            "2026-11-17T19:59:59Z"
+                        )
+                    with self.connect() as db:
+                        self.ingest(db, changed)
+                    pending = await (
+                        await client.get("/api/comparison-current", params=query)
+                    ).json()
+                    self.assertEqual(pending["rows"], first["rows"])
+                    with self.connect() as db:
+                        self.process(db)
+                    signal = await (
+                        await client.get(
+                            "/api/comparison-current/updates", params=update_query
+                        )
+                    ).json()
+                    self.assertTrue(signal["changed"])
+                    self.assertEqual(signal["scheduled_calculations"], 0)
+                    latest = await (
+                        await client.get("/api/comparison-current", params=query)
+                    ).json()
+                    self.assertTrue(
+                        any(row["posted"]["value"] == "+130" for row in latest["rows"])
+                    )
+                with patch.object(
+                    board, "utc", return_value=stamp(first["rows"][0]["kickoff"])
+                ):
+                    kicked_off = await (
+                        await client.get("/api/comparison-current", params=query)
+                    ).json()
+                    self.assertEqual(kicked_off["rows"], [])
+
     async def test_http_health_checks_supported_sql_without_calculation(self):
         from aiohttp import web
         from aiohttp.test_utils import TestClient, TestServer
@@ -197,6 +264,22 @@ class CurrentPregameSQL(LatestBoardFixture):
             self.ingest(db, data)
             self.process(db)
             row = board.read(db, {}, at=stamp(AT))["rows"][0]
+            event = db.execute(
+                "SELECT e.id,e.facts FROM current_event e JOIN current_contract c ON c.event_id=e.id WHERE c.id=%s",
+                (row["id"],),
+            ).fetchone()
+            from psycopg.types.json import Jsonb
+
+            cancelled = dict(event["facts"], status=dict(status="cancelled"))
+            db.execute(
+                "UPDATE current_event SET facts=%s WHERE id=%s",
+                (Jsonb(cancelled), event["id"]),
+            )
+            self.assertEqual(board.read(db, {}, at=stamp(AT))["total"], 0)
+            db.execute(
+                "UPDATE current_event SET facts=%s WHERE id=%s",
+                (Jsonb(event["facts"]), event["id"]),
+            )
             db.execute(
                 "UPDATE sgo_quote_revision SET facts=jsonb_set(facts,'{available}','false') WHERE is_current AND bookmaker_id='fanduel'"
             )
