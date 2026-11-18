@@ -20,7 +20,7 @@ difference in account-wide usage does not identify which request consumed it.
 Use attributable provider evidence to reconcile an individual charge.
 [Provider usage endpoint](https://sportsgameodds.com/docs/endpoints/getUsageData)
 
-The provider exempts `/account/usage` from its rate limits. Balance reads do not
+The worker treats `/account/usage` as rate-exempt. Balance reads do not
 consume a local paid-request slot; event requests still reserve their durable
 rate slot and object allowance before dispatch. Existing request history and
 unresolved exposure are preserved.
@@ -51,9 +51,9 @@ when no game is due. Games inside the 24-hour pregame window take priority
 between discovery pages. Discovery retains its cursor and budget guards.
 
 The planner forecasts the next 24 hours through each game's time bands, ending
-pregame polling at kickoff. The owner's requested policy is one hour inside
-24 hours, then one minute inside the final 30 minutes. The minute cadence is a
-measurement trial even though Rookie advertises three-minute data updates.
+pregame polling at kickoff. The target policy is one hour inside
+24 hours, then one minute inside the final 30 minutes. The minute cadence is measured for information gain; provider prices may
+change less often than polling.
 It slows distant repeats first. If the requested schedule cannot fit, it slows
 early repeat polls before stretching the late cadence in 30-second steps;
 `budget_stretched` distinguishes that selected schedule from the requested one.

@@ -8,9 +8,9 @@ from tempfile import TemporaryDirectory
 from pathlib import Path
 from fractions import Fraction
 from unittest import TestCase
-from unittest.mock import patch
+from unittest.mock import patch, Mock
 
-from app.dashboard.bet_journal import Journal, Conflict
+from app.dashboard.bet_journal import Journal, Conflict, digest
 from browser_tests.test_pregame_current import offer
 
 
@@ -24,6 +24,16 @@ class PersonalJournal(TestCase):
 
     def state(self, **fields):
         return dict(revision=1, decision="saved", notes="", trade=None, **fields)
+
+    def test_permission_failure_closes_the_opened_connection(self):
+        connection = Mock()
+        with (
+            patch("sqlite3.connect", return_value=connection),
+            patch("os.chmod", side_effect=PermissionError("fixture permissions")),
+        ):
+            with self.assertRaises(PermissionError):
+                self.journal.status()
+        connection.close.assert_called_once()
 
     def test_original_and_corrections_survive_reopen_and_source_socket_change(self):
         original = deepcopy(self.row)
@@ -58,6 +68,33 @@ class PersonalJournal(TestCase):
         with self.assertRaises(Conflict):
             self.journal.update(key, dict(revision=1, notes="Old tab"))
         self.assertEqual(self.journal.get(key)["entry"]["notes"], "First correction")
+
+    def test_manual_save_ignores_ranking_view_but_keeps_material_quote_changes(self):
+        self.row["ranking"] = dict(method="growth", value="1.234")
+        key = self.journal.observe("ev", self.row, manual=True)
+        other = dict(deepcopy(self.row), ranking=dict(method="ev", value="8.80"))
+        self.assertEqual(key, self.journal.observe("ev", other, manual=True))
+        self.assertEqual(self.journal.get(key)["entry"]["snapshot"], self.row)
+        other["posted"]["value"] = "+130"
+        self.assertNotEqual(key, self.journal.observe("ev", other, manual=True))
+        typed = deepcopy(self.row)
+        typed["main"] = 1  # JSON number is not the original boolean.
+        self.assertNotEqual(key, self.journal.observe("ev", typed, manual=True))
+
+    def test_legacy_ranked_save_keeps_its_id_and_corrections(self):
+        self.row["ranking"] = dict(method="growth", value="1.234")
+        key = self.journal.observe("ev", self.row, manual=True)
+        self.journal.update(key, dict(revision=1, notes="Keep this correction"))
+        legacy = digest(["browser_snapshot", "ev", self.row])
+        with self.journal.database() as db:
+            db.execute("UPDATE entries SET id=? WHERE id=?", (legacy, key))
+            db.execute("UPDATE events SET entry_id=? WHERE entry_id=?", (legacy, key))
+        other = dict(deepcopy(self.row), ranking=dict(method="score", value="748"))
+        self.assertEqual(legacy, self.journal.observe("ev", other, manual=True))
+        record = self.journal.get(legacy, history=True)
+        self.assertEqual(record["entry"]["revision"], 2)
+        self.assertEqual(record["entry"]["notes"], "Keep this correction")
+        self.assertEqual(len(record["history"]), 2)
 
     def test_actual_price_fee_and_net_return_case(self):
         source = (datetime.now(timezone.utc) - timedelta(minutes=4)).isoformat()
@@ -151,6 +188,67 @@ class PersonalJournal(TestCase):
             )
         self.assertEqual(len(set(keys)), 1)
         self.assertEqual(self.journal.list()["total"], 1)
+
+    def test_parallel_manual_ranking_views_save_one_quote(self):
+        self.journal.status()
+
+        def save(index):
+            row = dict(
+                deepcopy(self.row),
+                ranking=dict(method="growth" if index % 2 else "ev", value=str(index)),
+            )
+            return self.journal.observe("ev", row, manual=True)
+
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            keys = list(pool.map(save, range(12)))
+        self.assertEqual(len(set(keys)), 1)
+        self.assertEqual(self.journal.list()["total"], 1)
+
+    def test_failed_batch_and_failed_correction_roll_back_records_and_history(self):
+        invalid = deepcopy(self.row)
+        invalid.pop("id")
+        with self.assertRaises(ValueError):
+            self.journal.capture([self.row, invalid], [], [])
+        self.assertEqual(self.journal.list()["total"], 0)
+        key = self.journal.observe("ev", self.row, manual=True)
+        with patch.object(
+            self.journal,
+            "_metrics",
+            side_effect=RuntimeError("injected metrics failure"),
+        ):
+            with self.assertRaisesRegex(RuntimeError, "injected metrics"):
+                self.journal.update(key, dict(revision=1, notes="Must roll back"))
+        record = self.journal.get(key, history=True)
+        self.assertEqual(record["entry"]["revision"], 1)
+        self.assertEqual(record["entry"]["notes"], "")
+        self.assertEqual(len(record["history"]), 1)
+        self.assertEqual(
+            self.journal.update(key, dict(revision=1, notes="Retry succeeds"))["entry"][
+                "revision"
+            ],
+            2,
+        )
+
+    def test_sqlite_backup_restores_committed_wal_and_corrections(self):
+        import sqlite3
+
+        self.journal.status()
+        keeper = sqlite3.connect(self.path)
+        self.addCleanup(keeper.close)
+        keeper.execute("PRAGMA journal_mode=WAL").fetchone()
+        keeper.execute("SELECT count(*) FROM entries").fetchone()
+        keeper.execute("PRAGMA wal_autocheckpoint=0")
+        key = self.journal.observe("ev", self.row, manual=True)
+        self.journal.update(key, dict(revision=1, notes="Retained correction"))
+        self.assertEqual(self.journal.quotes([self.row]), 1)
+        self.assertGreater(Path(str(self.path) + "-wal").stat().st_size, 0)
+        destination = Path(self.directory.name) / "restored.sqlite3"
+        with sqlite3.connect(destination) as restored:
+            keeper.backup(restored)
+        self.assertEqual(
+            self.journal.get(key, history=True),
+            Journal(destination).get(key, history=True),
+        )
 
     def test_equivalent_kickoff_offsets_retain_the_same_quote_identity(self):
         row = deepcopy(self.row)

@@ -134,8 +134,11 @@ def test_current_pregame_journey(width, tmp_path):
         page.route("**/*", serve)
         page.goto("https://predict.fixture/")
         expect(page.locator(".ticket")).to_have_count(1)
+        expect(page.get_by_role("navigation", name="Pages")).to_be_hidden()
         expect(page.locator(".ticket")).to_contain_text("+8.80%")
         expect(page.locator(".fair .reference")).to_contain_text("FanDuel (-110)")
+        for label in ("Search teams", "League", "Market", "Venue"):
+            expect(page.locator(".filter-label", has_text=label)).to_be_visible()
         for kind in ("after", "fair", "ev", "score"):
             trigger = page.locator(f"#results .{kind} .math-trigger")
             trigger.hover()
@@ -154,6 +157,19 @@ def test_current_pregame_journey(width, tmp_path):
         expect(page.locator("#comparison")).to_be_visible()
         expect(page.locator(".sportsbook-prices")).to_contain_text("DraftKings")
         expect(page.locator(".sportsbook-prices")).to_contain_text("-115")
+        # Every quote figure and its save control fit the comparison at phone width.
+        table = page.locator(".exchange-prices")
+        expect(table.get_by_role("columnheader")).to_have_count(7)
+        if width == 390:
+            assert table.evaluate("e => e.scrollWidth <= e.clientWidth")
+            bounds = table.bounding_box()
+            for cell in table.locator("tbody td").all():
+                box = cell.bounding_box()
+                assert box["x"] >= bounds["x"] - 1
+                assert box["x"] + box["width"] <= bounds["x"] + bounds["width"] + 1
+        expect(
+            page.get_by_role("button", name="Save ProphetX to My Bets")
+        ).to_be_visible()
         page.locator(".exchange-prices .math-trigger").first.focus()
         expect(page.locator(".math-popover:popover-open")).to_be_visible()
         page.keyboard.press("Escape")
@@ -161,17 +177,23 @@ def test_current_pregame_journey(width, tmp_path):
         page.get_by_text("Fee and calculation details", exact=True).click()
         expect(page.locator("#comparison")).to_contain_text("$2.40")
         expect(page.locator("#comparison")).to_contain_text("$0.00")
+        page.get_by_text("Fee and calculation details", exact=True).focus()
         selected["display"]["net_ev"] = "+9.00%"
         state["revision"] = "two"
         expect(page.locator("#results")).to_contain_text("+9.00%")
         expect(page.locator("#comparison")).to_contain_text("+9.00%")
+        expect(
+            page.get_by_text("Fee and calculation details", exact=True)
+        ).to_be_focused()
         page.get_by_role("button", name="Close comparison").click()
         expect(page.get_by_role("button", name="Compare prices")).to_be_focused()
         # A withdrawn exact line clears the open drawer and its save controls.
         page.get_by_role("button", name="Compare prices").click()
         state["empty"] = True
         state["revision"] = "three"
-        expect(page.locator("#comparison")).to_contain_text("This line is no longer available")
+        expect(page.locator("#comparison")).to_contain_text(
+            "This line is no longer available"
+        )
         expect(page.locator("#comparison .exchange-prices")).to_have_count(0)
         expect(page.locator("#comparison .journal-action")).to_have_count(0)
         page.get_by_role("button", name="Close comparison").click()
@@ -203,6 +225,8 @@ def test_current_pregame_journey(width, tmp_path):
         page.goto("https://predict.fixture/")
         expect(page.locator("#error")).to_contain_text("Choose Refresh to retry")
         expect(page.locator("#error")).not_to_contain_text("preserved")
+        expect(page.locator(".status-line")).to_be_hidden()
+        expect(page.get_by_role("navigation", name="Pages")).to_be_hidden()
         state["failed"] = False
         state["empty"] = False
         selected["game"] = (
@@ -234,4 +258,205 @@ def test_current_pregame_journey(width, tmp_path):
         page.get_by_role("link", name="Back to opportunities", exact=True).click()
         expect(page.locator(".ticket")).to_have_count(1)
         assert not errors, errors
+        browser.close()
+
+
+def test_pending_save_survives_new_prices_and_refresh_reports_pending():
+    from playwright.sync_api import sync_playwright, expect
+
+    selected = offer()
+    state = dict(revision="one", hold_read=False, total=1)
+    pending_saves, pending_reads = [], []
+
+    def packet():
+        return dict(
+            cursor=state["revision"],
+            rows=[deepcopy(selected)],
+            total=state["total"],
+            refresh_at=selected["kickoff"],
+        )
+
+    def serve(route):
+        url = urlparse(route.request.url)
+        if url.path == "/api/bet-journal":
+            pending_saves.append(route)
+        elif url.path.endswith("/updates"):
+            q = parse_qs(url.query)
+            route.fulfill(json=dict(changed=q.get("after") != [state["revision"]]))
+        elif url.path == "/api/pregame":
+            if state["hold_read"]:
+                pending_reads.append(route)
+            else:
+                route.fulfill(json=packet())
+        elif url.path.startswith("/view/current/"):
+            route.fulfill(path=ASSETS / Path(url.path).name)
+        else:
+            route.fulfill(path=ASSETS / "pregame.html")
+
+    with sync_playwright() as pw:
+        browser = pw.chromium.launch(executable_path=os.getenv("PREDICT_CI_CHROMIUM"))
+        page = browser.new_page(viewport=dict(width=390, height=844))
+        page.route("**/*", serve)
+        page.goto("http://predict.fixture/")
+        page.get_by_role("button", name="Compare prices for").click()
+        save = page.get_by_role("button", name="Save ProphetX to My Bets")
+        save.click()
+        expect(save).to_be_disabled()
+        selected["posted"]["value"] = "+130"
+        selected["display"].update(posted_odds="+130", net_ev="+9.00%")
+        state["revision"] = "two"
+        expect(page.locator(".exchange-prices")).to_contain_text("+130")
+        expect(save).to_be_disabled()
+        first = pending_saves.pop(0)
+        assert first.request.post_data_json["snapshot"]["posted"]["value"] == "+120"
+        first.fulfill(status=201, json=dict(entry=dict(id="original-quote")))
+        expect(page.locator("#comparison")).to_contain_text("Earlier quote saved.")
+        expect(save).to_be_enabled()
+        save.click()
+        expect(save).to_be_disabled()
+        second = pending_saves.pop(0)
+        assert second.request.post_data_json["snapshot"]["posted"]["value"] == "+130"
+        second.fulfill(status=201, json=dict(entry=dict(id="newer-quote")))
+        expect(page.locator("#comparison")).not_to_contain_text("Earlier quote saved.")
+        expect(
+            page.get_by_role("link", name="Enter actual odds & stake")
+        ).to_have_attribute("href", "/my-bets?entry=newer-quote")
+        page.get_by_role("button", name="Close comparison").click()
+        state["hold_read"] = True
+        refresh = page.get_by_role("button", name="Refresh", exact=True)
+        refresh.click()
+        expect(refresh).to_be_disabled()
+        expect(refresh).to_have_attribute("aria-busy", "true")
+        state["hold_read"] = False
+        for route in pending_reads:
+            route.fulfill(json=packet())
+        expect(refresh).to_be_enabled()
+        expect(refresh).not_to_have_attribute("aria-busy", "true")
+        # One-page cleanup must leave genuine pagination reachable.
+        state.update(total=31, revision="three")
+        expect(page.get_by_role("navigation", name="Pages")).to_be_visible()
+        page.get_by_role("button", name="Next →", exact=True).click()
+        expect(page.locator("#page")).to_have_text("31–31 of 31")
+        expect(
+            page.get_by_role("button", name="← Previous", exact=True)
+        ).to_be_enabled()
+        # If the live population shrinks, preserve the way back from page two.
+        state.update(total=1, revision="four")
+        expect(page.locator("#count")).to_have_text("1 opportunity")
+        expect(page.get_by_role("navigation", name="Pages")).to_be_visible()
+        page.get_by_role("button", name="← Previous", exact=True).click()
+        expect(page.get_by_role("navigation", name="Pages")).to_be_hidden()
+        browser.close()
+
+
+@pytest.mark.parametrize("width", [1440, 600, 390])
+def test_ranking_dropdown_defaults_growth_persists_and_resets_page(width):
+    from playwright.sync_api import sync_playwright, expect
+
+    requests, errors = [], []
+    labels = {
+        "growth": ("Kelly growth", "Growth", "log bp", "1.234"),
+        "ev": ("Net EV", "Net EV", "%", "+8.80%"),
+        "score": ("Kelly fraction", "Kelly", "fraction × 10,000", "748"),
+        "balanced": ("Balanced (experimental)", "Balanced", "index", "812.34"),
+        "edge": ("Probability edge", "Edge", "pp", "+4.000"),
+    }
+
+    def serve(route):
+        url = urlparse(route.request.url)
+        q = {k: v[0] for k, v in parse_qs(url.query).items()}
+        if url.path.endswith("/updates"):
+            route.fulfill(json=dict(changed=False))
+        elif url.path == "/api/pregame":
+            requests.append(q)
+            selected = q.get("sort", "growth")
+            label, column, unit, shown = labels[selected]
+            row = offer()
+            row["ranking"] = dict(
+                method=selected,
+                label=label,
+                column=column,
+                unit=unit,
+                display=shown,
+                value="1.234",
+            )
+            route.fulfill(
+                json=dict(
+                    cursor=selected,
+                    sort=selected,
+                    rows=[row],
+                    total=31,
+                    refresh_at=row["kickoff"],
+                )
+            )
+        elif url.path.startswith("/view/current/"):
+            route.fulfill(path=ASSETS / Path(url.path).name)
+        else:
+            route.fulfill(path=ASSETS / "pregame.html")
+
+    with sync_playwright() as pw:
+        browser = pw.chromium.launch(executable_path=os.getenv("PREDICT_CI_CHROMIUM"))
+        page = browser.new_page(viewport=dict(width=width, height=900))
+        page.on("pageerror", lambda e: errors.append(str(e)))
+        page.route("**/*", serve)
+        page.goto("http://predict.fixture/")
+        ranking = page.get_by_role("combobox", name="Rank by")
+        from app.storage.pregame_ranking import catalog
+
+        expect(ranking.locator("option")).to_have_text(
+            [info["label"] for info in catalog()["methods"].values()]
+        )
+        expect(ranking).to_have_value("growth")
+        expect(page.locator(".ticket .score .math-trigger")).to_have_text("1.234")
+        assert requests[-1]["sort"] == "growth"
+        if width == 1440:
+            unsupported = page.evaluate(
+                """async row => {
+                const {addMath} = await import('/view/current/pregame-math.js');
+                const cell = document.createElement('div');
+                cell.innerHTML = '<span>0</span>';
+                try { addMath(cell, row, 'retired-score-detail'); return null; }
+                catch (error) { return error.message; }
+            }""",
+                offer(),
+            )
+            assert unsupported == "Unsupported calculation detail: retired-score-detail"
+            # display:contents metadata must not move growth under the Price heading.
+            for header, cell in (
+                ("#ranking-column", ".ticket .score"),
+                (".board-columns > span:nth-child(5)", ".ticket .posted"),
+            ):
+                heading = page.locator(header).bounding_box()
+                figure = page.locator(cell).bounding_box()
+                assert abs(heading["x"] - figure["x"]) < 1
+                assert abs(heading["width"] - figure["width"]) < 1
+        page.locator(".ticket .score .math-trigger").focus()
+        expect(page.locator(".math-popover:popover-open")).to_contain_text(
+            "Growth = 10,000"
+        )
+        page.keyboard.press("Escape")
+        page.get_by_role("button", name="Next →", exact=True).click()
+        expect(page.locator("#page")).to_have_text("31–31 of 31")
+        for selected in ("ev", "score", "balanced", "edge", "growth"):
+            ranking.select_option(selected)
+            expect(page.locator(".ticket .score .math-trigger")).to_have_text(
+                labels[selected][3]
+            )
+            expect(page.locator("#page")).to_have_text("1–30 of 31")
+            assert requests[-1]["sort"] == selected
+            assert requests[-1]["offset"] == "0"
+            assert page.evaluate("document.documentElement.scrollWidth<=innerWidth")
+        ranking.select_option("ev")
+        expect(page.locator(".ticket .score .math-trigger")).to_have_text("+8.80%")
+        page.reload()
+        expect(ranking).to_have_value("ev")
+        expect(page.locator(".ticket .score .math-trigger")).to_have_text("+8.80%")
+        page.get_by_role("button", name="Compare prices for").click()
+        expect(page.locator(".exchange-prices")).to_contain_text("+8.80%")
+        assert requests[-1]["sort"] == "ev"
+        page.keyboard.press("Escape")
+        page.goto("http://predict.fixture/browse-odds")
+        expect(ranking).to_be_hidden()
+        expect(page.locator("#sort-order")).to_contain_text("Game start time")
+        assert not errors
         browser.close()

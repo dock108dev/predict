@@ -1,9 +1,10 @@
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 
 import pytest
 
 from app.collection.sportsgameodds_schedule import (
-    EventDue, available_objects, budgeted_policy, daily_allowance, daily_retry_at, discovery_interval, due_events, projected_refresh_objects, response_object_charge,
+    PREGAME_TARGET, EventDue, available_objects, budgeted_policy, daily_allowance, daily_retry_at, discovery_interval, due_events, projected_refresh_objects, response_object_charge,
 )
 
 NOW = datetime(2026, 11, 10, 20, tzinfo=timezone.utc)
@@ -31,8 +32,8 @@ def test_source_timing_not_replaced_and_bad_clocks_fail_closed():
 
 
 def test_near_term_slate_refreshes_more_frequently_than_distant_games():
-    events = [EventDue('tonight', NOW + timedelta(hours=10), NOW - timedelta(minutes=45)),
-              EventDue('later', NOW + timedelta(hours=30), NOW - timedelta(minutes=45))]
+    events = [EventDue('tonight', NOW + timedelta(hours=10), NOW - timedelta(hours=1)),
+              EventDue('later', NOW + timedelta(hours=30), NOW - timedelta(hours=1))]
     assert [e.event_id for e in due_events(events, NOW)] == ['tonight']
 
 
@@ -91,8 +92,9 @@ def test_busy_slate_spends_headroom_on_near_start_prices_before_distant_polls():
 
 
 def test_projection_follows_bands_and_stops_pregame_at_kickoff():
-    from app.collection.sportsgameodds_schedule import SchedulePolicy
-    policy = SchedulePolicy(approaching=timedelta(minutes=3), imminent=timedelta(minutes=6))
+    policy = replace(PREGAME_TARGET, approaching=timedelta(minutes=3), imminent=timedelta(minutes=6),
+                     approaching_window=timedelta(hours=2), imminent_window=timedelta(hours=12),
+                     live=timedelta(minutes=15))
     soon = EventDue('soon', NOW+timedelta(hours=1))
     later = EventDue('later', NOW+timedelta(hours=6))
     assert projected_refresh_objects([soon], NOW, policy, include_kickoff=False) == 20
@@ -106,15 +108,18 @@ def test_projection_follows_bands_and_stops_pregame_at_kickoff():
 def test_first_post_start_poll_prioritizes_transition_and_does_not_retry_immediately():
     kickoff = EventDue('kickoff', NOW, NOW - timedelta(minutes=1))
     live = EventDue('live', NOW - timedelta(hours=1), NOW - timedelta(minutes=15), live=True)
-    pregame = EventDue('pregame', NOW + timedelta(hours=1), NOW - timedelta(minutes=31))
+    pregame = EventDue('pregame', NOW + timedelta(hours=1), NOW - PREGAME_TARGET.imminent - timedelta(minutes=1))
     assert [e.event_id for e in due_events([pregame, kickoff, live], NOW)] == ['live', 'kickoff', 'pregame']
     assert due_events([EventDue('kickoff', NOW, NOW)], NOW + timedelta(seconds=1)) == []
 
 
 def test_due_kickoffs_use_the_poll_deadline_within_the_urgent_tier():
+    # A stretched cadence clamps both first post-start deadlines to kickoff,
+    # so an older source receipt must not outrank the earlier kickoff deadline.
+    policy = replace(PREGAME_TARGET, approaching=timedelta(minutes=30))
     early = EventDue('early', NOW - timedelta(minutes=10), NOW - timedelta(minutes=12))
     late = EventDue('late', NOW - timedelta(minutes=1), NOW - timedelta(minutes=20))
-    assert due_events([late, early], NOW) == [early, late]
+    assert due_events([late, early], NOW, policy=policy) == [early, late]
 
 
 def test_small_budget_slows_polling_instead_of_projecting_an_unaffordable_rate():

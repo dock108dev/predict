@@ -183,12 +183,12 @@ class Journal:
             raise ValueError("The personal journal path must be absolute")
 
     @contextmanager
-    def database(self):
+    def database(self, *, write=False):
         self.path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
         db = sqlite3.connect(self.path, timeout=5)
-        os.chmod(self.path, 0o600)
-        db.row_factory = sqlite3.Row
         try:
+            os.chmod(self.path, 0o600)
+            db.row_factory = sqlite3.Row
             db.execute("PRAGMA journal_mode=WAL")
             db.execute("PRAGMA foreign_keys=ON")
             db.executescript("""
@@ -218,6 +218,9 @@ class Journal:
                 CREATE TABLE IF NOT EXISTS monitor (singleton INTEGER PRIMARY KEY, state TEXT NOT NULL);
             """)
             with db:
+                # Pin reads to one WAL snapshot; writers reserve before any
+                # read/modify/write step rather than upgrading a stale reader.
+                db.execute("BEGIN IMMEDIATE" if write else "BEGIN")
                 yield db
         finally:
             db.close()
@@ -246,8 +249,20 @@ class Journal:
         return value
 
     def observe(self, kind, snapshot, *, at=None, manual=False):
-        with self.database() as db:
+        with self.database(write=True) as db:
             return self._observe(db, kind, snapshot, at=at, manual=manual)
+
+    @staticmethod
+    def _manual_snapshot(kind, snapshot):
+        # Ranking is a read-time view of the same immutable quote, not another
+        # trading decision. Retain the original snapshot, but omit it from keys.
+        result = {key: value for key, value in snapshot.items() if key != "ranking"}
+        if kind == "arb":
+            result["legs"] = [
+                {key: value for key, value in row.items() if key != "ranking"}
+                for row in snapshot["legs"]
+            ]
+        return result
 
     def _observe(self, db, kind, snapshot, *, at=None, manual=False):
         validate_snapshot(kind, snapshot)
@@ -257,11 +272,29 @@ class Journal:
             [
                 origin,
                 kind,
-                snapshot
+                self._manual_snapshot(kind, snapshot)
                 if manual
                 else [self.identity(r) for r in legs(snapshot, kind)],
             ]
         )
+        if (
+            manual
+            and not db.execute("SELECT 1 FROM entries WHERE id=?", (key,)).fetchone()
+        ):
+            canonical = encoded(self._manual_snapshot(kind, snapshot))
+            # Keep IDs and corrections from saves made before ranking metadata
+            # was excluded. Never rekey, merge or delete existing decisions.
+            for prior in db.execute(
+                """SELECT id,snapshot FROM entries WHERE origin='browser_snapshot'
+                   AND kind=? AND json_extract(snapshot,'$.id')=? ORDER BY created_at,id""",
+                (kind, snapshot["id"]),
+            ):
+                if (
+                    encoded(self._manual_snapshot(kind, json.loads(prior["snapshot"])))
+                    == canonical
+                ):
+                    key = prior["id"]
+                    break
         decision = "saved" if manual else "observed"
         inserted = db.execute(
             "INSERT OR IGNORE INTO entries VALUES (?,?,?,?,?,?,?,?,?,?)",
@@ -282,7 +315,7 @@ class Journal:
     def capture(self, ev, arbs, quotes, *, at=None):
         """One source sample has one SQLite transaction, independent of its size."""
         at = instant(at or clock()).isoformat()
-        with self.database() as db:
+        with self.database(write=True) as db:
             for kind, snapshots in (("ev", ev), ("arb", arbs)):
                 for snapshot in snapshots:
                     self._observe(db, kind, snapshot, at=at)
@@ -381,7 +414,7 @@ class Journal:
 
     def quotes(self, rows, *, at=None):
         at = instant(at or clock()).isoformat()
-        with self.database() as db:
+        with self.database(write=True) as db:
             return sum(self._quote(db, row, at) for row in rows)
 
     def targets(self, *, at):
@@ -397,9 +430,8 @@ class Journal:
             return list(originals.values())
 
     def status(self, **fields):
-        with self.database() as db:
-            row = db.execute("SELECT state FROM monitor WHERE singleton=1").fetchone()
-            state = json.loads(row[0]) if row else {"monitor_state": "starting"}
+        with self.database(write=bool(fields)) as db:
+            state = self._status(db)
             if fields:
                 state.update(fields)
                 db.execute(
@@ -407,6 +439,11 @@ class Journal:
                     (encoded(state),),
                 )
         return state
+
+    @staticmethod
+    def _status(db):
+        row = db.execute("SELECT state FROM monitor WHERE singleton=1").fetchone()
+        return json.loads(row[0]) if row else {"monitor_state": "starting"}
 
     def _quotes(self, db, entry):
         originals = legs(entry["snapshot"], entry["kind"])
@@ -422,10 +459,12 @@ class Journal:
             for row in rows
         ]
 
-    def _metrics(self, db, entry):
+    def _metrics(self, db, entry, *, quotes=None):
         from .bet_journal_metrics import analyze
 
-        entry["metrics"] = analyze(entry, self._quotes(db, entry))
+        entry["metrics"] = analyze(
+            entry, self._quotes(db, entry) if quotes is None else quotes
+        )
         opportunity = digest(
             [
                 "automatic",
@@ -442,27 +481,41 @@ class Journal:
 
     def get(self, key, *, history=False):
         with self.database() as db:
-            entry = self._metrics(
+            return self._record(
                 db,
-                self.unpack(
-                    db.execute("SELECT * FROM entries WHERE id=?", (key,)).fetchone()
-                ),
+                db.execute("SELECT * FROM entries WHERE id=?", (key,)).fetchone(),
+                history=history,
             )
-            result = dict(entry=entry)
-            if history:
-                result["history"] = [
-                    dict(
-                        revision=row["revision"],
-                        recorded_at=row["recorded_at"],
-                        **json.loads(row["state"]),
-                    )
-                    for row in db.execute(
-                        "SELECT * FROM events WHERE entry_id=? ORDER BY revision",
-                        (key,),
-                    )
-                ]
-                result["quotes"] = self._quotes(db, entry)
-            return result
+
+    def _record(self, db, row, *, history=False):
+        entry = self.unpack(row)
+        quotes = self._quotes(db, entry)
+        result = dict(entry=self._metrics(db, entry, quotes=quotes))
+        if history:
+            result["history"] = [
+                dict(
+                    revision=row["revision"],
+                    recorded_at=row["recorded_at"],
+                    **json.loads(row["state"]),
+                )
+                for row in db.execute(
+                    "SELECT * FROM events WHERE entry_id=? ORDER BY revision",
+                    (entry["id"],),
+                )
+            ]
+            result["quotes"] = quotes
+        return result
+
+    def export(self, *, history=True):
+        """All records and revisions from one read snapshot, on one connection."""
+        with self.database() as db:
+            rows = db.execute(
+                "SELECT * FROM entries ORDER BY created_at DESC,id"
+            ).fetchall()
+            return dict(
+                entries=[self._record(db, row, history=history) for row in rows],
+                monitor=self._status(db),
+            )
 
     def update(self, key, changes):
         if not isinstance(changes, dict) or set(changes) - {
@@ -472,8 +525,7 @@ class Journal:
             "trade",
         }:
             raise ValueError("Unknown journal update fields")
-        with self.database() as db:
-            db.execute("BEGIN IMMEDIATE")
+        with self.database(write=True) as db:
             entry = self.unpack(
                 db.execute("SELECT * FROM entries WHERE id=?", (key,)).fetchone()
             )
@@ -508,7 +560,9 @@ class Journal:
                 "INSERT INTO events VALUES (?,?,?,?)",
                 (key, revision, at, encoded(state)),
             )
-        return self.get(key)
+            return self._record(
+                db, db.execute("SELECT * FROM entries WHERE id=?", (key,)).fetchone()
+            )
 
     def list(self, *, limit=100, offset=0, view="log", kind="", decision="", search=""):
         limit, offset = max(1, min(500, int(limit))), max(0, int(offset))
@@ -556,6 +610,7 @@ class Journal:
             opportunities = db.execute(
                 "SELECT count(*) FROM entries WHERE origin='automatic'"
             ).fetchone()[0]
+            monitor = self._status(db)
         settled = [
             e for e in placed if e["metrics"].get("realized_profit_usd") is not None
         ]
@@ -618,5 +673,5 @@ class Journal:
                     e["metrics"]["close_state"] == "closed" for e in close_due
                 ),
             ),
-            monitor=self.status(),
+            monitor=monitor,
         )

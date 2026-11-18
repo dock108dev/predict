@@ -1,13 +1,22 @@
-import {journalVenueActions} from './bet-journal-actions.js';
+import {journalAction} from './bet-journal-actions.js';
 import {bookName,venues} from './pregame-labels.js';
 import {priceDisplay,isContractVenue} from './pregame-prices.js';
 import {addMath} from './pregame-math.js';
+import {rankingCatalog} from './pregame-ranking.js';
 const $=id=>document.getElementById(id);
 const initial=new URLSearchParams(location.search), browse=location.pathname==='/browse-odds'||location.pathname==='/game';
 const gameView=location.pathname==='/game', gameBoard=location.pathname==='/browse-odds'&&!initial.has('bet_id')&&!initial.has('id')&&!initial.has('line')&&!initial.has('quote_key');
 let gameSequence=0,gameReturnKey,comparisonTrigger,gameTimer,activeComparison;
-let offset=0, total=0, cursor='', refreshTimer, running=false, checking=false, queued=false, lastGood=null, sequence=0, comparisonSequence=0, inspectionTimer, comparisonReturnId;
+let offset=0, total=0, cursor='', refreshTimer, feedbackTimer, running=false, checking=false, queued=false, lastGood=null, sequence=0, comparisonSequence=0, inspectionTimer, comparisonReturnId;
 const filters=$('filters');
+const rankingSelect=$('ranking'),rankingKey='predict-opportunity-ranking-v1';
+const rankingMethods=rankingCatalog.methods;
+rankingSelect.replaceChildren(...Object.entries(rankingMethods).map(([key,info])=>{const option=node('option',info.label);option.value=key;return option;}));
+let savedRanking;try{savedRanking=localStorage.getItem(rankingKey);}catch(e){}
+rankingSelect.value=Object.hasOwn(rankingMethods,initial.get('sort'))?initial.get('sort'):Object.hasOwn(rankingMethods,savedRanking)?savedRanking:rankingCatalog.default;
+let appliedRanking=rankingSelect.value;
+function rankInfo(row){return row.ranking||{...rankingMethods[appliedRanking],display:'—'};}
+function rankHeading(){const {label,column,unit}=rankingMethods[appliedRanking];$('ranking-column').replaceChildren(node('span',column.toUpperCase()),node('small',unit,'ranking-unit'));$('ranking-column').setAttribute('aria-label',label+' ('+unit+')');}
 function node(tag,text,cls){const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;}
 function pick(row){const s=row.selection;const team=row.selection_label||(s.participant||'').split(':').pop();let line=s.signed_line||'';if(line.includes('/')){const [a,b]=line.split('/');line=String(Number(a)/Number(b));}if(row.family==='total')return `${s.predicate==='over'?'Over':'Under'} ${line}`;return `${team}${row.family==='spread'?` ${Number(line)>0?'+':''}${line}`:' to win'}`;}
 
@@ -23,24 +32,25 @@ function ticket(row,compare=true){
  if(compare){const open=node('button',pick(row),'row-open');open.type='button';open.dataset.quoteId=row.id;open.setAttribute('aria-label','Compare prices for '+pick(row));open.setAttribute('aria-haspopup','dialog');open.setAttribute('aria-controls','comparison');open.onclick=()=>openComparison(row);title.append(open);}else title.textContent=pick(row);
  const link=node('a',row.game,'game');link.href='/game?'+new URLSearchParams({game_key:row.game_key});link.setAttribute('aria-label','Open Game: '+row.game);body.append(context,title,link);article.append(body);
  const cell=(cls,label,value)=>{const d=node('div',undefined,'board-number '+cls);d.append(node('span',label,'mobile-label'),node('span',value));article.append(d);return d;};
- cell('venue','Venue',venues[row.venue]||row.venue);
+ const venue=cell('venue','Venue',venues[row.venue]||row.venue);
  const posted=priceDisplay(row),after=priceDisplay(row,true),postedCell=cell('posted','Price',posted.primary),afterCell=cell('after','After fees',after.primary);
  if(isContractVenue(row)){addMath(postedCell,row,'posted');appendPriceContext(postedCell,posted);appendPriceContext(afterCell,after);}
  addMath(afterCell,row,'after');
  const fair=cell('fair','Fair odds',row.display.fair_odds);fair.append(node('small',bookName(row.reference.book)+' ('+referencePrice(row)+')','reference'));addMath(fair,row,'fair');
- addMath(cell('ev'+(row.display.net_ev.startsWith('-')?' negative':''),'Net EV',row.display.net_ev),row,'ev');addMath(cell('score','Opportunity Score',row.display.opportunity_score),row,'score');
+ addMath(cell('ev'+(row.display.net_ev.startsWith('-')?' negative':''),'Net EV',row.display.net_ev),row,'ev');const rank=rankInfo(row),score=cell('score',rank.column+(rank.unit==='log bp'?' (log bp)':rank.unit==='pp'?' (pp)':''),rank.display);addMath(score,row,'ranking');
+ const metadata=node('div',undefined,'ticket-meta');article.insertBefore(metadata,venue);metadata.append(venue,score);
  return article;
 }
-function query(){const data=new FormData(filters),q=new URLSearchParams({limit:'30',offset:String(offset)});for(const name of ['search','league','family','venue'])if(data.get(name))q.set(name,data.get(name));if(data.get('alternates'))q.set('lines','all');if(browse)q.set('browse','1');if(gameBoard)q.set('view','games');if(gameView)q.set('view','game');for(const name of ['game_key','bet_id','id'])if(initial.has(name))q.set(name,initial.get(name));if(initial.has('line'))q.set('bet_id',initial.get('line'));if(initial.has('quote_key'))q.set('id',initial.get('quote_key'));return q;}
+function query(){const data=new FormData(filters),q=new URLSearchParams({limit:'30',offset:String(offset)});for(const name of ['search','league','family','venue','sort'])if(data.get(name))q.set(name,data.get(name));if(data.get('alternates'))q.set('lines','all');if(browse)q.set('browse','1');if(gameBoard)q.set('view','games');if(gameView)q.set('view','game');for(const name of ['game_key','bet_id','id'])if(initial.has(name))q.set(name,initial.get(name));if(initial.has('line'))q.set('bet_id',initial.get('line'));if(initial.has('quote_key'))q.set('id',initial.get('quote_key'));return q;}
 async function get(q,updates=false){const response=await fetch(`/api/pregame${updates?'/updates':''}?${q}`,{cache:'no-store'});if(!response.ok)throw Error(`HTTP ${response.status}`);return response.json();}
-function render(packet){lastGood=packet;cursor=packet.cursor;total=packet.total;const result=$('results');result.replaceChildren();
- if(gameBoard&&packet.games?.length)result.append(...packet.games.map(gameCard));else if(gameView&&packet.rows.length)result.append(gameMarkets(packet.rows,true));else if(packet.rows.length)result.append(...packet.rows.map(row=>ticket(row)));else{const empty=node('div',undefined,'empty');empty.append(node('p','THE BOARD IS CLEAR','eyebrow'),node('h2',browse?'No odds match these filters.':'No positive opportunities in this view.'),node('p',browse?'Try another league, market or venue.':'Browse odds to compare available prices, or change your filters.'));const link=node('a','Browse odds ↗');link.href='/browse-odds';empty.append(link);result.append(empty);}
+function render(packet){appliedRanking=packet.sort||rankingSelect.value;rankHeading();document.querySelector('.status-line').hidden=false;document.querySelector('.pagination').hidden=gameView||(packet.total<=30&&offset===0);lastGood=packet;cursor=packet.cursor;total=packet.total;const result=$('results');result.replaceChildren();
+ if(gameBoard&&packet.games?.length)result.append(...packet.games.map(gameCard));else if(gameView&&packet.rows.length)result.append(gameMarkets(packet.rows,true));else if(packet.rows.length)result.append(...packet.rows.map(row=>ticket(row)));else{const empty=node('div',undefined,'empty');empty.append(node('h2',browse?'No odds match these filters.':'No positive opportunities in this view.'));if(browse){empty.append(node('p','Try another league, market or venue.'));}else{const link=node('a','Browse odds →');link.href='/browse-odds';empty.append(link);}result.append(empty);}
  $('board-columns').hidden=gameBoard||gameView||!packet.rows.length;$('count').textContent=`${total} ${gameBoard?(total===1?'game':'games'):browse?(total===1?'bet':'bets'):(total===1?'opportunity':'opportunities')}`;$('previous').disabled=offset===0;$('next').disabled=offset+30>=total;$('page').textContent=total?`${offset+1}–${Math.min(offset+30,total)} of ${total}`:'0';schedule(packet.refresh_at);
 }
 function schedule(deadline){clearTimeout(refreshTimer);if(deadline)refreshTimer=setTimeout(()=>load(),Math.min(2147483647,Math.max(30,Date.parse(deadline)-Date.now()+30)));}
-async function load(){if(running){queued=true;return;}running=true;const token=++sequence;try{const packet=await get(query());if(token===sequence){render(packet);$('error').hidden=true;refreshComparison();}}catch(e){$('error').textContent=lastGood?'Refresh failed. Your displayed odds are preserved.':'Odds could not be loaded. Choose Refresh to retry.';$('error').hidden=false;if(!lastGood)$('count').textContent='Odds could not be loaded.';}finally{running=false;if(queued){queued=false;load();}}}
+async function load(manual=false){if(running){queued=true;return;}running=true;const token=++sequence,refresh=$('refresh'),icon=refresh.querySelector('span');clearTimeout(feedbackTimer);refresh.disabled=true;refresh.setAttribute('aria-busy','true');icon.textContent='…';try{const packet=await get(query());if(token===sequence){render(packet);$('error').hidden=true;icon.textContent=manual?'✓':'↻';refreshComparison();}}catch(e){icon.textContent='↻';$('error').textContent=lastGood?'Refresh failed. Your displayed odds are preserved.':'Odds could not be loaded. Choose Refresh to retry.';$('error').hidden=false;if(!lastGood){$('count').textContent='';document.querySelector('.status-line').hidden=true;}}finally{running=false;refresh.disabled=false;refresh.removeAttribute('aria-busy');feedbackTimer=setTimeout(()=>{icon.textContent='↻';},1800);if(queued){queued=false;load();}}}
 function dollars(value){const [a,b='1']=String(value).split('/');return '$'+(Number(a)/Number(b)).toFixed(2);}
-function details(row){const detail=node('details'),dl=node('dl');detail.append(node('summary','Fee and calculation details'));const add=(label,value)=>dl.append(node('dt',label),node('dd',value));
+function details(row){const detail=node('details'),dl=node('dl'),summary=node('summary','Fee and calculation details');summary.dataset.focusKey='details-'+row.id;detail.append(summary);const add=(label,value)=>dl.append(node('dt',label),node('dd',value));
  add('Trusted reference books',Object.keys(row.reference.candidate_probabilities||{}).map(bookName).join(', ')||'Not recorded');add('Source route',row.source.provider);add('Source timestamp',row.times.source_at||'Not supplied');add('Received',row.times.received_at);add('Calculated',row.calculated_at);add('Fee basis','$100 internal comparison basis · Posted price');add('Cash committed',dollars(row.fee.committed_usd));add('Entry fee',dollars(row.fee.entry_usd));for(const [state,cash]of Object.entries(row.fee.cashflows)){add(`${state==='win'?'Winning':'Losing'} fee`,dollars(cash.total_fee_usd));add(`${state==='win'?'Winning':'Losing'} receipt`,dollars(cash.net_receipt_usd));}
  add('Fee terms',row.fee.classification==='conservative'?'Highest applicable documented charge where account terms are unresolved.':row.fee.classification.replaceAll('_',' '));
  const evidence=row.fee.evidence||{},rule=evidence.database_fee_rule;add('Fee schedule',rule?.id||evidence.schedule_version||evidence.version||evidence.product||'Verified venue schedule');
@@ -50,17 +60,17 @@ function details(row){const detail=node('details'),dl=node('dl');detail.append(n
  for(const price of row.reference.prices)add(`${row.reference.book} · ${price.side}`,`${price.price_american} · ${price.source_at}`);
  add('Method','Fair probability removes the same-book margin. Net EV weights net cash receipts by fair probabilities. Calculations use exact arithmetic until display rounding.');detail.append(dl);return detail;}
 function quoteTable(headers, rows, className){
- const table=node('table',undefined,className),head=node('thead'),heading=node('tr'),body=node('tbody');
- headers.forEach(label=>{const th=node('th',label);th.scope='col';heading.append(th);});head.append(heading);
- rows.forEach(values=>{const tr=node('tr');values.forEach(value=>{const td=node('td');td.append(value);tr.append(td);});body.append(tr);});table.append(head,body);
+ const table=node('table',undefined,className),head=node('thead'),heading=node('tr'),body=node('tbody');table.setAttribute('role','table');head.setAttribute('role','rowgroup');body.setAttribute('role','rowgroup');heading.setAttribute('role','row');
+ headers.forEach(label=>{const th=node('th',label);th.scope='col';th.setAttribute('role','columnheader');heading.append(th);});head.append(heading);
+ rows.forEach(values=>{const tr=node('tr');tr.setAttribute('role','row');values.forEach((value,index)=>{const td=node('td');td.setAttribute('role','cell');td.dataset.label=headers[index];td.append(value);tr.append(td);});body.append(tr);});table.append(head,body);
  const scroll=node('div',undefined,'comparison-scroll');scroll.tabIndex=0;scroll.setAttribute('role','region');scroll.setAttribute('aria-label',headers[0]+' price comparison');scroll.append(table);return scroll;
 }
 function appendPriceContext(cell,display){if(display.price)cell.append(node('small',display.price,'price-equivalent'));if(display.secondary)cell.append(node('small',display.secondary,'american-equivalent'));}
 function venuePrice(row,after=false){const display=priceDisplay(row,after),cell=node('span',undefined,'math-value');cell.append(node('span',display.primary));if(after||isContractVenue(row))addMath(cell,row,after?'after':'posted');appendPriceContext(cell,display);return cell;}
 function mathValue(row,kind,value){const cell=node('span',undefined,'math-value');cell.append(node('span',value));addMath(cell,row,kind);if(kind==='fair')cell.append(node('small',bookName(row.reference.book)+' ('+referencePrice(row)+')','reference'));return cell;}
-function exchangePrices(rows){return quoteTable(['Venue','Price','After fees','Fair odds','Net EV','Score'],rows.map(r=>[venues[r.venue]||r.venue,venuePrice(r),venuePrice(r,true),mathValue(r,'fair',r.display.fair_odds),mathValue(r,'ev',r.display.net_ev),mathValue(r,'score',r.display.opportunity_score)]),'exchange-prices');}
+function exchangePrices(rows){const previous=new Map([...$('comparison-content').querySelectorAll('.journal-action')].map(e=>[e.dataset.quoteId,e]));return quoteTable(['Venue','Price','After fees','Fair odds','Net EV',rankingMethods[appliedRanking].column,'My Bets'],rows.map(r=>{const label='Save '+bookName(r.venue)+' to My Bets',action=journalAction('ev',r,label,previous.get(r.id)),button=action.querySelector('button');action.dataset.quoteId=r.id;button.dataset.shortLabel='Save';button.dataset.focusKey='save-'+r.id;button.setAttribute('aria-label',label);if(!button.disabled)button.textContent='Save';return [venues[r.venue]||r.venue,venuePrice(r),venuePrice(r,true),mathValue(r,'fair',r.display.fair_odds),mathValue(r,'ev',r.display.net_ev),mathValue(r,'ranking',rankInfo(r).display),action];}),'exchange-prices');}
 function sportsbookPrices(selected,quotes=[]){
- const section=node('section',undefined,'sportsbook-comparison');section.append(node('h3','Sportsbook prices'),node('p','Posted odds for this exact pick and line.','comparison-context'));
+ const section=node('section',undefined,'sportsbook-comparison');section.append(node('h3','Sportsbook prices'));
  const reference=referenceQuote(selected),rows=[];
  if(reference)rows.push({book:selected.reference.book,posted_odds:reference.price_american,source_at:reference.source_at,received_at:reference.received_at,is_reference:true});
  rows.push(...quotes.filter(q=>!reference||q.book!==selected.reference.book));
@@ -73,15 +83,19 @@ function renderComparison(rows,quotes=[]){
  const content=$('comparison-content'),selected=rows.find(r=>r.id===comparisonReturnId)||rows[0];
  if(!selected){content.replaceChildren(node('p','This line is no longer available. Prices have moved; choose a current line.','comparison-context'));return;}
  const expanded=new Set([...content.querySelectorAll('details[open]')].map(e=>e.querySelector('summary')?.textContent));
- const game=node('p',selected.game,'comparison-context'),offers=node('section',undefined,'exchange-comparison'),evidence=node('section',undefined,'calculation-evidence'),actions=node('div');
- offers.append(node('h3','Exchange prices'),exchangePrices(rows));actions.append(journalVenueActions(rows));evidence.append(node('h3','Calculation details'));
+ const focused=content.contains(document.activeElement)?document.activeElement.dataset.focusKey:null;
+ const scroll=content.closest('dialog').scrollTop;
+ const game=node('p',selected.game,'comparison-context'),offers=node('section',undefined,'exchange-comparison'),evidence=node('section',undefined,'calculation-evidence');
+ offers.append(node('h3','Exchange prices'),exchangePrices(rows));
  for(const [index,row]of rows.entries()){const detail=details(row);if(index)detail.querySelector('summary').textContent=(venues[row.venue]||row.venue)+' · Fee and calculation details';detail.open=expanded.has(detail.querySelector('summary').textContent);evidence.append(detail);}
- content.replaceChildren(game,offers,actions,sportsbookPrices(selected,quotes),evidence);
+ content.replaceChildren(game,offers,sportsbookPrices(selected,quotes),evidence);
+ if(focused)[...content.querySelectorAll('[data-focus-key]')].find(e=>e.dataset.focusKey===focused)?.focus({preventScroll:true});
+ content.closest('dialog').scrollTop=scroll;
 }
 async function refreshComparison(){
  const active=activeComparison;if(!active||!$('comparison').open)return;
  if(active.loading){active.pending=true;return;}active.loading=true;
- try{const data=await get(new URLSearchParams({bet_id:active.selected.bet_id,lines:'all',browse:'1'}));
+ try{const data=await get(new URLSearchParams({bet_id:active.selected.bet_id,lines:'all',browse:'1',sort:appliedRanking}));
  if(active!==activeComparison||!$('comparison').open||Date.parse(active.selected.kickoff)<=Date.now())return;
  const fingerprint=JSON.stringify([data.rows,data.sportsbooks||[]]);
  if(fingerprint!==active.fingerprint){renderComparison(data.rows,data.sportsbooks||[]);active.fingerprint=fingerprint;}
@@ -110,20 +124,23 @@ function gameMarkets(rows,interactive=false){
  const grid=node('div',undefined,'game-markets');for(const [family,label]of Object.entries(families)){const lines=rows.filter(r=>r.family===family);if(!lines.length)continue;const market=node('section',undefined,'game-market');market.append(node('h3',label));for(const row of lines.sort((a,b)=>Number(b.main)-Number(a.main)||Number(a.selection.signed_line||0)-Number(b.selection.signed_line||0)||pick(a).localeCompare(pick(b))))market.append(gameBet(row,interactive));grid.append(market);}return grid;
 }
 function gameCard(game){
- const card=node('article',undefined,'game-card'),head=node('header'),date=new Date(game.kickoff),opts={timeZone:'America/New_York'};head.append(node('p',game.league+' · '+date.toLocaleString('en-US',{...opts,weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+' ET','game-clock'));
- const title=node('h2'),open=node('button',game.game,'game-open');open.type='button';open.dataset.gameKey=game.game_key;open.setAttribute('aria-haspopup','dialog');open.onclick=()=>openGame(game);title.append(open);head.append(title,node('span','All lines & comparisons ↗','game-hint'));card.append(head,gameMarkets(game.rows));return card;
+ const card=node('article',undefined,'game-card'),head=node('header'),date=new Date(game.kickoff),opts={timeZone:'America/New_York'};
+ const title=node('h2'),open=node('button',game.game,'game-open');open.type='button';open.dataset.gameKey=game.game_key;open.setAttribute('aria-haspopup','dialog');open.onclick=()=>openGame(game);title.append(open);head.append(title,node('p',game.league+' · '+date.toLocaleString('en-US',{...opts,weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+' ET','game-clock'),node('span','View all lines →','game-hint'));card.append(head,gameMarkets(game.rows));return card;
 }
 async function openGame(game){
  clearTimeout(gameTimer);gameTimer=setTimeout(()=>$('game-lines').close(),Math.min(2147483647,Math.max(0,Date.parse(game.kickoff)-Date.now())));
  const token=++gameSequence;gameReturnKey=game.game_key;$('game-title').textContent=game.game;const content=$('game-content');content.replaceChildren(node('p','Loading alternate lines…','comparison-context'),gameMarkets(game.rows,true));$('game-lines').showModal();
- try{const q=new URLSearchParams(query());q.set('view','game');q.set('game_key',game.game_key);q.set('lines','all');const data=await get(q);if(token!==gameSequence||!$('game-lines').open)return;content.replaceChildren(node('p','Select a line to compare venues and sportsbooks. All available main and alternate lines are shown.','comparison-context'),gameMarkets(data.rows,true));if(!data.rows.length)content.append(node('p','No current lines match these filters.'));}
+ try{const q=new URLSearchParams(query());q.set('view','game');q.set('game_key',game.game_key);q.set('lines','all');const data=await get(q);if(token!==gameSequence||!$('game-lines').open)return;content.replaceChildren(gameMarkets(data.rows,true));if(!data.rows.length)content.append(node('p','No current lines match these filters.'));}
  catch(e){if(token===gameSequence){const message=node('p','Alternate lines could not be loaded. Main lines are preserved.','comparison-context'),retry=node('button','Retry');retry.onclick=()=>{$('game-lines').close();openGame(game);};content.prepend(message,retry);}}
 }
 $('game-close').onclick=()=>$('game-lines').close();$('game-lines').addEventListener('close',()=>{clearTimeout(gameTimer);gameSequence++;if($('comparison').open)$('comparison').close();const target=[...document.querySelectorAll('.game-open')].find(b=>b.dataset.gameKey===gameReturnKey);(target||$('results')).focus({preventScroll:true});});
 
-$('close').onclick=()=>$('comparison').close();$('comparison').addEventListener('close',()=>{comparisonSequence++;activeComparison=null;clearTimeout(inspectionTimer);const eligible=button=>button?.isConnected&&(!button.closest('dialog')||button.closest('dialog').open);const target=eligible(comparisonTrigger)?comparisonTrigger:[...document.querySelectorAll('.row-open,.line-open')].find(button=>button.dataset.quoteId===comparisonReturnId&&eligible(button));(target||$('results')).focus({preventScroll:true});});$('refresh').onclick=()=>load();$('previous').onclick=()=>{offset=Math.max(0,offset-30);sequence++;load();};$('next').onclick=()=>{offset+=30;sequence++;load();};
+$('close').onclick=()=>$('comparison').close();$('comparison').addEventListener('close',()=>{comparisonSequence++;activeComparison=null;clearTimeout(inspectionTimer);const eligible=button=>button?.isConnected&&(!button.closest('dialog')||button.closest('dialog').open);const target=eligible(comparisonTrigger)?comparisonTrigger:[...document.querySelectorAll('.row-open,.line-open')].find(button=>button.dataset.quoteId===comparisonReturnId&&eligible(button));(target||$('results')).focus({preventScroll:true});});$('refresh').onclick=()=>load(true);$('previous').onclick=()=>{offset=Math.max(0,offset-30);sequence++;load();};$('next').onclick=()=>{offset+=30;sequence++;load();};
 let searchTimer;filters.addEventListener('submit',event=>event.preventDefault());filters.addEventListener('input',event=>{clearTimeout(searchTimer);offset=0;sequence++;searchTimer=setTimeout(()=>load(),event.target.name==='search'?180:0);});
-$('alternates-field').hidden=true;document.querySelector('.pagination').hidden=gameView;if(browse){$('sort-order').textContent=gameBoard?'Game start time ↑':'Main and alternate lines';$('results').setAttribute('aria-label',gameBoard?'Games by start time':'Game lines');}
+rankingSelect.addEventListener('change',()=>{try{localStorage.setItem(rankingKey,rankingSelect.value);}catch(e){}clearTimeout(searchTimer);offset=0;sequence++;load();});
+$('alternates-field').hidden=true;if(browse){$('sort-order').textContent=gameBoard?'Game start time ↑':'Main and alternate lines';$('results').setAttribute('aria-label',gameBoard?'Games by start time':'Game lines');}
+if(browse){$('ranking-field').hidden=true;$('sort-order').hidden=false;}
 if(browse){$('title').textContent=location.pathname==='/game'?'Game odds':'Browse odds';document.title='Predict · Browse odds';}
+if(gameView)document.querySelector('.heading-flag').textContent='Pregame · Main & alternate lines';
 for(const link of document.querySelectorAll('.masthead nav a'))if(new URL(link.href).pathname===location.pathname)link.setAttribute('aria-current','page');
 load();setInterval(async()=>{if(running||checking||document.hidden)return;checking=true;try{const p=await get(new URLSearchParams({after:cursor}),true);if(p.changed)load();}catch(e){$('error').textContent=lastGood?'Update check failed. Your displayed odds are preserved.':'Odds could not be loaded. Choose Refresh to retry.';$('error').hidden=false;}finally{checking=false;}},500);

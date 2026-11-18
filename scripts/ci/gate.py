@@ -53,6 +53,10 @@ def main():
     output = Path("test-results/readiness")
     output.mkdir(parents=True, exist_ok=True)
     statuses = {name: step_status(needs, name, "result") for name in REQUIRED}
+    full_diagnostics = (
+        os.environ.get("GITHUB_EVENT_NAME") == "workflow_dispatch"
+        and os.environ.get("FULL_DIAGNOSTICS") == "true"
+    )
     value = dict(
         schema=1,
         overall="PASS" if passed else "FAIL",
@@ -73,6 +77,8 @@ def main():
         check_status=statuses,
         errors=errors,
         baseline=None,
+        execution_policy="full behavior lanes after quality; no test omission on passing candidates",
+        full_diagnostics=full_diagnostics,
     )
     (output / "metrics.json").write_text(json.dumps(value, indent=2) + "\n")
     text = "## CI readiness — " + value["overall"] + "\n\n"
@@ -84,6 +90,19 @@ def main():
         f"Tested SHA `{safe(value['tested_sha'])}`. PR head `{safe(value['pr_head_sha'])}`. "
         f"Merge queue candidate `{safe(value['merge_queue_sha'])}`. Event {safe(value['event'])}, "
         f"ref `{safe(value['ref'])}`, attempt {safe(value['run_attempt'])}. {run_reference()}.\n"
+    )
+    text += "\n### Why these tests ran\n\n"
+    text += (
+        "Manual full diagnostics requested: behavior lanes may run despite a failed quality job. "
+        if full_diagnostics
+        else "Behavior lanes wait for the source, security and package job to succeed. "
+    )
+    text += (
+        "Passing candidates still run every registered behavior lane; no changed-file "
+        "selection or cached test result is used. Required failure, cancellation, "
+        "missing work or a skipped lane keeps readiness failed. "
+        "A quality failure can intentionally prevent behavior execution; that skip "
+        "is not a behavior pass. The manual override never bypasses readiness.\n"
     )
     if errors:
         text += (

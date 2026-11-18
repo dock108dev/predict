@@ -38,9 +38,11 @@ function inspect(pair){const frozen=structuredClone(pair);returnId=pair.id;const
 function query(){const q=new URLSearchParams({offset:String(offset),limit:'30'});for(const [key,v]of new FormData($('filters')))if(v&&key!=='alternates')q.set(key,v);return q;}
 function showError(source,message){
  if(source==='updates'&&errorSource==='load')return;
- errorSource=source;$('error').textContent=message;$('error').hidden=false;
+ errorSource=source;$('error').textContent=message;$('error').hidden=false;if(!lastGood)document.querySelector('.status-line').hidden=true;
 }
 function render(data){
+ document.querySelector('.status-line').hidden=false;
+ document.querySelector('.pagination').hidden=data.total<=30&&offset===0;
  lastGood=data;
  const book=$('book'),selectedBook=book.value,available=new Set(data.sportsbooks||[]);
  // An empty or filtered result must not silently clear the user's book filter.

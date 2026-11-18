@@ -11,20 +11,47 @@ The [CI workflow](../.github/workflows/ci.yml) runs on pull requests, pushes to
 `main`, merge groups, and manual dispatch. Its Ubuntu 24.04 runners use Python
 3.14 and Node 24.
 
-| Product risk | Exact workflow, job and entry point | Event and platform | Policy |
-| --- | --- | --- | --- |
-| Incorrect prices, fees, matching or delivery | `CI` / `Offline checks` / `sh scripts/check-ci` checks portable Python and Node behavior, compilation, JavaScript syntax, generated assets and the test manifest. It retains JUnit and Python line and branch coverage. | PR, `main` push, merge group, manual / Ubuntu 24.04 | Required by `CI readiness` |
-| Unshippable package or unsafe source | `CI` / `Source, security and package` runs Ruff, actionlint, shell syntax, docs and `pytest tests/test_ci_*.py`, plus the redacted Gitleaks scan, pip-audit for both lock sources, and a wheel build, locked install and HTTP startup. | Same CI events / Ubuntu 24.04 | Required by `CI readiness`. Duplication and complexity measurements are advisory. |
-| Transaction, migration or recovery failure | `CI` / `PostgreSQL storage` calls `Shared disposable storage assurance`. Four shards run `scripts/ci/postgres.py` against temporary PostgreSQL 16 databases. | Same CI events and manual assurance / Ubuntu 24.04 | Required by the calling workflow |
-| Desk and Scanner journeys break | `CI` / `Ordinary browser journey` / `pytest browser_tests` uses locked Chromium and intercepted or loopback fixtures for first use, ranked refresh, keyboard, fee details and Scanner journeys. | Same CI events / Ubuntu 24.04 | Required by `CI readiness` |
-| New advisories for locked dependencies | `Scheduled assurance` / `Dependency refresh` audits both hash-locked requirements files and the `uv.lock` export. `CI health sample` reads bounded Actions history. | Weekly default branch or manual assurance / Ubuntu 24.04 | Dependency audit required in the security scope. History is advisory. |
-| Deployment uses an unverified image | `Deploy Predict dev server` / `Build and verify Hetzner images` runs the proxy and Compose smoke scripts before GHCR publication. `Deploy Predict to Hetzner` consumes the verified digests, and `Release result` retains the stage outcomes. | Manual branch dispatch / Ubuntu 24.04 | Release workflow. The repo variable, dispatch input and `hetzner` environment govern deployment. |
+| Behavior / risk | Exact workflow, job and entry point | Event / platform / checkpoint | Status | Authority / evidence |
+| --- | --- | --- | --- | --- |
+| Incorrect prices, fees, matching or delivery | `CI` / `Offline checks` / `sh scripts/check-ci` checks portable Python and Node behavior, compilation, JavaScript syntax, generated assets and the test manifest. It retains JUnit and Python line and branch coverage. | PR, `main` push, merge group, manual / Ubuntu 24.04 | Required by `CI readiness` | Repository `ci.yml` and `gate.py`; full suite registrations remain unchanged. |
+| Unshippable package or unsafe source | `CI` / `Source, security and package` runs Ruff, actionlint, shell syntax, docs and `pytest tests/test_ci_*.py`, plus the redacted Gitleaks scan, pip-audit for both lock sources, and a wheel build, locked install and HTTP startup. | Same CI events / Ubuntu 24.04 | Required by `CI readiness`. Duplication and complexity measurements are advisory. | Repository quality job and expanded reporter; runs before behavior fanout. |
+| Transaction, migration or recovery failure | `CI` / `PostgreSQL storage` calls `Shared disposable storage assurance`. Four shards run `scripts/ci/postgres.py` against temporary PostgreSQL 16 databases. | Same CI events and manual assurance / Ubuntu 24.04 | Required by the calling workflow | Repository reusable `storage.yml`; all four SQL shards retained. |
+| Desk and Scanner journeys break | `CI` / `Ordinary browser journey` / `pytest browser_tests` uses locked Chromium and intercepted or loopback fixtures for first use, ranked refresh, keyboard, fee details and Scanner journeys. | Same CI events / Ubuntu 24.04 | Required by `CI readiness` | Repository browser job; required cases validated from JUnit. |
+| New advisories for locked dependencies | `Scheduled assurance` / `Dependency refresh` audits both hash-locked requirements files and the `uv.lock` export. `CI health sample` reads bounded Actions history. | Weekly default branch or manual assurance / Ubuntu 24.04 | Dependency audit required in the security scope. History is advisory. | Repository `assurance.yml`; optional health telemetry cannot override security results. |
+| Deployment uses an unverified image | `Deploy Predict dev server` / `Build and verify Hetzner images` runs the proxy and Compose smoke scripts before GHCR publication. `Deploy Predict to Hetzner` consumes the verified digests, and `Release result` retains the stage outcomes. | Manual branch dispatch / Ubuntu 24.04 | Release workflow. The repo variable, dispatch input and `hetzner` environment govern deployment. | Repository `hetzner.yml`; independent manually authorized image/deployment checkpoint. |
 
 `CI readiness` requires all four jobs to pass in the same run. Missing, failed,
-cancelled, or unexpectedly skipped required jobs fail the gate. To enforce the
-check for merges, require `CI readiness` in a GitHub branch protection rule or
-ruleset. PR runs validate GitHub's merge commit and report the PR head separately.
+cancelled, or unexpectedly skipped required jobs fail the gate. PR runs validate GitHub's merge commit and report the PR head separately.
 CI cancels superseded runs within the same pull request.
+
+`CI readiness` is a workflow result. Requiring it for merges is a separate
+GitHub branch-protection or ruleset setting; inspect repository settings before
+assuming merges enforce it. Manual deployment has its own image and environment
+checks. [GitHub required-check semantics](https://docs.github.com/en/pull-requests/how-tos/merge-and-close-pull-requests/troubleshooting-required-status-checks).
+
+### Quality before expensive behavior work
+
+`Source, security and package` now runs first. `Offline checks`, the four-shard
+PostgreSQL lane and `Ordinary browser journey` depend on its success, then run in
+parallel. This reuses the existing quality job and setup instead of adding a
+second lint job or test selector. Its commands and requirements are unchanged.
+The stable `CI readiness` job still runs with `always()` and requires success
+from **all four** original jobs. A quality failure intentionally skips behavior
+work and fails readiness; skipped work is never a behavior pass or N/A.
+
+For deliberate failure diagnosis, manually dispatch `CI` with the typed boolean
+`full_diagnostics: true`. Behavior lanes may then run despite quality failure;
+the override cannot bypass readiness and does not run after workflow
+cancellation. Normal PR/push/merge-group checks still run every registered test
+when quality succeeds. No hosted affected-test selection, prediction or cached
+result reuse was introduced. No shadow omission policy is being promoted.
+Readiness JSON and its actual Actions summary record the mode and explain why
+behavior ran or was prevented.
+
+The trade-off is later independent behavior feedback on quality-invalid
+candidates and a quality-job delay before passing candidates' fanout. The manual
+override is the diagnostic escape hatch. The dependency avoids expensive work on a revision that a required quality
+check has already rejected. Release authorization remains separate.
 
 [Scheduled assurance](../.github/workflows/assurance.yml) runs Mondays at 07:23
 UTC on the default branch, subject to runner scheduling. The weekly run checks
@@ -132,11 +159,61 @@ are registered in the disposable PostgreSQL lane.
 
 ### Selecting local cases
 
-Use pytest node IDs or affected modules for routine changes. Check discovery
-with `--collect-only -q` when a selector is uncertain. Pass SQL node IDs to
-`postgres.py --tests`. An unexpected zero-case pytest result exits with code
-5. When a shared fixture or configuration change has unclear reach, run the
-affected suite. Pytest's `--lf` uses failure history.
+The local entry point is a conservative **subsystem router**, not predictive
+selection or a result cache:
+
+```sh
+.venv/bin/python scripts/ci/affected.py --plan
+.venv/bin/python scripts/ci/affected.py
+.venv/bin/python scripts/ci/affected.py --base origin/main --plan
+.venv/bin/python scripts/ci/affected.py --full --plan
+```
+
+Omit `--plan` to execute. Choose your PostgreSQL 16 `PG_CONFIG` when it is not on
+PATH. `--full` runs all registered portable, PostgreSQL, Chromium and quality
+behavior lanes, plus docs; it does not replace the security/package/toolchain
+jobs in required CI. Hosted workflows and their full checks are unchanged.
+
+The default comparison is **HEAD versus index + worktree**, plus nonignored
+untracked files. `--base` adds committed branch work since `merge-base(BASE,
+HEAD)`. Rename detection is disabled so old and new paths both participate.
+Known journal, SGO and pregame source/assets route to their module suites and
+storage/browser consumers. Changed test modules are included; literal Python
+imports of changed test helpers add inspected consumers or broaden. New
+unclassified tests are included and broaden; update their required manifest
+classification before merging. A changed shared fixture, migration, lockfile,
+configuration or `AGENTS.md`, unknown source, deleted input or unknown helper
+consumer falls back visibly to the registered behavior lanes. Broadening can be expensive:
+inspect `--plan` first. Documentation alone selects the docs check. An empty
+working diff executes no tests and makes no pass claim.
+
+This bounded routing table is intentionally conservative. It does not infer
+arbitrary dynamic imports, runtime file dependencies or external-service
+changes; use `--full` or explicit additional targets for those. Do not interpret
+its selection as exhaustive dependency analysis. Extend the mappings when
+adding consumers to the maintained subsystems. The router uses the existing
+pytest and disposable PostgreSQL entry points; it does not install a coverage
+history service. [Pytest selection and discovery](https://docs.pytest.org/en/stable/how-to/usage.html).
+
+First-run behavior is identical to subsequent runs: there is no selection or
+result database to warm. The ignored `.local/test-affected/last-plan.json` is
+rewritten diagnostic output and is never read as an input. Missing, stale or
+corrupt diagnostics cannot suppress tests; no prior success is reused. Runs
+stop at the first failing command and preserve its status, including pytest's
+exit 5 for accidental zero collection. Each execution allocates fresh retained JUnit/SQL outputs under the ignored
+`.local/test-affected/run-*/` directory. PostgreSQL continues to use its existing
+fresh socket-only disposable runner; a direct `postgres.py` invocation still
+requires an empty report directory. Use `--collect-only -q` or explicit pytest node IDs
+for narrower iteration; SQL node IDs go to `postgres.py --tests`. Pytest `--lf`
+is failure history, not affected selection.
+
+Qualification uses disposable Git repositories: staged/unstaged/untracked and
+merge-base edits, leaf modules, helper consumers, new/deleted/renamed inputs,
+shared fixtures, non-code inputs, no-change/docs-only plans, explicit full
+routing, archival exclusions and missing/stale diagnostics. A real pytest
+fixture run compares a selected leaf with all four fixture modules; deliberately
+wrong arithmetic returns 1 and zero collection returns 5. This is representative
+selector qualification, not a selected-versus-full comparison of this repository.
 
 ## Reports and dependencies
 

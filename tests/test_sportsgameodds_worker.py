@@ -1,5 +1,6 @@
 import asyncio
 from copy import deepcopy
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 import subprocess
 from types import SimpleNamespace
@@ -9,7 +10,7 @@ import pytest
 
 from app.collection.current_policy import DEFAULT
 from app.collection.sportsgameodds_adapter import Page
-from app.collection.sportsgameodds_schedule import SchedulePolicy
+from app.collection.sportsgameodds_schedule import PREGAME_TARGET
 from app.collection.sportsgameodds_worker import SportsGameOddsWorker
 from tests.sportsgameodds_fixtures import NOW, event
 
@@ -113,6 +114,8 @@ def test_worker_replans_every_minute_overnight_and_keeps_discovery_cursor():
 
 
 def test_active_and_kickoff_refresh_interleave_with_discovery_and_retain_cursor_filter():
+    from app.collection.sportsgameodds_schedule import PREGAME_TARGET
+
     async def scenario():
         service = SimpleNamespace(config=dict(DEFAULT, live_enabled=True), dispatch=True, globally_stopped=False, paused_sources=set())
         now = NOW
@@ -120,7 +123,7 @@ def test_active_and_kickoff_refresh_interleave_with_discovery_and_retain_cursor_
         kickoff = NOW + timedelta(seconds=2)
         upcoming = dict(event(1), starts_at=kickoff.isoformat())
         active = dict(event(3), phase='live', starts_at=(NOW - timedelta(hours=1)).isoformat(),
-                      received_at=(kickoff - timedelta(minutes=15)).isoformat())
+                      received_at=(kickoff - PREGAME_TARGET.live).isoformat())
         worker.events['e3'] = active
         requests = []
 
@@ -216,6 +219,29 @@ def test_pregame_alternate_retry_does_not_dispatch_when_clock_reaches_kickoff():
     asyncio.run(scenario())
 
 
+@pytest.mark.parametrize('live', [False, True])
+def test_early_start_notice_is_admitted_without_poststart_prices(live):
+    async def scenario():
+        service = SimpleNamespace(config=deepcopy(DEFAULT), dispatch=True,
+                                  globally_stopped=False, paused_sources=set())
+        worker = SportsGameOddsWorker(service, now=lambda: NOW)
+        initial = dict(event(1), starts_at=(NOW+timedelta(hours=1)).isoformat())
+        worker.events['e1'] = initial
+        observed = dict(initial, phase='live' if live else 'started',
+                        status=dict(started=True, live=live))
+        received = Page((observed,), ({'event_id': 'e1'},), None, 'a'*64)
+        worker.collector = SimpleNamespace(fetch=AsyncMock(return_value=received))
+        worker._publish = AsyncMock()
+        worker.state = AsyncMock()
+        await worker._fetch({'eventIDs': 'e1', 'limit': 1})
+        admitted = worker._publish.await_args.args[0]
+        assert admitted.events == (observed,)
+        assert admitted.quotes == ()
+        assert 'e1' not in worker.events
+        worker.collector.fetch.assert_awaited_once()
+    asyncio.run(scenario())
+
+
 def test_started_event_uses_active_polling_without_relabeling_phase():
     service = SimpleNamespace(config=dict(DEFAULT, live_enabled=True), dispatch=True, globally_stopped=False, paused_sources=set())
     worker = SportsGameOddsWorker(service, transport=SimpleNamespace(close=AsyncMock()), now=lambda: NOW)
@@ -246,7 +272,8 @@ def test_every_game_deadline_and_faster_band_wake_without_extra_discovery():
     service = SimpleNamespace(config=deepcopy(DEFAULT), dispatch=True,
                               globally_stopped=False, paused_sources=set())
     worker = SportsGameOddsWorker(service, transport=SimpleNamespace(close=AsyncMock()), now=lambda: NOW)
-    policy = SchedulePolicy(approaching=timedelta(minutes=3), imminent=timedelta(minutes=6))
+    policy = replace(PREGAME_TARGET, approaching=timedelta(minutes=3), imminent=timedelta(minutes=6),
+                     approaching_window=timedelta(hours=2), imminent_window=timedelta(hours=12))
     worker.events['e1'] = dict(event(1), starts_at=(NOW+timedelta(hours=4)).isoformat(),
                               received_at=(NOW-timedelta(minutes=5,seconds=50)).isoformat())
     assert worker.next_pregame_refresh(NOW,policy,NOW+timedelta(minutes=1)) == NOW+timedelta(seconds=10)
@@ -346,7 +373,8 @@ def test_unreadable_alternates_try_main_lines_and_keep_scanning(base_readable):
 
 
 def test_alternates_use_bounded_approaching_event_refresh_and_track_admission():
-    from app.collection.sportsgameodds_schedule import EventDue, SchedulePolicy
+    from app.collection.sportsgameodds_schedule import EventDue
+    from app.collection.sportsgameodds_worker import ALTERNATE_REFRESH_WINDOW
 
     async def scenario():
         service = SimpleNamespace(config=deepcopy(DEFAULT), dispatch=True, globally_stopped=False, paused_sources=set())
@@ -358,11 +386,11 @@ def test_alternates_use_bounded_approaching_event_refresh_and_track_admission():
         worker.collector = SimpleNamespace(fetch=AsyncMock(side_effect=[response,Page((),(),None)]))
         worker._publish = AsyncMock()
         worker.state = AsyncMock()
-        due = [EventDue('e1',NOW+timedelta(hours=2)), EventDue('e2',NOW+timedelta(hours=2,seconds=1)),
+        due = [EventDue('e1',NOW+ALTERNATE_REFRESH_WINDOW), EventDue('e2',NOW+ALTERNATE_REFRESH_WINDOW+timedelta(seconds=1)),
                EventDue('e3',NOW+timedelta(hours=12))]
         worker.events = {item.event_id: dict(event(index), starts_at=item.starts_at.isoformat())
                          for index, item in enumerate(due, 1)}
-        await worker.refresh(due,SchedulePolicy())
+        await worker.refresh(due,PREGAME_TARGET)
         first, other = [c.args[0] for c in worker.collector.fetch.await_args_list]
         assert first['eventIDs'] == 'e1' and first['limit'] == 1 and first['includeAltLines'] is True
         assert set(first['bookmakerID'].split(',')) == {'kalshi','polymarket','novig','prophetexchange','fanduel','draftkings','betmgm','caesars'}
@@ -735,7 +763,8 @@ def test_pregame_refresh_between_scans_does_not_restart_discovery(scan_delay):
         worker = SportsGameOddsWorker(service, transport=SimpleNamespace(close=AsyncMock()), now=lambda: moment)
         worker.initialize = AsyncMock()
         worker.state = AsyncMock()
-        policy = SchedulePolicy(approaching=timedelta(minutes=15))
+        policy = replace(PREGAME_TARGET, approaching=timedelta(minutes=15),
+                         approaching_window=timedelta(hours=2), imminent_window=timedelta(hours=12))
         delays = []
 
         async def cycle():
@@ -772,4 +801,41 @@ def test_pregame_refresh_between_scans_does_not_restart_discovery(scan_delay):
         assert worker.cycle.await_count == 2
         worker.refresh.assert_awaited_once()
 
+    asyncio.run(scenario())
+
+
+def test_budget_planner_and_diagnostics_share_the_requested_target(tmp_path, monkeypatch):
+    from app.collection import sportsgameodds_schedule as schedule
+    from app.collection.sportsgameodds_ledger import ObjectLedger
+
+    # Change the owner policy to detect a duplicated one-minute override or
+    # stale diagnostic constants. No provider, account or owner config is used.
+    target = replace(schedule.PREGAME_TARGET, approaching=timedelta(seconds=90),
+                     imminent=timedelta(hours=2))
+    monkeypatch.setattr(schedule, 'PREGAME_TARGET', target)
+
+    event = schedule.EventDue('late', NOW+timedelta(minutes=20), NOW-timedelta(seconds=80))
+    assert schedule.due_events([event], NOW) == []
+    assert schedule.due_events([replace(event, last_received_at=NOW-timedelta(seconds=90))], NOW) == [replace(event, last_received_at=NOW-timedelta(seconds=90))]
+
+    async def scenario():
+        service = SimpleNamespace(config=deepcopy(DEFAULT), dispatch=True,
+                                  globally_stopped=False, paused_sources=set())
+        worker = SportsGameOddsWorker(service, now=lambda: NOW)
+        worker.ledger = ObjectLedger(tmp_path/'quota.sqlite3')
+        worker.window_id = 'fixture-window'
+        worker.ledger.create_window(worker.window_id, limit=10000, initial_used=0,
+            reserve=100, reset_at=NOW+timedelta(days=1), requests_per_minute=10)
+        worker.discovery_at.update({league: NOW for league in ('NFL','NCAAF','NBA','NCAAB','MLB','NHL')})
+        worker._fetch, worker.state = AsyncMock(), AsyncMock()
+        policy = await worker.cycle()
+        assert policy.approaching == timedelta(seconds=90)
+        assert policy.imminent == timedelta(hours=2)
+        metrics = worker.metrics['schedule_budget']
+        assert metrics['requested_late_refresh_seconds'] == 90
+        assert metrics['requested_early_refresh_seconds'] == 7200
+        assert metrics['budget_stretched'] is False
+        worker._fetch.assert_not_awaited()
+        worker.ledger = worker.window_id = None
+        assert await worker.cycle() is target
     asyncio.run(scenario())

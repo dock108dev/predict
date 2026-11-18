@@ -1,6 +1,7 @@
 """Bounded, read-only Actions sample; no inferred flakes or billing costs."""
 
 from datetime import datetime, timedelta, timezone
+from collections import defaultdict
 import json
 import os
 from pathlib import Path
@@ -103,7 +104,29 @@ def collect(fetch, now):
     failure_steps = {}
     runner_seconds = 0
     observed_jobs = 0
+    timed_jobs = 0
+    observed_runner_seconds = 0
     incomplete = 0
+    skipped_jobs = 0
+    unmeasured_steps = 0
+    job_times, step_times, event_seconds = (
+        defaultdict(list),
+        defaultdict(list),
+        defaultdict(float),
+    )
+
+    def duration(row):
+        try:
+            start, end = (
+                datetime.fromisoformat(row[k].replace("Z", "+00:00"))
+                for k in ("started_at", "completed_at")
+            )
+            if start.utcoffset() is None or end.utcoffset() is None or end < start:
+                return None
+            return (end - start).total_seconds()
+        except (KeyError, TypeError, ValueError, AttributeError):
+            return None
+
     for run in selected_runs(runs, now):
         if run["run_attempt"] > 1:
             try:
@@ -123,27 +146,69 @@ def collect(fetch, now):
                 f"/actions/runs/{run['id']}/attempts/{run['run_attempt']}/jobs?per_page=100"
             )
             jobs = response["jobs"]
+            if (
+                not isinstance(jobs, list)
+                or type(response["total_count"]) is not int
+                or response["total_count"] < len(jobs)
+            ):
+                raise ValueError("Malformed job inventory")
         except Exception as error:
             run["jobs_unavailable"] = type(error).__name__
             incomplete += 1
             continue
+        completed = []
+        executed = []
         for job in jobs:
-            for step in job.get("steps", []):
+            if not isinstance(job, dict):
+                executed.append(None)
+                continue
+            if job.get("conclusion") == "skipped":
+                skipped_jobs += 1
+                continue
+            executed.append(job)
+            seconds = duration(job)
+            if seconds is not None:
+                completed.append(job)
+                timed_jobs += 1
+                observed_runner_seconds += seconds
+                event_seconds[run["event"]] += seconds
+                label = (
+                    job.get("name")
+                    if isinstance(job.get("name"), str)
+                    else "Unnamed job"
+                )
+                job_times[label].append(seconds)
+            for step in job.get("steps") or []:
+                if not isinstance(step, dict):
+                    unmeasured_steps += 1
+                    continue
                 if step.get("conclusion") == "failure":
-                    label = step["name"]
+                    label = (
+                        step.get("name")
+                        if isinstance(step.get("name"), str)
+                        else "Unnamed step"
+                    )
                     failure_steps[label] = failure_steps.get(label, 0) + 1
-        completed = [j for j in jobs if j.get("completed_at") and j.get("started_at")]
-        if completed and len(completed) == len(jobs) == response["total_count"]:
+                if step.get("conclusion") != "skipped":
+                    seconds = duration(step)
+                    if seconds is None:
+                        unmeasured_steps += 1
+                    else:
+                        label = (
+                            step.get("name")
+                            if isinstance(step.get("name"), str)
+                            else "Unnamed step"
+                        )
+                        step_times[label].append(seconds)
+        if (
+            completed
+            and len(completed) == len(executed)
+            and len(jobs) == response["total_count"]
+        ):
             run["first_job_started_at"] = min(j["started_at"] for j in completed)
             run["job_completed_at"] = max(j["completed_at"] for j in completed)
             observed_jobs += len(completed)
-            runner_seconds += sum(
-                (
-                    datetime.fromisoformat(j["completed_at"].replace("Z", "+00:00"))
-                    - datetime.fromisoformat(j["started_at"].replace("Z", "+00:00"))
-                ).total_seconds()
-                for j in completed
-            )
+            runner_seconds += sum(duration(job) for job in completed)
         else:
             incomplete += 1
     metrics = analyze(runs, now)
@@ -169,7 +234,35 @@ def collect(fetch, now):
     metrics.update(
         runner_minutes=runner_seconds / 60 if observed_jobs else None,
         observed_jobs=observed_jobs,
+        observed_runner_minutes=observed_runner_seconds / 60 if timed_jobs else None,
+        timed_jobs=timed_jobs,
         incomplete_job_samples=incomplete,
+        skipped_jobs=skipped_jobs,
+        unmeasured_steps=unmeasured_steps,
+        runner_minutes_scope="complete job inventories of sampled latest CI attempts; not billing",
+        observed_runner_minutes_scope="all valid latest-attempt job timings, including partial inventories; lower bound, not billing",
+        unobserved_prior_attempts=sum(
+            r["run_attempt"] - 1 for r in selected_runs(runs, now)
+        ),
+        runner_minutes_by_event={
+            event: seconds / 60 for event, seconds in event_seconds.items()
+        },
+        job_timings={
+            name: dict(
+                samples=len(values),
+                seconds=sum(values),
+                median_seconds=statistics.median(values),
+            )
+            for name, values in job_times.items()
+        },
+        step_timings={
+            name: dict(
+                samples=len(values),
+                seconds=sum(values),
+                median_seconds=statistics.median(values),
+            )
+            for name, values in step_times.items()
+        },
     )
     return metrics, runs
 
@@ -246,7 +339,25 @@ def render_summary(metrics):
             f"({values['duration_sample']} measured) |\n"
         )
     queue = metrics.get("queue_seconds")
-    text += f"\nMedian time to first job (s): {safe(queue['median'] if queue else None)}. Observed runner minutes: {safe(metrics.get('runner_minutes'))}.\n"
+    text += f"\nMedian time to first job (s): {safe(queue['median'] if queue else None)}. Complete-inventory runner minutes: {safe(metrics.get('runner_minutes'))}. Observed job minutes including partial inventories: {safe(metrics.get('observed_runner_minutes'))}.\n"
+    text += (
+        "\nCompute covers only observed jobs in each sampled run's latest attempt. "
+        f"Prior attempts not measured: {safe(metrics.get('unobserved_prior_attempts'))}. "
+        f"Incomplete job samples: {safe(metrics.get('incomplete_job_samples'))}. "
+        f"Skipped jobs: {safe(metrics.get('skipped_jobs'))}. "
+        "Partial observations are lower bounds, not zero usage or billing.\n"
+    )
+    for heading, key in (
+        ("Job execution", "job_timings"),
+        ("Step execution (setup, tests and reports)", "step_timings"),
+    ):
+        values = metrics.get(key, {})
+        text += f"\n### {heading}\n\n| Name | Measured samples | Summed seconds | Median seconds |\n|---|---:|---:|---:|\n"
+        for name, value in sorted(values.items(), key=lambda item: -item[1]["seconds"]):
+            text += f"| {safe(name)} | {value['samples']} | {value['seconds']:.1f} | {value['median_seconds']:.1f} |\n"
+        if not values:
+            text += "| Unavailable | — | — | — |\n"
+    text += f"\nUnmeasured non-skipped steps: {safe(metrics.get('unmeasured_steps'))}. Step totals exclude unreported runner overhead; overlapping workflow jobs are summed separately.\n"
     text += f"\nRepository cache bytes: {safe(metrics.get('cache_bytes'))}. Bytes in sampled artifacts: {safe(metrics.get('artifact_sample_bytes'))}. See the current health artifact for job failures and measurement limits.\n"
     return text
 

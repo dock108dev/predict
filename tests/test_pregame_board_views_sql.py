@@ -11,8 +11,218 @@ from app.storage.store import stamp
 from app.storage import current_pregame as board
 
 
+def test_ranking_wire_is_canonical_and_preserves_unrounded_digits():
+    from decimal import Decimal, localcontext
+    from app.storage.pregame_ranking import present
+
+    for zero in ("0.00000000000000000000", Decimal("0E-64"), "-0.000"):
+        assert present({}, zero, "growth")["ranking"]["value"] == "0"
+    exact = "0.123456789012345678901234567890123456789012345678901"
+    with localcontext() as context:
+        context.prec = 12
+        assert present({}, Decimal(exact), "growth")["ranking"]["value"] == exact
+
+
+def test_ranking_catalog_owns_presented_metadata_and_rejects_missing_calculation():
+    import pytest
+    from app.storage import pregame_ranking as ranking
+
+    catalog = ranking.catalog()
+    assert catalog["default"] == "growth"
+    for method, info in catalog["methods"].items():
+        shown = ranking.present({}, None, method)["ranking"]
+        assert {key: shown[key] for key in ("label", "column", "unit")} == {
+            key: info[key] for key in ("label", "column", "unit")
+        }
+    # A future metadata entry must not silently run growth's calculation.
+    with patch.dict(ranking.METHODS, future=dict(ranking.METHODS["growth"])):
+        with pytest.raises(ValueError, match="Unsupported.*calculation"):
+            ranking.expression("future")
+    with patch.object(ranking, "DEFAULT", "unsupported"):
+        with pytest.raises(ValueError, match="Unknown opportunity ranking"):
+            ranking.catalog()
+
+
 @skipUnless(SOCKET, "Disposable PostgreSQL required")
 class PregameBoardViewsSQL(PregameFixture):
+    async def test_authored_cashflows_rank_longshot_above_larger_kelly_fraction(self):
+        """Fixed wealth factors, independent of the valuation packet/oracle below."""
+        import json
+        from decimal import Decimal
+        from app.storage.pregame_ranking import expression
+
+        # +500 at p=1/3: optimal f=1/5, wealth factors 2 and 4/5.
+        # +100 at p=13/20: optimal f=3/10, factors 13/10 and 7/10.
+        # Growth = log of their probability-weighted geometric means.
+        def payload(p, score, receipt, ev):
+            return json.dumps(
+                dict(
+                    reference=dict(probability=p),
+                    raw=dict(opportunity_score=score, net_ev=ev),
+                    fee=dict(
+                        committed_usd="100",
+                        cashflows=dict(
+                            win=dict(net_receipt_usd=receipt),
+                            loss=dict(net_receipt_usd="0"),
+                        ),
+                    ),
+                )
+            )
+
+        rows = [
+            ("longshot", payload("1/3", "2000", "600", "1")),
+            ("even", payload("13/20", "3000", "200", "3/10")),
+        ]
+        with self.connect() as db:
+
+            def ranked(method):
+                return list(
+                    db.execute(
+                        "SELECT name," + expression(method) + " AS value FROM "
+                        "(VALUES (%s,%s::jsonb),(%s,%s::jsonb)) AS q(name,payload) "
+                        "ORDER BY value DESC NULLS LAST,name",
+                        (*rows[0], *rows[1]),
+                    )
+                )
+
+            growth = ranked("growth")
+            self.assertEqual([r["name"] for r in growth], ["longshot", "even"])
+            self.assertLess(
+                abs(growth[0]["value"] - Decimal("822.866926438419326282")),
+                Decimal("1e-12"),
+            )
+            self.assertLess(
+                abs(growth[1]["value"] - Decimal("457.005415253128512036")),
+                Decimal("1e-12"),
+            )
+            self.assertEqual([r["name"] for r in ranked("score")], ["even", "longshot"])
+            self.assertEqual([r["value"] for r in ranked("ev")], [100, 30])
+            self.assertLess(
+                abs(ranked("edge")[0]["value"] - Decimal("16.666666666666666667")),
+                Decimal("1e-12"),
+            )
+            self.assertLess(
+                abs(
+                    ranked("balanced")[0]["value"] - Decimal("4472.135954999579392818")
+                ),
+                Decimal("1e-12"),
+            )
+            # A certain win permits full allocation despite zero losing wealth;
+            # any positive chance of ruin must remain undefined, never an error.
+            for p, expected in (("1", "6931.471805599453094172"), ("1/2", None)):
+                value = db.execute(
+                    "SELECT "
+                    + expression("growth")
+                    + " AS value FROM (SELECT %s::jsonb AS payload) q",
+                    (payload(p, "10000", "200", "1"),),
+                ).fetchone()["value"]
+                if expected is None:
+                    self.assertIsNone(value)
+                else:
+                    self.assertLess(abs(value - Decimal(expected)), Decimal("1e-12"))
+
+    async def test_growth_default_and_all_rankings_precede_pagination(self):
+        from decimal import Decimal, localcontext
+        from app.storage.pregame_ranking import METHODS
+
+        data = page()
+        original = deepcopy(data["data"][0])
+        data["data"] = []
+        for index, offered in enumerate(("+108", "+525", "+116")):
+            event = deepcopy(original)
+            event["eventID"] += "-rank-" + str(index)
+            event["status"]["startsAt"] = (
+                stamp(original["status"]["startsAt"]) + timedelta(minutes=15 * index)
+            ).isoformat()
+            for odd in event["odds"].values():
+                home = odd["sideID"] == "home"
+                odd["byBookmaker"]["prophetx"]["odds"] = offered if home else "-2000"
+                for book, pair in {
+                    "fanduel": ("+450", "-600"),
+                    "draftkings": ("+400", "-550"),
+                }.items():
+                    odd["byBookmaker"][book]["odds"] = (
+                        pair[not home] if index == 1 else "-110"
+                    )
+            data["data"].append(event)
+        with self.connect() as db:
+            self.ingest(db, data)
+            self.process(db)
+            before = list(
+                db.execute(
+                    "SELECT * FROM current_pregame_calculation ORDER BY contract_id"
+                )
+            )
+            all_rows = board.read(db, dict(limit="100"), at=stamp(AT))
+            self.assertEqual(all_rows["sort"], "growth")
+            self.assertEqual(all_rows["total"], 3)
+
+            def number(value):
+                value = Fraction(value)
+                return Decimal(value.numerator) / Decimal(value.denominator)
+
+            def value(row, selected):
+                p = number(row["reference"]["probability"])
+                ev = number(row["raw"]["net_ev"])
+                f = number(row["raw"]["opportunity_score"]) / 10000
+                cash = row["fee"]["cashflows"]
+                committed = number(row["fee"]["committed_usd"])
+                win = number(cash["win"]["net_receipt_usd"]) / committed - 1
+                loss = number(cash["loss"]["net_receipt_usd"]) / committed - 1
+                if selected == "growth":
+                    return 10000 * (
+                        p * (1 + f * win).ln() + (1 - p) * (1 + f * loss).ln()
+                    )
+                return {
+                    "score": f * 10000,
+                    "ev": ev * 100,
+                    "balanced": ev / win.sqrt() * 10000,
+                    "edge": (p + loss / (win - loss)) * 100,
+                }[selected]
+
+            with localcontext() as context:
+                context.prec = 50
+                for selected in METHODS:
+                    expected = sorted(
+                        all_rows["rows"],
+                        key=lambda r: (
+                            -value(r, selected),
+                            -number(r["raw"]["net_ev"]),
+                            r["bet_id"],
+                        ),
+                    )
+                    actual = []
+                    for offset in range(3):
+                        packet = board.read(
+                            db,
+                            dict(sort=selected, limit="1", offset=str(offset)),
+                            at=stamp(AT),
+                        )
+                        (row,) = packet["rows"]
+                        actual.append(row["id"])
+                        self.assertEqual(row["ranking"]["method"], selected)
+                        self.assertLess(
+                            abs(
+                                Decimal(row["ranking"]["value"]) - value(row, selected)
+                            ),
+                            Decimal("1e-9"),
+                        )
+                    self.assertEqual(actual, [r["id"] for r in expected])
+            legacy = board.read(db, dict(sort="score"), at=stamp(AT))["rows"]
+            self.assertNotEqual(
+                [r["id"] for r in legacy], [r["id"] for r in all_rows["rows"]]
+            )
+            with self.assertRaises(ValueError):
+                board.read(db, dict(sort="unknown; DROP TABLE"), at=stamp(AT))
+            self.assertEqual(
+                before,
+                list(
+                    db.execute(
+                        "SELECT * FROM current_pregame_calculation ORDER BY contract_id"
+                    )
+                ),
+            )
+
     async def test_games_page_orders_start_time_and_keeps_all_main_lines_before_paging(
         self,
     ):

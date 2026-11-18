@@ -600,3 +600,210 @@ class ReadinessArtifactTests(unittest.TestCase):
                     names + ["app/dashboard/opportunity_static/current/unknown.ttf"],
                     root,
                 )
+
+
+class QualityFirstWorkflowTests(unittest.TestCase):
+    def test_existing_quality_contract_precedes_each_behavior_lane_and_can_be_diagnosed(
+        self,
+    ):
+        import re
+
+        root = Path(__file__).resolve().parents[1]
+        candidate = (root / ".github/workflows/ci.yml").read_text()
+        # Required job IDs are independent of local selection. Changing fanout
+        # must retain the existing readiness obligations.
+        self.assertEqual(
+            load("gate").REQUIRED, ("offline", "quality", "postgres", "browser")
+        )
+        expected = "${{ !cancelled() && (needs.quality.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.full_diagnostics)) }}"
+        for lane in ("offline", "postgres", "browser"):
+            block = re.search(
+                r"(?ms)^  " + lane + r":\n(.*?)(?=^  [a-z_]+:|\Z)", candidate
+            )[1]
+            self.assertIn("    needs: quality\n", block)
+            self.assertIn("    if: " + expected + "\n", block)
+        readiness = candidate.split("  readiness:\n", 1)[1]
+        self.assertIn("    needs: [offline, quality, postgres, browser]", readiness)
+        self.assertIn("    if: always()", readiness)
+        dispatch = candidate.split("  workflow_dispatch:", 1)[1].split("\nenv:", 1)[0]
+        self.assertIn("      full_diagnostics:", dispatch)
+        self.assertIn("        type: boolean", dispatch)
+        self.assertIn("        default: false", dispatch)
+        # Passing changes still run the full lanes; do not install local routing
+        # as an unqualified omission policy in hosted CI.
+        self.assertIn("run: sh scripts/check-ci", candidate)
+        self.assertIn("python -m pytest -q browser_tests ", candidate)
+        self.assertIn("uses: ./.github/workflows/storage.yml", candidate)
+        self.assertNotIn("scripts/ci/affected.py", candidate)
+
+    def test_readiness_reports_quality_failure_skip_and_manual_override_without_bypass(
+        self,
+    ):
+        import contextlib
+        import os
+        from unittest.mock import patch
+
+        cases = (
+            ("success", "success", "push", "false", "PASS"),
+            ("failure", "skipped", "push", "false", "FAIL"),
+            ("failure", "success", "workflow_dispatch", "true", "FAIL"),
+            ("cancelled", "skipped", "workflow_dispatch", "true", "FAIL"),
+            ("success", "cancelled", "push", "false", "FAIL"),
+        )
+        for quality, behavior, event, full, expected in cases:
+            with (
+                self.subTest(case=(quality, behavior, event, full)),
+                tempfile.TemporaryDirectory() as folder,
+            ):
+                needs = {
+                    name: dict(result=quality if name == "quality" else behavior)
+                    for name in load("gate").REQUIRED
+                }
+                with (
+                    contextlib.chdir(folder),
+                    patch.dict(
+                        os.environ,
+                        {
+                            "NEEDS_JSON": json.dumps(needs),
+                            "GITHUB_EVENT_NAME": event,
+                            "FULL_DIAGNOSTICS": full,
+                            "GITHUB_SHA": "authored-candidate",
+                            "GITHUB_STEP_SUMMARY": "summary.md",
+                        },
+                        clear=True,
+                    ),
+                ):
+                    self.assertEqual(load("gate").main(), int(expected == "FAIL"))
+                    report = json.loads(
+                        Path("test-results/readiness/metrics.json").read_text()
+                    )
+                    text = Path("summary.md").read_text()
+                self.assertEqual(report["overall"], expected)
+                self.assertEqual(report["tested_sha"], "authored-candidate")
+                self.assertEqual(report["full_diagnostics"], full == "true")
+                self.assertIn("Why these tests ran", text)
+                self.assertIn("manual override never bypasses readiness", text)
+
+
+class ExecutionCostTests(unittest.TestCase):
+    def test_skipped_jobs_do_not_erase_quality_timing_and_partial_cost_is_separate(
+        self,
+    ):
+        from datetime import datetime, timezone
+
+        run = dict(
+            name="CI",
+            status="completed",
+            event="push",
+            conclusion="failure",
+            id=7,
+            run_attempt=1,
+            created_at="2026-11-17T00:00:00Z",
+            run_started_at="2026-11-17T00:00:01Z",
+        )
+        quality = dict(
+            name="Quality <script>|",
+            conclusion="failure",
+            started_at="2026-11-17T00:00:02Z",
+            completed_at="2026-11-17T00:01:02Z",
+            steps=[
+                dict(
+                    name="Format",
+                    conclusion="failure",
+                    started_at="2026-11-17T00:00:03Z",
+                    completed_at="2026-11-17T00:00:04Z",
+                )
+            ],
+        )
+        rows = [
+            quality,
+            dict(
+                name="Behavior",
+                conclusion="skipped",
+                started_at=None,
+                completed_at=None,
+            ),
+        ]
+
+        def fetch(path):
+            if "workflows/ci.yml/runs?" in path:
+                return dict(workflow_runs=[run])
+            return dict(total_count=len(rows), jobs=rows)
+
+        module = load("health")
+        now = datetime(2026, 11, 18, tzinfo=timezone.utc)
+        metrics, _ = module.collect(fetch, now)
+        self.assertEqual(metrics["runner_minutes"], 1)
+        self.assertEqual(metrics["observed_runner_minutes"], 1)
+        self.assertEqual(metrics["skipped_jobs"], 1)
+        self.assertEqual(metrics["incomplete_job_samples"], 0)
+        self.assertEqual(metrics["step_timings"]["Format"]["seconds"], 1)
+        text = module.render_summary(dict(metrics, status="PASS"))
+        self.assertIn("Quality &lt;script&gt;&#124;", text)
+        self.assertNotIn("<script>", text)
+        # Keep the established complete-inventory field unavailable when a job
+        # is missing; expose the valid observed lower bound under its own name.
+        rows.append(
+            dict(
+                name="Unknown",
+                conclusion="cancelled",
+                started_at=None,
+                completed_at=None,
+            )
+        )
+        metrics, _ = module.collect(fetch, now)
+        self.assertIsNone(metrics["runner_minutes"])
+        self.assertEqual(metrics["observed_runner_minutes"], 1)
+        self.assertEqual(metrics["incomplete_job_samples"], 1)
+
+    def test_bad_intervals_partial_inventory_and_rerun_cost_remain_explicit(self):
+        from datetime import datetime, timezone
+
+        run = dict(
+            name="CI",
+            status="completed",
+            event="pull_request",
+            conclusion="success",
+            id=8,
+            run_attempt=3,
+            created_at="2026-11-17T00:00:00Z",
+        )
+
+        def fetch(path):
+            if "workflows/ci.yml/runs?" in path:
+                return dict(workflow_runs=[run])
+            if path.endswith("/attempts/1"):
+                return dict(id=8, run_attempt=1, conclusion="failure")
+            return dict(
+                total_count=3,
+                jobs=[
+                    dict(
+                        name="Known",
+                        conclusion="success",
+                        started_at="2026-11-17T00:00:00Z",
+                        completed_at="2026-11-17T00:00:10Z",
+                        steps=[],
+                    ),
+                    dict(
+                        name="Invalid",
+                        conclusion="cancelled",
+                        started_at="2026-11-17T00:00:10Z",
+                        completed_at="2026-11-17T00:00:01Z",
+                        steps=[],
+                    ),
+                ],
+            )
+
+        module = load("health")
+        metrics, _ = module.collect(fetch, datetime(2026, 11, 18, tzinfo=timezone.utc))
+        self.assertIsNone(metrics["runner_minutes"])
+        self.assertAlmostEqual(metrics["observed_runner_minutes"], 10 / 60)
+        self.assertEqual(metrics["unobserved_prior_attempts"], 2)
+        self.assertEqual(metrics["incomplete_job_samples"], 1)
+        self.assertEqual(
+            metrics["events"]["pull_request"]["observed_rerun_recoveries"], 1
+        )
+        self.assertIn(
+            "Prior attempts not measured: 2",
+            module.render_summary(dict(metrics, status="PASS")),
+        )

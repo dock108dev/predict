@@ -84,8 +84,8 @@ account guards permit. Faster planning alone does not issue provider requests.
 The next-day cost forecast follows each game through its time bands to kickoff,
 prioritizing near-start odds over distant repeat polls. The requested schedule
 is hourly inside 24 hours, then every minute in the final 30 minutes. Minute
-polling is an owner-selected trial against the Rookie feed's advertised
-three-minute update frequency. Actual intervals stretch only if the slate
+polling is measured against observed quote and source-clock changes; polling
+more often does not guarantee a newer provider price. Actual intervals stretch only if the slate
 cannot fit the available object allowance; Admin reports that explicitly.
 Discovery and refresh keep a shared 10% planning
 margin; durable quota, reservation, rate and Stop guards remain authoritative.
@@ -93,7 +93,7 @@ League discovery retains one cutoff across cursor pages, including after a
 restart. A saved cursor resumes under matching query and phase settings.
 **Admin → Spending** shows account usage, holds, reserves, and pacing.
 The Odds API uses its own ledger and a 15-minute schedule from 09:00 to
-23:00 Eastern. [SportsGameOdds operations](sportsgameodds-operations-20261110.md)
+23:00 Eastern. [SportsGameOdds operations](sportsgameodds-operations.md)
 
 ## Start and stop
 

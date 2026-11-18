@@ -1,8 +1,14 @@
-# Local UI development from the dev server snapshot
+# Read-only snapshot development
 
-The selected flight-board UI runs in this checkout. Collectors remain on the
-Hetzner dev server. A PostgreSQL logical snapshot supplies actual source quotes,
-references, fee schedules, complete calculations, and saved data locally.
+Use a PostgreSQL snapshot of a development server to work on the UI without
+running a local collector. The snapshot includes source quotes, references, fee
+schedules, complete calculations and saved data.
+
+The repository helper currently expects PostgreSQL 16 tools at
+`/opt/homebrew/opt/postgresql@16/bin`. Configure an SSH alias named `hetzner`
+for your development server before using `pull`; that account must be able to
+run the database container's `pg_dump` through Docker. For an ordinary local
+database instead, use the [quickstart](../README.md#requirements-and-quickstart).
 
 ## Normal iteration
 
@@ -36,7 +42,7 @@ new private local cluster using PostgreSQL 16 tools, checks applied migration
 hashes against this checkout, and atomically selects it in
 `.local/dev-snapshot/current.json`. PostgreSQL 16 tools are currently expected at
 `/opt/homebrew/opt/postgresql@16/bin`. Dumps and previous snapshot clusters are
-retained under `.local/dev-snapshot/`; each complete cluster uses roughly 2 GiB.
+retained under `.local/dev-snapshot/` and consume additional disk space.
 To inspect the active paths, use `scripts/dev-snapshot status`. If importing a
 previously downloaded dump, use `restore --dump /absolute/path/to/file.dump`.
 

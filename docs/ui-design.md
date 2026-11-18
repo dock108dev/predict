@@ -7,7 +7,7 @@ rust accents. The main object changes with the task:
 
 | Route | Main content and order | Opening a row |
 | --- | --- | --- |
-| `/` and `/ev` | Positive complete main-line bets, ranked by Opportunity Score | Exact-pick market and sportsbook comparisons |
+| `/` and `/ev` | Positive complete main-line bets, ranked by Kelly growth by default | Exact-pick market and sportsbook comparisons |
 | `/browse-odds` | Games ordered by kickoff, with main winner, spread and total markets together | All available main and alternate lines for the game |
 | `/game?game_key=...` | Complete main and alternate bets for one game | Exact-pick comparison |
 | `/arbs` | Two-sided market/market and market/sportsbook price candidates, ranked by after-fee paired return | Both allocations and modeled outcome receipts |
@@ -36,7 +36,11 @@ a small rust square. Fonts and assets are packaged locally.
 
 Opportunities uses League, Start (ET), Pick/Game, Venue, Price, After fees,
 Fair odds/reference, Net EV and Score columns. Compact desktop rows use roughly
-15px pick text and 12px matchup text. Score governs ordering; kickoff is shown
+15px pick text and 12px matchup text. The **Rank by** dropdown selects Kelly
+growth, Net EV, Kelly fraction (the original Score), Balanced or Probability edge.
+The selection persists locally and applies before pagination. The final column
+and its calculation popover follow the selected metric, including its units.
+Browse odds retains kickoff order. Kickoff is shown
 explicitly in Eastern time. Below 1140px the row becomes a compact layout, and
 phone widths use separate cards. There are no ticket perforations or persistent
 inspector columns.
@@ -85,8 +89,11 @@ Hover and keyboard focus highlight the row. Enter, Space, pointer and touch open
 the same inspection. Game links and math controls remain independent controls
 above the row hit area; there are no nested buttons or role-button wrappers.
 
-Exact-pick comparison uses compact market and sportsbook tables. The selected
-row is copied, so background updates cannot change its inspected calculation.
+Exact-pick comparison uses compact market and sportsbook tables. The open
+comparison follows current stored rows; a withdrawn line clears its prices and
+save controls. Saving freezes the displayed quote at click time. Pending saves,
+their feedback, expanded calculations and focused controls survive redraws.
+An earlier saved quote is distinguished from a newer displayed quote.
 Additional matching sportsbook prices have their own source clocks. Only
 recognized cash sportsbooks appear in the sportsbook table; unknown venues,
 exchanges and sweepstakes products are excluded. Six books appear initially,
@@ -126,3 +133,32 @@ inspection without starting local collectors. Check populated and failed states,
 long names, keyboard/touch, reduced motion and increased text at supported sizes.
 A rendered screenshot establishes appearance at that state, not usability-study
 results or live trading availability.
+
+## Responsive layout and refresh behavior
+
+The interface uses a porcelain background, ink text, rust accents and Manrope.
+Filters keep visible, associated labels. Refresh shows a pending state and brief
+completion feedback for manual reads; neither indicates fresh provider odds.
+Game names lead grouped markets, with main and alternate line identity explicit.
+
+On phones, exact-bet tables become labeled venue groups while retaining all
+prices, fees, reference values and table semantics. Save sits beside its venue.
+Source times, delay notices, fee assumptions, errors and calculation disclosures
+remain visible.
+
+First-load failures show one actionable notice. Empty and one-page results hide
+pagination; additional pages remain reachable. If a quote changes while Save is
+pending, the original click snapshot is saved. The interface reports “Earlier
+quote saved” and permits a separate save of the newer quote.
+
+## Ranking controls
+
+Kelly growth is the default. Ranking covers the full eligible cohort before
+pagination and does not modify stored calculations. Changing the dropdown resets
+the page and preserves the other filters. A failed read retains the previous
+rows and metric heading. Exact-bet comparisons carry the selected metric; saved
+quotes retain their original EV and score.
+
+The backend ranking catalog generates the browser's labels and explanations.
+See [calculation policy](benchmark-ev.md#default-ranking-kelly-growth) and
+[frontend development](development.md#frontend-sources).

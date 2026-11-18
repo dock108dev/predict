@@ -21,6 +21,72 @@ from app.storage import current_pregame as board
 
 @skipUnless(SOCKET, "Disposable PostgreSQL required")
 class CurrentPregameSQL(PregameFixture):
+    async def test_early_started_and_live_notices_withdraw_without_admitting_prices(
+        self,
+    ):
+        import json
+        from dataclasses import replace
+        from datetime import timedelta
+        from app.collection.sportsgameodds_adapter import parse_page
+        from app.storage.sportsgameodds_reference import (
+            prepare_frames,
+            upsert_frames,
+            apply_event_lifecycle,
+        )
+
+        with self.connect() as db:
+            for index, live in enumerate((False, True)):
+                with self.subTest(live=live):
+                    data = page()
+                    event = data["data"][0]
+                    event["eventID"] += "-early-" + str(index)
+                    event["status"]["startsAt"] = (
+                        stamp(event["status"]["startsAt"])
+                        + timedelta(minutes=index * 5)
+                    ).isoformat()
+                    self.ingest(db, data)
+                    self.process(db)
+                    self.assertEqual(board.read(db, {}, at=stamp(AT))["total"], 1)
+                    received = stamp(AT) + timedelta(minutes=1)
+                    event["status"].update(started=True, live=live)
+                    closed = replace(
+                        parse_page(json.dumps(data).encode(), received.isoformat()),
+                        quotes=(),
+                    )
+                    frames = prepare_frames(closed, [])
+                    before_quotes = list(
+                        db.execute(
+                            "SELECT * FROM sgo_quote_revision ORDER BY id,revision"
+                        )
+                    )
+                    with self.assertRaisesRegex(RuntimeError, "injected rollback"):
+                        with db.transaction():
+                            upsert_frames(db, frames)
+                            changed, records = apply_event_lifecycle(db, frames, [], [])
+                            self.assertGreater(changed, 0)
+                            self.assertEqual(records, [])
+                            raise RuntimeError("injected rollback")
+                    self.assertEqual(board.read(db, {}, at=received)["total"], 1)
+                    with db.transaction():
+                        upsert_frames(db, frames)
+                        changed, records = apply_event_lifecycle(db, frames, [], [])
+                        self.assertGreater(changed, 0)
+                        self.assertEqual(records, [])
+                    # Withdrawal is visible even before queued recalculation.
+                    self.assertEqual(board.read(db, {}, at=received)["total"], 0)
+                    self.assertEqual(
+                        before_quotes,
+                        list(
+                            db.execute(
+                                "SELECT * FROM sgo_quote_revision ORDER BY id,revision"
+                            )
+                        ),
+                    )
+                    with db.transaction():
+                        upsert_frames(db, frames)
+                        changed, _ = apply_event_lifecycle(db, frames, [], [])
+                        self.assertEqual(changed, 0)
+
     async def test_source_transaction_coalesces_jobs_and_browser_revision(self):
         with self.connect() as db:
             before = db.execute(

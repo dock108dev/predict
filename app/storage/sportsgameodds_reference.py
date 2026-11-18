@@ -365,7 +365,10 @@ def apply_event_lifecycle(db, frames, references, records):
             WHERE f.event_id=ANY(%s) AND (f.event_id=ANY(%s) OR e.facts ? 'sgo_closed_at'
               OR e.facts#>>'{status,status}' IN ('cancelled','suspended','delayed') OR e.facts#>>'{status,ended}'='true'
               OR e.scheduled_start::timestamptz <> (f.facts->>'starts_at')::timestamptz
-              OR (f.facts#>>'{event_context,status,live}'='true' AND e.facts#>>'{status,live}' IS DISTINCT FROM 'true'))""",
+              OR (f.facts#>>'{event_context,status,live}'='true' AND e.facts#>>'{status,live}' IS DISTINCT FROM 'true')
+              OR (f.facts#>>'{event_context,status,started}'='true'
+                  AND f.facts#>>'{event_context,status,live}' IS DISTINCT FROM 'true'
+                  AND e.facts#>>'{status,status}' IS DISTINCT FROM 'started'))""",
             (sorted(candidates), sorted(terminal))).fetchall()
     if not previous:
         return 0, records

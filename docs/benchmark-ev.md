@@ -8,7 +8,7 @@ exact bet uses the eligible complete same-book pair with the lowest unrounded
 no-vig win probability. Eligible books are FanDuel, DraftKings, BetMGM and
 Caesars; that order breaks exact probability ties. At least two distinct trusted
 books must each offer a complete opposing pair for this exact line. Untrusted
-books, incomplete pairs and different lines do not count toward that minimum. This owner-selected policy
+books, incomplete pairs and different lines do not count toward that minimum. The policy
 is `lowest-no-vig-two-trusted-books-2`, calculation version `predict-current-pregame-6`.
 It minimizes EV among those sportsbook estimates for the selected long bet;
 it does not establish the true probability or a statistical lower bound. Match the occurrence, full-game period,
@@ -46,9 +46,31 @@ receipts; entry fees increase committed cash. A supported zero remains numeric
 reason. [Fee applicability](fee-coverage-policy.md)
 
 Group equivalent exact bets before pagination, select their highest Net EV venue,
-and rank by unrounded Opportunity Score, Net EV and stable identity. Venue
+and rank by the selected unrounded metric, Net EV and stable identity. Venue
 comparisons sort by Net EV. Main-line evidence, rather than payout or EV, controls
 default line eligibility.
+
+### Default ranking: Kelly growth
+
+Kelly growth is the default. The original
+Opportunity Score remains available as **Kelly fraction**. Let `p` be the stored
+reference win probability, `b = R[win]/C − 1`, `l = R[loss]/C − 1`, and
+`f = Opportunity Score/10,000`. The read-time growth index is:
+
+```text
+Growth = 10,000 × [p × ln(1 + f×b) + (1−p) × ln(1 + f×l)]
+```
+
+Its unit is natural-log basis points, not win probability or expected profit
+percentage. A zero-probability outcome contributes zero. PostgreSQL numeric
+arithmetic evaluates the full-cohort logarithms before pagination; displayed
+rounding is never an ordering input. This compares isolated modeled bets; it
+does not optimize a correlated portfolio or prescribe stakes.
+
+**Rank by** also exposes Net EV, Kelly fraction, **Balanced**
+(`10,000 × Net EV / sqrt(b)`, an experimental heuristic), and **Probability edge**
+(`100 × [p − (−l/(b−l))]`, in percentage points). Every choice retains the same
+eligibility, exact-bet grouping, best-Net-EV venue, reference inputs and fees.
 
 ## Indicative sportsbook estimate
 

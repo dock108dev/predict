@@ -99,3 +99,147 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,su
 @media(max-width:1140px){.arb-price-value:has(.american-equivalent){grid-template-rows:20px 13px 13px}}
 .arb-price-value>.math-trigger{text-align:left;justify-self:start;width:auto}.arb-detail-legs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px}
 @media(max-width:650px){.arb-detail-legs{grid-template-columns:1fr;gap:18px}}
+
+/* Task-first refinement of the selected flight board. */
+.pregame-page .board-heading{align-items:center;padding:22px 0 18px}
+.pregame-page .heading-title{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap}
+.pregame-page .heading-flag{margin:0;font-size:11px;font-weight:500;letter-spacing:0;text-transform:none}
+.pregame-page .board-info{flex-direction:row;align-items:center;gap:16px}
+.pregame-page .filters{display:flex;align-items:flex-end;gap:16px;padding:14px 0 16px}
+.pregame-page .filter-field,.pregame-page .search{display:flex;flex-direction:column;gap:6px;min-width:0;margin:0}
+.pregame-page .search{width:300px}
+.pregame-page .filter-field{flex:0 1 160px}
+.pregame-page .filter-label{font-size:11px;font-weight:650;color:var(--p-muted);line-height:1.4}
+.pregame-page .search input,.pregame-page .filters select{width:100%;max-width:none;background:var(--p-field);border:1px solid var(--p-controlLine);border-radius:5px;min-height:44px;padding:0 12px;font-size:13px;color:var(--p-ink)}
+.pregame-page .refresh{display:flex;align-items:center;justify-content:center;gap:7px;min-width:96px;border:1px solid var(--p-controlLine);border-radius:5px;padding:0 12px;font-size:12px;min-height:44px;color:var(--p-ink);background:var(--p-surface)}
+.pregame-page .refresh span{margin:0;font-size:17px}
+.pregame-page .refresh:hover:not(:disabled){background:var(--p-hover);border-color:var(--p-accent)}
+.pregame-page .refresh:disabled{cursor:wait;color:var(--p-muted)}
+.pregame-page .status-line{margin-bottom:12px;font-size:11px}
+.pregame-page .status-line strong{font-size:12px}
+.pregame-page .board-bottom{justify-content:flex-end;margin-top:12px;padding:18px 0;font-size:11px}
+.pregame-page .empty{padding:28px 24px;border:1px solid var(--p-line);border-radius:6px}
+.pregame-page .empty h2{font:650 19px/1.5 Manrope,Arial,sans-serif;margin:0 0 8px}
+.pregame-page .empty p{margin:8px 0 0}
+.pregame-page .empty a{color:var(--p-accent);font-weight:650}
+.pregame-page #error:not([hidden]){padding:12px 16px;background:var(--p-hover);border-left:3px solid var(--p-accent);border-radius:3px}
+.pregame-page .game-card header{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:5px 16px;margin-bottom:16px}
+.pregame-page .game-card header h2{grid-column:1;grid-row:1;font-size:16px;line-height:1.5}
+.pregame-page .game-clock{grid-column:1;grid-row:2;font-size:11px}
+.pregame-page .game-hint{grid-column:2;grid-row:1/3;align-self:center;font-size:12px;color:var(--p-accent);margin:0}
+.pregame-page .game-market>h3{font-size:11px;letter-spacing:.03em}
+.pregame-page .line-values>div>small{font-size:10px}
+.pregame-page .line-values .math-value{font-size:14px}
+.pregame-page .game-open,.pregame-page .line-open{min-height:24px}
+.pregame-page #comparison{width:min(960px,calc(100% - 32px));max-width:960px;border-radius:10px;padding:24px;max-height:calc(100dvh - 32px)}
+.pregame-page :is(#comparison,#game-lines,#arb-details) .dialog-heading{font-size:13px;letter-spacing:0;text-transform:none}
+.pregame-page .dialog-heading button{border:1px solid var(--p-line);border-radius:5px;font-size:24px;flex-shrink:0}
+.pregame-page :is(#comparison,#game-lines,#arb-details) .dialog-pick{font:700 23px/1.35 Manrope,Arial,sans-serif;letter-spacing:-.4px;margin:14px 0 8px;overflow-wrap:anywhere}
+.pregame-page .comparison-context{font-size:12px;line-height:1.6;margin:0 0 20px}
+.pregame-page #comparison h3{font-size:14px;margin:24px 0 12px}
+.pregame-page .comparison-scroll{border:0}
+.pregame-page .comparison-scroll table{font-size:13px}
+.pregame-page .comparison-scroll th{font-size:11px;padding:10px 9px;text-transform:none}
+.pregame-page .comparison-scroll td{padding:14px 9px}
+.pregame-page .exchange-prices{width:100%;min-width:0}
+.pregame-page .exchange-prices td:first-child{font-weight:650}
+.pregame-page .exchange-prices .journal-action{margin:0;gap:6px;justify-content:flex-end}
+.pregame-page .exchange-prices .journal-action button{width:auto;min-width:66px;min-height:38px;white-space:nowrap;font-size:11px;padding:6px 10px;border-radius:4px;background:var(--p-surface);color:var(--p-accent);border-color:var(--p-accent)}
+.pregame-page .exchange-prices .journal-action button:hover{background:var(--p-accent);color:var(--p-accentInk)}
+.pregame-page .exchange-prices .journal-action span:empty{display:none}
+.pregame-page .exchange-prices .journal-action span{max-width:150px;text-align:left}
+.pregame-page .calculation-evidence{margin-top:20px}
+.pregame-page .ticket-meta{display:contents}
+@media(min-width:900px){
+ .pregame-page .game-card:has(.game-market:only-child){display:grid;grid-template-columns:minmax(230px,1fr) minmax(0,2fr);gap:24px}
+ .pregame-page .game-card:has(.game-market:only-child) header{display:flex;flex-direction:column;gap:5px;margin:0}
+ .pregame-page .game-card:has(.game-market:only-child) .game-hint{margin:3px 0 0;align-self:flex-start}
+ .pregame-page .game-market:only-child .game-bet{grid-template-columns:minmax(140px,1fr) minmax(0,2fr)}
+}
+@media(max-width:1140px){
+ .pregame-page .masthead{min-height:64px;gap:28px;padding:0 20px}
+ .pregame-page .masthead nav{gap:20px}
+ .pregame-page .board-row{padding:16px;row-gap:10px}
+ .pregame-page .board-row .subject{grid-column:1;grid-row:1}
+ .pregame-page .board-row .venue{grid-column:1;grid-row:2;padding:0}
+ .pregame-page .board-row .score{grid-column:2;grid-row:2;padding:0}
+ .pregame-page .board-row .ev{margin:0;grid-column:2;grid-row:1;align-self:start;gap:3px}
+ .pregame-page .board-row .posted,.pregame-page .board-row .after,.pregame-page .board-row .fair{grid-row:3;align-self:stretch;border-top:0;padding-top:10px;gap:3px}
+ .pregame-page .board-row .posted{border-top:0}
+ .pregame-page .board-row .posted:before{content:'';position:absolute;left:16px;right:16px;height:1px;margin-top:-10px;background:var(--p-line)}
+ .pregame-page .board-row .board-number .mobile-label{font-size:10px}
+ .pregame-page .board-row .fair .reference{font-size:10px;line-height:1.5}
+}
+@media(max-width:800px){
+ .pregame-page .masthead{gap:24px;flex-wrap:wrap;min-height:64px}
+ .pregame-page .masthead nav{gap:18px;font-size:11px}
+ .pregame-page .brand{font-size:17px}
+ .pregame-page .board-wrap{padding:0 16px}
+ .pregame-page .board-heading{padding:18px 0 14px;align-items:flex-start;gap:12px}
+ .pregame-page .heading-title{gap:6px;flex-direction:column}
+ .pregame-page .board-info{flex-direction:column;align-items:flex-end;gap:2px;margin:0}
+ .pregame-page .board-info .delay{font-size:11px;line-height:1.5}
+ .pregame-page .about-link{font-size:11px;min-height:28px}
+ .pregame-page .filters,.pregame-page.arb-page .filters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+ .pregame-page .filters .search{grid-column:1/3;width:auto}
+ .pregame-page .filters .filter-field{width:auto}
+ .pregame-page .filters .refresh{align-self:end;width:100%;margin:0}
+ .pregame-page .game-card .game-hint{font-size:11px}
+}
+@media(max-width:760px){
+ .pregame-page #comparison{padding:18px 16px;width:calc(100% - 20px);max-height:calc(100dvh - 20px)}
+ .pregame-page :is(#comparison,#game-lines,#arb-details) .dialog-pick{font-size:20px}
+ .pregame-page .exchange-prices,.pregame-page .exchange-prices tbody{display:block}
+ .pregame-page .exchange-prices thead{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+ .pregame-page .exchange-prices tbody{display:grid;gap:12px}
+ .pregame-page .exchange-prices tbody tr{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px 10px;padding:14px;border:1px solid var(--p-line);border-radius:6px;background:var(--p-surface)}
+ .pregame-page .exchange-prices tbody tr:first-child{background:var(--p-hover)}
+ .pregame-page .exchange-prices td{display:block;min-width:0;padding:0;text-align:left;border:0;font-size:14px;white-space:normal}
+ .pregame-page .exchange-prices .math-value{font-size:14px}
+ .pregame-page .exchange-prices td:first-child{grid-column:1/-1;font-size:14px;margin-bottom:2px}
+ .pregame-page .exchange-prices td:not(:first-child):not(:last-child):before{content:attr(data-label);display:block;font:500 11px/1.4 Manrope,Arial,sans-serif;color:var(--p-muted);margin-bottom:4px}
+ .pregame-page .exchange-prices .math-value{align-items:flex-start}
+ .pregame-page .exchange-prices .math-value .reference{font-size:10px;white-space:normal}
+ .pregame-page .exchange-prices .journal-action{justify-content:flex-start;align-items:flex-start}
+ .pregame-page .exchange-prices td:last-child:before{content:attr(data-label);display:block;font:500 11px/1.4 Manrope,Arial,sans-serif;color:var(--p-muted);margin-bottom:4px}
+ .pregame-page .exchange-prices .journal-action button{min-height:44px;white-space:normal;width:100%;padding:6px;font-size:11px}
+ .pregame-page .exchange-prices .journal-action span{font-size:10px;overflow-wrap:anywhere}
+ .pregame-page .sportsbook-prices td,.pregame-page .comparison-scroll th{font-size:11px}
+ .pregame-page .sportsbook-prices{min-width:0;width:100%}
+ .pregame-page .sportsbook-prices td{padding:12px 6px}
+ .pregame-page .game-card header{gap:5px 10px}
+ .pregame-page .game-card header h2{font-size:14px}
+ .pregame-page .game-hint{grid-column:1;grid-row:3;justify-self:start;padding-top:3px}
+ .pregame-page .line-values{gap:8px}
+ .pregame-page .line-values .math-value{font-size:13px}
+ .pregame-page .line-values .math-value small{font-size:9px}
+}
+@media(max-width:500px){
+ .pregame-page .masthead{padding:12px 16px 0;gap:0;min-height:96px}
+ .pregame-page .masthead nav{margin-top:4px;gap:clamp(12px,4vw,22px);font-size:11px}
+ .pregame-page h1{font-size:26px}
+ .pregame-page .board-heading{display:flex}
+ .pregame-page .board-info{padding-top:1px;max-width:140px}
+ .pregame-page .filters,.pregame-page.arb-page .filters{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+ .pregame-page .filters .search{grid-column:1/-1}
+ .pregame-page .filters .refresh{font-size:12px}
+ .pregame-page .board-row .subject{grid-column:1/-1}
+ .pregame-page .ticket-meta{display:flex;flex-direction:column;align-items:flex-start;gap:2px;grid-row:2;grid-column:1}
+ .pregame-page .ticket-meta .venue{display:block}
+ .pregame-page .ticket-meta .score{display:flex;justify-content:flex-start;gap:6px;align-items:center}
+ .pregame-page .ticket-meta .score .math-trigger{min-height:28px}
+ .pregame-page .board-row .ev{grid-row:2;grid-column:2;align-self:center}
+ .pregame-page .board-row .context{font-size:10px;gap:10px}
+ .pregame-page .board-row .game{font-size:12px;max-width:none;padding:0}
+ .pregame-page .status-line{font-size:10px;gap:8px;align-items:center}
+ .pregame-page .status-line strong{font-size:11px}
+ .pregame-page .status-line #sort-order{max-width:160px;text-align:right}
+}
+
+/* Ranking stays beside the result count; it applies before pagination. */
+.pregame-page .ranking-control{display:flex;align-items:center;gap:9px;font-size:12px;color:var(--p-ink);margin-left:auto;min-width:0}
+.pregame-page .ranking-control select{font:inherit;color:var(--p-ink);background:var(--p-field);border:1px solid var(--p-controlLine);border-radius:5px;min-height:44px;padding:0 10px;max-width:200px}
+.pregame-page .ranking-unit{display:block;font-size:9px;font-weight:500;letter-spacing:0;text-transform:none;margin-top:3px}
+@media(min-width:1141px){.pregame-page .board-columns,.pregame-page .board-row{grid-template-columns:49px 88px minmax(210px,1fr) 73px 78px 78px 105px 99px 76px}}
+@media(max-width:500px){.pregame-page .ranking-control{font-size:11px;gap:6px}.pregame-page .ranking-control select{max-width:165px}}
+@media(min-width:1141px){.pregame-page .ticket-meta .score{grid-column:9;grid-row:1}}

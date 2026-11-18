@@ -42,6 +42,11 @@ fictional cases. Practice requires neither an archive nor a database.
 
 ## Focused checks
 
+Start with `.venv/bin/python scripts/ci/affected.py --plan` to see the complete
+working-change plan and its routing/fallback reasons. Omit `--plan` to execute,
+or use `--full` for all registered behavior lanes. See the
+[selection contract and limits](CI.md#selecting-local-cases).
+
 Choose the checks that exercise the changed behavior. CI's portable manifest
 and disposable database harness separate ordinary tests from historical tools
 that require local evidence. Avoid running SQL tests directly against the
@@ -107,13 +112,14 @@ tests exercise persistence.
 
 The authored frontend is under `app/dashboard/opportunity_static/current/`.
 
-- `desk.html` is the shared shell for Opportunities, Arbitrage, Browse odds,
-  game detail, and Saved odds. `desk.js` owns the list and its current/saved
-  requests. `desk-polling.js` owns the update timer and expiry rechecks.
-  `opportunity-cards.js` assembles cards and matrices. `desk-quote-display.js`
-  shares quote and reference presentation with the drawer. `desk-drawer.js`
-  owns selection history, leases, and adoption. `desk-inspection.js` renders
-  captured evidence and the trade preview.
+- `pregame.html`, `pregame.js` and `pregame.css` provide Opportunities, Browse odds
+  and game detail. `pregame-arbs.html` and `pregame-arbs.js` provide price Arbitrage.
+  `pregame-math.js` renders calculation disclosures; `pregame-ranking.js` is generated.
+- `bet-journal.html`, `bet-journal.js`, `bet-journal-actions.js` and
+  `bet-journal.css` provide My Bets and the opportunity log.
+- `desk.html` and `desk.js` provide research/live and replay views. Its polling,
+  cards, quote display, drawer and inspection modules retain captured evidence,
+  revision-bound details and hypothetical sizing.
 - Pages that share desk styling load `desk.css` before `desk-components.css`.
   The first defines fonts, chrome and base styles. The second adds the
   toolbar, inspection, card and matrix rules in cascade order.
@@ -129,6 +135,10 @@ The authored frontend is under `app/dashboard/opportunity_static/current/`.
 After editing an authored input to the stored or Scanner bundles, regenerate
 the tracked assets. The generator handles a closed set of named imports.
 Edit the authored files and keep the generated files in sync.
+The same command generates `pregame-ranking.js` from the pure catalog in
+`app/storage/pregame_ranking.py`. Edit that Python owner for method metadata,
+defaults and explanations; the dropdown and math disclosures import its generated
+module. `--check` rejects stale ranking metadata alongside stored/Scanner drift.
 
 ```sh
 .venv/bin/python scripts/build_stored_frontend.py
@@ -144,10 +154,16 @@ process after changing its backend code.
 [Architecture](architecture.md) describes module ownership. Preserve public
 imports, packaged asset paths, protocol versions, and applied migration files.
 
-Review mixed responsibilities above 500 physical lines in Python, 300 in
-authored JavaScript or CSS, 250 in templates, and 100 in shell. Above twice
-the review length, extract a cohesive owner or document the state or transaction
-that belongs together. Generated assets follow their source boundaries.
+Keep database queries in `current_pregame_read.py` separate from calculation and
+recovery writes in `current_pregame.py`. The public read facade preserves the
+clock and route resolver. Local-selector tests live in `tests/test_ci_affected.py`;
+CI environment guards and reporting tests have separate modules.
+
+Keep transaction and mutable-state ownership clear. The personal journal owns
+entry validation, revisions and history in one transaction; measurements and
+source sampling are separate modules. The SGO worker owns event cursors,
+in-flight pages, Stop handling and admission acknowledgement. Transport,
+scheduling, accounting and measurement logic have separate owners.
 
 - Keep source Stop, synchronization, and socket shutdown in the transport
   lifecycle. Exact book persistence acknowledges the active generation before
@@ -178,7 +194,9 @@ that belongs together. Generated assets follow their source boundaries.
 - `deploy/release.sh` keeps digest validation, migration checks, and rollback
   under one restricted-SSH rollout transaction.
 
-Keep credentials, operator state, local reports, and coding notes out of Git.
+Keep credentials, operator state, local task queues, reports and coding notes
+out of Git. Lasting documentation describes software behavior and supported
+workflows, not individual development runs.
 Keep required fixtures in `tests/fixtures` or `app/fixtures`, and keep reusable
 wire examples with their contracts. Preserve the packaged frontend assets and
 the exact sources and guard receipts required by sealed tools. Each `SOURCE.zip`

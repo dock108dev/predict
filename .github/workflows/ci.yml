@@ -7,6 +7,11 @@ on:
   merge_group:
     types: [checks_requested]
   workflow_dispatch:
+    inputs:
+      full_diagnostics:
+        description: Run behavior lanes even if source, security or package checks fail
+        type: boolean
+        default: false
 
 env:
   MERGE_QUEUE_SHA: ${{ github.event.merge_group.head_sha }}
@@ -24,6 +29,8 @@ concurrency:
 jobs:
   offline:
     name: Offline checks
+    needs: quality
+    if: ${{ !cancelled() && (needs.quality.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.full_diagnostics)) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     steps:
@@ -137,11 +144,15 @@ jobs:
           retention-days: 14
   postgres:
     name: PostgreSQL storage
+    needs: quality
+    if: ${{ !cancelled() && (needs.quality.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.full_diagnostics)) }}
     uses: ./.github/workflows/storage.yml
     with:
       python: '3.14'
   browser:
     name: Ordinary browser journey
+    needs: quality
+    if: ${{ !cancelled() && (needs.quality.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.full_diagnostics)) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -193,6 +204,7 @@ jobs:
       - name: Require every same-run gate
         env:
           NEEDS_JSON: ${{ toJSON(needs) }}
+          FULL_DIAGNOSTICS: ${{ inputs.full_diagnostics || false }}
         run: python3 scripts/ci/gate.py
       - name: Download this run's test and quality evidence
         if: ${{ !cancelled() }}

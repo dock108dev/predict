@@ -1,8 +1,9 @@
 # Predict
 
 Predict is an odds and opportunity board with a personal trade journal. It opens directly on
-**Pregame Opportunities**, showing complete main-line bets ranked by Opportunity
-Score after fees. **Browse odds** groups main markets by game, sorted by start
+**Pregame Opportunities**, showing complete main-line bets ranked by modeled
+Kelly growth after fees. **Rank by** also offers Net EV, the original Kelly-fraction
+score, Balanced and Probability edge. **Browse odds** groups main markets by game, sorted by start
 time. Open a game for alternate lines, then select a line to compare exact
 market and sportsbook prices. **Arbitrage** compares opposite market-to-market
 and market-to-sportsbook legs after fees, independently of sportsbook EV.
@@ -31,8 +32,8 @@ main-line EV signals and positive price-arb pairs. Trading remains outside Predi
 
 ## Requirements and quickstart
 
-Local operation requires macOS, Python 3.11 or later, and PostgreSQL tools.
-The commands below use Python 3.14 and PostgreSQL 16. Run them from the
+Local operation requires Python 3.11 or later and PostgreSQL 16 tools.
+The commands below use Python 3.14. Run them from the
 repository root. The sample configuration leaves acquisition disabled.
 
 ```sh
@@ -71,7 +72,7 @@ environment, including Node 24 for client checks.
 
 ```sh
 .venv/bin/python -m pytest -q tests/test_ev09_asset_delivery.py
-node tests/test_f07_desk_ui.cjs
+.venv/bin/python scripts/ci/affected.py --plan
 .venv/bin/python scripts/ci/docs.py
 ```
 

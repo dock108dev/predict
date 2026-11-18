@@ -7,7 +7,6 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[2]
 DOCUMENTS = (
     "README.md",
-    "NEXT_STEPS.md",
     "docs/current-pregame.md",
     "docs/bet-journal.md",
     "docs/storage-ownership.md",
@@ -16,7 +15,7 @@ DOCUMENTS = (
     "docs/hetzner.md",
     "docs/architecture.md",
     "docs/benchmark-ev.md",
-    "docs/sportsgameodds-operations-20261110.md",
+    "docs/sportsgameodds-operations.md",
     "docs/fee-coverage-policy.md",
     "docs/novig-nflwin-modeled-basis.md",
     "docs/combined-occurrence-input-contract.md",

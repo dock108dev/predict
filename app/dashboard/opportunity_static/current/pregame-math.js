@@ -1,3 +1,4 @@
+import {rankingCatalog} from './pregame-ranking.js';
 import {ratio} from './pregame-prices.js';
 // Explanations use the inspected calculation's cashflows, never current board state.
 let nextId=0;
@@ -40,14 +41,22 @@ export function explanation(row,kind){
   `Win return = ${money(win)} ÷ ${money(committed)} − 1 = ${fmt(rw)}. Loss return = ${money(loss)} ÷ ${money(committed)} − 1 = ${fmt(rl)}.`,
   `Net EV = p × win return + (1 − p) × loss return.`,
   `${fmt(p)} × ${fmt(rw)} + ${fmt(1-p)} × ${fmt(rl)} = ${fmt(ev)} → ${row.display.net_ev}.`];
- const simple=rl===-1&&rw>0;
- return ['Opportunity Score',ev<=0?'Nonpositive Net EV produces a score of 0.':simple?`Score = 10,000 × min(1, Net EV ÷ win return).`:'Score = 10,000 × f, where f maximizes p × log(1 + f × win return) + (1 − p) × log(1 + f × loss return), bounded by 0–1 and positive remaining wealth.',
-  ...(ev>0&&simple?[`10,000 × min(1, ${fmt(ev)} ÷ ${fmt(rw)}) = ${fmt(number(row.raw.opportunity_score))}.`]:[]),
-  `Displayed score: ${row.display.opportunity_score}. This ranks the opportunity; it is not a stake recommendation.`];
+ if(kind==='ranking'){
+  const rank=row.ranking;
+  if(!rank)return ['Ranking unavailable','Refresh to load this ranking. The quoted prices and Net EV remain available.'];
+  const f=number(row.raw.opportunity_score)/10000;
+  const formula=rankingCatalog.methods[rank.method].explanation;
+  return [rank.label,formula,`Reference win probability: ${fmt(p*100)}%. Win return: ${fmt(rw)}. Loss return: ${fmt(rl)}.`,
+   ...(rank.method==='growth'?[`Model-optimal Kelly fraction f = ${fmt(f)}. Growth is shown in natural-log basis points.`]:[]),
+   `Displayed value: ${rank.display} ${rank.unit}. All eligible picks are sorted before pagination.`,
+   'The probability estimate is a model input. This is not a stake recommendation or a guarantee of profit.'];
+ }
+ throw Error('Unsupported calculation detail: '+kind);
 }
 export function addMath(cell,row,kind){
  const value=cell.querySelector(':scope > span:not(.mobile-label)');
  const button=document.createElement('button');button.type='button';button.className='math-trigger';button.textContent=value.textContent;
+ button.dataset.focusKey=row.id+'-'+kind;
  const lines=explanation(row,kind),popover=document.createElement('div');popover.className='math-popover';popover.id='math-'+(++nextId);popover.setAttribute('popover','auto');popover.setAttribute('role','tooltip');
  const title=document.createElement('strong');title.textContent=lines[0];popover.append(title);
  lines.slice(1).forEach(line=>{const p=document.createElement('p');p.textContent=line;popover.append(p);});

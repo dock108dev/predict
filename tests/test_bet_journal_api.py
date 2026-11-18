@@ -3,6 +3,9 @@
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import IsolatedAsyncioTestCase
+from unittest.mock import patch
+from copy import deepcopy
+import json
 
 from aiohttp import web
 from aiohttp.test_utils import TestClient, TestServer
@@ -103,3 +106,66 @@ class JournalHTTP(IsolatedAsyncioTestCase):
         self.assertEqual((await response.json())["total"], 6)
         response = await self.client.get("/api/bet-journal/unknown")
         self.assertEqual(response.status, 404)
+
+    async def test_invalid_read_filters_are_rejected_without_server_errors(self):
+        await self.create()
+        for query in (
+            "limit=bad",
+            "offset=Infinity",
+            "view=unknown",
+            "kind=other",
+            "decision=other",
+        ):
+            with self.subTest(query=query):
+                response = await self.client.get("/api/bet-journal?" + query)
+                self.assertEqual(response.status, 422, await response.text())
+                self.assertIn("error", await response.json())
+        self.assertEqual(self.journal.list()["total"], 1)
+
+    async def test_export_does_not_mix_revisions_during_a_concurrent_correction(self):
+        entry = await self.create()
+        metrics = self.journal._metrics
+        changed = False
+
+        def correction(db, row, **kwargs):
+            nonlocal changed
+            if not changed:
+                changed = True
+                writer = Journal(self.journal.path)
+                # Both changes commit together: there is never a state containing
+                # revision 2 without the newly inserted entry.
+                with writer.database() as write:
+                    write.execute(
+                        "UPDATE entries SET revision=2,notes='Newer correction' WHERE id=?",
+                        (entry["id"],),
+                    )
+                    write.execute(
+                        "INSERT INTO events VALUES (?,?,?,?)",
+                        (
+                            entry["id"],
+                            2,
+                            entry["updated_at"],
+                            json.dumps(
+                                dict(
+                                    decision="saved",
+                                    notes="Newer correction",
+                                    trade=None,
+                                )
+                            ),
+                        ),
+                    )
+                    newer = deepcopy(entry["snapshot"])
+                    newer["id"] = "concurrent-new-quote"
+                    writer._observe(write, "ev", newer, manual=True)
+            return metrics(db, row, **kwargs)
+
+        with patch.object(self.journal, "_metrics", side_effect=correction):
+            response = await self.client.get("/api/bet-journal?download=json")
+        self.assertEqual(response.status, 200)
+        records = (await response.json())["entries"]
+        self.assertEqual(len(records), 1)
+        record = records[0]
+        self.assertEqual(record["entry"]["revision"], 1)
+        self.assertEqual([r["revision"] for r in record["history"]], [1])
+        self.assertEqual(self.journal.get(entry["id"])["entry"]["revision"], 2)
+        self.assertEqual(self.journal.list()["total"], 2)

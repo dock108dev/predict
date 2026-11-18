@@ -21,8 +21,9 @@ from .sportsgameodds_collector import (
 )
 from .sportsgameodds_current_rows import current_rows
 from .sportsgameodds_ledger import ObjectLedger
+from . import sportsgameodds_schedule as scheduling
 from .sportsgameodds_schedule import (
-    PLANNED_FRACTION, REFRESH_TARGET, EventDue, SchedulePolicy, budgeted_policy, daily_allowance,
+    PLANNED_FRACTION, REFRESH_TARGET, EventDue, budgeted_policy, daily_allowance,
     discovery_interval, due_events, poll_slot, response_object_charge,
 )
 from .sportsgameodds_transport import ODD_IDS, SportsgameoddsTransport
@@ -383,7 +384,7 @@ class SportsGameOddsWorker:
                 # Admit its lifecycle evidence without admitting post-start odds.
                 events = tuple(event for event in page.events if event['event_id'] in pregame or
                                any(event['status'].get(key) is True for key in
-                                   ('cancelled', 'completed', 'ended', 'delayed', 'suspended')))
+                                   ('started', 'live', 'cancelled', 'completed', 'ended', 'delayed', 'suspended')))
                 if len(pregame) != len(page.events):
                     admitted_page = replace(page, events=events,
                                             quotes=tuple(quote for quote in page.quotes
@@ -537,7 +538,7 @@ class SportsGameOddsWorker:
         now = self.now()
         # Receipt time schedules polling and carries no source-price authority.
         candidates = self.scheduled_events(at=now)
-        policy = SchedulePolicy()
+        policy = scheduling.PREGAME_TARGET
         discovery_cadence = timedelta(hours=12)
         leagues = list(aggregate_scope(self.service.config))
         if self.ledger is not None and self.window_id is not None:
@@ -554,12 +555,12 @@ class SportsGameOddsWorker:
             prior_cost = self.ledger.discovery_cost(now=now)
             walk_objects = sum(max(1, by_league[league], prior_cost.get(league, 0)) for league in leagues)
             policy, projected = budgeted_policy(candidates, now, allowance, discovery_walk_objects=walk_objects,
-                                                minimum_refresh=timedelta(minutes=1),
                                                 include_kickoff=live_enabled(self.service.config))
             discovery_cadence = discovery_interval(retained_events=walk_objects, daily_budget=allowance,
                                                    projected_refresh_objects=projected)
             discovery_per_day = walk_objects * timedelta(days=1) / discovery_cadence
             combined = projected + discovery_per_day
+            target = scheduling.PREGAME_TARGET
             self.metrics['schedule_budget'] = dict(daily_allowance=allowance,
                 projected_refresh_objects=projected, refresh_fraction=REFRESH_TARGET,
                 discovery_hours=discovery_cadence.total_seconds()/3600,
@@ -568,9 +569,10 @@ class SportsGameOddsWorker:
                 planned_fraction=PLANNED_FRACTION, projected_headroom_objects=round(allowance-combined, 3),
                 projection='next_24_hours_through_kickoff', replan_seconds=SCAN_INTERVAL.total_seconds(),
                 advertised_feed_seconds=600 if self.metrics.get('account_tier') == 'amateur' else 180,
-                requested_late_refresh_seconds=60, requested_early_refresh_seconds=3600,
+                requested_late_refresh_seconds=int(target.approaching.total_seconds()),
+                requested_early_refresh_seconds=int(target.imminent.total_seconds()),
                 trial='one_minute_final_30_minutes',
-                budget_stretched=policy.approaching!=timedelta(minutes=1) or policy.imminent!=timedelta(hours=1),
+                budget_stretched=policy.approaching!=target.approaching or policy.imminent!=target.imminent,
                 live_minutes=policy.live.total_seconds()/60, approaching_minutes=policy.approaching.total_seconds()/60,
                 approaching_hours=policy.approaching_window.total_seconds()/3600,
                 hourly_window_hours=policy.imminent_window.total_seconds()/3600,

@@ -182,3 +182,24 @@ class Composition(unittest.TestCase):
                 (assets / "stored.css").write_text("body {color: red}")
                 with self.assertRaisesRegex(ValueError, "Generated asset drift"):
                     builder.main()
+                (assets / "stored.css").write_text(builder.outputs()["stored.css"])
+                (assets / "pregame-ranking.js").write_text("export const rankingCatalog = {};")
+                with self.assertRaisesRegex(ValueError, "Generated asset drift: pregame-ranking.js"):
+                    builder.main()
+
+    def test_ranking_catalog_output_tracks_the_python_owner(self):
+        from app.storage.pregame_ranking import catalog
+        import json
+
+        root = Path(__file__).resolve().parents[1]
+        spec = importlib.util.spec_from_file_location("ranking_builder", root / "scripts/build_stored_frontend.py")
+        builder = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(builder)
+
+        def emitted():
+            return json.loads(builder.ranking_javascript().split("export const rankingCatalog = ")[1].rstrip(";\n"))
+
+        self.assertEqual(emitted(), catalog())
+        changed = dict(default="fixture", methods=dict(fixture=dict(label="Authored method")))
+        with patch.object(builder, "run_path", return_value={"catalog": lambda: changed}):
+            self.assertEqual(emitted(), changed)

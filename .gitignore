@@ -59,7 +59,7 @@ app/reviews/*
 /scripts/v1_coverage_package/stop-response.json
 /scripts/v1_coverage_package/supervisor-result.json
 
-# Local planning, reviews and superseded documentation
+# Local instructions, task queues, reviews and superseded documentation.
 /AGENTS.md
 /NEXT_STEPS.md
 /PLAN.md
@@ -87,6 +87,7 @@ app/reviews/*
 # Includes the generated priority and integrated runtime traces.
 /docs/engineering/live-data-20261107/
 /docs/engineering/server-remediation-20261115/
+/docs/design/interface-review-*/
 /docs/design/approved-20261103/
 /docs/design/completion-20261103/
 /docs/design/live-comparison-20261104/

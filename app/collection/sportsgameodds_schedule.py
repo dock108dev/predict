@@ -25,14 +25,28 @@ class EventDue:
 
 @dataclass(frozen=True)
 class SchedulePolicy:
-    live: timedelta = timedelta(minutes=15)
-    approaching: timedelta = timedelta(minutes=30)
-    imminent: timedelta = timedelta(minutes=45)
-    near: timedelta = timedelta(hours=3)
-    distant: timedelta = timedelta(hours=12)
-    approaching_window: timedelta = timedelta(hours=2)
-    imminent_window: timedelta = timedelta(hours=12)
-    near_window: timedelta = timedelta(hours=72)
+    live: timedelta
+    approaching: timedelta
+    imminent: timedelta
+    near: timedelta
+    distant: timedelta
+    approaching_window: timedelta
+    imminent_window: timedelta
+    near_window: timedelta
+
+
+# Ordinary pregame cadence before quota-driven stretching.
+# SchedulePolicy is a value record, without a second set of implicit cadences.
+PREGAME_TARGET = SchedulePolicy(
+    live=timedelta(minutes=3),
+    approaching=timedelta(minutes=1),
+    imminent=timedelta(hours=1),
+    near=timedelta(hours=3),
+    distant=timedelta(hours=12),
+    approaching_window=timedelta(minutes=30),
+    imminent_window=timedelta(hours=24),
+    near_window=timedelta(hours=72),
+)
 
 
 def _aware(value: datetime) -> bool:
@@ -61,11 +75,13 @@ def poll_slot(event: EventDue, now: datetime, policy: SchedulePolicy):
 
 
 def due_events(events: list[EventDue], now: datetime, *, stopped: bool = False,
-               paused: bool = False, policy: SchedulePolicy = SchedulePolicy()) -> list[EventDue]:
+               paused: bool = False, policy: SchedulePolicy | None = None) -> list[EventDue]:
     """Select each due event once, prioritizing live, imminent, near, distant.
 
     Receipt time schedules polling only; it is never a quote's source time.
     """
+    if policy is None:
+        policy = PREGAME_TARGET
     if not _aware(now):
         raise ValueError('now must be timezone-aware')
     if stopped or paused:
@@ -180,7 +196,7 @@ def projected_refresh_objects(events, now, policy, *, include_kickoff=True):
 
 def budgeted_policy(events: list[EventDue], now: datetime, daily_budget: int, *,
                     discovery_walk_objects: int = 0, include_kickoff=True,
-                    minimum_refresh=timedelta(minutes=1)) -> tuple[SchedulePolicy, int]:
+                    minimum_refresh=None) -> tuple[SchedulePolicy, int]:
     """Hourly pregame inside 24 hours; trial minute polling in the final 30.
 
     The owner selected a minute-poll trial despite the advertised three-minute
@@ -194,6 +210,9 @@ def budgeted_policy(events: list[EventDue], now: datetime, daily_budget: int, *,
         raise ValueError('now must be timezone-aware')
     if type(discovery_walk_objects) is not int or discovery_walk_objects < 0:
         raise ValueError('invalid discovery estimate')
+    target = PREGAME_TARGET
+    if minimum_refresh is None:
+        minimum_refresh = target.approaching
     if minimum_refresh <= timedelta(0):
         raise ValueError('positive refresh floor required')
     discovery = discovery_interval(retained_events=discovery_walk_objects,
@@ -205,12 +224,10 @@ def budgeted_policy(events: list[EventDue], now: datetime, daily_budget: int, *,
     def cost(policy):
         return projected_refresh_objects(events, now, policy, include_kickoff=include_kickoff)
 
-    for near, distant in ((3, 12), (6, 24), (12, 48), (24, 96)):
-        policy = SchedulePolicy(live=max(timedelta(minutes=3),minimum_refresh),
-                                approaching=minimum_refresh, imminent=timedelta(hours=1),
-                                approaching_window=timedelta(minutes=30),
-                                imminent_window=timedelta(hours=24),
-                                near=timedelta(hours=near), distant=timedelta(hours=distant))
+    for near, distant in ((target.near, target.distant), (timedelta(hours=6), timedelta(hours=24)),
+                          (timedelta(hours=12), timedelta(hours=48)), (timedelta(hours=24), timedelta(hours=96))):
+        policy = replace(target, live=max(target.live,minimum_refresh),
+                         approaching=minimum_refresh, near=near, distant=distant)
         projected = cost(policy)
         if projected <= refresh_limit:
             return policy, projected
@@ -226,7 +243,7 @@ def budgeted_policy(events: list[EventDue], now: datetime, daily_budget: int, *,
 
     def stretched(scale):
         seconds = ceil(floor_seconds*scale/30)*30
-        return replace(policy, live=timedelta(seconds=max(180,seconds)),
+        return replace(policy, live=timedelta(seconds=max(target.live.total_seconds(),seconds)),
                        approaching=timedelta(seconds=seconds),
                        imminent=max(policy.imminent,timedelta(seconds=seconds)))
 

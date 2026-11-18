@@ -98,6 +98,20 @@ Full original opportunity snapshots, append-only decision revisions and compact
 source quote observations are retained without automatic journal pruning.
 Different arb allocations are not inserted as separate source price observations.
 
+Journal writes reserve a SQLite write transaction before looking up or changing
+records. Entry changes, correction history and the returned applied revision
+share that transaction; a failure before commit rolls them back together. Reads
+pin one WAL snapshot for their entries, history, quote observations and metrics.
+A lost network response can still follow a commit: retry an identical saved
+quote, or reload the current correction revision before retrying an edit.
+
+Manual save identity excludes only read-time `ranking` metadata, so viewing the
+same quote under another sort cannot create another bet. The original first
+snapshot is retained. A compatible lookup reuses existing ranked-save IDs and
+their corrections without rekeying or merging records. Actual quote, reference,
+fee and clock changes retain their prior distinct-snapshot semantics. Already
+existing duplicate decisions are not deleted automatically.
+
 The web and collector containers share this journal through the existing state
 mount. The hosted `/my-bets` page and `/api/bet-journal*` routes use existing
 private operational authentication; public board prices remain public. Install
@@ -117,6 +131,12 @@ whole journal. Back up the journal with SQLite's backup mechanism, or stop both
 writers before copying the database and its WAL files; a live copy of the main
 file alone is not a complete WAL backup.
 
+Exports use one connection and one read snapshot instead of paging the changing
+journal through separate requests. JSON includes full history; CSV reads only
+the summary records it exports. The transaction ends before response serialization
+and network delivery. The original export schema and CSV formula escaping remain
+unchanged.
+
 ## Verification boundary
 
 Portable tests cover calculations, prospective cutoff clocks, fee unknowns,
@@ -126,6 +146,11 @@ rows, pending rebuild suppression and durable SQLite capture. Browser checks
 cover desktop/mobile saves, edits, arb legs, cash results and quote history.
 Local snapshot integration is separate from hosted installation, ongoing
 provider updates, real user fills and a month of results.
+
+Exports use a consistent read snapshot even while another connection saves or
+corrects entries. Backup/restore tests cover committed WAL data, original quotes,
+corrections and observations. Those fixtures do not establish production-scale
+throughput or recovery from host failure.
 
 ## Missing exact lines at close
 

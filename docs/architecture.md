@@ -34,8 +34,9 @@ full-slate work from an ordinary web request.
 
 Predict presents read-only odds and opportunities. Source observations remain
 available internally when required reference or fee inputs are absent. The primary
-dashboard includes only complete calculations. Execution depth, slippage and trade
-entry are separate backlog models; applicable fees are part of current delivery.
+dashboard includes only complete calculations. My Bets records manually reported trades; Predict does not place exchange
+orders. Available depth and slippage are not established by the opportunity board.
+Applicable fees are part of the modeled cashflows.
 
 ## Ordinary current data flow
 
@@ -74,7 +75,9 @@ bounded transient sizing.
 
 | Surface | Responsibility |
 | --- | --- |
-| `/`, `/ev`, `/arbs`, `/browse-odds`, `/game` | Current-row Opportunities/Browse/game; separate modeled Arbitrage research |
+| `/`, `/ev`, `/browse-odds`, `/game` | Current pregame Opportunities, Browse odds and exact game lines |
+| `/api/pregame`, `/api/pregame/updates` | Committed current rows and cheap update metadata |
+| `/arbs`, `/api/pregame/arbs` | Fee-qualified opposing market/market and market/sportsbook prices |
 | `/api/comparison-current` | Current desk results, selected evidence, update metadata, and fee coverage |
 | `/replay`, `/api/odds-replay` | Saved captures and fictional practice with revision-bound details |
 | `/scanner` | Advanced globally ranked Scanner, observed episodes and selected manual tickets |
@@ -164,6 +167,7 @@ Paths are relative to `app/`.
 | Native HTTP transport | `collection/native_http_transport.py`; `collection/continuous_rest.py` owns sequential admission/pacing/retries with session-owned budgets and an explicit clock |
 | Native discovery selection | `collection/current_native_catalog.py` owns pure bounded selection/diagnostics; `collection/current_native.py` owns discovery/stream lifecycle |
 | Direct admitted-only current ingress and guards | `collection/current_database.py`, `collection/current_storage_policy.py` |
+| Current pregame writes and committed-row reads | `storage/current_pregame.py` owns affected-game calculation/recovery and keeps the public `read` facade; `storage/current_pregame_read.py` owns pure SQL filtering, grouping and pagination. The facade supplies the clock and configured route resolver without changing transaction ownership. |
 | Current SQL ownership and reset | `storage/current_rows.py`, migration 012, `storage/current_reset.py` |
 | Shared latest publications and readers | `storage/scanner_latest.py`, `storage/latest_board.py`, `dashboard/scanner_api.py`; `storage/board_capture.py` owns bounded capture planning and `storage/board_view.py` owns pure captured-result rendering |
 | Selected current inputs and transient calculations | `storage/comparison_board.py`, `dashboard/comparison_board_api.py`, `dashboard/comparison_slate.py` |
@@ -234,13 +238,18 @@ See [acquisition](acquisition.md) for ownership, capacity and completeness limit
 
 | Domain | SSOT module/file | Why authoritative | Known callers |
 | --- | --- | --- | --- |
+| Pregame ranking methods, labels and calculation | `app/storage/pregame_ranking.py` | Owns the method catalog/default, exact SQL expressions and wire/display presentation. `catalog()` generates browser metadata through the existing asset build; the browser does not maintain a second method list. | `current_pregame.read`, generated `pregame-ranking.js`, `pregame.js` and `pregame-math.js`. |
+| Ordinary collection target and budget adaptation | `app/collection/sportsgameodds_schedule.py::PREGAME_TARGET` and `budgeted_policy` | One target defines the final-30-minute/minute and inside-24-hour/hour trial. Budget planning stretches that target; worker diagnostics compare against the same object. Account/Stop/hold authority remains in the existing collector and ledger. | `SportsGameOddsWorker.cycle`, due-event planning and schedule diagnostics. |
+| Source lifecycle and current-row withdrawal | `app/comparison/game_phase.py::sgo_event_status` and `app/storage/sportsgameodds_reference.py::apply_event_lifecycle` | Normalizes sporting evidence and commits lifecycle changes under the ingestion writer transaction. The worker's page filter preserves notices while excluding post-start prices; it does not implement a second persisted lifecycle. | Source ingress, current board reads and journal source sampling. |
+| Saved quote identity and correction transactions | `app/dashboard/bet_journal.py::Journal` | Owns canonical manual identity, original snapshots, revisions and SQLite read/write transactions. API and browser actions delegate persistence to it. | `bet_journal_api`, manual Save, opportunity observation and export. |
+| Required test ownership versus local selection | `scripts/ci/suites.json`, `scripts/ci/python-policy.json` and `scripts/ci/postgres.py` | Own the registered full lanes and exclusions. `affected.py` selects bounded consumers and delegates execution to those runners; its focused SQL subset is routing policy, not a second database runner. | Required CI, local full checks and the affected-test command. |
 | Aggregate provider and phase configuration | `app/collection/current_policy.py` and the committed `data_runtime.config` | Validates provider choices and Live defaults. Read-side code passes the provider from its committed runtime snapshot into publication identity and desk update cursors. | Collection workers, SQL publication, desk reads, Coverage, Scanner and Raw Odds. |
 | PostgreSQL socket and outage cache partition | `app/storage/store.py::socket_directory` | Resolves and validates the same absolute socket for PostgreSQL connections and the corresponding last-known desk cache. | Storage connections and the ordinary app launcher. |
 | Comparison evidence leases | `app/storage/comparison_snapshot.py` | Owns two-hour renewals and bounds explicit selections using the PostgreSQL clock. Result and input timestamps renew together. Evidence tokens retain exact published revisions independently. | Manual refresh and recalculation, saved reads, and current Details. |
 | SportsGameOdds discovery scope | `app/collection/sportsgameodds_worker.py`, `app/collection/sportsgameodds_adapter.py` | The worker builds the exact request used across a cursor walk. The adapter owns the supported leagues and page bounds. | Worker, transport, checkpoint restore, accounting and SQL admission. |
 | The Odds API featured market keys | `app/collection/current_aggregate_policy.py` | Maps the product market families to their provider request keys. | Configuration, scheduler, quota declarations, quote admission and coverage reporting. |
 | Persisted current event and contract identity | `app/storage/current_rows.py` | Builds the identifiers used to persist and find exact event and contract rows. | Admission, desk overlays, ordinary publication, Scanner and Coverage. |
-| Ordinary desk shell | `app/dashboard/multi_game_server.py` | Mounts all six ordinary SQL desk routes with one shared handler. | Opportunities, EV, Arbitrage, Browse odds, Game and Replay. |
+| Ordinary page and API routing | `app/dashboard/multi_game_server.py` and `app/dashboard/current_pregame_api.py` | Mounts Opportunities/EV/Browse/Game on the pregame shell, price Arbs on its own shell, and Replay/live on the research desk. Compatibility pregame API reads delegate to the same current handler. | `opportunity_board`, current pages and `snapshot_api.response`. |
 | Desk and replay phase selection | `app/dashboard/snapshot_display.py` | Applies the pregame boundary consistently to selected rows and related games and pairs. | Current and captured snapshot reads, replay lists and replay details. |
 | Best sportsbook payout and two-sided de-vig | `app/comparison/sgo_reference.py` | Owns the book order, tie-break, exact American-price parsing and normalization of a qualified pair. | Settlement-reviewed SGO reference, direct public book estimates, Browse odds and same-frame SGO baseline. |
 | Desk sportsbook line selection and enrichment | `app/dashboard/desk_sportsbooks.py` | Matches sportsbook prices to the exact displayed live line and applies live freshness. | Live snapshot list and Quote Quality. |
@@ -260,3 +269,18 @@ hidden controls for those modes have been removed; Dashboard and EV retain their
 separate supported calculation controls. Generated stored/scanner bundles and
 retained-session readers remain supported entry points, not dead alternatives to
 the raw controller.
+
+Browser ranking controls and explanations import metadata generated from
+`pregame_ranking.py`; the frontend build checks that generated module for drift.
+The supported `score` ranking uses the shared catalog. Unknown calculation-detail
+kinds fail explicitly.
+
+`SchedulePolicy` is a value record with explicit fields. Worker cycles and default
+`due_events` calls use `PREGAME_TARGET`. Custom policies derive from it with
+`dataclasses.replace` or provide all fields explicitly. Production startup
+initializes the guarded account window before dispatch.
+
+Saved `line`/`quote_key` links and compatibility API endpoints resolve to current
+exact reads. Retired amount/mode queries return HTTP 410. Journal legacy-ID lookup
+preserves saved decisions and corrections. `PregameOwner` also starts
+`OrdinaryOwner` for independent research, Coverage and Scanner work.

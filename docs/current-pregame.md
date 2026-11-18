@@ -12,15 +12,17 @@ SportsGameOdds / Kalshi direct / Polymarket US direct
     → SQL read → browser tickets and comparison
 ```
 
-Acquisition route and represented venue are separate fields. The configured scope
-is NFL, NCAAF, NBA, NCAAB, MLB and NHL full-game winners, spreads and totals.
-For the current owner-selected test, `direct_kalshi_enabled=false` and
-`direct_polymarket_us_enabled=false` route both venues through SportsGameOdds.
-Both direct adapters remain available to re-enable. SGO's `polymarket` bookmaker
-is temporarily treated as Polymarket US under that explicit test assumption;
-`source.provider=sportsgameodds` and the original bookmaker ID remain recorded.
-This mapping is not evidence that SGO's product identity has been independently
-established. Changing routes does not rename an observation's source history.
+Acquisition route and represented venue are separate fields. Supported scope
+covers NFL, NCAAF, NBA, NCAAB, MLB and NHL full-game winners, spreads and totals;
+the configuration selects the enabled subset. The sample configuration sets
+`direct_kalshi_enabled=false` and `direct_polymarket_us_enabled=false`, routing
+those venue observations through SportsGameOdds when aggregate collection is
+enabled. Both direct adapters remain available.
+
+The current SGO mapping displays its `polymarket` bookmaker as Polymarket US.
+That product identity has not been independently established; the original
+bookmaker ID and `source.provider=sportsgameodds` remain recorded. Changing
+routes does not rename an observation's source history.
 
 Existing Stop, source pauses, account limits, reservations and holds remain owned
 by acquisition. No dashboard request starts a provider request or durable calculation job.
@@ -84,16 +86,44 @@ cap while avoiding a whole-history window calculation in source admission.
 
 ## HTTP reads
 
+`app/storage/current_pregame_read.py` owns the committed-row queries. Callers keep
+using `current_pregame.read`; that facade supplies its existing clock and route
+resolver. Cheap update-cursor reads still return before resolving routes, and
+transaction ownership remains with the caller. Calculation/recovery writes stay
+in `current_pregame.py`.
+
 `GET /api/pregame` returns complete current rows. Supported query fields are
 `league`, `family` (`moneyline`, `spread`, `total`), `venue`, `search`, `game_key`,
 `bet_id`, `id`, `lines=all`, `browse=1`, `view=games`, `view=game`,
-`limit` (1–100), and `offset`.
+`limit` (1–100), `offset`, and `sort` (`growth`, `ev`, `score`, `balanced`, `edge`).
+The default sort is `growth`; unknown sorts return HTTP 400.
 
 The default list selects the highest unrounded Net EV venue per exact bet, keeps
-positive opportunities, then orders by Opportunity Score, Net EV and stable bet
-identity before pagination. Browse includes nonpositive complete comparisons.
+positive opportunities, then orders by the selected unrounded ranking value,
+Net EV and stable bet identity before pagination. Kelly growth evaluates expected
+log wealth at the existing model-optimal fraction. The other choices are Net EV,
+the original Kelly-fraction score, an experimental softer payout penalty, and
+reference probability minus after-fee break-even probability. These read-time
+rankings do not change stored quote, fee, reference or valuation records.
+Each ranked list/comparison row adds `ranking` metadata with the method, label,
+unit, numeric value and rounded display value; the original `raw.opportunity_score`
+remains unchanged. Browse includes nonpositive complete comparisons.
+`app/storage/pregame_ranking.py` is the method/catalog owner. The existing frontend
+builder emits `pregame-ranking.js` for the dropdown, column headings and ranking
+explanations. Do not edit a separate browser method list or generated metadata.
+A catalog entry without an implemented SQL calculation is rejected explicitly.
+
+Ranking values use a canonical, unrounded decimal wire representation in both
+list and exact-detail reads. Equivalent numeric encodings, including zero with
+different exponents, cannot produce false list/detail mismatches or comparison redraws.
 `bet_id` reads all quoted complete venue comparisons in Net EV order; `id` reads
 one exact current calculation, including an alternate excluded from the default.
+
+Pregame-only collection admits explicit early `started`/`live` lifecycle notices
+while discarding their post-start prices. The source-ingress transaction updates
+sporting state before returning, so list and journal readers withdraw that game
+even before affected-game recalculation. Repeated notices are idempotent;
+rollback preserves the previous state and original price evidence.
 
 `view=games` includes nonpositive complete rows, keeps main lines even when
 `lines=all` is supplied, and groups before pagination. It returns `games`, with
@@ -110,7 +140,6 @@ withdrawn, future-received or conflicting latest quotes and other exchange
 venues are excluded. They do not change calculation eligibility, fair-reference
 selection, fees, ranking or grouping. Each quote supplies its own source/receipt
 clock. The selected calculation's reference prices remain its pinned evidence.
-
 
 ```json
 {"schema":"predict-current-pregame-1","state":"ready","rows":[],"total":0,

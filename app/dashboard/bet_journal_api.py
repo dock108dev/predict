@@ -46,35 +46,36 @@ def mount(app, *, journal=None, monitor=True):
         filters = {
             key: request.query.get(key, "") for key in ("kind", "decision", "search")
         }
+        if download:
+            # One SQLite read transaction owns membership, corrections, quotes
+            # and metrics. Concurrent saves cannot shift offset-based pages.
+            snapshot = await asyncio.to_thread(
+                journal.export, history=download == "json"
+            )
+            histories = snapshot["entries"]
+            entries = [record["entry"] for record in histories]
+            if download == "json":
+                return web.json_response(
+                    dict(
+                        schema="predict-personal-journal-1",
+                        entries=histories,
+                        monitor=snapshot["monitor"],
+                    ),
+                    headers={
+                        "Content-Disposition": 'attachment; filename="predict-bet-journal.json"'
+                    },
+                )
+            return export_csv(entries)
         result = await asyncio.to_thread(
             journal.list,
-            limit=500 if download else request.query.get("limit", 100),
-            offset=0 if download else request.query.get("offset", 0),
-            view="log" if download else request.query.get("view", "log"),
-            **({} if download else filters),
+            limit=request.query.get("limit", 100),
+            offset=request.query.get("offset", 0),
+            view=request.query.get("view", "log"),
+            **filters,
         )
-        if not download:
-            return web.json_response(result)
-        # Exports include every page and append-only correction history.
-        entries = list(result["entries"])
-        for offset in range(len(entries), result["total"], 500):
-            packet = await asyncio.to_thread(journal.list, limit=500, offset=offset)
-            entries.extend(packet["entries"])
-        histories = [
-            await asyncio.to_thread(journal.get, entry["id"], history=True)
-            for entry in entries
-        ]
-        if download == "json":
-            return web.json_response(
-                dict(
-                    schema="predict-personal-journal-1",
-                    entries=histories,
-                    monitor=result["monitor"],
-                ),
-                headers={
-                    "Content-Disposition": 'attachment; filename="predict-bet-journal.json"'
-                },
-            )
+        return web.json_response(result)
+
+    def export_csv(entries):
         output = io.StringIO()
         fields = [
             "id",
