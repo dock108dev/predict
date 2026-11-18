@@ -47,6 +47,9 @@ ownership marker are preserved. Snapshots use a separate Unix socket and have
 mutation/collection workflows are outside this read-only development mode;
 server heartbeat information in the copied data will naturally become old.
 
+My Bets writes only its separate private SQLite journal. It survives snapshot
+pulls; the source database remains read-only. See the [journal contract](bet-journal.md).
+
 ## Limits and verification
 
 A snapshot is frozen, while kickoff eligibility still uses real time. Games

@@ -30,7 +30,7 @@ export function explanation(row,kind){
   `After-fee payout: ${fmt(number(row.raw.after_fee_decimal))}× (${row.display.after_fees} American). Losing receipt: ${money(loss)}.`];
  if(kind==='fair'){
   const decimal=number(row.reference.fair_decimal_odds ?? row.raw.fair_decimal);
-  return ['Fair odds',...(row.reference.selection_policy==='lowest-no-vig-probability-1'?["Reference: the lowest no-vig win probability among eligible complete sportsbook pairs.",'Eligible estimates: '+Object.entries(row.reference.candidate_probabilities||{}).map(([book,value])=>book+' '+fmt(100*number(value))+'%').join('; ')+'.']:[]),...prices.map(q=>`${q.side}${q===selected?' (selected)':''}: ${q.price_american} → implied probability ${fmt(100*probability(q.price_american))}%.`),
+  return ['Fair odds',...(['lowest-no-vig-probability-1','lowest-no-vig-two-trusted-books-2'].includes(row.reference.selection_policy)?["Reference: the lowest no-vig win probability, requiring complete exact-line pairs from at least two trusted books.",'Eligible estimates: '+Object.entries(row.reference.candidate_probabilities||{}).map(([book,value])=>book+' '+fmt(100*number(value))+'%').join('; ')+'.']:[]),...prices.map(q=>`${q.side}${q===selected?' (selected)':''}: ${q.price_american} → implied probability ${fmt(100*probability(q.price_american))}%.`),
    selected?`Remove the book's margin: ${fmt(probability(selected.price_american))} ÷ ${fmt(prices.reduce((sum,q)=>sum+probability(q.price_american),0))} = ${fmt(p)} (${fmt(p*100)}%).`:`Fair probability: ${fmt(p*100)}%.`,
    `Fair decimal odds = 1 ÷ ${fmt(p)} = ${fmt(decimal)}.`,
    `American odds = ${decimal>=2?'100 × (decimal − 1)':'−100 ÷ (decimal − 1)'} → ${row.display.fair_odds}.`];

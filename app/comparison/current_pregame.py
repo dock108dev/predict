@@ -19,7 +19,8 @@ from .snapshot_fee_scope import applicability
 from .trade_preview import order_step
 
 VERSION = "predict-current-pregame-6"
-REFERENCE_POLICY = "lowest-no-vig-probability-1"
+REFERENCE_POLICY = "lowest-no-vig-two-trusted-books-2"
+MIN_TRUSTED_BOOKS = 2
 COMPARISON_USD = F(100)
 
 
@@ -145,6 +146,8 @@ def select_reference(observations, *, family, side, line, start, at):
             )
     if not candidates:
         raise ValueError("reference_exact_pair_unavailable")
+    if len(candidates) < MIN_TRUSTED_BOOKS:
+        raise ValueError("reference_two_trusted_books_required")
     # Lower fair win probability lowers EV for every supported long bet. Only
     # complete same-book pairs compete; priority is a deterministic tie-break.
     selected = min(
@@ -154,6 +157,8 @@ def select_reference(observations, *, family, side, line, start, at):
     return dict(
         selected,
         selection_policy=REFERENCE_POLICY,
+        required_trusted_books=MIN_TRUSTED_BOOKS,
+        trusted_book_count=len(candidates),
         # Line eligibility keeps its established priority evidence;
         # changing an EV benchmark must not relabel main/alternate lines.
         main_line_evidence=all(

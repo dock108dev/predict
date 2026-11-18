@@ -36,8 +36,9 @@ def revalue(db, *, at=None):
             db.execute(
                 """SELECT contract_id,payload FROM current_pregame_calculation
             WHERE reason IS NULL AND payload IS NOT NULL AND start_at>%s AND valid_until>%s
-            AND (version<>%s OR payload#>'{reference,main_line_evidence}' IS NULL) ORDER BY game_key,contract_id""",
-                (at, at, math.VERSION),
+            AND (version<>%s OR payload#>'{reference,main_line_evidence}' IS NULL
+                 OR payload#>>'{reference,selection_policy}' IS DISTINCT FROM %s) ORDER BY game_key,contract_id""",
+                (at, at, math.VERSION, math.REFERENCE_POLICY),
             )
         )
         grouped = defaultdict(list)

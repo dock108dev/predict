@@ -18,6 +18,18 @@ PUBLIC_DESK_PAGES = ("/", "/ev", "/arbs", "/browse-odds", "/game", "/replay", "/
 
 
 class Assets(unittest.IsolatedAsyncioTestCase):
+    async def test_personal_journal_route_serves_its_module_and_shared_style(self):
+        provider = InjectedTestProvider()
+        provider.database_mode = True
+        app = create_app(owner=owner(), sessions={}, current_provider=provider)
+        async with TestClient(TestServer(app)) as client:
+            page = await client.get('/my-bets')
+            self.assertEqual(page.status, 200)
+            self.assertIn('/view/current/bet-journal.js', await page.text())
+            for name in ('bet-journal.js', 'bet-journal-actions.js', 'bet-journal.css', 'pregame.css'):
+                asset = await client.get('/view/current/' + name)
+                self.assertEqual(asset.status, 200, name)
+
     async def test_captured_arbitrage_game_link_keeps_its_evidence_context(self):
         provider = InjectedTestProvider()
         provider.database_mode = True

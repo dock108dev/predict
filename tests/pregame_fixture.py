@@ -55,7 +55,7 @@ class PregameFixture(LatestBoardFixture):
     async def asyncSetUp(self):
         with self.connect() as db:
             db.execute(
-                "TRUNCATE current_event,sgo_event_evidence,sgo_quote_revision,current_pregame_work CASCADE"
+                "TRUNCATE sgo_line_presence,current_event,sgo_event_evidence,sgo_quote_revision,current_pregame_work CASCADE"
             )
             from tests.test_public_fee_schedule import attempt, PDF
             from hashlib import sha256

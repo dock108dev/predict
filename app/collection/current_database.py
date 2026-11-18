@@ -508,6 +508,8 @@ class DatabaseIngressSink:
                                   **({'quote_links':sgo_links} if sgo_links else {}))
                     if sgo_links is not None:
                         changed += lifecycle_changes + withdraw_current_offers(db, row['sgo_reference_rows'], sgo_links)
+                        from app.storage.sgo_line_presence import observe
+                        changed += observe(db, row['sgo_reference_rows'], include_alternates=row.get('sgo_include_alt_lines') is True, events=row['event_scopes'], received_at=row['received_at'])
                     phase('native_depth')
                     if row['type'] in ('prediction_book','prediction_books'):rows.replace_native_books([o['book'] for o in observations])
                     if row['type']=='coverage_inventory':

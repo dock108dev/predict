@@ -152,7 +152,7 @@ def read(db, query, *, at=None):
         db.execute(
             """SELECT p.* FROM current_pregame_price p
         JOIN current_contract c ON c.id=p.contract_id
-        JOIN current_offer_storage o ON o.contract_id=c.id JOIN current_event e ON e.id=c.event_id
+        JOIN current_offer o ON o.contract_id=c.id JOIN current_event e ON e.id=c.event_id
         WHERE p.start_at>%s AND p.valid_until>%s AND e.scheduled_start::timestamptz>%s
           AND o.facts->>'state' IS DISTINCT FROM 'unavailable'
           AND NOT EXISTS(SELECT 1 FROM current_pregame_work w WHERE w.provider=e.provider AND w.native_event_id=e.native_event_id)

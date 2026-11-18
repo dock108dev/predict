@@ -523,6 +523,8 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
             app.router.add_get(route, desk_page)
         from .current_pregame_api import mount as mount_current_pregame
         mount_current_pregame(app)
+        from .bet_journal_api import mount as mount_bet_journal
+        mount_bet_journal(app)
         async def desk_redirect(req):
             raise web.HTTPFound('/')
         app.router.add_get('/view/current/desk.html',desk_redirect)

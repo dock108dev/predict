@@ -88,6 +88,12 @@ class PregameOwner:
                 limit=8,
                 can_continue=lambda: not BACKGROUND.critical_acquisition_pressure(),
             )
+            # Personal tracking observes already committed prices. It must never
+            # hold the acquisition writer transaction or make provider requests.
+            if not BACKGROUND.critical_acquisition_pressure():
+                from app.dashboard.bet_journal_monitor import poll
+
+                poll()
             from time import monotonic
 
             if result or monotonic() - self.last_status >= 5:

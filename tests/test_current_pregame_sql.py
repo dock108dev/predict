@@ -471,13 +471,12 @@ class CurrentPregameSQL(PregameFixture):
             )
             self.assertEqual(board.read(db, {}, at=stamp(AT))["total"], 0)
             self.process(db)
-            # The next eligible complete same-book reference is selected.
-            self.assertEqual(
-                board.read(db, {"browse": "1"}, at=stamp(AT))["rows"][0]["reference"][
-                    "book"
-                ],
-                "draftkings",
+            # DraftKings alone cannot replace the required two-book reference.
+            self.assertEqual(board.read(db, {"browse": "1"}, at=stamp(AT))["total"], 0)
+            db.execute(
+                "UPDATE sgo_quote_revision SET facts=jsonb_set(facts,'{available}','true') WHERE is_current AND bookmaker_id='fanduel'"
             )
+            self.process(db)
             db.execute(
                 "UPDATE current_contract_storage SET facts=jsonb_set(facts,'{comparison_source_metadata,alternate}','true'),revision='alternate' WHERE id=%s",
                 (row["id"],),
@@ -696,9 +695,20 @@ class CurrentPregameSQL(PregameFixture):
             refs = [
                 q for q in prepare_page(parse(data)) if q["facts"]["venue"] == "fanduel"
             ]
-            old_ref = math.reference(record, {"event": refs}, at=stamp(AT))
+            # Construct a historical one-book record explicitly; the current
+            # selector must now reject it even at the same calculation version.
+            old_ref = dict(
+                novig["reference"],
+                book="fanduel",
+                probability="0.5",
+                fair_decimal_odds="2",
+                fair_odds="+100",
+                prices=[q["facts"] for q in refs],
+                candidate_probabilities={"fanduel": "0.5"},
+                selection_policy="lowest-no-vig-probability-1",
+            )
             old = math.revalue_reference(novig, old_ref, at=stamp(AT))
-            old["version"] = "predict-current-pregame-5"
+            old["version"] = math.VERSION
             db.execute(
                 "UPDATE current_pregame_calculation SET version=%s,payload=%s WHERE contract_id=%s",
                 (old["version"], Jsonb(old), novig["id"]),
@@ -730,3 +740,26 @@ class CurrentPregameSQL(PregameFixture):
             )
             with self.assertRaisesRegex(ValueError, "full calculation upgrade"):
                 revalue(db, at=stamp(AT))
+
+    async def test_single_trusted_book_has_no_ev_but_keeps_source_prices(self):
+        data = page()
+        for odd in data["data"][0]["odds"].values():
+            other = odd["byBookmaker"].pop("draftkings")
+            odd["byBookmaker"]["casumo"] = other
+        with self.connect() as db:
+            self.ingest(db, data)
+            self.process(db)
+            self.assertEqual(
+                board.read(db, dict(browse="1", lines="all"), at=stamp(AT))["rows"], []
+            )
+            self.assertGreater(
+                db.execute("SELECT count(*) n FROM current_pregame_price").fetchone()[
+                    "n"
+                ],
+                0,
+            )
+            reasons = {
+                r["reason"]
+                for r in db.execute("SELECT reason FROM current_pregame_calculation")
+            }
+            self.assertIn("reference_two_trusted_books_required", reasons)

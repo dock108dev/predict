@@ -211,3 +211,21 @@ both allocations, after-fee state receipts, source/receipt clocks and the formul
 SportsGameOdds and links official documentation and relevant research. The SGO
 affiliate URL is a source comment placeholder until the owner supplies it; the
 visible credit uses the official provider site.
+
+## Scoped missing-line availability
+
+Successful SportsGameOdds refreshes requested with `includeAltLines=true` now
+record line presence independently of price/source clocks. When a returned game
+continues receiving complete scoped refreshes but a particular book/outcome/line
+is omitted, it receives a 15-minute grace period starting at its first observed
+omission. A later complete refresh at or beyond that boundary suppresses that
+quote and any EV/arb using it. The game and other lines remain. Empty book/market
+results inside the returned, explicitly requested scope count; absent games,
+failed requests, main-only pages, and out-of-order replays do not.
+
+A later receipt containing the exact line clears omission even if its source
+price has not changed. Provider quote facts and their original clocks remain
+unchanged. Migration 106 seeds known identities without inventing historical
+omissions. A frozen local snapshot therefore cannot demonstrate new disappearance
+until it receives scoped absence evidence. This is an admission-driven rule,
+not a universal 15-minute price-age expiry.

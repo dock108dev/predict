@@ -1,6 +1,6 @@
 # Predict
 
-Predict is a read-only odds and opportunity board. It opens directly on
+Predict is an odds and opportunity board with a personal trade journal. It opens directly on
 **Pregame Opportunities**, showing complete main-line bets ranked by Opportunity
 Score after fees. **Browse odds** groups main markets by game, sorted by start
 time. Open a game for alternate lines, then select a line to compare exact
@@ -11,7 +11,8 @@ The collector receives odds, normalizes affected games, calculates using posted
 prices, and stores complete current rows in PostgreSQL. Refresh and inspection
 only read stored data. Arb reads also balance a bounded illustrative allocation
 using the stored fee inputs. Pregame observations have no age expiry: authoritative kickoff,
-non-pregame status, and explicit withdrawal govern removal. Odds may be delayed.
+non-pregame status, explicit withdrawal, and repeated scoped line omissions
+after a 15-minute grace period govern removal. Odds may be delayed.
 
 [Desk guide](docs/ui-design.md#current-comparison-interface) ·
 [Current data flow and API](docs/current-pregame.md) ·
@@ -21,6 +22,12 @@ Saved captures and simulated practice remain separate research views.
 Live executable size and cross-venue fills are not established by these boards.
 [About this board](app/dashboard/opportunity_static/current/about.html) explains
 the model, execution limitations, sources and SportsGameOdds data credit.
+
+**My Bets** saves an EV quote or both arb legs, records the odds, stake and fees
+you actually got, and compares them with retained pregame quotes, closing value
+and reported settlement. The **Opportunity log** automatically retains positive
+main-line EV signals and positive price-arb pairs. Trading remains outside Predict.
+[Journal workflow, measurement definitions and durability](docs/bet-journal.md)
 
 ## Requirements and quickstart
 

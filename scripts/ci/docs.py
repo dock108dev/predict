@@ -9,6 +9,7 @@ DOCUMENTS = (
     "README.md",
     "NEXT_STEPS.md",
     "docs/current-pregame.md",
+    "docs/bet-journal.md",
     "docs/storage-ownership.md",
     "docs/odds-archive-operations.md",
     "docs/CI.md",

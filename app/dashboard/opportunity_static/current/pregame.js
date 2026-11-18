@@ -1,3 +1,4 @@
+import {journalVenueActions} from './bet-journal-actions.js';
 import {bookName,venues} from './pregame-labels.js';
 import {priceDisplay,isContractVenue} from './pregame-prices.js';
 import {addMath} from './pregame-math.js';
@@ -40,7 +41,7 @@ function schedule(deadline){clearTimeout(refreshTimer);if(deadline)refreshTimer=
 async function load(){if(running){queued=true;return;}running=true;const token=++sequence;try{const packet=await get(query());if(token===sequence){render(packet);$('error').hidden=true;}}catch(e){$('error').textContent=lastGood?'Refresh failed. Your displayed odds are preserved.':'Odds could not be loaded. Choose Refresh to retry.';$('error').hidden=false;if(!lastGood)$('count').textContent='Odds could not be loaded.';}finally{running=false;if(queued){queued=false;load();}}}
 function dollars(value){const [a,b='1']=String(value).split('/');return '$'+(Number(a)/Number(b)).toFixed(2);}
 function details(row){const detail=node('details'),dl=node('dl');detail.append(node('summary','Fee and calculation details'));const add=(label,value)=>dl.append(node('dt',label),node('dd',value));
- add('Source route',row.source.provider);add('Source timestamp',row.times.source_at||'Not supplied');add('Received',row.times.received_at);add('Calculated',row.calculated_at);add('Fee basis','$100 internal comparison basis · Posted price');add('Cash committed',dollars(row.fee.committed_usd));add('Entry fee',dollars(row.fee.entry_usd));for(const [state,cash]of Object.entries(row.fee.cashflows)){add(`${state==='win'?'Winning':'Losing'} fee`,dollars(cash.total_fee_usd));add(`${state==='win'?'Winning':'Losing'} receipt`,dollars(cash.net_receipt_usd));}
+ add('Trusted reference books',Object.keys(row.reference.candidate_probabilities||{}).map(bookName).join(', ')||'Not recorded');add('Source route',row.source.provider);add('Source timestamp',row.times.source_at||'Not supplied');add('Received',row.times.received_at);add('Calculated',row.calculated_at);add('Fee basis','$100 internal comparison basis · Posted price');add('Cash committed',dollars(row.fee.committed_usd));add('Entry fee',dollars(row.fee.entry_usd));for(const [state,cash]of Object.entries(row.fee.cashflows)){add(`${state==='win'?'Winning':'Losing'} fee`,dollars(cash.total_fee_usd));add(`${state==='win'?'Winning':'Losing'} receipt`,dollars(cash.net_receipt_usd));}
  add('Fee terms',row.fee.classification==='conservative'?'Highest applicable documented charge where account terms are unresolved.':row.fee.classification.replaceAll('_',' '));
  const evidence=row.fee.evidence||{},rule=evidence.database_fee_rule;add('Fee schedule',rule?.id||evidence.schedule_version||evidence.version||evidence.product||'Verified venue schedule');
  if(rule){add('Fee formula',rule.formula.replaceAll('_',' '));add('Fee coefficient',rule.rate);if(rule.multiplier!=='1')add('Market multiplier',rule.multiplier);add('Balance precision',`$${rule.balance_precision}`);add('Applies from',rule.effective_from);if(rule.effective_to)add('Applies until',rule.effective_to);}else if(evidence.fee_rate!==undefined)add('Fee coefficient',evidence.fee_rate);
@@ -73,11 +74,11 @@ async function openComparison(selected){
  const token=++comparisonSequence;clearTimeout(inspectionTimer);const frozen=structuredClone(selected);comparisonReturnId=selected.id;
  inspectionTimer=setTimeout(()=>$('comparison').close(),Math.min(2147483647,Math.max(0,Date.parse(frozen.kickoff)-Date.now())));
  $('comparison-title').textContent=pick(frozen);const content=$('comparison-content');
- const game=node('p',frozen.game,'comparison-context'),offers=node('section',undefined,'exchange-comparison'),books=node('div'),evidence=node('section',undefined,'calculation-evidence');
+ const game=node('p',frozen.game,'comparison-context'),offers=node('section',undefined,'exchange-comparison'),books=node('div'),evidence=node('section',undefined,'calculation-evidence'),actions=node('div');actions.append(journalVenueActions([frozen]));
  offers.append(node('h3','Exchange prices'),exchangePrices([frozen]));evidence.append(node('h3','Calculation details'),details(frozen));
- content.replaceChildren(game,offers,books,evidence);$('comparison').showModal();
+ content.replaceChildren(game,offers,actions,books,evidence);$('comparison').showModal();
  try{const data=await get(new URLSearchParams({bet_id:frozen.bet_id,lines:'all',browse:'1'}));if(!$('comparison').open||token!==comparisonSequence||Date.parse(frozen.kickoff)<=Date.now())return;
- const others=data.rows.filter(r=>r.id!==frozen.id);offers.replaceChildren(node('h3','Exchange prices'),exchangePrices([frozen,...others]));books.replaceChildren(sportsbookPrices(frozen,data.sportsbooks||[]));
+ const others=data.rows.filter(r=>r.id!==frozen.id);offers.replaceChildren(node('h3','Exchange prices'),exchangePrices([frozen,...others]));books.replaceChildren(sportsbookPrices(frozen,data.sportsbooks||[]));actions.replaceChildren(journalVenueActions([frozen,...others]));
  for(const row of others){const detail=details(row);detail.querySelector('summary').textContent=(venues[row.venue]||row.venue)+' · Fee and calculation details';evidence.append(detail);}
  }catch(e){books.replaceChildren(sportsbookPrices(frozen));content.append(node('p','Comparison refresh failed. The selected odds are preserved.','comparison-context'));}
 }

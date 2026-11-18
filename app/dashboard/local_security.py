@@ -15,6 +15,8 @@ class PublicRequestError(ValueError):
 
 
 def body_limit(path):
+    if path == '/api/bet-journal' or path.startswith('/api/bet-journal/'):
+        return 256 * 1024
     return IMPORT_BODY_LIMIT if path in IMPORT_ROUTES else CONTROL_BODY_LIMIT
 
 

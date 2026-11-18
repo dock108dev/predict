@@ -25,7 +25,7 @@ predict.dock108.dev {
 		method POST DELETE
 		path /api/comparison-current/lease
 	}
-	@admin path /admin /admin/* /raw-odds /odds /coverage /current/coverage /scanner /api/* /current/assets/* /view/* /style.css /shared-state.js
+	@admin path /admin /admin/* /my-bets /raw-odds /odds /coverage /current/coverage /scanner /api/* /current/assets/* /view/* /style.css /shared-state.js
 	@browserIcon {
 		method GET HEAD
 		path /favicon.ico /apple-touch-icon.png /apple-touch-icon-precomposed.png

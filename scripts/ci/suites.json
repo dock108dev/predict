@@ -681,5 +681,15 @@
       "tests/test_profile_validation_scope.py",
       "tests/test_scanner_revision_stream.py"
     ]
+  },
+  {
+    "name": "personal-bet-journal",
+    "tests": [
+      "tests/test_bet_journal.py",
+      "tests/test_bet_journal_api.py",
+      "tests/test_bet_journal_metrics.py",
+      "tests/test_bet_journal_monitor.py",
+      "tests/test_journal_closing_reference.py"
+    ]
   }
 ]

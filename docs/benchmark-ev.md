@@ -6,8 +6,10 @@ The primary dashboard uses complete current calculations from the affected-game
 path described in [Current pregame](current-pregame.md). Every venue for the same
 exact bet uses the eligible complete same-book pair with the lowest unrounded
 no-vig win probability. Eligible books are FanDuel, DraftKings, BetMGM and
-Caesars; that order breaks exact probability ties. This owner-selected policy
-is `lowest-no-vig-probability-1`, calculation version `predict-current-pregame-6`.
+Caesars; that order breaks exact probability ties. At least two distinct trusted
+books must each offer a complete opposing pair for this exact line. Untrusted
+books, incomplete pairs and different lines do not count toward that minimum. This owner-selected policy
+is `lowest-no-vig-two-trusted-books-2`, calculation version `predict-current-pregame-6`.
 It minimizes EV among those sportsbook estimates for the selected long bet;
 it does not establish the true probability or a statistical lower bound. Match the occurrence, full-game period,
 market, exact line and opposing outcome identities before arithmetic. Genuine

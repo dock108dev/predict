@@ -734,6 +734,11 @@ def read(db, query, *, at=None):
         "e.scheduled_start::timestamptz>%s",
     ]
     params = [at, at, at]
+    # A stored row from an older writer must not bypass the current owner rule.
+    clauses.append("""(SELECT count(*) FROM jsonb_object_keys(
+        COALESCE(p.payload#>'{reference,candidate_probabilities}','{}'::jsonb)) AS book
+        WHERE book=ANY(%s))>=2""")
+    params.append(list(math.BEST_BOOKS))
     routes = configured_routes(db)
     clauses.append(
         "("
@@ -783,7 +788,7 @@ def read(db, query, *, at=None):
     where = " AND ".join(clauses)
     source = (
         """ FROM current_pregame_calculation p JOIN current_contract c ON c.id=p.contract_id
-        JOIN current_offer_storage o ON o.contract_id=c.id JOIN current_event e ON e.id=c.event_id WHERE """
+        JOIN current_offer o ON o.contract_id=c.id JOIN current_event e ON e.id=c.event_id WHERE """
         + where
     )
     compare = bool(query.get("bet_id") or query.get("id"))

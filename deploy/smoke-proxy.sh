@@ -75,11 +75,16 @@ check 404 GET /apple-touch-icon-180x180.png
 check 404 GET /manifest.webmanifest
 check 403 GET / -H 'Origin: https://unrelated.invalid'
 check 401 GET /admin
+check 401 GET /my-bets
+check 401 GET /api/bet-journal
+check 401 POST /api/bet-journal
 check 401 GET /view/current/admin.html
 check 401 GET /view/current/raw-odds.html
 check 401 GET /api/admin/status
 check 401 POST /api/admin/current
 check 401 POST /api/comparison-current/settings
 check 200 GET /admin -u "fixture:$password"
+check 200 GET /my-bets -u "fixture:$password"
+check 200 GET /api/bet-journal -u "fixture:$password"
 check 200 GET /api/admin/status -u "fixture:$password"
 echo 'Public routes and Admin authentication passed.'

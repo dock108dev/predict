@@ -239,13 +239,13 @@ class SportsGameOddsWorker:
         self.metrics['object_interruptions'] = self.ledger.interruptions(self.window_id)
 
     @operation
-    def admit(self, sport, records, reference_rows, event_frames, received_at, receipt_sha256, event_scopes):
+    def admit(self, sport, records, reference_rows, event_frames, received_at, receipt_sha256, event_scopes, include_alternates=False):
         if self.controls()['stopped'] or self.controls()['source_paused']:
             raise asyncio.CancelledError()
         states = deepcopy(self.service.states)
         yield (dict(type='current_aggregate_records', source='sportsgameodds', sport=sport,
                     records=records, sgo_reference_rows=reference_rows, sgo_event_frames=event_frames,
-                    receipt_sha256=receipt_sha256, event_scopes=event_scopes,
+                    receipt_sha256=receipt_sha256, event_scopes=event_scopes, sgo_include_alt_lines=include_alternates,
                     complete_venues=[], received_at=received_at), states)
 
     @staticmethod
@@ -269,7 +269,7 @@ class SportsGameOddsWorker:
                         received_at=received_at, receipt_sha256=page.receipt_sha256, event_scopes=event_scopes)
         return prepared, len(exclusions)
 
-    async def _publish(self, page):
+    async def _publish(self, page, *, include_alternates=False):
         from .bulk_checkpoint import owned_thread
 
         # Large alternate pages used to prepare and serialize on the same
@@ -280,7 +280,7 @@ class SportsGameOddsWorker:
             return
         # The entire page is one source-revocable transaction: prices and
         # reference evidence cannot become visible at different revisions.
-        await call(self.service, self.admit, **prepared)
+        await call(self.service, self.admit, **prepared, include_alternates=include_alternates)
         admitted_at = self.now()
         self.metrics['records'] += len(prepared['records'])
         self.metrics['reference_rows'] = self.metrics.get('reference_rows', 0) + len(prepared['reference_rows'])
@@ -371,7 +371,10 @@ class SportsGameOddsWorker:
                                             quotes=tuple(quote for quote in page.quotes
                                                          if quote['event_id'] in pregame))
             try:
-                await self._publish(admitted_page)
+                if params.get('includeAltLines') is True:
+                    await self._publish(admitted_page, include_alternates=True)
+                else:
+                    await self._publish(admitted_page)
             except (ValueError, OperationalError, QueryCanceled) as exc:
                 failure(__name__, 'sgo_page_admission_interrupted', exc)
                 raise RuntimeError('provider page admission interrupted') from exc

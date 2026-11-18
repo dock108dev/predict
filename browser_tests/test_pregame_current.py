@@ -38,6 +38,7 @@ def offer():
             book="fanduel",
             selected_outcome="home",
             probability="0.5",
+            candidate_probabilities={"fanduel": "0.5", "draftkings": "0.51"},
             fair_decimal_odds="2",
             fair_odds="+100",
             prices=[

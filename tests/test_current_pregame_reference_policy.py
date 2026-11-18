@@ -86,7 +86,8 @@ def test_incomplete_withdrawn_wrong_line_duplicate_and_future_pairs_do_not_win()
     duplicate.append(deepcopy(duplicate[0]))
     variants.append(duplicate)
     for broken in variants:
-        assert reference(RECORD, {"event": valid + broken}, at=AT)["book"] == "fanduel"
+        with pytest.raises(ValueError, match="reference_two_trusted_books_required"):
+            reference(RECORD, {"event": valid + broken}, at=AT)
     with pytest.raises(ValueError, match="reference_exact_pair_unavailable"):
         reference(RECORD, {"event": valid}, at=stamp(START))
 
@@ -136,3 +137,15 @@ def test_reference_selection_does_not_relabel_established_main_line_evidence():
         entry["facts"]["alternate"] = False
     result = reference(RECORD, {"event": fd + dk}, at=AT)
     assert main_line(RECORD, result) is False
+
+
+def test_one_trusted_book_plus_untrusted_books_cannot_qualify():
+    quotes = pair("fanduel", "-8000", "+2500")
+    for book in ("betrsportsbook", "boylesports", "casumo", "paddypower"):
+        quotes += pair(book, "-10000", "+3000")
+    with pytest.raises(ValueError, match="reference_two_trusted_books_required"):
+        reference(RECORD, {"event": quotes}, at=AT)
+    quotes += pair("draftkings", "-7000", "+2200")
+    result = reference(RECORD, {"event": quotes}, at=AT)
+    assert result["trusted_book_count"] == 2
+    assert set(result["candidate_probabilities"]) == {"fanduel", "draftkings"}
