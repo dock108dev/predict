@@ -561,6 +561,16 @@ class DatabaseIngressSink:
                             if sgo_links is not None:
                                 archive.append(('sportsgameodds', odds_archive.sgo_page, (row,), {}))
                     phase('commit_observation')
+                from app.storage.current_pregame import process
+                calculation_keys = sorted({r['quote']['source']['provider']+':'+r['quote']['source']['native_event_id']
+                    for r in records if 'quote' in r} | {r['source']['provider']+':'+r['source']['native_event_id']
+                    for r in records if 'quote' not in r and 'source' in r})
+                if sgo_links is not None:
+                    calculation_keys.extend('sportsgameodds:'+event for event in row['event_scopes'])
+                if calculation_keys:
+                    phase('current_calculation')
+                    self.metrics['current_calculations'] = process(db,keys=calculation_keys,limit=len(set(calculation_keys)))
+                    self.metrics['recent_current_calculations'] = (self.metrics.get('recent_current_calculations', []) + self.metrics['current_calculations'])[-32:]
             if row['type']=='coverage_inventory':
                 self.metrics['catalog_storage_turnover']=dict(at=utc(),source=row['source'],generation=row['generation'],reasons=catalog_turnover)
             if material_rows is not None:

@@ -42,10 +42,8 @@ def main():
         socket_directory()
     except ValueError as exc:
         p.error(str(exc))
-    from app.dashboard.unit_publication_worker import mount as mount_unit_worker
 
     application=create_app(current_provider=RuntimeClient())
-    mount_unit_worker(application)
     web.run_app(application,host=a.host,port=a.port,access_log=None,handler_cancellation=True)
 
 if __name__=='__main__':main()

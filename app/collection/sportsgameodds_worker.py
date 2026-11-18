@@ -31,7 +31,7 @@ from .sportsgameodds_usage import read_usage
 from app.comparison.sgo_reference import BEST_BOOKS
 from app.diagnostics import failure
 
-ALTERNATE_REFRESH_BOOKS = ('kalshi', 'novig', PROPHETX_BOOKMAKER_ID, *BEST_BOOKS)
+ALTERNATE_REFRESH_BOOKS = ('kalshi', 'polymarket', 'novig', PROPHETX_BOOKMAKER_ID, *BEST_BOOKS)
 ALTERNATE_REFRESH_WINDOW = timedelta(hours=2)
 SCAN_INTERVAL = timedelta(minutes=15)
 

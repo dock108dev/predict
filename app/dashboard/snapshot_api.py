@@ -8,7 +8,6 @@ from datetime import datetime
 import re
 from aiohttp import web
 from psycopg import OperationalError
-from psycopg.errors import LockNotAvailable
 from app.owned_work import joined_thread
 from app.storage.store import connect, stamp
 from app.storage import comparison_snapshot as snapshots
@@ -255,10 +254,6 @@ def mount(app):
     app.on_cleanup.append(desk_reads.close)
 
     async def current_read(req):
-        from .unit_publication_worker import WAKE
-
-        wake_units = req.app.get(WAKE)
-        loop = asyncio.get_running_loop()
         timings = {}
         submitted = monotonic()
         is_fee_census = req.path.endswith('/fee-coverage')
@@ -269,29 +264,12 @@ def mount(app):
         query.setdefault('group', 'outcome')
         is_desk = query.get('layout') == 'desk'
         quote_key = query.get('quote_key') if is_selection and is_desk else None
-        board_selection = bool(is_selection and is_desk and query.get('board_id'))
-        board_request = (is_desk and not (is_selection or is_fee_census or is_updates)
-                         and query.get('ranked') == '1' and query.get('browse_odds') != '1'
-                         and query.get('view', 'ev') != 'arbs'
-                         and query.get('board') != '0')
+        if (is_desk and query.get('phase','pregame')!='live' and query.get('view','ev')!='arbs'
+                and not is_fee_census):
+            from .current_pregame_api import response
+            return await response(req,connector=connect)
         unit = None
-        board_update = bool(is_updates and is_desk and query.get('board') == '1' and 'unit_usd' in query)
-        if board_request or board_update or is_selection and is_desk:
-            from app.comparison.trade_preview import parse_amount
-
-            try:
-                preview_amount = parse_amount(query.get('preview_amount', '10'))
-                unit = parse_amount(query['unit_usd']) if 'unit_usd' in query else (
-                    parse_amount('100') if board_request or board_update else None)
-            except ValueError as exc:
-                raise PublicRequestError(str(exc)) from exc
-        cents = int(unit * 100) if unit is not None else None
-        if cents is not None and (board_request or board_update):
-            query['unit_usd'] = f'{cents // 100}.{cents % 100:02d}'
-        if board_selection and (not cents or not re.fullmatch(r'[a-f0-9]{64}', query['board_id'])):
-            raise PublicRequestError('Selected unit and board revision required')
-        if (cursor := query.get('board_cursor')) is not None and not re.fullmatch(r'[a-f0-9]{64}', cursor):
-            raise PublicRequestError('Invalid selected-unit page cursor')
+        preview_amount = None
         if quote_key is not None and not re.fullmatch(r'[a-f0-9]{64}', quote_key):
             raise PublicRequestError('Invalid exact quote key')
         if is_desk:
@@ -332,16 +310,6 @@ def mount(app):
                             load_preview_members=lambda rows: published_members(db, rows))
             counts['phase'] = phase
             counts['published_at'] = published_at
-            if phase != 'live':
-                from .pregame_board import read_page
-                from app.storage.pregame_unit_board import DEFAULT_CENTS
-
-                board = read_page(db, dict(lines='main'), ('ev', 'selected_unit', 0, 1),
-                    cents=DEFAULT_CENTS, head=live.status(db), owner=owner, states=states, epoch=epoch, at=at)
-                counts['default_estimate'] = {key: board.get(key) for key in (
-                    'state', 'board_state', 'board_id', 'selected_usd', 'matched_offer_count',
-                    'qualified_offer_count', 'qualified_board_offer_count', 'ranked_group_count',
-                    'pending_member_count', 'blocker_counts')}
             if query.get('funnel') == '1':
                 from .coverage_funnel import measure
                 counts['synchronized_funnel'] = measure(db, result, deps, counts, owner, at=at, phase=phase,
@@ -355,13 +323,6 @@ def mount(app):
         @contextmanager
         def read_frame():
             with connect() as db:
-                if board_request and cents is not None:
-                    from app.storage import pregame_unit_board
-                    try:
-                        pregame_unit_board.request(db, cents)
-                    except LockNotAvailable:
-                        # Another demand/worker transaction can finish before the next poll.
-                        pass
                 with db.transaction():
                     db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
                     yield db
@@ -409,10 +370,6 @@ def mount(app):
                     stage = monotonic()
                     update_cursor = desk_cursor(db, at=at, phase=query['phase'], head=head, owner=owner, provider=provider,
                         states=states, settings=settings, epoch=epoch, live_enabled=live_available)
-                    if cents is not None and (board_request or board_update) and query['phase'] == 'pregame':
-                        board = db.execute('SELECT board_id,error FROM pregame_unit_board WHERE unit_cents=%s',
-                                           (cents,)).fetchone()
-                        update_cursor = hashed([update_cursor, cents, board])
                     timings['desk_revision'] = (monotonic()-stage)*1000
                     if is_updates:
                         return dict(changed=query.get('after') != update_cursor, cursor=update_cursor,
@@ -423,21 +380,6 @@ def mount(app):
                 if pregame:
                     metadata = dict(result_id=head['result_id'], generation=head['generation'], cursor=update_cursor,
                                     provider_requests=0, **features)
-                    if board_request or board_selection:
-                        from . import pregame_board
-                        if board_request:
-                            stage = monotonic()
-                            displayed = pregame_board.read_page(db, query, options, cents=cents, head=head, owner=owner,
-                                                                states=states, epoch=epoch, at=at)
-                        else:
-                            stage = monotonic()
-                            displayed = pregame_board.selection(db, query, cents=cents, head=head, owner=owner,
-                                states=states, epoch=epoch, at=at, fragments=fragments)
-                        if wake_units is not None and board_request and cents is not None and (
-                                displayed.get('state') == 'valuation_pending' or displayed.get('replacement_pending')):
-                            loop.call_soon_threadsafe(wake_units.set)
-                        timings['unit_board_read'] = (monotonic() - stage) * 1000
-                        return metadata | displayed
                     from app.storage.pregame_publication import occurrence_rows, project as project_pregame
                     from .desk_updates import refresh_at
                     from .trade_desk import EV_METRIC, METRICS, direct_venue_offer, offer, page as desk_page
@@ -508,7 +450,7 @@ def mount(app):
                         row, = selected_rows
                         expected_member = query.get('expected_member')
                         if expected_member and expected_member != row.get('evidence_result_id'):
-                            return dict(row=None, reason='unit_publication_changed', **metadata)
+                            return dict(row=None, reason='capture_revision_changed', **metadata)
                         from .preview_inputs import prepared_preview, prepared_valuation, published_members
 
                         value = offer(row, METRICS.get(query.get('basis'), EV_METRIC))
@@ -531,9 +473,6 @@ def mount(app):
                     out = desk_page(result, query, options, captured_pairs=captured_pairs,
                                     policy=result['publication']['policy'], browsing=browsing, published_only=True,
                                     event_facts=result['desk_event_facts'])
-                    if query.get('browse_odds') == '1' and query.get('basis') == 'after_fees':
-                        from .pregame_board import add_default_estimates
-                        out = add_default_estimates(db, out)
                     if not out.get('rows'):
                         fallback = game_capture_link(db, query, allow_live=live_available)
                         if fallback:
@@ -731,14 +670,14 @@ def mount(app):
             value = await joined_thread(__name__, 'desk_read_after_cancellation', work)
             return (value, dict(timings)), float('inf'), 0
 
-        if is_updates and is_desk and set(req.query) <= {'layout', 'phase', 'after', 'board', 'unit_usd'}:
+        if is_updates and is_desk and set(req.query) <= {'layout', 'phase', 'after'}:
             (result, saved_timings), shared = await read_desk(
-                desk_reads.read(('updates', query['phase'], cents if board_update else None), read_work, reuse=0))
+                desk_reads.read(('updates', query['phase']), read_work, reuse=0))
             result = dict(result, changed=query.get('after') != result['cursor'])
             headers = {'Server-Timing': 'desk_shared;dur=0' if shared else timing_header(saved_timings)}
             return web.json_response(result, headers=headers)
 
-        if (is_desk and (query.get('summary') == '1' or board_request) and not
+        if (is_desk and query.get('summary') == '1' and not
                 (is_updates or is_selection or is_fee_census)):
             # Share only a validated packet, and only before its first expiry.
             explicit_refresh = query.get('refresh') == '1'
@@ -759,8 +698,8 @@ def mount(app):
 
             try:
                 (packet, saved_timings), shared = await read_desk(
-                    desk_reads.read(common or exact, produce, reuse=BURST_SECONDS if common and not board_request else 0,
-                                    late_reuse=0 if explicit_refresh or board_request else LATE_LIST_REUSE_SECONDS))
+                    desk_reads.read(common or exact, produce, reuse=BURST_SECONDS if common else 0,
+                                    late_reuse=0 if explicit_refresh else LATE_LIST_REUSE_SECONDS))
                 return packet_response(req, packet, saved_timings, shared=shared)
             except (web.HTTPServiceUnavailable, OperationalError, snapshots.SnapshotOperationError) as exc:
                 # An outage cannot prove that prices still exist. Saved odds
@@ -773,9 +712,6 @@ def mount(app):
                 completed = dict(timings)
                 completed[failure_stage] = (monotonic() - submitted) * 1000
                 headers = {'Server-Timing': timing_header(completed), 'Cache-Control': 'no-store'}
-                if board_request:
-                    return web.json_response(dict(schema='predict-pregame-board-1', state='read_failed',
-                        reason=failure_stage, provider_requests=0), status=503, headers=headers)
                 raise web.HTTPServiceUnavailable(reason='Prices temporarily unavailable', headers=headers) from None
 
         if is_selection and is_desk:

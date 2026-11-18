@@ -41,7 +41,58 @@ def number(value):
 
 
 def rounded(x, grid, mode):
+    from fractions import Fraction
+    if isinstance(x, Fraction):
+        value = x / grid
+        n, remainder = divmod(value.numerator, value.denominator)
+        if mode == ROUND_CEILING:
+            return (n + bool(remainder)) * grid
+        if mode == ROUND_FLOOR:
+            return n * grid
+        if mode not in (ROUND_HALF_EVEN, ROUND_HALF_UP):
+            raise ValueError('fee_rounding_mode')
+        return (n + (2 * remainder > value.denominator or 2 * remainder == value.denominator
+                     and (mode == ROUND_HALF_UP or n % 2))) * grid
     return (x / grid).to_integral_value(rounding=mode) * grid
+
+
+def quadratic_fee(rate, quantity, price, multiplier=1):
+    return rate * multiplier * quantity * price * (1 - price)
+
+
+def gains_fee(rate, gross, cost):
+    return max(0, gross - cost) * rate
+
+
+def posted_fee(rule, *, price, quantity, stake):
+    """Exact single-price fee arithmetic for database-configured pregame comparisons."""
+    from fractions import Fraction as F
+
+    price, quantity, stake, rate = map(F, (price, quantity, stake, rule['rate']))
+    if not 0 < price < 1 or quantity <= 0 or stake <= 0:
+        raise ValueError('fee_order_price_or_size')
+
+    formula = rule['formula']
+    if formula == 'polymarket_taker' and not F('0.01') <= price <= F('0.99'):
+        raise ValueError('polymarket_fee_price_scope')
+    raw = quadratic_fee(rate, quantity, price)
+    settlement = F(0)
+    if formula == 'kalshi_taker':
+        raw *= F(rule['multiplier'])
+        trade = rounded(raw, F('0.000001'), ROUND_CEILING)
+        entry = rounded(stake + trade, F(rule['balance_precision']), ROUND_CEILING) - stake
+    elif formula == 'polymarket_taker':
+        entry = rounded(raw, F('0.01'), ROUND_HALF_EVEN)
+    elif formula == 'novig_pregame':
+        entry = rounded(raw, F('0.00001'), ROUND_HALF_UP)
+    elif formula == 'prophetx_nhl_taker':
+        entry = rounded(raw, F('0.01'), ROUND_HALF_UP)
+    elif formula == 'prophetx_commission':
+        raw = gains_fee(rate, quantity, stake)
+        settlement, entry = rounded(raw, F('0.01'), ROUND_CEILING), F(0)
+    else:
+        raise ValueError('fee_formula_unsupported')
+    return entry, settlement, [dict(raw=str(raw), entry=str(entry), settlement=str(settlement), formula=formula)]
 
 
 class Registry:
@@ -244,7 +295,7 @@ def _calculate(c, registry):
             fill_maker={'quadratic':ZERO,'quadratic_with_maker_fees':D('.25'),'quadratic_with_combo_maker_fees':D('.5')}.get(fill_terms['fee_type'])
             if fill_mult<ZERO: raise ValueError('negative multiplier')
             if fill_maker is None: issues.append('unsupported earlier fill fee type'); return result
-            raw=D(s['coefficient'])*fill_mult*p*(ONE-p)*q*(fill_maker if f['role']=='maker' else ONE)
+            raw=quadratic_fee(D(s['coefficient']),q,p,fill_mult)*(fill_maker if f['role']=='maker' else ONE)
             trade=rounded(raw,D('.000001'),ROUND_CEILING)
             change=-p*q-trade; rounding=change-rounded(change,grid,ROUND_FLOOR)
             acc=states.get(f['order_id'],ZERO)+rounding
@@ -255,7 +306,7 @@ def _calculate(c, registry):
         result['credits'].append(dict(kind='order_rounding_refund',amount=str(credits),timing='fill',conditional=False))
     elif venue=='polymarket_us':
         for f,p,q in parsed:
-            raw=D(s['maker_coefficient'] if f['role']=='maker' else s['coefficient'])*q*p*(ONE-p)
+            raw=quadratic_fee(D(s['maker_coefficient'] if f['role']=='maker' else s['coefficient']),q,p)
             if f['role']=='taker' and s.get('combo_coefficient') is not None:
                 raw += D(s['combo_coefficient'])*q*p*(ONE-p)**4
             amount=rounded(raw,D('.01'),ROUND_HALF_EVEN)
@@ -284,7 +335,7 @@ def _calculate(c, registry):
                 if native_fee['charged']=='WHEN_LIVE' and status not in ('OPEN_PREGAME','OPEN_INGAME','DELAYED','FINAL','CANCELED'):
                     issues.append('Novig match-time event status required'); return result
                 charged=native_fee['charged']=='ALWAYS' or status=='OPEN_INGAME'
-                raw=coefficient*p*(ONE-p)*q if f['role']=='taker' and charged else ZERO
+                raw=quadratic_fee(coefficient,q,p) if f['role']=='taker' and charged else ZERO
                 amount=rounded(raw,D('.00001'),ROUND_HALF_UP); fee+=amount
                 result['trace'].append(dict(fill_ids=[f['fill_id']],contracts=str(q),raw=str(raw),amount=str(amount),charged=charged,regime='v3_one_cent_contracts'))
             result['rounding_qualification']='documented_per_fill_millicent'
@@ -325,7 +376,7 @@ def _calculate(c, registry):
                 groups.setdefault(key,[]).append((f,p,q))
             for group in groups.values():
                 q=sum((x[2] for x in group),ZERO); stake=sum((x[1]*x[2] for x in group),ZERO); p=stake/q
-                raw=coefficient*p*(ONE-p)*q if group[0][0]['role']=='taker' else ZERO
+                raw=quadratic_fee(coefficient,q,p) if group[0][0]['role']=='taker' else ZERO
                 amount=rounded(raw,D('.00001'),ROUND_HALF_UP); fee+=amount
                 result['trace'].append(dict(fill_ids=[x[0]['fill_id'] for x in group],contracts=str(q),vwap=str(p),raw=str(raw),amount=str(amount)))
             if any(f['role']=='maker' for f,_,_ in parsed) and coefficient:
@@ -379,7 +430,7 @@ def _calculate(c, registry):
         if gross<ZERO: raise ValueError('negative gross payout')
         raw=ZERO; settlement=ZERO
         if venue=='prophetx':
-            raw=max(ZERO,gross-cost)*D(s['coefficient'])
+            raw=gains_fee(D(s['coefficient']),gross,cost)
             settlement=ZERO if raw==ZERO else None
             if raw and c.get('settlement_rounding'):
                 rule=c['settlement_rounding']

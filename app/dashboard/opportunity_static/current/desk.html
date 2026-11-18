@@ -26,7 +26,6 @@
         <a class="desk-action" id="practice-link" href="/replay?dataset=practice" hidden>Try a practice example</a>
       </div>
     </header>
-    <p id="fixed-budget" class="desk-meta" hidden>$100 maximum upfront · Public retail fee estimate · Decisive completed game</p>
     <div id="desk-readiness" hidden></div>
     <div class="replay-bar" id="replay-controls" hidden>
       <label>Replay dataset <select id="replay-dataset"><option value="frozen">Saved capture</option><option value="preview">Earlier capture</option><option value="practice">Practice examples</option></select></label>
@@ -34,24 +33,6 @@
     </div>
     <nav id="phase-tabs" class="opportunity-tabs" aria-label="Game phase" hidden><a id="phase-pregame" href="/ev">Pregame</a><a id="phase-live" href="/ev?phase=live">Live</a></nav>
     <form id="filters" class="desk-filters">
-      <div id="board-unit-field" class="board-unit-field" hidden>
-        <label for="board-unit">Unit size
-          <select id="board-unit" aria-describedby="unit-help">
-            <option value="" disabled selected>Choose unit size</option>
-            <option value="5.00">$5</option><option value="10.00">$10</option>
-            <option value="12.00">$12</option><option value="25.00">$25</option>
-            <option value="50.00">$50</option><option value="100.00">$100</option>
-            <option value="custom">Custom amount</option>
-          </select>
-        </label>
-        <div id="custom-unit-field" hidden>
-          <label for="custom-unit">Custom amount in dollars
-            <input id="custom-unit" type="text" inputmode="decimal" maxlength="10" autocomplete="off">
-          </label>
-          <button id="apply-unit" type="button">Apply</button>
-        </div>
-        <p id="unit-help">Maximum you commit upfront for one offer.</p>
-      </div>
       <div class="desk-toolbar">
         <nav id="opportunity-tabs" class="opportunity-tabs" aria-label="Opportunities"><a id="opportunity-ev" href="/ev">Expected value</a><a id="opportunity-arb" href="/arbs">Arbitrage</a></nav>
         <div id="market-tabs" class="opportunity-tabs" role="group" aria-label="Market family" hidden></div>
@@ -106,11 +87,6 @@
       <p id="updates-ready" class="desk-note" role="status" hidden>New order available</p>
     </div>
     <p id="previous-results" class="desk-note previous-results" role="status" hidden></p>
-    <div id="ticketboard-order" hidden>
-      <h2>Ranked by Opportunity Score</h2>
-      <p>The score uses modeled win chance and after-fee payoff to rank offers.</p>
-    </div>
-    <p id="ticketboard-status" class="sr-only" role="status"></p>
     <div id="results" aria-label="Sorted results"></div>
     <nav class="desk-pages" aria-label="Results pages" hidden>
       <button id="previous" type="button" disabled>Previous</button>
@@ -126,14 +102,9 @@
   </dialog>
   <dialog id="trade" aria-labelledby="trade-title">
     <div class="desk-title"><h2 id="trade-title">Trade details</h2><form method="dialog"><button>Close</button></form></div>
-    <div id="preview-controls" hidden>
-      <label for="preview-amount">Maximum upfront cost <span class="preview-input">$ <input id="preview-amount" type="number" min="0.01" max="1000000" step="0.01" inputmode="decimal"></span></label>
-    </div>
     <div id="trade-body"></div>
     <footer class="inspection-footer">
       <button id="back-to-pair" type="button" hidden>Back to pairing</button><button id="latest" type="button">Use latest prices</button>
-      <button id="refresh-comparison" type="button" hidden>Refresh calculation</button>
-      <button id="refresh-preview" type="button" hidden>Refresh</button>
       <p id="trade-note" role="status"></p>
     </footer>
   </dialog>

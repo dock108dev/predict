@@ -30,7 +30,7 @@ class SecretControlIsolationTests(unittest.TestCase):
             findings = [dict(File=str(p), StartLine=2) for p in files]
             finance = source / "tests/fixtures/l02-native-20261104.json"
             findings.extend(dict(File=str(finance), StartLine=line) for line in (3, 4))
-            board = source / "docs/examples/pregame-board-1/saint-marys-25-board.json"
+            board = source / "docs/examples/current-pregame-1/positive-board.json"
             findings.append(dict(File=str(board), StartLine=3))
             report.write_text(json.dumps(findings))
             return SimpleNamespace(returncode=1)

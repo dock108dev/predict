@@ -1,7 +1,7 @@
 /* Start the default public read while the desk modules are still loading. */
 (() => {
   const path = location.pathname;
-  if (!['/', '/ev', '/browse-odds', '/arbs'].includes(path) || location.search
+  if (path !== '/arbs' || location.search
       || window.history.state?.predictDesk || window.PredictDeskStarted) return;
   const browse = path === '/browse-odds';
   const arb = path === '/arbs';
@@ -12,7 +12,6 @@
     view: arb ? 'arbs' : 'ev',
   };
   if (browse) fields.browse_odds = '1';
-  if (!browse && !arb) Object.assign(fields, {board:'1', ranked:'1', unit_usd:'100.00'});
   if (!arb) fields.lines = 'main';
   try {
     const saved = JSON.parse(localStorage.getItem(`predict-desk-${browse ? 'browse' : arb ? 'arb' : 'ev'}-filters`) || '{}') || {};

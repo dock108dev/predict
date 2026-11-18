@@ -20,7 +20,6 @@ PUBLIC_LIST_FIELDS = frozenset({
     'basis', 'group', 'league', 'family', 'venue', 'ranked', 'phase', 'lines',
     'layout', 'view', 'offset', 'limit', 'summary', 'browse_odds', 'metric',
     'search', 'day', 'timezone', 'time_from', 'time_to', 'minimum', 'profit', 'positive',
-    'board', 'unit_usd', 'board_cursor',
 })
 
 

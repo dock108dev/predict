@@ -505,8 +505,20 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
         async def desk_page(req):
             return web.FileResponse(static_root/'opportunity_static/current/desk.html')
 
-        for route in ('/', '/ev', '/arbs', '/browse-odds', '/game', '/replay'):
+        async def pregame_page(req):
+            if req.query.get('phase')=='live':
+                return web.FileResponse(static_root/'opportunity_static/current/desk.html')
+            return web.FileResponse(static_root/'opportunity_static/current/pregame.html')
+
+        for route in ('/', '/ev', '/browse-odds', '/game'):
+            app.router.add_get(route, pregame_page)
+        for route in ('/arbs','/replay'):
             app.router.add_get(route, desk_page)
+        from .current_pregame_api import mount as mount_current_pregame
+        mount_current_pregame(app)
+        async def desk_redirect(req):
+            raise web.HTTPFound('/')
+        app.router.add_get('/view/current/desk.html',desk_redirect)
 
         async def trading_fees_page(req):
             return web.FileResponse(static_root/'opportunity_static/current/trading-fees.html')

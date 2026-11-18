@@ -63,9 +63,9 @@ regexTarget = "match"
 regexes = ['''the_odds_api"\s*,\s*"(?:87d2b814c3f0d3691e9cebbf2de76295|c75744790b7acf6260c78ba5e739c0e5)"''']
 
 [[allowlists]]
-description = "Exact synthetic Saint Mary's contract selector in the authored unit-board examples"
+description = "Exact authored current-offer identity in the synthetic current-row example"
 condition = "AND"
 targetRules = ["generic-api-key"]
-paths = ['''(?:^|/)docs/examples/pregame-board-1/saint-marys-(?:12-board|25-board|25-selection)\.json$''']
+paths = ['''(?:^|/)docs/examples/current-pregame-1/positive-board\.json$''']
 regexTarget = "match"
-regexes = ['''desk_quote_key"?\s*:\s*"0a109b585d8316c25b3f7ac36e86c2cae34b4db43277f260bea4b1b9f3a8de8a"''']
+regexes = ['''id"?\s*:\s*"0a109b585d8316c25b3f7ac36e86c2cae34b4db43277f260bea4b1b9f3a8de8a"''']

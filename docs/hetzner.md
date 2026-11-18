@@ -88,6 +88,20 @@ source configuration to get Novig prices through SportsGameOdds. The legacy Odds
 retained. Its macOS-bound credential verification needs separate requalification
 before selecting that provider on the server.
 
+## Current-row cutover
+
+The current-row release applies forward migrations for per-offer calculations
+and coalesced recovery work, then drops generated amount-specific board tables.
+The release workflow takes its normal pre-migration database backup. A rollback
+must account for these schema changes: an earlier image expecting the dropped
+generated tables is not schema-compatible. Preserve subsequent acquisition and
+accounting when recovering; do not restore old protected records over new ones.
+
+The Caddy public route list includes `/api/pregame`, `/api/pregame/updates` and
+`/api/health`. Install the changed site file with the normal validated Caddy reload
+before verifying the new public dashboard. Verify the exact installed image
+revision, a normal source receipt through current-row commit, and browser display.
+
 ## Collection ownership and recovery
 
 Restore a logical PostgreSQL backup into the new database while collection is
@@ -102,11 +116,12 @@ transfer the **latest** database and ledgers before removing that marker.
 
 Create `/srv/predict/collection-enabled` once the server owns collection. The
 release script then starts the collector as a persistent Compose service. It
-collects and publishes with no web process or browser running, subject to the
-configured source schedules and budget guards. An enabled collector passes its
-health check when it can dispatch and has published or verified unchanged results
-within the last three minutes. A deliberate global Stop can pass the heartbeat
-check. The web check reads the same public odds endpoint used by the browser.
+collects and calculates affected-game current rows with no browser running, subject
+to existing schedules and budget guards. Collector health uses bounded owner
+heartbeat/dispatch/failure checks and distinguishes deliberate Stop or disabled
+collection. Web health calls `/api/health`, which checks current SQL read availability
+without importing or invoking financial arithmetic. Neither health check proves
+a real offer reached the browser. See [current pregame](current-pregame.md).
 Check the collector logs for startup, dispatch or publication errors.
 Admin Stop and source pauses stay in PostgreSQL and survive service or host
 restarts. The release script checks the

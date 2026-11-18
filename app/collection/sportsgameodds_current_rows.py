@@ -15,11 +15,11 @@ SPORTS = {'NFL': 'american_football', 'NCAAF': 'american_football', 'NBA': 'bask
           'NCAAB': 'basketball', 'MLB': 'baseball', 'NHL': 'ice_hockey'}
 # Map bookmaker display names while retaining the original SGO quote identity.
 # The provider's 'polymarket' is not established as Polymarket US.
-CURRENT_VENUES = frozenset(('novig', PROPHETX_BOOKMAKER_ID, 'prophetx', 'pinnacle', 'kalshi'))
+CURRENT_VENUES = frozenset(('novig', PROPHETX_BOOKMAKER_ID, 'prophetx', 'pinnacle', 'kalshi', 'polymarket'))
 
 
 def display_venue(bookmaker_id):
-    return 'prophetx' if bookmaker_id == PROPHETX_BOOKMAKER_ID else bookmaker_id
+    return {PROPHETX_BOOKMAKER_ID: 'prophetx', 'polymarket': 'polymarket_us'}.get(bookmaker_id, bookmaker_id)
 
 
 def source_bookmaker(record):
@@ -114,6 +114,8 @@ def current_rows(page, receipt_sha256):
     for (event_id, venue, family, _line), source_sides in groups.items():
         # Prefer one feed for the whole line when both spellings are present.
         bookmaker = PROPHETX_BOOKMAKER_ID if any(k[0] == PROPHETX_BOOKMAKER_ID for k in source_sides) else venue
+        if venue == 'polymarket_us':
+            bookmaker = 'polymarket'
         by_side = {side: quote for (book, side), quote in source_sides.items() if book == bookmaker}
         sides = ('over', 'under') if family == 'total' else ('home', 'away')
         pair = set(by_side) == set(sides)

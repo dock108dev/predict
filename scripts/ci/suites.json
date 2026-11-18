@@ -628,6 +628,7 @@
       "tests/test_novig_v3_public.py",
       "tests/test_novig_v3_stream.py",
       "tests/test_public_fee_schedule.py",
+      "tests/test_fee_pricing.py",
       "tests/test_snapshot_fee_coverage.py"
     ]
   },

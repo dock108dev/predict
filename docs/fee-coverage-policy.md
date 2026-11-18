@@ -5,6 +5,43 @@ app or website. Market-data APIs may provide quotes, market terms and reference
 odds. The comparison desk is read-only. The current goal is 99% numeric fee
 coverage within the configured ordinary scope.
 
+## Current pregame applicability
+
+The primary dashboard, quote comparison and Trading Fees use the existing fee
+engine and `public_fee_schedule` registry. Fees apply at the fixed internal $100
+comparison basis with posted prices, documented quantity grids and rounding.
+Editable `state.pricing_rules` supply the supported formula coefficients,
+market multiplier, precision, league overrides and effective intervals. The
+[fee catalog commands](configuration.md#editing-fee-rules) seed from applicable
+reviewed schedules and update rules atomically. Known source-review conflicts,
+account failures and native product restrictions remain binding. Configured
+rules with a gap do not fall back silently to another schedule.
+Inspect original schedule evidence and modeled entry/winning/losing cashflows
+in the selected row. No depth or execution qualification controls eligibility.
+
+A supported zero is numeric `$0.00`. Missing mandatory applicability or account
+facts exclude the opportunity and remain an internal diagnostic. Where the
+published applicable case is bounded but the precise tier/rounding case is
+unresolved, use the highest applicable charge and retain the alternatives in
+fee evidence. This includes documented Polymarket taker tiers and Kalshi balance
+rounding cases. Never invent an unbounded intermediary charge or silently set it
+to zero. Existing private account facts are read from
+`.local/trade-fee-account-facts.json` when applicable.
+
+Novig's reviewed pregame straight-trade zero must match the offer and applicable
+product; live exceptions do not inherit it. ProphetX NHL taker fees use the
+published price-based per-fill coefficient and carry/rounding rule; other covered
+straight markets use commission on positive winning gains. Effective dates,
+market overrides and scheduled changes are resolved by the same registry. A
+scheduled fee deadline invalidates the affected rows and queues recalculation.
+A failed document recheck preserves the existing registry's supported retention
+policy; a confirmed substantive change requires review of the changed terms.
+
+[Current arithmetic](benchmark-ev.md) · [Current flow](current-pregame.md)
+
+The coverage inventory below also includes separate research and execution
+scopes. Those stronger proof/depth denominators do not gate the current dashboard.
+
 ## What counts
 
 - The denominator is every distinct current, displayed-price offer across

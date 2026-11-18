@@ -159,6 +159,8 @@ class SGOScopeSQL(LatestBoardFixture):
             assert all(o['trade_fee']['available'] and o['source_at'] == original for o in offers)
 
     async def test_prophet_exchange_saved_quote_reaches_retail_desk_with_fee(self):
+        from app.storage.store import stamp as fixture_stamp
+        self.enterContext(patch('app.storage.current_pregame.utc',return_value=fixture_stamp(AT)))
         from datetime import timedelta
         from app.collection.current_policy import DEFAULT
         from app.collection.runtime_status import read_runtime
@@ -237,35 +239,22 @@ class SGOScopeSQL(LatestBoardFixture):
                     query = dict(layout='desk', phase='pregame', basis='sportsbooks',
                                  summary='1', ranked='1', lines='main', venue='prophetx', board='0', refresh='1')
                     reply = await client.get('/api/comparison-current', params=query)
-                    assert reply.status == 200
-                    listed = await reply.json()
-                    item, = [offer for group in listed['rows'] for offer in group['offers']
-                             if offer['desk_quote_key'] == key]
-                    assert item['current'] and item['trade_fee_available']
-                    # The admitted fee does not supply the jurisdiction or
-                    # the execution limits of the aggregate price.
-                    assert item['fair_reference'] is None
-                    selected = await (await client.get('/api/comparison-current/selection', params=dict(
-                        layout='desk', id=item['id'], quote_key=key, phase='pregame', basis='sportsbooks',
-                        unit_usd='10', preview_amount='10'))).json()
-                    assert selected['row']['price_revision'] == item['price_revision']
-                    assert selected['row']['trade_preview']['fee_if_win_usd'] == '0.19'
-                    assert selected['row']['trade_preview']['upfront_usd'] == '10'
-                    assert selected['row']['trade_preview'].get('estimated_return_percent') is None
-                    valuation = selected['row']['valuation']
-                    assert valuation['selected_usd'] == '10'
-                    assert valuation['reasons']['fill'] == 'unit_fill_depth_unverified'
-                    assert 'net_ev' not in valuation['raw']
-                    coverage = await (await client.get('/api/comparison-current/fee-coverage',
-                        params={'layout': 'desk', 'phase': 'pregame'})).json()
-                    assert coverage['total']['covered'] == 1
-                    assert selected['row']['after_fee'] == item['after_fee']
-                    assert selected['provider_requests'] == 0
+                    assert reply.status == 410
+                    assert (await reply.json())['error']=='amount_specific_board_retired'
+                    from app.storage.current_pregame import process,read
+                    process(db,at=stamp(AT))
+                    current=read(db,dict(browse='1',lines='all'),at=stamp(AT))
+                    assert current['provider_requests']==0
+                    item,=current['rows']
+                    assert item['id']==key
+                    assert item['reference']['book']=='fanduel'
+                    assert item['fee']['entry_usd']=='0'
+                    assert item['raw']['net_ev'] is not None
                     source_status(db.execute, 'sportsgameodds',
                                   {'state': 'budget_delayed', 'reason_code': 'sgo_usage_unreconciled'}, AT)
-                    held = await (await client.get('/api/comparison-current', params=query)).json()
-                    assert any(offer['desk_quote_key'] == key for group in held['rows'] for offer in group['offers'])
-                    assert held['publication']['sources']['sportsgameodds']['reason_code'] == 'sgo_usage_unreconciled'
+                    held = await (await client.get('/api/comparison-current', params=dict(layout='desk',browse='1'))).json()
+                    assert any(item['id']==key for item in held['rows'])
+                    assert held['provider_requests']==0
                     source_status(db.execute, 'sportsgameodds', states['sportsgameodds'], AT)
             captured = capture(db, at=AT, ordinary=True, event_ids=ids)
             assert len(captured['quotes']) == 1, captured['issues']

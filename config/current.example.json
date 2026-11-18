@@ -5,6 +5,8 @@
   "aggregate_enabled": false,
   "live_enabled": false,
   "aggregate_provider": "sportsgameodds",
+  "direct_kalshi_enabled": false,
+  "direct_polymarket_us_enabled": false,
   "sports": [
     "NFL"
   ],

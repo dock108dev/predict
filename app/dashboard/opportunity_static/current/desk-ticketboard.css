@@ -1,37 +1,4 @@
-.ticketboard {
-  --canvas: #f3f1ed;
-  --ticket: #fffdfa;
-  --ticket-stub: #eef1f5;
-  --ticket-ink: #263b57;
-  --perforation: #b5bfcb;
-}
-.opportunities-app .pregame-nav { grid-template-columns: repeat(5, minmax(0, 1fr)); width: min(32rem, 100%); }
-.ticketboard .desk-find, .ticketboard .desk-analysis, .ticketboard #alternates-field,
-.ticketboard #auto-update-field, .ticketboard #active-filters, .ticketboard #browse-link { display: none; }
-.ticketboard #filters { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: .65rem 1.3rem; margin-block: 1.1rem .35rem; }
-.board-unit-field { display: flex; flex-wrap: wrap; align-items: end; gap: .45rem .6rem; }
-.board-unit-field > label { min-width: 11rem; }
-.board-unit-field :is(select,input,button) { min-height: 44px; }
-#board-unit { width: 100%; min-height: 44px; font-weight: 700; }
-#custom-unit-field { display: flex; align-items: end; gap: .45rem; }
-#custom-unit { max-width: 9.5rem; }
-#unit-help { flex-basis: 100%; margin: 0; color: var(--muted); font-size: .82rem; }
-.ticketboard .desk-toolbar { margin-top: 1.47rem; }
-.ticketboard #refresh-list { font-size: .82rem; }
-.ticketboard:has(.ticketboard-empty #retry-board) #refresh-list,
-.ticketboard:has(#board-unit option[value=""]:checked):not(:has(.previous-results:not([hidden]))) #refresh-list { display: none; }
-.ticketboard .desk-feedback #notice { background: none; border: 0; padding: 0; margin-block: .15rem 1.1rem; }
-.ticketboard #results { display: grid; gap: .85rem; }
-#ticketboard-order { display: flex; flex-wrap: wrap; gap: .18rem .65rem; align-items: baseline; margin-block: .45rem .7rem; }
-#ticketboard-order h2 { font: 700 .88rem/1.4 Manrope, system-ui, sans-serif; margin: 0; }
-#ticketboard-order p { color: var(--muted); font-size: .82rem; margin: 0; }
-.ticketboard-empty { background: var(--ticket); border: 1px solid var(--control); border-radius: 14px; padding: clamp(1rem, 3vw, 2rem); }
-.ticketboard-empty h2 { font-size: clamp(1.35rem, 3vw, 1.85rem); }
-.ticketboard-empty :is(p,ul) { color: var(--muted); max-width: 42rem; font-size: .9rem; }
-.ticketboard-empty ul { margin: .7rem 0 1rem; padding-inline-start: 1.2rem; }
-.ticketboard-empty li + li { margin-block-start: .2rem; }
-.ticketboard-empty .desk-empty-actions :is(a,button) { min-height: 44px; }
-
+:root{--ticket:#fffdfa;--ticket-stub:#eef1f5;--perforation:#b5bfcb}
 .pregame-ticket {
   position: relative; display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) minmax(12rem, .72fr);
   background: var(--ticket); border: 1px solid var(--control); border-radius: 14px;
@@ -67,12 +34,6 @@
 }
 .ticket-compare:hover { border-color: var(--ticket-ink); }
 
-#trade.posted-inspection {
-  position: fixed; inset: 0 0 0 auto; margin: 0; height: 100dvh; max-height: 100dvh;
-  width: min(42rem, 100%); max-width: 100%; border-radius: 0; border-block: 0; border-inline-end: 0;
-}
-#trade.posted-inspection .desk-title { min-height: 3.65rem; }
-#trade.posted-inspection #trade-body { padding-block-start: .85rem; }
 .comparison-unit { margin: 0 0 .65rem; color: var(--muted); font-size: .83rem; }
 .comparison-reference { background: var(--soft); border: 1px solid var(--rule); padding: .7rem .85rem; border-radius: 9px; margin: .6rem 0 .8rem; }
 .comparison-reference h3 { margin-bottom: .35rem; }
@@ -93,7 +54,6 @@
 
 @media (min-width: 900px) {
   .opportunities-app .pregame-nav { width: 100%; grid-template-columns: 1fr; }
-  .ticketboard main { max-width: 88rem; }
 }
 @media (max-width: 720px) {
   .pregame-ticket { grid-template-columns: 1fr; }
@@ -111,7 +71,6 @@
   .ticketboard .pregame-nav a { flex: 1 1 auto; min-height: 40px; font-size: .74rem; padding-inline: .18rem; }
   .ticket-metrics dt { font-size: .7rem; }
   .ticket-compare { font-size: .86rem; padding-inline: .6rem; }
-  #trade.posted-inspection { width: 100%; border: 0; }
   .comparison-offer .ticket-prices { gap: .4rem .5rem; }
   .comparison-offer .ticket-prices dd { font-size: .91rem; }
 }

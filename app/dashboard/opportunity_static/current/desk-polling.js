@@ -1,6 +1,6 @@
 // Own the update timer and the single recheck for each expiry boundary.
 export function createDeskPolling({state, replay, arb, currentPhase, drawer, expireResultValues,
-  receivingUpdates, supportsAutoUpdate, usingResults, visibleAnchor, load, selections, unitBoard, previousResults}) {
+  receivingUpdates, supportsAutoUpdate, usingResults, visibleAnchor, load, selections, previousResults}) {
   let updateTimer;
   let updateDelay = 6500;
   let checkedBoundary;
@@ -8,10 +8,9 @@ export function createDeskPolling({state, replay, arb, currentPhase, drawer, exp
 
   function scheduleUpdates() {
     clearTimeout(updateTimer);
-    if (replay || unitBoard() && !selections().unit_usd && !state.loadFailed) return;
+    if (replay) return;
     const deadline = Date.parse(state.page?.refresh_at) - Date.now();
-    const delay = state.loadFailed || state.previousReason || state.page?.replacement_pending
-      || state.page?.state === 'valuation_pending' ? RECOVERY_POLL_MS : updateDelay;
+    const delay = state.loadFailed || state.previousReason ? RECOVERY_POLL_MS : updateDelay;
     updateTimer = setTimeout(followUpdates, deadline > 0 ? Math.min(delay, Math.max(deadline, 250)) : delay);
   }
 
@@ -21,7 +20,7 @@ export function createDeskPolling({state, replay, arb, currentPhase, drawer, exp
       drawer.expireInspection();
       expireResultValues();
       if (!receivingUpdates()) return;
-      if ((state.loadFailed || state.previousReason && !unitBoard()) && !state.request && !usingResults()) {
+      if ((state.loadFailed || state.previousReason) && !state.request && !usingResults()) {
         await load(state.offset, {background:true, freshMembership:supportsAutoUpdate(), anchor:visibleAnchor()});
         return;
       }
@@ -33,7 +32,7 @@ export function createDeskPolling({state, replay, arb, currentPhase, drawer, exp
       if (!page || state.request || state.query !== JSON.stringify(selections())) return;
       const expired = Date.parse(page.refresh_at) <= Date.now();
       if (usingResults()) return;
-      if (unitBoard() || arb && supportsAutoUpdate()) {
+      if (arb && supportsAutoUpdate()) {
         // An explicit withdrawal can arrive independently of the source head.
         await load(state.offset, {background:true, freshMembership:arb, refresh:arb,
           anchor:scrollY ? visibleAnchor() : undefined});

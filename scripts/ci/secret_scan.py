@@ -55,13 +55,11 @@ def verify_rules(binary, config):
             + json.dumps(["the_odds_api", credential])
             + "\n"
         )
-        board_name = "docs/examples/pregame-board-1/saint-marys-25-board.json"
+        board_name = "docs/examples/current-pregame-1/positive-board.json"
         selector = "0a109b585d8316c25b3f7ac36e86c2cae34b4db43277f260bea4b1b9f3a8de8a"
         (root / "source" / board_name).parent.mkdir(parents=True)
         (root / "source" / board_name).write_text(
-            f'"desk_quote_key": "{selector}"\n'
-            f'"api_key": "{selector}"\n'
-            f'"desk_quote_key": "{credential}"\n'
+            f'"id": "{selector}"\n"api_key": "{selector}"\n"api_key": "{credential}"\n'
         )
         expected = {
             ("app/dashboard/opportunity_board.py", 2),

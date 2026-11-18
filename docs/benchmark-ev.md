@@ -2,65 +2,51 @@
 
 ## Pregame Opportunities
 
-The ordinary ticketboard ranks public retail main-line estimates at a fixed
-$100 maximum upfront commitment. The collector builds this board continuously
-through partial ordinary publications. It uses the first eligible reference book in
-FanDuel, DraftKings, BetMGM, and Caesars order. The reference is a complete,
-coherent set of prices for the same market from one book. Each fair probability
-is its implied probability divided by the sum across that set. Matching the
-venue bet to the reference requires the same occurrence, outcome, line and period.
-The default public estimate conditions on a decisive completed game and discloses
-that assumption. Known scoring conflicts withhold the comparison. Fully verified
-settlement and execution results retain their separate evidence requirements.
+The primary dashboard uses complete current calculations from the affected-game
+path described in [Current pregame](current-pregame.md). Every venue for the same
+exact bet uses the first eligible complete same-book reference in this order:
+FanDuel, DraftKings, BetMGM, Caesars. Match the occurrence, full-game period,
+market, exact line and opposing outcome identities before arithmetic. Genuine
+identity, scoring or outcome contradictions exclude the comparison.
 
-The model sizes the captured book or a disclosed posted-price scenario and applies its documented fee, reserve,
-and settlement terms. If `C` is the actual cash committed and `R[s]` is the
-net cash returned in state `s`, effective decimal odds are `R[win] / C` and
-Net EV is `sum(p[s] × (R[s] − C)) / C`. A full-state push or refund result needs its own probability
-and cash flow. The default decisive-game estimate excludes those states. Keep the observed quote and
-any supported fee visible when a required valuation input is missing.
+For two decimal reference prices `a` and `b`, fair probability is
+`(1/a) / ((1/a)+(1/b))`. Preserve original prices and timestamps. Historical proof
+reconstruction and execution depth are not routine calculation prerequisites.
 
-For each exact bet, the board chooses the qualified marketplace offer with the
-highest Net EV. Positive offers sort by Opportunity Score, then Net EV and
-stable bet ID. The score is the positive modeled Kelly fraction in basis
-points. The comparison drawer sorts venues by Net EV. Both use unrounded
-metrics. [Selected-unit examples](examples/pregame-board-1/README.md)
+Posted-price cashflows use an internal **$100 maximum upfront comparison basis**
+where fees, quantity increments and rounding require an amount. It is a
+normalization, not a stake control or proposed order. Use the largest legal
+quantity under the basis, without execution fill-tolerance eligibility.
+
+For committed cash `C` and net receipt `R[s]`:
+
+```text
+after-fee decimal odds = R[win] / C
+Net EV = sum(p[s] * (R[s] - C)) / C
+expected dollar profit = C * Net EV
+Opportunity Score = 10,000 * max(0, Net EV / (after-fee decimal odds - 1))
+```
+
+The tested score engine also handles supported nonbinary cashflow models. Use
+exact fractions until display rounding. Winning commissions reduce winning
+receipts; entry fees increase committed cash. A supported zero remains numeric
+`$0.00`. Missing mandatory fee terms exclude an opportunity and retain an internal
+reason. [Fee applicability](fee-coverage-policy.md)
+
+Group equivalent exact bets before pagination, select their highest Net EV venue,
+and rank by unrounded Opportunity Score, Net EV and stable identity. Venue
+comparisons sort by Net EV. Main-line evidence, rather than payout or EV, controls
+default line eligibility.
 
 ## Indicative sportsbook estimate
 
-**Sportsbook estimate** is an indicative comparison available outside the
-selected-unit board. For an exact full-game
-winner, signed spread, or total, Predict chooses the highest payout on the
-selected side among qualifying FanDuel, DraftKings, BetMGM, and Caesars pairs.
-Ties follow that order. Both sides must be from the same book and a coherent
-observation. Both original source clocks remain visible. The desk keeps the
-committed pregame estimate with its original price until authoritative kickoff,
-replacement, or withdrawal of a required input. The evaluated offer has its own
-source and lifecycle checks.
+The current dashboard has one posted-price calculation model. The reference,
+fee and cashflow inputs travel together in the committed row; there is no
+calculation-mode selector. Source timestamps stay in details and pregame prices
+do not expire solely because they are old.
 
-For the selected book's decimal odds `a` on the outcome and `b` on its opposite:
-
-```text
-decisive probability p = (1/a) / (1/a + 1/b)
-fair decimal odds      = 1 / p
-gross return percent   = 100 × (p × offered decimal odds − 1)
-```
-
-For a normal $1 claim costing `c`, the last expression is `100 × (p / c − 1)`.
-The selected book's opposite side supplies the other half of the calculation.
-Matching teams alone is insufficient. A different line, period, or outcome
-changes the bet. The estimate conditions on a decisive result and uses before-fee
-prices. An offer can be available when its fair odds or return is unavailable.
-
-The desk can use exact pregame public-board and SportsGameOdds inputs.
-An SGO event frame can supply sportsbook odds for a game even when that frame
-contains only conventional sportsbooks. The frame must match the league,
-kickoff, and canonical home and away teams. Conflicting or ambiguous event
-evidence withholds the cross-source reference. Reviewed college aliases are
-scoped to the provider and league that used them.
-The shared book order and exact arithmetic live in
-[`sgo_reference.py`](../app/comparison/sgo_reference.py). Open the quote to see
-the originals and the selected book. [Coverage and freshness](broad-coverage.md#freshness-and-verification-window)
+The financial bases below describe separate historical, research and Scanner
+contracts. They do not gate ordinary pregame display.
 
 ## Financial bases
 

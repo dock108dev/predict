@@ -427,10 +427,10 @@ def needs_storage_interval(report, *, sql_bytes=None):
 
 
 async def run(config_path=None):
-    from app.storage.ordinary_owner import OrdinaryOwner
+    from app.collection.pregame_owner import PregameOwner
     import os
     import sys
-    runtime = DataRuntime(config_path=config_path, board_factory=OrdinaryOwner)
+    runtime = DataRuntime(config_path=config_path, board_factory=PregameOwner)
     loop = asyncio.get_running_loop()
     signalled=False
     def stop():

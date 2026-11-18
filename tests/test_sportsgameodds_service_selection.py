@@ -11,6 +11,24 @@ from tests.test_current_service import FakeWorker
 
 
 class AggregateSelection(unittest.IsolatedAsyncioTestCase):
+    async def test_direct_adapters_can_be_disabled_while_sgo_runs(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            service = CurrentService(config=dict(DEFAULT, aggregate_provider='sportsgameodds',
+                direct_kalshi_enabled=False, direct_polymarket_us_enabled=False),
+                directory=root/'state', ownership=LocalOwnership(root/'owner'), worker_factory=FakeWorker,
+                sgo_factory=lambda owner: FakeWorker(owner, 'sportsgameodds'))
+            store = CurrentStore(service)
+            try:
+                await service.start(store)
+                await asyncio.sleep(0)
+                self.assertEqual(set(service.workers), {'sportsgameodds'})
+                self.assertNotIn('kalshi', service.tasks)
+                self.assertNotIn('polymarket_us', service.tasks)
+            finally:
+                await service.close()
+                await store.close()
+
     async def test_legacy_config_defaults_to_existing_provider(self):
         old = dict(DEFAULT)
         old.pop('aggregate_provider')

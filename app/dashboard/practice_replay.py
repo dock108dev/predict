@@ -8,7 +8,7 @@ from app.comparison.pregame_valuation import valuation
 from app.comparison.snapshot_fee_outcome import unavailable
 from app.comparison.snapshot_math import assumptions, before_fee_pair
 from app.storage.ordinary_projection import counts
-from app.storage.pregame_unit_board import fair_odds
+from app.comparison.pregame_valuation import fair_odds
 from app.storage.store import hashed
 
 

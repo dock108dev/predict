@@ -1,72 +1,54 @@
 # Architecture and data
 
-The data process collects prices and publishes comparisons. It seals comparison
-members in `app/storage/ordinary_publication.py`.
-`app/storage/ordinary_projection.py` validates price, reference, and fee authority
-at read time. The HTTP desk groups and ranks the filtered results before
-pagination. An open drawer can hold a lease on the selected evidence while the
-published list advances. [Runtime and publication](data-app-runtime-contract.md) ·
-[Coverage and freshness](broad-coverage.md)
+The data process owns collection, ordered current facts and immediate affected-game
+calculations. The web process reads complete committed rows. Research publication,
+Scanner and saved evidence are independent consumers of admitted observations.
+[Current pregame](current-pregame.md) · [Runtime](data-app-runtime-contract.md)
+
+## Ordinary pregame dashboard
+
+The primary path is described in [Current pregame](current-pregame.md): existing
+ordered current observations feed direct affected-game arithmetic and compact
+complete SQL calculations. The browser reads those rows. Page loads, refreshes
+and quote inspection perform no acquisition or calculation. No global publication,
+selected-unit board, snapshot decoding or finance-ready barrier gates this path.
+
+The existing exact fee and Opportunity Score functions remain shared with research
+and Trading Fees. The internal $100 comparison basis is not a trade-entry setting.
+Current pregame lifecycle uses source/status/withdrawal and authoritative kickoff,
+with no age-based price expiry.
+
+The sections below cover independent research, Scanner, storage and acquisition
+owners. Their evidence requirements and publication graphs are not ordinary
+pregame prerequisites.
 
 ## Current and saved comparisons
 
-Opportunities and Browse odds read `/api/comparison-current`. Saved odds uses
-`/api/odds-replay`. The explicit snapshot API captures a consistent SQL read
-and atomically replaces the manual snapshot head. Recalculation creates a
-result revision over the same captured inputs. Snapshot Details resolves the
-selected row and its Originals against that revision.
-An explicit benchmark pair binds both source IDs to the original receipt, book,
-prices and clocks. A current estimate requires two distinct reference contracts.
-If either side is missing, the app can still show the source offer.
-Retention protects the current head, reviewed results and active read leases.
-
-Background collection supplies current rows. Scanner and background publication
-have separate read paths and lifecycles. See the [calculation basis](benchmark-ev.md)
-for the distinction between captured returns and live execution eligibility.
+Opportunities and Browse read `/api/pregame`. Quote comparison reads the exact bet's
+current records and keeps a compact copy of the selected row. Saved odds uses
+`/api/odds-replay`. Explicit snapshot and research APIs preserve their original
+capture/revision contracts. They neither gate current pregame prices nor start
+full-slate work from an ordinary web request.
 
 ## Product boundary
 
-Predict collects supported source observations and presents read-only comparisons.
-Observation visibility is independent of financial-estimate completeness: source
-prices, identities, original clocks and available depth remain useful when a
-particular estimate is unknown. Personal-website execution rules and exact order
-routes are outside collection/display requirements. Financial claims retain
-their own model applicability and uncertainty. Current latest-board price
-publication is independent of calculation success; unavailable estimates do not
-hide admitted source prices.
+Predict presents read-only odds and opportunities. Source observations remain
+available internally when required reference or fee inputs are absent. The primary
+dashboard includes only complete calculations. Execution depth, slippage and trade
+entry are separate backlog models; applicable fees are part of current delivery.
 
 ## Ordinary current data flow
 
-Acquisition, storage/publication, matching, financial logic, frontend and
-integration QA have distinct responsibilities. Current architecture has **two OS processes**:
-the background data process hosts collection and calculation workers; the app
-process serves comparisons and reads publications. Logical worker separation does not establish complete
-resource/failure isolation: workers within the data process share its memory and
-process lifetime.
+The data and web processes share PostgreSQL. Existing adapters admit ordered
+observations with original clocks. The ingestion owner calculates the affected
+occurrence directly and atomically replaces complete current calculations. Durable
+accepted work survives restart and the recovery owner resumes it without paid
+replay. The app reads, groups and pages indexed SQL records.
 
-The ordinary launcher runs an independent background data process and an app
-process against the existing PostgreSQL database. The data runtime owns
-collection, expiry, the shared scanner, Odds/EV calculations and compact episode
-summaries. The app serves comparison snapshots and reads background publications for other views. Opening a page is
-not necessary to start ordinary calculation. A selected unit can queue an
-independent valuation job from committed inputs. App-only restart preserves the data identity
-and epoch; explicit collection Stop has acknowledged cross-process semantics.
-[Runtime and latest-result contract](data-app-runtime-contract.md).
-
-1. Existing bounded adapters normalize source observations and upsert stable
-   current events/contracts/offers/shared depth with original clocks.
-2. Background workers discover committed database revisions, capture coherent
-   typed facts, then calculate affected economics outside SQL transactions.
-   Unrelated economics retain original calculation times.
-3. Final publication compares exact dependencies and runtime authority under the
-   current-writer lock, replacing compact latest rows and scope status.
-4. Scanner, Odds and EV reads filter/page stored results without acquisition or
-   whole-slate finance. Opportunities pages a selected-unit publication.
-   Direct quote inspection can size one exact published offer. Expanded reports
-   remain transient.
-5. The pregame desk keeps published prices and calculations until the game
-   starts or an explicit sporting change withdraws it. Live and execution
-   paths use their own freshness and runtime authority checks.
+A browser request does not wake a worker, construct an amount-specific board,
+recalculate finance or decode a whole publication. Pregame kickoff timers and
+SQL sporting/withdrawal guards govern removal. Separate research workers retain
+archival, Scanner and modeled Arbitrage support.
 
 `DatabaseIngressSink` commits directly through `CurrentRowStore`; ordinary
 collection does not construct a journal or import old diagnostics. Migrations
@@ -92,7 +74,7 @@ bounded transient sizing.
 
 | Surface | Responsibility |
 | --- | --- |
-| `/`, `/ev`, `/arbs`, `/browse-odds`, `/game` | Ordinary SQL desk for selected-unit Opportunities, modeled opposing positions, browse, and game views |
+| `/`, `/ev`, `/arbs`, `/browse-odds`, `/game` | Current-row Opportunities/Browse/game; separate modeled Arbitrage research |
 | `/api/comparison-current` | Current desk results, selected evidence, update metadata, and fee coverage |
 | `/replay`, `/api/odds-replay` | Saved captures and fictional practice with revision-bound details |
 | `/scanner` | Advanced globally ranked Scanner, observed episodes and selected manual tickets |
@@ -114,7 +96,7 @@ The [storage ownership contract](storage-ownership.md) describes the ordinary
 publication and current read surface. The [board contract](comparison-board-api-contract.md)
 and [current-state contract](contracts/predict-current-1.md) document the retained
 board and injected readers. Shared Host/Origin and request validation applies to
-these surfaces. [Selected-unit contract and examples](examples/pregame-board-1/README.md)
+these surfaces. [Current-row API and examples](examples/current-pregame-1/README.md)
 
 ## Identity and calculation
 

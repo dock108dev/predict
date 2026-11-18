@@ -14,9 +14,9 @@
   <main id="main-content">
     <header class="page-heading">
       <h1>Trading fees</h1>
-      <p>Opportunities uses a $100 maximum upfront model with public retail fees. Available size and settlement assumptions appear in each comparison.</p>
+      <p>Opportunities uses an internal $100 comparison basis for fee and rounding calculations at the posted price. Fee cashflows and source timestamps appear in each comparison.</p>
       <p>Predict models a new standalone position placed directly with the venue, taking the posted price and holding to settlement.</p>
-      <p>The preview uses the high end of the applicable standard taker schedule. Upfront fees count against your budget. A winning commission comes out of your payout.</p>
+      <p>The calculation uses the configured account or conservative public schedule. Upfront fees count against the comparison basis. A winning commission comes out of winning receipts.</p>
     </header>
     <div id="fee-guide">
       <section class="inspection-section" id="guide-kalshi">
@@ -33,13 +33,13 @@
       </section>
       <section class="inspection-section" id="guide-novig">
         <h2>Novig</h2>
-        <p>Eligible pregame straight trades have no taker fee. Predict verifies the exact market and its pregame status before showing a zero fee. In-game, futures, and parlay terms can differ.</p>
+        <p>The configured pregame straight schedule applies to the posted price. In-game, futures, and parlay terms can differ.</p>
         <a href="https://docs.novig.com/api/concepts/fees">Official Novig fee rules</a>
       </section>
       <section class="inspection-section" id="guide-prophetx">
         <h2>ProphetX</h2>
         <p>NHL straight trades can incur a fee at each fill. Other supported straight markets charge commission on positive net gains at settlement.</p>
-        <p>Fill prices and carry-forward rounding affect NHL charges. For settlement commission, other positions in the same market can change net gains. The preview models one standalone position.</p>
+        <p>Fill prices and carry-forward rounding affect NHL charges. For settlement commission, other positions in the same market can change net gains. The comparison models one standalone position.</p>
         <a href="https://www.prophetx.co/lobby/t-c/trading-fees">Official ProphetX fee schedule</a>
       </section>
     </div>

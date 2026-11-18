@@ -1,6 +1,6 @@
 # Storage ownership
 
-The ordinary data process owns collection and comparison publication. The app
+The data process owns collection, current observations and affected-game calculations. The app
 reads committed revisions. The Database tab defaults to `public`, which holds
 the working schema. Select `retained` for historical research and retired
 board records. Historical tools opt in with `open_retained()`. Migration 082
@@ -23,8 +23,8 @@ retains its own provider provenance.
 | SportsGameOdds evidence | `sgo_quote_revision` owns exact source quotes. `sgo_event_evidence` holds frame membership, separately timed venue catalog facts, and history counters. `current_sgo_history` retains bounded superseded observations. | Ordinary calculation, Quote Quality, and sportsbook display. |
 | Normalized market data | `current_event`, `current_contract_storage`, and `current_offer_storage` own admitted identities and offer authority. Native offers point to `native_book_revision`, whose exact ladders live in `native_ladder_revision`. Independent depth belongs to its contract. | The ordinary comparison worker, Scanner readiness, and source diagnostics. |
 | Calculation settings, inputs, and results | `comparison_policy_revision` has one active settings revision. `comparison_snapshot` and `comparison_snapshot_result` preserve original inputs and exact result bytes. New results also bind the settings revision with a foreign key. Ordinary results hold EV values and the default $100 modeled arbitrage payoff, with its fee evidence identity. | Live and manual comparisons, replay, and pinned Details. |
-| Display and inspection | `comparison_publication` holds live and manual heads, current components, Coverage, and Scanner. `comparison_result_reference` holds ordered members, review pins, and leases. The compact read projection is on the exact result row. | Opportunities, Browse Odds, game pages, Coverage, Raw Odds, and Scanner. |
-| Selected-unit Opportunities | `pregame_unit_board` points to a complete projection for the requested amount. `pregame_unit_member` keeps versioned, reusable valuations for immutable member results. Both are replaceable. | Opportunities, exact comparison drawer, and board update cursors. |
+| Display and inspection | `comparison_publication` holds live and manual heads, current components, Coverage, and Scanner. `comparison_result_reference` holds ordered members, review pins, and leases. The compact read projection is on the exact result row. | Historical/research comparisons, modeled Arbitrage, Coverage, Raw Odds, and Scanner. |
+| Current Opportunities | `current_pregame_calculation` holds complete per-offer values. `current_pregame_work` retains accepted affected-event work, and `current_pregame_revision` supplies a cheap read cursor. | Opportunities, Browse, Open Game, comparison and Trading Fees examples. |
 | Operations and policy evidence | `data_runtime` and `data_runtime_command` own Stop, pauses, heartbeat, and control acknowledgments. `current_row_state` holds reset epoch, committed source status, and refresh ordering. `delivery_clock` holds delivery telemetry. `public_fee_schedule` holds reviewed fee evidence and `schema_migration` records the upgrade history. | Admin, runtime authority, delivery diagnostics, and calculation. |
 | Odds history | The opt-in collector stages admitted pregame material changes and their source witnesses in `odds_archive_*`. An independent worker verifies immutable off-host shards before acknowledging their staged membership. In-game quotes are working data, with exact evidence retained for saved or pinned inspections. | [Archive verification and replay](odds-archive-operations.md). |
 

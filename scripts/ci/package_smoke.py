@@ -212,6 +212,7 @@ async def smoke():
                          '/admin?section=database','/view/current/admin-database.js',
                          '/view/current/admin-database.css',
                          '/view/current/barlow-semi-condensed-600.ttf',
+                         '/view/current/pregame.js','/view/current/pregame.css','/view/current/pregame.html',
                          '/view/current/desk.js','/view/current/desk.css','/view/current/desk-preferences.js',
                          '/view/current/desk-components.css','/view/current/desk-polling.js','/view/current/desk-quote-display.js',
                          '/view/current/desk-ticketboard.css','/view/current/desk-ticketboard.js',
@@ -243,7 +244,7 @@ async def smoke():
                 async with client.get(url+path) as response:
                     assert response.status==200,(path,response.status)
                     html = await response.text()
-                    assert '/view/current/desk.js' in html
+                    assert ('/view/current/pregame.js' if path.split('?')[0] in ('/','/ev','/browse-odds','/game') else '/view/current/desk.js') in html
                     assert '/view/current/predict-icon.png' in html
             for view in ('arbs', 'ev'):
                 async with client.get(url+'/api/odds-replay', params={'dataset':'practice','view':view}) as response:

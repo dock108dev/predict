@@ -69,7 +69,7 @@ def practice_journey(tab, base):
     assert tab.evaluate("document.documentElement.scrollWidth === innerWidth")
 
     tab.goto(base + "/ev")
-    tab.get_by_role("link", name="Try a practice example", exact=True).click()
+    tab.get_by_role("link", name="Practice", exact=True).click()
     ticket = tab.locator(".pregame-ticket")
     expect(ticket).to_contain_text("Saint Mary's Gaels")
     expect(ticket).to_contain_text("+2.82%")
@@ -96,18 +96,18 @@ def first_use(tab, base, archive_directory):
     tab.goto(base + "/")
     expect(tab.get_by_role("heading", name="Opportunities", exact=True)).to_be_visible()
     expect(
-        tab.get_by_role("heading", name="Calculating opportunities for $100")
+        tab.get_by_role("heading", name="No positive opportunities in this view.")
     ).to_be_visible()
     expect(tab.get_by_role("link", name="Arbitrage")).to_be_visible()
     expect(tab.get_by_label("Unit size")).to_be_hidden()
-    expect(tab.get_by_label("Unit size")).to_have_value("100.00")
+    expect(tab.get_by_label("Unit size")).to_have_count(0)
     expect(
-        tab.locator("#results").get_by_role("link", name="Browse Odds")
+        tab.locator("#results").get_by_role("link", name="Browse odds")
     ).to_be_visible()
     expect(tab.get_by_role("button", name="Filters", exact=True)).to_be_hidden()
     tab.evaluate("localStorage.setItem('predict-desk-unit-usd', '19.37')")
     tab.goto(base + "/ev")
-    expect(tab.get_by_label("Unit size")).to_have_value("100.00")
+    expect(tab.get_by_label("Unit size")).to_have_count(0)
     expect(tab.get_by_label("Unit size")).to_be_hidden()
     saved = tab.get_by_role("link", name="Saved odds", exact=True)
     expect(saved).to_have_count(1)
@@ -275,6 +275,20 @@ def test_first_use_without_credentials(width, tmp_path, monkeypatch):
         if url.hostname != "predict.fixture" or route.request.method != "GET":
             unexpected.append((url.hostname, route.request.method))
             route.abort()
+        elif url.path.startswith("/api/pregame"):
+            reads.append(params)
+            route.fulfill(
+                json={
+                    "schema": "predict-current-pregame-1",
+                    "state": "ready",
+                    "rows": [],
+                    "total": 0,
+                    "cursor": "empty",
+                    "changed": False,
+                    "provider_requests": 0,
+                    "scheduled_calculations": 0,
+                }
+            )
         elif url.path == "/api/comparison-current":
             reads.append(params)
             route.fulfill(
@@ -301,7 +315,14 @@ def test_first_use_without_credentials(width, tmp_path, monkeypatch):
                 )
         elif url.path in ("/", "/ev", "/arbs", "/replay", "/admin"):
             route.fulfill(
-                path=ASSETS / ("admin.html" if url.path == "/admin" else "desk.html")
+                path=ASSETS
+                / (
+                    "admin.html"
+                    if url.path == "/admin"
+                    else "pregame.html"
+                    if url.path in ("/", "/ev")
+                    else "desk.html"
+                )
             )
         elif url.path.startswith(("/view/current/", "/current/assets/")):
             route.fulfill(path=ASSETS / Path(url.path).name)
@@ -322,12 +343,12 @@ def test_first_use_without_credentials(width, tmp_path, monkeypatch):
             tab.on("pageerror", lambda error: errors.append(str(error)))
             first_use(tab, base, tmp_path)
             practice_journey(tab, base)
-            expect(tab.get_by_label("Unit size")).to_have_value("100.00")
+            expect(tab.get_by_label("Unit size")).to_have_count(0)
             if width == 390:
                 tab.add_style_tag(
                     content="html { font-size: 200%; } .desk-app { font-size: .9375rem; }"
                 )
-                nav = tab.get_by_role("navigation", name="Predict", exact=True)
+                nav = tab.get_by_role("navigation", name="Main", exact=True)
                 assert nav.get_by_role("link", name="Opportunities").evaluate("""link => {
                     const text = document.createRange();
                     text.selectNodeContents(link);

@@ -32,6 +32,45 @@ selects internal defaults that enable acquisition, so create the file first.
 | `native_sports`, `native_families` | Optional native-source overrides. Absent or empty overrides inherit the base scope. |
 | `aggregate_sports` | Optional aggregate sport override. An absent or empty list inherits `sports`. |
 | `live_enabled` | Enables in-game acquisition and display. The sample and omitted setting both select pregame only. |
+| `direct_kalshi_enabled`, `direct_polymarket_us_enabled` | Set both to `false` to use SGO prices for these venues. The direct adapters remain installed. Omitted flags preserve the older direct-source behavior. |
+
+For the current SGO-only test, use `aggregate_provider: "sportsgameodds"` with
+both direct flags false. SGO's `kalshi` quotes appear as Kalshi; its `polymarket`
+quotes appear as Polymarket US under the owner's temporary test mapping. The
+original `polymarket` bookmaker ID remains in source metadata. This is a configured
+test mapping, rather than independently established venue identity.
+Existing global Stop and source pauses remain in force.
+
+## Editing fee rules
+
+The current pregame fee rules live in the existing PostgreSQL
+`public_fee_schedule.state.pricing_rules` records. Source verification receipts
+remain in those same records. The calculation and Trading Fees page read these
+configured rules.
+
+```sh
+.venv/bin/python -m app.fees.catalog seed
+.venv/bin/python -m app.fees.catalog export > /tmp/predict-fees.json
+```
+
+`seed` copies applicable reviewed terms for venues that have no configured rules.
+It preserves existing edits. Edit the exported JSON, then apply it atomically:
+
+```sh
+.venv/bin/python -m app.fees.catalog import /tmp/predict-fees.json
+```
+
+Each rule defines its formula, decimal-string coefficient, multiplier, balance
+precision, quantity increment, optional league override, effective interval,
+source URL and account/conservative profile. `set-rate VENUE RULE_ID RATE` changes
+one rule coefficient. The existing engine owns the supported formulas and
+rounding; rates and effective schedules are data.
+
+Edits validate before writing and enqueue only affected venue occurrences.
+Future cutovers take effect without a new source receipt. A configured interval
+gap withholds that fee calculation rather than using a packaged fallback.
+Known account failures and native product applicability still govern configured
+rules. Private account evidence and credentials stay outside exported fee rules.
 
 The [configuration validator](../app/collection/current_policy.py) defines bounds
 and types. With Live off, a game leaves current results at verified kickoff or
@@ -119,21 +158,21 @@ Saved inspections require no provider keys. [Credential loading](security.md#pro
 
 ## Calculation settings
 
-The pregame EV desk opens on **Sportsbook estimate** and remembers the selected
-basis in the browser. The other bases are **Verified after-fee EV**,
-**Conservative after-fee EV**, and **Before-fee scenario**. A price can be
-visible while its calculation is unavailable. Clear return filters to see
-prices and open an offer to inspect the reason. Arbitrage requires opposing
-offers with compatible settlement terms. The SportsGameOdds-backed pregame
-desk updates the open trade preview with the list when **Auto-update** is on.
-Prices and estimates still expire while Auto-update is off. Use **Refresh list**
-to read the latest board when updates are held.
-[Calculation basis and limitations](benchmark-ev.md)
+The ordinary pregame dashboard has one posted-price model and no saved unit or
+calculation-mode preference. It uses the fixed internal $100 comparison basis
+for amount-dependent fee and quantity arithmetic. Search, league, market, venue
+and alternate-line filters only affect SQL reads.
 
-**Admin → Settings** controls the display time zone. The EV and Arbitrage schedule
-filters can override it with Eastern or UTC. Use the header's **Odds** control to
-switch between American and decimal prices. Board reads and selected calculation
-settings do not trigger acquisition or spend provider credits.
+Existing evidenced account facts may be supplied in
+`.local/trade-fee-account-facts.json`; they remain private and are not created by
+page loads. Where documented applicable charges vary and an exact account case
+is unresolved, the current calculation uses the highest applicable documented
+charge and records the conservative choice in fee details. Missing mandatory
+terms exclude the opportunity rather than defaulting to zero.
+
+Research, Arbitrage and historical replay retain their separately labeled math
+settings. Account connections and execution modeling are backlog work.
+[Calculation policy](benchmark-ev.md) · [Fee applicability](fee-coverage-policy.md)
 
 ## Storage and recovery
 

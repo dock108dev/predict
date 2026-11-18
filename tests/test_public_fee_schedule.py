@@ -183,3 +183,17 @@ def test_frozen_rebuild_and_inspection_keep_the_terms_captured_with_the_offer(ap
     projected = next(r for r in read['rows'] if r['id'] == row['id'])
     assert projected['price_current'] and projected['trade_fee']['reason'] == lifecycle.REVIEW_REQUIRED
     assert projected['conservative_return_percent'] is None
+
+
+def test_pmus_posted_order_honors_evidenced_fractional_quantity_grid():
+    from app.comparison.snapshot_polymarket_fee import order_fee
+    grid=dict(market_id='fractional-grid-fixture',authority='public_orders_minimumTradeQty_alignment',
+        response_sha256='a'*64,minimum_contracts='0.01',increment_contracts='0.01',price_tick_usd='0.01')
+    result=order_fee(grid['market_id'],inserted_at='2026-11-17T20:00:00Z',evaluated_at='2026-11-17T20:00:00Z',
+        fills=[dict(price='0.60',quantity='160.56')],grid=grid)
+    assert not result['unsupported']
+    assert result['entry_fees'] is not None
+    off_grid=order_fee(grid['market_id'],inserted_at='2026-11-17T20:00:00Z',evaluated_at='2026-11-17T20:00:00Z',
+        fills=[dict(price='0.60',quantity='160.565')],grid=grid)
+    assert off_grid['entry_fees'] is None
+    assert 'grid' in ' '.join(off_grid['unsupported'])

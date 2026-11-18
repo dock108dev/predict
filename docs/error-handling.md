@@ -16,59 +16,24 @@ states. Other valid saved captures remain available.
 
 ## Ordinary app and data runtime
 
-The data runtime logs heartbeat/ownership failures as `data_runtime_heartbeat`,
-withdraws dispatch through source shutdown, and exits failed. A secondary status
-write logs `data_runtime_failure_status`; inability to persist a failure does not
-make the last heartbeat healthy indefinitely. The app reader fails closed when
-runtime storage is unavailable and logs `data_runtime_read`. Control submission
-failure logs `data_runtime_submit`. A failure reading an already submitted
-control's acknowledgment returns HTTP 503 `data_runtime_control_unknown` and logs
-`data_runtime_control_result`. Inspect Admin and the data log before retrying:
-the control may already have applied. The reader never resubmits it automatically.
+Accepted source observations are durable independently of calculation completion.
+A calculation failure records a specific reason in `current_pregame_work`; the
+data runtime recovers that game from current SQL. Other games proceed. A failed
+provider page does not delete complete pregame opportunities or renew source
+clocks. Partial pages preserve omitted observations.
 
-Runtime shutdown attempts finite-operation, task, source, board, scanner, store,
-database-connection and ownership cleanup despite an earlier failure. Every
-failure logs a `data_runtime_*` operation and marks the process failed; the first
-cleanup exception is re-raised after remaining attempts. Startup preserves its
-original error or cancellation if cleanup also fails. Terminal status is best
-effort when storage is unavailable. Cleanup remains cooperative and does not
-establish a process-wide termination deadline.
+The dashboard only displays complete committed calculations. Refresh and
+inspection are read-only; HTTP 503 records a read failure internally and leaves
+the rendered browser board intact. Retired amount/mode API requests return 410.
+The UI has no calculation-progress or missing-calculation placeholders.
 
-A stopped scanner, observation, estimate or Coverage task is observed once and
-marked unavailable without stopping independent healthy sources. Periodic board
-and Coverage failures retain unavailable status and log `latest_board_*` on each
-failure. Optional calculation failures continue to preserve independent source
-observations. Cooperative calculation cancellation propagates through optional
-financial work; expected cancellation during owner shutdown is normal.
-Scanner reconciliation failures log `scanner_reconciliation` and publish the
-fixed reason `scanner_reconciliation_failed`, excluding provider/storage exception
-messages. Failed withdrawal of a scanner publication logs
-`scanner_failure_withdrawal`; heartbeat, dependency and expiry checks still guard
-read eligibility. Publication and selected-proof read failures log
-`scanner_publication_read` and `scanner_selection_capture` and withhold authority.
-The dated Scanner census can survive a calculation binding change while the
-runtime, reset epoch and collection controls still match. The read reports
-`scanner_calculation_binding_changed` and drops complete and partial receipts.
+Use `/api/health` for bounded database/current-read availability. Collector health
+checks heartbeat, dispatch, deliberate Stop/disabled state and specific failed
+accepted work. Neither health probe invokes financial arithmetic. Real-source
+arrival and browser display require separate evidence.
 
-Retained read workers log unexpected errors as `retained_read_worker`, even after
-request cancellation or timeout. Their completion futures carry errors as data,
-preventing detached asyncio diagnostics from exposing raw exception text. Expected
-cooperative cancellation is quiet. Capacity stays charged until a launched thread
-exits; failure to start a thread releases its lane and reservation immediately.
-
-Optional scanner commit measurements run inside a savepoint. A failed SQL probe
-rolls back that savepoint, logs `scanner_commit_probe`, and leaves the accepted
-ingress transaction able to commit. No measurement is published for that failure.
-Post-commit listener errors log `scanner_commit_listener` without undoing the
-already committed data or skipping other listeners. Ingress transaction failures
-still propagate and produce no successful-commit measurement.
-
-Inspect `.local/predict-data-runtime/data.log` and the app instance's
-`server.log` (normally `.local/opportunity-board-beta/server.log`) alongside
-Admin. The data process boundary logs `data_runtime_process` and exits with code
-1 for an unexpected startup/shutdown exception, suppressing raw traceback output. Diagnostic records use the safe
-operation/class/frame format described below. These changes introduce no provider
-retries, accounting recovery or automatic collection authority.
+[Current pregame contract](current-pregame.md) documents eligibility, recovery and
+operations. Research-worker failures below do not gate ordinary current rows.
 
 ## Disposable calculation workers
 

@@ -1001,18 +1001,6 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
                                    batched=True,errors=errors)
             else:generation=status(db)['generation']
         timings['finance_seal_seconds']=round(monotonic()-finance_seal_started,6)
-        from . import pregame_unit_board
-
-        head = status(db)
-        unit_work = {}
-        try:
-            unit_work = pregame_unit_board.service(db, head=head, owner=owner, states=source_states,
-                                                   epoch=epoch, at=stamp(utc()))
-        except (CalculationStopped, MemoryError, OperationalError):
-            raise
-        except (ValueError, ArithmeticError) as exc:
-            unit_work = dict(unit_board=dict(error='unit_board_build_failed'))
-            errors.append(dict(reason='unit_board_build_failed', failure=failure_details(exc)))
         snapshots.prune(db)
         # Exact identities at this turn's planning snapshot. This is a bounded
         # census, not an exhaustive arrival log: intervening updates can coalesce.
@@ -1024,8 +1012,7 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
         if capture_cache is not None:
             capture_structure.save(capture_cache)
             capture_materialization.save(capture_cache.with_suffix('.material.json'))
-        return dict(timings=timings, unit_board=unit_work.get('unit_board', {}),
-            desk_fragment_bytes=unit_work.get('desk_fragment_bytes', 0), component_trace=component_trace[-8:],component_queue=queue_trace,
+        return dict(timings=timings, component_trace=component_trace[-8:],component_queue=queue_trace,
             capture_structure=capture_structure.metrics(),materialization=capture_materialization.metrics(),serviced_components=[key for key,_,_ in work],pending_components=len(all_pending),
             captured_components=len(work),
             live_first_price_seal=live_first_price_seal,

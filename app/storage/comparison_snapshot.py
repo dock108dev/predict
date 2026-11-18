@@ -677,7 +677,6 @@ def prune(db):
                 DELETE FROM comparison_snapshot_result WHERE id IN (
                     SELECT id FROM comparison_snapshot_result WHERE lease_until<now()
                     AND id NOT IN (SELECT result_id FROM comparison_publication WHERE result_id IS NOT NULL)
-                    AND id NOT IN (SELECT root_id FROM pregame_unit_board WHERE root_id IS NOT NULL)
                     AND id NOT IN (SELECT result_id FROM comparison_result_reference)
                     AND id NOT IN (SELECT id FROM keep_latest) FOR UPDATE SKIP LOCKED)''')
         db.execute('''DELETE FROM comparison_snapshot WHERE lease_until<now()

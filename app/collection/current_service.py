@@ -138,6 +138,9 @@ class CurrentService:
             if venue in self.paused_sources:
                 await call(self, self.source_state, venue, 'stopped', 'Source explicitly paused. This pause survives app and data restarts.')
                 continue
+            if not self.config.get('direct_' + venue + '_enabled', True):
+                await call(self, self.source_state, venue, 'stopped', 'Direct price adapter disabled in configuration.')
+                continue
             self.workers[venue] = factory(self,venue)
             self.tasks[venue] = asyncio.create_task(self.run_worker(venue), name='predict-current-'+venue)
         provider=self.config['aggregate_provider']

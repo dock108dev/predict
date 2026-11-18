@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Predict · Opportunities</title>
+<link rel="icon" href="/view/current/predict-icon.png">
+<link rel="apple-touch-icon" href="/view/current/predict-icon.png">
+<link rel="stylesheet" href="/view/current/pregame.css">
+<script type="module" src="/view/current/pregame.js"></script>
+</head>
+<body>
+<a class="skip" href="#results">Skip to opportunities</a>
+<header class="masthead"><a class="brand" href="/">P<span>R</span>EDICT<span class="brand-dot">●</span></a><nav aria-label="Main"><a href="/">Opportunities</a><a href="/browse-odds">Browse odds</a><a href="/arbs">Arbitrage</a><a href="/trading-fees">Trading fees</a><a href="/replay?dataset=practice">Practice</a></nav></header>
+<main>
+<div class="heading"><div><p class="eyebrow">THE PREGAME BOARD</p><h1 id="title">Opportunities</h1><p class="intro">A fairer view of the odds. Ranked after fees.</p></div><div class="live-note"><span></span>Odds may be delayed.</div></div>
+<form id="filters" class="toolbar"><label class="search"><span class="sr-only">Search teams</span><input name="search" placeholder="Search teams" type="search" maxlength="150"></label><label><span class="sr-only">League</span><select name="league"><option value="">All leagues</option><option>NFL</option><option>NCAAF</option><option>NBA</option><option>NCAAB</option><option>MLB</option><option>NHL</option></select></label><label><span class="sr-only">Market</span><select name="family"><option value="">All markets</option><option value="moneyline">Winners</option><option value="spread">Spreads</option><option value="total">Totals</option></select></label><label><span class="sr-only">Venue</span><select name="venue"><option value="">All venues</option><option value="kalshi">Kalshi</option><option value="polymarket_us">Polymarket US</option><option value="novig">Novig</option><option value="prophetx">ProphetX</option></select></label><label class="toggle"><input name="alternates" type="checkbox">Alternate lines</label><button id="refresh" type="button">↻ Refresh</button></form>
+<div class="board-heading"><p id="count" aria-live="polite">Loading odds…</p><span>ORDERED BY OPPORTUNITY SCORE</span></div>
+<p id="error" role="status" hidden>Refresh failed. Your displayed odds are preserved.</p>
+<section id="results" aria-label="Opportunities" tabindex="-1"></section>
+<nav class="pagination" aria-label="Pages"><button id="previous" type="button">← Previous</button><span id="page"></span><button id="next" type="button">Next →</button></nav>
+<footer><span>Posted odds, fair references, and applicable fees in one view.</span><nav aria-label="More"><a href="/trading-fees">How fees work ↗</a> · <a href="/replay?dataset=frozen">Saved odds</a> · <a href="/admin">Admin</a></nav></footer>
+</main>
+<dialog id="comparison" aria-labelledby="comparison-title"><div class="dialog-heading"><div><p class="eyebrow">EXACT BET · COMPARE PRICES</p><h2 id="comparison-title"></h2></div><button id="close" type="button" aria-label="Close comparison">✕</button></div><div id="comparison-content"></div></dialog>
+</body></html>

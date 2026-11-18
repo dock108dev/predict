@@ -7,44 +7,22 @@ native depth. This guide describes their ownership, ordering and expiry. See
 
 ## Ordinary write path
 
-`CurrentService` uses `DatabaseIngressSink` for ordinary database operation. Existing native adapters reconstruct synchronized books in bounded memory; normalized admitted records go directly into `CurrentRowStore`. Aggregate transport strictly decodes one bounded `ParsedAggregateFrame`, preserving exact decimal spellings. The credential-echo check, independent venue/reference admission, existing normalizer, market exclusions and coverage all reuse that frame. The normalizer accepts optional parsed events without serializing and reparsing the response. Aggregate admission supplies its accepted venue records and selected-reference records. A SQL transaction publishes all affected records, source statuses and native depth before acknowledging a saved observation. SQL failure leaves the previous rows intact, returns the failure and exposes an unavailable persistence status. There is no raw retry queue or file spill.
+The existing normalized current-event/current-contract/current-offer tables own
+ordered observations and original source/receipt clocks. SportsGameOdds is an
+acquisition route, separately stored from the represented venue. Kalshi and
+Polymarket US retain their direct adapters and controls.
 
-| Relation | Owner and lifetime |
-| --- | --- |
-| `current_row_epoch` | Current data/reset generation; app and data restarts preserve it. Runtime identity and fresh exact dependencies independently invalidate old selections. |
-| `current_event` | One exact provider/event mapping, compact allowlisted sporting and occurrence-witness facts, pregame start expiry. |
-| `current_contract` | One exact venue/provider/event/market/outcome/native-side selection, including selections with no offer. |
-| `current_offer` | One admitted offer per contract. For native offers, its immutable book revision supplies the exact ask and any original opposite bid used to derive it. |
-| `native_book_revision` | Immutable native book header, outcome presence, sequence, clocks, and ladder references. The current head is a row flag. |
-| `native_ladder_revision` | Exact ordered bids and asks, shared across book revisions when the ladder is identical. |
-| `current_depth` | Read view over optional independent depth held on the normalized contract. |
-| `current_source_status` | Bounded latest source status, without full response bodies. |
-| `current_refresh_scope` | Latest authoritative exact-scope ordering guards; expires after 48 hours and has an explicit capacity. |
+After a material admission, `current_pregame_work` coalesces the source event.
+The ingestion owner loads that occurrence's current price, exact references and
+fee registry, calculates directly, and atomically replaces complete per-offer
+`current_pregame_calculation` rows. The durable work row survives an exit between
+admission and calculation. Recovery reads accepted SQL without paid replay.
 
-Migration 012 established the current-row owners. Migrations 086 and 087 give
-native books immutable revisions and move epoch, source status and refresh scope
-into `current_row_state`. Migration 091 links delayed offers to a uniquely
-matching retained book. The offer link supplies native depth and book clocks to
-current readers. Provider account and reservation evidence retains its own
-storage and controls.
-
-Migration 079 gives each exact Kalshi or Polymarket US market metadata body one
-content hash in `current_native_market_body`. The acquisition census and the
-recovery roster reference that body and keep their own generation, scope and
-receipt fields. They can reference different revisions while a catalog is being
-adopted. Recovery can reconstruct the original compact adapter JSON from the
-body and its key order. Other wire formats stay inline. Maintenance converts
-old inline metadata in bounded transactions and reclaims shared bodies only
-after both owners release their references.
-
-Current snapshots and calculation results are not persisted by this owner. Shared financial definitions and user configuration retain their existing separate owners. `capture(include_depth=False)` supplies a coherent repeatable-read metadata frame and semantic dependencies. MVCC binds reads without taking the writer advisory lock; catalog construction cannot hold that write lock. A standalone capture starts its own repeatable-read, read-only transaction; ordinary API callers provide an existing repeatable-read transaction through selected-depth hydration. `hydrate_records` reads only selected execution ask ladders; its caller binds the expected revision before/after hydration. The API integration owner provides the transient calculation and Details context.
-
-`data_runtime` and its bounded command relation provide source status, heartbeat,
-material revisions and actual control acknowledgments. `scanner_latest` replaces
-one compact typed projection with a 32 MiB cap. `OrdinaryOwner` publishes the
-current comparison head from exact calculated members. The
-[runtime contract](data-app-runtime-contract.md) specifies authority, failure,
-retention and app-read behavior.
+The [current pregame contract](current-pregame.md) describes schema, concurrency,
+HTTP reads, eligibility and operational SQL. Old amount-specific generated boards
+are dropped by a forward migration; protected source, history and accounting
+owners are preserved. Scanner/research representations below have separate
+consumers and do not participate in normal dashboard reads.
 
 ## Bounded ordered SQL writes
 

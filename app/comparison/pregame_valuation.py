@@ -384,3 +384,8 @@ def board_order(results, *, highest_ev=False, include_alternatives=False):
             identity = (result['bet_id'], result['offer_id']) if include_alternatives else result['bet_id']
             best.setdefault(identity, result)
     return sorted(best.values(), key=lambda result: _board_sort_key(result, highest_ev=highest_ev))
+
+
+def fair_odds(reference):
+    value = reference['fair_decimal_odds']
+    return dict(american=american(F(value)), decimal=value, reason=None)

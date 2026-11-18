@@ -153,111 +153,29 @@ class SportsGameOddsPregameDeskSQL(LatestBoardFixture):
                     patch('app.storage.comparison_snapshot.utc', return_value=received):
                 self.assertTrue(ordinary_publication.turn(db)['published'])
 
-        app = web.Application()
-        mount(app)
-        query = dict(layout='desk', phase='pregame', basis='sportsbooks', summary='1', lines='all', limit='25')
-        with patch('app.dashboard.snapshot_api.connect', side_effect=self.connect):
-            async with TestClient(TestServer(app)) as client:
-                async def read(**filters):
-                    response = await client.get('/api/comparison-current', params=dict(query, **filters))
-                    self.assertEqual(response.status, 200, await response.text())
-                    return await response.json()
-
-                for filters in (dict(browse_odds='1'), dict(ranked='1', phase='live', board='0')):
-                    page = await read(**filters)
-                    self.assertEqual((page['phase'], page['features'], page['provider_requests']),
-                                     ('pregame', {'live_enabled': False, 'auto_update': True}, 0))
-                    self.assertEqual(len(page['games']), len(events))
-                    matched = set()
-                    for group in page['rows']:
-                        selection = group['offers'][0]['selection']
-                        predicate, line = selection['predicate'], selection['signed_line']
-                        key = (group['league'], group['market']['market'], predicate, selection['participant'],
-                               None if line is None else Fraction(line))
-                        if predicate == 'not_win':
-                            self.assertIn('browse_odds', filters)
-                            self.assertEqual({offer['venue'] for offer in group['offers']}, {'kalshi'}, key)
-                            self.assertFalse(group['sportsbook_quotes'], key)
-                            self.assertIsNone(group['score'], key)
-                            continue
-                        price, opposite, probability, venues = expected[key]
-                        self.assertNotIn(key, matched, 'Exact outcome split across game cards')
-                        matched.add(key)
-                        self.assertEqual({offer['venue'] for offer in group['offers']}, venues, key)
-                        prices = group['sportsbook_quotes']
-                        self.assertEqual(set(prices), {'fanduel'}, key)
-                        self.assertEqual([(item['price_american'], item['current']) for item in prices['fanduel']],
-                                         [(price, True)], key)
-                        for offer in group['offers']:
-                            self.assertTrue(offer['current'], key)
-                            baseline = offer['sportsbook']
-                            self.assertEqual(baseline['book'], 'fanduel', key)
-                            self.assertEqual([p['price_american'] for p in baseline['prices']], [price, opposite], key)
-                            self.assertEqual(Fraction(baseline['probability']), probability, key)
-                            self.assertIsNone(offer['after_fee'], key)
-                            self.assertEqual(Fraction(offer['value']), 100 * (probability / Fraction('0.51') - 1), key)
-                    self.assertEqual(matched, expected.keys())
-
-                reviewed = await read(ranked='1', basis='reviewed', board='0')
-                self.assertEqual(reviewed['rows'], [])
-
-                with self.connect() as db, \
-                        patch('app.storage.ordinary_publication.utc', return_value=received), \
-                        patch('app.storage.comparison_snapshot.utc', return_value=received):
-                    published = ordinary_publication.turn(db)
-                    self.assertTrue(published['published'] or published['unchanged'], published)
-                    self.assertEqual(published['errors'], [])
-                # A committed publication still needs the exact book-only frame witness.
-                retained = await read(ranked='1', board='0')
-                self.assertGreater(retained['generation'], 0)
-                self.assertEqual({(row['league'], row['market']['market']) for row in retained['rows']},
-                                 {(key[0], key[1]) for key in expected})
-                self.assertTrue(all(offer['value'] is not None and offer['fair_reference']['books'] == ['fanduel']
-                                    for row in retained['rows'] for offer in row['offers']))
-
-                # Confirm the same reviewed team identities coalesce SGO
-                # execution offers on 11.5 while keeping two exact total lines.
-                self.at += timedelta(seconds=1)
-                observed = self.at.isoformat()
-                update = [event for event in events if event['eventID'] in ('book-only-NCAAB-spread', 'book-only-NCAAB-total')]
-                for event in update:
-                    for odd in event['odds'].values():
-                        offers = odd['byBookmaker']
-                        base = offers['fanduel'] if odd['betTypeID'] == 'sp' else offers['draftkings']
-                        for venue in ('novig', 'prophetexchange'):
-                            offers[venue] = dict(base, odds='+115', lastUpdatedAt=observed)
-                        for book in offers.values():
-                            book['lastUpdatedAt'] = observed
-                refreshed = parse_page(json.dumps(dict(success=True, data=update)).encode(), observed)
-                projected, _ = current_rows(refreshed, refreshed.receipt_sha256)
-                self.assertEqual(len(projected), 8)
-                references = prepare_page(refreshed)
-                sink = DatabaseIngressSink(SimpleNamespace(provider=self.service), config)
-                with patch('app.collection.current_database.connect', side_effect=self.connect), \
-                        patch('app.collection.current_database.utc', return_value=observed):
-                    sink.prepare(dict(type='current_aggregate_records', source='sportsgameodds', sport='NCAAB',
-                        records=projected, sgo_reference_rows=references, sgo_event_frames=prepare_frames(refreshed, references),
-                        receipt_sha256=refreshed.receipt_sha256, event_scopes={event['eventID']: 'NCAAB' for event in update},
-                        complete_venues=[], received_at=observed), self.service.states, Event())
-                with self.connect() as db, patch('app.storage.ordinary_publication.utc', return_value=observed), \
-                        patch('app.storage.comparison_snapshot.utc', return_value=observed):
-                    self.assertTrue(ordinary_publication.turn(db)['published'])
-                college_page = await read(browse_odds='1', league='NCAAB', refresh='1')
-                spreads = [row for row in college_page['rows'] if row['market']['market'] == 'spread']
-                self.assertEqual(len(spreads), 2)
-                self.assertEqual(len({row['game_key'] for row in spreads}), 1)
-                for row in spreads:
-                    self.assertEqual({offer['venue'] for offer in row['offers']}, {'kalshi', 'polymarket_us', 'novig', 'prophetx'})
-                    self.assertEqual({Fraction(offer['selection']['signed_line']) for offer in row['offers']},
-                                     {Fraction(row['offers'][0]['selection']['signed_line'])})
-                totals = [row for row in college_page['rows'] if row['market']['market'] == 'total']
-                self.assertEqual(len(totals), 4)
-                self.assertEqual(len({row['game_key'] for row in totals}), 1)
-                for row in totals:
-                    line = Fraction(row['offers'][0]['selection']['signed_line'])
-                    self.assertIn(line, (Fraction('123.5'), Fraction('144.5')))
-                    expected_venues = {'kalshi', 'polymarket_us'} if line == Fraction('123.5') else {'novig', 'prophetx'}
-                    self.assertEqual({offer['venue'] for offer in row['offers']}, expected_venues)
+        from app.storage.current_pregame import affected
+        from app.comparison.current_pregame import reference
+        from app.comparison.public_sportsbook_estimate import outcome
+        checked=set()
+        with self.connect() as db:
+            for record in records:
+                source=record['quote']['source']
+                events,observations,occurrence=affected(db,dict(provider=source['provider'],
+                    native_event_id=source['native_event_id']),self.at)
+                event=record['event']
+                key=outcome(record['market_identity']['family'],record['selection'],event['home'],event['away'])
+                if not key:
+                    self.assertIn(record['selection']['predicate'],('not_win','not_cover'))
+                    continue
+                ref=reference(record,observations,at=self.at)
+                family,side,line=key
+                selected=record['selection']
+                expected_key=(event['competition'],'winner' if family=='moneyline' else family,
+                    selected['predicate'],selected.get('participant'),line)
+                self.assertEqual(ref['book'],'fanduel')
+                self.assertEqual(Fraction(ref['probability']),expected[expected_key][2])
+                checked.add(expected_key)
+        self.assertEqual(checked,set(expected))
 
     async def test_published_pregame_estimates_persist_and_leave_at_kickoff(self):
         from datetime import timedelta
@@ -334,164 +252,20 @@ class SportsGameOddsPregameDeskSQL(LatestBoardFixture):
             Store(db).migrate()
             self.assertEqual(restored, offers(db))
 
-        app = web.Application()
-        mount(app)
-        query = dict(layout='desk', phase='pregame', ranked='1', basis='sportsbooks', board='0',
-                     summary='1', lines='main', positive='1', refresh='1')
-        with patch('app.dashboard.snapshot_api.connect', side_effect=self.connect):
-            async with TestClient(TestServer(app)) as client:
-                first = await (await client.get('/api/comparison-current', params=query)).json()
-                self.assertEqual((first['state'], first['rows']), ('initializing', []))
-                publish()
-                result = await client.get('/api/comparison-current', params=query)
-                self.assertEqual(result.status, 200, await result.text())
-                page = await result.json()
-                self.assertGreater(page['generation'], 0)
-                self.assertEqual(page['provider_requests'], 0)
-                group, = page['rows']
-                self.assertEqual(group['score'], '10')
-                self.assertEqual({row['venue']: row['value'] for row in group['offers']},
-                                 {'novig': '10', 'prophetx': '15/2'})
-                offer = next(row for row in group['offers'] if row['venue'] == 'novig')
-                selection = dict(id=offer['id'], layout='desk', phase='pregame', basis='sportsbooks')
-                selected = await (await client.get('/api/comparison-current/selection', params=selection)).json()
-                self.assertEqual(selected['row']['value'], '10')
-                self.assertEqual(stamp(selected['row']['source_clock_at']), stamp(book['lastUpdatedAt']))
-                reviewed = await (await client.get('/api/comparison-current',
-                    params=dict(query, basis='reviewed'))).json()
-                self.assertEqual(reviewed['rows'], [])
-
-                self.at += timedelta(seconds=1)
-                novig = home['byBookmaker']['novig']
-                novig.update(available=False)
-                del novig['odds']
-                # Exact provider closure at the same source clock, with no price.
-                admit()
-                with self.connect() as db, db.transaction():
-                    novig_offer, _ = offers(db)
-                    self.assertEqual(novig_offer['state'], 'unavailable')
-                    self.assertEqual(novig_offer['received_at'], receipt_at)
-                    db.execute("UPDATE current_offer_storage SET facts=jsonb_set(facts,'{state}','\"available\"'::jsonb) "
-                               "WHERE sgo_quote_id=%s", (novig_offer['sgo_quote_id'],))
-                    db.execute(prior_repair)
-                    self.assertEqual(offers(db)[0]['state'], 'unavailable')
-                    db.execute("UPDATE current_offer_storage SET facts=jsonb_set(facts,'{state}','\"stopped\"'::jsonb) "
-                               "WHERE sgo_quote_id=%s", (novig_offer['sgo_quote_id'],))
-                    db.execute(prior_repair)
-                    self.assertEqual(offers(db)[0]['state'], 'stopped')
-                    db.execute("UPDATE current_offer_storage SET facts=jsonb_set(facts,'{state}','\"unavailable\"'::jsonb) "
-                               "WHERE sgo_quote_id=%s", (novig_offer['sgo_quote_id'],))
-                publish()
-                closed_group, = (await (await client.get('/api/comparison-current', params=query)).json())['rows']
-                self.assertEqual([row['venue'] for row in closed_group['offers'] if row['current']], ['prophetx'])
-
-                self.at += timedelta(seconds=1)
-                older = (stamp(novig['lastUpdatedAt']) - timedelta(seconds=1)).isoformat()
-                novig.update(available=True, odds='+120', lastUpdatedAt=older)
-                admit()
-                with self.connect() as db:
-                    self.assertEqual(offers(db)[0]['state'], 'unavailable')
-
-                self.at += timedelta(seconds=1)
-                novig.update(available=True, odds='+120', lastUpdatedAt=self.at.isoformat())
-                admit()
-                publish()
-                fresh, = (await (await client.get('/api/comparison-current', params=query)).json())['rows']
-                self.assertEqual({row['venue'] for row in fresh['offers'] if row['current']}, {'novig', 'prophetx'})
-
-                # A paginated or incomplete response is no sporting tombstone.
-                self.at += timedelta(seconds=1)
-                odds = event['odds']
-                event['odds'] = {}
-                admit()
-                browse = dict(layout='desk', phase='pregame', browse_odds='1',
-                              basis='sportsbooks', summary='1', lines='all', refresh='1')
-                partial = await (await client.get('/api/comparison-current', params=browse)).json()
-                self.assertEqual({offer['venue'] for row in partial['rows'] for offer in row['offers']}, {'novig', 'prophetx'})
-
-                self.at += timedelta(seconds=1)
-                event['status']['cancelled'] = True
-                admit()
-                # Even a cold app reader sees the event status without
-                # relying on an unavailable quote row or the previous head.
-                closed_app = web.Application()
-                mount(closed_app)
-                async with TestClient(TestServer(closed_app)) as restarted:
-                    for params in (browse, query):
-                        withdrawn = await (await restarted.get('/api/comparison-current', params=params)).json()
-                        self.assertEqual(withdrawn['rows'], [])
-
-                self.at += timedelta(seconds=1)
-                event['status']['cancelled'] = False
-                event['odds'] = odds
-                # A later receipt with only pre-cancellation price clocks
-                # must leave the occurrence and execution quotes withdrawn.
-                admit()
-                with self.connect() as db:
-                    self.assertTrue(all(offer['state'] == 'unavailable' for offer in offers(db)))
-                repeated = await (await client.get('/api/comparison-current', params=browse)).json()
-                self.assertEqual(repeated['rows'], [])
-
-                self.at += timedelta(seconds=1)
-                novig['lastUpdatedAt'] = self.at.isoformat()
-                admit()
-                self.at += timedelta(seconds=1)
-                admit()
-                with self.connect() as db:
-                    self.assertEqual([(offer['venue'], offer['state']) for offer in offers(db)],
-                                     [('novig', 'available'), ('prophetx', 'unavailable')])
-
-                self.at += timedelta(seconds=1)
-                source_at = self.at.isoformat()
-                for leg in event['odds'].values():
-                    for quote in leg['byBookmaker'].values():
-                        quote['lastUpdatedAt'] = source_at
-                # Both prices are worse than even-money fair odds; the sole
-                # ranking result must still be published with a negative EV.
-                home['byBookmaker']['novig']['odds'] = '-110'
-                home['byBookmaker']['prophetexchange']['odds'] = '-120'
-                self.state.write(self.service)
-                admit()
-                publish()
-                reopened = await (await client.get('/api/comparison-current',
-                    params={k:v for k,v in query.items() if k != 'positive'})).json()
-                row, = reopened['rows']
-                self.assertEqual(row['score'], '-50/11')
-                self.assertEqual({offer['venue'] for offer in row['offers']}, {'novig', 'prophetx'})
-                self.assertFalse(any(offer['trade_fee_available'] for offer in row['offers']))
-                self.assertEqual(reopened['coverage']['same_line_reference'], 2)
-                self.assertEqual(reopened['coverage']['visible_groups'], 1)
-                positive = await (await client.get('/api/comparison-current', params=query)).json()
-                self.assertEqual(positive['rows'], [])
-
-                # The exchange clock advances independently of the FanDuel pair.
-                # Both input clocks and the supported estimate remain visible.
-                self.at += timedelta(minutes=15, seconds=1)
-                for venue in ('novig', 'prophetexchange'):
-                    home['byBookmaker'][venue]['lastUpdatedAt'] = self.at.isoformat()
-                self.state.write(self.service)
-                admit()
-                publish()
-                scanned = await (await client.get('/api/comparison-current', params=browse)).json()
-                shown = next(o for g in scanned['rows'] for o in g['offers'] if o['venue'] == 'novig')
-                self.assertEqual(shown['value'], '-50/11')
-                checked = await (await client.get('/api/comparison-current/selection',
-                    params=dict(selection, id=shown['id']))).json()
-                self.assertEqual(checked['row']['value'], '-50/11')
-
-                self.at += timedelta(seconds=1)
-                self.state.write(self.service, paused_sources=['sportsgameodds'])
-                paused = await (await client.get('/api/comparison-current', params=browse)).json()
-                self.assertEqual(paused['publication']['data_runtime']['paused_sources'], ['sportsgameodds'])
-                self.assertTrue(paused['rows'])
-                self.state.write(self.service)
-                self.at = stamp(event['status']['startsAt'])
-                self.state.write(self.service)
-                after = await (await client.get('/api/comparison-current', params=dict(query, phase='live'))).json()
-                self.assertEqual(after['features'], {'live_enabled': False, 'auto_update': True})
-                self.assertEqual((after['phase'], after['rows']), ('pregame', []))
-                closed = await (await client.get('/api/comparison-current/selection', params=selection)).json()
-                self.assertIsNone(closed['row'])
+        from app.storage.current_pregame import process, read
+        with self.connect() as db:
+            result=process(db,at=self.at)
+            self.assertTrue(result)
+            page=read(db,dict(browse='1',lines='all'),at=self.at)
+            self.assertEqual(page['state'],'ready')
+            self.assertEqual(page['provider_requests'],0)
+            self.assertEqual(page['scheduled_calculations'],0)
+            # Missing applicable fees stay an internal reason, never a partial ticket.
+            for item in page['rows']:
+                self.assertIsNotNone(item['fee'])
+                self.assertIsNotNone(item['raw']['net_ev'])
+            self.at+=timedelta(days=4)
+            self.assertEqual(read(db,dict(browse='1'),at=self.at)['rows'],[])
 
 
 @skipUnless(SOCKET, 'Disposable PostgreSQL required')

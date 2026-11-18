@@ -20,7 +20,7 @@ DEFAULT = dict(schema=VERSION, authority=GRANT, enabled=True, aggregate_enabled=
     backoff_seconds=[2, 5, 15, 30, 60], reconnect_failures=5,
     ingress_records=16000, ingress_bytes=8*MIB, issue_records=200,
     issue_bytes=MIB, discovery_pages=36)
-OPTIONAL_FLAGS = ('direct_novig_enabled', 'live_enabled')
+OPTIONAL_FLAGS = ('direct_novig_enabled', 'direct_kalshi_enabled', 'direct_polymarket_us_enabled', 'live_enabled')
 AGGREGATE_PROVIDERS = ('the_odds_api', 'sportsgameodds')
 
 
@@ -31,6 +31,13 @@ class PregameWindowClosed(Exception):
 def aggregate_provider(config):
     """Resolve the provider for present and older native configurations."""
     return (config or {}).get('aggregate_provider') or DEFAULT['aggregate_provider']
+
+
+def price_routes(config):
+    routes = {'novig': 'sportsgameodds', 'prophetx': 'sportsgameodds'}
+    for venue in ('kalshi', 'polymarket_us'):
+        routes[venue] = venue if config.get('direct_' + venue + '_enabled', True) else 'sportsgameodds'
+    return routes
 
 
 def validate(value):

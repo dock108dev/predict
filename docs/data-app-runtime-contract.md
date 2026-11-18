@@ -2,51 +2,16 @@
 
 ## Current ordinary publication
 
-Ordinary Opportunities reads `/api/comparison-current`
-and checks a lightweight notification cursor between full reads. The data process's
-`OrdinaryOwner` replaces legacy board observation/estimate loops, reusing the
-snapshot math engine and matching-component partition. It publishes source-only
-prices before optional finance and atomically replaces immutable current roots.
-Explicit historical snapshots remain readable; selected evidence uses bounded
-leases. The inspection controller keeps a selected revision pinned as the list
-advances. [Desk and inspection](ui-design.md)
+The ordinary pregame flow is receipt → ordered observation admission → affected
+game calculation → atomic current SQL rows → read-only API/browser. The data owner
+invokes calculation directly after admission and recovers durable unfinished work
+on restart. It does not wait for a global finance-ready or generation barrier.
 
-The desk limits distinct in-flight current read work to 16 per web process,
-including custom filters and exact selections. Requests for an identical shared
-page can use the same read while there is no room for new work. New work at
-capacity receives HTTP 503 and can be retried as slots finish. A disconnected
-viewer leaves an admitted read owned until it finishes. Requests arriving after
-a shared page's first quote or kickoff deadline take a fresh SQL snapshot.
-An exact native live quote read can return its original price and evidence before
-the first ordinary publication, subject to current source controls and clocks.
-Pregame selections use committed results.
-The default pregame board models a maximum $100 upfront cost. Its collector-owned
-worker advances separately from ordinary capture and optional finance. Immutable
-members are checkpointed across bounded turns, and completed members can publish
-while other members remain pending. A moving ordinary head does not discard
-completed work; the board retains its exact root and each read applies current
-withdrawal and sporting-schedule authority. Pending-member counts remain visible.
-Browse and Open Game reuse the same cached member valuations, while quote
-inspection runs the same deterministic calculation over the exact stored inputs.
-Public estimates disclose decisive completed-game settlement, posted-price sizing
-when depth is absent, and applicable public retail fees. Strict fully evidenced
-valuation remains a separate evidence class.
-
-The current-read deadline is three seconds. Shared compressed member decoding
-retains up to 2,048 entries within the existing eight-MiB byte cap, preventing
-routine full-root reads from evicting the beginning of a roughly 280-member root.
-Saved snapshot refreshes and recalculations return the same pregame rows as
-saved snapshot reads when Live is disabled. The retained inputs still contain
-the original observations.
-
-The installation uses the same two processes and PostgreSQL database.
-`app.collection.data_runtime` owns `CurrentService`, maintenance, ordinary
-publication, Scanner and Coverage. `app.dashboard.opportunity_board` uses
-`RuntimeClient` and result readers. HTTP access never starts acquisition or
-financial workers. Stop/pause, accounting, source clocks and resource guards below
-remain binding. See L01 for current routes, readiness, timings and the observed
-partial currentness/coverage limitations. Legacy board loop descriptions below
-remain architectural history, not an additional ordinary publisher.
+[Current pregame storage, API and lifecycle](current-pregame.md) is the current
+contract. The app starts no publication worker and inspection schedules no
+financial work. Selected-unit projections and workers are retired. The remaining
+publication sections document separate Scanner, Arbitrage and historical owners;
+they are not prerequisites for ordinary pregame rows.
 
 ## Lifecycle and controls
 
@@ -337,54 +302,17 @@ RSS must be reported separately alongside parent and combined process use.
 
 ## Pregame prices and calculations
 
-Browse Odds, Open Game, Opportunities, and Arbitrage use the same committed
-ordinary comparison publication. Ingress keeps the latest observation for
-each exact source contract. A partial response, a collection pause, or an
-old source clock does not remove a pregame observation. Explicit closures
-and the latest authoritative kickoff still govern eligibility.
-An authoritative alternate response can replace its own route. Coverage
-counts published pregame prices separately from prices with fresh book
-evidence. A source reconnect without a new observation does not restore
-book continuity.
+Current observations retain original source and receipt clocks through refresh,
+calculation, disconnect and restart. Partial pages preserve omitted quotes.
+Collection errors preserve complete accepted rows. No age-based expiry applies
+to pregame prices. Authoritative kickoff, non-pregame sporting state and exact
+applicable withdrawal remove or invalidate the dependent opportunity.
 
-The data worker freezes the price, sportsbook sides, and available fee and
-settlement evidence together. When a replacement for the same component is
-waiting for calculations, the public head keeps the previous complete member;
-the worker can recover the committed replacement input after interruption.
-Price, fee, and reference availability are independent. A sportsbook estimate
-with a supported fee is a modeled decisive return, not a verified fill or a
-full settlement EV. The quote drawer and Admin use the same sizing inputs from
-the exact published member. The census reports available fees (including zero),
-modeled returns and verified after-fee EV separately.
-
-For spreads and totals, Browse Odds, Open Game and Opportunities use the same
-supported main-line evidence before ranking or paging. A site filter does not
-select a different line. An unverified line is labeled as such, and an exact
-link can still open an alternate. Independent, compatible role and schedule
-witnesses are required to reconcile two published game listings.
-
-Quote and reference times remain separate from the board read and publication
-times. The desk reports the original quote or receipt clock, identifies
-retained prices when the source is unavailable or the confirmation ages out,
-and keeps the published price and its calculations available until kickoff or
-explicit closure.
-
-The web process reads and pages the committed terms. Sporting authority can
-remove a pregame offer before another generation. An explicit quote withdrawal
-or an invalidated reference, fee, or settlement input also constrains the
-affected comparison. Linked offers
-use the same schedule in the list, game page, and quote inspection. The
-pregame fee census counts the same published offers. Open pages use the
-next visible kickoff and the update cursor. Live views keep their separate
-freshness rules. The Novig public catalog verifies eligible SportsGameOdds
-links independently of direct Novig price collection, subject to source pause
-and Stop controls.
-
-Opportunities queues a bounded selected-unit calculation and reads a committed
-board. The worker caches valuations by amount, immutable member, and policy.
-It seals the board only after checking the root and epoch. An app-only process
-can service unit demand from committed inputs while the ordinary data owner is
-absent. These requests make zero provider calls. [Selected-unit wire contract](examples/pregame-board-1/README.md)
+Price, reference, fee cashflows, fair odds and Net EV become visible together in
+`current_pregame_calculation`. Diagnostic reasons are internal. Browser revision
+polls avoid full reads when unchanged, and scheduled kickoff refreshes remove
+rows without another collector update. Failed reads preserve the displayed board.
+[Calculation method](benchmark-ev.md) · [Fee policy](fee-coverage-policy.md)
 
 ## Independent ordinary raw reads
 

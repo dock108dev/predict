@@ -40,7 +40,6 @@ export function nextDeskDeadline(page, now, {live}) {
     }
     if (!live) {
       consider(Date.parse(row.start_at));
-      if (page.board_id) for (const offer of row.offers) consider(Date.parse(offer.calculation_current_until));
       continue;
     }
     consider(Date.parse(row.sportsbook_reference?.current_until));
@@ -60,7 +59,7 @@ export function expirePage(page, now, {ranked, live, netFilter}) {
   const rows = displayRows(page).flatMap(row => {
     const offers = row.offers.flatMap(offer => {
       if (offer.current === false || (!live && expired(row.start_at, now)) || (live && expired(offer.current_until, now))
-          || page.board_id && expired(offer.calculation_current_until, now)) {
+) {
         changed = true;
         return [];
       }

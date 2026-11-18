@@ -51,23 +51,18 @@ BROWSER_BEHAVIOR = (
 
 STORAGE_BEHAVIOR = (
     (
-        "Published pregame prices, references and fees agree across desk reads",
-        "Preserves a complete comparison during partial pages, retries and schedule corrections",
-        "tests.test_pregame_publication_sql.PregamePublicationSQL",
-        (
-            "test_aged_price_and_reference_publish_together_until_authoritative_start",
-            "test_novig_catalog_publishes_zero_fee_with_settlement_gap",
-            "test_quote_details_follow_linked_sources_corrected_start",
-        ),
+        "Current pregame prices and calculations commit together within one second",
+        "Reads never dispatch providers or schedule calculation work",
+        "tests.test_current_pregame_sql.CurrentPregameSQL",
+        ("test_atomic_current_values_under_one_second_and_read_only",),
     ),
     (
-        "Selected-unit board uses one committed calculation and recovers from a blocked read",
-        "Keeps pinned offer evidence, ordering and pagination coherent and allows retry after a database lock",
-        "tests.test_pregame_publication_sql.PregamePublicationSQL",
+        "Pregame retention, withdrawal, main lines and failure isolation",
+        "Retains omitted and older observations and removes kicked-off games without another receipt",
+        "tests.test_current_pregame_sql.CurrentPregameSQL",
         (
-            "test_saint_marys_published_unit_selection_and_replacement",
-            "test_selected_unit_order_eligibility_and_pagination",
-            "test_selected_unit_read_budget_recovers_from_blocked_postgres",
+            "test_partial_page_old_update_failure_and_kickoff",
+            "test_withdrawal_exact_main_line_and_failure_isolation",
         ),
     ),
     (

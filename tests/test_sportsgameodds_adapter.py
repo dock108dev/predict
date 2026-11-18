@@ -32,6 +32,22 @@ def test_exact_source_and_receipt_clocks_and_fair_line():
     assert q['fair'] == {'available': True, 'price_american': '+101', 'line': '-2', 'source_at': None}
 
 
+def test_sgo_polymarket_test_mapping_preserves_provider_identity():
+    from app.collection.sportsgameodds_current_rows import current_rows, source_bookmaker
+
+    data = response()
+    books = data['data'][0]['odds']['points-home-game-sp-home']['byBookmaker']
+    books['polymarket'] = books.pop('book')
+    page = parse(data)
+    rows, exclusions = current_rows(page, page.receipt_sha256)
+    assert not exclusions
+    row, = rows
+    assert row['quote']['venue'] == 'polymarket_us'
+    assert row['quote']['source']['provider'] == 'sportsgameodds'
+    assert source_bookmaker(row) == 'polymarket'
+    assert row['quote']['times']['source_at'] == '2026-11-10T19:59:00Z'
+
+
 @pytest.mark.parametrize(('away_name', 'away_id', 'home_name', 'home_id'), [
     ('Norfolk State', 'NCAAB:M:D1:NCAA485', 'Georgia State Panthers', 'NCAAB:M:D1:NCAA254'),
     ('Brown Bears', 'NCAAB:M:D1:NCAA80', 'Siena Saints', 'NCAAB:M:D1:NCAA639'),
@@ -256,11 +272,11 @@ def test_current_row_projection_is_exact_unverified_and_not_native():
         current_rows(page, 'a' * 64)
 
 
-def test_current_rows_reject_mismatches_and_unestablished_polymarket():
+def test_current_rows_reject_unknown_bookmakers():
     from app.collection.sportsgameodds_current_rows import current_rows
     data = response()
     odd = data['data'][0]['odds']['points-home-game-sp-home']
-    odd['byBookmaker'] = {'polymarket': odd['byBookmaker']['book']}
+    odd['byBookmaker'] = {'unknown-exchange': odd['byBookmaker']['book']}
     page = parse(data)
     rows, exclusions = current_rows(page, page.receipt_sha256)
     assert not rows and exclusions[0][2] == 'unsupported current-row venue'

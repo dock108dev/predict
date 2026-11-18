@@ -437,21 +437,7 @@
   .sportsbook-prices { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
-#preview-controls {
-  padding: 0.65rem 1.1rem;
-  border-bottom: 1px solid var(--border, #e2e5eb);
-}
 
-#preview-controls label, .preview-input {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-#preview-amount, #board-unit {
-  width: 7rem;
-  min-height: 2.25rem;
-}
 
 .trade-preview-price {
   display: flex;

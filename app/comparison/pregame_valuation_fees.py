@@ -9,7 +9,7 @@ from .cashflows import exact_wire as wire
 from .current_dependencies import instant
 from .snapshot_fee_scope import ROOT, kalshi_fee_context
 from .snapshot_pair_fees import _leg_fee
-from .snapshot_polymarket_fee import CUTOVER, STANDARD_TIERS, order_fee
+from .snapshot_polymarket_fee import CUTOVER, STANDARD_TIERS, order_fee, quantity_grid
 from .snapshot_conservative import prophetx_public_fee
 
 
@@ -32,6 +32,9 @@ def retail_order(row, terms, cost, fee):
     if not fee.get('available'):
         raise ValueError('unit_fee_schedule_unverified')
     evidence = fee.get('evidence') or {}
+    if evidence.get('database_fee_rule'):
+        from app.fees.pricing import order
+        return order(row, evidence['database_fee_rule'], cost, terms)
     venue = row['venue']
     provider = (row.get('source') or {}).get('provider')
     estimated = terms.get('evidence_class') == 'public_estimate'
@@ -75,17 +78,18 @@ def retail_order(row, terms, cost, fee):
                 raise ValueError('unit_fill_depth_conflict')
         elif not estimated:
             raise ValueError('unit_fill_depth_conflict')
+        grid=quantity_grid(row)
         tiers = STANDARD_TIERS if instant(when) >= instant(CUTOVER) else (STANDARD_TIERS[0],)
         def evaluated(levels, stake):
             return _same_entry([order_fee(evidence['market_id'], inserted_at=when,
-                evaluated_at=when, fills=_fills(levels), tier=tier) for tier in tiers], 'entry_fees',
+                evaluated_at=when, fills=_fills(levels), tier=tier,grid=grid) for tier in tiers], 'entry_fees',
                 conservative=estimated)
         # Cost upper bounds suffice to find the legal fill. If fees differ
         # across public tiers there, report the missing tier instead.
         if len(tiers) > 1 and not estimated:
             def bounded(levels, stake):
                 return _same_entry([order_fee(evidence['market_id'], inserted_at=when, evaluated_at=when,
-                    fills=_fills(levels), tier=tiers[0])], 'entry_fees')
+                    fills=_fills(levels), tier=tiers[0],grid=grid)], 'entry_fees')
             evaluated.sizing_bound = bounded
         return evaluated, dict(evidence, public_tiers_considered=list(tiers)), None
     if venue == provider == 'kalshi' and evidence.get('path'):
@@ -96,11 +100,13 @@ def retail_order(row, terms, cost, fee):
         if evidence.get('metadata_revision') != verified['metadata_revision']:
             raise ValueError('unit_fee_schedule_unverified')
         registry = Registry(registry)
+        account=evidence.get('account_profile')
+        precisions=(account['balance_precision'],) if account else ('0.0001','0.01')
         def audits(levels):
             fills = [dict(fill, order_id='modeled-order', fill_id=str(i), role='taker', unit='contracts')
                      for i, fill in enumerate(_fills(levels))]
             return [calculate(dict(context, balance_precision=precision, fills=fills,
-                applicability_evidence=row['fee_applicability']), registry) for precision in ('0.0001', '0.01')]
+                applicability_evidence=row['fee_applicability']), registry) for precision in precisions]
         def evaluated(levels, stake):
             return _same_entry(audits(levels), 'entry_cash_requirement', stake, conservative=estimated)
         def bounded(levels, stake):
@@ -109,7 +115,7 @@ def retail_order(row, terms, cost, fee):
                 raise ValueError('unit_fee_schedule_unverified')
             return max(F(audit['entry_cash_requirement']) for audit in receipts) - stake, F(0), {}, receipts[0]['trace']
         evaluated.sizing_bound = bounded
-        return evaluated, dict(evidence, balance_precisions_considered=['0.0001', '0.01']), None
+        return evaluated, dict(evidence, balance_precisions_considered=list(precisions)), None
     if venue == 'prophetx' and row['league'] == 'NHL' and evidence.get('nhl_taker_coefficient'):
         def evaluated(levels, stake):
             model = prophetx_public_fee(row, at=row['captured_at'], review=evidence,

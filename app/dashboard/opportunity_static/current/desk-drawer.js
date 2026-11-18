@@ -1,8 +1,7 @@
-import {boardComparison, markPinned, tradeInspection, pairInspection, tradePreview} from './desk-inspection.js';
+import {boardComparison, markPinned, tradeInspection, pairInspection} from './desk-inspection.js';
 import {quoteFreshness, selectedReference} from './desk-quote-display.js';
 import {pinLatestSelection, selectionCurrent, selectionIdentity} from './desk-evidence.js';
 import {evidenceReason} from './desk-reasons.js';
-import {sameBoardUnit} from './desk-ticketboard.js';
 
 const {el, name, num} = window.PredictUI;
 
@@ -34,46 +33,17 @@ function sameOffer(previous, next) {
 }
 
 // Keep a selected capture, its dialog history, and its evidence lease together.
-export function createDeskDrawer({replay, browse, dataset, retainedResult, gameKey, pageSize, captureMode,
-  clock, viewContext, fetchPage, matrixPositions, restoreMatrices, restoreFocus, refreshDesk, unitSize}) {
+export function createDeskDrawer({replay, dataset, retainedResult, gameKey, pageSize, captureMode,
+  clock, viewContext, fetchPage, matrixPositions, restoreMatrices, restoreFocus, refreshDesk}) {
   const $ = id => document.getElementById(id);
   const dialog = $('trade');
   const filters = $('filters');
-  const previewControls = $('preview-controls');
-  if (replay || location.pathname === '/arbs') previewControls.remove();
-  const amount = $('preview-amount');
-  const previewRefresh = $('refresh-preview');
-  const refreshComparison = $('refresh-comparison');
   let currentSelection = null;
 
   function tradeDetails() {
-    const {offer, group, game, evidence, pairContext, posted, boardId, size, comparison, closed, loading} = currentSelection;
-    dialog.classList.toggle('posted-inspection', !!posted);
-    previewControls.hidden = true;
-    previewRefresh.hidden = !posted || !!boardId || viewContext().autoUpdate;
-    refreshComparison.hidden = !boardId || !currentSelection.refreshAvailable;
+    const {offer, group, game, evidence, pairContext} = currentSelection;
     const label = position(offer, game);
-    $('trade-title').textContent = boardId ? label : `${name(offer.venue)} · ${label}`;
-    if (posted) {
-      const body = $('trade-body');
-      const expanded = [...body.querySelectorAll('details')].map(details => details.open);
-      const active = body.contains(document.activeElement) && document.activeElement;
-      const activeTag = active?.tagName;
-      const detailsIndex = [...body.querySelectorAll('summary')].indexOf(active);
-      const top = dialog.scrollTop;
-      body.replaceChildren(boardId
-        ? boardComparison(offer, group, game, comparison, {clock, size, loading})
-        : tradePreview(offer, group, evidence, {clock, closed, loading}));
-      [...body.querySelectorAll('details')].forEach((details, index) => { details.open = !!expanded[index]; });
-      if (activeTag === 'SUMMARY') body.querySelectorAll('summary')[detailsIndex]?.focus({preventScroll:true});
-      if (activeTag === 'A') [...body.querySelectorAll('a')].find(link => link.href === active.href)
-        ?.focus({preventScroll:true});
-      dialog.scrollTop = top;
-      $('latest').hidden = true;
-      $('back-to-pair').hidden = true;
-      amount.disabled = closed;
-      return;
-    }
+    $('trade-title').textContent = `${name(offer.venue)} · ${label}`;
     if (offer.practice_ticket) {
       const model = evidence?.valuation;
       $('trade-title').textContent = label;
@@ -120,12 +90,6 @@ export function createDeskDrawer({replay, browse, dataset, retainedResult, gameK
       basis:page?.basis || filters.elements.basis.value,
       checkedAt:previous ? Date.parse(page?.publication?.read_at) || Date.now() : Date.now(),
       pinned:previous, publication:pairContext?.publication ?? page?.publication, capturedAt:page?.replay?.captured_at};
-    if ((browse || offer.board_id) && offer.posted_price && !replay && !pairContext) {
-      amount.readOnly = true;
-      const size = offer.board_id ? Number(offer.unit_usd).toFixed(2) : unitSize() || null;
-      Object.assign(currentSelection, {posted:true, loading:true, closed:false, size, boardId:offer.board_id});
-      amount.value = size ?? '';
-    }
     if (parent) {
       currentSelection.parent = parent;
       if (inspection) pushInspection(2);
@@ -136,14 +100,6 @@ export function createDeskDrawer({replay, browse, dataset, retainedResult, gameK
     else dialog.querySelector('form button').focus();
     dialog.scrollTop=0;
     const selected=currentSelection;
-    if (selected.boardId) {
-      await readBoardSelection(selected);
-      return;
-    }
-    if (selected.posted) {
-      await readPostedSelection(selected);
-      return;
-    }
     try {
       const pinned=await pinEvidence(offer, selected.basis);
       if(currentSelection!==selected||!dialog.open){releaseEvidence(pinned.lease);return;}
@@ -231,8 +187,6 @@ export function createDeskDrawer({replay, browse, dataset, retainedResult, gameK
   function renderPair(context) {
     const {pair, offers, group, game} = context;
     currentSelection = context;
-    dialog.classList.remove('posted-inspection');
-    refreshComparison.hidden = true;
     $('trade-title').textContent = 'Pair payoff';
     $('trade-note').textContent = context.authorityNote || '';
     $('latest').hidden = replay;
@@ -240,8 +194,6 @@ export function createDeskDrawer({replay, browse, dataset, retainedResult, gameK
     const mode = [captureMode, context.authorityNote && 'Earlier published calculation',
       context.capturedAt && `Captured ${clock(context.capturedAt)}`].filter(Boolean).join(' · ');
     const body = $('trade-body');
-    previewControls.hidden = true;
-    previewRefresh.hidden = true;
     body.replaceChildren(pairInspection(pair, offers, {group, game, position, mode,
       inspect: (offer, opener) => openTrade(offer, group, game, context, opener)}));
     if (!pair.inspection && !replay && pair.evidence_result_id
@@ -491,10 +443,6 @@ export function createDeskDrawer({replay, browse, dataset, retainedResult, gameK
       if (closed || expired) setPairAuthorityNote(pair, closed ? 'Scheduled start passed. The pregame pair is closed.'
         : 'The published price or fee authority expired.');
     }
-    if (selected?.posted) {
-      if (!selected.ended && Date.parse(selected.group.start_at) <= Date.now()) closePosted(selected, 'Pregame closed', true);
-      return;
-    }
     if (!replay && dialog.open && selected?.offer && !selected.historical && !selectionCurrent(selected.offer)) {
       pinSelectionStatus(selected);
     }
@@ -513,178 +461,6 @@ export function createDeskDrawer({replay, browse, dataset, retainedResult, gameK
       } else if (!note) mode?.remove();
     }
   }
-
-  function closePosted(selected, message, ended = false) {
-    if (selected.closed && selected.ended === ended && $('trade-note').textContent === message) return;
-    selected.request = (selected.request || 0) + 1;
-    selected.closed = true;
-    selected.ended = ended;
-    selected.loading = false;
-    selected.offer = {...selected.offer, valuation:null, sportsbook:null};
-    selected.comparison = null;
-    selected.refreshAvailable = !ended;
-    $('trade-note').textContent = message;
-    tradeDetails();
-  }
-
-  async function readBoardSelection(selected, refresh = false) {
-    const request = selected.request = (selected.request || 0) + 1;
-    const active = () => dialog.open && currentSelection === selected && selected.request === request && !selected.ended;
-    const finish = message => {
-      selected.loading = false;
-      $('trade-note').textContent = message;
-      tradeDetails();
-    };
-    try {
-      const query = latestQuoteQuery(selected);
-      query.set('unit_usd', selected.size);
-      let boardId = selected.boardId;
-      if (refresh) {
-        const page = await fetchPage(new URLSearchParams({
-          layout:'desk', phase:'pregame', ranked:'1', summary:'1', unit_usd:selected.size, limit:'1', refresh:'1'
-        }));
-        if (!active()) return;
-        if (page.state === 'read_failed' || !sameBoardUnit(page.selected_usd, selected.size)) throw Error('Board unavailable');
-        if (page.state === 'valuation_pending' || page.replacement_pending) {
-          finish('The current calculation is still updating. Try refreshing again.');
-          return;
-        }
-        if (page.state !== 'ready' || !page.board_id) throw Error('Board unavailable');
-        boardId = page.board_id;
-        selected.boardChanged ||= selected.boardId !== boardId;
-        query.set('refresh', '1');
-      } else {
-        query.set('expected_member', selected.offer.evidence_result_id);
-      }
-      query.set('board_id', boardId);
-      const response = await fetch(`/api/comparison-current/selection?${query}`);
-      if (!response.ok) throw Error('Selection unavailable');
-      const packet = await response.json();
-      if (!active()) return;
-      if (!packet.row) {
-        const ended = packet.reason === 'pregame_closed' || Date.parse(selected.group.start_at) <= Date.now();
-        const changed = packet.reason === 'unit_publication_changed';
-        closePosted(selected, ended ? 'Pregame closed.' : changed
-          ? refresh ? 'This exact offer has no current ranked calculation at this unit.' : 'This offer or its calculation changed. Refresh to check the current offer.'
-          : evidenceReason(packet.reason, 'This offer is no longer available for comparison.'), ended);
-        return;
-      }
-      const {row, result_id, comparison} = packet;
-      const model = row.valuation;
-      if (packet.board_id !== boardId || row.board_id !== boardId || !sameOffer(selected.offer, row) ||
-          !sameBoardUnit(row.unit_usd, selected.size) || !model || model.bet_id !== selected.group.id ||
-          model.offer_id !== row.id || model.member_result_id !== row.evidence_result_id || model.publication_id !== result_id ||
-          model.price_revision !== row.price_revision || model.economic_revision !== row.economic_revision ||
-          (!refresh && (row.id !== selected.offer.id || row.evidence_result_id !== selected.offer.evidence_result_id ||
-            row.price_revision !== selected.offer.price_revision || row.economic_revision !== selected.offer.economic_revision)) ||
-          !sameBoardUnit(model.selected_usd, selected.size) || !Array.isArray(comparison) ||
-          !comparison.some(quote => quote.offer_id === row.id && quote.member_result_id === row.evidence_result_id) ||
-          comparison.some(quote => quote.publication_id !== result_id || !sameBoardUnit(quote.selected_usd, selected.size))) {
-        throw Error('Comparison inputs changed');
-      }
-      const displayChanged = JSON.stringify([selected.offer.valuation, selected.comparison]) !== JSON.stringify([model, comparison]);
-      Object.assign(selected, {offer:row, boardId, comparison, closed:false, refreshAvailable:false});
-      if (row.start_at) selected.group = {...selected.group, start_at:row.start_at};
-      if (refresh && document.activeElement === refreshComparison) dialog.querySelector('form button').focus();
-      if (selected.loading || displayChanged || refresh) finish(refresh ? 'Current calculation loaded.' : '');
-      else $('trade-note').textContent = '';
-    } catch {
-      if (!active()) return;
-      selected.refreshAvailable = true;
-      finish(selected.offer.valuation ? 'Could not verify current prices. Showing the inspected calculation.'
-        : 'The comparison could not be loaded. Refresh to retry.');
-    }
-  }
-
-  refreshComparison.onclick = async () => {
-    const selected = currentSelection;
-    if (!selected?.boardId) return;
-    refreshComparison.disabled = true;
-    $('trade-note').textContent = 'Checking the current calculation…';
-    try { await readBoardSelection(selected, true); }
-    finally { refreshComparison.disabled = false; }
-  };
-
-  async function readPostedSelection(selected, {adopt = false} = {}) {
-    const revision = selected.request = (selected.request || 0) + 1;
-    const size = selected.size;
-    const active = () => dialog.open && selected === currentSelection && selected.request === revision
-      && selected.size === size && !selected.ended;
-    const query = latestQuoteQuery(selected);
-    if (size !== null) query.set('unit_usd', size);
-    if (!adopt && selected.offer.evidence_result_id) query.set('expected_member', selected.offer.evidence_result_id);
-    try {
-      const response = await fetch(`/api/comparison-current/selection?${query}`);
-      if (!response.ok) throw Error('Selection unavailable');
-      const {row, evidence, reason, withdrawn_from_phase, result_id, comparison} = await response.json();
-      if (!active()) return;
-      const canAdopt = adopt === 'refresh' || adopt && viewContext().autoUpdate;
-      if (withdrawn_from_phase || canAdopt && reason !== 'unit_publication_changed'
-          && (!row?.posted_price || !sameOffer(selected.offer, row))) {
-        const ended = Date.parse(selected.group.start_at) <= Date.now();
-        closePosted(selected, ended ? 'Pregame closed'
-          : evidenceReason(reason, 'This posted quote was withdrawn.'), ended);
-        return;
-      }
-      selected.loading = false;
-      const model = row?.valuation;
-      if (model && (model.offer_id !== row.id || model.member_result_id !== row.evidence_result_id
-          || model.publication_id !== result_id || model.price_revision !== row.price_revision
-          || model.economic_revision !== row.economic_revision
-          || (size === null ? model.selected_usd !== null : num(model.selected_usd) !== Number(size)))) {
-        throw Error('Valuation inputs changed');
-      }
-      if (row?.posted_price && sameOffer(selected.offer, row)
-          && (canAdopt || row.price_revision === selected.offer.price_revision
-            && row.economic_revision === selected.offer.economic_revision
-            && row.evidence_result_id === selected.offer.evidence_result_id)) {
-        const before = selected.offer;
-        const scheduleChanged = row.start_at && Date.parse(row.start_at) !== Date.parse(selected.group.start_at);
-        if (scheduleChanged) selected.group = {...selected.group, start_at:row.start_at};
-        selected.closed = false;
-        selected.ended = false;
-        selected.offer = {...row, odds:row.odds && (row.odds.decimal === before.odds?.decimal ? before.odds : row.odds)};
-        selected.evidence = evidence;
-        selected.boardId = row.board_id || selected.boardId;
-        selected.comparison = comparison;
-        $('trade-note').textContent = '';
-        if (scheduleChanged || before.price_revision !== row.price_revision || before.economic_revision !== row.economic_revision
-            || JSON.stringify(before.valuation) !== JSON.stringify(row.valuation) || !before.valuation) tradeDetails();
-        return;
-      }
-      $('trade-note').textContent = 'A newer quote or calculation is available. Refresh to use it.';
-      tradeDetails();
-    } catch {
-      if (!active()) return;
-      selected.loading = false;
-      $('trade-note').textContent = 'Could not update this preview. The posted price is still shown.';
-      tradeDetails();
-    }
-  }
-
-  amount?.addEventListener('input', () => {
-    if (!currentSelection?.posted) return;
-    currentSelection.request = (currentSelection.request || 0) + 1;
-    currentSelection.editingSize = true;
-    currentSelection.loading = false;
-    if (currentSelection.offer.valuation) {
-      currentSelection.offer = {...currentSelection.offer, valuation:null};
-      tradeDetails();
-    }
-  });
-  function commitSize() {
-    if (!currentSelection?.posted || !currentSelection.editingSize || !amount.reportValidity()) return;
-    currentSelection.editingSize = false;
-    currentSelection.size = amount.value ? Number(amount.value).toFixed(2) : null;
-    currentSelection.loading = true;
-    currentSelection.offer = {...currentSelection.offer, valuation:null};
-    tradeDetails();
-    readPostedSelection(currentSelection);
-  }
-  amount?.addEventListener('change', commitSize);
-  amount?.addEventListener('blur', commitSize);
-  amount?.addEventListener('keydown', event => { if (event.key === 'Enter') commitSize(); });
-  previewRefresh.onclick = refreshDesk;
 
   $('latest').onclick = async () => {
     const latest = $('latest');
@@ -768,8 +544,7 @@ export function createDeskDrawer({replay, browse, dataset, retainedResult, gameK
       : [...$('results').querySelectorAll(old?.opener?.dataset.calculationId ? '[data-calculation-id]' : '[data-offer-id]')]
         .find(item => (item.dataset.calculationId ?? item.dataset.offerId) === old?.offer?.id
           || old?.offer?.desk_quote_key && item.dataset.deskQuoteKey === old.offer.desk_quote_key);
-    const fallback = old?.boardId ? $('board-unit')
-      : $('refresh-list').getAttribute('aria-disabled') === 'true' ? filters.elements.search : $('refresh-list');
+    const fallback = $('refresh-list').getAttribute('aria-disabled') === 'true' ? filters.elements.search : $('refresh-list');
     const previousOpener = old?.pairContext?.opener || old?.opener;
     const opener = previousOpener?.isConnected ? previousOpener : current;
     const focused = document.activeElement;
@@ -782,26 +557,12 @@ export function createDeskDrawer({replay, browse, dataset, retainedResult, gameK
       window.scrollTo(0, position.scrollY);
       window.history.scrollRestoration = position.scrollRestoration;
     }
-    if (old.boardChanged) refreshDesk();
   }
   // A native close event follows later. Clean up external closes without moving
   // focus after the user has already reached another control.
   dialog.addEventListener('close', () => finishInspection());
   async function checkSelection(refresh = false) {
     const selected = currentSelection;
-    if (selected?.boardId) {
-      expireInspection();
-      if (dialog.open && !selected.ended && !selected.loading && !refreshComparison.disabled) {
-        return readBoardSelection(selected);
-      }
-      return;
-    }
-    if (selected?.posted) {
-      previewRefresh.hidden = viewContext().autoUpdate;
-      expireInspection();
-      if (!dialog.open || selected.ended || selected.editingSize || !refresh && !viewContext().autoUpdate) return;
-      return readPostedSelection(selected, {adopt:refresh ? 'refresh' : true});
-    }
     if (replay || !dialog.open || !selected || selected.historical || selected.adoptionNotice || $('latest').disabled) return;
     expireInspection();
     try {

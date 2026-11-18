@@ -1,16 +1,22 @@
 # Predict
 
-Predict is a read-only prediction-market comparison app for macOS. The desk
-opens on **Pregame Opportunities**. Choose a unit size to rank qualified
-main-line offers by Opportunity Score. **Compare prices** shows the posted
-quote and how the published Net EV was calculated. In-game collection and
-display require `live_enabled`, which defaults to `false`.
+Predict is a read-only odds and opportunity dashboard. It opens directly on
+**Pregame Opportunities**, showing complete main-line bets ranked by Opportunity
+Score after fees. **Browse odds** includes complete comparisons with nonpositive
+EV and optional alternate lines. Open a game or choose **Compare prices** to
+inspect the same committed price, reference, fees, and Net EV.
 
-Use **Browse odds** to compare full-game winners, spreads, and totals or find an
-alternate line. **Arbitrage** shows modeled opposing positions. **Saved odds**
-opens recorded captures. **Try a practice example** opens simulated odds and
-calculations without a provider connection or saved capture.
-[Desk and inspection guide](docs/ui-design.md#current-comparison-interface)
+The collector receives odds, normalizes affected games, calculates using posted
+prices, and stores complete current rows in PostgreSQL. Refresh and inspection
+only read SQL. Pregame observations have no age expiry: authoritative kickoff,
+non-pregame status, and explicit withdrawal govern removal. Odds may be delayed.
+
+[Desk guide](docs/ui-design.md#current-comparison-interface) ·
+[Current data flow and API](docs/current-pregame.md) ·
+[Calculation policy](docs/benchmark-ev.md)
+
+**Arbitrage**, saved captures, and simulated practice remain separate research
+views. Account connections and execution modeling remain backlog work.
 
 ## Requirements and quickstart
 
@@ -31,7 +37,7 @@ scripts/project-postgres start
 
 Open the loopback address printed by the launcher. If port 8784 is free,
 use [Predict on port 8784](http://127.0.0.1:8784/). The desk needs committed
-prices to show current offers. Choose **Try a practice example** to explore the desk.
+prices to show current offers. Choose **Practice** to explore simulated calculations.
 `cp -n` preserves an existing config, and `check-config` prints its acquisition scope.
 
 ## Collect prices

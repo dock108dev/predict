@@ -34,16 +34,33 @@ def _registry(tier):
     ]))
 
 
-def order_fee(market_id, *, inserted_at, evaluated_at, fills, tier=STANDARD_TIERS[0]):
-    """Price chronological taker fills of a single standard order, with zero rebates."""
-    return calculate(dict(
+def quantity_grid(row):
+    """Use the selected public instrument's evidenced minimum and price grid."""
+    retail=(row.get('fee_applicability') or {}).get('retail') or {}
+    values=retail.get('values') or {}
+    digest=retail.get('material_sha256')
+    if not digest:
+        return None
+    if (retail.get('market_id')!=row['source']['native_market_id'] or
+            retail.get('instrument_id')!=row['source']['native_outcome_id']):
+        raise ValueError('polymarket_selected_order_grid_unbound')
+    return dict(market_id=retail['market_id'],authority='public_orders_minimumTradeQty_alignment',
+        response_sha256=digest,minimum_contracts=values['minimumTradeQty'],
+        increment_contracts=values['minimumTradeQty'],price_tick_usd=values['orderPriceMinTickSize'])
+
+
+def order_fee(market_id, *, inserted_at, evaluated_at, fills, tier=STANDARD_TIERS[0], grid=None):
+    """Price chronological taker fills of one order on its documented quantity grid."""
+    context=dict(
         venue='polymarket_us', environment='production', market_id=market_id,
         product='standard_contract', order_inserted_at=inserted_at,
         trade_time=evaluated_at, calculation_time=evaluated_at,
         applicability_evidence={'profile': PROFILE}, complete_order_history=True,
         fills=[dict(fill, fill_id=str(i), order_id='modeled-order', role='taker', unit='contracts')
-               for i, fill in enumerate(fills)],
-    ), _registry(tier))
+               for i, fill in enumerate(fills)])
+    if grid is not None:
+        context.update(public_binding_version='comparison-public-retail-1',public_retail_quantity=grid)
+    return calculate(context,_registry(tier))
 
 
 def public_fee(row, *, at, phase, review, quantity='1'):
@@ -102,7 +119,7 @@ def public_fee(row, *, at, phase, review, quantity='1'):
             raise ValueError('fee_quote_receipt_future')
         when = modeled_at.isoformat()
         audit = order_fee(market_id, inserted_at=when, evaluated_at=when,
-                          fills=[dict(price=original['value'], quantity=wire(size))])
+                          fills=[dict(price=original['value'], quantity=wire(size))],grid=quantity_grid(row))
         if audit['entry_fees'] is None:
             raise ValueError('; '.join(audit['unsupported']))
         schedule = audit['schedule']

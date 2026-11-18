@@ -6,7 +6,7 @@ import {displayRows, expirePage, holdDeskPage, nextDeskDeadline} from './desk-st
 import {evidenceReason} from './desk-reasons.js';
 import {DiagnosticSession} from './session-history.js';
 import {clock as savedClock, readPreference, savePreference, timezone} from './desk-preferences.js';
-import {createUnitPicker, sameBoardUnit, ticketboardEmpty, ticketCard} from './desk-ticketboard.js';
+import {ticketCard} from './desk-ticketboard.js';
 
 const {el, fmt, name, odd, link, button} = window.PredictUI;
 const $ = id => document.getElementById(id);
@@ -24,12 +24,11 @@ const afterFeeView = opportunityView && !arb;
 const comparable = !replay && !arb;
 let phase = !replay && (route.get('phase') === 'live' ? 'live' : 'pregame');
 let liveEnabled = false;
-const unitBoard = () => afterFeeView && phase === 'pregame' && route.get('board') !== '0';
 const autoUpdateKey = 'pregame-auto-update';
 const autoUpdateToggle = $('auto-update');
 let autoUpdate = readPreference(autoUpdateKey, 'on') !== 'off';
 autoUpdateToggle.checked = autoUpdate;
-const supportsAutoUpdate = (page = state.page) => !replay && !unitBoard() && phase === 'pregame' && page?.features?.auto_update === true;
+const supportsAutoUpdate = (page = state.page) => !replay && phase === 'pregame' && page?.features?.auto_update === true;
 const receivingUpdates = () => !supportsAutoUpdate() || autoUpdate;
 const phaseURL = (path, value = phase) => path + (value === 'live' ? '?phase=live' : '');
 const back = window.PredictUI.localURL(route.get('back'));
@@ -60,7 +59,6 @@ const defaultZone = timezone();
 const selectedZone = () => filters.elements.timezone.value || defaultZone;
 const clock = at => savedClock(at, selectedZone());
 const state = {offset: 0, page: null, request: null};
-const unitPicker = createUnitPicker({readPreference, savePreference, changed:changeBoardUnit});
 const history = new DiagnosticSession();
 function collectionIssue(runtime) {
   if (runtime?.stopped) return 'Price updates are stopped';
@@ -118,11 +116,7 @@ function updatePhaseView() {
     $('opportunity-arb').href = phaseURL('/arbs');
   }
   $('period-field').hidden = phase === 'pregame';
-  const ticketboard = unitBoard();
-  document.body.classList.toggle('ticketboard', ticketboard);
-  $('board-unit-field').hidden = true;
-  $('fixed-budget').hidden = !ticketboard;
-  $('opportunity-tabs').hidden = !opportunityView || ticketboard;
+  $('opportunity-tabs').hidden = !opportunityView;
   if (browse) {
     if (safeBack && $('desk-path').firstElementChild) $('desk-path').firstElementChild.href = safeBack;
     $('browse-link').href = gameKey ? phaseURL('/browse-odds') : phaseURL('/');
@@ -132,7 +126,7 @@ updatePhaseView();
 $('game-state-field').hidden = !!phase;
 if (replay) $('period-field').hidden = false;
 $(arb ? 'opportunity-arb' : 'opportunity-ev').setAttribute('aria-current', 'page');
-$('positive-field').hidden = browse || unitBoard();
+$('positive-field').hidden = browse;
 $('return-filters').hidden = browse;
 $('sort-field').hidden = !replay;
 if (replay) $('return-title').textContent = 'Sorting and return thresholds';
@@ -313,15 +307,6 @@ function selections() {
     }
   } else if (opportunityView) {
     if (!arb) query.ranked = '1';
-    if (unitBoard()) {
-      query.board = '1';
-      if (unitPicker.value()) query.unit_usd = unitPicker.value();
-      Object.assign(query, {league:'NBA,NFL,MLB,NHL,NCAAB,NCAAF', family:'winner,spread,total',
-        venue:'kalshi,polymarket_us,novig,prophetx'});
-      for (const key of ['search','day','time_from','time_to','minimum','positive']) delete query[key];
-    } else if (!arb && route.get('board') === '0') {
-      query.board = '0';
-    }
     delete query.sort;
   }
   if (phase) {
@@ -329,15 +314,15 @@ function selections() {
     delete query.game_state;
     if (phase === 'pregame') delete query.period;
   }
-  if (comparable) query.lines = !unitBoard() && $('alternates').checked ? 'all' : 'main';
+  if (comparable) query.lines = $('alternates').checked ? 'all' : 'main';
   query.timezone = selectedZone();
   return query;
 }
 
 const drawer = createDeskDrawer({
-  replay, browse, dataset, retainedResult, gameKey, pageSize, captureMode:replayMode(), clock,
+  replay, dataset, retainedResult, gameKey, pageSize, captureMode:replayMode(), clock,
   viewContext: () => ({phase, page:state.page, previousReason:state.previousReason, autoUpdate}),
-  fetchPage, matrixPositions, restoreMatrices, restoreFocus, refreshDesk, unitSize:unitPicker.value
+  fetchPage, matrixPositions, restoreMatrices, restoreFocus, refreshDesk,
 });
 
 const deskLinks = new WeakMap();
@@ -450,7 +435,7 @@ function rememberView(group, action) {
   const target = new URL(action.href);
   const returnRoute = window.PredictUI.localURL(target.searchParams.get('back'));
   const navigation = {offset:state.offset, groupId:group?.id, gameKey:group?.game_key,
-    browseId:state.page?.browse_id, boardCursor:state.page?.board_cursor, openerHref:action.href, sourceEvent:target.searchParams.get('source_event'),
+    browseId:state.page?.browse_id, openerHref:action.href, sourceEvent:target.searchParams.get('source_event'),
     entryKey:window.navigation?.currentEntry?.key,
     openerTop:action.getBoundingClientRect().top, scrollY:window.scrollY,
     filters:browsePreferences(), oddsFormat:window.PredictUI.oddsFormat(),
@@ -508,7 +493,7 @@ function cardContext(games, gameTitle = null) {
     } : null,
     explainQuoteGap,
     inspectOffer:(offer, group, opener) => {
-      if (offer.board_id || offer.practice_ticket) {
+      if (offer.practice_ticket) {
         return drawer.openTrade(offer, group, games.get(group.game_key), null, opener);
       }
       const shown = displayRows(state.page).find(row => row.id === group.id && row.game_key === group.game_key) || group;
@@ -528,7 +513,7 @@ function cardContext(games, gameTitle = null) {
 const pageBasis = () => state.page?.basis || filters.elements.basis.value;
 
 function refreshStatus() {
-  const invalidWindow = !unitBoard() && !filters.elements.time_to.validity.valid;
+  const invalidWindow = !filters.elements.time_to.validity.valid;
   const mode = invalidWindow ? 'Correct the time window to refresh.'
     : replay ? (state.request ? 'Loading replay…' : 'Replay clock is fixed.')
     : state.request ? 'Checking for updates…'
@@ -676,7 +661,7 @@ function rankedGroup(key, marketRows, games, disclosures) {
 }
 
 function render(page, keepNodes = false) {
-  $('positive-field').hidden = browse || page.schema === 'predict-pregame-board-1';
+  $('positive-field').hidden = browse;
   const results = $('results');
   const focus = keepNodes && captureResultsFocus(results);
   const content = document.createDocumentFragment();
@@ -684,7 +669,6 @@ function render(page, keepNodes = false) {
   const tableScrolls = matrixPositions();
   const games = new Map((page.games || []).map(game => [game.game_key, game]));
   const rows = displayRows(page);
-  const board = unitBoard() && page.schema === 'predict-pregame-board-1';
   const total = page.total || 0;
   const selectedLine = page.selected_line_id || requestedLine;
   if (gameKey) {
@@ -721,9 +705,7 @@ function render(page, keepNodes = false) {
   if (opportunityView) $('browse-link').classList.toggle('desk-primary', !awaitingPrices);
   const notice = [];
   if (replay && page.replay?.captured_at) notice.push(`Captured ${clock(page.replay.captured_at)}.`);
-  if (board) {
-    notice.push('Odds may be delayed.');
-  } else if (!replay) {
+  if (!replay) {
     if (!emptyIssue) {
       notice.push('Odds may be delayed.');
       if (issue) notice.push(`${issue}.`);
@@ -749,21 +731,7 @@ function render(page, keepNodes = false) {
   if (focusSelectedLine && page.state === 'ready' && !pinnedAvailable) {
     content.append(el('p', `${linkedLine || 'The selected line'} is unavailable for this matchup in the selected view.`, 'desk-note selected-line-unavailable'));
   }
-  $('ticketboard-order').hidden = !board || !rows.length;
-  if (board) {
-    let announcement;
-    if (rows.length) {
-      announcement = `${total} ${total === 1 ? 'opportunity' : 'opportunities'} ranked by Opportunity Score.`;
-      for (const group of rows) content.append(ticketCard(group, cardContext(games)));
-    } else {
-      const visibleState = page.state === 'ready' && total ? {...page, state:'valuation_pending'} : page;
-      const empty = ticketboardEmpty(visibleState, {amount:unitPicker.value(), retry:refreshDesk,
-        browseLink:browsingLink('Browse Odds', null, 'desk-action')});
-      announcement = empty.firstElementChild.textContent;
-      content.append(empty);
-    }
-    $('ticketboard-status').textContent = announcement;
-  } else if (practice && page.practice_ticket && rows.length) {
+  if (practice && page.practice_ticket && rows.length) {
     for (const group of rows) content.append(ticketCard(group, cardContext(games)));
   } else if (browse && rows.length) {
     const groups = groupRows(rows, row => row.game_key);
@@ -815,7 +783,6 @@ function render(page, keepNodes = false) {
     const area = [...results.querySelectorAll(focus.selector)].find(focus.matchesArea);
     const replacement = area && focus.controls(area)[focus.index];
     if (replacement) restoreFocus(replacement);
-    else if (board) restoreFocus($('board-unit'));
   }
   updateMatrixCues(results);
   scheduleResultExpiry();
@@ -826,7 +793,7 @@ function render(page, keepNodes = false) {
   $('next').disabled = state.offset + shown >= total;
   const singlePage = $('previous').disabled && $('next').disabled;
   $('previous').hidden = $('next').hidden = singlePage;
-  $('previous').parentElement.hidden = !!gameKey || !total || board && (singlePage || !rows.length);
+  $('previous').parentElement.hidden = !!gameKey || !total || singlePage;
   if (revealMarket && page.state !== 'initializing') {
     const first = results.querySelector('.odds-matrix tbody tr, .matrix-empty, .desk-empty');
     const bottom = first?.getBoundingClientRect().bottom;
@@ -901,10 +868,6 @@ async function fetchPage(query, signal) {
   }
   const response = await fetch(url, {signal});
   if (!response.ok) {
-    if (response.status === 503 && query.get('ranked') === '1' && query.get('board') !== '0') {
-      const result = await response.json();
-      if (result.schema === 'predict-pregame-board-1' && result.state === 'read_failed') return result;
-    }
     throw Error('Unavailable');
   }
   return response.json();
@@ -980,13 +943,6 @@ function expireResultValues() {
   const current = expirePage(state.page, Date.now(), expiryOptions());
   if (current === state.page) return;
   const anchor = scrollY ? visibleAnchor() : null;
-  if (unitBoard() && !displayRows(current).length && state.loadFailed) {
-    state.page = null;
-    previousResults();
-    render(boardPlaceholder('read_failed'));
-    restoreAnchor(anchor);
-    return;
-  }
   state.page = current;
   state.renderSignature = resultSignature(current);
   render(current, true);
@@ -1056,16 +1012,15 @@ function resultSignature(page) {
   const {data_runtime:runtime = {}, sources} = page.publication || {};
   return JSON.stringify([stripReadClock(page.rows), page.games, page.retained_game,
     page.total, page.page_count, page.offset, page.pair_status, page.calculation_reason, page.calculation_missing,
-    page.state, page.board_id, page.selected_usd, page.basis, page.phase, page.anchor_state, page.selected_line_id, page.selected_game_key,
-    page.selected_venues, page.board_cursor, page.replacement_pending, page.qualified_offer_count,
+    page.state, page.basis, page.phase, page.anchor_state, page.selected_line_id, page.selected_game_key,
+    page.selected_venues, page.qualified_offer_count,
     page.qualified_board_offer_count, page.blocker_counts,
     page.ranked_group_count, page.matched_offer_count, runtime.stopped, runtime.healthy, runtime.reason, runtime.paused_sources,
     Object.values(sources || {}).map(source => [source.state, source.reason_code])]);
 }
 
 async function load(offset = state.offset, {background = false, freshMembership = false, anchor = null, refresh = false} = {}) {
-  const boardRead = unitBoard();
-  if (!boardRead && !filters.checkValidity()) return;
+  if (!filters.checkValidity()) return;
   if (background && state.request) return;
   state.request?.abort();
   const controller = new AbortController();
@@ -1085,26 +1040,18 @@ async function load(offset = state.offset, {background = false, freshMembership 
   if (retainedResult) query.set('result_id', retainedResult);
   const browseId = (state.query === requestFilters ? readMember?.browse_id : null) ?? restoreLocation?.browseId;
   if (!replay && !freshMembership && browseId && (offset || restoreLocation?.browseId)) query.set('browse_id', browseId);
-  const boardCursor = (state.query === requestFilters ? readMember?.board_cursor : null) ?? restoreLocation?.boardCursor;
-  if (unitBoard() && offset && !freshMembership && !refresh && boardCursor) query.set('board_cursor', boardCursor);
-  if ((readMember?.schema === 'predict-pregame-board-1' || restoreLocation?.boardCursor)
-      && !query.has('board_cursor')) query.set('offset', '0');
   const locator = restoreLocation || (freshMembership && anchor);
-  if (!unitBoard() && !gameKey && locator && (locator.groupId || locator.gameKey)) {
+  if (!gameKey && locator && (locator.groupId || locator.gameKey)) {
     query.set('locate', locator.groupId || locator.gameKey);
     if (locator.gameKey) query.set('locate_game', locator.gameKey);
     if (freshMembership && restoreLocation) query.set('offset', restoreLocation.offset || 0);
   }
-  if (!unitBoard() && !state.page && !state.loadFailed) $('notice').textContent = 'Loading prices…';
+  if (!state.page && !state.loadFailed) $('notice').textContent = 'Loading prices…';
   const backgroundBlocked = () => background && (!receivingUpdates() || usingResults()
     || !supportsAutoUpdate() && drawer.isOpen());
   try {
     let page = await fetchPage(query, controller.signal);
     if (controller.signal.aborted || !matchesInputs(requestFilters) || backgroundBlocked()) return;
-    if (boardRead) {
-      if (page.schema !== 'predict-pregame-board-1' || page.state === 'read_failed'
-          || !sameBoardUnit(page.selected_usd, selected.unit_usd)) throw Error('Selected-unit board unavailable');
-    }
     const emptyPage = !displayRows(page).length;
     if (page.state === 'page_changed' || query.has('browse_id') && emptyPage && (page.total || page.anchor_state === 'removed')) {
       if (freshMembership) throw Error('Browsing order unavailable');
@@ -1113,7 +1060,6 @@ async function load(offset = state.offset, {background = false, freshMembership 
       if (!background) state.resetReason = reason;
       if (restoreLocation) {
         restoreLocation.browseId = null;
-        restoreLocation.boardCursor = null;
       }
       state.request = null;
       return load(0, {background, freshMembership:true, anchor:anchor || visibleAnchor()});
@@ -1148,11 +1094,7 @@ async function load(offset = state.offset, {background = false, freshMembership 
     if (controller.signal.aborted || !matchesInputs(requestFilters) || backgroundBlocked()) return;
     if (!replay) page = expirePage(page, Date.now(), expiryOptions());
     applyDeskFeatures(page);
-    if (!boardRead && unitBoard()) {
-      changeBoardUnit();
-      return;
-    }
-    const held = background && page.schema !== 'predict-pregame-board-1' && displayRows(state.page).length && state.page.phase === page.phase;
+    const held = background && displayRows(state.page).length && state.page.phase === page.phase;
     const prior = background && !restoreLocation && scrollY ? anchor || visibleAnchor() : anchor;
     if (held) {
       state.backgroundPage = {offset:page.offset, browse_id:page.browse_id};
@@ -1170,31 +1112,19 @@ async function load(offset = state.offset, {background = false, freshMembership 
     state.query = JSON.stringify(selections());
     state.renderSignature = signature;
     state.offset = page.offset ?? (freshMembership ? 0 : offset);
-    previousResults(page.replacement_pending ? 'Prices are updating. Showing the previous complete board.' : '');
+    previousResults();
     if (repaint) {
-      const retryFocused = document.activeElement === $('retry-board');
-      render(page, held || boardRead);
-      if (retryFocused) restoreFocus(unitPicker.value() ? $('refresh-list') : $('board-unit'));
+      render(page, held);
       restoreAnchor(prior);
     }
     expireResultValues();
     state.resetReason = null;
     restoreLocationAfterLoad();
     history.observe(page, selections());
-    drawer.checkSelection(refresh && !unitBoard());
+    drawer.checkSelection(refresh);
   } catch (error) {
     if (!controller.signal.aborted && error.name !== 'AbortError' && matchesInputs(requestFilters)) {
-      if (unitBoard()) {
-        state.loadFailed = true;
-        expireResultValues();
-        if (state.query === requestFilters && state.page?.state === 'ready' && displayRows(state.page).length) {
-          previousResults('Opportunities could not be loaded. Showing previous results.');
-        } else {
-          state.page = null;
-          previousResults();
-          render(boardPlaceholder('read_failed'));
-        }
-      } else if (state.page && !replay) {
+      if (state.page && !replay) {
         state.loadFailed = true;
         previousResults('Price update failed. Showing previous results.');
       }
@@ -1288,8 +1218,6 @@ function applyFilters() {
   if (browse && !gameKey) saveBrowsePreferences();
   else if (!gameKey) {
     const savedFilters = selections();
-    delete savedFilters.unit_usd;
-    delete savedFilters.board;
     savePreference(filterKey(), JSON.stringify({...savedFilters, timezone:filters.elements.timezone.value}));
   }
   if (browse && !replay) {
@@ -1312,25 +1240,9 @@ function saveBrowsePreferences() {
   window.history.replaceState(otherState, '', browseReturnRoute(chosen));
   if (!replay) updateBrowsePhaseLinks();
 }
-function boardPlaceholder(status = unitPicker.value() ? 'valuation_pending' : 'unit_needed') {
-  return {schema:'predict-pregame-board-1', state:status, rows:[], total:0, phase};
-}
-
-function changeBoardUnit() {
-  state.request?.abort();
-  clearTimeout(debounce);
-  state.page = state.backgroundPage = state.query = null;
-  state.offset = 0;
-  state.loadFailed = false;
-  restoreLocation = null;
-  previousResults();
-  render(boardPlaceholder());
-  load(0);
-}
-
 filters.addEventListener('submit', event => event.preventDefault());
 filters.addEventListener('input', event => {
-  if (event.target !== autoUpdateToggle && !$('board-unit-field').contains(event.target)) applyFilters();
+  if (event.target !== autoUpdateToggle) applyFilters();
 });
 filters.elements.basis.disabled = false;
 $('reset').onclick = () => {
@@ -1389,14 +1301,6 @@ session.addEventListener('close', () => {
 document.addEventListener('visibilitychange',()=>history.record(document.hidden?'display_paused':'display_resumed',{reason:'tab_visibility'}));
 window.addEventListener('pageshow', event => {
   if (!event.persisted || gameKey) return;
-  if (unitBoard()) {
-    const previous = unitPicker.value();
-    unitPicker.restore();
-    if (previous !== unitPicker.value()) {
-      changeBoardUnit();
-      return;
-    }
-  }
   const location = window.history.state?.predictDesk;
   if (location) {
     restoreLocation = location;
@@ -1409,9 +1313,8 @@ document.addEventListener('visibilitychange', () => {
   scheduleResultExpiry();
 });
 const scheduleUpdates = createDeskPolling({state, replay, arb, currentPhase:() => phase, drawer, expireResultValues,
-  receivingUpdates, supportsAutoUpdate, usingResults, visibleAnchor, load, selections, unitBoard, previousResults});
+  receivingUpdates, supportsAutoUpdate, usingResults, visibleAnchor, load, selections, previousResults});
 
-if (unitBoard()) render(boardPlaceholder());
 load(restored?.offset ?? 0);
 drawer.openHistorical(route.get('result_id'), route.get('selection'));
 scheduleUpdates();
