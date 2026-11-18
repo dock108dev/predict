@@ -367,6 +367,28 @@ class SportsGameOddsAtomicIngress(LatestBoardFixture):
             self.assertEqual(db.execute('SELECT skipped_runway FROM current_sgo_history_state').fetchone()['skipped_runway'], 1)
             db.execute("DELETE FROM current_sgo_history WHERE event_id='rotation-fixture'")
 
+    async def test_history_rotation_preserves_oldest_order_across_bounded_batches(self):
+        from app.storage.sportsgameodds_reference import archive_revisions
+        from app.storage.store import encoded
+        facts=dict(phase='pregame',starts_at='2026-11-11T00:00:00Z',received_at='2026-11-10T20:00:00Z',pad='x'*512)
+        size=len(encoded(facts))
+        incoming=dict(id='new',event_id='bounded-rotation',revision='new',facts=dict(facts,pad='y'*(600*size)))
+        expected=(len(encoded(incoming['facts']))+size-1)//size
+        self.assertGreater(expected,512)
+        with self.connect() as db, db.transaction(force_rollback=True):
+            db.execute('SELECT pg_advisory_xact_lock(901095)')
+            db.execute('DELETE FROM current_sgo_history')
+            with db.cursor() as cursor:
+                cursor.executemany("""INSERT INTO current_sgo_history
+                    (kind,identity,revision,event_id,archived_at,payload_bytes,facts)
+                    VALUES('reference',%s,'old','bounded-rotation','2026-11-10T20:00:00Z',%s,%s)""",
+                    [(f'old-{n:04d}',size,Jsonb(facts))for n in range(1200)])
+            with patch('app.storage.sportsgameodds_reference.HISTORY_BYTES',1200*size):
+                self.assertEqual(archive_revisions(db,'reference',[incoming]),1)
+            remaining=[r['identity']for r in db.execute("SELECT identity FROM current_sgo_history WHERE identity<>'new' ORDER BY identity")]
+            self.assertEqual(remaining,[f'old-{n:04d}'for n in range(expected,1200)])
+            self.assertLessEqual(db.execute('SELECT sum(payload_bytes) n FROM current_sgo_history').fetchone()['n'],1200*size)
+
     async def test_bounded_history_records_revisions_and_prunes_only_history(self):
         import json
         from datetime import datetime, timedelta, timezone

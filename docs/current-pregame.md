@@ -62,6 +62,9 @@ Housekeeping commits reference, frame, history and native-evidence cleanup
 independently. It yields between cleanups and rewrites when source admission is
 active, releasing the shared writer lock for the waiting update. Physical storage
 limits and the normal maintenance retry remain enforced.
+Bounded audit rotation reads only the next oldest prefix through the existing
+archive-time index. Multiple batches preserve the exact victim order and byte
+cap while avoiding a whole-history window calculation in source admission.
 
 ## HTTP reads
 

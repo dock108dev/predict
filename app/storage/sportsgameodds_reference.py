@@ -86,12 +86,14 @@ def archive_revisions(db, kind, rows):
     evicted = 0
     needed = max(0, used + requested - HISTORY_BYTES) if requested else 0
     while needed:
-        removed = db.execute('''WITH ranked AS (
+        removed = db.execute('''WITH oldest AS MATERIALIZED (
+            SELECT kind,identity,revision,archived_at,payload_bytes FROM current_sgo_history
+            ORDER BY archived_at,kind,identity,revision LIMIT 512), ranked AS (
             SELECT kind,identity,revision,COALESCE(sum(payload_bytes) OVER
               (ORDER BY archived_at,kind,identity,revision ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING),0) before
-            FROM current_sgo_history), chosen AS (
+            FROM oldest), chosen AS (
             SELECT kind,identity,revision FROM ranked WHERE before < %s
-            ORDER BY before,kind,identity,revision LIMIT 10000)
+            ORDER BY before,kind,identity,revision)
             DELETE FROM current_sgo_history h USING chosen c
             WHERE (h.kind,h.identity,h.revision)=(c.kind,c.identity,c.revision)
             RETURNING h.payload_bytes''', (needed,)).fetchall()
