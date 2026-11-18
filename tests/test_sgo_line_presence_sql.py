@@ -14,6 +14,86 @@ from app.storage.current_pregame import read
 
 @skipUnless(SOCKET, "Disposable PostgreSQL required")
 class LinePresenceSQL(PregameFixture):
+    async def test_moved_main_retires_previous_line_without_alternate_poll(self):
+        from app.storage.sportsgameodds_reference import upsert_rows
+
+        with self.connect() as db:
+            self.ingest(db, page())
+            initial = prepare_page(parse(page()))
+            observe(db, initial)
+            old = next(r for r in initial if r['bookmaker_id'] == 'prophetx'
+                       and r['facts']['side'] == 'home')
+            db.execute("""UPDATE current_offer_storage SET sgo_quote_id=%s,sgo_quote_revision=%s,
+                price_value=NULL,facts=facts#-'{original,value}'
+                WHERE facts->>'venue'='prophetx' AND facts#>>'{source,native_outcome_id}'=%s""",
+                (old['id'], old['revision'], old['facts']['odd_id']))
+            self.process(db)
+            self.assertTrue(any(r['side'] == 'home' for r in read(
+                db, dict(browse='1', lines='all'), at=stamp(AT))['rows']))
+            moved = page()
+            odd = moved['data'][0]['odds'][old['facts']['odd_id']]
+            odd['byBookmaker']['prophetx'].update(
+                spread='-2.5', lastUpdatedAt=AT)
+            rows = prepare_page(parse(moved))
+            upsert_rows(db, rows)
+            observe(db, rows)
+            self.assertIsNone(db.execute(
+                'SELECT id FROM current_sgo_reference WHERE id=%s',
+                (old['id'],)).fetchone())
+            self.assertEqual(db.execute("""SELECT facts->>'state' state FROM current_offer
+                WHERE facts->>'venue'='prophetx' AND facts#>>'{source,native_outcome_id}'=%s""",
+                (old['facts']['odd_id'],)).fetchone()['state'], 'unavailable')
+            self.process(db)
+            self.assertFalse(any(r['side'] == 'home' for r in read(
+                db, dict(browse='1', lines='all'), at=stamp(AT))['rows']))
+            # Other books, the opposite side and the game remain intact.
+            self.assertEqual(db.execute(
+                'SELECT count(*) n FROM current_sgo_reference').fetchone()['n'], 6)
+            self.assertGreater(db.execute(
+                'SELECT count(*) n FROM current_event').fetchone()['n'], 0)
+            # A late receipt with an older source clock cannot restore the old main.
+            replay = deepcopy(old)
+            replay['received_order'] = str(exact_time((stamp(AT) + timedelta(minutes=1)).isoformat()))
+            observe(db, [replay])
+            self.assertIsNone(db.execute(
+                'SELECT id FROM current_sgo_reference WHERE id=%s',
+                (old['id'],)).fetchone())
+
+    async def test_explicit_alternate_survives_main_move_and_can_return(self):
+        from app.storage.sportsgameodds_reference import upsert_rows
+        from app.storage.store import hashed
+
+        with self.connect() as db:
+            self.ingest(db, page())
+            initial = prepare_page(parse(page()))
+            observe(db, initial)
+            old = next(r for r in initial if r['bookmaker_id'] == 'prophetx'
+                       and r['facts']['side'] == 'home')
+            moved = page()
+            odd = moved['data'][0]['odds'][old['facts']['odd_id']]
+            odd['byBookmaker']['prophetx'].update(spread='-2.5', lastUpdatedAt=AT)
+            rows = prepare_page(parse(moved))
+            upsert_rows(db, rows)
+            observe(db, rows)
+            alternate = deepcopy(old)
+            alternate['source_order'] = str(exact_time(AT))
+            alternate['facts'].update(alternate=True, source_at=AT,
+                                      source_at_original=AT)
+            alternate['received_order'] = str(exact_time((stamp(AT) + timedelta(minutes=1)).isoformat()))
+            alternate['facts']['received_at'] = (stamp(AT) + timedelta(minutes=1)).isoformat()
+            alternate['revision'] = hashed({k: v for k, v in alternate['facts'].items()
+                                            if k not in ('received_at', 'receipt_sha256')})
+            upsert_rows(db, [alternate])
+            observe(db, [alternate])
+            self.assertIsNotNone(db.execute(
+                'SELECT id FROM current_sgo_reference WHERE id=%s',
+                (old['id'],)).fetchone())
+            # Refreshing the main never withdraws an explicitly observed alternate.
+            observe(db, rows)
+            self.assertIsNotNone(db.execute(
+                'SELECT id FROM current_sgo_reference WHERE id=%s',
+                (old['id'],)).fetchone())
+
     async def test_complete_scope_grace_recovery_and_other_book_preservation(self):
         with self.connect() as db:
             self.ingest(db, page())

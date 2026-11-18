@@ -41,6 +41,10 @@ class PregameOwner:
 
         with connect() as db, db.transaction():
             db.execute("SELECT pg_advisory_xact_lock(901095)")
+            from app.storage.sgo_line_presence import retire_superseded_mains
+
+            retire_superseded_mains(db, [r['event_id'] for r in db.execute(
+                "SELECT event_id FROM sgo_event_evidence WHERE kind='frame' AND expires_at>clock_timestamp()")])
             routes = configured_routes(db)
             db.execute(
                 """INSERT INTO current_pregame_work(provider,native_event_id)

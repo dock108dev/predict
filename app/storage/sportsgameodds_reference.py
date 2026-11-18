@@ -213,13 +213,16 @@ def upsert_rows(db, rows):
         if stamp(row['expires_at']) != expected_expiry:
             raise ValueError('sgo reference retention')
     db.execute('SELECT pg_advisory_xact_lock(%s)', (LOCK,))
+    # Visibility can suppress a superseded/omitted line while its canonical
+    # revision remains current. Reappearance must replace that physical head,
+    # not insert a second current revision for the same identity.
     previous = {r['id']: r for r in db.execute(
-        'SELECT id,event_id,revision,facts FROM current_sgo_reference WHERE id=ANY(%s)', (list(identities),)).fetchall()}
+        'SELECT id,event_id,revision,facts FROM sgo_quote_revision WHERE is_current AND id=ANY(%s)', (list(identities),)).fetchall()}
     growth = len(rows) - len(previous)
     # The writer lock protects membership. Replacing known identities cannot
     # increase the bounded population; only growth needs a global count.
     if growth:
-        total = db.execute('SELECT count(*) AS n FROM current_sgo_reference').fetchone()['n']
+        total = db.execute('SELECT count(*) AS n FROM sgo_quote_revision WHERE is_current').fetchone()['n']
         if total + growth > MAX_CURRENT_ROWS:
             raise ValueError('sgo reference storage capacity')
     return advance_quotes(db, rows, previous)

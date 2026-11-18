@@ -5,7 +5,7 @@ import {addMath} from './pregame-math.js';
 const $=id=>document.getElementById(id);
 const initial=new URLSearchParams(location.search), browse=location.pathname==='/browse-odds'||location.pathname==='/game';
 const gameView=location.pathname==='/game', gameBoard=location.pathname==='/browse-odds'&&!initial.has('bet_id')&&!initial.has('id')&&!initial.has('line')&&!initial.has('quote_key');
-let gameSequence=0,gameReturnKey,comparisonTrigger,gameTimer;
+let gameSequence=0,gameReturnKey,comparisonTrigger,gameTimer,activeComparison;
 let offset=0, total=0, cursor='', refreshTimer, running=false, checking=false, queued=false, lastGood=null, sequence=0, comparisonSequence=0, inspectionTimer, comparisonReturnId;
 const filters=$('filters');
 function node(tag,text,cls){const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;}
@@ -38,7 +38,7 @@ function render(packet){lastGood=packet;cursor=packet.cursor;total=packet.total;
  $('board-columns').hidden=gameBoard||gameView||!packet.rows.length;$('count').textContent=`${total} ${gameBoard?(total===1?'game':'games'):browse?(total===1?'bet':'bets'):(total===1?'opportunity':'opportunities')}`;$('previous').disabled=offset===0;$('next').disabled=offset+30>=total;$('page').textContent=total?`${offset+1}–${Math.min(offset+30,total)} of ${total}`:'0';schedule(packet.refresh_at);
 }
 function schedule(deadline){clearTimeout(refreshTimer);if(deadline)refreshTimer=setTimeout(()=>load(),Math.min(2147483647,Math.max(30,Date.parse(deadline)-Date.now()+30)));}
-async function load(){if(running){queued=true;return;}running=true;const token=++sequence;try{const packet=await get(query());if(token===sequence){render(packet);$('error').hidden=true;}}catch(e){$('error').textContent=lastGood?'Refresh failed. Your displayed odds are preserved.':'Odds could not be loaded. Choose Refresh to retry.';$('error').hidden=false;if(!lastGood)$('count').textContent='Odds could not be loaded.';}finally{running=false;if(queued){queued=false;load();}}}
+async function load(){if(running){queued=true;return;}running=true;const token=++sequence;try{const packet=await get(query());if(token===sequence){render(packet);$('error').hidden=true;refreshComparison();}}catch(e){$('error').textContent=lastGood?'Refresh failed. Your displayed odds are preserved.':'Odds could not be loaded. Choose Refresh to retry.';$('error').hidden=false;if(!lastGood)$('count').textContent='Odds could not be loaded.';}finally{running=false;if(queued){queued=false;load();}}}
 function dollars(value){const [a,b='1']=String(value).split('/');return '$'+(Number(a)/Number(b)).toFixed(2);}
 function details(row){const detail=node('details'),dl=node('dl');detail.append(node('summary','Fee and calculation details'));const add=(label,value)=>dl.append(node('dt',label),node('dd',value));
  add('Trusted reference books',Object.keys(row.reference.candidate_probabilities||{}).map(bookName).join(', ')||'Not recorded');add('Source route',row.source.provider);add('Source timestamp',row.times.source_at||'Not supplied');add('Received',row.times.received_at);add('Calculated',row.calculated_at);add('Fee basis','$100 internal comparison basis · Posted price');add('Cash committed',dollars(row.fee.committed_usd));add('Entry fee',dollars(row.fee.entry_usd));for(const [state,cash]of Object.entries(row.fee.cashflows)){add(`${state==='win'?'Winning':'Losing'} fee`,dollars(cash.total_fee_usd));add(`${state==='win'?'Winning':'Losing'} receipt`,dollars(cash.net_receipt_usd));}
@@ -69,18 +69,33 @@ function sportsbookPrices(selected,quotes=[]){
  if(reference&&!quotes.some(q=>q.book!==selected.reference.book))section.append(node('p','No other sportsbooks quote this exact line in this snapshot.','comparison-context'));
  return section;
 }
+function renderComparison(rows,quotes=[]){
+ const content=$('comparison-content'),selected=rows.find(r=>r.id===comparisonReturnId)||rows[0];
+ if(!selected){content.replaceChildren(node('p','This line is no longer available. Prices have moved; choose a current line.','comparison-context'));return;}
+ const expanded=new Set([...content.querySelectorAll('details[open]')].map(e=>e.querySelector('summary')?.textContent));
+ const game=node('p',selected.game,'comparison-context'),offers=node('section',undefined,'exchange-comparison'),evidence=node('section',undefined,'calculation-evidence'),actions=node('div');
+ offers.append(node('h3','Exchange prices'),exchangePrices(rows));actions.append(journalVenueActions(rows));evidence.append(node('h3','Calculation details'));
+ for(const [index,row]of rows.entries()){const detail=details(row);if(index)detail.querySelector('summary').textContent=(venues[row.venue]||row.venue)+' · Fee and calculation details';detail.open=expanded.has(detail.querySelector('summary').textContent);evidence.append(detail);}
+ content.replaceChildren(game,offers,actions,sportsbookPrices(selected,quotes),evidence);
+}
+async function refreshComparison(){
+ const active=activeComparison;if(!active||!$('comparison').open)return;
+ if(active.loading){active.pending=true;return;}active.loading=true;
+ try{const data=await get(new URLSearchParams({bet_id:active.selected.bet_id,lines:'all',browse:'1'}));
+ if(active!==activeComparison||!$('comparison').open||Date.parse(active.selected.kickoff)<=Date.now())return;
+ const fingerprint=JSON.stringify([data.rows,data.sportsbooks||[]]);
+ if(fingerprint!==active.fingerprint){renderComparison(data.rows,data.sportsbooks||[]);active.fingerprint=fingerprint;}
+ $('comparison-refresh-error')?.remove();
+ }catch(e){if(active===activeComparison&&$('comparison').open&&!$('comparison-refresh-error')){const message=node('p','Comparison refresh failed. Displayed prices could not be verified.','comparison-context');message.id='comparison-refresh-error';$('comparison-content').append(message);}}
+ finally{active.loading=false;if(active===activeComparison&&active.pending){active.pending=false;refreshComparison();}}
+}
 async function openComparison(selected){
  comparisonTrigger=document.activeElement;
- const token=++comparisonSequence;clearTimeout(inspectionTimer);const frozen=structuredClone(selected);comparisonReturnId=selected.id;
- inspectionTimer=setTimeout(()=>$('comparison').close(),Math.min(2147483647,Math.max(0,Date.parse(frozen.kickoff)-Date.now())));
- $('comparison-title').textContent=pick(frozen);const content=$('comparison-content');
- const game=node('p',frozen.game,'comparison-context'),offers=node('section',undefined,'exchange-comparison'),books=node('div'),evidence=node('section',undefined,'calculation-evidence'),actions=node('div');actions.append(journalVenueActions([frozen]));
- offers.append(node('h3','Exchange prices'),exchangePrices([frozen]));evidence.append(node('h3','Calculation details'),details(frozen));
- content.replaceChildren(game,offers,actions,books,evidence);$('comparison').showModal();
- try{const data=await get(new URLSearchParams({bet_id:frozen.bet_id,lines:'all',browse:'1'}));if(!$('comparison').open||token!==comparisonSequence||Date.parse(frozen.kickoff)<=Date.now())return;
- const others=data.rows.filter(r=>r.id!==frozen.id);offers.replaceChildren(node('h3','Exchange prices'),exchangePrices([frozen,...others]));books.replaceChildren(sportsbookPrices(frozen,data.sportsbooks||[]));actions.replaceChildren(journalVenueActions([frozen,...others]));
- for(const row of others){const detail=details(row);detail.querySelector('summary').textContent=(venues[row.venue]||row.venue)+' · Fee and calculation details';evidence.append(detail);}
- }catch(e){books.replaceChildren(sportsbookPrices(frozen));content.append(node('p','Comparison refresh failed. The selected odds are preserved.','comparison-context'));}
+ ++comparisonSequence;clearTimeout(inspectionTimer);comparisonReturnId=selected.id;
+ activeComparison={selected:structuredClone(selected),loading:false,pending:false};
+ inspectionTimer=setTimeout(()=>$('comparison').close(),Math.min(2147483647,Math.max(0,Date.parse(selected.kickoff)-Date.now())));
+ $('comparison-title').textContent=pick(selected);renderComparison([selected]);$('comparison').showModal();
+ await refreshComparison();
 }
 
 const families={moneyline:'Winner',spread:'Spread',total:'Total'};
@@ -106,7 +121,7 @@ async function openGame(game){
 }
 $('game-close').onclick=()=>$('game-lines').close();$('game-lines').addEventListener('close',()=>{clearTimeout(gameTimer);gameSequence++;if($('comparison').open)$('comparison').close();const target=[...document.querySelectorAll('.game-open')].find(b=>b.dataset.gameKey===gameReturnKey);(target||$('results')).focus({preventScroll:true});});
 
-$('close').onclick=()=>$('comparison').close();$('comparison').addEventListener('close',()=>{comparisonSequence++;clearTimeout(inspectionTimer);const eligible=button=>button?.isConnected&&(!button.closest('dialog')||button.closest('dialog').open);const target=eligible(comparisonTrigger)?comparisonTrigger:[...document.querySelectorAll('.row-open,.line-open')].find(button=>button.dataset.quoteId===comparisonReturnId&&eligible(button));(target||$('results')).focus({preventScroll:true});});$('refresh').onclick=()=>load();$('previous').onclick=()=>{offset=Math.max(0,offset-30);sequence++;load();};$('next').onclick=()=>{offset+=30;sequence++;load();};
+$('close').onclick=()=>$('comparison').close();$('comparison').addEventListener('close',()=>{comparisonSequence++;activeComparison=null;clearTimeout(inspectionTimer);const eligible=button=>button?.isConnected&&(!button.closest('dialog')||button.closest('dialog').open);const target=eligible(comparisonTrigger)?comparisonTrigger:[...document.querySelectorAll('.row-open,.line-open')].find(button=>button.dataset.quoteId===comparisonReturnId&&eligible(button));(target||$('results')).focus({preventScroll:true});});$('refresh').onclick=()=>load();$('previous').onclick=()=>{offset=Math.max(0,offset-30);sequence++;load();};$('next').onclick=()=>{offset+=30;sequence++;load();};
 let searchTimer;filters.addEventListener('submit',event=>event.preventDefault());filters.addEventListener('input',event=>{clearTimeout(searchTimer);offset=0;sequence++;searchTimer=setTimeout(()=>load(),event.target.name==='search'?180:0);});
 $('alternates-field').hidden=true;document.querySelector('.pagination').hidden=gameView;if(browse){$('sort-order').textContent=gameBoard?'Game start time ↑':'Main and alternate lines';$('results').setAttribute('aria-label',gameBoard?'Games by start time':'Game lines');}
 if(browse){$('title').textContent=location.pathname==='/game'?'Game odds':'Browse odds';document.title='Predict · Browse odds';}

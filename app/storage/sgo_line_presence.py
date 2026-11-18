@@ -1,8 +1,43 @@
-"""Scoped omission evidence, separate from immutable provider quote facts."""
+"""Main-line replacement and scoped omissions, separate from quote facts."""
 
 from psycopg.types.json import Jsonb
 
 GRACE_SECONDS = 15 * 60
+
+
+def retire_superseded_mains(db, events):
+    """A newer main replaces the prior main for that book and exact outcome.
+
+    A moved main is affirmative evidence, unlike an omitted alternate. Retain
+    historical quote bodies, but stop offering their old main-line prices. A
+    later explicit alternate can restore the exact line through normal admission.
+    Compare canonical source clocks so a delayed old page cannot resurrect it.
+    The caller holds the source writer lock and owns the transaction.
+    """
+    if not events:
+        return 0
+    retired = db.execute(
+        """WITH mains AS MATERIALIZED (
+          SELECT q.id,q.event_id,q.bookmaker_id,q.facts->>'odd_id' odd_id,
+            q.source_order,q.received_order,
+            max(q.source_order) OVER w head_source,
+            first_value(q.received_order) OVER
+              (PARTITION BY q.event_id,q.bookmaker_id,q.facts->>'odd_id'
+               ORDER BY q.source_order DESC,q.received_order DESC,q.id) head_received
+          FROM sgo_quote_revision q WHERE q.is_current AND q.event_id=ANY(%s)
+            AND q.facts->'alternate'='false'::jsonb AND q.source_order IS NOT NULL
+          WINDOW w AS (PARTITION BY q.event_id,q.bookmaker_id,q.facts->>'odd_id')
+        ) UPDATE sgo_line_presence p SET expired=true,
+          missing_since=COALESCE(p.missing_since,m.head_received),
+          scope_received=GREATEST(p.scope_received,m.head_received)
+        FROM mains m WHERE p.quote_id=m.id AND NOT p.expired
+          AND m.source_order<m.head_source AND m.received_order<=m.head_received
+        RETURNING p.event_id""",
+        (sorted(set(events)),),
+    ).fetchall()
+    for event in sorted({r['event_id'] for r in retired}):
+        db.execute("SELECT pregame_enqueue('sportsgameodds',%s)", (event,))
+    return len(retired)
 
 
 def observe(db, rows, *, include_alternates=False, events=(), received_at=None):
@@ -80,4 +115,5 @@ def observe(db, rows, *, include_alternates=False, events=(), received_at=None):
     if changed:
         for event in sorted({r["event"] for r in incoming} | set(events)):
             db.execute("SELECT pregame_enqueue('sportsgameodds',%s)", (event,))
-    return changed
+    return changed + retire_superseded_mains(
+        db, {r['event'] for r in incoming} | set(events))

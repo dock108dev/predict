@@ -214,6 +214,16 @@ visible credit uses the official provider site.
 
 ## Scoped missing-line availability
 
+A newer source observation that explicitly moves a book's main line immediately
+retires that book's previous main for the same game and outcome. Prices at a
+different line are different bets: the old price must not remain an available
+main-line opportunity. Other books, the opposite outcome, and explicitly observed
+alternates remain independent. A delayed older source observation cannot restore
+the superseded main; an explicit later alternate observation can restore that line.
+Original quote facts and timestamps remain available for history. Collector
+startup applies the same rule to retained heads, repairing already accumulated
+main lines without replaying sources or changing account records.
+
 Successful SportsGameOdds refreshes requested with `includeAltLines=true` now
 record line presence independently of price/source clocks. When a returned game
 continues receiving complete scoped refreshes but a particular book/outcome/line
@@ -221,7 +231,8 @@ is omitted, it receives a 15-minute grace period starting at its first observed
 omission. A later complete refresh at or beyond that boundary suppresses that
 quote and any EV/arb using it. The game and other lines remain. Empty book/market
 results inside the returned, explicitly requested scope count; absent games,
-failed requests, main-only pages, and out-of-order replays do not.
+failed requests, main-only pages, and out-of-order replays do not prove alternate
+absence. Main-line replacement above applies to main-only pages as well.
 
 A later receipt containing the exact line clears omission even if its source
 price has not changed. Provider quote facts and their original clocks remain

@@ -11,7 +11,7 @@ The collector receives odds, normalizes affected games, calculates using posted
 prices, and stores complete current rows in PostgreSQL. Refresh and inspection
 only read stored data. Arb reads also balance a bounded illustrative allocation
 using the stored fee inputs. Pregame observations have no age expiry: authoritative kickoff,
-non-pregame status, explicit withdrawal, and repeated scoped line omissions
+non-pregame status, explicit withdrawal, replacement by a newer main line, and repeated scoped line omissions
 after a 15-minute grace period govern removal. Odds may be delayed.
 
 [Desk guide](docs/ui-design.md#current-comparison-interface) ·

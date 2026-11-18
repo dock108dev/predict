@@ -1,4 +1,4 @@
-"""The shipped current-row UI: complete tickets, pinned inspection, cheap updates and recovery."""
+"""The shipped current-row UI: complete tickets, live inspection, cheap updates and recovery."""
 
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
@@ -164,9 +164,20 @@ def test_current_pregame_journey(width, tmp_path):
         selected["display"]["net_ev"] = "+9.00%"
         state["revision"] = "two"
         expect(page.locator("#results")).to_contain_text("+9.00%")
-        expect(page.locator("#comparison")).to_contain_text("+8.80%")
+        expect(page.locator("#comparison")).to_contain_text("+9.00%")
         page.get_by_role("button", name="Close comparison").click()
         expect(page.get_by_role("button", name="Compare prices")).to_be_focused()
+        # A withdrawn exact line clears the open drawer and its save controls.
+        page.get_by_role("button", name="Compare prices").click()
+        state["empty"] = True
+        state["revision"] = "three"
+        expect(page.locator("#comparison")).to_contain_text("This line is no longer available")
+        expect(page.locator("#comparison .exchange-prices")).to_have_count(0)
+        expect(page.locator("#comparison .journal-action")).to_have_count(0)
+        page.get_by_role("button", name="Close comparison").click()
+        state["empty"] = False
+        state["revision"] = "four"
+        expect(page.locator(".ticket")).to_have_count(1)
         before = len([r for r in requests if r[0] == "/api/pregame"])
         # One unchanged status poll must not reread the list.
         with page.expect_response(lambda r: "/updates" in r.url):
