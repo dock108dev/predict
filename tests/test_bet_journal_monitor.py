@@ -3,6 +3,7 @@
 from copy import deepcopy
 from types import SimpleNamespace
 from unittest.mock import patch
+from unittest import IsolatedAsyncioTestCase
 
 from app.dashboard import bet_journal_monitor as monitor
 from app.storage.store import stamp
@@ -10,6 +11,50 @@ from tests.test_pregame_arbs import entry
 
 
 NOW = stamp("2026-11-18T15:00:00Z")
+
+
+class RecoveryJournalIsolation(IsolatedAsyncioTestCase):
+    async def test_slow_journal_does_not_stall_recovery_or_overlap_and_close_drains(self):
+        import asyncio
+        from threading import Event
+        from unittest.mock import AsyncMock
+        from app.collection.pregame_owner import PregameOwner
+
+        owner = PregameOwner(None)
+        owner.research = SimpleNamespace(close=AsyncMock())
+        started, release, recovered = Event(), Event(), Event()
+        turns = []
+
+        def turn():
+            turns.append(1)
+            if len(turns) >= 2:
+                recovered.set()
+
+        def slow_poll():
+            started.set()
+            release.wait(3)
+
+        with patch.object(owner, 'turn', side_effect=turn), patch.object(
+            monitor, 'poll', side_effect=slow_poll
+        ) as sampling, patch(
+            'app.collection.background_work.BACKGROUND.critical_acquisition_pressure',
+            return_value=False
+        ):
+            owner.task = asyncio.create_task(owner.run())
+            try:
+                self.assertTrue(await asyncio.to_thread(started.wait, 1))
+                self.assertTrue(await asyncio.to_thread(recovered.wait, 1))
+                owner.sample_journal()
+                self.assertEqual(sampling.call_count, 1)
+                closing = asyncio.create_task(owner.close())
+                await asyncio.sleep(0)
+                self.assertFalse(closing.done())
+            finally:
+                owner.closed = True
+                owner.wake.set()
+                release.set()
+                await asyncio.wait_for(owner.close(), 2)
+            await asyncio.wait_for(closing, 2)
 
 
 class Journal:
