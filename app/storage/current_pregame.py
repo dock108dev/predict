@@ -19,6 +19,9 @@ from .store import hashed, stamp
 from .sgo_schedule_review import canonical_roles
 
 
+UPSERT = "INSERT INTO current_pregame_calculation\n            (contract_id,game_key,bet_id,league,family,venue,start_at,main,input_revision,version,valid_until,\n             net_ev,opportunity_score,reason,payload)\n            VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)\n            ON CONFLICT(contract_id) DO UPDATE SET game_key=excluded.game_key,bet_id=excluded.bet_id,\n              league=excluded.league,family=excluded.family,venue=excluded.venue,start_at=excluded.start_at,\n              main=excluded.main,input_revision=excluded.input_revision,version=excluded.version,\n              calculated_at=clock_timestamp(),valid_until=excluded.valid_until,net_ev=excluded.net_ev,\n              opportunity_score=excluded.opportunity_score,reason=excluded.reason,payload=excluded.payload\n            WHERE current_pregame_calculation.input_revision<>excluded.input_revision\n                OR current_pregame_calculation.reason IS DISTINCT FROM excluded.reason"
+
+
 def utc():
     return datetime.now(timezone.utc)
 
@@ -327,7 +330,18 @@ def calculate_game(db, job, context, *, at):
     ids = [e["id"] for e in events]
     if not ids:
         return dict(offers=0, complete=0)
-    records = CurrentRowStore(db).capture(include_depth=False, event_ids=ids)["records"]
+    capture_ids = [
+        e["id"] for e in events if e["provider"] in set(context.price_routes.values())
+    ]
+    if not capture_ids:
+        db.execute(
+            "DELETE FROM current_pregame_calculation WHERE contract_id IN (SELECT id FROM current_contract_storage WHERE event_id=ANY(%s))",
+            (ids,),
+        )
+        return dict(offers=0, complete=0)
+    records = CurrentRowStore(db).capture(include_depth=False, event_ids=capture_ids)[
+        "records"
+    ]
     records = [
         r
         for r in records
@@ -364,6 +378,9 @@ def calculate_game(db, job, context, *, at):
         )
     }
     references = {}
+    reference_errors = {}
+    reference_inputs = math.ReferenceInputs(observations)
+    updates = []
     complete = 0
     context.db = db
     accepted = set()
@@ -414,9 +431,15 @@ def calculate_game(db, job, context, *, at):
                     != event["scheduled_start"]
                 ):
                     raise ValueError("occurrence_schedule_conflict")
-            key = hashed([family, market["period"], record["selection"]])
+            key = math.reference_key(record)
+            if key in reference_errors:
+                raise ValueError(reference_errors[key])
             if key not in references:
-                references[key] = math.reference(record, observations, at=at)
+                try:
+                    references[key] = math.reference(record, reference_inputs, at=at)
+                except ValueError as exc:
+                    reference_errors[key] = str(exc)
+                    raise
             fee = context.fee(record, at)
             revision = input_identity(record, references[key], context, fee)
             prior = previous.get(cid)
@@ -461,18 +484,15 @@ def calculate_game(db, job, context, *, at):
             ).isoformat()
         if payload:
             payload["input_revision"] = revision
-        db.execute(
-            """INSERT INTO current_pregame_calculation
-            (contract_id,game_key,bet_id,league,family,venue,start_at,main,input_revision,version,valid_until,
-             net_ev,opportunity_score,reason,payload)
-            VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-            ON CONFLICT(contract_id) DO UPDATE SET game_key=excluded.game_key,bet_id=excluded.bet_id,
-              league=excluded.league,family=excluded.family,venue=excluded.venue,start_at=excluded.start_at,
-              main=excluded.main,input_revision=excluded.input_revision,version=excluded.version,
-              calculated_at=clock_timestamp(),valid_until=excluded.valid_until,net_ev=excluded.net_ev,
-              opportunity_score=excluded.opportunity_score,reason=excluded.reason,payload=excluded.payload
-            WHERE current_pregame_calculation.input_revision<>excluded.input_revision
-                OR current_pregame_calculation.reason IS DISTINCT FROM excluded.reason""",
+        prior = previous.get(cid)
+        if (
+            reason
+            and prior
+            and prior["reason"] == reason
+            and prior["input_revision"] == revision
+        ):
+            continue
+        updates.append(
             (
                 cid,
                 game_key,
@@ -489,9 +509,12 @@ def calculate_game(db, job, context, *, at):
                 numeric(payload["raw"]["opportunity_score"]) if payload else None,
                 reason,
                 Jsonb(payload) if payload else None,
-            ),
+            )
         )
         complete += payload is not None
+    if updates:
+        with db.cursor() as cursor:
+            cursor.executemany(UPSERT, updates)
     db.execute(
         "DELETE FROM current_pregame_calculation WHERE game_key=%s AND NOT(contract_id=ANY(%s))",
         (game_key, sorted(accepted)),

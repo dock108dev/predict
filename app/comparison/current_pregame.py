@@ -18,12 +18,42 @@ from .sgo_reference import (
 from .snapshot_fee_scope import applicability
 from .trade_preview import order_step
 
-VERSION = "predict-current-pregame-4"
+VERSION = "predict-current-pregame-5"
 COMPARISON_USD = F(100)
 
 
-def reference(record, observations, *, at):
-    """Select one complete exact pair, in the owner's fixed book priority."""
+class ReferenceInputs:
+    """Index exact bookmaker pairs once for the affected occurrence."""
+
+    def __init__(self, observations):
+        self.groups = {}
+        for event_id, rows in observations.items():
+            for entry in rows:
+                original = entry["facts"]
+                q = dict(
+                    original, side=original.get("canonical_side", original["side"])
+                )
+                if (
+                    q["venue"] not in BEST_BOOKS
+                    or q["period"] != "game"
+                    or q["phase"] != "pregame"
+                    or q.get("partition") == "three_way"
+                ):
+                    continue
+                try:
+                    line = target(q["market"], q["side"], q["line"])
+                except (KeyError, ValueError, TypeError, ArithmeticError):
+                    continue
+                by_event = self.groups.setdefault((q["venue"], q["market"], line), {})
+                sides = by_event.setdefault(event_id, {})
+                sides[q["side"]] = (
+                    None
+                    if q["side"] in sides
+                    else dict(q, input_id=entry["id"], input_revision=entry["revision"])
+                )
+
+
+def reference_key(record):
     event, market = record["event"], record["market_identity"]
     key = outcome(market["family"], record["selection"], event["home"], event["away"])
     if not key:
@@ -42,57 +72,41 @@ def reference(record, observations, *, at):
         > 1
     ):
         raise ValueError("reference_scoring_scope_conflict")
+    return family, side, target(family, side, line)
+
+
+def reference(record, observations, *, at):
+    """Select one complete exact pair, in the owner's fixed book priority."""
+    event = record["event"]
+    family, side, line = reference_key(record)
+    inputs = (
+        observations
+        if isinstance(observations, ReferenceInputs)
+        else ReferenceInputs(observations)
+    )
     for book in BEST_BOOKS:
         pairs = []
-        for event_id, rows in observations.items():
-            sides = {}
-            for entry in rows:
-                original = entry["facts"]
-                q = dict(
-                    original, side=original.get("canonical_side", original["side"])
-                )
-                if (
-                    q["venue"] != book
-                    or q["market"] != family
-                    or q["period"] != "game"
-                    or q["phase"] != "pregame"
-                    or q.get("partition") == "three_way"
+        for event_id, sides in inputs.groups.get((book, family, line), {}).items():
+            a, b = sides.get(side), sides.get(OPPOSITE[side])
+            if not a or not b:
+                continue
+            try:
+                if not all(
+                    q["available"] is True
+                    and q.get("source_at")
+                    and stamp(q["source_at"])
+                    <= stamp(q["received_at"])
+                    <= at
+                    < stamp(event["scheduled_start"])
+                    for q in (a, b)
                 ):
                     continue
-                try:
-                    observed_line = None if q["line"] is None else F(q["line"])
-                    wanted_line = (
-                        -line if family == "spread" and q["side"] != side else line
-                    )
-                    if observed_line != wanted_line or q["side"] not in (
-                        side,
-                        OPPOSITE[side],
-                    ):
-                        continue
-                    if q["side"] in sides:
-                        sides[q["side"]] = None
-                        continue
-                    if (
-                        q["available"] is not True
-                        or not q.get("source_at")
-                        or not stamp(q["source_at"])
-                        <= stamp(q["received_at"])
-                        <= at
-                        < stamp(event["scheduled_start"])
-                    ):
-                        sides[q["side"]] = None
-                        continue
+                for q in (a, b):
                     american_probability(q["price_american"])
-                    sides[q["side"]] = dict(
-                        q, input_id=entry["id"], input_revision=entry["revision"]
-                    )
-                except (ValueError, TypeError, ArithmeticError):
-                    continue
-            a, b = sides.get(side), sides.get(OPPOSITE[side])
+            except (ValueError, TypeError, ArithmeticError):
+                continue
             if (
-                a
-                and b
-                and a["odd_id"] == b["opposing_odd_id"]
+                a["odd_id"] == b["opposing_odd_id"]
                 and b["odd_id"] == a["opposing_odd_id"]
                 and a["odd_id"] != b["odd_id"]
             ):
@@ -110,15 +124,45 @@ def reference(record, observations, *, at):
                 fair_odds=american(1 / probability),
                 prices=[a, b],
                 event_id=event_id,
-                market=dict(
-                    family=family,
-                    period="full_game",
-                    line=wire(target(family, side, line)),
-                ),
+                market=dict(family=family, period="full_game", line=wire(line)),
                 selected_outcome=side,
                 conditioning="decisive_completed_game",
             )
     raise ValueError("reference_exact_pair_unavailable")
+
+
+def posted_fill(terms, amount, cost, fees, rule):
+    """Find the maximum legal posted-price size inside the fee rounding envelope."""
+    if not rule:
+        return _fill(terms, amount, cost, fees, F(1))
+    from app.fees.engine import posted_fee_bounds
+
+    step = F(terms["increment"])
+    stake_order = terms["kind"] == "stake"
+    unit_cost = F(1) if stake_order else cost
+    raw_rate, error = (F(0), F(0)) if stake_order else posted_fee_bounds(rule, cost)
+    tick = step * (unit_cost + raw_rate)
+    lower = max(F(1), (amount - error) // tick)
+    upper = min((amount + error) // tick, amount // (step * unit_cost))
+
+    def order(ticks):
+        size = ticks * step
+        legs = [(unit_cost, size)]
+        wager = unit_cost * size
+        entry, reserve, cash, trace = fees(legs, wager)
+        return wager + entry + reserve, legs, wager, entry, reserve, cash, trace
+
+    best = order(lower)
+    if best[0] > amount:
+        raise ValueError("fee_comparison_basis_invalid")
+    while lower < upper:
+        middle = (lower + upper + 1) // 2
+        candidate = order(middle)
+        if candidate[0] <= amount:
+            lower, best = middle, candidate
+        else:
+            upper = middle - 1
+    return best, None
 
 
 def calculate(record, ref, fee, *, at, game_key):
@@ -148,9 +192,13 @@ def calculate(record, ref, fee, *, at, game_key):
     if not 0 < cost < 1:
         raise ValueError("posted_price_invalid")
     quantity_step = order_step(row)
-    if configured := (fee.get('evidence') or {}).get('database_fee_rule'):
-        if q['source']['provider'] == 'sportsgameodds':
-            quantity_step = None if configured['formula'] == 'prophetx_commission' else F(configured['quantity_step'])
+    if configured := (fee.get("evidence") or {}).get("database_fee_rule"):
+        if q["source"]["provider"] == "sportsgameodds":
+            quantity_step = (
+                None
+                if configured["formula"] == "prophetx_commission"
+                else F(configured["quantity_step"])
+            )
     stake = (
         q["original"]["units"] in ("american_odds", "decimal_odds")
         and quantity_step is None
@@ -169,8 +217,12 @@ def calculate(record, ref, fee, *, at, game_key):
     if not stake:
         terms["asks"] = [dict(price=wire(cost), quantity=wire(COMPARISON_USD / cost))]
     fees, evidence, _ = retail_order(row, terms, cost, fee)
-    (committed, legs, wager, entry, reserve, cash, trace), reason = _fill(
-        terms, COMPARISON_USD, cost, fees, F(1)
+    (committed, legs, wager, entry, reserve, cash, trace), reason = posted_fill(
+        terms,
+        COMPARISON_USD,
+        cost,
+        fees,
+        (fee.get("evidence") or {}).get("database_fee_rule"),
     )
     # Posted-price normalization accepts the largest legal quantity below $100;
     # the execution preview's fill tolerance is not an eligibility condition.

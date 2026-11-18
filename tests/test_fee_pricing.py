@@ -119,3 +119,30 @@ def test_native_polymarket_product_and_grid_are_checked_with_configured_rules():
     bad["fee_applicability"]["retail"]["values"]["minimumTradeQty"] = "0"
     with pytest.raises(ValueError, match="quantity_or_price_grid"):
         outcome(bad, rule("polymarket_us"))
+
+
+@pytest.mark.parametrize('venue', ['kalshi', 'polymarket_us', 'novig', 'prophetx'])
+@pytest.mark.parametrize('cost', ['0.01', '0.5', '0.99', '7/19', '100/237'])
+def test_posted_rounding_envelope_matches_existing_maximum_legal_size(venue, cost):
+    from app.comparison.current_pregame import posted_fill
+    from app.comparison.pregame_valuation import _fill
+    from app.fees.pricing import order
+
+    cost = F(cost)
+    configured = dict(rule(venue), quantity_step='0.01')
+    variants = [configured]
+    if venue == 'kalshi':
+        variants.append(dict(configured, balance_precision='0.0001', multiplier='0.5'))
+    if venue == 'novig':
+        variants.append(dict(configured, rate='0.07'))
+    if venue == 'prophetx':
+        variants.append(dict(configured, formula='prophetx_nhl_taker', rate='0.035'))
+    for fee_rule in variants:
+        stake = fee_rule['formula'] == 'prophetx_commission'
+        terms = dict(kind='stake' if stake else 'exchange', increment='0.01', minimum='0.01',
+                     maximum='100' if stake else None, order_type='straight_stake' if stake else 'taker',
+                     asks=[dict(price=str(cost), quantity=str(100 / cost))], revision='authored-grid')
+        fees, _, _ = order({}, fee_rule, cost, terms)
+        expected, _ = _fill(terms, F(100), cost, fees, F(1))
+        actual, _ = posted_fill(terms, F(100), cost, fees, fee_rule)
+        assert actual == expected

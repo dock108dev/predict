@@ -38,7 +38,10 @@ accepted observations while other games proceed.
 
 The existing current-row advisory transaction lock orders observation writes and
 complete calculation replacement. Delayed work cannot publish over a newer
-admission. Complete rows replace atomically per game. The public SQL projection
+admission. Complete rows replace atomically per game. Reference pairs are indexed once per
+occurrence. Posted sizing searches only the exact fee-rounding envelope, and
+changed rows are written in one SQL pipeline; unchanged excluded rows do not
+repeat no-op writes. The public SQL projection
 includes only complete calculations, with diagnostic exclusions kept internally.
 A collection interruption retains the last accepted complete row.
 

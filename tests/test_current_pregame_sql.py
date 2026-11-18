@@ -207,6 +207,119 @@ class CurrentPregameSQL(LatestBoardFixture):
                     ).json()
                     self.assertEqual(kicked_off["rows"], [])
 
+    async def test_dense_game_keeps_exact_lines_and_complete_atomic_rows(self):
+        from app.fees import pricing
+        from tests.test_fee_pricing import rule
+
+        data = page()
+        venues = ("kalshi", "polymarket_us", "novig", "prophetx")
+        for side, odd in enumerate(data["data"][0]["odds"].values()):
+            template = deepcopy(odd["byBookmaker"]["prophetx"])
+            for venue in ("kalshi", "polymarket", "novig"):
+                odd["byBookmaker"][venue] = deepcopy(template)
+            for book in odd["byBookmaker"].values():
+                book["altLines"] = [
+                    dict(book, spread=str((1 if side else -1) * (n + 2.5)))
+                    for n in range(50)
+                ]
+        with self.connect() as db:
+            for venue in venues:
+                pricing.write(db, venue, [rule(venue)])
+            started = monotonic()
+            with patch.object(
+                board,
+                "configured_routes",
+                return_value={v: "sportsgameodds" for v in venues},
+            ):
+                records = self.ingest(db, data)
+                result = self.process(db)
+                complete = board.read(
+                    db, dict(lines="all", browse="1", limit="100"), at=stamp(AT)
+                )
+            self.assertEqual(len(records), 408)
+            self.assertEqual(sum(row["complete"] for row in result), 408)
+            self.assertEqual(complete["total"], 102)
+            self.assertEqual(len({row["bet_id"] for row in complete["rows"]}), 100)
+            self.assertEqual(
+                db.execute(
+                    "SELECT count(*) n FROM current_pregame_calculation WHERE reason IS NULL"
+                ).fetchone()["n"],
+                408,
+            )
+            print(
+                "dense current game: 408 offers, 102 exact bets, admission-through-read seconds",
+                monotonic() - started,
+            )
+
+    async def test_shared_reference_does_not_mask_one_venues_scoring_conflict(self):
+        from app.fees import pricing
+        from tests.test_fee_pricing import rule
+
+        data = page()
+        for odd in data["data"][0]["odds"].values():
+            odd["byBookmaker"]["novig"] = deepcopy(odd["byBookmaker"]["prophetx"])
+        with self.connect() as db:
+            for venue in ("novig", "prophetx"):
+                pricing.write(db, venue, [rule(venue)])
+            self.ingest(db, data)
+            self.process(db)
+            chosen = next(
+                row
+                for row in board.read(db, dict(venue="prophetx"), at=stamp(AT))["rows"]
+            )
+            db.execute(
+                "UPDATE current_contract_storage SET facts=jsonb_set(facts,'{comparison_source_metadata,scoring_scope}',%s::jsonb),revision=revision||'-conflict' WHERE id=%s",
+                ('{"conflicts":["overtime"]}', chosen["id"]),
+            )
+            self.process(db)
+            compared = board.read(db, dict(bet_id=chosen["bet_id"]), at=stamp(AT))[
+                "rows"
+            ]
+            self.assertEqual({row["venue"] for row in compared}, {"novig"})
+            self.assertEqual(
+                db.execute(
+                    "SELECT reason FROM current_pregame_calculation WHERE contract_id=%s",
+                    (chosen["id"],),
+                ).fetchone()["reason"],
+                "reference_scoring_scope_conflict",
+            )
+
+    async def test_inactive_direct_route_recovers_without_dropping_source_offers(self):
+        from tests.broad_pipeline_fixtures import captured_partial
+        from tests.multisport_fixtures import source_case
+
+        case = dict(
+            source_case("NBA", "spread", "inactive-direct", clock=stamp(AT)),
+            period="full_game",
+        )
+        records, excluded, book, _ = await captured_partial(case, "kalshi")
+        self.assertEqual(excluded, [])
+        with self.connect() as db:
+            CurrentRowStore(db).upsert_records(records, now=AT)
+            CurrentRowStore(db).replace_native_books([book])
+            before = db.execute("SELECT count(*) n FROM current_offer").fetchone()["n"]
+            with patch.object(
+                board,
+                "configured_routes",
+                return_value={
+                    v: "sportsgameodds"
+                    for v in ("kalshi", "polymarket_us", "novig", "prophetx")
+                },
+            ):
+                result = self.process(db)
+            self.assertTrue(result)
+            self.assertTrue(all("error" not in row for row in result), result)
+            self.assertEqual(
+                db.execute("SELECT count(*) n FROM current_offer").fetchone()["n"],
+                before,
+            )
+            self.assertEqual(
+                db.execute("SELECT count(*) n FROM current_pregame_work").fetchone()[
+                    "n"
+                ],
+                0,
+            )
+
     async def test_http_health_checks_supported_sql_without_calculation(self):
         from aiohttp import web
         from aiohttp.test_utils import TestClient, TestServer

@@ -64,6 +64,22 @@ def gains_fee(rate, gross, cost):
     return max(0, gross - cost) * rate
 
 
+def posted_fee_bounds(rule, price):
+    """Raw entry charge per contract and a conservative absolute rounding bound."""
+    from fractions import Fraction as F
+
+    formula = rule['formula']
+    if formula == 'prophetx_commission':
+        return F(0), F(0)
+    rate = quadratic_fee(F(rule['rate']), F(1), price,
+                         F(rule['multiplier']) if formula == 'kalshi_taker' else F(1))
+    if rate == 0 and formula != 'kalshi_taker':
+        return rate, F(0)
+    bound = (F(rule['balance_precision']) + F('0.000001') if formula == 'kalshi_taker'
+             else F('0.000005') if formula == 'novig_pregame' else F('0.005'))
+    return rate, bound
+
+
 def posted_fee(rule, *, price, quantity, stake):
     """Exact single-price fee arithmetic for database-configured pregame comparisons."""
     from fractions import Fraction as F
