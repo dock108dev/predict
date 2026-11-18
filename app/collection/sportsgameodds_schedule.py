@@ -180,11 +180,12 @@ def projected_refresh_objects(events, now, policy, *, include_kickoff=True):
 
 def budgeted_policy(events: list[EventDue], now: datetime, daily_budget: int, *,
                     discovery_walk_objects: int = 0, include_kickoff=True,
-                    minimum_refresh=timedelta(minutes=3)) -> tuple[SchedulePolicy, int]:
-    """Use available budget for near-start odds before distant repeat polls.
+                    minimum_refresh=timedelta(minutes=1)) -> tuple[SchedulePolicy, int]:
+    """Hourly pregame inside 24 hours; trial minute polling in the final 30.
 
-    The 10% planning margin, shared discovery cost and hard ledger guards all
-    remain. Round intervals upward to 30 seconds, never below the feed floor.
+    The owner selected a minute-poll trial despite the advertised three-minute
+    feed frequency. Preserve the shared margin and guards; stretch only when
+    that requested cadence cannot fit. Round upward to 30-second steps.
     Planning is a forecast, not new authority to spend or infer source clocks.
     """
     if type(daily_budget) is not int or daily_budget < 0:
@@ -205,18 +206,29 @@ def budgeted_policy(events: list[EventDue], now: datetime, daily_budget: int, *,
         return projected_refresh_objects(events, now, policy, include_kickoff=include_kickoff)
 
     for near, distant in ((3, 12), (6, 24), (12, 48), (24, 96)):
-        policy = SchedulePolicy(live=minimum_refresh, approaching=minimum_refresh,
-                                imminent=minimum_refresh*2,
+        policy = SchedulePolicy(live=max(timedelta(minutes=3),minimum_refresh),
+                                approaching=minimum_refresh, imminent=timedelta(hours=1),
+                                approaching_window=timedelta(minutes=30),
+                                imminent_window=timedelta(hours=24),
                                 near=timedelta(hours=near), distant=timedelta(hours=distant))
+        projected = cost(policy)
+        if projected <= refresh_limit:
+            return policy, projected
+
+    # If a crowded slate cannot fund both targets, preserve the final-minute
+    # trial ahead of early repeat polls. Actual ledger guards still decide
+    # dispatch; report any selected interval that differs from the request.
+    for hours in (2, 4):
+        policy = replace(policy, imminent=timedelta(hours=hours))
         projected = cost(policy)
         if projected <= refresh_limit:
             return policy, projected
 
     def stretched(scale):
         seconds = ceil(floor_seconds*scale/30)*30
-        return replace(policy, live=timedelta(seconds=seconds),
+        return replace(policy, live=timedelta(seconds=max(180,seconds)),
                        approaching=timedelta(seconds=seconds),
-                       imminent=timedelta(seconds=seconds*2))
+                       imminent=max(policy.imminent,timedelta(seconds=seconds)))
 
     low, high = 1.0, 2.0
     while high < 86400/floor_seconds and cost(stretched(high)) > refresh_limit:

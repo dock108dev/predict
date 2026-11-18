@@ -20,6 +20,12 @@ difference in account-wide usage does not identify which request consumed it.
 Use attributable provider evidence to reconcile an individual charge.
 [Provider usage endpoint](https://sportsgameodds.com/docs/endpoints/getUsageData)
 
+The provider exempts `/account/usage` from its rate limits. Balance reads do not
+consume a local paid-request slot; event requests still reserve their durable
+rate slot and object allowance before dispatch. Existing request history and
+unresolved exposure are preserved.
+[Provider usage FAQ](https://sportsgameodds.com/docs/faq)
+
 The worker uses a first-of-month UTC pacing boundary when the provider reports
 no reset. Treat this as a scheduling assumption. It does not establish actual
 replenishment or resolve prior exposure. A due date shown during rolling
@@ -41,20 +47,46 @@ market inputs are eligible for the desk. [Coverage limits](broad-coverage.md)
 
 Scheduling replans every minute, with separate wakeups for exact refresh and
 time-band deadlines. This does not start another discovery walk or make a request
-when no game is due. Games inside the 12-hour near-start window take priority
+when no game is due. Games inside the 24-hour pregame window take priority
 between discovery pages. Discovery retains its cursor and budget guards.
 
 The planner forecasts the next 24 hours through each game's time bands, ending
-pregame polling at kickoff. It starts with the feed's useful polling floor
-(three minutes on Rookie, ten on Amateur), slows distant repeats first, and then
-stretches near-start intervals in 30-second steps to fit the shared allowance.
-The final two hours receive twice the polling frequency of earlier pregame odds.
+pregame polling at kickoff. The owner's requested policy is one hour inside
+24 hours, then one minute inside the final 30 minutes. The minute cadence is a
+measurement trial even though Rookie advertises three-minute data updates.
+It slows distant repeats first. If the requested schedule cannot fit, it slows
+early repeat polls before stretching the late cadence in 30-second steps;
+`budget_stretched` distinguishes that selected schedule from the requested one.
 Active games are conservatively costed for the full horizon; a finish is never
 invented. Planned discovery plus refresh stays within 90% where the slate fits;
 the ledger still checks actual rolling expenditure before every request. Admin's
-`schedule_budget` records the projection basis, selected intervals, feed floor,
+`schedule_budget` records the projection basis, requested and selected intervals,
+advertised feed frequency,
 discovery cost and headroom. These are targets, not source-latency guarantees.
 [Provider plan frequencies](https://sportsgameodds.com/pricing)
+
+## Minute-poll measurement
+
+After successful page admission, the collector records compact quote-image and
+source-clock fingerprints for pregame events inside the final 30 minutes. The
+separate `.local/predict-odds/diagnostics/sgo-refresh-study.sqlite3` contains no
+credentials, raw prices or financial accounting. It retains at most 10,000
+samples and seven days. Restart loads the retained summary; a study error does
+not fail acquisition or revoke committed prices.
+
+Admin's source metrics include `late_pregame_study`: comparable polls, changed
+quote images, clock-only changes, fully repeated polls, observed time gaps and
+changed images observed earlier than a three-minute replay. A quote image covers
+prices, lines and availability; a first sample is a baseline. The replay measures
+earlier information, not order executions. Inspect the durable report without
+issuing provider requests:
+
+```sh
+.venv/bin/python -m app.collection.sportsgameodds_study
+```
+
+For server measurements, run that module in the collector container. A local
+snapshot app does not collect minute-poll samples.
 
 The desk uses both original sportsbook clocks for same-book fair odds. Vendor
 fair odds and book consensus have separate meanings from Predict's own estimate.

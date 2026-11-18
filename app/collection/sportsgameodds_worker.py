@@ -129,7 +129,7 @@ class SportsGameOddsWorker:
     max_discovery_pages = 1000
 
     def __init__(self, service, *, key_loader=credential, usage_reader=read_usage,
-                 transport=None, ledger_path=None, now=clock):
+                 transport=None, ledger_path=None, study_path=None, now=clock):
         self.service = service
         self.key_loader = key_loader
         self.usage_reader = usage_reader
@@ -149,6 +149,7 @@ class SportsGameOddsWorker:
         self.storage_interval_requested = False
         self.ledger = None
         self.window_id = None
+        self.study_path = Path(study_path or ROOT / '.local/predict-odds/diagnostics/sgo-refresh-study.sqlite3')
         self.collector = None
         self.events = {}
         self.discovery_at = {}
@@ -185,9 +186,8 @@ class SportsGameOddsWorker:
     async def usage(self):
         if self.controls()['stopped'] or self.controls()['source_paused']:
             raise RuntimeError('collection stopped or source paused')
-        self.ledger.reserve_request(self.account_id, requests_per_minute=self.request_limit, now=self.now())
-        if self.controls()['stopped'] or self.controls()['source_paused']:
-            raise RuntimeError('collection stopped or source paused')
+        # /account/usage is exempt from provider rate limits. Paid event
+        # requests still reserve their own durable rate slot in the ledger.
         return await self.usage_reader(self.key)
 
     async def initialize(self):
@@ -221,6 +221,19 @@ class SportsGameOddsWorker:
                                               eligible=self.request_in_scope)
         self.metrics.update(state='waiting', account_tier=observed.get('tier'), reset_basis=reset_basis)
         self._account_status()
+        await self.update_study()
+
+    async def update_study(self, page=None, admitted_at=None):
+        from .bulk_checkpoint import owned_thread
+        from .sportsgameodds_study import observe, report
+
+        try:
+            self.metrics['late_pregame_study'] = (
+                await owned_thread(observe,self.study_path,page,admitted_at) if page is not None
+                else await owned_thread(report,self.study_path))
+        except Exception as exc:
+            failure(__name__, 'sgo_refresh_study', exc)
+            self.metrics['late_pregame_study'] = dict(state='measurement_unavailable')
 
     def _usage_status(self, observed):
         # Nonsecret, point-in-time provider facts; a calendar boundary remains
@@ -292,6 +305,11 @@ class SportsGameOddsWorker:
             totals = cohorts.setdefault(key, dict.fromkeys(tally, 0))
             for field, count in tally.items():
                 totals[field] += count
+
+        # A study failure cannot revoke prices already committed above.
+        if any(timedelta(0) < datetime.fromisoformat(e['starts_at'])-admitted_at <= timedelta(minutes=30)
+               for e in page.events):
+            await self.update_study(page,admitted_at)
 
     async def _fetch(self, params):
         if not self.request_in_scope(params):
@@ -536,7 +554,7 @@ class SportsGameOddsWorker:
             prior_cost = self.ledger.discovery_cost(now=now)
             walk_objects = sum(max(1, by_league[league], prior_cost.get(league, 0)) for league in leagues)
             policy, projected = budgeted_policy(candidates, now, allowance, discovery_walk_objects=walk_objects,
-                                                minimum_refresh=timedelta(minutes=10 if self.metrics.get('account_tier') == 'amateur' else 3),
+                                                minimum_refresh=timedelta(minutes=1),
                                                 include_kickoff=live_enabled(self.service.config))
             discovery_cadence = discovery_interval(retained_events=walk_objects, daily_budget=allowance,
                                                    projected_refresh_objects=projected)
@@ -549,9 +567,13 @@ class SportsGameOddsWorker:
                 projected_discovery_objects=discovery_per_day, projected_total_objects=combined,
                 planned_fraction=PLANNED_FRACTION, projected_headroom_objects=round(allowance-combined, 3),
                 projection='next_24_hours_through_kickoff', replan_seconds=SCAN_INTERVAL.total_seconds(),
-                feed_floor_seconds=600 if self.metrics.get('account_tier') == 'amateur' else 180,
+                advertised_feed_seconds=600 if self.metrics.get('account_tier') == 'amateur' else 180,
+                requested_late_refresh_seconds=60, requested_early_refresh_seconds=3600,
+                trial='one_minute_final_30_minutes',
+                budget_stretched=policy.approaching!=timedelta(minutes=1) or policy.imminent!=timedelta(hours=1),
                 live_minutes=policy.live.total_seconds()/60, approaching_minutes=policy.approaching.total_seconds()/60,
                 approaching_hours=policy.approaching_window.total_seconds()/3600,
+                hourly_window_hours=policy.imminent_window.total_seconds()/3600,
                 imminent_minutes=policy.imminent.total_seconds()/60,
                 near_minutes=policy.near.total_seconds()/60, distant_minutes=policy.distant.total_seconds()/60)
             self.metrics['resolved_objects_last_hour'] = self.ledger.charge_breakdown(self.window_id, since=now-timedelta(hours=1))

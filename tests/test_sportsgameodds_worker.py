@@ -255,6 +255,38 @@ def test_every_game_deadline_and_faster_band_wake_without_extra_discovery():
     assert worker.next_pregame_refresh(NOW,policy,NOW+timedelta(minutes=1)) == NOW+timedelta(seconds=5)
 
 
+def test_running_worker_enters_final_30_minutes_without_waiting_for_hourly_poll():
+    from unittest.mock import patch
+    from app.collection.sportsgameodds_schedule import budgeted_policy
+
+    async def scenario():
+        moment=NOW
+        service=SimpleNamespace(config=deepcopy(DEFAULT),dispatch=True,
+                                globally_stopped=False,paused_sources=set(),database_mode=True)
+        worker=SportsGameOddsWorker(service,now=lambda:moment)
+        worker.initialize,worker.state=AsyncMock(),AsyncMock()
+        policy,_=budgeted_policy([],NOW,10000,include_kickoff=False)
+        worker.events['e1']=dict(event(1),starts_at=(NOW+timedelta(minutes=30,seconds=30)).isoformat(),
+                                 received_at=(NOW-timedelta(minutes=2)).isoformat())
+        worker.cycle=AsyncMock(return_value=policy)
+        async def sleep(delay):
+            nonlocal moment
+            assert delay == 30
+            moment += timedelta(seconds=delay)
+        async def refresh(due,selected):
+            assert moment == NOW+timedelta(seconds=30)
+            assert [e.event_id for e in due] == ['e1']
+            assert selected.approaching == timedelta(minutes=1)
+            service.dispatch=False
+        worker.refresh=AsyncMock(side_effect=refresh)
+        with patch('app.collection.sportsgameodds_worker.retained_schedule',return_value=({},False)), \
+             patch('app.collection.sportsgameodds_worker.asyncio.sleep',side_effect=sleep):
+            await worker.run()
+        worker.refresh.assert_awaited_once()
+        worker.cycle.assert_awaited_once()
+    asyncio.run(scenario())
+
+
 def test_replanning_fresh_games_does_not_spend_or_repeat_a_discovery_walk():
     async def scenario():
         moment = NOW
@@ -473,6 +505,28 @@ def test_initial_usage_rate_limit_waits_and_retries():
     asyncio.run(scenario())
 
 
+def test_exempt_usage_reads_do_not_consume_or_release_paid_rate_slots(tmp_path):
+    from app.collection.sportsgameodds_ledger import ObjectLedger
+
+    async def scenario():
+        service=SimpleNamespace(config=deepcopy(DEFAULT),dispatch=True,
+                                globally_stopped=False,paused_sources=set())
+        reader=AsyncMock(return_value=dict(used=0))
+        worker=SportsGameOddsWorker(service,usage_reader=reader,now=lambda:NOW)
+        worker.ledger=ObjectLedger(tmp_path/'quota.sqlite3')
+        worker.account_id='account';worker.window_id='account:window'
+        worker.ledger.create_window(worker.window_id,limit=100,initial_used=0,reserve=10,
+                                    reset_at=NOW+timedelta(days=30),requests_per_minute=1)
+        worker.ledger.reserve_request('account',requests_per_minute=1,now=NOW)
+        assert await worker.usage() == dict(used=0)
+        reader.assert_awaited_once()
+        # Reading usage neither spends another slot nor releases the old one.
+        with pytest.raises(RuntimeError,match='request rate limit'):
+            worker.ledger.reserve(worker.window_id,'paid',objects=1,now=NOW)
+        assert worker.ledger.status(worker.window_id)['held'] == 0
+    asyncio.run(scenario())
+
+
 def test_worker_waits_for_evidenced_charge_resolution_without_restart(tmp_path):
     from unittest.mock import patch
     from app.collection.sportsgameodds_ledger import ObjectLedger
@@ -543,21 +597,27 @@ def test_hourly_spend_retains_its_sample_time_until_next_cycle(tmp_path):
     asyncio.run(scenario())
 
 
-def test_offer_and_reference_evidence_share_one_bounded_ingress():
+@pytest.mark.parametrize('study_fails',[False,True])
+def test_offer_and_reference_evidence_share_one_bounded_ingress(tmp_path,study_fails):
     from unittest.mock import patch
     async def scenario():
         saved = []
         sink = SimpleNamespace(commit=lambda row, states: saved.append(row))
         service = SimpleNamespace(config=deepcopy(DEFAULT), dispatch=True, globally_stopped=False,
             paused_sources=set(), database_mode=False, states={}, sink=sink)
-        worker = SportsGameOddsWorker(service, transport=SimpleNamespace(close=AsyncMock()), now=lambda: NOW)
-        page = Page((event(1),), (), None, 'a'*64)
+        worker = SportsGameOddsWorker(service, transport=SimpleNamespace(close=AsyncMock()),
+                                     study_path=tmp_path/'study.db',now=lambda: NOW)
+        observed=event(1)
+        if study_fails:
+            observed['starts_at']=(NOW+timedelta(minutes=20)).isoformat()
+        page = Page((observed,), (), None, 'a'*64)
         record = {'event': {'competition':'NFL'}, 'quote': {'id':'offer'}}
         reference = {'id':'reference'}
         frames = [{'event_id':'e1'}]
         with patch('app.collection.sportsgameodds_worker.current_rows', return_value=([record], [])), \
              patch('app.storage.sportsgameodds_reference.prepare_page', return_value=[reference]), \
-             patch('app.storage.sportsgameodds_reference.prepare_frames', return_value=frames):
+             patch('app.storage.sportsgameodds_reference.prepare_frames', return_value=frames), \
+             patch('app.collection.sportsgameodds_study.observe',side_effect=OSError('fixture study failure')):
             await worker._publish(page)
         assert len(saved) == 1
         assert saved[0]['source'] == 'sportsgameodds'
@@ -565,6 +625,8 @@ def test_offer_and_reference_evidence_share_one_bounded_ingress():
         assert saved[0]['sgo_reference_rows'] == [reference]
         assert saved[0]['sgo_event_frames'] == frames
         assert saved[0]['complete_venues'] == []
+        if study_fails:
+            assert worker.metrics['late_pregame_study']['state'] == 'measurement_unavailable'
     asyncio.run(scenario())
 
 

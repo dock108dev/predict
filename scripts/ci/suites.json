@@ -650,6 +650,7 @@
       "tests/test_sportsgameodds_ledger.py",
       "tests/test_sportsgameodds_schedule.py",
       "tests/test_sportsgameodds_service_selection.py",
+      "tests/test_sportsgameodds_study.py",
       "tests/test_sportsgameodds_transport.py",
       "tests/test_sportsgameodds_usage.py",
       "tests/test_sportsgameodds_worker.py"

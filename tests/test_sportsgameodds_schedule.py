@@ -37,13 +37,16 @@ def test_near_term_slate_refreshes_more_frequently_than_distant_games():
 
 
 def test_approaching_games_are_prioritized_and_costed():
-    events = [EventDue('approaching', NOW + timedelta(hours=1), NOW - timedelta(minutes=30)),
-              EventDue('later', NOW + timedelta(hours=6), NOW - timedelta(minutes=30))]
+    events = [EventDue('approaching', NOW + timedelta(minutes=15), NOW - timedelta(minutes=2)),
+              EventDue('later', NOW + timedelta(hours=6), NOW - timedelta(hours=1))]
     policy, projected = budgeted_policy(events, NOW, 1000)
     assert [e.event_id for e in due_events(events, NOW, policy=policy)] == ['approaching', 'later']
-    assert policy.approaching == timedelta(minutes=3)
-    # One remaining hour, then kickoff; the later game crosses both bands.
-    assert projected == 20 + 80 + 2
+    assert policy.approaching == timedelta(minutes=1)
+    assert policy.imminent == timedelta(hours=1)
+    assert policy.approaching_window == timedelta(minutes=30)
+    assert policy.imminent_window == timedelta(hours=24)
+    # Fifteen minute polls, then 5.5 hourly objects + 30 late polls, and kickoff.
+    assert projected == 53
 
 
 def test_object_charge_reserve_and_unknown_exposure():
@@ -82,10 +85,9 @@ def test_busy_slate_spends_headroom_on_near_start_prices_before_distant_polls():
     policy, projected = budgeted_policy(events, NOW, 4500)
     assert policy.near == timedelta(hours=24)
     assert policy.distant == timedelta(hours=96)
-    assert timedelta(minutes=3) <= policy.approaching < policy.imminent
+    assert timedelta(minutes=1) <= policy.approaching < policy.imminent
     assert projected <= 4500 * .9
-    # The previous 45-minute tier was not a target, just a fixed candidate.
-    assert policy.imminent < timedelta(minutes=60)
+    assert policy.imminent >= timedelta(hours=1)
 
 
 def test_projection_follows_bands_and_stops_pregame_at_kickoff():
@@ -172,6 +174,15 @@ def test_captured_busy_pregame_shape_improves_forty_five_minutes_within_allowanc
               [EventDue(f'cold{i}',NOW+timedelta(days=10),NOW) for i in range(564)])
     policy, refresh = budgeted_policy(events,NOW,5891,discovery_walk_objects=850,include_kickoff=False)
     discovery=discovery_interval(retained_events=850,daily_budget=5891,projected_refresh_objects=refresh)
-    assert policy.approaching < timedelta(minutes=10)
-    assert policy.imminent < timedelta(minutes=20)
+    assert policy.approaching == timedelta(minutes=1)
+    assert policy.imminent == timedelta(hours=1)
     assert refresh+850*timedelta(days=1)/discovery <= 5891*.9
+
+
+def test_hourly_to_minute_transition_is_exact():
+    policy,_=budgeted_policy([],NOW,10000,include_kickoff=False)
+    last=NOW-timedelta(minutes=2)
+    outside=EventDue('early',NOW+timedelta(minutes=30,seconds=1),last)
+    inside=EventDue('late',NOW+timedelta(minutes=30),last)
+    assert due_events([outside,inside],NOW,policy=policy) == [inside]
+    assert policy.imminent == timedelta(hours=1)
