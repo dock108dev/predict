@@ -4,13 +4,23 @@
 
 The primary dashboard uses complete current calculations from the affected-game
 path described in [Current pregame](current-pregame.md). Every venue for the same
-exact bet uses the first eligible complete same-book reference in this order:
-FanDuel, DraftKings, BetMGM, Caesars. Match the occurrence, full-game period,
+exact bet uses the eligible complete same-book pair with the lowest unrounded
+no-vig win probability. Eligible books are FanDuel, DraftKings, BetMGM and
+Caesars; that order breaks exact probability ties. This owner-selected policy
+is `lowest-no-vig-probability-1`, calculation version `predict-current-pregame-6`.
+It minimizes EV among those sportsbook estimates for the selected long bet;
+it does not establish the true probability or a statistical lower bound. Match the occurrence, full-game period,
 market, exact line and opposing outcome identities before arithmetic. Genuine
-identity, scoring or outcome contradictions exclude the comparison.
+identity, scoring or outcome contradictions exclude the comparison. Main/alternate
+classification keeps the established source and fixed-priority line evidence,
+independently of which book supplies the conservative probability.
 
 For two decimal reference prices `a` and `b`, fair probability is
-`(1/a) / ((1/a)+(1/b))`. Preserve original prices and timestamps. Historical proof
+`(1/a) / ((1/a)+(1/b))`. Choose using the full same-book pair, not one posted price or a pair assembled
+across books. For UCLA −33.5, FanDuel −110/−110 gives 50%; DraftKings and BetMGM
+−105/−115 give 903/1846 ≈ 48.9166%. Novig +115 with zero fees therefore has
++5.17% EV instead of +7.50%, and a rounded score of 450 instead of 652.
+Preserve original prices and timestamps. Historical proof
 reconstruction and execution depth are not routine calculation prerequisites.
 
 Posted-price cashflows use an internal **$100 maximum upfront comparison basis**

@@ -1,22 +1,26 @@
 # Predict
 
-Predict is a read-only odds and opportunity dashboard. It opens directly on
+Predict is a read-only odds and opportunity board. It opens directly on
 **Pregame Opportunities**, showing complete main-line bets ranked by Opportunity
-Score after fees. **Browse odds** includes complete comparisons with nonpositive
-EV and optional alternate lines. Open a game or choose **Compare prices** to
-inspect the same committed price, reference, fees, and Net EV.
+Score after fees. **Browse odds** groups main markets by game, sorted by start
+time. Open a game for alternate lines, then select a line to compare exact
+market and sportsbook prices. **Arbitrage** compares opposite market-to-market
+and market-to-sportsbook legs after fees, independently of sportsbook EV.
 
 The collector receives odds, normalizes affected games, calculates using posted
 prices, and stores complete current rows in PostgreSQL. Refresh and inspection
-only read SQL. Pregame observations have no age expiry: authoritative kickoff,
+only read stored data. Arb reads also balance a bounded illustrative allocation
+using the stored fee inputs. Pregame observations have no age expiry: authoritative kickoff,
 non-pregame status, and explicit withdrawal govern removal. Odds may be delayed.
 
 [Desk guide](docs/ui-design.md#current-comparison-interface) ·
 [Current data flow and API](docs/current-pregame.md) ·
 [Calculation policy](docs/benchmark-ev.md)
 
-**Arbitrage**, saved captures, and simulated practice remain separate research
-views. Account connections and execution modeling remain backlog work.
+Saved captures and simulated practice remain separate research views.
+Live executable size and cross-venue fills are not established by these boards.
+[About this board](app/dashboard/opportunity_static/current/about.html) explains
+the model, execution limitations, sources and SportsGameOdds data credit.
 
 ## Requirements and quickstart
 
@@ -39,6 +43,9 @@ Open the loopback address printed by the launcher. If port 8784 is free,
 use [Predict on port 8784](http://127.0.0.1:8784/). The desk needs committed
 prices to show current offers. Choose **Practice** to explore simulated calculations.
 `cp -n` preserves an existing config, and `check-config` prints its acquisition scope.
+
+For UI iteration with a real dev-server database and no local collectors, see
+[local snapshot development](docs/local-ui-development.md).
 
 ## Collect prices
 

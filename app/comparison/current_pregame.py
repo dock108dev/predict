@@ -18,7 +18,8 @@ from .sgo_reference import (
 from .snapshot_fee_scope import applicability
 from .trade_preview import order_step
 
-VERSION = "predict-current-pregame-5"
+VERSION = "predict-current-pregame-6"
+REFERENCE_POLICY = "lowest-no-vig-probability-1"
 COMPARISON_USD = F(100)
 
 
@@ -76,14 +77,26 @@ def reference_key(record):
 
 
 def reference(record, observations, *, at):
-    """Select one complete exact pair, in the owner's fixed book priority."""
-    event = record["event"]
+    """Use the lowest eligible no-vig win probability for this exact bet."""
     family, side, line = reference_key(record)
+    return select_reference(
+        observations,
+        family=family,
+        side=side,
+        line=line,
+        start=record["event"]["scheduled_start"],
+        at=at,
+    )
+
+
+def select_reference(observations, *, family, side, line, start, at):
+    """Shared selector for collection and source-preserving snapshot revaluation."""
     inputs = (
         observations
         if isinstance(observations, ReferenceInputs)
         else ReferenceInputs(observations)
     )
+    candidates = []
     for book in BEST_BOOKS:
         pairs = []
         for event_id, sides in inputs.groups.get((book, family, line), {}).items():
@@ -97,7 +110,7 @@ def reference(record, observations, *, at):
                     and stamp(q["source_at"])
                     <= stamp(q["received_at"])
                     <= at
-                    < stamp(event["scheduled_start"])
+                    < stamp(start)
                     for q in (a, b)
                 ):
                     continue
@@ -117,18 +130,40 @@ def reference(record, observations, *, at):
                 american_probability(a["price_american"]),
                 american_probability(b["price_american"]),
             )
-            return dict(
-                book=book,
-                probability=wire(probability),
-                fair_decimal_odds=wire(1 / probability),
-                fair_odds=american(1 / probability),
-                prices=[a, b],
-                event_id=event_id,
-                market=dict(family=family, period="full_game", line=wire(line)),
-                selected_outcome=side,
-                conditioning="decisive_completed_game",
+            candidates.append(
+                dict(
+                    book=book,
+                    probability=wire(probability),
+                    fair_decimal_odds=wire(1 / probability),
+                    fair_odds=american(1 / probability),
+                    prices=[a, b],
+                    event_id=event_id,
+                    market=dict(family=family, period="full_game", line=wire(line)),
+                    selected_outcome=side,
+                    conditioning="decisive_completed_game",
+                )
             )
-    raise ValueError("reference_exact_pair_unavailable")
+    if not candidates:
+        raise ValueError("reference_exact_pair_unavailable")
+    # Lower fair win probability lowers EV for every supported long bet. Only
+    # complete same-book pairs compete; priority is a deterministic tie-break.
+    selected = min(
+        candidates,
+        key=lambda item: (F(item["probability"]), BEST_BOOKS.index(item["book"])),
+    )
+    return dict(
+        selected,
+        selection_policy=REFERENCE_POLICY,
+        # Line eligibility keeps its established priority evidence;
+        # changing an EV benchmark must not relabel main/alternate lines.
+        main_line_evidence=all(
+            q.get("alternate") is False for q in candidates[0]["prices"]
+        ),
+        main_line_reference_book=candidates[0]["book"],
+        candidate_probabilities={
+            item["book"]: item["probability"] for item in candidates
+        },
+    )
 
 
 def posted_fill(terms, amount, cost, fees, rule):
@@ -165,7 +200,7 @@ def posted_fill(terms, amount, cost, fees, rule):
     return best, None
 
 
-def calculate(record, ref, fee, *, at, game_key):
+def calculate(record, ref, fee, *, at, game_key, amount=COMPARISON_USD):
     """Use tested fee, cashflow and score functions; depth never enters this model."""
     q, market = record["quote"], record["market_identity"]
     from app.storage.current_rows import contract_id
@@ -209,17 +244,17 @@ def calculate(record, ref, fee, *, at, game_key):
         order_type="straight_stake" if stake else "taker",
         increment=wire(step),
         minimum=wire(step),
-        maximum=wire(COMPARISON_USD) if stake else None,
+        maximum=wire(amount) if stake else None,
         evidence_class="public_estimate",
         pricing_model="posted_price",
         revision=VERSION,
     )
     if not stake:
-        terms["asks"] = [dict(price=wire(cost), quantity=wire(COMPARISON_USD / cost))]
+        terms["asks"] = [dict(price=wire(cost), quantity=wire(amount / cost))]
     fees, evidence, _ = retail_order(row, terms, cost, fee)
     (committed, legs, wager, entry, reserve, cash, trace), reason = posted_fill(
         terms,
-        COMPARISON_USD,
+        amount,
         cost,
         fees,
         (fee.get("evidence") or {}).get("database_fee_rule"),
@@ -244,28 +279,20 @@ def calculate(record, ref, fee, *, at, game_key):
             fee_terms=cash,
             settlement=settlement,
         )
-    p = F(ref["probability"])
-    probabilities = dict(win=p, loss=1 - p)
-    ratios = {s: F(v["net_return"]) for s, v in states.items()}
-    ev = sum(probabilities[s] * ratios[s] for s in states)
     after = F(states["win"]["net_receipt_usd"]) / committed
-    opportunity = score(probabilities, ratios, ev)
+    ev, opportunity = None, None
+    if ref is not None:
+        ev, _, opportunity = cashflow_values(ref, states, committed)
     selection = record["selection"]
     side = outcome(
         market["family"], selection, record["event"]["home"], record["event"]["away"]
     )[1]
+    canonical_line = reference_key(record)[2]
     bet = hashed(
-        [game_key, market["period"], market["family"], ref["market"]["line"], side]
+        [game_key, market["period"], market["family"], wire(canonical_line), side]
     )
-    alternate = (record.get("comparison_source_metadata") or {}).get("alternate")
-    main = (
-        alternate is False
-        or alternate is not True
-        and all(p.get("alternate") is False for p in ref["prices"])
-    )
-    if market["family"] == "moneyline":
-        main = alternate is not True
-    return dict(
+    main = main_line(record, ref or {"prices": [{}]})
+    result = dict(
         id=cid,
         game_key=game_key,
         bet_id=bet,
@@ -289,6 +316,13 @@ def calculate(record, ref, fee, *, at, game_key):
         source=q["source"],
         times=q["times"],
         reference=ref,
+        arb_key=hashed(
+            [game_key, market["period"], market["family"], wire(canonical_line)]
+        ),
+        side=side,
+        scoring_scope=(record.get("comparison_source_metadata") or {}).get(
+            "scoring_scope"
+        ),
         fee=dict(
             evidence=evidence,
             classification=fee["classification"],
@@ -296,24 +330,83 @@ def calculate(record, ref, fee, *, at, game_key):
             entry_usd=wire(entry),
             reserve_usd=wire(reserve),
             rounding_trace=trace,
-            comparison_basis_usd="100",
+            comparison_basis_usd=wire(amount),
             committed_usd=wire(committed),
         ),
         raw=dict(
             posted_decimal=wire(1 / cost),
             after_fee_decimal=wire(after),
-            fair_decimal=ref["fair_decimal_odds"],
-            net_ev=wire(ev),
-            opportunity_score=wire(opportunity),
-            expected_profit_usd=wire(committed * ev),
+            fair_decimal=ref["fair_decimal_odds"] if ref else None,
+            net_ev=wire(ev) if ev is not None else None,
+            opportunity_score=wire(opportunity) if opportunity is not None else None,
+            expected_profit_usd=wire(committed * ev) if ev is not None else None,
         ),
         display=dict(
             posted_odds=american(1 / cost),
             after_fees=american(after) or decimal_display(after, 4),
-            fair_odds=ref["fair_odds"],
-            net_ev=decimal_display(ev * 100, signed=True) + "%",
-            opportunity_score=decimal_display(opportunity, 0),
+            fair_odds=ref["fair_odds"] if ref else None,
+            net_ev=decimal_display(ev * 100, signed=True) + "%"
+            if ev is not None
+            else None,
+            opportunity_score=decimal_display(opportunity, 0)
+            if opportunity is not None
+            else None,
         ),
         version=VERSION,
         calculated_at=at.isoformat(),
+    )
+
+    return result
+
+
+def cashflow_values(reference, states, committed):
+    p = F(reference["probability"])
+    probabilities = dict(win=p, loss=1 - p)
+    ratios = {
+        state: F(value["net_receipt_usd"]) / committed - 1
+        for state, value in states.items()
+    }
+    ev = sum(probabilities[state] * ratios[state] for state in states)
+    after = F(states["win"]["net_receipt_usd"]) / committed
+    return ev, after, score(probabilities, ratios, ev)
+
+
+def revalue_reference(payload, reference, *, at):
+    """Revalue a frozen offer; original prices, cashflows, fees and clocks survive."""
+    from copy import deepcopy
+
+    result = deepcopy(payload)
+    committed = F(result["fee"]["committed_usd"])
+    ev, _, opportunity = cashflow_values(
+        reference, result["fee"]["cashflows"], committed
+    )
+    result.update(reference=reference, version=VERSION, calculated_at=at.isoformat())
+    result["raw"].update(
+        fair_decimal=reference["fair_decimal_odds"],
+        net_ev=wire(ev) if ev is not None else None,
+        opportunity_score=wire(opportunity) if opportunity is not None else None,
+        expected_profit_usd=wire(committed * ev) if ev is not None else None,
+    )
+    result["display"].update(
+        fair_odds=reference["fair_odds"],
+        net_ev=decimal_display(ev * 100, signed=True) + "%",
+        opportunity_score=decimal_display(opportunity, 0),
+    )
+    result["input_revision"] = hashed(
+        [payload["input_revision"], REFERENCE_POLICY, reference]
+    )
+    return result
+
+
+def main_line(record, reference):
+    alternate = (record.get("comparison_source_metadata") or {}).get("alternate")
+    if record["market_identity"]["family"] == "moneyline":
+        return alternate is not True
+    return (
+        alternate is False
+        or alternate is not True
+        and reference.get(
+            "main_line_evidence",
+            all(p.get("alternate") is False for p in reference["prices"]),
+        )
     )

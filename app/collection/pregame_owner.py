@@ -78,12 +78,9 @@ class PregameOwner:
                     )
                     self.fee_account_identity = identity
                 # Effective fee deadlines enqueue only the affected source events.
-                db.execute("""INSERT INTO current_pregame_work(provider,native_event_id)
-                    SELECT DISTINCT e.provider,e.native_event_id FROM current_pregame_calculation p
-                    JOIN current_contract c ON c.id=p.contract_id JOIN current_event e ON e.id=c.event_id
-                    WHERE p.valid_until<=clock_timestamp() AND p.start_at>clock_timestamp()
-                      AND (p.reason IS NULL OR p.reason='fee_rule_no_current_schedule')
-                    ON CONFLICT DO NOTHING""")
+                from app.storage.current_pregame import enqueue_due
+
+                enqueue_due(db)
             from .background_work import BACKGROUND
 
             result = process(

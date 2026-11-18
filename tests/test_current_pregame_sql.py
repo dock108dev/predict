@@ -1,115 +1,66 @@
 """Current pregame ingestion, coherent values, retention and pure read coverage."""
 
 from copy import deepcopy
-from datetime import timedelta
 from fractions import Fraction
 from time import monotonic
 from unittest import skipUnless
 from unittest.mock import patch
 
-from tests.latest_board_fixture import LatestBoardFixture, SOCKET
-from tests.test_sportsgameodds_adapter import response
-from app.collection.sportsgameodds_adapter import parse_page
-import json
-import asyncio
+from tests.latest_board_fixture import SOCKET
 
-AT = "2026-11-17T20:00:00Z"
+from tests.pregame_fixture import AT, page, parse, PregameFixture
 
 
-def parse(data):
-    return parse_page(json.dumps(data).encode(), AT)
-
-
-from app.collection.sportsgameodds_current_rows import current_rows
 from app.storage.current_rows import CurrentRowStore
 from app.storage.sportsgameodds_reference import (
     prepare_page,
-    prepare_frames,
-    upsert_rows,
-    upsert_frames,
 )
 from app.storage.store import stamp
 from app.storage import current_pregame as board
 
 
-def page():
-    data = json.loads(json.dumps(response()).replace("2026-11-10", "2026-11-17"))
-    event = data["data"][0]
-    event["teams"]["home"]["names"]["long"] = "Orlando Magic"
-    event["teams"]["away"]["names"]["long"] = "Milwaukee Bucks"
-    odd = next(iter(event["odds"].values()))
-    book = next(iter(odd["byBookmaker"].values()))
-    odd["byBookmaker"] = {
-        "prophetx": dict(book, odds="+120"),
-        "fanduel": book,
-        "draftkings": dict(book, odds="-130"),
-    }
-    other = deepcopy(odd)
-    other.update(
-        oddID=odd["opposingOddID"],
-        opposingOddID=odd["oddID"],
-        statEntityID="away",
-        sideID="away",
-    )
-    other["byBookmaker"] = {
-        k: dict(v, spread="1.5", odds="-110") for k, v in other["byBookmaker"].items()
-    }
-    event["odds"][other["oddID"]] = other
-    return data
-
-
 @skipUnless(SOCKET, "Disposable PostgreSQL required")
-class CurrentPregameSQL(LatestBoardFixture):
-    async def asyncSetUp(self):
-        with self.connect() as db:
-            db.execute(
-                "TRUNCATE current_event,sgo_event_evidence,sgo_quote_revision,current_pregame_work CASCADE"
-            )
-            from tests.test_public_fee_schedule import attempt, PDF
-            from hashlib import sha256
-            from app.fees import schedule_lifecycle
-
-            approved = dict(
-                schedule_lifecycle.approved(), document_sha256=sha256(PDF).hexdigest()
-            )
-            schedule_lifecycle.write(
-                db, await asyncio.to_thread(attempt, approved, at=stamp(AT))
-            )
-
-    def ingest(self, db, data):
-        parsed = parse(data)
-        refs = prepare_page(parsed)
-        with db.transaction():
-            upsert_rows(db, refs)
-            upsert_frames(db, prepare_frames(parsed, refs))
-            records = current_rows(parsed, parsed.receipt_sha256)[0]
-            CurrentRowStore(db).upsert_records(records, now=AT)
-        return records
-
-    def process(self, db, **kwargs):
-        with patch("app.storage.current_rows.utc", return_value=AT):
-            return board.process(db, at=stamp(AT), **kwargs)
-
+class CurrentPregameSQL(PregameFixture):
     async def test_source_transaction_coalesces_jobs_and_browser_revision(self):
         with self.connect() as db:
-            before = db.execute("SELECT revision FROM current_pregame_revision").fetchone()['revision']
+            before = db.execute(
+                "SELECT revision FROM current_pregame_revision"
+            ).fetchone()["revision"]
             with db.transaction():
                 for _ in range(100):
                     db.execute("SELECT pregame_enqueue('sportsgameodds','coalesced')")
-                first = db.execute("SELECT revision,admitted_at FROM current_pregame_work").fetchone()
-                self.assertEqual(first['revision'], 1)
-                self.assertEqual(db.execute("SELECT revision FROM current_pregame_revision").fetchone()['revision'], before + 1)
+                first = db.execute(
+                    "SELECT revision,admitted_at FROM current_pregame_work"
+                ).fetchone()
+                self.assertEqual(first["revision"], 1)
+                self.assertEqual(
+                    db.execute(
+                        "SELECT revision FROM current_pregame_revision"
+                    ).fetchone()["revision"],
+                    before + 1,
+                )
                 db.execute("SELECT pregame_enqueue('sportsgameodds','unrelated')")
-                self.assertEqual(db.execute("SELECT count(*) n FROM current_pregame_work").fetchone()['n'], 2)
+                self.assertEqual(
+                    db.execute(
+                        "SELECT count(*) n FROM current_pregame_work"
+                    ).fetchone()["n"],
+                    2,
+                )
             with db.transaction():
                 db.execute("SELECT pregame_enqueue('sportsgameodds','coalesced')")
-                newer = db.execute("SELECT revision,admitted_at FROM current_pregame_work WHERE native_event_id='coalesced'").fetchone()
-                self.assertEqual(newer['revision'], 2)
-                self.assertGreaterEqual(newer['admitted_at'], first['admitted_at'])
-                db.execute("UPDATE current_pregame_work SET error='retry' WHERE native_event_id='coalesced'")
+                newer = db.execute(
+                    "SELECT revision,admitted_at FROM current_pregame_work WHERE native_event_id='coalesced'"
+                ).fetchone()
+                self.assertEqual(newer["revision"], 2)
+                self.assertGreaterEqual(newer["admitted_at"], first["admitted_at"])
+                db.execute(
+                    "UPDATE current_pregame_work SET error='retry' WHERE native_event_id='coalesced'"
+                )
                 db.execute("SELECT pregame_enqueue('sportsgameodds','coalesced')")
-                recovered = db.execute("SELECT revision,error FROM current_pregame_work WHERE native_event_id='coalesced'").fetchone()
-                self.assertEqual(recovered, dict(revision=3,error=None))
+                recovered = db.execute(
+                    "SELECT revision,error FROM current_pregame_work WHERE native_event_id='coalesced'"
+                ).fetchone()
+                self.assertEqual(recovered, dict(revision=3, error=None))
 
     async def test_inactive_route_does_not_resolve_or_recalculate_active_game(self):
         with self.connect() as db:
@@ -234,6 +185,10 @@ class CurrentPregameSQL(LatestBoardFixture):
                 self.assertEqual(board.read(db, {}, at=stamp(AT))["rows"], out["rows"])
                 comparison = board.read(db, {"bet_id": row["bet_id"]}, at=stamp(AT))
                 self.assertEqual(comparison["rows"][0], row)
+                prices = {
+                    q["book"]: q["posted_odds"] for q in comparison["sportsbooks"]
+                }
+                self.assertEqual(prices, {"fanduel": "-110", "draftkings": "-130"})
             self.assertEqual(
                 pending,
                 db.execute("SELECT count(*) n FROM current_pregame_work").fetchone()[
@@ -346,6 +301,12 @@ class CurrentPregameSQL(LatestBoardFixture):
                 beyond = board.read(
                     db, dict(lines="all", browse="1", offset="102"), at=stamp(AT)
                 )
+                expanded = board.read(
+                    db,
+                    dict(view="game", game_key=complete["rows"][0]["game_key"]),
+                    at=stamp(AT),
+                )
+                self.assertEqual(len(expanded["rows"]), 102)
             self.assertEqual(len(records), 408)
             self.assertEqual(sum(row["complete"] for row in result), 408)
             self.assertEqual(complete["total"], 102)
@@ -690,3 +651,82 @@ class CurrentPregameSQL(LatestBoardFixture):
             self.assertEqual((winning * 100).denominator, 1)
             self.assertLessEqual(Fraction(row["fee"]["committed_usd"]), 100)
             self.assertEqual(row["fee"]["entry_usd"], exact_wire(Fraction(0)))
+
+    async def test_conservative_reference_shared_by_venues_and_snapshot_revalue(self):
+        from app.comparison import current_pregame as math
+        from app.storage.pregame_snapshot import revalue
+        from psycopg.types.json import Jsonb
+
+        data = page()
+        home, away = list(data["data"][0]["odds"].values())
+        home["byBookmaker"]["draftkings"]["odds"] = "-105"
+        away["byBookmaker"]["draftkings"]["odds"] = "-115"
+        home["byBookmaker"]["betmgm"] = dict(home["byBookmaker"]["draftkings"])
+        away["byBookmaker"]["betmgm"] = dict(away["byBookmaker"]["draftkings"])
+        home["byBookmaker"]["novig"] = dict(
+            home["byBookmaker"]["prophetx"], odds="+115"
+        )
+        away["byBookmaker"]["novig"] = dict(away["byBookmaker"]["prophetx"])
+        with self.connect() as db:
+            from app.fees import pricing
+            from tests.test_fee_pricing import rule
+
+            pricing.write(db, "novig", [rule("novig")])
+            records = self.ingest(db, data)
+            self.process(db)
+            selected = board.read(db, {}, at=stamp(AT))["rows"][0]
+            rows = board.read(db, {"bet_id": selected["bet_id"]}, at=stamp(AT))["rows"]
+            self.assertEqual({r["venue"] for r in rows}, {"prophetx", "novig"})
+            self.assertTrue(all(r["reference"]["book"] == "draftkings" for r in rows))
+            self.assertTrue(
+                all(
+                    Fraction(r["reference"]["probability"]) == Fraction(903, 1846)
+                    for r in rows
+                )
+            )
+            novig = next(r for r in rows if r["venue"] == "novig")
+            self.assertEqual(novig["display"]["net_ev"], "+5.17%")
+            self.assertEqual(novig["display"]["opportunity_score"], "450")
+            record = next(
+                r
+                for r in records
+                if r["quote"]["venue"] == "novig"
+                and r["selection"]["signed_line"] == "-1.5"
+            )
+            refs = [
+                q for q in prepare_page(parse(data)) if q["facts"]["venue"] == "fanduel"
+            ]
+            old_ref = math.reference(record, {"event": refs}, at=stamp(AT))
+            old = math.revalue_reference(novig, old_ref, at=stamp(AT))
+            old["version"] = "predict-current-pregame-5"
+            db.execute(
+                "UPDATE current_pregame_calculation SET version=%s,payload=%s WHERE contract_id=%s",
+                (old["version"], Jsonb(old), novig["id"]),
+            )
+            source_before = list(
+                db.execute("SELECT id,revision FROM current_sgo_reference ORDER BY id")
+            )
+            with patch("app.storage.current_rows.utc", return_value=AT):
+                report = revalue(db, at=stamp(AT))
+            self.assertEqual(report["revalued"], 1)
+            self.assertEqual(report["excluded"], {})
+            actual = board.read(db, {"id": novig["id"]}, at=stamp(AT))["rows"][0]
+            self.assertEqual(actual["reference"]["book"], "draftkings")
+            for key in ("fee", "times", "posted", "source"):
+                self.assertEqual(actual[key], old[key])
+            self.assertEqual(actual["display"]["net_ev"], "+5.17%")
+            self.assertEqual(
+                list(
+                    db.execute(
+                        "SELECT id,revision FROM current_sgo_reference ORDER BY id"
+                    )
+                ),
+                source_before,
+            )
+            self.assertEqual(revalue(db, at=stamp(AT))["examined"], 0)
+            db.execute(
+                "UPDATE current_pregame_calculation SET version='future-unknown' WHERE contract_id=%s",
+                (novig["id"],),
+            )
+            with self.assertRaisesRegex(ValueError, "full calculation upgrade"):
+                revalue(db, at=stamp(AT))

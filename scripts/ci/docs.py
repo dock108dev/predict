@@ -56,6 +56,7 @@ DOCUMENTS = (
     "docs/examples/scanner-1/README.md",
     "docs/sports-integration.md",
     "docs/ui-design.md",
+    "docs/local-ui-development.md",
     "docs/contracts/predict-admin-1.md",
     "docs/contracts/predict-current-1.md",
     "docs/contracts/predict-retained-prices-1.md",

@@ -40,6 +40,9 @@ async def response(request, *, connector=None):
     def work():
         from app.storage.current_pregame import read
 
+        if request.path.endswith("/arbs"):
+            from app.storage.pregame_arbs import read
+
         started = monotonic()
         with (connector or connect)() as db, db.transaction():
             db.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
@@ -78,4 +81,5 @@ def mount(app):
 
     app.router.add_get("/api/health", health)
     app.router.add_get("/api/pregame", response)
+    app.router.add_get("/api/pregame/arbs", response)
     app.router.add_get("/api/pregame/updates", response)

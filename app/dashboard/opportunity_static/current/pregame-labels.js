@@ -1,0 +1,4 @@
+// Presentation labels shared by opportunities, game odds and paired prices.
+const names={kalshi:'Kalshi',polymarket_us:'Polymarket US',novig:'Novig',prophetx:'ProphetX',fanduel:'FanDuel',draftkings:'DraftKings',betmgm:'BetMGM',caesars:'Caesars',espnbet:'ESPN BET',thescorebet:'theScore Bet',bookmakereu:'BookMaker',betonline:'BetOnline',bovada:'Bovada',betrivers:'BetRivers',ballybet:'Bally Bet',betparx:'betPARX',hardrockbet:'Hard Rock Bet',pinnacle:'Pinnacle',lowvig:'LowVig',pointsbet:'PointsBet',sportsbet:'Sportsbet',sugarhouse:'SugarHouse',tabtouch:'TABtouch','1xbet':'1xBet','888sport':'888sport',bet365:'bet365',williamhill:'William Hill',unibet:'Unibet',circa:'Circa Sports'};
+export const bookName=value=>names[value]||value;
+export const venues={kalshi:names.kalshi,polymarket_us:names.polymarket_us,novig:names.novig,prophetx:names.prophetx};

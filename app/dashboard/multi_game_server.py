@@ -516,7 +516,10 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
 
         for route in ('/', '/ev', '/browse-odds', '/game'):
             app.router.add_get(route, pregame_page)
-        for route in ('/arbs','/replay'):
+        async def pregame_arbs_page(req):
+            return web.FileResponse(static_root/'opportunity_static/current/pregame-arbs.html')
+        app.router.add_get('/arbs',pregame_arbs_page)
+        for route in ('/replay',):
             app.router.add_get(route, desk_page)
         from .current_pregame_api import mount as mount_current_pregame
         mount_current_pregame(app)
@@ -532,6 +535,10 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
 
             return web.json_response(await asyncio.to_thread(guide))
 
+        async def about_page(req):
+            return web.FileResponse(static_root/'opportunity_static/current/about.html')
+
+        app.router.add_get('/about', about_page)
         app.router.add_get('/trading-fees', trading_fees_page)
         app.router.add_get('/api/trading-fees', trading_fees)
 

@@ -37,7 +37,7 @@ payouts. A tie that pays $0.50 is a different outcome from a stake refund.
 Computing full EV requires probabilities for those outcomes.
 [Calculation basis](benchmark-ev.md)
 
-Use **Try a practice example** on Opportunities or Arbitrage for packaged
+Use **Practice** under **More** on Opportunities or Arbitrage for packaged
 fictional cases. Practice requires neither an archive nor a database.
 
 ## Focused checks
@@ -57,7 +57,10 @@ git diff --check
 
 | Change | Focused tests |
 | --- | --- |
-| Desk rendering, selection, and refresh | `tests/test_f07_desk_ui.cjs`, `browser_tests/test_ranked_opportunities.py`, `browser_tests/test_ranked_desk_journey.py` |
+| Current boards, filters, exact prices and failure recovery | `browser_tests/test_pregame_current.py`, `browser_tests/test_pregame_games_arbs.py`, `tests/test_pregame_arbs.py` |
+| Current PostgreSQL admission, game grouping, arb expiry and recovery | `tests/test_current_pregame_sql.py`, `tests/test_pregame_board_views_sql.py`, `tests/test_fee_pricing_sql.py` |
+| Private local snapshot transfer and target guards | `tests/test_dev_snapshot.py` |
+| Saved desk rendering, selection, and refresh | `tests/test_f07_desk_ui.cjs`, `browser_tests/test_ranked_opportunities.py`, `browser_tests/test_ranked_desk_journey.py` |
 | Snapshot math and evidence | `tests/test_snapshot_display.py`, `tests/test_snapshot_benchmark.py`, `tests/test_comparison_snapshot_sql.py` |
 | Source lifecycle and acquisition | `tests/test_current_service.py`, `tests/test_ordinary_native_transport.py`, `tests/test_data_runtime_unit.py` |
 | SportsGameOdds scheduling, discovery and cursor recovery | `tests/test_sportsgameodds_worker.py`, `tests/test_sportsgameodds_discovery.py` |

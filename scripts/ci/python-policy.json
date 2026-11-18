@@ -139,7 +139,8 @@
     "tests/test_storage_maintenance_sql.py": "Required in scripts/ci/postgres.py against disposable PostgreSQL: bounded independent retention, measured reclamation, immutable leased Originals and publication recovery; no owner database or provider use.",
     "tests/test_pipeline_storage_report_sql.py": "Required in scripts/ci/postgres.py against disposable PostgreSQL: bounded independent retention, measured reclamation, immutable leased Originals and publication recovery; no owner database or provider use.",
     "tests/test_grid_packet_store_sql.py": "Required in scripts/ci/postgres.py against disposable PostgreSQL: bounded independent retention, measured reclamation, immutable leased Originals and publication recovery; no owner database or provider use.",
-    "tests/test_result_dependencies_sql.py": "Required in disposable PostgreSQL lanes: independent unit dependency closure, sealed publication, candidate membership, clocks and ordinary read isolation; no providers or owner database."
+    "tests/test_result_dependencies_sql.py": "Required in disposable PostgreSQL lanes: independent unit dependency closure, sealed publication, candidate membership, clocks and ordinary read isolation; no providers or owner database.",
+    "tests/test_pregame_board_views_sql.py": "Required in the disposable PostgreSQL lane. Checks game pagination, reference-free arb prices, fee expiry and book-role attachment."
   },
   "archival_nodes": {
     "tests/test_moneyline.py::CapturedMoneylineTests": "Historical production listing/rule hashes require removed capture corpus; synthetic matcher and settlement classes remain required.",

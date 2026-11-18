@@ -328,6 +328,10 @@ def input_identity(record, reference, context, fee=None):
 def calculate_game(db, job, context, *, at):
     if job["provider"] not in {"sportsgameodds", *context.price_routes.values()}:
         db.execute(
+            "DELETE FROM current_pregame_price WHERE contract_id IN (SELECT c.id FROM current_contract_storage c JOIN current_event e ON e.id=c.event_id WHERE e.provider=%s AND e.native_event_id=%s)",
+            (job["provider"], job["native_event_id"]),
+        )
+        db.execute(
             """DELETE FROM current_pregame_calculation WHERE contract_id IN
             (SELECT c.id FROM current_contract_storage c JOIN current_event e ON e.id=c.event_id
              WHERE e.provider=%s AND e.native_event_id=%s)""",
@@ -342,6 +346,10 @@ def calculate_game(db, job, context, *, at):
         e["id"] for e in events if e["provider"] in set(context.price_routes.values())
     ]
     if not capture_ids:
+        db.execute(
+            "DELETE FROM current_pregame_price WHERE contract_id IN (SELECT id FROM current_contract_storage WHERE event_id=ANY(%s))",
+            (ids,),
+        )
         db.execute(
             "DELETE FROM current_pregame_calculation WHERE contract_id IN (SELECT id FROM current_contract_storage WHERE event_id=ANY(%s))",
             (ids,),
@@ -389,6 +397,7 @@ def calculate_game(db, job, context, *, at):
     reference_errors = {}
     reference_inputs = math.ReferenceInputs(observations)
     updates = []
+    price_updates = []
     complete = 0
     context.db = db
     accepted = set()
@@ -400,6 +409,7 @@ def calculate_game(db, job, context, *, at):
         reason = None
         payload = None
         fee = None
+        price_payload = None
         revision = None
         try:
             if (q["source"]["provider"], q["source"]["native_event_id"]) in conflicts:
@@ -439,6 +449,27 @@ def calculate_game(db, job, context, *, at):
                     != event["scheduled_start"]
                 ):
                     raise ValueError("occurrence_schedule_conflict")
+            fee = context.fee(record, at)
+            if not fee.get("available"):
+                raise ValueError(fee.get("reason") or "fee_schedule_unavailable")
+            price_payload = math.calculate(record, None, fee, at=at, game_key=game_key)
+            price_payload["sportsbook_event_ids"] = list(observations)
+            price_payload["sportsbook_sides_reversed"] = {
+                eid: any(
+                    q["facts"].get("canonical_side")
+                    and q["facts"]["canonical_side"] != q["facts"]["side"]
+                    for q in quotes
+                )
+                for eid, quotes in observations.items()
+            }
+            # Book event/role attachment can change without changing this price.
+            price_payload["input_revision"] = hashed(
+                [
+                    input_identity(record, None, context, fee),
+                    price_payload["sportsbook_event_ids"],
+                    price_payload["sportsbook_sides_reversed"],
+                ]
+            )
             key = math.reference_key(record)
             if key in reference_errors:
                 raise ValueError(reference_errors[key])
@@ -448,7 +479,6 @@ def calculate_game(db, job, context, *, at):
                 except ValueError as exc:
                     reference_errors[key] = str(exc)
                     raise
-            fee = context.fee(record, at)
             revision = input_identity(record, references[key], context, fee)
             prior = previous.get(cid)
             if (
@@ -458,9 +488,18 @@ def calculate_game(db, job, context, *, at):
                 and stamp(prior["valid_until"]) > at
             ):
                 complete += 1
+                price_updates.append(
+                    (
+                        cid,
+                        game_key,
+                        event["scheduled_start"],
+                        prior["valid_until"],
+                        Jsonb(price_payload),
+                        Jsonb(record),
+                        Jsonb(fee),
+                    )
+                )
                 continue
-            if not fee.get("available"):
-                raise ValueError(fee.get("reason") or "fee_schedule_unavailable")
             payload = math.calculate(
                 record, references[key], fee, at=at, game_key=game_key
             )
@@ -490,6 +529,20 @@ def calculate_game(db, job, context, *, at):
                     ),
                 ]
             ).isoformat()
+        if price_payload:
+            price_updates.append(
+                (
+                    cid,
+                    game_key,
+                    event["scheduled_start"],
+                    deadline,
+                    Jsonb(price_payload),
+                    Jsonb(record),
+                    Jsonb(fee),
+                )
+            )
+        else:
+            db.execute("DELETE FROM current_pregame_price WHERE contract_id=%s", (cid,))
         if payload:
             payload["input_revision"] = revision
         prior = previous.get(cid)
@@ -520,6 +573,20 @@ def calculate_game(db, job, context, *, at):
             )
         )
         complete += payload is not None
+    if price_updates:
+        with db.cursor() as cursor:
+            cursor.executemany(
+                """INSERT INTO current_pregame_price
+                (contract_id,game_key,start_at,valid_until,payload,record,fee_input) VALUES(%s,%s,%s,%s,%s,%s,%s)
+                ON CONFLICT(contract_id) DO UPDATE SET game_key=excluded.game_key,start_at=excluded.start_at,
+                  valid_until=excluded.valid_until,payload=excluded.payload,record=excluded.record,fee_input=excluded.fee_input
+                WHERE current_pregame_price.payload->>'input_revision' IS DISTINCT FROM excluded.payload->>'input_revision'""",
+                price_updates,
+            )
+    db.execute(
+        "DELETE FROM current_pregame_price WHERE game_key=%s AND NOT(contract_id=ANY(%s))",
+        (game_key, sorted(accepted)),
+    )
     if updates:
         with db.cursor() as cursor:
             cursor.executemany(UPSERT, updates)
@@ -610,6 +677,25 @@ def process(db, *, limit=32, keys=None, at=None, can_continue=None):
     return results
 
 
+def enqueue_due(db, *, at=None):
+    """Recover expired fee inputs even when an EV reference is unavailable."""
+    at = at or utc()
+    db.execute(
+        """INSERT INTO current_pregame_work(provider,native_event_id)
+        SELECT DISTINCT e.provider,e.native_event_id FROM (
+            SELECT contract_id FROM current_pregame_calculation
+            WHERE valid_until<=%s AND start_at>%s
+              AND (reason IS NULL OR reason='fee_rule_no_current_schedule')
+            UNION
+            SELECT contract_id FROM current_pregame_price
+            WHERE valid_until<=%s AND start_at>%s
+        ) due JOIN current_contract c ON c.id=due.contract_id
+        JOIN current_event e ON e.id=c.event_id
+        ON CONFLICT DO NOTHING""",
+        (at, at, at, at),
+    )
+
+
 def read(db, query, *, at=None):
     """Read committed complete rows; grouping and exact values precede pagination."""
     at = at or utc()
@@ -619,14 +705,14 @@ def read(db, query, *, at=None):
         "SELECT revision,committed_at FROM current_pregame_revision WHERE singleton"
     ).fetchone()
     # Time is part of the cheap cursor only at a real eligibility deadline.
-    deadline = db.execute(
-        "SELECT min(valid_until) AS at FROM current_pregame_calculation WHERE reason IS NULL AND valid_until>%s",
-        (at,),
-    ).fetchone()["at"]
-    boundary = db.execute(
-        "SELECT max(valid_until) AS at FROM current_pregame_calculation WHERE reason IS NULL AND valid_until<=%s",
-        (at,),
-    ).fetchone()["at"]
+    deadlines = db.execute(
+        """SELECT min(valid_until) FILTER (WHERE valid_until>%s) AS next,
+                  max(valid_until) FILTER (WHERE valid_until<=%s) AS previous
+        FROM (SELECT valid_until FROM current_pregame_calculation WHERE reason IS NULL
+              UNION ALL SELECT valid_until FROM current_pregame_price) eligible""",
+        (at, at),
+    ).fetchone()
+    deadline, boundary = deadlines["next"], deadlines["previous"]
     cursor = hashed([revision["revision"], str(boundary)])
     base = dict(
         schema="predict-current-pregame-1",
@@ -658,7 +744,14 @@ def read(db, query, *, at=None):
     )
     for venue, provider in routes.items():
         params.extend((venue, provider))
-    if query.get("lines") != "all" and not query.get("id") and not query.get("bet_id"):
+    if (
+        not query.get("id")
+        and not query.get("bet_id")
+        and (
+            query.get("view") == "games"
+            or (query.get("view") != "game" and query.get("lines") != "all")
+        )
+    ):
         clauses.append("p.main")
     for key, column in (("league", "league"), ("family", "family"), ("venue", "venue")):
         if query.get(key):
@@ -709,20 +802,58 @@ def read(db, query, *, at=None):
             logical + "SELECT payload FROM logical ORDER BY net_ev DESC,contract_id",
             params,
         ).fetchall()
+        from .pregame_sportsbooks import read_prices
+
+        rows = [r["payload"] for r in entries]
         return dict(
             base,
-            rows=[r["payload"] for r in entries],
+            sportsbooks=read_prices(db, rows, at=at),
+            rows=rows,
             total=len(entries),
             offset=0,
             limit=limit,
         )
-    positive = query.get("browse") != "1"
+    positive = query.get("browse") != "1" and query.get("view") not in ("games", "game")
     grouped = (
         logical.rstrip()
         + ", qualified AS (SELECT *,row_number() OVER (PARTITION BY bet_id ORDER BY net_ev DESC,contract_id) AS venue_order FROM logical), best AS (SELECT * FROM qualified WHERE venue_order=1"
         + (" AND net_ev>0" if positive else "")
         + ") "
     )
+    if query.get("view") == "game":
+        if not query.get("game_key"):
+            raise ValueError("A game key is required")
+        rows = [
+            r["payload"]
+            for r in db.execute(
+                grouped + "SELECT payload FROM best ORDER BY main DESC,family,bet_id",
+                params,
+            )
+        ]
+        return dict(base, rows=rows, total=len(rows), offset=0, limit=len(rows))
+    if query.get("view") == "games":
+        page = db.execute(
+            grouped
+            + """, games AS (
+            SELECT game_key,min(start_at) AS kickoff,
+                jsonb_build_object('game_key',game_key,'game',min(payload->>'game'),
+                  'league',min(league),'kickoff',min(start_at),
+                  'rows',jsonb_agg(payload ORDER BY family,bet_id)) AS game
+            FROM best GROUP BY game_key)
+            SELECT count(*) AS total,
+              (SELECT jsonb_agg(game ORDER BY kickoff,game_key) FROM
+                (SELECT * FROM games ORDER BY kickoff,game_key LIMIT %s OFFSET %s) page) AS games
+            FROM games""",
+            (*params, limit, offset),
+        ).fetchone()
+        return dict(
+            base,
+            games=page["games"] or [],
+            rows=[],
+            total=page["total"],
+            offset=offset,
+            limit=limit,
+        )
     page = db.execute(
         grouped
         + """SELECT count(*) AS total,

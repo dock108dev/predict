@@ -629,7 +629,10 @@
       "tests/test_novig_v3_stream.py",
       "tests/test_public_fee_schedule.py",
       "tests/test_fee_pricing.py",
-      "tests/test_snapshot_fee_coverage.py"
+      "tests/test_snapshot_fee_coverage.py",
+      "tests/test_current_pregame_reference_policy.py",
+      "tests/test_pregame_arbs.py",
+      "tests/test_pregame_sportsbook_prices.py"
     ]
   },
   {
@@ -659,7 +662,8 @@
       "tests/test_publication_encoding.py",
       "tests/test_selected_frame_cache.py",
       "tests/test_slate_byte_pages.py",
-      "tests/test_worker_memory.py"
+      "tests/test_worker_memory.py",
+      "tests/test_dev_snapshot.py"
     ]
   },
   {

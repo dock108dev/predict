@@ -114,6 +114,22 @@ browser first-use cases include the fictional practice journeys at desktop and
 phone widths. These checks use fixtures and disposable storage. Live reference,
 fee, fill, and collection coverage require separate evidence.
 
+The current-board regression groups protect these boundaries:
+
+| Behavior | Tests | Expected protection |
+| --- | --- | --- |
+| Conservative exact-pair reference | `test_current_pregame_reference_policy.py` | Hand-checked probabilities and score; incomplete or conflicting pairs rejected; line eligibility unchanged |
+| Two-sided fee math | `test_pregame_arbs.py` | Exact cents, both outcomes positive, fees can erase a gross edge, no probability dependency |
+| Observed sportsbook quotes | `test_pregame_sportsbook_prices.py` | Exact event/line, clocks and availability; exchanges cannot become fee-free books |
+| PostgreSQL admission and recovery | `test_current_pregame_sql.py`, `test_pregame_board_views_sql.py` | Atomic values, pagination, withdrawals, fee-only expiry/cache invalidation and recovery without EV |
+| Current browser flows | `browser_tests/test_pregame_current.py`, `browser_tests/test_pregame_games_arbs.py` | Native actions and focus, pinned inspection, late-response protection, retained filters and visible polling failures |
+| Snapshot helper | `test_dev_snapshot.py` | Failed transfer stays partial/private and never restores; non-snapshot socket rejected using mocked I/O |
+
+These cases are retained as distinct calculation, persistence and UI boundaries;
+the runtime/provider boundary remains unverified by their fixtures. The new
+portable modules are registered in the existing required manifest; the SQL cases
+are registered in the disposable PostgreSQL lane.
+
 ### Selecting local cases
 
 Use pytest node IDs or affected modules for routine changes. Check discovery

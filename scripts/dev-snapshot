@@ -1,0 +1,251 @@
+#!/usr/bin/env python3
+"""Private local database snapshots; never starts collectors or changes the server."""
+
+import argparse
+from datetime import datetime, timezone
+import json
+import os
+from pathlib import Path
+import subprocess
+import sys
+
+ROOT = Path(__file__).resolve().parents[1]
+BASE = ROOT / ".local/dev-snapshot"
+BIN = Path("/opt/homebrew/opt/postgresql@16/bin")
+
+
+def run(*args, **kwargs):
+    return subprocess.run([str(a) for a in args], check=True, **kwargs)
+
+
+def pull():
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    dump = BASE / (stamp + ".dump")
+    partial = BASE / (stamp + ".dump.partial")
+    # An interrupted transfer must never resemble a completed restore input.
+    with partial.open("xb") as output:
+        os.chmod(partial, 0o600)
+        run(
+            "ssh",
+            "-o",
+            "BatchMode=yes",
+            "hetzner",
+            "docker exec predict-db-1 pg_dump -h /run/predict-postgres -p 55432 "
+            "-U prediction_arb -d prediction_arb -Fc --no-owner --no-acl",
+            stdout=output,
+        )
+    os.replace(partial, dump)
+    restore(dump)
+
+
+def restore(dump):
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    folder = BASE / stamp
+    folder.mkdir(parents=True, mode=0o700)
+    socket = ROOT / ".local" / ("devpg-" + stamp[-7:-1])
+    socket.mkdir(mode=0o700)
+    run(
+        BIN / "initdb",
+        "-D",
+        folder / "postgres",
+        "-U",
+        "prediction_arb",
+        "--auth-local=trust",
+        "--auth-host=reject",
+        "--encoding=UTF8",
+        "--no-locale",
+        stdout=subprocess.DEVNULL,
+    )
+    run(
+        BIN / "pg_ctl",
+        "-D",
+        folder / "postgres",
+        "-l",
+        folder / "postgres.log",
+        "-o",
+        f"-k '{socket}' -p 55432 -c listen_addresses='' -c unix_socket_permissions=0700",
+        "start",
+    )
+    common = ["-h", socket, "-p", "55432", "-U", "prediction_arb"]
+    try:
+        run(BIN / "createdb", *common, "prediction_arb")
+        run(
+            BIN / "pg_restore",
+            *common,
+            "-d",
+            "prediction_arb",
+            "--no-owner",
+            "--no-acl",
+            "--exit-on-error",
+            "--single-transaction",
+            dump,
+        )
+        # Read-only defaults make accidental local collection/admin writes fail.
+        run(
+            BIN / "psql",
+            *common,
+            "-d",
+            "prediction_arb",
+            "-c",
+            "ALTER DATABASE prediction_arb SET default_transaction_read_only=on",
+        )
+        import psycopg
+
+        with psycopg.connect(
+            host=str(socket), port=55432, user="prediction_arb", dbname="prediction_arb"
+        ) as db:
+            applied = db.execute(
+                "SELECT version,sha256 FROM schema_migration ORDER BY version"
+            ).fetchall()
+            import hashlib
+
+            packaged = sorted(
+                p.name for p in (ROOT / "app/storage/migrations").glob("*.sql")
+            )
+            if [version for version, _ in applied] != packaged[: len(applied)]:
+                raise SystemExit(
+                    "Snapshot requires a different migration version; previous snapshot remains selected."
+                )
+            for version, digest in applied:
+                migration = ROOT / "app/storage/migrations" / version
+                if (
+                    not migration.is_file()
+                    or hashlib.sha256(migration.read_bytes()).hexdigest() != digest
+                ):
+                    raise SystemExit(
+                        "Snapshot schema differs from this checkout; previous snapshot remains selected."
+                    )
+        record = dict(
+            restored_at=stamp,
+            dump_completed_at=datetime.fromtimestamp(
+                dump.stat().st_mtime, timezone.utc
+            ).isoformat(),
+            dump=str(dump.resolve()),
+            cluster=str(folder / "postgres"),
+            socket=str(socket),
+            collection="server-owned; no local collector",
+            read_only=True,
+        )
+        record["reference_revaluation"] = revalue_snapshot(record)
+        temporary = BASE / "current.tmp"
+        temporary.write_text(json.dumps(record, indent=2) + "\n")
+        os.chmod(temporary, 0o600)
+        os.replace(temporary, BASE / "current.json")
+    except BaseException:
+        run(BIN / "pg_ctl", "-D", folder / "postgres", "-m", "fast", "stop")
+        raise
+    print(
+        "Restored private read-only snapshot. Start UI: .venv/bin/python scripts/dev-snapshot serve"
+    )
+
+
+def revalue_snapshot(record):
+    """The only write session targets the selected private snapshot cluster."""
+    sys.path.insert(0, str(ROOT))
+    from app.storage.store import connect
+    from app.storage.pregame_snapshot import revalue
+
+    socket = Path(record["socket"]).resolve()
+    if socket.parent != (ROOT / ".local").resolve() or not socket.name.startswith(
+        "devpg-"
+    ):
+        raise SystemExit("Snapshot socket required; no database changed.")
+    previous = os.environ.get("PREDICT_DB_SOCKET")
+    os.environ["PREDICT_DB_SOCKET"] = str(socket)
+    try:
+        with connect() as db:
+            actual = db.execute("SHOW data_directory").fetchone()["data_directory"]
+            if Path(actual).resolve() != Path(record["cluster"]).resolve():
+                raise SystemExit(
+                    "Snapshot cluster identity mismatch; no database changed."
+                )
+            db.execute("SET default_transaction_read_only=off")
+            from app.storage.store import Store
+            from app.storage.current_pregame import process
+
+            Store(db).migrate()
+            rebuilt = 0
+            while True:
+                batch = process(db, limit=24)
+                if not batch:
+                    break
+                rebuilt += len(batch)
+                if any(r.get("error") for r in batch):
+                    raise SystemExit(
+                        "Snapshot calculation recovery failed; see retained work queue."
+                    )
+                print(json.dumps(dict(rebuilt_games=rebuilt)), flush=True)
+            result = revalue(db)
+            print(json.dumps(result), flush=True)
+            return result
+    finally:
+        if previous is None:
+            os.environ.pop("PREDICT_DB_SOCKET", None)
+        else:
+            os.environ["PREDICT_DB_SOCKET"] = previous
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "action", choices=["pull", "restore", "serve", "status", "revalue"]
+    )
+    parser.add_argument("--dump", type=Path)
+    parser.add_argument("--port", type=int, default=8784)
+    args = parser.parse_args()
+    BASE.mkdir(parents=True, exist_ok=True, mode=0o700)
+    if args.action == "pull":
+        pull()
+    elif args.action == "restore":
+        if not args.dump or not args.dump.is_file():
+            parser.error("--dump must name a completed PostgreSQL custom-format dump")
+        restore(args.dump)
+    elif args.action == "revalue":
+        record = json.loads((BASE / "current.json").read_text())
+        record["reference_revaluation"] = revalue_snapshot(record)
+        temporary = BASE / "current.tmp"
+        temporary.write_text(json.dumps(record, indent=2) + "\n")
+        os.chmod(temporary, 0o600)
+        os.replace(temporary, BASE / "current.json")
+    elif args.action == "serve":
+        record = json.loads((BASE / "current.json").read_text())
+        status = subprocess.run(
+            [str(BIN / "pg_ctl"), "-D", record["cluster"], "status"],
+            stdout=subprocess.DEVNULL,
+        )
+        if status.returncode:
+            Path(record["socket"]).mkdir(mode=0o700, exist_ok=True)
+            run(
+                BIN / "pg_ctl",
+                "-D",
+                record["cluster"],
+                "-l",
+                Path(record["cluster"]).parent / "postgres.log",
+                "-o",
+                f"-k '{record['socket']}' -p 55432 -c listen_addresses='' -c unix_socket_permissions=0700",
+                "start",
+            )
+        environment = dict(os.environ, PREDICT_DB_SOCKET=record["socket"])
+        print(
+            f"Local snapshot {record['restored_at']}; collectors stay on server; http://127.0.0.1:{args.port}",
+            flush=True,
+        )
+        os.chdir(ROOT)
+        os.execve(
+            sys.executable,
+            [
+                sys.executable,
+                "-m",
+                "app.dashboard.opportunity_board",
+                "--port",
+                str(args.port),
+            ],
+            environment,
+        )
+    else:
+        record = json.loads((BASE / "current.json").read_text())
+        print(json.dumps(record, indent=2))
+
+
+if __name__ == "__main__":
+    main()

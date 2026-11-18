@@ -23,7 +23,8 @@ This mapping is not evidence that SGO's product identity has been independently
 established. Changing routes does not rename an observation's source history.
 
 Existing Stop, source pauses, account limits, reservations and holds remain owned
-by acquisition. No dashboard request starts a provider request or calculation.
+by acquisition. No dashboard request starts a provider request or durable calculation job.
+Arb reads evaluate their bounded allocation from stored fee-qualified prices.
 Ordinary pregame collection does not start the separate OddsLink ProphetX
 fallback: SGO already supplies that configured price route. The fallback remains
 available only with explicit live collection, and its saved observations remain
@@ -69,7 +70,7 @@ board. Generated `pregame_unit_board` and `pregame_unit_member` are removed by a
 forward migration. Applied migration history and source evidence remain intact.
 
 Research publication, Scanner and Coverage stay outside the ordinary read and
-calculation prerequisite chain. Their archive/practice and Arbitrage consumers
+calculation prerequisite chain. Their archive/practice consumers
 retain their own evidence models. Research children wait during source admission
 and yield at safe checkpoints when an accepted page needs processing. They never
 pause while holding SQL transaction locks.
@@ -85,13 +86,31 @@ cap while avoiding a whole-history window calculation in source admission.
 
 `GET /api/pregame` returns complete current rows. Supported query fields are
 `league`, `family` (`moneyline`, `spread`, `total`), `venue`, `search`, `game_key`,
-`bet_id`, `id`, `lines=all`, `browse=1`, `limit` (1–100), and `offset`.
+`bet_id`, `id`, `lines=all`, `browse=1`, `view=games`, `view=game`,
+`limit` (1–100), and `offset`.
 
 The default list selects the highest unrounded Net EV venue per exact bet, keeps
 positive opportunities, then orders by Opportunity Score, Net EV and stable bet
 identity before pagination. Browse includes nonpositive complete comparisons.
 `bet_id` reads all quoted complete venue comparisons in Net EV order; `id` reads
 one exact current calculation, including an alternate excluded from the default.
+
+`view=games` includes nonpositive complete rows, keeps main lines even when
+`lines=all` is supplied, and groups before pagination. It returns `games`, with
+`game_key`, `game`, `league`, `kickoff` and all available best-venue main-line
+`rows` per game; `total` counts games. Stable ordering is kickoff then game key.
+`view=game` requires `game_key` and returns every complete main/alternate exact
+bet for that game in one repeatable read, including games with more than 100 bets.
+It does not truncate at the ordinary list limit. Exact-bet reads retain precedence.
+
+Exact `bet_id`/`id` reads also include `sportsbooks`: observed posted prices
+matched to the selected reference's native event/outcome, league, scheduled
+start, full-game family and exact signed line. These use current SGO evidence;
+withdrawn, future-received or conflicting latest quotes and other exchange
+venues are excluded. They do not change calculation eligibility, fair-reference
+selection, fees, ranking or grouping. Each quote supplies its own source/receipt
+clock. The selected calculation's reference prices remain its pinned evidence.
+
 
 ```json
 {"schema":"predict-current-pregame-1","state":"ready","rows":[],"total":0,
@@ -106,13 +125,17 @@ A row contains `id`, `game_key`, `bet_id`, `game`, `league`, `kickoff`, `family`
 
 `GET /api/pregame/updates?after=<cursor>` reads the small committed revision and
 eligibility deadline, returning `changed` and a suggested 500 ms poll interval.
-Unchanged revisions avoid reading the list. Kickoff timers also refresh the list
+The cursor includes expiry boundaries from both complete EV rows and independent
+fee-qualified prices. Recovery enqueues expired fee inputs from either table,
+including prices without a complete sportsbook reference. Unchanged revisions
+avoid reading the list. Kickoff timers also refresh the list
 without waiting for another provider response. Failed refreshes preserve rendered
 rows. Inspection keeps a compact selected-row copy, with source clocks in details.
 
 Ordinary pregame requests to `/api/comparison-current` forward to this read path.
-Retired amount/mode parameters return HTTP 410 explicitly. Live research,
-Arbitrage and saved replay retain their separate contracts.
+Retired amount/mode parameters return HTTP 410 explicitly. Live research and
+saved replay retain their separate contracts. The current Arbitrage page uses the
+reference-free price read below.
 Captured Arbitrage game links redirect to the existing saved-game reader with
 their exact result, occurrence, line and return context. Their historical game
 identities are not current-row identifiers.
@@ -138,3 +161,53 @@ remain unchanged. The cache holds only the two configured status paths; dynamic
 clock/window checks still run. Its child has background CPU priority. Every
 ledger mutation independently reloads and validates disk state; this status cache
 grants no acquisition authority and cannot release a hold or pause.
+
+## Reference-free after-fee arbitrage
+
+Migration 105 adds `current_pregame_price`, owned by the same affected-game
+processor. Occurrence, schedule, route, source availability, exact line and fee
+checks run before the sportsbook-reference lookup. A missing complete reference
+can exclude EV while leaving a usable price/fee record for paired research.
+The table stores the source record and fee inputs for repricing; the API does not
+expose these internal records. Its price identity avoids no-op replacement on
+receipt-only confirmation. Source, fee and event changes enqueue the existing
+owner; reads suppress pending work until an atomic rebuild completes.
+
+`GET /api/pregame/arbs` accepts `league`, `family`, `venue`, `book`, `search`,
+`category` (`market_market` or `market_book`), `limit` and `offset`. It compares
+opposite sides of the same occurrence, period, family and exact normalized line.
+Same-venue, book-to-book and conflicting explicit overtime scopes are excluded.
+Books use current available SGO quotes for the mapped event and exact line;
+withdrawn/future, three-way and conflicting latest prices are excluded.
+Only explicitly recognized sportsbook IDs qualify for the zero-placement-fee
+assumption; unknown venues, sweepstakes products and other exchanges such as
+Betfair Exchange are excluded. Zero
+sportsbook placement commission is an explicit model assumption.
+
+The exact fee engine reprices both legs on legal quantity increments inside a
+$100 combined basis. A bounded cent-allocation search balances their two net
+receipts; it does not claim a global optimum. Fees are not linearly scaled from
+standalone odds. A pair qualifies only if both decisive completed-game state
+profits are positive after fees. Paired return is the lower profit divided by
+actual committed cash; residual cash is shown separately. No fair probability,
+Net EV or Opportunity Score is used in the result. Push, void, tie, cancellation
+and other exceptional states are excluded explicitly, so these are conditional
+price-arb candidates, not verified full-settlement arbitrage.
+
+The response supplies `rows`, `total`, source clocks, leg prices/cashflows,
+committed cash, both receipts/profits, minimum profit and paired return.
+`execution_qualified=false` and `instant_fill_max_usd=null` are explicit: aggregate
+quotes do not establish depth or synchronized fills. No source calls, collection,
+account writes or scheduled calculation jobs are initiated by this read. A small
+process cache reuses results only for the same database, committed revision,
+eligibility cursor and filters; cached rows also respect their explicit deadline.
+Pagination slices the already-ranked result. Book-event and side-role attachments
+are part of the price input identity, so they can update without a new offer.
+The app refreshes on changes and deadline, retaining last-good prices on failure.
+
+`/arbs` shares the selected board style and responsive cards. Opening a row shows
+both allocations, after-fee state receipts, source/receipt clocks and the formula.
+`/about#arbitrage` covers model and execution assumptions; `/about#sources` credits
+SportsGameOdds and links official documentation and relevant research. The SGO
+affiliate URL is a source comment placeholder until the owner supplies it; the
+visible credit uses the official provider site.
