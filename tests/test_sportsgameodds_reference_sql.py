@@ -152,6 +152,11 @@ class SportsGameOddsReferenceSQL(unittest.TestCase):
         other['data'][0]['eventID'] = 'event-2'
         other_page = parse_page(json.dumps(other).encode(), AT)
         with patch('app.storage.sportsgameodds_reference.MAX_CURRENT_ROWS', 2):
+            updated = self.page(source='2026-11-10T19:59:30Z',
+                                received='2026-11-10T20:00:01Z', available=False, odds='+100')
+            with self.db.transaction():
+                self.assertEqual(upsert_rows(self.db, prepare_page(updated)), 2)
+            self.assertEqual({r['facts']['price_american'] for r in read_event(self.db, 'event')}, {'+100'})
             with self.assertRaisesRegex(ValueError, 'storage capacity'):
                 with self.db.transaction():
                     upsert_rows(self.db, prepare_page(other_page))

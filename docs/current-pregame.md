@@ -47,7 +47,12 @@ complete calculation replacement. Delayed work cannot publish over a newer
 admission. Complete rows replace atomically per game. Reference pairs are indexed once per
 occurrence. Posted sizing searches only the exact fee-rounding envelope, and
 changed rows are written in one SQL pipeline; unchanged excluded rows do not
-repeat no-op writes. The public SQL projection
+repeat no-op writes. Small affected-game processing and SGO admission
+use transaction-local serial plans,
+admission, avoiding parallel worker startup. Reference replacement checks the
+global row cap only when new identities can increase membership; the writer lock
+keeps that decision stable and every growing batch still checks the full cap.
+The public SQL projection
 includes only complete calculations, with diagnostic exclusions kept internally.
 A collection interruption retains the last accepted complete row.
 

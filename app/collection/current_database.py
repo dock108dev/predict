@@ -443,6 +443,10 @@ class DatabaseIngressSink:
                 rows=CurrentRowStore(db)
                 from app.storage.scanner_publication import transaction as published_transaction
                 with published_transaction(db):
+                    if sgo_links is not None:
+                        # Small indexed admission reads cost less than starting
+                        # parallel workers on the shared collection host.
+                        db.execute('SET LOCAL max_parallel_workers_per_gather=0')
                     # Linearize ingress with persisted Stop/pause, independently
                     # of heartbeat writes. A waiting old command cannot revive it.
                     # Take the current-row lock before authority, as publication does.

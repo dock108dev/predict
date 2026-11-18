@@ -546,6 +546,7 @@ def process(db, *, limit=32, keys=None, at=None, can_continue=None):
             break
         started = monotonic()
         with db.transaction():
+            db.execute("SET LOCAL max_parallel_workers_per_gather=0")
             # Every writer takes this lock before touching the coalesced queue.
             db.execute("SELECT pg_advisory_xact_lock(%s)", (LOCK,))
             job = db.execute(

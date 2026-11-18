@@ -215,9 +215,13 @@ def upsert_rows(db, rows):
     db.execute('SELECT pg_advisory_xact_lock(%s)', (LOCK,))
     previous = {r['id']: r for r in db.execute(
         'SELECT id,event_id,revision,facts FROM current_sgo_reference WHERE id=ANY(%s)', (list(identities),)).fetchall()}
-    total = db.execute('SELECT count(*) AS n FROM current_sgo_reference').fetchone()['n']
-    if total + len(rows) - len(previous) > MAX_CURRENT_ROWS:
-        raise ValueError('sgo reference storage capacity')
+    growth = len(rows) - len(previous)
+    # The writer lock protects membership. Replacing known identities cannot
+    # increase the bounded population; only growth needs a global count.
+    if growth:
+        total = db.execute('SELECT count(*) AS n FROM current_sgo_reference').fetchone()['n']
+        if total + growth > MAX_CURRENT_ROWS:
+            raise ValueError('sgo reference storage capacity')
     return advance_quotes(db, rows, previous)
 
 
