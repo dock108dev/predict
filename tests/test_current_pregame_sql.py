@@ -90,6 +90,27 @@ class CurrentPregameSQL(LatestBoardFixture):
         with patch("app.storage.current_rows.utc", return_value=AT):
             return board.process(db, at=stamp(AT), **kwargs)
 
+    async def test_source_transaction_coalesces_jobs_and_browser_revision(self):
+        with self.connect() as db:
+            before = db.execute("SELECT revision FROM current_pregame_revision").fetchone()['revision']
+            with db.transaction():
+                for _ in range(100):
+                    db.execute("SELECT pregame_enqueue('sportsgameodds','coalesced')")
+                first = db.execute("SELECT revision,admitted_at FROM current_pregame_work").fetchone()
+                self.assertEqual(first['revision'], 1)
+                self.assertEqual(db.execute("SELECT revision FROM current_pregame_revision").fetchone()['revision'], before + 1)
+                db.execute("SELECT pregame_enqueue('sportsgameodds','unrelated')")
+                self.assertEqual(db.execute("SELECT count(*) n FROM current_pregame_work").fetchone()['n'], 2)
+            with db.transaction():
+                db.execute("SELECT pregame_enqueue('sportsgameodds','coalesced')")
+                newer = db.execute("SELECT revision,admitted_at FROM current_pregame_work WHERE native_event_id='coalesced'").fetchone()
+                self.assertEqual(newer['revision'], 2)
+                self.assertGreaterEqual(newer['admitted_at'], first['admitted_at'])
+                db.execute("UPDATE current_pregame_work SET error='retry' WHERE native_event_id='coalesced'")
+                db.execute("SELECT pregame_enqueue('sportsgameodds','coalesced')")
+                recovered = db.execute("SELECT revision,error FROM current_pregame_work WHERE native_event_id='coalesced'").fetchone()
+                self.assertEqual(recovered, dict(revision=3,error=None))
+
     async def test_inactive_route_does_not_resolve_or_recalculate_active_game(self):
         with self.connect() as db:
             self.ingest(db, page())

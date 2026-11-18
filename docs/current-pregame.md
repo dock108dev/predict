@@ -33,7 +33,11 @@ available to historical and research consumers.
 
 `app/collection/current_database.py` admits observations through the existing
 ordered current event/contract/offer owners. SQL triggers coalesce material changes
-into `current_pregame_work`. The same ingestion call invokes
+into `current_pregame_work`. Only the first material change to a game in a serialized source transaction
+updates its durable job and browser revision; a later transaction or retryable
+failure still advances it. Processing cannot interleave with that admission
+because both own the same current-writer lock.
+The same ingestion call invokes
 `app/storage/current_pregame.py:process` after source admission commits. The data
 runtime's `PregameOwner` recovers unfinished accepted work without replaying a
 provider call. Recovery yields between games while source admission is active;
