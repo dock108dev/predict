@@ -720,17 +720,17 @@ def read(db, query, *, at=None):
         + (" AND net_ev>0" if positive else "")
         + ") "
     )
-    total = db.execute(grouped + "SELECT count(*) AS n FROM best", params).fetchone()[
-        "n"
-    ]
-    rows = db.execute(
+    page = db.execute(
         grouped
-        + """SELECT payload FROM best
-        ORDER BY opportunity_score DESC,net_ev DESC,bet_id LIMIT %s OFFSET %s""",
+        + """SELECT count(*) AS total,
+        (SELECT jsonb_agg(payload ORDER BY opportunity_score DESC,net_ev DESC,bet_id)
+         FROM (SELECT payload,opportunity_score,net_ev,bet_id FROM best
+               ORDER BY opportunity_score DESC,net_ev DESC,bet_id LIMIT %s OFFSET %s) page) AS rows
+        FROM best""",
         (*params, limit, offset),
-    ).fetchall()
+    ).fetchone()
     return dict(
-        base, rows=[r["payload"] for r in rows], total=total, offset=offset, limit=limit
+        base, rows=page["rows"] or [], total=page["total"], offset=offset, limit=limit
     )
 
 

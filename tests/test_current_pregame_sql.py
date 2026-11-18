@@ -292,9 +292,14 @@ class CurrentPregameSQL(LatestBoardFixture):
                 complete = board.read(
                     db, dict(lines="all", browse="1", limit="100"), at=stamp(AT)
                 )
+                beyond = board.read(
+                    db, dict(lines="all", browse="1", offset="102"), at=stamp(AT)
+                )
             self.assertEqual(len(records), 408)
             self.assertEqual(sum(row["complete"] for row in result), 408)
             self.assertEqual(complete["total"], 102)
+            self.assertEqual(beyond["total"], 102)
+            self.assertEqual(beyond["rows"], [])
             self.assertEqual(len({row["bet_id"] for row in complete["rows"]}), 100)
             self.assertEqual(
                 db.execute(
