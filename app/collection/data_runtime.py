@@ -148,7 +148,7 @@ class DataRuntime:
             raise
 
     def acquisition_pressure(self, *, critical=False):
-        """Yield at measured ordered-transport capacity, not missing images.
+        """Yield to owned source admission and measured transport pressure.
 
         Initial images may never exist for inactive subscribed markets. Raw and
         normalized images are replaceable maps bounded by market cardinality;
@@ -156,6 +156,8 @@ class DataRuntime:
         Ordered deltas alone cannot be replaced and retain capacity priority.
         """
         if self.service is None or not self.service.dispatch:return False
+        if getattr(getattr(self.service, 'ingress', None), 'tasks', None):
+            return True
         for venue in ('kalshi','polymarket_us'):
             worker=self.service.workers.get(venue)
             if worker is None or worker.closed or worker.failed or venue in self.service.paused_sources:continue

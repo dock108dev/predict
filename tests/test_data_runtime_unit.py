@@ -506,6 +506,19 @@ def test_missing_images_and_replaceable_tails_do_not_veto_current_work():
     assert not runtime.acquisition_pressure()
 
 
+def test_active_sgo_admission_defers_research_until_current_rows_finish():
+    from types import SimpleNamespace
+    from app.collection.data_runtime import DataRuntime
+    runtime=DataRuntime.__new__(DataRuntime)
+    ingress=SimpleNamespace(tasks={'accepted-sgo-page':object()})
+    runtime.service=SimpleNamespace(dispatch=True,workers={},paused_sources=set(),ingress=ingress)
+    assert runtime.acquisition_pressure()
+    assert runtime.acquisition_pressure(critical=True)
+    ingress.tasks.clear()
+    assert not runtime.acquisition_pressure()
+    assert not runtime.acquisition_pressure(critical=True)
+
+
 def test_native_restore_defers_optional_work_until_the_source_can_stream():
     from types import SimpleNamespace
     from app.collection.data_runtime import DataRuntime

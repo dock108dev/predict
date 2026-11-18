@@ -55,7 +55,9 @@ forward migration. Applied migration history and source evidence remain intact.
 
 Research publication, Scanner and Coverage stay outside the ordinary read and
 calculation prerequisite chain. Their archive/practice and Arbitrage consumers
-retain their own evidence models.
+retain their own evidence models. Research children wait during source admission
+and yield at safe checkpoints when an accepted page needs processing. They never
+pause while holding SQL transaction locks.
 
 ## HTTP reads
 

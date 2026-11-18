@@ -106,7 +106,7 @@ def test_component_progress_survives_pressure_cancellation(tmp_path):
 
 
 @pytest.mark.skipif(not hasattr(signal,'SIGSTOP'),reason='POSIX child suspension')
-@pytest.mark.parametrize('module',[None,'app.collection.financial_worker'])
+@pytest.mark.parametrize('module',[None,'app.collection.financial_worker','app.collection.ordinary_worker'])
 def test_coverage_pauses_cpu_work_then_resumes_same_census(tmp_path,module):
     financial=module is not None
     async def exercise_pause():
@@ -153,7 +153,7 @@ print('{{"published":true}}')
     asyncio.run(exercise_pause())
 
 
-@pytest.mark.parametrize('module',[None])
+@pytest.mark.parametrize('module',[None,'app.collection.ordinary_worker'])
 @pytest.mark.parametrize('mode',['clears','stop','persistent'])
 def test_coverage_admission_wait_is_bounded_and_starts_only_when_clear(tmp_path,mode,module):
     async def exercise_admission():
@@ -295,29 +295,3 @@ def test_financial_pause_never_waits_inside_sql_transaction():
         assert pause.checkpoint(db,lambda:False) is False
     db.info.transaction_status=TransactionStatus.IDLE
     assert pause.checkpoint(db,lambda:True) is True
-
-
-@pytest.mark.parametrize('mode',['success','stop','deadline'])
-def test_ordinary_delivery_progresses_under_persistent_ingress_pressure(tmp_path,mode):
-    """Separate-process delivery cannot wait for an overloaded socket to empty."""
-    async def exercise_delivery():
-        from app.collection.background_work import BACKGROUND
-        launch=asyncio.create_subprocess_exec;children=[]
-        code=('print(\'{"published":true}\')' if mode=='success' else
-              'import time; time.sleep(30)')
-        async def start(*args,**kwargs):
-            p=await launch(sys.executable,'-c',code,**kwargs);children.append(p);return p
-        with patch.object(worker.asyncio,'create_subprocess_exec',side_effect=start), \
-             patch.object(BACKGROUND,'acquisition_pressure',return_value=True), \
-             patch.object(BACKGROUND,'critical_acquisition_pressure',return_value=True), \
-             patch.object(worker,'MAX_SECONDS',.3):
-            stop=lambda:mode=='stop' and bool(children)
-            if mode=='deadline':
-                with pytest.raises(ValueError,match='coverage_worker_deadline'):
-                    await worker.run(stop,root=tmp_path,module='app.collection.ordinary_worker')
-            else:
-                result=await worker.run(stop,root=tmp_path,module='app.collection.ordinary_worker')
-                assert result.get('published') is (mode=='success')
-                if mode=='success':assert result['worker_pauses']==0
-        assert len(children)==1 and children[0].returncode is not None
-    asyncio.run(exercise_delivery())

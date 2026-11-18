@@ -40,12 +40,9 @@ async def run(stopped, *, root, module=None, arguments=(), on_progress=None, wai
     # publication interval, phase-locking with recurring raw-input bursts. Wait
     # for an admissible slot without launching CPU work; this wait consumes the
     # same total deadline as the child, and Stop remains immediately observable.
-    # Ordinary publication is the delivery path, not optional census work.
-    # It has its own bounded, lower-priority process and no event-loop GIL.
-    # Suspending it until a persistently busy socket drains starves every
-    # source, including already-admitted API receipts. Keep all child memory,
-    # deadline, Stop and ingress capacity guards; only optional work waits.
-    while coverage and BACKGROUND.acquisition_pressure():
+    # Research publication and census yield to current source admission.
+    # Their child ownership, deadline and safe SQL checkpoints remain bounded.
+    while (coverage or ordinary) and BACKGROUND.acquisition_pressure():
         if not wait_for_admission:raise AcquisitionDeferred('native_acquisition_catching_up')
         if stopped():return dict(published=False,reason='updates_stopped')
         if time.monotonic()-start>MAX_SECONDS:raise AcquisitionDeferred('native_acquisition_catching_up')
@@ -90,7 +87,7 @@ async def run(stopped, *, root, module=None, arguments=(), on_progress=None, wai
         while not reply.done():
             if stopped():return dict(published=False,reason='updates_stopped')
             if time.monotonic()-start>MAX_SECONDS:raise ValueError('coverage_worker_deadline')
-            pressure=not ordinary and BACKGROUND.critical_acquisition_pressure()
+            pressure=BACKGROUND.critical_acquisition_pressure()
             if cooperative:
                 if ready and pressure!=paused:
                     try:process.send_signal(signal.SIGUSR1 if pressure else signal.SIGUSR2)
