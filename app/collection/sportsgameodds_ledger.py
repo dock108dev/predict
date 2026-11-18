@@ -171,7 +171,7 @@ class ObjectLedger:
         db.execute('INSERT INTO sgo_http_request(account,requested_at) VALUES(?,?)', (account,current))
 
     def reserve_request(self, account: str, *, requests_per_minute: int, now: datetime) -> None:
-        """Persist a non-object request before dispatch, including usage reads."""
+        """Persist a rate-limited non-object request; exempt usage reads skip it."""
         if not account:
             raise ValueError('account id required')
         _integer(requests_per_minute, 'requests_per_minute', positive=True)
