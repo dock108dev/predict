@@ -17,6 +17,36 @@ from app.dashboard.snapshot_api import mount
 
 @skipUnless(SOCKET, 'Disposable PostgreSQL required')
 class OrdinarySQL(LatestBoardFixture):
+    async def test_expensive_planning_does_not_consume_the_finance_stage(self):
+        from time import monotonic
+        from app.storage.current_rows import CurrentRowStore
+        from tests.broad_pipeline_fixtures import captured_partial
+        from tests.multisport_fixtures import source_case
+
+        case = dict(source_case('NBA', 'spread', 'finance-budget', clock=self.at), period='full_game')
+        records, exclusions, book, _ = await captured_partial(case, 'kalshi')
+        self.assertFalse(exclusions)
+        with self.connect() as db:
+            store = CurrentRowStore(db)
+            store.upsert_records(records, now=self.at.isoformat())
+            store.replace_native_books([book])
+        offset = 0
+        planning = live.planning_signatures
+
+        def expensive_planning(*args, **kwargs):
+            nonlocal offset
+            value = planning(*args, **kwargs)
+            offset += 30
+            return value
+
+        with self.connect() as db, \
+                patch.object(live, 'planning_signatures', side_effect=expensive_planning), \
+                patch.object(live, 'monotonic', side_effect=lambda: monotonic() + offset):
+            result = live.turn(db)
+        self.assertGreater(result['computed'], 1, result)
+        self.assertGreater(result['timings']['planning_seconds'], 30)
+        self.assertLess(result['timings']['finance_seconds'], 8)
+
     async def test_current_native_quote_expires_and_rotation_preserves_only_the_stored_price(self):
         from app.storage.current_native_desk import overlay
         from app.storage.current_rows import CurrentRowStore

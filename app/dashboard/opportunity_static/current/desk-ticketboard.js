@@ -153,11 +153,12 @@ export function ticketboardEmpty(page, {amount, retry, browseLink}) {
     unit_needed:'Choose a unit size to rank offers after fees.',
     valuation_pending:`Calculating opportunities for ${unitLabel(amount)}`,
     read_failed:'Opportunities could not be loaded',
-    ready:hasQualified ? 'No positive Net EV offers at this unit size.'
-      : 'No offers qualify for Net EV at this unit size.'
+    ready:hasQualified ? 'No positive estimated Net EV offers at $100.'
+      : 'No offers have an estimated Net EV at $100.'
   }[page.state] || 'Opportunities could not be loaded';
   empty.append(el('h2', page.pending_member_count ? 'Updating $100 estimates' : title));
   if (page.pending_member_count) empty.append(el('p', `${page.pending_member_count} groups are still being calculated. Completed results appear as they publish.`, 'desk-meta'));
+  if (page.state === 'ready') empty.append(el('p', `${page.qualified_offer_count || 0} of ${page.matched_offer_count || 0} posted offers have an estimated Net EV.`, 'desk-meta'));
   if (page.state === 'ready' && !hasQualified) {
     const reasons = Object.entries(page.blocker_counts || {}).sort((a, b) => b[1] - a[1]);
     const labels = [...new Set(reasons.map(([reason]) => evidenceReason(reason)))].slice(0, 4);

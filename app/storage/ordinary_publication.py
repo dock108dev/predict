@@ -943,8 +943,7 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
             # Standalone fees and opposing cashflows do not require a current
             # sportsbook comparison. Missing reference fields stay unavailable.
             finance_work = list(work)
-            if finance_only:
-                key = finance_only[0]
+            for key in finance_only[:8]:
                 prior = old[key]
                 saved = db.execute('SELECT snapshot_id FROM comparison_snapshot_result WHERE id=%s',
                                    (prior['result_id'],)).fetchone()
@@ -953,9 +952,10 @@ def turn(db, *, turn_seconds=8, capture_cache=None):
             finance_work.sort(key=lambda item: (old.get(item[0], {}).get('facts', {}).get('visited_at', ''), item[0]))
             for key,input_id,facts in finance_work:
                 checkpoint()
-                # Finance shares the turn's wall-time budget with planning and
-                # capture. Keep one oldest job progressing even on a costly turn.
-                if computed and monotonic()-started>=turn_seconds:break
+                # Planning cannot consume finance's bounded stage budget before
+                # it starts. The child deadline and checkpoints still bound the
+                # complete turn, including the oldest retained financial work.
+                if computed and monotonic()-finance_started>=turn_seconds:break
                 decoded=False
                 previous_failure=facts.get('finance')=='failed'
                 try:

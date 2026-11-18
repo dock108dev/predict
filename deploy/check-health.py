@@ -14,25 +14,27 @@ def web_health():
 
 
 def collector_health():
-    from app.collection.runtime_status import RuntimeState
-    from app.storage.store import stamp
+    from app.storage.store import connect, stamp
 
-    runtime = RuntimeState().read()
-    if not runtime['healthy'] or runtime['service_state'] != 'running':
-        return False
-    if (runtime['global_stopped'] or not runtime['config']['enabled']
-            or runtime.get('calculations', {}).get('board') == 'stopped'):
-        return True
-    progress = runtime['status'].get('background_work', {}).get('progress', {}).get('ordinary', {})
+    with connect() as db, db.transaction():
+        db.execute('SET TRANSACTION READ ONLY')
+        runtime = db.execute('''SELECT state,dispatch,global_stopped,config->'enabled' AS enabled,
+            status#>>'{background_calculations,board}' AS calculation,
+            status#>'{background_work,progress,ordinary}' AS ordinary,
+            status#>'{background_work,progress,unit_board}' AS unit_board,heartbeat_at,
+            heartbeat_at BETWEEN clock_timestamp()-interval '8 seconds' AND clock_timestamp() AS healthy
+            FROM data_runtime WHERE singleton=true''').fetchone()
+        if not runtime or not runtime['healthy'] or runtime['state'] != 'running':
+            return False
+        if runtime['global_stopped'] or not runtime['enabled'] or runtime['calculation'] == 'stopped':
+            return True
+        board = db.execute('SELECT board_id,policy_id FROM pregame_unit_board WHERE unit_cents=10000').fetchone()
+    progress = runtime['ordinary'] or {}
+    unit_progress = runtime['unit_board'] or {}
     last_success = progress.get('last_success_at')
-    from app.storage import pregame_unit_board
-    from app.storage.store import connect
-
-    with connect() as db:
-        board = pregame_unit_board.read(db, pregame_unit_board.DEFAULT_CENTS)
-    if not board or not board['board_id'] or board['policy_id'] != pregame_unit_board.policy_id():
+    if not board or not board['board_id'] or board['policy_id'] != unit_progress.get('policy_id'):
         return False
-    return (runtime['active'] and not progress.get('error') and bool(last_success)
+    return (runtime['dispatch'] and not progress.get('error') and bool(last_success)
             and abs((stamp(runtime['heartbeat_at']) - stamp(last_success)).total_seconds()) <= 180)
 
 

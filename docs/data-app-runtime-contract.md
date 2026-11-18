@@ -76,6 +76,11 @@ the transaction rechecks runtime/control identity and revocation before commit.
 Shutdown reports incomplete cleanup rather than releasing a live ingress owner.
 
 Ordinary publication waits its usual two-second interval after a failed turn.
+Finance has its own bounded eight-second stage after price publication; planning
+and capture cannot exhaust that allowance before finance begins. Each turn can
+visit up to eight older finance-only members alongside newly captured work.
+The child deadline, resource checks, Stop, and transaction checkpoints still
+bound the entire turn.
 Incoming quotes can wake a healthy publisher without bypassing that retry
 delay. Close still interrupts the wait. Reading the implicit manual snapshot
 head locks the pointer while renewing the exact result and its input together.

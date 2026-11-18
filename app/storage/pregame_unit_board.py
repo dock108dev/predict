@@ -386,4 +386,5 @@ def app_turn(db, *, data_owner=False):
         return {}
     head = ordinary_publication.status(db)
     epoch = str(db.execute('SELECT epoch FROM current_row_epoch').fetchone()['epoch'])
-    return service(db, head=head, owner=owner, states=states, epoch=epoch, at=at, default_only=data_owner)
+    return dict(service(db, head=head, owner=owner, states=states, epoch=epoch, at=at,
+                        default_only=data_owner), policy_id=policy_id())

@@ -76,13 +76,11 @@ class RuntimeReadGuards(unittest.TestCase):
         self.assertEqual(source_states({}, stopped)['kalshi']['state'], 'stopped')
         self.assertIsNone(disabled['reason_code'])
         def publishing(**progress):
-            status = dict(background_work=dict(progress=dict(ordinary=progress)))
+            status = dict(background_work=dict(progress=dict(ordinary=progress,
+                unit_board={'policy_id': 'tested-policy'})))
             return self.read(runtime_row(status=status))
-        with patch('app.collection.runtime_status.RuntimeState') as state, \
-                patch('app.storage.store.connect'), \
-                patch('app.storage.pregame_unit_board.policy_id', return_value='tested-policy'), \
-                patch('app.storage.pregame_unit_board.read', return_value={
-                    'board_id': 'published-default', 'policy_id': 'tested-policy'}):
+        with patch('app.storage.store.connect') as connection:
+            sql = connection.return_value.__enter__.return_value.execute
             for runtime, expected in (
                 (blocked, False), (stopped, True), (disabled, True),
                 (dict(blocked, calculations={'board': 'stopped'}), True),
@@ -92,7 +90,15 @@ class RuntimeReadGuards(unittest.TestCase):
                 (publishing(last_success_at=(AT-timedelta(minutes=4)).isoformat()), False),
             ):
                 with self.subTest(expected=expected, status=runtime['status']):
-                    state.return_value.read.return_value = runtime
+                    progress = runtime['status'].get('background_work', {}).get('progress', {})
+                    summary = dict(state=runtime['service_state'], dispatch=runtime['active'],
+                        global_stopped=runtime['global_stopped'], enabled=runtime['config']['enabled'],
+                        calculation=runtime.get('calculations', {}).get('board'), healthy=runtime['healthy'],
+                        heartbeat_at=runtime['heartbeat_at'], ordinary=progress.get('ordinary'),
+                        unit_board=progress.get('unit_board'))
+                    board = {'board_id': 'published-default', 'policy_id': 'tested-policy'}
+                    sql.return_value.fetchone.side_effect = [summary, board] if not (
+                        summary['global_stopped'] or not summary['enabled'] or summary['calculation'] == 'stopped') else [summary]
                     self.assertEqual(health(), expected)
 
     def test_postgres_local_offset_heartbeat_is_returned_as_utc(self):
