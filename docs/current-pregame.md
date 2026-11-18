@@ -24,6 +24,10 @@ established. Changing routes does not rename an observation's source history.
 
 Existing Stop, source pauses, account limits, reservations and holds remain owned
 by acquisition. No dashboard request starts a provider request or calculation.
+Ordinary pregame collection does not start the separate OddsLink ProphetX
+fallback: SGO already supplies that configured price route. The fallback remains
+available only with explicit live collection, and its saved observations remain
+available to historical and research consumers.
 
 ## Storage and ownership
 

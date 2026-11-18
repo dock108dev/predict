@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 from aiohttp.test_utils import TestClient, TestServer
 from app.collection.current_policy import DEFAULT, validate
 from app.collection.current_service import CurrentService
@@ -57,6 +57,30 @@ class ServiceLifecycle(unittest.IsolatedAsyncioTestCase):
         self.service=CurrentService(config=dict(DEFAULT,aggregate_enabled=False),directory=self.root/'state',ownership=LocalOwnership(self.root/'owner.lock'),worker_factory=FakeWorker)
         self.store=CurrentStore(self.service)
     async def asyncTearDown(self):await self.store.close();self.temp.cleanup()
+    async def test_pregame_sgo_does_not_start_the_live_only_public_fallback(self):
+        for live in (False,True):
+            with self.subTest(live=live):
+                config=dict(DEFAULT,aggregate_enabled=True,aggregate_provider='sportsgameodds',
+                    direct_kalshi_enabled=False,direct_polymarket_us_enabled=False,
+                    direct_novig_enabled=False,live_enabled=live)
+                service=CurrentService(config=config,database_mode=True,
+                    directory=self.root/str(live)/'state',ownership=LocalOwnership(self.root/str(live)/'owner.lock'))
+                store=CurrentStore(service)
+                service.store=store
+                service.sink=LatestStateSink(store,service.initial_state(),service.config)
+                with patch('app.collection.current_service.call',new=AsyncMock()), \
+                     patch('app.collection.sportsgameodds_worker.SportsGameOddsWorker',side_effect=lambda s:FakeWorker(s,'sportsgameodds')), \
+                     patch('app.collection.novig_v3_public.NovigPublicDiscovery',side_effect=lambda s:FakeWorker(s,'novig_public')), \
+                     patch('app.collection.public_sportsbook_worker.PublicSportsbookWorker',side_effect=lambda s:FakeWorker(s,'public_sportsbook')) as fallback:
+                    try:
+                        await service._start_sources()
+                        await asyncio.sleep(0)
+                        self.assertEqual('public_sportsbook'in service.workers,live)
+                        self.assertEqual(fallback.call_count,int(live))
+                        self.assertIn('sportsgameodds',service.workers)
+                        self.assertIn('novig_public',service.workers)
+                    finally:await store.close()
+
     async def test_start_attachment_single_workers_consumed_record_shutdown(self):
         await self.service.start(self.store);await self.service.start(self.store);await asyncio.sleep(0)
         self.assertEqual(sorted(FakeWorker.starts),['kalshi','polymarket_us'])

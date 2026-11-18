@@ -148,7 +148,7 @@ class CurrentService:
             from .sportsgameodds_worker import SportsGameOddsWorker
             self.workers[provider]=(self.sgo_factory or SportsGameOddsWorker)(self)
             self.tasks[provider]=asyncio.create_task(self.run_worker(provider), name='predict-current-sportsgameodds')
-            if self.database_mode and self.sgo_factory is None:
+            if self.database_mode and self.sgo_factory is None and live_enabled(self.config):
                 from .public_sportsbook_worker import PublicSportsbookWorker
                 self.workers['public_sportsbook'] = PublicSportsbookWorker(self)
                 self.tasks['public_sportsbook'] = asyncio.create_task(
