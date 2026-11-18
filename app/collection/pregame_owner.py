@@ -37,35 +37,45 @@ class PregameOwner:
 
     def seed(self):
         from app.comparison.current_pregame import VERSION
+        from app.storage.current_pregame import configured_routes
 
         with connect() as db, db.transaction():
             db.execute("SELECT pg_advisory_xact_lock(901095)")
+            routes = configured_routes(db)
             db.execute(
                 """INSERT INTO current_pregame_work(provider,native_event_id)
                 SELECT DISTINCT e.provider,e.native_event_id FROM current_event e
                 JOIN current_contract c ON c.event_id=e.id JOIN current_offer o ON o.contract_id=c.id
                 LEFT JOIN current_pregame_calculation p ON p.contract_id=c.id
                 WHERE e.expires_order>extract(epoch FROM clock_timestamp())
+                  AND (c.venue||':'||e.provider)=ANY(%s)
                   AND (p.contract_id IS NULL OR p.version<>%s)
                 ON CONFLICT DO NOTHING""",
-                (VERSION,),
+                (
+                    [venue + ":" + provider for venue, provider in routes.items()],
+                    VERSION,
+                ),
             )
 
     def turn(self):
         from app.storage.current_pregame import process, operational
 
         with connect() as db:
-            from app.storage.current_pregame import account_identity
+            from app.storage.current_pregame import account_identity, configured_routes
 
             with db.transaction():
                 db.execute("SELECT pg_advisory_xact_lock(901095)")
                 identity = account_identity()
                 if identity != self.fee_account_identity:
-                    db.execute("""INSERT INTO current_pregame_work(provider,native_event_id)
+                    db.execute(
+                        """INSERT INTO current_pregame_work(provider,native_event_id)
                         SELECT DISTINCT e.provider,e.native_event_id FROM current_event e
                         JOIN current_contract c ON c.event_id=e.id
-                        WHERE c.venue='kalshi' AND e.expires_order>extract(epoch FROM clock_timestamp())
-                        ON CONFLICT DO NOTHING""")
+                        WHERE c.venue='kalshi' AND e.provider=%s
+                          AND e.expires_order>extract(epoch FROM clock_timestamp())
+                        ON CONFLICT DO NOTHING""",
+                        (configured_routes(db)["kalshi"],),
+                    )
                     self.fee_account_identity = identity
                 # Effective fee deadlines enqueue only the affected source events.
                 db.execute("""INSERT INTO current_pregame_work(provider,native_event_id)

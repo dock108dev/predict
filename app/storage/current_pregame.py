@@ -326,6 +326,14 @@ def input_identity(record, reference, context, fee=None):
 
 
 def calculate_game(db, job, context, *, at):
+    if job["provider"] not in {"sportsgameodds", *context.price_routes.values()}:
+        db.execute(
+            """DELETE FROM current_pregame_calculation WHERE contract_id IN
+            (SELECT c.id FROM current_contract_storage c JOIN current_event e ON e.id=c.event_id
+             WHERE e.provider=%s AND e.native_event_id=%s)""",
+            (job["provider"], job["native_event_id"]),
+        )
+        return dict(offers=0, complete=0)
     events, observations, occurrence = affected(db, job, at)
     ids = [e["id"] for e in events]
     if not ids:

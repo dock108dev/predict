@@ -90,6 +90,62 @@ class CurrentPregameSQL(LatestBoardFixture):
         with patch("app.storage.current_rows.utc", return_value=AT):
             return board.process(db, at=stamp(AT), **kwargs)
 
+    async def test_inactive_route_does_not_resolve_or_recalculate_active_game(self):
+        with self.connect() as db:
+            self.ingest(db, page())
+            self.process(db)
+            before = list(db.execute("SELECT * FROM current_pregame_calculation"))
+            with db.transaction():
+                db.execute(
+                    "INSERT INTO current_pregame_work(provider,native_event_id) VALUES('oddslink_public_board','inactive')"
+                )
+            with patch.object(
+                board,
+                "affected",
+                side_effect=AssertionError("inactive route loaded game"),
+            ):
+                result = self.process(db)
+            self.assertEqual(result[0]["offers"], 0)
+            self.assertEqual(
+                before, list(db.execute("SELECT * FROM current_pregame_calculation"))
+            )
+            self.assertEqual(
+                db.execute("SELECT count(*) AS n FROM current_pregame_work").fetchone()[
+                    "n"
+                ],
+                0,
+            )
+
+    async def test_restart_seed_only_configured_price_routes(self):
+        from app.collection.pregame_owner import PregameOwner
+
+        with self.connect() as db:
+            self.ingest(db, page())
+            with db.transaction():
+                db.execute("DELETE FROM current_pregame_work")
+                db.execute(
+                    "UPDATE current_event SET expires_order=extract(epoch FROM clock_timestamp())+60"
+                )
+                db.execute("UPDATE current_event SET provider='oddslink_public_board'")
+            with patch("app.collection.pregame_owner.connect", self.connect):
+                PregameOwner(None).seed()
+            self.assertEqual(
+                db.execute("SELECT count(*) AS n FROM current_pregame_work").fetchone()[
+                    "n"
+                ],
+                0,
+            )
+            with db.transaction():
+                db.execute("UPDATE current_event SET provider='sportsgameodds'")
+            with patch("app.collection.pregame_owner.connect", self.connect):
+                PregameOwner(None).seed()
+            self.assertEqual(
+                db.execute("SELECT count(*) AS n FROM current_pregame_work").fetchone()[
+                    "n"
+                ],
+                1,
+            )
+
     async def test_atomic_current_values_under_one_second_and_read_only(self):
         with self.connect() as db:
             started = monotonic()
