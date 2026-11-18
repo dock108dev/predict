@@ -119,8 +119,9 @@ dates. Recheck rates and exceptions before enabling a new market family.
   it as exact.
   Predict calculates the fee from the published price and the applicable
   schedule, including a numeric zero. An exact SportsGameOdds offer typed
-  as a linked pregame straight can use the reviewed retail schedule without
-  a direct Novig price feed. When official catalog evidence exists, use its
+  as a pregame straight can use the reviewed retail schedule without
+  a direct Novig price feed. A missing native link makes this a public retail
+  estimate; it does not assert native contract verification. When official catalog evidence exists, use its
   applicable terms and preserve any exact market, side, or kickoff conflict.
   [v3 trading fees](https://docs.novig.com/api/concepts/fees) ·
   [Retail fee schedule](https://support.novig.com/en/articles/16195057-fees-on-novig) ·

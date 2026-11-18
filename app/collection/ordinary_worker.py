@@ -31,7 +31,7 @@ def main():
 
     try:
         with cancellation(lambda:pause.checkpoint(db,stopped)), store.connect() as db:
-            result = (app_turn(db) if '--units-only' in sys.argv[3:] else
+            result = (app_turn(db, data_owner='--data-owner' in sys.argv[3:]) if '--units-only' in sys.argv[3:] else
                       turn(db,capture_cache=store.ROOT/'.local/ordinary-capture-structure.json'))
         result.update(worker_seconds=round(time.monotonic()-start,3), worker_peak_rss_bytes=rss())
     except Exception as exc:

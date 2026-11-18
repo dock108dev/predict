@@ -58,10 +58,10 @@ class TradeDesk(TestCase):
         from app.dashboard.trade_desk import AFTER_FEE_METRIC, offer
 
         verified = with_verified_model(quote('verified', 'kalshi'), '-1')
-        verified.update(game_state='scheduled', sportsbook_after_fee_percent='9',
+        verified.update(game_state='scheduled', alternate=False, sportsbook_after_fee_percent='9',
                         sportsbook_baseline=dict(book='fanduel', fair_decimal_odds='2',
                                                  prices=[dict(price_american='-110'), dict(price_american='-110')]))
-        modeled = dict(quote('modeled', 'novig'), game_state='scheduled', game_key='second',
+        modeled = dict(quote('modeled', 'novig'), game_state='scheduled', alternate=False, game_key='second',
                        sportsbook_baseline=verified['sportsbook_baseline'], sportsbook_after_fee_percent='2',
                        trade_fee=dict(available=True, trade_fee_usd='0', classification='exact_public'))
         missing = dict(modeled, id='missing', game_key='third', sportsbook_return_percent='50',
@@ -78,7 +78,7 @@ class TradeDesk(TestCase):
 
     def test_single_negative_before_fee_result_survives_default_comparison_and_missing_fees(self):
         first = with_verified_model(quote('first', 'novig'), '-1')
-        first.update(game_state='scheduled', gross_return_percent='-4/5',
+        first.update(game_state='scheduled', alternate=False, gross_return_percent='-4/5',
                      conditional_return_percent=None, trade_fee=dict(available=False, reason='fee_unavailable'))
         data = dict(result(first), captured_at='2026-11-08T00:00:00Z')
         query = dict(layout='desk', summary='1', phase='pregame', basis='sportsbooks', ranked='1', lines='main')
@@ -348,20 +348,20 @@ class TradeDesk(TestCase):
         self.assertEqual(lines(filtered), {'-13.5', '13.5'})
         self.assertTrue(all(offer['venue'] != 'polymarket_us' for group in filtered['rows'] for offer in group['offers']))
         unknown = read({'browse_odds': '1'}, rows=rows[2:4])
-        self.assertEqual({entry['line_role'] for entry in unknown['rows']}, {'unknown'})
+        self.assertEqual(unknown['rows'], [])
 
         conflict = dict(facts)
         conflict['polymarket_us', native_id] = dict(native, source_participant_roles={'home': native['away'],
                                                                                     'away': native['home']})
-        separate = read({'browse_odds': '1'}, events=conflict)
+        separate = read({'browse_odds': '1', 'lines': 'all'}, events=conflict)
         self.assertEqual(separate['total'], 2)
         self.assertEqual({entry['game_identity_status'] for entry in separate['rows']}, {'source_listing_unverified'})
         conflict['polymarket_us', native_id]['schedule_conflict'] = {'reason': 'start_conflict'}
-        separate = read({'browse_odds': '1', 'game_key': 'native'}, events=conflict)
+        separate = read({'browse_odds': '1', 'game_key': 'native', 'lines': 'all'}, events=conflict)
         self.assertEqual(separate['games'][0]['game_identity_status'], 'schedule_conflict')
         conflict['polymarket_us', native_id].pop('schedule_conflict')
         conflict['polymarket_us', native_id]['occurrence_conflict'] = True
-        separate = read({'browse_odds': '1'}, rows=rows[2:4], events=conflict)
+        separate = read({'browse_odds': '1', 'lines': 'all'}, rows=rows[2:4], events=conflict)
         self.assertEqual(separate['games'][0]['game_identity_status'], 'source_listing_unverified')
 
     def test_committed_freshness_and_feed_outage_do_not_change_pregame_economics(self):

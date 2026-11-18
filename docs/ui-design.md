@@ -2,9 +2,10 @@
 
 ## Current comparison interface
 
-**Opportunities** at `/` and `/ev` opens on the pregame ticketboard. **Unit
-size** is the maximum upfront commitment for one offer. Choose a preset or
-enter a custom dollar amount. Predict remembers that choice on the device.
+**Opportunities** at `/` and `/ev` opens on the pregame ticketboard using a
+$100 maximum upfront commitment, public retail fees, and a decisive completed-game
+estimate. The basis is visible before the tickets. Each comparison discloses its
+fill and settlement assumptions.
 Main-line tickets are ranked by Opportunity Score, which uses modeled win
 chance and after-fee payoff. Net EV gives the modeled return per dollar.
 
@@ -27,7 +28,7 @@ change withdraws it.
 ## Find and compare games
 
 Use **Browse odds** to find a game, market, venue, or alternate line. It works
-before you choose a unit and when the board has no qualifying offers. Browse
+when the board has no qualifying offers. Browse
 shows aligned venue columns for each exact outcome. Select **No quote** to
 read what Predict knows about the missing price for that venue and line.
 Saved and retained prices are labeled when available.
@@ -46,7 +47,7 @@ shows when each price was observed. Live uses separate freshness rules.
 
 Open a Browse quote to inspect its posted price, any verified fee, and the
 reference, fill, and settlement evidence. The trade preview starts with the
-saved board unit when one exists and supports adjusting the amount for that
+default $100 basis and supports adjusting the amount for that
 quote. **Auto-update** controls Browse list updates. **Trading fees** explains
 the venue terms. Admin's **Sources** view shows collection problems.
 [Data and freshness limits](market-data-gaps.md)

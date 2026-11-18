@@ -102,7 +102,7 @@ function restoreFocus(target) {
 $('title').textContent = gameKey ? linkedTitle || 'Game odds' : browse ? 'Browse odds' : replay ? (arb ? 'Arbitrage' : 'Expected value') : 'Opportunities';
 document.body.classList.toggle('game-odds-view', !!gameKey);
 document.title = `Predict · ${$('title').textContent}`;
-$('basis-field').hidden = arb || afterFeeView || practice;
+$('basis-field').hidden = arb || afterFeeView || practice || !replay && phase === 'pregame';
 $('group-field').hidden = arb || !replay || practice;
 $('opportunity-tabs').hidden = !opportunityView;
 function updatePhaseView() {
@@ -120,7 +120,8 @@ function updatePhaseView() {
   $('period-field').hidden = phase === 'pregame';
   const ticketboard = unitBoard();
   document.body.classList.toggle('ticketboard', ticketboard);
-  $('board-unit-field').hidden = !ticketboard;
+  $('board-unit-field').hidden = true;
+  $('fixed-budget').hidden = !ticketboard;
   $('opportunity-tabs').hidden = !opportunityView || ticketboard;
   if (browse) {
     if (safeBack && $('desk-path').firstElementChild) $('desk-path').firstElementChild.href = safeBack;
@@ -231,7 +232,7 @@ if (browse) {
 if (phase) delete saved.game_state;
 if (phase === 'pregame') delete saved.period;
 if (phase === 'live' && !saved.basis) saved.basis = 'reviewed';
-if (afterFeeView) saved.basis = 'after_fees';
+if (afterFeeView || !replay && browse && phase === 'pregame') saved.basis = 'after_fees';
 if (replay) {
   filters.elements.basis.querySelector('option[value="sportsbooks"]').remove();
   if (saved.basis === 'sportsbooks') saved.basis = dataset === 'retained' ? 'reviewed' : 'before';

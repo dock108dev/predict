@@ -410,6 +410,58 @@ class PregamePublicationSQL(LatestBoardFixture):
             quote_key=retail['desk_quote_key'], basis='after_fees', preview_amount='10', unit_usd='25'), API + '/selection'))['row']
         self.assertEqual(retail_detail['trade_fee']['evidence']['basis'], 'reviewed_retail_pregame_straight')
         self.assertEqual(retail_detail['trade_preview']['fee_at_entry_usd'], '0')
+        default = await self.read(dict(layout='desk', phase='pregame', ranked='1', summary='1', lines='main'))
+        self.assertEqual(default['selected_usd'], '100')
+        self.assertEqual(default['state'], 'ready')
+        self.assertGreater(default['qualified_offer_count'], 0, default)
+        self.assertTrue(default['rows'], default)
+        estimated = default['rows'][0]['offers'][0]['valuation_summary']
+        self.assertEqual(estimated['evidence_class'], 'public_estimate')
+        self.assertEqual(estimated['display']['fee'], '$0.00')
+        self.assertTrue(estimated['assumptions'])
+        priced = await self.read(dict(BROWSE, basis='after_fees'))
+        published = next(o for g in priced['rows'] for o in g['offers']
+                         if o['id'] == default['rows'][0]['offers'][0]['id'])
+        self.assertEqual(published['default_estimate']['raw'], estimated['raw'])
+        self.assertEqual(Fraction(published['value']), 100 * Fraction(estimated['raw']['net_ev']))
+        inspected = (await self.read(dict(layout='desk', phase='pregame', id=published['id'],
+            quote_key=published['desk_quote_key'], basis='after_fees', unit_usd='100'), API + '/selection'))['row']
+        self.assertEqual(inspected['valuation']['raw'], estimated['raw'])
+        self.assertEqual(inspected['source_clock_at'], published['source_clock_at'])
+        self.assertEqual(priced['provider_requests'], 0)
+        from app.storage import pregame_unit_board
+        with self.connect() as db:
+            db.execute("UPDATE comparison_publication SET facts=facts || '{\"finance\":\"pending\"}'::jsonb WHERE kind='live'")
+            db.execute('DELETE FROM pregame_unit_member WHERE unit_cents=10000')
+            result = pregame_unit_board.app_turn(db, data_owner=True)
+        self.assertTrue(result['unit_board']['published'], result)
+        self.assertEqual((await self.read(dict(layout='desk', phase='pregame', ranked='1', summary='1')))['state'], 'ready')
+
+        # A new ordinary root during a bounded unit turn must not starve the
+        # exact completed predecessor. A subsequent turn advances its prices.
+        self.at += timedelta(seconds=1)
+        home['novig'].update(odds='+2100', lastUpdatedAt=self.at.isoformat())
+        self.admit_page(raw)
+        assemble = pregame_unit_board.assemble
+        with self.connect() as db:
+            prior = ordinary_publication.status(db)
+            owner, states = ordinary_publication.authority(db, at=self.at, include_diagnostics=False)
+            epoch = str(db.execute('SELECT epoch FROM current_row_epoch').fetchone()['epoch'])
+            db.execute('DELETE FROM pregame_unit_member WHERE unit_cents=10000')
+
+            def advancing_root(*args, **kwargs):
+                projection = assemble(*args, **kwargs)
+                with patch.object(pregame_unit_board, 'service', return_value={}):
+                    self.publish()
+                return projection
+
+            with patch.object(pregame_unit_board, 'assemble', side_effect=advancing_root):
+                advanced = pregame_unit_board.turn(db, head=prior, owner=owner, states=states,
+                                                   epoch=epoch, at=self.at, default_only=True)
+            self.assertTrue(advanced['published'], advanced)
+            self.assertNotEqual(ordinary_publication.status(db)['result_id'], prior['result_id'])
+            self.assertEqual(pregame_unit_board.read(db, 10000)['root_id'], prior['result_id'])
+        self.publish()
 
         self.at += timedelta(seconds=1)
         official, market = fixture()[1:]
@@ -554,7 +606,9 @@ class PregamePublicationSQL(LatestBoardFixture):
         self.assertEqual(invalid.status, 422)
 
         board_query = dict(RANKED, board='1', lines='main', limit='1')
-        self.assertEqual((await self.read({k:v for k,v in board_query.items() if k != 'board'}))['state'], 'unit_needed')
+        default = await self.read({k:v for k,v in board_query.items() if k != 'board'})
+        self.assertEqual(default['state'], 'ready')
+        self.assertEqual(default['selected_usd'], '100')
         self.assertEqual((await self.read(dict(board_query, unit_usd='25')))['state'], 'valuation_pending')
         self.assertEqual((await self.read(dict(board_query, unit_usd='25.00')))['state'], 'valuation_pending')
         first_job = self.publish()['unit_board']

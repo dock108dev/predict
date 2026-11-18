@@ -286,10 +286,14 @@ export function tradePreview(offer, group, evidence, {clock, closed, loading}) {
       ? 'Pregame trading fee' : 'Trading fee', shown.fee]);
     else if (model?.fees?.entry_usd != null) entries.push(['Entry fee', usd(model.fees.entry_usd, 2)]);
     else if (charge?.available && !loading) entries.push(['Published fee at quoted size', tradingFeeLabel(charge)]);
+    if (model?.fees?.kind === 'varies') entries.push(['Fee at entry', usd(model.fees.entry_usd, 2)],
+      ...Object.entries(model.states || {}).map(([state, cash]) =>
+        [`Total fee if ${human(state).toLowerCase()}`, '$' + cash.display_fee_usd]));
     if (win) entries.push(['If it wins', '$' + win.display_receipt_usd + ' returned']);
     entries.push(['After-fee odds', shown.after_fee_odds || shown.after_fee_decimal],
-      ['Net EV', shown.net_ev], ['Opportunity Score', shown.opportunity_score]);
+      [model?.evidence_class === 'public_estimate' ? 'Estimated Net EV' : 'Net EV', shown.net_ev], ['Opportunity Score', shown.opportunity_score]);
     summary.append(facts(entries));
+    for (const assumption of model?.assumptions || []) summary.append(el('p', assumption, 'desk-meta'));
     if (!model && !loading) summary.append(el('p', 'Enter a maximum upfront cost to calculate a fill.', 'desk-meta'));
     for (const code of new Set(gaps)) summary.append(el('p', reasons(code), 'inspection-gap'));
     result.append(summary);
@@ -355,6 +359,7 @@ export function boardComparison(offer, group, game, comparison, {clock, size, lo
     return result;
   }
   const model = offer.valuation;
+  for (const assumption of model.assumptions || []) result.append(el('p', assumption, 'desk-meta'));
   if (model.evidence_class === 'fixture') result.append(el('p', 'Simulated offer and terms', 'inspection-mode'));
   else if (offer.quote_freshness === 'retained' || offer.quote_freshness === 'unknown') {
     result.append(el('p', quoteFreshness(offer, false, true), 'desk-meta'));

@@ -2,18 +2,22 @@
 
 ## Pregame Opportunities
 
-The ordinary ticketboard ranks qualified main-line offers at the user's
-selected maximum upfront cost. It uses the first eligible reference book in
+The ordinary ticketboard ranks public retail main-line estimates at a fixed
+$100 maximum upfront commitment. The collector builds this board continuously
+through partial ordinary publications. It uses the first eligible reference book in
 FanDuel, DraftKings, BetMGM, and Caesars order. The reference is a complete,
 coherent set of prices for the same market from one book. Each fair probability
 is its implied probability divided by the sum across that set. Matching the
-venue bet to the reference also requires applicable market and settlement rules.
+venue bet to the reference requires the same occurrence, outcome, line and period.
+The default public estimate conditions on a decisive completed game and discloses
+that assumption. Known scoring conflicts withhold the comparison. Fully verified
+settlement and execution results retain their separate evidence requirements.
 
-The unit model sizes a supported fill and applies its documented fee, reserve,
+The model sizes the captured book or a disclosed posted-price scenario and applies its documented fee, reserve,
 and settlement terms. If `C` is the actual cash committed and `R[s]` is the
 net cash returned in state `s`, effective decimal odds are `R[win] / C` and
-Net EV is `sum(p[s] × (R[s] − C)) / C`. A push or refund needs its own probability
-and cash flow when it materially affects the model. Keep the observed quote and
+Net EV is `sum(p[s] × (R[s] − C)) / C`. A full-state push or refund result needs its own probability
+and cash flow. The default decisive-game estimate excludes those states. Keep the observed quote and
 any supported fee visible when a required valuation input is missing.
 
 For each exact bet, the board chooses the qualified marketplace offer with the

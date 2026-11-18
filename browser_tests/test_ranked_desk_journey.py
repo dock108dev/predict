@@ -359,7 +359,7 @@ def test_ranked_and_browse_journey(width, tmp_path):
                 price = tab.locator(f'[data-offer-id="{key}"]')
                 expect(price).to_contain_text(f"{value} EV")
                 expect(price).to_have_accessible_name(
-                    re.compile(re.escape(f"{value} Estimated EV after fees"))
+                    re.compile(re.escape(f"{value} Estimated Net EV · $100"))
                 )
             expect(tab.locator('[data-offer-id="kalshi-minnesota"]')).to_contain_text(
                 "EV unavailable"

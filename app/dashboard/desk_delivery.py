@@ -11,7 +11,7 @@ from app.storage.store import stamp
 
 
 BURST_SECONDS = 0.5
-RESPONSE_SECONDS = 1.0
+RESPONSE_SECONDS = 3.0
 # A list that missed its response budget can finish between browser retries.
 LATE_LIST_REUSE_SECONDS = 3.5
 MAX_DESK_READS = 16

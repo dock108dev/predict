@@ -3,7 +3,7 @@ import {evidenceReason} from './desk-reasons.js';
 const {el, num, fmt, name, odd, button} = window.PredictUI;
 const basisLabels = {sportsbooks:'Indicative before-fee estimate', reviewed:'Verified after-fee EV',
   conservative:'Conservative after-fee scenario', before:'Before-fee scenario',
-  after_fees:'Estimated EV after fees', sportsbook_after_fees:'Modeled after-fee estimate'};
+  after_fees:'Estimated Net EV · $100', sportsbook_after_fees:'Modeled after-fee estimate', public_estimate:'Estimated Net EV · $100'};
 export const books = ['fanduel', 'draftkings', 'betmgm', 'caesars'];
 export const cash = value => value == null ? 'Unavailable' : new Intl.NumberFormat('en-US', {
   style:'currency', currency:'USD'
@@ -20,7 +20,7 @@ export function quoteReason(offer) {
   return evidenceReason(reason, 'No qualified same-line sportsbook pair.').replace(/\.$/, '');
 }
 
-export const usesSportsbookReference = (offer, basis) => basis === 'sportsbooks' || offer?.value_basis === 'sportsbook_after_fees';
+export const usesSportsbookReference = (offer, basis) => basis === 'sportsbooks' || ['sportsbook_after_fees', 'public_estimate'].includes(offer?.value_basis);
 
 export function selectedReference(offer, basis) {
   if (usesSportsbookReference(offer, basis) && offer?.sportsbook) {

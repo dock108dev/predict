@@ -78,9 +78,14 @@ class RuntimeReadGuards(unittest.TestCase):
         def publishing(**progress):
             status = dict(background_work=dict(progress=dict(ordinary=progress)))
             return self.read(runtime_row(status=status))
-        with patch('app.collection.runtime_status.RuntimeState') as state:
+        with patch('app.collection.runtime_status.RuntimeState') as state, \
+                patch('app.storage.store.connect'), \
+                patch('app.storage.pregame_unit_board.policy_id', return_value='tested-policy'), \
+                patch('app.storage.pregame_unit_board.read', return_value={
+                    'board_id': 'published-default', 'policy_id': 'tested-policy'}):
             for runtime, expected in (
                 (blocked, False), (stopped, True), (disabled, True),
+                (dict(blocked, calculations={'board': 'stopped'}), True),
                 (publishing(), False),
                 (publishing(last_success_at=AT.isoformat(), unchanged=True), True),
                 (publishing(last_success_at=AT.isoformat(), error='ordinary_publication_failed'), False),

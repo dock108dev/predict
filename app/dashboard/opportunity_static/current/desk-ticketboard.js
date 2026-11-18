@@ -10,7 +10,8 @@ export function unitLabel(value) {
   const amount = Number(value);
   return (Number.isInteger(amount) ? wholeDollars : dollars).format(amount);
 }
-export const conditioningLabel = value => ({if_no_draw:'if no draw', if_no_push:'if no push'})[value];
+export const conditioningLabel = value => ({if_no_draw:'if no draw', if_no_push:'if no push',
+  if_decisive_completed_game:'for a decisive completed game'})[value];
 
 // The service validates these same dollar bounds and decimal places.
 function validUnit(value) {
@@ -40,7 +41,7 @@ export function createUnitPicker({readPreference, savePreference, changed}) {
   }
 
   function restore() {
-    amount = validUnit(readPreference(unitKey, amount ?? ''));
+    amount = '100.00';
     showAmount();
   }
 
@@ -132,7 +133,7 @@ export function ticketCard(group, {position, clock, inspectOffer}) {
     pricing.append(el('p', quoteFreshness(offer, false), 'ticket-context'));
   }
   const stub = el('div', null, 'ticket-stub');
-  const metric = ticketFacts([['Net EV', display.net_ev], ['Opportunity Score', display.opportunity_score]], 'ticket-metrics');
+  const metric = ticketFacts([['Estimated Net EV', display.net_ev], ['Opportunity Score', display.opportunity_score]], 'ticket-metrics');
   const compare = button('Compare prices', () => inspectOffer(offer, group, compare), 'ticket-compare');
   compare.dataset.offerId = offer.id;
   compare.dataset.boardId = offer.board_id;
@@ -155,7 +156,8 @@ export function ticketboardEmpty(page, {amount, retry, browseLink}) {
     ready:hasQualified ? 'No positive Net EV offers at this unit size.'
       : 'No offers qualify for Net EV at this unit size.'
   }[page.state] || 'Opportunities could not be loaded';
-  empty.append(el('h2', title));
+  empty.append(el('h2', page.pending_member_count ? 'Updating $100 estimates' : title));
+  if (page.pending_member_count) empty.append(el('p', `${page.pending_member_count} groups are still being calculated. Completed results appear as they publish.`, 'desk-meta'));
   if (page.state === 'ready' && !hasQualified) {
     const reasons = Object.entries(page.blocker_counts || {}).sort((a, b) => b[1] - a[1]);
     const labels = [...new Set(reasons.map(([reason]) => evidenceReason(reason)))].slice(0, 4);

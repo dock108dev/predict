@@ -24,6 +24,8 @@ try {
     if (terms.document_url || terms.source_url) source.href = terms.document_url || terms.source_url;
     const effective = terms.published_effective_from || terms.effective_from;
     if (terms.available) {
+      const modeled = terms.hundred_dollar_example;
+      if (modeled) source.before(el('p', `$100 maximum upfront example at ${modeled.posted_odds}. Stake ${dollars(modeled.stake)}, entry fee ${dollars(modeled.entry_fee)}, upfront ${dollars(modeled.upfront)}. A win returns ${dollars(modeled.winning_return)} after the ${dollars(modeled.win_fee)} winning fee. ${modeled.basis}.`));
       if (venue === 'novig' || terms.example_fee != null) source.before(el('p', examples[venue](terms)));
       if (venue === 'prophetx' && terms.nhl_taker_coefficient) {
         source.before(el('p', `NHL taker base coefficient ${terms.nhl_taker_coefficient}. Other supported straight markets use ${num(terms.rate) * 100}% of positive net gains.`));

@@ -24,6 +24,7 @@ from .storage_maintenance import REWRITE_RUNWAY_BYTES
 from .store import hashed, stamp
 
 SCHEMA = 'predict-pregame-board-1'
+DEFAULT_CENTS = 10_000
 MAX_AMOUNTS = 8
 MAX_CACHE_BYTES = 48 * 1024 * 1024
 MAX_PACKET = 8 * 1024 * 1024
@@ -36,7 +37,8 @@ def policy_id():
     return hashed([SCHEMA, pregame_valuation.VERSION, pregame_valuation.SIZING, pregame_reference.VERSION, [
         sha256(path.read_bytes()).hexdigest() for path in (
             Path(__file__), directory / 'pregame_valuation.py', directory / 'pregame_valuation_fees.py',
-            directory / 'pregame_reference.py', RULES, RULES.with_name('sgo-reviewed-jurisdiction-bindings.json'))]])
+            directory / 'pregame_reference.py', directory / 'pregame_estimate.py',
+            RULES, RULES.with_name('sgo-reviewed-jurisdiction-bindings.json'))]])
 
 
 def request(db, cents):
@@ -88,6 +90,9 @@ def member_projection(part, cents):
                 or set(row['current_authority']['price'].get('reasons', ())) - {'source_expired'}):
             continue
         row = snapshots.expand_row(row)
+        if cents == DEFAULT_CENTS:
+            from app.comparison.pregame_estimate import inputs as estimated_inputs
+            row = estimated_inputs(row, Fraction(cents, 100))
         model = pregame_valuation.valuation(row, Fraction(cents, 100), publication_id=None,
                                             snapshot_id=part['snapshot_id'])
         models[row['id']] = model
@@ -129,6 +134,7 @@ def compact(row, model, title, role):
             value=exact_wire(Fraction(model['raw']['net_ev']) * 100), valuation_summary=dict(
                 selected_usd=model['selected_usd'], raw=model['raw'], display=model['display'],
                 evidence_class=model['evidence_class'], reference_snapshot_id=model['reference_snapshot_id'],
+                assumptions=model.get('assumptions', []),
                 reference=benchmark,
                 settlement_revision=model['settlement_revision'], fee_revision=model['fee_revision'],
                 fill_revision=model['fill_revision'])))
@@ -239,22 +245,28 @@ def next_start(model, row):
     return ((model.get('canonical_market') or {}).get('kickoff') or row['start_at'])
 
 
-def turn(db, *, head, owner, states, epoch, at):
+def turn(db, *, head, owner, states, epoch, at, default_only=False):
     """Build one unit from the ordinary turn, checkpointing immutable member work."""
     root_id = head['result_id']
-    if (not root_id or head['facts'].get('finance') != 'ready'
-            or head['facts'].get('component_count') != head['facts'].get('expected_components')):
+    if not root_id:
         return {}
     policy = policy_id()
     job = db.execute('''SELECT b.unit_cents FROM pregame_unit_board b
         LEFT JOIN comparison_snapshot_result prior ON prior.id=b.root_id
-        WHERE b.root_id IS DISTINCT FROM %s OR b.policy_id IS DISTINCT FROM %s
-        ORDER BY (b.error IS NOT NULL), prior.calculated_at NULLS FIRST, b.requested_at DESC, b.unit_cents
-        LIMIT 1''', (root_id, policy)).fetchone()
+        WHERE (NOT %s OR b.unit_cents=%s) AND (b.root_id IS DISTINCT FROM %s OR b.policy_id IS DISTINCT FROM %s
+          OR EXISTS (SELECT 1 FROM comparison_result_reference m
+              LEFT JOIN pregame_unit_member v ON v.unit_cents=b.unit_cents
+                AND v.member_id=m.result_id AND v.policy_id=%s
+              WHERE m.kind='member' AND m.holder=%s AND v.member_id IS NULL))
+        ORDER BY (b.unit_cents=%s), (b.error IS NOT NULL), prior.calculated_at NULLS FIRST,
+                 b.requested_at DESC, b.unit_cents
+        LIMIT 1''', (default_only, DEFAULT_CENTS, root_id, policy, policy, root_id, DEFAULT_CENTS)).fetchone()
     if not job:
         return {}
     started = monotonic()
     cents = job['unit_cents']
+    if not snapshots.renew_result_lease(db, root_id):
+        return dict(unit_cents=cents, pending=True, superseded=True)
     root = snapshots._decode(db.execute('SELECT result FROM comparison_snapshot_result WHERE id=%s',
                                         (root_id,)).fetchone()['result'])
     if (root.get('_read_fragments') != 'publication-members-v1'
@@ -280,7 +292,9 @@ def turn(db, *, head, owner, states, epoch, at):
             continue
         checkpoint()
         if built and monotonic() - started >= WORK_SECONDS:
-            return dict(unit_cents=cents, member_builds=built, member_reuses=cached, pending=True)
+            if cents != DEFAULT_CENTS:
+                return dict(unit_cents=cents, member_builds=built, member_reuses=cached, pending=True)
+            break
         row = db.execute('SELECT read_fragment FROM comparison_snapshot_result WHERE id=%s', (m['id'],)).fetchone()
         part = snapshots._decode(row['read_fragment'])
         packet = member_projection(part, cents)
@@ -302,16 +316,18 @@ def turn(db, *, head, owner, states, epoch, at):
         for row in cursor:
             checkpoint()
             parts.append(snapshots._decode(row['valuation']))
-    if len(parts) != len(ids):
+    if len(parts) != len(ids) and cents != DEFAULT_CENTS:
         return {}
     projection = assemble(db, parts, root, owner=owner, states=states, epoch=epoch, at=at)
-    board_id = hashed([SCHEMA, cents, root_id, ids, policy, projection['events']])
+    projection['pending_members'] = len(ids) - len(parts)
+    board_id = hashed([SCHEMA, cents, root_id, ids, policy, projection['events'], len(parts)])
     body = snapshots.pack_read(projection)
     if len(body) > min(MAX_PACKET, headroom(db)):
         return capacity(db, cents)
     with db.transaction():
-        if db.execute("SELECT result_id FROM comparison_publication WHERE kind='live' AND id='' FOR SHARE"
-                      ).fetchone()['result_id'] != root_id:
+        current = db.execute("SELECT result_id FROM comparison_publication WHERE kind='live' AND id='' FOR SHARE"
+                             ).fetchone()
+        if not current or not current['result_id']:
             return dict(unit_cents=cents, pending=True, superseded=True)
         if str(db.execute('SELECT epoch FROM current_row_epoch').fetchone()['epoch']) != epoch:
             return dict(unit_cents=cents, pending=True, superseded=True)
@@ -319,6 +335,7 @@ def turn(db, *, head, owner, states, epoch, at):
             WHERE unit_cents=%s''', (board_id, root_id, policy, body, cents))
     return dict(unit_cents=cents, published=bool(written.rowcount), board_id=board_id,
                 member_builds=built, member_reuses=cached, valuations=count,
+                pending=bool(projection['pending_members']), pending_members=projection['pending_members'],
                 board_bytes=len(body), seconds=round(monotonic() - started, 4))
 
 
@@ -340,30 +357,33 @@ def stored_parts(db, cents, policy, member_ids):
         ''', (cents, policy, list(member_ids)))}
 
 
-def service(db, *, head, owner, states, epoch, at):
+def service(db, *, head, owner, states, epoch, at, default_only=False):
     """Share one writer between ordinary turns and the app-only worker."""
     from .ordinary_desk_projection import backfill
 
     if not db.execute('SELECT pg_try_advisory_lock(901198) AS held').fetchone()['held']:
         return dict(busy=True)
     try:
+        db.execute('INSERT INTO pregame_unit_board(unit_cents) VALUES (%s) ON CONFLICT DO NOTHING',
+                   (DEFAULT_CENTS,))
         written = backfill(db, head['result_id'])
-        board = turn(db, head=head, owner=owner, states=states, epoch=epoch, at=at)
+        board = turn(db, head=head, owner=owner, states=states, epoch=epoch, at=at, default_only=default_only)
         return dict(unit_board=board, desk_fragment_bytes=written,
                     more=bool(written or board.get('pending') or board.get('published')))
     finally:
         db.execute('SELECT pg_advisory_unlock(901198)')
 
 
-def app_turn(db):
+def app_turn(db, *, data_owner=False):
     """Service committed inputs when the ordinary data process is absent."""
     from . import ordinary_publication
     from .current_games import utc
 
     at = stamp(utc())
     owner, states = ordinary_publication.authority(db, at=at, include_diagnostics=False)
-    if owner.get('healthy') or owner.get('calculations', {}).get('board') == 'stopped':
+    if (owner.get('healthy') and not data_owner
+            or owner.get('calculations', {}).get('board') == 'stopped'):
         return {}
     head = ordinary_publication.status(db)
     epoch = str(db.execute('SELECT epoch FROM current_row_epoch').fetchone()['epoch'])
-    return service(db, head=head, owner=owner, states=states, epoch=epoch, at=at)
+    return service(db, head=head, owner=owner, states=states, epoch=epoch, at=at, default_only=data_owner)

@@ -14,12 +14,13 @@ class OrdinaryOwner:
     def __init__(self, service):
         self.service = service
         self.closed = False
-        self.task = self.coverage_task = self.drain_task = None
+        self.task = self.coverage_task = self.unit_task = self.drain_task = None
         self.last = self.last_coverage = None
         self.last_success_at = None
         self.error = self.observation_error = self.estimate_error = self.coverage_error = None
         self.progress = {}
         self.wake = asyncio.Event()
+        self.closing = asyncio.Event()
 
     async def start(self):
         self.service.ingress.on_sgo_admitted = self.wake.set
@@ -28,11 +29,13 @@ class OrdinaryOwner:
         # observation/estimate owner runs alongside this ordinary projection.
         self.task = asyncio.create_task(self.run_ordinary(), name='predict-ordinary-comparison-owner')
         self.coverage_task = asyncio.create_task(self.run_coverage(), name='predict-coverage-owner')
+        self.unit_task = asyncio.create_task(self.run_units(), name='predict-default-unit-owner')
 
     async def close(self):
         self.closed = True
+        self.closing.set()
         self.wake.set()
-        tasks = [task for task in (self.task, self.coverage_task) if task]
+        tasks = [task for task in (self.task, self.coverage_task, self.unit_task) if task]
         if not tasks:
             return
         # The child runner observes closed, drains the process and releases
@@ -89,6 +92,26 @@ class OrdinaryOwner:
                 except TimeoutError:
                     pass
             self.wake.clear()
+
+    async def run_units(self):
+        """Advance the default board independently of a slow acquisition capture."""
+        while not self.closed:
+            delay = TURN_INTERVAL_SECONDS
+            try:
+                result = await run(lambda: self.closed, root=ROOT,
+                    module='app.collection.ordinary_worker', arguments=('--units-only', '--data-owner'))
+                self.progress['unit_board'] = dict(at=utc(), **result)
+                if result.get('more'):
+                    delay = 0.25
+            except Exception as exc:
+                if self.closed:
+                    return
+                failure(__name__, 'default_unit_publication', exc)
+                self.progress['unit_board'] = dict(at=utc(), error='unit_board_build_failed')
+            try:
+                await asyncio.wait_for(self.closing.wait(), timeout=delay)
+            except TimeoutError:
+                pass
 
     async def run_coverage(self):
         # The full census must neither hold the publication lane nor allocate

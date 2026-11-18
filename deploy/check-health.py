@@ -20,10 +20,18 @@ def collector_health():
     runtime = RuntimeState().read()
     if not runtime['healthy'] or runtime['service_state'] != 'running':
         return False
-    if runtime['global_stopped'] or not runtime['config']['enabled']:
+    if (runtime['global_stopped'] or not runtime['config']['enabled']
+            or runtime.get('calculations', {}).get('board') == 'stopped'):
         return True
     progress = runtime['status'].get('background_work', {}).get('progress', {}).get('ordinary', {})
     last_success = progress.get('last_success_at')
+    from app.storage import pregame_unit_board
+    from app.storage.store import connect
+
+    with connect() as db:
+        board = pregame_unit_board.read(db, pregame_unit_board.DEFAULT_CENTS)
+    if not board or not board['board_id'] or board['policy_id'] != pregame_unit_board.policy_id():
+        return False
     return (runtime['active'] and not progress.get('error') and bool(last_success)
             and abs((stamp(runtime['heartbeat_at']) - stamp(last_success)).total_seconds()) <= 180)
 

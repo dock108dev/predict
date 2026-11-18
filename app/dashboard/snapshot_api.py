@@ -281,7 +281,8 @@ def mount(app):
 
             try:
                 preview_amount = parse_amount(query.get('preview_amount', '10'))
-                unit = parse_amount(query['unit_usd']) if 'unit_usd' in query else None
+                unit = parse_amount(query['unit_usd']) if 'unit_usd' in query else (
+                    parse_amount('100') if board_request or board_update else None)
             except ValueError as exc:
                 raise PublicRequestError(str(exc)) from exc
         cents = int(unit * 100) if unit is not None else None
@@ -331,6 +332,16 @@ def mount(app):
                             load_preview_members=lambda rows: published_members(db, rows))
             counts['phase'] = phase
             counts['published_at'] = published_at
+            if phase != 'live':
+                from .pregame_board import read_page
+                from app.storage.pregame_unit_board import DEFAULT_CENTS
+
+                board = read_page(db, dict(lines='main'), ('ev', 'selected_unit', 0, 1),
+                    cents=DEFAULT_CENTS, head=live.status(db), owner=owner, states=states, epoch=epoch, at=at)
+                counts['default_estimate'] = {key: board.get(key) for key in (
+                    'state', 'board_state', 'board_id', 'selected_usd', 'matched_offer_count',
+                    'qualified_offer_count', 'qualified_board_offer_count', 'ranked_group_count',
+                    'pending_member_count', 'blocker_counts')}
             if query.get('funnel') == '1':
                 from .coverage_funnel import measure
                 counts['synchronized_funnel'] = measure(db, result, deps, counts, owner, at=at, phase=phase,
@@ -520,6 +531,9 @@ def mount(app):
                     out = desk_page(result, query, options, captured_pairs=captured_pairs,
                                     policy=result['publication']['policy'], browsing=browsing, published_only=True,
                                     event_facts=result['desk_event_facts'])
+                    if query.get('browse_odds') == '1' and query.get('basis') == 'after_fees':
+                        from .pregame_board import add_default_estimates
+                        out = add_default_estimates(db, out)
                     if not out.get('rows'):
                         fallback = game_capture_link(db, query, allow_live=live_available)
                         if fallback:

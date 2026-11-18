@@ -99,7 +99,7 @@ def published_lines(groups, games, *, alternates, requested=None):
         role = ('main' if line == mains[market] else 'alternate') if market in mains else (
             'unknown' if featured or unknown else 'alternate')
         roles[identifier] = role
-        if alternates or role != 'alternate' or identifier == requested:
+        if alternates or role == 'main' or identifier == requested:
             eligible[key] = rows
     return eligible, roles
 

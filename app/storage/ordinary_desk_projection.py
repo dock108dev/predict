@@ -177,7 +177,7 @@ class DeskFragments:
                     if key not in self.members and size <= MAX_FRAGMENT_BYTES:
                         self.members[key] = part, size
                         self.bytes += size
-                        while self.bytes > MAX_FRAGMENT_BYTES or len(self.members) > 256:
+                        while self.bytes > MAX_FRAGMENT_BYTES or len(self.members) > 2048:
                             _, (_, removed) = self.members.popitem(last=False)
                             self.bytes -= removed
         if len(found) != len(entries):

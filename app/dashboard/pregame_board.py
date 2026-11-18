@@ -17,6 +17,30 @@ from .trade_desk import EV_METRIC, filters, offer
 BASIS = 'selected_unit'
 
 
+def add_default_estimates(db, page):
+    """Enrich only the visible quotes from the same immutable member valuations."""
+    offers = [offer for group in page.get('rows', ()) for offer in group.get('offers', ())]
+    members = {offer['evidence_result_id'] for offer in offers if offer.get('evidence_result_id')}
+    parts = units.stored_parts(db, units.DEFAULT_CENTS, units.policy_id(), members) if members else {}
+    for offer in offers:
+        part = parts.get(offer.get('evidence_result_id')) or {}
+        model = part.get('models', {}).get(offer['id'])
+        offer.update(value=None, value_basis='public_estimate', reason='unit_size_valuation_pending')
+        if not model:
+            continue
+        offer['default_estimate'] = model
+        offer['reason'] = next(iter(model['reasons'].values()), None)
+        if model['status'] != 'qualified':
+            continue
+        offer['value'] = exact_wire(Fraction(model['raw']['net_ev']) * 100)
+        offer['sportsbook_after_fee'] = offer['value']
+        reference = model['reference']
+        offer['sportsbook'] = dict(book=reference['book'], prices=reference['prices'],
+            probability=reference['probability'], conditioning=reference['conditioning'],
+            fair_decimal_odds=reference['fair_decimal_odds'], fair_odds=units.fair_odds(reference))
+    return page
+
+
 def states_at(db, events, at):
     rows = [dict(source=dict(provider=provider, native_event_id=native))
             for provider, native in events if provider and native]
@@ -204,7 +228,8 @@ def read_page(db, query, options, *, cents, head, owner, states, epoch, at):
     cursor = hashed([board_id, filter_signature, [(row['id'], row['score_source']['id']) for row in rows]])
     base.update(board_id=board_id, source_result_id=stored['root_id'], board_cursor=cursor,
         valuation_policy_revision=stored['policy_id'],
-        replacement_pending=stored['root_id'] != head['result_id'],
+        replacement_pending=stored['root_id'] != head['result_id'] or bool(projection.get('pending_members')),
+        pending_member_count=projection.get('pending_members', 0),
         publication=visible_publication(dict(projection['publication'], read_at=at.isoformat(), sources=states,
             data_runtime=publication_runtime(owner))))
     if (query.get('board_cursor') and cursor != query['board_cursor'] or offset and not query.get('board_cursor')):

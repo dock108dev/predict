@@ -71,6 +71,11 @@ export function feeCensusLines(report) {
   const published = report.published_at ? new Date(report.published_at).toLocaleString() : 'Time unavailable';
   const rate = t.posted_fee_coverage_percent != null ? `${t.posted_fee_coverage_percent.toFixed(2)}%` : 'No posted offers';
   return [
+    ...(report.default_estimate ? [
+      ['$100 estimate board', report.default_estimate.state === 'ready'
+        ? `${count(report.default_estimate.qualified_offer_count)} supported estimates · ${count(report.default_estimate.ranked_group_count)} positive main-line bets · ${count(report.default_estimate.pending_member_count)} groups pending`
+        : report.default_estimate.state.replaceAll('_', ' ')],
+    ] : []),
     ['Trading fees', `${count(t.posted_fee)} of ${count(t.posted)} posted offers · ${rate}`],
     ['Named sportsbook references', count(t.posted_named_reference)],
     ['Offers with qualified settlement', count(t.posted_settlement_qualified)],

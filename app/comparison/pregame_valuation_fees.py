@@ -17,13 +17,15 @@ def _fills(levels):
     return [dict(price=wire(price), quantity=wire(quantity)) for price, quantity in levels]
 
 
-def _same_entry(audits, field, stake=0):
+def _same_entry(audits, field, stake=0, *, conservative=False):
     amounts = {F(audit[field]) - stake for audit in audits if audit.get(field) is not None}
     if not amounts or any(audit.get(field) is None for audit in audits):
         raise ValueError('unit_fee_schedule_unverified')
-    if len(amounts) != 1:
+    if len(amounts) != 1 and not conservative:
         raise ValueError('unit_fee_retail_rounding_or_tier_unverified')
-    return amounts.pop(), F(0), {}, audits[0]['trace']
+    charge = max(amounts)
+    selected = next(audit for audit in audits if F(audit[field]) - stake == charge)
+    return charge, F(0), {}, selected['trace']
 
 
 def retail_order(row, terms, cost, fee):
@@ -32,6 +34,22 @@ def retail_order(row, terms, cost, fee):
     evidence = fee.get('evidence') or {}
     venue = row['venue']
     provider = (row.get('source') or {}).get('provider')
+    estimated = terms.get('evidence_class') == 'public_estimate'
+    native = venue == provider and venue in ('kalshi', 'polymarket_us')
+    if estimated and (terms.get('pricing_model') == 'posted_price' and not native or venue == 'prophetx'):
+        def evaluated(levels, stake):
+            quantity = stake / cost if terms['kind'] == 'stake' else sum(q for _, q in levels)
+            audit = _leg_fee(row, stake=stake, price=cost, quantity=quantity,
+                             receipts={'win': quantity, 'loss': F(0)}, allow_fractional=True)
+            if not audit['available']:
+                raise ValueError('unit_fee_schedule_unverified')
+            cash = dict(settlement_fee_usd=audit['settlement_usd'])
+            reserve = F(audit.get('reserve_usd', '0'))
+            if reserve:
+                cash['reserve_release'] = {state: wire(F(value) / reserve)
+                                           for state, value in audit['reserve_released_usd'].items()}
+            return F(audit['at_fill_usd']), reserve, cash, audit.get('rounding_trace')
+        return evaluated, evidence, None
     if venue == 'novig' and provider == 'sportsgameodds' and fee.get('classification') == 'exact_public':
         # This reviewed pregame zero is independent of amount. _leg_fee
         # verifies the exact catalog link, witness price, phase and schedule.
@@ -50,16 +68,21 @@ def retail_order(row, terms, cost, fee):
         if F(evidence['acquired_price_usd']) != cost or evidence['market_id'] != row['source']['native_market_id']:
             raise ValueError('unit_fee_schedule_unverified')
         when = evidence['order_inserted_at']
-        tick = F(row['fee_applicability']['retail']['values']['orderPriceMinTickSize'])
-        if tick <= 0 or any(F(leg['price']) % tick for leg in terms['asks']):
+        values = (row.get('fee_applicability') or {}).get('retail', {}).get('values') or {}
+        if values.get('orderPriceMinTickSize') is not None:
+            tick = F(values['orderPriceMinTickSize'])
+            if tick <= 0 or any(F(leg['price']) % tick for leg in terms['asks']):
+                raise ValueError('unit_fill_depth_conflict')
+        elif not estimated:
             raise ValueError('unit_fill_depth_conflict')
         tiers = STANDARD_TIERS if instant(when) >= instant(CUTOVER) else (STANDARD_TIERS[0],)
         def evaluated(levels, stake):
             return _same_entry([order_fee(evidence['market_id'], inserted_at=when,
-                evaluated_at=when, fills=_fills(levels), tier=tier) for tier in tiers], 'entry_fees')
+                evaluated_at=when, fills=_fills(levels), tier=tier) for tier in tiers], 'entry_fees',
+                conservative=estimated)
         # Cost upper bounds suffice to find the legal fill. If fees differ
         # across public tiers there, report the missing tier instead.
-        if len(tiers) > 1:
+        if len(tiers) > 1 and not estimated:
             def bounded(levels, stake):
                 return _same_entry([order_fee(evidence['market_id'], inserted_at=when, evaluated_at=when,
                     fills=_fills(levels), tier=tiers[0])], 'entry_fees')
@@ -79,7 +102,7 @@ def retail_order(row, terms, cost, fee):
             return [calculate(dict(context, balance_precision=precision, fills=fills,
                 applicability_evidence=row['fee_applicability']), registry) for precision in ('0.0001', '0.01')]
         def evaluated(levels, stake):
-            return _same_entry(audits(levels), 'entry_cash_requirement', stake)
+            return _same_entry(audits(levels), 'entry_cash_requirement', stake, conservative=estimated)
         def bounded(levels, stake):
             receipts = audits(levels)
             if any(audit['entry_cash_requirement'] is None for audit in receipts):

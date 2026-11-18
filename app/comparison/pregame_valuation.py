@@ -234,6 +234,7 @@ def valuation(row, amount, *, publication_id, snapshot_id):
         offer=row.get('original'), source_clocks=row.get('times'), captured_at=row.get('captured_at'),
         quote_freshness=row.get('quote_freshness'),
         selected_usd=wire(amount), actual_outlay_usd=None, sizing_policy=SIZING,
+        assumptions=row.get('estimate_assumptions', []),
         sizing_tolerance_usd=wire(min(F(1), amount / 100)) if amount is not None else None,
         fill=None, fees=None, states={}, raw={}, display={}, reasons=reasons)
     raw, shown = result['raw'], result['display']

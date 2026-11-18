@@ -94,33 +94,21 @@ def first_use(tab, base, archive_directory):
     from playwright.sync_api import expect
 
     tab.goto(base + "/")
-    expect(tab.get_by_role("heading", name="Opportunities")).to_be_visible()
+    expect(tab.get_by_role("heading", name="Opportunities", exact=True)).to_be_visible()
     expect(
-        tab.get_by_role("heading", name="Choose a unit size to rank offers after fees.")
+        tab.get_by_role("heading", name="Calculating opportunities for $100")
     ).to_be_visible()
     expect(tab.get_by_role("link", name="Arbitrage")).to_be_visible()
-    expect(tab.get_by_label("Unit size")).to_have_value("")
+    expect(tab.get_by_label("Unit size")).to_be_hidden()
+    expect(tab.get_by_label("Unit size")).to_have_value("100.00")
     expect(
         tab.locator("#results").get_by_role("link", name="Browse Odds")
     ).to_be_visible()
     expect(tab.get_by_role("button", name="Filters", exact=True)).to_be_hidden()
-    unit = tab.get_by_label("Unit size")
-    unit.select_option("custom")
-    custom = tab.get_by_label("Custom amount in dollars")
-    custom.fill("12.345")
-    custom.press("Enter")
-    assert not custom.evaluate("input => input.validity.valid")
-    custom.fill("19.37")
-    custom.press("Enter")
-    expect(
-        tab.get_by_role("heading", name="Calculating opportunities for $19.37")
-    ).to_be_visible()
+    tab.evaluate("localStorage.setItem('predict-desk-unit-usd', '19.37')")
     tab.goto(base + "/ev")
-    expect(unit).to_have_value("19.37")
-    unit.select_option("custom")
-    expect(custom).to_have_value("19.37")
-    custom.press("Escape")
-    expect(unit).to_have_value("19.37")
+    expect(tab.get_by_label("Unit size")).to_have_value("100.00")
+    expect(tab.get_by_label("Unit size")).to_be_hidden()
     saved = tab.get_by_role("link", name="Saved odds", exact=True)
     expect(saved).to_have_count(1)
     tab.get_by_role("link", name="Admin", exact=True).click()
@@ -334,7 +322,7 @@ def test_first_use_without_credentials(width, tmp_path, monkeypatch):
             tab.on("pageerror", lambda error: errors.append(str(error)))
             first_use(tab, base, tmp_path)
             practice_journey(tab, base)
-            expect(tab.get_by_label("Unit size")).to_have_value("19.37")
+            expect(tab.get_by_label("Unit size")).to_have_value("100.00")
             if width == 390:
                 tab.add_style_tag(
                     content="html { font-size: 200%; } .desk-app { font-size: .9375rem; }"

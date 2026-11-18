@@ -390,7 +390,8 @@ def published_pregame_fee(record, binding, *, at, review):
     from .game_phase import original_price_phase
     from .snapshot_fee_outcome import unavailable
 
-    if binding.get('reason') != 'sgo_native_catalog_unavailable':
+    if binding.get('reason') not in ('sgo_native_catalog_unavailable', 'sgo_native_event_link_unavailable',
+                                      'sgo_native_outcome_link_unavailable'):
         return pregame_fee(binding, review=review)
     if not record or not review or not review.get('standing_public_terms'):
         return pregame_fee(binding, review=review)
@@ -409,7 +410,7 @@ def published_pregame_fee(record, binding, *, at, review):
         if (quote['venue'] != 'novig' or source['provider'] != 'sportsgameodds'
                 or source['native_side'] != 'bookmaker_outcome' or source['quote_side'] != 'buy'
                 or source['native_event_id'] != event['id'] or not source['native_market_id']
-                or not _uuid(native_event) or not native_outcome or not side or not family_code
+                or not side or not family_code
                 or source['native_outcome_id'].split('-')[-2] != family_code
                 or event['competition'] != market['competition'] or (event['competition'], family) not in RULES
                 or market['period'] != 'full_game' or stamp(market['scheduled_start']) != stamp(event['scheduled_start'])
@@ -435,10 +436,12 @@ def published_pregame_fee(record, binding, *, at, review):
     except (ValueError, KeyError, TypeError, ArithmeticError):
         return unavailable('sgo_native_pregame_public_schedule_scope_unverified')
     amount = exact_wire(model['amount'])
-    return dict(available=True, classification='exact_public', reason=None, trade_fee_usd=amount,
+    linked = bool(_uuid(native_event) and native_outcome)
+    return dict(available=True, classification='exact_public' if linked else 'conservative', reason=None, trade_fee_usd=amount,
         quantity='1', quantity_unit='USD payout claim', fill_count=1, liquidity_role='taker',
         fee_payment='at_fill', fee_cashflows={'at_fill_usd': amount}, profile='manual_retail',
-        assumptions=[*model['assumptions'], 'SportsGameOdds labels the linked offer as a full-game pregame straight.'],
+        assumptions=[*model['assumptions'], 'SportsGameOdds identifies this offer as a full-game pregame straight.',
+                     *([] if linked else ['Native contract link is unverified. The public retail schedule supplies this fee estimate.'])],
         details=dict(rounding_trace=model['trace']),
         evidence=dict(review, basis='reviewed_retail_pregame_straight', offer_identity=fee_offer_identity(source),
             native_event_id=native_event, native_outcome_id=native_outcome, native_market_id=None,

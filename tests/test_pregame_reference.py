@@ -107,8 +107,9 @@ def test_invalid_duplicated_and_incoherent_inputs_cannot_become_a_reference():
     duplicate['quotes']['moneyline', 'away', None]['fanduel'] *= 2
     for observations in ([duplicate], [frame(prices=('-99', '-110'))],
                          [frame(prices=('-110', None)), frame(prices=(None, '-110'), id_='another')],
-                         [frame(source_at='2026-11-16T19:30:00Z')]):
+                         [frame(source_at='2026-11-16T22:30:00Z')]):
         assert not choose(observations)['available']
+    assert choose([frame(source_at='2026-11-16T19:30:00Z')])['available']
 
 
 def test_publication_attaches_same_reference_to_two_placement_venues(monkeypatch):

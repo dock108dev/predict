@@ -116,9 +116,8 @@ def snapshot(occurrence, family, line, outcomes, observation, book, *, at, rules
         if len(legs) == 2 and any(legs[i].get('opposing_odd_id') != legs[1-i]['odd_id'] for i in (0, 1)):
             raise ValueError('reference_outcome_identity_unverified')
     clocks = [stamp(leg['source_at']) for leg in legs]
-    if (any(not clock <= stamp(leg.get('received_at', observation['frame_received_at'])) <= captured
-            for clock, leg in zip(clocks, legs, strict=True))
-            or captured - min(clocks) > timedelta(seconds=MAX_AGE_SECONDS)):
+    if any(not clock <= stamp(leg.get('received_at', observation['frame_received_at'])) <= captured
+           for clock, leg in zip(clocks, legs, strict=True)):
         raise ValueError('reference_source_clocks_unverified')
     implied = [american_probability(leg['price_american']) for leg in legs]
     rule = rules_for(observation, book, family, legs, at)

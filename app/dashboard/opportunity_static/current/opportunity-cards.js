@@ -10,9 +10,9 @@ export {basisName, percent, priceStatus, quoteAge, quoteFreshness, quoteReason, 
 
 const compactBasisLabels = {sportsbooks:'Before-fee estimate', reviewed:'After-fee EV',
   conservative:'Conservative after-fee estimate', before:'Before-fee scenario',
-  after_fees:'Estimated EV after fees', sportsbook_after_fees:'Modeled after-fee estimate'};
+  after_fees:'Estimated EV after fees', sportsbook_after_fees:'Modeled after-fee estimate', public_estimate:'Estimated Net EV · $100'};
 const matrixBasisLabels = {sportsbooks:'est.', reviewed:'EV', conservative:'est.', before:'scenario',
-  after_fees:'EV', sportsbook_after_fees:'est.'};
+  after_fees:'EV', sportsbook_after_fees:'est.', public_estimate:'Estimated Net EV · $100'};
 const venues = ['kalshi', 'polymarket_us', 'novig', 'prophetx'];
 
 function fairReferenceLabel(reference) {

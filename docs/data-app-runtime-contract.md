@@ -20,6 +20,21 @@ a shared page's first quote or kickoff deadline take a fresh SQL snapshot.
 An exact native live quote read can return its original price and evidence before
 the first ordinary publication, subject to current source controls and clocks.
 Pregame selections use committed results.
+The default pregame board models a maximum $100 upfront cost. Its collector-owned
+worker advances separately from ordinary capture and optional finance. Immutable
+members are checkpointed across bounded turns, and completed members can publish
+while other members remain pending. A moving ordinary head does not discard
+completed work; the board retains its exact root and each read applies current
+withdrawal and sporting-schedule authority. Pending-member counts remain visible.
+Browse and Open Game reuse the same cached member valuations, while quote
+inspection runs the same deterministic calculation over the exact stored inputs.
+Public estimates disclose decisive completed-game settlement, posted-price sizing
+when depth is absent, and applicable public retail fees. Strict fully evidenced
+valuation remains a separate evidence class.
+
+The current-read deadline is three seconds. Shared compressed member decoding
+retains up to 2,048 entries within the existing eight-MiB byte cap, preventing
+routine full-root reads from evicting the beginning of a roughly 280-member root.
 Saved snapshot refreshes and recalculations return the same pregame rows as
 saved snapshot reads when Live is disabled. The retained inputs still contain
 the original observations.

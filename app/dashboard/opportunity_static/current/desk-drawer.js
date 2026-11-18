@@ -49,7 +49,7 @@ export function createDeskDrawer({replay, browse, dataset, retainedResult, gameK
   function tradeDetails() {
     const {offer, group, game, evidence, pairContext, posted, boardId, size, comparison, closed, loading} = currentSelection;
     dialog.classList.toggle('posted-inspection', !!posted);
-    previewControls.hidden = !posted || !!boardId;
+    previewControls.hidden = true;
     previewRefresh.hidden = !posted || !!boardId || viewContext().autoUpdate;
     refreshComparison.hidden = !boardId || !currentSelection.refreshAvailable;
     const label = position(offer, game);
@@ -121,7 +121,7 @@ export function createDeskDrawer({replay, browse, dataset, retainedResult, gameK
       checkedAt:previous ? Date.parse(page?.publication?.read_at) || Date.now() : Date.now(),
       pinned:previous, publication:pairContext?.publication ?? page?.publication, capturedAt:page?.replay?.captured_at};
     if ((browse || offer.board_id) && offer.posted_price && !replay && !pairContext) {
-      amount.readOnly = Boolean(offer.board_id);
+      amount.readOnly = true;
       const size = offer.board_id ? Number(offer.unit_usd).toFixed(2) : unitSize() || null;
       Object.assign(currentSelection, {posted:true, loading:true, closed:false, size, boardId:offer.board_id});
       amount.value = size ?? '';

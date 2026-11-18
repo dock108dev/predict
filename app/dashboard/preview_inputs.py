@@ -75,4 +75,7 @@ def prepared_valuation(db, row, amount, publication_id):
                         (member,)).fetchone() if member else None
     if not stored:
         return None
+    if amount == 100:
+        from app.comparison.pregame_estimate import inputs
+        row = inputs(row, amount)
     return valuation(row, amount, publication_id=publication_id, snapshot_id=stored['snapshot_id'])
