@@ -84,7 +84,13 @@ class PregameOwner:
                     WHERE p.valid_until<=clock_timestamp() AND p.start_at>clock_timestamp()
                       AND (p.reason IS NULL OR p.reason='fee_rule_no_current_schedule')
                     ON CONFLICT DO NOTHING""")
-            result = process(db, limit=8)
+            from .background_work import BACKGROUND
+
+            result = process(
+                db,
+                limit=8,
+                can_continue=lambda: not BACKGROUND.critical_acquisition_pressure(),
+            )
             from time import monotonic
 
             if result or monotonic() - self.last_status >= 5:

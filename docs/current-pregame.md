@@ -32,7 +32,9 @@ ordered current event/contract/offer owners. SQL triggers coalesce material chan
 into `current_pregame_work`. The same ingestion call invokes
 `app/storage/current_pregame.py:process` after source admission commits. The data
 runtime's `PregameOwner` recovers unfinished accepted work without replaying a
-provider call. Work is per affected occurrence; references and fee schedules are
+provider call. Recovery yields between games while source admission is active;
+inline ingestion keeps ownership of its newly admitted batch. Work is per
+affected occurrence; references and fee schedules are
 loaded once per processing batch. A game failure retains its diagnostic and
 accepted observations while other games proceed.
 

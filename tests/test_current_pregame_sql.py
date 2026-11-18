@@ -116,6 +116,36 @@ class CurrentPregameSQL(LatestBoardFixture):
                 0,
             )
 
+    async def test_recovery_yields_between_games_without_claiming_ingress_work(self):
+        with self.connect() as db:
+            self.ingest(db, page())
+            with db.transaction():
+                db.execute(
+                    "INSERT INTO current_pregame_work(provider,native_event_id) VALUES('oddslink_public_board','inactive')"
+                )
+            self.assertEqual(self.process(db, can_continue=lambda: False), [])
+            self.assertEqual(
+                db.execute("SELECT count(*) n FROM current_pregame_work").fetchone()[
+                    "n"
+                ],
+                2,
+            )
+            turns = iter((True, False))
+            self.assertEqual(len(self.process(db, can_continue=lambda: next(turns))), 1)
+            self.assertEqual(
+                db.execute("SELECT count(*) n FROM current_pregame_work").fetchone()[
+                    "n"
+                ],
+                1,
+            )
+            self.assertEqual(len(self.process(db)), 1)
+            self.assertEqual(
+                db.execute("SELECT count(*) n FROM current_pregame_work").fetchone()[
+                    "n"
+                ],
+                0,
+            )
+
     async def test_restart_seed_only_configured_price_routes(self):
         from app.collection.pregame_owner import PregameOwner
 

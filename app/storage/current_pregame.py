@@ -530,7 +530,7 @@ def calculate_game(db, job, context, *, at):
     return dict(offers=len(records), complete=complete)
 
 
-def process(db, *, limit=32, keys=None, at=None):
+def process(db, *, limit=32, keys=None, at=None, can_continue=None):
     """Recover durable admissions, atomically replacing each game's complete rows.
 
     Admission and final calculation use the existing writer lock in the same
@@ -542,6 +542,8 @@ def process(db, *, limit=32, keys=None, at=None):
     results = []
     attempted = set()
     for _ in range(limit):
+        if can_continue is not None and not can_continue():
+            break
         started = monotonic()
         with db.transaction():
             # Every writer takes this lock before touching the coalesced queue.
