@@ -21,7 +21,8 @@ The [CI workflow](../.github/workflows/ci.yml) runs on pull requests, pushes to
 | Deployment uses an unverified image | `Deploy Predict dev server` / `Build and verify Hetzner images` runs the proxy and Compose smoke scripts before GHCR publication. `Deploy Predict to Hetzner` consumes the verified digests, and `Release result` retains the stage outcomes. | Manual branch dispatch / Ubuntu 24.04 | Release workflow. The repo variable, dispatch input and `hetzner` environment govern deployment. | Repository `hetzner.yml`; independent manually authorized image/deployment checkpoint. |
 
 `CI readiness` requires all four jobs to pass in the same run. Missing, failed,
-cancelled, or unexpectedly skipped required jobs fail the gate. PR runs validate GitHub's merge commit and report the PR head separately.
+cancelled, or unexpectedly skipped required jobs fail the gate. PR runs validate
+GitHub's merge commit and report the PR head separately.
 CI cancels superseded runs within the same pull request.
 
 `CI readiness` is a workflow result. Requiring it for merges is a separate
@@ -31,7 +32,7 @@ checks. [GitHub required-check semantics](https://docs.github.com/en/pull-reques
 
 ### Quality before expensive behavior work
 
-`Source, security and package` now runs first. `Offline checks`, the four-shard
+`Source, security and package` runs first. `Offline checks`, the four-shard
 PostgreSQL lane and `Ordinary browser journey` depend on its success, then run in
 parallel. This reuses the existing quality job and setup instead of adding a
 second lint job or test selector. Its commands and requirements are unchanged.
@@ -207,13 +208,10 @@ requires an empty report directory. Use `--collect-only -q` or explicit pytest n
 for narrower iteration; SQL node IDs go to `postgres.py --tests`. Pytest `--lf`
 is failure history, not affected selection.
 
-Qualification uses disposable Git repositories: staged/unstaged/untracked and
-merge-base edits, leaf modules, helper consumers, new/deleted/renamed inputs,
-shared fixtures, non-code inputs, no-change/docs-only plans, explicit full
-routing, archival exclusions and missing/stale diagnostics. A real pytest
-fixture run compares a selected leaf with all four fixture modules; deliberately
-wrong arithmetic returns 1 and zero collection returns 5. This is representative
-selector qualification, not a selected-versus-full comparison of this repository.
+The selector tests in `tests/test_ci_affected.py` cover working-tree and
+merge-base changes, helper consumers, new/deleted/renamed inputs, configuration,
+missing diagnostics and failure propagation. Keep those cases aligned when
+changing the routing rules.
 
 ## Reports and dependencies
 

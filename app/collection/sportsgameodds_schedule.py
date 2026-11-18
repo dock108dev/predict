@@ -199,9 +199,9 @@ def budgeted_policy(events: list[EventDue], now: datetime, daily_budget: int, *,
                     minimum_refresh=None) -> tuple[SchedulePolicy, int]:
     """Hourly pregame inside 24 hours; trial minute polling in the final 30.
 
-    The owner selected a minute-poll trial despite the advertised three-minute
-    feed frequency. Preserve the shared margin and guards; stretch only when
-    that requested cadence cannot fit. Round upward to 30-second steps.
+    The collector measures information gained by minute polling. Preserve the
+    shared margin and guards; stretch only when the target cadence cannot fit.
+    Round upward to 30-second steps.
     Planning is a forecast, not new authority to spend or infer source clocks.
     """
     if type(daily_budget) is not int or daily_budget < 0:

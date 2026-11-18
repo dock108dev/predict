@@ -1,10 +1,10 @@
 # Predict
 
-Predict is an odds and opportunity board with a personal trade journal. It opens directly on
-**Pregame Opportunities**, showing complete main-line bets ranked by modeled
+Predict is an odds and opportunity board with a personal trade journal. It
+opens on **Pregame Opportunities**, showing complete main-line bets ranked by modeled
 Kelly growth after fees. **Rank by** also offers Net EV, the original Kelly-fraction
-score, Balanced and Probability edge. **Browse odds** groups main markets by game, sorted by start
-time. Open a game for alternate lines, then select a line to compare exact
+score, Balanced and Probability edge. **Browse odds** groups main markets by game,
+sorted by start time. Open a game for alternate lines, then select a line to compare exact
 market and sportsbook prices. **Arbitrage** compares opposite market-to-market
 and market-to-sportsbook legs after fees, independently of sportsbook EV.
 
