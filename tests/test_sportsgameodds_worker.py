@@ -607,9 +607,7 @@ def test_offer_and_reference_evidence_share_one_bounded_ingress(tmp_path,study_f
             paused_sources=set(), database_mode=False, states={}, sink=sink)
         worker = SportsGameOddsWorker(service, transport=SimpleNamespace(close=AsyncMock()),
                                      study_path=tmp_path/'study.db',now=lambda: NOW)
-        observed=event(1)
-        if study_fails:
-            observed['starts_at']=(NOW+timedelta(minutes=20)).isoformat()
+        observed=dict(event(1),starts_at=(NOW+timedelta(minutes=20)).isoformat())
         page = Page((observed,), (), None, 'a'*64)
         record = {'event': {'competition':'NFL'}, 'quote': {'id':'offer'}}
         reference = {'id':'reference'}
@@ -618,7 +616,7 @@ def test_offer_and_reference_evidence_share_one_bounded_ingress(tmp_path,study_f
              patch('app.storage.sportsgameodds_reference.prepare_page', return_value=[reference]), \
              patch('app.storage.sportsgameodds_reference.prepare_frames', return_value=frames), \
              patch('app.collection.sportsgameodds_study.observe',side_effect=OSError('fixture study failure')):
-            await worker._publish(page)
+            await worker._publish(page,include_alternates=study_fails)
         assert len(saved) == 1
         assert saved[0]['source'] == 'sportsgameodds'
         assert saved[0]['records'] == [record]
@@ -627,6 +625,8 @@ def test_offer_and_reference_evidence_share_one_bounded_ingress(tmp_path,study_f
         assert saved[0]['complete_venues'] == []
         if study_fails:
             assert worker.metrics['late_pregame_study']['state'] == 'measurement_unavailable'
+        else:
+            assert 'late_pregame_study' not in worker.metrics
     asyncio.run(scenario())
 
 

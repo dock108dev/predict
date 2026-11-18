@@ -307,7 +307,7 @@ class SportsGameOddsWorker:
                 totals[field] += count
 
         # A study failure cannot revoke prices already committed above.
-        if any(timedelta(0) < datetime.fromisoformat(e['starts_at'])-admitted_at <= timedelta(minutes=30)
+        if include_alternates and any(timedelta(0) < datetime.fromisoformat(e['starts_at'])-admitted_at <= timedelta(minutes=30)
                for e in page.events):
             await self.update_study(page,admitted_at)
 

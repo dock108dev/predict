@@ -67,8 +67,10 @@ discovery cost and headroom. These are targets, not source-latency guarantees.
 
 ## Minute-poll measurement
 
-After successful page admission, the collector records compact quote-image and
-source-clock fingerprints for pregame events inside the final 30 minutes. The
+After successful full-alternate page admission, the collector records compact
+quote-image and source-clock fingerprints for pregame events inside the final
+30 minutes. Main-only fallback responses are excluded so a scope change cannot
+masquerade as a changed price image. The
 separate `.local/predict-odds/diagnostics/sgo-refresh-study.sqlite3` contains no
 credentials, raw prices or financial accounting. It retains at most 10,000
 samples and seven days. Restart loads the retained summary; a study error does
