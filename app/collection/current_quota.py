@@ -606,7 +606,7 @@ class QuotaLedger:
                 raise QuotaStop(self.failed) from None
 
     def snapshot(self):
-        from .quota_status import read
+        from .quota_status import read, encoded_size
         try:
             v=read(self)
         except (OSError, QuotaStop):
@@ -648,7 +648,7 @@ class QuotaLedger:
             attempts=len(v['attempts']),unresolved_attempts=len(unresolved),engineering_reserve=RESERVE,ceiling=v['ceiling'],account_id=v.get('account_id'),account_transitions=deepcopy(v.get('account_transitions',[])),cycle=deepcopy(v.get('cycle')),sports_inventory=deepcopy(v.get('sports_inventory')),
             observation_age_seconds=None if o is None or stamp(self.clock())<stamp(o['at']) else (stamp(self.clock())-stamp(o['at'])).total_seconds(),
             observation_clock_skew=o is not None and stamp(self.clock())<stamp(o['at']),
-            ledger_encoded_bytes=len(packed(v)),ledger_byte_ceiling=LEDGER_BYTE_CAP,attempt_ceiling=ATTEMPT_CAP,
+            ledger_encoded_bytes=encoded_size(self,v),ledger_byte_ceiling=LEDGER_BYTE_CAP,attempt_ceiling=ATTEMPT_CAP,
             last_clock=v['last_clock'],clock_anchor=deepcopy(v['clock_anchor']),
             clock_recoveries=deepcopy(v['clock_recoveries']),accounting_epoch=deepcopy(v['accounting_epoch']))
 

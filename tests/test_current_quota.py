@@ -105,6 +105,31 @@ class DurableQuota(unittest.TestCase):
             self.assertEqual(self.q.snapshot()['pause'],'quota_ledger_unavailable')
             with self.assertRaises(QuotaStop):self.q.transact(lambda v,at:None)
 
+    def test_status_jobs_reuse_unchanged_verified_ledger_and_detect_replacement(self):
+        from app.collection.quota_status import account_projection, _account_reads
+        from app.collection.current_quota import packed
+        self.q.bind_window(WINDOW);self.bootstrap()
+        args=(self.q.directory,None,self.q.directory,WINDOW)
+        with patch.dict(_account_reads,clear=True), \
+             patch('app.collection.current_quota.QuotaLedger',return_value=self.q), \
+             patch.object(self.q,'_read',wraps=self.q._read) as reader, \
+             patch('app.collection.current_quota.packed',wraps=packed) as encoder:
+            first=account_projection(*args)
+            reads,encodes=reader.call_count,encoder.call_count
+            self.assertEqual(account_projection(*args),first)
+            self.assertEqual((reader.call_count,encoder.call_count),(reads,encodes))
+            self.at='2026-10-03T12:01:00+00:00'
+            self.assertEqual(account_projection(*args)['quota']['observation_age_seconds'],60)
+            self.assertEqual((reader.call_count,encoder.call_count),(reads,encodes))
+            self.q.transact(lambda v,at:v.update(rotation=7))
+            changed=account_projection(*args)
+            self.assertEqual(changed['quota']['rotation'],7)
+            self.assertGreater(reader.call_count,reads)
+            self.assertEqual(changed['quota']['ledger_encoded_bytes'],len(packed(self.q._read())))
+            (self.q.directory/'quota.json').write_text('{}')
+            self.assertEqual(account_projection(*args)['quota']['pause'],'quota_ledger_unavailable')
+            self.assertEqual((self.q.directory/'quota.json').read_text(),'{}')
+
     def test_accounting_encoder_preserves_existing_canonical_seals(self):
         from app.collection.current_quota import packed
         from app.dashboard.current_contract import packed as original

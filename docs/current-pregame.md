@@ -106,3 +106,10 @@ ingress metrics keep a bounded ring of affected-game commit durations and
 admission-to-commit measurements, separately from source receipt/preparation
 stages and browser delivery. No
 amount-specific readiness is a health dependency.
+
+Display-only legacy accounting status reuses a verified ledger and its exact
+encoded byte count while device, inode, mode, size and nanosecond file clocks
+remain unchanged. The cache holds only the two configured status paths; dynamic
+clock/window checks still run. Its child has background CPU priority. Every
+ledger mutation independently reloads and validates disk state; this status cache
+grants no acquisition authority and cannot release a hold or pause.

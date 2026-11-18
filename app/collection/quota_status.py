@@ -3,6 +3,7 @@ from contextlib import contextmanager
 from contextvars import ContextVar
 
 _reads = ContextVar('quota_status_reads', default=None)
+_account_reads = {}
 
 
 def signature(ledger):
@@ -35,6 +36,18 @@ def read(ledger):
     return value
 
 
+def encoded_size(ledger, value):
+    from .current_quota import packed
+    cache = _reads.get()
+    key = str(ledger.directory.absolute())
+    entry = cache.get(key) if cache is not None else None
+    if entry is not None and entry[1] is value:
+        if len(entry) == 2:
+            cache[key] = (*entry, len(packed(value)))
+        return cache[key][2]
+    return len(packed(value))
+
+
 @contextmanager
 def projection(cache=None):
     existing=_reads.get()
@@ -60,7 +73,12 @@ def account_projection(directory, failed, retained_directory, evidence):
     """Read-only child projection. No lock authority, transport or ledger writes."""
     from .current_quota import QuotaLedger
     from .current_conservative import pending_reason
-    with projection():
+    from pathlib import Path
+    keys = {str(Path(p).absolute()) for p in (directory, retained_directory) if p is not None}
+    for key in tuple(_account_reads):
+        if key not in keys:
+            _account_reads.pop(key)
+    with projection(_account_reads):
         ledger=QuotaLedger(directory) if directory is not None else None
         if ledger is not None:ledger.failed=failed
         quota=ledger.snapshot() if ledger is not None else None
@@ -73,12 +91,18 @@ def account_projection(directory, failed, retained_directory, evidence):
         return dict(quota=quota,pending=pending,ledger_reason=reason)
 
 
+def status_priority():
+    import os
+    if hasattr(os, 'nice'):
+        os.nice(10)
+
+
 class AccountProjection:
     """One joined status job; the parent receives only compact display facts."""
     def __init__(self):
         from concurrent.futures import ProcessPoolExecutor
         from multiprocessing import get_context
-        self.pool=ProcessPoolExecutor(max_workers=1,mp_context=get_context('spawn'))
+        self.pool=ProcessPoolExecutor(max_workers=1,mp_context=get_context('spawn'),initializer=status_priority)
 
     async def read(self,*args):
         import asyncio
