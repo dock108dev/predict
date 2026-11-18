@@ -19,7 +19,8 @@ def practice_journey(tab, base):
     from playwright.sync_api import expect
 
     tab.goto(base + "/arbs")
-    tab.get_by_role("link", name="Try a practice example", exact=True).click()
+    tab.locator(".more > summary").click()
+    tab.get_by_role("link", name="Practice", exact=True).click()
     expect(tab.get_by_role("heading", name="Arbitrage", exact=True)).to_be_visible()
     expect(tab.locator("#desk-mode")).to_have_text("Practice example · simulated odds")
     cards = tab.locator(".opportunity-arb")
@@ -69,6 +70,7 @@ def practice_journey(tab, base):
     assert tab.evaluate("document.documentElement.scrollWidth === innerWidth")
 
     tab.goto(base + "/ev")
+    tab.locator(".more > summary").click()
     tab.get_by_role("link", name="Practice", exact=True).click()
     ticket = tab.locator(".pregame-ticket")
     expect(ticket).to_contain_text("Saint Mary's Gaels")
@@ -111,6 +113,8 @@ def first_use(tab, base, archive_directory):
     expect(tab.get_by_label("Unit size")).to_be_hidden()
     saved = tab.get_by_role("link", name="Saved odds", exact=True)
     expect(saved).to_have_count(1)
+    expect(tab.get_by_role("link", name="Admin", exact=True)).to_be_hidden()
+    tab.locator(".more > summary").click()
     tab.get_by_role("link", name="Admin", exact=True).click()
     tab.get_by_role("link", name="Sources", exact=True).click()
     setup = tab.locator("#source-setup")
@@ -319,6 +323,8 @@ def test_first_use_without_credentials(width, tmp_path, monkeypatch):
                 / (
                     "admin.html"
                     if url.path == "/admin"
+                    else "pregame-arbs.html"
+                    if url.path == "/arbs"
                     else "pregame.html"
                     if url.path in ("/", "/ev")
                     else "desk.html"

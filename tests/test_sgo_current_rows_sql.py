@@ -182,8 +182,13 @@ class SGOScopeSQL(LatestBoardFixture):
         books = home['byBookmaker']
         books['prophetexchange'] = books.pop('book')
         books['fanduel'] = dict(books['prophetexchange'])
+        # This positive fee/backfill case needs two trusted exact-line pairs.
+        # ProphetX itself is the offer being assessed, not a benchmark book.
+        books['draftkings'] = dict(books['fanduel'])
         away = dict(home, oddID='points-away-game-sp-away', opposingOddID=home['oddID'],
-                    statEntityID='away', sideID='away', byBookmaker={'fanduel': dict(books['fanduel'], spread='1.5')})
+                    statEntityID='away', sideID='away', byBookmaker={
+                        book: dict(books[book], spread='1.5')
+                        for book in ('fanduel', 'draftkings')})
         event['odds'][away['oddID']] = away
         page = parse(raw)
         record, = current_rows(page, page.receipt_sha256)[0]
@@ -248,6 +253,8 @@ class SGOScopeSQL(LatestBoardFixture):
                     item,=current['rows']
                     assert item['id']==key
                     assert item['reference']['book']=='fanduel'
+                    assert item['reference']['trusted_book_count']==2
+                    assert set(item['reference']['candidate_probabilities'])=={'fanduel','draftkings'}
                     assert item['fee']['entry_usd']=='0'
                     assert item['raw']['net_ev'] is not None
                     source_status(db.execute, 'sportsgameodds',

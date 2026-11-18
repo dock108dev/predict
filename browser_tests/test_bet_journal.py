@@ -141,7 +141,9 @@ def test_save_ev_edit_actual_odds_record_result_and_keep_original(width, tmp_pat
         assert entry["snapshot"]["posted"]["value"] == "+120"
         page.get_by_role("button", name="Edit trade").click()
         page.locator('[name="receipt-0"]').fill("210")
-        now = datetime.now().replace(microsecond=0).isoformat()
+        # datetime-local omits zero seconds. Playwright rejects the otherwise
+        # equivalent ':00' spelling after the browser normalizes its value.
+        now = datetime.now().replace(microsecond=0).isoformat().removesuffix(":00")
         page.locator('[name="settled_at"]').fill(now)
         page.locator('[name="result_notes"]').fill("Won, net cash returned")
         page.get_by_role("button", name="Save changes", exact=True).click()
