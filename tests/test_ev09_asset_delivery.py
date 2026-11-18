@@ -6,7 +6,7 @@ import tempfile
 from unittest.mock import patch
 import unittest
 from pathlib import Path
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse, parse_qs
 from aiohttp.test_utils import TestClient, TestServer, make_mocked_request
 from aiohttp.web import FileResponse
 from app.dashboard.multi_game_server import create_app
@@ -18,6 +18,30 @@ PUBLIC_DESK_PAGES = ("/", "/ev", "/arbs", "/browse-odds", "/game", "/replay")
 
 
 class Assets(unittest.IsolatedAsyncioTestCase):
+    async def test_captured_arbitrage_game_link_keeps_its_evidence_context(self):
+        provider = InjectedTestProvider()
+        provider.database_mode = True
+        app = create_app(owner=owner(), sessions={}, current_provider=provider)
+        async with TestClient(TestServer(app)) as client:
+            response = await client.get('/game', params=dict(
+                game_key='combined:event:one', game_capture='captured-one',
+                line='exact-winner', source_event='native-one', back='/arbs',
+            ), allow_redirects=False)
+            self.assertEqual(response.status, 302)
+            destination = urlparse(response.headers['Location'])
+            self.assertEqual(destination.path, '/replay')
+            self.assertEqual(parse_qs(destination.query), {
+                'game_key': ['combined:event:one'], 'result_id': ['captured-one'],
+                'line': ['exact-winner'], 'source_event': ['native-one'],
+                'back': ['/arbs'], 'view': ['game'], 'dataset': ['retained'],
+            })
+            replay = await client.get(response.headers['Location'])
+            self.assertEqual(replay.status, 200)
+            self.assertIn('/view/current/desk.js', await replay.text())
+            retired = await client.get('/view/current/desk.html', allow_redirects=False)
+            self.assertEqual(retired.status, 302)
+            self.assertEqual(retired.headers['Location'], '/')
+
     async def test_preview_routes_keep_their_retained_shells(self):
         provider = InjectedTestProvider()
         app = create_app(owner=owner(), sessions={}, current_provider=provider)

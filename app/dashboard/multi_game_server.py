@@ -508,6 +508,10 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
         async def pregame_page(req):
             if req.query.get('phase')=='live':
                 return web.FileResponse(static_root/'opportunity_static/current/desk.html')
+            if req.path == '/game' and req.query.get('game_capture'):
+                query = dict(req.query)
+                query.update(view='game', dataset='retained', result_id=query.pop('game_capture'))
+                raise web.HTTPFound(str(req.rel_url.with_path('/replay').with_query(query)))
             return web.FileResponse(static_root/'opportunity_static/current/pregame.html')
 
         for route in ('/', '/ev', '/browse-odds', '/game'):

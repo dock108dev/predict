@@ -104,6 +104,9 @@ rows. Inspection keeps a compact selected-row copy, with source clocks in detail
 Ordinary pregame requests to `/api/comparison-current` forward to this read path.
 Retired amount/mode parameters return HTTP 410 explicitly. Live research,
 Arbitrage and saved replay retain their separate contracts.
+Captured Arbitrage game links redirect to the existing saved-game reader with
+their exact result, occurrence, line and return context. Their historical game
+identities are not current-row identifiers.
 
 ## Health and operations
 

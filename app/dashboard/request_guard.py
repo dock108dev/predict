@@ -57,7 +57,7 @@ def dashboard_guard(current_provider, *, logger):
             response = web.json_response({"error": exc.reason}, status=exc.status)
             if exc.status == 408:
                 response.force_close()
-            for header in ("Allow", "Retry-After"):
+            for header in ("Allow", "Retry-After", "Location"):
                 if header in exc.headers:
                     response.headers[header] = exc.headers[header]
         except SelectionError as exc:
