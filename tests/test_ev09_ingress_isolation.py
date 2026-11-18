@@ -6,6 +6,7 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 from app.collection.current_database import DatabasePipeline
+from app.collection.background_work import BACKGROUND
 
 
 class IngressIsolation(unittest.IsolatedAsyncioTestCase):
@@ -22,7 +23,8 @@ class IngressIsolation(unittest.IsolatedAsyncioTestCase):
                 patch('app.storage.storage_maintenance.maintain', return_value={'after_bytes':123}) as maintenance:
             self.assertEqual(pipe.tick(), 0)
             usage.assert_called_once_with(database)
-            maintenance.assert_called_once_with(database,collecting=True,compact=True)
+            maintenance.assert_called_once_with(database,collecting=True,compact=True,
+                yield_requested=BACKGROUND.critical_acquisition_pressure)
             self.assertEqual(pipe.maintenance,{'after_bytes':123})
             self.assertEqual(pipe.used, 123)
             store.assert_called_once_with(database)
@@ -30,11 +32,13 @@ class IngressIsolation(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(rows.method_calls, [('expire', (), {})])
             maintenance.reset_mock()
             pipe.tick()
-            maintenance.assert_called_once_with(database,collecting=True,compact=False)
+            maintenance.assert_called_once_with(database,collecting=True,compact=False,
+                yield_requested=BACKGROUND.critical_acquisition_pressure)
             pipe.maintenance=dict(pipe.maintenance,continue_compaction=True)
             maintenance.reset_mock()
             pipe.tick()
-            maintenance.assert_called_once_with(database,collecting=True,compact=True)
+            maintenance.assert_called_once_with(database,collecting=True,compact=True,
+                yield_requested=BACKGROUND.critical_acquisition_pressure)
             store.reset_mock();usage.reset_mock()
             pipe.closed = True
             pipe.tick()
