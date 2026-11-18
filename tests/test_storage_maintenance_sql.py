@@ -9,6 +9,36 @@ from app.collection import native_recovery
 
 
 class StorageMaintenanceSQL(LatestBoardFixture):
+    async def test_source_admission_defers_housekeeping_without_changing_current_work(self):
+        from app.storage import storage_maintenance as maintenance
+        with self.connect() as db, self.connect() as source:
+            before=list(db.execute('SELECT * FROM current_pregame_work'))
+            settings=db.execute("SHOW statement_timeout").fetchone()
+            result=maintain(db,collecting=True,yield_requested=lambda:True)
+            self.assertEqual(result['reason'],'source_admission_active')
+            self.assertEqual(result['state'],'busy')
+            self.assertEqual(before,list(db.execute('SELECT * FROM current_pregame_work')))
+            self.assertEqual(settings,db.execute("SHOW statement_timeout").fetchone())
+            self.assertTrue(source.execute('SELECT pg_try_advisory_lock(%s) held',(maintenance.LOCK,)).fetchone()['held'])
+            source.execute('SELECT pg_advisory_unlock(%s)',(maintenance.LOCK,))
+            self.assertNotEqual(maintain(db,compact=False).get('state'),'busy')
+
+    async def test_source_can_take_writer_lock_between_evidence_cleanups(self):
+        from app.storage.current_rows import LOCK
+        turns=iter((False,False,True))
+        with self.connect() as db, self.connect() as source:
+            def first(*args,**kwargs):
+                with source.transaction():
+                    self.assertFalse(source.execute('SELECT pg_try_advisory_xact_lock(%s) held',(LOCK,)).fetchone()['held'])
+                return 17
+            with patch('app.storage.sportsgameodds_reference.prune',side_effect=first) as refs, \
+                 patch('app.storage.sportsgameodds_reference.prune_frames') as frames:
+                result=maintain(db,collecting=True,yield_requested=lambda:next(turns))
+                refs.assert_called_once();frames.assert_not_called()
+            self.assertEqual(result['sgo_reference_expired'],17)
+            with source.transaction():
+                self.assertTrue(source.execute('SELECT pg_try_advisory_xact_lock(%s) held',(LOCK,)).fetchone()['held'])
+
     async def test_failed_initial_measurement_releases_maintenance_lock(self):
         from app.storage import storage_maintenance as maintenance
 

@@ -58,6 +58,10 @@ calculation prerequisite chain. Their archive/practice and Arbitrage consumers
 retain their own evidence models. Research children wait during source admission
 and yield at safe checkpoints when an accepted page needs processing. They never
 pause while holding SQL transaction locks.
+Housekeeping commits reference, frame, history and native-evidence cleanup
+independently. It yields between cleanups and rewrites when source admission is
+active, releasing the shared writer lock for the waiting update. Physical storage
+limits and the normal maintenance retry remain enforced.
 
 ## HTTP reads
 

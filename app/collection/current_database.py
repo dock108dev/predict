@@ -633,7 +633,9 @@ class DatabasePipeline:
                 # Frequent in-place reuse must not multiply expensive whole-
                 # database compaction scans or monopolize the publication lock.
                 compact=monotonic()-self.last_compaction_check>=60 or bool((self.maintenance or {}).get('continue_compaction'))
-                self.maintenance=maintain(db,collecting=True,compact=compact)
+                from .background_work import BACKGROUND
+                self.maintenance=maintain(db,collecting=True,compact=compact,
+                    yield_requested=BACKGROUND.critical_acquisition_pressure)
                 if compact and self.maintenance.get('state')!='busy':
                     self.last_compaction_check=monotonic()
                 if expiry_error is not None:raise expiry_error

@@ -46,7 +46,7 @@ _last_collecting_candidate = {}
 REWRITE_FLOORS = 128
 
 
-def maintain(db, *, compact=True, collecting=False):
+def maintain(db, *, compact=True, collecting=False, yield_requested=None):
     if db.info.transaction_status != TransactionStatus.IDLE:
         raise ValueError('storage_maintenance_requires_independent_transaction')
     if not db.execute('SELECT pg_try_advisory_lock(%s) held', (LOCK,)).fetchone()['held']:
@@ -55,6 +55,12 @@ def maintain(db, *, compact=True, collecting=False):
     capture_lock=False
     try:
         result = dict(before_bytes=sql_usage(db), rewrites=[], deferred=[])
+        def source_waiting():
+            if collecting and yield_requested is not None and yield_requested():
+                result.update(state='busy', reason='source_admission_active', after_bytes=sql_usage(db))
+                return True
+            return False
+        if source_waiting():return result
         settings = {name: db.execute(sql.SQL('SHOW {}').format(sql.Identifier(name))).fetchone()[name]
                     for name in ('lock_timeout', 'statement_timeout')}
         db.execute("SET lock_timeout='1s'")
@@ -78,42 +84,35 @@ def maintain(db, *, compact=True, collecting=False):
             if db.execute("SELECT to_regclass('current_result_work') r").fetchone()['r']:
                 from .result_inventory import prune as prune_inventory
                 prune_inventory(db)
-        # Source evidence shares the current-row writer lock. Do not let a busy
-        # writer roll back or delay unrelated retention work above.
-        with db.transaction():
-            reference = db.execute("SELECT to_regclass('public.current_sgo_reference') r").fetchone()['r']
-            frames = db.execute("SELECT to_regclass('public.sgo_event_evidence') r").fetchone()['r']
-            history = db.execute("SELECT to_regclass('public.current_sgo_history') r").fetchone()['r']
-            native = db.execute("SELECT to_regclass('public.native_book_revision') r").fetchone()['r']
-            if reference or frames or history or native:
-                from .current_rows import LOCK as CURRENT_ROWS_LOCK
-                if not db.execute('SELECT pg_try_advisory_xact_lock(%s) held', (CURRENT_ROWS_LOCK,)).fetchone()['held']:
-                    if reference or frames or history:
-                        result['deferred'].append(dict(table='sportsgameodds_reference', reason='lock_busy'))
-                    if native:
-                        result['deferred'].append(dict(table='native_book_revision', reason='lock_busy'))
+        # Each evidence cleanup commits independently so a waiting source can
+        # take the writer lock before housekeeping starts its next cleanup.
+        from .current_rows import LOCK as CURRENT_ROWS_LOCK
+        from .store import now
+        from .sportsgameodds_reference import prune as prune_sgo, prune_frames, prune_history
+        from .native_ladder_batch import prune as prune_native_revisions
+        def execute_native(query, params, *, synchronous=False):
+            return db.execute(query, params)
+        jobs=(
+            ('public.current_sgo_reference','sportsgameodds_reference','sgo_reference_expired',
+             lambda:prune_sgo(db,at=now(),include_legacy=compact)),
+            ('public.sgo_event_evidence','sgo_event_evidence','sgo_frame_expired',
+             lambda:prune_frames(db,at=now(),include_legacy=compact)),
+            ('public.current_sgo_history','current_sgo_history','sgo_history_expired',
+             lambda:prune_history(db,at=now())),
+            ('public.native_book_revision','native_book_revision','native_book_expired',
+             lambda:prune_native_revisions(execute_native)),
+        )
+        for relation,label,key,cleanup in jobs:
+            if source_waiting():return result
+            if not db.execute('SELECT to_regclass(%s) r',(relation,)).fetchone()['r']:continue
+            with db.transaction():
+                if not db.execute('SELECT pg_try_advisory_xact_lock(%s) held',(CURRENT_ROWS_LOCK,)).fetchone()['held']:
+                    result['deferred'].append(dict(table=label,reason='lock_busy'))
+                elif key=='sgo_reference_expired' and not db.execute("SELECT to_regclass('public.sgo_quote_revision') IS NOT NULL ready").fetchone()['ready']:
+                    result['deferred'].append(dict(table=label,reason='migration_pending'))
                 else:
-                    from .store import now
-                    if reference:
-                        from .sportsgameodds_reference import prune as prune_sgo
-                        versioned = db.execute("SELECT to_regclass('public.sgo_quote_revision') IS NOT NULL ready").fetchone()['ready']
-                        if versioned:
-                            result['sgo_reference_expired'] = prune_sgo(db, at=now(), include_legacy=compact)
-                        else:
-                            # First startup runs maintenance before forward
-                            # migrations. Leave these quotes for the new owner.
-                            result['deferred'].append(dict(table='sportsgameodds_reference', reason='migration_pending'))
-                    if frames:
-                        from .sportsgameodds_reference import prune_frames
-                        result['sgo_frame_expired'] = prune_frames(db, at=now(), include_legacy=compact)
-                    if history:
-                        from .sportsgameodds_reference import prune_history
-                        result['sgo_history_expired'] = prune_history(db, at=now())
-                    if native:
-                        from .native_ladder_batch import prune as prune_native_revisions
-                        def execute_native(query, params, *, synchronous=False):
-                            return db.execute(query, params)
-                        result['native_book_expired'] = prune_native_revisions(execute_native)
+                    result[key]=cleanup()
+        if source_waiting():return result
         has_metadata = db.execute("SELECT to_regclass('public.current_native_market_body') r").fetchone()['r']
         if has_metadata:
             from . import native_market_metadata
@@ -151,6 +150,7 @@ def maintain(db, *, compact=True, collecting=False):
                     index=next((i+1 for i,r in enumerate(candidates) if r['oid']==last),0)
                     candidates=candidates[index:]+candidates[:index]
                 for index,row in enumerate(candidates):
+                    if source_waiting():return result
                     if collecting:
                         if index and monotonic()-rewrite_started>=REWRITE_TURN_SECONDS:
                             result['continue_compaction']=True
@@ -259,6 +259,7 @@ def maintain(db, *, compact=True, collecting=False):
                         # Each individual SQL operation retains its timeout.
                         result['continue_compaction']=sql_usage(db)>=PRESSURE_BYTES
                         break
+        if source_waiting():return result
         if db.execute("SELECT to_regclass('public.current_native_market_recovery') r").fetchone()['r']:
             from .recovery_codec import repack
             result['recovery_repack']=repack(db)
