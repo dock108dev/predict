@@ -33,7 +33,7 @@ from app.diagnostics import failure
 
 ALTERNATE_REFRESH_BOOKS = ('kalshi', 'polymarket', 'novig', PROPHETX_BOOKMAKER_ID, *BEST_BOOKS)
 ALTERNATE_REFRESH_WINDOW = timedelta(hours=2)
-SCAN_INTERVAL = timedelta(minutes=15)
+SCAN_INTERVAL = timedelta(minutes=1)
 
 
 def credential():
@@ -536,7 +536,7 @@ class SportsGameOddsWorker:
             prior_cost = self.ledger.discovery_cost(now=now)
             walk_objects = sum(max(1, by_league[league], prior_cost.get(league, 0)) for league in leagues)
             policy, projected = budgeted_policy(candidates, now, allowance, discovery_walk_objects=walk_objects,
-                                                priority_pregame=True, allow_faster_refresh=False,
+                                                minimum_refresh=timedelta(minutes=10 if self.metrics.get('account_tier') == 'amateur' else 3),
                                                 include_kickoff=live_enabled(self.service.config))
             discovery_cadence = discovery_interval(retained_events=walk_objects, daily_budget=allowance,
                                                    projected_refresh_objects=projected)
@@ -548,6 +548,8 @@ class SportsGameOddsWorker:
                 discovery_walk_objects=walk_objects, last_completed_walk_objects=prior_cost,
                 projected_discovery_objects=discovery_per_day, projected_total_objects=combined,
                 planned_fraction=PLANNED_FRACTION, projected_headroom_objects=round(allowance-combined, 3),
+                projection='next_24_hours_through_kickoff', replan_seconds=SCAN_INTERVAL.total_seconds(),
+                feed_floor_seconds=600 if self.metrics.get('account_tier') == 'amateur' else 180,
                 live_minutes=policy.live.total_seconds()/60, approaching_minutes=policy.approaching.total_seconds()/60,
                 approaching_hours=policy.approaching_window.total_seconds()/3600,
                 imminent_minutes=policy.imminent.total_seconds()/60,
@@ -566,7 +568,7 @@ class SportsGameOddsWorker:
             due = due_events(self.scheduled_events(at=at), at, policy=policy, **self.controls_to_schedule())
             urgent, scheduled = [], []
             for event in due:
-                (urgent if event.active or event.starts_at <= at else scheduled).append(event)
+                (urgent if event.active or event.starts_at-at <= policy.imminent_window else scheduled).append(event)
             return urgent, scheduled
 
         def in_traversal():
@@ -661,13 +663,18 @@ class SportsGameOddsWorker:
                 if not event.active and at < event.starts_at <= at + policy.approaching_window]
 
     def next_pregame_refresh(self, at, policy, next_scan):
-        # A fixed sweep can fall just before the last receipt plus its cadence.
-        # Wake for that exact event deadline without starting extra discovery.
-        if policy is None or policy.approaching > SCAN_INTERVAL:
+        # Wake at every selected event deadline or a faster-band boundary. This
+        # also covers games outside the final two hours without new discovery.
+        if policy is None:
             return next_scan
-        return min((max(at, due) for event in self.approaching_events(at, policy)
-                    if (due := poll_slot(event, at, policy)[1]) < event.starts_at),
-                   default=next_scan)
+        deadlines = [next_scan]
+        for event in self.scheduled_events(at=at):
+            deadlines.append(max(at, poll_slot(event, at, policy)[1]))
+            for window in (policy.approaching_window, policy.imminent_window, policy.near_window):
+                boundary = event.starts_at-window
+                if at < boundary:
+                    deadlines.append(boundary)
+        return min(deadlines)
 
     def controls_to_schedule(self):
         c = self.controls()
@@ -720,7 +727,7 @@ class SportsGameOddsWorker:
                     if scanning:
                         policy = await self.cycle()
                     else:
-                        due = due_events(self.approaching_events(now, policy), now, policy=policy,
+                        due = due_events(self.scheduled_events(at=now), now, policy=policy,
                                          **self.controls_to_schedule())
                         await self.refresh(due, policy)
                 except RuntimeError as exc:

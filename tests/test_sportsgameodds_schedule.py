@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 
 from app.collection.sportsgameodds_schedule import (
-    EventDue, available_objects, budgeted_policy, daily_allowance, daily_retry_at, discovery_interval, due_events, response_object_charge,
+    EventDue, available_objects, budgeted_policy, daily_allowance, daily_retry_at, discovery_interval, due_events, projected_refresh_objects, response_object_charge,
 )
 
 NOW = datetime(2026, 11, 10, 20, tzinfo=timezone.utc)
@@ -40,8 +40,10 @@ def test_approaching_games_are_prioritized_and_costed():
     events = [EventDue('approaching', NOW + timedelta(hours=1), NOW - timedelta(minutes=30)),
               EventDue('later', NOW + timedelta(hours=6), NOW - timedelta(minutes=30))]
     policy, projected = budgeted_policy(events, NOW, 1000)
-    assert [e.event_id for e in due_events(events, NOW, policy=policy)] == ['approaching']
-    assert projected == 48 + 32 + 2
+    assert [e.event_id for e in due_events(events, NOW, policy=policy)] == ['approaching', 'later']
+    assert policy.approaching == timedelta(minutes=3)
+    # One remaining hour, then kickoff; the later game crosses both bands.
+    assert projected == 20 + 80 + 2
 
 
 def test_object_charge_reserve_and_unknown_exposure():
@@ -73,20 +75,30 @@ def test_daily_retry_uses_guard_when_time_to_reset_shrinks_or_old_charges_age_ou
     assert daily_retry_at(available=1, requested=2, now=NOW, reset_at=reset, expirations=[]) == reset
 
 
-def test_slate_budget_slows_distant_games_before_imminent_and_keeps_live_priority():
+def test_busy_slate_spends_headroom_on_near_start_prices_before_distant_polls():
     events = ([EventDue(f'i{i}', NOW + timedelta(hours=6)) for i in range(63)] +
               [EventDue(f'n{i}', NOW + timedelta(hours=24)) for i in range(182)] +
               [EventDue(f'd{i}', NOW + timedelta(days=5)) for i in range(267)])
     policy, projected = budgeted_policy(events, NOW, 4500)
-    assert policy.live == timedelta(minutes=15)
-    assert policy.imminent == timedelta(minutes=45)
-    assert policy.near == timedelta(hours=12)
-    assert policy.distant == timedelta(hours=24)
-    assert projected == 2892
-    assert projected <= 4500 * .65
-    live = EventDue('live', NOW - timedelta(hours=1), NOW - timedelta(minutes=15), live=True)
-    imminent = EventDue('soon', NOW + timedelta(hours=1), NOW - timedelta(minutes=45))
-    assert [e.event_id for e in due_events([imminent, live], NOW, policy=policy)] == ['live', 'soon']
+    assert policy.near == timedelta(hours=24)
+    assert policy.distant == timedelta(hours=96)
+    assert timedelta(minutes=3) <= policy.approaching < policy.imminent
+    assert projected <= 4500 * .9
+    # The previous 45-minute tier was not a target, just a fixed candidate.
+    assert policy.imminent < timedelta(minutes=60)
+
+
+def test_projection_follows_bands_and_stops_pregame_at_kickoff():
+    from app.collection.sportsgameodds_schedule import SchedulePolicy
+    policy = SchedulePolicy(approaching=timedelta(minutes=3), imminent=timedelta(minutes=6))
+    soon = EventDue('soon', NOW+timedelta(hours=1))
+    later = EventDue('later', NOW+timedelta(hours=6))
+    assert projected_refresh_objects([soon], NOW, policy, include_kickoff=False) == 20
+    assert projected_refresh_objects([later], NOW, policy, include_kickoff=False) == 80
+    assert projected_refresh_objects([EventDue('started',NOW)], NOW, policy,
+                                     include_kickoff=False) == 0
+    # Live is conservatively budgeted all day; no finish time is invented.
+    assert projected_refresh_objects([EventDue('live',NOW,live=True)], NOW, policy) == 96
 
 
 def test_first_post_start_poll_prioritizes_transition_and_does_not_retry_immediately():
@@ -103,24 +115,26 @@ def test_due_kickoffs_use_the_poll_deadline_within_the_urgent_tier():
     assert due_events([late, early], NOW) == [early, late]
 
 
-def test_budget_policy_reports_overflow_without_weakening_live_cadence():
+def test_small_budget_slows_polling_instead_of_projecting_an_unaffordable_rate():
     events = [EventDue('live', NOW, live=True)]
     policy, projected = budgeted_policy(events, NOW, 10)
-    assert policy.live == timedelta(minutes=15)
-    assert projected == 96
-    assert projected > 10 * .65
+    assert policy.live > timedelta(minutes=15)
+    assert projected <= 10 * .9
 
 
-def test_live_cadence_uses_only_available_refresh_headroom():
+def test_refresh_floor_and_headroom_adapt_without_exceeding_shared_budget():
     events = [EventDue('live', NOW, live=True)]
-    fast, fast_cost = budgeted_policy(events, NOW, 500)
-    medium, medium_cost = budgeted_policy(events, NOW, 250)
-    normal, normal_cost = budgeted_policy(events, NOW, 150)
-    assert (fast.live, fast_cost) == (timedelta(minutes=5), 288)
-    assert (medium.live, medium_cost) == (timedelta(minutes=10), 144)
-    assert (normal.live, normal_cost) == (timedelta(minutes=15), 96)
-    assert [e.event_id for e in due_events(
-        [EventDue('live', NOW, NOW - timedelta(minutes=5), live=True)], NOW, policy=fast)] == ['live']
+    fast, fast_cost = budgeted_policy(events, NOW, 1000)
+    medium, medium_cost = budgeted_policy(events, NOW, 500)
+    slow, slow_cost = budgeted_policy(events, NOW, 150)
+    assert fast.live == timedelta(minutes=3)
+    assert fast.live < medium.live < slow.live
+    for cost, budget in ((fast_cost,1000),(medium_cost,500),(slow_cost,150)):
+        assert cost <= budget * .9
+    amateur, _ = budgeted_policy(events, NOW, 10000,minimum_refresh=timedelta(minutes=10))
+    assert amateur.live == timedelta(minutes=10)
+    with pytest.raises(ValueError):
+        budgeted_policy(events,NOW,1000,minimum_refresh=timedelta(0))
 
 
 def test_pregame_only_budget_does_not_reserve_a_kickoff_poll():
@@ -145,6 +159,19 @@ def test_combined_projection_protects_headroom_on_crowded_slate():
               for count, hours in tiers for i in range(count)]
     policy, refresh = budgeted_policy(events, NOW, 4736, discovery_walk_objects=985)
     discovery = discovery_interval(retained_events=985, daily_budget=4736, projected_refresh_objects=refresh)
-    assert policy.live == timedelta(minutes=15)
-    assert policy.distant > timedelta(hours=48)
+    assert policy.live >= timedelta(minutes=3)
+    assert policy.distant >= timedelta(hours=48)
     assert refresh + 985 * timedelta(days=1) / discovery <= 4736 * .9
+
+
+def test_captured_busy_pregame_shape_improves_forty_five_minutes_within_allowance():
+    # Six-league server shape: game day, tomorrow, then a large cold catalog.
+    events = ([EventDue(f'today{i}',NOW+timedelta(hours=6),NOW) for i in range(76)] +
+              [EventDue(f'tomorrow{i}',NOW+timedelta(hours=30),NOW) for i in range(45)] +
+              [EventDue(f'near{i}',NOW+timedelta(hours=60),NOW) for i in range(160)] +
+              [EventDue(f'cold{i}',NOW+timedelta(days=10),NOW) for i in range(564)])
+    policy, refresh = budgeted_policy(events,NOW,5891,discovery_walk_objects=850,include_kickoff=False)
+    discovery=discovery_interval(retained_events=850,daily_budget=5891,projected_refresh_objects=refresh)
+    assert policy.approaching < timedelta(minutes=10)
+    assert policy.imminent < timedelta(minutes=20)
+    assert refresh+850*timedelta(days=1)/discovery <= 5891*.9

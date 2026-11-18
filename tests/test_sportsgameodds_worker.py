@@ -78,7 +78,7 @@ def test_planned_storage_interval_waits_for_paid_page_and_blocks_next_dispatch()
     asyncio.run(scenario())
 
 
-def test_worker_scans_every_fifteen_minutes_overnight_and_keeps_discovery_cursor():
+def test_worker_replans_every_minute_overnight_and_keeps_discovery_cursor():
     from unittest.mock import patch
 
     async def scenario():
@@ -99,14 +99,14 @@ def test_worker_scans_every_fifteen_minutes_overnight_and_keeps_discovery_cursor
 
         async def sleep(delay):
             nonlocal now
-            assert delay == 880
+            assert delay == 40
             now += timedelta(seconds=delay)
 
         worker.cycle = cycle
         with patch('app.collection.sportsgameodds_worker.asyncio.sleep', side_effect=sleep), \
              patch('app.collection.sportsgameodds_worker.retained_schedule', return_value=({}, False)):
             await worker.run()
-        assert start_times == [start_times[0] + timedelta(minutes=15 * index) for index in range(3)]
+        assert start_times == [start_times[0] + timedelta(minutes=index) for index in range(3)]
         assert worker.discovery_progress
 
     asyncio.run(scenario())
@@ -240,6 +240,35 @@ def test_started_event_uses_active_polling_without_relabeling_phase():
         await worker.cycle()
         assert [call.args[0]['eventIDs'] for call in worker._fetch.await_args_list] == ['e2','e1']
     asyncio.run(check_due())
+
+
+def test_every_game_deadline_and_faster_band_wake_without_extra_discovery():
+    service = SimpleNamespace(config=deepcopy(DEFAULT), dispatch=True,
+                              globally_stopped=False, paused_sources=set())
+    worker = SportsGameOddsWorker(service, transport=SimpleNamespace(close=AsyncMock()), now=lambda: NOW)
+    policy = SchedulePolicy(approaching=timedelta(minutes=3), imminent=timedelta(minutes=6))
+    worker.events['e1'] = dict(event(1), starts_at=(NOW+timedelta(hours=4)).isoformat(),
+                              received_at=(NOW-timedelta(minutes=5,seconds=50)).isoformat())
+    assert worker.next_pregame_refresh(NOW,policy,NOW+timedelta(minutes=1)) == NOW+timedelta(seconds=10)
+    worker.events['e1'].update(starts_at=(NOW+timedelta(hours=2,seconds=5)).isoformat(),
+                               received_at=NOW.isoformat())
+    assert worker.next_pregame_refresh(NOW,policy,NOW+timedelta(minutes=1)) == NOW+timedelta(seconds=5)
+
+
+def test_replanning_fresh_games_does_not_spend_or_repeat_a_discovery_walk():
+    async def scenario():
+        moment = NOW
+        service = SimpleNamespace(config=deepcopy(DEFAULT),dispatch=True,
+                                  globally_stopped=False,paused_sources=set())
+        worker = SportsGameOddsWorker(service,transport=SimpleNamespace(close=AsyncMock()),now=lambda: moment)
+        worker.events['e1'] = dict(event(1),starts_at=(NOW+timedelta(hours=4)).isoformat(),received_at=NOW.isoformat())
+        worker.discovery_at['NFL'] = NOW
+        worker._fetch = AsyncMock()
+        for _ in range(3):
+            await worker.cycle()
+            moment += timedelta(minutes=1)
+        worker._fetch.assert_not_awaited()
+    asyncio.run(scenario())
 
 
 @pytest.mark.parametrize('base_readable', [True, False])
@@ -558,7 +587,7 @@ def test_local_rate_limit_backs_off_then_resumes_without_losing_cursor():
             service.dispatch = False
         worker.cycle = cycle
         async def immediate_sleep(delay):
-            assert delay == 900
+            assert delay == 60
         with patch('app.collection.sportsgameodds_worker.asyncio.sleep', side_effect=immediate_sleep), \
                 patch('app.collection.sportsgameodds_worker.retained_schedule', return_value=({}, False)):
             await worker.run()
@@ -568,7 +597,7 @@ def test_local_rate_limit_backs_off_then_resumes_without_losing_cursor():
     asyncio.run(scenario())
 
 
-@pytest.mark.parametrize(('headroom_seconds', 'expected_delay'), [(92, 900), (1200, 1200)])
+@pytest.mark.parametrize(('headroom_seconds', 'expected_delay'), [(92, 92), (1200, 1200)])
 def test_daily_pacing_waits_for_both_scan_and_headroom(headroom_seconds, expected_delay):
     from unittest.mock import patch
 
@@ -615,7 +644,7 @@ def test_balance_mismatch_waits_for_a_new_usage_read_without_abandoning_work():
         worker.discovery_progress['NFL'] = cursor
 
         async def recover(delay):
-            assert delay == 900 and worker.discovery_progress['NFL'] is cursor
+            assert delay == 60 and worker.discovery_progress['NFL'] is cursor
 
         async def cycle():
             assert worker.discovery_progress['NFL'] is cursor
@@ -673,7 +702,8 @@ def test_pregame_refresh_between_scans_does_not_restart_discovery(scan_delay):
 
         worker.cycle = AsyncMock(side_effect=cycle)
         worker.refresh = AsyncMock(side_effect=refresh)
-        with patch('app.collection.sportsgameodds_worker.asyncio.sleep', side_effect=sleep), \
+        with patch('app.collection.sportsgameodds_worker.SCAN_INTERVAL',timedelta(minutes=15)), \
+             patch('app.collection.sportsgameodds_worker.asyncio.sleep', side_effect=sleep), \
              patch('app.collection.sportsgameodds_worker.retained_schedule', return_value=({}, False)):
             await worker.run()
         assert delays[:2] == [899, max(0, 1 - scan_delay)]

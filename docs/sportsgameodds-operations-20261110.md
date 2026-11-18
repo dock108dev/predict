@@ -39,6 +39,23 @@ Event refresh and discovery share the object budget. Near-start refresh can
 request alternate lines for one event at a time. Only the supported book and
 market inputs are eligible for the desk. [Coverage limits](broad-coverage.md)
 
+Scheduling replans every minute, with separate wakeups for exact refresh and
+time-band deadlines. This does not start another discovery walk or make a request
+when no game is due. Games inside the 12-hour near-start window take priority
+between discovery pages. Discovery retains its cursor and budget guards.
+
+The planner forecasts the next 24 hours through each game's time bands, ending
+pregame polling at kickoff. It starts with the feed's useful polling floor
+(three minutes on Rookie, ten on Amateur), slows distant repeats first, and then
+stretches near-start intervals in 30-second steps to fit the shared allowance.
+The final two hours receive twice the polling frequency of earlier pregame odds.
+Active games are conservatively costed for the full horizon; a finish is never
+invented. Planned discovery plus refresh stays within 90% where the slate fits;
+the ledger still checks actual rolling expenditure before every request. Admin's
+`schedule_budget` records the projection basis, selected intervals, feed floor,
+discovery cost and headroom. These are targets, not source-latency guarantees.
+[Provider plan frequencies](https://sportsgameodds.com/pricing)
+
 The desk uses both original sportsbook clocks for same-book fair odds. Vendor
 fair odds and book consensus have separate meanings from Predict's own estimate.
 A refreshed frame does not make an old source quote fresh.

@@ -79,3 +79,5 @@ source clocks, controls and financial ledgers are preserved. Normal app connecti
 remain read-only; no collector starts. Reference-only revaluation is atomic and
 idempotent; affected-game recovery uses its normal per-game transactions. Other
 calculation-version changes still require the appropriate full owner rebuild.
+Revaluation also retires superseded main-line quotes using retained source
+evidence before recovering affected games, matching collector startup.

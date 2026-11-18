@@ -145,88 +145,90 @@ def daily_retry_at(*, available, requested, now, reset_at, expirations):
     return min(reset_at, now+timedelta(seconds=high))
 
 
-REFRESH_TARGET = .65
+REFRESH_TARGET = .90
 PLANNED_FRACTION = .90
 DISCOVERY_HOURS = (12, 24, 48, 72, 96)
 
 
-def budgeted_policy(events: list[EventDue], now: datetime, daily_budget: int, *,
-                    discovery_walk_objects: int = 0, priority_pregame=False,
-                    allow_faster_refresh=True, include_kickoff=True) -> tuple[SchedulePolicy, int]:
-    """Budget the static slate, preserving kickoff and active refresh priority.
+def projected_refresh_objects(events, now, policy, *, include_kickoff=True):
+    """Forecast the next 24 hours as games move through bands and reach kickoff.
 
-    Project current live events as live all day. Reserve capacity for the
-    slowest repeat walk and keep ten percent for costs the slate misses.
-    Source clocks and expiry remain independent of polling intervals.
+    A pregame game consumes no pregame refreshes after kickoff. Active games
+    remain conservatively costed for the full horizon; no finish is invented.
     """
-    if isinstance(daily_budget, bool) or not isinstance(daily_budget, int) or daily_budget < 0:
+    total = 0.0
+    horizon = timedelta(days=1).total_seconds()
+    for event in events:
+        if not _aware(event.starts_at):
+            raise ValueError('event clocks must be timezone-aware')
+        if event.active:
+            total += horizon / policy.live.total_seconds()
+            continue
+        until = max(0, (event.starts_at-now).total_seconds())
+        boundaries = (0, policy.approaching_window.total_seconds(),
+                      policy.imminent_window.total_seconds(), policy.near_window.total_seconds(),
+                      float('inf'))
+        for low, high, cadence in zip(boundaries, boundaries[1:],
+                (policy.approaching, policy.imminent, policy.near, policy.distant)):
+            duration = max(0, min(horizon, until-low)-max(0, until-high))
+            total += duration / cadence.total_seconds()
+        if include_kickoff and until <= horizon and (
+                event.last_received_at is None or event.last_received_at < event.starts_at):
+            total += 1
+    return ceil(total)
+
+
+def budgeted_policy(events: list[EventDue], now: datetime, daily_budget: int, *,
+                    discovery_walk_objects: int = 0, include_kickoff=True,
+                    minimum_refresh=timedelta(minutes=3)) -> tuple[SchedulePolicy, int]:
+    """Use available budget for near-start odds before distant repeat polls.
+
+    The 10% planning margin, shared discovery cost and hard ledger guards all
+    remain. Round intervals upward to 30 seconds, never below the feed floor.
+    Planning is a forecast, not new authority to spend or infer source clocks.
+    """
+    if type(daily_budget) is not int or daily_budget < 0:
         raise ValueError('daily budget must be a nonnegative integer')
     if not _aware(now):
         raise ValueError('now must be timezone-aware')
     if type(discovery_walk_objects) is not int or discovery_walk_objects < 0:
         raise ValueError('invalid discovery estimate')
-    tiers = [0, 0, 0, 0, 0]
-    kickoff_polls = 0
-    for event in events:
-        if not _aware(event.starts_at):
-            raise ValueError('event clocks must be timezone-aware')
-        hours = (event.starts_at - now).total_seconds() / 3600
-        tiers[0 if event.active else 1 if hours <= 2 else 2 if hours <= 12 else 3 if hours <= 72 else 4] += 1
-        if (include_kickoff and not event.active and hours <= 24
-                and (event.last_received_at is None or event.last_received_at < event.starts_at)):
-            kickoff_polls += 1
-    # Keep the normal 15-minute live target as we stretch distant, near and
-    # imminent pregame polling. Kickoff remains an independent one-time poll.
-    candidates = [
-        SchedulePolicy(),
-        SchedulePolicy(near=timedelta(hours=6), distant=timedelta(hours=24)),
-        SchedulePolicy(near=timedelta(hours=8), distant=timedelta(hours=24)),
-        SchedulePolicy(near=timedelta(hours=12), distant=timedelta(hours=24)),
-        SchedulePolicy(imminent=timedelta(hours=1), near=timedelta(hours=12), distant=timedelta(hours=24)),
-        SchedulePolicy(imminent=timedelta(hours=2), near=timedelta(hours=12), distant=timedelta(hours=24)),
-        SchedulePolicy(imminent=timedelta(hours=2), near=timedelta(hours=12), distant=timedelta(hours=48)),
-    ]
-    combined_limit = daily_budget * PLANNED_FRACTION - discovery_walk_objects * 24 / DISCOVERY_HOURS[-1]
-    normal_limit = min(daily_budget * REFRESH_TARGET, combined_limit)
+    if minimum_refresh <= timedelta(0):
+        raise ValueError('positive refresh floor required')
+    discovery = discovery_interval(retained_events=discovery_walk_objects,
+                                   daily_budget=daily_budget)
+    discovery_cost = discovery_walk_objects * timedelta(days=1) / discovery
+    refresh_limit = max(0, floor(daily_budget * PLANNED_FRACTION - discovery_cost)-1)
+    floor_seconds = minimum_refresh.total_seconds()
 
     def cost(policy):
-        intervals = (policy.live, policy.approaching, policy.imminent, policy.near, policy.distant)
-        return kickoff_polls + sum(count * 86400 / interval.total_seconds()
-                                   for count, interval in zip(tiers, intervals))
+        return projected_refresh_objects(events, now, policy, include_kickoff=include_kickoff)
 
-    for policy in candidates:
+    for near, distant in ((3, 12), (6, 24), (12, 48), (24, 96)):
+        policy = SchedulePolicy(live=minimum_refresh, approaching=minimum_refresh,
+                                imminent=minimum_refresh*2,
+                                near=timedelta(hours=near), distant=timedelta(hours=distant))
         projected = cost(policy)
-        if projected <= normal_limit:
-            if tiers[0] and allow_faster_refresh:
-                for minutes in (5, 10):
-                    faster = replace(policy, live=timedelta(minutes=minutes))
-                    if cost(faster) <= normal_limit:
-                        policy = faster
-                        break
-            if priority_pregame and tiers[1]:
-                for minutes in ((5, 10, 15) if allow_faster_refresh else (15,)):
-                    faster = replace(policy, approaching=timedelta(minutes=minutes))
-                    if cost(faster) <= normal_limit:
-                        policy = faster
-                        break
-            return policy, ceil(cost(policy))
-    if not discovery_walk_objects:
-        return policy, ceil(projected)
+        if projected <= refresh_limit:
+            return policy, projected
 
-    # On crowded slates, use the shared headroom and reduce pregame frequency
-    # before relaxing the live cadence. The hard ledger guard still applies.
-    for changes in (
-        {},
-        {'distant': timedelta(hours=96), 'near': timedelta(hours=24)},
-        {'imminent': timedelta(hours=4), 'approaching': timedelta(minutes=45)},
-        {'imminent': timedelta(hours=6), 'approaching': timedelta(hours=1)},
-        *({'live': timedelta(minutes=minutes)} for minutes in (20, 30, 45, 60)),
-    ):
-        policy = replace(policy, **changes)
-        projected = cost(policy)
-        if projected <= combined_limit:
-            break
-    return policy, ceil(projected)
+    def stretched(scale):
+        seconds = ceil(floor_seconds*scale/30)*30
+        return replace(policy, live=timedelta(seconds=seconds),
+                       approaching=timedelta(seconds=seconds),
+                       imminent=timedelta(seconds=seconds*2))
+
+    low, high = 1.0, 2.0
+    while high < 86400/floor_seconds and cost(stretched(high)) > refresh_limit:
+        high *= 2
+    for _ in range(32):
+        middle = (low+high)/2
+        if cost(stretched(middle)) <= refresh_limit:
+            high = middle
+        else:
+            low = middle
+    policy = stretched(high)
+    return policy, cost(policy)
 
 
 def discovery_interval(*, retained_events: int, daily_budget: int,

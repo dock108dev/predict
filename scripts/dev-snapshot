@@ -164,6 +164,13 @@ def revalue_snapshot(record):
             from app.storage.current_pregame import process
 
             Store(db).migrate()
+            from app.storage.sgo_line_presence import retire_superseded_mains
+
+            with db.transaction():
+                db.execute("SELECT pg_advisory_xact_lock(901095)")
+                retired = retire_superseded_mains(db, [r['event_id'] for r in db.execute(
+                    "SELECT event_id FROM sgo_event_evidence WHERE kind='frame' AND expires_at>clock_timestamp()")])
+            print(json.dumps(dict(retired_main_quotes=retired)), flush=True)
             rebuilt = 0
             while True:
                 batch = process(db, limit=24)
