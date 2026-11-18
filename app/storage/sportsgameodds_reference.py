@@ -265,6 +265,11 @@ def advance_quotes(db, rows, previous):
               OR (i.source_order IS NULL AND q.source_order IS NULL AND i.received_order>q.received_order)
               OR (i.source_order=q.source_order AND i.received_order>=q.received_order
                   AND i.facts->>'available'='false' AND q.facts->>'available'='true')
+              OR (i.source_order=q.source_order AND i.received_order>=q.received_order
+                  AND i.facts->'alternate'='true'::jsonb AND q.facts->'alternate'='false'::jsonb
+                  AND (i.facts->'price_american',i.facts->'available',i.facts->'provider_available')
+                      IS NOT DISTINCT FROM
+                      (q.facts->'price_american',q.facts->'available',q.facts->'provider_available'))
         )) OR (q.revision=i.revision AND i.received_order>=q.received_order
               AND ((i.expires_at>q.expires_at AND q.expires_at<to_timestamp(i.received_order)+interval '2 days')
                    OR i.expires_at<q.expires_at-interval '1 day'))''',

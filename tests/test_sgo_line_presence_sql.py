@@ -76,9 +76,8 @@ class LinePresenceSQL(PregameFixture):
             upsert_rows(db, rows)
             observe(db, rows)
             alternate = deepcopy(old)
-            alternate['source_order'] = str(exact_time(AT))
-            alternate['facts'].update(alternate=True, source_at=AT,
-                                      source_at_original=AT)
+            # Alternate availability can be confirmed without a new price clock.
+            alternate['facts'].update(alternate=True)
             alternate['received_order'] = str(exact_time((stamp(AT) + timedelta(minutes=1)).isoformat()))
             alternate['facts']['received_at'] = (stamp(AT) + timedelta(minutes=1)).isoformat()
             alternate['revision'] = hashed({k: v for k, v in alternate['facts'].items()
