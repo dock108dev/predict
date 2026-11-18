@@ -4,7 +4,7 @@ const $=id=>document.getElementById(id), initial=new URLSearchParams(location.se
 const node=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;};
 const ratio=value=>{if(value===null||value===undefined||value==='')return null;const [a,b='1']=String(value).split('/'),n=Number(a)/Number(b);return Number.isFinite(n)?n:null;};
 const money=value=>{const n=ratio(value);return n===null?'Unavailable':n.toLocaleString('en-US',{style:'currency',currency:'USD'});};
-const percent=value=>{const n=ratio(value);return n===null?'Unavailable':(n>0?'+':'')+(n*100).toFixed(2)+'%';};
+const percent=(value,unit='%')=>{const n=ratio(value);return n===null?'Unavailable':(n>0?'+':'')+(n*100).toFixed(2)+unit;};
 const decimal=value=>{const n=ratio(value);return n===null?'':String(Number(n.toFixed(8)));};
 const when=value=>value?new Date(value).toLocaleString('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+' ET':'Not supplied';
 const exactWhen=value=>value?new Date(value).toLocaleString('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',hour:'numeric',minute:'2-digit',second:'2-digit'})+' ET':'Not supplied';
@@ -95,7 +95,7 @@ function priceDetails(entry){
   if(m.basis==='observed_model')details.append(node('p','Entry metrics currently use the observed modeled comparison. Enter the actual trade to measure what you got.'));
   if(m.entry_probability_basis)details.append(node('p',m.entry_probability_basis));
   const change=entry.kind==='arb'?m.arb_return_slippage:m.ev_slippage;
-  if(change!==null&&change!==undefined)details.append(node('p',(entry.kind==='arb'?'Paired return':'Entry EV')+' changed '+percent(change).replace('%',' percentage points')+' from the original observation.'));
+  if(change!==null&&change!==undefined)details.append(node('p',(entry.kind==='arb'?'Paired return':'Entry EV')+' changed '+percent(change,' percentage points')+' from the original observation.'));
   if(m.realized_minus_entry_ev_usd!==null&&m.realized_minus_entry_ev_usd!==undefined)details.append(node('p','Reported result minus entry expected profit: '+money(m.realized_minus_entry_ev_usd)+'.'));
   details.append(quoteHistory(entry));
   return details;

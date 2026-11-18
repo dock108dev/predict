@@ -123,6 +123,9 @@ class SportsGameOddsPregameDeskSQL(LatestBoardFixture):
                         field = 'spread' if family == 'spread' else 'overUnder'
                         book[field] = str(line)
                         by_book['draftkings'] = dict(book, odds='+500', **{field: str(alternate[position])})
+                    # Qualify the exact line with two trusted books. Keep DK
+                    # on a different line to prove it cannot affect this price.
+                    by_book['betmgm'] = dict(book)
                     odd_id = f'{bet_type}-{side}'
                     event['odds'][odd_id] = dict(oddID=odd_id, opposingOddID=f'{bet_type}-{opposite}',
                         periodID='game', statID='points', statEntityID='all' if family == 'total' else side,
@@ -173,6 +176,8 @@ class SportsGameOddsPregameDeskSQL(LatestBoardFixture):
                 expected_key=(event['competition'],'winner' if family=='moneyline' else family,
                     selected['predicate'],selected.get('participant'),line)
                 self.assertEqual(ref['book'],'fanduel')
+                self.assertEqual(ref['trusted_book_count'],2)
+                self.assertEqual(set(ref['candidate_probabilities']),{'fanduel','betmgm'})
                 self.assertEqual(Fraction(ref['probability']),expected[expected_key][2])
                 checked.add(expected_key)
         self.assertEqual(checked,set(expected))

@@ -64,6 +64,7 @@ def test_save_ev_edit_actual_odds_record_result_and_keep_original(width, tmp_pat
                 entry["revision"] += 1
                 entry["metrics"]["basis"] = "reported_trade"
                 entry["metrics"]["entry_ev"] = ".05"
+                entry["metrics"]["ev_slippage"] = "-19/500"
                 if (entry["trade"] or {}).get("result"):
                     entry["metrics"]["realized_profit_usd"] = "110"
                     entry["metrics"]["realized_roi"] = "1.1"
@@ -137,6 +138,11 @@ def test_save_ev_edit_actual_odds_record_result_and_keep_original(width, tmp_pat
         page.get_by_role("button", name="Save changes", exact=True).click()
         expect(page.locator("#editor")).not_to_be_visible()
         expect(page.locator(".journal-entry")).to_contain_text("Actual entry EV")
+        expect(page.locator(".journal-entry")).to_contain_text("+5.00%")
+        page.locator(".journal-details > summary").click()
+        expect(page.locator(".journal-details")).to_contain_text(
+            "Entry EV changed -3.80 percentage points from the original observation."
+        )
         assert updates[0]["trade"]["legs"][0]["price"] == "+110"
         assert entry["snapshot"]["posted"]["value"] == "+120"
         page.get_by_role("button", name="Edit trade").click()
@@ -195,6 +201,7 @@ def test_arb_has_independent_actual_prices_and_explains_close_basis():
             close_arb_return="-.02",
             close_min_profit_usd="-4",
             close_cost_usd="200",
+            arb_return_slippage=".0123",
             legs=[],
         ),
     )
@@ -220,6 +227,10 @@ def test_arb_has_independent_actual_prices_and_explains_close_basis():
         expect(page.locator(".journal-entry")).to_contain_text("-2.00%")
         expect(page.locator(".journal-entry")).to_contain_text("$200.00 basis")
         expect(page.locator(".journal-entry")).to_contain_text("Entry EV Unavailable")
+        page.locator(".journal-details > summary").click()
+        expect(page.locator(".journal-details")).to_contain_text(
+            "Paired return changed +1.23 percentage points from the original observation."
+        )
         page.get_by_role("button", name="Edit trade").click()
         expect(page.locator('[name="price-0"]')).to_have_value("+120")
         expect(page.locator('[name="units-1"]')).to_have_value("probability")
@@ -246,6 +257,7 @@ def test_quote_history_is_lazy_paged_and_keeps_negative_ev():
             basis="observed_model",
             observed_ev=".088",
             entry_ev=".088",
+            ev_slippage="0",
             close_state="tracking",
             legs=[],
         ),
@@ -282,6 +294,9 @@ def test_quote_history_is_lazy_paged_and_keeps_negative_ev():
         expect(page.locator(".journal-entry")).to_be_visible()
         assert "/api/bet-journal/history-ev" not in reads
         page.locator(".journal-details > summary").click()
+        expect(page.locator(".journal-details")).to_contain_text(
+            "Entry EV changed 0.00 percentage points from the original observation."
+        )
         page.get_by_text("Quote history", exact=True).click()
         expect(page.locator(".journal-history-list li")).to_have_count(100)
         expect(page.locator(".journal-history")).to_contain_text("6–105 of 105")
