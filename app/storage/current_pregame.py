@@ -687,7 +687,7 @@ def read(db, query, *, at=None):
     where = " AND ".join(clauses)
     source = (
         """ FROM current_pregame_calculation p JOIN current_contract c ON c.id=p.contract_id
-        JOIN current_offer o ON o.contract_id=c.id JOIN current_event e ON e.id=c.event_id WHERE """
+        JOIN current_offer_storage o ON o.contract_id=c.id JOIN current_event e ON e.id=c.event_id WHERE """
         + where
     )
     compare = bool(query.get("bet_id") or query.get("id"))
