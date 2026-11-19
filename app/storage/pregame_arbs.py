@@ -195,7 +195,8 @@ def read(db, query, *, at=None, can_continue=None):
           AND o.facts->>'state' IS DISTINCT FROM 'unavailable'
           AND NOT EXISTS(SELECT 1 FROM sgo_line_presence lp WHERE lp.quote_id=o.sgo_quote_id AND lp.expired)
           AND NOT EXISTS(SELECT 1 FROM current_pregame_work w WHERE w.provider=e.provider AND w.native_event_id=e.native_event_id)
-          AND NOT EXISTS(SELECT 1 FROM current_pregame_work w WHERE w.provider='sportsgameodds' AND (p.payload->'sportsbook_event_ids') ? w.native_event_id)
+          AND NOT EXISTS(SELECT 1 FROM jsonb_array_elements_text(p.payload->'sportsbook_event_ids') ref(event_id)
+            JOIN current_pregame_work w ON w.provider='sportsgameodds' AND w.native_event_id=ref.event_id)
           AND NOT (COALESCE(e.facts->'status','{}'::jsonb) @> '{"live":true}'::jsonb)
           AND NOT (COALESCE(e.facts->'status','{}'::jsonb) @> '{"ended":true}'::jsonb)
           AND COALESCE(e.facts#>>'{status,status}','') NOT IN ('cancelled','final','suspended','started','delayed')

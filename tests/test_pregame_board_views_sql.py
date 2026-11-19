@@ -319,6 +319,34 @@ class PregameBoardViewsSQL(PregameFixture):
             )
             self.assertEqual(arb_read(db, {}, at=stamp(AT))["total"], 0)
 
+    async def test_pending_reference_job_suppresses_pairs_before_recalculation(self):
+        from app.fees import pricing
+        from tests.test_fee_pricing import rule
+        from app.storage.pregame_arbs import read as arb_read
+
+        data = page()
+        for odd in data["data"][0]["odds"].values():
+            quote = dict(odd["byBookmaker"]["prophetx"], odds="+120")
+            odd["byBookmaker"] = {"novig": quote, "prophetx": deepcopy(quote)}
+        with self.connect() as db:
+            for venue in ("novig", "prophetx"):
+                pricing.write(db, venue, [rule(venue)])
+            self.ingest(db, data)
+            self.process(db)
+            # A separate sportsbook event is attached to the market entries.
+            # Its pending job must suppress pairs even with no price-source job.
+            db.execute("""UPDATE current_pregame_price SET payload=jsonb_set(
+                payload,'{sportsbook_event_ids}','["pending-reference-event"]'::jsonb)""")
+            before = arb_read(db, {}, at=stamp(AT))
+            self.assertGreater(before["total"], 0)
+            db.execute(
+                "SELECT pregame_enqueue('sportsgameodds','pending-reference-event')"
+            )
+            self.assertEqual(arb_read(db, {}, at=stamp(AT))["total"], 0)
+            self.process(db)
+            restored = arb_read(db, {}, at=stamp(AT))
+            self.assertEqual(restored["rows"], before["rows"])
+
     async def test_browse_and_exact_comparison_keep_authentic_prices_without_ev(self):
         from app.fees import pricing
         from tests.test_fee_pricing import rule

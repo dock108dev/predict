@@ -68,6 +68,14 @@ under that policy. The regression fixtures now carry the real CSP. Native close
 events are asynchronous, so restoration checks wait for the app's unlock state
 rather than treating trigger focus alone as completion.
 
+The first hosted Linux browser run exposed a second touch difference: tapping a
+button need not make it `document.activeElement`. Saving active focus could
+therefore save the game-close button instead of the tapped quote. Dialog openers
+now pass `event.currentTarget`, and restoration searches the saved parent for a
+replacement with the same focus identity if a late response replaced the node.
+The regression reproduces absent native focus and both before/after-close response
+orderings without weakening its original focus or scroll assertions.
+
 The 15-minute historical-input caution follows the existing
 `CURRENT_DESK_MAX_AGE_SECONDS` display convention. It does not remove retained
 pregame prices or establish execution authority. Sporting eligibility remains
@@ -105,6 +113,17 @@ took 81/43 ms against warm server calculations; these do not replace the measure
 The final owner handoff records the pushed SHA, hosted CI, deployment workflow,
 installed commit and deployed browser/API results separately; local evidence is
 not substituted for any of them.
+
+Initial deployed commit `adead29` did pass image smoke tests and all five normal
+deployed persona paths, but its cold live-Arbitrage requests returned explicit
+503 timeouts. That prevented completion. Profiling isolated the eight-second
+failure to SQL eligibility, before any pairing arithmetic: pending reference jobs
+caused repeated payload decompression. The equivalent indexed reference-ID join
+reduced that statement to 474 ms in the same deployed read snapshot. Positive-bet
+group filtering and paging game identities before JSON aggregation also reduce
+unneeded work while preserving full eligible results. The follow-up source checks
+pass 30 SQL tests plus two subtests and 23 unit tests. Installed final-SHA behavior
+and the new Linux hosted run remain separate evidence in the final handoff.
 
 Mobile evidence uses Chromium touch emulation and dispatched touch gestures,
 with focused keyboard input. Physical iOS/Android software-keyboard resizing

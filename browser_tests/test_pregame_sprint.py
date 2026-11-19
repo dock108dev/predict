@@ -5,6 +5,8 @@ from copy import deepcopy
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
+import pytest
+
 from browser_tests.test_pregame_current import ASSETS, offer
 
 
@@ -138,7 +140,10 @@ def test_comparison_completeness_failure_deadline_and_superseded_filters():
     asyncio.run(journey())
 
 
-def test_touch_nested_dialogs_preserve_context_and_unavailable_ev():
+@pytest.mark.parametrize("game_reply_before_close", [True, False])
+def test_touch_nested_dialogs_preserve_context_and_unavailable_ev(
+    game_reply_before_close,
+):
     from playwright.async_api import async_playwright, expect
 
     async def swipe(session, x, start_y, end_y):
@@ -185,11 +190,13 @@ def test_touch_nested_dialogs_preserve_context_and_unavailable_ev():
                 game=base["game"] + f" {i}",
                 league=base["league"],
                 kickoff=base["kickoff"],
-                rows=[base],
+                rows=[rows[0]],
             )
             for i in range(12)
         ]
         errors = []
+        game_wait, game_release = asyncio.Event(), asyncio.Event()
+        game_state = {"failed_once": False}
 
         async def serve(route):
             url = urlparse(route.request.url)
@@ -197,6 +204,13 @@ def test_touch_nested_dialogs_preserve_context_and_unavailable_ev():
             if url.path.endswith("/updates"):
                 await route.fulfill(json={"changed": False})
             elif url.path == "/api/pregame":
+                if q.get("view") == "game":
+                    if not game_state["failed_once"]:
+                        game_state["failed_once"] = True
+                        await route.fulfill(status=503, json={})
+                        return
+                    game_wait.set()
+                    await game_release.wait()
                 selected = (
                     [next((r for r in rows if r["bet_id"] == q["bet_id"]), base)]
                     if q.get("bet_id")
@@ -253,8 +267,44 @@ def test_touch_nested_dialogs_preserve_context_and_unavailable_ev():
             await page.locator(".game-open").nth(8).scroll_into_view_if_needed()
             before_page = await page.evaluate("scrollY")
             assert before_page > 0
+            # Some touch platforms dispatch a tap without focusing its button.
+            # Prevent only native focus; the real pointer click must still open it.
+            await (
+                page.locator(".game-open")
+                .nth(8)
+                .evaluate(
+                    "button=>button.addEventListener('pointerdown',event=>event.preventDefault())"
+                )
+            )
             await page.locator(".game-open").nth(8).tap()
-            await expect(page.locator("#game-content .line-open")).to_have_count(20)
+            await expect(page.locator("#game-content")).to_contain_text(
+                "Alternate lines could not be loaded. Main lines are preserved."
+            )
+            await page.get_by_role("button", name="Retry", exact=True).tap()
+            await asyncio.wait_for(game_wait.wait(), 3)
+            await expect(page.locator("#game-content .line-open")).to_have_count(1)
+            # A slow game response replaces the main-line opener behind its quote.
+            # The same quote also exists on the inert main page; return to the
+            # replacement inside the open game dialog, preserving that context.
+            initial_line = page.locator("#game-content .line-open").first
+            await initial_line.evaluate(
+                "button=>button.addEventListener('pointerdown',event=>event.preventDefault())"
+            )
+            await initial_line.tap()
+            await expect(page.locator("#comparison")).to_be_visible()
+            if game_reply_before_close:
+                game_release.set()
+                await expect(page.locator("#game-content .line-open")).to_have_count(20)
+            await page.get_by_role("button", name="Close comparison").tap()
+            await expect(
+                page.locator('#game-content .line-open[data-quote-id="quote-0"]')
+            ).to_be_focused()
+            if not game_reply_before_close:
+                game_release.set()
+                await expect(page.locator("#game-content .line-open")).to_have_count(20)
+                await expect(
+                    page.locator('#game-content .line-open[data-quote-id="quote-0"]')
+                ).to_be_focused()
             close = page.get_by_role("button", name="Close game lines")
             close_y = (await close.bounding_box())["y"]
             session = await context.new_cdp_session(page)
@@ -268,6 +318,9 @@ def test_touch_nested_dialogs_preserve_context_and_unavailable_ev():
             await line.scroll_into_view_if_needed()
             parent_scroll = await page.locator("#game-content").evaluate(
                 "e=>e.scrollTop"
+            )
+            await line.evaluate(
+                "button=>button.addEventListener('pointerdown',event=>event.preventDefault())"
             )
             await line.tap()
             await expect(page.locator("#comparison")).to_be_visible()

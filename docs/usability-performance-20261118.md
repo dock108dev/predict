@@ -102,6 +102,69 @@ Arbitrage remains 2.235 seconds locally in this cohort. The next sufficient evid
 is the deployed workflow plus normal browser/API reads on its installed SHA; this
 local report alone does not establish deployed latency under live host contention.
 
+## First deployed check exposed the remaining SQL bottleneck
+
+The first GitHub deployment (`adead2955…`, workflow `44446682769`) installed and
+served the intended code, but **did not complete the performance outcome**.
+Arbitrage returned `503 current_read_timeout` after 8.94/8.56 seconds. Opportunities
+still took 2.739/5.049 seconds; Browse 7.698/7.168 seconds. These failing results
+remain in the sprint's deployed timing evidence; successful deployment was not
+mistaken for successful behavior.
+
+A request-equivalent read-only trace localized the Arbitrage failure: its initial
+eligibility SELECT hit the eight-second SQL timeout after 8.034 seconds. Python
+pair modeling and sportsbook decoding had not started. The actual plan nested
+1,000+ price rows against 297 pending sportsbook jobs, repeatedly decompressing
+large quote payloads to test each job's event-ID membership.
+
+The revised predicate expands each price's small event-ID array once and joins
+those IDs to the pending-work primary key:
+
+```sql
+NOT EXISTS (
+  SELECT 1
+  FROM jsonb_array_elements_text(p.payload->'sportsbook_event_ids') ref(event_id)
+  JOIN current_pregame_work w
+    ON w.provider='sportsgameodds' AND w.native_event_id=ref.event_id
+)
+```
+
+This retains the same exclusion: any pending job for an attached sportsbook event
+suppresses that price until recovery. It does not omit pending work or truncate
+candidate coverage. An equivalent read-only plan on the live database returned
+1,672 eligible prices in **474 ms**, versus the original statement's eight-second
+timeout. A complete diagnostic using this candidate SQL and the installed Python
+model returned 184 pairs from 41,642 candidates in 9.654 seconds (SQL 1.448 seconds,
+reference fetch 0.682 seconds in that separate sample). This diagnostic is not an
+installed-endpoint claim. Source files on the server were not edited.
+
+Two other query changes address demonstrated board costs:
+
+- Opportunities admits complete **bet groups** having at least one stored positive
+  venue before expensive eligibility work. All aliases/venues within such bets
+  remain candidates, so a newer negative alias cannot be bypassed by an older
+  positive one. Bets with no positive stored price cannot produce a positive result.
+- Browse first chooses the page's game identities, then builds full game JSON only
+  for those games. Counts, kickoff order and all lines within the selected games
+  remain intact; it no longer constructs large documents for off-page games.
+
+Actual before/candidate `EXPLAIN ANALYZE` calls in one deployed repeatable-read
+transaction measured **Opportunities 1,406→324 ms**, and **Browse 3,794→2,099 ms**.
+Those are SQL times under the same database snapshot, not browser transfer times.
+Remaining Browse work included approximately 744 ms qualifying price-only rows
+and 579 ms qualifying complete rows. Repeated reference availability lookups
+contributed roughly 150 ms, so this evidence did not justify a larger reference
+schema redesign. The solver also now copies mutable cashflow/presentation maps
+without repeatedly deep-copying immutable source and fee evidence.
+
+A new disposable integration case attaches a distinct sportsbook event to market
+prices, admits a job for that event, and verifies that cached pairs disappear
+before recalculation and return after recovery. The focused SQL run now passes
+**30 tests plus 2 subtests** in 6.02 seconds. Unit checks remain **23 passed**.
+The next sufficient stopping condition is normal completed API/browser behavior
+on the next GitHub-deployed SHA, including a cold Arbitrage read. No additional
+observation window or two-second release gate was introduced.
+
 ## Verification and limits
 
 - `tests/test_pregame_arbs.py`, `tests/test_pregame_sportsbook_prices.py` and
@@ -123,6 +186,6 @@ No provider request, account mutation, source configuration, Stop choice or fina
 ledger changed in these reads and disposable tests. Hosted checks, deployment and
 installed behavior are recorded in the main sprint handoff after they occur.
 
-Learning update: The real plan and abandoned server reads refuted a JIT-only diagnosis | removed unnecessary source-body reconstruction and bounded/coalesced exact pair work | fixed-snapshot reads and 31 SQL checks pass, changed-filter Arbitrage improves 797→261 ms | deployed latency still requires installed-SHA verification.
+Learning update: The first deployed timeout occurred inside SQL before any pair modeling | replaced the queued-reference membership join and deferred off-page JSON construction | candidate live plans improve Arbitrage eligibility from an eight-second timeout to 474 ms, Opportunities 1406→324 ms and Browse 3794→2099 ms; 32 SQL checks pass | next deployed cold-read and browser verification remain required.
 
 Review decision: Browse must hide prices without complete EV | prior test expectation superseded by owner sprint scope; blocks desired browsing | updated assertions to require null EV and actual reason while retaining the positive-opportunity rule.

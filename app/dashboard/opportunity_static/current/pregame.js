@@ -18,7 +18,9 @@ function showDialog(dialog,trigger=document.activeElement){
 function restoreDialog(dialog,fallback){
  const saved=dialogReturns.get(dialog);dialogReturns.delete(dialog);
  const eligible=target=>target?.isConnected&&(!target.closest('dialog')||target.closest('dialog').open);
- const target=eligible(saved?.trigger)?saved.trigger:fallback;
+ const scope=saved?.parent?.open?saved.parent:document,focusKey=saved?.trigger?.dataset.focusKey;
+ const replacement=focusKey?[...scope.querySelectorAll('[data-focus-key]')].find(button=>button.dataset.focusKey===focusKey):null;
+ const target=eligible(saved?.trigger)?saved.trigger:eligible(replacement)?replacement:fallback;
  if(!document.querySelector('dialog[open]')&&lockedPage){const page=lockedPage;lockedPage=null;for(const [name,value,priority]of page.properties){if(value)document.body.style.setProperty(name,value,priority);else document.body.style.removeProperty(name);}if(page.style===null&&!document.body.style.length)document.body.removeAttribute('style');scrollTo(page.x,page.y);}
  const restore=()=>{target?.focus({preventScroll:true});if(saved?.parent?.open)saved.parent.querySelector('#game-content').scrollTop=saved.parentScroll;};restore();requestAnimationFrame(restore);
 }
@@ -43,7 +45,7 @@ function ticket(row,compare=true){
  const start=node('div',undefined,'start-cell');start.append(node('strong',date.toLocaleTimeString('en-US',{...opts,hour:'numeric',minute:'2-digit'})),node('span',date.toLocaleDateString('en-US',{...opts,weekday:'short',month:'short',day:'numeric'})));article.append(start);
  const body=node('div',undefined,'subject'),context=node('p',undefined,'context');context.append(node('strong',row.league),node('time',date.toLocaleString('en-US',{...opts,weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+' ET'));
  const title=node('h2',undefined,'pick');
- if(compare){const open=node('button',pick(row),'row-open');open.type='button';open.dataset.quoteId=row.id;open.dataset.focusKey='compare-'+row.id;open.setAttribute('aria-label','Compare prices for '+pick(row));open.setAttribute('aria-haspopup','dialog');open.setAttribute('aria-controls','comparison');open.onclick=()=>openComparison(row);title.append(open);}else title.textContent=pick(row);
+ if(compare){const open=node('button',pick(row),'row-open');open.type='button';open.dataset.quoteId=row.id;open.dataset.focusKey='compare-'+row.id;open.setAttribute('aria-label','Compare prices for '+pick(row));open.setAttribute('aria-haspopup','dialog');open.setAttribute('aria-controls','comparison');open.onclick=event=>openComparison(row,event.currentTarget);title.append(open);}else title.textContent=pick(row);
  const link=node('a',row.game,'game');link.dataset.focusKey='game-link-'+row.id;link.href='/game?'+new URLSearchParams({game_key:row.game_key});link.setAttribute('aria-label','Open Game: '+row.game);body.append(context,title,link);article.append(body);
  const cell=(cls,label,value)=>{const d=node('div',undefined,'board-number '+cls);d.append(node('span',label,'mobile-label'),node('span',value));article.append(d);return d;};
  const venue=cell('venue','Venue',venues[row.venue]||row.venue);
@@ -140,8 +142,9 @@ async function refreshComparison(){
  }catch(e){if(active===activeComparison&&$('comparison').open){active.state='failed';renderComparison(active.rows,active.quotes,'failed');}}
  finally{active.loading=false;if(active===activeComparison&&active.pending){active.pending=false;active.controller=new AbortController();refreshComparison();}}
 }
-async function openComparison(selected){
- comparisonTrigger=document.activeElement;
+async function openComparison(selected,trigger){
+ // A touch click can open a button without making it document.activeElement.
+ comparisonTrigger=trigger||document.activeElement;
  ++comparisonSequence;clearTimeout(inspectionTimer);comparisonReturnId=selected.id;
  activeComparison?.controller.abort();activeComparison={selected:structuredClone(selected),rows:[selected],quotes:[],loading:false,pending:false,state:'loading',controller:new AbortController()};
  inspectionTimer=setTimeout(()=>$('comparison').close(),Math.min(2147483647,Math.max(0,Date.parse(selected.kickoff)-Date.now())));
@@ -152,7 +155,7 @@ async function openComparison(selected){
 const families={moneyline:'Winner',spread:'Spread',total:'Total'};
 function gameBet(row,interactive=false,annotate=true){
  const item=node('article',undefined,'game-bet');const heading=node('h4');
- if(interactive){const open=node('button',pick(row),'line-open');open.type='button';open.dataset.quoteId=row.id;open.dataset.focusKey='compare-'+row.id;open.setAttribute('aria-label','Compare prices for '+pick(row));open.onclick=()=>openComparison(row);if(!annotate)open.append(node('small','Compare prices →','line-action-label'));heading.append(open);}else heading.textContent=pick(row);
+ if(interactive){const open=node('button',pick(row),'line-open');open.type='button';open.dataset.quoteId=row.id;open.dataset.focusKey='compare-'+row.id;open.setAttribute('aria-label','Compare prices for '+pick(row));open.onclick=event=>openComparison(row,event.currentTarget);if(!annotate)open.append(node('small','Compare prices →','line-action-label'));heading.append(open);}else heading.textContent=pick(row);
  const subject=node('div',undefined,'line-subject');subject.append(heading,node('span',(venues[row.venue]||row.venue)+(interactive&&annotate?' · '+(row.main?'Main':'Alternate'):''),'line-venue'));item.append(subject);
  const values=node('div',undefined,'line-values');
  for(const [label,value] of [['Price',venuePrice(row)],['After fees',venuePrice(row,true)],['Fair',mathValue(row,'fair',row.display.fair_odds)],['Net EV',mathValue(row,'ev',row.display.net_ev)]]){const cell=node('div');cell.append(node('small',label),value);values.append(cell);}item.append(values,freshness(row));return item;
@@ -162,13 +165,13 @@ function gameMarkets(rows,interactive=false,annotate=true){
 }
 function gameCard(game){
  const card=node('article',undefined,'game-card'),head=node('header'),date=new Date(game.kickoff),opts={timeZone:'America/New_York'};
- const title=node('h2'),open=node('button',game.game,'game-open');open.type='button';open.dataset.gameKey=game.game_key;open.dataset.focusKey='game-'+game.game_key;open.setAttribute('aria-haspopup','dialog');open.onclick=()=>openGame(game);title.append(open);head.append(title,node('p',game.league+' · '+date.toLocaleString('en-US',{...opts,weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+' ET','game-clock'),node('span','View all lines →','game-hint'));card.append(head,gameMarkets(game.rows,true,false));return card;
+ const title=node('h2'),open=node('button',game.game,'game-open');open.type='button';open.dataset.gameKey=game.game_key;open.dataset.focusKey='game-'+game.game_key;open.setAttribute('aria-haspopup','dialog');open.onclick=event=>openGame(game,event.currentTarget);title.append(open);head.append(title,node('p',game.league+' · '+date.toLocaleString('en-US',{...opts,weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+' ET','game-clock'),node('span','View all lines →','game-hint'));card.append(head,gameMarkets(game.rows,true,false));return card;
 }
-async function openGame(game){
+async function openGame(game,trigger){
  clearTimeout(gameTimer);gameTimer=setTimeout(()=>$('game-lines').close(),Math.min(2147483647,Math.max(0,Date.parse(game.kickoff)-Date.now())));
- gameController?.abort();const controller=gameController=new AbortController();const token=++gameSequence;gameReturnKey=game.game_key;$('game-title').textContent=game.game;const content=$('game-content');content.replaceChildren(node('p','Loading alternate lines…','comparison-context'),gameMarkets(game.rows,true));showDialog($('game-lines'));
- try{const q=new URLSearchParams(query());q.set('view','game');q.set('game_key',game.game_key);q.set('lines','all');const data=await get(q,false,controller);if(token!==gameSequence||!$('game-lines').open)return;content.replaceChildren(gameMarkets(data.rows,true));if(!data.rows.length)content.append(node('p','No current lines match these filters.'));}
- catch(e){if(token===gameSequence){const message=node('p','Alternate lines could not be loaded. Main lines are preserved.','comparison-context'),retry=node('button','Retry');retry.onclick=()=>{$('game-lines').close();openGame(game);};content.prepend(message,retry);}}
+ gameController?.abort();const controller=gameController=new AbortController();const token=++gameSequence;gameReturnKey=game.game_key;$('game-title').textContent=game.game;const content=$('game-content');content.replaceChildren(node('p','Loading alternate lines…','comparison-context'),gameMarkets(game.rows,true));if(!$('game-lines').open)showDialog($('game-lines'),trigger||document.activeElement);
+ try{const q=new URLSearchParams(query());q.set('view','game');q.set('game_key',game.game_key);q.set('lines','all');const data=await get(q,false,controller);if(token!==gameSequence||!$('game-lines').open)return;const focused=content.contains(document.activeElement)?document.activeElement.dataset.focusKey:null,scroll=content.scrollTop;content.replaceChildren(gameMarkets(data.rows,true));if(!data.rows.length)content.append(node('p','No current lines match these filters.'));if(focused)[...content.querySelectorAll('[data-focus-key]')].find(button=>button.dataset.focusKey===focused)?.focus({preventScroll:true});content.scrollTop=scroll;}
+ catch(e){if(token===gameSequence){const message=node('p','Alternate lines could not be loaded. Main lines are preserved.','comparison-context'),retry=node('button','Retry');retry.onclick=()=>openGame(game,trigger);content.prepend(message,retry);}}
 }
 $('game-close').onclick=()=>$('game-lines').close();$('game-lines').addEventListener('close',()=>{clearTimeout(gameTimer);gameController?.abort();gameSequence++;if($('comparison').open)$('comparison').close();const target=[...document.querySelectorAll('.game-open')].find(b=>b.dataset.gameKey===gameReturnKey);restoreDialog($('game-lines'),target||$('results'));});
 

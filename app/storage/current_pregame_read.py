@@ -69,6 +69,17 @@ def read(db, query, *, at=None, clock, configured_routes):
         "e.scheduled_start::timestamptz>%s",
     ]
     params = [at, at, at]
+    # A bet with no positive stored venue cannot produce a positive result.
+    # Keep every alias/venue inside admitted bets so newest-alias selection and
+    # exact eligibility remain unchanged; do not filter individual rows by EV.
+    if (
+        not compare
+        and query.get("browse") != "1"
+        and query.get("view") not in ("games", "game")
+    ):
+        clauses.append(
+            "p.bet_id IN (SELECT bet_id FROM current_pregame_calculation WHERE reason IS NULL AND net_ev>0)"
+        )
     # A stored row from an older writer must not bypass the current owner rule.
     clauses.append("""(p.payload ? 'ev_unavailable_reason' OR (SELECT count(*) FROM jsonb_object_keys(
         COALESCE(p.payload#>'{reference,candidate_probabilities}','{}'::jsonb)) AS book
@@ -183,14 +194,16 @@ def read(db, query, *, at=None, clock, configured_routes):
         page = db.execute(
             grouped
             + """, games AS (
-            SELECT game_key,min(start_at) AS kickoff,
-                jsonb_build_object('game_key',game_key,'game',min(payload->>'game'),
-                  'league',min(league),'kickoff',min(start_at),
-                  'rows',jsonb_agg(payload ORDER BY family,bet_id)) AS game
-            FROM best GROUP BY game_key)
+            SELECT game_key,min(start_at) AS kickoff FROM best GROUP BY game_key),
+            page AS (SELECT * FROM games ORDER BY kickoff,game_key LIMIT %s OFFSET %s),
+            page_games AS (
+            SELECT b.game_key,p.kickoff,
+                jsonb_build_object('game_key',b.game_key,'game',min(b.payload->>'game'),
+                  'league',min(b.league),'kickoff',p.kickoff,
+                  'rows',jsonb_agg(b.payload ORDER BY b.family,b.bet_id)) AS game
+            FROM best b JOIN page p USING(game_key) GROUP BY b.game_key,p.kickoff)
             SELECT count(*) AS total,
-              (SELECT jsonb_agg(game ORDER BY kickoff,game_key) FROM
-                (SELECT * FROM games ORDER BY kickoff,game_key LIMIT %s OFFSET %s) page) AS games
+              (SELECT jsonb_agg(game ORDER BY kickoff,game_key) FROM page_games) AS games
             FROM games""",
             (*params, limit, offset),
         ).fetchone()

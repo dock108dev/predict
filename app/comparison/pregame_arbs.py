@@ -14,15 +14,21 @@ BUDGET = F(100)
 def reprice(entry, amount, *, at):
     # One quote participates in many opposing pairs. Binary searches repeatedly
     # ask for the same cent allocation; reuse that exact fee/order result.
-    # Return independent nested cashflows because the selected legs are edited
-    # for presentation and callers must not change the retained sample.
+    # Copy mutable cashflows and presentation maps, retaining shared immutable
+    # source/fee evidence instead of deep-copying it at every solver sample.
     cache = entry.setdefault("_reprice_cache", {})
     key = (at, amount)
     if key not in cache:
         if len(cache) >= 256:
             cache.clear()
         cache[key] = _reprice(entry, amount, at=at)
-    return deepcopy(cache[key])
+    value = cache[key]
+    return dict(
+        value,
+        fee=dict(value["fee"], cashflows=deepcopy(value["fee"].get("cashflows", {}))),
+        raw=dict(value["raw"]),
+        display=dict(value["display"]),
+    )
 
 
 def _reprice(entry, amount, *, at):
