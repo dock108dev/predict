@@ -11,6 +11,121 @@ from app.storage.store import stamp
 from app.storage import current_pregame as board
 
 
+def test_late_financial_inputs_require_the_same_complete_price_witness():
+    from copy import deepcopy
+    from types import SimpleNamespace
+    import pytest
+    from app.storage.pregame_arbs import hydrate_prices
+
+    original = dict(
+        contract_id="one",
+        game_key="game",
+        valid_until=stamp(AT),
+        payload=dict(id="one"),
+    )
+    for replacement in (
+        [],
+        [dict(original, payload=dict(id="changed"))],
+        [dict(original, valid_until=stamp(AT) + timedelta(seconds=1))],
+        [dict(original, game_key="different-game")],
+    ):
+        row = deepcopy(original)
+        db = SimpleNamespace(execute=lambda *args: replacement)
+        with pytest.raises(TimeoutError, match="arbitrage_source_changed"):
+            hydrate_prices(db, [row])
+        assert "record" not in row and "fee_input" not in row
+
+
+def test_late_hydration_keeps_newer_negative_native_alias_before_profit_bound():
+    from types import SimpleNamespace
+    from tests.test_pregame_arbs import entry
+    from app.storage import pregame_arbs as arbs
+
+    def native(cid, decimal, seconds):
+        payload = entry("novig", "home", decimal)["payload"]
+        payload.update(
+            id=cid,
+            input_revision=cid,
+            source=dict(provider="sportsgameodds"),
+            times=dict(
+                source_at=(stamp(AT) + timedelta(seconds=seconds)).isoformat(),
+                received_at=(stamp(AT) + timedelta(seconds=seconds)).isoformat(),
+            ),
+            sportsbook_event_ids=["event"],
+        )
+        return dict(
+            contract_id=cid,
+            game_key="game",
+            valid_until=stamp(AT) + timedelta(hours=1),
+            payload=payload,
+        )
+
+    older, newer = native("older", "3", -2), native("newer", "4/3", -1)
+    book = entry("fanduel", "away", "2.1")
+    book["payload"]["times"] = dict(source_at=AT, received_at=AT)
+    fetched = []
+
+    def execute(query, params=None):
+        if query.startswith("SELECT p.contract_id,p.game_key,p.valid_until,p.payload"):
+            return deepcopy([older, newer])
+        if query.startswith(
+            "SELECT contract_id,game_key,valid_until,payload,record,fee_input"
+        ):
+            fetched.extend(params[0])
+            return [
+                dict(
+                    deepcopy(newer), record=dict(witness="newer negative"), fee_input={}
+                )
+            ]
+        return []
+
+    def reference_key(record):
+        assert record["witness"] == "newer negative"
+        return "spread", "home", Fraction("-1.5")
+
+    db = SimpleNamespace(
+        info=SimpleNamespace(host="alias-fixture", port=0, dbname="alias"),
+        execute=execute,
+    )
+    arbs._CACHE.clear()
+    arbs._SCAN_CACHE.clear()
+    with (
+        patch.object(
+            arbs,
+            "pregame_read",
+            return_value=dict(cursor="native-alias", refresh_at=None),
+        ),
+        patch.object(
+            arbs, "configured_routes", return_value=dict(novig="sportsgameodds")
+        ),
+        patch.object(arbs, "reference_key", side_effect=reference_key),
+        patch.object(
+            arbs,
+            "read_book_quotes",
+            return_value=[
+                dict(
+                    event_id="event",
+                    market="spread",
+                    line="1.5",
+                    side="away",
+                    available=True,
+                    venue="fanduel",
+                    _arb_groups=["same"],
+                )
+            ],
+        ),
+        patch.object(arbs, "book_entry", return_value=book),
+        patch.object(
+            arbs.math,
+            "evaluate",
+            side_effect=AssertionError("newest price cannot pass pre-fee test"),
+        ),
+    ):
+        packet = arbs.read(db, {}, at=stamp(AT))
+    assert packet["rows"] == [] and packet["evaluated_pairs"] == 1
+    assert fetched == ["newer"]
+
+
 def test_ranking_wire_is_canonical_and_preserves_unrounded_digits():
     from decimal import Decimal, localcontext
     from app.storage.pregame_ranking import present

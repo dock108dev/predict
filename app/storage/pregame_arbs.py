@@ -44,6 +44,41 @@ def cached_pair(left, right, *, at):
     return result
 
 
+def hydrate_prices(db, entries):
+    """Load exact financial inputs only when needed, bound to the frozen price.
+
+    All alias/price witnesses remain in the initial scan. Templates need their
+    original record for exact line/role checks; modeled legs additionally need
+    the unchanged fee input. A concurrent replacement fails rather than mixing
+    its financial evidence with an older price outside a repeatable-read caller.
+    """
+    pending = {
+        e["contract_id"]: e
+        for e in entries
+        if not e.get("sportsbook") and "fee_input" not in e
+    }
+    if not pending:
+        return
+    rows = list(
+        db.execute(
+            """SELECT contract_id,game_key,valid_until,payload,record,fee_input
+        FROM current_pregame_price WHERE contract_id=ANY(%s)""",
+            (list(pending),),
+        )
+    )
+    if len(rows) != len(pending):
+        raise TimeoutError("arbitrage_source_changed")
+    for row in rows:
+        entry = pending[row["contract_id"]]
+        if (
+            row["payload"] != entry["payload"]
+            or row["valid_until"] != entry["valid_until"]
+            or row["game_key"] != entry["game_key"]
+        ):
+            raise TimeoutError("arbitrage_source_changed")
+        entry.update(record=row["record"], fee_input=row["fee_input"])
+
+
 def read_book_quotes(db, request_lines, *, include_groups=False):
     """Fetch supported books on represented lines before decoding quote bodies.
 
@@ -379,6 +414,7 @@ def read(db, query, *, at=None, can_continue=None):
     routes = configured_routes(db)
     checkpoint()
     # A queued source/fee change suppresses stale calculations before rebuilding.
+    late_inputs = not any(query.get(k) for k in ("league", "family", "search"))
     filters, parameters = list(ROW_GUARDS), [at, at, at, at]
     if query.get("_scope_seconds"):
         filters.append("p.start_at<=%s")
@@ -395,7 +431,13 @@ def read(db, query, *, at=None, can_continue=None):
         parameters.append("%" + query["search"][:150] + "%")
     entries = list(
         db.execute(
-            """SELECT p.* FROM current_pregame_price p
+            "SELECT "
+            + (
+                "p.contract_id,p.game_key,p.valid_until,p.payload"
+                if late_inputs
+                else "p.*"
+            )
+            + """ FROM current_pregame_price p
         JOIN current_contract c ON c.id=p.contract_id
         JOIN current_offer_storage o ON o.contract_id=c.id JOIN LATERAL (SELECT * FROM current_event WHERE id=c.event_id LIMIT 1) e ON true
         WHERE p.start_at>%s AND p.valid_until>%s AND e.scheduled_start::timestamptz>%s
@@ -447,6 +489,7 @@ def read(db, query, *, at=None, can_continue=None):
     grouped = defaultdict(lambda: defaultdict(list))
     for entry in entries:
         grouped[entry["payload"]["arb_key"]][entry["payload"]["side"]].append(entry)
+    hydrate_prices(db, [next(iter(sides.values()))[0] for sides in grouped.values()])
     requested = {}
     for group_key, sides in grouped.items():
         markets = [e for side in sides.values() for e in side]
@@ -521,6 +564,8 @@ def read(db, query, *, at=None, can_continue=None):
     counts = defaultdict(lambda: [0, 0])
     group_metadata = {}
     row_groups = {}
+    prepared_groups = []
+    financial_inputs = {}
     for group_key, sides in grouped.items():
         checkpoint()
         all_markets = [e for side in sides.values() for e in side]
@@ -577,6 +622,29 @@ def read(db, query, *, at=None, can_continue=None):
         first = [e for e in candidates if e["payload"]["side"] in ("home", "over")]
         second = [e for e in candidates if e["payload"]["side"] in ("away", "under")]
         for candidate in candidates:
+            candidate["acquisition_probability"] = 1 / F(
+                candidate["payload"]["raw"]["posted_decimal"]
+            )
+        # Alias and conflicting-book selection is already complete. Preserve all
+        # price witnesses; full financial inputs are needed only where the same
+        # existing pre-fee necessary test can proceed to fee-qualified math.
+        for a, b in product(first, second):
+            checkpoint()
+            if (
+                a.get("sportsbook")
+                and b.get("sportsbook")
+                or a["payload"]["venue"] == b["payload"]["venue"]
+                or a["acquisition_probability"] + b["acquisition_probability"] >= 1
+            ):
+                continue
+            for candidate in (a, b):
+                if not candidate.get("sportsbook"):
+                    financial_inputs[candidate["contract_id"]] = candidate
+        prepared_groups.append((group_key, candidates, first, second))
+    hydrate_prices(db, financial_inputs.values())
+    for group_key, candidates, first, second in prepared_groups:
+        checkpoint()
+        for candidate in candidates:
             payload = candidate["payload"]
             candidate["cache_identity"] = hashed(
                 [
@@ -589,9 +657,6 @@ def read(db, query, *, at=None, can_continue=None):
                     candidate.get("fee_input"),
                     None if payload.get("input_revision") else candidate.get("record"),
                 ]
-            )
-            candidate["acquisition_probability"] = 1 / F(
-                candidate["payload"]["raw"]["posted_decimal"]
             )
         for a, b in product(first, second):
             checkpoint()
