@@ -77,8 +77,12 @@ Arb rows have no sportsbook fair odds, EV or Opportunity Score.
 Completed Arb scans reuse qualified pairs across ordering, league, market, venue,
 pair-type and sportsbook changes. Reuse requires the same database, cohort/source
 revision, look-ahead, source-age and search context, and stops at eligibility
-deadlines. First reads with league, market or search filters keep their SQL
-filters. Broad reads retain every price/alias witness, but defer full financial
+deadlines. Retained-cohort cursors track their own positive generation and
+relevant current withdrawal, closure, route and queued-work authority; unrelated
+public price revisions do not invalidate a frozen snapshot. Negative additions
+and removals still invalidate immediately, and earlier known public starts
+shorten its refresh deadline. Actual new cohort captures require a fresh scan.
+First reads with league, market or search filters keep their SQL filters. Broad reads retain every price/alias witness, but defer full financial
 records until exact-line templates or the unchanged pre-fee pair test need them.
 Hydration verifies the whole price payload, game and expiry in the same source
 snapshot; it never selects an older profitable alias over a newer losing one.

@@ -86,7 +86,7 @@ def test_arb_deadline_retry_supersession_partial_and_retained_failure():
                 "data-state", "loading"
             )
             await expect(page.locator('a[href*="dataset=practice"]')).to_have_count(0)
-            await page.clock.fast_forward(18001)
+            await page.clock.fast_forward(35001)
             await expect(page.locator("#results")).to_have_attribute(
                 "data-state", "failed"
             )

@@ -54,11 +54,20 @@ def _read(db, query, *, at=None, clock, configured_routes):
     public_revision = db.execute(
         "SELECT revision,current_schema() AS cohort_schema FROM public.current_pregame_revision WHERE singleton"
     ).fetchone()
+    authority = public_revision["revision"]
+    if public_revision["cohort_schema"] != "public":
+        from .pregame_cohort_authority import authority_state
+
+        state = authority_state(db, at)
+        public_start = state["next"]
+        if public_start is not None:
+            deadline = min(deadline, public_start) if deadline else public_start
+        authority = [state["fingerprint"], configured_routes(db), str(public_start)]
     cursor = hashed(
         [
             public_revision["cohort_schema"],
             revision["revision"],
-            public_revision["revision"],
+            authority,
             str(boundary),
         ]
     )

@@ -15,6 +15,194 @@ from app.storage.store import stamp
 
 @skipUnless(SOCKET, "Disposable PostgreSQL required")
 class PregameCohortsSQL(PregameFixture):
+    async def test_reference_scope_covers_eligible_ev_and_reference_free_arb_prices(
+        self,
+    ):
+        with self.connect() as writer:
+            self.seed_quoted_cohort(writer)
+            for schema in ("pregame_monitor", "pregame_combined"):
+                from psycopg import sql
+
+                self.assertEqual(
+                    writer.execute(
+                        sql.SQL("""SELECT count(*) n FROM {}.current_pregame_price
+                    WHERE payload->'reference' IS DISTINCT FROM 'null'::jsonb""").format(
+                            sql.Identifier(schema)
+                        )
+                    ).fetchone()["n"],
+                    0,
+                )
+                self.assertEqual(
+                    writer.execute(
+                        sql.SQL("""SELECT count(*) n
+                    FROM {}.current_pregame_calculation p
+                    CROSS JOIN LATERAL jsonb_array_elements(p.payload#>'{{reference,prices}}') r
+                    LEFT JOIN {}.current_sgo_reference s ON s.id=r->>'input_id'
+                    WHERE p.reason IS NULL AND s.id IS NULL""").format(
+                            sql.Identifier(schema), sql.Identifier(schema)
+                        )
+                    ).fetchone()["n"],
+                    0,
+                )
+            with self.connect() as reader, reader.transaction():
+                select(reader, "monitor")
+                before = board.read(reader, {}, at=stamp(AT))
+            self.assertTrue(before["rows"])
+            # Retained/legacy calculations may outlive a reference row. Their
+            # existing positive eligibility guard already rejects them, so an
+            # absent reference cannot be an uncaptured withdrawal dependency.
+            writer.execute("DELETE FROM pregame_monitor.current_sgo_reference")
+            writer.execute(
+                "UPDATE pregame_monitor.current_pregame_revision SET revision=revision+1"
+            )
+            with self.connect() as reader, reader.transaction():
+                select(reader, "monitor")
+                missing = board.read(reader, {}, at=stamp(AT))
+            self.assertEqual(missing["rows"], [])
+            self.assertNotEqual(missing["cursor"], before["cursor"])
+
+    async def test_public_positive_changes_keep_cross_transaction_filter_cache(self):
+        from app.storage.pregame_arbs import read as arbs, ordered_pairs
+
+        heavy = []
+
+        class Traced:
+            def __init__(self, db):
+                self.db, self.info = db, db.info
+
+            def transaction(self):
+                return self.db.transaction()
+
+            def execute(self, query, parameters=None):
+                if query.startswith(
+                    (
+                        "SELECT p.",
+                        "WITH requested",
+                        "SELECT contract_id,game_key,valid_until,payload,record,fee_input",
+                    )
+                ):
+                    heavy.append(query[:35])
+                return self.db.execute(query, parameters)
+
+        def read(query):
+            with self.connect() as reader, reader.transaction():
+                reader.execute(
+                    "SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY"
+                )
+                select(reader, "monitor")
+                return arbs(
+                    Traced(reader),
+                    dict(data_type="monitor", limit="100", **query),
+                    at=stamp(AT),
+                )
+
+        with self.connect() as writer:
+            self.seed_quoted_cohort(writer)
+            before = read({})
+            self.assertTrue(before["rows"])
+            self.assertTrue(heavy)
+            heavy.clear()
+            writer.execute("""UPDATE public.sgo_quote_revision SET facts=jsonb_set(
+                facts,'{price_american}','\"+180\"') WHERE is_current""")
+            writer.execute(
+                "UPDATE public.current_pregame_revision SET revision=revision+1"
+            )
+            changed = read(dict(sort="start"))
+            self.assertEqual(changed["cursor"], before["cursor"])
+            self.assertEqual(changed["rows"], ordered_pairs(before["rows"], "start"))
+            filtered = read(dict(league=before["rows"][0]["league"]))
+            self.assertEqual(filtered["rows"], before["rows"])
+            writer.execute("""INSERT INTO public.sgo_quote_revision
+                (id,event_id,bookmaker_id,source_order,received_order,expires_at,revision,facts,is_current)
+                SELECT id||'-unrelated','unrelated',bookmaker_id,source_order,received_order,
+                  expires_at,revision,jsonb_set(facts,'{available}','false'),true
+                FROM public.sgo_quote_revision WHERE is_current LIMIT 1""")
+            writer.execute("""INSERT INTO public.sgo_line_presence
+                (quote_id,event_id,bookmaker_id,odd_id,last_seen,scope_received,expired)
+                VALUES('unrelated','unrelated','fanduel','unrelated',0,0,true)""")
+            unrelated = read(dict(sort="start"))
+            self.assertEqual(unrelated["cursor"], before["cursor"])
+            self.assertEqual(unrelated["rows"], changed["rows"])
+            self.assertEqual(heavy, [])
+
+    async def test_cohort_authority_additions_and_removals_invalidate_cursor(self):
+        def cursor(at=stamp(AT)):
+            with self.connect() as reader, reader.transaction():
+                select(reader, "monitor")
+                return board.read(reader, dict(updates="1"), at=at)
+
+        with self.connect() as writer:
+            self.seed_quoted_cohort(writer)
+            writer.execute("""INSERT INTO public.sgo_line_presence
+                (quote_id,event_id,bookmaker_id,odd_id,last_seen,scope_received,expired)
+                SELECT id,event_id,bookmaker_id,facts->>'odd_id',0,0,false
+                FROM public.sgo_quote_revision WHERE is_current LIMIT 1""")
+            baseline = cursor()["cursor"]
+            changes = [
+                (
+                    "UPDATE public.current_contract_storage SET active=false",
+                    "UPDATE public.current_contract_storage SET active=true",
+                ),
+                (
+                    "UPDATE public.current_offer_storage SET facts=jsonb_set(facts,'{state}','\"unavailable\"')",
+                    "UPDATE public.current_offer_storage SET facts=jsonb_set(facts,'{state}','\"available\"')",
+                ),
+                (
+                    "UPDATE public.sgo_quote_revision SET facts=jsonb_set(facts,'{available}','false') WHERE is_current",
+                    "UPDATE public.sgo_quote_revision SET facts=jsonb_set(facts,'{available}','true') WHERE is_current",
+                ),
+                (
+                    "UPDATE public.sgo_line_presence SET expired=true",
+                    "UPDATE public.sgo_line_presence SET expired=false",
+                ),
+                (
+                    "UPDATE public.current_event SET facts=jsonb_set(facts,'{status}','{\"started\":true}')",
+                    "UPDATE public.current_event SET facts=jsonb_set(facts,'{status}','{}')",
+                ),
+                (
+                    "INSERT INTO pregame_monitor.current_pregame_work(provider,native_event_id,revision,admitted_at) VALUES('sportsgameodds','event',1,now())",
+                    "DELETE FROM pregame_monitor.current_pregame_work",
+                ),
+            ]
+            for add, remove in changes:
+                with self.subTest(change=add):
+                    writer.execute(add)
+                    withdrawn = cursor()["cursor"]
+                    self.assertNotEqual(withdrawn, baseline)
+                    writer.execute(remove)
+                    self.assertEqual(cursor()["cursor"], baseline)
+            writer.execute("""INSERT INTO data_runtime VALUES(true,'fixture',1,now(),now(),
+                'running','{\"direct_kalshi_enabled\":false}','{}',true,'{}',1,'fixture','[]',false)""")
+            self.assertNotEqual(cursor()["cursor"], baseline)
+            writer.execute("DELETE FROM data_runtime")
+            self.assertEqual(cursor()["cursor"], baseline)
+            from app.fees import pricing
+            from tests.test_fee_pricing import rule
+
+            pricing.write(writer, "novig", [dict(rule("novig"), rate="0.01")])
+            self.assertNotEqual(cursor()["cursor"], baseline)
+
+    async def test_earlier_public_kickoff_changes_deadline_and_expires_cohort(self):
+        at = stamp(AT)
+        with self.connect() as writer:
+            self.seed_quoted_cohort(writer)
+            before, _ = self.monitor_reads(writer)
+            earlier = at + timedelta(minutes=1)
+            writer.execute(
+                "UPDATE public.current_event SET scheduled_start=%s",
+                (earlier.isoformat(),),
+            )
+            with self.connect() as reader, reader.transaction():
+                select(reader, "monitor")
+                approaching = board.read(reader, dict(browse="1"), at=at)
+            self.assertNotEqual(approaching["cursor"], before["cursor"])
+            self.assertEqual(stamp(approaching["refresh_at"]), earlier)
+            with self.connect() as reader, reader.transaction():
+                select(reader, "monitor")
+                expired = board.read(reader, dict(browse="1"), at=earlier)
+            self.assertNotEqual(expired["cursor"], approaching["cursor"])
+            self.assertEqual(expired["rows"], [])
+
     async def test_lookahead_window_entry_invalidates_empty_cached_view(self):
         from app.storage.pregame_arbs import read as arbs
 
