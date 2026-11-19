@@ -102,7 +102,7 @@ export function createModeSettings(onModeChange=()=>{}){
   lastActivity=Date.now();activityPending=true;
   try{const value=await request('/api/admin/activity-mode/activity',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});if(value.unauthorized){owner=false;rememberOwner(false);permissions();}else update(value,true);}catch{}finally{activityPending=false;}
  }
- for(const type of ['pointerdown','pointermove','keydown','touchstart'])document.addEventListener(type,activity,{passive:true,capture:true});
+ for(const type of ['pointerdown','pointermove','keydown','touchstart','wheel'])document.addEventListener(type,activity,{passive:true,capture:true});
  if(ownerOptIn())authorize();
  permissions();return {update};
 }

@@ -426,3 +426,81 @@ def test_short_idle_window_reports_activity_before_its_deadline():
             await browser.close()
 
     asyncio.run(journey())
+
+
+def test_stationary_wheel_renews_live_but_programmatic_scroll_does_not():
+    from playwright.async_api import async_playwright, expect
+
+    async def journey():
+        state = ModeFixture(owner=True)
+        state.settings["inactivity_seconds"] = 1
+        async with async_playwright() as pw:
+            browser = await pw.chromium.launch()
+            page = await browser.new_page(viewport={"width": 900, "height": 600})
+            await page.clock.install(
+                time=datetime.fromtimestamp(CLOCK / 1000, timezone.utc)
+            )
+            await page.route("**/*", state.serve)
+            await page.goto("https://predict.fixture/")
+            await page.locator(".mode-badge").click()
+            toggle = page.get_by_role("switch", name="Live mode", exact=True)
+            await expect(toggle).to_be_enabled()
+            await toggle.check()
+            await expect(page.locator(".mode-badge")).to_contain_text("Live")
+            await page.evaluate("""() => {
+                window.activityInputs=[];
+                for(const type of ['pointermove','pointerdown','keydown','wheel'])
+                    document.addEventListener(type,event=>window.activityInputs.push(
+                        {type,trusted:event.isTrusted}),true);
+            }""")
+            # Keep the pointer at its current position: wheel scrolling alone
+            # must keep an actively reading owner Live beyond the first deadline.
+            for _ in range(3):
+                state.now += 400
+                await page.clock.fast_forward(400)
+                async with page.expect_response(
+                    lambda response: response.url.endswith("/activity"), timeout=5000
+                ):
+                    await page.mouse.wheel(0, 120)
+            await expect(page.locator(".mode-settings-body")).not_to_have_js_property(
+                "scrollTop", 0
+            )
+            assert state.status()["mode"] == "live"
+            inputs = await page.evaluate("window.activityInputs")
+            assert inputs == [{"type": "wheel", "trusted": True}] * 3
+            activity_count = len(
+                [
+                    request
+                    for request in state.writes
+                    if request[0].endswith("/activity")
+                ]
+            )
+            assert activity_count == 3
+            last_activity = state.last
+            state.now += 400
+            await page.clock.fast_forward(400)
+            await page.evaluate("""() => {
+                const body=document.querySelector('.mode-settings-body');
+                body.scrollTop=0;
+                body.dispatchEvent(new WheelEvent('wheel',{bubbles:true,deltaY:120}));
+            }""")
+            await page.clock.run_for(1)
+            assert state.last == last_activity
+            assert (
+                len(
+                    [
+                        request
+                        for request in state.writes
+                        if request[0].endswith("/activity")
+                    ]
+                )
+                == activity_count
+            )
+            state.now += 1001
+            await page.clock.fast_forward(1001)
+            await expect(page.locator(".mode-badge")).to_contain_text("Monitor")
+            assert state.status()["reason"] == "inactivity"
+            assert state.last == last_activity
+            await browser.close()
+
+    asyncio.run(journey())
