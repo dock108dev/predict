@@ -27,6 +27,7 @@ def serial(x): return json.loads(json.dumps(x,default=lambda v:str(v) if not isi
 
 class Pipeline:
     def __init__(self, mode, limits, database='prediction_arb'):
+        if mode != 'live':raise ValueError('Live observations are required')
         self.mode=mode;self.limits=limits;self.database=database
         self.db=None;self.sid=None;self.seq=0;self.receipts=0;self.raw_bytes=0
         self.parents=Matcher();self.matcher=MoneylineMatcher();self.rows=[];self.observations={};self.books={};self.contexts={};self.titles={};self.event_titles={};self.current_receipts={}
@@ -51,7 +52,7 @@ class Pipeline:
         self.db.execute('SET statement_timeout=3000');self.db.execute('SET lock_timeout=1000')
         self.db=DeadlineConnection(self.db)
         self.store=Store(self.db)
-        self.sid=self.store.start('production' if self.mode=='live' else 'synthetic','current' if self.mode=='live' else 'synthetic',
+        self.sid=self.store.start('production','current',
             'Slice 13 supervised '+self.mode+' dashboard scan',CapturePolicy(max_seconds=self.limits['seconds'],max_receipts=self.limits['receipts']))
         self.store.event(self.sid,'coverage',dict(mode=self.mode,limits=self.limits,continuous_survival=False,stream_reconstruction=False))
         return self.sid
@@ -90,27 +91,6 @@ class Pipeline:
                 self.store.metadata(self.sid,'native-market',r['key'],r)
                 self.store.metadata(self.sid,'rule-profile',r['key'],r['profile'])
         return self.evaluate()
-
-    def synthetic_bootstrap(self):
-        from app.depth_example import fixture
-        data,self.synthetic_ladders=fixture();self.parents,self.matcher,obs,self.contexts,self.rows=data
-        self.titles={r['key']:r['native']['title'] for r in self.rows}
-        for r in self.rows:self.event_titles[(r['venue'],r['native_event_id'])]='Atlanta vs Pittsburgh · invented example'
-        view=self.synthetic_tick(0)
-        return view if view is not None else self.evaluate()
-
-    def synthetic_tick(self,n):
-        from app.models.core import QuoteSide,Probability,Quantity
-        from decimal import Decimal
-        t=instant()
-        with self.observation_transaction():
-            for ladder in self.synthetic_ladders:
-                o=ladder.observation;p='0.40' if n%3!=2 else '0.55'
-                o=replace(o,quote=replace(o.quote,raw=replace(o.quote.raw,received_at=t,exchange_at=t),ask=QuoteSide(price=Probability(value=Decimal(p)),quantity=Quantity(value=Decimal('3'),unit='contracts'))))
-                self._save_observation(o,levels=[dict(price=p,quantity='3',provenance='invented dashboard example')])
-                self.books[(o.quote.raw.ref.venue.value,o.quote.raw.ref.market_id)]=replace(ladder,observation=o,levels=((p,'3','invented dashboard example'),))
-        self.dirty+=1
-        return None if self.defer_views else self.evaluate()
 
     def _save_observation(self,o,levels=None):
         if self.stopping: return
@@ -219,8 +199,7 @@ class Pipeline:
     def depth(self,cid):
         ladders=[]
         for (venue,mid),book in self.books.items():
-            if self.mode=='synthetic': ladders.append(book)
-            else:ladders.extend(book_ladders(book,environment='production',evidence_class='current',source_time_semantics='last_change' if venue=='polymarket_us' else 'unknown',locks_clear=None,units_verified=False))
+            ladders.extend(book_ladders(book,environment='production',evidence_class='current',source_time_semantics='last_change' if venue=='polymarket_us' else 'unknown',locks_clear=None,units_verified=False))
         # On-demand only: at most the configured small universe, 64 allocations per pair.
         report=size_depth(self.parents,self.matcher,ladders,self.contexts,evaluation_time=instant(),search=Search(max_evaluations=64),policy=Policy(max_receipt_age_seconds='10'))
         audit=next((c for c in report['candidates'] if c['id']==cid),None)

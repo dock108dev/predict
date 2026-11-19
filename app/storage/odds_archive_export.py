@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 import re
 import signal
+import shutil
 import tempfile
 from threading import Event
 
@@ -24,7 +25,7 @@ CHECK_INTERVAL = 30
 MARKER = '.predict-archive-id'
 
 
-def claim(db, *, feed=None):
+def claim(db, *, feed=None, force=False):
     """Commit immutable membership before any filesystem operation."""
     with db.transaction():
         db.execute('SELECT pg_advisory_xact_lock(%s)', (LOCK,))
@@ -34,9 +35,9 @@ def claim(db, *, feed=None):
             return existing
         group = db.execute('''SELECT feed,receipt_day FROM odds_archive_stage
             WHERE batch_id IS NULL AND (%s::text IS NULL OR feed=%s) GROUP BY feed,receipt_day
-            HAVING min(received_at)<=clock_timestamp()-%s OR sum(bytes)>=%s OR count(*)>=%s
+            HAVING %s OR min(received_at)<=clock_timestamp()-%s OR sum(bytes)>=%s OR count(*)>=%s
             ORDER BY receipt_day,min(received_at),feed LIMIT 1''',
-            (feed, feed, MAX_WAIT, SHARD_BYTES, SHARD_ROWS)).fetchone()
+            (feed, feed, force, MAX_WAIT, SHARD_BYTES, SHARD_ROWS)).fetchone()
         if not group:
             return None
         ids = [row['id'] for row in db.execute('''WITH ordered AS (
@@ -103,6 +104,8 @@ class DirectoryArchive:
             _sync_directory(directory)
         if not target.exists():
             compressed = gzip.compress(raw, compresslevel=6, mtime=0)
+            if shutil.disk_usage(self.path).free < len(compressed)+512*1024*1024:
+                raise ValueError('odds_archive_destination_capacity')
             with tempfile.NamedTemporaryFile(prefix=f'.{identity}.', dir=target.parent) as temporary:
                 temporary.write(compressed)
                 temporary.flush()
@@ -186,6 +189,7 @@ def main():
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument('--status', action='store_true')
     mode.add_argument('--check', action='store_true')
+    mode.add_argument('--flush', action='store_true', help='Verify and export currently staged rows once, without waiting for shard age')
     args = parser.parse_args()
     if args.status:
         with connect() as db:
@@ -198,6 +202,19 @@ def main():
         with connect() as db:
             lag = status(db)['oldest_age_seconds'] or 0
         return int(lag > 1800)
+    if args.flush:
+        archive.verify_mount()
+        with connect() as db:
+            if not db.execute('SELECT pg_try_advisory_lock(%s) held', (LOCK,)).fetchone()['held']:
+                raise ValueError('odds_archive_export_already_running')
+            for feed in sorted(FEEDS):
+                for _ in range(64):
+                    batch = claim(db,feed=feed,force=True)
+                    if not batch:
+                        break
+                    acknowledge(db,batch,archive.write(batch,load_batch(db,batch)))
+            print(json.dumps(status(db),default=str))
+        return
     logging.basicConfig(level=logging.INFO)
     stop = Event()
     for sig in (signal.SIGINT,signal.SIGTERM):

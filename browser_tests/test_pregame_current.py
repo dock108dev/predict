@@ -251,7 +251,13 @@ def test_current_pregame_journey(width, tmp_path):
         page.keyboard.press("Space")
         expect(page.locator("#comparison")).to_be_visible()
         page.keyboard.press("Escape")
-        page.locator(".board-info .about-link").click()
+        if width <= 760:
+            page.locator(".more > summary").click()
+            page.locator(".more-links").get_by_role(
+                "link", name="About this board", exact=True
+            ).click()
+        else:
+            page.locator(".board-info .about-link").click()
         expect(
             page.get_by_role("heading", name="About this board", exact=True)
         ).to_be_visible()
@@ -356,7 +362,7 @@ def test_pending_save_survives_new_prices_and_refresh_reports_pending():
 
 
 @pytest.mark.parametrize("width", [1440, 600, 390])
-def test_ranking_dropdown_defaults_growth_persists_and_resets_page(width):
+def test_ranking_dropdown_defaults_edge_persists_and_resets_page(width):
     from playwright.sync_api import sync_playwright, expect
 
     requests, errors = [], []
@@ -375,7 +381,7 @@ def test_ranking_dropdown_defaults_growth_persists_and_resets_page(width):
             route.fulfill(json=dict(changed=False))
         elif url.path == "/api/pregame":
             requests.append(q)
-            selected = q.get("sort", "growth")
+            selected = q.get("sort", "edge")
             label, column, unit, shown = labels[selected]
             row = offer()
             row["ranking"] = dict(
@@ -406,15 +412,16 @@ def test_ranking_dropdown_defaults_growth_persists_and_resets_page(width):
         page.on("pageerror", lambda e: errors.append(str(e)))
         page.route("**/*", serve)
         page.goto("http://predict.fixture/")
+        page.locator("#board-advanced > summary").click()
         ranking = page.get_by_role("combobox", name="Rank by")
         from app.storage.pregame_ranking import catalog
 
         expect(ranking.locator("option")).to_have_text(
             [info["label"] for info in catalog()["methods"].values()]
         )
-        expect(ranking).to_have_value("growth")
-        expect(page.locator(".ticket .score .math-trigger")).to_have_text("1.234")
-        assert requests[-1]["sort"] == "growth"
+        expect(ranking).to_have_value("edge")
+        expect(page.locator(".ticket .score .math-trigger")).to_have_text("+4.000")
+        assert requests[-1]["sort"] == "edge"
         if width == 1440:
             unsupported = page.evaluate(
                 """async row => {
@@ -427,7 +434,7 @@ def test_ranking_dropdown_defaults_growth_persists_and_resets_page(width):
                 offer(),
             )
             assert unsupported == "Unsupported calculation detail: retired-score-detail"
-            # display:contents metadata must not move growth under the Price heading.
+            # display:contents metadata must not move the selected rank under Price.
             for header, cell in (
                 ("#ranking-column", ".ticket .score"),
                 (".board-columns > span:nth-child(5)", ".ticket .posted"),
@@ -437,9 +444,7 @@ def test_ranking_dropdown_defaults_growth_persists_and_resets_page(width):
                 assert abs(heading["x"] - figure["x"]) < 1
                 assert abs(heading["width"] - figure["width"]) < 1
         page.locator(".ticket .score .math-trigger").focus()
-        expect(page.locator(".math-popover:popover-open")).to_contain_text(
-            "Growth = 10,000"
-        )
+        expect(page.locator(".math-popover:popover-open")).to_contain_text("Edge = 100")
         page.keyboard.press("Escape")
         page.get_by_role("button", name="Next →", exact=True).click()
         expect(page.locator("#page")).to_have_text("31–31 of 31")
@@ -455,8 +460,10 @@ def test_ranking_dropdown_defaults_growth_persists_and_resets_page(width):
         ranking.select_option("ev")
         expect(page.locator(".ticket .score .math-trigger")).to_have_text("+8.80%")
         page.reload()
+        page.locator("#board-advanced > summary").click()
         expect(ranking).to_have_value("ev")
         expect(page.locator(".ticket .score .math-trigger")).to_have_text("+8.80%")
+        page.locator("#board-advanced > summary").click()
         page.get_by_role("button", name="Compare prices for").click()
         expect(page.locator(".exchange-prices")).to_contain_text("+8.80%")
         assert requests[-1]["sort"] == "ev"

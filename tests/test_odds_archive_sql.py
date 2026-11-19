@@ -451,3 +451,38 @@ def test_sgo_live_quote_stays_current_until_short_working_expiry(db, monkeypatch
     assert read_event(db, event_id) == []
     assert read_event_frame(db, event_id) is None
     assert db.execute('SELECT count(*) n FROM current_sgo_history').fetchone()['n']==0
+
+
+def test_each_mode_capture_keeps_unchanged_inputs_and_force_exports_without_wait(db, tmp_path, monkeypatch):
+    from copy import deepcopy
+    from datetime import timedelta
+    from app.collection.sportsgameodds_adapter import parse_page
+    from app.storage.sportsgameodds_reference import prepare_page, prepare_frames
+    from app.storage.odds_archive import sgo_page
+    from app.storage import odds_archive_export as exporter
+    from tests.test_sportsgameodds_adapter import AT, response
+
+    parsed = parse_page(json.dumps(response()).encode(),AT)
+    refs = prepare_page(parsed)
+    envelope = dict(sport='NBA',received_at=AT,sgo_reference_rows=refs,
+                    sgo_event_frames=prepare_frames(parsed,refs),records=[],
+                    event_scopes={event['event_id']:event['league'] for event in parsed.events},
+                    collection_run=dict(kind='monitor',id='monitor-1'))
+    first = next(o for o in sgo_page(envelope) if o['body'][1]=='collection_snapshot')
+    envelope = deepcopy(envelope)
+    envelope['collection_run'] = dict(kind='live',id='live-1')
+    second = next(o for o in sgo_page(envelope) if o['body'][1]=='collection_snapshot')
+    assert first['body'][-1]['references']==second['body'][-1]['references']
+    assert first['id']!=second['id']
+    record(db,'sportsgameodds',[first,second])
+    assert db.execute('SELECT count(*) n FROM odds_archive_stage').fetchone()['n']==2
+    monkeypatch.setattr(exporter,'MAX_WAIT',timedelta(days=3650))
+    assert exporter.claim(db) is None
+    batch = exporter.claim(db,force=True)
+    (tmp_path/'.predict-archive-id').write_text('capture-test')
+    raw = exporter.load_batch(db,batch)
+    receipt = exporter.DirectoryArchive(tmp_path,'capture-test').write(batch,raw)
+    exporter.acknowledge(db,batch,receipt)
+    assert db.execute('SELECT count(*) n FROM odds_archive_stage').fetchone()['n']==0
+    assert (tmp_path/receipt['path']).is_file()
+    assert b'monitor-1' in raw and b'live-1' in raw

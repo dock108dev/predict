@@ -109,14 +109,11 @@ export function tradingFeeSize(model) {
 function tradingFee(model) {
   const block = section('Trading fee');
   if (model.available) {
-    const fictional = model.classification === 'synthetic';
     const size = tradingFeeSize(model);
     const timing = model.fee_cashflows?.winning_settlement_usd != null ? 'Winning settlement' : 'At fill';
     block.append(facts([
       ['Trading fee', usd(model.trade_fee_usd)], ['Evidence class', feeClasses[model.classification]],
-      ['Trade profile', fictional ? 'Authored scenario' : 'Manual retail'],
-      ...(fictional && model.evidence?.fictional_rate != null
-        ? [['Fictional rate', `${percent(num(model.evidence.fictional_rate) * 100)} of the acquisition cost`]] : []),
+      ['Trade profile', 'Manual retail'],
       ...(size ? [['Modeled size', size]] : []),
       ['Fee timing', timing], ...(model.holding_assumption ? [['Holding assumption', model.holding_assumption]] : [])
     ]), ...(model.assumptions || []).map(note => el('p', note, 'desk-meta')));
@@ -173,7 +170,7 @@ function settlement(data, venue, aggregate) {
       part.append(el('strong', rule.excerpt ? `${rule.label} excerpt` : rule.label), el('p', rule.text));
       return part;
     })));
-  } else if (!data.fictional) {
+  } else {
     block.append(el('p', 'This capture did not include the book’s exact market rule text.', 'inspection-gap'));
   }
   return block;
@@ -267,8 +264,7 @@ export function boardComparison(offer, group, game, comparison, {clock, size, lo
   }
   const model = offer.valuation;
   for (const assumption of model.assumptions || []) result.append(el('p', assumption, 'desk-meta'));
-  if (model.evidence_class === 'fixture') result.append(el('p', 'Simulated offer and terms', 'inspection-mode'));
-  else if (offer.quote_freshness === 'retained' || offer.quote_freshness === 'unknown') {
+  if (offer.quote_freshness === 'retained' || offer.quote_freshness === 'unknown') {
     result.append(el('p', quoteFreshness(offer, false, true), 'desk-meta'));
   }
   const reference = model.reference;
@@ -383,7 +379,7 @@ export function tradeInspection(offer, group, evidence, {mode, position, basis, 
   priceFreshness.dataset.inspectionPrice = '1';
   quote.append(priceFreshness);
   if (cost != null) quote.append(el('small', `${usd(cost)} per $1 payout`, 'inspection-price-unit'));
-  const priceBasis = {native_book:'Native order book ask', aggregate_snapshot:'Aggregate quote', synthetic:'Authored scenario quote'}[offer.price_basis];
+  const priceBasis = {native_book:'Native order book ask', aggregate_snapshot:'Aggregate quote'}[offer.price_basis];
   if (offer.book_size) quote.append(el('small', `${offer.book_size.quantity} ${offer.book_size.quantity_unit} at this price`, 'inspection-price-unit'));
   const tradeFee = offer.trade_fee;
   const activeFee = (offer.current || mode) && tradeFee?.available ? tradeFee.trade_fee_usd : null;
@@ -428,7 +424,7 @@ export function tradeInspection(offer, group, evidence, {mode, position, basis, 
     result.append(policy);
   }
   if (pairFee?.available) {
-    const modeled = pairFee.classification === 'synthetic' ? 'Fictional pairing fee' : 'Modeled pairing fee';
+    const modeled = 'Modeled pairing fee';
     const acquisition = pairAcquisition != null ? ` on ${usd(pairAcquisition)} of acquisition cost` : '';
     result.append(el('p', `${modeled} · ${usd(pairFee.at_fill_usd)} at fill${acquisition}`, 'desk-meta'));
   }
@@ -469,7 +465,7 @@ export function tradeInspection(offer, group, evidence, {mode, position, basis, 
   }
   const directRead = offer.live_native_desk ? 'Native book read'
     : offer.live_aggregate_desk && !offer.evidence_result_id ? 'Aggregate quote read' : null;
-  const quoteClocks = offer.price_basis === 'synthetic' ? [['Authored scenario time', offer.source_clock_at]] : [
+  const quoteClocks = [
     ['Original source update', offer.source_clock_at],
     ...(offer.confirmed_at || offer.price_basis === 'native_book' ? [['Book confirmation', offer.confirmed_at]] : []),
     ['Collector receipt', offer.received_at],
@@ -492,7 +488,7 @@ export function tradeInspection(offer, group, evidence, {mode, position, basis, 
   details.append(el('p', `Math at capture · ${evidence.captured_at || offer.captured_at}`, 'desk-meta'));
   details.append(section('Price and outcome', facts([
     ['Selected outcome', position], ['Market', [name(offer.market.market), human(offer.market.period)].join(' · ')],
-    ...[['Price provider', data.source?.provider === 'oddslink_public_board' ? 'OddsLink' : data.source?.provider === 'sportsgameodds' ? 'SportsGameOdds' : data.source?.provider === 'practice' ? 'Authored scenario' : null],
+    ...[['Price provider', data.source?.provider === 'oddslink_public_board' ? 'OddsLink' : data.source?.provider === 'sportsgameodds' ? 'SportsGameOdds' : null],
       ['Quote type', priceBasis]].filter(([, value]) => value),
     ['Native side', data.source?.native_side && human(data.source.native_side)], ['Original price', original.value == null ? null : `${original.value} ${human(original.units)}`],
     ...[['Native event', data.source?.native_event_id], ['Native market', data.source?.native_market_id],
@@ -562,11 +558,6 @@ export function tradeInspection(offer, group, evidence, {mode, position, basis, 
     if (excluded.length) reference.append(disclosure('Other sportsbook checks', facts(excluded.map(([book, reason]) => [
       name(book), human(reason)
     ]))));
-  } else if (ref.available && ref.method === 'authored_probability') {
-    reference.append(facts([
-      ['Authored scenario probability', probability(ref.probability)],
-      ['Scenario fair decimal odds', number(ref.fair_decimal_odds)]
-    ]), el('p', ref.conditioning, 'desk-meta'));
   } else if (ref.available && ref.pair?.length) {
     reference.append(facts([
       ...ref.pair.map((leg, index) => [index === ref.selected ? 'Selected price' : 'Opposite price',
@@ -738,9 +729,7 @@ export function pairInspection(pair, offers, {group, game, position, inspect, mo
         ...pairLegSize(pair, index),
         ...(!charge?.available ? [['Fee blocker', reasons(charge?.reason || offer.trade_fee?.reason
           || offer.trade_fee_reason || 'pair_fee_size_unverified')]] : []),
-        ...(charge?.depth_status === 'insufficient' ? [['Depth', `${number(charge.depth_evidence.quantity)} claims available`]] : []),
-        ...(offer.trade_fee?.evidence?.fictional_rate != null
-          ? [['Fictional rate', `${percent(num(offer.trade_fee.evidence.fictional_rate) * 100)} of the acquisition cost`]] : [])]),
+        ...(charge?.depth_status === 'insufficient' ? [['Depth', `${number(charge.depth_evidence.quantity)} claims available`]] : [])]),
       button('Inspect offer and fees', event => inspect(offer, event.currentTarget), 'desk-action'));
     legs.append(info);
     const feeTerms = offer.trade_fee?.evidence || {};

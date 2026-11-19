@@ -13,7 +13,6 @@ from .product_finance import retained_novig_fee, visible_assumptions, visible_ro
 from .snapshot_api import page_options, runtime_allows_live
 from .snapshot_display import retained_pregame, saved_pregame
 from .trade_desk import page
-from .practice_replay import UNIT, examples, practice_valuation
 
 
 @lru_cache(maxsize=2)
@@ -106,8 +105,6 @@ def load(query, *, details=False, allow_live=False):
     if not allow_live:
         query = {key: value for key, value in query.items() if key != 'phase'}
     dataset = query.get('dataset', 'frozen')
-    if dataset == 'practice':
-        return practice(query, details=details)
     if dataset == 'retained':
         return retained_game(query, details=details, allow_live=allow_live)
     if dataset in odds_replay.DATASETS:
@@ -140,44 +137,13 @@ def load(query, *, details=False, allow_live=False):
     return out
 
 
-def practice(query, *, details):
-    result, ev = examples()
-    result_id = result['id']
-    if details:
-        row = next((row for row in result['rows'] if row['id'] == query.get('id')), None)
-        if row is None or result_id != query.get('result_id'):
-            raise PublicRequestError('Offer unavailable in this replay revision')
-        evidence = archive_detail(dict(row=row, captured_at=result['captured_at'],
-                                       assumptions=result['assumptions']), result_id)
-        if row is ev:
-            evidence['valuation'] = practice_valuation(row, result_id)
-        return evidence
-    options = page_options(query)
-    ticket = options[0] == 'ev' and query.get('browse_odds') != '1'
-    if ticket:
-        result = dict(result, rows=[ev], pairs=[])
-        query = dict(query, group='offer')
-    out = page(result, query, options, captured_pairs=result['pairs'], policy='practice')
-    if ticket:
-        model = practice_valuation(ev, result_id)
-        summary = {key: model[key] for key in ('raw', 'display', 'evidence_class')}
-        summary['reference'] = dict(model['reference'], fair_odds=model['fair_odds'], selected_price='-110')
-        for group in out['rows']:
-            group['offers'] = [dict(offer, practice_ticket=True, unit_usd=str(UNIT),
-                                    valuation_summary=summary) for offer in group['offers']]
-        out['practice_ticket'] = True
-    return dict(out, replay=result['replay'])
-
-
 def mount(app):
     async def read(req):
         dataset = req.query.get('dataset', 'frozen')
-        if dataset not in (*odds_replay.DATASETS, 'retained', 'practice'):
+        if dataset not in (*odds_replay.DATASETS, 'retained'):
             raise PublicRequestError('Unknown replay dataset')
 
         def work():
-            if dataset == 'practice':
-                return load(dict(req.query), details=req.path.endswith('/details'))
             allow_live = False
             try:
                 with connect() as db:

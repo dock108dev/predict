@@ -130,7 +130,7 @@ class SportsGameOddsWorker:
     max_discovery_pages = 1000
 
     def __init__(self, service, *, key_loader=credential, usage_reader=read_usage,
-                 transport=None, ledger_path=None, study_path=None, now=clock):
+                 transport=None, ledger_path=None, study_path=None, now=clock, activity_reader=None):
         self.service = service
         self.key_loader = key_loader
         self.usage_reader = usage_reader
@@ -159,6 +159,9 @@ class SportsGameOddsWorker:
         self.key = None
         self.account_id = None
         self.request_limit = 1
+        self.collection_run = None
+        self.activity_status = None
+        self.activity_reader = activity_reader
 
     def controls(self):
         return {'stopped': self.closed or not self.service.dispatch or self.service.globally_stopped
@@ -166,10 +169,27 @@ class SportsGameOddsWorker:
                 'source_paused': 'sportsgameodds' in self.service.paused_sources}
 
     def event_in_scope(self, event, at):
+        if getattr(self.service, 'activity_mode_enabled', False):
+            return event['phase'] == 'pregame' and at < datetime.fromisoformat(event['starts_at'])
         return live_enabled(self.service.config) or (
             event['phase'] == 'pregame' and at < datetime.fromisoformat(event['starts_at']))
 
     def request_in_scope(self, params):
+        if getattr(self.service, 'activity_mode_enabled', False):
+            from .activity_mode import eligible, read_control
+            try:
+                status = (self.activity_reader or read_control)(at=self.now())
+            except Exception:
+                raise RuntimeError('activity control unavailable') from None
+            if status.get('staged_bytes',0) >= 32*1024*1024:
+                from .activity_collector import ActivityBudgetDelayed
+                raise ActivityBudgetDelayed('archive_backlog', self.now()+timedelta(seconds=30))
+            if 'leagueID' in params:
+                return params.get('started') is False and params.get('live') is False and 'startsAfter' in params
+            if self.collection_run and self.collection_run['kind'] == 'live':
+                events = [self.events[eid] for eid in params['eventIDs'].split(',') if eid in self.events]
+                return len(events) == len(params['eventIDs'].split(',')) and len(eligible(events,status,at=self.now())) == len(events)
+            return all(eid in self.events and self.event_in_scope(self.events[eid], self.now()) for eid in params['eventIDs'].split(','))
         if live_enabled(self.service.config):
             return True
         if 'leagueID' in params:
@@ -178,6 +198,12 @@ class SportsGameOddsWorker:
         at = self.now()
         return all(event_id in self.events and self.event_in_scope(self.events[event_id], at)
                    for event_id in params['eventIDs'].split(','))
+
+    async def request_in_scope_async(self, params):
+        if getattr(self.service, 'activity_mode_enabled', False):
+            from .bulk_checkpoint import owned_thread
+            return await owned_thread(self.request_in_scope, params)
+        return self.request_in_scope(params)
 
     def request_storage_interval(self):
         """Let the owned page settle and publish, then prevent another dispatch."""
@@ -219,7 +245,7 @@ class SportsGameOddsWorker:
             return dict(current, reset_at=current_reset)
         self.collector = GuardedPageCollector(self.ledger, self.window_id, self.transport,
                                               controls=self.controls, account_usage=pacing_usage,
-                                              eligible=self.request_in_scope)
+                                              eligible=self.request_in_scope_async)
         self.metrics.update(state='waiting', account_tier=observed.get('tier'), reset_basis=reset_basis)
         self._account_status()
         await self.update_study()
@@ -253,17 +279,18 @@ class SportsGameOddsWorker:
         self.metrics['object_interruptions'] = self.ledger.interruptions(self.window_id)
 
     @operation
-    def admit(self, sport, records, reference_rows, event_frames, received_at, receipt_sha256, event_scopes, include_alternates=False):
+    def admit(self, sport, records, reference_rows, event_frames, received_at, receipt_sha256, event_scopes, include_alternates=False, collection_run=None):
         if self.controls()['stopped'] or self.controls()['source_paused']:
             raise asyncio.CancelledError()
         states = deepcopy(self.service.states)
         yield (dict(type='current_aggregate_records', source='sportsgameodds', sport=sport,
                     records=records, sgo_reference_rows=reference_rows, sgo_event_frames=event_frames,
                     receipt_sha256=receipt_sha256, event_scopes=event_scopes, sgo_include_alt_lines=include_alternates,
+                    collection_mode=(collection_run or {}).get('kind','monitor'), collection_run=collection_run,
                     complete_venues=[], received_at=received_at), states)
 
     @staticmethod
-    def _prepare_page(page, ingress_bytes):
+    def _prepare_page(page, ingress_bytes, collection_run=None):
         from app.dashboard.current_contract import packed
         from app.storage.sportsgameodds_reference import prepare_page, prepare_frames
         records, exclusions = current_rows(page, page.receipt_sha256)
@@ -276,11 +303,12 @@ class SportsGameOddsWorker:
         received_at = page.events[0]['received_at']
         envelope = dict(type='current_aggregate_records',source='sportsgameodds',sport=sport,
                         records=records,sgo_reference_rows=reference_rows,sgo_event_frames=event_frames,
-                        receipt_sha256=page.receipt_sha256,event_scopes=event_scopes,complete_venues=[],received_at=received_at)
+                        receipt_sha256=page.receipt_sha256,event_scopes=event_scopes,complete_venues=[],received_at=received_at,
+                        collection_mode=(collection_run or {}).get('kind','monitor'), collection_run=collection_run)
         if len(packed(envelope)) > ingress_bytes:
             raise ValueError('SGO current page exceeds ingress bound')
         prepared = dict(sport=sport, records=records, reference_rows=reference_rows, event_frames=event_frames,
-                        received_at=received_at, receipt_sha256=page.receipt_sha256, event_scopes=event_scopes)
+                        received_at=received_at, receipt_sha256=page.receipt_sha256, event_scopes=event_scopes, collection_run=collection_run)
         return prepared, len(exclusions)
 
     async def _publish(self, page, *, include_alternates=False):
@@ -288,7 +316,7 @@ class SportsGameOddsWorker:
 
         # Large alternate pages used to prepare and serialize on the same
         # event loop that receives both dedicated book streams.
-        prepared, excluded = await owned_thread(self._prepare_page, page, self.service.config['ingress_bytes'])
+        prepared, excluded = await owned_thread(self._prepare_page, page, self.service.config['ingress_bytes'], *([self.collection_run] if self.collection_run is not None else []))
         self.metrics['excluded'] += excluded
         if prepared is None:
             return
@@ -313,7 +341,7 @@ class SportsGameOddsWorker:
             await self.update_study(page,admitted_at)
 
     async def _fetch(self, params):
-        if not self.request_in_scope(params):
+        if not await self.request_in_scope_async(params):
             raise PregameWindowClosed()
         self.page_in_progress = True
         self.phase = 'collecting'
@@ -377,7 +405,7 @@ class SportsGameOddsWorker:
             from psycopg import OperationalError
             from psycopg.errors import QueryCanceled
             admitted_page = page
-            if not live_enabled(self.service.config):
+            if getattr(self.service, 'activity_mode_enabled', False) or not live_enabled(self.service.config):
                 pregame = {event['event_id'] for event in page.events
                            if self.event_in_scope(event, datetime.fromisoformat(event['received_at']))}
                 # A provider may report an explicit closure with started=true.
@@ -737,6 +765,10 @@ class SportsGameOddsWorker:
                     if not await self.wait_for_dispatch(exc, retry_at=self.now()+timedelta(minutes=1)):
                         raise
                     await asyncio.sleep(60)
+            if getattr(self.service, 'activity_mode_enabled', False):
+                from .activity_collector import ActivityCollector
+                await ActivityCollector(self).run()
+                return
             next_scan = self.now()
             policy = None
             while not self.controls()['stopped'] and not self.controls()['source_paused']:

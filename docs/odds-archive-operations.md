@@ -1,13 +1,22 @@
 # Odds archive deployment and verification
 
-Archive capture is opt-in. The collector continues publishing live prices and
+Monitor/Live deployment enables archive capture. The collector continues publishing prices and
 calculations while the archive runs. The export worker uses the PostgreSQL Unix
-socket and an off-host filesystem supplied by the administrator. It has no
+socket and a persistent POSIX filesystem. It has no
 provider credentials or network access.
 
-Long-term history covers only pregame observations. Activate capture after
-the off-host mount verifies. The collector keeps in-game prices for the
+Long-term history covers only pregame observations. The personal deployment's
+`deploy/configure-retention.sh` supplies a persistent host directory when no
+owner destination exists. This has no off-host backup and finite host capacity;
+the off-host setup below remains the durable backup recommendation. Never
+describe local files as protected from host loss. Activate capture after
+the destination marker and filesystem behavior verify. The collector keeps in-game prices for the
 working desk and exact evidence for saved or pinned inspections.
+
+Every Monitor/Live capture retains its run provenance, source witnesses and
+fee/calculation evidence, including unchanged inputs. Verified archive files
+have no TTL deletion. `python -m app.storage.odds_archive_export --flush` exports
+and verifies currently staged rows once without waiting for the normal shard age.
 
 ## Set up the off-host destination
 

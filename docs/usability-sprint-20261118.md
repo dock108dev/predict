@@ -1,5 +1,11 @@
 # Usability and performance sprint — November 18, 2026
 
+The subsequent owner-directed [Monitor/Live change](monitor-live.md) supersedes
+the historical Practice-navigation and prominent age-warning decisions recorded
+below. Production Practice is now retired; quiet source/reference timestamps
+replace the yellow age blocks. The loading, fee, payout, comparison and mobile
+recovery fixes remain in effect.
+
 ## Scope and evidence boundaries
 
 This sprint addresses the nine findings in the owner's five-person simulated

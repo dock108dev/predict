@@ -66,13 +66,16 @@ storage out of test fixtures.
 The example configuration selects SportsGameOdds as its aggregate provider.
 Its page adapter, object ledger, scheduler and reference capture run in the
 data process.
-`app/collection/sportsgameodds_schedule.py::PREGAME_TARGET` owns the requested
-minute cadence in the final 30 minutes and hourly cadence inside 24 hours.
-`budgeted_policy` adapts it to account headroom; worker diagnostics read that same
-target when reporting requested intervals and whether the budget stretched them.
-Default due-event selection uses that target too; `SchedulePolicy` no longer
-hides a separate 30/45-minute default. The target is not permission to bypass
-the ledger, reservations, holds or Stop.
+The ordinary SQL runtime uses [Monitor and Live](activity-mode-20261118.md):
+Monitor targets the next 24 hours every 30 minutes, including supported alternate
+lines; owner-selected Live adds minute refreshes only for pregame games starting
+within 60 minutes. Monitor continues independently. Explicit owner activity keeps
+Live active, with a configurable 15-minute default inactivity return to Monitor.
+All intervals/horizons are configurable, subject to unchanged account controls,
+conservative operating object caps and archive backpressure. Passive reads do not
+collect or renew activity. The older `PREGAME_TARGET`/`budgeted_policy` scheduler
+remains for retained compatibility paths; its hour/minute bands no longer define
+the ordinary SQL runtime's two modes.
 
 The adapter retains original bookmaker clocks and availability,
 including per-book alternate lines, and refuses incomplete or ambiguous input

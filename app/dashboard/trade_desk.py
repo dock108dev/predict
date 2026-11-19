@@ -220,8 +220,6 @@ def offer(original, metric=None, *, sportsbook_updates_paused=False):
     if reference_price or sportsbook:
         if sportsbook and (metric == SPORTSBOOK_METRIC or value_basis == 'sportsbook_after_fees' or not reference_price):
             fair_reference = dict(books=[sportsbook['book']], method='single', indicative=True)
-        elif reference.get('method') == 'authored_probability':
-            fair_reference = dict(books=[], method='authored_probability')
         elif sgo_reference and reference['method'] == SGO_MEDIAN:
             fair_reference = dict(books=[item['venue'] for item in reference.get('contributors', ())],
                                   method='median')
@@ -254,7 +252,7 @@ def offer(original, metric=None, *, sportsbook_updates_paused=False):
                 id=row['id'], venue=row['venue'], source_provider=(row.get('source') or {}).get('provider'), selection=row.get('selection'),
                 native_side=(row.get('source') or {}).get('native_side'),
                 price_basis=('native_book' if (row.get('source') or {}).get('provider') in NATIVE_VENUES
-                             else 'synthetic' if (row.get('source') or {}).get('provider') == 'practice' else 'aggregate_snapshot'),
+                             else 'aggregate_snapshot'),
                 participant=row.get('participant_label'), market=row['market'],
                 alternate=line_role(row) if source_metadata.get('alternate') is None else source_metadata['alternate'],
                 original=price, cost_per_normal_claim=cost, book_size=row.get('book_size'),

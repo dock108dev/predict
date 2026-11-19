@@ -1,8 +1,6 @@
 import {ratio} from './pregame-prices.js';
 
-// Display evidence ages only. Sporting eligibility and original clocks stay server-owned.
-// The 15-minute caution matches CURRENT_DESK_MAX_AGE_SECONDS; it never removes a price.
-const cautionMs=15*60*1000;
+// Original source clocks stay inspectable; age is a quiet timestamp, never a banner.
 const number=value=>value===null||value===undefined||value===''?NaN:ratio(value);
 const money=value=>Number.isFinite(value)?(value<0?'-$':'$')+Math.abs(value).toFixed(2):'Unavailable';
 const node=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;};
@@ -19,22 +17,17 @@ export function freshnessText(row,now=Date.now()){
  const quote=row.times?.source_at,prices=row.reference?.prices||[];
  const clocks=prices.map(p=>Date.parse(p.source_at));
  const reference=clocks.length&&clocks.every(Number.isFinite)?Math.min(...clocks):NaN;
- const source=Date.parse(quote),old=[source,reference].some(t=>Number.isFinite(t)&&now-t>cautionMs);
  const texts=['Quote '+ageText(quote,now)];
  if(row.reference)texts.push('Reference '+(Number.isFinite(reference)?ageText(new Date(reference).toISOString(),now):'age unknown'));
- if(Number.isFinite(source)&&Number.isFinite(reference)&&Math.abs(source-reference)>=60000)texts.push('Mixed ages · '+Math.floor(Math.abs(source-reference)/60000)+'m apart');
- if(old)texts.push('Historical inputs · verify current prices');
- if(!Number.isFinite(source)||row.reference&&!Number.isFinite(reference))texts.push('Freshness unverified');
  return texts.join(' · ');
 }
 export function freshness(row){
- const e=node('aside',freshnessText(row),'quote-evidence');
- e.dataset.caution=/Historical inputs|unverified|future timestamp/.test(e.textContent)?'true':'false';
+ const e=node('span',freshnessText(row),'quote-evidence');
  e.dataset.evidence=JSON.stringify({times:row.times,reference:row.reference?{prices:row.reference.prices}:null});
  e.title='Original quote: '+(row.times?.source_at||'not supplied')+'. Reference timestamps: '+((row.reference?.prices||[]).map(p=>p.source_at||'unknown').join(', ')||'not supplied')+'. Calculation time does not renew these prices.';
  return e;
 }
-setInterval(()=>{for(const e of document.querySelectorAll('[data-evidence]')){e.textContent=freshnessText(JSON.parse(e.dataset.evidence));e.dataset.caution=/Historical inputs|unverified|future timestamp/.test(e.textContent)?'true':'false';}},30000);
+setInterval(()=>{for(const e of document.querySelectorAll('[data-evidence]')){e.textContent=freshnessText(JSON.parse(e.dataset.evidence));}},30000);
 
 export function feeRows(row){
  const fee=row.fee||{},cash=fee.cashflows||{},entry=number(fee.entry_usd),committed=number(fee.committed_usd),reserve=number(fee.reserve_usd??'0');

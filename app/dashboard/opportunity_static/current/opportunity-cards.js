@@ -16,7 +16,6 @@ const matrixBasisLabels = {sportsbooks:'est.', reviewed:'EV', conservative:'est.
 const venues = ['kalshi', 'polymarket_us', 'novig', 'prophetx'];
 
 function fairReferenceLabel(reference) {
-  if (reference?.method === 'authored_probability') return 'Authored scenario probability';
   const names = reference?.books?.map(name);
   if (!names?.length) return '';
   if (reference.indicative) return `Indicative · ${names.join(', ')}`;

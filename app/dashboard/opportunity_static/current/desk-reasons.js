@@ -116,7 +116,7 @@ const reasonLabels = {
   eligible_reference_unavailable: 'No eligible reference covers this exact quote, game and settlement at the capture time.',
   ev_calibration_or_settlement_unverified: 'An executable fee and fill, a full settlement model, and calibrated confidence of at least 99% are required.',
   effective_fill_unverified: 'Applicable charges and executable fills at the modeled size are unverified.',
-  synthetic_public_schedule_unavailable: 'This example uses no public fee schedule.',
+  synthetic_public_schedule_unavailable: 'No public fee schedule is verified for these inputs.',
   pair_fee_size_unverified: 'The available fee terms do not establish a charge at this stake.',
   pair_size_unsupported: 'This stake does not fit the venue’s order size increment.',
   pair_stake_rounds_to_zero: 'This leg’s stake rounds to zero cents.',

@@ -100,7 +100,7 @@ class MeasuredController(Controller):
 
     async def work(self, fn, *args):
         m = self.metrics
-        row = m.next_item if fn.__name__ in ('book', 'disconnect', 'synthetic_tick', 'event') else None
+        row = m.next_item if fn.__name__ in ('book', 'disconnect', 'event') else None
         if row:
             m.next_item = None
         submitted = m.now()

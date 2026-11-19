@@ -24,7 +24,7 @@ def test_payout_fee_and_original_age_evidence():
         page.route("https://predict.fixture/**", serve)
         page.goto("https://predict.fixture/")
         result = page.evaluate("""async()=>{
-          const {feeRows,payoutExample,freshnessText}=await import('/pregame-evidence.js');
+          const {feeRows,payoutExample,freshnessText,freshness}=await import('/pregame-evidence.js');
           const {explanation}=await import('/pregame-math.js');
           const row={venue:'kalshi',source:{provider:'kalshi'},
             times:{source_at:'2026-11-18T12:00:00Z',received_at:'2026-11-18T12:00:02Z'},
@@ -41,7 +41,7 @@ def test_payout_fee_and_original_age_evidence():
             age:freshnessText(row,Date.parse('2026-11-18T13:01:00Z')),
             recalculated:freshnessText({...row,calculated_at:'2026-11-18T13:01:00Z'},Date.parse('2026-11-18T13:01:00Z')),
             unknown:freshnessText({...row,times:{source_at:null}},Date.parse('2026-11-18T13:01:00Z')),
-            missing:payoutExample(missing).textContent,ev:explanation(missing,'ev')};
+            missing:payoutExample(missing).textContent,ev:explanation(missing,'ev'),ageTag:freshness(row).tagName,ageCaution:freshness(row).dataset.caution??null};
         }""")
         assert result["fees"]["Stake / purchase amount"] == "$100.00"
         assert result["fees"]["Total upfront cash committed"] == "$106.35"
@@ -61,10 +61,11 @@ def test_payout_fee_and_original_age_evidence():
         assert result["age"] == result["recalculated"]
         assert "Quote 1h 1m ago" in result["age"]
         assert "Reference 2h 1m ago" in result["age"]
-        assert "Mixed ages · 60m apart" in result["age"]
-        assert "Historical inputs" in result["age"]
+        assert "Historical inputs" not in result["age"]
+        assert result["ageTag"] == "SPAN"
+        assert result["ageCaution"] is None
         assert "Quote age unknown" in result["unknown"]
-        assert "Freshness unverified" in result["unknown"]
+        assert "Freshness unverified" not in result["unknown"]
         assert (
             "EV unavailable: reference two trusted books required" in result["missing"]
         )

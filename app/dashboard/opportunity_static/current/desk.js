@@ -6,7 +6,6 @@ import {displayRows, expirePage, holdDeskPage, nextDeskDeadline} from './desk-st
 import {evidenceReason} from './desk-reasons.js';
 import {DiagnosticSession} from './session-history.js';
 import {clock as savedClock, readPreference, savePreference, timezone} from './desk-preferences.js';
-import {ticketCard} from './desk-ticketboard.js';
 
 const {el, fmt, name, odd, link, button} = window.PredictUI;
 const $ = id => document.getElementById(id);
@@ -44,12 +43,11 @@ if (browse && safeBack) {
     try { sessionStorage.setItem(browseCacheKey, JSON.stringify({...cached, pending:null})); } catch {}
   }
 }
-const dataset = ['frozen','preview','retained','practice'].includes(route.get('dataset')) ? route.get('dataset') : 'frozen';
-const practice = replay && dataset === 'practice';
+const dataset = route.get('dataset') || 'frozen';
 const retainedResult = replay && dataset === 'retained' ? route.get('result_id') : null;
 const endpoint = replay ? '/api/odds-replay' : '/api/comparison-current';
 const replayURL = (view, chosen = dataset === 'retained' ? 'frozen' : dataset) => '/replay?' + new URLSearchParams({view, dataset:chosen});
-const replayMode = () => practice ? 'Practice example · simulated odds' : replay ? 'Saved odds · prices at capture' : null;
+const replayMode = () => replay ? 'Saved odds · prices at capture' : null;
 const pageSize = 25;
 const gamesPerPage = 12;
 const pageLimit = gameKey ? 100 : replay ? (browse ? 5 : pageSize) : arb ? pageSize : gamesPerPage;
@@ -100,8 +98,8 @@ function restoreFocus(target) {
 $('title').textContent = gameKey ? linkedTitle || 'Game odds' : browse ? 'Browse odds' : replay ? (arb ? 'Arbitrage' : 'Expected value') : 'Opportunities';
 document.body.classList.toggle('game-odds-view', !!gameKey);
 document.title = `Predict · ${$('title').textContent}`;
-$('basis-field').hidden = arb || afterFeeView || practice || !replay && phase === 'pregame';
-$('group-field').hidden = arb || !replay || practice;
+$('basis-field').hidden = arb || afterFeeView || !replay && phase === 'pregame';
+$('group-field').hidden = arb || !replay;
 $('opportunity-tabs').hidden = !opportunityView;
 function updatePhaseView() {
   if (replay) return;
@@ -169,8 +167,6 @@ if (browse) {
   if (gameKey) $('desk-path').append($('browse-link'));
 }
 $('replay-link').href = replayURL(arb ? 'arbs' : 'ev', 'frozen');
-$('practice-link').hidden = replay || browse;
-$('practice-link').href = replayURL(arb ? 'arbs' : 'ev', 'practice');
 filters.elements.timezone.options[0].textContent = `Default (${defaultZone.replaceAll('_', ' ')})`;
 if (replay) {
   $('desk-mode').hidden = false;
@@ -493,9 +489,6 @@ function cardContext(games, gameTitle = null) {
     } : null,
     explainQuoteGap,
     inspectOffer:(offer, group, opener) => {
-      if (offer.practice_ticket) {
-        return drawer.openTrade(offer, group, games.get(group.game_key), null, opener);
-      }
       const shown = displayRows(state.page).find(row => row.id === group.id && row.game_key === group.game_key) || group;
       const exact = shown.offers.find(quote => quote.id === offer.id) || offer;
       rememberGameInspection(exact);
@@ -601,9 +594,6 @@ function emptyResults(page, publication, issue) {
   if (opportunityView && (page.state !== 'initializing' || publication.retained_prices)) {
     actions.append(browsingLink('Browse odds ↗'));
   }
-  if (arb && !replay) {
-    actions.append(link('Try a practice example', $('practice-link').href, 'desk-action desk-primary'));
-  }
   if (!replay && page.retained_game) {
     const capture = page.retained_game;
     const query = new URLSearchParams({view:'game', dataset:'retained', game_key:capture.game_key,
@@ -701,7 +691,6 @@ function render(page, keepNodes = false) {
     if (!readiness.firstElementChild?.isEqualNode(start)) readiness.replaceChildren(start);
   } else if (readiness.hasChildNodes()) readiness.replaceChildren();
   $('replay-link').hidden = awaitingPrices;
-  $('practice-link').hidden = replay || browse || arb && !rows.length;
   if (opportunityView) $('browse-link').classList.toggle('desk-primary', !awaitingPrices);
   const notice = [];
   if (replay && page.replay?.captured_at) notice.push(`Captured ${clock(page.replay.captured_at)}.`);
@@ -731,9 +720,7 @@ function render(page, keepNodes = false) {
   if (focusSelectedLine && page.state === 'ready' && !pinnedAvailable) {
     content.append(el('p', `${linkedLine || 'The selected line'} is unavailable for this matchup in the selected view.`, 'desk-note selected-line-unavailable'));
   }
-  if (practice && page.practice_ticket && rows.length) {
-    for (const group of rows) content.append(ticketCard(group, cardContext(games)));
-  } else if (browse && rows.length) {
+  if (browse && rows.length) {
     const groups = groupRows(rows, row => row.game_key);
     const compactGames = !replay && !gameKey && page.row_kind === 'games' && total > 3;
     for (const [key, matrixGroup] of groups) {

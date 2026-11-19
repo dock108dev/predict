@@ -246,16 +246,9 @@ async def smoke():
                     html = await response.text()
                     assert ('/view/current/pregame.js' if path.split('?')[0] in ('/','/ev','/browse-odds','/game') else '/view/current/desk.js') in html
                     assert '/view/current/predict-icon.png' in html
-            for view in ('arbs', 'ev'):
-                async with client.get(url+'/api/odds-replay', params={'dataset':'practice','view':view}) as response:
-                    practice=await response.json()
-                    assert response.status==200 and practice['provider_requests']==0
-                    assert practice['replay']['synthetic'] is True
-                    if view=='arbs':
-                        assert practice['rows'][0]['pairs'][0]['retail_payoff']['minimum_net_profit_usd']=='25'
-                    else:
-                        offer=practice['rows'][0]['offers'][0]
-                        assert offer['valuation_summary']['display']['net_ev']=='+2.82%'
+            for path in ('/replay?dataset=practice', '/api/odds-replay?dataset=practice', '/api/odds-replay/details?dataset=synthetic'):
+                async with client.get(url+path) as response:
+                    assert response.status==422,(path,response.status)
             assert app[current_key].provider.__class__.__name__=='CurrentStateProvider'
     finally:
         await runner.cleanup()

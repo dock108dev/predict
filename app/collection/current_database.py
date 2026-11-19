@@ -577,6 +577,10 @@ class DatabaseIngressSink:
                     phase('current_calculation')
                     self.metrics['current_calculations'] = process(db,keys=calculation_keys,limit=len(set(calculation_keys)))
                     self.metrics['recent_current_calculations'] = (self.metrics.get('recent_current_calculations', []) + self.metrics['current_calculations'])[-32:]
+                if sgo_links is not None and row.get('collection_run'):
+                    from app.storage.pregame_cohorts import capture as capture_cohort
+                    capture_cohort(db, row['collection_run'], row['event_scopes'], now,
+                                   observed=dict(records=records,references=row['sgo_reference_rows']))
             if row['type']=='coverage_inventory':
                 self.metrics['catalog_storage_turnover']=dict(at=utc(),source=row['source'],generation=row['generation'],reasons=catalog_turnover)
             if material_rows is not None:
@@ -619,6 +623,8 @@ class DatabasePipeline:
                         rows.expire_out_of_scope(venue,native_scope(self.service.config) if native else aggregate_scope(self.service.config),
                             native_markets(self.service.config) if native else self.service.config['families'])
                     rows.expire()
+                from app.storage.pregame_cohorts import bootstrap
+                bootstrap(db)
             self.error=None
             self.task=asyncio.create_task(self.run_maintenance(),name='predict-current-expiry')
         except Exception as exc:

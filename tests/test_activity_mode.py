@@ -1,0 +1,675 @@
+"""Controlled-clock activity intent and guarded Monitor/Live collection."""
+
+import asyncio
+from copy import deepcopy
+from datetime import datetime, timedelta, timezone
+from types import SimpleNamespace
+
+import pytest
+
+from app.collection.activity_mode import (
+    DEFAULT_SETTINGS,
+    eligible,
+    project,
+    validate_settings,
+)
+from app.collection.activity_collector import (
+    ActivityCollector,
+    ActivityBudgetDelayed,
+    budget_admit,
+)
+from app.collection.sportsgameodds_adapter import Page
+from app.collection.sportsgameodds_ledger import ObjectLedger
+
+AT = datetime(2026, 11, 19, tzinfo=timezone.utc)
+
+
+def row(mode="monitor"):
+    return dict(
+        mode=mode,
+        settings=deepcopy(DEFAULT_SETTINGS),
+        revision=1,
+        reason="selected",
+        last_activity_at=AT if mode == "live" else None,
+        live_until=AT + timedelta(minutes=15) if mode == "live" else None,
+    )
+
+
+def test_passive_reads_expire_live_without_renewing_activity_or_source_clocks():
+    value = row("live")
+    before = deepcopy(value)
+    assert project(value, at=AT + timedelta(minutes=14))["mode"] == "live"
+    expired = project(value, at=AT + timedelta(minutes=15))
+    assert expired["mode"] == "monitor" and expired["reason"] == "inactivity"
+    assert value == before
+    assert project(row(), at=AT)["mode"] == "monitor"
+
+
+def test_configurable_pregame_windows_preserve_kickoff_and_status_boundaries():
+    status = project(row("live"), at=AT)
+
+    def event(name, seconds, **values):
+        return dict(
+            event_id=name,
+            phase="pregame",
+            starts_at=(AT + timedelta(seconds=seconds)).isoformat(),
+            status={},
+            **values,
+        )
+
+    events = [
+        event("now", 0),
+        event("near", 1),
+        event("edge", 3600),
+        event("far", 3601),
+    ]
+    events += [
+        dict(events[1], event_id="inplay", phase="live"),
+        dict(events[1], event_id="started", status={"started": True}),
+    ]
+    assert [e["event_id"] for e in eligible(events, status, at=AT)] == ["near", "edge"]
+    assert eligible(events, project(row(), at=AT), at=AT) == []
+    assert [
+        e["event_id"]
+        for e in eligible(events, project(row(), at=AT), kind="monitor", at=AT)
+    ] == ["near", "edge", "far"]
+    for invalid in (
+        {"live_interval_seconds": True},
+        {"inactivity_seconds": 0},
+        {"unknown": 1},
+    ):
+        with pytest.raises(ValueError):
+            validate_settings(invalid, partial=True)
+    assert (
+        validate_settings({"monitor_horizon_seconds": None}, partial=True)[
+            "monitor_horizon_seconds"
+        ]
+        is None
+    )
+
+
+class Store:
+    def __init__(self):
+        self.value = row()
+        self.runs = []
+        self.updates = []
+
+    def status(self, at):
+        return project(self.value, at=at)
+
+    def begin(self, kind, status, at):
+        run = dict(
+            id=str(len(self.runs) + 1),
+            kind=kind,
+            started_at=at.isoformat(),
+            scope_start_at=at.isoformat(),
+            scope_end_at=(
+                at
+                + timedelta(
+                    seconds=status["settings"]["monitor_horizon_seconds"]
+                    if kind == "monitor"
+                    else status["settings"]["live_window_seconds"]
+                )
+            ).isoformat(),
+            settings_revision=status["revision"],
+        )
+        self.runs.append(run)
+        return run
+
+    def update(self, run, **values):
+        self.updates.append((deepcopy(run), values))
+
+
+class Worker:
+    def __init__(self):
+        self.at = AT
+        self.ledger = None
+        self.window_id = None
+        self.collection_run = None
+        self.activity_status = None
+        self.metrics = {}
+        self.max_discovery_pages = 100
+        self.service = SimpleNamespace(
+            config={"sports": ["NFL"], "aggregate_sports": []}
+        )
+        self.events = {
+            "near": dict(
+                event_id="near",
+                league="NFL",
+                phase="pregame",
+                starts_at=(AT + timedelta(minutes=20)).isoformat(),
+                status={},
+            )
+        }
+        self.calls = []
+        self.stopped = False
+        self.paused = False
+
+    def now(self):
+        return self.at
+
+    def controls(self):
+        return dict(stopped=self.stopped, source_paused=self.paused)
+
+    def params(
+        self,
+        *,
+        league=None,
+        starts_after=None,
+        cursor=None,
+        event_ids=None,
+        include_alternates=False,
+    ):
+        if league:
+            return dict(
+                leagueID=league,
+                startsAfter=starts_after,
+                limit=2,
+                **({"cursor": cursor} if cursor else {}),
+            )
+        return dict(
+            eventIDs=",".join(event_ids),
+            limit=len(event_ids),
+            includeAltLines=include_alternates,
+        )
+
+    async def _fetch(self, params):
+        self.calls.append((deepcopy(self.collection_run), deepcopy(params)))
+        return Page(
+            tuple(
+                e
+                for e in self.events.values()
+                if datetime.fromisoformat(e["starts_at"]) > self.at
+            ),
+            (),
+            None,
+            "a" * 64,
+        )
+
+
+def test_monitor_continues_through_live_and_inactivity_without_thirty_minute_wait():
+    async def scenario():
+        store, worker = Store(), Worker()
+        owner = ActivityCollector(worker, store=store)
+        await owner.tick()
+        assert [r["kind"] for r in store.runs] == ["monitor"]
+        monitor_due = owner.monitor_due
+        store.value = row("live")
+        store.value["revision"] = 2
+        worker.at = AT + timedelta(seconds=30)
+        await owner.tick()
+        assert [r["kind"] for r in store.runs] == ["monitor", "live"]
+        assert owner.monitor_due == monitor_due
+        worker.at += timedelta(seconds=1)
+        await owner.tick()
+        assert len(worker.calls) == 3
+        worker.at = AT + timedelta(seconds=90)
+        await owner.tick()
+        assert len(worker.calls) == 4 and worker.calls[-1][0]["kind"] == "live"
+        worker.at = AT + timedelta(minutes=15)
+        await owner.tick()
+        assert owner.previous_mode == "monitor"
+        worker.at = AT + timedelta(minutes=30)
+        await owner.tick()
+        assert [r["kind"] for r in store.runs].count("monitor") == 2
+        assert (
+            worker.calls[0][1]["startsBefore"] == (AT + timedelta(hours=24)).isoformat()
+        )
+        assert worker.collection_run is None
+
+    asyncio.run(scenario())
+
+
+def test_live_and_mode_settings_cannot_clear_source_stop_or_pause():
+    async def scenario():
+        for stopped, paused in ((True, False), (False, True)):
+            store, worker = Store(), Worker()
+            store.value = row("live")
+            worker.stopped = stopped
+            worker.paused = paused
+            await ActivityCollector(worker, store=store).tick()
+            assert worker.calls == [] and store.runs == []
+            assert (worker.stopped, worker.paused) == (stopped, paused)
+
+    asyncio.run(scenario())
+
+
+def test_operational_caps_include_held_exposure_without_resolving_it(tmp_path):
+    ledger = ObjectLedger(tmp_path / "objects.sqlite3")
+    ledger.create_window(
+        "account:window",
+        limit=100000,
+        initial_used=0,
+        reserve=10000,
+        reset_at=AT + timedelta(days=30),
+        requests_per_minute=100,
+    )
+    ledger.reserve(
+        "account:window", "uncertain", objects=300, now=AT - timedelta(minutes=5)
+    )
+    with pytest.raises(ActivityBudgetDelayed):
+        budget_admit(ledger, "account:window", 1, AT)
+    assert ledger.status("account:window")["held"] == 300
+    ledger.interrupt("uncertain", evidence="fixture interrupted transport")
+    with pytest.raises(ActivityBudgetDelayed):
+        budget_admit(ledger, "account:window", 1, AT)
+    assert ledger.status("account:window")["interrupted"] == 300
+    budget_admit(ledger, "account:window", 1, AT + timedelta(minutes=11))
+    daily = ObjectLedger(tmp_path / "daily.sqlite3")
+    daily.create_window(
+        "account:window",
+        limit=100000,
+        initial_used=0,
+        reserve=10000,
+        reset_at=AT + timedelta(days=30),
+        requests_per_minute=100,
+    )
+    daily.reserve(
+        "account:window", "earlier", objects=16800, now=AT - timedelta(hours=2)
+    )
+    daily.resolve(
+        "earlier",
+        charged=16800,
+        evidence="fixture accumulated earlier charges",
+        now=AT - timedelta(hours=2),
+    )
+    with pytest.raises(ActivityBudgetDelayed):
+        budget_admit(daily, "account:window", 1, AT)
+
+
+def test_activity_live_never_enables_in_game_collection_even_with_legacy_flag():
+    from app.collection.current_policy import DEFAULT
+    from app.collection.sportsgameodds_worker import SportsGameOddsWorker
+
+    service = SimpleNamespace(
+        config=dict(DEFAULT, live_enabled=True),
+        activity_mode_enabled=True,
+        dispatch=True,
+        globally_stopped=False,
+        paused_sources=set(),
+    )
+    worker = SportsGameOddsWorker(
+        service,
+        now=lambda: AT,
+        activity_reader=lambda **kw: project(row("live"), at=kw["at"]),
+    )
+    worker.collection_run = {"kind": "live"}
+    worker.activity_status = project(row("live"), at=AT)
+    worker.events = {
+        "near": dict(
+            event_id="near",
+            phase="pregame",
+            starts_at=(AT + timedelta(minutes=10)).isoformat(),
+            status={},
+        )
+    }
+    assert worker.request_in_scope({"eventIDs": "near"})
+    worker.events["near"]["phase"] = "live"
+    assert not worker.request_in_scope({"eventIDs": "near"})
+    assert not worker.request_in_scope(
+        {
+            "leagueID": "NFL",
+            "startsAfter": AT.isoformat(),
+            "started": True,
+            "live": True,
+        }
+    )
+
+
+def test_live_revocation_during_account_wait_and_after_reservation_blocks_dispatch(
+    tmp_path,
+):
+    from app.collection.current_policy import DEFAULT, PregameWindowClosed
+    from app.collection.sportsgameodds_worker import SportsGameOddsWorker
+    from app.collection.sportsgameodds_collector import GuardedPageCollector
+    from unittest.mock import AsyncMock
+
+    async def scenario(stage):
+        state = row("live")
+        worker = SportsGameOddsWorker(
+            SimpleNamespace(
+                config=deepcopy(DEFAULT),
+                activity_mode_enabled=True,
+                dispatch=True,
+                globally_stopped=False,
+                paused_sources=set(),
+            ),
+            now=lambda: AT,
+            activity_reader=lambda **kw: project(state, at=kw["at"]),
+        )
+        worker.collection_run = {"kind": "live"}
+        worker.events = {
+            "near": dict(
+                event_id="near",
+                phase="pregame",
+                starts_at=(AT + timedelta(minutes=10)).isoformat(),
+                status={},
+            )
+        }
+        ledger = ObjectLedger(tmp_path / (stage + ".sqlite3"))
+        reset = AT + timedelta(days=30)
+        ledger.create_window(
+            "account:window",
+            limit=100000,
+            initial_used=0,
+            reserve=10000,
+            reset_at=reset,
+            requests_per_minute=50,
+        )
+        waiting, release = asyncio.Event(), asyncio.Event()
+
+        async def usage():
+            if stage == "account":
+                waiting.set()
+                await release.wait()
+            return dict(
+                used=0, limit=100000, reset_at=reset, requests_per_minute=50, at=AT
+            )
+
+        checks = 0
+
+        async def eligible(params):
+            nonlocal checks
+            checks += 1
+            if stage == "reservation" and checks == 3:
+                waiting.set()
+                await release.wait()
+            return await worker.request_in_scope_async(params)
+
+        transport = SimpleNamespace(fetch=AsyncMock())
+        collector = GuardedPageCollector(
+            ledger,
+            "account:window",
+            transport,
+            controls=worker.controls,
+            account_usage=usage,
+            eligible=eligible,
+        )
+        task = asyncio.create_task(
+            collector.fetch(worker.params(event_ids=["near"]), "fixture", now=AT)
+        )
+        await asyncio.wait_for(waiting.wait(), 1)
+        state["mode"] = "monitor"
+        state["live_until"] = None
+        release.set()
+        with pytest.raises(PregameWindowClosed):
+            await task
+        transport.fetch.assert_not_awaited()
+        assert ledger.status("account:window")["held"] == 0
+        assert not worker.service.globally_stopped and not worker.service.paused_sources
+        if stage == "reservation":
+            with ledger._connect() as db:
+                assert db.execute(
+                    "SELECT status,charged FROM sgo_object_reservation"
+                ).fetchone() == ("resolved", 0)
+
+    asyncio.run(scenario("account"))
+    asyncio.run(scenario("reservation"))
+
+
+def test_current_archive_backlog_blocks_paid_dispatch_but_historical_gaps_do_not():
+    async def scenario():
+        store, worker = Store(), Worker()
+        original = store.status
+        store.status = lambda at: dict(
+            original(at),
+            retention=dict(staged_bytes=32 * 1024 * 1024, skipped_observations=10),
+        )
+        owner = ActivityCollector(worker, store=store)
+        await owner.tick()
+        assert worker.calls == [] and store.updates[-1][1]["state"] == "budget_delayed"
+        assert store.updates[-1][1]["reason"] == "archive_backlog"
+        worker.at += timedelta(seconds=30)
+        store.status = lambda at: dict(
+            original(at), retention=dict(staged_bytes=0, skipped_observations=10)
+        )
+        await owner.tick()
+        assert len(worker.calls) == 1
+
+    asyncio.run(scenario())
+
+
+def test_sgo_envelope_tags_each_observation_without_renewing_source_timestamps():
+    from app.collection.current_policy import DEFAULT
+    from app.collection.sportsgameodds_worker import SportsGameOddsWorker
+    from tests.test_sportsgameodds_adapter import parse, response
+
+    page = parse(response())
+    original = [deepcopy(q) for q in page.quotes]
+    run = dict(
+        id="fixture-run",
+        kind="monitor",
+        started_at=AT.isoformat(),
+        scope_start_at=AT.isoformat(),
+        scope_end_at=(AT + timedelta(hours=24)).isoformat(),
+        settings_revision=1,
+    )
+    worker = SportsGameOddsWorker(
+        SimpleNamespace(
+            config=deepcopy(DEFAULT),
+            dispatch=True,
+            globally_stopped=False,
+            paused_sources=set(),
+            states={},
+        )
+    )
+    prepared, _ = worker._prepare_page(page, DEFAULT["ingress_bytes"], run)
+    envelope, _ = next(worker.admit.operation(worker, **prepared))
+    assert (
+        envelope["collection_mode"] == "monitor" and envelope["collection_run"] == run
+    )
+    assert all(r["quote"]["times"]["source_at"] for r in envelope["records"])
+    assert list(page.quotes) == original
+
+
+def test_revoked_live_run_is_partial_instead_of_a_successful_empty_capture():
+    from app.collection.current_policy import PregameWindowClosed
+
+    async def scenario():
+        store, worker = Store(), Worker()
+        store.value = row("live")
+        original = worker._fetch
+
+        async def fetch(params):
+            if worker.collection_run["kind"] == "live":
+                raise PregameWindowClosed()
+            return await original(params)
+
+        worker._fetch = fetch
+        owner = ActivityCollector(worker, store=store)
+        await owner.tick()
+        live = [values for run, values in store.updates if run["kind"] == "live"]
+        assert (
+            live[-1]["state"] == "partial"
+            and live[-1]["reason"] == "live_scope_revoked"
+        )
+
+    asyncio.run(scenario())
+
+
+def test_final_async_eligibility_rechecks_source_controls_and_releases_unused_reservation(
+    tmp_path,
+):
+    from app.collection.current_policy import DEFAULT
+    from app.collection.sportsgameodds_worker import SportsGameOddsWorker
+    from app.collection.sportsgameodds_collector import GuardedPageCollector
+    from unittest.mock import AsyncMock
+
+    async def scenario(stage):
+        state = row("live")
+        backlog = {"bytes": 0}
+        service = SimpleNamespace(
+            config=deepcopy(DEFAULT),
+            activity_mode_enabled=True,
+            dispatch=True,
+            globally_stopped=False,
+            paused_sources=set(),
+        )
+        worker = SportsGameOddsWorker(
+            service,
+            now=lambda: AT,
+            activity_reader=lambda **kw: dict(
+                project(state, at=kw["at"]), staged_bytes=backlog["bytes"]
+            ),
+        )
+        worker.collection_run = {"kind": "live"}
+        worker.events = {
+            "near": dict(
+                event_id="near",
+                phase="pregame",
+                starts_at=(AT + timedelta(minutes=10)).isoformat(),
+                status={},
+            )
+        }
+        ledger = ObjectLedger(tmp_path / (stage + ".sqlite3"))
+        reset = AT + timedelta(days=30)
+        ledger.create_window(
+            "account:window",
+            limit=100000,
+            initial_used=0,
+            reserve=10000,
+            reset_at=reset,
+            requests_per_minute=50,
+        )
+        waiting, release = asyncio.Event(), asyncio.Event()
+        checks = 0
+
+        async def eligibility(params):
+            nonlocal checks
+            checks += 1
+            if checks == 3:
+                waiting.set()
+                await release.wait()
+                if stage == "error":
+                    raise RuntimeError("fixture authority unavailable")
+            return await worker.request_in_scope_async(params)
+
+        async def usage():
+            return dict(
+                used=0, limit=100000, reset_at=reset, requests_per_minute=50, at=AT
+            )
+
+        transport = SimpleNamespace(fetch=AsyncMock())
+        collector = GuardedPageCollector(
+            ledger,
+            "account:window",
+            transport,
+            controls=worker.controls,
+            account_usage=usage,
+            eligible=eligibility,
+        )
+        task = asyncio.create_task(
+            collector.fetch(worker.params(event_ids=["near"]), "fixture", now=AT)
+        )
+        await asyncio.wait_for(waiting.wait(), 1)
+        if stage == "stop":
+            service.globally_stopped = True
+        if stage == "pause":
+            service.paused_sources.add("sportsgameodds")
+        if stage == "archive":
+            backlog["bytes"] = 32 * 1024 * 1024
+        if stage == "cancel":
+            task.cancel()
+        else:
+            release.set()
+        with pytest.raises(
+            asyncio.CancelledError if stage == "cancel" else RuntimeError
+        ):
+            await task
+        transport.fetch.assert_not_awaited()
+        with ledger._connect() as db:
+            assert db.execute(
+                "SELECT status,charged FROM sgo_object_reservation"
+            ).fetchone() == ("resolved", 0)
+
+    for stage in ("stop", "pause", "archive", "error", "cancel"):
+        asyncio.run(scenario(stage))
+
+
+def test_live_page_crossing_archive_threshold_prevents_same_tick_monitor_dispatch():
+    from app.collection.current_policy import DEFAULT
+    from app.collection.sportsgameodds_worker import SportsGameOddsWorker
+
+    async def scenario():
+        store = Store()
+        store.value = row("live")
+        store.status = lambda at: dict(
+            project(store.value, at=at), retention={"staged_bytes": 31 * 1024 * 1024}
+        )
+        stage = {"bytes": 31 * 1024 * 1024}
+        calls = []
+        service = SimpleNamespace(
+            config=deepcopy(DEFAULT),
+            activity_mode_enabled=True,
+            dispatch=True,
+            globally_stopped=False,
+            paused_sources=set(),
+        )
+        worker = SportsGameOddsWorker(
+            service,
+            now=lambda: AT,
+            activity_reader=lambda **kw: dict(
+                project(store.value, at=kw["at"]), staged_bytes=stage["bytes"]
+            ),
+        )
+        worker.events = {
+            "near": dict(
+                event_id="near",
+                league="NFL",
+                phase="pregame",
+                starts_at=(AT + timedelta(minutes=10)).isoformat(),
+                status={},
+            )
+        }
+
+        async def fetch(params):
+            assert await worker.request_in_scope_async(params)
+            calls.append(worker.collection_run["kind"])
+            stage["bytes"] = 32 * 1024 * 1024
+            return Page(tuple(worker.events.values()), (), None, "a" * 64)
+
+        worker._fetch = fetch
+        owner = ActivityCollector(worker, store=store)
+        await owner.tick()
+        assert calls == ["live"]
+        assert store.updates[-1][0]["kind"] == "monitor"
+        assert store.updates[-1][1]["reason"] == "archive_backlog"
+
+    asyncio.run(scenario())
+
+
+def test_budget_contention_reserves_next_released_slot_for_waiting_kind(monkeypatch):
+    from app.collection import activity_collector as module
+
+    async def scenario():
+        store, worker = Store(), Worker()
+        store.value = row("live")
+        worker.ledger = object()
+        worker.window_id = "fixture"
+        params = worker.params
+        worker.params = lambda **kw: dict(params(**kw), limit=1)
+        slots = {"available": 1}
+
+        def budget(ledger, window, requested, at):
+            if slots["available"] < requested:
+                raise ActivityBudgetDelayed(
+                    "operational_object_budget", at + timedelta(seconds=1)
+                )
+            slots["available"] -= requested
+
+        monkeypatch.setattr(module, "budget_admit", budget)
+        owner = ActivityCollector(worker, store=store)
+        for seconds in (0, 60, 120, 180):
+            worker.at = AT + timedelta(seconds=seconds)
+            slots["available"] = 1
+            await owner.tick()
+        assert [run["kind"] for run, _ in worker.calls][:4] == [
+            "live",
+            "monitor",
+            "live",
+            "monitor",
+        ]
+        assert sum(run["kind"] == "monitor" for run, _ in worker.calls) >= 2
+        assert sum(run["kind"] == "live" for run, _ in worker.calls) >= 2
+
+    asyncio.run(scenario())

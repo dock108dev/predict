@@ -18,8 +18,6 @@ FEE_REQUIREMENTS = {
 def starting_fee_terms(row, captured_at, assumptions=None):
     """Describe the saved fee inputs independently of offer eligibility."""
     venue = row.get('venue')
-    if (row.get('source') or {}).get('provider') == 'practice':
-        return None
     if venue not in FEE_REQUIREMENTS:
         return None
     try:
@@ -94,7 +92,7 @@ def offer_math(row):
         risk = Fraction(reviewed['normalization_risk_usd'])
         reviewed.update(win_profit_usd=wire(Fraction(reviewed['normal_win_receipt_usd']) - risk),
                         loss_profit_usd=wire(-risk))
-    elif row.get('source', {}).get('provider') != 'practice':
+    else:
         reviewed['required_evidence'] = FEE_REQUIREMENTS.get(row.get('venue'))
     return dict(original=row.get('original'), source=row.get('source'), selection=row.get('selection'),
                 market=row.get('market'), clocks=row.get('times'),

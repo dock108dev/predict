@@ -45,7 +45,6 @@ def settlement_terms(row, original=None):
     contract = original.get('native_contract') or {}
     record = original.get('original_record') or {}
     metadata = record.get('comparison_source_metadata') or {}
-    practice = (row.get('source') or {}).get('provider') == 'practice'
     wording = _saved_wording(contract, metadata)
     facts = contract.get('same_outcome') or {}
     verified = bool((original.get('binding') or {}).get('verified'))
@@ -70,8 +69,6 @@ def settlement_terms(row, original=None):
 
     equality_payout, equality_note = _equality_payout(facts, cost)
     equality_label = 'Game ends tied' if row.get('market', {}).get('market') == 'winner' else 'Score lands exactly on the line'
-    if practice:
-        equality_note = 'The fictional scenario assumes decisive outcomes.'
     if wording:
         exception_note = 'See the saved rule text for timing and settlement conditions. A fixed payout is unverified.'
     else:
@@ -87,7 +84,7 @@ def settlement_terms(row, original=None):
         outcome('Game shortened or partially completed', None, exception_note),
     ]
     return dict(
-        wording=wording, fictional=practice, scoring=scoring,
+        wording=wording, scoring=scoring,
         cost_usd=wire(cost), equality_can_affect_ev=equality_payout is not None,
         outcomes=outcomes,
         priced_states=[item['label'] for item in outcomes if item['payout_usd'] is not None],

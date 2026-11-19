@@ -108,7 +108,10 @@ class DiagnosticPipeline(Pipeline):
         self.delay=delay;self.fail_side=fail_side;self.side_attempt=0
 
     def start(self):
-        with patch('app.dashboard.pipeline.connect',self.connector):
+        original_start = Store.start
+        def fixture_start(store, environment, evidence_class, *args, **kwargs):
+            return original_start(store, 'synthetic', 'synthetic', *args, **kwargs)
+        with patch('app.dashboard.pipeline.connect',self.connector), patch.object(Store,'start',fixture_start):
             sid=super().start()
         self.db=MeasuredDB(self.db,self.metrics);self.store=Store(self.db)
         for name in ('receipt','calculation','metadata','put','event'):
@@ -138,7 +141,10 @@ class DiagnosticPipeline(Pipeline):
             setattr(self.store,name,wrapped)
         return sid
 
-    def synthetic_bootstrap(self):
+    def bootstrap(self, discovery):
+        return self.fixture_bootstrap()
+
+    def fixture_bootstrap(self):
         self.parents,self.matcher,self.contexts,self.rows,self.fixture_books=fixture(self.market_count)
         self.titles={r['key']:r['native']['title'] for r in self.rows}
         self.event_titles={}
@@ -166,22 +172,26 @@ class DiagnosticPipeline(Pipeline):
             return super().evaluate()
 
     def depth(self,cid):
-        # Synthetic mode normally holds AcquisitionLadders; benchmark holds books.
-        # Convert those books with synthetic scope before using unchanged depth.
-        books=self.books
-        self.books={}
-        for key,b in books.items():
-            for n,l in enumerate(book_ladders(b,environment='synthetic',evidence_class='synthetic',source_time_semantics='unknown',locks_clear=None,units_verified=False)):
-                self.books[(key,n)]=l
-        try:return super().depth(cid)
-        finally:self.books=books
+        # Explicit test-only normalization; no production demo mode is needed.
+        def fixture_ladders(book, **kwargs):
+            return book_ladders(book, environment='synthetic', evidence_class='synthetic',
+                source_time_semantics='unknown', locks_clear=None, units_verified=False)
+        with patch('app.dashboard.pipeline.book_ladders', fixture_ladders):
+            return super().depth(cid)
+
+
+class FixtureSource:
+    def __init__(self, run):self.run=run
+    async def prepare(self):return [{}]
+    async def venue(self, discovery):await self.run.run_fixture()
+    async def close(self):pass
 
 
 class FixtureController(MeasuredController):
     def __init__(self,*a,scenario,**kw):
-        super().__init__(*a,**kw);self.scenario=scenario
+        super().__init__(*a,source_factory=FixtureSource,**kw);self.scenario=scenario
 
-    async def _demo(self):
+    async def run_fixture(self):
         # All scheduling is invented. No subscription or wire message counter.
         if self.scenario in ('stop_backlog','stop_depth','overload','byte_limit','receipt_limit','storage_limit','rollback','database_failure','finalization_failure'):
             return await self.repair_scenario()
@@ -279,7 +289,7 @@ async def trial(connector,markets,scenario,enabled=True):
         return value
     ctl.work=guarded
     start=time.perf_counter()
-    await ctl.start('synthetic',dict(seconds=60,markets=markets,receipts=512))
+    await ctl.start('live',dict(seconds=60,markets=markets,receipts=512))
     try:
         await asyncio.wait_for(ctl.task,75)
         with connector('prediction_arb_13a') as db:

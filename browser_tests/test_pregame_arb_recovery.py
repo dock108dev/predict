@@ -85,15 +85,13 @@ def test_arb_deadline_retry_supersession_partial_and_retained_failure():
             await expect(page.locator("#results")).to_have_attribute(
                 "data-state", "loading"
             )
-            await expect(
-                page.get_by_role("navigation", name="Main").get_by_text("Practice")
-            ).to_be_visible()
+            await expect(page.locator('a[href*="dataset=practice"]')).to_have_count(0)
             await page.clock.fast_forward(18001)
             await expect(page.locator("#results")).to_have_attribute(
                 "data-state", "failed"
             )
             await expect(page.locator("#error")).to_contain_text("timed out")
-            await expect(page.locator("#error a")).to_contain_text("synthetic")
+            await expect(page.locator("#error")).not_to_contain_text("synthetic")
             # A retry is not queued behind the abandoned request.
             state["mode"] = "empty"
             await page.get_by_role("button", name="Refresh", exact=True).click()

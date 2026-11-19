@@ -3,6 +3,7 @@
 from collections import defaultdict, OrderedDict
 from threading import Lock
 from fractions import Fraction as F
+from datetime import timedelta
 from itertools import product
 from psycopg.types.json import Jsonb
 from app.comparison import pregame_arbs as math
@@ -11,6 +12,7 @@ from app.comparison.sgo_reference import american_probability
 from app.comparison.sportsbooks import SPORTSBOOKS
 from .current_pregame import configured_routes, utc, read as pregame_read
 from .store import hashed, stamp
+from .pregame_known_withdrawals import ROW_GUARDS, BOOK_GUARD
 
 _CACHE = OrderedDict()
 _CACHE_LOCK = Lock()
@@ -70,6 +72,9 @@ def read_book_quotes(db, request_lines):
                   AND (NOT (q.facts ? 'provider_available') OR q.facts->'provider_available'='true'::jsonb)
                   AND (q.facts->>'phase')='pregame' AND (q.facts->>'period')='game'
                   AND (q.facts->>'partition') IS DISTINCT FROM 'three_way'
+                  AND """
+            + BOOK_GUARD
+            + """
                   AND CASE WHEN r.family='moneyline' THEN true
                     WHEN replace(trim((q.facts->>'line')),'_','') ~
                       '^[+-]?([0-9]+([.][0-9]*)?|[.][0-9]+)([eE][+-]?[0-9]+)?(/[0-9]+)?$'
@@ -244,7 +249,19 @@ def read(db, query, *, at=None, can_continue=None):
     routes = configured_routes(db)
     checkpoint()
     # A queued source/fee change suppresses stale calculations before rebuilding.
-    filters, parameters = [], [at, at, at]
+    filters, parameters = list(ROW_GUARDS), [at, at, at, at]
+    if query.get("_scope_seconds"):
+        filters.append("p.start_at<=%s")
+        parameters.append(at + timedelta(seconds=int(query["_scope_seconds"])))
+    selected_sort = query.get("sort", "return")
+    if selected_sort not in ("return", "newest", "oldest", "start"):
+        raise ValueError("Unknown arbitrage order")
+    if query.get("max_age_minutes"):
+        age = int(query["max_age_minutes"])
+        if not 1 <= age <= 525600:
+            raise ValueError("Invalid maximum age")
+        filters.append("(p.payload#>>'{times,source_at}')::timestamptz>=%s")
+        parameters.append(at - timedelta(minutes=age))
     for name in ("league", "family"):
         if query.get(name):
             filters.append("p.payload->>'" + name + "'=%s")
@@ -256,7 +273,7 @@ def read(db, query, *, at=None, can_continue=None):
         db.execute(
             """SELECT p.* FROM current_pregame_price p
         JOIN current_contract c ON c.id=p.contract_id
-        JOIN current_offer_storage o ON o.contract_id=c.id JOIN current_event e ON e.id=c.event_id
+        JOIN current_offer_storage o ON o.contract_id=c.id JOIN LATERAL (SELECT * FROM current_event WHERE id=c.event_id LIMIT 1) e ON true
         WHERE p.start_at>%s AND p.valid_until>%s AND e.scheduled_start::timestamptz>%s
           AND o.facts->>'state' IS DISTINCT FROM 'unavailable'
           AND NOT EXISTS(SELECT 1 FROM sgo_line_presence lp WHERE lp.quote_id=o.sgo_quote_id AND lp.expired)
@@ -353,6 +370,11 @@ def read(db, query, *, at=None, can_continue=None):
         )
     ]
     quotes = read_book_quotes(db, request_lines)
+    if query.get("max_age_minutes"):
+        cutoff = at - timedelta(minutes=int(query["max_age_minutes"]))
+        quotes = [
+            q for q in quotes if q.get("source_at") and stamp(q["source_at"]) >= cutoff
+        ]
     by_event = defaultdict(list)
     for q in quotes:
         try:
@@ -414,6 +436,7 @@ def read(db, query, *, at=None, can_continue=None):
                     payload.get("input_revision"),
                     payload["raw"],
                     payload.get("times"),
+                    payload.get("collection"),
                     payload.get("scoring_scope"),
                     candidate.get("fee_input"),
                     None if payload.get("input_revision") else candidate.get("record"),
@@ -463,6 +486,23 @@ def read(db, query, *, at=None, can_continue=None):
         for candidate in candidates:
             candidate.pop("_reprice_cache", None)
     results.sort(key=lambda p: (-F(p["return_rate"]), p["kickoff"], p["id"]))
+    if selected_sort == "start":
+        results.sort(key=lambda p: (p["kickoff"], p["id"]))
+    elif selected_sort in ("newest", "oldest"):
+
+        def pair_clock(pair):
+            clocks = [
+                stamp(leg["times"]["source_at"])
+                for leg in pair["legs"]
+                if leg.get("times", {}).get("source_at")
+            ]
+            return min(clocks) if len(clocks) == len(pair["legs"]) else None
+
+        known = [p for p in results if pair_clock(p) is not None]
+        unknown = [p for p in results if pair_clock(p) is None]
+        results = (
+            sorted(known, key=pair_clock, reverse=selected_sort == "newest") + unknown
+        )
     deadline = min((e["valid_until"] for e in entries), default=None)
     packet = dict(
         schema="predict-pregame-arbs-1",

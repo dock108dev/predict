@@ -28,7 +28,7 @@ def test_ranking_catalog_owns_presented_metadata_and_rejects_missing_calculation
     from app.storage import pregame_ranking as ranking
 
     catalog = ranking.catalog()
-    assert catalog["default"] == "growth"
+    assert catalog["default"] == "edge"
     for method, info in catalog["methods"].items():
         shown = ranking.present({}, None, method)["ranking"]
         assert {key: shown[key] for key in ("label", "column", "unit")} == {
@@ -121,7 +121,7 @@ class PregameBoardViewsSQL(PregameFixture):
                 else:
                     self.assertLess(abs(value - Decimal(expected)), Decimal("1e-12"))
 
-    async def test_growth_default_and_all_rankings_precede_pagination(self):
+    async def test_edge_default_and_all_rankings_precede_pagination(self):
         from decimal import Decimal, localcontext
         from app.storage.pregame_ranking import METHODS
 
@@ -154,7 +154,7 @@ class PregameBoardViewsSQL(PregameFixture):
                 )
             )
             all_rows = board.read(db, dict(limit="100"), at=stamp(AT))
-            self.assertEqual(all_rows["sort"], "growth")
+            self.assertEqual(all_rows["sort"], "edge")
             self.assertEqual(all_rows["total"], 3)
 
             def number(value):
@@ -209,9 +209,8 @@ class PregameBoardViewsSQL(PregameFixture):
                         )
                     self.assertEqual(actual, [r["id"] for r in expected])
             legacy = board.read(db, dict(sort="score"), at=stamp(AT))["rows"]
-            self.assertNotEqual(
-                [r["id"] for r in legacy], [r["id"] for r in all_rows["rows"]]
-            )
+            growth = board.read(db, dict(sort="growth"), at=stamp(AT))["rows"]
+            self.assertNotEqual([r["id"] for r in legacy], [r["id"] for r in growth])
             with self.assertRaises(ValueError):
                 board.read(db, dict(sort="unknown; DROP TABLE"), at=stamp(AT))
             self.assertEqual(

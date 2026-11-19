@@ -77,7 +77,7 @@ class Controller:
 
     async def start(self,mode,values):
         if self.task and not self.task.done():raise RuntimeError('A scan is already running or stopping')
-        if mode not in ('live','synthetic'):raise ValueError('Choose Live or Synthetic demo')
+        if mode != 'live':raise ValueError('Live observations are required')
         self.limits=limits_for(values);self.mode=mode;self.state='starting';self.error=None;self.depth_result=None
         from app.dashboard.refresh import StopBudget
         self.stop_budget=StopBudget();self.refresh_writer=None;self.refresh_samples=[]
@@ -111,7 +111,6 @@ class Controller:
             try:
                 if kind=='book':view=await self.work(self.worker.book,value)
                 elif kind=='disconnect':view=await self.work(self.worker.disconnect,*value)
-                elif kind=='demo':view=await self.work(self.worker.synthetic_tick,value)
                 else:
                     await self.work(self.worker.store.event,self.sid,'gap',value);view=None
                 if row:row['state']='processed'
@@ -181,13 +180,6 @@ class Controller:
         self.refresh_task=asyncio.create_task(self._compute_refresh(snapshot,generation,epoch))
         if force:await asyncio.shield(self.refresh_task)
 
-    async def _demo(self):
-        self.health('kalshi','connected','Invented prices · no venue connection')
-        self.health('polymarket_us','connected','Invented prices · no venue connection')
-        n=1
-        while not self.stop_event.is_set():
-            await asyncio.sleep(2);self.offer(('demo',n));n+=1
-
     async def _run(self):
         timer=asyncio.create_task(self._deadline());producers=[];source=None;failed=False
         self.worker=self.pipeline_factory(self.mode,self.limits)
@@ -195,21 +187,17 @@ class Controller:
         try:
             self.sid=await self.work(self.worker.start)
             if self.stop_event.is_set():return
-            if self.mode=='live':
-                source=self.source_factory(self)
-                # Deadline interrupts quiet discovery as well as quiet streams.
-                discovery=asyncio.create_task(source.prepare())
-                waiter=asyncio.create_task(self.stop_event.wait())
-                done,_=await asyncio.wait({discovery,waiter},return_when=asyncio.FIRST_COMPLETED)
-                waiter.cancel();await asyncio.gather(waiter,return_exceptions=True)
-                if discovery not in done:
-                    discovery.cancel();await asyncio.gather(discovery,return_exceptions=True);return
-                data=discovery.result()
-                self.view=await self.work(self.worker.bootstrap,data)
-                if not self.stop_event.is_set():producers=[asyncio.create_task(source.venue(d)) for d in data]
-            else:
-                self.view=await self.work(self.worker.synthetic_bootstrap)
-                if not self.stop_event.is_set():producers=[asyncio.create_task(self._demo())]
+            source=self.source_factory(self)
+            # Deadline interrupts quiet discovery as well as quiet streams.
+            discovery=asyncio.create_task(source.prepare())
+            waiter=asyncio.create_task(self.stop_event.wait())
+            done,_=await asyncio.wait({discovery,waiter},return_when=asyncio.FIRST_COMPLETED)
+            waiter.cancel();await asyncio.gather(waiter,return_exceptions=True)
+            if discovery not in done:
+                discovery.cancel();await asyncio.gather(discovery,return_exceptions=True);return
+            data=discovery.result()
+            self.view=await self.work(self.worker.bootstrap,data)
+            if not self.stop_event.is_set():producers=[asyncio.create_task(source.venue(d)) for d in data]
             if hasattr(self.worker,'refresh_config'):
                 from app.dashboard.refresh import RefreshWriter
                 config=await self.work(self.worker.refresh_config)

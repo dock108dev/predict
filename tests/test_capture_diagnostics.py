@@ -5,7 +5,7 @@ from dataclasses import asdict
 import json
 import unittest
 
-from app.capture_benchmark import fixture, schedule, synthetic_observations
+from tests.capture_benchmark import fixture, schedule, synthetic_observations
 from app.dashboard.diagnostics import Measurements, MeasuredController, MeasuredQueue, reconcile
 from app.dashboard.pipeline import serial
 

@@ -30,7 +30,6 @@ function draw() {
   });
   renderFilteredCoverage(get('filtered-totals'), data, cells);
   if (focused && !get('coverage-details').open) [...get('coverage').querySelectorAll('button')].find(button => button.dataset.cellId === focused)?.focus({preventScroll:true});
-  get('test-notice').hidden = !['synthetic', 'fixture', 'authored'].includes(data.mode);
   get('flow').dataset.state = readError || data.publication_error ? 'error' : 'ready';
   if (get('capture-evidence')) get('capture-evidence').textContent = (readError ? 'Read failed; prior freshness is unverified. ' : '') + (paused ? 'View updates paused. ' : '') + 'Captured ' + coverageTime(data.captured_at) + ' · Published ' + coverageTime(data.publication_at) + ' · ' + coverageWords(data.publication_state || 'published') + '. Measurements are as of capture; source clocks and explicit book confirmations determine freshness.' + (data.capture_age_seconds == null ? '' : ' Capture age: ' + Math.round(data.capture_age_seconds) + 's · Publication age: ' + Math.round(data.publication_age_seconds) + 's · Processing delay: ' + Number(data.capture_to_publication_seconds).toFixed(2) + 's.') + (data.publication_reasons?.length ? ' Summary warning: ' + data.publication_reasons.map(coverageWords).join(', ') + '.' : '');
   get('flow').textContent = [paused ? 'View updates paused.' : '', readError ? 'Latest read failed. Prior capture retained.' : ''].filter(Boolean).join(' ');
@@ -38,10 +37,6 @@ function draw() {
 const refreshFeeCensus = mountFeeCensus(get('fee-census'), get('export-fee-census'));
 mountCoverageFunnel(get('coverage-funnel'));
 function readFeeCensus() {
-  if (['synthetic', 'fixture', 'authored'].includes(data?.mode)) {
-    get('fee-census').textContent = 'The live fee census is not part of this preview.';
-    return;
-  }
   void refreshFeeCensus(() => active && !paused);
 }
 function schedule() {
@@ -54,6 +49,7 @@ async function pull() {
     const response = await fetch('/api/coverage', {signal:owned.signal, cache:'no-store'}), value = await response.json();
     if (!response.ok) throw Error(value.reason || value.error || 'Coverage publication is unavailable');
     if (value.schema !== 'predict-broad-coverage-1' || !Array.isArray(value.cells) || !value.global_totals) throw Error('Coverage publication does not have the expected captured contract');
+    if (['synthetic', 'fixture', 'authored'].includes(value.mode)) throw Error('Observed source data is required');
     if (!active || paused) return;
     data = value; readError = ""; failures = 0; get('retry-coverage').hidden = true; options(); draw(); void readFeeCensus();
   } catch (error) {

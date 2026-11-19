@@ -213,6 +213,7 @@ def test_after_fee_arbs_show_both_legs_without_sportsbook_ev(
         )
         page.get_by_role("button", name="Close arbitrage comparison").click()
         expect(page.locator(".arb-open")).to_be_focused()
+        page.locator("#board-advanced > summary").click()
         page.locator("#category").select_option("market_book")
         with page.expect_response(lambda r: "/api/pregame/arbs?" in r.url):
             page.locator("#refresh").click()
@@ -297,6 +298,7 @@ def test_arb_filters_survive_delayed_reads_empty_results_and_poll_failures():
             await expect(
                 page.locator(".arb-card .arb-price-column").first
             ).to_contain_text("45.45%")
+            await page.locator("#board-advanced > summary").click()
             async with page.expect_response(lambda r: "/api/pregame/arbs?" in r.url):
                 await page.locator("#book").select_option("draftkings")
             await page.locator("#venue").select_option("kalshi")

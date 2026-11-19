@@ -35,6 +35,7 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
     signals=Signals()
     history_busy=False
     retained_sessions=sessions
+    observed_history_only=bool(getattr(current_provider,'database_mode',False) and not getattr(current_provider,'allow_synthetic',False))
     def retained():
         nonlocal retained_sessions
         if retained_sessions is None:retained_sessions=load_sessions()
@@ -82,6 +83,13 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
         if owner.active() and s and s.journal and not hasattr(s,'projection'):
             saved=reopen(s.journal.path);select=next((r for r in saved['rows'] if r['type']=='multi_game_selection'),None)
             if select:values[s.sid]=dict(rows=saved['rows'],games=select['games'],coverage=select['coverage'],live=True,label='Current multi-game scan')
+        if observed_history_only:
+            # Production exposes authentic captures only. Test-only injected
+            # providers retain their isolated authored history fixtures.
+            modes={'real','production','observation','current'}
+            values={sid:value for sid,value in values.items() if
+                (value.get('product') or {}).get('data_mode') in modes or
+                bool(value.get('rows') and value['rows'][0].get('spec',{}).get('mode') in modes)}
         return values
     def product_cutoff(sid,d,cutoff):
         from app.dashboard import session_history
@@ -503,6 +511,9 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
     from .raw_price_api import mount as mount_raw_prices
     if database_mode:
         async def desk_page(req):
+            from app.storage.odds_replay import DATASETS
+            if req.query.get('dataset', 'frozen') not in (*DATASETS, 'retained'):
+                raise PublicRequestError('Unknown replay dataset')
             return web.FileResponse(static_root/'opportunity_static/current/desk.html')
 
         async def pregame_page(req):
@@ -523,6 +534,8 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
             app.router.add_get(route, desk_page)
         from .current_pregame_api import mount as mount_current_pregame
         mount_current_pregame(app)
+        from .activity_mode_api import mount as mount_activity_mode
+        mount_activity_mode(app)
         from .bet_journal_api import mount as mount_bet_journal
         mount_bet_journal(app)
         async def desk_redirect(req):

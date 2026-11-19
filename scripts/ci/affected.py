@@ -15,6 +15,8 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[2]
 SQL = [
     "tests/test_current_pregame_sql.py",
+    "tests/test_pregame_cohorts_sql.py",
+    "tests/test_activity_mode_sql.py",
     "tests/test_pregame_board_views_sql.py",
     "tests/test_bet_journal_monitor_sql.py",
     "tests/test_fee_pricing_sql.py",

@@ -33,8 +33,6 @@ def reference_allowed(row):
     reference = row.get('reference_calculation') or {}
     if not reference.get('available') or excluded_reference(row):
         return False
-    if reference.get('method') == 'authored_probability':
-        return (row.get('source') or {}).get('provider') == 'practice'
     return (reference.get('method') in REFERENCE_METHODS
             and reference.get('venue') in (*BEST_BOOKS, 'sportsgameodds_books'))
 

@@ -6,7 +6,7 @@ import threading
 import unittest
 from unittest.mock import patch
 
-from app.capture_benchmark import fixture, synthetic_observations
+from tests.capture_benchmark import fixture, synthetic_observations
 from app.dashboard.controller import Controller, DEFAULTS
 from app.dashboard.pipeline import Pipeline
 from app.dashboard.refresh import compute, thaw_result
@@ -15,7 +15,7 @@ from tests.test_dashboard import FakePipeline, QuietSource
 
 
 def pipeline():
-    p=Pipeline('synthetic',dict(DEFAULTS));p.sid='snapshot-session'
+    p=Pipeline('live',dict(DEFAULTS));p.sid='snapshot-session'
     p.parents,p.matcher,p.contexts,p.rows,books=fixture(4)
     p.titles={r['key']:r['native']['title'] for r in p.rows}
     for book in books:

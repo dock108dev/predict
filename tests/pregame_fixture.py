@@ -54,6 +54,14 @@ def page():
 class PregameFixture(LatestBoardFixture):
     async def asyncSetUp(self):
         with self.connect() as db:
+            from app.storage.pregame_cohorts import TABLES
+            from psycopg import sql
+
+            for schema in ("pregame_monitor", "pregame_live", "pregame_combined"):
+                for table in TABLES:
+                    db.execute(
+                        sql.SQL("TRUNCATE {}").format(sql.Identifier(schema, table))
+                    )
             db.execute(
                 "TRUNCATE sgo_line_presence,current_event,sgo_event_evidence,sgo_quote_revision,current_pregame_work CASCADE"
             )
@@ -80,4 +88,14 @@ class PregameFixture(LatestBoardFixture):
 
     def process(self, db, **kwargs):
         with patch("app.storage.current_rows.utc", return_value=AT):
-            return board.process(db, at=stamp(AT), **kwargs)
+            result = board.process(db, at=stamp(AT), **kwargs)
+        from app.storage.pregame_cohorts import capture
+
+        ids = [
+            r["native_event_id"]
+            for r in db.execute(
+                "SELECT native_event_id FROM current_event WHERE provider='sportsgameodds'"
+            )
+        ]
+        capture(db, dict(kind="monitor", id="fixture-monitor"), ids, stamp(AT))
+        return result

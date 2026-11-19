@@ -24,6 +24,7 @@ Live executable size and cross-venue fills are not established by these boards.
 [Usability sprint and verification](docs/usability-sprint-20261118.md) ·
 [Measured read performance](docs/usability-performance-20261118.md) ·
 [Available liquidity assessment](docs/liquidity.md).
+[Monitor and Live collection](docs/monitor-live.md) describes the personal-app defaults, controls and retention.
 [About this board](app/dashboard/opportunity_static/current/about.html) explains
 the model, execution limitations, sources and SportsGameOdds data credit.
 
@@ -52,7 +53,8 @@ scripts/project-postgres start
 
 Open the loopback address printed by the launcher. If port 8784 is free,
 use [Predict on port 8784](http://127.0.0.1:8784/). The desk needs committed
-prices to show current offers. Choose **Practice** to explore simulated calculations.
+prices to show current offers. Collection settings control Monitor and Live;
+authentic saved odds remain available for later inspection.
 `cp -n` preserves an existing config, and `check-config` prints its acquisition scope.
 
 For UI iteration with a real dev-server database and no local collectors, see

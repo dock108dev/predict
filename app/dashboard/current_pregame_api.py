@@ -64,6 +64,31 @@ async def response(request, *, connector=None):
             # Keep an abandoned read from occupying SQL indefinitely. Python
             # pairing also checks this same request deadline between groups.
             db.execute("SET LOCAL statement_timeout='8s'")
+            from app.collection.activity_mode import read_status
+            from app.storage.pregame_cohorts import select as select_cohort
+
+            mode = read_status(db)
+            if query.get("mode_status") == "1":
+                return dict(
+                    activity_mode=mode, provider_requests=0, scheduled_calculations=0
+                )
+            browse = query.get("browse") == "1" or query.get("view") in (
+                "games",
+                "game",
+            )
+            kind = query.get("data_type") or ("all" if browse else mode["mode"])
+            query["data_type"] = kind
+            query.pop("_scope_seconds", None)
+            scope = (
+                mode["settings"]["live_window_seconds"]
+                if kind == "live"
+                else mode["settings"]["monitor_horizon_seconds"]
+                if kind == "monitor"
+                else None
+            )
+            if scope:
+                query["_scope_seconds"] = str(scope)
+            select_cohort(db, kind)
             if request.path.endswith("/arbs"):
                 result = read(
                     db,
@@ -74,7 +99,12 @@ async def response(request, *, connector=None):
                 )
             else:
                 result = read(db, query)
-        return dict(result, read_ms=round((monotonic() - started) * 1000, 3))
+        return dict(
+            result,
+            data_type=kind,
+            activity_mode=mode,
+            read_ms=round((monotonic() - started) * 1000, 3),
+        )
 
     try:
         async with asyncio.timeout(read_seconds):

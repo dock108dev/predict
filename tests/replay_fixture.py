@@ -9,6 +9,7 @@ from app.comparison.inspection_math import offer_math
 from app.comparison.snapshot_fee_outcome import unavailable
 from app.comparison.snapshot_math import assumptions, before_fee_pair
 from app.comparison.snapshot_metrics import statuses
+from app.comparison.sgo_reference import BEST_VERSION
 from app.storage.ordinary_publication import counts
 from app.storage.comparison_snapshot import pack
 from app.dashboard.local_security import PublicRequestError
@@ -108,7 +109,7 @@ def practice_offer(*, key, side, venue, display, odds, family, line, selection, 
         times=dict(source_at=at, received_at=at))
     row['trade_fee'] = unavailable('synthetic_account_terms_unavailable')
     row['reference_calculation'] = dict(available=True, selected=side,
-        method='authored_probability', probability='0.5', fair_decimal_odds='2',
-        conditioning='Authored 50/50 probability for the two decisive practice outcomes')
+        method=BEST_VERSION, venue='fanduel', probability='0.5', fair_decimal_odds='2',
+        conditioning='if_decisive_completed_game')
     statuses(row)
     return row

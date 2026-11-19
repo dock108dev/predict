@@ -1,7 +1,8 @@
 # Predict on Hetzner
 
 Predict runs as `web`, `collector`, and `db` in a dedicated Docker Compose project.
-The optional `archive` service exports odds history to an off-host mount.
+The `archive` service exports odds history to a persistent destination with no TTL.
+An off-host destination provides protection from loss of the application host.
 See [archive deployment and verification](odds-archive-operations.md).
 The [public desk](https://predict.dock108.dev/) is open to visitors. Caddy requires
 authentication for Admin, the database console, and other operational routes.
@@ -71,6 +72,15 @@ Keep this directory and the forced command root-owned. Apply changes to these
 two host files over the administrator SSH connection before deploying a release
 that needs them. Install both files before the first split-image deploy. The
 forced command validates the role and build inputs of each Predict image digest.
+
+For the personal Monitor/Live deployment, install and run the committed
+`deploy/configure-retention.sh` as root before dispatching the image release.
+It creates a persistent host archive and `archive.env` only if no archive
+configuration exists, preserving an owner's existing destination. The next
+ordinary release applies that configuration to collector and archive. This
+initial destination has no off-host backup; provision additional capacity and
+an external backup for indefinite growth. Never delete verified history as a
+routine disk cleanup. See [Monitor/Live behavior](monitor-live.md).
 
 Web, collector, and archive share Docker layers and have separate image
 references. A release preserves a running service's image when its build inputs

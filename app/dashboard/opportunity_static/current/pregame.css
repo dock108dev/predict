@@ -250,23 +250,22 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,su
 .pregame-page :is(#comparison-content,#game-content,#arb-content){flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;touch-action:pan-y;padding:0 3px 12px;scrollbar-gutter:stable}
 .pregame-page .game-bet>.quote-evidence{grid-column:1/-1}
 .pregame-page .game-card .line-open{color:var(--p-accent);text-decoration:underline;text-underline-offset:3px;min-height:32px}
-.pregame-page :is(#request-status,#practice-recovery){font-size:12px;color:var(--p-muted);line-height:1.6}
+.pregame-page #request-status{font-size:12px;color:var(--p-muted);line-height:1.6}
 .pregame-page #request-status:empty{display:none}
 .pregame-page .comparison-status{padding:10px;border-left:3px solid var(--p-accent);background:var(--p-hover)}
-.pregame-page :is(#practice-recovery,.comparison-status) :is(a,button){color:var(--p-accent)}
+.pregame-page .comparison-status :is(a,button){color:var(--p-accent)}
 .pregame-page .comparison-status button{border:1px solid var(--p-controlLine);border-radius:4px;background:var(--p-surface);font:inherit;padding:5px 10px}
 .pregame-page .masthead nav{flex-wrap:wrap}
 @media(max-width:500px){.pregame-page :is(#comparison,#game-lines,#arb-details)[open]{height:calc(100dvh - 20px);max-height:calc(100dvh - 20px);inset:10px 0}.pregame-page .masthead nav{gap:8px 16px}.pregame-page .masthead nav a{font-size:10px}}
 
-.pregame-page .quote-evidence{font:500 10px/1.6 Manrope,Arial,sans-serif;color:var(--p-muted);margin:7px 0 0;white-space:normal;overflow-wrap:anywhere;max-width:100%}
-.pregame-page #comparison-content>.quote-evidence{font-size:12px;margin:0 0 14px;padding:10px;border:1px solid var(--p-controlLine);border-radius:4px}
+.pregame-page .quote-evidence{display:block;font:500 10px/1.6 Manrope,Arial,sans-serif;color:var(--p-muted);margin:7px 0 0;white-space:normal;overflow-wrap:anywhere;max-width:100%}
+.pregame-page #comparison-content>.quote-evidence{display:block;font-size:11px;margin:0 0 12px;padding:0;border:0;background:none}
 .pregame-page .payout-example{background:var(--p-hover);border:1px solid var(--p-controlLine);border-radius:6px;padding:12px 14px;margin:12px 0 18px;font-size:12px;line-height:1.7}
 .pregame-page #comparison .payout-example h3{margin:0 0 6px;font-size:14px}
 .pregame-page .payout-example p{margin:7px 0}.pregame-page .payout-summary{font-weight:650}
 .pregame-page .unavailable-reason{font-size:10px;line-height:1.5;color:var(--p-muted);white-space:normal;max-width:160px}
 .pregame-page .sportsbook-prices td:last-child{white-space:normal;min-width:100px;max-width:280px}
 
-.pregame-page .quote-evidence[data-caution=true]{color:#80510c;background:#fff6df;border:1px solid #dbc18a;border-radius:4px;padding:5px 7px}
 .pregame-page :is(#comparison,#game-lines,#arb-details) summary{min-height:44px}
 
 .pregame-page .selected-quote{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:10px 0 14px;margin-bottom:12px;border-bottom:1px solid var(--p-line);font-size:13px}.pregame-page .selected-quote>.math-value{font-size:18px}
@@ -275,3 +274,50 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,su
 .pregame-page .game-bet:has(.line-open:active),.pregame-page .game-card:has(.game-open:active){background:var(--p-active)}
 
 .pregame-page .line-action-label{display:block;font:500 10px/1.5 Manrope,Arial,sans-serif;color:var(--p-accent);padding-top:2px}
+/* Compact advanced filters keep the ordinary board controls on one rail. */
+.pregame-page .filters .refresh{margin-left:0}
+.pregame-page .advanced-filters{position:relative;flex:0 0 auto;align-self:flex-end;margin-left:auto}
+.pregame-page .advanced-filters>summary{display:flex;align-items:center;justify-content:center;cursor:pointer;list-style:none;min-height:44px;padding:0 14px;border:1px solid var(--p-controlLine);border-radius:5px;font-size:12px;background:var(--p-surface)}
+.pregame-page .advanced-filters>summary::after{content:'⌄';margin-left:8px;color:var(--p-muted)}
+.pregame-page .advanced-fields{position:absolute;z-index:8;right:0;top:calc(100% + 8px);width:370px;max-width:calc(100vw - 32px);display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:16px;background:var(--p-surface);border:1px solid var(--p-controlLine);border-radius:6px;box-shadow:0 8px 24px #0002}
+.pregame-page .advanced-fields :is(.advanced-field,.filter-field,.ranking-control){display:flex;flex-direction:column;align-items:stretch;gap:6px;margin:0;min-width:0;font-size:11px;color:var(--p-muted)}
+.pregame-page .advanced-fields :is(select,input){width:100%;max-width:none;min-height:42px;border:1px solid var(--p-controlLine);border-radius:4px;padding:0 8px;background:var(--p-field);color:var(--p-ink);font:12px Manrope,Arial,sans-serif}
+.pregame-page .mode-controls{display:flex;align-items:center}
+.pregame-page .mode-badge{min-height:36px;background:var(--p-surface);color:var(--p-ink);border:1px solid var(--p-controlLine);border-radius:5px;padding:0 10px;font-size:11px;white-space:nowrap}
+.pregame-page .mode-badge[data-mode=live]{color:#21623d;border-color:#93bca3}
+.pregame-page .collection-badge{display:inline-block;font:600 9px/1.5 Manrope,Arial,sans-serif;letter-spacing:0;color:var(--p-muted);border:1px solid var(--p-line);border-radius:3px;padding:1px 5px;margin-left:5px;white-space:nowrap;vertical-align:middle}
+.pregame-page .collection-badge[data-kind=live]{color:#21623d;border-color:#b3cebd}
+.pregame-page .mode-settings-dialog[open]{display:flex;flex-direction:column;position:fixed;inset:12px 0;margin:auto;width:min(650px,calc(100% - 24px));height:min(730px,calc(100dvh - 24px));max-height:calc(100dvh - 24px);overflow:hidden;padding:20px;border-radius:8px;background:var(--p-surface)}
+.pregame-page .mode-settings-dialog .dialog-heading{flex-shrink:0;gap:16px;letter-spacing:0}
+.pregame-page .mode-settings-dialog h2{font:700 18px/1.4 Manrope,Arial,sans-serif;margin:0}
+.pregame-page .mode-settings-body{min-height:0;overflow:auto;overscroll-behavior:contain;touch-action:pan-y;padding:4px 3px 12px;font-size:12px;line-height:1.6}
+.pregame-page .mode-summary{font-weight:600;margin:12px 0}
+.pregame-page .mode-choices{display:flex;gap:8px;margin:12px 0}
+.pregame-page .mode-choices button,.pregame-page .mode-settings-form>button{min-height:42px;padding:0 16px;background:var(--p-surface);border:1px solid var(--p-controlLine);border-radius:4px;font-size:12px}
+.pregame-page .mode-choices button[aria-pressed=true]{color:var(--p-accent);border-color:var(--p-accent);font-weight:700}
+.pregame-page .mode-settings-form{display:grid;gap:16px;padding:12px 0;border-block:1px solid var(--p-line)}
+.pregame-page .mode-setting{display:flex;flex-direction:column;gap:6px;min-width:0}
+.pregame-page .mode-setting>span{font-size:12px;font-weight:600}
+.pregame-page .mode-setting-inputs{display:grid;grid-template-columns:minmax(0,1fr) 85px 65px;align-items:center;gap:10px}
+.pregame-page .mode-setting input[type=range]{width:100%;accent-color:var(--p-accent)}
+.pregame-page .mode-setting input[type=number],.pregame-page .mode-setting select{min-height:40px;width:100%;border:1px solid var(--p-controlLine);border-radius:4px;padding:0 8px;background:var(--p-field);color:var(--p-ink);font:12px Manrope,Arial,sans-serif}
+.pregame-page .mode-setting input:disabled,.pregame-page .mode-setting select:disabled{opacity:.7}
+.pregame-page .mode-access a{color:var(--p-accent);text-decoration:underline}
+.pregame-page .mode-explanation,.pregame-page .mode-message{font-size:11px;color:var(--p-muted)}
+@media(max-width:1000px){.pregame-page .filters{flex-wrap:wrap}.pregame-page .search{flex:1 1 240px}.pregame-page .advanced-filters{margin-left:0}}
+@media(max-width:760px){.pregame-page .filters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.pregame-page .filters .search{grid-column:1/-1;width:100%}.pregame-page .advanced-filters{min-width:0}.pregame-page .advanced-filters[open]{grid-column:1/-1}.pregame-page .advanced-fields{position:static;max-width:none;width:100%;margin-top:8px;box-shadow:none}.pregame-page .board-info{flex-wrap:wrap;gap:8px}.pregame-page .mode-badge{font-size:10px}.pregame-page .mode-settings-dialog[open]{padding:16px}.pregame-page .mode-setting-inputs{grid-template-columns:minmax(0,1fr) 75px 52px;gap:7px}}
+.pregame-page .mode-switch{position:relative;display:inline-flex;align-items:center;gap:10px;min-height:44px;font-weight:650;cursor:pointer}
+.pregame-page .mode-switch input{position:absolute;inset:0;opacity:0;width:100%;height:100%;margin:0;cursor:inherit;z-index:1}
+.pregame-page .mode-switch-track{position:relative;display:block;width:44px;height:25px;border:1px solid var(--p-controlLine);border-radius:15px;background:var(--p-field)}
+.pregame-page .mode-switch-track:after{content:'';position:absolute;top:3px;left:3px;width:17px;height:17px;border-radius:50%;background:var(--p-muted)}
+.pregame-page .mode-switch input:checked+.mode-switch-track{background:var(--p-accent);border-color:var(--p-accent)}
+.pregame-page .mode-switch input:checked+.mode-switch-track:after{left:22px;background:white}
+.pregame-page .mode-switch input:focus-visible+.mode-switch-track{outline:3px solid var(--p-focus);outline-offset:3px}
+.pregame-page .mode-switch:has(input:disabled){opacity:.6;cursor:default}
+.pregame-page .mode-run-summary{font-size:11px;color:var(--p-muted);margin:4px 0 12px}
+.pregame-page .mode-settings-dialog .dialog-heading{color:var(--p-ink)}
+.pregame-page .mode-badge{-webkit-tap-highlight-color:transparent}
+.pregame-page .mode-badge:active{background:var(--p-active)}
+@media(max-width:760px){.pregame-page .filters .search{grid-row:1;width:calc(100% - 54px)}.pregame-page .filters .refresh{grid-column:2;grid-row:1;justify-self:end;align-self:end;width:44px;min-width:44px;padding:0;font-size:0;gap:0}.pregame-page .filters .refresh span{font-size:17px}.pregame-page .board-info .about-link{display:none}}
+.pregame-page .advanced-filters>summary,.pregame-page .mode-switch{-webkit-tap-highlight-color:transparent}
+.pregame-page .advanced-filters>summary:active{background:var(--p-active)}

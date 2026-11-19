@@ -5,7 +5,7 @@ import time
 import unittest
 from app.dashboard.bounds import CaptureQueue,retained_bytes
 from app.dashboard.controller import Controller
-from app.capture_benchmark import fixture
+from tests.capture_benchmark import fixture
 from tests.test_dashboard import FakePipeline,QuietSource
 
 

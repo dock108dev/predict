@@ -11,7 +11,7 @@ import tempfile
 
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
-from app.capture_benchmark import BUDGET
+from tests.capture_benchmark import BUDGET
 args=sys.argv[1:]
 out=Path(args[args.index('--output')+1]).resolve() if '--output' in args else ROOT/'evidence/slice-13-follow-up/13a/baseline'
 out.mkdir(parents=True,exist_ok=True)
@@ -28,7 +28,7 @@ try:
     subprocess.run(['initdb','-D',str(data),'-U','prediction_arb','--auth-local=trust','--auth-host=reject','--encoding=UTF8','--no-locale'],check=True,stdout=subprocess.DEVNULL,timeout=30)
     subprocess.run(['pg_ctl','-D',str(data),'-l',str(base/'postgres.log'),'-o',f"-k {sock} -p 55439 -c listen_addresses='' -c unix_socket_permissions=0700 -c max_connections=12 -c shared_buffers=32MB",'start'],check=True,timeout=30)
     started=True
-    command=[sys.executable,'-m','app.capture_benchmark','--socket',str(sock)]
+    command=[sys.executable,'-m','tests.capture_benchmark','--socket',str(sock)]
     if '--output' not in args:args+=['--output',str(out)]
     result=subprocess.run(command+args,cwd=ROOT,timeout=BUDGET['max_supervisor_seconds'])
     code=result.returncode

@@ -115,7 +115,7 @@ export function validateRetainedPrices(value,{settingsGeneration,runtimeId=null,
   const compare=(a,b)=>{const [x,y]=scaledPair(a,b);return x===y?0:x>y?1:-1;},complement=(a,b)=>{const [x,y,unit]=scaledPair(a,b);return x+y===unit;};
   const p=value?.estimate_policy,progress=value?.progress,pg=value?.pagination;
   if(!fields(value,['schema','mode','runtime_id','generation_id','settings_generation','estimate_policy','status','input_clock_at','validation_at','input_epoch','state_revision','error','progress','rows','pagination']))fail();
-  if(value?.schema!=='predict-retained-prices-1'||!['current','synthetic'].includes(value.mode)||!text(value.runtime_id)||!text(value.generation_id)||!integer(value.settings_generation)||value.settings_generation!==settingsGeneration||runtimeId&&value.runtime_id!==runtimeId||generationId&&value.generation_id!==generationId||!['pending','ready','rejected','superseded','stopped'].includes(value.status))fail();
+  if(value?.schema!=='predict-retained-prices-1'||value.mode!=='current'||!text(value.runtime_id)||!text(value.generation_id)||!integer(value.settings_generation)||value.settings_generation!==settingsGeneration||runtimeId&&value.runtime_id!==runtimeId||generationId&&value.generation_id!==generationId||!['pending','ready','rejected','superseded','stopped'].includes(value.status))fail();
   if(!p||p.version!=='predict-estimate-policy-2'||!text(p.revision)||!decimal(p.capital_ceiling_usd)||compare(p.capital_ceiling_usd,'0')<=0||compare(p.capital_ceiling_usd,'100000')>0||!decimal(p.buffer_rate)||compare(p.buffer_rate,'0')<0||compare(p.buffer_rate,'1')>0||policy&&['version','revision','capital_ceiling_usd','buffer_rate'].some(k=>p[k]!==policy[k]))fail();
   if(!stamp(value.input_clock_at)||!stamp(value.validation_at)||value.input_clock_at!==null&&value.validation_at!==null&&Date.parse(value.input_clock_at)>Date.parse(value.validation_at)||!(value.error===null||typeof value.error==='string'&&value.error.length<=160))fail();
   if(value.status==='ready'){if(!integer(value.input_epoch)||!integer(value.state_revision)||value.state_revision<1)fail();}
@@ -145,7 +145,7 @@ export function validateRetainedPrices(value,{settingsGeneration,runtimeId=null,
       if(o.transformation==='identity'&&(o.native_value!==o.value||o.native_units!==o.units))fail();
       if(o.transformation==='one_minus_native_bid'&&(o.native_units!=='usd_per_contract'||o.units!=='usd_per_contract'||compare(o.native_value,'0')<0||compare(o.native_value,'1')>0||!complement(o.native_value,o.value)))fail();
     }
-    if(!fields(t,['source_at','received_at','projected_at','source_time_kind'])||!['source_at','received_at','projected_at'].every(k=>stamp(t[k]))||!['provider_quote','provider_book','unknown','synthetic'].includes(t.source_time_kind)||t.source_time_kind==='synthetic'&&value.mode!=='synthetic'||(t.source_at===null)!==(t.source_time_kind==='unknown')||['source_at','received_at','projected_at'].some(k=>t[k]!==null&&Date.parse(t[k])>Date.parse(value.input_clock_at)))fail();
+    if(!fields(t,['source_at','received_at','projected_at','source_time_kind'])||!['source_at','received_at','projected_at'].every(k=>stamp(t[k]))||!['provider_quote','provider_book','unknown'].includes(t.source_time_kind)||(t.source_at===null)!==(t.source_time_kind==='unknown')||['source_at','received_at','projected_at'].some(k=>t[k]!==null&&Date.parse(t[k])>Date.parse(value.input_clock_at)))fail();
   }
   if(['rejected','superseded','stopped'].includes(value.status)&&value.rows.length)fail();
   return value;
@@ -204,7 +204,7 @@ export class RetainedPriceBootstrap {
     const p=value.progress,total=x=>x===null?'unknown':String(x),terminal=['rejected','superseded','stopped'].includes(value.status);
     const old=new Map([...this.root.children].filter(n=>n.dataset.quoteId).map(n=>[n.dataset.quoteId,n])),children=[];
     this.root.hidden=false;this.root.dataset.runtimeId=value.runtime_id;this.root.dataset.generationId=value.generation_id;
-    const heading=node('p',(value.mode==='synthetic'?'Authored offline · ':'')+(terminal?'Retained prices '+value.status:'Original prices · '+(value.status==='ready'?'server calculation complete':'calculating estimates')),'retained-heading');heading.setAttribute('role','status');children.push(heading);
+    const heading=node('p',(terminal?'Retained prices '+value.status:'Original prices · '+(value.status==='ready'?'server calculation complete':'calculating estimates')),'retained-heading');heading.setAttribute('role','status');children.push(heading);
     if(terminal){this.root.replaceChildren(...children,node('p',value.error||'This candidate is no longer available. Complete admitted prices remain separate.'));return;}
     children.push(node('p','Validated prices '+p.validated_prices+' / '+total(p.total_prices)+' · singles '+p.ready_singles+' ready / '+total(p.total_singles)+' · pairs '+p.ready_pairs+' ready / '+total(p.total_pairs),'retained-progress'));
     children.push(node('p','Estimates remain withheld until eligible complete results are available. Server ceiling $'+value.estimate_policy.capital_ceiling_usd+'; buffer rate '+value.estimate_policy.buffer_rate+'.','retained-disclosure'));

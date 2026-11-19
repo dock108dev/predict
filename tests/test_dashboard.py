@@ -10,10 +10,8 @@ class FakePipeline:
  def __init__(self,*args):self.finished=False;self.store=FakeStore();self.journal=False
  def start(self):return 'test-session'
  def bootstrap(self,data):return {'markets':[],'candidates':[]}
- def synthetic_bootstrap(self):return self.bootstrap([])
  def book(self,b):return self.bootstrap([])
  def disconnect(self,*a):return self.bootstrap([])
- def synthetic_tick(self,n):return self.bootstrap([])
  def finish(self,*a):self.finished=True
  def failure_journal(self,*a):self.journal=True
  def depth(self,cid):return {'id':cid}
@@ -34,6 +32,10 @@ class ControllerTests(unittest.IsolatedAsyncioTestCase):
    if self.c.state=='scanning':return
    await asyncio.sleep(.01)
   self.fail('not scanning')
+ async def test_rejects_non_live_mode_before_starting(self):
+  with self.assertRaisesRegex(ValueError,'Live observations are required'):
+   await self.c.start('synthetic',{})
+  self.assertIsNone(self.c.task)
  async def test_start_double_start_stop_cleanup(self):
   await self.c.start('live',{});await self.ready()
   with self.assertRaises(RuntimeError):await self.c.start('live',{})

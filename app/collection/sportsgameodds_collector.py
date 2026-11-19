@@ -4,6 +4,7 @@ The owning runtime must bind a fresh account observation, controls and a durable
 consumer. It must not start this component merely because a key exists.
 """
 import asyncio
+import inspect
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 from collections import Counter
@@ -44,9 +45,13 @@ class GuardedPageCollector:
         self.account_usage = account_usage
         self.eligible = eligible
 
+    async def _eligible(self, params):
+        value = self.eligible(params)
+        return await value if inspect.isawaitable(value) else value
+
     async def fetch(self, params, api_key, *, now=None):
         params = validate_params(params)
-        if self.eligible and not self.eligible(params):
+        if self.eligible and not await self._eligible(params):
             raise PregameWindowClosed()
         state = self.ledger.status(self.window_id)
         if state['reset_at'] is None:
@@ -77,20 +82,26 @@ class GuardedPageCollector:
                 reset_at=state['reset_at'], expirations=self.ledger.rolling_expirations(self.window_id, now=now))
             raise DailyObjectPacing(retry_at=retry, requested=params['limit'], rolling=rolling, allowance=per_day)
         control = self.controls()
-        if self.eligible and not self.eligible(params):
+        if self.eligible and not await self._eligible(params):
             raise PregameWindowClosed()
         attempt = str(uuid4())
         self.ledger.reserve(self.window_id, attempt, objects=params['limit'], now=now,
                             stopped=control['stopped'], source_paused=control['source_paused'],
                             category='discovery' if 'leagueID' in params else 'event_refresh',
                             league=params.get('leagueID'), request=params, usage=observed)
-        # Recheck after reservation and immediately before dispatch. An unused
-        # reservation is released only with a locally certain no-dispatch receipt.
-        control = self.controls()
+        # Eligibility can now await durable owner authority. Nothing has been
+        # dispatched here: error/cancellation is provably free, and Stop/pause
+        # must be read again after that await rather than using an old snapshot.
+        try:
+            eligible = not self.eligible or await self._eligible(params)
+            control = self.controls()
+        except BaseException:
+            self.ledger.resolve(attempt, charged=0, evidence='eligibility interrupted before transport dispatch', now=now)
+            raise
         if control['stopped'] or control['source_paused']:
             self.ledger.resolve(attempt, charged=0, evidence='control revoked before dispatch', now=now)
             raise RuntimeError('collection stopped or source paused')
-        if self.eligible and not self.eligible(params):
+        if not eligible:
             self.ledger.resolve(attempt, charged=0, evidence='pregame window closed before dispatch', now=now)
             raise PregameWindowClosed()
         try:

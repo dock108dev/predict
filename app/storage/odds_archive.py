@@ -203,8 +203,20 @@ def sgo_page(row):
     events = sorted((event, league) for event, league in row['event_scopes'].items() if event in pregame_ids)
     if not events:
         return ()
-    return (observation('sportsgameodds', 'page_receipt', row['sport'], None, None, at,
-                        receipt, events, material=[at, receipt, events]),)
+    result = [observation('sportsgameodds', 'page_receipt', row['sport'], None, None, at,
+                          receipt, events, material=[at, receipt, events])]
+    if row.get('collection_run'):
+        # Every successful collection is retained, including unchanged prices.
+        # Run receipt time never replaces any individual source timestamp.
+        for event, league in events:
+            data = dict(collection_run=row['collection_run'], league=league,
+                        records=[r for r in row['records'] if r['event']['id']==event],
+                        references=[r for r in refs if r['event_id']==event],
+                        frames=[f for f in row['sgo_event_frames'] if f['event_id']==event])
+            result.append(observation('sportsgameodds', 'collection_snapshot',
+                                      [row['collection_run']['id'],event],event,None,at,receipt,data,
+                                      material=[row['collection_run']['id'],at,receipt,event]))
+    return tuple(result)
 
 
 def observation_gap(key, at, reason, *, event):

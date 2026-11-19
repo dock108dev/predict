@@ -1,4 +1,4 @@
-import {boardComparison, markPinned, tradeInspection, pairInspection} from './desk-inspection.js';
+import {markPinned, tradeInspection, pairInspection} from './desk-inspection.js';
 import {quoteFreshness, selectedReference} from './desk-quote-display.js';
 import {pinLatestSelection, selectionCurrent, selectionIdentity} from './desk-evidence.js';
 import {evidenceReason} from './desk-reasons.js';
@@ -44,18 +44,7 @@ export function createDeskDrawer({replay, dataset, retainedResult, gameKey, page
     const {offer, group, game, evidence, pairContext} = currentSelection;
     const label = position(offer, game);
     $('trade-title').textContent = `${name(offer.venue)} · ${label}`;
-    if (offer.practice_ticket) {
-      const model = evidence?.valuation;
-      $('trade-title').textContent = label;
-      $('trade-body').replaceChildren(el('p', captureMode, 'inspection-mode'),
-        boardComparison({...offer, valuation:model}, group, game, model ? [model] : [],
-          {clock, size:offer.unit_usd, loading:!evidence}));
-      $('latest').hidden = true;
-      $('back-to-pair').hidden = true;
-      return;
-    }
-    const capturedAt = dataset === 'practice' ? null
-      : evidence?.captured_at || offer.captured_at || currentSelection.capturedAt;
+    const capturedAt = evidence?.captured_at || offer.captured_at || currentSelection.capturedAt;
     const mode = currentSelection.historical || replay
       ? [currentSelection.historical ? 'Saved capture' : captureMode, capturedAt && `Captured ${clock(capturedAt)}`]
         .filter(Boolean).join(' · ')

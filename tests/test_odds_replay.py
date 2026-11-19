@@ -54,11 +54,12 @@ def test_replay_detail_is_revision_bound_and_never_reads_live_data(saved_archive
         assert all(group['score'] is None for group in reviewed['rows'])
         offer = next(group['offers'][0] for group in page['rows'] if group['offers'][0]['id'] == 'practice-offer-0')
         assert offer['value'] == '10'
-        assert offer['fair_reference']['method'] == 'authored_probability'
+        assert offer['fair_reference'] == dict(books=['fanduel'], method='single')
         selection = dict(query, id=offer['id'], result_id=offer['evidence_result_id'])
         detail = load(selection, details=True)
         assert detail['inspection']['reviewed']['available'] is False
-        assert detail['inspection']['starting_fee_terms'] is None
+        assert detail['inspection']['starting_fee_terms']['scope']
+        assert 'fictional' not in str(detail['inspection']['starting_fee_terms']).lower()
         assert detail['inspection']['assumed_scenario']['available'] is False
         assert detail['inspection']['trade_fee']['reason'] == 'synthetic_account_terms_unavailable'
         with pytest.raises(PublicRequestError, match='revision changed'):
@@ -92,34 +93,14 @@ def test_saved_list_and_detail_use_the_same_per_offer_pregame_cutoff(saved_archi
     assert load(selection, details=True, allow_live=True)['row']['id'] == offer_id
 
 
-def test_practice_does_not_use_archives_and_selection_requires_exact_revision(tmp_path, monkeypatch):
+@pytest.mark.parametrize('dataset', ['practice', 'synthetic', 'demo', 'unknown'])
+@pytest.mark.parametrize('details', [False, True])
+def test_replay_rejects_unknown_datasets_without_archive_or_provider_reads(dataset, details, tmp_path, monkeypatch):
     monkeypatch.setattr(odds_replay, 'DIRECTORY', tmp_path)
-    rows = load(dict(dataset='practice', view='arbs'))['rows']
-    payoffs = {row['game_key']: row['pairs'][0]['retail_payoff'] for row in rows}
-    positive = payoffs['practice-positive']
-    assert (positive['funding_usd'], positive['minimum_net_payout_usd'], positive['minimum_net_profit_usd']) == (
-        '100', '125', '25')
-    assert {state['net_receipt_usd'] for state in positive['states'].values()} == {'125'}
-    assert 'partial_completion' in positive['states_unverified']
-    assert not positive['full_arbitrage_qualified']
-    assert payoffs['practice-shortfall']['minimum_gross_profit_usd'] == '-0.5'
-    assert payoffs['practice-depth']['reason'] == 'pair_execution_depth_insufficient'
-    assert payoffs['practice-rules']['reason'] == 'pair_settlement_unverified'
-    assert [r['game_key'] for r in load(dict(dataset='practice', view='arbs', positive='on'))['rows']] == [
-        'practice-positive']
-
-    ev = load(dict(dataset='practice'))
-    offer = ev['rows'][0]['offers'][0]
-    query = dict(dataset='practice', id=offer['id'], result_id=ev['replay']['id'])
-    detail = load(query, details=True)
-    assert detail['provider_requests'] == 0
-    assert ev['replay']['synthetic'] is True and 'captured_at' not in ev['replay']
-    assert offer['valuation_summary']['display'] == detail['valuation']['display']
-    assert detail['valuation']['fees']['entry_usd'] == '0.75'
-    assert detail['valuation']['display']['net_ev'] == '+2.82%'
+    with patch('app.dashboard.replay_api.connect', side_effect=AssertionError('live read')):
+        with pytest.raises(PublicRequestError, match='Unknown replay dataset'):
+            load(dict(dataset=dataset), details=details)
     assert list(tmp_path.iterdir()) == []
-    with pytest.raises(PublicRequestError, match='Offer unavailable in this replay revision'):
-        load(dict(query, result_id='another-revision'), details=True)
 
 
 def test_retained_novig_recovers_scoped_zero_without_legacy_reference():
@@ -179,3 +160,88 @@ def test_inspection_distinguishes_fractional_settlement_refund_and_loss(treatmen
     assert (tie['payout_usd'], tie['profit_usd']) == expected
     assert result['outcomes'][3]['payout_usd'] is None
     assert settlement_terms(row)['outcomes'][2]['payout_usd'] is None
+
+
+def test_retired_replay_datasets_fail_at_html_and_api_boundaries_without_sql(tmp_path):
+    import asyncio
+    from aiohttp.test_utils import TestClient, TestServer
+    from app.dashboard.multi_game_server import create_app
+    from tests.current_fixture import InjectedTestProvider
+    from tests.test_current_state import owner
+
+    async def journey():
+        provider = InjectedTestProvider()
+        provider.database_mode = True
+        from app.dashboard import bet_journal_api
+        from app.dashboard.bet_journal import Journal
+        original_mount = bet_journal_api.mount
+        with patch.object(bet_journal_api, 'mount', side_effect=lambda app: original_mount(
+                app, journal=Journal(tmp_path / 'journal.sqlite3'), monitor=False)):
+            app = create_app(owner=owner(), sessions={}, current_provider=provider)
+        async with TestClient(TestServer(app)) as client:
+            with patch('app.dashboard.replay_api.connect', side_effect=AssertionError('SQL read')):
+                for dataset in ('practice', 'synthetic', 'demo', 'unknown'):
+                    for path in ('/replay', '/api/odds-replay', '/api/odds-replay/details'):
+                        response = await client.get(path, params={'dataset': dataset})
+                        assert response.status == 422, (path, dataset, await response.text())
+            # Authentic archive/retained shells remain accessible.
+            for dataset in (*odds_replay.DATASETS, 'retained'):
+                response = await client.get('/replay', params={'dataset': dataset})
+                assert response.status == 200
+                assert 'desk.js' in await response.text()
+
+    asyncio.run(journey())
+
+
+def test_production_no_longer_recognizes_authored_probability_or_fictional_fee_rates():
+    from app.dashboard.product_finance import reference_allowed
+    from app.comparison.snapshot_pair_fees import _leg_fee
+    assert not reference_allowed(dict(source={'provider': 'practice'}, reference_calculation=dict(
+        available=True, method='authored_probability', probability='0.5')))
+    row = dict(venue='novig', captured_at='2026-11-18T20:00:00Z', source={'provider': 'practice'}, trade_fee=dict(
+        available=True, classification='synthetic', quantity='1',
+        evidence={'fictional_rate':'0'}, fee_cashflows={'at_fill_usd':'0'}))
+    result = _leg_fee(row, stake=Fraction(50), price=Fraction(2,5), quantity=Fraction(125),
+        receipts={'first_wins':Fraction(125), 'second_wins':Fraction(0)})
+    assert not result['available']
+
+
+@pytest.mark.parametrize('allow_synthetic', [False, True])
+def test_production_session_catalog_excludes_mock_history_without_deleting_it(allow_synthetic, tmp_path):
+    import asyncio
+    from aiohttp.test_utils import make_mocked_request
+    from app.dashboard.multi_game_server import create_app
+    from app.dashboard.current_state import CurrentStateProvider
+    from tests.test_current_state import owner
+
+    async def journey():
+        provider = CurrentStateProvider()
+        provider.database_mode = True
+        provider.allow_synthetic = allow_synthetic
+        selected_owner = owner()
+        selected_owner.output = tmp_path
+        for name in ('real', 'mock'):
+            (tmp_path/name).mkdir()
+            (tmp_path/name/'observations.jsonl').write_text('retained fixture')
+        selected_owner.saved.return_value = ['real', 'mock']
+        selected_owner.history_paths.return_value = {}
+        def saved(folder):
+            mode = folder.name
+            return {'rows':[{'type':'start','observed_at':'2026-11-18T20:00:00Z',
+                'spec':{'mode':mode}}, {'type':'multi_game_selection',
+                'games':[{'id':mode+'-game','title':mode+' capture'}], 'coverage':{}}]}
+        timeline = [{'id':'snapshot','at':'2026-11-18T20:00:00Z','label':'Saved'}]
+        with patch('app.dashboard.multi_game_server.saved_rows', side_effect=saved), \
+             patch('app.dashboard.multi_game_server.project_game', return_value=(timeline,[])), \
+             patch('app.dashboard.multi_game_server.default_point', return_value=timeline[0]):
+            app = create_app(owner=selected_owner, sessions={}, current_provider=provider)
+            request = make_mocked_request('GET','/api/sessions',app=app)
+            match = await app.router.resolve(request)
+            response = await match.handler(request)
+            import json
+            modes = {entry['data_mode'] for entry in json.loads(response.text)}
+            assert modes == ({'real','mock'} if allow_synthetic else {'real'})
+        # Filtering has no filesystem mutation; the historical captures remain.
+        assert all((tmp_path/name/'observations.jsonl').read_text()=='retained fixture' for name in ('real','mock'))
+        selected_owner.close.assert_not_called()
+    asyncio.run(journey())

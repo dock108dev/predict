@@ -58,8 +58,6 @@ def _leg_fee(row, *, stake, price, quantity, receipts, allow_fractional=False):
             assumptions = model['assumptions']
         elif quantity == F(fee.get('quantity', '1')):
             fill = F(cashflows['at_fill_usd'])
-        elif (row.get('source') or {}).get('provider') == 'practice' and fee['classification'] == 'synthetic':
-            fill = F(evidence['fictional_rate']) * stake
         else:
             if not allow_fractional and venue in ('kalshi', 'polymarket_us') and quantity.denominator != 1:
                 return dict(available=False, reason='pair_size_unsupported')

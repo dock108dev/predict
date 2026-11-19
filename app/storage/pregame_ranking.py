@@ -2,7 +2,7 @@
 
 from decimal import Decimal, ROUND_HALF_UP
 
-DEFAULT = "growth"
+DEFAULT = "edge"
 METHODS = {
     "growth": dict(
         label="Kelly growth",

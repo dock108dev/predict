@@ -20,6 +20,7 @@ class CurrentService:
 
     def __init__(self, config=None, *, directory=None, ownership=None, worker_factory=None, evidence=None, aggregate_factory=None, sgo_factory=None, config_loader=None, retained_directory=None, database_mode=False, paused_sources=(), globally_stopped=False):
         self.config = load() if config is None else validate(config)
+        self.activity_mode_enabled = database_mode
         from app.comparison.coverage import CoverageLedger
         self.coverage = CoverageLedger({v: native_scope(self.config) if v in ('kalshi','polymarket_us') else
             aggregate_scope(self.config) if self.config['aggregate_enabled'] else []

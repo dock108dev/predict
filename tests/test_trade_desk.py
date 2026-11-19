@@ -8,6 +8,8 @@ from unittest.mock import MagicMock, Mock, patch
 from aiohttp import web
 from aiohttp.test_utils import make_mocked_request
 
+from tests.fee_fixture import authored_fee_outcomes
+
 from app.comparison.ordinary_arb import DEFAULT_FUNDING, evaluate as evaluate_arb
 from app.comparison.snapshot_math import before_fee_pair
 from app.dashboard.snapshot_api import mount
@@ -825,6 +827,7 @@ class TradeDesk(TestCase):
         gap['same_outcome']['key'][10] = ['refund', [2, 1], None, 'not_applicable']
         self.assertIsNone(before_fee_pair(a, gap, 'spread'))
 
+    @authored_fee_outcomes
     def test_pair_uses_exact_funding_and_reports_insufficient_top_of_book_depth(self):
         left = quote('left', 'kalshi', threshold=3)
         right = quote('right', 'polymarket_us', threshold=2, operator='le')
@@ -849,6 +852,7 @@ class TradeDesk(TestCase):
         unavailable = evaluate_arb(proof, [left, right], Fraction(1,100))['retail_payoff']
         self.assertEqual(unavailable['reason'], 'pair_stake_rounds_to_zero')
 
+    @authored_fee_outcomes
     def test_positive_filter_hides_negative_reverse_and_counts_blocked_legs(self):
         a = quote('a', 'kalshi', threshold=3)
         b = quote('b', 'polymarket_us', threshold=2, operator='le')
@@ -890,6 +894,7 @@ class TradeDesk(TestCase):
         view = page(result(left, right), {}, ('arbs', None, 0, 25), captured_pairs=[pair], policy='policy')
         self.assertEqual(view['eligible_pair_count'], 0)
 
+    @authored_fee_outcomes
     def test_ranked_arb_uses_funded_minimum_and_keeps_zero_and_losses(self):
         rows, pairs = [], []
         for key, cost, fee in (
@@ -912,6 +917,7 @@ class TradeDesk(TestCase):
         positive = page(data, {'ranked': '1', 'positive': 'on'}, options, captured_pairs=pairs, policy='policy')
         self.assertEqual(positive['total'], 2)
 
+    @authored_fee_outcomes
     def test_arb_reuses_default_result_for_matching_fee_evidence(self):
         left = quote('left', 'novig', threshold=3)
         right = quote('right', 'prophetx', threshold=2, operator='le')
@@ -934,6 +940,7 @@ class TradeDesk(TestCase):
             self.assertEqual(evaluate.call_args.args[2], DEFAULT_FUNDING)
             self.assertNotEqual(changed['rows'][0]['score'], payoff['score'])
 
+    @authored_fee_outcomes
     def test_live_arb_lists_read_published_payoff_and_withdraw_replaced_fees(self):
         left = quote('left', 'novig', threshold=3)
         right = quote('right', 'prophetx', threshold=2, operator='le')
@@ -975,6 +982,7 @@ class TradeDesk(TestCase):
             self.assertNotIn('states', retail)
             self.assertEqual([leg['acquisition_usd'] for leg in retail['legs']], ['50', '50'])
 
+    @authored_fee_outcomes
     def test_selected_stake_reuses_exact_pair_member_and_existing_evaluator(self):
         at = '2026-11-07T23:00:00+00:00'
         left = quote('left', 'novig', threshold=3)

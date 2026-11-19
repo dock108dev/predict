@@ -6,6 +6,8 @@ stays after the cheap update-cursor path and inside the caller's transaction.
 
 from app.comparison import current_pregame as math
 from .store import hashed
+from .pregame_known_withdrawals import ROW_GUARDS
+from datetime import timedelta
 
 
 def read(db, query, *, at=None, clock, configured_routes):
@@ -28,7 +30,10 @@ def read(db, query, *, at=None, clock, configured_routes):
         (at, at),
     ).fetchone()
     deadline, boundary = deadlines["next"], deadlines["previous"]
-    cursor = hashed([revision["revision"], str(boundary)])
+    public_revision = db.execute(
+        "SELECT revision,current_schema() AS cohort_schema FROM public.current_pregame_revision WHERE singleton"
+    ).fetchone()
+    cursor = hashed([public_revision["cohort_schema"], revision["revision"], public_revision["revision"], str(boundary)])
     base = dict(
         schema="predict-current-pregame-1",
         state="ready",
@@ -69,6 +74,18 @@ def read(db, query, *, at=None, clock, configured_routes):
         "e.scheduled_start::timestamptz>%s",
     ]
     params = [at, at, at]
+    if query.get("_scope_seconds"):
+        clauses.append("p.start_at<=%s")
+        params.append(at + timedelta(seconds=int(query["_scope_seconds"])))
+    order_by = query.get("order", "rank")
+    if order_by not in ("rank", "newest", "oldest", "start"):
+        raise ValueError("Unknown row order")
+    if query.get("max_age_minutes"):
+        age = int(query["max_age_minutes"])
+        if not 1 <= age <= 525600:
+            raise ValueError("Invalid maximum age")
+        clauses.append("(p.payload#>>'{times,source_at}')::timestamptz>=%s")
+        params.append(at - timedelta(minutes=age))
     # A bet with no positive stored venue cannot produce a positive result.
     # Keep every alias/venue inside admitted bets so newest-alias selection and
     # exact eligibility remain unchanged; do not filter individual rows by EV.
@@ -132,12 +149,14 @@ def read(db, query, *, at=None, clock, configured_routes):
            WHERE s.id IS NULL OR s.facts->'available' IS DISTINCT FROM 'true'::jsonb)""",
         ]
     )
+    clauses.extend(ROW_GUARDS)
+    params.append(at)
     where = " AND ".join(clauses)
     source = (
         " FROM "
         + relation
         + """ p JOIN current_contract c ON c.id=p.contract_id
-        JOIN current_offer_storage o ON o.contract_id=c.id JOIN current_event e ON e.id=c.event_id WHERE """
+        JOIN current_offer_storage o ON o.contract_id=c.id JOIN LATERAL (SELECT * FROM current_event WHERE id=c.event_id LIMIT 1) e ON true WHERE """
         + where
     )
     # Multiple native aliases can describe one venue's same logical offer.
@@ -216,6 +235,15 @@ def read(db, query, *, at=None, clock, configured_routes):
             limit=limit,
         )
     order = "ranking_value DESC NULLS LAST,net_ev DESC,bet_id"
+    if order_by in ("newest", "oldest"):
+        direction = "DESC" if order_by == "newest" else "ASC"
+        order = (
+            "(payload#>>'{times,source_at}')::timestamptz "
+            + direction
+            + " NULLS LAST,bet_id"
+        )
+    elif order_by == "start":
+        order = "start_at,bet_id"
     page = db.execute(
         grouped
         + ", ranked AS (SELECT *,"
