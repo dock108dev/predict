@@ -10,6 +10,9 @@ from psycopg.errors import QueryCanceled
 from app.storage.store import connect
 
 READ_DEADLINE_SECONDS = 10
+# The measured whole-slate cold scan takes 8.9s on the shared deployed host.
+# Give that bounded computation headroom; ordinary stored-row reads retain 10s.
+ARBITRAGE_READ_DEADLINE_SECONDS = 15
 
 RETIRED = frozenset(
     (
@@ -42,7 +45,12 @@ async def response(request, *, connector=None):
         query["browse"] = "1"
 
     cancelled = Event()
-    deadline = monotonic() + READ_DEADLINE_SECONDS
+    read_seconds = (
+        ARBITRAGE_READ_DEADLINE_SECONDS
+        if request.path.endswith("/arbs")
+        else READ_DEADLINE_SECONDS
+    )
+    deadline = monotonic() + read_seconds
 
     def work():
         from app.storage.current_pregame import read
@@ -69,7 +77,7 @@ async def response(request, *, connector=None):
         return dict(result, read_ms=round((monotonic() - started) * 1000, 3))
 
     try:
-        async with asyncio.timeout(READ_DEADLINE_SECONDS):
+        async with asyncio.timeout(read_seconds):
             result = await asyncio.to_thread(work)
     except (TimeoutError, QueryCanceled):
         return web.json_response(

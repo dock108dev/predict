@@ -1,6 +1,8 @@
 """Recovery, truthful completeness, and touch inspection on the shipped pregame UI."""
 
 import asyncio
+import json
+import os
 from copy import deepcopy
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
@@ -338,8 +340,54 @@ def test_touch_nested_dialogs_preserve_context_and_unavailable_ev(
                 "document.querySelector('#comparison-content').scrollTop > 0"
             )
             assert abs((await close_comparison.bounding_box())["y"] - comparison_y) < 1
+            await page.evaluate("""() => {
+                window.closeProbe=[];
+                for(const type of ['pointerdown','pointerup','click','focusin','close'])
+                    document.addEventListener(type,event=>{
+                        const target=event.target;
+                        window.closeProbe.push({type,time:performance.now(),id:target.id,
+                            tag:target.tagName,focusKey:target.dataset?.focusKey,
+                            pointerType:event.pointerType,
+                            active:document.activeElement?.outerHTML.slice(0,500)});
+                    },true);
+            }""")
             await close_comparison.tap()
-            await expect(line).to_be_focused()
+            try:
+                await expect(line).to_be_focused()
+            except AssertionError:
+                diagnostic = await page.evaluate("""() => ({
+                    events:window.closeProbe,
+                    active:document.activeElement?.outerHTML,
+                    dialogs:[...document.querySelectorAll('dialog')].map(e=>({id:e.id,open:e.open})),
+                    popovers:[...document.querySelectorAll(':popover-open')].map(e=>e.outerHTML.slice(0,1000)),
+                    scrolls:{page:scrollY,game:document.querySelector('#game-content').scrollTop,
+                        comparison:document.querySelector('#comparison-content').scrollTop},
+                    closeHit:(() => {const b=document.querySelector('#close').getBoundingClientRect();
+                        return document.elementsFromPoint(b.x+b.width/2,b.y+b.height/2)
+                            .map(e=>({id:e.id,tag:e.tagName,className:e.className}));})()
+                })""")
+                print("Nested close diagnostic: " + json.dumps(diagnostic))
+                directory = Path(
+                    os.getenv(
+                        "PREDICT_CI_REPORT_ROOT", ".local/usability-sprint/linux-focus"
+                    )
+                )
+                directory.mkdir(parents=True, exist_ok=True)
+                stem = "nested-close-" + str(game_reply_before_close)
+                (directory / (stem + ".json")).write_text(
+                    json.dumps(diagnostic, indent=2)
+                )
+                await page.screenshot(path=str(directory / (stem + ".png")))
+                raise
+            # If Linux consumed native click synthesis during the fling, model
+            # that touch's delayed compatibility click landing on the parent
+            # close control at the same fixed coordinates. It must not close it.
+            if not await page.evaluate(
+                "()=>window.closeProbe.some(event=>event.type==='click')"
+            ):
+                await page.locator("#game-close").dispatch_event("click", {"detail": 1})
+                await expect(page.locator("#game-lines")).to_be_visible()
+                await expect(line).to_be_focused()
             assert (
                 abs(
                     await page.locator("#game-content").evaluate("e=>e.scrollTop")

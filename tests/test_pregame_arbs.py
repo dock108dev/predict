@@ -217,7 +217,7 @@ def test_api_deadline_cooperatively_stops_background_pair_work():
 
     async def scenario():
         with (
-            patch.object(api, "READ_DEADLINE_SECONDS", 0.02),
+            patch.object(api, "ARBITRAGE_READ_DEADLINE_SECONDS", 0.02),
             patch("app.storage.pregame_arbs.read", side_effect=slow_read),
         ):
             response = await api.response(

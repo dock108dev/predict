@@ -55,7 +55,7 @@ def test_arb_deadline_retry_supersession_partial_and_retained_failure():
                 if state["mode"] == "failed":
                     await route.fulfill(status=503, json={})
                     return
-                empty = state["mode"] == "empty"
+                empty = state["mode"] in ("empty", "excluded")
                 await route.fulfill(
                     json=dict(
                         rows=[] if empty else [pair],
@@ -63,6 +63,7 @@ def test_arb_deadline_retry_supersession_partial_and_retained_failure():
                         cursor="one",
                         sportsbooks=["draftkings"],
                         partial=state["mode"] == "partial",
+                        excluded_pairs=1 if state["mode"] == "excluded" else 0,
                     )
                 )
             else:
@@ -87,7 +88,7 @@ def test_arb_deadline_retry_supersession_partial_and_retained_failure():
             await expect(
                 page.get_by_role("navigation", name="Main").get_by_text("Practice")
             ).to_be_visible()
-            await page.clock.fast_forward(12001)
+            await page.clock.fast_forward(18001)
             await expect(page.locator("#results")).to_have_attribute(
                 "data-state", "failed"
             )
@@ -126,6 +127,17 @@ def test_arb_deadline_retry_supersession_partial_and_retained_failure():
             await page.locator("#refresh").click()
             await expect(page.locator("#count")).to_contain_text(
                 "Partial comparison results"
+            )
+            state["mode"] = "excluded"
+            await page.locator("#refresh").click()
+            await expect(page.locator("#results")).to_have_attribute(
+                "data-state", "partial"
+            )
+            await expect(page.locator("#count")).to_contain_text(
+                "1 pair could not be modeled"
+            )
+            await expect(page.locator("#results")).to_contain_text(
+                "No positive pair in the completed comparisons"
             )
             state["mode"] = "loaded"
             await page.locator("#venue").select_option("kalshi")

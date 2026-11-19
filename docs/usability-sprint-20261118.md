@@ -76,6 +76,17 @@ replacement with the same focus identity if a late response replaced the node.
 The regression reproduces absent native focus and both before/after-close response
 orderings without weakening its original focus or scroll assertions.
 
+The repeated Linux failure then provided a more specific observation: after a
+kinetic touch scroll, the close control received pointer press/release but no
+synthesized click. The dialog stayed open; focus restoration had never run. A
+matching isolated Linux/amd64 Chromium reproduction captured the event sequence,
+modal state and hit-test. `dialog-close.js` now closes on a completed primary
+touch release inside the control, retaining ordinary mouse/keyboard activation.
+It suppresses that touch's delayed compatibility click so the parent close
+control at the same coordinates cannot also activate. Zero-detail accessible
+activation remains allowed. The original Linux assertions pass without a
+fling-settling delay or a longer assertion timeout.
+
 The 15-minute historical-input caution follows the existing
 `CURRENT_DESK_MAX_AGE_SECONDS` display convention. It does not remove retained
 pregame prices or establish execution authority. Sporting eligibility remains
@@ -124,6 +135,25 @@ group filtering and paging game identities before JSON aggregation also reduce
 unneeded work while preserving full eligible results. The follow-up source checks
 pass 30 SQL tests plus two subtests and 23 unit tests. Installed final-SHA behavior
 and the new Linux hosted run remain separate evidence in the final handoff.
+
+Commit `0c03ed4` subsequently returned normal HTTP Arbitrage results in 4.91/5.03
+seconds and Opportunities in 1.48/1.28 seconds. Its fresh-process installed API
+handler still reached the ten-second deadline. The cold profile showed 34,800
+JSON decodes taking 4.52 seconds; fee calculation took 0.177 seconds. Restricting
+the reference fetch to represented event/family/line combinations and recognized
+books avoids decoding unrelated alternates. Spread preselection is deliberately
+broad, with the original signed/reversed-role checks retained. Exact arithmetic
+and guarded numeric parsing preserve decimal, fractional and scientific lines.
+Final deployed measurements are retained separately from both earlier attempts.
+
+After that optimization, the candidate cold scan completed in 8.9 seconds on
+the shared host and retained all 199 fixed-snapshot positive rows. Arbitrage's
+recovery deadline is calibrated to 15 seconds server-side and 18 seconds in the
+browser; ordinary stored-row reads retain 10/12 seconds. SQL statements retain
+their eight-second bound. This is headroom for measured cold computation, not a
+claim that the two-second engineering budget is met or a new completion gate.
+The sufficient final checks are a completed installed cold handler, normal
+deployed browser/API behavior, and the unchanged repository CI workflow.
 
 Mobile evidence uses Chromium touch emulation and dispatched touch gestures,
 with focused keyboard input. Physical iOS/Android software-keyboard resizing

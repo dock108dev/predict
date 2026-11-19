@@ -319,6 +319,134 @@ class PregameBoardViewsSQL(PregameFixture):
             )
             self.assertEqual(arb_read(db, {}, at=stamp(AT))["total"], 0)
 
+    async def test_profit_bound_keeps_latest_and_tied_cross_event_aliases(self):
+        from app.fees import pricing
+        from tests.test_fee_pricing import rule
+        from app.storage.pregame_arbs import read as arb_read
+        from psycopg.types.json import Jsonb
+
+        data = page()
+        for odd in data["data"][0]["odds"].values():
+            odd["byBookmaker"] = {
+                "prophetx": dict(odd["byBookmaker"]["prophetx"], odds="+150"),
+                "fanduel": dict(odd["byBookmaker"]["fanduel"], odds="+200"),
+            }
+        with self.connect() as db:
+            pricing.write(db, "prophetx", [rule("prophetx")])
+            self.ingest(db, data)
+            self.process(db)
+            self.assertGreater(arb_read(db, {}, at=stamp(AT))["total"], 0)
+            db.execute("""UPDATE current_pregame_price SET payload=jsonb_set(
+                payload,'{sportsbook_event_ids}','["event","alias"]')""")
+            # Newer unprofitable evidence wins over an older attractive alias.
+            db.execute(
+                """INSERT INTO sgo_quote_revision
+                (id,event_id,bookmaker_id,source_order,received_order,expires_at,revision,facts,is_current)
+                SELECT id||'-alias','alias',bookmaker_id,source_order,received_order,expires_at,revision,
+                  facts||%s,true FROM sgo_quote_revision
+                WHERE is_current AND bookmaker_id='fanduel'""",
+                (
+                    Jsonb(
+                        dict(
+                            event_id="alias",
+                            price_american="-200",
+                            source_at="2026-11-17T19:59:30Z",
+                        )
+                    ),
+                ),
+            )
+            self.process(db)
+            self.assertEqual(arb_read(db, {}, at=stamp(AT))["total"], 0)
+            original = db.execute(
+                "SELECT facts->>'source_at' AS original_clock FROM sgo_quote_revision WHERE event_id='event' AND bookmaker_id='fanduel' LIMIT 1"
+            ).fetchone()["original_clock"]
+            # Equal-clock conflicts stay ambiguous even when one price is good.
+            db.execute(
+                "UPDATE sgo_quote_revision SET facts=jsonb_set(facts,'{source_at}',%s) WHERE event_id='alias'",
+                (Jsonb(original),),
+            )
+            self.process(db)
+            self.assertEqual(arb_read(db, {}, at=stamp(AT))["total"], 0)
+            db.execute("DELETE FROM sgo_quote_revision WHERE event_id='alias'")
+            self.process(db)
+            self.assertGreater(arb_read(db, {}, at=stamp(AT))["total"], 0)
+
+    async def test_book_quote_fetch_filters_exact_numeric_lines_before_json_decode(
+        self,
+    ):
+        from app.storage.pregame_arbs import read_book_quotes
+        from psycopg.types.json import Jsonb
+
+        def request(family="spread", numerator=3, denominator=2):
+            return [
+                dict(
+                    event_id="event",
+                    family=family,
+                    numerator=numerator,
+                    denominator=denominator,
+                )
+            ]
+
+        with self.connect() as db:
+            self.ingest(db, page())
+            # Same exact 1.5-point line in source-supported representations.
+            for home, away in (
+                ("-3/2", "3/2"),
+                ("-1.5E+0", "1.5E+0"),
+                ("-15/1_0", "15/1_0"),
+            ):
+                db.execute(
+                    """UPDATE sgo_quote_revision SET facts=jsonb_set(facts,'{line}',
+                    to_jsonb(CASE WHEN facts->>'side'='home' THEN %s::text ELSE %s::text END))
+                    WHERE is_current AND bookmaker_id=ANY(%s)""",
+                    (home, away, ["fanduel", "draftkings"]),
+                )
+                quotes = read_book_quotes(db, request())
+                self.assertEqual(len(quotes), 4)
+                self.assertEqual(
+                    {q["venue"] for q in quotes}, {"fanduel", "draftkings"}
+                )
+            # Invalid and out-of-range retained numbers stay excluded rather
+            # than turning a harmless old quote into a failed board request.
+            for value in ("not-a-line", "1e-10000000", "1/0"):
+                db.execute(
+                    "UPDATE sgo_quote_revision SET facts=jsonb_set(facts,'{line}',%s) WHERE is_current",
+                    (Jsonb(value),),
+                )
+                self.assertEqual(read_book_quotes(db, request()), [])
+            db.execute(
+                "UPDATE sgo_quote_revision SET facts=jsonb_set(facts,'{market}','\"moneyline\"') WHERE is_current"
+            )
+            # Moneyline identity never depends on a source's irrelevant line.
+            self.assertEqual(
+                len(read_book_quotes(db, request("moneyline", None, 1))), 4
+            )
+            db.execute("""UPDATE sgo_quote_revision SET facts=jsonb_set(
+                jsonb_set(facts,'{market}','\"total\"'),'{line}','\"1E+2\"') WHERE is_current""")
+            self.assertEqual(len(read_book_quotes(db, request("total", 100, 1))), 4)
+            self.assertEqual(read_book_quotes(db, request("total", 101, 1)), [])
+            from app.comparison.sgo_reference import american_probability
+
+            scope = request("total", 100, 1)
+            scope[0].update(
+                cost_numerator=2,
+                cost_denominator=5,
+                group_key="unparsed-price",
+                canonical_side="home",
+            )
+            # The SQL fast parser cannot prove these prices impossible. Keep
+            # their witnesses for the ordinary validator rather than inventing
+            # an absence (including its accepted Unicode-decimal spelling).
+            self.assertEqual(american_probability("+١٠٠"), Fraction(1, 2))
+            with self.assertRaises(ValueError):
+                american_probability("+100.0000000000001")
+            for value in ("+١٠٠", "+100.0000000000001"):
+                db.execute(
+                    "UPDATE sgo_quote_revision SET facts=jsonb_set(facts,'{price_american}',%s) WHERE is_current",
+                    (Jsonb(value),),
+                )
+                self.assertEqual(len(read_book_quotes(db, scope)), 4)
+
     async def test_pending_reference_job_suppresses_pairs_before_recalculation(self):
         from app.fees import pricing
         from tests.test_fee_pricing import rule

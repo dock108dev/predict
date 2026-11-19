@@ -22,7 +22,8 @@ plans, profiles and failing/passing checks remain outside Git under
   SQL eligibility pass still excludes expired fees, withdrawal and kickoff before
   reuse; quote timestamps are never renewed. The existing whole-query cache remains
   query/cursor/deadline scoped.
-- Bound SQL statements at eight seconds and API work at ten seconds. A cancelled
+- Bound SQL statements at eight seconds, ordinary API work at ten seconds and
+  the measured whole-slate Arbitrage read at fifteen seconds. A cancelled
   request sets a cooperative stop signal, checked during Python pairing. A timeout
   returns an explicit 503 `current_read_timeout`, never an empty result. These
   limits prevent continuing the observed abandoned work; they are not the speed fix.
@@ -165,6 +166,77 @@ The next sufficient stopping condition is normal completed API/browser behavior
 on the next GitHub-deployed SHA, including a cold Arbitrage read. No additional
 observation window or two-second release gate was introduced.
 
+## Cold-process verification found a separate decoding cost
+
+The next installed commit, `0c03ed4`, completed normal HTTP Arbitrage reads in
+4.91/5.03 seconds, Opportunities in 1.48/1.28 seconds, and Browse in 3.92/4.56
+seconds. A fresh Python process calling the installed handler still returned
+`503 current_read_timeout` at 10.018 seconds. Warm process caches therefore could
+not establish cold behavior. The ten-second request deadline was retained.
+
+A deadline-bounded profile changed the next step: it decoded **34,800 JSON
+documents**, spending 4.52 seconds in JSON loading plus 2.13 seconds executing
+SQL, before only 16 pairs had been modeled. `prices.calculate` accounted for
+177 ms in that partial profile. Refactoring constant fee-order preparation would
+have targeted the wrong dominant cost at that point.
+
+The read now asks for represented events, families, lines and opposite native
+sides before fetching book quote bodies. Decimal/fraction/scientific line forms
+compare through exact cross-products, with guarded numeric casts. Spreads use an
+absolute-line superset and keep the existing signed-line/reversed-role check as
+the final authority. Moneyline identity continues to ignore the line field.
+
+Filtering alone and scalar projection moved too much work into SQL and remained
+near ten seconds. The final approach materializes compact quote identities and
+price witnesses, then fetches the **original complete JSON bodies only for
+admitted identities**. This preserves exact source timestamp text, Boolean types,
+missing-field behavior and all retained metadata without changing the JSON loader.
+
+Admission uses the existing model's necessary pre-fee condition: a book price
+cannot become a positive pair if no opposing native price can beat it before
+nonnegative fees. It applies this condition to **whole book/outcome witness
+groups across every attached event alias**, rather than dropping individual
+unprofitable quotes. Price spellings outside the bounded SQL fast parser remain
+optimistically admitted for the ordinary validator; they are not treated as a
+proven absence. A newer unprofitable alias must still replace an older
+attractive quote; conflicting prices at the same source clock must still be
+ambiguous. Both remain subject to the existing Python source-order and ambiguity
+selection. A window `bool_or` computes group admission once, avoiding a badly
+estimated nested-loop self-join that repeatedly scanned the witness set.
+
+A read-only fresh-process diagnostic using installed modeling code plus the
+candidate SQL completed **198 pairs in 8.9196 seconds**, with 0 provider requests
+and 0 scheduled calculations. It fetched 2,470 market price records in 0.950
+seconds and only **217 full book JSON records** for 1,106 requested scopes in
+3.109 seconds. This is candidate evidence, not a claim that the next commit is
+already installed. The next GitHub deployment must establish the actual cold
+handler result.
+
+The final recovery policy gives Arbitrage 15 seconds server-side and 18 seconds
+in the browser, based on the measured 8.9-second cold computation and shared-host
+variation. Ordinary reads retain 10/12 seconds and SQL statements retain eight
+seconds. These are engineering recovery choices, not owner-approved release
+gates. The query and transfer reductions establish the speed work; increasing
+the deadline alone would not. Actual installed cold latency remains part of the
+final verification, and the two-second cold-result budget is not claimed met.
+
+The API now declares `sportsbook_prefilter=opposite_market_positive_before_fees`.
+Its `evaluated_pairs` counts candidates surviving that safe admission, rather than
+all impossible book combinations; the counts are not directly comparable with
+the earlier broad read. The book selector correspondingly lists books in those
+admitted scopes. Authentic prices remain inspectable through Browse and exact
+comparisons independently of this positive-Arbitrage discovery optimization.
+
+The fixed-snapshot comparison retained all 199 identical positive rows across
+both pages while
+reducing local cold read time **1.762→1.105 seconds** and candidate combinations
+43,479→3,883. New disposable cases cover fractional/scientific lines, underscored
+fraction denominators, malformed/out-of-range numbers, moneyline line independence,
+newer unprofitable aliases across different events and equal-clock conflicting
+aliases. The final disposable PostgreSQL run passed **32 tests plus 2 subtests**
+in 5.79 seconds (`sql-cold-window-final/junit.xml`). One new fixture initially used the reserved SQL alias `at`; that failed
+run is preserved and the fixture now uses `original_clock`.
+
 ## Verification and limits
 
 - `tests/test_pregame_arbs.py`, `tests/test_pregame_sportsbook_prices.py` and
@@ -186,6 +258,6 @@ No provider request, account mutation, source configuration, Stop choice or fina
 ledger changed in these reads and disposable tests. Hosted checks, deployment and
 installed behavior are recorded in the main sprint handoff after they occur.
 
-Learning update: The first deployed timeout occurred inside SQL before any pair modeling | replaced the queued-reference membership join and deferred off-page JSON construction | candidate live plans improve Arbitrage eligibility from an eight-second timeout to 474 ms, Opportunities 1406→324 ms and Browse 3794→2099 ms; 32 SQL checks pass | next deployed cold-read and browser verification remain required.
+Learning update: Warm HTTP success hid cold-process JSON decoding, while individual profit filtering could revive stale aliases | fetch full book bodies only after whole-witness-group admission, preserving source order and ties | candidate fresh-process read completes 198 pairs in 8.9196 seconds and fixed-snapshot positive results remain identical | the next GitHub-deployed cold handler still requires verification.
 
 Review decision: Browse must hide prices without complete EV | prior test expectation superseded by owner sprint scope; blocks desired browsing | updated assertions to require null EV and actual reason while retaining the positive-opportunity rule.

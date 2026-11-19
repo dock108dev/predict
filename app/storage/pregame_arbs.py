@@ -4,6 +4,7 @@ from collections import defaultdict, OrderedDict
 from threading import Lock
 from fractions import Fraction as F
 from itertools import product
+from psycopg.types.json import Jsonb
 from app.comparison import pregame_arbs as math
 from app.comparison.current_pregame import reference_key
 from app.comparison.sgo_reference import american_probability
@@ -36,6 +37,71 @@ def cached_pair(left, right, *, at):
         while len(_PAIR_CACHE) > _PAIR_CACHE_LIMIT:
             _PAIR_CACHE.popitem(last=False)
     return result
+
+
+def read_book_quotes(db, request_lines):
+    """Fetch supported books on represented lines before decoding quote bodies.
+
+    The spread bound deliberately includes both signs; final canonical side,
+    line and reversed-role checks retain their ordinary authority. Cross-products
+    compare decimal and rational lines exactly, without float conversion.
+    Profit bounds admit whole book/outcome witness groups across attached events;
+    newest unprofitable quotes and conflicting ties must survive that admission.
+    Unparsed price formats stay optimistic; only the ordinary model validates them.
+    """
+    if not request_lines:
+        return []
+    rows = list(
+        db.execute(
+            """WITH requested AS (
+                  SELECT * FROM jsonb_to_recordset(%s)
+                    r(event_id text,family text,numerator numeric,denominator numeric,side text,
+                      group_key text,canonical_side text,cost_numerator numeric,cost_denominator numeric)),
+                scoped AS MATERIALIZED (
+                SELECT q.id AS quote_id,
+                  q.facts->>'venue' AS venue,q.facts->>'price_american' AS price_american,
+                  COALESCE(r.group_key,'') AS group_key,COALESCE(r.canonical_side,q.facts->>'side') AS canonical_side,
+                  r.cost_numerator,r.cost_denominator,
+                  jsonb_typeof(q.facts->'price_american')='string' AS price_is_string
+                FROM current_sgo_reference q JOIN requested r ON q.event_id=r.event_id
+                WHERE q.event_id=ANY(%s) AND q.facts->>'market'=r.family AND q.facts->>'venue'=ANY(%s)
+                  AND (r.side IS NULL OR (q.facts->>'side')=r.side)
+                  AND q.facts->'available'='true'::jsonb
+                  AND (NOT (q.facts ? 'provider_available') OR q.facts->'provider_available'='true'::jsonb)
+                  AND (q.facts->>'phase')='pregame' AND (q.facts->>'period')='game'
+                  AND (q.facts->>'partition') IS DISTINCT FROM 'three_way'
+                  AND CASE WHEN r.family='moneyline' THEN true
+                    WHEN replace(trim((q.facts->>'line')),'_','') ~
+                      '^[+-]?([0-9]+([.][0-9]*)?|[.][0-9]+)([eE][+-]?[0-9]+)?(/[0-9]+)?$'
+                      AND pg_input_is_valid(split_part(replace(trim((q.facts->>'line')),'_',''),'/',1),'numeric')
+                      AND pg_input_is_valid(COALESCE(NULLIF(split_part(replace(trim((q.facts->>'line')),'_',''),'/',2),''),'1'),'numeric') THEN
+                      CASE WHEN r.family='spread' THEN
+                        abs(split_part(replace(trim((q.facts->>'line')),'_',''),'/',1)::numeric) * r.denominator
+                          = abs(r.numerator) * COALESCE(NULLIF(split_part(replace(trim((q.facts->>'line')),'_',''),'/',2),''),'1')::numeric
+                      ELSE split_part(replace(trim((q.facts->>'line')),'_',''),'/',1)::numeric * r.denominator
+                          = r.numerator * COALESCE(NULLIF(split_part(replace(trim((q.facts->>'line')),'_',''),'/',2),''),'1')::numeric END
+                    ELSE false END),
+                admitted AS (
+                  SELECT quote_id,bool_or(cost_numerator IS NULL OR CASE
+                    WHEN price_is_string AND price_american ~ '^[+-]?[0-9]{1,12}([.][0-9]{1,12})?$' THEN
+                      CASE WHEN price_american::numeric>=100 THEN
+                        price_american::numeric*(cost_denominator-cost_numerator)>100*cost_numerator
+                      WHEN price_american::numeric<=-100 THEN
+                        -price_american::numeric*cost_numerator<100*(cost_denominator-cost_numerator)
+                      ELSE false END
+                    ELSE true END) OVER(PARTITION BY group_key,canonical_side,venue) AS potential
+                  FROM scoped)
+                SELECT q.facts FROM current_sgo_reference q JOIN (
+                  SELECT DISTINCT quote_id FROM admitted WHERE potential
+                ) chosen ON q.id=chosen.quote_id""",
+            (
+                Jsonb(request_lines),
+                sorted({r["event_id"] for r in request_lines}),
+                sorted(SPORTSBOOKS),
+            ),
+        )
+    )
+    return [row["facts"] for row in rows]
 
 
 def observation_clock(entry):
@@ -227,20 +293,66 @@ def read(db, query, *, at=None, can_continue=None):
         if previous is None or observation_clock(entry) > observation_clock(previous):
             unique[key] = entry
     entries = list(unique.values())
-    event_ids = sorted(
-        {eid for e in entries for eid in e["payload"].get("sportsbook_event_ids", [])}
-    )
-    quotes = (
-        [
-            r["facts"]
-            for r in db.execute(
-                "SELECT facts FROM current_sgo_reference WHERE event_id=ANY(%s)",
-                (event_ids,),
-            )
-        ]
-        if event_ids
-        else []
-    )
+    # Only exact lines represented by retained market legs can form a pair.
+    # Fetching every alternate from each event previously decoded tens of
+    # thousands of irrelevant JSON bodies before the first pair was modeled.
+    grouped = defaultdict(lambda: defaultdict(list))
+    for entry in entries:
+        grouped[entry["payload"]["arb_key"]][entry["payload"]["side"]].append(entry)
+    requested = {}
+    for group_key, sides in grouped.items():
+        markets = [e for side in sides.values() for e in side]
+        template = markets[0]
+        p = template["payload"]
+        family, _, line = reference_key(template["record"])
+        actual = abs(line) if family == "spread" else line
+        events = {
+            eid for e in markets for eid in e["payload"].get("sportsbook_event_ids", [])
+        }
+        for entry in markets:
+            canonical_side = {
+                "home": "away",
+                "away": "home",
+                "over": "under",
+                "under": "over",
+            }.get(entry["payload"]["side"])
+            if canonical_side is None:
+                continue
+            probability = 1 / F(entry["payload"]["raw"]["posted_decimal"])
+            for eid in events:
+                side = canonical_side
+                if p.get("sportsbook_sides_reversed", {}).get(eid) and side in (
+                    "home",
+                    "away",
+                ):
+                    side = {"home": "away", "away": "home"}[side]
+                key = (
+                    group_key,
+                    canonical_side,
+                    eid,
+                    family,
+                    None if actual is None else actual.numerator,
+                    1 if actual is None else actual.denominator,
+                    side,
+                )
+                requested[key] = min(probability, requested.get(key, probability))
+    request_lines = [
+        dict(
+            group_key=group_key,
+            canonical_side=canonical,
+            event_id=eid,
+            family=family,
+            numerator=n,
+            denominator=d,
+            side=side,
+            cost_numerator=cost.numerator,
+            cost_denominator=cost.denominator,
+        )
+        for (group_key, canonical, eid, family, n, d, side), cost in sorted(
+            requested.items()
+        )
+    ]
+    quotes = read_book_quotes(db, request_lines)
     by_event = defaultdict(list)
     for q in quotes:
         try:
@@ -250,9 +362,6 @@ def read(db, query, *, at=None, can_continue=None):
             by_event[(q["event_id"], q["market"], line)].append(q)
         except (KeyError, ValueError, TypeError, ArithmeticError):
             continue
-    grouped = defaultdict(lambda: defaultdict(list))
-    for entry in entries:
-        grouped[entry["payload"]["arb_key"]][entry["payload"]["side"]].append(entry)
     results = []
     evaluated = 0
     excluded = 0
@@ -364,6 +473,7 @@ def read(db, query, *, at=None, can_continue=None):
         cursor=cursor,
         provider_requests=0,
         scheduled_calculations=0,
+        sportsbook_prefilter="opposite_market_positive_before_fees",
         evaluated_pairs=evaluated,
         excluded_pairs=excluded,
         refresh_at=deadline.isoformat() if deadline else None,

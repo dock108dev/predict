@@ -1,3 +1,4 @@
+import {bindDialogClose} from './dialog-close.js';
 import {journalAction} from './bet-journal-actions.js';
 import {bookName} from './pregame-labels.js';
 import {priceDisplay,hasVenuePrice,ratio} from './pregame-prices.js';
@@ -5,8 +6,9 @@ import {addMath} from './pregame-math.js';
 import {freshness,feeRows} from './pregame-evidence.js';
 const $=id=>document.getElementById(id);
 let offset=0,lastGood=null,running=false,checking=false,returnId,deadlineTimer,inspectionTimer,requestVersion=0,errorSource=null,activeRead,activeUpdate,dialogReturn,lastRowsFingerprint;
-// Recovery deadline, not a claim that a 12-second read meets the interaction budget.
-const READ_DEADLINE_MS=12000;
+// The server allows 15s for a measured 8.9s cold scan; leave transport headroom.
+// This recovery deadline is not an interaction-performance claim.
+const READ_DEADLINE_MS=18000;
 const node=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;};
 const money=v=>'$'+ratio(v).toFixed(2);
 function pick(r){let line=r.selection.signed_line,team=r.selection_label||r.selection.participant||'';if(line!==undefined&&line!==null)line=ratio(line);return r.family==='total'?(r.side==='over'?'Over ':'Under ')+line:team+(r.family==='spread'?' '+(line>0?'+':'')+line:' to win');}
@@ -51,8 +53,9 @@ function showError(source,message){
  setState(lastGood?'partial':'failed',lastGood?'Displayed comparisons are unverified.':'Comparisons unavailable.');
 }
 function showResultState(data){
- const partial=data.partial===true||data.completeness==='partial';
- setState(partial?'partial':data.rows.length?'loaded':'empty',data.total+' price-arb '+(data.total===1?'candidate':'candidates')+(partial?' · Partial comparison results.':'')+(data.excluded_pairs?' · '+data.excluded_pairs+' pairs could not be modeled.':''));
+ const partial=data.partial===true||data.completeness==='partial'||Number(data.excluded_pairs)>0;
+ setState(partial?'partial':data.rows.length?'loaded':'empty',data.total+' price-arb '+(data.total===1?'candidate':'candidates')+(partial?' · Partial comparison results.':'')+(data.excluded_pairs?' · '+data.excluded_pairs+' '+(Number(data.excluded_pairs)===1?'pair':'pairs')+' could not be modeled.':''));
+ if(!data.rows.length){const heading=$('results').querySelector('.empty h2');if(heading)heading.textContent=partial?'No positive pair in the completed comparisons.':'No positive after-fee pairs match this view.';}
 }
 function render(data){
  document.querySelector('.pagination').hidden=data.total<=30&&offset===0;
@@ -114,4 +117,4 @@ async function checkUpdates(){
   if(version===requestVersion)showError('updates','Update check failed. Displayed comparisons are preserved but could not be verified; choose Refresh to retry.');
  }finally{checking=false;if(activeUpdate===controller)activeUpdate=null;}
 }
-$('arb-close').onclick=()=>$('arb-details').close();$('arb-details').addEventListener('close',()=>{clearTimeout(inspectionTimer);if(dialogReturn)document.documentElement.style.overflow=dialogReturn.overflow;const target=[...document.querySelectorAll('.arb-open')].find(b=>b.dataset.pairId===returnId);(target||$('results')).focus({preventScroll:true});if(dialogReturn)scrollTo(dialogReturn.x,dialogReturn.y);dialogReturn=null;});$('refresh').onclick=load;$('previous').onclick=()=>{offset=Math.max(0,offset-30);cancelRead();load();};$('next').onclick=()=>{offset+=30;cancelRead();load();};let debounce;$('filters').onsubmit=e=>e.preventDefault();$('filters').oninput=e=>{offset=0;cancelRead();setState('loading','Loading selected view…'+(lastGood?' Previous comparisons remain visible and unverified.':''));clearTimeout(debounce);debounce=setTimeout(load,e.target.name==='search'?180:0);};document.querySelector('a[href="/arbs"]').setAttribute('aria-current','page');load();setInterval(checkUpdates,1500);
+bindDialogClose($('arb-close'),$('arb-details'));$('arb-details').addEventListener('close',()=>{clearTimeout(inspectionTimer);if(dialogReturn)document.documentElement.style.overflow=dialogReturn.overflow;const target=[...document.querySelectorAll('.arb-open')].find(b=>b.dataset.pairId===returnId);(target||$('results')).focus({preventScroll:true});if(dialogReturn)scrollTo(dialogReturn.x,dialogReturn.y);dialogReturn=null;});$('refresh').onclick=load;$('previous').onclick=()=>{offset=Math.max(0,offset-30);cancelRead();load();};$('next').onclick=()=>{offset+=30;cancelRead();load();};let debounce;$('filters').onsubmit=e=>e.preventDefault();$('filters').oninput=e=>{offset=0;cancelRead();setState('loading','Loading selected view…'+(lastGood?' Previous comparisons remain visible and unverified.':''));clearTimeout(debounce);debounce=setTimeout(load,e.target.name==='search'?180:0);};document.querySelector('a[href="/arbs"]').setAttribute('aria-current','page');load();setInterval(checkUpdates,1500);
