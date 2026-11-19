@@ -142,7 +142,9 @@
     "tests/test_result_dependencies_sql.py": "Required in disposable PostgreSQL lanes: independent unit dependency closure, sealed publication, candidate membership, clocks and ordinary read isolation; no providers or owner database.",
     "tests/test_pregame_board_views_sql.py": "Required in the disposable PostgreSQL lane. Checks game pagination, reference-free arb prices, fee expiry and book-role attachment.",
     "tests/test_bet_journal_monitor_sql.py": "Required in scripts/ci/postgres.py against disposable PostgreSQL 16: read-only admitted-source sampling, pending-rebuild suppression, independent SQLite persistence, reopening and deduplication; no provider requests or owner journal writes.",
-    "tests/test_sgo_line_presence_sql.py": "Required in disposable PostgreSQL lane: scoped 15-minute line omission, recovery and game preservation."
+    "tests/test_sgo_line_presence_sql.py": "Required in disposable PostgreSQL lane: scoped 15-minute line omission, recovery and game preservation.",
+    "tests/test_activity_mode_sql.py": "Required in scripts/ci/postgres.py against disposable PostgreSQL 16. Verifies durable owner mode/settings, genuine activity expiry, API validation, and SQL-backed archive retention status without changing source Stop or accounting.",
+    "tests/test_pregame_cohorts_sql.py": "Required in scripts/ci/postgres.py against disposable PostgreSQL 16. Verifies independent Monitor/Live witnesses, consolidated latest prices, original clocks/cashflows, cohort-scoped reads and withdrawal authority."
   },
   "archival_nodes": {
     "tests/test_moneyline.py::CapturedMoneylineTests": "Historical production listing/rule hashes require removed capture corpus; synthetic matcher and settlement classes remain required.",

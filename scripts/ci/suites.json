@@ -638,6 +638,7 @@
   {
     "name": "sportsgameodds",
     "tests": [
+      "tests/test_activity_mode.py",
       "tests/test_pregame_reference.py",
       "tests/test_pregame_sportsbook_estimate.py",
       "tests/test_sgo_free_evaluation.py",

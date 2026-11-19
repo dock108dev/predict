@@ -201,8 +201,10 @@ def test_api_deadline_cooperatively_stops_background_pair_work():
     from contextlib import nullcontext
     from types import SimpleNamespace
     from aiohttp.test_utils import make_mocked_request
+    from app.collection.activity_mode import DEFAULT_SETTINGS
     from app.dashboard import current_pregame_api as api
 
+    entered = threading.Event()
     stopped = threading.Event()
     statements = []
     db = SimpleNamespace(
@@ -210,6 +212,11 @@ def test_api_deadline_cooperatively_stops_background_pair_work():
     )
 
     def slow_read(db, query, *, can_continue):
+        assert query["data_type"] == "monitor"
+        assert query["_scope_seconds"] == str(
+            DEFAULT_SETTINGS["monitor_horizon_seconds"]
+        )
+        entered.set()
         while can_continue():
             stopped.wait(0.001)
         stopped.set()
@@ -218,6 +225,13 @@ def test_api_deadline_cooperatively_stops_background_pair_work():
     async def scenario():
         with (
             patch.object(api, "ARBITRAGE_READ_DEADLINE_SECONDS", 0.02),
+            patch(
+                "app.collection.activity_mode.read_status",
+                return_value=dict(
+                    mode="monitor",
+                    settings=DEFAULT_SETTINGS,
+                ),
+            ),
             patch("app.storage.pregame_arbs.read", side_effect=slow_read),
         ):
             response = await api.response(
@@ -228,6 +242,7 @@ def test_api_deadline_cooperatively_stops_background_pair_work():
             assert b"current_read_timeout" in response.body
 
     asyncio.run(scenario())
+    assert entered.is_set()
     assert stopped.is_set()
     assert "SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY" in statements
     assert "SET LOCAL statement_timeout='8s'" in statements

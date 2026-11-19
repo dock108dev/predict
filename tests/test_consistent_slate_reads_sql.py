@@ -247,7 +247,10 @@ const path = require('node:path'), {pathToFileURL} = require('node:url');
         def changed_published(frame):
             from app.dashboard.comparison_board import expand_price_fields
             game = selected_board['game_key']
-            return any(price['original']['value'] == '0.67'
+            # Native venues publish independently. An updated opposing price
+            # does not prove this exact selected quote has been committed yet.
+            return any(price['quote_id'] == selected['quote_id']
+                and price['original']['value'] == '0.67'
                 for price in expand_price_fields(latest.board(frame, game, view='odds', filter='all'))['prices'])
 
         published = await self.publication(61, accepts=changed_published)
