@@ -16,8 +16,8 @@ def mount(app):
             raise web.HTTPBadRequest(text="Exact activity mode/settings required")
         try:
             result = await asyncio.to_thread(activity_mode.patch, **body)
-        except ValueError as exc:
-            raise web.HTTPBadRequest(text=str(exc)) from None
+        except ValueError:
+            raise web.HTTPBadRequest(text="Invalid activity mode or settings") from None
         return web.json_response(result)
 
     async def activity(request):

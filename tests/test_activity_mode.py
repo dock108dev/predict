@@ -24,6 +24,36 @@ from app.collection.sportsgameodds_ledger import ObjectLedger
 AT = datetime(2026, 11, 19, tzinfo=timezone.utc)
 
 
+@pytest.mark.parametrize(
+    "detail",
+    [
+        "INTERNAL_MARKER database internal.example.invalid SELECT private_column",
+        "INTERNAL_MARKER private configuration /srv/private/settings.json",
+    ],
+)
+def test_owner_settings_http_never_exposes_value_error_details(monkeypatch, detail):
+    from aiohttp import web
+    from aiohttp.test_utils import TestClient, TestServer
+    from app.dashboard import activity_mode_api
+
+    def reject(**kwargs):
+        raise ValueError(detail)
+
+    monkeypatch.setattr(activity_mode_api.activity_mode, "patch", reject)
+
+    async def scenario():
+        app = web.Application()
+        activity_mode_api.mount(app)
+        async with TestClient(TestServer(app)) as client:
+            response = await client.patch(
+                "/api/admin/activity-mode", json={"mode": "live"}
+            )
+            assert response.status == 400
+            assert await response.text() == "Invalid activity mode or settings"
+
+    asyncio.run(scenario())
+
+
 def row(mode="monitor"):
     return dict(
         mode=mode,
