@@ -289,7 +289,9 @@ class CurrentPregameSQL(PregameFixture):
                     await client.get("/api/comparison-current", params=query)
                 ).json()
                 self.assertTrue(first["rows"])
-                update_query = dict(layout="desk", after=first["cursor"])
+                update_query = dict(
+                    layout="desk", after=first["cursor"], data_type=first["data_type"]
+                )
                 with patch(
                     "app.storage.ordinary_publication.published_dependencies",
                     side_effect=AssertionError("Update decoded publication"),

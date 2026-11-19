@@ -13,6 +13,7 @@ from uuid import uuid4
 from aiohttp import web
 from aiohttp.test_utils import TestClient,TestServer
 from psycopg import OperationalError
+from psycopg import sql
 
 from app.collection.current_policy import DEFAULT
 from app.collection.runtime_client import RuntimeClient
@@ -45,6 +46,11 @@ class NativeMatrixFixture(IsolatedAsyncioTestCase):
             status=lambda:dict(issues=[],exclusions=[],database=dict(state='available')))
         self.state=RuntimeState(self.connect)
         with self.connect() as db:
+            from app.storage.pregame_cohorts import SCHEMAS, TABLES
+
+            for schema in SCHEMAS.values():
+                for table in TABLES:
+                    db.execute(sql.SQL('TRUNCATE {}').format(sql.Identifier(schema, table)))
             db.execute('TRUNCATE current_event,sgo_event_evidence,sgo_quote_revision,current_pregame_work CASCADE')
             db.execute("DELETE FROM current_row_state WHERE kind<>'epoch'")
             db.execute('TRUNCATE data_runtime,data_runtime_command,comparison_publication')
@@ -74,6 +80,7 @@ class BroadNativeMatrixSQL(NativeMatrixFixture):
     def prepare_current(self):
         from app.fees import pricing
         from app.storage import current_pregame
+        from app.storage.pregame_cohorts import capture
         from app.storage.store import stamp
         from tests.test_current_pregame_sql import CurrentPregameSQL, page, AT
         from tests.test_fee_pricing import rule
@@ -86,8 +93,13 @@ class BroadNativeMatrixSQL(NativeMatrixFixture):
         )
         with self.connect() as db:
             pricing.write(db, "prophetx", [rule("prophetx")])
-            CurrentPregameSQL.ingest(self, db, page())
+            data = page()
+            CurrentPregameSQL.ingest(self, db, data)
             current_pregame.process(db, at=self.at)
+            # Simulate the admission owner's explicit Monitor publication.
+            # API reads must never adopt public rows or calculate on demand.
+            capture(db, dict(kind="monitor", id="fixture-monitor"),
+                    [event["eventID"] for event in data["data"]], self.at)
 
     async def test_current_read_failure_recovers_without_discarding_stored_values(self):
         from app.dashboard.snapshot_api import mount
@@ -160,8 +172,9 @@ class BroadNativeMatrixSQL(NativeMatrixFixture):
             async with TestClient(TestServer(app)) as client:
                 response = await client.get("/api/comparison-current", params=query)
                 self.assertEqual(response.status, 200, await response.text())
-                quote = (await response.json())["rows"][0]
-                selection = dict(layout="desk", id=quote["id"])
+                packet = await response.json()
+                quote = packet["rows"][0]
+                selection = dict(layout="desk", id=quote["id"], data_type=packet["data_type"])
                 for params in (selection, dict(layout="desk", quote_key=quote["id"])):
                     response = await client.get(
                         "/api/comparison-current/selection", params=params
@@ -184,7 +197,7 @@ class BroadNativeMatrixSQL(NativeMatrixFixture):
                 self.assertEqual((await paused.json())["rows"], [quote])
                 missing = await client.get(
                     "/api/comparison-current/selection",
-                    params=dict(layout="desk", id="absent-contract"),
+                    params=dict(selection, id="absent-contract"),
                 )
                 self.assertEqual((await missing.json())["rows"], [])
 

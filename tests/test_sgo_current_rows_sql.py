@@ -257,11 +257,22 @@ class SGOScopeSQL(LatestBoardFixture):
                     assert set(item['reference']['candidate_probabilities'])=={'fanduel','draftkings'}
                     assert item['fee']['entry_usd']=='0'
                     assert item['raw']['net_ev'] is not None
+                    # Simulate the admission owner's Monitor page capture;
+                    # the HTTP read cannot populate a cohort or renew clocks.
+                    from app.storage.pregame_cohorts import capture as capture_cohort
+                    capture_cohort(db, dict(kind='monitor', id='prophetx-fee-fixture'),
+                                   [event['eventID']], at,
+                                   observed=dict(records=[record], references=refs))
                     source_status(db.execute, 'sportsgameodds',
                                   {'state': 'budget_delayed', 'reason_code': 'sgo_usage_unreconciled'}, AT)
                     held = await (await client.get('/api/comparison-current', params=dict(layout='desk',browse='1'))).json()
-                    assert any(item['id']==key for item in held['rows'])
+                    retained, = [row for row in held['rows'] if row['id']==key]
+                    assert retained['collection']['kind']=='monitor'
+                    assert retained['collection']['origin']=='collected'
+                    assert retained['collection']['run_id']=='prophetx-fee-fixture'
+                    assert retained['times']==item['times']
                     assert held['provider_requests']==0
+                    assert held['scheduled_calculations']==0
                     source_status(db.execute, 'sportsgameodds', states['sportsgameodds'], AT)
             captured = capture(db, at=AT, ordinary=True, event_ids=ids)
             assert len(captured['quotes']) == 1, captured['issues']

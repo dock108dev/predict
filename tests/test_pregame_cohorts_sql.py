@@ -15,6 +15,47 @@ from app.storage.store import stamp
 
 @skipUnless(SOCKET, "Disposable PostgreSQL required")
 class PregameCohortsSQL(PregameFixture):
+    async def test_fee_revision_does_not_skip_baseline_and_empty_later_cannot_readopt(
+        self,
+    ):
+        from app.storage.pregame_cohorts import bootstrap, TABLES
+        from psycopg import sql
+
+        with self.connect() as db:
+            self.ingest(db, page())
+            with patch("app.storage.current_rows.utc", return_value=AT):
+                board.process(db, at=stamp(AT))
+            row = db.execute(
+                "SELECT revision,baseline_initialized FROM pregame_monitor.current_pregame_revision"
+            ).fetchone()
+            self.assertGreater(row["revision"], 0)  # fee setup changed an empty cohort
+            self.assertFalse(row["baseline_initialized"])
+            self.assertEqual(
+                db.execute(
+                    "SELECT count(*) n FROM pregame_monitor.current_pregame_price"
+                ).fetchone()["n"],
+                0,
+            )
+            bootstrap(db, at=stamp(AT))
+            adopted = db.execute(
+                "SELECT payload FROM pregame_monitor.current_pregame_price LIMIT 1"
+            ).fetchone()["payload"]
+            self.assertEqual(adopted["collection"]["origin"], "legacy_retained")
+            self.assertEqual(adopted["times"]["source_at"], "2026-11-17T19:59:00Z")
+            for table in TABLES:
+                db.execute(
+                    sql.SQL("TRUNCATE {}").format(
+                        sql.Identifier("pregame_monitor", table)
+                    )
+                )
+            bootstrap(db, at=stamp(AT))
+            self.assertEqual(
+                db.execute(
+                    "SELECT count(*) n FROM pregame_monitor.current_pregame_price"
+                ).fetchone()["n"],
+                0,
+            )
+
     async def test_out_of_window_receipt_cannot_publish_live_cohort(self):
         with self.connect() as db:
             self.ingest(db, page())

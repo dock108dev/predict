@@ -445,15 +445,24 @@ def bootstrap(db, *, at=None):
     This is not a new provider observation and does not renew any source clock.
     """
     at = at or datetime.now(timezone.utc)
-    if db.execute(
-        "SELECT revision FROM pregame_monitor.current_pregame_revision WHERE singleton"
-    ).fetchone()["revision"]:
-        return
-    ids = [
-        r["native_event_id"]
-        for r in db.execute(
-            "SELECT native_event_id FROM public.current_event WHERE provider='sportsgameodds' AND scheduled_start::timestamptz>%s",
-            (at,),
+    from .current_rows import LOCK
+
+    with db.transaction():
+        # Preserve the admission/fee writer's lock order before the row lock.
+        db.execute("SELECT pg_advisory_xact_lock(%s)", (LOCK,))
+        row = db.execute(
+            "SELECT baseline_initialized FROM pregame_monitor.current_pregame_revision WHERE singleton FOR UPDATE"
+        ).fetchone()
+        if row["baseline_initialized"]:
+            return
+        ids = [
+            r["native_event_id"]
+            for r in db.execute(
+                "SELECT native_event_id FROM public.current_event WHERE provider='sportsgameodds' AND scheduled_start::timestamptz>%s",
+                (at,),
+            )
+        ]
+        capture(db, dict(kind="monitor", origin="legacy_retained"), ids, at)
+        db.execute(
+            "UPDATE pregame_monitor.current_pregame_revision SET baseline_initialized=true WHERE singleton"
         )
-    ]
-    capture(db, dict(kind="monitor", origin="legacy_retained"), ids, at)
