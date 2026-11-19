@@ -114,16 +114,22 @@ def _read(db, query, *, at=None, clock, configured_routes):
             raise ValueError("Invalid maximum age")
         clauses.append("(p.payload#>>'{times,source_at}')::timestamptz>=%s")
         params.append(at - timedelta(minutes=age))
-    # A bet with no positive stored venue cannot produce a positive result.
-    # Keep every alias/venue inside admitted bets so newest-alias selection and
-    # exact eligibility remain unchanged; do not filter individual rows by EV.
-    if (
+    positive = (
         not compare
         and query.get("browse") != "1"
         and query.get("view") not in ("games", "game")
-    ):
-        clauses.append(
-            "p.bet_id IN (SELECT bet_id FROM current_pregame_calculation WHERE reason IS NULL AND net_ev>0)"
+    )
+    prefix = "WITH "
+    # Keep every alias/venue inside a bet with a positive stored witness. Make
+    # this cheap scalar selection a real boundary: otherwise the planner can
+    # apply JSON/reference/withdrawal guards to the whole slate before the
+    # positive-bet semijoin. Newest observation still wins before EV ranking.
+    if positive:
+        relation = "candidate_prices"
+        prefix += (
+            "candidate_prices AS MATERIALIZED (SELECT * FROM current_pregame_calculation "
+            "WHERE bet_id IN (SELECT bet_id FROM current_pregame_calculation "
+            "WHERE reason IS NULL AND net_ev>0)), "
         )
     # A stored row from an older writer must not bypass the current owner rule.
     clauses.append("""(p.payload ? 'ev_unavailable_reason' OR (SELECT count(*) FROM jsonb_object_keys(
@@ -191,7 +197,8 @@ def _read(db, query, *, at=None, clock, configured_routes):
     # Source evidence order chooses its observation before EV chooses a venue.
     recency = "(payload#>>'{times,source_at}' IS NOT NULL) DESC,(payload#>>'{times,source_at}')::timestamptz DESC NULLS LAST,(payload#>>'{times,received_at}')::timestamptz DESC,contract_id"
     logical = (
-        "WITH available AS (SELECT p.*"
+        prefix
+        + "available AS (SELECT p.*"
         + source
         + "), logical AS (SELECT DISTINCT ON (bet_id,venue) * FROM available ORDER BY bet_id,venue,"
         + recency
@@ -219,7 +226,6 @@ def _read(db, query, *, at=None, clock, configured_routes):
             offset=0,
             limit=limit,
         )
-    positive = query.get("browse") != "1" and query.get("view") not in ("games", "game")
     grouped = (
         logical.rstrip()
         + ", qualified AS (SELECT *,row_number() OVER (PARTITION BY bet_id ORDER BY net_ev DESC NULLS LAST,contract_id) AS venue_order FROM logical), best AS (SELECT * FROM qualified WHERE venue_order=1"
