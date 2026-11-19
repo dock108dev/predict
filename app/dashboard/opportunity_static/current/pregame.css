@@ -243,3 +243,35 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,su
 @media(min-width:1141px){.pregame-page .board-columns,.pregame-page .board-row{grid-template-columns:49px 88px minmax(210px,1fr) 73px 78px 78px 105px 99px 76px}}
 @media(max-width:500px){.pregame-page .ranking-control{font-size:11px;gap:6px}.pregame-page .ranking-control select{max-width:165px}}
 @media(min-width:1141px){.pregame-page .ticket-meta .score{grid-column:9;grid-row:1}}
+
+/* A fixed inspection shell keeps the title and close control stable as results arrive. */
+.pregame-page :is(#comparison,#game-lines,#arb-details)[open]{display:flex;flex-direction:column;height:min(800px,calc(100dvh - 32px));max-height:calc(100dvh - 32px);overflow:hidden;position:fixed;inset:16px 0;margin:auto}
+.pregame-page :is(#comparison,#game-lines,#arb-details) :is(.dialog-heading,.dialog-pick){flex-shrink:0}
+.pregame-page :is(#comparison-content,#game-content,#arb-content){flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;touch-action:pan-y;padding:0 3px 12px;scrollbar-gutter:stable}
+.pregame-page .game-bet>.quote-evidence{grid-column:1/-1}
+.pregame-page .game-card .line-open{color:var(--p-accent);text-decoration:underline;text-underline-offset:3px;min-height:32px}
+.pregame-page :is(#request-status,#practice-recovery){font-size:12px;color:var(--p-muted);line-height:1.6}
+.pregame-page #request-status:empty{display:none}
+.pregame-page .comparison-status{padding:10px;border-left:3px solid var(--p-accent);background:var(--p-hover)}
+.pregame-page :is(#practice-recovery,.comparison-status) :is(a,button){color:var(--p-accent)}
+.pregame-page .comparison-status button{border:1px solid var(--p-controlLine);border-radius:4px;background:var(--p-surface);font:inherit;padding:5px 10px}
+.pregame-page .masthead nav{flex-wrap:wrap}
+@media(max-width:500px){.pregame-page :is(#comparison,#game-lines,#arb-details)[open]{height:calc(100dvh - 20px);max-height:calc(100dvh - 20px);inset:10px 0}.pregame-page .masthead nav{gap:8px 16px}.pregame-page .masthead nav a{font-size:10px}}
+
+.pregame-page .quote-evidence{font:500 10px/1.6 Manrope,Arial,sans-serif;color:var(--p-muted);margin:7px 0 0;white-space:normal;overflow-wrap:anywhere;max-width:100%}
+.pregame-page #comparison-content>.quote-evidence{font-size:12px;margin:0 0 14px;padding:10px;border:1px solid var(--p-controlLine);border-radius:4px}
+.pregame-page .payout-example{background:var(--p-hover);border:1px solid var(--p-controlLine);border-radius:6px;padding:12px 14px;margin:12px 0 18px;font-size:12px;line-height:1.7}
+.pregame-page #comparison .payout-example h3{margin:0 0 6px;font-size:14px}
+.pregame-page .payout-example p{margin:7px 0}.pregame-page .payout-summary{font-weight:650}
+.pregame-page .unavailable-reason{font-size:10px;line-height:1.5;color:var(--p-muted);white-space:normal;max-width:160px}
+.pregame-page .sportsbook-prices td:last-child{white-space:normal;min-width:100px;max-width:280px}
+
+.pregame-page .quote-evidence[data-caution=true]{color:#80510c;background:#fff6df;border:1px solid #dbc18a;border-radius:4px;padding:5px 7px}
+.pregame-page :is(#comparison,#game-lines,#arb-details) summary{min-height:44px}
+
+.pregame-page .selected-quote{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:10px 0 14px;margin-bottom:12px;border-bottom:1px solid var(--p-line);font-size:13px}.pregame-page .selected-quote>.math-value{font-size:18px}
+/* Use the existing row feedback instead of a native tap overlay above the modal. */
+.pregame-page :is(.row-open,.line-open,.game-open){-webkit-tap-highlight-color:transparent}
+.pregame-page .game-bet:has(.line-open:active),.pregame-page .game-card:has(.game-open:active){background:var(--p-active)}
+
+.pregame-page .line-action-label{display:block;font:500 10px/1.5 Manrope,Arial,sans-serif;color:var(--p-accent);padding-top:2px}

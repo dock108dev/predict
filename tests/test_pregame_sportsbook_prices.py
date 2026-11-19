@@ -85,3 +85,22 @@ def test_latest_observation_and_conflicting_same_clock():
 
 def test_native_outcome_id_preserves_selection_when_roles_were_canonicalized():
     assert matching_prices(ROW, [dict(QUOTE, side="away")], at=AT)[0]["side"] == "home"
+
+
+def test_reference_free_matching_maps_reversed_event_roles_without_inventing_ev():
+    row = dict(
+        ROW,
+        reference=None,
+        family="moneyline",
+        selection={},
+        side="home",
+        sportsbook_event_ids=["event-1"],
+        sportsbook_sides_reversed={"event-1": True},
+    )
+    correct = dict(QUOTE, market="moneyline", line=None, side="away")
+    wrong = dict(correct, side="home", venue="draftkings")
+    result = matching_prices(row, [correct, wrong], at=AT)
+    assert [(q["book"], q["side"], q["is_reference"]) for q in result] == [
+        ("fanduel", "home", False)
+    ]
+    assert result[0]["source_at"] == QUOTE["source_at"]

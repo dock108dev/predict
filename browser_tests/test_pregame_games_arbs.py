@@ -82,6 +82,7 @@ def test_grouped_game_expand_compare_and_focus(width, tmp_path):
         expect(page.locator("#count")).to_have_text("1 game")
         expect(page.locator("#sort-order")).to_have_text("Game start time ↑")
         expect(page.locator("#results .game-bet")).to_have_count(2)
+        expect(page.locator("#results")).to_contain_text("45.45%")
         expect(page.locator("#results")).not_to_contain_text("-2.5")
         expect(page.locator("#alternates-field")).to_be_hidden()
         assert requests[0]["view"] == "games"
@@ -293,6 +294,9 @@ def test_arb_filters_survive_delayed_reads_empty_results_and_poll_failures():
             await page.route("**/*", serve)
             await page.goto("http://predict.fixture/arbs")
             await expect(page.locator(".arb-card")).to_have_count(1)
+            await expect(
+                page.locator(".arb-card .arb-price-column").first
+            ).to_contain_text("45.45%")
             async with page.expect_response(lambda r: "/api/pregame/arbs?" in r.url):
                 await page.locator("#book").select_option("draftkings")
             await page.locator("#venue").select_option("kalshi")

@@ -1,4 +1,4 @@
-"""Contract-market equivalents preserve quoted price and American comparison values."""
+"""Venue price formats preserve stored prices and calculation equivalents."""
 
 from pathlib import Path
 from playwright.sync_api import sync_playwright
@@ -26,7 +26,13 @@ def test_contract_quote_formats_and_legacy_fallback():
           const row={venue:'polymarket_us',display:{posted_odds:'+126',after_fees:'+115'},raw:{posted_decimal:'2.26',after_fee_decimal:'2.1468'}};
           return {poly:priceDisplay(row),after:priceDisplay(row,true),
                   kalshi:priceDisplay({...row,venue:'kalshi',display:{posted_odds:'+119'},raw:{posted_decimal:'2.19'}}),
-                  sportsbook:priceDisplay({...row,venue:'novig'}),
+                  novig:priceDisplay({...row,venue:'novig'}),
+                  prophetx:priceDisplay({...row,venue:'prophetx'}),
+                  novigAfter:priceDisplay({...row,venue:'novig'},true),
+                  prophetxAfter:priceDisplay({...row,venue:'prophetx'},true),
+                  novigSlip:priceDisplay({...row,venue:'novig',raw:{posted_decimal:'200/101'}}),
+                  prophetxSlip:priceDisplay({...row,venue:'prophetx',raw:{posted_decimal:'1250/649'}}),
+                  sportsbook:priceDisplay({...row,venue:'fanduel'}),
                   missing:priceDisplay({...row,raw:{}})};
         }""")
         assert result["poly"] == dict(
@@ -37,5 +43,14 @@ def test_contract_quote_formats_and_legacy_fallback():
             primary="45.66¢", secondary="(+119)", price="2.19× payout"
         )
         assert result["sportsbook"]["primary"] == "+126"
+        for venue in ("novig", "prophetx"):
+            assert result[venue] == dict(
+                primary="44.25%", secondary="", price="2.26× payout"
+            )
+            assert result[venue + "After"] == dict(
+                primary="46.58%", secondary="", price="Effective price"
+            )
+        assert result["novigSlip"]["primary"] == "50.5%"
+        assert result["prophetxSlip"]["primary"] == "51.92%"
         assert result["missing"]["primary"] == "+126"
         browser.close()

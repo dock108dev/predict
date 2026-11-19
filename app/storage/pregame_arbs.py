@@ -13,6 +13,29 @@ from .store import hashed, stamp
 
 _CACHE = OrderedDict()
 _CACHE_LOCK = Lock()
+_PAIR_CACHE = OrderedDict()
+_PAIR_CACHE_LIMIT = 4096
+
+
+def cached_pair(left, right, *, at):
+    """Reuse exact immutable source/fee inputs across unrelated game revisions.
+
+    SQL eligibility still runs on every miss of the query cache. Expired fees,
+    withdrawal, route changes and kickoff exclude entries before this lookup;
+    original quote clocks and the original calculation timestamp stay intact.
+    """
+    key = (left["cache_identity"], right["cache_identity"])
+    with _CACHE_LOCK:
+        if key in _PAIR_CACHE:
+            _PAIR_CACHE.move_to_end(key)
+            return _PAIR_CACHE[key]
+        # Concurrent visits share the same immutable calculation rather than
+        # multiplying CPU work after a client retries.
+        result = math.evaluate(left, right, at=at)
+        _PAIR_CACHE[key] = result
+        while len(_PAIR_CACHE) > _PAIR_CACHE_LIMIT:
+            _PAIR_CACHE.popitem(last=False)
+    return result
 
 
 def observation_clock(entry):
@@ -122,8 +145,14 @@ def book_entry(quote, template, *, at):
         return None
 
 
-def read(db, query, *, at=None):
+def read(db, query, *, at=None, can_continue=None):
     at = at or utc()
+
+    def checkpoint():
+        if can_continue is not None and not can_continue():
+            raise TimeoutError("arbitrage_read_cancelled")
+
+    checkpoint()
     limit = max(1, min(100, int(query.get("limit", "30"))))
     offset = max(0, int(query.get("offset", "0")))
     cursor = pregame_read(db, {"updates": "1"}, at=at)["cursor"]
@@ -147,21 +176,33 @@ def read(db, query, *, at=None):
                 limit=limit,
             )
     routes = configured_routes(db)
+    checkpoint()
     # A queued source/fee change suppresses stale calculations before rebuilding.
+    filters, parameters = [], [at, at, at]
+    for name in ("league", "family"):
+        if query.get(name):
+            filters.append("p.payload->>'" + name + "'=%s")
+            parameters.append(query[name])
+    if query.get("search"):
+        filters.append("p.payload->>'game' ILIKE %s")
+        parameters.append("%" + query["search"][:150] + "%")
     entries = list(
         db.execute(
             """SELECT p.* FROM current_pregame_price p
         JOIN current_contract c ON c.id=p.contract_id
-        JOIN current_offer o ON o.contract_id=c.id JOIN current_event e ON e.id=c.event_id
+        JOIN current_offer_storage o ON o.contract_id=c.id JOIN current_event e ON e.id=c.event_id
         WHERE p.start_at>%s AND p.valid_until>%s AND e.scheduled_start::timestamptz>%s
           AND o.facts->>'state' IS DISTINCT FROM 'unavailable'
+          AND NOT EXISTS(SELECT 1 FROM sgo_line_presence lp WHERE lp.quote_id=o.sgo_quote_id AND lp.expired)
           AND NOT EXISTS(SELECT 1 FROM current_pregame_work w WHERE w.provider=e.provider AND w.native_event_id=e.native_event_id)
           AND NOT EXISTS(SELECT 1 FROM current_pregame_work w WHERE w.provider='sportsgameodds' AND (p.payload->'sportsbook_event_ids') ? w.native_event_id)
           AND NOT (COALESCE(e.facts->'status','{}'::jsonb) @> '{"live":true}'::jsonb)
           AND NOT (COALESCE(e.facts->'status','{}'::jsonb) @> '{"ended":true}'::jsonb)
           AND COALESCE(e.facts#>>'{status,status}','') NOT IN ('cancelled','final','suspended','started','delayed')
-        ORDER BY p.game_key,p.contract_id""",
-            (at, at, at),
+        """
+            + (" AND " + " AND ".join(filters) if filters else "")
+            + " ORDER BY p.game_key,p.contract_id",
+            parameters,
         )
     )
     entries = [
@@ -172,6 +213,7 @@ def read(db, query, *, at=None):
     # Prefer newest native alias, never whichever stale alias yields more profit.
     unique = {}
     for entry in entries:
+        checkpoint()
         p = entry["payload"]
         key = (p["game_key"], p["arb_key"], p["side"], p["venue"])
         if query.get("league") and p["league"] != query["league"]:
@@ -214,6 +256,7 @@ def read(db, query, *, at=None):
     evaluated = 0
     excluded = 0
     for sides in grouped.values():
+        checkpoint()
         all_markets = [e for side in sides.values() for e in side]
         books = {}
         ambiguous = set()
@@ -253,7 +296,24 @@ def read(db, query, *, at=None):
         ]
         first = [e for e in candidates if e["payload"]["side"] in ("home", "over")]
         second = [e for e in candidates if e["payload"]["side"] in ("away", "under")]
+        for candidate in candidates:
+            payload = candidate["payload"]
+            candidate["cache_identity"] = hashed(
+                [
+                    payload["id"],
+                    payload.get("input_revision"),
+                    payload["raw"],
+                    payload.get("times"),
+                    payload.get("scoring_scope"),
+                    candidate.get("fee_input"),
+                    None if payload.get("input_revision") else candidate.get("record"),
+                ]
+            )
+            candidate["acquisition_probability"] = 1 / F(
+                candidate["payload"]["raw"]["posted_decimal"]
+            )
         for a, b in product(first, second):
+            checkpoint()
             if a.get("sportsbook") and b.get("sportsbook"):
                 continue
             if query.get("book") and not any(
@@ -274,13 +334,24 @@ def read(db, query, *, at=None):
             if query.get("category") and query["category"] != category:
                 continue
             evaluated += 1
+            # Most pairs cannot beat even the pre-fee price. Do not repeatedly
+            # decode fractions or rebuild fee orders for those combinations.
+            if (
+                a["payload"]["venue"] == b["payload"]["venue"]
+                or a["acquisition_probability"] + b["acquisition_probability"] >= 1
+            ):
+                continue
             try:
-                pair = math.evaluate(a, b, at=at)
+                pair = cached_pair(a, b, at=at)
             except (ValueError, KeyError, TypeError, ArithmeticError):
                 excluded += 1
                 continue
             if pair:
                 results.append(pair)
+        # Each entry belongs to this exact arb group. Its cent-allocation memo
+        # has no use after the group and must not accumulate across the slate.
+        for candidate in candidates:
+            candidate.pop("_reprice_cache", None)
     results.sort(key=lambda p: (-F(p["return_rate"]), p["kickoff"], p["id"]))
     deadline = min((e["valid_until"] for e in entries), default=None)
     packet = dict(

@@ -71,6 +71,7 @@ def test_current_pregame_journey(width, tmp_path):
     from playwright.sync_api import sync_playwright, expect
 
     selected = offer()
+    selected["raw"].update(posted_decimal="2.2", after_fee_decimal="2.176")
     state = dict(revision="one", failed=False, empty=False)
     requests = []
     errors = []
@@ -136,6 +137,8 @@ def test_current_pregame_journey(width, tmp_path):
         expect(page.locator(".ticket")).to_have_count(1)
         expect(page.get_by_role("navigation", name="Pages")).to_be_hidden()
         expect(page.locator(".ticket")).to_contain_text("+8.80%")
+        expect(page.locator(".ticket .posted .math-trigger")).to_have_text("45.45%")
+        expect(page.locator(".ticket .after .math-trigger")).to_have_text("45.96%")
         expect(page.locator(".fair .reference")).to_contain_text("FanDuel (-110)")
         for label in ("Search teams", "League", "Market", "Venue"):
             expect(page.locator(".filter-label", has_text=label)).to_be_visible()
@@ -155,6 +158,9 @@ def test_current_pregame_journey(width, tmp_path):
         # Blank row space opens comparison, while the math and game link stay separate.
         page.locator(".ticket").click(position={"x": 8, "y": 8})
         expect(page.locator("#comparison")).to_be_visible()
+        expect(page.locator(".exchange-prices tbody td").nth(1)).to_contain_text(
+            "45.45%"
+        )
         expect(page.locator(".sportsbook-prices")).to_contain_text("DraftKings")
         expect(page.locator(".sportsbook-prices")).to_contain_text("-115")
         # Every quote figure and its save control fit the comparison at phone width.

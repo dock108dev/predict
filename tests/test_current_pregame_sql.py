@@ -537,8 +537,18 @@ class CurrentPregameSQL(PregameFixture):
             )
             self.assertEqual(board.read(db, {}, at=stamp(AT))["total"], 0)
             self.process(db)
-            # DraftKings alone cannot replace the required two-book reference.
-            self.assertEqual(board.read(db, {"browse": "1"}, at=stamp(AT))["total"], 0)
+            # DraftKings alone cannot replace the two-book EV reference; the
+            # authentic prices remain inspectable with the actual missing input.
+            browse = board.read(db, {"browse": "1"}, at=stamp(AT))
+            self.assertGreater(browse["total"], 0)
+            self.assertTrue(all(r["raw"]["net_ev"] is None for r in browse["rows"]))
+            self.assertTrue(
+                all(
+                    r["ev_unavailable_reason"] == "reference_two_trusted_books_required"
+                    for r in browse["rows"]
+                )
+            )
+            self.assertEqual(board.read(db, {}, at=stamp(AT))["total"], 0)
             db.execute(
                 "UPDATE sgo_quote_revision SET facts=jsonb_set(facts,'{available}','true') WHERE is_current AND bookmaker_id='fanduel'"
             )
@@ -815,9 +825,16 @@ class CurrentPregameSQL(PregameFixture):
         with self.connect() as db:
             self.ingest(db, data)
             self.process(db)
-            self.assertEqual(
-                board.read(db, dict(browse="1", lines="all"), at=stamp(AT))["rows"], []
+            rows = board.read(db, dict(browse="1", lines="all"), at=stamp(AT))["rows"]
+            self.assertTrue(rows)
+            self.assertTrue(
+                all(
+                    r["ev_unavailable_reason"] == "reference_two_trusted_books_required"
+                    for r in rows
+                )
             )
+            self.assertTrue(all(r["raw"]["net_ev"] is None for r in rows))
+            self.assertEqual(board.read(db, {}, at=stamp(AT))["total"], 0)
             self.assertGreater(
                 db.execute("SELECT count(*) n FROM current_pregame_price").fetchone()[
                     "n"

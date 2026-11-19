@@ -19,8 +19,11 @@ def practice_journey(tab, base):
     from playwright.sync_api import expect
 
     tab.goto(base + "/arbs")
-    tab.locator(".more > summary").click()
-    tab.get_by_role("link", name="Practice", exact=True).click()
+    # Practice is now a direct Main navigation action; More retains a separately
+    # named examples link for visitors using the previous exploration path.
+    tab.get_by_role("navigation", name="Main", exact=True).get_by_role(
+        "link", name="Practice", exact=True
+    ).click()
     expect(tab.get_by_role("heading", name="Arbitrage", exact=True)).to_be_visible()
     expect(tab.locator("#desk-mode")).to_have_text("Practice example · simulated odds")
     cards = tab.locator(".opportunity-arb")
@@ -70,8 +73,11 @@ def practice_journey(tab, base):
     assert tab.evaluate("document.documentElement.scrollWidth === innerWidth")
 
     tab.goto(base + "/ev")
-    tab.locator(".more > summary").click()
-    tab.get_by_role("link", name="Practice", exact=True).click()
+    # Practice is now a direct Main navigation action; More retains a separately
+    # named examples link for visitors using the previous exploration path.
+    tab.get_by_role("navigation", name="Main", exact=True).get_by_role(
+        "link", name="Practice", exact=True
+    ).click()
     ticket = tab.locator(".pregame-ticket")
     expect(ticket).to_contain_text("Saint Mary's Gaels")
     expect(ticket).to_contain_text("+2.82%")

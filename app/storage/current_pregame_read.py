@@ -43,6 +43,25 @@ def read(db, query, *, at=None, clock, configured_routes):
     )
     if query.get("updates") == "1":
         return dict(base, changed=query.get("after") != cursor, poll_after_ms=500)
+    compare = bool(query.get("bet_id") or query.get("id"))
+    include_unavailable = (
+        compare or query.get("browse") == "1" or query.get("view") in ("games", "game")
+    )
+    relation = "current_pregame_calculation"
+    if include_unavailable:
+        # Price-qualified rows survive a missing probability reference. Keep the
+        # actual refusal reason and null EV; never turn missing EV into zero.
+        relation = """(SELECT contract_id,game_key,bet_id,league,family,venue,start_at,main,
+            valid_until,net_ev,opportunity_score,reason,payload FROM current_pregame_calculation
+          UNION ALL SELECT price.contract_id,price.game_key,price.payload->>'bet_id',
+            price.payload->>'league',price.payload->>'family',price.payload->>'venue',
+            price.start_at,(price.payload->>'main')::boolean,price.valid_until,
+            NULL::numeric,NULL::numeric,NULL::text,
+            price.payload || jsonb_build_object('ev_unavailable_reason',
+                COALESCE(calc.reason,'reference_unavailable'))
+          FROM current_pregame_price price
+          LEFT JOIN current_pregame_calculation calc ON calc.contract_id=price.contract_id
+          WHERE calc.contract_id IS NULL OR calc.reason IS NOT NULL)"""
     clauses = [
         "p.reason IS NULL",
         "p.valid_until>%s",
@@ -51,9 +70,9 @@ def read(db, query, *, at=None, clock, configured_routes):
     ]
     params = [at, at, at]
     # A stored row from an older writer must not bypass the current owner rule.
-    clauses.append("""(SELECT count(*) FROM jsonb_object_keys(
+    clauses.append("""(p.payload ? 'ev_unavailable_reason' OR (SELECT count(*) FROM jsonb_object_keys(
         COALESCE(p.payload#>'{reference,candidate_probabilities}','{}'::jsonb)) AS book
-        WHERE book=ANY(%s))>=2""")
+        WHERE book=ANY(%s))>=2)""")
     params.append(list(math.BEST_BOOKS))
     routes = configured_routes(db)
     clauses.append(
@@ -93,6 +112,7 @@ def read(db, query, *, at=None, clock, configured_routes):
     clauses.extend(
         [
             "o.facts->>'state' IS DISTINCT FROM 'unavailable'",
+            "NOT EXISTS(SELECT 1 FROM sgo_line_presence lp WHERE lp.quote_id=o.sgo_quote_id AND lp.expired)",
             "NOT (COALESCE(e.facts->'status','{}'::jsonb) @> '{\"live\":true}'::jsonb)",
             "NOT (COALESCE(e.facts->'status','{}'::jsonb) @> '{\"ended\":true}'::jsonb)",
             "COALESCE(e.facts#>>'{status,status}','') NOT IN ('cancelled','final','suspended','started','delayed')",
@@ -103,11 +123,12 @@ def read(db, query, *, at=None, clock, configured_routes):
     )
     where = " AND ".join(clauses)
     source = (
-        """ FROM current_pregame_calculation p JOIN current_contract c ON c.id=p.contract_id
-        JOIN current_offer o ON o.contract_id=c.id JOIN current_event e ON e.id=c.event_id WHERE """
+        " FROM "
+        + relation
+        + """ p JOIN current_contract c ON c.id=p.contract_id
+        JOIN current_offer_storage o ON o.contract_id=c.id JOIN current_event e ON e.id=c.event_id WHERE """
         + where
     )
-    compare = bool(query.get("bet_id") or query.get("id"))
     # Multiple native aliases can describe one venue's same logical offer.
     # Source evidence order chooses its observation before EV chooses a venue.
     recency = "(payload#>>'{times,source_at}' IS NOT NULL) DESC,(payload#>>'{times,source_at}')::timestamptz DESC NULLS LAST,(payload#>>'{times,received_at}')::timestamptz DESC,contract_id"
@@ -123,7 +144,7 @@ def read(db, query, *, at=None, clock, configured_routes):
             logical
             + "SELECT payload,"
             + ranking.expression(selected_sort)
-            + " AS ranking_value FROM logical ORDER BY net_ev DESC,contract_id",
+            + " AS ranking_value FROM logical ORDER BY net_ev DESC NULLS LAST,contract_id",
             params,
         ).fetchall()
         from .pregame_sportsbooks import read_prices
@@ -143,7 +164,7 @@ def read(db, query, *, at=None, clock, configured_routes):
     positive = query.get("browse") != "1" and query.get("view") not in ("games", "game")
     grouped = (
         logical.rstrip()
-        + ", qualified AS (SELECT *,row_number() OVER (PARTITION BY bet_id ORDER BY net_ev DESC,contract_id) AS venue_order FROM logical), best AS (SELECT * FROM qualified WHERE venue_order=1"
+        + ", qualified AS (SELECT *,row_number() OVER (PARTITION BY bet_id ORDER BY net_ev DESC NULLS LAST,contract_id) AS venue_order FROM logical), best AS (SELECT * FROM qualified WHERE venue_order=1"
         + (" AND net_ev>0" if positive else "")
         + ") "
     )

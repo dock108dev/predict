@@ -1,6 +1,7 @@
 """Reference-free, exact-fee two-sided price comparisons, never fill promises."""
 
 from fractions import Fraction as F
+from copy import deepcopy
 from app.comparison import current_pregame as prices
 from app.comparison.cashflows import exact_wire as wire
 from app.comparison.pregame_valuation import decimal_display
@@ -11,6 +12,20 @@ BUDGET = F(100)
 
 
 def reprice(entry, amount, *, at):
+    # One quote participates in many opposing pairs. Binary searches repeatedly
+    # ask for the same cent allocation; reuse that exact fee/order result.
+    # Return independent nested cashflows because the selected legs are edited
+    # for presentation and callers must not change the retained sample.
+    cache = entry.setdefault("_reprice_cache", {})
+    key = (at, amount)
+    if key not in cache:
+        if len(cache) >= 256:
+            cache.clear()
+        cache[key] = _reprice(entry, amount, at=at)
+    return deepcopy(cache[key])
+
+
+def _reprice(entry, amount, *, at):
     if entry.get("record"):
         return prices.calculate(
             entry["record"],

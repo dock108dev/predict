@@ -7,15 +7,17 @@ const fmt=value=>Number.isFinite(value)?value.toLocaleString('en-US',{maximumFra
 const money=value=>Number.isFinite(value)?'$'+value.toFixed(2):'Unavailable';
 const probability=odds=>{const n=number(odds);return n>0?100/(n+100):-n/(-n+100);};
 export function explanation(row,kind){
- const cash=row.fee.cashflows,committed=number(row.fee.committed_usd),win=number(cash.win.net_receipt_usd),loss=number(cash.loss.net_receipt_usd),p=number(row.reference?.probability);
- const rw=win/committed-1,rl=loss/committed-1,ev=number(row.raw.net_ev);
- const prices=row.reference?.prices||[],selected=prices.find(q=>q.side===row.reference?.selected_outcome);
+ if(kind!=='posted'&&!row.fee?.cashflows?.win)return ['Calculation unavailable','The stored price is inspectable, but complete fee and cashflow inputs are unavailable.'];
+ if(['fair','ev','ranking'].includes(kind)&&!row.reference)return ['EV unavailable',row.ev_unavailable_reason?.replaceAll('_',' ')||'A complete exact-line probability reference is unavailable. The quoted price is not a zero-EV estimate.'];
  if(kind==='posted'){
   const decimal=number(row.raw.posted_decimal),cost=100/decimal;
   return ['Quoted price',`Payout multiple: ${fmt(decimal)}×. Price equivalent: ${fmt(cost)}% (${fmt(cost)}¢ per $1 payout).`,
    `American odds: ${row.display.posted_odds}.`,
    row.source.provider==='sportsgameodds'?`Converted from the aggregate feed's quoted ${row.display.posted_odds}. This is not a verified native order-book price or available size.`:`Source: ${row.source.provider}. Uses the stored quote; check the venue for current price and size.`];
  }
+ const cash=row.fee.cashflows,committed=number(row.fee.committed_usd),win=number(cash.win.net_receipt_usd),loss=number(cash.loss.net_receipt_usd),p=number(row.reference?.probability);
+ const rw=win/committed-1,rl=loss/committed-1,ev=number(row.raw.net_ev);
+ const prices=row.reference?.prices||[],selected=prices.find(q=>q.side===row.reference?.selected_outcome);
  const rule=row.fee.evidence?.database_fee_rule,trace=row.fee.rounding_trace?.[0],feeMath=[];
  if(rule&&trace){
   const rate=number(rule.rate),price=1/number(row.raw.posted_decimal),quantity=number(cash.win.gross_receipt_usd),stake=committed-number(row.fee.entry_usd)-number(row.fee.reserve_usd||'0');
@@ -26,8 +28,10 @@ export function explanation(row,kind){
  }
  if(kind==='after')return ['After-fee odds',...feeMath,
   `Committed cash: ${money(committed)}; entry fee: ${money(number(row.fee.entry_usd))}.`,
-  `Winning fees: ${money(number(cash.win.total_fee_usd))}; net winning receipt: ${money(win)}.`,
+  `Winning total fees (including the acquisition fee already committed): ${money(number(cash.win.total_fee_usd))}; net winning receipt: ${money(win)}.`,
+  `Additional winning settlement charge: ${money(number(cash.win.settlement_fee_usd??String(number(cash.win.total_fee_usd)-number(row.fee.entry_usd))))}. Net winning profit = receipt − committed cash = ${money(win-committed)}.`,
   `After-fee decimal odds = net winning receipt ÷ committed cash = ${money(win)} ÷ ${money(committed)} = ${fmt(number(row.raw.after_fee_decimal))}.`,
+  `Effective price = 100 ÷ after-fee decimal odds = ${fmt(100/number(row.raw.after_fee_decimal))}%. This includes modeled fees; it is not the posted venue price.`,
   `After-fee payout: ${fmt(number(row.raw.after_fee_decimal))}× (${row.display.after_fees} American). Losing receipt: ${money(loss)}.`];
  if(kind==='fair'){
   const decimal=number(row.reference.fair_decimal_odds ?? row.raw.fair_decimal);
@@ -37,6 +41,7 @@ export function explanation(row,kind){
    `American odds = ${decimal>=2?'100 × (decimal − 1)':'−100 ÷ (decimal − 1)'} → ${row.display.fair_odds}.`];
  }
  if(kind==='ev')return ['Net expected value',
+  'EV is modeled expected profit relative to total cash committed, conditional on the reference probability and fee inputs. It does not establish current executable size.',
   `Fair win probability p = ${fmt(p*100)}%.`,
   `Win return = ${money(win)} ÷ ${money(committed)} − 1 = ${fmt(rw)}. Loss return = ${money(loss)} ÷ ${money(committed)} − 1 = ${fmt(rl)}.`,
   `Net EV = p × win return + (1 − p) × loss return.`,

@@ -21,6 +21,9 @@ after a 15-minute grace period govern removal. Odds may be delayed.
 
 Saved captures and simulated practice remain separate research views.
 Live executable size and cross-venue fills are not established by these boards.
+[Usability sprint and verification](docs/usability-sprint-20261118.md) ·
+[Measured read performance](docs/usability-performance-20261118.md) ·
+[Available liquidity assessment](docs/liquidity.md).
 [About this board](app/dashboard/opportunity_static/current/about.html) explains
 the model, execution limitations, sources and SportsGameOdds data credit.
 

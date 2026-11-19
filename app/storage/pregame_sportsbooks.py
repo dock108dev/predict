@@ -6,9 +6,12 @@ from app.comparison.sportsbooks import SPORTSBOOKS
 
 
 def matching_prices(row, observations, *, at):
-    reference = row["reference"]
-    side = reference.get("selected_outcome")
-    event_ids = {p.get("event_id") for p in reference.get("prices", [])} - {None}
+    reference = row.get("reference") or {}
+    side = reference.get("selected_outcome") or row.get("side")
+    event_ids = (
+        {p.get("event_id") for p in reference.get("prices", [])}
+        | set(row.get("sportsbook_event_ids", []))
+    ) - {None}
     if not side or not event_ids:
         return []
     odd_ids = {
@@ -19,6 +22,11 @@ def matching_prices(row, observations, *, at):
     matches = {}
     for quote in observations:
         try:
+            quote_side = quote.get("side")
+            if row.get("sportsbook_sides_reversed", {}).get(
+                quote.get("event_id")
+            ) and quote_side in ("home", "away"):
+                quote_side = {"home": "away", "away": "home"}[quote_side]
             if quote.get("venue") not in SPORTSBOOKS:
                 continue
             if (
@@ -26,7 +34,7 @@ def matching_prices(row, observations, *, at):
                 or (odd_ids and quote.get("odd_id") not in odd_ids)
                 or quote.get("league") != row["league"]
                 or quote.get("market") != row["family"]
-                or (not odd_ids and quote.get("side") != side)
+                or (not odd_ids and quote_side != side)
                 or quote.get("partition") == "three_way"
                 or quote.get("period") != "game"
                 or quote.get("phase") != "pregame"
@@ -65,7 +73,7 @@ def matching_prices(row, observations, *, at):
                 source_at=quote.get("source_at"),
                 received_at=quote["received_at"],
                 provider=quote.get("provider"),
-                is_reference=quote["venue"] == reference["book"],
+                is_reference=quote["venue"] == reference.get("book"),
             )
             matches.setdefault(quote["venue"], []).append((clock, item))
         except (KeyError, TypeError, ValueError, ZeroDivisionError):
@@ -96,9 +104,13 @@ def read_prices(db, rows, *, at):
         {
             p["event_id"]
             for r in rows
-            for p in r["reference"]["prices"]
+            for p in (r.get("reference") or {}).get("prices", [])
             if p.get("event_id")
         }
+    )
+    event_ids = sorted(
+        set(event_ids)
+        | {eid for r in rows for eid in r.get("sportsbook_event_ids", [])}
     )
     if not event_ids:
         return []

@@ -319,6 +319,73 @@ class PregameBoardViewsSQL(PregameFixture):
             )
             self.assertEqual(arb_read(db, {}, at=stamp(AT))["total"], 0)
 
+    async def test_browse_and_exact_comparison_keep_authentic_prices_without_ev(self):
+        from app.fees import pricing
+        from tests.test_fee_pricing import rule
+
+        data = page()
+        for odd in data["data"][0]["odds"].values():
+            quote = dict(odd["byBookmaker"]["prophetx"], odds="+120")
+            odd["byBookmaker"] = {"novig": quote, "prophetx": deepcopy(quote)}
+        at = stamp(AT)
+        with self.connect() as db:
+            for venue in ("novig", "prophetx"):
+                pricing.write(db, venue, [rule(venue)])
+            self.ingest(db, data)
+            self.process(db)
+            before = list(
+                db.execute("SELECT * FROM current_pregame_price ORDER BY contract_id")
+            )
+            browse = board.read(db, {"browse": "1"}, at=at)
+            self.assertGreater(browse["total"], 0)
+            row = browse["rows"][0]
+            self.assertEqual(
+                row["ev_unavailable_reason"], "reference_exact_pair_unavailable"
+            )
+            self.assertIsNone(row["reference"])
+            self.assertIsNone(row["raw"]["net_ev"])
+            self.assertIsNone(row["display"]["net_ev"])
+            self.assertIsNone(row["ranking"]["value"])
+            self.assertEqual(board.read(db, {}, at=at)["total"], 0)
+            exact = board.read(db, {"bet_id": row["bet_id"], "browse": "1"}, at=at)
+            self.assertEqual({r["venue"] for r in exact["rows"]}, {"novig", "prophetx"})
+            self.assertEqual(exact["sportsbooks"], [])
+            again = board.read(
+                db,
+                {"bet_id": row["bet_id"], "browse": "1"},
+                at=at + timedelta(seconds=2),
+            )
+            self.assertEqual(
+                [r["times"] for r in exact["rows"]], [r["times"] for r in again["rows"]]
+            )
+            self.assertEqual(
+                before,
+                list(
+                    db.execute(
+                        "SELECT * FROM current_pregame_price ORDER BY contract_id"
+                    )
+                ),
+            )
+            # Attach exact source revisions as the ordinary aggregate ingress
+            # does; this fixture's generic upsert otherwise stores inline prices.
+            db.execute("""UPDATE current_offer_storage o SET price_value=NULL,
+                sgo_quote_id=q.id,sgo_quote_revision=q.revision,
+                facts=o.facts#-'{original,value}'
+                FROM sgo_quote_revision q,current_contract c
+                WHERE c.id=o.contract_id AND q.is_current AND q.bookmaker_id=c.venue
+                  AND q.facts->>'odd_id'=c.native_outcome_id
+                  AND q.facts->>'line'=o.facts#>>'{source,native_line}'""")
+            linked = db.execute(
+                "SELECT count(*) n FROM current_offer_storage WHERE sgo_quote_id IS NOT NULL"
+            ).fetchone()["n"]
+            self.assertEqual(linked, 4)
+            db.execute("""INSERT INTO sgo_line_presence
+                (quote_id,event_id,bookmaker_id,odd_id,last_seen,scope_received,expired)
+                SELECT id,event_id,bookmaker_id,facts->>'odd_id',received_order,received_order,true
+                FROM sgo_quote_revision WHERE is_current""")
+            # Same line-omission authority as the original current_offer view.
+            self.assertEqual(board.read(db, {"browse": "1"}, at=at)["total"], 0)
+
     async def test_market_to_book_arbs_use_actual_opposing_price_without_book_ev(self):
         from app.fees import pricing
         from tests.test_fee_pricing import rule

@@ -169,3 +169,65 @@ def test_offer_aliases_order_by_instant_not_timestamp_spelling():
         },
     }
     assert max([earlier, later], key=observation_clock)["contract_id"] == "later"
+
+
+def test_reprice_memo_preserves_nested_samples_and_binds_evaluation_clock():
+    from app.comparison import pregame_arbs as module
+    from datetime import timedelta
+    from unittest.mock import patch
+
+    row = entry("novig", "home")
+    with patch.object(module, "_reprice", wraps=module._reprice) as work:
+        first = module.reprice(row, F(50), at=AT)
+        first["fee"]["cashflows"]["win"]["net_receipt_usd"] = "0"
+        again = module.reprice(row, F(50), at=AT)
+        assert again["fee"]["cashflows"]["win"]["net_receipt_usd"] == "105"
+        assert work.call_count == 1
+        module.reprice(row, F(50), at=AT + timedelta(seconds=1))
+        module.reprice(row, F(51), at=AT)
+        assert work.call_count == 3
+
+
+def test_cancelled_arb_read_stops_before_any_sql_or_calculation():
+    from app.storage.pregame_arbs import read
+
+    with pytest.raises(TimeoutError, match="arbitrage_read_cancelled"):
+        read(None, {}, at=AT, can_continue=lambda: False)
+
+
+def test_api_deadline_cooperatively_stops_background_pair_work():
+    import asyncio
+    import threading
+    from contextlib import nullcontext
+    from types import SimpleNamespace
+    from aiohttp.test_utils import make_mocked_request
+    from app.dashboard import current_pregame_api as api
+
+    stopped = threading.Event()
+    statements = []
+    db = SimpleNamespace(
+        transaction=nullcontext, execute=lambda sql: statements.append(sql)
+    )
+
+    def slow_read(db, query, *, can_continue):
+        while can_continue():
+            stopped.wait(0.001)
+        stopped.set()
+        raise TimeoutError("arbitrage_read_cancelled")
+
+    async def scenario():
+        with (
+            patch.object(api, "READ_DEADLINE_SECONDS", 0.02),
+            patch("app.storage.pregame_arbs.read", side_effect=slow_read),
+        ):
+            response = await api.response(
+                make_mocked_request("GET", "/api/pregame/arbs"),
+                connector=lambda: nullcontext(db),
+            )
+            assert response.status == 503
+            assert b"current_read_timeout" in response.body
+
+    asyncio.run(scenario())
+    assert stopped.is_set()
+    assert "SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY" in statements
+    assert "SET LOCAL statement_timeout='8s'" in statements
