@@ -9,22 +9,25 @@ provider.
 1. Open an exact comparison on Opportunities or Browse odds and choose the
    venue's **Save to My Bets** button. Arbitrage inspection saves both original
    legs together.
-2. In **My Bets**, enter the actual stake/purchase cost, price, placement time,
-   entry fee and additional win/loss fees for each leg. American odds and
-   contract prices between 0 and 1 are supported. Price changes do not change
-   the selection, signed line or venue; save a different quote for a different
-   bet. Blank fees stay unknown. The optional copy button copies the original
-   modeled comparison amounts, which still need confirmation against actual fees.
-3. Choose Saved, Passed or Placed and record your reasoning. A placed trade
-   requires complete actual cashflows. Corrections append revisions; the
-   original quote and previous reports remain retained. Simultaneous stale
-   edits return a conflict instead of silently overwriting another correction.
+2. In **My Bets**, confirm the stake placed. Negative odds default to a stake
+   that wins $100 before fees; positive odds default to a $100 stake. Arbs default
+   to $200 total stake, split to approximately balance the two modeled decisive
+   payouts. Existing recorded stakes remain unchanged. These defaults are editable
+   suggestions, not order submissions or verified fills.
+3. **Save changes** records the trade as Placed by default. The server uses the
+   saved odds, calculates fees from the quote's pinned book schedule with the
+   existing rounding rules, and records placement time automatically. **Change
+   odds** allows a different actual fill price; **More options** holds the decision
+   placement-time correction and notes. Previously recorded fees survive an unchanged stake and price.
+   Missing fee terms do not block recording a stake: those charges and after-fee
+   metrics remain unavailable. Corrections append revisions; stale edits conflict.
 4. Quote tracking continues without a browser. Expand the price comparison to
    inspect observed, actual and latest/closing prices, reference clocks, CLV
    and the retained quote timeline. Zero and negative subsequent comparisons
    remain eligible observations even after disappearing from opportunity lists.
-5. After settlement, enter net cash returned per leg, including returned stake
-   and after all settlement charges. Use zero for an ordinary losing leg and a
+5. Expand **Record result** after settlement and enter net cash returned per leg,
+   including returned stake and after all settlement charges. Settlement time is
+   recorded automatically for a new result. Use zero for an ordinary losing leg and a
    negative amount for an additional debit. Results are reported cashflows,
    including pushes, refunds and partial outcomes; the journal does not infer
    actual venue settlement from the sporting winner.
@@ -94,8 +97,12 @@ The private SQLite journal is `.local/predict-personal/bets.sqlite3`, with WAL
 transactions, restricted file permissions and a configurable absolute
 `PREDICT_BET_JOURNAL_PATH`. It is separate from the source database, so
 `dev-snapshot pull` does not erase bets and source connections remain read-only.
-Full original opportunity snapshots, append-only decision revisions and compact
-source quote observations are retained without automatic journal pruning.
+Original opportunity snapshots, decision revisions and compact source quote
+observations are retained without automatic journal pruning. **Delete bet** asks
+for confirmation and removes that record and its corrections in one transaction,
+subject to the same revision check as editing. Other records and shared quote
+history remain intact. A deleted automatic log record stays suppressed during
+subsequent sampling; an explicit manual save can create a new decision.
 Different arb allocations are not inserted as separate source price observations.
 
 Journal writes reserve a SQLite write transaction before looking up or changing
@@ -152,26 +159,48 @@ corrects entries. Backup/restore tests cover committed WAL data, original quotes
 corrections and observations. Those fixtures do not establish production-scale
 throughput or recovery from host failure.
 
-## Missing exact lines at close
+## Closing prices and alternate-line estimates
 
-The journal now samples the eligible sportsbook reference universe for tracked
-selections even when their original exchange quote has disappeared. It chooses
-the lowest no-vig probability among complete eligible exact-line same-book pairs,
-using the existing reference policy, independently of the original benchmark book.
-Reference-only observations never create a new market quote or renew its clock.
+Each closed bet shows two separate values: the last retained pregame price for
+its exact pick at the placed venue, and the closing no-vig fair odds from the
+best eligible reference book under the board's existing conservative policy.
+The sportsbook's posted price is distinct from its fair odds. Source times are
+shown separately; a sportsbook update never renews the venue quote's clock.
 
-If no eligible exact pair remains, the closest harder nested line can provide a
-labeled conservative probability bound. For home spreads, a more negative spread
-is harder; away spreads reverse the canonical home-line direction. Over bets use
-a higher total and under bets a lower total. The bound assumes monotonic nested
-outcomes in the existing decisive-game model; it is not an observed exact close
-or a calibrated score-distribution estimate. An easier main line alone is
-insufficient. The UI labels the resulting closing EV and fair-value CLV as bounds.
-No linear interpolation or extrapolation is silently substituted. Price CLV stays
-based on actual retained market prices, with their original clocks visible.
+The sampler reads the eligible sportsbook universe for tracked selections even
+when their exchange quote disappears. A complete exact-line reference takes
+priority. If that line is unavailable, it finds the nearest alternate below and
+above the target **within each book**, requiring a complete same-book two-way
+pair at both endpoints. It removes margin from each pair, then linearly
+interpolates win probability by the target's distance between the alternate
+lines. Contradictory non-monotonic brackets are excluded. It does not combine
+one book's lower line with another book's upper line or extrapolate outside a
+bracket.
 
-The two-trusted-book minimum also applies to exact closing references and to the
-neighboring line used for an estimated bound. A single trusted book plus any
-number of untrusted books does not qualify. Original saved signals remain
-immutable; entry/closing EV and fair-value CLV are unavailable when retained
-reference evidence does not satisfy the minimum.
+At least two trusted books must independently support the estimated target.
+Their estimates compete under the existing lowest-no-vig-probability policy.
+The UI labels the selected value **Estimated fair close**, shows the book,
+both alternate lines and fair odds, the estimated posted book odds, and the
+endpoint fair probability range. Posted odds interpolate the two quoted implied
+probabilities separately; fair odds interpolate their no-vig probabilities.
+Closing EV and fair-value CLV are also labeled estimated. The range describes
+the alternate endpoints; it is not a statistical confidence interval. Linear
+interpolation is an approximation, not an observed exact-line price or a
+calibrated score-distribution model. It does not replace the exact reference
+used to measure reported entry EV.
+
+When a two-sided bracket is unavailable, a qualified nearest harder line can
+still supply an explicitly labeled conservative bound. The same two-trusted-book
+minimum applies at that line. Without qualified inputs the value remains
+unavailable. Price CLV always uses the actual retained exact-pick market price.
+
+All source, receipt and capture clocks must precede kickoff. New bracket details
+survive journal storage and JSON export. Old records cannot acquire missing
+alternate prices retrospectively from post-kickoff observations. A previously
+retained one-sided bound remains a bound when no two-sided bracket was captured.
+
+`DELETE /api/bet-journal/{id}` accepts `{revision}` under the same private
+authentication and same-origin JSON boundary. Stake-only updates use
+`trade: {automatic: true, legs: [{quote_id, stake}]}`; a leg may optionally include
+`price` and `units`. The saved response contains resolved prices, fee amounts and
+`fee_basis`. The existing explicit-cashflow update format remains supported.

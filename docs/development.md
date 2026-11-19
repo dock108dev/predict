@@ -115,8 +115,10 @@ The authored frontend is under `app/dashboard/opportunity_static/current/`.
 - `pregame.html`, `pregame.js` and `pregame.css` provide Opportunities, Browse odds
   and game detail. `pregame-arbs.html` and `pregame-arbs.js` provide price Arbitrage.
   `pregame-math.js` renders calculation disclosures; `pregame-ranking.js` is generated.
-- `bet-journal.html`, `bet-journal.js`, `bet-journal-actions.js` and
-  `bet-journal.css` provide My Bets and the opportunity log.
+- `bet-journal.html`, `bet-journal.js`, `bet-journal-defaults.js`,
+  `bet-journal-actions.js` and `bet-journal.css` provide My Bets and the opportunity
+  log. Editable stake suggestions stay separate from recorded trade cashflows;
+  the server calculates book fees when a stake-only report is saved.
 - `desk.html` and `desk.js` provide research/live and replay views. Its polling,
   cards, quote display, drawer and inspection modules retain captured evidence,
   revision-bound details and hypothetical sizing.

@@ -18,22 +18,33 @@ ssh -N -L 127.0.0.1:8784:127.0.0.1:8784 hetzner
 Open `http://127.0.0.1:8784/`. Stop the local web process first if it uses that
 port. The dashboard checks the local port as part of its browser boundary.
 
-The image release leaves the host's Caddy config in place. When
-`deploy/predict.Caddyfile` changes, replace the imported site file on the host,
-validate the full configuration, and reload Caddy. Keep `predict-auth` in place.
+The image release leaves the host's Caddy config in place. A successful image
+deploy does not install new proxy routes. When `deploy/predict.Caddyfile` changes,
+copy it from the checkout, validate the full configuration, and reload Caddy.
+Keep `predict-auth` in place. From the checkout:
 
 ```sh
-sudo caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
-sudo systemctl reload caddy
+scp deploy/predict.Caddyfile hetzner:predict.Caddyfile
+ssh hetzner '
+  set -eu
+  sudo install -o root -g caddy -m 0640 predict.Caddyfile /etc/caddy/predict.Caddyfile
+  sudo caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+  sudo systemctl reload caddy
+  rm predict.Caddyfile
+'
 ```
 
 After reloading, check the public site without credentials. The favicon request
-should redirect to `/view/current/predict-icon.png`. Admin should return
-`401` with a `WWW-Authenticate` header.
+should redirect to `/view/current/predict-icon.png`. Admin, My Bets and the journal
+API should return `401` with a `WWW-Authenticate` header. After signing in with
+existing operational credentials, `/my-bets` should display the journal. A bare
+`404` for `/my-bets` while the backend serves it indicates a stale proxy route list.
 
 ```sh
 curl -sS -D - -o /dev/null https://predict.dock108.dev/favicon.ico
 curl -sS -D - -o /dev/null https://predict.dock108.dev/admin
+curl -sS -D - -o /dev/null https://predict.dock108.dev/my-bets
+curl -sS -D - -o /dev/null https://predict.dock108.dev/api/bet-journal
 ```
 
 ## Releases

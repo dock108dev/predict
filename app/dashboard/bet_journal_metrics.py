@@ -56,6 +56,50 @@ def posted_decimal(row):
     return decimal_price(value, units)
 
 
+def closing_fair(row, original, probability):
+    if row is None or probability is None:
+        return None
+    from app.comparison.pregame_valuation import american
+
+    ref = row["reference"]
+    side = ref.get("selected_outcome", original.get("side"))
+    selected = next((q for q in ref["prices"] if q.get("side") == side), None)
+    basis = ref.get("closing_basis", "exact_line")
+
+    def selection(value):
+        result = dict(original["selection"])
+        if value is not None:
+            line = fraction(value)
+            result["signed_line"] = wire(
+                -line if original["family"] == "spread" and side == "away" else line
+            )
+        return result
+
+    brackets = [
+        dict(bound, selection=selection(bound["line"]))
+        for bound in ref.get("alternate_lines", [])
+    ]
+    return dict(
+        book=ref["book"],
+        fair_odds=american(1 / probability) if 0 < probability < 1 else None,
+        probability=wire(probability),
+        basis=basis,
+        selection=selection((ref.get("market") or {}).get("line")),
+        posted_odds=ref.get("estimated_posted_odds")
+        if brackets
+        else selected.get("price_american")
+        if selected
+        else None,
+        posted_estimated=bool(brackets),
+        source_at=min(ref["prices"], key=lambda q: instant(q["source_at"]))[
+            "source_at"
+        ],
+        observed_at=row["observed_at"],
+        alternate_lines=brackets,
+        probability_range=ref.get("probability_range"),
+    )
+
+
 def _same_quote(row, original):
     # Contract aliases can change, but an exact selection/line, venue and scheduled
     # occurrence must never borrow a different line's attractive closing price.
@@ -265,7 +309,10 @@ def analyze(entry, quotes, at=None):
             if entry_at is not None
             and clock[2] <= entry_at
             and (row.get("reference") or {}).get("closing_basis")
-            != "harder_line_probability_lower_bound"
+            not in (
+                "harder_line_probability_lower_bound",
+                "alternate_line_interpolation",
+            )
             and _probability(row, min(kickoff, now), known_at=entry_at) is not None
         ]
         # A reported fill uses only references already retained by placement.
@@ -336,6 +383,7 @@ def analyze(entry, quotes, at=None):
             close_quote=close_quote,
             latest_quote=latest,
             close_reference_quote=close_reference,
+            closing_fair=closing_fair(close_reference, original, p_close),
             close_reference_basis=(close_reference or {})
             .get("reference", {})
             .get("closing_basis", "exact_line"),
@@ -382,7 +430,7 @@ def analyze(entry, quotes, at=None):
             except (KeyError, TypeError, ValueError, ZeroDivisionError):
                 pass
         else:
-            leg["reason"] = "Actual stake, price and all fee fields are required."
+            leg["reason"] = "After-fee cashflows are unavailable for this saved quote."
         if not latest:
             leg["reason"] = (
                 "No quote with source, receipt and saved clocks before kickoff was retained."

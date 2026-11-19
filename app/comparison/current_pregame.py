@@ -90,8 +90,8 @@ def reference(record, observations, *, at):
     )
 
 
-def select_reference(observations, *, family, side, line, start, at):
-    """Shared selector for collection and source-preserving snapshot revaluation."""
+def reference_candidates(observations, *, family, side, line, start, at):
+    """Complete same-book pairs with the shared source/receipt/occurrence guards."""
     inputs = (
         observations
         if isinstance(observations, ReferenceInputs)
@@ -144,6 +144,14 @@ def select_reference(observations, *, family, side, line, start, at):
                     conditioning="decisive_completed_game",
                 )
             )
+    return candidates
+
+
+def select_reference(observations, *, family, side, line, start, at):
+    """Shared selector for collection and source-preserving snapshot revaluation."""
+    candidates = reference_candidates(
+        observations, family=family, side=side, line=line, start=start, at=at
+    )
     if not candidates:
         raise ValueError("reference_exact_pair_unavailable")
     if len(candidates) < MIN_TRUSTED_BOOKS:

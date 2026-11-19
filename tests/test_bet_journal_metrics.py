@@ -329,3 +329,34 @@ def test_single_trusted_book_cannot_supply_entry_or_closing_ev():
     assert measured["entry_ev"] is None
     assert measured["close_ev"] is None
     assert measured["legs"][0]["fair_clv"] is None
+
+
+def test_closing_fair_odds_and_book_prices_keep_independent_market_clock():
+    original = quote()
+    market = quote(clock=CLOSE, odds="+115")
+    reference = quote(
+        clock="2026-11-18T13:58:00+00:00", probability="0.4", book="draftkings"
+    )
+    reference["journal_reference_only"] = True
+    reference["reference"]["selected_outcome"] = "home"
+    reference["observed_at"] = CLOSE
+    result = analyze(entry(original), [market, reference], at=AFTER)
+    leg = result["legs"][0]
+    assert leg["close_quote"]["posted"]["value"] == "+115"
+    fair = leg["closing_fair"]
+    assert fair["book"] == "draftkings"
+    assert fair["fair_odds"] == "+150"
+    assert fair["posted_odds"] == "-110"
+    assert fair["source_at"] == "2026-11-18T13:58:00+00:00"
+    assert leg["close_quote"]["times"]["source_at"] == CLOSE
+
+
+def test_alternate_estimate_is_a_closing_model_not_a_reported_entry_reference():
+    trade = actual()
+    trade["placed_at"] = "2026-11-18T12:01:00+00:00"
+    estimate = quote(clock="2026-11-18T12:00:30+00:00", probability="0.4")
+    estimate["journal_reference_only"] = True
+    estimate["reference"]["closing_basis"] = "alternate_line_interpolation"
+    result = analyze(entry(trade=trade), [estimate], at=AFTER)
+    assert result["legs"][0]["entry_probability"] == "0.5"
+    assert result["legs"][0]["close_probability"] == "0.4"

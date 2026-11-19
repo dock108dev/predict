@@ -264,3 +264,75 @@ class PersonalJournal(TestCase):
         self.assertEqual(
             self.journal.get(key, history=True)["quotes"][0]["posted"]["value"], "+110"
         )
+
+    def test_deleted_automatic_opportunity_stays_deleted_and_manual_save_is_allowed(
+        self,
+    ):
+        key = self.journal.observe("ev", self.row)
+        saved = self.journal.observe("ev", self.row, manual=True)
+        self.journal.delete(key, 1)
+        self.journal.capture([self.row], [], [self.row])
+        self.assertEqual([e["id"] for e in self.journal.list()["entries"]], [saved])
+        self.assertEqual(self.journal.get(saved)["entry"]["snapshot"], self.row)
+        self.assertEqual(self.journal.observe("ev", self.row, manual=True), saved)
+
+    def test_failed_delete_rolls_back_the_record_and_its_corrections(self):
+        import sqlite3
+
+        key = self.journal.observe("ev", self.row, manual=True)
+        self.journal.update(key, dict(revision=1, notes="Keep my correction"))
+        with self.journal.database(write=True) as db:
+            db.execute("""CREATE TRIGGER failed_delete BEFORE DELETE ON entries
+                BEGIN SELECT RAISE(ABORT, 'authored delete failure'); END""")
+        with self.assertRaises(sqlite3.IntegrityError):
+            self.journal.delete(key, 2)
+        record = self.journal.get(key, history=True)
+        self.assertEqual(record["entry"]["notes"], "Keep my correction")
+        self.assertEqual([e["revision"] for e in record["history"]], [1, 2])
+        with self.journal.database() as db:
+            self.assertEqual(
+                db.execute("SELECT count(*) FROM deleted_entries").fetchone()[0], 0
+            )
+
+    def test_stake_only_note_correction_keeps_explicit_actual_fees(self):
+        key = self.journal.observe("ev", self.row, manual=True)
+        actual = dict(
+            quote_id=self.row["id"],
+            stake="100",
+            price="+120",
+            units="american_odds",
+            entry_fee="0.37",
+            win_fee="1.11",
+            loss_fee="0",
+        )
+        first = self.journal.update(
+            key,
+            dict(
+                revision=1,
+                decision="placed",
+                trade=dict(legs=[actual], placed_at=self.row["times"]["received_at"]),
+            ),
+        )
+        changed = self.journal.update(
+            key,
+            dict(
+                revision=2,
+                notes="Keep my actual fees",
+                trade=dict(
+                    automatic=True,
+                    legs=[
+                        dict(
+                            quote_id=self.row["id"],
+                            stake="100.00",
+                            price="120",
+                            units="american_odds",
+                        )
+                    ],
+                ),
+            ),
+        )
+        self.assertEqual(
+            changed["entry"]["trade"]["placed_at"], first["entry"]["trade"]["placed_at"]
+        )
+        for field in ("entry_fee", "win_fee", "loss_fee"):
+            self.assertEqual(changed["entry"]["trade"]["legs"][0][field], actual[field])

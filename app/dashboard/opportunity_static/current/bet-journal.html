@@ -6,6 +6,26 @@
 <nav class="journal-tabs" aria-label="Journal view"><button id="bets-tab" type="button" aria-pressed="true">My Bets</button><button id="log-tab" type="button" aria-pressed="false">Opportunity log</button></nav>
 <form id="filters" class="filters"><label class="search"><span aria-hidden="true" class="search-icon">⌕</span><span class="sr-only">Search journal</span><input name="search" type="search" maxlength="150" placeholder="Search game or notes"></label><label class="sr-only" for="kind">Opportunity type</label><select id="kind" name="kind"><option value="">EV & arbitrage</option><option value="ev">EV bets</option><option value="arb">Arbitrage</option></select><label class="sr-only" for="decision">Decision</label><select id="decision" name="decision"><option value="">All decisions</option><option value="observed">Observed</option><option value="saved">Saved</option><option value="placed">Placed</option><option value="passed">Passed</option></select><button id="refresh" type="button" class="refresh"><span>↻</span>Refresh</button></form>
 <div class="status-line"><strong id="count" aria-live="polite">Loading journal…</strong><span>Newest observed first</span></div><p id="error" role="status" hidden></p><section id="results" aria-label="Bet journal" tabindex="-1"></section><nav class="pagination" aria-label="Journal pages"><button id="previous" type="button">← Previous</button><span id="page"></span><button id="next" type="button">Next →</button></nav>
-<footer class="board-bottom"><span>Original observations and corrections are retained. Results are user reported.</span><nav><a href="/">Find opportunities →</a></nav></footer></main>
-<dialog id="editor" aria-labelledby="editor-title"><div class="dialog-heading"><span>OBSERVATION / ACTUAL TRADE / RESULT</span><button id="editor-close" type="button" aria-label="Close bet editor">×</button></div><h2 id="editor-title" class="dialog-pick"></h2><div id="entry-context"></div><form id="edit-form"><label class="journal-field">Decision<select name="decision"><option value="saved">Saved</option><option value="placed">Placed</option><option value="passed">Passed</option><option value="observed">Observed</option></select></label><div id="trade-legs"></div><label class="journal-field">Placed at <small>Your local time</small><input name="placed_at" type="datetime-local" step="1"></label><label class="journal-field">Notes<textarea name="notes" rows="3" maxlength="4000" placeholder="Why you took or passed on this opportunity"></textarea></label><fieldset class="journal-settlement"><legend>Result</legend><p>Enter net cash returned after settlement charges, including returned stake. Use 0 for an ordinary loss or a negative amount for an extra settlement debit. Leave blank while unresolved.</p><div id="result-legs"></div><label class="journal-field">Settled at <small>Your local time</small><input name="settled_at" type="datetime-local" step="1"></label><label class="journal-field">Result notes<textarea name="result_notes" rows="2" maxlength="4000" placeholder="Win, loss, push, void, partial fill or settlement details"></textarea></label></fieldset><p id="edit-status" role="status"></p><div class="journal-edit-actions"><button id="save" type="submit">Save changes</button><button id="cancel" type="button">Cancel</button></div></form><details id="audit"><summary>Original snapshot & correction history</summary><pre id="audit-data"></pre></details></dialog>
+<footer class="board-bottom"><span>Saved quotes stay fixed. Results are user reported.</span><nav><a href="/">Find opportunities →</a></nav></footer></main>
+<dialog id="editor" aria-labelledby="editor-title">
+<div class="dialog-heading"><span>EDIT BET</span><button id="editor-close" type="button" aria-label="Close bet editor">×</button></div>
+<h2 id="editor-title" class="dialog-pick"></h2><div id="entry-context"></div>
+<form id="edit-form">
+<div id="trade-legs"></div>
+<details id="more-options" class="journal-options"><summary>More options</summary>
+<label class="journal-field">Decision<select name="decision"><option value="placed">Placed</option><option value="saved">Saved</option><option value="passed">Passed</option><option value="observed">Observed</option></select></label>
+<label class="journal-field">Placed at <small>Optional correction; otherwise recorded automatically</small><input name="placed_at" type="datetime-local" step="1"></label>
+<label class="journal-field">Notes<textarea name="notes" rows="2" maxlength="4000" placeholder="Optional notes"></textarea></label>
+</details>
+<input name="settled_at" type="hidden">
+<details id="settlement" class="journal-options"><summary>Record result</summary>
+<p class="journal-observed-detail">Cash returned includes your stake, after settlement fees. Enter 0 for a loss; leave blank until settled.</p>
+<div id="result-legs"></div><label class="journal-field">Result notes<textarea name="result_notes" rows="2" maxlength="4000" placeholder="Optional settlement notes"></textarea></label>
+</details>
+<p id="edit-status" role="status"></p>
+<div class="journal-edit-actions"><button id="save" type="submit">Save changes</button><button id="cancel" type="button">Cancel</button><button id="delete" type="button">Delete bet</button></div>
+<div id="delete-confirmation" class="journal-delete-confirmation" hidden><p>Delete this record and its corrections? This cannot be undone.</p><button id="confirm-delete" type="button">Delete permanently</button><button id="keep" type="button">Keep bet</button></div>
+</form>
+<details id="audit"><summary>Original snapshot & correction history</summary><pre id="audit-data"></pre></details>
+</dialog>
 </body></html>

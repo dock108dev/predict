@@ -118,7 +118,17 @@ def mount(app, *, journal=None, monitor=True):
 
     async def record(request):
         try:
-            if request.method == "POST":
+            if request.method == "DELETE":
+                body = await read_json(request)
+                if not isinstance(body, dict) or set(body) != {"revision"}:
+                    raise ValueError(
+                        "Supply the current revision to delete this record"
+                    )
+                await asyncio.to_thread(
+                    journal.delete, request.match_info["id"], body["revision"]
+                )
+                return web.json_response(dict(deleted=True))
+            elif request.method == "POST":
                 body = await read_json(request)
                 result = await asyncio.to_thread(
                     journal.update, request.match_info["id"], body
@@ -147,6 +157,7 @@ def mount(app, *, journal=None, monitor=True):
     app.router.add_post("/api/bet-journal", records)
     app.router.add_get("/api/bet-journal/{id}", record)
     app.router.add_post("/api/bet-journal/{id}", record)
+    app.router.add_delete("/api/bet-journal/{id}", record)
 
     if monitor:
 

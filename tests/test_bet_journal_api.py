@@ -169,3 +169,128 @@ class JournalHTTP(IsolatedAsyncioTestCase):
         self.assertEqual([r["revision"] for r in record["history"]], [1])
         self.assertEqual(self.journal.get(entry["id"])["entry"]["revision"], 2)
         self.assertEqual(self.journal.list()["total"], 2)
+
+    async def test_delete_checks_origin_and_revision_and_preserves_other_records(self):
+        entry = await self.create()
+        other = deepcopy(entry["snapshot"])
+        other["id"] = "another-saved-quote"
+        survivor = await self.create(other)
+        self.journal.update(entry["id"], dict(revision=1, notes="Newer correction"))
+        url = "/api/bet-journal/" + entry["id"]
+        denied = await self.client.delete(url, json=dict(revision=2))
+        self.assertEqual(denied.status, 403)
+        stale = await self.client.delete(
+            url, json=dict(revision=1), headers={"Origin": self.origin}
+        )
+        self.assertEqual(stale.status, 409)
+        invalid = await self.client.delete(
+            url, json=dict(revision=True), headers={"Origin": self.origin}
+        )
+        self.assertEqual(invalid.status, 409)
+        deleted = await self.client.delete(
+            url, json=dict(revision=2), headers={"Origin": self.origin}
+        )
+        self.assertEqual(deleted.status, 200)
+        self.assertEqual(await deleted.json(), dict(deleted=True))
+        self.assertEqual((await self.client.get(url)).status, 404)
+        exported = await self.client.get("/api/bet-journal?download=json")
+        self.assertEqual(
+            [r["entry"]["id"] for r in (await exported.json())["entries"]],
+            [survivor["id"]],
+        )
+        with self.journal.database() as db:
+            self.assertEqual(
+                db.execute(
+                    "SELECT count(*) FROM events WHERE entry_id=?", (entry["id"],)
+                ).fetchone()[0],
+                0,
+            )
+        # Saving the same quote again is an explicit new intent, not a resurrection.
+        self.assertEqual((await self.create(entry["snapshot"]))["revision"], 1)
+
+    async def test_stake_only_placement_uses_saved_odds_and_exact_book_fees(self):
+        cases = [
+            (
+                "novig",
+                "+108",
+                "100",
+                dict(formula="novig_pregame", rate="0"),
+                ("0", "0"),
+            ),
+            (
+                "prophetx",
+                "+110",
+                "200",
+                dict(formula="prophetx_commission", rate="0.02"),
+                ("0", "4.4"),
+            ),
+            (
+                "kalshi",
+                "-300",
+                "75",
+                dict(
+                    formula="kalshi_taker",
+                    rate="0.07",
+                    multiplier="1",
+                    balance_precision="0.01",
+                ),
+                ("1.32", "0"),
+            ),
+        ]
+        for venue, odds, stake, rule, fees in cases:
+            with self.subTest(venue=venue):
+                row = offer()
+                row.update(
+                    id=venue,
+                    venue=venue,
+                    posted=dict(value=odds, units="american_odds"),
+                )
+                row["fee"]["evidence"] = dict(database_fee_rule=rule)
+                entry = await self.create(row)
+                response = await self.client.post(
+                    "/api/bet-journal/" + entry["id"],
+                    json=dict(
+                        revision=1,
+                        decision="placed",
+                        trade=dict(
+                            automatic=True, legs=[dict(quote_id=venue, stake=stake)]
+                        ),
+                    ),
+                    headers={"Origin": self.origin},
+                )
+                self.assertEqual(response.status, 200, await response.text())
+                saved = (await response.json())["entry"]
+                trade = saved["trade"]
+                actual = trade["legs"][0]
+                self.assertEqual((actual["entry_fee"], actual["win_fee"]), fees)
+                self.assertEqual(actual["loss_fee"], "0")
+                self.assertEqual(actual["fee_basis"], "saved_book_schedule")
+                self.assertTrue(trade["placed_at"])
+                self.assertEqual(saved["snapshot"], row)
+
+    async def test_missing_fee_schedule_still_records_stake_without_inventing_ev(self):
+        row = offer()
+        # An old/incomplete pinned rule must not look like a missing record or
+        # force users to type fees before they can log the stake.
+        row["fee"]["evidence"] = dict(
+            database_fee_rule=dict(formula="unknown", rate="0.02")
+        )
+        entry = await self.create(row)
+        response = await self.client.post(
+            "/api/bet-journal/" + entry["id"],
+            json=dict(
+                revision=1,
+                decision="placed",
+                trade=dict(
+                    automatic=True,
+                    legs=[dict(quote_id=entry["snapshot"]["id"], stake="100")],
+                ),
+            ),
+            headers={"Origin": self.origin},
+        )
+        self.assertEqual(response.status, 200, await response.text())
+        saved = (await response.json())["entry"]
+        self.assertEqual(saved["trade"]["legs"][0]["fee_basis"], "unavailable")
+        self.assertIsNone(saved["trade"]["legs"][0]["entry_fee"])
+        self.assertIsNone(saved["metrics"]["entry_ev"])
+        self.assertIsNotNone(saved["trade"]["placed_at"])
