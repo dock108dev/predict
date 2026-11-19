@@ -822,6 +822,63 @@ class PregameBoardViewsSQL(PregameFixture):
                 )
                 self.assertEqual(len(read_book_quotes(db, scope)), 4)
 
+    async def test_book_query_restores_jit_in_autocommit_and_outer_transactions(self):
+        from app.storage.pregame_arbs import book_query
+        from psycopg.errors import DivisionByZero
+
+        with self.connect() as db:
+            for outer in (False, True):
+                from contextlib import nullcontext
+
+                with self.subTest(outer_transaction=outer), (
+                    db.transaction() if outer else nullcontext()
+                ):
+                    db.execute("SELECT set_config('jit','on',false)")
+                    self.assertEqual(
+                        book_query(db, "SELECT current_setting('jit') AS jit", None).fetchone()["jit"],
+                        "off",
+                    )
+                    self.assertEqual(db.execute("SHOW jit").fetchone()["jit"], "on")
+                    with self.assertRaises(DivisionByZero):
+                        book_query(db, "SELECT 1/0", None)
+                    self.assertEqual(db.execute("SHOW jit").fetchone()["jit"], "on")
+                    db.execute("SELECT set_config('jit','off',false)")
+                    book_query(db, "SELECT 1", None)
+                    self.assertEqual(db.execute("SHOW jit").fetchone()["jit"], "off")
+
+    async def test_book_projection_preserves_strict_json_flags_and_original_facts(self):
+        from app.storage.pregame_arbs import read_book_quotes
+        from psycopg.types.json import Jsonb
+
+        request = [dict(event_id="event", family="spread", numerator=3, denominator=2)]
+        with self.connect() as db:
+            self.ingest(db, page())
+            for field in ("available", "provider_available"):
+                for present, value, expected in (
+                    (True, True, 4),
+                    (True, False, 0),
+                    (True, "true", 0),
+                    (True, None, 0),
+                    (False, None, 4 if field == "provider_available" else 0),
+                ):
+                    with self.subTest(field=field, present=present, value=value):
+                        db.execute("""UPDATE sgo_quote_revision SET facts=
+                            jsonb_set(jsonb_set(facts,'{available}','true'),
+                            '{provider_available}','true') WHERE is_current""")
+                        db.execute(
+                            "UPDATE sgo_quote_revision SET facts=(facts-%s) || %s WHERE is_current",
+                            (field, Jsonb({field: value} if present else {})),
+                        )
+                        rows = read_book_quotes(db, request)
+                        self.assertEqual(len(rows), expected)
+                        if expected:
+                            originals = [r["facts"] for r in db.execute(
+                                "SELECT facts FROM current_sgo_reference WHERE event_id='event'"
+                            ) if r["facts"].get("venue") in ("fanduel", "draftkings")]
+                            self.assertCountEqual(rows, originals)
+            db.execute("UPDATE sgo_quote_revision SET facts='\"malformed\"' WHERE is_current")
+            self.assertEqual(read_book_quotes(db, request), [])
+
     async def test_pending_reference_job_suppresses_pairs_before_recalculation(self):
         from app.fees import pricing
         from tests.test_fee_pricing import rule

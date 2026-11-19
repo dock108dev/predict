@@ -10,9 +10,9 @@ from psycopg.errors import QueryCanceled
 from app.storage.store import connect
 
 READ_DEADLINE_SECONDS = 10
-# The measured whole-slate cold scan takes 8.9s on the shared deployed host.
-# Give that bounded computation headroom; ordinary stored-row reads retain 10s.
-ARBITRAGE_READ_DEADLINE_SECONDS = 15
+# Complete current-slate scans measured 16–21s on the shared deployed host.
+# Keep cold computation bounded, cancellable and separate from ordinary 10s reads.
+ARBITRAGE_READ_DEADLINE_SECONDS = 30
 
 RETIRED = frozenset(
     (

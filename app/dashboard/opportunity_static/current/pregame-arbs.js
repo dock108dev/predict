@@ -12,7 +12,7 @@ const modeSettings=createModeSettings(()=>{offset=0;cancelRead();load();});
 let offset=0,lastGood=null,running=false,checking=false,returnId,deadlineTimer,inspectionTimer,requestVersion=0,errorSource=null,activeRead,activeUpdate,dialogReturn,lastRowsFingerprint;
 // The server allows 15s for a measured 8.9s cold scan; leave transport headroom.
 // This recovery deadline is not an interaction-performance claim.
-const READ_DEADLINE_MS=18000;
+const READ_DEADLINE_MS=35000;
 const node=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;};
 const money=v=>'$'+ratio(v).toFixed(2);
 function pick(r){let line=r.selection.signed_line,team=r.selection_label||r.selection.participant||'';if(line!==undefined&&line!==null)line=ratio(line);return r.family==='total'?(r.side==='over'?'Over ':'Under ')+line:team+(r.family==='spread'?' '+(line>0?'+':'')+line:' to win');}

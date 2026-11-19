@@ -257,7 +257,11 @@ def test_arb_filters_survive_delayed_reads_empty_results_and_poll_failures():
             display_return="+5.00%",
         )
         held, released = asyncio.Event(), asyncio.Event()
-        state = {"updates_failed": False}
+        state = {"updates_failed": False, "delay": None}
+        delays = {
+            name: (asyncio.Event(), asyncio.Event(), asyncio.Event())
+            for name in ("slow", "deadline")
+        }
 
         async def serve(route):
             url = urlparse(route.request.url)
@@ -267,6 +271,22 @@ def test_arb_filters_survive_delayed_reads_empty_results_and_poll_failures():
                     "updates_failed"
                 ] else await route.fulfill(json={"changed": False})
             elif url.path == "/api/pregame/arbs":
+                delayed = state["delay"]
+                if delayed:
+                    entered, release, completed = delays[delayed]
+                    entered.set()
+                    await release.wait()
+                    if delayed == "deadline":
+                        await route.fulfill(
+                            json=dict(
+                                rows=[],
+                                total=0,
+                                cursor="late-timeout",
+                                sportsbooks=["fanduel"],
+                            )
+                        )
+                        completed.set()
+                        return
                 # Older data omits the selected book: rendering it would clear the filter.
                 if q.get("venue") == "kalshi":
                     held.set()
@@ -302,15 +322,77 @@ def test_arb_filters_survive_delayed_reads_empty_results_and_poll_failures():
             await page.route("**/*", serve)
             await page.goto("http://predict.fixture/arbs")
             await expect(page.locator(".arb-card")).to_have_count(1)
+            await page.clock.install()
             await expect(
                 page.locator(".arb-card .arb-price-column").first
             ).to_contain_text("45.45%")
             await page.locator("#board-advanced > summary").click()
             async with page.expect_response(lambda r: "/api/pregame/arbs?" in r.url):
                 await page.locator("#book").select_option("draftkings")
+            # A cold read may legitimately outlast the former 18-second client
+            # limit. Keep the stored rows visible until the calibrated deadline.
+            state["delay"] = "slow"
+            await page.locator("#refresh").click()
+            await asyncio.wait_for(delays["slow"][0].wait(), 5)
+            await page.clock.fast_forward(20000)
+            await expect(page.locator("#results")).to_have_attribute(
+                "data-state", "loading"
+            )
+            await expect(page.locator("#refresh")).to_have_attribute(
+                "aria-busy", "true"
+            )
+            await expect(page.locator("#error")).to_be_hidden()
+            await expect(page.locator(".arb-card")).to_have_count(1)
+            state["delay"] = None
+            delays["slow"][1].set()
+            await expect(page.locator("#results")).to_have_attribute(
+                "data-state", "loaded"
+            )
+            await expect(page.locator("#refresh")).not_to_have_attribute(
+                "aria-busy", "true"
+            )
+            await expect(page.locator("#book")).to_have_value("draftkings")
+
+            # A genuinely over-deadline response fails visibly while preserving
+            # the last rows. Retry can finish before that old body is released.
+            await page.locator(".arb-card").evaluate("e=>e.dataset.retained='yes'")
+            state["delay"] = "deadline"
+            await page.locator("#refresh").click()
+            await asyncio.wait_for(delays["deadline"][0].wait(), 5)
+            await page.clock.fast_forward(35001)
+            await expect(page.locator("#error")).to_contain_text("timed out")
+            await expect(page.locator("#error")).to_contain_text("preserved")
+            await expect(page.locator(".arb-card")).to_have_attribute(
+                "data-retained", "yes"
+            )
+            await expect(page.locator("#results")).to_have_attribute(
+                "data-state", "partial"
+            )
+            await expect(page.locator("#refresh")).not_to_have_attribute(
+                "aria-busy", "true"
+            )
+            state["delay"] = None
+            async with page.expect_response(lambda r: "/api/pregame/arbs?" in r.url):
+                await page.locator("#refresh").click()
+            await expect(page.locator("#results")).to_have_attribute(
+                "data-state", "loaded"
+            )
+            await expect(page.locator("#error")).to_be_hidden()
+            delays["deadline"][1].set()
+            await asyncio.wait_for(delays["deadline"][2].wait(), 5)
+            await page.clock.run_for(1)
+            await expect(page.locator(".arb-card")).to_have_count(1)
+            await expect(page.locator("#book")).to_have_value("draftkings")
+            await expect(page.locator("#results")).to_have_attribute(
+                "data-state", "loaded"
+            )
+
             await page.locator("#venue").select_option("kalshi")
             await asyncio.wait_for(held.wait(), 5)
-            await page.locator("#venue").select_option("novig")
+            async with page.expect_event(
+                "requestfailed", predicate=lambda request: "venue=kalshi" in request.url
+            ):
+                await page.locator("#venue").select_option("novig")
             released.set()
             await expect(page.locator(".arb-card")).to_have_count(1)
             await expect(page.locator("#book")).to_have_value("draftkings")
@@ -319,8 +401,10 @@ def test_arb_filters_survive_delayed_reads_empty_results_and_poll_failures():
             await expect(page.locator(".arb-card")).to_have_count(0)
             await expect(page.locator("#book")).to_have_value("draftkings")
             state["updates_failed"] = True
+            await page.clock.fast_forward(1501)
             await expect(page.locator("#error")).to_contain_text("Update check failed")
             state["updates_failed"] = False
+            await page.clock.fast_forward(1501)
             await expect(page.locator("#error")).to_be_hidden()
             await browser.close()
 

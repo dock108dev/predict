@@ -79,6 +79,23 @@ def hydrate_prices(db, entries):
         entry.update(record=row["record"], fee_input=row["fee_input"])
 
 
+def book_query(db, query, parameters):
+    """Avoid measured multi-second compilation for this one short-lived query.
+
+    A nested transaction restores the prior setting on query failure; success
+    restores it explicitly. The same scope works for standalone autocommit
+    callers, without changing the connection or any other reader's policy.
+    """
+    with db.transaction():
+        previous = db.execute("SHOW jit").fetchone()["jit"]
+        if previous != "off":
+            db.execute("SELECT set_config('jit','off',true)")
+        result = db.execute(query, parameters)
+        if previous != "off":
+            db.execute("SELECT set_config('jit',%s,true)", (previous,))
+        return result
+
+
 def read_book_quotes(db, request_lines, *, include_groups=False):
     """Fetch supported books on represented lines before decoding quote bodies.
 
@@ -94,16 +111,17 @@ def read_book_quotes(db, request_lines, *, include_groups=False):
     if not request_lines:
         return []
     rows = list(
-        db.execute(
+        book_query(
+            db,
             """WITH requested AS (
                   SELECT * FROM jsonb_to_recordset(%s)
                     r(event_id text,family text,numerator numeric,denominator numeric,side text,
                       group_key text,canonical_side text,cost_numerator numeric,cost_denominator numeric)),
                 quotes AS MATERIALIZED (
                 SELECT q.id AS quote_id,
-                  q.event_id,q.facts->>'market' AS family,q.facts->>'side' AS side,
-                  q.facts->>'venue' AS venue,q.facts->>'price_american' AS price_american,
-                  jsonb_typeof(q.facts->'price_american')='string' AS price_is_string,
+                  q.event_id,fields.market AS family,fields.side AS side,
+                  fields.venue AS venue,fields.price_american#>>'{}' AS price_american,
+                  jsonb_typeof(fields.price_american)='string' AS price_is_string,
                   CASE WHEN normalized.line ~
                     '^[+-]?([0-9]+([.][0-9]*)?|[.][0-9]+)([eE][+-]?[0-9]+)?(/[0-9]+)?$'
                     AND pg_input_is_valid(split_part(normalized.line,'/',1),'numeric')
@@ -114,13 +132,17 @@ def read_book_quotes(db, request_lines, *, include_groups=False):
                     AND pg_input_is_valid(split_part(normalized.line,'/',1),'numeric')
                     AND pg_input_is_valid(COALESCE(NULLIF(split_part(normalized.line,'/',2),''),'1'),'numeric')
                     THEN COALESCE(NULLIF(split_part(normalized.line,'/',2),''),'1')::numeric END AS denominator
-                FROM current_sgo_reference q CROSS JOIN LATERAL (
-                  SELECT replace(trim(q.facts->>'line'),'_','') AS line) normalized
-                WHERE q.event_id=ANY(%s) AND q.facts->>'venue'=ANY(%s)
-                  AND q.facts->'available'='true'::jsonb
-                  AND (NOT (q.facts ? 'provider_available') OR q.facts->'provider_available'='true'::jsonb)
-                  AND (q.facts->>'phase')='pregame' AND (q.facts->>'period')='game'
-                  AND (q.facts->>'partition') IS DISTINCT FROM 'three_way'
+                FROM current_sgo_reference q CROSS JOIN LATERAL jsonb_to_record(
+                  CASE WHEN jsonb_typeof(q.facts)='object' THEN q.facts ELSE '{}'::jsonb END)
+                  AS fields(market text,side text,venue text,line text,price_american jsonb,
+                    available jsonb,provider_available jsonb,phase text,period text,partition text)
+                CROSS JOIN LATERAL (
+                  SELECT replace(trim(fields.line),'_','') AS line) normalized
+                WHERE q.event_id=ANY(%s) AND fields.venue=ANY(%s)
+                  AND fields.available='true'::jsonb
+                  AND (NOT (q.facts ? 'provider_available') OR fields.provider_available='true'::jsonb)
+                  AND (fields.phase)='pregame' AND (fields.period)='game'
+                  AND (fields.partition) IS DISTINCT FROM 'three_way'
                   AND """
             + BOOK_GUARD
             + """

@@ -87,6 +87,12 @@ expired lines, allowing reads to check negative authority without fetching every
 positive witness. Missing or unknown evidence stays unknown; original clocks,
 fees and cashflows remain unchanged. These mechanisms do not establish deployed
 cold-read latency; that requires measurement after the migration is installed.
+Book metadata is expanded once per quote, retaining the original full facts for
+qualification. Its query skips measured JIT compilation and restores the caller
+setting. Cold whole-slate Arb reads have a 30-second server/35-second client
+bound, calibrated to observed 16–21-second complete scans; each SQL statement
+retains its 8-second bound and filter changes cancel superseded work. Repeated
+filters project completed scans rather than repeat those cold reads.
 Background journal sampling shares its existing revision and 15-second cadence
 between web and collector roles, so duplicate samplers do not compete with board
 reads for the same retained evidence.
