@@ -5,12 +5,31 @@ stays after the cheap update-cursor path and inside the caller's transaction.
 """
 
 from app.comparison import current_pregame as math
-from .store import hashed
+from .store import hashed, stamp
 from .pregame_known_withdrawals import ROW_GUARDS
 from datetime import timedelta
 
 
 def read(db, query, *, at=None, clock, configured_routes):
+    packet = _read(db, query, at=at, clock=clock, configured_routes=configured_routes)
+    if query.get("max_age_minutes") and query.get("updates") != "1":
+        age = timedelta(minutes=int(query["max_age_minutes"]))
+        rows = list(packet.get("rows", []))
+        for game in packet.get("games", []):
+            rows.extend(game.get("rows", []))
+        deadlines = [
+            stamp(row["times"]["source_at"]) + age
+            for row in rows
+            if row.get("times", {}).get("source_at")
+        ]
+        if packet.get("refresh_at"):
+            deadlines.append(stamp(packet["refresh_at"]))
+        if deadlines:
+            packet = dict(packet, refresh_at=min(deadlines).isoformat())
+    return packet
+
+
+def _read(db, query, *, at=None, clock, configured_routes):
     """Read committed complete rows; grouping and exact values precede pagination."""
     from . import pregame_ranking as ranking
 
@@ -26,14 +45,23 @@ def read(db, query, *, at=None, clock, configured_routes):
         """SELECT min(valid_until) FILTER (WHERE valid_until>%s) AS next,
                   max(valid_until) FILTER (WHERE valid_until<=%s) AS previous
         FROM (SELECT valid_until FROM current_pregame_calculation WHERE reason IS NULL
-              UNION ALL SELECT valid_until FROM current_pregame_price) eligible""",
-        (at, at),
+              UNION ALL SELECT valid_until FROM current_pregame_price
+              UNION ALL SELECT start_at-(%s::int*interval '1 second')
+                FROM current_pregame_price WHERE %s::int IS NOT NULL) eligible""",
+        (at, at, query.get("_scope_seconds"), query.get("_scope_seconds")),
     ).fetchone()
     deadline, boundary = deadlines["next"], deadlines["previous"]
     public_revision = db.execute(
         "SELECT revision,current_schema() AS cohort_schema FROM public.current_pregame_revision WHERE singleton"
     ).fetchone()
-    cursor = hashed([public_revision["cohort_schema"], revision["revision"], public_revision["revision"], str(boundary)])
+    cursor = hashed(
+        [
+            public_revision["cohort_schema"],
+            revision["revision"],
+            public_revision["revision"],
+            str(boundary),
+        ]
+    )
     base = dict(
         schema="predict-current-pregame-1",
         state="ready",
@@ -140,7 +168,7 @@ def read(db, query, *, at=None, clock, configured_routes):
     clauses.extend(
         [
             "o.facts->>'state' IS DISTINCT FROM 'unavailable'",
-            "NOT EXISTS(SELECT 1 FROM sgo_line_presence lp WHERE lp.quote_id=o.sgo_quote_id AND lp.expired)",
+            "NOT COALESCE((SELECT lp.expired FROM sgo_line_presence lp WHERE lp.quote_id=o.sgo_quote_id LIMIT 1),false)",
             "NOT (COALESCE(e.facts->'status','{}'::jsonb) @> '{\"live\":true}'::jsonb)",
             "NOT (COALESCE(e.facts->'status','{}'::jsonb) @> '{\"ended\":true}'::jsonb)",
             "COALESCE(e.facts#>>'{status,status}','') NOT IN ('cancelled','final','suspended','started','delayed')",

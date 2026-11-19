@@ -405,6 +405,18 @@ class PregameBoardViewsSQL(PregameFixture):
                 self.assertEqual(
                     {q["venue"] for q in quotes}, {"fanduel", "draftkings"}
                 )
+            # A large alternate request set and repeated witnesses must retain
+            # exactly the same original bodies, once per quote identity.
+            import json
+
+            many_lines = request() * 2 + [
+                dict(event_id="event", family="spread", numerator=n, denominator=1)
+                for n in range(256)
+            ]
+            self.assertEqual(
+                sorted(json.dumps(q, sort_keys=True) for q in read_book_quotes(db, many_lines)),
+                sorted(json.dumps(q, sort_keys=True) for q in quotes),
+            )
             # Invalid and out-of-range retained numbers stay excluded rather
             # than turning a harmless old quote into a failed board request.
             for value in ("not-a-line", "1e-10000000", "1/0"):

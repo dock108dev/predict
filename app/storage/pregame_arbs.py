@@ -50,6 +50,8 @@ def read_book_quotes(db, request_lines):
     Profit bounds admit whole book/outcome witness groups across attached events;
     newest unprofitable quotes and conflicting ties must survive that admission.
     Unparsed price formats stay optimistic; only the ordinary model validates them.
+    Materialize compact quote fields once: a parameterized event scan per requested
+    alternate otherwise repeats JSON parsing and authority checks for every line.
     """
     if not request_lines:
         return []
@@ -59,15 +61,24 @@ def read_book_quotes(db, request_lines):
                   SELECT * FROM jsonb_to_recordset(%s)
                     r(event_id text,family text,numerator numeric,denominator numeric,side text,
                       group_key text,canonical_side text,cost_numerator numeric,cost_denominator numeric)),
-                scoped AS MATERIALIZED (
+                quotes AS MATERIALIZED (
                 SELECT q.id AS quote_id,
+                  q.event_id,q.facts->>'market' AS family,q.facts->>'side' AS side,
                   q.facts->>'venue' AS venue,q.facts->>'price_american' AS price_american,
-                  COALESCE(r.group_key,'') AS group_key,COALESCE(r.canonical_side,q.facts->>'side') AS canonical_side,
-                  r.cost_numerator,r.cost_denominator,
-                  jsonb_typeof(q.facts->'price_american')='string' AS price_is_string
-                FROM current_sgo_reference q JOIN requested r ON q.event_id=r.event_id
-                WHERE q.event_id=ANY(%s) AND q.facts->>'market'=r.family AND q.facts->>'venue'=ANY(%s)
-                  AND (r.side IS NULL OR (q.facts->>'side')=r.side)
+                  jsonb_typeof(q.facts->'price_american')='string' AS price_is_string,
+                  CASE WHEN normalized.line ~
+                    '^[+-]?([0-9]+([.][0-9]*)?|[.][0-9]+)([eE][+-]?[0-9]+)?(/[0-9]+)?$'
+                    AND pg_input_is_valid(split_part(normalized.line,'/',1),'numeric')
+                    AND pg_input_is_valid(COALESCE(NULLIF(split_part(normalized.line,'/',2),''),'1'),'numeric')
+                    THEN split_part(normalized.line,'/',1)::numeric END AS numerator,
+                  CASE WHEN normalized.line ~
+                    '^[+-]?([0-9]+([.][0-9]*)?|[.][0-9]+)([eE][+-]?[0-9]+)?(/[0-9]+)?$'
+                    AND pg_input_is_valid(split_part(normalized.line,'/',1),'numeric')
+                    AND pg_input_is_valid(COALESCE(NULLIF(split_part(normalized.line,'/',2),''),'1'),'numeric')
+                    THEN COALESCE(NULLIF(split_part(normalized.line,'/',2),''),'1')::numeric END AS denominator
+                FROM current_sgo_reference q CROSS JOIN LATERAL (
+                  SELECT replace(trim(q.facts->>'line'),'_','') AS line) normalized
+                WHERE q.event_id=ANY(%s) AND q.facts->>'venue'=ANY(%s)
                   AND q.facts->'available'='true'::jsonb
                   AND (NOT (q.facts ? 'provider_available') OR q.facts->'provider_available'='true'::jsonb)
                   AND (q.facts->>'phase')='pregame' AND (q.facts->>'period')='game'
@@ -75,17 +86,15 @@ def read_book_quotes(db, request_lines):
                   AND """
             + BOOK_GUARD
             + """
-                  AND CASE WHEN r.family='moneyline' THEN true
-                    WHEN replace(trim((q.facts->>'line')),'_','') ~
-                      '^[+-]?([0-9]+([.][0-9]*)?|[.][0-9]+)([eE][+-]?[0-9]+)?(/[0-9]+)?$'
-                      AND pg_input_is_valid(split_part(replace(trim((q.facts->>'line')),'_',''),'/',1),'numeric')
-                      AND pg_input_is_valid(COALESCE(NULLIF(split_part(replace(trim((q.facts->>'line')),'_',''),'/',2),''),'1'),'numeric') THEN
-                      CASE WHEN r.family='spread' THEN
-                        abs(split_part(replace(trim((q.facts->>'line')),'_',''),'/',1)::numeric) * r.denominator
-                          = abs(r.numerator) * COALESCE(NULLIF(split_part(replace(trim((q.facts->>'line')),'_',''),'/',2),''),'1')::numeric
-                      ELSE split_part(replace(trim((q.facts->>'line')),'_',''),'/',1)::numeric * r.denominator
-                          = r.numerator * COALESCE(NULLIF(split_part(replace(trim((q.facts->>'line')),'_',''),'/',2),''),'1')::numeric END
-                    ELSE false END),
+                  ), scoped AS MATERIALIZED (
+                  SELECT q.quote_id,q.venue,q.price_american,q.price_is_string,
+                    COALESCE(r.group_key,'') AS group_key,COALESCE(r.canonical_side,q.side) AS canonical_side,
+                    r.cost_numerator,r.cost_denominator
+                  FROM quotes q JOIN requested r ON q.event_id=r.event_id AND q.family=r.family
+                  WHERE (r.side IS NULL OR q.side=r.side)
+                    AND (r.family='moneyline' OR CASE WHEN r.family='spread' THEN
+                      abs(q.numerator)*r.denominator=abs(r.numerator)*q.denominator
+                    ELSE q.numerator*r.denominator=r.numerator*q.denominator END)),
                 admitted AS (
                   SELECT quote_id,bool_or(cost_numerator IS NULL OR CASE
                     WHEN price_is_string AND price_american ~ '^[+-]?[0-9]{1,12}([.][0-9]{1,12})?$' THEN
@@ -226,7 +235,10 @@ def read(db, query, *, at=None, can_continue=None):
     checkpoint()
     limit = max(1, min(100, int(query.get("limit", "30"))))
     offset = max(0, int(query.get("offset", "0")))
-    cursor = pregame_read(db, {"updates": "1"}, at=at)["cursor"]
+    cursor_packet = pregame_read(
+        db, {"updates": "1", "_scope_seconds": query.get("_scope_seconds")}, at=at
+    )
+    cursor = cursor_packet["cursor"]
     identity = (
         db.info.host,
         db.info.port,
@@ -276,7 +288,7 @@ def read(db, query, *, at=None, can_continue=None):
         JOIN current_offer_storage o ON o.contract_id=c.id JOIN LATERAL (SELECT * FROM current_event WHERE id=c.event_id LIMIT 1) e ON true
         WHERE p.start_at>%s AND p.valid_until>%s AND e.scheduled_start::timestamptz>%s
           AND o.facts->>'state' IS DISTINCT FROM 'unavailable'
-          AND NOT EXISTS(SELECT 1 FROM sgo_line_presence lp WHERE lp.quote_id=o.sgo_quote_id AND lp.expired)
+          AND NOT COALESCE((SELECT lp.expired FROM sgo_line_presence lp WHERE lp.quote_id=o.sgo_quote_id LIMIT 1),false)
           AND NOT EXISTS(SELECT 1 FROM current_pregame_work w WHERE w.provider=e.provider AND w.native_event_id=e.native_event_id)
           AND NOT EXISTS(SELECT 1 FROM jsonb_array_elements_text(p.payload->'sportsbook_event_ids') ref(event_id)
             JOIN current_pregame_work w ON w.provider='sportsgameodds' AND w.native_event_id=ref.event_id)
@@ -504,6 +516,22 @@ def read(db, query, *, at=None, can_continue=None):
             sorted(known, key=pair_clock, reverse=selected_sort == "newest") + unknown
         )
     deadline = min((e["valid_until"] for e in entries), default=None)
+    if cursor_packet.get("refresh_at"):
+        boundary = stamp(cursor_packet["refresh_at"])
+        deadline = min(deadline, boundary) if deadline else boundary
+    if query.get("max_age_minutes"):
+        age = timedelta(minutes=int(query["max_age_minutes"]))
+        age_deadlines = [
+            stamp(e["payload"]["times"]["source_at"]) + age
+            for e in entries
+            if e["payload"].get("times", {}).get("source_at")
+        ]
+        age_deadlines.extend(
+            stamp(q["source_at"]) + age for q in quotes if q.get("source_at")
+        )
+        if deadline:
+            age_deadlines.append(deadline)
+        deadline = min(age_deadlines, default=None)
     packet = dict(
         schema="predict-pregame-arbs-1",
         rows=results,

@@ -19,11 +19,12 @@ def phase_closed(alias):
 
 
 def reference_known_unavailable(identity):
-    return f"""(EXISTS(SELECT 1 FROM public.current_sgo_reference known_ref
-      WHERE known_ref.id={identity} AND
-        (known_ref.facts->'available'='false'::jsonb OR known_ref.facts->'provider_available'='false'::jsonb))
-      OR EXISTS(SELECT 1 FROM public.sgo_line_presence known_line
-        WHERE known_line.quote_id={identity} AND known_line.expired))"""
+    return f"""(COALESCE((SELECT known_ref.facts->'available'='false'::jsonb
+        OR known_ref.facts->'provider_available'='false'::jsonb
+        FROM public.sgo_quote_revision known_ref
+        WHERE known_ref.id={identity} AND known_ref.is_current LIMIT 1),false)
+      OR COALESCE((SELECT known_line.expired FROM public.sgo_line_presence known_line
+        WHERE known_line.quote_id={identity} LIMIT 1),false))"""
 
 
 # Both readers name their frozen price/contract/offer aliases p/c/o.
@@ -32,8 +33,8 @@ ROW_GUARDS = (
       WHERE known_contract.id=c.id AND known_contract.active=false)""",
     """NOT EXISTS(SELECT 1 FROM public.current_offer_storage known_offer
       WHERE known_offer.contract_id=c.id AND known_offer.facts->>'state'='unavailable')""",
-    """NOT EXISTS(SELECT 1 FROM public.sgo_line_presence known_line
-      WHERE known_line.quote_id=o.sgo_quote_id AND known_line.expired)""",
+    """NOT COALESCE((SELECT known_line.expired FROM public.sgo_line_presence known_line
+      WHERE known_line.quote_id=o.sgo_quote_id LIMIT 1),false)""",
     "NOT COALESCE((SELECT known_event.scheduled_start::timestamptz<=%s OR "
     + phase_closed("known_event")
     + " FROM public.current_event known_event WHERE known_event.id=c.event_id LIMIT 1),false)",
@@ -45,7 +46,7 @@ ROW_GUARDS = (
 BOOK_GUARD = (
     "NOT "
     + reference_known_unavailable("q.id")
-    + " AND NOT EXISTS(SELECT 1 FROM public.current_event known_book_event WHERE known_book_event.provider='sportsgameodds' AND known_book_event.native_event_id=q.event_id AND "
+    + " AND NOT COALESCE((SELECT "
     + phase_closed("known_book_event")
-    + ")"
+    + " FROM public.current_event known_book_event WHERE known_book_event.provider='sportsgameodds' AND known_book_event.native_event_id=q.event_id LIMIT 1),false)"
 )

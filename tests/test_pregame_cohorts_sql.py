@@ -15,6 +15,112 @@ from app.storage.store import stamp
 
 @skipUnless(SOCKET, "Disposable PostgreSQL required")
 class PregameCohortsSQL(PregameFixture):
+    async def test_lookahead_window_entry_invalidates_empty_cached_view(self):
+        from app.storage.pregame_arbs import read as arbs
+
+        with self.connect() as db:
+            self.seed_quoted_cohort(db)
+            with db.transaction():
+                select(db, "monitor")
+                query = dict(_scope_seconds="1800")
+                first = arbs(db, query, at=stamp(AT))
+                self.assertEqual(first["rows"], [])
+                entrance = stamp(first["refresh_at"])
+                self.assertEqual(entrance, stamp(AT) + timedelta(minutes=30))
+                later = arbs(db, query, at=entrance + timedelta(microseconds=1))
+                self.assertTrue(later["rows"])
+                self.assertNotEqual(first["cursor"], later["cursor"])
+
+    async def test_age_filter_expires_warm_arb_cache_and_schedules_board_refresh(self):
+        from app.storage.pregame_arbs import read as arbs
+
+        with self.connect() as db:
+            self.seed_quoted_cohort(db)
+            with db.transaction():
+                select(db, "monitor")
+                shown = board.read(
+                    db, dict(browse="1", max_age_minutes="2"), at=stamp(AT)
+                )
+                first = arbs(db, dict(max_age_minutes="2"), at=stamp(AT))
+                self.assertTrue(shown["rows"])
+                self.assertTrue(first["rows"])
+                cutoff = stamp(first["refresh_at"])
+                self.assertLessEqual(cutoff, stamp(AT) + timedelta(minutes=2))
+                self.assertLessEqual(
+                    stamp(shown["refresh_at"]), stamp(AT) + timedelta(minutes=2)
+                )
+                expired = arbs(
+                    db, dict(max_age_minutes="2"), at=cutoff + timedelta(microseconds=1)
+                )
+                self.assertEqual(expired["rows"], [])
+
+    async def test_derive_reuses_qualified_cashflows_and_batches_references(self):
+        from app.comparison import current_pregame as math
+        from app.storage.pregame_cohorts import derive
+
+        with self.connect() as db:
+            self.ingest(db, page())
+            self.process(db)
+            rows = list(
+                db.execute("SELECT * FROM pregame_monitor.current_pregame_price")
+            )
+            self.assertGreater(len(rows), 1)
+            # A price without a benchmark can carry a different main-line flag.
+            # Revaluation must recompute it from the cohort's actual reference.
+            db.execute("""UPDATE pregame_monitor.current_pregame_price
+                SET payload=jsonb_set(payload,'{main}','false'::jsonb)""")
+
+            class CountReferenceReads:
+                references = 0
+
+                def execute(self, query, params=()):
+                    text = query.as_string(db) if hasattr(query, "as_string") else query
+                    if (
+                        text.lstrip().startswith("SELECT")
+                        and "current_sgo_reference" in text
+                    ):
+                        self.references += 1
+                    return db.execute(query, params)
+
+            counted = CountReferenceReads()
+            metadata = rows[0]["payload"]["collection"]
+            with patch.object(
+                math, "calculate", side_effect=AssertionError("price already qualified")
+            ):
+                derive(
+                    counted,
+                    "pregame_monitor",
+                    [r["contract_id"] for r in rows],
+                    stamp(AT),
+                    metadata,
+                )
+            self.assertEqual(counted.references, 1)
+            for row in db.execute("""SELECT p.record,p.fee_input,p.game_key,c.payload
+                FROM pregame_monitor.current_pregame_price p
+                JOIN pregame_monitor.current_pregame_calculation c USING(contract_id)"""):
+                actual = row["payload"]
+                expected = math.calculate(
+                    row["record"],
+                    actual["reference"],
+                    row["fee_input"],
+                    at=stamp(AT),
+                    game_key=row["game_key"],
+                )
+                expected.update(
+                    {
+                        key: actual[key]
+                        for key in (
+                            "collection",
+                            "input_revision",
+                            "sportsbook_event_ids",
+                            "sportsbook_sides_reversed",
+                        )
+                    }
+                )
+                self.assertEqual(actual, expected)
+                self.assertTrue(actual["main"])
+                self.assertEqual(actual["times"]["source_at"], "2026-11-17T19:59:00Z")
+
     async def test_fee_revision_does_not_skip_baseline_and_empty_later_cannot_readopt(
         self,
     ):

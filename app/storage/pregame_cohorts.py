@@ -255,7 +255,6 @@ def combine(db, events, event_ids):
 
 def derive(db, schema, cids, at, metadata):
     """Compute EV from this capture's reference witnesses, never public leftovers."""
-    from copy import deepcopy
     from app.comparison import current_pregame as math
     from .current_pregame import numeric
     from . import odds_archive
@@ -268,6 +267,22 @@ def derive(db, schema, cids, at, metadata):
             (cids,),
         )
     )
+    # A page can contain hundreds of prices attached to the same reference
+    # events. Decode each cohort's witnesses once, then index each distinct
+    # event/role attachment once. Never consult the public reference table.
+    event_ids = sorted(
+        {eid for row in rows for eid in row["payload"].get("sportsbook_event_ids", [])}
+    )
+    by_event = {}
+    for reference in db.execute(
+        sql.SQL(
+            "SELECT id,revision,event_id,facts FROM {}.current_sgo_reference WHERE event_id=ANY(%s)"
+        ).format(sql.Identifier(schema)),
+        (event_ids,),
+    ):
+        by_event.setdefault(reference["event_id"], []).append(reference)
+    attachments = {}
+    reference_inputs = {}
     snapshots = []
     for row in rows:
         original = row["payload"]
@@ -278,32 +293,44 @@ def derive(db, schema, cids, at, metadata):
                 "origin", metadata["origin"]
             )
         ids = original.get("sportsbook_event_ids", [])
-        observations = {}
-        for reference in db.execute(
-            sql.SQL(
-                "SELECT id,revision,event_id,facts FROM {}.current_sgo_reference WHERE event_id=ANY(%s)"
-            ).format(sql.Identifier(schema)),
-            (ids,),
-        ):
-            reference = deepcopy(reference)
-            facts = reference["facts"]
-            if original.get("sportsbook_sides_reversed", {}).get(
-                reference["event_id"]
-            ) and facts.get("side") in ("home", "away"):
-                facts["canonical_side"] = "away" if facts["side"] == "home" else "home"
-            observations.setdefault(reference["event_id"], []).append(reference)
+        reversed_sides = original.get("sportsbook_sides_reversed", {})
+        attachment = tuple(
+            sorted((eid, bool(reversed_sides.get(eid))) for eid in set(ids))
+        )
+        if attachment not in attachments:
+            observations = {}
+            for event_id, references in by_event.items():
+                if event_id not in ids:
+                    continue
+                for reference in references:
+                    # Only this orientation changes. ReferenceInputs and the
+                    # selector read nested source evidence without mutating it.
+                    facts = dict(reference["facts"])
+                    if reversed_sides.get(event_id) and facts.get("side") in (
+                        "home",
+                        "away",
+                    ):
+                        facts["canonical_side"] = (
+                            "away" if facts["side"] == "home" else "home"
+                        )
+                    observations.setdefault(event_id, []).append(
+                        dict(reference, facts=facts)
+                    )
+            attachments[attachment] = observations
+        observations = attachments[attachment]
         reason = None
         payload = None
         reference = None
         try:
-            reference = math.reference(row["record"], observations, at=at)
-            payload = math.calculate(
-                row["record"],
-                reference,
-                row["fee_input"],
-                at=at,
-                game_key=row["game_key"],
+            if attachment not in reference_inputs:
+                reference_inputs[attachment] = math.ReferenceInputs(observations)
+            reference = math.reference(
+                row["record"], reference_inputs[attachment], at=at
             )
+            # The admitted price already contains the qualified fee cashflows.
+            # Only probability-dependent values and line status can change.
+            payload = math.revalue_reference(original, reference, at=at)
+            payload["main"] = math.main_line(row["record"], reference)
             payload.update(
                 sportsbook_event_ids=list(observations),
                 sportsbook_sides_reversed=original.get("sportsbook_sides_reversed", {}),
