@@ -106,8 +106,10 @@ with additional books under More sportsbooks.
 
 Escape closes an active calculation popover before its comparison. Closing an
 inspection restores focus to the corresponding current row or the results if
-that row disappeared. Expanded games retain context while opening an exact-line
-comparison. Kickoff closes expired inspections and refreshes the board without
+that row disappeared. List redraws preserve the focused quote or game control
+by identity, falling back to results when it disappears, and leave focus in
+dialogs and filters alone. Expanded games retain context while opening an
+exact-line comparison. Kickoff closes expired inspections and refreshes the board without
 waiting for another provider response. Reduced motion removes animation.
 
 ## About, replay and diagnostics

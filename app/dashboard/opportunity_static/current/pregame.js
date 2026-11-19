@@ -29,8 +29,8 @@ function ticket(row,compare=true){
  const start=node('div',undefined,'start-cell');start.append(node('strong',date.toLocaleTimeString('en-US',{...opts,hour:'numeric',minute:'2-digit'})),node('span',date.toLocaleDateString('en-US',{...opts,weekday:'short',month:'short',day:'numeric'})));article.append(start);
  const body=node('div',undefined,'subject'),context=node('p',undefined,'context');context.append(node('strong',row.league),node('time',date.toLocaleString('en-US',{...opts,weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+' ET'));
  const title=node('h2',undefined,'pick');
- if(compare){const open=node('button',pick(row),'row-open');open.type='button';open.dataset.quoteId=row.id;open.setAttribute('aria-label','Compare prices for '+pick(row));open.setAttribute('aria-haspopup','dialog');open.setAttribute('aria-controls','comparison');open.onclick=()=>openComparison(row);title.append(open);}else title.textContent=pick(row);
- const link=node('a',row.game,'game');link.href='/game?'+new URLSearchParams({game_key:row.game_key});link.setAttribute('aria-label','Open Game: '+row.game);body.append(context,title,link);article.append(body);
+ if(compare){const open=node('button',pick(row),'row-open');open.type='button';open.dataset.quoteId=row.id;open.dataset.focusKey='compare-'+row.id;open.setAttribute('aria-label','Compare prices for '+pick(row));open.setAttribute('aria-haspopup','dialog');open.setAttribute('aria-controls','comparison');open.onclick=()=>openComparison(row);title.append(open);}else title.textContent=pick(row);
+ const link=node('a',row.game,'game');link.dataset.focusKey='game-link-'+row.id;link.href='/game?'+new URLSearchParams({game_key:row.game_key});link.setAttribute('aria-label','Open Game: '+row.game);body.append(context,title,link);article.append(body);
  const cell=(cls,label,value)=>{const d=node('div',undefined,'board-number '+cls);d.append(node('span',label,'mobile-label'),node('span',value));article.append(d);return d;};
  const venue=cell('venue','Venue',venues[row.venue]||row.venue);
  const posted=priceDisplay(row),after=priceDisplay(row,true),postedCell=cell('posted','Price',posted.primary),afterCell=cell('after','After fees',after.primary);
@@ -43,9 +43,17 @@ function ticket(row,compare=true){
 }
 function query(){const data=new FormData(filters),q=new URLSearchParams({limit:'30',offset:String(offset)});for(const name of ['search','league','family','venue','sort'])if(data.get(name))q.set(name,data.get(name));if(data.get('alternates'))q.set('lines','all');if(browse)q.set('browse','1');if(gameBoard)q.set('view','games');if(gameView)q.set('view','game');for(const name of ['game_key','bet_id','id'])if(initial.has(name))q.set(name,initial.get(name));if(initial.has('line'))q.set('bet_id',initial.get('line'));if(initial.has('quote_key'))q.set('id',initial.get('quote_key'));return q;}
 async function get(q,updates=false){const response=await fetch(`/api/pregame${updates?'/updates':''}?${q}`,{cache:'no-store'});if(!response.ok)throw Error(`HTTP ${response.status}`);return response.json();}
-function render(packet){appliedRanking=packet.sort||rankingSelect.value;rankHeading();document.querySelector('.status-line').hidden=false;document.querySelector('.pagination').hidden=gameView||(packet.total<=30&&offset===0);lastGood=packet;cursor=packet.cursor;total=packet.total;const result=$('results');result.replaceChildren();
+function render(packet){
+ const result=$('results'),active=document.activeElement,restoreFocus=result.contains(active),focusKey=active?.dataset.focusKey;
+ appliedRanking=packet.sort||rankingSelect.value;rankHeading();document.querySelector('.status-line').hidden=false;document.querySelector('.pagination').hidden=gameView||(packet.total<=30&&offset===0);lastGood=packet;cursor=packet.cursor;total=packet.total;result.replaceChildren();
  if(gameBoard&&packet.games?.length)result.append(...packet.games.map(gameCard));else if(gameView&&packet.rows.length)result.append(gameMarkets(packet.rows,true));else if(packet.rows.length)result.append(...packet.rows.map(row=>ticket(row)));else{const empty=node('div',undefined,'empty');empty.append(node('h2',browse?'No odds match these filters.':'No positive opportunities in this view.'));if(browse){empty.append(node('p','Try another league, market or venue.'));}else{const link=node('a','Browse odds →');link.href='/browse-odds';empty.append(link);}result.append(empty);}
  $('board-columns').hidden=gameBoard||gameView||!packet.rows.length;$('count').textContent=`${total} ${gameBoard?(total===1?'game':'games'):browse?(total===1?'bet':'bets'):(total===1?'opportunity':'opportunities')}`;$('previous').disabled=offset===0;$('next').disabled=offset+30>=total;$('page').textContent=total?`${offset+1}–${Math.min(offset+30,total)} of ${total}`:'0';schedule(packet.refresh_at);
+ // A response can redraw the list just after a dialog restored its trigger.
+ // Preserve keyboard identity across replacement without moving dialog/filter focus.
+ if(restoreFocus){
+  const target=[...result.querySelectorAll('[data-focus-key]')].find(e=>e.dataset.focusKey===focusKey);
+  (target||result).focus({preventScroll:true});
+ }
 }
 function schedule(deadline){clearTimeout(refreshTimer);if(deadline)refreshTimer=setTimeout(()=>load(),Math.min(2147483647,Math.max(30,Date.parse(deadline)-Date.now()+30)));}
 async function load(manual=false){if(running){queued=true;return;}running=true;const token=++sequence,refresh=$('refresh'),icon=refresh.querySelector('span');clearTimeout(feedbackTimer);refresh.disabled=true;refresh.setAttribute('aria-busy','true');icon.textContent='…';try{const packet=await get(query());if(token===sequence){render(packet);$('error').hidden=true;icon.textContent=manual?'✓':'↻';refreshComparison();}}catch(e){icon.textContent='↻';$('error').textContent=lastGood?'Refresh failed. Your displayed odds are preserved.':'Odds could not be loaded. Choose Refresh to retry.';$('error').hidden=false;if(!lastGood){$('count').textContent='';document.querySelector('.status-line').hidden=true;}}finally{running=false;refresh.disabled=false;refresh.removeAttribute('aria-busy');feedbackTimer=setTimeout(()=>{icon.textContent='↻';},1800);if(queued){queued=false;load();}}}
@@ -115,7 +123,7 @@ async function openComparison(selected){
 const families={moneyline:'Winner',spread:'Spread',total:'Total'};
 function gameBet(row,interactive=false){
  const item=node('article',undefined,'game-bet');const heading=node('h4');
- if(interactive){const open=node('button',pick(row),'line-open');open.type='button';open.dataset.quoteId=row.id;open.setAttribute('aria-label','Compare prices for '+pick(row));open.onclick=()=>openComparison(row);heading.append(open);}else heading.textContent=pick(row);
+ if(interactive){const open=node('button',pick(row),'line-open');open.type='button';open.dataset.quoteId=row.id;open.dataset.focusKey='compare-'+row.id;open.setAttribute('aria-label','Compare prices for '+pick(row));open.onclick=()=>openComparison(row);heading.append(open);}else heading.textContent=pick(row);
  const subject=node('div',undefined,'line-subject');subject.append(heading,node('span',(venues[row.venue]||row.venue)+(interactive?' · '+(row.main?'Main':'Alternate'):''),'line-venue'));item.append(subject);
  const values=node('div',undefined,'line-values');
  for(const [label,value] of [['Price',venuePrice(row)],['After fees',venuePrice(row,true)],['Fair',mathValue(row,'fair',row.display.fair_odds)],['Net EV',mathValue(row,'ev',row.display.net_ev)]]){const cell=node('div');cell.append(node('small',label),value);values.append(cell);}item.append(values);return item;
@@ -125,7 +133,7 @@ function gameMarkets(rows,interactive=false){
 }
 function gameCard(game){
  const card=node('article',undefined,'game-card'),head=node('header'),date=new Date(game.kickoff),opts={timeZone:'America/New_York'};
- const title=node('h2'),open=node('button',game.game,'game-open');open.type='button';open.dataset.gameKey=game.game_key;open.setAttribute('aria-haspopup','dialog');open.onclick=()=>openGame(game);title.append(open);head.append(title,node('p',game.league+' · '+date.toLocaleString('en-US',{...opts,weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+' ET','game-clock'),node('span','View all lines →','game-hint'));card.append(head,gameMarkets(game.rows));return card;
+ const title=node('h2'),open=node('button',game.game,'game-open');open.type='button';open.dataset.gameKey=game.game_key;open.dataset.focusKey='game-'+game.game_key;open.setAttribute('aria-haspopup','dialog');open.onclick=()=>openGame(game);title.append(open);head.append(title,node('p',game.league+' · '+date.toLocaleString('en-US',{...opts,weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+' ET','game-clock'),node('span','View all lines →','game-hint'));card.append(head,gameMarkets(game.rows));return card;
 }
 async function openGame(game){
  clearTimeout(gameTimer);gameTimer=setTimeout(()=>$('game-lines').close(),Math.min(2147483647,Math.max(0,Date.parse(game.kickoff)-Date.now())));

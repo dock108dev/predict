@@ -460,3 +460,123 @@ def test_ranking_dropdown_defaults_growth_persists_and_resets_page(width):
         expect(page.locator("#sort-order")).to_contain_text("Game start time")
         assert not errors
         browser.close()
+
+
+@pytest.mark.parametrize("width", [390, 1440])
+def test_background_redraw_preserves_focus_after_comparison_closes(width):
+    from playwright.sync_api import sync_playwright, expect
+
+    selected = offer()
+    state = dict(hold=False, empty=False, revision="one")
+    pending, errors = [], []
+
+    def packet():
+        return dict(
+            cursor=state["revision"],
+            rows=[] if state["empty"] else [deepcopy(selected)],
+            total=0 if state["empty"] else 1,
+            refresh_at=selected["kickoff"],
+        )
+
+    def serve(route):
+        url = urlparse(route.request.url)
+        if url.path.endswith("/updates"):
+            route.fulfill(json=dict(changed=False))
+        elif url.path == "/api/pregame":
+            if state["hold"] and "bet_id" not in parse_qs(url.query):
+                pending.append(route)
+            else:
+                route.fulfill(json=packet())
+        elif url.path.startswith("/view/current/"):
+            route.fulfill(path=ASSETS / Path(url.path).name)
+        else:
+            route.fulfill(path=ASSETS / "pregame.html")
+
+    with sync_playwright() as pw:
+        browser = pw.chromium.launch(executable_path=os.getenv("PREDICT_CI_CHROMIUM"))
+        page = browser.new_page(viewport=dict(width=width, height=900))
+        page.on("pageerror", lambda error: errors.append(str(error)))
+        page.route("**/*", serve)
+        page.goto("https://predict.fixture/")
+        compare = page.get_by_role("button", name="Compare prices for")
+        expect(compare).to_be_visible()
+
+        def start_read():
+            state["hold"] = True
+            # Dispatch the real refresh handler without moving keyboard focus;
+            # the held response models a background read already in flight.
+            with page.expect_request(
+                lambda request: (
+                    urlparse(request.url).path == "/api/pregame"
+                    and "bet_id" not in parse_qs(urlparse(request.url).query)
+                )
+            ):
+                page.evaluate("document.getElementById('refresh').click()")
+            expect(
+                page.get_by_role("button", name="Refresh", exact=True)
+            ).to_be_disabled()
+            assert len(pending) == 1
+
+        def finish_read():
+            state["hold"] = False
+            pending.pop().fulfill(json=packet())
+            expect(
+                page.get_by_role("button", name="Refresh", exact=True)
+            ).to_be_enabled()
+
+        def close_comparison():
+            # Native focus restoration precedes the queued close event. Wait for
+            # the app's close handler before interacting with another control.
+            dialog = page.locator("#comparison")
+            dialog.evaluate("""dialog => {
+                dialog.testClosed = false;
+                dialog.addEventListener('close', () => dialog.testClosed = true,
+                    {once: true});
+            }""")
+            page.keyboard.press("Escape")
+            expect(dialog).to_have_js_property("testClosed", True)
+            expect(dialog).not_to_be_visible()
+            expect(compare).to_be_focused()
+
+        start_read()
+        compare.focus()
+        page.keyboard.press("Enter")
+        expect(page.locator("#comparison")).to_be_visible()
+        close = page.get_by_role("button", name="Close comparison")
+        close.focus()
+        selected["display"]["posted_odds"] = "+130"
+        state["revision"] = "two"
+        finish_read()
+        expect(page.locator("#results .posted")).to_contain_text("+130")
+        expect(close).to_be_focused()  # A list update must not steal dialog focus.
+        close_comparison()
+
+        start_read()
+        selected["display"]["posted_odds"] = "+140"
+        state["revision"] = "three"
+        finish_read()
+        expect(page.locator("#results .posted")).to_contain_text("+140")
+        expect(compare).to_be_focused()  # The restored button survives later reads.
+        page.keyboard.press("Space")
+        expect(page.locator("#comparison")).to_be_visible()
+        close_comparison()
+
+        metric = page.locator("#results .ev .math-trigger")
+        metric.focus()
+        expect(page.locator(".math-popover:popover-open")).to_be_visible()
+        start_read()
+        selected["display"]["net_ev"] = "+9.50%"
+        state["revision"] = "four"
+        finish_read()
+        expect(metric).to_have_text("+9.50%")
+        expect(metric).to_be_focused()
+        expect(page.locator(".math-popover:popover-open")).to_be_visible()
+        page.keyboard.press("Escape")
+
+        start_read()
+        state.update(empty=True, revision="five")
+        finish_read()
+        expect(page.locator(".ticket")).to_have_count(0)
+        expect(page.locator("#results")).to_be_focused()
+        assert not errors, errors
+        browser.close()
