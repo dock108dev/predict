@@ -8,7 +8,7 @@ from app.storage import Store,connect
 from app.storage.store import open_retained
 from app.dashboard.controller import DEFAULTS
 from app.dashboard.diagnostics import Measurements,reconcile
-from app.capture_benchmark import DiagnosticPipeline,fixture,trial
+from tests.capture_benchmark import DiagnosticPipeline,fixture,trial
 
 
 class CaptureDiagnosticStorageTests(unittest.TestCase):
@@ -22,7 +22,7 @@ class CaptureDiagnosticStorageTests(unittest.TestCase):
         with connect() as db:db.execute(sql.SQL('DROP DATABASE {}').format(sql.Identifier(cls.name)))
     def connector(self,ignored=None):return open_retained(connect(self.name))
     def prepared(self):
-        m=Measurements();p=DiagnosticPipeline('synthetic',dict(DEFAULTS),self.name,m,self.connector,2)
+        m=Measurements();p=DiagnosticPipeline('live',dict(DEFAULTS),self.name,m,self.connector,2)
         p.start();p.parents,p.matcher,p.contexts,p.rows,books=fixture(2)
         p.titles={r['key']:r['native']['title'] for r in p.rows}
         m.active='book-under-test';m.items=[dict(id=m.active,accepted=True,processed=False)]
