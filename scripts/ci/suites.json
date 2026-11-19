@@ -691,6 +691,7 @@
       "tests/test_bet_journal_api.py",
       "tests/test_bet_journal_metrics.py",
       "tests/test_bet_journal_monitor.py",
+      "tests/test_journal_sampling.py",
       "tests/test_journal_closing_reference.py"
     ]
   }

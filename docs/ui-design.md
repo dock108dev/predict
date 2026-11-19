@@ -87,6 +87,9 @@ expired lines, allowing reads to check negative authority without fetching every
 positive witness. Missing or unknown evidence stays unknown; original clocks,
 fees and cashflows remain unchanged. These mechanisms do not establish deployed
 cold-read latency; that requires measurement after the migration is installed.
+Background journal sampling shares its existing revision and 15-second cadence
+between web and collector roles, so duplicate samplers do not compete with board
+reads for the same retained evidence.
 
 ## Prices and calculations
 

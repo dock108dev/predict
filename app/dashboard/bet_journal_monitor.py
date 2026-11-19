@@ -5,6 +5,7 @@ source PostgreSQL database, including when that database is a frozen dev snapsho
 """
 
 from collections import defaultdict
+from contextlib import ExitStack
 from datetime import datetime, timezone
 from fractions import Fraction
 from threading import Lock
@@ -45,10 +46,10 @@ def _quote_rows(db, at):
     routes = configured_routes(db)
     entries = list(
         db.execute(
-            """SELECT p.*, calculation.payload AS calculation
+            """SELECT p.payload,p.record,calculation.payload AS calculation
             FROM current_pregame_price p
             JOIN current_contract c ON c.id=p.contract_id
-            JOIN current_offer o ON o.contract_id=c.id
+            JOIN current_offer_storage o ON o.contract_id=c.id
             JOIN current_event e ON e.id=c.event_id
             LEFT JOIN current_pregame_calculation calculation ON calculation.contract_id=p.contract_id
                 AND calculation.reason IS NULL AND calculation.valid_until>%s
@@ -58,10 +59,12 @@ def _quote_rows(db, at):
                     WHERE s.id IS NULL OR s.facts->'available' IS DISTINCT FROM 'true'::jsonb)
             WHERE p.start_at>%s AND p.valid_until>%s AND e.scheduled_start::timestamptz>%s
                 AND o.facts->>'state' IS DISTINCT FROM 'unavailable'
+                AND NOT EXISTS (SELECT 1 FROM sgo_line_presence lp
+                    WHERE lp.quote_id=o.sgo_quote_id AND lp.expired)
                 AND NOT EXISTS (SELECT 1 FROM current_pregame_work w
                     WHERE w.provider=e.provider AND w.native_event_id=e.native_event_id)
-                AND NOT EXISTS (SELECT 1 FROM current_pregame_work w
-                    WHERE w.provider='sportsgameodds' AND (p.payload->'sportsbook_event_ids') ? w.native_event_id)
+                AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements_text(p.payload->'sportsbook_event_ids') ref(event_id)
+                    JOIN current_pregame_work w ON w.provider='sportsgameodds' AND w.native_event_id=ref.event_id)
                 AND NOT (COALESCE(e.facts->'status','{}'::jsonb) @> '{"live":true}'::jsonb)
                 AND NOT (COALESCE(e.facts->'status','{}'::jsonb) @> '{"ended":true}'::jsonb)
                 AND COALESCE(e.facts#>>'{status,status}','') NOT IN
@@ -235,12 +238,23 @@ class Monitor:
         if not self.lock.acquire(blocking=False):
             return None
         journal_value = journal
+        leases = ExitStack()
         try:
             now = self.timer()
-            if now - self.last_sample < 1:
+            if 0 <= now - self.last_sample < 1:
                 return None
             self.last_sample = now
             journal_value = _journal(journal)
+            from .journal_sampling import (
+                sampling_lease,
+                shared_decision,
+                successful_gate,
+            )
+
+            shared = leases.enter_context(sampling_lease(journal_value))
+            if shared is False:
+                return None
+            sampled_at = stamp(at) if at is not None else utc()
             with connector() as db, db.transaction():
                 db.execute("SET TRANSACTION READ ONLY")
                 revision = db.execute(
@@ -248,9 +262,17 @@ class Monitor:
                 ).fetchone()["revision"]
                 info = db.info
                 identity = (info.host, info.port, info.dbname, revision)
-            include_arbs = now - self.last_arb >= 15
-            if identity == self.revision and not include_arbs:
-                return None
+            if shared:
+                state = journal_value.status()
+                due, include_arbs = shared_decision(
+                    state, identity[:-1], revision, sampled_at
+                )
+                if not due:
+                    return None
+            else:
+                include_arbs = now - self.last_arb >= 15
+                if identity == self.revision and not include_arbs:
+                    return None
             result = sample(
                 journal=journal_value,
                 connector=connector,
@@ -260,6 +282,16 @@ class Monitor:
             self.revision = (*identity[:-1], result["revision"])
             if include_arbs:
                 self.last_arb = now
+            if shared:
+                journal_value.status(
+                    sampling_gate=successful_gate(
+                        state,
+                        identity[:-1],
+                        result["revision"],
+                        sampled_at,
+                        include_arbs,
+                    )
+                )
             return result
         except Exception as exc:
             from app.diagnostics import failure
@@ -279,7 +311,10 @@ class Monitor:
                     failure(__name__, "personal_journal_monitor_status", status_exc)
             return None
         finally:
-            self.lock.release()
+            try:
+                leases.close()
+            finally:
+                self.lock.release()
 
 
 _MONITOR = Monitor()

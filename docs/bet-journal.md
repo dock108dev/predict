@@ -86,9 +86,13 @@ The sampler reads PostgreSQL in a repeatable read, read-only transaction and
 releases it before a batched SQLite journal write. It runs after committed
 collector processing and in the app lifecycle, independently of page visits.
 A one-second rate limit and source-revision gate avoid repeated whole-slate
-reads. Positive arb discovery runs approximately every 15 seconds, reusing the
-existing revision cache; tracked individual legs remain observable after the
-pair stops being profitable. This is sampled retained data, not every exchange
+reads. The quote reader uses stored offer state and explicit line expiry rather
+than reconstructing unused native prices. Positive arb discovery runs approximately every 15 seconds, reusing the
+existing revision cache. The web and collector roles share a nonblocking file
+lease beside the same journal and a successful source/revision/Arb-time gate in
+its status. Source changes still sample quotes immediately, and unchanged sources
+retain the 15-second Arb check; failed samples never advance the shared gate.
+Tracked individual legs remain observable after the pair stops being profitable. This is sampled retained data, not every exchange
 tick. Monitoring failures preserve saved records and appear in tracking status.
 
 ## Storage, exports and access
