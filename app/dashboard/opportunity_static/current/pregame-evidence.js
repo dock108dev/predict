@@ -45,10 +45,10 @@ export function payoutExample(row){
  section.append(node('h3','What this price means'));
  if(!Number.isFinite(committed)||!Number.isFinite(win)){section.append(node('p','Price available; payout and fees are not fully available. Verify the venue terms.'));return section;}
  section.append(node('p',money(committed-entry-reserve)+' stake / purchase → '+money(committed)+' committed upfront → '+money(win)+' total returned if this pick wins → '+money(win-committed)+' net profit.','payout-summary'));
- section.append(node('p','If it loses: '+money(number(cash.loss?.net_receipt_usd))+' returned; '+money(number(cash.loss?.net_receipt_usd)-committed)+' net profit. This is an illustrative calculation; available size is unknown.'));
- const detail=node('details'),dl=node('dl');detail.append(node('summary','Upfront and outcome fees'));
+ const loss=node('p','If it loses: '+money(number(cash.loss?.net_receipt_usd))+' returned; '+money(number(cash.loss?.net_receipt_usd)-committed)+' net profit. This is an illustrative calculation; available size is unknown.');
+ const detail=node('details'),dl=node('dl');detail.append(node('summary','Upfront and outcome fees'),loss);
  for(const [label,value]of feeRows(row))dl.append(node('dt',label),node('dd',value));detail.append(dl);section.append(detail);
- if(row.reference&&row.raw?.net_ev!==null&&row.raw?.net_ev!==undefined)section.append(node('p','Modeled EV '+(row.display.net_ev||'unavailable')+' means expected profit of '+money(number(row.raw.net_ev)*committed)+' on '+money(committed)+' committed, conditional on the reference probability and these fee inputs. It is not a promised return.'));
- else section.append(node('p','Price available; EV unavailable'+(row.ev_unavailable_reason?': '+row.ev_unavailable_reason.replaceAll('_',' '):'. Probability inputs are not available.')));
+ if(row.reference&&row.raw?.net_ev!==null&&row.raw?.net_ev!==undefined)detail.append(node('p','Modeled EV '+(row.display.net_ev||'unavailable')+' means expected profit of '+money(number(row.raw.net_ev)*committed)+' on '+money(committed)+' committed, conditional on the reference probability and these fee inputs. It is not a promised return.'));
+ else detail.append(node('p','Price available; EV unavailable'+(row.ev_unavailable_reason?': '+row.ev_unavailable_reason.replaceAll('_',' '):'. Probability inputs are not available.')));
  return section;
 }

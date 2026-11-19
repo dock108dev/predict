@@ -10,6 +10,8 @@ export function priceDisplay(row,after=false){
  const decimal=ratio(after?row.raw.after_fee_decimal:row.raw.posted_decimal);
  if(!Number.isFinite(decimal)||decimal<=1)return {primary:american,secondary:'',price:''};
  const cost=100/decimal;
+ if(row.venue==='novig')return {primary:cost.toLocaleString('en-US',{minimumFractionDigits:1,maximumFractionDigits:2})+'%',
+         secondary:american,price:''};
  if(isPercentageVenue(row))return {primary:cost.toLocaleString('en-US',{minimumFractionDigits:1,maximumFractionDigits:2})+'%',
          secondary:'',price:after?'Effective price':decimal.toFixed(2)+'× payout'};
  return {primary:row.venue==='kalshi'&&!after?fixed(cost)+'¢':decimal.toFixed(2)+'×',

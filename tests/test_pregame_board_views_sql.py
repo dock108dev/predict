@@ -45,6 +45,252 @@ def test_ranking_catalog_owns_presented_metadata_and_rejects_missing_calculation
 
 @skipUnless(SOCKET, "Disposable PostgreSQL required")
 class PregameBoardViewsSQL(PregameFixture):
+    async def test_indexed_negative_authority_preserves_unknown_and_typed_flags(self):
+        from psycopg.types.json import Jsonb
+        from app.storage.pregame_known_withdrawals import reference_known_unavailable
+
+        with self.connect() as db:
+            self.ingest(db, page())
+            quote = db.execute(
+                "SELECT id,event_id,bookmaker_id,facts FROM sgo_quote_revision WHERE is_current LIMIT 1"
+            ).fetchone()
+            original = {
+                k: v
+                for k, v in quote["facts"].items()
+                if k not in ("available", "provider_available")
+            }
+            predicate = (
+                "SELECT " + reference_known_unavailable("%s") + " AS unavailable"
+            )
+            for flags, unavailable in [
+                ({}, False),
+                (dict(available=None), False),
+                (dict(available="false"), False),
+                (dict(available=True, provider_available="false"), False),
+                (dict(available=True, provider_available=False), True),
+                (dict(available=False, provider_available=None), True),
+                (dict(available=False), True),
+            ]:
+                with self.subTest(flags=flags):
+                    db.execute(
+                        "UPDATE sgo_quote_revision SET facts=%s WHERE id=%s AND is_current",
+                        (Jsonb(dict(original, **flags)), quote["id"]),
+                    )
+                    self.assertEqual(
+                        db.execute(predicate, (quote["id"], quote["id"])).fetchone()[
+                            "unavailable"
+                        ],
+                        unavailable,
+                    )
+            db.execute(
+                "UPDATE sgo_quote_revision SET is_current=false WHERE id=%s",
+                (quote["id"],),
+            )
+            self.assertFalse(
+                db.execute(predicate, (quote["id"], quote["id"])).fetchone()[
+                    "unavailable"
+                ]
+            )
+            db.execute(
+                """INSERT INTO sgo_line_presence(quote_id,event_id,bookmaker_id,odd_id,last_seen,scope_received,expired)
+                VALUES(%s,%s,%s,%s,0,0,true)""",
+                (
+                    quote["id"],
+                    quote["event_id"],
+                    quote["bookmaker_id"],
+                    quote["facts"]["odd_id"],
+                ),
+            )
+            self.assertTrue(
+                db.execute(predicate, (quote["id"], quote["id"])).fetchone()[
+                    "unavailable"
+                ]
+            )
+            db.execute(
+                "UPDATE sgo_line_presence SET expired=false WHERE quote_id=%s",
+                (quote["id"],),
+            )
+            self.assertFalse(
+                db.execute(predicate, (quote["id"], quote["id"])).fetchone()[
+                    "unavailable"
+                ]
+            )
+            self.assertFalse(
+                db.execute(predicate, ("never-observed", "never-observed")).fetchone()[
+                    "unavailable"
+                ]
+            )
+
+    async def test_negative_authority_predicates_match_partial_indexes(self):
+        with self.connect() as db, db.transaction():
+            self.ingest(db, page())
+            # Tiny fixtures normally favor sequential scans. This proves index
+            # eligibility, not a latency target or a production planner setting.
+            db.execute("SET LOCAL enable_seqscan=off")
+
+            def indexes(query):
+                plan = db.execute(
+                    "EXPLAIN (FORMAT JSON) " + query, ("fixture-id",)
+                ).fetchone()["QUERY PLAN"][0]["Plan"]
+                found = []
+
+                def visit(node):
+                    if node.get("Index Name"):
+                        found.append(node["Index Name"])
+                    for child in node.get("Plans", []):
+                        visit(child)
+
+                visit(plan)
+                return found
+
+            names = indexes("""SELECT id FROM public.sgo_quote_revision WHERE id=%s AND is_current
+                AND (facts->'available'='false'::jsonb OR facts->'provider_available'='false'::jsonb)""")
+            self.assertIn("sgo_quote_known_unavailable", names)
+            self.assertIn(
+                "sgo_line_known_expired",
+                indexes(
+                    "SELECT quote_id FROM public.sgo_line_presence WHERE quote_id=%s AND expired"
+                ),
+            )
+            for schema in ("pregame_monitor", "pregame_live", "pregame_combined"):
+                self.assertIn(
+                    schema + "_line_expired",
+                    indexes(
+                        "SELECT quote_id FROM "
+                        + schema
+                        + ".sgo_line_presence WHERE quote_id=%s AND expired"
+                    ),
+                )
+            names = indexes(
+                "SELECT contract_id FROM public.current_offer_storage WHERE contract_id=%s AND facts->>'state'='unavailable'"
+            )
+            definitions = [
+                db.execute(
+                    "SELECT pg_get_indexdef(%s::regclass) definition", (name,)
+                ).fetchone()["definition"]
+                for name in names
+            ]
+            self.assertTrue(
+                any("unavailable" in definition for definition in definitions)
+            )
+
+    async def test_completed_arb_scan_reuses_exact_filtered_pairs_and_counts(self):
+        from app.storage import pregame_arbs as arbs
+        from app.fees import pricing
+        from tests.test_fee_pricing import rule
+
+        data = page()
+        for odd in data["data"][0]["odds"].values():
+            odd["byBookmaker"]["novig"] = deepcopy(odd["byBookmaker"]["prophetx"])
+        filters = [
+            dict(sort="newest"),
+            dict(sort="oldest"),
+            dict(sort="start"),
+            dict(league="NBA"),
+            dict(league="NHL"),
+            dict(family="spread"),
+            dict(family="total"),
+            dict(venue="novig"),
+            dict(category="market_market"),
+            dict(category="market_book"),
+            dict(book="fanduel"),
+            dict(book="draftkings"),
+            dict(league="NBA", family="spread", book="fanduel", limit="1", offset="1"),
+        ]
+
+        def clear_views():
+            arbs._CACHE.clear()
+            arbs._SCAN_CACHE.clear()
+
+        original = arbs.math.evaluate
+
+        def one_unmodelled_pair(left, right, *, at):
+            venues = {left["payload"]["venue"], right["payload"]["venue"]}
+            if venues == {"novig", "fanduel"}:
+                raise ValueError("fixture_pair_not_modelled")
+            return original(left, right, at=at)
+
+        with (
+            self.connect() as db,
+            patch.object(arbs.math, "evaluate", side_effect=one_unmodelled_pair),
+        ):
+            for venue in ("novig", "prophetx"):
+                pricing.write(db, venue, [rule(venue)])
+            self.ingest(db, data)
+            self.process(db)
+            arbs._PAIR_CACHE.clear()
+            clear_views()
+            arbs.read(db, dict(league="NBA"), at=stamp(AT))
+            self.assertFalse(arbs._SCAN_CACHE)  # narrow first never seeds a wider scan
+            expected = []
+            for query in filters:
+                clear_views()
+                expected.append(arbs.read(db, query, at=stamp(AT)))
+            clear_views()
+            full = arbs.read(db, {}, at=stamp(AT))
+            self.assertTrue(full["rows"])
+            self.assertGreater(full["excluded_pairs"], 0)
+            with patch.object(
+                arbs,
+                "read_book_quotes",
+                side_effect=AssertionError("completed scan must be reused"),
+            ):
+                for query, packet in zip(filters, expected):
+                    with self.subTest(query=query):
+                        self.assertEqual(arbs.read(db, query, at=stamp(AT)), packet)
+
+    async def test_arb_filter_reuse_preserves_scope_age_cohort_and_withdrawals(self):
+        from app.storage import pregame_arbs as arbs
+        from app.storage.pregame_cohorts import select
+
+        with self.connect() as db:
+            self.ingest(db, page())
+            self.process(db)
+            arbs._CACHE.clear()
+            arbs._SCAN_CACHE.clear()
+            with db.transaction():
+                select(db, "monitor")
+                full = arbs.read(db, {}, at=stamp(AT))
+                self.assertTrue(full["rows"])
+                self.assertEqual(
+                    arbs.read(
+                        db, dict(_scope_seconds="1800", sort="start"), at=stamp(AT)
+                    )["rows"],
+                    [],
+                )
+                self.assertEqual(
+                    arbs.read(
+                        db,
+                        dict(search="unmatched fixture", sort="newest"),
+                        at=stamp(AT),
+                    )["rows"],
+                    [],
+                )
+                aged = arbs.read(db, dict(max_age_minutes="2"), at=stamp(AT))
+                self.assertTrue(aged["rows"])
+                projected = arbs.read(
+                    db, dict(max_age_minutes="2", sort="oldest"), at=stamp(AT)
+                )
+                self.assertEqual(projected["total"], aged["total"])
+                expired = arbs.read(
+                    db,
+                    dict(max_age_minutes="2", sort="start"),
+                    at=stamp(aged["refresh_at"]) + timedelta(microseconds=1),
+                )
+                self.assertEqual(expired["rows"], [])
+            with db.transaction():
+                select(db, "live")
+                self.assertEqual(
+                    arbs.read(db, dict(sort="newest"), at=stamp(AT))["rows"], []
+                )
+            db.execute("""UPDATE public.current_offer_storage SET
+                facts=jsonb_set(facts,'{state}','"unavailable"'),revision=revision||'-withdrawn'""")
+            with db.transaction():
+                select(db, "monitor")
+                withdrawn = arbs.read(db, dict(sort="newest"), at=stamp(AT))
+                self.assertNotEqual(withdrawn["cursor"], full["cursor"])
+                self.assertEqual(withdrawn["rows"], [])
+
     async def test_authored_cashflows_rank_longshot_above_larger_kelly_fraction(self):
         """Fixed wealth factors, independent of the valuation packet/oracle below."""
         import json
@@ -414,7 +660,10 @@ class PregameBoardViewsSQL(PregameFixture):
                 for n in range(256)
             ]
             self.assertEqual(
-                sorted(json.dumps(q, sort_keys=True) for q in read_book_quotes(db, many_lines)),
+                sorted(
+                    json.dumps(q, sort_keys=True)
+                    for q in read_book_quotes(db, many_lines)
+                ),
                 sorted(json.dumps(q, sort_keys=True) for q in quotes),
             )
             # Invalid and out-of-range retained numbers stay excluded rather

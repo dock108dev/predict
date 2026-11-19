@@ -56,12 +56,12 @@ class ModeFixture:
 
     def rows(self, kind):
         rows = []
-        for index, mode in enumerate(("monitor", "live")):
+        for mode in ("monitor", "live"):
             row = offer()
             at = CLOCK - (1800000 if mode == "monitor" else 60000)
             row.update(
                 id=f"{mode}-quote",
-                selection_label=mode.title() + " pick",
+                selection_label="Orlando Magic",
                 kickoff=iso(CLOCK + 7200000),
                 collection=dict(
                     kind=mode,
@@ -74,6 +74,19 @@ class ModeFixture:
             for price in row["reference"]["prices"]:
                 price["source_at"] = iso(at)
             row["raw"].update(posted_decimal="2.2", after_fee_decimal="2.176")
+            if mode == "live":
+                # The same exact line has a different collected price in each
+                # cohort. A pinned inspection must not silently switch prices.
+                row["posted"]["value"] = "+160"
+                row["raw"].update(
+                    posted_decimal="2.6", after_fee_decimal="2.568", net_ev="0.284"
+                )
+                row["display"].update(
+                    posted_odds="+160", after_fees="+157", net_ev="+28.40%"
+                )
+                row["fee"]["cashflows"]["win"].update(
+                    total_fee_usd="3.2", net_receipt_usd="256.8"
+                )
             row["ranking"] = dict(
                 method="edge",
                 label="Probability edge",
@@ -205,7 +218,10 @@ def test_public_modes_are_read_only_and_settings_require_owner(path):
             page.on("pageerror", lambda error: errors.append(str(error)))
             await page.route("**/*", state.serve)
             await page.goto("https://predict.fixture" + path)
-            await expect(page.locator(".mode-badge")).to_contain_text("Monitor")
+            await expect(page.locator(".mode-badge")).to_have_text("Settings")
+            await expect(page.locator(".collection-badge")).to_have_count(0)
+            await expect(page.locator("#count")).not_to_contain_text("Monitor")
+            await expect(page.locator("#count")).not_to_contain_text("Live")
             assert state.authorizations == 0
             assert not state.writes
             await page.locator(".mode-badge").click()
@@ -233,14 +249,15 @@ def test_public_modes_are_read_only_and_settings_require_owner(path):
     asyncio.run(journey())
 
 
-def test_owner_settings_activity_and_passive_idle_fallback_use_fake_clock():
+@pytest.mark.parametrize("width", [1280, 390])
+def test_owner_settings_activity_and_passive_idle_fallback_use_fake_clock(width):
     from playwright.async_api import async_playwright, expect
 
     async def journey():
         state = ModeFixture(owner=True)
         async with async_playwright() as pw:
             browser = await pw.chromium.launch()
-            page = await browser.new_page()
+            page = await browser.new_page(viewport={"width": width, "height": 844})
             await page.clock.install(
                 time=datetime.fromtimestamp(CLOCK / 1000, timezone.utc)
             )
@@ -249,6 +266,17 @@ def test_owner_settings_activity_and_passive_idle_fallback_use_fake_clock():
             await page.locator(".mode-badge").click()
             field = page.get_by_label("Monitor refresh (minutes)", exact=True)
             await expect(field).to_be_enabled()
+            save = page.get_by_role("button", name="Save settings", exact=True)
+            await expect(save).to_be_visible()
+            assert await save.get_attribute("form") == "mode-settings-form"
+            assert await save.evaluate("button=>button.closest('form')===null")
+            save_y = (await save.bounding_box())["y"]
+            await page.locator(".mode-settings-body").evaluate(
+                "body=>body.scrollTop=body.scrollHeight"
+            )
+            assert abs((await save.bounding_box())["y"] - save_y) < 1
+            bounds = await save.bounding_box()
+            assert bounds["y"] >= 0 and bounds["y"] + bounds["height"] <= 844
             await field.fill("45")
             state.now += 15001
             await page.clock.fast_forward(15001)
@@ -257,9 +285,15 @@ def test_owner_settings_activity_and_passive_idle_fallback_use_fake_clock():
             )  # A passive status poll preserves dirty settings.
             await page.get_by_role("button", name="Save settings").click()
             await expect(page.locator(".mode-message")).to_contain_text("saved")
-            assert state.settings["monitor_interval_seconds"] == 2700
+            assert state.settings == dict(
+                monitor_interval_seconds=2700,
+                monitor_horizon_seconds=86400,
+                live_interval_seconds=60,
+                live_window_seconds=3600,
+                inactivity_seconds=900,
+            )
             await page.get_by_role("switch", name="Live mode", exact=True).check()
-            await expect(page.locator(".mode-badge")).to_contain_text("Live")
+            await expect(page.locator(".mode-badge")).to_have_text("Live · Settings")
             assert state.status()["mode"] == "live"
             assert not [
                 request for request in state.writes if request[0].endswith("/activity")
@@ -296,7 +330,7 @@ def test_owner_settings_activity_and_passive_idle_fallback_use_fake_clock():
             )
             # Same-tab navigation re-verifies authorization; it does not itself renew Live.
             await page.goto("https://predict.fixture/browse-odds")
-            await expect(page.locator(".mode-badge")).to_contain_text("Live")
+            await expect(page.locator(".mode-badge")).to_have_text("Live · Settings")
             assert state.authorizations >= 2
             activity_count = len(
                 [
@@ -307,7 +341,7 @@ def test_owner_settings_activity_and_passive_idle_fallback_use_fake_clock():
             )
             state.now += 900001
             await page.clock.fast_forward(900001)
-            await expect(page.locator(".mode-badge")).to_contain_text("Monitor")
+            await expect(page.locator(".mode-badge")).to_have_text("Settings")
             await page.mouse.move(25, 25)
             assert (
                 len(
@@ -344,29 +378,53 @@ def test_cohort_age_order_controls_and_browse_combined_default():
             await page.goto("https://predict.fixture/")
             await expect(page.locator(".ticket")).to_have_count(1)
             await expect(page.locator("#ranking")).to_have_value("edge")
-            await expect(page.locator(".ticket .collection-badge")).to_have_text(
-                "Monitor"
+            await expect(page.locator(".collection-badge")).to_have_count(0)
+            await expect(page.locator("#count")).to_have_text("1 opportunity")
+            await expect(page.locator("#results .posted .math-trigger")).to_have_text(
+                "45.45%"
             )
             await page.locator(".row-open").tap()
             await expect(page.locator(".comparison-status")).to_contain_text("complete")
+            await expect(
+                page.locator(".exchange-prices tbody td").nth(1)
+            ).to_contain_text("45.45%")
             assert state.reads[-1][1]["data_type"] == "monitor"
+            prior_reads = len(state.reads)
             state.mode, state.last = "live", state.now
             state.revision += 1
             await page.clock.fast_forward(501)
-            await expect(page.locator("#results .collection-badge")).to_have_text(
-                "Live"
-            )
             await expect(
-                page.locator(".exchange-prices .collection-badge")
-            ).to_have_text("Monitor")
+                page.locator('#results .row-open[data-quote-id="live-quote"]')
+            ).to_have_count(1)
+            await expect(page.locator("#results .posted .math-trigger")).to_have_text(
+                "38.46%"
+            )
+            await expect(page.locator(".mode-badge")).to_have_text("Live · Settings")
+            await expect(
+                page.locator(".exchange-prices tbody td").nth(1)
+            ).to_contain_text("45.45%")
+            await expect(page.locator(".exchange-prices")).not_to_contain_text("38.46%")
+            assert any(
+                q.get("bet_id") and q.get("data_type") == "monitor"
+                for _, q in state.reads[prior_reads:]
+            )
+            assert all(
+                q.get("data_type") == "monitor"
+                for _, q in state.reads[prior_reads:]
+                if q.get("bet_id")
+            )
+            await expect(page.locator(".collection-badge")).to_have_count(0)
             await page.get_by_role("button", name="Close comparison").tap()
             await page.locator("#board-advanced > summary").tap()
             await page.locator("#data-type").select_option("all")
             await expect(page.locator(".ticket")).to_have_count(2)
             await page.locator("#order").select_option("newest")
-            await expect(page.locator(".ticket .collection-badge").first).to_have_text(
-                "Live"
+            await expect(page.locator(".ticket .row-open").first).to_have_attribute(
+                "data-quote-id", "live-quote"
             )
+            await expect(
+                page.locator(".ticket .posted .math-trigger").first
+            ).to_have_text("38.46%")
             await page.locator("#max-age").fill("5")
             await page.clock.fast_forward(1)
             await expect(page.locator(".ticket")).to_have_count(1)
@@ -376,7 +434,10 @@ def test_cohort_age_order_controls_and_browse_combined_default():
             await page.goto("https://predict.fixture/browse-odds")
             await expect(page.locator(".game-card")).to_have_count(1)
             assert state.reads[-1][1]["data_type"] == "all"
-            await expect(page.locator(".game-card .collection-badge")).to_have_count(2)
+            await expect(page.locator(".game-card .collection-badge")).to_have_count(0)
+            await expect(page.locator("#count")).to_have_text("1 game")
+            await expect(page.locator(".game-card")).to_contain_text("45.45%")
+            await expect(page.locator(".game-card")).to_contain_text("38.46%")
             assert await page.evaluate(
                 "document.documentElement.scrollWidth<=innerWidth"
             )
@@ -404,7 +465,7 @@ def test_short_idle_window_reports_activity_before_its_deadline():
             toggle = page.get_by_role("switch", name="Live mode", exact=True)
             await expect(toggle).to_be_enabled()
             await toggle.check()
-            await expect(page.locator(".mode-badge")).to_contain_text("Live")
+            await expect(page.locator(".mode-badge")).to_have_text("Live · Settings")
             for step in range(4):
                 state.now += 400
                 await page.clock.fast_forward(400)
@@ -446,7 +507,7 @@ def test_stationary_wheel_renews_live_but_programmatic_scroll_does_not():
             toggle = page.get_by_role("switch", name="Live mode", exact=True)
             await expect(toggle).to_be_enabled()
             await toggle.check()
-            await expect(page.locator(".mode-badge")).to_contain_text("Live")
+            await expect(page.locator(".mode-badge")).to_have_text("Live · Settings")
             await page.evaluate("""() => {
                 window.activityInputs=[];
                 for(const type of ['pointermove','pointerdown','keydown','wheel'])
@@ -498,7 +559,7 @@ def test_stationary_wheel_renews_live_but_programmatic_scroll_does_not():
             )
             state.now += 1001
             await page.clock.fast_forward(1001)
-            await expect(page.locator(".mode-badge")).to_contain_text("Monitor")
+            await expect(page.locator(".mode-badge")).to_have_text("Settings")
             assert state.status()["reason"] == "inactivity"
             assert state.last == last_activity
             await browser.close()

@@ -18,6 +18,9 @@ _CACHE = OrderedDict()
 _CACHE_LOCK = Lock()
 _PAIR_CACHE = OrderedDict()
 _PAIR_CACHE_LIMIT = 4096
+_SCAN_CACHE = OrderedDict()
+_SCAN_CACHE_LIMIT = 4
+_VIEW_FIELDS = frozenset(("sort", "league", "family", "venue", "category", "book"))
 
 
 def cached_pair(left, right, *, at):
@@ -41,7 +44,7 @@ def cached_pair(left, right, *, at):
     return result
 
 
-def read_book_quotes(db, request_lines):
+def read_book_quotes(db, request_lines, *, include_groups=False):
     """Fetch supported books on represented lines before decoding quote bodies.
 
     The spread bound deliberately includes both signs; final canonical side,
@@ -96,7 +99,7 @@ def read_book_quotes(db, request_lines):
                       abs(q.numerator)*r.denominator=abs(r.numerator)*q.denominator
                     ELSE q.numerator*r.denominator=r.numerator*q.denominator END)),
                 admitted AS (
-                  SELECT quote_id,bool_or(cost_numerator IS NULL OR CASE
+                  SELECT quote_id,group_key,bool_or(cost_numerator IS NULL OR CASE
                     WHEN price_is_string AND price_american ~ '^[+-]?[0-9]{1,12}([.][0-9]{1,12})?$' THEN
                       CASE WHEN price_american::numeric>=100 THEN
                         price_american::numeric*(cost_denominator-cost_numerator)>100*cost_numerator
@@ -105,9 +108,15 @@ def read_book_quotes(db, request_lines):
                       ELSE false END
                     ELSE true END) OVER(PARTITION BY group_key,canonical_side,venue) AS potential
                   FROM scoped)
-                SELECT q.facts FROM current_sgo_reference q JOIN (
-                  SELECT DISTINCT quote_id FROM admitted WHERE potential
-                ) chosen ON q.id=chosen.quote_id""",
+                SELECT q.facts"""
+            + (",chosen.group_keys" if include_groups else "")
+            + " FROM current_sgo_reference q JOIN ("
+            + (
+                "SELECT quote_id,array_agg(DISTINCT group_key) AS group_keys FROM admitted WHERE potential GROUP BY quote_id"
+                if include_groups
+                else "SELECT DISTINCT quote_id FROM admitted WHERE potential"
+            )
+            + ") chosen ON q.id=chosen.quote_id",
             (
                 Jsonb(request_lines),
                 sorted({r["event_id"] for r in request_lines}),
@@ -115,7 +124,12 @@ def read_book_quotes(db, request_lines):
             ),
         )
     )
-    return [row["facts"] for row in rows]
+    return [
+        dict(row["facts"], _arb_groups=row["group_keys"])
+        if include_groups
+        else row["facts"]
+        for row in rows
+    ]
 
 
 def observation_clock(entry):
@@ -225,6 +239,79 @@ def book_entry(quote, template, *, at):
         return None
 
 
+def ordered_pairs(rows, selected):
+    rows = sorted(rows, key=lambda p: (-F(p["return_rate"]), p["kickoff"], p["id"]))
+    if selected == "start":
+        return sorted(rows, key=lambda p: (p["kickoff"], p["id"]))
+    if selected in ("newest", "oldest"):
+
+        def clock(pair):
+            times = [
+                stamp(leg["times"]["source_at"])
+                for leg in pair["legs"]
+                if leg.get("times", {}).get("source_at")
+            ]
+            return min(times) if len(times) == len(pair["legs"]) else None
+
+        known = [p for p in rows if clock(p) is not None]
+        unknown = [p for p in rows if clock(p) is None]
+        return sorted(known, key=clock, reverse=selected == "newest") + unknown
+    return rows
+
+
+def pair_matches(venues, category, book, query):
+    return not (
+        query.get("venue")
+        and query["venue"] not in venues
+        or query.get("category")
+        and query["category"] != category
+        or query.get("book")
+        and query["book"] != book
+    )
+
+
+def scan_view(scan, query, selected, offset, limit):
+    """Project a completed scan; never treat a narrowed scan as a superset."""
+    if (query.get("league") or query.get("family")) and not scan["uniform_groups"]:
+        return None
+    groups = {
+        key: value
+        for key, value in scan["groups"].items()
+        if (not query.get("league") or query["league"] == value["league"])
+        and (not query.get("family") or query["family"] == value["family"])
+    }
+    rows = []
+    for pair in scan["packet"]["rows"]:
+        if scan["row_groups"][pair["id"]] not in groups:
+            continue
+        venues = tuple(leg["venue"] for leg in pair["legs"])
+        book = next((v for v in venues if v in SPORTSBOOKS), None)
+        if pair_matches(venues, pair["category"], book, query):
+            rows.append(pair)
+    evaluated, excluded = 0, 0
+    for (group, venues, category, book), counts in scan["counts"].items():
+        if group in groups and pair_matches(venues, category, book, query):
+            evaluated += counts[0]
+            excluded += counts[1]
+    deadlines = [g["deadline"] for g in groups.values() if g["deadline"]]
+    if scan["cursor_deadline"]:
+        deadlines.append(scan["cursor_deadline"])
+    deadline = min(deadlines, default=None)
+    books = sorted({book for g in groups.values() for book in g["books"]})
+    rows = ordered_pairs(rows, selected)
+    return dict(
+        scan["packet"],
+        rows=rows[offset : offset + limit],
+        total=len(rows),
+        offset=offset,
+        limit=limit,
+        evaluated_pairs=evaluated,
+        excluded_pairs=excluded,
+        sportsbooks=books,
+        refresh_at=deadline.isoformat() if deadline else None,
+    )
+
+
 def read(db, query, *, at=None, can_continue=None):
     at = at or utc()
 
@@ -235,6 +322,14 @@ def read(db, query, *, at=None, can_continue=None):
     checkpoint()
     limit = max(1, min(100, int(query.get("limit", "30"))))
     offset = max(0, int(query.get("offset", "0")))
+    selected_sort = query.get("sort", "return")
+    if selected_sort not in ("return", "newest", "oldest", "start"):
+        raise ValueError("Unknown arbitrage order")
+    age = None
+    if query.get("max_age_minutes"):
+        age = int(query["max_age_minutes"])
+        if not 1 <= age <= 525600:
+            raise ValueError("Invalid maximum age")
     cursor_packet = pregame_read(
         db, {"updates": "1", "_scope_seconds": query.get("_scope_seconds")}, at=at
     )
@@ -245,6 +340,15 @@ def read(db, query, *, at=None, can_continue=None):
         db.info.dbname,
         cursor,
         tuple(sorted((k, v) for k, v in query.items() if k not in ("limit", "offset"))),
+    )
+    scan_identity = identity[:-1] + (
+        tuple(
+            sorted(
+                (k, v)
+                for k, v in query.items()
+                if k not in _VIEW_FIELDS | {"limit", "offset"}
+            )
+        ),
     )
     with _CACHE_LOCK:
         cached = _CACHE.get(identity)
@@ -258,6 +362,20 @@ def read(db, query, *, at=None, can_continue=None):
                 offset=offset,
                 limit=limit,
             )
+        scan = _SCAN_CACHE.get(scan_identity)
+        if scan is not None and (
+            scan["packet"]["refresh_at"] is None
+            or at < stamp(scan["packet"]["refresh_at"])
+        ):
+            _SCAN_CACHE.move_to_end(scan_identity)
+        else:
+            scan = None
+    if scan is not None:
+        projected = scan_view(scan, query, selected_sort, offset, limit)
+        if projected is not None:
+            checkpoint()
+            return projected
+    complete_scan = not any(query.get(k) for k in _VIEW_FIELDS - {"sort"})
     routes = configured_routes(db)
     checkpoint()
     # A queued source/fee change suppresses stale calculations before rebuilding.
@@ -265,13 +383,7 @@ def read(db, query, *, at=None, can_continue=None):
     if query.get("_scope_seconds"):
         filters.append("p.start_at<=%s")
         parameters.append(at + timedelta(seconds=int(query["_scope_seconds"])))
-    selected_sort = query.get("sort", "return")
-    if selected_sort not in ("return", "newest", "oldest", "start"):
-        raise ValueError("Unknown arbitrage order")
-    if query.get("max_age_minutes"):
-        age = int(query["max_age_minutes"])
-        if not 1 <= age <= 525600:
-            raise ValueError("Invalid maximum age")
+    if age is not None:
         filters.append("(p.payload#>>'{times,source_at}')::timestamptz>=%s")
         parameters.append(at - timedelta(minutes=age))
     for name in ("league", "family"):
@@ -288,7 +400,7 @@ def read(db, query, *, at=None, can_continue=None):
         JOIN current_offer_storage o ON o.contract_id=c.id JOIN LATERAL (SELECT * FROM current_event WHERE id=c.event_id LIMIT 1) e ON true
         WHERE p.start_at>%s AND p.valid_until>%s AND e.scheduled_start::timestamptz>%s
           AND o.facts->>'state' IS DISTINCT FROM 'unavailable'
-          AND NOT COALESCE((SELECT lp.expired FROM sgo_line_presence lp WHERE lp.quote_id=o.sgo_quote_id LIMIT 1),false)
+          AND NOT EXISTS(SELECT 1 FROM sgo_line_presence lp WHERE lp.quote_id=o.sgo_quote_id AND lp.expired)
           AND NOT EXISTS(SELECT 1 FROM current_pregame_work w WHERE w.provider=e.provider AND w.native_event_id=e.native_event_id)
           AND NOT EXISTS(SELECT 1 FROM jsonb_array_elements_text(p.payload->'sportsbook_event_ids') ref(event_id)
             JOIN current_pregame_work w ON w.provider='sportsgameodds' AND w.native_event_id=ref.event_id)
@@ -306,6 +418,13 @@ def read(db, query, *, at=None, can_continue=None):
         for e in entries
         if e["payload"]["source"]["provider"] == routes.get(e["payload"]["venue"])
     ]
+    labels = {}
+    uniform_groups = True
+    for entry in entries:
+        p = entry["payload"]
+        label = (p["league"], p["family"])
+        if labels.setdefault(p["arb_key"], label) != label:
+            uniform_groups = False
     # Prefer newest native alias, never whichever stale alias yields more profit.
     unique = {}
     for entry in entries:
@@ -381,7 +500,7 @@ def read(db, query, *, at=None, can_continue=None):
             requested.items()
         )
     ]
-    quotes = read_book_quotes(db, request_lines)
+    quotes = read_book_quotes(db, request_lines, include_groups=complete_scan)
     if query.get("max_age_minutes"):
         cutoff = at - timedelta(minutes=int(query["max_age_minutes"]))
         quotes = [
@@ -399,9 +518,26 @@ def read(db, query, *, at=None, can_continue=None):
     results = []
     evaluated = 0
     excluded = 0
-    for sides in grouped.values():
+    counts = defaultdict(lambda: [0, 0])
+    group_metadata = {}
+    row_groups = {}
+    for group_key, sides in grouped.items():
         checkpoint()
         all_markets = [e for side in sides.values() for e in side]
+        if complete_scan:
+            deadlines = [e["valid_until"] for e in all_markets]
+            if age is not None:
+                deadlines.extend(
+                    stamp(e["payload"]["times"]["source_at"]) + timedelta(minutes=age)
+                    for e in all_markets
+                    if e["payload"].get("times", {}).get("source_at")
+                )
+            group_metadata[group_key] = dict(
+                league=all_markets[0]["payload"]["league"],
+                family=all_markets[0]["payload"]["family"],
+                deadline=min(deadlines, default=None),
+                books=set(),
+            )
         books = {}
         ambiguous = set()
         entry = all_markets[0]
@@ -479,6 +615,17 @@ def read(db, query, *, at=None, can_continue=None):
             if query.get("category") and query["category"] != category:
                 continue
             evaluated += 1
+            if complete_scan:
+                count_key = (
+                    group_key,
+                    tuple(sorted((a["payload"]["venue"], b["payload"]["venue"]))),
+                    category,
+                    next(
+                        (e["payload"]["venue"] for e in (a, b) if e.get("sportsbook")),
+                        None,
+                    ),
+                )
+                counts[count_key][0] += 1
             # Most pairs cannot beat even the pre-fee price. Do not repeatedly
             # decode fractions or rebuild fee orders for those combinations.
             if (
@@ -490,31 +637,17 @@ def read(db, query, *, at=None, can_continue=None):
                 pair = cached_pair(a, b, at=at)
             except (ValueError, KeyError, TypeError, ArithmeticError):
                 excluded += 1
+                if complete_scan:
+                    counts[count_key][1] += 1
                 continue
             if pair:
                 results.append(pair)
+                row_groups[pair["id"]] = group_key
         # Each entry belongs to this exact arb group. Its cent-allocation memo
         # has no use after the group and must not accumulate across the slate.
         for candidate in candidates:
             candidate.pop("_reprice_cache", None)
-    results.sort(key=lambda p: (-F(p["return_rate"]), p["kickoff"], p["id"]))
-    if selected_sort == "start":
-        results.sort(key=lambda p: (p["kickoff"], p["id"]))
-    elif selected_sort in ("newest", "oldest"):
-
-        def pair_clock(pair):
-            clocks = [
-                stamp(leg["times"]["source_at"])
-                for leg in pair["legs"]
-                if leg.get("times", {}).get("source_at")
-            ]
-            return min(clocks) if len(clocks) == len(pair["legs"]) else None
-
-        known = [p for p in results if pair_clock(p) is not None]
-        unknown = [p for p in results if pair_clock(p) is None]
-        results = (
-            sorted(known, key=pair_clock, reverse=selected_sort == "newest") + unknown
-        )
+    results = ordered_pairs(results, selected_sort)
     deadline = min((e["valid_until"] for e in entries), default=None)
     if cursor_packet.get("refresh_at"):
         boundary = stamp(cursor_packet["refresh_at"])
@@ -556,7 +689,32 @@ def read(db, query, *, at=None, can_continue=None):
         ),
     )
 
+    if complete_scan:
+        for quote in quotes:
+            for group in quote.get("_arb_groups", []):
+                if group not in group_metadata:
+                    continue
+                metadata = group_metadata[group]
+                if quote.get("venue") in SPORTSBOOKS and quote.get("available") is True:
+                    metadata["books"].add(quote["venue"])
+                if query.get("max_age_minutes") and quote.get("source_at"):
+                    boundary = stamp(quote["source_at"]) + age
+                    metadata["deadline"] = min(metadata["deadline"], boundary)
+        scan = dict(
+            packet=packet,
+            groups=group_metadata,
+            row_groups=row_groups,
+            counts=dict(counts),
+            uniform_groups=uniform_groups,
+            cursor_deadline=stamp(cursor_packet["refresh_at"])
+            if cursor_packet.get("refresh_at")
+            else None,
+        )
     with _CACHE_LOCK:
+        if complete_scan:
+            _SCAN_CACHE[scan_identity] = scan
+            while len(_SCAN_CACHE) > _SCAN_CACHE_LIMIT:
+                _SCAN_CACHE.popitem(last=False)
         _CACHE[identity] = packet
         while len(_CACHE) > 8:
             _CACHE.popitem(last=False)

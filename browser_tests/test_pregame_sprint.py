@@ -142,9 +142,9 @@ def test_comparison_completeness_failure_deadline_and_superseded_filters():
     asyncio.run(journey())
 
 
-@pytest.mark.parametrize("game_reply_before_close", [True, False])
-def test_touch_nested_dialogs_preserve_context_and_unavailable_ev(
-    game_reply_before_close,
+@pytest.mark.parametrize("game_reply_before_back", [True, False])
+def test_touch_back_to_game_preserves_context_and_unavailable_ev(
+    game_reply_before_back,
 ):
     from playwright.async_api import async_playwright, expect
 
@@ -257,6 +257,7 @@ def test_touch_nested_dialogs_preserve_context_and_unavailable_ev(
             await page.locator("#results .line-open").first.tap()
             await expect(page.locator("#comparison")).to_be_visible()
             await page.get_by_role("button", name="Close comparison").tap()
+            await expect(page.locator("dialog[open]")).to_have_count(0)
             search = page.get_by_role("searchbox", name="Search teams")
             await search.tap()
             await page.keyboard.type("Milwaukee")
@@ -285,23 +286,28 @@ def test_touch_nested_dialogs_preserve_context_and_unavailable_ev(
             await page.get_by_role("button", name="Retry", exact=True).tap()
             await asyncio.wait_for(game_wait.wait(), 3)
             await expect(page.locator("#game-content .line-open")).to_have_count(1)
-            # A slow game response replaces the main-line opener behind its quote.
-            # The same quote also exists on the inert main page; return to the
-            # replacement inside the open game dialog, preserving that context.
+            # A slow game response may replace the main-line opener while its
+            # comparison is shown. Only one dialog stays open; Back must restore
+            # the exact line in the game, rather than its duplicate on the board.
             initial_line = page.locator("#game-content .line-open").first
             await initial_line.evaluate(
                 "button=>button.addEventListener('pointerdown',event=>event.preventDefault())"
             )
             await initial_line.tap()
             await expect(page.locator("#comparison")).to_be_visible()
-            if game_reply_before_close:
+            await expect(page.locator("#game-lines")).not_to_be_visible()
+            await expect(page.locator("dialog[open]")).to_have_count(1)
+            if game_reply_before_back:
                 game_release.set()
                 await expect(page.locator("#game-content .line-open")).to_have_count(20)
-            await page.get_by_role("button", name="Close comparison").tap()
+            await page.locator("#comparison-back").tap()
+            await expect(page.locator("#comparison")).not_to_be_visible()
+            await expect(page.locator("#game-lines")).to_be_visible()
+            await expect(page.locator("dialog[open]")).to_have_count(1)
             await expect(
                 page.locator('#game-content .line-open[data-quote-id="quote-0"]')
             ).to_be_focused()
-            if not game_reply_before_close:
+            if not game_reply_before_back:
                 game_release.set()
                 await expect(page.locator("#game-content .line-open")).to_have_count(20)
                 await expect(
@@ -332,14 +338,16 @@ def test_touch_nested_dialogs_preserve_context_and_unavailable_ev(
             await expect(page.locator("#comparison-content")).to_contain_text(
                 "exact reference pair missing"
             )
-            close_comparison = page.get_by_role("button", name="Close comparison")
-            comparison_y = (await close_comparison.bounding_box())["y"]
+            back = page.locator("#comparison-back")
+            comparison_y = (await back.bounding_box())["y"]
+            await expect(page.locator("#game-lines")).not_to_be_visible()
+            await expect(page.locator("dialog[open]")).to_have_count(1)
             await page.get_by_text("Fee and calculation details", exact=True).tap()
             await swipe(session, 180, 700, 250)
             await page.wait_for_function(
                 "document.querySelector('#comparison-content').scrollTop > 0"
             )
-            assert abs((await close_comparison.bounding_box())["y"] - comparison_y) < 1
+            assert abs((await back.bounding_box())["y"] - comparison_y) < 1
             await page.evaluate("""() => {
                 window.closeProbe=[];
                 for(const type of ['pointerdown','pointerup','click','focusin','close'])
@@ -351,7 +359,10 @@ def test_touch_nested_dialogs_preserve_context_and_unavailable_ev(
                             active:document.activeElement?.outerHTML.slice(0,500)});
                     },true);
             }""")
-            await close_comparison.tap()
+            await back.tap()
+            await expect(page.locator("#comparison")).not_to_be_visible()
+            await expect(page.locator("#game-lines")).to_be_visible()
+            await expect(page.locator("dialog[open]")).to_have_count(1)
             try:
                 await expect(line).to_be_focused()
             except AssertionError:
@@ -362,26 +373,26 @@ def test_touch_nested_dialogs_preserve_context_and_unavailable_ev(
                     popovers:[...document.querySelectorAll(':popover-open')].map(e=>e.outerHTML.slice(0,1000)),
                     scrolls:{page:scrollY,game:document.querySelector('#game-content').scrollTop,
                         comparison:document.querySelector('#comparison-content').scrollTop},
-                    closeHit:(() => {const b=document.querySelector('#close').getBoundingClientRect();
+                    closeHit:(() => {const b=document.querySelector('#comparison-back').getBoundingClientRect();
                         return document.elementsFromPoint(b.x+b.width/2,b.y+b.height/2)
                             .map(e=>({id:e.id,tag:e.tagName,className:e.className}));})()
                 })""")
-                print("Nested close diagnostic: " + json.dumps(diagnostic))
+                print("Back-to-game diagnostic: " + json.dumps(diagnostic))
                 directory = Path(
                     os.getenv(
                         "PREDICT_CI_REPORT_ROOT", ".local/usability-sprint/linux-focus"
                     )
                 )
                 directory.mkdir(parents=True, exist_ok=True)
-                stem = "nested-close-" + str(game_reply_before_close)
+                stem = "back-to-game-" + str(game_reply_before_back)
                 (directory / (stem + ".json")).write_text(
                     json.dumps(diagnostic, indent=2)
                 )
                 await page.screenshot(path=str(directory / (stem + ".png")))
                 raise
             # If Linux consumed native click synthesis during the fling, model
-            # that touch's delayed compatibility click landing on the parent
-            # close control at the same fixed coordinates. It must not close it.
+            # the delayed compatibility click after the game returns. It must
+            # not close the restored game or steal the selected line's focus.
             if not await page.evaluate(
                 "()=>window.closeProbe.some(event=>event.type==='click')"
             ):
@@ -401,6 +412,147 @@ def test_touch_nested_dialogs_preserve_context_and_unavailable_ev(
             assert abs(await page.evaluate("scrollY") - before_page) < 2
             await expect(search).to_have_value("Milwaukee")
             await expect(page.locator("#league")).to_have_value("NBA")
+            assert not errors, errors
+            await browser.close()
+
+    asyncio.run(journey())
+
+
+def test_touch_calculation_close_after_scroll_preserves_comparison_and_return():
+    """One touch dismisses scrolled math without dismissing its comparison."""
+    from playwright.async_api import async_playwright, expect
+
+    async def journey():
+        selected = offer()
+        selected["raw"].update(posted_decimal="2.2", after_fee_decimal="2.176")
+        selected["fee"]["cashflows"]["win"]["gross_receipt_usd"] = "220"
+        selected["fee"]["evidence"] = dict(
+            database_fee_rule=dict(formula="prophetx_commission", rate="0.02")
+        )
+        selected["fee"]["rounding_trace"] = [
+            dict(raw="2.4", entry="0", settlement="2.4")
+        ]
+        errors = []
+
+        async def serve(route):
+            url = urlparse(route.request.url)
+            q = {k: v[0] for k, v in parse_qs(url.query).items()}
+            if route.request.method != "GET":
+                errors.append("Unexpected mutating request")
+                await route.abort()
+            elif url.path.endswith("/updates"):
+                await route.fulfill(json=dict(changed=False))
+            elif url.path == "/api/pregame":
+                packet = dict(
+                    cursor="one",
+                    rows=[selected],
+                    total=1,
+                    refresh_at=selected["kickoff"],
+                    sportsbooks=[],
+                )
+                if q.get("view") == "games":
+                    packet.update(
+                        rows=[],
+                        games=[
+                            dict(
+                                game_key=selected["game_key"],
+                                game=selected["game"],
+                                league=selected["league"],
+                                kickoff=selected["kickoff"],
+                                rows=[selected],
+                            )
+                        ],
+                    )
+                await route.fulfill(json=packet)
+            else:
+                await route.fulfill(
+                    path=ASSETS
+                    / (
+                        Path(url.path).name
+                        if url.path.startswith("/view/")
+                        else "pregame.html"
+                    ),
+                    headers={
+                        "Content-Security-Policy": "default-src 'self'; connect-src 'self'"
+                    },
+                )
+
+        async with async_playwright() as pw:
+            browser = await pw.chromium.launch()
+            context = await browser.new_context(
+                viewport=dict(width=320, height=568),
+                is_mobile=True,
+                has_touch=True,
+                device_scale_factor=1,
+            )
+            page = await context.new_page()
+            page.on("pageerror", lambda e: errors.append(str(e)))
+            await page.route("**/*", serve)
+            await page.goto("https://predict.fixture/browse-odds")
+            game = page.locator(".game-open")
+            await game.tap()
+            line = page.locator("#game-content .line-open")
+            await expect(line).to_be_visible()
+            await line.tap()
+            await expect(page.locator(".comparison-status")).to_contain_text("complete")
+            await expect(page.locator("#game-lines")).not_to_be_visible()
+            trigger = (
+                page.locator(".exchange-prices tbody td")
+                .nth(2)
+                .locator(".math-trigger")
+            )
+            await trigger.tap()
+            popover = page.locator(".math-popover:popover-open")
+            await expect(popover).to_be_visible()
+            await expect(popover).to_contain_text("Commission = rate × gross profit")
+            await expect(popover).to_contain_text("$2.40")
+            body = popover.locator(".math-body")
+            assert await body.evaluate("e=>e.scrollHeight>e.clientHeight")
+            close = page.get_by_role("button", name="Close calculation", exact=True)
+            close_y = (await close.bounding_box())["y"]
+            box = await body.bounding_box()
+            x, start_y, end_y = (
+                box["x"] + box["width"] / 2,
+                box["y"] + box["height"] - 20,
+                box["y"] + 20,
+            )
+            session = await context.new_cdp_session(page)
+            await session.send(
+                "Input.dispatchTouchEvent",
+                dict(type="touchStart", touchPoints=[dict(x=x, y=start_y)]),
+            )
+            for index in range(1, 9):
+                await session.send(
+                    "Input.dispatchTouchEvent",
+                    dict(
+                        type="touchMove",
+                        touchPoints=[
+                            dict(x=x, y=start_y + (end_y - start_y) * index / 8)
+                        ],
+                    ),
+                )
+            await session.send(
+                "Input.dispatchTouchEvent", dict(type="touchEnd", touchPoints=[])
+            )
+            await page.wait_for_function(
+                "document.querySelector('.math-popover:popover-open .math-body').scrollTop>0"
+            )
+            assert abs((await close.bounding_box())["y"] - close_y) < 1
+            # Tap during kinetic scrolling: do not wait for a settled fling or
+            # issue a second tap that would conceal a missing synthesized click.
+            await close.tap()
+            await expect(page.locator(".math-popover:popover-open")).to_have_count(0)
+            await expect(page.locator("#comparison")).to_be_visible()
+            await expect(page.locator("dialog[open]")).to_have_count(1)
+            await expect(trigger).to_be_focused()
+            await page.locator("#comparison-back").tap()
+            await expect(page.locator("#game-lines")).to_be_visible()
+            await expect(line).to_be_focused()
+            await line.tap()
+            await expect(page.locator("#comparison")).to_be_visible()
+            await page.get_by_role("button", name="Close comparison", exact=True).tap()
+            await expect(page.locator("dialog[open]")).to_have_count(0)
+            await expect(game).to_be_focused()
             assert not errors, errors
             await browser.close()
 

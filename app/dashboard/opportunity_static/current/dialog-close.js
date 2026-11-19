@@ -24,13 +24,16 @@ function guardCompatibilityEvents(){
  document.addEventListener('keydown',clear,true);
  releaseGuard=clear;
 }
-export function bindDialogClose(button,dialog){
- button.onclick=()=>dialog.close();
+export function bindDismissControl(button,close,isOpen){
+ button.onclick=close;
  button.addEventListener('pointerup',event=>{
-  if(event.pointerType!=='touch'||!event.isPrimary||!dialog.open)return;
+  if(event.pointerType!=='touch'||!event.isPrimary||!isOpen())return;
   const box=button.getBoundingClientRect();
   if(event.clientX<box.left||event.clientX>box.right||event.clientY<box.top||event.clientY>box.bottom)return;
   // A canceled pan has no pointerup. Release outside the captured button is ignored.
-  event.preventDefault();guardCompatibilityEvents();dialog.close();
+  event.preventDefault();guardCompatibilityEvents();close();
  });
+}
+export function bindDialogClose(button,dialog,close=()=>dialog.close()){
+ bindDismissControl(button,close,()=>dialog.open);
 }

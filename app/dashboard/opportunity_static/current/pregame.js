@@ -1,4 +1,5 @@
-import {createModeSettings,collectionBadge} from './mode-settings.js';
+import {bindBoardFilters} from './board-filters.js';
+import {createModeSettings} from './mode-settings.js';
 import {bindDialogClose} from './dialog-close.js';
 import {journalAction} from './bet-journal-actions.js';
 import {bookName,venues} from './pregame-labels.js';
@@ -9,11 +10,11 @@ import {freshness,freshnessText,payoutExample,feeRows} from './pregame-evidence.
 const $=id=>document.getElementById(id);
 const initial=new URLSearchParams(location.search), browse=location.pathname==='/browse-odds'||location.pathname==='/game';
 const gameView=location.pathname==='/game', gameBoard=location.pathname==='/browse-odds'&&!initial.has('bet_id')&&!initial.has('id')&&!initial.has('line')&&!initial.has('quote_key');
-let gameSequence=0,gameReturnKey,comparisonTrigger,gameTimer,activeComparison;
+let gameSequence=0,gameReturnKey,comparisonTrigger,gameTimer,activeComparison,gameDataType,gameSuspended,suspendingGameClose=false,backToGame=false;
 let offset=0, total=0, cursor='', refreshTimer, feedbackTimer, running=false, checking=false, lastGood=null, sequence=0, comparisonSequence=0, inspectionTimer, comparisonReturnId,boardController,gameController,lastRendered,displayedQuery;
 const dialogReturns=new Map(),lockProperties=['position','top','left','width'];let lockedPage;
 function showDialog(dialog,trigger=document.activeElement){
- const parent=trigger?.closest('dialog');dialogReturns.set(dialog,{trigger,parent,parentScroll:parent?.querySelector('#game-content')?.scrollTop||0});
+ const parent=trigger?.closest('dialog');dialogReturns.set(dialog,{trigger,parent,parentScroll:gameSuspended?.scroll??parent?.querySelector('#game-content')?.scrollTop??0});
  if(!lockedPage){lockedPage={x:scrollX,y:scrollY,style:document.body.getAttribute('style'),properties:lockProperties.map(name=>[name,document.body.style.getPropertyValue(name),document.body.style.getPropertyPriority(name)])};Object.assign(document.body.style,{position:'fixed',top:-scrollY+'px',left:-scrollX+'px',width:'100%'});}
  dialog.showModal();
 }
@@ -43,15 +44,17 @@ function referenceQuote(row){return row.reference?.prices?.find(p=>p.side===row.
 function referencePrice(row){return referenceQuote(row)?.price_american ?? 'Unavailable';}
 function ticket(row,compare=true){
  const article=node('article',undefined,'ticket board-row');
+ article.addEventListener('click',event=>{if(compare&&!event.target.closest('a,button,input,select,summary,details,[popover]'))openComparison(row,article.querySelector('.row-open'));});
  const date=new Date(row.kickoff),opts={timeZone:'America/New_York'};
  article.append(node('div',row.league,'league-cell'));
  const start=node('div',undefined,'start-cell');start.append(node('strong',date.toLocaleTimeString('en-US',{...opts,hour:'numeric',minute:'2-digit'})),node('span',date.toLocaleDateString('en-US',{...opts,weekday:'short',month:'short',day:'numeric'})));article.append(start);
  const body=node('div',undefined,'subject'),context=node('p',undefined,'context');context.append(node('strong',row.league),node('time',date.toLocaleString('en-US',{...opts,weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+' ET'));
  const title=node('h2',undefined,'pick');
  if(compare){const open=node('button',pick(row),'row-open');open.type='button';open.dataset.quoteId=row.id;open.dataset.focusKey='compare-'+row.id;open.setAttribute('aria-label','Compare prices for '+pick(row));open.setAttribute('aria-haspopup','dialog');open.setAttribute('aria-controls','comparison');open.onclick=event=>openComparison(row,event.currentTarget);title.append(open);}else title.textContent=pick(row);
- const link=node('a',row.game,'game');link.dataset.focusKey='game-link-'+row.id;link.href='/game?'+new URLSearchParams({game_key:row.game_key});link.setAttribute('aria-label','Open Game: '+row.game);body.append(context,title,link);article.append(body);
+ const link=node('a',row.game,'game');link.dataset.focusKey='game-link-'+row.id;link.href='/game?'+new URLSearchParams({game_key:row.game_key});link.setAttribute('aria-label','Open Game: '+row.game);
+ link.onclick=event=>{if(event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;event.preventDefault();openGame({game_key:row.game_key,game:row.game,league:row.league,kickoff:row.kickoff,rows:[row]},event.currentTarget);};body.append(context,title,link);article.append(body);
  const cell=(cls,label,value)=>{const d=node('div',undefined,'board-number '+cls);d.append(node('span',label,'mobile-label'),node('span',value));article.append(d);return d;};
- const venue=cell('venue','Venue',venues[row.venue]||row.venue),badge=collectionBadge(row);if(badge)venue.append(badge);
+ const venue=cell('venue','Venue',venues[row.venue]||row.venue);
  const posted=priceDisplay(row),after=priceDisplay(row,true),postedCell=cell('posted','Price',posted.primary),afterCell=cell('after','After fees',after.primary);
  if(hasVenuePrice(row)){addMath(postedCell,row,'posted');appendPriceContext(postedCell,posted);appendPriceContext(afterCell,after);}
  addMath(afterCell,row,'after');
@@ -73,7 +76,7 @@ function render(packet){
  const result=$('results'),active=document.activeElement,restoreFocus=result.contains(active),focusKey=active?.dataset.focusKey;
  appliedRanking=packet.sort||rankingSelect.value;rankHeading();document.querySelector('.status-line').hidden=false;document.querySelector('.pagination').hidden=gameView||(packet.total<=30&&offset===0);lastGood=packet;cursor=packet.cursor;total=packet.total;result.replaceChildren();
  if(gameBoard&&packet.games?.length)result.append(...packet.games.map(gameCard));else if(gameView&&packet.rows.length)result.append(gameMarkets(packet.rows,true));else if(packet.rows.length)result.append(...packet.rows.map(row=>ticket(row)));else{const empty=node('div',undefined,'empty');empty.append(node('h2',browse?'No odds match these filters.':'No positive opportunities in this view.'));if(browse){empty.append(node('p','Try another league, market or venue.'));}else{const link=node('a','Browse odds →');link.href='/browse-odds';empty.append(link);}result.append(empty);}
- $('board-columns').hidden=gameBoard||gameView||!packet.rows.length;$('count').textContent=(packet.data_type==='live'?'Live · ':packet.data_type==='monitor'?'Monitor · ':'')+`${total} ${gameBoard?(total===1?'game':'games'):browse?(total===1?'bet':'bets'):(total===1?'opportunity':'opportunities')}`;$('previous').disabled=offset===0;$('next').disabled=offset+30>=total;$('page').textContent=total?`${offset+1}–${Math.min(offset+30,total)} of ${total}`:'0';schedule(packet.refresh_at);
+ $('board-columns').hidden=gameBoard||gameView||!packet.rows.length;$('count').textContent=`${total} ${gameBoard?(total===1?'game':'games'):browse?(total===1?'bet':'bets'):(total===1?'opportunity':'opportunities')}`;$('previous').disabled=offset===0;$('next').disabled=offset+30>=total;$('page').textContent=total?`${offset+1}–${Math.min(offset+30,total)} of ${total}`:'0';schedule(packet.refresh_at);
  // A response can redraw the list just after a dialog restored its trigger.
  // Preserve keyboard identity across replacement without moving dialog/filter focus.
  if(restoreFocus){
@@ -85,13 +88,13 @@ function schedule(deadline){clearTimeout(refreshTimer);if(deadline)refreshTimer=
 async function load(manual=false){
  const token=++sequence;boardController?.abort();const controller=boardController=new AbortController();running=true;
  const refresh=$('refresh'),icon=refresh.querySelector('span');clearTimeout(feedbackTimer);refresh.disabled=true;refresh.setAttribute('aria-busy','true');icon.textContent='…';$('results').setAttribute('aria-busy','true');
- $('request-status').textContent=lastGood?'Updating prices… Displayed prices await verification.':'Loading stored prices…';
+ $('request-status').textContent=lastGood?'Updating… Previous prices shown.':'Loading prices…';
  try{const packet=await get(query(),false,controller);if(token!==sequence)return;render(packet);$('error').hidden=true;delete $('error').dataset.source;$('request-status').textContent='';icon.textContent=manual?'✓':'↻';refreshComparison();}
  catch(e){if(token!==sequence)return;icon.textContent='↻';$('request-status').textContent='';$('error').textContent=(e.name==='TimeoutError'?'The stored-price request timed out. ':'')+(lastGood?'Refresh failed. Your displayed odds are preserved but could not be verified.'+(displayedQuery!==query().toString()?' Results from the previous filters are still displayed.':''):'Odds could not be loaded. Choose Refresh to retry.');$('error').hidden=false;$('error').dataset.source='load';if(!lastGood){$('count').textContent='';document.querySelector('.status-line').hidden=true;}}
  finally{if(token===sequence){running=false;refresh.disabled=false;refresh.removeAttribute('aria-busy');$('results').removeAttribute('aria-busy');feedbackTimer=setTimeout(()=>{icon.textContent='↻';},1800);}}
 }
 function details(row){const detail=node('details'),dl=node('dl'),summary=node('summary','Fee and calculation details');summary.dataset.focusKey='details-'+row.id;detail.append(summary);const add=(label,value)=>dl.append(node('dt',label),node('dd',value));
- add('Trusted reference books',Object.keys(row.reference?.candidate_probabilities||{}).map(bookName).join(', ')||'Not recorded');add('Source route',row.source.provider);add('Source timestamp',row.times.source_at||'Not supplied');add('Received',row.times.received_at);add('Calculated',row.calculated_at);for(const [label,value]of feeRows(row))add(label,value);
+ add('Trusted reference books',Object.keys(row.reference?.candidate_probabilities||{}).map(bookName).join(', ')||'Not recorded');add('Source route',row.source.provider);if(row.collection){add('Capture provenance',row.collection.origin==='legacy_retained'?'Retained baseline; source clock unchanged':'Recorded observation');add('Capture receipt',row.collection.observed_at||'Not recorded');}add('Source timestamp',row.times.source_at||'Not supplied');add('Received',row.times.received_at);add('Calculated',row.calculated_at);for(const [label,value]of feeRows(row))add(label,value);
  add('Fee terms',row.fee.classification==='conservative'?'Highest applicable documented charge where account terms are unresolved.':row.fee.classification.replaceAll('_',' '));
  const evidence=row.fee.evidence||{},rule=evidence.database_fee_rule;add('Fee schedule',rule?.id||evidence.schedule_version||evidence.version||evidence.product||'Verified venue schedule');
  if(rule){add('Fee formula',rule.formula.replaceAll('_',' '));add('Fee coefficient',rule.rate);if(rule.multiplier!=='1')add('Market multiplier',rule.multiplier);add('Balance precision',`$${rule.balance_precision}`);add('Applies from',rule.effective_from);if(rule.effective_to)add('Applies until',rule.effective_to);}else if(evidence.fee_rate!==undefined)add('Fee coefficient',evidence.fee_rate);
@@ -108,7 +111,7 @@ function quoteTable(headers, rows, className){
 function appendPriceContext(cell,display){if(display.price)cell.append(node('small',display.price,'price-equivalent'));if(display.secondary)cell.append(node('small',display.secondary,'american-equivalent'));}
 function venuePrice(row,after=false){const display=priceDisplay(row,after),cell=node('span',undefined,'math-value');cell.append(node('span',display.primary));if(after||hasVenuePrice(row))addMath(cell,row,after?'after':'posted');appendPriceContext(cell,display);return cell;}
 function mathValue(row,kind,value){const cell=node('span',undefined,'math-value');if(!row.reference||value===null||value===undefined){cell.append(node('span',kind==='ev'?'EV unavailable':'Unavailable'));const reason=row.ev_unavailable_reason?.replaceAll('_',' ')||'Reference probability not available';cell.append(node('small',reason,'unavailable-reason'));return cell;}cell.append(node('span',value));addMath(cell,row,kind);if(kind==='fair')cell.append(node('small',bookName(row.reference.book)+' ('+referencePrice(row)+')','reference'));return cell;}
-function exchangePrices(rows){const previous=new Map([...$('comparison-content').querySelectorAll('.journal-action')].map(e=>[e.dataset.quoteId,e]));return quoteTable(['Venue','Price','After fees','Fair odds','Net EV',rankingMethods[appliedRanking].column,'My Bets'],rows.map(r=>{const label='Save '+bookName(r.venue)+' to My Bets',action=r.reference?journalAction('ev',r,label,previous.get(r.id)):node('span','EV unavailable; price remains inspectable.','unavailable-reason'),button=action.querySelector('button');action.dataset.quoteId=r.id;if(button){button.dataset.shortLabel='Save';button.dataset.focusKey='save-'+r.id;button.setAttribute('aria-label',label);if(!button.disabled)button.textContent='Save';}const venue=node('span',venues[r.venue]||r.venue),badge=collectionBadge(r);if(badge)venue.append(badge);venue.append(freshness(r));return [venue,venuePrice(r),venuePrice(r,true),mathValue(r,'fair',r.display.fair_odds),mathValue(r,'ev',r.display.net_ev),mathValue(r,'ranking',rankInfo(r).display),action];}),'exchange-prices');}
+function exchangePrices(rows){const previous=new Map([...$('comparison-content').querySelectorAll('.journal-action')].map(e=>[e.dataset.quoteId,e]));return quoteTable(['Venue','Price','After fees','Fair odds','Net EV',rankingMethods[appliedRanking].column,'My Bets'],rows.map(r=>{const label='Save '+bookName(r.venue)+' to My Bets',action=r.reference?journalAction('ev',r,label,previous.get(r.id)):node('span','EV unavailable; price remains inspectable.','unavailable-reason'),button=action.querySelector('button');action.dataset.quoteId=r.id;if(button){button.dataset.shortLabel='Save';button.dataset.focusKey='save-'+r.id;button.setAttribute('aria-label',label);if(!button.disabled)button.textContent='Save';}const venue=node('span',venues[r.venue]||r.venue);venue.append(freshness(r));return [venue,venuePrice(r),venuePrice(r,true),mathValue(r,'fair',r.display.fair_odds),mathValue(r,'ev',r.display.net_ev),mathValue(r,'ranking',rankInfo(r).display),action];}),'exchange-prices');}
 function sportsbookPrices(selected,quotes=[],state='loading'){
  const section=node('section',undefined,'sportsbook-comparison');section.append(node('h3','Sportsbook prices'));
  const reference=referenceQuote(selected),rows=[];
@@ -130,7 +133,7 @@ function renderComparison(rows,quotes=[],state='loading'){
  const focused=content.contains(document.activeElement)?document.activeElement.dataset.focusKey:null;
  const scroll=content.scrollTop;
  const game=node('p',selected.game,'comparison-context'),selectedPrice=node('div',undefined,'selected-quote'),offers=node('section',undefined,'exchange-comparison'),evidence=node('section',undefined,'calculation-evidence');
- const selectedLabel=node('strong','Selected quote · '+(venues[selected.venue]||selected.venue)),selectedBadge=collectionBadge(selected);if(selectedBadge)selectedLabel.append(selectedBadge);selectedPrice.append(selectedLabel,venuePrice(selected));for(const button of selectedPrice.querySelectorAll('[data-focus-key]'))button.dataset.focusKey='selected-'+button.dataset.focusKey;offers.append(node('h3','Exchange prices'),exchangePrices(rows));
+ const selectedLabel=node('strong','Selected quote · '+(venues[selected.venue]||selected.venue));selectedPrice.append(selectedLabel,venuePrice(selected));for(const button of selectedPrice.querySelectorAll('[data-focus-key]'))button.dataset.focusKey='selected-'+button.dataset.focusKey;offers.append(node('h3','Exchange prices'),exchangePrices(rows));
  for(const [index,row]of rows.entries()){const detail=details(row);if(index)detail.querySelector('summary').textContent=(venues[row.venue]||row.venue)+' · Fee and calculation details';detail.open=expanded.has(detail.querySelector('summary').textContent);evidence.append(detail);}
  content.replaceChildren(game,selectedPrice,comparisonStatus(state),freshness(selected),payoutExample(selected),offers,sportsbookPrices(selected,quotes,state),evidence);for(const detail of content.querySelectorAll('details'))detail.open=expanded.has(detail.querySelector('summary')?.textContent);
  if(focused)[...content.querySelectorAll('[data-focus-key]')].find(e=>e.dataset.focusKey===focused)?.focus({preventScroll:true});
@@ -149,8 +152,10 @@ async function refreshComparison(){
 async function openComparison(selected,trigger){
  // A touch click can open a button without making it document.activeElement.
  comparisonTrigger=trigger||document.activeElement;
+ if($('game-lines').open){gameSuspended={scroll:$('game-content').scrollTop};suspendingGameClose=true;$('game-lines').close();}
+ $('comparison-back').hidden=!gameSuspended;
  ++comparisonSequence;clearTimeout(inspectionTimer);comparisonReturnId=selected.id;
- activeComparison?.controller.abort();activeComparison={selected:structuredClone(selected),dataType:lastGood?.data_type||$('data-type').value||selected.collection?.kind,maxAge:$('max-age').value,rows:[selected],quotes:[],loading:false,pending:false,state:'loading',controller:new AbortController()};
+ activeComparison?.controller.abort();activeComparison={selected:structuredClone(selected),dataType:gameSuspended?gameDataType:lastGood?.data_type||$('data-type').value||selected.collection?.kind,maxAge:$('max-age').value,rows:[selected],quotes:[],loading:false,pending:false,state:'loading',controller:new AbortController()};
  inspectionTimer=setTimeout(()=>$('comparison').close(),Math.min(2147483647,Math.max(0,Date.parse(selected.kickoff)-Date.now())));
  $('comparison-title').textContent=pick(selected);renderComparison([selected]);showDialog($('comparison'),comparisonTrigger);
  await refreshComparison();
@@ -159,8 +164,9 @@ async function openComparison(selected,trigger){
 const families={moneyline:'Winner',spread:'Spread',total:'Total'};
 function gameBet(row,interactive=false,annotate=true){
  const item=node('article',undefined,'game-bet');const heading=node('h4');
+ item.addEventListener('click',event=>{if(interactive&&!event.target.closest('a,button,input,select,summary,details,[popover]'))openComparison(row,item.querySelector('.line-open'));});
  if(interactive){const open=node('button',pick(row),'line-open');open.type='button';open.dataset.quoteId=row.id;open.dataset.focusKey='compare-'+row.id;open.setAttribute('aria-label','Compare prices for '+pick(row));open.onclick=event=>openComparison(row,event.currentTarget);if(!annotate)open.append(node('small','Compare prices →','line-action-label'));heading.append(open);}else heading.textContent=pick(row);
- const subject=node('div',undefined,'line-subject');subject.append(heading,node('span',(venues[row.venue]||row.venue)+(interactive&&annotate?' · '+(row.main?'Main':'Alternate'):''),'line-venue'));const badge=collectionBadge(row);if(badge)subject.lastChild.append(badge);item.append(subject);
+ const subject=node('div',undefined,'line-subject');subject.append(heading,node('span',(venues[row.venue]||row.venue)+(interactive&&annotate?' · '+(row.main?'Main':'Alternate'):''),'line-venue'));item.append(subject);
  const values=node('div',undefined,'line-values');
  for(const [label,value] of [['Price',venuePrice(row)],['After fees',venuePrice(row,true)],['Fair',mathValue(row,'fair',row.display.fair_odds)],['Net EV',mathValue(row,'ev',row.display.net_ev)]]){const cell=node('div');cell.append(node('small',label),value);values.append(cell);}item.append(values,freshness(row));return item;
 }
@@ -169,22 +175,47 @@ function gameMarkets(rows,interactive=false,annotate=true){
 }
 function gameCard(game){
  const card=node('article',undefined,'game-card'),head=node('header'),date=new Date(game.kickoff),opts={timeZone:'America/New_York'};
+ head.addEventListener('click',event=>{if(!event.target.closest('a,button,input,select,summary,details,[popover]'))openGame(game,head.querySelector('.game-open'));});
  const title=node('h2'),open=node('button',game.game,'game-open');open.type='button';open.dataset.gameKey=game.game_key;open.dataset.focusKey='game-'+game.game_key;open.setAttribute('aria-haspopup','dialog');open.onclick=event=>openGame(game,event.currentTarget);title.append(open);head.append(title,node('p',game.league+' · '+date.toLocaleString('en-US',{...opts,weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+' ET','game-clock'),node('span','View all lines →','game-hint'));card.append(head,gameMarkets(game.rows,true,false));return card;
 }
-async function openGame(game,trigger){
+async function openGame(game,trigger,dataType=lastGood?.data_type||query().get('data_type')||'all'){
+ gameDataType=dataType;
  clearTimeout(gameTimer);gameTimer=setTimeout(()=>$('game-lines').close(),Math.min(2147483647,Math.max(0,Date.parse(game.kickoff)-Date.now())));
  gameController?.abort();const controller=gameController=new AbortController();const token=++gameSequence;gameReturnKey=game.game_key;$('game-title').textContent=game.game;const content=$('game-content');content.replaceChildren(node('p','Loading alternate lines…','comparison-context'),gameMarkets(game.rows,true));if(!$('game-lines').open)showDialog($('game-lines'),trigger||document.activeElement);
- try{const q=new URLSearchParams(query());q.set('view','game');q.set('game_key',game.game_key);q.set('lines','all');const data=await get(q,false,controller);if(token!==gameSequence||!$('game-lines').open)return;const focused=content.contains(document.activeElement)?document.activeElement.dataset.focusKey:null,scroll=content.scrollTop;content.replaceChildren(gameMarkets(data.rows,true));if(!data.rows.length)content.append(node('p','No current lines match these filters.'));if(focused)[...content.querySelectorAll('[data-focus-key]')].find(button=>button.dataset.focusKey===focused)?.focus({preventScroll:true});content.scrollTop=scroll;}
- catch(e){if(token===gameSequence){const message=node('p','Alternate lines could not be loaded. Main lines are preserved.','comparison-context'),retry=node('button','Retry');retry.onclick=()=>openGame(game,trigger);content.prepend(message,retry);}}
+ try{const q=new URLSearchParams(query());for(const key of ['search','league','family','venue'])q.delete(key);q.set('view','game');q.set('game_key',game.game_key);q.set('data_type',dataType);q.set('lines','all');const data=await get(q,false,controller);if(token!==gameSequence||(!$('game-lines').open&&!gameSuspended))return;const focused=content.contains(document.activeElement)?document.activeElement.dataset.focusKey:null,scroll=content.scrollTop;content.replaceChildren(gameMarkets(data.rows,true));if(!data.rows.length)content.append(node('p','No current lines match these filters.'));if(focused)[...content.querySelectorAll('[data-focus-key]')].find(button=>button.dataset.focusKey===focused)?.focus({preventScroll:true});content.scrollTop=scroll;}
+ catch(e){if(token===gameSequence){const message=node('p','Alternate lines could not be loaded. Main lines are preserved.','comparison-context'),retry=node('button','Retry');retry.onclick=()=>openGame(game,trigger,dataType);content.prepend(message,retry);}}
 }
-bindDialogClose($('game-close'),$('game-lines'));$('game-lines').addEventListener('close',()=>{clearTimeout(gameTimer);gameController?.abort();gameSequence++;if($('comparison').open)$('comparison').close();const target=[...document.querySelectorAll('.game-open')].find(b=>b.dataset.gameKey===gameReturnKey);restoreDialog($('game-lines'),target||$('results'));});
-
-bindDialogClose($('close'),$('comparison'));$('comparison').addEventListener('close',()=>{comparisonSequence++;activeComparison?.controller.abort();activeComparison=null;clearTimeout(inspectionTimer);const eligible=button=>button?.isConnected&&(!button.closest('dialog')||button.closest('dialog').open);const target=eligible(comparisonTrigger)?comparisonTrigger:[...document.querySelectorAll('.row-open,.line-open')].find(button=>button.dataset.quoteId===comparisonReturnId&&eligible(button));restoreDialog($('comparison'),target||$('results'));});$('refresh').onclick=()=>load(true);$('previous').onclick=()=>{offset=Math.max(0,offset-30);load();};$('next').onclick=()=>{offset+=30;load();};
-let searchTimer;filters.addEventListener('submit',event=>event.preventDefault());filters.addEventListener('input',event=>{if(event.target.name==='sort')return;clearTimeout(searchTimer);offset=0;sequence++;boardController?.abort();$('request-status').textContent='Updating filters…';searchTimer=setTimeout(()=>load(),event.target.name==='search'?180:0);});
-rankingSelect.addEventListener('change',()=>{try{localStorage.setItem(rankingKey,rankingSelect.value);}catch(e){}clearTimeout(searchTimer);offset=0;sequence++;load();});
+bindDialogClose($('game-close'),$('game-lines'));
+$('game-lines').addEventListener('close',()=>{
+ if(suspendingGameClose){suspendingGameClose=false;return;}
+ clearTimeout(gameTimer);gameController?.abort();gameSequence++;
+ const target=[...document.querySelectorAll('.game-open')].find(b=>b.dataset.gameKey===gameReturnKey);
+ restoreDialog($('game-lines'),target||$('results'));
+});
+bindDialogClose($('comparison-back'),$('comparison'),()=>{backToGame=true;$('comparison').close();});
+bindDialogClose($('close'),$('comparison'));
+$('comparison').addEventListener('close',()=>{
+ comparisonSequence++;activeComparison?.controller.abort();activeComparison=null;clearTimeout(inspectionTimer);
+ if(gameSuspended){
+  if(backToGame){$('game-lines').showModal();restoreDialog($('comparison'),$('game-content'));}
+  else{
+   clearTimeout(gameTimer);gameController?.abort();gameSequence++;dialogReturns.delete($('comparison'));
+   const target=[...document.querySelectorAll('.game-open')].find(b=>b.dataset.gameKey===gameReturnKey);
+   restoreDialog($('game-lines'),target||$('results'));
+  }
+  gameSuspended=null;backToGame=false;return;
+ }
+ const eligible=button=>button?.isConnected&&(!button.closest('dialog')||button.closest('dialog').open);
+ const target=eligible(comparisonTrigger)?comparisonTrigger:[...document.querySelectorAll('.row-open,.line-open')].find(button=>button.dataset.quoteId===comparisonReturnId&&eligible(button));
+ restoreDialog($('comparison'),target||$('results'));backToGame=false;
+});
+$('refresh').onclick=()=>load(true);$('previous').onclick=()=>{offset=Math.max(0,offset-30);load();};$('next').onclick=()=>{offset+=30;load();};
+let searchTimer;filters.addEventListener('submit',event=>event.preventDefault());filters.addEventListener('input',event=>{if(event.target.name==='sort')return;clearTimeout(searchTimer);offset=0;sequence++;boardController?.abort();$('request-status').textContent='Updating filters…';searchTimer=setTimeout(()=>load(),event.target.name==='search'?180:120);});
+rankingSelect.addEventListener('change',()=>{try{localStorage.setItem(rankingKey,rankingSelect.value);}catch(e){}clearTimeout(searchTimer);offset=0;sequence++;boardController?.abort();$('request-status').textContent='Updating… Previous prices shown.';searchTimer=setTimeout(()=>load(),120);});
 $('data-type').value=browse?'all':'';$('order').value=browse?'start':'rank';for(const key of ['data_type','order','max_age_minutes'])if(initial.has(key))filters.elements.namedItem(key).value=initial.get(key);
+const boardFilters=bindBoardFilters(filters,{dataType:browse?'all':''});
 $('alternates-field').hidden=true;if(browse){$('sort-order').textContent=gameBoard?'Game start time ↑':'Main and alternate lines';$('results').setAttribute('aria-label',gameBoard?'Games by start time':'Game lines');}
-if(browse){$('ranking-field').hidden=true;$('sort-order').hidden=false;}
+if(browse){$('ranking-field').hidden=true;$('order').closest('label').hidden=true;$('sort-order').hidden=false;}
 if(browse){$('title').textContent=location.pathname==='/game'?'Game odds':'Browse odds';document.title='Predict · Browse odds';}
 if(gameView)document.querySelector('.heading-flag').textContent='Pregame · Main & alternate lines';
 for(const link of document.querySelectorAll('.masthead nav a'))if(new URL(link.href).pathname===location.pathname)link.setAttribute('aria-current','page');

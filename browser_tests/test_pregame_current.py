@@ -92,6 +92,8 @@ def test_current_pregame_journey(width, tmp_path):
             data = dict(
                 schema="predict-current-pregame-1",
                 state="ready",
+                data_type=query.get("data_type")
+                or ("all" if query.get("browse") == "1" else "monitor"),
                 cursor=state["revision"],
                 rows=[]
                 if state["empty"] or query.get("search")
@@ -145,17 +147,20 @@ def test_current_pregame_journey(width, tmp_path):
         for kind in ("after", "fair", "ev", "score"):
             trigger = page.locator(f"#results .{kind} .math-trigger")
             trigger.hover()
-            expect(page.locator(".math-popover:popover-open")).to_be_visible()
-            page.keyboard.press("Escape")
+            expect(page.locator(".math-popover:popover-open")).to_have_count(0)
             trigger.focus()
+            expect(page.locator(".math-popover:popover-open")).to_have_count(0)
+            page.keyboard.press("Enter")
             expect(page.locator(".math-popover:popover-open")).to_be_visible()
-            page.keyboard.press("Escape")
+            page.get_by_role("button", name="Close calculation", exact=True).click()
+            expect(page.locator(".math-popover:popover-open")).to_have_count(0)
+            expect(trigger).to_be_focused()
         expect(
             page.locator("select[name=basis],#board-unit,[name=unit_usd]")
         ).to_have_count(0)
         assert page.evaluate("document.documentElement.scrollWidth===innerWidth")
         expect(page.locator(".compare")).to_have_count(0)
-        # Blank row space opens comparison, while the math and game link stay separate.
+        # Blank row space opens comparison, while math and links stay separate.
         page.locator(".ticket").click(position={"x": 8, "y": 8})
         expect(page.locator("#comparison")).to_be_visible()
         expect(page.locator(".exchange-prices tbody td").nth(1)).to_contain_text(
@@ -176,9 +181,19 @@ def test_current_pregame_journey(width, tmp_path):
         expect(
             page.get_by_role("button", name="Save ProphetX to My Bets")
         ).to_be_visible()
-        page.locator(".exchange-prices .math-trigger").first.focus()
-        expect(page.locator(".math-popover:popover-open")).to_be_visible()
+        calculation = page.locator(".exchange-prices .math-trigger").first
+        calculation.focus()
+        expect(page.locator(".math-popover:popover-open")).to_have_count(0)
+        page.keyboard.press("Enter")
+        popover = page.locator(".math-popover:popover-open")
+        expect(popover).to_be_visible()
+        bounds = popover.bounding_box()
+        heading = page.locator("#comparison .dialog-heading").bounding_box()
+        assert bounds["y"] >= heading["y"] + heading["height"] - 1
+        assert bounds["y"] + bounds["height"] <= page.viewport_size["height"]
         page.keyboard.press("Escape")
+        expect(page.locator(".math-popover:popover-open")).to_have_count(0)
+        expect(calculation).to_be_focused()
         expect(page.locator("#comparison")).to_be_visible()
         page.get_by_text("Fee and calculation details", exact=True).click()
         expect(page.locator("#comparison")).to_contain_text("$2.40")
@@ -216,12 +231,57 @@ def test_current_pregame_journey(width, tmp_path):
         expect(page.locator("#error")).to_be_visible()
         expect(page.locator("#results")).to_contain_text("+9.00%")
         state["failed"] = False
-        page.get_by_role("link", name="Open Game:").click()
+        # Ordinary inspection retains the board; the canonical link remains
+        # available for deep links and modified-click navigation.
+        for field, value in (
+            ("league", "NBA"),
+            ("family", "spread"),
+            ("venue", "prophetx"),
+        ):
+            with page.expect_response(lambda r: urlparse(r.url).path == "/api/pregame"):
+                page.locator("#" + field).select_option(value)
+            expect(page.locator("#refresh")).to_be_enabled()
+        game_link = page.get_by_role("link", name="Open Game:")
+        canonical = game_link.get_attribute("href")
+        assert canonical == "/game?game_key=occurrence-1"
+        game_link.scroll_into_view_if_needed()
+        board_url, board_scroll = page.url, page.evaluate("scrollY")
+        board_filters = page.locator("#filters").evaluate(
+            "e=>Object.fromEntries(new FormData(e))"
+        )
+        with page.expect_response(
+            lambda r: (
+                urlparse(r.url).path == "/api/pregame"
+                and parse_qs(urlparse(r.url).query).get("view") == ["game"]
+            )
+        ):
+            game_link.click()
+        expect(page).to_have_url(board_url)
+        expect(page.locator("#game-lines")).to_be_visible()
+        expect(page.locator("#game-content .game-bet")).to_have_count(1)
+        assert (
+            page.locator("#filters").evaluate("e=>Object.fromEntries(new FormData(e))")
+            == board_filters
+        )
+        inspector_query = next(
+            q for _, q in reversed(requests) if q.get("view") == "game"
+        )
+        assert inspector_query["game_key"] == "occurrence-1"
+        assert inspector_query["data_type"] == "monitor"
+        assert not {"search", "league", "family", "venue"} & inspector_query.keys()
+        page.get_by_role("button", name="Close game lines", exact=True).click()
+        expect(page.locator("#game-lines")).not_to_be_visible()
+        expect(game_link).to_be_focused()
+        assert abs(page.evaluate("scrollY") - board_scroll) < 2
+        assert (
+            page.locator("#filters").evaluate("e=>Object.fromEntries(new FormData(e))")
+            == board_filters
+        )
+        page.goto("https://predict.fixture" + canonical)
         expect(page).to_have_url(
             __import__("re").compile(r"/game\?game_key=occurrence-1")
         )
         expect(page.locator(".game-bet")).to_have_count(1)
-        assert any(q.get("game_key") == "occurrence-1" for _, q in requests)
         page.screenshot(path=str(tmp_path / f"pregame-{width}.png"), full_page=True)
         page.get_by_role("searchbox", name="Search teams").fill("unknown")
         expect(page.locator(".ticket")).to_have_count(0)
@@ -412,8 +472,9 @@ def test_ranking_dropdown_defaults_edge_persists_and_resets_page(width):
         page.on("pageerror", lambda e: errors.append(str(e)))
         page.route("**/*", serve)
         page.goto("http://predict.fixture/")
-        page.locator("#board-advanced > summary").click()
         ranking = page.get_by_role("combobox", name="Rank by")
+        expect(ranking).to_be_visible()
+        expect(page.locator("#board-advanced")).not_to_have_attribute("open", "")
         from app.storage.pregame_ranking import catalog
 
         expect(ranking.locator("option")).to_have_text(
@@ -444,6 +505,8 @@ def test_ranking_dropdown_defaults_edge_persists_and_resets_page(width):
                 assert abs(heading["x"] - figure["x"]) < 1
                 assert abs(heading["width"] - figure["width"]) < 1
         page.locator(".ticket .score .math-trigger").focus()
+        expect(page.locator(".math-popover:popover-open")).to_have_count(0)
+        page.keyboard.press("Enter")
         expect(page.locator(".math-popover:popover-open")).to_contain_text("Edge = 100")
         page.keyboard.press("Escape")
         page.get_by_role("button", name="Next →", exact=True).click()
@@ -460,10 +523,9 @@ def test_ranking_dropdown_defaults_edge_persists_and_resets_page(width):
         ranking.select_option("ev")
         expect(page.locator(".ticket .score .math-trigger")).to_have_text("+8.80%")
         page.reload()
-        page.locator("#board-advanced > summary").click()
+        expect(ranking).to_be_visible()
         expect(ranking).to_have_value("ev")
         expect(page.locator(".ticket .score .math-trigger")).to_have_text("+8.80%")
-        page.locator("#board-advanced > summary").click()
         page.get_by_role("button", name="Compare prices for").click()
         expect(page.locator(".exchange-prices")).to_contain_text("+8.80%")
         assert requests[-1]["sort"] == "ev"
@@ -576,6 +638,8 @@ def test_background_redraw_preserves_focus_after_comparison_closes(width):
 
         metric = page.locator("#results .ev .math-trigger")
         metric.focus()
+        expect(page.locator(".math-popover:popover-open")).to_have_count(0)
+        page.keyboard.press("Enter")
         expect(page.locator(".math-popover:popover-open")).to_be_visible()
         start_read()
         selected["display"]["net_ev"] = "+9.50%"
@@ -583,7 +647,11 @@ def test_background_redraw_preserves_focus_after_comparison_closes(width):
         finish_read()
         expect(metric).to_have_text("+9.50%")
         expect(metric).to_be_focused()
-        expect(page.locator(".math-popover:popover-open")).to_be_visible()
+        # A changed row dismisses its old explanation. Focus restoration alone
+        # cannot reopen it; an explicit action shows the current inputs.
+        expect(page.locator(".math-popover:popover-open")).to_have_count(0)
+        page.keyboard.press("Enter")
+        expect(page.locator(".math-popover:popover-open")).to_contain_text("+9.50%")
         page.keyboard.press("Escape")
 
         start_read()
@@ -592,4 +660,158 @@ def test_background_redraw_preserves_focus_after_comparison_closes(width):
         expect(page.locator(".ticket")).to_have_count(0)
         expect(page.locator("#results")).to_be_focused()
         assert not errors, errors
+        browser.close()
+
+
+@pytest.mark.parametrize("width", [1440, 390])
+def test_primary_ranking_inline_filters_chips_and_clear(width):
+    """Narrow a real-shaped row, remove one filter, then clear without losing sort."""
+    from playwright.sync_api import sync_playwright, expect
+
+    selected = offer()
+    selected["collection"] = dict(kind="monitor", origin="collected")
+    requests, errors = [], []
+    status = dict(
+        mode="monitor",
+        requested_mode="monitor",
+        revision=1,
+        settings=dict(
+            monitor_interval_seconds=1800,
+            monitor_horizon_seconds=86400,
+            live_interval_seconds=60,
+            live_window_seconds=3600,
+            inactivity_seconds=900,
+        ),
+        last_activity_at=None,
+        live_until=None,
+        reason="default",
+    )
+
+    def serve(route):
+        url = urlparse(route.request.url)
+        q = {k: v[0] for k, v in parse_qs(url.query).items()}
+        if url.path.endswith("/updates"):
+            route.fulfill(json=dict(changed=False, activity_mode=status))
+        elif url.path == "/api/pregame":
+            if q.get("mode_status"):
+                route.fulfill(json=status)
+                return
+            requests.append(q)
+            route.fulfill(
+                json=dict(
+                    cursor=str(len(requests)),
+                    rows=[selected],
+                    total=1,
+                    data_type=q.get("data_type", "monitor"),
+                    activity_mode=status,
+                    refresh_at=selected["kickoff"],
+                )
+            )
+        elif url.path.startswith("/view/current/"):
+            route.fulfill(path=ASSETS / Path(url.path).name)
+        else:
+            route.fulfill(path=ASSETS / "pregame.html")
+
+    with sync_playwright() as pw:
+        browser = pw.chromium.launch(executable_path=os.getenv("PREDICT_CI_CHROMIUM"))
+        page = browser.new_page(viewport=dict(width=width, height=900))
+        page.on("pageerror", lambda e: errors.append(str(e)))
+        page.route("**/*", serve)
+        page.goto("https://predict.fixture/")
+        expect(page.locator(".ticket")).to_have_count(1)
+        expect(page.locator(".mode-badge")).to_have_text("Settings")
+        expect(page.locator("#results")).not_to_contain_text("Monitor")
+        expect(page.locator("#count")).to_have_text("1 opportunity")
+        expect(page.get_by_role("combobox", name="Rank by")).to_be_visible()
+        advanced = page.locator("#board-advanced")
+        expect(advanced).not_to_have_attribute("open", "")
+        advanced.locator("summary").click()
+        expect(page.locator("#data-type")).to_be_visible()
+        fields = advanced.locator(".advanced-fields").bounding_box()
+        summary = advanced.locator("summary").bounding_box()
+        results = page.locator("#results").bounding_box()
+        assert fields["y"] >= summary["y"] + summary["height"] - 1
+        assert results["y"] >= fields["y"] + fields["height"] - 1
+
+        def change(action, matches):
+            try:
+                with page.expect_response(
+                    lambda r: (
+                        urlparse(r.url).path == "/api/pregame"
+                        and matches(
+                            {
+                                k: v[0]
+                                for k, v in parse_qs(urlparse(r.url).query).items()
+                            }
+                        )
+                    )
+                ):
+                    action()
+            except Exception:
+                print(
+                    "Filter diagnostics:",
+                    {
+                        "requests": requests,
+                        "errors": errors,
+                        "controls": page.locator("#filters").evaluate(
+                            "e=>Object.fromEntries(new FormData(e))"
+                        ),
+                    },
+                )
+                raise
+            expect(page.locator("#refresh")).to_be_enabled()
+
+        search = page.get_by_role("searchbox", name="Search teams")
+        change(
+            lambda: page.locator("#league").select_option("NBA"),
+            lambda q: q.get("league") == "NBA",
+        )
+        change(lambda: search.fill("Orlando"), lambda q: q.get("search") == "Orlando")
+        change(
+            lambda: page.locator("#data-type").select_option("live"),
+            lambda q: q.get("data_type") == "live",
+        )
+        change(
+            lambda: page.locator("#max-age").fill("30"),
+            lambda q: q.get("max_age_minutes") == "30",
+        )
+        change(
+            lambda: page.locator("#order").select_option("newest"),
+            lambda q: q.get("order") == "newest",
+        )
+        change(
+            lambda: page.locator("#ranking").select_option("ev"),
+            lambda q: q.get("sort") == "ev",
+        )
+        for label in ("League", "Search", "Data", "Quote age"):
+            expect(
+                page.get_by_role("button", name=f"Remove {label} filter", exact=True)
+            ).to_be_visible()
+        change(
+            lambda: page.get_by_role(
+                "button", name="Remove League filter", exact=True
+            ).click(),
+            lambda q: "league" not in q and q.get("search") == "Orlando",
+        )
+        expect(page.locator("#league")).to_have_value("")
+        expect(search).to_have_value("Orlando")
+        expect(page.locator("#data-type")).to_have_value("live")
+        change(
+            lambda: page.get_by_role(
+                "button", name="Clear filters", exact=True
+            ).click(),
+            lambda q: (
+                not {"league", "search", "data_type", "max_age_minutes"} & q.keys()
+                and q.get("sort") == "ev"
+                and q.get("order") == "newest"
+            ),
+        )
+        expect(search).to_have_value("")
+        expect(page.locator("#data-type")).to_have_value("")
+        expect(page.locator("#max-age")).to_have_value("")
+        expect(page.locator("#ranking")).to_have_value("ev")
+        expect(page.locator("#order")).to_have_value("newest")
+        expect(page.locator("#active-filters button")).to_have_count(0)
+        assert not errors, errors
+        assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
         browser.close()

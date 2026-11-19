@@ -213,6 +213,8 @@ async def smoke():
                          '/view/current/admin-database.css',
                          '/view/current/barlow-semi-condensed-600.ttf',
                          '/view/current/pregame.js','/view/current/pregame.css','/view/current/pregame.html',
+                         '/view/current/board-filters.js','/view/current/interaction.css',
+                         '/view/current/mode-settings.js',
                          '/view/current/desk.js','/view/current/desk.css','/view/current/desk-preferences.js',
                          '/view/current/desk-components.css','/view/current/desk-polling.js','/view/current/desk-quote-display.js',
                          '/view/current/desk-ticketboard.css','/view/current/desk-ticketboard.js',

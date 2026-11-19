@@ -101,9 +101,16 @@ def test_grouped_game_expand_compare_and_focus(width, tmp_path):
         page.locator("#game-content .line-open").first.click()
         expect(page.locator("#comparison")).to_be_visible()
         expect(page.locator(".sportsbook-prices")).to_contain_text("DraftKings")
-        page.get_by_role("button", name="Close comparison").click()
+        expect(page.locator("#game-lines")).not_to_be_visible()
+        expect(page.locator("dialog[open]")).to_have_count(1)
+        page.locator("#comparison-back").click()
+        expect(page.locator("#comparison")).not_to_be_visible()
+        expect(page.locator("dialog[open]")).to_have_count(1)
         expect(page.locator("#game-content .line-open").first).to_be_focused()
-        page.get_by_role("button", name="Close game lines").click()
+        # Close comparison exits to the board directly, without reopening a game.
+        page.locator("#game-content .line-open").first.click()
+        page.get_by_role("button", name="Close comparison").click()
+        expect(page.locator("dialog[open]")).to_have_count(0)
         expect(page.locator(".game-open")).to_be_focused()
         assert page.evaluate("document.documentElement.scrollWidth===innerWidth")
         if width == 390:

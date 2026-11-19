@@ -23,14 +23,14 @@ async function request(url,options={}){
 }
 export function createModeSettings(onModeChange=()=>{}){
  let state=null,owner=false,pollTimer,refreshing=false,lastActivity=0,activityPending=false,dialogReturn,formDirty=false;
- const controls=node('div',undefined,'mode-controls'),open=node('button','Mode settings','mode-badge');open.type='button';open.id='mode-settings-open';controls.append(open);
+ const controls=node('div',undefined,'mode-controls'),open=node('button','Settings','mode-badge');open.type='button';open.id='mode-settings-open';controls.append(open);
  document.querySelector('.board-info')?.prepend(controls);
  const dialog=node('dialog',undefined,'mode-settings-dialog');dialog.id='mode-settings';dialog.setAttribute('aria-labelledby','mode-settings-title');
- const heading=node('div',undefined,'dialog-heading'),title=node('h2','Collection settings'),close=node('button','×');title.id='mode-settings-title';close.type='button';close.setAttribute('aria-label','Close collection settings');heading.append(title,close);
+ const heading=node('div',undefined,'dialog-heading'),title=node('h2','Collection settings'),close=node('button','Close ×');title.id='mode-settings-title';close.type='button';close.setAttribute('aria-label','Close collection settings');heading.append(title,close);
  const body=node('div',undefined,'mode-settings-body'),summary=node('p','Loading collection settings…','mode-summary'),access=node('p',undefined,'mode-access'),message=node('p',undefined,'mode-message');message.setAttribute('role','status');
  const signIn=node('a','Sign in through Admin →');signIn.href='/admin?section=settings';access.append(signIn);
  const choices=node('div',undefined,'mode-choices'),switchLabel=node('label',undefined,'mode-switch'),live=node('input'),track=node('span',undefined,'mode-switch-track'),runSummary=node('p',undefined,'mode-run-summary');live.type='checkbox';live.setAttribute('role','switch');live.setAttribute('aria-label','Live mode');live.disabled=true;track.setAttribute('aria-hidden','true');switchLabel.append(live,track,node('span','Live mode'));choices.append(switchLabel);
- const form=node('form',undefined,'mode-settings-form'),fields=new Map();
+ const form=node('form',undefined,'mode-settings-form'),fields=new Map();form.id='mode-settings-form';
  for(const [key,label,unit,multiplier,min,max,step]of durations){
   const field=node('label',undefined,'mode-setting'),text=node('span',label),value=node('input'),range=node('input'),inputs=node('div',undefined,'mode-setting-inputs');
   value.type='number';value.min=String(1/multiplier);value.max=String(31536000/multiplier);value.step=unit==='seconds'?'1':'any';value.required=true;value.setAttribute('aria-label',label+' ('+unit+')');
@@ -43,17 +43,16 @@ export function createModeSettings(onModeChange=()=>{}){
  hours.type='number';hours.min=String(1/3600);hours.max='8760';hours.step='any';hours.setAttribute('aria-label','Custom monitor horizon hours');hours.hidden=true;horizon.onchange=()=>{hours.hidden=horizon.value!=='custom';};
  horizonLabel.append(node('span','Monitor games start within'),horizon,hours);form.append(horizonLabel);
  form.addEventListener('input',()=>{formDirty=true;});
- const save=node('button','Save settings');save.type='submit';save.disabled=true;form.append(save);
- const note=node('p','Monitor continues in the background. Live targets pregame games in its selected window while you are active, then returns to Monitor after inactivity. Existing source Stop and pause choices stay in effect.','mode-explanation');
- body.append(summary,choices,runSummary,access,form,note,message);dialog.append(heading,body);document.body.append(dialog);bindDialogClose(close,dialog);
+ const save=node('button','Save settings');save.type='submit';save.disabled=true;save.setAttribute('form',form.id);
+ body.append(summary,choices,runSummary,access,form);const footer=node('div',undefined,'mode-settings-footer');footer.append(message,save);dialog.append(heading,body,footer);document.body.append(dialog);bindDialogClose(close,dialog);
  function permissions(){
-  for(const control of [...form.querySelectorAll('input,select,button'),live])control.disabled=!owner;
+  for(const control of [...form.querySelectorAll('input,select,button'),live,save])control.disabled=!owner;
   access.hidden=owner;
  }
  function render(){
-  if(!state){open.textContent='Collection settings';return;}
-  open.textContent=(state.mode==='live'?'Live':'Monitor')+' · '+minutes(state.mode==='live'?state.settings.live_interval_seconds:state.settings.monitor_interval_seconds);
-  open.dataset.mode=state.mode;open.setAttribute('aria-label',open.textContent+'. Open collection settings');
+  if(!state){open.textContent='Settings';open.setAttribute('aria-label','Collection settings');return;}
+  open.textContent=state.mode==='live'?'Live · Settings':'Settings';
+  open.dataset.mode=state.mode;open.setAttribute('aria-label','Collection settings'+(state.mode==='live'?' · Live is on':''));
   summary.textContent=state.mode==='live'?'Live · pregame games starting within '+minutes(state.settings.live_window_seconds)+' · target every '+minutes(state.settings.live_interval_seconds):'Monitor · target every '+minutes(state.settings.monitor_interval_seconds);
   if(state.reason==='inactivity')summary.textContent+=' · Live ended after inactivity';
   live.checked=state.mode==='live';
@@ -105,9 +104,4 @@ export function createModeSettings(onModeChange=()=>{}){
  for(const type of ['pointerdown','pointermove','keydown','touchstart','wheel'])document.addEventListener(type,activity,{passive:true,capture:true});
  if(ownerOptIn())authorize();
  permissions();return {update};
-}
-export function collectionBadge(row){
- const kind=row.collection?.kind;if(!['monitor','live'].includes(kind))return null;
- const badge=node('span',kind==='live'?'Live':'Monitor','collection-badge');badge.dataset.kind=kind;
- badge.title=row.collection.origin==='legacy_retained'?'Retained baseline adopted '+(row.collection.observed_at||'at an unknown time')+'; original source clocks shown with quote':'Collected '+(row.collection.observed_at||'at an unknown time');return badge;
 }
