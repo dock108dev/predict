@@ -12,7 +12,8 @@ function impliedPrice(value,units){
  return p>0&&p<1?p:null;
 }
 export function priceDisplay(row,after=false){
- const american=(after?row.display?.after_fees:row.display?.posted_odds)||'Unavailable';
+ // Original American quotes outrank cached display metadata in saved histories.
+ const american=(!after&&row.posted?.units==='american_odds'&&row.posted.value!=null?String(row.posted.value):(after?row.display?.after_fees:row.display?.posted_odds))||'Unavailable';
  if(after)return {primary:american,secondary:'',price:''};
  const native=row.native_price,posted=row.posted||{},value=posted.value,units=posted.units;
  if(native?.text)return {primary:native.text,secondary:native.format==='american'?'':'('+american+')',price:''};

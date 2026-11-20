@@ -558,3 +558,200 @@ def test_touch_calculation_close_after_scroll_preserves_comparison_and_return():
             await browser.close()
 
     asyncio.run(journey())
+
+
+@pytest.mark.parametrize("width", [1440, 390, 320])
+def test_research_amounts_never_save_and_navigation_restores_scope(width, tmp_path):
+    from playwright.sync_api import sync_playwright, expect
+
+    row = offer()
+    row["game"] = (
+        "A very long visiting college basketball team at Another very long home university"
+    )
+    row["raw"].update(
+        posted_decimal="2.2", after_fee_decimal="2.176", expected_profit_usd="8.8"
+    )
+    writes, queries, research = [], [], []
+
+    def serve(route):
+        url = urlparse(route.request.url)
+        q = {k: v[0] for k, v in parse_qs(url.query).items()}
+        if url.path == "/api/pregame/research":
+            body = route.request.post_data_json
+            research.append(body)
+            if body["amount"] == "26":
+                route.fulfill(
+                    status=409, json={"error": "The retained price inputs changed."}
+                )
+                return
+            modeled = deepcopy(row)
+            amount = body["amount"]
+            # Authored outputs: UI must consume supplied model results, not scale $100.
+            modeled["fee"].update(
+                committed_usd=amount,
+                entry_usd="0.13",
+                purchase_usd=str(float(amount) - 0.13),
+            )
+            modeled["fee"]["cashflows"]["win"]["net_receipt_usd"] = (
+                "53.47" if amount == "25" else "1088.17"
+            )
+            modeled["raw"]["expected_profit_usd"] = (
+                "1.73" if amount == "25" else "44.09"
+            )
+            route.fulfill(
+                json=dict(result=modeled, research_only=True, journal_writes=0)
+            )
+        elif url.path.startswith("/api/bet-journal"):
+            writes.append(route.request.post_data_json)
+            route.fulfill(status=503, json={})
+        elif url.path.endswith("/updates"):
+            route.fulfill(json={"changed": False})
+        elif url.path == "/api/pregame":
+            queries.append(q)
+            route.fulfill(
+                json=dict(
+                    cursor="one",
+                    rows=[row],
+                    total=1,
+                    sportsbooks=[],
+                    refresh_at=row["kickoff"],
+                )
+            )
+        elif url.path.startswith("/view/"):
+            route.fulfill(path=ASSETS / Path(url.path).name)
+        else:
+            route.fulfill(
+                path=ASSETS / ("about.html" if url.path == "/about" else "pregame.html")
+            )
+
+    with sync_playwright() as pw:
+        browser = pw.chromium.launch()
+        page = browser.new_page(viewport={"width": width, "height": 844})
+        errors = []
+        page.on("pageerror", lambda e: errors.append(str(e)))
+        page.route("**/*", serve)
+        page.goto("http://predict.fixture/")
+        page.locator(".row-open").click()
+        expect(page.locator(".amount-result")).to_contain_text(
+            "expected profit of $8.80"
+        )
+        page.get_by_role("button", name="$25", exact=True).click()
+        expect(page.locator(".amount-result")).to_contain_text("$53.47")
+        expect(page.locator(".amount-result")).to_contain_text(
+            "expected profit of $1.73"
+        )
+        page.get_by_role("button", name="$500", exact=True).click()
+        expect(page.locator(".amount-result")).to_contain_text("$1088.17")
+        expect(page.locator(".size-evidence")).to_contain_text("Unknown")
+        assert [r["amount"] for r in research] == ["25", "500"]
+        assert not writes
+        page.get_by_role("spinbutton", name="Illustrative cash budget").fill("26")
+        page.get_by_role("button", name="Evaluate amount", exact=True).click()
+        expect(page.locator(".amount-research > [role=status]")).to_contain_text(
+            "inputs changed"
+        )
+        expect(page.locator(".amount-result")).to_contain_text("$1088.17")
+        expect(page.locator(".comparison-record")).to_contain_text("Recording actions")
+        page.get_by_role("button", name="Record bet", exact=True).click()
+        expect(page.locator(".comparison-record")).to_contain_text("save unconfirmed")
+        assert len(writes) == 1
+        assert writes[0]["snapshot"]["fee"]["committed_usd"] == "100"
+        expect(page.get_by_role("button", name="Retry record bet")).to_be_enabled()
+        assert page.evaluate("document.documentElement.scrollWidth===innerWidth")
+        page.screenshot(path=str(tmp_path / f"research-{width}.png"))
+        page.get_by_role("button", name="Close comparison", exact=True).click()
+        page.get_by_role("searchbox", name="Search teams").fill("Orlando")
+        page.locator("#board-advanced > summary").click()
+        page.locator("#family").select_option("total")
+        page.locator("#max-age").fill("15")
+        expect(page.locator("#active-filters")).to_contain_text("15m")
+        page.goto("http://predict.fixture/about")
+        page.go_back()
+        expect(page.get_by_role("searchbox", name="Search teams")).to_have_value(
+            "Orlando"
+        )
+        expect(page.locator("#family")).to_have_value("total")
+        expect(page.locator("#max-age")).to_have_value("15")
+        expect(page.locator("#active-filters")).to_contain_text("15m")
+        expect(page.locator("#request-status")).to_have_text("")
+        assert queries[-1]["family"] == "total"
+        assert queries[-1]["max_age_minutes"] == "15"
+        page.get_by_role("link", name="Browse odds", exact=True).click()
+        page.get_by_role("searchbox", name="Search teams").fill("Bucks")
+        page.get_by_role("link", name="Opportunities", exact=True).click()
+        expect(page.get_by_role("searchbox", name="Search teams")).to_have_value(
+            "Orlando"
+        )
+        page.get_by_role("link", name="Browse odds", exact=True).click()
+        expect(page.get_by_role("searchbox", name="Search teams")).to_have_value(
+            "Bucks"
+        )
+        assert not errors, errors
+        browser.close()
+
+
+def test_historical_comparison_from_game_checks_current_alternatives():
+    from playwright.sync_api import sync_playwright, expect
+
+    row = offer()
+    row["raw"].update(posted_decimal="2.2", after_fee_decimal="2.176")
+    state = {"retired": False, "revision": "one"}
+    game_reads = []
+
+    def serve(route):
+        url = urlparse(route.request.url)
+        q = {k: v[0] for k, v in parse_qs(url.query).items()}
+        if url.path.endswith("/updates"):
+            route.fulfill(json=dict(changed=q.get("after") != state["revision"]))
+        elif url.path == "/api/pregame":
+            rows = [] if q.get("bet_id") and state["retired"] else [row]
+            if q.get("view") == "game":
+                game_reads.append(q)
+            packet = dict(
+                cursor=state["revision"],
+                rows=rows,
+                total=len(rows),
+                refresh_at=row["kickoff"],
+            )
+            if q.get("view") == "games":
+                packet.update(
+                    rows=[],
+                    games=[
+                        {
+                            **{
+                                k: row[k]
+                                for k in ("game_key", "game", "league", "kickoff")
+                            },
+                            "rows": [row],
+                        }
+                    ],
+                )
+            route.fulfill(json=packet)
+        else:
+            route.fulfill(
+                path=ASSETS
+                / (
+                    Path(url.path).name
+                    if url.path.startswith("/view/")
+                    else "pregame.html"
+                )
+            )
+
+    with sync_playwright() as pw:
+        browser = pw.chromium.launch()
+        page = browser.new_page(viewport={"width": 390, "height": 844})
+        page.route("**/*", serve)
+        page.goto("http://predict.fixture/browse-odds")
+        page.locator(".game-open").click()
+        page.locator("#game-content .line-open").first.click()
+        state.update(retired=True, revision="two")
+        expect(page.locator(".comparison-status")).to_contain_text("Historical")
+        expect(page.locator(".selected-summary")).to_contain_text("+120")
+        page.get_by_role(
+            "button", name="Check current alternatives", exact=True
+        ).click()
+        expect(page.locator("#game-lines")).to_be_visible()
+        expect(page.locator("#game-content .line-open")).to_be_visible()
+        expect(page.locator("#game-content")).not_to_contain_text("Loading alternate")
+        assert len(game_reads) == 2
+        browser.close()

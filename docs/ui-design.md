@@ -27,8 +27,27 @@ and receipt clocks are available in inspection details. First-load failure shows
 one actionable notice. Empty and one-page results hide pagination; additional
 pages remain reachable. Refresh feedback describes the read, not provider freshness.
 
-There are no unit-size, calculation-mode or execution-depth controls in the
-ordinary board. Current rows do not depend on research publication or saved
+Predict 0.2.0 adds **Explore an amount** inside single-pick and paired comparisons.
+The $25/$100/$500 presets and editable total cash budget use the existing Python
+fee and allocation owners, including legal increments and fee rounding. Research
+never saves a quote, records a bet, updates balances or submits an order. Recording
+controls save the original inspected quote and remain separate from research.
+The first view shows source/after-fee/reference prices, cash committed, win/loss,
+conditional expected profit and size status. Underlined values open explanations;
+Net EV retains its hover/focus reference preview.
+
+A comparison that leaves the eligible population retains its last displayed
+quote, reference and math as a historical, non-executable snapshot. **Check current
+alternatives** explicitly opens its game. Session-only per-board navigation restores
+search, market, sorting, age controls, expanded filters, page, scroll and an open
+game. Filter values are restored before requesting results and drawing chips.
+All game lines has market jumps, starts at the selected family, and groups alternate
+lines below main lines. Available size remains Unknown unless a directly linked,
+synchronized native top ask supplies exact-price quantity and its own clocks.
+Provider market links are labeled as retained links; generic venue home links are
+labeled generic and include a copyable exact opportunity summary.
+
+There are no execution-depth controls in the ordinary board. Current rows do not depend on research publication or saved
 capture readiness. [Data flow and API](current-pregame.md)
 
 ## Composition and responsive behavior

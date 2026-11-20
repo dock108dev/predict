@@ -21,6 +21,99 @@ from app.storage import current_pregame as board
 
 @skipUnless(SOCKET, "Disposable PostgreSQL required")
 class CurrentPregameSQL(PregameFixture):
+    async def test_research_amounts_are_read_only_and_bind_price_fee_reference(self):
+        from app.storage.pregame_research import research, ChangedInputs
+        from app.storage.pregame_quote_evidence import enrich
+        from app.dashboard.bet_journal import Journal
+        from app.dashboard import current_pregame_api
+        from aiohttp import web
+        from aiohttp.test_utils import TestClient, TestServer
+        from psycopg.types.json import Jsonb
+
+        at = stamp(AT)
+        with self.connect() as db:
+            self.ingest(db, page())
+            self.process(db)
+            row = board.read(db, {}, at=at)["rows"][0]
+            enriched = enrich(db, [row])[0]
+            self.assertEqual(enriched["available_size"]["status"], "unknown")
+            before = list(
+                db.execute(
+                    "SELECT * FROM current_pregame_calculation ORDER BY contract_id"
+                )
+            )
+            request = dict(kind="ev", snapshot=row, amount="25")
+            with db.transaction():
+                db.execute("SET TRANSACTION READ ONLY")
+                with patch.object(
+                    Journal,
+                    "observe",
+                    side_effect=AssertionError("research wrote journal"),
+                ):
+                    for amount in ("25", "100", "500", "25.13"):
+                        request["amount"] = amount
+                        result = research(db, request, at=at)
+                        self.assertEqual(result["journal_writes"], 0)
+                        modeled = result["result"]
+                        self.assertLessEqual(
+                            Fraction(modeled["fee"]["committed_usd"]), Fraction(amount)
+                        )
+                        self.assertEqual(modeled["reference"], row["reference"])
+                        cash = modeled["fee"]["cashflows"]
+                        p = Fraction(row["reference"]["probability"])
+                        expected = (
+                            p * Fraction(cash["win"]["net_receipt_usd"])
+                            + (1 - p) * Fraction(cash["loss"]["net_receipt_usd"])
+                            - Fraction(modeled["fee"]["committed_usd"])
+                        )
+                        self.assertEqual(
+                            Fraction(modeled["raw"]["expected_profit_usd"]), expected
+                        )
+            self.assertEqual(
+                before,
+                list(
+                    db.execute(
+                        "SELECT * FROM current_pregame_calculation ORDER BY contract_id"
+                    )
+                ),
+            )
+            altered = deepcopy(row)
+            altered["reference"]["probability"] = "0.99"
+            with self.assertRaises(ChangedInputs):
+                research(db, dict(request, snapshot=altered), at=at)
+            altered = deepcopy(row)
+            altered["posted"]["value"] = "+999"
+            with self.assertRaises(ChangedInputs):
+                research(db, dict(request, snapshot=altered), at=at)
+            # Missing probability still supports price/fee amount research.
+            db.execute(
+                "UPDATE current_pregame_calculation SET payload=NULL,net_ev=NULL,opportunity_score=NULL,reason=%s WHERE contract_id=%s",
+                ("reference_unavailable", row["id"]),
+            )
+            missing = dict(row, reference=None)
+            missing["ev_unavailable_reason"] = "reference_unavailable"
+            result = research(db, dict(request, snapshot=missing), at=at)["result"]
+            self.assertIsNone(result["raw"]["expected_profit_usd"])
+            self.assertIsNone(result["display"]["net_ev"])
+
+        application = web.Application()
+        current_pregame_api.mount(application)
+        with (
+            patch.object(current_pregame_api, "connect", self.connect),
+            patch.object(board, "utc", return_value=at),
+        ):
+            async with TestClient(TestServer(application)) as client:
+                response = await client.post(
+                    "/api/pregame/research?data_type=all",
+                    json=dict(request, snapshot=row),
+                )
+                self.assertEqual(response.status, 200, await response.text())
+                invalid = await client.post(
+                    "/api/pregame/research?data_type=all",
+                    json=dict(request, amount="0.001"),
+                )
+                self.assertEqual(invalid.status, 422)
+
     async def test_maximum_source_age_checks_reference_clocks_and_earliest_deadline(
         self,
     ):

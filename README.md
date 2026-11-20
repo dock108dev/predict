@@ -1,5 +1,8 @@
 # Predict
 
+Version **0.2.0** adds read-only amount research, decision-visible cashflows and
+size status, retained comparisons, and session navigation context.
+
 Predict is an odds and opportunity board with a personal trade journal. It
 opens on **Pregame Opportunities**, showing complete main-line bets ranked by modeled
 **Probability edge** after fees. **Rank by** also offers Kelly growth, Net EV, the original

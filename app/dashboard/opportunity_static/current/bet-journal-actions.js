@@ -2,16 +2,18 @@
 export function recordAction(snapshot,existing){
  if(existing?.updateQuote){existing.updateQuote(snapshot);return existing;}
  const button=document.createElement('button');button.type='button';button.className='record-bet';button.textContent='Record bet';button.dataset.focusKey='record-'+snapshot.id;
+ button.recordStatus=document.createElement('span');button.recordStatus.setAttribute('role','status');
  let current=structuredClone(snapshot);
  button.updateQuote=value=>{current=structuredClone(value);};
  button.onclick=async()=>{
   if(button.disabled)return;
-  const frozen=structuredClone(current);button.disabled=true;button.textContent='Saving quote…';
+  const frozen=structuredClone(current);button.disabled=true;button.textContent='Saving quote…';button.recordStatus.textContent='Saving a research quote first. Actual stake and odds are entered on My Bets.';
   try{
    const response=await fetch('/api/bet-journal',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:'ev',snapshot:frozen})});
-   if(!response.ok)throw Error();const data=await response.json();
-   if(button.isConnected&&button.closest('dialog')?.open)location.assign('/my-bets?'+new URLSearchParams({entry:(data.entry||data).id,record:'1'}));
-  }catch{button.textContent='Retry record bet';}
+   if(!response.ok){const error=Error();error.rejected=[400,403,413,415,422].includes(response.status);throw error;}const data=await response.json();const id=(data.entry||data).id;if(!id)throw Error();
+   button.recordStatus.textContent='Quote saved. No bet has been recorded.';
+   if(button.isConnected&&button.closest('dialog')?.open)location.assign('/my-bets?'+new URLSearchParams({entry:id,record:'1'}));
+  }catch(error){button.textContent='Retry record bet';button.recordStatus.textContent=error.rejected?'Quote rejected; nothing saved by this request. No bet recorded.':'Quote save unconfirmed; it may have persisted. Check My Bets or retry the same quote safely. No bet was recorded.';}
   finally{button.disabled=false;}
  };
  return button;
@@ -49,9 +51,9 @@ export function journalAction(kind, snapshot, label, existing) {
     try{
       const response=await fetch('/api/bet-journal',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind,snapshot:frozen})});
       const data=await response.json();
-      if(!response.ok)throw Error(data.message||data.error||'Save failed');
-      saved={id:(data.entry||data).id,fingerprint};
-    }catch(e){failed=true;status.textContent=fingerprint===JSON.stringify(current)?'Could not save. Retry to keep this quote.':'Could not save the earlier quote. Retry to save the displayed quote.';}
+      if(!response.ok){const error=Error(data.message||data.error||'Save failed');error.rejected=[400,403,413,415,422].includes(response.status);throw error;}
+      const id=(data.entry||data).id;if(!id)throw Error();saved={id,fingerprint};
+    }catch(e){failed=true;status.textContent=e.rejected?'Could not save: quote rejected. No record saved by this request.':'Could not confirm save; the quote may have persisted. Check My Bets or retry the same quote safely.';}
     finally{pending=false;render();}
   };
   section.append(button,status);render();return section;

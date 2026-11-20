@@ -31,12 +31,19 @@ def mount(app, *, journal=None, monitor=True):
                 key = await asyncio.to_thread(
                     journal.observe, body["kind"], body["snapshot"], manual=True
                 )
-                result = await asyncio.to_thread(journal.get, key)
             except (ValueError, KeyError, TypeError):
                 return web.json_response(
                     dict(error="The original opportunity snapshot is incomplete"),
                     status=422,
                 )
+            try:
+                result = await asyncio.to_thread(journal.get, key)
+            except Exception as exc:
+                # observe committed successfully. A later read failure cannot
+                # truthfully report a failed save or encourage another bet.
+                from app.diagnostics import failure
+                failure(__name__, "saved_quote_read", exc)
+                result = dict(id=key, quote_saved=True, details_available=False)
             return web.json_response(result, status=201)
         download = request.query.get("download")
         if download and download not in ("json", "csv"):

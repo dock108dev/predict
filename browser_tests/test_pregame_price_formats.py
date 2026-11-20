@@ -38,6 +38,7 @@ def test_contract_quote_formats_and_legacy_fallback():
             raw:{posted_decimal:'2.09',after_fee_decimal:'548625/267307'},display:{posted_odds:'+109',after_fees:'+105'}};
           const before=JSON.stringify(row);
           return {
+            staleDisplay:priceDisplay({...row,venue:'novig',posted:{value:'+150',units:'american_odds'},display:{posted_odds:'+120'}}),
             unavailable:priceDisplay(row),after:priceDisplay(row,true),
             venueFormats:['kalshi','polymarket_us','novig','prophetx'].map(venue=>[122,-110].map(price=>priceDisplay({venue,posted:{value:String(price),units:'american_odds'},display:{posted_odds:price>0?'+'+price:String(price)}}))),
             normalized:priceDisplay({...row,posted:{value:'+126',units:'american_odds'},source:{provider:'sportsgameodds'}}),
@@ -49,6 +50,9 @@ def test_contract_quote_formats_and_legacy_fallback():
             suggestedCommission:suggestedTrades({kind:'ev',snapshot:commission}),
             suggestedNhl:suggestedTrades({kind:'ev',snapshot:nhl}),unchanged:JSON.stringify(row)===before};
         }""")
+        assert result["staleDisplay"] == dict(
+            primary="40%", secondary="(+150)", price=""
+        )
         assert result["unavailable"] == dict(
             primary="+126", secondary="", price="Source price unavailable"
         )

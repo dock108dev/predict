@@ -89,6 +89,11 @@ async def response(request, *, connector=None):
             if scope:
                 query["_scope_seconds"] = str(scope)
             select_cohort(db, kind)
+            if request.path.endswith("/research"):
+                from app.storage.pregame_research import research
+                from app.storage.current_pregame import utc
+
+                return research(db, research_body, at=utc())
             if request.path.endswith("/arbs"):
                 result = read(
                     db,
@@ -99,6 +104,20 @@ async def response(request, *, connector=None):
                 )
             else:
                 result = read(db, query)
+            from app.storage.pregame_quote_evidence import enrich
+
+            if query.get("bet_id") or query.get("id"):
+                result["rows"] = enrich(db, result.get("rows", []))
+            elif request.path.endswith("/arbs"):
+                legs = [leg for pair in result["rows"] for leg in pair["legs"]]
+                evidence = enrich(db, legs)
+                result = dict(
+                    result,
+                    rows=[
+                        dict(pair, legs=evidence[i * 2 : i * 2 + 2])
+                        for i, pair in enumerate(result["rows"])
+                    ],
+                )
         return dict(
             result,
             data_type=kind,
@@ -106,6 +125,11 @@ async def response(request, *, connector=None):
             read_ms=round((monotonic() - started) * 1000, 3),
         )
 
+    research_body = None
+    if request.path.endswith("/research"):
+        from .local_security import read_json
+
+        research_body = await read_json(request)
     try:
         async with asyncio.timeout(read_seconds):
             result = await asyncio.to_thread(work)
@@ -117,7 +141,18 @@ async def response(request, *, connector=None):
             ),
             status=503,
         )
-    except (TypeError, ValueError):
+    except (TypeError, ValueError) as exc:
+        from app.storage.pregame_research import ChangedInputs
+
+        if isinstance(exc, ChangedInputs):
+            return web.json_response(dict(error=str(exc)), status=409)
+        if research_body is not None:
+            return web.json_response(
+                dict(
+                    error="This amount cannot be evaluated with the retained inputs. Enter a cash budget with cents precision or check current alternatives."
+                ),
+                status=422,
+            )
         raise web.HTTPBadRequest(text="Invalid current pregame query") from None
     except Exception as exc:
         from app.diagnostics import failure
@@ -151,3 +186,4 @@ def mount(app):
     app.router.add_get("/api/pregame", response)
     app.router.add_get("/api/pregame/arbs", response)
     app.router.add_get("/api/pregame/updates", response)
+    app.router.add_post("/api/pregame/research", response)

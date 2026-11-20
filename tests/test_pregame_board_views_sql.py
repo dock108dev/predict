@@ -354,6 +354,56 @@ class PregameBoardViewsSQL(PregameFixture):
                     with self.subTest(query=query):
                         self.assertEqual(arbs.read(db, query, at=stamp(AT)), packet)
 
+    async def test_paired_amount_research_uses_both_owners_without_writes(self):
+        from app.storage import pregame_arbs as arbs
+        from app.storage.pregame_research import research
+        from app.dashboard.bet_journal import Journal
+
+        with self.connect() as db:
+            self.ingest(db, page())
+            self.process(db)
+            arbs._CACHE.clear()
+            arbs._SCAN_CACHE.clear()
+            pairs = arbs.read(db, {}, at=stamp(AT))["rows"]
+            self.assertTrue(pairs)
+            pair = pairs[0]
+            before = list(
+                db.execute("SELECT * FROM current_pregame_price ORDER BY contract_id")
+            )
+            with db.transaction():
+                db.execute("SET TRANSACTION READ ONLY")
+                with patch.object(
+                    Journal,
+                    "observe",
+                    side_effect=AssertionError("research wrote journal"),
+                ):
+                    for amount in ("25", "100", "500", "25.13"):
+                        result = research(
+                            db,
+                            dict(kind="arb", snapshot=pair, amount=amount),
+                            at=stamp(AT),
+                        )["result"]
+                        self.assertLessEqual(
+                            Fraction(result["committed_usd"]), Fraction(amount)
+                        )
+                        self.assertEqual(result["basis_usd"], amount)
+                        self.assertEqual(len(result["legs"]), 2)
+                        for leg in result["legs"]:
+                            self.assertNotIn("reference", leg)
+                            self.assertEqual(leg["available_size"]["status"], "unknown")
+                        self.assertEqual(
+                            Fraction(result["minimum_profit_usd"]),
+                            min(map(Fraction, result["profits_usd"])),
+                        )
+            self.assertEqual(
+                before,
+                list(
+                    db.execute(
+                        "SELECT * FROM current_pregame_price ORDER BY contract_id"
+                    )
+                ),
+            )
+
     async def test_arb_filter_reuse_preserves_scope_age_cohort_and_withdrawals(self):
         from app.storage import pregame_arbs as arbs
         from app.storage.pregame_cohorts import select
@@ -830,12 +880,15 @@ class PregameBoardViewsSQL(PregameFixture):
             for outer in (False, True):
                 from contextlib import nullcontext
 
-                with self.subTest(outer_transaction=outer), (
-                    db.transaction() if outer else nullcontext()
+                with (
+                    self.subTest(outer_transaction=outer),
+                    db.transaction() if outer else nullcontext(),
                 ):
                     db.execute("SELECT set_config('jit','on',false)")
                     self.assertEqual(
-                        book_query(db, "SELECT current_setting('jit') AS jit", None).fetchone()["jit"],
+                        book_query(
+                            db, "SELECT current_setting('jit') AS jit", None
+                        ).fetchone()["jit"],
                         "off",
                     )
                     self.assertEqual(db.execute("SHOW jit").fetchone()["jit"], "on")
@@ -872,11 +925,17 @@ class PregameBoardViewsSQL(PregameFixture):
                         rows = read_book_quotes(db, request)
                         self.assertEqual(len(rows), expected)
                         if expected:
-                            originals = [r["facts"] for r in db.execute(
-                                "SELECT facts FROM current_sgo_reference WHERE event_id='event'"
-                            ) if r["facts"].get("venue") in ("fanduel", "draftkings")]
+                            originals = [
+                                r["facts"]
+                                for r in db.execute(
+                                    "SELECT facts FROM current_sgo_reference WHERE event_id='event'"
+                                )
+                                if r["facts"].get("venue") in ("fanduel", "draftkings")
+                            ]
                             self.assertCountEqual(rows, originals)
-            db.execute("UPDATE sgo_quote_revision SET facts='\"malformed\"' WHERE is_current")
+            db.execute(
+                "UPDATE sgo_quote_revision SET facts='\"malformed\"' WHERE is_current"
+            )
             self.assertEqual(read_book_quotes(db, request), [])
 
     async def test_pending_reference_job_suppresses_pairs_before_recalculation(self):

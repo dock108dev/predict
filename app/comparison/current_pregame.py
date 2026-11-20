@@ -345,6 +345,9 @@ def calculate(record, ref, fee, *, at, game_key, amount=COMPARISON_USD):
             rounding_trace=trace,
             comparison_basis_usd=wire(amount),
             committed_usd=wire(committed),
+            purchase_usd=wire(wager),
+            quantity=None if stake else wire(sum(quantity for _, quantity in legs)),
+            quantity_increment=wire(step),
         ),
         raw=dict(
             posted_decimal=wire(1 / cost),

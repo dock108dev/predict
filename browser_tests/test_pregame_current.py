@@ -206,15 +206,18 @@ def test_current_pregame_journey(width, tmp_path):
         ).to_be_focused()
         page.get_by_role("button", name="Close comparison").click()
         expect(page.get_by_role("button", name="Compare prices")).to_be_focused()
-        # A withdrawn exact line clears the open drawer and its save controls.
+        # A withdrawn line retains research and clearly loses current eligibility.
         page.get_by_role("button", name="Compare prices").click()
         state["empty"] = True
         state["revision"] = "three"
         expect(page.locator("#comparison")).to_contain_text(
-            "This line is no longer available"
+            "Historical research snapshot"
         )
-        expect(page.locator("#comparison .exchange-prices")).to_have_count(0)
-        expect(page.locator("#comparison .journal-action")).to_have_count(0)
+        expect(page.locator("#comparison .exchange-prices")).to_have_count(1)
+        expect(page.locator("#comparison")).to_contain_text("Not executable")
+        expect(
+            page.get_by_role("button", name="Check current alternatives")
+        ).to_be_visible()
         page.get_by_role("button", name="Close comparison").click()
         state["empty"] = False
         state["revision"] = "four"

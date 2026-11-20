@@ -25,6 +25,14 @@ attached to an aggregate quote without an exact, qualified binding. Different
 venues can use different contract payout units; price percentages alone do not
 establish equivalent cash amounts.
 
+Comparisons put **Available size: Unknown** beside the amount when the observation
+has no price-specific quantity. Aggregate American odds and historical volume do
+not supply that evidence. For directly sourced Kalshi/Polymarket US quotes, a linked
+current, active, synchronized native top ask at the identical price can show its
+observed contracts and independent book source/receipt timestamps. This is observed
+book evidence, not a fill promise. A different price, missing binding or unavailable
+book keeps the Unknown state.
+
 A top-level quantity supports only that captured level. Larger amounts may cross
 levels, pay different fees, fail a legal quantity grid or leave cash unspent.
 Displayed depth can change before an order is accepted. Account limits and actual

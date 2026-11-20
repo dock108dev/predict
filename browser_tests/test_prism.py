@@ -359,7 +359,7 @@ def test_site_prices_compact_saved_bookmark_and_ev_reference_preview(width, tmp_
         save.click()
         error = row.locator('.row-save [role="status"]')
         expect(error).to_be_visible()
-        expect(error).to_contain_text("Could not save")
+        expect(error).to_contain_text("Could not confirm save")
         fixture.fail_save = False
         save.click()
         expect(row.locator(".row-save")).to_have_attribute("data-state", "saved")

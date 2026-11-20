@@ -48,6 +48,53 @@ class FeePricingSQL(LatestBoardFixture):
             )
             db.execute("DELETE FROM public_fee_schedule")
 
+    async def test_research_contract_quantities_and_entry_fees_are_amount_specific(
+        self,
+    ):
+        from app.storage.pregame_research import research
+        from app.fees import pricing
+        from tests.test_fee_pricing import rule
+
+        at = stamp(AT)
+        data = page()
+        for odd in data["data"][0]["odds"].values():
+            for venue in ("kalshi", "polymarket"):
+                odd["byBookmaker"][venue] = deepcopy(odd["byBookmaker"]["prophetx"])
+        with self.connect() as db:
+            for venue in ("kalshi", "polymarket_us"):
+                pricing.write(db, venue, [rule(venue)])
+            parsed = parse(data)
+            refs = prepare_page(parsed)
+            records, _ = current_rows(parsed, parsed.receipt_sha256)
+            with db.transaction():
+                upsert_rows(db, refs)
+                upsert_frames(db, prepare_frames(parsed, refs))
+                CurrentRowStore(db).upsert_records(records, now=AT)
+            board.process(db, at=at)
+            for venue in ("kalshi", "polymarket_us"):
+                row = board.read(db, dict(venue=venue), at=at)["rows"][0]
+                for amount in ("25", "100", "500", "25.13"):
+                    modeled = research(
+                        db, dict(kind="ev", snapshot=row, amount=amount), at=at
+                    )["result"]
+                    fee = modeled["fee"]
+                    quantity, step = (
+                        Fraction(fee["quantity"]),
+                        Fraction(fee["quantity_increment"]),
+                    )
+                    self.assertEqual((quantity / step).denominator, 1)
+                    self.assertGreater(Fraction(fee["entry_usd"]), 0)
+                    self.assertEqual(
+                        Fraction(fee["purchase_usd"])
+                        + Fraction(fee["entry_usd"])
+                        + Fraction(fee["reserve_usd"]),
+                        Fraction(fee["committed_usd"]),
+                    )
+                    self.assertLessEqual(
+                        Fraction(fee["committed_usd"]), Fraction(amount)
+                    )
+                    self.assertEqual(modeled["available_size"]["status"], "unknown")
+
     async def test_fee_edit_recalculates_sgo_kalshi_and_polymarket_with_original_clocks(
         self,
     ):

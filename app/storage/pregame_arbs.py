@@ -291,6 +291,14 @@ def book_entry(quote, template, *, at):
                 cashflows={},
             ),
         )
+        from .pregame_quote_evidence import market_link
+
+        if link := market_link(quote["venue"], quote.get("bookmaker_market_link")):
+            payload["verification_link"] = dict(
+                url=link,
+                scope="market",
+                basis="Retained provider market link; verify venue identity and terms",
+            )
         return dict(payload=payload, sportsbook=True)
     except (KeyError, ValueError, TypeError, ArithmeticError):
         return None

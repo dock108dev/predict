@@ -208,8 +208,12 @@ def test_opportunity_log_keeps_only_positive_unique_market_arbs_and_selected_ev(
         expect(arb_card.locator(".journal-details")).not_to_have_attribute("open", "")
         visible_legs = arb_card.locator(":scope > p.journal-observed")
         expect(visible_legs).to_be_visible()
-        expect(visible_legs).to_contain_text("ProphetX · Orlando Magic -1.5 · +120")
-        expect(visible_legs).to_contain_text("Novig · Milwaukee Bucks +1.5 · +110")
+        expect(visible_legs).to_contain_text(
+            "ProphetX · Orlando Magic -1.5 · 45.45% (+120)"
+        )
+        expect(visible_legs).to_contain_text(
+            "Novig · Milwaukee Bucks +1.5 · 47.62% (+110)"
+        )
         observed = arb_card.locator(".journal-observed-arb")
         expect(observed).to_be_visible()
         for value in ("+5.00%", "$10.00", "$200.00"):
@@ -397,8 +401,8 @@ def test_observed_arb_details_load_full_closes_lazily_and_retry_without_losing_f
         assert not fixture.detail_reads
         primary = card.locator(":scope > .journal-observed")
         expect(primary).to_be_visible()
-        expect(primary).to_contain_text("ProphetX · Orlando Magic -1.5 · +120")
-        expect(primary).to_contain_text("Novig · Milwaukee Bucks +1.5 · +110")
+        expect(primary).to_contain_text("ProphetX · Orlando Magic -1.5 · 45.45% (+120)")
+        expect(primary).to_contain_text("Novig · Milwaukee Bucks +1.5 · 47.62% (+110)")
         expect(card.locator(".journal-observed-arb")).to_contain_text("+5.00%")
         details = card.locator(".journal-details")
         expect(details).not_to_have_attribute("open", "")
@@ -435,8 +439,8 @@ def test_observed_arb_details_load_full_closes_lazily_and_retry_without_losing_f
         pending.pop().fulfill(json=fixture.journal.get(key, history=True))
         closes = details.get_by_role("region", name="Closing prices")
         expect(closes).to_be_visible()
-        expect(closes).to_contain_text("Orlando Magic -1.5 · +120")
-        expect(closes).to_contain_text("Milwaukee Bucks +1.5 · +110")
+        expect(closes).to_contain_text("Orlando Magic -1.5 · 45.45% (+120)")
+        expect(closes).to_contain_text("Milwaukee Bucks +1.5 · 47.62% (+110)")
         close_math = details.locator(".journal-figure").filter(
             has=page.locator(
                 "span", has_text=re.compile(r"^Closing quote model return$")

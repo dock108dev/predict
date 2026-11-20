@@ -162,7 +162,16 @@ without waiting for another provider response. Failed refreshes preserve rendere
 rows. Inspection keeps a compact selected-row copy, with source clocks in details.
 
 Ordinary pregame requests to `/api/comparison-current` forward to this read path.
-Retired amount/mode parameters return HTTP 410 explicitly. Live research and
+Retired amount/mode board parameters return HTTP 410 explicitly.
+`POST /api/pregame/research?data_type=<inspected cohort>` accepts `kind`, the
+inspected `snapshot`, and an `amount` string (total cash budget). It runs in a
+repeatable-read, read-only transaction with no journal dependency or acquisition.
+It resolves retained source and fee inputs, verifies the original price, clocks
+and reference, and calls the existing single-pick or paired calculation owner.
+Changed inputs return 409 with the original display preserved; invalid/unfundable
+amounts return 422. Missing references keep price/fee research available with null
+EV. Paired research may show nonpositive results at a different amount; it does not
+change positive-pair board admission. The model does not consume or infer depth. Live research and
 saved replay retain their separate contracts. The current Arbitrage page uses the
 reference-free price read below.
 Captured Arbitrage game links redirect to the existing saved-game reader with

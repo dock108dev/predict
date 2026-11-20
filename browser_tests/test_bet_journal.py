@@ -514,7 +514,7 @@ def test_closing_market_and_fair_odds_show_exact_pick_and_alt_bracket(width, tmp
         page.locator(".journal-details > summary").click()
         closing = page.get_by_role("region", name="Closing prices")
         expect(closing).to_contain_text("Exact-pick close · Novig")
-        expect(closing).to_contain_text("Over 145.5 · +115")
+        expect(closing).to_contain_text("Over 145.5 · 46.51% (+115)")
         expect(closing).to_contain_text("Closing fair odds · DraftKings")
         expect(closing).to_contain_text("+104")
         expect(closing).to_contain_text("book price -110")
@@ -552,7 +552,7 @@ def test_closing_market_and_fair_odds_show_exact_pick_and_alt_bracket(width, tmp
         expect(closing).to_contain_text(
             "Interpolated fair probability 50.00% · range 40.00%–60.00%"
         )
-        expect(closing).to_contain_text("Over 145.5 · +115")
+        expect(closing).to_contain_text("Over 145.5 · 46.51% (+115)")
         assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
         page.screenshot(
             path=str(tmp_path / f"closing-bracket-{width}.png"), full_page=True

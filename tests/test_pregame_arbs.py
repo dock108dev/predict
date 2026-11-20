@@ -246,3 +246,77 @@ def test_api_deadline_cooperatively_stops_background_pair_work():
     assert stopped.is_set()
     assert "SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY" in statements
     assert "SET LOCAL statement_timeout='8s'" in statements
+
+
+@pytest.mark.parametrize("budget", ["25", "100", "500", "25.13"])
+def test_research_budget_rebalances_cents_and_can_show_nonpositive_results(budget):
+    left, right = entry("novig", "home", "2.3"), entry("fanduel", "away", "2.05")
+    result = evaluate(left, right, at=AT, budget=F(budget), positive_only=False)
+    assert F(result["committed_usd"]) <= F(budget)
+    assert F(result["basis_usd"]) == F(budget)
+    assert F(result["committed_usd"]) + F(result["unused_usd"]) == F(budget)
+    for leg in result["legs"]:
+        assert (F(leg["fee"]["purchase_usd"]) * 100).denominator == 1
+    for receipts, profit in zip(result["receipts_usd"], result["profits_usd"]):
+        assert F(receipts) - F(result["committed_usd"]) == F(profit)
+    loss = evaluate(
+        entry("novig", "home", "1.9"),
+        entry("fanduel", "away", "1.9"),
+        at=AT,
+        budget=F(budget),
+        positive_only=False,
+    )
+    assert F(loss["minimum_profit_usd"]) < 0
+
+
+def test_quote_evidence_uses_exact_native_top_ask_and_its_own_clock():
+    from types import SimpleNamespace
+    from app.storage.pregame_quote_evidence import enrich, market_link
+    from app.storage.current_rows import CurrentRowStore
+
+    link = dict(host="novig.com", path="/events/retained-outcome/sportsgameodds")
+    assert market_link("novig", link).startswith("https://novig.com/events/")
+    assert (
+        market_link("novig", dict(host="unrelated.example", path="/events/a")) is None
+    )
+    assert (
+        market_link("novig", dict(host="novig.com", path="//unrelated.example/a"))
+        is None
+    )
+    assert market_link("novig", dict(host="novig.com", path="/")) is None
+    row = dict(
+        id="native",
+        venue="kalshi",
+        posted=dict(value="25", units="cents_per_contract"),
+        times=dict(
+            source_at="2026-11-18T14:00:00Z", received_at="2026-11-18T14:00:01Z"
+        ),
+    )
+    record = dict(
+        quote=dict(
+            source=dict(provider="kalshi"),
+            venue="kalshi",
+            original=row["posted"],
+            times=row["times"],
+        )
+    )
+    result = SimpleNamespace(
+        fetchall=lambda: [dict(contract_id="native", record=record)]
+    )
+    db = SimpleNamespace(execute=lambda *args: result)
+    book = dict(
+        levels=[["1/4", "contracts", "17"]],
+        source_at="2026-11-18T14:01:00Z",
+        received_at="2026-11-18T14:01:01Z",
+    )
+    with patch.object(
+        CurrentRowStore, "native_valuation_asks", return_value={"native": book}
+    ):
+        size = enrich(db, [row])[0]["available_size"]
+    assert size["status"] == "observed" and size["quantity"] == "17"
+    assert size["source_at"] == book["source_at"] != row["times"]["source_at"]
+    book["levels"][0][0] = "1/3"
+    with patch.object(
+        CurrentRowStore, "native_valuation_asks", return_value={"native": book}
+    ):
+        assert enrich(db, [row])[0]["available_size"]["status"] == "unknown"

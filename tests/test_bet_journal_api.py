@@ -40,6 +40,26 @@ class JournalHTTP(IsolatedAsyncioTestCase):
         self.assertEqual(response.status, 201, await response.text())
         return (await response.json())["entry"]
 
+    async def test_saved_quote_read_failure_reports_committed_identity_and_safe_retry(
+        self,
+    ):
+        row = offer()
+        with patch.object(
+            self.journal, "get", side_effect=OSError("authored read failure")
+        ):
+            response = await self.client.post(
+                "/api/bet-journal",
+                json=dict(kind="ev", snapshot=row),
+                headers={"Origin": self.origin},
+            )
+        self.assertEqual(response.status, 201)
+        data = await response.json()
+        self.assertTrue(data["quote_saved"])
+        saved = await self.create(row)
+        self.assertEqual(saved["id"], data["id"])
+        self.assertIsNone(saved["trade"])
+        self.assertEqual(self.journal.list()["total"], 1)
+
     async def test_non_timestamp_json_values_are_rejected_without_saving_a_quote(self):
         for value in (None, 123, {}, []):
             with self.subTest(value=value):

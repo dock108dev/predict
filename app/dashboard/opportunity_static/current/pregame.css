@@ -321,3 +321,21 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,su
 @media(max-width:760px){.pregame-page .filters .search{grid-row:1;width:calc(100% - 54px)}.pregame-page .filters .refresh{grid-column:2;grid-row:1;justify-self:end;align-self:end;width:44px;min-width:44px;padding:0;font-size:0;gap:0}.pregame-page .filters .refresh span{font-size:17px}.pregame-page .board-info .about-link{display:none}}
 .pregame-page .advanced-filters>summary,.pregame-page .mode-switch{-webkit-tap-highlight-color:transparent}
 .pregame-page .advanced-filters>summary:active{background:var(--p-active)}
+
+/* Compact, explicitly read-only research near the decision. */
+.amount-research{border-block:1px solid var(--line,#ddd);padding-block:12px;margin-block:12px;min-width:0}
+.amount-research h3{margin:0 0 6px}.amount-research form{display:flex;flex-wrap:wrap;align-items:end;gap:8px}
+.amount-research label{display:flex;flex-direction:column;gap:4px;font-size:12px}.amount-research input{width:140px;max-width:100%;font:inherit;padding:8px}
+.amount-presets{display:flex;gap:4px}.amount-research button,.venue-verification button,.market-jumps button{font:inherit;padding:7px 10px;cursor:pointer}
+.amount-result,.venue-verification{min-width:0}.size-evidence strong,.size-evidence small{display:block}.size-evidence small,.price-provenance,.calculation-hint{font-size:12px;line-height:1.5;color:var(--muted,#666)}
+.venue-verification{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:12px;margin-block:10px;overflow-wrap:anywhere}.venue-verification details{flex-basis:100%}.venue-verification p{user-select:text}
+.market-jumps{display:flex;flex-wrap:wrap;gap:6px;grid-column:1/-1}.game-market{scroll-margin-top:8px}.older-leg{display:block;font-size:12px}.comparison-status strong{display:block}
+.math-trigger{text-decoration:underline;text-decoration-style:dotted;text-underline-offset:4px}
+@media(max-width:480px){.amount-research form{align-items:center}.amount-research label{flex-basis:100%}.amount-research input{width:100%}.amount-result .selected-summary{grid-template-columns:1fr 1fr}.venue-verification a{max-width:100%}}
+.prism-page .amount-result .selected-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 16px;margin:0 0 10px;border:0}
+.prism-page .amount-result .selected-summary>div{display:flex;flex-direction:column;align-items:flex-start;gap:3px;padding:8px 0;min-width:0}
+.prism-page .amount-result .selected-summary .math-value{align-items:flex-start;max-width:100%}.prism-page .amount-research{padding-top:4px;margin-top:4px;border-top:0}
+.prism-page .amount-result .payout-example{margin:8px 0;padding:9px 11px;line-height:1.5}.prism-page .amount-result .size-evidence{font-size:12px;line-height:1.5;margin:8px 0}
+.prism-page #comparison .amount-research h3{margin:12px 0 5px}.prism-page .amount-research .comparison-context{margin:4px 0 8px}
+body.prism-page #comparison .math-trigger,body.prism-page .arb-price-value .math-trigger{text-decoration:underline;text-decoration-style:dotted;text-underline-offset:4px}
+body.prism-page .amount-result .selected-summary>div{justify-content:flex-start}
