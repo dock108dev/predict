@@ -46,3 +46,8 @@ then verified discovery-time aliases and quote-only negative aliases after the
 pair disappears, including reopened latest/closing metrics. Wrong economic fields
 and invalid clocks remain rejected. Cleanup tests restore the pre-deletion backup,
 check preserved bet histories and shared alias evidence, and exercise idempotency.
+
+The paging toolbar sits above the results and remains sticky while scanning. Its
+390px and 1440px regressions verify both paging controls stay within the viewport,
+remain the actual hit targets after scrolling to the bottom, and do not introduce
+horizontal overflow. This avoids scrolling through 100 cards to reach Next.

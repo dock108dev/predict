@@ -1054,7 +1054,9 @@ def test_reopened_same_record_ignores_old_save_completion(
         browser.close()
 
 
+@pytest.mark.parametrize("width", [390, 1440])
 def test_opportunity_log_keeps_only_positive_unique_market_arbs_and_selected_ev(
+    width,
     tmp_path,
 ):
     import sqlite3
@@ -1194,7 +1196,7 @@ def test_opportunity_log_keeps_only_positive_unique_market_arbs_and_selected_ev(
     visible = {arb_key, saved_book, manual["saved"], manual["placed"]}
     with sync_playwright() as pw:
         browser = pw.chromium.launch(executable_path=os.getenv("PREDICT_CI_CHROMIUM"))
-        page = browser.new_page(viewport=dict(width=390, height=844))
+        page = browser.new_page(viewport=dict(width=width, height=844))
         errors = []
         page.on("pageerror", lambda error: errors.append(str(error)))
         page.route("**/*", fixture.serve)
@@ -1209,6 +1211,25 @@ def test_opportunity_log_keeps_only_positive_unique_market_arbs_and_selected_ev(
         page.get_by_role("button", name="Opportunity log", exact=True).click()
         expect(page.locator(".journal-entry")).to_have_count(4)
         expect(page.locator("#count")).to_have_text("4 records")
+        tools = page.locator(".journal-result-tools")
+        toolbar = tools.bounding_box()
+        first_card = page.locator(".journal-entry").first.bounding_box()
+        assert toolbar["y"] + toolbar["height"] <= first_card["y"]
+        expect(tools.get_by_role("navigation", name="Journal pages")).to_be_visible()
+        page.evaluate("window.scrollTo(0, document.documentElement.scrollHeight)")
+        assert page.evaluate("scrollY") > 0
+        for selector in ("#previous", "#next"):
+            control = page.locator(selector)
+            expect(control).to_be_in_viewport()
+            box = control.bounding_box()
+            assert (
+                box["y"] >= 0
+                and box["y"] + box["height"] <= page.viewport_size["height"]
+            )
+            assert control.evaluate(
+                "button=>{const r=button.getBoundingClientRect();return button.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));}"
+            )
+        assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
         observed = page.locator(
             f'.journal-entry[data-entry-id="{arb_key}"] .journal-observed-arb'
         )
