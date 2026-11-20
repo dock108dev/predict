@@ -270,6 +270,9 @@ def test_current_pregame_journey(width, tmp_path):
         assert not {"search", "league", "family", "venue"} & inspector_query.keys()
         page.get_by_role("button", name="Close game lines", exact=True).click()
         expect(page.locator("#game-lines")).not_to_be_visible()
+        # Native close hides the dialog before its asynchronous close handler
+        # releases the page lock. Focus alone can be restored by the browser.
+        expect(page.locator("body")).not_to_have_css("position", "fixed")
         expect(game_link).to_be_focused()
         assert abs(page.evaluate("scrollY") - board_scroll) < 2
         assert (

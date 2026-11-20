@@ -26,6 +26,8 @@ EV ranking; explicit saved ranking choices persist.
 Pointer, keyboard, touch and wheel activity can renew Live. Reads, polling,
 refreshes and background updates do not renew activity or collect provider data.
 Mode changes cannot clear source Stop choices or pauses.
+Collection Settings remains visible on desktop and phone layouts in both Monitor
+and Live. Changing settings still requires owner authentication.
 
 Monitor uses fixed clock slots. A restart can claim a recent slot once; older
 missed startup slots are skipped to avoid catch-up bursts. Active overruns and

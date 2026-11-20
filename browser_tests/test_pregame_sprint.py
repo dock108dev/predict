@@ -262,6 +262,7 @@ def test_touch_back_to_game_preserves_context_and_unavailable_ev(
             await search.tap()
             await page.keyboard.type("Milwaukee")
             await expect(search).to_have_value("Milwaukee")
+            await page.locator("#board-advanced > summary").tap()
             async with page.expect_response(
                 lambda r: "/api/pregame?" in r.url and "league=NBA" in r.url
             ):

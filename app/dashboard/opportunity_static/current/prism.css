@@ -233,8 +233,6 @@ body.prism-page #editor{padding:0;background:var(--surface);border-radius:16px}
  .prism-page h1{font-size:29px}
  .prism-page .board-info{gap:8px;justify-content:flex-end;max-width:150px}
  .prism-page .board-info .delay{font-size:10px}
- .prism-page .mode-controls{display:none}
- .prism-page .mode-controls:has([data-mode=live]){display:flex}
  body.prism-page .board-row{grid-template-columns:repeat(3,minmax(0,1fr));gap:18px 10px;padding:18px;position:relative}
  body.prism-page .board-row .subject{grid-column:1/-1;padding-right:35px}
  body.prism-page .board-row .pick{font-size:17px}

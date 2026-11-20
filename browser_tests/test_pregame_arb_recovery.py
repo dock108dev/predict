@@ -138,6 +138,7 @@ def test_arb_deadline_retry_supersession_partial_and_retained_failure():
                 "No positive pair in the completed comparisons"
             )
             state["mode"] = "loaded"
+            await page.locator("#board-advanced > summary").click()
             await page.locator("#venue").select_option("kalshi")
             await page.wait_for_function(
                 "document.querySelector('#results').dataset.state==='loading'"
