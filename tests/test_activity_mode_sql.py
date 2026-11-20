@@ -17,6 +17,77 @@ from tests.test_activity_mode import AT
 
 @skipUnless(SOCKET, "Disposable PostgreSQL required")
 class ActivityModeSQL(LatestBoardFixture):
+    async def test_legacy_settings_and_durable_monitor_slots_survive_restart_updates(
+        self,
+    ):
+        legacy = dict(mode.DEFAULT_SETTINGS)
+        legacy.pop("monitor_phase_seconds")
+        with self.connect() as db:
+            db.execute("UPDATE activity_mode SET settings=%s", (Jsonb(legacy),))
+            protected = list(
+                db.execute(
+                    "SELECT global_stopped,paused_sources,config FROM data_runtime"
+                )
+            )
+        before = mode.read_status(at=AT + timedelta(minutes=19), connector=self.connect)
+        self.assertEqual(before["settings"]["monitor_phase_seconds"], 1200)
+        self.assertEqual(
+            before["next_monitor_at"], (AT + timedelta(minutes=20)).isoformat()
+        )
+        changed = mode.patch(
+            settings={"monitor_phase_seconds": 0},
+            at=AT + timedelta(minutes=19),
+            connector=self.connect,
+        )
+        self.assertEqual(
+            changed["next_monitor_at"], (AT + timedelta(minutes=30)).isoformat()
+        )
+        settings = mode.patch(
+            settings={"monitor_phase_seconds": 1200},
+            at=AT + timedelta(minutes=20, seconds=30),
+            connector=self.connect,
+        )
+        with self.connect() as db:
+            run = mode.begin_run(
+                db, "monitor", settings, at=AT + timedelta(minutes=20, seconds=30)
+            )
+            self.assertEqual(
+                run["monitor_slot_at"], (AT + timedelta(minutes=20)).isoformat()
+            )
+            mode.update_run(
+                db,
+                run,
+                state="budget_delayed",
+                reason="fixture",
+                at=AT + timedelta(minutes=20, seconds=35),
+            )
+            mode.update_run(
+                db,
+                run,
+                state="partial",
+                reason="runtime_restarted",
+                at=AT + timedelta(minutes=20, seconds=40),
+            )
+        restarted = mode.read_status(
+            at=AT + timedelta(minutes=20, seconds=40), connector=self.connect
+        )
+        self.assertEqual(
+            restarted["runs"]["monitor"]["monitor_slot_at"], run["monitor_slot_at"]
+        )
+        self.assertFalse(restarted["monitor_schedule"]["due"])
+        self.assertEqual(
+            restarted["next_monitor_at"], (AT + timedelta(minutes=50)).isoformat()
+        )
+        with self.connect() as db:
+            self.assertEqual(
+                list(
+                    db.execute(
+                        "SELECT global_stopped,paused_sources,config FROM data_runtime"
+                    )
+                ),
+                protected,
+            )
+
     async def asyncSetUp(self):
         await super().asyncSetUp()
         with self.connect() as db:

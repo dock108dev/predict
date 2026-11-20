@@ -11,6 +11,7 @@ from app.storage.store import connect, stamp
 SCHEMA = "predict-activity-mode-1"
 DEFAULT_SETTINGS = dict(
     monitor_interval_seconds=1800,
+    monitor_phase_seconds=1200,
     monitor_horizon_seconds=86400,
     live_interval_seconds=60,
     live_window_seconds=3600,
@@ -26,14 +27,51 @@ def clock():
 def validate_settings(settings, *, partial=False):
     if not isinstance(settings, dict) or set(settings) - set(DEFAULT_SETTINGS):
         raise ValueError("Unsupported activity settings")
+    settings = deepcopy(settings)
+    if not partial and set(settings) == set(DEFAULT_SETTINGS) - {
+        "monitor_phase_seconds"
+    }:
+        settings["monitor_phase_seconds"] = DEFAULT_SETTINGS["monitor_phase_seconds"]
     if not partial and set(settings) != set(DEFAULT_SETTINGS):
         raise ValueError("Complete activity settings required")
     for key, value in settings.items():
+        if key == "monitor_phase_seconds":
+            if type(value) is not int or not 0 <= value <= MAX_SECONDS:
+                raise ValueError("Monitor phase must be nonnegative integer seconds")
+            continue
         if key == "monitor_horizon_seconds" and value is None:
             continue
         if type(value) is not int or not 1 <= value <= MAX_SECONDS:
             raise ValueError("Activity intervals must be positive integer seconds")
     return deepcopy(settings)
+
+
+def monitor_schedule(settings, *, at=None, last_slot=None, catch_up=False):
+    """Skip old startup backlog; running owners coalesce the latest due slot."""
+    at = stamp(at or clock()).astimezone(timezone.utc)
+    interval = settings["monitor_interval_seconds"]
+    phase = settings.get("monitor_phase_seconds", 1200) % interval
+    step = timedelta(seconds=interval)
+    anchor = datetime(1970, 1, 1, tzinfo=timezone.utc) + timedelta(seconds=phase)
+    slot = anchor + ((at - anchor) // step) * step
+    try:
+        consumed = stamp(last_slot).astimezone(timezone.utc) if last_slot else None
+    except (ValueError, TypeError, AttributeError):
+        consumed = None
+    grace = timedelta(seconds=min(60, interval / 2))
+    due = (consumed is None or consumed < slot) and (catch_up or at - slot <= grace)
+    next_slot = slot + step
+    if consumed and consumed >= next_slot:
+        next_slot = anchor + ((consumed - anchor) // step + 1) * step
+    return dict(
+        current_slot_at=slot.isoformat(),
+        next_slot_at=next_slot.isoformat(),
+        next_monitor_at=(slot if due else next_slot).isoformat(),
+        due=due,
+        interval_seconds=interval,
+        phase_seconds=phase,
+        catchup_grace_seconds=grace.total_seconds(),
+    )
 
 
 def project(row, *, at=None, runs=None):
@@ -53,6 +91,14 @@ def project(row, *, at=None, runs=None):
         else None
     )
     expired = row["mode"] == "live" and (deadline is None or at >= deadline)
+    last_monitor = (runs or {}).get("monitor", {})
+    schedule = monitor_schedule(
+        settings,
+        at=at,
+        last_slot=last_monitor.get("monitor_slot_at"),
+        catch_up=bool(last_monitor.get("monitor_slot_at"))
+        and last_monitor.get("state") in ("running", "budget_delayed"),
+    )
     return dict(
         schema=SCHEMA,
         mode="monitor" if expired else row["mode"],
@@ -67,6 +113,8 @@ def project(row, *, at=None, runs=None):
         live_until=deadline.isoformat() if deadline and not expired else None,
         reason="inactivity" if expired else row.get("reason", "selected"),
         runs=runs or {},
+        monitor_schedule=schedule,
+        next_monitor_at=schedule["next_monitor_at"],
     )
 
 
@@ -100,7 +148,7 @@ def read_status(db=None, *, at=None, connector=None):
         run
     ) in db.execute("""SELECT latest.* FROM (VALUES('monitor'),('live')) kinds(kind)
           CROSS JOIN LATERAL (SELECT id,kind,started_at,scope_start_at,scope_end_at,
-            state,completed_at,event_count,reason FROM activity_collection_run r
+            state,completed_at,event_count,reason,progress->>'monitor_slot_at' AS monitor_slot_at FROM activity_collection_run r
             WHERE r.kind=kinds.kind ORDER BY started_at DESC LIMIT 1) latest"""):
         runs[run["kind"]] = {
             k: v.astimezone(timezone.utc).isoformat() if isinstance(v, datetime) else v
@@ -223,10 +271,14 @@ def begin_run(db, kind, status, *, at=None):
         settings_revision=status["revision"],
         completed=False,
     )
+    progress = {}
+    if kind == "monitor":
+        run["monitor_slot_at"] = monitor_schedule(settings, at=at)["current_slot_at"]
+        progress["monitor_slot_at"] = run["monitor_slot_at"]
     db.execute(
         """INSERT INTO activity_collection_run
-        (id,kind,started_at,scope_start_at,scope_end_at,settings_revision)
-        VALUES(%s,%s,%s,%s,%s,%s)""",
+        (id,kind,started_at,scope_start_at,scope_end_at,settings_revision,progress)
+        VALUES(%s,%s,%s,%s,%s,%s,%s)""",
         tuple(
             run[k]
             for k in (
@@ -237,7 +289,8 @@ def begin_run(db, kind, status, *, at=None):
                 "scope_end_at",
                 "settings_revision",
             )
-        ),
+        )
+        + (Jsonb(progress),),
     )
     return run
 
@@ -250,12 +303,12 @@ def update_run(
     at = stamp(at or clock()).astimezone(timezone.utc)
     db.execute(
         """UPDATE activity_collection_run SET state=%s,event_count=%s,reason=%s,
-        progress=%s,completed_at=%s WHERE id=%s""",
+        progress=COALESCE(%s,progress),completed_at=%s WHERE id=%s""",
         (
             state,
             event_count,
             reason,
-            Jsonb(progress or {}),
+            Jsonb(progress) if progress is not None else None,
             at if state in ("complete", "partial", "failed") else None,
             run["id"],
         ),

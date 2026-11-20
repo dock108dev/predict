@@ -68,6 +68,7 @@ class ActivityCollector:
         self.monitor = None
         self.live = None
         self.monitor_due = None
+        self.last_monitor_slot = None
         self.live_due = None
         self.retry_at = None
         self.initialized = False
@@ -85,6 +86,8 @@ class ActivityCollector:
             cursor=job.get("traversal").next_cursor if job.get("traversal") else None,
             remaining_events=job.get("remaining", []),
         )
+        if job["run"].get("monitor_slot_at"):
+            progress["monitor_slot_at"] = job["run"]["monitor_slot_at"]
         await owned_thread(
             self.store.update,
             job["run"],
@@ -97,6 +100,14 @@ class ActivityCollector:
 
     async def new_job(self, kind, status):
         run = await owned_thread(self.store.begin, kind, status, self.worker.now())
+        if kind == "monitor":
+            run.setdefault(
+                "monitor_slot_at",
+                activity_mode.monitor_schedule(
+                    status["settings"], at=self.worker.now()
+                )["current_slot_at"],
+            )
+            self.last_monitor_slot = stamp(run["monitor_slot_at"])
         return dict(
             run=run,
             seen=set(),
@@ -105,6 +116,7 @@ class ActivityCollector:
             leagues=aggregate_scope(self.worker.service.config),
             remaining=None,
             alternate_remaining=None,
+            alternate_done=set(),
         )
 
     async def dispatch(self, job, params, status):
@@ -135,9 +147,51 @@ class ActivityCollector:
     async def monitor_turn(self, status):
         job = self.monitor
         worker = self.worker
+        end = stamp(job["run"]["scope_end_at"]) if job["run"]["scope_end_at"] else None
+        selected = activity_mode.eligible(
+            list(worker.events.values()), status, at=worker.now(), kind="monitor"
+        )
+        near = worker.now() + timedelta(
+            seconds=status["settings"]["live_window_seconds"]
+        )
+        priority = sorted(
+            (
+                event
+                for event in selected
+                if event["event_id"] not in job["alternate_done"]
+                and event.get("league") in job["leagues"]
+                and (end is None or stamp(event["starts_at"]) <= end)
+                and (
+                    job["league_index"] >= len(job["leagues"])
+                    or stamp(event["starts_at"]) <= near
+                )
+            ),
+            key=lambda event: (stamp(event["starts_at"]), event["event_id"]),
+        )
+        if priority:
+            event_id = priority[0]["event_id"]
+            try:
+                await self.dispatch(
+                    job,
+                    worker.params(event_ids=[event_id], include_alternates=True),
+                    status,
+                )
+            except PregameWindowClosed:
+                pass
+            job["alternate_done"].add(event_id)
+            await self.save(job)
+            return
         if job["league_index"] >= len(job["leagues"]):
             if job["alternate_remaining"] is None:
-                job["alternate_remaining"] = sorted(job["seen"])
+                job["alternate_remaining"] = sorted(
+                    job["seen"] - job["alternate_done"],
+                    key=lambda eid: (
+                        stamp(worker.events[eid]["starts_at"])
+                        if eid in worker.events
+                        else worker.now(),
+                        eid,
+                    ),
+                )
             while job["alternate_remaining"]:
                 event_id = job["alternate_remaining"][0]
                 event = worker.events.get(event_id)
@@ -201,7 +255,13 @@ class ActivityCollector:
             selected = activity_mode.eligible(
                 list(worker.events.values()), status, at=worker.now()
             )
-            job["remaining"] = sorted(e["event_id"] for e in selected)
+            job["remaining"] = [
+                event["event_id"]
+                for event in sorted(
+                    selected,
+                    key=lambda event: (stamp(event["starts_at"]), event["event_id"]),
+                )
+            ]
         while job["remaining"]:
             event_id = job["remaining"][0]
             selected = activity_mode.eligible(
@@ -249,11 +309,24 @@ class ActivityCollector:
                         at=at,
                     )
             self.initialized = True
-            self.monitor_due = at
+            latest = status.get("runs", {}).get("monitor", {}).get("monitor_slot_at")
+            initial = activity_mode.monitor_schedule(
+                status["settings"], at=at, last_slot=latest
+            )
+            self.last_monitor_slot = stamp(latest) if latest else None
+            if not initial["due"]:
+                slot = stamp(initial["current_slot_at"])
+                self.last_monitor_slot = (
+                    max(self.last_monitor_slot, slot)
+                    if self.last_monitor_slot
+                    else slot
+                )
+            self.monitor_due = stamp(initial["next_monitor_at"])
             self.live_due = at
+        restart_monitor = False
         if self.previous_settings is not None:
             for kind, keys in (
-                ("monitor", ("monitor_interval_seconds", "monitor_horizon_seconds")),
+                ("monitor", ("monitor_horizon_seconds",)),
                 ("live", ("live_interval_seconds", "live_window_seconds")),
             ):
                 if any(
@@ -264,6 +337,8 @@ class ActivityCollector:
                         await self.save(job, state="partial", reason="settings_changed")
                         setattr(self, kind, None)
                     setattr(self, kind + "_due", at)
+                    if kind == "monitor":
+                        restart_monitor = True
         if status["mode"] == "live" and self.previous_mode != "live":
             self.live_due = at
         self.settings_revision = status["revision"]
@@ -280,10 +355,16 @@ class ActivityCollector:
         if self.worker.controls()["stopped"] or self.worker.controls()["source_paused"]:
             return
         settings = status["settings"]
-        if self.monitor is None and at >= self.monitor_due:
+        schedule = activity_mode.monitor_schedule(
+            settings, at=at, last_slot=self.last_monitor_slot, catch_up=True
+        )
+        self.monitor_due = stamp(schedule["next_monitor_at"])
+        if self.monitor is None and (schedule["due"] or restart_monitor):
             self.monitor = await self.new_job("monitor", status)
-            self.monitor_due = at + timedelta(
-                seconds=settings["monitor_interval_seconds"]
+            self.monitor_due = stamp(
+                activity_mode.monitor_schedule(
+                    settings, at=at, last_slot=self.last_monitor_slot
+                )["next_monitor_at"]
             )
         if status["mode"] == "live" and self.live is None and at >= self.live_due:
             self.live = await self.new_job("live", status)

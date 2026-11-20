@@ -27,6 +27,7 @@ class ModeFixture:
         self.last = CLOCK if mode == "live" else None
         self.settings = dict(
             monitor_interval_seconds=1800,
+            monitor_phase_seconds=1200,
             monitor_horizon_seconds=86400,
             live_interval_seconds=60,
             live_window_seconds=3600,
@@ -234,13 +235,16 @@ def test_public_modes_are_read_only_and_settings_require_owner(path):
             await expect(
                 page.get_by_label("Monitor refresh (minutes)", exact=True)
             ).to_be_disabled()
+            await expect(
+                page.get_by_label("Monitor timing offset (minutes)", exact=True)
+            ).to_be_disabled()
             assert state.authorizations == 1 and not state.writes
-            await expect(page.locator(".mode-run-summary")).to_contain_text(
-                "waiting for budget"
-            )
-            await expect(page.locator(".mode-run-summary")).to_contain_text(
-                "partial update"
-            )
+            await expect(
+                page.locator(".mode-run-summary:not(#mode-monitor-schedule)")
+            ).to_contain_text("waiting for budget")
+            await expect(
+                page.locator(".mode-run-summary:not(#mode-monitor-schedule)")
+            ).to_contain_text("partial update")
             await expect(page.locator('a[href*="dataset=practice"]')).to_have_count(0)
             await expect(page.locator("[data-caution]")).to_have_count(0)
             assert not errors, errors
@@ -287,6 +291,7 @@ def test_owner_settings_activity_and_passive_idle_fallback_use_fake_clock(width)
             await expect(page.locator(".mode-message")).to_contain_text("saved")
             assert state.settings == dict(
                 monitor_interval_seconds=2700,
+                monitor_phase_seconds=1200,
                 monitor_horizon_seconds=86400,
                 live_interval_seconds=60,
                 live_window_seconds=3600,
@@ -562,6 +567,106 @@ def test_stationary_wheel_renews_live_but_programmatic_scroll_does_not():
             await expect(page.locator(".mode-badge")).to_have_text("Settings")
             assert state.status()["reason"] == "inactivity"
             assert state.last == last_activity
+            await browser.close()
+
+    asyncio.run(journey())
+
+
+@pytest.mark.parametrize("width", [390, 1280])
+def test_monitor_wall_clock_phase_display_configuration_and_zero_offset(width):
+    from playwright.async_api import async_playwright, expect
+
+    class ScheduledFixture(ModeFixture):
+        def status(self):
+            status = super().status()
+            # Authoritative API targets for this fixed 12:31 UTC scenario. The
+            # backend's boundary tests own scheduling math; this checks that the
+            # UI renders that status and sends offsets in seconds correctly.
+            status["next_monitor_at"] = {
+                1200: iso(CLOCK + 20 * 60000),
+                300: iso(CLOCK + 5 * 60000),
+                0: iso(CLOCK + 30 * 60000),
+            }[self.settings["monitor_phase_seconds"]]
+            return status
+
+    async def journey():
+        state = ScheduledFixture(owner=True)
+        state.now = CLOCK + 60000
+        async with async_playwright() as pw:
+            browser = await pw.chromium.launch()
+            page = await browser.new_page(viewport={"width": width, "height": 844})
+            errors = []
+            page.on("pageerror", lambda error: errors.append(str(error)))
+            await page.clock.install(
+                time=datetime.fromtimestamp(state.now / 1000, timezone.utc)
+            )
+            await page.route("**/*", state.serve)
+            await page.goto("https://predict.fixture/")
+            await page.locator(".mode-badge").click()
+            phase = page.get_by_label("Monitor timing offset (minutes)", exact=True)
+            await expect(phase).to_be_enabled()
+            await expect(phase).to_have_value("20")
+            await expect(
+                page.get_by_label("Monitor timing offset slider", exact=True)
+            ).to_have_value("20")
+            await expect(page.locator(".mode-summary")).to_have_text(
+                "Monitor · starts at :20 and :50 each hour"
+            )
+            next_start = page.locator("#mode-monitor-schedule")
+            await expect(next_start).to_contain_text("7:50 AM EST")
+            save = page.get_by_role("button", name="Save settings", exact=True)
+            close = page.get_by_role(
+                "button", name="Close collection settings", exact=True
+            )
+            original_y = [
+                (control, (await control.bounding_box())["y"])
+                for control in (save, close)
+            ]
+            await page.locator(".mode-settings-body").evaluate(
+                "body=>body.scrollTop=body.scrollHeight"
+            )
+            for control, y in original_y:
+                box = await control.bounding_box()
+                assert abs(box["y"] - y) < 1
+                assert 0 <= box["y"] and box["y"] + box["height"] <= 844
+            await phase.fill("5")
+            state.now += 15001
+            await page.clock.fast_forward(15001)
+            await expect(phase).to_have_value("5")
+            # Unsaved input survives polling, but cannot claim a changed target.
+            await expect(next_start).to_contain_text("7:50 AM EST")
+            await save.click()
+            await expect(page.locator(".mode-message")).to_contain_text("saved")
+            assert state.settings["monitor_phase_seconds"] == 300
+            assert state.settings["monitor_interval_seconds"] == 1800
+            await expect(page.locator(".mode-summary")).to_have_text(
+                "Monitor · starts at :05 and :35 each hour"
+            )
+            await expect(next_start).to_contain_text("7:35 AM EST")
+            await phase.fill("0")
+            async with page.expect_response(
+                lambda response: response.request.method == "PATCH"
+            ):
+                await save.click()
+            await expect(phase).to_have_value("0")
+            assert state.settings["monitor_phase_seconds"] == 0
+            await expect(page.locator(".mode-summary")).to_have_text(
+                "Monitor · starts at :00 and :30 each hour"
+            )
+            await expect(next_start).to_contain_text("8:00 AM EST")
+            assert len(state.writes) == 2
+            assert [
+                body["settings"]["monitor_phase_seconds"] for _, body in state.writes
+            ] == [300, 0]
+            assert all(
+                path == "/api/admin/activity-mode" and set(body) == {"settings"}
+                for path, body in state.writes
+            )
+            assert state.mode == "monitor"
+            await close.click()
+            await expect(page.locator("#mode-settings")).not_to_be_visible()
+            await expect(page.locator(".mode-badge")).to_be_focused()
+            assert not errors, errors
             await browser.close()
 
     asyncio.run(journey())

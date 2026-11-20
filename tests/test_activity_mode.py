@@ -12,6 +12,7 @@ from app.collection.activity_mode import (
     eligible,
     project,
     validate_settings,
+    monitor_schedule,
 )
 from app.collection.activity_collector import (
     ActivityCollector,
@@ -57,12 +58,203 @@ def test_owner_settings_http_never_exposes_value_error_details(monkeypatch, deta
 def row(mode="monitor"):
     return dict(
         mode=mode,
-        settings=deepcopy(DEFAULT_SETTINGS),
+        settings=dict(DEFAULT_SETTINGS, monitor_phase_seconds=0),
         revision=1,
         reason="selected",
         last_activity_at=AT if mode == "live" else None,
         live_until=AT + timedelta(minutes=15) if mode == "live" else None,
     )
+
+
+def test_monitor_clock_boundaries_custom_phase_legacy_settings_and_dst():
+    from zoneinfo import ZoneInfo
+
+    settings = deepcopy(DEFAULT_SETTINGS)
+    legacy = dict(settings)
+    legacy.pop("monitor_phase_seconds")
+    assert validate_settings(legacy) == settings
+    assert validate_settings({"monitor_phase_seconds": 0}, partial=True) == {
+        "monitor_phase_seconds": 0
+    }
+    for minute, second, due, next_minute in (
+        (19, 59, False, 20),
+        (20, 0, True, 20),
+        (20, 30, True, 20),
+        (21, 1, False, 50),
+        (49, 59, False, 50),
+        (50, 0, True, 50),
+    ):
+        at = AT + timedelta(minutes=minute, seconds=second)
+        plan = monitor_schedule(settings, at=at)
+        assert plan["due"] is due
+        assert datetime.fromisoformat(plan["next_monitor_at"]).minute == next_minute
+    claimed = (AT + timedelta(minutes=20)).isoformat()
+    assert not monitor_schedule(
+        settings, at=AT + timedelta(minutes=20, seconds=10), last_slot=claimed
+    )["due"]
+    assert (
+        monitor_schedule(
+            dict(settings, monitor_phase_seconds=300), at=AT + timedelta(minutes=4)
+        )["next_monitor_at"]
+        == (AT + timedelta(minutes=5)).isoformat()
+    )
+    eastern = ZoneInfo("America/New_York")
+    first = datetime(2026, 11, 1, 1, 20, tzinfo=eastern, fold=0)
+    second = first.replace(fold=1)
+    assert (
+        monitor_schedule(settings, at=first)["current_slot_at"]
+        != monitor_schedule(settings, at=second)["current_slot_at"]
+    )
+    assert monitor_schedule(
+        settings,
+        at=second,
+        last_slot=monitor_schedule(settings, at=first)["current_slot_at"],
+    )["due"]
+    spring = datetime(2026, 3, 8, 1, 59, 59, tzinfo=eastern)
+    following = datetime.fromisoformat(
+        monitor_schedule(settings, at=spring)["next_monitor_at"]
+    ).astimezone(eastern)
+    assert (following.hour, following.minute) == (3, 20)
+    rollback = monitor_schedule(
+        settings,
+        at=AT + timedelta(minutes=20),
+        last_slot=(AT + timedelta(minutes=50)).isoformat(),
+    )
+    assert (
+        not rollback["due"]
+        and rollback["next_monitor_at"]
+        == (AT + timedelta(hours=1, minutes=20)).isoformat()
+    )
+
+
+def test_monitor_restart_claims_recent_slot_once_and_skips_old_catchup():
+    async def scenario():
+        store, worker = Store(), Worker()
+        store.value["settings"]["monitor_phase_seconds"] = 1200
+        worker.events["near"]["starts_at"] = (AT + timedelta(minutes=30)).isoformat()
+        owner = ActivityCollector(worker, store=store)
+        worker.at = AT + timedelta(minutes=19)
+        await owner.tick()
+        assert not store.runs and not worker.calls
+        worker.at = AT + timedelta(minutes=20, seconds=30)
+        await owner.tick()
+        assert (
+            len(store.runs) == 1
+            and store.runs[0]["monitor_slot_at"]
+            == (AT + timedelta(minutes=20)).isoformat()
+        )
+        restarted = ActivityCollector(worker, store=store)
+        worker.at += timedelta(seconds=10)
+        calls = len(worker.calls)
+        await restarted.tick()
+        assert len(store.runs) == 1 and len(worker.calls) == calls
+        worker.at = AT + timedelta(minutes=50)
+        await restarted.tick()
+        assert (
+            len(store.runs) == 2
+            and store.runs[-1]["monitor_slot_at"] == worker.at.isoformat()
+        )
+        # A legacy off-phase run has no durable slot claim and cannot suppress
+        # the newly configured20-minute boundary.
+        old = Store()
+        old.value["settings"]["monitor_phase_seconds"] = 1200
+        old.runs = [
+            dict(
+                id="legacy",
+                kind="monitor",
+                started_at=(AT + timedelta(minutes=19)).isoformat(),
+                event_count=1,
+            )
+        ]
+        worker = Worker()
+        worker.at = AT + timedelta(minutes=20)
+        await ActivityCollector(worker, store=old).tick()
+        assert len(old.runs) == 2
+
+    asyncio.run(scenario())
+
+
+def test_active_monitor_overrun_coalesces_latest_slot_and_phase_edit_never_cancels():
+    async def scenario():
+        store, worker = Store(), Worker()
+        store.value["settings"]["monitor_phase_seconds"] = 1200
+        owner = ActivityCollector(worker, store=store)
+
+        async def active(status):
+            if (
+                worker.at >= AT + timedelta(minutes=52)
+                and owner.monitor["run"]["id"] == "1"
+            ):
+                await owner.save(owner.monitor, state="complete")
+                owner.monitor = None
+
+        owner.monitor_turn = active
+        worker.at = AT + timedelta(minutes=20)
+        await owner.tick()
+        original = owner.monitor
+        store.value["settings"]["monitor_phase_seconds"] = 300
+        worker.at = AT + timedelta(minutes=21)
+        await owner.tick()
+        assert owner.monitor is original and not store.updates
+        store.value["settings"]["monitor_phase_seconds"] = 1200
+        worker.at = AT + timedelta(minutes=52)
+        await owner.tick()
+        assert len(store.runs) == 1 and owner.monitor is None
+        worker.at += timedelta(seconds=1)
+        await owner.tick()
+        assert (
+            len(store.runs) == 2
+            and store.runs[-1]["monitor_slot_at"]
+            == (AT + timedelta(minutes=50)).isoformat()
+        )
+        assert owner.monitor_due == AT + timedelta(hours=1, minutes=20)
+        await owner.tick()
+        assert len(store.runs) == 2
+
+    asyncio.run(scenario())
+
+
+def test_monitor_refreshes_nearest_retained_games_before_walk_without_duplicate_alts():
+    async def scenario():
+        store, worker = Store(), Worker()
+        store.value["settings"]["monitor_phase_seconds"] = 1200
+        worker.at = AT + timedelta(minutes=20)
+        worker.service.config["sports"] = ["NFL", "NBA"]
+        worker.events = {
+            name: dict(
+                event_id=name,
+                league=league,
+                phase="pregame",
+                status={},
+                starts_at=(AT + timedelta(minutes=minute)).isoformat(),
+            )
+            for name, league, minute in (
+                ("a-far", "NFL", 240),
+                ("z-near", "NBA", 25),
+                ("y-sooner", "NFL", 24),
+            )
+        }
+        owner = ActivityCollector(worker, store=store)
+        for _ in range(6):
+            await owner.tick()
+        params = [params for _, params in worker.calls]
+        assert [p.get("eventIDs") for p in params] == [
+            "y-sooner",
+            "z-near",
+            None,
+            None,
+            "a-far",
+        ]
+        assert [p["leagueID"] for p in params if "leagueID" in p] == ["NFL", "NBA"]
+        assert all(p.get("includeAltLines") is True for p in params if "eventIDs" in p)
+        assert all(
+            p["startsBefore"] == (worker.at + timedelta(hours=24)).isoformat()
+            for p in params
+            if "leagueID" in p
+        )
+        assert owner.monitor is None and len(store.runs) == 1
+
+    asyncio.run(scenario())
 
 
 def test_passive_reads_expire_live_without_renewing_activity_or_source_clocks():
@@ -125,7 +317,22 @@ class Store:
         self.updates = []
 
     def status(self, at):
-        return project(self.value, at=at)
+        runs = {
+            run["kind"]: dict(
+                run,
+                state=next(
+                    (
+                        values["state"]
+                        for prior, values in reversed(self.updates)
+                        if prior["id"] == run["id"]
+                    ),
+                    "running",
+                ),
+                event_count=0,
+            )
+            for run in self.runs
+        }
+        return project(self.value, at=at, runs=runs)
 
     def begin(self, kind, status, at):
         run = dict(
@@ -210,6 +417,11 @@ class Worker:
                 e
                 for e in self.events.values()
                 if datetime.fromisoformat(e["starts_at"]) > self.at
+                and (
+                    not params.get("eventIDs")
+                    or e["event_id"] in params["eventIDs"].split(",")
+                )
+                and (not params.get("leagueID") or e["league"] == params["leagueID"])
             ),
             (),
             None,
@@ -243,7 +455,10 @@ def test_monitor_continues_through_live_and_inactivity_without_thirty_minute_wai
         await owner.tick()
         assert [r["kind"] for r in store.runs].count("monitor") == 2
         assert (
-            worker.calls[0][1]["startsBefore"] == (AT + timedelta(hours=24)).isoformat()
+            next(params for _, params in worker.calls if "leagueID" in params)[
+                "startsBefore"
+            ]
+            == (AT + timedelta(hours=24)).isoformat()
         )
         assert worker.collection_run is None
 
