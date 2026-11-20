@@ -72,6 +72,22 @@ class JournalHTTP(IsolatedAsyncioTestCase):
         self.assertTrue(
             all(leg["entry_probability"] is None for leg in metrics["legs"])
         )
+        deferred_response = await self.client.get(
+            "/api/bet-journal?view=log&decision=observed&defer_observed=1"
+        )
+        self.assertEqual(deferred_response.status, 200)
+        deferred = await deferred_response.json()
+        self.assertEqual(deferred["summary"], packet["summary"])
+        self.assertEqual(
+            deferred["entries"][0]["snapshot"], packet["entries"][0]["snapshot"]
+        )
+        self.assertEqual(
+            deferred["entries"][0]["metrics"],
+            dict(deferred=True, close_state="tracking"),
+        )
+        detail_response = await self.client.get("/api/bet-journal/" + key)
+        self.assertEqual(detail_response.status, 200)
+        self.assertEqual((await detail_response.json())["entry"], packet["entries"][0])
 
     async def test_read_only_preview_uses_saved_fee_math_without_creating_history(self):
         row = offer()

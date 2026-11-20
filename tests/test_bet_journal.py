@@ -582,6 +582,133 @@ class PersonalJournal(TestCase):
         self.assertEqual(len(set(keys)), 1)
         self.assertEqual(self.journal.list()["total"], 1)
 
+    def test_deferred_observed_cards_preserve_snapshot_and_summary_without_history_work(
+        self,
+    ):
+        from app.dashboard.bet_journal_metrics import analyze
+
+        pairs = []
+        for index in range(100):
+            row = deepcopy(self.row)
+            row["game_key"] = "deferred-game-" + str(index)
+            pair = arb_snapshot(row)
+            for leg in pair["legs"]:
+                leg.pop("reference", None)
+            pairs.append(pair)
+        self.journal.capture([], pairs, [])
+        saved = self.journal.observe("ev", self.row, manual=True)
+        actual = deepcopy(self.row)
+        actual["id"] = "placed-for-summary"
+        actual["game_key"] = "placed-summary-game"
+        placed = self.journal.observe("ev", actual, manual=True)
+        now = datetime.now(timezone.utc)
+        self.journal.update(
+            placed,
+            dict(
+                revision=1,
+                decision="placed",
+                trade=dict(
+                    placed_at=(now - timedelta(seconds=1)).isoformat(),
+                    legs=[
+                        dict(
+                            quote_id=actual["id"],
+                            stake="50",
+                            price="+110",
+                            units="american_odds",
+                            entry_fee="1",
+                            win_fee="2",
+                            loss_fee="0",
+                        )
+                    ],
+                    result=dict(outcomes=["win"], settled_at=now.isoformat()),
+                ),
+            ),
+        )
+        with patch(
+            "app.dashboard.bet_journal_metrics.analyze", wraps=analyze
+        ) as calculating:
+            full = self.journal.list(decision="observed", limit=100)
+            self.assertEqual(calculating.call_count, 101)
+        original_quotes = self.journal._quotes
+
+        def no_observed_history(db, entry):
+            self.assertNotEqual(entry["decision"], "observed")
+            return original_quotes(db, entry)
+
+        with (
+            patch.object(self.journal, "_quotes", side_effect=no_observed_history),
+            patch(
+                "app.dashboard.bet_journal_metrics.analyze", wraps=analyze
+            ) as calculating,
+        ):
+            deferred = self.journal.list(
+                decision="observed", limit=100, defer_observed=True
+            )
+            self.assertEqual(
+                calculating.call_count, 1
+            )  # Actual placed-bet summary only.
+        self.assertEqual(deferred["summary"], full["summary"])
+        self.assertEqual(deferred["summary"]["realized_profit_usd"], "52")
+        self.assertEqual(deferred["total"], full["total"])
+        for light, complete in zip(deferred["entries"], full["entries"]):
+            self.assertEqual(
+                {k: v for k, v in light.items() if k != "metrics"},
+                {k: v for k, v in complete.items() if k != "metrics"},
+            )
+            self.assertEqual(
+                light["metrics"],
+                dict(deferred=True, close_state=complete["metrics"]["close_state"]),
+            )
+        self.assertEqual(
+            self.journal.get(full["entries"][0]["id"])["entry"], full["entries"][0]
+        )
+        bets = self.journal.list(view="bets", defer_observed=True)
+        self.assertEqual({entry["id"] for entry in bets["entries"]}, {saved, placed})
+        self.assertTrue(
+            all(not entry["metrics"].get("deferred") for entry in bets["entries"])
+        )
+        self.assertTrue(
+            all(
+                not record["entry"]["metrics"].get("deferred")
+                for record in self.journal.export()["entries"]
+            )
+        )
+        with patch.object(
+            self.journal, "_metrics", side_effect=RuntimeError("comparison unavailable")
+        ):
+            with self.assertRaisesRegex(RuntimeError, "comparison unavailable"):
+                self.journal.get(full["entries"][0]["id"])
+
+    def test_observed_automatic_record_with_reported_trade_keeps_full_metrics(self):
+        pair = arb_snapshot(self.row)
+        key = self.journal.observe("arb", pair)
+        trade = dict(
+            placed_at=(datetime.now(timezone.utc) - timedelta(seconds=2)).isoformat(),
+            legs=[
+                dict(
+                    quote_id=row["id"],
+                    stake="100",
+                    price="+120",
+                    units="american_odds",
+                    entry_fee="0",
+                    win_fee="2.4",
+                    loss_fee="0",
+                )
+                for row in pair["legs"]
+            ],
+        )
+        self.journal.update(key, dict(revision=1, decision="placed", trade=trade))
+        self.journal.update(key, dict(revision=2, decision="observed"))
+        default = self.journal.list(decision="observed")
+        deferred = self.journal.list(decision="observed", defer_observed=True)
+        self.assertEqual(deferred, default)
+        entry = deferred["entries"][0]
+        self.assertEqual(entry["trade"], trade)
+        self.assertEqual(entry["metrics"]["basis"], "reported_trade")
+        self.assertEqual(entry["metrics"]["entry_cost_usd"], "200")
+        self.assertEqual(entry["metrics"]["entry_min_profit_usd"], "17.6")
+        self.assertFalse(entry["metrics"].get("deferred"))
+
     def test_failed_batch_and_failed_correction_roll_back_records_and_history(self):
         pair = arb_snapshot(self.row)
         invalid = deepcopy(pair)

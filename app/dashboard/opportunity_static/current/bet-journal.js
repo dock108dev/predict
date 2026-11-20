@@ -93,6 +93,19 @@ function drawSummary(){
 }
 function priceDetails(entry){
   const m=entry.metrics||{},details=node('details',undefined,'journal-details');details.append(node('summary','Observed → actual → '+(m.close_state==='closed'?'close':'latest')+' · prices & CLV'));
+  if(m.deferred){
+    const status=node('p','Open to load closing prices and analysis.');status.setAttribute('role','status');details.append(status);
+    let busy=false,loaded=false;
+    details.addEventListener('toggle',async()=>{
+      if(!details.open||busy||loaded)return;busy=true;status.textContent='Loading closing prices and analysis…';
+      try{
+        const response=await fetch('/api/bet-journal/'+encodeURIComponent(entry.id),{cache:'no-store'});if(!response.ok)throw Error('Read failed');const data=await response.json();
+        if(!data.entry||data.entry.id!==entry.id||data.entry.metrics?.deferred)throw Error('Incomplete record');
+        if(!details.isConnected)return;
+        const full=priceDetails(data.entry);status.replaceWith(...Array.from(full.children).slice(1));loaded=true;
+      }catch(e){if(details.isConnected)status.textContent='Closing analysis could not be loaded. Close and reopen to retry.';}finally{busy=false;}
+    });return details;
+  }
   const grid=node('div',undefined,'journal-prices');
   legs(entry).forEach((row,i)=>{
     const data=m.legs?.[i]||{},trade=entry.trade?.legs?.[i],quote=data.close_quote||data.latest_quote;
@@ -170,7 +183,7 @@ function render(){
   $('previous').disabled=offset===0;$('next').disabled=offset+entries.length>=total;$('page').textContent=total?`${offset+1}–${Math.min(offset+entries.length,total)} of ${total}`:'0';
   if(!entries.length){const empty=node('div',undefined,'journal-empty');empty.append(node('h2',tab==='bets'?'Your next bet starts with a saved quote.':'No logged opportunities match this view.'),node('p',tab==='bets'?'Save an EV bet or arbitrage comparison, then enter the odds, stake and fees you actually got. Positive market-to-market arbs are logged in the Opportunity log.':'Unique, positive market-to-market arbs are logged automatically. EVs appear only when you save them to My Bets.'));const link=node('a','Browse opportunities →');link.href='/';empty.append(link);$('results').append(empty);}
 }
-function query(){const q=new URLSearchParams({view:tab,limit:'100',offset:String(offset)});for(const [k,v]of new FormData($('filters')))if(v)q.set(k,v);return q;}
+function query(){const q=new URLSearchParams({view:tab,limit:'100',offset:String(offset),defer_observed:'1'});for(const [k,v]of new FormData($('filters')))if(v)q.set(k,v);return q;}
 async function load(){
   if(loading){queued=true;return;}loading=true;const token=sequence;$('refresh').disabled=true;
   try{

@@ -67,3 +67,25 @@ Unplaced arb cards show both venues, exact signed selections/lines and original
 prices directly, with a Record bet action. A collapsed-details regression checks
 those leg labels are visible in the card summary at 390px and 1440px, so records
 for the same game remain distinguishable without another popup.
+
+A deployed normal reload followed by Opportunity log → Observed took 16.09 seconds
+for 100 cards out of 130 records. A single read-only instrumented profile found
+114 full analyses (100 unpicked cards plus 14 placed bets for the summary), with
+13.42 seconds cumulative in metrics and only 0.52 seconds of SQLite execute self
+time. Its 14.59-second total includes fresh-process imports and profiler overhead;
+it is diagnostic evidence, not a warm API benchmark.
+
+The browser now opts into `defer_observed=1`. Only automatic observed cards omit
+history analysis from that list response. Their original snapshots, exact legs,
+prices, paired return and raw metadata are unchanged. Saved/placed cards and the
+placed-bet summary keep full calculations; default API reads, exports and record
+GETs remain full. Opening the existing prices/CLV disclosure fetches one full
+record. Its original summary node and open state remain in place; a failed read
+keeps the primary card visible and closing/reopening retries. No additional popup,
+provider request, cache or record migration is involved.
+
+A 100-card regression proves 101 analysis calls become one placed-summary call,
+with exact snapshot and summary parity. The real-Journal browser regression covers
+lazy loading, a 503 failure, retry, focus/open-state preservation, and genuine
+closing-price math. Installed end-to-end timing is measured separately after the
+normal deployment.

@@ -71,6 +71,7 @@ def mount(app, *, journal=None, monitor=True):
             limit=request.query.get("limit", 100),
             offset=request.query.get("offset", 0),
             view=request.query.get("view", "log"),
+            defer_observed=request.query.get("defer_observed") == "1",
             **filters,
         )
         return web.json_response(result)

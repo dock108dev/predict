@@ -1035,7 +1035,17 @@ class Journal:
                 db, db.execute("SELECT * FROM entries WHERE id=?", (key,)).fetchone()
             )
 
-    def list(self, *, limit=100, offset=0, view="log", kind="", decision="", search=""):
+    def list(
+        self,
+        *,
+        limit=100,
+        offset=0,
+        view="log",
+        kind="",
+        decision="",
+        search="",
+        defer_observed=False,
+    ):
         limit, offset = max(1, min(500, int(limit))), max(0, int(offset))
         if (
             view not in ("bets", "log")
@@ -1045,6 +1055,8 @@ class Journal:
             raise ValueError("Unknown journal filter")
         if len(search) > 150:
             raise ValueError("Search is limited to 150 characters")
+        if type(defer_observed) is not bool:
+            raise ValueError("Choose whether to defer observed comparisons")
         conditions, params = [ELIGIBLE], []
         if view == "bets":
             conditions.append("decision IN ('saved','placed')")
@@ -1068,7 +1080,29 @@ class Journal:
                 + " ORDER BY created_at DESC,id LIMIT ? OFFSET ?",
                 [*params, limit, offset],
             ).fetchall()
-            entries = [self._metrics(db, self.unpack(row)) for row in rows]
+            entries = []
+            now = instant(clock())
+            for row in rows:
+                entry = self.unpack(row)
+                if (
+                    defer_observed
+                    and entry["origin"] == "automatic"
+                    and entry["decision"] == "observed"
+                    and entry["trade"] is None
+                ):
+                    # Only unpicked cards without reported inputs defer. The
+                    # unchanged first snapshot is enough until Details loads
+                    # history; any recorded trade keeps its financial metrics.
+                    entry["metrics"] = dict(
+                        deferred=True,
+                        close_state="closed"
+                        if now >= instant(entry["snapshot"]["kickoff"])
+                        else "tracking",
+                    )
+                    entry["opportunity_id"] = entry["id"]
+                else:
+                    self._metrics(db, entry)
+                entries.append(entry)
             counts = dict(
                 db.execute(
                     "SELECT decision,count(*) FROM entries WHERE "

@@ -26,6 +26,7 @@ class JournalUI:
         self.journal = Journal(path)
         self.quote = quote
         self.updates, self.reads, self.previews = [], [], []
+        self.list_packets, self.detail_reads = [], []
         self.conflict = self.fail_save = False
 
     def serve(self, route):
@@ -40,7 +41,12 @@ class JournalUI:
                 route.fulfill(status=201, json=self.journal.get(key))
             else:
                 self.reads.append(q)
-                route.fulfill(json=self.journal.list(**q))
+                options = dict(q)
+                if "defer_observed" in options:
+                    options["defer_observed"] = options["defer_observed"] == "1"
+                packet = self.journal.list(**options)
+                self.list_packets.append(deepcopy(packet))
+                route.fulfill(json=packet)
         elif url.path.endswith("/preview") and url.path.startswith("/api/bet-journal/"):
             key = url.path.split("/")[-2]
             self.previews.append(deepcopy(request.post_data_json))
@@ -72,6 +78,7 @@ class JournalUI:
                     else:
                         route.fulfill(json=result)
             else:
+                self.detail_reads.append(key)
                 route.fulfill(json=self.journal.get(key, history=True))
         elif url.path.startswith("/api/pregame"):
             route.fulfill(
@@ -1356,3 +1363,142 @@ def test_opportunity_log_keeps_only_positive_unique_market_arbs_and_selected_ev(
     assert journal.list(view="log")["summary"]["counts"] == dict(
         observed=1, saved=2, placed=1
     )
+
+
+def test_observed_arb_details_load_full_closes_lazily_and_retry_without_losing_focus(
+    tmp_path,
+):
+    from playwright.sync_api import expect, sync_playwright
+
+    now = datetime.now(timezone.utc)
+    kickoff = now - timedelta(minutes=1)
+    original_at = kickoff - timedelta(minutes=3)
+    created_at = kickoff - timedelta(minutes=2)
+    source_close = kickoff - timedelta(seconds=10)
+    received_close = kickoff - timedelta(seconds=9)
+    observed_close = kickoff - timedelta(seconds=8)
+    pair = journal_arb()
+    pair.update(
+        category="market_market",
+        minimum_profit_usd="10",
+        committed_usd="200",
+        kickoff=kickoff.isoformat(),
+    )
+    pair["legs"][1].update(id="lazy-novig-close", venue="novig")
+    pair["legs"][1]["fee"]["classification"] = "exact_public"
+    for leg in pair["legs"]:
+        leg.update(
+            kickoff=kickoff.isoformat(),
+            times=dict(
+                source_at=original_at.isoformat(), received_at=original_at.isoformat()
+            ),
+            reference=None,
+            calculated_at=created_at.isoformat(),
+        )
+        leg["raw"].pop("net_ev", None)
+        leg["display"].pop("net_ev", None)
+    fixture = JournalUI(tmp_path / "lazy-observed.sqlite3", pair["legs"][0])
+    key = fixture.journal.observe("arb", pair, at=created_at)
+    closing = deepcopy(pair["legs"])
+    for leg in closing:
+        leg["times"] = dict(
+            source_at=source_close.isoformat(), received_at=received_close.isoformat()
+        )
+        leg["calculated_at"] = observed_close.isoformat()
+    assert fixture.journal.quotes(closing, at=observed_close) == 2
+    state, pending = dict(fail=True), []
+
+    def serve(route):
+        if (
+            route.request.method == "GET"
+            and urlparse(route.request.url).path == "/api/bet-journal/" + key
+        ):
+            fixture.detail_reads.append(key)
+            if state["fail"]:
+                route.fulfill(
+                    status=503, json=dict(error="fixture_detail_read_unavailable")
+                )
+            else:
+                pending.append(route)
+        else:
+            fixture.serve(route)
+
+    with sync_playwright() as pw:
+        browser = pw.chromium.launch(executable_path=os.getenv("PREDICT_CI_CHROMIUM"))
+        page = browser.new_page(viewport=dict(width=390, height=844))
+        errors = []
+        page.on("pageerror", lambda error: errors.append(str(error)))
+        page.route("**/*", serve)
+        page.goto("https://predict.fixture/my-bets?view=log")
+        card = page.locator(".journal-entry")
+        expect(card).to_have_count(1)
+        assert fixture.reads[-1]["defer_observed"] == "1"
+        initial = fixture.list_packets[-1]["entries"][0]
+        assert initial["metrics"] == dict(deferred=True, close_state="closed")
+        assert initial["snapshot"] == pair
+        assert not fixture.detail_reads
+        primary = card.locator(":scope > .journal-observed")
+        expect(primary).to_be_visible()
+        expect(primary).to_contain_text("ProphetX · Orlando Magic -1.5 · +120")
+        expect(primary).to_contain_text("Novig · Milwaukee Bucks +1.5 · +110")
+        expect(card.locator(".journal-observed-arb")).to_contain_text("+5.00%")
+        details = card.locator(".journal-details")
+        expect(details).not_to_have_attribute("open", "")
+        expect(details.locator(":scope > p[role=status]")).to_have_text(
+            "Open to load closing prices and analysis."
+        )
+        expect(details.get_by_role("region", name="Closing prices")).to_have_count(0)
+        summary = details.locator(":scope > summary")
+        summary.evaluate("e=>e.dataset.originalDisclosure='yes'")
+        summary.focus()
+        page.keyboard.press("Enter")
+        expect(details).to_have_attribute("open", "")
+        expect(details).to_contain_text("Close and reopen to retry")
+        expect(card).to_have_count(1)
+        expect(primary).to_be_visible()
+        expect(summary).to_be_focused()
+        state["fail"] = False
+        summary.click()
+        expect(details).not_to_have_attribute("open", "")
+        with page.expect_request(
+            lambda request: (
+                request.method == "GET"
+                and urlparse(request.url).path == "/api/bet-journal/" + key
+            )
+        ):
+            summary.focus()
+            page.keyboard.press("Enter")
+        expect(details).to_have_attribute("open", "")
+        expect(summary).to_be_focused()
+        assert len(pending) == 1
+        expect(details.locator(":scope > p[role=status]")).to_have_text(
+            "Loading closing prices and analysis…"
+        )
+        pending.pop().fulfill(json=fixture.journal.get(key, history=True))
+        closes = details.get_by_role("region", name="Closing prices")
+        expect(closes).to_be_visible()
+        expect(closes).to_contain_text("Orlando Magic -1.5 · +120")
+        expect(closes).to_contain_text("Milwaukee Bucks +1.5 · +110")
+        close_math = details.locator(".journal-figure").filter(
+            has=page.locator(
+                "span", has_text=re.compile(r"^Closing quote model return$")
+            )
+        )
+        expect(close_math.locator("strong")).to_have_text("+5.00%")
+        expect(close_math).to_contain_text("$10.00 modeled profit")
+        expect(close_math).to_contain_text("$200.00 basis")
+        expect(details).to_have_attribute("open", "")
+        expect(summary).to_have_attribute("data-original-disclosure", "yes")
+        expect(summary).to_be_focused()
+        expect(page.locator("dialog[open]")).to_have_count(0)
+        assert fixture.detail_reads == [key, key]
+        stored = fixture.journal.get(key, history=True)
+        assert stored["entry"]["revision"] == 1
+        assert stored["entry"]["snapshot"] == pair
+        assert stored["entry"]["metrics"]["close_arb_return"] == "0.05"
+        assert all(
+            leg["close_quote"]["times"]["source_at"] == source_close.isoformat()
+            for leg in stored["entry"]["metrics"]["legs"]
+        )
+        assert not fixture.updates and not errors, errors
+        browser.close()
