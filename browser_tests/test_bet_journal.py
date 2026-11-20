@@ -886,6 +886,33 @@ def test_legacy_receipt_adjustment_failure_conflict_and_correction_keep_history(
         assert record["history"][-2]["trade"]["result"]["receipts_usd"] == ["205"]
         expect(page.locator(".journal-result-line")).to_contain_text("Cash adjustment")
         expect(page.locator(".journal-result-line")).to_contain_text("$104.50")
+        # Choosing a modeled outcome hides the retained cash adjustment, so it
+        # cannot appear to disagree with the newly calculated net return.
+        edit_bet(page).click()
+        expect(page.locator('[name="manual_result"]')).to_be_checked()
+        expect(page.locator('[name="receipt-0"]')).to_have_value("204.5")
+        choose_outcome(page, 0, "win")
+        expect(page.locator('[name="manual_result"]')).not_to_be_checked()
+        expect(page.locator("#settlement")).not_to_have_attribute("open", "")
+        expect(page.locator('[name="receipt-0"]')).not_to_be_visible()
+        expect(page.locator("#settlement-preview")).to_contain_text("$207.80")
+        expect(page.locator("#settlement-preview")).to_contain_text("$107.80")
+        unchanged = fixture.journal.get(key)["entry"]
+        assert unchanged["revision"] == record["entry"]["revision"]
+        assert unchanged["trade"]["result"]["receipts_usd"] == ["204.5"]
+        assert "outcomes" not in unchanged["trade"]["result"]
+        page.locator("#save").click()
+        expect(page.locator("#editor")).not_to_be_visible()
+        converted = fixture.journal.get(key, history=True)
+        assert converted["entry"]["trade"]["result"]["outcomes"] == ["win"]
+        assert "receipts_usd" not in converted["entry"]["trade"]["result"]
+        assert converted["entry"]["metrics"]["realized_profit_usd"] == "107.8"
+        assert converted["history"][-2]["trade"]["result"]["receipts_usd"] == ["204.5"]
+        assert converted["entry"]["snapshot"] == quote
+        expect(page.locator(".journal-result-line")).to_contain_text("Win")
+        expect(page.locator(".journal-result-line")).not_to_contain_text(
+            "Cash adjustment"
+        )
         browser.close()
 
 

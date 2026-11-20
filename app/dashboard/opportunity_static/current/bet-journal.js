@@ -204,7 +204,7 @@ async function updatePreview(){
   catch(e){if(editing?.id===id&&request===previewSequence){for(const row of document.querySelectorAll('.journal-leg-preview'))row.replaceChildren(node('p','After-fee preview unavailable. Your entries are preserved.','journal-observed-detail'));$('settlement-preview').replaceChildren();}}
 }
 $('edit-form').addEventListener('input',event=>{
-  if(event.target.name?.startsWith('outcome-'))$('edit-form').elements.manual_result.checked=false;
+  if(event.target.name?.startsWith('outcome-')){$('edit-form').elements.manual_result.checked=false;$('settlement').open=false;}
   if(['notes','result_notes','placed_at'].includes(event.target.name))return;
   previewSequence++;clearTimeout(previewTimer);
   if(/^(stake|price|units)-/.test(event.target.name))for(const row of document.querySelectorAll('.journal-leg-preview'))row.replaceChildren(node('p','Calculating after-fee return…','journal-observed-detail'));
