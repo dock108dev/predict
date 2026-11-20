@@ -62,3 +62,8 @@ real Journal HTTP list. Both phone/desktop log cases now persist an explicit nul
 reference with valid unchanged timestamps. A private, read-only captured-input
 replay covered all 128 retained eligible automatic arbs and 153 nullable reference
 quotes with zero analysis exceptions. Those captured inputs remain untracked.
+
+Unplaced arb cards show both venues, exact signed selections/lines and original
+prices directly, with a Record bet action. A collapsed-details regression checks
+those leg labels are visible in the card summary at 390px and 1440px, so records
+for the same game remain distinguishable without another popup.

@@ -1239,9 +1239,13 @@ def test_opportunity_log_keeps_only_positive_unique_market_arbs_and_selected_ev(
                 "button=>{const r=button.getBoundingClientRect();return button.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));}"
             )
         assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
-        observed = page.locator(
-            f'.journal-entry[data-entry-id="{arb_key}"] .journal-observed-arb'
-        )
+        arb_card = page.locator(f'.journal-entry[data-entry-id="{arb_key}"]')
+        expect(arb_card.locator(".journal-details")).not_to_have_attribute("open", "")
+        visible_legs = arb_card.locator(":scope > p.journal-observed")
+        expect(visible_legs).to_be_visible()
+        expect(visible_legs).to_contain_text("ProphetX · Orlando Magic -1.5 · +120")
+        expect(visible_legs).to_contain_text("Novig · Milwaukee Bucks +1.5 · +110")
+        observed = arb_card.locator(".journal-observed-arb")
         expect(observed).to_be_visible()
         for value in ("+5.00%", "$10.00", "$200.00"):
             expect(observed).to_contain_text(value)

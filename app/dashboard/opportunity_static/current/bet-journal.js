@@ -151,13 +151,13 @@ function card(entry){
   const snapshot=entry.snapshot,m=entry.metrics||{},article=node('article',undefined,'journal-entry');article.dataset.entryId=entry.id;
   const settled=Boolean(entry.trade?.result),head=node('header',undefined,'journal-entry-head'),subject=node('div'),caption=node('p',(entry.kind==='arb'?'ARBITRAGE':'EV BET')+' · '+(snapshot.league||'')+' · '+when(snapshot.kickoff),'journal-caption');caption.append(node('span',settled?'Settled':entry.decision,'journal-decision '+entry.decision));
   subject.append(caption,node('h2',entry.kind==='arb'?snapshot.game:pick(snapshot)));if(entry.kind!=='arb')subject.append(node('p',snapshot.game,'journal-observed'));
-  const edit=node('button',entry.decision==='placed'&&!settled?'Set result':'Edit bet');edit.type='button';edit.onclick=()=>openEditor(entry,edit);head.append(subject,edit);article.append(head);
+  const edit=node('button',entry.decision==='observed'?'Record bet':entry.decision==='placed'&&!settled?'Set result':'Edit bet');edit.type='button';edit.onclick=()=>openEditor(entry,edit);head.append(subject,edit);article.append(head);
   if(entry.trade){
     legs(entry).forEach((row,i)=>{const trade=entry.trade.legs?.[i],line=node('section',undefined,'journal-position');line.append(node('h3',bookName(row.venue)+(entry.kind==='arb'?' · '+pick(row):'')+' · '+money(trade?.stake)+' staked'));line.append(priceStrip(row,trade));article.append(line);});
     const settlement=m.settlement,result=node('div',undefined,'journal-result-line');result.append(node('span',settled?'Net result':'Result pending'),node('strong',settled?money(m.realized_profit_usd):'Pick Win / Loss / Tie'));
     if(settled){const outcomes=entry.trade.result.outcomes;result.append(node('span',outcomes?outcomes.map(v=>v==='push'?'Tie · refund':v==='win'?'Win':'Loss').join(' / '):'Cash adjustment'));if(settlement?.total_receipts_usd!=null)result.append(node('span','Returned '+money(settlement.total_receipts_usd)));if(m.realized_roi!=null)result.append(node('span',percent(m.realized_roi)+' ROI'));if(settlement?.state==='unavailable')result.append(node('span','Saved fee terms unavailable; adjust returned cash to record the actual result.'));}article.append(result);
   }else{
-    article.append(node('p',legs(entry).map(row=>bookName(row.venue)+' · '+observedPrice(row)).join(' / '),'journal-observed'));
+    article.append(node('p',legs(entry).map(row=>bookName(row.venue)+' · '+(entry.kind==='arb'?pick(row)+' · ':'')+observedPrice(row)).join(' / '),'journal-observed'));
     if(entry.kind==='arb'){const observed=node('div',undefined,'journal-entry-prices journal-observed-arb');observed.append(metric('Observed paired return',percent(snapshot.return_rate)),metric('Modeled minimum profit',money(snapshot.minimum_profit_usd)),metric('Modeled total paid',money(snapshot.committed_usd??snapshot.basis_usd)));article.append(observed);}
     else article.append(node('p','Enter stake and entry price to track your return.','journal-observed'));
   }
