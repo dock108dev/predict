@@ -51,3 +51,14 @@ The paging toolbar sits above the results and remains sticky while scanning. Its
 390px and 1440px regressions verify both paging controls stay within the viewport,
 remain the actual hit targets after scrolling to the bottom, and do not introduce
 horizontal overflow. This avoids scrolling through 100 cards to reach Next.
+
+Engineer-led deployed checking then found a valid historical input absent from the
+first fixtures: `reference: null`. The optional probability reader attempted a
+dictionary lookup and failed the entire log request. Reference and contributor
+maps are now type-checked; an unavailable fair model leaves EV unknown while
+fee-only paired profit remains available. The regression first reproduced the
+AttributeError, then passed 37 metrics/API tests and eight subtests, including a
+real Journal HTTP list. Both phone/desktop log cases now persist an explicit null
+reference with valid unchanged timestamps. A private, read-only captured-input
+replay covered all 128 retained eligible automatic arbs and 153 nullable reference
+quotes with zero analysis exceptions. Those captured inputs remain untracked.

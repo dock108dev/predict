@@ -1,7 +1,7 @@
 """The personal journal flow, including actual odds edits and mobile layout."""
 
 from copy import deepcopy
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from fractions import Fraction
 import os
 import re
@@ -1176,6 +1176,15 @@ def test_opportunity_log_keeps_only_positive_unique_market_arbs_and_selected_ev(
     # Quotes are collected only after an eligible arb or chosen bet owns the
     # identity; an old unpicked EV alone must no longer keep tracking alive.
     journal.quotes([quote], at=at)
+    # A real fee-qualified arb quote can explicitly lack a fair reference. Give
+    # that tracked Novig leg qualified source/receipt/observation clocks so the
+    # normal log read must analyze it, rather than quietly discarding the row.
+    null_clock = datetime.now(timezone.utc).isoformat()
+    reference_free = deepcopy(pair["legs"][1])
+    reference_free.update(
+        reference=None, times=dict(source_at=null_clock, received_at=null_clock)
+    )
+    assert journal.quotes([reference_free], at=null_clock) == 1
     with journal.database() as db:
         legacy_rows = {
             key: tuple(
@@ -1249,6 +1258,20 @@ def test_opportunity_log_keeps_only_positive_unique_market_arbs_and_selected_ev(
         summary = journal.list(view="log")["summary"]
         assert summary["counts"] == dict(observed=1, saved=2, placed=1)
         assert summary["opportunities"] == 1
+        analyzed = next(
+            entry
+            for entry in journal.list(view="log", decision="observed")["entries"]
+            if entry["id"] == arb_key
+        )
+        metrics = analyzed["metrics"]
+        assert Fraction(metrics["entry_arb_return"]) == Fraction(".05")
+        assert metrics["entry_cost_usd"] == "200"
+        assert metrics["entry_min_profit_usd"] == "10"
+        assert metrics["entry_ev"] is None
+        latest = metrics["legs"][1]["latest_quote"]
+        assert "reference" in latest and latest["reference"] is None
+        assert latest["times"] == dict(source_at=null_clock, received_at=null_clock)
+        assert latest["observed_at"] == null_clock
         assert summary["settled"] == 1
         assert Fraction(summary["realized_profit_usd"]) == Fraction("107.8")
         page.get_by_label("Opportunity type").select_option("ev")

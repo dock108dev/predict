@@ -195,6 +195,41 @@ def test_closing_alias_ignores_only_label_and_preserves_every_economic_selection
         assert measured["legs"][0]["close_quote"]["id"] != alias["id"]
 
 
+def test_nullable_or_unavailable_references_keep_fee_only_arb_results():
+    left, right = quote(), quote(identifier="two", side="away")
+    snapshot = dict(
+        id="fee-only-pair", kickoff=KICKOFF, legs=[left, right], return_rate="0.1"
+    )
+    for reference in (
+        None,
+        {},
+        [],
+        "unavailable",
+        1,
+        dict(left["reference"], candidate_probabilities=["0.5", "0.5"]),
+        dict(left["reference"], candidate_probabilities="unavailable"),
+    ):
+        original = deepcopy(snapshot)
+        for row in original["legs"]:
+            row["reference"] = deepcopy(reference)
+        closing = deepcopy(original["legs"])
+        for row in closing:
+            row.update(
+                times=dict(source_at=CLOSE, received_at=CLOSE), observed_at=CLOSE
+            )
+        saved = entry(original)
+        saved["kind"] = "arb"
+        measured = analyze(saved, closing, at=AFTER)
+        assert measured["entry_probability_basis"]
+        assert measured["entry_ev"] is None and measured["close_ev"] is None
+        assert measured["entry_min_profit_usd"] == "20"
+        assert measured["close_min_profit_usd"] == "20"
+        assert all(
+            leg["entry_probability"] is None and leg["close_probability"] is None
+            for leg in measured["legs"]
+        )
+
+
 def test_actual_odds_fees_expected_value_close_and_cash_result():
     trade = actual()
     trade["result"] = dict(receipts_usd=["103"], settled_at=AFTER)

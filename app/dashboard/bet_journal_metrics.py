@@ -160,10 +160,14 @@ def _pregame_clock(row, cutoff):
 def _probability(row, cutoff, *, known_at=None):
     """A probability cannot acquire an earlier knowledge time than its inputs."""
     try:
-        reference = row["reference"]
+        reference = row.get("reference")
+        if not isinstance(reference, dict):
+            return None
         from app.comparison.sgo_reference import BEST_BOOKS
 
-        contributors = reference.get("candidate_probabilities") or {}
+        contributors = reference.get("candidate_probabilities")
+        if not isinstance(contributors, dict):
+            return None
         if (
             sum(
                 book in BEST_BOOKS and 0 < fraction(value) < 1
@@ -420,7 +424,8 @@ def analyze(entry, quotes, at=None):
             for clock, row in valid
             if entry_at is not None
             and clock[2] <= entry_at
-            and (row.get("reference") or {}).get("closing_basis")
+            and isinstance(row.get("reference"), dict)
+            and row["reference"].get("closing_basis")
             not in (
                 "harder_line_probability_lower_bound",
                 "alternate_line_interpolation",

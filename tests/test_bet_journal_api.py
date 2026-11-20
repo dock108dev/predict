@@ -5,6 +5,7 @@ from tempfile import TemporaryDirectory
 from unittest import IsolatedAsyncioTestCase
 from unittest.mock import patch
 from copy import deepcopy
+from datetime import datetime, timedelta, timezone
 import json
 
 from aiohttp import web
@@ -38,6 +39,39 @@ class JournalHTTP(IsolatedAsyncioTestCase):
         )
         self.assertEqual(response.status, 201, await response.text())
         return (await response.json())["entry"]
+
+    async def test_normal_observed_log_reads_real_nullable_reference_history(self):
+        from tests.test_bet_journal import arb_snapshot
+
+        now = datetime.now(timezone.utc)
+        row = offer()
+        row["kickoff"] = (now + timedelta(hours=1)).isoformat()
+        row["times"] = dict(
+            source_at=(now - timedelta(minutes=2)).isoformat(),
+            received_at=(now - timedelta(minutes=2)).isoformat(),
+        )
+        pair = arb_snapshot(row)
+        for leg in pair["legs"]:
+            leg.pop("reference", None)
+        key = self.journal.observe("arb", pair, at=now - timedelta(minutes=1))
+        later = deepcopy(pair["legs"][0])
+        later["reference"] = None
+        later["raw"]["net_ev"] = "-0.1"
+        self.assertEqual(self.journal.quotes([later], at=now), 1)
+        reopened = Journal(self.journal.path)
+        listing = reopened.list(view="log", decision="observed")
+        self.assertEqual(listing["total"], 1)
+        self.assertIsNone(reopened.get(key, history=True)["quotes"][0]["reference"])
+        response = await self.client.get("/api/bet-journal?view=log&decision=observed")
+        self.assertEqual(response.status, 200, await response.text())
+        packet = await response.json()
+        self.assertEqual(packet["total"], 1)
+        metrics = packet["entries"][0]["metrics"]
+        self.assertIsNone(metrics["entry_ev"])
+        self.assertEqual(metrics["entry_min_profit_usd"], "17.6")
+        self.assertTrue(
+            all(leg["entry_probability"] is None for leg in metrics["legs"])
+        )
 
     async def test_read_only_preview_uses_saved_fee_math_without_creating_history(self):
         row = offer()
