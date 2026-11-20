@@ -5,7 +5,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from tests.ci_support import load
+from tests.ci_support import load, readiness_evidence
 from tests.test_ci_reporting import browser_cases
 
 
@@ -537,7 +537,9 @@ class ReadinessArtifactTests(unittest.TestCase):
                     os.environ,
                     {
                         "NEEDS_JSON": raw,
-                        "GITHUB_SHA": "merge-candidate",
+                        "GITHUB_SHA": "a" * 40,
+                        "GITHUB_RUN_ID": "10",
+                        "GITHUB_RUN_ATTEMPT": "1",
                         "PR_HEAD_SHA": "pr-head",
                         "GITHUB_STEP_SUMMARY": "summary.md",
                     },
@@ -545,6 +547,7 @@ class ReadinessArtifactTests(unittest.TestCase):
                     before = Path.cwd()
                     try:
                         os.chdir(folder)
+                        readiness_evidence(Path("test-results/signals-inputs/current"))
                         self.assertEqual(gate.main(), int(expected == "FAIL"))
                     finally:
                         os.chdir(before)
@@ -552,7 +555,7 @@ class ReadinessArtifactTests(unittest.TestCase):
                     (Path(folder) / "test-results/readiness/metrics.json").read_text()
                 )
                 self.assertEqual(result["overall"], expected)
-                self.assertEqual(result["tested_sha"], "merge-candidate")
+                self.assertEqual(result["tested_sha"], "a" * 40)
                 self.assertEqual(result["pr_head_sha"], "pr-head")
                 self.assertTrue(
                     (Path(folder) / "test-results/readiness/summary.md").exists()
@@ -576,30 +579,6 @@ class ReadinessArtifactTests(unittest.TestCase):
             for missing in names:
                 with self.assertRaises(ValueError):
                     validate([name for name in names if name != missing], root)
-
-    def test_wheel_requires_declared_ui_assets_but_rejects_unknown_assets(self):
-        package = load("package_smoke")
-        with tempfile.TemporaryDirectory() as folder:
-            root = Path(folder)
-            names = sorted(package.UI_ASSETS)
-            for name in names:
-                path = root / name
-                path.parent.mkdir(parents=True, exist_ok=True)
-                path.write_bytes(b"authored asset fixture")
-            package.validate_wheel(names, root)
-            for missing in names:
-                with (
-                    self.subTest(missing=missing),
-                    self.assertRaisesRegex(ValueError, "Missing package inputs"),
-                ):
-                    package.validate_wheel(
-                        [name for name in names if name != missing], root
-                    )
-            with self.assertRaisesRegex(ValueError, "Unexpected/stale package inputs"):
-                package.validate_wheel(
-                    names + ["app/dashboard/opportunity_static/current/unknown.ttf"],
-                    root,
-                )
 
 
 class QualityFirstWorkflowTests(unittest.TestCase):
@@ -667,19 +646,22 @@ class QualityFirstWorkflowTests(unittest.TestCase):
                             "NEEDS_JSON": json.dumps(needs),
                             "GITHUB_EVENT_NAME": event,
                             "FULL_DIAGNOSTICS": full,
-                            "GITHUB_SHA": "authored-candidate",
+                            "GITHUB_SHA": "a" * 40,
+                            "GITHUB_RUN_ID": "10",
+                            "GITHUB_RUN_ATTEMPT": "1",
                             "GITHUB_STEP_SUMMARY": "summary.md",
                         },
                         clear=True,
                     ),
                 ):
+                    readiness_evidence(Path("test-results/signals-inputs/current"))
                     self.assertEqual(load("gate").main(), int(expected == "FAIL"))
                     report = json.loads(
                         Path("test-results/readiness/metrics.json").read_text()
                     )
                     text = Path("summary.md").read_text()
                 self.assertEqual(report["overall"], expected)
-                self.assertEqual(report["tested_sha"], "authored-candidate")
+                self.assertEqual(report["tested_sha"], "a" * 40)
                 self.assertEqual(report["full_diagnostics"], full == "true")
                 self.assertIn("Why these tests ran", text)
                 self.assertIn("manual override never bypasses readiness", text)

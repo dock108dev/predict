@@ -89,7 +89,9 @@ def test_percentage_and_american_on_boards_and_comparisons(venue, width, tmp_pat
     from browser_tests.test_pregame_arb_recovery import pair_fixture
 
     selected = offer()
-    selected.update(venue=venue, side="home", posted=dict(value="+126", units="american_odds"))
+    selected.update(
+        venue=venue, side="home", posted=dict(value="+126", units="american_odds")
+    )
     selected["raw"].update(posted_decimal="2.26", after_fee_decimal="2.1468")
     selected["display"].update(posted_odds="+126", after_fees="+115")
     pair = pair_fixture()

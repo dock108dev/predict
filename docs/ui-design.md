@@ -66,6 +66,16 @@ journal entries and preferences persist in separate private SQLite files. Palett
 colors never determine the sign of EV, warning or error values. NCAA themes are
 deferred.
 
+Owner appearance persists in `.local/predict-personal/preferences.sqlite3`, or the
+absolute `PREDICT_PREFERENCES_PATH`. Reads use a read-only connection and one
+schema/value snapshot. Before the first save commits, an absent store or
+uninitialized table yields the default appearance. Schema creation and the first
+value commit together. Malformed stored values, database corruption and lock
+failures remain explicit HTTP 503 storage failures; they do not overwrite saved
+preferences or turn into input-validation errors. The browser can retain its
+cached appearance during an unavailable read. Back up this file with SQLite's
+backup mechanism alongside the separate journal when preserving display settings.
+
 Completed Arb scans reuse qualified pairs across ordering, league, market, venue,
 pair-type and sportsbook changes. Reuse requires the same database, cohort/source
 revision, look-ahead, source-age and search context, and stops at eligibility

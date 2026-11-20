@@ -228,3 +228,9 @@ app/reviews/*
 /docs/sc09-acquisition-gaps.md
 /docs/usability/
 /docs/engineering/predict-sprint-*-20*.md
+
+# Local implementation reports; maintained behavior lives in the project guides.
+/docs/activity-mode-20*.md
+/docs/usability-sprint-20*.md
+/docs/usability-performance-20*.md
+/docs/engineering/my-bets-results-20*/

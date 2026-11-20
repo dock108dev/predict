@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 
 from reporting import behavior_table, run_reference, safe, step_status
+from required_evidence import evaluate as evaluate_evidence
 
 REQUIRED = ("offline", "quality", "postgres", "browser")
 CHECKS = {
@@ -50,9 +51,26 @@ def main():
     except ValueError:
         needs = None
         passed, errors = False, ["Required job results are malformed JSON"]
+    evidence_errors, evidence = evaluate_evidence(
+        Path("test-results/signals-inputs/current"),
+        os.environ.get("GITHUB_SHA"),
+        os.environ.get("GITHUB_RUN_ID"),
+        os.environ.get("GITHUB_RUN_ATTEMPT"),
+        os.environ.get("GITHUB_REPOSITORY", ""),
+    )
+    errors.extend(evidence_errors)
+    passed = passed and not evidence_errors
     output = Path("test-results/readiness")
     output.mkdir(parents=True, exist_ok=True)
     statuses = {name: step_status(needs, name, "result") for name in REQUIRED}
+    evidence_statuses = {
+        name: "PASS"
+        if len(rows := [row for row in evidence.values() if row["lane"] == name])
+        == (4 if name == "postgres" else 1)
+        and all(row["status"] == "PASS" for row in rows)
+        else "FAIL"
+        for name in REQUIRED
+    }
     full_diagnostics = (
         os.environ.get("GITHUB_EVENT_NAME") == "workflow_dispatch"
         and os.environ.get("FULL_DIAGNOSTICS") == "true"
@@ -75,7 +93,9 @@ def main():
             for name in REQUIRED
         },
         check_status=statuses,
+        evidence_status=evidence_statuses,
         errors=errors,
+        evidence=evidence,
         baseline=None,
         execution_policy="full behavior lanes after quality; no test omission on passing candidates",
         full_diagnostics=full_diagnostics,
@@ -83,8 +103,17 @@ def main():
     (output / "metrics.json").write_text(json.dumps(value, indent=2) + "\n")
     text = "## CI readiness — " + value["overall"] + "\n\n"
     text += behavior_table(
-        [(CHECKS[name][0], statuses[name], *CHECKS[name][1:]) for name in REQUIRED],
-        "These are job conclusions. Case results and skipped cases are in the job reports. Browser and database tests use synthetic inputs. Provider coverage, installed performance and release acceptance require separate evidence.",
+        [
+            (
+                CHECKS[name][0],
+                "FAIL"
+                if statuses[name] == "PASS" and evidence_statuses[name] != "PASS"
+                else statuses[name],
+                *CHECKS[name][1:],
+            )
+            for name in REQUIRED
+        ],
+        "Passing job conclusions require matching candidate/run reports, executed JUnit cases and all four SQL shards. Partial reruns reuse older artifacts only for retained successful jobs verified through Actions. Browser and database tests use synthetic inputs. Provider coverage, installed performance and release acceptance require separate evidence.",
     )
     text += (
         f"Tested SHA `{safe(value['tested_sha'])}`. PR head `{safe(value['pr_head_sha'])}`. "
@@ -104,6 +133,20 @@ def main():
         "A quality failure can intentionally prevent behavior execution; that skip "
         "is not a behavior pass. The manual override never bypasses readiness.\n"
     )
+    if evidence:
+        text += "\n### Required evidence\n\n"
+        text += (
+            "\n".join(
+                f"- `{safe(row['artifact'])}`: {row['status']}; "
+                + (
+                    "retained successful job"
+                    if str(row["attempt"]) != str(value["run_attempt"])
+                    else "current attempt"
+                )
+                for row in evidence.values()
+            )
+            + "\n"
+        )
     if errors:
         text += (
             "\nRequired jobs to inspect in this run\n\n"

@@ -49,7 +49,7 @@ def posted_decimal(row):
     posted = row.get("posted") or {}
     units = posted.get("units")
     value = posted.get("value")
-    if units in ("cents", "price_cents"):
+    if units in ("cents", "price_cents", "cents_per_contract"):
         return decimal_price(fraction(value) / 100, "probability")
     if units in ("probability", "contract_price", "price", "dollars"):
         return decimal_price(value, "probability")
@@ -457,6 +457,8 @@ def analyze(entry, quotes, at=None):
         )
         if actual is None and len(actual_legs) == len(originals):
             actual = actual_legs[index]
+        actual_venue = (actual or {}).get("venue") or original.get("venue")
+        same_venue = actual_venue == original.get("venue")
         try:
             cash = (
                 _cashflows(original, actual if trade else None)
@@ -474,6 +476,7 @@ def analyze(entry, quotes, at=None):
         leg = dict(
             quote_id=original["id"],
             venue=original.get("venue"),
+            actual_venue=actual_venue,
             observed_price=original.get("posted"),
             entry_decimal=wire(preview_cash.get("decimal")),
             cashflows={
@@ -534,12 +537,18 @@ def analyze(entry, quotes, at=None):
             entry_ev=None,
             close_ev=None,
             reason=None,
+            price_comparison_reason=None
+            if same_venue
+            else "Price CLV and execution price slippage are unavailable: the actual venue differs from the saved quote venue.",
         )
+        if not same_venue:
+            result["reasons"].append(leg["price_comparison_reason"])
         if cash:
             try:
-                leg["price_slippage"] = wire(
-                    cash["decimal"] / posted_decimal(original) - 1
-                )
+                if same_venue:
+                    leg["price_slippage"] = wire(
+                        cash["decimal"] / posted_decimal(original) - 1
+                    )
             except (KeyError, TypeError, ValueError, ZeroDivisionError):
                 pass
             leg["entry_ev"] = (
@@ -552,7 +561,7 @@ def analyze(entry, quotes, at=None):
                 wire(cash["decimal"] * p_close - 1) if p_close is not None else None
             )
             try:
-                if close_quote:
+                if close_quote and same_venue:
                     leg["clv"] = wire(cash["decimal"] / posted_decimal(close_quote) - 1)
             except (KeyError, TypeError, ValueError, ZeroDivisionError):
                 pass

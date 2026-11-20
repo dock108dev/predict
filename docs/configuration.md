@@ -31,14 +31,14 @@ selects internal defaults that enable acquisition, so create the file first.
 | `sports`, `families` | Base scope. Supported sports are NFL, NCAAF, NBA, NCAAB, MLB and NHL. Families are `moneyline`, `spread` and `total`. Listings vary by source. |
 | `native_sports`, `native_families` | Optional native-source overrides. Absent or empty overrides inherit the base scope. |
 | `aggregate_sports` | Optional aggregate sport override. An absent or empty list inherits `sports`. |
-| `live_enabled` | Enables in-game acquisition and display. The sample and omitted setting both select pregame only. |
+| `live_enabled` | Legacy in-game option for supported native/research routes. The sample and omitted setting select pregame only; ordinary SGO Monitor/Live collection remains pregame-only regardless of this flag. |
 | `direct_kalshi_enabled`, `direct_polymarket_us_enabled` | Set both to `false` to use SGO prices for these venues. The direct adapters remain installed. Omitted flags preserve the older direct-source behavior. |
 
-For the current SGO-only test, use `aggregate_provider: "sportsgameodds"` with
+For SGO-only operation, use `aggregate_provider: "sportsgameodds"` with
 both direct flags false. SGO's `kalshi` quotes appear as Kalshi; its `polymarket`
-quotes appear as Polymarket US under the owner's temporary test mapping. The
-original `polymarket` bookmaker ID remains in source metadata. This is a configured
-test mapping, rather than independently established venue identity.
+quotes appear as Polymarket US under the configured aggregate-venue mapping. The
+original `polymarket` bookmaker ID remains in source metadata. This display
+mapping does not independently establish native venue identity.
 Existing global Stop and source pauses remain in force.
 
 ## Editing fee rules

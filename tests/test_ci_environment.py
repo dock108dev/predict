@@ -584,7 +584,14 @@ class EnforcementTests(unittest.TestCase):
             names = [
                 "app/dashboard/opportunity_static/current/manrope.ttf",
                 "app/dashboard/opportunity_static/current/manrope-OFL.txt",
+                "app/dashboard/opportunity_static/current/barlow-semi-condensed-600.ttf",
+                "app/dashboard/opportunity_static/current/barlow-OFL.txt",
                 "app/dashboard/opportunity_static/current/predict-icon.png",
+                "app/dashboard/opportunity_static/current/sora-400.ttf",
+                "app/dashboard/opportunity_static/current/sora-500.ttf",
+                "app/dashboard/opportunity_static/current/sora-600.ttf",
+                "app/dashboard/opportunity_static/current/sora-700.ttf",
+                "app/dashboard/opportunity_static/current/sora-LICENSE.txt",
             ]
             for name in names:
                 asset = root / name

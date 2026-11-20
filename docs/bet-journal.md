@@ -53,9 +53,9 @@ and `L = −additional_loss_fee`.
 | Actual entry EV | `(p_entry × W + (1 − p_entry) × L − C) / C`, using the latest exact fair reference retained by reported placement time. Missing inputs remain unavailable. |
 | Entry EV at close | The same entry cashflows evaluated using the last retained pregame fair reference. It does not substitute closing acquisition prices into your fill. |
 | Closing market EV | The retained closing offer's modeled cashflows evaluated at its closing fair reference, separately exported from entry EV at close. |
-| Price CLV | `entry_decimal / closing_market_decimal − 1`, before fees, per leg. |
+| Price CLV | `entry_decimal / closing_market_decimal − 1`, before fees, per leg. Requires the actual fill and retained quote to use the same venue. |
 | Fair-value CLV | `entry_decimal × p_close − 1`, before fees, per leg. |
-| Price slippage | Actual decimal payout divided by observed decimal payout, minus one. |
+| Price slippage | Actual decimal payout divided by observed decimal payout, minus one, within the same venue. |
 | Arb minimum profit | Minimum of the two decisive-state net receipts, less combined actual entry cash. This can become negative after editing actual prices. |
 | Closing arb return | Uses each leg's stored closing comparison cashflows, normally $100 per leg. Its cash basis is shown; it is neither a repriced actual-size fill nor a rebalanced order. |
 | Realized net result | Sum of reported net returned cash, minus actual stake and entry fees. Settlement fees are already included in reported returned cash. |
@@ -115,8 +115,17 @@ Journal writes reserve a SQLite write transaction before looking up or changing
 records. Entry changes, correction history and the returned applied revision
 share that transaction; a failure before commit rolls them back together. Reads
 pin one WAL snapshot for their entries, history, quote observations and metrics.
-A lost network response can still follow a commit: retry an identical saved
-quote, or reload the current correction revision before retrying an edit.
+`bet_journal.py` owns these transactions and identities. The separate
+`bet_journal_trade.py` validates reported trades and derives stake-only fills
+from the saved price and fee evidence. Preview and update call the same helpers
+with the journal's clock; the trade module does not persist or sample quotes.
+A lost network response can still follow a commit. An edit with a stable
+`request_id` stores its request fingerprint and returned response in that same
+transaction. Identical concurrent/repeated requests return the applied response
+without another correction, including after SQLite backup/restore. Reusing an ID
+for different edits conflicts. Older clients without a request ID still use
+revision conflicts and must reload after an uncertain edit. Deleting an entry
+also removes its stored request responses through the existing foreign key.
 
 Manual save identity excludes only read-time `ranking` metadata, so viewing the
 same quote under another sort cannot create another bet. The original first
@@ -132,10 +141,12 @@ the updated Caddy site file through the documented [hosted workflow](hetzner.md)
 when deploying this feature. Each installation has its own journal; there is no
 implicit Mac/server synchronization.
 
-`GET /api/bet-journal` supports `view=bets|log`, `kind`, `decision`, `search`,
+`GET /api/bet-journal` supports `view=bets|log|placed|research`, `kind`, `decision`, `search`,
 `limit` (up to 500) and `offset`. `POST /api/bet-journal` saves `{kind,snapshot}`.
 `GET /api/bet-journal/{id}` returns the entry, correction history and quote
-observations. `POST` to that route applies an update with the current `revision`.
+observations. `POST` to that route applies an update with the current `revision`
+and an optional bounded `request_id`. Timestamp fields must be timezone-aware
+timestamps; other JSON types return validation errors before any quote is saved.
 Same-origin JSON and bounded request sizes are enforced.
 
 CSV exports provide one summary row per entry; JSON exports include original
@@ -157,8 +168,8 @@ corrections, conflicts, persistence, paging, exports and HTTP origin enforcement
 Disposable PostgreSQL tests exercise the real sampler over admitted current
 rows, pending rebuild suppression and durable SQLite capture. Browser checks
 cover desktop/mobile saves, edits, arb legs, cash results and quote history.
-Local snapshot integration is separate from hosted installation, ongoing
-provider updates, real user fills and a month of results.
+Local snapshot integration is separate from installed operation, ongoing
+provider updates and actual fills and results.
 
 Exports use a consistent read snapshot even while another connection saves or
 corrects entries. Backup/restore tests cover committed WAL data, original quotes,
@@ -168,10 +179,15 @@ throughput or recovery from host failure.
 ## Closing prices and alternate-line estimates
 
 Each closed bet shows two separate values: the last retained pregame price for
-its exact pick at the placed venue, and the closing no-vig fair odds from the
+its exact pick at the original research venue, and the closing no-vig fair odds from the
 best eligible reference book under the board's existing conservative policy.
 The sportsbook's posted price is distinct from its fair odds. Source times are
 shown separately; a sportsbook update never renews the venue quote's clock.
+If the actual fill venue differs from the saved quote venue, price CLV and
+execution price slippage are unavailable with an explicit reason. The original
+quote/history and supported fair-value comparisons remain available, as do actual
+cashflows and reported results. A different venue's close is not a substitute
+for an unobserved close at the actual venue.
 
 The sampler reads the eligible sportsbook universe for tracked selections even
 when their exchange quote disappears. A complete exact-line reference takes

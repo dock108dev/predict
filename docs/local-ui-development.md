@@ -4,8 +4,15 @@ Use a PostgreSQL snapshot of a development server to work on the UI without
 running a local collector. The snapshot includes source quotes, references, fee
 schedules, complete calculations and saved data.
 
-The repository helper currently expects PostgreSQL 16 tools at
-`/opt/homebrew/opt/postgresql@16/bin`. Configure an SSH alias named `hetzner`
+Use PostgreSQL 16 tools. The helper honors `PREDICT_PG_BIN`, matching the local
+database launcher. When the correct `pg_config` is on PATH, select its tools with:
+
+```sh
+export PREDICT_PG_BIN="$(pg_config --bindir)"
+```
+
+Without an override, the helper uses the standard Apple Silicon Homebrew
+PostgreSQL 16 directory. Configure an SSH alias named `hetzner`
 for your development server before using `pull`; that account must be able to
 run the database container's `pg_dump` through Docker. For an ordinary local
 database instead, use the [quickstart](../README.md#requirements-and-quickstart).
@@ -40,8 +47,7 @@ consistent custom-format `pg_dump` through the existing `hetzner`
 SSH alias. It does not stop or reconfigure server collection. It restores into a
 new private local cluster using PostgreSQL 16 tools, checks applied migration
 hashes against this checkout, and atomically selects it in
-`.local/dev-snapshot/current.json`. PostgreSQL 16 tools are currently expected at
-`/opt/homebrew/opt/postgresql@16/bin`. Dumps and previous snapshot clusters are
+`.local/dev-snapshot/current.json`. Dumps and previous snapshot clusters are
 retained under `.local/dev-snapshot/` and consume additional disk space.
 To inspect the active paths, use `scripts/dev-snapshot status`. If importing a
 previously downloaded dump, use `restore --dump /absolute/path/to/file.dump`.

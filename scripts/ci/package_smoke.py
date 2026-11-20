@@ -21,6 +21,11 @@ UI_ASSETS = frozenset(
         "app/dashboard/opportunity_static/current/barlow-semi-condensed-600.ttf",
         "app/dashboard/opportunity_static/current/barlow-OFL.txt",
         "app/dashboard/opportunity_static/current/predict-icon.png",
+        "app/dashboard/opportunity_static/current/sora-400.ttf",
+        "app/dashboard/opportunity_static/current/sora-500.ttf",
+        "app/dashboard/opportunity_static/current/sora-600.ttf",
+        "app/dashboard/opportunity_static/current/sora-700.ttf",
+        "app/dashboard/opportunity_static/current/sora-LICENSE.txt",
     }
 )
 
@@ -163,6 +168,7 @@ for name in ('index.html', 'current.js', 'arbs.html', 'arbs.js', 'admin.html', '
              'comparison-view.js', 'scanner.html', 'scanner.js',
              'scanner.css', 'scanner-runtime.json', 'stored.html', 'stored.js',
              'stored.css', 'ui-common.js', 'coverage-shell.js',
+             'sora-400.ttf', 'sora-500.ttf', 'sora-600.ttf', 'sora-700.ttf', 'sora-LICENSE.txt',
              'manrope.ttf', 'manrope-OFL.txt', 'barlow-semi-condensed-600.ttf',
              'barlow-OFL.txt', 'desk.html', 'desk.js', 'desk.css', 'desk-components.css', 'desk-preferences.js',
              'desk-ticketboard.css', 'desk-ticketboard.js',
@@ -208,6 +214,9 @@ async def smoke():
                          '/current/assets/scanner.js','/current/assets/scanner.css',
                          '/current/assets/comparison-board.js','/current/assets/board.js',
                          '/current/assets/stored.js','/current/assets/stored.css','/current/assets/board-client.js',
+                         '/view/current/sora-400.ttf', '/view/current/sora-500.ttf',
+                         '/view/current/sora-600.ttf', '/view/current/sora-700.ttf',
+                         '/view/current/sora-LICENSE.txt',
                          '/view/current/manrope.ttf','/view/current/ui-common.js',
                          '/admin?section=database','/view/current/admin-database.js',
                          '/view/current/admin-database.css',

@@ -1,4 +1,4 @@
-"""Approved Prism interactions over real disposable preference/journal stores."""
+"""Prism interactions over disposable preference and journal stores."""
 
 from copy import deepcopy
 from urllib.parse import urlparse, parse_qs
@@ -7,7 +7,7 @@ import pytest
 from playwright.sync_api import sync_playwright, expect
 
 from app.dashboard.appearance_api import Appearance, DEFAULT
-from browser_tests.test_bet_journal import JournalUI, prophetx_quote
+from browser_tests.journal_fixture import JournalUI, prophetx_quote
 
 
 @pytest.mark.parametrize("width", [1440, 390, 320])

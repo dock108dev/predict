@@ -172,6 +172,7 @@
     "tests/test_ci_environment.py",
     "tests/test_ci_affected.py",
     "tests/test_ci_assurance.py",
+    "tests/test_ci_required_evidence.py",
     "tests/test_ci_secrets.py"
   ]
 }

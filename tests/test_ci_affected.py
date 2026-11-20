@@ -152,6 +152,12 @@ class AffectedSelection(unittest.TestCase):
         self.assertTrue(
             any("browser_tests/test_bet_journal.py" in c for c in selected["commands"])
         )
+        self.assertTrue(
+            any(
+                "browser_tests/test_journal_opportunity_log.py" in c
+                for c in selected["commands"]
+            )
+        )
         self.write("tests/test_added.py", "def test_added(): assert True\n")
         selected = self.module.plan(self.root, ["tests/test_added.py"])
         self.assertTrue(selected["fallback"])

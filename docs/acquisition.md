@@ -66,7 +66,7 @@ storage out of test fixtures.
 The example configuration selects SportsGameOdds as its aggregate provider.
 Its page adapter, object ledger, scheduler and reference capture run in the
 data process.
-The ordinary SQL runtime uses [Monitor and Live](activity-mode-20261118.md):
+The ordinary SQL runtime uses [Monitor and Live](monitor-live.md):
 Monitor targets the next 24 hours every 30 minutes, including supported alternate
 lines; owner-selected Live adds minute refreshes only for pregame games starting
 within 60 minutes. Monitor continues independently. Explicit owner activity keeps

@@ -2,8 +2,9 @@
 
 from copy import deepcopy
 from fractions import Fraction as F
+import pytest
 
-from app.dashboard.bet_journal_metrics import analyze
+from app.dashboard.bet_journal_metrics import analyze, posted_decimal
 
 
 CREATED = "2026-11-18T12:00:00+00:00"
@@ -82,6 +83,45 @@ def actual():
             )
         ],
         placed_at=CREATED,
+    )
+
+
+def test_canonical_native_cents_without_a_derived_price_cache_remain_usable():
+    row = dict(posted=dict(value="25", units="cents_per_contract"))
+    assert posted_decimal(row) == F(4)
+
+
+@pytest.mark.parametrize("actual_venue", ["fanduel", "novig"])
+def test_actual_venue_controls_price_clv_without_losing_research_or_cash_results(
+    actual_venue,
+):
+    original = quote()
+    original["venue"] = "novig"
+    closing = quote(clock=CLOSE, odds="+100")
+    closing["venue"] = "novig"
+    trade = actual()
+    trade["legs"][0]["venue"] = actual_venue
+    trade["result"] = dict(outcomes=["win"], settled_at=AFTER)
+    measured = analyze(entry(original, trade), [closing], at=AFTER)
+    leg = measured["legs"][0]
+    assert leg["close_quote"]["venue"] == "novig"  # Retain the research history.
+    if actual_venue == "novig":
+        # Actual +110 = 2.1; close +100 = 2; original +120 = 2.2.
+        assert leg["clv"] is not None
+        assert F(leg["clv"]) == F(1, 20)
+        assert leg["price_slippage"] is not None
+        assert F(leg["price_slippage"]) == F(-1, 22)
+        assert leg["price_comparison_reason"] is None
+    else:
+        assert leg["clv"] is None
+        assert leg["price_slippage"] is None
+        assert "actual venue" in leg["price_comparison_reason"]
+    assert leg["closing_fair"] is not None
+    assert leg["fair_clv"] is not None
+    assert measured["entry_ev"] == "0"
+    assert measured["realized_profit_usd"] == "52"
+    assert any("actual venue" in reason for reason in measured["reasons"]) == (
+        actual_venue != "novig"
     )
 
 

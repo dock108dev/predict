@@ -5,16 +5,13 @@ from contextlib import closing
 import json
 import os
 from pathlib import Path
-import re
 import sqlite3
 
 from aiohttp import web
 
 from .local_security import read_json
 
-DEFAULT = dict(
-    palette="prism", primary="#b69ae8", secondary="#edb8dc", appearance="dark"
-)
+from .appearance_policy import DEFAULT, validate as validate_appearance
 
 
 class Appearance:
@@ -29,31 +26,42 @@ class Appearance:
             raise ValueError("The personal preferences path must be absolute")
 
     def read(self):
-        if not self.path.exists():
+        try:
+            self.path.stat()
+        except FileNotFoundError:
             return dict(DEFAULT)
-        with closing(sqlite3.connect(self.path, timeout=5)) as db:
+        # A first writer can create the file before committing its schema. Pin
+        # the schema/value read together, and never recreate a vanished file.
+        with closing(
+            sqlite3.connect(self.path.as_uri() + "?mode=ro", uri=True, timeout=5)
+        ) as db:
+            db.execute("BEGIN")
+            if not db.execute(
+                "SELECT 1 FROM sqlite_schema WHERE type='table' AND name='appearance'"
+            ).fetchone():
+                return dict(DEFAULT)
             row = db.execute(
                 "SELECT value FROM appearance WHERE singleton=1"
             ).fetchone()
-        return json.loads(row[0]) if row else dict(DEFAULT)
+        if not row:
+            return dict(DEFAULT)
+        try:
+            value = json.loads(row[0])
+            self.validate(value)
+        except (ValueError, TypeError) as exc:
+            # Invalid saved data is a storage failure, not bad GET input or a
+            # reason to overwrite the owner's preference with defaults.
+            raise RuntimeError("Saved appearance data is invalid") from exc
+        return value
+
+    validate = staticmethod(validate_appearance)
 
     def save(self, value):
-        if (
-            not isinstance(value, dict)
-            or set(value) != set(DEFAULT)
-            or value.get("appearance") not in ("dark", "light", "system")
-            or not isinstance(value.get("palette"), str)
-            or not re.fullmatch(r"[a-z]{1,20}", value["palette"])
-            or any(
-                not isinstance(value.get(k), str)
-                or not re.fullmatch(r"#[a-fA-F0-9]{6}", value[k])
-                for k in ("primary", "secondary")
-            )
-        ):
-            raise ValueError("Choose an appearance and two six-digit colors")
+        self.validate(value)
         self.path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
         with closing(sqlite3.connect(self.path, timeout=5)) as db, db:
             os.chmod(self.path, 0o600)
+            db.execute("BEGIN IMMEDIATE")
             db.execute(
                 "CREATE TABLE IF NOT EXISTS appearance (singleton INTEGER PRIMARY KEY CHECK(singleton=1), value TEXT NOT NULL)"
             )

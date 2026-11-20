@@ -918,3 +918,82 @@ def test_budget_contention_reserves_next_released_slot_for_waiting_kind(monkeypa
         assert sum(run["kind"] == "live" for run, _ in worker.calls) >= 2
 
     asyncio.run(scenario())
+
+
+def test_operating_budget_reporting_dispatch_and_holds_share_the_policy(
+    tmp_path, monkeypatch
+):
+    from app.collection import activity_mode
+
+    assert activity_mode.operating_budget() == dict(
+        units="returned_event_objects",
+        objects_per_15_minutes=300,
+        objects_per_day=16800,
+        stricter_account_guards_apply=True,
+    )
+    monkeypatch.setattr(activity_mode, "OBJECTS_PER_15_MINUTES", 3)
+    monkeypatch.setattr(activity_mode, "OBJECTS_PER_DAY", 9)
+    monkeypatch.setattr(activity_mode, "retention_status", lambda db: {})
+
+    class DB:
+        def execute(self, sql):
+            return (
+                SimpleNamespace(fetchone=lambda: row())
+                if sql == "SELECT * FROM activity_mode WHERE singleton"
+                else []
+            )
+
+    status = activity_mode.read_status(DB(), at=AT)
+    assert status["operating_budget"]["objects_per_15_minutes"] == 3
+    assert status["operating_budget"]["objects_per_day"] == 9
+    for name, amount, age in (
+        ("rolling", 3, timedelta(minutes=5)),
+        ("daily", 9, timedelta(hours=2)),
+    ):
+        ledger = ObjectLedger(tmp_path / (name + ".sqlite3"))
+        ledger.create_window(
+            "fixture",
+            limit=100,
+            initial_used=0,
+            reserve=10,
+            reset_at=AT + timedelta(days=30),
+            requests_per_minute=100,
+        )
+        ledger.reserve("fixture", "uncertain", objects=amount, now=AT - age)
+        with pytest.raises(ActivityBudgetDelayed):
+            budget_admit(ledger, "fixture", 1, AT)
+        assert ledger.status("fixture")["held"] == amount
+
+    async def scenario():
+        store, worker = Store(), Worker()
+        owner = ActivityCollector(worker, store=store)
+
+        async def delayed(status):
+            raise ActivityBudgetDelayed(
+                "operational_object_budget", AT + timedelta(minutes=1)
+            )
+
+        owner.monitor_turn = delayed
+        await owner.tick()
+        budget = worker.metrics["activity_budget"]
+        assert budget["objects_per_15_minutes"] == 3
+        assert budget["objects_per_day"] == 9
+        assert budget["stricter_account_guards_apply"] is True
+        assert not worker.calls
+        assert store.updates[-1][1]["state"] == "budget_delayed"
+
+    asyncio.run(scenario())
+
+
+def test_legacy_monitor_phase_uses_the_same_default_as_validated_settings(monkeypatch):
+    from app.collection import activity_mode
+
+    monkeypatch.setitem(activity_mode.DEFAULT_SETTINGS, "monitor_phase_seconds", 300)
+    legacy = dict(activity_mode.DEFAULT_SETTINGS)
+    legacy.pop("monitor_phase_seconds")
+    direct = activity_mode.monitor_schedule(legacy, at=AT)
+    validated = activity_mode.monitor_schedule(
+        activity_mode.validate_settings(legacy), at=AT
+    )
+    assert direct == validated
+    assert direct["phase_seconds"] == 300

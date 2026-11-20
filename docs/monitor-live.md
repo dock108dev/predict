@@ -1,45 +1,91 @@
 # Monitor and Live collection
 
-Monitor is the default personal-app mode. It targets collection every 30 minutes for games starting in the next 24 hours. Live is an explicit authenticated owner switch: it targets one-minute collection for pregame games starting in the next 60 minutes, while Monitor continues. Live returns to Monitor after 15 minutes without owner interaction. Every duration and the Monitor horizon is editable in Collection settings; numeric controls permit custom values, including a three-minute Live cadence.
+Monitor is the default collection mode. It targets games starting in the next
+24 hours every 30 minutes, with scheduled starts at :20 and :50 by default.
+Live is an explicit authenticated switch that adds one-minute collection for
+pregame games starting within the next 60 minutes. Monitor continues during Live.
+Fifteen minutes without owner interaction returns the effective mode to Monitor.
+Collection settings expose the intervals, horizons, Monitor phase and inactivity
+period; cadences are targets subject to source, account and storage controls.
 
-## Viewing and sorting
+Live describes collection intent, not in-play scope or order execution. The
+ordinary SGO mode collector stays pregame-only even if the legacy `live_enabled`
+setting is true. Kickoff, started/cancelled status, changed scope or revoked Live
+intent can make a request ineligible before dispatch.
 
-EV and Arbitrage default to the effective mode. This personal interface omits repeated Monitor/Live row badges and mode-prefixed counts; the single Settings control indicates active Live collection. Main filters and ranking are visible, while More filters expands inline for cohort, maximum source age and source-age/start-time order. Source provenance remains in retained row data and optional calculation/source details. Probability edge is the default EV rank; explicit saved ranking choices persist. Browse Odds always consolidates the latest observed event snapshot across both modes, without duplicate contracts. Mode selection changes collection intent, not an exchange order or execution authority.
+## Controls and scheduling
 
-The public status endpoint is `GET /api/pregame?mode_status=1`. Reading prices, polling status, refreshing the browser and checking update cursors never collect provider data or renew Live activity. Settings and Live activity writes use the existing protected `/api/admin/activity-mode` routes. Only genuine owner pointer, key, touch or wheel interaction renews activity; a read-only status projection recognizes expiry even before the collector persists it. Owner Stop choices, source pauses, reservations and unresolved financial exposure remain authoritative.
+EV and Arbitrage default to the effective mode. Browse Odds consolidates the
+latest observations across both modes without duplicating contracts. More filters
+exposes cohort, quote age and ordering controls. Probability edge is the default
+EV ranking; explicit saved ranking choices persist.
 
-## Evidence and coherent calculations
+`GET /api/pregame?mode_status=1` exposes public mode status. Protected
+`GET/PATCH /api/admin/activity-mode` reads or changes settings, and
+`POST /api/admin/activity-mode/activity` records genuine owner interaction.
+Pointer, keyboard, touch and wheel activity can renew Live. Reads, polling,
+refreshes and background updates do not renew activity or collect provider data.
+Mode changes cannot clear source Stop choices or pauses.
 
-Each successful source page carries a run ID and Monitor/Live kind. Separate working cohorts preserve their observed prices and references. A page missing a sportsbook or venue cannot borrow that input from the other cohort through global current-row retention. EV is derived from the cohort witnesses with the existing two-trusted-book, exact-line and fee rules. Omission alone retains the prior observation from the same mode; it never imports an input from the other mode. Original source clocks and the source-age filter expose that age. Available prices remain inspectable when EV is unavailable. Known authoritative withdrawals and started/cancelled games invalidate candidate claims across modes; no other-mode price is substituted.
+Monitor uses fixed clock slots. A restart can claim a recent slot once; older
+missed startup slots are skipped to avoid catch-up bursts. Active overruns and
+budget delays coalesce the latest overdue slot, then return to the clock schedule.
+Timing edits preserve active work; horizon changes still revoke out-of-scope work.
+Known near-start events receive alternate refreshes in kickoff order before bulk
+league discovery, followed by remaining eligible events. An event is not refreshed
+twice in one round. Scheduled starts do not imply simultaneous quote arrival or
+completion before every kickoff.
 
-The combined Odds set is maintained at collection time. A first attempt at merging cohorts during reads exceeded Browse deadlines on representative data; physical combined tables restored ordinary indexed reads. Quote clocks are copied unchanged, including unchanged captures. Recalculation and a new capture receipt never renew a source quote timestamp. Quiet timestamps replace the former yellow age-warning blocks. Actual request failures retain their recovery messages.
+Live and Monitor take turns when capacity is constrained. A waiting kind owns the
+next released slot so frequent Live requests cannot starve Monitor. Fresh mode,
+archive-backlog and Stop/pause checks run before transport. Provably unused
+reservations can be released; unknown charges retain their exposure.
 
-Existing authentic stored prices become a clearly identified `legacy_retained` Monitor baseline; adoption is not a new provider observation. Practice navigation, the production replay generator and synthetic financial allowances are retired. Authentic saved/replayed history and isolated verification fixtures remain supported.
+## Provenance and calculations
+
+Each admitted page retains its collection mode and run identity, scope, settings
+revision and completion state. A run completes only after its main traversal and
+supported alternate-line pass finish. Delayed or interrupted runs stay partial.
+Source, receipt and retained-observation clocks remain distinct.
+
+Separate working cohorts preserve their own prices and references. Missing inputs
+cannot be borrowed from the other mode to produce EV. The combined Odds set is
+maintained during collection, keeping ordinary reads indexed. Recalculation or a
+new capture receipt never renews the original source quote timestamp. Known
+withdrawals and started/cancelled games invalidate claims across cohorts.
+
+Retained prices adopted as a `legacy_retained` Monitor baseline remain identified
+as retained evidence, not new provider observations. Authentic saved captures are
+supported; production Practice navigation and synthetic replay are retired.
 
 ## Budgets and retention
 
-Cadences are targets subject to real account headroom, quota, reservations, holds and source Stop/pause choices. The aggregate worker additionally caps returned-event objects at 300 per rolling 15 minutes and 16,800 per day; these object counters are distinct from the former Odds API credit unit. The stricter provider-account pacing still applies. A full old horizon contained 769 events and would require at least 36,912 objects daily at 30-minute cadence, so the owner selected the next 24 hours instead. Monitor also refreshes configured alternate lines for each discovered event; 45 events require roughly 4,320 daily objects plus discovery overhead, leaving limited Live headroom within the account allowance. Budget-delayed or partial runs remain visible rather than being reported as fresh complete snapshots.
+The mode collector caps returned-event objects at 300 per rolling 15 minutes and
+16,800 per rolling day. These counters are distinct from Odds API credits.
+Stricter provider-account pacing, reserves, holds, interrupted exposure, request
+rates, reset rules and source controls still apply. Wider horizons, alternate-line
+passes and concurrent Live requests consume additional allowance. Budget-delayed
+runs remain visible rather than being labeled fresh, complete captures.
 
-Every collected source snapshot, including unchanged inputs, is staged durably and exported with source clocks, run provenance and fee/calculation evidence. Verified gzip shards have no automatic expiry deletion. Only working cohorts are pruned at kickoff. The exporter verifies hashes and read-back before acknowledging staging; `python -m app.storage.odds_archive_export --flush` exports staged records without waiting for shard age.
+Every collected snapshot, including unchanged inputs, is staged durably and
+exported with source clocks and calculation evidence. Export verifies hashes and
+read-back before acknowledging staging. Verified gzip shards have no automatic
+expiry deletion; working cohorts are pruned at kickoff.
 
-`deploy/configure-retention.sh` installs a persistent host archive only when no owner archive destination exists. It preserves existing configuration and destinations. The initial server destination is on the host, not an off-host backup; the server had 6.2 GB free during implementation. No finite disk can guarantee unlimited retention. Additional storage and a backup destination are required for an archive that grows indefinitely. Archive staging, delivery lag and recorded gaps are observable. New acquisition pauses behind 32 MiB of outstanding archive staging; export preserves 512 MiB of free destination space. Historical gap counters do not permanently disable collection after recovery. Capacity failure must never be called successful archival retention. See [archive operations](odds-archive-operations.md) and [deployment](hetzner.md).
+Retention status reports staged bytes, verified/skipped observations, oldest
+staged age and last verification time without exposing archive paths. A 32 MiB
+staging backlog pauses new acquisition. Historical gaps remain disclosed but do
+not permanently block collection after the backlog drains. Export preserves
+512 MiB of destination free space; finite storage still requires capacity planning.
+A host archive is not an off-host backup.
 
-## Local verification
+`deploy/configure-retention.sh` preserves an existing owner destination. To export
+staged records without waiting for shard age, use:
 
-Controlled-clock and dispatch barrier checks cover window boundaries, independent Monitor/Live clocks, idle expiry, Stop/pause changes during the final authority read, unused-reservation release, archive backpressure and constrained scheduling fairness. Ten cohort SQL scenarios cover missing books/venues, stale Monitor receipts after Live, consolidated per-key retention, known withdrawals through a warmed Arb cache, missing-public-row uncertainty and equal-revision cursor isolation. A further scope case refuses out-of-window cohort publication while retaining source evidence.
+```sh
+.venv/bin/python -m app.storage.odds_archive_export --flush
+```
 
-The final focused board/cohort SQL batch passed 23 tests; the separate scope case passed. The integrated source/ingress/archive/mode SQL batch passed 57 tests plus two subtests, including unchanged-capture export and verified file read-back. Local owner controls also passed against the migrated representative snapshot: Monitor nine opportunities, explicit Live with zero eligible Live captures, consolidated Odds 232 games, passive two-second expiry back to Monitor, and restoration of the exact default settings. Age ordering and a 30-minute source-age cutoff were exercised through the app.
-
-The broad browser run passed 73 cases and found one mobile About helper using a control hidden by the compact toolbar. Updating that journey to visible More → About retained navigation assertions; the exact failed case then passed. The installed-package smoke, generated-asset drift, maintained documentation, Ruff and CI contract checks passed. These local fixtures and flows establish software behavior, not sustained provider cadence or executable liquidity. Deployment and real archive receipts are verified separately in the delivery handoff.
-
-Startup adoption uses an explicit durable marker, separate from price revisions. A fee edit can advance an empty cohort's revision; it must not suppress the first retained-data baseline. Once adoption finishes, pruning an empty working set must not re-adopt later Live-only prices into Monitor. The adoption transaction follows the shared admission lock order. The regression, scope/cursor cases and changed HTTP update contract passed a 13-case PostgreSQL batch; existing HTTP fixtures now explicitly publish their Monitor captures and carry the list's data type into selection/update requests, as the browser does.
-
-## Operating-scale follow-up
-
-The first deployed Monitor cycle covered 47 unique events: 75 requests (28 discovery pages and 47 alternate refreshes), 97 charged objects, all HTTP 200, completed in 14m12s. HTTP itself totaled 48.0s; admission and cohort processing dominated. The reference/valuation kernel on the representative retained snapshot was then reduced from 13.56s to 1.18s by batching reference reads (2,373 to two SELECTs) and reusing qualified cashflows. All 4,744 captured SQL write parameters for 2,372 prices matched exactly. This benchmark excludes SQL writes, commit and archive export, and does not establish sustained one-minute Live throughput.
-
-The larger collected slate also exposed planner regressions not present in the small fixtures. Unique-ID scalar probes prevent repeated full expiry-set scans. Arbitrage now materializes compact quote scalars once before matching requested lines, preserving exact rational comparisons, optimistic profit bounds and whole alias/conflict witnesses; original quote bodies are still fetched only after admission. Read-only deployed-data probes completed Browse at about 4s and cold Arbitrage in 12.58s (246 pairs, 6,966 evaluated, no exclusions), with the unchanged 8s SQL / 15s Arb API deadlines. The frozen 199-pair baseline matched exactly across all pages. Normal deployed browser verification follows installation.
-
-Time-based eligibility is also part of expiry: age-filtered responses schedule refresh when a displayed quote becomes too old, and Arb caches expire at source-age boundaries. Lookahead-window entrances contribute to the cheap cursor and refresh deadline so an empty cached view cannot hide a stored game entering its configured window. The integrated cohort, board, numeric/alias and line-presence SQL batch passed 33 cases after these changes.
-
-The subsequent deployed desktop/mobile journey loaded Browse and Arbitrage with real Monitor inputs, but its first desktop EV read returned HTTP 503. A bounded read-only probe reproduced the EV query reaching its unchanged eight-second SQL deadline. The planner was applying expensive JSON/reference/withdrawal guards before the existing positive-bet semijoin. An explicit materialized candidate stage now preserves every venue and alias in a bet with a positive witness before those unchanged guards run. In one repeatable read-only transaction, the first ranked page matched exactly while SQL time fell from 6.20s to 0.21s. The complete pre-ranking logical set also matched: 146 venue rows, including 93 nonpositive rows and their original fees and clocks. A separate old all-page request timed out; the new query returned all 43 results in 0.29s, so full-packet equality for that attempt is unverified rather than a detected mismatch. Forty-seven relevant PostgreSQL cases and two subtests passed. These are query measurements, excluding EXPLAIN overhead; normal deployed API/browser verification follows installation.
+See [archive operations](odds-archive-operations.md), [source configuration](configuration.md)
+and [deployment](hetzner.md). Delayed feeds, available depth, sustained collection
+cadence and actual fills remain separate limitations; see [liquidity](liquidity.md).

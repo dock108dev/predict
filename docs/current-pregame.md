@@ -72,7 +72,7 @@ board. Generated `pregame_unit_board` and `pregame_unit_member` are removed by a
 forward migration. Applied migration history and source evidence remain intact.
 
 Research publication, Scanner and Coverage stay outside the ordinary read and
-calculation prerequisite chain. Their archive/practice consumers
+calculation prerequisite chain. Their retained-history consumers
 retain their own evidence models. Research children wait during source admission
 and yield at safe checkpoints when an accepted page needs processing. They never
 pause while holding SQL transaction locks.
@@ -96,7 +96,7 @@ in `current_pregame.py`.
 `league`, `family` (`moneyline`, `spread`, `total`), `venue`, `search`, `game_key`,
 `bet_id`, `id`, `lines=all`, `browse=1`, `view=games`, `view=game`,
 `limit` (1–100), `offset`, and `sort` (`growth`, `ev`, `score`, `balanced`, `edge`).
-The default sort is `growth`; unknown sorts return HTTP 400.
+The default sort is `edge` (Probability edge); unknown sorts return HTTP 400.
 
 The default list selects the highest unrounded Net EV venue per exact bet, keeps
 positive opportunities, then orders by the selected unrounded ranking value,

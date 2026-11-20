@@ -21,7 +21,14 @@ The [CI workflow](../.github/workflows/ci.yml) runs on pull requests, pushes to
 | Deployment uses an unverified image | `Deploy Predict dev server` / `Build and verify Hetzner images` runs the proxy and Compose smoke scripts before GHCR publication. `Deploy Predict to Hetzner` consumes the verified digests, and `Release result` retains the stage outcomes. | Manual branch dispatch / Ubuntu 24.04 | Release workflow. The repo variable, dispatch input and `hetzner` environment govern deployment. | Repository `hetzner.yml`; independent manually authorized image/deployment checkpoint. |
 
 `CI readiness` requires all four jobs to pass in the same run. Missing, failed,
-cancelled, or unexpectedly skipped required jobs fail the gate. PR runs validate
+cancelled, or unexpectedly skipped required jobs fail the gate. It also requires
+matching downloaded reports and executed JUnit evidence for quality, offline,
+browser and **all four** SQL shards. The artifact download precedes the gate;
+download failure cannot become an evidence-free pass. Offline report entries
+must cover the current registered suites, client checks and syntax checks.
+The quality inventory and SQL shard identity are checked independently of the
+local affected-test router. Malformed, zero-case, failed or missing required
+evidence fails readiness even when Actions reports successful jobs. PR runs validate
 GitHub's merge commit and report the PR head separately.
 CI cancels superseded runs within the same pull request.
 
@@ -34,10 +41,8 @@ checks. [GitHub required-check semantics](https://docs.github.com/en/pull-reques
 
 `Source, security and package` runs first. `Offline checks`, the four-shard
 PostgreSQL lane and `Ordinary browser journey` depend on its success, then run in
-parallel. This reuses the existing quality job and setup instead of adding a
-second lint job or test selector. Its commands and requirements are unchanged.
-The stable `CI readiness` job still runs with `always()` and requires success
-from **all four** original jobs. A quality failure intentionally skips behavior
+parallel. The stable `CI readiness` job runs with `always()` and requires success
+from **all four** required jobs. A quality failure intentionally skips behavior
 work and fails readiness; skipped work is never a behavior pass or N/A.
 
 For deliberate failure diagnosis, manually dispatch `CI` with the typed boolean
@@ -45,7 +50,7 @@ For deliberate failure diagnosis, manually dispatch `CI` with the typed boolean
 the override cannot bypass readiness and does not run after workflow
 cancellation. Normal PR/push/merge-group checks still run every registered test
 when quality succeeds. No hosted affected-test selection, prediction or cached
-result reuse was introduced. No shadow omission policy is being promoted.
+result reuse is used.
 Readiness JSON and its actual Actions summary record the mode and explain why
 behavior ran or was prevented.
 
@@ -138,8 +143,8 @@ same-line partitions, and exact push/draw probabilities. The valuation cases
 assert actual outlay, fee rounding, per-state returns, and ranking using
 authored terms. The storage shard summaries also name the selected-unit
 publication, pagination, and real PostgreSQL lock-recovery cases. The ordinary
-browser first-use cases include the fictional practice journeys at desktop and
-phone widths. These checks use fixtures and disposable storage. Live reference,
+browser cases cover current boards, saved captures, journal workflows and
+keyboard/touch interactions at desktop and phone widths. These checks use fixtures and disposable storage. Live reference,
 fee, fill, and collection coverage require separate evidence.
 
 The current-board regression groups protect these boundaries:
@@ -154,7 +159,7 @@ The current-board regression groups protect these boundaries:
 | Snapshot helper | `test_dev_snapshot.py` | Failed transfer stays partial/private and never restores; non-snapshot socket rejected using mocked I/O |
 
 These cases are retained as distinct calculation, persistence and UI boundaries;
-the runtime/provider boundary remains unverified by their fixtures. The new
+the runtime/provider boundary remains unverified by their fixtures. The
 portable modules are registered in the existing required manifest; the SQL cases
 are registered in the disposable PostgreSQL lane.
 
@@ -232,8 +237,12 @@ Case artifacts must match the run, commit and execution attempt. An earlier
 artifact is eligible only when the Actions Jobs API identifies that job as a
 successful job carried over into the rerun. If the API or the new artifact is
 unavailable, the missing case evidence stays visible. The advisory summary
-lists carried-over artifacts separately. Required job conclusions determine the
-gate. [GitHub rerun behavior](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/re-run-workflows-and-jobs)
+lists carried-over artifacts separately. The required gate separately validates
+reports through `scripts/ci/required_evidence.py`, using a complete latest-jobs
+inventory only when older reports are needed on a rerun. Unavailable or truncated
+history grants no reuse. Complete current-attempt evidence needs no API call.
+Job conclusions **and** required reports determine readiness; advisory telemetry
+cannot override either. [GitHub rerun behavior](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/re-run-workflows-and-jobs)
 
 Python coverage reports lines and branches separately, with component totals
 and coverage of executable lines and branch origins added or modified in the

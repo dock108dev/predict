@@ -11,7 +11,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 BASE = ROOT / ".local/dev-snapshot"
-BIN = Path("/opt/homebrew/opt/postgresql@16/bin")
+BIN = Path(os.environ.get("PREDICT_PG_BIN") or "/opt/homebrew/opt/postgresql@16/bin")
 
 
 def run(*args, **kwargs):

@@ -183,9 +183,11 @@ class Composition(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "Generated asset drift"):
                     builder.main()
                 (assets / "stored.css").write_text(builder.outputs()["stored.css"])
-                (assets / "pregame-ranking.js").write_text("export const rankingCatalog = {};")
-                with self.assertRaisesRegex(ValueError, "Generated asset drift: pregame-ranking.js"):
-                    builder.main()
+                for name in ("pregame-ranking.js", "appearance-policy.js"):
+                    (assets / name).write_text("// stale generated metadata")
+                    with self.assertRaisesRegex(ValueError, "Generated asset drift: " + name):
+                        builder.main()
+                    (assets / name).write_text(builder.outputs()[name])
 
     def test_ranking_catalog_output_tracks_the_python_owner(self):
         from app.storage.pregame_ranking import catalog

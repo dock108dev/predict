@@ -79,7 +79,7 @@ bounded transient sizing.
 | `/api/pregame`, `/api/pregame/updates` | Committed current rows and cheap update metadata |
 | `/arbs`, `/api/pregame/arbs` | Fee-qualified opposing market/market and market/sportsbook prices |
 | `/api/comparison-current` | Current desk results, selected evidence, update metadata, and fee coverage |
-| `/replay`, `/api/odds-replay` | Saved captures and fictional practice with revision-bound details |
+| `/replay`, `/api/odds-replay` | Authentic saved captures with revision-bound details; retired synthetic datasets fail explicitly |
 | `/scanner` | Advanced globally ranked Scanner, observed episodes and selected manual tickets |
 | `/odds` | Archived odds browser |
 | `/raw-odds` | Received source-local prices and original inputs |
@@ -239,9 +239,12 @@ See [acquisition](acquisition.md) for ownership, capacity and completeness limit
 | Domain | SSOT module/file | Why authoritative | Known callers |
 | --- | --- | --- | --- |
 | Pregame ranking methods, labels and calculation | `app/storage/pregame_ranking.py` | Owns the method catalog/default, exact SQL expressions and wire/display presentation. `catalog()` generates browser metadata through the existing asset build; the browser does not maintain a second method list. | `current_pregame.read`, generated `pregame-ranking.js`, `pregame.js` and `pregame-math.js`. |
-| Ordinary collection target and budget adaptation | `app/collection/sportsgameodds_schedule.py::PREGAME_TARGET` and `budgeted_policy` | One target defines the final-30-minute/minute and inside-24-hour/hour trial. Budget planning stretches that target; worker diagnostics compare against the same object. Account/Stop/hold authority remains in the existing collector and ledger. | `SportsGameOddsWorker.cycle`, due-event planning and schedule diagnostics. |
+| Monitor/Live cadence, settings and operational object limits | `app/collection/activity_mode.py` | Owns validated durable viewing intent, clock/default projection and returned-event ceilings. The ordinary SQL service selects `ActivityCollector`; status and budget-delay diagnostics use `operating_budget()`, while admission reads the same limits. Provider account, quota, reservation and Stop/hold guards remain independently stricter. | `activity_mode_api`, `current_pregame_api`, `activity_collector.budget_admit` and collector scheduling/diagnostics. |
+| Personal appearance contract | `app/dashboard/appearance_policy.py` | Owns the approved starter palettes, default, modes and validation patterns. The existing asset builder emits `appearance-policy.js`; SQLite validation and browser cache/server-response validation use the same contract. | `Appearance.read/save/validate`, generated metadata, `prism-theme.js`, `prism.js`. |
+| Theme color derivation and contrast | `app/dashboard/opportunity_static/current/prism-theme.js` | Computes every applied token, including accent text color. The interaction controller no longer maintains a second luminance calculation. | `prism.js`, theme preview, saved theme application and system-color changes. |
 | Source lifecycle and current-row withdrawal | `app/comparison/game_phase.py::sgo_event_status` and `app/storage/sportsgameodds_reference.py::apply_event_lifecycle` | Normalizes sporting evidence and commits lifecycle changes under the ingestion writer transaction. The worker's page filter preserves notices while excluding post-start prices; it does not implement a second persisted lifecycle. | Source ingress, current board reads and journal source sampling. |
 | Saved quote identity and correction transactions | `app/dashboard/bet_journal.py::Journal` | Owns canonical manual identity, original snapshots, revisions and SQLite read/write transactions. API and browser actions delegate persistence to it. | `bet_journal_api`, manual Save, opportunity observation and export. |
+| Reported trade validation and stake-only fill derivation | `app/dashboard/bet_journal_trade.py` | Owns actual price/stake/fee validation and derives fills from frozen quotes using the existing fee engine. Journal preview and correction pass their clock explicitly; these helpers perform no storage writes. | `Journal.preview`, `Journal.update`; existing helper imports through `bet_journal` remain available. |
 | Required test ownership versus local selection | `scripts/ci/suites.json`, `scripts/ci/python-policy.json` and `scripts/ci/postgres.py` | Own the registered full lanes and exclusions. `affected.py` selects bounded consumers and delegates execution to those runners; its focused SQL subset is routing policy, not a second database runner. | Required CI, local full checks and the affected-test command. |
 | Aggregate provider and phase configuration | `app/collection/current_policy.py` and the committed `data_runtime.config` | Validates provider choices and Live defaults. Read-side code passes the provider from its committed runtime snapshot into publication identity and desk update cursors. | Collection workers, SQL publication, desk reads, Coverage, Scanner and Raw Odds. |
 | PostgreSQL socket and outage cache partition | `app/storage/store.py::socket_directory` | Resolves and validates the same absolute socket for PostgreSQL connections and the corresponding last-known desk cache. | Storage connections and the ordinary app launcher. |
@@ -275,10 +278,23 @@ Browser ranking controls and explanations import metadata generated from
 The supported `score` ranking uses the shared catalog. Unknown calculation-detail
 kinds fail explicitly.
 
-`SchedulePolicy` is a value record with explicit fields. Worker cycles and default
-`due_events` calls use `PREGAME_TARGET`. Custom policies derive from it with
-`dataclasses.replace` or provide all fields explicitly. Production startup
-initializes the guarded account window before dispatch.
+Ordinary `CurrentService(database_mode=True)` selects `ActivityCollector` after
+initializing its guarded account window. Monitor/Live clocks and object limits
+come from `activity_mode.py`; they do not fall back to the older adaptive worker
+cycle. `SchedulePolicy`, `PREGAME_TARGET` and `budgeted_policy` remain in the
+non-SQL research/testing path. `scripts/replay_comparison_net_inputs.py` uses
+the non-SQL service with both acquisition flags disabled. Removing that service
+path and its legacy worker scheduling branch needs a separate caller/fixture
+migration: it crosses transport and accounting recovery, and is not a routine
+deletion based on the ordinary CLI no longer entering it. No paid use of that
+branch was established by this pass.
+
+Saved preference labels remain bounded lowercase identifiers rather than a
+foreign key into today's palette list. The persisted colors determine appearance;
+an older/custom label remains valid without rewriting owner records. Browser
+storage is a cache, SQLite is the durable owner, and invalid cache shapes no
+longer count as valid server preferences. First-paint CSS colors and the existing
+cache fallback during an unavailable API read remain supported startup behavior.
 
 Saved `line`/`quote_key` links and compatibility API endpoints resolve to current
 exact reads. Retired amount/mode queries return HTTP 410. Journal legacy-ID lookup

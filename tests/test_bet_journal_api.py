@@ -40,6 +40,45 @@ class JournalHTTP(IsolatedAsyncioTestCase):
         self.assertEqual(response.status, 201, await response.text())
         return (await response.json())["entry"]
 
+    async def test_non_timestamp_json_values_are_rejected_without_saving_a_quote(self):
+        for value in (None, 123, {}, []):
+            with self.subTest(value=value):
+                row = offer()
+                row["times"]["received_at"] = value
+                response = await self.client.post(
+                    "/api/bet-journal",
+                    json=dict(kind="ev", snapshot=row),
+                    headers={"Origin": self.origin},
+                )
+                self.assertEqual(response.status, 422)
+        self.assertEqual(self.journal.list(view="log")["total"], 0)
+
+    async def test_native_cents_quote_without_cache_can_record_a_stake_with_unknown_fees(
+        self,
+    ):
+        row = offer()
+        row.update(
+            venue="kalshi", posted=dict(value="25", units="cents_per_contract"), raw={}
+        )
+        entry = await self.create(row)
+        response = await self.client.post(
+            "/api/bet-journal/" + entry["id"],
+            json=dict(
+                revision=entry["revision"],
+                decision="placed",
+                trade=dict(automatic=True, legs=[dict(quote_id=row["id"], stake="50")]),
+            ),
+            headers={"Origin": self.origin},
+        )
+        self.assertEqual(response.status, 200, await response.text())
+        saved = (await response.json())["entry"]
+        self.assertEqual(saved["snapshot"]["posted"], row["posted"])
+        actual = saved["trade"]["legs"][0]
+        self.assertEqual(actual["price"], "1/4")
+        self.assertEqual(actual["units"], "probability")
+        self.assertEqual(actual["fee_basis"], "unavailable")
+        self.assertIsNone(actual["entry_fee"])
+
     async def test_normal_observed_log_reads_real_nullable_reference_history(self):
         from tests.test_bet_journal import arb_snapshot
 

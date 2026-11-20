@@ -18,6 +18,18 @@ DEFAULT_SETTINGS = dict(
     inactivity_seconds=900,
 )
 MAX_SECONDS = 31536000
+# Additional conservative SGO returned-event limits, not Odds API credit pricing.
+OBJECTS_PER_15_MINUTES = 300
+OBJECTS_PER_DAY = 16800
+
+
+def operating_budget():
+    return dict(
+        units="returned_event_objects",
+        objects_per_15_minutes=OBJECTS_PER_15_MINUTES,
+        objects_per_day=OBJECTS_PER_DAY,
+        stricter_account_guards_apply=True,
+    )
 
 
 def clock():
@@ -50,7 +62,10 @@ def monitor_schedule(settings, *, at=None, last_slot=None, catch_up=False):
     """Skip old startup backlog; running owners coalesce the latest due slot."""
     at = stamp(at or clock()).astimezone(timezone.utc)
     interval = settings["monitor_interval_seconds"]
-    phase = settings.get("monitor_phase_seconds", 1200) % interval
+    phase = (
+        settings.get("monitor_phase_seconds", DEFAULT_SETTINGS["monitor_phase_seconds"])
+        % interval
+    )
     step = timedelta(seconds=interval)
     anchor = datetime(1970, 1, 1, tzinfo=timezone.utc) + timedelta(seconds=phase)
     slot = anchor + ((at - anchor) // step) * step
@@ -156,12 +171,7 @@ def read_status(db=None, *, at=None, connector=None):
         }
     result = project(row, at=at, runs=runs)
     result["retention"] = retention_status(db)
-    result["operating_budget"] = dict(
-        units="returned_event_objects",
-        objects_per_15_minutes=300,
-        objects_per_day=16800,
-        stricter_account_guards_apply=True,
-    )
+    result["operating_budget"] = operating_budget()
     return result
 
 

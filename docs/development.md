@@ -37,8 +37,9 @@ payouts. A tie that pays $0.50 is a different outcome from a stake refund.
 Computing full EV requires probabilities for those outcomes.
 [Calculation basis](benchmark-ev.md)
 
-Use **Practice** under **More** on Opportunities or Arbitrage for packaged
-fictional cases. Practice requires neither an archive nor a database.
+**Saved odds** reads authentic local archives or retained captures. Missing
+archives remain unavailable. Production Practice navigation and synthetic replay
+datasets are retired; disposable synthetic development fixtures remain separate.
 
 ## Focused checks
 
@@ -54,6 +55,7 @@ ordinary project database.
 
 ```sh
 .venv/bin/python -m ruff check app tests scripts/ci browser_tests
+.venv/bin/python -m ruff format --check scripts/ci browser_tests tests/test_ci_*.py tests/ci_support.py
 .venv/bin/python scripts/ci/docs.py
 .venv/bin/python -m pytest -q tests/test_ev09_asset_delivery.py
 node tests/test_f07_desk_ui.cjs
@@ -140,7 +142,12 @@ Edit the authored files and keep the generated files in sync.
 The same command generates `pregame-ranking.js` from the pure catalog in
 `app/storage/pregame_ranking.py`. Edit that Python owner for method metadata,
 defaults and explanations; the dropdown and math disclosures import its generated
-module. `--check` rejects stale ranking metadata alongside stored/Scanner drift.
+module. The command also emits `appearance-policy.js` from
+`app/dashboard/appearance_policy.py`: edit that owner for starter palettes,
+defaults, modes and preference validation patterns. `prism-theme.js` owns color
+derivation and contrast; `prism.js` owns interaction and uses the generated
+contract to validate browser cache and server responses. `--check` rejects
+stale ranking/appearance metadata alongside stored/Scanner drift.
 
 ```sh
 .venv/bin/python scripts/build_stored_frontend.py
@@ -160,10 +167,17 @@ Keep database queries in `current_pregame_read.py` separate from calculation and
 recovery writes in `current_pregame.py`. The public read facade preserves the
 clock and route resolver. Local-selector tests live in `tests/test_ci_affected.py`;
 CI environment guards and reporting tests have separate modules.
+`test_ci_required_evidence.py` owns artifact/shard qualification and rerun
+evidence; it remains in the existing quality-only collection. Journal browser
+flows use `browser_tests/journal_fixture.py`, with manual edits/settlements in
+`test_bet_journal.py` and observed-log/lazy-close flows in
+`test_journal_opportunity_log.py`. Local journal selection includes both files.
 
 Keep transaction and mutable-state ownership clear. The personal journal owns
-entry validation, revisions and history in one transaction; measurements and
-source sampling are separate modules. The SGO worker owns event cursors,
+entry identity, revisions and history in one transaction. Reported-fill
+validation and frozen-price/fee derivation live in `bet_journal_trade.py`; callers
+pass the journal clock explicitly. Measurements and source sampling remain
+separate modules. The SGO worker owns event cursors,
 in-flight pages, Stop handling and admission acknowledgement. Transport,
 scheduling, accounting and measurement logic have separate owners.
 
@@ -195,6 +209,19 @@ scheduling, accounting and measurement logic have separate owners.
   current desk.
 - `deploy/release.sh` keeps digest validation, migration checks, and rollback
   under one restricted-SSH rollout transaction.
+
+The journal storage owner remains one class because identity lookup, revision
+checks, correction receipts and history must share explicit SQLite transactions;
+fill validation/derivation is the independent boundary extracted from it.
+`bet_journal_metrics.py` retains exact entry/close/settlement analysis together:
+those outputs share quote-eligibility clocks and cashflow completeness checks.
+The controlled-clock activity tests retain their common Store/Worker state machine
+so interleaving, final authority checks and held exposure use the same fake clock.
+The remaining manual journal browser cases share editor/settlement controls;
+opportunity-log flows now have their own module. Large modules still require a
+cohesion review when their responsibility changes; line counts are maintenance
+review triggers, not a target to reach by compressing code. Applied migrations,
+generated assets, authored replay fixtures and sealed source ZIPs are retained.
 
 Keep credentials, operator state, local task queues, reports and coding notes
 out of Git. Lasting documentation describes software behavior and supported

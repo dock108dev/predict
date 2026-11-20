@@ -231,7 +231,7 @@ def test_current_pregame_journey(width, tmp_path):
         state["failed"] = False
         # Ordinary inspection retains the board; the canonical link remains
         # available for deep links and modified-click navigation.
-        page.locator('#board-advanced > summary').click()
+        page.locator("#board-advanced > summary").click()
         for field, value in (
             ("league", "NBA"),
             ("family", "spread"),
@@ -316,7 +316,9 @@ def test_current_pregame_journey(width, tmp_path):
                 "link", name="About this board", exact=True
             ).click()
         else:
-            page.locator(".board-bottom").get_by_role("link", name="About this board", exact=True).click()
+            page.locator(".board-bottom").get_by_role(
+                "link", name="About this board", exact=True
+            ).click()
         expect(
             page.get_by_role("heading", name="About this board", exact=True)
         ).to_be_visible()

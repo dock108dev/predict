@@ -2,14 +2,14 @@
 
 Predict is an odds and opportunity board with a personal trade journal. It
 opens on **Pregame Opportunities**, showing complete main-line bets ranked by modeled
-Kelly growth after fees. **Rank by** also offers Net EV, the original Kelly-fraction
-score, Balanced and Probability edge. **Browse odds** groups main markets by game,
+**Probability edge** after fees. **Rank by** also offers Kelly growth, Net EV, the original
+Kelly-fraction score and Balanced. **Browse odds** groups main markets by game,
 sorted by start time. Open a game for alternate lines, then select a line to compare exact
 market and sportsbook prices. **Arbitrage** compares opposite market-to-market
 and market-to-sportsbook legs after fees, independently of sportsbook EV.
 
 The collector receives odds, normalizes affected games, calculates using posted
-prices, and stores complete current rows in PostgreSQL. Refresh and inspection
+prices, and stores current prices and complete calculations in PostgreSQL. Refresh and inspection
 only read stored data. Arb reads also balance a bounded illustrative allocation
 using the stored fee inputs. Pregame observations have no age expiry: authoritative kickoff,
 non-pregame status, explicit withdrawal, replacement by a newer main line, and repeated scoped line omissions
@@ -19,11 +19,9 @@ after a 15-minute grace period govern removal. Odds may be delayed.
 [Current data flow and API](docs/current-pregame.md) ·
 [Calculation policy](docs/benchmark-ev.md)
 
-Saved captures and simulated practice remain separate research views.
+Authentic saved captures remain a separate research view.
 Live executable size and cross-venue fills are not established by these boards.
-[Usability sprint and verification](docs/usability-sprint-20261118.md) ·
-[Measured read performance](docs/usability-performance-20261118.md) ·
-[Available liquidity assessment](docs/liquidity.md).
+[Price and liquidity limitations](docs/liquidity.md).
 [Monitor and Live collection](docs/monitor-live.md) describes the personal-app defaults, controls and retention.
 [About this board](app/dashboard/opportunity_static/current/about.html) explains
 the model, execution limitations, sources and SportsGameOdds data credit.
@@ -31,7 +29,8 @@ the model, execution limitations, sources and SportsGameOdds data credit.
 **My Bets** saves an EV quote or both arb legs, records the odds, stake and fees
 you actually got, and compares them with retained pregame quotes, closing value
 and reported settlement. The **Opportunity log** automatically retains positive
-main-line EV signals and positive price-arb pairs. Trading remains outside Predict.
+market-to-market arb pairs. EV quotes and market-to-sportsbook pairs require a
+manual save or recorded trade. Trading remains outside Predict.
 [Journal workflow, measurement definitions and durability](docs/bet-journal.md)
 
 ## Requirements and quickstart

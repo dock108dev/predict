@@ -10,11 +10,6 @@ from .current_policy import aggregate_scope, PregameWindowClosed
 from .sportsgameodds_adapter import Traversal
 from .sportsgameodds_collector import DailyObjectPacing, RejectedCursor
 
-# Additional conservative operational limits are SGO returned-event OBJECTS,
-# not an assertion that an Odds API credit has the same monetary value.
-OBJECTS_PER_15_MINUTES = 300
-OBJECTS_PER_DAY = 16800
-
 
 class ActivityBudgetDelayed(RuntimeError):
     def __init__(self, reason, retry_at):
@@ -26,7 +21,10 @@ def budget_admit(ledger, window_id, requested, at):
     """Read exposure, never alter or release a reservation/hold to fit a mode."""
     if ledger is None or window_id is None:
         return
-    for seconds, ceiling in ((900, OBJECTS_PER_15_MINUTES), (86400, OBJECTS_PER_DAY)):
+    for seconds, ceiling in (
+        (900, activity_mode.OBJECTS_PER_15_MINUTES),
+        (86400, activity_mode.OBJECTS_PER_DAY),
+    ):
         used = ledger.rolling_objects(window_id, since=at - timedelta(seconds=seconds))
         if used + requested > ceiling:
             expirations = ledger.rolling_expirations(window_id, now=at)
@@ -386,9 +384,7 @@ class ActivityCollector:
                 self.retry_at = max(at + timedelta(seconds=1), exc.retry_at)
                 await self.save(job, state="budget_delayed", reason=str(exc))
                 self.worker.metrics["activity_budget"] = dict(
-                    units="returned_event_objects",
-                    objects_per_15_minutes=OBJECTS_PER_15_MINUTES,
-                    objects_per_day=OBJECTS_PER_DAY,
+                    activity_mode.operating_budget(),
                     retry_at=self.retry_at.isoformat(),
                     reason=str(exc),
                     account_guards="also_required",

@@ -29,6 +29,7 @@ BOARD_BROWSER = [
     "browser_tests/test_pregame_current.py",
     "browser_tests/test_pregame_games_arbs.py",
     "browser_tests/test_bet_journal.py",
+    "browser_tests/test_journal_opportunity_log.py",
     "browser_tests/test_pregame_price_formats.py",
     "browser_tests/test_prism.py",
 ]
