@@ -152,6 +152,24 @@ def mount(app, *, journal=None, monitor=True):
             )
         return web.json_response(result)
 
+    async def preview(request):
+        try:
+            body = await read_json(request)
+            result = await asyncio.to_thread(
+                journal.preview, request.match_info["id"], body
+            )
+        except KeyError:
+            return web.json_response(dict(error="Unknown journal entry"), status=404)
+        except (ValueError, TypeError):
+            return web.json_response(
+                dict(
+                    error="Enter valid stakes, pre-fee prices and one outcome for each leg."
+                ),
+                status=422,
+            )
+        return web.json_response(result)
+
+    app.router.add_post("/api/bet-journal/{id}/preview", preview)
     app.router.add_get("/my-bets", page)
     app.router.add_get("/api/bet-journal", records)
     app.router.add_post("/api/bet-journal", records)

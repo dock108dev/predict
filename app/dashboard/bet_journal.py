@@ -157,14 +157,28 @@ def validate_trade(trade, entry, decision):
         if (
             decision != "placed"
             or not isinstance(result, dict)
-            or set(result) - {"receipts_usd", "settled_at", "notes"}
+            or set(result) - {"outcomes", "receipts_usd", "settled_at", "notes"}
         ):
             raise ValueError("Results belong to placed trades")
-        receipts = result.get("receipts_usd")
-        if not isinstance(receipts, list) or len(receipts) != len(original):
-            raise ValueError("Record net returned cash for each leg")
-        for receipt in receipts:
-            number(receipt, signed=True)
+        if "outcomes" in result:
+            outcomes = result["outcomes"]
+            if "receipts_usd" in result:
+                raise ValueError("Choose outcomes or explicit returned cash, not both")
+            if (
+                not isinstance(outcomes, list)
+                or len(outcomes) != len(original)
+                or any(
+                    not isinstance(value, str) or value not in ("win", "loss", "push")
+                    for value in outcomes
+                )
+            ):
+                raise ValueError("Choose Win, Loss or Tie / Push for each leg")
+        else:
+            receipts = result.get("receipts_usd")
+            if not isinstance(receipts, list) or len(receipts) != len(original):
+                raise ValueError("Record net returned cash for each leg")
+            for receipt in receipts:
+                number(receipt, signed=True)
         if not result.get("settled_at"):
             raise ValueError("Record the settlement time")
         settled = instant(result["settled_at"])
@@ -293,8 +307,11 @@ def automatic_trade(trade, entry, decision):
                     fee_basis="saved_book_schedule",
                 )
         result["legs"].append(actual)
-    if trade.get("result") is not None:
-        result["result"] = dict(trade["result"])
+    settlement = trade.get("result", previous.get("result"))
+    if settlement is not None:
+        if not isinstance(settlement, dict):
+            raise ValueError("Results belong to placed trades")
+        result["result"] = dict(settlement)
         if not result["result"].get("settled_at"):
             result["result"]["settled_at"] = clock()
     return result
@@ -632,6 +649,26 @@ class Journal:
                 db.execute("SELECT * FROM entries WHERE id=?", (key,)).fetchone(),
                 history=history,
             )
+
+    def preview(self, key, changes):
+        """Calculate a proposed fill against one read snapshot; persist nothing."""
+        if (
+            not isinstance(changes, dict)
+            or "trade" not in changes
+            or set(changes) - {"trade", "decision"}
+        ):
+            raise ValueError("Supply a proposed trade and optional decision")
+        with self.database() as db:
+            entry = self.unpack(
+                db.execute("SELECT * FROM entries WHERE id=?", (key,)).fetchone()
+            )
+            decision = changes.get("decision", "placed")
+            if decision not in ("observed", "saved", "passed", "placed"):
+                raise ValueError("Unknown decision")
+            trade = automatic_trade(changes["trade"], entry, decision)
+            validate_trade(trade, entry, decision)
+            entry.update(decision=decision, trade=trade)
+            return dict(entry=self._metrics(db, entry))
 
     def _record(self, db, row, *, history=False):
         entry = self.unpack(row)

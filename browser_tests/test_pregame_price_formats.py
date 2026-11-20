@@ -17,8 +17,9 @@ def test_contract_quote_formats_and_legacy_fallback():
         page = browser.new_page()
 
         def serve(route):
-            if route.request.url.endswith("/pregame-prices.js"):
-                route.fulfill(path=ASSETS / "pregame-prices.js")
+            name = Path(urlparse(route.request.url).path).name
+            if name in ("pregame-prices.js", "bet-journal-defaults.js"):
+                route.fulfill(path=ASSETS / name)
             else:
                 route.fulfill(content_type="text/html", body="<html></html>")
 
@@ -26,7 +27,15 @@ def test_contract_quote_formats_and_legacy_fallback():
         page.goto("https://predict.fixture/")
         result = page.evaluate("""async()=>{
           const {priceDisplay}=await import('/pregame-prices.js');
+          const {suggestedTrades}=await import('/bet-journal-defaults.js');
           const row={venue:'polymarket_us',display:{posted_odds:'+126',after_fees:'+115'},raw:{posted_decimal:'2.26',after_fee_decimal:'2.1468'}};
+          // Historical saved terms, not an assertion about today's fee schedule:
+          // NCAAF $100 posted +495, $9.90 winning commission => $585.10 receipt.
+          // NHL +109, entry fee $0.92, committed 267307/5225 => $105 receipt.
+          const commission={id:'saved-commission',venue:'prophetx',posted:{value:'+495',units:'american_odds'},
+            raw:{posted_decimal:'5.95',after_fee_decimal:'5.851'},display:{posted_odds:'+495',after_fees:'+485'}};
+          const nhl={id:'saved-nhl',venue:'prophetx',posted:{value:'+109',units:'american_odds'},
+            raw:{posted_decimal:'2.09',after_fee_decimal:'548625/267307'},display:{posted_odds:'+109',after_fees:'+105'}};
           const before=JSON.stringify(row);
           const result={poly:priceDisplay(row),after:priceDisplay(row,true),
                   kalshi:priceDisplay({...row,venue:'kalshi',display:{posted_odds:'+119'},raw:{posted_decimal:'2.19'}}),
@@ -37,7 +46,11 @@ def test_contract_quote_formats_and_legacy_fallback():
                   novigSlip:priceDisplay({...row,venue:'novig',raw:{posted_decimal:'200/101'}}),
                   prophetxSlip:priceDisplay({...row,venue:'prophetx',raw:{posted_decimal:'1250/649'}}),
                   sportsbook:priceDisplay({...row,venue:'fanduel'}),
-                  missing:priceDisplay({...row,raw:{}})};
+                  missing:priceDisplay({...row,raw:{}}),
+                  recordedCommission:[priceDisplay(commission),priceDisplay(commission,true)],
+                  recordedNhl:[priceDisplay(nhl),priceDisplay(nhl,true)],
+                  suggestedCommission:suggestedTrades({kind:'ev',snapshot:commission}),
+                  suggestedNhl:suggestedTrades({kind:'ev',snapshot:nhl})};
           return {...result,unchanged:JSON.stringify(row)===before};
         }""")
         assert result["poly"] == dict(
@@ -52,28 +65,46 @@ def test_contract_quote_formats_and_legacy_fallback():
         assert result["novigAfter"] == dict(
             primary="46.58%", secondary="+115", price=""
         )
-        assert result["prophetx"] == dict(
-            primary="44.25%", secondary="", price="2.26× payout"
-        )
+        assert result["prophetx"] == dict(primary="44.25%", secondary="+126", price="")
         assert result["prophetxAfter"] == dict(
-            primary="46.58%", secondary="", price="Effective price"
+            primary="46.58%", secondary="+115", price=""
         )
         assert result["novigSlip"]["primary"] == "50.5%"
         assert result["prophetxSlip"]["primary"] == "51.92%"
         assert result["missing"]["primary"] == "+126"
+        assert result["recordedCommission"] == [
+            dict(primary="16.81%", secondary="+495", price=""),
+            dict(primary="17.09%", secondary="+485", price=""),
+        ]
+        assert result["recordedNhl"] == [
+            dict(primary="47.85%", secondary="+109", price=""),
+            dict(primary="48.72%", secondary="+105", price=""),
+        ]
+        assert result["suggestedCommission"] == [
+            dict(
+                quote_id="saved-commission",
+                stake="100",
+                price="+495",
+                units="american_odds",
+            )
+        ]
+        assert result["suggestedNhl"] == [
+            dict(quote_id="saved-nhl", stake="100", price="+109", units="american_odds")
+        ]
         assert result["unchanged"]
         browser.close()
 
 
+@pytest.mark.parametrize("venue", ["novig", "prophetx"])
 @pytest.mark.parametrize("width", [1280, 390])
-def test_novig_percent_and_american_on_boards_and_comparisons(width, tmp_path):
+def test_percentage_and_american_on_boards_and_comparisons(venue, width, tmp_path):
     """The shared formatter reaches the shipped list, game and arb renderers."""
     from playwright.sync_api import expect
     from browser_tests.test_pregame_current import offer
     from browser_tests.test_pregame_arb_recovery import pair_fixture
 
     selected = offer()
-    selected.update(venue="novig", side="home")
+    selected.update(venue=venue, side="home")
     selected["raw"].update(posted_decimal="2.26", after_fee_decimal="2.1468")
     selected["display"].update(posted_odds="+126", after_fees="+115")
     pair = pair_fixture()
@@ -130,19 +161,19 @@ def test_novig_percent_and_american_on_boards_and_comparisons(width, tmp_path):
 
         page.goto("https://predict.fixture/")
         prices(page.locator(".ticket .posted"), page.locator(".ticket .after"))
-        page.screenshot(path=str(evidence / f"novig-opportunities{suffix}.png"))
+        page.screenshot(path=str(evidence / f"{venue}-opportunities{suffix}.png"))
         page.locator(".row-open").click()
         expect(page.locator(".comparison-status")).to_contain_text(
             "complete for this stored snapshot"
         )
         exchange = page.locator("#comparison .exchange-prices tbody tr").first
         prices(exchange.locator("td").nth(1), exchange.locator("td").nth(2))
-        page.screenshot(path=str(evidence / f"novig-comparison{suffix}.png"))
+        page.screenshot(path=str(evidence / f"{venue}-comparison{suffix}.png"))
 
         page.goto("https://predict.fixture/browse-odds")
         values = page.locator(".game-card .line-values > div")
         prices(values.nth(0), values.nth(1))
-        page.screenshot(path=str(evidence / f"novig-browse{suffix}.png"))
+        page.screenshot(path=str(evidence / f"{venue}-browse{suffix}.png"))
 
         page.goto("https://predict.fixture/arbs")
         columns = page.locator(".arb-leg").first.locator(".arb-price-column")
@@ -152,6 +183,6 @@ def test_novig_percent_and_american_on_boards_and_comparisons(width, tmp_path):
             ".arb-price-column"
         )
         prices(columns.nth(0), columns.nth(1))
-        page.screenshot(path=str(evidence / f"novig-arbitrage{suffix}.png"))
+        page.screenshot(path=str(evidence / f"{venue}-arbitrage{suffix}.png"))
         assert not errors, errors
         browser.close()

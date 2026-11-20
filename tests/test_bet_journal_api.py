@@ -39,6 +39,78 @@ class JournalHTTP(IsolatedAsyncioTestCase):
         self.assertEqual(response.status, 201, await response.text())
         return (await response.json())["entry"]
 
+    async def test_read_only_preview_uses_saved_fee_math_without_creating_history(self):
+        row = offer()
+        row.update(venue="prophetx", posted=dict(value="+495", units="american_odds"))
+        row["raw"].update(posted_decimal="5.95", after_fee_decimal="5.851")
+        row["fee"]["evidence"] = dict(
+            database_fee_rule=dict(formula="prophetx_commission", rate="0.02")
+        )
+        entry = await self.create(row)
+        before = self.journal.get(entry["id"], history=True)
+        trade = dict(
+            automatic=True,
+            legs=[dict(quote_id=row["id"], stake="100")],
+            result=dict(outcomes=["win"]),
+        )
+        path = "/api/bet-journal/" + entry["id"] + "/preview"
+        response = await self.client.post(
+            path, json=dict(trade=trade), headers={"Origin": self.origin}
+        )
+        self.assertEqual(response.status, 200, await response.text())
+        proposed = (await response.json())["entry"]
+        self.assertEqual(proposed["trade"]["legs"][0]["price"], "495")
+        self.assertEqual(
+            proposed["metrics"]["legs"][0]["cashflows"]["win_receipt_usd"], "585.1"
+        )
+        self.assertEqual(proposed["metrics"]["realized_profit_usd"], "485.1")
+        self.assertEqual(
+            proposed["metrics"]["settlement"]["basis"], "reported_outcomes"
+        )
+        self.assertEqual(self.journal.get(entry["id"], history=True), before)
+        trade["legs"][0]["stake"] = "sensitive-invalid-input"
+        response = await self.client.post(
+            path, json=dict(trade=trade), headers={"Origin": self.origin}
+        )
+        self.assertEqual(response.status, 422)
+        self.assertEqual(
+            (await response.json())["error"],
+            "Enter valid stakes, pre-fee prices and one outcome for each leg.",
+        )
+        self.assertEqual(self.journal.get(entry["id"], history=True), before)
+        denied = await self.client.post(path, json=dict(trade=trade))
+        self.assertEqual(denied.status, 403)
+
+    async def test_http_outcome_result_settles_and_clears_without_losing_history(self):
+        row = offer()
+        row.update(venue="fanduel")
+        entry = await self.create(row)
+        trade = dict(
+            automatic=True,
+            legs=[dict(quote_id=row["id"], stake="100")],
+            result=dict(outcomes=["push"]),
+        )
+        response = await self.client.post(
+            "/api/bet-journal/" + entry["id"],
+            json=dict(revision=1, decision="placed", trade=trade),
+            headers={"Origin": self.origin},
+        )
+        self.assertEqual(response.status, 200, await response.text())
+        saved = (await response.json())["entry"]
+        self.assertEqual(saved["metrics"]["realized_profit_usd"], "0")
+        self.assertEqual(saved["trade"]["result"]["outcomes"], ["push"])
+        trade["result"] = None
+        response = await self.client.post(
+            "/api/bet-journal/" + entry["id"],
+            json=dict(revision=2, decision="placed", trade=trade),
+            headers={"Origin": self.origin},
+        )
+        self.assertEqual(response.status, 200, await response.text())
+        self.assertIsNone(
+            (await response.json())["entry"]["metrics"]["realized_profit_usd"]
+        )
+        self.assertEqual(len(self.journal.get(entry["id"], history=True)["history"]), 3)
+
     async def test_save_edit_conflict_reopen_and_export(self):
         entry = await self.create()
         response = await self.client.post(

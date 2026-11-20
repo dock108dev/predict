@@ -28,3 +28,34 @@
 @media(max-width:500px){#editor{padding:18px 16px}#editor .dialog-pick{font-size:22px}#editor .journal-form-grid{gap:0}#editor #delete{margin-left:0}}
 
 .journal-closes{border-top:1px solid var(--p-line);margin-top:18px;padding-top:16px}.journal-closing-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px;margin:0 0 14px}.journal-closing-grid:last-child{margin-bottom:0}.journal-close span,.journal-close small{display:block;font-size:11px;line-height:1.7;color:var(--p-muted)}.journal-close strong{display:block;font-size:16px;margin:6px 0;color:var(--p-ink)}.journal-close small+small{margin-top:4px}@media(max-width:500px){.journal-closing-grid{grid-template-columns:1fr;gap:16px}}
+
+/* Bets foreground the entry and result; analysis stays available on demand. */
+.journal-intro{margin-top:8px}.journal-performance-details{margin:12px 0;font-size:12px;color:var(--p-muted)}
+.journal-performance-details>summary{cursor:pointer;min-height:32px;display:flex;align-items:center;width:max-content}
+.journal-performance-details>summary:before{content:'▸';margin-right:8px}.journal-performance-details[open]>summary:before{content:'▾'}
+.journal-stat{padding:12px 18px}.journal-stat span{font-size:11px;margin-bottom:5px}.journal-stat strong{font-size:21px}
+.journal-tabs{margin-top:16px}.journal-entry{padding:16px 20px;margin-bottom:10px}.journal-entry h2{font-size:21px;margin:6px 0;line-height:1.35}
+.journal-entry .journal-observed{margin:4px 0}.journal-position{border-top:1px solid var(--p-line);margin-top:10px;padding-top:10px}
+.journal-position h3{font-size:12px;font-weight:600;margin:0 0 10px}.journal-entry-prices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.journal-entry-prices .journal-figure strong{font-size:15px;line-height:1.5;display:block;overflow-wrap:anywhere}.journal-entry-prices .journal-figure span{font-size:11px;margin-bottom:3px}
+.journal-entry-prices .journal-figure small{font-size:10px;margin:2px 0 0}.journal-result-line{display:flex;align-items:baseline;flex-wrap:wrap;gap:8px 16px;background:var(--p-alternate);padding:10px 12px;margin-top:12px;font-size:12px}
+.journal-result-line strong{font-size:17px}.journal-result-line span{color:var(--p-muted)}.journal-details{margin-top:10px}.journal-details>summary{min-height:36px;display:list-item;padding:8px 0}
+#editor{width:min(760px,calc(100% - 24px));padding:0;max-height:min(90dvh,900px);overflow:hidden}
+#editor[open]{display:flex;flex-direction:column}#editor>.dialog-heading{padding:10px 20px;border-bottom:1px solid var(--p-line);flex-shrink:0;font-size:12px;letter-spacing:.5px}
+#edit-form{display:flex;flex-direction:column;min-height:0;overflow:hidden;margin:0}
+.journal-editor-body{overflow-y:auto;overscroll-behavior:contain;min-height:0;padding:0 20px 16px}
+#editor .dialog-pick{font-size:22px;margin:14px 0 6px}#entry-context p{margin:4px 0;font-size:12px;line-height:1.6}
+#editor fieldset{margin:14px 0;padding:12px 14px;border-radius:5px}#editor legend{font-size:12px;max-width:100%;overflow-wrap:anywhere;font-weight:700}
+#editor .journal-field{margin:8px 0;gap:5px;font-size:12px}#editor .journal-form-grid{gap:12px;grid-template-columns:repeat(2,minmax(0,1fr))}
+#editor .journal-field input,#editor .journal-field select{border-radius:4px}.journal-price-format{font-size:11px;color:var(--p-muted);margin:4px 0 10px}.journal-price-format summary{min-height:30px;cursor:pointer;padding:6px 0}
+.journal-leg-preview{border-top:1px solid var(--p-line);padding-top:10px;margin:8px 0 12px}.journal-leg-preview .journal-entry-prices{grid-template-columns:repeat(3,minmax(0,1fr))}
+.journal-outcomes{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}.journal-outcomes label{position:relative;cursor:pointer}
+.journal-outcomes input{position:absolute;opacity:0;width:1px;height:1px}.journal-outcomes span{display:flex;align-items:center;justify-content:center;border:1px solid var(--p-controlLine);border-radius:4px;min-height:44px;font-size:12px;padding:8px 4px;color:var(--p-ink);background:var(--p-surface)}
+.journal-outcomes input:checked+span{background:var(--p-accent);border-color:var(--p-accent);color:var(--p-accentInk);font-weight:700}.journal-outcomes input:focus-visible+span{outline:3px solid var(--p-accent);outline-offset:3px}
+.journal-editor-footer{padding:10px 20px;border-top:1px solid var(--p-line);background:var(--p-surface);flex-shrink:0}
+#editor .journal-edit-actions{margin:0;display:flex;gap:10px}#editor #save{flex:1}#editor #cancel{min-width:90px}#edit-status{margin:0;font-size:12px}#edit-status:not(:empty){margin:0 0 9px}
+#editor #delete{margin:12px 0 0;background:transparent;color:#9b2929;border:0;padding:8px 0;font-size:12px;text-decoration:underline;min-height:44px}
+.journal-preview-total{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;background:var(--p-alternate);padding:12px;border-radius:4px;margin:10px 0}
+.journal-preview-total .journal-figure strong{font-size:17px}.journal-manual{display:flex;gap:10px;align-items:center;font-size:12px;line-height:1.6;min-height:44px}.journal-manual input{width:18px;height:18px;flex-shrink:0;accent-color:var(--p-accent)}
+@media(max-width:500px){.journal-page .board-heading{padding:22px 0 16px;gap:12px}.journal-page .heading-flag{display:none}.journal-page h1{font-size:32px}.journal-exports{gap:12px;margin-top:4px}.journal-page .journal-intro{font-size:12px}.journal-stat{padding:10px 12px}.journal-stat strong{font-size:19px}.journal-page .journal-entry{padding:13px}.journal-entry h2{font-size:19px}.journal-entry-prices{gap:8px}.journal-entry-prices .journal-figure strong{font-size:12px}.journal-entry-prices .journal-figure span{font-size:10px}.journal-entry-prices .journal-figure small{font-size:9px}.journal-result-line{gap:6px 10px;font-size:11px}.journal-result-line strong{font-size:15px}#editor{max-height:94dvh}#editor>.dialog-heading{padding:6px 12px}.journal-editor-body{padding:0 12px 12px}.journal-editor-footer{padding:10px 12px}#editor .dialog-pick{font-size:19px}#editor fieldset{padding:10px}#editor .journal-form-grid{gap:8px}#editor .journal-field{font-size:11px}.journal-outcomes{gap:4px}.journal-outcomes span{font-size:11px}.journal-preview-total .journal-figure strong{font-size:15px}}
+.journal-leg-preview{min-height:76px}.journal-preview-total{min-height:77px;align-content:center}

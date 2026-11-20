@@ -85,6 +85,87 @@ def actual():
     )
 
 
+def test_outcome_results_use_actual_pre_fee_prices_and_known_charges():
+    for outcome, receipt, profit in (
+        ("win", "103", "52"),
+        ("loss", "-1", "-52"),
+        ("push", "50", "-1"),
+    ):
+        trade = actual()
+        trade["result"] = dict(outcomes=[outcome], settled_at=AFTER)
+        measured = analyze(entry(trade=trade), [], at=AFTER)
+        assert measured["settlement"]["state"] == "calculated"
+        assert measured["settlement"]["receipts_usd"] == [receipt]
+        assert measured["realized_profit_usd"] == profit
+        assert F(measured["realized_roi"]) == F(profit) / 51
+        assert measured["legs"][0]["cashflows"] == dict(
+            entry_cost_usd="51",
+            win_receipt_usd="103",
+            loss_receipt_usd="-1",
+            push_receipt_usd="50",
+        )
+
+
+def test_two_leg_results_are_per_leg_and_include_push_entry_costs():
+    left, right = quote(), quote(identifier="two", side="away")
+    trade = actual()
+    trade["legs"].append(
+        dict(
+            quote_id="two",
+            stake="40",
+            price="0.4",
+            units="probability",
+            entry_fee="2",
+            win_fee="3",
+            loss_fee="0",
+        )
+    )
+    saved = entry(dict(id="pair", kickoff=KICKOFF, legs=[left, right]), trade=trade)
+    saved["kind"] = "arb"
+    for outcomes, receipts, profit in (
+        (["win", "loss"], ["103", "0"], "10"),
+        (["loss", "win"], ["-1", "97"], "3"),
+        (["push", "push"], ["50", "40"], "-3"),
+    ):
+        trade["result"] = dict(outcomes=outcomes, settled_at=AFTER)
+        measured = analyze(saved, [], at=AFTER)
+        assert measured["settlement"]["receipts_usd"] == receipts
+        assert measured["settlement"]["entry_cost_usd"] == "93"
+        assert measured["realized_profit_usd"] == profit
+
+
+def test_unknown_fees_preserve_reported_outcome_and_unknown_profit():
+    trade = actual()
+    trade["legs"][0].update(
+        entry_fee=None, win_fee=None, loss_fee=None, fee_basis="unavailable"
+    )
+    for outcome in ("win", "loss", "push"):
+        trade["result"] = dict(outcomes=[outcome], settled_at=AFTER)
+        measured = analyze(entry(trade=trade), [], at=AFTER)
+        assert measured["settlement"]["outcomes"] == [outcome]
+        assert measured["settlement"]["state"] == "unavailable"
+        assert measured["realized_profit_usd"] is None
+        assert measured["settlement"]["receipts_usd"] == (
+            ["50"] if outcome == "push" else [None]
+        )
+
+
+def test_only_fees_used_by_reported_outcome_are_required():
+    trade = actual()
+    trade["legs"][0]["win_fee"] = None
+    trade["result"] = dict(outcomes=["loss"], settled_at=AFTER)
+    measured = analyze(entry(trade=trade), [], at=AFTER)
+    assert measured["realized_profit_usd"] == "-52"
+    assert measured["legs"][0]["cashflows"]["win_receipt_usd"] is None
+    trade["result"] = dict(outcomes=["push"], settled_at=AFTER)
+    measured = analyze(entry(trade=trade), [], at=AFTER)
+    assert measured["realized_profit_usd"] == "-1"
+    trade["result"] = dict(outcomes=["win"], settled_at=AFTER)
+    measured = analyze(entry(trade=trade), [], at=AFTER)
+    assert measured["settlement"]["state"] == "unavailable"
+    assert measured["realized_profit_usd"] is None
+
+
 def test_actual_odds_fees_expected_value_close_and_cash_result():
     trade = actual()
     trade["result"] = dict(receipts_usd=["103"], settled_at=AFTER)

@@ -161,6 +161,129 @@ class PersonalJournal(TestCase):
         with self.assertRaisesRegex(ValueError, "original selections"):
             self.journal.update(key, dict(revision=1, decision="placed", trade=trade))
 
+    def test_outcome_corrections_recalculate_and_keep_history_and_legacy_results(self):
+        row = deepcopy(self.row)
+        row.update(venue="prophetx", posted=dict(value="+495", units="american_odds"))
+        row["raw"]["posted_decimal"] = "5.95"
+        row["raw"]["after_fee_decimal"] = "5.851"
+        row["fee"]["evidence"] = dict(
+            database_fee_rule=dict(formula="prophetx_commission", rate="0.02")
+        )
+        key = self.journal.observe("ev", row, manual=True)
+        trade = dict(
+            automatic=True,
+            legs=[dict(quote_id=row["id"], stake="100")],
+            result=dict(outcomes=["win"]),
+        )
+        first = self.journal.update(
+            key, dict(revision=1, decision="placed", trade=trade)
+        )["entry"]
+        self.assertEqual(first["trade"]["legs"][0]["price"], "495")
+        self.assertEqual(first["trade"]["legs"][0]["win_fee"], "9.9")
+        self.assertEqual(first["metrics"]["realized_profit_usd"], "485.1")
+        self.assertNotIn("receipts_usd", first["trade"]["result"])
+        edited = dict(
+            automatic=True,
+            legs=[
+                dict(
+                    quote_id=row["id"], stake="200", price="+100", units="american_odds"
+                )
+            ],
+        )
+        second = self.journal.update(key, dict(revision=2, trade=edited))["entry"]
+        self.assertEqual(second["trade"]["result"], first["trade"]["result"])
+        self.assertEqual(second["metrics"]["realized_profit_usd"], "196")
+        edited["result"] = dict(outcomes=["loss"])
+        third = self.journal.update(key, dict(revision=3, trade=edited))["entry"]
+        self.assertEqual(third["metrics"]["realized_profit_usd"], "-200")
+        edited["result"] = dict(receipts_usd=["203"])
+        fourth = self.journal.update(key, dict(revision=4, trade=edited))["entry"]
+        self.assertEqual(fourth["metrics"]["realized_profit_usd"], "3")
+        with self.assertRaises(Conflict):
+            self.journal.update(key, dict(revision=4, trade=edited))
+        reopened = Journal(self.path).get(key, history=True)
+        self.assertEqual(len(reopened["history"]), 5)
+        self.assertEqual(reopened["history"][1]["trade"]["result"]["outcomes"], ["win"])
+        self.assertEqual(reopened["entry"]["snapshot"], row)
+
+    def test_outcome_report_rejects_ambiguous_or_incomplete_leg_results(self):
+        key = self.journal.observe("ev", self.row, manual=True)
+        for result in (
+            dict(outcomes=[]),
+            dict(outcomes=["tie"]),
+            dict(outcomes=[True]),
+            dict(outcomes=["win"], receipts_usd=["0"]),
+        ):
+            with self.subTest(result=result), self.assertRaises(ValueError):
+                self.journal.update(
+                    key,
+                    dict(
+                        revision=1,
+                        decision="placed",
+                        trade=dict(
+                            automatic=True,
+                            legs=[dict(quote_id=self.row["id"], stake="100")],
+                            result=result,
+                        ),
+                    ),
+                )
+        self.assertEqual(self.journal.get(key)["entry"]["revision"], 1)
+
+    def test_saved_entry_charge_survives_win_loss_push_and_explicit_refund(self):
+        row = deepcopy(self.row)
+        row.update(venue="prophetx", posted=dict(value="+109", units="american_odds"))
+        row["raw"]["posted_decimal"] = "2.09"
+        row["fee"]["evidence"] = dict(
+            database_fee_rule=dict(formula="prophetx_nhl_taker", rate="0.035")
+        )
+        key = self.journal.observe("ev", row, manual=True)
+        trade = dict(automatic=True, legs=[dict(quote_id=row["id"], stake="100")])
+        for revision, outcome, receipt, profit in (
+            (1, "win", "209", "107.17"),
+            (2, "loss", "0", "-101.83"),
+            (3, "push", "100", "-1.83"),
+        ):
+            with self.subTest(outcome=outcome):
+                trade["result"] = dict(outcomes=[outcome])
+                saved = self.journal.update(
+                    key, dict(revision=revision, decision="placed", trade=trade)
+                )["entry"]
+                self.assertEqual(saved["trade"]["legs"][0]["entry_fee"], "1.83")
+                self.assertEqual(
+                    saved["metrics"]["settlement"]["receipts_usd"], [receipt]
+                )
+                self.assertEqual(saved["metrics"]["realized_profit_usd"], profit)
+        # A reported adjustment is authority for refunded entry charges; an
+        # ordinary push cannot silently invent that additional cash credit.
+        trade["result"] = dict(receipts_usd=["101.83"])
+        refund = self.journal.update(key, dict(revision=4, trade=trade))["entry"]
+        self.assertEqual(refund["metrics"]["realized_profit_usd"], "0")
+        self.assertEqual(refund["metrics"]["settlement"]["basis"], "reported_receipts")
+
+    def test_known_loss_cost_enters_summary_even_when_unused_win_fee_is_unknown(self):
+        key = self.journal.observe("ev", self.row, manual=True)
+        now = datetime.now(timezone.utc)
+        trade = dict(
+            legs=[
+                dict(
+                    quote_id=self.row["id"],
+                    stake="50",
+                    price="+110",
+                    units="american_odds",
+                    entry_fee="1",
+                    win_fee=None,
+                    loss_fee="1",
+                    fee_basis="unavailable",
+                )
+            ],
+            placed_at=(now - timedelta(seconds=1)).isoformat(),
+            result=dict(outcomes=["loss"], settled_at=now.isoformat()),
+        )
+        self.journal.update(key, dict(revision=1, decision="placed", trade=trade))
+        summary = self.journal.list()["summary"]
+        self.assertEqual(summary["realized_profit_usd"], "-52")
+        self.assertEqual(summary["settled_cost_usd"], "51")
+
     def test_last_quote_not_renewed_by_polling_and_postkickoff_is_rejected(self):
         kickoff = datetime.now(timezone.utc) + timedelta(minutes=5)
         self.row["kickoff"] = kickoff.isoformat()

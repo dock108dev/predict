@@ -169,6 +169,39 @@ def _probability(row, cutoff, *, known_at=None):
         return None
 
 
+def actual_cashflows(actual):
+    """The shared exact fill calculation for previews and reported outcomes."""
+    cash = dict(cost=None, win=None, loss=None, push=None, decimal=None)
+    try:
+        stake = fraction(actual["stake"])
+        if stake <= 0:
+            return cash
+    except (KeyError, TypeError, ValueError, ZeroDivisionError):
+        return cash
+    cash["push"] = stake
+    try:
+        entry = fraction(actual["entry_fee"])
+        if entry >= 0:
+            cash["cost"] = stake + entry
+    except (KeyError, TypeError, ValueError, ZeroDivisionError):
+        pass
+    try:
+        cash["decimal"] = decimal_price(actual["price"], actual["units"])
+    except (KeyError, TypeError, ValueError, ZeroDivisionError):
+        pass
+    for outcome in ("win", "loss"):
+        try:
+            charge = fraction(actual[outcome + "_fee"])
+            if charge < 0:
+                continue
+            cash[outcome] = (
+                stake * cash["decimal"] if outcome == "win" else 0
+            ) - charge
+        except (KeyError, TypeError, ValueError, ZeroDivisionError):
+            pass
+    return cash
+
+
 def _cashflows(row, actual=None):
     if actual is None:
         fee = row["fee"]
@@ -177,19 +210,80 @@ def _cashflows(row, actual=None):
         loss = fraction(fee["cashflows"]["loss"]["net_receipt_usd"])
         decimal = posted_decimal(row)
     else:
-        stake = fraction(actual["stake"])
-        entry, winning, losing = (
-            fraction(actual[key]) for key in ("entry_fee", "win_fee", "loss_fee")
-        )
-        if stake <= 0 or min(entry, winning, losing) < 0:
+        cash = actual_cashflows(actual)
+        if any(cash[key] is None for key in ("cost", "win", "loss", "decimal")):
             raise ValueError("Positive stake and explicit nonnegative fees required")
-        decimal = decimal_price(actual["price"], actual["units"])
-        committed = stake + entry
-        win = stake * decimal - winning
-        loss = -losing
+        committed, win, loss, decimal = (
+            cash[key] for key in ("cost", "win", "loss", "decimal")
+        )
     if committed <= 0:
         raise ValueError("Positive committed cash required")
     return dict(cost=committed, win=win, loss=loss, decimal=decimal)
+
+
+def settlement_result(trade, count, *, now):
+    """Apply reported outcomes to actual pre-fee fills and recorded charges.
+
+    A push reports a stake refund. Recorded entry charges remain incurred;
+    winning/loss charges do not apply. Explicit net receipts remain authoritative
+    for legacy reports and settlement adjustments such as refunded entry fees.
+    """
+    settlement = (trade or {}).get("result")
+    if not settlement:
+        return None
+    outcomes = settlement.get("outcomes")
+    report = dict(
+        basis="reported_outcomes" if outcomes is not None else "reported_receipts",
+        state="unavailable",
+        outcomes=outcomes,
+        receipts_usd=[None] * count,
+        total_receipts_usd=None,
+        entry_cost_usd=None,
+        profit_usd=None,
+        roi=None,
+        reason="Actual entry costs or outcome fees are unavailable.",
+    )
+    try:
+        if not settlement.get("settled_at") or instant(settlement["settled_at"]) > now:
+            return dict(
+                report, state="pending", reason="Settlement time has not been reached."
+            )
+        actuals = trade["legs"]
+        if len(actuals) != count or (outcomes is not None and len(outcomes) != count):
+            return report
+        costs, receipts = [], []
+        for index, actual in enumerate(actuals):
+            cash = actual_cashflows(actual)
+            costs.append(cash["cost"])
+            try:
+                if outcomes is None:
+                    receipt = fraction(settlement["receipts_usd"][index])
+                elif outcomes[index] in ("win", "loss", "push"):
+                    receipt = cash[outcomes[index]]
+                else:
+                    raise ValueError("Unknown outcome")
+                receipts.append(receipt)
+            except (KeyError, IndexError, TypeError, ValueError, ZeroDivisionError):
+                receipts.append(None)
+        report["receipts_usd"] = [
+            wire(value) if value is not None else None for value in receipts
+        ]
+        if all(value is not None for value in costs):
+            cost = sum(costs)
+            report["entry_cost_usd"] = wire(cost)
+        if all(value is not None for value in receipts):
+            report["total_receipts_usd"] = wire(sum(receipts))
+        if all(value is not None for value in costs + receipts) and sum(costs) > 0:
+            cost, profit = sum(costs), sum(receipts) - sum(costs)
+            report.update(
+                state="calculated",
+                reason=None,
+                profit_usd=wire(profit),
+                roi=wire(profit / cost),
+            )
+    except (KeyError, TypeError, ValueError, ZeroDivisionError):
+        pass
+    return report
 
 
 def _ev(cash, probability):
@@ -230,7 +324,7 @@ def analyze(entry, quotes, at=None):
     actual_legs = (trade or {}).get("legs") or []
     result = dict(
         basis="reported_trade" if trade else "observed_model",
-        scope_note="Decisive completed-game cashflows only. Closing value uses the last retained pregame observation; quote and reference clocks may differ.",
+        scope_note="Modeled EV uses decisive completed-game cashflows. Reported results use selected outcomes or explicit receipts. Closing value uses the last retained pregame observation; quote and reference clocks may differ.",
         prospective_observation=created < kickoff,
         entry_probability_basis="Latest retained exact fair reference known by the reported placement time."
         if trade
@@ -253,6 +347,7 @@ def analyze(entry, quotes, at=None):
         close_basis="Each leg's stored closing comparison cashflows; not a repriced fill or a rebalanced order.",
         realized_profit_usd=None,
         realized_roi=None,
+        settlement=None,
         legs=[],
         reasons=[],
         ev_slippage=None,
@@ -353,11 +448,21 @@ def analyze(entry, quotes, at=None):
             close_cash = _cashflows(close_quote) if close_quote else None
         except (KeyError, TypeError, ValueError, ZeroDivisionError):
             close_cash = None
+        preview_cash = actual_cashflows(actual) if actual else cash or {}
         leg = dict(
             quote_id=original["id"],
             venue=original.get("venue"),
             observed_price=original.get("posted"),
-            entry_decimal=wire(cash["decimal"]) if cash else None,
+            entry_decimal=wire(preview_cash.get("decimal")),
+            cashflows={
+                name + "_usd": wire(preview_cash.get(key))
+                for name, key in (
+                    ("entry_cost", "cost"),
+                    ("win_receipt", "win"),
+                    ("loss_receipt", "loss"),
+                    ("push_receipt", "push"),
+                )
+            },
             entry_probability=wire(p_entry),
             close_probability=wire(p_close),
             entry_reference_book=(entry_reference or {})
@@ -474,23 +579,13 @@ def analyze(entry, quotes, at=None):
             ]
             result["entry_min_profit_usd"] = wire(min(profits))
             result["entry_arb_return"] = wire(min(profits) / cost)
-        settlement = (trade or {}).get("result")
-        if (
-            entry.get("decision") == "placed"
-            and settlement
-            and settlement.get("settled_at")
-        ):
-            try:
-                receipts = [fraction(v) for v in settlement["receipts_usd"]]
-                if (
-                    len(receipts) == len(originals)
-                    and instant(settlement["settled_at"]) <= now
-                ):
-                    profit = sum(receipts) - cost
-                    result["realized_profit_usd"] = wire(profit)
-                    result["realized_roi"] = wire(profit / cost)
-            except (KeyError, TypeError, ValueError, ZeroDivisionError):
-                pass
+    if entry.get("decision") == "placed":
+        settlement = settlement_result(trade, len(originals), now=now)
+        result["settlement"] = settlement
+        if settlement and settlement["state"] == "calculated":
+            result["entry_cost_usd"] = settlement["entry_cost_usd"]
+            result["realized_profit_usd"] = settlement["profit_usd"]
+            result["realized_roi"] = settlement["roi"]
     if closed and all(cash is not None for cash in closing_cashflows):
         cost = sum(cash["cost"] for cash in closing_cashflows)
         result["close_cost_usd"] = wire(cost)
