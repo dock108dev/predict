@@ -1,6 +1,7 @@
 """Prism interactions over disposable preference and journal stores."""
 
 from copy import deepcopy
+from pathlib import Path
 from urllib.parse import urlparse, parse_qs
 
 import pytest
@@ -161,8 +162,8 @@ def test_individual_picks_context_comparison_and_grouped_negative_browse(
         page.route("**/*", serve)
         page.goto("https://predict.fixture/")
         expect(page.locator(".ticket")).to_have_count(2)
-        expect(page.locator(".ticket .posted").first).to_contain_text(
-            "Native format unavailable"
+        expect(page.locator(".ticket .posted .math-trigger").first).to_have_text(
+            "45.45%"
         )
         expect(page.locator("#league")).not_to_be_visible()
         page.locator(".row-open").first.click()
@@ -297,4 +298,90 @@ def test_record_form_draft_discard_actual_fees_and_lost_response_retry(width, tm
         history = fixture.journal.get(entry["id"], history=True)["history"]
         assert len(history) == 2
         assert requests[0]["request_id"] == fixture.updates[-1]["request_id"]
+        browser.close()
+
+
+@pytest.mark.parametrize("width", [1440, 1100, 390])
+def test_site_prices_compact_saved_bookmark_and_ev_reference_preview(width, tmp_path):
+    """A compressed card retains source/fee formats, useful hover and a clean save."""
+    fixture = JournalUI(tmp_path / "saved.sqlite3", prophetx_quote())
+
+    def serve(route):
+        if (
+            fixture.fail_save
+            and route.request.method == "POST"
+            and urlparse(route.request.url).path == "/api/bet-journal"
+        ):
+            route.fulfill(status=503, json=dict(error="Stored quote unavailable"))
+        else:
+            fixture.serve(route)
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        page = browser.new_page(viewport=dict(width=width, height=900))
+        page.route("**/*", serve)
+        page.goto("https://predict.fixture/")
+        row = page.locator(".ticket").first
+        expect(row.locator(".posted .math-trigger")).to_have_text("45.45%")
+        expect(row.locator(".posted .american-equivalent")).to_have_text("(+120)")
+        expect(row.locator(".after .math-trigger")).to_have_text("+118")
+        expect(row).not_to_contain_text("Native format unavailable")
+        ev = row.locator(".ev .math-trigger")
+        ev.hover()
+        preview = page.get_by_role("tooltip")
+        expect(preview).to_be_visible()
+        expect(preview).to_contain_text("FanDuel")
+        expect(preview).to_contain_text("-110")
+        expect(preview).to_contain_text("Fair odds (no vig)")
+        expect(preview).to_contain_text("+100")
+        expect(page.locator(".math-popover:popover-open")).to_have_count(0)
+        page.mouse.move(0, 0)
+        expect(preview).not_to_be_visible()
+        ev.focus()
+        expect(preview).to_be_visible()
+        ev.press("Escape")
+        expect(preview).not_to_be_visible()
+        ev.click()
+        expect(page.locator(".math-popover:popover-open")).to_be_visible()
+        expect(preview).not_to_be_visible()
+        page.get_by_role("button", name="Close calculation", exact=True).click()
+        # Opening comparison compresses the desktop card, reproducing the layout
+        # where its old saved-state label collided with the Net EV heading.
+        row.locator(".row-open").click()
+        expect(page.locator("#comparison")).to_be_visible()
+        if width < 1100:
+            page.get_by_role("button", name="Close comparison", exact=True).click()
+            expect(page.locator("body")).not_to_have_css("position", "fixed")
+        page.evaluate("document.fonts.ready")
+        save = row.locator(".row-save button")
+        expect(save.locator("svg")).to_be_visible()
+        fixture.fail_save = True
+        save.click()
+        error = row.locator('.row-save [role="status"]')
+        expect(error).to_be_visible()
+        expect(error).to_contain_text("Could not save")
+        fixture.fail_save = False
+        save.click()
+        expect(row.locator(".row-save")).to_have_attribute("data-state", "saved")
+        expect(save).to_be_disabled()
+        expect(save).to_have_accessible_name("Saved to research")
+        assert save.inner_text() == ""
+        expect(save.locator("svg")).to_be_visible()
+        saved = fixture.journal.list(view="research")["entries"]
+        assert len(saved) == 1
+        assert saved[0]["snapshot"]["posted"]["value"] == "+120"
+        button_box, value_box = save.bounding_box(), row.locator(".ev").bounding_box()
+        assert button_box["width"] == 40 and button_box["height"] == 40
+        assert (
+            button_box["x"] >= value_box["x"] + value_box["width"]
+            or button_box["y"] + button_box["height"] <= value_box["y"]
+        )
+        assert page.evaluate("document.documentElement.scrollWidth<=innerWidth")
+        page.screenshot(
+            path=str(
+                Path(__file__).resolve().parents[1]
+                / ".local"
+                / f"price-card-{width}.png"
+            )
+        )
         browser.close()

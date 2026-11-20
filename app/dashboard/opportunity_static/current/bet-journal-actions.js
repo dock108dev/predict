@@ -21,27 +21,37 @@ export function journalAction(kind, snapshot, label, existing) {
   const section=document.createElement('section');section.className='journal-action';
   const button=document.createElement('button');button.type='button';
   const status=document.createElement('span');status.setAttribute('role','status');
-  let current=structuredClone(snapshot),currentLabel=label||'Save to My Bets',pending=false,saved;
+  let current=structuredClone(snapshot),currentLabel=label||'Save to My Bets',pending=false,saved,failed=false;
   const sameSaved=()=>saved?.fingerprint===JSON.stringify(current);
   const render=()=>{
     button.disabled=pending||sameSaved();
-    button.textContent=button.dataset.compact?(pending?'…':sameSaved()?'✓':'◇'):pending?'Saving…':sameSaved()?'Saved to My Bets':button.dataset.shortLabel||currentLabel;
+    section.dataset.state=pending?'saving':sameSaved()?'saved':failed?'error':'idle';
+    if(button.dataset.compact){
+      const svg=document.createElementNS('http://www.w3.org/2000/svg','svg'),path=document.createElementNS(svg.namespaceURI,'path');
+      svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('aria-hidden','true');
+      path.setAttribute('d',sameSaved()?'M6 3h12v18l-6-4-6 4V3Z M9 9l2 2 4-4':'M6 3h12v18l-6-4-6 4V3Z');svg.append(path);button.replaceChildren(svg);
+      button.setAttribute('aria-label',pending?'Saving to research':sameSaved()?'Saved to research':currentLabel);
+      button.title=pending?'Saving…':sameSaved()?'Saved to research':failed?'Retry saving to research':'Save to research';
+    }else button.textContent=pending?'Saving…':sameSaved()?'Saved to My Bets':button.dataset.shortLabel||currentLabel;
     if(saved&&button.dataset.compact){status.textContent=sameSaved()?'Saved':'Earlier quote saved';}
     else if(saved){
       const link=document.createElement('a');link.href='/my-bets?'+new URLSearchParams({entry:saved.id});link.textContent='Enter actual odds & stake →';
       status.replaceChildren(document.createTextNode(sameSaved()?'Saved. ':'Earlier quote saved. '),link);
     }
   };
+  section.setCompact=()=>{button.dataset.compact='true';render();};
   section.updateQuote=(value,text)=>{current=structuredClone(value);currentLabel=text||currentLabel;render();};
-  button.onclick=async()=>{
+  button.onclick=async event=>{
+    // Rendering a new SVG detaches the hit path before a card's click handler runs.
+    event.stopPropagation();
     const frozen=structuredClone(current),fingerprint=JSON.stringify(frozen);
-    pending=true;saved=null;render();status.textContent='Saving…';
+    pending=true;saved=null;failed=false;render();status.textContent='Saving…';
     try{
       const response=await fetch('/api/bet-journal',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind,snapshot:frozen})});
       const data=await response.json();
       if(!response.ok)throw Error(data.message||data.error||'Save failed');
       saved={id:(data.entry||data).id,fingerprint};
-    }catch(e){status.textContent=fingerprint===JSON.stringify(current)?'Could not save. Retry to keep this quote.':'Could not save the earlier quote. Retry to save the displayed quote.';}
+    }catch(e){failed=true;status.textContent=fingerprint===JSON.stringify(current)?'Could not save. Retry to keep this quote.':'Could not save the earlier quote. Retry to save the displayed quote.';}
     finally{pending=false;render();}
   };
   section.append(button,status);render();return section;

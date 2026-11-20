@@ -111,14 +111,14 @@ probability among eligible complete exact sportsbook pairs; book priority breaks
 ties. Main/alternate evidence is independent of reference selection.
 [Calculation policy](benchmark-ev.md)
 
-The posted-price adapter preserves supplied units and values. An American price
-appears once; supplied cents, probability or decimal/payout units keep their
-source meaning and add the stored American equivalent in parentheses. When an
-aggregate feed supplies only normalized American odds for a marketplace, show
-those odds with **Native format unavailable**. Never derive a venue percentage
-from its name and present it as an original source quote. After-fee American odds
-come directly from the authoritative stored cashflows. Fair odds remain a
-separate probability benchmark. Display text never becomes a calculation input.
+Source prices use the venue's default format: cents for Kalshi and Polymarket
+US, percentages for Novig and ProphetX, with American odds in parentheses.
+Explicit source-native text retains its supplied precision. When an aggregate
+feed supplies American odds, the presentation converts that stored price to the
+venue format; it does not recover unobserved order-book precision or executable
+size. Missing prices remain unavailable. After-fee values stay in American odds,
+derived from the stored fee cashflows. Fair odds remain a separate no-vig
+benchmark. Display formatting never changes saved quotes or calculation inputs.
 
 The maximum source-age filter checks the quote clock and every selected
 reference input clock, excluding unknown or future timestamps when the filter
@@ -127,8 +127,10 @@ Arbitrage checks the original clocks on both legs independently of EV references
 
 Price, After fees, Fair odds, Net EV and ranking expose calculation panels only
 by explicit click, tap or Enter. Panel content is created on first opening rather
-than adding hidden explanation trees to every board row. Hover and focus do not
-open overlays. Each panel
+than adding hidden explanation trees to every board row. Net EV also has a compact
+hover/keyboard-focus preview showing its selected reference book, that book’s
+quoted odds and no-vig fair odds. This preview does not open the full calculation;
+click/tap and Enter retain that action. Each calculation panel
 has an explicit Close control, bounded internal scrolling and a position below
 the inspection header so the main exit remains reachable. Scroll or Escape
 dismisses the panel; focus restoration never reopens it automatically. Explanations use the inspected row's stored inputs,
@@ -156,6 +158,10 @@ comparison follows current stored rows; a withdrawn line clears its prices and
 save controls. Saving freezes the displayed quote at click time. Pending saves,
 their feedback, expanded calculations and focused controls survive redraws.
 An earlier saved quote is distinguished from a newer displayed quote.
+Pick cards use a fixed-size bookmark control with an outlined idle state and a
+marked saved state. Success is announced without a wrapping label under the
+button; failed saves retain a visible retry message. The docked layout reserves
+a separate grid column for the bookmark so it cannot cover Net EV.
 Additional matching sportsbook prices have their own source clocks. Only
 recognized cash sportsbooks appear in the sportsbook table; unknown venues,
 exchanges and sweepstakes products are excluded. Six books appear initially,

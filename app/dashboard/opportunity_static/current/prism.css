@@ -100,9 +100,13 @@ body.prism-page .row-open{text-decoration:none}
 .prism-page .ranking-hint .math-trigger{font-size:10px;min-height:24px}
 body.prism-page .ranking-hint.score{display:flex;justify-content:flex-start;align-items:center;font:400 10px/1.5 Sora,Arial,sans-serif;color:var(--muted);text-align:left;padding:0;margin:5px 0 0;letter-spacing:0}
 .prism-page .quote-evidence{font:400 10px/1.6 Sora,Arial,sans-serif;color:var(--muted);margin:5px 0 0}
-.prism-page .row-save{margin:0;display:block;width:44px}
-.prism-page .row-save button{padding:0;width:40px;min-width:40px;min-height:40px;font-size:20px;background:transparent;border-color:var(--line);color:var(--muted)}
-.prism-page .row-save span{font-size:10px;display:block;overflow-wrap:anywhere}
+.prism-page .row-save{margin:0;display:block;width:44px;position:relative;align-self:start}
+.prism-page .row-save button{padding:9px;width:40px;min-width:40px;height:40px;min-height:40px;display:grid;place-items:center;line-height:1;background:transparent;border:1px solid var(--line);border-radius:9px;color:var(--muted)}
+.prism-page .row-save svg{width:18px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.prism-page .row-save[data-state=saved] button:disabled{opacity:1;color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}
+.prism-page .row-save[data-state=saving] button{opacity:.6}
+.prism-page .row-save [role=status]{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.prism-page .row-save[data-state=error] [role=status]{clip-path:none;width:min(230px,calc(100vw - 40px));height:auto;white-space:normal;right:0;top:44px;padding:8px;background:var(--surface);border:1px solid var(--negative);border-radius:8px;font-size:11px;color:var(--fg);z-index:3}
 .prism-page .row-save span:empty{display:none}
 .prism-page .board-bottom{margin-top:36px;padding:22px 0;border-top:1px solid var(--line);font-size:11px;color:var(--muted);display:flex;justify-content:space-between;gap:16px}
 .prism-page .board-bottom nav{gap:22px;flex-wrap:wrap}
@@ -199,9 +203,9 @@ body.prism-page #editor{padding:0;background:var(--surface);border-radius:16px}
 @media(min-width:1100px){
  .prism-page .research-layout:has(#comparison[open]){grid-template-columns:minmax(0,1.15fr) minmax(420px,.85fr)}
  body.prism-page #comparison[data-presentation=dock][open]{display:flex;position:sticky;inset:auto;top:16px;margin:0;width:100%;height:calc(100dvh - 32px);max-height:1000px;max-width:none;box-shadow:none}
- body.prism-page:has(#comparison[data-presentation=dock][open]) .board-row{grid-template-columns:minmax(0,1fr) 110px 90px 90px;gap:12px;padding:18px}
- body.prism-page:has(#comparison[data-presentation=dock][open]) .board-row .row-save{position:absolute;right:12px;top:12px}
- body.prism-page:has(#comparison[data-presentation=dock][open]) .board-row .subject{padding-right:26px}
+ body.prism-page:has(#comparison[data-presentation=dock][open]) .board-row{grid-template-columns:minmax(0,1fr) 110px 90px 90px 44px;gap:12px;padding:18px}
+ body.prism-page:has(#comparison[data-presentation=dock][open]) .board-row .row-save{position:static;grid-column:5;grid-row:1}
+ body.prism-page:has(#comparison[data-presentation=dock][open]) .board-row .subject{padding-right:0}
  body.prism-page:has(#comparison[data-presentation=dock][open]) .board-row .posted{font-size:16px}
  body.prism-page:has(#comparison[data-presentation=dock][open]) .board-row .after{font-size:18px}
  body.prism-page:has(#comparison[data-presentation=dock][open]) .board-row .posted>.math-trigger{font-size:16px}
@@ -234,7 +238,7 @@ body.prism-page #editor{padding:0;background:var(--surface);border-radius:16px}
  .prism-page .board-info{gap:8px;justify-content:flex-end;max-width:150px}
  .prism-page .board-info .delay{font-size:10px}
  body.prism-page .board-row{grid-template-columns:repeat(3,minmax(0,1fr));gap:18px 10px;padding:18px;position:relative}
- body.prism-page .board-row .subject{grid-column:1/-1;padding-right:35px}
+ body.prism-page .board-row .subject{grid-column:1/-1;padding-right:52px}
  body.prism-page .board-row .pick{font-size:17px}
  body.prism-page .board-row .row-open{font-size:17px}
  body.prism-page .board-row .posted>.math-trigger{font-size:17px}
@@ -282,3 +286,9 @@ body.prism-page #editor{padding:0;background:var(--surface);border-radius:16px}
  body.prism-page #comparison dl{grid-template-columns:1fr}
 }
 @media(prefers-reduced-motion:reduce){.prism-page *,.prism-page *:before,.prism-page *:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+.ev-preview{position:fixed;inset:auto;margin:0;width:250px;max-width:calc(100vw - 16px);padding:13px 15px;border:1px solid var(--line,#77658c);border-radius:10px;background:var(--surface,#261e34);color:var(--fg,#f6f1fb);box-shadow:0 8px 24px #0004;font:12px/1.6 Sora,Arial,sans-serif;pointer-events:none}
+.ev-preview strong{display:block;margin-bottom:7px;font-weight:600}
+.ev-preview>div{display:flex;justify-content:space-between;gap:16px}
+.ev-preview span{color:var(--muted,#c1b9cd)}
+.ev-preview b{font-weight:500}

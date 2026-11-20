@@ -139,7 +139,7 @@ def test_current_pregame_journey(width, tmp_path):
         expect(page.locator(".ticket")).to_have_count(1)
         expect(page.get_by_role("navigation", name="Pages")).to_be_hidden()
         expect(page.locator(".ticket")).to_contain_text("+8.80%")
-        expect(page.locator(".ticket .posted .math-trigger")).to_have_text("+120")
+        expect(page.locator(".ticket .posted .math-trigger")).to_have_text("45.45%")
         expect(page.locator(".ticket .after .math-trigger")).to_have_text("+118")
         expect(page.get_by_role("searchbox", name="Search teams")).to_be_visible()
         for field in ("#league", "#family", "#venue"):

@@ -1,3 +1,4 @@
+import {addEVPreview,dismissEVPreview} from './ev-preview.js';
 import {rankingCatalog} from './pregame-ranking.js';
 import {ratio} from './pregame-prices.js';
 import {bindDismissControl} from './dialog-close.js';
@@ -82,6 +83,7 @@ export function addMath(cell,row,kind){
  const lines=explanation(row,kind);
  button.setAttribute('aria-label',lines[0]+': '+value.textContent+'. Show calculation');button.setAttribute('aria-haspopup','dialog');button.setAttribute('aria-expanded','false');
  value.replaceWith(button);
+ if(kind==='ev')addEVPreview(button,cell,row);
  let popover;
  const close=(restore=false)=>{if(popover?.matches(':popover-open'))popover.hidePopover();button.setAttribute('aria-expanded','false');if(activeMath?.button===button)activeMath=null;if(restore&&button.isConnected)button.focus({preventScroll:true});};
  // The board needs the numeric controls now; build explanatory content only on demand.
@@ -100,6 +102,7 @@ export function addMath(cell,row,kind){
   return popover;
  };
  button.onclick=()=>{
+  dismissEVPreview();
   if(popover?.matches(':popover-open')){close(true);return;}
   dismissMath();if(!button.isConnected)return;ensurePopover().showPopover();
   const header=button.closest('dialog')?.querySelector('.dialog-heading');

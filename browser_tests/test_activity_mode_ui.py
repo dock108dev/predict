@@ -386,13 +386,13 @@ def test_cohort_age_order_controls_and_browse_combined_default():
             await expect(page.locator(".collection-badge")).to_have_count(0)
             await expect(page.locator("#count")).to_have_text("1 opportunity")
             await expect(page.locator("#results .posted .math-trigger")).to_have_text(
-                "+120"
+                "45.45%"
             )
             await page.locator(".row-open").tap()
             await expect(page.locator(".comparison-status")).to_contain_text("complete")
             await expect(
                 page.locator(".exchange-prices tbody td").nth(1)
-            ).to_contain_text("+120")
+            ).to_contain_text("45.45%")
             assert state.reads[-1][1]["data_type"] == "monitor"
             prior_reads = len(state.reads)
             state.mode, state.last = "live", state.now
@@ -402,13 +402,13 @@ def test_cohort_age_order_controls_and_browse_combined_default():
                 page.locator('#results .row-open[data-quote-id="live-quote"]')
             ).to_have_count(1)
             await expect(page.locator("#results .posted .math-trigger")).to_have_text(
-                "+160"
+                "38.46%"
             )
             await expect(page.locator(".mode-badge")).to_have_text("Live · Settings")
             await expect(
                 page.locator(".exchange-prices tbody td").nth(1)
-            ).to_contain_text("+120")
-            await expect(page.locator(".exchange-prices")).not_to_contain_text("+160")
+            ).to_contain_text("45.45%")
+            await expect(page.locator(".exchange-prices")).not_to_contain_text("38.46%")
             assert any(
                 q.get("bet_id") and q.get("data_type") == "monitor"
                 for _, q in state.reads[prior_reads:]
@@ -429,7 +429,7 @@ def test_cohort_age_order_controls_and_browse_combined_default():
             )
             await expect(
                 page.locator(".ticket .posted .math-trigger").first
-            ).to_have_text("+160")
+            ).to_have_text("38.46%")
             await page.locator("#max-age").fill("5")
             await page.clock.fast_forward(1)
             await expect(page.locator(".ticket")).to_have_count(1)
@@ -441,8 +441,8 @@ def test_cohort_age_order_controls_and_browse_combined_default():
             assert state.reads[-1][1]["data_type"] == "all"
             await expect(page.locator(".game-card .collection-badge")).to_have_count(0)
             await expect(page.locator("#count")).to_have_text("1 game")
-            await expect(page.locator(".game-card")).to_contain_text("+120")
-            await expect(page.locator(".game-card")).to_contain_text("+160")
+            await expect(page.locator(".game-card")).to_contain_text("45.45%")
+            await expect(page.locator(".game-card")).to_contain_text("38.46%")
             assert await page.evaluate(
                 "document.documentElement.scrollWidth<=innerWidth"
             )

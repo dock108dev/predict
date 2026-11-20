@@ -39,6 +39,7 @@ def test_contract_quote_formats_and_legacy_fallback():
           const before=JSON.stringify(row);
           return {
             unavailable:priceDisplay(row),after:priceDisplay(row,true),
+            venueFormats:['kalshi','polymarket_us','novig','prophetx'].map(venue=>[122,-110].map(price=>priceDisplay({venue,posted:{value:String(price),units:'american_odds'},display:{posted_odds:price>0?'+'+price:String(price)}}))),
             normalized:priceDisplay({...row,posted:{value:'+126',units:'american_odds'},source:{provider:'sportsgameodds'}}),
             native:priceDisplay({...row,posted:{value:'44.2500',units:'cents_per_contract'}}),
             probability:priceDisplay({...row,posted:{value:'0.4424778761061947',units:'probability'}}),
@@ -49,20 +50,28 @@ def test_contract_quote_formats_and_legacy_fallback():
             suggestedNhl:suggestedTrades({kind:'ev',snapshot:nhl}),unchanged:JSON.stringify(row)===before};
         }""")
         assert result["unavailable"] == dict(
-            primary="+126", secondary="", price="Native format unavailable"
+            primary="+126", secondary="", price="Source price unavailable"
         )
-        assert result["normalized"] == result["unavailable"]
-        assert result["native"] == dict(
-            primary="44.2500¢", secondary="(+126)", price=""
+        assert [
+            [value["primary"] for value in venue] for venue in result["venueFormats"]
+        ] == [
+            ["45.05¢", "52.38¢"],
+            ["45.05¢", "52.38¢"],
+            ["45.05%", "52.38%"],
+            ["45.05%", "52.38%"],
+        ]
+        assert result["normalized"] == dict(
+            primary="44.25¢", secondary="(+126)", price=""
         )
-        assert result["probability"]["primary"] == "44.24778761061947%"
-        assert result["decimal"] == dict(
-            primary="2.2600×", secondary="(+126)", price=""
-        )
+        assert result["native"] == dict(primary="44.25¢", secondary="(+126)", price="")
+        assert result["probability"]["primary"] == "44.25¢"
+        assert result["decimal"] == dict(primary="44.25¢", secondary="(+126)", price="")
         assert result["originalText"] == dict(
             primary="43.4800%", secondary="(+126)", price=""
         )
-        assert result["american"] == dict(primary="+495", secondary="", price="")
+        assert result["american"] == dict(
+            primary="16.81%", secondary="(+495)", price=""
+        )
         assert result["after"] == dict(primary="+115", secondary="", price="")
         assert result["missingAfter"]["primary"] == "Unavailable"
         assert result["suggestedCommission"] == [
@@ -80,7 +89,7 @@ def test_contract_quote_formats_and_legacy_fallback():
         browser.close()
 
 
-@pytest.mark.parametrize("venue", ["novig", "prophetx"])
+@pytest.mark.parametrize("venue", ["kalshi", "polymarket_us", "novig", "prophetx"])
 @pytest.mark.parametrize("width", [1280, 390])
 def test_percentage_and_american_on_boards_and_comparisons(venue, width, tmp_path):
     """The shared formatter reaches the shipped list, game and arb renderers."""
@@ -127,10 +136,11 @@ def test_percentage_and_american_on_boards_and_comparisons(venue, width, tmp_pat
             )
 
     def prices(posted, after):
-        expect(posted.locator(".math-trigger")).to_have_text("+126")
-        expect(posted.locator(".price-equivalent")).to_have_text(
-            "Native format unavailable"
+        expect(posted.locator(".math-trigger")).to_have_text(
+            "44.25¢" if venue in ("kalshi", "polymarket_us") else "44.25%"
         )
+        expect(posted.locator(".american-equivalent")).to_have_text("(+126)")
+        expect(posted.locator(".price-equivalent")).to_have_count(0)
         expect(after.locator(".math-trigger")).to_have_text("+115")
         expect(after.locator(".american-equivalent")).to_have_count(0)
 
