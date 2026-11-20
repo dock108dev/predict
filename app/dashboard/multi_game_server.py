@@ -538,6 +538,8 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
         mount_activity_mode(app)
         from .bet_journal_api import mount as mount_bet_journal
         mount_bet_journal(app)
+        from .appearance_api import mount as mount_appearance
+        mount_appearance(app)
         async def desk_redirect(req):
             raise web.HTTPFound('/')
         app.router.add_get('/view/current/desk.html',desk_redirect)

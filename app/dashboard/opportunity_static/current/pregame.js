@@ -1,7 +1,7 @@
 import {bindBoardFilters} from './board-filters.js';
 import {createModeSettings} from './mode-settings.js';
 import {bindDialogClose} from './dialog-close.js';
-import {journalAction} from './bet-journal-actions.js';
+import {journalAction,recordAction} from './bet-journal-actions.js';
 import {bookName,venues} from './pregame-labels.js';
 import {priceDisplay,hasVenuePrice} from './pregame-prices.js';
 import {addMath} from './pregame-math.js';
@@ -12,19 +12,31 @@ const initial=new URLSearchParams(location.search), browse=location.pathname==='
 const gameView=location.pathname==='/game', gameBoard=location.pathname==='/browse-odds'&&!initial.has('bet_id')&&!initial.has('id')&&!initial.has('line')&&!initial.has('quote_key');
 let gameSequence=0,gameReturnKey,comparisonTrigger,gameTimer,activeComparison,gameDataType,gameSuspended,suspendingGameClose=false,backToGame=false;
 let offset=0, total=0, cursor='', refreshTimer, feedbackTimer, running=false, checking=false, lastGood=null, sequence=0, comparisonSequence=0, inspectionTimer, comparisonReturnId,boardController,gameController,lastRendered,displayedQuery;
-const dialogReturns=new Map(),lockProperties=['position','top','left','width'];let lockedPage;
+const dialogReturns=new Map(),lockProperties=['position','top','left','width'];let lockedPage,comparisonModeChanges=0;
+const desktopComparison=matchMedia('(min-width:1100px)');
+function lockPage(){if(!lockedPage){lockedPage={x:scrollX,y:scrollY,style:document.body.getAttribute('style'),properties:lockProperties.map(name=>[name,document.body.style.getPropertyValue(name),document.body.style.getPropertyPriority(name)])};Object.assign(document.body.style,{position:'fixed',top:-scrollY+'px',left:-scrollX+'px',width:'100%'});}}
+function unlockPage(){if(!lockedPage)return;const page=lockedPage;lockedPage=null;for(const [name,value,priority]of page.properties){if(value)document.body.style.setProperty(name,value,priority);else document.body.style.removeProperty(name);}if(page.style===null&&!document.body.style.length)document.body.removeAttribute('style');scrollTo(page.x,page.y);}
 function showDialog(dialog,trigger=document.activeElement){
  const parent=trigger?.closest('dialog');dialogReturns.set(dialog,{trigger,parent,parentScroll:gameSuspended?.scroll??parent?.querySelector('#game-content')?.scrollTop??0});
- if(!lockedPage){lockedPage={x:scrollX,y:scrollY,style:document.body.getAttribute('style'),properties:lockProperties.map(name=>[name,document.body.style.getPropertyValue(name),document.body.style.getPropertyPriority(name)])};Object.assign(document.body.style,{position:'fixed',top:-scrollY+'px',left:-scrollX+'px',width:'100%'});}
- dialog.showModal();
+ if(dialog.id==='comparison'&&desktopComparison.matches){unlockPage();dialog.dataset.presentation='dock';dialog.show();dialog.querySelector('#close').focus({preventScroll:true});return;}
+ lockPage();
+ dialog.dataset.presentation='modal';dialog.showModal();
 }
+desktopComparison.addEventListener('change',()=>{
+ const dialog=$('comparison');if(!dialog.open)return;
+ const active=document.activeElement;comparisonModeChanges++;dialog.close();
+ if(desktopComparison.matches){unlockPage();dialog.dataset.presentation='dock';dialog.show();}
+ else{dialog.dataset.presentation='modal';lockPage();dialog.showModal();}
+ active?.focus({preventScroll:true});
+});
+document.addEventListener('keydown',event=>{if(event.key==='Escape'&&$('comparison').open&&$('comparison').dataset.presentation==='dock'&&!document.querySelector('dialog:modal,[popover]:popover-open')){event.preventDefault();$('comparison').close();}});
 function restoreDialog(dialog,fallback){
  const saved=dialogReturns.get(dialog);dialogReturns.delete(dialog);
  const eligible=target=>target?.isConnected&&(!target.closest('dialog')||target.closest('dialog').open);
  const scope=saved?.parent?.open?saved.parent:document,focusKey=saved?.trigger?.dataset.focusKey;
  const replacement=focusKey?[...scope.querySelectorAll('[data-focus-key]')].find(button=>button.dataset.focusKey===focusKey):null;
  const target=eligible(saved?.trigger)?saved.trigger:eligible(replacement)?replacement:fallback;
- if(!document.querySelector('dialog[open]')&&lockedPage){const page=lockedPage;lockedPage=null;for(const [name,value,priority]of page.properties){if(value)document.body.style.setProperty(name,value,priority);else document.body.style.removeProperty(name);}if(page.style===null&&!document.body.style.length)document.body.removeAttribute('style');scrollTo(page.x,page.y);}
+ if(!document.querySelector('dialog[open]'))unlockPage();
  const restore=()=>{target?.focus({preventScroll:true});if(saved?.parent?.open)saved.parent.querySelector('#game-content').scrollTop=saved.parentScroll;};restore();requestAnimationFrame(restore);
 }
 const filters=$('filters');
@@ -42,25 +54,21 @@ function pick(row){const s=row.selection;const team=row.selection_label||(s.part
 
 function referenceQuote(row){return row.reference?.prices?.find(p=>p.side===row.reference.selected_outcome);}
 function referencePrice(row){return referenceQuote(row)?.price_american ?? 'Unavailable';}
-function ticket(row,compare=true){
- const article=node('article',undefined,'ticket board-row');
+function ticket(row,compare=true,previousAction){
+ const article=node('article',undefined,'ticket board-row');article.dataset.quoteId=row.id;article.dataset.selected=String(activeComparison?.selected.id===row.id);
  article.addEventListener('click',event=>{if(compare&&!event.target.closest('a,button,input,select,summary,details,[popover]'))openComparison(row,article.querySelector('.row-open'));});
  const date=new Date(row.kickoff),opts={timeZone:'America/New_York'};
- article.append(node('div',row.league,'league-cell'));
- const start=node('div',undefined,'start-cell');start.append(node('strong',date.toLocaleTimeString('en-US',{...opts,hour:'numeric',minute:'2-digit'})),node('span',date.toLocaleDateString('en-US',{...opts,weekday:'short',month:'short',day:'numeric'})));article.append(start);
- const body=node('div',undefined,'subject'),context=node('p',undefined,'context');context.append(node('strong',row.league),node('time',date.toLocaleString('en-US',{...opts,weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+' ET'));
- const title=node('h2',undefined,'pick');
+ const body=node('div',undefined,'subject'),title=node('h2',undefined,'pick');
  if(compare){const open=node('button',pick(row),'row-open');open.type='button';open.dataset.quoteId=row.id;open.dataset.focusKey='compare-'+row.id;open.setAttribute('aria-label','Compare prices for '+pick(row));open.setAttribute('aria-haspopup','dialog');open.setAttribute('aria-controls','comparison');open.onclick=event=>openComparison(row,event.currentTarget);title.append(open);}else title.textContent=pick(row);
  const link=node('a',row.game,'game');link.dataset.focusKey='game-link-'+row.id;link.href='/game?'+new URLSearchParams({game_key:row.game_key});link.setAttribute('aria-label','Open Game: '+row.game);
- link.onclick=event=>{if(event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;event.preventDefault();openGame({game_key:row.game_key,game:row.game,league:row.league,kickoff:row.kickoff,rows:[row]},event.currentTarget);};body.append(context,title,link);article.append(body);
- const cell=(cls,label,value)=>{const d=node('div',undefined,'board-number '+cls);d.append(node('span',label,'mobile-label'),node('span',value));article.append(d);return d;};
- const venue=cell('venue','Venue',venues[row.venue]||row.venue);
- const posted=priceDisplay(row),after=priceDisplay(row,true),postedCell=cell('posted','Price',posted.primary),afterCell=cell('after','After fees',after.primary);
- if(hasVenuePrice(row)){addMath(postedCell,row,'posted');appendPriceContext(postedCell,posted);appendPriceContext(afterCell,after);}
- addMath(afterCell,row,'after');
- const fair=cell('fair','Fair odds',row.display.fair_odds||'Unavailable');if(row.reference){fair.append(node('small',bookName(row.reference.book)+' ('+referencePrice(row)+')','reference'));addMath(fair,row,'fair');}
- addMath(cell('ev'+((row.display.net_ev||'').startsWith('-')?' negative':''),'Net EV',row.display.net_ev),row,'ev');const rank=rankInfo(row),score=cell('score',rank.column+(rank.unit==='log bp'?' (log bp)':rank.unit==='pp'?' (pp)':''),rank.display);addMath(score,row,'ranking');
- const metadata=node('div',undefined,'ticket-meta');article.insertBefore(metadata,venue);metadata.append(venue,score);body.append(freshness(row));
+ link.onclick=event=>{if(event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;event.preventDefault();openGame({game_key:row.game_key,game:row.game,league:row.league,kickoff:row.kickoff,rows:[row]},event.currentTarget);};
+ const context=node('p',undefined,'context');context.append(node('strong',row.league),node('time',date.toLocaleString('en-US',{...opts,month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+' ET'));
+ body.append(title,link,context,freshness(row));
+ const rank=rankInfo(row),ranking=node('div',undefined,'ranking-hint score');ranking.append(node('span',rank.column+': '),mathValue(row,'ranking',rank.display),node('span',rank.unit));body.append(ranking);article.append(body);
+ const cell=(cls,label,after)=>{const d=node('div',undefined,'board-number '+cls),display=priceDisplay(row,after);d.append(node('span',label,'mobile-label'),node('span',display.primary));if(after||hasVenuePrice(row))addMath(d,row,after?'after':'posted');appendPriceContext(d,display);article.append(d);return d;};
+ cell('posted','Source quote',false).append(node('small',venues[row.venue]||row.venue,'source-venue'));cell('after','After fees',true);
+ const ev=node('div',undefined,'board-number ev'+((row.display.net_ev||'').startsWith('-')?' negative':''));ev.append(node('span','Net EV','mobile-label'),node('span',row.display.net_ev||'Unavailable'));if(row.reference)addMath(ev,row,'ev');article.append(ev);
+ const save=journalAction('ev',row,'Save '+bookName(row.venue)+' to My Bets',previousAction);save.classList.add('row-save');const button=save.querySelector('button');if(!button.dataset.compact){button.dataset.compact='true';button.textContent='◇';}button.setAttribute('aria-label','Save '+pick(row)+' to research');article.append(save);
  return article;
 }
 function query(){const data=new FormData(filters),q=new URLSearchParams({limit:'30',offset:String(offset)});for(const name of ['search','league','family','venue','sort','order','data_type','max_age_minutes'])if(data.get(name))q.set(name,data.get(name));if(data.get('alternates'))q.set('lines','all');if(browse)q.set('browse','1');if(gameBoard)q.set('view','games');if(gameView)q.set('view','game');for(const name of ['game_key','bet_id','id'])if(initial.has(name))q.set(name,initial.get(name));if(initial.has('line'))q.set('bet_id',initial.get('line'));if(initial.has('quote_key'))q.set('id',initial.get('quote_key'));return q;}
@@ -74,8 +82,9 @@ function render(packet){
  const fingerprint=JSON.stringify([query().toString(),packet.rows,packet.games,packet.total,packet.sort,packet.data_type]);
  if(lastRendered===fingerprint){lastGood=packet;cursor=packet.cursor;total=packet.total;schedule(packet.refresh_at);return;}lastRendered=fingerprint;
  const result=$('results'),active=document.activeElement,restoreFocus=result.contains(active),focusKey=active?.dataset.focusKey;
+ const previousActions=new Map([...result.querySelectorAll('.ticket')].map(row=>[row.dataset.quoteId,row.querySelector('.row-save')]));
  appliedRanking=packet.sort||rankingSelect.value;rankHeading();document.querySelector('.status-line').hidden=false;document.querySelector('.pagination').hidden=gameView||(packet.total<=30&&offset===0);lastGood=packet;cursor=packet.cursor;total=packet.total;result.replaceChildren();
- if(gameBoard&&packet.games?.length)result.append(...packet.games.map(gameCard));else if(gameView&&packet.rows.length)result.append(gameMarkets(packet.rows,true));else if(packet.rows.length)result.append(...packet.rows.map(row=>ticket(row)));else{const empty=node('div',undefined,'empty');empty.append(node('h2',browse?'No odds match these filters.':'No positive opportunities in this view.'));if(browse){empty.append(node('p','Try another league, market or venue.'));}else{const link=node('a','Browse odds →');link.href='/browse-odds';empty.append(link);}result.append(empty);}
+ if(gameBoard&&packet.games?.length)result.append(...packet.games.map(gameCard));else if(gameView&&packet.rows.length)result.append(gameMarkets(packet.rows,true));else if(packet.rows.length)result.append(...packet.rows.map(row=>ticket(row,true,previousActions.get(row.id))));else{const empty=node('div',undefined,'empty');empty.append(node('h2',browse?'No odds match these filters.':'No positive opportunities in this view.'));if(browse){empty.append(node('p','Try another league, market or venue.'));}else{const link=node('a','Browse odds →');link.href='/browse-odds';empty.append(link);}result.append(empty);}
  $('board-columns').hidden=gameBoard||gameView||!packet.rows.length;$('count').textContent=`${total} ${gameBoard?(total===1?'game':'games'):browse?(total===1?'bet':'bets'):(total===1?'opportunity':'opportunities')}`;$('previous').disabled=offset===0;$('next').disabled=offset+30>=total;$('page').textContent=total?`${offset+1}–${Math.min(offset+30,total)} of ${total}`:'0';schedule(packet.refresh_at);
  // A response can redraw the list just after a dialog restored its trigger.
  // Preserve keyboard identity across replacement without moving dialog/filter focus.
@@ -132,10 +141,15 @@ function renderComparison(rows,quotes=[],state='loading'){
  const expanded=new Set([...content.querySelectorAll('details[open]')].map(e=>e.querySelector('summary')?.textContent));
  const focused=content.contains(document.activeElement)?document.activeElement.dataset.focusKey:null;
  const scroll=content.scrollTop;
- const game=node('p',selected.game,'comparison-context'),selectedPrice=node('div',undefined,'selected-quote'),offers=node('section',undefined,'exchange-comparison'),evidence=node('section',undefined,'calculation-evidence');
- const selectedLabel=node('strong','Selected quote · '+(venues[selected.venue]||selected.venue));selectedPrice.append(selectedLabel,venuePrice(selected));for(const button of selectedPrice.querySelectorAll('[data-focus-key]'))button.dataset.focusKey='selected-'+button.dataset.focusKey;offers.append(node('h3','Exchange prices'),exchangePrices(rows));
+ const game=node('p',selected.game,'comparison-context'),offers=node('section',undefined,'exchange-comparison'),evidence=node('section',undefined,'calculation-evidence');
+ offers.append(node('h3','Exchange prices'),exchangePrices(rows));
  for(const [index,row]of rows.entries()){const detail=details(row);if(index)detail.querySelector('summary').textContent=(venues[row.venue]||row.venue)+' · Fee and calculation details';detail.open=expanded.has(detail.querySelector('summary').textContent);evidence.append(detail);}
- content.replaceChildren(game,selectedPrice,comparisonStatus(state),freshness(selected),payoutExample(selected),offers,sportsbookPrices(selected,quotes,state),evidence);for(const detail of content.querySelectorAll('details'))detail.open=expanded.has(detail.querySelector('summary')?.textContent);
+ const summary=node('section',undefined,'selected-summary');summary.setAttribute('aria-label','Selected price and reference');
+ for(const [label,value]of [['Source · '+bookName(selected.venue),venuePrice(selected)],['Effective after fees',venuePrice(selected,true)],['Net EV',mathValue(selected,'ev',selected.display.net_ev)],['Fair / no-vig reference',mathValue(selected,'fair',selected.display.fair_odds)]]){const line=node('div');line.append(node('span',label),value);summary.append(line);}
+ for(const button of summary.querySelectorAll('[data-focus-key]'))button.dataset.focusKey='selected-'+button.dataset.focusKey;
+ const previous=content.querySelector('.comparison-record'),sameQuote=previous?.dataset.quoteId===selected.id;
+ const actions=node('section',undefined,'comparison-record');actions.dataset.quoteId=selected.id;
+ actions.append(recordAction(selected,sameQuote?previous.querySelector('.record-bet'):null),journalAction('ev',selected,'Save to research',sameQuote?previous.querySelector('.journal-action'):null));content.replaceChildren(game,summary,actions,comparisonStatus(state),freshness(selected),payoutExample(selected),offers,sportsbookPrices(selected,quotes,state),evidence);for(const detail of content.querySelectorAll('details'))detail.open=expanded.has(detail.querySelector('summary')?.textContent);
  if(focused)[...content.querySelectorAll('[data-focus-key]')].find(e=>e.dataset.focusKey===focused)?.focus({preventScroll:true});
  content.scrollTop=scroll;
 }
@@ -157,7 +171,7 @@ async function openComparison(selected,trigger){
  ++comparisonSequence;clearTimeout(inspectionTimer);comparisonReturnId=selected.id;
  activeComparison?.controller.abort();activeComparison={selected:structuredClone(selected),dataType:gameSuspended?gameDataType:lastGood?.data_type||$('data-type').value||selected.collection?.kind,maxAge:$('max-age').value,rows:[selected],quotes:[],loading:false,pending:false,state:'loading',controller:new AbortController()};
  inspectionTimer=setTimeout(()=>$('comparison').close(),Math.min(2147483647,Math.max(0,Date.parse(selected.kickoff)-Date.now())));
- $('comparison-title').textContent=pick(selected);renderComparison([selected]);showDialog($('comparison'),comparisonTrigger);
+ $('comparison-title').textContent=pick(selected);renderComparison([selected]);for(const row of document.querySelectorAll('.ticket'))row.dataset.selected=String(row.dataset.quoteId===selected.id);if(!$('comparison').open)showDialog($('comparison'),comparisonTrigger);else if(dialogReturns.has($('comparison')))dialogReturns.get($('comparison')).trigger=comparisonTrigger;
  await refreshComparison();
 }
 
@@ -179,6 +193,7 @@ function gameCard(game){
  const title=node('h2'),open=node('button',game.game,'game-open');open.type='button';open.dataset.gameKey=game.game_key;open.dataset.focusKey='game-'+game.game_key;open.setAttribute('aria-haspopup','dialog');open.onclick=event=>openGame(game,event.currentTarget);title.append(open);head.append(title,node('p',game.league+' · '+date.toLocaleString('en-US',{...opts,weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+' ET','game-clock'),node('span','View all lines →','game-hint'));card.append(head,gameMarkets(game.rows,true,false));return card;
 }
 async function openGame(game,trigger,dataType=lastGood?.data_type||query().get('data_type')||'all'){
+ if($('comparison').open)$('comparison').close();
  gameDataType=dataType;
  clearTimeout(gameTimer);gameTimer=setTimeout(()=>$('game-lines').close(),Math.min(2147483647,Math.max(0,Date.parse(game.kickoff)-Date.now())));
  gameController?.abort();const controller=gameController=new AbortController();const token=++gameSequence;gameReturnKey=game.game_key;$('game-title').textContent=game.game;const content=$('game-content');content.replaceChildren(node('p','Loading alternate lines…','comparison-context'),gameMarkets(game.rows,true));if(!$('game-lines').open)showDialog($('game-lines'),trigger||document.activeElement);
@@ -195,9 +210,11 @@ $('game-lines').addEventListener('close',()=>{
 bindDialogClose($('comparison-back'),$('comparison'),()=>{backToGame=true;$('comparison').close();});
 bindDialogClose($('close'),$('comparison'));
 $('comparison').addEventListener('close',()=>{
+ if(comparisonModeChanges){comparisonModeChanges--;return;}
+ for(const row of document.querySelectorAll('.ticket'))row.dataset.selected='false';
  comparisonSequence++;activeComparison?.controller.abort();activeComparison=null;clearTimeout(inspectionTimer);
  if(gameSuspended){
-  if(backToGame){$('game-lines').showModal();restoreDialog($('comparison'),$('game-content'));}
+  if(backToGame){lockPage();$('game-lines').showModal();restoreDialog($('comparison'),$('game-content'));}
   else{
    clearTimeout(gameTimer);gameController?.abort();gameSequence++;dialogReturns.delete($('comparison'));
    const target=[...document.querySelectorAll('.game-open')].find(b=>b.dataset.gameKey===gameReturnKey);

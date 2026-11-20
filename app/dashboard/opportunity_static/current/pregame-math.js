@@ -61,7 +61,14 @@ export function explanation(row,kind){
 }
 let activeMath;
 const dismissMath=()=>activeMath?.close();
-document.addEventListener('scroll',event=>{if(activeMath&&!activeMath.popover.contains(event.target))dismissMath();},true);
+document.addEventListener('scroll',event=>{
+ if(!activeMath||activeMath.popover.contains(event.target))return;
+ const target=event.target===document?document.scrollingElement:event.target;
+ const before=activeMath.scrollOffsets.get(target);
+ // Focusing a lower comparison value can queue a scroll event before opening.
+ // Dismiss only for movement after the popover's actual opening position.
+ if(!before||before[0]!==target.scrollTop||before[1]!==target.scrollLeft)dismissMath();
+},true);
 window.addEventListener('resize',dismissMath);
 document.addEventListener('close',event=>{if(activeMath&&event.target.contains(activeMath.button))dismissMath();},true);
 document.addEventListener('focusin',event=>{if(activeMath&&event.target!==activeMath.button&&!activeMath.popover.contains(event.target))dismissMath();});
@@ -102,6 +109,8 @@ export function addMath(cell,row,kind){
   popover.style.left=Math.max(12,Math.min(innerWidth-popover.offsetWidth-12,box.right-popover.offsetWidth))+'px';
   const below=box.bottom+8,above=box.top-popover.offsetHeight-8;
   popover.style.top=Math.max(safeTop,Math.min(innerHeight-popover.offsetHeight-12,below+popover.offsetHeight<=innerHeight-12?below:above))+'px';
-  button.setAttribute('aria-expanded','true');activeMath={button,popover,close};
+  const scrollOffsets=new Map();for(let parent=button.parentElement;parent;parent=parent.parentElement)scrollOffsets.set(parent,[parent.scrollTop,parent.scrollLeft]);
+  scrollOffsets.set(document.scrollingElement,[document.scrollingElement.scrollTop,document.scrollingElement.scrollLeft]);
+  button.setAttribute('aria-expanded','true');activeMath={button,popover,close,scrollOffsets};
  };
 }

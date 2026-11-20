@@ -37,49 +37,34 @@ def test_contract_quote_formats_and_legacy_fallback():
           const nhl={id:'saved-nhl',venue:'prophetx',posted:{value:'+109',units:'american_odds'},
             raw:{posted_decimal:'2.09',after_fee_decimal:'548625/267307'},display:{posted_odds:'+109',after_fees:'+105'}};
           const before=JSON.stringify(row);
-          const result={poly:priceDisplay(row),after:priceDisplay(row,true),
-                  kalshi:priceDisplay({...row,venue:'kalshi',display:{posted_odds:'+119'},raw:{posted_decimal:'2.19'}}),
-                  novig:priceDisplay({...row,venue:'novig'}),
-                  prophetx:priceDisplay({...row,venue:'prophetx'}),
-                  novigAfter:priceDisplay({...row,venue:'novig'},true),
-                  prophetxAfter:priceDisplay({...row,venue:'prophetx'},true),
-                  novigSlip:priceDisplay({...row,venue:'novig',raw:{posted_decimal:'200/101'}}),
-                  prophetxSlip:priceDisplay({...row,venue:'prophetx',raw:{posted_decimal:'1250/649'}}),
-                  sportsbook:priceDisplay({...row,venue:'fanduel'}),
-                  missing:priceDisplay({...row,raw:{}}),
-                  recordedCommission:[priceDisplay(commission),priceDisplay(commission,true)],
-                  recordedNhl:[priceDisplay(nhl),priceDisplay(nhl,true)],
-                  suggestedCommission:suggestedTrades({kind:'ev',snapshot:commission}),
-                  suggestedNhl:suggestedTrades({kind:'ev',snapshot:nhl})};
-          return {...result,unchanged:JSON.stringify(row)===before};
+          return {
+            unavailable:priceDisplay(row),after:priceDisplay(row,true),
+            normalized:priceDisplay({...row,posted:{value:'+126',units:'american_odds'},source:{provider:'sportsgameodds'}}),
+            native:priceDisplay({...row,posted:{value:'44.2500',units:'cents_per_contract'}}),
+            probability:priceDisplay({...row,posted:{value:'0.4424778761061947',units:'probability'}}),
+            decimal:priceDisplay({...row,posted:{value:'2.2600',units:'decimal_odds'}}),
+            originalText:priceDisplay({...row,native_price:{text:'43.4800%',format:'percent',value:'43.4800',source_units:'percent'}}),
+            american:priceDisplay(commission),missingAfter:priceDisplay({...row,display:{posted_odds:'+126'}},true),
+            suggestedCommission:suggestedTrades({kind:'ev',snapshot:commission}),
+            suggestedNhl:suggestedTrades({kind:'ev',snapshot:nhl}),unchanged:JSON.stringify(row)===before};
         }""")
-        assert result["poly"] == dict(
-            primary="2.26×", secondary="(+126)", price="44.25% price"
+        assert result["unavailable"] == dict(
+            primary="+126", secondary="", price="Native format unavailable"
         )
-        assert result["after"] == dict(primary="2.15×", secondary="(+115)", price="")
-        assert result["kalshi"] == dict(
-            primary="45.66¢", secondary="(+119)", price="2.19× payout"
+        assert result["normalized"] == result["unavailable"]
+        assert result["native"] == dict(
+            primary="44.2500¢", secondary="(+126)", price=""
         )
-        assert result["sportsbook"]["primary"] == "+126"
-        assert result["novig"] == dict(primary="44.25%", secondary="+126", price="")
-        assert result["novigAfter"] == dict(
-            primary="46.58%", secondary="+115", price=""
+        assert result["probability"]["primary"] == "44.24778761061947%"
+        assert result["decimal"] == dict(
+            primary="2.2600×", secondary="(+126)", price=""
         )
-        assert result["prophetx"] == dict(primary="44.25%", secondary="+126", price="")
-        assert result["prophetxAfter"] == dict(
-            primary="46.58%", secondary="+115", price=""
+        assert result["originalText"] == dict(
+            primary="43.4800%", secondary="(+126)", price=""
         )
-        assert result["novigSlip"]["primary"] == "50.5%"
-        assert result["prophetxSlip"]["primary"] == "51.92%"
-        assert result["missing"]["primary"] == "+126"
-        assert result["recordedCommission"] == [
-            dict(primary="16.81%", secondary="+495", price=""),
-            dict(primary="17.09%", secondary="+485", price=""),
-        ]
-        assert result["recordedNhl"] == [
-            dict(primary="47.85%", secondary="+109", price=""),
-            dict(primary="48.72%", secondary="+105", price=""),
-        ]
+        assert result["american"] == dict(primary="+495", secondary="", price="")
+        assert result["after"] == dict(primary="+115", secondary="", price="")
+        assert result["missingAfter"]["primary"] == "Unavailable"
         assert result["suggestedCommission"] == [
             dict(
                 quote_id="saved-commission",
@@ -104,7 +89,7 @@ def test_percentage_and_american_on_boards_and_comparisons(venue, width, tmp_pat
     from browser_tests.test_pregame_arb_recovery import pair_fixture
 
     selected = offer()
-    selected.update(venue=venue, side="home")
+    selected.update(venue=venue, side="home", posted=dict(value="+126", units="american_odds"))
     selected["raw"].update(posted_decimal="2.26", after_fee_decimal="2.1468")
     selected["display"].update(posted_odds="+126", after_fees="+115")
     pair = pair_fixture()
@@ -140,17 +125,12 @@ def test_percentage_and_american_on_boards_and_comparisons(venue, width, tmp_pat
             )
 
     def prices(posted, after):
-        for cell, primary, american in (
-            (posted, "44.25%", "+126"),
-            (after, "46.58%", "+115"),
-        ):
-            expect(cell.locator(".math-trigger")).to_have_text(primary)
-            expect(cell.locator(".american-equivalent")).to_have_text(american)
-            expect(cell.locator(".price-equivalent")).to_have_count(0)
-            cell.locator(".math-trigger").scroll_into_view_if_needed()
-            top = cell.locator(".math-trigger").bounding_box()
-            bottom = cell.locator(".american-equivalent").bounding_box()
-            assert bottom["y"] >= top["y"] + top["height"] - 1
+        expect(posted.locator(".math-trigger")).to_have_text("+126")
+        expect(posted.locator(".price-equivalent")).to_have_text(
+            "Native format unavailable"
+        )
+        expect(after.locator(".math-trigger")).to_have_text("+115")
+        expect(after.locator(".american-equivalent")).to_have_count(0)
 
     with sync_playwright() as p:
         browser = p.chromium.launch(executable_path=os.getenv("PREDICT_CI_CHROMIUM"))

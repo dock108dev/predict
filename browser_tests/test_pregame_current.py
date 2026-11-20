@@ -139,12 +139,12 @@ def test_current_pregame_journey(width, tmp_path):
         expect(page.locator(".ticket")).to_have_count(1)
         expect(page.get_by_role("navigation", name="Pages")).to_be_hidden()
         expect(page.locator(".ticket")).to_contain_text("+8.80%")
-        expect(page.locator(".ticket .posted .math-trigger")).to_have_text("45.45%")
-        expect(page.locator(".ticket .after .math-trigger")).to_have_text("45.96%")
-        expect(page.locator(".fair .reference")).to_contain_text("FanDuel (-110)")
-        for label in ("Search teams", "League", "Market", "Venue"):
-            expect(page.locator(".filter-label", has_text=label)).to_be_visible()
-        for kind in ("after", "fair", "ev", "score"):
+        expect(page.locator(".ticket .posted .math-trigger")).to_have_text("+120")
+        expect(page.locator(".ticket .after .math-trigger")).to_have_text("+118")
+        expect(page.get_by_role("searchbox", name="Search teams")).to_be_visible()
+        for field in ("#league", "#family", "#venue"):
+            expect(page.locator(field)).not_to_be_visible()
+        for kind in ("after", "ev", "score"):
             trigger = page.locator(f"#results .{kind} .math-trigger")
             trigger.hover()
             expect(page.locator(".math-popover:popover-open")).to_have_count(0)
@@ -163,9 +163,7 @@ def test_current_pregame_journey(width, tmp_path):
         # Blank row space opens comparison, while math and links stay separate.
         page.locator(".ticket").click(position={"x": 8, "y": 8})
         expect(page.locator("#comparison")).to_be_visible()
-        expect(page.locator(".exchange-prices tbody td").nth(1)).to_contain_text(
-            "45.45%"
-        )
+        expect(page.locator(".exchange-prices tbody td").nth(1)).to_contain_text("+120")
         expect(page.locator(".sportsbook-prices")).to_contain_text("DraftKings")
         expect(page.locator(".sportsbook-prices")).to_contain_text("-115")
         # Every quote figure and its save control fit the comparison at phone width.
@@ -233,6 +231,7 @@ def test_current_pregame_journey(width, tmp_path):
         state["failed"] = False
         # Ordinary inspection retains the board; the canonical link remains
         # available for deep links and modified-click navigation.
+        page.locator('#board-advanced > summary').click()
         for field, value in (
             ("league", "NBA"),
             ("family", "spread"),
@@ -317,7 +316,7 @@ def test_current_pregame_journey(width, tmp_path):
                 "link", name="About this board", exact=True
             ).click()
         else:
-            page.locator(".board-info .about-link").click()
+            page.locator(".board-bottom").get_by_role("link", name="About this board", exact=True).click()
         expect(
             page.get_by_role("heading", name="About this board", exact=True)
         ).to_be_visible()
@@ -495,15 +494,12 @@ def test_ranking_dropdown_defaults_edge_persists_and_resets_page(width):
                 offer(),
             )
             assert unsupported == "Unsupported calculation detail: retired-score-detail"
-            # display:contents metadata must not move the selected rank under Price.
-            for header, cell in (
-                ("#ranking-column", ".ticket .score"),
-                (".board-columns > span:nth-child(5)", ".ticket .posted"),
-            ):
-                heading = page.locator(header).bounding_box()
-                figure = page.locator(cell).bounding_box()
-                assert abs(heading["x"] - figure["x"]) < 1
-                assert abs(heading["width"] - figure["width"]) < 1
+            # Native quote, fee-adjusted American and EV retain their visual order.
+            cells = [
+                page.locator(selector).bounding_box()
+                for selector in (".ticket .posted", ".ticket .after", ".ticket .ev")
+            ]
+            assert cells[0]["x"] < cells[1]["x"] < cells[2]["x"]
         page.locator(".ticket .score .math-trigger").focus()
         expect(page.locator(".math-popover:popover-open")).to_have_count(0)
         page.keyboard.press("Enter")
@@ -620,6 +616,7 @@ def test_background_redraw_preserves_focus_after_comparison_closes(width):
         close = page.get_by_role("button", name="Close comparison")
         close.focus()
         selected["display"]["posted_odds"] = "+130"
+        selected["posted"]["value"] = "+130"
         state["revision"] = "two"
         finish_read()
         expect(page.locator("#results .posted")).to_contain_text("+130")
@@ -628,6 +625,7 @@ def test_background_redraw_preserves_focus_after_comparison_closes(width):
 
         start_read()
         selected["display"]["posted_odds"] = "+140"
+        selected["posted"]["value"] = "+140"
         state["revision"] = "three"
         finish_read()
         expect(page.locator("#results .posted")).to_contain_text("+140")

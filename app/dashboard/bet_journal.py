@@ -145,10 +145,16 @@ def validate_trade(trade, entry, decision):
             "win_fee",
             "loss_fee",
             "fee_basis",
+            "venue",
         }:
             raise ValueError("Unknown trade leg fields")
         if actual.get("quote_id") != quoted["id"]:
             raise ValueError("The trade must retain its original selections and venues")
+        if actual.get("venue"):
+            from app.comparison.sportsbooks import SPORTSBOOKS
+
+            if actual["venue"] not in (*EXECUTION_VENUES, *SPORTSBOOKS):
+                raise ValueError("Choose a supported actual venue")
         for key in ("stake", "price", "units", "entry_fee", "win_fee", "loss_fee"):
             value = actual.get(key)
             if value in (None, ""):
@@ -250,6 +256,10 @@ def automatic_trade(trade, entry, decision):
             "stake",
             "price",
             "units",
+            "venue",
+            "entry_fee",
+            "win_fee",
+            "loss_fee",
         }:
             raise ValueError("Supply the stake and optional actual odds for each leg")
         if report.get("quote_id") != row["id"]:
@@ -273,9 +283,25 @@ def automatic_trade(trade, entry, decision):
         actual = dict(
             quote_id=row["id"], stake=exact_wire(stake), price=str(price), units=units
         )
+        venue = report.get("venue") or row["venue"]
+        if venue not in (*EXECUTION_VENUES, *SPORTSBOOKS):
+            raise ValueError("Choose a supported actual venue")
+        if "venue" in report:
+            actual["venue"] = venue
+        fee_keys = ("entry_fee", "win_fee", "loss_fee")
+        if any(k in report for k in fee_keys):
+            actual.update({k: exact_wire(number(report.get(k))) for k in fee_keys})
+            actual["fee_basis"] = "user_reported"
+            result["legs"].append(actual)
+            continue
+        if venue != row["venue"]:
+            raise ValueError("Enter actual fees when changing the venue")
         old = (previous.get("legs") or [])[i : i + 1]
         if old and (
-            all(old[0].get(k) not in (None, "") for k in ("stake", "price", "units"))
+            (old[0].get("venue") or row["venue"]) == venue
+            and all(
+                old[0].get(k) not in (None, "") for k in ("stake", "price", "units")
+            )
             and old[0].get("quote_id") == row["id"]
             and Fraction(str(old[0].get("stake"))) == stake
             and decimal_price(old[0].get("price"), old[0].get("units")) == decimal
@@ -406,6 +432,11 @@ class Journal:
                 CREATE INDEX IF NOT EXISTS quotes_identity ON quotes(identity, observed_at);
                 CREATE TABLE IF NOT EXISTS monitor (singleton INTEGER PRIMARY KEY, state TEXT NOT NULL);
                 CREATE TABLE IF NOT EXISTS deleted_entries (id TEXT PRIMARY KEY);
+                CREATE TABLE IF NOT EXISTS journal_requests (
+                    entry_id TEXT NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
+                    request_id TEXT NOT NULL, fingerprint TEXT NOT NULL, response TEXT NOT NULL,
+                    PRIMARY KEY(entry_id, request_id)
+                );
             """)
             with db:
                 # Pin reads to one WAL snapshot; writers reserve before any
@@ -993,9 +1024,24 @@ class Journal:
             "decision",
             "notes",
             "trade",
+            "request_id",
         }:
             raise ValueError("Unknown journal update fields")
         with self.database(write=True) as db:
+            request_id = changes.get("request_id")
+            if request_id is not None:
+                if not isinstance(request_id, str) or not 1 <= len(request_id) <= 100:
+                    raise ValueError("Use a bounded save request ID")
+                previous = db.execute(
+                    "SELECT fingerprint,response FROM journal_requests WHERE entry_id=? AND request_id=?",
+                    (key, request_id),
+                ).fetchone()
+                if previous:
+                    if previous["fingerprint"] != digest(changes):
+                        raise Conflict(
+                            "This save request was already used for different edits"
+                        )
+                    return json.loads(previous["response"])
             entry = self.unpack(
                 db.execute("SELECT * FROM entries WHERE id=?", (key,)).fetchone()
             )
@@ -1031,9 +1077,15 @@ class Journal:
                 "INSERT INTO events VALUES (?,?,?,?)",
                 (key, revision, at, encoded(state)),
             )
-            return self._record(
+            response = self._record(
                 db, db.execute("SELECT * FROM entries WHERE id=?", (key,)).fetchone()
             )
+            if request_id:
+                db.execute(
+                    "INSERT INTO journal_requests VALUES (?,?,?,?)",
+                    (key, request_id, digest(changes), encoded(response)),
+                )
+            return response
 
     def list(
         self,
@@ -1048,7 +1100,7 @@ class Journal:
     ):
         limit, offset = max(1, min(500, int(limit))), max(0, int(offset))
         if (
-            view not in ("bets", "log")
+            view not in ("bets", "log", "placed", "research")
             or kind not in ("", "ev", "arb")
             or decision not in ("", "observed", "saved", "passed", "placed")
         ):
@@ -1060,6 +1112,9 @@ class Journal:
         conditions, params = [ELIGIBLE], []
         if view == "bets":
             conditions.append("decision IN ('saved','placed')")
+        elif view in ("placed", "research"):
+            conditions.append("decision=?")
+            params.append("placed" if view == "placed" else "saved")
         for column, value in (("kind", kind), ("decision", decision)):
             if value:
                 conditions.append(column + "=?")
@@ -1077,7 +1132,11 @@ class Journal:
             rows = db.execute(
                 "SELECT * FROM entries"
                 + where
-                + " ORDER BY created_at DESC,id LIMIT ? OFFSET ?",
+                + (
+                    " ORDER BY (json_extract(trade,'$.result') IS NOT NULL),created_at DESC,id LIMIT ? OFFSET ?"
+                    if view == "placed"
+                    else " ORDER BY created_at DESC,id LIMIT ? OFFSET ?"
+                ),
                 [*params, limit, offset],
             ).fetchall()
             entries = []

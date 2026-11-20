@@ -21,6 +21,42 @@ from app.storage import current_pregame as board
 
 @skipUnless(SOCKET, "Disposable PostgreSQL required")
 class CurrentPregameSQL(PregameFixture):
+    async def test_maximum_source_age_checks_reference_clocks_and_earliest_deadline(
+        self,
+    ):
+        from datetime import timedelta
+        from psycopg.types.json import Jsonb
+
+        at = stamp(AT)
+        with self.connect() as db:
+            self.ingest(db, page())
+            self.process(db)
+            original = board.read(db, {}, at=at)["rows"][0]
+            payload = deepcopy(original)
+            payload["times"]["source_at"] = at.isoformat()
+            payload["reference"]["prices"][0]["source_at"] = (
+                at - timedelta(minutes=5)
+            ).isoformat()
+            for clock in (
+                (at - timedelta(minutes=5)).isoformat(),
+                (at - timedelta(minutes=11)).isoformat(),
+                None,
+                (at + timedelta(seconds=1)).isoformat(),
+            ):
+                payload["reference"]["prices"][0]["source_at"] = clock
+                db.execute(
+                    "UPDATE current_pregame_calculation SET payload=%s WHERE contract_id=%s",
+                    (Jsonb(payload), original["id"]),
+                )
+                self.assertEqual(board.read(db, {}, at=at)["total"], 1)
+                filtered = board.read(db, {"max_age_minutes": "10"}, at=at)
+                expected = clock == (at - timedelta(minutes=5)).isoformat()
+                self.assertEqual(filtered["total"], int(expected))
+                if expected:
+                    self.assertEqual(
+                        stamp(filtered["refresh_at"]), at + timedelta(minutes=5)
+                    )
+
     async def test_early_started_and_live_notices_withdraw_without_admitting_prices(
         self,
     ):

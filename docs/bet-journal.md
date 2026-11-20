@@ -6,39 +6,41 @@ provider.
 
 ## Workflow
 
-1. Open an exact comparison on Opportunities or Browse odds and choose the
-   venue's **Save to My Bets** button. Arbitrage inspection saves both original
-   legs together.
-2. In **My Bets**, confirm the stake placed. Negative odds default to a stake
-   that wins $100 before fees; positive odds default to a $100 stake. Arbs default
-   to $200 total stake, split to approximately balance the two modeled decisive
-   payouts. Existing recorded stakes remain unchanged. These defaults are editable
-   suggestions, not order submissions or verified fills.
-3. **Save changes** records the trade as Placed by default. The server uses the
-   saved odds, calculates fees from the quote's pinned book schedule with the
-   existing rounding rules, and records placement time automatically. **Change
-   odds** allows a different actual fill price; **More options** holds the decision
-   placement-time correction and notes. Previously recorded fees survive an unchanged stake and price.
-   Missing fee terms do not block recording a stake: those charges and after-fee
-   metrics remain unavailable. Corrections append revisions; stale edits conflict.
-4. Quote tracking continues without a browser. Expand the price comparison to
-   inspect observed, actual and latest/closing prices, reference clocks, CLV
-   and the retained quote timeline. Zero and negative subsequent comparisons
-   remain eligible observations even after disappearing from opportunity lists.
-5. Expand **Record result** after settlement and enter net cash returned per leg,
-   including returned stake and after all settlement charges. Settlement time is
-   recorded automatically for a new result. Use zero for an ordinary losing leg and a
-   negative amount for an additional debit. Results are reported cashflows,
-   including pushes, refunds and partial outcomes; the journal does not infer
-   actual venue settlement from the sporting winner.
-
-**Opportunity log** includes automatically observed positive main-line EV
-opportunities and positive arb pairs, plus manual saves. Automatic entries are
-deduplicated by exact occurrence, selection/line and venue(s). Their first
-snapshot stays fixed; later observations form quote history. Saving an inspected
-quote creates a separate decision snapshot and links the automatic opportunity
-when one exists. A later return to positive prices does not create another
-automatic entry for that same occurrence/selection/venue combination.
+1. Open an exact comparison and choose **Record bet** to save the displayed
+   quote and open its actual-fill editor. This entry path requires an explicit
+   stake. **Save to research** and the pick-card bookmark retain a quote without
+   recording a placed trade. Arbitrage inspection retains both original legs.
+2. **My Bets** shows placed trades, with open bets first, and performance across
+   recorded trades. **Saved research** contains saved quotes. **Opportunity log**
+   retains automatically discovered positive market-to-market pairs and manually
+   selected EV/arb snapshots. Existing API `view=bets` still includes saved and
+   placed entries; the UI uses `view=placed` and `view=research` to separate them.
+3. The editor carries the original selection, venue and price beside editable
+   actual odds and stake. Opening an existing saved entry keeps its editable
+   stake suggestions: win $100 before fees at negative odds, stake $100 at positive
+   odds, or approximately balance a $200 arb. These suggestions do not record a
+   fill until Save changes. Placement time is recorded automatically.
+4. The server calculates fees from the quote's pinned schedule and preserves
+   explicit fees when stake, price and venue remain unchanged. **Actual venue &
+   fees** allows a different actual venue with explicitly entered acquisition,
+   additional winning and additional losing fees. Missing schedule terms remain
+   unknown. Changing the actual venue requires explicit fees; it does not change
+   the original quote or the original venue's retained price history.
+5. Choose Win, Loss or Tie/refund for each leg; the server computes returned cash
+   from the actual price and charges. **Adjust returned cash** supports exceptional
+   settlements and partial refunds, recording net receipts after settlement fees.
+   Performance uses the existing cashflow convention below.
+6. Validation appears beside invalid fields. Failed saves retain entered values;
+   browser drafts can be restored after reload. Closing changed values requires
+   Keep editing / Discard changes. Closing during a save explicitly warns that
+   the request may still complete. Request IDs persist across unchanged retries;
+   the backend stores the response and correction in one SQLite transaction, so
+   a lost response can be retried without another correction. Stale edits from
+   a different request still conflict. Original quote snapshots remain immutable.
+7. Expand price comparison for observed, actual and latest/closing prices,
+   reference clocks, CLV and retained quote history. Zero and negative later
+   observations remain available. Correction history and CSV/JSON exports remain
+   supported. Quote tracking runs independently of an open browser.
 
 ## Measurements
 

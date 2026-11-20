@@ -17,11 +17,13 @@ def read(db, query, *, at=None, clock, configured_routes):
         rows = list(packet.get("rows", []))
         for game in packet.get("games", []):
             rows.extend(game.get("rows", []))
-        deadlines = [
-            stamp(row["times"]["source_at"]) + age
+        clocks = [row.get("times", {}).get("source_at") for row in rows]
+        clocks.extend(
+            price.get("source_at")
             for row in rows
-            if row.get("times", {}).get("source_at")
-        ]
+            for price in (row.get("reference") or {}).get("prices", [])
+        )
+        deadlines = [stamp(value) + age for value in clocks if value]
         if packet.get("refresh_at"):
             deadlines.append(stamp(packet["refresh_at"]))
         if deadlines:
@@ -121,8 +123,20 @@ def _read(db, query, *, at=None, clock, configured_routes):
         age = int(query["max_age_minutes"])
         if not 1 <= age <= 525600:
             raise ValueError("Invalid maximum age")
-        clauses.append("(p.payload#>>'{times,source_at}')::timestamptz>=%s")
-        params.append(at - timedelta(minutes=age))
+        cutoff = at - timedelta(minutes=age)
+        clauses.append(
+            "(p.payload#>>'{times,source_at}')::timestamptz BETWEEN %s AND %s"
+        )
+        params.extend([cutoff, at])
+        # A fresh market price cannot renew an older or unknown probability
+        # reference. Browse prices without a reference remain inspectable.
+        clauses.append("""(p.payload->'reference' IS NULL OR p.payload->'reference'='null'::jsonb OR (
+            jsonb_array_length(COALESCE(p.payload#>'{reference,prices}','[]'::jsonb))>0
+            AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements(
+                COALESCE(p.payload#>'{reference,prices}','[]'::jsonb)) ref
+                WHERE ref->>'source_at' IS NULL
+                   OR NOT ((ref->>'source_at')::timestamptz BETWEEN %s AND %s))))""")
+        params.extend([cutoff, at])
     positive = (
         not compare
         and query.get("browse") != "1"

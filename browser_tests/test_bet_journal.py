@@ -162,7 +162,7 @@ def test_save_ev_edit_actual_odds_record_result_and_keep_original(width, tmp_pat
         expect(page.locator('[name="stake-0"]')).to_have_value("100")
         expect(page.locator('[name="price-0"]')).to_be_visible()
         assert Fraction(page.locator('[name="price-0"]').input_value()) == 120
-        expect(page.locator('[name="entry_fee-0"]')).to_have_count(0)
+        expect(page.locator('[name="entry_fee-0"]')).not_to_be_visible()
         page.locator('[name="price-0"]').fill("+110")
         page.get_by_text("More options", exact=True).click()
         page.locator('[name="notes"]').fill("Actual odds moved before placement")
@@ -199,6 +199,7 @@ def test_save_ev_edit_actual_odds_record_result_and_keep_original(width, tmp_pat
             == "Actual odds moved before placement"
         )
         page.get_by_role("button", name="Close bet editor").click()
+        page.get_by_role("button", name="Discard changes", exact=True).click()
         page.get_by_role("button", name="Opportunity log", exact=True).click()
         expect(page.locator("#log-tab")).to_have_attribute("aria-pressed", "true")
         assert fixture.reads[-1]["view"] == "log"
@@ -512,7 +513,7 @@ def test_editor_defaults_and_delete_recovery(width, tmp_path):
             expect(page.locator("#editor")).to_be_visible()
             for i, stake in enumerate(expected):
                 expect(page.locator(f'[name="stake-{i}"]')).to_have_value(stake)
-            expect(page.locator('[name="entry_fee-0"]')).to_have_count(0)
+            expect(page.locator('[name="entry_fee-0"]')).not_to_be_visible()
             expect(page.locator('[name="receipt-0"]')).not_to_be_visible()
             page.get_by_text("More options", exact=True).click()
             page.get_by_text(
@@ -520,7 +521,7 @@ def test_editor_defaults_and_delete_recovery(width, tmp_path):
             ).click()
             assert_editor_controls_fixed(page)
             cancel = page.get_by_role("button", name="Cancel", exact=True)
-            expect(cancel).to_have_css("color", "rgb(32, 37, 44)")
+            assert cancel.evaluate("e=>getComputedStyle(e).color===getComputedStyle(document.body).color")
             assert page.locator("#editor").evaluate(
                 "e => e.scrollWidth <= e.clientWidth"
             )
@@ -989,7 +990,7 @@ def test_reopened_same_record_ignores_old_save_completion(
           };
         })()""")
         page.route("**/*", serve)
-        page.goto("https://predict.fixture/my-bets?entry=" + key)
+        page.goto("https://predict.fixture/my-bets?entry=" + key + "&view=log")
         page.get_by_text("More options", exact=True).click()
         page.locator('[name="notes"]').fill("Save A from the closed editor")
         page.locator("#save").click()
@@ -1000,6 +1001,7 @@ def test_reopened_same_record_ignores_old_save_completion(
         expect(page.locator("#cancel")).to_be_enabled()
         assert len(held) == 1
         page.locator("#cancel").click()
+        page.get_by_role("button", name="Close form", exact=True).click()
         expect(page.locator("#editor")).not_to_be_visible()
         edit_bet(page).click()  # Same ID, distinct editor session.
         expect(page.locator('[name="stake-0"]')).to_be_enabled()
@@ -1052,6 +1054,7 @@ def test_reopened_same_record_ignores_old_save_completion(
             )
             assert fixture.journal.get(key)["entry"]["notes"] == first_body["notes"]
             page.locator("#cancel").click()
+            page.get_by_role("button", name="Discard changes", exact=True).click()
         else:
             expect(page.locator("#editor")).not_to_be_visible()
             expect(page.locator(".journal-entry")).to_contain_text(second_body["notes"])
@@ -1217,12 +1220,15 @@ def test_opportunity_log_keeps_only_positive_unique_market_arbs_and_selected_ev(
         page.on("pageerror", lambda error: errors.append(str(error)))
         page.route("**/*", fixture.serve)
         page.goto("https://predict.fixture/my-bets")
-        expect(page.locator(".journal-entry")).to_have_count(3)
+        expect(page.locator(".journal-entry")).to_have_count(1)
         assert set(
             page.locator(".journal-entry").evaluate_all(
                 "es=>es.map(e=>e.dataset.entryId)"
             )
-        ) == {saved_book, manual["saved"], manual["placed"]}
+        ) == {manual["placed"]}
+        page.get_by_role("button", name="Saved research", exact=True).click()
+        expect(page.locator(".journal-entry")).to_have_count(2)
+        assert set(page.locator(".journal-entry").evaluate_all("es=>es.map(e=>e.dataset.entryId)")) == {saved_book,manual["saved"]}
         expect(page.locator("#summary")).to_contain_text("$107.80")
         page.get_by_role("button", name="Opportunity log", exact=True).click()
         expect(page.locator(".journal-entry")).to_have_count(4)

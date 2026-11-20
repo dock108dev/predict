@@ -30,6 +30,7 @@ BOARD_BROWSER = [
     "browser_tests/test_pregame_games_arbs.py",
     "browser_tests/test_bet_journal.py",
     "browser_tests/test_pregame_price_formats.py",
+    "browser_tests/test_prism.py",
 ]
 
 
@@ -155,7 +156,13 @@ def plan(root, paths, *, full=False):
             unit.add(path)
             broad = True
             reasons.append(f"Unclassified new test {path}: include it and broaden")
-        elif path.startswith(("app/dashboard/bet_journal", "app/comparison/journal_")):
+        elif path.startswith(
+            (
+                "app/dashboard/bet_journal",
+                "app/comparison/journal_",
+                "app/dashboard/appearance_api",
+            )
+        ):
             unit.update(by_name["personal-bet-journal"])
             sql.add("tests/test_bet_journal_monitor_sql.py")
             browser.update(BOARD_BROWSER)

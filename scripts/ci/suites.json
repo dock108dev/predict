@@ -689,6 +689,7 @@
     "tests": [
       "tests/test_bet_journal.py",
       "tests/test_bet_journal_api.py",
+      "tests/test_prism_integration.py",
       "tests/test_bet_journal_metrics.py",
       "tests/test_bet_journal_monitor.py",
       "tests/test_journal_sampling.py",

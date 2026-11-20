@@ -1,5 +1,7 @@
 import {bookName} from './pregame-labels.js';
 import {bindDialogClose} from './dialog-close.js';
+import {createDraftGuard} from './journal-editor-state.js';
+import {priceDisplay} from './pregame-prices.js';
 import {suggestedTrades} from './bet-journal-defaults.js';
 
 const $=id=>document.getElementById(id), initial=new URLSearchParams(location.search);
@@ -13,7 +15,7 @@ const exactWhen=value=>value?new Date(value).toLocaleString('en-US',{timeZone:'A
 const localInput=value=>{if(!value)return '';const date=new Date(value);return new Date(date-date.getTimezoneOffset()*60000).toISOString().slice(0,19);};
 const iso=value=>value?new Date(value).toISOString():null;
 const legs=entry=>entry.kind==='arb'?entry.snapshot.legs:[entry.snapshot];
-let packet=null,tab=initial.get('view')==='log'?'log':'bets',editing=null,returnFocus=null,loading=false,initialOpened=false,offset=0,sequence=0,queued=false;
+let packet=null,tab=['log','research'].includes(initial.get('view'))?initial.get('view'):'placed',editing=null,returnFocus=null,loading=false,initialOpened=false,offset=0,sequence=0,queued=false;
 
 function pick(row){
   const s=row.selection||{},line=ratio(s.signed_line),team=row.selection_label||(s.participant||'').split(':').pop();
@@ -21,11 +23,7 @@ function pick(row){
   return (team||row.game||'Selection')+(row.family==='spread'?' '+(line>0?'+':'')+(line??''):' to win');
 }
 function observedPrice(row){
-  const original=row.posted||{};
-  if(original.units==='american_odds')return String(original.value);
-  const d=ratio(row.raw?.posted_decimal),p=d?1/d:null;
-  if(p!==null&&['kalshi','polymarket_us'].includes(row.venue))return (p*100).toFixed(2).replace(/\.00$/,'')+'¢';
-  return row.display?.posted_odds||[original.value,original.units?.replaceAll('_',' ')].filter(Boolean).join(' ')||'Unavailable';
+  const display=priceDisplay(row);return [display.primary,display.secondary,display.price].filter(Boolean).join(' ');
 }
 function tradeDecimal(trade){
   const n=ratio(trade?.price);if(n===null)return null;
@@ -33,7 +31,7 @@ function tradeDecimal(trade){
 }
 function priceText(d,row){
   if(!(d>1))return 'Unavailable';const american=d>=2?100*(d-1):-100/(d-1),odds=(american>=0?'+':'')+Math.round(american);
-  return ['prophetx','novig'].includes(row.venue)?(100/d).toFixed(2)+'% · '+odds:['kalshi','polymarket_us'].includes(row.venue)?(100/d).toFixed(2)+'¢ · '+odds:odds;
+  return odds+' · '+(100/d).toFixed(2)+'% equivalent';
 }
 function tradePrice(trade,row={}){return trade?priceText(tradeDecimal(trade),row):'Not entered';}
 function cashflows(trade){
@@ -43,7 +41,7 @@ function cashflows(trade){
 }
 function priceStrip(row,trade){
   const strip=node('div',undefined,'journal-entry-prices'),flows=cashflows(trade);
-  const priceMetric=(label,d)=>{const [primary,odds]=priceText(d,row).split(' · ');return metric(label,primary,odds);};
+  const priceMetric=(label,d)=>{const [primary,equivalent]=priceText(d,row).split(' · ');return metric(label,primary,equivalent);};
   const after=priceMetric('After fees',flows?.netDecimal);if(flows)after.append(node('small',(ratio(trade.entry_fee)>0?'Entry fee '+money(trade.entry_fee)+' · ':'')+'Win fee '+money(trade.win_fee)));
   strip.append(priceMetric('Entry · before fees',tradeDecimal(trade)),after,metric('Win return',flows?money(flows.win):'Unavailable',flows?'Total paid '+money(flows.cost):undefined));return strip;
 }
@@ -166,7 +164,7 @@ function card(entry){
   subject.append(caption,node('h2',entry.kind==='arb'?snapshot.game:pick(snapshot)));if(entry.kind!=='arb')subject.append(node('p',snapshot.game,'journal-observed'));
   const edit=node('button',entry.decision==='observed'?'Record bet':entry.decision==='placed'&&!settled?'Set result':'Edit bet');edit.type='button';edit.onclick=()=>openEditor(entry,edit);head.append(subject,edit);article.append(head);
   if(entry.trade){
-    legs(entry).forEach((row,i)=>{const trade=entry.trade.legs?.[i],line=node('section',undefined,'journal-position');line.append(node('h3',bookName(row.venue)+(entry.kind==='arb'?' · '+pick(row):'')+' · '+money(trade?.stake)+' staked'));line.append(priceStrip(row,trade));article.append(line);});
+    legs(entry).forEach((row,i)=>{const trade=entry.trade.legs?.[i],line=node('section',undefined,'journal-position');line.append(node('h3',bookName(trade?.venue||row.venue)+(entry.kind==='arb'?' · '+pick(row):'')+' · '+money(trade?.stake)+' staked'));line.append(priceStrip(row,trade));article.append(line);});
     const settlement=m.settlement,result=node('div',undefined,'journal-result-line');result.append(node('span',settled?'Net result':'Result pending'),node('strong',settled?money(m.realized_profit_usd):'Pick Win / Loss / Tie'));
     if(settled){const outcomes=entry.trade.result.outcomes;result.append(node('span',outcomes?outcomes.map(v=>v==='push'?'Tie · refund':v==='win'?'Win':'Loss').join(' / '):'Cash adjustment'));if(settlement?.total_receipts_usd!=null)result.append(node('span','Returned '+money(settlement.total_receipts_usd)));if(m.realized_roi!=null)result.append(node('span',percent(m.realized_roi)+' ROI'));if(settlement?.state==='unavailable')result.append(node('span','Saved fee terms unavailable; adjust returned cash to record the actual result.'));}article.append(result);
   }else{
@@ -177,11 +175,12 @@ function card(entry){
   article.append(priceDetails(entry));if(entry.notes)article.append(node('p',entry.notes,'journal-notes'));return article;
 }
 function render(){
-  if(!packet)return;drawSummary();$('bets-tab').setAttribute('aria-pressed',String(tab==='bets'));$('log-tab').setAttribute('aria-pressed',String(tab==='log'));
+  if(!packet)return;drawSummary();$('bets-tab').setAttribute('aria-pressed',String(tab==='placed'));$('research-tab').setAttribute('aria-pressed',String(tab==='research'));$('log-tab').setAttribute('aria-pressed',String(tab==='log'));
+  document.querySelector('.status-line>span').textContent=tab==='placed'?'Open bets first':'Newest observed first';
   const entries=packet.entries||[],total=packet.total??entries.length;
   $('count').textContent=total+' '+(total===1?'record':'records');$('results').replaceChildren(...entries.map(card));
   $('previous').disabled=offset===0;$('next').disabled=offset+entries.length>=total;$('page').textContent=total?`${offset+1}–${Math.min(offset+entries.length,total)} of ${total}`:'0';
-  if(!entries.length){const empty=node('div',undefined,'journal-empty');empty.append(node('h2',tab==='bets'?'Your next bet starts with a saved quote.':'No logged opportunities match this view.'),node('p',tab==='bets'?'Save an EV bet or arbitrage comparison, then enter the odds, stake and fees you actually got. Positive market-to-market arbs are logged in the Opportunity log.':'Unique, positive market-to-market arbs are logged automatically. EVs appear only when you save them to My Bets.'));const link=node('a','Browse opportunities →');link.href='/';empty.append(link);$('results').append(empty);}
+  if(!entries.length){const empty=node('div',undefined,'journal-empty');empty.append(node('h2',tab==='placed'?'Your next bet starts with a saved quote.':'No logged opportunities match this view.'),node('p',tab==='placed'?'Save an EV bet or arbitrage comparison, then enter the odds, stake and fees you actually got. Positive market-to-market arbs are logged in the Opportunity log.':'Unique, positive market-to-market arbs are logged automatically. EVs appear only when you save them to My Bets.'));const link=node('a','Browse opportunities →');link.href='/';empty.append(link);$('results').append(empty);}
 }
 function query(){const q=new URLSearchParams({view:tab,limit:'100',offset:String(offset),defer_observed:'1'});for(const [k,v]of new FormData($('filters')))if(v)q.set(k,v);return q;}
 async function load(){
@@ -200,10 +199,19 @@ function field(label,name,value='',{required=false,help,type='number'}={}){
 }
 function legEditor(row,i,values){
   const fieldset=node('fieldset');fieldset.append(node('legend',bookName(row.venue)+' · '+pick(row)));
+  fieldset.append(node('p','Original quote · '+observedPrice(row)+' · '+bookName(row.venue),'journal-observed-detail'));
   const grid=node('div',undefined,'journal-form-grid'),price=field('Entry price · before fees','price-'+i,decimal(values.price),{type:'text'}),input=price.querySelector('input');input.dataset.originalValue=input.value;input.dataset.exactValue=values.price;
   const unitWrap=node('label','Price format','journal-field'),unit=node('select');unit.name='units-'+i;unit.append(new Option('American odds','american_odds'),new Option('Contract price (0–1)','probability'));unit.value=values.units;unit.dataset.originalValue=values.units;unitWrap.append(unit);
   grid.append(field('Stake placed ($)','stake-'+i,decimal(values.stake),{required:true}),price);fieldset.append(grid);
   const format=node('details',undefined,'journal-price-format'),formatLabel=node('summary');const describeFormat=()=>{formatLabel.textContent='Price format · '+(unit.value==='probability'?'Contract price (0–1)':'American odds');};describeFormat();unit.addEventListener('change',describeFormat);format.append(formatLabel,unitWrap);fieldset.append(format);
+  const actualOptions=node('details',undefined,'journal-price-format');actualOptions.append(node('summary','Actual venue & fees'));
+  const venueWrap=node('label','Actual venue','journal-field'),venue=node('select');venue.name='actual-venue-'+i;
+  for(const key of new Set([row.venue,'kalshi','polymarket_us','novig','prophetx','fanduel','draftkings','pinnacle','betmgm','caesars']))venue.append(new Option(bookName(key),key));venue.value=values.venue||row.venue;venueWrap.append(venue);
+  const override=node('label',undefined,'journal-manual'),checkbox=node('input');checkbox.type='checkbox';checkbox.name='actual-fees-'+i;checkbox.checked=values.fee_basis==='user_reported';override.append(checkbox,node('span','Use actual fees instead of the saved schedule'));
+  const feeInputs=node('div',undefined,'journal-form-grid');feeInputs.hidden=!checkbox.checked;
+  for(const [key,label]of [['entry_fee','Entry fee paid ($)'],['win_fee','Additional fee if won ($)'],['loss_fee','Additional fee if lost ($)']]){const wrap=field(label,key+'-'+i,decimal(values[key]));wrap.querySelector('input').min='0';feeInputs.append(wrap);}
+  checkbox.onchange=()=>feeInputs.hidden=!checkbox.checked;venue.onchange=()=>{if(venue.value!==row.venue){checkbox.checked=true;feeInputs.hidden=false;}};
+  actualOptions.append(venueWrap,override,node('p','Entry fees are paid upfront. Outcome fees are additional charges, deducted once from returned cash. Changing venues requires explicit fees.','journal-observed-detail'),feeInputs);fieldset.append(actualOptions);
   const preview=node('div',undefined,'journal-leg-preview');preview.id='leg-preview-'+i;fieldset.append(preview);
   const group=node('div',undefined,'journal-outcomes');group.setAttribute('role','group');group.setAttribute('aria-label','Result · '+bookName(row.venue));
   for(const [value,label]of [['pending','Pending'],['win','Win'],['loss','Loss'],['push','Tie · refund']]){const wrap=node('label'),radio=node('input');radio.type='radio';radio.name='outcome-'+i;radio.value=value;radio.checked=(editing.trade?.result?.outcomes?.[i]||'pending')===value;wrap.append(radio,node('span',label));group.append(wrap);}fieldset.append(group);fieldset.querySelector('[name="stake-'+i+'"]').min='.01';return fieldset;
@@ -227,15 +235,17 @@ $('edit-form').addEventListener('input',event=>{
   if(/^(stake|price|units)-/.test(event.target.name))for(const row of document.querySelectorAll('.journal-leg-preview'))row.replaceChildren(node('p','Calculating after-fee return…','journal-observed-detail'));
   $('settlement-preview').replaceChildren(node('p','Calculating result…','journal-preview-total journal-observed-detail'));previewTimer=setTimeout(updatePreview,250);
 });
-function lockEditor(locked){for(const field of $('edit-form').querySelectorAll('input,select,textarea,button'))if(field.id!=='cancel')field.disabled=locked;}
+let editorBusy=false,saveAttempt;
+const draftGuard=createDraftGuard({dialog:$('editor'),form:$('edit-form'),busy:()=>editorBusy,onRestore:()=>updatePreview()});
+function lockEditor(locked){editorBusy=locked;for(const field of $('edit-form').querySelectorAll('input,select,textarea,button'))if(field.id!=='cancel')field.disabled=locked;}
 async function openEditor(entry,trigger){
-  lockEditor(false);editing=structuredClone(entry);const session=editing;returnFocus=trigger||document.activeElement;const form=$('edit-form'),snapshot=entry.snapshot;
+  lockEditor(false);saveAttempt=null;editing=structuredClone(entry);const session=editing;returnFocus=trigger||document.activeElement;const form=$('edit-form'),snapshot=entry.snapshot;
   $('editor-title').textContent=entry.kind==='arb'?snapshot.game:pick(snapshot);$('entry-context').replaceChildren(node('p',snapshot.game+' · '+when(snapshot.kickoff),'journal-observed-detail'),node('p',entry.trade?'Edit your entry or pick the result. Tie refunds the stake.':entry.kind==='arb'?'Suggested $200 total stake, split across both legs. Confirm what you placed.':'Suggested stake: win $100 at negative odds; stake $100 at positive odds. Confirm what you placed.','journal-observed-detail'));
   form.elements.decision.value=['saved','observed'].includes(entry.decision)?'placed':entry.decision;form.elements.notes.value=entry.notes||'';form.elements.placed_at.value=localInput(entry.trade?.placed_at);form.elements.settled_at.value=localInput(entry.trade?.result?.settled_at);form.elements.result_notes.value=entry.trade?.result?.notes||'';
-  const defaults=suggestedTrades(entry);$('trade-legs').replaceChildren(...legs(entry).map((row,i)=>legEditor(row,i,entry.trade?.legs?.[i]||defaults[i])));
+  const defaults=suggestedTrades(entry);if(initial.get('record')==='1'&&!entry.trade){for(const value of defaults)value.stake='';$('entry-context').lastChild.textContent='Enter the stake and odds you actually got. The original source quote stays fixed.';}$('trade-legs').replaceChildren(...legs(entry).map((row,i)=>legEditor(row,i,entry.trade?.legs?.[i]||defaults[i])));
   $('result-legs').replaceChildren(...legs(entry).map((row,i)=>field('Leg '+(i+1)+' · '+bookName(row.venue)+' · net returned cash ($)','receipt-'+i,entry.trade?.result?.receipts_usd?.[i]??'',{help:'After all settlement charges; includes any returned stake'})));
   form.elements.manual_result.checked=Boolean(entry.trade?.result?.receipts_usd);$('more-options').open=false;$('settlement').open=form.elements.manual_result.checked;$('delete-confirmation').hidden=true;$('delete').disabled=false;$('confirm-delete').disabled=false;$('edit-status').textContent='';$('audit-data').textContent=JSON.stringify({original_snapshot:entry.snapshot},null,2);$('audit').open=false;$('save').disabled=false;
-  if(!$('editor').open)$('editor').showModal();document.querySelector('.journal-editor-body').scrollTop=0;showPreview(entry);updatePreview();
+  draftGuard.start(entry.id);if(!$('editor').open)$('editor').showModal();document.querySelector('.journal-editor-body').scrollTop=0;showPreview(entry);updatePreview();
   try{const response=await fetch('/api/bet-journal/'+encodeURIComponent(entry.id),{cache:'no-store'});if(!response.ok)return;const data=await response.json();if(editing===session)$('audit-data').textContent=JSON.stringify({original_snapshot:entry.snapshot,history:data.history,quote_observations:data.quotes},null,2);}catch(e){/* Editing remains available with the loaded snapshot. */}
 }
 function tradeFromForm(){
@@ -243,6 +253,8 @@ function tradeFromForm(){
     const stake=values.get('stake-'+i);if(!stake||Number(stake)<=0)throw Error('Enter the stake placed for each leg.');
     const leg={quote_id:row.id,stake},price=form.elements['price-'+i],units=form.elements['units-'+i];
     if(editing.trade?.legs?.[i]||price.value!==price.dataset.originalValue||units.value!==units.dataset.originalValue){leg.price=price.value===price.dataset.originalValue&&units.value===units.dataset.originalValue?price.dataset.exactValue:price.value;leg.units=units.value;}
+    const venue=values.get('actual-venue-'+i);if(venue!==row.venue||editing.trade?.legs?.[i]?.venue)leg.venue=venue;
+    if(form.elements['actual-fees-'+i].checked)for(const key of ['entry_fee','win_fee','loss_fee'])leg[key]=values.get(key+'-'+i);
     return leg;
   });
   const trade={automatic:true,legs:actual,placed_at:iso(values.get('placed_at')),result:null};
@@ -255,16 +267,31 @@ function tradeFromForm(){
   }
   return trade;
 }
+function validateFields(){
+ const form=$('edit-form');let first;
+ for(const error of form.querySelectorAll('.field-error'))error.remove();for(const input of form.querySelectorAll('[aria-invalid]')){input.removeAttribute('aria-invalid');input.removeAttribute('aria-describedby');}
+ const invalid=(input,message)=>{const text=node('small',message,'field-error');text.id=input.name+'-error';input.setAttribute('aria-invalid','true');input.setAttribute('aria-describedby',text.id);input.closest('label').append(text);input.closest('details')?.setAttribute('open','');first||=input;};
+ legs(editing).forEach((row,i)=>{
+  const stake=form.elements['stake-'+i],price=form.elements['price-'+i],units=form.elements['units-'+i].value;
+  if(!stake.value||!Number.isFinite(Number(stake.value))||Number(stake.value)<=0)invalid(stake,'Enter a stake greater than $0.');
+  const odds=ratio(price.value);if(odds===null||(units==='american_odds'?Math.abs(odds)<100||Math.abs(odds)>1000000:odds<=0||odds>=1))invalid(price,units==='american_odds'?'Use odds of +100 or higher, or −100 or lower.':'Use a contract price greater than 0 and less than 1.');
+  if(form.elements['actual-fees-'+i].checked)for(const key of ['entry_fee','win_fee','loss_fee']){const input=form.elements[key+'-'+i];if(input.value===''||!Number.isFinite(Number(input.value))||Number(input.value)<0)invalid(input,'Enter a nonnegative fee; use 0 only when known.');}
+ });
+ if(first){first.focus();$('edit-status').textContent='Check the highlighted fields.';return false;}return true;
+}
+$('edit-form').noValidate=true;
 $('edit-form').onsubmit=async event=>{
-  event.preventDefault();if(!editing)return;$('edit-status').textContent='';
+  event.preventDefault();if(!editing||editorBusy)return;$('edit-status').textContent='';
+  if(!validateFields())return;
   let payload;try{payload={revision:editing.revision,decision:$('edit-form').elements.decision.value,notes:$('edit-form').elements.notes.value,trade:tradeFromForm()};}catch(e){$('edit-status').textContent=e.message;return;}
+  const fingerprint=JSON.stringify(payload);if(saveAttempt?.fingerprint!==fingerprint)saveAttempt={fingerprint,id:crypto.randomUUID()};payload.request_id=saveAttempt.id;
   const target=editing;previewSequence++;clearTimeout(previewTimer);lockEditor(true);$('edit-status').textContent='Saving changes…';
   try{
     const response=await fetch('/api/bet-journal/'+encodeURIComponent(target.id),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}),data=await response.json();
     if(response.status===409)throw Error('This record changed in another session. Close and Refresh to load that version before saving. Your edits are still shown here.');
     if(!response.ok)throw Error(data.message||data.error||'The change could not be saved.');
-    if(editing===target)$('editor').close();await load();
-  }catch(e){if(editing===target)$('edit-status').textContent=e.message||'Changes could not be saved. Your entries are preserved; retry.';}finally{if(editing===target)lockEditor(false);}
+    if(editing===target){draftGuard.saved();$('editor').close();}$('count').textContent='Bet saved.';await load();
+  }catch(e){if(editing===target)$('edit-status').textContent=(e.message||'Changes could not be saved.')+' Your entries are preserved; retry.';}finally{if(editing===target)lockEditor(false);}
 };
 
 $('delete').onclick=()=>{$('delete-confirmation').hidden=false;$('confirm-delete').focus();};
@@ -279,6 +306,6 @@ $('confirm-delete').onclick=async()=>{
   }catch(e){if(editing===target)$('edit-status').textContent=e.message||'Could not delete. Your record is preserved.';}
   finally{if(editing===target)lockEditor(false);}
 };
-for(const id of ['editor-close','cancel'])bindDialogClose($(id),$('editor')); $('editor').addEventListener('close',()=>{editing=null;previewSequence++;clearTimeout(previewTimer);(returnFocus?.isConnected?returnFocus:$('results')).focus({preventScroll:true});});
-$('bets-tab').onclick=()=>{tab='bets';offset=0;sequence++;load();};$('log-tab').onclick=()=>{tab='log';offset=0;sequence++;load();};$('refresh').onclick=()=>{sequence++;load();};$('previous').onclick=()=>{offset=Math.max(0,offset-100);sequence++;load();};$('next').onclick=()=>{offset+=100;sequence++;load();};$('filters').onsubmit=e=>e.preventDefault();let debounce;$('filters').oninput=e=>{offset=0;sequence++;clearTimeout(debounce);debounce=setTimeout(load,e.target.name==='search'?180:0);};
+for(const id of ['editor-close','cancel'])bindDialogClose($(id),$('editor'),()=>draftGuard.requestClose()); $('editor').addEventListener('close',()=>{editing=null;previewSequence++;clearTimeout(previewTimer);(returnFocus?.isConnected?returnFocus:$('results')).focus({preventScroll:true});});
+$('bets-tab').onclick=()=>{tab='placed';offset=0;sequence++;load();};$('research-tab').onclick=()=>{tab='research';offset=0;sequence++;load();};$('log-tab').onclick=()=>{tab='log';offset=0;sequence++;load();};$('refresh').onclick=()=>{sequence++;load();};$('previous').onclick=()=>{offset=Math.max(0,offset-100);sequence++;load();};$('next').onclick=()=>{offset+=100;sequence++;load();};$('filters').onsubmit=e=>e.preventDefault();let debounce;$('filters').oninput=e=>{offset=0;sequence++;clearTimeout(debounce);debounce=setTimeout(load,e.target.name==='search'?180:0);};
 load();setInterval(()=>{if(!$('editor').open&&!document.querySelector('.journal-details[open]')&&!document.hidden)load();},15000);

@@ -2,8 +2,10 @@
 
 ## Current comparison interface
 
-Predict uses a compact flight-board layout with porcelain surfaces, ink text and
-rust accents. The main object changes with the task:
+Predict uses the approved Gamebook composition and Prism visual style: spacious
+individual pick cards, plum/violet surfaces, locally packaged Sora typography,
+and semantic green/red values independent of the selected brand palette.
+The main object changes with the task:
 
 | Route | Main content and order | Opening a row |
 | --- | --- | --- |
@@ -31,48 +33,38 @@ capture readiness. [Data flow and API](current-pregame.md)
 
 ## Composition and responsive behavior
 
-Use Manrope for picks, context and values, with tabular figures for prices.
-The palette is porcelain `#f4f5f7`, white rows, ink `#20252c`, charcoal column
-headings and rust `#974221`. Hover/focus adds a pale rust tint. The wordmark has
-a small rust square. Fonts and assets are packaged locally.
+Use Sora for picks, context and values, with tabular figures for prices. The
+main shell has a 74px navigation rail, a broad search field, a collapsed **Filters**
+control and the existing **Rank by** methods. Filters expand in the normal page
+flow on desktop and mobile. Ranking remains visible while secondary filters
+are closed. Opportunities keeps individual picks separate, including two picks
+from the same game. Each card shows the source quote, effective after-fee
+American odds and Net EV in that order. Ranking and source/reference ages stay
+with the selection. Fair/no-vig odds are separately labeled in comparison.
 
-Opportunities uses League, Start (ET), Pick/Game, Venue, Price, After fees,
-Fair odds/reference, Net EV and Score columns. Compact desktop rows use roughly
-15px pick text and 12px matchup text. The visible **Rank by** dropdown defaults
-to Probability edge and also offers Kelly growth, Net EV, Kelly fraction and Balanced.
-The selection persists locally and applies before pagination. The final column
-and its calculation panel follow the selected metric, including its units.
-Changing the ranking resets pagination and keeps the other filters. A failed read
-retains the previous rows and metric heading. Browser labels and explanations
-come from the generated backend catalog.
-Browse odds retains kickoff order. Kickoff is shown
-explicitly in Eastern time. Below 1140px the row becomes a compact layout, and
-phone widths use separate cards. There are no ticket perforations or persistent
-inspector columns. Main filters and ranking stay visible; **More filters** expands
-in the page flow and never floats over controls. Removable filter chips and
-**Clear filters** update narrowing without resetting the chosen rank or order.
-Unchanged chips keep their DOM identity so an input blur cannot consume the
-first click on a chip. A sticky result bar returns directly to the filters.
-Repeated Monitor badges and count prefixes are omitted in this personal app.
-The single Settings control indicates Live only when it is active; feed choice
-and collection settings remain explicit when opened.
+At widths of at least 1100px, exact-pick comparison opens beside the interactive
+list. It is a nonmodal, sticky panel with its own scrollable content; selecting
+another row updates the panel. At narrower widths it becomes a native modal
+with a fixed Close control. Crossing the breakpoint preserves the selection.
+All game lines remain a modal, with Back to game preserving the exact line and
+scroll position. Calculation popovers close before an enclosing comparison on
+Escape, and closing restores focus to the current list control by identity.
 
-Browse odds groups the available main markets in one game row/card and retains
-all available main lines, including nonpositive EV. Each exact line shows the
-best available venue, price, after-fee price, fair reference and Net EV. The
-venue label stands alone on the overview. Expanded game lines identify Main or
-Alternate because both kinds are present there. Missing markets are not invented.
-Game grouping precedes pagination, so a page boundary cannot split a game.
-Market columns use readable minimum space: two at ordinary desktop widths,
-three on wide screens, and one on narrow screens.
+Browse odds alone groups by game, with winner, spread and total columns where
+space allows. Negative EV and unavailable calculations remain visible. Arbitrage
+retains both native/available quotes, effective after-fee odds, source ages and
+paired return; instantly fillable size remains unknown. My Bets opens on placed
+trades, with open trades first, performance across recorded trades and separate
+Saved research and Opportunity log views. Exports and operational settings
+remain reachable.
 
-Arb rows show the game, both picks/venues and paired return. Each leg places
-Posted and After fees in adjacent columns. Native cents, payout multiples and
-percentage equivalents stay compact; American odds appear underneath. Legs align
-at the top. Phone cards stack the legs as horizontal comparison rows. The detail
-dialog uses two leg columns on desktop and one on phones. It shows committed
-cash, both modeled receipts/profits, source clocks, fee math and allocation math.
-Arb rows have no sportsbook fair odds, EV or Opportunity Score.
+Theme previews offer 15 starter palettes, custom primary/secondary colors and
+light, dark or system appearance. Cancel restores the saved theme; Apply persists
+through the private same-origin `/api/appearance` endpoint for this single-owner
+application. Browser storage caches appearance and editable journal drafts, while
+journal entries and preferences persist in separate private SQLite files. Palette
+colors never determine the sign of EV, warning or error values. NCAA themes are
+deferred.
 
 Completed Arb scans reuse qualified pairs across ordering, league, market, venue,
 pair-type and sportsbook changes. Reuse requires the same database, cohort/source
@@ -109,14 +101,19 @@ probability among eligible complete exact sportsbook pairs; book priority breaks
 ties. Main/alternate evidence is independent of reference selection.
 [Calculation policy](benchmark-ev.md)
 
-Novig shows its percentage price with American odds directly underneath in
-both Posted and After fees. Payout-multiple and Effective-price captions are
-omitted for Novig; the underlying exact values and fee math are unchanged.
-Polymarket US shows payout multiples and percentage prices; Kalshi shows cents
-and payout multiples. Both retain American equivalents in parentheses. After-fee
-values use adjusted payout multiples and American equivalents. Aggregate-feed
-conversions are identified in the quote explanation; they do not establish native
-ticks, available size or current execution availability.
+The posted-price adapter preserves supplied units and values. An American price
+appears once; supplied cents, probability or decimal/payout units keep their
+source meaning and add the stored American equivalent in parentheses. When an
+aggregate feed supplies only normalized American odds for a marketplace, show
+those odds with **Native format unavailable**. Never derive a venue percentage
+from its name and present it as an original source quote. After-fee American odds
+come directly from the authoritative stored cashflows. Fair odds remain a
+separate probability benchmark. Display text never becomes a calculation input.
+
+The maximum source-age filter checks the quote clock and every selected
+reference input clock, excluding unknown or future timestamps when the filter
+is active. The earliest source/reference age deadline schedules the next read.
+Arbitrage checks the original clocks on both legs independently of EV references.
 
 Price, After fees, Fair odds, Net EV and ranking expose calculation panels only
 by explicit click, tap or Enter. Panel content is created on first opening rather

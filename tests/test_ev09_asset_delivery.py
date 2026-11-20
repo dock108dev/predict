@@ -130,7 +130,7 @@ class Assets(unittest.IsolatedAsyncioTestCase):
                         if suffix == ".css"
                         else re.findall(r"(?:from\s+|import\s*)['\"]([^'\"]+)['\"]", source)
                     )
-                    if path in scripts and "scanner.js" not in path:
+                    if path in scripts and "scanner.js" not in path and "prism.js" not in path:
                         endpoint = ("/api/pregame" if page in ("/","/ev","/browse-odds","/game","/arbs") else
                             "/api/comparison-current" if page in PUBLIC_DESK_PAGES else "/api/comparison-snapshot")
                         self.assertIn(endpoint, source)
