@@ -110,6 +110,23 @@ def _same_quote(row, original):
             return False
     except (KeyError, TypeError, ValueError):
         return False
+
+    # Human labels can change independently of the economic selection. Keep all
+    # other selection fields exact, including participant, predicate and line.
+    def normalized(value):
+        selection = value.get("selection")
+        return (
+            dict(
+                value,
+                selection={
+                    key: item for key, item in selection.items() if key != "label"
+                },
+            )
+            if isinstance(selection, dict)
+            else value
+        )
+
+    row, original = normalized(row), normalized(original)
     keys = ("game_key", "family", "period", "selection")
     if any(
         original.get(key) is not None

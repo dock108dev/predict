@@ -151,28 +151,26 @@ def _quote_rows(db, at):
 
 def _read(db, at, include_arbs):
     from app.storage.pregame_arbs import read as arb_read
+    from .bet_journal import automatic_arb
 
     revision = db.execute(
         "SELECT revision FROM current_pregame_revision WHERE singleton"
     ).fetchone()["revision"]
     quotes = _quote_rows(db, at)
-    ev = [
-        row
-        for row in quotes
-        if row.get("main") is True
-        and row.get("reference")
-        and Fraction(row.get("raw", {}).get("net_ev") or "0") > 0
-    ]
     arbs = []
     if include_arbs:
         offset = 0
         while True:
-            packet = arb_read(db, dict(limit="100", offset=str(offset)), at=at)
-            arbs.extend(packet["rows"])
+            packet = arb_read(
+                db,
+                dict(limit="100", offset=str(offset), category="market_market"),
+                at=at,
+            )
+            arbs.extend(pair for pair in packet["rows"] if automatic_arb(pair))
             offset += len(packet["rows"])
             if not packet["rows"] or offset >= packet["total"]:
                 break
-    return dict(revision=revision, quotes=quotes, ev=ev, arbs=arbs)
+    return dict(revision=revision, quotes=quotes, ev=[], arbs=arbs)
 
 
 def sample(*, journal=None, connector=connect, at=None, include_arbs=True):
@@ -185,13 +183,16 @@ def sample(*, journal=None, connector=connect, at=None, include_arbs=True):
     with connector() as db, db.transaction():
         db.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
         packet = _read(db, at, include_arbs)
+        from .bet_journal import automatic_arb
+
+        packet = dict(
+            packet, ev=[], arbs=[pair for pair in packet["arbs"] if automatic_arb(pair)]
+        )
         if callable(getattr(journal, "targets", None)):
             targets = {r["id"]: r for r in targets}
             for pair in packet["arbs"]:
                 for leg in pair["legs"]:
                     targets.setdefault(leg["id"], leg)
-            for row in packet["ev"]:
-                targets[row["id"]] = row
             targets = list(targets.values())
         if targets:
             from .journal_closing_reference import capture
@@ -202,8 +203,6 @@ def sample(*, journal=None, connector=connect, at=None, include_arbs=True):
     if callable(getattr(journal, "capture", None)):
         journal.capture(packet["ev"], packet["arbs"], packet["quotes"], at=recorded_at)
     else:
-        for row in packet["ev"]:
-            journal.observe("ev", row, at=recorded_at)
         for pair in packet["arbs"]:
             journal.observe("arb", pair, at=recorded_at)
         journal.quotes(packet["quotes"], at=recorded_at)

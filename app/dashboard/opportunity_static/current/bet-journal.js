@@ -156,7 +156,11 @@ function card(entry){
     legs(entry).forEach((row,i)=>{const trade=entry.trade.legs?.[i],line=node('section',undefined,'journal-position');line.append(node('h3',bookName(row.venue)+(entry.kind==='arb'?' · '+pick(row):'')+' · '+money(trade?.stake)+' staked'));line.append(priceStrip(row,trade));article.append(line);});
     const settlement=m.settlement,result=node('div',undefined,'journal-result-line');result.append(node('span',settled?'Net result':'Result pending'),node('strong',settled?money(m.realized_profit_usd):'Pick Win / Loss / Tie'));
     if(settled){const outcomes=entry.trade.result.outcomes;result.append(node('span',outcomes?outcomes.map(v=>v==='push'?'Tie · refund':v==='win'?'Win':'Loss').join(' / '):'Cash adjustment'));if(settlement?.total_receipts_usd!=null)result.append(node('span','Returned '+money(settlement.total_receipts_usd)));if(m.realized_roi!=null)result.append(node('span',percent(m.realized_roi)+' ROI'));if(settlement?.state==='unavailable')result.append(node('span','Saved fee terms unavailable; adjust returned cash to record the actual result.'));}article.append(result);
-  }else article.append(node('p',legs(entry).map(row=>bookName(row.venue)+' · '+observedPrice(row)).join(' / ')+' · Enter stake and entry price to track your return.','journal-observed'));
+  }else{
+    article.append(node('p',legs(entry).map(row=>bookName(row.venue)+' · '+observedPrice(row)).join(' / '),'journal-observed'));
+    if(entry.kind==='arb'){const observed=node('div',undefined,'journal-entry-prices journal-observed-arb');observed.append(metric('Observed paired return',percent(snapshot.return_rate)),metric('Modeled minimum profit',money(snapshot.minimum_profit_usd)),metric('Modeled total paid',money(snapshot.committed_usd??snapshot.basis_usd)));article.append(observed);}
+    else article.append(node('p','Enter stake and entry price to track your return.','journal-observed'));
+  }
   article.append(priceDetails(entry));if(entry.notes)article.append(node('p',entry.notes,'journal-notes'));return article;
 }
 function render(){
@@ -164,7 +168,7 @@ function render(){
   const entries=packet.entries||[],total=packet.total??entries.length;
   $('count').textContent=total+' '+(total===1?'record':'records');$('results').replaceChildren(...entries.map(card));
   $('previous').disabled=offset===0;$('next').disabled=offset+entries.length>=total;$('page').textContent=total?`${offset+1}–${Math.min(offset+entries.length,total)} of ${total}`:'0';
-  if(!entries.length){const empty=node('div',undefined,'journal-empty');empty.append(node('h2',tab==='bets'?'Your next bet starts with a saved quote.':'No logged opportunities match this view.'),node('p',tab==='bets'?'Save an EV bet or arbitrage comparison, then enter the odds, stake and fees you actually got. Automatically observed opportunities are in the Opportunity log.':'Automatic logging begins from current eligible opportunities. You can also save any comparison from the board.'));const link=node('a','Browse opportunities →');link.href='/';empty.append(link);$('results').append(empty);}
+  if(!entries.length){const empty=node('div',undefined,'journal-empty');empty.append(node('h2',tab==='bets'?'Your next bet starts with a saved quote.':'No logged opportunities match this view.'),node('p',tab==='bets'?'Save an EV bet or arbitrage comparison, then enter the odds, stake and fees you actually got. Positive market-to-market arbs are logged in the Opportunity log.':'Unique, positive market-to-market arbs are logged automatically. EVs appear only when you save them to My Bets.'));const link=node('a','Browse opportunities →');link.href='/';empty.append(link);$('results').append(empty);}
 }
 function query(){const q=new URLSearchParams({view:tab,limit:'100',offset:String(offset)});for(const [k,v]of new FormData($('filters')))if(v)q.set(k,v);return q;}
 async function load(){

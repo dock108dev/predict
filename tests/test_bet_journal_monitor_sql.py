@@ -73,13 +73,40 @@ class JournalMonitorSQL(PregameFixture):
         from app.dashboard.bet_journal import Journal as DurableJournal
 
         with self.connect() as db:
-            self.ingest(db, page())
+            from app.fees import pricing
+            from tests.test_fee_pricing import rule
+
+            pricing.write(db, "novig", [rule("novig")])
+            pricing.write(db, "prophetx", [rule("prophetx")])
+            data = page()
+            for odd in data["data"][0]["odds"].values():
+                odd["byBookmaker"]["novig"] = dict(
+                    odd["byBookmaker"]["prophetx"], odds="+125"
+                )
+            self.ingest(db, data)
             self.process(db)
+            picked = next(
+                row
+                for row in monitor._quote_rows(db, stamp(AT))
+                if row["venue"] == "fanduel"
+            )
         with TemporaryDirectory(prefix="predict-personal-test-") as folder:
             path = Path(folder) / "bets.sqlite3"
             journal = DurableJournal(path)
+            saved = journal.observe("ev", picked, manual=True, at=AT)
             first = monitor.sample(journal=journal, connector=self.connect, at=AT)
-            self.assertGreater(first["ev"], 0)
+            self.assertEqual(first["ev"], 0)
+            self.assertGreater(first["arbs"], 0)
+            self.assertEqual(journal.list(kind="ev")["total"], 1)
+            self.assertEqual(journal.get(saved)["entry"]["decision"], "saved")
+            for row in journal.list(kind="arb")["entries"]:
+                self.assertTrue(
+                    all(
+                        leg["venue"] in ("novig", "prophetx", "kalshi", "polymarket_us")
+                        for leg in row["snapshot"]["legs"]
+                    )
+                )
+                self.assertGreater(Fraction(row["snapshot"]["minimum_profit_usd"]), 0)
             with journal.database() as db:
                 entries = db.execute("SELECT count(*) FROM entries").fetchone()[0]
                 quotes = db.execute("SELECT count(*) FROM quotes").fetchone()[0]
@@ -106,7 +133,8 @@ class JournalMonitorSQL(PregameFixture):
         journal = Journal()
         result = monitor.sample(journal=journal, connector=self.connect, at=AT)
         self.assertGreater(result["quotes"], 0)
-        self.assertGreater(result["ev"], 0)
+        self.assertEqual(result["ev"], 0)
+        self.assertTrue(all(kind == "arb" for kind, _, _ in journal.observed))
         self.assertTrue(
             any(row["venue"] == "fanduel" for row in journal.received[-1][0])
         )
@@ -175,10 +203,11 @@ class JournalMonitorSQL(PregameFixture):
             self.assertIsNotNone(target)
         with TemporaryDirectory(prefix="predict-journal-withdrawal-") as folder:
             journal = DurableJournal(Path(folder) / "journal.sqlite3")
+            journal.observe("ev", target["payload"], manual=True, at=AT)
             first = monitor.sample(
                 journal=journal, connector=self.connect, at=AT, include_arbs=False
             )
-            self.assertGreater(first["ev"], 0)
+            self.assertEqual(first["ev"], 0)
             prior = journal_history(journal)
             self.assertTrue(prior["entries"] and prior["events"] and prior["quotes"])
             for kind in ("unavailable", "expired"):

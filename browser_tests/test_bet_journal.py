@@ -1052,3 +1052,259 @@ def test_reopened_same_record_ignores_old_save_completion(
         assert fixture.journal.get(key)["entry"]["snapshot"] == quote
         assert not errors, errors
         browser.close()
+
+
+def test_opportunity_log_keeps_only_positive_unique_market_arbs_and_selected_ev(
+    tmp_path,
+):
+    import sqlite3
+    from app.dashboard.bet_journal import digest, encoded
+    from playwright.sync_api import expect, sync_playwright
+
+    quote = prophetx_quote()
+    quote["selection_label"] = "Historical unpicked EV"
+    fixture = JournalUI(tmp_path / "arb-only-log.sqlite3", quote)
+    journal = fixture.journal
+    at = quote["times"]["received_at"]
+
+    def historical(kind, snapshot, note):
+        # Only the disposable fixture bypasses today's discovery policy to
+        # reconstruct actual pre-policy records that an existing journal holds.
+        rows = snapshot["legs"] if kind == "arb" else [snapshot]
+        key = digest(["automatic", kind, [journal.identity(r) for r in rows]])
+        with journal.database(write=True) as db:
+            db.execute(
+                """INSERT INTO entries
+                (id,kind,origin,created_at,updated_at,decision,revision,snapshot,notes,trade)
+                VALUES(?,?,?,?,?,?,?,?,?,NULL)""",
+                (
+                    key,
+                    kind,
+                    "automatic",
+                    at,
+                    at,
+                    "observed",
+                    1,
+                    encoded(snapshot),
+                    note,
+                ),
+            )
+            db.execute(
+                "INSERT INTO events VALUES(?,?,?,?)",
+                (
+                    key,
+                    1,
+                    at,
+                    encoded(dict(decision="observed", notes=note, trade=None)),
+                ),
+            )
+            for row in rows:
+                db.execute(
+                    "INSERT OR IGNORE INTO tracked VALUES(?,?)",
+                    (row["id"], journal.identity(row)),
+                )
+        return key
+
+    legacy_ev = historical("ev", quote, "Historical automatic EV")
+    market_book = journal_arb()
+    market_book.update(
+        category="market_book", minimum_profit_usd="10", committed_usd="200"
+    )
+    legacy_book = historical("arb", market_book, "Historical automatic market-book arb")
+    saved_book = journal.observe("arb", market_book, manual=True)
+    pair = deepcopy(market_book)
+    pair.update(
+        id="market-market-log",
+        category="market_market",
+        receipts_usd=["217.6", "210"],
+        profits_usd=["17.6", "10"],
+    )
+    pair["legs"][1].update(id="novig-log-leg", venue="novig")
+    pair["legs"][1]["fee"]["classification"] = "exact_public"
+    # Positive arb cashflows do not require per-leg sportsbook EV references.
+    for leg in pair["legs"]:
+        leg.pop("reference", None)
+        leg["raw"].pop("net_ev", None)
+        leg["display"].pop("net_ev", None)
+    arb_key = journal.observe("arb", pair)
+    assert arb_key is not None
+    assert (
+        journal.observe("arb", dict(pair, legs=list(reversed(pair["legs"])))) == arb_key
+    )
+    moved = deepcopy(pair)
+    moved["legs"][0]["posted"]["value"] = "+130"
+    moved["legs"][0]["raw"].update(posted_decimal="2.3", after_fee_decimal="2.274")
+    moved["legs"][0]["display"].update(posted_odds="+130", after_fees="+127")
+    moved["legs"][0]["fee"]["cashflows"]["win"].update(
+        total_fee_usd="2.6", net_receipt_usd="227.4"
+    )
+    assert journal.observe("arb", moved) == arb_key
+    manual = {}
+    for decision in ("saved", "placed", "passed"):
+        chosen = prophetx_quote()
+        chosen.update(
+            id="selected-" + decision, selection_label="Selected EV " + decision
+        )
+        key = journal.observe("ev", chosen, manual=True)
+        manual[decision] = key
+        if decision == "placed":
+            journal.update(
+                key,
+                dict(
+                    revision=1,
+                    decision="placed",
+                    trade=dict(
+                        automatic=True,
+                        legs=[
+                            dict(
+                                quote_id=chosen["id"],
+                                stake="100",
+                                price="+110",
+                                units="american_odds",
+                            )
+                        ],
+                        result=dict(outcomes=["win"]),
+                    ),
+                ),
+            )
+        elif decision == "passed":
+            journal.update(
+                key, dict(revision=1, decision="passed", notes="Explicitly declined")
+            )
+    # Quotes are collected only after an eligible arb or chosen bet owns the
+    # identity; an old unpicked EV alone must no longer keep tracking alive.
+    journal.quotes([quote], at=at)
+    with journal.database() as db:
+        legacy_rows = {
+            key: tuple(
+                db.execute("SELECT * FROM entries WHERE id=?", (key,)).fetchone()
+            )
+            for key in (legacy_ev, legacy_book)
+        }
+        legacy_events = [
+            tuple(r)
+            for r in db.execute("SELECT * FROM events WHERE entry_id=?", (legacy_ev,))
+        ]
+        shared_quotes = [
+            tuple(r)
+            for r in db.execute("SELECT * FROM quotes WHERE quote_id=?", (quote["id"],))
+        ]
+        assert db.execute("SELECT count(*) FROM entries").fetchone()[0] == 7
+    assert shared_quotes
+    visible = {arb_key, saved_book, manual["saved"], manual["placed"]}
+    with sync_playwright() as pw:
+        browser = pw.chromium.launch(executable_path=os.getenv("PREDICT_CI_CHROMIUM"))
+        page = browser.new_page(viewport=dict(width=390, height=844))
+        errors = []
+        page.on("pageerror", lambda error: errors.append(str(error)))
+        page.route("**/*", fixture.serve)
+        page.goto("https://predict.fixture/my-bets")
+        expect(page.locator(".journal-entry")).to_have_count(3)
+        assert set(
+            page.locator(".journal-entry").evaluate_all(
+                "es=>es.map(e=>e.dataset.entryId)"
+            )
+        ) == {saved_book, manual["saved"], manual["placed"]}
+        expect(page.locator("#summary")).to_contain_text("$107.80")
+        page.get_by_role("button", name="Opportunity log", exact=True).click()
+        expect(page.locator(".journal-entry")).to_have_count(4)
+        expect(page.locator("#count")).to_have_text("4 records")
+        observed = page.locator(
+            f'.journal-entry[data-entry-id="{arb_key}"] .journal-observed-arb'
+        )
+        expect(observed).to_be_visible()
+        for value in ("+5.00%", "$10.00", "$200.00"):
+            expect(observed).to_contain_text(value)
+        expect(observed).not_to_contain_text("Unavailable")
+        assert (
+            set(
+                page.locator(".journal-entry").evaluate_all(
+                    "es=>es.map(e=>e.dataset.entryId)"
+                )
+            )
+            == visible
+        )
+        expect(page.locator("#results")).not_to_contain_text("Historical unpicked EV")
+        summary = journal.list(view="log")["summary"]
+        assert summary["counts"] == dict(observed=1, saved=2, placed=1)
+        assert summary["opportunities"] == 1
+        assert summary["settled"] == 1
+        assert Fraction(summary["realized_profit_usd"]) == Fraction("107.8")
+        page.get_by_label("Opportunity type").select_option("ev")
+        expect(page.locator(".journal-entry")).to_have_count(2)
+        assert set(
+            page.locator(".journal-entry").evaluate_all(
+                "es=>es.map(e=>e.dataset.entryId)"
+            )
+        ) == {manual["saved"], manual["placed"]}
+        page.get_by_label("Decision", exact=True).select_option("observed")
+        expect(page.locator(".journal-entry")).to_have_count(0)
+        expect(page.locator("#count")).to_have_text("0 records")
+        assert fixture.reads[-1]["view"] == "log" and fixture.reads[-1]["kind"] == "ev"
+        page.get_by_label("Opportunity type").select_option("arb")
+        expect(page.locator(".journal-entry")).to_have_count(1)
+        expect(page.locator(".journal-entry")).to_have_attribute(
+            "data-entry-id", arb_key
+        )
+        expect(page.locator("#summary")).to_contain_text("$107.80")
+        assert not fixture.updates and not errors, errors
+        browser.close()
+    # Browsing hides excluded data; it cannot silently perform maintenance.
+    with journal.database() as db:
+        assert {
+            key: tuple(
+                db.execute("SELECT * FROM entries WHERE id=?", (key,)).fetchone()
+            )
+            for key in legacy_rows
+        } == legacy_rows
+        assert [
+            tuple(r)
+            for r in db.execute("SELECT * FROM events WHERE entry_id=?", (legacy_ev,))
+        ] == legacy_events
+    assert journal.get(legacy_ev, history=True)["entry"]["snapshot"] == quote
+
+    def retained(key):
+        result = journal.get(key, history=True)
+        # This link is derived from the old automatic EV row, which cleanup is
+        # authorized to remove; selected snapshot/trade/history remain exact.
+        result["entry"].pop("opportunity_id", None)
+        return result
+
+    protected = {key: retained(key) for key in (*visible, legacy_book)}
+    backup = tmp_path / "before-unpicked-ev-prune.sqlite3"
+    journal.prune_unpicked_evs(backup_path=backup)
+    assert backup.is_file()
+    with sqlite3.connect(backup.as_uri() + "?mode=ro", uri=True) as db:
+        assert db.execute("SELECT count(*) FROM entries").fetchone()[0] == 7
+        assert (
+            tuple(
+                db.execute("SELECT * FROM entries WHERE id=?", (legacy_ev,)).fetchone()
+            )
+            == legacy_rows[legacy_ev]
+        )
+        assert (
+            db.execute(
+                "SELECT count(*) FROM entries WHERE id=?", (manual["passed"],)
+            ).fetchone()[0]
+            == 1
+        )
+    with journal.database() as db:
+        assert {row[0] for row in db.execute("SELECT id FROM entries")} == set(
+            protected
+        )
+        assert (
+            db.execute(
+                "SELECT count(*) FROM events WHERE entry_id IN (?,?)",
+                (legacy_ev, manual["passed"]),
+            ).fetchone()[0]
+            == 0
+        )
+        assert [
+            tuple(r)
+            for r in db.execute("SELECT * FROM quotes WHERE quote_id=?", (quote["id"],))
+        ] == shared_quotes
+    assert {key: retained(key) for key in protected} == protected
+    assert {entry["id"] for entry in journal.list(view="log")["entries"]} == visible
+    assert journal.list(view="log")["summary"]["counts"] == dict(
+        observed=1, saved=2, placed=1
+    )

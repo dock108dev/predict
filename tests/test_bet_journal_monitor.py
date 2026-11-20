@@ -14,7 +14,9 @@ NOW = stamp("2026-11-18T15:00:00Z")
 
 
 class RecoveryJournalIsolation(IsolatedAsyncioTestCase):
-    async def test_slow_journal_does_not_stall_recovery_or_overlap_and_close_drains(self):
+    async def test_slow_journal_does_not_stall_recovery_or_overlap_and_close_drains(
+        self,
+    ):
         import asyncio
         from threading import Event
         from unittest.mock import AsyncMock
@@ -34,11 +36,13 @@ class RecoveryJournalIsolation(IsolatedAsyncioTestCase):
             started.set()
             release.wait(3)
 
-        with patch.object(owner, 'turn', side_effect=turn), patch.object(
-            monitor, 'poll', side_effect=slow_poll
-        ) as sampling, patch(
-            'app.collection.background_work.BACKGROUND.critical_acquisition_pressure',
-            return_value=False
+        with (
+            patch.object(owner, "turn", side_effect=turn),
+            patch.object(monitor, "poll", side_effect=slow_poll) as sampling,
+            patch(
+                "app.collection.background_work.BACKGROUND.critical_acquisition_pressure",
+                return_value=False,
+            ),
         ):
             owner.task = asyncio.create_task(owner.run())
             try:
@@ -219,7 +223,9 @@ def test_sample_releases_readonly_source_transaction_before_journal_writes():
     db = Database()
     journal = Journal()
     payload = market()["calculation"]
-    packet = dict(revision=3, quotes=[payload], ev=[payload], arbs=[dict(id="pair")])
+    from tests.test_bet_journal import arb_snapshot
+
+    packet = dict(revision=3, quotes=[payload], ev=[payload], arbs=[arb_snapshot()])
     original = journal.observe
 
     def observe(*args, **kwargs):
@@ -229,8 +235,8 @@ def test_sample_releases_readonly_source_transaction_before_journal_writes():
     journal.observe = observe
     with patch.object(monitor, "_read", return_value=packet):
         result = monitor.sample(journal=journal, connector=lambda: db, at=NOW)
-    assert result == dict(revision=3, quotes=1, ev=1, arbs=1, provider_requests=0)
-    assert [kind for kind, _, _ in journal.observed] == ["ev", "arb"]
+    assert result == dict(revision=3, quotes=1, ev=0, arbs=1, provider_requests=0)
+    assert [kind for kind, _, _ in journal.observed] == ["arb"]
     assert "REPEATABLE READ READ ONLY" in db.queries[0][0]
     assert journal.received[0][0][0]["times"] == payload["times"]
     assert journal.states[-1]["monitor_error"] is None

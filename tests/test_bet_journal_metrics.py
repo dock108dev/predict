@@ -166,6 +166,35 @@ def test_only_fees_used_by_reported_outcome_are_required():
     assert measured["realized_profit_usd"] is None
 
 
+def test_closing_alias_ignores_only_label_and_preserves_every_economic_selection_field():
+    original = quote()
+    original["family"] = "spread"
+    original["selection"] = dict(
+        participant="home", predicate="cover", signed_line="-1.5", label="Home -1.5"
+    )
+    alias = deepcopy(original)
+    alias.update(
+        id="new-native-id",
+        times=dict(source_at=CLOSE, received_at=CLOSE),
+        observed_at=CLOSE,
+    )
+    alias["selection"]["label"] = "A different display name"
+    measured = analyze(entry(original), [alias], at=AFTER)
+    assert measured["legs"][0]["latest_quote"]["id"] == alias["id"]
+    assert measured["legs"][0]["close_quote"]["id"] == alias["id"]
+    for key, value in (
+        ("signed_line", "-2.5"),
+        ("participant", "away"),
+        ("predicate", "win"),
+        ("new_economic_term", "different"),
+    ):
+        wrong = deepcopy(alias)
+        wrong["selection"][key] = value
+        measured = analyze(entry(original), [wrong], at=AFTER)
+        assert measured["legs"][0]["latest_quote"]["id"] != alias["id"]
+        assert measured["legs"][0]["close_quote"]["id"] != alias["id"]
+
+
 def test_actual_odds_fees_expected_value_close_and_cash_result():
     trade = actual()
     trade["result"] = dict(receipts_usd=["103"], settled_at=AFTER)

@@ -14,6 +14,27 @@ from app.dashboard.bet_journal import Journal, Conflict, digest
 from browser_tests.test_pregame_current import offer
 
 
+def arb_snapshot(row=None):
+    left = deepcopy(row or offer())
+    left.update(venue="novig")
+    right = deepcopy(left)
+    right.update(
+        id=left["id"] + "-other",
+        venue="prophetx",
+        side="away",
+        selection=dict(left["selection"], participant="other", label="Other"),
+    )
+    return dict(
+        id="pair-" + left["id"],
+        game=left["game"],
+        game_key=left["game_key"],
+        kickoff=left["kickoff"],
+        legs=[left, right],
+        return_rate="0.05",
+        minimum_profit_usd="10",
+    )
+
+
 class PersonalJournal(TestCase):
     def setUp(self):
         self.directory = TemporaryDirectory()
@@ -51,16 +72,247 @@ class PersonalJournal(TestCase):
         self.assertEqual(self.path.stat().st_mode & 0o777, 0o600)
 
     def test_duplicate_observations_and_manual_snapshots_have_distinct_intent(self):
-        key = self.journal.observe("ev", self.row)
+        pair = arb_snapshot(self.row)
+        key = self.journal.observe("arb", pair)
         changed = deepcopy(self.row)
         changed["posted"]["value"] = "+110"
-        self.assertEqual(key, self.journal.observe("ev", changed))
+        self.assertIsNone(self.journal.observe("ev", changed))
+        self.assertEqual(key, self.journal.observe("arb", pair))
         saved = self.journal.observe("ev", changed, manual=True)
         self.assertNotEqual(saved, key)
         self.assertEqual(saved, self.journal.observe("ev", changed, manual=True))
         packet = self.journal.list()
         self.assertEqual(packet["total"], 2)
         self.assertEqual(packet["summary"]["counts"], dict(observed=1, saved=1))
+
+    def test_automatic_scope_requires_positive_market_pair_and_retains_legacy_id(self):
+        now = datetime.now(timezone.utc)
+        source = deepcopy(self.row)
+        source["kickoff"] = (now + timedelta(hours=1)).isoformat()
+        source["times"] = dict(
+            source_at=(now - timedelta(minutes=2)).isoformat(),
+            received_at=(now - timedelta(minutes=2)).isoformat(),
+        )
+        pair = arb_snapshot(source)
+        key = self.journal.observe("arb", pair)
+        legacy = digest(
+            ["automatic", "arb", [Journal.identity(row) for row in pair["legs"]]]
+        )
+        with self.journal.database(write=True) as db:
+            db.execute("UPDATE entries SET id=? WHERE id=?", (legacy, key))
+            db.execute("UPDATE events SET entry_id=? WHERE entry_id=?", (legacy, key))
+        changed = deepcopy(pair)
+        changed["legs"].reverse()
+        for row in changed["legs"]:
+            row["id"] += "-new-native-alias"
+            row["selection"]["label"] = "Decorative name changed"
+            row["posted"]["value"] = "+125"
+            row["times"] = dict(
+                source_at=(now - timedelta(minutes=1)).isoformat(),
+                received_at=(now - timedelta(minutes=1)).isoformat(),
+            )
+        self.assertEqual(self.journal.observe("arb", changed), legacy)
+        self.assertEqual(
+            self.journal.capture([], [changed], changed["legs"], at=now), 2
+        )
+        captured = self.journal.get(legacy, history=True)
+        self.assertEqual(
+            {quote["id"] for quote in captured["quotes"]},
+            {quote["id"] for quote in changed["legs"]},
+        )
+        from app.dashboard.bet_journal_metrics import analyze
+
+        closed = analyze(
+            captured["entry"], captured["quotes"], at=now + timedelta(hours=2)
+        )
+        self.assertEqual(
+            {leg["latest_quote"]["id"] for leg in closed["legs"]},
+            {quote["id"] for quote in changed["legs"]},
+        )
+        self.assertEqual(
+            {leg["close_quote"]["id"] for leg in closed["legs"]},
+            {quote["id"] for quote in changed["legs"]},
+        )
+        negative = deepcopy(changed["legs"][0])
+        negative["id"] += "-after-pair-disappeared"
+        negative["selection"]["label"] = "Renamed again after profitability disappeared"
+        negative["raw"]["net_ev"] = "-0.4"
+        negative["times"] = dict(source_at=now.isoformat(), received_at=now.isoformat())
+        self.assertEqual(
+            self.journal.capture([], [], [negative], at=now + timedelta(seconds=1)), 1
+        )
+        persisted = Journal(self.path).get(legacy, history=True)
+        after = analyze(
+            persisted["entry"], persisted["quotes"], at=now + timedelta(hours=2)
+        )
+        selected = next(
+            leg for leg in after["legs"] if leg["venue"] == negative["venue"]
+        )
+        self.assertEqual(selected["latest_quote"]["id"], negative["id"])
+        self.assertEqual(selected["close_quote"]["id"], negative["id"])
+        self.assertEqual(
+            self.journal.get(legacy, history=True)["entry"]["snapshot"], pair
+        )
+        self.assertEqual(len(self.journal.get(legacy, history=True)["history"]), 1)
+        self.assertEqual(self.journal.list()["total"], 1)
+        for field in ("return_rate", "minimum_profit_usd"):
+            for value in ("0", "-0.01", "invalid", True):
+                with self.subTest(field=field, value=value):
+                    rejected = dict(deepcopy(pair), **{field: value})
+                    self.assertIsNone(self.journal.observe("arb", rejected))
+        book = deepcopy(pair)
+        book["legs"][1]["venue"] = "fanduel"
+        self.assertIsNone(self.journal.observe("arb", book))
+        self.assertIsNone(self.journal.observe("ev", self.row))
+        with self.journal.database(write=True) as db:
+            invalid = dict(deepcopy(pair), return_rate="0")
+            db.execute(
+                "INSERT INTO entries SELECT 'legacy-nonpositive',kind,origin,created_at,updated_at,decision,revision,?,notes,trade FROM entries WHERE id=?",
+                (json.dumps(invalid), legacy),
+            )
+        self.assertNotIn(
+            "legacy-nonpositive",
+            [entry["id"] for entry in self.journal.list()["entries"]],
+        )
+        self.assertIsNotNone(self.journal.get("legacy-nonpositive"))
+        picked = self.journal.observe("arb", book, manual=True)
+        self.assertIn(picked, [row["id"] for row in self.journal.list()["entries"]])
+
+    def test_positive_pair_keeps_negative_leg_quotes_after_discovery(self):
+        now = datetime.now(timezone.utc)
+        row = deepcopy(self.row)
+        row["kickoff"] = (now + timedelta(hours=1)).isoformat()
+        row["times"] = dict(
+            source_at=(now - timedelta(minutes=1)).isoformat(),
+            received_at=(now - timedelta(minutes=1)).isoformat(),
+        )
+        pair = arb_snapshot(row)
+        for leg in pair["legs"]:
+            leg["raw"]["net_ev"] = "-0.2"
+        key = self.journal.observe("arb", pair, at=now)
+        later = deepcopy(pair["legs"][0])
+        later["posted"]["value"] = "-200"
+        later["raw"]["net_ev"] = "-0.4"
+        later["times"] = dict(source_at=now.isoformat(), received_at=now.isoformat())
+        self.assertEqual(self.journal.capture([later], [], [later], at=now), 1)
+        history = self.journal.get(key, history=True)
+        self.assertEqual(history["entry"]["snapshot"], pair)
+        self.assertEqual(history["quotes"][0]["raw"]["net_ev"], "-0.4")
+
+    def test_saved_ev_alias_requires_valid_clocks_and_stops_when_no_longer_picked(self):
+        now = datetime.now(timezone.utc)
+        row = deepcopy(self.row)
+        row["kickoff"] = (now + timedelta(hours=1)).isoformat()
+        row["times"] = dict(
+            source_at=(now - timedelta(minutes=2)).isoformat(),
+            received_at=(now - timedelta(minutes=2)).isoformat(),
+        )
+        key = self.journal.observe("ev", row, manual=True)
+        alias = deepcopy(row)
+        alias["id"] = "renamed-native-id"
+        alias["selection"]["label"] = "Changed decorative label"
+        alias["raw"]["net_ev"] = "-0.4"
+        alias["times"] = dict(
+            source_at=(now + timedelta(minutes=1)).isoformat(),
+            received_at=(now + timedelta(minutes=1)).isoformat(),
+        )
+        self.assertEqual(self.journal.capture([], [], [alias], at=now), 0)
+        with self.journal.database() as db:
+            self.assertEqual(
+                db.execute("SELECT count(*) FROM quote_aliases").fetchone()[0], 0
+            )
+        alias["times"] = dict(source_at=now.isoformat(), received_at=now.isoformat())
+        self.assertEqual(self.journal.quotes([alias], at=now), 1)
+        picked = Journal(self.path).get(key, history=True)
+        self.assertEqual(picked["quotes"][0]["id"], alias["id"])
+        self.assertEqual(picked["entry"]["snapshot"], row)
+        self.journal.update(key, dict(revision=1, decision="passed"))
+        alias["id"] = "another-alias-after-owner-passed"
+        self.assertEqual(self.journal.quotes([alias], at=now), 0)
+        with self.journal.database() as db:
+            self.assertEqual(
+                db.execute("SELECT count(*) FROM quote_aliases").fetchone()[0], 1
+            )
+            self.assertEqual(db.execute("SELECT count(*) FROM quotes").fetchone()[0], 1)
+
+    def test_explicit_ev_prune_backs_up_and_preserves_shared_bet_and_arb_evidence(self):
+        import sqlite3
+
+        now = datetime.now(timezone.utc)
+        row = deepcopy(self.row)
+        row.update(kickoff=(now + timedelta(hours=1)).isoformat())
+        row["times"] = dict(
+            source_at=(now - timedelta(minutes=2)).isoformat(),
+            received_at=(now - timedelta(minutes=2)).isoformat(),
+        )
+        saved = self.journal.observe("ev", row, manual=True)
+        self.journal.update(saved, dict(revision=1, notes="Preserved correction"))
+        self.assertEqual(self.journal.quotes([row], at=now), 1)
+        actual = deepcopy(row)
+        actual.update(id="placed", game_key="placed-game")
+        placed = self.journal.observe("ev", actual, manual=True)
+        self.journal.update(
+            placed,
+            dict(
+                revision=1,
+                decision="placed",
+                trade=dict(
+                    automatic=True,
+                    legs=[dict(quote_id=actual["id"], stake="100")],
+                    result=dict(outcomes=["win"]),
+                ),
+            ),
+        )
+        orphan = deepcopy(row)
+        orphan.update(id="orphan", game_key="orphan-game")
+        passed = self.journal.observe("ev", orphan, manual=True)
+        self.assertEqual(self.journal.quotes([orphan], at=now), 1)
+        self.journal.update(passed, dict(revision=1, decision="passed"))
+        pair = arb_snapshot(row)
+        arb = self.journal.observe("arb", pair)
+        self.journal.quotes(pair["legs"], at=now)
+        with self.journal.database(write=True) as db:
+            db.execute(
+                "INSERT INTO entries SELECT 'legacy-auto',kind,'automatic',created_at,updated_at,'observed',revision,snapshot,notes,trade FROM entries WHERE id=?",
+                (saved,),
+            )
+            db.execute(
+                "INSERT INTO events SELECT 'legacy-auto',revision,recorded_at,state FROM events WHERE entry_id=?",
+                (saved,),
+            )
+            before_rows = db.execute("SELECT count(*) FROM entries").fetchone()[0]
+            before_quotes = db.execute("SELECT count(*) FROM quotes").fetchone()[0]
+        protected = {
+            key: self.journal.get(key, history=True) for key in (saved, placed, arb)
+        }
+        self.assertEqual(
+            self.journal.quotes([orphan], at=now + timedelta(seconds=1)), 0
+        )
+        self.assertNotIn(
+            "orphan", [target["id"] for target in self.journal.targets(at=now)]
+        )
+        self.assertEqual(self.journal.list(kind="ev")["total"], 2)
+        backup = Path(self.directory.name) / "before-prune.sqlite3"
+        result = self.journal.prune_unpicked_evs(backup_path=backup)
+        self.assertEqual(result["deleted_entries"], 2)
+        self.assertEqual(result["deleted_quotes"], 1)
+        self.assertEqual(result["deleted_aliases"], 1)
+        self.assertEqual(result["preserved_bets"], 2)
+        self.assertEqual(
+            {key: self.journal.get(key, history=True) for key in protected}, protected
+        )
+        with sqlite3.connect(backup) as restored:
+            self.assertEqual(
+                restored.execute("SELECT count(*) FROM entries").fetchone()[0],
+                before_rows,
+            )
+            self.assertEqual(
+                restored.execute("SELECT count(*) FROM quotes").fetchone()[0],
+                before_quotes,
+            )
+        self.assertEqual(self.journal.prune_unpicked_evs()["deleted_entries"], 0)
+        with self.assertRaises(KeyError):
+            self.journal.get(passed)
 
     def test_stale_tab_cannot_overwrite_a_correction(self):
         key = self.journal.observe("ev", self.row, manual=True)
@@ -289,7 +541,7 @@ class PersonalJournal(TestCase):
         self.row["kickoff"] = kickoff.isoformat()
         at = kickoff - timedelta(minutes=4)
         self.row["times"] = dict(source_at=at.isoformat(), received_at=at.isoformat())
-        self.journal.observe("ev", self.row, at=at)
+        self.journal.observe("ev", self.row, at=at, manual=True)
         self.assertEqual(self.journal.quotes([self.row], at=at), 1)
         self.assertEqual(
             self.journal.quotes([self.row], at=at + timedelta(seconds=30)), 0
@@ -307,7 +559,10 @@ class PersonalJournal(TestCase):
         self.journal.status()
         with ThreadPoolExecutor(max_workers=4) as pool:
             keys = list(
-                pool.map(lambda _: self.journal.observe("ev", self.row), range(12))
+                pool.map(
+                    lambda _: self.journal.observe("arb", arb_snapshot(self.row)),
+                    range(12),
+                )
             )
         self.assertEqual(len(set(keys)), 1)
         self.assertEqual(self.journal.list()["total"], 1)
@@ -328,10 +583,11 @@ class PersonalJournal(TestCase):
         self.assertEqual(self.journal.list()["total"], 1)
 
     def test_failed_batch_and_failed_correction_roll_back_records_and_history(self):
-        invalid = deepcopy(self.row)
+        pair = arb_snapshot(self.row)
+        invalid = deepcopy(pair)
         invalid.pop("id")
         with self.assertRaises(ValueError):
-            self.journal.capture([self.row, invalid], [], [])
+            self.journal.capture([], [pair, invalid], [])
         self.assertEqual(self.journal.list()["total"], 0)
         key = self.journal.observe("ev", self.row, manual=True)
         with patch.object(
@@ -378,7 +634,7 @@ class PersonalJournal(TestCase):
         row["kickoff"] = "2026-11-19T00:00:00Z"
         at = "2026-11-18T15:00:00Z"
         row["times"] = dict(source_at=at, received_at=at)
-        key = self.journal.observe("ev", row, at=at)
+        key = self.journal.observe("ev", row, at=at, manual=True)
         later = deepcopy(row)
         later["kickoff"] = "2026-11-18T19:00:00-05:00"
         later["posted"]["value"] = "+110"
@@ -391,13 +647,19 @@ class PersonalJournal(TestCase):
     def test_deleted_automatic_opportunity_stays_deleted_and_manual_save_is_allowed(
         self,
     ):
-        key = self.journal.observe("ev", self.row)
-        saved = self.journal.observe("ev", self.row, manual=True)
+        pair = arb_snapshot(self.row)
+        key = self.journal.observe("arb", pair)
+        saved = self.journal.observe("arb", pair, manual=True)
         self.journal.delete(key, 1)
-        self.journal.capture([self.row], [], [self.row])
+        self.journal.capture([], [pair], pair["legs"])
         self.assertEqual([e["id"] for e in self.journal.list()["entries"]], [saved])
-        self.assertEqual(self.journal.get(saved)["entry"]["snapshot"], self.row)
-        self.assertEqual(self.journal.observe("ev", self.row, manual=True), saved)
+        self.assertEqual(self.journal.get(saved)["entry"]["snapshot"], pair)
+        changed = deepcopy(pair)
+        changed["legs"].reverse()
+        changed["legs"][0]["selection"]["label"] = "New decoration"
+        self.assertIsNotNone(self.journal.observe("arb", changed))
+        self.assertEqual(self.journal.list()["total"], 1)
+        self.assertEqual(self.journal.observe("arb", pair, manual=True), saved)
 
     def test_failed_delete_rolls_back_the_record_and_its_corrections(self):
         import sqlite3

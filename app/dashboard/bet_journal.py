@@ -1,6 +1,6 @@
 """Durable personal decisions, corrections and pregame quotes, outside source snapshots."""
 
-from contextlib import contextmanager
+from contextlib import contextmanager, closing
 from datetime import datetime, timezone
 from fractions import Fraction
 from hashlib import sha256
@@ -8,8 +8,41 @@ import json
 import os
 from pathlib import Path
 import sqlite3
+from app.comparison.scanner_readiness import EXECUTION_VENUES
 
 ROOT = Path(__file__).resolve().parents[2]
+MARKET_VENUES = ",".join("'" + venue + "'" for venue in EXECUTION_VENUES)
+MARKET_PAIR = (
+    "(kind='arb' AND json_array_length(snapshot,'$.legs')=2"
+    " AND json_extract(snapshot,'$.legs[0].venue') IN (" + MARKET_VENUES + ")"
+    " AND json_extract(snapshot,'$.legs[1].venue') IN (" + MARKET_VENUES + "))"
+)
+ELIGIBLE = (
+    "(decision IN ('saved','placed') OR ("
+    + MARKET_PAIR
+    + " AND journal_positive_arb(snapshot)))"
+)
+
+
+def automatic_arb(snapshot):
+    rows = snapshot.get("legs")
+    return (
+        isinstance(rows, list)
+        and len(rows) == 2
+        and all(row.get("venue") in EXECUTION_VENUES for row in rows)
+        and positive_arb(snapshot)
+    )
+
+
+def positive_arb(snapshot):
+    try:
+        return all(
+            not isinstance(snapshot[key], bool)
+            and number(snapshot[key], signed=True) > 0
+            for key in ("return_rate", "minimum_profit_usd")
+        )
+    except (KeyError, TypeError, ValueError, ZeroDivisionError):
+        return False
 
 
 def clock():
@@ -332,6 +365,12 @@ class Journal:
         self.path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
         db = sqlite3.connect(self.path, timeout=5)
         try:
+            db.create_function(
+                "journal_positive_arb",
+                1,
+                lambda value: int(positive_arb(json.loads(value))),
+                deterministic=True,
+            )
             os.chmod(self.path, 0o600)
             db.row_factory = sqlite3.Row
             db.execute("PRAGMA journal_mode=WAL")
@@ -354,6 +393,11 @@ class Journal:
                     quote_id TEXT PRIMARY KEY, identity TEXT NOT NULL
                 );
                 CREATE INDEX IF NOT EXISTS tracked_identity ON tracked(identity);
+                CREATE TABLE IF NOT EXISTS quote_aliases (
+                    quote_id TEXT NOT NULL, identity TEXT NOT NULL,
+                    PRIMARY KEY(quote_id, identity)
+                );
+                CREATE INDEX IF NOT EXISTS quote_aliases_identity ON quote_aliases(identity, quote_id);
                 CREATE TABLE IF NOT EXISTS quotes (
                     quote_id TEXT NOT NULL, fingerprint TEXT NOT NULL,
                     identity TEXT NOT NULL, observed_at TEXT NOT NULL, payload TEXT NOT NULL,
@@ -396,7 +440,14 @@ class Journal:
 
     def observe(self, kind, snapshot, *, at=None, manual=False):
         with self.database(write=True) as db:
-            return self._observe(db, kind, snapshot, at=at, manual=manual)
+            return self._observe(
+                db,
+                kind,
+                snapshot,
+                at=at,
+                manual=manual,
+                automatic_index=self._automatic_index(db) if not manual else None,
+            )
 
     @staticmethod
     def _manual_snapshot(kind, snapshot):
@@ -410,8 +461,12 @@ class Journal:
             ]
         return result
 
-    def _observe(self, db, kind, snapshot, *, at=None, manual=False):
+    def _observe(
+        self, db, kind, snapshot, *, at=None, manual=False, automatic_index=None
+    ):
         validate_snapshot(kind, snapshot)
+        if not manual and (kind != "arb" or not automatic_arb(snapshot)):
+            return None
         at = instant(at or clock()).isoformat()
         origin = "browser_snapshot" if manual else "automatic"
         key = digest(
@@ -420,9 +475,25 @@ class Journal:
                 kind,
                 self._manual_snapshot(kind, snapshot)
                 if manual
-                else [self.identity(r) for r in legs(snapshot, kind)],
+                else self._automatic_identities(snapshot),
             ]
         )
+        automatic_keys = self.automatic_keys(kind, snapshot) if not manual else [key]
+        if not manual:
+            if automatic_index is None:
+                automatic_index = self._automatic_index(db)
+            existing = automatic_index.get(key)
+            marks = ",".join("?" for _ in automatic_keys)
+            prior = db.execute(
+                "SELECT id FROM entries WHERE id IN ("
+                + marks
+                + ") ORDER BY created_at,id LIMIT 1",
+                automatic_keys,
+            ).fetchone()
+            if existing:
+                key = existing
+            elif prior:
+                key = prior["id"]
         if (
             manual
             and not db.execute("SELECT 1 FROM entries WHERE id=?", (key,)).fetchone()
@@ -447,7 +518,10 @@ class Journal:
         if (
             not manual
             and db.execute(
-                "SELECT 1 FROM deleted_entries WHERE id=?", (key,)
+                "SELECT 1 FROM deleted_entries WHERE id IN ("
+                + ",".join("?" for _ in automatic_keys)
+                + ")",
+                automatic_keys,
             ).fetchone()
         ):
             return key
@@ -465,16 +539,71 @@ class Journal:
                 "INSERT OR IGNORE INTO tracked VALUES (?,?)",
                 (row["id"], self.identity(row)),
             )
+        if automatic_index is not None and not manual:
+            automatic_index.setdefault(automatic_keys[0], key)
         return key
+
+    @classmethod
+    def _economic_identity(cls, row):
+        selection = row.get("selection")
+        if not isinstance(selection, dict):
+            return cls.identity(row)
+        return cls.identity(
+            dict(
+                row,
+                selection={
+                    key: value
+                    for key, value in row["selection"].items()
+                    if key != "label"
+                },
+            )
+        )
+
+    @classmethod
+    def _automatic_identities(cls, snapshot):
+        # Display labels can change without changing an exact trading selection.
+        return sorted(cls._economic_identity(row) for row in snapshot["legs"])
+
+    @classmethod
+    def _automatic_index(cls, db):
+        index = {}
+        for row in db.execute(
+            "SELECT id,snapshot FROM entries WHERE origin='automatic' AND "
+            + MARKET_PAIR
+            + " ORDER BY created_at,id"
+        ):
+            snapshot = json.loads(row["snapshot"])
+            index.setdefault(
+                digest(["automatic", "arb", cls._automatic_identities(snapshot)]),
+                row["id"],
+            )
+        return index
+
+    @classmethod
+    def automatic_keys(cls, kind, snapshot):
+        identities = [cls.identity(row) for row in legs(snapshot, kind)]
+        economic = cls._automatic_identities(snapshot) if kind == "arb" else identities
+        return list(
+            dict.fromkeys(
+                digest(["automatic", kind, order])
+                for order in (
+                    economic,
+                    sorted(identities),
+                    identities,
+                    list(reversed(identities)),
+                )
+            )
+        )
 
     def capture(self, ev, arbs, quotes, *, at=None):
         """One source sample has one SQLite transaction, independent of its size."""
         at = instant(at or clock()).isoformat()
         with self.database(write=True) as db:
-            for kind, snapshots in (("ev", ev), ("arb", arbs)):
-                for snapshot in snapshots:
-                    self._observe(db, kind, snapshot, at=at)
-            return sum(self._quote(db, row, at) for row in quotes)
+            index = self._automatic_index(db)
+            for snapshot in arbs:
+                self._observe(db, "arb", snapshot, at=at, automatic_index=index)
+            tracking = self._active_tracking(db, at)
+            return sum(self._quote(db, row, at, tracking) for row in quotes)
 
     @staticmethod
     def compact_quote(row):
@@ -554,13 +683,14 @@ class Journal:
         quote["_journal_basis"] = "source_comparison"
         return quote
 
-    def _quote(self, db, row, at):
+    def _quote(self, db, row, at, tracking):
         identity = self.identity(row)
-        tracked = db.execute(
-            "SELECT 1 FROM tracked WHERE quote_id=? OR identity=? LIMIT 1",
-            (row["id"], identity),
-        ).fetchone()
-        if not tracked:
+        originals = tracking[2].get(self._economic_identity(row), ())
+        if (
+            row["id"] not in tracking[0]
+            and identity not in tracking[1]
+            and not originals
+        ):
             return 0
         # Receipt/knowledge after kickoff is never promoted into a closing observation.
         kickoff = instant(row["kickoff"])
@@ -569,6 +699,13 @@ class Journal:
         source = instant(times.get("source_at") or times["received_at"])
         if not source <= received <= instant(at) < kickoff:
             return 0
+        # Learn aliases from every qualified tracked quote, including negative
+        # comparisons after the original arb has disappeared. No discovery or
+        # positive-EV condition renews the original record or source clocks.
+        db.executemany(
+            "INSERT OR IGNORE INTO quote_aliases VALUES (?,?)",
+            [(row["id"], original) for original in originals],
+        )
         row = self.compact_quote(row)
         return db.execute(
             "INSERT OR IGNORE INTO quotes VALUES (?,?,?,?,?)",
@@ -578,13 +715,49 @@ class Journal:
     def quotes(self, rows, *, at=None):
         at = instant(at or clock()).isoformat()
         with self.database(write=True) as db:
-            return sum(self._quote(db, row, at) for row in rows)
+            tracking = self._active_tracking(db, at)
+            return sum(self._quote(db, row, at, tracking) for row in rows)
+
+    def _active_tracking(self, db, at, *, eligible=ELIGIBLE):
+        ids, identities = set(), set()
+        economic = {}
+        for entry in db.execute(
+            "SELECT kind,snapshot FROM entries WHERE "
+            + eligible
+            + (
+                " AND julianday(json_extract(snapshot,'$.kickoff'))>julianday(?)"
+                if at
+                else ""
+            ),
+            (at,) if at else (),
+        ):
+            for row in legs(json.loads(entry["snapshot"]), entry["kind"]):
+                ids.add(row["id"])
+                identities.add(self.identity(row))
+                economic.setdefault(self._economic_identity(row), set()).add(
+                    self.identity(row)
+                )
+        values = sorted(identities)
+        for offset in range(0, len(values), 500):
+            batch = values[offset : offset + 500]
+            ids.update(
+                row["quote_id"]
+                for row in db.execute(
+                    "SELECT quote_id FROM quote_aliases WHERE identity IN ("
+                    + ",".join("?" for _ in batch)
+                    + ")",
+                    batch,
+                )
+            )
+        return ids, identities, economic
 
     def targets(self, *, at):
         with self.database() as db:
             originals = {}
             for row in db.execute(
-                "SELECT kind,snapshot FROM entries WHERE julianday(json_extract(snapshot,'$.kickoff'))>julianday(?)",
+                "SELECT kind,snapshot FROM entries WHERE "
+                + ELIGIBLE
+                + " AND julianday(json_extract(snapshot,'$.kickoff'))>julianday(?)",
                 (instant(at).isoformat(),),
             ):
                 for leg in legs(json.loads(row["snapshot"]), row["kind"]):
@@ -614,8 +787,9 @@ class Journal:
         ids = [row["id"] for row in originals]
         marks = ",".join("?" for _ in identities)
         rows = db.execute(
-            f"SELECT payload,observed_at FROM quotes WHERE identity IN ({marks}) OR quote_id IN ({marks}) ORDER BY observed_at",
-            [*identities, *ids],
+            f"""SELECT payload,observed_at FROM quotes WHERE identity IN ({marks}) OR quote_id IN ({marks})
+                OR quote_id IN (SELECT quote_id FROM quote_aliases WHERE identity IN ({marks})) ORDER BY observed_at""",
+            [*identities, *ids, *identities],
         ).fetchall()
         return [
             dict(json.loads(row["payload"]), observed_at=row["observed_at"])
@@ -628,18 +802,18 @@ class Journal:
         entry["metrics"] = analyze(
             entry, self._quotes(db, entry) if quotes is None else quotes
         )
-        opportunity = digest(
-            [
-                "automatic",
-                entry["kind"],
-                [self.identity(row) for row in legs(entry["snapshot"], entry["kind"])],
-            ]
-        )
-        entry["opportunity_id"] = (
-            opportunity
-            if db.execute("SELECT 1 FROM entries WHERE id=?", (opportunity,)).fetchone()
-            else None
-        )
+        candidates = self.automatic_keys(entry["kind"], entry["snapshot"])
+        prior = db.execute(
+            "SELECT id FROM entries WHERE origin='automatic' AND "
+            + MARKET_PAIR
+            + " AND id IN ("
+            + ",".join("?" for _ in candidates)
+            + ") ORDER BY created_at,id LIMIT 1",
+            candidates,
+        ).fetchone()
+        entry["opportunity_id"] = prior["id"] if prior else None
+        if not prior and entry["kind"] == "arb":
+            entry["opportunity_id"] = self._automatic_index(db).get(candidates[0])
         return entry
 
     def get(self, key, *, history=False):
@@ -693,7 +867,9 @@ class Journal:
         """All records and revisions from one read snapshot, on one connection."""
         with self.database() as db:
             rows = db.execute(
-                "SELECT * FROM entries ORDER BY created_at DESC,id"
+                "SELECT * FROM entries WHERE "
+                + ELIGIBLE
+                + " ORDER BY created_at DESC,id"
             ).fetchall()
             return dict(
                 entries=[self._record(db, row, history=history) for row in rows],
@@ -708,8 +884,108 @@ class Journal:
             if type(revision) is not int or revision != entry["revision"]:
                 raise Conflict("This entry changed. Reload it before deleting it.")
             db.execute("INSERT OR IGNORE INTO deleted_entries VALUES (?)", (key,))
+            if entry["origin"] == "automatic" and entry["kind"] == "arb":
+                db.executemany(
+                    "INSERT OR IGNORE INTO deleted_entries VALUES (?)",
+                    [
+                        (value,)
+                        for value in self.automatic_keys("arb", entry["snapshot"])
+                    ],
+                )
             db.execute("DELETE FROM events WHERE entry_id=?", (key,))
             db.execute("DELETE FROM entries WHERE id=?", (key,))
+
+    def prune_unpicked_evs(self, *, backup_path=None):
+        """Explicit maintenance only: back up, then remove EVs outside My Bets."""
+        with self.database(write=True) as db:
+            unwanted = list(
+                db.execute(
+                    "SELECT id,snapshot FROM entries WHERE kind='ev' AND decision NOT IN ('saved','placed')"
+                )
+            )
+            result = dict(
+                deleted_entries=0,
+                deleted_events=0,
+                deleted_tracking=0,
+                deleted_quotes=0,
+                deleted_aliases=0,
+                preserved_bets=db.execute(
+                    "SELECT count(*) FROM entries WHERE decision IN ('saved','placed')"
+                ).fetchone()[0],
+                backup_path=None,
+            )
+            result["counts"] = dict(
+                db.execute(
+                    "SELECT decision,count(*) FROM entries WHERE "
+                    + ELIGIBLE
+                    + " GROUP BY decision"
+                )
+            )
+            if not unwanted:
+                return result
+            backup = Path(backup_path) if backup_path is not None else None
+            if (
+                backup is None
+                or not backup.is_absolute()
+                or backup.resolve() == self.path.resolve()
+            ):
+                raise ValueError("Provide a new absolute SQLite backup path")
+            backup.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+            descriptor = os.open(backup, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+            os.close(descriptor)
+            # The writer reservation blocks concurrent corrections. A separate
+            # read connection can back up the committed WAL state without trying
+            # to back up our own uncommitted write transaction.
+            with (
+                closing(sqlite3.connect(self.path)) as source,
+                closing(sqlite3.connect(backup)) as destination,
+            ):
+                source.backup(destination)
+            result["backup_path"] = str(backup)
+            candidate_ids, candidate_identities = set(), set()
+            for row in unwanted:
+                snapshot = json.loads(row["snapshot"])
+                candidate_ids.add(snapshot["id"])
+                candidate_identities.add(self.identity(snapshot))
+                result["deleted_events"] += db.execute(
+                    "DELETE FROM events WHERE entry_id=?", (row["id"],)
+                ).rowcount
+                result["deleted_entries"] += db.execute(
+                    "DELETE FROM entries WHERE id=?", (row["id"],)
+                ).rowcount
+            keep_ids, keep_identities, _ = self._active_tracking(db, None, eligible="1")
+            for name, values in [
+                ("prune_ids", candidate_ids),
+                ("prune_identities", candidate_identities),
+                ("keep_ids", keep_ids),
+                ("keep_identities", keep_identities),
+            ]:
+                db.execute("CREATE TEMP TABLE " + name + " (value TEXT PRIMARY KEY)")
+                db.executemany(
+                    "INSERT INTO " + name + " VALUES (?)",
+                    [(value,) for value in values],
+                )
+            for table, field in [
+                ("tracked", "deleted_tracking"),
+                ("quotes", "deleted_quotes"),
+                ("quote_aliases", "deleted_aliases"),
+            ]:
+                result[field] = db.execute(
+                    "DELETE FROM "
+                    + table
+                    + """ WHERE
+                    (quote_id IN (SELECT value FROM prune_ids) OR identity IN (SELECT value FROM prune_identities))
+                    AND quote_id NOT IN (SELECT value FROM keep_ids)
+                    AND identity NOT IN (SELECT value FROM keep_identities)"""
+                ).rowcount
+            result["counts"] = dict(
+                db.execute(
+                    "SELECT decision,count(*) FROM entries WHERE "
+                    + ELIGIBLE
+                    + " GROUP BY decision"
+                )
+            )
+            return result
 
     def update(self, key, changes):
         if not isinstance(changes, dict) or set(changes) - {
@@ -769,7 +1045,7 @@ class Journal:
             raise ValueError("Unknown journal filter")
         if len(search) > 150:
             raise ValueError("Search is limited to 150 characters")
-        conditions, params = [], []
+        conditions, params = [ELIGIBLE], []
         if view == "bets":
             conditions.append("decision IN ('saved','placed')")
         for column, value in (("kind", kind), ("decision", decision)):
@@ -795,7 +1071,9 @@ class Journal:
             entries = [self._metrics(db, self.unpack(row)) for row in rows]
             counts = dict(
                 db.execute(
-                    "SELECT decision,count(*) FROM entries GROUP BY decision"
+                    "SELECT decision,count(*) FROM entries WHERE "
+                    + ELIGIBLE
+                    + " GROUP BY decision"
                 ).fetchall()
             )
             placed = [
@@ -803,7 +1081,9 @@ class Journal:
                 for row in db.execute("SELECT * FROM entries WHERE decision='placed'")
             ]
             opportunities = db.execute(
-                "SELECT count(*) FROM entries WHERE origin='automatic'"
+                "SELECT count(*) FROM entries WHERE origin='automatic' AND "
+                + MARKET_PAIR
+                + " AND journal_positive_arb(snapshot)"
             ).fetchone()[0]
             monitor = self._status(db)
         settled = [

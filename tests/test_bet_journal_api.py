@@ -117,7 +117,7 @@ class JournalHTTP(IsolatedAsyncioTestCase):
             "/api/bet-journal/" + entry["id"],
             json=dict(
                 revision=1,
-                decision="passed",
+                decision="saved",
                 notes="=unsafe spreadsheet expression",
                 trade=None,
             ),
@@ -136,7 +136,7 @@ class JournalHTTP(IsolatedAsyncioTestCase):
         self.assertEqual(data["entry"]["snapshot"], entry["snapshot"])
         export = await self.client.get("/api/bet-journal?download=json")
         self.assertEqual(
-            (await export.json())["entries"][0]["history"][1]["decision"], "passed"
+            (await export.json())["entries"][0]["history"][1]["decision"], "saved"
         )
         export = await self.client.get("/api/bet-journal?download=csv")
         self.assertIn("'=unsafe spreadsheet expression", await export.text())
@@ -163,7 +163,9 @@ class JournalHTTP(IsolatedAsyncioTestCase):
             row = offer()
             row["id"] = str(i)
             row["game_key"] = "other-" + str(i)
-            self.journal.observe("ev", row)
+            from tests.test_bet_journal import arb_snapshot
+
+            self.journal.observe("arb", arb_snapshot(row))
         response = await self.client.get("/api/bet-journal?view=bets&limit=1")
         data = await response.json()
         self.assertEqual(data["total"], 1)
@@ -173,7 +175,7 @@ class JournalHTTP(IsolatedAsyncioTestCase):
         self.assertEqual(data["total"], 6)
         self.assertEqual(len(data["entries"]), 2)
         response = await self.client.get("/api/bet-journal?kind=arb")
-        self.assertEqual((await response.json())["total"], 0)
+        self.assertEqual((await response.json())["total"], 5)
         response = await self.client.get("/api/bet-journal?search=Milwaukee")
         self.assertEqual((await response.json())["total"], 6)
         response = await self.client.get("/api/bet-journal/unknown")
