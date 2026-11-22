@@ -16,6 +16,8 @@ class PregameOwner:
         self.progress = {}
         self.wake = asyncio.Event()
         self.last_status = 0
+        self.last_research_capture = 0
+        self.cohort_progress = {}
         self.fee_account_identity = object()
         from app.storage.ordinary_owner import OrdinaryOwner
 
@@ -54,7 +56,9 @@ class PregameOwner:
                 LEFT JOIN current_pregame_calculation p ON p.contract_id=c.id
                 WHERE e.expires_order>extract(epoch FROM clock_timestamp())
                   AND (c.venue||':'||e.provider)=ANY(%s)
-                  AND (p.contract_id IS NULL OR p.version<>%s)
+                  AND (p.contract_id IS NULL OR p.version<>%s
+                    OR c.venue='polymarket_us' AND e.provider='sportsgameodds'
+                      AND p.reason IS DISTINCT FROM 'provider_venue_fee_applicability_unestablished')
                 ON CONFLICT DO NOTHING""",
                 (
                     [venue + ":" + provider for venue, provider in routes.items()],
@@ -95,6 +99,18 @@ class PregameOwner:
             )
             from time import monotonic
 
+            # Cohorts/cutoffs are independent of the optional positive-arb
+            # journal sampler. Scheduling reads issue no provider requests.
+            if monotonic() - self.last_research_capture >= 30 and not BACKGROUND.critical_acquisition_pressure():
+                self.last_research_capture = monotonic()
+                try:
+                    from app.research.records import automatic_turn
+
+                    self.cohort_progress = automatic_turn(db)
+                except Exception as exc:
+                    failure(__name__, "prospective_research_capture", exc)
+                    self.cohort_progress = dict(state="unavailable", reason=str(exc)[:160])
+
             if result or monotonic() - self.last_status >= 5:
                 state = operational(db)
                 state = {
@@ -104,6 +120,7 @@ class PregameOwner:
                 self.progress = dict(
                     current_rows=dict(**state, recent=result),
                     research=self.research.progress,
+                    cohorts=self.cohort_progress,
                 )
                 self.last_status = monotonic()
 

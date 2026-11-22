@@ -6,7 +6,7 @@ from hashlib import sha256
 import json
 from pathlib import Path
 from aiohttp import web
-from app.dashboard.e5_preview import fixed, isolate_process
+from app.dashboard.saved_preview import fixed, isolate_process
 from app.storage.store import exact_time as _exact_time
 
 def exact_time(value):
@@ -145,7 +145,7 @@ def create_app(root=ROOT):
             return web.json_response(dict(error='Saved evidence validation failed. A required file is missing, altered or invalid. No observations were displayed.'),status=422)
     async def page(request):return web.FileResponse(ROOT/'app/dashboard/e6_real_static/index.html')
     async def css(request):return web.FileResponse(ROOT/'app/dashboard/static/style.css')
-    async def component(request):return web.FileResponse(ROOT/'app/dashboard/e5_static/state.js')
+    async def component(request):return web.FileResponse(ROOT/'app/dashboard/static/saved-state.js')
     app.router.add_get('/',page);app.router.add_get('/api/package',package)
     app.router.add_get('/style.css',css);app.router.add_get('/shared-state.js',component)
     app.router.add_static('/view/',ROOT/'app/dashboard/e6_real_static',show_index=False)

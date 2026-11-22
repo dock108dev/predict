@@ -10,16 +10,17 @@ from app.normalization.college_registry import sgo_registry
 from app.storage.schedule_metadata import VERSION as SCHEDULE_VERSION
 from app.storage.store import hashed, stamp
 from .sportsgameodds_adapter import PROPHETX_BOOKMAKER_ID
+from .sgo_capabilities import CURRENT_BOOKS, DISPLAY_NAMES
 
 SPORTS = {'NFL': 'american_football', 'NCAAF': 'american_football', 'NBA': 'basketball',
           'NCAAB': 'basketball', 'MLB': 'baseball', 'NHL': 'ice_hockey'}
 # Map bookmaker display names while retaining the original SGO quote identity.
 # The provider's 'polymarket' is not established as Polymarket US.
-CURRENT_VENUES = frozenset(('novig', PROPHETX_BOOKMAKER_ID, 'prophetx', 'pinnacle', 'kalshi', 'polymarket'))
+CURRENT_VENUES = CURRENT_BOOKS
 
 
 def display_venue(bookmaker_id):
-    return {PROPHETX_BOOKMAKER_ID: 'prophetx', 'polymarket': 'polymarket_us'}.get(bookmaker_id, bookmaker_id)
+    return DISPLAY_NAMES.get(bookmaker_id, bookmaker_id)
 
 
 def source_bookmaker(record):

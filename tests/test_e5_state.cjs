@@ -1,5 +1,5 @@
 const assert=require('node:assert/strict');
-const state=require('../app/dashboard/e5_static/state.js');
+const state=require('../app/dashboard/static/saved-state.js');
 const book={key:'kalshi:contract:yes'};
 assert.equal(state.select([book],book.key,'key'),book);
 assert.equal(state.select([],book.key,'key'),null);

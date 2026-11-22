@@ -136,6 +136,9 @@ class SportsGameOddsWorker:
         self.usage_reader = usage_reader
         self.transport = transport or SportsgameoddsTransport()
         self.ledger_path = Path(ledger_path or ROOT / '.local/predict-odds/sportsgameodds-ledger.sqlite3')
+        # Evidence follows the injected ledger namespace. Disposable workers
+        # cannot accidentally retain synthetic responses in the owner's store.
+        self.original_response_root = self.ledger_path.parent / 'original-responses'
         self.now = now
         self.closed = False
         self.metrics = {'state':'connecting', 'requests':0, 'pages':0, 'events':0,
@@ -217,6 +220,12 @@ class SportsGameOddsWorker:
         # requests still reserve their own durable rate slot in the ledger.
         return await self.usage_reader(self.key)
 
+    async def retain_original(self, params, response):
+        from .bulk_checkpoint import owned_thread
+        from .original_receipts import capture
+        self.metrics['original_receipt'] = await owned_thread(
+            capture, params, response, root=self.original_response_root)
+
     async def initialize(self):
         self.key = self.key_loader()
         self.ledger_path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
@@ -245,7 +254,8 @@ class SportsGameOddsWorker:
             return dict(current, reset_at=current_reset)
         self.collector = GuardedPageCollector(self.ledger, self.window_id, self.transport,
                                               controls=self.controls, account_usage=pacing_usage,
-                                              eligible=self.request_in_scope_async)
+                                              eligible=self.request_in_scope_async,
+                                              receipt_retainer=self.retain_original)
         self.metrics.update(state='waiting', account_tier=observed.get('tier'), reset_basis=reset_basis)
         self._account_status()
         await self.update_study()
@@ -425,6 +435,19 @@ class SportsGameOddsWorker:
             except (ValueError, OperationalError, QueryCanceled) as exc:
                 failure(__name__, 'sgo_page_admission_interrupted', exc)
                 raise RuntimeError('provider page admission interrupted') from exc
+            # A final sporting score is a separate research observation. It
+            # cannot grant authority to post-start odds or venue settlement.
+            if any(event.get('game_results') or event.get('scores') or
+                   event['status'].get('completed') is True or event['status'].get('finalized') is True
+                   for event in page.events):
+                from .bulk_checkpoint import owned_thread
+                from .sgo_game_results import ingest
+                try:
+                    self.metrics['sporting_results'] = await owned_thread(
+                        ingest, page, known_at=self.now().isoformat())
+                except Exception as exc:
+                    failure(__name__, 'sgo_sporting_result_ingestion', exc)
+                    self.metrics['sporting_results'] = dict(state='unavailable', reason='sporting_result_ingestion_failed')
             if alternate is not None:
                 admitted = [quote for quote in admitted_page.quotes if quote.get('alternate')]
                 alternate['admitted_alternate_rows'] += len(admitted)

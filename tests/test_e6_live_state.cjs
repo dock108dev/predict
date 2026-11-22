@@ -7,7 +7,7 @@ const context=vm.createContext({document:{getElementById:element,querySelectorAl
  if(options?.method==='POST')return new Promise(resolve=>{pendingPost=()=>resolve({ok:true,json:async()=>idle});});
  return {ok:true,json:async()=>idle};
 }});
-for(const file of ['app/dashboard/e5_static/state.js','app/dashboard/e6_real_static/state.js'])vm.runInContext(fs.readFileSync(file,'utf8'),context);
+for(const file of ['app/dashboard/static/saved-state.js','app/dashboard/e6_real_static/state.js'])vm.runInContext(fs.readFileSync(file,'utf8'),context);
 vm.runInContext(fs.readFileSync('app/dashboard/e6_real_static/watch.js','utf8').split('function render()')[0],context);
 vm.runInContext(fs.readFileSync('app/dashboard/e6_live_static/watch.js','utf8'),context);
 (async()=>{

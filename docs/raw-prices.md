@@ -1,5 +1,30 @@
 # Raw prices and original inputs
 
+The primary **Research** view at `/research` includes retained SGO bookmaker
+observations, normalized offers and native/legacy raw books regardless of fee or
+EV qualification. It exposes provider and original book separately from the
+represented venue; the SGO `polymarket` alias has unestablished US equivalence.
+Unknown facts remain null. Open a row to follow identity, reference policies,
+fees/cashflows, original clocks and exact input/result revisions. Client export
+retains the inspected object even after the bounded SQL read lease expires.
+Positive rows remain separately accessible at `/opportunities`.
+
+`app/dashboard/research_api.py` and `app/storage/research_catalog.py` own
+`/api/research/catalog`, `/input`, `/export`, `/coverage` and `/cohorts` under
+the common `/api/research` prefix. These are passive reads. The coverage panel
+separates runtime liveness, actual receipt bounds, calculations and archive
+content/counters; unsupported archive routes and recorded gaps remain explicit.
+
+Original SGO HTTP-200 responses are separately retained by
+`app/collection/original_receipts.py`, outside normalized ingress. The initial
+allocation is 128 MiB compressed / 4,096 receipts with no automatic eviction;
+these are storage bounds, not coverage targets. Safe scope, receipt clock, parser
+version and body SHA-256 link raw bytes to normalized facts. Byte/count/disk
+refusals record gaps without another provider request or changes to accounting.
+Existing normalized history cannot reconstruct response bytes discarded before
+this feature. Received unsupported fields and never-requested markets differ.
+
+
 The **Raw Odds** view at `/raw-odds` reads retained source-local books from SQL.
 It does not wait for matching or financial calculations. Filters select league,
 venue, family, period and available source states; search and pagination operate

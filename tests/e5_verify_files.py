@@ -7,7 +7,7 @@ import socket
 import subprocess
 import sys
 import psycopg
-from app.dashboard.e5_preview import isolate_process, load_package
+from app.dashboard.historical.e5_preview import isolate_process, load_package
 
 def main():
     parser=argparse.ArgumentParser();parser.add_argument('--output',required=True,type=Path);args=parser.parse_args()

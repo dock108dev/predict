@@ -1,5 +1,5 @@
 const assert=require('node:assert/strict');
-globalThis.E5State=require('../app/dashboard/e5_static/state.js');
+globalThis.E5State=require('../app/dashboard/static/saved-state.js');
 const s=require('../app/dashboard/e6_real_static/state.js');
 const {execFileSync}=require('node:child_process');
 const data=JSON.parse(execFileSync('.venv/bin/python',['-c','import json;from app.dashboard.e6_real import load_package;print(json.dumps(load_package()))'],{encoding:'utf8',maxBuffer:10e6}));

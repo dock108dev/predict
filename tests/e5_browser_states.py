@@ -2,7 +2,7 @@
 import asyncio
 from urllib.parse import urlparse,parse_qs
 from aiohttp import web
-from app.dashboard.e5_preview import create_app,isolate_process
+from app.dashboard.historical.e5_preview import create_app,isolate_process
 @web.middleware
 async def state_fixture(request,handler):
     if request.path=='/api/package':

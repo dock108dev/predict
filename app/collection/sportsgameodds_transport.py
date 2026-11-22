@@ -12,11 +12,10 @@ import json
 import aiohttp
 
 from .sportsgameodds_adapter import LEAGUES, MAX_EVENTS, MAX_PAGE_BYTES
+from .sgo_capabilities import CORE_ODD_IDS
 
 ENDPOINT = 'https://api.sportsgameodds.com/v2/events/'
-ODD_IDS = frozenset(('points-home-game-ml-home', 'points-away-game-ml-away',
-                     'points-home-game-sp-home', 'points-away-game-sp-away',
-                     'points-all-game-ou-over', 'points-all-game-ou-under'))
+ODD_IDS = CORE_ODD_IDS
 
 
 class TransportFailure(RuntimeError):

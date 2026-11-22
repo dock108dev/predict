@@ -38,7 +38,7 @@ def test_theme_preview_cancel_persistence_failure_and_semantic_contrast(
         errors = []
         page.on("pageerror", lambda e: errors.append(str(e)))
         page.route("**/*", serve)
-        page.goto("https://predict.fixture/")
+        page.goto("https://predict.fixture/opportunities")
         page.locator(".ticket").wait_for()
         theme = page.get_by_role("button", name="Theme")
         original = page.evaluate(
@@ -160,7 +160,7 @@ def test_individual_picks_context_comparison_and_grouped_negative_browse(
         errors = []
         page.on("pageerror", lambda e: errors.append(str(e)))
         page.route("**/*", serve)
-        page.goto("https://predict.fixture/")
+        page.goto("https://predict.fixture/opportunities")
         expect(page.locator(".ticket")).to_have_count(2)
         expect(page.locator(".ticket .posted .math-trigger").first).to_have_text(
             "45.45%"
@@ -256,7 +256,7 @@ def test_record_form_draft_discard_actual_fees_and_lost_response_retry(width, tm
         page = browser.new_page(viewport=dict(width=width, height=900))
         page.on("dialog", lambda d: d.accept())
         page.route("**/*", serve)
-        page.goto("https://predict.fixture/")
+        page.goto("https://predict.fixture/opportunities")
         page.locator(".row-open").click()
         page.get_by_role("button", name="Record bet", exact=True).click()
         expect(page.locator("#editor")).to_be_visible()
@@ -320,7 +320,7 @@ def test_site_prices_compact_saved_bookmark_and_ev_reference_preview(width, tmp_
         browser = p.chromium.launch()
         page = browser.new_page(viewport=dict(width=width, height=900))
         page.route("**/*", serve)
-        page.goto("https://predict.fixture/")
+        page.goto("https://predict.fixture/opportunities")
         row = page.locator(".ticket").first
         expect(row.locator(".posted .math-trigger")).to_have_text("45.45%")
         expect(row.locator(".posted .american-equivalent")).to_have_text("(+120)")

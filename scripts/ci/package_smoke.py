@@ -164,6 +164,7 @@ import app.comparison.scanner_summaries
 import app.dashboard
 root = Path(app.dashboard.__file__).parent
 for name in ('index.html', 'current.js', 'arbs.html', 'arbs.js', 'admin.html', 'admin.js',
+             'research.html', 'research.js', 'research.css',
              'ev.html', 'ev.js', 'coverage.html', 'coverage.js', 'comparison-board.js',
              'comparison-view.js', 'scanner.html', 'scanner.js',
              'scanner.css', 'scanner-runtime.json', 'stored.html', 'stored.js',
@@ -209,7 +210,7 @@ async def smoke():
         await site.start()
         url='http://127.0.0.1:'+str(site._server.sockets[0].getsockname()[1])
         async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as client:
-            for path in ('/','/odds','/ev','/arbs','/admin','/current/coverage','/api/scanner/client',
+            for path in ('/','/research','/opportunities','/odds','/ev','/arbs','/admin','/current/coverage','/api/scanner/client',
                          '/api/scanner/summaries',
                          '/current/assets/scanner.js','/current/assets/scanner.css',
                          '/current/assets/comparison-board.js','/current/assets/board.js',
@@ -223,6 +224,8 @@ async def smoke():
                          '/view/current/barlow-semi-condensed-600.ttf',
                          '/view/current/pregame.js','/view/current/pregame.css','/view/current/pregame.html',
                          '/view/current/board-filters.js','/view/current/interaction.css',
+                         '/view/current/research.js','/view/current/research.css',
+                         '/shared-state.js',
                          '/view/current/mode-settings.js',
                          '/view/current/desk.js','/view/current/desk.css','/view/current/desk-preferences.js',
                          '/view/current/desk-components.css','/view/current/desk-polling.js','/view/current/desk-quote-display.js',
@@ -251,15 +254,22 @@ async def smoke():
                     state=await response.json()
                     assert state['error']=='database_unavailable',(path,state)
                     assert state['provider_requests']==0,(path,state)
-            for path in ('/', '/browse-odds', '/game?game_key=smoke'):
+            for path in ('/opportunities', '/browse-odds', '/game?game_key=smoke'):
                 async with client.get(url+path) as response:
                     assert response.status==200,(path,response.status)
                     html = await response.text()
-                    assert ('/view/current/pregame.js' if path.split('?')[0] in ('/','/ev','/browse-odds','/game') else '/view/current/desk.js') in html
+                    assert ('/view/current/pregame.js' if path.split('?')[0] in ('/opportunities','/ev','/browse-odds','/game') else '/view/current/desk.js') in html
                     assert '/view/current/predict-icon.png' in html
             for path in ('/replay?dataset=practice', '/api/odds-replay?dataset=practice', '/api/odds-replay/details?dataset=synthetic'):
                 async with client.get(url+path) as response:
                     assert response.status==422,(path,response.status)
+            async with client.get(url+'/') as response:
+                assert response.status==200
+                assert '/view/current/research.js' in await response.text()
+            assert (root/'static/saved-state.js').is_file()
+            assert (root/'historical/e5_static/index.html').is_file()
+            from app.dashboard.saved_preview import fixed
+            assert fixed('0.40')=='0.4'
             assert app[current_key].provider.__class__.__name__=='CurrentStateProvider'
     finally:
         await runner.cleanup()

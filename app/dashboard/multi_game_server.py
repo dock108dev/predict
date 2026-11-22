@@ -525,8 +525,20 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
                 raise web.HTTPFound(str(req.rel_url.with_path('/replay').with_query(query)))
             return web.FileResponse(static_root/'opportunity_static/current/pregame.html')
 
-        for route in ('/', '/ev', '/browse-odds', '/game'):
+        for route in ('/opportunities', '/ev', '/browse-odds', '/game'):
             app.router.add_get(route, pregame_page)
+        async def research_page(req):
+            # Preserve saved exact-comparison links made before Research became
+            # the landing view. Their explicit input selection still wins.
+            if req.path=='/' and (set(req.query)&{'id','bet_id','quote_key','line','game_key','phase'}):
+                return await pregame_page(req)
+            if req.path=='/':
+                raise web.HTTPFound(str(req.rel_url.with_path('/research')))
+            return web.FileResponse(static_root/'opportunity_static/current/research.html')
+        app.router.add_get('/',research_page)
+        app.router.add_get('/research',research_page)
+        from .research_api import mount as mount_research
+        mount_research(app)
         async def pregame_arbs_page(req):
             return web.FileResponse(static_root/'opportunity_static/current/pregame-arbs.html')
         app.router.add_get('/arbs',pregame_arbs_page)
@@ -755,7 +767,7 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
         return web.FileResponse(allowed[name])
     app.router.add_get('/current/assets/{name}',current_asset)
     async def style(req):return web.FileResponse(static_root/'static/style.css')
-    async def shared(req):return web.FileResponse(static_root/'e5_static/state.js')
+    async def shared(req):return web.FileResponse(static_root/'static/saved-state.js')
     app.add_routes([web.get('/style.css',style),web.get('/shared-state.js',shared),web.get('/api/status',state),web.post('/api/start',start),web.post('/api/stop',stop),web.post('/api/references',import_references),web.post('/api/resolutions',import_resolutions),web.get('/api/resolution',resolution),web.get('/api/dashboard',dashboard),web.get('/api/sessions',catalog),web.get('/api/calculate',calculation)])
     app.router.add_static('/view/',static_root/'opportunity_static')
     async def cleanup(app):

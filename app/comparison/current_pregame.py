@@ -18,8 +18,14 @@ from .sgo_reference import (
 from .snapshot_fee_scope import applicability
 from .trade_preview import order_step
 
-VERSION = "predict-current-pregame-6"
+VERSION = "predict-current-pregame-7"
 REFERENCE_POLICY = "lowest-no-vig-two-trusted-books-2"
+COHERENT_POLICY = "first-complete-trusted-pair-proportional-1"
+EXPANSION_POLICY = "same-book-betonline-first-1"
+COHERENT_POLICIES = {
+    COHERENT_POLICY: BEST_BOOKS,
+    EXPANSION_POLICY: ("betonline", *BEST_BOOKS),
+}
 MIN_TRUSTED_BOOKS = 2
 COMPARISON_USD = F(100)
 
@@ -27,7 +33,7 @@ COMPARISON_USD = F(100)
 class ReferenceInputs:
     """Index exact bookmaker pairs once for the affected occurrence."""
 
-    def __init__(self, observations):
+    def __init__(self, observations, *, books=BEST_BOOKS):
         self.groups = {}
         for event_id, rows in observations.items():
             for entry in rows:
@@ -36,7 +42,7 @@ class ReferenceInputs:
                     original, side=original.get("canonical_side", original["side"])
                 )
                 if (
-                    q["venue"] not in BEST_BOOKS
+                    q["venue"] not in books
                     or q["period"] != "game"
                     or q["phase"] != "pregame"
                     or q.get("partition") == "three_way"
@@ -90,15 +96,15 @@ def reference(record, observations, *, at):
     )
 
 
-def reference_candidates(observations, *, family, side, line, start, at):
+def reference_candidates(observations, *, family, side, line, start, at, books=BEST_BOOKS):
     """Complete same-book pairs with the shared source/receipt/occurrence guards."""
     inputs = (
         observations
         if isinstance(observations, ReferenceInputs)
-        else ReferenceInputs(observations)
+        else ReferenceInputs(observations, books=books)
     )
     candidates = []
-    for book in BEST_BOOKS:
+    for book in books:
         pairs = []
         for event_id, sides in inputs.groups.get((book, family, line), {}).items():
             a, b = sides.get(side), sides.get(OPPOSITE[side])
@@ -177,6 +183,62 @@ def select_reference(observations, *, family, side, line, start, at):
             item["book"]: item["probability"] for item in candidates
         },
     )
+
+
+def coherent_reference(record, observations, *, at, policy=COHERENT_POLICY, evaluated_book=None):
+    """Select a whole pair once, before inspecting the bet's EV or its outcome.
+
+    Fixed bookmaker priority is a reproducible baseline, not a claim of superior
+    probability quality. Both sides share the same pair and baseline identity.
+    The existing conservative per-bet reference remains a separate policy.
+    """
+    family, selected_side, line = reference_key(record)
+    if policy not in COHERENT_POLICIES:
+        raise ValueError("coherent_reference_policy_unsupported")
+    books = COHERENT_POLICIES[policy]
+    # The optional additional-book policy is a reference capability. It never
+    # grants execution support and excludes its own posted offer when evaluated.
+    if policy == EXPANSION_POLICY:
+        books = tuple(book for book in books if book != evaluated_book)
+    anchor = "over" if family == "total" else "home"
+    candidates = reference_candidates(
+        observations, family=family, side=anchor, line=line,
+        start=record["event"]["scheduled_start"], at=at, books=books,
+    )
+    if not candidates:
+        raise ValueError("coherent_reference_exact_pair_unavailable")
+    selected = candidates[0]  # reference_candidates iterates the recorded priority.
+    p = F(selected["probability"])
+    probabilities = {anchor: wire(p), OPPOSITE[anchor]: wire(1 - p)}
+    basis = dict(
+        policy_version=policy,
+        book_priority=list(books), evaluated_book=evaluated_book,
+        book=selected["book"], event_id=selected["event_id"],
+        market=selected["market"], prices=selected["prices"],
+        probabilities=probabilities,
+        conditioning="decisive_completed_game",
+        exceptional_outcomes="tie_push_void_not_modelled",
+        cutoff=at.isoformat(),
+        # Retaining every eligible pair makes selection reproducible, including
+        # fallback when the first-priority book did not supply a complete pair.
+        candidates=candidates,
+    )
+    probability = F(probabilities[selected_side])
+    return dict(
+        basis, baseline_id=hashed(basis), selected_outcome=selected_side,
+        probability=wire(probability), fair_decimal_odds=wire(1 / probability),
+        fair_odds=american(1 / probability), selection_policy=policy,
+    )
+
+
+def probability_inputs(reference):
+    """Evaluation time is a recorded envelope, not a changed economic input.
+
+    Prices, source/receipt clocks, revisions, eligibility candidates and policy
+    remain in the identity. Merely evaluating the same facts later cannot force
+    a current-row rewrite or impersonate a new source observation.
+    """
+    return {key: value for key, value in reference.items() if key not in ("cutoff", "baseline_id")}
 
 
 def posted_fill(terms, amount, cost, fees, rule):

@@ -37,13 +37,15 @@ class DailyObjectPacing(RuntimeError):
 
 
 class GuardedPageCollector:
-    def __init__(self, ledger, window_id, transport, *, controls, account_usage, eligible=None):
+    def __init__(self, ledger, window_id, transport, *, controls, account_usage, eligible=None,
+                 receipt_retainer=None):
         self.ledger = ledger
         self.window_id = window_id
         self.transport = transport
         self.controls = controls
         self.account_usage = account_usage
         self.eligible = eligible
+        self.receipt_retainer = receipt_retainer
 
     async def _eligible(self, params):
         value = self.eligible(params)
@@ -107,6 +109,10 @@ class GuardedPageCollector:
         try:
             response = await self.transport.fetch(params, api_key)
             self.ledger.record_response(attempt, response)
+            if self.receipt_retainer is not None:
+                retained = self.receipt_retainer(params, response)
+                if inspect.isawaitable(retained):
+                    await retained
             return self._accept(attempt, params, response, now)
         except asyncio.CancelledError:
             self.ledger.interrupt(attempt, evidence='request cancelled before accounting completed')

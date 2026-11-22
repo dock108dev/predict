@@ -76,7 +76,7 @@ def test_comparison_completeness_failure_deadline_and_superseded_filters():
             page = await browser.new_page()
             page.on("pageerror", lambda e: errors.append(str(e)))
             await page.route("**/*", serve)
-            await page.goto("https://predict.fixture/")
+            await page.goto("https://predict.fixture/opportunities")
             await expect(page.locator(".row-open")).to_be_visible()
             await page.locator(".ticket").evaluate("e=>e.dataset.retained='yes'")
             async with page.expect_response(lambda r: "/api/pregame?" in r.url):
@@ -630,7 +630,7 @@ def test_research_amounts_never_save_and_navigation_restores_scope(width, tmp_pa
         errors = []
         page.on("pageerror", lambda e: errors.append(str(e)))
         page.route("**/*", serve)
-        page.goto("http://predict.fixture/")
+        page.goto("http://predict.fixture/opportunities")
         page.locator(".row-open").click()
         expect(page.locator(".amount-result")).to_contain_text(
             "expected profit of $8.80"

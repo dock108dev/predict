@@ -9,7 +9,7 @@ from .current_rows import CurrentRowStore, contract_id, LOCK
 from .store import hashed
 
 
-def revalue(db, *, at=None):
+def _reference_only_revalue(db, *, at=None):
     if math.VERSION != "predict-current-pregame-6":
         raise ValueError(
             "Reference-only snapshot upgrade supports calculation version 5 to 6 only"
@@ -134,3 +134,65 @@ def revalue(db, *, at=None):
         reference_updated=changed,
         excluded=dict(excluded),
     )
+
+
+def revalue(db, *, at=None):
+    """Upgrade generated local rows using their retained source and fee owners.
+
+    Version seven adds coherent and optional probability baselines. A reference-
+    only patch cannot create these from the old scalar probability, so rebuild
+    only affected stored games. Original snapshots and source/control/fee rows
+    are read, never rewritten by this upgrade.
+    """
+    if math.VERSION == "predict-current-pregame-6":
+        return _reference_only_revalue(db, at=at)
+    if math.VERSION != "predict-current-pregame-7":
+        raise ValueError("Snapshot calculation upgrade version unsupported")
+    from .current_pregame import process
+
+    at = at or datetime.now(timezone.utc)
+    with db.transaction():
+        db.execute("SELECT pg_advisory_xact_lock(%s)", (LOCK,))
+        versions = {r["version"] for r in db.execute(
+            "SELECT DISTINCT version FROM current_pregame_calculation WHERE start_at>%s AND valid_until>%s", (at, at))}
+        if versions - {"predict-current-pregame-5", "predict-current-pregame-6", math.VERSION}:
+            raise ValueError("Snapshot requires a full calculation upgrade from a supported stored version")
+        rows = list(db.execute("""SELECT c.contract_id,c.payload,e.provider,e.native_event_id
+            FROM current_pregame_calculation c JOIN current_contract t ON t.id=c.contract_id
+            JOIN current_event e ON e.id=t.event_id
+            LEFT JOIN current_pregame_price p ON p.contract_id=c.contract_id
+            WHERE c.start_at>%s AND c.valid_until>%s AND
+              (c.version<>%s OR c.reason IS NULL AND
+                (c.payload#>>'{reference,selection_policy}' IS DISTINCT FROM %s
+                 OR c.payload#>'{reference,main_line_evidence}' IS NULL
+                 OR c.payload#>>'{coherent_probability,policy_version}' IS DISTINCT FROM %s)
+               OR p.contract_id IS NOT NULL AND p.payload->'coherent_probability' IS NULL
+               OR e.provider='sportsgameodds' AND t.venue='polymarket_us'
+                 AND c.reason IS DISTINCT FROM 'provider_venue_fee_applicability_unestablished')
+            ORDER BY c.game_key,c.contract_id""", (at, at, math.VERSION, math.REFERENCE_POLICY, math.COHERENT_POLICY)))
+        keys = sorted({r["provider"] + ":" + r["native_event_id"] for r in rows})
+        for source in {(r["provider"], r["native_event_id"]) for r in rows}:
+            db.execute("""INSERT INTO current_pregame_work(provider,native_event_id) VALUES(%s,%s)
+                ON CONFLICT(provider,native_event_id) DO UPDATE SET error=NULL,attempted_at=NULL""", source)
+        # Each selected source is bounded by already retained current games;
+        # no provider request is made and unchanged output stays idempotent.
+        results = process(db, keys=keys, limit=max(1, len(keys)), at=at) if keys else []
+        if any("error" in result for result in results):
+            raise ValueError("snapshot_stored_game_upgrade_failed")
+        after = {r["contract_id"]: r for r in db.execute(
+            "SELECT contract_id,payload,reason FROM current_pregame_calculation WHERE contract_id=ANY(%s)",
+            ([r["contract_id"] for r in rows],))}
+        excluded = defaultdict(int)
+        changed = revalued = 0
+        for row in rows:
+            result = after.get(row["contract_id"])
+            if not result or result["reason"]:
+                excluded[(result or {}).get("reason") or "source_identity_no_longer_current"] += 1
+                continue
+            revalued += 1
+            old = (row["payload"] or {}).get("reference") or {}
+            new = result["payload"]["reference"]
+            changed += (old.get("book"), old.get("probability")) != (new["book"], new["probability"])
+    return dict(policy=math.REFERENCE_POLICY, version=math.VERSION, examined=len(rows),
+                revalued=revalued, reference_updated=changed, excluded=dict(excluded),
+                upgrade="stored_affected_game_rebuild", provider_requests=0)

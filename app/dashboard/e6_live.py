@@ -230,7 +230,7 @@ def create_app(output=OUTPUT,owner=None,*,saved_loader=None,assets=None,card_sou
     async def shared(r):
         s=card_source or (ROOT/'app/dashboard/e6_real_static/watch.js').read_text();return web.Response(text=s[:s.index('function render()')],content_type='text/javascript')
     async def css(r):return web.FileResponse(ROOT/'app/dashboard/static/style.css')
-    async def state(r):return web.FileResponse(ROOT/'app/dashboard/e5_static/state.js')
+    async def state(r):return web.FileResponse(ROOT/'app/dashboard/static/saved-state.js')
     app.add_routes([web.get('/',page),web.get('/api/status',status),web.post('/api/start',start),web.post('/api/stop',stop),web.post('/api/interrupt',interrupt),web.get('/api/saved/{sid}',saved),web.get('/shared-card.js',shared),web.get('/style.css',css),web.get('/shared-state.js',state)])
     app.router.add_static('/view/',ROOT/'app/dashboard/e6_real_static',show_index=False)
     app.router.add_static('/live/',assets or ROOT/'app/dashboard/e6_live_static',show_index=False)

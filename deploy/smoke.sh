@@ -45,6 +45,13 @@ print(runtime["runtime_id"])
 compose up -d --no-deps --wait --wait-timeout 180 web
 first=$(curl -fsS http://127.0.0.1:8784/api/admin/status | jq -er 'select(.dispatch_enabled == false and .data_runtime.healthy) | .runtime_id')
 [[ "$before" == "$first" ]]
+[[ $(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8784/) == 302 ]]
+curl -fsS http://127.0.0.1:8784/research > "$scratch/research.html"
+grep -q '/view/current/research.js' "$scratch/research.html"
+curl -fsS http://127.0.0.1:8784/api/research/catalog > "$scratch/research-catalog.json"
+jq -e '.schema == "predict-research-catalog-1" and .provider_requests == 0 and .scheduled_calculations == 0' "$scratch/research-catalog.json" >/dev/null
+catalog_token=$(jq -er '.token' "$scratch/research-catalog.json")
+curl -fsS -X DELETE -H 'Origin: http://127.0.0.1:8784' -H 'Content-Type: application/json' "http://127.0.0.1:8784/api/research/read?token=$catalog_token" >/dev/null
 data_containers=$(compose ps --status running --quiet db collector archive | sort)
 [[ $(wc -l <<< "$data_containers") -eq 3 ]]
 web_container=$(compose ps --status running --quiet web)

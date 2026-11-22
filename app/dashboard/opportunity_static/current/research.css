@@ -1,0 +1,49 @@
+.research-page { --research-muted: var(--muted, #5c6571); }
+.research-page .board-wrap { max-width: 1500px; }
+.research-page .masthead nav { flex-wrap: wrap; }
+.research-page h1 { margin-bottom: .4rem; }
+.research-page .board-heading p { margin: .4rem 0; }
+.research-control { align-self: center; padding: .6rem; }
+.research-panels { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+.research-panels details { border: 1px solid var(--line, #d4d9de); border-radius: 6px; padding: .65rem; min-width: 0; }
+.research-panels summary { cursor: pointer; min-height: 30px; align-content: center; }
+.catalog-filters { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .65rem; padding: 1rem 0; border-block: 1px solid var(--line, #d4d9de); }
+.catalog-filters label { display: grid; gap: .25rem; font-size: .85rem; }
+.catalog-filters :is(input, select) { min-width: 0; width: 100%; min-height: 42px; padding: .5rem; border: 1px solid var(--line, #b8c2cc); border-radius: 4px; background: var(--paper, #fff); color: inherit; }
+.research-page button, .research-page .research-button { min-height: 42px; padding: .5rem .75rem; border: 1px solid var(--line, #b8c2cc); border-radius: 4px; cursor: pointer; background: var(--paper, #fff); color: inherit; font: inherit; }
+.research-page button:disabled { cursor: default; opacity: .55; }
+.catalog-actions { display: flex; gap: .4rem; align-items: end; flex-wrap: wrap; }
+.catalog-scroll { overflow-x: auto; }
+.catalog-table, .research-evidence-table { border-collapse: collapse; width: 100%; text-align: left; font-size: .85rem; }
+.catalog-table :is(th,td), .research-evidence-table :is(th,td) { border-bottom: 1px solid var(--line, #d4d9de); padding: .6rem .5rem; vertical-align: top; overflow-wrap: anywhere; }
+.catalog-table td:first-child { min-width: 170px; }
+.catalog-table small, .catalog-table strong { display: block; margin-bottom: .25rem; }
+.research-muted, .catalog-table small { color: var(--research-muted); font-size: .8rem; }
+.catalog-status-negative { color: #9f3030; }
+.catalog-status-positive { color: #166546; }
+.catalog-pagination { display: flex; align-items: center; justify-content: center; gap: .75rem; padding: 1rem; }
+.research-page footer { display: flex; flex-wrap: wrap; gap: 1rem; border-top: 1px solid var(--line, #d4d9de); padding-block: 1rem; }
+.research-page dialog { width: min(1050px, calc(100vw - 1rem)); max-height: calc(100dvh - 1rem); padding: 1rem; border: 1px solid var(--line, #b8c2cc); border-radius: 6px; background: var(--paper, #fff); color: inherit; }
+.research-page dialog::backdrop { background: rgb(0 0 0 / 45%); }
+.research-dialog-heading { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
+.research-detail-grid { display: grid; grid-template-columns: minmax(9rem, 1fr) minmax(0, 3fr); gap: .35rem .75rem; }
+.research-detail-grid dd { margin: 0; overflow-wrap: anywhere; }
+.research-page pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 28rem; overflow: auto; padding: .7rem; background: #f2f4f6; color: #17212b; font-size: .8rem; }
+.research-page dialog section { border-top: 1px solid var(--line, #d4d9de); margin-top: 1rem; padding-top: .4rem; }
+.research-page dialog h3 { font-size: 1rem; }
+.research-page dialog p { overflow-wrap: anywhere; }
+.research-panel-row { padding: .5rem 0; border-top: 1px solid var(--line, #d4d9de); overflow-wrap: anywhere; }
+@media (max-width: 760px) {
+ .research-panels { grid-template-columns: 1fr; }
+ .catalog-filters { grid-template-columns: repeat(2, minmax(0,1fr)); }
+ .catalog-actions { grid-column: 1 / -1; }
+ .research-page .board-heading { display: block; }
+ .catalog-table thead { display: none; }
+ .catalog-table, .catalog-table tbody, .catalog-table tr, .catalog-table td { display: block; width: 100%; }
+ .catalog-table tr { border: 1px solid var(--line, #d4d9de); border-radius: 5px; margin-bottom: .75rem; padding: .5rem; }
+ .catalog-table td { border: 0; display: grid; grid-template-columns: minmax(6.5rem, 1fr) minmax(0, 2fr); padding: .3rem; }
+ .catalog-table td::before { content: attr(data-label); color: var(--research-muted); padding-right: .5rem; }
+ .catalog-table td > * { grid-column: 2; }
+ .research-detail-grid { grid-template-columns: 1fr; }
+ .research-detail-grid dd { margin-bottom: .45rem; }
+}

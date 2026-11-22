@@ -52,6 +52,6 @@ if(filters&&advanced){for(const field of [...filters.querySelectorAll(':scope > 
  const refresh=document.getElementById('refresh');document.querySelector('.board-info')?.append(refresh);
 }
 for(const link of document.querySelectorAll('.masthead nav a')){
- const path=location.pathname==='/'||location.pathname==='/ev'?'/':location.pathname;
+ const path=location.pathname==='/'||location.pathname==='/ev'?'/opportunities':location.pathname;
  if(link.getAttribute('href')===path)link.setAttribute('aria-current','page');
 }

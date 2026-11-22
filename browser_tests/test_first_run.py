@@ -18,7 +18,7 @@ ASSETS = (
 def first_use(tab, base, archive_directory):
     from playwright.sync_api import expect
 
-    tab.goto(base + "/")
+    tab.goto(base + "/opportunities")
     expect(tab.get_by_role("heading", name="Opportunities", exact=True)).to_be_visible()
     expect(
         tab.get_by_role("heading", name="No positive opportunities in this view.")
@@ -240,7 +240,7 @@ def test_first_use_without_credentials(width, tmp_path, monkeypatch):
                 route.fulfill(
                     status=401, headers={"WWW-Authenticate": 'Basic realm="Admin"'}
                 )
-        elif url.path in ("/", "/ev", "/arbs", "/replay", "/admin"):
+        elif url.path in ("/opportunities", "/ev", "/arbs", "/replay", "/admin"):
             route.fulfill(
                 path=ASSETS
                 / (
@@ -249,7 +249,7 @@ def test_first_use_without_credentials(width, tmp_path, monkeypatch):
                     else "pregame-arbs.html"
                     if url.path == "/arbs"
                     else "pregame.html"
-                    if url.path in ("/", "/ev")
+                    if url.path in ("/opportunities", "/ev")
                     else "desk.html"
                 )
             )

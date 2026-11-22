@@ -15,7 +15,7 @@
 predict.dock108.dev {
 	@publicRead {
 		method GET HEAD
-		path / /ev /arbs /browse-odds /game /replay /about /trading-fees /api/trading-fees /api/pregame /api/pregame/arbs /api/pregame/updates /api/health /view/current/desk.html /api/comparison-current /api/comparison-current/updates /api/comparison-current/selection /api/comparison-snapshot/details /api/odds-replay /api/odds-replay/details
+		path / /opportunities /ev /arbs /browse-odds /game /replay /about /trading-fees /api/trading-fees /api/pregame /api/pregame/arbs /api/pregame/updates /api/health /view/current/desk.html /api/comparison-current /api/comparison-current/updates /api/comparison-current/selection /api/comparison-snapshot/details /api/odds-replay /api/odds-replay/details
 	}
 	@publicAssets {
 		method GET HEAD
@@ -25,7 +25,7 @@ predict.dock108.dev {
 		method POST DELETE
 		path /api/comparison-current/lease
 	}
-	@admin path /admin /admin/* /my-bets /raw-odds /odds /coverage /current/coverage /scanner /api/* /current/assets/* /view/* /style.css /shared-state.js
+	@admin path /research /admin /admin/* /my-bets /raw-odds /odds /coverage /current/coverage /scanner /api/* /current/assets/* /view/* /style.css /shared-state.js
 	@browserIcon {
 		method GET HEAD
 		path /favicon.ico /apple-touch-icon.png /apple-touch-icon-precomposed.png

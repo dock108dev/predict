@@ -14,6 +14,20 @@ ACCOUNT_PATH = ROOT / '.local/trade-fee-account-facts.json'
 RANKING_BASIS = 'decisive_taker_one_usd_claim_one_fill_total_risk_v1'
 
 
+def provider_venue_fee_reason(record):
+    """A display alias cannot establish an execution venue's fee applicability.
+
+    SGO's original ``polymarket`` bookmaker is currently displayed as US, but
+    no independently reviewed source-bound equivalence owner establishes that
+    identity. Admin fee rates configure a venue's arithmetic, not this bridge.
+    Native Polymarket US identities retain their existing applicability path.
+    """
+    quote = record['quote']
+    if quote['source']['provider'] == 'sportsgameodds' and quote['venue'] == 'polymarket_us':
+        return 'provider_venue_fee_applicability_unestablished'
+    return None
+
+
 def applicability(record):
     meta = record.get('comparison_source_metadata', {})
     retail = meta.get('public_retail_observation') or {}

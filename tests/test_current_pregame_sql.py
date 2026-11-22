@@ -505,7 +505,8 @@ class CurrentPregameSQL(PregameFixture):
                 )
                 self.assertEqual(len(expanded["rows"]), 102)
             self.assertEqual(len(records), 408)
-            self.assertEqual(sum(row["complete"] for row in result), 408)
+            # SGO's original polymarket alias cannot borrow US venue fees.
+            self.assertEqual(sum(row["complete"] for row in result), 306)
             self.assertEqual(complete["total"], 102)
             self.assertEqual(beyond["total"], 102)
             self.assertEqual(beyond["rows"], [])
@@ -514,10 +515,10 @@ class CurrentPregameSQL(PregameFixture):
                 db.execute(
                     "SELECT count(*) n FROM current_pregame_calculation WHERE reason IS NULL"
                 ).fetchone()["n"],
-                408,
+                306,
             )
             print(
-                "dense current game: 408 offers, 102 exact bets, admission-through-read seconds",
+                "dense current game: 408 offers, 306 fee-bound calculations, 102 exact bets, admission-through-read seconds",
                 monotonic() - started,
             )
 

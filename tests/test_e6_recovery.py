@@ -119,7 +119,7 @@ class ReadOnlySurface(unittest.IsolatedAsyncioTestCase):
                 self.assertFalse((await (await c.get('/api/status')).json())['active'])
     def test_offline_guarded_reopening(self):
         code="""
-from app.dashboard.e5_preview import isolate_process
+from app.dashboard.historical.e5_preview import isolate_process
 from app.dashboard.e6_recovery import load_saved
 from pathlib import Path
 import sys

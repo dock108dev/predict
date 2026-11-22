@@ -71,7 +71,7 @@ def card_source():
 
 def main():
     p=argparse.ArgumentParser();p.add_argument('--catalog',type=Path,default=CATALOG);p.add_argument('--port',type=int,default=8780);a=p.parse_args()
-    from app.dashboard.e5_preview import isolate_process
+    from app.dashboard.saved_preview import isolate_process
     from aiohttp import web
     isolate_process()
     web.run_app(e6_live.create_app(owner=Reader(a.catalog),saved_loader=load_saved,assets=ROOT/'app/dashboard/e6_recovery_static',card_source=card_source()),host='127.0.0.1',port=a.port,access_log=None)

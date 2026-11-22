@@ -111,6 +111,9 @@ def _read(db, query, *, at=None, clock, configured_routes):
         "p.valid_until>%s",
         "p.start_at>%s",
         "e.scheduled_start::timestamptz>%s",
+        # Refuse an older writer's native-US fee assumption immediately, before
+        # collector recovery replaces the generated row. Raw catalog stays open.
+        "NOT (e.provider='sportsgameodds' AND p.venue='polymarket_us')",
     ]
     params = [at, at, at]
     if query.get("_scope_seconds"):

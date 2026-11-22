@@ -28,4 +28,6 @@ include = ["app*"]
 "app.collection" = ["static/*"]
 
 "app.storage" = ["migrations/*.sql"]
-"app.dashboard" = ["static/*", "opportunity_static/*", "opportunity_static/u0/*", "opportunity_static/current/*", "e5_static/*", "e6_live_static/*", "e6_real_static/*", "e6_recovery_static/*", "*.json"]
+"app.dashboard" = ["static/*", "opportunity_static/*", "opportunity_static/u0/*", "opportunity_static/current/*", "e6_live_static/*", "e6_real_static/*", "e6_recovery_static/*", "*.json"]
+
+"app.dashboard.historical" = ["e5_static/*"]

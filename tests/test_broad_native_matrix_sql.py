@@ -175,15 +175,29 @@ class BroadNativeMatrixSQL(NativeMatrixFixture):
                 packet = await response.json()
                 quote = packet["rows"][0]
                 selection = dict(layout="desk", id=quote["id"], data_type=packet["data_type"])
+                enriched_rows = None
                 for params in (selection, dict(layout="desk", quote_key=quote["id"])):
                     response = await client.get(
                         "/api/comparison-current/selection", params=params
                     )
                     self.assertEqual(response.status, 200, await response.text())
                     detail = await response.json()
-                    self.assertEqual(detail["rows"], [quote])
+                    self.assertEqual(len(detail['rows']),1)
+                    # Exact inspection adds selected-only venue evidence to a
+                    # copy. Every committed input, clock and result stays the
+                    # same as Browse; aggregate size remains unknown, not zero.
+                    selected_row = dict(detail['rows'][0])
+                    size = selected_row.pop('available_size')
+                    self.assertEqual(selected_row,quote)
+                    self.assertEqual(size['status'],'unknown')
+                    self.assertIsNone(size['quantity'])
+                    self.assertTrue(size['reason'])
+                    if enriched_rows is None:enriched_rows=deepcopy(detail['rows'])
+                    else:self.assertEqual(detail['rows'],enriched_rows)
                     self.assertEqual(detail["provider_requests"], 0)
                     self.assertEqual(detail["scheduled_calculations"], 0)
+                unchanged = await client.get('/api/comparison-current',params=query)
+                self.assertEqual((await unchanged.json())['rows'],packet['rows'])
                 retired = await client.get(
                     "/api/comparison-current", params=dict(query, basis="before")
                 )
@@ -194,7 +208,7 @@ class BroadNativeMatrixSQL(NativeMatrixFixture):
                 paused = await client.get(
                     "/api/comparison-current/selection", params=selection
                 )
-                self.assertEqual((await paused.json())["rows"], [quote])
+                self.assertEqual((await paused.json())["rows"], enriched_rows)
                 missing = await client.get(
                     "/api/comparison-current/selection",
                     params=dict(selection, id="absent-contract"),

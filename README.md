@@ -3,13 +3,13 @@
 Version **0.2.0** adds read-only amount research, decision-visible cashflows and
 size status, retained comparisons, and session navigation context.
 
-Predict is an odds and opportunity board with a personal trade journal. It
-opens on **Pregame Opportunities**, showing complete main-line bets ranked by modeled
-**Probability edge** after fees. **Rank by** also offers Kelly growth, Net EV, the original
-Kelly-fraction score and Balanced. **Browse odds** groups main markets by game,
-sorted by start time. Open a game for alternate lines, then select a line to compare exact
-market and sportsbook prices. **Arbitrage** compares opposite market-to-market
-and market-to-sportsbook legs after fees, independently of sportsbook EV.
+Predict is a personal market-data research system. It opens on **Research**: a
+received-data table with source/book identity, exact markets, original clocks,
+positive and nonpositive calculations, unavailable reasons, inspection and export.
+**Opportunities** remains an optional positive-EV view. **Browse odds**, exact game
+comparisons, **Arbitrage**, saved replay and the optional personal journal remain
+available. Correct data and reproducible calculations are useful even when no
+profitable opportunity exists.
 
 The collector receives odds, normalizes affected games, calculates using posted
 prices, and stores current prices and complete calculations in PostgreSQL. Refresh and inspection

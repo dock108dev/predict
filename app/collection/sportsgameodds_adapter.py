@@ -13,14 +13,13 @@ import re
 from urllib.parse import urlsplit
 
 from app.comparison.sgo_reference import BEST_BOOKS
+from .sgo_capabilities import LEAGUES, MARKET_TYPES, PROPHETX_BOOKMAKER_ID, supported_odd
 
-LEAGUES = frozenset(('NFL', 'NCAAF', 'NBA', 'NCAAB', 'MLB', 'NHL'))
-MARKETS = {'ml': 'moneyline', 'ml3way': 'moneyline', 'sp': 'spread', 'ou': 'total'}
+MARKETS = MARKET_TYPES
 MAX_PAGE_BYTES = 16 * 1024 * 1024
 MAX_EVENTS = 100
 MAX_ODDS_PER_EVENT = 20000
 MAX_BOOKS_PER_ODD = 200
-PROPHETX_BOOKMAKER_ID = 'prophetexchange'
 P2P_BOOKS = frozenset(('novig', 'prophetx', PROPHETX_BOOKMAKER_ID, 'kalshi', 'polymarket', 'matchbook', 'betfairexchange'))
 LINK_BOOKS = P2P_BOOKS | {'pinnacle', *BEST_BOOKS}
 OPPOSITE_SIDE = {'home': 'away', 'away': 'home', 'over': 'under', 'under': 'over'}
@@ -285,14 +284,7 @@ def parse_page(body, received_at, *, leagues=LEAGUES, venues=None):
             if not isinstance(odd, dict):
                 raise ValueError('odd shape')
             typ, side, entity = odd.get('betTypeID'), odd.get('sideID'), odd.get('statEntityID')
-            if odd.get('periodID') != 'game' or odd.get('statID') != 'points' or typ not in MARKETS:
-                continue
-            if typ in ('ml', 'sp') and (side not in ('home', 'away') or entity != side):
-                continue
-            if typ == 'ml3way' and not (side in ('home', 'away') and entity == side
-                                       or side == 'draw' and entity in ('all', 'draw')):
-                continue
-            if typ == 'ou' and (side not in ('over', 'under') or entity != 'all'):
+            if not supported_odd(odd):
                 continue
             if odd.get('oddID') != odd_id:
                 raise ValueError('odd identity mismatch')

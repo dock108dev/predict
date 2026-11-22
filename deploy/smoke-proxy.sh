@@ -61,7 +61,7 @@ check() {
     fi
 }
 
-for path in / /ev /arbs /browse-odds /game /replay /trading-fees /api/trading-fees /api/pregame /api/pregame/updates /api/health /view/current/desk.js \
+for path in / /opportunities /ev /arbs /browse-odds /game /replay /trading-fees /api/trading-fees /api/pregame /api/pregame/updates /api/health /view/current/desk.js \
             /view/current/predict-icon.png /api/comparison-current /api/comparison-current/updates \
             /api/comparison-current/selection /api/comparison-snapshot/details \
             /api/odds-replay /api/odds-replay/details; do
@@ -75,6 +75,12 @@ check 404 GET /apple-touch-icon-180x180.png
 check 404 GET /manifest.webmanifest
 check 403 GET / -H 'Origin: https://unrelated.invalid'
 check 401 GET /admin
+check 401 GET /research
+check 401 GET /api/research/catalog
+check 401 GET /api/research/input
+check 401 GET /api/research/export
+check 401 GET /api/research/coverage
+check 401 GET /api/research/cohorts
 check 401 GET /my-bets
 check 401 GET /api/bet-journal
 check 401 POST /api/bet-journal
@@ -84,6 +90,8 @@ check 401 GET /api/admin/status
 check 401 POST /api/admin/current
 check 401 POST /api/comparison-current/settings
 check 200 GET /admin -u "fixture:$password"
+check 200 GET /research -u "fixture:$password"
+check 200 GET /api/research/catalog -u "fixture:$password"
 check 200 GET /my-bets -u "fixture:$password"
 check 200 GET /api/bet-journal -u "fixture:$password"
 check 200 GET /api/admin/status -u "fixture:$password"

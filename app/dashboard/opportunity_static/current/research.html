@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Predict · Research</title><link rel="icon" href="/view/current/predict-icon.png"><link rel="apple-touch-icon" href="/view/current/predict-icon.png">
+<link rel="stylesheet" href="/view/current/pregame.css">
+<link rel="stylesheet" href="/view/current/research.css">
+<script type="module" src="/view/current/research.js"></script>
+</head><body class="research-page">
+<a class="skip" href="#catalog">Skip to received data</a>
+<header class="masthead"><a class="brand" href="/">PREDICT</a>
+<nav aria-label="Main"><a href="/research" aria-current="page">Research</a><a href="/opportunities">Opportunities</a><a href="/browse-odds">Browse odds</a><a href="/raw-odds">Raw inputs</a><a href="/admin">Admin</a></nav></header>
+<main class="board-wrap">
+<header class="board-heading"><div><h1>Received market data</h1><p>Inspect source observations, identities and calculations across every result status.</p></div><a class="research-control" href="/admin">Collection &amp; budget controls</a></header>
+<section class="research-panels" aria-label="Research evidence">
+<details id="coverage"><summary>Collection, archive &amp; retention</summary><div id="coverage-content"><p>Open to read acquisition and archive coverage.</p></div></details>
+<details id="cohorts"><summary>Declared research populations &amp; evaluation</summary><div id="cohort-content"><p>Open to inspect frozen cohorts, missing cases and outcome scoring.</p></div></details>
+</section>
+<form id="catalog-filters" class="catalog-filters">
+<label>Search<input id="search" name="search" type="search" placeholder="Team, event or source market" maxlength="150"></label>
+<label>Provider<select id="provider" name="provider"><option value="">All providers</option><option value="sportsgameodds">SportsGameOdds</option><option value="kalshi">Kalshi native</option><option value="polymarket_us">Polymarket US native</option><option value="novig">Novig native</option><option value="oddslink_public_board">OddsLink</option><option value="the_odds_api">The Odds API (retained)</option></select></label>
+<label>Original book<input id="book" name="original_bookmaker_id" type="search" placeholder="Any bookmaker ID" maxlength="100" list="books"><datalist id="books"><option value="fanduel"><option value="draftkings"><option value="betmgm"><option value="caesars"><option value="pinnacle"><option value="novig"><option value="prophetexchange"><option value="kalshi"><option value="polymarket"></datalist></label>
+<label>League<select id="sport" name="sport"><option value="">All leagues</option><option>NFL</option><option>NCAAF</option><option>NBA</option><option>NCAAB</option><option>MLB</option><option>NHL</option></select></label>
+<label>Market<select id="family" name="family"><option value="">All markets</option><option value="moneyline">Moneyline</option><option value="spread">Spread</option><option value="total">Total</option></select></label>
+<label>Calculation<select id="calculation" name="calculation_status" aria-label="Calculation"><option value="">Every status</option><option value="positive">Positive</option><option value="negative">Negative</option><option value="zero">Zero</option><option value="unavailable">Unavailable</option></select></label>
+<label>Maximum source age (minutes)<input id="age" name="max_age_minutes" type="number" min="1" max="525600" step="1" placeholder="Any age"></label>
+<div class="catalog-actions"><button id="apply" type="submit">Apply filters</button><button id="clear" type="button">Clear</button><button id="refresh" type="button">Refresh data</button></div>
+</form>
+<p id="catalog-status" role="status">Loading received data…</p><p id="catalog-snapshot" class="research-muted"></p>
+<section id="catalog" aria-label="Received market observations" aria-busy="true" tabindex="-1"><div class="catalog-scroll"><table class="catalog-table"><thead><tr><th scope="col">Event / market</th><th scope="col">Provider / original book</th><th scope="col">Outcome / line</th><th scope="col">Source price</th><th scope="col">Clocks</th><th scope="col">Calculation</th><th scope="col">Inspect</th></tr></thead><tbody id="catalog-rows"></tbody></table></div></section>
+<nav class="catalog-pagination" aria-label="Catalog pages"><button id="previous" disabled>Previous</button><span id="page"></span><button id="next" disabled>Next</button></nav>
+<p class="research-muted">Received records include unavailable, unpaired, stale and withdrawn observations. Source event counts can overlap across providers. Positive Opportunities is a separate view. Browser reads issue no provider requests.</p>
+<footer><a href="/raw-odds">Raw native books &amp; retained legacy inputs</a><a href="/replay?dataset=frozen">Saved replay</a><a href="/my-bets">Personal journal</a></footer>
+</main>
+<dialog id="input-detail" aria-labelledby="input-title"><div class="research-dialog-heading"><h2 id="input-title">Captured research record</h2><button id="close-detail" type="button">Close</button></div><div id="input-content"></div></dialog>
+</body></html>

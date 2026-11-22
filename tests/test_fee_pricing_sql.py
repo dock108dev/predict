@@ -71,7 +71,13 @@ class FeePricingSQL(LatestBoardFixture):
                 upsert_frames(db, prepare_frames(parsed, refs))
                 CurrentRowStore(db).upsert_records(records, now=AT)
             board.process(db, at=at)
-            for venue in ("kalshi", "polymarket_us"):
+            # Native-US fee mechanics have portable/native coverage. The SGO
+            # polymarket alias has no independently established US applicability.
+            self.assertEqual(board.read(db, dict(venue="polymarket_us"), at=at)["rows"], [])
+            self.assertEqual({r["reason"] for r in db.execute(
+                "SELECT reason FROM current_pregame_calculation WHERE venue='polymarket_us'")},
+                {"provider_venue_fee_applicability_unestablished"})
+            for venue in ("kalshi",):
                 row = board.read(db, dict(venue=venue), at=at)["rows"][0]
                 for amount in ("25", "100", "500", "25.13"):
                     modeled = research(
@@ -95,7 +101,7 @@ class FeePricingSQL(LatestBoardFixture):
                     )
                     self.assertEqual(modeled["available_size"]["status"], "unknown")
 
-    async def test_fee_edit_recalculates_sgo_kalshi_and_polymarket_with_original_clocks(
+    async def test_fee_edit_recalculates_bound_kalshi_and_withholds_unbound_polymarket(
         self,
     ):
         data = page()
@@ -114,7 +120,7 @@ class FeePricingSQL(LatestBoardFixture):
                 CurrentRowStore(db).upsert_records(records, now=AT)
             board.process(db, at=stamp(AT))
             initial = {}
-            for venue in ("kalshi", "polymarket_us"):
+            for venue in ("kalshi",):
                 result = board.read(db, dict(venue=venue), at=stamp(AT))
                 self.assertTrue(
                     result["rows"],
@@ -151,10 +157,10 @@ class FeePricingSQL(LatestBoardFixture):
             self.assertEqual(
                 after["fee"]["evidence"]["database_fee_rule"]["rate"], "0.1"
             )
-            self.assertEqual(
-                board.read(db, dict(venue="polymarket_us"), at=stamp(AT))["rows"][0],
-                initial["polymarket_us"],
-            )
+            self.assertEqual(board.read(db, dict(venue="polymarket_us"), at=stamp(AT))["rows"], [])
+            self.assertEqual({r["reason"] for r in db.execute(
+                "SELECT reason FROM current_pregame_calculation WHERE venue='polymarket_us'")},
+                {"provider_venue_fee_applicability_unestablished"})
             bad = deepcopy(updated)
             bad[0]["rate"] = "-1"
             with self.assertRaises(ValueError):

@@ -174,6 +174,27 @@ def test_monitor_restart_claims_recent_slot_once_and_skips_old_catchup():
     asyncio.run(scenario())
 
 
+def test_monitor_idle_reports_actual_next_slot_without_dispatch_or_control_changes():
+    async def scenario():
+        store, worker = Store(), Worker()
+        store.value['settings']['monitor_phase_seconds'] = 1200
+        before=deepcopy(store.value)
+        worker.phase='initializing'
+        worker.at=AT+timedelta(minutes=19)
+        owner=ActivityCollector(worker,store=store)
+        await owner.tick()
+        assert worker.phase=='waiting_for_cycle'
+        assert worker.metrics['next_refresh_at']==(AT+timedelta(minutes=20)).isoformat()
+        assert not worker.calls and not store.runs and not store.updates
+        assert store.value==before and not worker.stopped and not worker.paused
+        assert 'last_received_at' not in worker.metrics
+        worker.at=AT+timedelta(minutes=20)
+        await owner.tick()
+        assert worker.calls and store.runs[0]['monitor_slot_at']==worker.at.isoformat()
+        assert store.value==before and not worker.stopped and not worker.paused
+    asyncio.run(scenario())
+
+
 def test_active_monitor_overrun_coalesces_latest_slot_and_phase_edit_never_cancels():
     async def scenario():
         store, worker = Store(), Worker()

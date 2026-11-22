@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 from aiohttp.test_utils import TestClient, TestServer
-from app.dashboard.e5_preview import load_package, create_app, ROOT, percent
+from app.dashboard.historical.e5_preview import load_package, create_app, ROOT, percent
 from app.opportunities.service import restore
 
 class FilesOnlyTests(unittest.TestCase):
@@ -54,7 +54,7 @@ class FilesOnlyTests(unittest.TestCase):
             with self.assertRaises(FileNotFoundError):load_package(Path(d))
 
     def test_external_e3_dependency_mismatch_rejected(self):
-        with patch('app.dashboard.e5_preview.as_of',return_value='changed'):
+        with patch('app.dashboard.historical.e5_preview.as_of',return_value='changed'):
             with self.assertRaisesRegex(ValueError,'reference history'):load_package()
 
 class HttpTests(unittest.IsolatedAsyncioTestCase):
@@ -65,7 +65,7 @@ class HttpTests(unittest.IsolatedAsyncioTestCase):
         for path in ('/api/start','/api/stop','/api/live','/api/sessions'):
             response=await self.client.post(path);self.assertEqual(response.status,404)
     async def test_validation_failure_is_closed(self):
-        with patch('app.dashboard.e5_preview.load_package',side_effect=ValueError('changed dependency')):
+        with patch('app.dashboard.historical.e5_preview.load_package',side_effect=ValueError('changed dependency')):
             response=await self.client.get('/api/package');self.assertEqual(response.status,422)
             body=await response.json();self.assertNotIn('cases',body)
     async def test_page_reuses_css_and_restricts_connections(self):

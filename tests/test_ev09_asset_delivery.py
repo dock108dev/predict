@@ -14,10 +14,22 @@ from tests.current_fixture import InjectedTestProvider
 from tests.test_current_state import owner
 
 
-PUBLIC_DESK_PAGES = ("/", "/ev", "/arbs", "/browse-odds", "/game", "/replay", "/about")
+PUBLIC_DESK_PAGES = ("/opportunities", "/research", "/ev", "/arbs", "/browse-odds", "/game", "/replay", "/about")
 
 
 class Assets(unittest.IsolatedAsyncioTestCase):
+    async def test_research_landing_preserves_selected_legacy_links(self):
+        provider = InjectedTestProvider()
+        provider.database_mode = True
+        app = create_app(owner=owner(), sessions={}, current_provider=provider)
+        async with TestClient(TestServer(app)) as client:
+            response = await client.get('/', allow_redirects=False)
+            self.assertEqual(response.status, 302)
+            self.assertEqual(response.headers['Location'], '/research')
+            response = await client.get('/?id=exact-existing-contract')
+            self.assertIn('/view/current/pregame.js', await response.text())
+            response = await client.get('/research')
+            self.assertIn('/view/current/research.js', await response.text())
     async def test_personal_journal_route_serves_its_module_and_shared_style(self):
         provider = InjectedTestProvider()
         provider.database_mode = True
@@ -131,18 +143,21 @@ class Assets(unittest.IsolatedAsyncioTestCase):
                         else re.findall(r"(?:from\s+|import\s*)['\"]([^'\"]+)['\"]", source)
                     )
                     if path in scripts and "scanner.js" not in path and "prism.js" not in path:
-                        endpoint = ("/api/pregame" if page in ("/","/ev","/browse-odds","/game","/arbs") else
+                        endpoint = ("/api/research/catalog" if page == "/research" else
+                            "/api/pregame" if page in ("/opportunities","/ev","/browse-odds","/game","/arbs") else
                             "/api/comparison-current" if page in PUBLIC_DESK_PAGES else "/api/comparison-snapshot")
                         self.assertIn(endpoint, source)
                         self.assertNotIn("new SavedReadPoller", source)
                     pending.extend(urljoin(path, module) for module in imports)
                 expected = (
+                    {"pregame.css", "research.css", "research.js", "manrope.ttf"}
+                    if page == "/research" else
                     {"pregame.css", "manrope.ttf"}
                     if page == "/about" else
                     {"board-client.js", "board-contract.js", "board-values.js", "board-read.js", "scanner.css", "scanner.js"}
                     if page == "/scanner" else
                     {"pregame.css",("pregame-arbs.js" if page=="/arbs" else "pregame.js"),"manrope.ttf"}
-                    if page in ("/","/ev","/browse-odds","/game","/arbs") else
+                    if page in ("/opportunities","/ev","/browse-odds","/game","/arbs") else
                     {"desk.css", "desk-components.css", "desk-ticketboard.css", "desk-ticketboard.js",
                      "desk.js", "desk-bootstrap.js", "desk-drawer.js",
                      "desk-polling.js", "desk-preferences.js", "desk-quote-display.js", "ui-common.js",

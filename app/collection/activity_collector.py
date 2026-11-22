@@ -416,6 +416,15 @@ class ActivityCollector:
                 return
             self.next_kind = "monitor" if kind == "live" else "live"
         self.retry_at = None
+        if self.monitor is None and self.live is None:
+            # Initialization has completed even when the next configured slot
+            # is in the future. A waiting source is not a connecting source;
+            # this diagnostic never renews a receipt or changes owner intent.
+            self.worker.phase = 'waiting_for_cycle'
+            deadlines = [self.monitor_due]
+            if status['mode'] == 'live':deadlines.append(self.live_due)
+            self.worker.metrics['next_refresh_at'] = min(
+                deadline for deadline in deadlines if deadline is not None).isoformat()
 
     async def run(self):
         try:

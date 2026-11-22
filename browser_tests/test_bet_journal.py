@@ -60,7 +60,7 @@ def test_save_ev_edit_actual_odds_record_result_and_keep_original(width, tmp_pat
         page = browser.new_page(viewport=dict(width=width, height=900))
         page.on("pageerror", lambda error: errors.append(str(error)))
         page.route("**/*", fixture.serve)
-        page.goto("https://predict.fixture/")
+        page.goto("https://predict.fixture/opportunities")
         page.get_by_role("button", name="Compare prices for").click()
         page.get_by_role("button", name="Save ProphetX to My Bets").click()
         page.get_by_role("link", name="Enter actual odds & stake").click()

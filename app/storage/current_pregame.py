@@ -11,7 +11,7 @@ from app.comparison import current_pregame as math
 from app.comparison.game_phase import scheduled_phase, sgo_event_status, sporting_phase
 from app.comparison.public_sportsbook_estimate import signature
 from app.comparison.snapshot_fee_outcome import outcome as fee_outcome, reviews
-from app.comparison.snapshot_fee_scope import applicability
+from app.comparison.snapshot_fee_scope import applicability, provider_venue_fee_reason
 from app.fees import product_schedules, schedule_lifecycle
 from .current_rows import CurrentRowStore, LOCK, contract_id
 from .sportsgameodds_reference import EventInputs, read_event
@@ -19,7 +19,22 @@ from .store import hashed, stamp
 from .sgo_schedule_review import canonical_roles
 
 
-UPSERT = "INSERT INTO current_pregame_calculation\n            (contract_id,game_key,bet_id,league,family,venue,start_at,main,input_revision,version,valid_until,\n             net_ev,opportunity_score,reason,payload)\n            VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)\n            ON CONFLICT(contract_id) DO UPDATE SET game_key=excluded.game_key,bet_id=excluded.bet_id,\n              league=excluded.league,family=excluded.family,venue=excluded.venue,start_at=excluded.start_at,\n              main=excluded.main,input_revision=excluded.input_revision,version=excluded.version,\n              calculated_at=clock_timestamp(),valid_until=excluded.valid_until,net_ev=excluded.net_ev,\n              opportunity_score=excluded.opportunity_score,reason=excluded.reason,payload=excluded.payload\n            WHERE current_pregame_calculation.input_revision<>excluded.input_revision\n                OR current_pregame_calculation.reason IS DISTINCT FROM excluded.reason"
+UPSERT = """INSERT INTO current_pregame_calculation
+    (contract_id,game_key,bet_id,league,family,venue,start_at,main,input_revision,version,valid_until,
+     net_ev,opportunity_score,reason,payload)
+    VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+    ON CONFLICT(contract_id) DO UPDATE SET game_key=excluded.game_key,bet_id=excluded.bet_id,
+      league=excluded.league,family=excluded.family,venue=excluded.venue,start_at=excluded.start_at,
+      main=excluded.main,input_revision=excluded.input_revision,version=excluded.version,
+      calculated_at=clock_timestamp(),valid_until=excluded.valid_until,net_ev=excluded.net_ev,
+      opportunity_score=excluded.opportunity_score,reason=excluded.reason,payload=excluded.payload
+    WHERE current_pregame_calculation.input_revision<>excluded.input_revision
+       OR current_pregame_calculation.reason IS DISTINCT FROM excluded.reason
+       OR current_pregame_calculation.version<>excluded.version
+       OR current_pregame_calculation.payload#>>'{reference,selection_policy}'
+            IS DISTINCT FROM excluded.payload#>>'{reference,selection_policy}'
+       OR current_pregame_calculation.payload#>>'{coherent_probability,policy_version}'
+            IS DISTINCT FROM excluded.payload#>>'{coherent_probability,policy_version}'"""
 
 
 def utc():
@@ -97,6 +112,12 @@ class CalculationContext:
 
     def fee(self, record, at):
         q, market = record["quote"], record["market_identity"]
+        if reason := provider_venue_fee_reason(record):
+            return dict(available=False, reason=reason, evidence=dict(
+                provider=q["source"]["provider"], represented_venue=q["venue"],
+                provider_bookmaker_id=(record.get("comparison_source_metadata") or {}).get("provider_bookmaker_id"),
+                venue_equivalence="unestablished",
+            ))
         row = dict(
             venue=q["venue"],
             source=q["source"],
@@ -389,13 +410,19 @@ def calculate_game(db, job, context, *, at):
     previous = {
         r["contract_id"]: r
         for r in db.execute(
-            "SELECT contract_id,input_revision,reason,valid_until FROM current_pregame_calculation WHERE contract_id=ANY(%s)",
+            """SELECT contract_id,input_revision,reason,valid_until,version,
+                payload#>>'{reference,selection_policy}' AS reference_policy,
+                payload#>>'{coherent_probability,policy_version}' AS coherent_policy
+                FROM current_pregame_calculation WHERE contract_id=ANY(%s)""",
             ([contract_id(r) for r in records],),
         )
     }
     references = {}
     reference_errors = {}
-    reference_inputs = math.ReferenceInputs(observations)
+    coherent = {}
+    reference_inputs = math.ReferenceInputs(
+        observations, books=math.COHERENT_POLICIES[math.EXPANSION_POLICY]
+    )
     updates = []
     price_updates = []
     complete = 0
@@ -451,8 +478,49 @@ def calculate_game(db, job, context, *, at):
                     raise ValueError("occurrence_schedule_conflict")
             fee = context.fee(record, at)
             if not fee.get("available"):
+                if fee.get("reason") == "provider_venue_fee_applicability_unestablished":
+                    old = db.execute("""SELECT c.payload,p.record,p.fee_input
+                        FROM current_pregame_calculation c LEFT JOIN current_pregame_price p
+                        USING(contract_id) WHERE c.contract_id=%s AND c.payload IS NOT NULL""", (cid,)).fetchone()
+                    if old:
+                        from app.research.records import preserve_conditional
+
+                        try:
+                            preserve_conditional(db, old["payload"], record=old["record"], fee_input=old["fee_input"])
+                        except Exception as exc:
+                            # Preserve the hidden old witness if retention is
+                            # unavailable; rolling back this game cannot turn it
+                            # back into applicable EV in the guarded readers.
+                            raise RuntimeError("conditional_calculation_retention_unavailable") from exc
                 raise ValueError(fee.get("reason") or "fee_schedule_unavailable")
             price_payload = math.calculate(record, None, fee, at=at, game_key=game_key)
+            key = math.reference_key(record)
+            if key not in coherent:
+                try:
+                    coherent[key] = math.coherent_reference(record, reference_inputs, at=at)
+                except ValueError as exc:
+                    coherent[key] = dict(
+                        available=False, reason=str(exc),
+                        policy_version=math.COHERENT_POLICY,
+                        probability=None, probabilities=None,
+                    )
+            price_payload["coherent_probability"] = coherent[key]
+            from app.collection.sportsgameodds_current_rows import source_bookmaker
+
+            try:
+                price_payload["alternative_probabilities"] = {
+                    math.EXPANSION_POLICY: math.coherent_reference(
+                        record, reference_inputs, at=at, policy=math.EXPANSION_POLICY,
+                        evaluated_book=source_bookmaker(record),
+                    )
+                }
+            except ValueError as exc:
+                price_payload["alternative_probabilities"] = {
+                    math.EXPANSION_POLICY: dict(
+                        policy_version=math.EXPANSION_POLICY, probability=None,
+                        probabilities=None, reason=str(exc),
+                    )
+                }
             price_payload["sportsbook_event_ids"] = list(observations)
             price_payload["sportsbook_sides_reversed"] = {
                 eid: any(
@@ -468,9 +536,10 @@ def calculate_game(db, job, context, *, at):
                     input_identity(record, None, context, fee),
                     price_payload["sportsbook_event_ids"],
                     price_payload["sportsbook_sides_reversed"],
+                    math.probability_inputs(coherent[key]),
+                    {p: math.probability_inputs(r) for p, r in price_payload["alternative_probabilities"].items()},
                 ]
             )
-            key = math.reference_key(record)
             if key in reference_errors:
                 raise ValueError(reference_errors[key])
             if key not in references:
@@ -479,12 +548,17 @@ def calculate_game(db, job, context, *, at):
                 except ValueError as exc:
                     reference_errors[key] = str(exc)
                     raise
-            revision = input_identity(record, references[key], context, fee)
+            revision = hashed([input_identity(record, references[key], context, fee),
+                               math.probability_inputs(coherent[key]),
+                               {p: math.probability_inputs(r) for p, r in price_payload["alternative_probabilities"].items()}])
             prior = previous.get(cid)
             if (
                 prior
                 and prior["input_revision"] == revision
                 and prior["reason"] is None
+                and prior["version"] == math.VERSION
+                and prior["reference_policy"] == math.REFERENCE_POLICY
+                and prior["coherent_policy"] == math.COHERENT_POLICY
                 and stamp(prior["valid_until"]) > at
             ):
                 complete += 1
@@ -503,6 +577,8 @@ def calculate_game(db, job, context, *, at):
             payload = math.calculate(
                 record, references[key], fee, at=at, game_key=game_key
             )
+            payload["coherent_probability"] = coherent[key]
+            payload["alternative_probabilities"] = price_payload["alternative_probabilities"]
         except (KeyError, TypeError, ValueError, ArithmeticError, OSError) as exc:
             reason = str(exc)[:160] or type(exc).__name__
         revision = revision or input_identity(record, dict(reason=reason), context)

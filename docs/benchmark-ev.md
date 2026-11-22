@@ -125,3 +125,21 @@ have separate evidence requirements. A positive single-offer estimate does not
 establish an arbitrage pair. Stale or stopped inputs lose current eligibility
 while pinned or archived evidence can remain inspectable. [Arbitrage evaluation](../app/comparison/ordinary_arb.py) ·
 [Fee coverage](fee-coverage-policy.md) · [Data limitations](market-data-gaps.md)
+
+## Coherent research baseline
+
+The per-bet conservative screen remains `lowest-no-vig-two-trusted-books-2`.
+It can choose different books for opposite bets, so its outputs are not a single
+complementary event distribution. Current version seven also retains
+`first-complete-trusted-pair-proportional-1`: one complete same-book pair selected
+in fixed FanDuel, DraftKings, BetMGM, Caesars order, preserving both outcomes.
+The optional `same-book-betonline-first-1` adds a reference capability and
+excludes the evaluated book. Neither policy is an empirical accuracy claim.
+
+`app/research/calculation.py` freezes exact source and fee inputs, policy version,
+quantity/rounding, settlement assumptions and results. `app/research/records.py`
+keeps append-only prospective populations, causal horizon captures, independent
+sporting outcomes and frozen Brier/log-loss/calibration reports. Record counts
+and distinct events are reported separately. Missing/excluded cases are retained;
+actual trades remain in the separate optional journal. Run
+`python -m app.research --help` for declaration, replay, capture and evaluation.

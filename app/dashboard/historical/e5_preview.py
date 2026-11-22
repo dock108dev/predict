@@ -1,35 +1,23 @@
 """File-only comparison preview without collection or database lifecycle imports."""
 import argparse
 import json
-from decimal import Decimal, localcontext, Context
+from decimal import Decimal
 from hashlib import sha256
 from pathlib import Path
-import sys
 
 from aiohttp import web
+from app.dashboard.saved_preview import fixed, percent, isolate_process
 from app.opportunities.service import restore, rank
 from app.pricing.baseline import restore as restore_price
 from app.reference.records import import_records, as_of
 from app.storage.store import exact_time
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 CASES = ('e3-unavailable-ev', 'invented-positive', 'invented-negative',
          'invented-missing-mass', 'unknown-quantity', 'unknown-fees', 'stale-book')
 LABELS = ('E3 · expected value unavailable', 'Invented scenario · positive',
           'Invented scenario · negative', 'Invented scenario · missing mass',
           'Unknown quantity', 'Unknown fees', 'Stale book')
-
-
-def fixed(value):
-    if value is None: return None
-    text = format(Decimal(value), 'f')
-    return text.rstrip('0').rstrip('.') if '.' in text else text
-
-
-def percent(value):
-    if value is None: return None
-    with localcontext(Context(prec=110)):
-        return fixed((Decimal(value) * 100).quantize(Decimal('0.0001')))
 
 
 def project_estimate(estimate):
@@ -103,33 +91,13 @@ def load_package(root=ROOT):
     return dict(mode='Synthetic',cases=cases,estimates=[project_estimate(e) for e in estimates],ranking=rank(audits))
 
 
-def isolate_process():
-    import psycopg
-    def no_database(*args, **kwargs):
-        raise PermissionError('E5 file-only preview forbids database connections')
-    psycopg.connect = no_database
-    psycopg.Connection.connect = no_database
-    psycopg.AsyncConnection.connect = no_database
-    # Audit events are denied before the OS operation, including dependencies.
-    def guard(event, args):
-        if event == 'open' and isinstance(args[0], (str, bytes)):
-            path = Path(args[0].decode() if isinstance(args[0], bytes) else args[0])
-            if (any(part in {'.ssh', '.aws', '.codex', 'Keychains'} for part in path.parts)
-                or path.name.startswith('.env') or path.name in {'auth.json', 'credentials', 'credentials.json'}
-                or path.suffix in {'.pem', '.key'}):
-                raise PermissionError('E5 preview forbids credential-file reads')
-        if event in ('socket.connect', 'socket.getaddrinfo', 'subprocess.Popen', 'os.system'):
-            raise PermissionError('E5 file-only preview forbids outbound connections and child processes')
-    sys.addaudithook(guard)
-
-
 def create_app(root=ROOT):
     app=web.Application()
     async def data(request):
         try: return web.json_response(load_package(root))
         except (ValueError, KeyError, TypeError, OSError) as exc:
             return web.json_response({'error':'Saved evidence validation failed', 'reason':str(exc)},status=422)
-    async def page(request): return web.FileResponse(ROOT/'app/dashboard/e5_static/index.html')
+    async def page(request): return web.FileResponse(ROOT/'app/dashboard/historical/e5_static/index.html')
     async def style(request): return web.FileResponse(ROOT/'app/dashboard/static/style.css')
     @web.middleware
     async def headers(request, handler):
@@ -139,7 +107,9 @@ def create_app(root=ROOT):
     app.middlewares.append(headers)
     app.router.add_get('/',page); app.router.add_get('/api/package',data)
     app.router.add_get('/assets/style.css',style)
-    app.router.add_static('/e5/',ROOT/'app/dashboard/e5_static',show_index=False)
+    async def state(request): return web.FileResponse(ROOT/'app/dashboard/static/saved-state.js')
+    app.router.add_get('/e5/state.js', state)
+    app.router.add_static('/e5/',ROOT/'app/dashboard/historical/e5_static',show_index=False)
     return app
 
 
