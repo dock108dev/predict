@@ -105,7 +105,7 @@ same owner without acquiring data. Corrections use `--supersedes` and `--reason`
 explicit retrospective cohort.
 
 The recorder, replay and evaluator add no provider subscription or paid request. It reserves a measured
-logical 24 MiB for candidate observations and a 32 MiB total bound, with a 1 MiB
+logical 96 MiB for candidate observations and a 128 MiB total bound, with a 1 MiB
 ordinary-record cap and a scoped 4 MiB evaluation-report cap, the existing
 whole-database cap, an 8 MiB SQL runway and the
 existing free-disk floor. Hitting a bound is reported in collector cohort status;
@@ -124,7 +124,7 @@ snapshot identity. Offline exports contain both records and resolve the same lin
 
 Migration 113 reserves a bounded disposition slot for every declared
 case/horizon before collection. Its conservative 2 KiB slot allowance and fixed
-accounting row are charged inside the unchanged 32 MiB total. Refusal attempts,
+accounting row are charged inside the research total. Refusal attempts,
 first/last times, affected slots and recovery are updated in place, so a full
 data allowance cannot consume the space needed to explain missing captures.
 One oversized/refused observation does not abort later cases. Counters measure
@@ -148,10 +148,21 @@ timestamps. Later identical polling does not create more reaffirmations.
 
 The real 1,159-case, 259-event report measured 1,148,474 canonical bytes before
 new retention annotations, exceeding the old 1 MiB record allocation. Evaluation
-records therefore have a 4 MiB bound inside the same 32 MiB total. Ordinary
+records therefore have a 4 MiB bound inside the research total. Ordinary
 observation/source records keep their 1 MiB limit. A per-kind cap owner is reused
 by admission and export validation; a forced-limit fixture proves refusal does
 not mutate evidence before the restored allowance saves the complete report.
+
+The first installed 24 MiB allowance also filled with genuine input revisions.
+At 22:04 UTC a read-only serialization measured 2,583,319 additional bytes for
+98 changed-input snapshots and 330 compact recovery reaffirmations; only 143
+observation bytes remained. There were no duplicate full snapshot IDs. The
+engineering allocation is therefore 96 MiB observations / 128 MiB total, within
+the existing 4 GiB SQL cap and 1 GiB free-disk floor. The additional 96 MiB total
+at the writer's conservative three-times append estimate is 301,989,888 bytes,
+below the measured 1,722,221,545-byte SQL headroom. This is finite capacity for
+the actual declared population, not a new operating-budget or accuracy gate.
+No retention duration is promised, and no unique evidence is evicted.
 
 ## Verification
 
@@ -203,7 +214,7 @@ top-level fields except `manifest`. The evaluation index points to saved results
 export does not silently recompute or append a replacement evaluation. Normal
 cohort summary/detail reads remain separate.
 
-Storage remains bounded at 32 MiB. Export reserves a bounded allocation of twice
+Storage remains bounded at 128 MiB. Export reserves a bounded allocation of twice
 that payload allowance plus 1 MiB for immutable row envelopes and metadata, so a
 valid cohort near its storage cap can still be exported completely. No records
 are truncated. The disposable regression closes the source database, reopens the

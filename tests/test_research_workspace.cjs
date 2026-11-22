@@ -59,6 +59,14 @@ const page={token:'captured',total:4,counts:{source_events:1},offset:0,next_offs
  assert.equal(frozenExport.textContent,'Export frozen evidence');
  assert.equal(frozenExport.href,'/api/research/cohorts?id=frozen-cohort&export=1');
  assert.equal(frozenExport.download,'predict-research-cohort.json');
+ $('cohort-content').querySelector('button').onclick();
+ await reply({cohort:{id:'frozen-cohort'},evaluation:{designation:'prospective',population_records:5,distinct_events:3,due_records:1,due_distinct_events:1,future_records:4,future_distinct_events:2,scored_records:0,scored_distinct_events:0,status_counts:{pending:4,missing:1},as_of:'2026-11-22T21:00:00Z'}});
+ const cohortResults=$('cohort-content').querySelector('.research-panel-row').children[3];
+ const cohortCells=cohortResults.querySelector('dl').children,cohortFields={};for(let index=0;index<cohortCells.length;index+=2)cohortFields[cohortCells[index].textContent]=cohortCells[index+1].textContent;
+ assert.equal(cohortFields['Due records'],'1');assert.equal(cohortFields['Future records'],'4');
+ assert.equal(cohortFields['Future distinct events'],'2');
+ assert(cohortFields['Case statuses'].includes('"pending": 4'));
+ assert.equal(cohortFields['Missing / excluded cases'],undefined);
  assert(pending.every(item=>!item.options||item.options.method==='DELETE'));
  console.log('Research workspace passed: every EV sign, nulls, source identity, captured inspection/export and stale-read preservation.');
 })().catch(error=>{console.error(error);process.exitCode=1;});

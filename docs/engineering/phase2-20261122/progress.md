@@ -301,3 +301,31 @@ The required final CI run is a repository-policy checkpoint, not a newly chosen
 observation window. The stopping evidence is readiness success on the final
 code SHA, installed capture recovery/counted limits, and normal operator export
 and inspection. No profitability, month-of-betting or public-launch gate applies.
+
+## Installed retention sizing
+
+Release `58e0b82` installed migration 113 with all three roles healthy and zero
+restarts. Its automatic pass continued through per-case refusals, rather than
+raising an exception, but the 24 MiB observation allocation also filled. This
+is not accepted as complete capture recovery. A read-only dry serialization at
+22:04 UTC measured 2,583,319 bytes of outstanding current inputs: 98 changed
+snapshots (2,383,999 bytes) and 330 compact reaffirmations (199,320 bytes).
+There were zero duplicate full snapshot IDs. The shared SQL database then used
+2,572,745,751 bytes, leaving 1,722,221,545 bytes under its unchanged 4 GiB cap.
+
+The original 32 MiB total was our initial engineering allocation, not an owner
+constraint. It is resized to 96 MiB observations / 128 MiB total; the additional
+96 MiB total at the conservative three-times append estimate is 301,989,888
+bytes. Per-write SQL and disk checks still govern actual admission. Unique
+history and counted/uncounted gaps remain intact. This is measured capacity for
+the declared population, not a promise of indefinite coverage or a replacement
+for storage-budget planning.
+
+One complete real daily evaluation was saved at 22:03:11 UTC: 1,159 cases / 259
+events, 507 due and 652 pending, with 239 missing and 268 excluded; zero scored
+cases. Its 1,474,118-byte immutable report preserves the capacity-affected state.
+The prior uncounted window is sourced to the retained 21:08:50.523378 UTC log
+and ends at disposition-aware coverage start 21:59:28.964816 UTC. Prior missed
+attempt/case counts remain null. Recovery cannot make those past horizons valid.
+The UI now labels case statuses and due/future counts separately, so pending
+horizons are not described as missing.

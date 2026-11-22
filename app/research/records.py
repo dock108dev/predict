@@ -20,8 +20,11 @@ LOCK = 901112
 MAX_CASES = 2048
 RECORD_BYTE_CAP = 1024 * 1024
 EVALUATION_RECORD_BYTE_CAP = 4 * 1024 * 1024
-OBSERVATION_BYTE_CAP = 24 * 1024 * 1024
-TOTAL_BYTE_CAP = 32 * 1024 * 1024
+# The declared live population exhausted 24 MiB with distinct changed inputs.
+# Keep a finite research allocation sized for that measured population; every
+# write still passes the shared 4 GiB SQL cap and 1 GiB free-disk floor below.
+OBSERVATION_BYTE_CAP = 96 * 1024 * 1024
+TOTAL_BYTE_CAP = 128 * 1024 * 1024
 DISPOSITION_SLOT_BYTES = 2048
 ACCOUNTING_BYTES = 2048
 DEFAULT_HORIZONS = [3600]
