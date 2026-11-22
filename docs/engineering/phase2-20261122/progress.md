@@ -329,3 +329,62 @@ and ends at disposition-aware coverage start 21:59:28.964816 UTC. Prior missed
 attempt/case counts remain null. Recovery cannot make those past horizons valid.
 The UI now labels case statuses and due/future counts separately, so pending
 horizons are not described as missing.
+
+## Final installed research recovery and complete population export
+
+Release `2a3e218c533521b863083d766598ec9f7879a2a2`, deployment run
+`45075771194`, completed successfully. At 22:11 UTC all three roles were healthy
+with zero restarts, all 113 migration hashes matched, and the real automatic
+research pass reported ready: 428 new observations, 224 unchanged inputs skipped,
+zero refused observations. Retained payloads plus reserved counters were
+35,175,019 / 134,217,728 bytes; observations 27,749,000 / 100,663,296.
+
+The previous 3,629 counted refusal attempts across 473 affected slots are kept.
+All 45 still-open observation gaps have already passed cutoff; zero future
+slots had an open gap in that observation. The uncounted 21:08–21:59 window
+retains null attempt/case totals. Historical captures and saved evaluations
+remain unchanged. Recovery is new evidence for future cutoffs, never prospective
+backfill into an elapsed horizon.
+
+The read-only 22:12 UTC population report reconciled 1,159 cases / 259 events:
+507 due across 9 events and 652 future across 250 events; 239 missing, 268
+excluded, 652 pending, zero scored. Those counts describe this timestamp, not
+an accuracy result. The complete post-recovery export held 2,575 immutable
+records (2,066 observations, 507 captures, one declaration, one saved evaluation)
+in 34,215,598 bytes. All record and bundle hashes verified offline; 1,728
+distinct snapshots reproduced, 334 reaffirmation references and 471 capture
+references resolved, and prospective receipt/knowledge/persistence cutoffs
+validated. No provider request or new saved evaluation was made by that check.
+
+Installed SQL used 2,510,748,695 bytes under 4 GiB; free disk was 2,465,624,064
+bytes above the protected 1 GiB floor. Stop, pauses and disabled direct-feed
+settings remained unchanged. The authoritative ledger retained all 94
+interrupted objects with zero held/overrun reservations. Original-response
+retention showed 113 receipts / 715,512 gzip bytes and no recorded gaps.
+
+Local migration/revaluation completed against the preserved read-only private
+snapshot. Its first attempt correctly hit the default local 2 GiB SQL guard
+because the snapshot already occupied 2.30 GB; the retry explicitly used the
+deployed 4 GiB setting. No source, fee or control evidence was replaced, and no
+local collector or provider call was started. Both attempt logs are retained.
+
+Focused final allocation checks passed: 26 PostgreSQL tests plus 3 subtests,
+workspace controller, JavaScript syntax, Ruff, documentation references and
+diff checks. The whole required hosted CI remains a separate final-SHA
+repository-policy check. During installed desktop QA, a small CSS containment
+issue was found in the export link at 150% browser zoom; that final fix and its
+installed verification complete the interface closeout.
+
+The containment fix uses one bounded grid column per cohort row and one
+inline-flex box per export anchor. A focused real-HTTP browser fixture passed
+three cases: desktop, 390 px mobile and the 150% zoom-equivalent viewport. It
+asserts that the export link is one contained fragment below the full cohort
+identity and still downloads the complete frozen evidence. The owner's browser
+zoom preference is preserved. No backend or calculation behavior changes in
+this final CSS/documentation tip.
+
+Private runtime/export/proof evidence is under `.local/phase2-20261122/`:
+`final-2a3-runtime.json`, `final-population-current.json`,
+`final-population-export.json`, `offline-population-proof.json`, and the
+`real-chain/` original/evaluation/export records. Public source does not include
+private observations or credentials.

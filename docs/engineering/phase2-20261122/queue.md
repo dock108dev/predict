@@ -10,7 +10,7 @@ evidence, not proof of present runtime. Work stays on `main` in this checkout.
 | 2 | Received-data catalog, exact inspection and export | Complete; local and installed passive flows verified | Normal operator flow includes nonpositive, missing fee/reference, unmatched and unavailable rows; passive reads |
 | 3 | Bounded original responses and explicit capabilities | Complete; normal scheduled capture and exact reparse verified | Reparse retained bytes, caps/retries/gaps, requested vs unsupported fields; no weakened normalized ingress |
 | 4 | Frozen calculations and coherent evaluation probabilities | Complete; exact, SQL, authentic v6 and offline export reproduction verified | Independent exact examples and policy reproduction; existing conservative screen preserved |
-| 5 | Prospective population, causal replay, outcomes and scoring | Real outcomes and cutoffs verified; retention-capacity repair in progress | Frozen horizons/population; all records reconcile; distinct events; retained real-event chain |
+| 5 | Prospective population, causal replay, outcomes and scoring | Complete; installed automatic retention recovery and offline population reproduction verified | 1,159 declared cases / 259 events; 507 due / 652 pending at 22:12 UTC; prior gaps retained; 428 new observations / zero refusals after measured allocation repair |
 | 6 | One additional book and bounded game/player case; detached historical consumers | Complete; real BetOnline/game-result chains and E5 detachment verified | Full source/identity/retention/inspection/evaluation trace; fixture vs live labeled; no broken imports/assets/migrations |
 
 ## Review blockers and stopping conditions
@@ -48,3 +48,12 @@ actual fills are separate claims. No owner review is requested while known
 agreed engineering remains.
 
 Phase evidence is recorded in [progress](progress.md) and the [research operating guide](research.md). Final installed/CI evidence will remain distinct from local implementation.
+
+All six engineering phases are integrated on `main`. Installed `2a3e218` is
+healthy with migration 113 and a completed automatic research pass. Complete
+daily evidence export contains 2,575 immutable records and reproduces 1,728
+distinct snapshots offline. A final narrow CSS fix addresses the cohort export
+button at the owner's 150% browser zoom; its installed check and the required
+hosted CI closeout are tracked separately from the proven backend behavior.
+Historical observation gaps, finite storage and missing native price history
+remain explicit operating limitations, not fabricated successful coverage.

@@ -108,8 +108,12 @@ def record(status, *, mapped=True):
     )
 
 
-@pytest.mark.parametrize("width", [1440, 390])
-def test_received_data_inspection_export_and_missing_cases(width, tmp_path):
+@pytest.mark.parametrize(
+    "width,scale",
+    [(1440, 1), (390, 1), (960, 1.5)],
+    ids=["desktop", "mobile", "zoom150-equivalent"],
+)
+def test_received_data_inspection_export_and_missing_cases(width, scale, tmp_path):
     records = [
         record(value) for value in ("positive", "negative", "zero", "unavailable")
     ]
@@ -245,7 +249,10 @@ def test_received_data_inspection_export_and_missing_cases(width, tmp_path):
                 route.fulfill(
                     json=dict(
                         cohorts=[
-                            dict(id="frozen-cohort", name="Declared fixture population")
+                            dict(
+                                id="frozen-cohort",
+                                name="Declared fixture population " + "a" * 64,
+                            )
                         ],
                         research_retention=retention,
                     )
@@ -263,7 +270,9 @@ def test_received_data_inspection_export_and_missing_cases(width, tmp_path):
     with research_http_fixture(serve) as base, sync_playwright() as pw:
         browser = pw.chromium.launch(executable_path=os.getenv("PREDICT_CI_CHROMIUM"))
         context = browser.new_context(
-            viewport=dict(width=width, height=900), accept_downloads=True
+            viewport=dict(width=width, height=round(900 / scale)),
+            device_scale_factor=scale,
+            accept_downloads=True,
         )
         page = context.new_page()
         page.on("pageerror", lambda error: errors.append(str(error)))
@@ -310,6 +319,16 @@ def test_received_data_inspection_export_and_missing_cases(width, tmp_path):
         expect(page.locator("#cohort-content")).to_contain_text(
             "Declared fixture population"
         )
+        bounds = page.locator("#cohort-content .research-panel-row").evaluate("""row=>{
+          const outer=row.getBoundingClientRect(), link=row.querySelector('a'), button=row.querySelector('button');
+          const a=link.getBoundingClientRect(), b=button.getBoundingClientRect(), id=row.querySelector('small').getBoundingClientRect();
+          return {fragments:link.getClientRects().length,left:a.left,right:a.right,outerLeft:outer.left,outerRight:outer.right,buttonRight:b.right,idBottom:id.bottom,linkTop:a.top};
+        }""")
+        assert bounds["fragments"] == 1
+        assert bounds["left"] >= bounds["outerLeft"] - 1
+        assert bounds["right"] <= bounds["outerRight"] + 1
+        assert bounds["buttonRight"] <= bounds["outerRight"] + 1
+        assert bounds["idBottom"] <= bounds["linkTop"]
         expect(
             page.locator(
                 '#research-retention-status dt:has-text("Earlier refusal attempts") + dd'
