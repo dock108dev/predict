@@ -168,7 +168,12 @@ def revalue(db, *, at=None):
                  OR c.payload#>>'{coherent_probability,policy_version}' IS DISTINCT FROM %s)
                OR p.contract_id IS NOT NULL AND p.payload->'coherent_probability' IS NULL
                OR e.provider='sportsgameodds' AND t.venue='polymarket_us'
-                 AND c.reason IS DISTINCT FROM 'provider_venue_fee_applicability_unestablished')
+                 AND (t.facts#>>'{market_identity,line}' IS NULL
+                   OR mod((t.facts#>>'{market_identity,line}')::numeric*2,1)=0)
+                 AND c.reason IS DISTINCT FROM 'provider_venue_fee_applicability_unestablished'
+               OR e.provider='sportsgameodds' AND t.facts#>>'{market_identity,family}' IN ('spread','total')
+                 AND mod((t.facts#>>'{market_identity,line}')::numeric*2,1)<>0
+                 AND c.reason IS DISTINCT FROM 'posted_line_settlement_unestablished')
             ORDER BY c.game_key,c.contract_id""", (at, at, math.VERSION, math.REFERENCE_POLICY, math.COHERENT_POLICY)))
         keys = sorted({r["provider"] + ":" + r["native_event_id"] for r in rows})
         for source in {(r["provider"], r["native_event_id"]) for r in rows}:

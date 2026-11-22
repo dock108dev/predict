@@ -134,6 +134,42 @@ input hashes exclude them. A forced unchanged affected-game turn at a later
 clock therefore preserves complete current price/calculation rows, including
 their original calculation timestamp, without losing source or policy inputs.
 
+Collection-mode derivation rebuilds coherent and optional probability witnesses
+from the mode's own batched reference inputs. Copying a public price cannot copy
+probability authority from another mode. Qualified fee cashflows and original
+price clocks remain unchanged. The regression deliberately corrupts copied
+probability metadata and verifies the full result against the mode's actual
+references while requiring just one reference-table read.
+
+The new evaluation scope is ordinary whole- and half-point sportsbook lines.
+`target()` preserves other exact fractions; it does not establish their
+settlement semantics. Newly qualified baselines refuse those unsupported lines,
+and ambiguous SGO odds-stake quarter lines retain their source price with
+`posted_line_settlement_unestablished`. Native USD-per-contract binary threshold
+prices retain their separate semantics; an unsupported sportsbook probability
+is unavailable. Historical pure probability/cashflow arithmetic stays unchanged,
+so old immutable conditional witnesses remain reproducible. Before an older
+numeric working row is withdrawn, its original conditional calculation is saved.
+
+## Complete evidence export
+
+`python -m app.research export COHORT` emits canonical JSON containing the full
+declaration, every retained cohort observation and capture snapshot, all sporting
+or settlement revisions, and every saved evaluation. Actual PostgreSQL
+`recorded_at` clocks accompany the unchanged payloads. Every payload is checked
+against its original SHA256 ID and retained byte size; a bundle SHA256 covers all
+top-level fields except `manifest`. The evaluation index points to saved results;
+export does not silently recompute or append a replacement evaluation. Normal
+cohort summary/detail reads remain separate.
+
+Storage remains bounded at 32 MiB. Export reserves a bounded allocation of twice
+that payload allowance plus 1 MiB for immutable row envelopes and metadata, so a
+valid cohort near its storage cap can still be exported completely. No records
+are truncated. The disposable regression closes the source database, reopens the
+exported JSON, reproduces its frozen observation and capture offline, and checks
+that both original and corrected outcomes/evaluations survive unchanged. A small
+patched-cap example verifies metadata headroom without raising the storage cap.
+
 The separate explicit result command
 `python -m app.collection.research_result_capture SOURCE_EVENT_ID [SECOND_ID]`
 can fetch one bounded page from the existing SGO source for already-declared,

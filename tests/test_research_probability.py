@@ -144,6 +144,31 @@ def test_independent_brier_and_log_loss_example():
     assert float(values["log_loss"]) == pytest.approx(1.3862943611198906)
 
 
+@pytest.mark.parametrize("family,line", [("spread", "-1.25"), ("total", "47.75")])
+def test_retained_quarter_line_is_not_scored_as_binary_settlement(family, line):
+    from app.comparison.pregame_reference import target
+
+    anchor = "over" if family == "total" else "home"
+    assert target(family, anchor, line) == F(line)
+    assert resolved_side(dict(family=family, period="full_game", line=line),
+        dict(final=True, result="completed", home_score=30, away_score=20)) == (
+            None, "outcome_line_settlement_unsupported")
+    selected = record(anchor, family, line)
+    selected["quote"] = dict(source=dict(provider="sportsgameodds"), original=dict(units="american_odds"))
+    assert math.posted_settlement_reason(selected) == "posted_line_settlement_unestablished"
+    native = deepcopy(selected)
+    native["quote"] = dict(source=dict(provider="kalshi"), original=dict(units="usd_per_contract"))
+    assert math.posted_settlement_reason(native) is None
+    references = {"event": pair("fanduel", "-110", "-110", family=family, line=line)}
+    # Original version-one arithmetic remains reproducible; only the new
+    # qualification boundary withholds an unsupported settlement interpretation.
+    legacy = math.coherent_reference(selected, references, at=AT)
+    saved = freeze(dict(kickoff=START, coherent_probability=legacy, fee=None))
+    assert F(reproduce(saved)["probability"]) == F(1, 2)
+    with pytest.raises(ValueError, match="reference_line_settlement_unsupported"):
+        math.qualified_coherent_reference(selected, references, at=AT)
+
+
 @pytest.mark.parametrize("family,line", [("spread", "-3.5"), ("total", "47.5")])
 def test_other_exact_market_pairs_reproduce(family, line):
     ref = math.coherent_reference(record("over" if family == "total" else "home", family, line),

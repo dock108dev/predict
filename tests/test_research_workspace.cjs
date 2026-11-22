@@ -42,6 +42,13 @@ const page={token:'captured',total:4,counts:{source_events:1},offset:0,next_offs
  $('refresh').onclick();await reply({message:'SQL unavailable'},false);
  assert($('catalog-status').textContent.includes('last-known'));
  assert.equal($('catalog-rows').children.length,4);
+ $('cohorts').open=true;$('cohorts').ontoggle();
+ assert.equal(pending[0].url,'/api/research/cohorts');
+ await reply({cohorts:[{id:'frozen-cohort',name:'Declared population'}]});
+ const frozenExport=$('cohort-content').querySelector('a');
+ assert.equal(frozenExport.textContent,'Export frozen evidence');
+ assert.equal(frozenExport.href,'/api/research/cohorts?id=frozen-cohort&export=1');
+ assert.equal(frozenExport.download,'predict-research-cohort.json');
  assert(pending.every(item=>!item.options||item.options.method==='DELETE'));
  console.log('Research workspace passed: every EV sign, nulls, source identity, captured inspection/export and stale-read preservation.');
 })().catch(error=>{console.error(error);process.exitCode=1;});

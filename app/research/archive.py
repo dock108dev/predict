@@ -78,7 +78,7 @@ def from_changes(changes, *, event_id, case, as_of, policy=math.COHERENT_POLICY)
                       participant=case["home"], signed_line=line))
     record = dict(event=canonical, market_identity=dict(family=family), selection=selection)
     try:
-        baseline = math.coherent_reference(record, {event_id: references}, at=deadline, policy=policy)
+        baseline = math.qualified_coherent_reference(record, {event_id: references}, at=deadline, policy=policy)
     except ValueError as exc:
         baseline = dict(policy_version=policy, probabilities=None, probability=None, reason=str(exc))
     gaps = [r[0] for r in accepted if r[2] in ("source_status", "runtime_status", "discovery_gap")]

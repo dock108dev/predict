@@ -4,7 +4,7 @@ import argparse
 import json
 from pathlib import Path
 
-from app.storage.store import connect, stamp
+from app.storage.store import connect, encoded, stamp
 from . import records
 
 
@@ -75,8 +75,11 @@ def main():
                 result["observation"] = records.observe(db, args.cohort, case["case_key"],
                     result["payload"], known_at=stamp(args.as_of))
         else:
-            result = records.detail(db, args.cohort)
-        print(json.dumps(result, indent=2, default=str, allow_nan=False))
+            result = records.export_cohort(db, args.cohort)
+        if args.command == "export":
+            print(encoded(result).decode())
+        else:
+            print(json.dumps(result, indent=2, default=str, allow_nan=False))
     return 0
 
 

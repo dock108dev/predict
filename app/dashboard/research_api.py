@@ -10,7 +10,7 @@ from aiohttp import web
 
 from app.collection.runtime_status import read_runtime
 from app.storage import research_catalog as catalog
-from app.storage.store import connect
+from app.storage.store import connect, encoded
 from .local_security import HEADERS, PublicRequestError
 from .raw_price_api import RawReads
 
@@ -164,14 +164,20 @@ def mount(app):
         return web.json_response(serial(value), headers=HEADERS)
 
     async def cohorts(request):
-        if set(request.query)-{'id', 'as_of'}:
+        if set(request.query)-{'id', 'as_of', 'export'}:
             raise PublicRequestError('Invalid research cohort selection.')
+        exporting = request.query.get('export') == '1'
+        if request.query.get('export') not in (None, '1') or exporting and (
+                not request.query.get('id') or request.query.get('as_of')):
+            raise PublicRequestError('A frozen-evidence export requires one cohort ID.')
         def work():
-            from app.research.records import list_cohorts, detail, evaluate
+            from app.research.records import list_cohorts, detail, evaluate, export_cohort
             from app.storage.store import stamp
             with connect() as db, db.transaction():
                 db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
                 db.execute("SET LOCAL statement_timeout='10s'")
+                if exporting:
+                    return encoded(export_cohort(db, request.query['id']))
                 if request.query.get('id'):
                     if request.query.get('as_of'):
                         return dict(evaluation=evaluate(db, request.query['id'],
@@ -180,6 +186,9 @@ def mount(app):
                 return dict(cohorts=list_cohorts(db), provider_requests=0)
         async with gate:
             value = await joined(work)
+        if exporting:
+            return web.Response(body=value, content_type='application/json', headers={**HEADERS,
+                'Content-Disposition': 'attachment; filename="predict-research-cohort.json"'})
         from .pipeline import serial
         return web.json_response(serial(value), headers=HEADERS)
 

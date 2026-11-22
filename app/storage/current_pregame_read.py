@@ -114,6 +114,10 @@ def _read(db, query, *, at=None, clock, configured_routes):
         # Refuse an older writer's native-US fee assumption immediately, before
         # collector recovery replaces the generated row. Raw catalog stays open.
         "NOT (e.provider='sportsgameodds' AND p.venue='polymarket_us')",
+        """CASE WHEN e.provider='sportsgameodds'
+            AND o.price_units IN ('american_odds','decimal_odds')
+            AND c.facts#>>'{market_identity,family}' IN ('spread','total')
+          THEN mod((c.facts#>>'{market_identity,line}')::numeric*2,1)=0 ELSE true END""",
     ]
     params = [at, at, at]
     if query.get("_scope_seconds"):

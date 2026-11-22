@@ -346,6 +346,22 @@ def input_identity(record, reference, context, fee=None):
     )
 
 
+def preserve_previous_conditional(db, cid, reason):
+    old = db.execute("""SELECT c.payload,p.record,p.fee_input
+        FROM current_pregame_calculation c LEFT JOIN current_pregame_price p
+        USING(contract_id) WHERE c.contract_id=%s AND c.payload IS NOT NULL""", (cid,)).fetchone()
+    if old:
+        from app.research.records import preserve_conditional
+
+        try:
+            preserve_conditional(db, old["payload"], record=old["record"],
+                                 fee_input=old["fee_input"], reason=reason)
+        except Exception as exc:
+            # Guarded reads withhold current applicability while rollback keeps
+            # an original that cannot yet be safely retained in history.
+            raise RuntimeError("conditional_calculation_retention_unavailable") from exc
+
+
 def calculate_game(db, job, context, *, at):
     if job["provider"] not in {"sportsgameodds", *context.price_routes.values()}:
         db.execute(
@@ -457,6 +473,9 @@ def calculate_game(db, job, context, *, at):
                 "total",
             ):
                 raise ValueError("market_outside_pregame_scope")
+            if settlement_reason := math.posted_settlement_reason(record):
+                preserve_previous_conditional(db, cid, settlement_reason)
+                raise ValueError(settlement_reason)
             if scheduled_phase(event, at)["state"] != "scheduled":
                 raise ValueError("pregame_closed")
             if q["state"] == "unavailable":
@@ -479,25 +498,13 @@ def calculate_game(db, job, context, *, at):
             fee = context.fee(record, at)
             if not fee.get("available"):
                 if fee.get("reason") == "provider_venue_fee_applicability_unestablished":
-                    old = db.execute("""SELECT c.payload,p.record,p.fee_input
-                        FROM current_pregame_calculation c LEFT JOIN current_pregame_price p
-                        USING(contract_id) WHERE c.contract_id=%s AND c.payload IS NOT NULL""", (cid,)).fetchone()
-                    if old:
-                        from app.research.records import preserve_conditional
-
-                        try:
-                            preserve_conditional(db, old["payload"], record=old["record"], fee_input=old["fee_input"])
-                        except Exception as exc:
-                            # Preserve the hidden old witness if retention is
-                            # unavailable; rolling back this game cannot turn it
-                            # back into applicable EV in the guarded readers.
-                            raise RuntimeError("conditional_calculation_retention_unavailable") from exc
+                    preserve_previous_conditional(db, cid, fee["reason"])
                 raise ValueError(fee.get("reason") or "fee_schedule_unavailable")
             price_payload = math.calculate(record, None, fee, at=at, game_key=game_key)
             key = math.reference_key(record)
             if key not in coherent:
                 try:
-                    coherent[key] = math.coherent_reference(record, reference_inputs, at=at)
+                    coherent[key] = math.qualified_coherent_reference(record, reference_inputs, at=at)
                 except ValueError as exc:
                     coherent[key] = dict(
                         available=False, reason=str(exc),
@@ -509,7 +516,7 @@ def calculate_game(db, job, context, *, at):
 
             try:
                 price_payload["alternative_probabilities"] = {
-                    math.EXPANSION_POLICY: math.coherent_reference(
+                    math.EXPANSION_POLICY: math.qualified_coherent_reference(
                         record, reference_inputs, at=at, policy=math.EXPANSION_POLICY,
                         evaluated_book=source_bookmaker(record),
                     )

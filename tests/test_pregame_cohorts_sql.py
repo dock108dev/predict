@@ -244,6 +244,7 @@ class PregameCohortsSQL(PregameFixture):
 
     async def test_derive_reuses_qualified_cashflows_and_batches_references(self):
         from app.comparison import current_pregame as math
+        from app.collection.sportsgameodds_current_rows import source_bookmaker
         from app.storage.pregame_cohorts import derive
 
         with self.connect() as db:
@@ -256,7 +257,9 @@ class PregameCohortsSQL(PregameFixture):
             # A price without a benchmark can carry a different main-line flag.
             # Revaluation must recompute it from the cohort's actual reference.
             db.execute("""UPDATE pregame_monitor.current_pregame_price
-                SET payload=jsonb_set(payload,'{main}','false'::jsonb)""")
+                SET payload=jsonb_set(jsonb_set(jsonb_set(payload,'{main}','false'::jsonb),
+                    '{coherent_probability}','{"probability":"0.99"}'::jsonb),
+                    '{alternative_probabilities}','{}'::jsonb)""")
 
             class CountReferenceReads:
                 references = 0
@@ -283,6 +286,12 @@ class PregameCohortsSQL(PregameFixture):
                     metadata,
                 )
             self.assertEqual(counted.references, 1)
+            cohort_observations = {}
+            for entry in db.execute("SELECT id,revision,event_id,facts FROM pregame_monitor.current_sgo_reference"):
+                cohort_observations.setdefault(entry["event_id"], []).append(entry)
+            inputs = math.ReferenceInputs(cohort_observations,
+                books=math.COHERENT_POLICIES[math.EXPANSION_POLICY])
+            original_prices = {r["contract_id"]: r["payload"] for r in rows}
             for row in db.execute("""SELECT p.record,p.fee_input,p.game_key,c.payload
                 FROM pregame_monitor.current_pregame_price p
                 JOIN pregame_monitor.current_pregame_calculation c USING(contract_id)"""):
@@ -305,7 +314,15 @@ class PregameCohortsSQL(PregameFixture):
                         )
                     }
                 )
+                expected["coherent_probability"] = math.coherent_reference(row["record"], inputs, at=stamp(AT))
+                expected["alternative_probabilities"] = {
+                    math.EXPANSION_POLICY: math.coherent_reference(row["record"], inputs,
+                        at=stamp(AT), policy=math.EXPANSION_POLICY,
+                        evaluated_book=source_bookmaker(row["record"])),
+                }
                 self.assertEqual(actual, expected)
+                self.assertEqual(actual["fee"], original_prices[actual["id"]]["fee"])
+                self.assertEqual(actual["times"], original_prices[actual["id"]]["times"])
                 self.assertTrue(actual["main"])
                 self.assertEqual(actual["times"]["source_at"], "2026-11-17T19:59:00Z")
 

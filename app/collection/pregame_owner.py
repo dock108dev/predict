@@ -58,7 +58,13 @@ class PregameOwner:
                   AND (c.venue||':'||e.provider)=ANY(%s)
                   AND (p.contract_id IS NULL OR p.version<>%s
                     OR c.venue='polymarket_us' AND e.provider='sportsgameodds'
-                      AND p.reason IS DISTINCT FROM 'provider_venue_fee_applicability_unestablished')
+                      AND (c.facts#>>'{market_identity,line}' IS NULL
+                        OR mod((c.facts#>>'{market_identity,line}')::numeric*2,1)=0)
+                      AND p.reason IS DISTINCT FROM 'provider_venue_fee_applicability_unestablished'
+                    OR e.provider='sportsgameodds' AND o.price_units IN ('american_odds','decimal_odds')
+                      AND c.facts#>>'{market_identity,family}' IN ('spread','total')
+                      AND mod((c.facts#>>'{market_identity,line}')::numeric*2,1)<>0
+                      AND p.reason IS DISTINCT FROM 'posted_line_settlement_unestablished')
                 ON CONFLICT DO NOTHING""",
                 (
                     [venue + ":" + provider for venue, provider in routes.items()],

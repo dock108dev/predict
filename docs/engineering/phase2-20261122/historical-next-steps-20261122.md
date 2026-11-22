@@ -3,16 +3,16 @@
 The selected product priority is **My Bets plus opportunity logging**, for both
 EV and arb trades. The local implementation preserves original signals, actual
 price/stake/fee corrections, quote history, closing comparisons and reported cash
-results. See [the journal contract](docs/bet-journal.md). A month of actual use
+results. See [the journal contract](../../bet-journal.md). A month of actual use
 should separate opportunity discovery, prices obtained, comparable closes and
 realized results; missing observations remain missing. Local frozen snapshots
 cannot establish ongoing live closing performance. Hosted installation and
 operating evidence remain separate from local verification.
 
 The active assignment is the simplified current-row pregame dashboard. The
-[shipped contract](docs/current-pregame.md) owns the data flow and API;
-[math](docs/benchmark-ev.md), [fees](docs/fee-coverage-policy.md),
-[UI](docs/ui-design.md) and [operations](docs/hetzner.md) describe current behavior.
+[shipped contract](../../current-pregame.md) owns the data flow and API;
+[math](../../benchmark-ev.md), [fees](../../fee-coverage-policy.md),
+[UI](../../ui-design.md) and [operations](../../hetzner.md) describe current behavior.
 
 Complete local and hosted verification on the same final candidate: normal
 receipt → admission → calculation → complete current row → browser. Verify the

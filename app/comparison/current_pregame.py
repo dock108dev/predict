@@ -241,6 +241,30 @@ def probability_inputs(reference):
     return {key: value for key, value in reference.items() if key not in ("cutoff", "baseline_id")}
 
 
+def qualified_coherent_reference(record, observations, *, at, policy=COHERENT_POLICY, evaluated_book=None):
+    """Qualify new book-pair baselines without changing historical arithmetic.
+
+    Quarter handicaps may describe split stakes. The recorded two-state baseline
+    has no half-win/half-loss policy. Native binary threshold price semantics
+    stay independent; an unsupported bookmaker reference cannot model them.
+    """
+    _, _, line = reference_key(record)
+    if line is not None and line.denominator not in (1, 2):
+        raise ValueError("reference_line_settlement_unsupported")
+    return coherent_reference(record, observations, at=at, policy=policy, evaluated_book=evaluated_book)
+
+
+def posted_settlement_reason(record):
+    """Refuse ambiguous source-book stake cashflows, preserving native claims."""
+    quote = record["quote"]
+    if (quote["source"]["provider"] == "sportsgameodds"
+            and quote["original"]["units"] in ("american_odds", "decimal_odds")):
+        _, _, line = reference_key(record)
+        if line is not None and line.denominator not in (1, 2):
+            return "posted_line_settlement_unestablished"
+    return None
+
+
 def posted_fill(terms, amount, cost, fees, rule):
     """Find the maximum legal posted-price size inside the fee rounding envelope."""
     if not rule:

@@ -230,3 +230,55 @@ class ResearchCatalogSQL(PregameFixture):
             self.assertEqual(detail['historical_conditional_history'][0]['id'], prior['id'])
         finally:
             reads.close()
+
+    async def test_cohort_http_download_contains_complete_frozen_input_and_result_evidence(self):
+        from datetime import timedelta
+        from app.research import records
+        from app.storage.store import stamp
+
+        at = stamp(AT)
+        with self.connect() as db:
+            self.ingest_linked(db, page())
+            self.process(db)
+            row = db.execute('''SELECT k.payload,p.record,p.fee_input
+                FROM current_pregame_calculation k JOIN current_pregame_price p USING(contract_id)
+                WHERE k.payload IS NOT NULL LIMIT 1''').fetchone()
+            payload = row['payload']
+            case = dict(case_key='http-export-case', event_id=payload['game_key'],
+                starts_at=payload['kickoff'], family=payload['family'], period=payload['period'],
+                line=row['record']['market_identity']['line'])
+            cohort = records.declare(db, name='portable-http-frozen-evidence', cases=[case],
+                designation='synthetic_demonstration', horizons=[3600], at=at-timedelta(minutes=1))
+            observed = records.observe(db, cohort['id'], case['case_key'], payload, known_at=at,
+                record=row['record'], fee_input=row['fee_input'])
+            records.capture_due(db, at=at+timedelta(seconds=1), cohort_id=cohort['id'])
+            records.annotate(db, cohort['id'], case['case_key'], 'sporting',
+                dict(source='portable-fixture-score', final=True, result='completed',
+                    home_score=100, away_score=90, published_at=None,
+                    observed_at=(at+timedelta(hours=2)).isoformat()), at=at+timedelta(hours=2))
+            records.evaluate(db, cohort['id'], as_of=at+timedelta(hours=3), persist=True)
+            before = list(db.execute('SELECT * FROM public.research_record ORDER BY id'))
+        app = web.Application(middlewares=[dashboard_guard(None, logger=__name__)])
+        with patch('app.dashboard.research_api.connect', side_effect=self.connect):
+            mount(app)
+            async with TestClient(TestServer(app)) as client:
+                detail = await client.get('/api/research/cohorts', params={'id': cohort['id']})
+                self.assertEqual(detail.status, 200, await detail.text())
+                self.assertNotIn('records', await detail.json())
+                response = await client.get('/api/research/cohorts', params={'id': cohort['id'], 'export': '1'})
+                self.assertEqual(response.status, 200, await response.text())
+                self.assertIn('attachment', response.headers['Content-Disposition'])
+                exported = await response.json()
+                self.assertEqual(exported['cohort_id'], cohort['id'])
+                self.assertEqual(exported['provider_requests'], 0)
+                self.assertEqual(exported['manifest']['record_count'], len(exported['records']))
+                self.assertTrue({'cohort', 'observation', 'capture', 'sporting', 'evaluation'} <= {r['kind'] for r in exported['records']})
+                self.assertTrue(all(r['recorded_at'] for r in exported['records']))
+                observed_export = next(r for r in exported['records'] if r['id'] == observed['id'])
+                frozen = observed_export['payload']['snapshot']['inputs']
+                self.assertEqual(frozen['source_record'], row['record'])
+                self.assertEqual(frozen['fee_input'], row['fee_input'])
+                self.assertEqual(frozen['calculation']['fee']['cashflows'], payload['fee']['cashflows'])
+                self.assertEqual((await client.get('/api/research/cohorts?export=1')).status, 422)
+        with self.connect() as db:
+            self.assertEqual(before, list(db.execute('SELECT * FROM public.research_record ORDER BY id')))

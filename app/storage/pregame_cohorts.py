@@ -256,6 +256,7 @@ def combine(db, events, event_ids):
 def derive(db, schema, cids, at, metadata):
     """Compute EV from this capture's reference witnesses, never public leftovers."""
     from app.comparison import current_pregame as math
+    from app.collection.sportsgameodds_current_rows import source_bookmaker
     from .current_pregame import numeric
     from . import odds_archive
 
@@ -321,11 +322,32 @@ def derive(db, schema, cids, at, metadata):
         reason = None
         payload = None
         reference = None
+        if attachment not in reference_inputs:
+            reference_inputs[attachment] = math.ReferenceInputs(
+                observations, books=math.COHERENT_POLICIES[math.EXPANSION_POLICY]
+            )
+        inputs = reference_inputs[attachment]
+        probabilities = {}
+        for policy in math.COHERENT_POLICIES:
+            try:
+                probabilities[policy] = math.qualified_coherent_reference(
+                    row["record"], inputs, at=at, policy=policy,
+                    evaluated_book=source_bookmaker(row["record"]) if policy == math.EXPANSION_POLICY else None,
+                )
+            except (ValueError, KeyError, TypeError, ArithmeticError) as exc:
+                probabilities[policy] = dict(
+                    policy_version=policy, probability=None, probabilities=None,
+                    reason=str(exc)[:160] or type(exc).__name__,
+                )
+        probability_evidence = dict(
+            coherent_probability=probabilities[math.COHERENT_POLICY],
+            alternative_probabilities={p: r for p, r in probabilities.items() if p != math.COHERENT_POLICY},
+        )
         try:
-            if attachment not in reference_inputs:
-                reference_inputs[attachment] = math.ReferenceInputs(observations)
+            if settlement_reason := math.posted_settlement_reason(row["record"]):
+                raise ValueError(settlement_reason)
             reference = math.reference(
-                row["record"], reference_inputs[attachment], at=at
+                row["record"], inputs, at=at
             )
             # The admitted price already contains the qualified fee cashflows.
             # Only probability-dependent values and line status can change.
@@ -334,15 +356,18 @@ def derive(db, schema, cids, at, metadata):
             payload.update(
                 sportsbook_event_ids=list(observations),
                 sportsbook_sides_reversed=original.get("sportsbook_sides_reversed", {}),
+                **probability_evidence,
             )
         except (ValueError, KeyError, TypeError, ArithmeticError) as exc:
             reason = str(exc)[:160] or type(exc).__name__
-        revision = hashed([row["record"]["quote"], reference, reason, row["fee_input"]])
+        revision = hashed([row["record"]["quote"], reference, reason, row["fee_input"],
+                           {p: math.probability_inputs(r) for p, r in probabilities.items()}])
         price = dict(
             original,
             collection=row_metadata,
             input_revision=revision,
             sportsbook_event_ids=list(observations),
+            **probability_evidence,
         )
         if payload:
             payload.update(collection=row_metadata, input_revision=revision)

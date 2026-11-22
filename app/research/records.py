@@ -267,6 +267,8 @@ def resolved_side(case, data):
     home, away = F(data["home_score"]), F(data["away_score"])
     if case["period"] != "full_game":
         return None, "outcome_period_unsupported"
+    if case["line"] is not None and F(case["line"]).denominator not in (1, 2):
+        return None, "outcome_line_settlement_unsupported"
     if case["family"] == "moneyline":
         delta, sides = home - away, ("home", "away")
     elif case["family"] == "spread" and case["line"] is not None:
@@ -432,6 +434,86 @@ def detail(db, cohort_id):
     return dict(cohort=cohort, evaluation=evaluate(db, cohort_id), provider_requests=0)
 
 
+def export_cohort(db, cohort_id):
+    """Export every retained cohort revision as one bounded, verifiable bundle.
+
+    One SQL statement supplies the immutable set and its actual persistence
+    clocks. Summary reads stay small; export never acquires data or appends a
+    freshly computed evaluation that could differ from the exported evidence.
+    """
+    rows = db.execute("""SELECT id,kind,cohort_id,case_key,slot,recorded_at,
+        payload_bytes,payload,statement_timestamp() AS export_statement_at
+        FROM public.research_record
+        WHERE (id=%s AND kind='cohort') OR cohort_id=%s
+        ORDER BY recorded_at,id""", (cohort_id, cohort_id))
+    exported = []
+    payload_bytes = 0
+    declaration = None
+    saved_evaluations = []
+    for row in rows:
+        payload = row["payload"]
+        size = len(encoded(payload))
+        if (hashed(payload) != row["id"] or size != row["payload_bytes"]
+                or payload.get("kind") != row["kind"]):
+            raise ValueError("research_export_record_integrity")
+        payload_bytes += size
+        if size > RECORD_BYTE_CAP or payload_bytes > TOTAL_BYTE_CAP:
+            raise ValueError("research_export_capacity")
+        item = {key: row[key] for key in
+                ("id", "kind", "cohort_id", "case_key", "slot", "payload_bytes", "payload")}
+        item["recorded_at"] = _clock(row["recorded_at"])
+        exported.append(item)
+        if row["kind"] == "cohort" and row["id"] == cohort_id:
+            declaration = item
+        elif row["cohort_id"] != cohort_id or payload.get("cohort_id") != cohort_id:
+            raise ValueError("research_export_cohort_integrity")
+        if row["kind"] == "evaluation":
+            saved_evaluations.append(dict(
+                id=item["id"], recorded_at=item["recorded_at"],
+                **{key: payload.get(key) for key in (
+                    "as_of", "designation", "population_records", "distinct_events",
+                    "scored_records", "scored_distinct_events", "status_counts",
+                    "probability_policy", "mean_brier", "mean_log_loss",
+                )},
+            ))
+    if declaration is None:
+        raise ValueError("research_record_unknown")
+    cohort = declaration["payload"]
+    body = dict(
+        schema="predict-research-cohort-export-1", cohort_id=cohort_id,
+        exported_at=_clock(row["export_statement_at"]),
+        cohort=dict(id=cohort_id, recorded_at=declaration["recorded_at"],
+            **{key: cohort.get(key) for key in
+               ("name", "declared_at", "designation", "horizons", "probability_policy", "probability_policies")},
+            population_records=len(cohort["population"])),
+        evaluation=dict(
+            saved_count=len(saved_evaluations), saved=saved_evaluations,
+            latest_saved_id=saved_evaluations[-1]["id"] if saved_evaluations else None,
+            current_recomputed=False,
+            reason=None if saved_evaluations else "no_saved_evaluation",
+        ),
+        records=exported,
+        completeness="all_retained_cohort_records_in_one_sql_snapshot; no_truncation",
+        provider_requests=0,
+    )
+    # Immutable envelopes add IDs, persistence clocks and audit metadata to the
+    # already bounded retained payloads. Reserve a bounded API allocation rather
+    # than rejecting valid near-cap state or changing the storage allowance.
+    export_byte_cap = 2 * TOTAL_BYTE_CAP + 1024 * 1024
+    bundle = dict(body, manifest=dict(
+        record_count=len(exported), records_by_kind=dict(Counter(r["kind"] for r in exported)),
+        total_payload_bytes=payload_bytes, retained_payload_byte_cap=TOTAL_BYTE_CAP,
+        canonical_byte_cap=export_byte_cap,
+        payload_hash="each record id is SHA256 of its canonical JSON payload",
+        bundle_sha256=hashed(body),
+        bundle_hash_scope="all top-level fields except manifest; canonical JSON uses app.storage.store.encoded",
+    ))
+    # A capacity refusal is explicit; silently omitting older revisions is unsafe.
+    if len(encoded(bundle)) + 1 > export_byte_cap:
+        raise ValueError("research_export_capacity")
+    return bundle
+
+
 def status(db):
     row = db.execute("""SELECT count(*) records,COALESCE(sum(payload_bytes),0) retained_bytes,
         max(recorded_at) latest_recorded_at FROM public.research_record""").fetchone()
@@ -442,7 +524,8 @@ def status(db):
                 provider_requests=0)
 
 
-def preserve_conditional(db, payload, *, record=None, fee_input=None):
+def preserve_conditional(db, payload, *, record=None, fee_input=None,
+                         reason="provider_venue_fee_applicability_unestablished"):
     """Keep a former numeric witness before withdrawing current applicability.
 
     This is outside a prospective population and does not mint a new forecast.
@@ -452,7 +535,7 @@ def preserve_conditional(db, payload, *, record=None, fee_input=None):
         _writer_lock(db)
         return _record(db, "observation", dict(
             designation="historical_conditional_calculation",
-            reason="provider_venue_fee_applicability_unestablished",
+            reason=reason,
             original_calculation=payload, source_record=record, fee_input=fee_input,
         ), case_key=payload["id"])
 
@@ -551,7 +634,7 @@ def automatic_turn(db, *, at=None):
                     refs[eid] = list(db.execute("SELECT id,revision,facts FROM public.current_sgo_reference WHERE event_id=%s", (eid,)))
                 record = dict(row["contract"], event=row["event"])
                 try:
-                    ref = math.coherent_reference(record, refs, at=at)
+                    ref = math.qualified_coherent_reference(record, refs, at=at)
                 except (ValueError, TypeError, KeyError, ArithmeticError) as exc:
                     ref = dict(policy_version=COHERENT_POLICY, probability=None,
                                probabilities=None, reason=str(exc))

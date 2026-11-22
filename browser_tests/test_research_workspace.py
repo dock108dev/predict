@@ -1,15 +1,71 @@
 """Personal research inspection across status, provenance and captured export."""
 
 import json
+import mimetypes
 import os
+from contextlib import contextmanager
 from copy import deepcopy
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from threading import Thread
+from types import SimpleNamespace
 from urllib.parse import parse_qs, urlparse
 
 import pytest
 from playwright.sync_api import expect, sync_playwright
 
 from browser_tests.test_pregame_current import ASSETS, offer
+
+
+@contextmanager
+def research_http_fixture(serve):
+    """Use real loopback HTTP so browser-owned attachments cross the wire."""
+
+    class Route:
+        def __init__(self, handler):
+            self.handler = handler
+            self.request = SimpleNamespace(
+                url="http://" + handler.headers["Host"] + handler.path,
+                method=handler.command,
+            )
+
+        def fulfill(self, *, json=None, path=None, status=200, headers=None):
+            import json as json_module
+
+            if path is not None:
+                body = Path(path).read_bytes()
+                kind = mimetypes.guess_type(str(path))[0] or "application/octet-stream"
+            else:
+                body = json_module.dumps(json).encode()
+                kind = "application/json"
+            self.handler.send_response(status)
+            for key, value in {
+                "Content-Type": kind,
+                "Content-Length": str(len(body)),
+                **(headers or {}),
+            }.items():
+                self.handler.send_header(key, value)
+            self.handler.end_headers()
+            self.handler.wfile.write(body)
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            serve(Route(self))
+
+        do_DELETE = do_GET
+
+        def log_message(self, *_):
+            pass
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    worker = Thread(target=server.serve_forever, daemon=True)
+    worker.start()
+    try:
+        yield "http://127.0.0.1:" + str(server.server_port)
+    finally:
+        server.shutdown()
+        server.server_close()
+        worker.join()
 
 
 def record(status, *, mapped=True):
@@ -61,6 +117,30 @@ def test_received_data_inspection_export_and_missing_cases(width, tmp_path):
     unmatched.update(id="sgo:unmatched", revision="captured-unmatched")
     records.append(unmatched)
     errors, requests = [], []
+    frozen_calculation = offer()
+    frozen_evidence = dict(
+        cohort_id="frozen-cohort",
+        records=[
+            dict(
+                id="immutable-capture",
+                kind="capture",
+                recorded_at="2026-11-22T20:00:01Z",
+                payload=dict(
+                    snapshot=dict(
+                        inputs=dict(
+                            calculation=frozen_calculation,
+                            source_record=dict(
+                                quote=dict(original=frozen_calculation["posted"])
+                            ),
+                            fee_input=dict(classification="frozen_fixture_fee"),
+                        )
+                    )
+                ),
+            )
+        ],
+        manifest=dict(record_count=1),
+        provider_requests=0,
+    )
 
     def serve(route):
         url = urlparse(route.request.url)
@@ -129,7 +209,22 @@ def test_received_data_inspection_export_and_missing_cases(width, tmp_path):
                 )
             )
         elif url.path == "/api/research/cohorts":
-            route.fulfill(json=dict(cohorts=[]))
+            if q.get("export") == "1":
+                assert q["id"] == "frozen-cohort"
+                route.fulfill(
+                    json=frozen_evidence,
+                    headers={
+                        "Content-Disposition": 'attachment; filename="predict-research-cohort.json"'
+                    },
+                )
+            else:
+                route.fulfill(
+                    json=dict(
+                        cohorts=[
+                            dict(id="frozen-cohort", name="Declared fixture population")
+                        ]
+                    )
+                )
         elif url.path == "/api/research/read":
             assert route.request.method == "DELETE"
             route.fulfill(json=dict(released=True))
@@ -140,12 +235,14 @@ def test_received_data_inspection_export_and_missing_cases(width, tmp_path):
         else:
             route.fulfill(status=404)
 
-    with sync_playwright() as pw:
+    with research_http_fixture(serve) as base, sync_playwright() as pw:
         browser = pw.chromium.launch(executable_path=os.getenv("PREDICT_CI_CHROMIUM"))
-        page = browser.new_page(viewport=dict(width=width, height=900))
+        context = browser.new_context(
+            viewport=dict(width=width, height=900), accept_downloads=True
+        )
+        page = context.new_page()
         page.on("pageerror", lambda error: errors.append(str(error)))
-        page.route("**/*", serve)
-        page.goto("https://predict.fixture/research")
+        page.goto(base + "/research")
         expect(page.locator("#catalog-rows tr")).to_have_count(5)
         for status in ("positive", "negative", "zero", "unavailable"):
             expect(page.locator("#catalog-rows")).to_contain_text(status)
@@ -186,8 +283,22 @@ def test_received_data_inspection_export_and_missing_cases(width, tmp_path):
             "Declared research populations & evaluation", exact=True
         ).click()
         expect(page.locator("#cohort-content")).to_contain_text(
-            "No research population has been declared"
+            "Declared fixture population"
         )
+        with page.expect_download() as cohort_exported:
+            page.get_by_role("link", name="Export frozen evidence", exact=True).click()
+        frozen = json.loads(Path(cohort_exported.value.path()).read_text())
+        assert frozen["cohort_id"] == "frozen-cohort"
+        snapshot = frozen["records"][0]["payload"]["snapshot"]["inputs"]
+        assert (
+            snapshot["source_record"]["quote"]["original"]
+            == frozen_calculation["posted"]
+        )
+        assert (
+            snapshot["calculation"]["fee"]["cashflows"]
+            == frozen_calculation["fee"]["cashflows"]
+        )
+        assert snapshot["fee_input"]["classification"] == "frozen_fixture_fee"
         assert page.evaluate("document.documentElement.scrollWidth<=innerWidth")
         page.screenshot(path=str(tmp_path / f"research-{width}.png"), full_page=True)
         assert not errors

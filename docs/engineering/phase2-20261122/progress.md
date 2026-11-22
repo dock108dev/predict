@@ -6,9 +6,9 @@ while scheduled runtime evidence is pending.
 
 ## Phase 1: recovery and coverage
 
-The exact startup rewrite was `sgo_quote_revision`: relation544,710,656bytes,
-reusable273,076,544bytes, required free disk2,707,873,792bytes versus
-2,391,052,288available. The database was below its4GiB operating guard.
+The exact startup rewrite was `sgo_quote_revision`: relation 544,710,656bytes,
+reusable 273,076,544bytes, required free disk 2,707,873,792bytes versus
+2,391,052,288available. The database was below its 4 GiB operating guard.
 Optional FULL rewrite, recovery repack and metadata-copy disk refusals now
 produce named deferrals. Other failures still propagate; runtime/admission
 SQL, disk, account and control guards remain authoritative. Startup disposition
@@ -28,7 +28,7 @@ not an invented soak window.
 Portable recovery/guard/status checks:53passed plus22subtests. The initial
 disposable maintenance run27pass/1fail revealed the second optional repack
 refusal; its focused rerun passed after the narrow fix. The original result is
-preserved. Coverage SQL:2passed. Archive census portable:2passed.
+preserved. Coverage SQL: 2passed. Archive census portable: 2passed.
 
 The first content census was interrupted by archive-container replacement
 (exit137), not corruption. A standalone read-only census with checkpoints is
@@ -47,7 +47,7 @@ exact links remain supported. Private research routes retain Admin auth at
 the proxy. Repeatable-read tokens and exact captured JSON export preserve
 input/result identity.
 
-New catalog SQL:5passed plus3subtests. It covers missing fees, reference-only
+New catalog SQL: 5passed plus3subtests. It covers missing fees, reference-only
 books, withdrawal, provider/venue ambiguity and a source update after snapshot.
 Controller/asset checks and a real saved-snapshot browser flow pass. One real
 inspected row was Boston–Denver Kalshi over240.5,+625, conservative p60/467,
@@ -73,7 +73,7 @@ retention classification. A player-points market is received-but-unsupported,
 not a supported game-total just because its family is `ou`. Existing native
 raw availability and historical SGO original-response gaps remain distinct.
 
-Original retention/adapter/transport/collector/game-result checks59passed.
+Original retention/adapter/transport/collector/game-result checks 59passed.
 This includes reparse to identical identities/prices/clocks, unsupported-field
 retention, cap/retry/disk behavior and unchanged known charges/holds.
 
@@ -193,3 +193,64 @@ fee assertions and exact cashflows: committed 100, win net receipt 1538, loss
 net receipt zero, probability 145/1909, EV 3211/19090 and modeled profit
 32110/1909. This is a historical calculation witness, not a fill or profit
 achieved. All preserved fields remain unchanged.
+
+## Installed research and real-data chain at 21:06 UTC
+
+Commit `4ae952d` was pushed and installed by release 45068971983. Web, collector
+and archive were healthy with restart zero; all 112 migration hashes matched.
+Stop, source pauses and the three disabled direct-source flags were unchanged.
+The existing interrupted exposure stayed recorded (94 reserved objects); SGO
+held/overrun count remained zero. SQL usage was 2,920,528,919 bytes and free
+disk 2,983,940,096 bytes after deployment.
+
+Two explicitly declared retrospective cases used the existing SGO account and
+guards. Each result capture charged one returned-event object and used two
+exempt usage reads; there were no retries or holds. Washington–Utah Tech final
+82–69 matched its exact source event, start and canonical roles. Old Dominion–
+UConn final 21–29 also matched. Provider publication clocks were absent and
+remain null. Results are sporting outcomes, not venue settlements or fills.
+
+The first record's receipt-horizon probability snapshot was captured before
+the later fee calculation became known (the latter was retained separately,
+not borrowed by the earlier cutoff). Its one scored event has Brier
+21025/3644281. The BetOnline capability's actual retained -550/+415 pair yields
+home1133/1393 and away260/1393; its independent scored event has Brier
+67600/1940449. These are retrospective functional examples; they do not
+establish model accuracy, calibration or profitable execution.
+
+Original receipt retention/reparse was verified in the installed app without
+further provider requests: Washington body47,719 bytes compressed7,063; UConn
+body57,882 compressed9,001. Body hashes, source event/role identities, receipt/
+knowledge clocks and final scores reproduced exactly. No gaps were recorded in
+these two captures. The next normal Monitor slot remains the configured21:20;
+these result captures are not mislabeled as normal Monitor receipt evidence.
+
+Automatic daily research declared1,159 exact market cases across259 events at
+20:58:37UTC. The first21:00 cutoff reconciled284 due slots:145 probability-only
+captures,36 missing-before-cutoff and103 unavailable references. All1,159cases
+had observations by21:03:13;875 slots were then still in the future. The audit
+found zero future-at-recording captures and zero late declarations. Missing
+startup observations were not backfilled. Storage16,987,561bytes total and
+14,244,446observation bytes remained within32MiB/16MiB allocations. Finite
+capacity and original source ages remain visible, rather than becoming false
+claims of indefinite capture or fresh quotes.
+
+The protected production `/research` and research API returned401 without
+credentials; `/opportunities` remained200. A passive installed query found zero
+positive calculations for the unestablished SGO Polymarket-US alias, with zero
+provider requests.
+
+## Final reproducibility follow-up
+
+The installed chain exposed an export gap: cohort definitions/evaluation IDs
+were downloadable, but frozen observations/captures/outcomes were omitted. A
+bounded, hash-verified complete evidence download is implemented, with a real
+loopback HTTP desktop/mobile download test. Detail reads remain small.
+
+Hosted CI also exposed the scenario derivation path copying stale coherent
+probability metadata. It now rebuilds both policy witnesses from the selected
+cohort's one batched reference read while preserving qualified fee cashflows.
+Unsupported source-book quarter-line settlement is withheld explicitly; pure
+historical arithmetic remains reproducible and native binary threshold prices
+are not relabeled as split stakes. Focused verification and final rollout are
+in progress; the failed hosted result is retained.

@@ -3,6 +3,7 @@
 from copy import deepcopy
 from datetime import timedelta
 from fractions import Fraction as F
+import json
 from unittest import skipUnless
 
 import psycopg
@@ -10,7 +11,7 @@ import psycopg
 from app.research import records
 from app.research.calculation import reproduce
 from app.storage import current_pregame as board
-from app.storage.store import stamp
+from app.storage.store import encoded, hashed, stamp
 from tests.latest_board_fixture import SOCKET
 from tests.pregame_fixture import AT, PregameFixture, page
 
@@ -102,6 +103,67 @@ class ResearchSQL(PregameFixture):
                 db.execute("DELETE FROM public.research_record WHERE id=%s", (first["id"],))
             self.assertEqual(records._get(db, before["id"])["records"], before["records"])
 
+    async def test_complete_export_reproduces_offline_and_preserves_all_revisions(self):
+        from unittest.mock import patch
+
+        with self.connect() as db:
+            cohort, case, observation, row = self.setup_case(db, missing=True)
+            capture = records.capture_due(db, at=stamp(AT), cohort_id=cohort["id"])
+            data = dict(source="fixture-final-score", published_at=None,
+                observed_at="2026-11-17T22:01:00Z", final=True, result="completed", home_score=100, away_score=90)
+            first = records.annotate(db, cohort["id"], case["case_key"], "sporting", data, at=stamp(data["observed_at"]))
+            before = records.evaluate(db, cohort["id"], as_of=stamp("2026-11-17T22:30:00Z"), persist=True)
+            correction = dict(data, home_score=90, away_score=100, observed_at="2026-11-17T23:00:00Z")
+            second = records.annotate(db, cohort["id"], case["case_key"], "sporting", correction,
+                supersedes_id=first["id"], reason="corrected final score", at=stamp(correction["observed_at"]))
+            after = records.evaluate(db, cohort["id"], as_of=stamp("2026-11-17T23:01:00Z"), persist=True)
+            unrelated = records.declare(db, name="outside-export", cases=[case],
+                horizons=[3600], designation="synthetic_demonstration", at=stamp(AT))
+            original = list(db.execute("SELECT * FROM public.research_record ORDER BY id"))
+            with db.transaction():
+                db.execute("SET TRANSACTION READ ONLY")
+                with patch.object(records, "evaluate", side_effect=AssertionError("export recomputed evaluation")):
+                    bundle = records.export_cohort(db, cohort["id"])
+            self.assertEqual(original, list(db.execute("SELECT * FROM public.research_record ORDER BY id")))
+            with patch.object(records, "TOTAL_BYTE_CAP", bundle["manifest"]["total_payload_bytes"]):
+                near_cap = records.export_cohort(db, cohort["id"])
+                self.assertEqual(near_cap["records"], bundle["records"])
+                self.assertGreater(len(encoded(near_cap)), records.TOTAL_BYTE_CAP)
+                self.assertLessEqual(len(encoded(near_cap))+1, near_cap["manifest"]["canonical_byte_cap"])
+                self.assertEqual(near_cap["manifest"]["retained_payload_byte_cap"], records.TOTAL_BYTE_CAP)
+            with patch.object(records, "TOTAL_BYTE_CAP", bundle["manifest"]["total_payload_bytes"]-1):
+                with self.assertRaisesRegex(ValueError, "research_export_capacity"):
+                    records.export_cohort(db, cohort["id"])
+        # Close the database before reopening the exact exported JSON. Neither
+        # source SQL nor current mutable policies are fetched to get these inputs.
+        reopened = json.loads(encoded(bundle))
+        self.assertEqual(reopened["provider_requests"], 0)
+        self.assertEqual(reopened["schema"], "predict-research-cohort-export-1")
+        self.assertLessEqual(len(encoded(reopened))+1, reopened["manifest"]["canonical_byte_cap"])
+        exported = {r["id"]: r for r in reopened["records"]}
+        self.assertNotIn(unrelated["id"], exported)
+        self.assertIn(cohort["id"], exported)
+        self.assertIn(observation["id"], exported)
+        self.assertEqual(len(exported), len(original)-1)
+        self.assertEqual(reopened["manifest"]["record_count"], len(exported))
+        self.assertEqual(reopened["manifest"]["total_payload_bytes"], sum(r["payload_bytes"] for r in exported.values()))
+        self.assertEqual(reopened["manifest"]["bundle_sha256"], hashed({k: v for k, v in reopened.items() if k != "manifest"}))
+        for entry in exported.values():
+            self.assertEqual(hashed(entry["payload"]), entry["id"])
+            self.assertEqual(len(encoded(entry["payload"])), entry["payload_bytes"])
+            self.assertIsNotNone(stamp(entry["recorded_at"]).tzinfo)
+        snapshot = exported[observation["id"]]["payload"]["snapshot"]
+        self.assertIsNotNone(snapshot["inputs"]["source_record"])
+        self.assertIsNotNone(snapshot["inputs"]["fee_input"])
+        self.assertEqual(reproduce(snapshot)["status"], "calculated")
+        captured = next(r for r in capture if r["status"] == "captured")
+        self.assertEqual(reproduce(exported[captured["id"]]["payload"]["snapshot"]), reproduce(snapshot))
+        self.assertEqual(exported[second["id"]]["payload"]["supersedes_id"], first["id"])
+        self.assertEqual(exported[before["id"]]["payload"]["records"][0]["outcome_id"], first["id"])
+        self.assertEqual(exported[after["id"]]["payload"]["records"][0]["outcome_id"], second["id"])
+        self.assertEqual(reopened["evaluation"]["latest_saved_id"], after["id"])
+        self.assertFalse(reopened["evaluation"]["current_recomputed"])
+
     async def test_sporting_import_preserves_unknown_publication_and_unavailable_cases(self):
         with self.connect() as db:
             cohort, case, observation, row = self.setup_case(db)
@@ -172,6 +234,40 @@ class ResearchSQL(PregameFixture):
             self.assertTrue(result)
             self.assertEqual(before, list(db.execute("SELECT * FROM current_pregame_calculation ORDER BY contract_id")))
             self.assertEqual(prices, list(db.execute("SELECT * FROM current_pregame_price ORDER BY contract_id")))
+
+    async def test_sgo_quarter_stake_remains_received_and_explicitly_unqualified(self):
+        from unittest.mock import patch
+        from app.comparison import current_pregame as math
+        data = page()
+        for i, odd in enumerate(data["data"][0]["odds"].values()):
+            for book in odd["byBookmaker"].values():
+                book["spread"] = "1.25" if i else "-1.25"
+        with self.connect() as db:
+            source = self.ingest(db, data)
+            self.assertEqual({F(r["selection"]["signed_line"]) for r in source}, {F(-5,4), F(5,4)})
+            self.process(db)
+            self.assertTrue(list(db.execute("SELECT * FROM current_offer")))
+            rows = list(db.execute("SELECT reason,payload FROM current_pregame_calculation"))
+            self.assertTrue(rows)
+            self.assertEqual({r["reason"] for r in rows}, {"posted_line_settlement_unestablished"})
+            self.assertTrue(all(r["payload"] is None for r in rows))
+            self.assertEqual(board.read(db, dict(browse="1", lines="all"), at=stamp(AT))["rows"], [])
+            # Simulate an old conditional writer, then exercise immediate read
+            # withholding, retained-source upgrade and unchanged historical math.
+            with patch("app.comparison.current_pregame.posted_settlement_reason", return_value=None), patch(
+                "app.comparison.current_pregame.qualified_coherent_reference", side_effect=math.coherent_reference
+            ):
+                db.execute("SELECT pregame_enqueue('sportsgameodds','event')")
+                self.process(db)
+            prior = db.execute("SELECT payload FROM current_pregame_calculation WHERE payload IS NOT NULL LIMIT 1").fetchone()["payload"]
+            self.assertEqual(board.read(db, dict(browse="1", lines="all"), at=stamp(AT))["rows"], [])
+            from app.storage.pregame_snapshot import revalue
+            with patch("app.storage.current_rows.utc", return_value=AT):
+                report = revalue(db, at=stamp(AT))
+            self.assertGreater(report["examined"], 0, list(db.execute("SELECT facts FROM current_contract")))
+            self.assertEqual(records.conditional_history(db, prior["id"])[0]["original_calculation"], prior)
+            with patch("app.storage.current_rows.utc", return_value=AT):
+                self.assertEqual(revalue(db, at=stamp(AT))["examined"], 0)
 
     async def test_polymarket_alias_stays_received_without_borrowing_us_fees(self):
         from unittest.mock import patch
