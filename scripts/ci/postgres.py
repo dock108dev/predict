@@ -293,6 +293,8 @@ def main(argv=None):
                     "tests/test_sgo_native_catalog_sql.py",
                     "tests/test_sportsgameodds_ingress_sql.py",
                     "tests/test_sportsgameodds_reference_sql.py",
+                    "tests/test_ev_experiment_sql.py",
+                    "tests/test_experiment_acquisition_sql.py",
                 ]
             )
             if args.tests:

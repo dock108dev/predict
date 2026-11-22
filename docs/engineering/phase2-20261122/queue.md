@@ -1,4 +1,21 @@
-# Active phase 2 implementation queue
+# Active research implementation queue
+
+The current assignment is the first-observation versus T−10 EV experiment.
+The phase 2 foundation below is completed historical implementation evidence.
+Current policy and operating details are in `docs/ev-checkpoint-experiment.md`.
+
+| Current checkpoint | State | Evidence needed |
+| --- | --- | --- |
+| Versioned policy and scheduling transition | Implemented; SQL integration in progress | Immutable activation, old history preserved, primary scheduler replaced |
+| Guarded early/late acquisition and coverage | Implemented; focused fixtures passed | Actual full-scope early/late receipt and persistence clocks |
+| Exact identity, sign selection and cross-reference math | Implemented; 22 portable checks passed | Independent branches, unavailable and chronology cases, offline reproduction |
+| Comparison, source context, observed plots and exports | Implemented; desktop/mobile/zoom fixtures passed | Installed normal clicks and complete export |
+| Scheduled operation, outcomes, storage and deployment | In progress | One real eligible game at both checkpoints, bounded follow-up, measured bytes, required CI |
+
+The live stopping condition comes from the owner's explicit two-checkpoint
+verification request. No positive cases, minimum early lead time, completed game
+outcome, or extra observation duration is added. The late tolerance and postgame
+attempt limits are versioned engineering policies, not review gates.
 
 Owner direction: November 22, 2026 pasted assignment. This is the one active
 implementation queue. The audit and implementation proposal are dated starting

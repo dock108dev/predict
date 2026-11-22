@@ -165,6 +165,13 @@ class SportsGameOddsWorker:
         self.collection_run = None
         self.activity_status = None
         self.activity_reader = activity_reader
+        # Ordinary collection and the scheduled experiment share one paid
+        # request slot. Upcoming checkpoint credit reservations are admission
+        # headroom only; financial ledger exposure remains the actual request.
+        self.request_lock = asyncio.Lock()
+        self.experiment_late_waiting = False
+        self.experiment_reserved_objects = 0
+        self.experiment_reserved_requests = 0
 
     def controls(self):
         return {'stopped': self.closed or not self.service.dispatch or self.service.globally_stopped
@@ -351,6 +358,15 @@ class SportsGameOddsWorker:
             await self.update_study(page,admitted_at)
 
     async def _fetch(self, params):
+        while True:
+            while self.experiment_late_waiting:
+                await asyncio.sleep(0.01)
+            async with self.request_lock:
+                if self.experiment_late_waiting:
+                    continue
+                return await self._fetch_owned(params)
+
+    async def _fetch_owned(self, params):
         if not await self.request_in_scope_async(params):
             raise PregameWindowClosed()
         self.page_in_progress = True

@@ -38,7 +38,7 @@ class DailyObjectPacing(RuntimeError):
 
 class GuardedPageCollector:
     def __init__(self, ledger, window_id, transport, *, controls, account_usage, eligible=None,
-                 receipt_retainer=None):
+                 receipt_retainer=None, eligible_after_reservation=None):
         self.ledger = ledger
         self.window_id = window_id
         self.transport = transport
@@ -46,9 +46,11 @@ class GuardedPageCollector:
         self.account_usage = account_usage
         self.eligible = eligible
         self.receipt_retainer = receipt_retainer
+        self.eligible_after_reservation = eligible_after_reservation
 
-    async def _eligible(self, params):
-        value = self.eligible(params)
+    async def _eligible(self, params, *, reserved=False):
+        check = self.eligible_after_reservation if reserved and self.eligible_after_reservation else self.eligible
+        value = check(params)
         return await value if inspect.isawaitable(value) else value
 
     async def fetch(self, params, api_key, *, now=None):
@@ -95,7 +97,7 @@ class GuardedPageCollector:
         # dispatched here: error/cancellation is provably free, and Stop/pause
         # must be read again after that await rather than using an old snapshot.
         try:
-            eligible = not self.eligible or await self._eligible(params)
+            eligible = not self.eligible or await self._eligible(params, reserved=True)
             control = self.controls()
         except BaseException:
             self.ledger.resolve(attempt, charged=0, evidence='eligibility interrupted before transport dispatch', now=now)

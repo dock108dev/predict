@@ -1,5 +1,10 @@
 # Reproducible probability and research records
 
+The daily/one-hour automatic policy described here is preserved foundation
+history. The new primary automatic workflow is documented in
+`docs/ev-checkpoint-experiment.md`; activation records its transition without
+rewriting these cohorts or their calculations and exports.
+
 The current calculation owner retains its conservative per-bet screen under
 `lowest-no-vig-two-trusted-books-2`. Its results are not a complementary event
 distribution. The additional `first-complete-trusted-pair-proportional-1`

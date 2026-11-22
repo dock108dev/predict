@@ -193,9 +193,62 @@ def mount(app):
         from .pipeline import serial
         return web.json_response(serial(value), headers=HEADERS)
 
+    async def experiment(request):
+        query = dict(request.query)
+        if set(query)-{'id', 'revision', 'export', 'include_context', 'limit', 'offset'} or any(
+                len(value) > 256 for value in query.values()):
+            raise PublicRequestError('Invalid checkpoint experiment selection.')
+        if query.get('export') not in (None, '1') or query.get('include_context') not in (None, '1'):
+            raise PublicRequestError('Invalid checkpoint experiment view.')
+        identity, revision = query.get('id'), query.get('revision')
+        exporting = query.get('export') == '1'
+        if bool(identity) != bool(revision) or exporting and not identity:
+            raise PublicRequestError('A captured game ID and revision are required.')
+        if revision and (len(revision) != 64 or any(char not in '0123456789abcdef' for char in revision)):
+            raise PublicRequestError('Invalid captured game revision.')
+        try:
+            limit, offset = int(query.get('limit', 50)), int(query.get('offset', 0))
+            if not 1 <= limit <= 100 or not 0 <= offset <= 2147483647:
+                raise ValueError()
+        except ValueError:
+            raise PublicRequestError('Invalid checkpoint experiment page.') from None
+        if identity and any(key in query for key in ('include_context', 'limit', 'offset')):
+            raise PublicRequestError('Context filtering applies to the game list.')
+
+        def work():
+            from app.research import experiment as owner
+            with connect() as db:
+                db.execute("SET statement_timeout='10s'")
+                # Detail/export own their repeatable-read boundary. Nesting
+                # them would make PostgreSQL reject SET TRANSACTION in a savepoint.
+                if exporting:
+                    return encoded(owner.export_game(db, identity, revision=revision))
+                if identity:
+                    return owner.detail(db, identity, revision=revision)
+                with db.transaction():
+                    db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
+                    return owner.catalog(db, include_context=query.get('include_context') == '1', limit=limit, offset=offset)
+
+        try:
+            async with gate:
+                value = await joined(work)
+        except ValueError as exc:
+            if str(exc) == 'experiment_revision_changed':
+                return web.json_response(dict(error='Checkpoint evidence changed; refresh comparisons before opening this game.',
+                    refresh_required=True, provider_requests=0), status=409, headers=HEADERS)
+            if str(exc) in ('experiment_game_unknown', 'experiment_unknown_game'):
+                raise PublicRequestError('Unknown tracked experiment game.') from None
+            raise
+        if exporting:
+            return web.Response(body=value, content_type='application/json', headers={**HEADERS,
+                'Content-Disposition': 'attachment; filename="predict-early-late-game.json"'})
+        from .pipeline import serial
+        return web.json_response(serial(value), headers=HEADERS)
+
     app.router.add_get('/api/research/catalog', page)
     app.router.add_get('/api/research/input', detail)
     app.router.add_get('/api/research/export', export)
     app.router.add_delete('/api/research/read', release)
     app.router.add_get('/api/research/coverage', coverage)
     app.router.add_get('/api/research/cohorts', cohorts)
+    app.router.add_get('/api/research/experiment', experiment)

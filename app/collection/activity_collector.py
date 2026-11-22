@@ -123,7 +123,15 @@ class ActivityCollector:
             raise ActivityBudgetDelayed(
                 "archive_backlog", worker.now() + timedelta(seconds=30)
             )
-        budget_admit(worker.ledger, worker.window_id, params["limit"], worker.now())
+        budget_admit(worker.ledger, worker.window_id,
+                     params["limit"] + max(0, getattr(worker, 'experiment_reserved_objects', 0)),
+                     worker.now())
+        reserved_requests = max(0, getattr(worker, 'experiment_reserved_requests', 0))
+        if reserved_requests and worker.ledger is not None and worker.window_id is not None:
+            rate = worker.ledger.request_capacity(worker.window_id, now=worker.now())
+            if rate['available'] <= reserved_requests:
+                raise ActivityBudgetDelayed('experiment_checkpoint_rate_headroom',
+                                            max(worker.now()+timedelta(seconds=1), rate['next_at']))
         previous = getattr(worker, "collection_run", None)
         worker.collection_run = job["run"]
         worker.activity_status = status

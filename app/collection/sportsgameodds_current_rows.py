@@ -80,7 +80,7 @@ def event_record(event, receipt_sha256, received_at, registry):
     return correct(row, at=received_at)
 
 
-def current_rows(page, receipt_sha256):
+def current_rows(page, receipt_sha256, *, include_unpriced=False):
     """Return (rows, exclusions); never declares a scope authoritative."""
     if not isinstance(receipt_sha256, str) or not re.fullmatch('[0-9a-f]{64}', receipt_sha256):
         raise ValueError('original receipt digest required')
@@ -94,7 +94,7 @@ def current_rows(page, receipt_sha256):
         if quote['venue'] not in CURRENT_VENUES:
             excluded.append((quote['event_id'], quote['venue'], 'unsupported current-row venue'))
             continue
-        if quote['price_american'] is None:
+        if quote['price_american'] is None and not include_unpriced:
             excluded.append((quote['event_id'], quote['venue'], 'no retained price'))
             continue
         line = quote['line']
@@ -190,7 +190,7 @@ def current_rows(page, receipt_sha256):
             q = dict(id='', revision=1, venue=venue, source=source, original=original,
                      times=dict(source_at=at, received_at=quote['received_at'], projected_at=None,
                                 source_time_kind='provider_book' if at else 'unknown'),
-                     state='available' if quote['available'] else 'unavailable',
+                     state='available' if quote['available'] and quote['price_american'] is not None else 'unavailable',
                      rule_note='SportsGameOdds aggregate full-game outcome; settlement and native occurrence association unverified.',
                      cost_note='American odds retained exactly; fees, execution and depth are unverified.',
                      observation_time_evidence='SportsGameOdds bookmaker clock; upstream delay unknown.',

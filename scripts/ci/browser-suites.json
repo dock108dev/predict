@@ -62,6 +62,7 @@
     "test_sc07_u3.cjs",
     "test_raw_result_view.cjs",
     "test_raw_odds_controls.cjs",
-    "test_research_workspace.cjs"
+    "test_research_workspace.cjs",
+    "test_experiment_workspace.cjs"
   ]
 }

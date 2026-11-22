@@ -75,4 +75,13 @@ def ingest(page, *, known_at):
     from app.storage.store import connect
     from app.research.records import import_sporting
     with connect() as db:
+        # Activation retires the old polling population, including outcome
+        # revision writes. Explicit historical CLI imports remain available.
+        if db.execute("SELECT to_regclass('public.ev_experiment_accounting') r").fetchone()['r']:
+            policy = db.execute('SELECT policy_id FROM public.ev_experiment_accounting WHERE singleton').fetchone()
+            if policy and policy['policy_id']:
+                from app.research.experiment import observe_outcomes
+
+                return dict(policy='first-observed-24h-vs-tminus10-screen-ev-1',
+                            **observe_outcomes(db, items, at=stamp(known_at)))
         return import_sporting(db, items)

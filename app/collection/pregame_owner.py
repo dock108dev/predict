@@ -18,6 +18,7 @@ class PregameOwner:
         self.last_status = 0
         self.last_research_capture = 0
         self.cohort_progress = {}
+        self.experiment = None
         self.fee_account_identity = object()
         from app.storage.ordinary_owner import OrdinaryOwner
 
@@ -34,6 +35,10 @@ class PregameOwner:
     async def start(self):
         await asyncio.to_thread(self.seed)
         await self.research.start()
+        from .experiment_acquisition import ExperimentAcquisition
+
+        self.experiment = ExperimentAcquisition(self.service)
+        await self.experiment.start()
         self.task = asyncio.create_task(
             self.run(), name="predict-current-pregame-recovery"
         )
@@ -105,17 +110,14 @@ class PregameOwner:
             )
             from time import monotonic
 
-            # Cohorts/cutoffs are independent of the optional positive-arb
-            # journal sampler. Scheduling reads issue no provider requests.
+            # The versioned first-observation/T-10 scheduler replaces daily
+            # one-hour polling. Historical cohorts and exports stay unchanged.
             if monotonic() - self.last_research_capture >= 30 and not BACKGROUND.critical_acquisition_pressure():
                 self.last_research_capture = monotonic()
-                try:
-                    from app.research.records import automatic_turn
+                from app.research.experiment import VERSION
 
-                    self.cohort_progress = automatic_turn(db)
-                except Exception as exc:
-                    failure(__name__, "prospective_research_capture", exc)
-                    self.cohort_progress = dict(state="unavailable", reason=str(exc)[:160])
+                self.cohort_progress = dict(state='superseded', replacement=VERSION,
+                    historical_records='preserved', new_daily_declarations=False)
 
             if result or monotonic() - self.last_status >= 5:
                 state = operational(db)
@@ -127,6 +129,7 @@ class PregameOwner:
                     current_rows=dict(**state, recent=result),
                     research=self.research.progress,
                     cohorts=self.cohort_progress,
+                    experiment=self.experiment.progress if self.experiment else {},
                 )
                 self.last_status = monotonic()
 
@@ -166,6 +169,8 @@ class PregameOwner:
     async def close(self):
         self.closed = True
         self.wake.set()
+        if self.experiment:
+            await self.experiment.close()
         await self.research.close()
         if self.task:
             await self.task

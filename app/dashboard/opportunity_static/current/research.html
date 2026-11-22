@@ -5,12 +5,24 @@
 <link rel="stylesheet" href="/view/current/pregame.css">
 <link rel="stylesheet" href="/view/current/research.css">
 <script type="module" src="/view/current/research.js"></script>
+<script type="module" src="/view/current/experiment.js"></script>
 </head><body class="research-page">
 <a class="skip" href="#catalog">Skip to received data</a>
 <header class="masthead"><a class="brand" href="/">PREDICT</a>
 <nav aria-label="Main"><a href="/research" aria-current="page">Research</a><a href="/opportunities">Opportunities</a><a href="/browse-odds">Browse odds</a><a href="/raw-odds">Raw inputs</a><a href="/admin">Admin</a></nav></header>
 <main class="board-wrap">
-<header class="board-heading"><div><h1>Received market data</h1><p>Inspect source observations, identities and calculations across every result status.</p></div><a class="research-control" href="/admin">Collection &amp; budget controls</a></header>
+<header class="board-heading"><div><h1>Early versus ten minutes before start</h1><p>Compare the same exact bet from this experiment’s first observation within 24 hours to its scheduled T−10 capture.</p></div><a class="research-control" href="/admin">Collection &amp; budget controls</a></header>
+<section id="experiment" aria-labelledby="experiment-heading" aria-busy="true">
+<div class="experiment-heading"><h2 id="experiment-heading">Retained research cases</h2><button id="experiment-refresh" type="button">Refresh comparisons</button></div>
+<p>Cases are retained when either checkpoint has positive exact screening EV. Missing values stay unavailable; surrounding negative/negative quotes remain in each game's market context.</p>
+<div class="experiment-controls"><label><input id="experiment-context" type="checkbox"> Show all tracked games and market context</label></div>
+<p id="experiment-status" role="status">Reading scheduled checkpoint evidence…</p><p id="experiment-policy" class="research-muted"></p>
+<div id="experiment-cases"></div><div id="experiment-games"></div>
+<nav class="catalog-pagination" aria-label="Experiment game pages"><button id="experiment-previous" type="button" disabled>Previous games</button><span id="experiment-page"></span><button id="experiment-next" type="button" disabled>Next games</button></nav>
+<details id="experiment-operation"><summary>Experiment timing, coverage &amp; retention</summary><div id="experiment-operation-content"></div></details>
+</section>
+<h2 id="received-heading">Received market data</h2>
+<p>Inspect source observations, identities and calculations across every result status.</p>
 <section class="research-panels" aria-label="Research evidence">
 <details id="coverage"><summary>Collection, archive &amp; retention</summary><div id="coverage-content"><p>Open to read acquisition and archive coverage.</p></div></details>
 <details id="cohorts"><summary>Declared research populations &amp; evaluation</summary><div id="cohort-content"><p>Open to inspect frozen cohorts, missing cases and outcome scoring.</p></div></details>
@@ -32,4 +44,5 @@
 <footer><a href="/raw-odds">Raw native books &amp; retained legacy inputs</a><a href="/replay?dataset=frozen">Saved replay</a><a href="/my-bets">Personal journal</a></footer>
 </main>
 <dialog id="input-detail" aria-labelledby="input-title"><div class="research-dialog-heading"><h2 id="input-title">Captured research record</h2><button id="close-detail" type="button">Close</button></div><div id="input-content"></div></dialog>
+<dialog id="experiment-detail" aria-labelledby="experiment-title"><div class="research-dialog-heading"><h2 id="experiment-title">Captured checkpoint comparison</h2><button id="experiment-close" type="button">Close comparison</button></div><div id="experiment-content"></div></dialog>
 </body></html>

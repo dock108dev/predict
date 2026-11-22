@@ -62,6 +62,28 @@ def record_byte_cap(kind):
     return EVALUATION_RECORD_BYTE_CAP if kind == "evaluation" else RECORD_BYTE_CAP
 
 
+def retention_usage(db):
+    """One allocation owner for historical research and checkpoint evidence."""
+    row = dict(db.execute("""SELECT count(*) records,COALESCE(sum(payload_bytes),0) total,
+        COALESCE(sum(payload_bytes) FILTER(WHERE kind='observation'),0) observations,
+        max(recorded_at) latest_recorded_at FROM public.research_record""").fetchone())
+    slots = db.execute("SELECT count(*) n FROM public.research_retention_disposition").fetchone()["n"]
+    row["reserved"] = slots * DISPOSITION_SLOT_BYTES + ACCOUNTING_BYTES
+    row.update(experiment_records=0, experiment_bytes=0, experiment_reserved_bytes=0)
+    if db.execute("SELECT to_regclass('public.ev_experiment_record') r").fetchone()["r"]:
+        from .experiment_evidence import GAME_METADATA_BYTES, ACCOUNTING_METADATA_BYTES
+        extra = db.execute("SELECT count(*) n,COALESCE(sum(payload_bytes),0) bytes,max(recorded_at) latest FROM public.ev_experiment_record").fetchone()
+        games = db.execute("SELECT count(*) n,COALESCE(sum(late_reserved_bytes),0) late FROM public.ev_experiment_game").fetchone()
+        reserve = games["n"] * GAME_METADATA_BYTES + ACCOUNTING_METADATA_BYTES + int(games["late"])
+        row.update(experiment_records=extra["n"], experiment_bytes=extra["bytes"], experiment_reserved_bytes=reserve)
+        row["total"] += extra["bytes"]
+        row["records"] += extra["n"]
+        row["reserved"] += reserve
+        if extra["latest"] and (not row["latest_recorded_at"] or extra["latest"] > row["latest_recorded_at"]):
+            row["latest_recorded_at"] = extra["latest"]
+    return row
+
+
 def _record(db, kind, payload, *, cohort_id=None, case_key=None, slot=None):
     body = dict(version=VERSION, kind=kind, **payload)
     identity = hashed(body)
@@ -70,11 +92,8 @@ def _record(db, kind, payload, *, cohort_id=None, case_key=None, slot=None):
         raise ValueError("research_record_capacity")
     if db.execute("SELECT 1 FROM public.research_record WHERE id=%s", (identity,)).fetchone():
         return dict(body, id=identity)
-    used = db.execute("""SELECT COALESCE(sum(payload_bytes),0) total,
-        COALESCE(sum(payload_bytes) FILTER(WHERE kind='observation'),0) observations
-        FROM public.research_record""").fetchone()
-    reserved = db.execute("SELECT count(*) n FROM public.research_retention_disposition").fetchone()["n"] * DISPOSITION_SLOT_BYTES + ACCOUNTING_BYTES
-    if used["total"] + reserved + size > TOTAL_BYTE_CAP or (
+    used = retention_usage(db)
+    if used["total"] + used["reserved"] + size > TOTAL_BYTE_CAP or (
         kind == "observation" and used["observations"] + size > OBSERVATION_BYTE_CAP
     ):
         raise ValueError("research_retention_capacity")
@@ -134,9 +153,8 @@ def declare(db, *, name, cases, horizons=DEFAULT_HORIZONS, designation="prospect
     with db.transaction():
         _writer_lock(db)
         required = len(normalized) * len(horizons) * DISPOSITION_SLOT_BYTES
-        used = db.execute("""SELECT COALESCE(sum(payload_bytes),0) n FROM public.research_record""").fetchone()["n"]
-        slots = db.execute("SELECT count(*) n FROM public.research_retention_disposition").fetchone()["n"]
-        if used + slots * DISPOSITION_SLOT_BYTES + required + ACCOUNTING_BYTES + RECORD_BYTE_CAP > TOTAL_BYTE_CAP:
+        used = retention_usage(db)
+        if used["total"] + used["reserved"] + required + RECORD_BYTE_CAP > TOTAL_BYTE_CAP:
             raise ValueError("research_disposition_capacity")
         cohort = _record(db, "cohort", dict(
             name=name, declared_at=at.isoformat(), designation=designation,
@@ -771,10 +789,10 @@ def export_cohort(db, cohort_id):
 
 
 def status(db):
-    row = db.execute("""SELECT count(*) records,COALESCE(sum(payload_bytes),0) retained_bytes,
-        COALESCE(sum(payload_bytes) FILTER(WHERE kind='observation'),0) observation_bytes,
-        max(recorded_at) latest_recorded_at FROM public.research_record""").fetchone()
-    row = dict(row)
+    used = retention_usage(db)
+    row = dict(records=used["records"], retained_bytes=used["total"], observation_bytes=used["observations"],
+               latest_recorded_at=used["latest_recorded_at"], experiment_records=used["experiment_records"],
+               experiment_payload_bytes=used["experiment_bytes"], experiment_allocation_bytes=used["experiment_reserved_bytes"])
     if row["latest_recorded_at"] is not None:
         row["latest_recorded_at"] = row["latest_recorded_at"].isoformat()
     disposition = db.execute("""SELECT count(*) slots,COALESCE(sum(observation_refusals),0)::bigint observation_refusals,
@@ -784,7 +802,7 @@ def status(db):
         count(*) FILTER(WHERE observation_refusals>0) observation_affected_slots,
         count(*) FILTER(WHERE capture_refusals>0) capture_affected_slots
         FROM public.research_retention_disposition""").fetchone()
-    allocation = disposition["slots"] * DISPOSITION_SLOT_BYTES + ACCOUNTING_BYTES
+    allocation = used["reserved"]
     return dict(row, byte_cap=TOTAL_BYTE_CAP, observation_byte_cap=OBSERVATION_BYTE_CAP,
                 record_byte_caps=dict(ordinary=RECORD_BYTE_CAP, evaluation=EVALUATION_RECORD_BYTE_CAP),
                 disposition_allocation_bytes=allocation, total_allocation_bytes=row["retained_bytes"]+allocation,

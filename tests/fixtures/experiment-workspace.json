@@ -1,0 +1,4592 @@
+{
+  "listing": {
+    "policy": {
+      "version": "first-observed-24h-vs-tminus10-screen-ev-1",
+      "late_tolerance_seconds": 60,
+      "early": {
+        "rule": "first_observed_by_this_experiment_within_24h"
+      },
+      "late": {
+        "target_seconds_before_start": 600,
+        "window_start_offset_seconds": 0,
+        "window_end_offset_seconds": 60
+      },
+      "outcomes": {
+        "offsets_seconds": [
+          10800,
+          21600
+        ],
+        "max_requests": 2
+      }
+    },
+    "scheduling_transition": {
+      "recorded_at": "2026-11-22T19:00:00Z",
+      "previous": "daily-one-hour",
+      "current": "first-observed-24h-vs-tminus10-screen-ev-1"
+    },
+    "status": {
+      "tracked_games": 1,
+      "games": 1,
+      "complete_checkpoint_games": 1,
+      "discovery_refusals": 0,
+      "tasks": [
+        {
+          "checkpoint": "late",
+          "state": "captured",
+          "refusals": 1
+        }
+      ]
+    },
+    "storage": {
+      "state": "bounded",
+      "retained_bytes": 12000,
+      "byte_cap": 134217728,
+      "refusals": 1,
+      "allocated_bytes": 16000,
+      "experiment_payload_bytes": 12000,
+      "late_reserved_bytes": 0,
+      "remaining_bytes": 134201728,
+      "mean_complete_game_payload_bytes": 12000,
+      "estimated_remaining_games": 10000,
+      "no_automatic_eviction": true
+    },
+    "games": [
+      {
+        "id": "game-captured",
+        "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "title": "Away at Home \u00b7 zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+        "league": "NBA",
+        "starts_at": "2026-11-23T01:00:00Z",
+        "state": "complete",
+        "early_at": "2026-11-22T20:00:00Z",
+        "late_target": "2026-11-23T00:50:00Z",
+        "late_at": "2026-11-23T00:50:01Z",
+        "case_counts": {
+          "retained": 4
+        },
+        "coverage": {
+          "early": {
+            "requested": {
+              "bookmakers": [
+                "kalshi",
+                "fanduel",
+                "draftkings"
+              ],
+              "odd_ids": [
+                "points-home-game-sp-home"
+              ],
+              "include_alt_lines": true
+            },
+            "received": {
+              "bookmakers": [
+                "kalshi",
+                "fanduel"
+              ],
+              "odd_ids": [
+                "points-home-game-sp-home"
+              ],
+              "quotes": 7,
+              "alternate_quotes": 3
+            },
+            "supported": {
+              "offer_quotes": 7,
+              "reference_quotes": 4
+            },
+            "missing": {
+              "bookmakers": [
+                "draftkings"
+              ],
+              "odd_ids": []
+            },
+            "incomplete": true,
+            "complete_market": false,
+            "scope": "available_supported_surface_returned_by_provider"
+          },
+          "late": {
+            "requested": {
+              "bookmakers": [
+                "kalshi",
+                "fanduel",
+                "draftkings"
+              ],
+              "odd_ids": [
+                "points-home-game-sp-home"
+              ],
+              "include_alt_lines": true
+            },
+            "received": {
+              "bookmakers": [
+                "kalshi",
+                "fanduel"
+              ],
+              "odd_ids": [
+                "points-home-game-sp-home"
+              ],
+              "quotes": 7,
+              "alternate_quotes": 3
+            },
+            "supported": {
+              "offer_quotes": 7,
+              "reference_quotes": 4
+            },
+            "missing": {
+              "bookmakers": [
+                "draftkings"
+              ],
+              "odd_ids": []
+            },
+            "incomplete": true,
+            "complete_market": false,
+            "scope": "available_supported_surface_returned_by_provider"
+          }
+        }
+      }
+    ],
+    "cases": [
+      {
+        "id": "case-pn",
+        "game_id": "game-captured",
+        "game_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "title": "Away at Home \u00b7 zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+        "game": "Away at Home",
+        "book": "kalshi",
+        "family": "spread",
+        "period": "full_game",
+        "outcome": "home",
+        "line": "-3",
+        "identity": {
+          "event": {
+            "provider": "sportsgameodds",
+            "source_event_id": "source-event",
+            "home": "NBA:HOME",
+            "away": "NBA:AWAY"
+          },
+          "provider": "sportsgameodds",
+          "book": "kalshi",
+          "venue": "kalshi",
+          "family": "spread",
+          "period": "full_game",
+          "outcome": "home",
+          "line": "-3",
+          "settlement": {
+            "rules": "unverified"
+          }
+        },
+        "early": {
+          "price": "+120",
+          "price_units": "american_odds",
+          "screen": {
+            "probability": "1/2",
+            "ev": "1/10",
+            "policy": "lowest-no-vig-two-trusted-books-2",
+            "reference_book": "draftkings",
+            "reason": null
+          },
+          "coherent": {
+            "probability": "3/5",
+            "ev": "1/5",
+            "policy": "first-complete-trusted-pair-proportional-1",
+            "reference_book": "fanduel",
+            "reason": null
+          },
+          "main": {
+            "status": "main",
+            "source": "source_reported",
+            "authority": "sportsgameodds_byBookmaker",
+            "native_book_main_authority": "unverified"
+          },
+          "times": {
+            "source_at": "2026-11-22T20:00:00Z",
+            "received_at": "2026-11-22T20:00:00Z",
+            "calculated_at": "2026-11-22T20:00:00Z"
+          },
+          "source_age_seconds": "2",
+          "available": true,
+          "reason": null,
+          "calculation_version": "predict-current-pregame-7",
+          "offer_index": 0
+        },
+        "late": {
+          "price": "-110",
+          "price_units": "american_odds",
+          "screen": {
+            "probability": "1/2",
+            "ev": "-1/20",
+            "policy": "lowest-no-vig-two-trusted-books-2",
+            "reference_book": "draftkings",
+            "reason": null
+          },
+          "coherent": {
+            "probability": "3/5",
+            "ev": "1/5",
+            "policy": "first-complete-trusted-pair-proportional-1",
+            "reference_book": "fanduel",
+            "reason": null
+          },
+          "main": {
+            "status": "alternate",
+            "source": "source_reported",
+            "authority": "sportsgameodds_byBookmaker",
+            "native_book_main_authority": "unverified"
+          },
+          "times": {
+            "source_at": "2026-11-23T00:50:01Z",
+            "received_at": "2026-11-23T00:50:01Z",
+            "calculated_at": "2026-11-23T00:50:01Z"
+          },
+          "source_age_seconds": "2",
+          "available": true,
+          "reason": null,
+          "calculation_version": "predict-current-pregame-7",
+          "offer_index": 0
+        },
+        "retain_case": true,
+        "transition": "positive_to_negative",
+        "incomplete": false,
+        "missing_reasons": [],
+        "role_link": "main_to_alternate",
+        "early_offer_late_reference": {
+          "screen": {
+            "probability": "2/5",
+            "ev": "-1/10",
+            "policy": "lowest-no-vig-two-trusted-books-2",
+            "reason": null
+          },
+          "coherent": {
+            "probability": "1/2",
+            "ev": "0",
+            "policy": "first-complete-trusted-pair-proportional-1",
+            "reason": null
+          },
+          "reason": null
+        }
+      },
+      {
+        "id": "case-np",
+        "game_id": "game-captured",
+        "game_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "title": "Away at Home \u00b7 zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+        "game": "Away at Home",
+        "book": "kalshi",
+        "family": "spread",
+        "period": "full_game",
+        "outcome": "home",
+        "line": "-7/2",
+        "identity": {
+          "event": {
+            "provider": "sportsgameodds",
+            "source_event_id": "source-event",
+            "home": "NBA:HOME",
+            "away": "NBA:AWAY"
+          },
+          "provider": "sportsgameodds",
+          "book": "kalshi",
+          "venue": "kalshi",
+          "family": "spread",
+          "period": "full_game",
+          "outcome": "home",
+          "line": "-7/2",
+          "settlement": {
+            "rules": "unverified"
+          }
+        },
+        "early": {
+          "price": "+120",
+          "price_units": "american_odds",
+          "screen": {
+            "probability": "1/2",
+            "ev": "-1/20",
+            "policy": "lowest-no-vig-two-trusted-books-2",
+            "reference_book": "draftkings",
+            "reason": null
+          },
+          "coherent": {
+            "probability": "3/5",
+            "ev": "1/5",
+            "policy": "first-complete-trusted-pair-proportional-1",
+            "reference_book": "fanduel",
+            "reason": null
+          },
+          "main": {
+            "status": "alternate",
+            "source": "source_reported",
+            "authority": "sportsgameodds_byBookmaker",
+            "native_book_main_authority": "unverified"
+          },
+          "times": {
+            "source_at": "2026-11-22T20:00:00Z",
+            "received_at": "2026-11-22T20:00:00Z",
+            "calculated_at": "2026-11-22T20:00:00Z"
+          },
+          "source_age_seconds": "2",
+          "available": true,
+          "reason": null,
+          "calculation_version": "predict-current-pregame-7",
+          "offer_index": 0
+        },
+        "late": {
+          "price": "-110",
+          "price_units": "american_odds",
+          "screen": {
+            "probability": "1/2",
+            "ev": "1/10",
+            "policy": "lowest-no-vig-two-trusted-books-2",
+            "reference_book": "draftkings",
+            "reason": null
+          },
+          "coherent": {
+            "probability": "3/5",
+            "ev": "1/5",
+            "policy": "first-complete-trusted-pair-proportional-1",
+            "reference_book": "fanduel",
+            "reason": null
+          },
+          "main": {
+            "status": "main",
+            "source": "source_reported",
+            "authority": "sportsgameodds_byBookmaker",
+            "native_book_main_authority": "unverified"
+          },
+          "times": {
+            "source_at": "2026-11-23T00:50:01Z",
+            "received_at": "2026-11-23T00:50:01Z",
+            "calculated_at": "2026-11-23T00:50:01Z"
+          },
+          "source_age_seconds": "2",
+          "available": true,
+          "reason": null,
+          "calculation_version": "predict-current-pregame-7",
+          "offer_index": 0
+        },
+        "retain_case": true,
+        "transition": "negative_to_positive",
+        "incomplete": false,
+        "missing_reasons": [],
+        "role_link": "alternate_to_main",
+        "early_offer_late_reference": {
+          "screen": {
+            "probability": "2/5",
+            "ev": "-1/10",
+            "policy": "lowest-no-vig-two-trusted-books-2",
+            "reason": null
+          },
+          "coherent": {
+            "probability": "1/2",
+            "ev": "0",
+            "policy": "first-complete-trusted-pair-proportional-1",
+            "reason": null
+          },
+          "reason": null
+        }
+      },
+      {
+        "id": "case-pp",
+        "game_id": "game-captured",
+        "game_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "title": "Away at Home \u00b7 zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+        "game": "Away at Home",
+        "book": "kalshi",
+        "family": "spread",
+        "period": "full_game",
+        "outcome": "home",
+        "line": "-4",
+        "identity": {
+          "event": {
+            "provider": "sportsgameodds",
+            "source_event_id": "source-event",
+            "home": "NBA:HOME",
+            "away": "NBA:AWAY"
+          },
+          "provider": "sportsgameodds",
+          "book": "kalshi",
+          "venue": "kalshi",
+          "family": "spread",
+          "period": "full_game",
+          "outcome": "home",
+          "line": "-4",
+          "settlement": {
+            "rules": "unverified"
+          }
+        },
+        "early": {
+          "price": "+120",
+          "price_units": "american_odds",
+          "screen": {
+            "probability": "1/2",
+            "ev": "1/1000",
+            "policy": "lowest-no-vig-two-trusted-books-2",
+            "reference_book": "draftkings",
+            "reason": null
+          },
+          "coherent": {
+            "probability": "3/5",
+            "ev": "1/5",
+            "policy": "first-complete-trusted-pair-proportional-1",
+            "reference_book": "fanduel",
+            "reason": null
+          },
+          "main": {
+            "status": "alternate",
+            "source": "source_reported",
+            "authority": "sportsgameodds_byBookmaker",
+            "native_book_main_authority": "unverified"
+          },
+          "times": {
+            "source_at": "2026-11-22T20:00:00Z",
+            "received_at": "2026-11-22T20:00:00Z",
+            "calculated_at": "2026-11-22T20:00:00Z"
+          },
+          "source_age_seconds": "2",
+          "available": true,
+          "reason": null,
+          "calculation_version": "predict-current-pregame-7",
+          "offer_index": 0
+        },
+        "late": {
+          "price": "-110",
+          "price_units": "american_odds",
+          "screen": {
+            "probability": "1/2",
+            "ev": "1/20",
+            "policy": "lowest-no-vig-two-trusted-books-2",
+            "reference_book": "draftkings",
+            "reason": null
+          },
+          "coherent": {
+            "probability": "3/5",
+            "ev": "1/5",
+            "policy": "first-complete-trusted-pair-proportional-1",
+            "reference_book": "fanduel",
+            "reason": null
+          },
+          "main": {
+            "status": "alternate",
+            "source": "source_reported",
+            "authority": "sportsgameodds_byBookmaker",
+            "native_book_main_authority": "unverified"
+          },
+          "times": {
+            "source_at": "2026-11-23T00:50:01Z",
+            "received_at": "2026-11-23T00:50:01Z",
+            "calculated_at": "2026-11-23T00:50:01Z"
+          },
+          "source_age_seconds": "2",
+          "available": true,
+          "reason": null,
+          "calculation_version": "predict-current-pregame-7",
+          "offer_index": 0
+        },
+        "retain_case": true,
+        "transition": "positive_to_positive",
+        "incomplete": false,
+        "missing_reasons": [],
+        "role_link": "unchanged_role",
+        "early_offer_late_reference": {
+          "screen": {
+            "probability": "2/5",
+            "ev": "-1/10",
+            "policy": "lowest-no-vig-two-trusted-books-2",
+            "reason": null
+          },
+          "coherent": {
+            "probability": "1/2",
+            "ev": "0",
+            "policy": "first-complete-trusted-pair-proportional-1",
+            "reason": null
+          },
+          "reason": null
+        }
+      },
+      {
+        "id": "case-incomplete",
+        "game_id": "game-captured",
+        "game_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "title": "Away at Home \u00b7 zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+        "game": "Away at Home",
+        "book": "kalshi",
+        "family": "spread",
+        "period": "full_game",
+        "outcome": "home",
+        "line": "-9/2",
+        "identity": {
+          "event": {
+            "provider": "sportsgameodds",
+            "source_event_id": "source-event",
+            "home": "NBA:HOME",
+            "away": "NBA:AWAY"
+          },
+          "provider": "sportsgameodds",
+          "book": "kalshi",
+          "venue": "kalshi",
+          "family": "spread",
+          "period": "full_game",
+          "outcome": "home",
+          "line": "-9/2",
+          "settlement": {
+            "rules": "unverified"
+          }
+        },
+        "early": null,
+        "late": {
+          "price": "-110",
+          "price_units": "american_odds",
+          "screen": {
+            "probability": "1/2",
+            "ev": "1/20",
+            "policy": "lowest-no-vig-two-trusted-books-2",
+            "reference_book": "draftkings",
+            "reason": null
+          },
+          "coherent": {
+            "probability": "3/5",
+            "ev": "1/5",
+            "policy": "first-complete-trusted-pair-proportional-1",
+            "reference_book": "fanduel",
+            "reason": null
+          },
+          "main": {
+            "status": "alternate",
+            "source": "source_reported",
+            "authority": "sportsgameodds_byBookmaker",
+            "native_book_main_authority": "unverified"
+          },
+          "times": {
+            "source_at": "2026-11-23T00:50:01Z",
+            "received_at": "2026-11-23T00:50:01Z",
+            "calculated_at": "2026-11-23T00:50:01Z"
+          },
+          "source_age_seconds": "2",
+          "available": true,
+          "reason": null,
+          "calculation_version": "predict-current-pregame-7",
+          "offer_index": 0
+        },
+        "retain_case": true,
+        "transition": "incomplete_positive",
+        "incomplete": true,
+        "missing_reasons": [
+          {
+            "checkpoint": "early",
+            "reason": "exact_bet_or_checkpoint_missing"
+          }
+        ],
+        "role_link": "newly_observed",
+        "early_offer_late_reference": {
+          "screen": {
+            "probability": "2/5",
+            "ev": "-1/10",
+            "policy": "lowest-no-vig-two-trusted-books-2",
+            "reason": null
+          },
+          "coherent": {
+            "probability": "1/2",
+            "ev": "0",
+            "policy": "first-complete-trusted-pair-proportional-1",
+            "reason": null
+          },
+          "reason": null
+        }
+      }
+    ],
+    "total_games": 1,
+    "offset": 0,
+    "next_offset": null,
+    "provider_requests": 0
+  },
+  "detail": {
+    "game": {
+      "id": "game-captured",
+      "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "title": "Away at Home \u00b7 zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+      "league": "NBA",
+      "starts_at": "2026-11-23T01:00:00Z",
+      "state": "complete",
+      "early_at": "2026-11-22T20:00:00Z",
+      "late_target": "2026-11-23T00:50:00Z",
+      "late_at": "2026-11-23T00:50:01Z",
+      "case_counts": {
+        "retained": 4
+      },
+      "coverage": {
+        "state": "incomplete",
+        "requested_books": [
+          "kalshi",
+          "fanduel",
+          "draftkings"
+        ],
+        "received_books": [
+          "kalshi",
+          "fanduel"
+        ],
+        "missing_books": [
+          "draftkings"
+        ]
+      }
+    },
+    "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "early": {
+      "status": "captured",
+      "captured_at": "2026-11-22T20:00:00Z",
+      "observed_at": "2026-11-22T20:00:00Z",
+      "target_at": null,
+      "window_start": null,
+      "deadline_at": null,
+      "known_at": "2026-11-22T20:00:00Z",
+      "persisted_at": "2026-11-22T20:00:00Z",
+      "seconds_to_start": 18000,
+      "coverage": {
+        "requested": {
+          "bookmakers": [
+            "kalshi",
+            "fanduel",
+            "draftkings"
+          ],
+          "odd_ids": [
+            "points-home-game-sp-home"
+          ],
+          "include_alt_lines": true
+        },
+        "received": {
+          "bookmakers": [
+            "kalshi",
+            "fanduel"
+          ],
+          "odd_ids": [
+            "points-home-game-sp-home"
+          ],
+          "quotes": 7,
+          "alternate_quotes": 3
+        },
+        "supported": {
+          "offer_quotes": 7,
+          "reference_quotes": 4
+        },
+        "missing": {
+          "bookmakers": [
+            "draftkings"
+          ],
+          "odd_ids": []
+        },
+        "incomplete": true,
+        "complete_market": false,
+        "scope": "available_supported_surface_returned_by_provider"
+      },
+      "snapshot": {
+        "offers": [
+          {
+            "record": {
+              "event": {
+                "title": "Away at Home"
+              },
+              "quote": {
+                "original": {
+                  "value": "+120"
+                },
+                "source": {
+                  "provider": "sportsgameodds",
+                  "native_event_id": "source-event"
+                }
+              },
+              "market_identity": {
+                "family": "spread",
+                "period": "full_game"
+              },
+              "selection": {
+                "participant": "home",
+                "signed_line": "-3"
+              }
+            },
+            "fee_input": {
+              "classification": "synthetic_fixture_fee",
+              "rounding": "cent_ceiling"
+            },
+            "calculation_payload": {
+              "version": "predict-current-pregame-7",
+              "fee": {
+                "committed_usd": "100",
+                "cashflows": {
+                  "win": {
+                    "net_receipt_usd": "220"
+                  },
+                  "loss": {
+                    "net_receipt_usd": "0"
+                  }
+                }
+              },
+              "reference": {
+                "selection_policy": "lowest-no-vig-two-trusted-books-2",
+                "probability": "1/2",
+                "prices": [
+                  {
+                    "input_id": "early-reference",
+                    "price_american": "-110"
+                  }
+                ]
+              },
+              "coherent_probability": {
+                "policy_version": "first-complete-trusted-pair-proportional-1",
+                "probability": "3/5",
+                "prices": [
+                  {
+                    "input_id": "coherent-reference"
+                  }
+                ]
+              },
+              "raw": {
+                "net_ev": "1/10"
+              }
+            }
+          }
+        ],
+        "references": [
+          {
+            "id": "surrounding-reference",
+            "facts": {
+              "book": "fanduel",
+              "price_american": "-110"
+            }
+          }
+        ],
+        "raw_quotes": [
+          {
+            "bookmaker_id": "kalshi",
+            "line": "-3",
+            "main": true
+          },
+          {
+            "bookmaker_id": "fanduel",
+            "price_american": "+110",
+            "line": "-3",
+            "alternate": false,
+            "source_note": "fanduel-early--3"
+          },
+          {
+            "bookmaker_id": "fanduel",
+            "price_american": "+110",
+            "line": "-7/2",
+            "alternate": true,
+            "source_note": "fanduel-early--7/2"
+          }
+        ],
+        "coverage": {
+          "requested": {
+            "bookmakers": [
+              "kalshi",
+              "fanduel",
+              "draftkings"
+            ],
+            "odd_ids": [
+              "points-home-game-sp-home"
+            ],
+            "include_alt_lines": true
+          },
+          "received": {
+            "bookmakers": [
+              "kalshi",
+              "fanduel"
+            ],
+            "odd_ids": [
+              "points-home-game-sp-home"
+            ],
+            "quotes": 7,
+            "alternate_quotes": 3
+          },
+          "supported": {
+            "offer_quotes": 7,
+            "reference_quotes": 4
+          },
+          "missing": {
+            "bookmakers": [
+              "draftkings"
+            ],
+            "odd_ids": []
+          },
+          "incomplete": true,
+          "complete_market": false,
+          "scope": "available_supported_surface_returned_by_provider"
+        }
+      }
+    },
+    "late": {
+      "status": "captured",
+      "captured_at": "2026-11-23T00:50:01Z",
+      "observed_at": "2026-11-23T00:50:01Z",
+      "target_at": "2026-11-23T00:50:00Z",
+      "window_start": "2026-11-23T00:50:00Z",
+      "deadline_at": "2026-11-23T00:51:00Z",
+      "known_at": "2026-11-23T00:50:01Z",
+      "persisted_at": "2026-11-23T00:50:01Z",
+      "seconds_to_start": 60,
+      "coverage": {
+        "requested": {
+          "bookmakers": [
+            "kalshi",
+            "fanduel",
+            "draftkings"
+          ],
+          "odd_ids": [
+            "points-home-game-sp-home"
+          ],
+          "include_alt_lines": true
+        },
+        "received": {
+          "bookmakers": [
+            "kalshi",
+            "fanduel"
+          ],
+          "odd_ids": [
+            "points-home-game-sp-home"
+          ],
+          "quotes": 7,
+          "alternate_quotes": 3
+        },
+        "supported": {
+          "offer_quotes": 7,
+          "reference_quotes": 4
+        },
+        "missing": {
+          "bookmakers": [
+            "draftkings"
+          ],
+          "odd_ids": []
+        },
+        "incomplete": true,
+        "complete_market": false,
+        "scope": "available_supported_surface_returned_by_provider"
+      },
+      "snapshot": {
+        "offers": [
+          {
+            "record": {
+              "event": {
+                "title": "Away at Home"
+              },
+              "quote": {
+                "original": {
+                  "value": "+120"
+                },
+                "source": {
+                  "provider": "sportsgameodds",
+                  "native_event_id": "source-event"
+                }
+              },
+              "market_identity": {
+                "family": "spread",
+                "period": "full_game"
+              },
+              "selection": {
+                "participant": "home",
+                "signed_line": "-3"
+              }
+            },
+            "fee_input": {
+              "classification": "synthetic_fixture_fee",
+              "rounding": "cent_ceiling"
+            },
+            "calculation_payload": {
+              "version": "predict-current-pregame-7",
+              "fee": {
+                "committed_usd": "100",
+                "cashflows": {
+                  "win": {
+                    "net_receipt_usd": "220"
+                  },
+                  "loss": {
+                    "net_receipt_usd": "0"
+                  }
+                }
+              },
+              "reference": {
+                "selection_policy": "lowest-no-vig-two-trusted-books-2",
+                "probability": "1/2",
+                "prices": [
+                  {
+                    "input_id": "early-reference",
+                    "price_american": "-110"
+                  }
+                ]
+              },
+              "coherent_probability": {
+                "policy_version": "first-complete-trusted-pair-proportional-1",
+                "probability": "3/5",
+                "prices": [
+                  {
+                    "input_id": "coherent-reference"
+                  }
+                ]
+              },
+              "raw": {
+                "net_ev": "1/10"
+              }
+            }
+          }
+        ],
+        "references": [
+          {
+            "id": "surrounding-reference",
+            "facts": {
+              "book": "fanduel",
+              "price_american": "-110"
+            }
+          }
+        ],
+        "raw_quotes": [
+          {
+            "bookmaker_id": "kalshi",
+            "line": "-3",
+            "main": true
+          },
+          {
+            "bookmaker_id": "fanduel",
+            "price_american": "-105",
+            "line": "-3",
+            "alternate": true,
+            "source_note": "fanduel-late--3"
+          },
+          {
+            "bookmaker_id": "fanduel",
+            "price_american": "-105",
+            "line": "-7/2",
+            "alternate": false,
+            "source_note": "fanduel-late--7/2"
+          }
+        ],
+        "coverage": {
+          "requested": {
+            "bookmakers": [
+              "kalshi",
+              "fanduel",
+              "draftkings"
+            ],
+            "odd_ids": [
+              "points-home-game-sp-home"
+            ],
+            "include_alt_lines": true
+          },
+          "received": {
+            "bookmakers": [
+              "kalshi",
+              "fanduel"
+            ],
+            "odd_ids": [
+              "points-home-game-sp-home"
+            ],
+            "quotes": 7,
+            "alternate_quotes": 3
+          },
+          "supported": {
+            "offer_quotes": 7,
+            "reference_quotes": 4
+          },
+          "missing": {
+            "bookmakers": [
+              "draftkings"
+            ],
+            "odd_ids": []
+          },
+          "incomplete": true,
+          "complete_market": false,
+          "scope": "available_supported_surface_returned_by_provider"
+        }
+      }
+    },
+    "cases": [
+      {
+        "id": "case-pn",
+        "game_id": "game-captured",
+        "game_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "title": "Away at Home \u00b7 zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+        "game": "Away at Home",
+        "book": "kalshi",
+        "family": "spread",
+        "period": "full_game",
+        "outcome": "home",
+        "line": "-3",
+        "identity": {
+          "event": {
+            "provider": "sportsgameodds",
+            "source_event_id": "source-event",
+            "home": "NBA:HOME",
+            "away": "NBA:AWAY"
+          },
+          "provider": "sportsgameodds",
+          "book": "kalshi",
+          "venue": "kalshi",
+          "family": "spread",
+          "period": "full_game",
+          "outcome": "home",
+          "line": "-3",
+          "settlement": {
+            "rules": "unverified"
+          }
+        },
+        "early": {
+          "price": "+120",
+          "price_units": "american_odds",
+          "screen": {
+            "probability": "1/2",
+            "ev": "1/10",
+            "policy": "lowest-no-vig-two-trusted-books-2",
+            "reference_book": "draftkings",
+            "reason": null
+          },
+          "coherent": {
+            "probability": "3/5",
+            "ev": "1/5",
+            "policy": "first-complete-trusted-pair-proportional-1",
+            "reference_book": "fanduel",
+            "reason": null
+          },
+          "main": {
+            "status": "main",
+            "source": "source_reported",
+            "authority": "sportsgameodds_byBookmaker",
+            "native_book_main_authority": "unverified"
+          },
+          "times": {
+            "source_at": "2026-11-22T20:00:00Z",
+            "received_at": "2026-11-22T20:00:00Z",
+            "calculated_at": "2026-11-22T20:00:00Z"
+          },
+          "source_age_seconds": "2",
+          "available": true,
+          "reason": null,
+          "calculation_version": "predict-current-pregame-7",
+          "offer_index": 0
+        },
+        "late": {
+          "price": "-110",
+          "price_units": "american_odds",
+          "screen": {
+            "probability": "1/2",
+            "ev": "-1/20",
+            "policy": "lowest-no-vig-two-trusted-books-2",
+            "reference_book": "draftkings",
+            "reason": null
+          },
+          "coherent": {
+            "probability": "3/5",
+            "ev": "1/5",
+            "policy": "first-complete-trusted-pair-proportional-1",
+            "reference_book": "fanduel",
+            "reason": null
+          },
+          "main": {
+            "status": "alternate",
+            "source": "source_reported",
+            "authority": "sportsgameodds_byBookmaker",
+            "native_book_main_authority": "unverified"
+          },
+          "times": {
+            "source_at": "2026-11-23T00:50:01Z",
+            "received_at": "2026-11-23T00:50:01Z",
+            "calculated_at": "2026-11-23T00:50:01Z"
+          },
+          "source_age_seconds": "2",
+          "available": true,
+          "reason": null,
+          "calculation_version": "predict-current-pregame-7",
+          "offer_index": 0
+        },
+        "retain_case": true,
+        "transition": "positive_to_negative",
+        "incomplete": false,
+        "missing_reasons": [],
+        "role_link": "main_to_alternate",
+        "early_offer_late_reference": {
+          "screen": {
+            "probability": "2/5",
+            "ev": "-1/10",
+            "policy": "lowest-no-vig-two-trusted-books-2",
+            "reason": null
+          },
+          "coherent": {
+            "probability": "1/2",
+            "ev": "0",
+            "policy": "first-complete-trusted-pair-proportional-1",
+            "reason": null
+          },
+          "reason": null
+        }
+      },
+      {
+        "id": "case-np",
+        "game_id": "game-captured",
+        "game_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "title": "Away at Home \u00b7 zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+        "game": "Away at Home",
+        "book": "kalshi",
+        "family": "spread",
+        "period": "full_game",
+        "outcome": "home",
+        "line": "-7/2",
+        "identity": {
+          "event": {
+            "provider": "sportsgameodds",
+            "source_event_id": "source-event",
+            "home": "NBA:HOME",
+            "away": "NBA:AWAY"
+          },
+          "provider": "sportsgameodds",
+          "book": "kalshi",
+          "venue": "kalshi",
+          "family": "spread",
+          "period": "full_game",
+          "outcome": "home",
+          "line": "-7/2",
+          "settlement": {
+            "rules": "unverified"
+          }
+        },
+        "early": {
+          "price": "+120",
+          "price_units": "american_odds",
+          "screen": {
+            "probability": "1/2",
+            "ev": "-1/20",
+            "policy": "lowest-no-vig-two-trusted-books-2",
+            "reference_book": "draftkings",
+            "reason": null
+          },
+          "coherent": {
+            "probability": "3/5",
+            "ev": "1/5",
+            "policy": "first-complete-trusted-pair-proportional-1",
+            "reference_book": "fanduel",
+            "reason": null
+          },
+          "main": {
+            "status": "alternate",
+            "source": "source_reported",
+            "authority": "sportsgameodds_byBookmaker",
+            "native_book_main_authority": "unverified"
+          },
+          "times": {
+            "source_at": "2026-11-22T20:00:00Z",
+            "received_at": "2026-11-22T20:00:00Z",
+            "calculated_at": "2026-11-22T20:00:00Z"
+          },
+          "source_age_seconds": "2",
+          "available": true,
+          "reason": null,
+          "calculation_version": "predict-current-pregame-7",
+          "offer_index": 0
+        },
+        "late": {
+          "price": "-110",
+          "price_units": "american_odds",
+          "screen": {
+            "probability": "1/2",
+            "ev": "1/10",
+            "policy": "lowest-no-vig-two-trusted-books-2",
+            "reference_book": "draftkings",
+            "reason": null
+          },
+          "coherent": {
+            "probability": "3/5",
+            "ev": "1/5",
+            "policy": "first-complete-trusted-pair-proportional-1",
+            "reference_book": "fanduel",
+            "reason": null
+          },
+          "main": {
+            "status": "main",
+            "source": "source_reported",
+            "authority": "sportsgameodds_byBookmaker",
+            "native_book_main_authority": "unverified"
+          },
+          "times": {
+            "source_at": "2026-11-23T00:50:01Z",
+            "received_at": "2026-11-23T00:50:01Z",
+            "calculated_at": "2026-11-23T00:50:01Z"
+          },
+          "source_age_seconds": "2",
+          "available": true,
+          "reason": null,
+          "calculation_version": "predict-current-pregame-7",
+          "offer_index": 0
+        },
+        "retain_case": true,
+        "transition": "negative_to_positive",
+        "incomplete": false,
+        "missing_reasons": [],
+        "role_link": "alternate_to_main",
+        "early_offer_late_reference": {
+          "screen": {
+            "probability": "2/5",
+            "ev": "-1/10",
+            "policy": "lowest-no-vig-two-trusted-books-2",
+            "reason": null
+          },
+          "coherent": {
+            "probability": "1/2",
+            "ev": "0",
+            "policy": "first-complete-trusted-pair-proportional-1",
+            "reason": null
+          },
+          "reason": null
+        }
+      },
+      {
+        "id": "case-pp",
+        "game_id": "game-captured",
+        "game_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "title": "Away at Home \u00b7 zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+        "game": "Away at Home",
+        "book": "kalshi",
+        "family": "spread",
+        "period": "full_game",
+        "outcome": "home",
+        "line": "-4",
+        "identity": {
+          "event": {
+            "provider": "sportsgameodds",
+            "source_event_id": "source-event",
+            "home": "NBA:HOME",
+            "away": "NBA:AWAY"
+          },
+          "provider": "sportsgameodds",
+          "book": "kalshi",
+          "venue": "kalshi",
+          "family": "spread",
+          "period": "full_game",
+          "outcome": "home",
+          "line": "-4",
+          "settlement": {
+            "rules": "unverified"
+          }
+        },
+        "early": {
+          "price": "+120",
+          "price_units": "american_odds",
+          "screen": {
+            "probability": "1/2",
+            "ev": "1/1000",
+            "policy": "lowest-no-vig-two-trusted-books-2",
+            "reference_book": "draftkings",
+            "reason": null
+          },
+          "coherent": {
+            "probability": "3/5",
+            "ev": "1/5",
+            "policy": "first-complete-trusted-pair-proportional-1",
+            "reference_book": "fanduel",
+            "reason": null
+          },
+          "main": {
+            "status": "alternate",
+            "source": "source_reported",
+            "authority": "sportsgameodds_byBookmaker",
+            "native_book_main_authority": "unverified"
+          },
+          "times": {
+            "source_at": "2026-11-22T20:00:00Z",
+            "received_at": "2026-11-22T20:00:00Z",
+            "calculated_at": "2026-11-22T20:00:00Z"
+          },
+          "source_age_seconds": "2",
+          "available": true,
+          "reason": null,
+          "calculation_version": "predict-current-pregame-7",
+          "offer_index": 0
+        },
+        "late": {
+          "price": "-110",
+          "price_units": "american_odds",
+          "screen": {
+            "probability": "1/2",
+            "ev": "1/20",
+            "policy": "lowest-no-vig-two-trusted-books-2",
+            "reference_book": "draftkings",
+            "reason": null
+          },
+          "coherent": {
+            "probability": "3/5",
+            "ev": "1/5",
+            "policy": "first-complete-trusted-pair-proportional-1",
+            "reference_book": "fanduel",
+            "reason": null
+          },
+          "main": {
+            "status": "alternate",
+            "source": "source_reported",
+            "authority": "sportsgameodds_byBookmaker",
+            "native_book_main_authority": "unverified"
+          },
+          "times": {
+            "source_at": "2026-11-23T00:50:01Z",
+            "received_at": "2026-11-23T00:50:01Z",
+            "calculated_at": "2026-11-23T00:50:01Z"
+          },
+          "source_age_seconds": "2",
+          "available": true,
+          "reason": null,
+          "calculation_version": "predict-current-pregame-7",
+          "offer_index": 0
+        },
+        "retain_case": true,
+        "transition": "positive_to_positive",
+        "incomplete": false,
+        "missing_reasons": [],
+        "role_link": "unchanged_role",
+        "early_offer_late_reference": {
+          "screen": {
+            "probability": "2/5",
+            "ev": "-1/10",
+            "policy": "lowest-no-vig-two-trusted-books-2",
+            "reason": null
+          },
+          "coherent": {
+            "probability": "1/2",
+            "ev": "0",
+            "policy": "first-complete-trusted-pair-proportional-1",
+            "reason": null
+          },
+          "reason": null
+        }
+      },
+      {
+        "id": "case-incomplete",
+        "game_id": "game-captured",
+        "game_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "title": "Away at Home \u00b7 zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+        "game": "Away at Home",
+        "book": "kalshi",
+        "family": "spread",
+        "period": "full_game",
+        "outcome": "home",
+        "line": "-9/2",
+        "identity": {
+          "event": {
+            "provider": "sportsgameodds",
+            "source_event_id": "source-event",
+            "home": "NBA:HOME",
+            "away": "NBA:AWAY"
+          },
+          "provider": "sportsgameodds",
+          "book": "kalshi",
+          "venue": "kalshi",
+          "family": "spread",
+          "period": "full_game",
+          "outcome": "home",
+          "line": "-9/2",
+          "settlement": {
+            "rules": "unverified"
+          }
+        },
+        "early": null,
+        "late": {
+          "price": "-110",
+          "price_units": "american_odds",
+          "screen": {
+            "probability": "1/2",
+            "ev": "1/20",
+            "policy": "lowest-no-vig-two-trusted-books-2",
+            "reference_book": "draftkings",
+            "reason": null
+          },
+          "coherent": {
+            "probability": "3/5",
+            "ev": "1/5",
+            "policy": "first-complete-trusted-pair-proportional-1",
+            "reference_book": "fanduel",
+            "reason": null
+          },
+          "main": {
+            "status": "alternate",
+            "source": "source_reported",
+            "authority": "sportsgameodds_byBookmaker",
+            "native_book_main_authority": "unverified"
+          },
+          "times": {
+            "source_at": "2026-11-23T00:50:01Z",
+            "received_at": "2026-11-23T00:50:01Z",
+            "calculated_at": "2026-11-23T00:50:01Z"
+          },
+          "source_age_seconds": "2",
+          "available": true,
+          "reason": null,
+          "calculation_version": "predict-current-pregame-7",
+          "offer_index": 0
+        },
+        "retain_case": true,
+        "transition": "incomplete_positive",
+        "incomplete": true,
+        "missing_reasons": [
+          {
+            "checkpoint": "early",
+            "reason": "exact_bet_or_checkpoint_missing"
+          }
+        ],
+        "role_link": "newly_observed",
+        "early_offer_late_reference": {
+          "screen": {
+            "probability": "2/5",
+            "ev": "-1/10",
+            "policy": "lowest-no-vig-two-trusted-books-2",
+            "reason": null
+          },
+          "coherent": {
+            "probability": "1/2",
+            "ev": "0",
+            "policy": "first-complete-trusted-pair-proportional-1",
+            "reason": null
+          },
+          "reason": null
+        }
+      }
+    ],
+    "context": [
+      {
+        "id": "case-pn",
+        "game_id": "game-captured",
+        "game_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "title": "Away at Home \u00b7 zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+        "game": "Away at Home",
+        "book": "kalshi",
+        "family": "spread",
+        "period": "full_game",
+        "outcome": "home",
+        "line": "-3",
+        "identity": {
+          "event": {
+            "provider": "sportsgameodds",
+            "source_event_id": "source-event",
+            "home": "NBA:HOME",
+            "away": "NBA:AWAY"
+          },
+          "provider": "sportsgameodds",
+          "book": "kalshi",
+          "venue": "kalshi",
+          "family": "spread",
+          "period": "full_game",
+          "outcome": "home",
+          "line": "-3",
+          "settlement": {
+            "rules": "unverified"
+          }
+        },
+        "early": {
+          "price": "+120",
+          "price_units": "american_odds",
+          "screen": {
+            "probability": "1/2",
+            "ev": "1/10",
+            "policy": "lowest-no-vig-two-trusted-books-2",
+            "reference_book": "draftkings",
+            "reason": null
+          },
+          "coherent": {
+            "probability": "3/5",
+            "ev": "1/5",
+            "policy": "first-complete-trusted-pair-proportional-1",
+            "reference_book": "fanduel",
+            "reason": null
+          },
+          "main": {
+            "status": "main",
+            "source": "source_reported",
+            "authority": "sportsgameodds_byBookmaker",
+            "native_book_main_authority": "unverified"
+          },
+          "times": {
+            "source_at": "2026-11-22T20:00:00Z",
+            "received_at": "2026-11-22T20:00:00Z",
+            "calculated_at": "2026-11-22T20:00:00Z"
+          },
+          "source_age_seconds": "2",
+          "available": true,
+          "reason": null,
+          "calculation_version": "predict-current-pregame-7",
+          "offer_index": 0
+        },
+        "late": {
+          "price": "-110",
+          "price_units": "american_odds",
+          "screen": {
+            "probability": "1/2",
+            "ev": "-1/20",
+            "policy": "lowest-no-vig-two-trusted-books-2",
+            "reference_book": "draftkings",
+            "reason": null
+          },
+          "coherent": {
+            "probability": "3/5",
+            "ev": "1/5",
+            "policy": "first-complete-trusted-pair-proportional-1",
+            "reference_book": "fanduel",
+            "reason": null
+          },
+          "main": {
+            "status": "alternate",
+            "source": "source_reported",
+            "authority": "sportsgameodds_byBookmaker",
+            "native_book_main_authority": "unverified"
+          },
+          "times": {
+            "source_at": "2026-11-23T00:50:01Z",
+            "received_at": "2026-11-23T00:50:01Z",
+            "calculated_at": "2026-11-23T00:50:01Z"
+          },
+          "source_age_seconds": "2",
+          "available": true,
+          "reason": null,
+          "calculation_version": "predict-current-pregame-7",
+          "offer_index": 0
+        },
+        "retain_case": true,
+        "transition": "positive_to_negative",
+        "incomplete": false,
+        "missing_reasons": [],
+        "role_link": "main_to_alternate",
+        "early_offer_late_reference": {
+          "screen": {
+            "probability": "2/5",
+            "ev": "-1/10",
+            "policy": "lowest-no-vig-two-trusted-books-2",
+            "reason": null
+          },
+          "coherent": {
+            "probability": "1/2",
+            "ev": "0",
+            "policy": "first-complete-trusted-pair-proportional-1",
+            "reason": null
+          },
+          "reason": null
+        }
+      },
+      {
+        "id": "case-np",
+        "game_id": "game-captured",
+        "game_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "title": "Away at Home \u00b7 zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+        "game": "Away at Home",
+        "book": "kalshi",
+        "family": "spread",
+        "period": "full_game",
+        "outcome": "home",
+        "line": "-7/2",
+        "identity": {
+          "event": {
+            "provider": "sportsgameodds",
+            "source_event_id": "source-event",
+            "home": "NBA:HOME",
+            "away": "NBA:AWAY"
+          },
+          "provider": "sportsgameodds",
+          "book": "kalshi",
+          "venue": "kalshi",
+          "family": "spread",
+          "period": "full_game",
+          "outcome": "home",
+          "line": "-7/2",
+          "settlement": {
+            "rules": "unverified"
+          }
+        },
+        "early": {
+          "price": "+120",
+          "price_units": "american_odds",
+          "screen": {
+            "probability": "1/2",
+            "ev": "-1/20",
+            "policy": "lowest-no-vig-two-trusted-books-2",
+            "reference_book": "draftkings",
+            "reason": null
+          },
+          "coherent": {
+            "probability": "3/5",
+            "ev": "1/5",
+            "policy": "first-complete-trusted-pair-proportional-1",
+            "reference_book": "fanduel",
+            "reason": null
+          },
+          "main": {
+            "status": "alternate",
+            "source": "source_reported",
+            "authority": "sportsgameodds_byBookmaker",
+            "native_book_main_authority": "unverified"
+          },
+          "times": {
+            "source_at": "2026-11-22T20:00:00Z",
+            "received_at": "2026-11-22T20:00:00Z",
+            "calculated_at": "2026-11-22T20:00:00Z"
+          },
+          "source_age_seconds": "2",
+          "available": true,
+          "reason": null,
+          "calculation_version": "predict-current-pregame-7",
+          "offer_index": 0
+        },
+        "late": {
+          "price": "-110",
+          "price_units": "american_odds",
+          "screen": {
+            "probability": "1/2",
+            "ev": "1/10",
+            "policy": "lowest-no-vig-two-trusted-books-2",
+            "reference_book": "draftkings",
+            "reason": null
+          },
+          "coherent": {
+            "probability": "3/5",
+            "ev": "1/5",
+            "policy": "first-complete-trusted-pair-proportional-1",
+            "reference_book": "fanduel",
+            "reason": null
+          },
+          "main": {
+            "status": "main",
+            "source": "source_reported",
+            "authority": "sportsgameodds_byBookmaker",
+            "native_book_main_authority": "unverified"
+          },
+          "times": {
+            "source_at": "2026-11-23T00:50:01Z",
+            "received_at": "2026-11-23T00:50:01Z",
+            "calculated_at": "2026-11-23T00:50:01Z"
+          },
+          "source_age_seconds": "2",
+          "available": true,
+          "reason": null,
+          "calculation_version": "predict-current-pregame-7",
+          "offer_index": 0
+        },
+        "retain_case": true,
+        "transition": "negative_to_positive",
+        "incomplete": false,
+        "missing_reasons": [],
+        "role_link": "alternate_to_main",
+        "early_offer_late_reference": {
+          "screen": {
+            "probability": "2/5",
+            "ev": "-1/10",
+            "policy": "lowest-no-vig-two-trusted-books-2",
+            "reason": null
+          },
+          "coherent": {
+            "probability": "1/2",
+            "ev": "0",
+            "policy": "first-complete-trusted-pair-proportional-1",
+            "reason": null
+          },
+          "reason": null
+        }
+      },
+      {
+        "id": "case-pp",
+        "game_id": "game-captured",
+        "game_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "title": "Away at Home \u00b7 zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+        "game": "Away at Home",
+        "book": "kalshi",
+        "family": "spread",
+        "period": "full_game",
+        "outcome": "home",
+        "line": "-4",
+        "identity": {
+          "event": {
+            "provider": "sportsgameodds",
+            "source_event_id": "source-event",
+            "home": "NBA:HOME",
+            "away": "NBA:AWAY"
+          },
+          "provider": "sportsgameodds",
+          "book": "kalshi",
+          "venue": "kalshi",
+          "family": "spread",
+          "period": "full_game",
+          "outcome": "home",
+          "line": "-4",
+          "settlement": {
+            "rules": "unverified"
+          }
+        },
+        "early": {
+          "price": "+120",
+          "price_units": "american_odds",
+          "screen": {
+            "probability": "1/2",
+            "ev": "1/1000",
+            "policy": "lowest-no-vig-two-trusted-books-2",
+            "reference_book": "draftkings",
+            "reason": null
+          },
+          "coherent": {
+            "probability": "3/5",
+            "ev": "1/5",
+            "policy": "first-complete-trusted-pair-proportional-1",
+            "reference_book": "fanduel",
+            "reason": null
+          },
+          "main": {
+            "status": "alternate",
+            "source": "source_reported",
+            "authority": "sportsgameodds_byBookmaker",
+            "native_book_main_authority": "unverified"
+          },
+          "times": {
+            "source_at": "2026-11-22T20:00:00Z",
+            "received_at": "2026-11-22T20:00:00Z",
+            "calculated_at": "2026-11-22T20:00:00Z"
+          },
+          "source_age_seconds": "2",
+          "available": true,
+          "reason": null,
+          "calculation_version": "predict-current-pregame-7",
+          "offer_index": 0
+        },
+        "late": {
+          "price": "-110",
+          "price_units": "american_odds",
+          "screen": {
+            "probability": "1/2",
+            "ev": "1/20",
+            "policy": "lowest-no-vig-two-trusted-books-2",
+            "reference_book": "draftkings",
+            "reason": null
+          },
+          "coherent": {
+            "probability": "3/5",
+            "ev": "1/5",
+            "policy": "first-complete-trusted-pair-proportional-1",
+            "reference_book": "fanduel",
+            "reason": null
+          },
+          "main": {
+            "status": "alternate",
+            "source": "source_reported",
+            "authority": "sportsgameodds_byBookmaker",
+            "native_book_main_authority": "unverified"
+          },
+          "times": {
+            "source_at": "2026-11-23T00:50:01Z",
+            "received_at": "2026-11-23T00:50:01Z",
+            "calculated_at": "2026-11-23T00:50:01Z"
+          },
+          "source_age_seconds": "2",
+          "available": true,
+          "reason": null,
+          "calculation_version": "predict-current-pregame-7",
+          "offer_index": 0
+        },
+        "retain_case": true,
+        "transition": "positive_to_positive",
+        "incomplete": false,
+        "missing_reasons": [],
+        "role_link": "unchanged_role",
+        "early_offer_late_reference": {
+          "screen": {
+            "probability": "2/5",
+            "ev": "-1/10",
+            "policy": "lowest-no-vig-two-trusted-books-2",
+            "reason": null
+          },
+          "coherent": {
+            "probability": "1/2",
+            "ev": "0",
+            "policy": "first-complete-trusted-pair-proportional-1",
+            "reason": null
+          },
+          "reason": null
+        }
+      },
+      {
+        "id": "case-incomplete",
+        "game_id": "game-captured",
+        "game_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "title": "Away at Home \u00b7 zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+        "game": "Away at Home",
+        "book": "kalshi",
+        "family": "spread",
+        "period": "full_game",
+        "outcome": "home",
+        "line": "-9/2",
+        "identity": {
+          "event": {
+            "provider": "sportsgameodds",
+            "source_event_id": "source-event",
+            "home": "NBA:HOME",
+            "away": "NBA:AWAY"
+          },
+          "provider": "sportsgameodds",
+          "book": "kalshi",
+          "venue": "kalshi",
+          "family": "spread",
+          "period": "full_game",
+          "outcome": "home",
+          "line": "-9/2",
+          "settlement": {
+            "rules": "unverified"
+          }
+        },
+        "early": null,
+        "late": {
+          "price": "-110",
+          "price_units": "american_odds",
+          "screen": {
+            "probability": "1/2",
+            "ev": "1/20",
+            "policy": "lowest-no-vig-two-trusted-books-2",
+            "reference_book": "draftkings",
+            "reason": null
+          },
+          "coherent": {
+            "probability": "3/5",
+            "ev": "1/5",
+            "policy": "first-complete-trusted-pair-proportional-1",
+            "reference_book": "fanduel",
+            "reason": null
+          },
+          "main": {
+            "status": "alternate",
+            "source": "source_reported",
+            "authority": "sportsgameodds_byBookmaker",
+            "native_book_main_authority": "unverified"
+          },
+          "times": {
+            "source_at": "2026-11-23T00:50:01Z",
+            "received_at": "2026-11-23T00:50:01Z",
+            "calculated_at": "2026-11-23T00:50:01Z"
+          },
+          "source_age_seconds": "2",
+          "available": true,
+          "reason": null,
+          "calculation_version": "predict-current-pregame-7",
+          "offer_index": 0
+        },
+        "retain_case": true,
+        "transition": "incomplete_positive",
+        "incomplete": true,
+        "missing_reasons": [
+          {
+            "checkpoint": "early",
+            "reason": "exact_bet_or_checkpoint_missing"
+          }
+        ],
+        "role_link": "newly_observed",
+        "early_offer_late_reference": {
+          "screen": {
+            "probability": "2/5",
+            "ev": "-1/10",
+            "policy": "lowest-no-vig-two-trusted-books-2",
+            "reason": null
+          },
+          "coherent": {
+            "probability": "1/2",
+            "ev": "0",
+            "policy": "first-complete-trusted-pair-proportional-1",
+            "reason": null
+          },
+          "reason": null
+        }
+      },
+      {
+        "id": "context-nn",
+        "game_id": "game-captured",
+        "game_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "title": "Away at Home \u00b7 zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+        "game": "Away at Home",
+        "book": "kalshi",
+        "family": "spread",
+        "period": "full_game",
+        "outcome": "home",
+        "line": "-5",
+        "identity": {
+          "event": {
+            "provider": "sportsgameodds",
+            "source_event_id": "source-event",
+            "home": "NBA:HOME",
+            "away": "NBA:AWAY"
+          },
+          "provider": "sportsgameodds",
+          "book": "kalshi",
+          "venue": "kalshi",
+          "family": "spread",
+          "period": "full_game",
+          "outcome": "home",
+          "line": "-5",
+          "settlement": {
+            "rules": "unverified"
+          }
+        },
+        "early": {
+          "price": "+120",
+          "price_units": "american_odds",
+          "screen": {
+            "probability": "1/2",
+            "ev": "-1/5",
+            "policy": "lowest-no-vig-two-trusted-books-2",
+            "reference_book": "draftkings",
+            "reason": null
+          },
+          "coherent": {
+            "probability": "3/5",
+            "ev": "1/5",
+            "policy": "first-complete-trusted-pair-proportional-1",
+            "reference_book": "fanduel",
+            "reason": null
+          },
+          "main": {
+            "status": "main",
+            "source": "inferred",
+            "authority": null,
+            "native_book_main_authority": "unverified"
+          },
+          "times": {
+            "source_at": "2026-11-22T20:00:00Z",
+            "received_at": "2026-11-22T20:00:00Z",
+            "calculated_at": "2026-11-22T20:00:00Z"
+          },
+          "source_age_seconds": "2",
+          "available": true,
+          "reason": null,
+          "calculation_version": "predict-current-pregame-7",
+          "offer_index": 0
+        },
+        "late": {
+          "price": "-110",
+          "price_units": "american_odds",
+          "screen": {
+            "probability": "1/2",
+            "ev": "-1/10",
+            "policy": "lowest-no-vig-two-trusted-books-2",
+            "reference_book": "draftkings",
+            "reason": null
+          },
+          "coherent": {
+            "probability": "3/5",
+            "ev": "1/5",
+            "policy": "first-complete-trusted-pair-proportional-1",
+            "reference_book": "fanduel",
+            "reason": null
+          },
+          "main": {
+            "status": "main",
+            "source": "inferred",
+            "authority": null,
+            "native_book_main_authority": "unverified"
+          },
+          "times": {
+            "source_at": "2026-11-23T00:50:01Z",
+            "received_at": "2026-11-23T00:50:01Z",
+            "calculated_at": "2026-11-23T00:50:01Z"
+          },
+          "source_age_seconds": "2",
+          "available": true,
+          "reason": null,
+          "calculation_version": "predict-current-pregame-7",
+          "offer_index": 0
+        },
+        "retain_case": false,
+        "transition": "negative_to_negative",
+        "incomplete": false,
+        "missing_reasons": [],
+        "role_link": "unchanged_role",
+        "early_offer_late_reference": {
+          "screen": {
+            "probability": "2/5",
+            "ev": "-1/10",
+            "policy": "lowest-no-vig-two-trusted-books-2",
+            "reason": null
+          },
+          "coherent": {
+            "probability": "1/2",
+            "ev": "0",
+            "policy": "first-complete-trusted-pair-proportional-1",
+            "reason": null
+          },
+          "reason": null
+        }
+      },
+      {
+        "id": "context-zero",
+        "game_id": "game-captured",
+        "game_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "title": "Away at Home \u00b7 zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+        "game": "Away at Home",
+        "book": "kalshi",
+        "family": "spread",
+        "period": "full_game",
+        "outcome": "home",
+        "line": "-11/2",
+        "identity": {
+          "event": {
+            "provider": "sportsgameodds",
+            "source_event_id": "source-event",
+            "home": "NBA:HOME",
+            "away": "NBA:AWAY"
+          },
+          "provider": "sportsgameodds",
+          "book": "kalshi",
+          "venue": "kalshi",
+          "family": "spread",
+          "period": "full_game",
+          "outcome": "home",
+          "line": "-11/2",
+          "settlement": {
+            "rules": "unverified"
+          }
+        },
+        "early": {
+          "price": "+120",
+          "price_units": "american_odds",
+          "screen": {
+            "probability": "1/2",
+            "ev": "0",
+            "policy": "lowest-no-vig-two-trusted-books-2",
+            "reference_book": "draftkings",
+            "reason": null
+          },
+          "coherent": {
+            "probability": "3/5",
+            "ev": "1/5",
+            "policy": "first-complete-trusted-pair-proportional-1",
+            "reference_book": "fanduel",
+            "reason": null
+          },
+          "main": {
+            "status": "alternate",
+            "source": "source_reported",
+            "authority": "sportsgameodds_byBookmaker",
+            "native_book_main_authority": "unverified"
+          },
+          "times": {
+            "source_at": "2026-11-22T20:00:00Z",
+            "received_at": "2026-11-22T20:00:00Z",
+            "calculated_at": "2026-11-22T20:00:00Z"
+          },
+          "source_age_seconds": "2",
+          "available": true,
+          "reason": null,
+          "calculation_version": "predict-current-pregame-7",
+          "offer_index": 0
+        },
+        "late": {
+          "price": "-110",
+          "price_units": "american_odds",
+          "screen": {
+            "probability": "1/2",
+            "ev": "0",
+            "policy": "lowest-no-vig-two-trusted-books-2",
+            "reference_book": "draftkings",
+            "reason": null
+          },
+          "coherent": {
+            "probability": "3/5",
+            "ev": "1/5",
+            "policy": "first-complete-trusted-pair-proportional-1",
+            "reference_book": "fanduel",
+            "reason": null
+          },
+          "main": {
+            "status": "alternate",
+            "source": "source_reported",
+            "authority": "sportsgameodds_byBookmaker",
+            "native_book_main_authority": "unverified"
+          },
+          "times": {
+            "source_at": "2026-11-23T00:50:01Z",
+            "received_at": "2026-11-23T00:50:01Z",
+            "calculated_at": "2026-11-23T00:50:01Z"
+          },
+          "source_age_seconds": "2",
+          "available": true,
+          "reason": null,
+          "calculation_version": "predict-current-pregame-7",
+          "offer_index": 0
+        },
+        "retain_case": false,
+        "transition": "zero_to_zero",
+        "incomplete": false,
+        "missing_reasons": [],
+        "role_link": "unchanged_role",
+        "early_offer_late_reference": {
+          "screen": {
+            "probability": "2/5",
+            "ev": "-1/10",
+            "policy": "lowest-no-vig-two-trusted-books-2",
+            "reason": null
+          },
+          "coherent": {
+            "probability": "1/2",
+            "ev": "0",
+            "policy": "first-complete-trusted-pair-proportional-1",
+            "reason": null
+          },
+          "reason": null
+        }
+      },
+      {
+        "id": "context-unavailable",
+        "game_id": "game-captured",
+        "game_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "title": "Away at Home \u00b7 zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+        "game": "Away at Home",
+        "book": "kalshi",
+        "family": "spread",
+        "period": "full_game",
+        "outcome": "home",
+        "line": "-6",
+        "identity": {
+          "event": {
+            "provider": "sportsgameodds",
+            "source_event_id": "source-event",
+            "home": "NBA:HOME",
+            "away": "NBA:AWAY"
+          },
+          "provider": "sportsgameodds",
+          "book": "kalshi",
+          "venue": "kalshi",
+          "family": "spread",
+          "period": "full_game",
+          "outcome": "home",
+          "line": "-6",
+          "settlement": {
+            "rules": "unverified"
+          }
+        },
+        "early": {
+          "price": "+120",
+          "price_units": "american_odds",
+          "screen": {
+            "probability": "1/2",
+            "ev": null,
+            "policy": "lowest-no-vig-two-trusted-books-2",
+            "reference_book": "draftkings",
+            "reason": "fee_unavailable"
+          },
+          "coherent": {
+            "probability": "3/5",
+            "ev": null,
+            "policy": "first-complete-trusted-pair-proportional-1",
+            "reference_book": "fanduel",
+            "reason": null
+          },
+          "main": {
+            "status": "unknown",
+            "source": "source_reported",
+            "authority": "sportsgameodds_byBookmaker",
+            "native_book_main_authority": "unverified"
+          },
+          "times": {
+            "source_at": "2026-11-22T20:00:00Z",
+            "received_at": "2026-11-22T20:00:00Z",
+            "calculated_at": "2026-11-22T20:00:00Z"
+          },
+          "source_age_seconds": "2",
+          "available": true,
+          "reason": null,
+          "calculation_version": "predict-current-pregame-7",
+          "offer_index": 0
+        },
+        "late": {
+          "price": "-110",
+          "price_units": "american_odds",
+          "screen": {
+            "probability": "1/2",
+            "ev": null,
+            "policy": "lowest-no-vig-two-trusted-books-2",
+            "reference_book": "draftkings",
+            "reason": "fee_unavailable"
+          },
+          "coherent": {
+            "probability": "3/5",
+            "ev": null,
+            "policy": "first-complete-trusted-pair-proportional-1",
+            "reference_book": "fanduel",
+            "reason": null
+          },
+          "main": {
+            "status": "unknown",
+            "source": "source_reported",
+            "authority": "sportsgameodds_byBookmaker",
+            "native_book_main_authority": "unverified"
+          },
+          "times": {
+            "source_at": "2026-11-23T00:50:01Z",
+            "received_at": "2026-11-23T00:50:01Z",
+            "calculated_at": "2026-11-23T00:50:01Z"
+          },
+          "source_age_seconds": "2",
+          "available": true,
+          "reason": null,
+          "calculation_version": "predict-current-pregame-7",
+          "offer_index": 0
+        },
+        "retain_case": false,
+        "transition": "incomplete",
+        "incomplete": true,
+        "missing_reasons": [],
+        "role_link": "unchanged_role",
+        "early_offer_late_reference": {
+          "screen": {
+            "probability": "2/5",
+            "ev": "-1/10",
+            "policy": "lowest-no-vig-two-trusted-books-2",
+            "reason": null
+          },
+          "coherent": {
+            "probability": "1/2",
+            "ev": "0",
+            "policy": "first-complete-trusted-pair-proportional-1",
+            "reason": null
+          },
+          "reason": null
+        }
+      }
+    ],
+    "main_line_links": [
+      {
+        "book": "kalshi",
+        "family": "spread",
+        "period": "full_game",
+        "outcome": "home",
+        "early_main_ids": [
+          "case-pn"
+        ],
+        "late_main_ids": [
+          "case-np"
+        ],
+        "early_main_lines": [
+          "-3"
+        ],
+        "late_main_lines": [
+          "-7/2"
+        ],
+        "movement": "changed",
+        "links": [
+          {
+            "id": "case-pn",
+            "early_role": "main",
+            "late_role": "alternate",
+            "relationship": "main_to_alternate"
+          },
+          {
+            "id": "case-np",
+            "early_role": "alternate",
+            "late_role": "main",
+            "relationship": "alternate_to_main"
+          },
+          {
+            "id": "case-pp",
+            "early_role": "alternate",
+            "late_role": "alternate",
+            "relationship": "unchanged_role"
+          },
+          {
+            "id": "case-incomplete",
+            "early_role": null,
+            "late_role": "alternate",
+            "relationship": "newly_observed"
+          },
+          {
+            "id": "context-nn",
+            "early_role": "main",
+            "late_role": "main",
+            "relationship": "unchanged_role"
+          },
+          {
+            "id": "context-zero",
+            "early_role": "alternate",
+            "late_role": "alternate",
+            "relationship": "unchanged_role"
+          },
+          {
+            "id": "context-unavailable",
+            "early_role": "unknown",
+            "late_role": "unknown",
+            "relationship": "unchanged_role"
+          }
+        ]
+      }
+    ],
+    "outcomes": {
+      "state": "pending",
+      "sporting": null,
+      "venue_settlement": null,
+      "actual_fills": null,
+      "scored_events": 0,
+      "scope": "Selected retained cases; no accuracy claim"
+    },
+    "retention": {
+      "retained_bytes": 12000,
+      "byte_cap": 134217728,
+      "refusals": 1
+    },
+    "reference_context": [
+      {
+        "id": "reference-fd-1",
+        "game_id": "game-captured",
+        "game_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "title": "Away at Home \u00b7 zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+        "game": "Away at Home",
+        "book": "fanduel",
+        "family": "spread",
+        "period": "full_game",
+        "outcome": "home",
+        "line": "-3",
+        "identity": {
+          "event": {
+            "provider": "sportsgameodds",
+            "source_event_id": "source-event",
+            "home": "NBA:HOME",
+            "away": "NBA:AWAY"
+          },
+          "provider": "sportsgameodds",
+          "book": "fanduel",
+          "venue": "fanduel",
+          "family": "spread",
+          "period": "full_game",
+          "outcome": "home",
+          "line": "-3",
+          "settlement": {
+            "rules": "unverified"
+          }
+        },
+        "early": {
+          "price": "+110",
+          "price_units": "american_odds",
+          "screen": {
+            "ev": null,
+            "probability": null,
+            "reason": "reference_only_book"
+          },
+          "coherent": {
+            "ev": null,
+            "probability": null,
+            "reason": "reference_only_book"
+          },
+          "main": {
+            "status": "main",
+            "source": "source_reported",
+            "authority": "sportsgameodds_byBookmaker",
+            "native_book_main_authority": "unverified"
+          },
+          "times": {
+            "source_at": "2026-11-22T20:00:00Z",
+            "received_at": "2026-11-22T20:00:00Z",
+            "calculated_at": "2026-11-22T20:00:00Z"
+          },
+          "source_age_seconds": "2",
+          "available": true,
+          "reason": null,
+          "calculation_version": "predict-current-pregame-7",
+          "raw_quote_index": 1
+        },
+        "late": {
+          "price": "-105",
+          "price_units": "american_odds",
+          "screen": {
+            "ev": null,
+            "probability": null,
+            "reason": "reference_only_book"
+          },
+          "coherent": {
+            "ev": null,
+            "probability": null,
+            "reason": "reference_only_book"
+          },
+          "main": {
+            "status": "alternate",
+            "source": "source_reported",
+            "authority": "sportsgameodds_byBookmaker",
+            "native_book_main_authority": "unverified"
+          },
+          "times": {
+            "source_at": "2026-11-23T00:50:01Z",
+            "received_at": "2026-11-23T00:50:01Z",
+            "calculated_at": "2026-11-23T00:50:01Z"
+          },
+          "source_age_seconds": "2",
+          "available": true,
+          "reason": null,
+          "calculation_version": "predict-current-pregame-7",
+          "raw_quote_index": 1
+        },
+        "retain_case": false,
+        "transition": "reference_only",
+        "incomplete": false,
+        "missing_reasons": [],
+        "role_link": "main_to_alternate",
+        "early_offer_late_reference": {
+          "screen": {
+            "probability": "2/5",
+            "ev": "-1/10",
+            "policy": "lowest-no-vig-two-trusted-books-2",
+            "reason": null
+          },
+          "coherent": {
+            "probability": "1/2",
+            "ev": "0",
+            "policy": "first-complete-trusted-pair-proportional-1",
+            "reason": null
+          },
+          "reason": null
+        },
+        "reference_only": true
+      },
+      {
+        "id": "reference-fd-2",
+        "game_id": "game-captured",
+        "game_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "title": "Away at Home \u00b7 zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+        "game": "Away at Home",
+        "book": "fanduel",
+        "family": "spread",
+        "period": "full_game",
+        "outcome": "home",
+        "line": "-7/2",
+        "identity": {
+          "event": {
+            "provider": "sportsgameodds",
+            "source_event_id": "source-event",
+            "home": "NBA:HOME",
+            "away": "NBA:AWAY"
+          },
+          "provider": "sportsgameodds",
+          "book": "fanduel",
+          "venue": "fanduel",
+          "family": "spread",
+          "period": "full_game",
+          "outcome": "home",
+          "line": "-7/2",
+          "settlement": {
+            "rules": "unverified"
+          }
+        },
+        "early": {
+          "price": "+110",
+          "price_units": "american_odds",
+          "screen": {
+            "ev": null,
+            "probability": null,
+            "reason": "reference_only_book"
+          },
+          "coherent": {
+            "ev": null,
+            "probability": null,
+            "reason": "reference_only_book"
+          },
+          "main": {
+            "status": "alternate",
+            "source": "source_reported",
+            "authority": "sportsgameodds_byBookmaker",
+            "native_book_main_authority": "unverified"
+          },
+          "times": {
+            "source_at": "2026-11-22T20:00:00Z",
+            "received_at": "2026-11-22T20:00:00Z",
+            "calculated_at": "2026-11-22T20:00:00Z"
+          },
+          "source_age_seconds": "2",
+          "available": true,
+          "reason": null,
+          "calculation_version": "predict-current-pregame-7",
+          "raw_quote_index": 2
+        },
+        "late": {
+          "price": "-105",
+          "price_units": "american_odds",
+          "screen": {
+            "ev": null,
+            "probability": null,
+            "reason": "reference_only_book"
+          },
+          "coherent": {
+            "ev": null,
+            "probability": null,
+            "reason": "reference_only_book"
+          },
+          "main": {
+            "status": "main",
+            "source": "source_reported",
+            "authority": "sportsgameodds_byBookmaker",
+            "native_book_main_authority": "unverified"
+          },
+          "times": {
+            "source_at": "2026-11-23T00:50:01Z",
+            "received_at": "2026-11-23T00:50:01Z",
+            "calculated_at": "2026-11-23T00:50:01Z"
+          },
+          "source_age_seconds": "2",
+          "available": true,
+          "reason": null,
+          "calculation_version": "predict-current-pregame-7",
+          "raw_quote_index": 2
+        },
+        "retain_case": false,
+        "transition": "reference_only",
+        "incomplete": false,
+        "missing_reasons": [],
+        "role_link": "alternate_to_main",
+        "early_offer_late_reference": {
+          "screen": {
+            "probability": "2/5",
+            "ev": "-1/10",
+            "policy": "lowest-no-vig-two-trusted-books-2",
+            "reason": null
+          },
+          "coherent": {
+            "probability": "1/2",
+            "ev": "0",
+            "policy": "first-complete-trusted-pair-proportional-1",
+            "reason": null
+          },
+          "reason": null
+        },
+        "reference_only": true
+      }
+    ],
+    "quality": {
+      "scope": "retained_cases_selected_by_screen_positive_at_either_checkpoint; selection_biased; within_game_dependence",
+      "retained_cases": 4,
+      "reports": [
+        {
+          "checkpoint": "early",
+          "policy": "screen",
+          "records": 0,
+          "distinct_events": 0,
+          "mean_brier": null
+        },
+        {
+          "checkpoint": "early",
+          "policy": "coherent",
+          "records": 0,
+          "distinct_events": 0,
+          "mean_brier": null
+        },
+        {
+          "checkpoint": "late",
+          "policy": "screen",
+          "records": 0,
+          "distinct_events": 0,
+          "mean_brier": null
+        },
+        {
+          "checkpoint": "late",
+          "policy": "coherent",
+          "records": 0,
+          "distinct_events": 0,
+          "mean_brier": null
+        }
+      ],
+      "exclusions": {
+        "sporting_result_not_final": 4
+      }
+    }
+  },
+  "export": {
+    "schema": "predict-experiment-export-fixture-1",
+    "designation": "synthetic_demonstration",
+    "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "game": {
+      "id": "game-captured",
+      "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "title": "Away at Home \u00b7 zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+      "league": "NBA",
+      "starts_at": "2026-11-23T01:00:00Z",
+      "state": "complete",
+      "early_at": "2026-11-22T20:00:00Z",
+      "late_target": "2026-11-23T00:50:00Z",
+      "late_at": "2026-11-23T00:50:01Z",
+      "case_counts": {
+        "retained": 4
+      },
+      "coverage": {
+        "state": "incomplete",
+        "requested_books": [
+          "kalshi",
+          "fanduel",
+          "draftkings"
+        ],
+        "received_books": [
+          "kalshi",
+          "fanduel"
+        ],
+        "missing_books": [
+          "draftkings"
+        ]
+      }
+    },
+    "checkpoints": [
+      {
+        "status": "captured",
+        "captured_at": "2026-11-22T20:00:00Z",
+        "observed_at": "2026-11-22T20:00:00Z",
+        "target_at": null,
+        "window_start": null,
+        "deadline_at": null,
+        "known_at": "2026-11-22T20:00:00Z",
+        "persisted_at": "2026-11-22T20:00:00Z",
+        "seconds_to_start": 18000,
+        "coverage": {
+          "requested": {
+            "bookmakers": [
+              "kalshi",
+              "fanduel",
+              "draftkings"
+            ],
+            "odd_ids": [
+              "points-home-game-sp-home"
+            ],
+            "include_alt_lines": true
+          },
+          "received": {
+            "bookmakers": [
+              "kalshi",
+              "fanduel"
+            ],
+            "odd_ids": [
+              "points-home-game-sp-home"
+            ],
+            "quotes": 7,
+            "alternate_quotes": 3
+          },
+          "supported": {
+            "offer_quotes": 7,
+            "reference_quotes": 4
+          },
+          "missing": {
+            "bookmakers": [
+              "draftkings"
+            ],
+            "odd_ids": []
+          },
+          "incomplete": true,
+          "complete_market": false,
+          "scope": "available_supported_surface_returned_by_provider"
+        },
+        "snapshot": {
+          "offers": [
+            {
+              "record": {
+                "event": {
+                  "title": "Away at Home"
+                },
+                "quote": {
+                  "original": {
+                    "value": "+120"
+                  },
+                  "source": {
+                    "provider": "sportsgameodds",
+                    "native_event_id": "source-event"
+                  }
+                },
+                "market_identity": {
+                  "family": "spread",
+                  "period": "full_game"
+                },
+                "selection": {
+                  "participant": "home",
+                  "signed_line": "-3"
+                }
+              },
+              "fee_input": {
+                "classification": "synthetic_fixture_fee",
+                "rounding": "cent_ceiling"
+              },
+              "calculation_payload": {
+                "version": "predict-current-pregame-7",
+                "fee": {
+                  "committed_usd": "100",
+                  "cashflows": {
+                    "win": {
+                      "net_receipt_usd": "220"
+                    },
+                    "loss": {
+                      "net_receipt_usd": "0"
+                    }
+                  }
+                },
+                "reference": {
+                  "selection_policy": "lowest-no-vig-two-trusted-books-2",
+                  "probability": "1/2",
+                  "prices": [
+                    {
+                      "input_id": "early-reference",
+                      "price_american": "-110"
+                    }
+                  ]
+                },
+                "coherent_probability": {
+                  "policy_version": "first-complete-trusted-pair-proportional-1",
+                  "probability": "3/5",
+                  "prices": [
+                    {
+                      "input_id": "coherent-reference"
+                    }
+                  ]
+                },
+                "raw": {
+                  "net_ev": "1/10"
+                }
+              }
+            }
+          ],
+          "references": [
+            {
+              "id": "surrounding-reference",
+              "facts": {
+                "book": "fanduel",
+                "price_american": "-110"
+              }
+            }
+          ],
+          "raw_quotes": [
+            {
+              "bookmaker_id": "kalshi",
+              "line": "-3",
+              "main": true
+            },
+            {
+              "bookmaker_id": "fanduel",
+              "price_american": "+110",
+              "line": "-3",
+              "alternate": false,
+              "source_note": "fanduel-early--3"
+            },
+            {
+              "bookmaker_id": "fanduel",
+              "price_american": "+110",
+              "line": "-7/2",
+              "alternate": true,
+              "source_note": "fanduel-early--7/2"
+            }
+          ],
+          "coverage": {
+            "requested": {
+              "bookmakers": [
+                "kalshi",
+                "fanduel",
+                "draftkings"
+              ],
+              "odd_ids": [
+                "points-home-game-sp-home"
+              ],
+              "include_alt_lines": true
+            },
+            "received": {
+              "bookmakers": [
+                "kalshi",
+                "fanduel"
+              ],
+              "odd_ids": [
+                "points-home-game-sp-home"
+              ],
+              "quotes": 7,
+              "alternate_quotes": 3
+            },
+            "supported": {
+              "offer_quotes": 7,
+              "reference_quotes": 4
+            },
+            "missing": {
+              "bookmakers": [
+                "draftkings"
+              ],
+              "odd_ids": []
+            },
+            "incomplete": true,
+            "complete_market": false,
+            "scope": "available_supported_surface_returned_by_provider"
+          }
+        }
+      },
+      {
+        "status": "captured",
+        "captured_at": "2026-11-23T00:50:01Z",
+        "observed_at": "2026-11-23T00:50:01Z",
+        "target_at": "2026-11-23T00:50:00Z",
+        "window_start": "2026-11-23T00:50:00Z",
+        "deadline_at": "2026-11-23T00:51:00Z",
+        "known_at": "2026-11-23T00:50:01Z",
+        "persisted_at": "2026-11-23T00:50:01Z",
+        "seconds_to_start": 60,
+        "coverage": {
+          "requested": {
+            "bookmakers": [
+              "kalshi",
+              "fanduel",
+              "draftkings"
+            ],
+            "odd_ids": [
+              "points-home-game-sp-home"
+            ],
+            "include_alt_lines": true
+          },
+          "received": {
+            "bookmakers": [
+              "kalshi",
+              "fanduel"
+            ],
+            "odd_ids": [
+              "points-home-game-sp-home"
+            ],
+            "quotes": 7,
+            "alternate_quotes": 3
+          },
+          "supported": {
+            "offer_quotes": 7,
+            "reference_quotes": 4
+          },
+          "missing": {
+            "bookmakers": [
+              "draftkings"
+            ],
+            "odd_ids": []
+          },
+          "incomplete": true,
+          "complete_market": false,
+          "scope": "available_supported_surface_returned_by_provider"
+        },
+        "snapshot": {
+          "offers": [
+            {
+              "record": {
+                "event": {
+                  "title": "Away at Home"
+                },
+                "quote": {
+                  "original": {
+                    "value": "+120"
+                  },
+                  "source": {
+                    "provider": "sportsgameodds",
+                    "native_event_id": "source-event"
+                  }
+                },
+                "market_identity": {
+                  "family": "spread",
+                  "period": "full_game"
+                },
+                "selection": {
+                  "participant": "home",
+                  "signed_line": "-3"
+                }
+              },
+              "fee_input": {
+                "classification": "synthetic_fixture_fee",
+                "rounding": "cent_ceiling"
+              },
+              "calculation_payload": {
+                "version": "predict-current-pregame-7",
+                "fee": {
+                  "committed_usd": "100",
+                  "cashflows": {
+                    "win": {
+                      "net_receipt_usd": "220"
+                    },
+                    "loss": {
+                      "net_receipt_usd": "0"
+                    }
+                  }
+                },
+                "reference": {
+                  "selection_policy": "lowest-no-vig-two-trusted-books-2",
+                  "probability": "1/2",
+                  "prices": [
+                    {
+                      "input_id": "early-reference",
+                      "price_american": "-110"
+                    }
+                  ]
+                },
+                "coherent_probability": {
+                  "policy_version": "first-complete-trusted-pair-proportional-1",
+                  "probability": "3/5",
+                  "prices": [
+                    {
+                      "input_id": "coherent-reference"
+                    }
+                  ]
+                },
+                "raw": {
+                  "net_ev": "1/10"
+                }
+              }
+            }
+          ],
+          "references": [
+            {
+              "id": "surrounding-reference",
+              "facts": {
+                "book": "fanduel",
+                "price_american": "-110"
+              }
+            }
+          ],
+          "raw_quotes": [
+            {
+              "bookmaker_id": "kalshi",
+              "line": "-3",
+              "main": true
+            },
+            {
+              "bookmaker_id": "fanduel",
+              "price_american": "-105",
+              "line": "-3",
+              "alternate": true,
+              "source_note": "fanduel-late--3"
+            },
+            {
+              "bookmaker_id": "fanduel",
+              "price_american": "-105",
+              "line": "-7/2",
+              "alternate": false,
+              "source_note": "fanduel-late--7/2"
+            }
+          ],
+          "coverage": {
+            "requested": {
+              "bookmakers": [
+                "kalshi",
+                "fanduel",
+                "draftkings"
+              ],
+              "odd_ids": [
+                "points-home-game-sp-home"
+              ],
+              "include_alt_lines": true
+            },
+            "received": {
+              "bookmakers": [
+                "kalshi",
+                "fanduel"
+              ],
+              "odd_ids": [
+                "points-home-game-sp-home"
+              ],
+              "quotes": 7,
+              "alternate_quotes": 3
+            },
+            "supported": {
+              "offer_quotes": 7,
+              "reference_quotes": 4
+            },
+            "missing": {
+              "bookmakers": [
+                "draftkings"
+              ],
+              "odd_ids": []
+            },
+            "incomplete": true,
+            "complete_market": false,
+            "scope": "available_supported_surface_returned_by_provider"
+          }
+        }
+      }
+    ],
+    "dependencies": [
+      {
+        "id": "shared-once",
+        "payload": {
+          "record": {
+            "event": {
+              "title": "Away at Home"
+            },
+            "quote": {
+              "original": {
+                "value": "+120"
+              },
+              "source": {
+                "provider": "sportsgameodds",
+                "native_event_id": "source-event"
+              }
+            },
+            "market_identity": {
+              "family": "spread",
+              "period": "full_game"
+            },
+            "selection": {
+              "participant": "home",
+              "signed_line": "-3"
+            }
+          },
+          "fee_input": {
+            "classification": "synthetic_fixture_fee",
+            "rounding": "cent_ceiling"
+          },
+          "calculation_payload": {
+            "version": "predict-current-pregame-7",
+            "fee": {
+              "committed_usd": "100",
+              "cashflows": {
+                "win": {
+                  "net_receipt_usd": "220"
+                },
+                "loss": {
+                  "net_receipt_usd": "0"
+                }
+              }
+            },
+            "reference": {
+              "selection_policy": "lowest-no-vig-two-trusted-books-2",
+              "probability": "1/2",
+              "prices": [
+                {
+                  "input_id": "early-reference",
+                  "price_american": "-110"
+                }
+              ]
+            },
+            "coherent_probability": {
+              "policy_version": "first-complete-trusted-pair-proportional-1",
+              "probability": "3/5",
+              "prices": [
+                {
+                  "input_id": "coherent-reference"
+                }
+              ]
+            },
+            "raw": {
+              "net_ev": "1/10"
+            }
+          }
+        }
+      }
+    ],
+    "comparison": {
+      "cases": [
+        {
+          "id": "case-pn",
+          "game_id": "game-captured",
+          "game_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "title": "Away at Home \u00b7 zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+          "game": "Away at Home",
+          "book": "kalshi",
+          "family": "spread",
+          "period": "full_game",
+          "outcome": "home",
+          "line": "-3",
+          "identity": {
+            "event": {
+              "provider": "sportsgameodds",
+              "source_event_id": "source-event",
+              "home": "NBA:HOME",
+              "away": "NBA:AWAY"
+            },
+            "provider": "sportsgameodds",
+            "book": "kalshi",
+            "venue": "kalshi",
+            "family": "spread",
+            "period": "full_game",
+            "outcome": "home",
+            "line": "-3",
+            "settlement": {
+              "rules": "unverified"
+            }
+          },
+          "early": {
+            "price": "+120",
+            "price_units": "american_odds",
+            "screen": {
+              "probability": "1/2",
+              "ev": "1/10",
+              "policy": "lowest-no-vig-two-trusted-books-2",
+              "reference_book": "draftkings",
+              "reason": null
+            },
+            "coherent": {
+              "probability": "3/5",
+              "ev": "1/5",
+              "policy": "first-complete-trusted-pair-proportional-1",
+              "reference_book": "fanduel",
+              "reason": null
+            },
+            "main": {
+              "status": "main",
+              "source": "source_reported",
+              "authority": "sportsgameodds_byBookmaker",
+              "native_book_main_authority": "unverified"
+            },
+            "times": {
+              "source_at": "2026-11-22T20:00:00Z",
+              "received_at": "2026-11-22T20:00:00Z",
+              "calculated_at": "2026-11-22T20:00:00Z"
+            },
+            "source_age_seconds": "2",
+            "available": true,
+            "reason": null,
+            "calculation_version": "predict-current-pregame-7",
+            "offer_index": 0
+          },
+          "late": {
+            "price": "-110",
+            "price_units": "american_odds",
+            "screen": {
+              "probability": "1/2",
+              "ev": "-1/20",
+              "policy": "lowest-no-vig-two-trusted-books-2",
+              "reference_book": "draftkings",
+              "reason": null
+            },
+            "coherent": {
+              "probability": "3/5",
+              "ev": "1/5",
+              "policy": "first-complete-trusted-pair-proportional-1",
+              "reference_book": "fanduel",
+              "reason": null
+            },
+            "main": {
+              "status": "alternate",
+              "source": "source_reported",
+              "authority": "sportsgameodds_byBookmaker",
+              "native_book_main_authority": "unverified"
+            },
+            "times": {
+              "source_at": "2026-11-23T00:50:01Z",
+              "received_at": "2026-11-23T00:50:01Z",
+              "calculated_at": "2026-11-23T00:50:01Z"
+            },
+            "source_age_seconds": "2",
+            "available": true,
+            "reason": null,
+            "calculation_version": "predict-current-pregame-7",
+            "offer_index": 0
+          },
+          "retain_case": true,
+          "transition": "positive_to_negative",
+          "incomplete": false,
+          "missing_reasons": [],
+          "role_link": "main_to_alternate",
+          "early_offer_late_reference": {
+            "screen": {
+              "probability": "2/5",
+              "ev": "-1/10",
+              "policy": "lowest-no-vig-two-trusted-books-2",
+              "reason": null
+            },
+            "coherent": {
+              "probability": "1/2",
+              "ev": "0",
+              "policy": "first-complete-trusted-pair-proportional-1",
+              "reason": null
+            },
+            "reason": null
+          }
+        },
+        {
+          "id": "case-np",
+          "game_id": "game-captured",
+          "game_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "title": "Away at Home \u00b7 zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+          "game": "Away at Home",
+          "book": "kalshi",
+          "family": "spread",
+          "period": "full_game",
+          "outcome": "home",
+          "line": "-7/2",
+          "identity": {
+            "event": {
+              "provider": "sportsgameodds",
+              "source_event_id": "source-event",
+              "home": "NBA:HOME",
+              "away": "NBA:AWAY"
+            },
+            "provider": "sportsgameodds",
+            "book": "kalshi",
+            "venue": "kalshi",
+            "family": "spread",
+            "period": "full_game",
+            "outcome": "home",
+            "line": "-7/2",
+            "settlement": {
+              "rules": "unverified"
+            }
+          },
+          "early": {
+            "price": "+120",
+            "price_units": "american_odds",
+            "screen": {
+              "probability": "1/2",
+              "ev": "-1/20",
+              "policy": "lowest-no-vig-two-trusted-books-2",
+              "reference_book": "draftkings",
+              "reason": null
+            },
+            "coherent": {
+              "probability": "3/5",
+              "ev": "1/5",
+              "policy": "first-complete-trusted-pair-proportional-1",
+              "reference_book": "fanduel",
+              "reason": null
+            },
+            "main": {
+              "status": "alternate",
+              "source": "source_reported",
+              "authority": "sportsgameodds_byBookmaker",
+              "native_book_main_authority": "unverified"
+            },
+            "times": {
+              "source_at": "2026-11-22T20:00:00Z",
+              "received_at": "2026-11-22T20:00:00Z",
+              "calculated_at": "2026-11-22T20:00:00Z"
+            },
+            "source_age_seconds": "2",
+            "available": true,
+            "reason": null,
+            "calculation_version": "predict-current-pregame-7",
+            "offer_index": 0
+          },
+          "late": {
+            "price": "-110",
+            "price_units": "american_odds",
+            "screen": {
+              "probability": "1/2",
+              "ev": "1/10",
+              "policy": "lowest-no-vig-two-trusted-books-2",
+              "reference_book": "draftkings",
+              "reason": null
+            },
+            "coherent": {
+              "probability": "3/5",
+              "ev": "1/5",
+              "policy": "first-complete-trusted-pair-proportional-1",
+              "reference_book": "fanduel",
+              "reason": null
+            },
+            "main": {
+              "status": "main",
+              "source": "source_reported",
+              "authority": "sportsgameodds_byBookmaker",
+              "native_book_main_authority": "unverified"
+            },
+            "times": {
+              "source_at": "2026-11-23T00:50:01Z",
+              "received_at": "2026-11-23T00:50:01Z",
+              "calculated_at": "2026-11-23T00:50:01Z"
+            },
+            "source_age_seconds": "2",
+            "available": true,
+            "reason": null,
+            "calculation_version": "predict-current-pregame-7",
+            "offer_index": 0
+          },
+          "retain_case": true,
+          "transition": "negative_to_positive",
+          "incomplete": false,
+          "missing_reasons": [],
+          "role_link": "alternate_to_main",
+          "early_offer_late_reference": {
+            "screen": {
+              "probability": "2/5",
+              "ev": "-1/10",
+              "policy": "lowest-no-vig-two-trusted-books-2",
+              "reason": null
+            },
+            "coherent": {
+              "probability": "1/2",
+              "ev": "0",
+              "policy": "first-complete-trusted-pair-proportional-1",
+              "reason": null
+            },
+            "reason": null
+          }
+        },
+        {
+          "id": "case-pp",
+          "game_id": "game-captured",
+          "game_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "title": "Away at Home \u00b7 zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+          "game": "Away at Home",
+          "book": "kalshi",
+          "family": "spread",
+          "period": "full_game",
+          "outcome": "home",
+          "line": "-4",
+          "identity": {
+            "event": {
+              "provider": "sportsgameodds",
+              "source_event_id": "source-event",
+              "home": "NBA:HOME",
+              "away": "NBA:AWAY"
+            },
+            "provider": "sportsgameodds",
+            "book": "kalshi",
+            "venue": "kalshi",
+            "family": "spread",
+            "period": "full_game",
+            "outcome": "home",
+            "line": "-4",
+            "settlement": {
+              "rules": "unverified"
+            }
+          },
+          "early": {
+            "price": "+120",
+            "price_units": "american_odds",
+            "screen": {
+              "probability": "1/2",
+              "ev": "1/1000",
+              "policy": "lowest-no-vig-two-trusted-books-2",
+              "reference_book": "draftkings",
+              "reason": null
+            },
+            "coherent": {
+              "probability": "3/5",
+              "ev": "1/5",
+              "policy": "first-complete-trusted-pair-proportional-1",
+              "reference_book": "fanduel",
+              "reason": null
+            },
+            "main": {
+              "status": "alternate",
+              "source": "source_reported",
+              "authority": "sportsgameodds_byBookmaker",
+              "native_book_main_authority": "unverified"
+            },
+            "times": {
+              "source_at": "2026-11-22T20:00:00Z",
+              "received_at": "2026-11-22T20:00:00Z",
+              "calculated_at": "2026-11-22T20:00:00Z"
+            },
+            "source_age_seconds": "2",
+            "available": true,
+            "reason": null,
+            "calculation_version": "predict-current-pregame-7",
+            "offer_index": 0
+          },
+          "late": {
+            "price": "-110",
+            "price_units": "american_odds",
+            "screen": {
+              "probability": "1/2",
+              "ev": "1/20",
+              "policy": "lowest-no-vig-two-trusted-books-2",
+              "reference_book": "draftkings",
+              "reason": null
+            },
+            "coherent": {
+              "probability": "3/5",
+              "ev": "1/5",
+              "policy": "first-complete-trusted-pair-proportional-1",
+              "reference_book": "fanduel",
+              "reason": null
+            },
+            "main": {
+              "status": "alternate",
+              "source": "source_reported",
+              "authority": "sportsgameodds_byBookmaker",
+              "native_book_main_authority": "unverified"
+            },
+            "times": {
+              "source_at": "2026-11-23T00:50:01Z",
+              "received_at": "2026-11-23T00:50:01Z",
+              "calculated_at": "2026-11-23T00:50:01Z"
+            },
+            "source_age_seconds": "2",
+            "available": true,
+            "reason": null,
+            "calculation_version": "predict-current-pregame-7",
+            "offer_index": 0
+          },
+          "retain_case": true,
+          "transition": "positive_to_positive",
+          "incomplete": false,
+          "missing_reasons": [],
+          "role_link": "unchanged_role",
+          "early_offer_late_reference": {
+            "screen": {
+              "probability": "2/5",
+              "ev": "-1/10",
+              "policy": "lowest-no-vig-two-trusted-books-2",
+              "reason": null
+            },
+            "coherent": {
+              "probability": "1/2",
+              "ev": "0",
+              "policy": "first-complete-trusted-pair-proportional-1",
+              "reason": null
+            },
+            "reason": null
+          }
+        },
+        {
+          "id": "case-incomplete",
+          "game_id": "game-captured",
+          "game_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "title": "Away at Home \u00b7 zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+          "game": "Away at Home",
+          "book": "kalshi",
+          "family": "spread",
+          "period": "full_game",
+          "outcome": "home",
+          "line": "-9/2",
+          "identity": {
+            "event": {
+              "provider": "sportsgameodds",
+              "source_event_id": "source-event",
+              "home": "NBA:HOME",
+              "away": "NBA:AWAY"
+            },
+            "provider": "sportsgameodds",
+            "book": "kalshi",
+            "venue": "kalshi",
+            "family": "spread",
+            "period": "full_game",
+            "outcome": "home",
+            "line": "-9/2",
+            "settlement": {
+              "rules": "unverified"
+            }
+          },
+          "early": null,
+          "late": {
+            "price": "-110",
+            "price_units": "american_odds",
+            "screen": {
+              "probability": "1/2",
+              "ev": "1/20",
+              "policy": "lowest-no-vig-two-trusted-books-2",
+              "reference_book": "draftkings",
+              "reason": null
+            },
+            "coherent": {
+              "probability": "3/5",
+              "ev": "1/5",
+              "policy": "first-complete-trusted-pair-proportional-1",
+              "reference_book": "fanduel",
+              "reason": null
+            },
+            "main": {
+              "status": "alternate",
+              "source": "source_reported",
+              "authority": "sportsgameodds_byBookmaker",
+              "native_book_main_authority": "unverified"
+            },
+            "times": {
+              "source_at": "2026-11-23T00:50:01Z",
+              "received_at": "2026-11-23T00:50:01Z",
+              "calculated_at": "2026-11-23T00:50:01Z"
+            },
+            "source_age_seconds": "2",
+            "available": true,
+            "reason": null,
+            "calculation_version": "predict-current-pregame-7",
+            "offer_index": 0
+          },
+          "retain_case": true,
+          "transition": "incomplete_positive",
+          "incomplete": true,
+          "missing_reasons": [
+            {
+              "checkpoint": "early",
+              "reason": "exact_bet_or_checkpoint_missing"
+            }
+          ],
+          "role_link": "newly_observed",
+          "early_offer_late_reference": {
+            "screen": {
+              "probability": "2/5",
+              "ev": "-1/10",
+              "policy": "lowest-no-vig-two-trusted-books-2",
+              "reason": null
+            },
+            "coherent": {
+              "probability": "1/2",
+              "ev": "0",
+              "policy": "first-complete-trusted-pair-proportional-1",
+              "reason": null
+            },
+            "reason": null
+          }
+        }
+      ],
+      "context": [
+        {
+          "id": "case-pn",
+          "game_id": "game-captured",
+          "game_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "title": "Away at Home \u00b7 zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+          "game": "Away at Home",
+          "book": "kalshi",
+          "family": "spread",
+          "period": "full_game",
+          "outcome": "home",
+          "line": "-3",
+          "identity": {
+            "event": {
+              "provider": "sportsgameodds",
+              "source_event_id": "source-event",
+              "home": "NBA:HOME",
+              "away": "NBA:AWAY"
+            },
+            "provider": "sportsgameodds",
+            "book": "kalshi",
+            "venue": "kalshi",
+            "family": "spread",
+            "period": "full_game",
+            "outcome": "home",
+            "line": "-3",
+            "settlement": {
+              "rules": "unverified"
+            }
+          },
+          "early": {
+            "price": "+120",
+            "price_units": "american_odds",
+            "screen": {
+              "probability": "1/2",
+              "ev": "1/10",
+              "policy": "lowest-no-vig-two-trusted-books-2",
+              "reference_book": "draftkings",
+              "reason": null
+            },
+            "coherent": {
+              "probability": "3/5",
+              "ev": "1/5",
+              "policy": "first-complete-trusted-pair-proportional-1",
+              "reference_book": "fanduel",
+              "reason": null
+            },
+            "main": {
+              "status": "main",
+              "source": "source_reported",
+              "authority": "sportsgameodds_byBookmaker",
+              "native_book_main_authority": "unverified"
+            },
+            "times": {
+              "source_at": "2026-11-22T20:00:00Z",
+              "received_at": "2026-11-22T20:00:00Z",
+              "calculated_at": "2026-11-22T20:00:00Z"
+            },
+            "source_age_seconds": "2",
+            "available": true,
+            "reason": null,
+            "calculation_version": "predict-current-pregame-7",
+            "offer_index": 0
+          },
+          "late": {
+            "price": "-110",
+            "price_units": "american_odds",
+            "screen": {
+              "probability": "1/2",
+              "ev": "-1/20",
+              "policy": "lowest-no-vig-two-trusted-books-2",
+              "reference_book": "draftkings",
+              "reason": null
+            },
+            "coherent": {
+              "probability": "3/5",
+              "ev": "1/5",
+              "policy": "first-complete-trusted-pair-proportional-1",
+              "reference_book": "fanduel",
+              "reason": null
+            },
+            "main": {
+              "status": "alternate",
+              "source": "source_reported",
+              "authority": "sportsgameodds_byBookmaker",
+              "native_book_main_authority": "unverified"
+            },
+            "times": {
+              "source_at": "2026-11-23T00:50:01Z",
+              "received_at": "2026-11-23T00:50:01Z",
+              "calculated_at": "2026-11-23T00:50:01Z"
+            },
+            "source_age_seconds": "2",
+            "available": true,
+            "reason": null,
+            "calculation_version": "predict-current-pregame-7",
+            "offer_index": 0
+          },
+          "retain_case": true,
+          "transition": "positive_to_negative",
+          "incomplete": false,
+          "missing_reasons": [],
+          "role_link": "main_to_alternate",
+          "early_offer_late_reference": {
+            "screen": {
+              "probability": "2/5",
+              "ev": "-1/10",
+              "policy": "lowest-no-vig-two-trusted-books-2",
+              "reason": null
+            },
+            "coherent": {
+              "probability": "1/2",
+              "ev": "0",
+              "policy": "first-complete-trusted-pair-proportional-1",
+              "reason": null
+            },
+            "reason": null
+          }
+        },
+        {
+          "id": "case-np",
+          "game_id": "game-captured",
+          "game_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "title": "Away at Home \u00b7 zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+          "game": "Away at Home",
+          "book": "kalshi",
+          "family": "spread",
+          "period": "full_game",
+          "outcome": "home",
+          "line": "-7/2",
+          "identity": {
+            "event": {
+              "provider": "sportsgameodds",
+              "source_event_id": "source-event",
+              "home": "NBA:HOME",
+              "away": "NBA:AWAY"
+            },
+            "provider": "sportsgameodds",
+            "book": "kalshi",
+            "venue": "kalshi",
+            "family": "spread",
+            "period": "full_game",
+            "outcome": "home",
+            "line": "-7/2",
+            "settlement": {
+              "rules": "unverified"
+            }
+          },
+          "early": {
+            "price": "+120",
+            "price_units": "american_odds",
+            "screen": {
+              "probability": "1/2",
+              "ev": "-1/20",
+              "policy": "lowest-no-vig-two-trusted-books-2",
+              "reference_book": "draftkings",
+              "reason": null
+            },
+            "coherent": {
+              "probability": "3/5",
+              "ev": "1/5",
+              "policy": "first-complete-trusted-pair-proportional-1",
+              "reference_book": "fanduel",
+              "reason": null
+            },
+            "main": {
+              "status": "alternate",
+              "source": "source_reported",
+              "authority": "sportsgameodds_byBookmaker",
+              "native_book_main_authority": "unverified"
+            },
+            "times": {
+              "source_at": "2026-11-22T20:00:00Z",
+              "received_at": "2026-11-22T20:00:00Z",
+              "calculated_at": "2026-11-22T20:00:00Z"
+            },
+            "source_age_seconds": "2",
+            "available": true,
+            "reason": null,
+            "calculation_version": "predict-current-pregame-7",
+            "offer_index": 0
+          },
+          "late": {
+            "price": "-110",
+            "price_units": "american_odds",
+            "screen": {
+              "probability": "1/2",
+              "ev": "1/10",
+              "policy": "lowest-no-vig-two-trusted-books-2",
+              "reference_book": "draftkings",
+              "reason": null
+            },
+            "coherent": {
+              "probability": "3/5",
+              "ev": "1/5",
+              "policy": "first-complete-trusted-pair-proportional-1",
+              "reference_book": "fanduel",
+              "reason": null
+            },
+            "main": {
+              "status": "main",
+              "source": "source_reported",
+              "authority": "sportsgameodds_byBookmaker",
+              "native_book_main_authority": "unverified"
+            },
+            "times": {
+              "source_at": "2026-11-23T00:50:01Z",
+              "received_at": "2026-11-23T00:50:01Z",
+              "calculated_at": "2026-11-23T00:50:01Z"
+            },
+            "source_age_seconds": "2",
+            "available": true,
+            "reason": null,
+            "calculation_version": "predict-current-pregame-7",
+            "offer_index": 0
+          },
+          "retain_case": true,
+          "transition": "negative_to_positive",
+          "incomplete": false,
+          "missing_reasons": [],
+          "role_link": "alternate_to_main",
+          "early_offer_late_reference": {
+            "screen": {
+              "probability": "2/5",
+              "ev": "-1/10",
+              "policy": "lowest-no-vig-two-trusted-books-2",
+              "reason": null
+            },
+            "coherent": {
+              "probability": "1/2",
+              "ev": "0",
+              "policy": "first-complete-trusted-pair-proportional-1",
+              "reason": null
+            },
+            "reason": null
+          }
+        },
+        {
+          "id": "case-pp",
+          "game_id": "game-captured",
+          "game_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "title": "Away at Home \u00b7 zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+          "game": "Away at Home",
+          "book": "kalshi",
+          "family": "spread",
+          "period": "full_game",
+          "outcome": "home",
+          "line": "-4",
+          "identity": {
+            "event": {
+              "provider": "sportsgameodds",
+              "source_event_id": "source-event",
+              "home": "NBA:HOME",
+              "away": "NBA:AWAY"
+            },
+            "provider": "sportsgameodds",
+            "book": "kalshi",
+            "venue": "kalshi",
+            "family": "spread",
+            "period": "full_game",
+            "outcome": "home",
+            "line": "-4",
+            "settlement": {
+              "rules": "unverified"
+            }
+          },
+          "early": {
+            "price": "+120",
+            "price_units": "american_odds",
+            "screen": {
+              "probability": "1/2",
+              "ev": "1/1000",
+              "policy": "lowest-no-vig-two-trusted-books-2",
+              "reference_book": "draftkings",
+              "reason": null
+            },
+            "coherent": {
+              "probability": "3/5",
+              "ev": "1/5",
+              "policy": "first-complete-trusted-pair-proportional-1",
+              "reference_book": "fanduel",
+              "reason": null
+            },
+            "main": {
+              "status": "alternate",
+              "source": "source_reported",
+              "authority": "sportsgameodds_byBookmaker",
+              "native_book_main_authority": "unverified"
+            },
+            "times": {
+              "source_at": "2026-11-22T20:00:00Z",
+              "received_at": "2026-11-22T20:00:00Z",
+              "calculated_at": "2026-11-22T20:00:00Z"
+            },
+            "source_age_seconds": "2",
+            "available": true,
+            "reason": null,
+            "calculation_version": "predict-current-pregame-7",
+            "offer_index": 0
+          },
+          "late": {
+            "price": "-110",
+            "price_units": "american_odds",
+            "screen": {
+              "probability": "1/2",
+              "ev": "1/20",
+              "policy": "lowest-no-vig-two-trusted-books-2",
+              "reference_book": "draftkings",
+              "reason": null
+            },
+            "coherent": {
+              "probability": "3/5",
+              "ev": "1/5",
+              "policy": "first-complete-trusted-pair-proportional-1",
+              "reference_book": "fanduel",
+              "reason": null
+            },
+            "main": {
+              "status": "alternate",
+              "source": "source_reported",
+              "authority": "sportsgameodds_byBookmaker",
+              "native_book_main_authority": "unverified"
+            },
+            "times": {
+              "source_at": "2026-11-23T00:50:01Z",
+              "received_at": "2026-11-23T00:50:01Z",
+              "calculated_at": "2026-11-23T00:50:01Z"
+            },
+            "source_age_seconds": "2",
+            "available": true,
+            "reason": null,
+            "calculation_version": "predict-current-pregame-7",
+            "offer_index": 0
+          },
+          "retain_case": true,
+          "transition": "positive_to_positive",
+          "incomplete": false,
+          "missing_reasons": [],
+          "role_link": "unchanged_role",
+          "early_offer_late_reference": {
+            "screen": {
+              "probability": "2/5",
+              "ev": "-1/10",
+              "policy": "lowest-no-vig-two-trusted-books-2",
+              "reason": null
+            },
+            "coherent": {
+              "probability": "1/2",
+              "ev": "0",
+              "policy": "first-complete-trusted-pair-proportional-1",
+              "reason": null
+            },
+            "reason": null
+          }
+        },
+        {
+          "id": "case-incomplete",
+          "game_id": "game-captured",
+          "game_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "title": "Away at Home \u00b7 zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+          "game": "Away at Home",
+          "book": "kalshi",
+          "family": "spread",
+          "period": "full_game",
+          "outcome": "home",
+          "line": "-9/2",
+          "identity": {
+            "event": {
+              "provider": "sportsgameodds",
+              "source_event_id": "source-event",
+              "home": "NBA:HOME",
+              "away": "NBA:AWAY"
+            },
+            "provider": "sportsgameodds",
+            "book": "kalshi",
+            "venue": "kalshi",
+            "family": "spread",
+            "period": "full_game",
+            "outcome": "home",
+            "line": "-9/2",
+            "settlement": {
+              "rules": "unverified"
+            }
+          },
+          "early": null,
+          "late": {
+            "price": "-110",
+            "price_units": "american_odds",
+            "screen": {
+              "probability": "1/2",
+              "ev": "1/20",
+              "policy": "lowest-no-vig-two-trusted-books-2",
+              "reference_book": "draftkings",
+              "reason": null
+            },
+            "coherent": {
+              "probability": "3/5",
+              "ev": "1/5",
+              "policy": "first-complete-trusted-pair-proportional-1",
+              "reference_book": "fanduel",
+              "reason": null
+            },
+            "main": {
+              "status": "alternate",
+              "source": "source_reported",
+              "authority": "sportsgameodds_byBookmaker",
+              "native_book_main_authority": "unverified"
+            },
+            "times": {
+              "source_at": "2026-11-23T00:50:01Z",
+              "received_at": "2026-11-23T00:50:01Z",
+              "calculated_at": "2026-11-23T00:50:01Z"
+            },
+            "source_age_seconds": "2",
+            "available": true,
+            "reason": null,
+            "calculation_version": "predict-current-pregame-7",
+            "offer_index": 0
+          },
+          "retain_case": true,
+          "transition": "incomplete_positive",
+          "incomplete": true,
+          "missing_reasons": [
+            {
+              "checkpoint": "early",
+              "reason": "exact_bet_or_checkpoint_missing"
+            }
+          ],
+          "role_link": "newly_observed",
+          "early_offer_late_reference": {
+            "screen": {
+              "probability": "2/5",
+              "ev": "-1/10",
+              "policy": "lowest-no-vig-two-trusted-books-2",
+              "reason": null
+            },
+            "coherent": {
+              "probability": "1/2",
+              "ev": "0",
+              "policy": "first-complete-trusted-pair-proportional-1",
+              "reason": null
+            },
+            "reason": null
+          }
+        },
+        {
+          "id": "context-nn",
+          "game_id": "game-captured",
+          "game_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "title": "Away at Home \u00b7 zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+          "game": "Away at Home",
+          "book": "kalshi",
+          "family": "spread",
+          "period": "full_game",
+          "outcome": "home",
+          "line": "-5",
+          "identity": {
+            "event": {
+              "provider": "sportsgameodds",
+              "source_event_id": "source-event",
+              "home": "NBA:HOME",
+              "away": "NBA:AWAY"
+            },
+            "provider": "sportsgameodds",
+            "book": "kalshi",
+            "venue": "kalshi",
+            "family": "spread",
+            "period": "full_game",
+            "outcome": "home",
+            "line": "-5",
+            "settlement": {
+              "rules": "unverified"
+            }
+          },
+          "early": {
+            "price": "+120",
+            "price_units": "american_odds",
+            "screen": {
+              "probability": "1/2",
+              "ev": "-1/5",
+              "policy": "lowest-no-vig-two-trusted-books-2",
+              "reference_book": "draftkings",
+              "reason": null
+            },
+            "coherent": {
+              "probability": "3/5",
+              "ev": "1/5",
+              "policy": "first-complete-trusted-pair-proportional-1",
+              "reference_book": "fanduel",
+              "reason": null
+            },
+            "main": {
+              "status": "main",
+              "source": "inferred",
+              "authority": null,
+              "native_book_main_authority": "unverified"
+            },
+            "times": {
+              "source_at": "2026-11-22T20:00:00Z",
+              "received_at": "2026-11-22T20:00:00Z",
+              "calculated_at": "2026-11-22T20:00:00Z"
+            },
+            "source_age_seconds": "2",
+            "available": true,
+            "reason": null,
+            "calculation_version": "predict-current-pregame-7",
+            "offer_index": 0
+          },
+          "late": {
+            "price": "-110",
+            "price_units": "american_odds",
+            "screen": {
+              "probability": "1/2",
+              "ev": "-1/10",
+              "policy": "lowest-no-vig-two-trusted-books-2",
+              "reference_book": "draftkings",
+              "reason": null
+            },
+            "coherent": {
+              "probability": "3/5",
+              "ev": "1/5",
+              "policy": "first-complete-trusted-pair-proportional-1",
+              "reference_book": "fanduel",
+              "reason": null
+            },
+            "main": {
+              "status": "main",
+              "source": "inferred",
+              "authority": null,
+              "native_book_main_authority": "unverified"
+            },
+            "times": {
+              "source_at": "2026-11-23T00:50:01Z",
+              "received_at": "2026-11-23T00:50:01Z",
+              "calculated_at": "2026-11-23T00:50:01Z"
+            },
+            "source_age_seconds": "2",
+            "available": true,
+            "reason": null,
+            "calculation_version": "predict-current-pregame-7",
+            "offer_index": 0
+          },
+          "retain_case": false,
+          "transition": "negative_to_negative",
+          "incomplete": false,
+          "missing_reasons": [],
+          "role_link": "unchanged_role",
+          "early_offer_late_reference": {
+            "screen": {
+              "probability": "2/5",
+              "ev": "-1/10",
+              "policy": "lowest-no-vig-two-trusted-books-2",
+              "reason": null
+            },
+            "coherent": {
+              "probability": "1/2",
+              "ev": "0",
+              "policy": "first-complete-trusted-pair-proportional-1",
+              "reason": null
+            },
+            "reason": null
+          }
+        },
+        {
+          "id": "context-zero",
+          "game_id": "game-captured",
+          "game_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "title": "Away at Home \u00b7 zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+          "game": "Away at Home",
+          "book": "kalshi",
+          "family": "spread",
+          "period": "full_game",
+          "outcome": "home",
+          "line": "-11/2",
+          "identity": {
+            "event": {
+              "provider": "sportsgameodds",
+              "source_event_id": "source-event",
+              "home": "NBA:HOME",
+              "away": "NBA:AWAY"
+            },
+            "provider": "sportsgameodds",
+            "book": "kalshi",
+            "venue": "kalshi",
+            "family": "spread",
+            "period": "full_game",
+            "outcome": "home",
+            "line": "-11/2",
+            "settlement": {
+              "rules": "unverified"
+            }
+          },
+          "early": {
+            "price": "+120",
+            "price_units": "american_odds",
+            "screen": {
+              "probability": "1/2",
+              "ev": "0",
+              "policy": "lowest-no-vig-two-trusted-books-2",
+              "reference_book": "draftkings",
+              "reason": null
+            },
+            "coherent": {
+              "probability": "3/5",
+              "ev": "1/5",
+              "policy": "first-complete-trusted-pair-proportional-1",
+              "reference_book": "fanduel",
+              "reason": null
+            },
+            "main": {
+              "status": "alternate",
+              "source": "source_reported",
+              "authority": "sportsgameodds_byBookmaker",
+              "native_book_main_authority": "unverified"
+            },
+            "times": {
+              "source_at": "2026-11-22T20:00:00Z",
+              "received_at": "2026-11-22T20:00:00Z",
+              "calculated_at": "2026-11-22T20:00:00Z"
+            },
+            "source_age_seconds": "2",
+            "available": true,
+            "reason": null,
+            "calculation_version": "predict-current-pregame-7",
+            "offer_index": 0
+          },
+          "late": {
+            "price": "-110",
+            "price_units": "american_odds",
+            "screen": {
+              "probability": "1/2",
+              "ev": "0",
+              "policy": "lowest-no-vig-two-trusted-books-2",
+              "reference_book": "draftkings",
+              "reason": null
+            },
+            "coherent": {
+              "probability": "3/5",
+              "ev": "1/5",
+              "policy": "first-complete-trusted-pair-proportional-1",
+              "reference_book": "fanduel",
+              "reason": null
+            },
+            "main": {
+              "status": "alternate",
+              "source": "source_reported",
+              "authority": "sportsgameodds_byBookmaker",
+              "native_book_main_authority": "unverified"
+            },
+            "times": {
+              "source_at": "2026-11-23T00:50:01Z",
+              "received_at": "2026-11-23T00:50:01Z",
+              "calculated_at": "2026-11-23T00:50:01Z"
+            },
+            "source_age_seconds": "2",
+            "available": true,
+            "reason": null,
+            "calculation_version": "predict-current-pregame-7",
+            "offer_index": 0
+          },
+          "retain_case": false,
+          "transition": "zero_to_zero",
+          "incomplete": false,
+          "missing_reasons": [],
+          "role_link": "unchanged_role",
+          "early_offer_late_reference": {
+            "screen": {
+              "probability": "2/5",
+              "ev": "-1/10",
+              "policy": "lowest-no-vig-two-trusted-books-2",
+              "reason": null
+            },
+            "coherent": {
+              "probability": "1/2",
+              "ev": "0",
+              "policy": "first-complete-trusted-pair-proportional-1",
+              "reason": null
+            },
+            "reason": null
+          }
+        },
+        {
+          "id": "context-unavailable",
+          "game_id": "game-captured",
+          "game_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "title": "Away at Home \u00b7 zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+          "game": "Away at Home",
+          "book": "kalshi",
+          "family": "spread",
+          "period": "full_game",
+          "outcome": "home",
+          "line": "-6",
+          "identity": {
+            "event": {
+              "provider": "sportsgameodds",
+              "source_event_id": "source-event",
+              "home": "NBA:HOME",
+              "away": "NBA:AWAY"
+            },
+            "provider": "sportsgameodds",
+            "book": "kalshi",
+            "venue": "kalshi",
+            "family": "spread",
+            "period": "full_game",
+            "outcome": "home",
+            "line": "-6",
+            "settlement": {
+              "rules": "unverified"
+            }
+          },
+          "early": {
+            "price": "+120",
+            "price_units": "american_odds",
+            "screen": {
+              "probability": "1/2",
+              "ev": null,
+              "policy": "lowest-no-vig-two-trusted-books-2",
+              "reference_book": "draftkings",
+              "reason": "fee_unavailable"
+            },
+            "coherent": {
+              "probability": "3/5",
+              "ev": null,
+              "policy": "first-complete-trusted-pair-proportional-1",
+              "reference_book": "fanduel",
+              "reason": null
+            },
+            "main": {
+              "status": "unknown",
+              "source": "source_reported",
+              "authority": "sportsgameodds_byBookmaker",
+              "native_book_main_authority": "unverified"
+            },
+            "times": {
+              "source_at": "2026-11-22T20:00:00Z",
+              "received_at": "2026-11-22T20:00:00Z",
+              "calculated_at": "2026-11-22T20:00:00Z"
+            },
+            "source_age_seconds": "2",
+            "available": true,
+            "reason": null,
+            "calculation_version": "predict-current-pregame-7",
+            "offer_index": 0
+          },
+          "late": {
+            "price": "-110",
+            "price_units": "american_odds",
+            "screen": {
+              "probability": "1/2",
+              "ev": null,
+              "policy": "lowest-no-vig-two-trusted-books-2",
+              "reference_book": "draftkings",
+              "reason": "fee_unavailable"
+            },
+            "coherent": {
+              "probability": "3/5",
+              "ev": null,
+              "policy": "first-complete-trusted-pair-proportional-1",
+              "reference_book": "fanduel",
+              "reason": null
+            },
+            "main": {
+              "status": "unknown",
+              "source": "source_reported",
+              "authority": "sportsgameodds_byBookmaker",
+              "native_book_main_authority": "unverified"
+            },
+            "times": {
+              "source_at": "2026-11-23T00:50:01Z",
+              "received_at": "2026-11-23T00:50:01Z",
+              "calculated_at": "2026-11-23T00:50:01Z"
+            },
+            "source_age_seconds": "2",
+            "available": true,
+            "reason": null,
+            "calculation_version": "predict-current-pregame-7",
+            "offer_index": 0
+          },
+          "retain_case": false,
+          "transition": "incomplete",
+          "incomplete": true,
+          "missing_reasons": [],
+          "role_link": "unchanged_role",
+          "early_offer_late_reference": {
+            "screen": {
+              "probability": "2/5",
+              "ev": "-1/10",
+              "policy": "lowest-no-vig-two-trusted-books-2",
+              "reason": null
+            },
+            "coherent": {
+              "probability": "1/2",
+              "ev": "0",
+              "policy": "first-complete-trusted-pair-proportional-1",
+              "reason": null
+            },
+            "reason": null
+          }
+        }
+      ],
+      "main_line_links": [
+        {
+          "book": "kalshi",
+          "family": "spread",
+          "period": "full_game",
+          "outcome": "home",
+          "early_main_ids": [
+            "case-pn"
+          ],
+          "late_main_ids": [
+            "case-np"
+          ],
+          "early_main_lines": [
+            "-3"
+          ],
+          "late_main_lines": [
+            "-7/2"
+          ],
+          "movement": "changed",
+          "links": [
+            {
+              "id": "case-pn",
+              "early_role": "main",
+              "late_role": "alternate",
+              "relationship": "main_to_alternate"
+            },
+            {
+              "id": "case-np",
+              "early_role": "alternate",
+              "late_role": "main",
+              "relationship": "alternate_to_main"
+            },
+            {
+              "id": "case-pp",
+              "early_role": "alternate",
+              "late_role": "alternate",
+              "relationship": "unchanged_role"
+            },
+            {
+              "id": "case-incomplete",
+              "early_role": null,
+              "late_role": "alternate",
+              "relationship": "newly_observed"
+            },
+            {
+              "id": "context-nn",
+              "early_role": "main",
+              "late_role": "main",
+              "relationship": "unchanged_role"
+            },
+            {
+              "id": "context-zero",
+              "early_role": "alternate",
+              "late_role": "alternate",
+              "relationship": "unchanged_role"
+            },
+            {
+              "id": "context-unavailable",
+              "early_role": "unknown",
+              "late_role": "unknown",
+              "relationship": "unchanged_role"
+            }
+          ]
+        }
+      ],
+      "reference_context": [
+        {
+          "id": "reference-fd-1",
+          "game_id": "game-captured",
+          "game_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "title": "Away at Home \u00b7 zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+          "game": "Away at Home",
+          "book": "fanduel",
+          "family": "spread",
+          "period": "full_game",
+          "outcome": "home",
+          "line": "-3",
+          "identity": {
+            "event": {
+              "provider": "sportsgameodds",
+              "source_event_id": "source-event",
+              "home": "NBA:HOME",
+              "away": "NBA:AWAY"
+            },
+            "provider": "sportsgameodds",
+            "book": "fanduel",
+            "venue": "fanduel",
+            "family": "spread",
+            "period": "full_game",
+            "outcome": "home",
+            "line": "-3",
+            "settlement": {
+              "rules": "unverified"
+            }
+          },
+          "early": {
+            "price": "+110",
+            "price_units": "american_odds",
+            "screen": {
+              "ev": null,
+              "probability": null,
+              "reason": "reference_only_book"
+            },
+            "coherent": {
+              "ev": null,
+              "probability": null,
+              "reason": "reference_only_book"
+            },
+            "main": {
+              "status": "main",
+              "source": "source_reported",
+              "authority": "sportsgameodds_byBookmaker",
+              "native_book_main_authority": "unverified"
+            },
+            "times": {
+              "source_at": "2026-11-22T20:00:00Z",
+              "received_at": "2026-11-22T20:00:00Z",
+              "calculated_at": "2026-11-22T20:00:00Z"
+            },
+            "source_age_seconds": "2",
+            "available": true,
+            "reason": null,
+            "calculation_version": "predict-current-pregame-7",
+            "raw_quote_index": 1
+          },
+          "late": {
+            "price": "-105",
+            "price_units": "american_odds",
+            "screen": {
+              "ev": null,
+              "probability": null,
+              "reason": "reference_only_book"
+            },
+            "coherent": {
+              "ev": null,
+              "probability": null,
+              "reason": "reference_only_book"
+            },
+            "main": {
+              "status": "alternate",
+              "source": "source_reported",
+              "authority": "sportsgameodds_byBookmaker",
+              "native_book_main_authority": "unverified"
+            },
+            "times": {
+              "source_at": "2026-11-23T00:50:01Z",
+              "received_at": "2026-11-23T00:50:01Z",
+              "calculated_at": "2026-11-23T00:50:01Z"
+            },
+            "source_age_seconds": "2",
+            "available": true,
+            "reason": null,
+            "calculation_version": "predict-current-pregame-7",
+            "raw_quote_index": 1
+          },
+          "retain_case": false,
+          "transition": "reference_only",
+          "incomplete": false,
+          "missing_reasons": [],
+          "role_link": "main_to_alternate",
+          "early_offer_late_reference": {
+            "screen": {
+              "probability": "2/5",
+              "ev": "-1/10",
+              "policy": "lowest-no-vig-two-trusted-books-2",
+              "reason": null
+            },
+            "coherent": {
+              "probability": "1/2",
+              "ev": "0",
+              "policy": "first-complete-trusted-pair-proportional-1",
+              "reason": null
+            },
+            "reason": null
+          },
+          "reference_only": true
+        },
+        {
+          "id": "reference-fd-2",
+          "game_id": "game-captured",
+          "game_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "title": "Away at Home \u00b7 zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+          "game": "Away at Home",
+          "book": "fanduel",
+          "family": "spread",
+          "period": "full_game",
+          "outcome": "home",
+          "line": "-7/2",
+          "identity": {
+            "event": {
+              "provider": "sportsgameodds",
+              "source_event_id": "source-event",
+              "home": "NBA:HOME",
+              "away": "NBA:AWAY"
+            },
+            "provider": "sportsgameodds",
+            "book": "fanduel",
+            "venue": "fanduel",
+            "family": "spread",
+            "period": "full_game",
+            "outcome": "home",
+            "line": "-7/2",
+            "settlement": {
+              "rules": "unverified"
+            }
+          },
+          "early": {
+            "price": "+110",
+            "price_units": "american_odds",
+            "screen": {
+              "ev": null,
+              "probability": null,
+              "reason": "reference_only_book"
+            },
+            "coherent": {
+              "ev": null,
+              "probability": null,
+              "reason": "reference_only_book"
+            },
+            "main": {
+              "status": "alternate",
+              "source": "source_reported",
+              "authority": "sportsgameodds_byBookmaker",
+              "native_book_main_authority": "unverified"
+            },
+            "times": {
+              "source_at": "2026-11-22T20:00:00Z",
+              "received_at": "2026-11-22T20:00:00Z",
+              "calculated_at": "2026-11-22T20:00:00Z"
+            },
+            "source_age_seconds": "2",
+            "available": true,
+            "reason": null,
+            "calculation_version": "predict-current-pregame-7",
+            "raw_quote_index": 2
+          },
+          "late": {
+            "price": "-105",
+            "price_units": "american_odds",
+            "screen": {
+              "ev": null,
+              "probability": null,
+              "reason": "reference_only_book"
+            },
+            "coherent": {
+              "ev": null,
+              "probability": null,
+              "reason": "reference_only_book"
+            },
+            "main": {
+              "status": "main",
+              "source": "source_reported",
+              "authority": "sportsgameodds_byBookmaker",
+              "native_book_main_authority": "unverified"
+            },
+            "times": {
+              "source_at": "2026-11-23T00:50:01Z",
+              "received_at": "2026-11-23T00:50:01Z",
+              "calculated_at": "2026-11-23T00:50:01Z"
+            },
+            "source_age_seconds": "2",
+            "available": true,
+            "reason": null,
+            "calculation_version": "predict-current-pregame-7",
+            "raw_quote_index": 2
+          },
+          "retain_case": false,
+          "transition": "reference_only",
+          "incomplete": false,
+          "missing_reasons": [],
+          "role_link": "alternate_to_main",
+          "early_offer_late_reference": {
+            "screen": {
+              "probability": "2/5",
+              "ev": "-1/10",
+              "policy": "lowest-no-vig-two-trusted-books-2",
+              "reason": null
+            },
+            "coherent": {
+              "probability": "1/2",
+              "ev": "0",
+              "policy": "first-complete-trusted-pair-proportional-1",
+              "reason": null
+            },
+            "reason": null
+          },
+          "reference_only": true
+        }
+      ]
+    },
+    "provider_requests": 0,
+    "manifest": {
+      "complete": true,
+      "shared_dependency_count": 1
+    }
+  }
+}

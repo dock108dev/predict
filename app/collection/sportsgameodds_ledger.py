@@ -181,6 +181,20 @@ class ObjectLedger:
             self._rate_admit(db, account, requests_per_minute, current)
             db.execute('COMMIT')
 
+    def request_capacity(self, window_id: str, *, now: datetime) -> dict:
+        """Read remaining rate slots without reserving or altering exposure."""
+        account = window_id.split(':', 1)[0]
+        current = _time(now)
+        with self._connect() as db:
+            row = db.execute('SELECT requests_per_minute FROM sgo_object_window WHERE id=?',
+                             (window_id,)).fetchone()
+            if row is None:
+                raise KeyError(window_id)
+            count, oldest = db.execute('SELECT count(*),min(requested_at) FROM sgo_http_request '
+                                      'WHERE account=? AND requested_at>?', (account, current-60)).fetchone()
+        return dict(limit=row[0], used=count, available=max(0, row[0]-count),
+                    next_at=datetime.fromtimestamp(oldest+60, timezone.utc) if oldest is not None else now)
+
     def reserve(self, window_id: str, reservation_id: str, *, objects: int,
                 now: datetime, stopped: bool = False, source_paused: bool = False,
                 category: str | None = None, league: str | None = None,

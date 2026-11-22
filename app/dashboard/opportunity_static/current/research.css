@@ -27,6 +27,7 @@
 .research-page dialog { width: min(1050px, calc(100vw - 1rem)); max-height: calc(100dvh - 1rem); padding: 1rem; border: 1px solid var(--line, #b8c2cc); border-radius: 6px; background: var(--paper, #fff); color: inherit; }
 .research-page dialog::backdrop { background: rgb(0 0 0 / 45%); }
 .research-dialog-heading { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
+.research-dialog-heading h2 { min-width: 0; overflow-wrap: anywhere; }
 .research-detail-grid { display: grid; grid-template-columns: minmax(9rem, 1fr) minmax(0, 3fr); gap: .35rem .75rem; }
 .research-detail-grid dd { margin: 0; overflow-wrap: anywhere; }
 .research-page pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 28rem; overflow: auto; padding: .7rem; background: #f2f4f6; color: #17212b; font-size: .8rem; }
@@ -34,6 +35,31 @@
 .research-page dialog h3 { font-size: 1rem; }
 .research-page dialog p { overflow-wrap: anywhere; }
 .research-panel-row { display: grid; grid-template-columns: minmax(0, 1fr); gap: .4rem; padding: .5rem 0; border-top: 1px solid var(--line, #d4d9de); overflow-wrap: anywhere; }
+#experiment { margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--line, #d4d9de); min-width: 0; }
+.experiment-heading { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: .6rem; }
+.experiment-controls { display: flex; flex-wrap: wrap; gap: .6rem 1rem; margin-block: .7rem; }
+.experiment-controls label { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; font-size: .85rem; }
+.experiment-controls select { min-width: 0; max-width: 100%; min-height: 42px; padding: .4rem; background: var(--paper, #fff); color: inherit; border: 1px solid var(--line, #b8c2cc); border-radius: 4px; }
+.experiment-table { width: 100%; border-collapse: collapse; font-size: .85rem; text-align: left; }
+.experiment-table :is(th,td) { padding: .5rem; border-bottom: 1px solid var(--line, #d4d9de); vertical-align: top; overflow-wrap: anywhere; }
+.experiment-table :is(small,strong) { display: block; margin-bottom: .3rem; }
+.experiment-table small { font-size: .78rem; color: var(--research-muted); }
+.experiment-table td { min-width: 8rem; }
+.experiment-table td:first-child { min-width: 11rem; }
+.experiment-table button { max-width: 100%; }
+.experiment-export { display: grid; grid-template-columns: minmax(0, 1fr); gap: .5rem; margin-block: .75rem; overflow-wrap: anywhere; }
+.experiment-export a { width: max-content; max-width: 100%; }
+.experiment-plots { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
+.experiment-plot { min-width: 0; margin: 0; border: 1px solid var(--line, #d4d9de); border-radius: 4px; padding: .5rem; overflow-x: auto; }
+.experiment-plot svg { display: block; width: 100%; min-width: 500px; height: auto; overflow: visible; }
+.experiment-plot figcaption { font-size: .8rem; overflow-wrap: anywhere; }
+.experiment-plot text { font-family: inherit; font-size: 12px; fill: currentColor; }
+.experiment-plot .plot-axis { stroke: currentColor; opacity: .4; stroke-width: 1; }
+.experiment-plot .plot-zero { stroke: currentColor; opacity: .25; stroke-dasharray: 3 3; }
+.experiment-plot .plot-early { stroke: #286a96; fill: var(--paper, #fff); stroke-width: 1.8; }
+.experiment-plot .plot-late { stroke: #986713; fill: #986713; stroke-width: 1.8; }
+.experiment-plot .plot-missing { stroke-width: 1.5; fill: none; }
+.experiment-notice { padding: .6rem; border-left: 3px solid #986713; background: var(--paper, #fff); }
 @media (max-width: 760px) {
  .research-panels { grid-template-columns: 1fr; }
  .catalog-filters { grid-template-columns: repeat(2, minmax(0,1fr)); }
@@ -47,4 +73,12 @@
  .catalog-table td > * { grid-column: 2; }
  .research-detail-grid { grid-template-columns: 1fr; }
  .research-detail-grid dd { margin-bottom: .45rem; }
+ .experiment-plots { grid-template-columns: 1fr; }
+ .experiment-table thead { display: none; }
+ .experiment-table, .experiment-table tbody, .experiment-table tr, .experiment-table td { display: block; width: 100%; }
+ .experiment-table tr { border: 1px solid var(--line, #d4d9de); border-radius: 5px; margin-bottom: .7rem; padding: .4rem; }
+ .experiment-table td { border: 0; display: grid; grid-template-columns: minmax(6.5rem, 1fr) minmax(0, 2fr); min-width: 0; padding: .3rem; }
+ .experiment-table td::before { content: attr(data-label); color: var(--research-muted); padding-right: .4rem; }
+ .experiment-table td > * { grid-column: 2; min-width: 0; }
+ .experiment-controls label { max-width: 100%; }
 }

@@ -10,6 +10,7 @@ DOCUMENTS = (
     "docs/liquidity.md",
     "docs/monitor-live.md",
     "docs/current-pregame.md",
+    "docs/ev-checkpoint-experiment.md",
     "docs/bet-journal.md",
     "docs/storage-ownership.md",
     "docs/odds-archive-operations.md",
