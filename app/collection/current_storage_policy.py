@@ -58,8 +58,8 @@ def writer_subset_usage(db):
     return int(value)
 
 
-def require_disk_space(path, append_bytes=0):
-    """Refuse a write that would consume the final GiB on its filesystem.
+def disk_capacity(path, append_bytes=0):
+    """Measure the same filesystem and reserve used by the write guard.
 
     New observation directories use the nearest existing ancestor. A check is
     advisory against external disk writers; the actual write can still fail and
@@ -70,7 +70,16 @@ def require_disk_space(path, append_bytes=0):
     directory = Path(path)
     while not directory.exists():
         directory = directory.parent
-    if shutil.disk_usage(directory).free < FREE_DISK_BYTE_FLOOR + append_bytes:
+    free = shutil.disk_usage(directory).free
+    required = FREE_DISK_BYTE_FLOOR + append_bytes
+    return dict(free_bytes=free, floor_bytes=FREE_DISK_BYTE_FLOOR,
+                append_bytes=append_bytes, required_bytes=required,
+                available=free >= required)
+
+
+def require_disk_space(path, append_bytes=0):
+    """Refuse a write that would consume the final GiB on its filesystem."""
+    if not disk_capacity(path, append_bytes)['available']:
         raise BudgetStop('current_observation_disk_free_floor')
 
 

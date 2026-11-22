@@ -8,9 +8,11 @@ successful rewrite is expected to lower the physical database guard quantity.
 from psycopg import sql
 from psycopg.errors import LockNotAvailable
 from psycopg.pq import TransactionStatus
-from app.collection.current_storage_policy import LOCAL_SQL_BYTE_CAP, SQL_BYTE_CAP, sql_usage, require_disk_space
+from app.collection.current_storage_policy import LOCAL_SQL_BYTE_CAP, SQL_BYTE_CAP, sql_usage, require_disk_space, disk_capacity
+from app.collection.odds_http import BudgetStop
 from .store import ROOT
 from time import monotonic
+import logging
 
 LOCK = 120046
 # Reclaim from the same physical size on every install. A larger hosted cap
@@ -44,6 +46,16 @@ REWRITE_TURN_SECONDS = 5
 _rewrite_floor = {}
 _last_collecting_candidate = {}
 REWRITE_FLOORS = 128
+
+
+def disk_deferral(table, operation, append_bytes, **facts):
+    capacity = disk_capacity(ROOT/'.local/postgres', append_bytes)
+    value = dict(table=table, operation=operation, reason='rewrite_disk_headroom',
+                 guard_reason='current_observation_disk_free_floor', **facts, **capacity)
+    logging.getLogger(__name__).warning(
+        'Deferred storage maintenance %s on %s: free=%d required=%d',
+        operation, table, capacity['free_bytes'], capacity['required_bytes'])
+    return value
 
 
 def maintain(db, *, compact=True, collecting=False, yield_requested=None):
@@ -220,7 +232,23 @@ def maintain(db, *, compact=True, collecting=False, yield_requested=None):
                         db.execute('SELECT pg_advisory_unlock(901153)')
                         capture_lock=False
                         continue
-                    require_disk_space(ROOT/'.local/postgres', append_bytes=row['bytes']*3)
+                    try:
+                        require_disk_space(ROOT/'.local/postgres', append_bytes=row['bytes']*3)
+                    except BudgetStop as exc:
+                        # A FULL rewrite is optional recovery work. Its extra
+                        # copy runway must not become acquisition authority or
+                        # a fatal startup requirement. Ordinary admission and
+                        # the runtime still enforce their own unchanged guards.
+                        if str(exc) != 'current_observation_disk_free_floor':
+                            raise
+                        deferred = disk_deferral(row['relname'], 'vacuum_full', row['bytes']*3,
+                            schema=row['schema'],
+                            relation_bytes=row['bytes'], reusable_bytes=free,
+                            transient_peak_bound_bytes=peak_bound)
+                        result['deferred'].append(deferred)
+                        db.execute('SELECT pg_advisory_unlock(901153)')
+                        capture_lock=False
+                        continue
                     if collecting:
                         db.execute("SELECT set_config('lock_timeout',%s,false)", (LIVE_REWRITE_LOCK_TIMEOUT,))
                     try:
@@ -261,10 +289,25 @@ def maintain(db, *, compact=True, collecting=False, yield_requested=None):
                         break
         if source_waiting():return result
         if db.execute("SELECT to_regclass('public.current_native_market_recovery') r").fetchone()['r']:
-            from .recovery_codec import repack
-            result['recovery_repack']=repack(db)
+            from .recovery_codec import repack, REPACK_BYTES
+            try:
+                result['recovery_repack']=repack(db)
+            except BudgetStop as exc:
+                # This specific guard runs before repack opens its write
+                # transaction; its original values remain untouched.
+                if str(exc) != 'current_observation_disk_free_floor':raise
+                result['deferred'].append(disk_deferral(
+                    'current_native_market_recovery','recovery_repack',2*REPACK_BYTES))
+                result['recovery_repack']=dict(deferred='recovery_repack_disk_headroom')
         if has_metadata:
-            result['native_metadata_backfill']=native_market_metadata.convert(db)
+            try:
+                result['native_metadata_backfill']=native_market_metadata.convert(db)
+            except BudgetStop as exc:
+                # convert likewise checks disk before its transactional copy.
+                if str(exc) != 'current_observation_disk_free_floor':raise
+                result['deferred'].append(disk_deferral('current_native_market_body',
+                    'metadata_convert',2*native_market_metadata.MAX_BATCH_BYTES))
+                result['native_metadata_backfill']=dict(deferred='metadata_convert_disk_headroom')
         result['after_bytes'] = sql_usage(db)
         return result
     finally:

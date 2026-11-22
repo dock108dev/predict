@@ -38,13 +38,15 @@ class DataRuntime:
         self.storage_interval_requested = False
         self.storage_interval = False
         self.sql_bytes = None
+        self.startup_maintenance = None
 
     def prepare_status(self):
         from .background_work import BACKGROUND
         self.service.background_work = dict(BACKGROUND.snapshot(),retained_memory=self.retained_memory,loop_progress=self.loop_progress.snapshot() if self.loop_progress else None,progress=getattr(self.board,'progress',{}),
             component_admission=dict(getattr(self.board,'admission_status',{})),coverage_progress=getattr(self.board,'last_coverage',None),
             scanner_admission=getattr(self.scanner,'admission_status',None),
-            catalog_transfer=getattr(getattr(getattr(self.service,'ingress',None),'catalog_preparer',None),'metrics',None))
+            catalog_transfer=getattr(getattr(getattr(self.service,'ingress',None),'catalog_preparer',None),'metrics',None),
+            startup_storage_maintenance=self.startup_maintenance)
         self.service.background_calculations = dict(
             scanner='pending' if self.scanner is None else 'unavailable' if getattr(self.scanner, 'error', None) else 'stopped' if getattr(self.scanner, 'closed', False) else 'running',
             scanner_error=None if self.scanner is None or not getattr(self.scanner, 'error', None) else 'background_scanner_unavailable',
@@ -94,7 +96,7 @@ class DataRuntime:
             if not locked:
                 raise ValueError('Another data runtime owns this database')
             from app.storage.storage_maintenance import maintain
-            await asyncio.to_thread(maintain, self.lock_connection)
+            self.startup_maintenance = await asyncio.to_thread(maintain, self.lock_connection)
             self.resource_guard()
             Store(self.lock_connection).migrate()
             self.paused_sources, self.global_stopped = self.state.retained_controls()

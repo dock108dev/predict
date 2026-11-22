@@ -29,6 +29,22 @@ def runtime_row(**updates):
 
 
 class RuntimeReadGuards(unittest.TestCase):
+    def test_runtime_still_refuses_the_operating_disk_floor_and_sql_cap(self):
+        from types import SimpleNamespace
+        from app.collection.data_runtime import DataRuntime
+        from app.collection.odds_http import BudgetStop
+        from app.collection.current_storage_policy import FREE_DISK_BYTE_FLOOR, SQL_BYTE_CAP
+        runtime=DataRuntime(service=SimpleNamespace(config=deepcopy(DEFAULT)))
+        runtime.lock_connection=Mock()
+        with patch('app.collection.current_storage_policy.shutil.disk_usage',return_value=SimpleNamespace(free=FREE_DISK_BYTE_FLOOR-1)):
+            with self.assertRaisesRegex(BudgetStop,'current_observation_disk_free_floor'):
+                runtime.resource_guard()
+        runtime.lock_connection.execute.assert_not_called()
+        runtime.lock_connection.execute.return_value.fetchone.return_value={'n':SQL_BYTE_CAP}
+        with patch('app.collection.current_storage_policy.shutil.disk_usage',return_value=SimpleNamespace(free=FREE_DISK_BYTE_FLOOR*2)):
+            with self.assertRaisesRegex(ValueError,'data_runtime_sql_storage_guard'):
+                runtime.resource_guard()
+
     def read(self, row, at=AT):
         db = Mock()
         db.execute.return_value.fetchone.return_value = row

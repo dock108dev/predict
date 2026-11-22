@@ -9,6 +9,52 @@ from app.collection import native_recovery
 
 
 class StorageMaintenanceSQL(LatestBoardFixture):
+    async def test_low_rewrite_disk_headroom_defers_copy_and_retries_without_losing_rows(self):
+        from types import SimpleNamespace
+        from app.storage import storage_maintenance as maintenance
+        from app.collection.current_storage_policy import FREE_DISK_BYTE_FLOOR, require_disk_space
+        from app.collection.odds_http import BudgetStop
+
+        with self.connect() as db, self.connect() as retry:
+            db.execute('CREATE EXTENSION IF NOT EXISTS pgstattuple')
+            db.execute('CREATE TABLE maintenance_disk_fixture(id integer PRIMARY KEY,payload text)')
+            db.execute("INSERT INTO maintenance_disk_fixture SELECT n,repeat('retained exact input ',14) FROM generate_series(1,6000)n")
+            db.execute('DELETE FROM maintenance_disk_fixture WHERE id>1000')
+            db.execute('VACUUM (TRUNCATE FALSE) maintenance_disk_fixture')
+            before=db.execute('SELECT * FROM maintenance_disk_fixture ORDER BY id').fetchall()
+            relation_bytes=db.execute("SELECT pg_total_relation_size('maintenance_disk_fixture') n").fetchone()['n']
+            settings=[db.execute('SHOW '+key).fetchone() for key in ('lock_timeout','statement_timeout')]
+            with patch.object(maintenance,'PRESSURE_BYTES',0), \
+                    patch.object(maintenance,'MIN_REUSABLE_BYTES',128*1024), \
+                    patch.object(maintenance,'COMPACT_TABLES',('maintenance_disk_fixture',)):
+                # Admission has ample room above the unchanged host floor;
+                # only the optional 3x rewrite reservation does not fit.
+                free=FREE_DISK_BYTE_FLOOR+relation_bytes*3-1
+                with patch('app.collection.current_storage_policy.shutil.disk_usage',return_value=SimpleNamespace(free=free)):
+                    require_disk_space('.')
+                    result=maintain(db)
+                self.assertEqual(result['rewrites'],[])
+                deferred=result['deferred'][0]
+                self.assertEqual(deferred['table'],'maintenance_disk_fixture')
+                self.assertEqual(deferred['reason'],'rewrite_disk_headroom')
+                self.assertEqual(deferred['operation'],'vacuum_full')
+                self.assertEqual(deferred['relation_bytes'],relation_bytes)
+                self.assertEqual(deferred['required_bytes'],free+1)
+                self.assertEqual(deferred['free_bytes'],free)
+                self.assertEqual(before,db.execute('SELECT * FROM maintenance_disk_fixture ORDER BY id').fetchall())
+                self.assertEqual(settings,[db.execute('SHOW '+key).fetchone() for key in ('lock_timeout','statement_timeout')])
+                self.assertTrue(retry.execute('SELECT pg_try_advisory_lock(901153) held').fetchone()['held'])
+                retry.execute('SELECT pg_advisory_unlock(901153)')
+                # A different BudgetStop is not silently relabeled as disk
+                # pressure; its existing failure path remains authoritative.
+                with patch.object(maintenance,'require_disk_space',side_effect=BudgetStop('other_guard')):
+                    with self.assertRaisesRegex(BudgetStop,'other_guard'):
+                        maintain(db)
+                recovered=maintain(retry)
+                self.assertEqual([r['table'] for r in recovered['rewrites']],['maintenance_disk_fixture'])
+                self.assertEqual(before,db.execute('SELECT * FROM maintenance_disk_fixture ORDER BY id').fetchall())
+            db.execute('DROP TABLE maintenance_disk_fixture')
+
     async def test_source_admission_defers_housekeeping_without_changing_current_work(self):
         from app.storage import storage_maintenance as maintenance
         with self.connect() as db, self.connect() as source:
