@@ -254,3 +254,50 @@ Unsupported source-book quarter-line settlement is withheld explicitly; pure
 historical arithmetic remains reproducible and native binary threshold prices
 are not relabeled as split stakes. Focused verification and final rollout are
 in progress; the failed hosted result is retained.
+
+## Normal original-response path and complete exports
+
+Installed `c3dcb5a` crossed the normal 21:20 Monitor slot: by 21:25:47 UTC,
+35 pages / 52 events had produced 3,123 normalized records and 12,406 reference
+rows. All 35 normal original responses were retained without gaps. The sampled
+Raiders–Broncos response was 121,540 raw / 13,985 gzip bytes, and its hash
+matched the admitted event frame. Reparse produced 1,010 reference inputs; 979
+initially matched exact stored revisions. The other 31 changed only derived
+fair/consensus metadata at the same bookmaker price, source clock and
+availability. The reference owner correctly refused to renew book authority
+from derived-data churn; the original bytes preserve those received fields.
+Later source-clock updates superseded some original revisions, with both
+observations retained in timestamped verification evidence.
+
+Both complete cohort downloads were verified offline with zero provider calls.
+Washington exported 7 immutable records / 2 distinct frozen snapshots and both
+pre-outcome and scored saved evaluations; BetOnline exported 5 records / 1
+snapshot and its scored evaluation. Every payload ID and bundle manifest hash
+verified, all snapshots reproduced, and Brier values agreed independently.
+These examples are retrospective and remain separate from the daily prospective
+population and any actual trade/fill stream.
+
+## Actual retention-allocation repair
+
+At 21:08:50.523378 UTC the 16 MiB observation suballocation began refusing new
+observations. By 21:25 it held 16,774,058 bytes, leaving only 3,158 bytes, while
+13.99 MB remained under the 32 MiB total. The measured set had 1,298 legitimate
+observations, 137 cases with two different input sets, and no identical
+fingerprint duplicates. Existing captures duplicated 2,143,816 snapshot bytes.
+This is an initial engineering allocation mismatch, not a provider outage or
+a new sample-size gate. Collection, normalized ingress and raw archives stayed
+healthy; retained observations and 21:00 captures remained unchanged.
+
+The repair references existing immutable observations from new captures, keeps
+legacy inline captures readable, rebalances observations to 24 MiB within the
+unchanged 32 MiB total, and preallocates bounded case/horizon disposition counters.
+Future capacity refusals must be durably counted and must not abort work on
+other cases. The earlier uncounted window remains explicit with unknown case/
+attempt counts; it is not rewritten as zero. Counter allocation is charged
+inside the same total and preserves SQL/disk guards. Installation and forced-
+capacity verification are pending the tested migration 113 tip.
+
+The required final CI run is a repository-policy checkpoint, not a newly chosen
+observation window. The stopping evidence is readiness success on the final
+code SHA, installed capture recovery/counted limits, and normal operator export
+and inspection. No profitability, month-of-betting or public-launch gate applies.

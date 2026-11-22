@@ -105,12 +105,53 @@ same owner without acquiring data. Corrections use `--supersedes` and `--reason`
 explicit retrospective cohort.
 
 The recorder, replay and evaluator add no provider subscription or paid request. It reserves a measured
-logical 16 MiB for candidate observations and a 32 MiB total bound, with a 1 MiB
-per-record cap, the existing whole-database cap, an 8 MiB SQL runway and the
+logical 24 MiB for candidate observations and a 32 MiB total bound, with a 1 MiB
+ordinary-record cap and a scoped 4 MiB evaluation-report cap, the existing
+whole-database cap, an 8 MiB SQL runway and the
 existing free-disk floor. Hitting a bound is reported in collector cohort status;
 unique research evidence is not silently evicted. Capture scheduling failures
 have their own status and cannot turn into a paid-acquisition restart loop.
 These are initial retention bounds, not a claim of indefinite coverage.
+
+The November 22 operating population filled the original 16 MiB observation
+subcap while the total allowance still had room. A read-only census found 1,298
+observations with distinct per-case input fingerprints, including 137 cases with
+two revisions, rather than repeated identical polling writes. Existing capture
+rows duplicated 2,143,816 bytes of snapshots already retained in observations.
+Those immutable records remain unchanged. New captures retain an observation ID
+and snapshot ID; readers resolve that immutable observation and verify the
+snapshot identity. Offline exports contain both records and resolve the same link.
+
+Migration 113 reserves a bounded disposition slot for every declared
+case/horizon before collection. Its conservative 2 KiB slot allowance and fixed
+accounting row are charged inside the unchanged 32 MiB total. Refusal attempts,
+first/last times, affected slots and recovery are updated in place, so a full
+data allowance cannot consume the space needed to explain missing captures.
+One oversized/refused observation does not abort later cases. Counters measure
+attempts and affected slots, not distinct missed source revisions.
+
+Accounting records when disposition-aware code starts. Refusals before that
+cutover were not counted; their affected-case and attempt totals remain null.
+A sourced prior incident can be attached with `note_prior_retention_gap`, using
+the first retained log time and its evidence reference. It does not invent a
+beginning for an outage or backfill already frozen horizons. New counts and that
+prior uncounted window appear separately in operator status and evidence exports.
+
+Current evaluation conservatively excludes a captured horizon affected by that
+prior uncounted interval unless a valid observation was actually persisted after
+the accounting cutover and before the horizon cutoff. Older cutoffs stay outside
+the interval. Saved evaluations and captures are never rewritten. Unchanged
+current inputs can receive one lightweight reaffirmation observation linking to
+their existing immutable snapshot, with new knowledge and persistence clocks;
+this establishes recovery without duplicating full payloads or renewing source
+timestamps. Later identical polling does not create more reaffirmations.
+
+The real 1,159-case, 259-event report measured 1,148,474 canonical bytes before
+new retention annotations, exceeding the old 1 MiB record allocation. Evaluation
+records therefore have a 4 MiB bound inside the same 32 MiB total. Ordinary
+observation/source records keep their 1 MiB limit. A per-kind cap owner is reused
+by admission and export validation; a forced-limit fixture proves refusal does
+not mutate evidence before the restored allowance saves the complete report.
 
 ## Verification
 

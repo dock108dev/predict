@@ -44,7 +44,17 @@ const page={token:'captured',total:4,counts:{source_events:1},offset:0,next_offs
  assert.equal($('catalog-rows').children.length,4);
  $('cohorts').open=true;$('cohorts').ontoggle();
  assert.equal(pending[0].url,'/api/research/cohorts');
- await reply({cohorts:[{id:'frozen-cohort',name:'Declared population'}]});
+ await reply({cohorts:[{id:'frozen-cohort',name:'Declared population'}],research_retention:{retained_bytes:17000,total_allocation_bytes:19048,byte_cap:33554432,observation_bytes:16000,observation_byte_cap:25165824,retention_dispositions:{slots:4,observation_refusals:3,capture_refusals:1,observation_affected_slots:2,capture_affected_slots:1,observation_open_gaps:2,capture_open_gaps:0},retention_accounting:{coverage_started_at:'2026-11-22T21:00:00Z',prior_first_observed_refusal_at:'2026-11-22T20:45:00Z',prior_uncounted_window_end:'2026-11-22T21:00:00Z',prior_refused_attempts:null,prior_affected_cases:null,prior_window_status:'uncounted; affected cases and attempts unknown'}}});
+ const retentionCells=$('research-retention-status').querySelector('dl').children;
+ const retentionFields={};for(let index=0;index<retentionCells.length;index+=2)retentionFields[retentionCells[index].textContent]=retentionCells[index+1].textContent;
+ assert.equal(retentionFields['Observation refusal attempts'],'3');
+ assert.equal(retentionFields['Capture refusal attempts'],'1');
+ assert.equal(retentionFields['Open capture case/horizon gaps'],'0');
+ assert.equal(retentionFields['Earlier refusal attempts'],'Unknown');
+ assert.equal(retentionFields['Earlier affected cases'],'Unknown');
+ assert.equal(retentionFields['Observation bytes'],'16000');
+ assert.equal(retentionFields['Observation byte cap'],'25165824');
+ assert.equal(retentionFields['Counter coverage starts'],'2026-11-22T21:00:00Z');
  const frozenExport=$('cohort-content').querySelector('a');
  assert.equal(frozenExport.textContent,'Export frozen evidence');
  assert.equal(frozenExport.href,'/api/research/cohorts?id=frozen-cohort&export=1');

@@ -7,11 +7,11 @@ evidence, not proof of present runtime. Work stays on `main` in this checkout.
 | Phase | Work | State | Completion evidence |
 | --- | --- | --- | --- |
 | 1 | Reconcile plans, recover maintenance, measure acquisition/archive gaps | Complete; deployed scheduled receipt and export verified | Bounded low-headroom regression; actual candidate disposition; deployed scheduled receipt through admission and export |
-| 2 | Received-data catalog, exact inspection and export | Implemented; local SQL and browser verified | Normal operator flow includes nonpositive, missing fee/reference, unmatched and unavailable rows; passive reads |
-| 3 | Bounded original responses and explicit capabilities | Implemented; live capture verification next | Reparse retained bytes, caps/retries/gaps, requested vs unsupported fields; no weakened normalized ingress |
-| 4 | Frozen calculations and coherent evaluation probabilities | Implemented; exact, SQL and authentic v6 reproduction verified | Independent exact examples and policy reproduction; existing conservative screen preserved |
-| 5 | Prospective population, causal replay, outcomes and scoring | Implemented; real sporting-result integration next | Frozen horizons/population; all records reconcile; distinct events; retained real-event chain |
-| 6 | One additional book and bounded game/player case; detached historical consumers | Book/result boundary and historical detachment implemented | Full source/identity/retention/inspection/evaluation trace; fixture vs live labeled; no broken imports/assets/migrations |
+| 2 | Received-data catalog, exact inspection and export | Complete; local and installed passive flows verified | Normal operator flow includes nonpositive, missing fee/reference, unmatched and unavailable rows; passive reads |
+| 3 | Bounded original responses and explicit capabilities | Complete; normal scheduled capture and exact reparse verified | Reparse retained bytes, caps/retries/gaps, requested vs unsupported fields; no weakened normalized ingress |
+| 4 | Frozen calculations and coherent evaluation probabilities | Complete; exact, SQL, authentic v6 and offline export reproduction verified | Independent exact examples and policy reproduction; existing conservative screen preserved |
+| 5 | Prospective population, causal replay, outcomes and scoring | Real outcomes and cutoffs verified; retention-capacity repair in progress | Frozen horizons/population; all records reconcile; distinct events; retained real-event chain |
+| 6 | One additional book and bounded game/player case; detached historical consumers | Complete; real BetOnline/game-result chains and E5 detachment verified | Full source/identity/retention/inspection/evaluation trace; fixture vs live labeled; no broken imports/assets/migrations |
 
 ## Review blockers and stopping conditions
 

@@ -282,3 +282,56 @@ class ResearchCatalogSQL(PregameFixture):
                 self.assertEqual((await client.get('/api/research/cohorts?export=1')).status, 422)
         with self.connect() as db:
             self.assertEqual(before, list(db.execute('SELECT * FROM public.research_record ORDER BY id')))
+
+    async def test_cohort_api_exposes_counted_retention_gaps_and_keeps_prior_counts_null(self):
+        from datetime import timedelta
+        from app.research import records
+        from app.storage.store import stamp
+
+        at = stamp(AT)
+        with self.connect() as db:
+            self.ingest_linked(db, page())
+            self.process(db)
+            row = db.execute('''SELECT k.payload,p.record,p.fee_input
+                FROM current_pregame_calculation k JOIN current_pregame_price p USING(contract_id)
+                WHERE k.payload IS NOT NULL LIMIT 1''').fetchone()
+            payload = row['payload']
+            case = dict(case_key='http-retention-case', event_id=payload['game_key'],
+                starts_at=payload['kickoff'], family=payload['family'], period=payload['period'],
+                line=row['record']['market_identity']['line'])
+            cohort = records.declare(db, name='portable-http-retention-coverage', cases=[case],
+                designation='synthetic_demonstration', horizons=[3600], at=at-timedelta(minutes=1))
+            records.note_prior_retention_gap(db, first_observed_at=at-timedelta(minutes=5),
+                evidence_reference='portable-fixture:previous-uncounted-window')
+            previous = records.status(db)['retention_dispositions']
+            with patch.object(records, 'OBSERVATION_BYTE_CAP', 1):
+                with self.assertRaisesRegex(ValueError, 'research_retention_capacity'):
+                    records.observe(db, cohort['id'], case['case_key'], payload, known_at=at,
+                        record=row['record'], fee_input=row['fee_input'])
+            with patch.object(records, 'TOTAL_BYTE_CAP', 1):
+                self.assertEqual(records.capture_due(db, at=at+timedelta(seconds=1), cohort_id=cohort['id']), [])
+            before_records = list(db.execute('SELECT * FROM public.research_record ORDER BY id'))
+            before_counts = list(db.execute('SELECT * FROM public.research_retention_disposition ORDER BY cohort_id,case_key,slot'))
+        app = web.Application(middlewares=[dashboard_guard(None, logger=__name__)])
+        with patch('app.dashboard.research_api.connect', side_effect=self.connect):
+            mount(app)
+            async with TestClient(TestServer(app)) as client:
+                response = await client.get('/api/research/cohorts')
+                self.assertEqual(response.status, 200, await response.text())
+                status = (await response.json())['research_retention']
+                self.assertEqual(status['retention_dispositions']['observation_refusals'], previous['observation_refusals']+1)
+                self.assertEqual(status['retention_dispositions']['capture_refusals'], previous['capture_refusals']+1)
+                self.assertEqual(status['observation_byte_cap'], records.OBSERVATION_BYTE_CAP)
+                self.assertGreaterEqual(status['observation_bytes'], 0)
+                self.assertIsNone(status['retention_accounting']['prior_refused_attempts'])
+                self.assertIsNone(status['retention_accounting']['prior_affected_cases'])
+                self.assertIsNotNone(status['retention_accounting']['coverage_started_at'])
+                detail = await (await client.get('/api/research/cohorts', params={'id': cohort['id']})).json()
+                self.assertEqual(detail['research_retention'], status)
+                exported = await (await client.get('/api/research/cohorts', params={'id': cohort['id'], 'export': '1'})).json()
+                self.assertEqual(exported['research_retention'], status)
+                self.assertEqual(exported['retention_dispositions'][0]['capture_refusals'], 1)
+                self.assertIsNone(exported['research_retention']['retention_accounting']['prior_refused_attempts'])
+        with self.connect() as db:
+            self.assertEqual(before_records, list(db.execute('SELECT * FROM public.research_record ORDER BY id')))
+            self.assertEqual(before_counts, list(db.execute('SELECT * FROM public.research_retention_disposition ORDER BY cohort_id,case_key,slot')))

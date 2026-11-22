@@ -19,8 +19,11 @@ VERSION = "prospective-market-research-1"
 LOCK = 901112
 MAX_CASES = 2048
 RECORD_BYTE_CAP = 1024 * 1024
-OBSERVATION_BYTE_CAP = 16 * 1024 * 1024
+EVALUATION_RECORD_BYTE_CAP = 4 * 1024 * 1024
+OBSERVATION_BYTE_CAP = 24 * 1024 * 1024
 TOTAL_BYTE_CAP = 32 * 1024 * 1024
+DISPOSITION_SLOT_BYTES = 2048
+ACCOUNTING_BYTES = 2048
 DEFAULT_HORIZONS = [3600]
 
 
@@ -52,18 +55,23 @@ def _fingerprint(payload, reason):
     return hashed([inputs(payload), reason])
 
 
+def record_byte_cap(kind):
+    return EVALUATION_RECORD_BYTE_CAP if kind == "evaluation" else RECORD_BYTE_CAP
+
+
 def _record(db, kind, payload, *, cohort_id=None, case_key=None, slot=None):
     body = dict(version=VERSION, kind=kind, **payload)
     identity = hashed(body)
     size = len(encoded(body))
-    if size > RECORD_BYTE_CAP:
+    if size > record_byte_cap(kind):
         raise ValueError("research_record_capacity")
     if db.execute("SELECT 1 FROM public.research_record WHERE id=%s", (identity,)).fetchone():
         return dict(body, id=identity)
     used = db.execute("""SELECT COALESCE(sum(payload_bytes),0) total,
         COALESCE(sum(payload_bytes) FILTER(WHERE kind='observation'),0) observations
         FROM public.research_record""").fetchone()
-    if used["total"] + size > TOTAL_BYTE_CAP or (
+    reserved = db.execute("SELECT count(*) n FROM public.research_retention_disposition").fetchone()["n"] * DISPOSITION_SLOT_BYTES + ACCOUNTING_BYTES
+    if used["total"] + reserved + size > TOTAL_BYTE_CAP or (
         kind == "observation" and used["observations"] + size > OBSERVATION_BYTE_CAP
     ):
         raise ValueError("research_retention_capacity")
@@ -106,7 +114,8 @@ def declare(db, *, name, cases, horizons=DEFAULT_HORIZONS, designation="prospect
         required = ("case_key", "event_id", "starts_at", "family", "period", "line")
         if not isinstance(item, dict) or any(key not in item for key in required):
             raise ValueError("research_exact_case_required")
-        if not item["case_key"] or not item["event_id"]:
+        if (not isinstance(item["case_key"], str) or not 1 <= len(item["case_key"].encode()) <= 256
+                or not isinstance(item["event_id"], str) or not item["event_id"]):
             raise ValueError("research_exact_case_required")
         if designation == "prospective" and any(
             stamp(item["starts_at"]) - timedelta(seconds=h) <= at for h in horizons
@@ -121,7 +130,12 @@ def declare(db, *, name, cases, horizons=DEFAULT_HORIZONS, designation="prospect
         raise ValueError("research_duplicate_case")
     with db.transaction():
         _writer_lock(db)
-        return _record(db, "cohort", dict(
+        required = len(normalized) * len(horizons) * DISPOSITION_SLOT_BYTES
+        used = db.execute("""SELECT COALESCE(sum(payload_bytes),0) n FROM public.research_record""").fetchone()["n"]
+        slots = db.execute("SELECT count(*) n FROM public.research_retention_disposition").fetchone()["n"]
+        if used + slots * DISPOSITION_SLOT_BYTES + required + ACCOUNTING_BYTES + RECORD_BYTE_CAP > TOTAL_BYTE_CAP:
+            raise ValueError("research_disposition_capacity")
+        cohort = _record(db, "cohort", dict(
             name=name, declared_at=at.isoformat(), designation=designation,
             population=normalized, horizons=sorted(horizons, reverse=True),
             probability_policy=COHERENT_POLICY,
@@ -131,6 +145,125 @@ def declare(db, *, name, cases, horizons=DEFAULT_HORIZONS, designation="prospect
             scoring_rule="binary anchor Brier/log-loss; fixed ten-bin calibration; exceptional outcomes excluded with reason",
             trading_results="separate_optional_evidence_stream",
         ))
+        for case in normalized:
+            for horizon in horizons:
+                db.execute("""INSERT INTO public.research_retention_disposition(cohort_id,case_key,slot)
+                    VALUES(%s,%s,%s) ON CONFLICT DO NOTHING""", (cohort["id"], case["case_key"], str(horizon)))
+        return cohort
+
+
+def _retention_failure(exc):
+    return str(exc) in ("research_record_capacity", "research_retention_capacity", "research_disposition_capacity", "research_sql_runway",
+                        "current_observation_disk_free_floor") or isinstance(exc, OSError)
+
+
+def _activate_accounting(db):
+    db.execute("""UPDATE public.research_retention_accounting
+        SET coverage_started_at=clock_timestamp() WHERE singleton AND coverage_started_at IS NULL""")
+
+
+def note_prior_retention_gap(db, *, first_observed_at, evidence_reference):
+    """Record sourced historical uncertainty without inventing missed counts."""
+    first = stamp(first_observed_at)
+    if not isinstance(evidence_reference, str) or not 1 <= len(evidence_reference.encode()) <= 1024:
+        raise ValueError("research_retention_evidence_reference")
+    with db.transaction():
+        _writer_lock(db)
+        db.execute("""UPDATE public.research_retention_accounting
+            SET prior_first_observed_refusal_at=LEAST(prior_first_observed_refusal_at,%s),
+                prior_evidence_reference=%s
+            WHERE singleton AND (coverage_started_at IS NULL OR %s<=coverage_started_at)""",
+            (first, evidence_reference, first))
+    return retention_accounting(db)
+
+
+def retention_accounting(db):
+    row = db.execute("SELECT * FROM public.research_retention_accounting WHERE singleton").fetchone()
+    return dict({k: _clock(v) if hasattr(v, "isoformat") else v for k, v in row.items()},
+        prior_window_status="uncounted; affected cases and attempts unknown",
+        counter_scope="refusals recorded by disposition-aware code from coverage_started_at",
+        prior_uncounted_window_end=_clock(row["coverage_started_at"]) if row["coverage_started_at"] else None)
+
+
+def _disposition(db, cohort_id, case_key, horizon, stage, *, reason=None, fingerprint=None,
+                 attempted_bytes=0, at=None):
+    if stage not in ("observation", "capture"):
+        raise ValueError("research_disposition_stage")
+    at = at or utc()
+    with db.transaction():
+        _writer_lock(db)
+        _activate_accounting(db)
+        if reason is None:
+            db.execute("UPDATE public.research_retention_disposition SET " + stage +
+                "_recovered_at=%s,updated_at=clock_timestamp() WHERE cohort_id=%s AND case_key=%s AND slot=%s AND " +
+                stage + "_refusals>0 AND " + stage + "_recovered_at IS NULL", (at, cohort_id, case_key, str(horizon)))
+        else:
+            reason = str(reason).encode()[:160].decode(errors="ignore")
+            row = db.execute("UPDATE public.research_retention_disposition SET " + stage + "_refusals=" + stage +
+                "_refusals+1," + stage + "_first_refused_at=COALESCE(" + stage + "_first_refused_at,%s)," + stage +
+                "_last_refused_at=%s," + stage + "_recovered_at=NULL,last_reason=%s,last_input_fingerprint=%s,"
+                "last_attempted_bytes=%s,updated_at=clock_timestamp() WHERE cohort_id=%s AND case_key=%s AND slot=%s RETURNING slot",
+                (at, at, reason, fingerprint, attempted_bytes, cohort_id, case_key, str(horizon))).fetchone()
+            if not row:
+                raise ValueError("research_disposition_slot_unreserved")
+
+
+def retention_dispositions(db, cohort_id):
+    rows = []
+    for row in db.execute("SELECT * FROM public.research_retention_disposition WHERE cohort_id=%s ORDER BY case_key,slot", (cohort_id,)):
+        rows.append({k: _clock(v) if hasattr(v, "isoformat") else v for k, v in row.items()})
+    return rows
+
+
+def capture_snapshot(capture, records=None, *, db=None):
+    """Read old inline captures and new immutable observation references offline."""
+    if capture.get("snapshot") is not None:
+        return capture["snapshot"]
+    if not capture.get("snapshot_id"):
+        return None
+    identity = capture.get("observation_id")
+    observation = _load_observation(identity, records=records, db=db)
+    snapshot = observation_snapshot(observation, records=records, db=db)
+    if (observation.get("cohort_id") != capture.get("cohort_id")
+            or observation.get("case_key") != capture.get("case_key")
+            or not snapshot or snapshot.get("id") != capture["snapshot_id"]):
+        raise ValueError("research_capture_snapshot_identity")
+    return snapshot
+
+
+def _load_observation(identity, *, records=None, db=None):
+    if records is not None:
+        observation = records.get(identity)
+        if observation is None:
+            raise ValueError("research_capture_observation_missing")
+        observation = observation.get("payload", observation)
+        if hashed(observation) != identity:
+            raise ValueError("research_capture_observation_integrity")
+    elif db is not None:
+        observation = _get(db, identity, kind="observation")
+    else:
+        raise ValueError("research_capture_observation_missing")
+    return observation
+
+
+def observation_snapshot(observation, records=None, *, db=None, _seen=None):
+    observation = observation.get("payload", observation)
+    if observation.get("snapshot") is not None:
+        return observation["snapshot"]
+    if not observation.get("snapshot_id"):
+        return None
+    identity = observation.get("snapshot_observation_id")
+    seen = set(_seen or ())
+    if identity in seen or len(seen) >= 64:
+        raise ValueError("research_observation_reference_cycle")
+    seen.add(identity)
+    original = _load_observation(identity, records=records, db=db)
+    if (original.get("cohort_id"), original.get("case_key")) != (observation.get("cohort_id"), observation.get("case_key")):
+        raise ValueError("research_observation_reference_identity")
+    snapshot = observation_snapshot(original, records=records, db=db, _seen=seen)
+    if not snapshot or snapshot["id"] != observation["snapshot_id"]:
+        raise ValueError("research_observation_snapshot_identity")
+    return snapshot
 
 
 def list_cohorts(db, *, limit=30):
@@ -139,8 +272,8 @@ def list_cohorts(db, *, limit=30):
             for r in db.execute("SELECT * FROM public.research_record WHERE kind='cohort' ORDER BY recorded_at DESC,id LIMIT %s", (limit,))]
 
 
-def observe(db, cohort_id, case_key, payload, *, known_at=None, record=None, fee_input=None,
-            unavailable_reason=None):
+def _observe(db, cohort_id, case_key, payload, *, known_at=None, record=None, fee_input=None,
+            unavailable_reason=None, reuse_observation_id=None):
     """Retain a candidate when known, rather than backfilling an earlier cutoff."""
     known_at = known_at or utc()
     with db.transaction():
@@ -162,12 +295,52 @@ def observe(db, cohort_id, case_key, payload, *, known_at=None, record=None, fee
                 raise ValueError("research_future_input")
             if payload.get("game_key") != case["event_id"]:
                 raise ValueError("research_event_identity_conflict")
-            snapshot = freeze(payload, record=record, fee_input=fee_input)
-        return _record(db, "observation", dict(
+            if reuse_observation_id:
+                prior = _get(db, reuse_observation_id, kind="observation")
+                if (prior.get("cohort_id"), prior.get("case_key"), prior.get("input_fingerprint")) != (
+                    cohort_id, case_key, _fingerprint(payload, unavailable_reason)):
+                    raise ValueError("research_reaffirmation_input_conflict")
+                if stamp(prior["known_at"]) > known_at:
+                    raise ValueError("research_future_input")
+                snapshot = observation_snapshot(prior, db=db)
+                reuse_observation_id = prior.get("snapshot_observation_id") or reuse_observation_id
+            else:
+                snapshot = freeze(payload, record=record, fee_input=fee_input)
+        body = dict(
             cohort_id=cohort_id, case_key=case_key, known_at=known_at.isoformat(),
-            snapshot=snapshot, reason=unavailable_reason,
+            reason=unavailable_reason,
             input_fingerprint=_fingerprint(payload, unavailable_reason),
-        ), cohort_id=cohort_id, case_key=case_key)
+        )
+        if reuse_observation_id:
+            body.update(snapshot_observation_id=reuse_observation_id,
+                        snapshot_id=snapshot["id"] if snapshot else None,
+                        observation_kind="reaffirmed_current_inputs")
+        else:
+            body["snapshot"] = snapshot
+        return _record(db, "observation", body, cohort_id=cohort_id, case_key=case_key)
+
+
+def observe(db, cohort_id, case_key, payload, *, known_at=None, record=None, fee_input=None,
+            unavailable_reason=None, reuse_observation_id=None):
+    known_at = known_at or utc()
+    cohort = _get(db, cohort_id, kind="cohort")
+    case = next((c for c in cohort["population"] if c["case_key"] == case_key), None)
+    horizons = [h for h in cohort["horizons"] if case and
+                known_at <= stamp(case["starts_at"]) - timedelta(seconds=h)]
+    try:
+        result = _observe(db, cohort_id, case_key, payload, known_at=known_at,
+            record=record, fee_input=fee_input, unavailable_reason=unavailable_reason,
+            reuse_observation_id=reuse_observation_id)
+    except Exception as exc:
+        if _retention_failure(exc):
+            for horizon in horizons:
+                _disposition(db, cohort_id, case_key, horizon, "observation", reason=exc,
+                    fingerprint=_fingerprint(payload, unavailable_reason),
+                    attempted_bytes=len(encoded([payload, record, fee_input])), at=known_at)
+        raise
+    for horizon in horizons:
+        _disposition(db, cohort_id, case_key, horizon, "observation", at=known_at)
+    return result
 
 
 def capture_due(db, *, at=None, cohort_id=None, limit=128):
@@ -195,7 +368,7 @@ def capture_due(db, *, at=None, cohort_id=None, limit=128):
                         ORDER BY (payload->>'known_at')::timestamptz DESC,recorded_at DESC,id DESC LIMIT 1""",
                         (cohort["id"], case["case_key"], cutoff, cohort["designation"], cutoff)).fetchone()
                     observation = row["payload"] if row else None
-                    snapshot = observation.get("snapshot") if observation else None
+                    snapshot = observation_snapshot(observation, db=db) if observation else None
                     reason = (observation or {}).get("reason")
                     status = "missing"
                     if snapshot:
@@ -206,12 +379,30 @@ def capture_due(db, *, at=None, cohort_id=None, limit=128):
                         status = "unavailable"
                     else:
                         reason = "no_inputs_known_by_capture_cutoff"
-                    captured.append(_record(db, "capture", dict(
+                    body = dict(
                         cohort_id=cohort["id"], case_key=case["case_key"], horizon_seconds=horizon,
                         cutoff=cutoff.isoformat(), status=status, reason=reason,
-                        observation_id=row["id"] if row else None, snapshot=snapshot,
+                        observation_id=row["id"] if row else None,
+                        snapshot_id=snapshot["id"] if snapshot else None,
+                        snapshot_storage="immutable_observation_reference",
                         historical_freshness="not_established",
-                    ), cohort_id=cohort["id"], case_key=case["case_key"], slot=slot))
+                    )
+                    gap = db.execute("""SELECT observation_refusals,observation_first_refused_at,
+                        observation_last_refused_at FROM public.research_retention_disposition
+                        WHERE cohort_id=%s AND case_key=%s AND slot=%s""",
+                        (cohort["id"], case["case_key"], slot)).fetchone()
+                    if gap and gap["observation_refusals"]:
+                        body["retention_gaps"] = {k: _clock(v) if hasattr(v, "isoformat") else v for k, v in gap.items()}
+                    try:
+                        item = _record(db, "capture", body, cohort_id=cohort["id"], case_key=case["case_key"], slot=slot)
+                    except Exception as exc:
+                        if not _retention_failure(exc):
+                            raise
+                        _disposition(db, cohort["id"], case["case_key"], horizon, "capture", reason=exc,
+                                     attempted_bytes=len(encoded(body)), at=at)
+                        continue
+                    _disposition(db, cohort["id"], case["case_key"], horizon, "capture", at=at)
+                    captured.append(item)
                     if len(captured) >= limit:
                         return captured
     return captured
@@ -295,8 +486,28 @@ def scores(probability, actual):
     return dict(brier=wire(brier), log_loss=str(loss))
 
 
+def _prior_gap_exclusion(db, cohort_id, case_key, cutoff, accounting):
+    start = accounting.get("prior_first_observed_refusal_at")
+    if not start or stamp(cutoff) < stamp(start):
+        return None
+    end = accounting.get("coverage_started_at")
+    if end and stamp(cutoff) >= stamp(end):
+        row = db.execute("""SELECT payload FROM public.research_record
+            WHERE kind='observation' AND cohort_id=%s AND case_key=%s
+              AND recorded_at>=%s AND recorded_at<=%s
+              AND (payload->>'known_at')::timestamptz>=%s
+              AND (payload->>'known_at')::timestamptz<=%s
+            ORDER BY (payload->>'known_at')::timestamptz DESC,recorded_at DESC,id DESC LIMIT 1""",
+            (cohort_id, case_key, end, cutoff, end, cutoff)).fetchone()
+        if row:
+            snapshot = observation_snapshot(row["payload"], db=db)
+            if snapshot and reproduce(snapshot).get("probability") is not None:
+                return None
+    return "prior_uncounted_retention_gap"
+
+
 def evaluate(db, cohort_id, *, as_of=None, persist=False):
-    """Resolve every declared slot to scored, missing or excluded at a knowledge cutoff."""
+    """Keep future slots pending; resolve due slots at the knowledge cutoff."""
     as_of = as_of or utc()
     cohort = _get(db, cohort_id, kind="cohort")
     cases = {c["case_key"]: c for c in cohort["population"]}
@@ -307,19 +518,38 @@ def evaluate(db, cohort_id, *, as_of=None, persist=False):
     if cohort["designation"] == "synthetic_demonstration":
         captures = list(db.execute("SELECT * FROM public.research_record WHERE cohort_id=%s AND kind='capture' ORDER BY case_key,slot", (cohort_id,)))
     by_slot = {(r["case_key"], r["slot"]): r for r in captures}
+    dispositions = retention_dispositions(db, cohort_id)
+    for disposition in dispositions:
+        key = (disposition["case_key"], disposition["slot"])
+        first = disposition["capture_first_refused_at"]
+        if key not in by_slot and first and stamp(first) <= as_of:
+            by_slot[key] = dict(id=None, payload=dict(status="missing",
+                reason="capture_retention_refused:" + (disposition["last_reason"] or "unknown")))
+    snapshots = {key: capture_snapshot(row["payload"], db=db) for key, row in by_slot.items()}
+    accounting = retention_accounting(db)
+    gap_exclusions = {key: _prior_gap_exclusion(db, cohort_id, key[0], row["payload"]["cutoff"], accounting)
+        for key, row in by_slot.items() if row["payload"].get("status") == "captured"}
     results = []
     calibration = [dict(lower=wire(F(i, 10)), upper=wire(F(i + 1, 10)), count=0,
                         probability_sum=F(0), actual_sum=0) for i in range(10)]
     for case_key, case in cases.items():
         for horizon in cohort["horizons"]:
             row = by_slot.get((case_key, str(horizon)))
+            cutoff = stamp(case["starts_at"]) - timedelta(seconds=horizon)
             item = dict(case_key=case_key, event_id=case["event_id"], horizon_seconds=horizon,
-                        status="missing", reason="capture_pending_or_missing", capture_id=None,
+                        capture_cutoff=cutoff.isoformat(), due=cutoff<=as_of,
+                        status="missing", reason="capture_missing_at_due_cutoff", capture_id=None,
                         outcome_id=None, brier=None, log_loss=None)
+            if cutoff > as_of:
+                item.update(status="pending", reason="capture_horizon_not_due")
+                results.append(item); continue
             if not row:
                 results.append(item); continue
             capture = row["payload"]
             item["capture_id"] = row["id"]
+            if gap_exclusions.get((case_key, str(horizon))):
+                item.update(status="excluded", reason=gap_exclusions[(case_key, str(horizon))])
+                results.append(item); continue
             if capture["status"] != "captured":
                 item.update(status="missing" if capture["status"] == "missing" else "excluded", reason=capture["reason"])
                 results.append(item); continue
@@ -336,7 +566,7 @@ def evaluate(db, cohort_id, *, as_of=None, persist=False):
             if side is None:
                 item.update(status="excluded", reason=reason)
                 results.append(item); continue
-            snapshot = capture["snapshot"]
+            snapshot = snapshots[(case_key, str(horizon))]
             reproduce(snapshot)
             ref = snapshot["inputs"]["calculation"]["coherent_probability"]
             anchor = "over" if case["family"] == "total" else "home"
@@ -358,12 +588,17 @@ def evaluate(db, cohort_id, *, as_of=None, persist=False):
         cohort_id=cohort_id, as_of=as_of.isoformat(), designation=cohort["designation"],
         probability_policy=cohort["probability_policy"],
         population_records=len(results), distinct_events=len({r["event_id"] for r in results}),
+        due_records=sum(r["due"] for r in results), future_records=sum(not r["due"] for r in results),
+        due_distinct_events=len({r["event_id"] for r in results if r["due"]}),
+        future_distinct_events=len({r["event_id"] for r in results if not r["due"]}),
         scored_records=len(scored), scored_distinct_events=len({r["event_id"] for r in scored}),
         status_counts=dict(counts), records=results,
         mean_brier=wire(sum((F(r["brier"]) for r in scored), F(0)) / len(scored)) if scored else None,
         mean_log_loss=str(sum((Decimal(r["log_loss"]) for r in scored), Decimal(0)) / len(scored)) if scored else None,
         calibration=calibration,
-        policy_comparison=_policy_comparison(db, cohort, by_slot, as_of),
+        policy_comparison=_policy_comparison(db, cohort, by_slot, as_of, snapshots=snapshots, gap_exclusions=gap_exclusions),
+        retention_accounting=accounting,
+        retention_dispositions=[d for d in dispositions if d["observation_refusals"] or d["capture_refusals"]],
         limitations=["Repeated horizons/markets from one event are dependent samples",
                      "Probability quality requires outcome evidence; arithmetic tests do not establish calibration",
                      "Sporting outcomes are separate from venue settlement and actual fills",
@@ -376,7 +611,7 @@ def evaluate(db, cohort_id, *, as_of=None, persist=False):
     return summary
 
 
-def _policy_comparison(db, cohort, captures, as_of):
+def _policy_comparison(db, cohort, captures, as_of, *, snapshots=None, gap_exclusions=None):
     """Every policy sees the same declared slots, including its missing cases."""
     policies = cohort.get("probability_policies", [cohort["probability_policy"]])
     results = {policy: [] for policy in policies}
@@ -388,13 +623,20 @@ def _policy_comparison(db, cohort, captures, as_of):
             ORDER BY recorded_at DESC,id DESC LIMIT 1""", (cohort["id"], case["case_key"], as_of, cohort["designation"], as_of)).fetchone()
         for horizon in cohort["horizons"]:
             row = captures.get((case["case_key"], str(horizon)))
-            snapshot = row["payload"].get("snapshot") if row else None
+            snapshot = (snapshots or {}).get((case["case_key"], str(horizon)))
+            cutoff = stamp(case["starts_at"]) - timedelta(seconds=horizon)
             for policy in policies:
                 item = dict(case_key=case["case_key"], event_id=case["event_id"],
                     horizon_seconds=horizon, capture_id=row["id"] if row else None,
+                    capture_cutoff=cutoff.isoformat(), due=cutoff<=as_of,
                     outcome_id=outcome["id"] if outcome else None,
-                    status="missing", reason="capture_pending_or_missing", brier=None, log_loss=None)
-                if not snapshot:
+                    status="missing", reason="capture_missing_at_due_cutoff", brier=None, log_loss=None)
+                if cutoff > as_of:
+                    item.update(status="pending", reason="capture_horizon_not_due", capture_id=None, outcome_id=None)
+                    results[policy].append(item); continue
+                if (gap_exclusions or {}).get((case["case_key"], str(horizon))):
+                    item.update(status="excluded", reason=gap_exclusions[(case["case_key"], str(horizon))])
+                elif not snapshot:
                     item["reason"] = row["payload"]["reason"] if row else item["reason"]
                 else:
                     reproduce(snapshot)
@@ -420,6 +662,9 @@ def _policy_comparison(db, cohort, captures, as_of):
     for policy, rows in results.items():
         scored = [r for r in rows if r["status"] == "scored"]
         summaries.append(dict(policy_version=policy, population_records=len(rows),
+            due_records=sum(r["due"] for r in rows), future_records=sum(not r["due"] for r in rows),
+            due_distinct_events=len({r["event_id"] for r in rows if r["due"]}),
+            future_distinct_events=len({r["event_id"] for r in rows if not r["due"]}),
             distinct_events=len({r["event_id"] for r in rows}), scored_records=len(scored),
             scored_distinct_events=len({r["event_id"] for r in scored}),
             status_counts=dict(Counter(r["status"] for r in rows)),
@@ -457,7 +702,7 @@ def export_cohort(db, cohort_id):
                 or payload.get("kind") != row["kind"]):
             raise ValueError("research_export_record_integrity")
         payload_bytes += size
-        if size > RECORD_BYTE_CAP or payload_bytes > TOTAL_BYTE_CAP:
+        if size > record_byte_cap(row["kind"]) or payload_bytes > TOTAL_BYTE_CAP:
             raise ValueError("research_export_capacity")
         item = {key: row[key] for key in
                 ("id", "kind", "cohort_id", "case_key", "slot", "payload_bytes", "payload")}
@@ -472,6 +717,7 @@ def export_cohort(db, cohort_id):
                 id=item["id"], recorded_at=item["recorded_at"],
                 **{key: payload.get(key) for key in (
                     "as_of", "designation", "population_records", "distinct_events",
+                    "due_records", "future_records", "due_distinct_events", "future_distinct_events",
                     "scored_records", "scored_distinct_events", "status_counts",
                     "probability_policy", "mean_brier", "mean_log_loss",
                 )},
@@ -493,6 +739,9 @@ def export_cohort(db, cohort_id):
             reason=None if saved_evaluations else "no_saved_evaluation",
         ),
         records=exported,
+        research_retention=status(db),
+        retention_dispositions=retention_dispositions(db, cohort_id),
+        retention_observed_at=_clock(utc()),
         completeness="all_retained_cohort_records_in_one_sql_snapshot; no_truncation",
         provider_requests=0,
     )
@@ -508,6 +757,10 @@ def export_cohort(db, cohort_id):
         bundle_sha256=hashed(body),
         bundle_hash_scope="all top-level fields except manifest; canonical JSON uses app.storage.store.encoded",
     ))
+    index = {item["id"]: item for item in exported}
+    for item in exported:
+        if item["kind"] == "capture":
+            capture_snapshot(item["payload"], index)
     # A capacity refusal is explicit; silently omitting older revisions is unsafe.
     if len(encoded(bundle)) + 1 > export_byte_cap:
         raise ValueError("research_export_capacity")
@@ -516,11 +769,23 @@ def export_cohort(db, cohort_id):
 
 def status(db):
     row = db.execute("""SELECT count(*) records,COALESCE(sum(payload_bytes),0) retained_bytes,
+        COALESCE(sum(payload_bytes) FILTER(WHERE kind='observation'),0) observation_bytes,
         max(recorded_at) latest_recorded_at FROM public.research_record""").fetchone()
     row = dict(row)
     if row["latest_recorded_at"] is not None:
         row["latest_recorded_at"] = row["latest_recorded_at"].isoformat()
+    disposition = db.execute("""SELECT count(*) slots,COALESCE(sum(observation_refusals),0)::bigint observation_refusals,
+        COALESCE(sum(capture_refusals),0)::bigint capture_refusals,
+        count(*) FILTER(WHERE observation_refusals>0 AND observation_recovered_at IS NULL) observation_open_gaps,
+        count(*) FILTER(WHERE capture_refusals>0 AND capture_recovered_at IS NULL) capture_open_gaps,
+        count(*) FILTER(WHERE observation_refusals>0) observation_affected_slots,
+        count(*) FILTER(WHERE capture_refusals>0) capture_affected_slots
+        FROM public.research_retention_disposition""").fetchone()
+    allocation = disposition["slots"] * DISPOSITION_SLOT_BYTES + ACCOUNTING_BYTES
     return dict(row, byte_cap=TOTAL_BYTE_CAP, observation_byte_cap=OBSERVATION_BYTE_CAP,
+                record_byte_caps=dict(ordinary=RECORD_BYTE_CAP, evaluation=EVALUATION_RECORD_BYTE_CAP),
+                disposition_allocation_bytes=allocation, total_allocation_bytes=row["retained_bytes"]+allocation,
+                retention_dispositions=dict(disposition), retention_accounting=retention_accounting(db),
                 provider_requests=0)
 
 
@@ -593,12 +858,20 @@ def automatic_turn(db, *, at=None):
     Later-discovered identities wait for a later declaration; the name and
     population description make that boundary visible rather than backfilling.
     """
+    supplied_clock = at is not None
     at = at or utc()
+    with db.transaction():
+        _writer_lock(db)
+        _activate_accounting(db)
+    accounting = retention_accounting(db)
+    if not supplied_clock:
+        at = utc()
     captured = capture_due(db, at=at)
     name = "daily-primary-pregame:" + at.astimezone(timezone.utc).date().isoformat()
     rows = _current_population(db, at)
     existing = db.execute("SELECT id FROM public.research_record WHERE kind='cohort' AND payload->>'name'=%s", (name,)).fetchone()
     declared = None
+    declaration_refused = None
     if not existing:
         cases = {}
         for row in rows:
@@ -607,18 +880,30 @@ def automatic_turn(db, *, at=None):
                 continue
             cases.setdefault(case["case_key"], case)
         if cases:
-            declared = declare(
-                db, name=name, cases=list(cases.values()), at=at,
-                population_description="All primary normalized exact market identities known at this daily declaration; all calculation statuses and EV signs; starts within seven days, more than one hour ahead. Later discoveries are outside this frozen population.",
-            )
+            try:
+                declared = declare(
+                    db, name=name, cases=list(cases.values()), at=at,
+                    population_description="All primary normalized exact market identities known at this daily declaration; all calculation statuses and EV signs; starts within seven days, more than one hour ahead. Later discoveries are outside this frozen population.",
+                )
+            except Exception as exc:
+                if not _retention_failure(exc):
+                    raise
+                declaration_refused = str(exc)
+                with db.transaction():
+                    _writer_lock(db)
+                    db.execute("""UPDATE public.research_retention_accounting SET declaration_refusals=declaration_refusals+1,
+                        last_declaration_refused_at=%s,last_declaration_reason=%s,last_declaration_population=%s WHERE singleton""",
+                        (at, declaration_refused[:160], len(cases)))
     by_key = {}
     for row in rows:
         case = _case(row)
         by_key.setdefault(case["case_key"], row)
-    observed = skipped = 0
+    observed = skipped = refused = 0
     for cohort in list_cohorts(db):
         if cohort["designation"] != "prospective":
             continue
+        gap_cases = {d["case_key"] for d in retention_dispositions(db, cohort["id"])
+                     if d["observation_refusals"] and d["observation_recovered_at"] is None}
         for case in cohort["population"]:
             if stamp(case["starts_at"]) - timedelta(seconds=min(cohort["horizons"])) < at:
                 continue
@@ -645,17 +930,31 @@ def automatic_turn(db, *, at=None):
                     times=dict(source_at=None, received_at=None), fee=None,
                     coherent_probability=ref, reference=None, raw=dict(net_ev=None),
                 )
-            prior = db.execute("""SELECT payload FROM public.research_record WHERE kind='observation'
+            prior = db.execute("""SELECT id,payload,recorded_at FROM public.research_record WHERE kind='observation'
                 AND cohort_id=%s AND case_key=%s ORDER BY recorded_at DESC,id DESC LIMIT 1""", (cohort["id"], case["case_key"])).fetchone()
-            if prior and prior["payload"].get("input_fingerprint") == _fingerprint(payload, why):
+            same = prior and prior["payload"].get("input_fingerprint") == _fingerprint(payload, why)
+            prior_window = accounting.get("prior_first_observed_refusal_at")
+            cutover = accounting.get("coverage_started_at")
+            reaffirm = same and (case["case_key"] in gap_cases or prior_window and cutover
+                and (prior["recorded_at"] < stamp(cutover) or stamp(prior["payload"]["known_at"]) < stamp(cutover))
+                and stamp(case["starts_at"]) - timedelta(seconds=min(cohort["horizons"])) >= stamp(prior_window))
+            if same and not reaffirm:
                 skipped += 1
                 continue
-            observe(db, cohort["id"], case["case_key"], payload, known_at=at,
-                    record=row.get("record") if row and row.get("payload") else None,
-                    fee_input=row.get("fee_input") if row and row.get("payload") else None,
-                    unavailable_reason=why)
+            try:
+                observe(db, cohort["id"], case["case_key"], payload, known_at=at,
+                        record=row.get("record") if row and row.get("payload") else None,
+                        fee_input=row.get("fee_input") if row and row.get("payload") else None,
+                        unavailable_reason=why, reuse_observation_id=prior["id"] if reaffirm else None)
+            except Exception as exc:
+                if not _retention_failure(exc):
+                    raise
+                refused += 1
+                continue
             observed += 1
     return dict(declared_cohort=declared["id"] if declared else None,
+                state="degraded" if refused or declaration_refused else "ready", refused_observations=refused,
+                declaration_refused=declaration_refused,
                 new_observations=observed, unchanged=skipped, captured=len(captured), **status(db))
 
 

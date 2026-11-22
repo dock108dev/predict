@@ -171,19 +171,20 @@ def mount(app):
                 not request.query.get('id') or request.query.get('as_of')):
             raise PublicRequestError('A frozen-evidence export requires one cohort ID.')
         def work():
-            from app.research.records import list_cohorts, detail, evaluate, export_cohort
+            from app.research.records import list_cohorts, detail, evaluate, export_cohort, status as retention_status
             from app.storage.store import stamp
             with connect() as db, db.transaction():
                 db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
                 db.execute("SET LOCAL statement_timeout='10s'")
                 if exporting:
                     return encoded(export_cohort(db, request.query['id']))
+                retention = retention_status(db)
                 if request.query.get('id'):
                     if request.query.get('as_of'):
                         return dict(evaluation=evaluate(db, request.query['id'],
-                            as_of=stamp(request.query['as_of'])), provider_requests=0)
-                    return detail(db, request.query['id'])
-                return dict(cohorts=list_cohorts(db), provider_requests=0)
+                            as_of=stamp(request.query['as_of'])), research_retention=retention, provider_requests=0)
+                    return dict(detail(db, request.query['id']), research_retention=retention)
+                return dict(cohorts=list_cohorts(db), research_retention=retention, provider_requests=0)
         async with gate:
             value = await joined(work)
         if exporting:

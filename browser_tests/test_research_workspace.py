@@ -118,6 +118,29 @@ def test_received_data_inspection_export_and_missing_cases(width, tmp_path):
     records.append(unmatched)
     errors, requests = [], []
     frozen_calculation = offer()
+    retention = dict(
+        retained_bytes=17000,
+        total_allocation_bytes=19048,
+        byte_cap=33554432,
+        observation_bytes=16000,
+        observation_byte_cap=25165824,
+        retention_dispositions=dict(
+            slots=4,
+            observation_refusals=3,
+            capture_refusals=1,
+            observation_affected_slots=2,
+            capture_affected_slots=1,
+            observation_open_gaps=2,
+            capture_open_gaps=0,
+        ),
+        retention_accounting=dict(
+            coverage_started_at="2026-11-22T21:00:00Z",
+            prior_first_observed_refusal_at="2026-11-22T20:45:00Z",
+            prior_uncounted_window_end="2026-11-22T21:00:00Z",
+            prior_refused_attempts=None,
+            prior_affected_cases=None,
+        ),
+    )
     frozen_evidence = dict(
         cohort_id="frozen-cohort",
         records=[
@@ -139,6 +162,7 @@ def test_received_data_inspection_export_and_missing_cases(width, tmp_path):
             )
         ],
         manifest=dict(record_count=1),
+        research_retention=retention,
         provider_requests=0,
     )
 
@@ -222,7 +246,8 @@ def test_received_data_inspection_export_and_missing_cases(width, tmp_path):
                     json=dict(
                         cohorts=[
                             dict(id="frozen-cohort", name="Declared fixture population")
-                        ]
+                        ],
+                        research_retention=retention,
                     )
                 )
         elif url.path == "/api/research/read":
@@ -285,10 +310,32 @@ def test_received_data_inspection_export_and_missing_cases(width, tmp_path):
         expect(page.locator("#cohort-content")).to_contain_text(
             "Declared fixture population"
         )
+        expect(
+            page.locator(
+                '#research-retention-status dt:has-text("Earlier refusal attempts") + dd'
+            )
+        ).to_have_text("Unknown")
+        expect(
+            page.locator(
+                '#research-retention-status dt:has-text("Observation refusal attempts") + dd'
+            )
+        ).to_have_text("3")
         with page.expect_download() as cohort_exported:
             page.get_by_role("link", name="Export frozen evidence", exact=True).click()
         frozen = json.loads(Path(cohort_exported.value.path()).read_text())
         assert frozen["cohort_id"] == "frozen-cohort"
+        assert (
+            frozen["research_retention"]["retention_accounting"][
+                "prior_refused_attempts"
+            ]
+            is None
+        )
+        assert (
+            frozen["research_retention"]["retention_dispositions"][
+                "observation_refusals"
+            ]
+            == 3
+        )
         snapshot = frozen["records"][0]["payload"]["snapshot"]["inputs"]
         assert (
             snapshot["source_record"]["quote"]["original"]
