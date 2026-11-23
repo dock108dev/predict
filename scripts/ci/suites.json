@@ -697,6 +697,12 @@
     ]
   },
   {
+    "name": "owner-login",
+    "tests": [
+      "tests/test_owner_remember_cookie.py"
+    ]
+  },
+  {
     "name": "phase2-research",
     "tests": [
       "tests/test_original_receipts.py",

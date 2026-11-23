@@ -1,7 +1,10 @@
+import /etc/caddy/predict-owner-session.Caddyfile
+
 (predict_backend) {
 	reverse_proxy 127.0.0.1:8784 {
 		header_up Host 127.0.0.1:8784
 		header_up -Authorization
+		header_up -Cookie
 	}
 }
 
@@ -17,10 +20,12 @@ predict.dock108.dev {
 	@predictOrigin header Origin https://predict.dock108.dev
 
 	route {
-		respond @foreignOrigin 403
-		basicauth {
-			import /etc/caddy/predict-auth
+		header {
+			Cache-Control "private, no-store"
+			defer
 		}
+		respond @foreignOrigin 403
+		import predict_owner_session
 		redir @browserIcon /view/current/predict-icon.png 302
 		request_header @predictOrigin Origin http://127.0.0.1:8784
 		import predict_backend

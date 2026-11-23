@@ -42,6 +42,7 @@ DOMAINS = {
     },
     "dashboard": {"tests/test_experiment_api.py"},
     "deploy": {
+        "tests/test_owner_remember_cookie.py",
         "tests/test_ci_image_cleanup.py",
         "tests/test_ci_fast_release.py",
         "tests/test_ci_fast_checks.py",

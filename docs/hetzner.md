@@ -27,6 +27,23 @@ the host and preserves the existing owner authentication file, private settings,
 provider secrets, database, archive and accounting state. Routine proxy and
 Compose changes therefore travel with the tested release.
 
+The separate `/etc/caddy/predict-owner-session.Caddyfile` supplies remembered
+owner access. After initial provisioning of `predict-auth`, install
+[the provisioner](../deploy/remember-owner.py) as `/srv/predict/remember-owner.py`
+and run it once as root before validating the site configuration:
+
+```sh
+sudo python3 /srv/predict/remember-owner.py
+```
+
+It generates a private random cookie credential, preserving the existing login.
+Repeating the command preserves existing sessions. The private snippet is not
+part of the managed image bundle and must be preserved across releases/backups.
+To revoke remembered cookies deliberately, run with `--rotate`, then validate and
+reload Caddy. Password changes require that rotation if old cookies must also be
+revoked; the token itself has no server-side expiry. No token belongs in Git,
+GitHub settings or the Mac's `.env`.
+
 For initial provisioning or recovery, an administrator installs the restricted
 release script and the proxy once. Keep `/etc/caddy/Caddyfile` importing
 `/etc/caddy/predict.Caddyfile`, and preserve `/etc/caddy/predict-auth`. For an
@@ -46,7 +63,7 @@ ssh hetzner '
 After reloading, unauthenticated requests to the home page, research, APIs,
 assets and favicon must return `401` with a `WWW-Authenticate` header. Foreign
 browser origins remain refused. After signing in, normal routes and downloads
-work through the same proxy. Proxy authentication credentials are stripped before
+work through the same proxy. Authorization and Cookie credentials are stripped before
 forwarding to the application.
 
 ```sh
@@ -140,6 +157,9 @@ before selecting that provider on the server.
 ## Using the personal server from the Mac
 
 Open `https://predict.dock108.dev` and sign in with the existing owner credentials.
+The proxy remembers a successful login in that browser for up to one year,
+including browser restarts and normal server deployments. Clearing site cookies,
+an expired cookie or a separate private-browsing session requires another login.
 Hosted use requires no local `.env` change, running local app, SSH tunnel or
 provider API key. Collection, research checkpoints and exports run on the server
 without the browser open.

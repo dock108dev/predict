@@ -8,7 +8,15 @@ execution. Browser protections do not authenticate other local processes.
 The documented Hetzner deployment fronts this same loopback service with Caddy.
 Caddy terminates TLS, validates the browser Origin, and requires the existing
 owner's proxy authentication for every page, API, asset and evidence download.
-It strips those credentials before forwarding to the loopback service. The
+After a successful login it sets a persistent, host-only owner cookie with a
+one-year browser lifetime, Secure, HttpOnly and SameSite=Lax. A valid cookie
+allows return visits without another Basic Auth prompt. Its random bearer value
+lives in a private Caddy snippet outside Git and the application images, and
+survives normal deployments. Explicit rotation revokes existing remembered
+cookies; browser expiry alone is not server-side token expiry. The existing
+username/password remain unchanged. Foreign Origin checks still precede access,
+and protected responses remain private/no-store.
+It strips Authorization and Cookie before forwarding to the loopback service. The
 application remains a single-owner tool; the proxy supplies the deployed access
 boundary. [Hetzner boundary](hetzner.md)
 

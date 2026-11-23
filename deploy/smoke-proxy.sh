@@ -16,7 +16,9 @@ trap cleanup EXIT
 
 password=proxy-smoke-fixture
 hash=$("$caddy" hash-password --plaintext "$password")
-printf 'fixture %s\n' "$hash" > "$work/auth"
+printf 'fixture %s\n' "$hash" > "$work/predict-auth"
+chmod 0600 "$work/predict-auth"
+python3 deploy/remember-owner.py --directory "$work"
 {
     cat <<'CADDY'
 {
@@ -26,6 +28,8 @@ printf 'fixture %s\n' "$hash" > "$work/auth"
 http://127.0.0.1:18785 {
 	@credentials header Authorization *
 	respond @credentials 500
+	@cookies header Cookie *
+	respond @cookies 500
 	@wrongHost not header Host 127.0.0.1:8784
 	respond @wrongHost 500
 	@wrongOrigin {
@@ -36,15 +40,15 @@ http://127.0.0.1:18785 {
 	respond 200
 }
 CADDY
-    sed -e 's|^predict\.dock108\.dev {|http://127.0.0.1:18784 {|' \
+    sed -e 's|^predict\.dock108\.dev {|http://localhost:18784 {|' \
         -e 's|reverse_proxy 127.0.0.1:8784|reverse_proxy 127.0.0.1:18785|' \
-        -e "s|/etc/caddy/predict-auth|$work/auth|" deploy/predict.Caddyfile
+        -e "s|/etc/caddy/predict-owner-session.Caddyfile|$work/predict-owner-session.Caddyfile|" deploy/predict.Caddyfile
 } > "$work/Caddyfile"
 
 "$caddy" validate --config "$work/Caddyfile"
 "$caddy" run --config "$work/Caddyfile" > "$work/caddy.log" 2>&1 &
 proxy_pid=$!
-base=http://127.0.0.1:18784
+base=http://localhost:18784
 for _ in {1..30}; do
     if [[ $(curl --max-time 1 -s -o /dev/null -w '%{http_code}' -u "fixture:$password" "$base/" || true) == 200 ]]; then break; fi
     if ! kill -0 "$proxy_pid" 2>/dev/null; then cat "$work/caddy.log" >&2; exit 1; fi
@@ -64,6 +68,10 @@ check() {
     fi
     if [[ "$expected" == 401 ]]; then
         grep -qi '^www-authenticate: Basic' "$work/headers"
+        if grep -qi '^set-cookie:' "$work/headers"; then
+            echo 'Rejected credentials unexpectedly issued a remembered login.' >&2
+            exit 1
+        fi
     elif grep -qi '^www-authenticate:' "$work/headers"; then
         printf '%s %s unexpectedly requested authentication\n' "$method" "$path" >&2
         exit 1
@@ -116,4 +124,24 @@ for path in /favicon.ico /apple-touch-icon.png /apple-touch-icon-precomposed.png
     check 302 GET "$path" -u "fixture:$password"
     grep -qi '^location: /view/current/predict-icon.png' "$work/headers"
 done
-echo 'Private whole-site authentication, same-origin forwarding and credential stripping passed.'
+
+# Separate curl processes reuse only the persistent cookie jar, never Basic
+# credentials or an in-memory HTTP authentication session. localhost permits
+# Secure cookie testing without sharing the production owner's credential.
+check 200 GET /research -u "fixture:$password" --cookie-jar "$work/cookies"
+for attribute in '__Host-predict_owner=' 'Max-Age=31536000' 'Path=/' 'Secure' 'HttpOnly' 'SameSite=Lax'; do
+    grep -qi "$attribute" "$work/headers"
+done
+for path in / /research /api/research/catalog /api/health /view/current/research.js; do
+    check 200 GET "$path" --cookie "$work/cookies"
+    if grep -qi '^set-cookie:' "$work/headers"; then
+        echo 'A remembered request unexpectedly replaced its login cookie.' >&2
+        exit 1
+    fi
+    grep -qi '^cache-control: private, no-store' "$work/headers"
+done
+check 200 POST /api/admin/current --cookie "$work/cookies" -H 'Origin: https://predict.dock108.dev'
+check 403 GET /research --cookie "$work/cookies" -H 'Origin: https://unrelated.invalid'
+check 401 GET /research -H 'Cookie: __Host-predict_owner=wrong'
+check 401 GET /research -H 'Cookie: unrelated=present'
+echo 'Persistent owner login, private whole-site access and credential stripping passed.'
