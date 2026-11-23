@@ -1,5 +1,5 @@
-name: Fast personal checks
-description: Personal data, calculation, checkpoint and deployment checks
+name: Prepare personal check tools
+description: Install locked tools for the focused validation and release job
 runs:
   using: composite
   steps:
@@ -29,8 +29,3 @@ runs:
       if: steps.validators.outputs.cache-hit != 'true'
       shell: bash
       run: python scripts/ci/install_tools.py
-    - name: Run focused checks and record actual timing
-      shell: bash
-      env:
-        PG_CONFIG: /usr/lib/postgresql/16/bin/pg_config
-      run: python scripts/ci/fast_checks.py

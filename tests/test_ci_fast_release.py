@@ -47,6 +47,8 @@ def release(tmp_path, monkeypatch):
                 value = self.tips.pop(0)
             elif command == ["python", "deploy/image-inputs.py"]:
                 value = "\n".join(role + " " + "b" * 64 for role in module["ROLES"])
+            elif command == ["python", "scripts/ci/fast_checks.py"]:
+                value = "focused checks passed"
             else:
                 assert (
                     command[:2] in (["docker", "login"], ["bash", "deploy/smoke.sh"])
@@ -89,6 +91,7 @@ def test_publish_only_has_no_server_or_main_requirement(release):
     assert release.result["status"] == "PASS"
     assert not release.result["deployed"]
     assert not any(command[0] in ("ssh", "gh") for command in release.commands)
+    assert ["python", "scripts/ci/fast_checks.py"] in release.commands
 
 
 def test_current_checked_revision_hands_only_pinned_manifest_to_server(release):
@@ -109,6 +112,23 @@ def test_parallel_candidate_failure_never_contacts_server(release, stage):
         release.execute()
     assert not release.requests
     assert not release.result["deployed"]
+
+
+def test_failed_focused_checks_never_send_a_server_request(release):
+    original_run = release.run
+
+    def run(command, **kwargs):
+        if command == ["python", "scripts/ci/fast_checks.py"]:
+            release.commands.append(command)
+            raise RuntimeError("focused checks failed")
+        return original_run(command, **kwargs)
+
+    release.run = run
+    with pytest.raises(RuntimeError, match="focused checks failed"):
+        release.execute()
+    assert not release.requests
+    assert not release.result["deployed"]
+    assert "checks" in release.phases
 
 
 def test_budget_exhaustion_refuses_before_starting_image_work(release):

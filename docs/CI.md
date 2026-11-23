@@ -11,6 +11,12 @@ One runner performs focused checks, cached image verification and deployment.
 The normal runner budget is two minutes; GitHub queue time is recorded separately.
 A budget timeout is a failure, never evidence of a completed deployment.
 
+After locked tool installation, focused validation runs alongside private-proxy
+checks and image preparation/publication. Every selected check, the proxy check
+and all image identities must pass before SSH handoff. Publishing a candidate
+image does not authorize its deployment. This overlaps independent work while
+preserving the server rollout allowance and the two-minute job limit.
+
 The focused contracts cover exact reference/EV/cashflow arithmetic, collection
 budget and Stop guards, checkpoint timing and persistence, lossless export, and
 the deployment paths affected by the change. Storage/migration changes add a
@@ -86,7 +92,7 @@ checkpoint. Keep unchanged historical tests out of a new repair's completion gat
 
 ## Evidence and timing
 
-The run summary distinguishes focused validation, image cache/build, proxy/Compose
+The run summary distinguishes focused validation, image cache/build, proxy
 check, publication and installed deployment. A green focused result describes its
 selected contracts. A full-validation result describes the separately executed
 suite. Keep both distinct from actual source acquisition, research coverage,

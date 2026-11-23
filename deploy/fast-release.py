@@ -67,6 +67,9 @@ class Release:
                 timeout=max(1, remaining(self.started)),
                 text=True,
             )
+        if name == "focused-checks" and process.stdout:
+            with log.open("a") as output:
+                output.write(process.stdout)
         if check and process.returncode:
             print(log.read_text(errors="replace")[-12000:])
             raise RuntimeError(name + " failed with exit " + str(process.returncode))
@@ -93,6 +96,9 @@ class Release:
             name="main-tip",
         ).stdout.strip()
         return tip == self.sha
+
+    def checks(self):
+        return self.run(["python", "scripts/ci/fast_checks.py"], name="focused-checks")
 
     def proxy(self):
         cached = Path(".local/ci-tools/caddy").resolve()
@@ -220,7 +226,8 @@ class Release:
             ["python", "deploy/image-inputs.py"], name="image-inputs"
         ).stdout
         inputs = dict(line.split() for line in output.splitlines())
-        with ThreadPoolExecutor(max_workers=4) as pool:
+        with ThreadPoolExecutor(max_workers=5) as pool:
+            checks = pool.submit(self.phase, "checks", self.checks)
             proxy = pool.submit(self.phase, "proxy", self.proxy)
             images = self.phase(
                 "build",
@@ -229,6 +236,7 @@ class Release:
                 ),
             )
             images = self.phase("publish", lambda: list(pool.map(self.publish, images)))
+            checks.result()
             proxy.result()
         self.result["images"] = images
         if self.publish_only:
