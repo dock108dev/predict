@@ -32,16 +32,16 @@ function percent(value){
 }
 function probability(value){const n=number(value);return n===null?'Unavailable':`${(n*100).toFixed(2)}%`;}
 function gameTitle(value){return typeof value==='string'?value:value?.title||value?.game||value?.name||'Tracked game';}
-function lineLabel(row){const line=row.line??row.identity?.line;return line==null&&(row.family||row.identity?.family)==='moneyline'?'Not applicable (moneyline)':known(line);}
-function role(value){return value?`${label(value.status)} · ${label(value.source)}`:'Unknown';}
-function coverageLabel(value){
- if(!value)return 'Coverage unavailable';
- if('early' in value||'late' in value)return `Early: ${coverageLabel(value.early)}; late: ${coverageLabel(value.late)}`;
+function lineLabel(row){const line=row.line??row.identity?.line;return line==null?'':String(number(line)??line);}
+function role(value){return value&&value.status&&value.status!=='unknown'?[label(value.status),value.source?label(value.source):null].filter(Boolean).join(' · '):'Main role not established';}
+function coverageLabel(value,checkpoints={}){
+ if(!value)return 'Coverage not recorded';
+ if('early' in value||'late' in value)return ['early','late'].map(stage=>{const status=checkpointStatus(checkpoints[stage]);return `${stage==='early'?'Early':'Late'}: ${!value[stage]&&['Scheduled','Capturing'].includes(status.label)?status.label+' · '+status.detail:coverageLabel(value[stage])}`;}).join('; ');
  if(value.incomplete===true)return 'Incomplete returned scope';
  if(value.incomplete===false)return 'Returned request scope; market completeness unestablished';
  return label(value.state||value.status||value.scope);
 }
-function grid(root,values){const dl=node('dl',undefined,'research-detail-grid');for(const [key,value]of Object.entries(values))dl.append(node('dt',key),node('dd',known(value)));root.append(dl);return dl;}
+function grid(root,values){const dl=node('dl',undefined,'research-detail-grid');for(const [key,value]of Object.entries(values).filter(([,value])=>value!==null&&value!==undefined&&value!==''))dl.append(node('dt',key),node('dd',known(value)));root.append(dl);return dl;}
 function section(root,title){const item=node('section');item.append(node('h3',title));root.append(item);return item;}
 function evidence(root,title,value,open=false){const item=node('details');item.open=open;item.append(node('summary',title),node('pre',json(value)));root.append(item);return item;}
 function table(root,columns,rows){const scroll=node('div',undefined,'catalog-scroll'),value=node('table',undefined,'experiment-table'),head=node('thead'),tr=node('tr'),body=node('tbody');for(const column of columns)tr.append(node('th',column));head.append(tr);for(const cells of rows){const row=node('tr');for(const [index,content]of cells.entries()){const cell=node('td');cell.dataset.label=columns[index];if(content&&typeof content==='object'&&content.tagName)cell.append(content);else cell.append(node('span',known(content)));row.append(cell);}body.append(row);}value.append(head,body);scroll.append(value);root.append(scroll);return body;}
@@ -58,6 +58,20 @@ export function checkpointStatus(task={},capture=null,at=Date.now()){
  if(deadline&&new Date(deadline).getTime()<at)return {label:'Missed',detail:label(task.last_reason||payload?.reason||'Capture window closed without a receipt')};
  return due?{label:'Scheduled',detail:`Due ${dateTime(due)}`}:{label:'Not captured',detail:'Checkpoint timing not recorded'};
 }
+function taskFor(detail,stage){return detail?.checkpoint_status?.find(task=>task.checkpoint===stage)||detail?.checkpoints?.[stage]||{};}
+function missingStage(detail,stage){const status=checkpointStatus(taskFor(detail,stage),detail?.[stage]);return status.label==='Captured'?'Selected exact line not returned at this captured checkpoint':`${status.label} · ${status.detail}`;}
+function awaiting(detail,stage){return ['Scheduled','Capturing'].includes(checkpointStatus(taskFor(detail,stage),detail?.[stage]).label);}
+function namedRow(row,detail){
+ const result={...row.identity,...row},side=row.outcome||row.identity?.outcome;
+ if(result.selection_label)return result;
+ if(side==='home'||side==='away'){
+  for(const stage of ['early','late']){const frozen=snapshot(detail?.[stage]),event=frozen?.event||{},source=frozen?.source_event||{};const name=source.teams?.[side]?.name||Object.entries(event.participants||{}).find(([,identity])=>identity===event[side])?.[0];if(name){result.selection_label=name;return result;}}
+  result.selection_label=`${side==='home'?'Home':'Away'} team name unavailable`;
+ }else if(side==='over'||side==='under')result.selection_label=side==='over'?'Over':'Under';
+ return result;
+}
+function sourceCell(row,stage,detail){return row[stage]?`${odds(row[stage].price,row[stage].price_units)} · ${role(row[stage].main)}`:missingStage(detail,stage);}
+function continuity(row,detail){const pending=['early','late'].filter(stage=>!row[stage]&&awaiting(detail,stage));if(pending.length)return pending.map(stage=>`${stage==='late'?'T−10':'Early'}: ${missingStage(detail,stage)}`).join('; ');return [label(typeof row.role_link==='string'?row.role_link:row.role_link?.relationship),reasons(row.missing_reasons)].filter(Boolean).join(' · ')||'Recorded in checkpoint evidence';}
 function checkpointCell(value,task){
  if(!value){const status=checkpointStatus(task);return stack(status.label,status.label==='Captured'?'Selected exact line not returned at this checkpoint':status.detail);}
 
@@ -68,7 +82,7 @@ function checkpointCell(value,task){
  root.append(node('small',value.available===true?'Source available':value.available===false?'Source unavailable':'Source availability unknown'));
  return root;
 }
-function identityCell(row){return stack(row.title||gameTitle(row.game),`${venue(row.book||row.identity?.book)} · ${label(row.family||row.identity?.family)} · ${label(row.period||row.identity?.period)}`,selection({...row,...row.identity}));}
+function identityCell(row){return stack(row.title||gameTitle(row.game),`${venue(row.book||row.identity?.book)} · ${label(row.family||row.identity?.family)} · ${label(row.period||row.identity?.period)}`,selection(namedRow(row)));}
 function crossCell(value){return stack(`Screening: ${percent(value?.screen?.ev)}`,`Coherent: ${percent(value?.coherent?.ev)}`,value?.reason||value?.screen?.reason||'Early price, quantity, fees and cashflows retained');}
 function caseRows(root,cases,onInspect,timing={}){
  const rows=cases.map(row=>{
@@ -105,7 +119,7 @@ function renderListing(value){
  else root.append(node('p','No retained cases in this captured view. Show all tracked games to inspect checkpoint progress, missing inputs and the shared market context.'));
  const gameRoot=$('experiment-games');gameRoot.replaceChildren();
  if($('experiment-context').checked){
-  for(const game of games){const row=node('div',undefined,'research-panel-row'),button=node('button','Inspect market context');button.type='button';button.dataset.game=game.id;button.onclick=()=>inspectExperiment(game.id,game.revision,null,button);row.append(node('strong',game.title||gameTitle(game)),node('small',`${known(game.league)} · starts ${dateTime(game.starts_at)}`),node('small',`Early: ${checkpointStatus(game.checkpoints?.early,game.early_at?{captured_at:game.early_at}:null).label} · T−10: ${checkpointStatus(game.checkpoints?.late,game.late_at?{captured_at:game.late_at}:null).label} · due ${dateTime(game.late_target)}`),node('small',`Retained cases: ${known(game.case_counts?.retained_cases??game.case_counts?.retained??game.retained_cases)} · ${coverageLabel(game.coverage)}`),button);gameRoot.append(row);}
+  for(const game of games){const row=node('div',undefined,'research-panel-row'),button=node('button','Inspect market context');button.type='button';button.dataset.game=game.id;button.onclick=()=>inspectExperiment(game.id,game.revision,null,button);row.append(node('strong',game.title||gameTitle(game)),node('small',`${known(game.league)} · starts ${dateTime(game.starts_at)}`),node('small',`Early: ${checkpointStatus(game.checkpoints?.early,game.early_at?{captured_at:game.early_at}:null).label} · T−10: ${checkpointStatus(game.checkpoints?.late,game.late_at?{captured_at:game.late_at}:null).label} · due ${dateTime(game.late_target)}`),node('small',`Retained cases: ${known(game.case_counts?.retained_cases??game.case_counts?.retained??game.retained_cases)} · ${coverageLabel(game.coverage,game.checkpoints)}`),button);gameRoot.append(row);}
  }
  const offset=value.offset??pageOffset,total=value.total_games??games.length;
  $('experiment-page').textContent=total?`Games ${offset+1}–${offset+games.length} of ${total}`:'No tracked games in this view';
@@ -132,9 +146,9 @@ function checkpointTiming(root,name,checkpoint,task){
  evidence(panel,'Requested, received, supported, missing and incomplete coverage',coverage);
  evidence(panel,'Immutable checkpoint and original-receipt dependencies',checkpoint);
 }
-function measurementEvidence(root,name,value,offer){
+function measurementEvidence(root,name,value,offer,detail,stage){
  const panel=section(root,name);
- if(!value){panel.append(node('p','Not observed. Price, probability and EV remain unavailable.'));return;}
+ if(!value){panel.append(node('p',detail?missingStage(detail,stage):'Not captured. No later inputs substituted.'));return;}
  grid(panel,{'Original offered price':value.price,'Price units':value.price_units,'Source available':value.available,'Screening probability':value.screen?.probability,'Screening exact EV':value.screen?.ev,'Screening policy':value.screen?.policy,'Screening reference book':value.screen?.reference_book,'Screening reason':value.screen?.reason,'Coherent probability':value.coherent?.probability,'Coherent exact EV':value.coherent?.ev,'Coherent policy':value.coherent?.policy,'Coherent reference book':value.coherent?.reference_book,'Coherent reason':value.coherent?.reason,'Main / alternate role':role(value.main),'Main-role authority':value.main?.authority,'Native book main authority':value.main?.native_book_main_authority,'Source time':value.times?.source_at,'Receipt time':value.times?.received_at,'Calculation time':value.times?.calculated_at,'Knowledge time':value.times?.known_at,'Persistence time':value.times?.persisted_at,'Source age at capture (seconds)':value.source_age_seconds,'Calculation version':value.calculation_version,'Missing-data reason':value.reason});
  const calculation=offer?.calculation_payload,fee=calculation?.fee;
  grid(panel,{'Fee mode':feeLabel(calculation?.fee_mode||offer?.fee_input?.fee_mode),'Committed capital (USD)':fee?.committed_usd,'Win-state net receipt (USD)':fee?.cashflows?.win?.net_receipt_usd,'Loss-state net receipt (USD)':fee?.cashflows?.loss?.net_receipt_usd,'Fee applicability':offer?.fee_input?.classification||fee?.reason});
@@ -147,11 +161,13 @@ function measurementEvidence(root,name,value,offer){
 }
 function caseEvidence(root,row,detail){
  const panel=section(root,'Exact bet and cross-checkpoint calculation');
- grid(panel,{'Exact bet ID':row.id,Book:row.book,'Market family':row.family,Period:row.period,Outcome:row.outcome,'Exact line':lineLabel(row),Transition:label(row.transition),'Incomplete checkpoints':row.incomplete,'Main / alternate continuity':typeof row.role_link==='string'?label(row.role_link):json(row.role_link),'Missing reasons':reasons(row.missing_reasons)});
+ const pending=['early','late'].filter(stage=>!row[stage]&&awaiting(detail,stage));
+ grid(panel,{'Exact bet ID':row.id,Book:venue(row.book),'Market family':row.family,Period:row.period,Selection:selection(namedRow(row,detail)),Transition:pending.length?pending.map(stage=>missingStage(detail,stage)).join('; '):label(row.transition),'Incomplete checkpoints':pending.length?null:row.incomplete,'Main / alternate continuity':typeof row.role_link==='string'?label(row.role_link):json(row.role_link),'Missing reasons':pending.length?null:reasons(row.missing_reasons)});
  evidence(panel,'Canonical identity and material settlement semantics',row.identity);
- measurementEvidence(panel,'Early offer with early references',row.early,snapshot(detail.early)?.offers?.[row.early?.offer_index]);
- measurementEvidence(panel,'Late offer with late references',row.late,snapshot(detail.late)?.offers?.[row.late?.offer_index]);
+ measurementEvidence(panel,'Early offer with early references',row.early,snapshot(detail.early)?.offers?.[row.early?.offer_index],detail,'early');
+ measurementEvidence(panel,'Late offer with late references',row.late,snapshot(detail.late)?.offers?.[row.late?.offer_index],detail,'late');
  const cross=section(panel,'Analytical diagnostic · early offer using the late probability reference');
+ if(pending.length){cross.append(node('p',pending.map(stage=>missingStage(detail,stage)).join('; ')));evidence(cross,'Recorded analytical inputs',row.early_offer_late_reference);return;}
  grid(cross,{'Screening exact EV':row.early_offer_late_reference?.screen?.ev,'Screening probability':row.early_offer_late_reference?.screen?.probability,'Screening policy':row.early_offer_late_reference?.screen?.policy,'Coherent exact EV':row.early_offer_late_reference?.coherent?.ev,'Coherent probability':row.early_offer_late_reference?.coherent?.probability,'Coherent policy':row.early_offer_late_reference?.coherent?.policy,Reason:row.early_offer_late_reference?.reason||row.early_offer_late_reference?.screen?.reason});
  cross.append(node('p','This cross-checkpoint diagnostic is excluded from current opportunity eligibility and arbitrage. It preserves the early contract, original price, quantity, fees and state cashflows. Only the recorded probability reference changes.'));
  evidence(cross,'Exact cross-checkpoint inputs and reproduction result',row.early_offer_late_reference);
@@ -165,9 +181,9 @@ function decimalPrice(value){
  if(value.price_units==='usd_per_contract'||value.price_units==='probability')return price>0?1/price:null;
  return null;
 }
-function plot(root,title,rows,metric){
+function plot(root,title,rows,metric,detail){
  const figure=node('figure',undefined,'experiment-plot'),caption=node('figcaption',title),canvas=svg('svg',{viewBox:'0 0 520 280',role:'img','aria-label':title});figure.append(caption,canvas);root.append(figure);
- const points=[];for(const row of rows){const x=number(row.line??row.identity?.line);if(x===null)continue;for(const stage of ['early','late']){const observation=row[stage],value=observation?metric(observation):null;points.push({x,y:value,stage,observation,row});}}
+ const points=[];for(const row of rows){const x=number(row.line??row.identity?.line);if(x===null)continue;for(const stage of ['early','late']){const observation=row[stage],value=observation?metric(observation):null;if(!observation&&awaiting(detail,stage))continue;points.push({x,y:value,stage,observation,row});}}
  if(!points.length){figure.append(node('p','No observed numeric spread/total points for this selection. Moneyline and unavailable identities remain in the context table.'));return;}
  const xs=points.map(item=>item.x),ys=points.filter(item=>item.y!==null).map(item=>item.y);
  let xmin=Math.min(...xs),xmax=Math.max(...xs),ymin=ys.length?Math.min(0,...ys):0,ymax=ys.length?Math.max(0,...ys):1;
@@ -192,16 +208,16 @@ function plot(root,title,rows,metric){
 function rememberCase(row){if(!selected)return;selected.caseId=row.id;const q=new URLSearchParams(location.search);q.set('case',row.id);history.pushState(null,'',location.pathname+'?'+q);}
 function contextSourceEvidence(root,row,detail){
  const panel=section(root,referenceOnly(row)?'Reference only · sportsbook source quote':row.reference_only?'Trading market context · numeric calculation unavailable':'Shared offer context · no separate case is created');
- grid(panel,{'Source quote / exact bet ID':row.id,Book:row.book,'Market family':row.family,Period:row.period,Outcome:row.outcome,'Exact line':lineLabel(row),'Book role':referenceOnly(row)?'Reference only':row.reference_only?'Trading market context':'Supported prediction market'});
+ grid(panel,{'Source quote / exact bet ID':row.id,Book:venue(row.book),'Market family':row.family,Period:row.period,Selection:selection(namedRow(row,detail)),'Book role':referenceOnly(row)?'Reference only':row.reference_only?'Trading market context':'Supported prediction market'});
  evidence(panel,'Recorded identity and source mapping',row.identity);
  for(const stage of ['early','late']){
   const value=row[stage],frozen=snapshot(detail[stage]);
   if(row.reference_only){
    const group=section(panel,`${label(stage)} reference-book observation`);
-   if(!value){group.append(node('p','Not observed at this checkpoint.'));continue;}
+   if(!value){group.append(node('p',missingStage(detail,stage)));continue;}
    grid(group,{'Original price':value.price,'Price units':value.price_units,'Main / alternate role':role(value.main),'Native book authority':value.main?.native_book_main_authority,'Source time':value.times?.source_at,'Receipt time':value.times?.received_at,Available:value.available,Reason:value.reason||value.screen?.reason});
    evidence(group,'Original received bookmaker quote',frozen?.raw_quotes?.[value.raw_quote_index]);
-  }else measurementEvidence(panel,`${label(stage)} shared offer`,value,frozen?.offers?.[value?.offer_index]);
+  }else measurementEvidence(panel,`${label(stage)} shared offer`,value,frozen?.offers?.[value?.offer_index],detail,stage);
  }
 }
 function plots(root,context,detail){
@@ -210,7 +226,7 @@ function plots(root,context,detail){
  const controls=node('div',undefined,'experiment-controls');panel.append(controls);
  const select=(caption,id,values)=>{const labelNode=node('label',caption),input=node('select');input.id=id;for(const [value,text]of values){const option=node('option',text);option.value=value;input.append(option);}labelNode.append(input);controls.append(labelNode);return input;};
  const bookValues=[...new Set(context.map(row=>row.book||row.identity?.book).filter(Boolean))].sort();
- const books=select('Book','experiment-plot-book',bookValues.map(value=>[value,value]));
+ const books=select('Book','experiment-plot-book',bookValues.map(value=>[value,venue(value)]));
  const families=select('Market','experiment-plot-market',[['spread','Spread'],['total','Total'],['moneyline','Moneyline']]);
  const periods=select('Period','experiment-plot-period',[]);
  const outcomes=select('Outcome','experiment-plot-outcome',[]);
@@ -220,33 +236,34 @@ function plots(root,context,detail){
   const bookMarket=context.filter(row=>(row.book||row.identity?.book)===books.value&&(row.family||row.identity?.family)===families.value);
   if(changeOutcome){const values=[...new Set(bookMarket.map(row=>row.period||row.identity?.period).filter(Boolean))].sort();periods.replaceChildren(...values.map(value=>{const option=node('option',label(value));option.value=value;return option;}));}
   const candidates=bookMarket.filter(row=>(row.period||row.identity?.period)===periods.value);
-  if(changeOutcome){const values=[...new Set(candidates.map(row=>row.outcome||row.identity?.outcome).filter(Boolean))].sort();outcomes.replaceChildren(...values.map(value=>{const option=node('option',label(value));option.value=value;return option;}));}
+  if(changeOutcome){const values=[...new Set(candidates.map(row=>row.outcome||row.identity?.outcome).filter(Boolean))].sort();outcomes.replaceChildren(...values.map(value=>{const option=node('option',namedRow(candidates.find(row=>(row.outcome||row.identity?.outcome)===value)||{outcome:value},detail).selection_label||label(value));option.value=value;return option;}));}
   const rows=candidates.filter(row=>(row.outcome||row.identity?.outcome)===outcomes.value);chartRoot.replaceChildren();
   if(!rows.length){chartRoot.append(node('p','No observed exact bets for this book, market and outcome.'));return;}
-  const scope=`${books.value} · ${label(families.value)} · ${label(periods.value)} · ${label(outcomes.value)}`,policy=policies.value;
+  const scope=`${venue(books.value)} · ${label(families.value)} · ${label(periods.value)} · ${namedRow(rows[0],detail).selection_label||label(outcomes.value)}`,policy=policies.value;
   const sourceOnly=rows.every(row=>row.reference_only===true),sportsbookOnly=rows.every(row=>referenceOnly(row));
-  if(!sourceOnly)plot(chartRoot,`${scope} · ${policy==='screen'?'Screening':'Coherent'} EV (%)`,rows,value=>{const n=number(value[policy]?.ev);return n===null?null:n*100;});
-  plot(chartRoot,`${scope} · Offered decimal price`,rows,decimalPrice);
-  if(!sourceOnly)plot(chartRoot,`${scope} · ${policy==='screen'?'Screening reference':'Coherent'} probability (%)`,rows,value=>{const n=number(value[policy]?.probability);return n===null?null:n*100;});
+  if(!sourceOnly)plot(chartRoot,`${scope} · ${policy==='screen'?'Screening':'Coherent'} EV (%)`,rows,value=>{const n=number(value[policy]?.ev);return n===null?null:n*100;},detail);
+  plot(chartRoot,`${scope} · Offered decimal price`,rows,decimalPrice,detail);
+  if(!sourceOnly)plot(chartRoot,`${scope} · ${policy==='screen'?'Screening reference':'Coherent'} probability (%)`,rows,value=>{const n=number(value[policy]?.probability);return n===null?null:n*100;},detail);
   else chartRoot.append(node('p',sportsbookOnly?'Reference only: offered-price observations are shown. Trading EV and probability measurements are not asserted.':'Trading market context: offered-price observations are shown. Numeric calculation support is unavailable.'));
  }
- books.onchange=()=>render(true);families.onchange=()=>render(true);periods.onchange=()=>{const values=[...new Set(context.filter(row=>(row.book||row.identity?.book)===books.value&&(row.family||row.identity?.family)===families.value&&(row.period||row.identity?.period)===periods.value).map(row=>row.outcome||row.identity?.outcome).filter(Boolean))].sort();outcomes.replaceChildren(...values.map(value=>{const option=node('option',label(value));option.value=value;return option;}));render();};outcomes.onchange=()=>render();policies.onchange=()=>render();
+ books.onchange=()=>render(true);families.onchange=()=>render(true);periods.onchange=()=>{const values=[...new Set(context.filter(row=>(row.book||row.identity?.book)===books.value&&(row.family||row.identity?.family)===families.value&&(row.period||row.identity?.period)===periods.value).map(row=>row.outcome||row.identity?.outcome).filter(Boolean))].sort();outcomes.replaceChildren(...values.map(value=>{const matching=context.find(row=>(row.book||row.identity?.book)===books.value&&(row.family||row.identity?.family)===families.value&&(row.period||row.identity?.period)===periods.value&&(row.outcome||row.identity?.outcome)===value);const option=node('option',namedRow(matching||{outcome:value},detail).selection_label||label(value));option.value=value;return option;}));render();};outcomes.onchange=()=>render();policies.onchange=()=>render();
  if(bookValues.length){const offer=context.find(row=>!row.reference_only);books.value=offer?.book||offer?.identity?.book||bookValues[0];const first=context.find(row=>(row.book||row.identity?.book)===books.value);families.value=first?.family||first?.identity?.family||'spread';policies.value='screen';render(true);}else chartRoot.append(node('p','No exact market context has been retained yet.'));
  const all=section(panel,'Every captured exact line');
  const contextEvidence=node('div');
- table(all,['Book / market / outcome / exact line','Early source price / role','Late source price / role','Availability / continuity','Inspect source'],context.map(row=>{const button=node('button','Inspect context quote');button.type='button';button.dataset.context=row.id;button.onclick=()=>{rememberCase(row);contextEvidence.replaceChildren();contextSourceEvidence(contextEvidence,row,detail);contextEvidence.scrollIntoView?.({block:'start'});};return [`${known(row.book)}${referenceOnly(row)?' (Reference only)':row.reference_only?' (Trading market context)':''} · ${label(row.family)} · ${label(row.outcome)} · ${lineLabel(row)}`,`${known(row.early?.price)} · ${role(row.early?.main)}`,`${known(row.late?.price)} · ${role(row.late?.main)}`,`${label(typeof row.role_link==='string'?row.role_link:row.role_link?.relationship)} · ${reasons(row.missing_reasons)||'Recorded in checkpoint evidence'}`,button];}));
+ table(all,['Book / market / exact offer','Early source price / role','T−10 source price / role','Availability / continuity','Inspect source'],context.map(row=>{const button=node('button','Inspect context quote');button.type='button';button.dataset.context=row.id;button.onclick=()=>{rememberCase(row);contextEvidence.replaceChildren();contextSourceEvidence(contextEvidence,row,detail);contextEvidence.scrollIntoView?.({block:'start'});};return [`${venue(row.book)}${referenceOnly(row)?' (Reference only)':row.reference_only?' (Trading market context)':''} · ${label(row.family)} · ${selection(namedRow(row,detail))}`,sourceCell(row,'early',detail),sourceCell(row,'late',detail),continuity(row,detail),button];}));
  all.append(contextEvidence);
 }
-function mainLinks(root,value,context){
+function mainLinks(root,value,context,detail){
  const panel=section(root,"Each book's main-line progression");
  panel.append(node('p','Roles include their recorded source authority. Inferred and unknown roles remain distinct from source-reported main lines. A reference book’s main line does not establish another book’s main line or native execution authority.'));
  const groups=Array.isArray(value)?value:Object.values(value||{}),byId=new Map(context.map(row=>[row.id,row]));
  if(!groups.length){panel.append(node('p','No source-reported per-book main-line links are available.'));return;}
- for(const group of groups){const name=[group.book,group.family,group.period,group.outcome].filter(Boolean).map(label).join(' · ');panel.append(node('h4',name||'Recorded book / market group'));
-  const contextLine=id=>byId.has(id)?lineLabel(byId.get(id)):id;
-  const mains=stage=>(group[stage+'_main_ids']||[]).map(id=>`${contextLine(id)} (${label(byId.get(id)?.[stage]?.main?.source)})`).join(', ')||(group[stage+'_main_lines']||[]).map(line=>`${line==null&&group.family==='moneyline'?'Not applicable (moneyline)':known(line)} (authority unknown)`).join(', ')||'Unknown';
-  grid(panel,{'Recorded early main exact lines':mains('early'),'Recorded late main exact lines':mains('late'),Movement:typeof group.movement==='string'?label(group.movement):json(group.movement)});
-  table(panel,['Exact line','Early role / authority','Late role / authority','Relationship'],(group.links||[]).map(link=>[contextLine(link.id),byId.get(link.id)?.early?role(byId.get(link.id).early.main):label(link.early_role),byId.get(link.id)?.late?role(byId.get(link.id).late.main):label(link.late_role),label(link.relationship)]));
+ for(const group of groups){const name=[venue(group.book),label(group.family),label(group.period),namedRow(group,detail).selection_label].filter(Boolean).join(' · ');panel.append(node('h4',name||'Recorded book / market group'));
+  const contextLine=id=>byId.has(id)?selection(namedRow(byId.get(id),detail)):'Exact selection not recorded';
+  const mains=stage=>{if(awaiting(detail,stage))return missingStage(detail,stage);return (group[stage+'_main_ids']||[]).map(id=>`${contextLine(id)} (${label(byId.get(id)?.[stage]?.main?.source)})`).join(', ')||(group[stage+'_main_lines']||[]).map(line=>selection({...namedRow(group,detail),line})).join(', ')||'No source-designated main offer recorded';};
+  const pending=['early','late'].filter(stage=>awaiting(detail,stage));
+  grid(panel,{'Recorded early main offers':mains('early'),'Recorded late main offers':mains('late'),Movement:pending.length?pending.map(stage=>missingStage(detail,stage)).join('; '):typeof group.movement==='string'?label(group.movement):json(group.movement)});
+  table(panel,['Exact offer','Early role / authority','T−10 role / authority','Relationship'],(group.links||[]).map(link=>[contextLine(link.id),byId.get(link.id)?.early?role(byId.get(link.id).early.main):missingStage(detail,'early'),byId.get(link.id)?.late?role(byId.get(link.id).late.main):missingStage(detail,'late'),pending.length?pending.map(stage=>missingStage(detail,stage)).join('; '):label(link.relationship)]));
  }
  evidence(panel,'Exact continuity links and source role authority',value);
 }
@@ -260,7 +277,7 @@ async function prepareExport(root,selection){
  }catch(error){if(selected===selection)root.replaceChildren(node('p','Complete export unavailable. '+error.message,'experiment-notice'));}
 }
 function detailView(value,selection){
- const root=$('experiment-content');root.replaceChildren();const game=value.game||{},context=[...(value.context||[]),...(value.reference_context||[])].map(row=>referenceOnly(row)?{...row,reference_only:true}:row),cases=(value.cases||[]).filter(row=>row.retain_case===true&&isTradingVenue(row.book||row.identity?.book));
+ const root=$('experiment-content');root.replaceChildren();const game=value.game||{},context=[...(value.context||[]),...(value.reference_context||[])].map(row=>namedRow(referenceOnly(row)?{...row,reference_only:true}:row,value)),cases=(value.cases||[]).filter(row=>row.retain_case===true&&isTradingVenue(row.book||row.identity?.book)).map(row=>namedRow(row,value));
  $('experiment-title').textContent=game.title||gameTitle(game);
  root.append(node('p',`Captured revision ${value.revision||selection.revision}`,'research-muted'));
  const download=node('div',undefined,'experiment-export');root.append(download);prepareExport(download,selection);
@@ -271,7 +288,7 @@ function detailView(value,selection){
  const retained=section(root,'Retained exact-bet comparisons');if(cases.length)caseRows(retained,cases,row=>{rememberCase(row);selectedEvidence.replaceChildren();caseEvidence(selectedEvidence,row,value);selectedEvidence.scrollIntoView?.({block:'start'});},timing);else retained.append(node('p','No separate research case has positive screening EV at either checkpoint. Market context and capture failures remain below.'));
  checkpointTiming(root,'Early checkpoint · first observed by this experiment within 24 hours',value.early,value.checkpoint_status?.find(task=>task.checkpoint==='early'));
  checkpointTiming(root,'T−10 checkpoint',value.late,value.checkpoint_status?.find(task=>task.checkpoint==='late'));
- mainLinks(root,value.main_line_links,context);plots(root,context,value);
+ mainLinks(root,value.main_line_links,context,value);plots(root,context,value);
  const outcomes=section(root,'Sporting outcomes and probability evaluation');outcomes.append(node('p','Sporting outcomes, venue settlements and actual fills remain separate evidence streams. Movement analysis is available before outcomes arrive. Scores cover cases selected by positive screening EV at either checkpoint; multiple bets from one game are dependent.'));
  if(value.quality){grid(outcomes,{'Observed scoring scope':value.quality.scope,'Retained cases in scoring scope':value.quality.retained_cases});if(value.quality.reports?.some(item=>item.records>0))table(outcomes,['Checkpoint','Measurement policy','Scored records','Distinct events','Mean Brier'],value.quality.reports.filter(item=>item.records>0).map(item=>[label(item.checkpoint),label(item.policy),item.records,item.distinct_events,item.mean_brier]));else outcomes.append(node('p','No scored completed games in this captured view.'));}
  evidence(outcomes,'Sporting outcome observations and corrections',value.outcomes);evidence(outcomes,'Probability scoring, exclusions and observed-scope limitations',value.quality);

@@ -1,5 +1,7 @@
 """Arbitrage uses frozen scope membership even when working tables differ."""
 from dataclasses import replace
+from copy import deepcopy
+from fractions import Fraction
 from types import SimpleNamespace
 from unittest import skipUnless
 from unittest.mock import patch
@@ -65,3 +67,29 @@ class SnapshotArbsSQL(LatestBoardFixture):
             acquisition.finish(db,newer,'failed',details={'reason':'fixture_failure'})
             self.assertEqual(read(db,{},at=stamp(AT))['total'],0)
             self.assertEqual(db.execute("SELECT count(*) n FROM public.market_pull_scope WHERE pull_id=%s AND snapshot IS NOT NULL",(older,)).fetchone()['n'],3)
+
+    async def test_reference_index_skips_other_lines_but_retains_spread_polarity_guard(self):
+        from app.storage.pregame_arbs import book_entry
+
+        with self.connect() as db:
+            pull,_ = self.capture(db)
+            baseline = read(db,{},at=stamp(AT))
+            snapshot = acquisition.read_snapshot(db,pull)
+            template = next(reference for reference in snapshot['references']
+                if reference['facts']['market']=='spread' and reference['facts']['side']=='home')
+            for line in ('100.5','101.5','102.5'):
+                unrelated = deepcopy(template)
+                unrelated['facts'].update(line=line,fixture_unrelated_line=True)
+                snapshot['references'].append(unrelated)
+            wrong = deepcopy(template)
+            wrong['facts'].update(line=str(-Fraction(wrong['facts']['line'])),
+                venue='betmgm',price_american='+1000',fixture_wrong_polarity=True)
+            snapshot['references'].append(wrong)
+            with patch('app.storage.acquisition_snapshot.read_snapshot',return_value=snapshot), \
+                    patch('app.storage.pregame_arbs.book_entry',wraps=book_entry) as normalize:
+                indexed = read(db,{},at=stamp(AT))
+            self.assertEqual(indexed,baseline)
+            quotes = [call.args[0] for call in normalize.call_args_list]
+            self.assertTrue(any(quote.get('fixture_wrong_polarity') for quote in quotes))
+            self.assertFalse(any(quote.get('fixture_unrelated_line') for quote in quotes))
+            self.assertFalse(any(leg['venue']=='betmgm' for pair in indexed['rows'] for leg in pair['legs']))

@@ -58,8 +58,8 @@ start new polling. No additional soak, profitability target or sample gate appli
 
 ## Integration and checks
 
-In progress. Final evidence will distinguish disposable fixtures, retained-data
-integration, installed site observations and hosted CI/deployment.
+Verification below distinguishes disposable fixtures, retained-data integration,
+installed site observations and hosted CI/deployment.
 
 ### Integrated local result
 
@@ -82,8 +82,7 @@ integration, installed site observations and hosted CI/deployment.
   preserved all 132 numeric EVs in 245 offers and reproduced those results offline.
   Full recovery remains an installed maintenance operation, not browser behavior.
 
-Deployment and installed public-site acceptance are pending below. No owner
-review is requested at this intermediate checkpoint.
+Deployment and installed public-site evidence follow below.
 
 ### Installed integration follow-up
 
@@ -102,7 +101,7 @@ per exact migration manifest, seal it against connections, clone an isolated DB
 for each class, verify all migration hashes and assign distinct storage epochs.
 The same47 SQL tests and6 subtests passed before/after; local runner time changed
 17.819→14.999 seconds. A separate regression proves sibling data/DDL isolation.
-Hosted timing is still pending for this repair.
+The subsequent normal run passed in105.665 seconds, including deployment.
 
 Public-site review found two owning-boundary issues, fixed before owner handoff:
 - Empty-cache collector restart forgot the last valid receipt. Runtime reads now
@@ -146,3 +145,46 @@ immutable snapshot/export still retains every original input. A real snapshot
 SQL regression covers this distinction. Affected checks:102 portable +26 subtests,
 12 PostgreSQL +3 subtests, lint/workflow/secret checks pass. Final publication and
 remaining installed journeys follow below.
+
+
+### Final installed acceptance findings
+
+Normal CI45228995230 installed `cac6e10` in78.106s. Its public reference tab
+contains the sportsbook inputs only while the positive filter stays active.
+The actual 12:20 PM Indiana State T−10 shows independent moneyline/spread/total
+rows; moneyline -0.51% and spread -0.80% remain current, alongside total +1.00%.
+
+Two additional installed findings were resolved before final handoff:
+- Future T−10 was Scheduled in the case list but deep exact-line/source context
+  still said Unknown or checkpoint missing. The renderer now derives those
+  source cells, continuity, drilldowns, coverage and graph markers from the same
+  checkpoint task state. Captured-but-missing exact lines remain distinct.
+  Regression uses the actual future New Mexico State/Ohio shape and retained team
+  identities, without guessing names from the title.
+- Indiana State Previous capture correctly refused the wrong newer canonical
+  market ID for its older source-local capture. History now projects each
+  capture's own immutable market ID; navigation/reload/Back retain it with its
+  pull. No identity or revision substitution was allowed.
+
+Protected configuration and fee-schedule digests, actual Stop/source pauses and
+remembered-login file hash match before/after. The public Settings view separates
+service health/source availability from the durable accepted receipt after
+restart. Browsing/exact export starts no provider acquisition.
+
+**Material operating limitation:** the existing128 MiB research cap refused11
+additional historical links. Those original checkpoints remain in legacy
+evidence. At inspection90.9 MiB retained plus36.1 MiB protected late reservations
+left0.1 MiB unreserved; future captures can also refuse under that existing guard.
+No cap expansion, automatic eviction, reimport or financial assumption was used
+to make acceptance pass.
+
+The installed unfiltered arbitrage read initially reached its existing deadline.
+An authentic read-only profile identified repeated normalization of every book
+quote for every alternate line, repeated hashing of large witnesses, and redundant
+compact JSON transferred for each family. The reader now projects scope metadata,
+indexes references once per frozen pull by market/line, and keys immutable cached
+inputs by verified pull and original position. The authoritative side/settlement
+checks still reject wrong-polarity spreads after that broad bucket. An unprofiled
+read of the same installed retained population completed in13.422s,64 stored
+pairs,0 provider requests, inside the unchanged30-second arb deadline. Focused
+SQL confirms identical baseline output and skipped unrelated normalization.

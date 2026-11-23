@@ -226,6 +226,7 @@ def _capture(value):
     snapshot = value.get('snapshot') or {}
     times = snapshot.get('times') or {}
     return dict(pull_id=value['pull_id'], state=value['state'],
+        market_id=value['market_id'],
         received_at=times.get('received_at') or times.get('captured_at'),
         requested_at=value['requested_at'].isoformat(),
         reason=(value.get('details') or {}).get('reason'),
@@ -247,6 +248,7 @@ def row(db, value):
     snapshot = value.get('snapshot') or {}
     headline = offer(snapshot, value['best'], value['pull_id']) if value.get('best') else None
     previous = db.execute('''SELECT s.pull_id,s.state,s.coverage,
+        ''' + _game_identity_sql('s','p.started_order','p.details') + '''||'|'||s.family||'|'||s.period market_id,
         jsonb_build_object('times',s.snapshot->'times') snapshot,p.requested_at,p.details
         FROM public.market_pull_scope s
         JOIN public.market_pull p USING(pull_id)
@@ -335,6 +337,7 @@ def detail(db, *, market_id, pull_id, offer_id=None, revision=None):
             (pair[1].get('calculation_payload') or {}).get('id') or '',pair[0]))
         selected['best'] = eligible[0][1]['source_input']
     history = db.execute('''SELECT s.pull_id,s.state,s.coverage,
+        ''' + _game_identity_sql('s','p.started_order','p.details') + '''||'|'||s.family||'|'||s.period market_id,
         jsonb_build_object('times',s.snapshot->'times') snapshot,p.requested_at,p.details
         FROM public.market_pull_scope s
         JOIN public.market_pull p USING(pull_id)

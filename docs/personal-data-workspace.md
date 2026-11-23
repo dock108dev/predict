@@ -24,7 +24,9 @@ Click EV to open that exact offer, line, captured odds, probability basis, fee
 assumption and same-pull supporting references. Source identities, revisions,
 exact arithmetic and export evidence are expandable. Offers & history provides
 focused main/positive offers, Other offers, Reference inputs, Alternates and
-History, including Previous capture. A positive filter keeps references reachable.
+History, including Previous capture. Each history link carries that capture's own
+market identity, including an older source-local identity before canonical linking.
+A positive filter keeps sportsbook references reachable.
 
 Each current comparison uses a durable logical acquisition `pull_id`, with child
 ledger attempt IDs and accepted response membership. All required inputs share
@@ -65,13 +67,16 @@ the complete immutable dependency bundle for offline reproduction.
 
 The existing first-observation/T−10 experiment lists tracked games, capture
 coverage, missing/refused/missed cases, early/late changes and available sporting
-outcomes. The same game/bet inspector is used from Data and Experiments.
+outcomes. Experiments retains its game/bet inspector and captured evidence; Data
+opens the exact headline offer directly.
 Declared populations, evaluation and frozen cohort exports remain available in
 contextual details. Scheduled checkpoints show their actual due time; Capturing,
 Captured, Missed, failed/refused and cancelled states come from task evidence. A
 future T−10 is not a failure. Missing exact lines are separate from missing
 checkpoints. With no scored completed games, a concise empty state replaces empty
-scoring grids. Early-offer/late-reference diagnostics are labeled analytical views
+scoring grids. The same scheduled/due state applies to source rows, exact-line
+continuity and drilldowns; a future checkpoint contributes no missing-data graph
+marker. Early-offer/late-reference diagnostics are labeled analytical views
 outside current opportunity ranking and arbitrage.
 
 Sporting outcomes, quoted EV, probability quality and actual trading returns are
@@ -173,5 +178,12 @@ The fresh policy uses SGO, the selected ten references and four supported tradin
 markets. Old bookmarks still resolve through the workspace but can report that
 the old observation is no longer retained. Backups are not silently reimported.
 Data and Experiments start empty and fill through normal :20/:50 discovery,
-initial capture and scheduled T−10. New T−10 pairs are pending actual scheduled
-observations; the pre-reset journey is separate verification evidence.
+initial capture and scheduled T−10. The first post-reset T−10 was captured through the normal scheduled workflow on
+November 23; the pre-reset journey remains separate verification evidence.
+
+The November 23 snapshot migration linked 43 authentic historical captures without
+provider requests. The unchanged 128 MiB research-allocation guard refused 11
+additional links; their original checkpoints remain in legacy evidence. At the
+installed inspection, retained bytes plus protected future-capture reservations
+left approximately 0.1 MiB unreserved. New captures can therefore be refused by
+the existing capacity guard. No cap increase or automatic eviction was applied.

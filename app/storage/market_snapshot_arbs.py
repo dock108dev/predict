@@ -12,6 +12,22 @@ from app.comparison.reference_scope import REFERENCE_BOOKS, public_scope
 from .store import hashed, stamp
 
 
+def reference_surface(quote):
+    """Broad exact-line bucket; book_entry keeps every identity guard.
+
+    Both spread signs share a bucket so a reviewed reversed home/away role
+    cannot be lost before the authoritative canonical-side comparison.
+    """
+    family = quote.get('market')
+    if family not in ('moneyline','spread','total'):
+        return None
+    try:
+        line = None if family=='moneyline' else Fraction(quote['line'])
+        return family,abs(line) if family=='spread' else line
+    except (ValueError,KeyError,TypeError,ZeroDivisionError):
+        return None
+
+
 def read(db, query, *, at, can_continue=None):
     from .pregame_arbs import book_entry, cached_pair, ordered_pairs
 
@@ -26,16 +42,18 @@ def read(db, query, *, at, can_continue=None):
     if sort not in ('return', 'newest', 'oldest', 'start'):
         raise ValueError('Unknown arbitrage order')
     scopes = db.execute('''WITH ranked AS (
-        SELECT s.*,p.started_order,row_number() OVER (
+        SELECT s.pull_id,s.event_id,s.family,s.period,s.state,
+          s.snapshot#>>'{event,scheduled_start}' start_at,p.started_order,row_number() OVER (
           PARTITION BY s.event_id,s.family,s.period ORDER BY p.started_order DESC) newest
         FROM public.market_pull_scope s JOIN public.market_pull p USING(pull_id)
         WHERE s.coverage->>'covers_board'='true' AND s.period='full_game')
         SELECT * FROM ranked WHERE newest=1 AND state='complete'
-          AND (snapshot#>>'{event,scheduled_start}')::timestamptz>%s
+          AND start_at::timestamptz>%s
         ORDER BY started_order,event_id,family''', (at,)).fetchall()
     results, revisions, modes = [], [], []
     evaluated = 0
     decoded_pull, decoded, membership = None, None, set()
+    references_by_surface = defaultdict(list)
     for scope in scopes:
         checkpoint()
         from .acquisition_snapshot import read_snapshot
@@ -46,6 +64,17 @@ def read(db, query, *, at, can_continue=None):
             receipts = db.execute('''SELECT attempt_id,receipt_sha256,received_at
                 FROM public.market_pull_receipt WHERE pull_id=%s''',(decoded_pull,)).fetchall()
             membership = {(value['attempt_id'],value['receipt_sha256'],value['received_at']) for value in receipts}
+            references_by_surface = defaultdict(list)
+            if query.get('category') != 'market_market':
+                for reference_index,reference in enumerate(decoded.get('references', [])):
+                    quote = reference.get('facts') or reference
+                    if query.get('reference_scope', 'selected') == 'selected' and quote.get('venue') not in REFERENCE_BOOKS:
+                        continue
+                    if query.get('book') and quote.get('venue') != query['book']:
+                        continue
+                    surface = reference_surface(quote)
+                    if surface is not None:
+                        references_by_surface[surface].append((reference_index,quote))
         snapshot = decoded
         event = snapshot.get('event') or {}
         revisions.append([scope['pull_id'], scope['family']])
@@ -56,7 +85,7 @@ def read(db, query, *, at, can_continue=None):
         if query.get('search', '').casefold() not in event.get('title', '').casefold():
             continue
         groups = defaultdict(list)
-        for offer in snapshot.get('offers', []):
+        for offer_index,offer in enumerate(snapshot.get('offers', [])):
             # A missing probability reference does not prevent a price-only pair.
             payload = offer.get('price_payload') or offer.get('calculation_payload')
             record = offer.get('record') or {}
@@ -82,23 +111,30 @@ def read(db, query, *, at, can_continue=None):
                     continue
             payload = dict(payload, sportsbook_event_ids=[scope['event_id']])
             item = dict(payload=payload, record=record, fee_input=offer['fee_input'], sportsbook=False)
-            item['cache_identity'] = hashed([scope['pull_id'], payload, offer['fee_input']])
+            # read_snapshot verifies the immutable canonical evidence hash.
+            # Its original array position identifies the complete source/fee
+            # witness without repeatedly serializing all reference candidates.
+            item['cache_identity'] = hashed([scope['pull_id'],'offer',offer_index])
             groups[payload['arb_key']].append(item)
         for markets in groups.values():
             checkpoint()
             template = markets[0]
             books = []
-            for reference in snapshot.get('references', []):
-                quote = reference.get('facts') or reference
-                if query.get('reference_scope', 'selected') == 'selected' and quote.get('venue') not in REFERENCE_BOOKS:
-                    continue
+            from app.comparison.current_pregame import reference_key
+
+            try:
+                family,_,line = reference_key(template['record'])
+                surface = family,abs(line) if family=='spread' else line
+            except (ValueError,KeyError,TypeError,ArithmeticError):
+                surface = None
+            for reference_index,quote in references_by_surface.get(surface, []):
                 book = book_entry(quote, template, at=at)
                 if book:
                     proof = (book['payload'].get('acquisition') or {}).get('required_inputs', [])
                     if not proof or any((value['attempt_id'],value['receipt_sha256'],stamp(value['received_at'])) not in membership
                                         for value in proof):
                         continue
-                    book['cache_identity'] = hashed([scope['pull_id'], book['payload']])
+                    book['cache_identity'] = hashed([scope['pull_id'],'reference',reference_index,template['cache_identity']])
                     books.append(book)
             candidates = [*markets, *books]
             first = [item for item in candidates if item['payload']['side'] in ('home', 'over')]

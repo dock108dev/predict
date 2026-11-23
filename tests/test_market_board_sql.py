@@ -327,3 +327,23 @@ class MarketBoardSQL(LatestBoardFixture):
                     self.assertEqual(evidence['offers'],[])
                     previous_evidence = market_board.detail(db,market_id=value['id'],pull_id=older)
                     self.assertEqual(previous_evidence['row']['id'],value['id'])
+
+    async def test_history_returns_original_market_identity_before_canonical_link_existed(self):
+        with self.connect() as db:
+            earlier = self.start(db)
+            self.publish(db,earlier,captured_offer(family='moneyline'))
+            source_row = next(value for value in market_board.markets(db,{})['rows'] if value['family']=='moneyline')
+            later = self.start(db)
+            self.publish(db,later,captured_offer(family='moneyline'),canonical_game_id='canonical:established-game')
+            canonical_row = next(value for value in market_board.markets(db,{})['rows'] if value['family']=='moneyline')
+            self.assertNotEqual(source_row['id'],canonical_row['id'])
+            evidence = market_board.detail(db,market_id=canonical_row['id'],pull_id=later)
+            previous = next(value for value in evidence['history'] if value['pull_id']==earlier)
+            self.assertEqual(previous['market_id'],source_row['id'])
+            self.assertEqual(evidence['row']['previous_capture']['market_id'],source_row['id'])
+            original = market_board.detail(db,market_id=previous['market_id'],pull_id=previous['pull_id'])
+            self.assertEqual(original['row']['id'],source_row['id'])
+            self.assertEqual(original['offers'][0]['id'],source_row['headline']['id'])
+            self.assertEqual(original['offers'][0]['revision'],source_row['headline']['revision'])
+            with self.assertRaisesRegex(PublicRequestError,'Unknown market'):
+                market_board.detail(db,market_id=canonical_row['id'],pull_id=earlier)
