@@ -188,3 +188,40 @@ checks still reject wrong-polarity spreads after that broad bucket. An unprofile
 read of the same installed retained population completed in13.422s,64 stored
 pairs,0 provider requests, inside the unchanged30-second arb deadline. Focused
 SQL confirms identical baseline output and skipped unrelated normalization.
+
+
+### Installed result
+
+[Normal CI45231451583](https://github.com/dock108dev/predict/actions/runs/45231451583)
+installed `28a02c8` successfully in78.929 measured seconds (84s complete job).
+Web, collector, archive and database were healthy; installed role image digests
+match that checked release. Final integrated check selection:131 portable tests
++26 subtests and16 disposable PostgreSQL tests +3 subtests, with lint, workflow,
+secret scan and58 maintained-document checks passing. Earlier broader slice
+coverage above remains separate evidence.
+
+Installed public-site review at retained150% zoom confirms:
+- Direct exact positive NCAAB offer, sportsbook evidence with positive filtering,
+  exact captured export/offline reproduction, Back and reload.
+- Indiana State current12:20 PM capture → History → original10:51 AM source-local
+  capture succeeds; reload retains the earlier pull; browser Back restores the
+  canonical current pull. Current negative EVs remain visible.
+- New Mexico State/Ohio future T−10 shows Scheduled and Nov24,10:50 AM Eastern in
+  source rows, exact-line continuity and deeper context, with human selections.
+  No completed scored games shows one concise empty state.
+- Legacy `/odds` resolves to Data and `/arbs` to the paired-comparison view. The
+  unfiltered public pair view loads64 retained comparisons. Illinois State/Santa
+  Clara moneyline shows Novig−138 / ProphetX+156, allocations$59.75/$40.25,
+  $100 committed, Fees OFF and$3.04 minimum modeled profit, plus settlement/fill
+  limitations. FanDuel reference comparison explicitly rejects an executable
+  sportsbook leg/locked-profit claim.
+- Settings shows Running, fees unchecked, Eastern default, Source Available
+  and a distinct valid receipt at12:50:43 PM. Final capacity observation changed
+  normally to91.0 MiB retained,35.4 MiB protected and0.7 MiB unreserved; the
+  unchanged capacity limitation above remains. Stop/source-pause controls and
+  remembered login are preserved; both auth/session file hashes still match.
+
+Future missed/failed/cancelled mutations, exact600s receipt boundary, cross-pull
+rejection, delayed older completion and narrower-scope replacement are proven
+by disposable fixtures/SQL, not by mutating installed evidence or waiting for
+those live states. No new soak or profitability requirement was introduced.

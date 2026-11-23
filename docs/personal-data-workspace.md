@@ -185,5 +185,5 @@ The November 23 snapshot migration linked 43 authentic historical captures witho
 provider requests. The unchanged 128 MiB research-allocation guard refused 11
 additional links; their original checkpoints remain in legacy evidence. At the
 installed inspection, retained bytes plus protected future-capture reservations
-left approximately 0.1 MiB unreserved. New captures can therefore be refused by
+left approximately 0.7 MiB unreserved at the final public-site check. New captures can therefore be refused by
 the existing capacity guard. No cap increase or automatic eviction was applied.
