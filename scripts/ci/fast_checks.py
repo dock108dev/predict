@@ -1,6 +1,7 @@
 """Personal beta data, calculation, checkpoint and deployment checks."""
 
 import argparse
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 import json
 import os
@@ -211,6 +212,48 @@ def changed_paths(root):
     return sorted(set(raw.splitlines()))
 
 
+
+def run_checks(commands, *, root=ROOT):
+    """Pass the serial baseline, then join independent portable/SQL validation.
+
+    Each subprocess retains its own reports. A validation failure never abandons
+    its sibling: both results and elapsed times are collected before returning.
+    """
+    checks = []
+    validation_names = {"portable", "postgres"}
+
+    def measured(item):
+        name, command = item
+        before = time.monotonic()
+        error = None
+        try:
+            code = subprocess.run(command, cwd=root).returncode
+        except (OSError, subprocess.SubprocessError) as exc:
+            code = 1
+            error = str(exc)
+        result = dict(name=name, status="PASS" if code == 0 else "FAIL",
+                      seconds=round(time.monotonic() - before, 3), returncode=code)
+        if error is not None:
+            result["error"] = error
+        return result
+
+    for item in commands:
+        if item[0] in validation_names:
+            continue
+        result = measured(item)
+        checks.append(result)
+        if result["returncode"]:
+            return checks, result["returncode"]
+
+    independent = [item for item in commands if item[0] in validation_names]
+    if independent:
+        with ThreadPoolExecutor(max_workers=len(independent)) as pool:
+            futures = [pool.submit(measured, item) for item in independent]
+            # Keep report order deterministic and await every submitted owner.
+            checks.extend(future.result() for future in futures)
+    return checks, next((row["returncode"] for row in checks if row["returncode"]), 0)
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--plan", action="store_true")
@@ -231,23 +274,10 @@ def main(argv=None):
         elif name == "postgres":
             command[command.index("--report-dir") + 1] = str(reports / "postgres")
     started = time.monotonic()
-    checks = []
-    code = 0
-    for name, command in selected["commands"]:
-        before = time.monotonic()
-        result = subprocess.run(command, cwd=ROOT)
-        checks.append(
-            dict(
-                name=name,
-                status="PASS" if result.returncode == 0 else "FAIL",
-                seconds=round(time.monotonic() - before, 3),
-            )
-        )
-        if result.returncode:
-            code = result.returncode
-            break
+    checks, code = run_checks(selected["commands"], root=ROOT)
     metrics = dict(
         schema=1,
+        execution="serial_baseline_then_joined_parallel_portable_postgres",
         overall="PASS" if code == 0 else "FAIL",
         tested_sha=os.environ.get("GITHUB_SHA"),
         run_id=os.environ.get("GITHUB_RUN_ID"),
@@ -270,6 +300,7 @@ def main(argv=None):
     text += "\n".join(
         f"- {row['name']}: {row['status']} ({row['seconds']}s)" for row in checks
     )
+    text += "\n\nLint, workflow and secret checks pass before portable and PostgreSQL validation run concurrently; both validation processes are joined."
     text += f"\n\nFocused checks took {metrics['seconds']}s. Setup, build, deployment and runner queue are measured separately.\n"
     if selected["notes"]:
         text += "\n" + "\n".join(selected["notes"]) + "\n"
