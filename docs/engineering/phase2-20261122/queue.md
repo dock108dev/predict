@@ -213,3 +213,32 @@ hosted CI closeout were tracked separately and are now superseded by the final
 installed `6ed3211` and successful 102-second required run above.
 Historical observation gaps, finite storage and missing native price history
 remain explicit operating limitations, not fabricated successful coverage.
+
+
+## Owner follow-up: Open game and fee assumption
+
+The original installed single-navigation journey did not catch overlapping reads.
+The owner reported a 429 on Open game: each navigation reread the list and the
+browser retried any token-bearing error, including admission rejection. The new
+controller serializes navigation, reuses its captured list and refreshes only an
+expired snapshot. Regression cases for duplicate reads and 429 retry fail on the
+previous controller and pass on the repair. The unchanged four-slot server limit
+now waits within the existing read deadline rather than rejecting normal bursts.
+
+Default Data now shows trading markets, sportsbook reference coverage and best
+stored EV. A status filter qualifies games before full game context is rendered;
+opening one no longer discards reference or nonpositive observations.
+
+Include fees defaults off, per the owner's later instruction. The durable setting
+retains existing fee code and schedules; zero-fee cashflows and mode revisions are
+captured explicitly. Turning fees on uses the prior fee model. Current working
+calculations are invalidated and queued without acquisition; immutable historical
+checkpoints and their exports are preserved. Missing non-fee inputs remain
+unavailable. NCAAB models and game logs remain deferred.
+
+Focused evidence includes real retained-data Open game, exact inspection and Back
+using one list read; busy/expired/overlapping navigation; four-slot admission;
+zero/nonzero fees, native contract grids, on/off invalidation and offline export
+reproduction. The genuine 6,157-record historical bundle still reproduces both
+checkpoints unchanged. Hosted deployment and final installed follow-up evidence
+are reported with the follow-up commit/run, separately from these local checks.

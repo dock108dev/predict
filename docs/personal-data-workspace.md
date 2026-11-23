@@ -16,6 +16,13 @@ Open a game for books, markets, main/alternate lines and actual source/receipt
 clocks. Latest stored observations and frozen first-observation/T−10 checkpoints
 are separate. A frozen game remains reachable after current rows expire.
 
+The starting table separates trading markets from sportsbook reference coverage
+and shows best stored EV and calculation counts. Source IDs are inside the game
+inspector. Source/book/market/age filters are expandable. A calculation-status
+filter selects qualifying games; opening a game includes its other calculation
+statuses and reference prices under the remaining filters. Open game replaces
+the list with the game inspector, and Back restores the selected list context.
+
 Inspect an exact observation for original price, exact line, source identity,
 probability reference, fees/cashflows, EV and underlying evidence. Missing inputs
 stay unavailable and received prices remain visible. Where the exact retained
@@ -28,7 +35,7 @@ Trading is prediction-market only: market-to-book EV/comparisons and
 market-to-market comparisons. Sportsbook prices are reference evidence, not
 trading EV results. Sportsbook-to-sportsbook and book-to-market result views are
 excluded. Positive EV is a calculation filter for market offers. Arbitrage is a Data view of the existing
-fee-qualified active pregame pair reader; unsupported date/provider/EV-status
+active pregame pair reader under the captured fee mode; unsupported date/provider/EV-status
 filters are disabled there. Its bounded illustrative pair arithmetic is computed
 from stored inputs, with no provider request or background calculation job. A
 changed pair witness requires an explicit new selection.
@@ -60,6 +67,22 @@ unresolved holds, source state and finite storage. It retains Stop/Resume, sourc
 pauses and essential discovery configuration. Control eligibility still comes
 from the existing authenticated backend and its recovery/accounting guards.
 Detailed operating evidence is expandable. Display preferences remain local.
+
+### Fee assumption
+
+**Include fees is off by default.** New prediction-market calculations assume
+zero fees, including entry fees, settlement commissions and reserves. Turn the
+setting on to use the existing fee models and their applicability checks. The
+fee implementations and configured schedules remain intact.
+
+The shared PostgreSQL setting is `public_fee_schedule['predict:fee_mode']`.
+Changing it invalidates working calculations and queues recalculation from
+stored prices, with no provider request. Prices, source clocks, quantity grids,
+reference requirements and settlement checks still apply. Calculation payloads,
+checkpoint evidence and exports carry their actual fee-mode revision. Frozen
+history remains reproducible under its original assumption; each new checkpoint
+captures the mode in effect when it is computed. Mixed fee modes cannot form one
+arbitrage result. The Settings switch does not alter journal or accounting facts.
 
 Discovery stays at :20/:50 under the existing configuration: one initial full
 research snapshot, scheduled T−10, and bounded postgame checks. Browsing does not

@@ -38,11 +38,16 @@ DOMAINS = {
     },
     "fees": {
         "tests/test_fee_pricing.py",
+        "tests/test_fee_mode.py",
+        "tests/test_fee_mode_experiments.py",
         "tests/test_fees.py",
         "tests/test_comparison_cashflows.py",
     },
     "dashboard": {
         "tests/test_experiment_api.py",
+        "tests/test_data_workspace_client.py",
+        "tests/test_catalog_admission.py",
+        "tests/test_workspace_fee_mode_api.py",
         "tests/test_workspace_capture_client.py",
         "tests/test_workspace_sessions.py",
         "tests/test_workspace_settings_accounting.py",
@@ -99,6 +104,10 @@ def plan(root, paths):
             )
         if path in ("app/storage/research_catalog.py", "app/dashboard/research_api.py"):
             sql.update({"tests/test_data_workspace_sql.py", "tests/test_research_catalog_sql.py"})
+        if path in ("app/comparison/fee_mode.py", "app/comparison/current_pregame.py", "app/storage/current_pregame.py", "app/storage/current_pregame_read.py"):
+            sql.update({"tests/test_fee_mode_sql.py", "tests/test_fee_pricing_sql.py"})
+        if path in ("app/comparison/fee_mode.py", "app/research/experiment.py"):
+            sql.add("tests/test_ev_experiment_sql.py::ExperimentSQL::test_fee_mode_transition_appends_policy_without_rewriting_old_evidence")
         if path in ("app/research/experiment.py", "app/collection/experiment_acquisition.py", "app/comparison/reference_scope.py"):
             sql.add("tests/test_ev_experiment_sql.py::ExperimentSQL::test_reference_scope_transition_preserves_old_policy_and_declared_checkpoint_requests")
         if path == "app/dashboard/workspace_routes.py" or path.startswith(

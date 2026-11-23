@@ -47,10 +47,12 @@ function table(root,columns,rows){const scroll=node('div',undefined,'catalog-scr
 function stack(...values){const root=node('div');for(const [index,value]of values.entries())root.append(node(index===0?'strong':'small',known(value)));return root;}
 async function get(url){const response=await fetch(url,{cache:'no-store'});const value=await response.json();if(!response.ok)throw Error(value?.error||value?.message||`Stored experiment read failed (${response.status})`);return value;}
 
+const feeLabel=mode=>mode?(mode.enabled?'Fees enabled':'0 fees assumed'):'Original captured fee policy';
 function checkpointCell(value){
  if(!value)return stack('Not observed','EV and probability unavailable');
  const root=stack(`${known(value.price)} ${known(value.price_units)}`,`Screening EV: ${percent(value.screen?.ev)}`,`Screen probability: ${probability(value.screen?.probability)}`,`Coherent EV: ${percent(value.coherent?.ev)}`,`Coherent probability: ${probability(value.coherent?.probability)}`);
  root.title=`Exact screening EV: ${known(value.screen?.ev)}; exact coherent EV: ${known(value.coherent?.ev)}`;
+ if(value.fee_mode)root.append(node('small',feeLabel(value.fee_mode)));
  if(value.reason||value.screen?.reason)root.append(node('small',value.reason||value.screen.reason));
  root.append(node('small',value.available===true?'Source available':value.available===false?'Source unavailable':'Source availability unknown'));
  return root;
@@ -110,6 +112,7 @@ function checkpointTiming(root,name,checkpoint){
  const panel=section(root,name);
  if(!value){panel.append(node('p','Checkpoint not observed. No later inputs are substituted.'));return;}
  grid(panel,{State:value.state||value.status,'Target time':value.target_at,'Window opens':value.window_start,'Window closes':value.deadline_at||value.window_end,'Actual capture time':value.captured_at||value.actual_at,'First observed by this experiment':value.experiment_first_observed_at||value.observed_at,'Discovery kind':value.discovery_kind,'Seconds remaining until start':value.seconds_to_start,'Minutes remaining at capture':number(value.seconds_to_start)===null?null:(number(value.seconds_to_start)/60).toFixed(2),'Receipt time':value.received_at,'Knowledge cutoff':value.known_at,'Persistence time':checkpoint.recorded_at||value.persisted_at,Reason:value.reason});
+ const mode=value.fee_mode||snapshot(checkpoint)?.fee_mode;if(mode)grid(panel,{'Captured fee mode':feeLabel(mode),'Fee assumption':mode.assumption});
  const coverage=value.coverage||snapshot(checkpoint)?.coverage;
  if(coverage){const list=items=>Array.isArray(items)?items.join(', ')||'None recorded':null;
   grid(panel,{'Requested bookmakers':list(coverage.requested?.bookmakers),'Received bookmakers':list(coverage.received?.bookmakers),'Missing bookmakers':list(coverage.missing?.bookmakers),'Requested odd IDs':list(coverage.requested?.odd_ids),'Received odd IDs':list(coverage.received?.odd_ids),'Missing odd IDs':list(coverage.missing?.odd_ids),'Alternate lines requested':coverage.requested?.include_alt_lines,'Received quote count':coverage.received?.quotes,'Supported offer quote count':coverage.supported?.offer_quotes,'Supported reference quote count':coverage.supported?.reference_quotes,'Incomplete declared scope':coverage.incomplete,'Complete market established':coverage.complete_market,'Coverage scope':coverage.scope});
@@ -122,7 +125,7 @@ function measurementEvidence(root,name,value,offer){
  if(!value){panel.append(node('p','Not observed. Price, probability and EV remain unavailable.'));return;}
  grid(panel,{'Original offered price':value.price,'Price units':value.price_units,'Source available':value.available,'Screening probability':value.screen?.probability,'Screening exact EV':value.screen?.ev,'Screening policy':value.screen?.policy,'Screening reference book':value.screen?.reference_book,'Screening reason':value.screen?.reason,'Coherent probability':value.coherent?.probability,'Coherent exact EV':value.coherent?.ev,'Coherent policy':value.coherent?.policy,'Coherent reference book':value.coherent?.reference_book,'Coherent reason':value.coherent?.reason,'Main / alternate role':role(value.main),'Main-role authority':value.main?.authority,'Native book main authority':value.main?.native_book_main_authority,'Source time':value.times?.source_at,'Receipt time':value.times?.received_at,'Calculation time':value.times?.calculated_at,'Knowledge time':value.times?.known_at,'Persistence time':value.times?.persisted_at,'Source age at capture (seconds)':value.source_age_seconds,'Calculation version':value.calculation_version,'Missing-data reason':value.reason});
  const calculation=offer?.calculation_payload,fee=calculation?.fee;
- grid(panel,{'Committed capital (USD)':fee?.committed_usd,'Win-state net receipt (USD)':fee?.cashflows?.win?.net_receipt_usd,'Loss-state net receipt (USD)':fee?.cashflows?.loss?.net_receipt_usd,'Fee applicability':offer?.fee_input?.classification||fee?.reason});
+ grid(panel,{'Fee mode':feeLabel(calculation?.fee_mode||offer?.fee_input?.fee_mode),'Committed capital (USD)':fee?.committed_usd,'Win-state net receipt (USD)':fee?.cashflows?.win?.net_receipt_usd,'Loss-state net receipt (USD)':fee?.cashflows?.loss?.net_receipt_usd,'Fee applicability':offer?.fee_input?.classification||fee?.reason});
  evidence(panel,'Original normalized input and identity mapping',offer?.record);
  evidence(panel,'Screening reference inputs and recorded pair',calculation?.reference||offer?.screen_reference);
  evidence(panel,'Coherent reference inputs and recorded pair',calculation?.coherent_probability||offer?.coherent_reference);

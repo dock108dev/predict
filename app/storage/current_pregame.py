@@ -8,6 +8,7 @@ from time import monotonic
 from psycopg.types.json import Jsonb
 
 from app.comparison import current_pregame as math
+from app.comparison import fee_mode
 from app.comparison.game_phase import scheduled_phase, sgo_event_status, sporting_phase
 from app.comparison.public_sportsbook_estimate import signature
 from app.comparison.snapshot_fee_outcome import outcome as fee_outcome, reviews
@@ -80,13 +81,19 @@ def configured_routes(db):
 
 class CalculationContext:
     def __init__(self, db, at):
+        self.fee_mode = fee_mode.read(db)
+        self.price_routes = configured_routes(db)
+        self.reviews, self.products, self.fee_rules = {}, {}, {}
+        self.prophetx = None
+        self.account = self.account_error = self.account_revision = None
+        if not self.fee_mode['enabled']:
+            return
         self.reviews = reviews(at)
         self.products = product_schedules.read_all(db)
         self.prophetx = schedule_lifecycle.read(db)
         from app.fees import pricing
 
         self.fee_rules = pricing.read(db)
-        self.price_routes = configured_routes(db)
         from app.comparison.snapshot_fee_scope import ACCOUNT_PATH, kalshi_account
 
         self.account = None
@@ -111,6 +118,13 @@ class CalculationContext:
                 self.account_error = str(exc)
 
     def fee(self, record, at):
+        if not self.fee_mode['enabled']:
+            return fee_mode.zero_fee(record, self.fee_mode)
+        value = self._included_fee(record, at)
+        return dict(value, fee_mode=self.fee_mode,
+            evidence=dict(value.get('evidence') or {}, fee_mode=self.fee_mode))
+
+    def _included_fee(self, record, at):
         q, market = record["quote"], record["market_identity"]
         if reason := provider_venue_fee_reason(record):
             return dict(available=False, reason=reason, evidence=dict(
@@ -342,6 +356,7 @@ def input_identity(record, reference, context, fee=None):
             fee,
             fee_policy,
             context.account_revision if venue == "kalshi" else None,
+            context.fee_mode,
         ]
     )
 
@@ -714,13 +729,15 @@ def process(db, *, limit=32, keys=None, at=None, can_continue=None):
             try:
                 with db.transaction():
                     effective_at = at or utc()
+                    captured_mode = fee_mode.read(db)
                     registry = tuple(
                         (r["venue"], r["state"])
                         for r in db.execute(
                             "SELECT venue,state FROM public_fee_schedule ORDER BY venue"
                         )
-                    )
-                    current_identity = hashed([registry, account_identity()])
+                    ) if captured_mode['enabled'] else None
+                    current_identity = hashed([registry,
+                        account_identity() if captured_mode['enabled'] else None, captured_mode])
                     if context is None or current_identity != registry_identity:
                         context = CalculationContext(db, effective_at)
                         registry_identity = current_identity

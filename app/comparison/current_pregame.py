@@ -17,8 +17,9 @@ from .sgo_reference import (
 )
 from .snapshot_fee_scope import applicability
 from .trade_preview import order_step
+from . import fee_mode
 
-VERSION = "predict-current-pregame-7"
+VERSION = "predict-current-pregame-8"
 REFERENCE_POLICY = "lowest-no-vig-two-trusted-books-2"
 COHERENT_POLICY = "first-complete-trusted-pair-proportional-1"
 EXPANSION_POLICY = "same-book-betonline-first-1"
@@ -350,7 +351,8 @@ def calculate(record, ref, fee, *, at, game_key, amount=COMPARISON_USD):
     )
     if not stake:
         terms["asks"] = [dict(price=wire(cost), quantity=wire(amount / cost))]
-    fees, evidence, _ = retail_order(row, terms, cost, fee)
+    fees, evidence, _ = (fee_mode.zero_order(fee) if fee_mode.assumed_zero(fee)
+        else retail_order(row, terms, cost, fee))
     (committed, legs, wager, entry, reserve, cash, trace), reason = posted_fill(
         terms,
         amount,
@@ -435,6 +437,7 @@ def calculate(record, ref, fee, *, at, game_key, amount=COMPARISON_USD):
             quantity=None if stake else wire(sum(quantity for _, quantity in legs)),
             quantity_increment=wire(step),
         ),
+        fee_mode=fee_mode.mode_for_fee(fee),
         raw=dict(
             posted_decimal=wire(1 / cost),
             after_fee_decimal=wire(after),

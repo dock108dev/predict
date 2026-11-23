@@ -115,6 +115,28 @@ class ExperimentSQL(LatestBoardFixture):
             self.assertEqual(requests['old-pending'], list(LEGACY_BOOKS))
             self.assertEqual(requests['new-pending'], list(REQUEST_BOOKS))
 
+    async def test_fee_mode_transition_appends_policy_without_rewriting_old_evidence(self):
+        from app.comparison.fee_mode import state
+        with self.connect() as db:
+            with patch.object(owner, 'read_fee_mode', return_value=state(True, 1)):
+                old_game, _ = self.setup_game(db)
+                previous = owner.activate(db)
+            original = {row['id']:row['payload'] for row in db.execute('SELECT id,payload FROM ev_experiment_record')}
+            old_revision = owner._revision(db, db.execute('SELECT * FROM ev_experiment_game WHERE id=%s', (old_game,)).fetchone())
+            with patch.object(owner, 'read_fee_mode', return_value=state(False, 2)):
+                current = owner.activate(db)
+                self.assertEqual(owner.activate(db)['id'], current['id'])
+            self.assertNotEqual(current['id'], previous['id'])
+            self.assertFalse(current['fee_mode']['enabled'])
+            self.assertEqual(current['activated_at'], previous['activated_at'])
+            for identity,payload in original.items():
+                self.assertEqual(payload, db.execute('SELECT payload FROM ev_experiment_record WHERE id=%s', (identity,)).fetchone()['payload'])
+            detail = owner.detail(db, old_game, revision=old_revision)
+            self.assertTrue(detail['policy']['fee_mode']['enabled'])
+            bundle = owner.export_game(db, old_game, revision=old_revision)
+            with patch.object(owner, 'read_fee_mode', side_effect=AssertionError('offline settings read')):
+                self.assertEqual(owner.reproduce_export(bundle)['provider_requests'], 0)
+
     async def test_both_checkpoints_share_dependencies_and_export_reproduces_offline(self):
         with self.connect() as db:
             game_id,event=self.setup_game(db)

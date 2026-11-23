@@ -47,6 +47,9 @@ class FeePricingSQL(LatestBoardFixture):
                 "TRUNCATE current_event,sgo_event_evidence,sgo_quote_revision,current_pregame_work CASCADE"
             )
             db.execute("DELETE FROM public_fee_schedule")
+            # These scenarios verify nonzero fees and must explicitly opt in.
+            from app.comparison import fee_mode
+            fee_mode.set_enabled(db, True)
 
     async def test_research_contract_quantities_and_entry_fees_are_amount_specific(
         self,

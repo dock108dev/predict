@@ -67,6 +67,101 @@ class DataWorkspaceSQL(PregameFixture):
         finally:
             reads.close()
 
+    async def test_game_summary_counts_only_matching_trading_rows_and_scales_ev_once(self):
+        data = page()
+        for odd in data['data'][0]['odds'].values():
+            for book in ('kalshi', 'novig'):
+                odd['byBookmaker'][book] = deepcopy(odd['byBookmaker']['prophetx'])
+        with self.connect() as db:
+            self.ingest_linked(db, data)
+            self.process(db)
+            targets = list(db.execute('SELECT contract_id,payload FROM current_pregame_calculation ORDER BY contract_id'))
+            self.assertEqual(len(targets), 4)
+            template = next(row['payload'] for row in targets if row['payload'])
+            for target, ratio in zip(targets, ('1/25', '-1/50', '0', None)):
+                payload = deepcopy(template) if ratio is not None else None
+                if payload:
+                    payload['raw']['net_ev'] = ratio
+                from fractions import Fraction
+                db.execute('''UPDATE current_pregame_calculation SET payload=%s,reason=%s,net_ev=%s,
+                    opportunity_score=%s WHERE contract_id=%s''',
+                    (Jsonb(payload) if payload else None, 'fee_unknown' if payload is None else None,
+                     float(Fraction(ratio)) if ratio is not None else None,
+                     1 if ratio is not None else None, target['contract_id']))
+            with patch.object(experiment, '_admit', return_value=None):
+                experiment.discover(db, [dict(provider='sportsgameodds', source_event_id='event',
+                    event_id='normalized-fixture', league='NBA', title='Milwaukee Bucks at Orlando Magic',
+                    starts_at='2026-11-17T21:00:00Z', home='home', away='away', status={})], at=stamp(AT))
+        reads = CatalogReads(self.connect)
+        try:
+            complete = reads.games({})['rows'][0]
+            self.assertEqual(complete['records'], 10)
+            self.assertEqual(complete['calculation_counts'], dict(positive=1, negative=1, zero=1,
+                unavailable=3, reference_only=4))
+            self.assertEqual(complete['best_net_ev_percent'], '4')
+            self.assertEqual(complete['trading_book_count'], 3)
+            self.assertEqual(complete['reference_book_count'], 2)
+            self.assertEqual(set(complete['reference_books']), {'fanduel', 'draftkings'})
+            positive_frame = reads.games(dict(calculation_status='positive'))
+            positive = positive_frame['rows'][0]
+            self.assertEqual(positive['records'], 10)
+            self.assertEqual(positive['calculation_counts'], complete['calculation_counts'])
+            self.assertEqual(positive['best_net_ev_percent'], '4')
+            references = reads.games(dict(calculation_status='reference_only', original_bookmaker_id='fanduel'))['rows'][0]
+            self.assertEqual(references['calculation_counts'], dict(positive=0, negative=0, zero=0,
+                unavailable=0, reference_only=2))
+            self.assertIsNone(references['best_net_ev_percent'])
+            self.assertEqual(references['trading_books'], [])
+            game_query = dict(token=positive_frame['token'], calculation_status='positive', game_id=positive['id'], limit='100')
+            context = reads.read(game_query)
+            self.assertEqual(context['total'], 10)
+            negative = next(row for row in context['rows'] if row['calculation']['status']=='negative')
+            exact_query = dict(token=positive_frame['token'], id=negative['id'], revision=negative['revision'])
+            from app.dashboard.local_security import PublicRequestError
+            with self.assertRaisesRegex(PublicRequestError, 'Unknown captured catalog record'):
+                reads.detail(exact_query)
+            bound_query = dict(exact_query, game_id=positive['id'])
+            self.assertEqual(reads.detail(bound_query)['calculation']['status'], 'negative')
+            app = web.Application(middlewares=[dashboard_guard(None, logger=__name__)])
+            with patch('app.dashboard.research_api.CatalogReads', return_value=reads):
+                mount(app)
+                async with TestClient(TestServer(app)) as client:
+                    response = await client.get('/api/research/export', params=bound_query)
+                    self.assertEqual(response.status, 200, await response.text())
+                    exported = await response.json()
+                    self.assertEqual(exported['calculation']['status'], 'negative')
+                    self.assertEqual(exported['game_id'], positive['id'])
+        finally:
+            reads.close()
+
+    async def test_expired_game_lease_returns_422_and_a_fresh_snapshot_recovers_the_selection(self):
+        from time import monotonic
+        with self.connect() as db:
+            self.ingest_linked(db, page())
+            self.process(db)
+            before = list(db.execute('SELECT * FROM current_pregame_calculation ORDER BY contract_id'))
+        reads = CatalogReads(self.connect)
+        app = web.Application(middlewares=[dashboard_guard(None, logger=__name__)])
+        with patch('app.dashboard.research_api.CatalogReads', return_value=reads):
+            mount(app)
+            async with TestClient(TestServer(app)) as client:
+                captured = await (await client.get('/api/research/games')).json()
+                game = captured['rows'][0]
+                reads.frames[captured['token']]['expires'] = monotonic()-1
+                response = await client.get('/api/research/game', params=dict(token=captured['token'], game_id=game['id']))
+                self.assertEqual(response.status, 422)
+                self.assertEqual((await response.json())['error'], 'Catalog snapshot expired or filters changed; refresh data.')
+                renewed = await (await client.get('/api/research/games')).json()
+                self.assertNotEqual(renewed['token'], captured['token'])
+                response = await client.get('/api/research/game', params=dict(token=renewed['token'], game_id=game['id']))
+                recovered = await response.json()
+                self.assertEqual(response.status, 200, recovered)
+                self.assertEqual(recovered['game']['id'], game['id'])
+                self.assertTrue(recovered['rows'])
+                self.assertEqual((recovered['provider_requests'], recovered['scheduled_calculations']), (0, 0))
+        with self.connect() as db:
+            self.assertEqual(before, list(db.execute('SELECT * FROM current_pregame_calculation ORDER BY contract_id')))
+
     async def test_similar_names_without_established_identity_remain_separate_source_events(self):
         data = page()
         second = deepcopy(data['data'][0])
@@ -153,7 +248,10 @@ class DataWorkspaceSQL(PregameFixture):
                 records = await response.json()
                 self.assertEqual(response.status, 200, records)
                 self.assertTrue(records['rows'])
-                self.assertTrue(all(row['calculation']['net_ev_percent'] is None for row in records['rows']))
+                unavailable = [row for row in records['rows'] if row['calculation']['status']=='unavailable']
+                self.assertTrue(unavailable)
+                self.assertTrue(all(row['calculation']['net_ev_percent'] is None for row in unavailable))
+                self.assertTrue(any(row['calculation']['status']=='reference_only' for row in records['rows']))
                 self.assertTrue(all(row['price'] is not None for row in records['rows']))
                 self.assertEqual((await client.get('/api/research/games?date=2026-99-99')).status, 422)
                 self.assertEqual((await client.get('/api/research/game')).status, 422)
@@ -286,6 +384,40 @@ class DataWorkspaceSQL(PregameFixture):
             self.assertTrue(reads.read(dict(token=original['token'], game_id=selected['id']))['rows'])
             fresh = reads.games({})
             self.assertNotEqual(fresh['rows'][0]['id'], selected['id'])
+        finally:
+            reads.close()
+
+
+    @patch('app.storage.current_pregame.configured_routes', return_value={venue: 'sportsgameodds' for venue in ('kalshi','polymarket_us','novig','prophetx')})
+    async def test_zero_fee_assumption_exposes_polymarket_math_without_claiming_native_venue_identity(self, _routes):
+        from fractions import Fraction
+        from app.comparison import fee_mode
+        data = page()
+        for odd in data['data'][0]['odds'].values():
+            odd['byBookmaker']['polymarket'] = deepcopy(odd['byBookmaker']['fanduel'])
+        with self.connect() as db:
+            self.ingest_linked(db, data)
+            fee_mode.set_enabled(db, False)
+            self.process(db)
+            from app.storage.current_pregame import read as active_read
+            active = active_read(db, dict(venue='polymarket_us', browse='1', lines='all'), at=AT)
+            self.assertTrue(active['rows'], list(db.execute("SELECT venue,reason,main,payload->'fee_mode' mode FROM current_pregame_calculation")))
+            self.assertTrue(all(row['fee_mode']['enabled'] is False for row in active['rows']))
+        reads = CatalogReads(self.connect)
+        try:
+            frame = reads.read(dict(provider='sportsgameodds', original_bookmaker_id='polymarket', limit='100'))
+            self.assertFalse(frame['fee_mode']['enabled'])
+            numeric = [row for row in frame['rows'] if row['calculation']['net_ev_percent'] is not None]
+            self.assertTrue(numeric)
+            for row in numeric:
+                self.assertEqual(row['venue_equivalence'], 'unestablished')
+                self.assertFalse(row['fee_mode']['enabled'])
+                exact = reads.detail(dict(token=frame['token'], id=row['id'], revision=row['revision']))
+                self.assertFalse(exact['calculation_payload']['fee_mode']['enabled'])
+                self.assertEqual(Fraction(exact['calculation_payload']['fee']['entry_usd']), 0)
+                self.assertTrue(all(Fraction(state['total_fee_usd']) == 0 for state in
+                    exact['calculation_payload']['fee']['cashflows'].values()))
+            self.assertEqual(frame['provider_requests'], 0)
         finally:
             reads.close()
 

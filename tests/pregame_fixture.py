@@ -75,6 +75,10 @@ class PregameFixture(LatestBoardFixture):
             schedule_lifecycle.write(
                 db, await asyncio.to_thread(attempt, approved, at=stamp(AT))
             )
+            # Historical fee-policy scenarios explicitly exercise the opt-in
+            # model. Separate fee-mode tests remove this row to prove default OFF.
+            from app.comparison import fee_mode
+            fee_mode.set_enabled(db, True)
 
     def ingest(self, db, data):
         parsed = parse(data)

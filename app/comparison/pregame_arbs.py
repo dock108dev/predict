@@ -7,8 +7,17 @@ from app.comparison.cashflows import exact_wire as wire
 from app.comparison.pregame_valuation import decimal_display
 from app.comparison.sgo_reference import OPPOSITE
 from app.storage.store import hashed
+from app.comparison.fee_mode import mode_for_fee
 
 BUDGET = F(100)
+
+
+def _fee_mode(entry):
+    fee = entry.get("fee_input") or {}
+    explicit = fee.get("fee_mode") or (fee.get("evidence") or {}).get("fee_mode")
+    if explicit is not None:
+        return mode_for_fee(fee)
+    return entry["payload"].get("fee_mode") or mode_for_fee(fee)
 
 
 def reprice(entry, amount, *, at):
@@ -17,7 +26,7 @@ def reprice(entry, amount, *, at):
     # Copy mutable cashflows and presentation maps, retaining shared immutable
     # source/fee evidence instead of deep-copying it at every solver sample.
     cache = entry.setdefault("_reprice_cache", {})
-    key = (at, amount)
+    key = (at, amount, hashed(_fee_mode(entry)))
     if key not in cache:
         if len(cache) >= 256:
             cache.clear()
@@ -84,6 +93,12 @@ def evaluate(left, right, *, at, budget=BUDGET, positive_only=True):
     if budget <= 0 or (budget * 100).denominator != 1:
         raise ValueError("Invalid cash budget")
     a, b = left["payload"], right["payload"]
+    modes = [_fee_mode(entry) for entry in (left, right) if not entry.get("sportsbook")]
+    # A fee toggle cannot combine one leg's old charged cashflows with the
+    # other leg's new zero-fee model. Absent markers retain legacy fees-on.
+    if len({mode.get("enabled") if mode else True for mode in modes}) > 1:
+        return None
+    captured_mode = next((mode for mode in modes if mode is not None), None)
     if (
         a["venue"] == b["venue"]
         or a["arb_key"] != b["arb_key"]
@@ -166,7 +181,7 @@ def evaluate(left, right, *, at, budget=BUDGET, positive_only=True):
         if any(e.get("sportsbook") for e in (left, right))
         else "market_market"
     )
-    return dict(
+    result = dict(
         id=hashed(sorted([a["id"], b["id"]])),
         game_key=a["game_key"],
         game=a["game"],
@@ -189,3 +204,6 @@ def evaluate(left, right, *, at, budget=BUDGET, positive_only=True):
         settlement_note="Matching full-game scoring assumed. Pushes, ties, voids and exceptional settlements are not covered.",
         liquidity_note="Instantly fillable size is unknown. Verify both official order books; this allocation is illustrative.",
     )
+    if captured_mode is not None:
+        result["fee_mode"] = deepcopy(captured_mode)
+    return result

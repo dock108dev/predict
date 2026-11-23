@@ -113,7 +113,7 @@ def _read(db, query, *, at=None, clock, configured_routes):
         "e.scheduled_start::timestamptz>%s",
         # Refuse an older writer's native-US fee assumption immediately, before
         # collector recovery replaces the generated row. Raw catalog stays open.
-        "NOT (e.provider='sportsgameodds' AND p.venue='polymarket_us')",
+        "(NOT (e.provider='sportsgameodds' AND p.venue='polymarket_us') OR p.payload#>>'{fee_mode,enabled}'='false')",
         """CASE WHEN e.provider='sportsgameodds'
             AND o.price_units IN ('american_odds','decimal_odds')
             AND c.facts#>>'{market_identity,family}' IN ('spread','total')

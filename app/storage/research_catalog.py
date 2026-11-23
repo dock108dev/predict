@@ -27,16 +27,19 @@ SELECT 'sgo:'||q.id AS id,'sgo'::text kind,'sportsgameodds'::text provider,
  concat(q.facts#>>'{teams,away,name}',' at ',q.facts#>>'{teams,home,name}') title,
  (q.facts->>'received_at')::timestamptz received_at,q.facts->>'source_at' source_at,
  q.id source_id,q.revision source_revision,linked.contract_id,
- CASE WHEN q.bookmaker_id='polymarket' THEN 'provider_venue_fee_applicability_unestablished'
+ CASE WHEN q.bookmaker_id='polymarket' AND COALESCE(linked.fees_enabled,'true')<>'false' THEN 'provider_venue_fee_applicability_unestablished'
   ELSE linked.reason END reason,
- CASE WHEN q.bookmaker_id='polymarket' THEN NULL ELSE linked.net_ev END net_ev,
+ CASE WHEN q.bookmaker_id='polymarket' AND COALESCE(linked.fees_enabled,'true')<>'false' THEN NULL ELSE linked.net_ev END net_ev,
  linked.input_revision calculation_revision,(q.facts->>'starts_at')::timestamptz start_at
 FROM sgo_quote_revision q
 LEFT JOIN (
  SELECT DISTINCT ON (o.sgo_quote_id,o.sgo_quote_revision)
-  o.sgo_quote_id,o.sgo_quote_revision,c.id contract_id,k.reason,k.net_ev,k.input_revision
+  o.sgo_quote_id,o.sgo_quote_revision,c.id contract_id,k.reason,k.net_ev,k.input_revision,
+  COALESCE(k.payload#>>'{fee_mode,enabled}',p.payload#>>'{fee_mode,enabled}',
+    p.fee_input#>>'{fee_mode,enabled}') fees_enabled
  FROM current_offer_storage o JOIN current_contract_storage c ON c.id=o.contract_id
  LEFT JOIN current_pregame_calculation k ON k.contract_id=c.id
+ LEFT JOIN current_pregame_price p ON p.contract_id=c.id
  WHERE o.sgo_quote_id IS NOT NULL
  ORDER BY o.sgo_quote_id,o.sgo_quote_revision,c.active DESC,c.id
 ) linked ON (linked.sgo_quote_id,linked.sgo_quote_revision)=(q.id,q.revision)
@@ -47,13 +50,14 @@ SELECT 'offer:'||c.id,'offer',e.provider,
  c.venue,e.native_event_id,c.native_market_id,e.competition,
  c.facts#>>'{market_identity,family}',c.facts#>>'{market_identity,period}',
  e.facts->>'title',o.received_at::timestamptz,o.source_at,c.id,o.revision,c.id,
- CASE WHEN e.provider='sportsgameodds' AND c.venue='polymarket_us'
+ CASE WHEN e.provider='sportsgameodds' AND c.venue='polymarket_us' AND COALESCE(k.payload#>>'{fee_mode,enabled}',p.payload#>>'{fee_mode,enabled}',p.fee_input#>>'{fee_mode,enabled}','true')<>'false'
   THEN 'provider_venue_fee_applicability_unestablished' ELSE k.reason END,
- CASE WHEN e.provider='sportsgameodds' AND c.venue='polymarket_us' THEN NULL ELSE k.net_ev END,
+ CASE WHEN e.provider='sportsgameodds' AND c.venue='polymarket_us' AND COALESCE(k.payload#>>'{fee_mode,enabled}',p.payload#>>'{fee_mode,enabled}',p.fee_input#>>'{fee_mode,enabled}','true')<>'false' THEN NULL ELSE k.net_ev END,
  k.input_revision,e.scheduled_start::timestamptz
 FROM current_contract_storage c JOIN current_event e ON e.id=c.event_id
 JOIN current_offer_storage o ON o.contract_id=c.id
 LEFT JOIN current_pregame_calculation k ON k.contract_id=c.id
+LEFT JOIN current_pregame_price p ON p.contract_id=c.id
 WHERE e.provider<>'sportsgameodds' OR o.sgo_quote_id IS NULL
 UNION ALL
 SELECT 'raw:'||h.kind||':'||h.venue||':'||h.sport||':'||h.event_id||':'||h.market_id,
@@ -172,12 +176,30 @@ def counts(db, filters):
 
 
 def _grouped_games(filters):
-    clause, args = selection(filters)
-    return """WITH selected AS (SELECT * FROM (""" + GAME_POPULATION + ") population" + clause + """),
+    context_filters = dict(filters)
+    calculation_status = context_filters.pop('calculation_status', None)
+    clause, args = selection(context_filters)
+    qualification = ''
+    if calculation_status:
+        qualification = ' WHERE game_id IN (SELECT game_id FROM scoped WHERE is_observation AND trading_status=%s)'
+        args.append(calculation_status)
+    trading_ids = ','.join("'" + venue + "'" for venue in (*TRADING_VENUES, *HISTORICAL_TRADING_BOOKS))
+    return """WITH scoped AS (SELECT *,""" + STATUS + " AS trading_status FROM (" + GAME_POPULATION + ") population" + clause + "), selected AS (SELECT * FROM scoped" + qualification + """),
       games AS (SELECT game_id id,min(title) title,min(sport) sport,min(game_start_at) start_at,
         count(*) FILTER(WHERE is_observation) records,
+        jsonb_build_object(
+          'positive',count(*) FILTER(WHERE is_observation AND trading_status='positive'),
+          'negative',count(*) FILTER(WHERE is_observation AND trading_status='negative'),
+          'zero',count(*) FILTER(WHERE is_observation AND trading_status='zero'),
+          'unavailable',count(*) FILTER(WHERE is_observation AND trading_status='unavailable'),
+          'reference_only',count(*) FILTER(WHERE is_observation AND trading_status='reference_only')) calculation_counts,
+        max(net_ev) FILTER(WHERE is_observation AND trading_status IN ('positive','negative','zero')) best_net_ev,
         array_agg(DISTINCT original_bookmaker_id ORDER BY original_bookmaker_id)
           FILTER(WHERE original_bookmaker_id IS NOT NULL) books,
+        array_agg(DISTINCT original_bookmaker_id ORDER BY original_bookmaker_id)
+          FILTER(WHERE is_observation AND original_bookmaker_id IS NOT NULL AND venue IN (""" + trading_ids + """)) trading_books,
+        array_agg(DISTINCT original_bookmaker_id ORDER BY original_bookmaker_id)
+          FILTER(WHERE is_observation AND original_bookmaker_id IS NOT NULL AND venue NOT IN (""" + trading_ids + """)) reference_books,
         array_agg(DISTINCT family ORDER BY family) FILTER(WHERE family IS NOT NULL) markets,
         array_agg(DISTINCT provider ORDER BY provider) providers,
         jsonb_agg(DISTINCT jsonb_build_object('provider',provider,'event_id',event_id)) source_events,
@@ -199,6 +221,13 @@ def games(db, filters, *, offset=0, limit=50):
     for row in rows:
         row['identity_status'] = 'canonical' if row['id'].startswith('canonical:') else 'source_local'
         row['books'] = row['books'] or []
+        row['trading_books'] = row['trading_books'] or []
+        row['reference_books'] = row['reference_books'] or []
+        row['trading_book_count'] = len(row['trading_books'])
+        row['reference_book_count'] = len(row['reference_books'])
+        best = row.pop('best_net_ev')
+        row['best_net_ev_percent'] = str(Fraction(str(best))*100) if best is not None else None
+        row['calculation_summary_scope'] = 'All calculation statuses for the game within the other selected filters. Status filters qualify games; numeric EV applies only to trading-market offers.'
         row['markets'] = row['markets'] or []
         for key in ('start_at', 'latest_received_at'):
             row[key] = row[key].isoformat() if row[key] else None
@@ -334,8 +363,15 @@ def entry(db, header, owner, *, detail=False):
     trading_market = header['venue'] in TRADING_VENUES
     trading_side = trading_market or header['original_bookmaker_id'] in HISTORICAL_TRADING_BOOKS
     from app.comparison.snapshot_fee_scope import provider_venue_fee_reason
-    applicability_reason = provider_venue_fee_reason(dict(quote=dict(
-        source=dict(provider=header['provider']), venue=header['venue'])))
+    fee_mode = ((payload or {}).get('fee_mode') or
+        ((stored['price_payload'] or {}).get('fee_mode') if stored else None) or
+        ((stored['fee_input'] or {}).get('fee_mode') if stored else None))
+    if fee_mode is None and payload:
+        from app.comparison.fee_mode import mode_for_fee
+        fee_mode = mode_for_fee(stored['fee_input'] or {})
+    applicability_reason = (None if fee_mode and fee_mode.get('enabled') is False else
+        provider_venue_fee_reason(dict(quote=dict(
+            source=dict(provider=header['provider']), venue=header['venue']))))
     historical_conditional = payload if applicability_reason and trading_market else None
     if applicability_reason or not trading_market:
         payload = None
@@ -373,6 +409,7 @@ def entry(db, header, owner, *, detail=False):
     alternate = ((source_input or {}).get('alternate') if kind == 'sgo' else
         (stored['contract'].get('comparison_source_metadata') or {}).get('alternate') if stored else None)
     result = dict(id=header['id'], revision=revision, kind=kind,
+        fee_mode=fee_mode if trading_market else None,
         provider=header['provider'], original_bookmaker_id=original,
         represented_venue=header['venue'], venue_equivalence=equivalence,
         trading_role='prediction_market' if trading_side else 'reference_only',

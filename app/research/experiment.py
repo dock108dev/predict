@@ -11,6 +11,7 @@ from uuid import uuid4
 from psycopg.types.json import Jsonb
 
 from app.storage.store import encoded, hashed, stamp
+from app.comparison.fee_mode import read as read_fee_mode
 from app.comparison.reference_scope import REQUEST_BOOKS, VERSION as REFERENCE_SCOPE_VERSION
 from . import records
 from .experiment_evidence import (
@@ -130,23 +131,32 @@ def activate(db, *, at=None):
     at = at or utc()
     with db.transaction():
         _lock(db)
+        mode = read_fee_mode(db)
         row = db.execute("SELECT policy_id FROM public.ev_experiment_accounting WHERE singleton").fetchone()
         if row["policy_id"]:
             index = _closure(db, [row["policy_id"]])
             previous = _value(index[row["policy_id"]], index)
             if (previous.get('requested_scope_version') == REFERENCE_SCOPE_VERSION
-                    and previous['requested_scope']['bookmakers'] == list(REQUEST_BOOKS)):
+                    and previous['requested_scope']['bookmakers'] == list(REQUEST_BOOKS)
+                    and previous.get('fee_mode') == mode):
                 return dict(previous, id=row['policy_id'])
             # Scope changes append a new policy for future games. A declared
             # game's policy_id, original activation, clocks and frozen evidence
             # stay unchanged, including its still-pending checkpoint requests.
             policy = deepcopy(previous)
-            policy['requested_scope'] = dict(previous['requested_scope'], bookmakers=list(REQUEST_BOOKS))
-            policy['requested_scope_version'] = REFERENCE_SCOPE_VERSION
-            policy['scope_activated_at'] = clock(at)
-            policy['scope_transition'] = dict(previous_policy_id=row['policy_id'], changed_at=clock(at),
-                existing_games='retain_original_policy_and_request_scope',
-                probability_policy='unchanged; additional_books_are_reference_prices_and_market_book_comparisons')
+            if (previous.get('requested_scope_version') != REFERENCE_SCOPE_VERSION
+                    or previous['requested_scope']['bookmakers'] != list(REQUEST_BOOKS)):
+                policy['requested_scope'] = dict(previous['requested_scope'], bookmakers=list(REQUEST_BOOKS))
+                policy['requested_scope_version'] = REFERENCE_SCOPE_VERSION
+                policy['scope_activated_at'] = clock(at)
+                policy['scope_transition'] = dict(previous_policy_id=row['policy_id'], changed_at=clock(at),
+                    existing_games='retain_original_policy_and_request_scope',
+                    probability_policy='unchanged; additional_books_are_reference_prices_and_market_book_comparisons')
+            if previous.get('fee_mode') != mode:
+                policy['fee_mode'] = deepcopy(mode)
+                policy['fee_mode_transition'] = dict(previous_policy_id=row['policy_id'], changed_at=clock(at),
+                    existing_evidence='immutable; each_new_checkpoint_freezes_its_actual_fee_mode')
+            policy['fee_mode_rule'] = 'declared_mode_is_context; each_checkpoint_freezes_actual_mode; no_retroactive_recalculation'
             identity, _ = _write(db, 'policy', policy)
             db.execute('UPDATE public.ev_experiment_accounting SET policy_id=%s WHERE singleton', (identity,))
             return dict(policy, id=identity)
@@ -164,6 +174,8 @@ def activate(db, *, at=None):
             selection=dict(rule="early_screen_EV>0 OR late_screen_EV>0", unknown="null; never_zero_or_negative",
                 exact_bet="canonical_event+provider+original_book+venue+market+period+outcome+exact_line+settlement"),
             screen_policy=REFERENCE_POLICY, coherent_policy=COHERENT_POLICY,
+            fee_mode=deepcopy(mode),
+            fee_mode_rule='declared_mode_is_context; each_checkpoint_freezes_actual_mode; no_retroactive_recalculation',
             requested_scope_version=REFERENCE_SCOPE_VERSION, scope_activated_at=clock(at),
             requested_scope=dict(bookmakers=list(REQUEST_BOOKS), includeAltLines=True,
                 odd_ids=["points-all-game-ou-over","points-all-game-ou-under","points-away-game-ml-away",
@@ -596,6 +608,8 @@ def capture(db, game_id, checkpoint, snapshot, *, token=None, requested_at=None,
                 observation_to_capture_lag_seconds=str((known-game["first_observed_at"]).total_seconds()),
                 seconds_to_start=str((stamp(game["event"]["starts_at"])-received).total_seconds()),
                 scope=scope or snapshot.get("request_scope"), snapshot=frozen)
+            if snapshot.get("fee_mode") is not None:
+                value["fee_mode"] = deepcopy(snapshot["fee_mode"])
             if checkpoint == "late":
                 # The late capture may consume its own reservation, while other
                 # games' reserved reproduction space remains protected.
@@ -603,7 +617,8 @@ def capture(db, game_id, checkpoint, snapshot, *, token=None, requested_at=None,
             identity, size = _write(db, "checkpoint", value, game_id=game_id, checkpoint=checkpoint,
                 summary=dict(received_at=clock(received),known_at=clock(known),
                     target_at=clock(task["target_at"]),deadline_at=clock(task["deadline_at"]),
-                    coverage=deepcopy(snapshot.get("coverage") or {})))
+                    coverage=deepcopy(snapshot.get("coverage") or {}),
+                    **({"fee_mode":deepcopy(snapshot["fee_mode"])} if snapshot.get("fee_mode") is not None else {})))
             if checkpoint == "early":
                 late_target = stamp(game["event"]["starts_at"])-timedelta(seconds=LATE_SECONDS)
                 reserve = 0
@@ -955,7 +970,10 @@ def reproduce_export(bundle):
             checkpoints[name] = None
     comparison = compare_checkpoints(checkpoints["early"], checkpoints["late"])
     outcome = _value(index[game["outcome_id"]], index) if game["outcome_id"] else None
-    return dict(version=VERSION, records=len(index), checkpoints=checks, counts=comparison["counts"],
+    result = dict(version=VERSION, records=len(index), checkpoints=checks, counts=comparison["counts"],
                 checkpoint_history_reproduced=len(history_checks),
                 baseline_correction_id=correction_id,
                 quality=score_comparison(comparison, outcome), provider_requests=0)
+    if "fee_modes" in comparison:
+        result.update(fee_modes=comparison["fee_modes"], fee_modes_differ=comparison["fee_modes_differ"])
+    return result

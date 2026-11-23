@@ -9,6 +9,8 @@ function table(parent,columns,rows){const value=node('table',undefined,'research
 export function renderInput(root,value){
  root.replaceChildren();
  root.append(node('p',`Captured ${value.captured_at} · Revision ${value.revision}`,'research-muted'));
+ const mode=value.fee_mode||value.calculation_payload?.fee_mode;
+ if(mode)root.append(node('p',mode.enabled?'Calculation captured with fees enabled.':'Calculation captured with fees off: all fees assumed to be 0.'));
  const download=node('a','Export this exact input & result','research-button');
  // The selected record is already captured. Keep its export usable after the
  // bounded SQL paging lease expires while the owner reads the calculation.

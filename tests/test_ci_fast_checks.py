@@ -58,6 +58,9 @@ def test_api_changes_check_passive_data_and_export_behavior():
     assert "tests/test_experiment_api.py" in command(
         selected("app/dashboard/experiment_api.py"), "portable"
     )
+    assert "tests/test_data_workspace_client.py" in command(
+        selected("app/dashboard/opportunity_static/current/data.js"), "portable"
+    )
 
 
 def test_deploy_changes_check_rollback_healthy_services_and_private_configuration():

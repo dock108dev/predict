@@ -5,6 +5,7 @@ from copy import deepcopy
 from fractions import Fraction as F
 
 from app.comparison import current_pregame as math
+from app.comparison.fee_mode import mode_for_fee
 from app.comparison.cashflows import exact_wire as wire
 from app.storage.store import hashed, stamp
 
@@ -82,6 +83,16 @@ def _cashflow(payload, reference, policy):
     return result
 
 
+def _offer_fee_mode(offer):
+    payload_mode = (offer.get("calculation_payload") or {}).get("fee_mode")
+    fee = offer.get("fee_input") or {}
+    explicit = fee.get("fee_mode") or (fee.get("evidence") or {}).get("fee_mode")
+    input_mode = mode_for_fee(fee) if explicit is not None else None
+    if payload_mode is not None and input_mode is not None and payload_mode != input_mode:
+        raise ValueError("experiment_fee_mode_input_mismatch")
+    return payload_mode if payload_mode is not None else input_mode
+
+
 def offer_measurements(offer, *, offer_index=None, captured_at=None):
     record = offer["record"]
     payload = offer.get("calculation_payload")
@@ -106,11 +117,14 @@ def offer_measurements(offer, *, offer_index=None, captured_at=None):
     age = None
     if captured_at and times.get("source_at"):
         age = wire(F(str((stamp(captured_at)-stamp(times["source_at"])).total_seconds())))
-    return dict(price=(quote.get("original") or {}).get("value"),
+    result = dict(price=(quote.get("original") or {}).get("value"),
         price_units=(quote.get("original") or {}).get("units"),
         screen=screen, coherent=baseline, main=offer.get("main") or _role(record),
         times=times, source_age_seconds=age, available=available, reason=reason,
         calculation_version=(payload or {}).get("version"), offer_index=offer_index)
+    if (mode := _offer_fee_mode(offer)) is not None:
+        result["fee_mode"] = deepcopy(mode)
+    return result
 
 
 def _sign(value):
@@ -286,7 +300,7 @@ def compare_checkpoints(early, late):
                 relationship=r["role_link"]) for r in rows]))
     reference_links, reference_context = _reference_main_links(early, late)
     links.extend(reference_links)
-    return dict(version=VERSION, cases=cases, context=context, main_line_links=links,
+    result = dict(version=VERSION, cases=cases, context=context, main_line_links=links,
         reference_context=reference_context,
         schedule_comparison=dict(early_start=a_start, late_start=b_start, rescheduled=rescheduled,
                                  settlement_continuity="unverified" if rescheduled else "unchanged_schedule"),
@@ -298,6 +312,14 @@ def compare_checkpoints(early, late):
             transitions=dict(Counter(r["transition"] for r in cases))),
         policy_versions=dict(primary=math.REFERENCE_POLICY, coherent=math.COHERENT_POLICY,
                              calculation=math.VERSION, identity=IDENTITY_VERSION))
+    snapshots = {name:(point.get("snapshot") or point) for name,point in (("early",early),("late",late)) if point}
+    modes = {name:deepcopy(snapshot.get("fee_mode")) for name,snapshot in snapshots.items()}
+    if any(mode is not None for mode in modes.values()):
+        result["fee_modes"] = modes
+        observed = [mode.get("enabled") if mode else True for name,mode in modes.items()
+                    if snapshots[name].get("offers") is not None]
+        result["fee_modes_differ"] = len(set(observed)) > 1
+    return result
 
 
 def reproduce_checkpoint(snapshot):
@@ -312,6 +334,12 @@ def reproduce_checkpoint(snapshot):
     inputs = math.ReferenceInputs(dict(by_event), books=math.COHERENT_POLICIES[math.EXPANSION_POLICY])
     for offer in snapshot.get("offers", []):
         payload = offer.get("calculation_payload")
+        mode = _offer_fee_mode(offer)
+        snapshot_mode = snapshot.get("fee_mode")
+        if snapshot_mode is not None and mode is not None and snapshot_mode != mode:
+            raise ValueError("experiment_fee_mode_snapshot_mismatch")
+        if snapshot_mode is not None and snapshot_mode.get("enabled") is False and payload and mode is None:
+            raise ValueError("experiment_fee_mode_missing_from_calculation")
         value = offer_measurements(offer)
         record = offer["record"]
         at = stamp((payload or {}).get("calculated_at") or
@@ -331,8 +359,11 @@ def reproduce_checkpoint(snapshot):
         reproduce(freeze(payload, record=record, fee_input=offer.get("fee_input")))
         if value["screen"]["ev"] is not None:
             verified += 1
-    return dict(offers=len(snapshot.get("offers", [])), numeric_screen_results=verified,
-                provider_requests=0, version=VERSION)
+    result = dict(offers=len(snapshot.get("offers", [])), numeric_screen_results=verified,
+                  provider_requests=0, version=VERSION)
+    if snapshot.get("fee_mode") is not None:
+        result["fee_mode"] = deepcopy(snapshot["fee_mode"])
+    return result
 
 
 def score_comparison(comparison, outcome):
@@ -462,9 +493,10 @@ def build_snapshot(db, page, *, request_scope, dispatch_at, known_at):
                          maximum=wire(max(lines)), distinct_lines=len(set(lines)))
                      for (book, family, side), lines in sorted(surfaces.items())])
     return dict(version=VERSION, event=event, source_event=source, offers=offers,
+        fee_mode=deepcopy(fee_context.fee_mode),
         references=references, raw_quotes=list(page.quotes), coverage=coverage,
         request_scope=deepcopy(request_scope), receipt_sha256=page.receipt_sha256,
         times=dict(dispatch_at=dispatch_at, received_at=source["received_at"], known_at=known_at,
                    captured_at=known_at, source_times=sorted({q["source_at"] for q in page.quotes if q.get("source_at")})),
         policy_versions=dict(screen=math.REFERENCE_POLICY, coherent=math.COHERENT_POLICY,
-                             calculation=math.VERSION, experiment=VERSION))
+                             calculation=math.VERSION, experiment=VERSION, fee_mode=fee_context.fee_mode["version"]))

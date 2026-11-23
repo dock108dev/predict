@@ -4,7 +4,7 @@ from urllib.parse import urlencode
 
 from aiohttp import web
 
-from .local_security import HEADERS
+from .local_security import HEADERS, PublicRequestError, read_json
 
 # Keep local selection context, never an arbitrary redirect target.
 SELECTION_KEYS = frozenset('search sport date date_from date_to family provider original_bookmaker_id calculation_status max_age_minutes view game bet token revision offset record_offset capture id bet_id quote_key line game_key phase game_capture result_id source_event event_id case context include_context mode data_type market venue league dataset selection saved_bet selected_metric pair pair_revision session hash cutoff quantity scenario candidate contract reference research probability basis rule_version competition season period reference_scope book'.split())
@@ -115,6 +115,7 @@ def mount(app, static_root):
         from app.storage.store import connect
         from app.research.experiment import status as experiment_status
         from app.comparison.reference_scope import public_scope
+        from app.comparison.fee_mode import read as read_fee_mode
         from .pipeline import serial
         def read():
             with connect() as db, db.transaction():
@@ -126,6 +127,25 @@ def mount(app, static_root):
                     GROUP BY checkpoint ORDER BY min(target_at) LIMIT 1""").fetchone()
                 return dict(storage=state['storage'], next_capture=capture, provider_requests=0,
                             scheduled_calculations=0,
-                            reference_scope=public_scope())
+                            reference_scope=public_scope(), fee_mode=read_fee_mode(db))
         return web.json_response(serial(await joined_thread(__name__, 'workspace_status_after_cancellation', read)), headers=HEADERS)
     app.router.add_get('/api/workspace/status', status)
+
+
+    async def fees(request):
+        if request.query:
+            raise PublicRequestError('Fee settings take no query options.')
+        body = await read_json(request)
+        if not isinstance(body, dict) or set(body) != {'enabled'} or type(body['enabled']) is not bool:
+            raise PublicRequestError('Provide the exact boolean fee setting.')
+        from app.owned_work import joined_thread
+        from app.storage.store import connect
+        from app.comparison.fee_mode import set_enabled
+
+        def write():
+            with connect() as db, db.transaction():
+                db.execute("SET LOCAL statement_timeout='10s'")
+                return set_enabled(db, body['enabled'])
+        value = await joined_thread(__name__, 'fee_setting_after_cancellation', write)
+        return web.json_response(dict(value, provider_requests=0), headers=HEADERS)
+    app.router.add_patch('/api/workspace/fees', fees)

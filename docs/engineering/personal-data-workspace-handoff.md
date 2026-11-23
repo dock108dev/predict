@@ -128,3 +128,18 @@ The [active assignment completion record](phase2-20261122/queue.md#workspace-com
 separates those two observations and records the preserved limits and pending
 fresh T−10 evidence. No new live pair, profitability proof or owner review is a
 completion dependency after the authorized fresh start.
+
+## Owner follow-up: navigation and zero fees
+
+The owner reported Open game returning Too Many Requests and an unhelpful default
+table. The follow-up removes duplicate list reads on game navigation, serializes
+navigation reads, retries only an expired snapshot, and keeps the server read
+capacity unchanged with bounded admission waiting. Status filters now select
+games without removing their reference and nonpositive price context.
+
+The owner additionally requested exercise calculations assume zero fees,
+behind a feature flag with the existing fee implementation preserved. Include
+fees defaults off and is available in Settings. Current calculations and new
+checkpoints record the chosen assumption; frozen historical evidence retains its
+original mathematics. The operating guide documents the durable flag and its
+recalculation behavior.

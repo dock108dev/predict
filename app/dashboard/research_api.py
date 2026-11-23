@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from time import monotonic
 from uuid import uuid4
@@ -14,6 +15,11 @@ from app.storage import research_catalog as catalog
 from app.storage.store import connect, encoded
 from .local_security import HEADERS, PublicRequestError
 from .raw_price_api import RawReads
+
+CATALOG_READ_CAPACITY = 4
+# The existing browser deadline is 15s and a SQL statement can consume 10s.
+# Wait within that allowance without admitting more concurrent read owners.
+CATALOG_ADMISSION_WAIT_SECONDS = 4
 
 
 class CatalogReads(RawReads):
@@ -42,6 +48,8 @@ class CatalogReads(RawReads):
                 frame = dict(db=db, filters=filters, expires=monotonic()+120,
                     at=db.execute('SELECT transaction_timestamp() at').fetchone()['at'].isoformat(),
                     owner=read_runtime(db), counts=None, game_counts=None)
+                from app.comparison.fee_mode import read as read_fee_mode
+                frame['fee_mode'] = read_fee_mode(db)
                 token = uuid4().hex
                 self.frames[token] = frame
             except BaseException:
@@ -55,6 +63,8 @@ class CatalogReads(RawReads):
             with self.snapshot_read(token):
                 filters = dict(frame['filters'])
                 filters.update({key: query[key] for key in catalog.SCOPED_SELECTIONS if query.get(key)})
+                if query.get('game_id'):
+                    filters.pop('calculation_status', None)
                 offset, limit = int(query.get('offset', 0)), int(query.get('limit', 50))
                 rows = [catalog.entry(frame['db'], row, frame['owner']) for row in
                     catalog.headers(frame['db'], filters, offset=offset, limit=limit)]
@@ -71,7 +81,7 @@ class CatalogReads(RawReads):
                     rows=rows, total=total, offset=offset, game=game[0] if game else None,
                     next_offset=offset+len(rows) if offset+len(rows)<total else None,
                     provider_requests=0, scheduled_calculations=0,
-                    reference_scope=public_scope(),
+                    reference_scope=public_scope(), fee_mode=frame['fee_mode'],
                     population='Latest stored source observations; frozen first-observation/T−10 captures are separate. '
                         'Received prices remain visible independently of fees, matching and EV.')
 
@@ -95,7 +105,7 @@ class CatalogReads(RawReads):
                     rows=rows, total=total, offset=offset,
                     next_offset=offset+len(rows) if offset+len(rows)<total else None,
                     provider_requests=0, scheduled_calculations=0,
-                    reference_scope=public_scope(),
+                    reference_scope=public_scope(), fee_mode=frame['fee_mode'],
                     population='Canonical games and separately identified source-local events. '
                         'Retained checkpoint games remain inspectable after current observations expire.')
 
@@ -106,7 +116,11 @@ class CatalogReads(RawReads):
             if not frame:
                 raise PublicRequestError('Catalog snapshot expired; refresh data.')
             with self.snapshot_read(query['token']):
-                rows = catalog.headers(frame['db'], frame['filters'], entry_id=query['id'], limit=1)
+                filters = dict(frame['filters'])
+                if query.get('game_id'):
+                    filters.pop('calculation_status', None)
+                    filters['game_id'] = query['game_id']
+                rows = catalog.headers(frame['db'], filters, entry_id=query['id'], limit=1)
                 if not rows:
                     raise PublicRequestError('Unknown captured catalog record.')
                 value = catalog.entry(frame['db'], rows[0], frame['owner'], detail=True)
@@ -117,7 +131,19 @@ class CatalogReads(RawReads):
 
 def mount(app):
     reads = CatalogReads(connect)
-    gate = asyncio.Semaphore(4)
+    gate = asyncio.Semaphore(CATALOG_READ_CAPACITY)
+
+    @asynccontextmanager
+    async def admission():
+        try:
+            await asyncio.wait_for(gate.acquire(), timeout=CATALOG_ADMISSION_WAIT_SECONDS)
+        except TimeoutError:
+            raise web.HTTPServiceUnavailable(reason='Stored data reads are busy. Retry shortly.',
+                headers={'Retry-After': '1'}) from None
+        try:
+            yield
+        finally:
+            gate.release()
 
     async def joined(fn, *args):
         from app.owned_work import joined_thread
@@ -170,17 +196,13 @@ def mount(app):
 
     async def page(request):
         validate(request.query)
-        if gate.locked():
-            raise web.HTTPTooManyRequests()
-        async with gate:
+        async with admission():
             value = await joined(reads.read, dict(request.query))
         return web.json_response(value, headers=HEADERS)
 
     async def games(request):
         validate(request.query)
-        if gate.locked():
-            raise web.HTTPTooManyRequests()
-        async with gate:
+        async with admission():
             value = await joined(reads.games, dict(request.query))
         return web.json_response(value, headers=HEADERS)
 
@@ -191,17 +213,13 @@ def mount(app):
 
     async def detail(request):
         validate(request.query, detail=True)
-        if gate.locked():
-            raise web.HTTPTooManyRequests()
-        async with gate:
+        async with admission():
             value = await joined(reads.detail, dict(request.query))
         return web.json_response(value, headers=HEADERS)
 
     async def export(request):
         validate(request.query, detail=True)
-        if gate.locked():
-            raise web.HTTPTooManyRequests()
-        async with gate:
+        async with admission():
             value = await joined(reads.detail, dict(request.query))
         return web.Response(text=json.dumps(value, sort_keys=True, indent=2, allow_nan=False)+'\n',
             content_type='application/json', headers={**HEADERS,
@@ -210,7 +228,7 @@ def mount(app):
     async def release(request):
         if set(request.query) != {'token'}:
             raise PublicRequestError('Catalog token required.')
-        async with gate:
+        async with admission():
             await joined(reads.close, request.query['token'])
         return web.json_response(dict(released=True, provider_requests=0))
 
@@ -224,7 +242,7 @@ def mount(app):
                 db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
                 db.execute("SET LOCAL statement_timeout='10s'")
                 return dict(coverage=report(db), original_responses=status(), provider_requests=0)
-        async with gate:
+        async with admission():
             value = await joined(work)
         from .pipeline import serial
         return web.json_response(serial(value), headers=HEADERS)
@@ -251,7 +269,7 @@ def mount(app):
                             as_of=stamp(request.query['as_of'])), research_retention=retention, provider_requests=0)
                     return dict(detail(db, request.query['id']), research_retention=retention)
                 return dict(cohorts=list_cohorts(db), research_retention=retention, provider_requests=0)
-        async with gate:
+        async with admission():
             value = await joined(work)
         if exporting:
             return web.Response(body=value, content_type='application/json', headers={**HEADERS,
@@ -296,7 +314,7 @@ def mount(app):
                     return owner.catalog(db, include_context=query.get('include_context') == '1', limit=limit, offset=offset)
 
         try:
-            async with gate:
+            async with admission():
                 value = await joined(work)
         except ValueError as exc:
             if str(exc) == 'experiment_revision_changed':

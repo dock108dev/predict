@@ -10,23 +10,25 @@
 <header class="masthead"><a class="brand" href="/data">PREDICT</a><nav aria-label="Main" data-workspace-nav></nav></header>
 <main class="board-wrap">
 <header class="board-heading"><div><h1>Data</h1><p>Find a game, inspect captured prices and trace an exact calculation.</p></div></header>
-<form id="catalog-filters" class="catalog-filters">
+<form id="catalog-filters" class="catalog-filters data-filters">
 <label>Search<input id="search" name="search" type="search" placeholder="Team, event or source market" maxlength="150"></label>
-<label>Date (Eastern)<input id="date" name="date" type="date"></label>
-<label>View<select id="view" name="view"><option value="">Stored prices</option><option value="arbitrage">Arbitrage calculations</option></select></label>
-<label>Source scope<select id="reference-scope" name="reference_scope"><option value="selected">Selected sportsbook references</option><option value="all">All retained reference sources</option></select></label>
-<input id="provider" name="provider" type="hidden" value="sportsgameodds">
-<label>Original book<input id="book" name="original_bookmaker_id" type="search" placeholder="Any bookmaker ID" maxlength="100" list="books"><datalist id="books"></datalist></label>
 <label>Sport<select id="sport" name="sport"><option value="">All sports</option><option>NFL</option><option>NCAAF</option><option>NBA</option><option>NCAAB</option><option>MLB</option><option>NHL</option></select></label>
-<label>Market<select id="family" name="family"><option value="">All markets</option><option value="moneyline">Moneyline</option><option value="spread">Spread</option><option value="total">Total</option></select></label>
+<label>Date (Eastern)<input id="date" name="date" type="date"></label>
 <label>Calculation<select id="calculation" name="calculation_status" aria-label="Calculation"><option value="">Every status</option><option value="positive">Positive EV</option><option value="negative">Negative</option><option value="zero">Zero</option><option value="unavailable">Unavailable</option><option value="reference_only">Reference prices only</option></select></label>
+<label>View<select id="view" name="view"><option value="">Stored prices</option><option value="arbitrage">Arbitrage calculations</option></select></label>
+<input id="provider" name="provider" type="hidden" value="sportsgameodds">
+<details class="catalog-advanced"><summary>Source and market filters</summary><div class="catalog-advanced-fields">
+<label>Source scope<select id="reference-scope" name="reference_scope"><option value="selected">Selected sportsbook references</option><option value="all">All retained reference sources</option></select></label>
+<label>Original book<input id="book" name="original_bookmaker_id" type="search" placeholder="Any bookmaker ID" maxlength="100" list="books"><datalist id="books"></datalist></label>
+<label>Market<select id="family" name="family"><option value="">All markets</option><option value="moneyline">Moneyline</option><option value="spread">Spread</option><option value="total">Total</option></select></label>
 <label>Maximum source age (minutes)<input id="age" name="max_age_minutes" type="number" min="1" max="525600" step="1" placeholder="Any age"></label>
+</div></details>
 <div class="catalog-actions"><button id="apply" type="submit">Apply filters</button><button id="clear" type="button">Clear</button><button id="refresh" type="button">Refresh data</button></div>
 </form>
 <p id="reference-summary" class="research-muted">SportsGameOdds supplies the active data. The four trading markets remain available in either reference scope. Other stored sportsbook observations are available under all retained references.</p>
-<p id="catalog-status" role="status">Reading stored games…</p><p id="catalog-snapshot" class="research-muted"></p>
-<section id="catalog" aria-label="Stored games" aria-busy="true" tabindex="-1"><div class="catalog-scroll"><table class="catalog-table"><thead><tr><th>Game / start</th><th>Identity</th><th>Books / markets</th><th>Observations</th><th>Inspect</th></tr></thead><tbody id="catalog-rows"></tbody></table></div></section>
-<nav class="catalog-pagination" aria-label="Game pages"><button id="previous" disabled>Previous games</button><span id="page"></span><button id="next" disabled>Next games</button></nav>
+<p id="fee-mode-summary" class="research-muted"></p><p id="catalog-status" role="status">Reading stored games…</p><p id="catalog-snapshot" class="research-muted"></p>
+<section id="catalog" aria-label="Stored games" aria-busy="true" tabindex="-1"><div class="catalog-scroll"><table class="catalog-table"><thead><tr><th>Game / start</th><th>Trading markets</th><th>Sportsbook references</th><th>EV / prices</th><th>Open</th></tr></thead><tbody id="catalog-rows"></tbody></table></div></section>
+<nav id="game-pagination" class="catalog-pagination" aria-label="Game pages"><button id="previous" disabled>Previous games</button><span id="page"></span><button id="next" disabled>Next games</button></nav>
 <section id="game-detail" hidden aria-labelledby="game-title"><div class="experiment-heading"><h2 id="game-title">Selected game</h2><button id="close-game" type="button">Back to games</button></div><div id="game-content"></div></section>
 <p class="research-muted">Refresh reads stored data. Browsing and exports make no provider requests. Latest stored prices and frozen checkpoints retain their original observation clocks.</p>
 </main>
