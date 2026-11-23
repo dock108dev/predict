@@ -7,10 +7,10 @@ Current policy and operating details are in `docs/ev-checkpoint-experiment.md`.
 | Current checkpoint | State | Evidence needed |
 | --- | --- | --- |
 | Versioned policy and scheduling transition | Implemented; SQL integration in progress | Immutable activation, old history preserved, primary scheduler replaced |
-| Guarded early/late acquisition and coverage | Implemented; focused fixtures passed | Actual full-scope early/late receipt and persistence clocks |
+| Guarded early/late acquisition and coverage | Deployed; Magic–Wizards and UAB completed both scheduled checkpoints | Actual nine-book full-alternate request/receipt/persistence clocks, explicit timing/completeness caveats |
 | Exact identity, sign selection and cross-reference math | Implemented; 22 portable checks passed | Independent branches, unavailable and chronology cases, offline reproduction |
-| Comparison, source context, observed plots and exports | Implemented; desktop/mobile/zoom fixtures passed | Installed normal clicks and complete export |
-| Scheduled operation, outcomes, storage and deployment | In progress | One real eligible game at both checkpoints, bounded follow-up, measured bytes, required CI |
+| Comparison, source context, observed plots and exports | Installed native 150% and mobile checks passed | Complete native-click export and offline reproduction of both real snapshots |
+| Scheduled operation, outcomes, storage and deployment | Bootstrap ordering/encoding repair integrating | Actual owner-required live pair complete; fix late-before-early order, preserve correction history, reduce measured retained bytes without capraise; final CI/deployment remains |
 
 The live stopping condition comes from the owner's explicit two-checkpoint
 verification request. No positive cases, minimum early lead time, completed game

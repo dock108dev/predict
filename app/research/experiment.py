@@ -13,7 +13,7 @@ from psycopg.types.json import Jsonb
 from app.storage.store import encoded, hashed, stamp
 from . import records
 from .experiment_evidence import (
-    ACCOUNTING_METADATA_BYTES, GAME_METADATA_BYTES, pack, references, unpack,
+    ACCOUNTING_METADATA_BYTES, GAME_METADATA_BYTES, pack, pack_checkpoint, references, unpack,
 )
 
 VERSION = "first-observed-24h-vs-tminus10-screen-ev-1"
@@ -92,7 +92,7 @@ def _admit(db, size, *, reserve=0):
 
 
 def _write(db, kind, value, *, game_id=None, checkpoint=None, reserve=0, summary=None):
-    root, blobs = pack(value)
+    root, blobs = pack_checkpoint(value) if kind == "checkpoint" else pack(value)
     body = dict(version=VERSION, kind=kind, game_id=game_id, checkpoint=checkpoint, value=root)
     if summary is not None:
         body["summary"] = summary
@@ -298,6 +298,9 @@ def task_authorized(db, token, *, at=None):
         JOIN public.ev_experiment_game g ON g.id=t.game_id WHERE t.token=%s AND t.state='claimed'""", (token,)).fetchone()
     return bool(row and row["schedule_id"] == row["current_schedule"]
                 and not row["event"].get("status", {}).get("cancelled")
+                and (row["checkpoint"] != "late" or not db.execute(
+                    "SELECT 1 FROM public.ev_experiment_task WHERE game_id=%s AND checkpoint='early' AND state IN ('pending','claimed')",
+                    (row["game_id"],)).fetchone())
                 and row["target_at"] <= at <= row["deadline_at"])
 
 
@@ -339,6 +342,9 @@ def due(db, *, at=None, limit=1):
                     db.execute("UPDATE public.ev_experiment_game SET late_reserved_bytes=0 WHERE id=%s", (task["game_id"],))
         rows = db.execute("""SELECT t.*,g.event,g.late_reserved_bytes FROM public.ev_experiment_task t JOIN public.ev_experiment_game g ON g.id=t.game_id
             WHERE t.state='pending' AND t.target_at<=%s AND t.deadline_at>=%s
+              AND (t.checkpoint<>'late' OR NOT EXISTS (
+                SELECT 1 FROM public.ev_experiment_task early
+                WHERE early.game_id=t.game_id AND early.checkpoint='early' AND early.state IN ('pending','claimed')))
             ORDER BY CASE t.checkpoint WHEN 'late' THEN 0 WHEN 'early' THEN 1 ELSE 2 END,t.deadline_at,t.game_id
             LIMIT %s FOR UPDATE OF t SKIP LOCKED""", (at, at, limit))
         for row in rows:
@@ -415,7 +421,7 @@ def _checkpoint_view(db, game, checkpoint, index=None):
         return dict(status=task["state"], reason=task["last_reason"], target_at=clock(task["target_at"]),
                     window_start=clock(task["target_at"]), deadline_at=clock(task["deadline_at"]),
                     actual_at=None, captured_at=None, persisted_at=None, snapshot=None)
-    index = index or _closure(db, [identity])
+    index = index or _closure(db, [identity, *([game["baseline_correction_id"]] if game.get("baseline_correction_id") else [])])
     row = index[identity]
     value = _value(row, index)
     view = dict(value, id=identity, persisted_at=clock(row["recorded_at"]),
@@ -424,12 +430,36 @@ def _checkpoint_view(db, game, checkpoint, index=None):
     if checkpoint == "late" and value["schedule_id"] != game["schedule_id"]:
         view.update(status="superseded_by_reschedule", reason="rescheduled_late_target_changed",
                     current_target_at=clock(task["target_at"]), current_deadline_at=clock(task["deadline_at"]))
-    return view
+    return _corrected_view(view, checkpoint, game, index)
+
+
+def _corrected_view(view, checkpoint, game, index):
+    correction_id = game.get("baseline_correction_id")
+    if not correction_id:
+        return view
+    correction_row = index.get(correction_id)
+    if correction_row is None:
+        raise ValueError("experiment_baseline_correction_missing")
+    correction = _value(correction_row, index)
+    if correction.get("correction_kind") != "first_actual_observation_role_alias":
+        raise ValueError("experiment_baseline_correction_invalid")
+    if view["id"] != correction["first_observation_id"]:
+        return view
+    result = dict(view, baseline_correction_id=correction_id,
+        corrected_at=clock(correction_row["recorded_at"]), original_checkpoint=view["checkpoint"],
+        correction_reason=correction["reason"])
+    if checkpoint == "early":
+        result.update(checkpoint="early", role="first_actual_observation_recovered_from_existing_checkpoint",
+                      original_early_id=correction["original_early_id"])
+    else:
+        result.update(status="not_comparable_baseline_correction",
+                      reason="same_actual_observation_is_early_baseline; no_distinct_valid_late_checkpoint")
+    return result
 
 
 def _comparison(db, game):
     from .ev_movement import compare_checkpoints
-    roots = [game[key] for key in ("early_id", "late_id") if game[key]]
+    roots = [game[key] for key in ("early_id", "late_id", "baseline_correction_id") if game.get(key)]
     index = _closure(db, roots)
     early = _checkpoint_view(db, game, "early", index)
     late = _checkpoint_view(db, game, "late", index)
@@ -442,6 +472,63 @@ def _comparison(db, game):
     db.execute("UPDATE public.ev_experiment_game SET comparison_id=%s,retained_cases=%s,unique_payload_bytes=unique_payload_bytes+%s,updated_at=clock_timestamp() WHERE id=%s",
                (identity, len(value["cases"]), size, game["id"]))
     return value
+
+
+def correct_first_observation(db, game_id, *, reason, evidence_reference):
+    """Append an explicit role correction using already persisted source facts.
+
+    The referenced checkpoint retains its original receipt, knowledge and SQL
+    persistence clocks. This correction is recorded now and never manufactures
+    a pre-target baseline or a second observation from the same physical page.
+    """
+    if not isinstance(reason,str) or not 1 <= len(reason.encode()) <= 1024:
+        raise ValueError("experiment_baseline_correction_reason")
+    if not isinstance(evidence_reference,str) or not 1 <= len(evidence_reference.encode()) <= 2048:
+        raise ValueError("experiment_baseline_correction_evidence")
+    with db.transaction():
+        _lock(db)
+        game = db.execute("SELECT * FROM public.ev_experiment_game WHERE id=%s FOR UPDATE",(game_id,)).fetchone()
+        if not game:
+            raise ValueError("experiment_game_unknown")
+        rows = list(db.execute("SELECT id FROM public.ev_experiment_record WHERE game_id=%s AND kind='checkpoint' ORDER BY recorded_at,id",(game_id,)))
+        if not rows:
+            raise ValueError("experiment_baseline_correction_no_observation")
+        index = _closure(db,[row["id"] for row in rows])
+        candidates = [(index[row["id"]],_value(index[row["id"]],index)) for row in rows]
+        first, value = min(candidates,key=lambda pair:(stamp(pair[1]["received_at"]),
+            stamp(pair[1]["known_at"]),pair[0]["recorded_at"],pair[0]["id"]))
+        if first["game_id"] != game_id or value.get("status") != "captured" or stamp(value["known_at"]) > first["recorded_at"]:
+            raise ValueError("experiment_baseline_correction_source_invalid")
+        if game["early_id"] == first["id"]:
+            return dict(state="unchanged",game_id=game_id,first_observation_id=first["id"],
+                        baseline_correction_id=game.get("baseline_correction_id"))
+        now = _dbclock(db)
+        original_early_id = game["early_id"]
+        correction = dict(correction_version="first-actual-observation-role-correction-1",
+            correction_kind="first_actual_observation_role_alias", reason=reason,
+            evidence_reference=evidence_reference, correction_requested_at=clock(now),
+            original_early_id=original_early_id, first_observation_id=first["id"],
+            original_late_id=game["late_id"], original_checkpoint=first["checkpoint"],
+            first_received_at=value["received_at"], first_known_at=value["known_at"],
+            first_persisted_at=clock(first["recorded_at"]),
+            late_comparability="same_point_not_comparable" if game["late_id"] == first["id"] else "distinct_point_requires_original_timing_validation",
+            historical_records="all_original_checkpoint_rows_and_clocks_preserved",
+            provider_requests=0, new_measurement=False)
+        identity, size = _write(db,"comparison",correction,game_id=game_id,checkpoint="baseline_correction")
+        db.execute("""UPDATE public.ev_experiment_game SET early_id=%s,baseline_correction_id=%s,
+            state='baseline_corrected',late_reserved_bytes=0,unique_payload_bytes=unique_payload_bytes+%s,
+            updated_at=clock_timestamp() WHERE id=%s""",(first["id"],identity,size,game_id))
+        db.execute("""UPDATE public.ev_experiment_task SET state='captured',result_id=%s,token=NULL,
+            last_reason='first_actual_observation_role_corrected; see_baseline_correction',
+            updated_at=clock_timestamp() WHERE game_id=%s AND checkpoint='early'""",(first["id"],game_id))
+        if game["late_id"] == first["id"]:
+            db.execute("""UPDATE public.ev_experiment_task SET state='missed',token=NULL,
+                last_reason='first_actual_page_is_early_baseline; no_distinct_valid_late_checkpoint',
+                updated_at=clock_timestamp() WHERE game_id=%s AND checkpoint='late'""",(game_id,))
+        game = db.execute("SELECT * FROM public.ev_experiment_game WHERE id=%s",(game_id,)).fetchone()
+        _comparison(db,game)
+        return dict(state="corrected",game_id=game_id,id=identity,original_early_id=original_early_id,
+            first_observation_id=first["id"], corrected_at=clock(_get(db,identity)["recorded_at"]),provider_requests=0)
 
 
 def capture(db, game_id, checkpoint, snapshot, *, token=None, requested_at=None,
@@ -617,6 +704,7 @@ def _game_summary(row, revision=None):
         starts_at=event["starts_at"], source_event_id=row["source_event_id"], event=event,
         state=row["state"], first_observed_at=clock(row["first_observed_at"]),
         early_id=row["early_id"], late_id=row["late_id"], outcome_id=row["outcome_id"],
+        baseline_correction_id=row.get("baseline_correction_id"),
         retained_cases=row["retained_cases"], unique_payload_bytes=row["unique_payload_bytes"],
         raw_checkpoint_bytes=row["raw_checkpoint_bytes"], late_reserved_bytes=row["late_reserved_bytes"])
 
@@ -625,6 +713,7 @@ def _revision(db, row):
     tasks = list(db.execute("SELECT checkpoint,state,target_at,deadline_at,last_reason,result_id,attempts,refusals FROM public.ev_experiment_task WHERE game_id=%s ORDER BY checkpoint", (row["id"],)))
     return hashed(dict(policy=row["policy_id"], schedule=row["schedule_id"], early=row["early_id"],
         late=row["late_id"], outcome=row["outcome_id"], comparison=row["comparison_id"],
+        baseline_correction=row.get("baseline_correction_id"),
         tasks=[{k:clock(v) if hasattr(v,"isoformat") else v for k,v in task.items()} for task in tasks]))
 
 
@@ -703,12 +792,23 @@ def detail(db, game_id, *, revision=None):
         current = _revision(db, game)
         if revision and revision != current:
             raise ValueError("experiment_revision_changed")
-        roots = [game[k] for k in ("policy_id", "schedule_id", "early_id", "late_id", "outcome_id") if game[k]]
+        roots = [game[k] for k in ("policy_id", "schedule_id", "early_id", "late_id", "outcome_id", "baseline_correction_id") if game.get(k)]
         index = _closure(db, roots)
         early = _checkpoint_view(db, game, "early", index)
         late = _checkpoint_view(db, game, "late", index)
         comparison = compare_checkpoints(early, late)
         outcome = _value(index[game["outcome_id"]], index) if game["outcome_id"] else None
+        correction = None
+        rejected_early = None
+        if game.get("baseline_correction_id"):
+            correction_row = index[game["baseline_correction_id"]]
+            correction = dict(_value(correction_row,index),id=correction_row["id"],corrected_at=clock(correction_row["recorded_at"]))
+            if correction["original_early_id"]:
+                rejected_index = _closure(db,[correction["original_early_id"]])
+                rejected_row = rejected_index[correction["original_early_id"]]
+                rejected_early = dict(_value(rejected_row,rejected_index),id=rejected_row["id"],
+                    persisted_at=clock(rejected_row["recorded_at"]),status="invalid_early_role",
+                    reason="later_actual_page_was_previously_assigned_early_role; original_preserved")
         history = list(db.execute("SELECT id FROM public.ev_experiment_record WHERE game_id=%s AND kind IN ('schedule','outcome') ORDER BY recorded_at,id", (game_id,)))
         history_index = _closure(db, [row["id"] for row in history])
         tasks = list(db.execute("SELECT * FROM public.ev_experiment_task WHERE game_id=%s ORDER BY checkpoint", (game_id,)))
@@ -717,6 +817,7 @@ def detail(db, game_id, *, revision=None):
                 persisted_at=clock(history_index[r["id"]]["recorded_at"])) for r in history if history_index[r["id"]]["kind"] == "outcome"],
             schedule_history=[dict(_value(history_index[r["id"]], history_index), id=r["id"]) for r in history if history_index[r["id"]]["kind"] == "schedule"],
             quality=score_comparison(comparison, outcome), retention=status(db),
+            baseline_correction=correction, later_observation_context=rejected_early,
             checkpoint_status=[{k:clock(v) if hasattr(v,"isoformat") else v for k,v in task.items() if k != "token"} for task in tasks],
             provider_requests=0)
 
@@ -764,6 +865,25 @@ def reproduce_export(bundle):
             raise ValueError("experiment_blob_missing")
     game = bundle["game"]
     checkpoints, checks = {}, {}
+    correction_id = game.get("baseline_correction_id")
+    if correction_id:
+        if correction_id not in index:
+            raise ValueError("experiment_baseline_correction_missing")
+        correction = _value(index[correction_id],index)
+        for key in ("first_observation_id","original_early_id","original_late_id"):
+            source_id = correction.get(key)
+            if source_id and (source_id not in index or index[source_id]["kind"] != "checkpoint"
+                              or index[source_id]["game_id"] != game["id"]):
+                raise ValueError("experiment_baseline_correction_source_invalid")
+        if game["early_id"] != correction["first_observation_id"]:
+            raise ValueError("experiment_baseline_correction_invalid")
+    history_checks = {}
+    for row in index.values():
+        if row["kind"] == "checkpoint":
+            value = _value(row,index)
+            if stamp(row["recorded_at"]) > stamp(value["deadline_at"]) or stamp(value["known_at"]) > stamp(row["recorded_at"]):
+                raise ValueError("experiment_checkpoint_persistence_after_deadline")
+            history_checks[row["id"]] = reproduce_checkpoint(value["snapshot"])
     for name in ("early", "late"):
         identity = game[name+"_id"]
         if identity:
@@ -771,11 +891,15 @@ def reproduce_export(bundle):
             value = _value(row, index)
             if stamp(row["recorded_at"]) > stamp(value["deadline_at"]) or stamp(value["known_at"]) > stamp(row["recorded_at"]):
                 raise ValueError("experiment_checkpoint_persistence_after_deadline")
-            checks[name] = reproduce_checkpoint(value["snapshot"])
-            checkpoints[name] = value
+            view = _corrected_view(dict(value,id=identity,persisted_at=row["recorded_at"]),name,game,index)
+            if view["status"] == "captured":
+                checks[name] = history_checks[identity]
+            checkpoints[name] = view
         else:
             checkpoints[name] = None
     comparison = compare_checkpoints(checkpoints["early"], checkpoints["late"])
     outcome = _value(index[game["outcome_id"]], index) if game["outcome_id"] else None
     return dict(version=VERSION, records=len(index), checkpoints=checks, counts=comparison["counts"],
+                checkpoint_history_reproduced=len(history_checks),
+                baseline_correction_id=correction_id,
                 quality=score_comparison(comparison, outcome), provider_requests=0)

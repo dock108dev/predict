@@ -65,6 +65,26 @@ and late-checkpoint reservations. It is not raised for this experiment. Unique
 evidence is not automatically evicted; refusals remain visible. Actual bytes per
 game, deduplication and remaining runway are reported by the store.
 
+The first deployed full-surface run measured 11.33 MB of shared-JSON evidence
+for a two-checkpoint game: thousands of small records and reference hashes still
+cost too much. New snapshots use deterministic lossless gzip of the canonical
+witness, with shared event/fee inputs and content-addressed 512 KiB chunks. Both
+the packed and original canonical bytes are checked. A 32 MiB decoded-size bound
+protects memory independently of the smaller retained encoding; it is not an
+observation or review gate. Existing records and exports keep their original
+representation. The actual Orlando–Washington pair retained 1,729,132 bytes in
+the new representation, versus 11,334,804 bytes previously attributed: an 84.7%
+reduction, with byte-identical decoded witnesses and arithmetic. This reduces
+future writes; it does not reclaim or rewrite historical rows.
+
+If initial scheduling ever captured a late task before an untouched early task,
+the earliest actual frozen page remains the only honest first baseline. Migration
+115 supports an explicit append-only role correction: the original rows and
+clocks remain, the earliest page becomes the baseline alias, and its duplicate
+late role is non-comparable. The advanced former early point stays inspectable
+as later context. Corrections are recorded when made, never backdated. The due
+gate prevents this order for future acquisitions.
+
 Postgame collection is an engineering allocation of at most five guarded
 attempts per tracked game, at start plus 3, 4, 6, 12 and 24 hours. Each has a
 15-minute eligibility window; missed windows do not cause a catch-up burst.
@@ -106,3 +126,31 @@ both scheduled checkpoints. Fixtures prove sign branches even if that real game
 has no positive cases. A positive edge, completed sporting outcome, full T−24h
 wait or long trading history is not a completion gate. Required repository CI
 and installed normal operator/export checks remain separate evidence.
+
+## Actual installed example
+
+The initial deployment activated this policy at 2026-11-22 23:49:35 UTC.
+Orlando Magic at Washington Wizards, scheduled for 00:00 UTC, received its early
+response at 23:49:40.675527, finished calculation at 23:49:44.535742 and persisted
+at 23:49:49.066393. Its late target was 23:50:00, deadline 23:51:00; receipt was
+23:50:18.155335, knowledge 23:50:19.723143 and persistence 23:50:22.608806.
+These are actual 619.324473/581.844665-second receipt lead times, not T−24h.
+
+Both responses requested and received nine books and all six outcome IDs,
+with 1,133 quotes and 1,079 alternates: 397 offer-context bets and 736 reference
+quotes. The provider returned an event pagination cursor, which remains an
+explicit completeness caveat even though no requested book/ID was missing.
+The captured retained case was SGO's Kalshi-labelled Orlando spread −25.5 at
++1241, alternate at both checkpoints. Its conservative and coherent probability
+was 31/361, modeled committed capital $99.97, win receipt $1,259 and loss receipt
+zero. Exact EV was 293983/3608917 at both checkpoints and under the late-reference
+revaluation of early cashflows. The observed finding was unchanged economics
+with newer source clocks. It establishes no fill, venue settlement or quality
+claim. UAB–Rhode Island also completed both scheduled checkpoints.
+
+Actual native Chrome clicking at 150% zoom downloaded the complete game export;
+mobile views preserved missing values and reference-only book price context.
+The initial Magic export contained 12,076 immutable records and reproduced 84
+numeric results among 397 offers at each checkpoint offline, without provider
+or database calls. Private evidence and later storage/correction verification
+are under `.local/ev-experiment-20261122/` and `.local/ev-experiment-installed/`.

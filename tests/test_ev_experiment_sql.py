@@ -171,12 +171,83 @@ class ExperimentSQL(LatestBoardFixture):
             event=self.event(starts=self.now+timedelta(seconds=601))
             owner.discover(db,[event]);task=owner.due(db)[0]
             self.advance(self.now+timedelta(seconds=2))
+            self.assertEqual(owner.due(db,limit=8),[])
             owner.capture(db,task["game_id"],"early",self.snapshot(event),token=task["token"])
             detail=owner.detail(db,task["game_id"])
             self.assertEqual(detail["late"]["reason"],"early_baseline_after_target")
             self.assertEqual(detail["cases"][0]["transition"],"timing_incomplete")
             self.assertTrue(detail["cases"][0]["retain_case"])
             self.assertEqual(owner.due(db),[])
+
+    async def test_predeclared_early_backlog_is_not_bypassed_by_late_priority(self):
+        with self.connect() as db:
+            event=self.event();owner.discover(db,[event])
+            self.advance(owner.stamp(event["starts_at"])-timedelta(seconds=590))
+            tasks=owner.due(db,limit=8)
+            self.assertEqual([task["checkpoint"] for task in tasks],["early"])
+            task=tasks[0]
+            owner.capture(db,task["game_id"],"early",self.snapshot(event),token=task["token"])
+            detail=owner.detail(db,task["game_id"])
+            self.assertEqual(detail["late"]["status"],"missed")
+            self.assertEqual(detail["late"]["reason"],"early_baseline_after_target")
+            self.assertEqual(owner.due(db),[])
+
+    async def test_terminal_missing_early_still_allows_positive_incomplete_late(self):
+        with self.connect() as db:
+            event=self.event();owner.discover(db,[event]);early=owner.due(db)[0]
+            owner.fail_checkpoint(db,early["game_id"],"early","source_guard_refused",token=early["token"])
+            self.advance(owner.stamp(event["starts_at"])-timedelta(seconds=600))
+            late=owner.due(db)[0]
+            self.assertEqual(late["checkpoint"],"late")
+            owner.capture(db,late["game_id"],"late",self.snapshot(event),token=late["token"])
+            row=owner.detail(db,late["game_id"])["cases"][0]
+            self.assertIsNone(row["early"])
+            self.assertTrue(row["retain_case"])
+            self.assertTrue(row["incomplete"])
+
+    async def test_late_first_bootstrap_correction_aliases_original_page_without_backdating(self):
+        with self.connect() as db:
+            event=self.event();owner.discover(db,[event])
+            game=db.execute("SELECT * FROM ev_experiment_game").fetchone()
+            target=owner.stamp(event["starts_at"])-timedelta(seconds=600)
+            history=[]
+            # Recreate the deployed old ordering as immutable v1 records. This
+            # bypass is only authored fixture evidence, never scheduler behavior.
+            for label,at in (("late",target+timedelta(seconds=51)),("early",target+timedelta(seconds=72))):
+                self.advance(at)
+                task=db.execute("SELECT * FROM ev_experiment_task WHERE game_id=%s AND checkpoint=%s",(game["id"],label)).fetchone()
+                value=dict(status="captured",checkpoint=label,schedule_id=game["schedule_id"],
+                    target_at=owner.clock(task["target_at"]),deadline_at=owner.clock(task["deadline_at"]),
+                    requested_at=owner.clock(target),received_at=owner.clock(at),known_at=owner.clock(at),
+                    observed_at=owner.clock(game["first_observed_at"]),snapshot=self.snapshot(event))
+                with db.transaction():
+                    owner._lock(db)
+                    with patch.object(owner,"pack_checkpoint",owner.pack):
+                        identity,size=owner._write(db,"checkpoint",value,game_id=game["id"],checkpoint=label)
+                    db.execute("UPDATE ev_experiment_game SET "+label+"_id=%s,unique_payload_bytes=unique_payload_bytes+%s WHERE id=%s",(identity,size,game["id"]))
+                    db.execute("UPDATE ev_experiment_task SET state='captured',result_id=%s WHERE game_id=%s AND checkpoint=%s",(identity,game["id"],label))
+                history.append(identity)
+            first_id,advanced_id=history
+            before=list(db.execute("SELECT * FROM ev_experiment_record WHERE kind='checkpoint' ORDER BY id"))
+            self.advance(owner.stamp(event["starts_at"])+timedelta(minutes=1))
+            corrected=owner.correct_first_observation(db,game["id"],reason="old_late_priority_bypassed_pending_early",
+                evidence_reference="authored fixture original receipt/knowledge/persistence clocks")
+            self.assertEqual(corrected["state"],"corrected")
+            self.assertEqual(corrected["first_observation_id"],first_id)
+            self.assertEqual(before,list(db.execute("SELECT * FROM ev_experiment_record WHERE kind='checkpoint' ORDER BY id")))
+            detail=owner.detail(db,game["id"])
+            self.assertEqual(detail["early"]["id"],first_id)
+            self.assertEqual(detail["early"]["original_checkpoint"],"late")
+            self.assertEqual(detail["early"]["received_at"],owner.clock(target+timedelta(seconds=51)))
+            self.assertGreater(owner.stamp(detail["early"]["corrected_at"]),owner.stamp(event["starts_at"]))
+            self.assertEqual(detail["late"]["status"],"not_comparable_baseline_correction")
+            self.assertEqual(detail["later_observation_context"]["id"],advanced_id)
+            self.assertTrue(detail["cases"][0]["incomplete"])
+            bundle=owner.export_game(db,game["id"])
+            proof=owner.reproduce_export(bundle)
+            self.assertEqual(proof["checkpoint_history_reproduced"],2)
+            self.assertEqual(set(proof["checkpoints"]),{"early"})
+            self.assertEqual(owner.correct_first_observation(db,game["id"],reason="idempotent retry",evidence_reference="same original facts")["state"],"unchanged")
 
     async def test_reschedules_cannot_reopen_exhausted_game_outcome_budget(self):
         with self.connect() as db:
@@ -192,6 +263,8 @@ class ExperimentSQL(LatestBoardFixture):
     async def test_actual_persistence_after_deadline_rolls_back_and_records_miss(self):
         with self.connect() as db:
             event=self.event();owner.discover(db,[event])
+            early=owner.due(db)[0]
+            owner.capture(db,early["game_id"],"early",self.snapshot(event),token=early["token"])
             self.advance(owner.stamp(event["starts_at"])-timedelta(seconds=600))
             late=next(task for task in owner.due(db,limit=2) if task["checkpoint"]=="late")
             now=owner.utc();value=self.snapshot(event)
@@ -220,6 +293,8 @@ class ExperimentSQL(LatestBoardFixture):
     async def test_no_reserved_or_free_space_refuses_late_before_paid_claim(self):
         with self.connect() as db:
             event=self.event();owner.discover(db,[event])
+            early=owner.due(db)[0]
+            owner.fail_checkpoint(db,early["game_id"],"early","source_guard_refused",token=early["token"])
             self.advance(owner.stamp(event["starts_at"])-timedelta(seconds=600))
             usage=records.retention_usage(db)
             with patch.object(records,"TOTAL_BYTE_CAP",usage["total"]+usage["reserved"]):
