@@ -137,6 +137,26 @@ def markets(db, filters, *, offset=0, limit=50):
     return dict(rows=[row(db, value) for value in rows], total=count)
 
 
+def _selection_label(snapshot, record, payload, side):
+    if side in ('over', 'under'):
+        return side.title()
+    selected = record.get('selection') or {}
+    participant = selected.get('participant')
+    names = [name for name, identity in (record.get('event', {}).get('participants') or {}).items()
+             if identity == participant and name != participant]
+    if len(names) == 1:
+        return names[0]
+    label = selected.get('label') or (payload or {}).get('selection_label')
+    if label and label != participant:
+        return label
+    if side in ('home', 'away'):
+        source_name = ((snapshot.get('source_event') or {}).get('teams', {}).get(side) or {}).get('name')
+        if source_name:
+            return source_name
+        return side.title() + ' selection · name not recorded'
+    return 'Selection identity unresolved'
+
+
 def offer(snapshot, value, pull_id, *, family=None):
     """One exact received trading offer and its stored calculation witness."""
     from app.comparison.current_pregame import reference_key
@@ -146,7 +166,10 @@ def offer(snapshot, value, pull_id, *, family=None):
         # This immutable scalar display was produced from the original offer
         # before its evidence was compressed. Its exact identity and revision
         # remain identical to the fully expanded inspector/export projection.
-        return deepcopy(value['display_offer'])
+        displayed = deepcopy(value['display_offer'])
+        displayed['outcome'] = _selection_label(snapshot,value['record'],
+            value.get('calculation_payload'),displayed.get('side'))
+        return displayed
     record = value['record']
     quote = record['quote']
     payload = value.get('calculation_payload')
@@ -180,12 +203,7 @@ def offer(snapshot, value, pull_id, *, family=None):
         side = reference_key(record)[1]
     except (ValueError, KeyError, TypeError):
         side = None
-    selected = record['selection']
-    label = selected.get('label') or (payload or {}).get('selection_label')
-    if side in ('home', 'away'):
-        label = record['event'].get(side) or label
-    elif side in ('over', 'under'):
-        label = side.title()
+    label = _selection_label(snapshot, record, payload, side)
     result = dict(id=identity['id'], revision=value.get('evidence_revision') or hashed([pull_id, value]), pull_id=pull_id,
         exact_bet_id=identity['id'], outcome=label or 'Selection identity unresolved',
         side=side, line=None if identity['family']=='moneyline' else identity['line'],

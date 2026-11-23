@@ -46,6 +46,7 @@ def test_pair_rejects_cross_pull_and_whole_input_span_and_keeps_inclusive_bounda
     left['payload']['acquisition'] = validate([first])
     right['payload']['acquisition'] = validate([witness('pull-b','2026-11-18T14:00:01Z')])
     assert evaluate(left,right,at=AT) is None
+
     right['payload']['acquisition'] = validate([witness('pull-a','2026-11-18T14:10:00Z')])
     assert evaluate(left,right,at=AT)['acquisition']['receipt_span_seconds'] == 600
     right['payload']['acquisition'] = validate([witness('pull-a','2026-11-18T14:10:00.000001Z')])
@@ -53,3 +54,18 @@ def test_pair_rejects_cross_pull_and_whole_input_span_and_keeps_inclusive_bounda
     left['payload']['acquisition'] = validate([first,witness('pull-a','2026-11-18T14:09:50Z')])
     right['payload']['acquisition'] = validate([witness('pull-a','2026-11-18T14:19:40Z')])
     assert evaluate(left,right,at=AT) is None
+
+
+def test_team_display_uses_exact_participant_name_in_full_and_old_compact_evidence():
+    from app.storage.market_board import offer as display
+    from tests.test_ev_movement import offer
+
+    value = offer()
+    value['record']['event']['participants'] = {'Home Team':'home','Away Team':'away'}
+    value['calculation_payload']['selection_label'] = 'Home Team'
+    expanded = display({},value,'same-pull')
+    assert expanded['outcome'] == 'Home Team'
+    compact = dict(value,display_offer=dict(expanded,outcome='provider:raw-id'))
+    restored = display({},compact,'same-pull')
+    assert restored['outcome'] == 'Home Team'
+    assert restored['revision'] == expanded['revision']

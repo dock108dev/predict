@@ -25,7 +25,10 @@ serial validation time without relaxing the rollout allowance or omitting checks
 The focused contracts cover exact reference/EV/cashflow arithmetic, collection
 budget and Stop guards, checkpoint timing and persistence, lossless export, and
 the deployment paths affected by the change. Storage/migration changes add a
-small disposable PostgreSQL check. Private proxy smoke verifies owner access and
+small disposable PostgreSQL check. Disposable class fixtures clone a sealed empty
+schema keyed to the exact migration manifest. Fresh migrations run once; each
+class keeps its own database, validates the complete migration ledger and gets a
+distinct storage epoch. A clone-isolation regression checks data and DDL separation. Private proxy smoke verifies owner access and
 credential stripping. Current-main identity is checked before build and before
 SSH handoff. The full disposable Compose rehearsal remains in manual validation.
 

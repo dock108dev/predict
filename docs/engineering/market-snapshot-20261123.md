@@ -84,3 +84,37 @@ integration, installed site observations and hosted CI/deployment.
 
 Deployment and installed public-site acceptance are pending below. No owner
 review is requested at this intermediate checkpoint.
+
+### Installed integration follow-up
+
+Migration116 applied through `deploy/release.sh` full maintenance protocol using
+all three validated/published role images from CI45225548056. Retained database
+backup: `/srv/predict/backups/before-migration.iefDmdI5.dump` (71,669,951 bytes).
+All configured roles were healthy after the guarded rollout.
+
+CI45225548056 and45226141268 passed their selected tests, proxy validation and
+image verification/publication, then correctly refused handoff because less than
+55 seconds remained within the existing110-second execution budget. Their release
+metrics report59.638 and63.493 seconds before refusal. Warm cached images alone
+did not resolve the issue: second-run SQL took42.039s versus portable23.319s.
+The limits were not relaxed. Disposable SQL fixtures now migrate one empty schema
+per exact migration manifest, seal it against connections, clone an isolated DB
+for each class, verify all migration hashes and assign distinct storage epochs.
+The same47 SQL tests and6 subtests passed before/after; local runner time changed
+17.819→14.999 seconds. A separate regression proves sibling data/DDL isolation.
+Hosted timing is still pending for this repair.
+
+Public-site review found two owning-boundary issues, fixed before owner handoff:
+- Empty-cache collector restart forgot the last valid receipt. Runtime reads now
+  derive that fact from accepted durable receipts independently of heartbeat
+  availability; SQL proves healthy/unhealthy states preserve the receipt without
+  writing heartbeat or status.
+- Market projection overwrote human selection labels with internal team IDs.
+  Display uses the exact participant mapping/source role name, including existing
+  compact projections, while preserving offer/revision identity. Totals omit the
+  spread-style plus prefix. Focused formatter and identity checks pass.
+
+Integrated follow-up checks pass:278 portable tests +26 subtests;49 SQL tests
++6 subtests, including all originally selected SQL targets and new restart/isolation
+cases. The path-based selector intentionally selects different portable owners
+for this narrower follow-up; the earlier full implementation check remains374.

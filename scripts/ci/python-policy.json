@@ -1,5 +1,6 @@
 {
   "deferred": {
+    "tests/test_sql_fixture_template.py": "Required disposable PostgreSQL lane: all exact migration digests are cloned from a sealed empty template while each class retains independent data, schema changes and storage epoch.",
     "tests/test_market_board_sql.py": "Required disposable PostgreSQL lane: scoped acquisition replacement before market ranking/pagination, exact main/alternate selection and frozen revision reads across SQL lease expiry; zero provider requests.",
     "tests/test_market_snapshot_arbs_sql.py": "Required disposable PostgreSQL lane: market-to-market pairs use authentic frozen acquisition membership, complete scoped replacement and no executable sportsbook legs.",
     "tests/test_admin_database_sql.py": "Required in the disposable PostgreSQL lane. Verifies bounded local database reads and read-only access.",

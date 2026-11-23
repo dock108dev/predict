@@ -15,7 +15,17 @@ export function marketRow(row,query,onNavigate){
  cell(tr,'Capture / references',dateTime(row.received_at),offer?.reference_basis||row.reference_basis||referenceBasis(offer)||(offer?'Same-pull reference evidence':null),row.fee_mode?.enabled===true?'Captured with fees included':null);
  const expand=new URLSearchParams(exact);expand.delete('offer');expand.delete('revision');cell(tr,'Offers').append(action('Offers & history',expand,onNavigate));return tr;
 }
-function referenceLabel(ref,value){const facts=ref.facts||ref,team=(value.snapshot?.event||{})[facts.side];const offer={...facts,outcome:team||facts.outcome||facts.side};return [venue(facts.venue||facts.book||facts.original_bookmaker_id),selection(offer),odds(facts.price??facts.price_american,facts.price_units),dateTime(facts.received_at||facts.times?.received_at)].join(' · ');}
+function referenceLabel(ref,value){
+ const facts=ref.facts||ref,side=facts.side,event=value.snapshot?.event||{},source=value.snapshot?.source_event||{};
+ let label=facts.outcome;
+ if(side==='home'||side==='away'){
+  const sourceName=source.teams?.[side]?.name||facts.teams?.[side]?.name;
+  const participant=Object.entries(event.participants||{}).find(([,identity])=>identity===event[side]);
+  label=sourceName||participant?.[0]||`${side==='home'?'Home':'Away'} team name unavailable`;
+ }else if(side==='over'||side==='under')label=side==='over'?'Over':'Under';
+ const offer={...facts,family:facts.family||facts.market,outcome:label||'Selection identity unresolved'};
+ return [venue(facts.venue||facts.book||facts.original_bookmaker_id),selection(offer),odds(facts.price??facts.price_american,facts.price_units),dateTime(facts.received_at||facts.times?.received_at)].join(' · ');
+}
 function offerTable(root,offers,onSelect){const table=node('table',undefined,'catalog-table'),head=node('thead'),titles=node('tr');for(const text of ['Selection / line','Venue / odds','Stored EV','Inspect'])titles.append(node('th',text));head.append(titles);const body=node('tbody');for(const offer of offers){const row=node('tr');cell(row,'Selection / line',selection(offer),offer.main_role==='alternate'?'Alternate':offer.main_role!=='main'?'Main status uncertain':null);cell(row,'Venue / odds',venue(offer.venue||offer.represented_venue||offer.book),odds(offer.price,offer.price_units));cell(row,'Stored EV',percent(offer.calculation?.net_ev_percent)||readable(offer.calculation?.reason||'No matching reference pair in this pull'));const button=node('button','Inspect');button.onclick=()=>onSelect(offer);cell(row,'Inspect').append(button);body.append(row);}table.append(head,body);const scroll=node('div',undefined,'catalog-scroll');scroll.append(table);root.append(scroll);if(!offers.length)root.append(node('p','No received offers in this captured selection.'));}
 export function renderMarket(root,value,{positive=false,includeAlternates=false,onSelect,onCapture}){
  root.replaceChildren();const row=value.row;root.append(node('p',`${readable(row.family)} · ${dateTime(row.received_at)} · ${row.state==='complete'?'Captured':stateLabel(row)}`));

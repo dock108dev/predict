@@ -187,3 +187,46 @@ class ExperimentAcquisitionSQL(PregameFixture):
             again=recover(db,ledger_path=self.directory/'ledger.sqlite3',receipt_root=self.directory/'originals')
             self.assertEqual(again['linked'],0)
         self.assertEqual(len(requests),1)
+
+    async def test_restart_keeps_durable_last_receipt_separate_from_runtime_availability(self):
+        from psycopg.types.json import Jsonb
+        from app.collection.runtime_status import RuntimeState, read_runtime, HEARTBEAT_SECONDS
+        from app.storage.acquisition_snapshot import start
+
+        now=datetime.now(timezone.utc)
+        received=now-timedelta(seconds=30)
+        panel=dict(provider='sportsgameodds',metrics={},last_valid_receipt_at=None,
+                   worker_behavior='waiting_for_cycle',status=dict(novig=dict(state='available')))
+        state=RuntimeState(self.connect)
+        snapshot=dict(runtime_id='before-restart',state='running',config=dict(enabled=True,
+            aggregate_provider='sportsgameodds'),states=dict(sportsgameodds=dict(state='available')),
+            dispatch=True,status=dict(sources=[panel]),fingerprint='before-restart',
+            paused_sources=[],global_stopped=False)
+        with self.connect() as db,patch('app.collection.runtime_status.clock',return_value=now):
+            db.execute('TRUNCATE public.market_pull CASCADE')
+            pull=start(db,dict(eventIDs='receipt-fixture',oddID=','.join(acquisition.ODD_IDS),
+                bookmakerID=','.join(acquisition.BOOKS),includeAltLines=True),at=received)
+            db.execute('''INSERT INTO public.market_pull_receipt
+                (pull_id,attempt_id,receipt_sha256,received_at,membership) VALUES(%s,%s,%s,%s,%s)''',
+                (pull,'accepted-before-restart','a'*64,received,
+                 Jsonb(dict(event_ids=['receipt-fixture'],next_cursor_present=False))))
+            state.write_snapshot(snapshot)
+            # A new process publishes an empty diagnostic cache. Its healthy
+            # heartbeat says nothing about whether a valid receipt existed.
+            state.write_snapshot(dict(snapshot,runtime_id='after-restart',fingerprint='after-restart'))
+            owner=read_runtime(db,at=now)
+            self.assertTrue(owner['healthy'])
+            self.assertEqual(owner['states']['sportsgameodds']['state'],'available')
+            source=owner['status']['sources'][0]
+            self.assertEqual(datetime.fromisoformat(source['last_valid_receipt_at']),received)
+            self.assertEqual(source['last_valid_receipt_basis'],'accepted_acquisition_receipt')
+            self.assertEqual(source['metrics'],{})
+            expired=read_runtime(db,at=now+timedelta(seconds=HEARTBEAT_SECONDS+1))
+            self.assertFalse(expired['healthy'])
+            self.assertEqual(expired['states']['sportsgameodds']['state'],'unavailable')
+            self.assertEqual(datetime.fromisoformat(expired['status']['sources'][0]['last_valid_receipt_at']),received)
+            # This fallback is a passive read; it does not fabricate worker
+            # metrics, renew a heartbeat or rewrite the committed source panel.
+            stored=db.execute('SELECT status,heartbeat_at FROM data_runtime WHERE singleton').fetchone()
+            self.assertEqual(stored['status']['sources'][0],panel)
+            self.assertEqual(stored['heartbeat_at'],now)

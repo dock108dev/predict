@@ -2,7 +2,9 @@
 from copy import deepcopy
 from datetime import timedelta
 from functools import lru_cache
+from hashlib import sha256
 import os
+from pathlib import Path
 from types import SimpleNamespace
 from unittest import IsolatedAsyncioTestCase
 from unittest.mock import patch
@@ -24,6 +26,44 @@ from tests.test_d03_current_rows import fixture_records
 from tests.test_current_board_reads import context, frame
 
 SOCKET=os.environ.get('DA_TEST_PGSOCKET')
+
+
+def _migrated_template(db, connector):
+    """Migrate template0 once per exact schema, never reuse a test's database.
+
+    Only the temporary cluster can own this template. The session lock covers
+    CREATE DATABASE (which cannot run in a transaction), and disabling template
+    connections prevents test setup or application writes from changing it.
+    """
+    import app.storage.store as storage
+
+    migrations = sorted((Path(storage.__file__).parent/'migrations').glob('*.sql'))
+    manifest = [(path.name,sha256(path.read_bytes()).hexdigest()) for path in migrations]
+    if not manifest:
+        raise ValueError('No packaged migrations for disposable template')
+    digest = sha256(repr(manifest).encode()).hexdigest()
+    name = 'prediction_arb_schema_'+digest[:32]
+    db.execute('SELECT pg_advisory_lock(120013)')
+    try:
+        existing = db.execute('SELECT datistemplate,datallowconn FROM pg_database WHERE datname=%s',(name,)).fetchone()
+        if existing is None:
+            db.execute(sql.SQL('CREATE DATABASE {} TEMPLATE template0').format(sql.Identifier(name)))
+            try:
+                with connector(name) as fresh:
+                    Store(fresh).migrate()
+                    applied = [(row['version'],row['sha256']) for row in fresh.execute(
+                        'SELECT version,sha256 FROM public.schema_migration ORDER BY version')]
+                    if applied != manifest:
+                        raise ValueError('Disposable template migration manifest differs')
+                db.execute(sql.SQL('ALTER DATABASE {} WITH IS_TEMPLATE true ALLOW_CONNECTIONS false').format(sql.Identifier(name)))
+            except BaseException:
+                db.execute(sql.SQL('DROP DATABASE {}').format(sql.Identifier(name)))
+                raise
+        elif not existing['datistemplate'] or existing['datallowconn']:
+            raise ValueError('Disposable schema template is not sealed')
+        return name
+    finally:
+        db.execute('SELECT pg_advisory_unlock(120013)')
 
 
 class RetainedBoardClient(RuntimeClient):
@@ -87,8 +127,15 @@ class LatestBoardFixture(IsolatedAsyncioTestCase):
         with cls.connect('prediction_arb') as db:
             directory = str(db.execute('show data_directory').fetchone()['data_directory'])
             assert os.path.realpath(directory).startswith(os.path.realpath('/tmp/predict-pg-'))
-            db.execute(sql.SQL('CREATE DATABASE {}').format(sql.Identifier(cls.name)))
-        with cls.connect() as db:Store(db).migrate()
+            cls.schema_template = _migrated_template(db,cls.connect)
+            db.execute(sql.SQL('CREATE DATABASE {} TEMPLATE {}').format(
+                sql.Identifier(cls.name),sql.Identifier(cls.schema_template)))
+        with cls.connect() as db:
+            # The owner verifies every packaged digest even when all migrations
+            # were already applied in the empty template. Each cloned storage
+            # owner also needs its own epoch, just as a fresh migration creates.
+            Store(db).migrate()
+            db.execute('UPDATE current_row_epoch SET epoch=%s WHERE singleton=true',(uuid4().hex,))
 
     @classmethod
     def tearDownClass(cls):

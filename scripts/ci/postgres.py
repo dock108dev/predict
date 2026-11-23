@@ -241,6 +241,7 @@ def main(argv=None):
                 if args.sc03_ticket_timing
                 else [
                     "integration_tests",
+                    "tests/test_sql_fixture_template.py",
                     "tests/test_market_board_sql.py",
                     "tests/test_market_snapshot_arbs_sql.py",
                     "tests/test_research_catalog_sql.py",

@@ -40,6 +40,24 @@ def test_migration_checks_fresh_schema_checkpoint_export_and_sql_health():
     )
 
 
+def test_shared_sql_fixture_change_preserves_workspace_checks_and_clone_isolation():
+    result = command(selected("tests/latest_board_fixture.py"), "postgres")
+    for target in (
+        "tests/test_current_pregame_sql.py::CurrentPregameSQL::test_http_health_checks_supported_sql_without_calculation",
+        "tests/test_data_workspace_sql.py",
+        "tests/test_ev_experiment_sql.py::ExperimentSQL::test_both_checkpoints_share_dependencies_and_export_reproduces_offline",
+        "tests/test_ev_experiment_sql.py::ExperimentSQL::test_reference_scope_transition_preserves_old_policy_and_declared_checkpoint_requests",
+        "tests/test_experiment_acquisition_sql.py",
+        "tests/test_fee_mode_sql.py",
+        "tests/test_fee_pricing_sql.py",
+        "tests/test_market_board_sql.py",
+        "tests/test_market_snapshot_arbs_sql.py",
+        "tests/test_research_catalog_sql.py",
+        "tests/test_sql_fixture_template.py",
+    ):
+        assert target in result
+
+
 def test_collection_changes_check_financial_guards_and_automatic_acquisition():
     result = selected("app/collection/experiment_acquisition.py")
     pure = command(result, "portable")

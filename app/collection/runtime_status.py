@@ -87,6 +87,18 @@ def read_runtime(db, at=None, *, ordinary_authority=False):
     states = deepcopy(row['source_status'])
     status = deepcopy(row['status'])
     _unpack_status_sections(status)
+    # A collector restart clears its diagnostic cache, but not accepted receipt
+    # history. Availability follows the heartbeat; the last valid receipt remains
+    # a separately owned durable fact, including while collection is waiting.
+    sgo_panels = [panel for panel in status.get('sources', [])
+                  if panel.get('provider') == 'sportsgameodds']
+    if sgo_panels and db.execute("SELECT to_regclass('public.market_pull_receipt') r").fetchone()['r']:
+        receipt = db.execute('SELECT max(received_at) at FROM public.market_pull_receipt').fetchone()['at']
+        for panel in sgo_panels:
+            previous = panel.get('last_valid_receipt_at')
+            if receipt is not None and (not previous or receipt > _stamp(previous)):
+                panel.update(last_valid_receipt_at=receipt.isoformat(),
+                             last_valid_receipt_basis='accepted_acquisition_receipt')
     for panel in status.get('sources',[]):
         revoked=not healthy or not row['dispatch'] or row['global_stopped'] or panel.get('provider') in row['paused_sources']
         sync=panel.get('metrics',{}).get('synchronization')

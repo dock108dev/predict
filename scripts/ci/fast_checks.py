@@ -26,6 +26,16 @@ SQL_CORE = {
     "tests/test_ev_experiment_sql.py::ExperimentSQL::test_both_checkpoints_share_dependencies_and_export_reproduces_offline",
     "tests/test_current_pregame_sql.py::CurrentPregameSQL::test_http_health_checks_supported_sql_without_calculation",
 }
+SQL_WORKSPACE = SQL_CORE | {
+    "tests/test_data_workspace_sql.py",
+    "tests/test_ev_experiment_sql.py::ExperimentSQL::test_reference_scope_transition_preserves_old_policy_and_declared_checkpoint_requests",
+    "tests/test_experiment_acquisition_sql.py",
+    "tests/test_fee_mode_sql.py",
+    "tests/test_fee_pricing_sql.py",
+    "tests/test_market_board_sql.py",
+    "tests/test_market_snapshot_arbs_sql.py",
+    "tests/test_research_catalog_sql.py",
+}
 DOMAINS = {
     "collection": {
         "tests/test_sportsgameodds_adapter.py",
@@ -101,6 +111,11 @@ def plan(root, paths):
             scopes.add("fees")
         if path.startswith("app/dashboard/"):
             scopes.add("dashboard")
+        if path in ("tests/latest_board_fixture.py", "tests/pregame_fixture.py", "tests/test_sql_fixture_template.py"):
+            # Preserve the complete workspace SQL selection when its shared
+            # database setup changes; template reuse never narrows checks.
+            sql.update(SQL_WORKSPACE)
+            sql.add("tests/test_sql_fixture_template.py")
         if path == "app/dashboard/multi_game_server.py":
             pure.add(
                 "tests/test_ev09_asset_delivery.py::Assets"
