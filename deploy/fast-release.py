@@ -14,11 +14,12 @@ import time
 
 REPOSITORY = "ghcr.io/dock108dev/predict"
 ROLES = ("web", "collector", "archive")
+BUDGET_SECONDS = 110  # Leave job time for evidence upload and cache housekeeping.
 DIGEST = re.compile(re.escape(REPOSITORY) + r"@sha256:[a-f0-9]{64}")
 
 
 def remaining(started, *, now=None):
-    return 120 - ((time.time() if now is None else now) - started)
+    return BUDGET_SECONDS - ((time.time() if now is None else now) - started)
 
 
 def require_time(started, minimum, stage):
@@ -227,22 +228,7 @@ class Release:
                     pool.map(lambda role: self.build(role, inputs[role]), ROLES)
                 ),
             )
-            environment = dict(
-                os.environ,
-                **{"PREDICT_" + i["role"].upper() + "_IMAGE": i["tag"] for i in images},
-            )
-            # Candidate publication can overlap the disposable smoke: neither
-            # authorizes server changes. Both must succeed before SSH handoff.
-            publication = pool.submit(
-                self.phase, "publish", lambda: list(pool.map(self.publish, images))
-            )
-            self.phase(
-                "compose_smoke",
-                lambda: self.run(
-                    ["bash", "deploy/smoke.sh"], name="compose-smoke", env=environment
-                ),
-            )
-            images = publication.result()
+            images = self.phase("publish", lambda: list(pool.map(self.publish, images)))
             proxy.result()
         self.result["images"] = images
         if self.publish_only:
@@ -256,7 +242,7 @@ class Release:
                 status="SKIPPED", reason="Main advanced before server handoff"
             )
             return
-        require_time(self.started, 25, "server handoff")
+        require_time(self.started, 55, "server handoff")
         host = os.environ["SSH_HOST"]
         if not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9.-]+", host):
             raise ValueError("Invalid deployment host")
@@ -306,7 +292,7 @@ class Release:
     def report(self):
         self.result.update(
             elapsed_seconds=round(time.time() - self.started, 3),
-            budget_seconds=120,
+            budget_seconds=BUDGET_SECONDS,
             observed_at=datetime.now(timezone.utc).isoformat(),
         )
         output = Path("test-results/release")

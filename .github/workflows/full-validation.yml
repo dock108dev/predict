@@ -7,6 +7,10 @@ on:
         description: Run all assurance lanes even if source checks fail
         type: boolean
         default: false
+      compose_rehearsal:
+        description: Also boot disposable role images and rehearse web replacement
+        type: boolean
+        default: false
 
 env:
   CI_ASSURANCE_WORKFLOW: full-validation.yml
@@ -23,6 +27,26 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  compose:
+    name: Optional disposable deployment rehearsal
+    if: inputs.compose_rehearsal
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build local candidate roles
+        run: |
+          docker build --target web -t predict-rehearsal-web .
+          docker build --target collector -t predict-rehearsal-collector .
+          docker build --target archive -t predict-rehearsal-archive .
+      - name: Exercise fresh storage and role replacement without provider credentials
+        env:
+          PREDICT_WEB_IMAGE: predict-rehearsal-web
+          PREDICT_COLLECTOR_IMAGE: predict-rehearsal-collector
+          PREDICT_ARCHIVE_IMAGE: predict-rehearsal-archive
+        run: bash deploy/smoke.sh
   offline:
     name: Offline checks
     needs: quality

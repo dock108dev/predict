@@ -99,22 +99,12 @@ def test_current_checked_revision_hands_only_pinned_manifest_to_server(release):
     assert release.requests[0].startswith("predict-images-fast-v1\n")
 
 
-@pytest.mark.parametrize("stage", ["proxy", "publish", "smoke"])
+@pytest.mark.parametrize("stage", ["proxy", "publish"])
 def test_parallel_candidate_failure_never_contacts_server(release, stage):
     def fail(*args, **kwargs):
         raise RuntimeError("candidate failed")
 
-    if stage in ("proxy", "publish"):
-        setattr(release, stage, fail)
-    else:
-        original = release.run
-
-        def run(command, **kwargs):
-            if command == ["bash", "deploy/smoke.sh"]:
-                fail()
-            return original(command, **kwargs)
-
-        release.run = run
+    setattr(release, stage, fail)
     with pytest.raises(RuntimeError, match="candidate failed"):
         release.execute()
     assert not release.requests
@@ -150,4 +140,4 @@ def test_only_one_exact_repository_digest_can_authorize_a_role(values):
 
 
 def test_elapsed_budget_uses_runner_start_including_setup():
-    assert module["remaining"](100, now=125) == 95
+    assert module["remaining"](100, now=125) == 85

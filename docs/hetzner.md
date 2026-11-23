@@ -62,7 +62,7 @@ curl -sS -D - -o /dev/null https://predict.dock108.dev/api/bet-journal
 
 Push to `main` to run **CI**. Its single private-beta job performs focused
 data/calculation/deployment checks, builds or reuses cached role images, exercises
-private proxy and disposable Compose behavior, publishes pinned digests and
+the private proxy, publishes pinned digests and
 deploys through the restricted SSH connection. The runner budget is two minutes;
 GitHub queue time is separate. Failed checks stop the release, and main is
 rechecked before build and server handoff so an older revision cannot replace

@@ -15,8 +15,8 @@ The focused contracts cover exact reference/EV/cashflow arithmetic, collection
 budget and Stop guards, checkpoint timing and persistence, lossless export, and
 the deployment paths affected by the change. Storage/migration changes add a
 small disposable PostgreSQL check. Private proxy smoke verifies owner access and
-credential stripping; image/Compose smoke uses disposable state with acquisition
-disabled. Current-main identity is checked before build and before SSH handoff.
+credential stripping. Current-main identity is checked before build and before
+SSH handoff. The full disposable Compose rehearsal remains in manual validation.
 
 The [selector](../scripts/ci/fast_checks.py) records changed paths, selected checks,
 actual durations and limits in `test-results/fast` and the run summary. Source
@@ -33,8 +33,8 @@ workflow was removed.
 ## Personal release
 
 Only current `main` deploys to [the personal workspace](https://predict.dock108.dev/).
-The same job reuses content-identified role images and BuildKit layers, exercises
-the selected images, publishes pinned digests and invokes the restricted server
+The same job reuses content-identified role images and BuildKit layers,
+publishes pinned digests and invokes the restricted server
 release. Provider credentials never enter CI. GitHub's temporary token supplies
 registry access; the existing `hetzner` environment supplies restricted SSH access.
 
@@ -53,7 +53,9 @@ workflow or separate full-suite success is required for ordinary private use.
 [Full validation](../.github/workflows/full-validation.yml) preserves broader
 regression, browser, package/security and four-shard PostgreSQL checks for an
 explicit investigation. It is manual-only and outside the two-minute normal
-release path. The older focused [assurance workflow](../.github/workflows/assurance.yml)
+release path. Its optional `compose_rehearsal` input boots disposable storage and
+all role images, then rehearses web replacement without provider credentials.
+The older focused [assurance workflow](../.github/workflows/assurance.yml)
 is also manual-only. Neither adds a hidden nightly or weekly full-test gate.
 Dependabot and GitHub dependency alerts remain separate.
 
@@ -85,7 +87,7 @@ checkpoint. Keep unchanged historical tests out of a new repair's completion gat
 ## Evidence and timing
 
 The run summary distinguishes focused validation, image cache/build, proxy/Compose
-smoke, publication and installed deployment. A green focused result describes its
+check, publication and installed deployment. A green focused result describes its
 selected contracts. A full-validation result describes the separately executed
 suite. Keep both distinct from actual source acquisition, research coverage,
 probability quality and trading results.

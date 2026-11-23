@@ -46,6 +46,8 @@ DOMAINS = {
         "tests/test_ci_fast_checks.py",
         "tests/test_ci_deploy.py::test_failed_web_rolls_back_web_only",
         "tests/test_ci_deploy.py::test_forward_migration_backs_up_and_releases_together",
+        "tests/test_ci_deploy.py::test_fast_release_refuses_pending_schema_before_touching_services",
+        "tests/test_ci_deploy.py::test_fast_release_of_unchanged_schema_uses_no_backup",
         "tests/test_ci_deploy.py::test_wrong_image_label_fails_before_compose",
         "tests/test_ci_deploy.py::test_managed_bundle_refuses_a_different_owner_database_before_rollout",
         "tests/test_ci_deploy.py::test_success_installs_managed_configuration_after_all_service_health",
