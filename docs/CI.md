@@ -17,6 +17,11 @@ and all image identities must pass before SSH handoff. Publishing a candidate
 image does not authorize its deployment. This overlaps independent work while
 preserving the server rollout allowance and the two-minute job limit.
 
+Inside focused validation, lint, workflow and secret checks pass first. Portable
+and disposable PostgreSQL checks then run concurrently and are both joined;
+either failure still blocks SSH handoff and retains both results. This removes
+serial validation time without relaxing the rollout allowance or omitting checks.
+
 The focused contracts cover exact reference/EV/cashflow arithmetic, collection
 budget and Stop guards, checkpoint timing and persistence, lossless export, and
 the deployment paths affected by the change. Storage/migration changes add a

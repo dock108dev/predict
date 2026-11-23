@@ -1,21 +1,70 @@
 # Phase 2 completion and deferred backlog
 
 Phase 2 engineering, integration and engineer-led verification are complete.
-The deployed baseline is `6ed321157bb44dd98833deeaf246a371940477b8`.
+The historical phase 2 deployed baseline was `6ed321157bb44dd98833deeaf246a371940477b8`.
 All six foundation phases and the subsequent checkpoint experiment,
 credit-saving acquisition policy and private-beta CI/CD are installed.
 
 ## Personal data workspace assignment
 
-The [implementation handoff](../personal-data-workspace-handoff.md) is being
-integrated from `b449e79` in this checkout. Final routes are `/data` (home),
+The [implementation handoff](../personal-data-workspace-handoff.md) is implemented
+and installed from `b449e79` in this checkout. Final routes are `/data` (home),
 `/experiments` and `/settings`; the [operating guide](../../personal-data-workspace.md)
 describes game/capture/exact-bet navigation and legacy-link compatibility.
 Trading results cover prediction markets against sportsbook references and
 other prediction markets. Sportsbooks remain received reference-price evidence;
 book-to-market and sportsbook-to-sportsbook result views are excluded.
 Local verification, required CI/deployment and installed owner evidence are
-recorded separately in the closeout below once observed. Phase 2 remains complete.
+recorded separately below. Phase 2 remains complete.
+
+### Workspace completion and fresh start
+
+Application commit [b4ef1f6](https://github.com/dock108dev/predict/commit/b4ef1f6f8f4b2b716e6002c9ca09cb9177637b83)
+is installed. The required [CI/deploy run 45104792325](https://github.com/dock108dev/predict/actions/runs/45104792325)
+succeeded on [e9bbf92](https://github.com/dock108dev/predict/commit/e9bbf9224b42eef6fcd4da07ad36fe64b0d3c928)
+in 103 seconds, including replacement of all three application roles and health
+of all four configured services. The first run passed its required checks but
+refused SSH handoff when its remaining rollout allowance was 0.3 seconds short;
+the retained failure is [45104365121](https://github.com/dock108dev/predict/actions/runs/45104365121).
+Portable and PostgreSQL validation now run concurrently after baseline checks;
+every required result is still joined and gated. The complete local change
+selection passes in 16.1 seconds under that implementation (portable 7.6 seconds
+and PostgreSQL 12.5 seconds overlap).
+
+Before the owner-authorized reset, the actual installed UAB–Rhode Island journey
+covered main/alternate lines, the Kalshi home −2.5 source price of −107, explicit
+current-calculation unavailability, both frozen negative checkpoints, complete
+export, Back/reload context and incomplete future capture. Its complete export
+reproduced 6,157 immutable records and 34 numeric screening results at each of two
+checkpoints offline. Native Chrome at retained 150% confirmed exact inspection
+and download with remembered login; an isolated browser through the existing
+private SSH access completed Back/reload, Settings and functional legacy-link
+checks without interfering with the owner's Chrome activity. API reads reported
+zero provider requests; scheduled acquisition remained independently owned.
+Four browser journey fixtures, 23 existing control tests plus two subtests,
+affected data/math/collection/SQL checks and focused CI failure/join tests pass.
+
+The owner's later direction authorized a fresh observed-data population.
+After verified matching server/Mac database and protected-state backups, the
+active/public, retained and cohort market/research tables were cleared in one
+explicit transaction without CASCADE. Source-only files were quarantined
+recoverably. Seven protected SQL table signatures and 1,178 protected file
+signatures were unchanged across the reset. Journal, account/quota/reservation/
+hold/exposure state, settings, source Stop/pauses, scheduled-slot history,
+provider credentials, migration hashes and both owner-login files were preserved.
+The same reset transaction had first passed a rollback rehearsal on the private
+snapshot. The restarted services are healthy; archive capture, mount and identity
+were verified under the existing archive environment.
+
+Fresh installed observation: November 22, 2026, about 10:33 PM Eastern. Data and
+Experiments each show zero games; the new immutable policy requests ten selected
+sportsbook references plus four supported trading markets, solely through SGO.
+The unchanged 128 MiB research cap has 134,208,348 unreserved bytes after initial
+metadata. Next discovery is 10:50 PM Eastern under the preserved :20/:50 schedule.
+There is no fabricated fresh T−10 pair or outcome; new evidence follows its
+ordinary schedule. Old screenshots/exports prove the pre-reset journey and are
+not current-population claims. Detailed private evidence and backup manifests
+are under `.local/personal-workspace-20261122/`.
 
 The [NCAAB model and game-log backlog](../ncaab-model-research-backlog.md) is
 deferred planning, not an active implementation or unfinished phase 2 requirement.

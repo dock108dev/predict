@@ -113,3 +113,18 @@ BetOnline, Bovada, William Hill), with SportsGameOdds as the sole active provide
 Trading markets remain on the trade side and outside this ten-book count. Existing
 captured policies, historical inputs and numeric probability policies remain
 preserved; only future requested scope and default active browsing are narrowed.
+
+## Completed implementation and later reset direction
+
+The workspace is installed at application commit `b4ef1f6`; required CI/deployment
+on `e9bbf92` succeeded in run
+[45104792325](https://github.com/dock108dev/predict/actions/runs/45104792325).
+The installed retained-data journey and exact offline export reproduction passed
+before Michael's subsequently authorized fresh-data reset. Observed data was then
+cleared with verified backups while financial/journal records, controls,
+configuration, credentials, remembered login and scheduled-slot history were
+preserved. Fresh Data/Experiments and all role health were checked afterward.
+The [active assignment completion record](phase2-20261122/queue.md#workspace-completion-and-fresh-start)
+separates those two observations and records the preserved limits and pending
+fresh T−10 evidence. No new live pair, profitability proof or owner review is a
+completion dependency after the authorized fresh start.

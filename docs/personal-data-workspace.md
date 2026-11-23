@@ -114,3 +114,19 @@ Selecting ten reference sources does not change the versioned EV probability
 policy. Its four trusted screening books and optional recorded comparison policy
 remain as implemented; a received quote alone does not establish new probability
 eligibility or sharper/calibrated predictions.
+
+## Authorized fresh start, November 22
+
+After the installed retained-data journey and offline export reproduction passed,
+Michael authorized clearing the development server's observed market/research
+population. Active observations, retained research and source-only caches were
+reset with recoverable server/Mac backups. Financial journal and provider
+account/quota/reservation/hold records, login, Stop/pauses, configuration and
+scheduled-slot history were preserved. No storage cap or credit limit changed.
+
+The fresh policy uses SGO, the selected ten references and four supported trading
+markets. Old bookmarks still resolve through the workspace but can report that
+the old observation is no longer retained. Backups are not silently reimported.
+Data and Experiments start empty and fill through normal :20/:50 discovery,
+initial capture and scheduled T−10. New T−10 pairs are pending actual scheduled
+observations; the pre-reset journey is separate verification evidence.
