@@ -533,7 +533,7 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
             if req.path=='/' and (set(req.query)&{'id','bet_id','quote_key','line','game_key','phase'}):
                 return await pregame_page(req)
             if req.path=='/':
-                raise web.HTTPFound(str(req.rel_url.with_path('/research')))
+                raise web.HTTPFound('/research')
             return web.FileResponse(static_root/'opportunity_static/current/research.html')
         app.router.add_get('/',research_page)
         app.router.add_get('/research',research_page)

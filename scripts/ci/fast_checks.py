@@ -86,6 +86,10 @@ def plan(root, paths):
             scopes.add("fees")
         if path.startswith("app/dashboard/"):
             scopes.add("dashboard")
+        if path == "app/dashboard/multi_game_server.py":
+            pure.add(
+                "tests/test_ev09_asset_delivery.py::Assets::test_research_landing_preserves_selected_legacy_links"
+            )
         if path.startswith("app/") and not path.startswith(
             (
                 "app/collection/",
