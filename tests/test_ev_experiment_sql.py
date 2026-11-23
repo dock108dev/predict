@@ -85,6 +85,36 @@ class ExperimentSQL(LatestBoardFixture):
             self.assertEqual(first["scheduling_transition"]["from_default_horizon_seconds"],3600)
             self.assertEqual(before,db.execute("SELECT * FROM research_record WHERE id=%s",(old["id"],)).fetchone())
 
+    async def test_reference_scope_transition_preserves_old_policy_and_declared_checkpoint_requests(self):
+        from app.collection.experiment_acquisition import LEGACY_BOOKS, request_scope
+        from app.comparison.reference_scope import REQUEST_BOOKS
+        with self.connect() as db:
+            with patch.object(owner, 'REQUEST_BOOKS', LEGACY_BOOKS), \
+                    patch.object(owner, 'REFERENCE_SCOPE_VERSION', 'legacy-nine-book-request-scope'):
+                old_game, _ = self.setup_game(db)
+                old_policy = owner.activate(db)
+                pending_event = self.event(key='old-pending')
+                owner.discover(db, [pending_event])
+            original = {row['id']:row['payload'] for row in db.execute('SELECT id,payload FROM ev_experiment_record')}
+            old_revision = owner._revision(db, db.execute('SELECT * FROM ev_experiment_game WHERE id=%s', (old_game,)).fetchone())
+            current = owner.activate(db)
+            self.assertNotEqual(current['id'], old_policy['id'])
+            self.assertEqual(current['activated_at'], old_policy['activated_at'])
+            self.assertEqual(current['scheduling_transition'], old_policy['scheduling_transition'])
+            self.assertEqual(current['requested_scope']['bookmakers'], list(REQUEST_BOOKS))
+            self.assertEqual(owner.activate(db)['id'], current['id'])
+            for identity,payload in original.items():
+                self.assertEqual(payload, db.execute('SELECT payload FROM ev_experiment_record WHERE id=%s', (identity,)).fetchone()['payload'])
+            historical = owner.detail(db, old_game, revision=old_revision)
+            self.assertEqual(historical['policy']['requested_scope']['bookmakers'], list(LEGACY_BOOKS))
+            exported = owner.export_game(db, old_game, revision=old_revision)
+            self.assertEqual(owner.reproduce_export(exported)['provider_requests'], 0)
+            owner.discover(db, [self.event(key='new-pending')])
+            tasks = owner.due(db, limit=2)
+            requests = {task['event']['source_event_id']:request_scope(task)['bookmakerID'].split(',') for task in tasks}
+            self.assertEqual(requests['old-pending'], list(LEGACY_BOOKS))
+            self.assertEqual(requests['new-pending'], list(REQUEST_BOOKS))
+
     async def test_both_checkpoints_share_dependencies_and_export_reproduces_offline(self):
         with self.connect() as db:
             game_id,event=self.setup_game(db)

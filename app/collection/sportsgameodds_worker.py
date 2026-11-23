@@ -29,10 +29,10 @@ from .sportsgameodds_schedule import (
 from .sportsgameodds_transport import ODD_IDS, SportsgameoddsTransport
 from .sportsgameodds_transport import TransportFailure
 from .sportsgameodds_usage import read_usage
-from app.comparison.sgo_reference import BEST_BOOKS
+from app.comparison.reference_scope import REQUEST_BOOKS
 from app.diagnostics import failure
 
-ALTERNATE_REFRESH_BOOKS = ('kalshi', 'polymarket', 'novig', PROPHETX_BOOKMAKER_ID, *BEST_BOOKS)
+ALTERNATE_REFRESH_BOOKS = REQUEST_BOOKS
 ALTERNATE_REFRESH_WINDOW = timedelta(hours=2)
 SCAN_INTERVAL = timedelta(minutes=1)
 
@@ -479,7 +479,7 @@ class SportsGameOddsWorker:
 
     def params(self, *, league=None, event_ids=None, starts_after=None, cursor=None, include_alternates=False):
         result = {'oddID': ','.join(sorted(ODD_IDS)), 'limit': self.page_limit,
-                  'includeOpposingOdds': True}
+                  'includeOpposingOdds': True, 'bookmakerID': ','.join(REQUEST_BOOKS)}
         if league is not None:
             if starts_after is None:
                 raise ValueError('league discovery requires a fixed start cutoff')

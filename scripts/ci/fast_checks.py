@@ -40,7 +40,12 @@ DOMAINS = {
         "tests/test_fees.py",
         "tests/test_comparison_cashflows.py",
     },
-    "dashboard": {"tests/test_experiment_api.py"},
+    "dashboard": {
+        "tests/test_experiment_api.py",
+        "tests/test_workspace_capture_client.py",
+        "tests/test_workspace_sessions.py",
+        "tests/test_workspace_settings_accounting.py",
+    },
     "deploy": {
         "tests/test_owner_remember_cookie.py",
         "tests/test_ci_image_cleanup.py",
@@ -89,8 +94,16 @@ def plan(root, paths):
             scopes.add("dashboard")
         if path == "app/dashboard/multi_game_server.py":
             pure.add(
-                "tests/test_ev09_asset_delivery.py::Assets::test_research_landing_preserves_selected_legacy_links"
+                "tests/test_ev09_asset_delivery.py::Assets"
             )
+        if path in ("app/storage/research_catalog.py", "app/dashboard/research_api.py"):
+            sql.update({"tests/test_data_workspace_sql.py", "tests/test_research_catalog_sql.py"})
+        if path in ("app/research/experiment.py", "app/collection/experiment_acquisition.py", "app/comparison/reference_scope.py"):
+            sql.add("tests/test_ev_experiment_sql.py::ExperimentSQL::test_reference_scope_transition_preserves_old_policy_and_declared_checkpoint_requests")
+        if path == "app/dashboard/workspace_routes.py" or path.startswith(
+            "app/dashboard/opportunity_static/current/"
+        ):
+            pure.add("tests/test_ev09_asset_delivery.py::Assets")
         if path.startswith("app/") and not path.startswith(
             (
                 "app/collection/",

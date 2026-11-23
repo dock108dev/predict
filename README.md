@@ -8,13 +8,13 @@ login. Hosted use needs no local `.env` or running app. Pushes to `main` deploy
 through the focused private-beta CI path; [server and Mac setup](docs/hetzner.md) explains
 the private deployment and optional local development.
 
-Predict is a personal market-data research system. It opens on **Research**: a
-received-data table with source/book identity, exact markets, original clocks,
-positive and nonpositive calculations, unavailable reasons, inspection and export.
-**Opportunities** remains an optional positive-EV view. **Browse odds**, exact game
-comparisons, **Arbitrage**, saved replay and the optional personal journal remain
-available. Correct data and reproducible calculations are useful even when no
-profitable opportunity exists.
+Predict opens on **Data**: games, captured observations, and exact source and
+calculation evidence. Trading views cover prediction-market offers against
+sportsbook references and other prediction markets; sportsbook prices remain
+reference evidence. Positive EV and arbitrage are Data views. **Experiments**
+contains the existing first-observation/T−10 comparisons, coverage, outcomes and
+exports. **Settings** holds collection controls and operating status.
+See the [personal workspace guide](docs/personal-data-workspace.md).
 
 The collector receives odds, normalizes affected games, calculates using posted
 prices, and stores current prices and complete calculations in PostgreSQL. Refresh and inspection
@@ -23,22 +23,20 @@ using the stored fee inputs. Pregame observations have no age expiry: authoritat
 non-pregame status, explicit withdrawal, replacement by a newer main line, and repeated scoped line omissions
 after a 15-minute grace period govern removal. Odds may be delayed.
 
-[Desk guide](docs/ui-design.md#current-comparison-interface) ·
+[Workspace guide](docs/personal-data-workspace.md) ·
 [Current data flow and API](docs/current-pregame.md) ·
 [Calculation policy](docs/benchmark-ev.md)
 
-Authentic saved captures remain a separate research view.
+Authentic saved-capture bookmarks open evidence inspection within Data.
 Live executable size and cross-venue fills are not established by these boards.
 [Price and liquidity limitations](docs/liquidity.md).
 [Monitor and Live collection](docs/monitor-live.md) describes the personal-app defaults, controls and retention.
-[About this board](app/dashboard/opportunity_static/current/about.html) explains
-the model, execution limitations, sources and SportsGameOdds data credit.
+Underlying source identity and calculation limitations remain beside the exact
+observation. Aggregate observations retain their SportsGameOdds provenance.
 
-**My Bets** saves an EV quote or both arb legs, records the odds, stake and fees
-you actually got, and compares them with retained pregame quotes, closing value
-and reported settlement. The **Opportunity log** automatically retains positive
-market-to-market arb pairs. EV quotes and market-to-sportsbook pairs require a
-manual save or recorded trade. Trading remains outside Predict.
+The standalone My Bets interface is retired. Existing journal records, APIs,
+exposure and the provider-free quote sampler remain intact. Trading remains
+outside Predict.
 [Journal workflow, measurement definitions and durability](docs/bet-journal.md)
 
 ## Requirements and quickstart
@@ -73,7 +71,7 @@ Set up [source configuration and credentials](docs/configuration.md#source-confi
 before enabling collection. Start the data process with
 `.venv/bin/python scripts/opportunity-board start --role data`.
 
-Admin shows source health, spending, and Stop controls.
+Settings shows source health, spending, holds, Stop/Resume and source pauses.
 [Start and stop individual roles](docs/configuration.md#start-and-stop) ·
 [Storage ownership](docs/storage-ownership.md) · [Hetzner runbook](docs/hetzner.md)
 

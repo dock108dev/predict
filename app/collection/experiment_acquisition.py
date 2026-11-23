@@ -11,13 +11,15 @@ from datetime import datetime, timedelta, timezone
 import inspect
 
 from app.storage.store import ROOT, connect, hashed, stamp
+from app.comparison.reference_scope import REQUEST_BOOKS
 from .bulk_checkpoint import owned_thread
 from .current_policy import aggregate_provider, aggregate_scope
 from .sportsgameodds_transport import ODD_IDS
 
 VERSION = 'first-observed-24h-tminus10-acquisition-1'
 # Exact declared response scope, including the existing optional reference book.
-BOOKS = ('kalshi', 'polymarket', 'novig', 'prophetexchange',
+BOOKS = REQUEST_BOOKS
+LEGACY_BOOKS = ('kalshi', 'polymarket', 'novig', 'prophetexchange',
          'fanduel', 'draftkings', 'betmgm', 'caesars', 'betonline')
 OUTCOME_OFFSETS = (3 * 3600, 4 * 3600, 6 * 3600, 12 * 3600, 24 * 3600)
 DISCOVERY_SECONDS = 5
@@ -36,8 +38,11 @@ def request_scope(task):
     identity = event.get('source_event_id') or event.get('native_event_id')
     if not isinstance(identity, str) or not identity:
         raise ValueError('experiment_source_event_required')
-    params = dict(eventIDs=identity, oddID=','.join(sorted(ODD_IDS)), limit=1,
-                  includeOpposingOdds=True, bookmakerID=','.join(BOOKS))
+    declared = task.get('requested_scope')
+    books = declared['bookmakers'] if declared is not None else LEGACY_BOOKS
+    odds = declared['odd_ids'] if declared is not None else ODD_IDS
+    params = dict(eventIDs=identity, oddID=','.join(sorted(odds)), limit=1,
+                  includeOpposingOdds=True, bookmakerID=','.join(books))
     if task['checkpoint'] in ('early', 'late'):
         params['includeAltLines'] = True
     elif task['checkpoint'] != 'outcome':

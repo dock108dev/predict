@@ -112,10 +112,12 @@ paid service is selected.
 
 ## Inspection and reproduction
 
-Research defaults to retained cases. All-game context exposes surrounding
+Experiments opens all tracked games, including incomplete captures. Its retained
+case view selects positive-at-either-checkpoint cases. All-game context exposes surrounding
 markets and per-book main progression without turning negative/negative quotes
 into cases. Observed-data plots preserve missing values, show early/late points,
-and mark only source-reported main roles. Reference-only books have price plots
+and mark only source-reported main roles. Data reuses the same captured-game
+inspector and keeps latest stored prices separate. Reference-only books have price plots
 without invented EV or fee claims. Exact inspection includes source inputs,
 policies, fees, cashflows, clocks and missing-data reasons.
 

@@ -101,7 +101,11 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
             if snapshot is None:raise PublicRequestError('Older segmented cutoff available after Stop')
             return snapshot
         return session_history.load(d['folder'],cutoff)
-    app=web.Application(middlewares=[dashboard_guard(current_provider, logger=__name__)],client_max_size=IMPORT_BODY_LIMIT,handler_args={'auto_decompress':False});app[OWNER_KEY]=owner
+    from .workspace_routes import compatibility_middleware
+    middlewares = [dashboard_guard(current_provider, logger=__name__)]
+    if getattr(current_provider, 'database_mode', False):
+        middlewares.append(compatibility_middleware())
+    app=web.Application(middlewares=middlewares,client_max_size=IMPORT_BODY_LIMIT,handler_args={'auto_decompress':False});app[OWNER_KEY]=owner
     async def state(req):return web.json_response(owner.status())
     async def coverage_page(req):
         from pathlib import Path
@@ -510,6 +514,10 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
     database_mode=getattr(current_provider,'database_mode',False)
     from .raw_price_api import mount as mount_raw_prices
     if database_mode:
+        from .workspace_routes import mount as mount_workspace
+        mount_workspace(app, static_root)
+        from .workspace_sessions import mount as mount_workspace_sessions
+        mount_workspace_sessions(app, owner)
         async def desk_page(req):
             from app.storage.odds_replay import DATASETS
             if req.query.get('dataset', 'frozen') not in (*DATASETS, 'retained'):

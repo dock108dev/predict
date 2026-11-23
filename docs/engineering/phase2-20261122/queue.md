@@ -5,6 +5,18 @@ The deployed baseline is `6ed321157bb44dd98833deeaf246a371940477b8`.
 All six foundation phases and the subsequent checkpoint experiment,
 credit-saving acquisition policy and private-beta CI/CD are installed.
 
+## Personal data workspace assignment
+
+The [implementation handoff](../personal-data-workspace-handoff.md) is being
+integrated from `b449e79` in this checkout. Final routes are `/data` (home),
+`/experiments` and `/settings`; the [operating guide](../../personal-data-workspace.md)
+describes game/capture/exact-bet navigation and legacy-link compatibility.
+Trading results cover prediction markets against sportsbook references and
+other prediction markets. Sportsbooks remain received reference-price evidence;
+book-to-market and sportsbook-to-sportsbook result views are excluded.
+Local verification, required CI/deployment and installed owner evidence are
+recorded separately in the closeout below once observed. Phase 2 remains complete.
+
 The [NCAAB model and game-log backlog](../ncaab-model-research-backlog.md) is
 deferred planning, not an active implementation or unfinished phase 2 requirement.
 It does not enable new feeds, backfills, subscriptions or runtime changes.

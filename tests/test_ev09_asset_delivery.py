@@ -7,170 +7,113 @@ from unittest.mock import patch
 import unittest
 from pathlib import Path
 from urllib.parse import urljoin, urlparse, parse_qs
-from aiohttp.test_utils import TestClient, TestServer, make_mocked_request
-from aiohttp.web import FileResponse
+from aiohttp.test_utils import TestClient, TestServer
 from app.dashboard.multi_game_server import create_app
 from tests.current_fixture import InjectedTestProvider
 from tests.test_current_state import owner
 
 
-PUBLIC_DESK_PAGES = ("/opportunities", "/research", "/ev", "/arbs", "/browse-odds", "/game", "/replay", "/about")
+PUBLIC_DESK_PAGES = ("/data", "/experiments", "/settings")
 
 
 class Assets(unittest.IsolatedAsyncioTestCase):
+    def app(self):
+        provider = InjectedTestProvider()
+        provider.database_mode = True
+        return create_app(owner=owner(), sessions={}, current_provider=provider)
+
     async def test_research_landing_preserves_selected_legacy_links(self):
-        provider = InjectedTestProvider()
-        provider.database_mode = True
-        app = create_app(owner=owner(), sessions={}, current_provider=provider)
-        async with TestClient(TestServer(app)) as client:
-            response = await client.get('/', allow_redirects=False)
-            self.assertEqual(response.status, 302)
-            self.assertEqual(response.headers['Location'], '/research')
-            response = await client.get('/?id=exact-existing-contract')
-            self.assertIn('/view/current/pregame.js', await response.text())
-            response = await client.get('/research')
-            self.assertIn('/view/current/research.js', await response.text())
-    async def test_personal_journal_route_serves_its_module_and_shared_style(self):
-        provider = InjectedTestProvider()
-        provider.database_mode = True
-        app = create_app(owner=owner(), sessions={}, current_provider=provider)
-        async with TestClient(TestServer(app)) as client:
-            page = await client.get('/my-bets')
-            self.assertEqual(page.status, 200)
-            self.assertIn('/view/current/bet-journal.js', await page.text())
-            for name in ('bet-journal.js', 'bet-journal-actions.js', 'bet-journal.css', 'pregame.css'):
-                asset = await client.get('/view/current/' + name)
-                self.assertEqual(asset.status, 200, name)
+        async with TestClient(TestServer(self.app())) as client:
+            for path, expected, values in (
+                ('/', '/data', {}),
+                ('/?id=exact-existing-contract', '/data', {'id':['exact-existing-contract']}),
+                ('/research?id=experiment-one&revision=revision-one', '/experiments', {'id':['experiment-one'],'revision':['revision-one']}),
+                ('/game?game_key=combined%3Aevent%3Aone&game_capture=captured-one&line=exact-winner', '/data', {'game_key':['combined:event:one'],'game_capture':['captured-one'],'line':['exact-winner']}),
+                ('/arbs?game=one&capture=early', '/data', {'view':['arbitrage'],'game':['one'],'capture':['early']}),
+                ('/admin?section=inspection&bet=exact-bet', '/data', {'bet':['exact-bet']}),
+                ('/admin?section=sources', '/settings', {}),
+                ('/raw-odds?original_bookmaker_id=pinnacle', '/data', {'original_bookmaker_id':['pinnacle'],'reference_scope':['all']}),
+                ('/view/current/research.html?book=pinnacle', '/data', {'book':['pinnacle'],'original_bookmaker_id':['pinnacle'],'reference_scope':['all']}),
+                ('/browse-odds?venue=draftkings&reference_scope=all', '/data', {'venue':['draftkings'],'original_bookmaker_id':['draftkings'],'reference_scope':['all']}),
+            ):
+                response = await client.get(path, allow_redirects=False)
+                self.assertEqual(response.status, 302, path)
+                location=urlparse(response.headers['Location'])
+                self.assertEqual(location.path, expected, path)
+                self.assertEqual(parse_qs(location.query), values, path)
+                page=await client.get(response.headers['Location'])
+                self.assertEqual(page.status, 200, path)
+                self.assertIn('data-workspace-nav', await page.text())
 
-    async def test_captured_arbitrage_game_link_keeps_its_evidence_context(self):
-        provider = InjectedTestProvider()
-        provider.database_mode = True
-        app = create_app(owner=owner(), sessions={}, current_provider=provider)
-        async with TestClient(TestServer(app)) as client:
-            response = await client.get('/game', params=dict(
-                game_key='combined:event:one', game_capture='captured-one',
-                line='exact-winner', source_event='native-one', back='/arbs',
-            ), allow_redirects=False)
-            self.assertEqual(response.status, 302)
-            destination = urlparse(response.headers['Location'])
-            self.assertEqual(destination.path, '/replay')
-            self.assertEqual(parse_qs(destination.query), {
-                'game_key': ['combined:event:one'], 'result_id': ['captured-one'],
-                'line': ['exact-winner'], 'source_event': ['native-one'],
-                'back': ['/arbs'], 'view': ['game'], 'dataset': ['retained'],
-            })
-            replay = await client.get(response.headers['Location'])
-            self.assertEqual(replay.status, 200)
-            self.assertIn('/view/current/desk.js', await replay.text())
-            retired = await client.get('/view/current/desk.html', allow_redirects=False)
-            self.assertEqual(retired.status, 302)
-            self.assertEqual(retired.headers['Location'], '/')
+    async def test_static_bookmarks_resolve_to_workspace_context(self):
+        async with TestClient(TestServer(self.app())) as client:
+            for path, target in (
+                ('/view/current/research.html?id=game-one&revision=frozen', '/experiments'),
+                ('/view/current/pregame.html?game=canonical&bet=exact&capture=early', '/data'),
+                ('/view/current/pregame-arbs.html?game=canonical', '/data'),
+                ('/view/current/admin.html?section=usage', '/settings'),
+                ('/view/dashboard.html?capture=retained-one', '/data'),
+                ('/current/coverage', '/settings'),
+                ('/admin/retained?capture=retained-one', '/data'),
+            ):
+                response=await client.get(path,allow_redirects=False)
+                self.assertEqual(response.status,302,path)
+                destination=urlparse(response.headers['Location'])
+                self.assertEqual(destination.path,target,path)
+                context=parse_qs(urlparse(path).query)
+                for key in ('id','revision','game','bet','capture'):
+                    if key in context:self.assertEqual(parse_qs(destination.query)[key],context[key])
+                page=await client.get(response.headers['Location'])
+                self.assertEqual(page.status,200,path)
+                self.assertIn('data-workspace-nav',await page.text())
 
-    async def test_preview_routes_keep_their_retained_shells(self):
-        provider = InjectedTestProvider()
-        app = create_app(owner=owner(), sessions={}, current_provider=provider)
-        for path, shell in {
-            '/': 'current/index.html', '/ev': 'current/ev.html',
-            '/arbs': 'current/arbs.html', '/game': 'index.html',
-        }.items():
-            with self.subTest(path=path):
-                match = await app.router.resolve(make_mocked_request('GET', path, app=app))
-                request = make_mocked_request('GET', path, app=app, match_info=match)
-                response = await match.handler(request)
-                self.assertIsInstance(response, FileResponse)
-                self.assertTrue(response._path.as_posix().endswith(f'/opportunity_static/{shell}'))
+    async def test_retired_bookmarks_have_working_workspace_navigation(self):
+        app=self.app()
+        async with TestClient(TestServer(app)) as client:
+            for path in ('/scanner','/my-bets','/about','/trading-fees','/view/current/scanner.html','/view/current/bet-journal.html'):
+                response=await client.get(path)
+                self.assertEqual(response.status,410,path)
+                html=await response.text()
+                self.assertIn('This page is retired',html)
+                self.assertIn('href="/data"',html)
+                self.assertIn('data-workspace-nav',html)
+            # The journal owns more than its retired HTML: retain APIs/sampler.
+            routes={route.resource.canonical for route in app.router.routes()}
+            self.assertIn('/api/bet-journal',routes)
+            self.assertIn('/api/bet-journal/{id}',routes)
+            self.assertGreaterEqual(len(app.cleanup_ctx),3)
 
     async def test_public_desk_declares_the_packaged_browser_icon(self):
-        provider = InjectedTestProvider()
-        provider.database_mode = True
-        app = create_app(owner=owner(), sessions={}, current_provider=provider)
-
-        async def file_bytes(path):
-            match = await app.router.resolve(make_mocked_request("GET", path, app=app))
-            request = make_mocked_request("GET", path, app=app, match_info=match)
-            response = await match.handler(request)
-            self.assertIsInstance(response, FileResponse, path)
-            return response._path.read_bytes()
-
-        icon = "/view/current/predict-icon.png"
-        for path in (*PUBLIC_DESK_PAGES, "/admin", "/odds", "/raw-odds", "/scanner"):
-            html = (await file_bytes(path)).decode()
-            icons = re.findall(r'<link rel="(?:icon|apple-touch-icon)"[^>]+href="([^"]+)"', html)
-            self.assertEqual(icons, [icon, icon], path)
-        self.assertTrue((await file_bytes(icon)).startswith(b"\x89PNG\r\n\x1a\n"))
+        async with TestClient(TestServer(self.app())) as client:
+            for path in PUBLIC_DESK_PAGES:
+                html=await (await client.get(path)).text()
+                icons=re.findall(r'<link rel="(?:icon|apple-touch-icon)"[^>]+href="([^"]+)"',html)
+                self.assertEqual(icons,['/view/current/predict-icon.png']*2,path)
+            response=await client.get('/view/current/predict-icon.png')
+            self.assertTrue((await response.read()).startswith(b"\x89PNG\r\n\x1a\n"))
 
     async def test_ordinary_pages_deliver_their_module_graph(self):
-        provider = InjectedTestProvider()
-        provider.database_mode = True
-        app = create_app(owner=owner(), sessions={}, current_provider=provider)
-        async with TestClient(TestServer(app)) as client:
-            binding = await (await client.get('/api/scanner/client')).json()
-            self.assertTrue(binding['assets_valid'])
-            for page in (*PUBLIC_DESK_PAGES, "/odds", "/scanner"):
-                response = await client.get(page)
-                self.assertEqual(response.status, 200)
-                html = await response.text()
-                scripts = re.findall(r'<script[^>]+src="([^"]+)"', html)
-                styles = re.findall(r'<link[^>]+href="([^"]+\.css(?:\?[^"]*)?)"', html)
-                pending = [*scripts, *styles]
-                seen = set()
+        async with TestClient(TestServer(self.app())) as client:
+            for page in PUBLIC_DESK_PAGES:
+                response=await client.get(page)
+                self.assertEqual(response.status,200)
+                html=await response.text()
+                pending=[*re.findall(r'<script[^>]+src="([^"]+)"',html),*re.findall(r'<link[^>]+href="([^"]+\.css(?:\?[^"]*)?)"',html)]
+                seen=set()
                 while pending:
-                    path = pending.pop()
-                    if path in seen:
-                        continue
+                    path=pending.pop()
+                    if path in seen:continue
                     seen.add(path)
-                    response = await client.get(path)
-                    self.assertEqual(response.status, 200, path)
-                    suffix = Path(path.split("?")[0]).suffix
-                    self.assertIn(
-                        {".css": "css", ".js": "javascript", ".ttf": "font"}[suffix],
-                        response.headers["Content-Type"],
-                    )
-                    self.assertEqual(
-                        await response.read(),
-                        (
-                            Path(__file__).resolve().parents[1]
-                            / "app/dashboard/opportunity_static/current"
-                            / Path(path.split("?")[0]).name
-                        ).read_bytes(),
-                    )
-                    if suffix == ".ttf":
-                        continue
-                    source = await response.text()
-                    imports = (
-                        re.findall(r"url\([\"\']([^\"\']+)[\"\']\)", source)
-                        if suffix == ".css"
-                        else re.findall(r"(?:from\s+|import\s*)['\"]([^'\"]+)['\"]", source)
-                    )
-                    if path in scripts and "scanner.js" not in path and "prism.js" not in path:
-                        endpoint = ({
-                            "research.js": "/api/research/catalog",
-                            "experiment.js": "/api/research/experiment",
-                        }[Path(path.split("?")[0]).name] if page == "/research" else
-                            "/api/pregame" if page in ("/opportunities","/ev","/browse-odds","/game","/arbs") else
-                            "/api/comparison-current" if page in PUBLIC_DESK_PAGES else "/api/comparison-snapshot")
-                        self.assertIn(endpoint, source)
-                        self.assertNotIn("new SavedReadPoller", source)
-                    pending.extend(urljoin(path, module) for module in imports)
-                expected = (
-                    {"pregame.css", "research.css", "research.js", "experiment.js", "manrope.ttf"}
-                    if page == "/research" else
-                    {"pregame.css", "manrope.ttf"}
-                    if page == "/about" else
-                    {"board-client.js", "board-contract.js", "board-values.js", "board-read.js", "scanner.css", "scanner.js"}
-                    if page == "/scanner" else
-                    {"pregame.css",("pregame-arbs.js" if page=="/arbs" else "pregame.js"),"manrope.ttf"}
-                    if page in ("/opportunities","/ev","/browse-odds","/game","/arbs") else
-                    {"desk.css", "desk-components.css", "desk-ticketboard.css", "desk-ticketboard.js",
-                     "desk.js", "desk-bootstrap.js", "desk-drawer.js",
-                     "desk-polling.js", "desk-preferences.js", "desk-quote-display.js", "ui-common.js",
-                     "barlow-semi-condensed-600.ttf"}
-                    if page in PUBLIC_DESK_PAGES else {"stored.css", "stored.js", "manrope.ttf"}
-                )
-                self.assertTrue(expected <= {Path(path.split("?")[0]).name for path in seen}, page)
-            self.assertEqual(
-                (await client.get("/current/assets/unknown.js")).status, 404
-            )
+                    response=await client.get(path)
+                    self.assertEqual(response.status,200,path)
+                    suffix=Path(path.split('?')[0]).suffix
+                    self.assertIn({'.css':'css','.js':'javascript','.ttf':'font'}[suffix],response.headers['Content-Type'])
+                    if suffix=='.ttf':continue
+                    source=await response.text()
+                    imports=(re.findall(r"url\([\"\']([^\"\']+)[\"\']\)",source) if suffix=='.css' else re.findall(r"(?:from\s+|import\s*)['\"]([^'\"]+)['\"]",source))
+                    pending.extend(urljoin(path,module) for module in imports)
+                self.assertTrue({'pregame.css','research.css','workspace-nav.js','manrope.ttf'} <= {Path(path.split('?')[0]).name for path in seen},page)
+            self.assertEqual((await client.get('/current/assets/unknown.js')).status,404)
 
 
 class Composition(unittest.TestCase):

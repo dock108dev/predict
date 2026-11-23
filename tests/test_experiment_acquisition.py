@@ -76,6 +76,20 @@ def test_full_declared_book_surface_and_postgame_request_scope(tmp_path):
     assert 'includeAltLines' not in acquisition.request_scope(dict(task, checkpoint='outcome'))
 
 
+def test_game_declared_scope_overrides_current_books_without_widening_old_tasks(tmp_path):
+    from app.comparison.reference_scope import REQUEST_BOOKS, REFERENCE_BOOKS
+    from app.comparison.sgo_reference import BEST_BOOKS
+    _, task, _, _ = setup(tmp_path)
+    old = acquisition.request_scope(task)
+    new = acquisition.request_scope(dict(task, requested_scope=dict(bookmakers=list(REQUEST_BOOKS),
+        odd_ids=list(acquisition.ODD_IDS), includeAltLines=True)))
+    assert old['bookmakerID'].split(',') == list(acquisition.LEGACY_BOOKS)
+    assert new['bookmakerID'].split(',') == list(REQUEST_BOOKS)
+    assert len(REFERENCE_BOOKS) == 10 and len(REQUEST_BOOKS) == 14
+    assert set(REFERENCE_BOOKS).isdisjoint({'kalshi','polymarket','novig','prophetexchange','matchbook','betfairexchange','sporttrade'})
+    assert BEST_BOOKS == ('fanduel','draftkings','betmgm','caesars')
+
+
 def test_control_scope_and_checkpoint_window_are_rechecked(tmp_path):
     worker, task, controls, _ = setup(tmp_path)
     assert acquisition.authorized(worker, task, at=worker.now())

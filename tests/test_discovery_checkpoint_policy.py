@@ -105,3 +105,15 @@ def test_default_ev_and_arbs_use_monitor_and_allow_explicit_history(
     asyncio.run(scenario())
     assert selected == [expected]
     assert all(sql.startswith("SET ") for sql in statements)
+
+
+def test_discovery_requests_ten_references_and_trade_markets_without_extra_polling():
+    from app.collection.sportsgameodds_worker import SportsGameOddsWorker
+    from app.comparison.reference_scope import REQUEST_BOOKS
+    worker = SimpleNamespace(page_limit=20, service=SimpleNamespace(config={}))
+    query = SportsGameOddsWorker.params(worker, league='NCAAB',
+                                        starts_after='2026-11-23T00:00:00Z')
+    assert query['bookmakerID'].split(',') == list(REQUEST_BOOKS)
+    assert query['leagueID'] == 'NCAAB' and query['started'] is False
+    assert 'eventIDs' not in query and 'includeAltLines' not in query
+    assert query['startsAfter'] == '2026-11-23T00:00:00Z'

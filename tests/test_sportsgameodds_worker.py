@@ -11,7 +11,7 @@ import pytest
 from app.collection.current_policy import DEFAULT
 from app.collection.sportsgameodds_adapter import Page
 from app.collection.sportsgameodds_schedule import PREGAME_TARGET
-from app.collection.sportsgameodds_worker import SportsGameOddsWorker
+from app.collection.sportsgameodds_worker import ALTERNATE_REFRESH_BOOKS, SportsGameOddsWorker
 from tests.sportsgameodds_fixtures import NOW, event
 
 
@@ -145,8 +145,8 @@ def test_active_and_kickoff_refresh_interleave_with_discovery_and_retain_cursor_
         first, active_refresh, kickoff_refresh, last = requests
         assert [r['eventIDs'] for r in (active_refresh,kickoff_refresh)] == ['e3','e1']
         assert all(r['includeAltLines'] and r['limit'] == 1 for r in (active_refresh,kickoff_refresh))
-        assert 'includeAltLines' not in first and 'bookmakerID' not in first
-        assert 'includeAltLines' not in last and 'bookmakerID' not in last
+        assert 'includeAltLines' not in first and first['bookmakerID'].split(',') == list(ALTERNATE_REFRESH_BOOKS)
+        assert 'includeAltLines' not in last and last['bookmakerID'].split(',') == list(ALTERNATE_REFRESH_BOOKS)
         assert first['startsAfter'] == last['startsAfter']
         assert last['cursor'] == 'next'
         assert worker.events['e1']['phase'] == 'live'
@@ -393,9 +393,9 @@ def test_alternates_use_bounded_approaching_event_refresh_and_track_admission():
         await worker.refresh(due,PREGAME_TARGET)
         first, other = [c.args[0] for c in worker.collector.fetch.await_args_list]
         assert first['eventIDs'] == 'e1' and first['limit'] == 1 and first['includeAltLines'] is True
-        assert set(first['bookmakerID'].split(',')) == {'kalshi','polymarket','novig','prophetexchange','fanduel','draftkings','betmgm','caesars'}
+        assert first['bookmakerID'].split(',') == list(ALTERNATE_REFRESH_BOOKS)
         assert other['eventIDs'] == 'e2,e3' and other['limit'] == 2
-        assert not {'bookmakerID','includeAltLines'} & other.keys()
+        assert 'includeAltLines' not in other and other['bookmakerID'].split(',') == list(ALTERNATE_REFRESH_BOOKS)
         metrics = worker.metrics['alternate_refresh']
         assert (metrics['resolved_requests'],metrics['returned_events'],metrics['received_alternate_rows'],
                 metrics['admitted_alternate_rows'],metrics['ignored_bookmaker_groups']) == (1,1,3,1,4)

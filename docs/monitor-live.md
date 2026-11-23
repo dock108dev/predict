@@ -16,11 +16,11 @@ ineligible before dispatch.
 
 ## Controls and scheduling
 
-EV and Arbitrage default to the active Monitor feed. Explicit historical Live
-selection remains available. Browse Odds consolidates the
-latest observations across both modes without duplicating contracts. More filters
-exposes cohort, quote age and ordering controls. Probability edge is the default
-EV ranking; explicit saved ranking choices persist.
+Data is the game-oriented received-data browser. Positive EV and arbitrage are
+calculation views within Data; frozen checkpoints and saved captures keep their
+own evidence clocks. Experiments contains first-observation/T−10 evaluation and
+declared populations. Settings replaces the broad Admin interface with essential
+operating controls. [Workspace guide](personal-data-workspace.md)
 
 `GET /api/pregame?mode_status=1` exposes public mode status. Protected
 `GET/PATCH /api/admin/activity-mode` reads or changes settings, and
@@ -28,8 +28,9 @@ EV ranking; explicit saved ranking choices persist.
 Legacy Live intent can expire without changing historical evidence. Reads,
 polling, refreshes and background updates do not issue paid provider requests.
 Mode changes cannot clear source Stop choices or pauses.
-Collection Settings shows the active discovery/checkpoint policy on desktop and
-phone layouts. Changing settings still requires owner authentication.
+Settings shows the active discovery/checkpoint policy, next discovery and pending
+checkpoint, reported credits/holds and finite storage. Changing settings still
+requires owner authentication.
 
 Monitor uses fixed clock slots. A restart can claim a recent slot once; older
 missed startup slots are skipped to avoid catch-up bursts. Active overruns and

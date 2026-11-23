@@ -11,6 +11,7 @@ from uuid import uuid4
 from psycopg.types.json import Jsonb
 
 from app.storage.store import encoded, hashed, stamp
+from app.comparison.reference_scope import REQUEST_BOOKS, VERSION as REFERENCE_SCOPE_VERSION
 from . import records
 from .experiment_evidence import (
     ACCOUNTING_METADATA_BYTES, GAME_METADATA_BYTES, pack, pack_checkpoint, references, unpack,
@@ -132,7 +133,23 @@ def activate(db, *, at=None):
         row = db.execute("SELECT policy_id FROM public.ev_experiment_accounting WHERE singleton").fetchone()
         if row["policy_id"]:
             index = _closure(db, [row["policy_id"]])
-            return dict(_value(index[row["policy_id"]], index), id=row["policy_id"])
+            previous = _value(index[row["policy_id"]], index)
+            if (previous.get('requested_scope_version') == REFERENCE_SCOPE_VERSION
+                    and previous['requested_scope']['bookmakers'] == list(REQUEST_BOOKS)):
+                return dict(previous, id=row['policy_id'])
+            # Scope changes append a new policy for future games. A declared
+            # game's policy_id, original activation, clocks and frozen evidence
+            # stay unchanged, including its still-pending checkpoint requests.
+            policy = deepcopy(previous)
+            policy['requested_scope'] = dict(previous['requested_scope'], bookmakers=list(REQUEST_BOOKS))
+            policy['requested_scope_version'] = REFERENCE_SCOPE_VERSION
+            policy['scope_activated_at'] = clock(at)
+            policy['scope_transition'] = dict(previous_policy_id=row['policy_id'], changed_at=clock(at),
+                existing_games='retain_original_policy_and_request_scope',
+                probability_policy='unchanged; additional_books_are_reference_prices_and_market_book_comparisons')
+            identity, _ = _write(db, 'policy', policy)
+            db.execute('UPDATE public.ev_experiment_accounting SET policy_id=%s WHERE singleton', (identity,))
+            return dict(policy, id=identity)
         from app.comparison.current_pregame import REFERENCE_POLICY, COHERENT_POLICY
         policy = dict(version=VERSION, activated_at=clock(at), early=dict(
             rule="first_new_received_event_observation_after_activation_with_start_within_24h",
@@ -147,8 +164,8 @@ def activate(db, *, at=None):
             selection=dict(rule="early_screen_EV>0 OR late_screen_EV>0", unknown="null; never_zero_or_negative",
                 exact_bet="canonical_event+provider+original_book+venue+market+period+outcome+exact_line+settlement"),
             screen_policy=REFERENCE_POLICY, coherent_policy=COHERENT_POLICY,
-            requested_scope=dict(bookmakers=["kalshi","polymarket","novig","prophetexchange",
-                "fanduel","draftkings","betmgm","caesars","betonline"], includeAltLines=True,
+            requested_scope_version=REFERENCE_SCOPE_VERSION, scope_activated_at=clock(at),
+            requested_scope=dict(bookmakers=list(REQUEST_BOOKS), includeAltLines=True,
                 odd_ids=["points-all-game-ou-over","points-all-game-ou-under","points-away-game-ml-away",
                     "points-away-game-sp-away","points-home-game-ml-home","points-home-game-sp-home"]),
             reschedules="preserve_early; append_schedule; retarget_late; mark_settlement_continuity_unverified",
@@ -340,13 +357,14 @@ def due(db, *, at=None, limit=1):
                            (why, task["game_id"], task["checkpoint"]))
                 if task["checkpoint"] == "late":
                     db.execute("UPDATE public.ev_experiment_game SET late_reserved_bytes=0 WHERE id=%s", (task["game_id"],))
-        rows = db.execute("""SELECT t.*,g.event,g.late_reserved_bytes FROM public.ev_experiment_task t JOIN public.ev_experiment_game g ON g.id=t.game_id
+        rows = db.execute("""SELECT t.*,g.event,g.late_reserved_bytes,g.policy_id FROM public.ev_experiment_task t JOIN public.ev_experiment_game g ON g.id=t.game_id
             WHERE t.state='pending' AND t.target_at<=%s AND t.deadline_at>=%s
               AND (t.checkpoint<>'late' OR NOT EXISTS (
                 SELECT 1 FROM public.ev_experiment_task early
                 WHERE early.game_id=t.game_id AND early.checkpoint='early' AND early.state IN ('pending','claimed')))
             ORDER BY CASE t.checkpoint WHEN 'late' THEN 0 WHEN 'early' THEN 1 ELSE 2 END,t.deadline_at,t.game_id
             LIMIT %s FOR UPDATE OF t SKIP LOCKED""", (at, at, limit))
+        policies = {}
         for row in rows:
             if row["checkpoint"] == "outcome" and row["attempts"] >= len(OUTCOME_OFFSETS):
                 db.execute("UPDATE public.ev_experiment_task SET state='exhausted',last_reason='outcome_request_budget_exhausted',updated_at=clock_timestamp() WHERE game_id=%s AND checkpoint='outcome'", (row["game_id"],))
@@ -361,7 +379,11 @@ def due(db, *, at=None, limit=1):
             token = uuid4().hex
             db.execute("UPDATE public.ev_experiment_task SET state='claimed',token=%s,claimed_at=%s,attempts=attempts+1,updated_at=clock_timestamp() WHERE game_id=%s AND checkpoint=%s",
                        (token, at, row["game_id"], row["checkpoint"]))
+            if row['policy_id'] not in policies:
+                index = _closure(db, [row['policy_id']])
+                policies[row['policy_id']] = _value(index[row['policy_id']], index)
             claimed.append(dict(game_id=row["game_id"], checkpoint=row["checkpoint"], token=token,
+                policy_id=row['policy_id'], requested_scope=deepcopy(policies[row['policy_id']]['requested_scope']),
                 schedule_id=row["schedule_id"], event=row["event"], target_at=clock(row["target_at"]),
                 deadline_at=clock(row["deadline_at"]), requested_at=clock(at), attempt=row["attempts"]+1,
                 outcome_slot_index=row["slot_index"]))

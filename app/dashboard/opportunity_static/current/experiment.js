@@ -1,3 +1,4 @@
+import {referenceOnly,isTradingVenue} from './workspace-scope.js';
 // Passive, revision-bound views of the collector-owned checkpoint experiment.
 const $=id=>document.getElementById(id);
 const known=value=>value===null||value===undefined||value===''?'Unknown':String(value);
@@ -6,7 +7,8 @@ const node=(tag,text,cls)=>{const item=document.createElement(tag);if(text!==und
 const label=value=>known(value).replaceAll('_',' ');
 const reasons=values=>(values||[]).map(value=>typeof value==='string'?value:`${known(value.checkpoint)}: ${known(value.reason)}`).join('; ');
 const snapshot=checkpoint=>checkpoint?.snapshot||checkpoint?.payload?.snapshot||checkpoint?.payload||checkpoint;
-let listing=null,pageOffset=0,busy=false,selected=null,opener=null;
+const initialSelection=new URLSearchParams(location.search);
+let listing=null,pageOffset=Number(initialSelection.get('offset')||0),busy=false,selected=null,opener=null,suppressCloseURL=false,loadVersion=0;
 
 function number(value){
  if(value===null||value===undefined||value==='')return null;
@@ -62,9 +64,9 @@ function caseRows(root,cases,onInspect,timing={}){
   const roles=stack(`Early: ${role(row.early?.main)}`,`Late: ${role(row.late?.main)}`,`Link: ${label(typeof row.role_link==='string'?row.role_link:row.role_link?.relationship)}`,`Early age: ${known(row.early?.source_age_seconds)}s · late age: ${known(row.late?.source_age_seconds)}s`,`Captured early: ${known(clocks.early_at)}`,`Late target: ${known(clocks.late_target)} · actual: ${known(clocks.late_at)}`,`Coverage: ${coverageLabel(clocks.coverage)}`);
   const transition=stack(label(row.transition),row.incomplete?'Incomplete checkpoint pair':'Complete checkpoint pair');
   if(row.missing_reasons?.length)transition.append(node('small',reasons(row.missing_reasons)));
-  return [identityCell(row),checkpointCell(row.early),checkpointCell(row.late),transition,crossCell(row.early_offer_late_reference),roles,button];
+  return [identityCell(row),checkpointCell(row.early),checkpointCell(row.late),transition,button];
  });
- return table(root,['Game / exact bet','Early checkpoint','T−10 checkpoint','Transition','Early offer / late reference','Roles / source age','Inspect'],rows);
+ return table(root,['Game / exact bet','Early checkpoint','T−10 checkpoint','Change / missing capture','Inspect'],rows);
 }
 function controls(){
  $('experiment-refresh').disabled=busy;$('experiment-context').disabled=busy;
@@ -82,26 +84,26 @@ function operation(value){
  evidence(root,'Bounded retention and measured operating runway',value.storage);
 }
 function renderListing(value){
- listing=value;const cases=(value.cases||[]).filter(item=>item.retain_case===true),games=value.games||[];
+ listing=value;const cases=(value.cases||[]).filter(item=>item.retain_case===true&&isTradingVenue(item.book||item.identity?.book)),games=value.games||[];
  const root=$('experiment-cases');root.replaceChildren();
  $('experiment-status').textContent=`${cases.length.toLocaleString()} retained cases on this game page · ${known(value.total_games??games.length)} games${$('experiment-context').checked?' tracked':' with retained cases'}. Captured read; refresh for new checkpoint evidence.`;
- $('experiment-policy').textContent=`Primary sign metric: conservative screening EV. Coherent measurements are labeled separately. ${known(value.policy?.version||value.policy?.id||value.policy)}`;
- if(cases.length)caseRows(root,cases.map(row=>({...row,capture_timing:games.find(item=>item.id===row.game_id)})),(row,button)=>inspect(row.game_id,row.game_revision||games.find(item=>item.id===row.game_id)?.revision,row.id,button));
+ $('experiment-policy').textContent=`Primary sign metric: conservative screening EV. Coherent measurements are labeled separately. Captured prices and clocks remain unchanged.`;
+ if(cases.length)caseRows(root,cases.map(row=>({...row,capture_timing:games.find(item=>item.id===row.game_id)})),(row,button)=>inspectExperiment(row.game_id,row.game_revision||games.find(item=>item.id===row.game_id)?.revision,row.id,button));
  else root.append(node('p','No retained cases in this captured view. Show all tracked games to inspect checkpoint progress, missing inputs and the shared market context.'));
  const gameRoot=$('experiment-games');gameRoot.replaceChildren();
  if($('experiment-context').checked){
-  for(const game of games){const row=node('div',undefined,'research-panel-row'),button=node('button','Inspect market context');button.type='button';button.dataset.game=game.id;button.onclick=()=>inspect(game.id,game.revision,null,button);row.append(node('strong',game.title||gameTitle(game)),node('small',`${known(game.league)} · starts ${known(game.starts_at)} · ${label(game.state||game.status)}`),node('small',`Early ${known(game.early_at)} · T−10 target ${known(game.late_target)} · actual ${known(game.late_at)}`),node('small',`Retained cases: ${known(game.case_counts?.retained_cases??game.case_counts?.retained??game.retained_cases)} · ${coverageLabel(game.coverage)}`),button);gameRoot.append(row);}
+  for(const game of games){const row=node('div',undefined,'research-panel-row'),button=node('button','Inspect market context');button.type='button';button.dataset.game=game.id;button.onclick=()=>inspectExperiment(game.id,game.revision,null,button);row.append(node('strong',game.title||gameTitle(game)),node('small',`${known(game.league)} · starts ${known(game.starts_at)} · ${label(game.state||game.status)}`),node('small',`Early ${known(game.early_at)} · T−10 target ${known(game.late_target)} · actual ${known(game.late_at)}`),node('small',`Retained cases: ${known(game.case_counts?.retained_cases??game.case_counts?.retained??game.retained_cases)} · ${coverageLabel(game.coverage)}`),button);gameRoot.append(row);}
  }
  const offset=value.offset??pageOffset,total=value.total_games??games.length;
  $('experiment-page').textContent=total?`Games ${offset+1}–${offset+games.length} of ${total}`:'No tracked games in this view';
  operation(value);
 }
 async function load(){
- if(busy)return;busy=true;controls();$('experiment-status').textContent=listing?'Reading stored comparisons… Previous captured values remain visible.':'Reading scheduled checkpoint evidence…';
+ const version=++loadVersion;busy=true;controls();$('experiment-status').textContent=listing?'Reading stored comparisons… Previous captured values remain visible.':'Reading scheduled checkpoint evidence…';
  const query=new URLSearchParams({limit:'10',offset:String(pageOffset)});if($('experiment-context').checked)query.set('include_context','1');
- try{renderListing(await get('/api/research/experiment?'+query));}
- catch(error){$('experiment-status').textContent=`${listing?'Could not refresh. Displayed comparisons are last-known.':'Experiment evidence unavailable.'} ${error.message}`;}
- finally{busy=false;controls();}
+ try{const value=await get('/api/research/experiment?'+query);if(version!==loadVersion)return;renderListing(value);const current=new URLSearchParams(location.search);if(current.get('id')&&current.get('revision'))await inspectExperiment(current.get('id'),current.get('revision'),current.get('case'),null,{updateURL:false});}
+ catch(error){if(version===loadVersion)$('experiment-status').textContent=`${listing?'Could not refresh. Displayed comparisons are last-known.':'Experiment evidence unavailable.'} ${error.message}`;}
+ finally{if(version===loadVersion){busy=false;controls();}}
 }
 function checkpointTiming(root,name,checkpoint){
  const value=checkpoint?.payload||checkpoint;
@@ -172,9 +174,10 @@ function plot(root,title,rows,metric){
  }
  figure.append(node('p',`Early: hollow blue. Late: filled gold. Squares: source-reported main for this book. ${missing} missing observations shown in the separate strip; ${reportedMain} main markers. Observed points only.`,'research-muted'));
 }
+function rememberCase(row){if(!selected)return;selected.caseId=row.id;const q=new URLSearchParams(location.search);q.set('case',row.id);history.pushState(null,'',location.pathname+'?'+q);}
 function contextSourceEvidence(root,row,detail){
- const panel=section(root,row.reference_only?'Reference-only source quote':'Shared offer context · no separate case is created');
- grid(panel,{'Source quote / exact bet ID':row.id,Book:row.book,'Market family':row.family,Period:row.period,Outcome:row.outcome,'Exact line':lineLabel(row),'Reference-only book':row.reference_only===true});
+ const panel=section(root,referenceOnly(row)?'Reference only · sportsbook source quote':row.reference_only?'Trading market context · numeric calculation unavailable':'Shared offer context · no separate case is created');
+ grid(panel,{'Source quote / exact bet ID':row.id,Book:row.book,'Market family':row.family,Period:row.period,Outcome:row.outcome,'Exact line':lineLabel(row),'Book role':referenceOnly(row)?'Reference only':row.reference_only?'Trading market context':'Supported prediction market'});
  evidence(panel,'Recorded identity and source mapping',row.identity);
  for(const stage of ['early','late']){
   const value=row[stage],frozen=snapshot(detail[stage]);
@@ -206,17 +209,17 @@ function plots(root,context,detail){
   const rows=candidates.filter(row=>(row.outcome||row.identity?.outcome)===outcomes.value);chartRoot.replaceChildren();
   if(!rows.length){chartRoot.append(node('p','No observed exact bets for this book, market and outcome.'));return;}
   const scope=`${books.value} · ${label(families.value)} · ${label(periods.value)} · ${label(outcomes.value)}`,policy=policies.value;
-  const referenceOnly=rows.every(row=>row.reference_only===true);
-  if(!referenceOnly)plot(chartRoot,`${scope} · ${policy==='screen'?'Screening':'Coherent'} EV (%)`,rows,value=>{const n=number(value[policy]?.ev);return n===null?null:n*100;});
+  const sourceOnly=rows.every(row=>row.reference_only===true),sportsbookOnly=rows.every(row=>referenceOnly(row));
+  if(!sourceOnly)plot(chartRoot,`${scope} · ${policy==='screen'?'Screening':'Coherent'} EV (%)`,rows,value=>{const n=number(value[policy]?.ev);return n===null?null:n*100;});
   plot(chartRoot,`${scope} · Offered decimal price`,rows,decimalPrice);
-  if(!referenceOnly)plot(chartRoot,`${scope} · ${policy==='screen'?'Screening reference':'Coherent'} probability (%)`,rows,value=>{const n=number(value[policy]?.probability);return n===null?null:n*100;});
-  else chartRoot.append(node('p','Reference-only book: offered-price observations are shown. Offer-venue EV and probability measurements are not asserted.'));
+  if(!sourceOnly)plot(chartRoot,`${scope} · ${policy==='screen'?'Screening reference':'Coherent'} probability (%)`,rows,value=>{const n=number(value[policy]?.probability);return n===null?null:n*100;});
+  else chartRoot.append(node('p',sportsbookOnly?'Reference only: offered-price observations are shown. Trading EV and probability measurements are not asserted.':'Trading market context: offered-price observations are shown. Numeric calculation support is unavailable.'));
  }
  books.onchange=()=>render(true);families.onchange=()=>render(true);periods.onchange=()=>{const values=[...new Set(context.filter(row=>(row.book||row.identity?.book)===books.value&&(row.family||row.identity?.family)===families.value&&(row.period||row.identity?.period)===periods.value).map(row=>row.outcome||row.identity?.outcome).filter(Boolean))].sort();outcomes.replaceChildren(...values.map(value=>{const option=node('option',label(value));option.value=value;return option;}));render();};outcomes.onchange=()=>render();policies.onchange=()=>render();
  if(bookValues.length){const offer=context.find(row=>!row.reference_only);books.value=offer?.book||offer?.identity?.book||bookValues[0];const first=context.find(row=>(row.book||row.identity?.book)===books.value);families.value=first?.family||first?.identity?.family||'spread';policies.value='screen';render(true);}else chartRoot.append(node('p','No exact market context has been retained yet.'));
  const all=section(panel,'Every captured exact line');
  const contextEvidence=node('div');
- table(all,['Book / market / outcome / exact line','Early source price / role','Late source price / role','Availability / continuity','Inspect source'],context.map(row=>{const button=node('button','Inspect context quote');button.type='button';button.dataset.context=row.id;button.onclick=()=>{contextEvidence.replaceChildren();contextSourceEvidence(contextEvidence,row,detail);contextEvidence.scrollIntoView?.({block:'start'});};return [`${known(row.book)}${row.reference_only?' (reference only)':''} · ${label(row.family)} · ${label(row.outcome)} · ${lineLabel(row)}`,`${known(row.early?.price)} · ${role(row.early?.main)}`,`${known(row.late?.price)} · ${role(row.late?.main)}`,`${label(typeof row.role_link==='string'?row.role_link:row.role_link?.relationship)} · ${reasons(row.missing_reasons)||'Recorded in checkpoint evidence'}`,button];}));
+ table(all,['Book / market / outcome / exact line','Early source price / role','Late source price / role','Availability / continuity','Inspect source'],context.map(row=>{const button=node('button','Inspect context quote');button.type='button';button.dataset.context=row.id;button.onclick=()=>{rememberCase(row);contextEvidence.replaceChildren();contextSourceEvidence(contextEvidence,row,detail);contextEvidence.scrollIntoView?.({block:'start'});};return [`${known(row.book)}${referenceOnly(row)?' (Reference only)':row.reference_only?' (Trading market context)':''} · ${label(row.family)} · ${label(row.outcome)} · ${lineLabel(row)}`,`${known(row.early?.price)} · ${role(row.early?.main)}`,`${known(row.late?.price)} · ${role(row.late?.main)}`,`${label(typeof row.role_link==='string'?row.role_link:row.role_link?.relationship)} · ${reasons(row.missing_reasons)||'Recorded in checkpoint evidence'}`,button];}));
  all.append(contextEvidence);
 }
 function mainLinks(root,value,context){
@@ -242,15 +245,15 @@ async function prepareExport(root,selection){
  }catch(error){if(selected===selection)root.replaceChildren(node('p','Complete export unavailable. '+error.message,'experiment-notice'));}
 }
 function detailView(value,selection){
- const root=$('experiment-content');root.replaceChildren();const game=value.game||{},context=[...(value.context||[]),...(value.reference_context||[])],cases=(value.cases||[]).filter(row=>row.retain_case===true);
+ const root=$('experiment-content');root.replaceChildren();const game=value.game||{},context=[...(value.context||[]),...(value.reference_context||[])].map(row=>referenceOnly(row)?{...row,reference_only:true}:row),cases=(value.cases||[]).filter(row=>row.retain_case===true&&isTradingVenue(row.book||row.identity?.book));
  $('experiment-title').textContent=game.title||gameTitle(game);
  root.append(node('p',`Captured revision ${value.revision||selection.revision}`,'research-muted'));
  const download=node('div',undefined,'experiment-export');root.append(download);prepareExport(download,selection);
  grid(root,{'Game identity':game.id||selection.id,League:game.league,'Scheduled start':game.starts_at,State:game.state||game.status,'Retained cases':cases.length,'Shared supported-offer context':(value.context||[]).length,'Reference-only quote context':(value.reference_context||[]).length,'Screening policy':value.policy_versions?.primary,'Coherent policy':value.policy_versions?.coherent,'Calculation version':value.policy_versions?.calculation,'Identity version':value.policy_versions?.identity});
  const selectedEvidence=node('div');root.append(selectedEvidence);
- const selectedCase=cases.find(row=>row.id===selection.caseId);if(selectedCase)caseEvidence(selectedEvidence,selectedCase,value);
+ const selectedCase=cases.find(row=>row.id===selection.caseId),selectedContext=context.find(row=>row.id===selection.caseId);if(selectedCase)caseEvidence(selectedEvidence,selectedCase,value);else if(selectedContext)contextSourceEvidence(selectedEvidence,selectedContext,value);
  const timing={early_at:value.early?.captured_at,late_at:value.late?.captured_at,late_target:value.late?.target_at,coverage:{early:snapshot(value.early)?.coverage,late:snapshot(value.late)?.coverage}};
- const retained=section(root,'Retained exact-bet comparisons');if(cases.length)caseRows(retained,cases,row=>{selectedEvidence.replaceChildren();caseEvidence(selectedEvidence,row,value);selectedEvidence.scrollIntoView?.({block:'start'});},timing);else retained.append(node('p','No separate research case has positive screening EV at either checkpoint. Market context and capture failures remain below.'));
+ const retained=section(root,'Retained exact-bet comparisons');if(cases.length)caseRows(retained,cases,row=>{rememberCase(row);selectedEvidence.replaceChildren();caseEvidence(selectedEvidence,row,value);selectedEvidence.scrollIntoView?.({block:'start'});},timing);else retained.append(node('p','No separate research case has positive screening EV at either checkpoint. Market context and capture failures remain below.'));
  checkpointTiming(root,'Early checkpoint · first observed by this experiment within 24 hours',value.early);
  checkpointTiming(root,'Scheduled T−10 checkpoint',value.late);
  mainLinks(root,value.main_line_links,context);plots(root,context,value);
@@ -261,17 +264,24 @@ function detailView(value,selection){
  evidence(root,'Experiment retention, refused captures and runway',value.retention);
  evidence(root,'Complete captured comparison and reproduction metadata',value);
 }
-async function inspect(id,revision,caseId,button){
- if(!id||!revision){$('experiment-status').textContent='Captured game identity is unavailable; refresh comparisons.';return;}
+export async function inspectExperiment(id,revision,caseId,button,{updateURL=true}={}){
+ if(!id||!revision){const status=$('experiment-status')||$('catalog-status');status.textContent='Captured game identity is unavailable; refresh stored data.';return;}
+ if(updateURL&&location.pathname==='/experiments'){const query=new URLSearchParams(location.search);query.set('id',id);query.set('revision',revision);if(caseId)query.set('case',caseId);else query.delete('case');history.pushState(null,'','/experiments?'+query);}
  opener=button;if(selected?.exportUrl)URL.revokeObjectURL(selected.exportUrl);const selection={id,revision,caseId};selected=selection;
- $('experiment-title').textContent='Captured checkpoint comparison';$('experiment-content').replaceChildren(node('p','Reading captured game evidence…'));$('experiment-detail').showModal();
+ $('experiment-title').textContent='Captured checkpoint comparison';$('experiment-content').replaceChildren(node('p','Reading captured game evidence…'));if(!$('experiment-detail').open)$('experiment-detail').showModal();
  try{const value=await get('/api/research/experiment?'+new URLSearchParams({id,revision}));if(value.revision!==revision)throw Error('Captured comparison revision differs; refresh comparisons.');if(selected===selection)detailView(value,selection);}
  catch(error){if(selected===selection)$('experiment-content').replaceChildren(node('p',error.message,'experiment-notice'));}
 }
+export function closeExperiment(){if($('experiment-detail')?.open){suppressCloseURL=true;$('experiment-detail').close();}}
 $('experiment-close').onclick=()=>$('experiment-detail').close();
-$('experiment-detail').addEventListener('close',()=>{if(selected?.exportUrl)URL.revokeObjectURL(selected.exportUrl);selected=null;opener?.focus({preventScroll:true});});
-$('experiment-refresh').onclick=()=>load();$('experiment-context').onchange=()=>{pageOffset=0;load();};
-$('experiment-previous').onclick=()=>{if(busy)return;pageOffset=Math.max(0,pageOffset-10);load();};
-$('experiment-next').onclick=()=>{if(busy||listing?.next_offset==null)return;pageOffset=listing.next_offset;load();};
+$('experiment-detail').addEventListener('close',()=>{if(selected?.exportUrl)URL.revokeObjectURL(selected.exportUrl);selected=null;opener?.focus({preventScroll:true});const suppress=suppressCloseURL;suppressCloseURL=false;if(!suppress&&location.pathname==='/experiments'){const q=new URLSearchParams(location.search);for(const key of ['id','revision','case'])q.delete(key);history.pushState(null,'','/experiments'+(q.size?'?'+q:''));}});
+function saveListURL(){const q=new URLSearchParams();if($('experiment-context').checked)q.set('context','1');else q.set('context','0');if(pageOffset)q.set('offset',String(pageOffset));history.pushState(null,'','/experiments?'+q);}
+if($('experiment')){
+ if(initialSelection.has('context'))$('experiment-context').checked=initialSelection.get('context')==='1';
+ $('experiment-refresh').onclick=()=>load();$('experiment-context').onchange=()=>{pageOffset=0;saveListURL();load();};
+ $('experiment-previous').onclick=()=>{if(busy)return;pageOffset=Math.max(0,pageOffset-10);saveListURL();load();};
+ $('experiment-next').onclick=()=>{if(busy||listing?.next_offset==null)return;pageOffset=listing.next_offset;saveListURL();load();};
+ window.addEventListener('popstate',()=>{const q=new URLSearchParams(location.search);pageOffset=Number(q.get('offset')||0);$('experiment-context').checked=q.get('context')!=='0';if(!q.has('id'))closeExperiment();load();});
+ load();
+}
 window.addEventListener('pagehide',()=>{if(selected?.exportUrl)URL.revokeObjectURL(selected.exportUrl);});
-load();

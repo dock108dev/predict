@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Predict · Experiments</title><link rel="icon" href="/view/current/predict-icon.png"><link rel="apple-touch-icon" href="/view/current/predict-icon.png">
+<link rel="stylesheet" href="/view/current/pregame.css"><link rel="stylesheet" href="/view/current/research.css">
+<script type="module" src="/view/current/workspace-nav.js"></script>
+<script type="module" src="/view/current/experiment.js"></script><script type="module" src="/view/current/experiment-populations.js"></script>
+</head><body class="research-page">
+<a class="skip" href="#experiment">Skip to Experiments</a>
+<header class="masthead"><a class="brand" href="/data">PREDICT</a><nav aria-label="Main" data-workspace-nav></nav></header>
+<main class="board-wrap">
+<header class="board-heading"><div><h1>Experiments</h1><p>Evaluate captured observations. Quoted EV, sporting outcomes and trading returns are separate.</p></div></header>
+<section id="experiment" aria-labelledby="experiment-heading" aria-busy="true">
+<div class="experiment-heading"><h2 id="experiment-heading">First observation / T−10</h2><button id="experiment-refresh" type="button">Refresh comparisons</button></div>
+<p>Frozen checkpoints preserve the books requested when each game was declared. Later reference-scope changes do not rewrite captured inputs.</p>
+<p>Inspect declared games, capture coverage, exact early/late changes and sporting outcomes. Missing and refused captures stay visible.</p>
+<div class="experiment-controls"><label><input id="experiment-context" type="checkbox" checked> All tracked games, including incomplete captures</label></div>
+<p id="experiment-status" role="status">Reading scheduled checkpoint evidence…</p><p id="experiment-policy" class="research-muted"></p>
+<div id="experiment-cases"></div><div id="experiment-games"></div>
+<nav class="catalog-pagination" aria-label="Experiment game pages"><button id="experiment-previous" type="button" disabled>Previous games</button><span id="experiment-page"></span><button id="experiment-next" type="button" disabled>Next games</button></nav>
+<details id="experiment-operation"><summary>Experiment timing, coverage &amp; retention</summary><div id="experiment-operation-content"></div></details>
+</section>
+<section class="research-panels" aria-label="Research evidence">
+<details id="coverage"><summary>Collection, archive &amp; retention</summary><div id="coverage-content"><p>Open to read acquisition and archive coverage.</p></div></details>
+<details id="cohorts"><summary>Declared research populations &amp; evaluation</summary><div id="cohort-content"><p>Open to inspect frozen cohorts, missing cases and outcome scoring.</p></div></details>
+</section>
+</main>
+<dialog id="experiment-detail" aria-labelledby="experiment-title"><div class="research-dialog-heading"><h2 id="experiment-title">Captured checkpoint comparison</h2><button id="experiment-close" type="button">Close comparison</button></div><div id="experiment-content"></div></dialog>
+</body></html>

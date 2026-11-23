@@ -20,8 +20,8 @@
 .catalog-table td:first-child { min-width: 170px; }
 .catalog-table small, .catalog-table strong { display: block; margin-bottom: .25rem; }
 .research-muted, .catalog-table small { color: var(--research-muted); font-size: .8rem; }
-.catalog-status-negative { color: #9f3030; }
-.catalog-status-positive { color: #166546; }
+.catalog-status-negative { color: var(--research-negative, #9f3030); }
+.catalog-status-positive { color: var(--research-positive, #166546); }
 .catalog-pagination { display: flex; align-items: center; justify-content: center; gap: .75rem; padding: 1rem; }
 .research-page footer { display: flex; flex-wrap: wrap; gap: 1rem; border-top: 1px solid var(--line, #d4d9de); padding-block: 1rem; }
 .research-page dialog { width: min(1050px, calc(100vw - 1rem)); max-height: calc(100dvh - 1rem); padding: 1rem; border: 1px solid var(--line, #b8c2cc); border-radius: 6px; background: var(--paper, #fff); color: inherit; }
@@ -81,4 +81,19 @@
  .experiment-table td::before { content: attr(data-label); color: var(--research-muted); padding-right: .4rem; }
  .experiment-table td > * { grid-column: 2; min-width: 0; }
  .experiment-controls label { max-width: 100%; }
+}
+/* Reuse the existing display preference across all three workspace screens. */
+.research-page { --paper: var(--p-surface); min-height: 100dvh; color-scheme: light; }
+.research-page pre { background: var(--p-alternate); color: var(--p-ink); }
+:root[data-theme="dark"] .research-page {
+ --p-bg:#141c29; --p-surface:#202c3f; --p-alternate:#192435; --p-ink:#edf3fc;
+ --p-muted:#b6c5da; --p-line:#526078; --muted:#b6c5da; --line:#526078;
+ --paper:#202c3f; --research-muted:#b6c5da; --research-positive:#b2e8ce; --research-negative:#ff9ba4; color-scheme:dark;
+}
+@media (prefers-color-scheme: dark) {
+ :root:not([data-theme]) .research-page {
+  --p-bg:#141c29; --p-surface:#202c3f; --p-alternate:#192435; --p-ink:#edf3fc;
+  --p-muted:#b6c5da; --p-line:#526078; --muted:#b6c5da; --line:#526078;
+  --paper:#202c3f; --research-muted:#b6c5da; --research-positive:#b2e8ce; --research-negative:#ff9ba4; color-scheme:dark;
+ }
 }

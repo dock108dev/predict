@@ -9,6 +9,7 @@ from uuid import uuid4
 from aiohttp import web
 
 from app.collection.runtime_status import read_runtime
+from app.comparison.reference_scope import PROVIDER, public_scope
 from app.storage import research_catalog as catalog
 from app.storage.store import connect, encoded
 from .local_security import HEADERS, PublicRequestError
@@ -16,45 +17,87 @@ from .raw_price_api import RawReads
 
 
 class CatalogReads(RawReads):
+    def _frame(self, query):
+        self.cleanup()
+        if query.get('release'):
+            self.close(query['release'])
+        filters = {key: query[key] for key in catalog.READ_FILTERS if query.get(key)}
+        filters.setdefault('reference_scope', 'selected')
+        if filters['reference_scope'] != 'all':
+            filters.setdefault('provider', PROVIDER)
+        token = query.get('token')
+        if token:
+            frame = self.frames.get(token)
+            if not frame or frame['filters'] != filters:
+                raise PublicRequestError('Catalog snapshot expired or filters changed; refresh data.')
+        else:
+            if len(self.frames) >= 8:
+                raise PublicRequestError('Catalog read capacity reached; close another view.')
+            db = self.connector()
+            try:
+                db.execute('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY')
+                db.execute("SET LOCAL idle_in_transaction_session_timeout='125s'")
+                db.execute("SET LOCAL statement_timeout='10s'")
+                db.execute("SET LOCAL jit='off'")
+                frame = dict(db=db, filters=filters, expires=monotonic()+120,
+                    at=db.execute('SELECT transaction_timestamp() at').fetchone()['at'].isoformat(),
+                    owner=read_runtime(db), counts=None, game_counts=None)
+                token = uuid4().hex
+                self.frames[token] = frame
+            except BaseException:
+                db.close()
+                raise
+        return token, frame
+
     def read(self, query):
         with self.lock:
-            self.cleanup()
-            if query.get('release'):
-                self.close(query['release'])
-            filters = {key: query[key] for key in (*catalog.FILTERS, 'search', 'calculation_status', 'max_age_minutes') if query.get(key)}
-            token = query.get('token')
-            if token:
-                frame = self.frames.get(token)
-                if not frame or frame['filters'] != filters:
-                    raise PublicRequestError('Catalog snapshot expired or filters changed; refresh data.')
-            else:
-                if len(self.frames) >= 8:
-                    raise PublicRequestError('Catalog read capacity reached; close another view.')
-                db = self.connector()
-                try:
-                    db.execute('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY')
-                    db.execute("SET LOCAL idle_in_transaction_session_timeout='125s'")
-                    db.execute("SET LOCAL statement_timeout='10s'")
-                    frame = dict(db=db, filters=filters, expires=monotonic()+120,
-                        at=db.execute('SELECT transaction_timestamp() at').fetchone()['at'].isoformat(),
-                        owner=read_runtime(db), counts=catalog.counts(db, filters))
-                    token = uuid4().hex
-                    self.frames[token] = frame
-                except BaseException:
-                    db.close()
-                    raise
+            token, frame = self._frame(query)
             with self.snapshot_read(token):
+                filters = dict(frame['filters'])
+                filters.update({key: query[key] for key in catalog.SCOPED_SELECTIONS if query.get(key)})
                 offset, limit = int(query.get('offset', 0)), int(query.get('limit', 50))
                 rows = [catalog.entry(frame['db'], row, frame['owner']) for row in
                     catalog.headers(frame['db'], filters, offset=offset, limit=limit)]
-                total = frame['counts']['records']
+                if filters != frame['filters']:
+                    counts = catalog.counts(frame['db'], filters)
+                else:
+                    if frame['counts'] is None:
+                        frame['counts'] = catalog.counts(frame['db'], filters)
+                    counts = frame['counts']
+                total = counts['records']
+                game = catalog.games(frame['db'], filters, limit=1) if query.get('game_id') else []
                 return dict(schema='predict-research-catalog-1', token=token, captured_at=frame['at'],
-                    read_at=datetime.now(timezone.utc).isoformat(), counts=frame['counts'],
+                    read_at=datetime.now(timezone.utc).isoformat(), counts=counts,
+                    rows=rows, total=total, offset=offset, game=game[0] if game else None,
+                    next_offset=offset+len(rows) if offset+len(rows)<total else None,
+                    provider_requests=0, scheduled_calculations=0,
+                    reference_scope=public_scope(),
+                    population='Latest stored source observations; frozen first-observation/T−10 captures are separate. '
+                        'Received prices remain visible independently of fees, matching and EV.')
+
+    def games(self, query):
+        with self.lock:
+            token, frame = self._frame(query)
+            with self.snapshot_read(token):
+                filters = dict(frame['filters'])
+                filters.update({key: query[key] for key in catalog.SCOPED_SELECTIONS if query.get(key)})
+                if filters != frame['filters']:
+                    counts = catalog.game_counts(frame['db'], filters)
+                else:
+                    if frame['game_counts'] is None:
+                        frame['game_counts'] = catalog.game_counts(frame['db'], filters)
+                    counts = frame['game_counts']
+                offset, limit = int(query.get('offset', 0)), int(query.get('limit', 50))
+                rows = catalog.games(frame['db'], filters, offset=offset, limit=limit)
+                total = counts['games']
+                return dict(schema='predict-data-games-1', token=token, captured_at=frame['at'],
+                    read_at=datetime.now(timezone.utc).isoformat(), counts=counts,
                     rows=rows, total=total, offset=offset,
                     next_offset=offset+len(rows) if offset+len(rows)<total else None,
                     provider_requests=0, scheduled_calculations=0,
-                    population='Received current source records, independent of fees, matching and EV. '
-                        'Retained withdrawn/stale rows remain inspectable. Historical archive is separate.')
+                    reference_scope=public_scope(),
+                    population='Canonical games and separately identified source-local events. '
+                        'Retained checkpoint games remain inspectable after current observations expire.')
 
     def detail(self, query):
         with self.lock:
@@ -97,8 +140,7 @@ def mount(app):
     app.cleanup_ctx.append(life)
 
     def validate(query, *, detail=False):
-        allowed = set((*catalog.FILTERS, 'search', 'calculation_status', 'max_age_minutes',
-            'token', 'release', 'offset', 'limit'))
+        allowed = set((*catalog.READ_FILTERS, *catalog.SCOPED_SELECTIONS, 'token', 'release', 'offset', 'limit'))
         if detail:
             allowed |= {'id', 'revision'}
         if set(query)-allowed or any(len(value)>1024 for value in query.values()):
@@ -110,8 +152,19 @@ def mount(app):
                 raise ValueError()
         except ValueError:
             raise PublicRequestError('Invalid catalog page or source age.') from None
-        if query.get('calculation_status') not in (None, '', 'positive', 'negative', 'zero', 'unavailable'):
+        if query.get('date'):
+            from datetime import date
+            try:
+                if date.fromisoformat(query['date']).isoformat() != query['date']:
+                    raise ValueError()
+            except ValueError:
+                raise PublicRequestError('Invalid game date; use YYYY-MM-DD.') from None
+        if query.get('calculation_status') not in (None, '', 'positive', 'negative', 'zero', 'unavailable', 'reference_only'):
             raise PublicRequestError('Unknown calculation status.')
+        if query.get('reference_scope') not in (None, '', 'selected', 'all'):
+            raise PublicRequestError('Unknown reference scope.')
+        if query.get('provider') not in (None, '', PROVIDER) and query.get('reference_scope') != 'all':
+            raise PublicRequestError('Other source records require explicit historical selection.')
         if detail and not all(query.get(key) for key in ('token', 'id', 'revision')):
             raise PublicRequestError('Captured catalog identity required.')
 
@@ -122,6 +175,19 @@ def mount(app):
         async with gate:
             value = await joined(reads.read, dict(request.query))
         return web.json_response(value, headers=HEADERS)
+
+    async def games(request):
+        validate(request.query)
+        if gate.locked():
+            raise web.HTTPTooManyRequests()
+        async with gate:
+            value = await joined(reads.games, dict(request.query))
+        return web.json_response(value, headers=HEADERS)
+
+    async def game(request):
+        if not request.query.get('game_id'):
+            raise PublicRequestError('A captured game identity is required.')
+        return await page(request)
 
     async def detail(request):
         validate(request.query, detail=True)
@@ -245,6 +311,8 @@ def mount(app):
         from .pipeline import serial
         return web.json_response(serial(value), headers=HEADERS)
 
+    app.router.add_get('/api/research/games', games)
+    app.router.add_get('/api/research/game', game)
     app.router.add_get('/api/research/catalog', page)
     app.router.add_get('/api/research/input', detail)
     app.router.add_get('/api/research/export', export)

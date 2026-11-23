@@ -10,6 +10,7 @@ from app.comparison import pregame_arbs as math
 from app.comparison.current_pregame import reference_key
 from app.comparison.sgo_reference import american_probability
 from app.comparison.sportsbooks import SPORTSBOOKS
+from app.comparison.reference_scope import PROVIDER, REFERENCE_BOOKS
 from .current_pregame import configured_routes, utc, read as pregame_read
 from .store import hashed, stamp
 from .pregame_known_withdrawals import ROW_GUARDS, BOOK_GUARD
@@ -96,7 +97,7 @@ def book_query(db, query, parameters):
         return result
 
 
-def read_book_quotes(db, request_lines, *, include_groups=False):
+def read_book_quotes(db, request_lines, *, include_groups=False, books=None):
     """Fetch supported books on represented lines before decoding quote bodies.
 
     The spread bound deliberately includes both signs; final canonical side,
@@ -177,7 +178,7 @@ def read_book_quotes(db, request_lines, *, include_groups=False):
             (
                 Jsonb(request_lines),
                 sorted({r["event_id"] for r in request_lines}),
-                sorted(SPORTSBOOKS),
+                sorted(SPORTSBOOKS if books is None else books),
             ),
         )
     )
@@ -379,6 +380,13 @@ def scan_view(scan, query, selected, offset, limit):
 
 def read(db, query, *, at=None, can_continue=None):
     at = at or utc()
+    query = dict(query)
+    query.setdefault('reference_scope', 'selected')
+    query.setdefault('provider', PROVIDER)
+    if query['reference_scope'] not in ('selected', 'all'):
+        raise ValueError('Unknown reference scope')
+    if query['provider'] != PROVIDER and query['reference_scope'] != 'all':
+        raise ValueError('Other providers require historical selection')
 
     def checkpoint():
         if can_continue is not None and not can_continue():
@@ -446,6 +454,8 @@ def read(db, query, *, at=None, can_continue=None):
     # A queued source/fee change suppresses stale calculations before rebuilding.
     late_inputs = not any(query.get(k) for k in ("league", "family", "search"))
     filters, parameters = list(ROW_GUARDS), [at, at, at, at]
+    filters.append('e.provider=%s')
+    parameters.append(query['provider'])
     if query.get("_scope_seconds"):
         filters.append("p.start_at<=%s")
         parameters.append(at + timedelta(seconds=int(query["_scope_seconds"])))
@@ -573,7 +583,8 @@ def read(db, query, *, at=None, can_continue=None):
             requested.items()
         )
     ]
-    quotes = read_book_quotes(db, request_lines, include_groups=complete_scan)
+    quotes = read_book_quotes(db, request_lines, include_groups=complete_scan,
+        books=REFERENCE_BOOKS if query['reference_scope'] == 'selected' else None)
     if query.get("max_age_minutes"):
         cutoff = at - timedelta(minutes=int(query["max_age_minutes"]))
         quotes = [

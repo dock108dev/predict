@@ -7,6 +7,11 @@ This catalog never acquires data or recalculates an input during a browser read.
 
 from fractions import Fraction
 
+from psycopg.types.json import Jsonb
+
+from app.comparison.snapshot_fee_outcome import VENUES as TRADING_VENUES
+from app.comparison.reference_scope import HISTORICAL_TRADING_BOOKS, REFERENCE_BOOKS
+
 from . import raw_prices
 from .store import hashed
 
@@ -25,7 +30,7 @@ SELECT 'sgo:'||q.id AS id,'sgo'::text kind,'sportsgameodds'::text provider,
  CASE WHEN q.bookmaker_id='polymarket' THEN 'provider_venue_fee_applicability_unestablished'
   ELSE linked.reason END reason,
  CASE WHEN q.bookmaker_id='polymarket' THEN NULL ELSE linked.net_ev END net_ev,
- linked.input_revision calculation_revision
+ linked.input_revision calculation_revision,(q.facts->>'starts_at')::timestamptz start_at
 FROM sgo_quote_revision q
 LEFT JOIN (
  SELECT DISTINCT ON (o.sgo_quote_id,o.sgo_quote_revision)
@@ -45,7 +50,7 @@ SELECT 'offer:'||c.id,'offer',e.provider,
  CASE WHEN e.provider='sportsgameodds' AND c.venue='polymarket_us'
   THEN 'provider_venue_fee_applicability_unestablished' ELSE k.reason END,
  CASE WHEN e.provider='sportsgameodds' AND c.venue='polymarket_us' THEN NULL ELSE k.net_ev END,
- k.input_revision
+ k.input_revision,e.scheduled_start::timestamptz
 FROM current_contract_storage c JOIN current_event e ON e.id=c.event_id
 JOIN current_offer_storage o ON o.contract_id=c.id
 LEFT JOIN current_pregame_calculation k ON k.contract_id=c.id
@@ -55,7 +60,7 @@ SELECT 'raw:'||h.kind||':'||h.venue||':'||h.sport||':'||h.event_id||':'||h.marke
  'raw',CASE WHEN h.kind='native' THEN h.venue ELSE 'the_odds_api' END,
  h.venue,h.venue,h.event_id,h.market_id,h.sport,h.family,h.period,h.title,
  h.received_at,NULL::text,NULL::text,NULL::text,NULL::text,NULL::text,
- NULL::numeric,NULL::text
+ NULL::numeric,NULL::text,NULL::timestamptz
 FROM (""" + raw_prices.HEADER + """) h
 WHERE NOT EXISTS (
  SELECT 1 FROM current_contract_storage c JOIN current_event e ON e.id=c.event_id
@@ -65,13 +70,61 @@ WHERE NOT EXISTS (
  AND c.native_market_id=h.market_id AND o.received_at::timestamptz=h.received_at)
 """
 
-STATUS = """CASE WHEN net_ev>0 THEN 'positive' WHEN net_ev<0 THEN 'negative'
+# The calculation owner has already resolved occurrences and conflicts. Reuse
+# that identity; a matching title or kickoff is never a grouping authority.
+EVENT_IDENTITIES = """
+SELECT e.provider,e.native_event_id,
+ min(e.scheduled_start::timestamptz) start_at,
+ CASE WHEN count(DISTINCT k.game_key)=1
+   AND NOT bool_or(COALESCE(k.reason,'') IN
+     ('occurrence_identity_conflict','occurrence_conflict','occurrence_schedule_conflict'))
+   THEN min(k.game_key) END game_key
+FROM current_event e
+LEFT JOIN current_contract_storage c ON c.event_id=e.id
+LEFT JOIN current_pregame_calculation k ON k.contract_id=c.id
+GROUP BY e.provider,e.native_event_id
+"""
+
+CATALOG = """SELECT source.*,
+ COALESCE('canonical:'||identity.game_key,'source:'||source.provider||':'||source.event_id) game_id,
+ COALESCE(source.start_at,identity.start_at) game_start_at
+FROM (""" + SOURCES + """) source
+LEFT JOIN (""" + EVENT_IDENTITIES + """) identity
+ ON identity.provider=source.provider AND identity.native_event_id=source.event_id
+ AND (source.start_at IS NULL OR source.start_at=identity.start_at)
+"""
+
+# Frozen checkpoint games remain reachable after current working rows expire.
+# Metadata contributes no received quote, calculation, or fictitious bookmaker.
+GAME_POPULATION = """SELECT catalog.*,true is_observation FROM (""" + CATALOG + """) catalog
+UNION ALL
+SELECT NULL::text,'experiment',g.provider,NULL::text,NULL::text,g.source_event_id,
+ NULL::text,g.event->>'league',NULL::text,NULL::text,g.event->>'title',
+ NULL::timestamptz,NULL::text,NULL::text,NULL::text,NULL::text,NULL::text,
+ NULL::numeric,NULL::text,(g.event->>'starts_at')::timestamptz,
+ COALESCE('canonical:'||identity.game_key,'source:'||g.provider||':'||g.source_event_id),
+ (g.event->>'starts_at')::timestamptz,false
+FROM public.ev_experiment_game g
+LEFT JOIN (""" + EVENT_IDENTITIES + """) identity
+ ON identity.provider=g.provider AND identity.native_event_id=g.source_event_id
+ AND (g.event->>'starts_at')::timestamptz=identity.start_at
+"""
+
+STATUS = """CASE WHEN venue IS NULL THEN 'unavailable'
+ WHEN venue IN (""" + ','.join("'" + venue + "'" for venue in HISTORICAL_TRADING_BOOKS) + """) THEN 'unavailable'
+ WHEN venue NOT IN (""" + ','.join("'" + venue + "'" for venue in TRADING_VENUES) + """) THEN 'reference_only'
+ WHEN net_ev>0 THEN 'positive' WHEN net_ev<0 THEN 'negative'
  WHEN net_ev=0 THEN 'zero' ELSE 'unavailable' END"""
 FILTERS = ('provider', 'original_bookmaker_id', 'sport', 'family', 'event_id')
+READ_FILTERS = (*FILTERS, 'search', 'calculation_status', 'max_age_minutes', 'date', 'reference_scope')
+SCOPED_SELECTIONS = ('game_id', 'contract_id', 'exact_bet_id')
 
 
 def selection(filters):
     clauses, args = [], []
+    if filters.get('reference_scope') != 'all':
+        clauses.append("(kind='experiment' OR venue=ANY(%s) OR original_bookmaker_id=ANY(%s))")
+        args.extend((list(TRADING_VENUES), list(REFERENCE_BOOKS)))
     for key in FILTERS:
         if filters.get(key):
             clauses.append(key + '=%s')
@@ -86,6 +139,18 @@ def selection(filters):
     if filters.get('max_age_minutes'):
         clauses.append("source_at::timestamptz >= transaction_timestamp()-(%s::int*interval '1 minute')")
         args.append(int(filters['max_age_minutes']))
+    if filters.get('date'):
+        clauses.append("(game_start_at AT TIME ZONE 'America/New_York')::date=%s::date")
+        args.append(filters['date'])
+    if filters.get('game_id'):
+        clauses.append('game_id=%s')
+        args.append(filters['game_id'])
+    if filters.get('contract_id'):
+        clauses.append('contract_id=%s')
+        args.append(filters['contract_id'])
+    if filters.get('exact_bet_id'):
+        clauses.append('contract_id IN (SELECT contract_id FROM current_pregame_calculation WHERE bet_id=%s)')
+        args.append(filters['exact_bet_id'])
     return (' WHERE ' + ' AND '.join(clauses) if clauses else ''), args
 
 
@@ -94,16 +159,108 @@ def headers(db, filters, *, offset=0, limit=50, entry_id=None):
     if entry_id is not None:
         clause += (' AND ' if clause else ' WHERE ') + 'id=%s'
         args.append(entry_id)
-    return db.execute('SELECT *,transaction_timestamp() snapshot_at FROM (' + SOURCES + ') catalog' + clause +
+    return db.execute('SELECT *,transaction_timestamp() snapshot_at FROM (' + CATALOG + ') catalog' + clause +
         ' ORDER BY received_at DESC,id LIMIT %s OFFSET %s', (*args, limit, offset)).fetchall()
 
 
 def counts(db, filters):
     clause, args = selection(filters)
     row = db.execute('SELECT count(*) records,count(DISTINCT (provider,event_id)) source_events,'
-        'count(DISTINCT event_id) event_identifiers FROM (' + SOURCES + ') catalog' + clause, args).fetchone()
+        'count(DISTINCT event_id) event_identifiers FROM (' + CATALOG + ') catalog' + clause, args).fetchone()
     row['event_count_meaning'] = 'Source-event identities; cross-provider events may overlap.'
     return row
+
+
+def _grouped_games(filters):
+    clause, args = selection(filters)
+    return """WITH selected AS (SELECT * FROM (""" + GAME_POPULATION + ") population" + clause + """),
+      games AS (SELECT game_id id,min(title) title,min(sport) sport,min(game_start_at) start_at,
+        count(*) FILTER(WHERE is_observation) records,
+        array_agg(DISTINCT original_bookmaker_id ORDER BY original_bookmaker_id)
+          FILTER(WHERE original_bookmaker_id IS NOT NULL) books,
+        array_agg(DISTINCT family ORDER BY family) FILTER(WHERE family IS NOT NULL) markets,
+        array_agg(DISTINCT provider ORDER BY provider) providers,
+        jsonb_agg(DISTINCT jsonb_build_object('provider',provider,'event_id',event_id)) source_events,
+        max(received_at) latest_received_at
+      FROM selected GROUP BY game_id) """, args
+
+
+def game_counts(db, filters):
+    query, args = _grouped_games(filters)
+    return db.execute(query + "SELECT count(*) games,count(*) FILTER(WHERE id LIKE 'canonical:%%') canonical_games,"
+        "count(*) FILTER(WHERE id LIKE 'source:%%') source_local_games FROM games", args).fetchone()
+
+
+def games(db, filters, *, offset=0, limit=50):
+    query, args = _grouped_games(filters)
+    rows = db.execute(query + 'SELECT * FROM games ORDER BY latest_received_at DESC NULLS LAST,start_at DESC NULLS LAST,id LIMIT %s OFFSET %s',
+        (*args, limit, offset)).fetchall()
+    from app.research.experiment import _revision
+    for row in rows:
+        row['identity_status'] = 'canonical' if row['id'].startswith('canonical:') else 'source_local'
+        row['books'] = row['books'] or []
+        row['markets'] = row['markets'] or []
+        for key in ('start_at', 'latest_received_at'):
+            row[key] = row[key].isoformat() if row[key] else None
+        members = row['source_events']
+        experiment = db.execute('''SELECT g.* FROM public.ev_experiment_game g
+            JOIN jsonb_to_recordset(%s) member(provider text,event_id text)
+              ON member.provider=g.provider AND member.event_id=g.source_event_id
+            ORDER BY g.first_observed_at,g.id LIMIT 1''',
+            (Jsonb(members),)).fetchone()
+        row['experiment'] = dict(id=experiment['id'], revision=_revision(db, experiment)) if experiment else None
+        row['revision'] = hashed(row)
+    return rows
+
+
+def checkpoint_source_match(db, header, source_input):
+    """Link an expired current SGO input to immutable exact checkpoint evidence.
+
+    This is a source tuple lookup, not normalization or a financial calculation.
+    Different settlement identities for one source tuple make the link refuse.
+    The current record keeps its independent source-local identity.
+    """
+    from app.collection.sportsgameodds_current_rows import source_bookmaker
+    from app.comparison.current_pregame import reference_key
+    from app.research import experiment
+    from app.research.ev_movement import exact_bet_identity
+
+    game = db.execute('''SELECT * FROM public.ev_experiment_game
+        WHERE provider=%s AND source_event_id=%s''',
+        (header['provider'], header['event_id'])).fetchone()
+    if not game:
+        return None, 'no_retained_checkpoint_game'
+    roots = [game[key] for key in ('early_id', 'late_id', 'baseline_correction_id') if game.get(key)]
+    index = experiment._closure(db, roots)
+    matches, checkpoints = {}, []
+    for label in ('early', 'late'):
+        checkpoint = experiment._checkpoint_view(db, game, label, index)
+        if checkpoint.get('status') not in (None, 'captured', 'complete'):
+            continue
+        for offer in (checkpoint.get('snapshot') or {}).get('offers', []):
+            record = offer['record']
+            source = record['quote']['source']
+            family, side, _ = reference_key(record)
+            line = record['selection'].get('signed_line') if family != 'moneyline' else None
+            expected_line = source_input.get('line') if source_input['market'] != 'moneyline' else None
+            if (source['provider'] != header['provider']
+                    or source['native_event_id'] != header['event_id']
+                    or source.get('native_outcome_id') != header['market_id']
+                    or source_bookmaker(record) != header['original_bookmaker_id']
+                    or family != source_input['market'] or side != source_input['side']
+                    or record['market_identity']['period'] != ('full_game' if source_input['period'] == 'game' else source_input['period'])
+                    or (line is None) != (expected_line is None)
+                    or line is not None and Fraction(str(line)) != Fraction(str(expected_line))):
+                continue
+            identity = exact_bet_identity(record)
+            matches[identity['id']] = identity
+            checkpoints.append(label)
+    if len(matches) != 1:
+        return None, 'checkpoint_source_identity_ambiguous' if matches else 'exact_source_line_not_in_checkpoint_offers'
+    identity = next(iter(matches.values()))
+    return dict(id=identity['id'], game_id=game['id'], revision=experiment._revision(db, game),
+        checkpoints=sorted(set(checkpoints)), identity=identity,
+        scope='Exact retained provider/event/book/market/outcome/line tuple; current source-local identity remains unchanged.'), None
 
 
 def calculation_state(payload, reason, *, contract_id):
@@ -134,7 +291,7 @@ def entry(db, header, owner, *, detail=False):
         stored = db.execute('''SELECT c.facts contract,c.revision contract_revision,c.active,
             e.facts event,e.id canonical_event_id,o.facts quote,o.revision offer_revision,
             o.source_at,o.received_at,o.price_value,o.price_units,
-            k.payload,k.reason,k.version,k.input_revision,k.calculated_at,k.valid_until,
+            k.payload,k.reason,k.version,k.input_revision,k.calculated_at,k.valid_until,k.bet_id,
             p.record,p.fee_input,p.payload price_payload
             FROM current_contract_storage c JOIN current_event e ON e.id=c.event_id
             JOIN current_offer o ON o.contract_id=c.id
@@ -174,15 +331,21 @@ def entry(db, header, owner, *, detail=False):
         digest, source_revision = None, raw_book['revision']
         source_input = raw_book
     payload = stored['payload'] if stored else None
+    trading_market = header['venue'] in TRADING_VENUES
+    trading_side = trading_market or header['original_bookmaker_id'] in HISTORICAL_TRADING_BOOKS
     from app.comparison.snapshot_fee_scope import provider_venue_fee_reason
     applicability_reason = provider_venue_fee_reason(dict(quote=dict(
         source=dict(provider=header['provider']), venue=header['venue'])))
-    historical_conditional = payload if applicability_reason else None
-    if applicability_reason:
+    historical_conditional = payload if applicability_reason and trading_market else None
+    if applicability_reason or not trading_market:
         payload = None
     state = calculation_state(payload,
         applicability_reason or (stored['reason'] if stored else None), contract_id=cid)
-    state['evidence_scope'] = 'stored_calculation; catalog grants no execution authority'
+    if not trading_market:
+        state = dict(status='unavailable' if trading_side else 'reference_only', net_ev_percent=None, net_ev_ratio=None,
+            display=None, reason='unsupported_trading_venue' if trading_side else 'reference_price_only')
+    state['evidence_scope'] = ('stored_calculation; catalog grants no execution authority' if trading_market else
+        'unsupported_trading_price_only; no trading EV result' if trading_side else 'reference_price_only; no trading EV result')
     state['freshness'] = ('source_unavailable' if available is False else
         'expired' if stored and stored['valid_until'] and stored['valid_until'] <= header['snapshot_at'] else
         'within_stored_deadline' if stored and stored['valid_until'] else 'not_established')
@@ -207,11 +370,17 @@ def entry(db, header, owner, *, detail=False):
     revision = hashed([header['id'], source_revision, times, digest,
         stored['contract_revision'] if stored else None,
         stored['input_revision'] if stored else None, state])
+    alternate = ((source_input or {}).get('alternate') if kind == 'sgo' else
+        (stored['contract'].get('comparison_source_metadata') or {}).get('alternate') if stored else None)
     result = dict(id=header['id'], revision=revision, kind=kind,
         provider=header['provider'], original_bookmaker_id=original,
         represented_venue=header['venue'], venue_equivalence=equivalence,
+        trading_role='prediction_market' if trading_side else 'reference_only',
         event_id=header['event_id'], source_market_id=header['market_id'],
         sport=header['sport'], family=header['family'], period=header['period'], title=header['title'],
+        game_id=header['game_id'], start_at=header['game_start_at'].isoformat() if header['game_start_at'] else None,
+        main_role='alternate' if alternate is True else 'main' if alternate is False else 'unknown',
+        exact_bet_id=stored['bet_id'] if stored else None,
         outcome=outcome, line=line, price=price, price_units=units,
         available=available, availability_reason=availability_reason,
         identity=canonical, times=times, calculation=state,
@@ -226,7 +395,7 @@ def entry(db, header, owner, *, detail=False):
         provider_requests=0)
     if detail:
         history = []
-        if applicability_reason and cid:
+        if applicability_reason and cid and trading_market:
             from app.research.records import conditional_history
             history = conditional_history(db, cid, limit=1)
             if historical_conditional is None and history:
@@ -236,6 +405,20 @@ def entry(db, header, owner, *, detail=False):
             from .current_rows import project_contract, project_quote
             normalized = dict(project_contract(stored['event'], stored['contract'], stored['received_at']),
                 event=stored['event'], quote=project_quote(stored))
+        checkpoint_bet_id, checkpoint_identity_reason = None, None
+        checkpoint_match = None
+        if normalized and trading_market:
+            from app.research.ev_movement import exact_bet_identity
+            try:
+                checkpoint_bet_id = exact_bet_identity(normalized)['id']
+            except (ValueError, KeyError, TypeError) as exc:
+                checkpoint_identity_reason = str(exc)
+        elif kind == 'sgo' and trading_market:
+            checkpoint_match, checkpoint_identity_reason = checkpoint_source_match(db, header, source_input)
+            if checkpoint_match:
+                checkpoint_bet_id = checkpoint_match['id']
+        elif not trading_market:
+            checkpoint_identity_reason = 'unsupported_trading_venue' if trading_side else 'reference_price_only'
         native_wire = None
         if header['provider'] in ('kalshi', 'polymarket_us'):
             wire = db.execute("SELECT image->'raw'->>'json_text' wire FROM current_acquisition_image "
@@ -248,11 +431,13 @@ def entry(db, header, owner, *, detail=False):
                     'No native wire bound to this exact receipt.', retention_owner='current_acquisition_image')
         result.update(source_input=source_input, native_wire=native_wire,
             normalized_record=normalized,
+            checkpoint_bet_id=checkpoint_bet_id, checkpoint_identity_reason=checkpoint_identity_reason,
+            checkpoint_match=checkpoint_match,
             contract=stored['contract'] if stored else None,
             event=stored['event'] if stored else None,
-            fee_input=stored['fee_input'] if stored and not applicability_reason else None,
+            fee_input=stored['fee_input'] if stored and not applicability_reason and trading_market else None,
             calculation_payload=payload,
-            price_payload=stored['price_payload'] if stored and not applicability_reason else None,
+            price_payload=stored['price_payload'] if stored and not applicability_reason and trading_market else None,
             historical_conditional_calculation=historical_conditional,
             historical_conditional_history=history,
             reproduction='Exact source, identity, fee and calculation revisions from the captured read. '
