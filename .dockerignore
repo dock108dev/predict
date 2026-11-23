@@ -10,6 +10,11 @@
 !scripts/sgo_runtime_census.sql
 !deploy/
 !deploy/check-health.py
+!deploy/compose.yml
+!deploy/predict.Caddyfile
+!deploy/release.sh
+!deploy/managed-config.py
+!deploy/image-cleanup.py
 **/__pycache__
 **/.DS_Store
 app/reviews/

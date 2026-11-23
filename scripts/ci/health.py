@@ -17,7 +17,7 @@ def selected_runs(runs, now):
     return [
         r
         for r in runs[:30]
-        if r["name"] == "CI"
+        if r["name"] == os.environ.get("CI_HISTORY_WORKFLOW_NAME", "CI")
         and r["status"] == "completed"
         and window
         <= datetime.fromisoformat(r["created_at"].replace("Z", "+00:00"))
@@ -40,7 +40,13 @@ def analyze(runs, now):
         "quota": None,
         "suspected_flakes": None,
     }
-    for event in ("pull_request", "push", "workflow_dispatch", "merge_group"):
+    for event in (
+        "pull_request",
+        "push",
+        "workflow_dispatch",
+        "merge_group",
+        "schedule",
+    ):
         selected = [r for r in rows if r["event"] == event]
         first = [
             r["conclusion"]

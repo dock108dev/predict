@@ -201,7 +201,7 @@ class RequiredEvidenceTests(unittest.TestCase):
     def test_workflow_downloads_before_gate_and_retains_four_shard_contract(self):
         root = Path(__file__).resolve().parents[1]
         workflow = (
-            (root / ".github/workflows/ci.yml")
+            (root / ".github/workflows/full-validation.yml")
             .read_text()
             .split("  readiness:\n", 1)[1]
         )

@@ -43,6 +43,8 @@ services:
       test: [CMD, psql, -h, /run/predict-postgres, -p, '55432', -U, prediction_arb, -d, prediction_arb, -Atqc, 'SELECT 1']
       interval: 5s
       timeout: 4s
+      start_period: 30s
+      start_interval: 1s
       retries: 12
     restart: unless-stopped
     logging: *logging
@@ -57,6 +59,8 @@ services:
       test: [CMD, python, deploy/check-health.py, web]
       interval: 10s
       timeout: 8s
+      start_period: 30s
+      start_interval: 1s
       retries: 6
 
   collector:
@@ -79,6 +83,7 @@ services:
       interval: 10s
       timeout: 8s
       start_period: 60s
+      start_interval: 1s
       retries: 6
 
   archive:
@@ -102,6 +107,8 @@ services:
       test: [CMD, python, -m, app.storage.odds_archive_export, --check]
       interval: 1m
       timeout: 10s
+      start_period: 60s
+      start_interval: 1s
       retries: 3
 
 networks:

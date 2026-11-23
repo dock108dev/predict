@@ -5,27 +5,7 @@
 	}
 }
 
-(predict_admin) {
-	basicauth {
-		import /etc/caddy/predict-auth
-	}
-	import predict_backend
-}
-
 predict.dock108.dev {
-	@publicRead {
-		method GET HEAD
-		path / /opportunities /ev /arbs /browse-odds /game /replay /about /trading-fees /api/trading-fees /api/pregame /api/pregame/arbs /api/pregame/updates /api/health /view/current/desk.html /api/comparison-current /api/comparison-current/updates /api/comparison-current/selection /api/comparison-snapshot/details /api/odds-replay /api/odds-replay/details
-	}
-	@publicAssets {
-		method GET HEAD
-		path_regexp predictAssets ^/view/current/[a-z0-9-]+\.(css|js|ttf|png)$
-	}
-	@publicLease {
-		method POST DELETE
-		path /api/comparison-current/lease
-	}
-	@admin path /research /admin /admin/* /my-bets /raw-odds /odds /coverage /current/coverage /scanner /api/* /current/assets/* /view/* /style.css /shared-state.js
 	@browserIcon {
 		method GET HEAD
 		path /favicon.ico /apple-touch-icon.png /apple-touch-icon-precomposed.png
@@ -38,20 +18,11 @@ predict.dock108.dev {
 
 	route {
 		respond @foreignOrigin 403
+		basicauth {
+			import /etc/caddy/predict-auth
+		}
 		redir @browserIcon /view/current/predict-icon.png 302
 		request_header @predictOrigin Origin http://127.0.0.1:8784
-		handle @publicRead {
-			import predict_backend
-		}
-		handle @publicAssets {
-			import predict_backend
-		}
-		handle @publicLease {
-			import predict_backend
-		}
-		handle @admin {
-			import predict_admin
-		}
-		respond 404
+		import predict_backend
 	}
 }

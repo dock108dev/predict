@@ -1,7 +1,5 @@
-name: Scheduled assurance
+name: Optional diagnostics
 on:
-  schedule:
-    - cron: '23 7 * * 1'
   workflow_dispatch:
     inputs:
       scope:
@@ -24,7 +22,7 @@ jobs:
     with:
       python: '3.14'
   security:
-    if: ${{ github.event_name == 'schedule' || inputs.scope == 'all' || inputs.scope == 'security' }}
+    if: ${{ inputs.scope == 'all' || inputs.scope == 'security' }}
     name: Dependency refresh
     runs-on: ubuntu-24.04
     timeout-minutes: 10

@@ -8,13 +8,17 @@ ROLES = ("web", "collector", "archive")
 BUILD_FILES = {
     b"Dockerfile",
     b".dockerignore",
-    b".github/workflows/hetzner.yml",
     b"pyproject.toml",
     b"uv.lock",
     b"deploy/image-inputs.py",
     b"deploy/check-health.py",
 }
 WEB_FILES = {
+    b"deploy/compose.yml",
+    b"deploy/predict.Caddyfile",
+    b"deploy/release.sh",
+    b"deploy/managed-config.py",
+    b"deploy/image-cleanup.py",
     b"app/dashboard/opportunity_board.py",
     b"app/dashboard/scanner_client_api.py",
     b"scripts/live_coverage_census.py",

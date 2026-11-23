@@ -6,9 +6,11 @@ It has no application accounts, tenant isolation, public webhooks, or order
 execution. Browser protections do not authenticate other local processes.
 
 The documented Hetzner deployment fronts this same loopback service with Caddy.
-Caddy terminates TLS, validates the public Origin, and permits specific public
-desk, asset and evidence-lease routes. It requires separate proxy authentication
-for Admin, database access and other operational routes. [Hetzner boundary](hetzner.md)
+Caddy terminates TLS, validates the browser Origin, and requires the existing
+owner's proxy authentication for every page, API, asset and evidence download.
+It strips those credentials before forwarding to the loopback service. The
+application remains a single-owner tool; the proxy supplies the deployed access
+boundary. [Hetzner boundary](hetzner.md)
 
 ## HTTP and browser boundary
 

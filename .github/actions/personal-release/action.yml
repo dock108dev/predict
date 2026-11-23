@@ -1,0 +1,14 @@
+name: Cached personal release
+description: Smoke-test cached role images and deploy the exact checked main revision
+inputs:
+  publish-only:
+    description: Publish images without accessing the server
+    default: 'false'
+runs:
+  using: composite
+  steps:
+    - name: Build, smoke-test and release within the personal CI budget
+      shell: bash
+      env:
+        RELEASE_PUBLISH_ONLY: ${{ inputs.publish-only }}
+      run: python deploy/fast-release.py

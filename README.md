@@ -3,6 +3,11 @@
 Version **0.2.0** adds read-only amount research, decision-visible cashflows and
 size status, retained comparisons, and session navigation context.
 
+The [personal server](https://predict.dock108.dev/) requires the existing owner
+login. Hosted use needs no local `.env` or running app. Pushes to `main` deploy
+through the focused private-beta CI path; [server and Mac setup](docs/hetzner.md) explains
+the private deployment and optional local development.
+
 Predict is a personal market-data research system. It opens on **Research**: a
 received-data table with source/book identity, exact markets, original clocks,
 positive and nonpositive calculations, unavailable reasons, inspection and export.

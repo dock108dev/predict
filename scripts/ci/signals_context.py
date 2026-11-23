@@ -93,21 +93,25 @@ def actions(repo, endpoint, **kwargs):
 def baseline(repo, sha, destination):
     if not sha:
         return None
+    workflow = os.environ.get("CI_ASSURANCE_WORKFLOW", "ci.yml")
+    events = (
+        ("schedule", "workflow_dispatch")
+        if workflow == "full-validation.yml"
+        else ("push",)
+    )
+    query = dict(head_sha=sha, branch="main", status="success", per_page=5)
+    if workflow != "full-validation.yml":
+        query["event"] = "push"
     result = actions(
         repo,
-        "workflows/ci.yml/runs",
-        head_sha=sha,
-        branch="main",
-        event="push",
-        status="success",
-        per_page=5,
+        "workflows/" + workflow + "/runs",
+        **query,
     )
     for run in result["workflow_runs"]:
-        if (run.get("head_sha"), run.get("conclusion"), run.get("event")) != (
+        if (run.get("head_sha"), run.get("conclusion")) != (
             sha,
             "success",
-            "push",
-        ):
+        ) or run.get("event") not in events:
             continue
         run_id, attempt = run["id"], run["run_attempt"]
         if not all(type(n) is int and n > 0 for n in (run_id, attempt)):
@@ -230,7 +234,9 @@ def collect(root, sha, run, destination):
             lambda: analyze(
                 actions(
                     repo,
-                    "workflows/ci.yml/runs",
+                    "workflows/"
+                    + os.environ.get("CI_ASSURANCE_WORKFLOW", "ci.yml")
+                    + "/runs",
                     per_page=30,
                     status="completed",
                     created=">=" + (now - timedelta(days=30)).date().isoformat(),

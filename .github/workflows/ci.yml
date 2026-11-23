@@ -1,230 +1,61 @@
 name: CI
 
 on:
-  pull_request:
   push:
     branches: [main]
-  merge_group:
-    types: [checks_requested]
   workflow_dispatch:
     inputs:
-      full_diagnostics:
-        description: Run behavior lanes even if source, security or package checks fail
+      publish_only:
+        description: Check and publish current main without changing the server
         type: boolean
         default: false
-
-env:
-  MERGE_QUEUE_SHA: ${{ github.event.merge_group.head_sha }}
-  PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-  CI_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
 permissions:
   contents: read
 
 concurrency:
-  # Only successive revisions of the same PR compete for the pending slot.
-  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: predict-personal-${{ github.event_name == 'push' && 'main' || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'push' }}
+
+env:
+  RELEASE_SHA: ${{ github.sha }}
+  CI_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
 jobs:
-  offline:
-    name: Offline checks
-    needs: quality
-    if: ${{ !cancelled() && (needs.quality.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.full_diagnostics)) }}
+  personal:
+    name: Personal beta checks and deploy
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
-    timeout-minutes: 35
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup
-        id: setup
-        with:
-          python: '3.14'
-      - name: Ensure Poppler is available for PDF renderer checks
-        id: poppler
-        run: |
-          if ! command -v pdftotext >/dev/null; then
-            sudo apt-get update
-            sudo apt-get install -y poppler-utils
-          fi
-          pdftotext -v
-      - name: Syntax and offline regressions
-        id: offline
-        run: sh scripts/check-ci
-      - name: Report interrupted setup or execution
-        if: always()
-        env:
-          CHECK_OUTCOMES: ${{ toJSON(steps) }}
-        run: python3 scripts/ci/interrupted.py
-      - name: Retain offline diagnostics
-        if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: ci-offline-${{ github.run_id }}-${{ github.run_attempt }}
-          path: test-results/ci/
-          if-no-files-found: error
-          retention-days: 14
-  quality:
-    name: Source, security and package
-    runs-on: ubuntu-24.04
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup
-        id: setup
-        with:
-          python: '3.14'
-      - name: Install checksum-pinned validators
-        id: tools
-        run: python scripts/ci/install_tools.py
-      - name: Source lint and support formatting
-        id: lint
-        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
-        run: |
-          python -m ruff check app tests scripts/ci browser_tests
-          python -m ruff format --check scripts/ci browser_tests tests/test_ci_*.py tests/ci_support.py
-      - name: Measure Python duplication and complexity
-        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
-        continue-on-error: true
-        run: python scripts/ci/code_signals.py
-      - name: Redacted publishable-tree secret scan
-        id: secrets
-        if: ${{ !cancelled() && steps.setup.outcome == 'success' && steps.tools.outcome == 'success' }}
-        run: python scripts/ci/secret_scan.py
-      - name: Actions and shell syntax
-        id: workflow
-        if: ${{ !cancelled() && steps.tools.outcome == 'success' }}
-        run: |
-          .local/ci-tools/actionlint -shellcheck=''
-          sh -n scripts/check-ci
-          for script in deploy/release.sh deploy/smoke.sh deploy/smoke-proxy.sh; do
-            bash -n "$script"
-          done
-      - name: Maintained documentation references
-        id: docs
-        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
-        run: python scripts/ci/docs.py
-      - name: Reporting failure and missing-data regressions
-        id: source
-        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
-        run: |
-          mkdir -p test-results/quality
-          python -m pytest -q tests/test_ci_*.py --junitxml=test-results/quality/junit.xml
-      - name: Audit locked dependencies
-        id: audit
-        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
-        run: python -m pip_audit -r requirements-ci.txt -r requirements-browser.txt --require-hashes --disable-pip --progress-spinner off --timeout 20 -f json -o test-results/quality/audit.json
-      - name: Audit alternate runtime lock
-        id: uv_audit
-        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
-        run: |
-          python scripts/ci/uv_audit_requirements.py
-          python -m pip_audit -r test-results/quality/uv-requirements.txt --require-hashes --disable-pip --progress-spinner off --timeout 20 -f json -o test-results/quality/uv-audit.json
-      - name: Build and install package
-        id: package
-        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
-        run: python scripts/ci/package_smoke.py
-      - name: Summarize outcomes
-        if: always()
-        env:
-          CHECK_OUTCOMES: ${{ toJSON(steps) }}
-        run: python scripts/ci/quality_report.py --expanded
-      - name: Retain quality diagnostics
-        if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: ci-quality-${{ github.run_id }}-${{ github.run_attempt }}
-          path: |
-            test-results/quality/
-            test-results/package/metrics.json
-          if-no-files-found: error
-          retention-days: 14
-  postgres:
-    name: PostgreSQL storage
-    needs: quality
-    if: ${{ !cancelled() && (needs.quality.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.full_diagnostics)) }}
-    uses: ./.github/workflows/storage.yml
-    with:
-      python: '3.14'
-  browser:
-    name: Ordinary browser journey
-    needs: quality
-    if: ${{ !cancelled() && (needs.quality.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.full_diagnostics)) }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup
-        id: setup
-        with:
-          python: '3.14'
-          browser: 'true'
-      - name: Install matching Chromium and Linux system libraries
-        id: chromium
-        run: python -m playwright install --with-deps chromium
-      - name: Offline ordinary journey and keyboard checks
-        id: browser
-        env:
-          PREDICT_CI_REPORT_ROOT: test-results/browser
-        run: |
-          mkdir -p test-results/browser
-          python -m pytest -q browser_tests --junitxml=test-results/browser/junit.xml
-      - name: Browser summary
-        if: always()
-        env:
-          CHECK_OUTCOMES: ${{ toJSON(steps) }}
-        run: python scripts/ci/quality_report.py --browser
-      - name: Retain browser diagnostics
-        if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: ci-browser-${{ github.run_id }}-${{ github.run_attempt }}
-          path: test-results/browser/
-          if-no-files-found: error
-          retention-days: 14
-  readiness:
-    name: CI readiness
-    needs: [offline, quality, postgres, browser]
-    if: always()
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
+    timeout-minutes: 2
+    environment: hetzner
     permissions:
       contents: read
-      actions: read
+      packages: write
     steps:
+      - name: Start measured personal lane
+        run: echo "PREDICT_CICD_STARTED=$(date +%s)" >> "$GITHUB_ENV"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          persist-credentials: false
           fetch-depth: 2
-      - name: Download this run's test and quality evidence
-        if: ${{ !cancelled() }}
-        continue-on-error: true
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+          persist-credentials: false
+      - uses: ./.github/actions/fast-checks
+      - uses: ./.github/actions/personal-release
         with:
-          path: test-results/signals-inputs/current
-      - name: Require every same-run gate and report
-        if: always()
+          publish-only: ${{ inputs.publish_only || false }}
         env:
-          NEEDS_JSON: ${{ toJSON(needs) }}
-          FULL_DIAGNOSTICS: ${{ inputs.full_diagnostics || false }}
+          RELEASE_SHA: ${{ github.sha }}
           GH_TOKEN: ${{ github.token }}
-        run: python3 scripts/ci/gate.py
-      - name: Publish advisory validation signals
-        if: ${{ !cancelled() }}
-        continue-on-error: true
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: python3 scripts/ci/readiness_signals.py
-      - name: Retain same-run readiness result
+          SSH_KEY: ${{ secrets.HETZNER_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ vars.HETZNER_KNOWN_HOSTS }}
+          SSH_HOST: ${{ vars.HETZNER_HOST }}
+          HETZNER_DEPLOY_ENABLED: ${{ vars.HETZNER_DEPLOY_ENABLED }}
+      - name: Keep focused validation and release evidence
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: ci-readiness-${{ github.run_id }}-${{ github.run_attempt }}
-          path: test-results/readiness/
-          if-no-files-found: error
-          retention-days: 90
+          name: personal-beta-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            test-results/fast/
+            test-results/release/
+          if-no-files-found: warn
+          retention-days: 7

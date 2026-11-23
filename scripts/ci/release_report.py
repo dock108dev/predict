@@ -1,4 +1,4 @@
-"""Report the manual release stages using the workflow's actual outcomes."""
+"""Report CI-qualified personal releases using the workflow's actual outcomes."""
 
 from datetime import datetime, timezone
 import json
@@ -10,9 +10,13 @@ from reporting import STATUS, behavior_table, run_reference, safe, step_status
 
 
 STAGES = {
+    "qualification": (
+        "Qualify the exact release revision",
+        "Requires successful same-commit main CI before server deployment",
+    ),
     "proxy": (
-        "Public proxy routes and Admin authentication",
-        "Keeps Admin behind its authentication boundary",
+        "Personal-site authentication and proxy routes",
+        "Keeps the entire personal application behind authentication",
     ),
     "smoke": (
         "Build and smoke-test all three service images",
@@ -24,16 +28,27 @@ STAGES = {
     ),
     "deploy": (
         "Deploy the published digests",
-        "Verifies that the selected commit is still the branch tip before handing off to the host",
+        "Rechecks current main and required CI before handing verified image digests to the host",
     ),
 }
 
 
+def job_outputs(needs, name):
+    job = needs.get(name) if isinstance(needs, dict) else None
+    outputs = job.get("outputs") if isinstance(job, dict) else None
+    return outputs if isinstance(outputs, dict) else {}
+
+
 def evaluate(needs, *, branch, publish_only, deploy_enabled):
+    qualification = step_status(needs, "prepare", "result")
     image = step_status(needs, "release-image", "result")
     deploy = step_status(needs, "deploy-hetzner", "result")
+    selection = job_outputs(needs, "prepare")
+    deploy_outputs = job_outputs(needs, "deploy-hetzner")
     skip_reason = (
-        "Publication is branch-only."
+        selection.get("reason")
+        if selection.get("state") == "skipped"
+        else "Publication is branch-only."
         if not branch
         else "Publish-only dispatch."
         if publish_only
@@ -41,12 +56,26 @@ def evaluate(needs, *, branch, publish_only, deploy_enabled):
         if not deploy_enabled
         else "Image verification and publication did not succeed."
         if image != "PASS"
+        else deploy_outputs.get("skip_reason")
+        if deploy_outputs.get("eligible") == "false"
         else None
     )
     steps = {}
     for name in STAGES:
-        job = "deploy-hetzner" if name == "deploy" else "release-image"
-        outcome = deploy if name == "deploy" else image
+        job = (
+            "prepare"
+            if name == "qualification"
+            else "deploy-hetzner"
+            if name == "deploy"
+            else "release-image"
+        )
+        outcome = (
+            qualification
+            if name == "qualification"
+            else deploy
+            if name == "deploy"
+            else image
+        )
         entry = needs.get(job) if isinstance(needs, dict) else None
         outputs = entry.get("outputs") if isinstance(entry, dict) else None
         value = outputs.get(name) if isinstance(outputs, dict) else None
@@ -54,16 +83,24 @@ def evaluate(needs, *, branch, publish_only, deploy_enabled):
         if status == "NOT RUN" and outcome in ("CANCELLED", "SKIPPED"):
             status = outcome
         steps[name] = status
-    if not branch and image == deploy == "SKIPPED":
+    if (
+        qualification == "PASS"
+        and selection.get("state") == "skipped"
+        and image == deploy == "SKIPPED"
+    ):
         overall = "SKIPPED"
-    elif image == "CANCELLED" or deploy == "CANCELLED":
+    elif qualification == "CANCELLED" or image == "CANCELLED" or deploy == "CANCELLED":
         overall = "CANCELLED"
     elif (
         branch
+        and qualification == steps["qualification"] == "PASS"
+        and selection.get("state") == "ready"
         and image == "PASS"
         and all(steps[name] == "PASS" for name in ("proxy", "smoke", "publish"))
         and (
-            deploy == "SKIPPED" if skip_reason else deploy == steps["deploy"] == "PASS"
+            (deploy == "SKIPPED" or deploy == "PASS" and steps["deploy"] == "SKIPPED")
+            if skip_reason
+            else deploy == steps["deploy"] == "PASS"
         )
     ):
         overall = "PASS"
@@ -84,18 +121,21 @@ def main():
         deploy_enabled=os.environ.get("RELEASE_DEPLOY_ENABLED") == "true",
     )
     result = dict(
-        schema=1,
+        schema=2,
         overall=overall,
-        tested_sha=os.environ.get("GITHUB_SHA"),
+        tested_sha=os.environ.get("RELEASE_SHA") or os.environ.get("GITHUB_SHA"),
         ref=os.environ.get("GITHUB_REF"),
         event=os.environ.get("GITHUB_EVENT_NAME"),
         run_id=os.environ.get("GITHUB_RUN_ID"),
         run_attempt=os.environ.get("GITHUB_RUN_ATTEMPT"),
         run_url=os.environ.get("CI_RUN_URL"),
         timestamp=datetime.now(timezone.utc).isoformat(),
+        qualification_job=step_status(needs, "prepare", "result"),
+        qualification=job_outputs(needs, "prepare"),
+        source_ci_url=os.environ.get("RELEASE_SOURCE_CI_URL") or None,
         image_job=image,
         deploy_job=deploy,
-        deployment_skip_reason=skip_reason if deploy == "SKIPPED" else None,
+        deployment_skip_reason=skip_reason if steps["deploy"] == "SKIPPED" else None,
         steps=steps,
     )
     text = f"## Release result · {overall}\n\n" + behavior_table(
@@ -105,7 +145,9 @@ def main():
                 steps[name],
                 purpose,
                 skip_reason
-                if name == "deploy" and deploy == "SKIPPED" and skip_reason
+                if name == "deploy" and steps[name] == "SKIPPED" and skip_reason
+                else job_outputs(needs, "prepare").get("reason")
+                if name == "qualification"
                 else f"Release step {name}",
             )
             for name, (title, purpose) in STAGES.items()
@@ -117,6 +159,8 @@ def main():
         f"Event {safe(result['event'])}, attempt {safe(result['run_attempt'])}. "
         f"Ubuntu 24.04 runner · summary Python {platform.python_version()}. {run_reference()}.\n"
     )
+    if result["source_ci_url"]:
+        text += f"\nQualified CI evidence: {safe(result['source_ci_url'])}.\n"
     if overall in ("FAIL", "CANCELLED"):
         text += f"\nInspect the first failed or unreached stage in the run. Image job {image}. Deployment job {deploy}.\n"
     output = Path("test-results/release")
