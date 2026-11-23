@@ -73,7 +73,8 @@ the packed and original canonical bytes are checked. A 32 MiB decoded-size bound
 protects memory independently of the smaller retained encoding; it is not an
 observation or review gate. Existing records and exports keep their original
 representation. The actual Orlando–Washington pair retained 1,729,132 bytes in
-the new representation, versus 11,334,804 bytes previously attributed: an 84.7%
+the new representation, versus 11,326,154 bytes in the same original checkpoint
+dependency closure: an 84.7%
 reduction, with byte-identical decoded witnesses and arithmetic. This reduces
 future writes; it does not reclaim or rewrite historical rows.
 
@@ -84,6 +85,9 @@ clocks remain, the earliest page becomes the baseline alias, and its duplicate
 late role is non-comparable. The advanced former early point stays inspectable
 as later context. Corrections are recorded when made, never backdated. The due
 gate prevents this order for future acquisitions.
+Complete-pair counts and measured completed-game means require distinct,
+causally ordered captured checkpoints on the same current schedule; a corrected
+baseline alias or superseded schedule cannot inflate those figures.
 
 Postgame collection is an engineering allocation of at most five guarded
 attempts per tracked game, at start plus 3, 4, 6, 12 and 24 hours. Each has a

@@ -413,7 +413,7 @@ Its complete 3,018-record export reproduces both historical pages offline and
 retains one explicitly timing-incomplete positive case, with no new source call.
 
 Whole-checkpoint deterministic gzip reduced the actual Magic pair's retained
-representation from 11,334,804 to 1,729,132 bytes, with identical decoded inputs
+checkpoint dependency closure from 11,326,154 to 1,729,132 bytes, with identical decoded inputs
 and exact arithmetic. Previous immutable rows are not rewritten; legacy data
 and late reservations leave little current logical headroom. Refusals remain
 visible. The 128 MiB allocation and existing source/account/SQL/disk guards stay
@@ -427,8 +427,16 @@ subtests. Native browser QA clicked the complete export at 150% zoom and checked
 The initial hosted run's sole failure was a stale asset test assuming every
 Research script used the old catalog API. Its corrected endpoint-specific test
 passes eight tests/four subtests while preserving actual delivery assertions.
-Full required CI follows the coordinated final-main integration revision; the
-GitHub result remains authoritative for that separate repository gate.
+The final complete-pair summary correction also passes eighteen store SQL
+checks, covering valid pairs, reversed clocks, corrected aliases, missed tasks
+and reschedules without decoding market snapshots. Count and mean use the same
+valid-pair predicate.
+
+Required CI follows the coordinated final-main integration revision under the
+owner's newer two-minute normal-release direction. Focused checks/deployment and
+full regression assurance have separate results; the old full lane is not
+reinstated as a normal-release blocker. The current GitHub result remains
+authoritative for that repository gate.
 
 Private evidence is in `.local/ev-experiment-20261122/` and
 `.local/ev-experiment-installed/`, including actual exports, offline proofs,

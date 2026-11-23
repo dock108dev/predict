@@ -17,8 +17,12 @@ All 115 migration hashes match. The stale asset-delivery assertion from initial
 CI `45084819231` was reproduced and corrected: each Research script must call
 its own endpoint; all existing delivery checks remain. Its focused suite passes
 eight tests and four subtests. The coordinated personal-server CI/CD change
-will run the full required checks on the combined final main revision; that
-GitHub check is the source for hosted completion, separate from installed proof.
+follows the owner's newer two-minute normal-release direction: focused required
+checks and deployment, with full regression assurance reported separately. The
+combined final-main GitHub check is the source for hosted completion, separate
+from installed proof. The final summary query counts only valid distinct
+checkpoint pairs; aliases, missed tasks and superseded schedules cannot inflate
+completion or measured runway.
 
 The research allocation remains finite. Legacy evidence and existing late
 reservations nearly fill 128 MiB; the compact format reduces future writes but

@@ -93,6 +93,10 @@ class ExperimentSQL(LatestBoardFixture):
             revision=catalog["games"][0]["revision"]
             detail=owner.detail(db,game_id,revision=revision)
             self.assertEqual(detail["cases"][0]["transition"],"positive_to_positive")
+            with patch.object(owner,"_closure",side_effect=AssertionError("status_must_not_decode_snapshots")):
+                completed=owner.status(db)
+            self.assertEqual(completed["complete_checkpoint_games"],1)
+            self.assertEqual(completed["storage"]["mean_complete_game_payload_bytes"],detail["game"]["unique_payload_bytes"])
             self.assertEqual(detail["early"]["discovery_kind"],"policy_activation_existing_game")
             self.assertEqual(detail["early"]["snapshot"]["event"]["scheduled_start"],event["starts_at"])
             early_ids=set(owner._closure(db,[detail["early"]["id"]]))
@@ -223,11 +227,14 @@ class ExperimentSQL(LatestBoardFixture):
                 with db.transaction():
                     owner._lock(db)
                     with patch.object(owner,"pack_checkpoint",owner.pack):
-                        identity,size=owner._write(db,"checkpoint",value,game_id=game["id"],checkpoint=label)
+                        identity,size=owner._write(db,"checkpoint",value,game_id=game["id"],checkpoint=label,
+                            summary=dict(received_at=value["received_at"],known_at=value["known_at"],
+                                         target_at=value["target_at"],deadline_at=value["deadline_at"]))
                     db.execute("UPDATE ev_experiment_game SET "+label+"_id=%s,unique_payload_bytes=unique_payload_bytes+%s WHERE id=%s",(identity,size,game["id"]))
                     db.execute("UPDATE ev_experiment_task SET state='captured',result_id=%s WHERE game_id=%s AND checkpoint=%s",(identity,game["id"],label))
                 history.append(identity)
             first_id,advanced_id=history
+            self.assertEqual(owner.status(db)["complete_checkpoint_games"],0)
             before=list(db.execute("SELECT * FROM ev_experiment_record WHERE kind='checkpoint' ORDER BY id"))
             self.advance(owner.stamp(event["starts_at"])+timedelta(minutes=1))
             corrected=owner.correct_first_observation(db,game["id"],reason="old_late_priority_bypassed_pending_early",
@@ -243,11 +250,32 @@ class ExperimentSQL(LatestBoardFixture):
             self.assertEqual(detail["late"]["status"],"not_comparable_baseline_correction")
             self.assertEqual(detail["later_observation_context"]["id"],advanced_id)
             self.assertTrue(detail["cases"][0]["incomplete"])
+            completed=owner.status(db)
+            self.assertEqual(completed["complete_checkpoint_games"],0)
+            self.assertIsNone(completed["storage"]["mean_complete_game_payload_bytes"])
+            self.assertIsNone(completed["storage"]["estimated_remaining_games"])
             bundle=owner.export_game(db,game["id"])
             proof=owner.reproduce_export(bundle)
             self.assertEqual(proof["checkpoint_history_reproduced"],2)
             self.assertEqual(set(proof["checkpoints"]),{"early"})
             self.assertEqual(owner.correct_first_observation(db,game["id"],reason="idempotent retry",evidence_reference="same original facts")["state"],"unchanged")
+
+    async def test_status_excludes_missed_and_rescheduled_pairs_with_both_records_present(self):
+        with self.connect() as db:
+            game_id,event=self.setup_game(db)
+            self.assertEqual(owner.status(db)["complete_checkpoint_games"],1)
+            db.execute("UPDATE ev_experiment_task SET state='missed' WHERE game_id=%s AND checkpoint='late'",(game_id,))
+            self.assertEqual(owner.status(db)["complete_checkpoint_games"],0)
+            self.assertIsNone(owner.status(db)["storage"]["mean_complete_game_payload_bytes"])
+            db.execute("UPDATE ev_experiment_task SET state='captured' WHERE game_id=%s AND checkpoint='late'",(game_id,))
+            self.assertEqual(owner.status(db)["complete_checkpoint_games"],1)
+            event["starts_at"]=owner.clock(owner.stamp(event["starts_at"])+timedelta(hours=1))
+            owner.discover(db,[event])
+            state=owner.status(db)
+            game=db.execute("SELECT early_id,late_id FROM ev_experiment_game WHERE id=%s",(game_id,)).fetchone()
+            self.assertTrue(game["early_id"] and game["late_id"])
+            self.assertEqual(state["complete_checkpoint_games"],0)
+            self.assertIsNone(state["storage"]["mean_complete_game_payload_bytes"])
 
     async def test_reschedules_cannot_reopen_exhausted_game_outcome_budget(self):
         with self.connect() as db:

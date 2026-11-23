@@ -721,7 +721,41 @@ def status(db):
     accounting = db.execute("SELECT * FROM public.ev_experiment_accounting WHERE singleton").fetchone()
     usage = records.retention_usage(db)
     task_counts = db.execute("SELECT checkpoint,state,count(*) records,sum(refusals)::bigint refusals FROM public.ev_experiment_task GROUP BY checkpoint,state ORDER BY checkpoint,state").fetchall()
-    games = db.execute("SELECT count(*) n,count(*) FILTER(WHERE early_id IS NOT NULL AND late_id IS NOT NULL) complete,COALESCE(sum(unique_payload_bytes),0) bytes,COALESCE(sum(late_reserved_bytes),0) late_reserved,COALESCE(avg(unique_payload_bytes) FILTER(WHERE early_id IS NOT NULL AND late_id IS NOT NULL),0) mean_complete_bytes FROM public.ev_experiment_game").fetchone()
+    # A non-null pair can still be the same recovered page, a superseded
+    # schedule or an invalid order. Check only immutable checkpoint headers and
+    # their small summaries; never unpack market snapshots for a status read.
+    games = db.execute("""WITH checkpoint_pairs AS (
+        SELECT g.unique_payload_bytes,g.late_reserved_bytes,
+            (g.early_id<>g.late_id
+             AND e.kind='checkpoint' AND l.kind='checkpoint'
+             AND e.checkpoint='early' AND l.checkpoint='late'
+             AND e.game_id=g.id AND l.game_id=g.id
+             AND et.state='captured' AND lt.state='captured'
+             AND et.result_id=g.early_id AND lt.result_id=g.late_id
+             AND et.schedule_id=g.schedule_id AND lt.schedule_id=g.schedule_id
+             AND NULLIF(e.payload#>>'{summary,target_at}','')::timestamptz=et.target_at
+             AND NULLIF(e.payload#>>'{summary,deadline_at}','')::timestamptz=et.deadline_at
+             AND NULLIF(l.payload#>>'{summary,target_at}','')::timestamptz=lt.target_at
+             AND NULLIF(l.payload#>>'{summary,deadline_at}','')::timestamptz=lt.deadline_at
+             AND NULLIF(e.payload#>>'{summary,received_at}','')::timestamptz<=NULLIF(e.payload#>>'{summary,known_at}','')::timestamptz
+             AND NULLIF(l.payload#>>'{summary,received_at}','')::timestamptz<=NULLIF(l.payload#>>'{summary,known_at}','')::timestamptz
+             AND NULLIF(e.payload#>>'{summary,known_at}','')::timestamptz<NULLIF(l.payload#>>'{summary,known_at}','')::timestamptz
+             AND NULLIF(e.payload#>>'{summary,known_at}','')::timestamptz<lt.target_at
+             AND NULLIF(e.payload#>>'{summary,known_at}','')::timestamptz<=e.recorded_at
+             AND NULLIF(l.payload#>>'{summary,known_at}','')::timestamptz<=l.recorded_at
+             AND NULLIF(l.payload#>>'{summary,received_at}','')::timestamptz>=lt.target_at
+             AND e.recorded_at<l.recorded_at
+             AND e.recorded_at<=et.deadline_at AND l.recorded_at<=lt.deadline_at) valid_pair
+        FROM public.ev_experiment_game g
+        LEFT JOIN public.ev_experiment_task et ON et.game_id=g.id AND et.checkpoint='early'
+        LEFT JOIN public.ev_experiment_task lt ON lt.game_id=g.id AND lt.checkpoint='late'
+        LEFT JOIN public.ev_experiment_record e ON e.id=g.early_id
+        LEFT JOIN public.ev_experiment_record l ON l.id=g.late_id
+    ) SELECT count(*) n,count(*) FILTER(WHERE valid_pair) complete,
+        COALESCE(sum(unique_payload_bytes),0) bytes,
+        COALESCE(sum(late_reserved_bytes),0) late_reserved,
+        COALESCE(avg(unique_payload_bytes) FILTER(WHERE valid_pair),0) mean_complete_bytes
+        FROM checkpoint_pairs""").fetchone()
     remaining = max(0, records.TOTAL_BYTE_CAP-usage["total"]-usage["reserved"])
     mean = int(games["mean_complete_bytes"]) if games["complete"] else None
     return dict(version=VERSION, activated=bool(accounting["policy_id"]), activated_at=clock(accounting["activated_at"]) if accounting["activated_at"] else None,
