@@ -99,6 +99,28 @@ def test_current_checked_revision_hands_only_pinned_manifest_to_server(release):
     assert release.requests[0].startswith("predict-images-fast-v1\n")
 
 
+@pytest.mark.parametrize("stage", ["proxy", "publish", "smoke"])
+def test_parallel_candidate_failure_never_contacts_server(release, stage):
+    def fail(*args, **kwargs):
+        raise RuntimeError("candidate failed")
+
+    if stage in ("proxy", "publish"):
+        setattr(release, stage, fail)
+    else:
+        original = release.run
+
+        def run(command, **kwargs):
+            if command == ["bash", "deploy/smoke.sh"]:
+                fail()
+            return original(command, **kwargs)
+
+        release.run = run
+    with pytest.raises(RuntimeError, match="candidate failed"):
+        release.execute()
+    assert not release.requests
+    assert not release.result["deployed"]
+
+
 def test_budget_exhaustion_refuses_before_starting_image_work(release):
     release.started = int(time.time()) - 100
     with pytest.raises(RuntimeError, match="existing server was not changed"):

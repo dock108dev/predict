@@ -19,7 +19,7 @@ runs:
       id: validators
       with:
         path: .local/ci-tools
-        key: predict-validators-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('scripts/ci/install_tools.py') }}
+        key: predict-validators-caddy-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('scripts/ci/install_tools.py') }}
     - name: Install checksum-pinned workflow and secret validators
       if: steps.validators.outputs.cache-hit != 'true'
       shell: bash

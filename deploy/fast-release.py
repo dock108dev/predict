@@ -94,7 +94,8 @@ class Release:
         return tip == self.sha
 
     def proxy(self):
-        binary = shutil.which("caddy")
+        cached = Path(".local/ci-tools/caddy").resolve()
+        binary = str(cached) if cached.is_file() else shutil.which("caddy")
         if not binary:
             package = self.directory / "caddy"
             package.mkdir()
@@ -111,6 +112,9 @@ class Release:
             deb = next(package.glob("*.deb"))
             self.run(["dpkg-deb", "-x", str(deb), str(package)], name="caddy-extract")
             binary = str(package / "usr/bin/caddy")
+            cached.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(binary, cached)
+            binary = str(cached)
         self.run(
             ["bash", "deploy/smoke-proxy.sh"],
             name="private-proxy",
@@ -199,7 +203,6 @@ class Release:
             self.result.update(status="SKIPPED", reason="Main advanced before build")
             return
         require_time(self.started, 45, "image verification")
-        self.phase("proxy", self.proxy)
         self.run(
             [
                 "docker",
@@ -216,7 +219,8 @@ class Release:
             ["python", "deploy/image-inputs.py"], name="image-inputs"
         ).stdout
         inputs = dict(line.split() for line in output.splitlines())
-        with ThreadPoolExecutor(max_workers=3) as pool:
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            proxy = pool.submit(self.phase, "proxy", self.proxy)
             images = self.phase(
                 "build",
                 lambda: list(
@@ -227,13 +231,19 @@ class Release:
                 os.environ,
                 **{"PREDICT_" + i["role"].upper() + "_IMAGE": i["tag"] for i in images},
             )
+            # Candidate publication can overlap the disposable smoke: neither
+            # authorizes server changes. Both must succeed before SSH handoff.
+            publication = pool.submit(
+                self.phase, "publish", lambda: list(pool.map(self.publish, images))
+            )
             self.phase(
                 "compose_smoke",
                 lambda: self.run(
                     ["bash", "deploy/smoke.sh"], name="compose-smoke", env=environment
                 ),
             )
-            images = self.phase("publish", lambda: list(pool.map(self.publish, images)))
+            images = publication.result()
+            proxy.result()
         self.result["images"] = images
         if self.publish_only:
             self.result.update(status="PASS", reason="Published only; no server access")
