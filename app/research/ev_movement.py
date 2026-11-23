@@ -433,7 +433,7 @@ def build_snapshot(db, page, *, request_scope, dispatch_at, known_at):
     for record in rows:
         if record["quote"]["venue"] not in ("kalshi", "polymarket_us", "novig", "prophetx"):
             continue
-        reason, payload, fee = None, None, None
+        reason, payload, fee, price_payload = None, None, None, None
         screen, coherent = None, None
         try:
             if role_conflict:
@@ -460,12 +460,15 @@ def build_snapshot(db, page, *, request_scope, dispatch_at, known_at):
             fee = fee_context.fee(record, at)
             if not fee.get("available"):
                 raise ValueError(fee.get("reason") or "fee_applicability_unavailable")
-            payload = math.calculate(record, screen if screen.get("probability") is not None else None,
+            price_payload = math.calculate(record, None, fee, at=at, game_key=game_key)
+            if screen.get("probability") is None:
+                raise ValueError(screen.get('reason') or 'reference_exact_pair_unavailable')
+            payload = math.calculate(record, screen,
                                      fee, at=at, game_key=game_key)
             payload["coherent_probability"] = coherent
         except (ValueError, KeyError, TypeError, ArithmeticError) as exc:
             reason = str(exc) or "calculation_unavailable"
-        offers.append(dict(record=record, calculation_payload=payload, fee_input=fee,
+        offers.append(dict(record=record, calculation_payload=payload, price_payload=price_payload, fee_input=fee,
                            screen_reference=screen, coherent_reference=coherent,
                            main=_role(record), reason=reason))
     requested_books = sorted(set(str(request_scope.get("bookmakerID", "")).split(",")) - {""})
@@ -492,7 +495,17 @@ def build_snapshot(db, page, *, request_scope, dispatch_at, known_at):
         line_ranges=[dict(book=book, family=family, outcome=side, minimum=wire(min(lines)),
                          maximum=wire(max(lines)), distinct_lines=len(set(lines)))
                      for (book, family, side), lines in sorted(surfaces.items())])
+    canonical = [] if db is None else db.execute('''SELECT DISTINCT price.game_key FROM current_pregame_price price
+        JOIN current_contract_storage contract ON contract.id=price.contract_id
+        JOIN current_event stored ON stored.id=contract.event_id
+        WHERE stored.provider='sportsgameodds' AND stored.native_event_id=%s
+          AND stored.facts->>'home'=%s AND stored.facts->>'away'=%s
+          AND stored.scheduled_start::timestamptz=%s''',
+        (source['event_id'],event['home'],event['away'],stamp(event['scheduled_start']))).fetchall()
+    from app.comparison.acquisition import provenance
     return dict(version=VERSION, event=event, source_event=source, offers=offers,
+        **(dict(canonical_game_id='canonical:'+canonical[0]['game_key']) if len(canonical) == 1 else {}),
+        acquisition=provenance(page),
         fee_mode=deepcopy(fee_context.fee_mode),
         references=references, raw_quotes=list(page.quotes), coverage=coverage,
         request_scope=deepcopy(request_scope), receipt_sha256=page.receipt_sha256,

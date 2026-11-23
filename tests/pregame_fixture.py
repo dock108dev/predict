@@ -1,6 +1,8 @@
 """Disposable current-pregame source/fee fixtures shared by SQL scenarios."""
 
 from copy import deepcopy
+from dataclasses import replace
+from uuid import uuid4
 import asyncio
 import json
 from tests.latest_board_fixture import LatestBoardFixture
@@ -22,7 +24,13 @@ AT = "2026-11-17T20:00:00Z"
 
 
 def parse(data):
-    return parse_page(json.dumps(data).encode(), AT)
+    # Re-projecting one authored response reuses its declared fixture operation.
+    # A different response object gets a new operation, even for identical bytes.
+    acquisition = data.setdefault('_fixture_acquisition', dict(
+        pull_id='fixture-pull-'+uuid4().hex, attempt_id='fixture-attempt-'+uuid4().hex))
+    body = {key:value for key,value in data.items() if key != '_fixture_acquisition'}
+    parsed = parse_page(json.dumps(body).encode(), AT)
+    return replace(parsed, **acquisition, request_scope={}, received_at=AT)
 
 
 def page():

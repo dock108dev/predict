@@ -32,6 +32,18 @@ class CheckpointUnavailable(RuntimeError):
         self.dispatched = dispatched
 
 
+def _start_pull(task, params, at):
+    from app.storage.acquisition_snapshot import start
+    with connect() as db:
+        return start(db, params, at=at, event=task['event'])
+
+
+def _end_pull(pull_id, state, details):
+    from app.storage.acquisition_snapshot import finish
+    with connect() as db:
+        finish(db, pull_id, state, details=details)
+
+
 def request_scope(task):
     """One event object; all six supported outcomes and every declared book."""
     event = task['event']
@@ -138,6 +150,7 @@ async def acquire(worker, task, *, eligible=None, request_locked=False):
     if worker.collector is None or worker.ledger is None or worker.window_id is None:
         raise CheckpointUnavailable('experiment_source_not_initialized')
     params = request_scope(task)
+    pull_id = None
     receipt = {}
     dispatched_at = None
     transport = worker.transport
@@ -195,9 +208,12 @@ async def acquire(worker, task, *, eligible=None, request_locked=False):
         async with _request_slot(worker, request_locked):
             if not await check(params):
                 raise CheckpointUnavailable('experiment_authority_or_window_closed')
+            if task['checkpoint'] != 'outcome':
+                pull_id = await owned_thread(_start_pull, task, params, worker.now())
+                task['_pull_id'] = pull_id
             while True:
                 try:
-                    page = await collector.fetch(params, worker.key)
+                    page = await collector.fetch(params, worker.key, pull_id=pull_id)
                     break
                 except RuntimeError as exc:
                     # A rejected rate reservation is provably pre-dispatch.
@@ -210,6 +226,11 @@ async def acquire(worker, task, *, eligible=None, request_locked=False):
                         raise CheckpointUnavailable('experiment_rate_window_missed') from exc
                     await asyncio.sleep(min(1, remaining))
     except BaseException as exc:
+        if pull_id:
+            await owned_thread(_end_pull, pull_id,
+                'cancelled' if isinstance(exc, asyncio.CancelledError) else
+                'failed' if dispatched_at is not None else 'refused',
+                dict(reason=str(exc)[:160] or type(exc).__name__, original_response=receipt))
         if isinstance(exc, (asyncio.CancelledError, KeyboardInterrupt, SystemExit)):
             raise
         if isinstance(exc, CheckpointUnavailable):
@@ -226,28 +247,36 @@ async def acquire(worker, task, *, eligible=None, request_locked=False):
     finally:
         if late and not request_locked:
             worker.experiment_late_waiting = False
-    known_at = worker.now()
-    details = dict(version=VERSION, request_scope=params,
-                   dispatch_at=dispatched_at.isoformat() if dispatched_at else None,
-                   known_at=known_at.isoformat(), receipt_sha256=page.receipt_sha256,
-                   original_response=receipt, paid_event_requests=1,
-                   charged_objects=response_object_charge(len(page.events)),
-                   response_event_count=len(page.events), next_cursor_present=page.next_cursor is not None)
-    if len(page.events) != 1:
-        raise CheckpointUnavailable('experiment_event_not_returned' if not page.events else
-                                    'experiment_response_event_scope', details=details, dispatched=True)
-    event = page.events[0]
-    details['received_at'] = event['received_at']
-    if event['event_id'] != params['eventIDs'] or event['league'] != task['event']['league']:
-        raise CheckpointUnavailable('experiment_response_event_scope', details=details, dispatched=True)
-    received_at = stamp(event['received_at'])
-    if received_at > known_at:
-        raise CheckpointUnavailable('experiment_future_receipt', details=details, dispatched=True)
-    if known_at > stamp(task['deadline_at']):
-        raise CheckpointUnavailable('experiment_response_after_deadline', details=details, dispatched=True)
-    worker.metrics['experiment_acquisition'] = details
-    return dict(page=page, request_scope=params, dispatch_at=dispatched_at,
-                received_at=received_at, known_at=known_at, acquisition=details)
+    try:
+        known_at = worker.now()
+        worker.metrics['last_valid_received_at'] = page.received_at
+        details = dict(version=VERSION, request_scope=params, pull_id=page.pull_id, attempt_id=page.attempt_id,
+                       dispatch_at=dispatched_at.isoformat() if dispatched_at else None,
+                       known_at=known_at.isoformat(), receipt_sha256=page.receipt_sha256,
+                       original_response=receipt, paid_event_requests=1,
+                       charged_objects=response_object_charge(len(page.events)),
+                       response_event_count=len(page.events), next_cursor_present=page.next_cursor is not None)
+        if len(page.events) != 1:
+            raise CheckpointUnavailable('experiment_event_not_returned' if not page.events else
+                                        'experiment_response_event_scope', details=details, dispatched=True)
+        event = page.events[0]
+        details['received_at'] = event['received_at']
+        if event['event_id'] != params['eventIDs'] or event['league'] != task['event']['league']:
+            raise CheckpointUnavailable('experiment_response_event_scope', details=details, dispatched=True)
+        received_at = stamp(event['received_at'])
+        if received_at > known_at:
+            raise CheckpointUnavailable('experiment_future_receipt', details=details, dispatched=True)
+        if known_at > stamp(task['deadline_at']):
+            raise CheckpointUnavailable('experiment_response_after_deadline', details=details, dispatched=True)
+        worker.metrics['experiment_acquisition'] = details
+        return dict(page=page, request_scope=params, dispatch_at=dispatched_at,
+                    received_at=received_at, known_at=known_at, acquisition=details)
+    except BaseException as exc:
+        if pull_id:
+            await owned_thread(_end_pull, pull_id,
+                'cancelled' if isinstance(exc, asyncio.CancelledError) else 'failed',
+                dict(reason=str(exc)[:160] or type(exc).__name__, original_response=receipt))
+        raise
 
 
 def utc():
@@ -312,7 +341,7 @@ class ExperimentAcquisition:
         with BACKGROUND.claim('observations', SOURCE_RUNWAY, source=True) as lease:
             if not lease:
                 raise CheckpointUnavailable(lease.reason, details=acquired['acquisition'], dispatched=True)
-            with self.connector() as db:
+            with self.connector() as db, db.transaction():
                 actual_event = event_metadata(page.events[0], page.receipt_sha256)
                 experiment.discover(db, [actual_event], at=acquired['known_at'])
                 source = page.events[0]
@@ -344,9 +373,15 @@ class ExperimentAcquisition:
                 snapshot['times'].update(inputs_cutoff=acquired['known_at'].isoformat(),
                     calculation_finished_at=finished.isoformat(), known_at=finished.isoformat(), captured_at=finished.isoformat())
                 snapshot['acquisition'] = acquired['acquisition']
-                return experiment.capture(db, task['game_id'], task['checkpoint'], snapshot,
+                saved = experiment.capture(db, task['game_id'], task['checkpoint'], snapshot,
                     token=task['token'], requested_at=acquired['dispatch_at'],
                     received_at=acquired['received_at'], known_at=finished, scope=acquired['request_scope'])
+                from app.storage.acquisition_snapshot import publish, finish
+                if saved['state'] == 'captured':
+                    publish(db, page, snapshot, details=acquired['acquisition'])
+                else:
+                    finish(db, page.pull_id, 'failed', details=saved)
+                return saved
 
     async def tick(self):
         worker = self.service.workers.get('sportsgameodds')
@@ -397,6 +432,8 @@ class ExperimentAcquisition:
         except asyncio.CancelledError:
             # The durable claim survives termination; an uncertain request is
             # never redispatched merely because this coroutine was cancelled.
+            if task.get('_pull_id'):
+                await owned_thread(_end_pull, task['_pull_id'], 'cancelled', dict(reason='capture_cancelled'))
             raise
         except Exception as exc:
             reason = str(exc)[:160] or type(exc).__name__
@@ -404,6 +441,8 @@ class ExperimentAcquisition:
             dispatched = getattr(exc, 'dispatched', acquired is not None)
             failure = await owned_thread(self._fail, task, reason, at=worker.now(),
                                          dispatched=dispatched, details=details)
+            if task.get('_pull_id'):
+                await owned_thread(_end_pull, task['_pull_id'], 'failed', dict(reason=reason))
             self.progress = dict(self.progress, state='degraded', last_failure=failure,
                                  last_completed_at=worker.now().isoformat())
         finally:

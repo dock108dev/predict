@@ -9,10 +9,22 @@ document.createElement=tag=>{const item=originalCreate(tag);if(tag==='select')Ob
 document.createElementNS=(_,tag)=>document.createElement(tag);
 Element.prototype.showModal=function(){this.open=true;};
 Element.prototype.close=function(){this.open=false;this.onclose?.();};
-for(const match of fs.readFileSync('app/dashboard/opportunity_static/current/research.html','utf8').matchAll(/id="([^"]+)"/g)){const item=new Element('div');item.id=match[1];document.body.append(item);}
+for(const match of fs.readFileSync('app/dashboard/opportunity_static/current/experiments.html','utf8').matchAll(/id="([^"]+)"/g)){const item=new Element('div');item.id=match[1];document.body.append(item);}
 const $=id=>document.getElementById(id),pending=[],downloads=[],revoked=[];
-const context={document,URLSearchParams,Blob,URL:{createObjectURL:blob=>{downloads.push(blob);return 'blob:captured-game';},revokeObjectURL:url=>revoked.push(url)},Date,JSON,Math,Number,String,BigInt,Map,Set,Error,window:{addEventListener(){}},fetch:(url,options)=>new Promise(resolve=>pending.push({url,options,resolve}))};
-vm.runInNewContext(fs.readFileSync('app/dashboard/opportunity_static/current/experiment.js','utf8'),context);
+const context={document,URLSearchParams,Blob,URL:{createObjectURL:blob=>{downloads.push(blob);return 'blob:captured-game';},revokeObjectURL:url=>revoked.push(url)},Date,Intl,JSON,Math,Number,String,BigInt,Map,Set,Error,location:{pathname:'/experiments',search:'?context=0'},history:{pushState(){},replaceState(){}},window:{addEventListener(){}},fetch:(url,options)=>new Promise(resolve=>pending.push({url,options,resolve}))};
+const strip=source=>source.replace(/^import .*;\n/gm,'').replace(/export /g,'');
+context.clock=value=>new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short'}).format(new Date(value));
+Object.assign(context,vm.runInNewContext('(()=>{'+strip(fs.readFileSync('app/dashboard/opportunity_static/current/workspace-format.js','utf8'))+';return {dateTime,venue,selection,odds};})()',context));
+Object.assign(context,vm.runInNewContext('(()=>{'+strip(fs.readFileSync('app/dashboard/opportunity_static/current/workspace-scope.js','utf8'))+';return {referenceOnly,isTradingVenue};})()',context));
+vm.runInNewContext(strip(fs.readFileSync('app/dashboard/opportunity_static/current/experiment.js','utf8')),context);
+const now=Date.parse('2026-11-23T22:00:00Z'),future={state:'pending',target_at:'2026-11-23T22:10:00Z',deadline_at:'2026-11-23T22:11:00Z'};
+assert.equal(context.checkpointStatus(future,null,now).label,'Scheduled');
+assert.match(context.checkpointStatus(future,null,now).detail,/Due/);
+assert.equal(context.checkpointStatus({...future,state:'claimed'},null,now).label,'Capturing');
+assert.equal(context.checkpointStatus({...future,state:'captured'},{received_at:'2026-11-23T22:00:00Z'},now).label,'Captured');
+assert.equal(context.checkpointStatus(future,null,Date.parse('2026-11-23T22:12:00Z')).label,'Missed');
+for(const state of ['failed','refused','cancelled'])assert.equal(context.checkpointStatus({...future,state},null,now).label,state);
+assert.equal(context.checkpointStatus({},null,now).label,'Not captured');
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
 const reply=async(value,ok=true,status=200)=>{assert(pending.length,'Expected passive read');pending.shift().resolve({ok,status,json:async()=>value});await tick();};
 const all=(root,predicate)=>{const values=[];for(const child of root.children){if(predicate(child))values.push(child);values.push(...all(child,predicate));}return values;};
@@ -37,13 +49,15 @@ const all=(root,predicate)=>{const values=[];for(const child of root.children){i
  assert(!$('experiment-content').querySelector('a'),'Download appears only after the complete captured bundle is ready');
  await reply(fixture.export);
  const text=$('experiment-content').textContent;
- for(const expected of ['Original normalized input and identity mapping','Screening reference inputs and recorded pair','Coherent reference inputs and recorded pair','Frozen fee, quantity, cashflow and rounding inputs','Early offer using the late probability reference','Each book\'s main-line progression','main to alternate','alternate to main','inferred','synthetic_fixture_fee','Missing'])assert(text.includes(expected),expected);
+ assert(text.includes('No scored completed games in this captured view.'));
+ assert(!text.includes('Mean Brier'),'No empty scoring grid when every report has zero scored records');
+ for(const expected of ['Original normalized input and identity mapping','Screening reference inputs and recorded pair','Coherent reference inputs and recorded pair','Frozen fee, quantity, cashflow and rounding inputs','Analytical diagnostic · early offer using the late probability reference','Each book\'s main-line progression','main to alternate','alternate to main','inferred','synthetic_fixture_fee','Missing'])assert(text.includes(expected),expected);
  assert(!text.includes('[object Object]'));
  const missing=all($('experiment-content'),item=>item.attributes['data-missing']==='true');assert(missing.length>0);
  const main=all($('experiment-content'),item=>item.attributes['data-main']==='source_reported');assert(main.length>0);
  $('experiment-plot-book').value='fanduel';$('experiment-plot-book').onchange();
  assert.equal(all($('experiment-content'),item=>item.tagName==='SVG').length,1);
- assert($('experiment-content').textContent.includes('Reference-only book: offered-price observations are shown'));
+ assert($('experiment-content').textContent.includes('Reference only: offered-price observations are shown'));
  $('experiment-content').querySelectorAll('[data-context]').find(item=>item.dataset.context==='reference-fd-1').onclick();
  assert($('experiment-content').textContent.includes('fanduel-early--3'));
  assert($('experiment-content').textContent.includes('fanduel-late--3'));

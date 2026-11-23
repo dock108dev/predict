@@ -146,7 +146,7 @@ def revalue(db, *, at=None):
     """
     if math.VERSION == "predict-current-pregame-6":
         return _reference_only_revalue(db, at=at)
-    if math.VERSION != "predict-current-pregame-7":
+    if math.VERSION not in ("predict-current-pregame-7", "predict-current-pregame-8"):
         raise ValueError("Snapshot calculation upgrade version unsupported")
     from .current_pregame import process
 

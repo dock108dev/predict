@@ -15,6 +15,15 @@ from app.collection.sportsgameodds_worker import ALTERNATE_REFRESH_BOOKS, Sports
 from tests.sportsgameodds_fixtures import NOW, event
 
 
+@pytest.fixture(autouse=True)
+def acquisition_manifest(monkeypatch):
+    # This module isolates scheduling from durable SQL. SQL acquisition tests
+    # exercise the real manifest and its transaction/capacity boundaries.
+    monkeypatch.setattr(SportsGameOddsWorker, '_begin_pull', lambda self, params: 'fixture-pull')
+    monkeypatch.setattr(SportsGameOddsWorker, '_retain_pull', lambda *args: None)
+    monkeypatch.setattr(SportsGameOddsWorker, '_fail_pull', lambda *args: None)
+
+
 def test_credential_requires_private_untracked_file(tmp_path, monkeypatch):
     from app.collection import sportsgameodds_worker as worker
 

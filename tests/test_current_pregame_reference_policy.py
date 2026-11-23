@@ -130,7 +130,9 @@ def test_reference_selection_does_not_relabel_established_main_line_evidence():
     result = reference(RECORD, {"event": fd + dk}, at=AT)
     assert result["book"] == "draftkings"
     assert result["main_line_reference_book"] == "fanduel"
-    assert main_line(RECORD, result) is True
+    assert main_line(RECORD, result) is False
+    main_offer = dict(RECORD, comparison_source_metadata=dict(alternate=False))
+    assert main_line(main_offer, result) is True
     for entry in fd:
         entry["facts"]["alternate"] = None
     for entry in dk:

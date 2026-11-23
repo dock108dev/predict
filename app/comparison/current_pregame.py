@@ -169,7 +169,7 @@ def select_reference(observations, *, family, side, line, start, at):
         candidates,
         key=lambda item: (F(item["probability"]), BEST_BOOKS.index(item["book"])),
     )
-    return dict(
+    result = dict(
         selected,
         selection_policy=REFERENCE_POLICY,
         required_trusted_books=MIN_TRUSTED_BOOKS,
@@ -184,6 +184,9 @@ def select_reference(observations, *, family, side, line, start, at):
             item["book"]: item["probability"] for item in candidates
         },
     )
+    if any(price.get("acquisition") for item in candidates for price in item["prices"]):
+        result["required_input_prices"] = [price for item in candidates for price in item["prices"]]
+    return result
 
 
 def coherent_reference(record, observations, *, at, policy=COHERENT_POLICY, evaluated_book=None):
@@ -461,6 +464,9 @@ def calculate(record, ref, fee, *, at, game_key, amount=COMPARISON_USD):
         calculated_at=at.isoformat(),
     )
 
+    from .acquisition import offer_input, calculation, validate
+    if offer_input(record).get("pull_id"):
+        result["acquisition"] = calculation(record, ref) if ref is not None else validate([offer_input(record)])
     return result
 
 
@@ -504,14 +510,5 @@ def revalue_reference(payload, reference, *, at):
 
 
 def main_line(record, reference):
-    alternate = (record.get("comparison_source_metadata") or {}).get("alternate")
-    if record["market_identity"]["family"] == "moneyline":
-        return alternate is not True
-    return (
-        alternate is False
-        or alternate is not True
-        and reference.get(
-            "main_line_evidence",
-            all(p.get("alternate") is False for p in reference["prices"]),
-        )
-    )
+    """Only a trading venue's source role designates its main offer."""
+    return (record.get("comparison_source_metadata") or {}).get("alternate") is False

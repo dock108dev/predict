@@ -93,6 +93,17 @@ def evaluate(left, right, *, at, budget=BUDGET, positive_only=True):
     if budget <= 0 or (budget * 100).denominator != 1:
         raise ValueError("Invalid cash budget")
     a, b = left["payload"], right["payload"]
+    acquisition = None
+    if a.get('acquisition') or b.get('acquisition'):
+        from .acquisition import validate
+
+        try:
+            acquisition = validate([
+                *a.get('acquisition', {}).get('required_inputs', [None]),
+                *b.get('acquisition', {}).get('required_inputs', [None]),
+            ])
+        except (ValueError, KeyError, TypeError):
+            return None
     modes = [_fee_mode(entry) for entry in (left, right) if not entry.get("sportsbook")]
     # A fee toggle cannot combine one leg's old charged cashflows with the
     # other leg's new zero-fee model. Absent markers retain legacy fees-on.
@@ -181,6 +192,14 @@ def evaluate(left, right, *, at, budget=BUDGET, positive_only=True):
         if any(e.get("sportsbook") for e in (left, right))
         else "market_market"
     )
+    for leg, original in zip(best["legs"], (left, right)):
+        leg["allocation_usd"] = leg["fee"]["committed_usd"]
+        leg["input_role"] = "sportsbook_reference" if original.get("sportsbook") else "trading_market"
+        leg["executable_venue"] = not original.get("sportsbook", False)
+    receipt_times = [leg.get("times", {}).get("received_at") for leg in best["legs"]]
+    from app.storage.store import stamp
+
+    captured_at = max((stamp(value) for value in receipt_times if value), default=None)
     result = dict(
         id=hashed(sorted([a["id"], b["id"]])),
         game_key=a["game_key"],
@@ -189,6 +208,9 @@ def evaluate(left, right, *, at, budget=BUDGET, positive_only=True):
         kickoff=a["kickoff"],
         family=a["family"],
         category=category,
+        category_label="Sportsbook reference comparison" if category == "market_book" else "Market-to-market arbitrage",
+        executable_legs=category == "market_market",
+        captured_at=captured_at.isoformat() if captured_at else None,
         legs=best["legs"],
         basis_usd=wire(budget),
         committed_usd=wire(best["committed"]),
@@ -202,8 +224,12 @@ def evaluate(left, right, *, at, budget=BUDGET, positive_only=True):
         execution_qualified=False,
         instant_fill_max_usd=None,
         settlement_note="Matching full-game scoring assumed. Pushes, ties, voids and exceptional settlements are not covered.",
-        liquidity_note="Instantly fillable size is unknown. Verify both official order books; this allocation is illustrative.",
+        liquidity_note=("Sportsbook price is reference evidence. This benchmark is not an executable two-leg trade or a locked-profit claim."
+                        if category == "market_book" else
+                        "Instantly fillable size is unknown. Verify both official order books; this allocation is illustrative."),
     )
     if captured_mode is not None:
         result["fee_mode"] = deepcopy(captured_mode)
+    if acquisition is not None:
+        result['acquisition'] = acquisition
     return result

@@ -4,6 +4,7 @@ The owning runtime must bind a fresh account observation, controls and a durable
 consumer. It must not start this component merely because a key exists.
 """
 import asyncio
+from dataclasses import replace
 import inspect
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
@@ -53,8 +54,9 @@ class GuardedPageCollector:
         value = check(params)
         return await value if inspect.isawaitable(value) else value
 
-    async def fetch(self, params, api_key, *, now=None):
+    async def fetch(self, params, api_key, *, now=None, pull_id=None):
         params = validate_params(params)
+        pull_id = pull_id or getattr(self, 'pull_id', None)
         if self.eligible and not await self._eligible(params):
             raise PregameWindowClosed()
         state = self.ledger.status(self.window_id)
@@ -115,7 +117,9 @@ class GuardedPageCollector:
                 retained = self.receipt_retainer(params, response)
                 if inspect.isawaitable(retained):
                     await retained
-            return self._accept(attempt, params, response, now)
+            page = self._accept(attempt, params, response, now)
+            return replace(page, pull_id=pull_id or attempt, attempt_id=attempt,
+                           request_scope=dict(params), received_at=response.received_at)
         except asyncio.CancelledError:
             self.ledger.interrupt(attempt, evidence='request cancelled before accounting completed')
             raise

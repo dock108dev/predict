@@ -360,6 +360,12 @@ class DataWorkspaceSQL(PregameFixture):
         with self.connect() as db:
             self.ingest_linked(db, data)
             self.process(db)
+            # Current pairing owns the frozen acquisition, independently of
+            # working-table omission grace and historical catalog membership.
+            from tests.test_market_snapshot_arbs_sql import SnapshotArbsSQL
+
+            db.execute('TRUNCATE public.market_pull CASCADE')
+            SnapshotArbsSQL.capture(self,db,data=data)
             selected = read(db, dict(league='NBA'), at=stamp(AT))
             historical = read(db, dict(league='NBA', reference_scope='all'), at=stamp(AT))
         self.assertTrue(any(any(leg['venue']=='unibet' for leg in pair['legs']) for pair in historical['rows']))
@@ -368,6 +374,9 @@ class DataWorkspaceSQL(PregameFixture):
             self.assertIn(pair['category'], ('market_book', 'market_market'))
             self.assertTrue(any(leg['venue'] in ('kalshi','polymarket_us','novig','prophetx') for leg in pair['legs']))
             self.assertTrue(all(leg['venue'] in REFERENCE_BOOKS or leg['venue'] in ('kalshi','polymarket_us','novig','prophetx') for leg in pair['legs']))
+            if pair['category'] == 'market_book':
+                self.assertEqual(pair['category_label'],'Sportsbook reference comparison')
+                self.assertFalse(pair['executable_legs'])
 
     async def test_grouping_identity_and_prices_stay_bound_to_snapshot_after_new_revision(self):
         with self.connect() as db:

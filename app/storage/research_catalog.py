@@ -120,7 +120,8 @@ STATUS = """CASE WHEN venue IS NULL THEN 'unavailable'
  WHEN net_ev>0 THEN 'positive' WHEN net_ev<0 THEN 'negative'
  WHEN net_ev=0 THEN 'zero' ELSE 'unavailable' END"""
 FILTERS = ('provider', 'original_bookmaker_id', 'sport', 'family', 'event_id')
-READ_FILTERS = (*FILTERS, 'search', 'calculation_status', 'max_age_minutes', 'date', 'reference_scope')
+READ_FILTERS = (*FILTERS, 'search', 'calculation_status', 'max_age_minutes', 'date', 'reference_scope',
+                'include_alternates', 'sort')
 SCOPED_SELECTIONS = ('game_id', 'contract_id', 'exact_bet_id')
 
 

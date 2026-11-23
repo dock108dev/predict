@@ -1,7 +1,8 @@
+import {dateTime,venue,selection,odds} from './workspace-format.js';
 import {referenceOnly,isTradingVenue} from './workspace-scope.js';
 // Passive, revision-bound views of the collector-owned checkpoint experiment.
 const $=id=>document.getElementById(id);
-const known=value=>value===null||value===undefined||value===''?'Unknown':String(value);
+const known=value=>value===null||value===undefined||value===''?'Not recorded':String(value);
 const json=value=>JSON.stringify(value??null,null,2);
 const node=(tag,text,cls)=>{const item=document.createElement(tag);if(text!==undefined)item.textContent=text;if(cls)item.className=cls;return item;};
 const label=value=>known(value).replaceAll('_',' ');
@@ -48,25 +49,35 @@ function stack(...values){const root=node('div');for(const [index,value]of value
 async function get(url){const response=await fetch(url,{cache:'no-store'});const value=await response.json();if(!response.ok)throw Error(value?.error||value?.message||`Stored experiment read failed (${response.status})`);return value;}
 
 const feeLabel=mode=>mode?(mode.enabled?'Fees enabled':'0 fees assumed'):'Original captured fee policy';
-function checkpointCell(value){
- if(!value)return stack('Not observed','EV and probability unavailable');
- const root=stack(`${known(value.price)} ${known(value.price_units)}`,`Screening EV: ${percent(value.screen?.ev)}`,`Screen probability: ${probability(value.screen?.probability)}`,`Coherent EV: ${percent(value.coherent?.ev)}`,`Coherent probability: ${probability(value.coherent?.probability)}`);
+export function checkpointStatus(task={},capture=null,at=Date.now()){
+ const payload=capture?.payload||capture,raw=task.state||payload?.state||payload?.status;
+ if(payload?.captured_at||payload?.actual_at||raw==='captured')return {label:'Captured',detail:dateTime(payload?.received_at||payload?.captured_at||payload?.actual_at)};
+ if(['claimed','capturing','running','in_progress'].includes(raw))return {label:'Capturing',detail:task.target_at?`Due ${dateTime(task.target_at)}`:''};
+ if(['failed','refused','cancelled','missed','superseded_by_reschedule','expired'].includes(raw))return {label:label(raw==='expired'?'missed':raw),detail:label(task.last_reason||payload?.reason||'Capture unavailable')};
+ const due=task.target_at||payload?.target_at,deadline=task.deadline_at||payload?.deadline_at;
+ if(deadline&&new Date(deadline).getTime()<at)return {label:'Missed',detail:label(task.last_reason||payload?.reason||'Capture window closed without a receipt')};
+ return due?{label:'Scheduled',detail:`Due ${dateTime(due)}`}:{label:'Not captured',detail:'Checkpoint timing not recorded'};
+}
+function checkpointCell(value,task){
+ if(!value){const status=checkpointStatus(task);return stack(status.label,status.label==='Captured'?'Selected exact line not returned at this checkpoint':status.detail);}
+
+ const root=stack(odds(value.price,value.price_units),`Screening EV: ${percent(value.screen?.ev)}`,`Screen probability: ${probability(value.screen?.probability)}`,`Coherent EV: ${percent(value.coherent?.ev)}`,`Coherent probability: ${probability(value.coherent?.probability)}`);
  root.title=`Exact screening EV: ${known(value.screen?.ev)}; exact coherent EV: ${known(value.coherent?.ev)}`;
  if(value.fee_mode)root.append(node('small',feeLabel(value.fee_mode)));
  if(value.reason||value.screen?.reason)root.append(node('small',value.reason||value.screen.reason));
  root.append(node('small',value.available===true?'Source available':value.available===false?'Source unavailable':'Source availability unknown'));
  return root;
 }
-function identityCell(row){return stack(row.title||gameTitle(row.game),`${known(row.book||row.identity?.book)} · ${label(row.family||row.identity?.family)} · ${label(row.period||row.identity?.period)}`,`${label(row.outcome||row.identity?.outcome)} · exact line ${lineLabel(row)}`);}
+function identityCell(row){return stack(row.title||gameTitle(row.game),`${venue(row.book||row.identity?.book)} · ${label(row.family||row.identity?.family)} · ${label(row.period||row.identity?.period)}`,selection({...row,...row.identity}));}
 function crossCell(value){return stack(`Screening: ${percent(value?.screen?.ev)}`,`Coherent: ${percent(value?.coherent?.ev)}`,value?.reason||value?.screen?.reason||'Early price, quantity, fees and cashflows retained');}
 function caseRows(root,cases,onInspect,timing={}){
  const rows=cases.map(row=>{
   const button=node('button','Inspect comparison');button.type='button';button.dataset.case=row.id;button.onclick=()=>onInspect(row,button);
   const clocks=row.capture_timing||timing;
   const roles=stack(`Early: ${role(row.early?.main)}`,`Late: ${role(row.late?.main)}`,`Link: ${label(typeof row.role_link==='string'?row.role_link:row.role_link?.relationship)}`,`Early age: ${known(row.early?.source_age_seconds)}s · late age: ${known(row.late?.source_age_seconds)}s`,`Captured early: ${known(clocks.early_at)}`,`Late target: ${known(clocks.late_target)} · actual: ${known(clocks.late_at)}`,`Coverage: ${coverageLabel(clocks.coverage)}`);
-  const transition=stack(label(row.transition),row.incomplete?'Incomplete checkpoint pair':'Complete checkpoint pair');
-  if(row.missing_reasons?.length)transition.append(node('small',reasons(row.missing_reasons)));
-  return [identityCell(row),checkpointCell(row.early),checkpointCell(row.late),transition,button];
+  const lateStatus=checkpointStatus(clocks.checkpoints?.late);const scheduled=!row.late&&['Scheduled','Capturing'].includes(lateStatus.label);const transition=stack(scheduled?lateStatus.label:label(row.transition),scheduled?lateStatus.detail:row.incomplete?'Checkpoint or exact line unavailable':'Complete checkpoint pair');
+  if(!scheduled&&row.missing_reasons?.length)transition.append(node('small',reasons(row.missing_reasons)));
+  return [identityCell(row),checkpointCell(row.early,clocks.checkpoints?.early),checkpointCell(row.late,clocks.checkpoints?.late),transition,button];
  });
  return table(root,['Game / exact bet','Early checkpoint','T−10 checkpoint','Change / missing capture','Inspect'],rows);
 }
@@ -94,7 +105,7 @@ function renderListing(value){
  else root.append(node('p','No retained cases in this captured view. Show all tracked games to inspect checkpoint progress, missing inputs and the shared market context.'));
  const gameRoot=$('experiment-games');gameRoot.replaceChildren();
  if($('experiment-context').checked){
-  for(const game of games){const row=node('div',undefined,'research-panel-row'),button=node('button','Inspect market context');button.type='button';button.dataset.game=game.id;button.onclick=()=>inspectExperiment(game.id,game.revision,null,button);row.append(node('strong',game.title||gameTitle(game)),node('small',`${known(game.league)} · starts ${known(game.starts_at)} · ${label(game.state||game.status)}`),node('small',`Early ${known(game.early_at)} · T−10 target ${known(game.late_target)} · actual ${known(game.late_at)}`),node('small',`Retained cases: ${known(game.case_counts?.retained_cases??game.case_counts?.retained??game.retained_cases)} · ${coverageLabel(game.coverage)}`),button);gameRoot.append(row);}
+  for(const game of games){const row=node('div',undefined,'research-panel-row'),button=node('button','Inspect market context');button.type='button';button.dataset.game=game.id;button.onclick=()=>inspectExperiment(game.id,game.revision,null,button);row.append(node('strong',game.title||gameTitle(game)),node('small',`${known(game.league)} · starts ${dateTime(game.starts_at)}`),node('small',`Early: ${checkpointStatus(game.checkpoints?.early,game.early_at?{captured_at:game.early_at}:null).label} · T−10: ${checkpointStatus(game.checkpoints?.late,game.late_at?{captured_at:game.late_at}:null).label} · due ${dateTime(game.late_target)}`),node('small',`Retained cases: ${known(game.case_counts?.retained_cases??game.case_counts?.retained??game.retained_cases)} · ${coverageLabel(game.coverage)}`),button);gameRoot.append(row);}
  }
  const offset=value.offset??pageOffset,total=value.total_games??games.length;
  $('experiment-page').textContent=total?`Games ${offset+1}–${offset+games.length} of ${total}`:'No tracked games in this view';
@@ -107,11 +118,12 @@ async function load(){
  catch(error){if(version===loadVersion)$('experiment-status').textContent=`${listing?'Could not refresh. Displayed comparisons are last-known.':'Experiment evidence unavailable.'} ${error.message}`;}
  finally{if(version===loadVersion){busy=false;controls();}}
 }
-function checkpointTiming(root,name,checkpoint){
+function checkpointTiming(root,name,checkpoint,task){
  const value=checkpoint?.payload||checkpoint;
  const panel=section(root,name);
- if(!value){panel.append(node('p','Checkpoint not observed. No later inputs are substituted.'));return;}
- grid(panel,{State:value.state||value.status,'Target time':value.target_at,'Window opens':value.window_start,'Window closes':value.deadline_at||value.window_end,'Actual capture time':value.captured_at||value.actual_at,'First observed by this experiment':value.experiment_first_observed_at||value.observed_at,'Discovery kind':value.discovery_kind,'Seconds remaining until start':value.seconds_to_start,'Minutes remaining at capture':number(value.seconds_to_start)===null?null:(number(value.seconds_to_start)/60).toFixed(2),'Receipt time':value.received_at,'Knowledge cutoff':value.known_at,'Persistence time':checkpoint.recorded_at||value.persisted_at,Reason:value.reason});
+ const status=checkpointStatus(task,value);panel.append(node('p',`${status.label} · ${status.detail}`));
+ if(!value)return;
+ grid(panel,{State:status.label,'Target time':value.target_at,'Window opens':value.window_start,'Window closes':value.deadline_at||value.window_end,'Actual capture time':value.captured_at||value.actual_at,'First observed by this experiment':value.experiment_first_observed_at||value.observed_at,'Discovery kind':value.discovery_kind,'Seconds remaining until start':value.seconds_to_start,'Minutes remaining at capture':number(value.seconds_to_start)===null?null:(number(value.seconds_to_start)/60).toFixed(2),'Receipt time':value.received_at,'Knowledge cutoff':value.known_at,'Persistence time':checkpoint.recorded_at||value.persisted_at,Reason:value.reason});
  const mode=value.fee_mode||snapshot(checkpoint)?.fee_mode;if(mode)grid(panel,{'Captured fee mode':feeLabel(mode),'Fee assumption':mode.assumption});
  const coverage=value.coverage||snapshot(checkpoint)?.coverage;
  if(coverage){const list=items=>Array.isArray(items)?items.join(', ')||'None recorded':null;
@@ -139,9 +151,9 @@ function caseEvidence(root,row,detail){
  evidence(panel,'Canonical identity and material settlement semantics',row.identity);
  measurementEvidence(panel,'Early offer with early references',row.early,snapshot(detail.early)?.offers?.[row.early?.offer_index]);
  measurementEvidence(panel,'Late offer with late references',row.late,snapshot(detail.late)?.offers?.[row.late?.offer_index]);
- const cross=section(panel,'Early offer using the late probability reference');
+ const cross=section(panel,'Analytical diagnostic · early offer using the late probability reference');
  grid(cross,{'Screening exact EV':row.early_offer_late_reference?.screen?.ev,'Screening probability':row.early_offer_late_reference?.screen?.probability,'Screening policy':row.early_offer_late_reference?.screen?.policy,'Coherent exact EV':row.early_offer_late_reference?.coherent?.ev,'Coherent probability':row.early_offer_late_reference?.coherent?.probability,'Coherent policy':row.early_offer_late_reference?.coherent?.policy,Reason:row.early_offer_late_reference?.reason||row.early_offer_late_reference?.screen?.reason});
- cross.append(node('p','This calculation preserves the early contract, original price, quantity, fees and state cashflows. Only the recorded probability reference changes.'));
+ cross.append(node('p','This cross-checkpoint diagnostic is excluded from current opportunity eligibility and arbitrage. It preserves the early contract, original price, quantity, fees and state cashflows. Only the recorded probability reference changes.'));
  evidence(cross,'Exact cross-checkpoint inputs and reproduction result',row.early_offer_late_reference);
 }
 
@@ -252,16 +264,16 @@ function detailView(value,selection){
  $('experiment-title').textContent=game.title||gameTitle(game);
  root.append(node('p',`Captured revision ${value.revision||selection.revision}`,'research-muted'));
  const download=node('div',undefined,'experiment-export');root.append(download);prepareExport(download,selection);
- grid(root,{'Game identity':game.id||selection.id,League:game.league,'Scheduled start':game.starts_at,State:game.state||game.status,'Retained cases':cases.length,'Shared supported-offer context':(value.context||[]).length,'Reference-only quote context':(value.reference_context||[]).length,'Screening policy':value.policy_versions?.primary,'Coherent policy':value.policy_versions?.coherent,'Calculation version':value.policy_versions?.calculation,'Identity version':value.policy_versions?.identity});
+ grid(root,{'Game identity':game.id||selection.id,League:game.league,'Scheduled start':dateTime(game.starts_at),State:game.state||game.status,'Retained cases':cases.length,'Shared supported-offer context':(value.context||[]).length,'Reference-only quote context':(value.reference_context||[]).length,'Screening policy':value.policy_versions?.primary,'Coherent policy':value.policy_versions?.coherent,'Calculation version':value.policy_versions?.calculation,'Identity version':value.policy_versions?.identity});
  const selectedEvidence=node('div');root.append(selectedEvidence);
  const selectedCase=cases.find(row=>row.id===selection.caseId),selectedContext=context.find(row=>row.id===selection.caseId);if(selectedCase)caseEvidence(selectedEvidence,selectedCase,value);else if(selectedContext)contextSourceEvidence(selectedEvidence,selectedContext,value);
- const timing={early_at:value.early?.captured_at,late_at:value.late?.captured_at,late_target:value.late?.target_at,coverage:{early:snapshot(value.early)?.coverage,late:snapshot(value.late)?.coverage}};
+ const timing={checkpoints:Object.fromEntries((value.checkpoint_status||[]).map(task=>[task.checkpoint,task])),early_at:value.early?.captured_at,late_at:value.late?.captured_at,late_target:value.late?.target_at,coverage:{early:snapshot(value.early)?.coverage,late:snapshot(value.late)?.coverage}};
  const retained=section(root,'Retained exact-bet comparisons');if(cases.length)caseRows(retained,cases,row=>{rememberCase(row);selectedEvidence.replaceChildren();caseEvidence(selectedEvidence,row,value);selectedEvidence.scrollIntoView?.({block:'start'});},timing);else retained.append(node('p','No separate research case has positive screening EV at either checkpoint. Market context and capture failures remain below.'));
- checkpointTiming(root,'Early checkpoint · first observed by this experiment within 24 hours',value.early);
- checkpointTiming(root,'Scheduled T−10 checkpoint',value.late);
+ checkpointTiming(root,'Early checkpoint · first observed by this experiment within 24 hours',value.early,value.checkpoint_status?.find(task=>task.checkpoint==='early'));
+ checkpointTiming(root,'T−10 checkpoint',value.late,value.checkpoint_status?.find(task=>task.checkpoint==='late'));
  mainLinks(root,value.main_line_links,context);plots(root,context,value);
  const outcomes=section(root,'Sporting outcomes and probability evaluation');outcomes.append(node('p','Sporting outcomes, venue settlements and actual fills remain separate evidence streams. Movement analysis is available before outcomes arrive. Scores cover cases selected by positive screening EV at either checkpoint; multiple bets from one game are dependent.'));
- if(value.quality){grid(outcomes,{'Observed scoring scope':value.quality.scope,'Retained cases in scoring scope':value.quality.retained_cases});if(value.quality.reports?.length)table(outcomes,['Checkpoint','Measurement policy','Scored records','Distinct events','Mean Brier'],value.quality.reports.map(item=>[label(item.checkpoint),label(item.policy),item.records,item.distinct_events,item.mean_brier]));}
+ if(value.quality){grid(outcomes,{'Observed scoring scope':value.quality.scope,'Retained cases in scoring scope':value.quality.retained_cases});if(value.quality.reports?.some(item=>item.records>0))table(outcomes,['Checkpoint','Measurement policy','Scored records','Distinct events','Mean Brier'],value.quality.reports.filter(item=>item.records>0).map(item=>[label(item.checkpoint),label(item.policy),item.records,item.distinct_events,item.mean_brier]));else outcomes.append(node('p','No scored completed games in this captured view.'));}
  evidence(outcomes,'Sporting outcome observations and corrections',value.outcomes);evidence(outcomes,'Probability scoring, exclusions and observed-scope limitations',value.quality);
  evidence(root,'Schedule history, reschedules and current checkpoint status',{schedule_history:value.schedule_history,checkpoint_status:value.checkpoint_status});
  evidence(root,'Experiment retention, refused captures and runway',value.retention);

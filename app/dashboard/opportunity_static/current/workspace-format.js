@@ -1,0 +1,10 @@
+import {clock} from './desk-preferences.js';
+
+export const number=value=>{if(value==null||value==='')return null;const [a,b]=String(value).split('/').map(Number),n=b===undefined?a:a/b;return Number.isFinite(n)?n:null;};
+const consequences={reference_exact_pair_unavailable:'No matching reference pair in this pull',reference_two_trusted_books_required:'Fewer than two trusted reference pairs in this pull',acquisition_membership_unverified:'Acquisition membership could not be verified',acquisition_pull_mismatch:'Inputs came from different acquisition pulls',acquisition_receipt_span_exceeded:'Required receipts span more than 10 minutes',price_withdrawn:'Source withdrew this price'};
+export const readable=value=>value==null||value===''?'Not recorded':consequences[value]||String(value).replaceAll('_',' ');
+export const venue=id=>({kalshi:'Kalshi',polymarket:'Polymarket',polymarket_us:'Polymarket',novig:'Novig',prophetx:'ProphetX',prophetexchange:'ProphetX',fanduel:'FanDuel',draftkings:'DraftKings',betmgm:'BetMGM',caesars:'Caesars',betrivers:'BetRivers',hardrockbet:'Hard Rock Bet',bookmakereu:'Bookmaker.eu',betonline:'BetOnline',bovada:'Bovada',williamhill:'William Hill'})[id]||readable(id);
+export function dateTime(value){if(!value)return 'Not recorded';try{return clock(value);}catch{return 'Time unavailable';}}
+export function percent(value){const n=number(value);return n===null?null:`${n>0?'+':''}${n.toFixed(2)}%`;}
+export function odds(value,units='american_odds'){const n=number(value);if(n===null)return 'Price unavailable';if(units==='american_odds')return `${n>0?'+':''}${n.toFixed(0)}`;if(units==='decimal_odds')return n.toFixed(2);return `${n.toFixed(3)} ${units==='usd_per_contract'?'USD / contract':readable(units)}`;}
+export function selection(offer){const label=offer.selection_label||offer.outcome_label||offer.outcome||offer.side;const line=offer.line??offer.selection?.signed_line;return [label?readable(label):'Selection identity unresolved',line==null||offer.family==='moneyline'?null:(number(line)>0?'+':'')+(number(line)===null?String(line):String(number(line)))].filter(Boolean).join(' ');}

@@ -91,20 +91,21 @@ def _read(db, query, *, at=None, clock, configured_routes):
     include_unavailable = (
         compare or query.get("browse") == "1" or query.get("view") in ("games", "game")
     )
-    relation = "current_pregame_calculation"
+    relation = "eligible_calculations"
     if include_unavailable:
         # Price-qualified rows survive a missing probability reference. Keep the
         # actual refusal reason and null EV; never turn missing EV into zero.
         relation = """(SELECT contract_id,game_key,bet_id,league,family,venue,start_at,main,
-            valid_until,net_ev,opportunity_score,reason,payload FROM current_pregame_calculation
+            valid_until,net_ev,opportunity_score,reason,payload FROM eligible_calculations
           UNION ALL SELECT price.contract_id,price.game_key,price.payload->>'bet_id',
             price.payload->>'league',price.payload->>'family',price.payload->>'venue',
             price.start_at,(price.payload->>'main')::boolean,price.valid_until,
             NULL::numeric,NULL::numeric,NULL::text,
             price.payload || jsonb_build_object('ev_unavailable_reason',
-                COALESCE(calc.reason,'reference_unavailable'))
+                COALESCE(calc.reason,stored.reason,'acquisition_or_reference_unavailable'))
           FROM current_pregame_price price
-          LEFT JOIN current_pregame_calculation calc ON calc.contract_id=price.contract_id
+          LEFT JOIN eligible_calculations calc ON calc.contract_id=price.contract_id
+          LEFT JOIN current_pregame_calculation stored ON stored.contract_id=price.contract_id
           WHERE calc.contract_id IS NULL OR calc.reason IS NOT NULL)"""
     clauses = [
         "p.reason IS NULL",
@@ -149,7 +150,19 @@ def _read(db, query, *, at=None, clock, configured_routes):
         and query.get("browse") != "1"
         and query.get("view") not in ("games", "game")
     )
-    prefix = "WITH "
+    prefix = """WITH eligible_calculations AS MATERIALIZED (
+        SELECT calc.* FROM current_pregame_calculation calc
+        WHERE calc.payload#>>'{acquisition,eligible}'='true'
+          AND calc.payload#>>'{acquisition,pull_id}' IS NOT NULL
+          AND NOT EXISTS (
+            SELECT 1 FROM (SELECT scope.pull_id,scope.state
+              FROM public.market_pull_scope scope JOIN public.market_pull pull USING(pull_id)
+              WHERE scope.event_id=calc.payload#>>'{source,native_event_id}'
+                AND scope.family=calc.family AND scope.period='full_game'
+                AND scope.coverage->>'covers_board'='true'
+              ORDER BY pull.started_order DESC LIMIT 1) latest
+            WHERE latest.state<>'complete' OR latest.pull_id<>calc.payload#>>'{acquisition,pull_id}')
+    ), """
     # Keep every alias/venue inside a bet with a positive stored witness. Make
     # this cheap scalar selection a real boundary: otherwise the planner can
     # apply JSON/reference/withdrawal guards to the whole slate before the
@@ -157,8 +170,8 @@ def _read(db, query, *, at=None, clock, configured_routes):
     if positive:
         relation = "candidate_prices"
         prefix += (
-            "candidate_prices AS MATERIALIZED (SELECT * FROM current_pregame_calculation "
-            "WHERE bet_id IN (SELECT bet_id FROM current_pregame_calculation "
+            "candidate_prices AS MATERIALIZED (SELECT * FROM eligible_calculations "
+            "WHERE bet_id IN (SELECT bet_id FROM eligible_calculations "
             "WHERE reason IS NULL AND net_ev>0)), "
         )
     # A stored row from an older writer must not bypass the current owner rule.

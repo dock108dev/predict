@@ -1,6 +1,7 @@
+import {dateTime,venue,selection,percent,odds,number} from './workspace-format.js';
 import {referenceOnly,tradingContext} from './workspace-scope.js';
 const node=(tag,text,cls)=>{const value=document.createElement(tag);if(text!==undefined)value.textContent=text;if(cls)value.className=cls;return value;};
-const known=value=>value===null||value===undefined||value===''?'Unknown':String(value);
+const known=value=>value===null||value===undefined||value===''?'Not recorded':String(value);
 const json=value=>JSON.stringify(value,null,2);
 function grid(parent,values){const dl=node('dl',undefined,'research-detail-grid');for(const [key,value]of Object.entries(values))dl.append(node('dt',key),node('dd',known(value)));parent.append(dl);}
 function section(parent,title){const value=node('section');value.append(node('h3',title));parent.append(value);return value;}
@@ -8,7 +9,13 @@ function evidence(parent,title,value){const details=node('details');details.appe
 function table(parent,columns,rows){const value=node('table',undefined,'research-evidence-table'),head=node('thead'),headRow=node('tr');for(const title of columns)headRow.append(node('th',title));head.append(headRow);const body=node('tbody');for(const cells of rows){const tr=node('tr');for(const cell of cells)tr.append(node('td',known(cell)));body.append(tr);}value.append(head,body);parent.append(value);}
 export function renderInput(root,value){
  root.replaceChildren();
- root.append(node('p',`Captured ${value.captured_at} · Revision ${value.revision}`,'research-muted'));
+ root.append(node('h3',`${value.title} · ${selection(value)}`));
+ const summary=node('div',undefined,'market-inspector-summary');summary.append(node('strong',`${value.family} · ${venue(value.original_bookmaker_id)} · ${odds(value.price,value.price_units)}`),node('p',`Stored EV ${percent(value.calculation?.net_ev_percent)||'unavailable'} · captured ${dateTime(value.times?.received_at||value.captured_at)}`));
+ const reference=value.calculation_payload?.reference;
+ if(reference)summary.append(node('p',`Reference ${venue(reference.book)} · probability ${number(reference.probability)===null?'not recorded':(number(reference.probability)*100).toFixed(2)+'%'}`));
+ if(value.calculation?.reason)summary.append(node('p',value.calculation.reason.replaceAll('_',' ')));root.append(summary);
+ if(reference?.prices){const inputs=section(root,'Supporting reference prices');table(inputs,['Book','Selection / line','Odds','Received'],reference.prices.map(row=>[venue(row.venue),selection(row),odds(row.price_american),dateTime(row.received_at)]));}
+
  const mode=value.fee_mode||value.calculation_payload?.fee_mode;
  if(mode)root.append(node('p',mode.enabled?'Calculation captured with fees enabled.':'Calculation captured with fees off: all fees assumed to be 0.'));
  const download=node('a','Export this exact input & result','research-button');
@@ -16,6 +23,7 @@ export function renderInput(root,value){
  // bounded SQL paging lease expires while the owner reads the calculation.
  const exportUrl=URL.createObjectURL(new Blob([json(value)+'\n'],{type:'application/json'}));
  download.href=exportUrl;download.download='predict-research-record.json';root.append(download);
+ const advanced=node('details');advanced.append(node('summary','Source identities, revisions, exact arithmetic and reproduction evidence'));root.append(advanced);root=advanced;
  const source=section(root,'1. Received source input');
  grid(source,{Provider:value.provider,'Original bookmaker / venue ID':value.original_bookmaker_id,'Represented venue':value.represented_venue,'Venue equivalence':value.venue_equivalence,'Source event ID':value.event_id,'Source market / odd ID':value.source_market_id,'Original price':value.price,'Price units':value.price_units,Outcome:value.outcome,'Exact line':value.line,'Source available':value.available,'Availability reason':value.availability_reason,'Source time':value.times.source_at,'Receipt time':value.times.received_at,'Receipt hash':value.receipt_sha256,'Source revision':value.source_revision});
  if(value.raw_observations)table(source,['Outcome','Side','Price','Units','Disposition'],value.raw_observations.map(row=>[row.label,row.side,row.price,row.units,row.disposition]));

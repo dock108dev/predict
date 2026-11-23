@@ -7,45 +7,59 @@ login protects all routes, assets, APIs and exports.
 
 ## Data
 
-Find a game by search, sport or Eastern start date. All six supported sports stay
-available. Games are grouped on the server before pagination. Only established
-canonical occurrence identity joins provider events; source-local games remain
-separate and identifiable. Source-event counts are not unique-game counts.
+The default table has one row per established game, full-game market family and
+period. Moneyline, spread and total have independent headline offers. Search,
+sport, Eastern start date, positive EV and EV ordering stay visible; source, age,
+market and alternate controls live under More filters. Grouping, candidate
+selection, filtering, ordering and counting happen on the server before paging.
 
-Open a game for books, markets, main/alternate lines and actual source/receipt
-clocks. Latest stored observations and frozen first-observation/T−10 checkpoints
-are separate. A frozen game remains reachable after current rows expire.
+A headline is the highest eligible stored screening EV among the trading venues'
+own source-designated main offers, across either selection in that acquisition.
+Different exact lines remain different bets. Reference-book main status never
+relabels a trading offer. Alternates enter the headline/filter/ranking population
+only with Include alternates; an alternate winner is marked. Unknown main status
+cannot become a default headline. Zero and negative EV remain available.
 
-The starting table separates trading markets from sportsbook reference coverage
-and shows best stored EV and calculation counts. Source IDs are inside the game
-inspector. Source/book/market/age filters are expandable. A calculation-status
-filter selects qualifying games; opening a game includes its other calculation
-statuses and reference prices under the remaining filters. Open game replaces
-the list with the game inspector, and Back restores the selected list context.
+Click EV to open that exact offer, line, captured odds, probability basis, fee
+assumption and same-pull supporting references. Source identities, revisions,
+exact arithmetic and export evidence are expandable. Offers & history provides
+focused main/positive offers, Other offers, Reference inputs, Alternates and
+History, including Previous capture. A positive filter keeps references reachable.
 
-Inspect an exact observation for original price, exact line, source identity,
-probability reference, fees/cashflows, EV and underlying evidence. Missing inputs
-stay unavailable and received prices remain visible. Where the exact retained
-identity matches, Compare this exact bet opens both frozen observations. The
-conservative per-bet screening estimate and coherent evaluation estimate retain
-separate labels. Different lines remain different bets even when main status
-changes.
+Each current comparison uses a durable logical acquisition `pull_id`, with child
+ledger attempt IDs and accepted response membership. All required inputs share
+that pull and their complete receipt span is at most 600 seconds inclusive.
+Source timestamps remain separate evidence; this rule adds no source-age
+threshold. Identical bytes across requests do not merge acquisition identity.
+An explicit single-event request closes its requested returned surface when that
+one event is returned with known membership. SGO paginates events, and may emit
+a redundant cursor; this does not imply another page of odds within the returned
+event. Broader discovery retains its cursor chain and uncertain omission
+authority. An absent book or line is Not returned, not source withdrawal.
 
-Trading is prediction-market only: market-to-book EV/comparisons and
-market-to-market comparisons. Sportsbook prices are reference evidence, not
-trading EV results. Sportsbook-to-sportsbook and book-to-market result views are
-excluded. Positive EV is a calculation filter for market offers. Arbitrage is a Data view of the existing
-active pregame pair reader under the captured fee mode; unsupported date/provider/EV-status
-filters are disabled there. Its bounded illustrative pair arithmetic is computed
-from stored inputs, with no provider request or background calculation job. A
-changed pair witness requires an explicit new selection.
+A newer covering attempt suppresses the current numeric headline while in
+progress, partial, failed or cancelled. A complete capture with missing references
+publishes null EV. Earlier positive captures remain in history. Narrow requests
+cannot replace or suppress the unrestricted board, and late completion cannot
+replace a newer started attempt. Frozen snapshot publication is atomic. Historical
+records without proven membership remain under View → Received evidence / legacy
+history and Experiments, with original provenance and calculation versions.
 
-Links and browser Back preserve filters, game, capture and exact bet. Catalog
-paging uses a repeatable-read token with a two-minute lease. An expired token can
-open a new stored snapshot, but exact revisions are checked and never silently
-replaced. Exporting an already opened exact input uses its captured bytes even
-after the paging lease expires. Checkpoint exports stay game-revision bound and
-contain the complete immutable dependency bundle for offline reproduction.
+Trading is prediction-market only: market-to-book EV uses sportsbook evidence;
+market-to-market arbitrage uses two prediction venues. The pair view shows both
+actual selections/lines, odds, illustrative allocations, committed cash, captured
+fees, snapshot time, modeled return and minimum modeled profit. Existing
+market/book benchmarks are labeled Sportsbook reference comparison; a sportsbook
+is never an executable second leg or a locked-profit claim. Pairing reads the
+same latest covering frozen scopes as the market board, without provider requests
+or background acquisition/calculation jobs.
+
+Links and browser Back/reload preserve filters, row, acquisition and exact offer
+revision. A repeatable SQL read token is a paging lease, not the acquisition ID.
+After lease expiry, exact market inspection reopens the selected immutable pull;
+it refuses an absent or changed revision instead of choosing another offer.
+Exporting an opened exact input uses its captured bytes. Checkpoint exports retain
+the complete immutable dependency bundle for offline reproduction.
 
 ## Experiments
 
@@ -53,7 +67,12 @@ The existing first-observation/T−10 experiment lists tracked games, capture
 coverage, missing/refused/missed cases, early/late changes and available sporting
 outcomes. The same game/bet inspector is used from Data and Experiments.
 Declared populations, evaluation and frozen cohort exports remain available in
-contextual details. This page does not contain another received-data browser.
+contextual details. Scheduled checkpoints show their actual due time; Capturing,
+Captured, Missed, failed/refused and cancelled states come from task evidence. A
+future T−10 is not a failure. Missing exact lines are separate from missing
+checkpoints. With no scored completed games, a concise empty state replaces empty
+scoring grids. Early-offer/late-reference diagnostics are labeled analytical views
+outside current opportunity ranking and arbitrage.
 
 Sporting outcomes, quoted EV, probability quality and actual trading returns are
 separate. Missing outcomes and incomplete captures remain visible. NCAAB models,
@@ -66,7 +85,10 @@ Settings reads real collection state, next discovery/checkpoint, reported credit
 unresolved holds, source state and finite storage. It retains Stop/Resume, source
 pauses and essential discovery configuration. Control eligibility still comes
 from the existing authenticated backend and its recovery/accounting guards.
-Detailed operating evidence is expandable. Display preferences remain local.
+Detailed operating evidence is expandable. Availability and last valid provider
+receipt are separate facts; a missing diagnostic-cache quote is not a failed
+acquisition. Display preferences remain local, with Eastern as the default time
+zone. The date filter always uses Eastern-day boundaries.
 
 ### Fee assumption
 

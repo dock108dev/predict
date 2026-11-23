@@ -72,6 +72,29 @@ def age(at):
     except (ValueError,TypeError):return None
 
 
+def valid_receipt(metrics, receipt_times=(), observed_receipts=()):
+    """Validated provider receipt is independent of the diagnostic quote cache.
+
+    Failed HTTP responses and account-usage observations are deliberately absent.
+    SQL-mode SGO can receive valid pages without retaining any diagnostic quotes.
+    """
+    from app.storage.store import stamp as receipt_clock
+
+    candidates = []
+    for value, owner in [(metrics.get('last_valid_received_at'), 'validated_provider_page'),
+                         *((value, 'retained_price') for value in receipt_times),
+                         *((value, 'source_state') for value in observed_receipts)]:
+        if value:
+            try:
+                candidates.append((receipt_clock(value), owner))
+            except (ValueError, TypeError):
+                continue
+    if not candidates:
+        return dict(at=None, basis=None)
+    at, basis = max(candidates, key=lambda item: item[0])
+    return dict(at=at.isoformat(), basis=basis)
+
+
 def project(service, raw, *, accounting=None):
     store=service.store
     # This projection is synchronous and read-only. Keep the defensive-copy
@@ -108,6 +131,7 @@ def project(service, raw, *, accounting=None):
         received=max(receipt_times,key=stamp) if receipt_times else None
         observed_sources=[service.states[v].get('source_at') for v in venues if service.states[v].get('source_at')]
         observed_receipts=[service.states[v].get('received_at') for v in venues if service.states[v].get('received_at')]
+        receipt = valid_receipt(metrics, receipt_times, observed_receipts)
         summaries={v:deepcopy(service.states[v]) for v in venues}
         backoff=max(0,getattr(worker,'backoff_until',0)-time.monotonic())
         latest_issue=next((i for i in reversed(service.issues) if i['runtime_id']==service.runtime_id and any(v in i['affected_venues'] for v in venues)),None)
@@ -129,6 +153,7 @@ def project(service, raw, *, accounting=None):
             publication_completions=deepcopy(getattr(worker,'publication_completions',[])),
             processing_phase=getattr(worker,'phase',None),next_action=None if latest_issue is None else latest_issue['next_action'],provider=provider,affected_venues=venues,status=summaries,
             source_at=latest,source_age_seconds=age(latest),received_at=received,receipt_age_seconds=age(received),
+            last_valid_receipt_at=receipt['at'],last_valid_receipt_basis=receipt['basis'],
             last_book_observation_at=max(observed_sources,key=stamp) if observed_sources else None,last_book_receipt_at=max(observed_receipts,key=stamp) if observed_receipts else None,last_http_received_at=metrics.get('last_received_at'),socket_connected=bool(getattr(worker,'socket',None)) if provider not in ('the_odds_api','sportsgameodds') else None,
             timestamp_meanings=sorted({q['times']['source_time_kind'] for q in quotes}),
             quote_count_scope='diagnostic_cache' if getattr(service,'database_mode',False) else 'current_projection',

@@ -127,6 +127,11 @@ class Page:
     duplicate_alternate_rows: int = 0
     conflicting_alternate_lines: int = 0
     ignored_bookmaker_groups: int = 0
+    # Acquisition identity is assigned before dispatch, independently of bytes.
+    pull_id: str | None = None
+    attempt_id: str | None = None
+    request_scope: dict | None = None
+    received_at: str | None = None
 
 
 def clock_sample(page, *, admitted_at=None):

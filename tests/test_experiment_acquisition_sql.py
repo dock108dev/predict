@@ -146,3 +146,44 @@ class ExperimentAcquisitionSQL(PregameFixture):
         self.assertEqual(result['nonfinal'],1)
         with self.connect() as db:
             self.assertEqual(db.execute('SELECT count(*) n FROM research_record').fetchone()['n'],before)
+
+    async def test_retained_recovery_requires_original_bytes_and_unique_ledger_attempt(self):
+        from dataclasses import replace
+        from app.research.ev_movement import build_snapshot, reproduce_checkpoint
+        from app.storage.market_snapshot_recovery import recover
+        from app.storage.acquisition_snapshot import read_snapshot
+        from app.comparison import fee_mode
+        data=source_data(datetime.now(timezone.utc)+timedelta(hours=1))
+        self.frame(data)
+        service,worker,requests=self.worker(data)
+        scheduler=acquisition.ExperimentAcquisition(service,connector=self.connect)
+        scheduler._prepare(worker.now())
+        task=scheduler._claim(worker.now())
+        with patch.object(acquisition,'connect',self.connect):
+            acquired=await acquisition.acquire(worker,task)
+        legacy_page=replace(acquired['page'],pull_id=None,attempt_id=None,request_scope=None,received_at=None)
+        with self.connect() as db:
+            fee_mode.set_enabled(db,False)
+            legacy=build_snapshot(db,legacy_page,request_scope=acquired['request_scope'],
+                dispatch_at=acquired['dispatch_at'].isoformat(),known_at=acquired['known_at'].isoformat())
+            legacy['acquisition']={key:value for key,value in acquired['acquisition'].items()
+                                   if key not in ('pull_id','attempt_id')}
+            saved=experiment.capture(db,task['game_id'],task['checkpoint'],legacy,token=task['token'],
+                requested_at=acquired['dispatch_at'],received_at=acquired['received_at'],
+                known_at=worker.now(),scope=acquired['request_scope'])
+            self.assertEqual(saved['state'],'captured')
+            original=db.execute('SELECT payload FROM ev_experiment_record WHERE id=%s',(saved['id'],)).fetchone()['payload']
+            db.execute('TRUNCATE public.market_pull CASCADE')
+            result=recover(db,ledger_path=self.directory/'ledger.sqlite3',receipt_root=self.directory/'originals')
+            self.assertEqual(result['linked'],1,result)
+            pull=db.execute('SELECT * FROM public.market_pull').fetchone()
+            self.assertLess(pull['started_order'],0)
+            self.assertEqual(pull['state'],'complete')
+            frozen=read_snapshot(db,pull['pull_id'])
+            self.assertEqual([o.get('calculation_payload',{}).get('raw') if o.get('calculation_payload') else None for o in legacy['offers']],
+                             [o.get('calculation_payload',{}).get('raw') if o.get('calculation_payload') else None for o in frozen['offers']])
+            self.assertGreater(reproduce_checkpoint(frozen)['numeric_screen_results'],0)
+            self.assertEqual(db.execute('SELECT payload FROM ev_experiment_record WHERE id=%s',(saved['id'],)).fetchone()['payload'],original)
+            again=recover(db,ledger_path=self.directory/'ledger.sqlite3',receipt_root=self.directory/'originals')
+            self.assertEqual(again['linked'],0)
+        self.assertEqual(len(requests),1)

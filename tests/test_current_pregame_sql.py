@@ -624,19 +624,22 @@ class CurrentPregameSQL(PregameFixture):
             first = board.read(db, {}, at=stamp(AT))
             self.assertEqual(first["total"], 1)
             partial = deepcopy(data)
+            partial.pop('_fixture_acquisition', None)
             odd = next(iter(partial["data"][0]["odds"].values()))
             odd["byBookmaker"] = {"fanduel": odd["byBookmaker"]["fanduel"]}
             partial["data"][0]["odds"] = {odd["oddID"]: odd}
             self.ingest(db, partial)
             self.process(db)
-            self.assertEqual(board.read(db, {}, at=stamp(AT))["rows"], first["rows"])
+            # This new partial receipt cannot manufacture a same-pull reference
+            # from the prior response. Current numeric EV is withheld.
+            self.assertEqual(board.read(db, {}, at=stamp(AT))["rows"], [])
             older = deepcopy(data)
             for odd in older["data"][0]["odds"].values():
                 for quote in odd["byBookmaker"].values():
                     quote.update(lastUpdatedAt="2026-11-17T19:58:00Z", odds="+500")
             self.ingest(db, older)
             self.process(db)
-            self.assertEqual(board.read(db, {}, at=stamp(AT))["rows"], first["rows"])
+            self.assertEqual(board.read(db, {}, at=stamp(AT))["rows"], [])
             # No collector response is needed to remove a started occurrence.
             self.assertEqual(
                 board.read(db, {}, at=stamp("2026-11-17T21:00:00Z"))["total"], 0

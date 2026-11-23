@@ -1,5 +1,7 @@
 {
   "deferred": {
+    "tests/test_market_board_sql.py": "Required disposable PostgreSQL lane: scoped acquisition replacement before market ranking/pagination, exact main/alternate selection and frozen revision reads across SQL lease expiry; zero provider requests.",
+    "tests/test_market_snapshot_arbs_sql.py": "Required disposable PostgreSQL lane: market-to-market pairs use authentic frozen acquisition membership, complete scoped replacement and no executable sportsbook legs.",
     "tests/test_admin_database_sql.py": "Required in the disposable PostgreSQL lane. Verifies bounded local database reads and read-only access.",
     "tests/test_sgo_current_rows_sql.py": "Required in the disposable PostgreSQL lane. Exercises source-scoped current rows and sportsbook EV publication and withdrawal.",
     "tests/test_sgo_native_catalog_sql.py": "Required in the disposable PostgreSQL lane. Exercises exact Novig catalog evidence, replacement and expiry.",

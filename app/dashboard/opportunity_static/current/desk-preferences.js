@@ -9,7 +9,7 @@ export function savePreference(key, value) {
 }
 
 export function timezone() {
-  return readPreference('timezone') || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+  return readPreference('timezone') || 'America/New_York';
 }
 
 export function clock(at, zone = timezone()) {

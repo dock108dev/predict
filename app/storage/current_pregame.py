@@ -570,6 +570,8 @@ def calculate_game(db, job, context, *, at):
                 except ValueError as exc:
                     reference_errors[key] = str(exc)
                     raise
+            from app.comparison.acquisition import calculation as acquisition_calculation
+            acquisition_calculation(record, references[key])
             revision = hashed([input_identity(record, references[key], context, fee),
                                math.probability_inputs(coherent[key]),
                                {p: math.probability_inputs(r) for p, r in price_payload["alternative_probabilities"].items()}])

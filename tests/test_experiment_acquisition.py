@@ -60,6 +60,8 @@ def storage_patches():
     from contextlib import ExitStack
     stack = ExitStack()
     stack.enter_context(patch.object(acquisition, 'connect', side_effect=lambda:nullcontext(None)))
+    stack.enter_context(patch.object(acquisition, '_start_pull', return_value='fixture-pull'))
+    stack.enter_context(patch.object(acquisition, '_end_pull'))
     stack.enter_context(patch('app.collection.current_storage_policy.sql_usage', return_value=0))
     stack.enter_context(patch('app.collection.current_storage_policy.require_disk_space'))
     return stack
@@ -271,7 +273,7 @@ def test_actual_started_or_closed_response_cannot_be_a_pregame_checkpoint(tmp_pa
             acquired=await acquisition.acquire(worker,task)
         # The source's event-ID query can ignore phase/start filters. The
         # contradictory lifecycle comes from the actual retained response.
-        scheduler=acquisition.ExperimentAcquisition(worker.service,connector=lambda:nullcontext(None))
+        scheduler=acquisition.ExperimentAcquisition(worker.service,connector=lambda:nullcontext(SimpleNamespace(transaction=nullcontext)))
         memory=BackgroundWork(sampler=lambda:64*1024*1024)
         with patch('app.collection.background_work.BACKGROUND',memory), \
                 patch.object(experiment,'discover') as discover, \

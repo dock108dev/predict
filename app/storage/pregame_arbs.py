@@ -292,6 +292,14 @@ def book_entry(quote, template, *, at):
                 cashflows={},
             ),
         )
+        # dict(p) contains the template trading leg's provenance. A sportsbook
+        # reference must prove its own membership, never inherit the template's.
+        payload.pop('acquisition', None)
+        if quote.get('acquisition'):
+            from app.comparison.acquisition import validate
+
+            payload['acquisition'] = validate([dict(quote['acquisition'],
+                                                   received_at=quote['received_at'])])
         from .pregame_quote_evidence import market_link
 
         if link := market_link(quote["venue"], quote.get("bookmaker_market_link")):
@@ -387,6 +395,10 @@ def read(db, query, *, at=None, can_continue=None):
         raise ValueError('Unknown reference scope')
     if query['provider'] != PROVIDER and query['reference_scope'] != 'all':
         raise ValueError('Other providers require historical selection')
+    if query['provider'] == PROVIDER:
+        from .market_snapshot_arbs import read as snapshot_read
+
+        return snapshot_read(db, query, at=at, can_continue=can_continue)
 
     def checkpoint():
         if can_continue is not None and not can_continue():
@@ -694,6 +706,7 @@ def read(db, query, *, at=None, can_continue=None):
                     payload["raw"],
                     payload.get("times"),
                     payload.get("collection"),
+                    payload.get("acquisition"),
                     payload.get("scoring_scope"),
                     candidate.get("fee_input"),
                     None if payload.get("input_revision") else candidate.get("record"),

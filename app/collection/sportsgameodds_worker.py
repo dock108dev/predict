@@ -366,13 +366,40 @@ class SportsGameOddsWorker:
                     continue
                 return await self._fetch_owned(params)
 
+    def _begin_pull(self, params):
+        from app.storage.acquisition_snapshot import begin
+        from app.storage.store import connect
+        with connect() as db:
+            return begin(db, params, at=self.now())
+
+    def _retain_pull(self, page, params):
+        from app.storage.acquisition_snapshot import accept, finish
+        from app.storage.store import connect
+        with connect() as db:
+            accept(db, page)
+            if 'leagueID' not in params:
+                finish(db, page.pull_id, 'partial', details=dict(reason='working_surface_only'))
+            elif not page.next_cursor:
+                finish(db, page.pull_id, 'complete', details=dict(reason='discovery_cursor_closed; moving_scope_omissions_uncertain'))
+
+    def _fail_pull(self, pull_id, state, reason):
+        from app.storage.acquisition_snapshot import finish
+        from app.storage.store import connect
+        with connect() as db:
+            finish(db, pull_id, state, details=dict(reason=reason))
+
     async def _fetch_owned(self, params):
         if not await self.request_in_scope_async(params):
             raise PregameWindowClosed()
         self.page_in_progress = True
         self.phase = 'collecting'
+        from .bulk_checkpoint import owned_thread
+        pull_id = None
         try:
+            pull_id = await owned_thread(self._begin_pull, params)
+            self.collector.pull_id = pull_id
             page = await self.collector.fetch(params, self.key)
+            self.metrics['last_valid_received_at'] = page.received_at
             self.metrics['requests'] += 1
             self.metrics['pages'] += 1
             self.metrics['events'] += len(page.events)
@@ -472,7 +499,15 @@ class SportsGameOddsWorker:
             if page.events:
                 await self.state('available', 'sgo_page_received',
                                  'SportsGameOdds page received; individual source clocks and availability apply.')
+            # Broader discovery remains separate from full-alt checkpoints.
+            await owned_thread(self._retain_pull, page, params)
             return page
+        except BaseException as exc:
+            if pull_id:
+                await owned_thread(self._fail_pull, pull_id,
+                    'cancelled' if isinstance(exc, asyncio.CancelledError) else 'failed',
+                    type(exc).__name__)
+            raise
         finally:
             self.page_in_progress = False
             self._account_status()

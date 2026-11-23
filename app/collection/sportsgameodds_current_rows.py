@@ -213,6 +213,9 @@ def current_rows(page, receipt_sha256, *, include_unpriced=False):
                 row['comparison_source_metadata']['bookmaker_market_link'] = market_link.copy()
             if isinstance(quote.get('alternate'), bool):
                 row['comparison_source_metadata']['alternate'] = quote['alternate']
+            from app.comparison.acquisition import provenance
+            if acquisition := provenance(page):
+                row['comparison_source_metadata']['acquisition'] = acquisition
             row['_instrument'] = instrument
             fingerprint = [source, original, q['state'], identity, at, quote['source_at_original'],
                            quote['opposing_odd_id'], policy, event['aliases'], event['status'], event['phase']]

@@ -81,6 +81,16 @@ def retention_usage(db):
         row["reserved"] += reserve
         if extra["latest"] and (not row["latest_recorded_at"] or extra["latest"] > row["latest_recorded_at"]):
             row["latest_recorded_at"] = extra["latest"]
+    if db.execute("SELECT to_regclass('public.market_pull') r").fetchone()["r"]:
+        # Snapshot projections share the existing retained-research allocation.
+        # Count JSON text conservatively, including manifest/scope metadata.
+        market = db.execute('''SELECT COALESCE(sum(bytes),0) bytes FROM (
+            SELECT allocation_bytes AS bytes FROM public.market_pull
+            UNION ALL SELECT allocation_bytes FROM public.market_pull_scope
+            UNION ALL SELECT allocation_bytes FROM public.market_pull_receipt
+            UNION ALL SELECT allocation_bytes FROM public.market_pull_evidence) allocation''').fetchone()
+        row['market_snapshot_bytes'] = int(market['bytes'])
+        row['total'] += row['market_snapshot_bytes']
     return row
 
 

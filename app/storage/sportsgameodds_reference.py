@@ -170,6 +170,9 @@ def prepare_page(page):
         for field in ('consensus', 'bookmaker_market_link', 'alternate', 'partition'):
             if field in quote:
                 facts[field] = quote[field]
+        from app.comparison.acquisition import provenance
+        if acquisition := provenance(page):
+            facts['acquisition'] = acquisition
         revision = hashed({k: v for k, v in facts.items() if k not in ('received_at', 'receipt_sha256')})
         rows.append(dict(id=row_id, event_id=quote['event_id'], bookmaker_id=quote['venue'],
                          source_order=str(exact_time(quote['source_at'])) if quote['source_at'] else None,
@@ -263,6 +266,10 @@ def advance_quotes(db, rows, previous):
               (i.source_order IS NOT NULL AND q.source_order IS NULL)
               OR i.source_order>q.source_order
               OR (i.source_order IS NULL AND q.source_order IS NULL AND i.received_order>q.received_order)
+              OR (i.source_order IS NOT DISTINCT FROM q.source_order
+                  AND i.received_order>=q.received_order AND i.facts#>>'{{acquisition,pull_id}}' IS NOT NULL
+                  AND (i.facts-'acquisition'-'received_at'-'receipt_sha256')=
+                      (q.facts-'acquisition'-'received_at'-'receipt_sha256'))
               OR (i.source_order=q.source_order AND i.received_order>=q.received_order
                   AND i.facts->>'available'='false' AND q.facts->>'available'='true')
               OR (i.source_order=q.source_order AND i.received_order>=q.received_order

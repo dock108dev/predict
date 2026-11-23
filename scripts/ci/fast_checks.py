@@ -13,12 +13,14 @@ import time
 
 ROOT = Path(__file__).resolve().parents[2]
 CORE = {
+    "tests/test_acquisition_membership.py",
     "tests/test_current_pregame_reference_policy.py",
     "tests/test_pregame_valuation.py",
     "tests/test_pregame_arbs.py",
     "tests/test_ev_movement.py",
     "tests/test_research_probability.py",
     "tests/test_current_storage_policy.py",
+    "tests/test_market_snapshot_presentation.py",
 }
 SQL_CORE = {
     "tests/test_ev_experiment_sql.py::ExperimentSQL::test_both_checkpoints_share_dependencies_and_export_reproduces_offline",
@@ -51,6 +53,7 @@ DOMAINS = {
         "tests/test_workspace_capture_client.py",
         "tests/test_workspace_sessions.py",
         "tests/test_workspace_settings_accounting.py",
+        "tests/test_market_workspace_client.py",
     },
     "deploy": {
         "tests/test_owner_remember_cookie.py",
@@ -104,6 +107,12 @@ def plan(root, paths):
             )
         if path in ("app/storage/research_catalog.py", "app/dashboard/research_api.py"):
             sql.update({"tests/test_data_workspace_sql.py", "tests/test_research_catalog_sql.py"})
+        if path in ("app/storage/market_board.py", "app/storage/acquisition_snapshot.py",
+                    "app/dashboard/research_api.py", "tests/test_market_board_sql.py"):
+            sql.add("tests/test_market_board_sql.py")
+        if path in ("app/storage/market_snapshot_arbs.py", "app/comparison/pregame_arbs.py",
+                    "app/storage/pregame_arbs.py", "tests/test_market_snapshot_arbs_sql.py"):
+            sql.add("tests/test_market_snapshot_arbs_sql.py")
         if path in ("app/comparison/fee_mode.py", "app/comparison/current_pregame.py", "app/storage/current_pregame.py", "app/storage/current_pregame_read.py"):
             sql.update({"tests/test_fee_mode_sql.py", "tests/test_fee_pricing_sql.py"})
         if path in ("app/comparison/fee_mode.py", "app/research/experiment.py"):

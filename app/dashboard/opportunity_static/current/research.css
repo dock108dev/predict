@@ -118,3 +118,20 @@
  .data-filters > label:first-child { grid-column: 1 / -1; }
 }
 .research-page :is(#catalog, #game-pagination, #game-detail)[hidden] { display: none !important; }
+
+/* Market comparison controls stay compact at the retained desktop zoom. */
+.data-filters { padding-block:.6rem; gap:.5rem; }
+.data-filters .catalog-advanced { grid-column:1 / -1; }
+.data-filters .catalog-actions { grid-column:auto; }
+.data-filters .catalog-advanced-fields { grid-template-columns:repeat(3,minmax(0,1fr)); }
+.data-filters .catalog-checkbox { display:flex; align-items:center; gap:.5rem; }
+.data-filters .catalog-checkbox input { width:auto; min-height:0; }
+#reference-summary:empty, #fee-mode-summary:empty, #catalog-snapshot:empty { display:none; }
+#reference-summary, #fee-mode-summary, #catalog-status, #catalog-snapshot { margin-block:.35rem; }
+#catalog .catalog-table th:first-child { width:23%; }
+.market-ev { font-weight:700; font-variant-numeric:tabular-nums; }
+.market-inspector-summary { margin-block:.75rem; padding:.75rem; background:var(--p-alternate); border-radius:4px; }
+.market-offer-tabs { display:flex; flex-wrap:wrap; gap:.4rem; margin-block:.6rem; }
+.market-offer-tabs button[aria-pressed="true"] { font-weight:700; border-color:currentColor; }
+.market-evidence details { padding-block:.5rem; }
+@media(min-width:1001px) { .data-filters { grid-template-columns:minmax(12rem,2fr) repeat(4,minmax(7rem,1fr)); } .data-filters .catalog-actions { grid-column:1 / -1; } }

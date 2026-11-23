@@ -109,6 +109,41 @@ class CatalogReads(RawReads):
                     population='Canonical games and separately identified source-local events. '
                         'Retained checkpoint games remain inspectable after current observations expire.')
 
+    def markets(self, query):
+        from app.storage import market_board
+
+        with self.lock:
+            token, frame = self._frame(query)
+            with self.snapshot_read(token):
+                offset, limit = int(query.get('offset', 0)), int(query.get('limit', 50))
+                projection = market_board.markets(frame['db'], frame['filters'], offset=offset, limit=limit)
+                return dict(schema='predict-market-board-1', token=token,
+                    captured_at=frame['at'], read_at=datetime.now(timezone.utc).isoformat(),
+                    **projection, offset=offset,
+                    next_offset=offset+len(projection['rows']) if offset+len(projection['rows'])<projection['total'] else None,
+                    fee_mode=frame['fee_mode'], reference_scope=public_scope(),
+                    provider_requests=0, scheduled_calculations=0,
+                    population='One game/market/period per latest covering acquisition attempt; '
+                        'numeric headlines use only eligible source-designated main trading offers.')
+
+    def market(self, query):
+        from app.storage import market_board
+
+        with self.lock:
+            self.cleanup()
+            frame = self.frames.get(query.get('token'))
+            if frame:
+                with self.snapshot_read(query['token']):
+                    return market_board.detail(frame['db'], market_id=query['market_id'],
+                        pull_id=query['pull_id'], offer_id=query.get('offer_id'), revision=query.get('revision'))
+            # The read lease is not the acquisition identity. Reopen an exact,
+            # bounded read using immutable pull/offer/revision selection.
+            with self.connector() as db, db.transaction():
+                db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
+                db.execute("SET LOCAL statement_timeout='10s'")
+                return market_board.detail(db, market_id=query['market_id'], pull_id=query['pull_id'],
+                    offer_id=query.get('offer_id'), revision=query.get('revision'))
+
     def detail(self, query):
         with self.lock:
             self.cleanup()
@@ -165,8 +200,10 @@ def mount(app):
             await joined(reads.close)
     app.cleanup_ctx.append(life)
 
-    def validate(query, *, detail=False):
+    def validate(query, *, detail=False, market=False):
         allowed = set((*catalog.READ_FILTERS, *catalog.SCOPED_SELECTIONS, 'token', 'release', 'offset', 'limit'))
+        if market:
+            allowed |= {'market_id', 'pull_id', 'offer_id', 'revision'}
         if detail:
             allowed |= {'id', 'revision'}
         if set(query)-allowed or any(len(value)>1024 for value in query.values()):
@@ -189,6 +226,10 @@ def mount(app):
             raise PublicRequestError('Unknown calculation status.')
         if query.get('reference_scope') not in (None, '', 'selected', 'all'):
             raise PublicRequestError('Unknown reference scope.')
+        if query.get('include_alternates') not in (None, '', '1'):
+            raise PublicRequestError('Unknown alternate selection.')
+        if query.get('sort') not in (None, '', 'ev_desc', 'ev_asc'):
+            raise PublicRequestError('Unknown market EV order.')
         if query.get('provider') not in (None, '', PROVIDER) and query.get('reference_scope') != 'all':
             raise PublicRequestError('Other source records require explicit historical selection.')
         if detail and not all(query.get(key) for key in ('token', 'id', 'revision')):
@@ -204,6 +245,26 @@ def mount(app):
         validate(request.query)
         async with admission():
             value = await joined(reads.games, dict(request.query))
+        return web.json_response(value, headers=HEADERS)
+
+    async def markets(request):
+        validate(request.query)
+        async with admission():
+            value = await joined(reads.markets, dict(request.query))
+        return web.json_response(value, headers=HEADERS)
+
+    async def market(request):
+        validate(request.query, market=True)
+        if not all(request.query.get(key) for key in ('market_id', 'pull_id')):
+            raise PublicRequestError('A captured market and acquisition identity are required.')
+        if bool(request.query.get('offer_id')) != bool(request.query.get('revision')):
+            raise PublicRequestError('Exact offer identity and revision are required together.')
+        async with admission():
+            value = await joined(reads.market, dict(request.query))
+        if request.path.endswith('market-export'):
+            return web.Response(text=json.dumps(value, sort_keys=True, indent=2, allow_nan=False)+'\n',
+                content_type='application/json', headers={**HEADERS,
+                    'Content-Disposition': 'attachment; filename="predict-market-evidence.json"'})
         return web.json_response(value, headers=HEADERS)
 
     async def game(request):
@@ -329,6 +390,9 @@ def mount(app):
         from .pipeline import serial
         return web.json_response(serial(value), headers=HEADERS)
 
+    app.router.add_get('/api/research/markets', markets)
+    app.router.add_get('/api/research/market', market)
+    app.router.add_get('/api/research/market-export', market)
     app.router.add_get('/api/research/games', games)
     app.router.add_get('/api/research/game', game)
     app.router.add_get('/api/research/catalog', page)
