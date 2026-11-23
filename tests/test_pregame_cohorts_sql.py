@@ -495,8 +495,22 @@ class PregameCohortsSQL(PregameFixture):
             self.assertTrue(monitor["rows"])
             change_mode(mode="live", at=stamp(AT), connector=self.connect)
             live = json.loads((await response(query, connector=self.connect)).text)
-            self.assertEqual(live["data_type"], "live")
-            self.assertEqual(live["rows"], [])
+            self.assertEqual(live["data_type"], "monitor")
+            self.assertEqual(live["rows"], monitor["rows"])
+            self.assertEqual(live["activity_mode"]["requested_mode"], "live")
+            self.assertEqual(live["activity_mode"]["effective_mode"], "monitor")
+            historical = json.loads(
+                (
+                    await response(
+                        SimpleNamespace(
+                            path="/api/pregame", query={"data_type": "live"}
+                        ),
+                        connector=self.connect,
+                    )
+                ).text
+            )
+            self.assertEqual(historical["data_type"], "live")
+            self.assertEqual(historical["rows"], [])
             browse = json.loads(
                 (
                     await response(

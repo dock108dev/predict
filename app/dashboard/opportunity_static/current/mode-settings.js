@@ -1,13 +1,10 @@
 import {bindDialogClose} from './dialog-close.js';
 
 const node=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;};
-const ownerSession='predict-owner-mode-controls-v1',activityThrottle=15000;
+const ownerSession='predict-owner-mode-controls-v1';
 const durations=[
- ['monitor_interval_seconds','Monitor refresh','minutes',60,1,120,1],
- ['monitor_phase_seconds','Monitor timing offset','minutes',60,0,59,1],
- ['live_interval_seconds','Live refresh','seconds',1,15,300,15],
- ['live_window_seconds','Live games start within','minutes',60,5,180,5],
- ['inactivity_seconds','Turn Live off after inactivity','minutes',60,1,60,1],
+ ['monitor_interval_seconds','Discovery interval','minutes',60,1,120,1],
+ ['monitor_phase_seconds','Discovery timing offset','minutes',60,0,59,1],
 ];
 const minutes=seconds=>Number.isFinite(seconds)?Number((seconds/60).toFixed(2))+'m':'—';
 const monitorTiming=settings=>{
@@ -18,6 +15,7 @@ const monitorTiming=settings=>{
 };
 const scheduledTime=value=>{if(!value)return null;const at=new Date(value);return Number.isFinite(at.getTime())?at.toLocaleTimeString('en-US',{timeZone:'America/New_York',hour:'numeric',minute:'2-digit',timeZoneName:'short'}):null;};
 const valid=value=>value&&['monitor','live'].includes(value.mode)&&value.settings;
+const effectiveMode=value=>value?.effective_mode||'monitor';
 function ownerOptIn(){try{return sessionStorage.getItem(ownerSession)==='1';}catch{return false;}}
 function rememberOwner(enabled){try{if(enabled)sessionStorage.setItem(ownerSession,'1');else sessionStorage.removeItem(ownerSession);}catch{}}
 async function request(url,options={}){
@@ -30,42 +28,40 @@ async function request(url,options={}){
  }finally{clearTimeout(timer);}
 }
 export function createModeSettings(onModeChange=()=>{}){
- let state=null,owner=false,pollTimer,refreshing=false,lastActivity=0,activityPending=false,dialogReturn,formDirty=false;
+ let state=null,owner=false,pollTimer,refreshing=false,dialogReturn,formDirty=false;
  const controls=node('div',undefined,'mode-controls'),open=node('button','Settings','mode-badge');open.type='button';open.id='mode-settings-open';controls.append(open);
  document.querySelector('.board-info')?.prepend(controls);
  const dialog=node('dialog',undefined,'mode-settings-dialog');dialog.id='mode-settings';dialog.setAttribute('aria-labelledby','mode-settings-title');
  const heading=node('div',undefined,'dialog-heading'),title=node('h2','Collection settings'),close=node('button','Close ×');title.id='mode-settings-title';close.type='button';close.setAttribute('aria-label','Close collection settings');heading.append(title,close);
  const body=node('div',undefined,'mode-settings-body'),summary=node('p','Loading collection settings…','mode-summary'),access=node('p',undefined,'mode-access'),message=node('p',undefined,'mode-message');message.setAttribute('role','status');
  const signIn=node('a','Sign in through Admin →');signIn.href='/admin?section=settings';access.append(signIn);
- const choices=node('div',undefined,'mode-choices'),switchLabel=node('label',undefined,'mode-switch'),live=node('input'),track=node('span',undefined,'mode-switch-track'),runSummary=node('p',undefined,'mode-run-summary'),schedule=node('p',undefined,'mode-run-summary');schedule.id='mode-monitor-schedule';live.type='checkbox';live.setAttribute('role','switch');live.setAttribute('aria-label','Live mode');live.disabled=true;track.setAttribute('aria-hidden','true');switchLabel.append(live,track,node('span','Live mode'));choices.append(switchLabel);
+ const policyNote=node('p','One capture at first observation, then another at T−10 (10 minutes before start). No separate saved-game refreshes or Live polling. Discovery scans can still return and bill saved games.','mode-summary'),runSummary=node('p',undefined,'mode-run-summary'),schedule=node('p',undefined,'mode-run-summary');policyNote.id='mode-acquisition-policy';schedule.id='mode-monitor-schedule';
  const form=node('form',undefined,'mode-settings-form'),fields=new Map();form.id='mode-settings-form';
  for(const [key,label,unit,multiplier,min,max,step]of durations){
   const field=node('label',undefined,'mode-setting'),text=node('span',label),value=node('input'),range=node('input'),inputs=node('div',undefined,'mode-setting-inputs');
   value.type='number';value.min=key==='monitor_phase_seconds'?'0':String(1/multiplier);value.max=String(31536000/multiplier);value.step=unit==='seconds'?'1':'any';value.required=true;value.setAttribute('aria-label',label+' ('+unit+')');
   range.type='range';range.min=String(min);range.max=String(max);range.step=String(step);range.setAttribute('aria-label',label+' slider');
   range.oninput=()=>{value.value=range.value;};value.oninput=()=>{range.value=value.value;};
-  inputs.append(range,value,node('small',unit));field.append(text,inputs);if(key==='monitor_phase_seconds')field.append(node('small','With a 30-minute refresh, 20 starts at :20 and :50 each hour.'));form.append(field);fields.set(key,{value,range,multiplier});
+  inputs.append(range,value,node('small',unit));field.append(text,inputs);if(key==='monitor_phase_seconds')field.append(node('small','With a 30-minute interval, 20 starts at :20 and :50 each hour.'));form.append(field);fields.set(key,{value,range,multiplier});
  }
- const horizonLabel=node('label',undefined,'mode-setting'),horizon=node('select'),hours=node('input');horizon.setAttribute('aria-label','Monitor games start within');
+ const horizonLabel=node('label',undefined,'mode-setting'),horizon=node('select'),hours=node('input');horizon.setAttribute('aria-label','Discover games starting within');
  for(const [value,label]of [['86400','24 hours'],['259200','72 hours'],['all','All future games'],['custom','Custom hours']]){const option=node('option',label);option.value=value;horizon.append(option);}
  hours.type='number';hours.min=String(1/3600);hours.max='8760';hours.step='any';hours.setAttribute('aria-label','Custom monitor horizon hours');hours.hidden=true;horizon.onchange=()=>{hours.hidden=horizon.value!=='custom';};
- horizonLabel.append(node('span','Monitor games start within'),horizon,hours);form.append(horizonLabel);
+ horizonLabel.append(node('span','Discover games starting within'),horizon,hours);form.append(horizonLabel);
  form.addEventListener('input',()=>{formDirty=true;});
  const save=node('button','Save settings');save.type='submit';save.disabled=true;save.setAttribute('form',form.id);
- body.append(summary,choices,runSummary,schedule,access,form);const footer=node('div',undefined,'mode-settings-footer');footer.append(message,save);dialog.append(heading,body,footer);document.body.append(dialog);bindDialogClose(close,dialog);
+ body.append(summary,policyNote,runSummary,schedule,access,form);const footer=node('div',undefined,'mode-settings-footer');footer.append(message,save);dialog.append(heading,body,footer);document.body.append(dialog);bindDialogClose(close,dialog);
  function permissions(){
-  for(const control of [...form.querySelectorAll('input,select,button'),live,save])control.disabled=!owner;
+  for(const control of [...form.querySelectorAll('input,select,button'),save])control.disabled=!owner;
   access.hidden=owner;
  }
  function render(){
   if(!state){open.textContent='Settings';open.setAttribute('aria-label','Collection settings');return;}
-  open.textContent=state.mode==='live'?'Live · Settings':'Settings';
-  open.dataset.mode=state.mode;open.setAttribute('aria-label','Collection settings'+(state.mode==='live'?' · Live is on':''));
-  summary.textContent=state.mode==='live'?'Live · pregame games starting within '+minutes(state.settings.live_window_seconds)+' · target every '+minutes(state.settings.live_interval_seconds):'Monitor · starts '+monitorTiming(state.settings);
-  if(state.reason==='inactivity')summary.textContent+=' · Live ended after inactivity';
-  const next=scheduledTime(state.next_monitor_at);schedule.textContent=next?'Next scheduled Monitor start: '+next+'. Near-start games are fetched first.':'';schedule.hidden=!next;
-  live.checked=state.mode==='live';
-  const runLabels={budget_delayed:'waiting for budget',partial:'partial update',running:'updating',complete:'complete',failed:'update failed'};runSummary.textContent=Object.entries(state.runs||{}).map(([kind,run])=>(kind==='live'?'Live':'Monitor')+': '+(runLabels[run.state]||'update pending')+(run.completed_at?' · '+new Date(run.completed_at).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'')).join(' · ');runSummary.hidden=!runSummary.textContent;
+  open.textContent='Settings';
+  open.dataset.mode=effectiveMode(state);open.setAttribute('aria-label','Collection settings');
+  summary.textContent='24/7 discovery · starts '+monitorTiming(state.settings);
+  const next=scheduledTime(state.next_monitor_at);schedule.textContent=next?'Next scheduled discovery start: '+next+'.':'';schedule.hidden=!next;
+  const runLabels={budget_delayed:'waiting for budget',partial:'partial update',running:'updating',complete:'complete',failed:'update failed'};runSummary.textContent=Object.entries(state.runs||{}).map(([kind,run])=>(kind==='live'?'Historical Live':'Discovery')+': '+(runLabels[run.state]||'update pending')+(run.completed_at?' · '+new Date(run.completed_at).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'')).join(' · ');runSummary.hidden=!runSummary.textContent;
   if(!formDirty){
    for(const [key,field]of fields){field.value.value=String((state.settings[key]??(key==='monitor_phase_seconds'?1200:0))/field.multiplier);field.range.value=field.value.value;}
    const seconds=state.settings.monitor_horizon_seconds;
@@ -74,7 +70,7 @@ export function createModeSettings(onModeChange=()=>{}){
   permissions();
  }
  function update(value,refresh=false){
-  if(!valid(value)||state&&Number(value.revision)<Number(state.revision))return;const changed=state&&(state.mode!==value.mode||state.settings.live_window_seconds!==value.settings.live_window_seconds||state.settings.monitor_horizon_seconds!==value.settings.monitor_horizon_seconds);state=value;render();
+  if(!valid(value)||state&&Number(value.revision)<Number(state.revision))return;const changed=state&&(effectiveMode(state)!==effectiveMode(value)||state.settings.monitor_horizon_seconds!==value.settings.monitor_horizon_seconds);state=value;render();
   if(!pollTimer)pollTimer=setInterval(async()=>{if(document.hidden||refreshing)return;refreshing=true;try{update(await request('/api/pregame?mode_status=1'),true);}catch{}finally{refreshing=false;}},15000);
   if(refresh&&changed)onModeChange(state);
  }
@@ -90,7 +86,6 @@ export function createModeSettings(onModeChange=()=>{}){
    formDirty=false;update(value,true);message.textContent='Collection settings saved.';
   }catch{render();message.textContent='Collection settings could not be saved. Your previous settings remain in effect.';}
  }
- live.onchange=()=>change({mode:live.checked?'live':'monitor'});
  form.onsubmit=event=>{
   event.preventDefault();if(!owner||!form.reportValidity())return;const settings={};
   for(const [key,field]of fields)settings[key]=Math.round(Number(field.value.value)*field.multiplier);
@@ -104,13 +99,6 @@ export function createModeSettings(onModeChange=()=>{}){
   const results=await Promise.allSettled([request('/api/pregame?mode_status=1'),authorize()]);if(results[0].status==='fulfilled')update(results[0].value,true);else if(!state)summary.textContent='Collection status could not be loaded.';
  };
  dialog.addEventListener('close',()=>{if(!dialogReturn)return;const saved=dialogReturn;dialogReturn=null;for(const [name,value,priority]of saved.style){if(value)document.body.style.setProperty(name,value,priority);else document.body.style.removeProperty(name);}scrollTo(saved.x,saved.y);saved.trigger?.focus({preventScroll:true});});
- async function activity(event){
-  const throttle=Math.min(activityThrottle,(state?.settings.inactivity_seconds||45)*1000/3);
-  if(!event.isTrusted||document.hidden||!owner||state?.mode!=='live'||activityPending||Date.now()-lastActivity<throttle||!Number.isFinite(Date.parse(state.live_until))||Date.parse(state.live_until)<=Date.now())return;
-  lastActivity=Date.now();activityPending=true;
-  try{const value=await request('/api/admin/activity-mode/activity',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});if(value.unauthorized){owner=false;rememberOwner(false);permissions();}else update(value,true);}catch{}finally{activityPending=false;}
- }
- for(const type of ['pointerdown','pointermove','keydown','touchstart','wheel'])document.addEventListener(type,activity,{passive:true,capture:true});
  if(ownerOptIn())authorize();
  permissions();return {update};
 }

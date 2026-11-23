@@ -708,7 +708,8 @@
       "tests/test_ev_movement.py",
       "tests/test_ev_experiment_evidence.py",
       "tests/test_experiment_api.py",
-      "tests/test_experiment_acquisition.py"
+      "tests/test_experiment_acquisition.py",
+      "tests/test_discovery_checkpoint_policy.py"
     ]
   }
 ]

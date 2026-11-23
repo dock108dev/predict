@@ -28,6 +28,7 @@ DOMAINS = {
         "tests/test_sportsgameodds_adapter.py",
         "tests/test_sportsgameodds_ledger.py",
         "tests/test_activity_mode.py",
+        "tests/test_discovery_checkpoint_policy.py",
         "tests/test_experiment_acquisition.py",
     },
     "research": {

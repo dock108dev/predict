@@ -23,6 +23,13 @@ controls scheduling. A source reschedule appends a revision and retargets the
 late task; it never moves the frozen early baseline. Changed schedule/settlement
 continuity and reversed observation order remain explicitly incomplete.
 
+The owner-selected credit-saving policy keeps automatic league discovery at
+:20 and :50 each hour, 24/7. Separate Monitor alternate passes and repeated Live
+odds polling are retired; an already saved research game waits for its T−10
+checkpoint. Discovery and the first full snapshot are distinct acquisitions.
+SGO still bills known games returned by league discovery; there is no documented
+exclude-known-ID filter. No source-price freshness is invented between captures.
+
 Late discovery still receives one actual early snapshot before game start. If
 discovery is already at/after the T−10 target, late is marked missing and no
 second paid request invents a pre-target baseline. A positive available early

@@ -443,3 +443,47 @@ Private evidence is in `.local/ev-experiment-20261122/` and
 installed bootstrap correction, local/hosted failure receipts and browser QA.
 The local read-only snapshot preview has been restored to port 8784 with schema
 115; no local collector or provider request was started.
+
+## Owner-selected credit-saving follow-up
+
+The owner explicitly kept 24/7 discovery at :20 and :50, accepting that SGO
+discovery still bills returned saved games. Production settings already match:
+interval 1,800 seconds, phase 1,200 seconds, horizon 86,400 seconds. No settings,
+Stop, pauses, account windows or unresolved objects are reset.
+
+The active database-mode path is `ActivityCollector`, not the older SGO time-band
+refresh loop. Its Monitor traversal previously added one full alternate request
+per eligible game, and Live viewing added minute requests. The follow-up keeps
+league discovery and removes those separate per-game requests before transport.
+The experiment still owns one early full snapshot, T−10 and bounded postgame
+result attempts. Settings show that effective policy; default EV/Arbs reads use
+Monitor while explicit historical Live reads remain available. Recorded Live
+intent, values and prior runs remain unchanged. Scope edits close an active walk
+as partial and wait for the next durable slot instead of starting an extra scan.
+
+The controlled two-league/three-saved-game example now makes two discovery calls
+instead of five discovery-plus-alternate calls: three billed event requests are
+avoided. Viewing activity adds no repeated jobs. This is not a claim that discovery
+is free or that subscription cost falls. The documented provider API cannot
+exclude arbitrary saved IDs without sacrificing newly listed/rescheduled games.
+
+Focused verification passed 116 collection/account/experiment portable tests,
+25 policy/API portable checks, a settings controller and two disposable PostgreSQL
+checks. The new policy test is selected by the focused collection CI domain;
+manual registries retain the controller and portable evidence without restoring
+the old broad release gate.
+
+The natural 00:50 UTC wave also established actual new-format persistence:
+Blackhawks–Canucks at 00:50:10.788216, Lafayette–USC at 00:50:29.120564 and
+UT Martin–Utah Valley at 00:50:52.855371. Pacers–Knicks missed without dispatch
+and stays explicitly missed. At 00:59:56 there were five valid complete pairs,
+11,865,505 unreserved research bytes and 3,854,393 late-reserved bytes. The
+128 MiB cap remains unchanged. Physical SQL was 2,616,400,919 bytes; interrupted
+exposure remained 86 rows / 94 objects, with no held reservations. This is an
+observed window, not a guarantee every simultaneous future game fits one minute.
+
+The coordinated private-beta CI/deploy run `45092093603` succeeded on `c635d56`.
+Its 73-second job verified an already recovered healthy release; it is not fresh
+changed-role timing evidence. The acquisition follow-up uses the same required
+focused pipeline. Its GitHub result and final installed role/policy check remain
+the authoritative closeout for that change. No new broad diagnostic is required.

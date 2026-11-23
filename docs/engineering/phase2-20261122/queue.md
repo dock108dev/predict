@@ -1,6 +1,10 @@
 # Active research implementation queue
 
 The current assignment is the first-observation versus T−10 EV experiment.
+The latest owner steering keeps 24/7 :20/:50 discovery while removing separate
+saved-game refreshes until T−10. The owner explicitly accepts that league
+discovery still bills returned known games; it cannot exclude arbitrary saved
+IDs. First full snapshots and bounded sporting-result follow-up remain.
 The phase 2 foundation below is completed historical implementation evidence.
 Current policy and operating details are in `docs/ev-checkpoint-experiment.md`.
 

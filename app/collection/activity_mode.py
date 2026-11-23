@@ -32,6 +32,25 @@ def operating_budget():
     )
 
 
+def acquisition_policy(settings):
+    """Effective collection behavior, separate from retained viewing settings."""
+    return dict(
+        id="first_observed_tminus10",
+        data_type="monitor",
+        discovery=dict(
+            interval_seconds=settings["monitor_interval_seconds"],
+            phase_seconds=settings["monitor_phase_seconds"],
+            horizon_seconds=settings["monitor_horizon_seconds"],
+            continuous=True,
+            known_games_billed=True,
+        ),
+        initial_capture="first_observed",
+        final_capture_seconds_before_start=600,
+        separate_saved_game_refresh=False,
+        live_polling=False,
+    )
+
+
 def clock():
     return datetime.now(timezone.utc)
 
@@ -118,6 +137,8 @@ def project(row, *, at=None, runs=None):
         schema=SCHEMA,
         mode="monitor" if expired else row["mode"],
         requested_mode=row["mode"],
+        effective_mode="monitor",
+        acquisition_policy=acquisition_policy(settings),
         revision=row["revision"],
         settings=settings,
         last_activity_at=stamp(row["last_activity_at"])

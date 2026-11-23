@@ -78,19 +78,18 @@ earlier withdrawal. Saved pregame evidence can still be inspected. The web
 app reads the selected provider and Live setting from the committed data
 runtime.
 
-SportsGameOdds shares its object budget across discovery and event refresh.
-Its worker replans once a minute and wakes at individual event deadlines when
-account guards permit. Faster planning alone does not issue provider requests.
-The next-day cost forecast follows each game through its time bands to kickoff,
-prioritizing near-start odds over distant repeat polls. The requested schedule
-is hourly inside 24 hours, then every minute in the final 30 minutes. Minute
-polling is measured against observed quote and source-clock changes; polling
-more often does not guarantee a newer provider price. Actual intervals stretch only if the slate
-cannot fit the available object allowance; Admin reports that explicitly.
-Discovery and refresh keep a shared 10% planning
-margin; durable quota, reservation, rate and Stop guards remain authoritative.
-League discovery retains one cutoff across cursor pages, including after a
-restart. A saved cursor resumes under matching query and phase settings.
+SportsGameOdds shares its object budget across discovery and research captures.
+Automatic discovery runs 24/7 at :20 and :50 each hour. Newly observed games get
+one full early checkpoint, then wait for their scheduled T−10 checkpoint;
+separate Monitor alternate passes and repeated Live refreshes are retired.
+Bounded postgame sporting-result follow-up remains independent of viewing.
+Source, account, reservation, rate, archive and Stop guards remain authoritative,
+including protected headroom for pending T−10 work. League discovery keeps one
+start cutoff across its cursor pages. Restarted partial runs remain explicitly
+partial; a recent fixed-clock slot can be consumed once without catch-up bursts.
+Discovery still bills saved games returned by SGO. Removing separate per-game
+requests saves their credits; changing the already-active clock alone saves none.
+See [discovery and saved-game collection](monitor-live.md).
 **Admin → Spending** shows account usage, holds, reserves, and pacing.
 The Odds API uses its own ledger and a 15-minute schedule from 09:00 to
 23:00 Eastern. [SportsGameOdds operations](sportsgameodds-operations.md)

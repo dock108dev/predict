@@ -76,7 +76,9 @@ async def response(request, *, connector=None):
                 "games",
                 "game",
             )
-            kind = query.get("data_type") or ("all" if browse else mode["mode"])
+            kind = query.get("data_type") or (
+                "all" if browse else mode.get("effective_mode", "monitor")
+            )
             query["data_type"] = kind
             query.pop("_scope_seconds", None)
             scope = (

@@ -1,4 +1,4 @@
-"""Controlled-clock activity intent and guarded Monitor/Live collection."""
+"""Controlled-clock discovery and retained activity intent with paid guards."""
 
 import asyncio
 from copy import deepcopy
@@ -235,7 +235,33 @@ def test_active_monitor_overrun_coalesces_latest_slot_and_phase_edit_never_cance
     asyncio.run(scenario())
 
 
-def test_monitor_refreshes_nearest_retained_games_before_walk_without_duplicate_alts():
+def test_horizon_change_closes_partial_walk_and_waits_for_next_discovery_slot():
+    async def scenario():
+        store, worker = Store(), Worker()
+        store.value["settings"]["monitor_phase_seconds"] = 1200
+        worker.service.config["sports"] = ["NFL", "NBA"]
+        worker.at = AT + timedelta(minutes=20)
+        owner = ActivityCollector(worker, store=store)
+        await owner.tick()
+        assert len(worker.calls) == 1 and owner.monitor is not None
+        store.value["settings"]["monitor_horizon_seconds"] = 7200
+        store.value["revision"] = 2
+        worker.at += timedelta(minutes=1)
+        await owner.tick()
+        assert len(worker.calls) == 1 and len(store.runs) == 1
+        assert owner.monitor is None
+        assert store.updates[-1][1]["state"] == "partial"
+        assert store.updates[-1][1]["reason"] == "settings_changed"
+        worker.at = AT + timedelta(minutes=50)
+        await owner.tick()
+        assert len(worker.calls) == 2 and len(store.runs) == 2
+        assert store.runs[-1]["monitor_slot_at"] == worker.at.isoformat()
+        assert store.runs[-1]["scope_end_at"] == (worker.at + timedelta(hours=2)).isoformat()
+
+    asyncio.run(scenario())
+
+
+def test_monitor_discovers_each_league_without_extra_saved_game_requests():
     async def scenario():
         store, worker = Store(), Worker()
         store.value["settings"]["monitor_phase_seconds"] = 1200
@@ -259,21 +285,45 @@ def test_monitor_refreshes_nearest_retained_games_before_walk_without_duplicate_
         for _ in range(6):
             await owner.tick()
         params = [params for _, params in worker.calls]
-        assert [p.get("eventIDs") for p in params] == [
-            "y-sooner",
-            "z-near",
-            None,
-            None,
-            "a-far",
-        ]
-        assert [p["leagueID"] for p in params if "leagueID" in p] == ["NFL", "NBA"]
-        assert all(p.get("includeAltLines") is True for p in params if "eventIDs" in p)
+        assert len(params) == 2
+        assert [p["leagueID"] for p in params] == ["NFL", "NBA"]
+        assert all("eventIDs" not in p and not p.get("includeAltLines") for p in params)
         assert all(
             p["startsBefore"] == (worker.at + timedelta(hours=24)).isoformat()
             for p in params
             if "leagueID" in p
         )
         assert owner.monitor is None and len(store.runs) == 1
+        assert store.updates[-1][1]["state"] == "complete"
+        assert store.updates[-1][1]["event_count"] == 3
+
+    asyncio.run(scenario())
+
+
+def test_discovery_walks_all_cursor_pages_then_waits_for_the_next_slot():
+    async def scenario():
+        store, worker = Store(), Worker()
+        original = worker._fetch
+
+        async def fetch(params):
+            page = await original(params)
+            return Page(page.events if not params.get("cursor") else (), page.quotes,
+                        "next-page" if not params.get("cursor") else None,
+                        page.receipt_sha256)
+
+        worker._fetch = fetch
+        owner = ActivityCollector(worker, store=store)
+        await owner.tick()
+        assert owner.monitor is not None
+        assert store.updates[-1][1]["progress"]["cursor"] == "next-page"
+        await owner.tick()
+        await owner.tick()
+        assert len(worker.calls) == 2 and len(store.runs) == 1
+        assert [params.get("cursor") for _, params in worker.calls] == [None, "next-page"]
+        assert all(params["leagueID"] == "NFL" and "eventIDs" not in params
+                   for _, params in worker.calls)
+        assert owner.monitor is None and store.updates[-1][1]["state"] == "complete"
+        assert store.updates[-1][1]["event_count"] == 1
 
     asyncio.run(scenario())
 
@@ -450,9 +500,12 @@ class Worker:
         )
 
 
-def test_monitor_continues_through_live_and_inactivity_without_thirty_minute_wait():
+@pytest.mark.parametrize("empty", [False, True])
+def test_live_intent_adds_no_saved_game_requests_or_empty_minute_runs(empty):
     async def scenario():
         store, worker = Store(), Worker()
+        if empty:
+            worker.events = {}
         owner = ActivityCollector(worker, store=store)
         await owner.tick()
         assert [r["kind"] for r in store.runs] == ["monitor"]
@@ -461,20 +514,30 @@ def test_monitor_continues_through_live_and_inactivity_without_thirty_minute_wai
         store.value["revision"] = 2
         worker.at = AT + timedelta(seconds=30)
         await owner.tick()
-        assert [r["kind"] for r in store.runs] == ["monitor", "live"]
+        assert [r["kind"] for r in store.runs] == ["monitor"]
         assert owner.monitor_due == monitor_due
+        intent = deepcopy(store.value)
         worker.at += timedelta(seconds=1)
         await owner.tick()
-        assert len(worker.calls) == 3
+        assert len(worker.calls) == 1
         worker.at = AT + timedelta(seconds=90)
         await owner.tick()
-        assert len(worker.calls) == 4 and worker.calls[-1][0]["kind"] == "live"
+        assert len(worker.calls) == 1 and len(store.runs) == 1
+        store.value["settings"]["live_interval_seconds"] = 1
+        store.value["settings"]["live_window_seconds"] = 120
+        worker.at += timedelta(seconds=1)
+        await owner.tick()
+        assert len(worker.calls) == 1 and len(store.runs) == 1
+        store.value = intent
         worker.at = AT + timedelta(minutes=15)
         await owner.tick()
-        assert owner.previous_mode == "monitor"
+        assert len(worker.calls) == 1 and store.value == intent
         worker.at = AT + timedelta(minutes=30)
         await owner.tick()
         assert [r["kind"] for r in store.runs].count("monitor") == 2
+        assert len(worker.calls) == 2
+        assert all(run["kind"] == "monitor" and "leagueID" in params
+                   for run, params in worker.calls)
         assert (
             next(params for _, params in worker.calls if "leagueID" in params)[
                 "startsBefore"
@@ -728,27 +791,25 @@ def test_sgo_envelope_tags_each_observation_without_renewing_source_timestamps()
     assert list(page.quotes) == original
 
 
-def test_revoked_live_run_is_partial_instead_of_a_successful_empty_capture():
-    from app.collection.current_policy import PregameWindowClosed
-
+def test_prior_live_run_remains_partial_history_without_replacement_jobs():
     async def scenario():
         store, worker = Store(), Worker()
         store.value = row("live")
-        original = worker._fetch
-
-        async def fetch(params):
-            if worker.collection_run["kind"] == "live":
-                raise PregameWindowClosed()
-            return await original(params)
-
-        worker._fetch = fetch
+        store.value["settings"]["monitor_phase_seconds"] = 1200
+        store.runs = [dict(id="prior-live", kind="live", started_at=AT.isoformat())]
+        worker.at = AT + timedelta(minutes=1)
+        intent = deepcopy(store.value)
         owner = ActivityCollector(worker, store=store)
         await owner.tick()
         live = [values for run, values in store.updates if run["kind"] == "live"]
         assert (
             live[-1]["state"] == "partial"
-            and live[-1]["reason"] == "live_scope_revoked"
+            and live[-1]["reason"] == "discovery_checkpoint_policy"
         )
+        worker.at += timedelta(minutes=1)
+        await owner.tick()
+        assert len(store.runs) == 1 and not worker.calls
+        assert store.value == intent
 
     asyncio.run(scenario())
 
@@ -852,20 +913,21 @@ def test_final_async_eligibility_rechecks_source_controls_and_releases_unused_re
         asyncio.run(scenario(stage))
 
 
-def test_live_page_crossing_archive_threshold_prevents_same_tick_monitor_dispatch():
+def test_discovery_page_crossing_archive_threshold_blocks_the_next_league():
     from app.collection.current_policy import DEFAULT
     from app.collection.sportsgameodds_worker import SportsGameOddsWorker
 
     async def scenario():
         store = Store()
         store.value = row("live")
-        store.status = lambda at: dict(
-            project(store.value, at=at), retention={"staged_bytes": 31 * 1024 * 1024}
-        )
         stage = {"bytes": 31 * 1024 * 1024}
+        original_status = store.status
+        store.status = lambda at: dict(
+            original_status(at), retention={"staged_bytes": stage["bytes"]}
+        )
         calls = []
         service = SimpleNamespace(
-            config=deepcopy(DEFAULT),
+            config=dict(deepcopy(DEFAULT), sports=["NFL", "NBA"], aggregate_sports=[]),
             activity_mode_enabled=True,
             dispatch=True,
             globally_stopped=False,
@@ -890,31 +952,34 @@ def test_live_page_crossing_archive_threshold_prevents_same_tick_monitor_dispatc
 
         async def fetch(params):
             assert await worker.request_in_scope_async(params)
-            calls.append(worker.collection_run["kind"])
+            calls.append(params["leagueID"])
             stage["bytes"] = 32 * 1024 * 1024
             return Page(tuple(worker.events.values()), (), None, "a" * 64)
 
         worker._fetch = fetch
         owner = ActivityCollector(worker, store=store)
         await owner.tick()
-        assert calls == ["live"]
+        assert calls == ["NFL"]
+        await owner.tick()
+        assert calls == ["NFL"]
         assert store.updates[-1][0]["kind"] == "monitor"
         assert store.updates[-1][1]["reason"] == "archive_backlog"
 
     asyncio.run(scenario())
 
 
-def test_budget_contention_reserves_next_released_slot_for_waiting_kind(monkeypatch):
+def test_discovery_budget_delay_resumes_same_run_without_live_jobs(monkeypatch):
     from app.collection import activity_collector as module
 
     async def scenario():
         store, worker = Store(), Worker()
         store.value = row("live")
+        worker.service.config["sports"] = ["NFL", "NBA"]
         worker.ledger = object()
         worker.window_id = "fixture"
         params = worker.params
         worker.params = lambda **kw: dict(params(**kw), limit=1)
-        slots = {"available": 1}
+        slots = {"available": 0}
 
         def budget(ledger, window, requested, at):
             if slots["available"] < requested:
@@ -925,18 +990,16 @@ def test_budget_contention_reserves_next_released_slot_for_waiting_kind(monkeypa
 
         monkeypatch.setattr(module, "budget_admit", budget)
         owner = ActivityCollector(worker, store=store)
-        for seconds in (0, 60, 120, 180):
+        await owner.tick()
+        assert not worker.calls and len(store.runs) == 1
+        assert store.updates[-1][1]["state"] == "budget_delayed"
+        for seconds in (1, 2, 60, 120):
             worker.at = AT + timedelta(seconds=seconds)
             slots["available"] = 1
             await owner.tick()
-        assert [run["kind"] for run, _ in worker.calls][:4] == [
-            "live",
-            "monitor",
-            "live",
-            "monitor",
-        ]
-        assert sum(run["kind"] == "monitor" for run, _ in worker.calls) >= 2
-        assert sum(run["kind"] == "live" for run, _ in worker.calls) >= 2
+        assert [params["leagueID"] for _, params in worker.calls] == ["NFL", "NBA"]
+        assert all(run["kind"] == "monitor" for run, _ in worker.calls)
+        assert len(store.runs) == 1 and store.updates[-1][1]["state"] == "complete"
 
     asyncio.run(scenario())
 
