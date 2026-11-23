@@ -242,3 +242,35 @@ zero/nonzero fees, native contract grids, on/off invalidation and offline export
 reproduction. The genuine 6,157-record historical bundle still reproduces both
 checkpoints unchanged. Hosted deployment and final installed follow-up evidence
 are reported with the follow-up commit/run, separately from these local checks.
+
+### Installed follow-up evidence
+
+Application commit `6044281b5c61eee84f741928e599f5e5a590b396` is installed.
+Normal [CI/deploy run 45109399267](https://github.com/dock108dev/predict/actions/runs/45109399267)
+succeeded in **92 seconds** (04:02:11–04:03:43 UTC). The unchanged four service
+roles are healthy; the release actually replaced the application images. Local
+normal checks passed in 17.064 seconds: 264 portable tests plus 41 subtests and
+32 PostgreSQL tests plus three subtests, with lint/workflow/secrets passing.
+
+Installed follow-up verified 49 freshly collected games, the owner's expired
+bookmark recovering, the useful default summary, Open game without another
+list read, full calculation-status context, exact export, reload and Back, and
+the off/usable Settings switch. The isolated browser used an 800 CSS-pixel
+viewport at 1.5 device scale for the 1200-pixel 150% layout; this is separate from
+the earlier native owner's retained-150% journey. All observed read/export APIs
+reported zero provider requests, with no browser errors. Public unauthenticated
+access remains 401 and both proxy authentication file hashes are unchanged.
+
+The installed current calculation queue was empty with **860 numeric zero-fee
+calculations and zero numeric fee-enabled/legacy calculations**. One genuine
+Prophet Exchange example at +285 committed $100 and returned $385 in the win
+state, using recorded probability 85/319: exact EV 3/116 (+2.59%), with every fee
+zero. Mode, source clocks and exact revision are in the matching downloaded
+export. The dedicated disposable tests prove enabling fees restores nonzero
+fees and that disabling them rebuilds the same source prices without acquisition.
+
+Fresh T−10 comparisons await their actual scheduled captures. Early checkpoints
+captured before this later fee instruction retain their original assumption;
+new checkpoints record the actual selected mode. NCAAB model/game-log work
+remains deferred. Private screenshots, exports, normal-CI artifacts and installed
+journey receipts are in `.local/personal-workspace-20261122/`.

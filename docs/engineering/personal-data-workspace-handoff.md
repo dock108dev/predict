@@ -143,3 +143,9 @@ fees defaults off and is available in Settings. Current calculations and new
 checkpoints record the chosen assumption; frozen historical evidence retains its
 original mathematics. The operating guide documents the durable flag and its
 recalculation behavior.
+
+The follow-up is installed at `6044281`; normal CI/deploy run
+[45109399267](https://github.com/dock108dev/predict/actions/runs/45109399267)
+passed in 92 seconds. The installed 49-game journey and zero-fee exact export,
+Settings, expired bookmark, Back/reload and role health passed. Detailed evidence
+and the pending fresh T−10 limitation are in the active assignment record.
