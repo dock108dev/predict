@@ -143,14 +143,17 @@ class Assets(unittest.IsolatedAsyncioTestCase):
                         else re.findall(r"(?:from\s+|import\s*)['\"]([^'\"]+)['\"]", source)
                     )
                     if path in scripts and "scanner.js" not in path and "prism.js" not in path:
-                        endpoint = ("/api/research/catalog" if page == "/research" else
+                        endpoint = ({
+                            "research.js": "/api/research/catalog",
+                            "experiment.js": "/api/research/experiment",
+                        }[Path(path.split("?")[0]).name] if page == "/research" else
                             "/api/pregame" if page in ("/opportunities","/ev","/browse-odds","/game","/arbs") else
                             "/api/comparison-current" if page in PUBLIC_DESK_PAGES else "/api/comparison-snapshot")
                         self.assertIn(endpoint, source)
                         self.assertNotIn("new SavedReadPoller", source)
                     pending.extend(urljoin(path, module) for module in imports)
                 expected = (
-                    {"pregame.css", "research.css", "research.js", "manrope.ttf"}
+                    {"pregame.css", "research.css", "research.js", "experiment.js", "manrope.ttf"}
                     if page == "/research" else
                     {"pregame.css", "manrope.ttf"}
                     if page == "/about" else

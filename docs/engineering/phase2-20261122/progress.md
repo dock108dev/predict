@@ -388,3 +388,50 @@ Private runtime/export/proof evidence is under `.local/phase2-20261122/`:
 `final-population-export.json`, `offline-population-proof.json`, and the
 `real-chain/` original/evaluation/export records. Public source does not include
 private observations or credentials.
+
+## First-observation / T−10 experiment installed closeout
+
+The successor policy is documented in `docs/ev-checkpoint-experiment.md`.
+Feature release `e74b73d` and correction `a8a482f` were pushed on main and
+deployed through runs `45084842627` and `45088113403`. The latter installs
+migration 115 and the lossless checkpoint encoding. Installed runtime, migration
+hashes, controls and account records are checked separately from hosted CI.
+
+Magic–Wizards and UAB–Rhode Island completed both actual scheduled checkpoints.
+Magic's early/late receipts were 23:49:40.675527 and 23:50:18.155335 UTC on
+November 22; both persisted inside their declared windows. Its one retained
+Kalshi-labelled Orlando −25.5 alternate remained +1241 with exact screening EV
+293983/3608917 at both points. All nine requested books and six outcome IDs
+arrived; a provider pagination cursor remains an explicit completeness caveat.
+The owner-required actual pair is complete without a fabricated T−24h claim.
+
+Bootstrap late priority exposed a separate NHL ordering error. Future late tasks
+now wait for their early task to resolve. The installed Pittsburgh correction
+at 00:25:20 UTC aliases the earliest existing page as baseline, preserves all
+five original records and clocks, and appends correction/comparison records.
+Its complete 3,018-record export reproduces both historical pages offline and
+retains one explicitly timing-incomplete positive case, with no new source call.
+
+Whole-checkpoint deterministic gzip reduced the actual Magic pair's retained
+representation from 11,334,804 to 1,729,132 bytes, with identical decoded inputs
+and exact arithmetic. Previous immutable rows are not rewritten; legacy data
+and late reservations leave little current logical headroom. Refusals remain
+visible. The 128 MiB allocation and existing source/account/SQL/disk guards stay
+unchanged. At most five timed postgame attempts are installed; real final-result
+arrival for these newly tracked games is future operating evidence, not a new
+milestone gate.
+
+Final focused checks passed 37 PostgreSQL tests and 32 portable tests with ten
+subtests. Native browser QA clicked the complete export at 150% zoom and checked
+390px mobile plots, explicit missing points and reference-only price context.
+The initial hosted run's sole failure was a stale asset test assuming every
+Research script used the old catalog API. Its corrected endpoint-specific test
+passes eight tests/four subtests while preserving actual delivery assertions.
+Full required CI follows the coordinated final-main integration revision; the
+GitHub result remains authoritative for that separate repository gate.
+
+Private evidence is in `.local/ev-experiment-20261122/` and
+`.local/ev-experiment-installed/`, including actual exports, offline proofs,
+installed bootstrap correction, local/hosted failure receipts and browser QA.
+The local read-only snapshot preview has been restored to port 8784 with schema
+115; no local collector or provider request was started.

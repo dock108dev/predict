@@ -6,11 +6,25 @@ Current policy and operating details are in `docs/ev-checkpoint-experiment.md`.
 
 | Current checkpoint | State | Evidence needed |
 | --- | --- | --- |
-| Versioned policy and scheduling transition | Implemented; SQL integration in progress | Immutable activation, old history preserved, primary scheduler replaced |
+| Versioned policy and scheduling transition | Integrated and installed, migration 115 | Immutable activation, old history preserved, primary scheduler replaced |
 | Guarded early/late acquisition and coverage | Deployed; Magic–Wizards and UAB completed both scheduled checkpoints | Actual nine-book full-alternate request/receipt/persistence clocks, explicit timing/completeness caveats |
-| Exact identity, sign selection and cross-reference math | Implemented; 22 portable checks passed | Independent branches, unavailable and chronology cases, offline reproduction |
+| Exact identity, sign selection and cross-reference math | Integrated; real exports reproduce offline | Independent branches, unavailable and chronology cases; final focused checks include 37 PostgreSQL tests and 32 portable tests plus 10 subtests |
 | Comparison, source context, observed plots and exports | Installed native 150% and mobile checks passed | Complete native-click export and offline reproduction of both real snapshots |
-| Scheduled operation, outcomes, storage and deployment | Bootstrap ordering/encoding repair integrating | Actual owner-required live pair complete; fix late-before-early order, preserve correction history, reduce measured retained bytes without capraise; final CI/deployment remains |
+| Scheduled operation, outcomes, storage and deployment | Corrective product revision `a8a482f` deployed; required hosted CI tracked on final integration revision | Both live pairs retained; append-only Pittsburgh baseline correction verified; lossless encoding reduces measured pair by 84.7%; no cap raise or historical rewrite |
+
+Deployment run `45088113403` installed `a8a482f` through the existing workflow.
+All 115 migration hashes match. The stale asset-delivery assertion from initial
+CI `45084819231` was reproduced and corrected: each Research script must call
+its own endpoint; all existing delivery checks remain. Its focused suite passes
+eight tests and four subtests. The coordinated personal-server CI/CD change
+will run the full required checks on the combined final main revision; that
+GitHub check is the source for hosted completion, separate from installed proof.
+
+The research allocation remains finite. Legacy evidence and existing late
+reservations nearly fill 128 MiB; the compact format reduces future writes but
+does not reclaim prior rows. Capacity refusals are reported and are not retried
+with later observations. Export preserves every retained game revision and its
+dependencies. There is no new cap, eviction, service or profitability gate.
 
 The live stopping condition comes from the owner's explicit two-checkpoint
 verification request. No positive cases, minimum early lead time, completed game

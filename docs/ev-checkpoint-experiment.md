@@ -154,3 +154,21 @@ The initial Magic export contained 12,076 immutable records and reproduced 84
 numeric results among 397 offers at each checkpoint offline, without provider
 or database calls. Private evidence and later storage/correction verification
 are under `.local/ev-experiment-20261122/` and `.local/ev-experiment-installed/`.
+
+Corrective release `a8a482f` deployed in run `45088113403`, with all 115
+migration hashes matching. At 00:25:20 UTC an explicit role correction made
+Pittsburgh–Dallas's earliest actual receipt (23:50:51.201280 UTC) its baseline.
+The advanced former early page remains context; the duplicate late role is
+non-comparable. All five original game records were unchanged, two records were
+appended, and the corrected complete export reproduced both historical pages
+offline. This repair used zero new provider requests and did not backdate a
+capture. Its one positive available case remains explicitly incomplete.
+
+The existing research allocation is nearly full because historical evidence and
+previous late reservations remain charged. Future smaller captures can consume
+their own protected reservations; this is not permission to retry refused early
+baselines or manufacture missed observations. Download complete game exports
+before making any separately authorized archival/capacity decision. Unique
+evidence is never automatically discarded. Physical server cleanup is owned by
+the separate personal-server assignment and does not reclaim logical research
+allocation.
