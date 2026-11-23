@@ -1,8 +1,13 @@
 # Phase boundary record
 
-November 22, 2026. The [active queue](queue.md) governs this continuous assignment.
-This records completed actions and their actual evidence; later phases continue
-while scheduled runtime evidence is pending.
+November 22, 2026. The [completion record](queue.md) gives the current status.
+This records the implementation sequence and its actual evidence, including
+observations collected while other engineering was still in progress.
+
+Phase 2 is now complete. Sections below preserve the chronological record,
+including earlier pending work and failures. The final 102-second changed-role
+CI and installed state appear in the closing section and the
+[current completion record](queue.md).
 
 ## Phase 1: recovery and coverage
 
@@ -487,3 +492,35 @@ Its 73-second job verified an already recovered healthy release; it is not fresh
 changed-role timing evidence. The acquisition follow-up uses the same required
 focused pipeline. Its GitHub result and final installed role/policy check remain
 the authoritative closeout for that change. No new broad diagnostic is required.
+
+## Final installed completion and private beta CI
+
+November 22, 2026, 8:13:50 PM Eastern. Application baseline
+`6ed321157bb44dd98833deeaf246a371940477b8` is installed. Required
+[CI/deployment run 45093123941](https://github.com/dock108dev/predict/actions/runs/45093123941)
+succeeded in 102 seconds for the complete job, including actual replacement of
+web, collector and archive. Setup and focused checks fell from 36 to 17 seconds
+using the same locked dependencies through uv. The earlier 73-second reused-image
+run is historical, not the final changed-role timing proof.
+
+All four services are healthy, app roles have zero restarts, role fingerprints
+match and all 115 migration hashes match. Monitor is active with interval/phase/
+horizon 1800/1200/86400, no separate saved-game refreshes and zero new Live jobs.
+Stop and source pauses are unchanged. The 86 interrupted ledger rows representing
+94 account objects are preserved, with no held/overrun state. Five valid distinct
+checkpoint pairs and scheduled T−10/bounded outcome tasks are retained.
+
+The same observation recorded 10,225,788 unreserved bytes under the unchanged
+128 MiB research allocation. Later read-only readiness checks confirmed roughly
+21.2 GB physical disk free, current/rollback images resolving, the deploy lock
+clear, public research 401 and internal health 200. Physical disk headroom does
+not enlarge research retention or guarantee future capture coverage.
+
+Private evidence remains at
+`.local/ev-experiment-20261122/final-discovery-installed-6ed-check.json`.
+Phase 2 engineering, integration and verification are complete. Pending sporting
+outcomes, visible missed/refused captures and finite storage remain explicit.
+Accuracy/calibration, comprehensive NCAAB game logs, executable liquidity and
+profit are separate research. The
+[NCAAB model research backlog](../ncaab-model-research-backlog.md) records the
+next expansion without enabling implementation or changing runtime policy.

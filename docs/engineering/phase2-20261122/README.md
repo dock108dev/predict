@@ -1,5 +1,11 @@
 # Prediction data and calculation audit
 
+Historical starting audit. Phase 2 implementation and verification are complete;
+use the [completion record](queue.md) for installed state and CI/CD. The
+[NCAAB model and game-log backlog](../ncaab-model-research-backlog.md) is deferred.
+The observations and proposals below describe the original baseline, not current
+operating failures.
+
 November 22, 2026. Baseline: `main`, commit `5d66f855ccc8c37530dd9e6ea2eae9549c3b7f12`, version 0.2.0. The checkout was clean before this documentation work. The deployed web, collector and archive images identify the same commit.
 
 The recommendation is to **keep the acquisition, identity, calculation and evidence foundation; retire competing product plans; and make a simple research workspace the primary interface**. A wholesale rewrite would discard useful, tested behavior. Phase 2 should prove data correctness and reproducible calculations. Profitability, public release, onboarding and marketing are separate possible outcomes.
