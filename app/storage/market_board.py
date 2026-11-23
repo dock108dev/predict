@@ -9,6 +9,7 @@ from fractions import Fraction
 from copy import deepcopy
 
 from app.comparison.snapshot_fee_outcome import VENUES
+from app.comparison.sportsbooks import SPORTSBOOKS
 from app.storage.store import hashed
 
 
@@ -345,7 +346,8 @@ def detail(db, *, market_id, pull_id, offer_id=None, revision=None):
         selected_row['headline'] = offer_summary(selected_row['headline'])
     return dict(schema='predict-market-evidence-1', row=selected_row, offers=[offer_summary(item) for item in offers],
         selected_offer=exact, reference_inputs=[item for item in snapshot.get('references',[])
-            if (item.get('facts') or item).get('market')==selected['family']],
+            if (item.get('facts') or item).get('market')==selected['family']
+            and (item.get('facts') or item).get('venue') in SPORTSBOOKS],
         raw_quotes=[item for item in snapshot.get('raw_quotes',[]) if item.get('market')==selected['family']],
         history=[_capture(item) for item in history], snapshot=snapshot,
         acquisition=dict(pull_id=pull_id,request_scope=selected['request_scope'],details=selected['details'],

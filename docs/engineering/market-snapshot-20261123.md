@@ -118,3 +118,31 @@ Integrated follow-up checks pass:278 portable tests +26 subtests;49 SQL tests
 +6 subtests, including all originally selected SQL targets and new restart/isolation
 cases. The path-based selector intentionally selects different portable owners
 for this narrower follow-up; the earlier full implementation check remains374.
+
+### Normal release and retained-data recovery
+
+Normal CI/deploy45227966609 succeeded on `e6862a0` in105.665 measured seconds,
+without changing the two-minute job limit or55-second handoff allowance.
+The preceding run45227614767 failed during GHCR publication (`unknown blob`),
+not validation or handoff; the same revision succeeded on the next normal run.
+Reports for all runs are retained in `.local/market-snapshot-20261123/ci-*`.
+
+Installed recovery linked15 historical captures before yielding to the ordinary
+12:20 PM Eastern T−10 writer's lock. That scheduled checkpoint completed normally.
+The resumed finite recovery linked28 more, skipped16 already-linked/modern
+operations and refused11 links at the unchanged research retention cap. These
+11 original checkpoints remain inspectable as legacy evidence; no source data,
+old arithmetic or account record was rewritten and no provider request was made.
+
+The public-site exact offer journey opened Maryland Eastern Shore moneyline at
+Novig +900, stored screening EV +6.62%, supporting DraftKings pair +800/−1350,
+reference probability10.66% and Fees OFF. A browser-generated export retained the
+selected pull/offer/revision and reproduced all8 numeric moneyline offers offline.
+An expired SQL paging lease renewed without changing that exact selection.
+
+Final reference-tab review found normalized reference storage also includes the
+trading venues. The focused tab now projects sportsbook inputs only; the complete
+immutable snapshot/export still retains every original input. A real snapshot
+SQL regression covers this distinction. Affected checks:102 portable +26 subtests,
+12 PostgreSQL +3 subtests, lint/workflow/secret checks pass. Final publication and
+remaining installed journeys follow below.

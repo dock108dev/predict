@@ -243,6 +243,9 @@ class MarketBoardSQL(LatestBoardFixture):
                 offer_id=headline['id'],revision=headline['revision'])
             self.assert_exact_headline(headline,evidence['selected_offer'])
             self.assertGreater(len(evidence['reference_inputs']),0)
+            self.assertTrue(all((item.get('facts') or item)['venue'] not in
+                ('kalshi','polymarket_us','novig','prophetx','polymarket','prophetexchange')
+                for item in evidence['reference_inputs']))
             witness = evidence['selected_offer']['calculation_payload']['acquisition']
             self.assertTrue(witness['eligible'])
             self.assertGreaterEqual(len(witness['required_inputs']),5)
