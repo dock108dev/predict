@@ -4,7 +4,7 @@ const endpoint = '/api/workspace/mens-d1';
 const easternDay = new Intl.DateTimeFormat('en-CA', {timeZone:'America/New_York', year:'numeric', month:'2-digit', day:'2-digit'});
 const dates = [['2026-11-23', 'Nov 23'], ['2026-11-24', 'Nov 24']];
 const facets = {
-  source_mens:'Men’s games returned', expected:'Expected D1 games', excluded:'Excluded source rows',
+  source_mens:'Men’s games returned', expected:'Eligible source games', excluded:'Excluded source rows',
   membership_unresolved:'Unverified membership', matched:'Matched to odds', source_only:'Source only',
   provider_only:'Odds provider only', provider_conflict:'Provider identity or schedule conflict',
   result_only:'Result without schedule', no_market:'No market observed', identity_conflict:'Identity conflict',
@@ -112,9 +112,11 @@ function coverageSummary(value, query) {
     : population.source_identity === 'sports_reference' ? 'Sports Reference' : 'Independent source';
   const retainedSlate = population.source_eligible_games == null ? '' :
     ` ${sourceName} returned ${count(population.source_returned_mens_games)} games, including ${count(population.source_eligible_games)} verified D1 matchups. ${count(population.source_eligible_known_before_tminus10)} were retained before T−10.`;
+  const additional = population.source_corroborated_additional_eligible
+    ? ` Official sources identify ${count(population.source_corroborated_additional_eligible)} additional D1 matchups with an unresolved participant in the dated receipt.` : '';
   const entries = [
     ['Population coverage', (population.expected_games == null ? `${count(population.provider_known_games)} provider-known · complete expected slate unknown.`
-      : `${denom(population.matched_games, population.expected_games)} source-declared eligible games linked to the odds provider.`) + retainedSlate,
+      : `${denom(population.matched_games, population.expected_games)} source-declared eligible games linked to the odds provider.`) + retainedSlate + additional,
       population.observed_at || population.as_of, population.revision ? 'Source games' : 'Provider-known games',
       population.revision ? 'expected' : 'provider_scope_eligible'],
     ['Capture coverage', `${denom(capture.current_frozen, capture.current_denominator)} ${scope} frozen in the current ledger. ` +
@@ -311,6 +313,15 @@ function gameDetail(row, value, query) {
   if (result.teams?.length) root.append(table(['Participant', 'Final score', 'Period scores'], result.teams.map(team => [
     team.name || team.id, team.score, team.period_scores?.length ? team.period_scores.join(' · ') : 'Not supplied',
   ])));
+  if (row.official_source_evidence?.length) {
+    root.append(node('h4', 'Official school or conference evidence'));
+    for (const evidence of row.official_source_evidence) {
+      const participants = evidence.teams.map(team => team.score == null ? team.name : `${team.name} ${team.score}`).join(' · ');
+      const description = `${participants} · ${evidence.status === 'final' ? 'Sporting final' : time(evidence.scheduled_start)}`;
+      root.append(node('p', description), link(evidence.publisher, evidence.source_url),
+        node('p', `Observed ${time(evidence.observed_at)} · Recorded ${time(evidence.recorded_at)}`, 'workspace-clocks'));
+    }
+  }
   const sources = node('div', undefined, 'workspace-links');
   addReceipt(sources, 'Original schedule receipt', schedule.receipt_id || row.receipt_id);
   addReceipt(sources, 'Original result receipt', result.receipt_id);

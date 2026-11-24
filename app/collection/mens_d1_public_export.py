@@ -6,6 +6,7 @@ from hashlib import sha256
 import json
 from pathlib import Path
 import sys
+from urllib.parse import urlsplit
 
 from psycopg.types.json import Jsonb
 
@@ -21,6 +22,7 @@ URL = 'https://www.collegebasketballdata.com/exporter/games'
 TERMS = 'https://www.collegebasketballdata.com/terms'
 ACQUISITION = 'official_public_exporter_displayed_rows'
 PARSER_VERSION = 'college-basketball-data-public-exporter-1'
+CORROBORATION_VERSION = coverage.OFFICIAL_CORROBORATION_VERSION
 STATUS = dict(scheduled='scheduled', in_progress='incomplete', final='final',
               postponed='postponed', cancelled='cancelled')
 GAME_FIELDS = {'Id', 'SourceId', 'Season', 'StartDate', 'StartTimeTbd', 'NeutralSite', 'Status', 'Venue'}
@@ -207,12 +209,7 @@ def attach(db, body):
         # Account for one append to each schedule and independent result ledger,
         # including the original pages, normalized rows and each binding revision.
         size = 6 * (len(body) + len(encoded(grouped_to_json(grouped))))
-        usage = records.retention_usage(db)
-        if usage['total'] + usage['reserved'] + size > records.TOTAL_BYTE_CAP:
-            raise ValueError('research_retention_capacity')
-        if sql_usage(db) + size + 8 * 1024 * 1024 > SQL_BYTE_CAP:
-            raise ValueError('research_sql_runway')
-        require_disk_space(ROOT / '.local/postgres', append_bytes=size)
+        _admit_storage(db, size)
         for day, rows in sorted(grouped.items()):
             for kind in ('schedule', 'results'):
                 purpose = f'{kind}_public_export_{digest[:24]}'
@@ -236,6 +233,77 @@ def attach(db, body):
     return grouped
 
 
+def _admit_storage(db, size):
+    usage = records.retention_usage(db)
+    if usage['total'] + usage['reserved'] + size > records.TOTAL_BYTE_CAP:
+        raise ValueError('research_retention_capacity')
+    if sql_usage(db) + size + 8 * 1024 * 1024 > SQL_BYTE_CAP:
+        raise ValueError('research_sql_runway')
+    require_disk_space(ROOT / '.local/postgres', append_bytes=size)
+
+
+def _official_game(note, original, day, observed):
+    url, publisher, start, status = (note[key] for key in ('source_url', 'publisher', 'scheduled_start', 'status'))
+    address = urlsplit(url)
+    if (address.scheme != 'https' or not address.hostname or address.username or address.password
+            or len(url) > 500 or not 0 < len(publisher) <= 120 or status not in ('scheduled', 'final')
+            or start and stamp(start).astimezone(coverage.EASTERN).date() != day):
+        raise ValueError('invalid_official_source_evidence')
+    membership = load_membership(day)
+    teams = []
+    for team in note['teams']:
+        evidence = membership.lookup(name=team['name'])
+        score = team.get('score')
+        if not evidence['canonical_id'] or (type(score) is not int or not 0 <= score <= 999
+                if status == 'final' else score is not None):
+            raise ValueError('invalid_official_team_or_score')
+        teams.append(dict(name=team['name'], canonical_id=evidence['canonical_id'], score=score, membership=evidence))
+    pair = coverage._pair(teams, 'canonical_id')
+    original_ids = {team['membership'].get('canonical_id') for team in original['teams']} - {None}
+    if (len(teams) != 2 or not pair or not original_ids or not original_ids <= pair
+            or original['membership_status'] == 'excluded'
+            or status == 'final' and teams[0]['score'] == teams[1]['score']):
+        raise ValueError('official_game_does_not_corroborate_source_row')
+    return dict(kind=CORROBORATION_VERSION, source_game_id=original['source_game_id'],
+        publisher=publisher, source_url=url, observed_at=coverage.clock(observed), status=status,
+        scheduled_start=coverage.clock(start), teams=teams)
+
+
+def attach_corroborations(db, body):
+    """Append verified school/conference facts while keeping the original source row intact."""
+    if not body or len(body) > coverage.MAX_PARSED_BYTES:
+        raise ValueError('official_evidence_size')
+    data = json.loads(body)
+    notes = data['games']
+    observed, now = stamp(data['observed_at']), coverage.utc()
+    if data['version'] != CORROBORATION_VERSION or observed > now or not 0 < len(notes) <= coverage.MAX_ROWS:
+        raise ValueError('invalid_official_evidence_artifact')
+    digest, entries = sha256(body).hexdigest(), []
+    with db.transaction():
+        records._writer_lock(db)
+        _admit_storage(db, len(body) * 10)
+        revisions = db.execute("""SELECT revision.id,revision.game_date,revision.facts,revision.observed_at
+            FROM public.mens_d1_revision revision JOIN public.mens_d1_receipt receipt ON receipt.id=revision.receipt_id
+            WHERE revision.source=%s AND revision.kind='schedule' AND receipt.body_sha256=%s
+            ORDER BY revision.immutable_sequence DESC""", (SOURCE, data['public_export_body_sha256'])).fetchall()
+        slates = {}
+        for revision in revisions:
+            slates.setdefault(str(revision['game_date']), revision)
+        for note in notes:
+            slate = slates.get(note['date'])
+            if not slate or observed < slate['observed_at']:
+                raise ValueError('official_evidence_original_slate_missing')
+            original = next((row for row in slate['facts'] if row['source_game_id'] == note['source_game_id']), None)
+            if original is None:
+                raise ValueError('official_evidence_original_game_missing')
+            facts = dict(_official_game(note, original, slate['game_date'], observed), artifact_sha256=digest)
+            identity = hashed([slate['id'], facts])
+            db.execute("""INSERT INTO public.mens_d1_binding(id,schedule_revision_id,facts)
+                VALUES (%s,%s,%s) ON CONFLICT (id) DO NOTHING""", (identity, slate['id'], Jsonb(facts)))
+            entries.append(identity)
+    return dict(artifact_sha256=digest, retained_corroborations=entries, provider_requests=0, charged_credits=0)
+
+
 def grouped_to_json(grouped):
     return {str(day): rows for day, rows in sorted(grouped.items())}
 
@@ -244,9 +312,16 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('receipt', help='Path to displayed public exporter receipt, or - for stdin')
     parser.add_argument('--validate-only', action='store_true', help='Verify the retained file without writing or querying production')
+    parser.add_argument('--corroborations', action='store_true', help='Attach reviewed official facts to an already-retained exporter receipt')
     args = parser.parse_args()
     body = (sys.stdin.buffer.read(MAX_FIRECRAWL_RESPONSE_BYTES + 1) if args.receipt == '-' else
             Path(args.receipt).read_bytes())
+    if args.corroborations:
+        if args.validate_only:
+            parser.error('Corroboration validation requires the original slate database receipt')
+        with connect() as db:
+            print(encoded(attach_corroborations(db, body)).decode())
+        return
     if args.validate_only:
         _, _, grouped, _ = parse(body, now=coverage.utc())
     else:

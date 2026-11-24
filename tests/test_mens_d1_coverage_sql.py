@@ -138,6 +138,24 @@ class MensD1CoverageSQL(LatestBoardFixture):
             self.assertEqual(coverage.read_coverage(db, DAY, at=at)['counts']['source_eligible'], None)
             usage = db.execute('SELECT count(*) AS n,sum(charged_credits) AS charged FROM public.mens_d1_attempt').fetchone()
             self.assertEqual(usage, {'n': 2, 'charged': 0})
+            official = dict(version=public_export.CORROBORATION_VERSION, observed_at=coverage.clock(coverage.utc()),
+                public_export_body_sha256=sha256(receipt).hexdigest(), games=[dict(date=str(DAY),
+                    source_game_id='cbbd:123', source_url='https://fixture.invalid/boxscore', publisher='Fixture recap',
+                    scheduled_start=None, status='final', teams=[dict(name='Seattle University', score=83),
+                        dict(name='Duke', score=80)])])
+            proof = public_export.attach_corroborations(db, json.dumps(official).encode())
+            self.assertEqual(public_export.attach_corroborations(db, json.dumps(official).encode()), proof)
+            updated = coverage.read_coverage(db, DAY, at=coverage.utc())
+            self.assertEqual(updated['population_revision'], value['population_revision'])
+            self.assertEqual(updated['counts']['source_eligible'], 1)
+            self.assertEqual(updated['counts']['source_corroborated_additional_eligible'], 1)
+            game_with_proof = next(game for game in updated['games'] if game['source_game_id'] == 'cbbd:123')
+            self.assertEqual(game_with_proof['scope_state'], 'unresolved')
+            self.assertEqual(game_with_proof['teams'][0]['name'], 'TBD')
+            witness, = game_with_proof['official_source_evidence']
+            self.assertEqual(witness['id'], proof['retained_corroborations'][0])
+            self.assertEqual(witness['status'], 'final')
+            self.assertEqual(witness['teams'][1]['score'], 80)
 
     def test_coalesces_overdue_schedule_and_preserves_challenge_vs_empty(self):
         observed = stamp('2026-11-24T15:15:00Z')

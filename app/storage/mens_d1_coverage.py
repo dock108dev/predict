@@ -14,6 +14,7 @@ from .store import ROOT, encoded, hashed, stamp
 
 SOURCE = 'sports_reference'
 PUBLIC_SOURCE = 'college_basketball_data'
+OFFICIAL_CORROBORATION_VERSION = 'official-game-corroboration-1'
 EASTERN = ZoneInfo('America/New_York')
 SCOPE = 'mens-d1'
 RECONCILIATION_VERSION = 'mens-d1-sgo-canonical-binding-2'
@@ -534,6 +535,17 @@ def _source_state(db):
         checked_at=None, budget={})
 
 
+def _official_corroborations(db, slate, at):
+    evidence = {}
+    for result in db.execute("""SELECT id,recorded_at,facts FROM public.mens_d1_binding
+        WHERE schedule_revision_id=%s AND recorded_at<=%s AND facts->>'kind'=%s
+        ORDER BY recorded_at,id""", (slate['id'], at, OFFICIAL_CORROBORATION_VERSION)):
+        facts = result['facts']
+        evidence.setdefault(facts['source_game_id'], []).append(dict(facts, id=result['id'],
+            schedule_revision_id=slate['id'], recorded_at=clock(result['recorded_at'])))
+    return evidence
+
+
 def read_coverage(db, game_date, *, at=None):
     day, at = source_date(game_date), at or utc()
     slates = schedule_revisions(db, day, at=at, source=None)
@@ -548,8 +560,17 @@ def read_coverage(db, game_date, *, at=None):
                            (population['evidence_id'], at)).fetchone()
         population['binding_revision_id'] = saved['id'] if saved else None
     result_rows = _result_rows(db, day, at, source=None)
+    official = _official_corroborations(db, slates[0], at) if slates else {}
+    eligible_pairs = {_pair(game['teams'], 'canonical_id') for game in games if game['scope_state'] == 'eligible'}
+    corroborated_pairs = set()
     for row in games:
         _with_result(row, result_rows, providers, at)
+        citations = official.get(row['source_game_id'])
+        if citations:
+            row['official_source_evidence'] = citations
+            pairs = {_pair(item['teams'], 'canonical_id') for item in citations}
+            if row['scope_state'] == 'unresolved' and len(pairs) == 1:
+                corroborated_pairs.update(pairs - eligible_pairs)
     used = {game['provider_event_id'] for game in games if game['provider_event_id']}
     disputed = {identity for g in games for identity in g['provider_candidate_ids']} - used
     provider_only = []
@@ -603,6 +624,7 @@ def read_coverage(db, game_date, *, at=None):
                 if slates else None,
             expected=population['expected_games'] if population else None,
             source_eligible=membership['eligible'] if slates else None,
+            source_corroborated_additional_eligible=len(corroborated_pairs) if slates else None,
             source_pre_tminus10=sum(row['known_before_tminus10'] is True for row in games
                 if row['scope_state'] == 'eligible') if slates else None,
             source_time_tbd=sum(row['schedule']['source_time_tbd'] is True for row in games
