@@ -170,6 +170,7 @@ class SportsGameOddsWorker:
         # headroom only; financial ledger exposure remains the actual request.
         self.request_lock = asyncio.Lock()
         self.experiment_late_waiting = False
+        self.experiment_late_windows = ()
         self.experiment_reserved_objects = 0
         self.experiment_reserved_requests = 0
 
@@ -358,11 +359,23 @@ class SportsGameOddsWorker:
             await self.update_study(page,admitted_at)
 
     async def _fetch(self, params):
+        from .experiment_acquisition import late_protection_until
+        from .activity_collector import ActivityBudgetDelayed
+
         while True:
-            while self.experiment_late_waiting:
-                await asyncio.sleep(0.01)
+            until = late_protection_until(self)
+            if until and getattr(self.service, 'activity_mode_enabled', False):
+                # Restart admission after the protected turn. An old ordinary
+                # quota check cannot authorize a request after late work spends it.
+                raise ActivityBudgetDelayed('protected_tminus10_capture_due', until)
+            if until or self.experiment_late_waiting:
+                controls = self.controls()
+                if controls['stopped'] or controls['source_paused']:
+                    raise PregameWindowClosed()
+                await asyncio.sleep(0.2)
+                continue
             async with self.request_lock:
-                if self.experiment_late_waiting:
+                if self.experiment_late_waiting or late_protection_until(self):
                     continue
                 return await self._fetch_owned(params)
 

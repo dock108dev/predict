@@ -77,9 +77,17 @@ class PregameOwner:
                 ),
             )
 
+    def protected_checkpoint_due(self):
+        from .experiment_acquisition import late_protection_active
+
+        worker = getattr(self.service, 'workers', {}).get('sportsgameodds')
+        return bool(worker and late_protection_active(worker))
+
     def turn(self):
         from app.storage.current_pregame import process, operational
 
+        if self.protected_checkpoint_due():
+            return
         with connect() as db:
             from app.storage.current_pregame import account_identity, configured_routes
 
@@ -106,7 +114,8 @@ class PregameOwner:
             result = process(
                 db,
                 limit=8,
-                can_continue=lambda: not BACKGROUND.critical_acquisition_pressure(),
+                can_continue=lambda: not (self.protected_checkpoint_due()
+                                          or BACKGROUND.critical_acquisition_pressure()),
             )
             from time import monotonic
 

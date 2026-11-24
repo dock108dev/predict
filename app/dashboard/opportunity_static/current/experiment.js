@@ -37,8 +37,9 @@ function role(value){return value&&value.status&&value.status!=='unknown'?[label
 function coverageLabel(value,checkpoints={}){
  if(!value)return 'Coverage not recorded';
  if('early' in value||'late' in value)return ['early','late'].map(stage=>{const status=checkpointStatus(checkpoints[stage]);return `${stage==='early'?'Early':'Late'}: ${!value[stage]&&['Scheduled','Capturing'].includes(status.label)?status.label+' · '+status.detail:coverageLabel(value[stage])}`;}).join('; ');
- if(value.incomplete===true)return 'Incomplete returned scope';
- if(value.incomplete===false)return 'Returned request scope; market completeness unestablished';
+ if(value.retrieval?.state==='complete_requested_event_response')return 'Requested event returned · venue-wide completeness unknown';
+ if(value.retrieval)return 'Requested event response completeness unknown';
+ if(typeof value.incomplete==='boolean')return 'Saved request and return counts · venue-wide completeness unknown';
  return label(value.state||value.status||value.scope);
 }
 function grid(root,values){const dl=node('dl',undefined,'research-detail-grid');for(const [key,value]of Object.entries(values).filter(([,value])=>value!==null&&value!==undefined&&value!==''))dl.append(node('dt',key),node('dd',known(value)));root.append(dl);return dl;}
@@ -143,9 +144,19 @@ function checkpointTiming(root,name,checkpoint,task){
  const mode=value.fee_mode||snapshot(checkpoint)?.fee_mode;if(mode)grid(panel,{'Captured fee mode':feeLabel(mode),'Fee assumption':mode.assumption});
  const coverage=value.coverage||snapshot(checkpoint)?.coverage;
  if(coverage){const list=items=>Array.isArray(items)?items.join(', ')||'None recorded':null;
-  grid(panel,{'Requested bookmakers':list(coverage.requested?.bookmakers),'Received bookmakers':list(coverage.received?.bookmakers),'Missing bookmakers':list(coverage.missing?.bookmakers),'Requested odd IDs':list(coverage.requested?.odd_ids),'Received odd IDs':list(coverage.received?.odd_ids),'Missing odd IDs':list(coverage.missing?.odd_ids),'Alternate lines requested':coverage.requested?.include_alt_lines,'Received quote count':coverage.received?.quotes,'Supported offer quote count':coverage.supported?.offer_quotes,'Supported reference quote count':coverage.supported?.reference_quotes,'Incomplete declared scope':coverage.incomplete,'Complete market established':coverage.complete_market,'Coverage scope':coverage.scope});
+  const retrieval=coverage.retrieval;
+  grid(panel,{
+   'Requested bookmakers':list(coverage.requested?.bookmakers),'Received bookmakers':list(coverage.received?.bookmakers),
+   'Requested bookmakers unreturned':list(coverage.missing?.bookmakers),'Requested odd IDs':list(coverage.requested?.odd_ids),
+   'Received odd IDs':list(coverage.received?.odd_ids),'Requested odd IDs unreturned':list(coverage.missing?.odd_ids),
+   'Alternate lines requested':coverage.requested?.include_alt_lines,'Returned book / outcome combinations':coverage.returned_cells,
+   'Received quote count':coverage.received?.quotes,'Supported offer quote count':coverage.supported?.offer_quotes,
+   'Supported reference quote count':coverage.supported?.reference_quotes,'Requested event response':coverageLabel(coverage),
+   'Event pagination':retrieval?label(retrieval.traversal):null,
+   'Complete market established':coverage.complete_market===true?'Yes':'Unknown','Coverage scope':coverage.scope,
+  });
  }
- evidence(panel,'Requested, received, supported, missing and incomplete coverage',coverage);
+ evidence(panel,'Requested scope, response and coverage evidence',coverage);
  evidence(panel,'Immutable checkpoint and original-receipt dependencies',checkpoint);
 }
 function measurementEvidence(root,name,value,offer,detail,stage){

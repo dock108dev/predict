@@ -108,6 +108,67 @@ class ExperimentAcquisitionSQL(PregameFixture):
         self.assertEqual(len(requests),1)
         self.assertEqual(worker.ledger.status(worker.window_id)['charged'],1)
 
+    async def test_simultaneous_late_tasks_exclude_ordinary_discovery_and_keep_stage_clocks(self):
+        import asyncio
+
+        from app.collection.activity_collector import ActivityBudgetDelayed
+        from app.collection.sportsgameodds_worker import SportsGameOddsWorker
+        from app.research.capture_forecast import late_capture_forecast
+
+        at = datetime.now(timezone.utc)
+        start = at + timedelta(minutes=10) - timedelta(seconds=2)
+        first = source_data(start)
+        second = deepcopy(first)
+        second['data'][0]['eventID'] += '-second'
+        bodies = {value['data'][0]['eventID']: value for value in (first, second)}
+        events = []
+        for body in bodies.values():
+            parsed = self.frame(body)
+            events.append(acquisition.event_metadata(parsed.events[0], parsed.receipt_sha256))
+
+        known_early = at - timedelta(minutes=10)
+        with self.connect() as db:
+            experiment.discover(db, events, at=known_early)
+            for claim in experiment.due(db, at=known_early, limit=2):
+                experiment.fail_checkpoint(db, claim['game_id'], 'early', 'fixture_early_unavailable',
+                                           token=claim['token'], at=known_early)
+            before = late_capture_forecast(db, at=at, headroom_bytes=100_000_000)
+            self.assertEqual(len(before['windows']), 1)
+            self.assertEqual(before['windows'][0]['maximum_event_requests'], 2)
+
+        service, worker, _ = self.worker(first)
+        service.activity_mode_enabled = True
+        calls = []
+
+        async def fetch(params, _credential):
+            calls.append(params['eventIDs'])
+            await asyncio.sleep(0.03)
+            return PageResponse(200, json.dumps(bodies[params['eventIDs']]).encode(),
+                                worker.now().isoformat(), None)
+
+        worker.transport.fetch = fetch
+        scheduler = acquisition.ExperimentAcquisition(service, connector=self.connect)
+        with patch.object(acquisition, 'connect', self.connect):
+            self.assertTrue(await scheduler.tick())
+            # Ordinary eligibility must be checked anew after the group, even
+            # during the gap between its two individually serialized requests.
+            with self.assertRaisesRegex(ActivityBudgetDelayed, 'protected_tminus10_capture_due'):
+                await SportsGameOddsWorker._fetch(worker, {'leagueID': 'NCAAB'})
+            self.assertTrue(await scheduler.tick())
+
+        self.assertCountEqual(calls, bodies)
+        self.assertEqual(worker.ledger.status(worker.window_id)['charged'], 2)
+        with self.connect() as db:
+            timings = [row['details']['timings'] for row in db.execute(
+                "SELECT details FROM market_pull WHERE state='complete' AND details ? 'timings'")]
+        self.assertEqual(len(timings), 2)
+        for clocks in timings:
+            ordered = [datetime.fromisoformat(clocks[key]) for key in (
+                'claimed_at', 'lane_entered_at', 'manifest_ready_at', 'usage_requested_at',
+                'response_received_at', 'original_retention_finished_at', 'parse_finished_at',
+                'calculation_finished_at', 'projection_ready_at', 'checkpoint_recorded_at')]
+            self.assertEqual(ordered, sorted(ordered))
+
     async def test_postgame_followup_runs_without_browser_and_final_stops_future_requests(self):
         now=datetime.now(timezone.utc)
         start=now-timedelta(hours=4)+timedelta(seconds=1)

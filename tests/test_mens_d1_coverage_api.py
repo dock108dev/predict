@@ -8,7 +8,7 @@ from unittest.mock import patch
 from aiohttp import web
 from aiohttp.test_utils import TestClient, TestServer
 
-from app.dashboard.mens_d1_coverage_api import BASE, coverage_view, mount
+from app.dashboard.mens_d1_coverage_api import BASE, _coverage_summary, coverage_view, mount
 from app.dashboard.request_guard import dashboard_guard
 from app.research import experiment
 from app.storage.store import stamp
@@ -19,6 +19,23 @@ from tests.pregame_fixture import PregameFixture
 DAY = "2026-11-23"
 AS_OF = "2026-11-23T22:00:00Z"
 RECEIPT = "d" * 64
+
+
+def test_current_population_and_saved_offer_denominators_are_independent():
+    current = [dict(provider_membership=dict(state="eligible"), capture=dict(state="captured"), facets=[]),
+               dict(provider_membership=dict(state="eligible"), capture=dict(state="refused"), facets=[])]
+    report = dict(as_of=AS_OF, games=[dict(status="reconstructed", observed_offer_count=7, evaluated_offers=3,
+        exclusions=dict(reference_exact_pair_unavailable=2, price_withdrawn=2, below_minimum_ev=3))],
+        portfolios={"all_venues": {"tickets": []}})
+    value = _coverage_summary(dict(as_of="2026-11-24T11:50:00-05:00", counts=dict(expected=None)), current, True, report)
+    assert value["population"]["expected_games"] is None
+    assert value["capture"]["current_denominator"] == 2
+    assert value["capture"]["current_refusals"] == 1
+    assert value["capture"]["saved_denominator"] == value["capture"]["saved_reconstructed"] == 1
+    assert value["reference"]["observed_offers"] == 7
+    assert value["reference"]["evaluated_offers"] == 3
+    assert value["reference"]["reference_gaps"] == 2
+    assert value["trade"]["variants"]["all_venues"]["tickets"] == 0
 
 
 def test_coverage_reads_and_downloads_do_not_dispatch():
@@ -40,9 +57,12 @@ def test_coverage_reads_and_downloads_do_not_dispatch():
     async def read_routes():
         app = web.Application(middlewares=[dashboard_guard(None, logger=__name__)])
         mount(app)
-        value = dict(date=DAY, source_state="disabled", population_revision=None, provider_requests=0, orders_submitted=0)
+        value = dict(date=DAY, source_state="disabled", population_revision=None, as_of=AS_OF,
+                     coverage_summary={"trade": {}}, provider_requests=0, orders_submitted=0)
         with patch('app.dashboard.mens_d1_coverage_api.connect', side_effect=ReadConnection), \
                 patch('app.dashboard.mens_d1_coverage_api.coverage_view', return_value=value) as read_coverage, \
+                patch('app.dashboard.mens_d1_coverage_api.market_view', side_effect=[dict(checkpoint_id=RECEIPT),
+                    (dict(receipt_sha256=RECEIPT), b'{"success":true}')]) as read_markets, \
                 patch('app.storage.mens_d1_coverage.read_status', return_value=dict(state="disabled")), \
                 patch('app.storage.mens_d1_coverage.read_receipt', return_value=dict(raw_html="<script>ignored</script>")), \
                 patch('app.collection.sportsgameodds_transport.SportsgameoddsTransport.fetch', side_effect=AssertionError('provider transport')):
@@ -55,6 +75,20 @@ def test_coverage_reads_and_downloads_do_not_dispatch():
                 assert (await export.json()) == value
                 assert export.headers['Content-Disposition'].endswith(f'"predict-mens-d1-{DAY}.json"')
                 assert read_coverage.call_args.args[1:] == (DAY, None, 'source:occurrence')
+                summary = await client.get(BASE, params=dict(date=DAY, summary="1"))
+                assert (await summary.json())["coverage_summary"] == value["coverage_summary"]
+                assert (await summary.json()).get("population_revision") is None
+                request = dict(date=DAY, game="source:occurrence", run=RECEIPT, version="saved")
+                malformed = await client.get(f'{BASE}/market-census', params=dict(request, collect="1"))
+                assert malformed.status == 422
+                census = await client.get(f'{BASE}/market-census', params=dict(request, export="1"))
+                assert census.status == 200
+                assert (await census.json())["checkpoint_id"] == RECEIPT
+                assert read_markets.call_args.args[1:] == (DAY, RECEIPT, 'source:occurrence', 'saved', False)
+                raw = await client.get(f'{BASE}/market-census', params=dict(request, raw="1"))
+                assert await raw.read() == b'{"success":true}'
+                assert raw.headers['Content-Disposition'].endswith(f'{RECEIPT}.json"')
+                assert read_markets.call_args.args[1:] == (DAY, RECEIPT, 'source:occurrence', 'saved', True)
                 source = await client.get(f'{BASE}/receipts/{RECEIPT}')
                 assert source.headers['Content-Disposition'].startswith('attachment')
                 assert source.content_type == 'application/json'
@@ -62,7 +96,7 @@ def test_coverage_reads_and_downloads_do_not_dispatch():
                 status = await client.get(BASE + '/status')
                 assert (await status.json())['provider_requests'] == 0
         assert statements == ['SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY',
-                              "SET LOCAL statement_timeout='10s'"] * 3
+                              "SET LOCAL statement_timeout='10s'"] * 6
 
     asyncio.run(read_routes())
 

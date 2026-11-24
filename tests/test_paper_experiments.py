@@ -12,7 +12,7 @@ from aiohttp.test_utils import TestClient, TestServer
 
 from app.dashboard.paper_api import mount
 from app.dashboard.request_guard import dashboard_guard
-from app.research import paper
+from app.research import paper, paper_evidence
 from tests.test_ev_movement import offer, checkpoint
 
 AT = "2026-11-23T17:50:00Z"
@@ -146,3 +146,27 @@ async def api_contract():
             assert response.status==422
         assert report.call_count==3
     await client.close()
+
+
+def test_quote_receipt_age_gross_ev_and_modeled_size_use_frozen_witness():
+    ticket = dict(venue="novig", posted_odds="+300", probability="13/50", ev="1/25", screen_ev="1/25",
+        cash_commitment_usd="33.33", kelly_budget_usd="33.33", fee_mode=dict(enabled=False),
+        times=dict(source_at="2026-11-23T18:50:00Z", received_at="2026-11-23T18:50:10.250Z"))
+    quote = dict(source=dict(provider="sportsgameodds", native_market_id="derived-market-id", native_outcome_id="odd-id"))
+    checkpoint = dict(requested_at="2026-11-23T18:50:09Z", received_at="2026-11-23T18:50:10.250Z")
+    sized = dict(raw=dict(posted_decimal="4"), fee=dict(committed_usd="33.33", entry_usd="0",
+        cashflows=dict(win=dict(net_receipt_usd="133.32"), loss=dict(net_receipt_usd="0"))))
+    value = paper_evidence.inspect(ticket, checkpoint, dict(record=dict(quote=quote)), sized, paper.POLICY)
+    assert value["clocks"]["quote_age_at_receipt_seconds"] == 10.25
+    assert value["clocks"]["requested_at"] == checkpoint["requested_at"]
+    assert value["quote"]["venue_contract_id"] is None
+    assert value["quote"]["source_market_key"] == "derived-market-id"
+    assert value["gross_ev"] == "1/25"
+    assert value["kelly"]["outcome_returns"] == {"win": "3", "loss": "-1"}
+    assert value["kelly"]["commitment_usd"] == "33.33"
+    assert value["fees"]["paper_assumption"] == "zero_assumed"
+    assert value["fees"]["actual_fee_evidence"] == "unknown"
+    assert value["size"]["executable_size_usd"] is None
+    assert paper_evidence.clock_counts([ticket, dict(times=dict(received_at=ticket["times"]["received_at"]))]) == {
+        "tickets": 2, "quote_ages_known": 1, "verified_executable_size": 0, "verified_actual_fees": 0,
+    }

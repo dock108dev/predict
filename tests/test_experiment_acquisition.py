@@ -252,7 +252,8 @@ def test_source_metadata_failure_cannot_starve_already_due_checkpoint(tmp_path):
         worker.service.workers = {'sportsgameodds':worker}
         scheduler = acquisition.ExperimentAcquisition(worker.service)
         acquired = dict(page='paid-page')
-        with patch.object(scheduler,'_prepare',side_effect=ValueError('bad source metadata')), \
+        with patch.object(scheduler,'_pressure',return_value=dict(windows={},objects=0,requests=0)), \
+                patch.object(scheduler,'_prepare',side_effect=ValueError('bad source metadata')), \
                 patch.object(scheduler,'_claim',return_value=task), \
                 patch.object(scheduler,'_finish',return_value=dict(state='captured')), \
                 patch.object(acquisition,'acquire',AsyncMock(return_value=acquired)):

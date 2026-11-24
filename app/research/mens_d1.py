@@ -107,7 +107,10 @@ def daily_population(db, day):
     from app.storage.mens_d1_coverage import read_population
 
     value = read_population(db, date.fromisoformat(day))
-    return dict(value, kind="verified_daily_schedule") if value else None
+    if value is None:
+        return None
+    kind = "verified_daily_schedule" if value.get("expected_games") is not None else "observed_daily_schedule"
+    return dict(value, kind=kind)
 
 
 def retained_provider_population(db, day):

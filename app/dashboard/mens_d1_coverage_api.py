@@ -7,7 +7,7 @@ from urllib.parse import urlencode
 from aiohttp import web
 
 from app.owned_work import joined_thread
-from app.research import experiment, workspace
+from app.research import experiment, market_census, paper_evidence, workspace
 from app.storage.store import connect, encoded, stamp
 from .local_security import HEADERS, PublicRequestError
 from .pipeline import serial
@@ -18,7 +18,8 @@ BASE = "/api/workspace/mens-d1"
 
 def _saved(db, day, run_id):
     runs = list(db.execute("""SELECT r.id,r.game_date,r.definition_version,r.observed_at,r.summary,
-               d.payload->>'designation' designation,d.payload#>>'{policy,scope}' scope
+               d.payload->>'designation' designation,d.payload#>>'{policy,scope}' scope,
+               d.payload#>>'{policy,minimum_ev}' minimum_ev
         FROM public.research_workspace_run r JOIN public.research_workspace_definition d
         ON d.version=r.definition_version WHERE r.game_date=%s::date
         ORDER BY r.observed_at DESC,r.id""", (day,)))
@@ -35,7 +36,7 @@ def _saved(db, day, run_id):
 
 def _checkpoint_rows(db, day, provider_ids):
     return list(db.execute("""SELECT g.*,t.state task_state,t.target_at,t.deadline_at,t.last_reason,
-        t.attempts,t.refusals,t.schedule_id task_schedule_id,
+        t.attempts,t.refusals,t.claimed_at,t.updated_at task_updated_at,t.last_refused_at,t.schedule_id task_schedule_id,
         o.state outcome_task_state,o.target_at outcome_target_at,o.deadline_at outcome_deadline_at,
         r.recorded_at checkpoint_persisted_at,
         COALESCE(r.payload#>>'{summary,received_at}',
@@ -79,10 +80,14 @@ def _capture(row, as_of):
             state = "superseded_by_reschedule"
     return dict(state=state, reason=reason, target_at=target, deadline_at=deadline,
                 task_schedule_id=row["task_schedule_id"], attempts=row["attempts"], refusals=row["refusals"],
+                first_provider_observed_at=row["first_observed_at"],
+                schedule_source_received_at=row["event"].get("source_metadata_received_at"),
+                claimed_at=row["claimed_at"], task_updated_at=row["task_updated_at"], last_refused_at=row["last_refused_at"],
                 frozen_id=row["late_id"], frozen_schedule_id=row["checkpoint_schedule_id"],
                 frozen_requested_at=row["checkpoint_requested_at"], frozen_received_at=row["checkpoint_received_at"],
                 frozen_known_at=row["checkpoint_known_at"],
-                frozen_persisted_at=row["checkpoint_persisted_at"], frozen_coverage=row["checkpoint_coverage"])
+                frozen_persisted_at=row["checkpoint_persisted_at"], frozen_coverage=row["checkpoint_coverage"],
+                market_summary=market_census.summarize_coverage(row["checkpoint_coverage"]))
 
 
 def _provider_row(row):
@@ -117,6 +122,7 @@ def _saved_game(game, run, tickets):
     base = f'/api/research/workspace/runs/{run["id"]}/evidence/{game["game_id"]}'
     qualifying = {variant:len(rows) for variant, rows in tickets.items()} if game["status"] in ("captured", "reconstructed") else None
     return dict(**game, qualifying=qualifying,
+                market_summary=market_census.summarize_coverage(game.get("coverage")),
                 evidence_export=base + "?export=1", original_response_export=base + "?raw=1")
 
 
@@ -143,15 +149,23 @@ def _facets(row, in_scope):
     if in_scope:
         if capture.get("frozen_id") or saved.get("status") == "captured":
             facets.append("frozen")
-        if saved.get("status") == "reconstructed":
-            facets.append("reconstructed")
+        if capture["state"] == "captured" and capture.get("frozen_id"):
+            facets.append("current_market_evidence")
         if capture["state"] in ("upcoming", "due", "claimed", "missed", "failed", "refused", "cancelled", "superseded_by_reschedule", "no_task"):
             facets.append(capture["state"])
-        if saved.get("evaluated_offers") is not None:
-            facets.append("evaluated")
-        for variant in ("best_venue", "all_venues"):
-            if (saved.get("qualifying") or {}).get(variant, 0):
-                facets.append("qualifying_" + variant)
+    if saved.get("status") == "reconstructed":
+        facets.append("reconstructed")
+    if saved.get("evaluated_offers") is not None:
+        facets.append("evaluated")
+        if saved.get("observed_offer_count") is not None:
+            facets.append("observed_offers")
+        if (saved.get("qualifying") or {}).get("all_venues") == 0:
+            facets.append("zero_qualifiers")
+        if any(reason.startswith("reference_") and count for reason, count in (saved.get("exclusions") or {}).items()):
+            facets.append("reference_gaps")
+    for variant in ("best_venue", "all_venues"):
+        if (saved.get("qualifying") or {}).get(variant, 0):
+            facets.append("qualifying_" + variant)
     if scope == "eligible":
         result = row.get("result_state")
         facets.append({"final":"final", "conflicting":"conflicting", "pending":"result_pending"}.get(result, "result_unresolved"))
@@ -160,6 +174,56 @@ def _facets(row, in_scope):
     if row.get("result_state") in ("provider_pending", "provider_result_unresolved"):
         facets.append(row["result_state"])
     return facets
+
+
+def _coverage_summary(value, games, run, report):
+    provider = [game for game in games if (game.get("provider_membership") or {}).get("state") == "eligible"]
+    counts = value.get("counts", {})
+    expected = counts.get("expected")
+    source_eligible = [game for game in games if "expected" in game["facets"]]
+    current = source_eligible if expected is not None else provider
+    saved = report.get("games", [])
+    captured = [game for game in saved if game["status"] in ("captured", "reconstructed")]
+    observed_counts = [game.get("observed_offer_count") for game in captured]
+    evaluated_counts = [game.get("evaluated_offers") for game in captured]
+    exclusions = Counter()
+    for game in captured:
+        exclusions.update(game.get("exclusions") or {})
+    reference = {reason: amount for reason, amount in exclusions.items() if reason.startswith("reference_")}
+    states = Counter(game["capture"]["state"] for game in current)
+    retrieval = Counter(summary["retrieval_state"] for game in captured
+                        if (summary := market_census.summarize_coverage(game.get("coverage"))))
+    retrieval["unknown_completeness"] += len(captured) - sum(retrieval.values())
+    return dict(
+        population=dict(as_of=value["as_of"], observed_at=value.get("source_observed_at"),
+                        revision=value.get("population_revision"), expected_games=expected,
+                        source_identity=value.get("source"), source_mode=value.get("source_mode"),
+                        source_url=value.get("source_url"), source_eligible_games=counts.get("source_eligible"),
+                        source_returned_mens_games=counts.get("source_returned_mens_games"),
+                        source_eligible_known_before_tminus10=sum(game.get("known_before_tminus10") is True
+                                                                  for game in source_eligible) if value.get("population_revision") else None,
+                        matched_games=sum("matched" in game["facets"] for game in current) if expected is not None else None,
+                        provider_known_games=len(provider)),
+        capture=dict(as_of=value["as_of"], current_denominator=len(current),
+                     population_basis="source" if expected is not None else "provider_known",
+                     current_frozen=states["captured"],
+                     current_upcoming=sum(states[state] for state in ("upcoming", "due", "claimed")),
+                     current_misses=states["missed"], current_refusals=states["refused"],
+                     saved_at=report.get("as_of"), saved_denominator=len(saved) if run else None,
+                     saved_frozen=sum(game["status"] == "captured" for game in captured),
+                     saved_reconstructed=sum(game["status"] == "reconstructed" for game in captured)),
+        markets=dict(as_of=report.get("as_of"), evidence_games=len(captured) if run else None,
+                     saved_retrieval_states=dict(retrieval), current_evidence_games=states["captured"],
+                     current_as_of=value["as_of"],
+                     observed_offer_games=sum(n is not None for n in observed_counts),
+                     observed_offers=sum(observed_counts) if captured and None not in observed_counts else None),
+        reference=dict(as_of=report.get("as_of"), observed_offers=sum(observed_counts) if captured and None not in observed_counts else None,
+                       evaluated_offers=sum(evaluated_counts) if captured and None not in evaluated_counts else None,
+                       reference_gaps=sum(reference.values()) if captured else None,
+                       exclusions=dict(exclusions), reference_exclusions=reference),
+        trade=dict(as_of=report.get("as_of"), variants={name: paper_evidence.clock_counts(portfolio["tickets"])
+                   for name, portfolio in report.get("portfolios", {}).items()}),
+    )
 
 
 def coverage_view(db, day, run_id, selection):
@@ -216,12 +280,9 @@ def coverage_view(db, day, run_id, selection):
                 query = urlencode(dict(id=game_id, revision=revision))
                 game["checkpoint_inspect"] = '/data?evidence=checkpoints&' + query
                 game["checkpoint_export"] = '/api/research/experiment?export=1&' + query
-        if value.get("population_revision"):
-            in_scope = game.get("scope_state") == "eligible"
-        elif population:
-            in_scope = bool(retained and retained["scope_state"] == "eligible")
-        else:
-            in_scope = (game.get("provider_membership") or {}).get("state") == "eligible"
+        in_scope = (game.get("scope_state") == "eligible"
+                    or (game.get("provider_membership") or {}).get("state") == "eligible"
+                    or bool(retained and retained["scope_state"] == "eligible"))
         game["facets"] = _facets(game, in_scope)
     facets = Counter(facet for game in games for facet in game["facets"])
     evaluated = [game["saved"]["evaluated_offers"] for game in games if "evaluated" in game["facets"]]
@@ -233,7 +294,34 @@ def coverage_view(db, day, run_id, selection):
     return {**{key:val for key,val in value.items() if key not in ("games","provider_only")},
         "games":games,"facets":dict(facets),"offer_counts":offers,
         "run":run,"runs":runs,"run_population":report.get("population"),
+        "coverage_summary":_coverage_summary(value, games, run, report),
         "provider_requests":0,"orders_submitted":0}
+
+
+def market_view(db, day, run_id, game_id, version, raw=False):
+    value = coverage_view(db, day, run_id, None)
+    game = next((row for row in value["games"] if row["id"] == game_id), None)
+    if game is None:
+        raise web.HTTPNotFound(reason="The selected game is unavailable on this date.")
+    if version == "saved":
+        checkpoint = (game.get("saved") or {}).get("checkpoint_id")
+    else:
+        checkpoint = game["capture"].get("frozen_id")
+    if not checkpoint:
+        raise web.HTTPNotFound(reason="There is no retained T−10 market evidence for this selection.")
+    minimum = (value.get("run") or {}).get("minimum_ev") if version == "saved" else None
+    census = market_census.for_checkpoint(db, checkpoint, include_rows=not raw, minimum=minimum or "1/25")
+    if raw:
+        from app.collection.original_receipts import read
+
+        original = census["original_response"]
+        if original["state"] != "retained":
+            raise web.HTTPNotFound(reason="The original odds response is unavailable for this capture.")
+        return read(original["id"])
+    saved = game.get("saved") or {}
+    return dict(census, date=day, game=game_id, title=game.get("title"), basis=version,
+                saved_disposition={key: saved.get(key) for key in ("status", "qualifying", "exclusions")}
+                if version == "saved" else None)
 
 
 def _response(value, filename=None):
@@ -277,7 +365,9 @@ def mount(app):
 
     async def coverage(request):
         query = request.query
-        if set(query) - {"date", "run", "game", "export"} or query.get("export") not in (None, "1"):
+        if (set(query) - {"date", "run", "game", "export", "summary"}
+                or query.get("export") not in (None, "1") or query.get("summary") not in (None, "1")
+                or query.get("summary") and (query.get("game") or query.get("export"))):
             raise PublicRequestError("Invalid men’s D1 coverage request.")
         try:
             day = workspace.game_day(query.get("date"))
@@ -289,7 +379,31 @@ def mount(app):
         if game is not None and (len(game) > 512 or not game.startswith(("source:", "provider:"))):
             raise PublicRequestError("Select a coverage game identity.")
         value = await read(coverage_view, day, run_id, game)
+        if query.get("summary"):
+            value = {key: value[key] for key in ("date", "as_of", "coverage_summary", "provider_requests", "orders_submitted")}
         return _response(value, f"predict-mens-d1-{day}.json" if query.get("export") else None)
+
+    async def market(request):
+        query = request.query
+        game, run_id, version = query.get("game"), query.get("run"), query.get("version")
+        raw = query.get("raw")
+        if (set(query) - {"date", "run", "game", "version", "export", "raw"} or query.get("export") not in (None, "1")
+                or raw not in (None, "1") or (raw and query.get("export"))
+                or version not in ("current", "saved") or not game or len(game) > 512
+                or not game.startswith(("source:", "provider:")) or (version == "saved" and run_id is None)
+                or (run_id is not None and not workspace.HASH.fullmatch(run_id))):
+            raise PublicRequestError("Select a game and a current or saved T−10 market census.")
+        try:
+            day = workspace.game_day(query.get("date"))
+        except workspace.SelectionError as exc:
+            raise PublicRequestError(str(exc)) from None
+        value = await read(market_view, day, run_id, game, version, raw is not None)
+        if raw:
+            metadata, body = value
+            return web.Response(body=body, content_type="application/json", headers={**HEADERS,
+                "Content-Disposition":f'attachment; filename="predict-original-{metadata["receipt_sha256"]}.json"'})
+        name = f'predict-mens-d1-markets-{day}-{value["checkpoint_id"][:12]}.json' if query.get("export") else None
+        return _response(value, name)
 
     async def status(request):
         from app.storage.mens_d1_coverage import read_status
@@ -323,6 +437,7 @@ def mount(app):
             "Content-Disposition":f'attachment; filename="predict-original-{metadata["receipt_sha256"]}.json"'})
 
     app.router.add_get(BASE, coverage)
+    app.router.add_get(BASE + "/market-census", market)
     app.router.add_get(BASE + "/status", status)
     app.router.add_get(BASE + "/receipts/{receipt_id}", receipt)
     app.router.add_get(BASE + "/provider-results/{result_id}", provider_receipt)

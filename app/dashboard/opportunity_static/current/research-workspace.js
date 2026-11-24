@@ -313,7 +313,7 @@ function dailyRunForm(template, query, requestVersion) {
   const panel = card('Save a men’s D1 paper run');
   const feedback = node('p', 'Checking retained schedule evidence…', 'workspace-caption');
   feedback.setAttribute('role', 'status');
-  const submit = node('button', 'Save run from verified schedule');
+  const submit = node('button', 'Save run from retained schedule');
   submit.type = 'button';
   submit.disabled = true;
   panel.append(feedback, submit);
@@ -360,9 +360,13 @@ function dailyRunForm(template, query, requestVersion) {
   else readDailyCoverage(new URLSearchParams({date:context.date})).then(value => {
     if (!current()) return;
     submit.disabled = !value.population_revision;
-    feedback.textContent = value.population_revision
-      ? `${context.date} · ${count(value.counts.expected)} eligible games in the retained schedule. Paper results use the frozen 4% EV and quarter Kelly policy.`
-      : `A verified source schedule has yet to be retained for ${context.date}.`;
+    if (!value.population_revision) {
+      feedback.textContent = `No independent schedule is retained for ${context.date}.`;
+      return;
+    }
+    const expected = value.counts.expected;
+    feedback.textContent = `${context.date} · ${count(expected ?? value.counts.source_eligible)} eligible source games.`
+      + (expected == null ? ' The full expected slate is unknown.' : '') + ' Paper results use the frozen 4% EV and quarter Kelly policy.';
   }).catch(error => { if (current()) feedback.textContent = error.message; });
   return panel;
 }
@@ -381,7 +385,8 @@ async function experiments(query, requestVersion) {
       link('Open evaluation results', url('results')), link('Browse checkpoint evidence in Data', '/data?evidence=checkpoints'));
     const variant = query.get('variant') === 'all_venues' ? 'all_venues' : 'best_venue';
     root.replaceChildren(nav);
-    if (Object.keys(context).length) root.append(experimentCoverage(new URLSearchParams(context), selected.run.date, selected.run));
+    if (Object.keys(context).length) root.append(experimentCoverage(new URLSearchParams({...context, variant}),
+      selected.run.date, selected.run, () => requestVersion === version));
     renderRun(root, selected, {
       variant, variantLink:name => url('experiments', {...context, run:id, variant:name}),
       ticketLink:ticket => url('experiments', {...context, run:id, variant, ticket:ticket.id}),

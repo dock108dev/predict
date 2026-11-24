@@ -8,7 +8,7 @@ import re
 from psycopg.types.json import Jsonb
 
 from app.storage.store import ROOT, encoded, hashed, stamp
-from . import experiment, mens_d1, paper, records
+from . import experiment, mens_d1, paper, paper_evidence, records
 
 SCHEMA = "predict-research-workspace-1"
 PILOT_VERSION = "ncaab-t10-paper-v1"
@@ -492,9 +492,13 @@ def ticket_detail(db, run_id, ticket_id):
     original_offer = checkpoint["snapshot"]["offers"][witness["offer_index"]]
     calculated = witness["sized_calculation"]
     links = _source_links(run_id, game["game_id"])
+    persisted_at = index[checkpoint_id]["recorded_at"].isoformat()
+    trade = paper_evidence.inspect(ticket, checkpoint, original_offer, calculated, report["policy"])
+    trade["clocks"]["persisted_at"] = persisted_at
     evidence = dict(checkpoint=dict(id=checkpoint_id, game_id=game["game_id"], revision=checkpoint_id,
-        persisted_at=index[checkpoint_id]["recorded_at"].isoformat(),
-        **{key: checkpoint.get(key) for key in ("target_at", "deadline_at", "received_at", "known_at", "source_kind", "recovery")}),
+        persisted_at=persisted_at,
+        **{key: checkpoint.get(key) for key in ("target_at", "deadline_at", "requested_at", "received_at", "known_at", "source_kind", "recovery")}),
+        trade=trade,
         sporting_result=outcome, original_offer=original_offer, sized_calculation=calculated, links=links)
     return dict(run=_run_summary(row), ticket=dict(ticket, witness=dict(original_offer=original_offer,
         sized_calculation=calculated)), evidence=evidence, provider_requests=0, orders_submitted=0)

@@ -347,9 +347,14 @@ class DailyCoverageJobs:
         with self.connector() as db:
             finish(db, job, attempt, self.now(), receipt=receipt, rows=rows, membership_version=version, error=error)
 
-    def _refresh_bindings(self, at):
+    def _refresh_bindings(self, at, approved):
         today = at.astimezone(coverage.EASTERN).date()
         with self.connector() as db:
+            if not approved and not db.execute("""SELECT EXISTS (
+                SELECT 1 FROM public.mens_d1_revision WHERE source=%s AND kind='schedule'
+                  AND game_date BETWEEN %s AND %s) present""",
+                (coverage.PUBLIC_SOURCE, today - timedelta(days=1), today + timedelta(days=1))).fetchone()['present']:
+                return
             for day in (today - timedelta(days=1), today, today + timedelta(days=1)):
                 if self.stopped():
                     break
@@ -372,8 +377,8 @@ class DailyCoverageJobs:
             work = await owned_thread(self._prepare, at, approved, reason, permitted)
             if work:
                 await owned_thread(self._collect, *work, approved)
-            if approved and not self.stopped() and not self.pressure():
-                await owned_thread(self._refresh_bindings, self.now())
+            if not self.stopped() and not self.pressure():
+                await owned_thread(self._refresh_bindings, self.now(), approved)
         finally:
             self.idle.set()
 

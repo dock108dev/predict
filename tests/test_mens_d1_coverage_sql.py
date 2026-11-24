@@ -1,4 +1,5 @@
 from datetime import date, timedelta
+from hashlib import sha256
 import json
 from unittest import skipUnless
 
@@ -6,6 +7,7 @@ from psycopg.errors import RaiseException
 from psycopg.types.json import Jsonb
 
 from app.collection import mens_d1_jobs as jobs
+from app.collection import mens_d1_public_export as public_export
 from app.collection.mens_d1_source import SourceReceipt, load_membership, source_url
 from app.research import records
 from app.storage import mens_d1_coverage as coverage
@@ -93,6 +95,50 @@ class MensD1CoverageSQL(LatestBoardFixture):
             self.assertEqual(db.execute('SELECT disposition FROM public.mens_d1_attempt WHERE id=%s',
                 (attempt['id'],)).fetchone()['disposition'], 'unknown')
 
+    def test_offline_public_export_is_idempotent_and_preserves_observation_and_final(self):
+        headers = sorted(public_export.REQUIRED_FIELDS)
+        at = min(coverage.utc() - timedelta(seconds=1), MORNING)
+        base = dict(Id='120', SourceId='241', Season='2027', StartDate=TIP, StartTimeTbd='false',
+            NeutralSite='true', Status='final', Venue='Neutral fixture', HomeTeamId='262', HomeTeam='Seattle U',
+            HomeConference='WCC', HomePoints='91', HomePeriodPoints='[38,43,10]', AwayTeamId='151',
+            AwayTeam='Loyola Chicago', AwayConference='A-10', AwayPoints='88', AwayPeriodPoints='[40,41,7]')
+        placeholder = dict(base, Id='121', SourceId='242', StartDate='2026-11-24T05:00:00Z',
+                           StartTimeTbd='true', Status='scheduled')
+        excluded = dict(base, Id='122', SourceId='243', AwayTeamId='617', AwayTeam='Fredonia State', AwayConference='')
+        unresolved = dict(base, Id='123', SourceId='244', AwayTeamId='1217', AwayTeam='TBD', AwayConference='')
+        receipt = encoded_fixture = json.dumps(dict(source=public_export.SOURCE, source_url=public_export.URL,
+            source_terms_url=public_export.TERMS, acquisition=public_export.ACQUISITION, observed_at=at.isoformat(),
+            query=dict(season=2027, startDateRange='2026-11-24T05:00:00Z', endDateRange='2026-11-25T04:59:59Z'),
+            headers=headers, pages=[[list(row[key] for key in headers)
+                    for row in (base, placeholder, excluded, unresolved)]], last_page=True)).encode()
+        with self.connect() as db:
+            public_export.attach(db, encoded_fixture)
+            public_export.attach(db, encoded_fixture)
+            value = coverage.read_coverage(db, DAY, at=coverage.utc())
+            self.assertEqual(value['source_mode'], 'retrospective_public_export')
+            self.assertIsNone(value['counts']['expected'])
+            self.assertEqual(value['counts']['source_eligible'], 1)
+            self.assertEqual(value['counts']['source_returned_mens_games'], 4)
+            self.assertEqual(value['counts']['excluded'], 2)
+            self.assertEqual(value['counts']['unresolved_membership'], 1)
+            self.assertIsNotNone(value['population']['binding_revision_id'])
+            games = {row['native_game_id']: row for row in value['games']}
+            self.assertEqual(games['120']['match_state'], 'source_only')
+            self.assertEqual(games['120']['result']['overtime_periods'], 1)
+            self.assertEqual(games['120']['result']['teams'][1]['score'], 91)
+            self.assertEqual(games['121']['scope_reason'], 'superseded_source_placeholder')
+            self.assertIsNone(games['121']['schedule']['starts_at'])
+            self.assertEqual(games['123']['scope_state'], 'unresolved')
+            source_receipt = coverage.read_receipt(db, value['source_receipt_id'])
+            self.assertEqual(source_receipt['body_sha256'], sha256(receipt).hexdigest())
+            self.assertIsNone(source_receipt['requested_at'])
+            self.assertNotIn('raw_body', source_receipt)
+            self.assertEqual(len(value['source_revisions']), 1)
+            self.assertEqual(len(value['result_source_revisions']), 1)
+            self.assertEqual(coverage.read_coverage(db, DAY, at=at)['counts']['source_eligible'], None)
+            usage = db.execute('SELECT count(*) AS n,sum(charged_credits) AS charged FROM public.mens_d1_attempt').fetchone()
+            self.assertEqual(usage, {'n': 2, 'charged': 0})
+
     def test_coalesces_overdue_schedule_and_preserves_challenge_vs_empty(self):
         observed = stamp('2026-11-24T15:15:00Z')
         with self.connect() as db:
@@ -157,7 +203,8 @@ class MensD1CoverageSQL(LatestBoardFixture):
             self.assertEqual(matched['provider_event_id'], 'fixture-odds')
             self.assertEqual(matched['match_reason'], 'canonical_participants_and_start_agree_display_order_differs')
             self.assertEqual(payload['counts']['source_returned_mens_games'], 3)
-            self.assertEqual(payload['counts']['expected'], 1)
+            self.assertIsNone(payload['counts']['expected'])
+            self.assertEqual(payload['counts']['source_eligible'], 1)
             self.assertEqual(payload['counts']['excluded'], 2)
             self.assertEqual(payload['counts']['unresolved_membership'], 1)
             self.assertTrue(coverage.retain_bindings(db, DAY, at=at))
@@ -174,6 +221,7 @@ class MensD1CoverageSQL(LatestBoardFixture):
             self.assertNotEqual(payload['population_revision'], latest['population_revision'])
             revised = next(row for row in latest['games'] if row['source_game_id'] == 'neutral')
             self.assertEqual(revised['match_state'], 'schedule_conflict')
+            self.assertEqual([change['change'] for change in revised['schedule_changes']], ['added', 'rescheduled'])
             self.assertEqual(len(latest['source_revisions']), 3)
             # An index score and later conflicting detail both stay available.
             result_at = stamp('2026-11-25T16:00:00Z')

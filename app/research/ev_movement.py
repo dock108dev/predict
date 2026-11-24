@@ -411,6 +411,7 @@ def build_snapshot(db, page, *, request_scope, dispatch_at, known_at, calculatio
     from app.normalization.college_registry import sgo_registry
     from app.storage.current_pregame import CalculationContext
     from app.storage.sportsgameodds_reference import prepare_page
+    from .market_census import retrieval
 
     if len(page.events) != 1:
         raise ValueError("experiment_single_event_required")
@@ -475,6 +476,8 @@ def build_snapshot(db, page, *, request_scope, dispatch_at, known_at, calculatio
     received_books = sorted({q["venue"] for q in page.quotes})
     requested_odds = sorted(set(str(request_scope.get("oddID", "")).split(",")) - {""})
     received_odds = sorted({q["odd_id"] for q in page.quotes})
+    returned_cells = {(q["venue"], q["odd_id"]) for q in page.quotes
+                      if q["venue"] in requested_books and q["odd_id"] in requested_odds}
     surfaces = defaultdict(list)
     for q in page.quotes:
         if q.get("line") is not None:
@@ -486,9 +489,11 @@ def build_snapshot(db, page, *, request_scope, dispatch_at, known_at, calculatio
         supported=dict(offer_quotes=len(offers), reference_quotes=len(references)),
         missing=dict(bookmakers=sorted(set(requested_books)-set(received_books)),
                      odd_ids=sorted(set(requested_odds)-set(received_odds))),
-        incomplete=bool(page.next_cursor or page.conflicting_alternate_lines or page.ignored_bookmaker_groups
-                        or set(requested_books)-set(received_books) or set(requested_odds)-set(received_odds)),
-        complete_market=False, scope="available_supported_surface_returned_by_provider; no_unseen_lines_inferred",
+        returned_cells=len(returned_cells),
+        retrieval=retrieval(request_scope, [source["event_id"]], page.next_cursor, page.receipt_sha256),
+        incomplete=bool(page.conflicting_alternate_lines or page.ignored_bookmaker_groups
+                        or len(returned_cells) < len(requested_books) * len(requested_odds)),
+        scope="available_supported_surface_returned_by_provider; no_unseen_lines_inferred",
         rejected_projection=[list(r) for r in excluded],
         conflicting_alternate_lines=page.conflicting_alternate_lines,
         ignored_bookmaker_groups=page.ignored_bookmaker_groups,

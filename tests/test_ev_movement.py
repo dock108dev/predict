@@ -2,11 +2,14 @@
 
 from copy import deepcopy
 from fractions import Fraction as F
+from types import SimpleNamespace
 
 import pytest
 
 from app.comparison import current_pregame as math
-from app.research import ev_movement as experiment
+from app.comparison import fee_mode
+from app.research import ev_movement as experiment, market_census
+from tests.pregame_fixture import AT as MARKET_SAMPLE_AT, page as market_page, parse as parse_market_page
 from tests.test_research_probability import snapshot as frozen_example
 
 
@@ -244,3 +247,88 @@ def test_outcomes_score_observed_scope_without_settlement_or_fills():
     missing = experiment.score_comparison(result, None)
     assert missing["exclusions"] == {"no_sporting_outcome_yet": 1}
     assert all(r["mean_brier"] is None for r in missing["reports"])
+
+
+def test_event_pagination_keeps_event_surface_and_request_coverage_distinct():
+    exact = market_census.retrieval({"eventIDs": "one"}, ["one"], "opaque", "digest")
+    assert exact["state"] == "complete_requested_event_response"
+    assert exact["request_state"] == "all_requested_events_returned"
+    assert exact["traversal"] == "cursor_unfollowed"
+    assert exact["venue_market_state"] == "unknown_completeness"
+    assert len(exact["pages"][0]["next_cursor_sha256"]) == 64
+    assert "opaque" not in str(exact)
+    batch = market_census.retrieval({"eventIDs": "one,two"}, ["one"], "opaque", "digest")
+    assert batch["state"] == "complete_requested_event_response"
+    assert batch["request_state"] == batch["traversal"] == "partial_retrieval"
+    assert batch["events_unreturned"] == ["two"]
+    closed = market_census.retrieval({"eventIDs": "one,two"}, ["one"], None, "digest")
+    assert closed["request_state"] == "requested_events_unreturned"
+    unknown = market_census.retrieval({"eventIDs": "one"}, [], None, "digest", cursor_known=False)
+    assert unknown["state"] == unknown["venue_market_state"] == "unknown_completeness"
+
+
+def test_original_rows_and_exact_reference_gaps_reconcile_without_revaluing(monkeypatch):
+    data = market_page()
+    event = data["data"][0]
+    home, away = event["odds"].values()
+    draftkings_away = away["byBookmaker"]["draftkings"]
+    # FanDuel has a valid exact -1.5/+1.5 pair. DraftKings has +2.5 away.
+    draftkings_away["spread"] = "2.5"
+    draftkings_away["altLines"] = [dict(draftkings_away, odds="-160")]
+    # BetMGM returned one explicitly unavailable side. Caesars was never requested.
+    home["byBookmaker"]["betmgm"] = dict(home["byBookmaker"]["fanduel"], available=False)
+    unsupported = dict(home, periodID="1h", oddID="points-home-1h-sp-home")
+    event["odds"][unsupported["oddID"]] = unsupported
+    requested = dict(eventIDs=event["eventID"], bookmakerID="prophetx,fanduel,draftkings,betmgm",
+        oddID=",".join(sorted(odd for odd in event["odds"] if odd != unsupported["oddID"])),
+        includeOpposingOdds=True, includeAltLines=True)
+    received = parse_market_page(data)
+    mode = fee_mode.state(False)
+    context = SimpleNamespace(fee_mode=mode, price_routes={"prophetx": "sportsgameodds"},
+        fee=lambda record, at: fee_mode.zero_fee(record, mode))
+    snapshot = experiment.build_snapshot(None, received, request_scope=requested,
+        dispatch_at=MARKET_SAMPLE_AT, known_at=MARKET_SAMPLE_AT, calculation_context=context)
+    monkeypatch.setattr(market_census, "_original", lambda _: (dict(state="retained"), data))
+    before = deepcopy(snapshot)
+    result = market_census.from_checkpoint(dict(snapshot=snapshot), "checkpoint")
+
+    assert snapshot == before
+    assert result["summary"]["observed_offers"] == 2
+    assert result["summary"]["evaluated_offers"] == 0
+    assert result["summary"]["requested_cells"] == 8
+    assert result["summary"]["returned_cells"] == 7
+    assert result["summary"]["reference_disposition_mismatches"] == 0
+    assert result["summary"]["reference_exclusions"] == 2
+    assert any(row["state"] == "unsupported" for row in result["original_rows"])
+    assert sum(row["state"] == "conflicting" for row in result["original_rows"]) == 2
+    assert result["summary"]["normalized_states"]["explicitly_unavailable"] == 1
+    offer = next(row for row in result["offers"] if row["outcome"] == "away")
+    assert offer["price_american"] == "-110"
+    assert offer["price_state"] == "available"
+    assert offer["reference_gap"]["normalized_reference_line"] == "-1.5"
+    books = {book["bookmaker_id"]: book for book in offer["reference_gap"]["books"]}
+    assert books["fanduel"]["reason"] == "qualifying_pair"
+    assert books["draftkings"]["reason"] == "one_exact_side_unreturned"
+    assert books["betmgm"]["states"] == ["explicitly_unavailable"]
+    assert books["caesars"]["reason"] == "request_scope_omission"
+    assert any(row["state"] == "requested_but_unreturned" for row in result["request_cells"])
+
+
+def test_missing_original_preserves_compact_request_proof(monkeypatch):
+    data = market_page()
+    event = data["data"][0]
+    received = parse_market_page(data)
+    mode = fee_mode.state(False)
+    context = SimpleNamespace(fee_mode=mode, price_routes={"prophetx": "sportsgameodds"},
+        fee=lambda record, at: fee_mode.zero_fee(record, mode))
+    scope = dict(eventIDs=event["eventID"], bookmakerID="prophetx,fanduel,draftkings",
+                 oddID=",".join(event["odds"]), includeAltLines=True)
+    snapshot = experiment.build_snapshot(None, received, request_scope=scope,
+        dispatch_at=MARKET_SAMPLE_AT, known_at=MARKET_SAMPLE_AT, calculation_context=context)
+    monkeypatch.setattr(market_census, "_original", lambda _: (dict(state="not_retained"), None))
+    result = market_census.from_checkpoint(dict(snapshot=snapshot), "checkpoint", include_rows=False)
+    assert result["summary"]["observed_offers"] == result["summary"]["evaluated_offers"] == 2
+    assert result["summary"]["original_rows"] is None
+    assert result["retrieval"]["basis"] == "frozen_normalized_checkpoint"
+    assert "normalized_rows" not in result
+    assert result["orders_submitted"] == result["provider_requests"] == 0

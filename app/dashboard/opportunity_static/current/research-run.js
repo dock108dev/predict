@@ -16,6 +16,9 @@ const statuses = {
 const resultLabel = {win:'Modeled win', loss:'Modeled loss', unresolved:'Unresolved'};
 const capturedFee = mode => mode?.enabled === true ? 'Captured with fees included' : mode?.enabled === false ? '$0 fees assumed in capture' : 'Captured fee treatment unknown';
 const evidenceLink = (title, href) => link(title, href, 'research-button');
+const evidenceClock = new Intl.DateTimeFormat('en-US', {timeZone:'America/New_York',
+  month:'short', day:'numeric', hour:'numeric', minute:'2-digit', second:'2-digit', fractionalSecondDigits:3, timeZoneName:'short'});
+const preciseTime = value => value && Number.isFinite(Date.parse(value)) ? evidenceClock.format(new Date(value)) : 'Not recorded';
 function coverageDescription(run) {
   if (run.coverage?.reconstructed_games) return 'This opportunity record separates original frozen calculations from calculations made later using retained responses received inside the T−10 window. Missing games and unseen source markets remain unavailable. Results integration is deferred.';
   if (run.validity === 'no_valid_capture') return 'No paper result can be evaluated from this saved run. Capture dispositions show why evidence is unavailable.';
@@ -123,11 +126,13 @@ export function renderRun(root, {run, definition, report}, navigation) {
   root.append(runs);
 
   const dispositions = node('section', undefined, 'workspace-panel');
+  const ticketsByGame = new Map();
+  for (const ticket of portfolio?.tickets || []) ticketsByGame.set(ticket.game_id, (ticketsByGame.get(ticket.game_id) || 0) + 1);
   dispositions.append(node('h2', 'Capture dispositions and exclusions'));
   if (report?.games?.length) dispositions.append(table(['Tracked game', 'T−10 capture', 'Qualifying offers', 'Evidence'], report.games.map(game => [
     stack(game.title, time(game.starts_at)),
     stack(statuses[game.status] || label(game.status), game.reason ? label(game.reason) : null),
-    ['captured', 'reconstructed'].includes(game.status) ? count(game.tickets) : 'Unavailable',
+    ['captured', 'reconstructed'].includes(game.status) ? count(ticketsByGame.get(game.game_id) || 0) : 'Unavailable',
     evidenceLink('Inspect capture', gameLink(game)),
   ])));
   else dispositions.append(node('p', 'No tracked game records are available on this date. The expected population remains unknown.'));
@@ -185,6 +190,8 @@ export function renderSavedEvidence(root, value, {ticket, exportLink, gameLink})
     const reference = offer.calculation_payload?.reference || sized.reference || {};
     const original = offer.record?.quote?.original;
     const fee = sized.fee || {};
+    const trade = evidence.trade || {}, clocks = trade.clocks || {}, quote = trade.quote || {};
+    const kelly = trade.kelly || {};
     const recovered = item.source_kind === 'retrospective_raw_t10';
     root.append(node('h3', item.title + ' · ' + selection({ ...item, selection_label:item.label })));
     root.append(node('p', `${venue(item.venue)} at ${text(item.posted_odds)}. This modeled ticket uses the frozen T−10 offer and its recorded probability.`));
@@ -192,18 +199,32 @@ export function renderSavedEvidence(root, value, {ticket, exportLink, gameLink})
     if (item.game_id) root.append(evidenceLink('Open frozen checkpoint', gameLink(item.game_id)));
     evidenceSection(root, 'Frozen quote', null, {
       'Posted odds':item.posted_odds, 'Original source price':original?.value ?? item.posted_odds,
-      'Source time':time(item.times?.source_at), 'Receipt time':time(item.times?.received_at),
-      'Modeled decision time':time(item.decision_at), 'Capture eligibility':recovered ? 'Retrospective reconstruction; original T−10 response' : 'Valid frozen T−10 checkpoint',
-    }, {checkpoint:evidence.checkpoint, original_offer:offer});
+      Venue:venue(item.venue), Provider:quote.provider || item.identity?.provider,
+      'Provider event ID':quote.provider_event_id, 'Provider outcome ID':quote.provider_odd_id,
+      'Venue-native contract ID':quote.venue_contract_id || 'Unavailable in captured evidence',
+      'Exact period / selection / line':`${label(item.period)} · ${selection({...item, selection_label:item.label})}`,
+      'Source time':preciseTime(clocks.source_at || item.times?.source_at), 'Source clock basis':label(clocks.source_time_kind),
+      'Quote age at receipt':clocks.quote_age_at_receipt_seconds == null ? 'Unknown' : `${clocks.quote_age_at_receipt_seconds.toFixed(3)} seconds`,
+      'Requested at':preciseTime(clocks.requested_at), 'Dispatched at':preciseTime(clocks.dispatched_at),
+      'Quote receipt time':preciseTime(clocks.quote_received_at || item.times?.received_at),
+      'Provider response received':preciseTime(clocks.received_at), 'Known to capture worker':preciseTime(clocks.known_at),
+      'Capture clock':preciseTime(clocks.captured_at), 'Persistence clock':preciseTime(clocks.persisted_at),
+      'Modeled decision time':preciseTime(item.decision_at), 'Capture eligibility':recovered ? 'Retrospective reconstruction; original T−10 response' : 'Valid frozen T−10 checkpoint',
+    }, {checkpoint:evidence.checkpoint, original_offer:offer, source_quote:quote, clocks});
     evidenceSection(root, 'Probability and screening', 'The captured probability is used for both screening and paper sizing.', {
       'Estimated outcome probability':pct(item.probability), 'Reference book':reference.book ? venue(reference.book) : 'Unknown',
-      'Screening EV (rounded for display)':pct(item.screen_ev), 'EV at modeled commitment':pct(item.ev),
+      'Gross EV at quoted price':pct(trade.gross_ev), 'Screening EV (rounded for display)':pct(item.screen_ev),
+      'EV at modeled commitment':pct(item.ev),
     }, {reference, exact_probability:item.probability, exact_screen_ev:item.screen_ev, exact_sized_ev:item.ev});
-    evidenceSection(root, 'Paper sizing and fee treatment', capturedFee(item.fee_mode), {
+    evidenceSection(root, 'Paper sizing and fee treatment', `${capturedFee(item.fee_mode)}. Paper turnover assumes the quoted price is available at the modeled stake.`, {
+      'Fee evidence for an actual order':trade.fees?.actual_fee_evidence === 'unknown' ? 'Unknown' : trade.fees?.actual_fee_evidence,
+      'Executable size at the quoted price':trade.size?.executable_size_evidence === 'unavailable' ? 'Unavailable in captured evidence' : trade.size?.executable_size_evidence,
+      'Reference bankroll':usd(kelly.reference_bankroll_usd), 'Kelly multiplier':pct(kelly.multiplier),
+      'Modeled win / loss net return':`${pct(kelly.outcome_returns?.win)} / ${pct(kelly.outcome_returns?.loss)}`,
       'Kelly budget':usd(item.kelly_budget_usd), 'Paper commitment':usd(item.stake_usd),
-      'Purchase':usd(item.purchase_usd), Quantity:fee.quantity, 'Entry fee':usd(fee.entry_usd),
+      'Purchase':usd(item.purchase_usd), Quantity:fee.quantity, 'Modeled entry fee':usd(fee.entry_usd),
       'Expected profit at entry':usd(item.expected_profit_usd),
-    }, {fee_input:offer.fee_input, sized_calculation:sized});
+    }, {fee_input:offer.fee_input, sized_calculation:sized, trade_evidence:trade});
     const result = evidence.sporting_result;
     evidenceSection(root, 'Sporting-result grading', 'Actual execution and venue settlement remain unverified.', {
       'Sporting grade':resultLabel[item.grading?.state] || 'Unresolved',
