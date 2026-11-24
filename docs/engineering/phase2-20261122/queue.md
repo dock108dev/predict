@@ -1,5 +1,56 @@
 # Phase 2 completion and deferred backlog
 
+## Men’s D1 coverage slice deployed
+
+The [coverage assignment and operating record](../mens-d1-coverage-completion-20261124.md)
+contains the source, capture, market, reference and trade-evidence reconciliation.
+The source and capture views separate current evidence from the immutable
+November 23 corrected run and November 24 saved snapshot. Production runs
+`b25586946517674a49d1ee631d3a282e02f50abb` on the three application roles after
+the [passing release retry](https://github.com/dock108dev/predict/actions/runs/45445919672/attempts/2).
+
+CollegeBasketballData supplies dated source evidence for 32 and 77 eligible
+rows, with one official Eastern date discrepancy on each date. Both complete
+expected-slate denominators remain unknown. Sports Reference remains disabled
+pending source permission and configured Firecrawl access. Recurring ingestion
+requires an active, authorized source. Venue-wide market inventory and actual
+executable size remain unverified. The collector exposes its remaining
+serial-capacity risk for the 6:50 PM Eastern cluster in Settings.
+
+The November 24 12:20 PM window froze both games on the first attempt with
+two scheduled SportsGameOdds requests, two confirmed object credits, and no
+competing dispatches. At 12:21 PM the current Tuesday view had five frozen
+and 72 upcoming provider-known eligible games. The saved snapshot still
+has three frozen and 74 pending. The dated exports, immutable replay
+witnesses and raw receipt hashes are recorded in the assignment.
+
+- [November 23 coverage and output](https://predict.dock108.dev/data?evidence=mens-d1&scope=mens-d1&date=2026-11-23)
+- [November 24 coverage and output](https://predict.dock108.dev/data?evidence=mens-d1&scope=mens-d1&date=2026-11-24)
+- [Collector status and deadline forecast](https://predict.dock108.dev/settings#mens-d1-jobs)
+
+### Historical 11:41 AM handoff baseline
+
+The [five-priority implementation assignment](../mens-d1-coverage-completion-20261124.md)
+was ready for engineering at this checkpoint. A read-only production refresh on November 24 at
+11:41 AM Eastern confirms 33 eligible provider-known Monday games: 6 frozen,
+20 reconstructed and 7 missing. Tuesday remains 77 eligible, 3 frozen and 74
+pending. Neither date has an independently verified expected slate.
+
+Corrected Monday scope has **26 evidence-bearing games** and **1,546 offers
+lacking required reference evidence** (672 exact-pair gaps and 874 two-book
+gaps), replacing the older 27 / 1,547 counts. Market completeness is unproven
+for all 26; the existing false flag is conservative, rather than proof of
+missing markets. Next work covers expected population, capture reliability,
+returned markets, references and usable quote/fee/size evidence together.
+Source activation must not hold up independent capture and accounting fixes.
+
+This refresh changed planning documents only. Local main is `1431897`, with
+[passing CI](https://github.com/dock108dev/predict/actions/runs/45435387664);
+installed app roles remain healthy on `c75ffcd`. Sports Reference remains
+disabled with zero Firecrawl requests, charges or holds. Current research
+unreserved headroom is 364,754,617 bytes (347.9 MiB). The prior implementation
+and its 11:09 AM observation below remain historical evidence.
+
 ## Active follow-on: men’s D1 daily coverage
 
 The November 24, 2026 [implementation assignment](../mens-d1-daily-coverage-20261124.md)
