@@ -86,6 +86,13 @@ class ExperimentAPI(IsolatedAsyncioTestCase):
         self.assertEqual(value['provider_requests'], 0)
         self.owner.export_game.assert_not_called()
 
+    async def test_sporting_results_request_adds_only_the_opt_in_filter(self):
+        response = await self.client.get('/api/research/experiment?outcomes_only=1&limit=10')
+        self.assertEqual(response.status, 200)
+        self.assertEqual(self.owner.catalog.call_args.kwargs,
+                         dict(include_context=False, outcomes_only=True, limit=10, offset=0))
+        self.assertIn('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY', self.statements)
+
     async def test_invalid_selection_never_opens_database_or_dispatches_acquisition(self):
         for query in (
             dict(id='game-captured'), dict(revision='a'*64), dict(export='1'),

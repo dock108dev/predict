@@ -376,8 +376,10 @@ def mount(app):
                     return owner.detail(db, identity, revision=revision)
                 with db.transaction():
                     db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
-                    return owner.catalog(db, include_context=query.get('include_context') == '1',
-                        outcomes_only=query.get('outcomes_only') == '1', limit=limit, offset=offset)
+                    options = dict(include_context=query.get('include_context') == '1', limit=limit, offset=offset)
+                    if query.get('outcomes_only') == '1':
+                        options['outcomes_only'] = True
+                    return owner.catalog(db, **options)
 
         try:
             async with admission():
